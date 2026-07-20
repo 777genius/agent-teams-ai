@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -78,6 +78,42 @@ describe('ReviewMutationJournalStore', () => {
     await expect(store.list('demo', persistenceScope)).resolves.toEqual([complete]);
     await store.remove(complete);
     await expect(store.list('demo', persistenceScope)).resolves.toEqual([]);
+  });
+
+  it('fails closed for a symlinked mutation-journal scope', async () => {
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const store = new ReviewMutationJournalStore();
+    const external = await mkdtemp(path.join(tmpdir(), 'external-review-journal-'));
+    const sentinelPath = path.join(external, 'sentinel.json');
+    try {
+      await writeFile(sentinelPath, 'sentinel', 'utf8');
+      const scopeParent = path.join(
+        teamsBasePath,
+        'demo',
+        'review-decisions',
+        'mutation-journal',
+        persistenceScope.scopeKey
+      );
+      await mkdir(scopeParent, { recursive: true });
+      await symlink(
+        external,
+        path.join(
+          scopeParent,
+          createHash('sha256').update(persistenceScope.scopeToken).digest('hex')
+        ),
+        'dir'
+      );
+
+      await expect(store.prepare(makeInput())).rejects.toThrow('Unsafe persistence directory');
+      await expect(store.list('demo', persistenceScope)).rejects.toThrow(
+        'Unsafe persistence directory'
+      );
+      await expect(readFile(sentinelPath, 'utf8')).resolves.toBe('sentinel');
+      await expect(readdir(external)).resolves.toEqual(['sentinel.json']);
+    } finally {
+      await rm(external, { recursive: true, force: true });
+    }
   });
 
   it('persists a decision-only Redo record with no artificial disk step', async () => {
@@ -171,6 +207,49 @@ describe('ReviewMutationJournalStore', () => {
     await expect(store.list('demo', persistenceScope)).rejects.toThrow(
       'Invalid review mutation journal record'
     );
+  });
+
+  it('quarantines an unreadable WAL scope for explicit recovery', async () => {
+    const { CorruptReviewMutationJournalError, ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const store = new ReviewMutationJournalStore();
+    const prepared = await store.prepare(makeInput());
+    const recordPath = findRecordPath(teamsBasePath, prepared.id);
+    await writeFile(recordPath, '{broken-wal', 'utf8');
+
+    await expect(store.list('demo', persistenceScope)).rejects.toBeInstanceOf(
+      CorruptReviewMutationJournalError
+    );
+    await expect(store.inspectForRecoveryDiscard('demo', persistenceScope)).resolves.toEqual({
+      records: [],
+      corruptRecordCount: 1,
+    });
+    const quarantinePath = await store.quarantineCorruptScope('demo', persistenceScope);
+
+    expect(quarantinePath).toContain('.corrupt-');
+    await expect(store.list('demo', persistenceScope)).resolves.toEqual([]);
+    await expect(readdir(path.dirname(path.dirname(recordPath)))).resolves.toContain(
+      path.basename(quarantinePath!)
+    );
+  });
+
+  it('does not quarantine a valid pending disk mutation beside a corrupt record', async () => {
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const store = new ReviewMutationJournalStore();
+    const prepared = await store.prepare(makeInput());
+    const recordPath = findRecordPath(teamsBasePath, prepared.id);
+    const corruptId = '11111111-1111-4111-8111-111111111111';
+    await writeFile(path.join(path.dirname(recordPath), `${corruptId}.json`), '{broken', 'utf8');
+
+    await expect(store.inspectForRecoveryDiscard('demo', persistenceScope)).resolves.toMatchObject({
+      records: [{ id: prepared.id }],
+      corruptRecordCount: 1,
+    });
+    await expect(store.quarantineCorruptScope('demo', persistenceScope)).rejects.toThrow(
+      'valid pending disk mutation'
+    );
+    await expect(readFile(recordPath, 'utf8')).resolves.toContain(prepared.id);
   });
 
   it('round-trips only validated SHA-256 decision postimages', async () => {

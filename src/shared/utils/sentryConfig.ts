@@ -28,6 +28,10 @@ const MAX_REDACTION_DEPTH = 8;
 const SENSITIVE_KEY_PARTS = [
   'token',
   'secret',
+  'apikey',
+  'api_key',
+  'password',
+  'credential',
   'authorization',
   'cookie',
   'email',
@@ -48,8 +52,10 @@ const SENSITIVE_STRING_PATTERNS: [RegExp, string][] = [
   [/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, REDACTED],
   [/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, REDACTED],
   [/\b(?:sk|pk|rk|ghp|gho|github_pat|xoxb|xoxp|ya29)[A-Za-z0-9_-]{12,}\b/g, REDACTED],
+  [/\b(?:Bearer|Basic)\s+[A-Z0-9._~+/=-]{8,}/gi, REDACTED],
   [/\/Users\/[^/\s"'`]+(?:\/[^\s"'`]+)*/g, '/Users/[redacted]/[redacted-path]'],
   [/\/home\/[^/\s"'`]+(?:\/[^\s"'`]+)*/g, '/home/[redacted]/[redacted-path]'],
+  [/\/Volumes\/[^/\s"'`]+(?:\/[^\s"'`]+)*/g, '/Volumes/[redacted]/[redacted-path]'],
   [/([A-Za-z]:\\Users\\)[^\\\s"'`]+(?:\\[^\\\s"'`]+)*/g, '$1[redacted]\\[redacted-path]'],
 ];
 

@@ -2,7 +2,8 @@
 
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
@@ -30,8 +31,6 @@ const sandboxTeamCard = `Array.from(document.querySelectorAll('[role="button"]')
 const sandboxKanbanTaskCard = `document.querySelector(
   '.kanban-task-card[data-task-id="changes-history-e2e"]'
 )`;
-const sandboxKanbanTaskTitle = `Array.from((${sandboxKanbanTaskCard})?.querySelectorAll('h5') ?? [])
-  .find((heading) => heading.textContent?.trim() === 'Verify durable Changes history')`;
 const kanbanTabButton = `Array.from(document.querySelectorAll('button'))
   .find((button) => button.textContent?.trim() === 'Kanban')`;
 const visibleElement = (expression) => `(() => {
@@ -40,8 +39,10 @@ const visibleElement = (expression) => `(() => {
   const rect = element.getBoundingClientRect();
   return rect.width > 0 && rect.height > 0 ? element : null;
 })()`;
-const historyPopover = `Array.from(document.querySelectorAll('[data-radix-popper-content-wrapper]'))
-  .find((wrapper) => wrapper.textContent?.includes('Review action history'))`;
+const historyPopoverLayer = `Array.from(
+  document.querySelectorAll('[data-radix-popper-content-wrapper]')
+).find((wrapper) => wrapper.textContent?.includes('Review action history'))`;
+const historyPopover = `(${historyPopoverLayer})?.querySelector('[data-state="open"]')`;
 const visibleHistoryPopover = visibleElement(historyPopover);
 const visibleRejectHunkButton = `Array.from(document.querySelectorAll('button[title^="Reject change"]'))
   .find((button) => {
@@ -184,14 +185,18 @@ async function startApp(port, fixture) {
       AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
       AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: fixture.claudeRoot,
       AGENT_TEAMS_ELECTRON_USER_DATA_DIR: fixture.userDataRoot,
-      // Node keeps runtime discovery deterministic. The E2E never launches agents.
+      // Changes does not exercise the OpenCode MCP transport. Avoid coupling this
+      // renderer E2E to a second background service and its independent startup timeout.
+      CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+      // Keep the local MCP Node probe deterministic. The E2E never launches agents.
       NODE_BINARY: process.execPath,
-      CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: process.execPath,
+      CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH:
+        process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || process.execPath,
     },
   });
   appProcess.stdout.on('data', rememberAppLog);
   appProcess.stderr.on('data', rememberAppLog);
-  const webSocketUrl = await waitForCdp(port, devMcpMode ? 90_000 : 45_000);
+  const webSocketUrl = await waitForCdp(port, devMcpMode ? 90_000 : 60_000);
   client = await CdpClient.connect(webSocketUrl);
   await client.send('Runtime.enable');
   await client.send('Page.enable');
@@ -202,7 +207,8 @@ async function startApp(port, fixture) {
 async function ensureSandboxNavigation() {
   await client.waitFor(
     `(${sandboxKanbanTaskCard}) || (${selectTeamButton})`,
-    'sandbox team navigation'
+    'sandbox team navigation',
+    devMcpMode ? 90_000 : 60_000
   );
   const navigationDeadline = Date.now() + 60_000;
   while (!(await client.evaluate(`Boolean(${sandboxKanbanTaskCard})`))) {
@@ -508,21 +514,6 @@ class CdpClient {
     assert.equal(clicked, true, `Element not clickable: ${expression}`);
   }
 
-  async domMouseDown(expression) {
-    const dispatched = await this.evaluate(`(() => {
-      const element = (${expression});
-      if (!(element instanceof HTMLElement)) return false;
-      element.dispatchEvent(new MouseEvent('mousedown', {
-        bubbles: true,
-        cancelable: true,
-        button: 0,
-        view: window,
-      }));
-      return true;
-    })()`);
-    assert.equal(dispatched, true, `Element cannot receive mouse down: ${expression}`);
-  }
-
   async pressEscape() {
     const key = {
       key: 'Escape',
@@ -556,24 +547,59 @@ const enabledButtonWithText = (text) => `(() => {
   return button && !button.disabled ? button : null;
 })()`;
 
+async function discardActiveRecoveryBranch(label) {
+  await client.domClick(enabledButtonWithText('Discard recovery branch'));
+  const confirmDiscard = `Array.from(
+    document.querySelectorAll('[role="alertdialog"] button')
+  ).find((button) => button.textContent?.trim() === 'Discard recovery branch' && !button.disabled)`;
+  await client.waitFor(confirmDiscard, `${label} discard confirmation`);
+  await client.domClick(confirmDiscard);
+}
+
 async function openReview() {
-  await client.evaluate(`(${sandboxKanbanTaskTitle})?.click()`);
+  await client.domClick(sandboxKanbanTaskCard);
   const taskDialog = `Array.from(document.querySelectorAll('[role="dialog"]'))
     .find((dialog) => Array.from(dialog.querySelectorAll('h2'))
       .some((heading) => heading.textContent?.trim() === 'Verify durable Changes history'))`;
   await client.waitFor(taskDialog, 'task dialog');
   const fileRow = `(${taskDialog})?.querySelector(
-    '[role="button"][title="src/review-history.ts"]'
+    '[role="button"][aria-label="src/review-history.ts"]'
   )`;
-  const expandChanges = `Array.from((${taskDialog})?.querySelectorAll('section') ?? [])
+  const changesSection = `Array.from((${taskDialog})?.querySelectorAll('section') ?? [])
     .find((section) => Array.from(section.querySelectorAll('span'))
-      .some((span) => span.textContent?.trim() === 'Changes'))
-    ?.querySelector('button[aria-label="Expand section"]')`;
-  await client.waitFor(`(${fileRow}) || (${expandChanges})`, 'Changes section readiness');
-  if (!(await client.evaluate(`Boolean(${fileRow})`))) {
-    await client.domClick(expandChanges);
-    await client.waitFor(fileRow, 'task file change');
+      .some((span) => span.textContent?.trim() === 'Changes'))`;
+  const expandChanges = `(${changesSection})?.querySelector(
+    'button[aria-label="Expand section"]'
+  )`;
+  const collapseChanges = `(${changesSection})?.querySelector(
+    'button[aria-label="Collapse section"]'
+  )`;
+  await client.waitFor(
+    `(${fileRow}) || (${expandChanges}) || (${collapseChanges})`,
+    'Changes section readiness',
+    45_000
+  );
+  const changesDeadline = Date.now() + 45_000;
+  while (!(await client.evaluate(`Boolean(${fileRow})`)) && Date.now() < changesDeadline) {
+    if (await client.evaluate(`Boolean(${expandChanges})`)) {
+      await client.domClick(expandChanges);
+    }
+    try {
+      await client.waitFor(
+        `(${fileRow}) || (${expandChanges})`,
+        'task file change or remounted collapsed section',
+        Math.min(5_000, Math.max(250, changesDeadline - Date.now()))
+      );
+    } catch {
+      // A slow task refresh can keep the section open while its file summaries load.
+      // Retry until the total deadline, and reopen if a remount collapsed the section.
+    }
   }
+  assert.equal(
+    await client.evaluate(`Boolean(${fileRow})`),
+    true,
+    'Task Changes section did not expose the synthetic file before the deadline'
+  );
   await client.domClick(fileRow);
   await client.waitFor(
     `/\\b\\d+ (?:pending|accepted|rejected)\\b/.test(document.body?.innerText ?? '')`,
@@ -611,6 +637,125 @@ async function waitForDiskLines(filePath, expectedFirst, expectedSecond, timeout
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   return assertDiskLines(filePath, expectedFirst, expectedSecond);
+}
+
+async function readPersistedReviewScope(fixture) {
+  const scopeKey = 'task-changes-history-e2e';
+  const scopeDir = path.join(
+    fixture.claudeRoot,
+    'teams',
+    fixture.teamName,
+    'review-decisions',
+    'v2',
+    scopeKey
+  );
+  const entries = (await readdir(scopeDir)).filter((entry) => entry.endsWith('.json'));
+  assert.equal(entries.length, 1, 'Expected one exact persisted Changes scope');
+  const filePath = path.join(scopeDir, entries[0]);
+  const raw = await readFile(filePath, 'utf8');
+  const persisted = JSON.parse(raw);
+  const fileStats = await stat(filePath, { bigint: true });
+  assert.equal(persisted.scopeKey, scopeKey, 'Persisted Changes scope key mismatch');
+  assert.equal(typeof persisted.scopeToken, 'string', 'Persisted Changes scope token missing');
+  return {
+    scopeKey,
+    scopeToken: persisted.scopeToken,
+    revision: persisted.revision,
+    raw,
+    mtimeNs: fileStats.mtimeNs,
+  };
+}
+
+async function invokeReviewApi(method, args) {
+  return client.evaluate(
+    `window.electronAPI.review[${JSON.stringify(method)}](...${JSON.stringify(args)})`
+  );
+}
+
+async function moveDecisionCandidateToPriorSnapshot(fixture, scope, candidateId) {
+  const hash = (value) => createHash('sha256').update(value).digest('hex');
+  const currentScopeHash = hash(scope.scopeToken);
+  const priorScopeHash = hash(`${scope.scopeToken}:prior-e2e-snapshot`);
+  const conflictRoot = path.join(
+    fixture.claudeRoot,
+    'teams',
+    fixture.teamName,
+    'review-decisions',
+    'conflicts',
+    'v1',
+    scope.scopeKey
+  );
+  const currentPath = path.join(conflictRoot, currentScopeHash, `${candidateId}.json`);
+  const candidate = JSON.parse(await readFile(currentPath, 'utf8'));
+  candidate.scopeTokenHash = priorScopeHash;
+  const identity = {
+    scopeKey: candidate.scopeKey,
+    scopeTokenHash: candidate.scopeTokenHash,
+    expectedRevision: candidate.expectedRevision,
+    hunkDecisions: candidate.hunkDecisions,
+    fileDecisions: candidate.fileDecisions,
+    hunkContextHashesByFile: candidate.hunkContextHashesByFile,
+    reviewActionHistory: candidate.reviewActionHistory,
+    reviewRedoHistory: candidate.reviewRedoHistory,
+    textBlobs: candidate.textBlobs,
+    fileSummaryBlobs: candidate.fileSummaryBlobs,
+  };
+  candidate.id = hash(JSON.stringify(identity));
+  const priorDir = path.join(conflictRoot, priorScopeHash);
+  await mkdir(priorDir, { recursive: true });
+  await writeFile(path.join(priorDir, `${candidate.id}.json`), JSON.stringify(candidate), {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  await rm(currentPath);
+  return candidate.id;
+}
+
+async function waitForReviewDecisions(scope, predicate, label, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastSnapshot = null;
+  while (Date.now() < deadline) {
+    lastSnapshot = await invokeReviewApi('loadDecisions', [
+      'changes-e2e',
+      scope.scopeKey,
+      scope.scopeToken,
+    ]);
+    if (lastSnapshot && predicate(lastSnapshot)) return lastSnapshot;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`${label}: ${JSON.stringify(lastSnapshot)}`);
+}
+
+async function waitForStableReviewDecisions(scope, label, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  let previous = null;
+  while (Date.now() < deadline) {
+    const current = await invokeReviewApi('loadDecisions', [
+      'changes-e2e',
+      scope.scopeKey,
+      scope.scopeToken,
+    ]);
+    if (current && previous?.revision === current.revision) return current;
+    previous = current;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`${label}: ${JSON.stringify(previous)}`);
+}
+
+async function waitForPersistedRevisionAfter(fixture, previousRevision, label, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastRevision = null;
+  while (Date.now() < deadline) {
+    try {
+      const persisted = await readPersistedReviewScope(fixture);
+      lastRevision = persisted.revision;
+      if (persisted.revision > previousRevision) return persisted;
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`${label}: expected revision > ${previousRevision}, found ${lastRevision}`);
 }
 
 async function assertViewportFits() {
@@ -673,13 +818,15 @@ async function main() {
     const rect = button.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0;
   })`);
+  const historyDismissTarget = visibleElement(`Array.from(document.querySelectorAll('h2'))
+    .find((heading) => heading.textContent?.startsWith('Changes for task #'))`);
   const ensureHistoryOpen = async (label) => {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       if (await client.evaluate(`Boolean(${visibleHistoryPopover})`)) {
         return;
       }
       await client.waitFor(historyButton, `${label} trigger`);
-      await client.click(historyButton);
+      await client.domClick(historyButton);
       try {
         await client.waitFor(visibleHistoryPopover, label, 3_000);
         return;
@@ -690,16 +837,49 @@ async function main() {
     throw new Error(`Unable to open ${label}`);
   };
   const ensureHistoryClosed = async (label) => {
+    const waitForExitLayer = () =>
+      client.waitFor(`!(${historyPopoverLayer})`, `${label} exit layer`, 3_000);
     for (let attempt = 0; attempt < 3; attempt += 1) {
       if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) {
+        await waitForExitLayer();
         return;
+      }
+      const explicitCloseButton = `(${visibleHistoryPopover})?.querySelector(
+        'button[aria-label="Close review history"]'
+      )`;
+      if (await client.evaluate(`Boolean(${explicitCloseButton})`)) {
+        await client.domClick(explicitCloseButton);
+        try {
+          await client.waitFor(`!(${visibleHistoryPopover})`, label, 1_000);
+          await waitForExitLayer();
+          return;
+        } catch (error) {
+          if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) throw error;
+          // A concurrent history update can keep the semantic popover open; continue fallbacks.
+        }
       }
       await client.pressEscape();
       try {
         await client.waitFor(`!(${visibleHistoryPopover})`, label, 750);
+        await waitForExitLayer();
         return;
-      } catch {
+      } catch (error) {
+        if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) throw error;
         // An action can remount the Radix layer after Escape was delivered to the old content.
+      }
+      if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) {
+        return;
+      }
+      if (await client.evaluate(`Boolean(${historyDismissTarget})`)) {
+        await client.click(historyDismissTarget);
+        try {
+          await client.waitFor(`!(${visibleHistoryPopover})`, label, 1_000);
+          await waitForExitLayer();
+          return;
+        } catch (error) {
+          if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) throw error;
+          // Radix may replace the dismissable layer while an action is committing.
+        }
       }
       if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) {
         return;
@@ -707,8 +887,10 @@ async function main() {
       await client.domClick(historyButton);
       try {
         await client.waitFor(`!(${visibleHistoryPopover})`, label, 1_000);
+        await waitForExitLayer();
         return;
-      } catch {
+      } catch (error) {
+        if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) throw error;
         // The toolbar can remount its trigger after a history action; retry the live trigger.
       }
       const navigationButton = `(${visibleHistoryPopover})?.querySelector(
@@ -718,26 +900,54 @@ async function main() {
         await client.domClick(navigationButton);
         try {
           await client.waitFor(`!(${visibleHistoryPopover})`, label, 1_000);
+          await waitForExitLayer();
           return;
-        } catch {
+        } catch (error) {
+          if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) throw error;
           // Navigating from a live history row explicitly closes the controlled popover.
         }
       }
     }
     throw new Error(`Unable to close ${label}`);
   };
-  const activateFirstHunkAction = async (buttonExpression, label) => {
+  const performFirstHunkAction = async (buttonExpression, label) => {
     for (let attempt = 0; attempt < 8; attempt += 1) {
       await client.moveTo(reviewedLine(0, 'after-0'));
-      try {
-        await client.waitFor(buttonExpression, label, 750);
-        return;
-      } catch {
-        // CodeMirror can finish an async extension update after the pointer event and hide
-        // the floating toolbar. Re-hover, but never act unless its exact hunk counter is 1.
-      }
+      const dispatched = await client.evaluate(`(() => {
+        const element = (${buttonExpression});
+        if (!(element instanceof HTMLElement)) return false;
+        element.dispatchEvent(new MouseEvent('mousedown', {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+          view: window,
+        }));
+        return true;
+      })()`);
+      if (dispatched) return;
+      // CodeMirror can finish an async extension update after the pointer event and hide
+      // the floating toolbar. Re-hover, but select and act in one renderer evaluation so
+      // the live toolbar cannot disappear between separate CDP round trips.
     }
-    throw new Error(`Unable to activate ${label} for exact hunk 1`);
+    throw new Error(`Unable to perform ${label} for exact hunk 1`);
+  };
+  const performActionWithBlockedResponse = async (buttonExpression, label) => {
+    await client.waitFor(buttonExpression, `${label} trigger`);
+    const scheduled = await client.evaluate(`(() => {
+      const element = (${buttonExpression});
+      if (!(element instanceof HTMLElement)) return false;
+      setTimeout(() => {
+        element.click();
+        // Let the click handler's quiesce await continue and dispatch the real IPC call,
+        // then block the next renderer task before the main process can deliver its result.
+        setTimeout(() => {
+          const deadline = performance.now() + 15_000;
+          while (performance.now() < deadline) {}
+        }, 0);
+      }, 0);
+      return true;
+    })()`);
+    if (!scheduled) throw new Error(`Unable to schedule blocked-response ${label}`);
   };
   const restoreConfirm = `Array.from(document.querySelectorAll('[role="alertdialog"] button'))
     .find((button) => button.textContent?.trim() === 'Restore' && !button.disabled)`;
@@ -810,9 +1020,19 @@ async function main() {
   await ensureHistoryClosed('closed history after cleanup Undo');
 
   // dev:mcp adds Vite reload/focus timing that is unrelated to the hunk-hover controls.
-  // Keep this mode focused on the new durable Restore workflow; the production-preview
-  // path below continues to exercise the complete hunk and guarded-close matrix.
+  // Keep this mode focused on durable Restore and divergent-branch recovery; the
+  // production-preview path below continues to exercise guarded process-close recovery.
   if (devMcpMode) {
+    await client.waitFor(
+      `Boolean(document.querySelector('button[aria-label*="; saved"]'))`,
+      'settled history before final dev restart'
+    );
+    const persistenceBeforeHydration = await readPersistedReviewScope(fixture);
+    const decisionsBeforeHydration = await waitForStableReviewDecisions(
+      persistenceBeforeHydration,
+      'Durable history did not settle before hydration'
+    );
+
     await restartApp(port, fixture);
     await openReview();
     await client.waitFor(
@@ -822,16 +1042,296 @@ async function main() {
     );
     await assertDiskLines(fixture.changedFile, 'after-0', 'after-1');
     await assertViewportFits();
+
+    const persistenceScope = await readPersistedReviewScope(fixture);
+    await client.waitFor(
+      `Boolean(document.querySelector('button[aria-label*="; saved"]'))`,
+      'hydrated history persistence acknowledgement'
+    );
+    const decisionsAfterHydration = await waitForStableReviewDecisions(
+      persistenceScope,
+      'Hydrated history revision did not settle'
+    );
+    const persistenceAfterHydration = await readPersistedReviewScope(fixture);
+    assert.equal(
+      decisionsAfterHydration.revision,
+      decisionsBeforeHydration.revision,
+      'Passive history hydration must not advance the durable revision'
+    );
+    assert.equal(
+      persistenceAfterHydration.raw,
+      persistenceBeforeHydration.raw,
+      'Passive history hydration must not rewrite the durable payload'
+    );
+    assert.equal(
+      persistenceAfterHydration.mtimeNs,
+      persistenceBeforeHydration.mtimeNs,
+      'Passive history hydration must not touch the durable file'
+    );
+    const reviewCloseButton = `Array.from(document.querySelectorAll('h2'))
+      .find((heading) => heading.textContent?.startsWith('Changes for task #'))
+      ?.parentElement?.parentElement?.querySelector('button')`;
+    await client.domClick(reviewCloseButton);
+    await client.waitFor(
+      `!Array.from(document.querySelectorAll('h2'))
+        .some((heading) => heading.textContent?.startsWith('Changes for task #'))`,
+      'closed review before conflict-test reset'
+    );
+    const restoredStart = await waitForStableReviewDecisions(
+      persistenceScope,
+      'Closed durable history revision did not settle'
+    );
+    const cleared = await invokeReviewApi('clearDecisions', [
+      fixture.teamName,
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+      restoredStart.revision,
+    ]);
+    assert.equal(cleared.revision, restoredStart.revision + 1, 'Exact clear must advance revision');
+
+    await reloadRenderer();
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('12 pending') &&
+        !document.body?.innerText.includes('A conflicting recovery branch is safe on disk')`,
+      'empty conflict-test base revision'
+    );
+
+    await performFirstHunkAction(visibleAcceptHunkButton, 'conflict branch hunk Accept');
+    await client.waitFor(
+      `document.body?.innerText.includes('11 pending') &&
+        document.body?.innerText.includes('1 accepted')`,
+      'one-hunk recovery branch'
+    );
+    const recoveryBranch = await waitForReviewDecisions(
+      persistenceScope,
+      (snapshot) =>
+        snapshot.revision > cleared.revision &&
+        snapshot.reviewActionHistory.length === 1 &&
+        Object.values(snapshot.hunkDecisions).includes('accepted'),
+      'one-hunk branch was not persisted'
+    );
+
+    await client.domClick(enabledButtonWithText('Undo'));
+    await client.waitFor(`document.body?.innerText.includes('12 pending')`, 'conflict branch Undo');
+    const conflictBase = await waitForReviewDecisions(
+      persistenceScope,
+      (snapshot) =>
+        snapshot.revision > recoveryBranch.revision &&
+        snapshot.reviewActionHistory.length === 0 &&
+        snapshot.reviewRedoHistory.length === 1,
+      'conflict base Undo was not persisted'
+    );
+
+    await client.domClick(enabledButtonWithText('Accept All'));
+    await client.waitFor(`document.body?.innerText.includes('12 accepted')`, 'current branch');
+    const currentBranch = await waitForReviewDecisions(
+      persistenceScope,
+      (snapshot) =>
+        snapshot.revision > conflictBase.revision &&
+        snapshot.reviewActionHistory.length === 1 &&
+        snapshot.reviewRedoHistory.length === 0 &&
+        Object.values(snapshot.fileDecisions).includes('accepted'),
+      'current Accept All branch was not persisted'
+    );
+
+    const staleSave = await client.evaluate(`(async () => {
+      try {
+        const value = await window.electronAPI.review.saveDecisions(...${JSON.stringify([
+          fixture.teamName,
+          persistenceScope.scopeKey,
+          persistenceScope.scopeToken,
+          recoveryBranch.hunkDecisions,
+          recoveryBranch.fileDecisions,
+          recoveryBranch.hunkContextHashesByFile,
+          recoveryBranch.reviewActionHistory,
+          cleared.revision,
+          recoveryBranch.reviewRedoHistory,
+        ])});
+        return { ok: true, value };
+      } catch (error) {
+        return { ok: false, error: String(error) };
+      }
+    })()`);
+    assert.equal(staleSave.ok, false, 'Divergent stale save must not replace the current branch');
+    assert.match(
+      staleSave.error,
+      /revision|changed|stale/i,
+      'Expected an explicit stale CAS error'
+    );
+    const capturedCandidates = await invokeReviewApi('loadDecisionConflictCandidates', [
+      fixture.teamName,
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+    ]);
+    assert.equal(capturedCandidates.length, 1, 'Losing branch must be durable before reload');
+    assert.equal(
+      capturedCandidates[0].observedCurrentRevision,
+      currentBranch.revision,
+      'Recovery choice must bind to the exact visible revision'
+    );
+
+    await reloadRenderer();
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('A conflicting recovery branch is safe on disk') &&
+        document.body?.innerText.includes('12 accepted')`,
+      'durable recovery banner after reload'
+    );
+    await client.waitFor(
+      `(${buttonWithText('Undo')})?.disabled === true &&
+        (${buttonWithText('Reject')})?.disabled === true`,
+      'review actions locked by recovery choice'
+    );
+
+    await client.domClick(enabledButtonWithText('Switch to recovery'));
+    await client.waitFor(
+      `document.body?.innerText.includes('11 pending') &&
+        document.body?.innerText.includes('1 accepted') &&
+        Boolean(${enabledButtonWithText('Switch to recovery')})`,
+      'recovered one-hunk branch and current backup'
+    );
+    await client.domClick(enabledButtonWithText('Switch to recovery'));
+    await client.waitFor(
+      `document.body?.innerText.includes('12 accepted') &&
+        Boolean(${enabledButtonWithText('Discard recovery branch')})`,
+      'reversible switch back to current branch'
+    );
+    await discardActiveRecoveryBranch('current-branch backup');
+    await client.waitFor(
+      `!document.body?.innerText.includes('A conflicting recovery branch is safe on disk') &&
+        document.body?.innerText.includes('12 accepted') &&
+        Boolean(${enabledButtonWithText('Reject')})`,
+      'explicit current-branch resolution'
+    );
+
+    await reloadRenderer();
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('12 accepted') &&
+        !document.body?.innerText.includes('A conflicting recovery branch is safe on disk')`,
+      'resolved branch after final reload'
+    );
+    const remainingCandidates = await invokeReviewApi('loadDecisionConflictCandidates', [
+      fixture.teamName,
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+    ]);
+    assert.equal(remainingCandidates.length, 0, 'Resolved recovery copies must stay cleared');
+    await assertDiskLines(fixture.changedFile, 'after-0', 'after-1');
+    await assertViewportFits();
+
+    const priorSnapshotSave = await client.evaluate(`(async () => {
+      try {
+        const value = await window.electronAPI.review.saveDecisions(...${JSON.stringify([
+          fixture.teamName,
+          persistenceScope.scopeKey,
+          persistenceScope.scopeToken,
+          recoveryBranch.hunkDecisions,
+          recoveryBranch.fileDecisions,
+          recoveryBranch.hunkContextHashesByFile,
+          recoveryBranch.reviewActionHistory,
+          cleared.revision,
+          recoveryBranch.reviewRedoHistory,
+        ])});
+        return { ok: true, value };
+      } catch (error) {
+        return { ok: false, error: String(error) };
+      }
+    })()`);
+    assert.equal(
+      priorSnapshotSave.ok,
+      false,
+      'Prior-snapshot fixture must begin as a CAS conflict'
+    );
+    const [currentSnapshotCandidate] = await invokeReviewApi('loadDecisionConflictCandidates', [
+      fixture.teamName,
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+    ]);
+    assert.equal(
+      currentSnapshotCandidate.origin,
+      'current-snapshot',
+      'New CAS conflict must first belong to the active snapshot'
+    );
+    const priorCandidateId = await moveDecisionCandidateToPriorSnapshot(
+      fixture,
+      persistenceScope,
+      currentSnapshotCandidate.id
+    );
+    const [priorSnapshotCandidate] = await invokeReviewApi('loadDecisionConflictCandidates', [
+      fixture.teamName,
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+    ]);
+    assert.equal(priorSnapshotCandidate.id, priorCandidateId);
+    assert.equal(priorSnapshotCandidate.origin, 'prior-snapshot');
+    assert.equal(priorSnapshotCandidate.recoverability, 'different-review-snapshot');
+
+    await restartApp(port, fixture);
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('An earlier review snapshot has a saved branch') &&
+        (${buttonWithText('Switch to recovery')})?.disabled === true &&
+        Boolean(${enabledButtonWithText('Discard recovery branch')})`,
+      'prior-snapshot recovery inbox after restart'
+    );
+    await client.waitFor(
+      `(${buttonWithText('Undo')})?.disabled === true &&
+        (${buttonWithText('Reject')})?.disabled === true`,
+      'prior-snapshot recovery locks review actions'
+    );
+    await discardActiveRecoveryBranch('prior-snapshot');
+    await client.waitFor(
+      `!document.body?.innerText.includes('A conflicting recovery branch is safe on disk') &&
+        Boolean(${enabledButtonWithText('Reject')})`,
+      'prior-snapshot recovery dismissed explicitly'
+    );
+    await restartApp(port, fixture);
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('12 accepted') &&
+        !document.body?.innerText.includes('A conflicting recovery branch is safe on disk')`,
+      'prior-snapshot discard persisted after restart'
+    );
+
+    const beforeLostResponse = await readPersistedReviewScope(fixture);
+    await performActionWithBlockedResponse(
+      enabledButtonWithText('Reject'),
+      'lost-response file Reject'
+    );
+    await waitForPersistedRevisionAfter(
+      fixture,
+      beforeLostResponse.revision,
+      'Main process did not durably commit the blocked-response Reject'
+    );
+    await killAppImmediately();
+    await startApp(port, fixture);
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('12 rejected') &&
+        Boolean(${enabledButtonWithText('Undo')})`,
+      'lost-response file Reject recovered after SIGKILL'
+    );
+    await waitForDiskLines(fixture.changedFile, 'before-0', 'before-1');
+    await client.domClick(enabledButtonWithText('Undo'));
+    await client.waitFor(
+      `document.body?.innerText.includes('12 accepted')`,
+      'lost-response file Reject Undo'
+    );
+    await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
+
     process.stdout.write(
       `Changes desktop E2E passed (dev:mcp${singleWindowMode ? ', single-window' : ''}): ` +
         'Accept All -> Reject file -> Restore back -> hydrate -> Restore forward -> ' +
-        'Undo to start -> hydrate -> exact disk/history\n'
+        'Undo to start -> hydrate -> stale branch -> reload -> reversible recovery -> ' +
+        'Discard backup -> reload -> prior snapshot -> discard -> reload -> ' +
+        'blocked response -> SIGKILL -> exact Undo\n'
     );
     return;
   }
 
-  await activateFirstHunkAction(visibleRejectHunkButton, 'hunk Reject');
-  await client.domMouseDown(visibleRejectHunkButton);
+  await performFirstHunkAction(visibleRejectHunkButton, 'hunk Reject');
   await client.waitFor(`document.body?.innerText.includes('11 pending')`, 'one rejected hunk');
   await waitForDiskLines(fixture.changedFile, 'before-0', 'after-1');
 
@@ -891,7 +1391,11 @@ async function main() {
   await assertDiskLines(fixture.changedFile, 'external-0', 'after-1');
   await client.screenshot(conflictScreenshot);
 
-  await client.domClick(buttonWithText('Reload from disk'));
+  await client.waitFor(
+    enabledButtonWithText('Reload from disk'),
+    'enabled Reload after durable history settles'
+  );
+  await client.domClick(enabledButtonWithText('Reload from disk'));
   await client.waitFor(
     `!document.body?.innerText.includes('Changed on disk') &&
       !(${buttonWithText('Redo')}) && !(${historyButton})`,
@@ -915,8 +1419,7 @@ async function main() {
   );
   await client.screenshot(finalScreenshot);
 
-  await activateFirstHunkAction(visibleAcceptHunkButton, 'hunk Accept');
-  await client.domMouseDown(visibleAcceptHunkButton);
+  await performFirstHunkAction(visibleAcceptHunkButton, 'hunk Accept');
   await client.waitFor(`document.body?.innerText.includes('11 pending')`, 'one accepted hunk');
   await client.waitFor(
     `document.querySelector('button[aria-label^="Review history:"][aria-label$="; saved"]')`,
@@ -939,11 +1442,14 @@ async function main() {
   await client.click(enabledButtonWithText('Undo'));
   await client.waitFor(`document.body?.innerText.includes('12 pending')`, 'accepted Undo result');
   await client.waitFor(enabledButtonWithText('Redo'), 'accepted Redo after forced restart Undo');
+  await client.waitFor(
+    `document.querySelector('button[aria-label^="Review history:"][aria-label$="; saved"]')`,
+    'saved accepted Undo before closing history'
+  );
   await assertDiskLines(fixture.changedFile, 'external-0', 'after-1');
   await ensureHistoryClosed('closed accepted history before the guarded-close action');
 
-  await activateFirstHunkAction(visibleAcceptHunkButton, 'hunk Accept');
-  await client.domMouseDown(visibleAcceptHunkButton);
+  await performFirstHunkAction(visibleAcceptHunkButton, 'hunk Accept');
   await client.waitFor(`document.body?.innerText.includes('11 pending')`, 'accepted before close');
   await client.evaluate(`void window.electronAPI?.windowControls?.close()`);
   await waitForAppExit();

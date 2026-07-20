@@ -215,11 +215,28 @@ export abstract class TeamProvisioningServiceRuntimeStateFacade extends TeamProv
     this.secondaryRuntimeRuns.hasSecondaryRuntimeRuns(teamName);
   private readonly getSecondaryRuntimeRuns = (teamName: string): SecondaryRuntimeRunEntry[] =>
     this.secondaryRuntimeRuns.getSecondaryRuntimeRuns(teamName);
+  private readonly getSecondaryRuntimeRun = (
+    teamName: string,
+    laneId: string
+  ): SecondaryRuntimeRunEntry | undefined =>
+    this.secondaryRuntimeRunByTeam.get(teamName)?.get(laneId);
   private readonly setSecondaryRuntimeRun = (
     input: SecondaryRuntimeRunEntry & { teamName: string }
   ): void => this.secondaryRuntimeRuns.setSecondaryRuntimeRun(input);
   private readonly deleteSecondaryRuntimeRun = (teamName: string, laneId: string): void =>
     this.secondaryRuntimeRuns.deleteSecondaryRuntimeRun(teamName, laneId);
+  private readonly deleteSecondaryRuntimeRunIfOwned = (
+    teamName: string,
+    laneId: string,
+    runId: string
+  ): boolean => {
+    const current = this.getSecondaryRuntimeRun(teamName, laneId);
+    if (current?.providerId !== 'opencode' || current.runId !== runId) {
+      return false;
+    }
+    this.secondaryRuntimeRuns.deleteSecondaryRuntimeRun(teamName, laneId);
+    return true;
+  };
   private readonly clearSecondaryRuntimeRuns = (teamName: string): void =>
     this.secondaryRuntimeRuns.clearSecondaryRuntimeRuns(teamName);
   private readonly stoppingSecondaryRuntimeTeams = new Set<string>();

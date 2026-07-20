@@ -1,4 +1,5 @@
 import { getTeamsBasePath as getDefaultTeamsBasePath } from '@main/utils/pathDecoder';
+import { createLogger } from '@shared/utils/logger';
 
 import {
   migrateLegacyOpenCodeRuntimeState as defaultMigrateLegacyOpenCodeRuntimeState,
@@ -7,6 +8,8 @@ import {
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 
 import { type LaunchOpenCodeAggregatePrimaryLanePorts } from './TeamProvisioningOpenCodeAggregateLaunchPersistence';
+
+const logger = createLogger('Service:TeamProvisioning');
 
 export interface TeamProvisioningOpenCodeAggregatePrimaryLaneServiceHost {
   prepareFacade: {
@@ -27,6 +30,7 @@ export interface TeamProvisioningOpenCodeAggregatePrimaryLanePortsFactoryDeps {
   migrateLegacyOpenCodeRuntimeState?: LaunchOpenCodeAggregatePrimaryLanePorts['migrateLegacyOpenCodeRuntimeState'];
   upsertOpenCodeRuntimeLaneIndexEntry?: LaunchOpenCodeAggregatePrimaryLanePorts['upsertOpenCodeRuntimeLaneIndexEntry'];
   setOpenCodeRuntimeActiveRunManifest?: LaunchOpenCodeAggregatePrimaryLanePorts['setOpenCodeRuntimeActiveRunManifest'];
+  logWarning?: LaunchOpenCodeAggregatePrimaryLanePorts['logWarning'];
 }
 
 export function createTeamProvisioningOpenCodeAggregatePrimaryLanePortsFromService(
@@ -50,5 +54,6 @@ export function createTeamProvisioningOpenCodeAggregatePrimaryLanePortsFromServi
     setRuntimeAdapterRunByTeam: (teamName, runtimeRun) => {
       service.runtimeAdapterRunByTeam.set(teamName, runtimeRun);
     },
+    logWarning: deps.logWarning ?? ((message) => logger.warn(message)),
   };
 }

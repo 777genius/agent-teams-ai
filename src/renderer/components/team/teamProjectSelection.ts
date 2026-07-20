@@ -25,6 +25,16 @@ export interface ResolveCreateTeamDefaultProjectPathInput {
   priorityProjectPath: string | null | undefined;
 }
 
+export function resolveTeamsProjectNavigationPath(
+  intent: { projectId: string; projectPath: string } | null | undefined,
+  selectedProjectId: string | null
+): string | null {
+  if (!intent || intent.projectId !== selectedProjectId) {
+    return null;
+  }
+  return intent.projectPath.trim() || null;
+}
+
 export type TeamProjectSelectionTarget =
   | {
       kind: 'grouped';

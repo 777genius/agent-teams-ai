@@ -13,6 +13,7 @@ const applyAllConfiguredConnectionEnvMock = vi.fn();
 const getConfiguredConnectionIssuesMock = vi.fn();
 const getConfiguredConnectionLaunchArgsMock = vi.fn();
 const resolveVerifiedOpenCodeRuntimeBinaryPathMock = vi.fn();
+const isSupportedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const resolveVerifiedAppManagedCodexRuntimeBinaryPathMock = vi.fn();
 const resolveAgentTeamsMcpLaunchSpecMock = vi.fn();
 
@@ -68,6 +69,8 @@ vi.mock('../../../../src/main/services/runtime/ProviderConnectionService', () =>
 }));
 
 vi.mock('../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerService', () => ({
+  isSupportedOpenCodeRuntimeBinaryPath: (...args: unknown[]) =>
+    isSupportedOpenCodeRuntimeBinaryPathMock(...args),
   resolveVerifiedOpenCodeRuntimeBinaryPath: () => resolveVerifiedOpenCodeRuntimeBinaryPathMock(),
 }));
 
@@ -106,6 +109,7 @@ describe('buildProviderAwareCliEnv', () => {
     getConfiguredConnectionLaunchArgsMock.mockResolvedValue([]);
     getConfiguredConnectionIssuesMock.mockResolvedValue({});
     resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(null);
+    isSupportedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(true);
     resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(null);
     resolveAgentTeamsMcpLaunchSpecMock.mockResolvedValue({
       command: 'node',
@@ -250,14 +254,11 @@ describe('buildProviderAwareCliEnv', () => {
       allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
     });
 
-    expect(augmentAllConfiguredConnectionEnvMock).toHaveBeenCalledWith(
-      expect.any(Object),
-      {
-        allowStoredApiKeyDecryption: false,
-        allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
-        allowClaudeUserSettingsAuthEnv: false,
-      }
-    );
+    expect(augmentAllConfiguredConnectionEnvMock).toHaveBeenCalledWith(expect.any(Object), {
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+      allowClaudeUserSettingsAuthEnv: false,
+    });
     expect(applyAllConfiguredConnectionEnvMock).not.toHaveBeenCalled();
   });
 
@@ -601,11 +602,9 @@ describe('buildProviderAwareCliEnv', () => {
     });
     expect(connectionIssuesEnv?.OPENAI_API_KEY).toBeUndefined();
     expect(connectionIssuesEnv?.CODEX_API_KEY).toBeUndefined();
-    expect(getConfiguredConnectionIssuesMock).toHaveBeenCalledWith(
-      connectionIssuesEnv,
-      ['codex'],
-      { codex: undefined }
-    );
+    expect(getConfiguredConnectionIssuesMock).toHaveBeenCalledWith(connectionIssuesEnv, ['codex'], {
+      codex: undefined,
+    });
     expect(result.env.CODEX_CLI_PATH).toBe('/Users/tester/.local/bin/codex');
     expect(result.env.CODEX_HOME).toBe('/Users/tester/.codex-custom');
     expect(result.env.CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD).toBe('chatgpt');
@@ -651,9 +650,9 @@ describe('buildProviderAwareCliEnv', () => {
     expect(result.env.OPENCODE_BIN_PATH).toBe(appManagedBinaryPath);
     expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(appManagedBinaryPath));
     expect(
-      result.env.PATH
-        ?.split(path.delimiter)
-        .filter((entry) => entry === path.dirname(appManagedBinaryPath))
+      result.env.PATH?.split(path.delimiter).filter(
+        (entry) => entry === path.dirname(appManagedBinaryPath)
+      )
     ).toHaveLength(1);
   });
 
@@ -672,6 +671,27 @@ describe('buildProviderAwareCliEnv', () => {
     expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(explicitBinaryPath);
     expect(result.env.OPENCODE_BIN_PATH).toBe(explicitBinaryPath);
     expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(explicitBinaryPath));
+  });
+
+  it('ignores an unsupported explicit OpenCode override and uses the verified runtime', async () => {
+    const explicitBinaryPath = path.join(process.cwd(), 'old opencode', 'opencode');
+    const verifiedBinaryPath = path.join(process.cwd(), 'managed opencode', 'opencode');
+    isSupportedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(false);
+    resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(verifiedBinaryPath);
+
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    const result = await buildProviderAwareCliEnv({
+      providerId: 'opencode',
+      env: {
+        CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: explicitBinaryPath,
+      },
+    });
+
+    expect(isSupportedOpenCodeRuntimeBinaryPathMock).toHaveBeenCalledWith(explicitBinaryPath);
+    expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(verifiedBinaryPath);
+    expect(result.env.OPENCODE_BIN_PATH).toBe(verifiedBinaryPath);
+    expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(verifiedBinaryPath));
   });
 
   it('does not inject the app-managed OpenCode binary into non-OpenCode provider launches', async () => {

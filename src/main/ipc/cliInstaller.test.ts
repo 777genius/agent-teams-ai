@@ -260,7 +260,6 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
       .mockImplementationOnce(() => secondDeferred.promise);
     const service = createInstallerService({ getProviderStatus });
     const { invoke } = setupHandlers(service);
-
     const firstRequest = invoke<IpcResult<CliProviderStatus | null>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
       'opencode',

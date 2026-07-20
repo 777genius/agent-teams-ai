@@ -32,10 +32,13 @@ import type {
   RestoreReviewHistoryResult,
   RetryReviewMutationRecoveryRequest,
   RetryReviewMutationRecoveryResult,
+  ReviewConflictResolution,
+  ReviewDecisionConflictCandidateSummary,
   ReviewFileScope,
   ReviewRedoAction,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
+  SaveReviewDecisionsResult,
   SnippetDiff,
   TaskChangeRequestOptions,
   TaskChangeSetV2,
@@ -115,6 +118,7 @@ import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
 import type { AppCloseCoordinationElectronApi } from '@features/app-close-coordination/contracts';
 import type {
+  ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,
   ReviewDraftHistorySnapshot,
 } from '@features/change-review-history/contracts';
@@ -844,12 +848,25 @@ export interface ReviewAPI {
     reviewActionHistory?: ReviewUndoAction[],
     expectedRevision?: number,
     reviewRedoHistory?: ReviewRedoAction[]
-  ) => Promise<{ revision: number }>;
+  ) => Promise<SaveReviewDecisionsResult>;
   clearDecisions: (
     teamName: string,
     scopeKey: string,
     scopeToken?: string,
     expectedRevision?: number
+  ) => Promise<{ revision: number }>;
+  loadDecisionConflictCandidates: (
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ) => Promise<ReviewDecisionConflictCandidateSummary[]>;
+  resolveDecisionConflictCandidate: (
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    candidateId: string,
+    resolution: ReviewConflictResolution,
+    expectedCurrentRevision: number
   ) => Promise<{ revision: number }>;
   loadDraftHistory: (
     teamName: string,
@@ -872,6 +889,29 @@ export interface ReviewAPI {
     expectedRevision?: number,
     expectedGeneration?: string | null
   ) => Promise<void>;
+  loadDraftHistoryConflictCandidates: (
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ) => Promise<ReviewDraftHistoryConflictCandidateSummary[]>;
+  resolveDraftHistoryConflictCandidate: (
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    candidateId: string,
+    resolution: ReviewConflictResolution,
+    expectedCurrentRevision: number,
+    expectedCurrentGeneration: string | null
+  ) => Promise<ReviewDraftHistoryEntry | null>;
+  replaceDraftHistoryConflictCandidate: (
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    expectedEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
+    replacementEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
+    expectedCurrentRevision: number,
+    expectedCurrentGeneration: string | null
+  ) => Promise<ReviewDraftHistoryConflictCandidateSummary>;
   onCmdN?: (callback: () => void) => (() => void) | undefined;
   // Phase 4
   getGitFileLog: (

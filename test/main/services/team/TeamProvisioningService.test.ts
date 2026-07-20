@@ -224,6 +224,7 @@ import {
   type OpenCodeRuntimeCheckinRun,
   updateOpenCodeRuntimeMemberLiveness,
 } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeCheckin';
+import { materializeOpenCodeRuntimeAdapterDefaults } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDefaults';
 import {
   createOpenCodeRuntimeDeliveryService,
   createTeamProvisioningOpenCodeRuntimeDeliveryBoundary,
@@ -236,6 +237,7 @@ import { createOpenCodeRuntimeRecoveryIdentityHelpers } from '@main/services/tea
 import { formatToolApprovalBody } from '@main/services/team/provisioning/TeamProvisioningToolApprovalFlow';
 import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import {
+  type TeamLaunchRuntimeAdapter,
   TeamRuntimeAdapterRegistry,
   type TeamRuntimeLaunchInput,
   type TeamRuntimeStopInput,
@@ -285,7 +287,12 @@ import {
 
 import type { TeamProvisioningConfigFacade } from '@main/services/team/provisioning/TeamProvisioningConfigFacade';
 import type { OpenCodeTeamRuntimeMessageResult } from '@main/services/team/runtime';
-import type { TeamConfig, TeamMember, TeamProvisioningMemberInput } from '@shared/types/team';
+import type {
+  TeamConfig,
+  TeamCreateRequest,
+  TeamMember,
+  TeamProvisioningMemberInput,
+} from '@shared/types/team';
 
 const EXPECTED_RUNTIME_PIDUSAGE_OPTIONS =
   process.platform === 'win32' ? { maxage: 10_000 } : { maxage: 0 };
@@ -293,6 +300,35 @@ const ORIGINAL_RUNTIME_PIDUSAGE_ENABLED = process.env.CLAUDE_TEAM_RUNTIME_PIDUSA
 
 type RuntimeTelemetryProcessTableRow = RuntimeProcessTableRow & {
   runtimeTelemetrySource?: 'native' | 'wsl' | 'windows-host';
+};
+
+type OpenCodeIsolationHarness = {
+  runs: Map<string, ReturnType<typeof createMemberSpawnRun>>;
+  aliveRunByTeam: Map<string, string>;
+  runtimeAdapterRunByTeam: Map<string, unknown>;
+  secondaryRuntimeRunByTeam: Map<
+    string,
+    Map<string, { runId: string; laneId: string; memberName: string }>
+  >;
+  setSecondaryRuntimeRun(input: {
+    teamName: string;
+    runId: string;
+    providerId: 'opencode';
+    laneId: string;
+    memberName: string;
+  }): void;
+  toolApprovalFacade: {
+    answerRuntimeToolApproval(
+      entry: Record<string, unknown>,
+      allow: boolean,
+      message?: string
+    ): Promise<void>;
+  };
+  openCodeRuntimeRecoveryFacade: {
+    openCodeRuntimeRecoveryIdentity: {
+      resolveCurrentOpenCodeRuntimeRunId(teamName: string, laneId: string): Promise<string | null>;
+    };
+  };
 };
 
 type LeadWorkSyncTestTaskRef = { taskId: string; displayId?: string; teamName?: string };
@@ -6440,6 +6476,248 @@ describe('TeamProvisioningService', () => {
       );
     });
 
+    it('keeps an existing OpenCode lane running when local model restart preflight blocks', async () => {
+      const svc = createServiceWithConfig({
+        name: 'Mixed Local Team',
+        projectPath: '/tmp/mixed-local-team',
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      });
+      const preflightLocalModels = vi.fn(async () => ({
+        ok: false,
+        warnings: [],
+        diagnostics: ['Custom local model is offline. Start the server, then retry.'],
+      }));
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            preflightLocalModels,
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: vi.fn(),
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      const run = createMemberSpawnRun({
+        teamName: 'mixed-local-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map(),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+      run.request = {
+        providerId: 'codex',
+        cwd: '/tmp/mixed-local-team',
+        members: [],
+      };
+      const existingLane = {
+        laneId: 'secondary:opencode:alice',
+        providerId: 'opencode' as const,
+        member: {
+          name: 'alice',
+          providerId: 'opencode' as const,
+          model: 'local-lab/team-model',
+          cwd: '/tmp/mixed-local-team',
+        },
+        runId: 'opencode-run-1',
+        state: 'finished' as const,
+        result: null,
+        warnings: [],
+        diagnostics: [],
+      };
+      run.mixedSecondaryLanes = [existingLane];
+      (svc as unknown as { membersMetaStore: unknown }).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'opencode' as const,
+            model: 'local-lab/team-model',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      memberLifecycleHostHarness(svc).resolveOpenCodeMemberWorkspacesForRuntime = vi.fn(
+        async () => [
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'opencode' as const,
+            model: 'local-lab/team-model',
+            cwd: '/tmp/mixed-local-team',
+          },
+        ]
+      );
+      const laneLifecycleHarness = svc as unknown as {
+        stopSingleMixedSecondaryRuntimeLane(...args: unknown[]): Promise<void>;
+        launchSingleMixedSecondaryLane(...args: unknown[]): Promise<void>;
+      };
+      const stopLane = vi.spyOn(laneLifecycleHarness, 'stopSingleMixedSecondaryRuntimeLane');
+      const launchLane = vi.spyOn(laneLifecycleHarness, 'launchSingleMixedSecondaryLane');
+      const isolationHarness = svc as unknown as OpenCodeIsolationHarness;
+      isolationHarness.aliveRunByTeam.set('mixed-local-team', run.runId);
+      isolationHarness.runs.set(run.runId, run);
+
+      await expect(svc.restartMember('mixed-local-team', 'alice')).rejects.toThrow(
+        'Custom local model is offline'
+      );
+
+      expect(preflightLocalModels).toHaveBeenCalledWith({
+        targets: [
+          {
+            projectPath: '/tmp/mixed-local-team',
+            modelRoute: 'local-lab/team-model',
+          },
+        ],
+      });
+      expect(stopLane).not.toHaveBeenCalled();
+      expect(launchLane).not.toHaveBeenCalled();
+      expect(run.mixedSecondaryLanes).toEqual([existingLane]);
+    });
+
+    it('keeps the aggregate primary lane running when a sibling local model restart preflight blocks', async () => {
+      const teamName = 'pure-opencode-local-sibling-preflight';
+      const projectPath = '/tmp/pure-opencode-local-sibling-preflight';
+      const svc = createServiceWithConfig({
+        name: 'Pure OpenCode Local Sibling Team',
+        projectPath,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead', providerId: 'opencode' },
+          {
+            name: 'alice',
+            role: 'Reviewer',
+            providerId: 'opencode',
+            model: 'openai/gpt-5.4-mini',
+            agentType: 'general-purpose',
+          },
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'local-lab/team-model',
+            agentType: 'general-purpose',
+          },
+        ],
+      });
+      const preflightLocalModels = vi.fn(async () => ({
+        ok: false,
+        warnings: [],
+        diagnostics: ['Sibling local model is offline. Start the server, then retry.'],
+      }));
+      const adapterStop = vi.fn();
+      const adapterLaunch = vi.fn();
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            preflightLocalModels,
+            launch: adapterLaunch,
+            reconcile: vi.fn(),
+            stop: adapterStop,
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+
+      const run = createMemberSpawnRun({
+        teamName,
+        expectedMembers: ['alice', 'bob'],
+        memberSpawnStatuses: new Map(),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+      run.request = {
+        providerId: 'opencode',
+        cwd: projectPath,
+        model: 'openai/gpt-5.4-mini',
+        members: [],
+      };
+      run.effectiveMembers = [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'opencode',
+          model: 'openai/gpt-5.4-mini',
+          cwd: projectPath,
+        },
+        {
+          name: 'bob',
+          role: 'Developer',
+          providerId: 'opencode',
+          model: 'local-lab/team-model',
+          cwd: projectPath,
+        },
+      ];
+      run.allEffectiveMembers = [...run.effectiveMembers];
+
+      const isolationHarness = svc as unknown as OpenCodeIsolationHarness;
+      isolationHarness.runtimeAdapterRunByTeam.set(teamName, {
+        runId: run.runId,
+        providerId: 'opencode',
+        cwd: projectPath,
+        members: {},
+      });
+      (svc as unknown as { membersMetaStore: unknown }).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'alice',
+            role: 'Reviewer',
+            providerId: 'opencode',
+            model: 'openai/gpt-5.4-mini',
+            agentType: 'general-purpose',
+          },
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'local-lab/team-model',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      memberLifecycleHostHarness(svc).resolveOpenCodeMemberWorkspacesForRuntime = vi.fn(
+        async (input: { members: TeamProvisioningMemberInput[] }) =>
+          input.members.map((member) => ({
+            ...member,
+            cwd: projectPath,
+          }))
+      );
+      isolationHarness.aliveRunByTeam.set(teamName, run.runId);
+      isolationHarness.runs.set(run.runId, run);
+
+      await expect(svc.restartMember(teamName, 'alice')).rejects.toThrow(
+        'Sibling local model is offline'
+      );
+
+      expect(preflightLocalModels).toHaveBeenCalledWith({
+        targets: [
+          {
+            projectPath,
+            modelRoute: 'openai/gpt-5.4-mini',
+          },
+          {
+            projectPath,
+            modelRoute: 'openai/gpt-5.4-mini',
+          },
+          {
+            projectPath,
+            modelRoute: 'local-lab/team-model',
+          },
+        ],
+      });
+      expect(adapterStop).not.toHaveBeenCalled();
+      expect(adapterLaunch).not.toHaveBeenCalled();
+      expect(run.effectiveMembers.map((member: { name: string }) => member.name)).toEqual([
+        'alice',
+        'bob',
+      ]);
+      expect(run.mixedSecondaryLanes).toEqual([]);
+      expect(svc.isTeamAlive(teamName)).toBe(true);
+    });
+
     it('restarts a pure OpenCode member through the app-owned runtime adapter without a tracked lead run', async () => {
       const svc = createServiceWithConfig({
         name: 'Pure OpenCode Team',
@@ -6462,6 +6740,11 @@ describe('TeamProvisioningService', () => {
           },
         ],
       });
+      const adapterPreflight = vi.fn(async () => ({
+        ok: true,
+        warnings: [],
+        diagnostics: [],
+      }));
       const adapterLaunch = vi.fn(async (input: TeamRuntimeLaunchInput) => ({
         runId: input.runId,
         teamName: input.teamName,
@@ -6491,6 +6774,7 @@ describe('TeamProvisioningService', () => {
           {
             providerId: 'opencode',
             prepare: vi.fn(),
+            preflightLocalModels: adapterPreflight,
             launch: adapterLaunch,
             reconcile: vi.fn(),
             stop: vi.fn(),
@@ -6552,6 +6836,12 @@ describe('TeamProvisioningService', () => {
 
       await svc.restartMember('pure-opencode-team', 'alice');
 
+      expect(adapterPreflight).toHaveBeenCalledWith({
+        targets: [
+          { projectPath: '/repo', modelRoute: 'openai/gpt-5.4-mini' },
+          { projectPath: '/repo', modelRoute: 'openai/gpt-5.4-mini' },
+        ],
+      });
       expect(runtimeRelaunch).toHaveBeenCalledTimes(1);
       const relaunchInput = runtimeRelaunch.mock.calls[0]?.[0] as any;
       expect(relaunchInput.request).toMatchObject({
@@ -7924,15 +8214,23 @@ describe('TeamProvisioningService', () => {
         getConfig: vi.fn(async () => ({
           projectPath: '/repo',
           members: [
-            { name: 'team-lead', providerId: 'codex', model: 'gpt-5.4' },
-            { name: 'bob', providerId: 'opencode', model: 'minimax-m2.5-free' },
+            {
+              name: 'team-lead',
+              providerId: 'opencode',
+              model: 'minimax-coding-plan/MiniMax-M3',
+            },
+            { name: 'bob', providerId: 'opencode', model: 'zai-coding-plan/glm-5.2' },
           ],
         })),
       };
       (svc as any).teamMetaStore = {
         getMeta: vi.fn(async () => ({
-          launchIdentity: { providerId: 'codex' },
-          providerId: 'codex',
+          launchIdentity: {
+            providerId: 'opencode',
+            resolvedLaunchModel: 'minimax-coding-plan/MiniMax-M3',
+          },
+          providerId: 'opencode',
+          model: 'minimax-coding-plan/MiniMax-M3',
         })),
       };
       (svc as any).membersMetaStore = {
@@ -7940,7 +8238,7 @@ describe('TeamProvisioningService', () => {
           {
             name: 'bob',
             providerId: 'opencode',
-            model: 'opencode/minimax-m2.5-free',
+            model: 'zai-coding-plan/glm-5.2',
           },
         ]),
       };
@@ -17860,7 +18158,7 @@ describe('TeamProvisioningService', () => {
     it('starts a pure Codex team through the app createTeam path without a real CLI process', async () => {
       allowConsoleLogs();
       vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
-      vi.mocked(spawnCli).mockReturnValue(createRunningChild() as any);
+      vi.mocked(spawnCli).mockReturnValue(createRunningChild() as never);
 
       const { svc, membersMetaStore } = createSafeLaunchService();
       const progress: string[] = [];
@@ -18355,6 +18653,978 @@ describe('TeamProvisioningService', () => {
       });
       expect(publicStatuses.teamLaunchState).toBe('clean_success');
       expect(progress).toEqual(expect.arrayContaining(['validating', 'spawning', 'ready']));
+    });
+
+    it('materializes the first member model as the pure OpenCode lead model when routes differ', async () => {
+      const { svc } = createSafeLaunchService();
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: vi.fn(),
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      const request: TeamCreateRequest = {
+        teamName: 'safe-opencode-inherited-lead-model',
+        cwd: tempClaudeRoot,
+        providerId: 'opencode' as const,
+        providerBackendId: 'adapter' as const,
+        members: [
+          {
+            name: 'alice',
+            providerId: 'opencode' as const,
+            model: 'minimax-coding-plan/MiniMax-M3',
+          },
+          {
+            name: 'bob',
+            providerId: 'opencode' as const,
+            model: 'zai-coding-plan/glm-5.2',
+          },
+        ],
+      };
+      const materialized = await materializeOpenCodeRuntimeAdapterDefaults(
+        {
+          request,
+          members: request.members,
+        },
+        {
+          resolveClaudePath: vi.fn(async () => '/mock/claude'),
+          buildProvisioningEnv: vi.fn(async () => ({ env: {}, providerArgs: [] })),
+          resolveProviderDefaultModel: vi.fn(async () => null),
+        }
+      );
+      if (materialized.request.providerId !== 'opencode') {
+        throw new Error('Expected OpenCode materialization');
+      }
+      const lanePlan = (
+        svc as unknown as {
+          planRuntimeLanesOrThrow(
+            providerId: 'opencode',
+            members: typeof request.members,
+            cwd: string
+          ): unknown;
+        }
+      ).planRuntimeLanesOrThrow(
+        materialized.request.providerId,
+        materialized.members as typeof request.members,
+        materialized.request.cwd
+      );
+
+      expect(materialized.request.model).toBe('minimax-coding-plan/MiniMax-M3');
+      expect(materialized.members).toEqual(request.members);
+      expect(lanePlan).toMatchObject({
+        mode: 'pure_opencode_member_lanes',
+        primaryMembers: [
+          expect.objectContaining({
+            name: 'alice',
+            model: 'minimax-coding-plan/MiniMax-M3',
+          }),
+        ],
+        sideLanes: [
+          expect.objectContaining({
+            laneId: 'secondary:opencode:bob',
+            member: expect.objectContaining({
+              name: 'bob',
+              model: 'zai-coding-plan/glm-5.2',
+            }),
+          }),
+        ],
+      });
+    });
+
+    it('does not repeat a shared OpenCode runtime timeout for every queued member lane', async () => {
+      allowConsoleLogs();
+      const teamName = 'safe-opencode-shared-runtime-timeout';
+      const rootCause = 'Failed to query OpenCode agents: OpenCode command timed out after 10000ms';
+      const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
+        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const memberName =
+          expectedMembers.find((member) => member.name !== 'team-lead')?.name ??
+          expectedMembers[0]!.name;
+        return {
+          runId: String(input.runId),
+          teamName,
+          launchPhase: 'finished' as const,
+          teamLaunchState: 'partial_failure' as const,
+          members: {
+            [memberName]: {
+              memberName,
+              providerId: 'opencode' as const,
+              launchState: 'failed_to_start' as const,
+              agentToolAccepted: false,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: true,
+              hardFailureReason: rootCause,
+              diagnostics: [
+                rootCause,
+                'Failed to query OpenCode models: OpenCode command timed out after 10000ms',
+                'OpenCode raw model id "zai-coding-plan/glm-5.1" was not found in the live provider catalog',
+                'OpenCode request timed out after 15000ms for /config',
+              ],
+            },
+          },
+          warnings: [],
+          diagnostics: [rootCause],
+        };
+      });
+      const adapterStop = vi.fn(async () => undefined);
+      const { svc } = createSafeLaunchService();
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: adapterLaunch,
+            reconcile: vi.fn(),
+            stop: adapterStop,
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      const progress: Array<{ state: string; error?: string }> = [];
+
+      await svc.createTeam(
+        {
+          teamName,
+          cwd: tempClaudeRoot,
+          providerId: 'opencode',
+          providerBackendId: 'adapter',
+          model: 'opencode/big-pickle',
+          members: [
+            {
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+              model: 'zai-coding-plan/glm-5.1',
+            },
+            {
+              name: 'tom',
+              role: 'Developer',
+              providerId: 'opencode',
+              model: 'xai/grok-4.5',
+            },
+          ],
+        },
+        (event) => progress.push(event)
+      );
+
+      expect(adapterLaunch).toHaveBeenCalledTimes(1);
+      expect(adapterStop).toHaveBeenCalledTimes(1);
+      expect(progress.at(-1)).toMatchObject({ state: 'failed', error: rootCause });
+      const statuses = await svc.getMemberSpawnStatuses(teamName);
+      expect(statuses.statuses.alice).toMatchObject({
+        status: 'error',
+        launchState: 'failed_to_start',
+      });
+      expect(statuses.statuses.tom).toMatchObject({
+        status: 'error',
+        launchState: 'failed_to_start',
+      });
+      expect(statuses.statuses.alice?.error).toContain('same project runtime');
+      expect(statuses.statuses.tom?.error).toContain('same project runtime');
+    });
+
+    it('does not repeat a shared OpenCode timeout across mixed Codex secondary lanes', async () => {
+      allowConsoleLogs();
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+      vi.mocked(spawnCli).mockReturnValue(createRunningChild() as never);
+      const teamName = 'safe-mixed-shared-opencode-timeout';
+      const rootCause = 'Failed to query OpenCode agents: OpenCode command timed out after 10000ms';
+      const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
+        const memberName = (input.expectedMembers as Array<{ name: string }>)[0]!.name;
+        return {
+          runId: String(input.runId),
+          teamName,
+          launchPhase: 'finished' as const,
+          teamLaunchState: 'partial_failure' as const,
+          members: {
+            [memberName]: {
+              memberName,
+              providerId: 'opencode' as const,
+              launchState: 'failed_to_start' as const,
+              agentToolAccepted: false,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: true,
+              hardFailureReason: rootCause,
+              diagnostics: [
+                rootCause,
+                'Failed to query OpenCode models: OpenCode command timed out after 10000ms',
+                'OpenCode raw model id "zai-coding-plan/glm-5.1" was not found in the live provider catalog',
+                'OpenCode request timed out after 15000ms for /config',
+              ],
+            },
+          },
+          warnings: [],
+          diagnostics: [rootCause],
+        };
+      });
+      const { svc } = createSafeLaunchService();
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: adapterLaunch,
+            reconcile: vi.fn(),
+            stop: vi.fn(async () => undefined),
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+
+      const { runId } = await svc.createTeam(
+        {
+          teamName,
+          cwd: tempClaudeRoot,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          members: ['alice', 'bob', 'tom', 'sam'].map((name, index) => ({
+            name,
+            role: 'Developer',
+            providerId: 'opencode' as const,
+            model: `openrouter/test-model-${index}`,
+          })),
+        },
+        () => undefined
+      );
+
+      const mixedLaunchHarness = svc as unknown as {
+        runs: Map<string, ReturnType<typeof createMemberSpawnRun>>;
+        launchMixedSecondaryLaneIfNeeded(
+          run: ReturnType<typeof createMemberSpawnRun>
+        ): Promise<unknown>;
+      };
+      const run = mixedLaunchHarness.runs.get(runId);
+      if (!run) {
+        throw new Error(`Expected provisioning run ${runId}`);
+      }
+      await mixedLaunchHarness.launchMixedSecondaryLaneIfNeeded(run);
+      await vi.waitFor(
+        () => {
+          expect(adapterLaunch).toHaveBeenCalledTimes(1);
+          expect(
+            run.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
+          ).toBe(true);
+        },
+        { timeout: 5_000 }
+      );
+
+      const statuses = await svc.getMemberSpawnStatuses(teamName);
+      for (const memberName of ['alice', 'bob', 'tom', 'sam']) {
+        expect(statuses.statuses[memberName]).toMatchObject({
+          status: 'error',
+          launchState: 'failed_to_start',
+        });
+      }
+      expect(
+        ['alice', 'bob', 'tom', 'sam'].filter((memberName) =>
+          statuses.statuses[memberName]?.error?.includes('same project runtime')
+        )
+      ).toHaveLength(3);
+    });
+
+    it('keeps healthy OpenCode member lanes running when a Cursor member hits its usage limit', async () => {
+      allowConsoleLogs();
+      const teamName = 'safe-opencode-partial-member-launch';
+      let aliceLaunchAttempts = 0;
+      const adapterStop = vi.fn(async () => undefined);
+      const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
+        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const laneId = String(input.laneId);
+        const runId = String(input.runId);
+        const failAlice =
+          expectedMembers.some((member) => member.name === 'alice') && aliceLaunchAttempts++ === 0;
+
+        if (failAlice) {
+          await writeCommittedOpenCodeSessionStore({
+            teamName,
+            laneId,
+            runId,
+            sessions: expectedMembers
+              .filter((member) => member.name !== 'alice')
+              .map((member) => ({
+                id: `oc-session-${member.name}`,
+                teamName,
+                memberName: member.name,
+                laneId,
+                runId,
+                source: 'runtime_bootstrap_checkin',
+              })),
+          });
+          return {
+            runId,
+            teamName,
+            launchPhase: 'finished',
+            teamLaunchState: 'partial_failure',
+            members: Object.fromEntries(
+              expectedMembers.map((member) => [
+                member.name,
+                member.name === 'alice'
+                  ? {
+                      memberName: 'alice',
+                      providerId: 'opencode',
+                      launchState: 'failed_to_start',
+                      agentToolAccepted: false,
+                      runtimeAlive: false,
+                      bootstrapConfirmed: false,
+                      hardFailure: true,
+                      hardFailureReason: "You've hit your Cursor usage limit.",
+                      diagnostics: ["You've hit your Cursor usage limit."],
+                    }
+                  : {
+                      memberName: member.name,
+                      providerId: 'opencode',
+                      launchState: 'confirmed_alive',
+                      agentToolAccepted: true,
+                      runtimeAlive: true,
+                      bootstrapConfirmed: true,
+                      hardFailure: false,
+                      diagnostics: [],
+                    },
+              ])
+            ),
+            warnings: [],
+            diagnostics: ["You've hit your Cursor usage limit."],
+          };
+        }
+
+        await writeCommittedOpenCodeSessionStore({
+          teamName,
+          laneId,
+          runId,
+          sessions: expectedMembers.map((member) => ({
+            id: `oc-session-${member.name}`,
+            teamName,
+            memberName: member.name,
+            laneId,
+            runId,
+            source: 'runtime_bootstrap_checkin',
+          })),
+        });
+        return {
+          runId,
+          teamName,
+          launchPhase: 'finished',
+          teamLaunchState: 'clean_success',
+          members: Object.fromEntries(
+            expectedMembers.map((member) => [
+              member.name,
+              {
+                memberName: member.name,
+                providerId: 'opencode',
+                launchState: 'confirmed_alive',
+                agentToolAccepted: true,
+                runtimeAlive: true,
+                bootstrapConfirmed: true,
+                hardFailure: false,
+                diagnostics: [],
+              },
+            ])
+          ),
+          warnings: [],
+          diagnostics: [],
+        };
+      });
+
+      const { svc } = createSafeLaunchService();
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: adapterLaunch,
+            reconcile: vi.fn(),
+            stop: adapterStop,
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      const progress: Array<{ state: string; message?: string; error?: string }> = [];
+
+      await svc.createTeam(
+        {
+          teamName,
+          cwd: tempClaudeRoot,
+          providerId: 'opencode',
+          providerBackendId: 'adapter',
+          model: 'cursor-acp/auto',
+          effort: 'medium',
+          members: [
+            {
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+              model: 'cursor-acp/auto',
+            },
+            {
+              name: 'bob',
+              role: 'Developer',
+              providerId: 'opencode',
+              model: 'minimax-m2.5-free',
+            },
+          ],
+        },
+        (event) => progress.push(event)
+      );
+
+      expect(adapterLaunch).toHaveBeenCalledTimes(2);
+      expect(adapterStop).not.toHaveBeenCalled();
+      expect(svc.isTeamAlive(teamName)).toBe(true);
+      expect(progress.at(-1)).toMatchObject({
+        state: 'ready',
+        message: 'OpenCode team is running with unavailable members',
+        error: undefined,
+      });
+
+      const publicStatuses = await svc.getMemberSpawnStatuses(teamName);
+      expect(publicStatuses.statuses.alice).toMatchObject({
+        status: 'error',
+        launchState: 'failed_to_start',
+        error: "You've hit your Cursor usage limit.",
+      });
+      expect(publicStatuses.statuses.bob).toMatchObject({
+        status: 'online',
+        launchState: 'confirmed_alive',
+      });
+      expect(publicStatuses.teamLaunchState).toBe('partial_failure');
+
+      await svc.restartMember(teamName, 'alice');
+
+      expect(adapterStop).toHaveBeenCalledTimes(1);
+      expect(adapterStop).toHaveBeenCalledWith(
+        expect.objectContaining({ teamName, laneId: 'primary' })
+      );
+      expect(adapterLaunch).toHaveBeenCalledTimes(4);
+      expect(adapterLaunch.mock.calls.at(-2)?.[0]).toMatchObject({
+        teamName,
+        laneId: 'primary',
+        expectedMembers: [expect.objectContaining({ name: 'team-lead' })],
+      });
+      expect(adapterLaunch).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          teamName,
+          laneId: 'secondary:opencode:alice',
+          expectedMembers: [expect.objectContaining({ name: 'alice' })],
+        })
+      );
+      expect(svc.isTeamAlive(teamName)).toBe(true);
+      const recoveredStatuses = await svc.getMemberSpawnStatuses(teamName);
+      expect(recoveredStatuses.statuses.alice).toMatchObject({
+        status: 'online',
+        launchState: 'confirmed_alive',
+      });
+      expect(recoveredStatuses.statuses.bob).toMatchObject({
+        status: 'online',
+        launchState: 'confirmed_alive',
+      });
+    });
+
+    it('keeps a materialized pending OpenCode lane alive when a Cursor sibling fails first', async () => {
+      allowConsoleLogs();
+      const teamName = 'safe-opencode-failed-and-pending-member-launch';
+      const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
+        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const memberName =
+          expectedMembers.find((member) => member.name !== 'team-lead')?.name ??
+          expectedMembers[0]!.name;
+        const runId = String(input.runId);
+
+        if (memberName === 'alice') {
+          return {
+            runId,
+            teamName,
+            launchPhase: 'finished',
+            teamLaunchState: 'partial_failure',
+            members: {
+              alice: {
+                memberName: 'alice',
+                providerId: 'opencode',
+                launchState: 'failed_to_start',
+                agentToolAccepted: false,
+                runtimeAlive: false,
+                bootstrapConfirmed: false,
+                hardFailure: true,
+                hardFailureReason: "You've hit your Cursor usage limit.",
+                diagnostics: ["You've hit your Cursor usage limit."],
+              },
+            },
+            warnings: [],
+            diagnostics: ["You've hit your Cursor usage limit."],
+          };
+        }
+
+        return {
+          runId,
+          teamName,
+          launchPhase: 'active',
+          teamLaunchState: 'partial_pending',
+          members: {
+            bob: {
+              memberName: 'bob',
+              providerId: 'opencode',
+              launchState: 'runtime_pending_permission',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              pendingPermissionRequestIds: ['permission-1'],
+              diagnostics: ['Waiting for runtime permission approval.'],
+            },
+          },
+          warnings: [],
+          diagnostics: ['Waiting for runtime permission approval.'],
+        };
+      });
+
+      const { svc } = createSafeLaunchService();
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: adapterLaunch,
+            reconcile: vi.fn(),
+            stop: vi.fn(),
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      const progress: Array<{ state: string; message?: string; error?: string }> = [];
+
+      await svc.createTeam(
+        {
+          teamName,
+          cwd: tempClaudeRoot,
+          providerId: 'opencode',
+          providerBackendId: 'adapter',
+          model: 'cursor-acp/auto',
+          effort: 'medium',
+          members: [
+            {
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+              model: 'cursor-acp/auto',
+            },
+            {
+              name: 'bob',
+              role: 'Developer',
+              providerId: 'opencode',
+              model: 'minimax-m2.5-free',
+            },
+          ],
+        },
+        (event) => progress.push(event)
+      );
+
+      expect(svc.isTeamAlive(teamName)).toBe(true);
+      expect(progress.at(-1)).toMatchObject({
+        state: 'ready',
+        message: 'OpenCode team is running with unavailable members',
+        error: undefined,
+      });
+
+      const publicStatuses = await svc.getMemberSpawnStatuses(teamName);
+      expect(publicStatuses.statuses.alice).toMatchObject({
+        status: 'error',
+        launchState: 'failed_to_start',
+      });
+      expect(publicStatuses.statuses.bob).toMatchObject({
+        status: 'waiting',
+        launchState: 'runtime_pending_permission',
+        hardFailure: false,
+      });
+      expect(publicStatuses.teamLaunchState).toBe('partial_failure');
+      await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+        lanes: {
+          primary: { state: 'degraded' },
+          'secondary:opencode:bob': { state: 'active' },
+        },
+      });
+      const isolationHarness = svc as unknown as OpenCodeIsolationHarness;
+      const runtimeIdentity =
+        isolationHarness.openCodeRuntimeRecoveryFacade.openCodeRuntimeRecoveryIdentity;
+      await expect(
+        runtimeIdentity.resolveCurrentOpenCodeRuntimeRunId(teamName, 'primary')
+      ).resolves.toBeNull();
+      await expect(
+        runtimeIdentity.resolveCurrentOpenCodeRuntimeRunId(teamName, 'secondary:opencode:bob')
+      ).resolves.toEqual(expect.any(String));
+    });
+
+    it('does not resurrect an aggregate OpenCode team when primary launch resolves after cancel', async () => {
+      allowConsoleLogs();
+      const teamName = 'safe-opencode-cancel-primary-race';
+      const primaryResult = createDeferred<Record<string, unknown>>();
+      const adapterStop = vi.fn(async () => {});
+      const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
+        if (input.laneId !== 'primary') {
+          throw new Error('secondary lane must not launch after aggregate cancellation');
+        }
+        return await primaryResult.promise;
+      });
+      const { svc } = createSafeLaunchService();
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: adapterLaunch,
+            reconcile: vi.fn(),
+            stop: adapterStop,
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+
+      const createPromise = svc.createTeam(
+        {
+          teamName,
+          cwd: tempClaudeRoot,
+          providerId: 'opencode',
+          providerBackendId: 'adapter',
+          model: 'cursor-acp/auto',
+          effort: 'medium',
+          members: [
+            { name: 'alice', providerId: 'opencode', model: 'cursor-acp/auto' },
+            { name: 'bob', providerId: 'opencode', model: 'minimax-m2.5-free' },
+          ],
+        },
+        vi.fn()
+      );
+      await vi.waitFor(() => expect(adapterLaunch).toHaveBeenCalledTimes(1));
+      const launchInput = adapterLaunch.mock.calls[0]![0];
+      const runId = String(launchInput.runId);
+      const expectedMembers = launchInput.expectedMembers as Array<{ name: string }>;
+
+      await svc.cancelProvisioning(runId);
+      await writeCommittedOpenCodeSessionStore({
+        teamName,
+        laneId: 'primary',
+        runId,
+        sessions: expectedMembers.map((member) => ({
+          id: `oc-session-${member.name}-late`,
+          teamName,
+          memberName: member.name,
+          laneId: 'primary',
+          runId,
+          source: 'runtime_bootstrap_checkin',
+        })),
+      });
+      primaryResult.resolve({
+        runId,
+        teamName,
+        launchPhase: 'finished',
+        teamLaunchState: 'clean_success',
+        members: Object.fromEntries(
+          expectedMembers.map((member) => [
+            member.name,
+            {
+              memberName: member.name,
+              providerId: 'opencode',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              diagnostics: [],
+            },
+          ])
+        ),
+        warnings: [],
+        diagnostics: [],
+      });
+
+      await createPromise;
+
+      expect(adapterLaunch).toHaveBeenCalledTimes(1);
+      expect(adapterStop).toHaveBeenCalledWith(
+        expect.objectContaining({ teamName, runId, laneId: 'primary', force: true })
+      );
+      expect(svc.isTeamAlive(teamName)).toBe(false);
+      const isolationHarness = svc as unknown as OpenCodeIsolationHarness;
+      expect(isolationHarness.runtimeAdapterRunByTeam.has(teamName)).toBe(false);
+      expect(isolationHarness.secondaryRuntimeRunByTeam.has(teamName)).toBe(false);
+    });
+
+    it('keeps a healthy sibling alive when a secondary Cursor lane fails after permission', async () => {
+      const teamName = 'safe-opencode-secondary-permission-failure';
+      const run = createMemberSpawnRun({ teamName, expectedMembers: [] });
+      run.child = null;
+      run.request = {
+        teamName,
+        cwd: tempClaudeRoot,
+        providerId: 'opencode',
+        model: 'cursor-acp/auto',
+        members: [],
+      };
+      run.mixedSecondaryLanes = [
+        {
+          laneId: 'secondary:opencode:alice',
+          providerId: 'opencode',
+          member: { name: 'alice', providerId: 'opencode', model: 'cursor-acp/auto' },
+          runId: 'alice-run',
+          state: 'launching',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+        {
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          member: { name: 'bob', providerId: 'opencode', model: 'minimax-m2.5-free' },
+          runId: 'bob-run',
+          state: 'finished',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+      ];
+      const answerRuntimePermission = vi.fn(async () => ({
+        runId: 'alice-run',
+        teamName,
+        launchPhase: 'finished' as const,
+        teamLaunchState: 'partial_failure' as const,
+        members: {
+          alice: {
+            memberName: 'alice',
+            providerId: 'opencode' as const,
+            launchState: 'failed_to_start' as const,
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            hardFailureReason: "You've hit your Cursor usage limit.",
+            diagnostics: ["You've hit your Cursor usage limit."],
+          },
+        },
+        warnings: [],
+        diagnostics: ["You've hit your Cursor usage limit."],
+      }));
+      const adapterStop = vi.fn(async () => undefined);
+      const svc = new TeamProvisioningService();
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: adapterStop,
+            answerRuntimePermission,
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      const isolationHarness = svc as unknown as OpenCodeIsolationHarness;
+      isolationHarness.runs.set(run.runId, run);
+      isolationHarness.aliveRunByTeam.set(teamName, run.runId);
+      isolationHarness.setSecondaryRuntimeRun({
+        teamName,
+        runId: 'alice-run',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:alice',
+        memberName: 'alice',
+      });
+      isolationHarness.setSecondaryRuntimeRun({
+        teamName,
+        runId: 'bob-run',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+      });
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'secondary:opencode:alice',
+        state: 'active',
+      });
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'secondary:opencode:bob',
+        state: 'active',
+      });
+
+      await isolationHarness.toolApprovalFacade.answerRuntimeToolApproval(
+        {
+          providerId: 'opencode',
+          approval: {
+            requestId: 'permission-1',
+            runId: 'alice-run',
+            teamName,
+            source: 'alice',
+            toolName: 'Bash',
+            toolInput: {},
+            receivedAt: new Date().toISOString(),
+          },
+          providerRequestId: 'permission-1',
+          laneId: 'secondary:opencode:alice',
+          memberName: 'alice',
+          expectedMembers: [
+            {
+              name: 'alice',
+              providerId: 'opencode',
+              model: 'cursor-acp/auto',
+              cwd: tempClaudeRoot,
+            },
+          ],
+        },
+        false
+      );
+
+      expect(answerRuntimePermission).toHaveBeenCalledTimes(1);
+      expect(svc.isTeamAlive(teamName)).toBe(true);
+      expect(
+        isolationHarness.secondaryRuntimeRunByTeam.get(teamName)?.has('secondary:opencode:alice')
+      ).toBe(false);
+      expect(
+        isolationHarness.secondaryRuntimeRunByTeam.get(teamName)?.has('secondary:opencode:bob')
+      ).toBe(true);
+      expect(adapterStop).toHaveBeenCalledTimes(1);
+      expect(adapterStop).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName,
+          runId: 'alice-run',
+          laneId: 'secondary:opencode:alice',
+          reason: 'cleanup',
+          force: true,
+        })
+      );
+      await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+        lanes: {
+          'secondary:opencode:alice': { state: 'degraded' },
+          'secondary:opencode:bob': { state: 'active' },
+        },
+      });
+    });
+
+    it('keeps a secondary sibling alive when primary Cursor permission resolution fails', async () => {
+      const teamName = 'safe-opencode-primary-permission-failure';
+      const run = createMemberSpawnRun({ teamName, expectedMembers: [] });
+      run.child = null;
+      run.request = {
+        teamName,
+        cwd: tempClaudeRoot,
+        providerId: 'opencode',
+        model: 'cursor-acp/auto',
+        members: [],
+      };
+      const answerRuntimePermission = vi.fn(async () => ({
+        runId: run.runId,
+        teamName,
+        launchPhase: 'finished' as const,
+        teamLaunchState: 'partial_failure' as const,
+        members: {
+          alice: {
+            memberName: 'alice',
+            providerId: 'opencode' as const,
+            launchState: 'failed_to_start' as const,
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            hardFailureReason: "You've hit your Cursor usage limit.",
+            diagnostics: ["You've hit your Cursor usage limit."],
+          },
+        },
+        warnings: [],
+        diagnostics: ["You've hit your Cursor usage limit."],
+      }));
+      const adapterStop = vi.fn(async () => undefined);
+      const svc = new TeamProvisioningService();
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: adapterStop,
+            answerRuntimePermission,
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      const isolationHarness = svc as unknown as OpenCodeIsolationHarness;
+      isolationHarness.runs.set(run.runId, run);
+      isolationHarness.aliveRunByTeam.set(teamName, run.runId);
+      isolationHarness.runtimeAdapterRunByTeam.set(teamName, {
+        runId: run.runId,
+        providerId: 'opencode',
+        cwd: tempClaudeRoot,
+        members: {},
+      });
+      isolationHarness.setSecondaryRuntimeRun({
+        teamName,
+        runId: 'bob-run',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+      });
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'primary',
+        state: 'active',
+      });
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'secondary:opencode:bob',
+        state: 'active',
+      });
+
+      await isolationHarness.toolApprovalFacade.answerRuntimeToolApproval(
+        {
+          providerId: 'opencode',
+          approval: {
+            requestId: 'permission-primary',
+            runId: run.runId,
+            teamName,
+            source: 'alice',
+            toolName: 'Bash',
+            toolInput: {},
+            receivedAt: new Date().toISOString(),
+          },
+          providerRequestId: 'permission-primary',
+          laneId: 'primary',
+          memberName: 'alice',
+          cwd: tempClaudeRoot,
+          expectedMembers: [
+            {
+              name: 'alice',
+              providerId: 'opencode',
+              model: 'cursor-acp/auto',
+              cwd: tempClaudeRoot,
+            },
+          ],
+        },
+        false
+      );
+
+      expect(answerRuntimePermission).toHaveBeenCalledTimes(1);
+      expect(svc.isTeamAlive(teamName)).toBe(true);
+      expect(isolationHarness.runtimeAdapterRunByTeam.has(teamName)).toBe(false);
+      expect(
+        isolationHarness.secondaryRuntimeRunByTeam.get(teamName)?.has('secondary:opencode:bob')
+      ).toBe(true);
+      expect(adapterStop).toHaveBeenCalledTimes(1);
+      expect(adapterStop).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName,
+          runId: run.runId,
+          laneId: 'primary',
+          reason: 'cleanup',
+          force: true,
+        })
+      );
+      await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+        lanes: {
+          primary: { state: 'degraded' },
+          'secondary:opencode:bob': { state: 'active' },
+        },
+      });
     });
 
     it('keeps Codex in the primary CLI lane and starts OpenCode teammates as secondary runtime lanes', async () => {
@@ -29440,6 +30710,7 @@ describe('TeamProvisioningService', () => {
     const teamName = 'atlas-hq-source-aware-persisted';
     const exactOpenCodeReason =
       'Latest assistant message msg_alice failed with APIError - Insufficient credits.';
+    const promotedOpenCodeReason = 'Insufficient credits.';
     const transientBobMcpFailure =
       'resources/read failed: resources/read failed for `agent-teams` (member_briefing?teamName=atlas-hq-source-aware-persisted&memberName=bob): Mcp error: -32601: Method not found';
     writeTeamMeta(teamName, {
@@ -29567,7 +30838,7 @@ describe('TeamProvisioningService', () => {
     expect(result.statuses.alice).toMatchObject({
       status: 'error',
       launchState: 'failed_to_start',
-      hardFailureReason: 'Insufficient credits.',
+      hardFailureReason: promotedOpenCodeReason,
     });
     expect(result.statuses.tom).toMatchObject({
       status: 'error',
@@ -30257,6 +31528,7 @@ describe('TeamProvisioningService', () => {
     );
     const exactOpenCodeReason =
       'Latest assistant message msg_alice failed with APIError - Insufficient credits.';
+    const promotedOpenCodeReason = 'Insufficient credits.';
     fs.writeFileSync(
       getTeamLaunchStatePath(teamName),
       `${JSON.stringify(
@@ -30318,7 +31590,7 @@ describe('TeamProvisioningService', () => {
     expect(result.statuses.alice).toMatchObject({
       status: 'error',
       launchState: 'failed_to_start',
-      hardFailureReason: 'Insufficient credits.',
+      hardFailureReason: promotedOpenCodeReason,
     });
     const persisted = JSON.parse(
       await fsPromises.readFile(getTeamLaunchStatePath(teamName), 'utf8')
@@ -30326,7 +31598,7 @@ describe('TeamProvisioningService', () => {
     expect(persisted.members.alice).toMatchObject({
       laneId: 'secondary:opencode:alice',
       launchState: 'failed_to_start',
-      hardFailureReason: 'Insufficient credits.',
+      hardFailureReason: promotedOpenCodeReason,
     });
   });
 

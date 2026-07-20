@@ -1,5 +1,17 @@
 import { createHash } from 'crypto';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import * as fs from 'fs';
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  symlink,
+  utimes,
+  writeFile,
+} from 'fs/promises';
 import { tmpdir } from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -136,9 +148,7 @@ describe('ReviewDecisionStore', () => {
       fileDecisions: {},
     });
 
-    await expect(
-      store.clearUnreadableExactScope('demo', 'task-123', scopeToken)
-    ).rejects.toThrow(
+    await expect(store.clearUnreadableExactScope('demo', 'task-123', scopeToken)).rejects.toThrow(
       'Saved review decisions became readable; refusing destructive recovery discard'
     );
     await expect(store.load('demo', 'task-123', scopeToken)).resolves.toMatchObject({
@@ -245,6 +255,144 @@ describe('ReviewDecisionStore', () => {
     });
   });
 
+  it('never prunes the just-written scope when retained files have equal mtimes', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeKey = 'task-prune-current';
+    const scopeToken = 'task:prune:req:current';
+    await store.save('demo', scopeKey, {
+      scopeToken,
+      hunkDecisions: { 'current:0': 'accepted' },
+      fileDecisions: {},
+    });
+    const currentPath = exactScopeFilePath('demo', scopeKey, scopeToken);
+    const scopeDir = path.dirname(currentPath);
+    const oldPaths = Array.from({ length: 16 }, (_, index) =>
+      path.join(scopeDir, `${createHash('sha256').update(`old-${index}`).digest('hex')}.json`)
+    );
+    await Promise.all(oldPaths.map((filePath) => writeFile(filePath, '{}', 'utf8')));
+    const sameMtime = new Date('2026-01-01T00:00:00.000Z');
+    await Promise.all(
+      [...oldPaths, currentPath].map((filePath) => utimes(filePath, sameMtime, sameMtime))
+    );
+
+    await (
+      store as unknown as {
+        pruneScopeDir(teamName: string, key: string, protectedPath: string): Promise<void>;
+      }
+    ).pruneScopeDir('demo', scopeKey, currentPath);
+
+    await expect(access(currentPath)).resolves.toBeUndefined();
+    await expect(readdir(scopeDir)).resolves.toHaveLength(16);
+  });
+
+  it('protects a scope snapshot while its mutation journal is pending', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeKey = 'task-prune-pending';
+    const currentToken = 'task:prune:req:current-pending';
+    const pendingToken = 'task:prune:req:wal-pending';
+    await store.save('demo', scopeKey, {
+      scopeToken: currentToken,
+      hunkDecisions: { 'current:0': 'accepted' },
+      fileDecisions: {},
+    });
+    const currentPath = exactScopeFilePath('demo', scopeKey, currentToken);
+    const pendingPath = exactScopeFilePath('demo', scopeKey, pendingToken);
+    const scopeDir = path.dirname(currentPath);
+    const otherPaths = Array.from({ length: 15 }, (_, index) =>
+      path.join(scopeDir, `${createHash('sha256').update(`other-${index}`).digest('hex')}.json`)
+    );
+    await Promise.all(
+      [pendingPath, ...otherPaths].map((filePath) => writeFile(filePath, '{}', 'utf8'))
+    );
+    const pendingHash = createHash('sha256').update(pendingToken).digest('hex');
+    await mkdir(
+      path.join(
+        teamsBasePath,
+        'demo',
+        'review-decisions',
+        'mutation-journal',
+        scopeKey,
+        pendingHash
+      ),
+      { recursive: true }
+    );
+    const sameMtime = new Date('2026-01-01T00:00:00.000Z');
+    await Promise.all(
+      [currentPath, pendingPath, ...otherPaths].map((filePath) =>
+        utimes(filePath, sameMtime, sameMtime)
+      )
+    );
+
+    await (
+      store as unknown as {
+        pruneScopeDir(teamName: string, key: string, protectedPath: string): Promise<void>;
+      }
+    ).pruneScopeDir('demo', scopeKey, currentPath);
+
+    await expect(access(currentPath)).resolves.toBeUndefined();
+    await expect(access(pendingPath)).resolves.toBeUndefined();
+    await expect(readdir(scopeDir)).resolves.toHaveLength(16);
+  });
+
+  it('does not prune the canonical side of an unresolved older-scope conflict', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeKey = 'task-prune-conflict';
+    const conflictedToken = 'task:prune:req:conflicted';
+    await store.save('demo', scopeKey, {
+      scopeToken: conflictedToken,
+      hunkDecisions: { 'file:0': 'accepted' },
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+    await expect(
+      store.save('demo', scopeKey, {
+        scopeToken: conflictedToken,
+        hunkDecisions: { 'file:0': 'rejected' },
+        fileDecisions: {},
+        expectedRevision: 0,
+      })
+    ).rejects.toThrow('Review decisions changed');
+    await utimes(
+      exactScopeFilePath('demo', scopeKey, conflictedToken),
+      new Date('2020-01-01T00:00:00.000Z'),
+      new Date('2020-01-01T00:00:00.000Z')
+    );
+
+    for (let index = 0; index < 17; index++) {
+      await store.save('demo', scopeKey, {
+        scopeToken: `task:prune:req:new-${index}`,
+        hunkDecisions: { [`new:${index}`]: 'accepted' },
+        fileDecisions: {},
+        expectedRevision: 0,
+      });
+    }
+
+    await expect(store.load('demo', scopeKey, conflictedToken)).resolves.toMatchObject({
+      hunkDecisions: { 'file:0': 'accepted' },
+    });
+    const [candidate] = await store.loadConflictCandidates('demo', scopeKey, conflictedToken);
+    expect(candidate).toBeDefined();
+    await store.resolveConflictCandidate(
+      'demo',
+      scopeKey,
+      conflictedToken,
+      candidate!.id,
+      'keep-current',
+      1
+    );
+    await store.save('demo', scopeKey, {
+      scopeToken: 'task:prune:req:new-after-resolution',
+      hunkDecisions: { newest: 'accepted' },
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+
+    await expect(store.load('demo', scopeKey, conflictedToken)).resolves.toBeNull();
+  });
+
   it('rejects stale CAS writes and makes a committed mutation retry idempotent', async () => {
     const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
     const store = new ReviewDecisionStore();
@@ -273,7 +421,433 @@ describe('ReviewDecisionStore', () => {
     ).rejects.toThrow('Review decisions changed; refusing stale state overwrite');
   });
 
-  it('makes only an exact single-revision generic retry idempotent after response loss', async () => {
+  it('durably preserves and explicitly resolves a divergent decision branch', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const scopeToken = 'task:123:req:durable-conflict:src:one';
+    const first = new ReviewDecisionStore();
+    await first.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { 'file:0': 'accepted' },
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+    await expect(
+      first.save('demo', 'task-123', {
+        scopeToken,
+        hunkDecisions: { 'file:0': 'rejected' },
+        fileDecisions: {},
+        expectedRevision: 0,
+      })
+    ).rejects.toThrow('Review decisions changed; refusing stale state overwrite');
+
+    const restarted = new ReviewDecisionStore();
+    const [candidate] = await restarted.loadConflictCandidates('demo', 'task-123', scopeToken);
+    expect(candidate).toMatchObject({
+      expectedRevision: 0,
+      observedCurrentRevision: 1,
+      state: { hunkDecisions: { 'file:0': 'rejected' } },
+    });
+    if (process.platform !== 'win32') {
+      const candidateStats = await stat(
+        path.join(
+          teamsBasePath,
+          'demo',
+          'review-decisions',
+          'conflicts',
+          'v1',
+          'task-123',
+          createHash('sha256').update(scopeToken).digest('hex'),
+          candidate!.id + '.json'
+        )
+      );
+      expect(candidateStats.mode & 0o777).toBe(0o600);
+    }
+
+    await expect(
+      restarted.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        scopeToken,
+        candidate!.id,
+        'recover-candidate',
+        1
+      )
+    ).resolves.toBe(2);
+    await expect(restarted.load('demo', 'task-123', scopeToken)).resolves.toMatchObject({
+      revision: 2,
+      hunkDecisions: { 'file:0': 'rejected' },
+    });
+    const [canonicalBackup] = await restarted.loadConflictCandidates(
+      'demo',
+      'task-123',
+      scopeToken
+    );
+    expect(canonicalBackup).toMatchObject({
+      observedCurrentRevision: 2,
+      state: { hunkDecisions: { 'file:0': 'accepted' } },
+    });
+    await expect(
+      restarted.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        scopeToken,
+        canonicalBackup!.id,
+        'recover-candidate',
+        2
+      )
+    ).resolves.toBe(3);
+    await expect(restarted.load('demo', 'task-123', scopeToken)).resolves.toMatchObject({
+      revision: 3,
+      hunkDecisions: { 'file:0': 'accepted' },
+    });
+  });
+
+  it('discovers prior-snapshot decision branches without allowing unsafe recovery', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeTokenA = 'task:123:req:prior-decisions:a';
+    const scopeTokenB = 'task:123:req:prior-decisions:b';
+    await store.save('demo', 'task-123', {
+      scopeToken: scopeTokenA,
+      hunkDecisions: { 'file:0': 'accepted' },
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken: scopeTokenA,
+        hunkDecisions: { 'file:0': 'rejected' },
+        fileDecisions: {},
+        expectedRevision: 0,
+      })
+    ).rejects.toThrow('Review decisions changed');
+    await store.save('demo', 'task-123', {
+      scopeToken: scopeTokenB,
+      hunkDecisions: {},
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+
+    const [candidate] = await new ReviewDecisionStore().loadConflictCandidates(
+      'demo',
+      'task-123',
+      scopeTokenB
+    );
+    expect(candidate).toMatchObject({
+      origin: 'prior-snapshot',
+      observedCurrentRevision: 1,
+      state: { hunkDecisions: { 'file:0': 'rejected' } },
+    });
+    await expect(
+      store.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        scopeTokenB,
+        candidate!.id,
+        'recover-candidate',
+        1
+      )
+    ).rejects.toThrow('different review snapshot');
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', scopeTokenB)
+    ).resolves.toMatchObject([{ id: candidate!.id }]);
+    await expect(
+      store.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        scopeTokenB,
+        candidate!.id,
+        'keep-current',
+        1
+      )
+    ).resolves.toBe(1);
+    await expect(store.loadConflictCandidates('demo', 'task-123', scopeTokenB)).resolves.toEqual(
+      []
+    );
+    await expect(store.load('demo', 'task-123', scopeTokenA)).resolves.toMatchObject({
+      hunkDecisions: { 'file:0': 'accepted' },
+    });
+  });
+
+  it('keeps authoritative decisions when a conflict candidate is dismissed', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:dismiss-conflict:src:one';
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { 'file:0': 'accepted' },
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken,
+        hunkDecisions: { 'file:0': 'rejected' },
+        fileDecisions: {},
+        expectedRevision: 0,
+      })
+    ).rejects.toThrow();
+    const [candidate] = await store.loadConflictCandidates('demo', 'task-123', scopeToken);
+
+    await expect(
+      store.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        scopeToken,
+        candidate!.id,
+        'keep-current',
+        1
+      )
+    ).resolves.toBe(1);
+    await expect(store.load('demo', 'task-123', scopeToken)).resolves.toMatchObject({
+      revision: 1,
+      hunkDecisions: { 'file:0': 'accepted' },
+    });
+  });
+
+  it('retains a recovery branch when its observed canonical revision becomes stale', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:stale-resolution:src:one';
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { 'file:0': 'accepted' },
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken,
+        hunkDecisions: { 'file:0': 'rejected' },
+        fileDecisions: {},
+        expectedRevision: 0,
+      })
+    ).rejects.toThrow();
+    const [candidate] = await store.loadConflictCandidates('demo', 'task-123', scopeToken);
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { 'file:0': 'accepted' },
+      fileDecisions: { file: 'accepted' },
+      expectedRevision: 1,
+    });
+
+    await expect(
+      store.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        scopeToken,
+        candidate!.id,
+        'recover-candidate',
+        1
+      )
+    ).rejects.toThrow('Saved review state changed again');
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', scopeToken)
+    ).resolves.toMatchObject([{ id: candidate!.id, observedCurrentRevision: 2 }]);
+  });
+
+  it('never prunes an unresolved decision branch when the recovery quota is full', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:conflict-quota:src:one';
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { canonical: 'accepted' },
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+    for (let index = 0; index < 8; index++) {
+      await expect(
+        store.save('demo', 'task-123', {
+          scopeToken,
+          hunkDecisions: { ['branch-' + index]: 'rejected' },
+          fileDecisions: {},
+          expectedRevision: 0,
+        })
+      ).rejects.toThrow('Review decisions changed');
+    }
+    const before = await store.loadConflictCandidates('demo', 'task-123', scopeToken);
+    expect(before).toHaveLength(8);
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken,
+        hunkDecisions: { 'branch-overflow': 'rejected' },
+        fileDecisions: {},
+        expectedRevision: 0,
+      })
+    ).rejects.toThrow('Too many unresolved review recovery copies');
+    await expect(store.loadConflictCandidates('demo', 'task-123', scopeToken)).resolves.toEqual(
+      before
+    );
+
+    const selected = before[0]!;
+    await expect(
+      store.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        scopeToken,
+        selected.id,
+        'recover-candidate',
+        1
+      )
+    ).resolves.toBe(2);
+    await expect(store.load('demo', 'task-123', scopeToken)).resolves.toMatchObject({
+      revision: 2,
+      hunkDecisions: selected.state.hunkDecisions,
+    });
+    const afterSwap = await store.loadConflictCandidates('demo', 'task-123', scopeToken);
+    expect(afterSwap).toHaveLength(8);
+    expect(afterSwap.some((candidate) => candidate.id === selected.id)).toBe(false);
+    expect(afterSwap).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          state: expect.objectContaining({ hunkDecisions: { canonical: 'accepted' } }),
+        }),
+      ])
+    );
+  });
+
+  it('refuses a symlinked recovery directory without touching external files', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:symlink-conflict:src:one';
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { canonical: 'accepted' },
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+    const external = path.join(teamsBasePath, 'external-candidate-target');
+    const sentinelName = 'a'.repeat(64) + '.json';
+    await mkdir(external, { recursive: true });
+    await writeFile(path.join(external, sentinelName), 'sentinel', 'utf8');
+    const conflictParent = path.join(
+      teamsBasePath,
+      'demo',
+      'review-decisions',
+      'conflicts',
+      'v1',
+      'task-123'
+    );
+    await mkdir(conflictParent, { recursive: true });
+    await symlink(
+      external,
+      path.join(conflictParent, createHash('sha256').update(scopeToken).digest('hex')),
+      'dir'
+    );
+
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken,
+        hunkDecisions: { local: 'rejected' },
+        fileDecisions: {},
+        expectedRevision: 0,
+      })
+    ).rejects.toThrow('Unsafe persistence directory');
+    await expect(readFile(path.join(external, sentinelName), 'utf8')).resolves.toBe('sentinel');
+    await expect(readdir(external)).resolves.toEqual([sentinelName]);
+  });
+
+  it('fails closed for a symlinked canonical scope directory', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const external = await mkdtemp(path.join(tmpdir(), 'external-review-decisions-'));
+    const sentinelPath = path.join(external, 'sentinel.json');
+    try {
+      await writeFile(sentinelPath, 'sentinel', 'utf8');
+      const scopeParent = path.join(teamsBasePath, 'demo', 'review-decisions', 'v2');
+      await mkdir(scopeParent, { recursive: true });
+      await symlink(external, path.join(scopeParent, 'task-123'), 'dir');
+
+      await expect(
+        store.save('demo', 'task-123', {
+          scopeToken: 'canonical-symlink-scope',
+          hunkDecisions: { local: 'accepted' },
+          fileDecisions: {},
+          expectedRevision: 0,
+        })
+      ).rejects.toThrow('Unsafe persistence directory');
+      await expect(store.clear('demo', 'task-123')).rejects.toThrow('Unsafe persistence directory');
+      await expect(readFile(sentinelPath, 'utf8')).resolves.toBe('sentinel');
+      await expect(readdir(external)).resolves.toEqual(['sentinel.json']);
+    } finally {
+      await rm(external, { recursive: true, force: true });
+    }
+  });
+
+  it('quarantines an unreadable decision candidate without hiding valid recovery branches', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:corrupt-conflict:src:one';
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { canonical: 'accepted' },
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken,
+        hunkDecisions: { local: 'rejected' },
+        fileDecisions: {},
+        expectedRevision: 0,
+      })
+    ).rejects.toThrow();
+    const conflictDir = path.join(
+      teamsBasePath,
+      'demo',
+      'review-decisions',
+      'conflicts',
+      'v1',
+      'task-123',
+      createHash('sha256').update(scopeToken).digest('hex')
+    );
+    await writeFile(path.join(conflictDir, 'c'.repeat(64) + '.json'), '{broken', 'utf8');
+
+    await expect(store.loadConflictCandidates('demo', 'task-123', scopeToken)).rejects.toThrow(
+      'was quarantined'
+    );
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', scopeToken)
+    ).resolves.toMatchObject([{ state: { hunkDecisions: { local: 'rejected' } } }]);
+    await expect(readdir(path.join(conflictDir, 'quarantine'))).resolves.toHaveLength(1);
+  });
+
+  it('keeps a valid recovery branch visible after a transient directory read failure', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:transient-conflict:src:one';
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { 'file-a:0': 'accepted' },
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken,
+        hunkDecisions: { 'file-a:0': 'rejected' },
+        fileDecisions: {},
+        expectedRevision: 0,
+      })
+    ).rejects.toThrow('refusing stale state overwrite');
+
+    const failure = Object.assign(new Error('temporary recovery read failure'), { code: 'EIO' });
+    const readdirSpy = vi.spyOn(fs.promises, 'readdir').mockRejectedValueOnce(failure);
+    try {
+      await expect(store.loadConflictCandidates('demo', 'task-123', scopeToken)).rejects.toThrow(
+        'temporary recovery read failure'
+      );
+    } finally {
+      readdirSpy.mockRestore();
+    }
+
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', scopeToken)
+    ).resolves.toHaveLength(1);
+  });
+
+  it('makes an exact forward generic retry idempotent after response loss', async () => {
     const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
     const store = new ReviewDecisionStore();
     const scopeToken = 'task:123:req:generic-response-loss:src:one';
@@ -327,12 +901,13 @@ describe('ReviewDecisionStore', () => {
       store.save('demo', 'task-123', { ...target, expectedRevision: 2 })
     ).rejects.toThrow('Review decisions changed; refusing stale state overwrite');
 
+    const exactPath = exactScopeFilePath('demo', 'task-123', scopeToken);
+    const beforeExactRetry = await readFile(exactPath, 'utf8');
     await expect(store.save('demo', 'task-123', { ...target, expectedRevision: 1 })).resolves.toBe(
-      2
+      1
     );
-    await expect(store.save('demo', 'task-123', target)).rejects.toThrow(
-      'Review decisions changed; refusing stale state overwrite'
-    );
+    await expect(readFile(exactPath, 'utf8')).resolves.toBe(beforeExactRetry);
+    await expect(store.save('demo', 'task-123', target)).resolves.toBe(1);
   });
 
   it('migrates a legacy revision zero snapshot through the first CAS write', async () => {

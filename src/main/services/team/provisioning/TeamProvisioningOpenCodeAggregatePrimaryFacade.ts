@@ -281,6 +281,42 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     };
 
     const currentPrimaryRun = this.runtimeAdapterRunByTeam.get(teamName);
+    const assertPrimaryRuntimeOwnerCurrent = (): void => {
+      if (
+        currentPrimaryRun?.providerId !== 'opencode' ||
+        currentPrimaryRun.runId !== run.runId ||
+        this.runtimeAdapterRunByTeam.get(teamName) !== currentPrimaryRun
+      ) {
+        throw this.getCancelledOpenCodeAggregateRestartError(teamName, memberName);
+      }
+    };
+    assertPrimaryRuntimeOwnerCurrent();
+    const localModelPreflight = await adapter.preflightLocalModels?.({
+      targets: [
+        {
+          projectPath: run.request.cwd,
+          modelRoute: run.request.model?.trim() ?? '',
+        },
+        ...run.effectiveMembers.map((member) => ({
+          projectPath: member.cwd?.trim() || run.request.cwd,
+          modelRoute: member.model?.trim() ?? '',
+        })),
+      ],
+    });
+    assertRestartCurrent();
+    assertPrimaryRuntimeOwnerCurrent();
+    if (localModelPreflight && !localModelPreflight.ok) {
+      throw new Error(
+        localModelPreflight.diagnostics[0] ??
+          `Local model for teammate "${memberName}" is not ready for restart.`
+      );
+    }
+    if (localModelPreflight?.warnings.length) {
+      logger.warn(
+        `[${teamName}] Local model aggregate restart preflight warnings for ${memberName}: ${localModelPreflight.warnings.join(' ')}`
+      );
+    }
+
     if (currentPrimaryRun?.providerId === 'opencode' && currentPrimaryRun.runId === run.runId) {
       await this.stopOpenCodeRuntimeAdapterTeam(teamName, run.runId);
       assertRestartCurrent();
@@ -355,6 +391,22 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         throw abortedByOwnershipGuard
           ? restartError
           : this.getCancelledOpenCodeAggregatePrimaryLaunchError(teamName);
+      }
+      try {
+        await this.stopFailedOpenCodeAggregatePrimaryRelaunchCandidate({
+          adapter,
+          run,
+          previousLaunchState,
+          previousOwner: currentPrimaryRun,
+        });
+      } catch (cleanupError) {
+        run.effectiveMembers = previousEffectiveMembers;
+        run.expectedMembers = previousExpectedMembers;
+        run.mixedSecondaryLanes = previousSecondaryLanes;
+        this.invalidateRuntimeSnapshotCaches(teamName);
+        throw new Error(
+          `OpenCode member restart failed: ${getErrorMessage(restartError)}. Failed primary candidate cleanup prevented rollback: ${getErrorMessage(cleanupError)}`
+        );
       }
       run.effectiveMembers = previousEffectiveMembers;
       run.expectedMembers = previousExpectedMembers;
@@ -489,6 +541,51 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       logger.warn(
         `[${input.run.teamName}] Failed to stop unretainable OpenCode primary lane: ${getErrorMessage(error)}`
       );
+    }
+  }
+
+  private async stopFailedOpenCodeAggregatePrimaryRelaunchCandidate(input: {
+    adapter: TeamLaunchRuntimeAdapter;
+    run: ProvisioningRun;
+    previousLaunchState: Awaited<ReturnType<TeamLaunchStateStore['read']>>;
+    previousOwner:
+      | {
+          runId: string;
+          providerId: string;
+          cwd?: string;
+        }
+      | undefined;
+  }): Promise<void> {
+    const currentOwner = this.runtimeAdapterRunByTeam.get(input.run.teamName);
+    if (
+      currentOwner &&
+      (currentOwner === input.previousOwner ||
+        currentOwner.providerId !== 'opencode' ||
+        currentOwner.runId !== input.run.runId)
+    ) {
+      throw this.getCancelledOpenCodeAggregatePrimaryLaunchError(input.run.teamName);
+    }
+    const expectedOwner = currentOwner;
+    await input.adapter.stop({
+      runId: input.run.runId,
+      laneId: 'primary',
+      teamName: input.run.teamName,
+      cwd:
+        expectedOwner?.cwd ??
+        this.prepareFacade.getOpenCodeRuntimeLaunchCwd(
+          input.run.request.cwd,
+          input.run.effectiveMembers
+        ),
+      providerId: 'opencode',
+      reason: 'cleanup',
+      previousLaunchState: input.previousLaunchState,
+      force: true,
+    });
+    if (expectedOwner && this.runtimeAdapterRunByTeam.get(input.run.teamName) !== expectedOwner) {
+      throw this.getCancelledOpenCodeAggregatePrimaryLaunchError(input.run.teamName);
+    }
+    if (expectedOwner) {
+      this.runtimeAdapterRunByTeam.delete(input.run.teamName);
     }
   }
 

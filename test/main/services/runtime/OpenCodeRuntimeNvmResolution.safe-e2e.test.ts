@@ -66,7 +66,7 @@ describePosix('OpenCode nvm runtime resolution safe e2e', () => {
       source: 'path',
       state: 'ready',
       binaryPath,
-      version: 'opencode 1.15.6',
+      version: 'opencode 1.18.3',
     });
 
     const bridgeEnv: NodeJS.ProcessEnv = { PATH: '' };
@@ -85,7 +85,7 @@ describePosix('OpenCode nvm runtime resolution safe e2e', () => {
       timeout: 2_000,
       windowsHide: true,
     });
-    expect(version.stdout.trim()).toBe('opencode 1.15.6');
+    expect(version.stdout.trim()).toBe('opencode 1.18.3');
   });
 
   async function createFakeNvmOpenCodeBinary(
@@ -102,7 +102,7 @@ describePosix('OpenCode nvm runtime resolution safe e2e', () => {
         : [
             '#!/bin/sh',
             'if [ "$1" = "--version" ]; then',
-            '  echo "opencode 1.15.6"',
+            '  echo "opencode 1.18.3"',
             '  exit 0',
             'fi',
             'echo "unexpected opencode args: $*" >&2',

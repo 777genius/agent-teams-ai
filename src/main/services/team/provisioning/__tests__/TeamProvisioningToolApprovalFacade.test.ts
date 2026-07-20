@@ -501,6 +501,11 @@ function createHarness(
   const events: ToolApprovalEvent[] = [];
   const persistedMessages: InboxMessage[] = [];
   const teamChanges: TeamChangeEvent[] = [];
+  const runtimeOwner = {
+    runId: run.runId,
+    providerId: 'opencode' as const,
+    cwd: '/repo',
+  };
   const deps: TeamProvisioningToolApprovalFacadeDeps<TestRun> = {
     logger: {
       debug: vi.fn(),
@@ -516,6 +521,7 @@ function createHarness(
     readLaunchState: vi.fn(async () => null),
     persistOpenCodeRuntimeAdapterLaunchResult: vi.fn(async (result) => ({ result })),
     deleteRuntimeAdapterRunByTeam: vi.fn(),
+    getRuntimeAdapterRunByTeam: vi.fn(() => runtimeOwner),
     setRuntimeAdapterRunByTeam: vi.fn(),
     setAliveRunId: vi.fn(),
     guardCommittedOpenCodeSecondaryLaneEvidence: vi.fn(async ({ result }) => result),

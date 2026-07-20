@@ -71,8 +71,19 @@ describe('TeamProvisioningOpenCodeMemberIdentity', () => {
       memberName: 'worker',
       directory: createDirectory(
         createConfig([
-          { name: 'lead', role: 'Team Lead', providerId: 'opencode' },
-          { name: 'worker', role: 'Builder', providerId: 'opencode', cwd: '/fake/worker' },
+          {
+            name: 'lead',
+            role: 'Team Lead',
+            providerId: 'opencode',
+            model: 'openrouter/shared-model',
+          },
+          {
+            name: 'worker',
+            role: 'Builder',
+            providerId: 'opencode',
+            model: 'openrouter/shared-model',
+            cwd: '/fake/identity-team',
+          },
         ])
       ),
       runtimeAdapterProviderId: 'opencode',
@@ -84,7 +95,47 @@ describe('TeamProvisioningOpenCodeMemberIdentity', () => {
       laneIdentity: {
         laneOwnerProviderId: 'opencode',
       },
-      memberRuntimeCwd: '/fake/worker',
+      memberRuntimeCwd: '/fake/identity-team',
+    });
+  });
+
+  it('reconstructs a pure OpenCode secondary model lane without in-memory runtime state', () => {
+    const identity = resolveOpenCodeMemberIdentityFromDirectory({
+      memberName: 'worker',
+      directory: {
+        ...createDirectory(
+          createConfig([
+            {
+              name: 'team-lead',
+              role: 'Team Lead',
+              providerId: 'opencode',
+              model: 'minimax-coding-plan/MiniMax-M3',
+            },
+            {
+              name: 'worker',
+              role: 'Builder',
+              providerId: 'opencode',
+              model: 'zai-coding-plan/glm-5.2',
+            },
+          ])
+        ),
+        teamMeta: {
+          providerId: 'opencode',
+          model: 'minimax-coding-plan/MiniMax-M3',
+        },
+      },
+      runtimeAdapterProviderId: 'opencode',
+    });
+
+    expect(identity).toMatchObject({
+      ok: true,
+      canonicalMemberName: 'worker',
+      laneId: 'secondary:opencode:worker',
+      laneIdentity: {
+        laneId: 'secondary:opencode:worker',
+        laneKind: 'secondary',
+        laneOwnerProviderId: 'opencode',
+      },
     });
   });
 

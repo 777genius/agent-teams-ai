@@ -129,7 +129,10 @@ export function getGraphNodeRenderBounds(
 ): { left: number; top: number; right: number; bottom: number } {
   const x = node.x ?? 0;
   const y = node.y ?? 0;
-  if (getGraphSemanticZoomLevel(zoom) === 'overview') {
+  if (
+    getGraphSemanticZoomLevel(zoom) === 'overview' &&
+    !(node.kind === 'task' && node.taskOverviewStyle === 'card')
+  ) {
     const overviewSize = getGraphNodeOverviewSize(node, zoom);
     if (!overviewSize) return getGraphNodeWorldBounds(node);
     const halfWidth = overviewSize.width / 2;

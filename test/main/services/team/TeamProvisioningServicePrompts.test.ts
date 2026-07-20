@@ -816,7 +816,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(spawnCli).not.toHaveBeenCalled();
   });
 
-  it('blocks future Codex catalog models until runtime declares dynamic launch support', async () => {
+  it('blocks Codex models absent from the authoritative live catalog', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
     vi.mocked(spawnCli).mockReset();
 
@@ -841,7 +841,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
         },
         () => {}
       )
-    ).rejects.toThrow('does not declare dynamic Codex model launch support yet');
+    ).rejects.toThrow('not present in the live Codex model catalog');
 
     expect(execCli).toHaveBeenCalledWith(
       '/fake/codex',

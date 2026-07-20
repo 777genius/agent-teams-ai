@@ -193,6 +193,7 @@ type TeamSliceHarnessState = TeamSlice &
     | 'invalidateTaskChangePresence'
     | 'openTab'
     | 'paneLayout'
+    | 'selectedProjectId'
     | 'setActiveTab'
     | 'updateTabLabel'
     | 'warmTaskChangeSummaries'
@@ -272,6 +273,7 @@ function createSliceStore() {
       ({
         ...createTeamSlice(set as never, get as never, store as never),
         paneLayout: createPaneLayout(),
+        selectedProjectId: null,
         openTab: vi.fn(),
         setActiveTab: vi.fn(),
         updateTabLabel: vi.fn(),
@@ -533,6 +535,26 @@ describe('teamSlice actions', () => {
   afterEach(() => {
     restoreWindowAnimationFrame();
     vi.useRealTimers();
+  });
+
+  it('keeps an explicit project intent when opening Teams and clears it for generic navigation', () => {
+    const store = createSliceStore();
+    store.setState({ selectedProjectId: 'worktree-alpha' });
+
+    store.getState().openTeamsTab('/tmp/alpha');
+
+    expect(store.getState().teamsProjectNavigationIntent).toEqual({
+      projectId: 'worktree-alpha',
+      projectPath: '/tmp/alpha',
+    });
+    expect(store.getState().openTab).toHaveBeenCalledWith({
+      type: 'teams',
+      label: 'Teams',
+    });
+
+    store.getState().openTeamsTab();
+
+    expect(store.getState().teamsProjectNavigationIntent).toBeNull();
   });
 
   it('records task first output once through createTask and refresh without leaking prompt text', async () => {

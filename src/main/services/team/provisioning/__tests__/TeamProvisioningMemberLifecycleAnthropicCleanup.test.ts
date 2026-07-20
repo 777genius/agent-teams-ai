@@ -62,6 +62,24 @@ vi.mock('@main/utils/processKill', () => ({
   killProcessByPid: vi.fn(),
 }));
 
+vi.mock('@main/services/team/bootstrap/NativeAppManagedBootstrapContextBuilder', () => ({
+  buildNativeAppManagedBootstrapSpecs: vi.fn(async ({ members }) => {
+    return new Map(
+      members.map((member: { name: string }) => [
+        member.name,
+        {
+          mode: 'startup_context_file',
+          contextText:
+            '<agent_teams_native_bootstrap_context>test</agent_teams_native_bootstrap_context>',
+          contextHash: 'a'.repeat(64),
+          briefingHash: 'b'.repeat(64),
+          generatedAt: new Date().toISOString(),
+        },
+      ])
+    );
+  }),
+}));
+
 vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
   const actual = await importOriginal<typeof PathDecoderModule>();
   return {
@@ -273,5 +291,49 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
 
     expect(killProcessByPid).toHaveBeenCalledWith(4567);
     expect(fs.existsSync(helperDirectory)).toBe(false);
+  });
+
+  it('queues the native bootstrap marker when a direct process restart has app-managed context', async () => {
+    const helperDirectory = createHelperDirectory();
+    const input = createInput();
+    const host = createHost(helperDirectory, input.run);
+    fs.mkdirSync(path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime'), {
+      recursive: true,
+    });
+    const child = Object.assign(new EventEmitter(), {
+      pid: 5678,
+      stdin: Object.assign(new EventEmitter(), { unref: vi.fn() }),
+      stdout: { pipe: vi.fn(), unref: vi.fn() },
+      stderr: { pipe: vi.fn(), unref: vi.fn() },
+      unref: vi.fn(),
+    });
+    vi.mocked(spawnCli).mockReturnValue(child as never);
+    const controller = createController(host);
+
+    await controller.launchDirectProcessMemberRestartInternal(input);
+
+    await vi.waitFor(() => {
+      expect(
+        fs.existsSync(
+          path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime', 'alice.stdout.log')
+        )
+      ).toBe(true);
+      expect(
+        fs.existsSync(
+          path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime', 'alice.stderr.log')
+        )
+      ).toBe(true);
+    });
+    expect(host.enqueueDirectRestartPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        memberName: 'alice',
+        prompt: [
+          '<agent_teams_native_app_managed_bootstrap_check>',
+          '</agent_teams_native_app_managed_bootstrap_check>',
+        ].join('\n'),
+      })
+    );
+    child.emit('close', 0, null);
+    await new Promise<void>((resolve) => setImmediate(resolve));
   });
 });

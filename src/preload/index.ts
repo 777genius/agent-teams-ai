@@ -92,12 +92,17 @@ import {
   REVIEW_GET_TASK_CHANGES,
   REVIEW_GET_TEAM_TASK_CHANGE_SUMMARIES,
   REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES,
+  REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
   REVIEW_LOAD_DECISIONS,
   REVIEW_LOAD_DRAFT_HISTORY,
+  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
   REVIEW_PREVIEW_REJECT,
   REVIEW_REAPPLY_REJECTED_RENAME,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
+  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
   REVIEW_RESTORE_HISTORY,
   REVIEW_RESTORE_REJECTED_RENAME,
   REVIEW_RETRY_MUTATION_RECOVERY,
@@ -270,6 +275,7 @@ import {
 } from './constants/ipcChannels';
 
 import type {
+  ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,
   ReviewDraftHistorySnapshot,
 } from '@features/change-review-history/contracts';
@@ -329,10 +335,13 @@ import type {
   RetryFailedOpenCodeSecondaryLanesResult,
   RetryReviewMutationRecoveryRequest,
   RetryReviewMutationRecoveryResult,
+  ReviewConflictResolution,
+  ReviewDecisionConflictCandidateSummary,
   ReviewFileScope,
   ReviewRedoAction,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
+  SaveReviewDecisionsResult,
   Schedule,
   ScheduleChangeEvent,
   ScheduleRun,
@@ -509,14 +518,10 @@ function formatConsoleArg(arg: unknown): string {
 }
 
 function shouldForwardConsoleText(text: string): boolean {
-  return (
-    text.startsWith('[Store:') ||
-    text.startsWith('[Component:') ||
-    text.startsWith('[IPC:') ||
-    text.startsWith('[Service:') ||
-    text.startsWith('[Perf:')
-  );
+  return /^\[[A-Za-z][A-Za-z0-9:_-]{0,79}\](?:\s|$)/.test(text);
 }
+
+const MAX_FORWARDED_RENDERER_LOG_CHARS = 16_000;
 
 function installRendererLogForwarding(): void {
   const originalWarn = console.warn.bind(console);
@@ -527,7 +532,10 @@ function installRendererLogForwarding(): void {
     try {
       const text = args.map(formatConsoleArg).join(' ').trim();
       if (!text || !shouldForwardConsoleText(text)) return;
-      ipcRenderer.send(RENDERER_LOG, { level: 'warn', message: text });
+      ipcRenderer.send(RENDERER_LOG, {
+        level: 'warn',
+        message: text.slice(0, MAX_FORWARDED_RENDERER_LOG_CHARS),
+      });
     } catch {
       // ignore
     }
@@ -538,7 +546,10 @@ function installRendererLogForwarding(): void {
     try {
       const text = args.map(formatConsoleArg).join(' ').trim();
       if (!text || !shouldForwardConsoleText(text)) return;
-      ipcRenderer.send(RENDERER_LOG, { level: 'error', message: text });
+      ipcRenderer.send(RENDERER_LOG, {
+        level: 'error',
+        message: text.slice(0, MAX_FORWARDED_RENDERER_LOG_CHARS),
+      });
     } catch {
       // ignore
     }
@@ -1654,7 +1665,7 @@ const electronAPI: ElectronAPI = {
       expectedRevision?: number,
       reviewRedoHistory?: ReviewRedoAction[]
     ) => {
-      return invokeIpcWithResult<{ revision: number }>(
+      return invokeIpcWithResult<SaveReviewDecisionsResult>(
         REVIEW_SAVE_DECISIONS,
         teamName,
         scopeKey,
@@ -1679,6 +1690,36 @@ const electronAPI: ElectronAPI = {
         scopeKey,
         scopeToken ?? null,
         expectedRevision
+      );
+    },
+    loadDecisionConflictCandidates: async (
+      teamName: string,
+      scopeKey: string,
+      scopeToken: string
+    ) => {
+      return invokeIpcWithResult<ReviewDecisionConflictCandidateSummary[]>(
+        REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+        teamName,
+        scopeKey,
+        scopeToken
+      );
+    },
+    resolveDecisionConflictCandidate: async (
+      teamName: string,
+      scopeKey: string,
+      scopeToken: string,
+      candidateId: string,
+      resolution: ReviewConflictResolution,
+      expectedCurrentRevision: number
+    ) => {
+      return invokeIpcWithResult<{ revision: number }>(
+        REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+        teamName,
+        scopeKey,
+        scopeToken,
+        candidateId,
+        resolution,
+        expectedCurrentRevision
       );
     },
     loadDraftHistory: async (teamName: string, scopeKey: string, scopeToken: string) => {
@@ -1723,6 +1764,58 @@ const electronAPI: ElectronAPI = {
         filePath ?? null,
         expectedRevision ?? null,
         expectedGeneration ?? null
+      );
+    },
+    loadDraftHistoryConflictCandidates: async (
+      teamName: string,
+      scopeKey: string,
+      scopeToken: string
+    ) => {
+      return invokeIpcWithResult<ReviewDraftHistoryConflictCandidateSummary[]>(
+        REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+        teamName,
+        scopeKey,
+        scopeToken
+      );
+    },
+    resolveDraftHistoryConflictCandidate: async (
+      teamName: string,
+      scopeKey: string,
+      scopeToken: string,
+      candidateId: string,
+      resolution: ReviewConflictResolution,
+      expectedCurrentRevision: number,
+      expectedCurrentGeneration: string | null
+    ) => {
+      return invokeIpcWithResult<ReviewDraftHistoryEntry | null>(
+        REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+        teamName,
+        scopeKey,
+        scopeToken,
+        candidateId,
+        resolution,
+        expectedCurrentRevision,
+        expectedCurrentGeneration
+      );
+    },
+    replaceDraftHistoryConflictCandidate: async (
+      teamName: string,
+      scopeKey: string,
+      scopeToken: string,
+      expectedEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
+      replacementEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
+      expectedCurrentRevision: number,
+      expectedCurrentGeneration: string | null
+    ) => {
+      return invokeIpcWithResult<ReviewDraftHistoryConflictCandidateSummary>(
+        REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+        teamName,
+        scopeKey,
+        scopeToken,
+        expectedEntry,
+        replacementEntry,
+        expectedCurrentRevision,
+        expectedCurrentGeneration
       );
     },
     onCmdN: (callback: () => void): (() => void) => {

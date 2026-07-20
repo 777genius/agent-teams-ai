@@ -9,6 +9,7 @@ import {
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 
 import {
+  type OpenCodeAggregateProvisioningRun,
   runOpenCodeWorktreeRootAggregateLaunch,
   type RunOpenCodeWorktreeRootAggregateLaunchInput,
 } from './TeamProvisioningOpenCodeAggregateRun';
@@ -23,7 +24,10 @@ import type {
   TeamRuntimeLaunchResult,
   TeamRuntimeMemberSpec,
 } from '../runtime';
-import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
+import type {
+  MixedSecondaryRuntimeLaneState,
+  SecondaryRuntimeRunEntry,
+} from './TeamProvisioningSecondaryRuntimeRuns';
 import type {
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSnapshot,
@@ -52,6 +56,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
   runtimeAdapterProgressByRunId: Map<string, TeamProvisioningProgress>;
   cancelledRuntimeAdapterRunIds: Set<string>;
   runs: Map<string, Run>;
+  secondaryRuntimeRunByTeam: ReadonlyMap<string, ReadonlyMap<string, SecondaryRuntimeRunEntry>>;
   runtimeAdapterProgressState: {
     setRuntimeAdapterProgress(
       progress: TeamProvisioningProgress,
@@ -89,6 +94,10 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
   }): Promise<TeamRuntimeLaunchResult | null>;
   launchSingleMixedSecondaryLane(run: Run, lane: MixedSecondaryRuntimeLaneState): Promise<void>;
+  publishMixedSecondaryLaneStatusChange(
+    run: Run,
+    lane: MixedSecondaryRuntimeLaneState
+  ): Promise<void>;
   summarizeOpenCodeAggregateLaunchState(input: {
     primaryResult: TeamRuntimeLaunchResult | null;
     lanes: readonly MixedSecondaryRuntimeLaneState[];
@@ -136,6 +145,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringServiceHost<Run> {
   runtimeAdapterProgressByRunId: TeamProvisioningOpenCodeLaunchWiringHost<Run>['runtimeAdapterProgressByRunId'];
   cancelledRuntimeAdapterRunIds: TeamProvisioningOpenCodeLaunchWiringHost<Run>['cancelledRuntimeAdapterRunIds'];
   runs: TeamProvisioningOpenCodeLaunchWiringHost<Run>['runs'];
+  secondaryRuntimeRunByTeam: TeamProvisioningOpenCodeLaunchWiringHost<Run>['secondaryRuntimeRunByTeam'];
   runtimeAdapterProgressState: TeamProvisioningOpenCodeLaunchWiringHost<Run>['runtimeAdapterProgressState'];
   runTracking: TeamProvisioningOpenCodeLaunchWiringHost<Run>['runTracking'];
   stopAllTeamsGeneration: number;
@@ -168,6 +178,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringServiceHost<Run> {
   invalidateRuntimeSnapshotCaches: TeamProvisioningOpenCodeLaunchWiringHost<Run>['invalidateRuntimeSnapshotCaches'];
   launchOpenCodeAggregatePrimaryLane: TeamProvisioningOpenCodeLaunchWiringHost<Run>['launchOpenCodeAggregatePrimaryLane'];
   launchSingleMixedSecondaryLane: TeamProvisioningOpenCodeLaunchWiringHost<Run>['launchSingleMixedSecondaryLane'];
+  publishMixedSecondaryLaneStatusChange: TeamProvisioningOpenCodeLaunchWiringHost<Run>['publishMixedSecondaryLaneStatusChange'];
   summarizeOpenCodeAggregateLaunchState: TeamProvisioningOpenCodeLaunchWiringHost<Run>['summarizeOpenCodeAggregateLaunchState'];
   persistLaunchStateSnapshot: TeamProvisioningOpenCodeLaunchWiringHost<Run>['persistLaunchStateSnapshot'];
   syncRunMemberSpawnStatusesFromSnapshot: TeamProvisioningOpenCodeLaunchWiringHost<Run>['syncRunMemberSpawnStatusesFromSnapshot'];
@@ -194,6 +205,7 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
     runtimeAdapterProgressByRunId: service.runtimeAdapterProgressByRunId,
     cancelledRuntimeAdapterRunIds: service.cancelledRuntimeAdapterRunIds,
     runs: service.runs,
+    secondaryRuntimeRunByTeam: service.secondaryRuntimeRunByTeam,
     runtimeAdapterProgressState: service.runtimeAdapterProgressState,
     runTracking: service.runTracking,
     getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
@@ -223,6 +235,8 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
       service.launchOpenCodeAggregatePrimaryLane(input),
     launchSingleMixedSecondaryLane: (run, lane) =>
       service.launchSingleMixedSecondaryLane(run, lane),
+    publishMixedSecondaryLaneStatusChange: (run, lane) =>
+      service.publishMixedSecondaryLaneStatusChange(run, lane),
     summarizeOpenCodeAggregateLaunchState: (input) =>
       service.summarizeOpenCodeAggregateLaunchState(input),
     persistLaunchStateSnapshot: (run, launchPhase) =>
@@ -254,6 +268,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
         { ...input, adapter: getRequiredOpenCodeRuntimeAdapter(host) },
         {
           randomUUID,
+          nowMs: () => Date.now(),
           nowIso,
           getStopAllTeamsGeneration: () => host.getStopAllTeamsGeneration(),
           getRuntimeAdapterRun: (teamName) => host.runtimeAdapterRunByTeam.get(teamName),
@@ -274,6 +289,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           setProvisioningRun: (teamName, runId) => {
             host.provisioningRunByTeam.set(teamName, runId);
           },
+          getRun: (runId) => host.runs.get(runId) as OpenCodeAggregateProvisioningRun | undefined,
           setRuntimeAdapterProgress: (progress, onProgress) =>
             host.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress, onProgress),
           resetTeamScopedTransientStateForNewRun: (teamName) =>
@@ -292,6 +308,12 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
             }),
           launchSingleMixedSecondaryLane: (run, lane) =>
             host.launchSingleMixedSecondaryLane(run as Run, lane),
+          publishMixedSecondaryLaneStatusChange: (run, lane) =>
+            host.publishMixedSecondaryLaneStatusChange(run as Run, lane),
+          getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
+            host.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
+          getSecondaryRuntimeRun: (teamName, laneId) =>
+            host.secondaryRuntimeRunByTeam.get(teamName)?.get(laneId),
           summarizeOpenCodeAggregateLaunchState: (nextInput) =>
             host.summarizeOpenCodeAggregateLaunchState(nextInput),
           persistLaunchStateSnapshot: (run, launchPhase) =>

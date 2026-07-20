@@ -22,6 +22,42 @@ enum LogLevel {
   NONE = 4,
 }
 
+export type LogSinkLevel = 'warn' | 'error';
+
+export interface LogSinkEntry {
+  timestamp: string;
+  level: LogSinkLevel;
+  namespace: string;
+  args: readonly unknown[];
+}
+
+export type LogSink = (entry: LogSinkEntry) => void;
+
+const logSinks = new Set<LogSink>();
+
+/**
+ * Register a process-local sink for durable warning/error diagnostics.
+ *
+ * Shared modules are bundled separately for Electron main and renderer, so a
+ * sink installed by main cannot expose filesystem access to the renderer.
+ */
+export function addLogSink(sink: LogSink): () => void {
+  logSinks.add(sink);
+  return () => {
+    logSinks.delete(sink);
+  };
+}
+
+function emitToLogSinks(entry: LogSinkEntry): void {
+  for (const sink of logSinks) {
+    try {
+      sink(entry);
+    } catch {
+      // Logging must never interfere with application behavior.
+    }
+  }
+}
+
 class Logger {
   private static level: LogLevel =
     process.env.NODE_ENV === 'production' ? LogLevel.ERROR : LogLevel.WARN;
@@ -41,12 +77,24 @@ class Logger {
   }
 
   warn(...args: unknown[]): void {
+    emitToLogSinks({
+      timestamp: new Date().toISOString(),
+      level: 'warn',
+      namespace: this.namespace,
+      args,
+    });
     if (Logger.level <= LogLevel.WARN) {
       console.warn(`[${this.namespace}]`, ...args);
     }
   }
 
   error(...args: unknown[]): void {
+    emitToLogSinks({
+      timestamp: new Date().toISOString(),
+      level: 'error',
+      namespace: this.namespace,
+      args,
+    });
     if (Logger.level <= LogLevel.ERROR) {
       console.error(`[${this.namespace}]`, ...args);
     }

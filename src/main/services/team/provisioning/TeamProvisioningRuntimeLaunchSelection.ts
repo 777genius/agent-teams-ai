@@ -870,16 +870,12 @@ export function validateRuntimeLaunchSelection(params: {
     return;
   }
 
-  if (params.facts.runtimeCapabilities?.modelCatalog?.dynamic === true) {
-    return;
-  }
-
   if (!hasAuthoritativeCodexLaunchCatalog(params.facts)) {
     return;
   }
 
   throw new Error(
-    `${params.actorLabel} uses Codex model "${explicitModel}", but this Agent Teams runtime does not declare dynamic Codex model launch support yet. Upgrade the runtime or pick a listed Codex model.`
+    `${params.actorLabel} uses Codex model "${explicitModel}", but it is not present in the live Codex model catalog. Refresh the catalog or pick a listed Codex model.`
   );
 }
 

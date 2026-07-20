@@ -9,6 +9,8 @@
  * before being sent to renderer (SEC-2).
  */
 
+import { lstatSync } from 'node:fs';
+
 import { isPathWithinRoot } from '@main/utils/pathValidation';
 import { createLogger } from '@shared/utils/logger';
 import { watch } from 'chokidar';
@@ -23,7 +25,58 @@ const log = createLogger('EditorFileWatcher');
 // =============================================================================
 
 const STARTUP_IGNORE_CHANGE_MS = 3000;
+const WATCHER_READY_TIMEOUT_MS = 5000;
+const WATCHER_RESTART_DELAY_MS = 250;
 const MAX_EMITTED_EVENTS_PER_FLUSH = 300;
+
+export type FileIdentity =
+  | { status: 'missing' }
+  | { status: 'unavailable' }
+  | {
+      status: 'present';
+      device: bigint;
+      inode: bigint;
+      size: bigint;
+      modifiedAtNs: bigint;
+      changedAtNs: bigint;
+    };
+
+function readFileIdentity(filePath: string): FileIdentity {
+  try {
+    const stat = lstatSync(filePath, { bigint: true });
+    return {
+      status: 'present',
+      device: stat.dev,
+      inode: stat.ino,
+      size: stat.size,
+      modifiedAtNs: stat.mtimeNs,
+      changedAtNs: stat.ctimeNs,
+    };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { status: 'missing' };
+    }
+    return { status: 'unavailable' };
+  }
+}
+
+export function identityChangeType(
+  before: FileIdentity,
+  after: FileIdentity
+): EditorFileChangeEvent['type'] | null {
+  // Uncertainty must fail closed for review: silently treating an unreadable
+  // identity as unchanged can permit a destructive action on stale bytes.
+  if (before.status === 'unavailable' || after.status === 'unavailable') return 'change';
+  if (before.status === 'missing') return after.status === 'present' ? 'create' : null;
+  if (after.status === 'missing') return 'delete';
+  return before.device !== after.device ||
+    before.inode !== after.inode ||
+    before.size !== after.size ||
+    before.modifiedAtNs !== after.modifiedAtNs ||
+    before.changedAtNs !== after.changedAtNs
+    ? 'change'
+    : null;
+}
 
 export interface EditorFileWatcherOptions {
   /**
@@ -40,6 +93,11 @@ export interface EditorFileWatcherOptions {
 
 export class EditorFileWatcher {
   private watcher: FSWatcher | null = null;
+  private retiringWatchers = new Set<FSWatcher>();
+  private lastReadyWatcher: FSWatcher | null = null;
+  private watcherReadyTimer: ReturnType<typeof setTimeout> | null = null;
+  private watcherRestartTimer: ReturnType<typeof setTimeout> | null = null;
+  private watcherNeedsRestart = false;
   private dirWatcher: FSWatcher | null = null;
   private projectRoot: string | null = null;
   private pendingEvents = new Map<string, EditorFileChangeEvent['type']>();
@@ -77,7 +135,9 @@ export class EditorFileWatcher {
 
   /**
    * Update list of watched file paths (open tabs).
-   * Rebuilds chokidar watcher when the set changes.
+   * Rebuilds chokidar watcher when the set changes while retaining the previous
+   * subscription until the replacement is ready. A before/ready identity check
+   * recovers changes that happen while chokidar is arming its native watchers.
    */
   setWatchedFiles(filePaths: string[]): void {
     if (!this.projectRoot) {
@@ -93,32 +153,52 @@ export class EditorFileWatcher {
     if (this.watcher) {
       const added = normalized.filter((filePath) => !this.watchedFiles.has(filePath));
       const removed = [...this.watchedFiles].filter((filePath) => !nextWatchedFiles.has(filePath));
-      if (added.length === 0 && removed.length === 0) return;
-      // Add first so unchanged and newly-visible files remain continuously covered.
-      if (added.length > 0) this.watcher.add(added);
-      if (removed.length > 0) {
-        this.watcher.unwatch(removed);
-      }
-      this.watchedFiles = nextWatchedFiles;
-      return;
+      if (added.length === 0 && removed.length === 0 && !this.watcherNeedsRestart) return;
     }
 
     if (normalized.length === 0) {
       this.watchedFiles.clear();
+      this.clearWatcherReadyTimer();
+      this.clearWatcherRestartTimer();
+      if (this.watcher) {
+        void this.watcher.close();
+        this.watcher = null;
+      }
+      this.closeRetiringWatchers();
+      this.lastReadyWatcher = null;
+      this.watcherNeedsRestart = false;
       return;
     }
 
+    const startupIdentities = new Map(
+      normalized.map((filePath) => [filePath, readFileIdentity(filePath)] as const)
+    );
+    const startupObservedPaths = new Set<string>();
+    let isReady = false;
+
     // Build a new watcher for the given file set.
     // disableGlobbing prevents chokidar from treating file names as patterns.
-    this.watcher = watch(normalized, {
+    const previousWatcher = this.watcher;
+    this.clearWatcherReadyTimer();
+    this.clearWatcherRestartTimer();
+    this.watcherNeedsRestart = false;
+    const nextWatcher = watch(normalized, {
       ignoreInitial: true,
       ignorePermissionErrors: true,
       followSymlinks: false,
     });
+    this.watcher = nextWatcher;
     this.watchedFiles = nextWatchedFiles;
+    if (previousWatcher) this.retiringWatchers.add(previousWatcher);
 
-    const emitSafe = (type: EditorFileChangeEvent['type'], filePath: string): void => {
-      if (type === 'change' && Date.now() < this.ignoreChangeUntilMs) {
+    const emitSafe = (
+      type: EditorFileChangeEvent['type'],
+      filePath: string,
+      forceConservativeChange = false
+    ): void => {
+      if (!isReady) startupObservedPaths.add(filePath);
+      if (!this.watchedFiles.has(filePath)) return;
+      if (type === 'change' && !forceConservativeChange && Date.now() < this.ignoreChangeUntilMs) {
         return;
       }
       if (!isPathWithinRoot(filePath, this.projectRoot!)) {
@@ -129,12 +209,55 @@ export class EditorFileWatcher {
       this.scheduleFlush();
     };
 
-    this.watcher.on('change', (p) => emitSafe('change', p));
-    this.watcher.on('add', (p) => emitSafe('create', p));
-    this.watcher.on('unlink', (p) => emitSafe('delete', p));
+    nextWatcher.on('change', (p) => emitSafe('change', p));
+    nextWatcher.on('add', (p) => emitSafe('create', p));
+    nextWatcher.on('unlink', (p) => emitSafe('delete', p));
 
-    this.watcher.on('error', (error) => {
+    let failedClosed = false;
+    const failClosed = (reason: string): void => {
+      if (failedClosed || this.watcher !== nextWatcher) return;
+      failedClosed = true;
+      this.watcherNeedsRestart = true;
+      this.clearWatcherReadyTimer();
+      if (this.lastReadyWatcher === nextWatcher) this.lastReadyWatcher = null;
+      log.error(reason);
+      for (const filePath of startupIdentities.keys()) {
+        if (this.watchedFiles.has(filePath)) emitSafe('change', filePath, true);
+      }
+      // Keep the latest known-ready watcher for unchanged paths, but bound
+      // abandoned replacement watchers when chokidar never reaches `ready`.
+      if (!isReady) this.closeRetiringWatchers(this.lastReadyWatcher);
+      this.watcherRestartTimer = setTimeout(() => {
+        this.watcherRestartTimer = null;
+        if (this.watcher !== nextWatcher || !this.projectRoot || !this.watcherNeedsRestart) return;
+        this.setWatchedFiles([...this.watchedFiles]);
+      }, WATCHER_RESTART_DELAY_MS);
+    };
+
+    this.watcherReadyTimer = setTimeout(() => {
+      failClosed('Watcher did not become ready; review files require revalidation');
+    }, WATCHER_READY_TIMEOUT_MS);
+
+    nextWatcher.on('ready', () => {
+      isReady = true;
+      if (this.watcher !== nextWatcher || failedClosed) return;
+      this.clearWatcherReadyTimer();
+      this.clearWatcherRestartTimer();
+      this.watcherNeedsRestart = false;
+
+      for (const [filePath, before] of startupIdentities) {
+        if (startupObservedPaths.has(filePath) || !this.watchedFiles.has(filePath)) continue;
+        const changeType = identityChangeType(before, readFileIdentity(filePath));
+        if (changeType) emitSafe(changeType, filePath);
+      }
+
+      this.closeRetiringWatchers();
+      this.lastReadyWatcher = nextWatcher;
+    });
+
+    nextWatcher.on('error', (error) => {
       log.error('Watcher error:', error);
+      failClosed('Watcher failed; review files require revalidation');
     });
   }
 
@@ -196,6 +319,9 @@ export class EditorFileWatcher {
    * Stop watching. Safe to call multiple times.
    */
   stop(): void {
+    this.clearWatcherReadyTimer();
+    this.clearWatcherRestartTimer();
+    this.watcherNeedsRestart = false;
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
       this.flushTimer = null;
@@ -210,6 +336,8 @@ export class EditorFileWatcher {
       void this.watcher.close();
       this.watcher = null;
     }
+    this.closeRetiringWatchers();
+    this.lastReadyWatcher = null;
     if (this.dirWatcher) {
       log.info('Stopping directory watcher');
       void this.dirWatcher.close();
@@ -259,5 +387,25 @@ export class EditorFileWatcher {
    */
   isWatching(): boolean {
     return this.watcher !== null;
+  }
+
+  private clearWatcherReadyTimer(): void {
+    if (!this.watcherReadyTimer) return;
+    clearTimeout(this.watcherReadyTimer);
+    this.watcherReadyTimer = null;
+  }
+
+  private clearWatcherRestartTimer(): void {
+    if (!this.watcherRestartTimer) return;
+    clearTimeout(this.watcherRestartTimer);
+    this.watcherRestartTimer = null;
+  }
+
+  private closeRetiringWatchers(except: FSWatcher | null = null): void {
+    for (const watcher of this.retiringWatchers) {
+      if (watcher === except) continue;
+      void watcher.close();
+      this.retiringWatchers.delete(watcher);
+    }
   }
 }

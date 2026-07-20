@@ -1,3 +1,6 @@
+import { getErrorMessage } from '@shared/utils/errorHandling';
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import { randomUUID } from 'crypto';
 
 import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
@@ -26,6 +29,8 @@ import type {
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchInput,
   TeamRuntimeLaunchResult,
+  TeamRuntimeLocalModelPreflightResult,
+  TeamRuntimeLocalModelPreflightTarget,
   TeamRuntimeMemberLaunchEvidence,
   TeamRuntimeMemberStopEvidence,
   TeamRuntimePendingPermission,
@@ -112,6 +117,14 @@ export interface OpenCodeTeamRuntimeMessageResult {
   diagnostics: string[];
 }
 
+export interface OpenCodeTeamRuntimeAdapterOptions {
+  inspectLocalModelRuntime?: (input: { projectPath: string; modelRoute: string }) => Promise<{
+    severity: 'ready' | 'warning' | 'blocking';
+    code: string;
+    message: string;
+  } | null>;
+}
+
 const REQUIRED_READY_CHECKPOINTS = new Set([
   'required_tools_proven',
   'delivery_ready',
@@ -131,6 +144,95 @@ const OPEN_CODE_CAPABILITY_SNAPSHOT_PRELAUNCH_MISMATCH_MARKERS = [
 ];
 const OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_LIMIT = 3;
 const OPEN_CODE_READINESS_RETRY_DELAYS_MS = [750, 2_000] as const;
+
+function isOpenCodeLocalModelRoute(modelRoute: string): boolean {
+  const sourceId = parseOpenCodeQualifiedModelRef(modelRoute)?.sourceId ?? null;
+  return isOpenCodeLocalProviderId(sourceId);
+}
+
+type LocalRuntimeReadiness = {
+  severity: 'ready' | 'warning' | 'blocking';
+  code: string;
+  message: string;
+} | null;
+
+interface LocalRuntimeInspectionState {
+  readonly inspectedModels: Map<string, LocalRuntimeReadiness>;
+  readonly nonLocalSources: Set<string>;
+}
+
+function createLocalRuntimeInspectionState(): LocalRuntimeInspectionState {
+  return {
+    inspectedModels: new Map<string, LocalRuntimeReadiness>(),
+    nonLocalSources: new Set<string>(),
+  };
+}
+
+async function preflightOpenCodeLocalModels(
+  options: OpenCodeTeamRuntimeAdapterOptions,
+  targets: readonly TeamRuntimeLocalModelPreflightTarget[],
+  state: LocalRuntimeInspectionState = createLocalRuntimeInspectionState()
+): Promise<TeamRuntimeLocalModelPreflightResult> {
+  if (!options.inspectLocalModelRuntime) {
+    return { ok: true, warnings: [], diagnostics: [] };
+  }
+
+  let warnings: string[] = [];
+  let diagnostics: string[] = [];
+  for (const target of targets) {
+    const modelRoute = target.modelRoute.trim();
+    const parsed = parseOpenCodeQualifiedModelRef(modelRoute);
+    if (!parsed) continue;
+
+    const projectIdentity = normalizeOpenCodeProjectIdentity(target.projectPath);
+    const sourceKey = `${projectIdentity}\0${parsed.sourceId}`;
+    if (state.nonLocalSources.has(sourceKey)) continue;
+
+    const inspectionKey = `${projectIdentity}\0${modelRoute}`;
+    let readiness = state.inspectedModels.get(inspectionKey);
+    if (!state.inspectedModels.has(inspectionKey)) {
+      try {
+        readiness = await options.inspectLocalModelRuntime({
+          projectPath: target.projectPath,
+          modelRoute,
+        });
+        if (!readiness) {
+          if (!isOpenCodeLocalModelRoute(modelRoute)) {
+            state.nonLocalSources.add(sourceKey);
+            state.inspectedModels.set(inspectionKey, null);
+            continue;
+          }
+          readiness = {
+            severity: 'blocking',
+            code: 'local_provider_unavailable',
+            message:
+              `Local provider for ${modelRoute} could not be resolved. ` +
+              'Reconnect it, then retry.',
+          };
+        }
+      } catch (error) {
+        readiness = {
+          severity: 'blocking',
+          code: 'local_runtime_inspection_failed',
+          message: `Local model launch verification failed: ${getErrorMessage(error)}`,
+        };
+      }
+      state.inspectedModels.set(inspectionKey, readiness);
+    }
+
+    if (readiness?.severity === 'warning') {
+      warnings = mergeDiagnostics(warnings, [readiness.message]);
+    } else if (readiness?.severity === 'blocking') {
+      diagnostics = mergeDiagnostics(diagnostics, [readiness.message]);
+    }
+  }
+
+  return {
+    ok: diagnostics.length === 0,
+    warnings,
+    diagnostics,
+  };
+}
 
 type OpenCodeTeamLaunchReadinessInput = Parameters<
   OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']
@@ -187,6 +289,25 @@ function isTransientOpenCodeReadinessTransportFailure(
     return false;
   }
 
+  const hasTransientTransportMarker =
+    diagnosticText.includes('unable to connect') ||
+    diagnosticText.includes('timed out') ||
+    diagnosticText.includes('timeout') ||
+    diagnosticText.includes('aborted') ||
+    diagnosticText.includes('socket connection was closed') ||
+    diagnosticText.includes('fetch failed') ||
+    diagnosticText.includes('econnreset') ||
+    diagnosticText.includes('econnrefused') ||
+    diagnosticText.includes('socket hang up') ||
+    diagnosticText.includes('networkerror') ||
+    diagnosticText.includes('/experimental/tool/ids unavailable');
+  if (!hasTransientTransportMarker) {
+    return false;
+  }
+
+  // A timed-out inventory can append secondary "model not found" diagnostics
+  // because the catalog never loaded. Treat transport evidence as authoritative
+  // unless the same response also proves a non-retryable contract/auth failure.
   const hasHardFailureMarker =
     /\b(?:401|403)\b/.test(diagnosticText) ||
     diagnosticText.includes('unauthorized') ||
@@ -201,22 +322,12 @@ function isTransientOpenCodeReadinessTransportFailure(
     diagnosticText.includes('contract') ||
     diagnosticText.includes('schema') ||
     diagnosticText.includes('invalid input') ||
-    /\b(?:404|405)\b/.test(diagnosticText) ||
-    diagnosticText.includes('not found');
+    /\b(?:404|405)\b/.test(diagnosticText);
   if (hasHardFailureMarker) {
     return false;
   }
 
-  return (
-    diagnosticText.includes('unable to connect') ||
-    diagnosticText.includes('socket connection was closed') ||
-    diagnosticText.includes('fetch failed') ||
-    diagnosticText.includes('econnreset') ||
-    diagnosticText.includes('econnrefused') ||
-    diagnosticText.includes('socket hang up') ||
-    diagnosticText.includes('networkerror') ||
-    diagnosticText.includes('/experimental/tool/ids unavailable')
-  );
+  return true;
 }
 
 function sleepOpenCodeReadinessRetry(delayMs: number): Promise<void> {
@@ -239,15 +350,28 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     Promise<OpenCodeTeamLaunchReadiness>
   >();
 
-  constructor(private readonly bridge: OpenCodeTeamRuntimeBridgePort) {}
+  constructor(
+    private readonly bridge: OpenCodeTeamRuntimeBridgePort,
+    private readonly options: OpenCodeTeamRuntimeAdapterOptions = {}
+  ) {}
 
   async prepare(input: TeamRuntimeLaunchInput): Promise<TeamRuntimePrepareResult> {
+    return this.prepareOpenCodeLaunch(input, false);
+  }
+
+  private async prepareOpenCodeLaunch(
+    input: TeamRuntimeLaunchInput,
+    forceReadinessRefresh: boolean
+  ): Promise<TeamRuntimePrepareResult> {
     const runtimeOnly = input.runtimeOnly === true;
-    const readiness = await this.resolveOpenCodeReadinessArtifact({
-      projectPath: input.cwd,
-      selectedModel: input.model ?? null,
-      requireExecutionProbe: !runtimeOnly,
-    });
+    const readiness = await this.resolveOpenCodeReadinessArtifact(
+      {
+        projectPath: input.cwd,
+        selectedModel: input.model ?? null,
+        requireExecutionProbe: !runtimeOnly,
+      },
+      forceReadinessRefresh
+    );
     if (!readiness.launchAllowed) {
       return {
         ok: false,
@@ -280,6 +404,12 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     );
   }
 
+  async preflightLocalModels(input: {
+    targets: readonly TeamRuntimeLocalModelPreflightTarget[];
+  }): Promise<TeamRuntimeLocalModelPreflightResult> {
+    return preflightOpenCodeLocalModels(this.options, input.targets);
+  }
+
   private async checkOpenCodeReadinessWithTransientRetry(
     input: OpenCodeTeamLaunchReadinessInput
   ): Promise<OpenCodeTeamLaunchReadiness> {
@@ -295,16 +425,17 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   }
 
   private async resolveOpenCodeReadinessArtifact(
-    input: OpenCodeTeamLaunchReadinessInput
+    input: OpenCodeTeamLaunchReadinessInput,
+    forceRefresh = false
   ): Promise<OpenCodeTeamLaunchReadiness> {
     const artifactKey = openCodeReadinessArtifactKey(input);
     const cached = this.lastReadinessByArtifactKey.get(artifactKey);
-    if (cached?.launchAllowed && reusableOpenCodeExecutionProof(cached, input)) {
+    if (!forceRefresh && cached?.launchAllowed && reusableOpenCodeExecutionProof(cached, input)) {
       return cached;
     }
 
     const inFlight = this.readinessInFlightByArtifactKey.get(artifactKey);
-    if (inFlight) {
+    if (!forceRefresh && inFlight) {
       return inFlight;
     }
 
@@ -344,6 +475,28 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     const skipReadinessPreflight = false;
     let selectedModel = input.model?.trim() ?? '';
     let launchWarnings: string[] = [];
+    const localRuntimeInspectionState = createLocalRuntimeInspectionState();
+
+    // Reject every configured incompatible local member runtime before OpenCode starts
+    // its execution readiness probe. A mixed-model OpenCode lane must not be able
+    // to bypass the guard just because its source id is custom or its default is remote.
+    const localModelTargets = [
+      { projectPath: input.cwd, modelRoute: selectedModel },
+      ...input.expectedMembers.map((member) => ({
+        projectPath: member.cwd?.trim() || input.cwd,
+        modelRoute: member.model?.trim() ?? '',
+      })),
+    ];
+    const localModelPreflight = await preflightOpenCodeLocalModels(
+      this.options,
+      localModelTargets,
+      localRuntimeInspectionState
+    );
+    if (!localModelPreflight.ok) {
+      return blockedLaunchResult(input, 'model_unavailable', localModelPreflight.diagnostics);
+    }
+    launchWarnings = mergeDiagnostics(launchWarnings, localModelPreflight.warnings);
+
     if (!skipReadinessPreflight) {
       // A state-changing launch must never inherit a caller's compatibility-only
       // preflight. Authless subscription bridges such as Cursor ACP are present
@@ -354,7 +507,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         return blockedLaunchResult(input, prepared.reason, prepared.diagnostics, prepared.warnings);
       }
       selectedModel = prepared.modelId ?? selectedModel;
-      launchWarnings = prepared.warnings;
+      launchWarnings = mergeDiagnostics(launchWarnings, prepared.warnings);
     }
 
     if (!this.bridge.launchOpenCodeTeam) {
@@ -368,6 +521,20 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         'OpenCode launch requires a selected raw model id.',
       ]);
     }
+
+    const selectedLocalModelPreflight = await preflightOpenCodeLocalModels(
+      this.options,
+      [{ projectPath: input.cwd, modelRoute: selectedModel }],
+      localRuntimeInspectionState
+    );
+    if (!selectedLocalModelPreflight.ok) {
+      return blockedLaunchResult(
+        input,
+        'model_unavailable',
+        selectedLocalModelPreflight.diagnostics
+      );
+    }
+    launchWarnings = mergeDiagnostics(launchWarnings, selectedLocalModelPreflight.warnings);
 
     const readinessInput: OpenCodeTeamLaunchReadinessInput = {
       projectPath: input.cwd,
@@ -433,7 +600,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       capabilitySnapshotRefreshAttempts < OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_LIMIT
     ) {
       capabilitySnapshotRefreshAttempts += 1;
-      const refreshed = await this.prepare(input);
+      const refreshed = await this.prepareOpenCodeLaunch(input, true);
       if (!refreshed.ok) {
         return blockedLaunchResult(
           input,
@@ -446,6 +613,19 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         );
       }
       selectedModel = refreshed.modelId ?? selectedModel;
+      const refreshedLocalModelPreflight = await preflightOpenCodeLocalModels(
+        this.options,
+        [{ projectPath: input.cwd, modelRoute: selectedModel }],
+        localRuntimeInspectionState
+      );
+      if (!refreshedLocalModelPreflight.ok) {
+        return blockedLaunchResult(
+          input,
+          'model_unavailable',
+          refreshedLocalModelPreflight.diagnostics
+        );
+      }
+      launchWarnings = mergeDiagnostics(launchWarnings, refreshedLocalModelPreflight.warnings);
       const refreshedSnapshot =
         this.bridge.getLastOpenCodeRuntimeSnapshot?.(
           input.cwd,
@@ -1324,6 +1504,14 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
       : input.actionMode === 'delegate'
         ? 'Action mode DELEGATE is orchestration-only for this delivered message: pass the task with context instead of implementing or editing files yourself.'
         : 'If this delivered message assigns implementation, fixes, review follow-up, or concrete investigation, you may inspect, read/search, and edit files in the project working directory as your available tools allow.';
+  const requiredMessageEnvelope = JSON.stringify({
+    teamName: input.teamName,
+    to: replyRecipient,
+    from: input.memberName,
+    source: 'runtime_delivery',
+    ...(input.messageId ? { relayOfMessageId: input.messageId } : {}),
+    ...(input.taskRefs?.length ? { taskRefs: input.taskRefs } : {}),
+  });
   // Work-sync nudges are health/reporting probes. Requiring a visible
   // message_send reply here causes false delivery failures, so accept the
   // dedicated member_work_sync_report proof path while keeping normal user
@@ -1356,6 +1544,8 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
       : [
           'To make your reply visible in the app Messages UI, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send if that is the exposed name).',
           `Use teamName="${input.teamName}", to="${replyRecipient}", from="${input.memberName}", text, and summary.`,
+          `Required message_send argument envelope: ${requiredMessageEnvelope}. Copy every value exactly, then add non-empty text and summary fields.`,
+          'Before calling message_send, verify that teamName, to, from, text, and summary are all present and are strings.',
           'Include source="runtime_delivery" in that message_send call.',
           input.messageId
             ? `Include relayOfMessageId="${input.messageId}" in that message_send call.`
@@ -1363,6 +1553,7 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
           input.taskRefs?.length
             ? `If taskRefs are present in <opencode_delivery_context>, include taskRefs exactly as provided in that message_send call: ${JSON.stringify(input.taskRefs)}.`
             : null,
+          'If message_send reports parameter validation failure, correct the missing or invalid arguments from the required envelope and retry exactly once. Do not explain the validation error as the final reply.',
           'If message_send returns an unavailable, not connected, or missing-tool error, write the exact concise reply as plain assistant text once, then stop.',
           'After the message_send tool call succeeds, stop immediately. Do not send follow-up confirmations or repeat the same answer.',
           'You must not end this turn empty.',

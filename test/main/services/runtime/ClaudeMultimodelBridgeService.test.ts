@@ -203,8 +203,14 @@ describe('ClaudeMultimodelBridgeService', () => {
     const service = new ClaudeMultimodelBridgeService();
 
     const providers = await service.getProviderStatuses('/mock/agent_teams_orchestrator');
+    const hydrationState = service as unknown as {
+      providerStatusHydrationGenerations: Map<string, number>;
+      providerStatusHydrationInFlight: Map<string, unknown>;
+    };
 
     expect(providers).toHaveLength(3);
+    expect(hydrationState.providerStatusHydrationGenerations.size).toBe(0);
+    expect(hydrationState.providerStatusHydrationInFlight.size).toBe(0);
     expect(providers.map((provider) => provider.providerId)).toEqual([
       'anthropic',
       'codex',
@@ -1063,11 +1069,16 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
 
     const providers = await service.getProviderStatuses('/mock/agent_teams_orchestrator', onUpdate);
+    const hydrationState = service as unknown as {
+      providerStatusHydrationGenerations: Map<string, number>;
+      providerStatusHydrationInFlight: Map<string, unknown>;
+    };
     expect(providers.find((provider) => provider.providerId === 'codex')).toMatchObject({
       authenticated: true,
       authMethod: 'api_key',
       modelCatalogRefreshState: 'loading',
     });
+    expect(hydrationState.providerStatusHydrationGenerations.size).toBe(1);
 
     const hydratedProviders = await hydrated;
     const hydratedCodex = hydratedProviders.find((provider) => provider.providerId === 'codex');
@@ -1078,6 +1089,10 @@ describe('ClaudeMultimodelBridgeService', () => {
       modelCatalogRefreshState: 'ready',
     });
     expect(hydratedCodex?.modelCatalog?.models.map((model) => model.id)).toEqual(['gpt-5.4']);
+    await vi.waitFor(() => {
+      expect(hydrationState.providerStatusHydrationGenerations.size).toBe(0);
+      expect(hydrationState.providerStatusHydrationInFlight.size).toBe(0);
+    });
 
     const codexEnvBuilds = buildProviderAwareCliEnvMock.mock.calls.filter(
       ([options]) => options.providerId === 'codex'
@@ -1474,6 +1489,116 @@ describe('ClaudeMultimodelBridgeService', () => {
       modelCatalog: {
         defaultModelId: 'fresh-model',
       },
+    });
+  });
+
+  it('hydrates project-scoped catalogs independently from a global in-flight request', async () => {
+    let resolveGlobalHydration!: (value: {
+      stdout: string;
+      stderr: string;
+      exitCode: number;
+    }) => void;
+    const globalHydration = new Promise<{
+      stdout: string;
+      stderr: string;
+      exitCode: number;
+    }>((resolve) => {
+      resolveGlobalHydration = resolve;
+    });
+    const buildStatus = (defaultModelId?: string) => ({
+      schemaVersion: 2,
+      providers: {
+        opencode: {
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          canLoginFromUi: false,
+          statusMessage: null,
+          models: defaultModelId ? [defaultModelId] : [],
+          capabilities: { teamLaunch: true, oneShot: false },
+          runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+          ...(defaultModelId
+            ? {
+                modelCatalog: {
+                  schemaVersion: 1,
+                  providerId: 'opencode',
+                  source: 'app-server',
+                  status: 'ready',
+                  fetchedAt: '2026-07-19T00:00:00.000Z',
+                  staleAt: '2026-07-19T00:10:00.000Z',
+                  defaultModelId,
+                  defaultLaunchModel: defaultModelId,
+                  models: [],
+                  diagnostics: {
+                    configReadState: 'ready',
+                    appServerState: 'healthy',
+                  },
+                },
+              }
+            : {}),
+        },
+      },
+    });
+
+    execCliMock.mockImplementation((_binaryPath, args, options) => {
+      const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+      if (normalizedArgs === 'runtime status --json --provider opencode --summary') {
+        return Promise.resolve({
+          stdout: JSON.stringify(buildStatus()),
+          stderr: '',
+          exitCode: 0,
+        });
+      }
+      if (normalizedArgs === 'runtime status --json --provider opencode') {
+        if (options?.cwd === '/tmp/scoped-project') {
+          return Promise.resolve({
+            stdout: JSON.stringify(buildStatus('ollama/qwen2.5-coder:0.5b')),
+            stderr: '',
+            exitCode: 0,
+          });
+        }
+        return globalHydration;
+      }
+      return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+    const globalUpdate = vi.fn();
+    const scopedUpdate = vi.fn();
+
+    await service.getProviderStatus('/mock/agent_teams_orchestrator', 'opencode', globalUpdate);
+    const scopedStatus = await service.getProviderStatus(
+      '/mock/agent_teams_orchestrator',
+      'opencode',
+      scopedUpdate,
+      { projectPath: '/tmp/scoped-project' }
+    );
+
+    expect(scopedUpdate).not.toHaveBeenCalled();
+    expect(
+      execCliMock.mock.calls.filter(
+        (call) => call[1].join(' ') === 'runtime status --json --provider opencode'
+      )
+    ).toHaveLength(2);
+    expect(scopedStatus).toMatchObject({
+      modelCatalog: { defaultModelId: 'ollama/qwen2.5-coder:0.5b' },
+    });
+
+    resolveGlobalHydration({
+      stdout: JSON.stringify(buildStatus('opencode/big-pickle')),
+      stderr: '',
+      exitCode: 0,
+    });
+    await vi.waitFor(() => {
+      expect(globalUpdate).toHaveBeenCalledTimes(1);
+    });
+    expect(globalUpdate.mock.calls[0]?.[0]).toMatchObject({
+      modelCatalog: { defaultModelId: 'opencode/big-pickle' },
     });
   });
 

@@ -1,7 +1,12 @@
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useId, useState } from 'react';
 
+import { useOptionalTabId } from '@renderer/hooks/useOptionalTabId';
 import { useStore } from '@renderer/store';
 import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
+import {
+  buildChangeReviewLifecycleSessionId,
+  requestChangeReviewLifecycleReservation,
+} from '@renderer/utils/changeReviewLifecycleCoordinator';
 import {
   buildTaskChangeRequestOptions,
   type TaskChangeRequestOptions,
@@ -30,6 +35,8 @@ interface UseGraphChangeReviewDialogResult {
 }
 
 export function useGraphChangeReviewDialog(teamName: string): UseGraphChangeReviewDialogResult {
+  const lifecycleHostId = useId();
+  const tabId = useOptionalTabId();
   const [dialogState, setDialogState] = useState<GraphChangeReviewDialogState>({
     open: false,
     mode: 'task',
@@ -40,40 +47,50 @@ export function useGraphChangeReviewDialog(teamName: string): UseGraphChangeRevi
       selectReviewFile: state.selectReviewFile,
     }))
   );
+  const focusLifecycleHost = useCallback((): void => {
+    if (tabId) useStore.getState().setActiveTab(tabId);
+  }, [tabId]);
+  const requestOpenChangeReview = useCallback(
+    async (next: Omit<GraphChangeReviewDialogState, 'open'>): Promise<boolean> => {
+      const sessionId = buildChangeReviewLifecycleSessionId({ teamName, ...next });
+      const reserved = await requestChangeReviewLifecycleReservation({
+        hostId: lifecycleHostId,
+        sessionId,
+        tabId: tabId ?? undefined,
+      });
+      if (!reserved) return false;
+      setDialogState({ ...next, open: true });
+      if (next.initialFilePath) selectReviewFile(next.initialFilePath);
+      return true;
+    },
+    [lifecycleHostId, selectReviewFile, tabId, teamName]
+  );
 
   const openTaskChanges = useCallback(
     (taskId: string, filePath?: string): void => {
       const task = teamData?.tasks.find((candidate) => candidate.id === taskId);
-      setDialogState({
-        open: true,
+      void requestOpenChangeReview({
         mode: 'task',
         taskId,
         memberName: undefined,
         initialFilePath: filePath,
         taskChangeRequestOptions: task ? buildTaskChangeRequestOptions(task) : {},
       });
-      if (filePath) {
-        selectReviewFile(filePath);
-      }
     },
-    [selectReviewFile, teamData?.tasks]
+    [requestOpenChangeReview, teamData?.tasks]
   );
 
   const openMemberChanges = useCallback(
     (memberName: string, filePath?: string): void => {
-      setDialogState({
-        open: true,
+      void requestOpenChangeReview({
         mode: 'agent',
         memberName,
         taskId: undefined,
         initialFilePath: filePath,
         taskChangeRequestOptions: undefined,
       });
-      if (filePath) {
-        selectReviewFile(filePath);
-      }
     },
-    [selectReviewFile]
+    [requestOpenChangeReview]
   );
 
   const handleOpenChange = useCallback((open: boolean): void => {
@@ -99,6 +116,9 @@ export function useGraphChangeReviewDialog(teamName: string): UseGraphChangeRevi
           initialFilePath={dialogState.initialFilePath}
           taskChangeRequestOptions={dialogState.taskChangeRequestOptions}
           projectPath={teamData?.config.projectPath}
+          lifecycleHostId={lifecycleHostId}
+          lifecycleTabId={tabId ?? undefined}
+          onLifecycleFocus={focusLifecycleHost}
         />
       </Suspense>
     ) : null,

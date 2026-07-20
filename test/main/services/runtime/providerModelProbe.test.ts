@@ -17,8 +17,8 @@ describe('providerModelProbe', () => {
   });
 
   it('keeps the default Codex preflight model when no override is configured', () => {
-    expect(getProviderPreflightModel('codex')).toBe('gpt-5.4-mini');
-    expect(buildProviderPreflightPingArgs('codex')).toContain('gpt-5.4-mini');
+    expect(getProviderPreflightModel('codex')).toBe('gpt-5.6-sol');
+    expect(buildProviderPreflightPingArgs('codex')).toContain('gpt-5.6-sol');
   });
 
   it('builds direct Codex exec probes that ignore user config', () => {

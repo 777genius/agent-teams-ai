@@ -1,5 +1,86 @@
 # Release Guide
 
+## Published: v2.10.0 (2026-07-20)
+
+GitHub release: [v2.10.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.10.0).
+
+Target branch: `dev`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.70`.
+- Terminal Platform runtime: `v0.3.2`.
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.10.0 -->
+
+Improved local model setup, team launches, Changes recovery, and provider error messages.
+
+### What's New
+
+- Added project-specific local model lists with independent refresh.
+- Added model compatibility checks before team launch.
+- Added quick setup for OpenRouter and Vercel AI Gateway.
+- Added GPT-5.6 Sol, Terra, and Luna support, plus Kiro setup and usage tracking.
+
+### Improvements
+
+- Improved Ollama detection and OpenCode model refresh.
+- Kept healthy teammates running when another teammate fails.
+- Preserved Changes decisions and undo/redo after crashes or reloads.
+- Improved the team graph, recent project navigation, and working directory selection.
+- Added safer local diagnostics and clearer Cursor and provider errors.
+
+### Bug Fixes
+
+- Fixed outdated OpenCode and Codex model choices reaching team launch.
+- Fixed false "team name already taken" errors.
+- Fixed failed Codex turns ending without an explanation.
+- Fixed Changes recovery when actions are interrupted or run at the same time.
+- Fixed terminal completion status and Windows project paths with non-ASCII characters.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.10.0/Agent.Teams.AI-2.10.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.10.0/Agent.Teams.AI-2.10.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.10.0/Agent.Teams.AI.Setup.2.10.0.exe">
+    <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.10.0/Agent.Teams.AI-2.10.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.10.0/agent-teams-ai_2.10.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.10.0/agent-teams-ai-2.10.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.10.0/agent-teams-ai-2.10.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.10.0 -->
+
 ## Published: v2.9.0 (2026-07-19)
 
 GitHub release: [v2.9.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.9.0).
@@ -14,6 +95,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.9.0 -->
+
 Redesigned the team page and related workflows, added simple setup for local models, improved Cursor-style control over code changes, and fixed issues in agent setup, launch, and recovery.
 
 <img width="2624" height="1652" alt="image" src="https://github.com/user-attachments/assets/b23a09f3-0f08-446f-824d-5623ff111574" />
@@ -100,6 +182,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.8.0 -->
+
 Use more of the AI subscriptions you already pay for in the same Agent Team. Guided setup connects supported plans, lets you choose a provider and model for each teammate, and keeps the whole flow in one place. This release also adds safe team-folder import, newer Codex models, and fuller usage and cost reporting.
 
 ### What's New
@@ -191,6 +274,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.5.1 -->
+
 Reduces memory growth in long-running teams and large projects. Fixes OOM risks in transcript/project matching, duplicate runtime probes, and unbounded runtime/provisioning diagnostic buffers.
 
 ### What's New
@@ -262,6 +346,7 @@ GitHub release: [v2.5.0](https://github.com/777genius/agent-teams-ai/releases/ta
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.5.0 -->
+
 Built-in terminal for command and graph screens.
 
 <img width="762" height="338" alt="image" src="https://github.com/user-attachments/assets/c8aa4e93-1223-4caa-b3be-cf22852f1c10" />
@@ -333,6 +418,7 @@ Target commit: `ad5a2dc5808eeddde30ab17eecf3afbb32b24214` (`origin/dev`).
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.4.0 -->
+
 Minor release focused on more capable team runtime workflows, better Agent Graph controls, faster team screens, and stronger recovery for OpenCode, Codex, and member work sync. It also refreshes onboarding docs, screenshots, and Simplified Chinese localization.
 
 ### What's New
@@ -486,8 +572,8 @@ EOF
 
 Format: `MAJOR.MINOR.PATCH`
 
-| Bump  | When                                                                  | Example       |
-| ----- | --------------------------------------------------------------------- | ------------- |
+| Bump  | When                                                                  | Example        |
+| ----- | --------------------------------------------------------------------- | -------------- |
 | MAJOR | Breaking changes, major UI overhaul, incompatible data format changes | 1.0.0 -> 2.0.0 |
 | MINOR | New features, new panels/views, new integrations                      | 1.0.0 -> 1.1.0 |
 | PATCH | Bug fixes, performance improvements, small UI tweaks                  | 1.0.0 -> 1.0.1 |
@@ -805,6 +891,33 @@ Do not publish or call a release finished until this is true:
 - The public release assets include `latest.yml`, `latest-linux.yml`, and `latest-mac.yml`.
 
 If a draft was published before notes were written, immediately edit the public release body with `gh release edit`; do not leave a release with only generated notes.
+
+### 7. Download and launch a requested build
+
+When the user explicitly asks to download or launch a release build, use the
+exact versioned asset for the requested release. Do not use a stable alias or an
+older file already present in `Downloads`.
+
+For an Apple Silicon build, the required filename is:
+
+```text
+Agent.Teams.AI-<VERSION>-arm64.dmg
+```
+
+Before opening the app:
+
+- Read the asset name and SHA-256 digest from the exact GitHub release.
+- Download the versioned asset, even if another version is already mounted or
+  running.
+- If a file with the same name already exists locally, verify its digest. Move
+  a stale or mismatched file to the Trash before downloading the replacement.
+- Verify the downloaded SHA-256 digest against GitHub.
+- Mount the DMG read-only and confirm the app bundle version equals the exact
+  requested version.
+- Verify the macOS signature and notarization before launching the app.
+
+Never report that the requested build was launched based only on its filename.
+The GitHub digest and bundle version must both match.
 
 ## Release Notes Template
 

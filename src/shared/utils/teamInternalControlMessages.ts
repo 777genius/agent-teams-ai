@@ -1,4 +1,6 @@
 const NATIVE_APP_MANAGED_BOOTSTRAP_CHECK_OPEN = '<agent_teams_native_app_managed_bootstrap_check>';
+const NATIVE_APP_MANAGED_BOOTSTRAP_CHECK_CLOSE =
+  '</agent_teams_native_app_managed_bootstrap_check>';
 const NATIVE_BOOTSTRAP_CONTROL_OPEN = '<agent_teams_native_bootstrap_control>';
 const LEAD_INBOX_RELAY_PROMPT_OPEN = 'You have new inbox messages addressed to you (team lead ';
 const TEAMMATE_MESSAGE_OPEN_RE = /^<teammate-message\s/i;
@@ -33,6 +35,12 @@ export function isNativeAppManagedBootstrapCheckText(value: unknown): boolean {
   return (
     typeof value === 'string' &&
     stripTranscriptSpeakerPrefix(value).startsWith(NATIVE_APP_MANAGED_BOOTSTRAP_CHECK_OPEN)
+  );
+}
+
+export function buildNativeAppManagedBootstrapCheckText(): string {
+  return [NATIVE_APP_MANAGED_BOOTSTRAP_CHECK_OPEN, NATIVE_APP_MANAGED_BOOTSTRAP_CHECK_CLOSE].join(
+    '\n'
   );
 }
 

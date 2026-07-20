@@ -403,8 +403,8 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       'setActive',
       'adapter.launch',
       'persist',
-      'syncApprovals',
       'setRuntimeRun',
+      'syncApprovals',
     ]);
     expect(memberSpawnStatuses.get('alice')).toMatchObject({ status: 'online' });
     expect(runtimeRuns.get('team-a')).toMatchObject({
@@ -412,6 +412,331 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       providerId: 'opencode',
       cwd: '/repo',
     });
+  });
+
+  it('stops an unretainable failed primary runtime and persists the lane as degraded', async () => {
+    const failedResult: TeamRuntimeLaunchResult = {
+      runId: 'run-failed',
+      teamName: 'team-a',
+      launchPhase: 'finished',
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: {
+          memberName: 'alice',
+          providerId: 'opencode',
+          launchState: 'failed_to_start',
+          agentToolAccepted: false,
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          hardFailureReason: 'Shared OpenCode runtime timed out',
+          diagnostics: ['Shared OpenCode runtime timed out'],
+        },
+      },
+      warnings: [],
+      diagnostics: ['Shared OpenCode runtime timed out'],
+    };
+    const adapterStop = vi.fn(async () => {
+      throw new Error('cleanup transport failed');
+    });
+    const logWarning = vi.fn();
+    const laneIndexWrites: Array<{ state: string; diagnostics?: string[] }> = [];
+    const setRuntimeAdapterRunByTeam = vi.fn();
+    const request = {
+      teamName: 'team-a',
+      cwd: '/repo',
+      providerId: 'opencode',
+      members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+    } as TeamCreateRequest;
+
+    const result = await launchOpenCodeAggregatePrimaryLane(
+      {
+        run: {
+          runId: 'run-failed',
+          teamName: 'team-a',
+          request,
+          effectiveMembers: request.members,
+          memberSpawnStatuses: new Map(),
+        },
+        adapter: {
+          launch: vi.fn(async () => failedResult),
+          stop: adapterStop,
+        } as unknown as TeamLaunchRuntimeAdapter,
+        prompt: 'launch',
+        previousLaunchState: null,
+      },
+      {
+        getTeamsBasePath: () => '/workspace/teams',
+        getOpenCodeRuntimeLaunchCwd: () => '/repo',
+        migrateLegacyOpenCodeRuntimeState: async () => ({ diagnostics: ['migration-note'] }),
+        upsertOpenCodeRuntimeLaneIndexEntry: async (input) => {
+          laneIndexWrites.push({ state: input.state, diagnostics: input.diagnostics });
+        },
+        setOpenCodeRuntimeActiveRunManifest: async () => undefined,
+        persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
+          persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
+            createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
+            nowIso: () => '2026-01-01T00:00:00.000Z',
+            writeLaunchStateSnapshot: async (_teamName, snapshot) => snapshot,
+          }),
+        syncOpenCodeRuntimeToolApprovals: vi.fn(),
+        setRuntimeAdapterRunByTeam,
+        logWarning,
+      }
+    );
+
+    expect(result).toBe(failedResult);
+    expect(laneIndexWrites).toEqual([
+      { state: 'active', diagnostics: ['migration-note'] },
+      {
+        state: 'degraded',
+        diagnostics: ['migration-note', 'Shared OpenCode runtime timed out'],
+      },
+    ]);
+    expect(adapterStop).toHaveBeenCalledTimes(1);
+    expect(adapterStop).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run-failed',
+        teamName: 'team-a',
+        laneId: 'primary',
+        cwd: '/repo',
+        reason: 'cleanup',
+        force: true,
+      })
+    );
+    expect(setRuntimeAdapterRunByTeam).not.toHaveBeenCalled();
+    expect(logWarning).toHaveBeenCalledWith(
+      '[team-a] Failed to stop unretainable OpenCode primary lane: cleanup transport failed'
+    );
+  });
+
+  it('retains a degraded primary runtime when a sibling still has recoverable evidence', async () => {
+    const partialResult: TeamRuntimeLaunchResult = {
+      runId: 'run-partial',
+      teamName: 'team-a',
+      launchPhase: 'finished',
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: {
+          memberName: 'alice',
+          providerId: 'opencode',
+          launchState: 'failed_to_start',
+          agentToolAccepted: false,
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          diagnostics: ['Cursor usage limit'],
+        },
+        bob: confirmedMemberEvidence('bob', 'minimax-m2.5-free'),
+      },
+      warnings: [],
+      diagnostics: ['Cursor usage limit'],
+    };
+    const adapterStop = vi.fn(async () => undefined);
+    const setRuntimeAdapterRunByTeam = vi.fn();
+    const request = {
+      teamName: 'team-a',
+      cwd: '/repo',
+      providerId: 'opencode',
+      members: [
+        { name: 'alice', role: 'Engineer', providerId: 'opencode' },
+        { name: 'bob', role: 'Engineer', providerId: 'opencode' },
+      ],
+    } as TeamCreateRequest;
+
+    await launchOpenCodeAggregatePrimaryLane(
+      {
+        run: {
+          runId: 'run-partial',
+          teamName: 'team-a',
+          request,
+          effectiveMembers: request.members,
+          memberSpawnStatuses: new Map(),
+        },
+        adapter: {
+          launch: vi.fn(async () => partialResult),
+          stop: adapterStop,
+        } as unknown as TeamLaunchRuntimeAdapter,
+        prompt: 'launch',
+        previousLaunchState: null,
+      },
+      {
+        getTeamsBasePath: () => '/workspace/teams',
+        getOpenCodeRuntimeLaunchCwd: () => '/repo',
+        migrateLegacyOpenCodeRuntimeState: async () => ({}),
+        upsertOpenCodeRuntimeLaneIndexEntry: async () => undefined,
+        setOpenCodeRuntimeActiveRunManifest: async () => undefined,
+        persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
+          persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
+            createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
+            nowIso: () => '2026-01-01T00:00:00.000Z',
+            writeLaunchStateSnapshot: async (_teamName, snapshot) => snapshot,
+          }),
+        syncOpenCodeRuntimeToolApprovals: vi.fn(),
+        setRuntimeAdapterRunByTeam,
+      }
+    );
+
+    expect(adapterStop).not.toHaveBeenCalled();
+    expect(setRuntimeAdapterRunByTeam).toHaveBeenCalledWith(
+      'team-a',
+      expect.objectContaining({ runId: 'run-partial', providerId: 'opencode', cwd: '/repo' })
+    );
+  });
+
+  it('registers a retainable partial primary before a degraded-index write can fail', async () => {
+    const partialResult: TeamRuntimeLaunchResult = {
+      runId: 'run-partial',
+      teamName: 'team-a',
+      launchPhase: 'finished',
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: confirmedMemberEvidence('alice', 'minimax-m2.5-free'),
+      },
+      warnings: [],
+      diagnostics: ['secondary bootstrap failed'],
+    };
+    const request = {
+      teamName: 'team-a',
+      cwd: '/repo',
+      providerId: 'opencode',
+      members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+    } as TeamCreateRequest;
+    const adapterStop = vi.fn(async () => undefined);
+    const runtimeRuns = new Map<
+      string,
+      Parameters<LaunchOpenCodeAggregatePrimaryLanePorts['setRuntimeAdapterRunByTeam']>[1]
+    >();
+    let indexWrites = 0;
+
+    await expect(
+      launchOpenCodeAggregatePrimaryLane(
+        {
+          run: {
+            runId: 'run-partial',
+            teamName: 'team-a',
+            request,
+            effectiveMembers: request.members,
+            memberSpawnStatuses: new Map(),
+          },
+          adapter: {
+            launch: vi.fn(async () => partialResult),
+            stop: adapterStop,
+          } as unknown as TeamLaunchRuntimeAdapter,
+          prompt: 'launch',
+          previousLaunchState: null,
+        },
+        {
+          getTeamsBasePath: () => '/workspace/teams',
+          getOpenCodeRuntimeLaunchCwd: () => '/repo',
+          migrateLegacyOpenCodeRuntimeState: async () => ({}),
+          upsertOpenCodeRuntimeLaneIndexEntry: async () => {
+            indexWrites += 1;
+            if (indexWrites === 2) throw new Error('degraded index failed');
+          },
+          setOpenCodeRuntimeActiveRunManifest: async () => undefined,
+          persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
+            persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
+              createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
+              nowIso: () => '2026-01-01T00:00:00.000Z',
+              writeLaunchStateSnapshot: async (_teamName, snapshot) => snapshot,
+            }),
+          syncOpenCodeRuntimeToolApprovals: vi.fn(),
+          setRuntimeAdapterRunByTeam: (teamName, runtimeRun) => {
+            runtimeRuns.set(teamName, runtimeRun);
+          },
+        }
+      )
+    ).rejects.toThrow('degraded index failed');
+
+    expect(runtimeRuns.get('team-a')).toMatchObject({
+      runId: 'run-partial',
+      providerId: 'opencode',
+      cwd: '/repo',
+    });
+    expect(adapterStop).not.toHaveBeenCalled();
+  });
+
+  it('stops the exact unretainable candidate before a degraded-index write can fail', async () => {
+    const failedResult: TeamRuntimeLaunchResult = {
+      runId: 'run-failed',
+      teamName: 'team-a',
+      launchPhase: 'finished',
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: {
+          memberName: 'alice',
+          providerId: 'opencode',
+          launchState: 'failed_to_start',
+          agentToolAccepted: false,
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          diagnostics: ['runtime failed'],
+        },
+      },
+      warnings: [],
+      diagnostics: ['runtime failed'],
+    };
+    const request = {
+      teamName: 'team-a',
+      cwd: '/repo',
+      providerId: 'opencode',
+      members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+    } as TeamCreateRequest;
+    const adapterStop = vi.fn(async () => undefined);
+    const setRuntimeAdapterRunByTeam = vi.fn();
+    let indexWrites = 0;
+
+    await expect(
+      launchOpenCodeAggregatePrimaryLane(
+        {
+          run: {
+            runId: 'run-failed',
+            teamName: 'team-a',
+            request,
+            effectiveMembers: request.members,
+            memberSpawnStatuses: new Map(),
+          },
+          adapter: {
+            launch: vi.fn(async () => failedResult),
+            stop: adapterStop,
+          } as unknown as TeamLaunchRuntimeAdapter,
+          prompt: 'launch',
+          previousLaunchState: null,
+        },
+        {
+          getTeamsBasePath: () => '/workspace/teams',
+          getOpenCodeRuntimeLaunchCwd: () => '/repo',
+          migrateLegacyOpenCodeRuntimeState: async () => ({}),
+          upsertOpenCodeRuntimeLaneIndexEntry: async () => {
+            indexWrites += 1;
+            if (indexWrites === 2) throw new Error('degraded index failed');
+          },
+          setOpenCodeRuntimeActiveRunManifest: async () => undefined,
+          persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
+            persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
+              createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
+              nowIso: () => '2026-01-01T00:00:00.000Z',
+              writeLaunchStateSnapshot: async (_teamName, snapshot) => snapshot,
+            }),
+          syncOpenCodeRuntimeToolApprovals: vi.fn(),
+          setRuntimeAdapterRunByTeam,
+        }
+      )
+    ).rejects.toThrow('degraded index failed');
+
+    expect(adapterStop).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run-failed',
+        teamName: 'team-a',
+        laneId: 'primary',
+        cwd: '/repo',
+        reason: 'cleanup',
+        force: true,
+      })
+    );
+    expect(setRuntimeAdapterRunByTeam).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -40,7 +40,7 @@ vi.mock('../../../../src/main/services/infrastructure/NotificationManager', () =
 
 const liveDescribe = process.env.AGENT_DELETION_258_LIVE === '1' ? describe : describe.skip;
 const execFileAsync = promisify(execFile);
-const MODEL = process.env.AGENT_DELETION_258_CODEX_MODEL?.trim() || 'gpt-5.4-mini';
+const MODEL = process.env.AGENT_DELETION_258_CODEX_MODEL?.trim() || 'gpt-5.6-sol';
 const TEAMMATES = ['alice', 'bob'] as const;
 const REMOVED = TEAMMATES[0];
 const SURVIVOR = TEAMMATES[1];

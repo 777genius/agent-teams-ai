@@ -90,10 +90,10 @@ import {
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
 import {
   getTimelineCardBorderRadius,
-  getTimelineHeaderGradient,
   joinsPreviousTimelineCard,
   type TimelineCardPosition,
 } from './timelineCardStack';
+import { TimelineHeaderAccent } from './TimelineHeaderAccent';
 
 import type { TeamColorSet } from '@renderer/constants/teamColors';
 import type { InboxMessage } from '@shared/types';
@@ -1356,8 +1356,8 @@ export const ActivityItem = memo(
           : isLight
             ? ACTIVITY_HEADER_BG_LIGHT
             : ACTIVITY_HEADER_BG_DARK,
-      backgroundImage: getTimelineHeaderGradient(activityAccentColor, isLight),
     };
+    const headerAccent = <TimelineHeaderAccent color={activityAccentColor} />;
 
     const senderBadge = isSlashCommandResult ? (
       <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium tracking-wide text-amber-300">
@@ -1555,7 +1555,7 @@ export const ActivityItem = memo(
           role={isHeaderClickable ? 'button' : undefined}
           tabIndex={isHeaderClickable ? 0 : undefined}
           className={[
-            isExpanded ? 'flex min-w-0 items-center gap-2 px-2.5 py-1.5' : 'min-w-0',
+            isExpanded ? 'relative flex min-w-0 items-center gap-2 px-2.5 py-1.5' : 'min-w-0',
             isHeaderClickable ? 'cursor-pointer select-none' : '',
           ].join(' ')}
           style={isExpanded ? headerStyle : undefined}
@@ -1571,9 +1571,14 @@ export const ActivityItem = memo(
               : undefined
           }
         >
+          {isExpanded ? headerAccent : null}
           {useCompactCollapsedHeader ? (
             <div className="min-w-0">
-              <div className="flex min-w-0 items-start gap-3 px-2.5 py-1.5" style={headerStyle}>
+              <div
+                className="relative flex min-w-0 items-start gap-3 px-2.5 py-1.5"
+                style={headerStyle}
+              >
+                {headerAccent}
                 <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                   {isUnread ? (
                     <span
@@ -1630,7 +1635,11 @@ export const ActivityItem = memo(
             </div>
           ) : !isExpanded ? (
             <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2 px-2.5 py-1.5" style={headerStyle}>
+              <div
+                className="relative flex min-w-0 items-center gap-2 px-2.5 py-1.5"
+                style={headerStyle}
+              >
+                {headerAccent}
                 {isUnread ? (
                   <span
                     className="size-2 shrink-0 rounded-full bg-blue-500"

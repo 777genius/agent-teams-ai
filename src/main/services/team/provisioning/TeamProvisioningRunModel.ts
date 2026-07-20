@@ -100,6 +100,8 @@ export interface ProvisioningRun {
    * per team run to avoid file-lock contention while keeping launch non-blocking.
    */
   mixedSecondaryLaneLaunchQueue?: Promise<void>;
+  /** Shared OpenCode host preflight failures, scoped to the resolved project cwd for this run. */
+  mixedSecondarySharedRuntimeFailuresByProject?: Map<string, string>;
   lastLogProgressAt: number;
   /** Monotonic ms timestamp of last stdout/stderr data. For stall detection. */
   lastDataReceivedAt: number;

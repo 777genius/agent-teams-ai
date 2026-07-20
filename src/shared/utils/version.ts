@@ -27,3 +27,28 @@ export function compareVersions(a: string, b: string): number {
 export function isVersionOlder(installed: string, latest: string): boolean {
   return compareVersions(installed, latest) < 0;
 }
+
+/**
+ * OpenCode 1.16 introduced the session storage schema used by the current
+ * Agent Teams integration. Older binaries can read parts of a newer profile
+ * and then fail writes, which makes catalogs appear transiently available.
+ */
+export const MINIMUM_AGENT_TEAMS_OPENCODE_VERSION = '1.16.0';
+
+export function isAgentTeamsOpenCodeVersionSupported(version: string | null | undefined): boolean {
+  if (!version || !/\d{1,10}\.\d{1,10}\.\d{1,10}/.test(version)) {
+    return false;
+  }
+  return !isVersionOlder(version, MINIMUM_AGENT_TEAMS_OPENCODE_VERSION);
+}
+
+export function getUnsupportedAgentTeamsOpenCodeVersionMessage(
+  version: string | null | undefined
+): string {
+  const detected = version?.trim() || 'unknown';
+  return (
+    `OpenCode ${detected} is below the supported minimum ` +
+    `${MINIMUM_AGENT_TEAMS_OPENCODE_VERSION}. Update OpenCode before loading providers, ` +
+    'models, or launching teammates.'
+  );
+}

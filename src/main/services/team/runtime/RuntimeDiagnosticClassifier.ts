@@ -101,29 +101,123 @@ function hasGrpcResourceExhaustedCode(message: string): boolean {
   return /\bgrpc[_\s-]*code["']?\s*(?::|=|is)\s*["']?8\b/i.test(message);
 }
 
-function hasLeadingHttpRateLimitStatusCode(message: string): boolean {
-  return /^\s*(?:error\s*[:=-]?\s*)?429\b/m.test(message);
-}
+const HTTP_RATE_LIMIT_CONTEXT_MARKERS = [
+  { firstWord: 'http' },
+  { firstWord: 'http', secondWord: 'status' },
+  { firstWord: 'status' },
+  { firstWord: 'status', secondWord: 'code' },
+  { firstWord: 'error' },
+  { firstWord: 'error', secondWord: 'code' },
+  { firstWord: 'code' },
+] as const;
 
-function hasLabeledHttpRateLimitStatusCode(message: string): boolean {
+function isAsciiWordCharacter(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+  const code = value.charCodeAt(0);
   return (
-    /\bhttp(?:[\s_-]*status)?["']?\s*(?::|=|is|of)?\s*["']?429\b/.test(message) ||
-    /\bstatus(?:[\s_-]*code)?["']?\s*(?::|=|is|of)?\s*["']?429\b/.test(message) ||
-    /\berror(?:[\s_-]*code)?["']?\s*(?::|=|is|of)?\s*["']?429\b/.test(message) ||
-    /\bcode["']?\s*(?::|=|is|of)?\s*["']?429\b/.test(message)
+    (code >= 48 && code <= 57) ||
+    (code >= 65 && code <= 90) ||
+    (code >= 97 && code <= 122) ||
+    value === '_'
   );
 }
 
-function hasDescriptiveHttpRateLimitStatusCode(message: string): boolean {
-  return /\b429\s+(?:too many requests|rate limit(?:ed)?|resource exhausted)\b/.test(message);
+function skipWhitespace(value: string, startIndex: number): number {
+  let index = startIndex;
+  while (index < value.length && value[index].trim() === '') {
+    index += 1;
+  }
+  return index;
+}
+
+function skipContextMarkerSeparators(value: string, startIndex: number): number {
+  let index = startIndex;
+  while (
+    index < value.length &&
+    (value[index].trim() === '' || value[index] === '_' || value[index] === '-')
+  ) {
+    index += 1;
+  }
+  return index;
+}
+
+function hasDelimited429At(value: string, index: number): boolean {
+  return value.startsWith('429', index) && !isAsciiWordCharacter(value[index + 3]);
+}
+
+function consumeOptionalHttpStatusOperator(value: string, startIndex: number): number {
+  const index = skipWhitespace(value, startIndex);
+  if (value[index] === ':' || value[index] === '=') {
+    return index + 1;
+  }
+  if (value.startsWith('is', index) || value.startsWith('of', index)) {
+    return index + 2;
+  }
+  return index;
+}
+
+function has429AfterContextMarker(value: string, startIndex: number): boolean {
+  let index = startIndex;
+  if (value[index] === '"' || value[index] === "'") {
+    index += 1;
+  }
+  index = consumeOptionalHttpStatusOperator(value, index);
+  index = skipWhitespace(value, index);
+  if (value[index] === '"' || value[index] === "'") {
+    index += 1;
+  }
+  return hasDelimited429At(value, index);
+}
+
+function hasHttpRateLimitContext(value: string): boolean {
+  return HTTP_RATE_LIMIT_CONTEXT_MARKERS.some((marker) => {
+    const { firstWord } = marker;
+    const secondWord = 'secondWord' in marker ? marker.secondWord : undefined;
+    let markerIndex = value.indexOf(firstWord);
+    while (markerIndex >= 0) {
+      if (!isAsciiWordCharacter(value[markerIndex - 1])) {
+        let markerEnd = markerIndex + firstWord.length;
+        if (secondWord) {
+          markerEnd = skipContextMarkerSeparators(value, markerEnd);
+          if (!value.startsWith(secondWord, markerEnd)) {
+            markerIndex = value.indexOf(firstWord, markerIndex + 1);
+            continue;
+          }
+          markerEnd += secondWord.length;
+        }
+        if (has429AfterContextMarker(value, markerEnd)) {
+          return true;
+        }
+      }
+      markerIndex = value.indexOf(firstWord, markerIndex + 1);
+    }
+    return false;
+  });
+}
+
+function hasLeadingHttpRateLimitStatus(value: string): boolean {
+  let remainder = value.trimStart();
+  if (hasDelimited429At(remainder, 0)) {
+    return true;
+  }
+  if (!remainder.startsWith('error')) {
+    return false;
+  }
+  remainder = remainder.slice('error'.length).trimStart();
+  if (remainder.startsWith(':') || remainder.startsWith('=') || remainder.startsWith('-')) {
+    remainder = remainder.slice(1).trimStart();
+  }
+  return hasDelimited429At(remainder, 0);
 }
 
 export function hasHttpRateLimitStatusCode(message: string): boolean {
   const normalized = message.toLowerCase();
   return (
-    hasLeadingHttpRateLimitStatusCode(normalized) ||
-    hasLabeledHttpRateLimitStatusCode(normalized) ||
-    hasDescriptiveHttpRateLimitStatusCode(normalized)
+    normalized.split('\n').some(hasLeadingHttpRateLimitStatus) ||
+    hasHttpRateLimitContext(normalized) ||
+    /\b429\s+(?:too many requests|rate limit(?:ed)?|resource exhausted)\b/.test(normalized)
   );
 }
 

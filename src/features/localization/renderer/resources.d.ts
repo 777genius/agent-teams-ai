@@ -1059,7 +1059,7 @@ export default interface Resources {
         copyCommand: 'Copy command';
         cursorConnected: 'Cursor account connected';
         cursorDescription: 'Use your Cursor subscription through the managed OpenCode Cursor plugin.';
-        description: 'Connect any plans you use, then mix them in the same Agent Team.';
+        description: 'Connect providers and plans you use, then mix them in the same Agent Team.';
         done: 'Done';
         installAndConnect: 'Install & connect';
         installOpenCode: 'Install OpenCode';
@@ -4253,7 +4253,7 @@ export default interface Resources {
         deleteForever: 'Delete forever';
         deletePermanently: 'Delete permanently';
         deleteTeam: 'Delete team';
-        importTeam: 'Import from folder';
+        importTeam: 'Import';
         launchTeam: 'Launch team';
         launching: 'Launching...';
         organizationMap: 'Org Map';

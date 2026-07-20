@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   probeLocalProvider: vi.fn(),
   configureLocalProvider: vi.fn(),
   testModel: vi.fn(),
+  prepareProvisioning: vi.fn(),
   selectFolders: vi.fn(),
 }));
 
@@ -20,6 +21,9 @@ vi.mock('@renderer/api', () => ({
       probeLocalProvider: mocks.probeLocalProvider,
       configureLocalProvider: mocks.configureLocalProvider,
       testModel: mocks.testModel,
+    },
+    teams: {
+      prepareProvisioning: mocks.prepareProvisioning,
     },
     config: {
       selectFolders: mocks.selectFolders,
@@ -89,6 +93,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     mocks.probeLocalProvider.mockReset();
     mocks.configureLocalProvider.mockReset();
     mocks.testModel.mockReset();
+    mocks.prepareProvisioning.mockReset();
     mocks.selectFolders.mockReset();
     mocks.selectFolders.mockResolvedValue([]);
     mocks.listLocalProviders.mockImplementation(async (input: { scope: 'global' | 'project' }) => ({
@@ -132,6 +137,13 @@ describe('RuntimeLocalProviderSetupDialog', () => {
         message: 'Model probe passed',
         diagnostics: [],
       },
+    });
+    mocks.prepareProvisioning.mockResolvedValue({
+      ready: true,
+      message: 'OpenCode model is ready for Agent Teams launch.',
+      details: ['Agent Teams tool coordination and runtime capacity verified.'],
+      warnings: [],
+      issues: [],
     });
   });
 
@@ -228,7 +240,9 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       await Promise.resolve();
     });
     await vi.waitFor(() => {
-      expect(host.textContent).toContain('OpenCode successfully ran qwen3:8b.');
+      expect(host.textContent).toContain(
+        'OpenCode ran qwen3:8b, and the Agent Teams launch preflight passed.'
+      );
       expect(host.textContent).toContain(
         'Saved globally. Every project can use this provider unless its own config overrides it.'
       );
@@ -257,6 +271,14 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       providerId: 'ollama',
       modelId: 'ollama/qwen3:8b',
     });
+    expect(mocks.prepareProvisioning).toHaveBeenCalledWith(
+      '/Users/test/.config/opencode',
+      'opencode',
+      ['opencode'],
+      ['ollama/qwen3:8b'],
+      false,
+      'deep'
+    );
   });
 
   it('replaces the empty scan status after a manual connection succeeds', async () => {
@@ -473,9 +495,11 @@ describe('RuntimeLocalProviderSetupDialog', () => {
 
     await vi.waitFor(() => {
       expect(host.textContent).toContain('Local providers');
-      expect(host.textContent).toContain('2 local providers available for model selection.');
+      expect(host.textContent).toContain('1 of 2 local providers running.');
+      expect(host.textContent).toContain('Offline providers remain configured but cannot launch.');
       expect(host.textContent).toContain('Global default');
       expect(host.textContent).toContain('Offline');
+      expect(host.textContent).toContain('1 configured model');
     });
     expect(host.querySelector('[data-testid="configured-local-provider-ollama"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="configured-local-provider-lmstudio"]')).not.toBeNull();
@@ -714,7 +738,9 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     });
     await vi.waitFor(() => {
       expect(host.textContent).toContain('Existing project defaults were preserved.');
-      expect(host.textContent).toContain('OpenCode successfully ran qwen3:8b.');
+      expect(host.textContent).toContain(
+        'OpenCode ran qwen3:8b, and the Agent Teams launch preflight passed.'
+      );
     });
     expect(mocks.configureLocalProvider).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -723,6 +749,59 @@ describe('RuntimeLocalProviderSetupDialog', () => {
         setAsDefault: false,
       })
     );
+  });
+
+  it('does not mark setup ready when the deep Agent Teams preflight blocks the model', async () => {
+    mocks.prepareProvisioning.mockResolvedValueOnce({
+      ready: false,
+      message: 'OpenCode model preflight failed.',
+      issues: [
+        {
+          providerId: 'opencode',
+          modelId: 'ollama/qwen3:8b',
+          scope: 'model',
+          severity: 'blocking',
+          code: 'local_context_too_small',
+          message:
+            'Ollama is running ollama/qwen3:8b with 4K context. Agent Teams requires at least 16K.',
+        },
+      ],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <RuntimeLocalProviderSetupDialog
+          open
+          onOpenChange={vi.fn()}
+          projectPath="/tmp/sandbox"
+          projects={[]}
+          onProjectPathChange={vi.fn()}
+          onConfigured={vi.fn(async () => undefined)}
+        />
+      );
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => {
+      expect(host.textContent).toContain('Ollama connected');
+    });
+
+    const saveButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Save & verify')
+    );
+    await act(async () => {
+      saveButton?.click();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => {
+      expect(host.textContent).toContain('Setup saved, but the model check needs attention.');
+      expect(host.textContent).toContain('Agent Teams requires at least 16K.');
+      expect(host.textContent).not.toContain('Your local model is ready for Agent Teams.');
+    });
+    expect(mocks.testModel).not.toHaveBeenCalled();
   });
 
   it('does not claim execution verification passed while the request is still running', async () => {
@@ -763,8 +842,12 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       await Promise.resolve();
     });
     await vi.waitFor(() => {
-      expect(host.textContent).toContain('Testing qwen3:8b through OpenCode...');
-      expect(host.textContent).not.toContain('OpenCode successfully ran qwen3:8b.');
+      expect(host.textContent).toContain(
+        'Testing qwen3:8b tools and runtime capacity through OpenCode...'
+      );
+      expect(host.textContent).not.toContain(
+        'OpenCode ran qwen3:8b, and the Agent Teams launch preflight passed.'
+      );
     });
 
     await act(async () => {
@@ -783,7 +866,9 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       await Promise.resolve();
     });
     await vi.waitFor(() => {
-      expect(host.textContent).toContain('OpenCode successfully ran qwen3:8b.');
+      expect(host.textContent).toContain(
+        'OpenCode ran qwen3:8b, and the Agent Teams launch preflight passed.'
+      );
     });
   });
 
@@ -840,7 +925,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
 
     await vi.waitFor(
       () => {
-        expect(host.textContent).toContain('Your local model is ready.');
+        expect(host.textContent).toContain('Your local model is ready for Agent Teams.');
         expect(host.textContent).not.toContain('needs attention');
       },
       { timeout: 3_000 }
@@ -1005,8 +1090,10 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       await Promise.resolve();
     });
     await vi.waitFor(() => {
-      expect(host.textContent).toContain('Your local model is ready.');
-      expect(host.textContent).toContain('OpenCode successfully ran qwen3:8b.');
+      expect(host.textContent).toContain('Your local model is ready for Agent Teams.');
+      expect(host.textContent).toContain(
+        'OpenCode ran qwen3:8b, and the Agent Teams launch preflight passed.'
+      );
     });
     expect(mocks.configureLocalProvider).toHaveBeenCalledTimes(1);
     expect(mocks.testModel).toHaveBeenCalledTimes(2);

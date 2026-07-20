@@ -287,7 +287,7 @@ describe('TeamProvisioningSecondaryRuntimeRuns', () => {
       expect(store.hasSecondaryRuntimeRuns('team-a')).toBe(false);
     });
 
-    it('resolves current OpenCode run ids from primary and secondary runtime maps', () => {
+    it('resolves primary ownership only from the exact runtime map and keeps secondary lanes scoped', () => {
       const shouldRouteOpenCodeToRuntimeAdapter = vi.fn(() => true);
       const isCancellableRuntimeAdapterProgress = vi.fn(() => true);
       const runs = new Map<string, { request: TeamCreateRequest }>([
@@ -315,8 +315,8 @@ describe('TeamProvisioningSecondaryRuntimeRuns', () => {
           shouldRouteOpenCodeToRuntimeAdapter,
           isCancellableRuntimeAdapterProgress,
         })
-      ).toBe('run-tracked');
-      expect(shouldRouteOpenCodeToRuntimeAdapter).toHaveBeenCalled();
+      ).toBeNull();
+      expect(shouldRouteOpenCodeToRuntimeAdapter).not.toHaveBeenCalled();
 
       expect(
         getCurrentOpenCodeRuntimeRunId({
@@ -331,7 +331,7 @@ describe('TeamProvisioningSecondaryRuntimeRuns', () => {
           shouldRouteOpenCodeToRuntimeAdapter: () => false,
           isCancellableRuntimeAdapterProgress,
         })
-      ).toBe('run-pending');
+      ).toBeNull();
 
       expect(
         getCurrentOpenCodeRuntimeRunId({

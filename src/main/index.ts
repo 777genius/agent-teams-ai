@@ -74,6 +74,7 @@ import {
 } from '@features/recent-projects/main';
 import {
   createRuntimeProviderManagementFeature,
+  inspectOpenCodeLocalModelRuntimeReadiness,
   registerRuntimeProviderManagementIpc,
   removeRuntimeProviderManagementIpc,
   type RuntimeProviderManagementFeatureFacade,
@@ -249,6 +250,7 @@ import {
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
 import { getAppIconPath } from './utils/appIcon';
 import { configureFatalDiagnosticReport } from './utils/fatalDiagnosticReport';
+import { installPersistentAppLog } from './utils/persistentAppLog';
 import {
   getAutoDetectedClaudeBasePath,
   getAppDataPath,
@@ -285,6 +287,7 @@ import {
   LocalFileSystemProvider,
   MemberStatsComputer,
   NotificationManager,
+  isSupportedOpenCodeRuntimeBinaryPath,
   OpenCodeRuntimeInstallerService,
   OpenCodeReadinessBridge,
   OpenCodeTeamRuntimeAdapter,
@@ -321,6 +324,7 @@ import type {
 } from '@shared/types';
 
 const logger = createLogger('App');
+let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
@@ -652,6 +656,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       bridgeEnv,
       resolveVerifiedOpenCodeRuntimeBinaryPath: () =>
         resolveOpenCodeRuntimeBinaryForBridgeEnv({ includeShellEnv: options.includeShellEnv }),
+      isSupportedOpenCodeRuntimeBinaryPath,
       onWarning: (message) => logger.warn(message),
     });
   };
@@ -767,7 +772,11 @@ async function createOpenCodeRuntimeAdapterRegistry(
     appVersion: clientIdentity.appVersion,
   });
   openCodeLifecycleBridge = readinessBridge;
-  return new TeamRuntimeAdapterRegistry([new OpenCodeTeamRuntimeAdapter(readinessBridge)]);
+  return new TeamRuntimeAdapterRegistry([
+    new OpenCodeTeamRuntimeAdapter(readinessBridge, {
+      inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
+    }),
+  ]);
 }
 
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
@@ -1379,6 +1388,8 @@ async function requestGuardedAppQuit(reason: 'app-quit' | 'relaunch'): Promise<b
       } catch (error) {
         logger.error(`Shutdown failed: ${error instanceof Error ? error.message : String(error)}`);
       }
+      persistentAppLog?.dispose();
+      await persistentAppLog?.flush();
       shutdownComplete = true;
       app.quit();
       return true;
@@ -3359,35 +3370,6 @@ function createWindow(): void {
   });
   markRendererUnavailable(mainWindow);
 
-  // In dev, forward selected renderer console warnings/errors to the main terminal.
-  // Use the new single-argument event payload to avoid Electron deprecation warnings.
-  if (isDev) {
-    mainWindow.webContents.on('console-message', (details: unknown) => {
-      if (!details || typeof details !== 'object') return;
-      const d = details as {
-        level?: unknown;
-        message?: unknown;
-        lineNumber?: unknown;
-        sourceId?: unknown;
-      };
-      const level = typeof d.level === 'string' ? d.level : 'info';
-      if (level !== 'warning' && level !== 'error') return;
-      const message = typeof d.message === 'string' ? d.message.trim() : '';
-      if (!message) return;
-      const isNamespaced =
-        message.startsWith('[Store:') ||
-        message.startsWith('[Component:') ||
-        message.startsWith('[IPC:') ||
-        message.startsWith('[Service:') ||
-        message.startsWith('[Perf:') ||
-        message.startsWith('[startup]');
-      if (!isNamespaced) return;
-      const sourceId = typeof d.sourceId === 'string' ? d.sourceId : 'unknown';
-      const line = typeof d.lineNumber === 'number' ? d.lineNumber : -1;
-      logger.warn(`RendererConsole: ${message} (${sourceId}:${line})`);
-    });
-  }
-
   // Load the renderer
   if (isDev) {
     // electron-vite may move the dev server off 5173 if it's already taken.
@@ -3595,6 +3577,10 @@ function createWindow(): void {
  * Application ready handler.
  */
 void app.whenReady().then(async () => {
+  persistentAppLog ??= installPersistentAppLog({
+    directory: app.getPath('logs'),
+    appVersion: app.getVersion(),
+  });
   logger.info('App ready, initializing...');
   configureFatalDiagnosticReport({
     directory: join(app.getPath('userData'), 'diagnostics'),

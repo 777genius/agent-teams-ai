@@ -518,7 +518,7 @@ interface InstalledBannerProps {
   onOpenCodeProviderConnect: (providerId: string) => void;
   onOpenCodeProviderAction: (
     providerId: string,
-    action: 'connect' | 'reconnect' | 'select'
+    action: 'connect' | 'reconnect' | 'select' | 'settings-connect'
   ) => void;
   onBrowseOpenCodeProviders: (query?: string) => void;
   onProviderRefresh: (providerId: CliProviderId) => void;
@@ -1936,11 +1936,11 @@ export const CliStatusBanner = ({
   }, []);
 
   const handleOpenCodeProviderAction = useCallback(
-    (providerId: string, action: 'connect' | 'reconnect' | 'select') => {
-      if (action === 'select' || action === 'reconnect') {
+    (providerId: string, action: 'connect' | 'reconnect' | 'select' | 'settings-connect') => {
+      if (action === 'select' || action === 'reconnect' || action === 'settings-connect') {
         setManageProviderId('opencode');
         setManageRuntimeProviderId(providerId);
-        setManageRuntimeProviderAction(action);
+        setManageRuntimeProviderAction(action === 'settings-connect' ? 'connect' : action);
         setManageDialogOpen(true);
         return;
       }

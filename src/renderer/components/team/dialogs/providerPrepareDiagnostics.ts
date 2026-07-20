@@ -1,5 +1,9 @@
 import { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
-import { getOpenCodeQualifiedModelSourceLabel } from '@shared/utils/opencodeModelRef';
+import {
+  getOpenCodeQualifiedModelSourceLabel,
+  parseOpenCodeQualifiedModelRef,
+} from '@shared/utils/opencodeModelRef';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import {
   isOpenCodeWindowsAccessDeniedDiagnostic,
   normalizeOpenCodeWindowsAccessDeniedDiagnostic,
@@ -153,8 +157,39 @@ export function buildProviderPrepareModelCheckingLine(
   return `${getModelLabel(providerId, modelId)} - checking...`;
 }
 
-function buildModelSuccessLine(providerId: TeamProviderId, modelId: string): string {
+function isLocalOpenCodeModel(providerId: TeamProviderId, modelId: string): boolean {
+  const openCodeSourceId =
+    providerId === 'opencode' ? (parseOpenCodeQualifiedModelRef(modelId)?.sourceId ?? null) : null;
+  return isOpenCodeLocalProviderId(openCodeSourceId);
+}
+
+function buildModelSuccessLine(
+  providerId: TeamProviderId,
+  modelId: string,
+  localCoordinationVerified: boolean
+): string {
+  if (isLocalOpenCodeModel(providerId, modelId) && localCoordinationVerified) {
+    return `${getModelLabel(providerId, modelId)} - response and team tools verified`;
+  }
+  if (isLocalOpenCodeModel(providerId, modelId)) {
+    return `${getModelLabel(providerId, modelId)} - response verified; team tools not tested`;
+  }
   return `${getModelLabel(providerId, modelId)} - verified`;
+}
+
+function buildModelSuccessResult(
+  providerId: TeamProviderId,
+  modelId: string,
+  localCoordinationVerified = false
+): ProviderPrepareDiagnosticsModelResult {
+  const line = buildModelSuccessLine(providerId, modelId, localCoordinationVerified);
+  const hasUnverifiedTeamTools =
+    isLocalOpenCodeModel(providerId, modelId) && !localCoordinationVerified;
+  return {
+    status: hasUnverifiedTeamTools ? 'notes' : 'ready',
+    line,
+    warningLine: hasUnverifiedTeamTools ? line : null,
+  };
 }
 
 function normalizeSelectedModelChecks(
@@ -256,6 +291,10 @@ function stripSelectedModelPrefix(modelId: string, message: string): string {
     new RegExp(`^Selected model ${escapeRegExp(modelId)} is unavailable\\.\\s*`, 'i'),
     new RegExp(`^Selected model ${escapeRegExp(modelId)} could not be verified\\.\\s*`, 'i'),
     new RegExp(`^Selected model ${escapeRegExp(modelId)} verification deferred\\.\\s*`, 'i'),
+    new RegExp(
+      `^Selected model ${escapeRegExp(modelId)} verified for launch with Agent Teams tool coordination\\.\\s*`,
+      'i'
+    ),
     new RegExp(`^Selected model ${escapeRegExp(modelId)} verified for launch\\.\\s*`, 'i'),
     new RegExp(`^Selected model ${escapeRegExp(modelId)} is available for launch\\.\\s*`, 'i'),
     new RegExp(
@@ -399,64 +438,6 @@ function getBlockingProviderIssue(
   );
 }
 
-function isAdvisoryOpenCodeDeepVerificationIssue(
-  issue: TeamProvisioningPrepareIssue | null,
-  reason: string | null | undefined
-): boolean {
-  if (issue?.code?.trim().toLowerCase() !== 'unknown_error') {
-    return false;
-  }
-
-  const lower = [issue.message, reason]
-    .map((entry) => entry?.trim() ?? '')
-    .filter(Boolean)
-    .join('\n')
-    .toLowerCase();
-
-  if (!lower) {
-    return false;
-  }
-
-  const hasHardRuntimeMarker =
-    lower.includes('mcp_unavailable') ||
-    lower.includes('not_authenticated') ||
-    lower.includes('authentication') ||
-    lower.includes('credential') ||
-    lower.includes('api key') ||
-    lower.includes('not licensed') ||
-    lower.includes('payment required') ||
-    lower.includes('available credits') ||
-    lower.includes('spending limit') ||
-    lower.includes('insufficient credits') ||
-    lower.includes('/experimental/tool') ||
-    lower.includes('runtime store') ||
-    lower.includes('opencode cli') ||
-    lower.includes('opencode runtime binary') ||
-    isOpenCodeBridgeNoOutputDiagnostic(lower) ||
-    isOpenCodeWindowsAccessDeniedDiagnostic(lower);
-  if (hasHardRuntimeMarker) {
-    return false;
-  }
-
-  return (
-    lower.includes('unable to connect') ||
-    lower.includes('timed out') ||
-    lower.includes('timeout') ||
-    lower.includes('aborted') ||
-    lower.includes('econnreset') ||
-    lower.includes('econnrefused') ||
-    lower.includes('fetch failed') ||
-    lower.includes('socket hang up') ||
-    lower.includes('networkerror')
-  );
-}
-
-function buildOpenCodeAdvisoryDeepVerificationWarning(reason: string | null | undefined): string {
-  const normalizedReason =
-    normalizeModelReason(reason?.trim() ?? '') || 'Model ping was not confirmed';
-  return `OpenCode model ping was not confirmed. ${normalizedReason}`;
-}
-
 function isProviderLevelOpenCodeBusyDeepVerificationWarning(value: string): boolean {
   const lower = value.trim().toLowerCase();
   return (
@@ -464,19 +445,6 @@ function isProviderLevelOpenCodeBusyDeepVerificationWarning(value: string): bool
     lower.includes('deep model verification') &&
     lower.includes('idle')
   );
-}
-
-function createOpenCodeAdvisoryDeepVerificationModelResult(
-  providerId: TeamProviderId,
-  modelId: string
-): ProviderPrepareDiagnosticsModelResult {
-  const line = `${getModelLabel(providerId, modelId)} - ping not confirmed`;
-  return {
-    // TODO: Introduce a dedicated `unconfirmed` model result status for deep-ping advisory results.
-    status: 'notes',
-    line,
-    warningLine: line,
-  };
 }
 
 function getResultReason(modelId: string, result: TeamProvisioningPrepareResult): string | null {
@@ -771,12 +739,14 @@ function resolveModelResultFromBatch(
   const hasVerifiedLine = modelScopedEntries.some((entry) =>
     /selected model .* verified for launch\./i.test(entry)
   );
+  const hasLocalCoordinationVerifiedLine = modelScopedEntries.some((entry) =>
+    /selected model .* verified for launch with Agent Teams tool coordination\./i.test(entry)
+  );
+  if (hasLocalCoordinationVerifiedLine) {
+    return buildModelSuccessResult(providerId, modelId, true);
+  }
   if (hasVerifiedLine) {
-    return {
-      status: 'ready',
-      line: buildModelSuccessLine(providerId, modelId),
-      warningLine: null,
-    };
+    return buildModelSuccessResult(providerId, modelId);
   }
 
   const hasAvailableLine = modelScopedEntries.some((entry) =>
@@ -867,11 +837,7 @@ function resolveModelResultFromBatch(
   }
 
   if (result.ready) {
-    return {
-      status: 'ready',
-      line: buildModelSuccessLine(providerId, modelId),
-      warningLine: null,
-    };
+    return buildModelSuccessResult(providerId, modelId);
   }
 
   const line = buildModelFailureLine(
@@ -902,14 +868,19 @@ function resolveModelResultFromCompatibilityBatch(
   const hasVerifiedLine = modelScopedEntries.some((entry) =>
     /selected model .* verified for launch\./i.test(entry)
   );
+  const hasLocalCoordinationVerifiedLine = modelScopedEntries.some((entry) =>
+    /selected model .* verified for launch with Agent Teams tool coordination\./i.test(entry)
+  );
+  if (hasLocalCoordinationVerifiedLine) {
+    return {
+      kind: 'terminal',
+      result: buildModelSuccessResult(providerId, modelId, true),
+    };
+  }
   if (hasVerifiedLine) {
     return {
       kind: 'terminal',
-      result: {
-        status: 'ready',
-        line: buildModelSuccessLine(providerId, modelId),
-        warningLine: null,
-      },
+      result: buildModelSuccessResult(providerId, modelId),
     };
   }
 
@@ -1434,47 +1405,27 @@ export async function runProviderPrepareDiagnostics({
         );
         const structuredProviderScopedFailure =
           structuredProviderScopedIssue?.message.trim() ?? null;
-        let handledAdvisoryDeepFailure = false;
         let handledBusyDeepDeferral = false;
         if (structuredProviderScopedFailure || providerScopedFailure) {
           const failureReason =
             structuredProviderScopedFailure ?? providerScopedFailure ?? 'OpenCode failed';
-          if (
-            isAdvisoryOpenCodeDeepVerificationIssue(structuredProviderScopedIssue, failureReason)
-          ) {
-            hasNotes = true;
-            runtimeDetailLines = [];
-            runtimeWarnings = uniquePrepareLines([
-              ...runtimeWarnings,
-              buildOpenCodeAdvisoryDeepVerificationWarning(failureReason),
-            ]);
-            for (const modelId of compatibilityPassedModelIds) {
-              recordTerminalModelResult(
-                modelId,
-                createOpenCodeAdvisoryDeepVerificationModelResult(providerId, modelId)
-              );
-            }
-            handledAdvisoryDeepFailure = true;
-          } else {
-            return withSupportDiagnostics(
-              {
-                status: 'failed',
-                details: [
-                  normalizeRuntimeFailureDetailLine(
-                    failureReason,
-                    structuredProviderScopedIssue?.code,
-                    providerId
-                  ) ?? failureReason,
-                ],
-                warnings: [],
-                modelResultsById: {},
-              },
-              supportDiagnostics
-            );
-          }
+          return withSupportDiagnostics(
+            {
+              status: 'failed',
+              details: [
+                normalizeRuntimeFailureDetailLine(
+                  failureReason,
+                  structuredProviderScopedIssue?.code,
+                  providerId
+                ) ?? failureReason,
+              ],
+              warnings: [],
+              modelResultsById: {},
+            },
+            supportDiagnostics
+          );
         }
         if (
-          !handledAdvisoryDeepFailure &&
           batchedModelResult.ready &&
           !hasModelScopedEntries &&
           runtimeWarnings.some(isProviderLevelOpenCodeBusyDeepVerificationWarning)
@@ -1491,7 +1442,6 @@ export async function runProviderPrepareDiagnostics({
           handledBusyDeepDeferral = true;
         }
         if (
-          !handledAdvisoryDeepFailure &&
           !handledBusyDeepDeferral &&
           (shouldSurfaceProviderRuntimeFailureInsteadOfModelFailure({
             result: batchedModelResult,
@@ -1520,7 +1470,6 @@ export async function runProviderPrepareDiagnostics({
           );
         }
         if (
-          !handledAdvisoryDeepFailure &&
           !handledBusyDeepDeferral &&
           !hasModelScopedEntries &&
           compatibilityPassedModelIds.length === 1
@@ -1529,7 +1478,7 @@ export async function runProviderPrepareDiagnostics({
           runtimeWarnings = [];
         }
 
-        if (!handledAdvisoryDeepFailure && !handledBusyDeepDeferral) {
+        if (!handledBusyDeepDeferral) {
           for (const modelId of compatibilityPassedModelIds) {
             recordTerminalModelResult(
               modelId,
@@ -1543,18 +1492,18 @@ export async function runProviderPrepareDiagnostics({
           }
         }
       } catch (error) {
-        hasNotes = true;
         const reason = normalizeModelReason(
           error instanceof Error ? error.message.trim() : String(error).trim()
         );
-        for (const modelId of compatibilityPassedModelIds) {
-          const line = buildModelFailureLine(providerId, modelId, 'check failed', reason || null);
-          recordTerminalModelResult(modelId, {
-            status: 'notes',
-            line,
-            warningLine: line,
-          });
-        }
+        return withSupportDiagnostics(
+          {
+            status: 'failed',
+            details: [reason || 'OpenCode runtime verification failed'],
+            warnings: [],
+            modelResultsById: {},
+          },
+          supportDiagnostics
+        );
       } finally {
         emitProgress();
       }

@@ -3,9 +3,9 @@ import { useCallback, useMemo } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
+import { formatCompactRelativeTime } from '@renderer/utils/formatters';
 import { resolveProjectIdByPath } from '@renderer/utils/projectLookup';
 import { formatSessionLabel } from '@renderer/utils/sessionTitleParser';
-import { formatDistanceToNowStrict } from 'date-fns';
 import {
   AlertCircle,
   Crown,
@@ -187,7 +187,7 @@ const SessionRow = ({
   filterBySessionLabel,
   openSessionLabel,
 }: SessionRowProps): React.JSX.Element => {
-  const timeAgo = formatShortTime(new Date(session.createdAt));
+  const timeAgo = formatCompactRelativeTime(new Date(session.createdAt));
   const label = formatSessionLabel(session.firstMessage);
 
   return (
@@ -261,26 +261,3 @@ const SessionRow = ({
     </div>
   );
 };
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatShortTime(date: Date): string {
-  const distance = formatDistanceToNowStrict(date, { addSuffix: false });
-  return distance
-    .replace(' seconds', 's')
-    .replace(' second', 's')
-    .replace(' minutes', 'm')
-    .replace(' minute', 'm')
-    .replace(' hours', 'h')
-    .replace(' hour', 'h')
-    .replace(' days', 'd')
-    .replace(' day', 'd')
-    .replace(' weeks', 'w')
-    .replace(' week', 'w')
-    .replace(' months', 'mo')
-    .replace(' month', 'mo')
-    .replace(' years', 'y')
-    .replace(' year', 'y');
-}

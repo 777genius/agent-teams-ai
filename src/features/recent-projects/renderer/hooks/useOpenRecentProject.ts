@@ -35,10 +35,10 @@ export function useOpenRecentProject(): {
   );
 
   const navigateToMatch = useCallback(
-    (match: WorktreeMatch): void => {
+    (match: WorktreeMatch, projectPath: string): void => {
       useStore.setState(getWorktreeNavigationState(match.repoId, match.worktreeId));
       void useStore.getState().fetchSessionsInitial(match.worktreeId);
-      openTeamsTab();
+      openTeamsTab(projectPath);
     },
     [openTeamsTab]
   );
@@ -57,7 +57,7 @@ export function useOpenRecentProject(): {
 
       const initialMatch = findMatchingWorktree(repositoryGroups, selectableCandidatePaths);
       if (initialMatch) {
-        navigateToMatch(initialMatch);
+        navigateToMatch(initialMatch, path);
         return;
       }
 
@@ -65,7 +65,7 @@ export function useOpenRecentProject(): {
       const refreshedGroups = useStore.getState().repositoryGroups;
       const refreshedMatch = findMatchingWorktree(refreshedGroups, selectableCandidatePaths);
       if (refreshedMatch) {
-        navigateToMatch(refreshedMatch);
+        navigateToMatch(refreshedMatch, path);
         return;
       }
 
@@ -81,7 +81,7 @@ export function useOpenRecentProject(): {
       }));
 
       const encodedId = encodeProjectPathForNavigation(path);
-      navigateToMatch({ repoId: encodedId, worktreeId: encodedId });
+      navigateToMatch({ repoId: encodedId, worktreeId: encodedId }, path);
     },
     [fetchRepositoryGroups, navigateToMatch, repositoryGroups]
   );
@@ -89,13 +89,17 @@ export function useOpenRecentProject(): {
   const openTarget = useCallback(
     async (
       target: DashboardRecentProjectOpenTarget,
-      associatedPaths: readonly string[]
+      associatedPaths: readonly string[],
+      primaryPath: string
     ): Promise<void> => {
       if (target.type === 'existing-worktree') {
-        navigateToMatch({
-          repoId: target.repositoryId,
-          worktreeId: target.worktreeId,
-        });
+        navigateToMatch(
+          {
+            repoId: target.repositoryId,
+            worktreeId: target.worktreeId,
+          },
+          primaryPath
+        );
         return;
       }
 
@@ -112,7 +116,7 @@ export function useOpenRecentProject(): {
       }
 
       try {
-        await openTarget(project.openTarget, project.associatedPaths);
+        await openTarget(project.openTarget, project.associatedPaths, project.primaryPath);
         recordRecentProjectOpenPaths([project.primaryPath, ...project.associatedPaths]);
       } catch (error) {
         logger.error('Failed to open recent project', error);

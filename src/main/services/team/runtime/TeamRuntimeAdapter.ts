@@ -211,9 +211,23 @@ export interface TeamRuntimeStopResult {
   diagnostics: string[];
 }
 
+export interface TeamRuntimeLocalModelPreflightTarget {
+  projectPath: string;
+  modelRoute: string;
+}
+
+export interface TeamRuntimeLocalModelPreflightResult {
+  ok: boolean;
+  warnings: string[];
+  diagnostics: string[];
+}
+
 export interface TeamLaunchRuntimeAdapter {
   readonly providerId: TeamRuntimeProviderId;
   prepare(input: TeamRuntimeLaunchInput): Promise<TeamRuntimePrepareResult>;
+  preflightLocalModels?(input: {
+    targets: readonly TeamRuntimeLocalModelPreflightTarget[];
+  }): Promise<TeamRuntimeLocalModelPreflightResult>;
   launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult>;
   reconcile(input: TeamRuntimeReconcileInput): Promise<TeamRuntimeReconcileResult>;
   stop(input: TeamRuntimeStopInput): Promise<TeamRuntimeStopResult>;

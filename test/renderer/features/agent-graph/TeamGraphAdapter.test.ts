@@ -1121,6 +1121,45 @@ describe('TeamGraphAdapter particles', () => {
     expect(findNode(graph, 'task:my-team:unknown-task')?.ownerId).toBeNull();
   });
 
+  it('keeps team task nodes visible across semantic zoom levels', () => {
+    const adapter = TeamGraphAdapter.create();
+
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        tasks: [
+          {
+            id: 'task-assigned',
+            displayId: '#42',
+            subject: 'Implement calculator core',
+            owner: 'alice',
+            status: 'in_progress',
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+        ],
+      }),
+      'my-team'
+    );
+
+    expect(findNode(graph, 'task:my-team:task-assigned')).toMatchObject({
+      kind: 'task',
+      ownerId: 'member:my-team:alice',
+      taskZoomVisibility: 'overview',
+      taskOverviewStyle: 'card',
+      domainRef: {
+        kind: 'task',
+        teamName: 'my-team',
+        taskId: 'task-assigned',
+      },
+    });
+    expect(graph.edges).toContainEqual(
+      expect.objectContaining({
+        source: 'member:my-team:alice',
+        target: 'task:my-team:task-assigned',
+        type: 'ownership',
+      })
+    );
+  });
+
   it('builds member activity feeds from inbox messages in newest-first order', () => {
     const adapter = TeamGraphAdapter.create();
 
@@ -1909,7 +1948,8 @@ describe('TeamGraphAdapter particles', () => {
             hardFailure: true,
             hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
             livenessKind: 'confirmed_bootstrap',
-            runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+            runtimeDiagnostic:
+              'runtime pid could not be verified because process table is unavailable',
             runtimeDiagnosticSeverity: 'warning',
             updatedAt: '2026-05-25T20:14:02.147Z',
           },
@@ -2048,6 +2088,8 @@ describe('TeamGraphAdapter particles', () => {
     expect(visibleLiveTask).toMatchObject({ hasLiveTaskLogs: true });
     expect(overflowNode).toMatchObject({
       hasLiveTaskLogs: true,
+      taskZoomVisibility: 'overview',
+      taskOverviewStyle: 'card',
       overflowTaskIds: expect.arrayContaining(['task-overflow-5']),
     });
     expect(findNode(graph, 'task:my-team:task-overflow-1')?.hasLiveTaskLogs).toBeUndefined();

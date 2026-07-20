@@ -26,7 +26,10 @@ import {
   readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
 } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
-import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
+import {
+  OpenCodeTeamRuntimeAdapter,
+  type OpenCodeTeamRuntimeAdapterOptions,
+} from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
@@ -61,6 +64,7 @@ export async function createOpenCodeLiveHarness(input: {
   tempDir: string;
   selectedModel: string;
   projectPath?: string;
+  runtimeAdapterOptions?: OpenCodeTeamRuntimeAdapterOptions;
   configureServices?: (
     svc: TeamProvisioningService
   ) => Partial<HttpServices> | Promise<Partial<HttpServices> | void> | void;
@@ -116,7 +120,7 @@ export async function createOpenCodeLiveHarness(input: {
     reconcileTimeoutMs: 90_000,
     stopTimeoutMs: 90_000,
   });
-  const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge);
+  const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge, input.runtimeAdapterOptions);
   svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
   return {
     bridgeClient,
@@ -282,7 +286,7 @@ export async function waitForOpenCodeLanesStopped(
   await waitUntil(async () => {
     const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
     return Object.keys(laneIndex.lanes).length === 0;
-  }, timeoutMs).catch(() => undefined);
+  }, timeoutMs);
 }
 
 export async function getRuntimeTranscript(input: {
@@ -312,10 +316,7 @@ export async function getRuntimeTranscript(input: {
     }));
 }
 
-async function resolveOpenCodeMemberLaneId(
-  teamName: string,
-  memberName: string
-): Promise<string> {
+async function resolveOpenCodeMemberLaneId(teamName: string, memberName: string): Promise<string> {
   const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
   const laneIds = Object.keys(laneIndex.lanes);
   for (const laneId of laneIds) {

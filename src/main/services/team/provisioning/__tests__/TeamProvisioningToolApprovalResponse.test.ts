@@ -365,6 +365,11 @@ function createRuntimeAnswerPorts(
   answerRuntimePermission: NonNullable<TeamLaunchRuntimeAdapter['answerRuntimePermission']>
 ): OpenCodeRuntimeToolApprovalAnswerPorts<TestRuntimeRun> {
   const run: TestRuntimeRun = {};
+  const runtimeOwner = {
+    runId: 'run-1',
+    providerId: 'opencode' as const,
+    cwd: '/repo',
+  };
   const adapter = {
     providerId: 'opencode',
     prepare: vi.fn(),
@@ -400,6 +405,8 @@ function createRuntimeAnswerPorts(
     }),
     persistOpenCodeRuntimeAdapterLaunchResult: async (result) => ({ result }),
     deleteRuntimeAdapterRunByTeam: vi.fn(),
+    getRuntimeAdapterRunByTeam: vi.fn(() => runtimeOwner),
+    logWarning: vi.fn(),
     setRuntimeAdapterRunByTeam: vi.fn(),
     setAliveRunId: vi.fn(),
     getTrackedRunId: vi.fn(() => 'run-1'),

@@ -2,8 +2,32 @@
  * Formatting utility functions for display values.
  */
 
+import { formatDistanceStrict } from 'date-fns';
+
 // Re-export token formatting from shared module
 export { formatTokensCompact } from '@shared/utils/tokenFormatting';
+
+/**
+ * Formats relative time in a compact form (e.g. "6s", "4m", "2h", "1d").
+ */
+export function formatCompactRelativeTime(date: Date, now: Date = new Date()): string {
+  const distance = formatDistanceStrict(date, now, { addSuffix: false });
+  return distance
+    .replace(' seconds', 's')
+    .replace(' second', 's')
+    .replace(' minutes', 'm')
+    .replace(' minute', 'm')
+    .replace(' hours', 'h')
+    .replace(' hour', 'h')
+    .replace(' days', 'd')
+    .replace(' day', 'd')
+    .replace(' weeks', 'w')
+    .replace(' week', 'w')
+    .replace(' months', 'mo')
+    .replace(' month', 'mo')
+    .replace(' years', 'y')
+    .replace(' year', 'y');
+}
 
 /**
  * Formats a byte count to a human-readable string (e.g. "1.2 MB").

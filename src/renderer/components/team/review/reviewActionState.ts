@@ -10,11 +10,13 @@ import {
   isReviewFileExpectedDeleted,
 } from './reviewContentPreview';
 
+import type { ReviewDraftHistoryConflictCandidateSummary } from '@features/change-review-history/contracts';
 import type {
   ConflictCheckResult,
   FileChangeSummary,
   FileChangeWithContent,
   HunkDecision,
+  ReviewDecisionConflictCandidateSummary,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
 } from '@shared/types';
@@ -22,6 +24,68 @@ import type {
 export interface ReviewDecisionRecords {
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
+}
+
+export interface ReviewOperationScopeToken {
+  readonly hydrationKey: string;
+  readonly generation: symbol;
+}
+
+/**
+ * Object identity intentionally distinguishes closing and reopening the same
+ * durable scope. A string key alone is vulnerable to an A -> B -> A race.
+ */
+export function createReviewOperationScopeToken(hydrationKey: string): ReviewOperationScopeToken {
+  return Object.freeze({ hydrationKey, generation: Symbol(hydrationKey) });
+}
+
+export function isReviewOperationScopeCurrent(
+  current: ReviewOperationScopeToken | null,
+  operation: ReviewOperationScopeToken | null
+): operation is ReviewOperationScopeToken {
+  return current !== null && current === operation;
+}
+
+export function shouldRequestReviewCloseForEscape(input: {
+  key: string;
+  defaultPrevented: boolean;
+  hasOpenModalLayer: boolean;
+}): boolean {
+  return input.key === 'Escape' && !input.defaultPrevented && !input.hasOpenModalLayer;
+}
+
+export type ReviewConflictCandidateSelection =
+  | { kind: 'decision'; value: ReviewDecisionConflictCandidateSummary }
+  | { kind: 'draft'; value: ReviewDraftHistoryConflictCandidateSummary };
+
+export function selectLatestReviewConflictCandidate(
+  decisions: readonly ReviewDecisionConflictCandidateSummary[],
+  drafts: readonly ReviewDraftHistoryConflictCandidateSummary[]
+): ReviewConflictCandidateSelection | null {
+  const decision = decisions[0];
+  const draft = drafts[0];
+  if (!decision) return draft ? { kind: 'draft', value: draft } : null;
+  if (!draft) return { kind: 'decision', value: decision };
+  return Date.parse(decision.capturedAt) >= Date.parse(draft.capturedAt)
+    ? { kind: 'decision', value: decision }
+    : { kind: 'draft', value: draft };
+}
+
+export function replaceReviewScopedRecord<T>(
+  current: Readonly<Record<string, T>>,
+  scopeFilePaths: Iterable<string>,
+  recovered: Readonly<Record<string, T>>
+): Record<string, T> {
+  const normalizedScopePaths = new Set(
+    [...scopeFilePaths].map((filePath) => normalizePathForComparison(filePath))
+  );
+  const next = { ...current };
+  for (const filePath of Object.keys(next)) {
+    if (normalizedScopePaths.has(normalizePathForComparison(filePath))) {
+      delete next[filePath];
+    }
+  }
+  return { ...next, ...recovered };
 }
 
 export { restoreReviewDecisionRecordsForFile, restoreReviewDecisionRecordsForFiles };
@@ -85,6 +149,34 @@ export function getReviewCloseBlockReason(input: {
   if (input.busy) return 'Wait for the current review action to finish.';
   if (input.draftCount > 0) return 'Save or discard manual edits before closing Changes.';
   return null;
+}
+
+export function hasUnscopedLocalReviewState(input: {
+  editedContentCount: number;
+  hunkDecisionCount: number;
+  fileDecisionCount: number;
+  undoHistoryCount: number;
+  redoHistoryCount: number;
+  pendingDraftWriteCount: number;
+  draftWriteChainCount: number;
+  draftWriteErrorCount: number;
+  pendingApplyCleanup: boolean;
+  pendingDecisionClear: boolean;
+  persistenceStatus: ReviewActionPersistenceStatus;
+}): boolean {
+  return (
+    input.editedContentCount > 0 ||
+    input.hunkDecisionCount > 0 ||
+    input.fileDecisionCount > 0 ||
+    input.undoHistoryCount > 0 ||
+    input.redoHistoryCount > 0 ||
+    input.pendingDraftWriteCount > 0 ||
+    input.draftWriteChainCount > 0 ||
+    input.draftWriteErrorCount > 0 ||
+    input.pendingApplyCleanup ||
+    input.pendingDecisionClear ||
+    input.persistenceStatus !== 'saved'
+  );
 }
 
 export function getReviewDecisionHydrationGuard(input: {

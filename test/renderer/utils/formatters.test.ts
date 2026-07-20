@@ -1,8 +1,25 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatDuration, formatTokensCompact } from '../../../src/renderer/utils/formatters';
+import {
+  formatCompactRelativeTime,
+  formatDuration,
+  formatTokensCompact,
+} from '../../../src/renderer/utils/formatters';
 
 describe('formatters', () => {
+  describe('formatCompactRelativeTime', () => {
+    const now = new Date('2026-04-09T10:00:00.000Z');
+
+    it.each([
+      ['2026-04-09T09:59:54.000Z', '6s'],
+      ['2026-04-09T09:56:00.000Z', '4m'],
+      ['2026-04-09T08:00:00.000Z', '2h'],
+      ['2026-04-08T10:00:00.000Z', '1d'],
+    ])('formats %s as %s', (value, expected) => {
+      expect(formatCompactRelativeTime(new Date(value), now)).toBe(expected);
+    });
+  });
+
   describe('formatDuration', () => {
     it('should format milliseconds', () => {
       expect(formatDuration(500)).toBe('500ms');

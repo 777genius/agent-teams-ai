@@ -32,4 +32,43 @@ describe('ReviewDraftHistoryWriteBuffer', () => {
     expect(buffer.hasFailedWithPrefix('scope-b\0')).toBe(false);
     expect(buffer.hasPendingWithPrefix('scope-b\0')).toBe(true);
   });
+
+  it('discards both queued branches after an explicit conflict resolution', () => {
+    const buffer = new ReviewDraftHistoryWriteBuffer<number>();
+    const key = 'scope-a\0a.ts';
+    buffer.enqueue(key, 1);
+    const failed = buffer.takeNext(key);
+    if (failed === undefined) throw new Error('Expected an in-flight draft');
+    buffer.markFailed(key, failed);
+    buffer.enqueue(key, 2);
+
+    expect(buffer.resolveConflict(key, false)).toBeUndefined();
+
+    expect(buffer.takeNext(key)).toBeUndefined();
+    expect(buffer.keys('scope-a\0')).toEqual([]);
+  });
+
+  it('returns the newest queued descendant when recovering the failed branch', () => {
+    const buffer = new ReviewDraftHistoryWriteBuffer<number>();
+    const key = 'scope-a\0a.ts';
+    buffer.markFailed(key, 1);
+    buffer.enqueue(key, 2);
+
+    expect(buffer.resolveConflict(key, true)).toBe(2);
+    expect(buffer.keys('scope-a\0')).toEqual([]);
+  });
+
+  it('records a durably promoted descendant without dropping a newer edit', () => {
+    const buffer = new ReviewDraftHistoryWriteBuffer<number>();
+    const key = 'scope-a\0a.ts';
+    buffer.markFailed(key, 1);
+    buffer.enqueue(key, 2);
+    const promoted = buffer.peekPending(key);
+    if (promoted === undefined) throw new Error('Expected a pending draft');
+    buffer.enqueue(key, 3);
+
+    expect(buffer.promotePendingToFailed(key, 1, promoted)).toBe(true);
+    expect(buffer.peekFailed(key)).toBe(2);
+    expect(buffer.peekPending(key)).toBe(3);
+  });
 });

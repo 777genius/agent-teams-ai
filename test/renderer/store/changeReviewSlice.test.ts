@@ -2415,6 +2415,29 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().applying).toBe(false);
   });
 
+  it('refuses to apply a stale change set owned by another team', async () => {
+    const store = createSliceStore();
+    store.setState({
+      activeChangeSet: makeAgentChangeSet(),
+      hunkDecisions: { '/repo/file.ts:0': 'rejected' },
+      fileChunkCounts: { '/repo/file.ts': 1 },
+      changeSetEpoch: 1,
+    });
+
+    const allResult = await store.getState().applyReview('team-b', undefined, 'alice');
+    const fileResult = await store
+      .getState()
+      .applySingleFileDecision('team-b', '/repo/file.ts', undefined, 'alice');
+
+    expect(allResult).toBeNull();
+    expect(fileResult).toBeNull();
+    expect(hoisted.getAgentChanges).not.toHaveBeenCalled();
+    expect(hoisted.applyDecisions).not.toHaveBeenCalled();
+    expect(store.getState().applyError).toBe(
+      'Review scope changed. Reload Changes before applying.'
+    );
+  });
+
   it('surfaces instant single-file apply errors returned without throwing', async () => {
     const store = createSliceStore();
     hoisted.applyDecisions.mockResolvedValueOnce({
@@ -2631,6 +2654,72 @@ describe('changeReviewSlice task changes', () => {
       []
     );
     vi.mocked(console.error).mockClear();
+  });
+
+  it('hydrates a canonical suffix returned by a contained response-loss retry', async () => {
+    const store = createSliceStore();
+    const actionA = {
+      id: 'accepted-a',
+      createdAt: '2026-07-18T10:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: '/repo/file.ts', originalIndex: 0 },
+    };
+    const actionB = {
+      ...actionA,
+      id: 'accepted-b',
+      createdAt: '2026-07-18T10:00:01.000Z',
+    };
+    const actionC = {
+      ...actionA,
+      id: 'accepted-c',
+      createdAt: '2026-07-18T10:00:02.000Z',
+    };
+    const scopeKey = 'team-a:agent-alice:response-loss-scope';
+    store.setState({
+      activeChangeSet: makeAgentChangeSet(),
+      hunkDecisions: { '/repo/file.ts:0': 'accepted' },
+      reviewActionHistory: [actionA],
+      decisionHydrationScopeKey: scopeKey,
+      decisionHydrationStatus: 'loaded',
+    });
+    store.getState().recordDecisionRevision('team-a', 'agent-alice', 'response-loss-scope', 0);
+    hoisted.saveDecisions.mockResolvedValueOnce({
+      revision: 2,
+      reconciledState: {
+        hunkDecisions: { '/repo/file.ts:0': 'accepted' },
+        fileDecisions: {},
+        hunkContextHashesByFile: { '/repo/file.ts': {} },
+        reviewActionHistory: [actionA, actionB],
+        reviewRedoHistory: [],
+      },
+    });
+
+    store.getState().persistDecisions('team-a', 'agent-alice', 'response-loss-scope');
+    await expect(
+      store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'response-loss-scope')
+    ).resolves.toBe(true);
+    expect(store.getState()).toMatchObject({
+      decisionRevision: 2,
+      reviewActionHistory: [actionA, actionB],
+    });
+
+    store.setState({ reviewActionHistory: [actionA, actionB, actionC] });
+    hoisted.saveDecisions.mockResolvedValueOnce({ revision: 3 });
+    store.getState().persistDecisions('team-a', 'agent-alice', 'response-loss-scope');
+    await expect(
+      store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'response-loss-scope')
+    ).resolves.toBe(true);
+    expect(hoisted.saveDecisions).toHaveBeenLastCalledWith(
+      'team-a',
+      'agent-alice',
+      'response-loss-scope',
+      { '/repo/file.ts:0': 'accepted' },
+      {},
+      { '/repo/file.ts': {} },
+      [actionA, actionB, actionC],
+      2,
+      []
+    );
   });
 
   it('serializes a close flush behind an older in-flight decision write', async () => {

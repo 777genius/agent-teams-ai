@@ -1,5 +1,6 @@
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { getAppIconPath } from '@main/utils/appIcon';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 
 import { openCodeRuntimeApprovalProvider } from '../approvals/OpenCodeRuntimeApprovalProvider';
@@ -7,6 +8,7 @@ import {
   RuntimeToolApprovalCoordinator,
   type RuntimeToolApprovalEntry,
 } from '../approvals/RuntimeToolApprovalCoordinator';
+import { upsertOpenCodeRuntimeLaneIndexEntry } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 
 import { type RespondToTeammatePermissionInput } from './TeamProvisioningTeammatePermissionResponse';
 import {
@@ -63,6 +65,12 @@ export interface TeamProvisioningToolApprovalFacadeDeps<
   readLaunchState: TeamProvisioningToolApprovalBoundaryDeps<TRun>['readLaunchState'];
   persistOpenCodeRuntimeAdapterLaunchResult: TeamProvisioningToolApprovalBoundaryDeps<TRun>['persistOpenCodeRuntimeAdapterLaunchResult'];
   deleteRuntimeAdapterRunByTeam: TeamProvisioningToolApprovalBoundaryDeps<TRun>['deleteRuntimeAdapterRunByTeam'];
+  getRuntimeAdapterRunByTeam?: TeamProvisioningToolApprovalBoundaryDeps<TRun>['getRuntimeAdapterRunByTeam'];
+  deleteRuntimeAdapterRunIfOwned?: TeamProvisioningToolApprovalBoundaryDeps<TRun>['deleteRuntimeAdapterRunIfOwned'];
+  getSecondaryRuntimeRun?: TeamProvisioningToolApprovalBoundaryDeps<TRun>['getSecondaryRuntimeRun'];
+  deleteSecondaryRuntimeRunIfOwned?: TeamProvisioningToolApprovalBoundaryDeps<TRun>['deleteSecondaryRuntimeRunIfOwned'];
+  markOpenCodeRuntimeLaneDegraded?: TeamProvisioningToolApprovalBoundaryDeps<TRun>['markOpenCodeRuntimeLaneDegraded'];
+  deleteAliveRunIdIfNoRuntime?: TeamProvisioningToolApprovalBoundaryDeps<TRun>['deleteAliveRunIdIfNoRuntime'];
   setRuntimeAdapterRunByTeam: TeamProvisioningToolApprovalBoundaryDeps<TRun>['setRuntimeAdapterRunByTeam'];
   setAliveRunId: TeamProvisioningToolApprovalBoundaryDeps<TRun>['setAliveRunId'];
   guardCommittedOpenCodeSecondaryLaneEvidence: TeamProvisioningToolApprovalBoundaryDeps<TRun>['guardCommittedOpenCodeSecondaryLaneEvidence'];
@@ -85,7 +93,9 @@ export interface TeamProvisioningToolApprovalFacadeServiceHost<
   runs: ReadonlyMap<string, TRun>;
   runTracking: {
     getTrackedRunId(teamName: string): string | null | undefined;
+    getAliveRunId?(teamName: string): string | null | undefined;
     setAliveRunId: TeamProvisioningToolApprovalFacadeDeps<TRun>['setAliveRunId'];
+    deleteAliveRunId?(teamName: string): void;
   };
   appShellBoundary: {
     getOpenCodeRuntimeAdapter: TeamProvisioningToolApprovalFacadeDeps<TRun>['getOpenCodeRuntimeAdapter'];
@@ -94,6 +104,11 @@ export interface TeamProvisioningToolApprovalFacadeServiceHost<
     read: TeamProvisioningToolApprovalFacadeDeps<TRun>['readLaunchState'];
   };
   runtimeAdapterRunByTeam: {
+    get(
+      teamName: string
+    ):
+      | Parameters<TeamProvisioningToolApprovalFacadeDeps<TRun>['setRuntimeAdapterRunByTeam']>[1]
+      | undefined;
     delete(teamName: string): unknown;
     set(
       teamName: string,
@@ -102,6 +117,14 @@ export interface TeamProvisioningToolApprovalFacadeServiceHost<
       >[1]
     ): unknown;
   };
+  getSecondaryRuntimeRun?(
+    teamName: string,
+    laneId: string
+  ): ReturnType<
+    NonNullable<TeamProvisioningToolApprovalFacadeDeps<TRun>['getSecondaryRuntimeRun']>
+  >;
+  deleteSecondaryRuntimeRunIfOwned?(teamName: string, laneId: string, runId: string): boolean;
+  hasSecondaryRuntimeRuns?(teamName: string): boolean;
   teamChangeEmitter?: TeamProvisioningToolApprovalFacadeDeps<TRun>['emitTeamChange'] | null;
   configFacade: {
     readConfigForStrictDecision: TeamProvisioningToolApprovalFacadeDeps<TRun>['readConfigForStrictDecision'];
@@ -142,6 +165,39 @@ export function createTeamProvisioningToolApprovalFacadeDepsFromService<
       service.persistOpenCodeRuntimeAdapterLaunchResult(result, input),
     deleteRuntimeAdapterRunByTeam: (teamName) => {
       service.runtimeAdapterRunByTeam.delete(teamName);
+    },
+    getRuntimeAdapterRunByTeam: (teamName) => service.runtimeAdapterRunByTeam.get(teamName),
+    deleteRuntimeAdapterRunIfOwned: (teamName, runId) => {
+      const current = service.runtimeAdapterRunByTeam.get(teamName);
+      if (current?.providerId !== 'opencode' || current.runId !== runId) {
+        return false;
+      }
+      service.runtimeAdapterRunByTeam.delete(teamName);
+      return true;
+    },
+    getSecondaryRuntimeRun: (teamName, laneId) =>
+      service.getSecondaryRuntimeRun?.(teamName, laneId),
+    deleteSecondaryRuntimeRunIfOwned: (teamName, laneId, runId) =>
+      service.deleteSecondaryRuntimeRunIfOwned?.(teamName, laneId, runId) === true,
+    markOpenCodeRuntimeLaneDegraded: async (input) => {
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: getTeamsBasePath(),
+        teamName: input.teamName,
+        laneId: input.laneId,
+        state: 'degraded',
+        diagnostics: input.diagnostics,
+      });
+    },
+    deleteAliveRunIdIfNoRuntime: (teamName, trackedRunId) => {
+      if (
+        service.runtimeAdapterRunByTeam.get(teamName) ||
+        service.hasSecondaryRuntimeRuns?.(teamName) ||
+        service.runTracking.getAliveRunId?.(teamName) !== trackedRunId
+      ) {
+        return false;
+      }
+      service.runTracking.deleteAliveRunId?.(teamName);
+      return true;
     },
     setRuntimeAdapterRunByTeam: (teamName, runtimeRun) => {
       service.runtimeAdapterRunByTeam.set(teamName, runtimeRun);
@@ -227,6 +283,12 @@ export class TeamProvisioningToolApprovalFacade<
         this.deps.persistOpenCodeRuntimeAdapterLaunchResult(result, input),
       deleteRuntimeAdapterRunByTeam: (teamName) =>
         this.deps.deleteRuntimeAdapterRunByTeam(teamName),
+      getRuntimeAdapterRunByTeam: this.deps.getRuntimeAdapterRunByTeam,
+      deleteRuntimeAdapterRunIfOwned: this.deps.deleteRuntimeAdapterRunIfOwned,
+      getSecondaryRuntimeRun: this.deps.getSecondaryRuntimeRun,
+      deleteSecondaryRuntimeRunIfOwned: this.deps.deleteSecondaryRuntimeRunIfOwned,
+      markOpenCodeRuntimeLaneDegraded: this.deps.markOpenCodeRuntimeLaneDegraded,
+      deleteAliveRunIdIfNoRuntime: this.deps.deleteAliveRunIdIfNoRuntime,
       setRuntimeAdapterRunByTeam: (teamName, runtimeRun) =>
         this.deps.setRuntimeAdapterRunByTeam(teamName, runtimeRun),
       setAliveRunId: (teamName, runId) => this.deps.setAliveRunId(teamName, runId),

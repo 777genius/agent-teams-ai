@@ -6,6 +6,7 @@
  */
 
 import { api } from '@renderer/api';
+import { requestCloseActiveChangeReviewLifecycle } from '@renderer/utils/changeReviewLifecycleCoordinator';
 
 import { invalidateContextScopedRequestEpoch } from '../utils/contextScopedRequestEpoch';
 import { getContextScopedTeamResetState, getFullResetState } from '../utils/stateResetHelpers';
@@ -64,6 +65,9 @@ export const createConnectionSlice: StateCreator<AppState, [], [], ConnectionSli
 
   // Actions
   connectSsh: async (config: SshConnectionConfig): Promise<void> => {
+    const lifecycleClose = requestCloseActiveChangeReviewLifecycle();
+    if (lifecycleClose !== true && !(await lifecycleClose)) return;
+
     set({
       connectionState: 'connecting',
       connectedHost: config.host,
@@ -144,6 +148,9 @@ export const createConnectionSlice: StateCreator<AppState, [], [], ConnectionSli
   },
 
   disconnectSsh: async (): Promise<void> => {
+    const lifecycleClose = requestCloseActiveChangeReviewLifecycle();
+    if (lifecycleClose !== true && !(await lifecycleClose)) return;
+
     try {
       const status = await api.ssh.disconnect();
       invalidateContextScopedRequestEpoch();

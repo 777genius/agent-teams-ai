@@ -638,6 +638,7 @@ export interface RuntimeLocalProviderListInput {
   runtimeId: RuntimeProviderManagementRuntimeId;
   scope: RuntimeLocalProviderScopeDto;
   projectPath?: string | null;
+  providerId?: string | null;
 }
 
 export interface RuntimeLocalProviderListEntryDto {

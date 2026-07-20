@@ -1,3 +1,4 @@
+import { MINIMUM_AGENT_TEAMS_OPENCODE_VERSION } from '@shared/utils/version';
 import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
 
@@ -14,7 +15,7 @@ export interface OpenCodeSupportedVersionPolicy {
 }
 
 export const OPENCODE_TEAM_LAUNCH_VERSION_POLICY: OpenCodeSupportedVersionPolicy = {
-  minimumVersion: '1.14.19',
+  minimumVersion: MINIMUM_AGENT_TEAMS_OPENCODE_VERSION,
   allowedPrerelease: false,
   requireCapabilities: true,
 };

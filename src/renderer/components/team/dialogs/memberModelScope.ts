@@ -39,6 +39,19 @@ export function resolveProviderScopedMemberModel(input: {
   }
 
   const providerStatus = input.runtimeProviderStatusById.get(providerId) ?? null;
+  // A cold renderer can hydrate saved team members before provider status and
+  // the model catalog arrive. Keep the explicit selection until the runtime
+  // has enough information to prove it unavailable; otherwise preflight can
+  // silently omit a teammate model and launch it with the provider default.
+  if (!providerStatus) {
+    return { providerId, model: normalizedModel };
+  }
+  if (
+    providerStatus.verificationState === 'error' ||
+    providerStatus.modelCatalogRefreshState === 'error'
+  ) {
+    return { providerId, model: normalizedModel };
+  }
   if (!isTeamModelAvailableForUi(providerId, normalizedModel, providerStatus)) {
     return { providerId, model: '' };
   }
@@ -55,7 +68,9 @@ function shouldClearOpenCodeModelToDefault(
   }
   if (
     providerStatus.modelCatalogRefreshState === 'loading' ||
-    providerStatus.modelVerificationState === 'verifying'
+    providerStatus.modelCatalogRefreshState === 'error' ||
+    providerStatus.modelVerificationState === 'verifying' ||
+    providerStatus.verificationState === 'error'
   ) {
     return false;
   }

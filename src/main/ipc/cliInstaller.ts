@@ -386,7 +386,7 @@ async function handleGetProviderStatus(
       currentService.getProviderStatus(providerId, options)
     )
       .then((status) => {
-        if (generation === statusCacheGeneration) {
+        if (generation === statusCacheGeneration && !options.projectPath) {
           patchCachedProviderStatus(status);
         }
         return status;

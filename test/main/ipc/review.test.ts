@@ -1,3 +1,4 @@
+import { ReviewDraftHistoryStore } from '@features/change-review-history/main';
 import {
   initializeReviewHandlers,
   registerReviewHandlers,
@@ -12,19 +13,26 @@ import {
   REVIEW_DELETE_EDITED_FILE,
   REVIEW_EXECUTE_MUTATION,
   REVIEW_GET_FILE_CONTENT,
+  REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
   REVIEW_LOAD_DECISIONS,
   REVIEW_LOAD_DRAFT_HISTORY,
+  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
+  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
   REVIEW_RESTORE_HISTORY,
   REVIEW_RESTORE_REJECTED_RENAME,
   REVIEW_RETRY_MUTATION_RECOVERY,
   REVIEW_SAVE_DECISIONS,
   REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
   REVIEW_SAVE_EDITED_FILE,
+  REVIEW_UNWATCH_FILES,
+  REVIEW_WATCH_FILES,
 } from '@preload/constants/ipcChannels';
 import { createHash } from 'crypto';
-import { link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'fs/promises';
+import { link, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -296,6 +304,53 @@ describe('review IPC path confinement', () => {
     return token;
   }
 
+  it('ignores a late watch request after unwatch and a newer project subscription', async () => {
+    let resolveOldProject!: (projectPath: string) => void;
+    const oldProjectValidation = new Promise<string>((resolve) => {
+      resolveOldProject = resolve;
+    });
+    let watching = false;
+    const fileWatcher = {
+      isWatching: vi.fn(() => watching),
+      start: vi.fn(() => {
+        watching = true;
+      }),
+      stop: vi.fn(() => {
+        watching = false;
+      }),
+      setWatchedFiles: vi.fn(),
+    };
+    const projectPathValidator = vi.fn((candidate: string) =>
+      candidate === projectDir ? oldProjectValidation : Promise.resolve(candidate)
+    );
+    initializeReviewHandlers({
+      extractor: extractor as never,
+      applier: applier as never,
+      contentResolver: resolver as never,
+      fileWatcher,
+      projectPathValidator,
+      configReader: {
+        getConfig: vi.fn().mockResolvedValue({
+          name: 'safe-team',
+          projectPath: projectDir,
+          members: [{ name: 'worker', cwd: worktreeDir }],
+        }),
+      },
+    });
+
+    const lateOldWatch = ipcMain.invoke(REVIEW_WATCH_FILES, projectDir, [projectFile]);
+    await vi.waitFor(() => expect(projectPathValidator).toHaveBeenCalledWith(projectDir));
+    await ipcMain.invoke(REVIEW_UNWATCH_FILES);
+    await ipcMain.invoke(REVIEW_WATCH_FILES, worktreeDir, [worktreeFile]);
+    resolveOldProject(projectDir);
+    await lateOldWatch;
+
+    expect(fileWatcher.start).toHaveBeenCalledTimes(1);
+    expect(fileWatcher.start).toHaveBeenCalledWith(worktreeDir, expect.any(Function));
+    expect(fileWatcher.setWatchedFiles).toHaveBeenCalledTimes(1);
+    expect(fileWatcher.setWatchedFiles).toHaveBeenCalledWith([worktreeFile]);
+  });
+
   it('rejects path traversal in persisted review decision identities', async () => {
     const result = await ipcMain.invoke(
       REVIEW_SAVE_DECISIONS,
@@ -313,6 +368,30 @@ describe('review IPC path confinement', () => {
     if (!result.success) {
       expect(result.error).toContain('Invalid review');
     }
+  });
+
+  it('rejects manual-edit history outside the authoritative review file set', async () => {
+    const result = await ipcMain.invoke(
+      REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
+      'safe-team',
+      'agent-worker',
+      'scope-token-outside',
+      {
+        filePath: outsideFile,
+        codec: 'codemirror-history-v1',
+        revision: 1,
+        diskBaseline: 'outside\n',
+        editorState: {
+          doc: 'outside edited\n',
+          history: { done: [], undone: [] },
+        },
+      },
+      0,
+      null
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toContain('not part of the reviewed scope');
   });
 
   it('round-trips ordered review Undo history with the exact decision scope', async () => {
@@ -348,6 +427,12 @@ describe('review IPC path confinement', () => {
     );
     expect(responseLostRetry).toEqual({ success: true, data: { revision: 1 } });
 
+    const divergentAction = {
+      id: 'reject-hunk-2',
+      createdAt: '2026-07-17T12:00:01.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
     const divergentRetry = await ipcMain.invoke(
       REVIEW_SAVE_DECISIONS,
       'safe-team',
@@ -356,12 +441,60 @@ describe('review IPC path confinement', () => {
       { [`${projectFile}:0`]: 'rejected' },
       {},
       null,
-      [action],
+      [divergentAction],
       0
     );
     expect(divergentRetry).toEqual({
       success: false,
       error: 'Review decisions changed; refusing stale state overwrite',
+    });
+
+    const conflicts = await ipcMain.invoke(
+      REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      'agent:worker:content:history'
+    );
+    expect(conflicts).toMatchObject({
+      success: true,
+      data: [
+        {
+          expectedRevision: 0,
+          hunkDecisionCount: 1,
+          undoDepth: 1,
+          redoDepth: 0,
+        },
+      ],
+    });
+    const decisionCandidateId = (conflicts as { data: { id: string }[] }).data[0]!.id;
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        'agent:worker:content:history',
+        decisionCandidateId,
+        'recover-candidate',
+        1
+      )
+    ).resolves.toEqual({ success: true, data: { revision: 2 } });
+
+    const branchBackup = await ipcMain.invoke(
+      REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      'agent:worker:content:history'
+    );
+    expect(branchBackup).toMatchObject({
+      success: true,
+      data: [
+        {
+          observedCurrentRevision: 2,
+          hunkDecisionCount: 1,
+          undoDepth: 1,
+          redoDepth: 0,
+        },
+      ],
     });
 
     const loaded = await ipcMain.invoke(
@@ -373,14 +506,379 @@ describe('review IPC path confinement', () => {
     expect(loaded).toEqual({
       success: true,
       data: {
-        hunkDecisions: { [`${projectFile}:0`]: 'accepted' },
+        hunkDecisions: { [`${projectFile}:0`]: 'rejected' },
         fileDecisions: {},
         hunkContextHashesByFile: undefined,
-        reviewActionHistory: [action],
+        reviewActionHistory: [divergentAction],
         reviewRedoHistory: [],
-        revision: 1,
+        revision: 2,
       },
     });
+  });
+
+  it('shows prior decision recovery branches but rejects cross-snapshot recovery', async () => {
+    const scopeTokenA = 'agent:worker:content:prior-decision-a';
+    const scopeTokenB = 'agent:worker:content:prior-decision-b';
+    const acceptedAction = {
+      id: 'prior-accepted-hunk',
+      createdAt: '2026-07-17T12:20:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const rejectedAction = {
+      id: 'prior-rejected-hunk',
+      createdAt: '2026-07-17T12:21:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeTokenA,
+      { [`${projectFile}:0`]: 'accepted' },
+      {},
+      null,
+      [acceptedAction],
+      0
+    );
+    await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeTokenA,
+      { [`${projectFile}:0`]: 'rejected' },
+      {},
+      null,
+      [rejectedAction],
+      0
+    );
+    await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeTokenB,
+      {},
+      {},
+      null,
+      [],
+      0
+    );
+
+    const conflicts = await ipcMain.invoke(
+      REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      scopeTokenB
+    );
+    expect(conflicts).toMatchObject({
+      success: true,
+      data: [
+        {
+          origin: 'prior-snapshot',
+          recoverability: 'different-review-snapshot',
+          observedCurrentRevision: 1,
+        },
+      ],
+    });
+    const candidateId = (conflicts as { data: { id: string }[] }).data[0]!.id;
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        scopeTokenB,
+        candidateId,
+        'recover-candidate',
+        1
+      )
+    ).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('different review snapshot'),
+    });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        scopeTokenB,
+        candidateId,
+        'keep-current',
+        1
+      )
+    ).resolves.toEqual({ success: true, data: { revision: 1 } });
+  });
+
+  it('recovers authorized prior manual edits and lets incompatible paths be discarded', async () => {
+    const store = new ReviewDraftHistoryStore();
+    const scopeTokenA = 'agent:worker:content:prior-draft-a';
+    const scopeTokenB = 'agent:worker:content:prior-draft-b';
+    await store.saveEntry('safe-team', 'agent-worker', scopeTokenA, {
+      filePath: projectFile,
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'project\n',
+      editorState: { doc: 'canonical A', history: { done: [], undone: [] } },
+    });
+    await expect(
+      store.saveEntry('safe-team', 'agent-worker', scopeTokenA, {
+        filePath: projectFile,
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'project\n',
+        editorState: { doc: 'recovery A', history: { done: [], undone: [] } },
+      })
+    ).rejects.toThrow('Review draft history changed');
+    const currentB = await store.saveEntry('safe-team', 'agent-worker', scopeTokenB, {
+      filePath: projectFile,
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'project\n',
+      editorState: { doc: 'canonical B', history: { done: [], undone: [] } },
+    });
+
+    const conflicts = await ipcMain.invoke(
+      REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      scopeTokenB
+    );
+    expect(conflicts).toMatchObject({
+      success: true,
+      data: [
+        {
+          origin: 'prior-snapshot',
+          recoverability: 'recoverable',
+          observedCurrentGeneration: currentB.generation,
+        },
+      ],
+    });
+    const candidateId = (conflicts as { data: { id: string }[] }).data[0]!.id;
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        scopeTokenB,
+        candidateId,
+        'recover-candidate',
+        1,
+        currentB.generation
+      )
+    ).resolves.toMatchObject({ success: true, data: { editorState: { doc: 'recovery A' } } });
+
+    const outsideScopeToken = 'agent:worker:content:outside-prior-draft';
+    await store.saveEntry('safe-team', 'agent-worker', outsideScopeToken, {
+      filePath: outsideFile,
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'outside\n',
+      editorState: { doc: 'outside canonical', history: { done: [], undone: [] } },
+    });
+    await expect(
+      store.saveEntry('safe-team', 'agent-worker', outsideScopeToken, {
+        filePath: outsideFile,
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'outside\n',
+        editorState: { doc: 'outside recovery', history: { done: [], undone: [] } },
+      })
+    ).rejects.toThrow('Review draft history changed');
+    const outsideConflicts = await ipcMain.invoke(
+      REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      scopeTokenB
+    );
+    const outsideCandidate = (
+      outsideConflicts as { data: Array<{ id: string; filePath: string; recoverability: string }> }
+    ).data.find((candidate) => candidate.filePath === outsideFile)!;
+    expect(outsideCandidate.recoverability).toBe('file-not-in-current-review');
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        scopeTokenB,
+        outsideCandidate.id,
+        'keep-current',
+        0,
+        null
+      )
+    ).resolves.toEqual({ success: true, data: null });
+  });
+
+  it('does not preserve a stale branch whose Undo metadata contradicts its decisions', async () => {
+    const acceptedAction = {
+      id: 'valid-accepted-hunk',
+      createdAt: '2026-07-17T12:10:00.000Z',
+      kind: 'hunk' as const,
+      descriptor: {
+        intent: 'accept-hunk' as const,
+        filePath: projectFile,
+        hunkIndex: 0,
+      },
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const scopeToken = 'agent:worker:content:invalid-conflict';
+    await expect(
+      ipcMain.invoke(
+        REVIEW_SAVE_DECISIONS,
+        'safe-team',
+        'agent-worker',
+        scopeToken,
+        { [projectFile + ':0']: 'accepted' },
+        {},
+        null,
+        [acceptedAction],
+        0
+      )
+    ).resolves.toEqual({ success: true, data: { revision: 1 } });
+
+    const invalidBranch = {
+      ...acceptedAction,
+      id: 'invalid-rejected-hunk',
+      createdAt: '2026-07-17T12:10:01.000Z',
+    };
+    const rejected = await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeToken,
+      { [projectFile + ':0']: 'rejected' },
+      {},
+      null,
+      [invalidBranch],
+      0
+    );
+    expect(rejected).toMatchObject({
+      success: false,
+      error: expect.stringContaining('descriptor does not match'),
+    });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+        'safe-team',
+        'agent-worker',
+        scopeToken
+      )
+    ).resolves.toEqual({ success: true, data: [] });
+  });
+
+  it('accepts a lost-response retry when the canonical branch is a proven append-only superset', async () => {
+    const scopeToken = 'agent:worker:content:response-loss-superset';
+    const firstAction = {
+      id: 'superset-hunk-1',
+      createdAt: '2026-07-17T12:20:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const secondAction = {
+      id: 'superset-hunk-2',
+      createdAt: '2026-07-17T12:20:01.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 1 },
+    };
+    await expect(
+      ipcMain.invoke(
+        REVIEW_SAVE_DECISIONS,
+        'safe-team',
+        'agent-worker',
+        scopeToken,
+        { [projectFile + ':0']: 'accepted' },
+        {},
+        null,
+        [firstAction],
+        0
+      )
+    ).resolves.toEqual({ success: true, data: { revision: 1 } });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_SAVE_DECISIONS,
+        'safe-team',
+        'agent-worker',
+        scopeToken,
+        {
+          [projectFile + ':0']: 'accepted',
+          [projectFile + ':1']: 'rejected',
+        },
+        {},
+        null,
+        [firstAction, secondAction],
+        1
+      )
+    ).resolves.toEqual({ success: true, data: { revision: 2 } });
+
+    await expect(
+      ipcMain.invoke(
+        REVIEW_SAVE_DECISIONS,
+        'safe-team',
+        'agent-worker',
+        scopeToken,
+        { [projectFile + ':0']: 'accepted' },
+        {},
+        null,
+        [firstAction],
+        0
+      )
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        revision: 2,
+        reconciledState: {
+          hunkDecisions: {
+            [projectFile + ':0']: 'accepted',
+            [projectFile + ':1']: 'rejected',
+          },
+          fileDecisions: {},
+          hunkContextHashesByFile: undefined,
+          reviewActionHistory: [firstAction, secondAction],
+          reviewRedoHistory: [],
+        },
+      },
+    });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+        'safe-team',
+        'agent-worker',
+        scopeToken
+      )
+    ).resolves.toEqual({ success: true, data: [] });
+
+    const incompletePrefix = await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeToken,
+      {},
+      {},
+      null,
+      [firstAction],
+      0
+    );
+    expect(incompletePrefix).toMatchObject({
+      success: false,
+      error: expect.stringContaining('Generic hunk history'),
+    });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+        'safe-team',
+        'agent-worker',
+        scopeToken
+      )
+    ).resolves.toEqual({ success: true, data: [] });
   });
 
   it('makes an exact clear retry idempotent without deleting newer review state', async () => {
@@ -503,6 +1001,63 @@ describe('review IPC path confinement', () => {
       error: 'Review draft history changed; refusing stale state overwrite',
     });
 
+    const draftConflicts = await ipcMain.invoke(
+      REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      'scope-token-a'
+    );
+    expect(draftConflicts).toMatchObject({
+      success: true,
+      data: [{ filePath: projectFile, entryRevision: 2 }],
+    });
+    const latestConflict = await ipcMain.invoke(
+      REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+      'safe-team',
+      'agent-worker',
+      'scope-token-a',
+      {
+        ...entry,
+        revision: 2,
+        editorState: { ...entry.editorState, doc: 'stale writer\n' },
+      },
+      {
+        ...entry,
+        revision: 3,
+        editorState: { ...entry.editorState, doc: 'latest local\n' },
+      },
+      1,
+      generation
+    );
+    expect(latestConflict).toMatchObject({
+      success: true,
+      data: { entryRevision: 3 },
+    });
+    const latestCandidateId = (latestConflict as { data: { id: string } }).data.id;
+    await expect(
+      ipcMain.invoke(
+        REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+        'safe-team',
+        'agent-worker',
+        'scope-token-a'
+      )
+    ).resolves.toMatchObject({
+      success: true,
+      data: [{ id: latestCandidateId, entryRevision: 3 }],
+    });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        'scope-token-a',
+        latestCandidateId,
+        'keep-current',
+        1,
+        generation
+      )
+    ).resolves.toMatchObject({ success: true, data: { editorState: { doc: 'project edited\n' } } });
+
     const loaded = await ipcMain.invoke(
       REVIEW_LOAD_DRAFT_HISTORY,
       'safe-team',
@@ -603,9 +1158,7 @@ describe('review IPC path confinement', () => {
       data: { hunkDecisions: { [`${projectFile}:1`]: 'rejected' } },
     });
 
-    const { ReviewDraftHistoryStore } = await import(
-      '@features/change-review-history/main'
-    );
+    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
     const draftPath = path.join(
       decisionTeamsBasePath,
       'safe-team',
@@ -650,15 +1203,19 @@ describe('review IPC path confinement', () => {
       ipcMain.invoke(REVIEW_CLEAR_DRAFT_HISTORY, 'safe-team', scopeKey, scopeToken)
     ).resolves.toEqual({
       success: false,
-      error:
-        'Saved manual edit history became readable; refusing destructive recovery discard',
+      error: 'Saved manual edit history became readable; refusing destructive recovery discard',
     });
     await expect(
       ipcMain.invoke(REVIEW_LOAD_DRAFT_HISTORY, 'safe-team', scopeKey, scopeToken)
     ).resolves.toMatchObject({
       success: true,
       data: {
-        entries: { [projectFile]: { generation: replacement.generation, editorState: { doc: 'new draft\n' } } },
+        entries: {
+          [projectFile]: {
+            generation: replacement.generation,
+            editorState: { doc: 'new draft\n' },
+          },
+        },
       },
     });
   });
@@ -733,7 +1290,7 @@ describe('review IPC path confinement', () => {
       [],
       1
     );
-    expect(saved).toEqual({ success: true, data: { revision: 2 } });
+    expect(saved).toEqual({ success: true, data: { revision: 1 } });
     await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
   });
 
@@ -795,6 +1352,49 @@ describe('review IPC path confinement', () => {
     });
     await expect(journal.list('safe-team', persistenceScope)).resolves.toMatchObject([
       { id: prepared.id, blocked: true },
+    ]);
+  });
+
+  it('quarantines corrupt WAL and restores the exact scope after confirmed discard', async () => {
+    const scopeKey = 'agent-worker';
+    const scopeToken = 'agent:worker:content:corrupt-wal';
+    const scopeHash = createHash('sha256').update(scopeToken).digest('hex');
+    const decisionPath = path.join(
+      decisionTeamsBasePath,
+      'safe-team',
+      'review-decisions',
+      'v2',
+      scopeKey,
+      `${scopeHash}.json`
+    );
+    const journalScopeDir = path.join(
+      decisionTeamsBasePath,
+      'safe-team',
+      'review-decisions',
+      'mutation-journal',
+      scopeKey,
+      scopeHash
+    );
+    await mkdir(path.dirname(decisionPath), { recursive: true });
+    await mkdir(journalScopeDir, { recursive: true });
+    await writeFile(decisionPath, '{broken-decisions', 'utf8');
+    await writeFile(
+      path.join(journalScopeDir, '11111111-1111-4111-8111-111111111111.json'),
+      '{broken-wal',
+      'utf8'
+    );
+
+    await expect(
+      ipcMain.invoke(REVIEW_LOAD_DECISIONS, 'safe-team', scopeKey, scopeToken)
+    ).resolves.toMatchObject({ success: false });
+    await expect(
+      ipcMain.invoke(REVIEW_CLEAR_DECISIONS, 'safe-team', scopeKey, scopeToken)
+    ).resolves.toEqual({ success: true, data: { revision: 0 } });
+    await expect(
+      ipcMain.invoke(REVIEW_LOAD_DECISIONS, 'safe-team', scopeKey, scopeToken)
+    ).resolves.toEqual({ success: true, data: null });
+    await expect(readdir(path.dirname(journalScopeDir))).resolves.toEqual([
+      expect.stringMatching(`${scopeHash}\\.corrupt-`),
     ]);
   });
 

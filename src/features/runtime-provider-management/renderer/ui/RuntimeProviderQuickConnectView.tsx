@@ -8,6 +8,10 @@ import {
 } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import {
+  getUnsupportedAgentTeamsOpenCodeVersionMessage,
+  isAgentTeamsOpenCodeVersionSupported,
+} from '@shared/utils/version';
+import {
   AlertTriangle,
   CheckCircle2,
   Download,
@@ -190,8 +194,13 @@ const OpenCodePrerequisite = ({
   }
 
   const isError = gate === 'error';
-  const detail =
-    gate === 'missing'
+  const isOutdated =
+    Boolean(runtimeStatus?.version) &&
+    !isAgentTeamsOpenCodeVersionSupported(runtimeStatus?.version);
+  const detail = isOutdated
+    ? (runtimeStatus?.error ??
+      getUnsupportedAgentTeamsOpenCodeVersionMessage(runtimeStatus?.version))
+    : gate === 'missing'
       ? t('cliStatus.quickConnect.openCodeRequired')
       : runtimeStatus?.error || t('cliStatus.quickConnect.openCodeError');
 
@@ -232,9 +241,11 @@ const OpenCodePrerequisite = ({
       <div className="flex items-center gap-1.5">
         <Button type="button" variant="outline" size="sm" className="h-7" onClick={onInstall}>
           <Download className="mr-1.5 size-3.5" />
-          {isError
-            ? t('cliStatus.quickConnect.retryOpenCode')
-            : t('cliStatus.quickConnect.installOpenCode')}
+          {isOutdated
+            ? t('cliStatus.quickConnect.updateOpenCode')
+            : isError
+              ? t('cliStatus.quickConnect.retryOpenCode')
+              : t('cliStatus.quickConnect.installOpenCode')}
         </Button>
         {isError ? (
           <Button
@@ -309,11 +320,11 @@ export const RuntimeProviderQuickConnectView = ({
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 px-2 text-[10.5px]"
+            className="h-7 gap-1.5 px-2 text-[10.5px]"
             disabled={gate !== 'ready'}
             onClick={onSetupLocalModel}
           >
-            <Plus className="mr-1.5 size-3" />
+            <Plus className="size-3" />
             Set up local model
           </Button>
           <Button

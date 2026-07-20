@@ -1,4 +1,7 @@
-import { buildPlannedMemberLaneIdentity } from '@features/team-runtime-lanes';
+import {
+  buildOpenCodeSecondaryLaneId,
+  buildPlannedMemberLaneIdentity,
+} from '@features/team-runtime-lanes';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import {
   inferTeamProviderIdFromModel,
@@ -26,6 +29,10 @@ export interface ResolveOpenCodeMemberIdentityFromDirectoryInput {
   directory: OpenCodeMemberDirectory;
   secondaryRuntimeRuns?: readonly OpenCodeSecondaryRuntimeRunIdentity[];
   runtimeAdapterProviderId?: TeamProviderId | null;
+}
+
+function normalizeOptionalString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 export function resolveOpenCodeMemberIdentityFromDirectory(
@@ -92,15 +99,43 @@ export function resolveOpenCodeMemberIdentityFromDirectory(
     };
   }
 
-  if (input.runtimeAdapterProviderId === 'opencode') {
-    const laneIdentity = buildPlannedMemberLaneIdentity({
-      leadProviderId: 'opencode',
-      member: {
-        name: canonicalMemberName,
-        providerId: 'opencode',
-      },
-    });
-    const memberRuntimeCwd = metaMember?.cwd?.trim() || configMember?.cwd?.trim();
+  const leadMember = input.directory.config?.members?.find((member) => isLeadMember(member));
+  const persistedLeadProviderId =
+    normalizeOptionalTeamProviderId(input.directory.teamMeta?.launchIdentity?.providerId) ??
+    normalizeOptionalTeamProviderId(input.directory.teamMeta?.providerId) ??
+    normalizeOptionalTeamProviderId(leadMember?.providerId);
+  const memberRuntimeCwd = metaMember?.cwd?.trim() || configMember?.cwd?.trim();
+  if (input.runtimeAdapterProviderId === 'opencode' || persistedLeadProviderId === 'opencode') {
+    const leadModel =
+      normalizeOptionalString(input.directory.teamMeta?.launchIdentity?.resolvedLaunchModel) ??
+      normalizeOptionalString(input.directory.teamMeta?.launchIdentity?.selectedModel) ??
+      normalizeOptionalString(input.directory.teamMeta?.model) ??
+      normalizeOptionalString(leadMember?.model);
+    const memberModel = normalizeOptionalString(metaMember?.model ?? configMember?.model);
+    const projectRoot =
+      input.directory.config?.projectPath?.trim() ??
+      normalizeOptionalString(input.directory.teamMeta?.cwd);
+    const usesDistinctModel = Boolean(memberModel && leadModel && memberModel !== leadModel);
+    const usesDistinctRoot = Boolean(
+      memberRuntimeCwd && (!projectRoot || memberRuntimeCwd !== projectRoot)
+    );
+    const isConfiguredLead =
+      isLeadMember({ name: canonicalMemberName }) ||
+      Boolean(leadMember && matchesTeamMemberIdentity(leadMember.name, canonicalMemberName));
+    const usesSecondaryLane = !isConfiguredLead && (usesDistinctModel || usesDistinctRoot);
+    const laneIdentity = usesSecondaryLane
+      ? {
+          laneId: buildOpenCodeSecondaryLaneId({ name: canonicalMemberName }),
+          laneKind: 'secondary' as const,
+          laneOwnerProviderId: 'opencode' as const,
+        }
+      : buildPlannedMemberLaneIdentity({
+          leadProviderId: 'opencode',
+          member: {
+            name: canonicalMemberName,
+            providerId: 'opencode',
+          },
+        });
     return {
       ok: true,
       canonicalMemberName,
@@ -112,19 +147,13 @@ export function resolveOpenCodeMemberIdentityFromDirectory(
     };
   }
 
-  const leadMember = input.directory.config?.members?.find((member) => isLeadMember(member));
-  const leadProviderId =
-    normalizeOptionalTeamProviderId(input.directory.teamMeta?.launchIdentity?.providerId) ??
-    normalizeOptionalTeamProviderId(input.directory.teamMeta?.providerId) ??
-    normalizeOptionalTeamProviderId(leadMember?.providerId);
   const laneIdentity = buildPlannedMemberLaneIdentity({
-    leadProviderId,
+    leadProviderId: persistedLeadProviderId,
     member: {
       name: canonicalMemberName,
       providerId,
     },
   });
-  const memberRuntimeCwd = metaMember?.cwd?.trim() || configMember?.cwd?.trim();
   return {
     ok: true,
     canonicalMemberName,

@@ -59,7 +59,8 @@ import type { ComboboxOption } from '@renderer/components/ui/combobox';
 import type { JSX, ReactNode } from 'react';
 
 const SERVER_START_GUIDANCE: Record<RuntimeLocalProviderPresetIdDto, string> = {
-  ollama: 'Make sure Ollama is running and at least one model has been pulled locally.',
+  ollama:
+    'Make sure Ollama is running and at least one model has been pulled locally. Agent Teams tool use needs an effective 16K-32K context; Ollama defaults to 4K unless configured separately.',
   'lm-studio': 'In LM Studio, load a model, open Developer > Local Server, and start the server.',
   'atomic-chat': 'Open Atomic Chat, load a model, and start its local API server.',
   'llama.cpp': 'Start llama-server with a model loaded. The default port for this setup is 8080.',
@@ -89,6 +90,32 @@ const splitConfigPath = (configPath: string): { directory: string; filename: str
         directory: configPath.slice(0, separatorIndex + 1),
         filename: configPath.slice(separatorIndex + 1),
       };
+};
+
+const getLocalModelVerificationCwd = (
+  configuration: RuntimeLocalProviderConfigurationDto,
+  targetProjectPath: string | null
+): string => {
+  const projectPath = targetProjectPath?.trim();
+  if (projectPath) return projectPath;
+  const configPath = configuration.configPath.trim();
+  const separatorIndex = Math.max(configPath.lastIndexOf('/'), configPath.lastIndexOf('\\'));
+  return separatorIndex > 0 ? configPath.slice(0, separatorIndex) : configPath;
+};
+
+const getLocalModelReadinessError = (
+  readiness: Awaited<ReturnType<typeof api.teams.prepareProvisioning>>,
+  modelRoute: string
+): string => {
+  const modelIssue = readiness.issues?.find(
+    (issue) =>
+      issue.severity === 'blocking' && (issue.modelId === modelRoute || issue.scope === 'provider')
+  );
+  return (
+    modelIssue?.message ||
+    readiness.message ||
+    'The model is configured, but it is not ready for Agent Teams launch.'
+  );
 };
 
 const getFriendlyVerificationError = (
@@ -475,11 +502,15 @@ export const RuntimeLocalProviderSetupDialog = ({
         : 'Writing the project settings...';
     }
     if (phase === 'refreshing') return 'Refreshing the OpenCode provider catalog...';
-    if (phase === 'verifying') return 'Running a short model request through OpenCode...';
+    if (phase === 'verifying') {
+      return 'Verifying model tools and runtime capacity for Agent Teams...';
+    }
     if (savedConfiguration && verificationError) {
       return 'Settings are saved. Retry the check now, or close and fix the server later.';
     }
-    if (savedConfiguration && verificationPassed) return 'Your local model is ready to use.';
+    if (savedConfiguration && verificationPassed) {
+      return 'Your local model is ready for Agent Teams launch.';
+    }
     if (scanLoading) return 'Looking for local model servers on this computer...';
     if (!serverConnected) {
       return `Start ${selectedPreset.displayName}, then test the connection.`;
@@ -699,6 +730,34 @@ export const RuntimeLocalProviderSetupDialog = ({
     setVerificationError(null);
     setVerificationPassed(false);
     try {
+      // Check model/runtime capacity before asking OpenCode to execute a model turn.
+      // This rejects known-incompatible local models from metadata in milliseconds
+      // instead of waiting for a doomed execution probe to time out.
+      const readiness = await api.teams.prepareProvisioning(
+        getLocalModelVerificationCwd(configuration, targetProjectPath),
+        'opencode',
+        ['opencode'],
+        [configuration.modelRoute],
+        false,
+        'deep'
+      );
+      if (dialogSessionRef.current !== sessionId) return;
+      if (!readiness.ready) {
+        setVerificationError(getLocalModelReadinessError(readiness, configuration.modelRoute));
+        return;
+      }
+      const readinessWarning =
+        readiness.issues?.find(
+          (issue) =>
+            issue.severity === 'warning' &&
+            (issue.modelId === configuration.modelRoute || issue.scope === 'provider')
+        )?.message ?? readiness.warnings?.[0];
+      if (readinessWarning) {
+        setRefreshWarning((current) =>
+          current ? `${current} ${readinessWarning}` : readinessWarning
+        );
+      }
+
       const runVerification = () =>
         api.runtimeProviderManagement.testModel({
           runtimeId: 'opencode',
@@ -911,6 +970,9 @@ export const RuntimeLocalProviderSetupDialog = ({
     dialogSessionRef.current += 1;
     onOpenChange(false);
   };
+  const runningProviderCount = configuredProviders.filter(
+    (provider) => provider.state === 'available'
+  ).length;
 
   return (
     <Dialog
@@ -1018,16 +1080,21 @@ export const RuntimeLocalProviderSetupDialog = ({
                         ? configurationScope === 'global'
                           ? 'No local servers are available to all projects yet.'
                           : 'No local servers have been added to this project yet.'
-                        : `${configuredProviders.length} local provider${configuredProviders.length === 1 ? '' : 's'} available for model selection.`}
+                        : runningProviderCount === 0
+                          ? `${configuredProviders.length} local provider${configuredProviders.length === 1 ? '' : 's'} configured, but offline. Start the server before launching a team.`
+                          : runningProviderCount === configuredProviders.length
+                            ? `${runningProviderCount} local provider${runningProviderCount === 1 ? '' : 's'} running and available for model selection.`
+                            : `${runningProviderCount} of ${configuredProviders.length} local providers running. Offline providers remain configured but cannot launch.`}
                     </p>
                   </div>
                   <Button
                     type="button"
                     size="sm"
+                    className="gap-1.5"
                     disabled={!availabilityComplete || providerListLoading}
                     onClick={beginAddProvider}
                   >
-                    <Plus className="mr-1.5 size-3.5" />
+                    <Plus className="size-3.5" />
                     Add provider
                   </Button>
                 </div>
@@ -1082,8 +1149,12 @@ export const RuntimeLocalProviderSetupDialog = ({
                             <span>
                               {entry.liveModels.length || entry.configuredModelIds.length}{' '}
                               {(entry.liveModels.length || entry.configuredModelIds.length) === 1
-                                ? 'model'
-                                : 'models'}
+                                ? entry.state === 'available'
+                                  ? 'model'
+                                  : 'configured model'
+                                : entry.state === 'available'
+                                  ? 'models'
+                                  : 'configured models'}
                             </span>
                             {entry.defaultModelId ? (
                               <span className="truncate">Model: {entry.defaultModelId}</span>
@@ -1516,7 +1587,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                         {verificationError
                           ? 'Setup saved, but the model check needs attention.'
                           : verificationPassed
-                            ? 'Your local model is ready.'
+                            ? 'Your local model is ready for Agent Teams.'
                             : savedSummary}
                       </div>
                     </div>
@@ -1528,12 +1599,15 @@ export const RuntimeLocalProviderSetupDialog = ({
                     ) : verificationPassed ? (
                       <>
                         <p className="mt-2 leading-relaxed">{savedSummary}</p>
-                        <p className="mt-2">OpenCode successfully ran {selectedModelId}.</p>
+                        <p className="mt-2">
+                          OpenCode ran {selectedModelId}, and the Agent Teams launch preflight
+                          passed.
+                        </p>
                       </>
                     ) : (
                       <p className="mt-2">
                         {phase === 'verifying'
-                          ? `Testing ${selectedModelId} through OpenCode...`
+                          ? `Testing ${selectedModelId} tools and runtime capacity through OpenCode...`
                           : 'Refreshing the provider catalog...'}
                       </p>
                     )}
@@ -1581,8 +1655,13 @@ export const RuntimeLocalProviderSetupDialog = ({
                   </Button>
                 ) : null}
                 {phase === 'done' ? (
-                  <Button type="button" variant="outline" onClick={beginAddProvider}>
-                    <Plus className="mr-1.5 size-3.5" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={beginAddProvider}
+                  >
+                    <Plus className="size-3.5" />
                     Add another provider
                   </Button>
                 ) : null}

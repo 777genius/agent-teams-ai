@@ -104,6 +104,7 @@ function createHost(
     runtimeAdapterProgressByRunId: new Map(),
     cancelledRuntimeAdapterRunIds: new Set(),
     runs: new Map(),
+    secondaryRuntimeRunByTeam: new Map(),
     runtimeAdapterProgressState: {
       setRuntimeAdapterProgress: (progress, onProgress) => {
         calls.push(`progress:${progress.state}`);
@@ -164,6 +165,9 @@ function createHost(
       lane.state = 'finished';
       lane.result = runtimeResult();
     },
+    publishMixedSecondaryLaneStatusChange: async (_run, lane) => {
+      calls.push(`publishSecondary:${lane.laneId}`);
+    },
     summarizeOpenCodeAggregateLaunchState: () => {
       calls.push('summarizeAggregateState');
       return 'clean_success';
@@ -211,6 +215,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       runtimeAdapterProgressByRunId: baseHost.runtimeAdapterProgressByRunId,
       cancelledRuntimeAdapterRunIds: baseHost.cancelledRuntimeAdapterRunIds,
       runs: baseHost.runs,
+      secondaryRuntimeRunByTeam: baseHost.secondaryRuntimeRunByTeam,
       runtimeAdapterProgressState: baseHost.runtimeAdapterProgressState,
       runTracking: baseHost.runTracking,
       stopAllTeamsGeneration: 42,
@@ -244,6 +249,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       invalidateRuntimeSnapshotCaches: baseHost.invalidateRuntimeSnapshotCaches,
       launchOpenCodeAggregatePrimaryLane: baseHost.launchOpenCodeAggregatePrimaryLane,
       launchSingleMixedSecondaryLane: baseHost.launchSingleMixedSecondaryLane,
+      publishMixedSecondaryLaneStatusChange: baseHost.publishMixedSecondaryLaneStatusChange,
       summarizeOpenCodeAggregateLaunchState: baseHost.summarizeOpenCodeAggregateLaunchState,
       persistLaunchStateSnapshot: baseHost.persistLaunchStateSnapshot,
       syncRunMemberSpawnStatusesFromSnapshot: baseHost.syncRunMemberSpawnStatusesFromSnapshot,
@@ -360,9 +366,11 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
     expect(host.provisioningRunByTeam.has('team-a')).toBe(false);
     expect(host.aliveRuns.get('team-a')).toBe(result.runId);
     expect(calls).toEqual([
+      'getLaunchCwd',
+      'getLaunchCwd',
+      'readLaunchState',
       'progress:validating',
       'resetTransientState',
-      'readLaunchState',
       'clearPersistedLaunchState',
       'invalidateCaches',
       'progress:spawning',

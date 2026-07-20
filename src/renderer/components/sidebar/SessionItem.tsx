@@ -10,11 +10,11 @@ import { createPortal } from 'react-dom';
 import { useAppTranslation } from '@features/localization/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { useStore } from '@renderer/store';
+import { formatCompactRelativeTime } from '@renderer/utils/formatters';
 import { formatSessionLabel, parseSessionTitle } from '@renderer/utils/sessionTitleParser';
 import { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
 import { inferTeamProviderIdFromModel } from '@shared/utils/teamProvider';
 import { formatTokensCompact } from '@shared/utils/tokenFormatting';
-import { formatDistanceToNowStrict } from 'date-fns';
 import { EyeOff, MessageSquare, Pin, Play, RotateCw, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -31,28 +31,6 @@ interface SessionItemProps {
   isHidden?: boolean;
   multiSelectActive?: boolean;
   isSelected?: boolean;
-}
-
-/**
- * Format time distance in short form (e.g., "4m", "2h", "1d")
- */
-function formatShortTime(date: Date): string {
-  const distance = formatDistanceToNowStrict(date, { addSuffix: false });
-  return distance
-    .replace(' seconds', 's')
-    .replace(' second', 's')
-    .replace(' minutes', 'm')
-    .replace(' minute', 'm')
-    .replace(' hours', 'h')
-    .replace(' hour', 'h')
-    .replace(' days', 'd')
-    .replace(' day', 'd')
-    .replace(' weeks', 'w')
-    .replace(' week', 'w')
-    .replace(' months', 'mo')
-    .replace(' month', 'mo')
-    .replace(' years', 'y')
-    .replace(' year', 'y');
 }
 
 /**
@@ -355,7 +333,9 @@ export const SessionItem = memo(function SessionItem({
                   {session.messageCount}
                 </span>
                 <span style={{ opacity: 0.5 }}>·</span>
-                <span className="tabular-nums">{formatShortTime(new Date(session.createdAt))}</span>
+                <span className="tabular-nums">
+                  {formatCompactRelativeTime(new Date(session.createdAt))}
+                </span>
                 {session.model && (
                   <>
                     <span style={{ opacity: 0.5 }}>·</span>

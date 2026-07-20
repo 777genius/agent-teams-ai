@@ -9,6 +9,7 @@ import {
   buildReviewDecisionScopeToken,
   getReviewChangeSetIdentityToken,
   type ReviewChangeSetLike,
+  reviewChangeSetMatchesScope,
 } from '@renderer/utils/reviewDecisionScope';
 import {
   buildHunkDecisionKey,
@@ -53,6 +54,20 @@ const persistDecisionWriteChains = new Map<string, Promise<void>>();
 const decisionRevisionByScope = new Map<string, number>();
 const PERSIST_DEBOUNCE_MS = 500;
 
+function reviewPersistedSnapshotsEqual(
+  left: ReviewPersistedStateSnapshot,
+  right: ReviewPersistedStateSnapshot
+): boolean {
+  return (
+    JSON.stringify(left.hunkDecisions) === JSON.stringify(right.hunkDecisions) &&
+    JSON.stringify(left.fileDecisions) === JSON.stringify(right.fileDecisions) &&
+    JSON.stringify(left.hunkContextHashesByFile ?? {}) ===
+      JSON.stringify(right.hunkContextHashesByFile ?? {}) &&
+    JSON.stringify(left.reviewActionHistory) === JSON.stringify(right.reviewActionHistory) &&
+    JSON.stringify(left.reviewRedoHistory) === JSON.stringify(right.reviewRedoHistory)
+  );
+}
+
 import type { AppState } from '../types';
 import type {
   AgentChangeSet,
@@ -78,15 +93,14 @@ const logger = createLogger('changeReviewSlice');
 
 function buildApplyDecisionPersistenceScope(
   changeSet: ReviewChangeSetLike,
+  teamName: string,
   taskChangeRequestOptions: TaskChangeRequestOptions | null,
   taskId?: string,
   memberName?: string
 ): ReviewDecisionPersistenceScope | undefined {
   const mode = taskId ? 'task' : memberName ? 'agent' : null;
   if (!mode) return undefined;
-  if (mode === 'task') {
-    if (!('taskId' in changeSet) || changeSet.taskId !== taskId) return undefined;
-  } else if (!('memberName' in changeSet) || changeSet.memberName !== memberName) {
+  if (!reviewChangeSetMatchesScope(changeSet, { teamName, taskId, memberName })) {
     return undefined;
   }
   const scopeToken = buildReviewDecisionScopeToken({
@@ -1018,6 +1032,13 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       );
       const persistedReviewActionHistory = structuredClone(reviewActionHistory);
       const persistedReviewRedoHistory = structuredClone(reviewRedoHistory);
+      const queuedSnapshot: ReviewPersistedStateSnapshot = {
+        hunkDecisions: persistedHunkDecisions,
+        fileDecisions: persistedFileDecisions,
+        hunkContextHashesByFile: persistedHashes,
+        reviewActionHistory: persistedReviewActionHistory,
+        reviewRedoHistory: persistedReviewRedoHistory,
+      };
       const write = async (): Promise<void> => {
         const expectedRevision = decisionRevisionByScope.get(scopeStorageKey) ?? 0;
         const saved = await api.review.saveDecisions(
@@ -1033,6 +1054,40 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         );
         decisionRevisionByScope.set(scopeStorageKey, saved.revision);
         const latest = get();
+        if (
+          saved.reconciledState &&
+          latest.decisionHydrationScopeKey === scopeStorageKey &&
+          latest.decisionHydrationStatus === 'loaded'
+        ) {
+          const liveSnapshot: ReviewPersistedStateSnapshot = {
+            hunkDecisions: latest.hunkDecisions,
+            fileDecisions: latest.fileDecisions,
+            hunkContextHashesByFile: latest.hunkContextHashesByFile,
+            reviewActionHistory: latest.reviewActionHistory,
+            reviewRedoHistory: latest.reviewRedoHistory,
+          };
+          if (!reviewPersistedSnapshotsEqual(liveSnapshot, queuedSnapshot)) {
+            set({
+              decisionHydrationStatus: 'error',
+              applyError:
+                'Saved review advanced while local actions changed. Reload Changes before continuing.',
+            });
+            throw new Error('Review reconciliation raced a newer local action');
+          }
+          const normalized = normalizePersistedReviewState(
+            latest.activeChangeSet?.files ?? [],
+            saved.reconciledState
+          );
+          set({
+            hunkDecisions: normalized.hunkDecisions,
+            fileDecisions: normalized.fileDecisions,
+            hunkContextHashesByFile: normalized.hunkContextHashesByFile,
+            reviewActionHistory: saved.reconciledState.reviewActionHistory,
+            reviewRedoHistory: saved.reconciledState.reviewRedoHistory,
+            decisionRevision: saved.revision,
+          });
+          return;
+        }
         if (
           latest.decisionHydrationScopeKey === scopeStorageKey &&
           latest.decisionHydrationStatus === 'loaded'
@@ -1432,11 +1487,20 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       const startState = get();
       const changeSetEpoch = startState.changeSetEpoch;
       const current = startState.activeChangeSet;
+      if (!reviewChangeSetMatchesScope(current, { teamName, taskId, memberName })) {
+        set({ applyError: 'Review scope changed. Reload Changes before applying.' });
+        return null;
+      }
       const currentFingerprint = getReviewChangeSetIdentityToken(current);
       const isCurrentScope = (): boolean => {
         const latest = get();
         return (
           latest.changeSetEpoch === changeSetEpoch &&
+          reviewChangeSetMatchesScope(latest.activeChangeSet, {
+            teamName,
+            taskId,
+            memberName,
+          }) &&
           getReviewChangeSetIdentityToken(latest.activeChangeSet) === currentFingerprint
         );
       };
@@ -1454,6 +1518,10 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
             forceFresh: true,
           });
           if (!isCurrentScope()) return null;
+          if (!reviewChangeSetMatchesScope(fresh, { teamName, taskId })) {
+            set({ applyError: 'Review scope changed. Reload Changes before applying.' });
+            return null;
+          }
           if (currentFingerprint !== getReviewChangeSetIdentityToken(fresh)) {
             replaceActiveChangeSetAfterStaleRefresh(fresh, staleMessage);
             return null;
@@ -1461,6 +1529,10 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         } else if (memberName && current) {
           const fresh = await api.review.getAgentChanges(teamName, memberName);
           if (!isCurrentScope()) return null;
+          if (!reviewChangeSetMatchesScope(fresh, { teamName, memberName })) {
+            set({ applyError: 'Review scope changed. Reload Changes before applying.' });
+            return null;
+          }
           if (currentFingerprint !== getReviewChangeSetIdentityToken(fresh)) {
             replaceActiveChangeSetAfterStaleRefresh(fresh, staleMessage);
             return null;
@@ -1567,6 +1639,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
         const decisionPersistenceScope = buildApplyDecisionPersistenceScope(
           activeChangeSet,
+          teamName,
           startState.activeTaskChangeRequestOptions,
           taskId,
           memberName
@@ -1674,7 +1747,10 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         fileContents,
         changeSetEpoch,
       } = startState;
-      if (!activeChangeSet) return null;
+      if (!reviewChangeSetMatchesScope(activeChangeSet, { teamName, taskId, memberName })) {
+        set({ applyError: 'Review scope changed. Reload Changes before applying.' });
+        return null;
+      }
 
       const file = findReviewFileByPath(activeChangeSet.files, filePath);
       if (!file) return null;
@@ -1687,6 +1763,11 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         const latest = get();
         return (
           latest.changeSetEpoch === changeSetEpoch &&
+          reviewChangeSetMatchesScope(latest.activeChangeSet, {
+            teamName,
+            taskId,
+            memberName,
+          }) &&
           getReviewChangeSetIdentityToken(latest.activeChangeSet) === scopeFingerprint
         );
       };
@@ -1742,6 +1823,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         };
         const decisionPersistenceScope = buildApplyDecisionPersistenceScope(
           activeChangeSet,
+          teamName,
           startState.activeTaskChangeRequestOptions,
           taskId,
           memberName

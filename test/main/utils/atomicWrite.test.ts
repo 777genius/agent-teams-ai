@@ -205,6 +205,57 @@ describe('atomicWriteAsync', () => {
     expect(mockOpen).toHaveBeenNthCalledWith(2, TARGET_DIR, 'r');
   });
 
+  it('reports a strict directory fsync failure after publish', async () => {
+    const fileHandle = {
+      sync: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const directoryHandle = {
+      sync: vi
+        .fn()
+        .mockRejectedValue(Object.assign(new Error('directory device failure'), { code: 'EIO' })),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    mockOpen
+      .mockResolvedValueOnce(fileHandle as unknown as fs.promises.FileHandle)
+      .mockResolvedValueOnce(directoryHandle as unknown as fs.promises.FileHandle);
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+      })
+    ).rejects.toThrow('directory device failure');
+
+    expect(mockRename).toHaveBeenCalledWith(getTmpPath(), TARGET_PATH);
+    expect(directoryHandle.close).toHaveBeenCalled();
+  });
+
+  it('accepts an explicitly unsupported directory fsync result in strict mode', async () => {
+    const fileHandle = {
+      sync: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const directoryHandle = {
+      sync: vi
+        .fn()
+        .mockRejectedValue(
+          Object.assign(new Error('unsupported directory sync'), { code: 'EINVAL' })
+        ),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    mockOpen
+      .mockResolvedValueOnce(fileHandle as unknown as fs.promises.FileHandle)
+      .mockResolvedValueOnce(directoryHandle as unknown as fs.promises.FileHandle);
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+      })
+    ).resolves.toBeUndefined();
+  });
+
   it('continues retrying beyond short antivirus-style locks', async () => {
     const transientError = Object.assign(new Error('Transient EPERM'), { code: 'EPERM' });
     mockRename.mockImplementation(async () => {

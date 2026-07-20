@@ -1,3 +1,7 @@
+import { getErrorMessage } from '@shared/utils/errorHandling';
+
+import { hasRetainableOpenCodeRuntimeMember } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+
 import type { RuntimeToolApprovalEntry } from '../approvals/RuntimeToolApprovalCoordinator';
 import type {
   TeamLaunchRuntimeAdapter,
@@ -40,6 +44,10 @@ interface RuntimeToolApprovalIdentity<TRun extends OpenCodeRuntimePermissionAnsw
   readonly memberName: string;
   readonly providerRequestId: string;
   readonly cwd: string | undefined;
+  readonly runtimeOwner:
+    | RuntimeAdapterRunEntry
+    | { runId: string; providerId: TeamProviderId; cwd?: string };
+  readonly runtimeOwnerCwd: string | undefined;
   readonly run: TRun | undefined;
   readonly lane: MixedSecondaryRuntimeLaneState | undefined;
 }
@@ -63,6 +71,20 @@ export interface OpenCodeRuntimeToolApprovalAnswerPorts<
     input: TeamRuntimeLaunchInput
   ): Promise<{ result: TeamRuntimeLaunchResult }>;
   deleteRuntimeAdapterRunByTeam(teamName: string): void;
+  getRuntimeAdapterRunByTeam?(teamName: string): RuntimeAdapterRunEntry | undefined;
+  deleteRuntimeAdapterRunIfOwned?(teamName: string, runId: string): boolean;
+  getSecondaryRuntimeRun?(
+    teamName: string,
+    laneId: string
+  ): { runId: string; providerId: TeamProviderId; cwd?: string } | undefined;
+  deleteSecondaryRuntimeRunIfOwned?(teamName: string, laneId: string, runId: string): boolean;
+  markOpenCodeRuntimeLaneDegraded?(input: {
+    teamName: string;
+    laneId: string;
+    diagnostics: string[];
+  }): Promise<void>;
+  deleteAliveRunIdIfNoRuntime?(teamName: string, trackedRunId: string): boolean;
+  logWarning(message: string): void;
   setRuntimeAdapterRunByTeam(teamName: string, entry: RuntimeAdapterRunEntry): void;
   setAliveRunId(teamName: string, runId: string): void;
   getTrackedRunId(teamName: string): string | null | undefined;
@@ -105,15 +127,22 @@ export async function answerOpenCodeRuntimeToolApproval<
     allow,
     previousLaunchState
   );
-  const permissionInput: TeamRuntimePermissionAnswerInput =
-    message === undefined ? basePermissionInput : { ...basePermissionInput, message };
+  const permissionInput: TeamRuntimePermissionAnswerInput = {
+    ...basePermissionInput,
+    cwd: expectedIdentity.cwd ?? '',
+    ...(message === undefined ? {} : { message }),
+  };
   assertRuntimePermissionInputIdentity(expectedIdentity, permissionInput);
   const result = await adapter.answerRuntimePermission(permissionInput);
   assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
   assertRuntimePermissionResultIdentity(expectedIdentity, result);
 
+  let removedUnretainableRuntime = false;
   if (expectedIdentity.laneId === 'primary') {
-    const launchInput = ports.buildOpenCodeRuntimePermissionLaunchInput(entry, previousLaunchState);
+    const launchInput = {
+      ...ports.buildOpenCodeRuntimePermissionLaunchInput(entry, previousLaunchState),
+      cwd: expectedIdentity.cwd ?? '',
+    };
     assertRuntimePermissionLaunchInputIdentity(expectedIdentity, launchInput);
     const { result: committed } = await ports.persistOpenCodeRuntimeAdapterLaunchResult(
       result,
@@ -121,8 +150,17 @@ export async function answerOpenCodeRuntimeToolApproval<
     );
     assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
     assertRuntimePermissionResultIdentity(expectedIdentity, committed);
-    if (committed.teamLaunchState === 'partial_failure') {
-      ports.deleteRuntimeAdapterRunByTeam(expectedIdentity.teamName);
+    if (
+      committed.teamLaunchState === 'partial_failure' &&
+      !hasRetainableOpenCodeRuntimeMember(committed)
+    ) {
+      removedUnretainableRuntime = await stopUnretainableOpenCodePermissionRuntime(
+        adapter,
+        expectedIdentity,
+        committed,
+        previousLaunchState,
+        ports
+      );
     } else {
       ports.setRuntimeAdapterRunByTeam(expectedIdentity.teamName, {
         runId: expectedIdentity.runtimeRunId,
@@ -143,8 +181,22 @@ export async function answerOpenCodeRuntimeToolApproval<
       teamColor: entry.approval.teamColor,
     });
   } else {
-    await applyOpenCodeSecondaryPermissionAnswerResult(entry, result, ports, expectedIdentity);
-    assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
+    removedUnretainableRuntime = await applyOpenCodeSecondaryPermissionAnswerResult(
+      entry,
+      result,
+      ports,
+      expectedIdentity,
+      previousLaunchState
+    );
+    if (removedUnretainableRuntime) {
+      assertTrackedRuntimeApprovalRunIdentity(expectedIdentity, ports);
+    } else {
+      assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
+    }
+  }
+
+  if (removedUnretainableRuntime) {
+    ports.deleteAliveRunIdIfNoRuntime?.(expectedIdentity.teamName, expectedIdentity.trackedRunId);
   }
 
   ports.emitTeamChange({
@@ -167,12 +219,26 @@ export async function applyOpenCodeSecondaryPermissionAnswerResult<
     | 'guardCommittedOpenCodeSecondaryLaneEvidence'
     | 'publishMixedSecondaryLaneStatusChange'
     | 'syncOpenCodeRuntimeToolApprovals'
-  >,
+    | 'deleteRuntimeAdapterRunByTeam'
+    | 'logWarning'
+  > &
+    Partial<
+      Pick<
+        OpenCodeRuntimeToolApprovalAnswerPorts<TRun>,
+        | 'getOpenCodeRuntimeAdapter'
+        | 'getRuntimeAdapterRunByTeam'
+        | 'deleteRuntimeAdapterRunIfOwned'
+        | 'getSecondaryRuntimeRun'
+        | 'deleteSecondaryRuntimeRunIfOwned'
+        | 'markOpenCodeRuntimeLaneDegraded'
+      >
+    >,
   expectedIdentity: RuntimeToolApprovalIdentity<TRun> = captureTrackedRuntimeApprovalIdentity(
     entry,
     ports
-  )
-): Promise<void> {
+  ),
+  previousLaunchState: PersistedTeamLaunchSnapshot | null = null
+): Promise<boolean> {
   assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
   assertRuntimePermissionResultIdentity(expectedIdentity, result);
   const run = expectedIdentity.run;
@@ -200,6 +266,23 @@ export async function applyOpenCodeSecondaryPermissionAnswerResult<
   lane.state = 'finished';
   await ports.publishMixedSecondaryLaneStatusChange(run, lane);
   assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
+  let removedUnretainableRuntime = false;
+  if (
+    guarded.teamLaunchState === 'partial_failure' &&
+    !hasRetainableOpenCodeRuntimeMember(guarded)
+  ) {
+    const adapter = ports.getOpenCodeRuntimeAdapter?.();
+    if (!adapter) {
+      throw new Error('OpenCode runtime adapter is not available for failed lane cleanup');
+    }
+    removedUnretainableRuntime = await stopUnretainableOpenCodePermissionRuntime(
+      adapter,
+      expectedIdentity,
+      guarded,
+      previousLaunchState,
+      ports
+    );
+  }
   ports.syncOpenCodeRuntimeToolApprovals({
     teamName: expectedIdentity.teamName,
     runId: expectedIdentity.runtimeRunId,
@@ -210,18 +293,159 @@ export async function applyOpenCodeSecondaryPermissionAnswerResult<
     teamDisplayName: entry.approval.teamDisplayName,
     teamColor: entry.approval.teamColor,
   });
+  return removedUnretainableRuntime;
+}
+
+async function stopUnretainableOpenCodePermissionRuntime<
+  TRun extends OpenCodeRuntimePermissionAnswerRun,
+>(
+  adapter: TeamLaunchRuntimeAdapter,
+  expectedIdentity: RuntimeToolApprovalIdentity<TRun>,
+  result: TeamRuntimeLaunchResult,
+  previousLaunchState: PersistedTeamLaunchSnapshot | null,
+  ports: Pick<
+    OpenCodeRuntimeToolApprovalAnswerPorts<TRun>,
+    | 'getTrackedRunId'
+    | 'getRun'
+    | 'deleteRuntimeAdapterRunByTeam'
+    | 'getRuntimeAdapterRunByTeam'
+    | 'deleteRuntimeAdapterRunIfOwned'
+    | 'getSecondaryRuntimeRun'
+    | 'deleteSecondaryRuntimeRunIfOwned'
+    | 'markOpenCodeRuntimeLaneDegraded'
+    | 'logWarning'
+  >
+): Promise<boolean> {
+  assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
+  const isPrimary = expectedIdentity.laneId === 'primary';
+  const runtimeOwner = isPrimary
+    ? ports.getRuntimeAdapterRunByTeam?.(expectedIdentity.teamName)
+    : ports.getSecondaryRuntimeRun?.(expectedIdentity.teamName, expectedIdentity.laneId);
+  if (
+    runtimeOwner &&
+    (runtimeOwner.providerId !== 'opencode' || runtimeOwner.runId !== expectedIdentity.runtimeRunId)
+  ) {
+    throw new Error(
+      `Stale runtime approval: runtime owner changed for team "${expectedIdentity.teamName}" lane ${expectedIdentity.laneId}`
+    );
+  }
+
+  const cleanupCwd =
+    expectedIdentity.runtimeOwnerCwd ??
+    expectedIdentity.cwd ??
+    expectedIdentity.lane?.member.cwd?.trim() ??
+    '';
+  try {
+    await adapter.stop({
+      runId: expectedIdentity.runtimeRunId,
+      laneId: expectedIdentity.laneId,
+      teamName: expectedIdentity.teamName,
+      cwd: cleanupCwd,
+      providerId: 'opencode',
+      reason: 'cleanup',
+      previousLaunchState,
+      force: true,
+    });
+  } catch (error) {
+    ports.logWarning(
+      `[${expectedIdentity.teamName}] Failed to stop unretainable OpenCode runtime lane ${expectedIdentity.laneId}: ${getErrorMessage(error)}`
+    );
+  }
+  assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
+  const runtimeOwnerAfterStop = isPrimary
+    ? ports.getRuntimeAdapterRunByTeam?.(expectedIdentity.teamName)
+    : ports.getSecondaryRuntimeRun?.(expectedIdentity.teamName, expectedIdentity.laneId);
+  if (runtimeOwner && runtimeOwnerAfterStop !== runtimeOwner) {
+    throw new Error(
+      `Stale runtime approval: runtime owner changed for team "${expectedIdentity.teamName}" lane ${expectedIdentity.laneId}`
+    );
+  }
+
+  if (isPrimary) {
+    if (ports.deleteRuntimeAdapterRunIfOwned) {
+      ports.deleteRuntimeAdapterRunIfOwned(
+        expectedIdentity.teamName,
+        expectedIdentity.runtimeRunId
+      );
+    } else {
+      ports.deleteRuntimeAdapterRunByTeam(expectedIdentity.teamName);
+    }
+  } else {
+    ports.deleteSecondaryRuntimeRunIfOwned?.(
+      expectedIdentity.teamName,
+      expectedIdentity.laneId,
+      expectedIdentity.runtimeRunId
+    );
+  }
+
+  const diagnostics = Array.from(
+    new Set(
+      [
+        ...result.diagnostics,
+        ...Object.values(result.members).flatMap((member) => [
+          member.hardFailureReason,
+          member.runtimeDiagnostic,
+          ...member.diagnostics,
+        ]),
+      ].filter((diagnostic): diagnostic is string => Boolean(diagnostic?.trim()))
+    )
+  );
+  try {
+    await ports.markOpenCodeRuntimeLaneDegraded?.({
+      teamName: expectedIdentity.teamName,
+      laneId: expectedIdentity.laneId,
+      diagnostics,
+    });
+  } catch (error) {
+    ports.logWarning(
+      `[${expectedIdentity.teamName}] Failed to mark OpenCode runtime lane ${expectedIdentity.laneId} degraded after cleanup: ${getErrorMessage(error)}`
+    );
+  }
+  assertTrackedRuntimeApprovalRunIdentity(expectedIdentity, ports);
+  const replacementOwner = isPrimary
+    ? ports.getRuntimeAdapterRunByTeam?.(expectedIdentity.teamName)
+    : ports.getSecondaryRuntimeRun?.(expectedIdentity.teamName, expectedIdentity.laneId);
+  if (replacementOwner) {
+    throw new Error(
+      `Stale runtime approval: replacement runtime owner appeared for team "${expectedIdentity.teamName}" lane ${expectedIdentity.laneId}`
+    );
+  }
+  return true;
 }
 
 function captureTrackedRuntimeApprovalIdentity<TRun extends OpenCodeRuntimePermissionAnswerRun>(
   entry: RuntimeToolApprovalEntry,
-  ports: Pick<OpenCodeRuntimeToolApprovalAnswerPorts<TRun>, 'getTrackedRunId' | 'getRun'>
+  ports: Pick<
+    OpenCodeRuntimeToolApprovalAnswerPorts<TRun>,
+    'getTrackedRunId' | 'getRun' | 'getRuntimeAdapterRunByTeam' | 'getSecondaryRuntimeRun'
+  >
 ): RuntimeToolApprovalIdentity<TRun> {
   const teamName = entry.approval.teamName;
   const runtimeRunId = entry.approval.runId;
   const laneId = entry.laneId.trim() || 'primary';
   const memberName = entry.memberName;
   const providerRequestId = entry.providerRequestId;
-  const cwd = entry.cwd;
+  const runtimeOwner =
+    laneId === 'primary'
+      ? ports.getRuntimeAdapterRunByTeam?.(teamName)
+      : ports.getSecondaryRuntimeRun?.(teamName, laneId);
+  if (
+    !runtimeOwner ||
+    runtimeOwner.providerId !== 'opencode' ||
+    runtimeOwner.runId !== runtimeRunId
+  ) {
+    throw new Error(
+      `Stale runtime approval: exact runtime owner is no longer current for team "${teamName}" lane ${laneId}`
+    );
+  }
+  const entryCwd = entry.cwd?.trim() || undefined;
+  const runtimeOwnerCwd = runtimeOwner.cwd?.trim() || undefined;
+  if (entryCwd && runtimeOwnerCwd && entryCwd !== runtimeOwnerCwd) {
+    throw new Error(
+      `Stale runtime approval: runtime owner cwd changed for team "${teamName}" lane ${laneId}`
+    );
+  }
+  const cwd = runtimeOwnerCwd ?? entryCwd;
   const trackedRunId = ports.getTrackedRunId(teamName);
   if (!trackedRunId) {
     throw new Error(`Run not found for team "${teamName}"`);
@@ -241,6 +465,8 @@ function captureTrackedRuntimeApprovalIdentity<TRun extends OpenCodeRuntimePermi
       memberName,
       providerRequestId,
       cwd,
+      runtimeOwner,
+      runtimeOwnerCwd,
       run,
       lane: undefined,
     };
@@ -265,12 +491,42 @@ function captureTrackedRuntimeApprovalIdentity<TRun extends OpenCodeRuntimePermi
     memberName,
     providerRequestId,
     cwd,
+    runtimeOwner,
+    runtimeOwnerCwd,
     run,
     lane,
   };
 }
 
 function assertTrackedRuntimeApprovalIdentity<TRun extends OpenCodeRuntimePermissionAnswerRun>(
+  expectedIdentity: RuntimeToolApprovalIdentity<TRun>,
+  ports: Pick<
+    OpenCodeRuntimeToolApprovalAnswerPorts<TRun>,
+    'getTrackedRunId' | 'getRun' | 'getRuntimeAdapterRunByTeam' | 'getSecondaryRuntimeRun'
+  >
+): void {
+  assertTrackedRuntimeApprovalRunIdentity(expectedIdentity, ports);
+  const runtimeOwner =
+    expectedIdentity.laneId === 'primary'
+      ? ports.getRuntimeAdapterRunByTeam?.(expectedIdentity.teamName)
+      : ports.getSecondaryRuntimeRun?.(expectedIdentity.teamName, expectedIdentity.laneId);
+  if (runtimeOwner !== expectedIdentity.runtimeOwner) {
+    throw new Error(
+      `Stale runtime approval: exact runtime owner changed for team "${expectedIdentity.teamName}" lane ${expectedIdentity.laneId}`
+    );
+  }
+  if (
+    runtimeOwner.providerId !== 'opencode' ||
+    runtimeOwner.runId !== expectedIdentity.runtimeRunId ||
+    (runtimeOwner.cwd?.trim() || undefined) !== expectedIdentity.runtimeOwnerCwd
+  ) {
+    throw new Error(
+      `Stale runtime approval: runtime owner identity changed for team "${expectedIdentity.teamName}" lane ${expectedIdentity.laneId}`
+    );
+  }
+}
+
+function assertTrackedRuntimeApprovalRunIdentity<TRun extends OpenCodeRuntimePermissionAnswerRun>(
   expectedIdentity: RuntimeToolApprovalIdentity<TRun>,
   ports: Pick<OpenCodeRuntimeToolApprovalAnswerPorts<TRun>, 'getTrackedRunId' | 'getRun'>
 ): void {

@@ -67,6 +67,7 @@ export interface TeamProvisioningPrepareFacadePorts {
   }): Promise<{ worktreePath: string }>;
   providerProbeCache?: ProviderProbeCachePort;
   execCli?: TeamProvisioningPrepareCoordinatorPorts['execCli'];
+  inspectOpenCodeLocalModelRuntime?: TeamProvisioningPrepareCoordinatorPorts['inspectOpenCodeLocalModelRuntime'];
   planRuntimeLanesOrThrow(
     leadProviderId: TeamProviderId | undefined,
     members: TeamCreateRequest['members'],
@@ -98,7 +99,10 @@ export interface TeamProvisioningPrepareFacadeServiceHostOptions
     Partial<
       Pick<
         TeamProvisioningPrepareFacadePorts,
-        'execCli' | 'providerProbeCache' | 'resolveClaudeBinaryPath'
+        | 'execCli'
+        | 'inspectOpenCodeLocalModelRuntime'
+        | 'providerProbeCache'
+        | 'resolveClaudeBinaryPath'
       >
     > {}
 
@@ -125,6 +129,7 @@ export function createTeamProvisioningPrepareFacadeFromService(
     ensureMemberWorktree: (input) => service.memberWorktreeManager.ensureMemberWorktree(input),
     providerProbeCache: options.providerProbeCache,
     execCli: options.execCli,
+    inspectOpenCodeLocalModelRuntime: options.inspectOpenCodeLocalModelRuntime,
     planRuntimeLanesOrThrow: (leadProviderId, members, baseCwd) =>
       service.planRuntimeLanesOrThrow(leadProviderId, members, baseCwd),
     info: (message) => options.info(message),
@@ -153,6 +158,7 @@ export class TeamProvisioningPrepareFacade {
         ports.probeClaudeRuntime(claudePath, cwd, env, providerId, providerArgs),
       ensureMemberWorktree: (input) => ports.ensureMemberWorktree(input),
       execCli: (command, args, opts) => execCli(command, args, opts),
+      inspectOpenCodeLocalModelRuntime: ports.inspectOpenCodeLocalModelRuntime,
       info: (message) => ports.info(message),
       warn: (message) => ports.warn(message),
     });

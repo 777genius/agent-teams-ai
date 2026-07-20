@@ -9,6 +9,8 @@ export type {
   TeamRuntimeApprovalProviderId,
   TeamRuntimeLaunchInput,
   TeamRuntimeLaunchResult,
+  TeamRuntimeLocalModelPreflightResult,
+  TeamRuntimeLocalModelPreflightTarget,
   TeamRuntimeMemberLaunchEvidence,
   TeamRuntimeMemberSpec,
   TeamRuntimeMemberStopEvidence,

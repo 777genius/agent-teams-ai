@@ -100,6 +100,8 @@ export function collapseOverflowStacksWithMeta(
       state: representative.state,
       displayId: `+${hiddenTasks.length} more`,
       sublabel: undefined,
+      taskZoomVisibility: representative.taskZoomVisibility,
+      taskOverviewStyle: representative.taskOverviewStyle,
       ownerId: representative.ownerId ?? null,
       taskStatus: representative.taskStatus,
       reviewState: representative.reviewState,

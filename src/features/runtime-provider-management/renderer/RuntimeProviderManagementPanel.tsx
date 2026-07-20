@@ -45,6 +45,8 @@ export const RuntimeProviderManagementPanel = ({
   const [projectContextLoading, setProjectContextLoading] = useState(false);
   const [projectContextError, setProjectContextError] = useState<string | null>(null);
   const backgroundHydrationKeyRef = useRef<string | null>(null);
+  const searchInitialProviderDirectly =
+    initialProviderId === 'openrouter' || initialProviderId === 'vercel';
 
   useEffect(() => {
     if (!open) return;
@@ -88,9 +90,9 @@ export const RuntimeProviderManagementPanel = ({
     // A quick-card Manage action can reuse the dashboard summary immediately.
     // Browse-all opens without an initial provider and loads the full catalog.
     directoryPageSize: initialProviderId ? 100 : 250,
-    directorySummaryOnEnable: Boolean(initialProviderId),
+    directorySummaryOnEnable: Boolean(initialProviderId) && !searchInitialProviderDirectly,
     loadViewOnEnable: false,
-    searchDirectoryOnQueryChange: false,
+    searchDirectoryOnQueryChange: searchInitialProviderDirectly,
     projectPath: activeProjectPath,
     initialProviderId,
     initialProviderAction,

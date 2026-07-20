@@ -124,13 +124,19 @@ describe('registerRuntimeProviderManagementIpc', () => {
     await expect(
       handlers.get(RUNTIME_LOCAL_PROVIDER_LIST)?.(
         {},
-        { runtimeId: 'opencode', scope: 'project', projectPath: '/tmp/sandbox' }
+        {
+          runtimeId: 'opencode',
+          scope: 'project',
+          projectPath: '/tmp/sandbox',
+          providerId: 'local-lab',
+        }
       )
     ).resolves.toEqual(listResponse);
     expect(feature.listLocalProviders).toHaveBeenCalledWith({
       runtimeId: 'opencode',
       scope: 'project',
       projectPath: '/tmp/sandbox',
+      providerId: 'local-lab',
     });
     await expect(
       handlers.get(RUNTIME_LOCAL_PROVIDER_SCAN)?.({}, { runtimeId: 'opencode' })
@@ -202,6 +208,18 @@ describe('registerRuntimeProviderManagementIpc', () => {
     );
     expect(invalid).toMatchObject({ error: { code: 'invalid-input' } });
     expect(feature.configureLocalProvider).toHaveBeenCalledTimes(2);
+
+    const invalidProviderFilter = await handlers.get(RUNTIME_LOCAL_PROVIDER_LIST)?.(
+      {},
+      {
+        runtimeId: 'opencode',
+        scope: 'project',
+        projectPath: '/tmp/sandbox',
+        providerId: 'Not a valid provider',
+      }
+    );
+    expect(invalidProviderFilter).toMatchObject({ error: { code: 'invalid-input' } });
+    expect(feature.listLocalProviders).toHaveBeenCalledTimes(2);
   });
 
   it('accepts every registered companion id and rejects unknown transport input', async () => {

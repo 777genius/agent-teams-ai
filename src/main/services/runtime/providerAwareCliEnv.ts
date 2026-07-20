@@ -1,7 +1,10 @@
 import { resolveVerifiedAppManagedCodexRuntimeBinaryPath } from '@features/codex-runtime-installer/main';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
 
-import { resolveVerifiedOpenCodeRuntimeBinaryPath } from '../infrastructure/OpenCodeRuntimeInstallerService';
+import {
+  isSupportedOpenCodeRuntimeBinaryPath,
+  resolveVerifiedOpenCodeRuntimeBinaryPath,
+} from '../infrastructure/OpenCodeRuntimeInstallerService';
 
 import { ensureAgentTeamsMcpLocalLaunchEnv } from './agentTeamsMcpLaunchEnv';
 import { buildRuntimeBaseEnv } from './buildRuntimeBaseEnv';
@@ -95,8 +98,13 @@ export async function buildProviderAwareCliEnv(
     ]
       .find((candidate): candidate is string => Boolean(candidate?.trim()))
       ?.trim();
+    const supportedExplicitOpenCodeBinary =
+      explicitOpenCodeBinary &&
+      (await isSupportedOpenCodeRuntimeBinaryPath(explicitOpenCodeBinary).catch(() => false))
+        ? explicitOpenCodeBinary
+        : null;
     const openCodeBinary =
-      explicitOpenCodeBinary ?? (await resolveVerifiedOpenCodeRuntimeBinaryPath());
+      supportedExplicitOpenCodeBinary ?? (await resolveVerifiedOpenCodeRuntimeBinaryPath());
     if (openCodeBinary) {
       // Login-shell snapshots can contain an older OpenCode override than the
       // app-managed runtime shown in the UI. Keep deliberate process/call

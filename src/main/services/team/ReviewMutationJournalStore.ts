@@ -1,6 +1,15 @@
 import { assertReviewMutationTransition } from '@features/review-mutations';
-import { atomicWriteAsync, unlinkPathDurably } from '@main/utils/atomicWrite';
+import {
+  atomicWriteAsync,
+  renamePathWithRetry,
+  syncDirectoryDurably,
+  unlinkPathDurably,
+} from '@main/utils/atomicWrite';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import {
+  assertConstrainedPersistenceDirectory,
+  ensureConstrainedPersistenceDirectory,
+} from '@main/utils/safePersistenceDirectory';
 import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -20,6 +29,18 @@ const MAX_JOURNAL_BYTES = 32 * 1024 * 1024;
 const MAX_JOURNAL_RECORDS_PER_SCOPE = 64;
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const SCOPE_KEY_PATTERN = /^(?:task|agent)-[a-zA-Z0-9][a-zA-Z0-9._-]{0,255}$/;
+
+export class CorruptReviewMutationJournalError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'CorruptReviewMutationJournalError';
+  }
+}
+
+export interface ReviewMutationJournalDiscardInspection {
+  records: ReviewMutationJournalRecord[];
+  corruptRecordCount: number;
+}
 
 export interface ReviewMutationJournalRecord {
   version: 2;
@@ -137,7 +158,10 @@ export class ReviewMutationJournalStore {
     if (Buffer.byteLength(serialized, 'utf8') > MAX_JOURNAL_BYTES) {
       throw new Error('Review mutation journal record exceeds the storage limit');
     }
-    await atomicWriteAsync(this.getRecordPath(record), serialized, {
+    const recordPath = this.getRecordPath(record);
+    await ensureConstrainedPersistenceDirectory(getTeamsBasePath(), path.dirname(recordPath));
+    await atomicWriteAsync(recordPath, serialized, {
+      mode: 0o600,
       durability: 'strict',
       syncDirectory: true,
     });
@@ -275,7 +299,13 @@ export class ReviewMutationJournalStore {
   }
 
   async remove(record: ReviewMutationJournalRecord): Promise<void> {
-    await unlinkPathDurably(this.getRecordPath(record)).catch((error: NodeJS.ErrnoException) => {
+    const recordPath = this.getRecordPath(record);
+    if (
+      !(await assertConstrainedPersistenceDirectory(getTeamsBasePath(), path.dirname(recordPath)))
+    ) {
+      return;
+    }
+    await unlinkPathDurably(recordPath).catch((error: NodeJS.ErrnoException) => {
       if (error.code !== 'ENOENT') throw error;
     });
   }
@@ -285,12 +315,65 @@ export class ReviewMutationJournalStore {
     persistenceScope: ReviewDecisionPersistenceScope
   ): Promise<void> {
     this.assertSafeScope(teamName, persistenceScope);
-    const records = await this.list(teamName, persistenceScope).catch(() => []);
+    const records = await this.list(teamName, persistenceScope);
     await Promise.all(records.map((record) => this.remove(record)));
-    await fs.promises.rm(this.getScopeDir(teamName, persistenceScope), {
-      recursive: true,
-      force: true,
+    const scopeDir = this.getScopeDir(teamName, persistenceScope);
+    let removedScopeDir = false;
+    try {
+      await fs.promises.rmdir(scopeDir);
+      removedScopeDir = true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    if (removedScopeDir) await syncDirectoryDurably(path.dirname(scopeDir));
+  }
+
+  async inspectForRecoveryDiscard(
+    teamName: string,
+    persistenceScope: ReviewDecisionPersistenceScope
+  ): Promise<ReviewMutationJournalDiscardInspection> {
+    this.assertSafeScope(teamName, persistenceScope);
+    const scopeDir = this.getScopeDir(teamName, persistenceScope);
+    if (!(await assertConstrainedPersistenceDirectory(getTeamsBasePath(), scopeDir))) {
+      return { records: [], corruptRecordCount: 0 };
+    }
+    const recordNames = await this.listRecordNames(scopeDir);
+    const records: ReviewMutationJournalRecord[] = [];
+    let corruptRecordCount = 0;
+    for (const entry of recordNames) {
+      try {
+        records.push(await this.loadRecord(scopeDir, entry, teamName, persistenceScope));
+      } catch (error) {
+        if (!(error instanceof CorruptReviewMutationJournalError)) throw error;
+        corruptRecordCount += 1;
+      }
+    }
+    return { records, corruptRecordCount };
+  }
+
+  async quarantineCorruptScope(
+    teamName: string,
+    persistenceScope: ReviewDecisionPersistenceScope
+  ): Promise<string | null> {
+    const inspection = await this.inspectForRecoveryDiscard(teamName, persistenceScope);
+    if (
+      inspection.records.some(
+        (record) => record.decisions.length > 0 || (record.diskSteps?.length ?? 0) > 0
+      )
+    ) {
+      throw new Error(
+        'Cannot quarantine a review mutation journal with a valid pending disk mutation'
+      );
+    }
+    if (inspection.corruptRecordCount === 0) return null;
+
+    const scopeDir = this.getScopeDir(teamName, persistenceScope);
+    const quarantinePath = `${scopeDir}.corrupt-${Date.now()}-${randomUUID()}`;
+    await renamePathWithRetry(scopeDir, quarantinePath, {
+      syncDirectories: true,
+      durability: 'strict',
     });
+    return quarantinePath;
   }
 
   async list(
@@ -299,6 +382,20 @@ export class ReviewMutationJournalStore {
   ): Promise<ReviewMutationJournalRecord[]> {
     this.assertSafeScope(teamName, persistenceScope);
     const scopeDir = this.getScopeDir(teamName, persistenceScope);
+    if (!(await assertConstrainedPersistenceDirectory(getTeamsBasePath(), scopeDir))) return [];
+    const recordNames = await this.listRecordNames(scopeDir);
+    if (recordNames.length > MAX_JOURNAL_RECORDS_PER_SCOPE) {
+      throw new Error('Too many pending review mutation journal records');
+    }
+
+    const records: ReviewMutationJournalRecord[] = [];
+    for (const entry of recordNames) {
+      records.push(await this.loadRecord(scopeDir, entry, teamName, persistenceScope));
+    }
+    return records.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+  }
+
+  private async listRecordNames(scopeDir: string): Promise<string[]> {
     let entries: string[];
     try {
       entries = await fs.promises.readdir(scopeDir);
@@ -306,26 +403,27 @@ export class ReviewMutationJournalStore {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
       throw error;
     }
-    const recordNames = entries
+    return entries
       .filter((entry) => /^[a-f0-9-]+\.json$/i.test(entry))
       .sort((left, right) => left.localeCompare(right));
-    if (recordNames.length > MAX_JOURNAL_RECORDS_PER_SCOPE) {
-      throw new Error('Too many pending review mutation journal records');
-    }
+  }
 
-    const records: ReviewMutationJournalRecord[] = [];
-    for (const entry of recordNames) {
-      const filePath = path.join(scopeDir, entry);
-      const parsed = await this.readRecord(filePath);
-      const record = this.parseRecord(
-        parsed,
-        path.basename(entry, '.json'),
-        teamName,
-        persistenceScope
+  private async loadRecord(
+    scopeDir: string,
+    entry: string,
+    teamName: string,
+    persistenceScope: ReviewDecisionPersistenceScope
+  ): Promise<ReviewMutationJournalRecord> {
+    const filePath = path.join(scopeDir, entry);
+    const parsed = await this.readRecord(filePath);
+    try {
+      return this.parseRecord(parsed, path.basename(entry, '.json'), teamName, persistenceScope);
+    } catch (error) {
+      throw new CorruptReviewMutationJournalError(
+        `Invalid review mutation journal record at ${filePath}`,
+        { cause: error }
       );
-      records.push(record);
     }
-    return records.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
   }
 
   private async readRecord(filePath: string): Promise<unknown> {
@@ -333,7 +431,7 @@ export class ReviewMutationJournalStore {
     try {
       const pathStats = await fs.promises.lstat(filePath);
       if (pathStats.isSymbolicLink()) {
-        throw new Error('Unsafe review mutation journal symlink');
+        throw new CorruptReviewMutationJournalError('Unsafe review mutation journal symlink');
       }
       handle = await fs.promises.open(filePath, 'r');
       const stats = await handle.stat();
@@ -344,7 +442,9 @@ export class ReviewMutationJournalStore {
         stats.dev !== pathStats.dev ||
         stats.ino !== pathStats.ino
       ) {
-        throw new Error('Unsafe or oversized review mutation journal record');
+        throw new CorruptReviewMutationJournalError(
+          'Unsafe or oversized review mutation journal record'
+        );
       }
       const raw = await handle.readFile({ encoding: 'utf8' });
       const latestPathStats = await fs.promises.lstat(filePath);
@@ -353,12 +453,16 @@ export class ReviewMutationJournalStore {
         latestPathStats.dev !== stats.dev ||
         latestPathStats.ino !== stats.ino
       ) {
-        throw new Error('Review mutation journal changed while being read');
+        throw new CorruptReviewMutationJournalError(
+          'Review mutation journal changed while being read'
+        );
       }
       try {
         return JSON.parse(raw) as unknown;
       } catch (error) {
-        throw new Error('Corrupted review mutation journal record', { cause: error });
+        throw new CorruptReviewMutationJournalError('Corrupted review mutation journal record', {
+          cause: error,
+        });
       }
     } finally {
       await handle?.close().catch(() => undefined);

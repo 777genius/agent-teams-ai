@@ -803,23 +803,69 @@ function mergeProviderCatalogFields(
 export class ClaudeMultimodelBridgeService {
   private providerStatusHydrationGeneration = 0;
 
-  private readonly providerStatusHydrationGenerations = new Map<CliProviderId, number>();
+  private readonly providerStatusHydrationGenerations = new Map<string, number>();
 
   private readonly providerStatusHydrationInFlight = new Map<
-    CliProviderId,
+    string,
     { readonly generation: number; readonly promise: Promise<CliProviderStatus> }
   >();
 
-  private beginProviderStatusHydration(providerIds: readonly CliProviderId[]): number {
+  invalidateProviderStatusHydrations(): void {
+    this.providerStatusHydrationGeneration += 1;
+    this.providerStatusHydrationGenerations.clear();
+    this.providerStatusHydrationInFlight.clear();
+  }
+
+  private getProviderStatusHydrationKey(
+    binaryPath: string,
+    providerId: CliProviderId,
+    projectPath: string | null | undefined
+  ): string {
+    const cwd = getProviderStatusCommandCwd(projectPath) ?? '';
+    return `${path.resolve(binaryPath)}\0${providerId}\0${cwd}`;
+  }
+
+  private beginProviderStatusHydration(
+    binaryPath: string,
+    providerIds: readonly CliProviderId[],
+    projectPath?: string | null
+  ): number {
     const generation = ++this.providerStatusHydrationGeneration;
     for (const providerId of providerIds) {
-      this.providerStatusHydrationGenerations.set(providerId, generation);
+      this.providerStatusHydrationGenerations.set(
+        this.getProviderStatusHydrationKey(binaryPath, providerId, projectPath),
+        generation
+      );
     }
     return generation;
   }
 
-  private isProviderStatusHydrationCurrent(providerId: CliProviderId, generation: number): boolean {
-    return this.providerStatusHydrationGenerations.get(providerId) === generation;
+  private isProviderStatusHydrationCurrent(
+    binaryPath: string,
+    providerId: CliProviderId,
+    generation: number,
+    projectPath?: string | null
+  ): boolean {
+    return (
+      this.providerStatusHydrationGenerations.get(
+        this.getProviderStatusHydrationKey(binaryPath, providerId, projectPath)
+      ) === generation
+    );
+  }
+
+  private clearProviderStatusHydrationGeneration(
+    binaryPath: string,
+    providerId: CliProviderId,
+    generation: number,
+    projectPath?: string | null
+  ): void {
+    const hydrationKey = this.getProviderStatusHydrationKey(binaryPath, providerId, projectPath);
+    if (
+      this.providerStatusHydrationGenerations.get(hydrationKey) === generation &&
+      !this.providerStatusHydrationInFlight.has(hydrationKey)
+    ) {
+      this.providerStatusHydrationGenerations.delete(hydrationKey);
+    }
   }
 
   private getProviderCatalogHydration(
@@ -828,7 +874,12 @@ export class ClaudeMultimodelBridgeService {
     generation: number,
     options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus | null> {
-    const inFlight = this.providerStatusHydrationInFlight.get(providerId);
+    const hydrationKey = this.getProviderStatusHydrationKey(
+      binaryPath,
+      providerId,
+      options.projectPath
+    );
+    const inFlight = this.providerStatusHydrationInFlight.get(hydrationKey);
     if (inFlight) {
       if (inFlight.generation === generation) {
         return inFlight.promise;
@@ -837,7 +888,14 @@ export class ClaudeMultimodelBridgeService {
       return inFlight.promise
         .catch(() => undefined)
         .then(() => {
-          if (!this.isProviderStatusHydrationCurrent(providerId, generation)) {
+          if (
+            !this.isProviderStatusHydrationCurrent(
+              binaryPath,
+              providerId,
+              generation,
+              options.projectPath
+            )
+          ) {
             return null;
           }
           return this.getProviderCatalogHydration(binaryPath, providerId, generation, options);
@@ -847,11 +905,11 @@ export class ClaudeMultimodelBridgeService {
     const request = this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
       projectPath: options.projectPath,
     }).finally(() => {
-      if (this.providerStatusHydrationInFlight.get(providerId)?.promise === request) {
-        this.providerStatusHydrationInFlight.delete(providerId);
+      if (this.providerStatusHydrationInFlight.get(hydrationKey)?.promise === request) {
+        this.providerStatusHydrationInFlight.delete(hydrationKey);
       }
     });
-    this.providerStatusHydrationInFlight.set(providerId, { generation, promise: request });
+    this.providerStatusHydrationInFlight.set(hydrationKey, { generation, promise: request });
     return request;
   }
 
@@ -1342,6 +1400,9 @@ export class ClaudeMultimodelBridgeService {
     onUpdate?: (providers: CliProviderStatus[]) => void
   ): void {
     if (!onUpdate) {
+      for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
+        this.clearProviderStatusHydrationGeneration(binaryPath, providerId, generation);
+      }
       return;
     }
 
@@ -1349,9 +1410,21 @@ export class ClaudeMultimodelBridgeService {
       liveProviders.map((provider) => [provider.providerId, provider])
     );
     const providerIds = liveProviders.map((provider) => provider.providerId);
+    const liveProviderIds = new Set(providerIds);
+
+    for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
+      if (!liveProviderIds.has(providerId)) {
+        this.clearProviderStatusHydrationGeneration(binaryPath, providerId, generation);
+      }
+    }
 
     for (const liveProvider of liveProviders) {
       if (liveProvider.runtimeCapabilities?.modelCatalog?.dynamic !== true) {
+        this.clearProviderStatusHydrationGeneration(
+          binaryPath,
+          liveProvider.providerId,
+          generation
+        );
         continue;
       }
 
@@ -1360,7 +1433,9 @@ export class ClaudeMultimodelBridgeService {
           if (!hydratedProvider) {
             return;
           }
-          if (!this.isProviderStatusHydrationCurrent(liveProvider.providerId, generation)) {
+          if (
+            !this.isProviderStatusHydrationCurrent(binaryPath, liveProvider.providerId, generation)
+          ) {
             return;
           }
           const currentProvider = providers.get(liveProvider.providerId);
@@ -1374,7 +1449,9 @@ export class ClaudeMultimodelBridgeService {
           onUpdate(this.buildProviderStatusesSnapshot(providers, providerIds));
         })
         .catch((error) => {
-          if (!this.isProviderStatusHydrationCurrent(liveProvider.providerId, generation)) {
+          if (
+            !this.isProviderStatusHydrationCurrent(binaryPath, liveProvider.providerId, generation)
+          ) {
             return;
           }
           const currentProvider = providers.get(liveProvider.providerId);
@@ -1391,6 +1468,13 @@ export class ClaudeMultimodelBridgeService {
             }`
           );
           onUpdate(this.buildProviderStatusesSnapshot(providers, providerIds));
+        })
+        .finally(() => {
+          this.clearProviderStatusHydrationGeneration(
+            binaryPath,
+            liveProvider.providerId,
+            generation
+          );
         });
     }
   }
@@ -1496,25 +1580,80 @@ export class ClaudeMultimodelBridgeService {
       background: false,
     });
 
+    const generation = this.beginProviderStatusHydration(
+      binaryPath,
+      [providerId],
+      options.projectPath
+    );
+    let backgroundHydrationOwnsGenerationCleanup = false;
     try {
-      const generation = this.beginProviderStatusHydration([providerId]);
       const provider = await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
         summary: true,
         projectPath: options.projectPath,
       });
+      if (
+        options.projectPath?.trim() &&
+        provider.runtimeCapabilities?.modelCatalog?.dynamic === true
+      ) {
+        try {
+          const hydratedProvider = await this.getProviderCatalogHydration(
+            binaryPath,
+            provider.providerId,
+            generation,
+            options
+          );
+          if (
+            hydratedProvider &&
+            this.isProviderStatusHydrationCurrent(
+              binaryPath,
+              provider.providerId,
+              generation,
+              options.projectPath
+            )
+          ) {
+            return mergeProviderCatalogFields(provider, hydratedProvider);
+          }
+        } catch (error) {
+          logger.warn(
+            `Project-scoped provider catalog hydration failed for ${provider.providerId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+          return {
+            ...provider,
+            modelCatalogRefreshState: 'error',
+            detailMessage: error instanceof Error ? error.message : String(error),
+          };
+        }
+      }
       if (provider.runtimeCapabilities?.modelCatalog?.dynamic === true && onCatalogUpdate) {
+        backgroundHydrationOwnsGenerationCleanup = true;
         void this.getProviderCatalogHydration(binaryPath, provider.providerId, generation, options)
           .then((hydratedProvider) => {
             if (!hydratedProvider) {
               return;
             }
-            if (!this.isProviderStatusHydrationCurrent(provider.providerId, generation)) {
+            if (
+              !this.isProviderStatusHydrationCurrent(
+                binaryPath,
+                provider.providerId,
+                generation,
+                options.projectPath
+              )
+            ) {
               return;
             }
             onCatalogUpdate(mergeProviderCatalogFields(provider, hydratedProvider));
           })
           .catch((error) => {
-            if (!this.isProviderStatusHydrationCurrent(provider.providerId, generation)) {
+            if (
+              !this.isProviderStatusHydrationCurrent(
+                binaryPath,
+                provider.providerId,
+                generation,
+                options.projectPath
+              )
+            ) {
               return;
             }
             logger.warn(
@@ -1526,6 +1665,14 @@ export class ClaudeMultimodelBridgeService {
               ...provider,
               modelCatalogRefreshState: 'error',
             });
+          })
+          .finally(() => {
+            this.clearProviderStatusHydrationGeneration(
+              binaryPath,
+              providerId,
+              generation,
+              options.projectPath
+            );
           });
       }
       return provider;
@@ -1594,6 +1741,15 @@ export class ClaudeMultimodelBridgeService {
         `Provider-scoped summary runtime status unavailable for ${providerId}: ${summaryStatusError}`
       );
       return createRuntimeStatusErrorProviderStatus(providerId, error);
+    } finally {
+      if (!backgroundHydrationOwnsGenerationCleanup) {
+        this.clearProviderStatusHydrationGeneration(
+          binaryPath,
+          providerId,
+          generation,
+          options.projectPath
+        );
+      }
     }
   }
 
@@ -1753,8 +1909,9 @@ export class ClaudeMultimodelBridgeService {
       background: false,
     });
 
+    const generation = this.beginProviderStatusHydration(binaryPath, DEFAULT_PROVIDER_STATUS_IDS);
+    let catalogHydrationOwnsGenerationCleanup = false;
     try {
-      const generation = this.beginProviderStatusHydration(DEFAULT_PROVIDER_STATUS_IDS);
       const providers = await this.getProviderStatusesFromScopedRuntimeStatus(
         binaryPath,
         onUpdate,
@@ -1765,6 +1922,7 @@ export class ClaudeMultimodelBridgeService {
         }
       );
       if (providers) {
+        catalogHydrationOwnsGenerationCleanup = true;
         this.hydrateProviderCatalogs(binaryPath, providers, generation, onUpdate);
         return providers;
       }
@@ -1774,6 +1932,12 @@ export class ClaudeMultimodelBridgeService {
           error instanceof Error ? error.message : String(error)
         }`
       );
+    } finally {
+      if (!catalogHydrationOwnsGenerationCleanup) {
+        for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
+          this.clearProviderStatusHydrationGeneration(binaryPath, providerId, generation);
+        }
+      }
     }
 
     try {

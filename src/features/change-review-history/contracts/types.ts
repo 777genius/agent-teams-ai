@@ -35,3 +35,32 @@ export interface ReviewDraftHistoryEntry {
 export interface ReviewDraftHistorySnapshot {
   entries: Record<string, ReviewDraftHistoryEntry>;
 }
+
+/** Durable local editor branch preserved after a per-file CAS conflict. */
+export interface ReviewDraftHistoryConflictCandidate {
+  id: string;
+  capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
+  filePath: string;
+  expectedRevision: number;
+  expectedGeneration: string | null;
+  observedCurrentRevision: number;
+  observedCurrentGeneration: string | null;
+  /** Null is a durable tombstone representing the branch with no saved manual edit. */
+  entry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'> | null;
+}
+
+/** Metadata-only renderer view of a durable manual-edit recovery branch. */
+export interface ReviewDraftHistoryConflictCandidateSummary {
+  id: string;
+  capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
+  recoverability: 'recoverable' | 'file-not-in-current-review';
+  filePath: string;
+  expectedRevision: number;
+  expectedGeneration: string | null;
+  observedCurrentRevision: number;
+  observedCurrentGeneration: string | null;
+  /** Null identifies a reversible branch with no saved manual edit. */
+  entryRevision: number | null;
+}

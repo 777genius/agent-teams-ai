@@ -4,6 +4,11 @@ import {
   invalidateContextScopedRequestEpoch,
   resetContextScopedRequestEpochForTests,
 } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
+import {
+  registerChangeReviewLifecycleOwner,
+  requestChangeReviewLifecycleReservation,
+  resetChangeReviewLifecycleCoordinatorForTests,
+} from '../../../src/renderer/utils/changeReviewLifecycleCoordinator';
 
 import { createTestStore } from './storeTestUtils';
 
@@ -127,6 +132,20 @@ async function flushMicrotasks(): Promise<void> {
   await Promise.resolve();
 }
 
+async function registerBlockedChangeReview(): Promise<ReturnType<typeof vi.fn>> {
+  const requestClose = vi.fn().mockResolvedValue(false);
+  await requestChangeReviewLifecycleReservation({
+    hostId: 'changes-host',
+    sessionId: 'changes-session',
+  });
+  registerChangeReviewLifecycleOwner({
+    hostId: 'changes-host',
+    sessionId: 'changes-session',
+    requestClose,
+  });
+  return requestClose;
+}
+
 describe('context slice team/task reset', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -141,7 +160,53 @@ describe('context slice team/task reset', () => {
 
   afterEach(() => {
     resetContextScopedRequestEpochForTests();
+    resetChangeReviewLifecycleCoordinatorForTests();
     vi.restoreAllMocks();
+  });
+
+  it('does not switch context when Changes cannot flush durably', async () => {
+    const requestClose = await registerBlockedChangeReview();
+    const store = createTestStore();
+
+    await store.getState().switchContext('ssh-dev');
+
+    expect(requestClose).toHaveBeenCalledTimes(1);
+    expect(apiMock.context.switch).not.toHaveBeenCalled();
+    expect(contextStorageMock.saveSnapshot).not.toHaveBeenCalled();
+    expect(store.getState().activeContextId).toBe('local');
+    expect(store.getState().isContextSwitching).toBe(false);
+  });
+
+  it('does not reset an initialized context when Changes cannot flush durably', async () => {
+    apiMock.context.getActive.mockResolvedValue('ssh-dev');
+    const requestClose = await registerBlockedChangeReview();
+    const store = createTestStore();
+
+    await store.getState().initializeContextSystem();
+
+    expect(requestClose).toHaveBeenCalledTimes(1);
+    expect(store.getState().activeContextId).toBe('local');
+    expect(apiMock.getProjects).not.toHaveBeenCalled();
+    expect(apiMock.context.list).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not connect or disconnect SSH when Changes cannot flush durably', async () => {
+    const requestClose = await registerBlockedChangeReview();
+    const store = createTestStore();
+
+    await store.getState().connectSsh({
+      host: 'dev',
+      port: 22,
+      username: 'me',
+      authMethod: 'privateKey',
+      privateKeyPath: '/tmp/key',
+    });
+    await store.getState().disconnectSsh();
+
+    expect(requestClose).toHaveBeenCalledTimes(2);
+    expect(apiMock.ssh.connect).not.toHaveBeenCalled();
+    expect(apiMock.ssh.disconnect).not.toHaveBeenCalled();
+    expect(store.getState().activeContextId).toBe('local');
   });
 
   it('does not refetch context-scoped data when lazy initialization keeps the same context', async () => {
@@ -235,6 +300,10 @@ describe('context slice team/task reset', () => {
       globalTasksInitialized: true,
       selectedTeamName: 'local-team',
       selectedTeamData: { teamName: 'local-team' },
+      teamsProjectNavigationIntent: {
+        projectId: 'local-project',
+        projectPath: '/local/project',
+      },
       teamDataCacheByName: { 'local-team': { teamName: 'local-team' } },
     } as never);
 
@@ -246,6 +315,7 @@ describe('context slice team/task reset', () => {
     expect(store.getState().globalTasks).toEqual([]);
     expect(store.getState().selectedTeamName).toBeNull();
     expect(store.getState().selectedTeamData).toBeNull();
+    expect(store.getState().teamsProjectNavigationIntent).toBeNull();
     expect(store.getState().teamDataCacheByName).toEqual({});
     expect(apiMock.teams.list).toHaveBeenCalledTimes(1);
     expect(apiMock.teams.getAllTasks).toHaveBeenCalledTimes(1);

@@ -1,4 +1,5 @@
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
+import { isAgentTeamsOpenCodeVersionSupported } from '@shared/utils/version';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
 import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
@@ -22,7 +23,9 @@ export type RuntimeProviderQuickPlanState =
 const MINIMUM_OPENCODE_PROVIDER_OAUTH_VERSION = [1, 15, 7] as const;
 
 export function isOpenCodeRuntimeUsable(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
-  return runtimeStatus?.installed === true;
+  return (
+    runtimeStatus?.installed === true && isAgentTeamsOpenCodeVersionSupported(runtimeStatus.version)
+  );
 }
 
 function isProviderCheckPending(provider: CliProviderStatus | null): boolean {
@@ -70,7 +73,7 @@ export function resolveOpenCodeQuickConnectGate(input: {
   if (runtimeStatus?.state === 'failed') {
     return isOpenCodeRuntimeUsable(runtimeStatus) ? 'ready' : 'error';
   }
-  if (runtimeStatus?.state === 'ready' && runtimeStatus.installed) {
+  if (runtimeStatus?.state === 'ready' && isOpenCodeRuntimeUsable(runtimeStatus)) {
     return 'ready';
   }
   if (
@@ -80,7 +83,7 @@ export function resolveOpenCodeQuickConnectGate(input: {
   ) {
     return 'checking';
   }
-  if (runtimeStatus?.installed) {
+  if (isOpenCodeRuntimeUsable(runtimeStatus)) {
     return 'ready';
   }
   if (

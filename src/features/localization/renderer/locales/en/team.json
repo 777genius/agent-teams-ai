@@ -1444,7 +1444,7 @@
   },
   "list": {
     "actions": {
-      "importTeam": "Import from folder",
+      "importTeam": "Import",
       "copyTeam": "Copy team",
       "createTeam": "Create Team",
       "organizationMap": "Org Map",

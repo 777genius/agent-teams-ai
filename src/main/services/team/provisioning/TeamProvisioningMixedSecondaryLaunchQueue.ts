@@ -1,3 +1,10 @@
+import * as path from 'path';
+
+import {
+  markOpenCodeLaneBlockedBySharedRuntimeFailure,
+  selectOpenCodeSharedRuntimePreflightFailureDiagnostic,
+} from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+
 import type {
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchResult,
@@ -7,10 +14,12 @@ import type { PersistedTeamLaunchPhase, PersistedTeamLaunchSnapshot } from '@sha
 
 export interface MixedSecondaryLaunchQueueRun {
   teamName: string;
+  request: { cwd: string };
   cancelRequested: boolean;
   processKilled: boolean;
   mixedSecondaryLanes?: MixedSecondaryRuntimeLaneState[];
   mixedSecondaryLaneLaunchQueue?: Promise<void>;
+  mixedSecondarySharedRuntimeFailuresByProject?: Map<string, string>;
 }
 
 export interface MixedSecondaryLaunchQueuePorts<TRun extends MixedSecondaryLaunchQueueRun> {
@@ -90,11 +99,34 @@ export function launchQueuedMixedSecondaryLaneInBackground<
         lane.state = 'finished';
         return;
       }
+      const laneCwd = path.resolve(lane.member.cwd?.trim() || run.request.cwd);
+      const sharedRuntimeFailure = run.mixedSecondarySharedRuntimeFailuresByProject?.get(laneCwd);
+      if (sharedRuntimeFailure) {
+        markOpenCodeLaneBlockedBySharedRuntimeFailure({
+          teamName: run.teamName,
+          lane,
+          rootCause: sharedRuntimeFailure,
+          nowMs: ports.nowMs(),
+          createRunId: ports.randomUuid,
+        });
+        await ports.publishMixedSecondaryLaneStatusChange(run, lane).catch(() => undefined);
+        return;
+      }
       lane.state = 'launching';
       await ports.launchSingleMixedSecondaryLane(run, lane);
+      if (lane.result) {
+        const nextSharedRuntimeFailure = selectOpenCodeSharedRuntimePreflightFailureDiagnostic(
+          lane.result
+        );
+        if (nextSharedRuntimeFailure) {
+          run.mixedSecondarySharedRuntimeFailuresByProject ??= new Map();
+          run.mixedSecondarySharedRuntimeFailuresByProject.set(laneCwd, nextSharedRuntimeFailure);
+        }
+      }
     } catch (error) {
       if (run.cancelRequested || run.processKilled) {
         await clearQueuedMixedSecondaryLaneStorage(run, lane, ports);
+        lane.state = 'finished';
         return;
       }
       const message = error instanceof Error ? error.message : String(error);
@@ -109,6 +141,14 @@ export function launchQueuedMixedSecondaryLaneInBackground<
       });
       lane.warnings = [];
       lane.diagnostics = [...lane.diagnostics, message];
+      const laneCwd = path.resolve(lane.member.cwd?.trim() || run.request.cwd);
+      const sharedRuntimeFailure = selectOpenCodeSharedRuntimePreflightFailureDiagnostic(
+        lane.result
+      );
+      if (sharedRuntimeFailure) {
+        run.mixedSecondarySharedRuntimeFailuresByProject ??= new Map();
+        run.mixedSecondarySharedRuntimeFailuresByProject.set(laneCwd, sharedRuntimeFailure);
+      }
       await ports
         .upsertOpenCodeRuntimeLaneIndexEntry({
           teamsBasePath: ports.teamsBasePath(),

@@ -1,3 +1,4 @@
+import * as runtimeProviderManagementMain from '@features/runtime-provider-management/main';
 import { execCli, spawnCli } from '@main/utils/childProcess';
 import { getAutoDetectedClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -674,6 +675,15 @@ export function createTeamProvisioningServiceComposition(
   const prepareFacade = createTeamProvisioningPrepareFacadeFromService(host.prepare, {
     resolveClaudeBinaryPath: () => ClaudeBinaryResolver.resolve(),
     execCli,
+    inspectOpenCodeLocalModelRuntime: (
+      runtimeProviderManagementMain as typeof runtimeProviderManagementMain & {
+        inspectOpenCodeLocalModelRuntimeReadiness?: NonNullable<
+          Parameters<
+            typeof createTeamProvisioningPrepareFacadeFromService
+          >[1]['inspectOpenCodeLocalModelRuntime']
+        >;
+      }
+    ).inspectOpenCodeLocalModelRuntimeReadiness,
     info: (message) => logger.info(message),
     warn: (message) => logger.warn(message),
   });

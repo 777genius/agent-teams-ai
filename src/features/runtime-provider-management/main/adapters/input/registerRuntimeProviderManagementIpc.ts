@@ -68,6 +68,7 @@ import type { IpcMain } from 'electron';
 const logger = createLogger('Feature:RuntimeProviderManagement:IPC');
 const LOCAL_PROVIDER_PRESET_ID_SET = new Set<string>(RUNTIME_LOCAL_PROVIDER_PRESET_IDS);
 const LOCAL_PROVIDER_SCOPE_SET = new Set<string>(RUNTIME_LOCAL_PROVIDER_SCOPES);
+const LOCAL_PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const RUNTIME_PROVIDER_IPC_ERROR_DETAIL_LIMIT = 1_600;
 const ESCAPE_CHARACTER = String.fromCharCode(27);
 const BELL_CHARACTER = String.fromCharCode(7);
@@ -184,7 +185,10 @@ export function registerRuntimeProviderManagementIpc(
         input?.runtimeId !== 'opencode' ||
         !isLocalProviderScope(input.scope) ||
         !validOptionalString(input.projectPath) ||
+        !validOptionalString(input.providerId) ||
         (typeof input.projectPath === 'string' && input.projectPath.length > 4_096) ||
+        (typeof input.providerId === 'string' &&
+          !LOCAL_PROVIDER_ID_PATTERN.test(input.providerId)) ||
         (input.scope === 'project' && typeof input.projectPath !== 'string')
       ) {
         return localProviderError('invalid-input', 'Local provider list request is invalid.');

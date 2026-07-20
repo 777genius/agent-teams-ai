@@ -8,6 +8,7 @@ import {
   normalizeProviderModelListModels,
   normalizeProviderSelectedModelChecks,
   normalizeProvisioningModelCheckRequests,
+  validateRuntimeLaunchSelection,
 } from '@main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection';
 import { describe, expect, it } from 'vitest';
 
@@ -155,5 +156,35 @@ describe('TeamProvisioningRuntimeLaunchSelection', () => {
         runtimeCapabilities: { modelCatalog: { dynamic: true } },
       })
     ).toBe(false);
+  });
+
+  it('rejects stale Codex models even when the live catalog is dynamic', () => {
+    expect(() =>
+      validateRuntimeLaunchSelection({
+        actorLabel: 'Member bob',
+        providerId: 'codex',
+        model: 'gpt-5.4-mini',
+        effort: 'low',
+        facts: {
+          defaultModel: 'gpt-5.6-sol',
+          modelIds: new Set(['gpt-5.6-sol', 'gpt-5.6-terra']),
+          modelListParsed: true,
+          modelCatalog: null,
+          runtimeCapabilities: {
+            modelCatalog: { dynamic: true },
+            reasoningEffort: {
+              supported: true,
+              values: ['low', 'medium', 'high'],
+              configPassthrough: true,
+            },
+          },
+          providerStatus: null,
+        },
+        anthropicFastModeDefault: false,
+        getProviderLabel: () => 'Codex',
+      })
+    ).toThrow(
+      'Member bob uses Codex model "gpt-5.4-mini", but it is not present in the live Codex model catalog.'
+    );
   });
 });

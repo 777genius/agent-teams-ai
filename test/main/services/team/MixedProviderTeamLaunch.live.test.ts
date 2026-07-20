@@ -37,9 +37,10 @@ const liveDescribe =
     ? describe
     : describe.skip;
 
-const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
+const DEFAULT_ORCHESTRATOR_CLI =
+  '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 const DEFAULT_ANTHROPIC_MODEL = 'haiku';
-const DEFAULT_CODEX_MODEL = 'gpt-5.4-mini';
+const DEFAULT_CODEX_MODEL = 'gpt-5.6-sol';
 const DEFAULT_OPENCODE_MODEL = 'opencode/big-pickle';
 
 liveDescribe('Mixed provider team launch live e2e', () => {
@@ -167,107 +168,103 @@ liveDescribe('Mixed provider team launch live e2e', () => {
     }
   }, 180_000);
 
-  it(
-    'launches Anthropic, Codex subscription, and OpenCode teammates in one mixed team',
-    async () => {
-      const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
-      expect(orchestratorCli).toBeTruthy();
-      await assertExecutable(orchestratorCli!);
-      await assertCodexSubscriptionAuthAvailable(process.env.CODEX_HOME!);
+  it('launches Anthropic, Codex subscription, and OpenCode teammates in one mixed team', async () => {
+    const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+    expect(orchestratorCli).toBeTruthy();
+    await assertExecutable(orchestratorCli!);
+    await assertCodexSubscriptionAuthAvailable(process.env.CODEX_HOME!);
 
-      const anthropicModel =
-        process.env.MIXED_PROVIDER_TEAM_ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
-      const codexModel = process.env.MIXED_PROVIDER_TEAM_CODEX_MODEL?.trim() || DEFAULT_CODEX_MODEL;
-      const codexEffort =
-        (process.env.MIXED_PROVIDER_TEAM_CODEX_EFFORT?.trim() as
-          | 'low'
-          | 'medium'
-          | 'high'
-          | 'xhigh'
-          | undefined) || 'low';
-      const openCodeModel =
-        process.env.MIXED_PROVIDER_TEAM_OPENCODE_MODEL?.trim() || DEFAULT_OPENCODE_MODEL;
+    const anthropicModel =
+      process.env.MIXED_PROVIDER_TEAM_ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
+    const codexModel = process.env.MIXED_PROVIDER_TEAM_CODEX_MODEL?.trim() || DEFAULT_CODEX_MODEL;
+    const codexEffort =
+      (process.env.MIXED_PROVIDER_TEAM_CODEX_EFFORT?.trim() as
+        | 'low'
+        | 'medium'
+        | 'high'
+        | 'xhigh'
+        | undefined) || 'low';
+    const openCodeModel =
+      process.env.MIXED_PROVIDER_TEAM_OPENCODE_MODEL?.trim() || DEFAULT_OPENCODE_MODEL;
 
-      const [
-        { ProviderConnectionService },
-        { createCodexAccountFeature },
-      ] = await Promise.all([
-        import('../../../../src/main/services/runtime/ProviderConnectionService'),
-        import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
-      ]);
+    const [{ ProviderConnectionService }, { createCodexAccountFeature }] = await Promise.all([
+      import('../../../../src/main/services/runtime/ProviderConnectionService'),
+      import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
+    ]);
 
-      codexAccountFeature = createCodexAccountFeature({
-        logger: {
-          info: () => undefined,
-          warn: () => undefined,
-          error: () => undefined,
-        },
-        configManager: {
-          getConfig: () => ({
-            providerConnections: {
-              codex: {
-                preferredAuthMode: 'chatgpt' as const,
-              },
+    codexAccountFeature = createCodexAccountFeature({
+      logger: {
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      },
+      configManager: {
+        getConfig: () => ({
+          providerConnections: {
+            codex: {
+              preferredAuthMode: 'chatgpt' as const,
             },
-          }),
-        },
-      });
-      providerConnectionService = ProviderConnectionService.getInstance();
-      providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+          },
+        }),
+      },
+    });
+    providerConnectionService = ProviderConnectionService.getInstance();
+    providerConnectionService.setCodexAccountFeature(codexAccountFeature);
 
-      harness = await createOpenCodeLiveHarness({
-        tempDir,
-        selectedModel: openCodeModel,
-        projectPath,
-      });
+    harness = await createOpenCodeLiveHarness({
+      tempDir,
+      selectedModel: openCodeModel,
+      projectPath,
+    });
 
-      teamName = `mixed-provider-live-${Date.now()}`;
-      const progressEvents: TeamProvisioningProgress[] = [];
+    teamName = `mixed-provider-live-${Date.now()}`;
+    const progressEvents: TeamProvisioningProgress[] = [];
 
-      await harness.svc.createTeam(
-        {
-          teamName,
-          cwd: projectPath,
-          providerId: 'anthropic',
-          model: anthropicModel,
-          skipPermissions: true,
-          prompt: 'Keep the team idle after bootstrap. Do not start extra work.',
-          members: [
-            {
-              name: 'alice',
-              role: 'Developer',
-              providerId: 'anthropic',
-              model: anthropicModel,
-            },
-            {
-              name: 'cody',
-              role: 'Developer',
-              providerId: 'codex',
-              model: codexModel,
-              effort: codexEffort,
-            },
-            {
-              name: 'oscar',
-              role: 'Developer',
-              providerId: 'opencode',
-              model: openCodeModel,
-            },
-          ],
-        },
-        (progress) => {
-          progressEvents.push(progress);
-        }
-      );
+    await harness.svc.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'anthropic',
+        model: anthropicModel,
+        skipPermissions: true,
+        prompt: 'Keep the team idle after bootstrap. Do not start extra work.',
+        members: [
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'anthropic',
+            model: anthropicModel,
+          },
+          {
+            name: 'cody',
+            role: 'Developer',
+            providerId: 'codex',
+            model: codexModel,
+            effort: codexEffort,
+          },
+          {
+            name: 'oscar',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: openCodeModel,
+          },
+        ],
+      },
+      (progress) => {
+        progressEvents.push(progress);
+      }
+    );
 
-      await waitUntil(async () => {
-        const last = progressEvents.at(-1);
-        if (last?.state === 'failed') {
-          throw new Error(formatProgressDump(progressEvents));
-        }
-        return last?.state === 'ready';
-      }, 360_000);
+    await waitUntil(async () => {
+      const last = progressEvents.at(-1);
+      if (last?.state === 'failed') {
+        throw new Error(formatProgressDump(progressEvents));
+      }
+      return last?.state === 'ready';
+    }, 360_000);
 
-      await waitUntilWithDiagnostics(async () => {
+    await waitUntilWithDiagnostics(
+      async () => {
         const status = await harness!.svc.getMemberSpawnStatuses(teamName!);
         if (status.teamLaunchState === 'partial_failure') {
           throw new Error(await formatMixedLaunchDiagnostics(harness!, teamName!, progressEvents));
@@ -283,9 +280,13 @@ liveDescribe('Mixed provider team launch live e2e', () => {
           }
         }
         return true;
-      }, 180_000, () => formatMixedLaunchDiagnostics(harness!, teamName!, progressEvents));
+      },
+      180_000,
+      () => formatMixedLaunchDiagnostics(harness!, teamName!, progressEvents)
+    );
 
-      await waitUntilWithDiagnostics(async () => {
+    await waitUntilWithDiagnostics(
+      async () => {
         const snapshot = await harness!.svc.getTeamAgentRuntimeSnapshot(teamName!);
         return (
           snapshot.members.alice?.providerId === 'anthropic' &&
@@ -295,41 +296,45 @@ liveDescribe('Mixed provider team launch live e2e', () => {
           snapshot.members.oscar?.providerId === 'opencode' &&
           snapshot.members.oscar.alive === true
         );
-      }, 180_000, () => formatMixedLaunchDiagnostics(harness!, teamName!, progressEvents));
+      },
+      180_000,
+      () => formatMixedLaunchDiagnostics(harness!, teamName!, progressEvents)
+    );
 
-      const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
-      expect(
-        Object.entries(laneIndex.lanes).some(
-          ([laneId, lane]) => lane.state === 'active' && laneId === 'secondary:opencode:oscar'
-        )
-      ).toBe(true);
+    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+    expect(
+      Object.entries(laneIndex.lanes).some(
+        ([laneId, lane]) => lane.state === 'active' && laneId === 'secondary:opencode:oscar'
+      )
+    ).toBe(true);
 
-      await cleanupMixedProviderSmokeTeam(harness, teamName);
+    await cleanupMixedProviderSmokeTeam(harness, teamName);
 
-      const relaunchProgressEvents: TeamProvisioningProgress[] = [];
-      await harness.svc.launchTeam(
-        {
-          teamName,
-          cwd: projectPath,
-          providerId: 'anthropic',
-          model: anthropicModel,
-          skipPermissions: true,
-          clearContext: true,
-        },
-        (progress) => {
-          relaunchProgressEvents.push(progress);
-        }
-      );
+    const relaunchProgressEvents: TeamProvisioningProgress[] = [];
+    await harness.svc.launchTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'anthropic',
+        model: anthropicModel,
+        skipPermissions: true,
+        clearContext: true,
+      },
+      (progress) => {
+        relaunchProgressEvents.push(progress);
+      }
+    );
 
-      await waitUntil(async () => {
-        const last = relaunchProgressEvents.at(-1);
-        if (last?.state === 'failed') {
-          throw new Error(formatProgressDump(relaunchProgressEvents));
-        }
-        return last?.state === 'ready';
-      }, 360_000);
+    await waitUntil(async () => {
+      const last = relaunchProgressEvents.at(-1);
+      if (last?.state === 'failed') {
+        throw new Error(formatProgressDump(relaunchProgressEvents));
+      }
+      return last?.state === 'ready';
+    }, 360_000);
 
-      await waitUntilWithDiagnostics(async () => {
+    await waitUntilWithDiagnostics(
+      async () => {
         const status = await harness!.svc.getMemberSpawnStatuses(teamName!);
         if (status.teamLaunchState === 'partial_failure') {
           throw new Error(
@@ -347,9 +352,13 @@ liveDescribe('Mixed provider team launch live e2e', () => {
           }
         }
         return true;
-      }, 180_000, () => formatMixedLaunchDiagnostics(harness!, teamName!, relaunchProgressEvents));
+      },
+      180_000,
+      () => formatMixedLaunchDiagnostics(harness!, teamName!, relaunchProgressEvents)
+    );
 
-      await waitUntilWithDiagnostics(async () => {
+    await waitUntilWithDiagnostics(
+      async () => {
         const snapshot = await harness!.svc.getTeamAgentRuntimeSnapshot(teamName!);
         return (
           snapshot.members.alice?.providerId === 'anthropic' &&
@@ -359,17 +368,18 @@ liveDescribe('Mixed provider team launch live e2e', () => {
           snapshot.members.oscar?.providerId === 'opencode' &&
           snapshot.members.oscar.alive === true
         );
-      }, 180_000, () => formatMixedLaunchDiagnostics(harness!, teamName!, relaunchProgressEvents));
+      },
+      180_000,
+      () => formatMixedLaunchDiagnostics(harness!, teamName!, relaunchProgressEvents)
+    );
 
-      const relaunchedLaneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
-      expect(
-        Object.entries(relaunchedLaneIndex.lanes).some(
-          ([laneId, lane]) => lane.state === 'active' && laneId === 'secondary:opencode:oscar'
-        )
-      ).toBe(true);
-    },
-    480_000
-  );
+    const relaunchedLaneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+    expect(
+      Object.entries(relaunchedLaneIndex.lanes).some(
+        ([laneId, lane]) => lane.state === 'active' && laneId === 'secondary:opencode:oscar'
+      )
+    ).toBe(true);
+  }, 480_000);
 });
 
 function restoreEnv(name: string, previous: string | undefined): void {
@@ -678,7 +688,9 @@ async function waitUntilWithDiagnostics(
     }
     await new Promise((resolve) => setTimeout(resolve, pollMs));
   }
-  throw new Error(`Timed out after ${timeoutMs}ms waiting for condition.\n${await describeState()}`);
+  throw new Error(
+    `Timed out after ${timeoutMs}ms waiting for condition.\n${await describeState()}`
+  );
 }
 
 async function formatMixedLaunchDiagnostics(

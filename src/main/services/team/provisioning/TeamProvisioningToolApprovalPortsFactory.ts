@@ -79,6 +79,12 @@ export interface TeamProvisioningToolApprovalPortsFactoryDeps<
   readLaunchState: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['readLaunchState'];
   persistOpenCodeRuntimeAdapterLaunchResult: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['persistOpenCodeRuntimeAdapterLaunchResult'];
   deleteRuntimeAdapterRunByTeam: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['deleteRuntimeAdapterRunByTeam'];
+  getRuntimeAdapterRunByTeam?: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['getRuntimeAdapterRunByTeam'];
+  deleteRuntimeAdapterRunIfOwned?: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['deleteRuntimeAdapterRunIfOwned'];
+  getSecondaryRuntimeRun?: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['getSecondaryRuntimeRun'];
+  deleteSecondaryRuntimeRunIfOwned?: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['deleteSecondaryRuntimeRunIfOwned'];
+  markOpenCodeRuntimeLaneDegraded?: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['markOpenCodeRuntimeLaneDegraded'];
+  deleteAliveRunIdIfNoRuntime?: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['deleteAliveRunIdIfNoRuntime'];
   setRuntimeAdapterRunByTeam: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['setRuntimeAdapterRunByTeam'];
   setAliveRunId: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['setAliveRunId'];
   guardCommittedOpenCodeSecondaryLaneEvidence: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>['guardCommittedOpenCodeSecondaryLaneEvidence'];
@@ -157,6 +163,27 @@ export function createOpenCodeRuntimeToolApprovalAnswerPortsFromDeps<
     persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
       deps.persistOpenCodeRuntimeAdapterLaunchResult(result, input),
     deleteRuntimeAdapterRunByTeam: (teamName) => deps.deleteRuntimeAdapterRunByTeam(teamName),
+    getRuntimeAdapterRunByTeam: deps.getRuntimeAdapterRunByTeam
+      ? (teamName) => deps.getRuntimeAdapterRunByTeam?.(teamName)
+      : undefined,
+    deleteRuntimeAdapterRunIfOwned: deps.deleteRuntimeAdapterRunIfOwned
+      ? (teamName, runId) => deps.deleteRuntimeAdapterRunIfOwned?.(teamName, runId) === true
+      : undefined,
+    getSecondaryRuntimeRun: deps.getSecondaryRuntimeRun
+      ? (teamName, laneId) => deps.getSecondaryRuntimeRun?.(teamName, laneId)
+      : undefined,
+    deleteSecondaryRuntimeRunIfOwned: deps.deleteSecondaryRuntimeRunIfOwned
+      ? (teamName, laneId, runId) =>
+          deps.deleteSecondaryRuntimeRunIfOwned?.(teamName, laneId, runId) === true
+      : undefined,
+    markOpenCodeRuntimeLaneDegraded: deps.markOpenCodeRuntimeLaneDegraded
+      ? (input) => deps.markOpenCodeRuntimeLaneDegraded!(input)
+      : undefined,
+    deleteAliveRunIdIfNoRuntime: deps.deleteAliveRunIdIfNoRuntime
+      ? (teamName, trackedRunId) =>
+          deps.deleteAliveRunIdIfNoRuntime?.(teamName, trackedRunId) === true
+      : undefined,
+    logWarning: (message) => deps.logger.warn(message),
     setRuntimeAdapterRunByTeam: (teamName, runtimeRun) =>
       deps.setRuntimeAdapterRunByTeam(teamName, runtimeRun),
     setAliveRunId: (teamName, runId) => deps.setAliveRunId(teamName, runId),

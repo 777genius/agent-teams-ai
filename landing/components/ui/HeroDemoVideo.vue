@@ -1,50 +1,55 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
-import { mdiPlay } from "@mdi/js";
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { mdiPlay } from '@mdi/js';
 
 const { t } = useI18n();
 const config = useRuntimeConfig();
-const muxAccentColor = "#00f0ff";
-const muxPrimaryColor = "#e6fbff";
-const muxSecondaryColor = "#020617";
+const muxAccentColor = '#00f0ff';
+const muxPrimaryColor = '#e6fbff';
+const muxSecondaryColor = '#020617';
 
-const muxPlaybackId = computed(() => String(config.public.muxPlaybackId || "").trim());
-const videoTitle = computed(() => t("hero.demoVideoTitle"));
-const muxVideoTitle = computed(() => t("hero.demoTitle"));
+const muxPlaybackId = computed(() => String(config.public.muxPlaybackId || '').trim());
+const videoTitle = computed(() => t('hero.demoVideoTitle'));
+const muxVideoTitle = computed(() => t('hero.demoTitle'));
 const muxPlayerUrl = computed(() => {
-  if (!muxPlaybackId.value) return "";
+  if (!muxPlaybackId.value) return '';
 
   const url = new URL(`https://player.mux.com/${encodeURIComponent(muxPlaybackId.value)}`);
-  url.searchParams.set("accent-color", muxAccentColor);
-  url.searchParams.set("primary-color", muxPrimaryColor);
-  url.searchParams.set("secondary-color", muxSecondaryColor);
-  url.searchParams.set("metadata-video-id", "agent-teams-demo");
-  url.searchParams.set("metadata-video-title", muxVideoTitle.value);
-  url.searchParams.set("metadata-player-name", "Landing hero");
-  url.searchParams.set("title", muxVideoTitle.value);
-  url.searchParams.set("video-title", muxVideoTitle.value);
+  url.searchParams.set('accent-color', muxAccentColor);
+  url.searchParams.set('primary-color', muxPrimaryColor);
+  url.searchParams.set('secondary-color', muxSecondaryColor);
+  url.searchParams.set('metadata-video-id', 'agent-teams-demo');
+  url.searchParams.set('metadata-video-title', muxVideoTitle.value);
+  url.searchParams.set('metadata-player-name', 'Landing hero');
+  url.searchParams.set('title', muxVideoTitle.value);
+  url.searchParams.set('video-title', muxVideoTitle.value);
   return url.toString();
 });
 const muxPosterUrl = computed(() => {
-  if (!muxPlaybackId.value) return "";
+  if (!muxPlaybackId.value) return '';
 
-  const url = new URL(`https://image.mux.com/${encodeURIComponent(muxPlaybackId.value)}/thumbnail.webp`);
-  url.searchParams.set("time", "0.1");
-  url.searchParams.set("width", "900");
-  url.searchParams.set("fit_mode", "preserve");
+  const url = new URL(
+    `https://image.mux.com/${encodeURIComponent(muxPlaybackId.value)}/thumbnail.webp`,
+  );
+  url.searchParams.set('time', '0.1');
+  url.searchParams.set('width', '900');
+  url.searchParams.set('fit_mode', 'preserve');
   return url.toString();
 });
 const isLoaded = ref(false);
 const hasError = ref(false);
 const isMobileViewport = ref(false);
 const playerActivated = ref(false);
-const shouldShowMobilePoster = computed(() => (
-  Boolean(muxPlayerUrl.value) &&
+const shouldShowMobilePoster = computed(
+  () =>
+    Boolean(muxPlayerUrl.value) &&
     !hasError.value &&
     isMobileViewport.value &&
-    !playerActivated.value
-));
-const shouldShowPlayer = computed(() => Boolean(muxPlayerUrl.value) && !hasError.value && !shouldShowMobilePoster.value);
+    !playerActivated.value,
+);
+const shouldShowPlayer = computed(
+  () => Boolean(muxPlayerUrl.value) && !hasError.value && !shouldShowMobilePoster.value,
+);
 
 let loadFallbackTimer: ReturnType<typeof setTimeout> | null = null;
 let mobileQuery: MediaQueryList | null = null;
@@ -75,14 +80,14 @@ function activatePlayer() {
 }
 
 onMounted(() => {
-  mobileQuery = window.matchMedia("(max-width: 700px)");
+  mobileQuery = window.matchMedia('(max-width: 700px)');
   syncMobileViewport();
-  mobileQuery.addEventListener("change", syncMobileViewport);
+  mobileQuery.addEventListener('change', syncMobileViewport);
   loadFallbackTimer = setTimeout(markLoaded, 2500);
 });
 
 onUnmounted(() => {
-  mobileQuery?.removeEventListener("change", syncMobileViewport);
+  mobileQuery?.removeEventListener('change', syncMobileViewport);
   clearLoadFallback();
 });
 </script>
@@ -117,7 +122,7 @@ onUnmounted(() => {
           <div class="hero-video__skeleton-pulse" />
           <div class="hero-video__skeleton-content">
             <div class="hero-video__skeleton-spinner" />
-            <span class="hero-video__skeleton-label">{{ t("hero.watchDemo") }}</span>
+            <span class="hero-video__skeleton-label">{{ t('hero.watchDemo') }}</span>
           </div>
         </div>
       </template>
@@ -127,27 +132,31 @@ onUnmounted(() => {
       v-if="shouldShowMobilePoster"
       type="button"
       class="hero-video__poster"
-      :style="{ '--hero-video-poster': muxPosterUrl ? `url(${muxPosterUrl})` : 'url(/screenshots/2.jpg)' }"
+      :style="{
+        '--hero-video-poster': muxPosterUrl
+          ? `url(${muxPosterUrl})`
+          : 'url(/screenshots/previews/2.webp)',
+      }"
       :aria-label="videoTitle"
       @click="activatePlayer"
     >
       <span class="hero-video__poster-play">
         <v-icon :icon="mdiPlay" size="40" />
       </span>
-      <span class="hero-video__poster-label">{{ t("hero.watchDemo") }}</span>
+      <span class="hero-video__poster-label">{{ t('hero.watchDemo') }}</span>
     </button>
 
     <div v-if="!isLoaded && !hasError && shouldShowPlayer" class="hero-video__skeleton">
       <div class="hero-video__skeleton-pulse" />
       <div class="hero-video__skeleton-content">
         <div class="hero-video__skeleton-spinner" />
-        <span class="hero-video__skeleton-label">{{ t("hero.watchDemo") }}</span>
+        <span class="hero-video__skeleton-label">{{ t('hero.watchDemo') }}</span>
       </div>
     </div>
 
     <div v-if="hasError || !muxPlayerUrl" class="hero-video__error">
       <v-icon :icon="mdiPlay" size="36" class="hero-video__error-icon" />
-      <span class="hero-video__error-text">{{ t("hero.videoUnavailable") }}</span>
+      <span class="hero-video__error-text">{{ t('hero.videoUnavailable') }}</span>
     </div>
 
     <div class="hero-video__scan" aria-hidden="true" />
@@ -183,7 +192,7 @@ onUnmounted(() => {
 
 .hero-video::before,
 .hero-video::after {
-  content: "";
+  content: '';
   position: absolute;
   pointer-events: none;
   z-index: 4;
@@ -202,7 +211,13 @@ onUnmounted(() => {
   inset: 0;
   background:
     linear-gradient(90deg, transparent 0 7%, rgba(0, 240, 255, 0.1) 7.2% 7.55%, transparent 7.8%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 18%, transparent 78%, rgba(0, 240, 255, 0.1));
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.1),
+      transparent 18%,
+      transparent 78%,
+      rgba(0, 240, 255, 0.1)
+    );
   mix-blend-mode: screen;
   opacity: 0.32;
 }
@@ -219,7 +234,13 @@ onUnmounted(() => {
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(135deg, rgba(0, 240, 255, 0.14), transparent 28%, transparent 68%, rgba(255, 43, 255, 0.16)),
+    linear-gradient(
+      135deg,
+      rgba(0, 240, 255, 0.14),
+      transparent 28%,
+      transparent 68%,
+      rgba(255, 43, 255, 0.16)
+    ),
     radial-gradient(circle at 50% 50%, transparent 58%, rgba(0, 0, 0, 0.34));
   mix-blend-mode: screen;
   opacity: 0.74;
@@ -240,7 +261,13 @@ onUnmounted(() => {
   right: 18px;
   z-index: 6;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--hero-video-cyan), var(--hero-video-magenta), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--hero-video-cyan),
+    var(--hero-video-magenta),
+    transparent
+  );
   box-shadow: 0 0 16px rgba(0, 240, 255, 0.45);
   opacity: 0.9;
 }
@@ -330,7 +357,7 @@ onUnmounted(() => {
 }
 
 .hero-video__poster::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   background:
@@ -365,7 +392,7 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: 800;
   color: rgba(0, 240, 255, 0.9);
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   text-shadow: 0 0 16px rgba(0, 240, 255, 0.42);
@@ -385,7 +412,7 @@ onUnmounted(() => {
 
 .hero-video__skeleton::before,
 .hero-video__skeleton::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -395,7 +422,7 @@ onUnmounted(() => {
   background:
     linear-gradient(90deg, rgba(2, 6, 16, 0.18), rgba(2, 6, 16, 0.36)),
     linear-gradient(180deg, rgba(0, 234, 255, 0.08), rgba(255, 43, 255, 0.08)),
-    url("/screenshots/2.jpg") center / cover;
+    url('/screenshots/previews/2.webp') center / cover;
   opacity: 0.82;
   filter: saturate(0.98) contrast(1.14) brightness(0.72);
   transform: scale(1.035);
@@ -403,7 +430,12 @@ onUnmounted(() => {
 
 .hero-video__skeleton::after {
   background:
-    linear-gradient(90deg, transparent 0 48%, rgba(0, 234, 255, 0.14) 48.2% 48.6%, transparent 48.8%),
+    linear-gradient(
+      90deg,
+      transparent 0 48%,
+      rgba(0, 234, 255, 0.14) 48.2% 48.6%,
+      transparent 48.8%
+    ),
     repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 4px);
   mix-blend-mode: screen;
   opacity: 0.34;
@@ -447,7 +479,7 @@ onUnmounted(() => {
   font-size: 13px;
   font-weight: 800;
   color: rgba(0, 240, 255, 0.88);
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   text-shadow: 0 0 16px rgba(0, 240, 255, 0.42);
@@ -455,12 +487,18 @@ onUnmounted(() => {
 
 @keyframes skeletonPulse {
   0%,
-  100% { opacity: 0.3; }
-  50% { opacity: 0.8; }
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 @keyframes spinnerRotate {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .hero-video__error {
@@ -474,8 +512,7 @@ onUnmounted(() => {
   gap: 12px;
   padding: 32px;
   background:
-    linear-gradient(135deg, rgba(0, 234, 255, 0.08), rgba(255, 43, 255, 0.05)),
-    rgba(2, 6, 16, 0.94);
+    linear-gradient(135deg, rgba(0, 234, 255, 0.08), rgba(255, 43, 255, 0.05)), rgba(2, 6, 16, 0.94);
 }
 
 .hero-video__error-icon {
@@ -485,7 +522,7 @@ onUnmounted(() => {
 .hero-video__error-text {
   font-size: 13px;
   color: #8892b0;
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   text-align: center;
 }
 

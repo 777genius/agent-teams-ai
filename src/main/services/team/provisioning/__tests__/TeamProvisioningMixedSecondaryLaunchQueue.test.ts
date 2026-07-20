@@ -16,6 +16,7 @@ import type { PersistedTeamLaunchPhase, PersistedTeamLaunchSnapshot } from '@sha
 
 interface TestRun extends MixedSecondaryLaunchQueueRun {
   teamName: string;
+  request: { cwd: string };
   cancelRequested: boolean;
   processKilled: boolean;
   mixedSecondaryLanes: MixedSecondaryRuntimeLaneState[];
@@ -41,6 +42,7 @@ function createLane(
 function createRun(input: Partial<TestRun> = {}): TestRun {
   return {
     teamName: 'team-a',
+    request: { cwd: '/workspace/root' },
     cancelRequested: false,
     processKilled: false,
     mixedSecondaryLanes: [],
@@ -209,6 +211,75 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
 
     expect(lane.state).toBe('launching');
     expect(ports.launchSingleMixedSecondaryLane).toHaveBeenCalledWith(run, lane);
+  });
+
+  it('caches shared preflight failures by resolved cwd and finishes only matching skipped lanes', async () => {
+    const rootFailure = 'Failed to query OpenCode models: request timed out';
+    const first = createLane({
+      laneId: 'secondary:opencode:first',
+      member: { name: 'First', providerId: 'opencode', cwd: '/workspace/root' },
+    });
+    const sameProject = createLane({
+      laneId: 'secondary:opencode:same',
+      member: { name: 'Same', providerId: 'opencode', cwd: '/workspace/root/./' },
+    });
+    const healthySibling = createLane({
+      laneId: 'secondary:opencode:healthy',
+      member: { name: 'Healthy', providerId: 'opencode', cwd: '/workspace/other' },
+    });
+    const run = createRun({ mixedSecondaryLanes: [first, sameProject, healthySibling] });
+    const launchSingleMixedSecondaryLane = vi.fn<
+      MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']
+    >(async (_run, lane) => {
+      lane.state = 'finished';
+      lane.result =
+        lane === first
+          ? createFailureResult({
+              runId: lane.runId!,
+              teamName: run.teamName,
+              memberName: lane.member.name,
+              message: rootFailure,
+            })
+          : {
+              runId: lane.runId!,
+              teamName: run.teamName,
+              launchPhase: 'finished',
+              teamLaunchState: 'clean_success',
+              members: {},
+              warnings: [],
+              diagnostics: [],
+            };
+    });
+    const ports = createPorts({ launchSingleMixedSecondaryLane });
+
+    await launchMixedSecondaryLaneIfNeeded(run, ports, { waitForCompletion: true });
+
+    expect(launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(2);
+    expect(launchSingleMixedSecondaryLane).toHaveBeenNthCalledWith(1, run, first);
+    expect(launchSingleMixedSecondaryLane).toHaveBeenNthCalledWith(2, run, healthySibling);
+    expect(sameProject).toMatchObject({
+      state: 'finished',
+      result: {
+        launchPhase: 'finished',
+        teamLaunchState: 'partial_failure',
+        members: {
+          Same: {
+            launchState: 'failed_to_start',
+            hardFailure: true,
+          },
+        },
+      },
+    });
+    expect(sameProject.diagnostics).toEqual([
+      rootFailure,
+      expect.stringContaining(
+        'This lane was not attempted because it uses the same project runtime.'
+      ),
+    ]);
+    expect(run.mixedSecondarySharedRuntimeFailuresByProject).toEqual(
+      new Map([['/workspace/root', rootFailure]])
+    );
+    expect(ports.publishMixedSecondaryLaneStatusChange).toHaveBeenCalledWith(run, sameProject);
   });
 
   it('cleans up and finishes a canceled queued lane before launch', async () => {

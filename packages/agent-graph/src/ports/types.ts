@@ -119,6 +119,8 @@ export interface GraphNode {
   semanticSummary?: string;
   /** Earliest semantic zoom level where a task card remains visible. */
   taskZoomVisibility?: 'overview' | 'summary' | 'detail';
+  /** Visual treatment for a task that remains visible at overview zoom. */
+  taskOverviewStyle?: 'badge' | 'card';
   /** Hierarchy depth used to progressively reveal aggregate nodes at overview scale. */
   hierarchyDepth?: number;
 

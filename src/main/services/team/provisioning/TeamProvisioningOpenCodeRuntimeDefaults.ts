@@ -58,11 +58,6 @@ export async function materializeOpenCodeRuntimeAdapterDefaults<
         .filter((model): model is string => Boolean(model))
     ),
   ];
-  if (!explicitRootModel && memberModels.length > 1) {
-    throw new Error(
-      'OpenCode runtime adapter launch supports one selected model per lane. Select one team model or align OpenCode teammate models.'
-    );
-  }
   const inheritedRootModel = explicitRootModel ? undefined : memberModels[0];
   const rootModel = explicitRootModel ?? inheritedRootModel;
   const needsMemberModel = effectiveOpenCodeMembers.some((member) => !member.model?.trim());

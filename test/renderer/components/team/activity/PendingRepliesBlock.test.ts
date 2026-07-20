@@ -68,10 +68,18 @@ describe('PendingRepliesBlock', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Gemini quota retry · 45s');
-    expect(host.textContent).toContain('1 minute ago');
+    expect(host.textContent).toContain('Gemini quota retry');
+    expect(host.textContent).toContain('1m');
+    expect(host.textContent).not.toContain('1 minute ago');
+    expect(host.textContent).not.toContain('Reviewer');
     const retryElement = host.querySelector('[title*="Gemini quota exhausted"]');
     expect(retryElement).not.toBeNull();
+    const coloredName = Array.from(host.querySelectorAll<HTMLElement>('span')).find(
+      (element) => element.textContent === 'alice' && element.style.color !== ''
+    );
+    expect(coloredName).toBeDefined();
+    expect(coloredName?.style.backgroundColor).toBe('');
+    expect(coloredName?.style.border).toBe('');
 
     await act(async () => {
       root.unmount();
@@ -101,8 +109,9 @@ describe('PendingRepliesBlock', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Gemini quota retry · 45s');
-    expect(host.textContent).toContain('1 minute ago');
+    expect(host.textContent).toContain('Gemini quota retry');
+    expect(host.textContent).toContain('1m');
+    expect(host.textContent).not.toContain('1 minute ago');
 
     await act(async () => {
       root.render(
@@ -117,7 +126,8 @@ describe('PendingRepliesBlock', () => {
 
     expect(host.textContent).toContain('Gemini quota retry');
     expect(host.textContent).not.toContain('Gemini quota retry ·');
-    expect(host.textContent).toContain('2 minutes ago');
+    expect(host.textContent).toContain('2m');
+    expect(host.textContent).not.toContain('2 minutes ago');
 
     await act(async () => {
       root.unmount();
@@ -197,9 +207,9 @@ describe('PendingRepliesBlock', () => {
       root.render(
         React.createElement(PendingRepliesBlock, {
           members: [plainMember],
+          nowMs: Date.parse('2026-04-09T10:00:00.000Z'),
           messages: [message],
           isTeamAlive: false,
-          nowMs: Date.parse('2026-04-09T10:00:00.000Z'),
           pendingRepliesByMember,
         })
       );
@@ -211,9 +221,9 @@ describe('PendingRepliesBlock', () => {
       root.render(
         React.createElement(PendingRepliesBlock, {
           members: [plainMember],
+          nowMs: Date.parse('2026-04-09T10:00:00.000Z'),
           messages: [message],
           isTeamAlive: true,
-          nowMs: Date.parse('2026-04-09T10:00:00.000Z'),
           pendingRepliesByMember,
         })
       );
@@ -225,9 +235,9 @@ describe('PendingRepliesBlock', () => {
       root.render(
         React.createElement(PendingRepliesBlock, {
           members: [plainMember],
+          nowMs: Date.parse('2026-04-09T10:00:00.000Z'),
           messages: [{ ...message, read: true }],
           isTeamAlive: true,
-          nowMs: Date.parse('2026-04-09T10:00:00.000Z'),
           pendingRepliesByMember,
         })
       );

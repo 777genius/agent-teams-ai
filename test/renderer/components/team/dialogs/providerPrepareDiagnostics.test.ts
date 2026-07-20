@@ -97,11 +97,13 @@ describe('runProviderPrepareDiagnostics', () => {
   });
 
   it('passes selected model effort checks through compatibility preflight', async () => {
-    const prepareProvisioning = vi.fn(async (): Promise<TeamProvisioningPrepareResult> => ({
-      ready: true,
-      message: 'ready',
-      details: ['Selected model claude-opus-4-6[1m] is available for launch.'],
-    }));
+    const prepareProvisioning = vi.fn(
+      async (): Promise<TeamProvisioningPrepareResult> => ({
+        ready: true,
+        message: 'ready',
+        details: ['Selected model claude-opus-4-6[1m] is available for launch.'],
+      })
+    );
 
     const result = await runProviderPrepareDiagnostics({
       cwd: '/tmp/project',
@@ -372,6 +374,88 @@ describe('runProviderPrepareDiagnostics', () => {
     );
   });
 
+  it('does not present a local OpenCode response probe as team tool verification', async () => {
+    const prepareProvisioning = vi.fn(
+      (
+        _cwd?: string,
+        _providerId?: TeamProviderId,
+        _providerIds?: TeamProviderId[],
+        selectedModels?: string[],
+        _limitContext?: boolean,
+        modelVerificationMode?: 'compatibility' | 'deep'
+      ): Promise<TeamProvisioningPrepareResult> => {
+        expect(selectedModels).toEqual(['ollama/qwen2.5:0.5b']);
+        return Promise.resolve(
+          modelVerificationMode === 'compatibility'
+            ? {
+                ready: true,
+                message: 'CLI is ready to launch',
+                details: [
+                  'Selected model ollama/qwen2.5:0.5b is compatible. Deep verification pending.',
+                ],
+              }
+            : {
+                ready: true,
+                message: 'CLI is ready to launch',
+                details: ['Selected model ollama/qwen2.5:0.5b verified for launch.'],
+              }
+        );
+      }
+    );
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      selectedModelIds: ['ollama/qwen2.5:0.5b'],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('notes');
+    expect(result.details).toContain('qwen2.5:0.5b - response verified; team tools not tested');
+    expect(result.warnings).toContain('qwen2.5:0.5b - response verified; team tools not tested');
+  });
+
+  it('presents a local model as ready after explicit Agent Teams coordination proof', async () => {
+    const prepareProvisioning = vi.fn(
+      (
+        _cwd?: string,
+        _providerId?: TeamProviderId,
+        _providerIds?: TeamProviderId[],
+        _selectedModels?: string[],
+        _limitContext?: boolean,
+        modelVerificationMode?: 'compatibility' | 'deep'
+      ): Promise<TeamProvisioningPrepareResult> =>
+        Promise.resolve(
+          modelVerificationMode === 'compatibility'
+            ? {
+                ready: true,
+                message: 'CLI is ready to launch',
+                details: [
+                  'Selected model ollama/qwen3:8b is compatible. Deep verification pending.',
+                ],
+              }
+            : {
+                ready: true,
+                message: 'CLI is ready to launch',
+                details: [
+                  'Selected model ollama/qwen3:8b verified for launch with Agent Teams tool coordination.',
+                ],
+              }
+        )
+    );
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      selectedModelIds: ['ollama/qwen3:8b'],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('ready');
+    expect(result.details).toContain('qwen3:8b - response and team tools verified');
+    expect(result.warnings).toEqual([]);
+  });
+
   it('does not mislabel OpenCode runtime connectivity failures as model unavailable', async () => {
     const prepareProvisioning = vi.fn<
       (
@@ -572,8 +656,7 @@ describe('runProviderPrepareDiagnostics', () => {
     {
       modelId: 'opencode/big-pickle',
       providerError: 'Invalid API key.',
-      expected:
-        'OpenCode Zen rejected its API key. Reconnect OpenCode Zen in Plans & providers',
+      expected: 'OpenCode Zen rejected its API key. Reconnect OpenCode Zen in Plans & providers',
     },
     {
       modelId: 'openrouter/openrouter/free',
@@ -710,7 +793,9 @@ describe('runProviderPrepareDiagnostics', () => {
       'google/gemma-4-26b-a4b-it - available for launch',
     ]);
     expect(result.warnings).toEqual([]);
-    expect(result.details.join('\n')).not.toContain('verification deferred - OpenCode session is busy');
+    expect(result.details.join('\n')).not.toContain(
+      'verification deferred - OpenCode session is busy'
+    );
     expect(prepareProvisioning).toHaveBeenCalledTimes(2);
   });
 
@@ -753,9 +838,7 @@ describe('runProviderPrepareDiagnostics', () => {
     });
 
     expect(result.status).toBe('ready');
-    expect(result.details).toEqual([
-      'kimi-k2.6 - available for launch',
-    ]);
+    expect(result.details).toEqual(['kimi-k2.6 - available for launch']);
     expect(result.warnings).toEqual([]);
     expect(prepareProvisioning).toHaveBeenCalledTimes(2);
   });
@@ -963,7 +1046,7 @@ describe('runProviderPrepareDiagnostics', () => {
     expect(prepareProvisioning).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps transient OpenCode deep ping failures advisory after compatibility passed', async () => {
+  it('blocks launch when OpenCode inventory times out after compatibility passed', async () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
@@ -987,15 +1070,18 @@ describe('runProviderPrepareDiagnostics', () => {
       expect(selectedModels).toEqual(['opencode/big-pickle']);
       return Promise.resolve({
         ready: false,
-        message: 'Unable to connect. Is the computer able to access the url?',
-        details: ['Unable to connect. Is the computer able to access the url?'],
+        message: 'Failed to query OpenCode agents: OpenCode command timed out after 10000ms',
+        details: [
+          'Failed to query OpenCode agents: OpenCode command timed out after 10000ms',
+          'OpenCode request timed out after 15000ms for /config',
+        ],
         issues: [
           {
             providerId: 'opencode',
             scope: 'provider',
             severity: 'blocking',
             code: 'unknown_error',
-            message: 'Unable to connect. Is the computer able to access the url?',
+            message: 'Failed to query OpenCode agents: OpenCode command timed out after 10000ms',
           },
         ],
       });
@@ -1008,19 +1094,12 @@ describe('runProviderPrepareDiagnostics', () => {
       prepareProvisioning,
     });
 
-    expect(result.status).toBe('notes');
-    expect(result.details).toEqual(['big-pickle - ping not confirmed']);
-    expect(result.warnings).toEqual([
-      'OpenCode model ping was not confirmed. Unable to connect. Is the computer able to access the url?',
-      'big-pickle - ping not confirmed',
+    expect(result.status).toBe('failed');
+    expect(result.details).toEqual([
+      'Failed to query OpenCode agents: OpenCode command timed out after 10000ms',
     ]);
-    expect(result.modelResultsById).toEqual({
-      'opencode/big-pickle': {
-        status: 'notes',
-        line: 'big-pickle - ping not confirmed',
-        warningLine: 'big-pickle - ping not confirmed',
-      },
-    });
+    expect(result.warnings).toEqual([]);
+    expect(result.modelResultsById).toEqual({});
     expect(prepareProvisioning).toHaveBeenCalledTimes(2);
   });
 

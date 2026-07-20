@@ -14,12 +14,17 @@ export interface RuntimeProviderQuickConnectDirectoryState {
   entries: readonly RuntimeProviderDirectoryEntryDto[];
   loading: boolean;
   loaded: boolean;
+  authoritativeLoaded: boolean;
+  authoritativePending: boolean;
   error: string | null;
   refresh: () => void;
 }
 
 const INITIAL_LOAD_DELAY_MS = 200;
 const AUTHORITATIVE_LOAD_DELAY_MS = 3_000;
+const AUTHORITATIVE_RETRY_DELAYS_MS = [5_000, 10_000] as const;
+
+type DirectoryLoadOutcome = 'loaded' | 'cancelled' | 'recoverable-error' | 'terminal-error';
 
 export function useRuntimeProviderQuickConnect({
   enabled,
@@ -29,10 +34,13 @@ export function useRuntimeProviderQuickConnect({
   const requestSequence = useRef(0);
   const previousRefreshKey = useRef(refreshKey);
   const previousManualRefreshSequence = useRef(0);
+  const previousProjectScope = useRef(projectPath?.trim() ?? '');
   const hasStartedLoad = useRef(false);
   const [entries, setEntries] = useState<readonly RuntimeProviderDirectoryEntryDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [authoritativeLoaded, setAuthoritativeLoaded] = useState(false);
+  const [authoritativePending, setAuthoritativePending] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [manualRefreshSequence, setManualRefreshSequence] = useState(0);
 
@@ -54,12 +62,23 @@ export function useRuntimeProviderQuickConnect({
     previousManualRefreshSequence.current = manualRefreshSequence;
     let cancelled = false;
     let authoritativeTimeout: number | null = null;
+    const projectScope = projectPath?.trim() ?? '';
+    const projectScopeChanged = previousProjectScope.current !== projectScope;
+    previousProjectScope.current = projectScope;
+    if (projectScopeChanged) {
+      setEntries([]);
+      setLoaded(false);
+      setAuthoritativeLoaded(false);
+      setError(null);
+    }
+    setAuthoritativePending(true);
 
     const loadDirectory = async (input: {
       summary: boolean;
       refresh: boolean;
       silent: boolean;
-    }): Promise<boolean> => {
+      reportErrors?: boolean;
+    }): Promise<DirectoryLoadOutcome> => {
       if (!input.silent) {
         setLoading(true);
         setError(null);
@@ -79,33 +98,35 @@ export function useRuntimeProviderQuickConnect({
           refresh: input.refresh,
         });
         if (cancelled || requestSequence.current !== requestId) {
-          return false;
+          return 'cancelled';
         }
         if (response.error) {
-          if (!input.silent) {
+          if (!input.silent || input.reportErrors || !response.error.recoverable) {
             setError(response.error.message);
           }
-          return false;
+          return response.error.recoverable ? 'recoverable-error' : 'terminal-error';
         }
         if (!response.directory) {
-          if (!input.silent) {
+          if (!input.silent || input.reportErrors) {
             setError('Provider directory response was empty');
           }
-          return false;
+          return 'terminal-error';
         }
         setEntries(response.directory.entries);
+        setError(null);
         setLoaded(true);
-        return true;
+        setAuthoritativeLoaded(!input.summary);
+        return 'loaded';
       } catch (loadError) {
         if (cancelled || requestSequence.current !== requestId) {
-          return false;
+          return 'cancelled';
         }
-        if (!input.silent) {
+        if (!input.silent || input.reportErrors) {
           setError(
             loadError instanceof Error ? loadError.message : 'Failed to load provider status'
           );
         }
-        return false;
+        return 'recoverable-error';
       } finally {
         if (!input.silent && !cancelled && requestSequence.current === requestId) {
           setLoading(false);
@@ -113,22 +134,68 @@ export function useRuntimeProviderQuickConnect({
       }
     };
 
+    const loadAuthoritativeWithRetry = async (input: {
+      refresh: boolean;
+      silent: boolean;
+      retryIndex?: number;
+    }): Promise<void> => {
+      const retryIndex = input.retryIndex ?? 0;
+      const isFinalAttempt = retryIndex >= AUTHORITATIVE_RETRY_DELAYS_MS.length;
+      const outcome = await loadDirectory({
+        summary: false,
+        refresh: input.refresh,
+        silent: input.silent,
+        reportErrors: isFinalAttempt,
+      });
+      if (cancelled || requestSequence.current !== requestId) {
+        return;
+      }
+      if (outcome === 'loaded') {
+        setAuthoritativePending(false);
+        return;
+      }
+      if (outcome === 'cancelled') {
+        return;
+      }
+      if (outcome === 'terminal-error') {
+        setAuthoritativePending(false);
+        return;
+      }
+      const retryDelay = AUTHORITATIVE_RETRY_DELAYS_MS[retryIndex];
+      if (retryDelay === undefined) {
+        setAuthoritativePending(false);
+        return;
+      }
+      authoritativeTimeout = window.setTimeout(() => {
+        void loadAuthoritativeWithRetry({
+          refresh: true,
+          silent: true,
+          retryIndex: retryIndex + 1,
+        });
+      }, retryDelay);
+    };
+
     const loadDelay = hasStartedLoad.current ? 0 : INITIAL_LOAD_DELAY_MS;
     const timeout = window.setTimeout(() => {
       hasStartedLoad.current = true;
       if (refreshRequested) {
-        void loadDirectory({ summary: false, refresh: true, silent: false });
+        void loadAuthoritativeWithRetry({ refresh: true, silent: false });
         return;
       }
 
-      void loadDirectory({ summary: true, refresh: false, silent: false }).then((loadedSummary) => {
-        if (!loadedSummary || cancelled || requestSequence.current !== requestId) {
-          return;
+      void loadDirectory({ summary: true, refresh: false, silent: false }).then(
+        (summaryOutcome) => {
+          if (cancelled || requestSequence.current !== requestId) {
+            return;
+          }
+          authoritativeTimeout = window.setTimeout(() => {
+            void loadAuthoritativeWithRetry({
+              refresh: summaryOutcome !== 'loaded',
+              silent: summaryOutcome === 'loaded',
+            });
+          }, AUTHORITATIVE_LOAD_DELAY_MS);
         }
-        authoritativeTimeout = window.setTimeout(() => {
-          void loadDirectory({ summary: false, refresh: false, silent: true });
-        }, AUTHORITATIVE_LOAD_DELAY_MS);
-      });
+      );
     }, loadDelay);
 
     return () => {
@@ -140,5 +207,13 @@ export function useRuntimeProviderQuickConnect({
     };
   }, [enabled, manualRefreshSequence, projectPath, refreshKey]);
 
-  return { entries, loading, loaded, error, refresh };
+  return {
+    entries,
+    loading,
+    loaded,
+    authoritativeLoaded,
+    authoritativePending,
+    error,
+    refresh,
+  };
 }

@@ -449,6 +449,12 @@ describe('TeamProvisioningLaunchRuntimeStatusCompatibilityFacade', () => {
     facade.provisioningRunByTeam.set(run.teamName, run.runId);
     facade.runtimeAdapterProgressByRunId.set(run.runId, progress(run.runId, run.teamName));
 
+    expect(facade.currentOpenCodeRunId('alpha', 'primary')).toBeNull();
+
+    facade.runtimeAdapterRunByTeam.set(run.teamName, {
+      runId: run.runId,
+      providerId: 'opencode',
+    });
     expect(facade.currentOpenCodeRunId('alpha', 'primary')).toBe(run.runId);
 
     facade.secondaryRuntimeRunByTeam.set(

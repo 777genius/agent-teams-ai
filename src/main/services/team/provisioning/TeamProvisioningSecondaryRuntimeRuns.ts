@@ -310,20 +310,6 @@ export function getCurrentOpenCodeRuntimeRunId(input: {
   isCancellableRuntimeAdapterProgress(progress: TeamProvisioningProgress): boolean;
 }): string | null {
   if (input.laneId === 'primary') {
-    const trackedRun = input.trackedRunId ? input.runs.get(input.trackedRunId) : null;
-    if (trackedRun && input.shouldRouteOpenCodeToRuntimeAdapter(trackedRun.request)) {
-      return input.trackedRunId;
-    }
-    if (
-      input.trackedRunId &&
-      input.provisioningRunByTeam.get(input.teamName) === input.trackedRunId &&
-      input.runtimeAdapterProgressByRunId.has(input.trackedRunId)
-    ) {
-      const runtimeProgress = input.runtimeAdapterProgressByRunId.get(input.trackedRunId);
-      if (runtimeProgress && input.isCancellableRuntimeAdapterProgress(runtimeProgress)) {
-        return input.trackedRunId;
-      }
-    }
     const runtimeRun = input.runtimeAdapterRunByTeam.get(input.teamName);
     if (runtimeRun?.providerId === 'opencode') {
       return runtimeRun.runId;

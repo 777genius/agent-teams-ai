@@ -10,10 +10,27 @@ import {
 
 import type { ReviewUndoAction } from '@shared/types';
 
+const popoverMock = vi.hoisted(() => ({
+  current: null as null | { open: boolean; onOpenChange: (open: boolean) => void },
+}));
+
 vi.mock('@renderer/components/ui/popover', () => ({
-  Popover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Popover: ({
+    children,
+    open,
+    onOpenChange,
+  }: {
+    children: React.ReactNode;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) => {
+    popoverMock.current = { open, onOpenChange };
+    return <>{children}</>;
+  },
   PopoverContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  PopoverTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PopoverTrigger: ({ children }: { children: React.ReactNode }) => (
+    <span onClick={() => popoverMock.current?.onOpenChange(true)}>{children}</span>
+  ),
 }));
 
 function makeAction(index: number): ReviewUndoAction {
@@ -30,13 +47,47 @@ function makeAction(index: number): ReviewUndoAction {
   };
 }
 
+function openHistory(container: HTMLElement): void {
+  act(() =>
+    container.querySelector<HTMLButtonElement>('button[aria-label^="Review history:"]')?.click()
+  );
+}
+
 describe('ReviewActionHistoryPopover', () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    popoverMock.current = null;
     container = document.createElement('div');
     document.body.appendChild(container);
+  });
+
+  it('ignores a stale reopen after Undo moves the history position', () => {
+    const root = createRoot(container);
+    const older = makeAction(1);
+    const current = makeAction(2);
+    act(() => {
+      root.render(<ReviewActionHistoryPopover undoHistory={[older, current]} redoHistory={[]} />);
+    });
+
+    const staleOpen = popoverMock.current?.onOpenChange;
+    openHistory(container);
+    expect(popoverMock.current?.open).toBe(true);
+
+    act(() => {
+      root.render(<ReviewActionHistoryPopover undoHistory={[older, current]} redoHistory={[]} />);
+    });
+    expect(popoverMock.current?.open).toBe(true);
+
+    act(() => {
+      root.render(<ReviewActionHistoryPopover undoHistory={[older]} redoHistory={[]} />);
+    });
+    expect(popoverMock.current?.open).toBe(false);
+
+    act(() => staleOpen?.(true));
+    expect(popoverMock.current?.open).toBe(false);
+    act(() => root.unmount());
   });
 
   afterEach(() => {
@@ -51,6 +102,7 @@ describe('ReviewActionHistoryPopover', () => {
     act(() => {
       root.render(<ReviewActionHistoryPopover undoHistory={undoHistory} redoHistory={[]} />);
     });
+    openHistory(container);
 
     expect(container.querySelectorAll('[data-review-history-action]')).toHaveLength(12);
     const firstReveal = container.querySelector<HTMLButtonElement>(
@@ -84,6 +136,7 @@ describe('ReviewActionHistoryPopover', () => {
         />
       );
     });
+    openHistory(container);
 
     const actionButton = container.querySelector<HTMLButtonElement>(
       '[data-review-history-action="action-3"]'
@@ -110,6 +163,7 @@ describe('ReviewActionHistoryPopover', () => {
         />
       );
     });
+    openHistory(container);
 
     const currentRestore = container.querySelector<HTMLButtonElement>(
       '[data-review-history-restore="action-2"]'
@@ -159,6 +213,7 @@ describe('ReviewActionHistoryPopover', () => {
         />
       );
     });
+    openHistory(container);
 
     expect(container.querySelector('button[data-review-history-action="bulk-action"]')).toBeNull();
     expect(
@@ -208,6 +263,7 @@ describe('ReviewActionHistoryPopover', () => {
         />
       );
     });
+    openHistory(container);
 
     act(() =>
       container
@@ -245,6 +301,7 @@ describe('ReviewActionHistoryPopover', () => {
         />
       );
     });
+    openHistory(container);
 
     act(() =>
       container
@@ -290,6 +347,7 @@ describe('ReviewActionHistoryPopover', () => {
         />
       );
     });
+    openHistory(container);
 
     act(() =>
       container
@@ -349,6 +407,7 @@ describe('ReviewActionHistoryPopover', () => {
         />
       );
     });
+    openHistory(container);
     act(() =>
       container
         .querySelector<HTMLButtonElement>('[data-review-history-restore="action-1"]')
@@ -400,6 +459,7 @@ describe('ReviewActionHistoryPopover', () => {
         />
       );
     });
+    openHistory(container);
     act(() =>
       container
         .querySelector<HTMLButtonElement>('[data-review-history-restore="action-1"]')

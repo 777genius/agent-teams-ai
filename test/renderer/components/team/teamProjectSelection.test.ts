@@ -2,6 +2,7 @@ import {
   findTeamProjectSelectionTarget,
   resolveCreateTeamDefaultProjectPath,
   resolveTeamProjectSelection,
+  resolveTeamsProjectNavigationPath,
   teamMatchesProjectSelection,
 } from '@renderer/components/team/teamProjectSelection';
 import { describe, expect, it } from 'vitest';
@@ -43,6 +44,21 @@ const projects: Project[] = [
 ];
 
 describe('teamProjectSelection', () => {
+  it('keeps an explicit Teams navigation path while its project remains selected', () => {
+    expect(
+      resolveTeamsProjectNavigationPath(
+        { projectId: 'wt-headless', projectPath: '/Users/test/headless' },
+        'wt-headless'
+      )
+    ).toBe('/Users/test/headless');
+    expect(
+      resolveTeamsProjectNavigationPath(
+        { projectId: 'wt-headless', projectPath: '/Users/test/headless' },
+        'project-standalone'
+      )
+    ).toBeNull();
+  });
+
   it('resolves selected grouped worktree path', () => {
     expect(
       resolveTeamProjectSelection({

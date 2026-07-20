@@ -7,6 +7,7 @@ import {
 } from '../TeamProvisioningPrepareCoordinator';
 import { createProbeCacheKey } from '../TeamProvisioningProviderPreflight';
 
+import type { TeamLaunchRuntimeAdapter } from '../../runtime';
 import type {
   CachedProbeResult,
   ProbeResult,
@@ -257,6 +258,77 @@ describe('TeamProvisioningPrepareCoordinator', () => {
       expect.objectContaining({ ready: true }),
     ]);
     expect(verifySelectedProviderModels).toHaveBeenCalledOnce();
+  });
+
+  it('blocks selected local models that fail the injected runtime-readiness gate', async () => {
+    const prepare = vi.fn().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'ollama/qwen3:4b',
+      diagnostics: [],
+      warnings: [],
+    });
+    const inspectOpenCodeLocalModelRuntime = vi.fn().mockResolvedValue({
+      providerId: 'ollama',
+      modelId: 'qwen3:4b',
+      presetId: 'ollama',
+      toolCapable: false,
+      parameterCount: 4_000_000_000,
+      trainedContextTokens: 32_768,
+      configuredContextTokens: 4_096,
+      effectiveContextTokens: 4_096,
+      coordinationProbeStatus: 'failed',
+      severity: 'blocking',
+      code: 'local_tools_unsupported',
+      message: 'The selected local model does not support tools.',
+    });
+    const coordinator = createCoordinator({
+      getOpenCodeRuntimeAdapter: () => ({ prepare }) as unknown as TeamLaunchRuntimeAdapter,
+      inspectOpenCodeLocalModelRuntime,
+    });
+
+    const result = await coordinator.prepareForProvisioning('/workspace/local-model', {
+      providerId: 'opencode',
+      modelIds: ['ollama/qwen3:4b'],
+      modelVerificationMode: 'deep',
+    });
+
+    expect(inspectOpenCodeLocalModelRuntime).toHaveBeenCalledWith({
+      projectPath: '/workspace/local-model',
+      modelRoute: 'ollama/qwen3:4b',
+    });
+    expect(prepare).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      ready: false,
+      issues: [
+        expect.objectContaining({
+          providerId: 'opencode',
+          modelId: 'ollama/qwen3:4b',
+          severity: 'blocking',
+          code: 'local_tools_unsupported',
+        }),
+      ],
+    });
+    expect(result.details).toContain(
+      'Selected model ollama/qwen3:4b is unavailable. The selected local model does not support tools.'
+    );
+  });
+
+  it('treats quota retry one-shot diagnostics as blocking readiness failures', async () => {
+    const runProviderOneShotDiagnostic = vi.fn().mockResolvedValue({
+      warning: 'Usage limit reached; retry after the quota resets.',
+    });
+    const coordinator = createCoordinator({ runProviderOneShotDiagnostic });
+
+    const result = await coordinator.prepareForProvisioning('/workspace/quota-block', {
+      providerId: 'codex',
+      modelVerificationMode: 'deep',
+    });
+
+    expect(runProviderOneShotDiagnostic).toHaveBeenCalledOnce();
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe('Usage limit reached; retry after the quota resets.');
+    expect(result.warnings).toEqual(['Usage limit reached; retry after the quota resets.']);
   });
 
   it('clears one probe cache entry per requested provider when forceFresh is set', async () => {

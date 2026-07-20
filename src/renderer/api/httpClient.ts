@@ -1431,6 +1431,12 @@ export class HttpAPIClient implements ElectronAPI {
     clearDecisions: async (): Promise<never> => {
       throw new Error('Review is not available in browser mode');
     },
+    loadDecisionConflictCandidates: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    resolveDecisionConflictCandidate: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
     loadDraftHistory: async (): Promise<never> => {
       throw new Error('Review is not available in browser mode');
     },
@@ -1438,6 +1444,15 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Review is not available in browser mode');
     },
     clearDraftHistory: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    loadDraftHistoryConflictCandidates: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    resolveDraftHistoryConflictCandidate: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    replaceDraftHistoryConflictCandidate: async (): Promise<never> => {
       throw new Error('Review is not available in browser mode');
     },
     // Phase 4 stubs

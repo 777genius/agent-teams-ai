@@ -123,8 +123,14 @@ export interface OpenCodeMemberInboxDelivery {
 export interface OpenCodeMemberDirectory {
   config: TeamConfig | null;
   teamMeta: {
-    launchIdentity?: { providerId?: unknown } | null;
+    launchIdentity?: {
+      providerId?: unknown;
+      selectedModel?: unknown;
+      resolvedLaunchModel?: unknown;
+    } | null;
     providerId?: unknown;
+    model?: unknown;
+    cwd?: unknown;
   } | null;
   metaMembers: TeamMember[];
 }

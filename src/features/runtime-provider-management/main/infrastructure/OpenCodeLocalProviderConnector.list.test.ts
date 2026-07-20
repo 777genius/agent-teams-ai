@@ -107,6 +107,54 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
     expect(response.configPath).toBe(path.join(await fs.realpath(projectPath), 'opencode.json'));
   });
 
+  it('filters by provider id before probing so custom local detection stays cheap', async () => {
+    const projectPath = path.join(tempDir, 'filtered-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'opencode.json'),
+      JSON.stringify({
+        provider: {
+          'local-lab': {
+            npm: '@ai-sdk/openai-compatible',
+            options: { baseURL: 'http://127.0.0.1:18080/v1' },
+            models: { 'team-model': {} },
+          },
+          ollama: {
+            npm: '@ai-sdk/openai-compatible',
+            options: { baseURL: 'http://127.0.0.1:11434/v1' },
+            models: { 'qwen3:8b': {} },
+          },
+        },
+      }),
+      'utf8'
+    );
+    const requestedUrls: string[] = [];
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl: (async (input: string | URL | Request) => {
+        requestedUrls.push(String(input));
+        return new Response(JSON.stringify({ data: [{ id: 'team-model' }] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }) as typeof fetch,
+    });
+
+    const response = await connector.listLocalProviders({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+      providerId: 'local-lab',
+    });
+
+    expect(response.providers).toEqual([
+      expect.objectContaining({
+        providerId: 'local-lab',
+        state: 'available',
+      }),
+    ]);
+    expect(requestedUrls).toEqual(['http://127.0.0.1:18080/v1/models']);
+  });
+
   it('lists providers from the global config without requiring a project', async () => {
     const globalConfigDirectory = path.join(tempDir, '.config', 'opencode');
     await fs.mkdir(globalConfigDirectory, { recursive: true });

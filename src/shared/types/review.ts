@@ -246,6 +246,38 @@ export interface ReviewPersistedStateSnapshot {
   reviewRedoHistory: ReviewRedoAction[];
 }
 
+/** Save acknowledgement that can reconcile a response-loss retry with a newer canonical suffix. */
+export interface SaveReviewDecisionsResult {
+  revision: number;
+  reconciledState?: ReviewPersistedStateSnapshot;
+}
+
+/** Durable renderer branch preserved after a decision CAS conflict. */
+export interface ReviewDecisionConflictCandidate {
+  id: string;
+  capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
+  expectedRevision: number;
+  observedCurrentRevision: number;
+  state: ReviewPersistedStateSnapshot;
+}
+
+/** Metadata-only renderer view; full recovery state never crosses IPC until selected. */
+export interface ReviewDecisionConflictCandidateSummary {
+  id: string;
+  capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
+  recoverability: 'recoverable' | 'different-review-snapshot';
+  expectedRevision: number;
+  observedCurrentRevision: number;
+  hunkDecisionCount: number;
+  fileDecisionCount: number;
+  undoDepth: number;
+  redoDepth: number;
+}
+
+export type ReviewConflictResolution = 'recover-candidate' | 'keep-current';
+
 /** Complete inverse decision state carried by a durable review action. */
 export interface ReviewDecisionSnapshot {
   hunkDecisions: Record<string, HunkDecision>;

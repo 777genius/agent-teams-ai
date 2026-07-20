@@ -494,6 +494,13 @@ describe('TeamLaunchFailureArtifactPack', () => {
       code: 'provider_auth',
     },
     {
+      name: 'OpenCode runtime inventory timeout',
+      text:
+        'Failed to query OpenCode agents: OpenCode command timed out after 10000ms; ' +
+        'OpenCode raw model id "zai-coding-plan/glm-5.1" was not found in live provider catalog',
+      code: 'opencode_runtime_readiness_timeout',
+    },
+    {
       name: 'model bootstrap timeout',
       text: 'bob: Teammate was registered but did not bootstrap-confirm before timeout.',
       code: 'model_no_bootstrap',

@@ -28,6 +28,10 @@ import {
   type ReviewMutationJournalRecord,
   ReviewMutationJournalStore,
 } from '@main/services/team/ReviewMutationJournalStore';
+import {
+  withReviewPersistenceLogicalScopeLock,
+  withReviewPersistenceScopeLock,
+} from '@main/services/team/ReviewPersistenceScopeLock';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import {
   cleanupAtomicCreateTempLinks,
@@ -51,12 +55,17 @@ import {
   REVIEW_GET_TASK_CHANGES,
   REVIEW_GET_TEAM_TASK_CHANGE_SUMMARIES,
   REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES,
+  REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
   REVIEW_LOAD_DECISIONS,
   REVIEW_LOAD_DRAFT_HISTORY,
+  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
   REVIEW_PREVIEW_REJECT,
   REVIEW_REAPPLY_REJECTED_RENAME,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
+  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
   REVIEW_RESTORE_HISTORY,
   REVIEW_RESTORE_REJECTED_RENAME,
   REVIEW_RETRY_MUTATION_RECOVERY,
@@ -75,6 +84,7 @@ import * as path from 'path';
 import { isDeepStrictEqual } from 'util';
 
 import type {
+  ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,
   ReviewDraftHistorySnapshot,
 } from '@features/change-review-history/contracts';
@@ -101,7 +111,10 @@ import type {
   RestoreReviewHistoryResult,
   RetryReviewMutationRecoveryRequest,
   RetryReviewMutationRecoveryResult,
+  ReviewConflictResolution,
+  ReviewDecisionConflictCandidateSummary,
   ReviewDecisionPersistenceScope,
+  ReviewDecisionSnapshot,
   ReviewDirectDiskMutationStep,
   ReviewDiskUndoSnapshot,
   ReviewFileScope,
@@ -110,6 +123,7 @@ import type {
   ReviewRedoAction,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
+  SaveReviewDecisionsResult,
   SnippetDiff,
   TaskChangeRequestOptions,
   TaskChangeSetV2,
@@ -142,17 +156,24 @@ const reviewMutationCoordinator = new ReviewMutationCoordinator(reviewMutationJo
 const reviewDecisionPersistenceQueues = new Map<string, Promise<void>>();
 // Review is backed by a point-in-time diff. Unlike the editor watcher, ignoring
 // the first few seconds can silently miss an external write and make Undo unsafe.
-const reviewFileWatcher = new EditorFileWatcher({ ignoreStartupChanges: false });
+export type ReviewFileWatcher = Pick<
+  EditorFileWatcher,
+  'isWatching' | 'setWatchedFiles' | 'start' | 'stop'
+>;
+const defaultReviewFileWatcher = new EditorFileWatcher({ ignoreStartupChanges: false });
+let reviewFileWatcher: ReviewFileWatcher = defaultReviewFileWatcher;
 let reviewWatcherProjectRoot: string | null = null;
+let reviewWatcherRequestGeneration = 0;
 let reviewMainWindowRef: BrowserWindow | null = null;
+let reviewProjectPathValidator: (projectPath: string) => Promise<string> =
+  validateReviewProjectPath;
 
 async function withReviewDecisionPersistenceLock<T>(
   teamName: string,
   persistenceScope: ReviewDecisionPersistenceScope,
   operation: () => Promise<T>
 ): Promise<T> {
-  const scopeHash = createHash('sha256').update(persistenceScope.scopeToken).digest('hex');
-  const key = `${teamName}:${persistenceScope.scopeKey}:${scopeHash}`;
+  const key = `${teamName}:${persistenceScope.scopeKey}`;
   const previous = reviewDecisionPersistenceQueues.get(key) ?? Promise.resolve();
   let release = (): void => undefined;
   const current = new Promise<void>((resolve) => {
@@ -166,7 +187,9 @@ async function withReviewDecisionPersistenceLock<T>(
 
   await previous.catch(() => undefined);
   try {
-    return await operation();
+    return await withReviewPersistenceLogicalScopeLock(teamName, persistenceScope.scopeKey, () =>
+      withReviewPersistenceScopeLock(teamName, persistenceScope, operation)
+    );
   } finally {
     release();
     if (reviewDecisionPersistenceQueues.get(key) === queueTail) {
@@ -870,14 +893,26 @@ export interface ReviewHandlerDeps {
   contentResolver?: FileContentResolver;
   gitFallback?: GitDiffFallback;
   configReader?: Pick<TeamConfigReader, 'getConfig'>;
+  fileWatcher?: ReviewFileWatcher;
+  projectPathValidator?: (projectPath: string) => Promise<string>;
 }
 
 export function initializeReviewHandlers(deps: ReviewHandlerDeps): void {
+  // Handler reinitialization supersedes validation still pending from the
+  // previous registration, even when both registrations reuse one watcher.
+  reviewWatcherRequestGeneration += 1;
   changeExtractor = deps.extractor;
   if (deps.applier) reviewApplier = deps.applier;
   if (deps.contentResolver) fileContentResolver = deps.contentResolver;
   if (deps.gitFallback) gitDiffFallback = deps.gitFallback;
   reviewConfigReader = deps.configReader ?? new TeamConfigReader();
+  const nextFileWatcher = deps.fileWatcher ?? defaultReviewFileWatcher;
+  if (reviewFileWatcher !== nextFileWatcher) {
+    reviewFileWatcher.stop();
+    reviewWatcherProjectRoot = null;
+    reviewFileWatcher = nextFileWatcher;
+  }
+  reviewProjectPathValidator = deps.projectPathValidator ?? validateReviewProjectPath;
 }
 
 export function registerReviewHandlers(ipcMain: IpcMain): void {
@@ -908,9 +943,26 @@ export function registerReviewHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(REVIEW_GET_GIT_FILE_LOG, handleGetGitFileLog);
   // Decision persistence
   ipcMain.handle(REVIEW_LOAD_DECISIONS, handleLoadDecisions);
+  ipcMain.handle(REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES, handleLoadDecisionConflictCandidates);
+  ipcMain.handle(
+    REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+    handleResolveDecisionConflictCandidate
+  );
   ipcMain.handle(REVIEW_SAVE_DECISIONS, handleSaveDecisions);
   ipcMain.handle(REVIEW_CLEAR_DECISIONS, handleClearDecisions);
   ipcMain.handle(REVIEW_LOAD_DRAFT_HISTORY, handleLoadDraftHistory);
+  ipcMain.handle(
+    REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+    handleLoadDraftHistoryConflictCandidates
+  );
+  ipcMain.handle(
+    REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+    handleResolveDraftHistoryConflictCandidate
+  );
+  ipcMain.handle(
+    REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+    handleReplaceDraftHistoryConflictCandidate
+  );
   ipcMain.handle(REVIEW_SAVE_DRAFT_HISTORY_ENTRY, handleSaveDraftHistoryEntry);
   ipcMain.handle(REVIEW_CLEAR_DRAFT_HISTORY, handleClearDraftHistory);
 }
@@ -943,13 +995,19 @@ export function removeReviewHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(REVIEW_GET_GIT_FILE_LOG);
   // Decision persistence
   ipcMain.removeHandler(REVIEW_LOAD_DECISIONS);
+  ipcMain.removeHandler(REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES);
+  ipcMain.removeHandler(REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE);
   ipcMain.removeHandler(REVIEW_SAVE_DECISIONS);
   ipcMain.removeHandler(REVIEW_CLEAR_DECISIONS);
   ipcMain.removeHandler(REVIEW_LOAD_DRAFT_HISTORY);
+  ipcMain.removeHandler(REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES);
+  ipcMain.removeHandler(REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE);
+  ipcMain.removeHandler(REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE);
   ipcMain.removeHandler(REVIEW_SAVE_DRAFT_HISTORY_ENTRY);
   ipcMain.removeHandler(REVIEW_CLEAR_DRAFT_HISTORY);
   reviewFileWatcher.stop();
   reviewWatcherProjectRoot = null;
+  reviewWatcherRequestGeneration += 1;
 }
 
 export function setReviewMainWindow(win: BrowserWindow | null): void {
@@ -2209,6 +2267,51 @@ function getNewReviewHistoryActions(
   ].filter((action) => !trustedIds.has(action.id));
 }
 
+function isGenericReviewSnapshotContainedByCurrent(
+  incoming: ReviewPersistedStateSnapshot,
+  current: Awaited<ReturnType<ReviewDecisionStore['load']>>,
+  authorization: ReviewPathAuthorization
+): boolean {
+  if (!current || incoming.reviewActionHistory.length === 0) return false;
+  if (incoming.reviewRedoHistory.length > 0 || current.reviewRedoHistory.length > 0) return false;
+  if (
+    current.reviewActionHistory.length < incoming.reviewActionHistory.length ||
+    !isDurableReviewEqual(
+      current.reviewActionHistory.slice(0, incoming.reviewActionHistory.length),
+      incoming.reviewActionHistory
+    )
+  ) {
+    return false;
+  }
+  let expectedDecisions: ReviewDecisionSnapshot = {
+    hunkDecisions: current.hunkDecisions,
+    fileDecisions: current.fileDecisions,
+  };
+  for (
+    let index = current.reviewActionHistory.length - 1;
+    index >= incoming.reviewActionHistory.length;
+    index--
+  ) {
+    const action = current.reviewActionHistory[index];
+    if (!action) return false;
+    const previous = buildReviewUndoDecisionState(action, expectedDecisions, (filePath) =>
+      getAuthoritativeReviewedFile(authorization, filePath)
+    );
+    if (!previous) return false;
+    expectedDecisions = previous;
+  }
+  const recordIsContained = <T>(
+    expected: Readonly<Record<string, T>>,
+    observed: Readonly<Record<string, T>>
+  ): boolean =>
+    Object.entries(expected).every(([key, value]) => isDurableReviewEqual(value, observed[key]));
+  return (
+    isDurableReviewEqual(incoming.hunkDecisions, expectedDecisions.hunkDecisions) &&
+    isDurableReviewEqual(incoming.fileDecisions, expectedDecisions.fileDecisions) &&
+    recordIsContained(incoming.hunkContextHashesByFile ?? {}, current.hunkContextHashesByFile ?? {})
+  );
+}
+
 function parseReviewScopeKey(teamName: string, scopeKey: string): ReviewFileScope {
   if (scopeKey.startsWith('task-')) {
     return parseReviewFileScope({ teamName, taskId: scopeKey.slice('task-'.length) });
@@ -2217,6 +2320,118 @@ function parseReviewScopeKey(teamName: string, scopeKey: string): ReviewFileScop
     return parseReviewFileScope({ teamName, memberName: scopeKey.slice('agent-'.length) });
   }
   throw new Error('Review decision scope cannot authorize history');
+}
+
+function isAuthorizedReviewDecisionKey(
+  canonicalFiles: ReadonlyMap<string, FileChangeSummary>,
+  key: string,
+  hunk: boolean
+): boolean {
+  if (!hunk) return canonicalFiles.has(key);
+  for (const reviewKey of canonicalFiles.keys()) {
+    const prefix = `${reviewKey}:`;
+    if (key.startsWith(prefix) && /^\d+$/.test(key.slice(prefix.length))) return true;
+  }
+  return false;
+}
+
+function assertReviewCandidateWithinAuthorization(
+  state: ReviewPersistedStateSnapshot,
+  authorization: ReviewPathAuthorization
+): void {
+  if (!authorization.reviewedFiles) {
+    throw new Error('Authoritative review file set is unavailable');
+  }
+  const canonicalFiles = new Map<string, FileChangeSummary>();
+  for (const file of authorization.reviewedFiles.values()) {
+    canonicalFiles.set(file.changeKey ?? file.filePath, file);
+  }
+  if (
+    Object.keys(state.hunkDecisions).some(
+      (key) => !isAuthorizedReviewDecisionKey(canonicalFiles, key, true)
+    ) ||
+    Object.keys(state.fileDecisions).some(
+      (key) => !isAuthorizedReviewDecisionKey(canonicalFiles, key, false)
+    ) ||
+    Object.keys(state.hunkContextHashesByFile ?? {}).some((key) => !canonicalFiles.has(key))
+  ) {
+    throw new Error('Review recovery branch contains decisions outside the active review');
+  }
+
+  const actions = [
+    ...(state.reviewActionHistory ?? []),
+    ...(state.reviewRedoHistory ?? []).map((entry) => entry.action),
+  ];
+  for (const action of actions) {
+    if (action.kind === 'hunk') {
+      const file = getAuthoritativeReviewedFile(authorization, action.action.filePath);
+      const key = `${file.changeKey ?? file.filePath}:${action.action.originalIndex}`;
+      if (!isAuthorizedReviewDecisionKey(canonicalFiles, key, true)) {
+        throw new Error('Review recovery branch contains an unauthorized hunk action');
+      }
+      continue;
+    }
+    if (action.kind === 'bulk') {
+      if (
+        Object.keys(action.decisionSnapshot.hunkDecisions).some(
+          (key) => !isAuthorizedReviewDecisionKey(canonicalFiles, key, true)
+        ) ||
+        Object.keys(action.decisionSnapshot.fileDecisions).some(
+          (key) => !isAuthorizedReviewDecisionKey(canonicalFiles, key, false)
+        )
+      ) {
+        throw new Error('Review recovery branch contains an unauthorized bulk snapshot');
+      }
+    }
+  }
+
+  const isGenericAction = (action: ReviewUndoAction): boolean =>
+    action.kind === 'hunk' || (action.kind === 'bulk' && action.diskSnapshots.length === 0);
+  if (actions.every(isGenericAction)) {
+    const undoHistory = state.reviewActionHistory ?? [];
+    if (undoHistory.length > 0) {
+      assertExactGenericReviewHistoryTransition(
+        { ...state, reviewRedoHistory: [] },
+        null,
+        authorization,
+        undoHistory
+      );
+    } else if (
+      Object.keys(state.hunkDecisions).length > 0 ||
+      Object.keys(state.fileDecisions).length > 0
+    ) {
+      throw new Error('Review recovery branch decisions have no matching Undo history');
+    }
+    let workingState: ReviewDecisionSnapshot = {
+      hunkDecisions: state.hunkDecisions,
+      fileDecisions: state.fileDecisions,
+    };
+    let workingHistory = [...undoHistory];
+    const redoHistory = state.reviewRedoHistory ?? [];
+    for (let index = redoHistory.length - 1; index >= 0; index--) {
+      const redo = redoHistory[index];
+      const nextHistory = [...workingHistory, redo.action];
+      assertExactGenericReviewHistoryTransition(
+        {
+          hunkDecisions: redo.decisionSnapshot.hunkDecisions,
+          fileDecisions: redo.decisionSnapshot.fileDecisions,
+          reviewActionHistory: nextHistory,
+          reviewRedoHistory: [],
+        },
+        {
+          ...workingState,
+          hunkContextHashesByFile: {},
+          reviewActionHistory: workingHistory,
+          reviewRedoHistory: [],
+          revision: 0,
+        },
+        authorization,
+        [redo.action]
+      );
+      workingState = redo.decisionSnapshot;
+      workingHistory = nextHistory;
+    }
+  }
 }
 
 function assertExactGenericReviewHistoryTransition(
@@ -2250,14 +2465,6 @@ function assertExactGenericReviewHistoryTransition(
   const resolveHunkKey = (filePath: string, originalIndex: number): string => {
     const file = getAuthoritativeReviewedFile(authorization, filePath);
     return `${file.changeKey ?? file.filePath}:${originalIndex}`;
-  };
-  const isAuthorizedDecisionKey = (key: string, hunk: boolean): boolean => {
-    if (!hunk) return canonicalFiles.has(key);
-    for (const reviewKey of canonicalFiles.keys()) {
-      const prefix = `${reviewKey}:`;
-      if (key.startsWith(prefix) && /^\d+$/.test(key.slice(prefix.length))) return true;
-    }
-    return false;
   };
   const resolveHunkReviewKey = (key: string): string | null => {
     for (const reviewKey of canonicalFiles.keys()) {
@@ -2321,10 +2528,14 @@ function assertExactGenericReviewHistoryTransition(
     if (
       changedHunks.length + changedFiles.length === 0 ||
       changedHunks.some(
-        (key) => !isAuthorizedDecisionKey(key, true) || working.hunkDecisions[key] !== 'accepted'
+        (key) =>
+          !isAuthorizedReviewDecisionKey(canonicalFiles, key, true) ||
+          working.hunkDecisions[key] !== 'accepted'
       ) ||
       changedFiles.some(
-        (key) => !isAuthorizedDecisionKey(key, false) || working.fileDecisions[key] !== 'accepted'
+        (key) =>
+          !isAuthorizedReviewDecisionKey(canonicalFiles, key, false) ||
+          working.fileDecisions[key] !== 'accepted'
       )
     ) {
       throw new Error('Generic bulk history does not match an authoritative Accept transition');
@@ -3469,8 +3680,10 @@ async function handleWatchReviewFiles(
   projectPath: string,
   filePaths: string[]
 ): Promise<IpcResult<void>> {
+  const requestGeneration = ++reviewWatcherRequestGeneration;
   return wrapReviewHandler('watchFiles', async () => {
-    const normalizedProjectPath = await validateReviewProjectPath(projectPath);
+    const normalizedProjectPath = await reviewProjectPathValidator(projectPath);
+    if (requestGeneration !== reviewWatcherRequestGeneration) return;
     const shouldRestart =
       reviewWatcherProjectRoot !== normalizedProjectPath || !reviewFileWatcher.isWatching();
 
@@ -3487,6 +3700,7 @@ async function handleWatchReviewFiles(
 }
 
 async function handleUnwatchReviewFiles(): Promise<IpcResult<void>> {
+  reviewWatcherRequestGeneration += 1;
   return wrapReviewHandler('unwatchFiles', async () => {
     reviewFileWatcher.stop();
     reviewWatcherProjectRoot = null;
@@ -3835,6 +4049,69 @@ async function handleLoadDecisions(
   });
 }
 
+async function handleLoadDecisionConflictCandidates(
+  _event: IpcMainInvokeEvent,
+  teamName: string,
+  scopeKey: string,
+  scopeToken: string
+): Promise<IpcResult<ReviewDecisionConflictCandidateSummary[]>> {
+  return wrapReviewHandler('loadDecisionConflictCandidates', async () => {
+    const persistenceScope = { scopeKey, scopeToken };
+    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
+      const scope = parseReviewScopeKey(teamName, scopeKey);
+      await resolveReviewPathAuthorization(scope, {
+        requireIdentity: true,
+      });
+      await recoverReviewMutationJournal(teamName, persistenceScope);
+      return reviewDecisionStore.loadConflictCandidateSummaries(teamName, scopeKey, scopeToken);
+    });
+  });
+}
+
+async function handleResolveDecisionConflictCandidate(
+  _event: IpcMainInvokeEvent,
+  teamName: string,
+  scopeKey: string,
+  scopeToken: string,
+  candidateId: string,
+  resolution: ReviewConflictResolution,
+  expectedCurrentRevision: number
+): Promise<IpcResult<{ revision: number }>> {
+  return wrapReviewHandler('resolveDecisionConflictCandidate', async () => {
+    const persistenceScope = { scopeKey, scopeToken };
+    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
+      const scope = parseReviewScopeKey(teamName, scopeKey);
+      const { authorization } = await resolveReviewPathAuthorization(scope, {
+        requireIdentity: true,
+      });
+      await recoverReviewMutationJournal(teamName, persistenceScope);
+      if (resolution === 'recover-candidate') {
+        const candidate = await reviewDecisionStore.loadConflictCandidate(
+          teamName,
+          scopeKey,
+          scopeToken,
+          candidateId
+        );
+        if (candidate.origin !== 'current-snapshot') {
+          throw new Error(
+            'Recovery copy belongs to a different review snapshot; only discard is safe'
+          );
+        }
+        assertReviewCandidateWithinAuthorization(candidate.state, authorization);
+      }
+      const revision = await reviewDecisionStore.resolveConflictCandidate(
+        teamName,
+        scopeKey,
+        scopeToken,
+        candidateId,
+        resolution,
+        expectedCurrentRevision
+      );
+      return { revision };
+    });
+  });
+}
+
 async function handleSaveDecisions(
   _event: IpcMainInvokeEvent,
   teamName: string,
@@ -3846,7 +4123,7 @@ async function handleSaveDecisions(
   reviewActionHistory: ReviewUndoAction[] = [],
   expectedRevision: number | undefined = undefined,
   reviewRedoHistory: ReviewRedoAction[] = []
-): Promise<IpcResult<{ revision: number }>> {
+): Promise<IpcResult<SaveReviewDecisionsResult>> {
   return wrapReviewHandler('saveDecisions', async () => {
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision! < 0) {
       throw new Error('Saving review decisions requires an exact decision revision');
@@ -3865,6 +4142,53 @@ async function handleSaveDecisions(
       const current = await reviewDecisionStore.load(teamName, scopeKey, scopeToken);
       if (hasNewReviewDiskHistory(incomingState, current)) {
         throw new Error('Disk review history must be committed atomically with its mutation');
+      }
+      const currentRevision = current?.revision ?? 0;
+      if (expectedRevision !== currentRevision) {
+        const currentSnapshot = current && {
+          hunkDecisions: current.hunkDecisions,
+          fileDecisions: current.fileDecisions,
+          hunkContextHashesByFile: current.hunkContextHashesByFile,
+          reviewActionHistory: current.reviewActionHistory,
+          reviewRedoHistory: current.reviewRedoHistory,
+        };
+        if (currentSnapshot && isDurableReviewEqual(incomingState, currentSnapshot)) {
+          return { revision: currentRevision };
+        }
+        const scope = parseReviewScopeKey(teamName, scopeKey);
+        const { authorization } = await resolveReviewPathAuthorization(scope, {
+          requireIdentity: true,
+        });
+        if (isGenericReviewSnapshotContainedByCurrent(incomingState, current, authorization)) {
+          if (!current) {
+            throw new Error('Canonical review state disappeared during retry reconciliation');
+          }
+          return {
+            revision: currentRevision,
+            reconciledState: {
+              hunkDecisions: current.hunkDecisions,
+              fileDecisions: current.fileDecisions,
+              hunkContextHashesByFile: current.hunkContextHashesByFile,
+              reviewActionHistory: current.reviewActionHistory,
+              reviewRedoHistory: current.reviewRedoHistory,
+            },
+          };
+        }
+        assertReviewCandidateWithinAuthorization(incomingState, authorization);
+        const boundCandidate = await bindNewReviewHistorySnapshots(
+          incomingState,
+          current,
+          scope,
+          authorization
+        );
+        // The store publishes the losing branch durably before reporting the stale CAS.
+        // This call intentionally throws after the sidecar is committed.
+        const revision = await reviewDecisionStore.save(teamName, scopeKey, {
+          scopeToken,
+          ...boundCandidate,
+          expectedRevision: expectedRevision!,
+        });
+        return { revision };
       }
       const newActions = getNewReviewHistoryActions(incomingState, current);
       if (newActions.length > 0) {
@@ -3896,7 +4220,7 @@ async function handleSaveDecisions(
       const revision = await reviewDecisionStore.save(teamName, scopeKey, {
         scopeToken,
         ...boundState,
-        expectedRevision: expectedRevision!,
+        expectedRevision,
       });
       return { revision };
     });
@@ -3919,9 +4243,12 @@ async function handleClearDecisions(
     return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
       if (expectedRevision === undefined) {
         // Only the explicit "discard unreadable state" UI uses this recovery escape hatch.
-        const pending = await reviewMutationJournal.list(teamName, persistenceScope);
+        const inspection = await reviewMutationJournal.inspectForRecoveryDiscard(
+          teamName,
+          persistenceScope
+        );
         if (
-          pending.some(
+          inspection.records.some(
             (record) => record.decisions.length > 0 || (record.diskSteps?.length ?? 0) > 0
           )
         ) {
@@ -3930,7 +4257,11 @@ async function handleClearDecisions(
           );
         }
         await reviewDecisionStore.clearUnreadableExactScope(teamName, scopeKey, scopeToken);
-        await reviewMutationJournal.clearScope(teamName, persistenceScope);
+        if (inspection.corruptRecordCount > 0) {
+          await reviewMutationJournal.quarantineCorruptScope(teamName, persistenceScope);
+        } else {
+          await reviewMutationJournal.clearScope(teamName, persistenceScope);
+        }
         return { revision: 0 };
       }
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
@@ -3959,9 +4290,144 @@ async function handleLoadDraftHistory(
 ): Promise<IpcResult<ReviewDraftHistorySnapshot | null>> {
   return wrapReviewHandler('loadDraftHistory', async () => {
     const persistenceScope = { scopeKey, scopeToken };
-    return withReviewDecisionPersistenceLock(teamName, persistenceScope, () =>
-      reviewDraftHistoryStore.load(teamName, scopeKey, scopeToken)
-    );
+    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
+      const { authorization } = await resolveReviewPathAuthorization(
+        parseReviewScopeKey(teamName, scopeKey),
+        { requireIdentity: true }
+      );
+      const snapshot = await reviewDraftHistoryStore.load(teamName, scopeKey, scopeToken);
+      for (const filePath of Object.keys(snapshot?.entries ?? {})) {
+        await validateAuthorizedReviewFilePath(authorization, filePath, {
+          requireReviewedFile: true,
+        });
+      }
+      return snapshot;
+    });
+  });
+}
+
+async function handleLoadDraftHistoryConflictCandidates(
+  _event: IpcMainInvokeEvent,
+  teamName: string,
+  scopeKey: string,
+  scopeToken: string
+): Promise<IpcResult<ReviewDraftHistoryConflictCandidateSummary[]>> {
+  return wrapReviewHandler('loadDraftHistoryConflictCandidates', async () => {
+    const persistenceScope = { scopeKey, scopeToken };
+    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
+      const { authorization } = await resolveReviewPathAuthorization(
+        parseReviewScopeKey(teamName, scopeKey),
+        { requireIdentity: true }
+      );
+      const candidates = await reviewDraftHistoryStore.loadConflictCandidateSummaries(
+        teamName,
+        scopeKey,
+        scopeToken
+      );
+      return Promise.all(
+        candidates.map(async (candidate) => {
+          const isCurrentReviewedFile =
+            path.isAbsolute(path.normalize(candidate.filePath)) &&
+            authorization.reviewedFiles?.has(normalizeReviewPathForIdentity(candidate.filePath));
+          if (candidate.origin === 'prior-snapshot' && !isCurrentReviewedFile) {
+            return { ...candidate, recoverability: 'file-not-in-current-review' as const };
+          }
+          await validateAuthorizedReviewFilePath(authorization, candidate.filePath, {
+            requireReviewedFile: true,
+          });
+          return candidate;
+        })
+      );
+    });
+  });
+}
+
+async function handleResolveDraftHistoryConflictCandidate(
+  _event: IpcMainInvokeEvent,
+  teamName: string,
+  scopeKey: string,
+  scopeToken: string,
+  candidateId: string,
+  resolution: ReviewConflictResolution,
+  expectedCurrentRevision: number,
+  expectedCurrentGeneration: string | null
+): Promise<IpcResult<ReviewDraftHistoryEntry | null>> {
+  return wrapReviewHandler('resolveDraftHistoryConflictCandidate', async () => {
+    const persistenceScope = { scopeKey, scopeToken };
+    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
+      const { authorization } = await resolveReviewPathAuthorization(
+        parseReviewScopeKey(teamName, scopeKey),
+        { requireIdentity: true }
+      );
+      const candidate = await reviewDraftHistoryStore.loadConflictCandidate(
+        teamName,
+        scopeKey,
+        scopeToken,
+        candidateId
+      );
+      if (resolution === 'recover-candidate') {
+        await validateAuthorizedReviewFilePath(authorization, candidate.filePath, {
+          requireReviewedFile: true,
+        });
+      }
+      return reviewDraftHistoryStore.resolveConflictCandidate(
+        teamName,
+        scopeKey,
+        scopeToken,
+        candidateId,
+        resolution,
+        expectedCurrentRevision,
+        expectedCurrentGeneration
+      );
+    });
+  });
+}
+
+async function handleReplaceDraftHistoryConflictCandidate(
+  _event: IpcMainInvokeEvent,
+  teamName: string,
+  scopeKey: string,
+  scopeToken: string,
+  expectedEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
+  replacementEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
+  expectedCurrentRevision: number,
+  expectedCurrentGeneration: string | null
+): Promise<IpcResult<ReviewDraftHistoryConflictCandidateSummary>> {
+  return wrapReviewHandler('replaceDraftHistoryConflictCandidate', async () => {
+    const persistenceScope = { scopeKey, scopeToken };
+    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
+      const { authorization } = await resolveReviewPathAuthorization(
+        parseReviewScopeKey(teamName, scopeKey),
+        { requireIdentity: true }
+      );
+      await validateAuthorizedReviewFilePath(authorization, expectedEntry.filePath, {
+        requireReviewedFile: true,
+      });
+      if (replacementEntry.filePath !== expectedEntry.filePath) {
+        throw new Error('Manual-edit recovery update changed file identity');
+      }
+      const replacement = await reviewDraftHistoryStore.replaceConflictCandidate(
+        teamName,
+        scopeKey,
+        scopeToken,
+        expectedEntry,
+        replacementEntry,
+        expectedCurrentRevision,
+        expectedCurrentGeneration
+      );
+      return {
+        id: replacement.id,
+        capturedAt: replacement.capturedAt,
+        origin: replacement.origin,
+        recoverability: 'recoverable',
+        filePath: replacement.filePath,
+        expectedRevision: replacement.expectedRevision,
+        expectedGeneration: replacement.expectedGeneration,
+        observedCurrentRevision: replacement.observedCurrentRevision,
+        observedCurrentGeneration: replacement.observedCurrentGeneration,
+        entryRevision: replacement.entry?.revision ?? null,
+      };
+    });
   });
 }
 
@@ -3976,13 +4442,20 @@ async function handleSaveDraftHistoryEntry(
 ): Promise<IpcResult<ReviewDraftHistoryEntry>> {
   return wrapReviewHandler('saveDraftHistoryEntry', async () => {
     const persistenceScope = { scopeKey, scopeToken };
-    return withReviewDecisionPersistenceLock(teamName, persistenceScope, () =>
-      reviewDraftHistoryStore.saveEntry(teamName, scopeKey, scopeToken, {
+    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
+      const { authorization } = await resolveReviewPathAuthorization(
+        parseReviewScopeKey(teamName, scopeKey),
+        { requireIdentity: true }
+      );
+      await validateAuthorizedReviewFilePath(authorization, entry.filePath, {
+        requireReviewedFile: true,
+      });
+      return reviewDraftHistoryStore.saveEntry(teamName, scopeKey, scopeToken, {
         ...entry,
         expectedRevision,
         expectedGeneration,
-      })
-    );
+      });
+    });
   });
 }
 
@@ -3998,10 +4471,17 @@ async function handleClearDraftHistory(
   return wrapReviewHandler('clearDraftHistory', async () => {
     const persistenceScope = { scopeKey, scopeToken };
     await withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
+      const { authorization } = await resolveReviewPathAuthorization(
+        parseReviewScopeKey(teamName, scopeKey),
+        { requireIdentity: true }
+      );
       if (filePath !== null) {
         if (expectedRevision === null) {
           throw new Error('Clearing review draft history requires an exact revision');
         }
+        await validateAuthorizedReviewFilePath(authorization, filePath, {
+          requireReviewedFile: true,
+        });
         await reviewDraftHistoryStore.clearEntry(
           teamName,
           scopeKey,

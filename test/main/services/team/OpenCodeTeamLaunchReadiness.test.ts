@@ -70,7 +70,9 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
       },
     });
 
-    await expect(service(ports).check(readinessInput({ selectedModel: null }))).resolves.toMatchObject({
+    await expect(
+      service(ports).check(readinessInput({ selectedModel: null }))
+    ).resolves.toMatchObject({
       state: 'ready',
       launchAllowed: true,
       modelId: 'opencode/big-pickle',
@@ -105,7 +107,7 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
     await expect(service(ports).check(readinessInput())).resolves.toMatchObject({
       state: 'not_authenticated',
       launchAllowed: false,
-      opencodeVersion: '1.14.19',
+      opencodeVersion: '1.16.0',
       diagnostics: [
         'No connected OpenCode provider found. Choose a free OpenCode model such as Big Pickle, or connect a provider in OpenCode for provider-backed models.',
       ],
@@ -208,7 +210,7 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
       state: 'unsupported_version',
       launchAllowed: false,
       supportLevel: 'unsupported_too_old',
-      missing: ['OpenCode 1.4.0 is below supported minimum 1.14.19'],
+      missing: ['OpenCode 1.4.0 is below supported minimum 1.16.0'],
     });
     expect(ports.mcpTools.prove).not.toHaveBeenCalled();
   });
@@ -308,7 +310,7 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
       state: 'ready',
       launchAllowed: true,
       modelId: 'openai/gpt-5.4-mini',
-      opencodeVersion: '1.14.19',
+      opencodeVersion: '1.16.0',
       hostHealthy: true,
       appMcpConnected: true,
       requiredToolsPresent: true,
@@ -392,7 +394,7 @@ function inventory(overrides: Partial<OpenCodeRuntimeInventory> = {}): OpenCodeR
     detected: true,
     binaryPath: '/opt/homebrew/bin/opencode',
     installMethod: 'brew',
-    version: '1.14.19',
+    version: '1.16.0',
     authenticated: true,
     connectedProviders: ['openai'],
     models: ['openai/gpt-5.4-mini'],
@@ -419,7 +421,7 @@ function capabilities(
   }
 
   return {
-    version: '1.14.19',
+    version: '1.16.0',
     source: 'openapi_doc',
     endpoints,
     requiredForTeamLaunch: {

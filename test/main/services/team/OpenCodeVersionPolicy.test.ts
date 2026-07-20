@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -12,11 +11,11 @@ import {
 import {
   buildOpenCodeBinaryFingerprint,
   evaluateOpenCodeSupport,
+  type OpenCodeCompatibilitySnapshot,
+  type OpenCodeRouteCompatibilityCache,
   parseOpenCodeSemver,
   selectPermissionReplyRouteFromCache,
   shouldReuseCompatibilitySnapshot,
-  type OpenCodeCompatibilitySnapshot,
-  type OpenCodeRouteCompatibilityCache,
 } from '../../../../src/main/services/team/opencode/version/OpenCodeVersionPolicy';
 
 describe('OpenCodeVersionPolicy', () => {
@@ -55,25 +54,25 @@ describe('OpenCodeVersionPolicy', () => {
     ).toMatchObject({
       supported: false,
       supportLevel: 'unsupported_too_old',
-      diagnostics: ['OpenCode 1.4.0 is below supported minimum 1.14.19'],
+      diagnostics: ['OpenCode 1.4.0 is below supported minimum 1.16.0'],
     });
 
     expect(
       evaluateOpenCodeSupport({
-        version: '1.14.19-beta.1',
+        version: '1.16.0-beta.1',
         capabilities: readyCapabilities(),
       })
     ).toMatchObject({
       supported: false,
       supportLevel: 'unsupported_prerelease',
-      diagnostics: ['OpenCode prerelease 1.14.19-beta.1 is not enabled for production team launch'],
+      diagnostics: ['OpenCode prerelease 1.16.0-beta.1 is not enabled for production team launch'],
     });
   });
 
   it('requires capabilities before support', () => {
     expect(
       evaluateOpenCodeSupport({
-        version: '1.14.19',
+        version: '1.16.0',
         capabilities: missingCapabilities(['POST permission reply route']),
       })
     ).toMatchObject({
@@ -84,7 +83,7 @@ describe('OpenCodeVersionPolicy', () => {
 
     expect(
       evaluateOpenCodeSupport({
-        version: '1.14.19',
+        version: '1.16.0',
         capabilities: readyCapabilities(),
       })
     ).toMatchObject({
@@ -97,7 +96,7 @@ describe('OpenCodeVersionPolicy', () => {
   it('accepts supported version when capabilities pass', () => {
     expect(
       evaluateOpenCodeSupport({
-        version: '1.14.19',
+        version: '1.16.0',
         capabilities: readyCapabilities(),
       })
     ).toMatchObject({

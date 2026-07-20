@@ -46,7 +46,12 @@ export function drawTasks(
     ctx.save();
     ctx.globalAlpha = opacity;
 
-    if (getGraphSemanticZoomLevel(zoom) === 'overview' && !isSelected && !isHovered) {
+    if (
+      getGraphSemanticZoomLevel(zoom) === 'overview' &&
+      node.taskOverviewStyle !== 'card' &&
+      !isSelected &&
+      !isHovered
+    ) {
       drawTaskOverviewBadge(ctx, x, y, node, zoom);
     } else {
       drawTaskPill(ctx, x, y, node, time, isSelected, isHovered);
@@ -298,6 +303,8 @@ function drawTaskProgressRail(
   time: number,
   statusColor: string
 ): void {
+  if (node.taskStatus === 'completed' || node.reviewState === 'approved') return;
+
   const railWidth = halfW * 2 - 20;
   const railHeight = 2;
   const x = -halfW + 10;
@@ -308,22 +315,29 @@ function drawTaskProgressRail(
   ctx.fillStyle = 'rgba(92, 112, 142, 0.22)';
   ctx.fill();
 
-  if (node.taskStatus === 'completed') {
-    ctx.beginPath();
-    ctx.roundRect(x, y, railWidth, railHeight, 1);
-    ctx.fillStyle = hexWithAlpha(statusColor, 0.85);
-    ctx.fill();
-    return;
-  }
   if (node.taskStatus !== 'in_progress') return;
 
   const segmentWidth = railWidth * 0.34;
   const travel = railWidth - segmentWidth;
-  const progress = (time * 0.28) % 1;
+  const phase = (time * travel * 0.28) % railWidth;
+
+  ctx.save();
   ctx.beginPath();
-  ctx.roundRect(x + travel * progress, y, segmentWidth, railHeight, 1);
+  ctx.roundRect(x, y, railWidth, railHeight, 1);
+  ctx.clip();
   ctx.fillStyle = hexWithAlpha(statusColor, 0.92);
+
+  ctx.beginPath();
+  ctx.roundRect(x + phase, y, segmentWidth, railHeight, 1);
   ctx.fill();
+
+  if (phase + segmentWidth > railWidth) {
+    ctx.beginPath();
+    ctx.roundRect(x + phase - railWidth, y, segmentWidth, railHeight, 1);
+    ctx.fill();
+  }
+
+  ctx.restore();
 }
 
 function drawLiveTaskLogIndicator(

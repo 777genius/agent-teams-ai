@@ -6,6 +6,7 @@ import {
   recordProviderConnectionEnd,
 } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
+import { getOpenCodeSourceDisplayName } from '@shared/utils/opencodeModelRef';
 
 import {
   getRuntimeProviderCredentialUrl,
@@ -60,6 +61,66 @@ const DEFAULT_DIRECTORY_FILTER: RuntimeProviderDirectoryFilterDto = 'all';
 const MODEL_PAGE_SIZE = 250;
 const MODEL_SEARCH_DEBOUNCE_MS = 300;
 const OAUTH_CONNECT_UI_TIMEOUT_MS = 18 * 60_000;
+
+function presentProviderConnection(
+  provider: RuntimeProviderConnectionDto
+): RuntimeProviderConnectionDto {
+  const displayName = getOpenCodeSourceDisplayName(provider.providerId, provider.displayName);
+  return displayName === provider.displayName ? provider : { ...provider, displayName };
+}
+
+function presentDirectoryEntry(
+  provider: RuntimeProviderDirectoryEntryDto
+): RuntimeProviderDirectoryEntryDto {
+  const displayName = getOpenCodeSourceDisplayName(provider.providerId, provider.displayName);
+  return displayName === provider.displayName ? provider : { ...provider, displayName };
+}
+
+function presentManagementView(
+  view: RuntimeProviderManagementViewDto | null
+): RuntimeProviderManagementViewDto | null {
+  if (!view) return null;
+  return { ...view, providers: view.providers.map(presentProviderConnection) };
+}
+
+function replaceProviderNameInText(
+  value: string | null,
+  currentDisplayName: string,
+  presentedDisplayName: string
+): string | null {
+  if (!value || currentDisplayName === presentedDisplayName) return value;
+  return value.replace(currentDisplayName, presentedDisplayName);
+}
+
+function presentSetupForm(
+  form: RuntimeProviderSetupFormDto | null
+): RuntimeProviderSetupFormDto | null {
+  if (!form) return null;
+  // xAI is the catalog source, while SuperGrok is the user-facing subscription
+  // being connected. Keep the curated plan name in setup and error messages.
+  const displayName =
+    form.providerId.trim().toLowerCase() === 'xai' &&
+    form.displayName.trim().toLowerCase() === 'supergrok'
+      ? form.displayName
+      : getOpenCodeSourceDisplayName(form.providerId, form.displayName);
+  if (displayName === form.displayName) return form;
+  return {
+    ...form,
+    displayName,
+    title: replaceProviderNameInText(form.title, form.displayName, displayName) ?? form.title,
+    description: replaceProviderNameInText(form.description, form.displayName, displayName),
+    submitLabel:
+      replaceProviderNameInText(form.submitLabel, form.displayName, displayName) ??
+      form.submitLabel,
+  };
+}
+
+function presentOAuthProgress(
+  event: RuntimeProviderOAuthProgressDto
+): RuntimeProviderOAuthProgressDto {
+  const displayName = getOpenCodeSourceDisplayName(event.providerId, event.displayName);
+  return displayName === event.displayName ? event : { ...event, displayName };
+}
 
 interface ProjectContextSnapshot {
   path: string | null;
@@ -628,7 +689,7 @@ export function useRuntimeProviderManagement(
           setErrorDiagnostics(response.error.diagnostics ?? null);
           return false;
         }
-        const nextView = response.view ?? null;
+        const nextView = presentManagementView(response.view ?? null);
         setView(nextView);
         setSelectedProviderId((current) => {
           if (current && nextView?.providers.some((provider) => provider.providerId === current)) {
@@ -729,7 +790,9 @@ export function useRuntimeProviderManagement(
         setDirectoryTotalCount(directory.totalCount);
         setDirectoryNextCursor(directory.nextCursor);
         setDirectoryEntries((current) =>
-          append ? [...current, ...directory.entries] : directory.entries
+          append
+            ? [...current, ...directory.entries.map(presentDirectoryEntry)]
+            : directory.entries.map(presentDirectoryEntry)
         );
         return true;
       } catch (loadError) {
@@ -830,7 +893,7 @@ export function useRuntimeProviderManagement(
         return;
       }
       activeOAuthPhaseRef.current = event.phase;
-      setOAuthProgress(event);
+      setOAuthProgress(presentOAuthProgress(event));
       if (event.phase === 'failed') {
         setSetupSubmitError(event.message ?? 'Browser authorization failed');
       }
@@ -1164,17 +1227,18 @@ export function useRuntimeProviderManagement(
             setSetupFormErrorDiagnostics(response.error.diagnostics ?? null);
             return;
           }
-          setSetupForm(response.setupForm ?? null);
+          const setupForm = presentSetupForm(response.setupForm ?? null);
+          setSetupForm(setupForm);
           setSelectedAuthOptionId(
-            response.setupForm
+            setupForm
               ? selectRuntimeProviderSetupAuthOptionId({
-                  form: response.setupForm,
+                  form: setupForm,
                   intent,
                   connectedAuthHint,
                 })
               : null
           );
-          if (!response.setupForm) {
+          if (!setupForm) {
             setSetupFormError('Provider setup form response was empty');
             setSetupFormErrorDiagnostics(null);
           }
@@ -1399,7 +1463,9 @@ export function useRuntimeProviderManagement(
           return cancelled ? { status: 'cancelled', verifiedModelId: null } : null;
         }
         const connectedProvider =
-          response.provider?.state === 'connected' ? response.provider : null;
+          response.provider?.state === 'connected'
+            ? presentProviderConnection(response.provider)
+            : null;
         if (!connectedProvider) {
           const cancelled = recordUnsuccessfulConnection(null);
           if (!isProjectContextCurrent(projectContext)) {

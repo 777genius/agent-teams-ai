@@ -45,6 +45,7 @@ describe('resolveOpenCodeQuickConnectGate', () => {
           installed: true,
           source: 'app-managed',
           state: 'failed',
+          version: '1.18.3',
           error: 'registry unavailable',
         },
         runtimeStatusLoading: false,
@@ -61,11 +62,28 @@ describe('resolveOpenCodeQuickConnectGate', () => {
           ...runtimeStatus('ready'),
           installed: true,
           source: 'app-managed',
+          version: '1.18.3',
         },
         runtimeStatusLoading: true,
         provider: null,
         cliStatusLoading: false,
       })
     ).toBe('ready');
+  });
+
+  it('requires an OpenCode update before loading provider and model catalogs', () => {
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: {
+          installed: true,
+          source: 'path',
+          state: 'ready',
+          version: '1.15.6',
+        },
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('missing');
   });
 });

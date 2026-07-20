@@ -50,10 +50,10 @@ import {
 import { ThoughtBodyContent } from './ThoughtBodyContent';
 import {
   getTimelineCardBorderRadius,
-  getTimelineHeaderGradient,
   joinsPreviousTimelineCard,
   type TimelineCardPosition,
 } from './timelineCardStack';
+import { TimelineHeaderAccent } from './TimelineHeaderAccent';
 
 import type { InboxMessage, ToolCallMeta } from '@shared/types';
 
@@ -825,8 +825,8 @@ const LeadThoughtsGroupRowComponent = ({
       : isLight
         ? ACTIVITY_HEADER_BG_LIGHT
         : ACTIVITY_HEADER_BG_DARK,
-    backgroundImage: getTimelineHeaderGradient(activityAccentColor, isLight),
   };
+  const headerAccent = <TimelineHeaderAccent color={activityAccentColor} />;
 
   return (
     <AnimatedHeightReveal animate={isNew} containerRef={ref} style={{ overflowAnchor: 'none' }}>
@@ -846,8 +846,8 @@ const LeadThoughtsGroupRowComponent = ({
           tabIndex={canToggleBodyVisibility ? 0 : undefined}
           className={[
             useCompactCollapsedHeader
-              ? 'select-none px-3 py-2'
-              : 'flex select-none items-center gap-2 px-3 py-1.5',
+              ? 'select-none py-2'
+              : 'relative flex select-none items-center gap-2 px-3 py-1.5',
             canToggleBodyVisibility ? 'cursor-pointer' : '',
           ].join(' ')}
           style={headerStyle}
@@ -863,9 +863,11 @@ const LeadThoughtsGroupRowComponent = ({
               : undefined
           }
         >
+          {!useCompactCollapsedHeader ? headerAccent : null}
           {useCompactCollapsedHeader ? (
             <div className="min-w-0">
-              <div className="flex min-w-0 items-start gap-3">
+              <div className="relative flex min-w-0 items-start gap-3 px-3">
+                {headerAccent}
                 <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                   <MemberBadge
                     name={leadName}
@@ -907,7 +909,7 @@ const LeadThoughtsGroupRowComponent = ({
                 </div>
               </div>
               {compactPreviewMarkdown ? (
-                <div title={compactPreviewTooltipText ?? undefined}>
+                <div className="px-3" title={compactPreviewTooltipText ?? undefined}>
                   <CompactMarkdownPreview
                     content={compactPreviewMarkdown}
                     className="mt-1 line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] leading-4"

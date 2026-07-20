@@ -1,3 +1,5 @@
+import { getErrorMessage } from '@shared/utils/errorHandling';
+
 import {
   createPersistedLaunchSnapshot,
   snapshotToMemberSpawnStatuses,
@@ -10,6 +12,7 @@ import {
 } from './TeamProvisioningOpenCodeBootstrapEvidence';
 import {
   appendDiagnosticOnce,
+  hasRetainableOpenCodeRuntimeMember,
   promoteCommittedOpenCodeAppManagedBootstrapEvidence,
   summarizeRuntimeLaunchResultMembers,
   toOpenCodePersistedLaunchMember,
@@ -96,6 +99,7 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
       members: TeamRuntimeLaunchResult['members'];
     }
   ): void;
+  logWarning?(message: string): void;
 }
 
 function collectOpenCodeAggregateRuntimeMemberEvidence(
@@ -190,6 +194,48 @@ export async function launchOpenCodeAggregatePrimaryLane(
     launchResult,
     launchInput
   );
+  const retainPrimaryRuntime =
+    result.teamLaunchState !== 'partial_failure' || hasRetainableOpenCodeRuntimeMember(result);
+  if (retainPrimaryRuntime) {
+    const primaryMembers = result.members;
+    const secondaryLanes = params.run.mixedSecondaryLanes ?? [];
+    // Publish ownership before any degraded-lane index write can fail. Once
+    // launch persistence proves that this candidate is retainable, leaving it
+    // untracked would make later cleanup/restart paths unable to target the
+    // exact runtime generation.
+    ports.setRuntimeAdapterRunByTeam(teamName, {
+      runId,
+      providerId: 'opencode',
+      cwd: launchCwd,
+      get members() {
+        return collectOpenCodeAggregateRuntimeMemberEvidence(primaryMembers, secondaryLanes);
+      },
+    });
+  }
+  if (result.teamLaunchState === 'partial_failure') {
+    if (!retainPrimaryRuntime) {
+      try {
+        await params.adapter.stop({
+          ...launchInput,
+          reason: 'cleanup',
+          force: true,
+        });
+      } catch (error) {
+        ports.logWarning?.(
+          `[${teamName}] Failed to stop unretainable OpenCode primary lane: ${getErrorMessage(error)}`
+        );
+      }
+    }
+    await ports.upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: ports.getTeamsBasePath(),
+      teamName,
+      laneId: 'primary',
+      state: 'degraded',
+      diagnostics: Array.from(
+        new Set([...(migration.diagnostics ?? []), ...result.diagnostics].filter(Boolean))
+      ),
+    });
+  }
   const snapshotStatuses = snapshotToMemberSpawnStatuses(snapshot);
   for (const member of expectedMembers) {
     const status = snapshotStatuses[member.name];
@@ -207,18 +253,6 @@ export async function launchOpenCodeAggregatePrimaryLane(
     teamColor: params.run.request.color,
     teamDisplayName: params.run.request.displayName,
   });
-  if (result.teamLaunchState !== 'partial_failure') {
-    const primaryMembers = result.members;
-    const secondaryLanes = params.run.mixedSecondaryLanes ?? [];
-    ports.setRuntimeAdapterRunByTeam(teamName, {
-      runId,
-      providerId: 'opencode',
-      cwd: launchCwd,
-      get members() {
-        return collectOpenCodeAggregateRuntimeMemberEvidence(primaryMembers, secondaryLanes);
-      },
-    });
-  }
   return result;
 }
 

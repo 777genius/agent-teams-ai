@@ -35,6 +35,7 @@ import {
   promoteCommittedOpenCodeAppManagedBootstrapEvidence,
   resolveOpenCodeBootstrapAcceptedAt,
   selectOpenCodeSecondaryBootstrapStallDiagnostic,
+  selectOpenCodeSharedRuntimePreflightFailureDiagnostic,
   shouldMarkPersistedOpenCodeBootstrapStalled,
   shouldRetainOpenCodeRuntimeLaunch,
   summarizeRuntimeLaunchResultMembers,
@@ -340,6 +341,52 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
     ).toBe(false);
   });
 
+  it('distinguishes a shared OpenCode runtime timeout from a model-specific failure', () => {
+    const sharedTimeout = makeLaunchResult(
+      makeEvidence({
+        launchState: 'failed_to_start',
+        hardFailure: true,
+        hardFailureReason:
+          'Failed to query OpenCode agents: OpenCode command timed out after 10000ms',
+        diagnostics: [
+          'OpenCode raw model id "zai-coding-plan/glm-5.1" was not found in the live provider catalog',
+          'OpenCode request timed out after 15000ms for /config',
+        ],
+      }),
+      { teamLaunchState: 'partial_failure' }
+    );
+    expect(selectOpenCodeSharedRuntimePreflightFailureDiagnostic(sharedTimeout)).toBe(
+      'Failed to query OpenCode agents: OpenCode command timed out after 10000ms'
+    );
+
+    const cursorQuota = makeLaunchResult(
+      makeEvidence({
+        launchState: 'failed_to_start',
+        hardFailure: true,
+        hardFailureReason: "You've hit your Cursor usage limit.",
+        diagnostics: [
+          'OpenCode command timed out after 10000ms',
+          "You've hit your Cursor usage limit.",
+        ],
+      }),
+      { teamLaunchState: 'partial_failure' }
+    );
+    expect(selectOpenCodeSharedRuntimePreflightFailureDiagnostic(cursorQuota)).toBeNull();
+
+    const routeSpecificReadinessTimeout = makeLaunchResult(
+      makeEvidence({
+        launchState: 'failed_to_start',
+        hardFailure: true,
+        hardFailureReason:
+          'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
+      }),
+      { teamLaunchState: 'partial_failure' }
+    );
+    expect(
+      selectOpenCodeSharedRuntimePreflightFailureDiagnostic(routeSpecificReadinessTimeout)
+    ).toBeNull();
+  });
+
   it('normalizes recoverable bootstrap-pending launch results', () => {
     const result = makeLaunchResult(
       makeEvidence({
@@ -528,9 +575,9 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
     expect(hasRecoverableOpenCodeBootstrapDiagnostic(['runtime_bootstrap_checkin pending'])).toBe(
       true
     );
-    expect(hasRecoverableOpenCodeBootstrapDiagnostic(['provider unavailable: quota exceeded'])).toBe(
-      false
-    );
+    expect(
+      hasRecoverableOpenCodeBootstrapDiagnostic(['provider unavailable: quota exceeded'])
+    ).toBe(false);
     expect(hasRecoverableOpenCodeBootstrapDiagnostic([])).toBe(false);
   });
 
@@ -688,7 +735,9 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
         'OpenCode secondary lane timing: 100ms',
         'member_briefing delivery pending',
       ])
-    ).toBe('member_briefing delivery pending; runtime_bootstrap_checkin did not complete after 5 min.');
+    ).toBe(
+      'member_briefing delivery pending; runtime_bootstrap_checkin did not complete after 5 min.'
+    );
     expect(getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted(makePersisted())).toBe(
       OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC
     );
@@ -699,7 +748,9 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
           diagnostics: ['member_briefing delivery pending'],
         })
       )
-    ).toBe('member_briefing delivery pending; runtime_bootstrap_checkin did not complete after 5 min.');
+    ).toBe(
+      'member_briefing delivery pending; runtime_bootstrap_checkin did not complete after 5 min.'
+    );
     expect(
       getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted(
         makePersisted({
@@ -731,7 +782,10 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
     ).toBe(false);
     expect(
       shouldMarkPersistedOpenCodeBootstrapStalled(
-        makePersisted({ runtimeSessionId: 'runtime-session', hardFailureReason: 'model not found' }),
+        makePersisted({
+          runtimeSessionId: 'runtime-session',
+          hardFailureReason: 'model not found',
+        }),
         stalledAtMs
       )
     ).toBe(false);
@@ -830,9 +884,11 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
     expect(isRecoverableOpenCodeRuntimeEvidence(evidence as TeamRuntimeMemberLaunchEvidence)).toBe(
       true
     );
-    expect(isRecoverableOpenCodeRuntimeEvidence({ runtimeAlive: true } as TeamRuntimeMemberLaunchEvidence)).toBe(
-      true
-    );
+    expect(
+      isRecoverableOpenCodeRuntimeEvidence({
+        runtimeAlive: true,
+      } as TeamRuntimeMemberLaunchEvidence)
+    ).toBe(true);
     expect(isRecoverableOpenCodeRuntimeEvidence(undefined)).toBe(false);
   });
 

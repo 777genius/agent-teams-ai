@@ -21,6 +21,8 @@ import {
   RuntimeLocalProviderValidationError,
 } from '../../core/domain';
 
+import { buildOllamaNativeUrl, parseOllamaShowMetadata } from './ollamaRuntimeApi';
+
 import type {
   RuntimeLocalProviderConfigureInput,
   RuntimeLocalProviderConfigureResponse,
@@ -40,8 +42,11 @@ import type { RuntimeLocalProviderConnectorPort } from '../../core/application';
 
 const SCAN_TIMEOUT_MS = 1_200;
 const PROBE_TIMEOUT_MS = 5_000;
+const MODEL_METADATA_TIMEOUT_MS = 3_000;
+const DEFAULT_LOCAL_MODEL_OUTPUT_TOKENS = 4_096;
 const MAX_MODELS = 500;
 const MAX_RESPONSE_BYTES = 1_048_576;
+const PROVIDER_ID_FILTER_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const CONFIG_CANDIDATES = [
   'opencode.json',
   'opencode.jsonc',
@@ -74,6 +79,17 @@ interface ModelProbeOutcome {
   readonly latencyMs: number;
   readonly message: string;
   readonly available: boolean;
+}
+
+interface LocalModelConfigMetadata {
+  readonly tool_call?: true;
+  readonly options?: {
+    readonly reasoningEffort: 'none';
+  };
+  readonly limit?: {
+    readonly context: number;
+    readonly output: number;
+  };
 }
 
 class LocalProviderOperationError extends Error {
@@ -111,6 +127,10 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       (input.scope !== 'global' && input.scope !== 'project')
     ) {
       return this.listError('invalid-input', 'Only the OpenCode runtime supports local providers.');
+    }
+    const requestedProviderId = input.providerId?.trim() || null;
+    if (requestedProviderId && !PROVIDER_ID_FILTER_PATTERN.test(requestedProviderId)) {
+      return this.listError('invalid-input', 'Local provider id is invalid.');
     }
     try {
       const configTarget = await this.readConfigTarget(input.scope, input.projectPath);
@@ -184,6 +204,10 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
               };
             })
             .filter((provider): provider is NonNullable<typeof provider> => provider !== null)
+            .filter(
+              (provider) =>
+                requestedProviderId === null || provider.providerId === requestedProviderId
+            )
         : [];
 
       const providers = await Promise.all(
@@ -316,6 +340,8 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         );
       }
 
+      const selectedModelConfig = await this.fetchModelConfigMetadata(target, defaultModelId);
+
       const configPath = await this.writeConfig({
         scope: input.scope,
         projectPath: input.projectPath,
@@ -324,6 +350,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         modelIds,
         defaultModelId,
         setAsDefault: input.setAsDefault,
+        selectedModelConfig,
       });
       return {
         schemaVersion: 1,
@@ -354,7 +381,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     target: ReturnType<typeof normalizeRuntimeLocalProviderTarget>,
     timeoutMs: number
   ): Promise<RuntimeLocalProviderProbeDto> {
-    const outcome = await this.fetchModels(target.baseUrl, timeoutMs);
+    const outcome = await this.fetchModels(target, timeoutMs);
     return {
       preset: target.preset,
       providerId: target.providerId,
@@ -366,7 +393,11 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     };
   }
 
-  private async fetchModels(baseUrl: string, timeoutMs: number): Promise<ModelProbeOutcome> {
+  private async fetchModels(
+    target: ReturnType<typeof normalizeRuntimeLocalProviderTarget>,
+    timeoutMs: number
+  ): Promise<ModelProbeOutcome> {
+    const baseUrl = target.baseUrl;
     const startedAt = this.now();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -416,6 +447,10 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
           message: 'Local server returned an invalid OpenAI-compatible model list.',
         };
       }
+      const reportedModelCount = models.length;
+      if (target.preset.id === 'ollama' && models.length > 0) {
+        models = await this.filterOllamaCompletionModels(baseUrl, models, controller.signal);
+      }
       return {
         available: true,
         models,
@@ -423,7 +458,9 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         message:
           models.length > 0
             ? `Connected. Found ${models.length} model${models.length === 1 ? '' : 's'}.`
-            : 'Connected, but the server did not report any loaded models.',
+            : reportedModelCount > 0 && target.preset.id === 'ollama'
+              ? 'Connected, but Ollama did not report any chat-capable models.'
+              : 'Connected, but the server did not report any loaded models.',
       };
     } catch (error) {
       const latencyMs = Math.max(0, this.now() - startedAt);
@@ -441,6 +478,107 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     }
   }
 
+  private async filterOllamaCompletionModels(
+    baseUrl: string,
+    models: RuntimeLocalProviderModelDto[],
+    signal: AbortSignal
+  ): Promise<RuntimeLocalProviderModelDto[]> {
+    const eligible = new Array<boolean>(models.length).fill(true);
+    let nextIndex = 0;
+    const workerCount = Math.min(8, models.length);
+    await Promise.all(
+      Array.from({ length: workerCount }, async () => {
+        while (nextIndex < models.length) {
+          const index = nextIndex;
+          nextIndex += 1;
+          eligible[index] = await this.isOllamaCompletionModel(baseUrl, models[index].id, signal);
+        }
+      })
+    );
+    return models.filter((_model, index) => eligible[index]);
+  }
+
+  private async isOllamaCompletionModel(
+    baseUrl: string,
+    modelId: string,
+    signal: AbortSignal
+  ): Promise<boolean> {
+    try {
+      const response = await this.fetchImpl(buildOllamaNativeUrl(baseUrl, '/api/show'), {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ model: modelId }),
+        redirect: 'error',
+        signal,
+      });
+      if (!response.ok) {
+        return response.status < 400 || response.status >= 500;
+      }
+      const raw = await readResponseTextWithLimit(response, MAX_RESPONSE_BYTES);
+      if (!raw) return true;
+      return parseOllamaShowMetadata(raw)?.completionCapable !== false;
+    } catch {
+      // Older or temporarily busy Ollama servers may not expose model metadata.
+      // Keep the model visible and let launch verification decide compatibility.
+      return true;
+    }
+  }
+
+  private async fetchModelConfigMetadata(
+    target: ReturnType<typeof normalizeRuntimeLocalProviderTarget>,
+    modelId: string
+  ): Promise<LocalModelConfigMetadata | null> {
+    if (target.preset.id !== 'ollama') return null;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), MODEL_METADATA_TIMEOUT_MS);
+    timeout.unref?.();
+    try {
+      const response = await this.fetchImpl(buildOllamaNativeUrl(target.baseUrl, '/api/show'), {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ model: modelId }),
+        redirect: 'error',
+        signal: controller.signal,
+      });
+      if (!response.ok) return null;
+      const raw = await readResponseTextWithLimit(response, MAX_RESPONSE_BYTES);
+      if (!raw) return null;
+      const metadata = parseOllamaShowMetadata(raw);
+      if (!metadata) return null;
+      const contextTokens =
+        metadata.configuredContextTokens ?? metadata.trainedContextTokens ?? null;
+      const modelConfig: LocalModelConfigMetadata = {
+        ...(metadata.toolCapable === true ? { tool_call: true as const } : {}),
+        options: {
+          reasoningEffort: 'none',
+        },
+        ...(contextTokens
+          ? {
+              limit: {
+                context: contextTokens,
+                output: Math.min(DEFAULT_LOCAL_MODEL_OUTPUT_TOKENS, contextTokens),
+              },
+            }
+          : {}),
+      };
+      return Object.keys(modelConfig).length > 0 ? modelConfig : null;
+    } catch {
+      // OpenAI-compatible servers do not have to expose Ollama's native
+      // metadata endpoint. Connecting the provider must still work when the
+      // optional enrichment request is unavailable.
+      return null;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   private async writeConfig(input: {
     scope: RuntimeLocalProviderScopeDto;
     projectPath?: string | null;
@@ -449,6 +587,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     modelIds: readonly string[];
     defaultModelId: string;
     setAsDefault: boolean;
+    selectedModelConfig: LocalModelConfigMetadata | null;
   }): Promise<string> {
     // Chain onto any in-flight write so the read-modify-write below runs after
     // the previous one fully committed (no lost update on concurrent configures).
@@ -471,6 +610,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     modelIds: readonly string[];
     defaultModelId: string;
     setAsDefault: boolean;
+    selectedModelConfig?: LocalModelConfigMetadata | null;
   }): Promise<string> {
     const configTarget = await this.readConfigTarget(input.scope, input.projectPath, true);
     const configPath = configTarget.configPath;
@@ -511,7 +651,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       nextRaw = setJsoncValue(nextRaw, ['provider', input.providerId], {
         npm: '@ai-sdk/openai-compatible',
         options: { baseURL: input.baseUrl },
-        models: createModelRecord(input.modelIds),
+        models: createModelRecord(input.modelIds, input.defaultModelId, input.selectedModelConfig),
       });
     } else {
       nextRaw = setJsoncValue(
@@ -535,14 +675,26 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       if (modelsNode && modelsNode.type === 'object') {
         for (const modelId of input.modelIds) {
           if (!findNodeAtLocation(configTree, ['provider', input.providerId, 'models', modelId])) {
-            nextRaw = setJsoncValue(nextRaw, ['provider', input.providerId, 'models', modelId], {});
+            nextRaw = setJsoncValue(
+              nextRaw,
+              ['provider', input.providerId, 'models', modelId],
+              modelId === input.defaultModelId ? (input.selectedModelConfig ?? {}) : {}
+            );
           }
         }
       } else {
         nextRaw = setJsoncValue(
           nextRaw,
           ['provider', input.providerId, 'models'],
-          createModelRecord(input.modelIds)
+          createModelRecord(input.modelIds, input.defaultModelId, input.selectedModelConfig)
+        );
+      }
+
+      for (const [key, value] of Object.entries(input.selectedModelConfig ?? {})) {
+        nextRaw = setJsoncValue(
+          nextRaw,
+          ['provider', input.providerId, 'models', input.defaultModelId, key],
+          value
         );
       }
     }
@@ -864,10 +1016,14 @@ function setJsoncValue(raw: string, pathSegments: (string | number)[], value: un
   return applyEdits(raw, modify(raw, pathSegments, value, { formattingOptions: JSON_FORMATTING }));
 }
 
-function createModelRecord(modelIds: readonly string[]): Record<string, unknown> {
+function createModelRecord(
+  modelIds: readonly string[],
+  selectedModelId?: string,
+  selectedModelConfig?: LocalModelConfigMetadata | null
+): Record<string, unknown> {
   const models = Object.create(null) as Record<string, unknown>;
   for (const modelId of modelIds) {
-    models[modelId] = {};
+    models[modelId] = modelId === selectedModelId && selectedModelConfig ? selectedModelConfig : {};
   }
   return models;
 }

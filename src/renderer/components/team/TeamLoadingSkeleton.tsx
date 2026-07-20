@@ -392,52 +392,57 @@ const TeamContentLoadingSkeleton = ({
           badgeWidth="w-8"
           actionWidth="w-16"
         />
-        <div className="mt-3 flex min-w-0 max-w-full items-center gap-2 px-2">
-          <div className="relative h-8 min-w-0 max-w-full flex-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] sm:max-w-[33.333333%]">
-            <SkeletonPill className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 rounded" />
-            <SkeletonPill className="absolute left-8 top-1/2 h-3 w-[58%] -translate-y-1/2 rounded" />
-          </div>
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <SkeletonBlock className="h-7 w-[62px]" />
-            <SkeletonBlock className="h-7 w-[66px]" />
-          </div>
-        </div>
-        <div className="mt-2 grid grid-cols-12 gap-y-3" style={{ gridAutoRows: '18px' }}>
-          {TEAM_LOADING_KANBAN_COLUMNS.map((column) => (
-            <div
-              key={column.id}
-              className="min-h-0"
-              style={{ gridColumn: column.gridColumn, gridRow: column.gridRow }}
-            >
-              <KanbanColumn
-                title={<SkeletonPill className={cn('h-3', column.titleWidth)} />}
-                count={0}
-                icon={
-                  <column.icon size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />
-                }
-                accentColor={column.accentColor}
-                headerAccessory={
-                  <SkeletonPill className="h-2.5 w-3 rounded bg-[var(--skeleton-base-dim)]" />
-                }
-                className="flex h-full min-h-0 animate-pulse flex-col"
-                headerClassName="shrink-0"
-                bodyClassName="min-h-0 max-h-none flex-1 overflow-hidden"
-              >
-                {column.cardHeights.map((height, index) => (
-                  <KanbanTaskCardSkeleton
-                    key={`${column.id}:${height}:${index}`}
-                    height={height}
-                    showSeparator={index < column.cardHeights.length - 1}
-                  />
-                ))}
-                {column.showAddButton ? (
-                  <div className="ml-2 flex w-[calc(100%_-_0.5rem)] shrink-0 items-center justify-center rounded-md border border-dashed border-[var(--color-border)] p-3">
-                    <SkeletonPill className="h-4 w-28" />
-                  </div>
-                ) : null}
-              </KanbanColumn>
+        <div className="-mx-4 w-[calc(100%+2rem)]">
+          <div className="mt-3 flex min-w-0 max-w-full items-center gap-2 px-2">
+            <div className="relative h-8 min-w-0 max-w-full flex-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] sm:max-w-[33.333333%]">
+              <SkeletonPill className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 rounded" />
+              <SkeletonPill className="absolute left-8 top-1/2 h-3 w-[58%] -translate-y-1/2 rounded" />
             </div>
-          ))}
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <SkeletonBlock className="h-7 w-[62px]" />
+              <SkeletonBlock className="h-7 w-[66px]" />
+            </div>
+          </div>
+          <div className="mt-2 grid grid-cols-12 gap-y-3" style={{ gridAutoRows: '18px' }}>
+            {TEAM_LOADING_KANBAN_COLUMNS.map((column) => (
+              <div
+                key={column.id}
+                className="min-h-0"
+                style={{ gridColumn: column.gridColumn, gridRow: column.gridRow }}
+              >
+                <KanbanColumn
+                  title={<SkeletonPill className={cn('h-3', column.titleWidth)} />}
+                  count={0}
+                  icon={
+                    <column.icon
+                      size={14}
+                      className="shrink-0 text-[var(--kanban-column-accent)]"
+                    />
+                  }
+                  accentColor={column.accentColor}
+                  headerAccessory={
+                    <SkeletonPill className="h-2.5 w-3 rounded bg-[var(--skeleton-base-dim)]" />
+                  }
+                  className="flex h-full min-h-0 animate-pulse flex-col"
+                  headerClassName="shrink-0"
+                  bodyClassName="min-h-0 max-h-none flex-1 overflow-hidden"
+                >
+                  {column.cardHeights.map((height, index) => (
+                    <KanbanTaskCardSkeleton
+                      key={`${column.id}:${height}:${index}`}
+                      height={height}
+                      showSeparator={index < column.cardHeights.length - 1}
+                    />
+                  ))}
+                  {column.showAddButton ? (
+                    <div className="ml-2 flex w-[calc(100%_-_0.5rem)] shrink-0 items-center justify-center rounded-md border border-dashed border-[var(--color-border)] p-3">
+                      <SkeletonPill className="h-4 w-28" />
+                    </div>
+                  ) : null}
+                </KanbanColumn>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </div>

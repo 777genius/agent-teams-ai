@@ -10,6 +10,13 @@ import type { GraphNode } from '@claude-teams/agent-graph';
 
 function createMockContext() {
   const arcCalls: Array<{ x: number; y: number; radius: number }> = [];
+  const roundRectCalls: Array<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    radius: number;
+  }> = [];
   const fillTextCalls: Array<{ text: string; x: number; y: number }> = [];
   const gradient = { addColorStop: vi.fn() };
   let fillStyle: string | CanvasGradient | CanvasPattern = '';
@@ -35,7 +42,9 @@ function createMockContext() {
     strokeRect: vi.fn(),
     translate: vi.fn(),
     scale: vi.fn(),
-    roundRect: vi.fn(),
+    roundRect: vi.fn((x: number, y: number, width: number, height: number, radius: number) => {
+      roundRectCalls.push({ x, y, width, height, radius });
+    }),
     createRadialGradient: vi.fn(() => gradient),
     createLinearGradient: vi.fn(() => gradient),
     measureText: vi.fn((text: string) => ({ width: text.length * 4.5 })),
@@ -66,7 +75,7 @@ function createMockContext() {
     },
   } as unknown as CanvasRenderingContext2D;
 
-  return { ctx, arcCalls, fillTextCalls };
+  return { ctx, arcCalls, roundRectCalls, fillTextCalls };
 }
 
 function createTaskNode(hasLiveTaskLogs: boolean): GraphNode {
@@ -133,6 +142,7 @@ describe('drawTasks', () => {
     const selected = createMockContext();
     const hierarchySummary = createMockContext();
     const hierarchyOverview = createMockContext();
+    const persistentOverviewCard = createMockContext();
     const node = createTaskNode(false);
 
     drawTasks(overview.ctx, [node], 1, null, null, null, 0.1);
@@ -157,13 +167,76 @@ describe('drawTasks', () => {
       null,
       0.1
     );
+    drawTasks(
+      persistentOverviewCard.ctx,
+      [{ ...node, taskZoomVisibility: 'overview', taskOverviewStyle: 'card' }],
+      1,
+      null,
+      null,
+      null,
+      0.1
+    );
 
     expect(overview.fillTextCalls).toHaveLength(0);
     expect(summary.fillTextCalls).toHaveLength(0);
     expect(detail.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(true);
     expect(selected.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(true);
     expect(hierarchySummary.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(true);
-    expect(hierarchyOverview.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(true);
+    expect(hierarchyOverview.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(
+      true
+    );
+    expect(hierarchyOverview.fillTextCalls.some((call) => call.text === '#1')).toBe(false);
+    expect(persistentOverviewCard.fillTextCalls.some((call) => call.text === '#1')).toBe(true);
+  });
+
+  it('does not draw a progress rail for finished tasks', () => {
+    const completed = createMockContext();
+    const approved = createMockContext();
+    const inProgress = createMockContext();
+    const railCall = (call: { x: number; y: number; width: number; height: number }) =>
+      call.x === -120 && call.y === 29 && call.width === 240 && call.height === 2;
+
+    drawTasks(
+      completed.ctx,
+      [{ ...createTaskNode(false), taskStatus: 'completed' }],
+      1,
+      null,
+      null,
+      null,
+      1
+    );
+    drawTasks(
+      approved.ctx,
+      [{ ...createTaskNode(false), reviewState: 'approved' }],
+      1,
+      null,
+      null,
+      null,
+      1
+    );
+    drawTasks(inProgress.ctx, [createTaskNode(false)], 1, null, null, null, 1);
+
+    expect(completed.roundRectCalls.some(railCall)).toBe(false);
+    expect(approved.roundRectCalls.some(railCall)).toBe(false);
+    expect(inProgress.roundRectCalls.some(railCall)).toBe(true);
+  });
+
+  it('wraps the in-progress segment smoothly across both rail edges', () => {
+    const wrapping = createMockContext();
+    const railWidth = 240;
+    const segmentWidth = railWidth * 0.34;
+    const travel = railWidth - segmentWidth;
+    const wrappingTime = (railWidth - segmentWidth / 2) / (travel * 0.28);
+
+    drawTasks(wrapping.ctx, [createTaskNode(false)], wrappingTime, null, null, null, 1);
+
+    const segmentCalls = wrapping.roundRectCalls.filter(
+      (call) => call.height === 2 && Math.abs(call.width - segmentWidth) < 0.001
+    );
+
+    expect(segmentCalls).toHaveLength(2);
+    expect(segmentCalls.some((call) => call.x > -120)).toBe(true);
+    expect(segmentCalls.some((call) => call.x < -120)).toBe(true);
   });
 
   it('draws the live log indicator only for task nodes with live log activity', () => {

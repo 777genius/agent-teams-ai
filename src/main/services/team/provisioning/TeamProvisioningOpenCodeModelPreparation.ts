@@ -1,4 +1,6 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import { randomUUID } from 'crypto';
 
 import {
@@ -25,12 +27,42 @@ export interface OpenCodeSelectedModelPreparationResult {
   supportDiagnostics: TeamProvisioningSupportDiagnostic[];
 }
 
+export interface OpenCodeLocalModelRuntimeReadiness {
+  readonly providerId: string;
+  readonly modelId: string;
+  readonly presetId: string;
+  readonly toolCapable: boolean | null;
+  readonly parameterCount: number | null;
+  readonly trainedContextTokens: number | null;
+  readonly configuredContextTokens: number | null;
+  readonly effectiveContextTokens: number | null;
+  readonly coordinationProbeStatus: 'passed' | 'failed' | 'unavailable' | null;
+  readonly severity: 'ready' | 'warning' | 'blocking';
+  readonly code:
+    | 'local_coordination_verified'
+    | 'local_coordination_probe_failed'
+    | 'local_coordination_probe_unavailable'
+    | 'local_team_tools_unverified'
+    | 'local_model_too_small'
+    | 'local_tools_unsupported'
+    | 'local_context_too_small'
+    | 'local_provider_unavailable'
+    | 'local_model_not_loaded'
+    | 'local_runtime_inspection_failed'
+    | 'local_runtime_unverified';
+  readonly message: string;
+}
+
 export interface OpenCodeSelectedModelPreparationInput {
   adapter: TeamLaunchRuntimeAdapter;
   cwd: string;
   modelIds: readonly string[];
   verificationMode: TeamProvisioningModelVerificationMode;
   appendPreflightDebugLog?: (event: string, data: Record<string, unknown>) => void;
+  inspectLocalModelRuntime?: (input: {
+    projectPath: string;
+    modelRoute: string;
+  }) => Promise<OpenCodeLocalModelRuntimeReadiness | null>;
 }
 
 type OpenCodeLaunchReadinessProvider = TeamLaunchRuntimeAdapter & {
@@ -47,12 +79,50 @@ const OPENCODE_PROVIDER_SCOPED_PREPARE_FAILURE_REASONS = new Set([
   'adapter_disabled',
 ]);
 
+function buildLocalModelTeamToolsWarning(modelId: string): string | null {
+  const sourceId = parseOpenCodeQualifiedModelRef(modelId)?.sourceId ?? null;
+  if (!isOpenCodeLocalProviderId(sourceId)) return null;
+  return (
+    `Local model ${modelId} answered the execution probe, but Agent Teams task and messaging ` +
+    'tools are not proven by that check. Use a tool-capable model and an effective 16K-32K ' +
+    'server context; Ollama defaults to 4K unless configured separately.'
+  );
+}
+
+function isOpenCodeLocalModelRoute(modelId: string): boolean {
+  const sourceId = parseOpenCodeQualifiedModelRef(modelId)?.sourceId ?? null;
+  return isOpenCodeLocalProviderId(sourceId);
+}
+
+function buildLocalRuntimeInspectionFailure(
+  modelId: string,
+  code: OpenCodeLocalModelRuntimeReadiness['code'],
+  message: string
+): OpenCodeLocalModelRuntimeReadiness {
+  const parsed = parseOpenCodeQualifiedModelRef(modelId);
+  return {
+    providerId: parsed?.sourceId ?? 'local',
+    modelId: parsed?.modelId ?? modelId,
+    presetId: 'custom',
+    toolCapable: null,
+    parameterCount: null,
+    trainedContextTokens: null,
+    configuredContextTokens: null,
+    effectiveContextTokens: null,
+    coordinationProbeStatus: null,
+    severity: 'blocking',
+    code,
+    message,
+  };
+}
+
 export async function prepareSelectedOpenCodeModelsForProvisioning({
   adapter,
   cwd,
   modelIds,
   verificationMode,
   appendPreflightDebugLog = () => undefined,
+  inspectLocalModelRuntime,
 }: OpenCodeSelectedModelPreparationInput): Promise<OpenCodeSelectedModelPreparationResult> {
   const details: string[] = [];
   const warnings: string[] = [];
@@ -77,14 +147,20 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
     }
   }
 
-  const results = new Array<{ modelId: string; prepare: TeamRuntimePrepareResult } | undefined>(
-    modelIds.length
-  );
+  const results = new Array<
+    | {
+        modelId: string;
+        prepare: TeamRuntimePrepareResult;
+        localRuntimeReadiness?: OpenCodeLocalModelRuntimeReadiness | null;
+      }
+    | undefined
+  >(modelIds.length);
   let providerBusyDeferred: {
     modelId: string;
     reason: string;
     code: string;
   } | null = null;
+  const nonLocalProviderSources = new Set<string>();
 
   const prepareModel = async (modelId: string): Promise<TeamRuntimePrepareResult> => {
     const modelStartedAt = Date.now();
@@ -145,8 +221,71 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
   // - Once busy is observed, probing more selected models only repeats the same host state.
   for (let index = 0; index < modelIds.length; index += 1) {
     const modelId = modelIds[index];
+    let localRuntimeReadiness: OpenCodeLocalModelRuntimeReadiness | null | undefined;
+    const parsedModel = parseOpenCodeQualifiedModelRef(modelId);
+    if (
+      verificationMode === 'deep' &&
+      inspectLocalModelRuntime &&
+      parsedModel &&
+      !nonLocalProviderSources.has(parsedModel.sourceId)
+    ) {
+      try {
+        localRuntimeReadiness = await inspectLocalModelRuntime({
+          projectPath: cwd,
+          modelRoute: modelId,
+        });
+        if (!localRuntimeReadiness) {
+          if (isOpenCodeLocalModelRoute(modelId)) {
+            localRuntimeReadiness = buildLocalRuntimeInspectionFailure(
+              modelId,
+              'local_provider_unavailable',
+              `Local provider for ${modelId} could not be resolved. Reconnect it, then retry verification.`
+            );
+          } else {
+            nonLocalProviderSources.add(parsedModel.sourceId);
+          }
+        }
+      } catch (error) {
+        const inspectionError = getErrorMessage(error);
+        localRuntimeReadiness = buildLocalRuntimeInspectionFailure(
+          modelId,
+          'local_runtime_inspection_failed',
+          `Local model launch verification failed: ${inspectionError}`
+        );
+        appendPreflightDebugLog('opencode_local_model_runtime_inspection_failed', {
+          cwd,
+          modelId,
+          error: inspectionError,
+        });
+      }
+    }
+
+    // A local runtime can often prove a hard incompatibility from server metadata alone.
+    // Avoid starting the much slower OpenCode execution probe when launch is already
+    // impossible (for example, a sub-1B model or an effective 4K context window).
+    if (localRuntimeReadiness?.severity === 'blocking') {
+      appendPreflightDebugLog('opencode_local_model_prepare_skipped', {
+        cwd,
+        modelId,
+        verificationMode,
+        reason: localRuntimeReadiness.code,
+      });
+      results[index] = {
+        modelId,
+        prepare: {
+          ok: true,
+          providerId: 'opencode',
+          modelId,
+          diagnostics: [],
+          warnings: [],
+        },
+        localRuntimeReadiness,
+      };
+      continue;
+    }
+
     const prepare = await prepareModel(modelId);
-    results[index] = { modelId, prepare };
+    results[index] = { modelId, prepare, localRuntimeReadiness };
 
     if (verificationMode === 'compatibility' || prepare.ok) {
       continue;
@@ -184,7 +323,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       continue;
     }
 
-    const { modelId, prepare } = result;
+    const { modelId, prepare, localRuntimeReadiness } = result;
     pushUniqueSupportDiagnostics(supportDiagnostics, prepare.supportDiagnostics);
     const prepareReason = prepare.ok ? undefined : prepare.reason;
     warnings.push(
@@ -193,11 +332,45 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       )
     );
     if (prepare.ok) {
+      if (verificationMode === 'deep' && localRuntimeReadiness?.severity === 'blocking') {
+        const unavailableLine = `Selected model ${modelId} is unavailable. ${localRuntimeReadiness.message}`;
+        pushUniqueLine(details, unavailableLine);
+        pushUniqueLine(blockingMessages, unavailableLine);
+        issues.push({
+          providerId: 'opencode',
+          modelId,
+          scope: 'model',
+          severity: 'blocking',
+          code: localRuntimeReadiness.code,
+          message: localRuntimeReadiness.message,
+        });
+        continue;
+      }
       details.push(
         verificationMode === 'compatibility'
           ? `Selected model ${modelId} is compatible. Deep verification pending.`
-          : `Selected model ${modelId} verified for launch.`
+          : localRuntimeReadiness?.severity === 'ready'
+            ? `Selected model ${modelId} verified for launch with Agent Teams tool coordination.`
+            : `Selected model ${modelId} verified for launch.`
       );
+      if (verificationMode === 'deep') {
+        if (localRuntimeReadiness?.severity === 'ready') {
+          continue;
+        }
+        const localModelWarning =
+          localRuntimeReadiness?.message ?? buildLocalModelTeamToolsWarning(modelId);
+        if (localModelWarning) {
+          pushUniqueLine(warnings, localModelWarning);
+          issues.push({
+            providerId: 'opencode',
+            modelId,
+            scope: 'model',
+            severity: 'warning',
+            code: localRuntimeReadiness?.code ?? 'local_team_tools_unverified',
+            message: localModelWarning,
+          });
+        }
+      }
       continue;
     }
 

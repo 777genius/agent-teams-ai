@@ -38,4 +38,23 @@ describe('graph camera geometry', () => {
     expect(bounds.right - bounds.left).toBeCloseTo(94 / 0.19);
     expect(bounds.bottom - bounds.top).toBeCloseTo(28 / 0.19);
   });
+
+  it('keeps persistent overview task bounds aligned with the full card', () => {
+    const task: GraphNode = {
+      id: 'task:demo:1',
+      kind: 'task',
+      label: '#1',
+      state: 'complete',
+      taskZoomVisibility: 'overview',
+      taskOverviewStyle: 'card',
+      x: 0,
+      y: 0,
+      domainRef: { kind: 'task', teamName: 'demo', taskId: '1' },
+    };
+
+    const bounds = getGraphNodeRenderBounds(task, 0.05);
+
+    expect(bounds.right - bounds.left).toBe(260);
+    expect(bounds.bottom - bounds.top).toBe(72);
+  });
 });

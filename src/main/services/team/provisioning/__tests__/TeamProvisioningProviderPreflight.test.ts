@@ -63,6 +63,24 @@ describe('provider preflight model compatibility', () => {
     ).toEqual({ kind: 'available', resolvedModelId: 'new-codex-model' });
   });
 
+  it('blocks stale Codex selections when a dynamic live catalog has current models', () => {
+    expect(
+      resolveProviderCompatibilityModel({
+        providerId: 'codex',
+        requestedModelId: 'gpt-5.4-mini',
+        runtimeFacts: buildRuntimeFacts({
+          defaultModel: 'gpt-5.6-sol',
+          modelIds: new Set(['gpt-5.6-sol', 'gpt-5.6-terra']),
+          runtimeCapabilities: { modelCatalog: { dynamic: true } },
+        }),
+        limitContext: false,
+      })
+    ).toEqual({
+      kind: 'unavailable',
+      reason: 'Selected model gpt-5.4-mini was not found in the live provider catalog.',
+    });
+  });
+
   it('blocks ambiguous scoped matches and authoritative catalog misses', () => {
     expect(
       resolveProviderCompatibilityModel({

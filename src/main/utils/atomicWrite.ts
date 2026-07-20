@@ -218,13 +218,13 @@ function renameWithRetrySync(src: string, dest: string): void {
 export async function renamePathWithRetry(
   src: string,
   dest: string,
-  options: { syncDirectories?: boolean } = {}
+  options: { syncDirectories?: boolean; durability?: 'best-effort' | 'strict' } = {}
 ): Promise<void> {
   for (let attempt = 1; attempt <= RENAME_MAX_ATTEMPTS; attempt++) {
     try {
       await fs.promises.rename(src, dest);
       if (options.syncDirectories) {
-        await syncRenamedDirectoriesBestEffort(src, dest);
+        await syncRenamedDirectories(src, dest, options.durability === 'strict');
       }
       return;
     } catch (error) {
@@ -290,7 +290,7 @@ export async function atomicWriteAsync(
     await syncFile(tmpPath, options.durability === 'strict');
     await renameWithRetry(tmpPath, targetPath, options.beforeCommit);
     if (options.syncDirectory) {
-      await syncDirectoryBestEffort(dir);
+      await syncDirectory(dir, options.durability === 'strict');
     }
   } catch (error) {
     await fs.promises.unlink(tmpPath).catch(() => undefined);
@@ -336,7 +336,7 @@ export async function atomicCreateAsync(
       // terminal success instead of deleting it or making a lost IPC response
       // ambiguous. A later authorization pass removes this reserved sibling link.
     }
-    await syncDirectoryBestEffort(dir);
+    await syncDirectory(dir, true);
     return { dev: identity.dev, ino: identity.ino };
   } catch (error) {
     await fs.promises.unlink(tmpPath).catch(() => undefined);
@@ -734,34 +734,68 @@ async function syncFile(filePath: string, strict: boolean): Promise<void> {
   }
 }
 
-async function syncDirectoryBestEffort(dirPath: string): Promise<void> {
+const UNSUPPORTED_DIRECTORY_SYNC_CODES = new Set(['EINVAL', 'ENOSYS', 'ENOTSUP', 'EOPNOTSUPP']);
+
+function isUnsupportedDirectorySyncError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code && UNSUPPORTED_DIRECTORY_SYNC_CODES.has(code)) return true;
+  // Windows does not provide a portable directory handle that can be fsynced.
+  // Keep only the platform-specific open/sync failures best-effort there; real
+  // storage failures such as EIO and ENOSPC must still fail strict operations.
+  return (
+    process.platform === 'win32' &&
+    (code === 'EACCES' || code === 'EPERM' || code === 'EISDIR' || code === 'EBADF')
+  );
+}
+
+async function syncDirectory(dirPath: string, strict: boolean): Promise<void> {
   let fd: fs.promises.FileHandle | null = null;
+  let firstError: unknown = null;
   try {
     fd = await fs.promises.open(dirPath, 'r');
     await fd.sync();
-  } catch {
-    // Directory fsync is unsupported on some platforms (notably Windows).
+  } catch (error) {
+    firstError = error;
   } finally {
     try {
       await fd?.close();
-    } catch {
-      // Best-effort close after best-effort fsync.
+    } catch (error) {
+      firstError ??= error;
     }
+  }
+  if (strict && firstError && !isUnsupportedDirectorySyncError(firstError)) {
+    throw firstError instanceof Error
+      ? firstError
+      : new Error('Directory synchronization failed with a non-Error value', {
+          cause: firstError,
+        });
   }
 }
 
+async function syncDirectoryBestEffort(dirPath: string): Promise<void> {
+  await syncDirectory(dirPath, false);
+}
+
+export async function syncDirectoryDurably(dirPath: string): Promise<void> {
+  await syncDirectory(dirPath, true);
+}
+
 async function syncRenamedDirectoriesBestEffort(src: string, dest: string): Promise<void> {
+  await syncRenamedDirectories(src, dest, false);
+}
+
+async function syncRenamedDirectories(src: string, dest: string, strict: boolean): Promise<void> {
   const sourceDir = path.dirname(src);
   const destinationDir = path.dirname(dest);
-  await syncDirectoryBestEffort(destinationDir);
+  await syncDirectory(destinationDir, strict);
   if (sourceDir !== destinationDir) {
-    await syncDirectoryBestEffort(sourceDir);
+    await syncDirectory(sourceDir, strict);
   }
 }
 
 export async function unlinkPathDurably(filePath: string): Promise<void> {
   await fs.promises.unlink(filePath);
-  await syncDirectoryBestEffort(path.dirname(filePath));
+  await syncDirectory(path.dirname(filePath), true);
 }
 
 /** Remove only crash-left atomic-create temp names that still reference this exact inode. */

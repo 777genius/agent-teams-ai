@@ -98,7 +98,7 @@ jobs:
         run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
 
       - name: Audit dependencies
-        run: pnpm audit --audit-level high
+        run: pnpm dlx pnpm@11.4.0 --pm-on-fail=ignore audit --audit-level high
 
       - name: Validate workspace truth gate
         env:

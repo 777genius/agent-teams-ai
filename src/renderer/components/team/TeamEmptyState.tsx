@@ -1,6 +1,6 @@
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
-import { FolderOpen, Plus } from 'lucide-react';
+import { Import, Plus } from 'lucide-react';
 
 interface TeamEmptyStateProps {
   canCreate: boolean;
@@ -32,7 +32,7 @@ export const TeamEmptyState = ({
               disabled={!canCreate}
               onClick={onImportTeam}
             >
-              <FolderOpen className="size-3.5" />
+              <Import className="size-3.5" />
               {t('list.actions.importTeam')}
             </Button>
           ) : null}

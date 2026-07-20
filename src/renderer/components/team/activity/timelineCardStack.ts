@@ -29,8 +29,3 @@ export function getTimelineCardBorderRadius(position: TimelineCardPosition = 'si
 export function joinsPreviousTimelineCard(position: TimelineCardPosition = 'single'): boolean {
   return position === 'middle' || position === 'last';
 }
-
-export function getTimelineHeaderGradient(accentColor: string, isLight: boolean): string {
-  const mix = isLight ? '9%' : '15%';
-  return `linear-gradient(180deg, color-mix(in srgb, ${accentColor} ${mix}, transparent) 0%, transparent 58%)`;
-}

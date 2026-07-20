@@ -1191,6 +1191,14 @@ export function getProvisioningFailureHint(
     );
   }
   if (
+    combined.includes('opencode') &&
+    (combined.includes('below supported minimum') ||
+      combined.includes('below the supported minimum') ||
+      combined.includes('unsupported_version'))
+  ) {
+    return 'Update OpenCode from the provider status card, then retry launch.';
+  }
+  if (
     combined.includes('opencode cli not detected on path') ||
     combined.includes('opencode cli not found') ||
     combined.includes('opencode runtime binary is not installed')

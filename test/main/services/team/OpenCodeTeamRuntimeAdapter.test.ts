@@ -212,6 +212,214 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
   });
 
+  it('blocks a local model before the state-changing launch when team tool coordination fails', async () => {
+    const launchOpenCodeTeam = vi.fn(async () => successfulOpenCodeLaunchData());
+    const inspectLocalModelRuntime = vi.fn(async () => ({
+      severity: 'blocking' as const,
+      code: 'local_coordination_probe_failed',
+      message: 'Local model ollama/qwen2.5:0.5b did not complete the Agent Teams tool sequence.',
+    }));
+    const bridge = bridgePort(
+      readiness({
+        state: 'ready',
+        launchAllowed: true,
+        modelId: 'ollama/qwen2.5:0.5b',
+        availableModels: ['ollama/qwen2.5:0.5b'],
+      }),
+      {
+        getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-local-blocked')),
+        launchOpenCodeTeam,
+      }
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge, {
+      inspectLocalModelRuntime,
+    });
+
+    const result = await adapter.launch(launchInput({ model: 'ollama/qwen2.5:0.5b' }));
+
+    expect(inspectLocalModelRuntime).toHaveBeenCalledWith({
+      projectPath: '/repo',
+      modelRoute: 'ollama/qwen2.5:0.5b',
+    });
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).not.toHaveBeenCalled();
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: {
+          launchState: 'failed_to_start',
+          hardFailureReason:
+            'Local model ollama/qwen2.5:0.5b did not complete the Agent Teams tool sequence.',
+        },
+      },
+    });
+  });
+
+  it('blocks an incompatible local member model even when the lane default is remote', async () => {
+    const launchOpenCodeTeam = vi.fn(async () => successfulOpenCodeLaunchData());
+    const inspectLocalModelRuntime = vi.fn(async ({ modelRoute }: { modelRoute: string }) =>
+      modelRoute.startsWith('ollama/')
+        ? {
+            severity: 'blocking' as const,
+            code: 'local_context_too_small',
+            message: 'Ollama member model is running with 4K context; Agent Teams requires 16K.',
+          }
+        : null
+    );
+    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-local-member-blocked')),
+      launchOpenCodeTeam,
+    });
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge, {
+      inspectLocalModelRuntime,
+    });
+
+    const result = await adapter.launch(
+      launchInput({
+        model: 'openai/gpt-5.4-mini',
+        expectedMembers: [
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'openai/gpt-5.4-mini',
+            cwd: '/repo',
+          },
+          {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'ollama/qwen3:4b',
+            cwd: '/repo',
+          },
+        ],
+      })
+    );
+
+    // The adapter checks each distinct source once so arbitrary configured local
+    // provider ids can be discovered without hardcoding their names.
+    expect(inspectLocalModelRuntime).toHaveBeenCalledTimes(2);
+    expect(inspectLocalModelRuntime).toHaveBeenCalledWith({
+      projectPath: '/repo',
+      modelRoute: 'ollama/qwen3:4b',
+    });
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).not.toHaveBeenCalled();
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      teamLaunchState: 'partial_failure',
+      members: {
+        bob: {
+          launchState: 'failed_to_start',
+          hardFailureReason:
+            'Ollama member model is running with 4K context; Agent Teams requires 16K.',
+        },
+      },
+    });
+  });
+
+  it('blocks a local model when its configured provider cannot be resolved', async () => {
+    const launchOpenCodeTeam = vi.fn(async () => successfulOpenCodeLaunchData());
+    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+      launchOpenCodeTeam,
+    });
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge, {
+      inspectLocalModelRuntime: vi.fn().mockResolvedValue(null),
+    });
+
+    const result = await adapter.launch(launchInput({ model: 'lmstudio/qwen3:8b' }));
+
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).not.toHaveBeenCalled();
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: {
+          launchState: 'failed_to_start',
+          hardFailureReason: expect.stringContaining('Reconnect it'),
+        },
+      },
+    });
+  });
+
+  it('blocks an incompatible custom local provider even with an arbitrary source id', async () => {
+    const launchOpenCodeTeam = vi.fn(async () => successfulOpenCodeLaunchData());
+    const inspectLocalModelRuntime = vi.fn(async () => ({
+      severity: 'blocking' as const,
+      code: 'local_coordination_probe_failed',
+      message: 'Custom local model did not complete Agent Teams coordination.',
+    }));
+    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+      launchOpenCodeTeam,
+    });
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge, {
+      inspectLocalModelRuntime,
+    });
+
+    const result = await adapter.launch(launchInput({ model: 'local-lab/team-model' }));
+
+    expect(inspectLocalModelRuntime).toHaveBeenCalledWith({
+      projectPath: '/repo',
+      modelRoute: 'local-lab/team-model',
+    });
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).not.toHaveBeenCalled();
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+    expect(result.members.alice?.hardFailureReason).toContain(
+      'did not complete Agent Teams coordination'
+    );
+  });
+
+  it('checks an unconfigured cloud source only once during local model preflight', async () => {
+    const inspectLocalModelRuntime = vi.fn().mockResolvedValue(null);
+    const adapter = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(readiness({ state: 'ready', launchAllowed: true })),
+      { inspectLocalModelRuntime }
+    );
+
+    const result = await adapter.preflightLocalModels({
+      targets: [
+        { projectPath: '/repo', modelRoute: 'openrouter/model-a' },
+        { projectPath: '/repo', modelRoute: 'openrouter/model-b' },
+      ],
+    });
+
+    expect(result).toEqual({ ok: true, warnings: [], diagnostics: [] });
+    expect(inspectLocalModelRuntime).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows a coordination-verified local model through the state-changing launch', async () => {
+    const launchOpenCodeTeam = vi.fn(async () =>
+      successfulOpenCodeLaunchData({ model: 'ollama/qwen3:4b' })
+    );
+    const inspectLocalModelRuntime = vi.fn(async ({ modelRoute }: { modelRoute: string }) =>
+      modelRoute.startsWith('ollama/')
+        ? {
+            severity: 'ready' as const,
+            code: 'local_coordination_verified',
+            message: 'Local model ollama/qwen3:4b passed Agent Teams tool coordination.',
+          }
+        : null
+    );
+    const bridge = bridgePort(
+      readiness({
+        state: 'ready',
+        launchAllowed: true,
+        modelId: 'ollama/qwen3:4b',
+        availableModels: ['ollama/qwen3:4b'],
+      }),
+      {
+        getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-local-ready')),
+        launchOpenCodeTeam,
+      }
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge, {
+      inspectLocalModelRuntime,
+    });
+
+    const result = await adapter.launch(launchInput({ model: 'ollama/qwen3:4b' }));
+
+    expect(result.teamLaunchState).toBe('clean_success');
+    expect(inspectLocalModelRuntime).toHaveBeenCalledTimes(2);
+    expect(launchOpenCodeTeam).toHaveBeenCalledTimes(1);
+  });
+
   it('launches isolated worktrees with the member worktree as the OpenCode project path', async () => {
     const worktreePath = '/tmp/generated-worktrees/alice';
     const launchOpenCodeTeam = vi.fn<
@@ -373,6 +581,43 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           state: 'unknown_error',
           launchAllowed: false,
           diagnostics: ['OpenCode readiness bridge failed: fetch failed'],
+        })
+      )
+      .mockResolvedValueOnce(readiness({ state: 'ready', launchAllowed: true }));
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+    });
+
+    vi.useFakeTimers();
+    try {
+      const resultPromise = adapter.prepare(launchInput());
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(750);
+
+      await expect(resultPromise).resolves.toMatchObject({
+        ok: true,
+        providerId: 'opencode',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries the OpenCode inventory and config timeout seen during multi-member launch', async () => {
+    const checkReadiness = vi
+      .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
+      .mockResolvedValueOnce(
+        readiness({
+          state: 'unknown_error',
+          launchAllowed: false,
+          diagnostics: [
+            'Failed to query OpenCode agents: OpenCode command timed out after 10000ms',
+            'Failed to query OpenCode models: OpenCode command timed out after 10000ms',
+            '/config request failed: request timed out after 15000ms',
+            'OpenCode raw model id "zai-coding-plan/glm-5.1" was not found in live provider catalog',
+          ],
         })
       )
       .mockResolvedValueOnce(readiness({ state: 'ready', launchAllowed: true }));
@@ -563,9 +808,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     await adapter.launch(launchInput());
 
     expect(checkReadiness).toHaveBeenCalledTimes(1);
-    expect(launchOpenCodeTeam).toHaveBeenCalledWith(
-      expect.objectContaining({ executionProof })
-    );
+    expect(launchOpenCodeTeam).toHaveBeenCalledWith(expect.objectContaining({ executionProof }));
   });
 
   it('does not reuse OAuth execution proof across prepare and launch', async () => {
@@ -633,9 +876,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       launchOpenCodeTeam,
     });
 
-    await expect(
-      adapter.launch(launchInput({ skipPermissions: false }))
-    ).resolves.toMatchObject({
+    await expect(adapter.launch(launchInput({ skipPermissions: false }))).resolves.toMatchObject({
       teamLaunchState: 'clean_success',
     });
 
@@ -972,6 +1213,52 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
   });
 
+  it('forces a readiness refresh after capability mismatch even when the execution proof is reusable', async () => {
+    let readinessCalls = 0;
+    let capabilitySnapshotId = 'cap-old';
+    const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
+      () => {
+        readinessCalls += 1;
+        capabilitySnapshotId = readinessCalls === 1 ? 'cap-old' : 'cap-new';
+        return Promise.resolve(
+          readiness({
+            state: 'ready',
+            launchAllowed: true,
+            executionProof: {
+              ...reusableExecutionProof(),
+              capabilitySnapshotId,
+            },
+          })
+        );
+      }
+    );
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >((input) =>
+      Promise.resolve(
+        input.expectedCapabilitySnapshotId === 'cap-old'
+          ? failedCapabilitySnapshotLaunchData('Bridge server capability snapshot mismatch')
+          : successfulOpenCodeLaunchData()
+      )
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot(capabilitySnapshotId)),
+      launchOpenCodeTeam,
+    });
+
+    const result = await adapter.launch(launchInput());
+
+    expect(result.teamLaunchState).toBe('clean_success');
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
+    expect(
+      launchOpenCodeTeam.mock.calls.map((call) => call[0].expectedCapabilitySnapshotId)
+    ).toEqual(['cap-old', 'cap-new']);
+    expect(launchOpenCodeTeam.mock.calls[1]?.[0].executionProof).toMatchObject({
+      capabilitySnapshotId: 'cap-new',
+    });
+  });
+
   it('refreshes readiness and retries once when the launch command sees a newer capability snapshot', async () => {
     const { result, checkReadiness, launchOpenCodeTeam } =
       await launchWithStaleCapabilitySnapshotRecovery(
@@ -991,12 +1278,12 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
   it('keeps refreshing bounded capability snapshot churn until launch observes the current snapshot', async () => {
     let readinessCalls = 0;
     const capabilitySnapshots = ['cap-1', 'cap-2', 'cap-3', 'cap-4'];
-    const checkReadiness = vi.fn<
-      OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']
-    >(() => {
-      readinessCalls += 1;
-      return Promise.resolve(readiness({ state: 'ready', launchAllowed: true }));
-    });
+    const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
+      () => {
+        readinessCalls += 1;
+        return Promise.resolve(readiness({ state: 'ready', launchAllowed: true }));
+      }
+    );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
     >((input) =>
@@ -1008,8 +1295,10 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: checkReadiness,
-      getLastOpenCodeRuntimeSnapshot: vi.fn(
-        () => runtimeSnapshot(capabilitySnapshots[Math.max(0, Math.min(readinessCalls - 1, 3))] ?? 'cap-4')
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() =>
+        runtimeSnapshot(
+          capabilitySnapshots[Math.max(0, Math.min(readinessCalls - 1, 3))] ?? 'cap-4'
+        )
       ),
       launchOpenCodeTeam,
     });
@@ -1022,24 +1311,26 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
     expect(checkReadiness).toHaveBeenCalledTimes(3);
     expect(launchOpenCodeTeam).toHaveBeenCalledTimes(3);
-    expect(launchOpenCodeTeam.mock.calls.map((call) => call[0].expectedCapabilitySnapshotId)).toEqual(
-      ['cap-1', 'cap-2', 'cap-3']
-    );
     expect(
-      launchOpenCodeTeam.mock.calls.slice(1).every((call) =>
-        /^opencode-capability-recovery-/.test(call[0].capabilitySnapshotRecoveryAttemptId ?? '')
-      )
+      launchOpenCodeTeam.mock.calls.map((call) => call[0].expectedCapabilitySnapshotId)
+    ).toEqual(['cap-1', 'cap-2', 'cap-3']);
+    expect(
+      launchOpenCodeTeam.mock.calls
+        .slice(1)
+        .every((call) =>
+          /^opencode-capability-recovery-/.test(call[0].capabilitySnapshotRecoveryAttemptId ?? '')
+        )
     ).toBe(true);
   });
 
   it('uses a fresh recovery attempt id when capability refresh returns the same snapshot', async () => {
     let readinessCalls = 0;
-    const checkReadiness = vi.fn<
-      OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']
-    >(() => {
-      readinessCalls += 1;
-      return Promise.resolve(readiness({ state: 'ready', launchAllowed: true }));
-    });
+    const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
+      () => {
+        readinessCalls += 1;
+        return Promise.resolve(readiness({ state: 'ready', launchAllowed: true }));
+      }
+    );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
     >((input) =>
@@ -1073,9 +1364,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
   });
 
   it('retries pre-launch capability mismatch reported in member diagnostics', async () => {
-    const checkReadiness = vi.fn<
-      OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']
-    >(() => Promise.resolve(readiness({ state: 'ready', launchAllowed: true })));
+    const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
+      () => Promise.resolve(readiness({ state: 'ready', launchAllowed: true }))
+    );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
     >((input) =>
@@ -1104,9 +1395,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
   });
 
   it('does not retry a successful launch just because stale diagnostics mention pre-launch mismatch', async () => {
-    const checkReadiness = vi.fn<
-      OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']
-    >(() => Promise.resolve(readiness({ state: 'ready', launchAllowed: true })));
+    const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
+      () => Promise.resolve(readiness({ state: 'ready', launchAllowed: true }))
+    );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
     >(() =>
@@ -1149,9 +1440,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
   });
 
   it('keeps the original precondition mismatch when the recovery retry also fails', async () => {
-    const checkReadiness = vi.fn<
-      OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']
-    >(() => Promise.resolve(readiness({ state: 'ready', launchAllowed: true })));
+    const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
+      () => Promise.resolve(readiness({ state: 'ready', launchAllowed: true }))
+    );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
     >(() =>
@@ -1333,6 +1624,12 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     const sentText = sendOpenCodeTeamMessage.mock.calls[0]?.[0]?.text ?? '';
     expect(sentText).toContain('hello bob');
     expect(sentText).toContain('Use teamName="team-a", to="alice", from="bob", text, and summary.');
+    expect(sentText).toContain(
+      'Required message_send argument envelope: {"teamName":"team-a","to":"alice","from":"bob","source":"runtime_delivery","relayOfMessageId":"msg-1"'
+    );
+    expect(sentText).toContain(
+      'If message_send reports parameter validation failure, correct the missing or invalid arguments'
+    );
     expect(sentText).toContain('Include source="runtime_delivery"');
     expect(sentText).toContain('Include relayOfMessageId="msg-1"');
     expect(sentText).toContain('Action mode for this message: delegate.');

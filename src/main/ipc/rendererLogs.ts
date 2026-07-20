@@ -1,3 +1,4 @@
+import { createLogger } from '@shared/utils/logger';
 import { type IpcMain } from 'electron';
 
 // IPC channel names — must match the preload bindings in src/preload/index.ts
@@ -12,6 +13,23 @@ const sendersWithDestroyCleanup = new WeakSet<object>();
 let heartbeatMonitorStarted = false;
 let heartbeatMonitorInterval: ReturnType<typeof setInterval> | null = null;
 let rendererLogHandlersRegistered = false;
+const logger = createLogger('Renderer');
+
+function normalizeRendererLogPayload(payload: unknown): {
+  level: 'warn' | 'error';
+  message: string;
+} | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const candidate = payload as { level?: unknown; message?: unknown };
+  if (candidate.level !== 'warn' && candidate.level !== 'error') return null;
+  if (typeof candidate.message !== 'string') return null;
+  const message = candidate.message.trim();
+  if (!message) return null;
+  return {
+    level: candidate.level,
+    message,
+  };
+}
 
 function startHeartbeatMonitor(): void {
   if (heartbeatMonitorStarted) return;
@@ -48,8 +66,14 @@ export function registerRendererLogHandlers(ipcMain: IpcMain): void {
   rendererLogHandlersRegistered = true;
   startHeartbeatMonitor();
 
-  ipcMain.on(RENDERER_LOG, () => {
-    // Forwarded renderer logs are intentionally silenced.
+  ipcMain.on(RENDERER_LOG, (_event, payload: unknown) => {
+    const normalized = normalizeRendererLogPayload(payload);
+    if (!normalized) return;
+    if (normalized.level === 'error') {
+      logger.error(normalized.message);
+      return;
+    }
+    logger.warn(normalized.message);
   });
 
   ipcMain.on(RENDERER_BOOT, (event) => {

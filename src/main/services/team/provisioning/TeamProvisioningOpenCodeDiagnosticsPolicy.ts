@@ -151,7 +151,11 @@ export function looksLikeOpenCodeProviderPrepareDiagnostic(value: string): boole
     lower.includes('runtime store') ||
     lower.includes('opencode cli') ||
     lower.includes('opencode runtime binary') ||
-    lower.includes('unable to connect')
+    lower.includes('unable to connect') ||
+    lower.includes('failed to query opencode') ||
+    lower.includes('opencode command timed out') ||
+    lower.includes('opencode request timed out') ||
+    (lower.includes('/config') && (lower.includes('timed out') || lower.includes('timeout')))
   );
 }
 

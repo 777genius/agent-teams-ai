@@ -124,7 +124,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     delete process.env.NVM_SYMLINK;
     clearOpenCodeRuntimeBinaryResolverCache();
     execCliMock.mockReset();
-    execCliMock.mockResolvedValue({ stdout: 'opencode 1.0.0\n', stderr: '' });
+    execCliMock.mockResolvedValue({ stdout: 'opencode 1.18.3\n', stderr: '' });
     buildMergedCliPathMock.mockReset();
     buildMergedCliPathMock.mockReturnValue('');
     getCachedShellEnvMock.mockReset();
@@ -251,6 +251,44 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     await expect(resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).resolves.toBeNull();
   });
 
+  it('rejects an executable old enough to corrupt a newer managed OpenCode profile', async () => {
+    const binaryPath = path.join(
+      tempRoot!,
+      'data',
+      'runtimes',
+      'opencode',
+      'versions',
+      '1.15.6',
+      'opencode-test',
+      'opencode'
+    );
+    const manifestPath = path.join(tempRoot!, 'data', 'runtimes', 'opencode', 'current.json');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await mkdir(path.dirname(manifestPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        version: '1.15.6',
+        platformPackage: 'opencode-test',
+        binaryPath,
+        integrity: 'sha512-test',
+        installedAt: '2026-07-20T00:00:00.000Z',
+      })}\n`,
+      'utf8'
+    );
+    execCliMock.mockResolvedValue({ stdout: 'opencode 1.15.6\n', stderr: '' });
+
+    await expect(resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).resolves.toBeNull();
+    await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
+      installed: false,
+      source: 'app-managed',
+      state: 'failed',
+      error: expect.stringContaining('below the supported minimum 1.16.0'),
+    });
+  });
+
   it('coalesces concurrent app-managed OpenCode verification probes', async () => {
     const binaryPath = path.join(
       tempRoot!,
@@ -285,7 +323,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const second = resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath();
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
 
-    versionProbe.resolve({ stdout: 'opencode 1.0.0\n', stderr: '' });
+    versionProbe.resolve({ stdout: 'opencode 1.18.3\n', stderr: '' });
     await expect(Promise.all([first, second])).resolves.toEqual([binaryPath, binaryPath]);
 
     await expect(resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).resolves.toBe(binaryPath);
@@ -330,7 +368,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const second = resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 });
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
 
-    versionProbe.resolve({ stdout: 'opencode 1.0.0\n', stderr: '' });
+    versionProbe.resolve({ stdout: 'opencode 1.18.3\n', stderr: '' });
     await expect(Promise.all([first, second])).resolves.toEqual([binaryPath, binaryPath]);
 
     await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
@@ -355,7 +393,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
 
     clearOpenCodeRuntimeBinaryResolverCache();
-    versionProbe.resolve({ stdout: 'opencode 1.0.0\n', stderr: '' });
+    versionProbe.resolve({ stdout: 'opencode 1.18.3\n', stderr: '' });
     await expect(staleResolve).resolves.toBe(binaryPath);
 
     await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
@@ -380,7 +418,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const second = service.getStatus();
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
 
-    versionProbe.resolve({ stdout: 'opencode 1.0.0\n', stderr: '' });
+    versionProbe.resolve({ stdout: 'opencode 1.18.3\n', stderr: '' });
     await expect(Promise.all([first, second])).resolves.toMatchObject([
       { installed: true, source: 'path', binaryPath },
       { installed: true, source: 'path', binaryPath },
@@ -413,12 +451,12 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
 
     service.invalidateStatusCache();
-    versionProbe.resolve({ stdout: 'opencode 1.0.0\n', stderr: '' });
+    versionProbe.resolve({ stdout: 'opencode 1.18.3\n', stderr: '' });
     await expect(staleStatus).resolves.toMatchObject({
       installed: true,
       source: 'path',
       binaryPath,
-      version: 'opencode 1.0.0',
+      version: 'opencode 1.18.3',
     });
 
     await expect(service.getStatus()).resolves.toMatchObject({
@@ -654,7 +692,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       process.env.PATH = activeNpmDirectory;
       getCachedShellEnvMock.mockReturnValue({ PATH: staleNvmDirectory });
       execCliMock.mockImplementation(async (binaryPath: string) => ({
-        stdout: binaryPath === activeNativePath ? '1.15.10\n' : '1.14.29\n',
+        stdout: binaryPath === activeNativePath ? '1.18.3\n' : '1.15.6\n',
         stderr: '',
       }));
 
@@ -730,7 +768,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       if (binaryPath === brokenBinaryPath) {
         throw new Error('broken nvm runtime');
       }
-      return { stdout: 'opencode 1.15.6\n', stderr: '' };
+      return { stdout: 'opencode 1.18.3\n', stderr: '' };
     });
 
     await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
@@ -741,7 +779,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       source: 'path',
       state: 'ready',
       binaryPath: workingBinaryPath,
-      version: 'opencode 1.15.6',
+      version: 'opencode 1.18.3',
     });
   });
 
@@ -762,7 +800,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       if (binaryPath === brokenBinaryPath) {
         throw new Error('broken nvm runtime');
       }
-      return { stdout: 'opencode 1.15.6\n', stderr: '' };
+      return { stdout: 'opencode 1.18.3\n', stderr: '' };
     });
 
     await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
@@ -789,7 +827,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       source: 'path',
       state: 'ready',
       binaryPath,
-      version: 'opencode 1.0.0',
+      version: 'opencode 1.18.3',
     });
   });
 
@@ -828,7 +866,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       if (binaryPath === appManagedBinaryPath) {
         throw new Error('broken app-managed runtime');
       }
-      return { stdout: 'opencode 1.0.0\n', stderr: '' };
+      return { stdout: 'opencode 1.18.3\n', stderr: '' };
     });
 
     await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
@@ -836,7 +874,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       source: 'path',
       state: 'ready',
       binaryPath: pathBinaryPath,
-      version: 'opencode 1.0.0',
+      version: 'opencode 1.18.3',
     });
   });
 

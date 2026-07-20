@@ -611,6 +611,7 @@ export class CliInstallerService {
     this.latestStatusSnapshot = null;
     this.latestProviderSignatures.clear();
     this.modelAvailabilityService.invalidate();
+    this.multimodelBridgeService.invalidateProviderStatusHydrations();
   }
 
   /**
@@ -942,7 +943,7 @@ export class CliInstallerService {
       ? await this.multimodelBridgeService.getProviderStatus(
           binaryPath,
           providerId,
-          handleCatalogUpdate,
+          undefined,
           options
         )
       : await this.multimodelBridgeService.getProviderStatus(
@@ -950,7 +951,9 @@ export class CliInstallerService {
           providerId,
           handleCatalogUpdate
         );
-    this.updateLatestProviderStatusIfCurrent(providerStatus, generation);
+    if (!options.projectPath) {
+      this.updateLatestProviderStatusIfCurrent(providerStatus, generation);
+    }
     return providerStatus;
   }
 

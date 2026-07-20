@@ -66,6 +66,7 @@ export type LaunchFailureArtifactClassificationCode =
   | 'stdin_missing'
   | 'provider_quota'
   | 'provider_auth'
+  | 'opencode_runtime_readiness_timeout'
   | 'process_readiness_timeout'
   | 'model_no_bootstrap'
   | 'process_exited'
@@ -294,6 +295,12 @@ export function classifyLaunchFailureArtifact(
       confidence: 0.88,
       pattern:
         /401 unauthorized|not_logged_in|login required|auth(?:entication)? failed|api key.*(?:missing|invalid)|token refresh failed/i,
+    },
+    {
+      code: 'opencode_runtime_readiness_timeout',
+      confidence: 0.94,
+      pattern:
+        /failed to query opencode (?:agents|models):.*(?:timed out|timeout)|opencode (?:bridge )?command timed out|(?:\/config request failed|opencode request timed out.*\/config).*?(?:timed out|timeout)/i,
     },
     {
       code: 'process_readiness_timeout',

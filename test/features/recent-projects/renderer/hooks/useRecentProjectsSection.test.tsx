@@ -18,8 +18,9 @@ import type {
 } from '@features/recent-projects/contracts';
 import type { TeamSummary } from '@shared/types';
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
-  true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 const apiMock = vi.hoisted(() => ({
   getDashboardRecentProjects: vi.fn(),
@@ -47,6 +48,10 @@ const storeState = vi.hoisted(() => ({
   fetchRepositoryGroups: vi.fn(),
   openTeamsTab: vi.fn(),
   fetchSessionsInitial: vi.fn(),
+  selectedRepositoryId: null as string | null,
+  selectedWorktreeId: null as string | null,
+  selectedProjectId: null as string | null,
+  activeProjectId: null as string | null,
 }));
 
 vi.mock('@renderer/api', () => ({
@@ -59,9 +64,15 @@ vi.mock('@renderer/store', () => {
     (selector: (state: typeof storeState) => unknown) => selector(storeState),
     {
       getState: () => storeState,
-      setState: vi.fn((patch: Partial<typeof storeState>) => {
-        Object.assign(storeState, patch);
-      }),
+      setState: vi.fn(
+        (
+          patch:
+            | Partial<typeof storeState>
+            | ((state: typeof storeState) => Partial<typeof storeState>)
+        ) => {
+          Object.assign(storeState, typeof patch === 'function' ? patch(storeState) : patch);
+        }
+      ),
     }
   );
   return { useStore };
@@ -153,6 +164,10 @@ describe('useRecentProjectsSection', () => {
     storeState.currentProvisioningRunIdByTeam = {};
     storeState.provisioningSnapshotByTeam = {};
     storeState.repositoryGroups = [];
+    storeState.selectedRepositoryId = null;
+    storeState.selectedWorktreeId = null;
+    storeState.selectedProjectId = null;
+    storeState.activeProjectId = null;
     apiMock.teams.aliveList.mockResolvedValue([]);
 
     host = document.createElement('div');
@@ -259,5 +274,40 @@ describe('useRecentProjectsSection', () => {
     expect(latest?.cards[0]?.activeTeams?.map((activeTeam) => activeTeam.teamName)).toEqual([
       'fresh-team',
     ]);
+  });
+
+  it('passes an existing-worktree project path to Teams before repository groups load', async () => {
+    const selectedProject = {
+      ...project('alpha', '/tmp/alpha'),
+      openTarget: {
+        type: 'existing-worktree' as const,
+        repositoryId: 'repo-alpha',
+        worktreeId: 'worktree-alpha',
+      },
+    };
+    apiMock.getDashboardRecentProjects.mockResolvedValue({
+      projects: [selectedProject],
+      degraded: false,
+    });
+
+    await renderHarness();
+
+    await act(async () => {
+      await latest?.openRecentProject(selectedProject);
+      await flushPromises();
+    });
+
+    expect(storeState.repositoryGroups).toEqual([]);
+    expect(storeState).toEqual(
+      expect.objectContaining({
+        selectedRepositoryId: 'repo-alpha',
+        selectedWorktreeId: 'worktree-alpha',
+        selectedProjectId: 'worktree-alpha',
+        activeProjectId: 'worktree-alpha',
+      })
+    );
+    expect(storeState.fetchSessionsInitial).toHaveBeenCalledWith('worktree-alpha');
+    expect(storeState.openTeamsTab).toHaveBeenCalledOnce();
+    expect(storeState.openTeamsTab).toHaveBeenCalledWith('/tmp/alpha');
   });
 });

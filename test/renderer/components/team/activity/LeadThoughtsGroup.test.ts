@@ -12,11 +12,14 @@ vi.mock('@renderer/components/chat/viewers/MarkdownViewer', () => ({
     React.createElement('div', { className }, content),
 }));
 vi.mock('@renderer/components/ui/tooltip', () => ({
-  TooltipProvider: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
-  Tooltip: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+  TooltipProvider: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  Tooltip: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
   TooltipTrigger: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
-  TooltipContent: ({ children }: { children: React.ReactNode }) => React.createElement('div', null, children),
+  TooltipContent: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', null, children),
 }));
 vi.mock('../../../../../src/renderer/components/team/activity/AnimatedHeightReveal', () => ({
   ENTRY_REVEAL_ANIMATION_MS: 220,
@@ -132,7 +135,8 @@ describe('LeadThoughtsGroup', () => {
     });
 
     it('excludes Human-prefixed internal control echoes from timeline', () => {
-      const leadRelayEcho = makeLeadSessionMsg(`Human: You have new inbox messages addressed to you (team lead "team-lead").
+      const leadRelayEcho =
+        makeLeadSessionMsg(`Human: You have new inbox messages addressed to you (team lead "team-lead").
 Process them in order (oldest first).
 If action is required, delegate via task creation or SendMessage, and keep responses minimal.
 
@@ -144,7 +148,8 @@ Messages:
       const teammateEcho = makeLeadSessionMsg(
         'Human: <teammate-message teammate_id="alice">{"type":"idle_notification"}</teammate-message>'
       );
-      const nativeBootstrapControlEcho = makeLeadSessionMsg(`Human: <agent_teams_native_bootstrap_control>
+      const nativeBootstrapControlEcho =
+        makeLeadSessionMsg(`Human: <agent_teams_native_bootstrap_control>
 System-level bootstrap rules:
 - This is a private startup context handoff.
 </agent_teams_native_bootstrap_control>`);
@@ -164,9 +169,7 @@ System-level bootstrap rules:
       );
       // Has a recipient, so isLeadThought returns false (line 61), but isLeadSessionNoise
       // also returns false because `to` is non-empty — message should appear in timeline.
-      expect(groupTimelineItems([sendMsg])).toEqual([
-        { type: 'message', message: sendMsg },
-      ]);
+      expect(groupTimelineItems([sendMsg])).toEqual([{ type: 'message', message: sendMsg }]);
     });
 
     it('does not exclude non-lead noise messages from timeline', () => {
@@ -177,9 +180,7 @@ System-level bootstrap rules:
         read: true,
         // No source — regular inbox message
       };
-      expect(groupTimelineItems([inboxMsg])).toEqual([
-        { type: 'message', message: inboxMsg },
-      ]);
+      expect(groupTimelineItems([inboxMsg])).toEqual([{ type: 'message', message: inboxMsg }]);
     });
 
     it('keeps regular lead thoughts alongside noise', () => {
@@ -217,6 +218,7 @@ System-level bootstrap rules:
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
           group: { type: 'lead-thoughts', thoughts: [thought] },
+          memberColor: 'green',
           collapseMode: 'managed',
           isCollapsed: true,
           canToggleCollapse: true,
@@ -235,6 +237,16 @@ System-level bootstrap rules:
     expect(previewNode?.className).toContain('max-w-full');
     expect(previewNode?.className).not.toContain('min-h-8');
     expect(previewNode?.className).not.toContain('truncate');
+
+    const accent = host.querySelector<HTMLElement>('[data-timeline-header-accent]');
+    expect(accent).not.toBeNull();
+    expect(accent?.className).toContain('left-0');
+    expect(accent?.className).toContain('h-6');
+    expect(accent?.style.backgroundColor).toBe('#22c55e');
+    expect(accent?.parentElement?.className).toContain('relative');
+    expect((accent?.closest('[role="button"]') as HTMLElement | null)?.style.backgroundImage).toBe(
+      ''
+    );
 
     await act(async () => {
       root.unmount();

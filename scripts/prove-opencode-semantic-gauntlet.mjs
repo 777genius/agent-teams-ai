@@ -13,19 +13,26 @@ import { spawnSyncWithWindowsShell } from './lib/windows-shell-spawn.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
+const gauntletRuns = process.env.OPENCODE_E2E_GAUNTLET_RUNS?.trim() || '3';
+const parsedGauntletRuns = Number.parseInt(gauntletRuns, 10);
+const defaultMinimumSuccessfulRuns = String(
+  Number.isInteger(parsedGauntletRuns) && parsedGauntletRuns > 0
+    ? Math.max(3, parsedGauntletRuns)
+    : 3
+);
 
 const env = {
   ...process.env,
   OPENCODE_E2E: '1',
   OPENCODE_E2E_SEMANTIC_MODEL_GAUNTLET: '1',
   OPENCODE_E2E_MODEL: process.env.OPENCODE_E2E_MODEL?.trim() || 'opencode/big-pickle',
-  OPENCODE_E2E_GAUNTLET_RUNS: process.env.OPENCODE_E2E_GAUNTLET_RUNS?.trim() || '1',
+  OPENCODE_E2E_GAUNTLET_RUNS: gauntletRuns,
   OPENCODE_E2E_GAUNTLET_MIN_AVERAGE_SCORE:
-    process.env.OPENCODE_E2E_GAUNTLET_MIN_AVERAGE_SCORE?.trim() || '80',
+    process.env.OPENCODE_E2E_GAUNTLET_MIN_AVERAGE_SCORE?.trim() || '90',
   OPENCODE_E2E_GAUNTLET_MIN_SUCCESSFUL_RUNS:
-    process.env.OPENCODE_E2E_GAUNTLET_MIN_SUCCESSFUL_RUNS?.trim() || '1',
+    process.env.OPENCODE_E2E_GAUNTLET_MIN_SUCCESSFUL_RUNS?.trim() || defaultMinimumSuccessfulRuns,
   OPENCODE_E2E_GAUNTLET_MIN_CONSISTENCY_SCORE:
-    process.env.OPENCODE_E2E_GAUNTLET_MIN_CONSISTENCY_SCORE?.trim() || '0',
+    process.env.OPENCODE_E2E_GAUNTLET_MIN_CONSISTENCY_SCORE?.trim() || '85',
   OPENCODE_E2E_GAUNTLET_REQUIRE_RECOMMENDED:
     process.env.OPENCODE_E2E_GAUNTLET_REQUIRE_RECOMMENDED?.trim() || '1',
   OPENCODE_DISABLE_AUTOUPDATE: process.env.OPENCODE_DISABLE_AUTOUPDATE ?? '1',

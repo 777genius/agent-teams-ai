@@ -31,7 +31,8 @@ vi.mock('@renderer/components/team/MemberBadge', () => ({
   MemberBadge: ({ name }: { name: string }) => React.createElement('span', null, name),
 }));
 vi.mock('@renderer/components/team/TaskTooltip', () => ({
-  TaskTooltip: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+  TaskTooltip: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
 }));
 vi.mock('@renderer/components/ui/ExpandableContent', () => ({
   ExpandableContent: ({ children }: { children: React.ReactNode }) =>
@@ -40,7 +41,8 @@ vi.mock('@renderer/components/ui/ExpandableContent', () => ({
 vi.mock('@renderer/components/ui/tooltip', () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
-  Tooltip: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+  Tooltip: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
   TooltipTrigger: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
   TooltipContent: ({ children }: { children: React.ReactNode }) =>
@@ -125,6 +127,7 @@ describe('ActivityItem compact header preview', () => {
         React.createElement(ActivityItem, {
           message,
           teamName: 'my-team',
+          memberColor: 'green',
           compactHeader: true,
           collapseMode: 'managed',
           isCollapsed: true,
@@ -144,6 +147,14 @@ describe('ActivityItem compact header preview', () => {
     expect(preview?.className).toContain('max-w-full');
     expect(preview?.className).not.toContain('min-h-8');
     expect(preview?.className).not.toContain('truncate');
+
+    const accent = host.querySelector<HTMLElement>('[data-timeline-header-accent]');
+    expect(accent).not.toBeNull();
+    expect(accent?.className).toContain('left-0');
+    expect(accent?.className).toContain('h-6');
+    expect(accent?.style.backgroundColor).toBe('#22c55e');
+    expect(accent?.parentElement?.className).toContain('relative');
+    expect((accent?.parentElement as HTMLElement | null)?.style.backgroundImage).toBe('');
 
     await act(async () => {
       root.unmount();

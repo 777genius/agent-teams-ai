@@ -211,7 +211,7 @@ describe('KiroCliCompanionService', () => {
         stdout: [
           'Installing Kiro CLI...',
           'Installation failed with exit code 1603',
-          'You can try installing manually: C:\\Users\\tester\\kiro-cli-installer.msi',
+          'You can try installing manually: C:\\Users\\test\\AppData\\Local\\Kiro\\kiro-cli-installer.msi',
         ].join('\n'),
         stderr: '',
       }),

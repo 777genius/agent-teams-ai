@@ -1,31 +1,12 @@
 import { memo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { formatDistanceToNowStrict } from 'date-fns';
+import { formatCompactRelativeTime } from '@renderer/utils/formatters';
 import { ExternalLink, Square, Terminal } from 'lucide-react';
 
 import { MemberBadge } from './MemberBadge';
 
 import type { ResolvedTeamMember, TeamProcess } from '@shared/types';
-
-function formatShortTime(date: Date): string {
-  const distance = formatDistanceToNowStrict(date, { addSuffix: false });
-  return distance
-    .replace(' seconds', 's')
-    .replace(' second', 's')
-    .replace(' minutes', 'm')
-    .replace(' minute', 'm')
-    .replace(' hours', 'h')
-    .replace(' hour', 'h')
-    .replace(' days', 'd')
-    .replace(' day', 'd')
-    .replace(' weeks', 'w')
-    .replace(' week', 'w')
-    .replace(' months', 'mo')
-    .replace(' month', 'mo')
-    .replace(' years', 'y')
-    .replace(' year', 'y');
-}
 
 interface ProcessesSectionProps {
   teamName: string;
@@ -94,9 +75,11 @@ export const ProcessesSection = memo(function ProcessesSection({
       {sorted.map((proc) => {
         const alive = !proc.stoppedAt;
         const timeStr = alive
-          ? t('processes.ago', { time: formatShortTime(new Date(proc.registeredAt)) })
+          ? t('processes.ago', {
+              time: formatCompactRelativeTime(new Date(proc.registeredAt)),
+            })
           : t('processes.stoppedAgo', {
-              time: formatShortTime(new Date(proc.stoppedAt!)),
+              time: formatCompactRelativeTime(new Date(proc.stoppedAt!)),
             });
 
         return (

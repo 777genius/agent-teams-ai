@@ -10,6 +10,10 @@ import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { getShellPreferredHome, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
+import {
+  getUnsupportedAgentTeamsOpenCodeVersionMessage,
+  isAgentTeamsOpenCodeVersionSupported,
+} from '@shared/utils/version';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fsp, readdirSync, readFileSync } from 'fs';
 import path from 'path';
@@ -103,7 +107,15 @@ export async function resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath(): Prom
     return null;
   }
   const version = await probeOpenCodeBinaryVersionCached(binaryPath);
-  return version.ok ? binaryPath : null;
+  return version.ok && isAgentTeamsOpenCodeVersionSupported(version.version) ? binaryPath : null;
+}
+
+export async function isSupportedOpenCodeRuntimeBinaryPath(binaryPath: string): Promise<boolean> {
+  if (!isAbsoluteExistingFile(binaryPath)) {
+    return false;
+  }
+  const version = await probeOpenCodeBinaryVersionCached(binaryPath);
+  return version.ok && isAgentTeamsOpenCodeVersionSupported(version.version);
 }
 
 function getExecutableName(): string {
@@ -311,14 +323,19 @@ async function probeFirstWorkingOpenCodeBinaryCandidate(
       }
       seen.add(normalized);
       const version = await probeOpenCodeBinaryVersionCached(launchBinaryPath);
-      if (version.ok) {
+      if (version.ok && isAgentTeamsOpenCodeVersionSupported(version.version)) {
         return {
           ok: true,
           binaryPath: launchBinaryPath,
           version: version.version,
         };
       }
-      nextFirstFailure ??= { binaryPath: launchBinaryPath, error: version.error };
+      nextFirstFailure ??= {
+        binaryPath: launchBinaryPath,
+        error: version.ok
+          ? getUnsupportedAgentTeamsOpenCodeVersionMessage(version.version)
+          : version.error,
+      };
     }
   }
 
@@ -827,7 +844,7 @@ export class OpenCodeRuntimeInstallerService {
       return { installed: false, source: 'missing', state: 'idle' };
     }
     const version = await probeOpenCodeBinaryVersionCached(manifest.binaryPath);
-    if (version.ok) {
+    if (version.ok && isAgentTeamsOpenCodeVersionSupported(version.version)) {
       return {
         installed: true,
         binaryPath: manifest.binaryPath,
@@ -842,7 +859,9 @@ export class OpenCodeRuntimeInstallerService {
       version: manifest.version,
       source: 'app-managed',
       state: 'failed',
-      error: version.error,
+      error: version.ok
+        ? getUnsupportedAgentTeamsOpenCodeVersionMessage(version.version)
+        : version.error,
     };
   }
 
@@ -877,7 +896,7 @@ export class OpenCodeRuntimeInstallerService {
       isAbsoluteExistingFile(latestStatus.binaryPath)
     ) {
       const version = await probeOpenCodeBinaryVersion(latestStatus.binaryPath);
-      if (version.ok) {
+      if (version.ok && isAgentTeamsOpenCodeVersionSupported(version.version)) {
         return {
           installed: true,
           binaryPath: latestStatus.binaryPath,
@@ -893,7 +912,7 @@ export class OpenCodeRuntimeInstallerService {
       return null;
     }
     const version = await probeOpenCodeBinaryVersion(manifest.binaryPath);
-    if (!version.ok) {
+    if (!version.ok || !isAgentTeamsOpenCodeVersionSupported(version.version)) {
       return null;
     }
     return {

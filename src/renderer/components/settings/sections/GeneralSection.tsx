@@ -12,6 +12,7 @@ import { Combobox } from '@renderer/components/ui/combobox';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { getFullResetState } from '@renderer/store/utils/stateResetHelpers';
+import { requestCloseActiveChangeReviewLifecycle } from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { AGENT_LANGUAGE_OPTIONS, resolveLanguageName } from '@shared/utils/agentLanguage';
 import { Check, Copy, FolderOpen, Laptop, Loader2, RotateCcw } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -134,6 +135,9 @@ export const GeneralSection = ({
   const applyClaudeRootPath = useCallback(
     async (claudeRootPath: string | null): Promise<void> => {
       try {
+        const lifecycleClose = requestCloseActiveChangeReviewLifecycle();
+        if (lifecycleClose !== true && !(await lifecycleClose)) return;
+
         setUpdatingClaudeRoot(true);
         setClaudeRootError(null);
 

@@ -121,21 +121,25 @@ describe('OpenCode runtime defaults', () => {
     expect(resolveProviderDefaultModel).toHaveBeenCalledOnce();
   });
 
-  it('rejects ambiguous member model selections', async () => {
-    await expect(
-      materializeOpenCodeRuntimeAdapterDefaults(
-        {
-          request: createRequest(),
-          members: [
-            { name: 'dev', role: 'developer', providerId: 'opencode', model: 'gpt-5' },
-            { name: 'qa', role: 'tester', providerId: 'opencode', model: 'gpt-4.1' },
-          ],
-        },
-        createPorts()
-      )
-    ).rejects.toThrow(
-      'OpenCode runtime adapter launch supports one selected model per lane. Select one team model or align OpenCode teammate models.'
+  it('uses the first OpenCode member model for the root while preserving differing side lanes', async () => {
+    const ports = createPorts();
+    const result = await materializeOpenCodeRuntimeAdapterDefaults(
+      {
+        request: createRequest(),
+        members: [
+          { name: 'dev', role: 'developer', providerId: 'opencode', model: 'gpt-5' },
+          { name: 'qa', role: 'tester', providerId: 'opencode', model: 'gpt-4.1' },
+        ],
+      },
+      ports
     );
+
+    expect(result.request.model).toBe('gpt-5');
+    expect(result.members).toEqual([
+      expect.objectContaining({ name: 'dev', model: 'gpt-5' }),
+      expect.objectContaining({ name: 'qa', model: 'gpt-4.1' }),
+    ]);
+    expect(ports.resolveProviderDefaultModel).not.toHaveBeenCalled();
   });
 
   it('resolves and applies the runtime default model when no model is selected', async () => {

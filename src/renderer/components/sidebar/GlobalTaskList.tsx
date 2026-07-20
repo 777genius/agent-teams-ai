@@ -1526,7 +1526,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
       )}
 
       {/* Controls */}
-      <div className="mb-[5px] shrink-0 border-b" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="shrink-0 border-b" style={{ borderColor: 'var(--color-border)' }}>
         <div className="flex items-center gap-1.5 px-2 py-1">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -1636,7 +1636,30 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
             </PopoverContent>
           </Popover>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            {hasArchivedTasks && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setShowArchived(!showArchived)}
+                    className={cn(
+                      'rounded p-0.5 transition-colors',
+                      effectiveShowArchived
+                        ? 'bg-surface-raised text-text-secondary'
+                        : 'text-text-muted hover:text-text-secondary'
+                    )}
+                  >
+                    <Archive className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {effectiveShowArchived
+                    ? t('tasksPanel.hideArchived')
+                    : t('tasksPanel.showArchived')}
+                </TooltipContent>
+              </Tooltip>
+            )}
             <TaskFiltersPopover
               open={filtersPopoverOpen}
               onOpenChange={setFiltersPopoverOpen}
@@ -1708,36 +1731,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
           />
         </div>
       )}
-
-      {/* Secondary controls */}
-      <div className="flex shrink-0 items-center px-2 py-1">
-        {/* Archive toggle — only visible when archived tasks exist */}
-        {hasArchivedTasks && (
-          <div className="ml-auto">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => setShowArchived(!showArchived)}
-                  className={cn(
-                    'rounded p-0.5 transition-colors',
-                    effectiveShowArchived
-                      ? 'bg-surface-raised text-text-secondary'
-                      : 'text-text-muted hover:text-text-secondary'
-                  )}
-                >
-                  <Archive className="size-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                {effectiveShowArchived
-                  ? t('tasksPanel.hideArchived')
-                  : t('tasksPanel.showArchived')}
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        )}
-      </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">

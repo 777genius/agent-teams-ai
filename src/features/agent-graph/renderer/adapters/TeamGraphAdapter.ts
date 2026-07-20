@@ -796,6 +796,8 @@ export class TeamGraphAdapter {
         kind: 'task',
         label: task.displayId ?? `#${task.id.slice(0, 6)}`,
         sublabel: task.subject,
+        taskZoomVisibility: 'overview',
+        taskOverviewStyle: 'card',
         state:
           graphColumn === 'approved' ? 'complete' : TeamGraphAdapter.#mapTaskStatus(task.status),
         taskStatus,

@@ -6,6 +6,10 @@ import {
   GPT_5_1_CODEX_MINI_UI_DISABLED_REASON,
   GPT_5_2_CODEX_UI_DISABLED_REASON,
   GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON,
+  isTeamProviderModelCatalogFresh,
+  isTeamProviderModelCatalogSettled,
+  isTeamProviderModelVerificationPending,
+  isTeamProviderRuntimeStatusLoading,
   normalizeTeamModelForUi,
   type TeamModelRuntimeProviderStatus,
 } from '@renderer/utils/teamModelAvailability';
@@ -85,6 +89,140 @@ function createAnthropicCompatibleProviderStatus(
 }
 
 describe('teamModelAvailability', () => {
+  it('keeps Codex pending while its runtime checks a settled cached catalog', () => {
+    const providerStatus = createCodexProviderStatus(['gpt-5.4'], {
+      modelCatalogRefreshState: 'ready',
+      statusMessage: 'Checking...',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'codex',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-07-20T12:00:00.000Z',
+        staleAt: '2026-07-20T12:10:00.000Z',
+        defaultModelId: 'gpt-5.4',
+        defaultLaunchModel: 'gpt-5.4',
+        diagnostics: {
+          configReadState: 'ready',
+          appServerState: 'healthy',
+        },
+        models: [],
+      },
+    });
+
+    expect(isTeamProviderModelCatalogSettled('codex', providerStatus)).toBe(true);
+    expect(isTeamProviderModelVerificationPending('codex', providerStatus)).toBe(true);
+    expect(isTeamProviderRuntimeStatusLoading('codex', providerStatus, false)).toBe(true);
+  });
+
+  it('keeps a hydrated OpenCode runtime ready while its catalog refreshes in the background', () => {
+    const providerStatus = createOpenCodeProviderStatus(['openrouter/openai/gpt-5.4'], {
+      modelCatalogRefreshState: 'loading',
+      statusMessage: 'Checking...',
+    });
+
+    expect(isTeamProviderModelVerificationPending('opencode', providerStatus)).toBe(false);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, false)).toBe(false);
+  });
+
+  it('keeps an explicit provider or auth refresh loading even with cached models', () => {
+    const providerStatus = createOpenCodeProviderStatus(['openrouter/openai/gpt-5.4'], {
+      modelCatalogRefreshState: 'loading',
+      statusMessage: 'Checking...',
+    });
+
+    expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, true)).toBe(true);
+  });
+
+  it('keeps the OpenCode runtime pending until its first model snapshot arrives', () => {
+    const providerStatus = createOpenCodeProviderStatus([], {
+      modelCatalogRefreshState: 'loading',
+      statusMessage: 'Checking...',
+    });
+
+    expect(isTeamProviderModelVerificationPending('opencode', providerStatus)).toBe(true);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, true)).toBe(true);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', null, true)).toBe(true);
+  });
+
+  it('treats only ready, unexpired provider catalogs as fresh', () => {
+    const providerStatus = createOpenCodeProviderStatus(['openrouter/openai/gpt-5.4'], {
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-07-20T12:00:00.000Z',
+        staleAt: '2026-07-20T12:10:00.000Z',
+        defaultModelId: 'openrouter/openai/gpt-5.4',
+        defaultLaunchModel: 'openrouter/openai/gpt-5.4',
+        diagnostics: {
+          configReadState: 'ready',
+          appServerState: 'healthy',
+        },
+        models: [],
+      },
+    });
+
+    expect(
+      isTeamProviderModelCatalogFresh(
+        'opencode',
+        providerStatus,
+        Date.parse('2026-07-20T12:05:00.000Z')
+      )
+    ).toBe(true);
+    expect(
+      isTeamProviderModelCatalogFresh(
+        'opencode',
+        providerStatus,
+        Date.parse('2026-07-20T12:11:00.000Z')
+      )
+    ).toBe(false);
+    expect(
+      isTeamProviderModelCatalogFresh('opencode', {
+        ...providerStatus,
+        modelCatalogRefreshState: 'error',
+      })
+    ).toBe(false);
+    expect(
+      isTeamProviderModelCatalogFresh('opencode', {
+        ...providerStatus,
+        modelCatalog: providerStatus.modelCatalog
+          ? { ...providerStatus.modelCatalog, status: 'stale' }
+          : null,
+      })
+    ).toBe(false);
+  });
+
+  it('treats a terminal OpenCode catalog as settled without calling it fresh', () => {
+    const providerStatus = createOpenCodeProviderStatus([], {
+      modelCatalogRefreshState: 'ready',
+      statusMessage: 'Model catalog unavailable',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'unavailable',
+        fetchedAt: '2026-07-20T12:00:00.000Z',
+        staleAt: '2026-07-20T12:00:00.000Z',
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        diagnostics: {
+          configReadState: 'failed',
+          appServerState: 'degraded',
+          message: 'OpenCode app server did not return a catalog',
+        },
+        models: [],
+      },
+    });
+
+    expect(isTeamProviderModelCatalogFresh('opencode', providerStatus)).toBe(false);
+    expect(isTeamProviderModelCatalogSettled('opencode', providerStatus)).toBe(true);
+    expect(isTeamProviderModelVerificationPending('opencode', providerStatus)).toBe(false);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, false)).toBe(false);
+  });
+
   it('uses runtime-reported Codex models as the source of truth', () => {
     const providerStatus = createCodexProviderStatus(['gpt-5.4', 'gpt-5.3-codex']);
 
@@ -800,9 +938,7 @@ describe('teamModelAvailability', () => {
     expect(normalizeTeamModelForUi('anthropic', 'claude-sonnet-4-7', providerStatus)).toBe(
       'claude-sonnet-4-7'
     );
-    expect(
-      getTeamModelSelectionError('anthropic', 'claude-sonnet-4-7', providerStatus)
-    ).toBeNull();
+    expect(getTeamModelSelectionError('anthropic', 'claude-sonnet-4-7', providerStatus)).toBeNull();
   });
 
   it('hides Claude Code removed Anthropic models even when the API catalog still lists them', () => {
@@ -1168,8 +1304,8 @@ describe('teamModelAvailability', () => {
     });
 
     expect(normalizeTeamModelForUi('anthropic', 'openai/gpt-oss-20b', providerStatus)).toBe('');
-    expect(
-      getTeamModelSelectionError('anthropic', 'openai/gpt-oss-20b', providerStatus)
-    ).toContain('not available');
+    expect(getTeamModelSelectionError('anthropic', 'openai/gpt-oss-20b', providerStatus)).toContain(
+      'not available'
+    );
   });
 });

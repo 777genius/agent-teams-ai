@@ -38,6 +38,7 @@ export function createStaticCodexModelCatalogModels(): CliProviderModelCatalogIt
       badgeLabel: '5.6-sol',
       efforts: GPT_5_6_SOL_TERRA_EFFORTS,
       defaultEffort: 'low',
+      isDefault: true,
     }),
     createFallbackModel({
       id: 'gpt-5.6-terra',
@@ -52,35 +53,14 @@ export function createStaticCodexModelCatalogModels(): CliProviderModelCatalogIt
       efforts: GPT_5_6_LUNA_EFFORTS,
     }),
     createFallbackModel({
-      id: 'gpt-5.4',
-      displayName: 'GPT-5.4',
-      badgeLabel: '5.4',
-      isDefault: true,
-    }),
-    createFallbackModel({
       id: 'gpt-5.5',
       displayName: 'GPT-5.5',
       badgeLabel: '5.5',
     }),
     createFallbackModel({
-      id: 'gpt-5.4-mini',
-      displayName: 'GPT-5.4 Mini',
-      badgeLabel: '5.4-mini',
-    }),
-    createFallbackModel({
-      id: 'gpt-5.3-codex',
-      displayName: 'GPT-5.3 Codex',
-      badgeLabel: '5.3-codex',
-    }),
-    createFallbackModel({
-      id: 'gpt-5.2',
-      displayName: 'GPT-5.2',
-      badgeLabel: '5.2',
-    }),
-    createFallbackModel({
-      id: 'gpt-5.1-codex-mini',
-      displayName: 'GPT-5.1 Codex Mini',
-      badgeLabel: '5.1-codex-mini',
+      id: 'gpt-5.3-codex-spark',
+      displayName: 'GPT-5.3 Codex Spark',
+      badgeLabel: '5.3-spark',
       efforts: MINI_CODEX_EFFORTS,
     }),
   ];

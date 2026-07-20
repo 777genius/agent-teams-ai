@@ -48,7 +48,9 @@ import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
+import { useOpenCodeCatalogPrefetch } from '@renderer/hooks/useOpenCodeCatalogPrefetch';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -388,7 +390,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     codexAccount.loading &&
     Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')) &&
     !codexAccount.snapshot;
-  const runtimeProviderStatusById = useMemo(
+  const globalRuntimeProviderStatusById = useMemo(
     () =>
       new Map(
         (effectiveCliStatus?.providers ?? []).map(
@@ -540,6 +542,29 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [worktreePathByMemberName, setWorktreePathByMemberName] = useState<Record<string, string>>(
     {}
   );
+  const selectedProjectPathDeleted = useMemo(
+    () =>
+      cwdMode === 'project' &&
+      selectedProjectPath.length > 0 &&
+      isDeletedProjectPathSelection(projects, selectedProjectPath),
+    [cwdMode, projects, selectedProjectPath]
+  );
+  const selectedProjectCwd =
+    isEphemeralProjectPath(selectedProjectPath) || selectedProjectPathDeleted
+      ? ''
+      : selectedProjectPath.trim();
+  const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
+  const { cliStatus: projectScopedCliStatus, providerStatus: projectScopedOpenCodeStatus } =
+    useEffectiveCliProviderStatus('opencode', {
+      projectPath: effectiveCwd || null,
+    });
+  const runtimeProviderStatusById = useMemo(() => {
+    const statuses = new Map(globalRuntimeProviderStatusById);
+    if (effectiveCwd && projectScopedOpenCodeStatus) {
+      statuses.set('opencode', projectScopedOpenCodeStatus);
+    }
+    return statuses;
+  }, [effectiveCwd, globalRuntimeProviderStatusById, projectScopedOpenCodeStatus]);
   const effectiveMemberDrafts = useMemo(() => {
     const scopedMembers = syncModelsWithLead
       ? membersDrafts.map(clearMemberModelOverrides)
@@ -565,13 +590,19 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ),
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
+  const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
+    enabled: open && multimodelEnabled,
+    projectPath: effectiveCwd || null,
+    priority: selectedMemberProviders.includes('opencode') ? 'required' : 'background',
+    deferBackground: prepareState === 'loading' || isSubmitting,
+  });
   const hasSelectedAnthropicRuntime = isLaunchMode && selectedMemberProviders.includes('anthropic');
   const effectiveAnthropicRuntimeLimitContext =
     hasSelectedAnthropicRuntime && !isSchedule ? limitContext : false;
 
   const runtimeBackendSummaryByProvider = useMemo(() => {
     const entries: (readonly [TeamProviderId, string | null])[] = (
-      effectiveCliStatus?.providers ?? []
+      projectScopedCliStatus?.providers ?? []
     ).map(
       (provider) =>
         [
@@ -580,7 +611,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         ] as const
     );
     return new Map<TeamProviderId, string | null>(entries);
-  }, [effectiveCliStatus?.providers]);
+  }, [projectScopedCliStatus?.providers]);
   const runtimeBackendSummaryByProviderRef = useRef(runtimeBackendSummaryByProvider);
   const prepareChecksRef = useRef<ProvisioningProviderCheck[]>([]);
   const prepareMessageRef = useRef<string | null>(null);
@@ -637,13 +668,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 runtimeProviderStatusById.get(providerId),
                 cliProviderStatusLoading[providerId] === true ||
                   (providerId === 'codex' && codexSnapshotPending)
-              ),
+              ) ||
+                (providerId === 'opencode' && openCodeCatalogPending),
             ] as const
         )
       ),
     [
       cliProviderStatusLoading,
       codexSnapshotPending,
+      openCodeCatalogPending,
       runtimeProviderStatusById,
       selectedMemberProviders,
     ]
@@ -914,6 +947,22 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   useEffect(() => {
     if (!open || !isLaunchMode) return;
+
+    const immediateEditableMembers = filterEditableMemberInputs(members);
+    if (immediateEditableMembers.length > 0) {
+      setMembersDrafts(
+        createMemberDraftsFromInputs(immediateEditableMembers).map((member) =>
+          normalizeMemberDraftForProviderMode(member, multimodelEnabled)
+        )
+      );
+      setWorktreePathByMemberName(buildWorktreePathByMemberName(immediateEditableMembers));
+      setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(immediateEditableMembers));
+      setSyncModelsWithLead(
+        !immediateEditableMembers.some(
+          (member) => member.providerId || member.model || member.effort
+        )
+      );
+    }
 
     let cancelled = false;
     void (async () => {
@@ -1532,18 +1581,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Launch-only effects
   // ---------------------------------------------------------------------------
 
-  const selectedProjectPathDeleted = useMemo(
-    () =>
-      cwdMode === 'project' &&
-      selectedProjectPath.length > 0 &&
-      isDeletedProjectPathSelection(projects, selectedProjectPath),
-    [cwdMode, projects, selectedProjectPath]
-  );
-  const selectedProjectCwd =
-    isEphemeralProjectPath(selectedProjectPath) || selectedProjectPathDeleted
-      ? ''
-      : selectedProjectPath.trim();
-  const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
   const hasSelectedWorktreeIsolation =
     isLaunchMode &&
     effectiveMemberDrafts.some((member) => !member.removedAt && member.isolation === 'worktree');

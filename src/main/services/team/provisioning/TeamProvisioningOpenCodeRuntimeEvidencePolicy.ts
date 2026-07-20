@@ -98,6 +98,81 @@ export function createUnexpectedMixedSecondaryLaneFailureResult(input: {
   };
 }
 
+export function markOpenCodeLaneBlockedBySharedRuntimeFailure(input: {
+  teamName: string;
+  lane: {
+    laneId: string;
+    member: { name: string };
+    runId: string | null;
+    state: 'queued' | 'launching' | 'finished';
+    result: TeamRuntimeLaunchResult | null;
+    warnings: string[];
+    diagnostics: string[];
+    queuedAtMs?: number;
+    launchFinishedAtMs?: number;
+  };
+  rootCause: string;
+  nowMs: number;
+  createRunId(): string;
+}): void {
+  const { lane } = input;
+  lane.queuedAtMs = lane.queuedAtMs ?? input.nowMs;
+  lane.launchFinishedAtMs = input.nowMs;
+  lane.runId = lane.runId ?? input.createRunId();
+  lane.state = 'finished';
+  const message =
+    `OpenCode runtime preflight failed before ${lane.member.name} could start. ` +
+    `This lane was not attempted because it uses the same project runtime. Root cause: ${input.rootCause}`;
+  const skippedResult = createUnexpectedMixedSecondaryLaneFailureResult({
+    runId: lane.runId,
+    teamName: input.teamName,
+    memberName: lane.member.name,
+    message,
+  });
+  lane.result = {
+    ...skippedResult,
+    diagnostics: [input.rootCause, message],
+    members: {
+      ...skippedResult.members,
+      [lane.member.name]: {
+        ...skippedResult.members[lane.member.name],
+        diagnostics: [input.rootCause, message],
+      },
+    },
+  };
+  lane.warnings = [];
+  lane.diagnostics = appendDiagnosticOnce([...lane.diagnostics, input.rootCause], message);
+}
+
+const OPEN_CODE_SHARED_RUNTIME_PREFLIGHT_FAILURE_PATTERNS = [
+  /failed to query opencode (?:agents|models):.*\b(?:timed out|timeout)\b/i,
+  /opencode request timed out.*\/config/i,
+  /\/config request failed:.*\b(?:timed out|timeout)\b/i,
+  /opencode host (?:is )?not healthy/i,
+  /opencode readiness bridge failed:.*\b(?:fetch failed|econnrefused)\b/i,
+] as const;
+
+export function selectOpenCodeSharedRuntimePreflightFailureDiagnostic(
+  result: TeamRuntimeLaunchResult
+): string | null {
+  for (const [memberName, member] of Object.entries(result.members)) {
+    if (!isDefinitiveOpenCodePreLaunchFailure(result, memberName)) {
+      continue;
+    }
+    const candidates = [member.hardFailureReason, member.runtimeDiagnostic]
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const sharedFailure = candidates.find((value) =>
+      OPEN_CODE_SHARED_RUNTIME_PREFLIGHT_FAILURE_PATTERNS.some((pattern) => pattern.test(value))
+    );
+    if (sharedFailure) {
+      return sharedFailure;
+    }
+  }
+  return null;
+}
+
 export function toOpenCodePersistedLaunchMember(
   member: TeamRuntimeLaunchInput['expectedMembers'][number],
   evidence: TeamRuntimeMemberLaunchEvidence | undefined,

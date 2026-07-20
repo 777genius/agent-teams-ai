@@ -139,6 +139,19 @@ describe('ProvisioningProviderStatusList', () => {
     );
   });
 
+  it('gives a concrete hint for an outdated OpenCode runtime', () => {
+    expect(
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          backendSummary: null,
+          details: ['OpenCode 1.15.6 is below supported minimum 1.16.0'],
+        },
+      ])
+    ).toBe('Update OpenCode from the provider status card, then retry launch.');
+  });
+
   it('gives a concrete hint for stale OpenCode app MCP bridge failures', () => {
     expect(
       getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
@@ -168,9 +181,7 @@ describe('ProvisioningProviderStatusList', () => {
           ],
         },
       ])
-    ).toBe(
-      'Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.'
-    );
+    ).toBe('Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.');
   });
 
   it('renders Copy diagnostics for OpenCode support diagnostics and copies the prepared payload', async () => {

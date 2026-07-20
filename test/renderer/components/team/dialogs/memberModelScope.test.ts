@@ -38,6 +38,20 @@ describe('memberModelScope', () => {
     });
   });
 
+  it('preserves a saved teammate model until cold-start provider status arrives', () => {
+    const scoped = resolveProviderScopedMemberModel({
+      memberProviderId: 'opencode',
+      memberModel: 'ollama/qwen2.5-coder:0.5b',
+      selectedProviderId: 'opencode',
+      runtimeProviderStatusById: providerStatuses([]),
+    });
+
+    expect(scoped).toEqual({
+      providerId: 'opencode',
+      model: 'ollama/qwen2.5-coder:0.5b',
+    });
+  });
+
   it('clears only inherited stale models after the selected non-Anthropic provider status is loaded', () => {
     const inheritedStale = draft({ id: 'inherited', model: 'gemini-3-pro-preview' });
     const explicitGemini = draft({
@@ -118,6 +132,43 @@ describe('memberModelScope', () => {
 
     expect(result.changed).toBe(false);
     expect(result.members[0]).toBe(explicitOpenCode);
+  });
+
+  it('preserves a teammate model when the project catalog refresh fails', () => {
+    const scoped = resolveProviderScopedMemberModel({
+      memberProviderId: 'opencode',
+      memberModel: 'ollama/qwen2.5-coder:0.5b',
+      selectedProviderId: 'opencode',
+      runtimeProviderStatusById: providerStatuses([
+        providerStatus('opencode', [], {
+          verificationState: 'error',
+          modelCatalogRefreshState: 'error',
+        }),
+      ]),
+    });
+
+    expect(scoped).toEqual({
+      providerId: 'opencode',
+      model: 'ollama/qwen2.5-coder:0.5b',
+    });
+  });
+
+  it('does not clear inherited OpenCode models after a catalog refresh error', () => {
+    const member = draft({ model: 'ollama/qwen2.5-coder:0.5b' });
+
+    const result = clearInheritedMemberModelsUnavailableForProvider({
+      members: [member],
+      selectedProviderId: 'opencode',
+      runtimeProviderStatusById: providerStatuses([
+        providerStatus('opencode', [], {
+          verificationState: 'error',
+          modelCatalogRefreshState: 'error',
+        }),
+      ]),
+    });
+
+    expect(result.changed).toBe(false);
+    expect(result.members[0]).toBe(member);
   });
 
   it('waits for non-Anthropic runtime status before mutating inherited models', () => {

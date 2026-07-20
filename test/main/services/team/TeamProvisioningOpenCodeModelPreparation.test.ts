@@ -16,10 +16,7 @@ type TestAdapter = TeamLaunchRuntimeAdapter & {
   getLastOpenCodeTeamLaunchReadiness?: Mock<(cwd: string) => { availableModels?: unknown[] }>;
 };
 
-function createAdapter(input: {
-  prepare: PrepareMock;
-  availableModels?: unknown[];
-}): TestAdapter {
+function createAdapter(input: { prepare: PrepareMock; availableModels?: unknown[] }): TestAdapter {
   return {
     providerId: 'opencode',
     prepare: input.prepare,
@@ -47,9 +44,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       findEquivalentOpenRouterModelIds('openrouter/qwen/qwen3-coder', ['qwen/qwen3-coder'])
     ).toEqual(['qwen/qwen3-coder']);
     expect(
-      resolveOpenCodeCompatibilityModel('qwen/qwen3-coder', [
-        'openrouter/qwen/qwen3-coder',
-      ])
+      resolveOpenCodeCompatibilityModel('qwen/qwen3-coder', ['openrouter/qwen/qwen3-coder'])
     ).toEqual({
       ok: true,
       resolvedModelId: 'openrouter/qwen/qwen3-coder',
@@ -201,5 +196,228 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
           'OpenCode is currently busy with another session. Deep model verification will retry when OpenCode is idle.',
       },
     ]);
+  });
+
+  it('blocks the provider after the shared OpenCode readiness timeout is exhausted', async () => {
+    const rootCause = 'Failed to query OpenCode agents: OpenCode command timed out after 10000ms';
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: false,
+      providerId: 'opencode',
+      reason: 'unknown_error',
+      retryable: true,
+      diagnostics: [
+        rootCause,
+        'Failed to query OpenCode models: OpenCode command timed out after 10000ms',
+        '/config request failed: request timed out after 15000ms',
+        'OpenCode raw model id "zai-coding-plan/glm-5.1" was not found in live provider catalog',
+      ],
+      warnings: [],
+    });
+    const adapter = createAdapter({ prepare });
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/tmp/project',
+      modelIds: ['zai-coding-plan/glm-5.1'],
+      verificationMode: 'deep',
+    });
+
+    expect(result.blockingMessages).toEqual([rootCause]);
+    expect(result.warnings).toEqual([]);
+    expect(result.issues).toEqual([
+      {
+        providerId: 'opencode',
+        scope: 'provider',
+        severity: 'blocking',
+        code: 'unknown_error',
+        message: rootCause,
+      },
+    ]);
+  });
+
+  it('does not present a local model response probe as proof of team tool coordination', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'ollama/qwen2.5:0.5b',
+      diagnostics: [],
+      warnings: [],
+    });
+    const adapter = createAdapter({ prepare });
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/tmp/project',
+      modelIds: ['ollama/qwen2.5:0.5b'],
+      verificationMode: 'deep',
+    });
+
+    expect(result.details).toEqual(['Selected model ollama/qwen2.5:0.5b verified for launch.']);
+    expect(result.blockingMessages).toEqual([]);
+    expect(result.warnings).toEqual([
+      expect.stringContaining('Agent Teams task and messaging tools are not proven'),
+    ]);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        providerId: 'opencode',
+        modelId: 'ollama/qwen2.5:0.5b',
+        scope: 'model',
+        severity: 'warning',
+        code: 'local_team_tools_unverified',
+      }),
+    ]);
+  });
+
+  it('blocks a local model when Ollama proves that its effective context is too small', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'ollama/qwen2.5:0.5b',
+      diagnostics: [],
+      warnings: [],
+    });
+    const adapter = createAdapter({ prepare });
+    const inspectLocalModelRuntime = vi.fn().mockResolvedValue({
+      providerId: 'ollama',
+      modelId: 'qwen2.5:0.5b',
+      presetId: 'ollama',
+      toolCapable: true,
+      trainedContextTokens: 32_768,
+      configuredContextTokens: null,
+      effectiveContextTokens: 4_096,
+      severity: 'blocking',
+      code: 'local_context_too_small',
+      message:
+        'Ollama is running ollama/qwen2.5:0.5b with 4K context. Agent Teams requires at least 16K.',
+    } as const);
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/tmp/project',
+      modelIds: ['ollama/qwen2.5:0.5b'],
+      verificationMode: 'deep',
+      inspectLocalModelRuntime,
+    });
+
+    expect(result.details).toEqual([
+      expect.stringContaining('Selected model ollama/qwen2.5:0.5b is unavailable.'),
+    ]);
+    expect(result.blockingMessages).toEqual([
+      expect.stringContaining('Agent Teams requires at least 16K'),
+    ]);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        severity: 'blocking',
+        code: 'local_context_too_small',
+      }),
+    ]);
+    expect(inspectLocalModelRuntime).toHaveBeenCalledWith({
+      projectPath: '/tmp/project',
+      modelRoute: 'ollama/qwen2.5:0.5b',
+    });
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it('marks a local model ready only after the coordination probe passes', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'ollama/qwen3:8b',
+      diagnostics: [],
+      warnings: [],
+    });
+    const adapter = createAdapter({ prepare });
+    const inspectLocalModelRuntime = vi.fn().mockResolvedValue({
+      providerId: 'ollama',
+      modelId: 'qwen3:8b',
+      presetId: 'ollama',
+      toolCapable: true,
+      parameterCount: 8_000_000_000,
+      trainedContextTokens: 32_768,
+      configuredContextTokens: 32_768,
+      effectiveContextTokens: 32_768,
+      coordinationProbeStatus: 'passed',
+      severity: 'ready',
+      code: 'local_coordination_verified',
+      message: 'Agent Teams coordination probe passed.',
+    } as const);
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/tmp/project',
+      modelIds: ['ollama/qwen3:8b'],
+      verificationMode: 'deep',
+      inspectLocalModelRuntime,
+    });
+
+    expect(result.details).toEqual([
+      'Selected model ollama/qwen3:8b verified for launch with Agent Teams tool coordination.',
+    ]);
+    expect(result.warnings).toEqual([]);
+    expect(result.blockingMessages).toEqual([]);
+    expect(result.issues).toEqual([]);
+  });
+
+  it('blocks a local model when runtime inspection fails instead of probing through it', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+    const adapter = createAdapter({ prepare });
+    const inspectLocalModelRuntime = vi
+      .fn()
+      .mockRejectedValue(new Error('local provider inventory unavailable'));
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/tmp/project',
+      modelIds: ['ollama/qwen3:8b'],
+      verificationMode: 'deep',
+      inspectLocalModelRuntime,
+    });
+
+    expect(result.blockingMessages).toEqual([
+      expect.stringContaining('local provider inventory unavailable'),
+    ]);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        severity: 'blocking',
+        code: 'local_runtime_inspection_failed',
+      }),
+    ]);
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it('preflights a configured custom local source before the OpenCode execution probe', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+    const adapter = createAdapter({ prepare });
+    const inspectLocalModelRuntime = vi.fn().mockResolvedValue({
+      providerId: 'local-lab',
+      modelId: 'team-model',
+      presetId: 'custom',
+      toolCapable: null,
+      parameterCount: null,
+      trainedContextTokens: null,
+      configuredContextTokens: null,
+      effectiveContextTokens: null,
+      coordinationProbeStatus: 'failed',
+      severity: 'blocking',
+      code: 'local_coordination_probe_failed',
+      message: 'Custom local model did not complete message_send coordination.',
+    } as const);
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/tmp/project',
+      modelIds: ['local-lab/team-model'],
+      verificationMode: 'deep',
+      inspectLocalModelRuntime,
+    });
+
+    expect(result.blockingMessages).toEqual([
+      expect.stringContaining('did not complete message_send coordination'),
+    ]);
+    expect(inspectLocalModelRuntime).toHaveBeenCalledWith({
+      projectPath: '/tmp/project',
+      modelRoute: 'local-lab/team-model',
+    });
+    expect(prepare).not.toHaveBeenCalled();
   });
 });

@@ -1,29 +1,35 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { describe, expect, it, vi } from 'vitest';
 
-import { describe, expect, it } from 'vitest';
-
+import {
+  inspectOpenCodeLocalModelRuntimeReadiness,
+  OpenCodeLocalProviderConnector,
+} from '../../../../src/features/runtime-provider-management/main';
+import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
+
+import {
+  createOpenCodeLiveHarness,
+  getRuntimeTranscript,
+  type InboxMessage,
+  waitForMemberInboxMessage,
+  waitForOpenCodeLanesStopped,
+  waitForOpenCodeMemberIdle,
+  waitForOpenCodePeerRelay,
+  waitForUserInboxReply,
+  waitUntil,
+} from './openCodeLiveTestHarness';
 import {
   buildOpenCodeScenarioTeamRequest,
   loadOpenCodeSemanticScenario,
   materializeOpenCodeScenarioProject,
   materializeOpenCodeScenarioTasks,
+  type OpenCodeSemanticScenario,
   parseOpenCodeE2EModelList,
   taskRefForScenario,
-  type OpenCodeSemanticScenario,
 } from './openCodeSemanticScenarioHarness';
-import {
-  createOpenCodeLiveHarness,
-  getRuntimeTranscript,
-  waitForOpenCodeMemberIdle,
-  type InboxMessage,
-  waitForMemberInboxMessage,
-  waitForOpenCodeLanesStopped,
-  waitForOpenCodePeerRelay,
-  waitForUserInboxReply,
-} from './openCodeLiveTestHarness';
 
 import type { TaskRef, TeamProvisioningProgress } from '../../../../src/shared/types';
 
@@ -45,6 +51,7 @@ interface ModelResult {
   stages: {
     launchBootstrap: boolean;
     directReply: boolean;
+    taskLifecycle: boolean;
     peerRelay: boolean;
     taskRefs: boolean;
     longPrompt: boolean;
@@ -73,9 +80,38 @@ liveDescribe('OpenCode semantic model matrix live e2e', () => {
       const failures = results.filter((result) => !result.passed);
       expect(failures, JSON.stringify(results, null, 2)).toEqual([]);
     },
-    Math.max(420_000, parseOpenCodeE2EModelList().length * 420_000)
+    Math.max(720_000, parseOpenCodeE2EModelList().length * 720_000)
   );
 });
+
+async function cleanupOpenCodeSemanticHarness(
+  harness: Awaited<ReturnType<typeof createOpenCodeLiveHarness>>,
+  teamName: string
+): Promise<void> {
+  const cleanupErrors: unknown[] = [];
+  await harness.svc.stopTeam(teamName).catch((error) => cleanupErrors.push(error));
+  await harness.svc
+    .getTeamAgentRuntimeSnapshot(teamName)
+    .then((snapshot) => {
+      const aliveMembers = Object.entries(snapshot.members)
+        .filter(([, member]) => member.alive)
+        .map(([memberName]) => memberName);
+      if (aliveMembers.length > 0) {
+        cleanupErrors.push(
+          new Error(`members still alive after stopTeam: ${aliveMembers.join(', ')}`)
+        );
+      }
+    })
+    .catch((error) => cleanupErrors.push(error));
+  await harness.dispose().catch((error) => cleanupErrors.push(error));
+  await waitForOpenCodeLanesStopped(teamName).catch((error) => cleanupErrors.push(error));
+  if (cleanupErrors.length > 0) {
+    throw new AggregateError(
+      cleanupErrors,
+      `OpenCode semantic model matrix cleanup failed for ${teamName}`
+    );
+  }
+}
 
 async function runModelScenario(input: {
   scenario: OpenCodeSemanticScenario;
@@ -85,6 +121,7 @@ async function runModelScenario(input: {
   const stages: ModelResult['stages'] = {
     launchBootstrap: false,
     directReply: false,
+    taskLifecycle: false,
     peerRelay: false,
     taskRefs: false,
     longPrompt: false,
@@ -103,10 +140,15 @@ async function runModelScenario(input: {
     await fs.mkdir(projectPath, { recursive: true });
     setClaudeBasePathOverride(tempClaudeRoot);
     await materializeOpenCodeScenarioProject(input.scenario, projectPath);
+    await configureLocalModelForSandbox(input.model, projectPath);
+    clearExpectedLocalProviderProbeConsoleNoise();
     harness = await createOpenCodeLiveHarness({
       tempDir,
       selectedModel: input.model,
       projectPath,
+      runtimeAdapterOptions: {
+        inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
+      },
     });
 
     const progressEvents: TeamProvisioningProgress[] = [];
@@ -124,7 +166,9 @@ async function runModelScenario(input: {
     await materializeOpenCodeScenarioTasks({ scenario: input.scenario, teamName, projectPath });
 
     const progressDump = formatProgressDump(progressEvents);
-    if (!progressEvents.some((progress) => progress.message.includes('OpenCode team launch is ready'))) {
+    if (
+      !progressEvents.some((progress) => progress.message.includes('OpenCode team launch is ready'))
+    ) {
       throw new Error(`OpenCode launch did not reach ready state.\n${progressDump}`);
     }
     const runtimeSnapshot = await harness.svc.getTeamAgentRuntimeSnapshot(teamName);
@@ -165,7 +209,9 @@ async function runModelScenario(input: {
     });
     diagnostics.push(`directDelivery=${formatDeliveryDiagnostic(directDelivery)}`);
     if (!directDelivery.delivered) {
-      throw new Error(`Direct OpenCode delivery failed: ${JSON.stringify(directDelivery, null, 2)}`);
+      throw new Error(
+        `Direct OpenCode delivery failed: ${JSON.stringify(directDelivery, null, 2)}`
+      );
     }
     const directReply = await waitForReplyWithTranscript({
       bridgeClient: harness.bridgeClient,
@@ -182,6 +228,65 @@ async function runModelScenario(input: {
     });
     stages.directReply = true;
     stages.taskRefs = hasTaskRef(directReply, directTaskRef);
+    await waitForOpenCodeMemberIdle({
+      bridgeClient: harness.bridgeClient,
+      teamName,
+      memberName: input.scenario.directDelivery.memberName,
+      projectPath,
+      timeoutMs: 90_000,
+    });
+
+    const taskMarker = `OPENCODE_TASK_LIFECYCLE_OK_${Date.now()}`;
+    const taskReplyToken = `OPENCODE_TASK_REPLY_OK_${Date.now()}`;
+    const taskDelivery = await harness.svc.deliverOpenCodeMemberMessage(teamName, {
+      memberName: input.scenario.directDelivery.memberName,
+      messageId: `ui-task-${Date.now()}`,
+      replyRecipient: 'user',
+      actionMode: 'delegate',
+      taskRefs: [directTaskRef],
+      source: 'manual',
+      text: [
+        `Complete task #${directTaskRef.displayId} using Agent Teams task tools.`,
+        `First call agent-teams_task_add_comment for that same task with comment text containing exactly: ${taskMarker}`,
+        'Then call agent-teams_task_complete for that same task.',
+        `Finally call agent-teams_message_send to="user" from="${input.scenario.directDelivery.memberName}" with message text containing exactly: ${taskReplyToken}`,
+        'Include the same taskRefs metadata in the visible reply.',
+        'Do not answer only as plain assistant text.',
+      ].join('\n'),
+    });
+    diagnostics.push(`taskDelivery=${formatDeliveryDiagnostic(taskDelivery)}`);
+    if (!taskDelivery.delivered) {
+      throw new Error(`Task OpenCode delivery failed: ${JSON.stringify(taskDelivery, null, 2)}`);
+    }
+
+    const taskReader = new TeamTaskReader();
+    await waitUntil(
+      async () => {
+        const tasks = await taskReader.getTasks(teamName);
+        const task = tasks.find((candidate) => candidate.id === directTaskRef.taskId);
+        return (
+          task?.status === 'completed' &&
+          task.comments?.some((comment) => comment.text.includes(taskMarker)) === true
+        );
+      },
+      180_000,
+      1_500
+    );
+    const taskReply = await waitForReplyWithTranscript({
+      bridgeClient: harness.bridgeClient,
+      teamName,
+      memberName: input.scenario.directDelivery.memberName,
+      projectPath,
+      expectedToken: taskReplyToken,
+      timeoutMs: 120_000,
+    });
+    assertVisibleReplyContract(taskReply, {
+      expectedFrom: input.scenario.directDelivery.memberName,
+      expectedTo: 'user',
+      expectedTaskRef: directTaskRef,
+    });
+    stages.taskLifecycle = true;
+    stages.taskRefs = stages.taskRefs && hasTaskRef(taskReply, directTaskRef);
     await waitForOpenCodeMemberIdle({
       bridgeClient: harness.bridgeClient,
       teamName,
@@ -293,13 +398,23 @@ async function runModelScenario(input: {
     };
   } finally {
     if (harness) {
-      await harness.svc.stopTeam(teamName).catch(() => undefined);
-      await harness.dispose().catch(() => undefined);
-      await waitForOpenCodeLanesStopped(teamName).catch(() => undefined);
+      await cleanupOpenCodeSemanticHarness(harness, teamName);
     }
+    clearExpectedLocalProviderProbeConsoleNoise();
     setClaudeBasePathOverride(null);
     if (!keepTempDir) {
       await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+    }
+  }
+}
+
+function clearExpectedLocalProviderProbeConsoleNoise(): void {
+  const error = vi.mocked(console.error);
+  if (!error.mock) return;
+  for (let index = error.mock.calls.length - 1; index >= 0; index -= 1) {
+    const rendered = error.mock.calls[index]?.map((arg) => String(arg)).join(' ') ?? '';
+    if (rendered.includes('/api/show 404')) {
+      error.mock.calls.splice(index, 1);
     }
   }
 }
@@ -371,11 +486,12 @@ function hasTaskRef(message: InboxMessage, expected: TaskRef): boolean {
 
 function scoreModel(stages: ModelResult['stages']): number {
   return (
-    (stages.launchBootstrap ? 25 : 0) +
-    (stages.directReply ? 25 : 0) +
+    (stages.launchBootstrap ? 20 : 0) +
+    (stages.directReply ? 20 : 0) +
+    (stages.taskLifecycle ? 20 : 0) +
     (stages.peerRelay ? 20 : 0) +
-    (stages.taskRefs ? 15 : 0) +
-    (stages.longPrompt ? 10 : 0) +
+    (stages.taskRefs ? 10 : 0) +
+    (stages.longPrompt ? 5 : 0) +
     (stages.latencyStable ? 5 : 0)
   );
 }
@@ -406,6 +522,30 @@ function formatDeliveryDiagnostic(delivery: {
       ? delivery.diagnostics.slice(0, 5)
       : delivery.diagnostics,
   });
+}
+
+async function configureLocalModelForSandbox(
+  modelRoute: string,
+  projectPath: string
+): Promise<void> {
+  if (!modelRoute.startsWith('ollama/')) return;
+  const modelId = modelRoute.slice('ollama/'.length).trim();
+  if (!modelId) {
+    throw new Error(`Invalid Ollama model route: ${modelRoute}`);
+  }
+  const result = await new OpenCodeLocalProviderConnector().configureLocalProvider({
+    runtimeId: 'opencode',
+    scope: 'project',
+    projectPath,
+    presetId: 'ollama',
+    defaultModelId: modelId,
+    setAsDefault: false,
+  });
+  if (result.error) {
+    throw new Error(
+      `Could not configure ${modelRoute} in the E2E sandbox: ${result.error.message}`
+    );
+  }
 }
 
 async function writeModelMatrixReport(report: ModelMatrixReport): Promise<void> {

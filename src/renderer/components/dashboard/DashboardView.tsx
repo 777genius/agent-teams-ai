@@ -130,7 +130,7 @@ export const DashboardView = ({ isActive = true }: DashboardViewProps): React.JS
         <div className="mb-12 flex flex-col items-stretch justify-center gap-2 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-0">
           <button
             type="button"
-            onClick={openTeamsTab}
+            onClick={() => openTeamsTab()}
             className="flex h-14 w-full shrink-0 items-center justify-center gap-3 px-4 text-base text-text-secondary transition-colors duration-200 hover:text-text focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500 min-[900px]:w-auto min-[900px]:justify-start"
           >
             <Users className="size-5" />

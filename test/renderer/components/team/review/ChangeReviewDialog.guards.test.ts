@@ -2,25 +2,31 @@ import { describe, expect, it } from 'vitest';
 
 import {
   appendOrderedReviewAction,
+  createReviewOperationScopeToken,
   getReviewCloseBlockReason,
   getReviewDecisionHydrationGuard,
   getReviewRenameRecoveryExpectation,
   hasReviewFileRejections,
   hasUnresolvedReviewExternalChange,
+  hasUnscopedLocalReviewState,
   isReviewActionLocked,
   isReviewActionPersistenceBlocking,
   isReviewDiskPreimageRestored,
   isReviewFileFullyRejected,
+  isReviewOperationScopeCurrent,
   partitionReviewFilesByApplyErrors,
   popOrderedReviewAction,
   reconcileReviewDecisionRecordsAfterApply,
   replaceLatestReviewAction,
+  replaceReviewScopedRecord,
   resolveDraftBaselineAfterSave,
   resolveReviewFileIsNew,
   restoreReviewDecisionRecordsForFile,
   restoreReviewDecisionRecordsForFiles,
+  selectLatestReviewConflictCandidate,
   shouldCreateFileWhenUndoingReject,
   shouldDeleteFileWhenUndoingReject,
+  shouldRequestReviewCloseForEscape,
 } from '../../../../../src/renderer/components/team/review/reviewActionState';
 
 function makeFile(filePath: string, changeKey?: string) {
@@ -36,6 +42,39 @@ function makeFile(filePath: string, changeKey?: string) {
 }
 
 describe('ChangeReviewDialog interaction guards', () => {
+  it('invalidates stale async operations even when the same scope is reopened', () => {
+    const first = createReviewOperationScopeToken('scope-a');
+    const reopened = createReviewOperationScopeToken('scope-a');
+
+    expect(isReviewOperationScopeCurrent(first, first)).toBe(true);
+    expect(isReviewOperationScopeCurrent(reopened, first)).toBe(false);
+    expect(isReviewOperationScopeCurrent(null, first)).toBe(false);
+  });
+
+  it('lets an inner modal consume Escape before Changes closes', () => {
+    expect(
+      shouldRequestReviewCloseForEscape({
+        key: 'Escape',
+        defaultPrevented: false,
+        hasOpenModalLayer: false,
+      })
+    ).toBe(true);
+    expect(
+      shouldRequestReviewCloseForEscape({
+        key: 'Escape',
+        defaultPrevented: true,
+        hasOpenModalLayer: false,
+      })
+    ).toBe(false);
+    expect(
+      shouldRequestReviewCloseForEscape({
+        key: 'Escape',
+        defaultPrevented: false,
+        hasOpenModalLayer: true,
+      })
+    ).toBe(false);
+  });
+
   it.each([
     { applying: true, fileApplyCount: 0, undoing: false, closing: false },
     { applying: false, fileApplyCount: 1, undoing: false, closing: false },
@@ -66,6 +105,89 @@ describe('ChangeReviewDialog interaction guards', () => {
     expect(getReviewCloseBlockReason({ busy: true, draftCount: 0 })).toContain('current');
     expect(getReviewCloseBlockReason({ busy: false, draftCount: 1 })).toContain('Save or discard');
     expect(getReviewCloseBlockReason({ busy: false, draftCount: 0 })).toBeNull();
+  });
+
+  it('does not close an unscoped review while any local or pending durable state remains', () => {
+    const clean = {
+      editedContentCount: 0,
+      hunkDecisionCount: 0,
+      fileDecisionCount: 0,
+      undoHistoryCount: 0,
+      redoHistoryCount: 0,
+      pendingDraftWriteCount: 0,
+      draftWriteChainCount: 0,
+      draftWriteErrorCount: 0,
+      pendingApplyCleanup: false,
+      pendingDecisionClear: false,
+      persistenceStatus: 'saved' as const,
+    };
+
+    expect(hasUnscopedLocalReviewState(clean)).toBe(false);
+    for (const dirty of [
+      { editedContentCount: 1 },
+      { hunkDecisionCount: 1 },
+      { fileDecisionCount: 1 },
+      { undoHistoryCount: 1 },
+      { redoHistoryCount: 1 },
+      { pendingDraftWriteCount: 1 },
+      { draftWriteChainCount: 1 },
+      { draftWriteErrorCount: 1 },
+      { pendingApplyCleanup: true },
+      { pendingDecisionClear: true },
+      { persistenceStatus: 'error' as const },
+    ]) {
+      expect(hasUnscopedLocalReviewState({ ...clean, ...dirty })).toBe(true);
+    }
+  });
+
+  it('shows recovery copies newest-first across decision and manual-edit conflicts', () => {
+    const decision = {
+      id: 'decision',
+      capturedAt: '2026-07-19T10:00:00.000Z',
+      origin: 'current-snapshot' as const,
+      recoverability: 'recoverable' as const,
+      expectedRevision: 0,
+      observedCurrentRevision: 1,
+      hunkDecisionCount: 0,
+      fileDecisionCount: 0,
+      undoDepth: 0,
+      redoDepth: 0,
+    };
+    const draft = {
+      id: 'draft',
+      capturedAt: '2026-07-19T10:01:00.000Z',
+      origin: 'current-snapshot' as const,
+      recoverability: 'recoverable' as const,
+      filePath: '/repo/a.ts',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      observedCurrentRevision: 1,
+      observedCurrentGeneration: 'generation-1',
+      entryRevision: 1,
+    };
+
+    expect(selectLatestReviewConflictCandidate([decision], [draft])).toEqual({
+      kind: 'draft',
+      value: draft,
+    });
+    expect(selectLatestReviewConflictCandidate([decision], [])).toEqual({
+      kind: 'decision',
+      value: decision,
+    });
+  });
+
+  it('replaces stale scoped drafts while preserving unrelated review state', () => {
+    expect(
+      replaceReviewScopedRecord(
+        {
+          '/repo/a.ts': 'stale-a',
+          '/repo/b.ts': 'keep-b',
+          'C:\\Repo\\C.ts': 'stale-c',
+        },
+        ['/repo/a.ts', 'c:/repo/c.ts'],
+        { '/repo/a.ts': 'saved-a' }
+      )
+    ).toEqual({ '/repo/a.ts': 'saved-a', '/repo/b.ts': 'keep-b' });
   });
 
   it('distinguishes pending, ready, and failed persisted-decision hydration', () => {

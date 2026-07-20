@@ -50,7 +50,7 @@ interface RuntimeProviderQuickConnectProps {
   onRefreshOpenCode: () => void;
   onOpenCodeProviderAction: (
     providerId: string,
-    action: 'connect' | 'reconnect' | 'select'
+    action: 'connect' | 'reconnect' | 'select' | 'settings-connect'
   ) => void;
   onBrowseProviders: (query?: string) => void;
   onConnectedCountChange?: (count: number) => void;
@@ -70,6 +70,13 @@ interface OpenCodePlanDefinition {
     | 'cursorDescription';
   requiresOAuthCredential?: boolean;
   connectionStrategy: ReturnType<typeof getRuntimeProviderOnboardingPlan>['connectionStrategy'];
+}
+
+interface OpenCodeGatewayDefinition {
+  id: 'openrouter' | 'vercel';
+  providerId: 'openrouter' | 'vercel';
+  displayName: string;
+  description: string;
 }
 
 type CompanionPlanId = 'kiro' | 'cursor';
@@ -121,6 +128,22 @@ const OPEN_CODE_PLANS: readonly OpenCodePlanDefinition[] = OPEN_CODE_PLAN_PRESEN
   }
 );
 
+const OPEN_CODE_GATEWAYS: readonly OpenCodeGatewayDefinition[] = [
+  {
+    id: 'openrouter',
+    providerId: 'openrouter',
+    displayName: 'OpenRouter',
+    description: 'Use one API key to access models from many providers through OpenRouter.',
+  },
+  {
+    id: 'vercel',
+    providerId: 'vercel',
+    displayName: 'Vercel AI Gateway',
+    description:
+      'Use Vercel AI Gateway to access OpenAI, Anthropic, Google, xAI, and other models.',
+  },
+];
+
 const QUICK_CONNECT_CARD_ORDER = [
   'cursor',
   'github-copilot',
@@ -130,6 +153,8 @@ const QUICK_CONNECT_CARD_ORDER = [
   'zai-coding-plan',
   'minimax-token-plan',
   'xiaomi-mimo-token-plan',
+  'openrouter',
+  'vercel',
 ] as const;
 
 const QUICK_CONNECT_CARD_RANK = new Map<string, number>(
@@ -290,6 +315,118 @@ export const RuntimeProviderQuickConnect = ({
     : null;
 
   const openCodeCards = useMemo<RuntimeProviderQuickCardViewModel[]>(() => {
+    const gatewayCards: RuntimeProviderQuickCardViewModel[] = OPEN_CODE_GATEWAYS.map((gateway) => {
+      const { description } = gateway;
+      if (gate !== 'ready') {
+        const busy = gate === 'checking' || gate === 'installing';
+        return {
+          id: gateway.id,
+          providerId: gateway.providerId,
+          displayName: gateway.displayName,
+          description,
+          state: busy ? 'checking' : 'unavailable',
+          stateLabel: busy
+            ? gate === 'installing'
+              ? t('cliStatus.quickConnect.installingOpenCode')
+              : t('cliStatus.quickConnect.checkingOpenCode')
+            : t('cliStatus.quickConnect.requiresOpenCode'),
+          actionLabel: null,
+          onAction: null,
+        };
+      }
+
+      if ((directory.loading && !directory.loaded) || (!directory.loaded && !directory.error)) {
+        return {
+          id: gateway.id,
+          providerId: gateway.providerId,
+          displayName: gateway.displayName,
+          description,
+          state: 'checking',
+          stateLabel: t('cliStatus.quickConnect.checkingPlan'),
+          actionLabel: null,
+          onAction: null,
+        };
+      }
+
+      if (directory.error && directory.entries.length === 0) {
+        return {
+          id: gateway.id,
+          providerId: gateway.providerId,
+          displayName: gateway.displayName,
+          description,
+          state: 'unavailable',
+          stateLabel: t('cliStatus.quickConnect.statusUnavailable'),
+          actionLabel: null,
+          onAction: null,
+        };
+      }
+
+      const entry = findDirectoryEntry(directory.entries, gateway.providerId);
+      if (!entry && directory.authoritativePending) {
+        return {
+          id: gateway.id,
+          providerId: gateway.providerId,
+          displayName: gateway.displayName,
+          description,
+          state: 'checking',
+          stateLabel: t('cliStatus.quickConnect.checkingPlan'),
+          actionLabel: null,
+          onAction: null,
+        };
+      }
+      if (!entry && !directory.authoritativeLoaded) {
+        return {
+          id: gateway.id,
+          providerId: gateway.providerId,
+          displayName: gateway.displayName,
+          description,
+          state: 'unavailable',
+          stateLabel: t('cliStatus.quickConnect.statusUnavailable'),
+          actionLabel: null,
+          onAction: null,
+        };
+      }
+
+      const resolvedState = resolveOpenCodeQuickPlanState({ entry });
+      const state =
+        directory.authoritativePending &&
+        (resolvedState === 'manual' || resolvedState === 'unavailable')
+          ? 'checking'
+          : resolvedState;
+      const stateLabel =
+        state === 'checking'
+          ? t('cliStatus.quickConnect.checkingPlan')
+          : state === 'connected'
+            ? t('cliStatus.quickConnect.connected')
+            : state === 'connectable'
+              ? t('cliStatus.quickConnect.readyToConnect')
+              : state === 'manual'
+                ? t('cliStatus.quickConnect.manualSetup')
+                : t('cliStatus.quickConnect.notInCatalog');
+      const actionLabel =
+        state === 'connected' || state === 'manual'
+          ? t('cliStatus.actions.manage')
+          : state === 'connectable'
+            ? t('cliStatus.actions.connect')
+            : null;
+      const onAction =
+        state === 'connected' || state === 'manual'
+          ? () => onOpenCodeProviderAction(gateway.providerId, 'select')
+          : state === 'connectable'
+            ? () => onOpenCodeProviderAction(gateway.providerId, 'settings-connect')
+            : null;
+
+      return {
+        id: gateway.id,
+        providerId: gateway.providerId,
+        displayName: gateway.displayName,
+        description,
+        state,
+        stateLabel,
+        actionLabel,
+        onAction,
+      };
+    });
     const planCards: RuntimeProviderQuickCardViewModel[] = OPEN_CODE_PLANS.map((plan) => {
       if (gate !== 'ready') {
         const busy = gate === 'checking' || gate === 'installing';
@@ -333,7 +470,7 @@ export const RuntimeProviderQuickConnect = ({
         if (status.phase === 'connected') {
           const bridgeEntry = findDirectoryEntry(directory.entries, plan.providerId);
           if (
-            directory.loaded &&
+            directory.authoritativeLoaded &&
             !isRuntimeProviderOnboardingPlanRoutable(
               getRuntimeProviderOnboardingPlan(plan.id),
               bridgeEntry
@@ -418,28 +555,59 @@ export const RuntimeProviderQuickConnect = ({
       }
 
       const entry = findDirectoryEntry(directory.entries, plan.providerId);
-      const state = resolveOpenCodeQuickPlanState({
+      if (!entry && directory.authoritativePending) {
+        return {
+          id: plan.id,
+          providerId: plan.providerId,
+          displayName: plan.displayName,
+          description: t(`cliStatus.quickConnect.${plan.descriptionKey}`),
+          state: 'checking',
+          stateLabel: t('cliStatus.quickConnect.checkingPlan'),
+          actionLabel: null,
+          onAction: null,
+        };
+      }
+      if (!entry && !directory.authoritativeLoaded) {
+        return {
+          id: plan.id,
+          providerId: plan.providerId,
+          displayName: plan.displayName,
+          description: t(`cliStatus.quickConnect.${plan.descriptionKey}`),
+          state: 'unavailable',
+          stateLabel: t('cliStatus.quickConnect.statusUnavailable'),
+          actionLabel: null,
+          onAction: null,
+        };
+      }
+      const resolvedState = resolveOpenCodeQuickPlanState({
         entry,
         requiresOAuthCredential: plan.requiresOAuthCredential,
         oauthBridgeOutdated: Boolean(plan.requiresOAuthCredential && oauthBridgeOutdated),
       });
+      const state =
+        directory.authoritativePending &&
+        (resolvedState === 'manual' || resolvedState === 'unavailable')
+          ? 'checking'
+          : resolvedState;
       const isSuperGrok = plan.id === 'supergrok';
       const stateLabel =
-        state === 'connected'
-          ? isSuperGrok
-            ? t('cliStatus.quickConnect.superGrokConnected')
-            : t('cliStatus.quickConnect.planConnected')
-          : state === 'connectable'
-            ? t('cliStatus.quickConnect.readyToConnect')
-            : state === 'different-credential'
-              ? isSuperGrok
-                ? t('cliStatus.quickConnect.xaiApiConnected')
-                : t('cliStatus.quickConnect.planCredentialUnverified')
-              : state === 'update-required'
-                ? t('cliStatus.quickConnect.updateForSuperGrok')
-                : state === 'manual'
-                  ? t('cliStatus.quickConnect.manualSetup')
-                  : t('cliStatus.quickConnect.notInCatalog');
+        state === 'checking'
+          ? t('cliStatus.quickConnect.checkingPlan')
+          : state === 'connected'
+            ? isSuperGrok
+              ? t('cliStatus.quickConnect.superGrokConnected')
+              : t('cliStatus.quickConnect.planConnected')
+            : state === 'connectable'
+              ? t('cliStatus.quickConnect.readyToConnect')
+              : state === 'different-credential'
+                ? isSuperGrok
+                  ? t('cliStatus.quickConnect.xaiApiConnected')
+                  : t('cliStatus.quickConnect.planCredentialUnverified')
+                : state === 'update-required'
+                  ? t('cliStatus.quickConnect.updateForSuperGrok')
+                  : state === 'manual'
+                    ? t('cliStatus.quickConnect.manualSetup')
+                    : t('cliStatus.quickConnect.notInCatalog');
 
       const actionLabel =
         state === 'connected'
@@ -478,9 +646,15 @@ export const RuntimeProviderQuickConnect = ({
     });
     const xiaomiConnected = connectedXiaomiEntry !== null;
     const xiaomiLoading =
-      gate === 'checking' || gate === 'installing' || (directory.loading && !directory.loaded);
+      gate === 'checking' ||
+      gate === 'installing' ||
+      (directory.loading && !directory.loaded) ||
+      (xiaomiEntries.length === 0 && directory.authoritativePending);
     const xiaomiAvailable = xiaomiEntries.length > 0;
-    const xiaomiDirectoryUnavailable = Boolean(directory.error && xiaomiEntries.length === 0);
+    const xiaomiDirectoryUnavailable = Boolean(
+      xiaomiEntries.length === 0 &&
+      (directory.error || (!directory.authoritativeLoaded && !directory.authoritativePending))
+    );
     planCards.push({
       id: 'xiaomi-mimo-token-plan',
       providerId: 'xiaomi',
@@ -515,10 +689,12 @@ export const RuntimeProviderQuickConnect = ({
           ? null
           : () => setXiaomiDialogOpen(true),
     });
-    return planCards;
+    return [...gatewayCards, ...planCards];
   }, [
     directory.entries,
     directory.error,
+    directory.authoritativeLoaded,
+    directory.authoritativePending,
     directory.loaded,
     directory.loading,
     connectedXiaomiEntry,

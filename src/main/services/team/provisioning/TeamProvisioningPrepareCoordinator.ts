@@ -28,7 +28,7 @@ import {
   selectOpenCodePrepareProviderDiagnostic,
 } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
 import { prepareSelectedOpenCodeModelsForProvisioning } from './TeamProvisioningOpenCodeModelPreparation';
-import { isAuthFailureWarning } from './TeamProvisioningOutputErrorPolicy';
+import { isAuthFailureWarning, isQuotaRetryMessage } from './TeamProvisioningOutputErrorPolicy';
 import { createPrepareForProvisioningInFlightKey as buildPrepareForProvisioningInFlightKey } from './TeamProvisioningPrepareCachePolicy';
 import { isBinaryProbeWarning, isTransientProbeWarning } from './TeamProvisioningProbeWarnings';
 import {
@@ -56,6 +56,7 @@ import {
 } from './TeamProvisioningRuntimeLaunchSelection';
 
 import type { TeamLaunchRuntimeAdapter } from '../runtime';
+import type { OpenCodeSelectedModelPreparationInput } from './TeamProvisioningOpenCodeModelPreparation';
 import type {
   CachedProbeResult,
   ProbeResult,
@@ -155,6 +156,7 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     providerArgs: string[],
     limitContext: boolean
   ): Promise<string | null>;
+  inspectOpenCodeLocalModelRuntime?: OpenCodeSelectedModelPreparationInput['inspectLocalModelRuntime'];
   info(message: string): void;
   warn(message: string): void;
 }
@@ -318,6 +320,7 @@ export class TeamProvisioningPrepareCoordinator {
           modelIds: providerSelectedModelIds,
           verificationMode: opts?.modelVerificationMode ?? 'deep',
           appendPreflightDebugLog,
+          inspectLocalModelRuntime: this.ports.inspectOpenCodeLocalModelRuntime,
         });
         details.push(...openCodeModelPrepare.details);
         warnings.push(...openCodeModelPrepare.warnings);
@@ -427,6 +430,10 @@ export class TeamProvisioningPrepareCoordinator {
             shouldRequireRuntimePingForAnthropicDirectCredential &&
             isAuthFailureWarning(diagnostic.warning, 'probe')
           ) {
+            blockingMessages.push(prefixedWarning);
+            return;
+          }
+          if (isQuotaRetryMessage(diagnostic.warning)) {
             blockingMessages.push(prefixedWarning);
             return;
           }

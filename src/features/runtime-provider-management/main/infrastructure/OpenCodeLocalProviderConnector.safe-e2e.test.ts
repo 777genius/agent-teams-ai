@@ -297,6 +297,118 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     }
   });
 
+  it('persists Ollama tool support and native context limits for the selected model', async () => {
+    const requests: Array<{ url: string; method: string; body: string | null }> = [];
+    const fetchImpl = (async (
+      input: string | URL | Request,
+      init?: RequestInit
+    ): Promise<Response> => {
+      const request = input instanceof Request ? input : null;
+      const url = request?.url ?? String(input);
+      const method = init?.method ?? request?.method ?? 'GET';
+      const body = typeof init?.body === 'string' ? init.body : null;
+      requests.push({ url, method, body });
+      if (url === 'http://127.0.0.1:11434/api/show') {
+        return new Response(
+          JSON.stringify({
+            capabilities: ['completion', 'tools'],
+            model_info: {
+              'qwen2.context_length': 32_768,
+            },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      }
+      return new Response(JSON.stringify({ data: [{ id: 'qwen2.5:0.5b', object: 'model' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as typeof fetch;
+    const connector = new OpenCodeLocalProviderConnector({ fetchImpl, homePath: tempDir });
+
+    const response = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'global',
+      presetId: 'ollama',
+      defaultModelId: 'qwen2.5:0.5b',
+      setAsDefault: true,
+    });
+
+    expect(response.error).toBeUndefined();
+    expect(requests).toContainEqual({
+      url: 'http://127.0.0.1:11434/api/show',
+      method: 'POST',
+      body: JSON.stringify({ model: 'qwen2.5:0.5b' }),
+    });
+    const configPath = path.join(tempDir, '.config', 'opencode', 'opencode.json');
+    const parsed = JSON.parse(await fs.readFile(configPath, 'utf8')) as {
+      provider: {
+        ollama: {
+          models: Record<string, unknown>;
+        };
+      };
+    };
+    expect(parsed.provider.ollama.models['qwen2.5:0.5b']).toEqual({
+      tool_call: true,
+      options: {
+        reasoningEffort: 'none',
+      },
+      limit: {
+        context: 32_768,
+        output: 4_096,
+      },
+    });
+  });
+
+  it('hides Ollama embedding and stale models from the teammate model list', async () => {
+    const fetchImpl = (async (
+      input: string | URL | Request,
+      init?: RequestInit
+    ): Promise<Response> => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.endsWith('/v1/models')) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              { id: 'qwen3:4b' },
+              { id: 'nomic-embed-text:latest' },
+              { id: 'stale-chat:latest' },
+            ],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      }
+      const body =
+        typeof init?.body === 'string' ? (JSON.parse(init.body) as { model?: string }) : {};
+      if (body.model === 'qwen3:4b') {
+        return new Response(JSON.stringify({ capabilities: ['completion', 'tools'] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      if (body.model === 'nomic-embed-text:latest') {
+        return new Response(JSON.stringify({ capabilities: ['embedding'] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ error: 'model not found' }), { status: 404 });
+    }) as typeof fetch;
+    const connector = new OpenCodeLocalProviderConnector({ fetchImpl });
+
+    const response = await connector.probeLocalProvider({
+      runtimeId: 'opencode',
+      presetId: 'ollama',
+    });
+
+    expect(response.error).toBeUndefined();
+    expect(response.probe).toMatchObject({
+      state: 'available',
+      models: [{ id: 'qwen3:4b', displayName: 'qwen3:4b' }],
+      message: 'Connected. Found 1 model.',
+    });
+  });
+
   it('serializes concurrent configures so neither provider block is lost', async () => {
     const projectPath = path.join(tempDir, 'concurrent-config-project');
     await fs.mkdir(projectPath, { recursive: true });

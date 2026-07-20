@@ -13,6 +13,7 @@ import {
 } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
+import { isTeamProviderModelCatalogFresh } from '@renderer/utils/teamModelAvailability';
 import {
   CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
   CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
@@ -40,6 +41,7 @@ const CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS = 3;
 const CODEX_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS = 700;
 const CODEX_CATALOG_LOADING_REFRESH_ATTEMPTS = 3;
 const CODEX_CATALOG_LOADING_REFRESH_RETRY_DELAY_MS = 2_000;
+export const CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT = 12;
 
 export const MULTIMODEL_PROVIDER_IDS: CliProviderId[] = isGeminiUiFrozen()
   ? ['anthropic', 'codex', 'opencode']
@@ -176,8 +178,11 @@ function sleep(ms: number): Promise<void> {
 }
 
 function clearCliProviderStatusInFlight(providerId: CliProviderId): void {
-  cliProviderStatusInFlight.delete(`${providerId}:status`);
-  cliProviderStatusInFlight.delete(`${providerId}:verify`);
+  for (const key of cliProviderStatusInFlight.keys()) {
+    if (key.startsWith(`${providerId}:status:`) || key.startsWith(`${providerId}:verify:`)) {
+      cliProviderStatusInFlight.delete(key);
+    }
+  }
 }
 
 function getProviderStatus(
@@ -878,6 +883,8 @@ export interface CliInstallerSlice {
   cliStatus: CliInstallationStatus | null;
   cliStatusLoading: boolean;
   cliProviderStatusLoading: Partial<Record<CliProviderId, boolean>>;
+  cliProviderStatusByScope: Readonly<Record<string, CliProviderStatus>>;
+  cliProviderStatusScopeRevision: number;
   cliStatusError: string | null;
   cliInstallerState:
     | 'idle'
@@ -925,11 +932,31 @@ export interface CliInstallerSlice {
 let cliStatusInFlight: Promise<void> | null = null;
 const cliProviderStatusInFlight = new Map<string, Promise<boolean>>();
 let cliStatusEpoch = 0;
-const cliProviderStatusSeq = new Map<CliProviderId, number>();
+const cliProviderStatusSeq = new Map<string, number>();
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshTimers = new Map<CliProviderId, ReturnType<typeof setTimeout>>();
 let openCodeRuntimeStatusInFlight: Promise<void> | null = null;
 let codexRuntimeStatusInFlight: Promise<void> | null = null;
+
+export function getCliProviderStatusScopeKey(
+  providerId: CliProviderId,
+  projectPath: string | null | undefined
+): string {
+  return `${providerId}\0${projectPath?.trim() ?? ''}`;
+}
+
+function setBoundedScopedProviderStatus(
+  current: Readonly<Record<string, CliProviderStatus>>,
+  scopeKey: string,
+  providerStatus: CliProviderStatus
+): Readonly<Record<string, CliProviderStatus>> {
+  const entries = Object.entries(current).filter(([key]) => key !== scopeKey);
+  entries.push([scopeKey, providerStatus]);
+  if (entries.length > CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT) {
+    entries.splice(0, entries.length - CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT);
+  }
+  return Object.fromEntries(entries);
+}
 
 function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
   const timer = codexCatalogLoadingRefreshTimers.get(providerId);
@@ -1010,6 +1037,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   cliStatus: null,
   cliStatusLoading: false,
   cliProviderStatusLoading: {},
+  cliProviderStatusByScope: {},
+  cliProviderStatusScopeRevision: 0,
   cliStatusError: null,
   cliInstallerState: 'idle',
   cliDownloadProgress: 0,
@@ -1178,7 +1207,10 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     if (cliStatusInFlight) return cliStatusInFlight;
 
     const epoch = ++cliStatusEpoch;
-    cliStatusInFlight = (async () => {
+    // Assigned before the first awaited continuation and referenced by its own cleanup.
+    let request!: Promise<void>;
+    // eslint-disable-next-line prefer-const
+    request = (async () => {
       set({ cliStatusLoading: true, cliStatusError: null });
       try {
         const status = await api.cliInstaller.getStatus();
@@ -1215,14 +1247,21 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to check CLI status';
         logger.error('Failed to fetch CLI status:', error);
-        set({ cliStatusError: message });
+        if (epoch === cliStatusEpoch) {
+          set({ cliStatusError: message });
+        }
       } finally {
-        set({ cliStatusLoading: false });
-        cliStatusInFlight = null;
+        if (epoch === cliStatusEpoch) {
+          set({ cliStatusLoading: false });
+        }
+        if (cliStatusInFlight === request) {
+          cliStatusInFlight = null;
+        }
       }
     })();
+    cliStatusInFlight = request;
 
-    return cliStatusInFlight;
+    return request;
   },
 
   fetchCliProviderStatus: async (providerId, options) => {
@@ -1233,17 +1272,21 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const verifyModels = options?.verifyModels === true && providerId !== 'opencode';
     const projectPath = options?.projectPath?.trim() || null;
     const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}:${projectPath ?? ''}`;
+    const scopeKey = getCliProviderStatusScopeKey(providerId, projectPath);
     const inFlight = cliProviderStatusInFlight.get(requestKey);
     if (inFlight) return inFlight;
 
     const requestEpoch = options?.epoch ?? cliStatusEpoch;
-    const requestSeq = (cliProviderStatusSeq.get(providerId) ?? 0) + 1;
+    const requestSeq = (cliProviderStatusSeq.get(requestKey) ?? 0) + 1;
     const silent = options?.silent === true;
     const requestStartedAtMs = Date.now();
     const previousProviderStatus = getProviderStatus(get().cliStatus, providerId);
-    cliProviderStatusSeq.set(providerId, requestSeq);
+    cliProviderStatusSeq.set(requestKey, requestSeq);
 
-    const request = (async () => {
+    // Assigned before the first awaited continuation and referenced by its own cleanup.
+    let request!: Promise<boolean>;
+    // eslint-disable-next-line prefer-const
+    request = (async () => {
       if (!silent) {
         set((state) => {
           const nextLoading = {
@@ -1275,7 +1318,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
             ? await api.cliInstaller.getProviderStatus(providerId, { projectPath })
             : await api.cliInstaller.getProviderStatus(providerId);
         const requestIsCurrent =
-          requestEpoch === cliStatusEpoch && cliProviderStatusSeq.get(providerId) === requestSeq;
+          requestEpoch === cliStatusEpoch && cliProviderStatusSeq.get(requestKey) === requestSeq;
         if (
           !silent &&
           !verifyModels &&
@@ -1302,13 +1345,27 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
           if (
             requestEpoch !== cliStatusEpoch ||
-            cliProviderStatusSeq.get(providerId) !== requestSeq
+            cliProviderStatusSeq.get(requestKey) !== requestSeq
           ) {
-            return { cliProviderStatusLoading: nextLoading };
+            return {};
           }
 
           if (!providerStatus || !currentCliStatus) {
             return { cliProviderStatusLoading: nextLoading };
+          }
+
+          if (projectPath) {
+            const previousScopedProvider = state.cliProviderStatusByScope[scopeKey];
+            return {
+              cliProviderStatusLoading: nextLoading,
+              cliProviderStatusByScope: setBoundedScopedProviderStatus(
+                state.cliProviderStatusByScope,
+                scopeKey,
+                previousScopedProvider
+                  ? mergeProviderCatalogCache(providerStatus, previousScopedProvider)
+                  : providerStatus
+              ),
+            };
           }
 
           const settledCliStatus: CliInstallationStatus = currentCliStatus;
@@ -1361,7 +1418,14 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           };
         });
         scheduleCodexCatalogLoadingRefresh(get, providerId);
-        return true;
+        const settledProviderStatus = projectPath
+          ? get().cliProviderStatusByScope[scopeKey]
+          : providerStatus;
+        return Boolean(
+          requestIsCurrent &&
+          settledProviderStatus &&
+          (!projectPath || isTeamProviderModelCatalogFresh(providerId, settledProviderStatus))
+        );
       } catch (error) {
         const message =
           error instanceof Error ? error.message : `Failed to refresh ${providerId} status`;
@@ -1371,7 +1435,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           currentProvider: previousProviderStatus,
         });
         const requestIsCurrent =
-          requestEpoch === cliStatusEpoch && cliProviderStatusSeq.get(providerId) === requestSeq;
+          requestEpoch === cliStatusEpoch && cliProviderStatusSeq.get(requestKey) === requestSeq;
         if (
           !silent &&
           !verifyModels &&
@@ -1400,9 +1464,25 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
           if (
             requestEpoch !== cliStatusEpoch ||
-            cliProviderStatusSeq.get(providerId) !== requestSeq
+            cliProviderStatusSeq.get(requestKey) !== requestSeq
           ) {
-            return { cliProviderStatusLoading: nextLoading };
+            return {};
+          }
+
+          if (projectPath) {
+            const currentScopedProvider = state.cliProviderStatusByScope[scopeKey];
+            return {
+              cliProviderStatusLoading: nextLoading,
+              cliProviderStatusByScope: setBoundedScopedProviderStatus(
+                state.cliProviderStatusByScope,
+                scopeKey,
+                createProviderStatusErrorSnapshot({
+                  providerId,
+                  message,
+                  currentProvider: currentScopedProvider,
+                })
+              ),
+            };
           }
 
           if (!currentCliStatus) {
@@ -1477,7 +1557,12 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         clearCodexCatalogLoadingRefresh(providerId);
         return false;
       } finally {
-        cliProviderStatusInFlight.delete(requestKey);
+        if (cliProviderStatusInFlight.get(requestKey) === request) {
+          cliProviderStatusInFlight.delete(requestKey);
+        }
+        if (cliProviderStatusSeq.get(requestKey) === requestSeq) {
+          cliProviderStatusSeq.delete(requestKey);
+        }
       }
     })();
 
@@ -1487,6 +1572,16 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
   invalidateCliStatus: async () => {
     clearCodexCatalogLoadingRefresh('codex');
+    cliStatusEpoch += 1;
+    cliStatusInFlight = null;
+    cliProviderStatusInFlight.clear();
+    cliProviderStatusSeq.clear();
+    set((state) => ({
+      cliProviderStatusByScope: {},
+      cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
+      cliStatusLoading: false,
+      cliProviderStatusLoading: {},
+    }));
     await api.cliInstaller?.invalidateStatus();
   },
 

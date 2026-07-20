@@ -5,7 +5,11 @@ import {
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
 import { useStore } from '@renderer/store';
-import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
+import {
+  createLoadingMultimodelCliStatus,
+  getCliProviderStatusScopeKey,
+} from '@renderer/store/slices/cliInstallerSlice';
+import { isTeamProviderModelCatalogSettled } from '@renderer/utils/teamModelAvailability';
 
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
@@ -18,11 +22,21 @@ export interface EffectiveCliProviderStatusSnapshot {
 }
 
 export function useEffectiveCliProviderStatus(
-  providerId: CliProviderId | undefined
+  providerId: CliProviderId | undefined,
+  options: { projectPath?: string | null } = {}
 ): EffectiveCliProviderStatusSnapshot {
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const cliStatus = useStore((s) => s.cliStatus);
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
+  const scopedProviderStatus = useStore((s) => {
+    if (!providerId || !options.projectPath?.trim()) {
+      return null;
+    }
+    return (
+      s.cliProviderStatusByScope?.[getCliProviderStatusScopeKey(providerId, options.projectPath)] ??
+      null
+    );
+  });
 
   const loadingCliStatus = useMemo(
     () =>
@@ -40,10 +54,55 @@ export function useEffectiveCliProviderStatus(
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
   });
 
-  const effectiveCliStatus = useMemo(
-    () => mergeCodexCliStatusWithSnapshot(loadingCliStatus, codexAccount.snapshot),
-    [codexAccount.snapshot, loadingCliStatus]
-  );
+  const effectiveCliStatus = useMemo(() => {
+    const withCodexSnapshot = mergeCodexCliStatusWithSnapshot(
+      loadingCliStatus,
+      codexAccount.snapshot
+    );
+    if (!providerId || !options.projectPath?.trim() || !withCodexSnapshot) {
+      return withCodexSnapshot;
+    }
+
+    const globalProvider = withCodexSnapshot.providers.find(
+      (provider) => provider.providerId === providerId
+    );
+    const scopedProviderFailed =
+      scopedProviderStatus?.verificationState === 'error' ||
+      scopedProviderStatus?.modelCatalogRefreshState === 'error';
+    const scopedProviderSettled = Boolean(
+      scopedProviderStatus && isTeamProviderModelCatalogSettled(providerId, scopedProviderStatus)
+    );
+    const projectProviderBase = scopedProviderStatus ?? globalProvider ?? null;
+    const projectProvider: CliProviderStatus | null =
+      scopedProviderSettled || scopedProviderFailed
+        ? scopedProviderStatus
+        : projectProviderBase
+          ? {
+              ...projectProviderBase,
+              models: [],
+              modelAvailability: [],
+              modelCatalog: null,
+              modelCatalogRefreshState: 'loading',
+            }
+          : null;
+    if (!projectProvider) {
+      return withCodexSnapshot;
+    }
+    return {
+      ...withCodexSnapshot,
+      providers: withCodexSnapshot.providers.some((provider) => provider.providerId === providerId)
+        ? withCodexSnapshot.providers.map((provider) =>
+            provider.providerId === providerId ? projectProvider : provider
+          )
+        : [...withCodexSnapshot.providers, projectProvider],
+    };
+  }, [
+    codexAccount.snapshot,
+    loadingCliStatus,
+    options.projectPath,
+    providerId,
+    scopedProviderStatus,
+  ]);
   const codexSnapshotPending =
     codexAccount.loading &&
     Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')) &&
