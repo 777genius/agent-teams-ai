@@ -598,7 +598,7 @@ export class TeamTaskWriter {
     await withTaskLock(taskPath, async () => {
       const raw = await fs.promises.readFile(taskPath, 'utf8');
       const task = parseTaskForMutation(raw, taskId);
-      const existing = Array.isArray(task.comments) ? (task.comments as TaskComment[]) : [];
+      const existing = Array.isArray(task.comments) ? task.comments : [];
       // Dedup by ID — skip if comment with same ID already exists
       if (existing.some((c) => c.id === comment.id)) {
         return;
@@ -625,9 +625,7 @@ export class TeamTaskWriter {
     await withTaskLock(taskPath, async () => {
       const raw = await fs.promises.readFile(taskPath, 'utf8');
       const task = parseTaskForMutation(raw, taskId);
-      const existing = Array.isArray(task.attachments)
-        ? (task.attachments as TaskAttachmentMeta[])
-        : [];
+      const existing = Array.isArray(task.attachments) ? task.attachments : [];
       // Dedup by ID
       if (existing.some((a) => a.id === meta.id)) {
         return;
@@ -643,9 +641,7 @@ export class TeamTaskWriter {
     await withTaskLock(taskPath, async () => {
       const raw = await fs.promises.readFile(taskPath, 'utf8');
       const task = parseTaskForMutation(raw, taskId);
-      const existing = Array.isArray(task.attachments)
-        ? (task.attachments as TaskAttachmentMeta[])
-        : [];
+      const existing = Array.isArray(task.attachments) ? task.attachments : [];
       const filtered = existing.filter((a) => a.id !== attachmentId);
       if (filtered.length > 0) {
         task.attachments = filtered;

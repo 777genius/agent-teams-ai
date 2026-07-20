@@ -1,5 +1,4 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- The catalog contains only composition-validated parent directories. */
-import { type FSWatcher, watch } from 'node:fs';
+import { watch } from 'node:fs';
 import { basename } from 'node:path';
 
 import type { ExternalWriterScope, ExternalWriterWatchCallbacks } from '../../contracts';
@@ -97,7 +96,7 @@ const defaultWatchFactory: NodeExternalWriterWatchFactory = ({ parentPath, persi
       recursive: false,
     },
     onEvent
-  ) as FSWatcher;
+  );
 
 const buildWatchGroups = (catalog: RegisteredExternalFileCatalog): readonly WatchGroup[] => {
   const filesByParent = new Map<string, RegisteredExternalFile[]>();

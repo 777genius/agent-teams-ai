@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- Every path is supplied by trusted main-process composition and is validated before it is retained. */
 import { lstatSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 

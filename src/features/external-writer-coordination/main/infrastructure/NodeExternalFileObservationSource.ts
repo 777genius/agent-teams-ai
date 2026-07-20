@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- All filesystem calls use exact paths resolved through RegisteredExternalFileCatalog. */
 import { constants as fsConstants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
