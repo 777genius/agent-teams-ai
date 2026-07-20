@@ -618,6 +618,7 @@ export const CreateTeamDialog = ({
     cwd?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittedTeamNameRef = useRef<string | null>(null);
   const [organizationStructure, setOrganizationStructure] =
     useState<OrganizationStructurePayload | null>(null);
   const [organizationStructureLoading, setOrganizationStructureLoading] = useState(false);
@@ -750,6 +751,7 @@ export const CreateTeamDialog = ({
   };
 
   const resetUIState = (): void => {
+    submittedTeamNameRef.current = null;
     setLocalError(null);
     setFieldErrors({});
     setIsSubmitting(false);
@@ -1944,9 +1946,13 @@ export const CreateTeamDialog = ({
 
   const sanitizedTeamName = sanitizeTeamName(teamName.trim());
   const teamNameInlineError = validateTeamNameInline(teamName, t);
-  const isNameTakenByExistingTeam = existingTeamNames.includes(sanitizedTeamName);
+  const isSubmittedTeamName = submittedTeamNameRef.current === sanitizedTeamName;
+  const isNameTakenByExistingTeam =
+    !isSubmittedTeamName && existingTeamNames.includes(sanitizedTeamName);
   const isNameProvisioning =
-    provisioningTeamNames.includes(sanitizedTeamName) && !isNameTakenByExistingTeam;
+    !isSubmittedTeamName &&
+    provisioningTeamNames.includes(sanitizedTeamName) &&
+    !isNameTakenByExistingTeam;
 
   const request = useMemo<TeamCreateRequest>(
     () => ({
@@ -2282,6 +2288,7 @@ export const CreateTeamDialog = ({
     }
     setFieldErrors({});
     setLocalError(null);
+    submittedTeamNameRef.current = request.teamName;
     setIsSubmitting(true);
 
     if (!launchTeam) {
@@ -2327,6 +2334,7 @@ export const CreateTeamDialog = ({
             error instanceof Error ? error.message : t('create.errors.createConfigFailed')
           );
         } finally {
+          submittedTeamNameRef.current = null;
           setIsSubmitting(false);
         }
       })();
@@ -2347,6 +2355,7 @@ export const CreateTeamDialog = ({
           setLocalError(error.message);
         }
       } finally {
+        submittedTeamNameRef.current = null;
         setIsSubmitting(false);
       }
     })();
