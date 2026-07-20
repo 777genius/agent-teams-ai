@@ -7,6 +7,14 @@ import type {
 const DEFAULT_IMAGE_BYTES_PER_PROVIDER = 4 * 1024 * 1024;
 const DEFAULT_IMAGE_BYTES_TOTAL = 8 * 1024 * 1024;
 const DEFAULT_FILE_BYTES_PER_PROVIDER = 4 * 1024 * 1024;
+const VERIFIED_OPENCODE_IMAGE_MODELS = new Set([
+  'gpt-5.4-mini',
+  'moonshotai/kimi-k2.6',
+  'z-ai/glm-4.5v',
+  'kimi-for-coding/k3',
+  'kimi-for-coding/kimi-for-coding',
+  'kimi-for-coding/kimi-for-coding-highspeed',
+]);
 
 export const NATIVE_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 export const CLAUDE_IMAGE_MIME_TYPES = [
@@ -99,15 +107,7 @@ export function resolveAgentAttachmentCapability(
 
   if (providerId === 'opencode') {
     const { model } = canonicalizeOpenCodeModel(target);
-    if (model === 'gpt-5.4-mini') {
-      return {
-        ...supportedImagesOnly(
-          'OpenCode model openai/gpt-5.4-mini is verified for image attachments.'
-        ),
-        reason: 'known_vision_model',
-      };
-    }
-    if (model === 'moonshotai/kimi-k2.6' || model === 'z-ai/glm-4.5v') {
+    if (VERIFIED_OPENCODE_IMAGE_MODELS.has(model)) {
       return {
         ...supportedImagesOnly(`OpenCode model ${model} is verified for image attachments.`),
         reason: 'known_vision_model',

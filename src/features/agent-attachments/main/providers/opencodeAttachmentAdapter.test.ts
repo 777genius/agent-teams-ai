@@ -60,6 +60,20 @@ describe('OpenCode attachment adapter', () => {
     ).not.toThrow();
   });
 
+  it.each([
+    'kimi-for-coding/kimi-for-coding',
+    'kimi-for-coding/kimi-for-coding-highspeed',
+    'kimi-for-coding/k3',
+  ])('allows verified Kimi membership model %s image delivery', (model) => {
+    expect(() =>
+      buildOpenCodeAttachmentDeliveryParts({
+        text: 'What color?',
+        model,
+        attachments: [attachment()],
+      })
+    ).not.toThrow();
+  });
+
   it('blocks known non-vision OpenCode models before runtime send', () => {
     expect(() =>
       buildOpenCodeAttachmentDeliveryParts({

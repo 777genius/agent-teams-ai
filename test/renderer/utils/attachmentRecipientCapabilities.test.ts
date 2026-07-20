@@ -56,10 +56,15 @@ describe('attachmentRecipientCapabilities', () => {
     );
   });
 
-  it('allows image picker input for verified OpenCode vision models', () => {
+  it.each([
+    'openrouter/moonshotai/kimi-k2.6',
+    'kimi-for-coding/kimi-for-coding',
+    'kimi-for-coding/kimi-for-coding-highspeed',
+    'kimi-for-coding/k3',
+  ])('allows image picker input for verified Kimi OpenCode model %s', (model) => {
     const bob = member({
       providerId: 'opencode',
-      model: 'openrouter/moonshotai/kimi-k2.6',
+      model,
     });
 
     expect(getMemberAttachmentUnavailableReason(bob)).toBeNull();

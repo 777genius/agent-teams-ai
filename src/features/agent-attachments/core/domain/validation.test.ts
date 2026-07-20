@@ -58,10 +58,15 @@ describe('agent attachment validation', () => {
     if (!result.ok) expect(result.code).toBe('attachment_model_unsupported');
   });
 
-  it('allows known vision OpenCode models', () => {
+  it.each([
+    'openrouter/moonshotai/kimi-k2.6',
+    'kimi-for-coding/kimi-for-coding',
+    'kimi-for-coding/kimi-for-coding-highspeed',
+    'kimi-for-coding/k3',
+  ])('allows verified Kimi OpenCode model %s', (model) => {
     const capability = resolveAgentAttachmentCapability({
       providerId: 'opencode',
-      model: 'openrouter/moonshotai/kimi-k2.6',
+      model,
     });
     expect(
       validateAttachmentForCapability({ attachment: fakeImageAttachment(), capability })
