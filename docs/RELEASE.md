@@ -14,34 +14,30 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.10.0 -->
-Local model setup and team launch are now more reliable, with project-specific model lists, pre-launch compatibility checks, and direct setup for more providers. This release also improves Changes recovery, the team graph, project navigation, and provider error handling.
+Improved local model setup, team launches, Changes recovery, and provider error messages.
 
 ### What's New
 
-- Launch GPT-5.6 Sol, Terra, and Luna correctly, with Sol as the default Codex choice.
-- Check local models for tool support, context size, and server availability before launch.
-- Connect OpenRouter and Vercel AI Gateway directly from provider quick setup.
-- Set up or update Kiro from the app and view Kiro usage in the Usage dashboard.
-- Select project-specific local models when configuring teammates and refresh each project's model list independently.
+- Added project-specific local model lists with independent refresh.
+- Added model compatibility checks before team launch.
+- Added quick setup for OpenRouter and Vercel AI Gateway.
+- Added GPT-5.6 Sol, Terra, and Luna support, plus Kiro setup and usage tracking.
 
 ### Improvements
 
-- Show only chat-capable Ollama models and save detected tool and context limits during setup.
-- Keep available models visible while OpenCode refreshes them, and retry automatically after provider changes or startup delays.
-- Keep Changes decisions, undo/redo history, and recovery state available after crashes and reloads.
-- Keep task cards visible when zooming out in the team graph, and open recent projects at the correct team list.
-- Preserve a custom working directory after opening team creation from a project.
-- Save redacted warning and error logs locally so failed launches are easier to troubleshoot.
-- Make team setup, model availability, task controls, and team actions clearer.
+- Improved Ollama detection and OpenCode model refresh.
+- Kept healthy teammates running when another teammate fails.
+- Preserved Changes decisions and undo/redo after crashes or reloads.
+- Improved the team graph, recent project navigation, and working directory selection.
+- Added safer local diagnostics and clearer Cursor and provider errors.
 
 ### Bug Fixes
 
-- Prevent outdated OpenCode versions and stale Codex model choices from reaching team launch.
-- Keep healthy teammates running when another OpenCode teammate fails, and preserve a working teammate when restart checks fail.
-- Show Cursor authentication, quota, and model errors, and report failed Codex turns instead of finishing without an explanation.
-- Prevent a submitted team name from being reported as already taken while creation is still finishing.
-- Prevent interrupted or concurrent Changes actions from losing recovery state, mixing project data, or leaving stale locks.
-- Preserve completed terminal command status and fix Windows command fallback for project paths with non-ASCII characters.
+- Fixed outdated OpenCode and Codex model choices reaching team launch.
+- Fixed false "team name already taken" errors.
+- Fixed failed Codex turns ending without an explanation.
+- Fixed Changes recovery when actions are interrupted or run at the same time.
+- Fixed terminal completion status and Windows project paths with non-ASCII characters.
 
 ### Downloads
 
