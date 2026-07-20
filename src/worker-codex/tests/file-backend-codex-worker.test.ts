@@ -161,12 +161,63 @@ describe("FileBackendCodexWorker", () => {
       expect(appServer.envs[0]!.PATH!.split(delimiter)).toEqual(
         expect.arrayContaining(expectedPathEntries),
       );
-      expect(appServer.prompts).toEqual(["Return exactly OK."]);
+      expect(appServer.prompts).toEqual([]);
       await worker.dispose();
       await expect(access(join(rootDir, "codex-cache"))).rejects.toThrow();
       await expect(worker.run({ prompt: "hello" })).rejects.toThrow(
         "Codex worker has been disposed.",
       );
+    } finally {
+      await worker.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not spend a provider turn during default prewarm", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-worker-prewarm-"));
+    const appServer = new FakeAppServerFactory({
+      emitTopLevelErrorOnTurn: "forced model turn failure",
+    });
+    const worker = new FileBackendCodexWorker({
+      providerInstanceId: "codex:default-prewarm",
+      stateRootDir: rootDir,
+      codexBinaryPath: "codex",
+      encryptionKey: new Uint8Array(32).fill(8),
+      appServerProcessFactory: appServer.create,
+    });
+
+    try {
+      await worker.start();
+      await worker.seedCodexAuthJson(validAuthJson);
+      await expect(worker.prewarm()).resolves.toMatchObject({
+        status: "ready",
+      });
+      expect(appServer.prompts).toEqual([]);
+    } finally {
+      await worker.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps an explicitly requested spending warmup", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-worker-warmup-"));
+    const appServer = new FakeAppServerFactory();
+    const worker = new FileBackendCodexWorker({
+      providerInstanceId: "codex:explicit-warmup",
+      stateRootDir: rootDir,
+      codexBinaryPath: "codex",
+      encryptionKey: new Uint8Array(32).fill(9),
+      appServerProcessFactory: appServer.create,
+      warmupPrompt: "Return explicit warmup proof.",
+    });
+
+    try {
+      await worker.start();
+      await worker.seedCodexAuthJson(validAuthJson);
+      await expect(worker.prewarm()).resolves.toMatchObject({
+        status: "ready",
+      });
+      expect(appServer.prompts).toEqual(["Return explicit warmup proof."]);
     } finally {
       await worker.dispose();
       await rm(rootDir, { recursive: true, force: true });

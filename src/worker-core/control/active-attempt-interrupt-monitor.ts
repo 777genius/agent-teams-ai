@@ -20,6 +20,7 @@ export class ActiveAttemptInterruptMonitor {
   private readonly interruptedSignalIds = new Set<string>();
   private stopRequested = false;
   private runPromise: Promise<void> | null = null;
+  private wakePendingPoll: (() => void) | null = null;
 
   constructor(private readonly options: ActiveAttemptInterruptMonitorOptions) {
     this.pollIntervalMs = options.pollIntervalMs ?? 250;
@@ -38,6 +39,7 @@ export class ActiveAttemptInterruptMonitor {
 
   async stop(): Promise<void> {
     this.stopRequested = true;
+    this.wakePendingPoll?.();
     await this.runPromise;
     this.runPromise = null;
   }
@@ -75,14 +77,33 @@ export class ActiveAttemptInterruptMonitor {
         // A transient inbox read must not fail the worker run. The next poll
         // retries the same durable signal without changing its delivery state.
       }
-      await delay(this.pollIntervalMs);
+      await this.waitForNextPoll();
     }
   }
-}
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    timer.unref?.();
-  });
+  private waitForNextPoll(): Promise<void> {
+    if (this.stopRequested) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      const finish = (): void => {
+        if (this.wakePendingPoll !== finish) {
+          return;
+        }
+        clearTimeout(timer);
+        this.wakePendingPoll = null;
+        resolve();
+      };
+      const timer = setTimeout(finish, this.pollIntervalMs);
+      timer.unref?.();
+      this.wakePendingPoll = finish;
+
+      // stop() cannot interleave with the synchronous setup above, but this
+      // keeps the wait safe if the lifecycle is ever driven re-entrantly.
+      if (this.stopRequested) {
+        finish();
+      }
+    });
+  }
 }

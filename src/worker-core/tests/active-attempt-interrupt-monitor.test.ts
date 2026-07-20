@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { InMemoryActiveAttemptRegistry } from "../control/active-attempt-registry";
 import { ActiveAttemptInterruptMonitor } from "../control/active-attempt-interrupt-monitor";
 import {
@@ -13,6 +13,10 @@ import type {
 } from "../control/types";
 
 describe("ActiveAttemptInterruptMonitor", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("interrupts a locally active attempt from a durable cross-process signal", async () => {
     const control = new WorkerControlService({
       store: new InMemoryWorkerControlInboxStore(),
@@ -76,7 +80,8 @@ describe("ActiveAttemptInterruptMonitor", () => {
       activeAttemptRegistry,
       pollIntervalMs: 5,
     });
-    let lease: ReturnType<InMemoryActiveAttemptRegistry["register"]> | undefined;
+    let lease:
+      ReturnType<InMemoryActiveAttemptRegistry["register"]> | undefined;
     try {
       monitor.start(target);
       await control.enqueueSignal({
@@ -104,27 +109,66 @@ describe("ActiveAttemptInterruptMonitor", () => {
       lease?.release();
     }
   });
+
+  it("wakes a sleeping unref poll synchronously when stopped", async () => {
+    vi.useFakeTimers();
+    const listSignals = vi.fn(async () => []);
+    const monitor = new ActiveAttemptInterruptMonitor({
+      control: { listSignals },
+      activeAttemptRegistry: new InMemoryActiveAttemptRegistry(),
+      pollIntervalMs: 60_000,
+    });
+    const target = {
+      jobId: "job-stop-sleeping-monitor",
+      taskId: "task-stop-sleeping-monitor",
+      workspaceId: "/tmp/stop-sleeping-monitor",
+    };
+
+    monitor.start(target);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(listSignals).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(1);
+
+    let stopped = false;
+    const stopPromise = monitor.stop().then(() => {
+      stopped = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(stopped).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    await stopPromise;
+  });
 });
 
 class InMemoryWorkerControlInboxStore implements WorkerControlInboxStore {
   private readonly signals: WorkerControlSignal[] = [];
   private readonly receipts: WorkerControlDeliveryReceipt[] = [];
 
-  async appendSignal(signal: WorkerControlSignal): Promise<WorkerControlSignal> {
+  async appendSignal(
+    signal: WorkerControlSignal,
+  ): Promise<WorkerControlSignal> {
     this.signals.push(signal);
     return signal;
   }
 
-  async listSignals(input: {
-    readonly target?: WorkerControlTarget;
-    readonly signalIds?: readonly string[];
-  } = {}): Promise<readonly WorkerControlSignal[]> {
+  async listSignals(
+    input: {
+      readonly target?: WorkerControlTarget;
+      readonly signalIds?: readonly string[];
+    } = {},
+  ): Promise<readonly WorkerControlSignal[]> {
     const signalIds = new Set(input.signalIds ?? []);
     return this.signals
       .filter((signal) =>
-        input.target ? workerControlTargetMatches(input.target, signal.target) : true
+        input.target
+          ? workerControlTargetMatches(input.target, signal.target)
+          : true,
       )
-      .filter((signal) => signalIds.size === 0 || signalIds.has(signal.signalId));
+      .filter(
+        (signal) => signalIds.size === 0 || signalIds.has(signal.signalId),
+      );
   }
 
   async appendReceipt(
@@ -134,18 +178,22 @@ class InMemoryWorkerControlInboxStore implements WorkerControlInboxStore {
     return receipt;
   }
 
-  async listReceipts(input: {
-    readonly target?: WorkerControlTarget;
-    readonly signalIds?: readonly string[];
-  } = {}): Promise<readonly WorkerControlDeliveryReceipt[]> {
+  async listReceipts(
+    input: {
+      readonly target?: WorkerControlTarget;
+      readonly signalIds?: readonly string[];
+    } = {},
+  ): Promise<readonly WorkerControlDeliveryReceipt[]> {
     const signalIds = new Set(input.signalIds ?? []);
     return this.receipts
       .filter((receipt) =>
         input.target
           ? workerControlTargetMatches(input.target, receipt.target)
-          : true
+          : true,
       )
-      .filter((receipt) => signalIds.size === 0 || signalIds.has(receipt.signalId));
+      .filter(
+        (receipt) => signalIds.size === 0 || signalIds.has(receipt.signalId),
+      );
   }
 }
 

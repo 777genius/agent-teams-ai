@@ -263,14 +263,12 @@ function createCodexAgentDriver(input: {
     ...(options.outputSchemas === undefined
       ? {}
       : { outputSchemas: options.outputSchemas }),
-    ...(options.warmupPrompt === false
-      ? {}
-      : { warmupPrompt: options.warmupPrompt ?? defaultWarmupPrompt }),
+    ...(typeof options.warmupPrompt === "string"
+      ? { warmupPrompt: options.warmupPrompt }
+      : {}),
   });
 }
 
 function hashText(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
-
-const defaultWarmupPrompt = "Return exactly OK.";
