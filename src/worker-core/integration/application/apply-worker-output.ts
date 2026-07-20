@@ -68,6 +68,9 @@ export async function applyWorkerOutput(
       const now = nowIso(deps.clock);
       updated = markWorkerOutputApplied(attempt, {
         changedFiles: result.changedFiles,
+        ...(result.mergeSourceCommit
+          ? { mergeSourceCommit: result.mergeSourceCommit }
+          : {}),
         now,
       });
       await deps.store.update(updated);

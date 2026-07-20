@@ -265,6 +265,7 @@ export class FakeGit implements GitPort {
   remoteCommit: string | null = null;
   lastAllowAlreadyApplied: boolean | undefined;
   appliedFiles: readonly string[] = ["src/memory.ts"];
+  appliedMergeSourceCommit: string | undefined;
   commitParents: readonly string[] | undefined;
   lastExpectedParentCommits: readonly string[] | undefined;
   lastCommittedFiles: readonly string[] | undefined;
@@ -286,7 +287,12 @@ export class FakeGit implements GitPort {
     this.calls.push("apply");
     this.lastAllowAlreadyApplied = input.allowAlreadyApplied;
     this.dirtyFiles = this.appliedFiles;
-    return { changedFiles: this.appliedFiles };
+    return {
+      changedFiles: this.appliedFiles,
+      ...(this.appliedMergeSourceCommit
+        ? { mergeSourceCommit: this.appliedMergeSourceCommit }
+        : {}),
+    };
   }
 
   diffCheck() {

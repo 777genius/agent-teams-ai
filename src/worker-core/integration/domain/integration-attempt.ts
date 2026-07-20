@@ -124,6 +124,7 @@ export type IntegrationAttempt = {
   readonly expectedFiles: readonly string[];
   readonly merge?: MergeIntegrationPlan;
   readonly appliedFiles?: readonly string[];
+  readonly appliedMergeSourceCommit?: string;
   readonly status: IntegrationAttemptStatus;
   readonly workerOutput: WorkerOutput;
   readonly reviewDecision: ReviewDecision;
@@ -201,17 +202,30 @@ export function markWorkerOutputApplied(
   attempt: IntegrationAttempt,
   input: {
     readonly changedFiles: readonly string[];
+    readonly mergeSourceCommit?: string;
     readonly now: string;
   },
 ): IntegrationAttempt {
   assertStatus(attempt, [IntegrationAttemptStatus.Opened]);
   const changedFiles = normalizeExpectedFiles(input.changedFiles);
   assertIntegrationAppliedFiles(attempt, changedFiles);
+  const appliedMergeSourceCommit = input.mergeSourceCommit
+    ? normalizeMergeCommit(input.mergeSourceCommit, "applied_source_commit")
+    : undefined;
+  if (!attempt.merge && appliedMergeSourceCommit) {
+    throw new IntegrationError({
+      reason: IntegrationErrorReason.InvalidMergePlan,
+      evidence: ["applied_source_commit_without_merge"],
+    });
+  }
   return {
     ...attempt,
     status: IntegrationAttemptStatus.Applied,
     ...(attempt.merge
-      ? { appliedFiles: changedFiles }
+      ? {
+          appliedFiles: changedFiles,
+          ...(appliedMergeSourceCommit ? { appliedMergeSourceCommit } : {}),
+        }
       : {
           workerOutput: {
             ...attempt.workerOutput,
@@ -298,6 +312,7 @@ export function markCommitCreated(
     assertMergeCommitParents(
       input.commitCandidate.parentCommits,
       attempt.merge,
+      attempt.appliedMergeSourceCommit,
     );
   }
   return {
@@ -352,8 +367,12 @@ export function assertIntegrationCommitFiles(
 export function assertMergeCommitParents(
   parentCommits: readonly string[] | undefined,
   merge: MergeIntegrationPlan,
+  appliedMergeSourceCommit?: string,
 ): void {
-  const expected = [merge.expectedTargetCommit, merge.sourceCommit];
+  const expected = [
+    merge.expectedTargetCommit,
+    appliedMergeSourceCommit ?? merge.sourceCommit,
+  ];
   if (
     !parentCommits ||
     parentCommits.length !== expected.length ||

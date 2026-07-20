@@ -843,6 +843,39 @@ describe("project integration use cases", () => {
     expect(fixture.scanner.lastFiles).toEqual(["src/memory.ts"]);
   });
 
+  it("records an applied descendant source as the actual second parent", async () => {
+    const fixture = createFixture();
+    const appliedSourceCommit = "d".repeat(40);
+    fixture.git.appliedFiles = ["src/base-change.ts", "src/memory.ts"];
+    fixture.git.appliedMergeSourceCommit = appliedSourceCommit;
+    fixture.git.changedSinceCommitFiles = ["src/memory.ts"];
+    const opened = await openProjectIntegrationAttempt(
+      fixture.deps(),
+      mergeInput(),
+    );
+    const applied = await applyWorkerOutput(fixture.deps(), {
+      attemptId: opened.attemptId,
+    });
+    expect(applied.appliedMergeSourceCommit).toBe(appliedSourceCommit);
+    await runRequiredChecks(fixture.deps(), { attemptId: opened.attemptId });
+
+    const committed = await commitApprovedChanges(fixture.deps(), {
+      attemptId: opened.attemptId,
+      message: "chore(git): merge advanced base branch",
+      policy: policy(),
+    });
+
+    expect(committed.commitCandidate?.parentCommits).toEqual([
+      MERGE_TARGET_COMMIT,
+      appliedSourceCommit,
+    ]);
+    expect(fixture.git.lastExpectedParentCommits).toEqual([
+      MERGE_TARGET_COMMIT,
+      appliedSourceCommit,
+    ]);
+    expect(fixture.git.lastChangedSinceCommit).toBe(appliedSourceCommit);
+  });
+
   it("fails closed when a merge commit reports different parents", async () => {
     const fixture = createFixture();
     fixture.git.appliedFiles = ["src/base-change.ts", "src/memory.ts"];

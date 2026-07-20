@@ -140,7 +140,7 @@ describe("local semantic merge integration", () => {
     ).toBe("");
   });
 
-  it("rejects a semantic merge after the reviewed source head advances", async () => {
+  it("merges an unrelated source descendant as the actual second parent", async () => {
     const fixture = await createSemanticMergeFixture();
     await git(fixture.workspacePath, ["checkout", "base"]);
     await writeFile(
@@ -149,41 +149,245 @@ describe("local semantic merge integration", () => {
     );
     await git(fixture.workspacePath, ["add", "BASE_ADVANCED.md"]);
     await git(fixture.workspacePath, ["commit", "-m", "feat: advance base"]);
+    const advancedHead = (
+      await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])
+    ).trim();
     await git(fixture.workspacePath, ["push", "origin", "base"]);
     await git(fixture.workspacePath, ["checkout", "main"]);
     const adapter = new LocalGitIntegrationAdapter({
       allowedPatchRoots: [fixture.rootDir],
     });
 
-    await expect(
-      adapter.applyWorkerOutput({
-        attempt: {
-          targetWorkspacePath: fixture.workspacePath,
-          expectedFiles: fixture.changedFiles,
-          merge: {
-            sourceRemote: "origin",
-            sourceBranch: "base",
-            sourceCommit: fixture.sourceCommit,
-            expectedTargetCommit: fixture.targetCommit,
-          },
-        },
-        workerOutput: {
-          workerJobId: "semantic-merge-resolution-worker",
-          workspacePath: fixture.workspacePath,
-          patchPath: fixture.patchPath,
-          patchSha256: fixture.patchSha256,
-          baseCommit: fixture.targetCommit,
-          changedFiles: fixture.changedFiles,
-        },
-      }),
-    ).rejects.toThrow(
-      "local_git_integration_merge_semantic_source_head_mismatch",
+    const applied = await adapter.applyWorkerOutput({
+      attempt: semanticAttempt(fixture),
+      workerOutput: semanticWorkerOutput(fixture),
+    });
+    expect(applied.mergeSourceCommit).toBe(advancedHead);
+    expect(applied.changedFiles).toContain("BASE_ADVANCED.md");
+
+    const commit = await adapter.commit({
+      workspacePath: fixture.workspacePath,
+      message: "merge: integrate semantic base policy",
+      files: applied.changedFiles,
+      identity: { name: "Integrator", email: "integrator@example.com" },
+      expectedParentCommits: [fixture.targetCommit, advancedHead],
+    });
+    expect(commit.parentCommits).toEqual([
+      fixture.targetCommit,
+      advancedHead,
+    ]);
+  });
+
+  it("rejects a source descendant that touches reviewed semantic scope", async () => {
+    const fixture = await createSemanticMergeFixture();
+    await git(fixture.workspacePath, ["checkout", "base"]);
+    await writeFile(
+      join(fixture.workspacePath, "package.json"),
+      '{"policy":"advanced-base"}\n',
     );
-    expect(
-      (await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])).trim(),
-    ).toBe(fixture.targetCommit);
-    expect(
-      await gitOutput(fixture.workspacePath, ["status", "--porcelain"]),
-    ).toBe("");
+    await git(fixture.workspacePath, ["add", "package.json"]);
+    await git(fixture.workspacePath, ["commit", "-m", "feat: advance policy"]);
+    await git(fixture.workspacePath, ["push", "origin", "base"]);
+    await git(fixture.workspacePath, ["checkout", "main"]);
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: semanticAttempt(fixture),
+      workerOutput: semanticWorkerOutput(fixture),
+    })).rejects.toThrow(
+      "local_git_integration_merge_semantic_descendant_touched_reviewed_scope:package.json",
+    );
+    await expectCleanTarget(fixture.workspacePath, fixture.targetCommit);
+  });
+
+  it("rejects a source descendant that changes the reviewed conflict set", async () => {
+    const fixture = await createSemanticMergeFixture();
+    await writeFile(
+      join(fixture.workspacePath, "CONFLICT_DRIFT.md"),
+      "target\n",
+    );
+    await git(fixture.workspacePath, ["add", "CONFLICT_DRIFT.md"]);
+    await git(fixture.workspacePath, ["commit", "-m", "feat: target drift"]);
+    const advancedTarget = (
+      await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])
+    ).trim();
+    await git(fixture.workspacePath, ["checkout", "base"]);
+    await writeFile(
+      join(fixture.workspacePath, "CONFLICT_DRIFT.md"),
+      "source\n",
+    );
+    await git(fixture.workspacePath, ["add", "CONFLICT_DRIFT.md"]);
+    await git(fixture.workspacePath, ["commit", "-m", "feat: source drift"]);
+    await git(fixture.workspacePath, ["push", "origin", "base"]);
+    await git(fixture.workspacePath, ["checkout", "main"]);
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: {
+        ...semanticAttempt(fixture),
+        merge: {
+          ...semanticAttempt(fixture).merge,
+          expectedTargetCommit: advancedTarget,
+        },
+      },
+      workerOutput: {
+        ...semanticWorkerOutput(fixture),
+        baseCommit: advancedTarget,
+      },
+    })).rejects.toThrow(
+      "local_git_integration_merge_semantic_conflict_scope_changed",
+    );
+    await expectCleanTarget(fixture.workspacePath, advancedTarget);
+  });
+
+  it("rejects a rewritten non-ancestor source", async () => {
+    const fixture = await createSemanticMergeFixture();
+    await git(fixture.workspacePath, ["checkout", "--orphan", "rewritten-base"]);
+    await git(fixture.workspacePath, ["rm", "-rf", "."]);
+    await writeFile(join(fixture.workspacePath, "REWRITTEN.md"), "rewritten\n");
+    await git(fixture.workspacePath, ["add", "REWRITTEN.md"]);
+    await git(fixture.workspacePath, ["commit", "-m", "feat: rewrite base"]);
+    await git(fixture.workspacePath, ["push", "--force", "origin", "HEAD:base"]);
+    await git(fixture.workspacePath, ["checkout", "main"]);
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: semanticAttempt(fixture),
+      workerOutput: semanticWorkerOutput(fixture),
+    })).rejects.toThrow(
+      "local_git_integration_merge_source_commit_not_ancestor",
+    );
+    await expectCleanTarget(fixture.workspacePath, fixture.targetCommit);
+  });
+
+  it("rejects when the source moves during fetch", async () => {
+    const fixture = await createSemanticMergeFixture();
+    const advancedHead = await createUnpushedBaseAdvance(
+      fixture.workspacePath,
+      "AFTER_FETCH.md",
+    );
+    const adapter = new MovingSourceAdapter({
+      fixture,
+      moveOnObservation: 2,
+      advancedHead,
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: semanticAttempt(fixture),
+      workerOutput: semanticWorkerOutput(fixture),
+    })).rejects.toThrow("local_git_integration_merge_source_head_changed");
+    await expectCleanTarget(fixture.workspacePath, fixture.targetCommit);
+  });
+
+  it("rejects when the source moves after compatibility probing", async () => {
+    const fixture = await createSemanticMergeFixture();
+    await git(fixture.workspacePath, ["checkout", "base"]);
+    await writeFile(join(fixture.workspacePath, "FIRST_ADVANCE.md"), "first\n");
+    await git(fixture.workspacePath, ["add", "FIRST_ADVANCE.md"]);
+    await git(fixture.workspacePath, ["commit", "-m", "feat: first advance"]);
+    await git(fixture.workspacePath, ["push", "origin", "base"]);
+    await writeFile(join(fixture.workspacePath, "SECOND_ADVANCE.md"), "second\n");
+    await git(fixture.workspacePath, ["add", "SECOND_ADVANCE.md"]);
+    await git(fixture.workspacePath, ["commit", "-m", "feat: second advance"]);
+    const secondHead = (
+      await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])
+    ).trim();
+    await git(fixture.workspacePath, ["checkout", "main"]);
+    const adapter = new MovingSourceAdapter({
+      fixture,
+      moveOnObservation: 3,
+      advancedHead: secondHead,
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: semanticAttempt(fixture),
+      workerOutput: semanticWorkerOutput(fixture),
+    })).rejects.toThrow("local_git_integration_merge_source_head_changed");
+    await expectCleanTarget(fixture.workspacePath, fixture.targetCommit);
   });
 });
+
+type SemanticFixture = Awaited<ReturnType<typeof createSemanticMergeFixture>>;
+
+function semanticAttempt(fixture: SemanticFixture) {
+  return {
+    targetWorkspacePath: fixture.workspacePath,
+    expectedFiles: fixture.changedFiles,
+    merge: {
+      sourceRemote: "origin",
+      sourceBranch: "base",
+      sourceCommit: fixture.sourceCommit,
+      expectedTargetCommit: fixture.targetCommit,
+    },
+  };
+}
+
+function semanticWorkerOutput(fixture: SemanticFixture) {
+  return {
+    workerJobId: "semantic-merge-resolution-worker",
+    workspacePath: fixture.workspacePath,
+    patchPath: fixture.patchPath,
+    patchSha256: fixture.patchSha256,
+    baseCommit: fixture.targetCommit,
+    changedFiles: fixture.changedFiles,
+  };
+}
+
+class MovingSourceAdapter extends LocalGitIntegrationAdapter {
+  private observations = 0;
+
+  constructor(private readonly movement: {
+    readonly fixture: SemanticFixture;
+    readonly moveOnObservation: number;
+    readonly advancedHead: string;
+  }) {
+    super({ allowedPatchRoots: [movement.fixture.rootDir] });
+  }
+
+  override async remoteBranchCommit(input: {
+    readonly workspacePath: string;
+    readonly remote: string;
+    readonly branch: string;
+  }): Promise<string | null> {
+    this.observations += 1;
+    if (this.observations === this.movement.moveOnObservation) {
+      await git(this.movement.fixture.workspacePath, [
+        "push",
+        "origin",
+        `${this.movement.advancedHead}:base`,
+      ]);
+    }
+    return super.remoteBranchCommit(input);
+  }
+}
+
+async function createUnpushedBaseAdvance(
+  workspacePath: string,
+  file: string,
+): Promise<string> {
+  await git(workspacePath, ["checkout", "base"]);
+  await writeFile(join(workspacePath, file), "advanced\n");
+  await git(workspacePath, ["add", file]);
+  await git(workspacePath, ["commit", "-m", "feat: advance during fetch"]);
+  const advancedHead = (
+    await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+  ).trim();
+  await git(workspacePath, ["checkout", "main"]);
+  return advancedHead;
+}
+
+async function expectCleanTarget(
+  workspacePath: string,
+  targetCommit: string,
+): Promise<void> {
+  expect((await gitOutput(workspacePath, ["rev-parse", "HEAD"])).trim()).toBe(
+    targetCommit,
+  );
+  expect(await gitOutput(workspacePath, ["status", "--porcelain"])).toBe("");
+}

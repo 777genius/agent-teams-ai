@@ -89,7 +89,8 @@ export async function commitApprovedChanges(
     const sourceDeltaFiles = attempt.merge
       ? new Set(await deps.git.changedFilesSinceCommit({
           workspacePath: attempt.targetWorkspacePath,
-          commit: attempt.merge.sourceCommit,
+          commit:
+            attempt.appliedMergeSourceCommit ?? attempt.merge.sourceCommit,
         }))
       : undefined;
     const scanFiles = sourceDeltaFiles === undefined
@@ -119,7 +120,7 @@ export async function commitApprovedChanges(
         ? {
             expectedParentCommits: [
               attempt.merge.expectedTargetCommit,
-              attempt.merge.sourceCommit,
+              attempt.appliedMergeSourceCommit ?? attempt.merge.sourceCommit,
             ],
           }
         : {}),

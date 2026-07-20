@@ -12,6 +12,7 @@ export type GitWorkspaceStatus = {
 
 export type GitApplyWorkerOutputResult = {
   readonly changedFiles: readonly string[];
+  readonly mergeSourceCommit?: string;
 };
 
 export type GitDiffCheckResult = {

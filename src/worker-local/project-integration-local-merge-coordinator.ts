@@ -175,38 +175,21 @@ export async function applyReviewedMerge(input: {
       );
     }
 
-    const mergeResult = await runtime.tryGit(
-      ["merge", "--no-ff", "--no-commit", merge.sourceCommit],
+    let appliedSourceCommit = merge.sourceCommit.toLowerCase();
+    let mergeState = await startReviewedMerge({
+      runtime,
       workspacePath,
-    );
-    mergeStarted = await hasMergeHead(runtime, workspacePath);
-    if (!mergeStarted) {
-      throw new Error(
-        mergeResult.exitCode === 0
-          ? "local_git_integration_merge_conflicts_required"
-          : `local_git_integration_merge_start_failed:${safeTail(
-              mergeResult.stderr || mergeResult.stdout,
-            )}`,
-      );
-    }
-    const conflictFiles = await runtime.gitNullTerminatedPaths(
-      ["diff", "--name-only", "--diff-filter=U", "-z"],
-      workspacePath,
-    );
-    mergeConflictFiles = conflictFiles;
-    const mergeFootprint = (await runtime.getStatus(workspacePath)).dirtyFiles;
-    if (!includesAllFiles(mergeFootprint, conflictFiles)) {
-      throw new Error(
-        "local_git_integration_merge_conflicts_missing_from_source_footprint",
-      );
-    }
+      sourceCommit: merge.sourceCommit,
+    });
+    mergeStarted = true;
+    mergeConflictFiles = mergeState.conflictFiles;
     const reviewedScope = await inspectReviewedMergeScope({
       runtime,
       workspacePath,
       targetCommit: merge.expectedTargetCommit,
       sourceCommit: merge.sourceCommit,
-      conflictFiles,
-      mergeFootprint,
+      conflictFiles: mergeState.conflictFiles,
+      mergeFootprint: mergeState.mergeFootprint,
       approvedFiles: input.attempt.expectedFiles,
       patchFiles: input.workerOutput.changedFiles,
     });
@@ -214,10 +197,63 @@ export async function applyReviewedMerge(input: {
       reviewedScope.semanticFiles.length > 0 &&
       fetchedHead !== merge.sourceCommit.toLowerCase()
     ) {
-      throw new Error(
-        "local_git_integration_merge_semantic_source_head_mismatch",
+      await assertSafeSemanticSourceDescendant({
+        runtime,
+        workspacePath,
+        reviewedSourceCommit: merge.sourceCommit,
+        fetchedHead,
+        protectedFiles: uniqueSorted([
+          ...input.attempt.expectedFiles,
+          ...input.workerOutput.changedFiles,
+          ...mergeState.conflictFiles,
+          ...reviewedScope.semanticFiles,
+        ]),
+      });
+      const reviewedConflictFiles = mergeState.conflictFiles;
+      await abortPendingMerge(
+        runtime,
+        workspacePath,
+        merge.expectedTargetCommit,
+        reviewedConflictFiles,
       );
+      mergeStarted = false;
+      mergeConflictFiles = [];
+      const stableDescendantHead = await runtime.remoteBranchCommit({
+        workspacePath,
+        remote: merge.sourceRemote,
+        branch: merge.sourceBranch,
+      });
+      if (stableDescendantHead?.toLowerCase() !== fetchedHead) {
+        throw new Error("local_git_integration_merge_source_head_changed");
+      }
+      mergeState = await startReviewedMerge({
+        runtime,
+        workspacePath,
+        sourceCommit: fetchedHead,
+      });
+      mergeStarted = true;
+      mergeConflictFiles = mergeState.conflictFiles;
+      if (!sameFiles(mergeState.conflictFiles, reviewedConflictFiles)) {
+        throw new Error(
+          `local_git_integration_merge_semantic_conflict_scope_changed:reviewed=${uniqueSorted(
+            reviewedConflictFiles,
+          ).join(",")};actual=${uniqueSorted(mergeState.conflictFiles).join(",")}`,
+        );
+      }
+      await inspectReviewedMergeScope({
+        runtime,
+        workspacePath,
+        targetCommit: merge.expectedTargetCommit,
+        sourceCommit: fetchedHead,
+        conflictFiles: mergeState.conflictFiles,
+        mergeFootprint: mergeState.mergeFootprint,
+        approvedFiles: input.attempt.expectedFiles,
+        patchFiles: input.workerOutput.changedFiles,
+      });
+      appliedSourceCommit = fetchedHead;
     }
+    const conflictFiles = mergeState.conflictFiles;
+    const mergeFootprint = mergeState.mergeFootprint;
     if (
       conflictFiles.length === 0 &&
       input.workerOutput.changedFiles.length === 0
@@ -236,7 +272,12 @@ export async function applyReviewedMerge(input: {
       }
       const patchPath = await runtime.canonicalWorkerPatch(input.workerOutput);
       await runtime.assertPatchSha256(patchPath, emptyPatchSha256);
-      return { changedFiles: mergeFootprint };
+      return {
+        changedFiles: mergeFootprint,
+        ...(appliedSourceCommit !== merge.sourceCommit.toLowerCase()
+          ? { mergeSourceCommit: appliedSourceCommit }
+          : {}),
+      };
     }
     const patchPath = await runtime.canonicalWorkerPatch(input.workerOutput);
     await runtime.assertPatchSha256(patchPath, input.workerOutput.patchSha256);
@@ -255,7 +296,7 @@ export async function applyReviewedMerge(input: {
       runtime,
       workspacePath,
       merge.expectedTargetCommit,
-      merge.sourceCommit,
+      appliedSourceCommit,
       patchFiles,
     );
     await restoreFilesToFirstParent(
@@ -298,7 +339,12 @@ export async function applyReviewedMerge(input: {
         )};actual=${uniqueSorted(changedFiles).join(",")}`,
       );
     }
-    return { changedFiles };
+    return {
+      changedFiles,
+      ...(appliedSourceCommit !== merge.sourceCommit.toLowerCase()
+        ? { mergeSourceCommit: appliedSourceCommit }
+        : {}),
+    };
   } catch (error) {
     if (mergeStarted || (await hasMergeHead(runtime, workspacePath))) {
       try {
@@ -316,6 +362,73 @@ export async function applyReviewedMerge(input: {
       }
     }
     throw error;
+  }
+}
+
+async function startReviewedMerge(input: {
+  readonly runtime: LocalGitMergeRuntime;
+  readonly workspacePath: string;
+  readonly sourceCommit: string;
+}): Promise<{
+  readonly conflictFiles: readonly string[];
+  readonly mergeFootprint: readonly string[];
+}> {
+  const mergeResult = await input.runtime.tryGit(
+    ["merge", "--no-ff", "--no-commit", input.sourceCommit],
+    input.workspacePath,
+  );
+  if (!(await hasMergeHead(input.runtime, input.workspacePath))) {
+    throw new Error(
+      mergeResult.exitCode === 0
+        ? "local_git_integration_merge_conflicts_required"
+        : `local_git_integration_merge_start_failed:${safeTail(
+            mergeResult.stderr || mergeResult.stdout,
+          )}`,
+    );
+  }
+  const conflictFiles = await input.runtime.gitNullTerminatedPaths(
+    ["diff", "--name-only", "--diff-filter=U", "-z"],
+    input.workspacePath,
+  );
+  const mergeFootprint = (await input.runtime.getStatus(input.workspacePath))
+    .dirtyFiles;
+  if (!includesAllFiles(mergeFootprint, conflictFiles)) {
+    throw new Error(
+      "local_git_integration_merge_conflicts_missing_from_source_footprint",
+    );
+  }
+  return { conflictFiles, mergeFootprint };
+}
+
+async function assertSafeSemanticSourceDescendant(input: {
+  readonly runtime: Pick<LocalGitMergeRuntime, "gitNullTerminatedPaths">;
+  readonly workspacePath: string;
+  readonly reviewedSourceCommit: string;
+  readonly fetchedHead: string;
+  readonly protectedFiles: readonly string[];
+}): Promise<void> {
+  const driftFiles = await input.runtime.gitNullTerminatedPaths(
+    [
+      "diff",
+      "--name-only",
+      "--no-renames",
+      "-z",
+      input.reviewedSourceCommit,
+      input.fetchedHead,
+      "--",
+    ],
+    input.workspacePath,
+  );
+  const protectedFiles = new Set(uniqueSorted(input.protectedFiles));
+  const touchedProtectedFiles = uniqueSorted(driftFiles).filter((file) =>
+    protectedFiles.has(file),
+  );
+  if (touchedProtectedFiles.length > 0) {
+    throw new Error(
+      `local_git_integration_merge_semantic_descendant_touched_reviewed_scope:${touchedProtectedFiles.join(
+        ",",
+      )}`,
+    );
   }
 }
 
