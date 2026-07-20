@@ -367,37 +367,7 @@ export async function applyVerifiedInputPatch(input: {
   if (status.length > 0) {
     throw new Error("project_control_input_patch_target_dirty");
   }
-  if (input.changedPaths.length === 0) {
-    throw new Error("project_control_input_patch_changed_paths_required");
-  }
-  if (input.expectedBaseCommit !== input.expectedTargetCommit) {
-    await execGitGuard(
-      [
-        "-C",
-        input.workspacePath,
-        "merge-base",
-        "--is-ancestor",
-        input.expectedBaseCommit,
-        input.expectedTargetCommit,
-      ],
-      "project_control_input_patch_base_not_ancestor",
-    );
-    await execGitGuard(
-      [
-        "-C",
-        input.workspacePath,
-        "diff",
-        "--quiet",
-        "--no-ext-diff",
-        "--no-renames",
-        input.expectedBaseCommit,
-        input.expectedTargetCommit,
-        "--",
-        ...input.changedPaths,
-      ],
-      "project_control_input_patch_changed_paths_advanced",
-    );
-  }
+  await assertInputPatchRevisionCompatibility(input);
   await execGitGuard(
     [
       "-C",
@@ -434,6 +404,45 @@ export async function applyVerifiedInputPatch(input: {
     ],
     "project_control_input_patch_apply_failed",
   );
+}
+
+export async function assertInputPatchRevisionCompatibility(input: {
+  readonly workspacePath: string;
+  readonly expectedBaseCommit: string;
+  readonly expectedTargetCommit: string;
+  readonly changedPaths: readonly string[];
+}): Promise<void> {
+  if (input.changedPaths.length === 0) {
+    throw new Error("project_control_input_patch_changed_paths_required");
+  }
+  if (input.expectedBaseCommit !== input.expectedTargetCommit) {
+    await execGitGuard(
+      [
+        "-C",
+        input.workspacePath,
+        "merge-base",
+        "--is-ancestor",
+        input.expectedBaseCommit,
+        input.expectedTargetCommit,
+      ],
+      "project_control_input_patch_base_not_ancestor",
+    );
+    await execGitGuard(
+      [
+        "-C",
+        input.workspacePath,
+        "diff",
+        "--quiet",
+        "--no-ext-diff",
+        "--no-renames",
+        input.expectedBaseCommit,
+        input.expectedTargetCommit,
+        "--",
+        ...input.changedPaths,
+      ],
+      "project_control_input_patch_changed_paths_advanced",
+    );
+  }
 }
 
 async function assertInputPatchHash(

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { access, chmod, mkdir, mkdtemp, realpath, rm, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,12 +15,14 @@ import {
   NetworkAccessMode,
 } from "@vioxen/subscription-runtime/worker-core";
 import { createCodexGoalMcpServer } from "../codex-goal-mcp";
+import { captureGitWorkspacePatch } from "../codex-goal-runtime-result-io";
 import {
   fastForwardExistingProjectWorktree,
   resolveBoundProjectWorktreeSource,
 } from "../codex-goal-mcp-project-broker";
 import { createOrReuseProjectWorktree } from "../application/project-control/codex-goal-project-refill";
 import type { CodexGoalProjectCreateWorktreeInput } from "../application/project-control/codex-goal-project-control-contracts";
+import { stagedPatchSha256 } from "../application/project-control/codex-goal-project-git";
 import {
   git,
   gitInitRepository,
@@ -240,6 +243,47 @@ describe("project refill worktree identity", () => {
       });
       expect(reused).toMatchObject({ created: false, result: { status: "noop" } });
       expect(brokerCalls).toBe(1);
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    {
+      name: "accepts an old staged patch after unrelated target advance",
+      advance: "unrelated" as const,
+      expectedError: undefined,
+    },
+    {
+      name: "rejects an old staged patch after touched-path target drift",
+      advance: "touched" as const,
+      expectedError: "project_control_input_patch_changed_paths_advanced",
+    },
+    {
+      name: "rejects an old staged patch on a non-ancestor target",
+      advance: "non-ancestor" as const,
+      expectedError: "project_control_input_patch_base_not_ancestor",
+    },
+  ])("$name", async ({ advance, expectedError }) => {
+    const fixture = await createReusableInputPatchFixture(advance);
+    try {
+      const reuse = createOrReuseProjectWorktree({
+        scope: fixture.scope,
+        createWorktreeInput: fixture.input,
+        broker: brokerWithCreate(async () => ({
+          status: "noop",
+          resourceId: fixture.input.path,
+        })),
+      });
+      if (expectedError) {
+        await expect(reuse).rejects.toThrow(expectedError);
+      } else {
+        await expect(reuse).resolves.toMatchObject({
+          created: false,
+          result: { status: "noop" },
+        });
+      }
+      await expect(access(fixture.input.path)).resolves.toBeUndefined();
     } finally {
       await rm(fixture.root, { recursive: true, force: true });
     }
@@ -677,3 +721,118 @@ describe("project refill worktree identity", () => {
     }
   });
 });
+
+async function createReusableInputPatchFixture(
+  advance: "unrelated" | "touched" | "non-ancestor",
+): Promise<{
+  readonly root: string;
+  readonly scope: ProjectAccessScope;
+  readonly input: CodexGoalProjectCreateWorktreeInput;
+}> {
+  const root = await mkdtemp(
+    join(tmpdir(), "subscription-runtime-project-reuse-input-patch-"),
+  );
+  const sourceWorkspacePath = join(root, "source");
+  const producerPath = join(root, "worktrees", "producer");
+  const targetPath = join(root, "worktrees", "target");
+  const targetBranch = `fix/reuse-${advance}`;
+  const featurePath = join(sourceWorkspacePath, "feature.txt");
+  await mkdir(sourceWorkspacePath, { recursive: true });
+  await gitInitRepository(sourceWorkspacePath);
+  await writeFile(
+    featurePath,
+    "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\n",
+  );
+  await writeFile(join(sourceWorkspacePath, "unrelated.txt"), "base\n");
+  await git(sourceWorkspacePath, ["add", "."]);
+  await git(sourceWorkspacePath, ["commit", "-m", "test: patch base"]);
+  const baseCommit = (
+    await gitStdout(sourceWorkspacePath, ["rev-parse", "HEAD"])
+  ).trim();
+  await git(sourceWorkspacePath, [
+    "worktree",
+    "add",
+    "-b",
+    "test/reuse-producer",
+    producerPath,
+    baseCommit,
+  ]);
+  await writeFile(
+    join(producerPath, "feature.txt"),
+    "line 1\nline 2\nline 3\nline 4\nline 5\nproducer line 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\n",
+  );
+  const patch = await captureGitWorkspacePatch({ workspacePath: producerPath });
+  const patchPath = join(root, "input.patch");
+  await writeFile(patchPath, patch);
+
+  let targetCommit: string;
+  if (advance === "non-ancestor") {
+    const baseTree = (
+      await gitStdout(sourceWorkspacePath, ["rev-parse", `${baseCommit}^{tree}`])
+    ).trim();
+    targetCommit = (
+      await gitStdout(sourceWorkspacePath, [
+        "commit-tree",
+        baseTree,
+        "-m",
+        "test: unrelated target",
+      ])
+    ).trim();
+  } else {
+    if (advance === "touched") {
+      await writeFile(
+        featurePath,
+        "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\ncanonical line 12\n",
+      );
+      await git(sourceWorkspacePath, ["add", "feature.txt"]);
+    } else {
+      await writeFile(
+        join(sourceWorkspacePath, "unrelated.txt"),
+        "canonical advance\n",
+      );
+      await git(sourceWorkspacePath, ["add", "unrelated.txt"]);
+    }
+    await git(sourceWorkspacePath, [
+      "commit",
+      "-m",
+      "test: advance patch target",
+    ]);
+    targetCommit = (
+      await gitStdout(sourceWorkspacePath, ["rev-parse", "HEAD"])
+    ).trim();
+  }
+  await git(sourceWorkspacePath, [
+    "worktree",
+    "add",
+    "-b",
+    targetBranch,
+    targetPath,
+    targetCommit,
+  ]);
+  await git(targetPath, ["apply", "--index", "--binary", patchPath]);
+  const input: CodexGoalProjectCreateWorktreeInput = {
+    sourceWorkspacePath,
+    expectedSourceRealPath: await realpath(sourceWorkspacePath),
+    path: targetPath,
+    expectedRealPath: await realpath(targetPath),
+    expectedRevision: targetCommit,
+    sourceRevisionPinned: true,
+    newBranch: targetBranch,
+    inputPatch: {
+      path: patchPath,
+      sha256: createHash("sha256").update(patch).digest("hex"),
+      stagedSha256: await stagedPatchSha256(targetPath),
+      baseCommit,
+      changedPaths: ["feature.txt"],
+    },
+  };
+  return {
+    root,
+    scope: {
+      projectId: "test-project",
+      workspaceRoots: [sourceWorkspacePath],
+      worktreeRoots: [join(root, "worktrees")],
+    },
+    input,
+  };
+}

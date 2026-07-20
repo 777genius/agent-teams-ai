@@ -16,6 +16,7 @@ import {
   type CodexGoalProjectCreateWorktreeInput,
 } from "./codex-goal-project-control-contracts";
 import {
+  assertInputPatchRevisionCompatibility,
   execGit,
   execGitStdout,
   stagedPatchSha256,
@@ -126,6 +127,8 @@ async function assertReusableProjectWorktree(
         workspacePath: materializedRealPath,
         patchPath: worktreeInput.inputPatch.path,
         expectedStagedSha256: worktreeInput.inputPatch.stagedSha256,
+        expectedBaseCommit: worktreeInput.inputPatch.baseCommit,
+        expectedTargetCommit: worktreeInput.expectedRevision,
         expectedChangedPaths: worktreeInput.inputPatch.changedPaths,
       });
     }
@@ -151,7 +154,8 @@ async function assertReusableProjectWorktree(
   } catch (error) {
     if (
       error instanceof Error &&
-      error.message.startsWith("project_control_existing_worktree_")
+      (error.message.startsWith("project_control_existing_worktree_") ||
+        error.message.startsWith("project_control_input_patch_"))
     ) {
       throw error;
     }
@@ -163,8 +167,16 @@ async function assertReusableInputPatch(input: {
   readonly workspacePath: string;
   readonly patchPath: string;
   readonly expectedStagedSha256: string;
+  readonly expectedBaseCommit: string;
+  readonly expectedTargetCommit: string;
   readonly expectedChangedPaths: readonly string[];
 }): Promise<void> {
+  await assertInputPatchRevisionCompatibility({
+    workspacePath: input.workspacePath,
+    expectedBaseCommit: input.expectedBaseCommit,
+    expectedTargetCommit: input.expectedTargetCommit,
+    changedPaths: input.expectedChangedPaths,
+  });
   await execGit([
     "-C",
     input.workspacePath,

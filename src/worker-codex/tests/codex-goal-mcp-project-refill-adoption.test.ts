@@ -22,7 +22,21 @@ import {
 } from "./codex-goal-mcp-test-support";
 
 describe("project refill adoption", () => {
-  it("seeds a remediation producer from an attested rejected output", async () => {
+  it.each([
+    {
+      name: "seeds rejected output after unrelated canonical advance",
+      canonicalPath: "unrelated.md",
+      canonicalContent: "canonical advance\n",
+      expectedError: undefined,
+    },
+    {
+      name: "rejects rejected output after changed-path canonical drift",
+      canonicalPath: "README.md",
+      canonicalContent:
+        "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\ncanonical changed line 12\n",
+      expectedError: "project_control_input_patch_changed_paths_advanced",
+    },
+  ])("$name", async ({ canonicalPath, canonicalContent, expectedError }) => {
     const root = await mkdtemp(
       join(tmpdir(), "subscription-runtime-project-refill-adoption-patch-"),
     );
@@ -189,6 +203,24 @@ describe("project refill adoption", () => {
       if (reviewed.ok !== true) throw new Error(JSON.stringify(reviewed));
       const reviewedOutputId = String(reviewed.reviewedOutputId);
       expect(reviewedOutputId).toMatch(/^[a-f0-9]{64}$/);
+      await writeFile(
+        join(sourceWorkspacePath, canonicalPath),
+        canonicalContent,
+      );
+      await git(sourceWorkspacePath, ["add", canonicalPath]);
+      await git(sourceWorkspacePath, [
+        "commit",
+        "-m",
+        "test: advance canonical",
+      ]);
+      const canonicalSha = (
+        await gitStdout(sourceWorkspacePath, ["rev-parse", "HEAD"])
+      ).trim();
+      await git(sourceWorkspacePath, [
+        "update-ref",
+        "refs/remotes/origin/main",
+        canonicalSha,
+      ]);
 
       const result = await callToolJson(
         client,
@@ -214,9 +246,9 @@ describe("project refill adoption", () => {
             contract: {
               kind: "worker-launch",
               format: 1,
-              canonicalSha: baseSha,
-              baseSha,
-              phaseStartSha: baseSha,
+              canonicalSha,
+              baseSha: canonicalSha,
+              phaseStartSha: canonicalSha,
               packetRevision: "phase-01-adoption-r2",
               controllerPacket: "controller.md",
               lanePacket: "lane.md",
@@ -244,6 +276,10 @@ describe("project refill adoption", () => {
           confirmRefill: true,
         },
       );
+      if (expectedError) {
+        expect(result).toEqual({ ok: false, error: expectedError });
+        return;
+      }
       if (result.ok !== true) throw new Error(JSON.stringify(result));
 
       const stagedSha256 = await stagedPatchSha256(childWorkspace);
@@ -257,10 +293,14 @@ describe("project refill adoption", () => {
           reviewedOutputId,
           controllerJobId: "project-controller",
           workerJobId: "project-producer",
+          baseCommit: baseSha,
           patchSha256: artifactSha256,
           decision: "rejected",
         },
       });
+      expect(
+        (await gitStdout(childWorkspace, ["rev-parse", "HEAD"])).trim(),
+      ).toBe(canonicalSha);
       await expect(
         readFile(join(childWorkspace, "README.md"), "utf8"),
       ).resolves.toContain("producer changed line 6\n");

@@ -42,9 +42,6 @@ export async function resolveRejectedReviewedOutputRemediation(
     reviewedOutputId: input.reviewedOutputId,
     expectedWorkerJobId: input.expectedWorkerJobId,
   });
-  if (snapshot.baseCommit !== input.expectedBaseCommit.toLowerCase()) {
-    throw new Error("reviewed_worker_output_remediation_base_commit_mismatch");
-  }
   if (
     typeof input.expectedPatchSha256 !== "string" ||
     input.expectedPatchSha256.toLowerCase() !== snapshot.patchSha256
