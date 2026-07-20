@@ -297,6 +297,10 @@ export class InternalStorageWorkerCore {
     fs.mkdirSync(path.dirname(this.options.databasePath), { recursive: true });
     const db = this.options.createDatabase(this.options.databasePath);
     try {
+      db.pragma('foreign_keys = ON');
+      if (db.pragma('foreign_keys', { simple: true }) !== 1) {
+        throw new Error('SQLite foreign key enforcement could not be enabled');
+      }
       db.pragma('journal_mode = WAL');
       db.pragma('busy_timeout = 5000');
       db.pragma('synchronous = NORMAL');
@@ -306,9 +310,9 @@ export class InternalStorageWorkerCore {
       }
       const schemaBefore = readSchemaVersion(db);
       if (schemaBefore > INTERNAL_STORAGE_SCHEMA_VERSION) {
-        // A newer app version already migrated this database. Schema v1+ is
-        // append-only, so reading known tables is safe; never migrate down.
-        return db;
+        throw new Error(
+          `Unsupported future internal storage schema version: ${schemaBefore} > ${INTERNAL_STORAGE_SCHEMA_VERSION}`
+        );
       }
       runInternalStorageMigrations(db);
       return db;

@@ -171,6 +171,173 @@ const MIGRATIONS: InternalStorageMigration[] = [
     version: 5,
     statements: [...TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS],
   },
+  {
+    version: 6,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS durable_application_commands (
+        command_id TEXT PRIMARY KEY,
+        deployment_id TEXT NOT NULL,
+        stable_actor_id TEXT NOT NULL,
+        command_kind TEXT NOT NULL,
+        idempotency_key TEXT NOT NULL,
+        descriptor_id TEXT NOT NULL,
+        descriptor_version INTEGER NOT NULL,
+        input_schema_version INTEGER NOT NULL,
+        fingerprint_version TEXT NOT NULL,
+        effect_plan_version INTEGER NOT NULL,
+        fingerprint_key_version TEXT NOT NULL,
+        fingerprint_digest TEXT NOT NULL,
+        attempt_generation INTEGER NOT NULL,
+        attempt_id TEXT NOT NULL,
+        attempt_owner_id TEXT NOT NULL,
+        attempt_lease_token TEXT NOT NULL,
+        attempt_claimed_at TEXT NOT NULL,
+        attempt_lease_expires_at TEXT NOT NULL,
+        state TEXT NOT NULL,
+        retention_class TEXT NOT NULL,
+        audit_session_id TEXT,
+        outcome_json TEXT,
+        error_code TEXT,
+        error_json TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        committed_at TEXT
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_durable_app_cmd_claim
+        ON durable_application_commands (
+          deployment_id, stable_actor_id, command_kind, idempotency_key
+        )`,
+      `CREATE INDEX IF NOT EXISTS idx_durable_app_cmd_state
+        ON durable_application_commands (deployment_id, state, updated_at)`,
+      `CREATE TABLE IF NOT EXISTS durable_application_command_effects (
+        command_id TEXT NOT NULL,
+        ordinal INTEGER NOT NULL,
+        effect_id TEXT NOT NULL,
+        effect_version INTEGER NOT NULL,
+        recovery_class TEXT NOT NULL,
+        evidence_schema_version INTEGER NOT NULL,
+        state TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (command_id, ordinal),
+        FOREIGN KEY (command_id) REFERENCES durable_application_commands(command_id)
+          ON DELETE RESTRICT
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_durable_app_cmd_effect_id
+        ON durable_application_command_effects (command_id, effect_id)`,
+      `CREATE TABLE IF NOT EXISTS durable_application_command_effect_evidence (
+        command_id TEXT NOT NULL,
+        ordinal INTEGER NOT NULL,
+        sequence INTEGER NOT NULL,
+        outcome TEXT NOT NULL,
+        evidence_schema_version INTEGER NOT NULL,
+        evidence_json TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
+        PRIMARY KEY (command_id, ordinal, sequence),
+        FOREIGN KEY (command_id, ordinal)
+          REFERENCES durable_application_command_effects(command_id, ordinal)
+          ON DELETE RESTRICT
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_durable_app_cmd_evidence_order
+        ON durable_application_command_effect_evidence (command_id, ordinal, sequence)`,
+      `CREATE TABLE IF NOT EXISTS durable_application_command_outbox (
+        sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id TEXT NOT NULL,
+        command_id TEXT NOT NULL,
+        deployment_id TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        scope_kind TEXT NOT NULL,
+        scope_id TEXT NOT NULL,
+        schema_version INTEGER NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        -- Version 6 used publication terminology for delivery bookkeeping.
+        -- Version 7 renames these physical columns without changing behavior.
+        publication_generation INTEGER NOT NULL,
+        publication_publisher_id TEXT,
+        publication_lease_token TEXT,
+        publication_claimed_at TEXT,
+        publication_lease_expires_at TEXT,
+        published_at TEXT,
+        FOREIGN KEY (command_id) REFERENCES durable_application_commands(command_id)
+          ON DELETE RESTRICT
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_durable_app_cmd_outbox_event
+        ON durable_application_command_outbox (event_id)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_durable_app_cmd_outbox_command
+        ON durable_application_command_outbox (command_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_durable_app_cmd_outbox_sequence
+        ON durable_application_command_outbox (sequence)`,
+    ],
+  },
+  {
+    version: 7,
+    statements: [
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN publication_generation TO delivery_generation`,
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN publication_publisher_id TO delivery_owner_id`,
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN publication_lease_token TO delivery_lease_token`,
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN publication_claimed_at TO delivery_claimed_at`,
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN publication_lease_expires_at TO delivery_lease_expires_at`,
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN published_at TO delivery_acknowledged_at`,
+      // Version 6 events had no typed revision. Start with a valid value so
+      // ALTER TABLE remains legal for populated databases, then deterministically
+      // rank every legacy projection's events in durable replay order. The
+      // projection key is (deployment_id, scope_kind, scope_id); sequence is
+      // canonical replay order and event_id is its deterministic tie-breaker.
+      `ALTER TABLE durable_application_command_outbox
+        ADD COLUMN semantic_revision INTEGER NOT NULL DEFAULT 1`,
+      `WITH ranked_legacy_events AS (
+        SELECT
+          sequence,
+          event_id,
+          ROW_NUMBER() OVER (
+            PARTITION BY deployment_id, scope_kind, scope_id
+            ORDER BY sequence ASC, event_id ASC
+          ) AS semantic_revision
+        FROM durable_application_command_outbox
+      )
+      UPDATE durable_application_command_outbox
+      SET semantic_revision = (
+        SELECT ranked_legacy_events.semantic_revision
+        FROM ranked_legacy_events
+        WHERE ranked_legacy_events.sequence = durable_application_command_outbox.sequence
+          AND ranked_legacy_events.event_id = durable_application_command_outbox.event_id
+      )`,
+      `CREATE TABLE IF NOT EXISTS durable_application_command_consumer_applications (
+        consumer_id TEXT NOT NULL,
+        event_id TEXT NOT NULL,
+        semantic_revision INTEGER NOT NULL,
+        projection_key TEXT NOT NULL,
+        state_json TEXT NOT NULL,
+        applied_at TEXT NOT NULL,
+        PRIMARY KEY (consumer_id, event_id),
+        FOREIGN KEY (event_id) REFERENCES durable_application_command_outbox(event_id)
+          ON DELETE RESTRICT
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_durable_app_cmd_consumer_revision
+        ON durable_application_command_consumer_applications (
+          consumer_id, projection_key, semantic_revision
+        )`,
+      `CREATE TABLE IF NOT EXISTS durable_application_command_consumer_projections (
+        consumer_id TEXT NOT NULL,
+        projection_key TEXT NOT NULL,
+        semantic_revision INTEGER NOT NULL,
+        last_event_id TEXT NOT NULL,
+        state_json TEXT NOT NULL,
+        application_count INTEGER NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (consumer_id, projection_key),
+        FOREIGN KEY (consumer_id, last_event_id)
+          REFERENCES durable_application_command_consumer_applications(consumer_id, event_id)
+          ON DELETE RESTRICT
+      )`,
+    ],
+  },
 ];
 
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

@@ -1,4 +1,5 @@
 import {
+  foreignKey,
   index,
   integer,
   primaryKey,
@@ -179,5 +180,166 @@ export const applicationCommandLedger = sqliteTable(
     ),
     index('idx_app_cmd_ledger_status').on(table.namespace, table.scopeKey, table.status),
     index('idx_app_cmd_ledger_operation').on(table.namespace, table.scopeKey, table.operation),
+  ]
+);
+
+export const durableApplicationCommands = sqliteTable(
+  'durable_application_commands',
+  {
+    commandId: text('command_id').primaryKey(),
+    deploymentId: text('deployment_id').notNull(),
+    stableActorId: text('stable_actor_id').notNull(),
+    commandKind: text('command_kind').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    descriptorId: text('descriptor_id').notNull(),
+    descriptorVersion: integer('descriptor_version').notNull(),
+    inputSchemaVersion: integer('input_schema_version').notNull(),
+    fingerprintVersion: text('fingerprint_version').notNull(),
+    effectPlanVersion: integer('effect_plan_version').notNull(),
+    fingerprintKeyVersion: text('fingerprint_key_version').notNull(),
+    fingerprintDigest: text('fingerprint_digest').notNull(),
+    attemptGeneration: integer('attempt_generation').notNull(),
+    attemptId: text('attempt_id').notNull(),
+    attemptOwnerId: text('attempt_owner_id').notNull(),
+    attemptLeaseToken: text('attempt_lease_token').notNull(),
+    attemptClaimedAt: text('attempt_claimed_at').notNull(),
+    attemptLeaseExpiresAt: text('attempt_lease_expires_at').notNull(),
+    state: text('state').notNull(),
+    retentionClass: text('retention_class').notNull(),
+    auditSessionId: text('audit_session_id'),
+    outcomeJson: text('outcome_json'),
+    errorCode: text('error_code'),
+    errorJson: text('error_json'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    committedAt: text('committed_at'),
+  },
+  (table) => [
+    uniqueIndex('idx_durable_app_cmd_claim').on(
+      table.deploymentId,
+      table.stableActorId,
+      table.commandKind,
+      table.idempotencyKey
+    ),
+    index('idx_durable_app_cmd_state').on(table.deploymentId, table.state, table.updatedAt),
+  ]
+);
+
+export const durableApplicationCommandEffects = sqliteTable(
+  'durable_application_command_effects',
+  {
+    commandId: text('command_id')
+      .notNull()
+      .references(() => durableApplicationCommands.commandId, { onDelete: 'restrict' }),
+    ordinal: integer('ordinal').notNull(),
+    effectId: text('effect_id').notNull(),
+    effectVersion: integer('effect_version').notNull(),
+    recoveryClass: text('recovery_class').notNull(),
+    evidenceSchemaVersion: integer('evidence_schema_version').notNull(),
+    state: text('state').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.commandId, table.ordinal] }),
+    uniqueIndex('idx_durable_app_cmd_effect_id').on(table.commandId, table.effectId),
+  ]
+);
+
+export const durableApplicationCommandEffectEvidence = sqliteTable(
+  'durable_application_command_effect_evidence',
+  {
+    commandId: text('command_id').notNull(),
+    ordinal: integer('ordinal').notNull(),
+    sequence: integer('sequence').notNull(),
+    outcome: text('outcome').notNull(),
+    evidenceSchemaVersion: integer('evidence_schema_version').notNull(),
+    evidenceJson: text('evidence_json').notNull(),
+    recordedAt: text('recorded_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.commandId, table.ordinal, table.sequence] }),
+    foreignKey({
+      columns: [table.commandId, table.ordinal],
+      foreignColumns: [
+        durableApplicationCommandEffects.commandId,
+        durableApplicationCommandEffects.ordinal,
+      ],
+    }).onDelete('restrict'),
+    index('idx_durable_app_cmd_evidence_order').on(table.commandId, table.ordinal, table.sequence),
+  ]
+);
+
+export const durableApplicationCommandOutbox = sqliteTable(
+  'durable_application_command_outbox',
+  {
+    sequence: integer('sequence').primaryKey({ autoIncrement: true }),
+    eventId: text('event_id').notNull(),
+    commandId: text('command_id')
+      .notNull()
+      .references(() => durableApplicationCommands.commandId, { onDelete: 'restrict' }),
+    deploymentId: text('deployment_id').notNull(),
+    eventType: text('event_type').notNull(),
+    scopeKind: text('scope_kind').notNull(),
+    scopeId: text('scope_id').notNull(),
+    schemaVersion: integer('schema_version').notNull(),
+    semanticRevision: integer('semantic_revision').notNull(),
+    payloadJson: text('payload_json').notNull(),
+    createdAt: text('created_at').notNull(),
+    deliveryGeneration: integer('delivery_generation').notNull(),
+    deliveryOwnerId: text('delivery_owner_id'),
+    deliveryLeaseToken: text('delivery_lease_token'),
+    deliveryClaimedAt: text('delivery_claimed_at'),
+    deliveryLeaseExpiresAt: text('delivery_lease_expires_at'),
+    deliveryAcknowledgedAt: text('delivery_acknowledged_at'),
+  },
+  (table) => [
+    uniqueIndex('idx_durable_app_cmd_outbox_event').on(table.eventId),
+    uniqueIndex('idx_durable_app_cmd_outbox_command').on(table.commandId),
+    index('idx_durable_app_cmd_outbox_sequence').on(table.sequence),
+  ]
+);
+
+export const durableApplicationCommandConsumerApplications = sqliteTable(
+  'durable_application_command_consumer_applications',
+  {
+    consumerId: text('consumer_id').notNull(),
+    eventId: text('event_id')
+      .notNull()
+      .references(() => durableApplicationCommandOutbox.eventId, { onDelete: 'restrict' }),
+    semanticRevision: integer('semantic_revision').notNull(),
+    projectionKey: text('projection_key').notNull(),
+    stateJson: text('state_json').notNull(),
+    appliedAt: text('applied_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.consumerId, table.eventId] }),
+    uniqueIndex('idx_durable_app_cmd_consumer_revision').on(
+      table.consumerId,
+      table.projectionKey,
+      table.semanticRevision
+    ),
+  ]
+);
+
+export const durableApplicationCommandConsumerProjections = sqliteTable(
+  'durable_application_command_consumer_projections',
+  {
+    consumerId: text('consumer_id').notNull(),
+    projectionKey: text('projection_key').notNull(),
+    semanticRevision: integer('semantic_revision').notNull(),
+    lastEventId: text('last_event_id').notNull(),
+    stateJson: text('state_json').notNull(),
+    applicationCount: integer('application_count').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.consumerId, table.projectionKey] }),
+    foreignKey({
+      columns: [table.consumerId, table.lastEventId],
+      foreignColumns: [
+        durableApplicationCommandConsumerApplications.consumerId,
+        durableApplicationCommandConsumerApplications.eventId,
+      ],
+    }).onDelete('restrict'),
   ]
 );

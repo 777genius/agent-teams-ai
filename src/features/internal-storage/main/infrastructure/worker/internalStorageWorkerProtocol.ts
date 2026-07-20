@@ -2,11 +2,57 @@ import type {
   CommentJournalEntryRecord,
   StallJournalEntryRecord,
 } from '../../../contracts/internalStorageContracts';
+import type {
+  DurableApplicationCommandCommitRequest,
+  DurableApplicationCommandConsumerApplyRequest,
+  DurableApplicationCommandConsumerProjectionRequest,
+} from '@features/application-command-ledger';
 import type { TeamId } from '@shared/contracts/hosted';
 
 export interface InternalStorageWorkerData {
   databasePath: string;
 }
+
+export type ApplicationCommandLedgerWorkerOp =
+  | 'appCommandLedger.begin'
+  | 'appCommandLedger.markCompleted'
+  | 'appCommandLedger.markFailed'
+  | 'appCommandLedger.getByCommandId'
+  | 'appCommandLedger.getByIdempotencyKey'
+  | 'appCommandLedger.listByScope'
+  | 'appCommandLedger.durable.claim'
+  | 'appCommandLedger.durable.getStatus'
+  | 'appCommandLedger.durable.getByClaim'
+  | 'appCommandLedger.durable.renewAttemptLease'
+  | 'appCommandLedger.durable.transitionCommand'
+  | 'appCommandLedger.durable.transitionEffect'
+  | 'appCommandLedger.durable.commit'
+  | 'appCommandLedger.durable.listOutbox'
+  | 'appCommandLedger.durable.claimOutbox'
+  | 'appCommandLedger.durable.acknowledgeOutboxDelivery'
+  | 'appCommandLedger.durable.applyConsumerEvent'
+  | 'appCommandLedger.durable.getConsumerProjection';
+
+/** Payloads whose durable envelope semantics must remain typed across IPC. */
+export interface ApplicationCommandLedgerWorkerPayloadByOp {
+  'appCommandLedger.durable.commit': DurableApplicationCommandCommitRequest;
+  'appCommandLedger.durable.applyConsumerEvent': DurableApplicationCommandConsumerApplyRequest;
+  'appCommandLedger.durable.getConsumerProjection': DurableApplicationCommandConsumerProjectionRequest;
+}
+
+type TypedApplicationCommandLedgerWorkerRequest = {
+  [TOp in keyof ApplicationCommandLedgerWorkerPayloadByOp]: {
+    id: string;
+    op: TOp;
+    payload: ApplicationCommandLedgerWorkerPayloadByOp[TOp];
+  };
+}[keyof ApplicationCommandLedgerWorkerPayloadByOp];
+
+type UntypedApplicationCommandLedgerWorkerRequest = {
+  id: string;
+  op: Exclude<ApplicationCommandLedgerWorkerOp, keyof ApplicationCommandLedgerWorkerPayloadByOp>;
+  payload: unknown;
+};
 
 export type InternalStorageWorkerRequest =
   | { id: string; op: 'ping'; payload: Record<string, never> }
@@ -38,7 +84,8 @@ export type InternalStorageWorkerRequest =
   | { id: string; op: 'teamIdentity.get'; payload: { teamId: TeamId } }
   // Member-work-sync ops share one wire shape; the typed client methods and
   // the worker-side dispatcher (memberWorkSyncWorkerOps) own the payloads.
-  | { id: string; op: `appCommandLedger.${string}`; payload: unknown }
+  | TypedApplicationCommandLedgerWorkerRequest
+  | UntypedApplicationCommandLedgerWorkerRequest
   | { id: string; op: `mws.${string}`; payload: unknown }
   | { id: string; op: 'close'; payload: Record<string, never> };
 

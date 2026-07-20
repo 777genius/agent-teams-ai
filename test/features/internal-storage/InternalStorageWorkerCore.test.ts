@@ -4,6 +4,7 @@ import { InternalStorageWorkerCore } from '@features/internal-storage/main/infra
 import { parseTeamId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
 import { getTableColumns, getTableName } from 'drizzle-orm';
+import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
@@ -224,6 +225,267 @@ describe('InternalStorageWorkerCore', () => {
     expect(info.integrity).toBe('ok');
   });
 
+  it('migrates v6 outbox revisions per projection and converges after replay and reopen', async () => {
+    const dbPath = await makeTmpDbPath();
+    await fs.mkdir(path.dirname(dbPath), { recursive: true });
+    const legacyDb = new Database(dbPath);
+    legacyDb.exec(`CREATE TABLE durable_application_command_outbox (
+      sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id TEXT NOT NULL,
+      command_id TEXT NOT NULL,
+      deployment_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      scope_kind TEXT NOT NULL,
+      scope_id TEXT NOT NULL,
+      schema_version INTEGER NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      publication_generation INTEGER NOT NULL,
+      publication_publisher_id TEXT,
+      publication_lease_token TEXT,
+      publication_claimed_at TEXT,
+      publication_lease_expires_at TEXT,
+      published_at TEXT
+    )`);
+    legacyDb.exec(`CREATE UNIQUE INDEX idx_durable_app_cmd_outbox_event
+      ON durable_application_command_outbox (event_id)`);
+    legacyDb.exec(`CREATE UNIQUE INDEX idx_durable_app_cmd_outbox_command
+      ON durable_application_command_outbox (command_id)`);
+    const insertLegacyEvent = legacyDb.prepare(`INSERT INTO durable_application_command_outbox (
+      sequence, event_id, command_id, deployment_id, event_type, scope_kind, scope_id,
+      schema_version, payload_json, created_at, publication_generation
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const legacyEvents = [
+      {
+        sequence: 30,
+        eventId: 'legacy-team-a-2',
+        commandId: 'legacy-command-a-2',
+        scopeId: 'team-a',
+        payloadJson: '{"legacyOrder":2,"projection":"team-a"}',
+      },
+      {
+        sequence: 10,
+        eventId: 'legacy-team-a-1',
+        commandId: 'legacy-command-a-1',
+        scopeId: 'team-a',
+        payloadJson: '{"legacyOrder":1,"projection":"team-a"}',
+      },
+      {
+        sequence: 20,
+        eventId: 'legacy-team-b-1',
+        commandId: 'legacy-command-b-1',
+        scopeId: 'team-b',
+        payloadJson: '{"legacyOrder":1,"projection":"team-b"}',
+      },
+    ] as const;
+    for (const event of legacyEvents) {
+      insertLegacyEvent.run(
+        event.sequence,
+        event.eventId,
+        event.commandId,
+        'deployment-a',
+        'task.changed',
+        'team',
+        event.scopeId,
+        1,
+        event.payloadJson,
+        '2026-07-20T10:00:00.000Z',
+        0
+      );
+    }
+    legacyDb.pragma('user_version = 6');
+    legacyDb.close();
+
+    const core = track(makeCore(dbPath));
+    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 7, integrity: 'ok' });
+    const deliveryLease = {
+      ownerId: 'legacy-replay-worker',
+      leaseToken: 'legacy-replay-lease',
+      claimedAtIso: '2026-07-20T10:01:00.000Z',
+      leaseExpiresAtIso: '2026-07-20T10:02:00.000Z',
+      limit: 10,
+    };
+    const replayBatch = core.handle(
+      'appCommandLedger.durable.claimOutbox',
+      deliveryLease
+    ) as Array<{
+      sequence: number;
+      eventId: string;
+      scopeKind: string;
+      scopeId: string;
+      semanticRevision: number;
+      payloadJson: string;
+      deliveryLease: { generation: number } | null;
+    }>;
+    expect(
+      replayBatch.map(({ sequence, eventId, scopeId, semanticRevision }) => ({
+        sequence,
+        eventId,
+        scopeId,
+        semanticRevision,
+      }))
+    ).toEqual([
+      {
+        sequence: 10,
+        eventId: 'legacy-team-a-1',
+        scopeId: 'team-a',
+        semanticRevision: 1,
+      },
+      {
+        sequence: 20,
+        eventId: 'legacy-team-b-1',
+        scopeId: 'team-b',
+        semanticRevision: 1,
+      },
+      {
+        sequence: 30,
+        eventId: 'legacy-team-a-2',
+        scopeId: 'team-a',
+        semanticRevision: 2,
+      },
+    ]);
+
+    for (const [index, event] of replayBatch.entries()) {
+      const projectionKey = `${event.scopeKind}/${event.scopeId}`;
+      expect(
+        core.handle('appCommandLedger.durable.applyConsumerEvent', {
+          consumerId: 'legacy-task-projection-v1',
+          projectionKey,
+          eventId: event.eventId,
+          semanticRevision: event.semanticRevision,
+          stateJson: event.payloadJson,
+          appliedAtIso: `2026-07-20T10:01:0${index + 1}.000Z`,
+        })
+      ).toMatchObject({ outcome: 'applied' });
+      expect(event.deliveryLease).not.toBeNull();
+      expect(
+        core.handle('appCommandLedger.durable.acknowledgeOutboxDelivery', {
+          eventId: event.eventId,
+          deliveryGeneration: event.deliveryLease!.generation,
+          ownerId: deliveryLease.ownerId,
+          leaseToken: deliveryLease.leaseToken,
+          acknowledgedAtIso: `2026-07-20T10:01:1${index}.000Z`,
+        })
+      ).toBeNull();
+    }
+    core.close();
+
+    const reopened = track(makeCore(dbPath));
+    expect(reopened.handle('ping', {})).toMatchObject({ schemaVersion: 7, integrity: 'ok' });
+    expect(
+      reopened.handle('appCommandLedger.durable.applyConsumerEvent', {
+        consumerId: 'legacy-task-projection-v1',
+        projectionKey: 'team/team-a',
+        eventId: 'legacy-team-a-2',
+        semanticRevision: 2,
+        stateJson: '{"legacyOrder":2,"projection":"team-a"}',
+        appliedAtIso: '2026-07-20T10:03:00.000Z',
+      })
+    ).toMatchObject({
+      outcome: 'duplicate',
+      projection: {
+        semanticRevision: 2,
+        lastEventId: 'legacy-team-a-2',
+        applicationCount: 2,
+      },
+    });
+    expect(
+      reopened.handle('appCommandLedger.durable.getConsumerProjection', {
+        consumerId: 'legacy-task-projection-v1',
+        projectionKey: 'team/team-b',
+      })
+    ).toMatchObject({
+      semanticRevision: 1,
+      lastEventId: 'legacy-team-b-1',
+      applicationCount: 1,
+    });
+    expect(
+      reopened.handle('appCommandLedger.durable.listOutbox', { afterSequence: 0, limit: 10 })
+    ).toEqual([
+      expect.objectContaining({
+        eventId: 'legacy-team-a-1',
+        semanticRevision: 1,
+        deliveryAcknowledgedAt: expect.any(String),
+      }),
+      expect.objectContaining({
+        eventId: 'legacy-team-b-1',
+        semanticRevision: 1,
+        deliveryAcknowledgedAt: expect.any(String),
+      }),
+      expect.objectContaining({
+        eventId: 'legacy-team-a-2',
+        semanticRevision: 2,
+        deliveryAcknowledgedAt: expect.any(String),
+      }),
+    ]);
+    expect(
+      reopened.handle('appCommandLedger.durable.claimOutbox', {
+        ownerId: 'post-reopen-worker',
+        leaseToken: 'post-reopen-lease',
+        claimedAtIso: '2026-07-20T10:03:00.000Z',
+        leaseExpiresAtIso: '2026-07-20T10:04:00.000Z',
+        limit: 10,
+      })
+    ).toEqual([]);
+
+    const migrated = new Database(dbPath, { readonly: true });
+    try {
+      const columns = (
+        migrated.pragma('table_info(durable_application_command_outbox)') as {
+          name: string;
+        }[]
+      ).map(({ name }) => name);
+      expect(columns).toEqual(
+        expect.arrayContaining([
+          'delivery_generation',
+          'delivery_owner_id',
+          'delivery_acknowledged_at',
+          'semantic_revision',
+        ])
+      );
+      expect(columns).not.toContain('publication_generation');
+      expect(
+        migrated
+          .prepare(
+            `SELECT event_id, semantic_revision
+             FROM durable_application_command_outbox
+             ORDER BY sequence`
+          )
+          .all()
+      ).toEqual([
+        { event_id: 'legacy-team-a-1', semantic_revision: 1 },
+        { event_id: 'legacy-team-b-1', semantic_revision: 1 },
+        { event_id: 'legacy-team-a-2', semantic_revision: 2 },
+      ]);
+    } finally {
+      migrated.close();
+    }
+  });
+
+  it('fails closed without rewriting a database from an unknown future schema version', async () => {
+    const dbPath = await makeTmpDbPath();
+    const initialized = track(makeCore(dbPath));
+    initialized.handle('ping', {});
+    initialized.close();
+    const futureDb = new Database(dbPath);
+    futureDb.pragma(`user_version = ${INTERNAL_STORAGE_SCHEMA_VERSION + 1}`);
+    futureDb.close();
+
+    const core = track(makeCore(dbPath));
+    expect(() => core.handle('ping', {})).toThrow(
+      /Unsupported future internal storage schema version/
+    );
+
+    const reopened = new Database(dbPath, { readonly: true });
+    try {
+      expect(reopened.pragma('user_version', { simple: true })).toBe(
+        INTERNAL_STORAGE_SCHEMA_VERSION + 1
+      );
+    } finally {
+      reopened.close();
+    }
+  });
+
   it('keeps the raw migration DDL in sync with the drizzle schema', async () => {
     const dbPath = await makeTmpDbPath();
     const core = track(makeCore(dbPath));
@@ -241,9 +503,107 @@ describe('InternalStorageWorkerCore', () => {
           .sort((a, b) => a.localeCompare(b));
         expect(actual, `columns of ${tableName}`).toEqual(expected);
       }
+
+      const evidenceForeignKeys = getTableConfig(
+        schema.durableApplicationCommandEffectEvidence
+      ).foreignKeys;
+      expect(evidenceForeignKeys).toHaveLength(1);
+      const evidenceReference = evidenceForeignKeys[0].reference();
+      expect(evidenceReference.columns.map((column) => column.name)).toEqual([
+        'command_id',
+        'ordinal',
+      ]);
+      expect(evidenceReference.foreignColumns.map((column) => column.name)).toEqual([
+        'command_id',
+        'ordinal',
+      ]);
+      expect(getTableName(evidenceReference.foreignTable)).toBe(
+        'durable_application_command_effects'
+      );
+      expect(db.pragma('foreign_key_list(durable_application_command_effect_evidence)')).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            table: 'durable_application_command_effects',
+            from: 'command_id',
+            to: 'command_id',
+            on_delete: 'RESTRICT',
+          }),
+          expect.objectContaining({
+            table: 'durable_application_command_effects',
+            from: 'ordinal',
+            to: 'ordinal',
+            on_delete: 'RESTRICT',
+          }),
+        ])
+      );
+
+      const consumerApplicationForeignKeys = getTableConfig(
+        schema.durableApplicationCommandConsumerApplications
+      ).foreignKeys;
+      expect(consumerApplicationForeignKeys).toHaveLength(1);
+      expect(
+        db.pragma('foreign_key_list(durable_application_command_consumer_applications)')
+      ).toEqual([
+        expect.objectContaining({
+          table: 'durable_application_command_outbox',
+          from: 'event_id',
+          to: 'event_id',
+          on_delete: 'RESTRICT',
+        }),
+      ]);
+
+      const consumerProjectionForeignKeys = getTableConfig(
+        schema.durableApplicationCommandConsumerProjections
+      ).foreignKeys;
+      expect(consumerProjectionForeignKeys).toHaveLength(1);
+      const projectionReference = consumerProjectionForeignKeys[0].reference();
+      expect(projectionReference.columns.map((column) => column.name)).toEqual([
+        'consumer_id',
+        'last_event_id',
+      ]);
+      expect(projectionReference.foreignColumns.map((column) => column.name)).toEqual([
+        'consumer_id',
+        'event_id',
+      ]);
+      expect(
+        db.pragma('foreign_key_list(durable_application_command_consumer_projections)')
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            table: 'durable_application_command_consumer_applications',
+            from: 'consumer_id',
+            to: 'consumer_id',
+            on_delete: 'RESTRICT',
+          }),
+          expect.objectContaining({
+            table: 'durable_application_command_consumer_applications',
+            from: 'last_event_id',
+            to: 'event_id',
+            on_delete: 'RESTRICT',
+          }),
+        ])
+      );
     } finally {
       db.close();
     }
+  });
+
+  it('enables SQLite foreign key enforcement on every opened core connection', async () => {
+    const dbPath = await makeTmpDbPath();
+    let opened: InstanceType<typeof Database> | null = null;
+    const core = track(
+      new InternalStorageWorkerCore({
+        databasePath: dbPath,
+        createDatabase: (file) => {
+          opened = new Database(file);
+          return opened;
+        },
+      })
+    );
+
+    core.handle('ping', {});
+    expect(opened).not.toBeNull();
+    expect(opened!.pragma('foreign_keys', { simple: true })).toBe(1);
   });
 
   it('propagates transient open failures without touching the database file', async () => {

@@ -31,6 +31,7 @@ import type {
   MemberWorkSyncStorageGateway,
 } from '../../core/application/ports';
 import type {
+  ApplicationCommandLedgerWorkerPayloadByOp,
   InternalStorageWorkerData,
   InternalStorageWorkerRequest,
   InternalStorageWorkerResponse,
@@ -45,6 +46,24 @@ import type {
   ApplicationCommandLedgerReadByIdempotencyKeyRequest,
   ApplicationCommandLedgerRecord,
   ApplicationCommandLedgerStorageGateway,
+  DurableApplicationCommandAttemptLeaseRequest,
+  DurableApplicationCommandClaimResult,
+  DurableApplicationCommandClaimStatusRequest,
+  DurableApplicationCommandCommitRequest,
+  DurableApplicationCommandConsumerApplyRequest,
+  DurableApplicationCommandConsumerApplyResult,
+  DurableApplicationCommandConsumerProjectionRecord,
+  DurableApplicationCommandConsumerProjectionRequest,
+  DurableApplicationCommandEffectTransitionRequest,
+  DurableApplicationCommandLedgerStorageGateway,
+  DurableApplicationCommandOutboxClaimRequest,
+  DurableApplicationCommandOutboxDeliveryAcknowledgementRequest,
+  DurableApplicationCommandOutboxListRequest,
+  DurableApplicationCommandOutboxRecord,
+  DurableApplicationCommandPersistClaimRequest,
+  DurableApplicationCommandRecord,
+  DurableApplicationCommandStatusRequest,
+  DurableApplicationCommandTransitionRequest,
 } from '@features/application-command-ledger';
 import type { TeamId } from '@shared/contracts/hosted';
 
@@ -52,11 +71,12 @@ const logger = createLogger('Service:InternalStorageWorkerClient');
 
 // Keeps per-op payload typing for the journal ops; mws.* ops share one wire
 // shape and are typed by the public gateway methods instead.
-type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['op']> = TOp extends
-  | `appCommandLedger.${string}`
-  | `mws.${string}`
-  ? unknown
-  : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
+type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['op']> =
+  TOp extends keyof ApplicationCommandLedgerWorkerPayloadByOp
+    ? ApplicationCommandLedgerWorkerPayloadByOp[TOp]
+    : TOp extends `appCommandLedger.${string}` | `mws.${string}`
+      ? unknown
+      : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
 
 const WORKER_CALL_TIMEOUT_MS = 20_000;
 const WORKER_FILENAME = 'internal-storage-worker.cjs';
@@ -113,6 +133,7 @@ export class InternalStorageWorkerClient
     InternalStorageGateway,
     MemberWorkSyncStorageGateway,
     ApplicationCommandLedgerStorageGateway,
+    DurableApplicationCommandLedgerStorageGateway,
     TeamIdentityReadGateway
 {
   private worker: Worker | null = null;
@@ -394,6 +415,111 @@ export class InternalStorageWorkerClient
       'appCommandLedger.listByScope',
       request
     )) as ApplicationCommandLedgerRecord<TOperation>[];
+  }
+
+  async applicationCommandLedgerDurableClaim<TCommandKind extends string>(
+    request: DurableApplicationCommandPersistClaimRequest<TCommandKind>
+  ): Promise<DurableApplicationCommandClaimResult<TCommandKind>> {
+    return (await this.call(
+      'appCommandLedger.durable.claim',
+      request
+    )) as DurableApplicationCommandClaimResult<TCommandKind>;
+  }
+
+  async applicationCommandLedgerDurableGetStatus<TCommandKind extends string>(
+    request: DurableApplicationCommandStatusRequest
+  ): Promise<DurableApplicationCommandRecord<TCommandKind> | null> {
+    return (await this.call(
+      'appCommandLedger.durable.getStatus',
+      request
+    )) as DurableApplicationCommandRecord<TCommandKind> | null;
+  }
+
+  async applicationCommandLedgerDurableGetByClaim<TCommandKind extends string>(
+    request: DurableApplicationCommandClaimStatusRequest<TCommandKind>
+  ): Promise<DurableApplicationCommandRecord<TCommandKind> | null> {
+    return (await this.call(
+      'appCommandLedger.durable.getByClaim',
+      request
+    )) as DurableApplicationCommandRecord<TCommandKind> | null;
+  }
+
+  async applicationCommandLedgerDurableRenewAttemptLease(
+    request: DurableApplicationCommandAttemptLeaseRequest
+  ): Promise<DurableApplicationCommandRecord> {
+    return (await this.call(
+      'appCommandLedger.durable.renewAttemptLease',
+      request
+    )) as DurableApplicationCommandRecord;
+  }
+
+  async applicationCommandLedgerDurableTransitionCommand(
+    request: DurableApplicationCommandTransitionRequest
+  ): Promise<DurableApplicationCommandRecord> {
+    return (await this.call(
+      'appCommandLedger.durable.transitionCommand',
+      request
+    )) as DurableApplicationCommandRecord;
+  }
+
+  async applicationCommandLedgerDurableTransitionEffect(
+    request: DurableApplicationCommandEffectTransitionRequest
+  ): Promise<DurableApplicationCommandRecord> {
+    return (await this.call(
+      'appCommandLedger.durable.transitionEffect',
+      request
+    )) as DurableApplicationCommandRecord;
+  }
+
+  async applicationCommandLedgerDurableCommit(
+    request: DurableApplicationCommandCommitRequest
+  ): Promise<DurableApplicationCommandRecord> {
+    return (await this.call(
+      'appCommandLedger.durable.commit',
+      request
+    )) as DurableApplicationCommandRecord;
+  }
+
+  async applicationCommandLedgerDurableListOutbox(
+    request: DurableApplicationCommandOutboxListRequest
+  ): Promise<DurableApplicationCommandOutboxRecord[]> {
+    return (await this.call(
+      'appCommandLedger.durable.listOutbox',
+      request
+    )) as DurableApplicationCommandOutboxRecord[];
+  }
+
+  async applicationCommandLedgerDurableClaimOutbox(
+    request: DurableApplicationCommandOutboxClaimRequest
+  ): Promise<DurableApplicationCommandOutboxRecord[]> {
+    return (await this.call(
+      'appCommandLedger.durable.claimOutbox',
+      request
+    )) as DurableApplicationCommandOutboxRecord[];
+  }
+
+  async applicationCommandLedgerDurableAcknowledgeOutboxDelivery(
+    request: DurableApplicationCommandOutboxDeliveryAcknowledgementRequest
+  ): Promise<void> {
+    await this.call('appCommandLedger.durable.acknowledgeOutboxDelivery', request);
+  }
+
+  async applicationCommandLedgerDurableApplyConsumerEvent(
+    request: DurableApplicationCommandConsumerApplyRequest
+  ): Promise<DurableApplicationCommandConsumerApplyResult> {
+    return (await this.call(
+      'appCommandLedger.durable.applyConsumerEvent',
+      request
+    )) as DurableApplicationCommandConsumerApplyResult;
+  }
+
+  async applicationCommandLedgerDurableGetConsumerProjection(
+    request: DurableApplicationCommandConsumerProjectionRequest
+  ): Promise<DurableApplicationCommandConsumerProjectionRecord | null> {
+    return (await this.call(
+      'appCommandLedger.durable.getConsumerProjection',
+      request
+    )) as DurableApplicationCommandConsumerProjectionRecord | null;
   }
 
   async close(): Promise<void> {
