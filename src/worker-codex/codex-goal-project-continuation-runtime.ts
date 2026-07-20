@@ -32,6 +32,10 @@ import { codexGoalStatusInputFromLaunch } from "./codex-goal-mcp-status-input";
 const MAX_RECOVERABLE_RESULT_BYTES = 256 * 1024;
 const APP_SERVER_RECONNECT_TIMEOUT_PREFIX =
   "codex_app_server_reconnect_timeout:";
+const PREWARM_FAILED_REASON = "prewarm_failed";
+const PREWARM_FAILED_ERROR_CODE = "subscription_worker_prewarm_failed";
+const PREWARM_BEFORE_ATTEMPT_EVIDENCE =
+  "provider prewarm failed before any task attempt";
 
 export async function resolveProjectPreStartContinuation(input: {
   readonly manifest: CodexGoalJobManifest;
@@ -55,9 +59,15 @@ export async function resolveProjectPreStartContinuation(input: {
       : {}),
   });
   if (decision) return decision;
-  return (await isRecoverableAdmittedInputPatchReconnect(input))
+  if (await isRecoverableAdmittedInputPatchReconnect(input)) {
+    return {
+      kind: "capacity",
+      workspaceMode: "admitted_input_patch_continuation",
+    };
+  }
+  return (await isRecoverableAdmittedInputPatchPrewarmFailure(input))
     ? {
-        kind: "capacity",
+        kind: "prewarm_before_attempt",
         workspaceMode: "admitted_input_patch_continuation",
       }
     : undefined;
@@ -308,6 +318,63 @@ async function isRecoverableAdmittedInputPatchReconnect(input: {
     return (
       typeof rawCause === "string" &&
       rawCause.startsWith(APP_SERVER_RECONNECT_TIMEOUT_PREFIX)
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function isRecoverableAdmittedInputPatchPrewarmFailure(input: {
+  readonly manifest: CodexGoalJobManifest;
+  readonly launch: CodexGoalLaunchInput;
+  readonly reviewedOutputId?: string;
+  readonly status: CodexGoalStatus;
+}): Promise<boolean> {
+  const status = input.status;
+  const progressStale =
+    status.progressHeartbeatAgeMs !== undefined &&
+    status.progressHeartbeatAgeMs > 10 * 60_000;
+  if (
+    input.reviewedOutputId ||
+    !input.manifest.projectPreStartAdmission ||
+    status.workspaceDirty !== true ||
+    status.recommendedAction !== "inspect_dirty_failure" ||
+    status.resultExists !== true ||
+    (status.resultStatus !== "failed" && status.resultStatus !== "partial") ||
+    status.resultReason !== PREWARM_FAILED_REASON ||
+    (status.progressResultReason !== undefined &&
+      status.progressResultReason !== PREWARM_FAILED_REASON) ||
+    !status.resultPath ||
+    projectPreStartWorkerAlive(status, progressStale)
+  ) {
+    return false;
+  }
+  try {
+    const body = await readFile(status.resultPath);
+    if (body.byteLength > MAX_RECOVERABLE_RESULT_BYTES) return false;
+    const parsed: unknown = JSON.parse(body.toString("utf8"));
+    if (
+      !isRecord(parsed) ||
+      parsed.status !== status.resultStatus ||
+      parsed.reason !== PREWARM_FAILED_REASON ||
+      parsed.taskId !== input.launch.config.taskId ||
+      parsed.nextAction !== "preserve_patch" ||
+      !stringArray(parsed.changedFiles) ||
+      parsed.changedFiles.length === 0 ||
+      !stringArray(parsed.evidence) ||
+      !parsed.evidence.includes(PREWARM_BEFORE_ATTEMPT_EVIDENCE) ||
+      !stringArray(parsed.blockers) ||
+      parsed.blockers.length !== 1 ||
+      parsed.blockers[0] !== PREWARM_FAILED_REASON ||
+      !samePaths(parsed.changedFiles, status.changedFiles ?? []) ||
+      !isRecord(parsed.details)
+    ) {
+      return false;
+    }
+    return (
+      parsed.details.errorCode === PREWARM_FAILED_ERROR_CODE &&
+      typeof parsed.details.baseCommit === "string" &&
+      /^[a-f0-9]{40}$/i.test(parsed.details.baseCommit)
     );
   } catch {
     return false;

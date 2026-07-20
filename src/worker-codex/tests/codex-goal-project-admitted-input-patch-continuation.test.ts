@@ -17,7 +17,11 @@ import type {
   CodexGoalJobManifestInput,
 } from "../codex-goal-jobs";
 import { codexGoalJobManifestPath, readCodexGoalJob } from "../codex-goal-jobs";
-import type { CodexGoalLaunchInput } from "../codex-goal-ops";
+import type {
+  CodexGoalLaunchInput,
+  CodexGoalStatus,
+} from "../codex-goal-ops";
+import { resolveProjectPreStartContinuation } from "../codex-goal-project-continuation-runtime";
 import {
   projectControlStartStoredJobView,
   type CodexGoalMcpProjectControlActionsDeps,
@@ -73,6 +77,93 @@ describe("admitted input-patch capacity continuation", () => {
         resultReason: "provider_failure",
       }),
     ).toBe(false);
+  });
+
+  it("resumes only a strict prewarm-before-attempt result for the admitted patch", async () => {
+    const fixture = await createBuiltinFixture();
+    const plan = fixture.plan();
+    const manifest = {
+      ...fixture.storedManifest,
+      projectPreStartAdmission: plan.descriptor,
+    };
+    const resultPath = join(fixture.root, "prewarm-result.json");
+    const changedFiles = ["src/example.ts"];
+    const result = {
+      schemaVersion: 1,
+      taskId: manifest.taskId,
+      status: "partial",
+      reason: "prewarm_failed",
+      changedFiles,
+      evidence: ["provider prewarm failed before any task attempt"],
+      blockers: ["prewarm_failed"],
+      nextAction: "preserve_patch",
+      details: {
+        errorName: "WrappedProviderError",
+        errorCode: "subscription_worker_prewarm_failed",
+        baseCommit: "a".repeat(40),
+      },
+    };
+    const status = {
+      tmuxAlive: false,
+      workspaceDirty: true,
+      changedFiles,
+      resultExists: true,
+      resultPath,
+      resultStatus: "partial",
+      resultReason: "prewarm_failed",
+      recommendedAction: "inspect_dirty_failure",
+      warnings: [],
+    } as CodexGoalStatus;
+    const launch = {
+      config: { taskId: manifest.taskId },
+    } as CodexGoalLaunchInput;
+
+    await writeFile(resultPath, `${JSON.stringify(result)}\n`);
+    await expect(
+      resolveProjectPreStartContinuation({ manifest, launch, status }),
+    ).resolves.toEqual({
+      kind: "prewarm_before_attempt",
+      workspaceMode: "admitted_input_patch_continuation",
+    });
+
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({ ...result, evidence: ["provider failed"] })}\n`,
+    );
+    await expect(
+      resolveProjectPreStartContinuation({ manifest, launch, status }),
+    ).resolves.toBeUndefined();
+
+    await writeFile(resultPath, `${JSON.stringify(result)}\n`);
+    await expect(
+      resolveProjectPreStartContinuation({
+        manifest,
+        launch,
+        status: { ...status, changedFiles: ["src/drift.ts"] },
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      resolveProjectPreStartContinuation({
+        manifest,
+        launch,
+        status: { ...status, recommendedAction: "review_completed" },
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      resolveProjectPreStartContinuation({
+        manifest,
+        launch,
+        status: { ...status, progressResultReason: "unknown_error" },
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      resolveProjectPreStartContinuation({
+        manifest,
+        launch,
+        status,
+        reviewedOutputId: "b".repeat(64),
+      }),
+    ).resolves.toBeUndefined();
   });
 
   it("resumes the same admitted patch without reviewed output and rejects drift", async () => {
