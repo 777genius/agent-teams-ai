@@ -51,7 +51,7 @@ describe('preload electronAPI team lifecycle wiring', () => {
     vi.restoreAllMocks();
   });
 
-  it('forwards the strict request and projects additive canonical response fields', async () => {
+  it('unwraps an enveloped success and projects additive canonical response fields', async () => {
     await import('../../src/preload/index');
     const request: ListTeamLifecycleRequest = {
       schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
@@ -74,13 +74,39 @@ describe('preload electronAPI team lifecycle wiring', () => {
       nextCursor: null,
     } satisfies CanonicalListTeamLifecycleResult;
     mocks.ipcRenderer.invoke.mockResolvedValueOnce({
-      ...expected,
-      items: expected.items.map((item) => ({ ...item, additiveItemField: 'ignored' })),
-      additiveEnvelopeField: 'ignored',
+      success: true,
+      data: {
+        ...expected,
+        items: expected.items.map((item) => ({ ...item, additiveItemField: 'ignored' })),
+        additiveEnvelopeField: 'ignored',
+      },
     });
 
     await expect(getElectronApi().listTeamLifecycle(request)).resolves.toEqual(expected);
     expect(mocks.ipcRenderer.invoke).toHaveBeenCalledWith('team:list', request);
+  });
+
+  it('maps an enveloped IPC failure to unavailable without exposing diagnostics', async () => {
+    await import('../../src/preload/index');
+    const request: ListTeamLifecycleRequest = {
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      cursor: null,
+      expectedRevision: null,
+    };
+    mocks.ipcRenderer.invoke.mockResolvedValueOnce({
+      success: false,
+      error: 'private sqlite diagnostic /private/project',
+    });
+
+    const result = await getElectronApi().listTeamLifecycle(request);
+    expect(result).toEqual({
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      kind: 'failure',
+      error: { code: 'unavailable', reason: 'transport_unavailable' },
+      retryable: true,
+    });
+    expect(JSON.stringify(result)).not.toContain('private sqlite diagnostic');
+    expect(JSON.stringify(result)).not.toContain('/private/project');
   });
 
   it('contains malformed responses and rejected IPC without exposing diagnostics', async () => {
@@ -91,7 +117,10 @@ describe('preload electronAPI team lifecycle wiring', () => {
       expectedRevision: null,
     };
     mocks.ipcRenderer.invoke
-      .mockResolvedValueOnce({ kind: 'success', privatePath: '/private/project' })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { kind: 'success', privatePath: '/private/project' },
+      })
       .mockRejectedValueOnce(new Error('private sqlite diagnostic /private/project'));
 
     const malformed = await getElectronApi().listTeamLifecycle(request);

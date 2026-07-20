@@ -523,7 +523,7 @@ async function invokeListTeamLifecycle(
   if (!request.ok) return phase2ReadFailure(request.error as TeamLifecycleReadFailure['error']);
 
   try {
-    const response: unknown = await ipcRenderer.invoke(TEAM_LIST, request.value);
+    const response = await invokeIpcWithResult<unknown>(TEAM_LIST, request.value);
     const parsed = parseCanonicalListTeamLifecycleResult(response);
     return parsed.ok
       ? parsed.value
