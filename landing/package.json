@@ -54,6 +54,8 @@
     "vitepress-plugin-llms": "^1.12.2"
   },
   "overrides": {
-    "esbuild": "0.28.1"
+    "esbuild": "0.28.1",
+    "shell-quote": "1.10.0",
+    "tar": "7.5.20"
   }
 }
