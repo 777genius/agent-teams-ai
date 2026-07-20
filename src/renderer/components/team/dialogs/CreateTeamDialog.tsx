@@ -615,6 +615,7 @@ export const CreateTeamDialog = ({
   const prepareIdleHandlesRef = useRef(new Set<ScheduledIdleHandle>());
   const prepareUnmountGenerationRef = useRef(0);
   const appliedDefaultProjectPathRef = useRef<string | null>(null);
+  const forcedDefaultProjectModePathRef = useRef<string | null>(null);
   const lastAutoDescriptionRef = useRef<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     teamName?: string;
@@ -1689,18 +1690,28 @@ export const CreateTeamDialog = ({
   }, [descriptionDraft, initialData, open, suggestedTeamName, t, teamName]);
 
   useEffect(() => {
-    if (
-      !open ||
-      !draftLoaded ||
-      !forceDefaultProjectSelection ||
-      !defaultProjectPath ||
-      isEphemeralProjectPath(defaultProjectPath) ||
-      cwdMode === 'project'
-    ) {
+    if (!open || !forceDefaultProjectSelection) {
+      forcedDefaultProjectModePathRef.current = null;
+      return;
+    }
+    if (!draftLoaded) {
+      return;
+    }
+    if (!defaultProjectPath || isEphemeralProjectPath(defaultProjectPath)) {
+      forcedDefaultProjectModePathRef.current = null;
       return;
     }
 
-    setCwdMode('project');
+    const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
+    if (forcedDefaultProjectModePathRef.current === normalizedDefaultProjectPath) {
+      return;
+    }
+
+    // Apply navigation context once. Later mode changes are explicit user choices.
+    forcedDefaultProjectModePathRef.current = normalizedDefaultProjectPath;
+    if (cwdMode !== 'project') {
+      setCwdMode('project');
+    }
   }, [cwdMode, defaultProjectPath, draftLoaded, forceDefaultProjectSelection, open, setCwdMode]);
 
   // Pre-select defaultProjectPath when the draft and projects are loaded.

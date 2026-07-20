@@ -942,7 +942,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('forces project mode when Create receives an explicit navigation project', async () => {
+  it('forces navigation project mode once and then allows a custom path', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     createTeamDraftMock.state.cwdMode = 'custom';
     createTeamDraftMock.state.selectedProjectPath = '';
@@ -950,26 +950,43 @@ describe('LaunchTeamDialog', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    const props = {
+      open: true,
+      canCreate: true,
+      provisioningErrorsByTeam: {},
+      existingTeamNames: [],
+      activeTeams: [],
+      defaultProjectPath: '/tmp/project',
+      forceDefaultProjectSelection: true,
+      onClose: vi.fn(),
+      onCreate: vi.fn(async () => {}),
+      onOpenTeam: vi.fn(),
+    };
 
     await act(async () => {
-      root.render(
-        React.createElement(CreateTeamDialog, {
-          open: true,
-          canCreate: true,
-          provisioningErrorsByTeam: {},
-          existingTeamNames: [],
-          activeTeams: [],
-          defaultProjectPath: '/tmp/project',
-          forceDefaultProjectSelection: true,
-          onClose: vi.fn(),
-          onCreate: vi.fn(async () => {}),
-          onOpenTeam: vi.fn(),
-        })
-      );
+      root.render(React.createElement(CreateTeamDialog, props));
       await flush();
     });
 
     expect(createTeamDraftMock.state.setCwdMode).toHaveBeenCalledWith('project');
+    expect(createTeamDraftMock.state.setSelectedProjectPath).not.toHaveBeenCalled();
+
+    createTeamDraftMock.state.cwdMode = 'project';
+    await act(async () => {
+      root.render(React.createElement(CreateTeamDialog, props));
+      await flush();
+    });
+
+    expect(createTeamDraftMock.state.setSelectedProjectPath).toHaveBeenCalledWith('/tmp/project');
+
+    createTeamDraftMock.state.setCwdMode.mockClear();
+    createTeamDraftMock.state.cwdMode = 'custom';
+    await act(async () => {
+      root.render(React.createElement(CreateTeamDialog, props));
+      await flush();
+    });
+
+    expect(createTeamDraftMock.state.setCwdMode).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();
