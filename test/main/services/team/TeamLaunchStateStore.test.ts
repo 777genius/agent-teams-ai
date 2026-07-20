@@ -279,4 +279,150 @@ describe('TeamLaunchStateStore', () => {
       remove.mockRestore();
     }
   });
+
+  it('preserves supported unknown fields while replacing known launch entities', async () => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const existingState = {
+      ...snapshot(),
+      futureRoot: { retained: true },
+      members: {
+        Builder: {
+          ...snapshot().members.Builder,
+          runtimeDiagnostic: 'remove known optional field',
+          futureMember: { retained: true },
+          sources: {
+            processAlive: true,
+            futureSource: { retained: true },
+          },
+        },
+        Removed: {
+          ...snapshot().members.Builder,
+          name: 'Removed',
+          futureMember: { doNotResurrect: true },
+        },
+      },
+      summary: {
+        ...snapshot().summary,
+        futureSummary: { retained: true },
+      },
+    };
+    const existingSummary = {
+      version: 1,
+      teamName: 'demo',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      futureProjection: { retained: true },
+    };
+    const statSpy = vi.spyOn(fs.promises, 'stat').mockImplementation(async (filePath) => {
+      const raw = filePath === statePath ? existingState : existingSummary;
+      return {
+        isFile: () => true,
+        size: Buffer.byteLength(JSON.stringify(raw)),
+      } as fs.Stats;
+    });
+    const readSpy = vi
+      .spyOn(fs.promises, 'readFile')
+      .mockImplementation(async (filePath) =>
+        JSON.stringify(filePath === statePath ? existingState : existingSummary)
+      );
+
+    try {
+      const next = snapshot('2026-01-01T00:00:01.000Z');
+      next.members.Builder.sources = { processAlive: false };
+      await new TeamLaunchStateStore().write('demo', next);
+
+      const persistedState = JSON.parse(mocks.atomicWriteAsync.mock.calls[0][1] as string) as {
+        futureRoot?: unknown;
+        members: Record<string, Record<string, unknown>>;
+        summary: Record<string, unknown>;
+      };
+      const persistedSummary = JSON.parse(mocks.atomicWriteAsync.mock.calls[1][1] as string) as {
+        futureProjection?: unknown;
+      };
+      expect(persistedState.futureRoot).toEqual({ retained: true });
+      expect(persistedState.members.Builder).toMatchObject({
+        futureMember: { retained: true },
+        sources: { processAlive: false, futureSource: { retained: true } },
+      });
+      expect(persistedState.members.Builder.runtimeDiagnostic).toBeUndefined();
+      expect(persistedState.members.Removed).toBeUndefined();
+      expect(persistedState.summary.futureSummary).toEqual({ retained: true });
+      expect(persistedSummary.futureProjection).toEqual({ retained: true });
+    } finally {
+      statSpy.mockRestore();
+      readSpy.mockRestore();
+    }
+  });
+
+  it.each([
+    ['future version', JSON.stringify({ version: 3, teamName: 'demo' }), 32],
+    ['malformed JSON', '{not-json', 9],
+    ['malformed document', JSON.stringify({ version: 2, teamName: 'demo' }), 32],
+    [
+      'malformed known member source',
+      JSON.stringify({
+        ...snapshot(),
+        members: {
+          Builder: {
+            ...snapshot().members.Builder,
+            sources: { processAlive: 'yes' },
+          },
+        },
+      }),
+      1,
+    ],
+    [
+      'malformed known launch summary count',
+      JSON.stringify({
+        ...snapshot(),
+        summary: { ...snapshot().summary, confirmedCount: 'one' },
+      }),
+      1,
+    ],
+    ['oversized JSON', '{}', 256 * 1024 + 1],
+  ])('fails closed on %s without publishing either launch file', async (_label, raw, size) => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const statSpy = vi.spyOn(fs.promises, 'stat').mockImplementation(async (filePath) => {
+      if (filePath === statePath) {
+        return { isFile: () => true, size } as fs.Stats;
+      }
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    });
+    const readSpy = vi.spyOn(fs.promises, 'readFile').mockResolvedValue(raw);
+
+    try {
+      await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toBeTruthy();
+      expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      statSpy.mockRestore();
+      readSpy.mockRestore();
+    }
+  });
+
+  it('fails closed on malformed known summary-projection fields before publishing either file', async () => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const stateRaw = JSON.stringify(snapshot());
+    const summaryRaw = JSON.stringify({
+      version: 1,
+      teamName: 'demo',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      missingMembers: ['Builder', 42],
+    });
+    const statSpy = vi.spyOn(fs.promises, 'stat').mockImplementation(async (filePath) => {
+      const raw = filePath === statePath ? stateRaw : summaryRaw;
+      return { isFile: () => true, size: Buffer.byteLength(raw) } as fs.Stats;
+    });
+    const readSpy = vi
+      .spyOn(fs.promises, 'readFile')
+      .mockImplementation(async (filePath) => (filePath === statePath ? stateRaw : summaryRaw));
+
+    try {
+      await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toBeTruthy();
+      expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      statSpy.mockRestore();
+      readSpy.mockRestore();
+    }
+  });
 });

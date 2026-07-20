@@ -16,6 +16,39 @@ import type {
 
 const taskWriteLocks = new Map<string, Promise<void>>();
 
+type MutableTaskDocument = TeamTask & Record<string, unknown>;
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isSupportedPersistedComment(value: unknown): boolean {
+  return (
+    isJsonRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.author === 'string' &&
+    typeof value.text === 'string' &&
+    typeof value.createdAt === 'string'
+  );
+}
+
+function parseTaskForMutation(raw: string, taskId: string): MutableTaskDocument {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new Error(`Refusing to replace malformed task: ${taskId}`, { cause: error });
+  }
+  if (
+    !isJsonRecord(parsed) ||
+    (parsed.comments !== undefined &&
+      (!Array.isArray(parsed.comments) || !parsed.comments.every(isSupportedPersistedComment)))
+  ) {
+    throw new Error(`Refusing to replace malformed task: ${taskId}`);
+  }
+  return parsed as MutableTaskDocument;
+}
+
 async function withTaskLock<T>(taskPath: string, fn: () => Promise<T>): Promise<T> {
   const prev = taskWriteLocks.get(taskPath) ?? Promise.resolve();
   let release!: () => void;
@@ -118,7 +151,7 @@ export class TeamTaskWriter {
         throw error;
       }
 
-      const task = JSON.parse(raw) as TeamTask;
+      const task = parseTaskForMutation(raw, targetTaskId);
       const blocks = task.blocks ?? [];
       if (!blocks.includes(blockedTaskId)) {
         task.blocks = [...blocks, blockedTaskId];
@@ -157,8 +190,8 @@ export class TeamTaskWriter {
         // Read both tasks
         const taskRaw = await this.readTaskFile(taskPath, taskId);
         const targetRaw = await this.readTaskFile(targetPath, targetId);
-        const task = JSON.parse(taskRaw) as TeamTask;
-        const target = JSON.parse(targetRaw) as TeamTask;
+        const task = parseTaskForMutation(taskRaw, taskId);
+        const target = parseTaskForMutation(targetRaw, targetId);
 
         if (type === 'blockedBy') {
           // Cycle detection: walk target's blockedBy chain to check if taskId is reachable
@@ -217,7 +250,7 @@ export class TeamTaskWriter {
       withTaskLock(secondPath, async () => {
         // Read task (must exist)
         const taskRaw = await this.readTaskFile(taskPath, taskId);
-        const task = JSON.parse(taskRaw) as TeamTask;
+        const task = parseTaskForMutation(taskRaw, taskId);
 
         if (type === 'blockedBy') {
           task.blockedBy = (task.blockedBy ?? []).filter((id) => id !== targetId);
@@ -226,7 +259,7 @@ export class TeamTaskWriter {
           // Remove reverse from target if it exists
           try {
             const targetRaw = await fs.promises.readFile(targetPath, 'utf8');
-            const target = JSON.parse(targetRaw) as TeamTask;
+            const target = parseTaskForMutation(targetRaw, targetId);
             target.blocks = (target.blocks ?? []).filter((id) => id !== taskId);
             await atomicWriteAsync(targetPath, JSON.stringify(target, null, 2));
           } catch (error) {
@@ -240,7 +273,7 @@ export class TeamTaskWriter {
 
           try {
             const targetRaw = await fs.promises.readFile(targetPath, 'utf8');
-            const target = JSON.parse(targetRaw) as TeamTask;
+            const target = parseTaskForMutation(targetRaw, targetId);
             target.related = (target.related ?? []).filter((id) => id !== taskId);
             await atomicWriteAsync(targetPath, JSON.stringify(target, null, 2));
           } catch (error) {
@@ -316,7 +349,7 @@ export class TeamTaskWriter {
         throw error;
       }
 
-      const task = JSON.parse(raw) as TeamTask;
+      const task = parseTaskForMutation(raw, taskId);
       const prevStatus = task.status;
       if (prevStatus === status) {
         return;
@@ -377,7 +410,7 @@ export class TeamTaskWriter {
         throw error;
       }
 
-      const task = JSON.parse(raw) as TeamTask;
+      const task = parseTaskForMutation(raw, taskId);
       const previousOwner =
         typeof task.owner === 'string' && task.owner.trim() ? task.owner.trim() : undefined;
       const nextOwner = typeof owner === 'string' && owner.trim() ? owner.trim() : undefined;
@@ -415,7 +448,7 @@ export class TeamTaskWriter {
         throw error;
       }
 
-      const task = JSON.parse(raw) as TeamTask;
+      const task = parseTaskForMutation(raw, taskId);
       const prevStatus = task.status;
       const nowIso = new Date().toISOString();
 
@@ -464,7 +497,7 @@ export class TeamTaskWriter {
         throw error;
       }
 
-      const task = JSON.parse(raw) as TeamTask;
+      const task = parseTaskForMutation(raw, taskId);
       const prevStatus = task.status;
       task.historyEvents = appendHistoryEvent(
         Array.isArray(task.historyEvents) ? task.historyEvents : undefined,
@@ -499,7 +532,7 @@ export class TeamTaskWriter {
         throw error;
       }
 
-      const task = JSON.parse(raw) as TeamTask;
+      const task = parseTaskForMutation(raw, taskId);
       if (fields.subject !== undefined) {
         task.subject = fields.subject;
       }
@@ -528,7 +561,7 @@ export class TeamTaskWriter {
         throw error;
       }
 
-      const task = JSON.parse(raw) as Record<string, unknown>;
+      const task = parseTaskForMutation(raw, taskId);
       if (value) {
         task.needsClarification = value;
       } else {
@@ -564,7 +597,7 @@ export class TeamTaskWriter {
 
     await withTaskLock(taskPath, async () => {
       const raw = await fs.promises.readFile(taskPath, 'utf8');
-      const task = JSON.parse(raw) as Record<string, unknown>;
+      const task = parseTaskForMutation(raw, taskId);
       const existing = Array.isArray(task.comments) ? (task.comments as TaskComment[]) : [];
       // Dedup by ID — skip if comment with same ID already exists
       if (existing.some((c) => c.id === comment.id)) {
@@ -591,7 +624,7 @@ export class TeamTaskWriter {
 
     await withTaskLock(taskPath, async () => {
       const raw = await fs.promises.readFile(taskPath, 'utf8');
-      const task = JSON.parse(raw) as Record<string, unknown>;
+      const task = parseTaskForMutation(raw, taskId);
       const existing = Array.isArray(task.attachments)
         ? (task.attachments as TaskAttachmentMeta[])
         : [];
@@ -609,7 +642,7 @@ export class TeamTaskWriter {
 
     await withTaskLock(taskPath, async () => {
       const raw = await fs.promises.readFile(taskPath, 'utf8');
-      const task = JSON.parse(raw) as Record<string, unknown>;
+      const task = parseTaskForMutation(raw, taskId);
       const existing = Array.isArray(task.attachments)
         ? (task.attachments as TaskAttachmentMeta[])
         : [];

@@ -110,6 +110,23 @@ function normalizeProjectPathCandidate(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isSupportedConfigForMutation(
+  value: unknown
+): value is TeamConfig & Record<string, unknown> {
+  if (!isJsonRecord(value) || typeof value.name !== 'string' || value.name.trim() === '') {
+    return false;
+  }
+  return (
+    value.members === undefined ||
+    (Array.isArray(value.members) &&
+      value.members.every((member) => isJsonRecord(member) && typeof member.name === 'string'))
+  );
+}
+
 export function resolveProjectPathFromConfig(
   config: Pick<TeamConfig, 'projectPath' | 'projectPathHistory' | 'members'>
 ): string | undefined {
@@ -1127,7 +1144,8 @@ export class TeamConfigReader {
     teamName: string,
     updates: { name?: string; description?: string; color?: string; language?: string }
   ): Promise<TeamConfig | null> {
-    const config = await this.getConfig(teamName);
+    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    const config = await this.readConfigForMutation(configPath);
     if (!config) {
       return null;
     }
@@ -1143,9 +1161,36 @@ export class TeamConfigReader {
     if (updates.language !== undefined) {
       config.language = updates.language.trim() || undefined;
     }
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
     await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
     await TeamConfigReader.primeConfig(teamName, config);
     return config;
+  }
+
+  private async readConfigForMutation(
+    configPath: string
+  ): Promise<(TeamConfig & Record<string, unknown>) | null> {
+    let fingerprint: InternalTeamConfigFingerprint | null;
+    try {
+      fingerprint = await TeamConfigReader.getConfigFingerprint(configPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    }
+    if (!fingerprint) return null;
+    if (!fingerprint.isFile || fingerprint.numericSize > MAX_CONFIG_READ_BYTES) {
+      throw new Error('Refusing to replace unsafe or oversized team config');
+    }
+
+    const raw = await readFileUtf8WithTimeout(configPath, PER_TEAM_READ_TIMEOUT_MS);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch (error) {
+      throw new Error('Refusing to replace malformed team config', { cause: error });
+    }
+    if (!isSupportedConfigForMutation(parsed)) {
+      throw new Error('Refusing to replace malformed team config');
+    }
+    return parsed;
   }
 }

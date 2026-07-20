@@ -720,4 +720,50 @@ describe('TeamInboxWriter', () => {
     expect(persisted).toHaveLength(1);
     expect(persisted[0]).not.toHaveProperty('source');
   });
+
+  it('characterizes inbox read-modify-write as preserving unknown entry and nested fields', async () => {
+    hoisted.files.set(
+      inboxPath,
+      JSON.stringify([
+        {
+          from: 'user',
+          to: 'alice',
+          text: 'before',
+          timestamp: '2026-07-20T00:00:00.000Z',
+          read: false,
+          messageId: 'existing-message',
+          futureEntry: { retained: true },
+          runtimeRecovery: {
+            schemaVersion: 1,
+            recoveryId: 'recovery-1',
+            sourceFailureId: 'failure-1',
+            attempt: 1,
+            reasonCode: 'runtime_unavailable',
+            payloadHash: 'hash-1',
+            futureRecovery: { retained: true },
+          },
+        },
+      ])
+    );
+
+    await writer.updateMessageText('my-team', {
+      member: 'alice',
+      messageId: 'existing-message',
+      text: 'after',
+    });
+    await writer.sendMessage('my-team', {
+      member: 'alice',
+      text: 'second message',
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Array<
+      Record<string, unknown> & { runtimeRecovery?: Record<string, unknown> }
+    >;
+    expect(persisted).toHaveLength(2);
+    expect(persisted[0]).toMatchObject({
+      text: 'after',
+      futureEntry: { retained: true },
+    });
+    expect(persisted[0].runtimeRecovery?.futureRecovery).toEqual({ retained: true });
+  });
 });

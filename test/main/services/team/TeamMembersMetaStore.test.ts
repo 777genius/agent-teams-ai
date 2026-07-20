@@ -13,9 +13,8 @@ vi.mock('@main/utils/pathDecoder', () => ({
 }));
 
 vi.mock('../../../../src/main/services/team/atomicWrite', async (importOriginal) => {
-  const actual = await importOriginal<
-    typeof import('../../../../src/main/services/team/atomicWrite')
-  >();
+  const actual =
+    await importOriginal<typeof import('../../../../src/main/services/team/atomicWrite')>();
   return {
     atomicWriteAsync: async (filePath: string, contents: string) => {
       await hoisted.beforeAtomicWrite?.(filePath, contents);
@@ -286,5 +285,137 @@ describe('TeamMembersMetaStore', () => {
       expect.objectContaining({ name: 'alice', role: 'Original' }),
       expect.objectContaining({ name: 'bob', role: 'Recovered' }),
     ]);
+  });
+
+  it('preserves unknown fields only for retained members while replacing known fields', async () => {
+    const store = new TeamMembersMetaStore();
+    const teamName = 'round-trip-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const metaPath = path.join(teamDir, 'members.meta.json');
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      metaPath,
+      JSON.stringify({
+        version: 1,
+        providerBackendId: 'codex-native',
+        futureRoot: { retained: true },
+        members: [
+          {
+            name: 'alice',
+            role: 'Old role',
+            model: 'remove-me',
+            futureMember: { retained: true },
+            mcpPolicy: {
+              mode: 'strictAllowlist',
+              scopes: { user: true, futureScope: 'retained' },
+              serverNames: ['old-server'],
+              futurePolicy: { retained: true },
+            },
+          },
+          { name: 'removed', role: 'Do not resurrect', futureMember: true },
+        ],
+      }),
+      'utf8'
+    );
+
+    await store.updateMembers(teamName, (members) =>
+      members
+        .filter((member) => member.name !== 'removed')
+        .map((member) => ({
+          ...member,
+          role: 'New role',
+          model: undefined,
+          mcpPolicy: {
+            mode: 'strictAllowlist' as const,
+            scopes: { project: true },
+            serverNames: ['new-server'],
+          },
+        }))
+    );
+
+    const persisted = JSON.parse(await fs.readFile(metaPath, 'utf8')) as {
+      futureRoot?: unknown;
+      members: Array<Record<string, unknown>>;
+    };
+    expect(persisted.futureRoot).toEqual({ retained: true });
+    expect(persisted.members).toHaveLength(1);
+    expect(persisted.members[0]).toMatchObject({
+      name: 'alice',
+      role: 'New role',
+      futureMember: { retained: true },
+      mcpPolicy: {
+        mode: 'strictAllowlist',
+        scopes: { project: true, futureScope: 'retained' },
+        serverNames: ['new-server'],
+        futurePolicy: { retained: true },
+      },
+    });
+    expect(persisted.members[0].model).toBeUndefined();
+  });
+
+  it('rejects an unsupported persisted member provider backend without rewriting bytes', async () => {
+    const store = new TeamMembersMetaStore();
+    const teamName = 'unsupported-provider-backend-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const metaPath = path.join(teamDir, 'members.meta.json');
+    const raw = JSON.stringify({
+      version: 1,
+      members: [
+        {
+          name: 'alice',
+          providerId: 'codex',
+          providerBackendId: 'future-backend',
+        },
+      ],
+    });
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(metaPath, raw, 'utf8');
+    let updateCalled = false;
+    let writeCalled = false;
+    hoisted.beforeAtomicWrite = async () => {
+      writeCalled = true;
+    };
+
+    await expect(
+      store.updateMembers(teamName, (members) => {
+        updateCalled = true;
+        return [...members, { name: 'bob' }];
+      })
+    ).rejects.toThrow('Refusing to replace malformed members metadata');
+    expect(updateCalled).toBe(false);
+    expect(writeCalled).toBe(false);
+    await expect(fs.readFile(metaPath, 'utf8')).resolves.toBe(raw);
+  });
+
+  it.each([
+    ['future version', JSON.stringify({ version: 2, members: [] })],
+    ['malformed JSON', '{not-json'],
+    [
+      'malformed known member field',
+      JSON.stringify({ version: 1, members: [{ name: 'alice', role: 42 }] }),
+    ],
+    [
+      'malformed nested MCP scope',
+      JSON.stringify({
+        version: 1,
+        members: [
+          {
+            name: 'alice',
+            mcpPolicy: { mode: 'strictAllowlist', scopes: { user: 'enabled' } },
+          },
+        ],
+      }),
+    ],
+    ['oversized JSON', JSON.stringify({ version: 1, members: [], pad: 'x'.repeat(256 * 1024) })],
+  ])('fails closed on %s without replacing the existing bytes', async (_label, raw) => {
+    const store = new TeamMembersMetaStore();
+    const teamName = 'closed-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const metaPath = path.join(teamDir, 'members.meta.json');
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(metaPath, raw, 'utf8');
+
+    await expect(store.writeMembers(teamName, [{ name: 'replacement' }])).rejects.toBeTruthy();
+    await expect(fs.readFile(metaPath, 'utf8')).resolves.toBe(raw);
   });
 });
