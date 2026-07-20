@@ -32,6 +32,7 @@ import { codexGoalStatusInputFromLaunch } from "./codex-goal-mcp-status-input";
 const MAX_RECOVERABLE_RESULT_BYTES = 256 * 1024;
 const APP_SERVER_RECONNECT_TIMEOUT_PREFIX =
   "codex_app_server_reconnect_timeout:";
+const APP_SERVER_PROVIDER_ERROR_PREFIX = "codex_app_server_error:";
 const PREWARM_FAILED_REASON = "prewarm_failed";
 const PREWARM_FAILED_ERROR_CODE = "subscription_worker_prewarm_failed";
 const PREWARM_BEFORE_ATTEMPT_EVIDENCE =
@@ -59,9 +60,9 @@ export async function resolveProjectPreStartContinuation(input: {
       : {}),
   });
   if (decision) return decision;
-  if (await isRecoverableAdmittedInputPatchReconnect(input)) {
+  if (await isRecoverableAdmittedInputPatchProviderFailure(input)) {
     return {
-      kind: "capacity",
+      kind: "provider_failure",
       workspaceMode: "admitted_input_patch_continuation",
     };
   }
@@ -272,7 +273,7 @@ export function projectConfirmStartRequiredView(
   };
 }
 
-async function isRecoverableAdmittedInputPatchReconnect(input: {
+async function isRecoverableAdmittedInputPatchProviderFailure(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly launch: CodexGoalLaunchInput;
   readonly reviewedOutputId?: string;
@@ -317,7 +318,8 @@ async function isRecoverableAdmittedInputPatchReconnect(input: {
     const rawCause = parsed.details.rawCause;
     return (
       typeof rawCause === "string" &&
-      rawCause.startsWith(APP_SERVER_RECONNECT_TIMEOUT_PREFIX)
+      (rawCause.startsWith(APP_SERVER_RECONNECT_TIMEOUT_PREFIX) ||
+        rawCause.startsWith(APP_SERVER_PROVIDER_ERROR_PREFIX))
     );
   } catch {
     return false;

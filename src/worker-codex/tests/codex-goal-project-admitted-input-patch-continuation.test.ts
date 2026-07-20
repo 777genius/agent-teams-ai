@@ -511,6 +511,44 @@ describe("admitted input-patch capacity continuation", () => {
       `${JSON.stringify({
         ...reconnectResult,
         details: {
+          rawCause:
+            "codex_app_server_error:This request was rejected before the verifier could run.",
+        },
+      })}\n`,
+    );
+    await expect(
+      projectControlStartStoredJobView(
+        { ...args, forceStart: true },
+        continuationDeps,
+      ),
+    ).resolves.toMatchObject({ ok: true });
+    expect(startAdmissionWorkspaceModes.at(-1)).toBe(
+      "admitted_input_patch_continuation",
+    );
+
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...reconnectResult,
+        details: {
+          rawCause: "ordinary_unknown_runtime_failure",
+        },
+      })}\n`,
+    );
+    await expect(
+      projectControlStartStoredJobView(
+        { ...args, forceStart: true },
+        continuationDeps,
+      ),
+    ).rejects.toThrow(
+      "project_control_reviewed_dirty_continuation_output_required",
+    );
+
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...reconnectResult,
+        details: {
           ...reconnectFailureDetails,
         },
       })}\n`,

@@ -20,6 +20,10 @@ export type ProjectPreStartContinuationDecision =
       readonly workspaceMode: "admitted_input_patch_continuation";
     }
   | {
+      readonly kind: "provider_failure";
+      readonly workspaceMode: "admitted_input_patch_continuation";
+    }
+  | {
       readonly kind: "controlled_runtime_interruption";
       readonly workspaceMode: "admitted_input_patch_runtime_continuation";
       readonly evidence: ControlledRuntimeInterruptionEvidence;
