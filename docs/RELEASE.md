@@ -1,6 +1,8 @@
 # Release Guide
 
-## Draft: v2.10.0 (2026-07-20)
+## Published: v2.10.0 (2026-07-20)
+
+GitHub release: [v2.10.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.10.0).
 
 Target branch: `dev`.
 
