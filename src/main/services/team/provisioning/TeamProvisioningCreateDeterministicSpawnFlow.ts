@@ -1,4 +1,3 @@
-import { spawnCli } from '@main/utils/childProcess';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { type spawn } from 'child_process';
@@ -43,6 +42,7 @@ import {
 
 import type { GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
+import type { spawnCli } from '@main/utils/childProcess';
 import type {
   ProviderModelLaunchIdentity,
   TeamCreateRequest,
@@ -269,14 +269,28 @@ export async function handleDeterministicCreateSpawnTimeout<
   ports: Pick<
     DeterministicCreateSpawnFlowPorts<TRun>,
     'tryCompleteAfterTimeout' | 'killTeamProcess' | 'updateProgress' | 'cleanupRun'
-  >
+  >,
+  timedOutChild = run.child
 ): Promise<void> {
   const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
-  ports.killTeamProcess(run.child);
   if (readyOnTimeout) {
     return; // cleanupRun already called inside tryCompleteAfterTimeout
   }
 
+  // The readiness probe is asynchronous. A completion/cancellation path or a
+  // replacement child may have taken ownership while it was in flight.
+  if (
+    run.provisioningComplete ||
+    run.cancelRequested ||
+    run.processKilled ||
+    run.child !== timedOutChild
+  ) {
+    run.finalizingByTimeout = false;
+    return;
+  }
+
+  run.processKilled = true;
+  ports.killTeamProcess(timedOutChild);
   const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI', {
     error:
       'Timed out waiting for CLI. Run `claude` once in terminal to complete onboarding and try again.',
@@ -467,11 +481,11 @@ export async function runDeterministicCreateSpawnFlow<
   run.onProgress(run.progress);
   ports.startFilesystemMonitor(run, request);
 
+  const spawnedChild = child;
   run.timeoutHandle = setTimeout(() => {
-    if (!run.processKilled && !run.provisioningComplete) {
-      run.processKilled = true;
+    if (!run.processKilled && !run.provisioningComplete && run.child === spawnedChild) {
       run.finalizingByTimeout = true;
-      void handleDeterministicCreateSpawnTimeout(run, ports);
+      void handleDeterministicCreateSpawnTimeout(run, ports, spawnedChild);
     }
   }, getProvisioningRunTimeoutMs(run));
 

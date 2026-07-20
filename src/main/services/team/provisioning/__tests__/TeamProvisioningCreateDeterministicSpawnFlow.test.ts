@@ -1,6 +1,6 @@
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as path from 'path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const flowMocks = vi.hoisted(() => ({
   cleanupAnthropicTeamApiKeyHelperMaterial: vi.fn<() => Promise<void>>(),
@@ -52,17 +52,18 @@ import {
   buildDeterministicCreateCleanupTargets,
   type DeterministicCreateSpawnFlowPorts,
   type DeterministicCreateSpawnFlowRun,
-  handleDeterministicCreateSpawnTimeout,
   runDeterministicCreateSpawnFlow,
   shouldCancelDeterministicCreateSpawn,
 } from '../TeamProvisioningCreateDeterministicSpawnFlow';
 
-import type { TeamCreateRequest, TeamProvisioningProgress } from '@shared/types';
+import type { TeamCreateRequest } from '@shared/types';
 
 const TEST_BOOTSTRAP_SPEC_PATH = '/repo/.agent-teams/bootstrap.json';
 const TEST_BOOTSTRAP_PROMPT_PATH = '/repo/.agent-teams/prompt.txt';
 const TEST_MCP_CONFIG_PATH = '/repo/.agent-teams/mcp.json';
 const TEST_ANTHROPIC_HELPER_DIR = '/repo/.agent-teams/helpers/anthropic';
+
+type PlanningPorts = DeterministicCreateSpawnFlowPorts<DeterministicCreateSpawnFlowRun>;
 
 const planningRequest: TeamCreateRequest = {
   teamName: 'planning-cleanup-team',
@@ -113,6 +114,12 @@ function createPlanningRun(): DeterministicCreateSpawnFlowRun {
     requiresFirstRealTurnSuccess: true,
     deterministicBootstrap: true,
     effectiveMembers: planningRequest.members,
+    provisioningTraceLines: [],
+    lastProvisioningTraceKey: null,
+    provisioningOutputParts: [],
+    provisioningOutputIndexByMessageId: new Map<string, number>(),
+    stallWarningIndex: null,
+    apiRetryWarningIndex: null,
     onProgress: vi.fn(),
   } as unknown as DeterministicCreateSpawnFlowRun;
 }
@@ -203,6 +210,40 @@ function runPlanningFailureFlow(
   });
 }
 
+function configureSpawnedChild(
+  ports: PlanningPorts,
+  pid: number
+): ReturnType<PlanningPorts['spawnCli']> {
+  const child = {
+    pid,
+    once: vi.fn(),
+  } as unknown as ReturnType<PlanningPorts['spawnCli']>;
+  ports.spawnCli = vi.fn(() => child) as unknown as typeof ports.spawnCli;
+  return child;
+}
+
+function configureTimeoutSideEffects(ports: PlanningPorts): {
+  cleanupRun: ReturnType<typeof vi.fn<PlanningPorts['cleanupRun']>>;
+  killTeamProcess: ReturnType<typeof vi.fn<PlanningPorts['killTeamProcess']>>;
+  updateProgress: ReturnType<typeof vi.fn<PlanningPorts['updateProgress']>>;
+} {
+  const cleanupRun = vi.fn<PlanningPorts['cleanupRun']>();
+  const killTeamProcess = vi.fn<PlanningPorts['killTeamProcess']>();
+  const updateProgress = vi.fn<PlanningPorts['updateProgress']>((run, state, message) => {
+    run.progress = { ...run.progress, state, message };
+    return run.progress;
+  });
+  ports.cleanupRun = cleanupRun;
+  ports.killTeamProcess = killTeamProcess;
+  ports.updateProgress = updateProgress;
+  return { cleanupRun, killTeamProcess, updateProgress };
+}
+
+async function firePlanningTimeout(): Promise<void> {
+  await vi.runOnlyPendingTimersAsync();
+  await Promise.resolve();
+}
+
 describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -216,6 +257,10 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     });
     flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial.mockReset().mockResolvedValue(undefined);
     flowMocks.removePath.mockReset().mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('plans deterministic create cleanup targets from run materialization state', () => {
@@ -395,51 +440,142 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     expect(run.mcpConfigPath).toBeNull();
   });
 
-  it('kills and cleans up a timed-out create when timeout completion persistence rejects', async () => {
-    const progress: TeamProvisioningProgress = {
-      runId: 'run-1',
-      teamName: 'runtime-team',
-      state: 'configuring',
-      message: 'Waiting for team configuration...',
-      startedAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-    };
-    const child = { pid: 123 };
+  it('lets readiness win at the timeout deadline without killing or failure cleanup', async () => {
+    vi.useFakeTimers();
+    const order: string[] = [];
+    const run = createPlanningRun();
+    const ports = createPlanningPorts(order);
+    const child = configureSpawnedChild(ports, 123);
+    const { cleanupRun, killTeamProcess, updateProgress } = configureTimeoutSideEffects(ports);
+    const tryCompleteAfterTimeout = vi.fn<PlanningPorts['tryCompleteAfterTimeout']>(
+      async (targetRun) => {
+        expect(targetRun.processKilled).toBe(false);
+        cleanupRun(targetRun);
+        return true;
+      }
+    );
+    ports.tryCompleteAfterTimeout = tryCompleteAfterTimeout;
+
+    await runPlanningFailureFlow(run, ports);
+    await firePlanningTimeout();
+
+    expect(tryCompleteAfterTimeout).toHaveBeenCalledOnce();
+    expect(run.child).toBe(child);
+    expect(run.processKilled).toBe(false);
+    expect(killTeamProcess).not.toHaveBeenCalled();
+    expect(updateProgress).not.toHaveBeenCalledWith(
+      run,
+      'failed',
+      expect.any(String),
+      expect.anything()
+    );
+    expect(cleanupRun).toHaveBeenCalledOnce();
+  });
+
+  it('kills and cleans up the spawned child when it is genuinely not ready at timeout', async () => {
+    vi.useFakeTimers();
+    const order: string[] = [];
+    const run = createPlanningRun();
     const onProgress = vi.fn();
-    const run = {
-      runId: 'run-1',
-      teamName: 'runtime-team',
-      child,
-      progress,
-      stdoutBuffer: '',
-      stderrBuffer: '',
-      claudeLogLines: [],
-      onProgress,
-    } as unknown as DeterministicCreateSpawnFlowRun;
-    const killTeamProcess = vi.fn();
-    const cleanupRun = vi.fn();
-    const updateProgress = vi.fn((nextRun: DeterministicCreateSpawnFlowRun, state, message) => {
-      nextRun.progress = { ...nextRun.progress, state, message };
-      return nextRun.progress;
-    });
+    run.onProgress = onProgress;
+    const ports = createPlanningPorts(order);
+    const child = configureSpawnedChild(ports, 456);
+    const { cleanupRun, killTeamProcess, updateProgress } = configureTimeoutSideEffects(ports);
+    const tryCompleteAfterTimeout = vi.fn<PlanningPorts['tryCompleteAfterTimeout']>(
+      async (targetRun) => {
+        expect(targetRun.processKilled).toBe(false);
+        return false;
+      }
+    );
+    ports.tryCompleteAfterTimeout = tryCompleteAfterTimeout;
 
-    await handleDeterministicCreateSpawnTimeout(run, {
-      tryCompleteAfterTimeout: vi.fn(async () => {
-        throw new Error('launch state persistence failed');
-      }),
-      killTeamProcess,
-      updateProgress,
-      cleanupRun,
-    });
+    await runPlanningFailureFlow(run, ports);
+    await firePlanningTimeout();
 
+    expect(run.processKilled).toBe(true);
+    expect(killTeamProcess).toHaveBeenCalledOnce();
     expect(killTeamProcess).toHaveBeenCalledWith(child);
     expect(updateProgress).toHaveBeenCalledWith(
       run,
       'failed',
       'Timed out waiting for CLI',
-      expect.objectContaining({ error: expect.stringContaining('Timed out waiting for CLI') })
+      expect.any(Object)
     );
+    const failureExtras = updateProgress.mock.calls.find((call) => call[1] === 'failed')?.[3];
+    expect(failureExtras?.error).toContain('Timed out waiting for CLI');
     expect(onProgress).toHaveBeenCalledWith(run.progress);
+    expect(cleanupRun).toHaveBeenCalledOnce();
     expect(cleanupRun).toHaveBeenCalledWith(run);
+  });
+
+  it('kills and cleans up the spawned child when the readiness check rejects', async () => {
+    vi.useFakeTimers();
+    const order: string[] = [];
+    const run = createPlanningRun();
+    const onProgress = vi.fn();
+    run.onProgress = onProgress;
+    const ports = createPlanningPorts(order);
+    const child = configureSpawnedChild(ports, 789);
+    const { cleanupRun, killTeamProcess, updateProgress } = configureTimeoutSideEffects(ports);
+    const tryCompleteAfterTimeout = vi.fn<PlanningPorts['tryCompleteAfterTimeout']>(async () => {
+      throw new Error('launch state persistence failed');
+    });
+    ports.tryCompleteAfterTimeout = tryCompleteAfterTimeout;
+
+    await runPlanningFailureFlow(run, ports);
+    await firePlanningTimeout();
+
+    expect(run.processKilled).toBe(true);
+    expect(killTeamProcess).toHaveBeenCalledOnce();
+    expect(killTeamProcess).toHaveBeenCalledWith(child);
+    expect(updateProgress).toHaveBeenCalledWith(
+      run,
+      'failed',
+      'Timed out waiting for CLI',
+      expect.any(Object)
+    );
+    const failureExtras = updateProgress.mock.calls.find((call) => call[1] === 'failed')?.[3];
+    expect(failureExtras?.error).toContain('Timed out waiting for CLI');
+    expect(onProgress).toHaveBeenCalledWith(run.progress);
+    expect(cleanupRun).toHaveBeenCalledOnce();
+    expect(cleanupRun).toHaveBeenCalledWith(run);
+  });
+
+  it('does not kill or clean up a replacement child that takes ownership during the check', async () => {
+    vi.useFakeTimers();
+    const order: string[] = [];
+    const run = createPlanningRun();
+    const ports = createPlanningPorts(order);
+    configureSpawnedChild(ports, 111);
+    const { cleanupRun, killTeamProcess, updateProgress } = configureTimeoutSideEffects(ports);
+    let resolveReadiness!: (ready: boolean) => void;
+    const tryCompleteAfterTimeout = vi.fn<PlanningPorts['tryCompleteAfterTimeout']>(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveReadiness = resolve;
+        })
+    );
+    ports.tryCompleteAfterTimeout = tryCompleteAfterTimeout;
+
+    await runPlanningFailureFlow(run, ports);
+    await vi.runOnlyPendingTimersAsync();
+    expect(tryCompleteAfterTimeout).toHaveBeenCalledOnce();
+
+    const replacementChild = configureSpawnedChild(ports, 222);
+    run.child = replacementChild;
+    resolveReadiness(false);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(run.processKilled).toBe(false);
+    expect(run.finalizingByTimeout).toBe(false);
+    expect(killTeamProcess).not.toHaveBeenCalled();
+    expect(updateProgress).not.toHaveBeenCalledWith(
+      run,
+      'failed',
+      expect.any(String),
+      expect.anything()
+    );
+    expect(cleanupRun).not.toHaveBeenCalled();
   });
 });
