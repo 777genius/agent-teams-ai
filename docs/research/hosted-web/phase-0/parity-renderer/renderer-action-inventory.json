@@ -29,12 +29,12 @@
   "sourceFiles": [
     {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-      "sha256": "sha256:82c3b74822b72203757f85ca3eb57986f4ce39abd7eb867c6d0b9bb2fddbaf83",
-      "interactionSiteCount": 48
+      "sha256": "sha256:fb630c6786dfe27559b908a26dae67d0bdb1aa7e58fe64894c66eefe57e85ede",
+      "interactionSiteCount": 60
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/providerBrandIcons.tsx",
-      "sha256": "sha256:4233b80a4e92a8d9c7654b5176ef7a7f04ad409a2508a32d78f907802fa1cd49",
+      "sha256": "sha256:95046c7a6f8b5be3d52641de9449f498788301d84ed2b99219b0878011a4077d",
       "interactionSiteCount": 1
     },
     {
@@ -49,8 +49,8 @@
     },
     {
       "path": "src/renderer/components/team/ClaudeLogsSection.tsx",
-      "sha256": "sha256:69c69381b1b96b6ec2ca63a86ae6032b4ffab36679375554f1d6ff3902bd2da5",
-      "interactionSiteCount": 7
+      "sha256": "sha256:099cd771bebd552b938da791062c842a03d45a4f27eb7ef80a47335eaf1bc4fb",
+      "interactionSiteCount": 8
     },
     {
       "path": "src/renderer/components/team/CliLogsRichView.tsx",
@@ -59,7 +59,7 @@
     },
     {
       "path": "src/renderer/components/team/CollapsibleTeamSection.tsx",
-      "sha256": "sha256:616a600ef28355dc6bc7059e6992868e2a81755b39e427c448e1f804bf3ff4cc",
+      "sha256": "sha256:c587ea6a628be171a92fa9930825e3297848118ba725d2b15aab8ebf3a51b968",
       "interactionSiteCount": 1
     },
     {
@@ -69,7 +69,7 @@
     },
     {
       "path": "src/renderer/components/team/LiveRuntimeStatusBridge.tsx",
-      "sha256": "sha256:3d34eb9b81cbc27ff48f19a0338c219903b0c780503ad60fb8f2cc1b799ca94f",
+      "sha256": "sha256:3e85594e7cdbbc83ed46f928d9eb47a76a81509787bf81dd166a4089de96ddd7",
       "interactionSiteCount": 0
     },
     {
@@ -109,18 +109,18 @@
     },
     {
       "path": "src/renderer/components/team/TeamChangesSection.tsx",
-      "sha256": "sha256:850d0ba71808289597383105b0b02396e135ebe56bb754245b9be88775cae8fb",
+      "sha256": "sha256:2f8577f6849517878cd6d5f063ec7803cb92dcedaa8bd90587e79aa2a66663dd",
       "interactionSiteCount": 7
     },
     {
       "path": "src/renderer/components/team/TeamDetailView.tsx",
-      "sha256": "sha256:73c9670545dea4d95c072d210fe45bb81e8b239f4f2ad484a5ebcdf8a28fa247",
+      "sha256": "sha256:d36cf1a89778f9ce1fb9985ff6b685a19c62d6339afac227e65f25249fc18ba4",
       "interactionSiteCount": 22
     },
     {
       "path": "src/renderer/components/team/TeamEmptyState.tsx",
-      "sha256": "sha256:b298d314e831ca47d55500eaab65538ae971e539ef81943ea57ab297e6bad74a",
-      "interactionSiteCount": 1
+      "sha256": "sha256:44ab0ab710d53e4bc73d23b0ba5aac8fc3bebb7718101dcc633099b1212dbed9",
+      "interactionSiteCount": 2
     },
     {
       "path": "src/renderer/components/team/TeamListFilterPopover.tsx",
@@ -129,12 +129,12 @@
     },
     {
       "path": "src/renderer/components/team/TeamListView.tsx",
-      "sha256": "sha256:17700eb4a1f4b854a529bed9ce6b5599e387729a370200c081fc7f0bf4d55e23",
-      "interactionSiteCount": 15
+      "sha256": "sha256:cc94c41bbfc3c5e050ec4eb3a3d1e387cf7da5f2f41b807788b751b821fa9eeb",
+      "interactionSiteCount": 16
     },
     {
       "path": "src/renderer/components/team/TeamLoadingSkeleton.tsx",
-      "sha256": "sha256:2bb4f9489790d89101fb9baed1e5630202ae9ddbf74f39b1c190faacca93d4e4",
+      "sha256": "sha256:bb67754b7b8fe7c17627b2eadb4d25e3d2aeef1e02d531d363e894e61f20deb8",
       "interactionSiteCount": 0
     },
     {
@@ -169,7 +169,7 @@
     },
     {
       "path": "src/renderer/components/team/UnreadCommentsBadge.tsx",
-      "sha256": "sha256:2dcdae15465c96aa6a615897340c08184356256795053a1e219fd9d5e043741f",
+      "sha256": "sha256:6e27dbbaff5da937777a7569dc0999d7e7d0d26aff7ab52a47a9d9174c46f55a",
       "interactionSiteCount": 1
     },
     {
@@ -179,12 +179,12 @@
     },
     {
       "path": "src/renderer/components/team/activity/ActivityItem.tsx",
-      "sha256": "sha256:3d238eb67bcae148e11b08024f0f82e1802a9dec1cf420224e48b793d794ae91",
+      "sha256": "sha256:f1b3bb5f5fb7ffc9ea00b1850a7b384f8cd8dd4490ab1bc9b42e2aebf469f378",
       "interactionSiteCount": 31
     },
     {
       "path": "src/renderer/components/team/activity/ActivityTimeline.tsx",
-      "sha256": "sha256:1a709a0699116d09430de565a59d02174374c23139fb376b7e9d32f85cf6f44a",
+      "sha256": "sha256:3a25f7475084d5a7f41065002f0116f0b51d2f91586fb481fa976b05b91a504b",
       "interactionSiteCount": 2
     },
     {
@@ -204,7 +204,7 @@
     },
     {
       "path": "src/renderer/components/team/activity/PendingRepliesBlock.tsx",
-      "sha256": "sha256:4fe3b3d9782c2fa0ded3ef2d3a55782548102d89a2280a8be9d16332a436e40b",
+      "sha256": "sha256:fb47b7256f7c2ccc7d63cddf20df17b552a9c0bb18715d61842818b7aceeb794",
       "interactionSiteCount": 1
     },
     {
@@ -253,6 +253,11 @@
       "interactionSiteCount": 0
     },
     {
+      "path": "src/renderer/components/team/composer/ComposerSurface.tsx",
+      "sha256": "sha256:92107db1ace06e912529deac561dfa3b3ead2e0c8660a74e906ddd288de7d5c1",
+      "interactionSiteCount": 0
+    },
+    {
       "path": "src/renderer/components/team/dialogs/AddMemberDialog.tsx",
       "sha256": "sha256:5b0dca18a4837ec84c5675f4d2b21c1e43f7478d4497c9e84e97e3b4601c88dc",
       "interactionSiteCount": 4
@@ -289,12 +294,12 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/CreateTaskDialog.tsx",
-      "sha256": "sha256:7921effdcdb20e2365b8a9042bcb667c2e395515e973e13ca642114d8b2f368b",
+      "sha256": "sha256:b075bbe09e3349e0750c55e2d010d720b0a1fc22017bf2aba555b554f9d5dea5",
       "interactionSiteCount": 14
     },
     {
       "path": "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
-      "sha256": "sha256:3c13677d12809918a5f963a144b30f61afb42d398410279b8888f62423577feb",
+      "sha256": "sha256:c4b0f2611f5b097644a3224e067b0748169033573aae00fb6cc7a63ccd935b1a",
       "interactionSiteCount": 21
     },
     {
@@ -314,7 +319,7 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
-      "sha256": "sha256:2e4ca8b15bd7f65c74e3983a4b0c1264b098830ba1c4580cfdd41e51da637f15",
+      "sha256": "sha256:d235b5ae8fcf5799ca4dffadb803b61332c5e62961c764bdce4d5528ee731303",
       "interactionSiteCount": 20
     },
     {
@@ -333,13 +338,8 @@
       "interactionSiteCount": 1
     },
     {
-      "path": "src/renderer/components/team/dialogs/OpenCodeContextConfigHint.tsx",
-      "sha256": "sha256:dbd44cb65543d8f720a3672f7726aeac6a20daa04aab8b38fd25a4e24638c621",
-      "interactionSiteCount": 3
-    },
-    {
       "path": "src/renderer/components/team/dialogs/OptionalSettingsSection.tsx",
-      "sha256": "sha256:cd17132960e3b56d0403722b2a1791b54f5c038132e00a957c5c7c7c0af3ba74",
+      "sha256": "sha256:e7c12f42fec939c9799efc3c56f3c15f2e4374af54c0a973318b1f1c94c3fdb2",
       "interactionSiteCount": 1
     },
     {
@@ -349,12 +349,12 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx",
-      "sha256": "sha256:db29361c5d754e0afd27a0ac5f50213ec2e4306169656bb64d68668330c8c3d5",
+      "sha256": "sha256:e5a0004f0530f121b0500d9f2872a105e46b2593eabd782d0fd6df77e0cd7dd0",
       "interactionSiteCount": 1
     },
     {
       "path": "src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx",
-      "sha256": "sha256:a2037956bf406f59ae0b038ab6f81e449d68f81debd06f3f5aeae61892504eeb",
+      "sha256": "sha256:c1de028e169ebe2948e54bb65a7ce68fac2e317704cde292a4a4fe681e27b824",
       "interactionSiteCount": 2
     },
     {
@@ -389,7 +389,7 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
-      "sha256": "sha256:8e36c93689ff5608fadce2324a7abba462f719e67d0d9236231dd8fee1db201f",
+      "sha256": "sha256:8a0483dd45fd2839f07cc013deb0c45900562cb11b86568661960c3a841c087b",
       "interactionSiteCount": 10
     },
     {
@@ -399,13 +399,18 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
-      "sha256": "sha256:2b1699b853b2b55ec4fee0769784ac45fa403cd5b5cffbd22b15dedff04fb759",
+      "sha256": "sha256:ecc2404b75e1c8de25c4feb9275ffa7d157d6a5885de6732b41bd3a8960ae3f7",
       "interactionSiteCount": 28
     },
     {
+      "path": "src/renderer/components/team/dialogs/TeamModelBrandIcon.tsx",
+      "sha256": "sha256:eea34c4a4014c36c313f9e4d14530623c45bea11141e1b344c8e527a5126f938",
+      "interactionSiteCount": 0
+    },
+    {
       "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-      "sha256": "sha256:61710bdf2807abcd4b61644e8a10259978f70f97b4d63816b44f40af8e5e3deb",
-      "interactionSiteCount": 16
+      "sha256": "sha256:ab40d9c6704f36f698e931c6cae06a537b821b59cc696a637e938a46ca1cf67b",
+      "interactionSiteCount": 23
     },
     {
       "path": "src/renderer/components/team/dialogs/TeammateRuntimeCompatibilityNotice.tsx",
@@ -554,12 +559,12 @@
     },
     {
       "path": "src/renderer/components/team/kanban/KanbanBoard.tsx",
-      "sha256": "sha256:e3d724eb0013c1e96f3f3f4c715958edff3633b6ad19fa087f037410612c4b93",
+      "sha256": "sha256:2ccb2576939020b73fdb6dea61645efb3ffe1f9298a5c36d77507d9be6b4270c",
       "interactionSiteCount": 7
     },
     {
       "path": "src/renderer/components/team/kanban/KanbanColumn.tsx",
-      "sha256": "sha256:377a57a40ce8b9be8dab4ad4ce21ff2718a9b0f35b07e885e78c6785bb3ff3ab",
+      "sha256": "sha256:0ac631b1949c9a61189689576cccc73d792d75fa88326208f76e87406f199c6d",
       "interactionSiteCount": 0
     },
     {
@@ -569,7 +574,7 @@
     },
     {
       "path": "src/renderer/components/team/kanban/KanbanGridLayout.tsx",
-      "sha256": "sha256:4411936fbde1dedbd65655f8c95875e65df1c5fd16c80b561e8c675aabc396e4",
+      "sha256": "sha256:853505f8554f837f5903e73edc7b0b97b4c4fd3f3160ccd5de7502c890caa9ca",
       "interactionSiteCount": 0
     },
     {
@@ -584,8 +589,13 @@
     },
     {
       "path": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
-      "sha256": "sha256:a6f7937544cff2830d1f0147503cd83edb842d1b212b2db7ae800a0ae1d89dc6",
-      "interactionSiteCount": 19
+      "sha256": "sha256:7bc3c261726ec6e3bd7cf02bc8103eabb55fa83fbb5e27013054fb2e0ac19c58",
+      "interactionSiteCount": 25
+    },
+    {
+      "path": "src/renderer/components/team/kanban/KanbanTaskCardSkeleton.tsx",
+      "sha256": "sha256:b04a185bd4ba39b23a8a9435e06e64490ddcf2c73fc5ed3ab89982172a014ebe",
+      "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/kanban/TrashDialog.tsx",
@@ -599,12 +609,12 @@
     },
     {
       "path": "src/renderer/components/team/members/LeadModelRow.tsx",
-      "sha256": "sha256:3ee36f177f55d9dfb50b5eca9e5d18a2d300d7affdb1fb89029d095694e04f4e",
+      "sha256": "sha256:9e04434079d9ce765f4da257c87c8d743173892274f31a3841cf7caea8060428",
       "interactionSiteCount": 5
     },
     {
       "path": "src/renderer/components/team/members/MemberCard.tsx",
-      "sha256": "sha256:51f72b534f19a0b37120b39f5ff774d405083b47f57da3b7ad858886de6588e3",
+      "sha256": "sha256:ae1ed50094ef19779395b0427114a0c773e7066cb82d911d9230024f86f9e9c7",
       "interactionSiteCount": 17
     },
     {
@@ -624,7 +634,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberDraftRow.tsx",
-      "sha256": "sha256:648311fdcbe7bb5b7d3008885f671cafa6b48a59d6f43ee86929232805cd0339",
+      "sha256": "sha256:a344cf4fdd281d0c010c66e32fd3661b81fc2bda57d8dab04f0c8c57920ed72a",
       "interactionSiteCount": 21
     },
     {
@@ -644,7 +654,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberList.tsx",
-      "sha256": "sha256:2c166be277b732916871d55e80bb2050f90d99f5b7a73ef1add3f866641d11e0",
+      "sha256": "sha256:839d63fbae6fb40024c75a3ce66b1b46652b4946c454bbc5b2db1cbf32d984be",
       "interactionSiteCount": 5
     },
     {
@@ -674,8 +684,8 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberStatsTab.tsx",
-      "sha256": "sha256:764f36bd9299dc498e4dc1851828bd08379c0865d4096c822741fc91efa021e2",
-      "interactionSiteCount": 3
+      "sha256": "sha256:fd7bed93c5e2a02b33fcd80d9b3fb78dd8f2e3b07ae81d353449c2ea47d9a25f",
+      "interactionSiteCount": 4
     },
     {
       "path": "src/renderer/components/team/members/MemberTasksTab.tsx",
@@ -684,7 +694,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MembersEditorSection.tsx",
-      "sha256": "sha256:23f553a1b7eee81bb09c271018114ec27141c9d2d28ed0139dc8962a9daecfe0",
+      "sha256": "sha256:3de9c73d8d22f6ade0d324ccbead638d0c1e8857fd35c358bb43e8ea7a8e3750",
       "interactionSiteCount": 5
     },
     {
@@ -694,17 +704,17 @@
     },
     {
       "path": "src/renderer/components/team/members/TeamRosterEditorSection.tsx",
-      "sha256": "sha256:78a5c77b7aba780aeb1885899b5bc276f8aa63c46dcf751a5b60b80c1e0e2518",
+      "sha256": "sha256:4f97ea476c98e266451c8e6f71ce835d3804a64eda4a2e643cc7669945456511",
       "interactionSiteCount": 1
     },
     {
       "path": "src/renderer/components/team/messages/ActionModeSelector.tsx",
-      "sha256": "sha256:bda9aea5e06ca1432f57936547ae4207273766d5bddb56ffc5fdc4e1009bd9c9",
+      "sha256": "sha256:3b97166c679cdd9ae2109b7d193a808a4f79d7c6159c5fce46438562e916de2e",
       "interactionSiteCount": 1
     },
     {
       "path": "src/renderer/components/team/messages/MessageComposer.tsx",
-      "sha256": "sha256:74c316989cb107a0a64ce0114160cd5b9a99d2fdf7bd1f71a6eb9a1d55f73926",
+      "sha256": "sha256:c41a788b6981b4286f18ef3b08c92676a05c30459ed03d7fab6e16b71e3cb238",
       "interactionSiteCount": 22
     },
     {
@@ -714,7 +724,7 @@
     },
     {
       "path": "src/renderer/components/team/messages/MessagesPanel.tsx",
-      "sha256": "sha256:ea8d33c332f6eeed559c6c2f579c460a0476efbd2065b9411741e89606b73f53",
+      "sha256": "sha256:fcaad13443eeddb5e8bf42cd1f4af943e9962499e4a16765edc23ff48c49e873",
       "interactionSiteCount": 35
     },
     {
@@ -724,13 +734,18 @@
     },
     {
       "path": "src/renderer/components/team/messages/StatusBlock.tsx",
-      "sha256": "sha256:64b4721bc65283441209861da7490d655872404df1a73142f5e5bacaae47e5c3",
+      "sha256": "sha256:0f66052f3681fc928a5123933bced3f5fb3dffd94a005ac8618143ed54a24001",
       "interactionSiteCount": 1
     },
     {
       "path": "src/renderer/components/team/review/ChangeReviewDialog.tsx",
-      "sha256": "sha256:36bb3e62fdac1060112a76bf53536c1c1412c23cae4ef8ef1b3631a5b2279367",
+      "sha256": "sha256:410eabf6abb28d4417c6876f6b601b1bc80bc7ecffff8c2deb7413183b69e329",
       "interactionSiteCount": 3
+    },
+    {
+      "path": "src/renderer/components/team/review/ChangeStatsBadge.tsx",
+      "sha256": "sha256:da06962fa36755ff311364abd1aa9a9fc45918e70e716684bf00557dda2ef3e6",
+      "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/review/ChangesLoadingAnimation.tsx",
@@ -739,7 +754,7 @@
     },
     {
       "path": "src/renderer/components/team/review/CodeMirrorDiffView.tsx",
-      "sha256": "sha256:0b614067c43efbd6f29203714ad46e68fa5b183de041232cd36d2045a69401e3",
+      "sha256": "sha256:aac4d3880de402e43ae0c25d713c44feebbaa35fa81e09dd010503b96b1508bb",
       "interactionSiteCount": 6
     },
     {
@@ -749,7 +764,7 @@
     },
     {
       "path": "src/renderer/components/team/review/ContinuousScrollView.tsx",
-      "sha256": "sha256:2dce4273e1a3deb7677c589ec22a9f90af7ff3c21ae542e430a8fde5eac68fc0",
+      "sha256": "sha256:7da2dd895c7550685d21abccfabeebe4b943fcbf92d950d9fd4cc08c12679194",
       "interactionSiteCount": 0
     },
     {
@@ -764,12 +779,12 @@
     },
     {
       "path": "src/renderer/components/team/review/FileSectionDiff.tsx",
-      "sha256": "sha256:7b66e5fb5defda7d9b4b178fc29886b07e4540c318d7a933666675a6e6200b9c",
+      "sha256": "sha256:1c18ad1a016dd8e78133e13577b3ebb3c437b72a514a54c595230b66644c2a46",
       "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/review/FileSectionHeader.tsx",
-      "sha256": "sha256:52de5f8b7ebd4fe649c6146d59bb58bee9b31bfe464e0d03843aa1f0fee262ea",
+      "sha256": "sha256:7719c32391b5fea9831b91c984be189e716ac46d535abb703943ab896d365806",
       "interactionSiteCount": 9
     },
     {
@@ -788,6 +803,11 @@
       "interactionSiteCount": 1
     },
     {
+      "path": "src/renderer/components/team/review/ReviewActionHistoryPopover.tsx",
+      "sha256": "sha256:64aab365e080f8df03bb43aeadcda5dd46faf557ddf9a22c263a169bdb5b76dc",
+      "interactionSiteCount": 9
+    },
+    {
       "path": "src/renderer/components/team/review/ReviewDiffContent.tsx",
       "sha256": "sha256:e5cb7d2044cf7763cf62a63186d9d870c8e09cfd97333832411c6fff7cb47f1b",
       "interactionSiteCount": 0
@@ -799,8 +819,13 @@
     },
     {
       "path": "src/renderer/components/team/review/ReviewToolbar.tsx",
-      "sha256": "sha256:a022355cdc09da2e155c7b2388842782c43191dce05562260b61a590c4301c56",
-      "interactionSiteCount": 5
+      "sha256": "sha256:7f4ba2d35f50a8e79bc465bebe7fa5391d8d542a107b8f40a0530b51527ff373",
+      "interactionSiteCount": 6
+    },
+    {
+      "path": "src/renderer/components/team/review/SavedReviewStateRecoveryGate.tsx",
+      "sha256": "sha256:77c341a7c3a75f6704c4b84eb287f89c967b817e42ea8939bf944cf21a0d5fb5",
+      "interactionSiteCount": 4
     },
     {
       "path": "src/renderer/components/team/review/ScopeWarningBanner.tsx",
@@ -844,7 +869,7 @@
     },
     {
       "path": "src/renderer/components/team/sidebar/TeamSidebarHost.tsx",
-      "sha256": "sha256:00798c3f46d11b808cd78aabb1ed079101f6c378ed696e1f9fc356c30ee79723",
+      "sha256": "sha256:bdc7c8ec7f094b5966b9ce1214c08979a49a67b5d3eb5122d7a90ca65c81be7c",
       "interactionSiteCount": 0
     },
     {
@@ -854,7 +879,7 @@
     },
     {
       "path": "src/renderer/components/team/sidebar/TeamSidebarRail.tsx",
-      "sha256": "sha256:3775bc6ae0bc176f07e28cb99e5a5ccd27eaadc3c74092e9ae454a24e3afc75d",
+      "sha256": "sha256:673a4dd7455e481cc94e763d14e5c187eba229839437522dfffecebc5afc5559",
       "interactionSiteCount": 3
     },
     {
@@ -890,11 +915,6 @@
       "interactionSiteCount": 1
     },
     {
-      "path": "src/renderer/components/team/review/ChangeStatsBadge.tsx",
-      "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
-      "interactionSiteCount": 0
-    },
-    {
       "path": "src/renderer/components/team/review/ConflictDialog.tsx",
       "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
       "interactionSiteCount": 7
@@ -920,7 +940,7 @@
       "interactionSiteCount": 0
     }
   ],
-  "transitiveActionCoverage": "The checked-in child-control catalog exactly matches the recursively discovered team/provider renderer closure. Every scanner-visible site maps once to a reviewed semantic action or deliberate absence; direct renderer IPC callers remain bound to the 109-member parity ledger. Every other production team TSX file is listed as excluded and rechecked as unreachable from these roots.",
+  "transitiveActionCoverage": "The checked-in child-control catalog exactly matches the recursively discovered team/provider renderer closure. Every scanner-visible site maps once to a reviewed semantic action or deliberate absence; direct renderer IPC callers remain bound to the 118-member parity ledger. Every other production team TSX file is listed as excluded and rechecked as unreachable from these roots.",
   "actions": [
     {
       "id": "team.console.select",
@@ -1221,6 +1241,11 @@
           "siteCount": 1
         },
         {
+          "file": "src/renderer/components/team/TeamListView.tsx",
+          "sourceHash": "sha256:495711757cb25a3d",
+          "siteCount": 1
+        },
+        {
           "file": "src/renderer/components/team/TeamDetailView.tsx",
           "sourceHash": "sha256:93356b94c86b9a31",
           "siteCount": 1
@@ -1384,6 +1409,31 @@
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
           "sourceHash": "sha256:8e6244151887f85f",
           "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:0866a69dd465cea2",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:32a0b93f9100520a",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:90b5386bbc48f0ef",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:e61e6699ac805f3d",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:2e96c75568c654f7",
+          "siteCount": 1
         }
       ]
     },
@@ -1397,7 +1447,27 @@
       "sourceRefs": [
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:794a1a84ac5acf96",
+          "sourceHash": "sha256:69d499064c5acd68",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:6bc3452b02286516",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:0762178282badb9e",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:29c4895caee155e7",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:e05b1f72353d30ba",
           "siteCount": 1
         },
         {
@@ -1407,7 +1477,17 @@
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:3ad8822f863003a5",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
           "sourceHash": "sha256:1495ee29bd7c3e90",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:ac9b52278c788f42",
           "siteCount": 1
         }
       ]
@@ -1437,13 +1517,18 @@
       "sourceRefs": [
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:583734f5a9437488",
+          "sourceHash": "sha256:bcc0207e64dd80e9",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:4db1c0b6fb7b9ffb",
           "siteCount": 1
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
           "sourceHash": "sha256:08bc5dc7c332dd08",
-          "siteCount": 1
+          "siteCount": 2
         }
       ]
     },
@@ -1477,7 +1562,7 @@
       "sourceRefs": [
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:2fb0d49422661878",
+          "sourceHash": "sha256:ac11e711a5ad0984",
           "siteCount": 2
         },
         {
@@ -1553,6 +1638,21 @@
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
           "sourceHash": "sha256:34e3adf63bf25705",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "provider.management.model.page",
+      "owner": "runtime-provider-management",
+      "disposition": "direct",
+      "securityClass": "provider-read",
+      "target": "WP-4-PROVIDER-AVAILABILITY",
+      "evidence": ["bounded cursor and pagination"],
+      "sourceRefs": [
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "sourceHash": "sha256:c5c2275db5ceba29",
           "siteCount": 1
         }
       ]
@@ -1642,17 +1742,12 @@
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:6c071dd044cf6391",
+          "sourceHash": "sha256:45ae2001fbe22fe4",
           "siteCount": 1
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:a96191f79a8f9c7f",
-          "siteCount": 1
-        },
-        {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:ba53ebf583dc0cce",
+          "sourceHash": "sha256:86ccffc56c2917aa",
           "siteCount": 1
         }
       ]
@@ -3338,45 +3433,6 @@
       ]
     },
     {
-      "id": "team.legacy-control.dialogs.open.code.context.config.hint.a-navigate",
-      "owner": "team-console",
-      "disposition": "direct",
-      "securityClass": "renderer-local",
-      "target": "WP-7-TEAM-CONSOLE",
-      "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
-      ],
-      "sourceRefs": [
-        {
-          "file": "src/renderer/components/team/dialogs/OpenCodeContextConfigHint.tsx",
-          "sourceHash": "sha256:21a92661401bca54",
-          "siteCount": 1
-        },
-        {
-          "file": "src/renderer/components/team/dialogs/OpenCodeContextConfigHint.tsx",
-          "sourceHash": "sha256:9a728f715f096c3c",
-          "siteCount": 1
-        }
-      ]
-    },
-    {
-      "id": "team.legacy-control.dialogs.open.code.context.config.hint.set-expanded",
-      "owner": "team-console",
-      "disposition": "direct",
-      "securityClass": "renderer-local",
-      "target": "WP-7-TEAM-CONSOLE",
-      "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
-      ],
-      "sourceRefs": [
-        {
-          "file": "src/renderer/components/team/dialogs/OpenCodeContextConfigHint.tsx",
-          "sourceHash": "sha256:99e038ca74c3243e",
-          "siteCount": 1
-        }
-      ]
-    },
-    {
       "id": "team.legacy-control.dialogs.optional.settings.section.handle-toggle-open",
       "owner": "team-console",
       "disposition": "direct",
@@ -3814,7 +3870,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
-          "sourceHash": "sha256:ae9794bc80701403",
+          "sourceHash": "sha256:49c2025f629fc6a5",
           "siteCount": 1
         },
         {
@@ -3919,7 +3975,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
-          "sourceHash": "sha256:94c5ce6e19343cff",
+          "sourceHash": "sha256:ed413735bae6df87",
           "siteCount": 1
         }
       ]
@@ -3953,7 +4009,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
-          "sourceHash": "sha256:0f993adb0364f137",
+          "sourceHash": "sha256:78dafed7fc648f8e",
           "siteCount": 1
         }
       ]
@@ -4376,6 +4432,23 @@
       ]
     },
     {
+      "id": "team.legacy-control.dialogs.team.model.selector.clear-open-code-filters",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "Clears every reviewed OpenCode model filter without changing provider or model ownership."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+          "sourceHash": "sha256:d9547002c6b51b05",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
       "id": "team.legacy-control.dialogs.team.model.selector.input-on-change",
       "owner": "team-console",
       "disposition": "direct",
@@ -4393,6 +4466,40 @@
       ]
     },
     {
+      "id": "team.legacy-control.dialogs.team.model.selector.refresh-open-code-local-providers",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "Refreshes the local OpenCode provider catalog through the provider-management renderer boundary."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+          "sourceHash": "sha256:89375eb6fbaa9d80",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.dialogs.team.model.selector.select-local-models",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "Selects the reviewed local-models surface while retaining the model selector's provider boundary."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+          "sourceHash": "sha256:89f66ae52d695ad1",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
       "id": "team.legacy-control.dialogs.team.model.selector.selected-provider-id",
       "owner": "team-console",
       "disposition": "direct",
@@ -4404,7 +4511,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:bfd3d295354c3357",
+          "sourceHash": "sha256:f9e961f0457c1865",
           "siteCount": 1
         }
       ]
@@ -4421,7 +4528,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:bcc471f762efa6b4",
+          "sourceHash": "sha256:c48b6df013f974bb",
           "siteCount": 1
         }
       ]
@@ -4438,7 +4545,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:abb468deaa0c78f4",
+          "sourceHash": "sha256:6dc1bd60808700a5",
           "siteCount": 1
         }
       ]
@@ -4474,6 +4581,26 @@
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
           "sourceHash": "sha256:10fb7a27563b057f",
           "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+          "sourceHash": "sha256:7c1f38bc7952f185",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.dialogs.team.model.selector.set-new-only",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": ["Toggles the reviewed recently-released model filter."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+          "sourceHash": "sha256:9d43df1c40e5bd13",
+          "siteCount": 1
         }
       ]
     },
@@ -4506,7 +4633,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:ea696b218060f2e5",
+          "sourceHash": "sha256:40fd58216316d4b1",
           "siteCount": 1
         }
       ]
@@ -4540,7 +4667,29 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:2bcd0f6bb2639aea",
+          "sourceHash": "sha256:2bb2bdfee1c697b5",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+          "sourceHash": "sha256:50a3c0db14930221",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.dialogs.team.model.selector.toggle-open-code-route-tag",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "Toggles a reviewed OpenCode route-status filter independently of source filtering."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+          "sourceHash": "sha256:17a904c69575ab0b",
           "siteCount": 1
         }
       ]
@@ -4562,7 +4711,7 @@
         },
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:9b398edcf83ccdd4",
+          "sourceHash": "sha256:572e2b448b909358",
           "siteCount": 1
         }
       ]
@@ -6606,7 +6755,7 @@
         {
           "file": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
           "sourceHash": "sha256:09fe3d215bf39d4d",
-          "siteCount": 1
+          "siteCount": 2
         }
       ]
     },
@@ -6652,12 +6801,12 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
-          "sourceHash": "sha256:17e8f9ac1d274a88",
+          "sourceHash": "sha256:51dcd3b14062cfd7",
           "siteCount": 1
         },
         {
           "file": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
-          "sourceHash": "sha256:26532b782722e3b0",
+          "sourceHash": "sha256:f171c6da12f3b1c0",
           "siteCount": 1
         }
       ]
@@ -7706,6 +7855,21 @@
       ]
     },
     {
+      "id": "team.legacy-control.members.member.stats.tab.open-kiro-usage",
+      "owner": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "target": "WP-5-RUNTIME-CONTROL",
+      "evidence": ["Opens the fixed Kiro account usage URL without exposing runtime credentials."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/members/MemberStatsTab.tsx",
+          "sourceHash": "sha256:8c9371333b6ec662",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
       "id": "team.legacy-control.members.member.stats.tab.set-expanded",
       "owner": "team-runtime-control",
       "disposition": "decomposed",
@@ -7909,12 +8073,12 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:34a488d7a1626a77",
+          "sourceHash": "sha256:1ff82e5efc2af2fa",
           "siteCount": 1
         },
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:a58e46450c5aa49a",
+          "sourceHash": "sha256:3b6f0923ffdae25d",
           "siteCount": 1
         }
       ]
@@ -7948,7 +8112,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:50d79073db76e67e",
+          "sourceHash": "sha256:af143ae5254dade2",
           "siteCount": 1
         }
       ]
@@ -7980,7 +8144,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:9dce3273926e35d9",
+          "sourceHash": "sha256:6a4111d7d2940c97",
           "siteCount": 1
         }
       ]
@@ -8121,7 +8285,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:bc8e2ab3cbd43bd7",
+          "sourceHash": "sha256:eb9a0907ae47120a",
           "siteCount": 1
         }
       ]
@@ -8312,6 +8476,11 @@
         "Closing the mounted message sheet moves the message surface to its inline position."
       ],
       "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/ClaudeLogsSection.tsx",
+          "sourceHash": "sha256:5f5910daf98c9ae0",
+          "siteCount": 1
+        },
         {
           "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
           "sourceHash": "sha256:b0c71590e72d19c1",
@@ -8670,7 +8839,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/review/ChangeReviewDialog.tsx",
-          "sourceHash": "sha256:191efb3695441fbf",
+          "sourceHash": "sha256:f6d69166a52782ee",
           "siteCount": 1
         }
       ]
@@ -8953,6 +9122,105 @@
       ]
     },
     {
+      "id": "team.legacy-control.review.review.action.history.popover.navigate-to-action",
+      "owner": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "target": "WP-9-REVIEW",
+      "evidence": ["Navigates to the file-backed review action selected from retained history."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/review/ReviewActionHistoryPopover.tsx",
+          "sourceHash": "sha256:c512b00e999e336e",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.review.review.action.history.popover.open-history",
+      "owner": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "target": "WP-9-REVIEW",
+      "evidence": ["Opens the retained review action history surface."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/review/ReviewActionHistoryPopover.tsx",
+          "sourceHash": "sha256:f5daf8bf356c6a2b",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.review.review.action.history.popover.request-restore",
+      "owner": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "target": "WP-9-REVIEW",
+      "evidence": [
+        "Prepares a checkpoint restore preview before any review or disk transition is applied."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/review/ReviewActionHistoryPopover.tsx",
+          "sourceHash": "sha256:37870a899a708ea1",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/review/ReviewActionHistoryPopover.tsx",
+          "sourceHash": "sha256:900f949becc50693",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.review.review.action.history.popover.retry-persistence",
+      "owner": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "target": "WP-9-REVIEW",
+      "evidence": [
+        "Retries persistence of the latest review action through the owning review workflow."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/review/ReviewActionHistoryPopover.tsx",
+          "sourceHash": "sha256:8c820300e854ec66",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.review.review.action.history.popover.run-restore",
+      "owner": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "target": "WP-9-REVIEW",
+      "evidence": ["Runs only the confirmed, revalidated review-history restore request."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/review/ReviewActionHistoryPopover.tsx",
+          "sourceHash": "sha256:bd6fc14c2953a704",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.review.review.action.history.popover.show-older",
+      "owner": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "target": "WP-9-REVIEW",
+      "evidence": ["Expands the retained history window without mutating review decisions."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/review/ReviewActionHistoryPopover.tsx",
+          "sourceHash": "sha256:af982a72ee143ef2",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
       "id": "team.legacy-control.review.review.file.tree.on-select-file",
       "owner": "team-review",
       "disposition": "decomposed",
@@ -9111,6 +9379,21 @@
       ]
     },
     {
+      "id": "team.legacy-control.review.review.toolbar.on-redo",
+      "owner": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "target": "WP-9-REVIEW",
+      "evidence": ["Reapplies the next reviewed action from the bounded redo history."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/review/ReviewToolbar.tsx",
+          "sourceHash": "sha256:c48bb67e828f6d21",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
       "id": "team.legacy-control.review.review.toolbar.on-reject-all",
       "owner": "team-review",
       "disposition": "decomposed",
@@ -9140,6 +9423,57 @@
         {
           "file": "src/renderer/components/team/review/ReviewToolbar.tsx",
           "sourceHash": "sha256:78813f4b1bcf062e",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.review.saved.review.state.recovery.gate.open-discard-confirmation",
+      "owner": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "target": "WP-9-REVIEW",
+      "evidence": [
+        "Opens the explicit confirmation gate without deleting saved review recovery data."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/review/SavedReviewStateRecoveryGate.tsx",
+          "sourceHash": "sha256:5a825749b237ee5d",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.review.saved.review.state.recovery.gate.retry-load",
+      "owner": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "target": "WP-9-REVIEW",
+      "evidence": [
+        "Retries loading unreadable review recovery state while leaving the stored copy untouched."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/review/SavedReviewStateRecoveryGate.tsx",
+          "sourceHash": "sha256:3c7874e3acc27459",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.review.saved.review.state.recovery.gate.run-discard",
+      "owner": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "target": "WP-9-REVIEW",
+      "evidence": [
+        "Runs the confirmed deletion of unreadable review recovery data without changing project files."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/review/SavedReviewStateRecoveryGate.tsx",
+          "sourceHash": "sha256:71f805080d3f440f",
           "siteCount": 1
         }
       ]
@@ -9677,6 +10011,21 @@
         {
           "file": "src/renderer/components/team/TeamEmptyState.tsx",
           "sourceHash": "sha256:685d8d76af0d2b0b",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.team.empty.state.on-import-team",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": ["The empty-state import control opens the reviewed local team-import workflow."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/TeamEmptyState.tsx",
+          "sourceHash": "sha256:4eda11d99450e79c",
           "siteCount": 1
         }
       ]
@@ -10574,6 +10923,34 @@
       "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"]
     },
     {
+      "actionId": "team.review.execute-mutation",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "executeMutation",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"]
+    },
+    {
+      "actionId": "team.review.retry-mutation-recovery",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "retryMutationRecovery",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"]
+    },
+    {
+      "actionId": "team.review.restore-history",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "restoreHistory",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"]
+    },
+    {
+      "actionId": "team.review.check-conflict",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "checkConflict",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"]
+    },
+    {
       "actionId": "team.review.save-edited-file",
       "owner": "team-review",
       "source": "ReviewAPI",
@@ -10621,6 +10998,27 @@
       "source": "ReviewAPI",
       "sourceMember": "clearDecisions",
       "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"]
+    },
+    {
+      "actionId": "team.review.load-draft-history",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "loadDraftHistory",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"]
+    },
+    {
+      "actionId": "team.review.save-draft-history-entry",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "saveDraftHistoryEntry",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"]
+    },
+    {
+      "actionId": "team.review.clear-draft-history",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "clearDraftHistory",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"]
     },
     {
       "actionId": "team.message.cross-team.send",
@@ -10703,7 +11101,7 @@
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
           "sourceHash": "sha256:49a1bb745fad7f34",
-          "siteCount": 3
+          "siteCount": 2
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
@@ -10889,7 +11287,12 @@
         },
         {
           "file": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
-          "sourceHash": "sha256:310d6f37fcbf2e33",
+          "sourceHash": "sha256:04a72f139df99543",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
+          "sourceHash": "sha256:7c0c8c8af26a9ba4",
           "siteCount": 1
         },
         {
@@ -10950,6 +11353,21 @@
         {
           "file": "src/renderer/components/team/review/ChangeReviewDialog.tsx",
           "sourceHash": "sha256:05d3c7a7e9f2fd8d",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/review/ReviewActionHistoryPopover.tsx",
+          "sourceHash": "sha256:310d6f37fcbf2e33",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/review/ReviewActionHistoryPopover.tsx",
+          "sourceHash": "sha256:d23fe47e3f8ec44d",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/review/SavedReviewStateRecoveryGate.tsx",
+          "sourceHash": "sha256:28ef9554a8de86f0",
           "siteCount": 1
         },
         {
@@ -11016,6 +11434,16 @@
         {
           "file": "src/renderer/components/team/editor/EditorTabBar.tsx",
           "sourceHash": "sha256:77a2033921a6ec5e",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
+          "sourceHash": "sha256:0bae4f78a9f70b54",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
+          "sourceHash": "sha256:323fe6817e91a5ed",
           "siteCount": 1
         },
         {
@@ -11165,6 +11593,16 @@
           "siteCount": 1
         },
         {
+          "file": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
+          "sourceHash": "sha256:91365fb5a464bdfb",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
+          "sourceHash": "sha256:95bc5862872de27f",
+          "siteCount": 1
+        },
+        {
           "file": "src/renderer/components/team/members/MemberCard.tsx",
           "sourceHash": "sha256:6b592916076b2d06",
           "siteCount": 1
@@ -11201,27 +11639,27 @@
         },
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:51ea68e718a54b92",
+          "sourceHash": "sha256:3dc7b49ba3c8368d",
           "siteCount": 1
         },
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:540d6fbf5956bd35",
+          "sourceHash": "sha256:4e0ae98aa980e659",
           "siteCount": 1
         },
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:57f9387f7461288f",
+          "sourceHash": "sha256:5064b8a25a40cfd1",
           "siteCount": 1
         },
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:73481c2379d747fa",
+          "sourceHash": "sha256:797c82045a15b0de",
           "siteCount": 1
         },
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:d9fd063bad9cdf03",
+          "sourceHash": "sha256:972453b7e7123179",
           "siteCount": 1
         },
         {

@@ -208,6 +208,40 @@
       }
     },
     {
+      "key": "AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP",
+      "policyProfileId": "kp-26",
+      "semanticRole": "host_policy_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "currently_possible_target_forbidden",
+      "credentialExposureSetId": "ces-host-only-denied",
+      "authority": {
+        "path": "src/main/composition/hosted/phase2ReadBootstrapSource.ts",
+        "token": "AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP"
+      }
+    },
+    {
       "key": "AGENT_TEAMS_IDENTITY_STORE_PATH",
       "policyProfileId": "kp-18",
       "semanticRole": "selected_child_input",
@@ -828,6 +862,25 @@
       }
     },
     {
+      "key": "ANTHROPIC_CUSTOM_HEADERS",
+      "policyProfileId": "kp-08",
+      "semanticRole": "selected_child_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "optional"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "provider_child_visible_when_selected",
+      "credentialExposureSetId": "ces-provider-secret-material",
+      "authority": {
+        "path": "src/main/services/runtime/providerRuntimeEnv.ts",
+        "token": "ANTHROPIC_CUSTOM_HEADERS"
+      }
+    },
+    {
       "key": "APPDATA",
       "policyProfileId": "kp-19",
       "semanticRole": "selected_child_input",
@@ -862,8 +915,46 @@
       }
     },
     {
-      "key": "AWS_PROFILE",
-      "policyProfileId": "kp-23",
+      "key": "AWS_ACCESS_KEY_ID",
+      "policyProfileId": "kp-08",
+      "semanticRole": "selected_child_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "optional"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "provider_child_visible_when_selected",
+      "credentialExposureSetId": "ces-provider-secret-material",
+      "authority": {
+        "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+        "token": "AWS_ACCESS_KEY_ID"
+      }
+    },
+    {
+      "key": "AWS_CONFIG_FILE",
+      "policyProfileId": "kp-08",
+      "semanticRole": "selected_child_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "optional"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "provider_child_visible_when_selected",
+      "credentialExposureSetId": "ces-provider-secret-material",
+      "authority": {
+        "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+        "token": "AWS_CONFIG_FILE"
+      }
+    },
+    {
+      "key": "AWS_DEFAULT_REGION",
+      "policyProfileId": "kp-09",
       "semanticRole": "selected_child_input",
       "providerBindings": [
         {
@@ -876,13 +967,32 @@
       "childVisibility": "provider_child_visible_when_selected",
       "credentialExposureSetId": "ces-runtime-metadata",
       "authority": {
-        "path": "src/main/services/runtime/providerRuntimeEnv.test.ts",
+        "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+        "token": "AWS_DEFAULT_REGION"
+      }
+    },
+    {
+      "key": "AWS_PROFILE",
+      "policyProfileId": "kp-09",
+      "semanticRole": "selected_child_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "optional"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "provider_child_visible_when_selected",
+      "credentialExposureSetId": "ces-runtime-metadata",
+      "authority": {
+        "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
         "token": "AWS_PROFILE"
       }
     },
     {
       "key": "AWS_REGION",
-      "policyProfileId": "kp-23",
+      "policyProfileId": "kp-09",
       "semanticRole": "selected_child_input",
       "providerBindings": [
         {
@@ -895,8 +1005,65 @@
       "childVisibility": "provider_child_visible_when_selected",
       "credentialExposureSetId": "ces-runtime-metadata",
       "authority": {
-        "path": "src/main/services/runtime/providerRuntimeEnv.test.ts",
+        "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
         "token": "AWS_REGION"
+      }
+    },
+    {
+      "key": "AWS_SECRET_ACCESS_KEY",
+      "policyProfileId": "kp-08",
+      "semanticRole": "selected_child_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "optional"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "provider_child_visible_when_selected",
+      "credentialExposureSetId": "ces-provider-secret-material",
+      "authority": {
+        "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+        "token": "AWS_SECRET_ACCESS_KEY"
+      }
+    },
+    {
+      "key": "AWS_SESSION_TOKEN",
+      "policyProfileId": "kp-08",
+      "semanticRole": "selected_child_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "optional"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "provider_child_visible_when_selected",
+      "credentialExposureSetId": "ces-provider-secret-material",
+      "authority": {
+        "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+        "token": "AWS_SESSION_TOKEN"
+      }
+    },
+    {
+      "key": "AWS_SHARED_CREDENTIALS_FILE",
+      "policyProfileId": "kp-08",
+      "semanticRole": "selected_child_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "optional"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "provider_child_visible_when_selected",
+      "credentialExposureSetId": "ces-provider-secret-material",
+      "authority": {
+        "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+        "token": "AWS_SHARED_CREDENTIALS_FILE"
       }
     },
     {
@@ -3869,6 +4036,44 @@
       "authority": {
         "path": "src/main/services/runtime/agentChildProcessPreflight.ts",
         "token": "npm_config_script_shell"
+      }
+    },
+    {
+      "key": "NVM_HOME",
+      "policyProfileId": "kp-39",
+      "semanticRole": "host_policy_input",
+      "providerBindings": [
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "platformScope": "windows_only",
+      "childVisibility": "currently_possible_target_forbidden",
+      "credentialExposureSetId": "ces-host-only-denied",
+      "authority": {
+        "path": "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts",
+        "token": "NVM_HOME"
+      }
+    },
+    {
+      "key": "NVM_SYMLINK",
+      "policyProfileId": "kp-39",
+      "semanticRole": "host_policy_input",
+      "providerBindings": [
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "platformScope": "windows_only",
+      "childVisibility": "currently_possible_target_forbidden",
+      "credentialExposureSetId": "ces-host-only-denied",
+      "authority": {
+        "path": "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts",
+        "token": "NVM_SYMLINK"
       }
     },
     {

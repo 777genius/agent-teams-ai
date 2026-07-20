@@ -152,11 +152,20 @@
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_AUTH_TOKEN",
         "ANTHROPIC_BASE_URL",
+        "ANTHROPIC_CUSTOM_HEADERS",
         "ANTHROPIC_AWS_WORKSPACE_ID",
         "CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR",
         "CLAUDE_CODE_OAUTH_TOKEN",
         "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
-        "ANTHROPIC_AWS_API_KEY"
+        "ANTHROPIC_AWS_API_KEY",
+        "AWS_PROFILE",
+        "AWS_REGION",
+        "AWS_DEFAULT_REGION",
+        "AWS_CONFIG_FILE",
+        "AWS_SHARED_CREDENTIALS_FILE",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_SESSION_TOKEN"
       ],
       "provenance": "explicit environment, approved stored connection, Claude credential storage, or compatible endpoint settings",
       "providers": ["anthropic"],
@@ -387,25 +396,16 @@
       "discoveryDisposition": "target_only_prohibition"
     },
     {
-      "id": "ambient-backend-test-characterization",
-      "keys": ["AWS_PROFILE", "AWS_REGION"],
-      "provenance": "generic ambient environment preservation characterized by the provider runtime environment fixture",
-      "providers": ["anthropic"],
-      "classification": "optional",
-      "targetRule": "admit only for the selected Bedrock backend and resolve through the execution-unit policy",
-      "source": "src/main/services/runtime/providerRuntimeEnv.ts",
-      "sourceToken": "NodeJS.ProcessEnv",
-      "discoveryDisposition": "fixture_bound",
-      "keyBindings": [
-        {
-          "key": "AWS_PROFILE",
-          "path": "src/main/services/runtime/providerRuntimeEnv.test.ts"
-        },
-        {
-          "key": "AWS_REGION",
-          "path": "src/main/services/runtime/providerRuntimeEnv.test.ts"
-        }
-      ]
+      "id": "host-runtime-discovery-inputs",
+      "keys": ["NVM_HOME", "NVM_SYMLINK"],
+      "provenance": "Windows host environment used only to discover an installed native OpenCode executable",
+      "providers": ["opencode"],
+      "classification": "forbidden",
+      "currentBehavior": "read by the desktop host during OpenCode runtime discovery",
+      "targetRule": "consume only during host runtime discovery and keep absent from the managed OpenCode child",
+      "source": "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts",
+      "sourceToken": "NVM_SYMLINK",
+      "discoveryDisposition": "source_discovered"
     },
     {
       "id": "portable-platform-and-network-inputs",
@@ -442,6 +442,7 @@
         "AGENT_TEAMS_DISABLE_GPU",
         "AGENT_TEAMS_ELECTRON_CLAUDE_ROOT",
         "AGENT_TEAMS_ELECTRON_USER_DATA_DIR",
+        "AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP",
         "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS",
         "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND",
         "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON",
@@ -678,10 +679,6 @@
         "path": "docs/hosted-web-e2e-completion-plan.md"
       },
       {
-        "id": "sp-34",
-        "path": "src/main/services/runtime/providerRuntimeEnv.test.ts"
-      },
-      {
         "id": "sp-35",
         "path": "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts"
       },
@@ -776,6 +773,10 @@
       {
         "id": "sp-58",
         "path": "src/features/workspace-trust/main/infrastructure/workspaceTrustPreflightEnv.ts"
+      },
+      {
+        "id": "sp-59",
+        "path": "src/main/composition/hosted/phase2ReadBootstrapSource.ts"
       }
     ],
     "rows": [
@@ -826,10 +827,19 @@
       ["ANTHROPIC_AUTH_TOKEN", "anthropic-auth", "kp-08", "sp-20"],
       ["ANTHROPIC_BASE_URL", "anthropic-auth", "kp-09", "sp-19"],
       ["ANTHROPIC_AWS_WORKSPACE_ID", "anthropic-auth", "kp-09", "sp-11"],
+      ["ANTHROPIC_CUSTOM_HEADERS", "anthropic-auth", "kp-08", "sp-11"],
       ["CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR", "anthropic-auth", "kp-08", "sp-21"],
       ["CLAUDE_CODE_OAUTH_TOKEN", "anthropic-auth", "kp-08", "sp-21"],
       ["CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR", "anthropic-auth", "kp-08", "sp-21"],
       ["ANTHROPIC_AWS_API_KEY", "anthropic-auth", "kp-08", "sp-14"],
+      ["AWS_PROFILE", "anthropic-auth", "kp-09", "sp-57"],
+      ["AWS_REGION", "anthropic-auth", "kp-09", "sp-57"],
+      ["AWS_DEFAULT_REGION", "anthropic-auth", "kp-09", "sp-57"],
+      ["AWS_CONFIG_FILE", "anthropic-auth", "kp-08", "sp-57"],
+      ["AWS_SHARED_CREDENTIALS_FILE", "anthropic-auth", "kp-08", "sp-57"],
+      ["AWS_ACCESS_KEY_ID", "anthropic-auth", "kp-08", "sp-57"],
+      ["AWS_SECRET_ACCESS_KEY", "anthropic-auth", "kp-08", "sp-57"],
+      ["AWS_SESSION_TOKEN", "anthropic-auth", "kp-08", "sp-57"],
       ["CLAUDE_TEAM_ANTHROPIC_AUTH_MODE", "anthropic-helper-metadata", "kp-10", "sp-21"],
       [
         "CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH",
@@ -924,8 +934,8 @@
         "kp-22",
         "sp-33"
       ],
-      ["AWS_PROFILE", "ambient-backend-test-characterization", "kp-23", "sp-34"],
-      ["AWS_REGION", "ambient-backend-test-characterization", "kp-23", "sp-34"],
+      ["NVM_HOME", "host-runtime-discovery-inputs", "kp-39", "sp-35"],
+      ["NVM_SYMLINK", "host-runtime-discovery-inputs", "kp-39", "sp-35"],
       ["APPDATA", "portable-platform-and-network-inputs", "kp-19", "sp-35"],
       ["CURL_CA_BUNDLE", "portable-platform-and-network-inputs", "kp-24", "sp-14"],
       ["EDITOR", "portable-platform-and-network-inputs", "kp-24", "sp-05"],
@@ -946,6 +956,12 @@
       ["AGENT_TEAMS_DISABLE_GPU", "host-only-and-injection-inputs", "kp-26", "sp-08"],
       ["AGENT_TEAMS_ELECTRON_CLAUDE_ROOT", "host-only-and-injection-inputs", "kp-26", "sp-37"],
       ["AGENT_TEAMS_ELECTRON_USER_DATA_DIR", "host-only-and-injection-inputs", "kp-26", "sp-37"],
+      [
+        "AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-59"
+      ],
       ["AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS", "host-only-and-injection-inputs", "kp-26", "sp-08"],
       [
         "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND",
@@ -1699,27 +1715,6 @@
       }
     },
     {
-      "id": "kp-23",
-      "sourceClass": "checked_fixture_binding",
-      "owner": "process_execution_unit_policy",
-      "executionUnitIds": ["unit-primary-provisioning"],
-      "providerBindings": [
-        {
-          "providerId": "anthropic",
-          "backendFamily": "provisioning_cli_primary",
-          "versionScope": "canonical-base-c72fd2018-source-observed",
-          "targetDisposition": "optional"
-        }
-      ],
-      "credentialExposureSetIds": ["ces-runtime-metadata"],
-      "secretClass": "non_secret_configuration",
-      "childVisibility": "provider_child_visible_when_selected",
-      "redactionRule": "record key name and policy class only; redact values",
-      "claimStatus": "source_observed_not_target_verified",
-      "platformScope": "cross_platform_or_provider_conditional",
-      "semanticRole": "selected_child_input"
-    },
-    {
       "id": "kp-24",
       "sourceClass": "production_source_census",
       "owner": "process_execution_unit_policy",
@@ -2437,6 +2432,27 @@
       "claimStatus": "source_observed_not_target_verified",
       "platformScope": "cross_platform_or_provider_conditional",
       "semanticRole": "removed_child_key"
+    },
+    {
+      "id": "kp-39",
+      "sourceClass": "production_source_census",
+      "owner": "desktop_host_policy",
+      "executionUnitIds": ["unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-host-only-denied"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "currently_possible_target_forbidden",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "windows_only",
+      "semanticRole": "host_policy_input"
     }
   ]
 }

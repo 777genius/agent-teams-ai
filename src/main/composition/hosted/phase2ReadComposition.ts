@@ -467,7 +467,9 @@ async function closeActiveFileHandle(
   } catch (error) {
     firstError ??= error;
   }
-  if (firstError) throw firstError;
+  if (firstError === undefined) return;
+  if (firstError instanceof Error) throw firstError;
+  throw new Error('phase2-read-file-handle-close-failed', { cause: firstError });
 }
 
 async function openActiveFileHandle(

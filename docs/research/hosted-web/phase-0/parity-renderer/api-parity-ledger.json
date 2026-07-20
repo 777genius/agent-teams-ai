@@ -7,10 +7,10 @@
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
   "counts": {
     "TeamsAPI": 86,
-    "ReviewAPI": 20,
+    "ReviewAPI": 29,
     "CrossTeamAPI": 3
   },
-  "historicalCountDifference": "none: pinned AST remains exactly 86/20/3",
+  "historicalCountDifference": "ReviewAPI +9 since the phase-start AST: current 86/29/3 versus historical 86/20/3",
   "members": [
     {
       "stableId": "P0.W1.API.TeamsAPI.list",
@@ -1741,12 +1741,66 @@
       "targetWorkPackage": "WP-9-REVIEW"
     },
     {
+      "stableId": "P0.W1.API.ReviewAPI.executeMutation",
+      "source": "ReviewAPI",
+      "sourceMember": "executeMutation",
+      "legacySignature": "executeMutation: (request: ExecuteReviewMutationRequest) => Promise<ExecuteReviewMutationResult>;",
+      "sourceSignatureHash": "sha256:2c9bc1b401269033f830b4e71564836fdbf2b416bdd7e505646c7e1ca04ca45c",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.execute-mutation",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.retryMutationRecovery",
+      "source": "ReviewAPI",
+      "sourceMember": "retryMutationRecovery",
+      "legacySignature": "retryMutationRecovery: (request: RetryReviewMutationRecoveryRequest) => Promise<RetryReviewMutationRecoveryResult>;",
+      "sourceSignatureHash": "sha256:c4145fe4a3ac29382d8fde44b70507e9c96f7cd93b7e3901490bd035504e082e",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.retry-mutation-recovery",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.restoreHistory",
+      "source": "ReviewAPI",
+      "sourceMember": "restoreHistory",
+      "legacySignature": "restoreHistory: (request: RestoreReviewHistoryRequest) => Promise<RestoreReviewHistoryResult>;",
+      "sourceSignatureHash": "sha256:c18ae82e0476fcfe3177258989510c108d1173f50291b032c383045e72a1eb10",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.restore-history",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
       "stableId": "P0.W1.API.ReviewAPI.checkConflict",
       "source": "ReviewAPI",
       "sourceMember": "checkConflict",
-      "legacySignature": "checkConflict: (filePath: string, expectedModified: string) => Promise<ConflictCheckResult>;",
-      "sourceSignatureHash": "sha256:25c7d0628a45986539955589e49f247a50fc7f278672dc7d1594b2bbf26feebd",
-      "rendererCallers": [],
+      "legacySignature": "checkConflict: (scope: ReviewFileScope, filePath: string, expectedModified: string) => Promise<ConflictCheckResult>;",
+      "sourceSignatureHash": "sha256:30fbf403bc90071dcf528cb50c73a9ecdace09c65ffba9d964005473a067f60b",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -1762,8 +1816,8 @@
       "stableId": "P0.W1.API.ReviewAPI.rejectHunks",
       "source": "ReviewAPI",
       "sourceMember": "rejectHunks",
-      "legacySignature": "rejectHunks: (filePath: string, original: string, modified: string, hunkIndices: number[], snippets: SnippetDiff[]) => Promise<RejectResult>;",
-      "sourceSignatureHash": "sha256:d28f9395b42112391a9947a93e15304f192a536b72d888cbd35ff2ffb04d11d7",
+      "legacySignature": "rejectHunks: (scope: ReviewFileScope, filePath: string, hunkIndices: number[]) => Promise<RejectResult>;",
+      "sourceSignatureHash": "sha256:4b728f7955495f31375c868956649f108d7f09fec70fb727693a68f52d597ac1",
       "rendererCallers": [],
       "owningFeature": "team-review",
       "disposition": "decomposed",
@@ -1780,8 +1834,8 @@
       "stableId": "P0.W1.API.ReviewAPI.rejectFile",
       "source": "ReviewAPI",
       "sourceMember": "rejectFile",
-      "legacySignature": "rejectFile: (filePath: string, original: string, modified: string) => Promise<RejectResult>;",
-      "sourceSignatureHash": "sha256:f420cfe5f2a5f53d95752173d5ca07d982861a3ffc1324f63f3efa3e2f0e19d8",
+      "legacySignature": "rejectFile: (scope: ReviewFileScope, filePath: string) => Promise<RejectResult>;",
+      "sourceSignatureHash": "sha256:9551694f09775b0da45d681ea4babc754de84c7cc363f780a41f43253fc46022",
       "rendererCallers": [],
       "owningFeature": "team-review",
       "disposition": "decomposed",
@@ -1816,8 +1870,8 @@
       "stableId": "P0.W1.API.ReviewAPI.saveEditedFile",
       "source": "ReviewAPI",
       "sourceMember": "saveEditedFile",
-      "legacySignature": "saveEditedFile: (filePath: string, content: string, projectPath?: string) => Promise<{ success: boolean; }>;",
-      "sourceSignatureHash": "sha256:f1f925a6b07f93d46320b7fa3ae49dbae4c63531f89415e7a00895317f459219",
+      "legacySignature": "saveEditedFile: (scope: ReviewFileScope, filePath: string, content: string, expectedCurrentContent: string | null) => Promise<{ success: boolean; }>;",
+      "sourceSignatureHash": "sha256:a1b57037833b89da5b0f5008e0b20c0e269dc613c523b9224235b25784b29655",
       "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
       "owningFeature": "team-review",
       "disposition": "decomposed",
@@ -1828,6 +1882,60 @@
         "revision/idempotency/event obligation"
       ],
       "actionId": "team.review.save-edited-file",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.deleteEditedFile",
+      "source": "ReviewAPI",
+      "sourceMember": "deleteEditedFile",
+      "legacySignature": "deleteEditedFile: (scope: ReviewFileScope, filePath: string, expectedCurrentContent: string) => Promise<{ success: boolean; }>;",
+      "sourceSignatureHash": "sha256:f6a7bb25103609050cfbaf16962113ca9dead02d22c6e2eccdad315b5b652150",
+      "rendererCallers": [],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.delete-edited-file",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.restoreRejectedRename",
+      "source": "ReviewAPI",
+      "sourceMember": "restoreRejectedRename",
+      "legacySignature": "restoreRejectedRename: (scope: ReviewFileScope, filePath: string, expectation: ReviewRenameRecoveryExpectation) => Promise<{ success: boolean; }>;",
+      "sourceSignatureHash": "sha256:bddbcd802e876d4b5a2dd6e784d1769021931c999cc7579d393ceb50b5533e8f",
+      "rendererCallers": [],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.restore-rejected-rename",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.reapplyRejectedRename",
+      "source": "ReviewAPI",
+      "sourceMember": "reapplyRejectedRename",
+      "legacySignature": "reapplyRejectedRename: (scope: ReviewFileScope, filePath: string, expectation: ReviewRenameRecoveryExpectation) => Promise<{ success: boolean; }>;",
+      "sourceSignatureHash": "sha256:ee5c9578b7b3c9eeacdd23572f27fa1b29facdd4bfd3bbc9d0951b152a8a8806",
+      "rendererCallers": [],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.reapply-rejected-rename",
       "targetWorkPackage": "WP-9-REVIEW"
     },
     {
@@ -1888,8 +1996,8 @@
       "stableId": "P0.W1.API.ReviewAPI.loadDecisions",
       "source": "ReviewAPI",
       "sourceMember": "loadDecisions",
-      "legacySignature": "loadDecisions: (teamName: string, scopeKey: string, scopeToken?: string) => Promise<{ hunkDecisions: Record<string, HunkDecision>; fileDecisions: Record<string, HunkDecision>; hunkContextHashesByFile?: Record<string, Record<number, string>>; } | null>;",
-      "sourceSignatureHash": "sha256:bfb689f9b2fdfc22caad21b56ecfe881c180b9efa0f3a566eaa0f906f71b168f",
+      "legacySignature": "loadDecisions: (teamName: string, scopeKey: string, scopeToken?: string) => Promise<{ hunkDecisions: Record<string, HunkDecision>; fileDecisions: Record<string, HunkDecision>; hunkContextHashesByFile?: Record<string, Record<number, string>>; reviewActionHistory: ReviewUndoAction[]; reviewRedoHistory: ReviewRedoAction[]; revision: number; } | null>;",
+      "sourceSignatureHash": "sha256:6ab13b98b0479ffd09a31b50d9c5e8cda9eb75d409c40c8298f2dbc769e455b1",
       "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
       "owningFeature": "team-review",
       "disposition": "decomposed",
@@ -1906,8 +2014,8 @@
       "stableId": "P0.W1.API.ReviewAPI.saveDecisions",
       "source": "ReviewAPI",
       "sourceMember": "saveDecisions",
-      "legacySignature": "saveDecisions: (teamName: string, scopeKey: string, scopeToken: string, hunkDecisions: Record<string, HunkDecision>, fileDecisions: Record<string, HunkDecision>, hunkContextHashesByFile?: Record<string, Record<number, string>>) => Promise<void>;",
-      "sourceSignatureHash": "sha256:788dc535c18ff17593cce8103dfa1ec9118c05cc322e9ac3b9524adf114eb5ea",
+      "legacySignature": "saveDecisions: (teamName: string, scopeKey: string, scopeToken: string, hunkDecisions: Record<string, HunkDecision>, fileDecisions: Record<string, HunkDecision>, hunkContextHashesByFile?: Record<string, Record<number, string>>, reviewActionHistory?: ReviewUndoAction[], expectedRevision?: number, reviewRedoHistory?: ReviewRedoAction[]) => Promise<{ revision: number; }>;",
+      "sourceSignatureHash": "sha256:7ed4262031338e9ab497683f1c9dca24c412e098d2d90832d473b53b69be93ff",
       "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
       "owningFeature": "team-review",
       "disposition": "decomposed",
@@ -1924,8 +2032,8 @@
       "stableId": "P0.W1.API.ReviewAPI.clearDecisions",
       "source": "ReviewAPI",
       "sourceMember": "clearDecisions",
-      "legacySignature": "clearDecisions: (teamName: string, scopeKey: string, scopeToken?: string) => Promise<void>;",
-      "sourceSignatureHash": "sha256:eff6291a3095d18a4f7347b1034d837f40c7fe8ba92e4ecd06879591f81792ac",
+      "legacySignature": "clearDecisions: (teamName: string, scopeKey: string, scopeToken?: string, expectedRevision?: number) => Promise<{ revision: number; }>;",
+      "sourceSignatureHash": "sha256:fbbb25abafcae84386d6b51bb49167c699b3e5a4a92c3c377103bb3415b5a625",
       "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
       "owningFeature": "team-review",
       "disposition": "decomposed",
@@ -1936,6 +2044,60 @@
         "revision/idempotency/event obligation"
       ],
       "actionId": "team.review.clear-decisions",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.loadDraftHistory",
+      "source": "ReviewAPI",
+      "sourceMember": "loadDraftHistory",
+      "legacySignature": "loadDraftHistory: (teamName: string, scopeKey: string, scopeToken: string) => Promise<ReviewDraftHistorySnapshot | null>;",
+      "sourceSignatureHash": "sha256:1db8053abb2608392cc092faed24b49ed027c0cfaa460f91497678d8dc17abab",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.load-draft-history",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.saveDraftHistoryEntry",
+      "source": "ReviewAPI",
+      "sourceMember": "saveDraftHistoryEntry",
+      "legacySignature": "saveDraftHistoryEntry: (teamName: string, scopeKey: string, scopeToken: string, entry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>, expectedRevision: number, expectedGeneration: string | null) => Promise<ReviewDraftHistoryEntry>;",
+      "sourceSignatureHash": "sha256:5533291b443626b87f68f5a4dba237e5189ce784c0531cc21e4b8fadab3c84c0",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.save-draft-history-entry",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.clearDraftHistory",
+      "source": "ReviewAPI",
+      "sourceMember": "clearDraftHistory",
+      "legacySignature": "clearDraftHistory: (teamName: string, scopeKey: string, scopeToken: string, filePath?: string, expectedRevision?: number, expectedGeneration?: string | null) => Promise<void>;",
+      "sourceSignatureHash": "sha256:af609ad313105105ada4771728fc5bf267d354117b874514baf510875807b31f",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.clear-draft-history",
       "targetWorkPackage": "WP-9-REVIEW"
     },
     {
