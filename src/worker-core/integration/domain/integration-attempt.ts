@@ -1,10 +1,7 @@
 import { isAbsolute, posix } from "node:path";
 
 import type { BaseRevisionStatus } from "../../base-revision";
-import {
-  IntegrationError,
-  IntegrationErrorReason,
-} from "./integration-errors";
+import { IntegrationError, IntegrationErrorReason } from "./integration-errors";
 
 export enum IntegrationAttemptStatus {
   Opened = "opened",
@@ -162,7 +159,9 @@ export function openIntegrationAttempt(
       message: "integration_attempt_requires_approved_review",
     });
   }
-  const expectedFiles = normalizeExpectedFiles(input.reviewDecision.approvedFiles);
+  const expectedFiles = normalizeExpectedFiles(
+    input.reviewDecision.approvedFiles,
+  );
   const merge = input.merge
     ? normalizeMergeIntegrationPlan(input.merge, input.workerOutput)
     : undefined;
@@ -230,6 +229,7 @@ export function markChecksRunning(
   assertStatus(attempt, [
     IntegrationAttemptStatus.Applied,
     IntegrationAttemptStatus.ChecksFailed,
+    IntegrationAttemptStatus.ChecksRunning,
   ]);
   return {
     ...attempt,
@@ -260,20 +260,27 @@ export function allCheckRunsPassed(checkRuns: readonly CheckRun[]): boolean {
 
 export function integrationStatusForCheckRuns(
   checkRuns: readonly CheckRun[],
-): IntegrationAttemptStatus.ChecksFailed | IntegrationAttemptStatus.ChecksPassed {
+):
+  | IntegrationAttemptStatus.ChecksFailed
+  | IntegrationAttemptStatus.ChecksPassed {
   return rollupCheckRuns(checkRuns).status;
 }
 
-export function rollupCheckRuns(checkRuns: readonly CheckRun[]): CheckRunRollup {
+export function rollupCheckRuns(
+  checkRuns: readonly CheckRun[],
+): CheckRunRollup {
   const failedCheckIds = [
-    ...new Set(checkRuns
-      .filter((run) => run.status !== CheckRunStatus.Passed)
-      .map((run) => run.checkId)),
+    ...new Set(
+      checkRuns
+        .filter((run) => run.status !== CheckRunStatus.Passed)
+        .map((run) => run.checkId),
+    ),
   ].sort();
   return {
-    status: failedCheckIds.length > 0
-      ? IntegrationAttemptStatus.ChecksFailed
-      : IntegrationAttemptStatus.ChecksPassed,
+    status:
+      failedCheckIds.length > 0
+        ? IntegrationAttemptStatus.ChecksFailed
+        : IntegrationAttemptStatus.ChecksPassed,
     failedCheckIds,
   };
 }
@@ -495,8 +502,12 @@ export function markRejected(
   };
 }
 
-export function normalizeExpectedFiles(paths: readonly string[]): readonly string[] {
-  const normalized = [...new Set(paths.map(normalizeProjectRelativePath))].sort();
+export function normalizeExpectedFiles(
+  paths: readonly string[],
+): readonly string[] {
+  const normalized = [
+    ...new Set(paths.map(normalizeProjectRelativePath)),
+  ].sort();
   if (normalized.length === 0) {
     throw new IntegrationError({
       reason: IntegrationErrorReason.InvalidPath,
@@ -535,7 +546,9 @@ export function assertFilesWithinExpected(
   expectedFiles: readonly string[],
 ): void {
   const expected = new Set(normalizeExpectedFiles(expectedFiles));
-  const outside = normalizeExpectedFiles(files).filter((file) => !expected.has(file));
+  const outside = normalizeExpectedFiles(files).filter(
+    (file) => !expected.has(file),
+  );
   if (outside.length > 0) {
     throw new IntegrationError({
       reason: IntegrationErrorReason.PathOutsideExpectedFiles,

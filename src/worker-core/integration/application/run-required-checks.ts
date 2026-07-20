@@ -53,7 +53,7 @@ async function runRequiredChecksLocked(
   deps: RunRequiredChecksDeps,
   attempt: IntegrationAttempt,
 ): Promise<IntegrationAttempt> {
-  if (requiredChecksAlreadyInProgressOrPassed(attempt)) {
+  if (requiredChecksAlreadyPassed(attempt)) {
     return attempt;
   }
   const startedAt = nowIso(deps.clock);
@@ -91,13 +91,8 @@ function assertSameTargetWorkspace(
   }
 }
 
-function requiredChecksAlreadyInProgressOrPassed(
-  attempt: IntegrationAttempt,
-): boolean {
-  return (
-    attempt.status === IntegrationAttemptStatus.ChecksRunning ||
-    attempt.status === IntegrationAttemptStatus.ChecksPassed
-  );
+function requiredChecksAlreadyPassed(attempt: IntegrationAttempt): boolean {
+  return attempt.status === IntegrationAttemptStatus.ChecksPassed;
 }
 
 async function runDeclaredRequiredChecks(

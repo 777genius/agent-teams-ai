@@ -237,12 +237,50 @@ describe("runRequiredChecks", () => {
     expect(checked.status).toBe(IntegrationAttemptStatus.ChecksFailed);
   });
 
-  it.each([
-    IntegrationAttemptStatus.ChecksRunning,
-    IntegrationAttemptStatus.ChecksPassed,
-  ])("does not dispatch checks for %s attempts", async (status) => {
+  it("restarts checks after the previous lock owner left checks_running", async () => {
     const attempt = createAttempt({
-      status,
+      status: IntegrationAttemptStatus.ChecksRunning,
+      requiredChecks: [
+        {
+          checkId: "test:memory",
+          command: ["npm", "test", "--", "memory"],
+        },
+      ],
+    });
+    const store = new MemoryAttemptStore(attempt);
+    const checks = new RecordingCheckRunner([CheckRunStatus.Passed]);
+
+    const checked = await runRequiredChecks(
+      {
+        store,
+        checks,
+        locks: immediateWorkspaceLock(),
+        clock: new SequenceClock([
+          "2026-01-01T00:00:02.000Z",
+          "2026-01-01T00:00:03.000Z",
+          "2026-01-01T00:00:04.000Z",
+        ]),
+      },
+      {
+        attemptId: attempt.attemptId,
+      },
+    );
+
+    expect(checked.status).toBe(IntegrationAttemptStatus.ChecksPassed);
+    expect(checks.calls).toHaveLength(1);
+    expect(store.updates.map((update) => update.status)).toEqual([
+      IntegrationAttemptStatus.ChecksRunning,
+      IntegrationAttemptStatus.ChecksPassed,
+    ]);
+    expect(store.events.map((event) => event.type)).toEqual([
+      IntegrationAuditEventType.ChecksStarted,
+      IntegrationAuditEventType.ChecksPassed,
+    ]);
+  });
+
+  it("does not dispatch checks for a checks_passed attempt", async () => {
+    const attempt = createAttempt({
+      status: IntegrationAttemptStatus.ChecksPassed,
       requiredChecks: [
         {
           checkId: "test:memory",
