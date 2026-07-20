@@ -1,33 +1,33 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { describe, expect, it, vi } from 'vitest';
 
 import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
-import {
-  buildOpenCodeScenarioTeamRequest,
-  loadOpenCodeSemanticScenario,
-  materializeOpenCodeScenarioProject,
-  materializeOpenCodeScenarioTasks,
-  parseOpenCodeE2EModelList,
-  taskRefForScenario,
-  type OpenCodeSemanticScenario,
-} from './openCodeSemanticScenarioHarness';
+
 import {
   createOpenCodeLiveHarness,
   getRuntimeTranscript,
+  type InboxMessage,
   readInboxMessages,
   waitForMemberInboxMessage,
   waitForOpenCodeLanesStopped,
   waitForOpenCodeMemberIdle,
   waitForOpenCodePeerRelay,
   waitForUserInboxReply,
-  type InboxMessage,
 } from './openCodeLiveTestHarness';
+import {
+  buildOpenCodeScenarioTeamRequest,
+  loadOpenCodeSemanticScenario,
+  materializeOpenCodeScenarioProject,
+  materializeOpenCodeScenarioTasks,
+  type OpenCodeSemanticScenario,
+  parseOpenCodeE2EModelList,
+  taskRefForScenario,
+} from './openCodeSemanticScenarioHarness';
 
 import type {
   AgentActionMode,
@@ -218,9 +218,12 @@ liveDescribe('OpenCode semantic model gauntlet live e2e', () => {
         process.env.OPENCODE_E2E_GAUNTLET_MIN_AVERAGE_SCORE,
         90
       );
-      const minimumSuccessfulRuns = parsePositiveInteger(
-        process.env.OPENCODE_E2E_GAUNTLET_MIN_SUCCESSFUL_RUNS,
-        Math.max(3, runsPerModel)
+      const minimumSuccessfulRuns = Math.max(
+        3,
+        parsePositiveInteger(
+          process.env.OPENCODE_E2E_GAUNTLET_MIN_SUCCESSFUL_RUNS,
+          Math.max(3, runsPerModel)
+        )
       );
       const minimumConsistencyScore = parsePositiveInteger(
         process.env.OPENCODE_E2E_GAUNTLET_MIN_CONSISTENCY_SCORE,
@@ -348,6 +351,22 @@ describe('OpenCode semantic model gauntlet report helpers', () => {
     expect(qualified).toBe(false);
     expect(verdict).toBe('strong-candidate');
     expect(confidence).toBe('low');
+  });
+
+  it('does not allow an explicit weak threshold to promote a single run', () => {
+    const qualified = isModelQualified({
+      averageScore: 100,
+      successfulRuns: 1,
+      minimumAverageScore: 1,
+      minimumSuccessfulRuns: 1,
+      minimumConsistencyScore: 1,
+      hardFailures: 0,
+      providerInfraFailures: 0,
+      harnessFailures: 0,
+      consistencyScore: 100,
+    });
+
+    expect(qualified).toBe(false);
   });
 
   it('does not mark failed high-score runs as strong candidates', () => {
@@ -1531,9 +1550,11 @@ function isModelQualified(input: {
   harnessFailures: number;
   consistencyScore: number;
 }): boolean {
+  const requiredSuccessfulRuns = Math.max(3, input.minimumSuccessfulRuns);
+
   return (
     input.averageScore >= input.minimumAverageScore &&
-    input.successfulRuns >= input.minimumSuccessfulRuns &&
+    input.successfulRuns >= requiredSuccessfulRuns &&
     input.consistencyScore >= input.minimumConsistencyScore &&
     input.hardFailures === 0 &&
     input.providerInfraFailures === 0 &&

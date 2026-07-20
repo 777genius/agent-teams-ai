@@ -25,16 +25,20 @@ const liveDescribe =
     ? describe
     : describe.skip;
 
-const PROJECT_PATH = process.env.OPENCODE_E2E_PROJECT_PATH?.trim() || process.cwd();
 const DEFAULT_MODEL = 'opencode/big-pickle';
 
 liveDescribe('OpenCode semantic messaging live e2e', () => {
   let tempDir: string;
   let tempClaudeRoot: string;
+  let projectPath: string;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-semantic-message-e2e-'));
     tempClaudeRoot = path.join(tempDir, '.claude');
+    projectPath = await resolveIsolatedSemanticProjectPath(
+      tempDir,
+      process.env.OPENCODE_E2E_PROJECT_PATH
+    );
     await fs.mkdir(tempClaudeRoot, { recursive: true });
     setClaudeBasePathOverride(tempClaudeRoot);
   });
@@ -54,7 +58,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
       const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness({
         tempDir,
         selectedModel: process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL,
-        projectPath: PROJECT_PATH,
+        projectPath,
       });
 
       const teamName = `opencode-semantic-message-${Date.now()}`;
@@ -66,7 +70,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
         const { runId } = await svc.createTeam(
           {
             teamName,
-            cwd: PROJECT_PATH,
+            cwd: projectPath,
             providerId: 'opencode',
             model: selectedModel,
             skipPermissions: true,
@@ -140,7 +144,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
             bridgeClient,
             teamName,
             memberName,
-            projectPath: PROJECT_PATH,
+            projectPath,
           });
           throw new Error(
             `${error instanceof Error ? error.message : String(error)}\nTranscript: ${JSON.stringify(
@@ -170,7 +174,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
       const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness({
         tempDir,
         selectedModel: process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL,
-        projectPath: PROJECT_PATH,
+        projectPath,
       });
 
       const teamName = `opencode-concurrent-lane-message-${Date.now()}`;
@@ -184,7 +188,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
         const { runId } = await svc.createTeam(
           {
             teamName,
-            cwd: PROJECT_PATH,
+            cwd: projectPath,
             providerId: 'opencode',
             model: selectedModel,
             skipPermissions: true,
@@ -274,7 +278,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
               bridgeClient,
               teamName,
               memberName: 'alice',
-              projectPath: PROJECT_PATH,
+              projectPath,
             });
             return JSON.stringify(transcript).includes(aliceToken);
           }, 30_000),
@@ -283,7 +287,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
               bridgeClient,
               teamName,
               memberName: 'bob',
-              projectPath: PROJECT_PATH,
+              projectPath,
             });
             return JSON.stringify(transcript).includes(bobToken);
           }, 30_000),
@@ -303,7 +307,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
       const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness({
         tempDir,
         selectedModel: process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL,
-        projectPath: PROJECT_PATH,
+        projectPath,
       });
 
       const teamName = `opencode-lead-message-${Date.now()}`;
@@ -316,7 +320,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
         const { runId } = await svc.createTeam(
           {
             teamName,
-            cwd: PROJECT_PATH,
+            cwd: projectPath,
             providerId: 'opencode',
             model: selectedModel,
             skipPermissions: true,
@@ -406,7 +410,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
             bridgeClient,
             teamName,
             memberName: leadName,
-            projectPath: PROJECT_PATH,
+            projectPath,
           });
           throw new Error(
             `${error instanceof Error ? error.message : String(error)}\nLast relay: ${JSON.stringify(
@@ -436,7 +440,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
       const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness({
         tempDir,
         selectedModel: process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL,
-        projectPath: PROJECT_PATH,
+        projectPath,
       });
 
       const teamName = `opencode-peer-message-${Date.now()}`;
@@ -455,7 +459,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
         const { runId } = await svc.createTeam(
           {
             teamName,
-            cwd: PROJECT_PATH,
+            cwd: projectPath,
             providerId: 'opencode',
             model: selectedModel,
             skipPermissions: true,
@@ -542,7 +546,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
             bridgeClient,
             teamName,
             memberName: senderName,
-            projectPath: PROJECT_PATH,
+            projectPath,
           });
           throw new Error(
             `${error instanceof Error ? error.message : String(error)}\n${senderName} transcript: ${JSON.stringify(
@@ -570,13 +574,13 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
               bridgeClient,
               teamName,
               memberName: senderName,
-              projectPath: PROJECT_PATH,
+              projectPath,
             }),
             getRuntimeTranscript({
               bridgeClient,
               teamName,
               memberName: recipientName,
-              projectPath: PROJECT_PATH,
+              projectPath,
             }),
           ]);
           throw new Error(
@@ -601,3 +605,62 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
     360_000
   );
 });
+
+describe('OpenCode semantic messaging sandbox safety', () => {
+  it('creates the default project inside the per-test temp directory', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-semantic-safety-'));
+
+    try {
+      const projectPath = await resolveIsolatedSemanticProjectPath(tempDir);
+      const realTempDir = await fs.realpath(tempDir);
+
+      expect(path.relative(realTempDir, projectPath)).toBe('sandbox-project');
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects an explicitly configured project outside the system temp directory', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-semantic-safety-'));
+
+    try {
+      await expect(resolveIsolatedSemanticProjectPath(tempDir, process.cwd())).rejects.toThrow(
+        'must resolve inside the system temp directory'
+      );
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
+  });
+});
+
+async function resolveIsolatedSemanticProjectPath(
+  tempDir: string,
+  configuredProjectPath?: string
+): Promise<string> {
+  const candidate = configuredProjectPath?.trim()
+    ? path.resolve(configuredProjectPath.trim())
+    : path.join(tempDir, 'sandbox-project');
+  const lexicalTempRoot = path.resolve(os.tmpdir());
+  assertPathInsideSystemTemp(lexicalTempRoot, candidate);
+  await fs.mkdir(candidate, { recursive: true });
+
+  const [realTempRoot, realCandidate] = await Promise.all([
+    fs.realpath(os.tmpdir()),
+    fs.realpath(candidate),
+  ]);
+  assertPathInsideSystemTemp(realTempRoot, realCandidate);
+
+  return realCandidate;
+}
+
+function assertPathInsideSystemTemp(tempRoot: string, candidate: string): void {
+  const relative = path.relative(tempRoot, candidate);
+  const isInsideTempRoot =
+    relative.length > 0 && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+
+  if (!isInsideTempRoot) {
+    throw new Error(
+      `OPENCODE_E2E_PROJECT_PATH must resolve inside the system temp directory (${tempRoot}); received ${candidate}`
+    );
+  }
+}

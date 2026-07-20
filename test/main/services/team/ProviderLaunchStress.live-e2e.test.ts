@@ -21,6 +21,7 @@ import { killProcessByPid } from '../../../../src/main/utils/processKill';
 
 import {
   createOpenCodeLiveHarness,
+  waitForMemberInboxMessage,
   waitForOpenCodeLanesStopped,
   waitUntil,
 } from './openCodeLiveTestHarness';
@@ -49,7 +50,7 @@ const liveDescribe =
 const DEFAULT_ORCHESTRATOR_CLI =
   '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 const DEFAULT_ANTHROPIC_MODEL = 'haiku';
-const DEFAULT_CODEX_MODEL = 'gpt-5.4-mini';
+const DEFAULT_CODEX_MODEL = 'gpt-5.6-sol';
 const DEFAULT_CODEX_EFFORT = 'low' as const;
 const DEFAULT_OPENCODE_MODEL = 'opencode/big-pickle';
 const DEFAULT_ORDER: ProviderLaunchStressScenario[] = ['anthropic', 'codex', 'opencode', 'mixed'];
@@ -408,6 +409,9 @@ async function runPostLaunchWorkProofCheck(
   const probes = await Promise.all(
     memberNames.map(async (memberName, index) => {
       const marker = `${markerPrefix}-${index + 1}`;
+      const peerRecipient =
+        memberNames.length > 1 ? memberNames[(index + 1) % memberNames.length] : null;
+      const peerToken = peerRecipient ? `${marker}:to:${peerRecipient}` : null;
       const task = await teamDataService.createTask(active.teamName, {
         subject: `Provider launch stress proof ${marker}`,
         owner: memberName,
@@ -417,6 +421,12 @@ async function runPostLaunchWorkProofCheck(
           'Do not edit files.',
           'Add one task comment containing exactly:',
           `${marker}:done`,
+          ...(peerRecipient && peerToken
+            ? [
+                `Send ${peerRecipient} one team message whose full text is exactly: ${peerToken}`,
+                'Use agent-teams_message_send for the team message.',
+              ]
+            : []),
           'Then mark this task complete.',
           'After that stop. Do not send a separate user-visible chat reply.',
         ].join('\n'),
@@ -427,7 +437,7 @@ async function runPostLaunchWorkProofCheck(
           `Post-launch work probe was not relayed to ${memberName}; relay result: ${JSON.stringify(relay)}`
         );
       }
-      return { marker, memberName, taskId: task.id };
+      return { marker, memberName, peerRecipient, peerToken, taskId: task.id };
     })
   );
 
@@ -446,6 +456,41 @@ async function runPostLaunchWorkProofCheck(
     POST_LAUNCH_WORK_TIMEOUT_MS,
     2_000,
     () => formatStressDiagnostics(active.svc, active.teamName, progressEvents)
+  );
+
+  const peerProbes = probes.filter(
+    (
+      probe
+    ): probe is (typeof probes)[number] & {
+      peerRecipient: string;
+      peerToken: string;
+    } => Boolean(probe.peerRecipient && probe.peerToken)
+  );
+  await Promise.all(
+    peerProbes.map((probe) =>
+      waitForMemberInboxMessage(
+        active.teamName,
+        probe.peerRecipient,
+        probe.memberName,
+        probe.peerToken,
+        POST_LAUNCH_WORK_TIMEOUT_MS
+      )
+    )
+  );
+  await Promise.all(
+    Array.from(new Set(peerProbes.map((probe) => probe.peerRecipient))).map(
+      async (recipientName) => {
+        const relay = await active.svc.relayInboxFileToLiveRecipient(
+          active.teamName,
+          recipientName
+        );
+        if (!isAcceptedStressRelayResult(relay)) {
+          throw new Error(
+            `Peer message was not relayed to ${recipientName}; relay result: ${JSON.stringify(relay)}`
+          );
+        }
+      }
+    )
   );
   process.stderr.write(`[ProviderLaunchStress.live] ${active.scenario} post-launch work passed\n`);
 }

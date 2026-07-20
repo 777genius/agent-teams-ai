@@ -11,6 +11,7 @@ const OPENCODE_HEALTH_FETCH_TIMEOUT_MS = 1_000;
 
 export async function preflightOpenCodeLiveEnvironment(input) {
   const repoRoot = input.repoRoot;
+  const projectPath = input.projectPath || repoRoot;
   const sourceEnv = input.env ?? process.env;
   const requiredModels = Array.isArray(input.requiredModels)
     ? input.requiredModels.map((model) => String(model).trim()).filter(Boolean)
@@ -36,8 +37,8 @@ export async function preflightOpenCodeLiveEnvironment(input) {
     }
 
     const models = shouldUseManagedAppCredentials(env)
-      ? runManagedOpenCodeModels(requiredModels, repoRoot, env)
-      : runOpenCodeCommand(opencodeBin, ['models'], repoRoot, env);
+      ? runManagedOpenCodeModels(requiredModels, projectPath, env)
+      : runOpenCodeCommand(opencodeBin, ['models'], projectPath, env);
     if (!models.ok) {
       return skip(`opencode models failed: ${models.output}`);
     }
@@ -50,7 +51,7 @@ export async function preflightOpenCodeLiveEnvironment(input) {
       );
     }
 
-    const agents = runOpenCodeCommand(opencodeBin, ['agent', 'list'], repoRoot, env);
+    const agents = runOpenCodeCommand(opencodeBin, ['agent', 'list'], projectPath, env);
     if (!agents.ok) {
       return skip(`opencode agent list failed: ${agents.output}`);
     }
@@ -60,7 +61,7 @@ export async function preflightOpenCodeLiveEnvironment(input) {
       return skip(`127.0.0.1 loopback bind failed: ${loopback.reason}`);
     }
 
-    const host = await canStartOpenCodeHost(opencodeBin, repoRoot, env);
+    const host = await canStartOpenCodeHost(opencodeBin, projectPath, env);
     if (!host.ok) {
       return skip(`opencode serve health check failed: ${host.reason}`);
     }
