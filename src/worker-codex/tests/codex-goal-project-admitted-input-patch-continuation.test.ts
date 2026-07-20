@@ -226,8 +226,12 @@ describe("admitted input-patch capacity continuation", () => {
       verifiedInputPatchStagedSha256: patchSha256,
     });
     await authorizeProjectPreStartAdmissionLaunch({ manifest, scope });
+    const resultPath = join(
+      manifest.jobRootDir,
+      `${manifest.taskId}.latest-result.json`,
+    );
     await writeFile(
-      join(manifest.jobRootDir, `${manifest.taskId}.latest-result.json`),
+      resultPath,
       `${JSON.stringify({
         status: "blocked",
         reason: "account_unavailable",
@@ -327,6 +331,59 @@ describe("admitted input-patch capacity continuation", () => {
       ),
     ).toBe(patchSha256);
 
+    const reconnectResult = {
+      schemaVersion: 1,
+      provider: "codex",
+      runId: manifest.jobId,
+      taskId: manifest.taskId,
+      status: "failed",
+      reason: "unknown_error",
+      updatedAt: new Date().toISOString(),
+      changedFiles: ["src/example.ts"],
+      evidence: ["safe_execution_status:failed"],
+      blockers: ["unknown_error"],
+      nextAction: "preserve_patch",
+      details: {
+        rawCause: "ordinary_unknown_runtime_failure",
+      },
+    };
+    await writeFile(resultPath, `${JSON.stringify(reconnectResult)}\n`);
+    await expect(
+      projectControlStartStoredJobView(
+        { ...args, forceStart: true },
+        continuationDeps,
+      ),
+    ).rejects.toThrow(
+      "project_control_reviewed_dirty_continuation_output_required",
+    );
+
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...reconnectResult,
+        details: {
+          rawCause:
+            "codex_app_server_reconnect_timeout:Reconnecting... 2/5",
+        },
+      })}\n`,
+    );
+    await expect(
+      projectControlStartStoredJobView(args, continuationDeps),
+    ).resolves.toMatchObject({
+      ok: false,
+      reason: "status_requires_review",
+      requiredOverride: "forceStart",
+    });
+    await expect(
+      projectControlStartStoredJobView(
+        { ...args, forceStart: true },
+        continuationDeps,
+      ),
+    ).resolves.toMatchObject({ ok: true });
+    expect(startAdmissionWorkspaceModes.at(-1)).toBe(
+      "admitted_input_patch_continuation",
+    );
+
     if (!reservedLaunch) throw new Error("expected reserved launch");
     await writeFile(
       join(workspacePath, "src", "example.ts"),
@@ -353,10 +410,7 @@ describe("admitted input-patch capacity continuation", () => {
       jobRootDir: manifest.jobRootDir,
     });
     if (!interruptedHandoff) throw new Error("expected interrupted handoff");
-    const interruptedResultPath = join(
-      manifest.jobRootDir,
-      `${manifest.taskId}.latest-result.json`,
-    );
+    const interruptedResultPath = resultPath;
     const interruptedResult = {
       schemaVersion: 1,
       taskId: manifest.taskId,

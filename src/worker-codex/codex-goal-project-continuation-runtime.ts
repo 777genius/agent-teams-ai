@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import {
   type ProjectAccessScope,
   type ProjectControlBroker,
@@ -28,6 +29,10 @@ import type { ProjectControlWorkspaceLease } from "./codex-goal-project-workspac
 import { readControlledRuntimeInterruptionEvidence } from "./codex-goal-runtime-control-evidence";
 import { codexGoalStatusInputFromLaunch } from "./codex-goal-mcp-status-input";
 
+const MAX_RECOVERABLE_RESULT_BYTES = 256 * 1024;
+const APP_SERVER_RECONNECT_TIMEOUT_PREFIX =
+  "codex_app_server_reconnect_timeout:";
+
 export async function resolveProjectPreStartContinuation(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly launch: CodexGoalLaunchInput;
@@ -39,7 +44,7 @@ export async function resolveProjectPreStartContinuation(input: {
       resultPath: input.status.resultPath,
       taskId: input.launch.config.taskId,
     });
-  return projectPreStartContinuationDecision({
+  const decision = projectPreStartContinuationDecision({
     manifest: input.manifest,
     ...(input.reviewedOutputId
       ? { reviewedOutputId: input.reviewedOutputId }
@@ -49,6 +54,13 @@ export async function resolveProjectPreStartContinuation(input: {
       ? { controlledInterruptionEvidence }
       : {}),
   });
+  if (decision) return decision;
+  return (await isRecoverableAdmittedInputPatchReconnect(input))
+    ? {
+        kind: "capacity",
+        workspaceMode: "admitted_input_patch_continuation",
+      }
+    : undefined;
 }
 
 export async function assertProjectPreStartContinuationEvidence(input: {
@@ -104,8 +116,7 @@ export async function observeProjectPreStartContinuation(input: {
   return {
     status,
     decision,
-    workerAlive: resolveCodexGoalWorkerLiveness({ status, progressStale })
-      .alive,
+    workerAlive: projectPreStartWorkerAlive(status, progressStale),
   };
 }
 
@@ -249,4 +260,87 @@ export function projectConfirmStartRequiredView(
     tmuxCommand,
     status,
   };
+}
+
+async function isRecoverableAdmittedInputPatchReconnect(input: {
+  readonly manifest: CodexGoalJobManifest;
+  readonly launch: CodexGoalLaunchInput;
+  readonly reviewedOutputId?: string;
+  readonly status: CodexGoalStatus;
+}): Promise<boolean> {
+  const status = input.status;
+  const progressStale =
+    status.progressHeartbeatAgeMs !== undefined &&
+    status.progressHeartbeatAgeMs > 10 * 60_000;
+  if (
+    input.reviewedOutputId ||
+    !input.manifest.projectPreStartAdmission ||
+    status.workspaceDirty !== true ||
+    status.resultExists !== true ||
+    status.resultStatus !== "failed" ||
+    status.resultReason !== "unknown_error" ||
+    !status.resultPath ||
+    projectPreStartWorkerAlive(status, progressStale)
+  ) {
+    return false;
+  }
+  try {
+    const body = await readFile(status.resultPath);
+    if (body.byteLength > MAX_RECOVERABLE_RESULT_BYTES) return false;
+    const parsed: unknown = JSON.parse(body.toString("utf8"));
+    if (
+      !isRecord(parsed) ||
+      parsed.status !== "failed" ||
+      parsed.reason !== "unknown_error" ||
+      parsed.taskId !== input.launch.config.taskId ||
+      parsed.nextAction !== "preserve_patch" ||
+      !stringArray(parsed.changedFiles) ||
+      parsed.changedFiles.length === 0 ||
+      !stringArray(parsed.evidence) ||
+      !stringArray(parsed.blockers) ||
+      !samePaths(parsed.changedFiles, status.changedFiles ?? []) ||
+      !isRecord(parsed.details)
+    ) {
+      return false;
+    }
+    const rawCause = parsed.details.rawCause;
+    return (
+      typeof rawCause === "string" &&
+      rawCause.startsWith(APP_SERVER_RECONNECT_TIMEOUT_PREFIX)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function projectPreStartWorkerAlive(
+  status: CodexGoalStatus,
+  progressStale: boolean,
+): boolean {
+  return resolveCodexGoalWorkerLiveness({ status, progressStale }).alive;
+}
+
+function stringArray(value: unknown): value is readonly string[] {
+  return (
+    Array.isArray(value) &&
+    value.every((item): item is string => typeof item === "string")
+  );
+}
+
+function samePaths(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  const normalizedLeft = [...new Set(left)].sort((a, b) => a.localeCompare(b));
+  const normalizedRight = [...new Set(right)].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  return (
+    normalizedLeft.length === normalizedRight.length &&
+    normalizedLeft.every((path, index) => path === normalizedRight[index])
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
