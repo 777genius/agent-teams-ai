@@ -13,7 +13,9 @@ export async function createGitFixture(): Promise<{
   readonly workspacePath: string;
   readonly workerCommitSha: string;
 }> {
-  const rootDir = await mkdtemp(join(tmpdir(), "project-integration-adapters-"));
+  const rootDir = await mkdtemp(
+    join(tmpdir(), "project-integration-adapters-"),
+  );
   tempRoots.push(rootDir);
   const workspacePath = join(rootDir, "workspace");
   const remotePath = join(rootDir, "remote.git");
@@ -24,16 +26,24 @@ export async function createGitFixture(): Promise<{
     await git(workspacePath, ["config", "user.email", "test@example.com"]);
     await git(workspacePath, ["config", "user.name", "Test User"]);
     await mkdir(join(workspacePath, "src"));
-    await writeFile(join(workspacePath, "src", "memory.ts"), "export const value = 1;\n");
+    await writeFile(
+      join(workspacePath, "src", "memory.ts"),
+      "export const value = 1;\n",
+    );
     await git(workspacePath, ["add", "."]);
     await git(workspacePath, ["commit", "-m", "chore: initial"]);
     await execFileAsync("git", ["init", "--bare", remotePath]);
     await git(workspacePath, ["remote", "add", "origin", remotePath]);
     await git(workspacePath, ["checkout", "-b", "worker"]);
-    await writeFile(join(workspacePath, "src", "memory.ts"), "export const value = 2;\n");
+    await writeFile(
+      join(workspacePath, "src", "memory.ts"),
+      "export const value = 2;\n",
+    );
     await git(workspacePath, ["add", "."]);
     await git(workspacePath, ["commit", "-m", "fix: worker output"]);
-    const workerCommitSha = (await gitOutput(workspacePath, ["rev-parse", "HEAD"])).trim();
+    const workerCommitSha = (
+      await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+    ).trim();
     await git(workspacePath, ["checkout", "main"]);
     return { rootDir, workspacePath, workerCommitSha };
   } catch (error) {
@@ -77,10 +87,9 @@ export async function createMergeFixture(): Promise<{
   );
   await git(workspacePath, ["add", "."]);
   await git(workspacePath, ["commit", "-m", "feat: update base"]);
-  const sourceCommit = (await gitOutput(
-    workspacePath,
-    ["rev-parse", "HEAD"],
-  )).trim();
+  const sourceCommit = (
+    await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+  ).trim();
   await git(workspacePath, ["push", "origin", "base"]);
   await git(workspacePath, ["checkout", "main"]);
   await writeFile(
@@ -89,10 +98,9 @@ export async function createMergeFixture(): Promise<{
   );
   await git(workspacePath, ["add", "."]);
   await git(workspacePath, ["commit", "-m", "feat: update target"]);
-  const targetCommit = (await gitOutput(
-    workspacePath,
-    ["rev-parse", "HEAD"],
-  )).trim();
+  const targetCommit = (
+    await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+  ).trim();
   await git(workspacePath, ["push", "origin", "main"]);
   await writeFile(
     join(workspacePath, "src", "memory.ts"),
@@ -134,23 +142,24 @@ export async function createTargetOnlyConflictMergeFixture(): Promise<{
     "src/member-lifecycle.ts",
     "src/safe-e2e.ts",
     "src/service.ts",
+    "src/source-added-facade.ts",
     "src/stop-flow.ts",
   ];
   const patchFiles = [
     "src/member-lifecycle.ts",
     "src/safe-e2e.ts",
     "src/service.ts",
+    "src/source-added-facade.ts",
   ];
-  const expectedAppliedFiles = [
-    "src/base-change.ts",
-    ...patchFiles,
-  ].sort();
+  const expectedAppliedFiles = ["src/base-change.ts", ...patchFiles].sort();
 
   await mkdir(join(workspacePath, "src"), { recursive: true });
   await git(workspacePath, ["init", "-b", "main"]);
   await git(workspacePath, ["config", "user.email", "test@example.com"]);
   await git(workspacePath, ["config", "user.name", "Test User"]);
-  for (const file of approvedFiles) {
+  for (const file of approvedFiles.filter(
+    (file) => file !== "src/source-added-facade.ts",
+  )) {
     await writeFile(
       join(workspacePath, file),
       file === "src/member-lifecycle.ts"
@@ -176,6 +185,10 @@ export async function createTargetOnlyConflictMergeFixture(): Promise<{
     join(workspacePath, "src", "base-change.ts"),
     "export const baseChange = true;\n",
   );
+  await writeFile(
+    join(workspacePath, "src", "source-added-facade.ts"),
+    "src/source-added-facade.ts: base\n",
+  );
   await git(workspacePath, ["add", "."]);
   await git(workspacePath, ["commit", "-m", "feat: update base"]);
   const sourceCommit = (
@@ -185,7 +198,9 @@ export async function createTargetOnlyConflictMergeFixture(): Promise<{
 
   await git(workspacePath, ["checkout", "main"]);
   for (const file of approvedFiles.filter(
-    (file) => file !== "src/member-lifecycle.ts",
+    (file) =>
+      file !== "src/member-lifecycle.ts" &&
+      file !== "src/source-added-facade.ts",
   )) {
     await writeFile(join(workspacePath, file), `${file}: target\n`);
   }
@@ -206,14 +221,28 @@ export async function createTargetOnlyConflictMergeFixture(): Promise<{
         : `${file}: reviewed merge\n`,
     );
   }
-  const patch = await gitOutput(
-    workspacePath,
-    ["diff", "--binary", "--", ...patchFiles],
-  );
+  await git(workspacePath, [
+    "add",
+    "--intent-to-add",
+    "--",
+    "src/source-added-facade.ts",
+  ]);
+  const patch = await gitOutput(workspacePath, [
+    "diff",
+    "--binary",
+    "--",
+    ...patchFiles,
+  ]);
   const patchPath = join(rootDir, "reviewed-target-only-resolution.patch");
   await writeFile(patchPath, patch);
   const patchSha256 = createHash("sha256").update(patch).digest("hex");
-  await git(workspacePath, ["checkout", "--", ...patchFiles]);
+  await git(workspacePath, ["reset", "--", "src/source-added-facade.ts"]);
+  await rm(join(workspacePath, "src", "source-added-facade.ts"));
+  await git(workspacePath, [
+    "checkout",
+    "--",
+    ...patchFiles.filter((file) => file !== "src/source-added-facade.ts"),
+  ]);
 
   return {
     rootDir,
@@ -228,27 +257,33 @@ export async function createTargetOnlyConflictMergeFixture(): Promise<{
   };
 }
 
-function memberLifecycleContent(input: {
-  readonly baseLine?: string;
-  readonly workerLine?: string;
-} = {}): string {
-  return [
-    "member lifecycle",
-    input.baseLine ?? "initial lifecycle policy",
-    "line 3",
-    "line 4",
-    "line 5",
-    "line 6",
-    "line 7",
-    "line 8",
-    input.workerLine ?? "initial lifecycle assertion",
-    "line 10",
-  ].join("\n") + "\n";
+function memberLifecycleContent(
+  input: {
+    readonly baseLine?: string;
+    readonly workerLine?: string;
+  } = {},
+): string {
+  return (
+    [
+      "member lifecycle",
+      input.baseLine ?? "initial lifecycle policy",
+      "line 3",
+      "line 4",
+      "line 5",
+      "line 6",
+      "line 7",
+      "line 8",
+      input.workerLine ?? "initial lifecycle assertion",
+      "line 10",
+    ].join("\n") + "\n"
+  );
 }
 
-export async function createSemanticMergeFixture(input: {
-  readonly includeUnrelatedPath?: boolean;
-} = {}): Promise<{
+export async function createSemanticMergeFixture(
+  input: {
+    readonly includeUnrelatedPath?: boolean;
+  } = {},
+): Promise<{
   readonly rootDir: string;
   readonly workspacePath: string;
   readonly sourceCommit: string;
@@ -257,7 +292,9 @@ export async function createSemanticMergeFixture(input: {
   readonly patchSha256: string;
   readonly changedFiles: readonly string[];
 }> {
-  const rootDir = await mkdtemp(join(tmpdir(), "project-integration-semantic-merge-"));
+  const rootDir = await mkdtemp(
+    join(tmpdir(), "project-integration-semantic-merge-"),
+  );
   tempRoots.push(rootDir);
   const workspacePath = join(rootDir, "workspace");
   const remotePath = join(rootDir, "remote.git");
@@ -265,7 +302,10 @@ export async function createSemanticMergeFixture(input: {
   await git(workspacePath, ["init", "-b", "main"]);
   await git(workspacePath, ["config", "user.email", "test@example.com"]);
   await git(workspacePath, ["config", "user.name", "Test User"]);
-  await writeFile(join(workspacePath, "package.json"), '{"policy":"initial"}\n');
+  await writeFile(
+    join(workspacePath, "package.json"),
+    '{"policy":"initial"}\n',
+  );
   await writeFile(
     join(workspacePath, ".github", "workflows", "ci.yml"),
     "name: CI\njobs:\n  test:\n    runs-on: ubuntu-latest\n",
@@ -292,7 +332,9 @@ export async function createSemanticMergeFixture(input: {
   );
   await git(workspacePath, ["add", "."]);
   await git(workspacePath, ["commit", "-m", "feat: update base policy"]);
-  const sourceCommit = (await gitOutput(workspacePath, ["rev-parse", "HEAD"])).trim();
+  const sourceCommit = (
+    await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+  ).trim();
   await git(workspacePath, ["push", "origin", "base"]);
 
   await git(workspacePath, ["checkout", "main"]);
@@ -307,7 +349,9 @@ export async function createSemanticMergeFixture(input: {
   );
   await git(workspacePath, ["add", "."]);
   await git(workspacePath, ["commit", "-m", "feat: update target policy"]);
-  const targetCommit = (await gitOutput(workspacePath, ["rev-parse", "HEAD"])).trim();
+  const targetCommit = (
+    await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+  ).trim();
   await git(workspacePath, ["push", "origin", "main"]);
 
   await writeFile(
@@ -329,9 +373,17 @@ export async function createSemanticMergeFixture(input: {
     ...(input.includeUnrelatedPath ? ["README.md"] : []),
   ];
   if (input.includeUnrelatedPath) {
-    await writeFile(join(workspacePath, "README.md"), "unrelated semantic edit\n");
+    await writeFile(
+      join(workspacePath, "README.md"),
+      "unrelated semantic edit\n",
+    );
   }
-  const patch = await gitOutput(workspacePath, ["diff", "--binary", "--", ...changedFiles]);
+  const patch = await gitOutput(workspacePath, [
+    "diff",
+    "--binary",
+    "--",
+    ...changedFiles,
+  ]);
   const patchPath = join(rootDir, "reviewed-semantic-resolution.patch");
   await writeFile(patchPath, patch);
   const patchSha256 = createHash("sha256").update(patch).digest("hex");
@@ -347,9 +399,11 @@ export async function createSemanticMergeFixture(input: {
   };
 }
 
-export async function createCleanMergeFixture(input: {
-  readonly deleteSourcePath?: boolean;
-} = {}): Promise<{
+export async function createCleanMergeFixture(
+  input: {
+    readonly deleteSourcePath?: boolean;
+  } = {},
+): Promise<{
   readonly rootDir: string;
   readonly workspacePath: string;
   readonly sourceCommit: string;
@@ -392,10 +446,9 @@ export async function createCleanMergeFixture(input: {
   }
   await git(workspacePath, ["add", "."]);
   await git(workspacePath, ["commit", "-m", "feat: add base source"]);
-  const sourceCommit = (await gitOutput(
-    workspacePath,
-    ["rev-parse", "HEAD"],
-  )).trim();
+  const sourceCommit = (
+    await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+  ).trim();
   await git(workspacePath, ["push", "origin", "base"]);
 
   await git(workspacePath, ["checkout", "main"]);
@@ -405,10 +458,9 @@ export async function createCleanMergeFixture(input: {
   );
   await git(workspacePath, ["add", "."]);
   await git(workspacePath, ["commit", "-m", "feat: add target source"]);
-  const targetCommit = (await gitOutput(
-    workspacePath,
-    ["rev-parse", "HEAD"],
-  )).trim();
+  const targetCommit = (
+    await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+  ).trim();
   await git(workspacePath, ["push", "origin", "main"]);
 
   const patchPath = join(rootDir, "reviewed-empty.patch");
@@ -427,7 +479,10 @@ export async function git(cwd: string, args: readonly string[]): Promise<void> {
   await execFileAsync("git", [...args], { cwd });
 }
 
-export async function gitOutput(cwd: string, args: readonly string[]): Promise<string> {
+export async function gitOutput(
+  cwd: string,
+  args: readonly string[],
+): Promise<string> {
   const { stdout } = await execFileAsync("git", [...args], { cwd });
   return stdout;
 }
