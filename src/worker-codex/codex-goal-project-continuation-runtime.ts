@@ -277,7 +277,8 @@ async function isRecoverableAdmittedInputPatchReconnect(input: {
     !input.manifest.projectPreStartAdmission ||
     status.workspaceDirty !== true ||
     status.resultExists !== true ||
-    status.resultStatus !== "failed" ||
+    (status.resultStatus !== "failed" &&
+      status.resultStatus !== "partial") ||
     status.resultReason !== "unknown_error" ||
     !status.resultPath ||
     projectPreStartWorkerAlive(status, progressStale)
@@ -290,7 +291,7 @@ async function isRecoverableAdmittedInputPatchReconnect(input: {
     const parsed: unknown = JSON.parse(body.toString("utf8"));
     if (
       !isRecord(parsed) ||
-      parsed.status !== "failed" ||
+      parsed.status !== status.resultStatus ||
       parsed.reason !== "unknown_error" ||
       parsed.taskId !== input.launch.config.taskId ||
       parsed.nextAction !== "preserve_patch" ||

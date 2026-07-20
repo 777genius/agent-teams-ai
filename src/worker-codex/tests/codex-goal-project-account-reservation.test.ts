@@ -77,6 +77,105 @@ describe("project account reservation", () => {
     expect(continued.launch.config.maxAccountCycles).toBe(2);
   });
 
+  it("grants one new attempt after an evidenced app-server reconnect timeout", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-reconnect-retry-"));
+    roots.push(root);
+    const scoped = fixture(root, "job-1");
+    const journal = new InMemoryAttemptJournal();
+    await recordUnavailableAttempt(
+      journal,
+      "account-a",
+      scoped.launch.config.workspacePath,
+    );
+    const now = new Date("2026-07-13T00:01:00.000Z");
+    const reconnectDetails = {
+      rawCause:
+        "codex_app_server_reconnect_timeout:Reconnecting... 2/5",
+    };
+    await journal.appendAttempt({
+      taskId: "job-1-task",
+      attempt: {
+        taskId: "job-1-task",
+        attemptNumber: 2,
+        accountId: "account-b",
+        provider: "codex",
+        startedAt: now,
+        finishedAt: now,
+        status: "blocked",
+        failureReason: "unknown_error",
+        failureDetails: reconnectDetails,
+        workspaceDirtyBefore: true,
+        workspaceDirtyAfter: true,
+        changedFiles: [],
+      },
+      now,
+    });
+    await journal.markPartial({
+      taskId: "job-1-task",
+      status: "partial",
+      reason: "unknown_error",
+      details: reconnectDetails,
+      now,
+    });
+
+    const continuation = await codexProjectContinuationReservationInput({
+      status: {
+        recommendedAction: "inspect_dirty_failure",
+        resultReason: "unknown_error",
+        progressResultReason: "unknown_error",
+        progressAttemptCount: 2,
+        progressCurrentAccount: "account-b",
+      },
+      launch: scoped.launch,
+      journal,
+    });
+    expect(continuation).toEqual({
+      excludedAccountIds: [],
+      continuation: { previousAttemptCount: 2 },
+    });
+    const reserved = await reserveCodexProjectAccount({
+      ...scoped,
+      ...continuation,
+      deps: {
+        capacityStore: new InMemoryWorkerAccountCapacityStore(),
+        leaseMode: "shared",
+        now,
+      },
+    });
+    expect(reserved.launch.config.maxAccountCycles).toBe(3);
+
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "inspect_dirty_failure",
+          resultReason: "unknown_error",
+          progressAttemptCount: 1,
+        },
+        launch: scoped.launch,
+        journal,
+      }),
+    ).rejects.toThrow(
+      "project_control_runtime_retry_attempt_history_mismatch",
+    );
+    const recorded = await journal.readTask({ taskId: "job-1-task" });
+    if (!recorded) throw new Error("expected reconnect task");
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "inspect_dirty_failure",
+          resultReason: "unknown_error",
+        },
+        launch: scoped.launch,
+        journal: {
+          readTask: async () => ({
+            ...recorded,
+            lastFailureDetails: { rawCause: "ordinary_unknown_error" },
+          }),
+        },
+      }),
+    ).resolves.toEqual({ excludedAccountIds: [] });
+  });
+
   it("proves quota_limited continuation from a singleton launch account", async () => {
     const root = await mkdtemp(join(tmpdir(), "project-quota-continuation-"));
     roots.push(root);

@@ -336,7 +336,7 @@ describe("admitted input-patch capacity continuation", () => {
       provider: "codex",
       runId: manifest.jobId,
       taskId: manifest.taskId,
-      status: "failed",
+      status: "partial",
       reason: "unknown_error",
       updatedAt: new Date().toISOString(),
       changedFiles: ["src/example.ts"],
@@ -347,6 +347,36 @@ describe("admitted input-patch capacity continuation", () => {
         rawCause: "ordinary_unknown_runtime_failure",
       },
     };
+    const reconnectAttemptAt = new Date("2026-07-14T00:01:00.000Z");
+    const reconnectFailureDetails = {
+      rawCause:
+        "codex_app_server_reconnect_timeout:Reconnecting... 2/5",
+    };
+    await journal.appendAttempt({
+      taskId: manifest.taskId,
+      attempt: {
+        taskId: manifest.taskId,
+        attemptNumber: 2,
+        accountId: "account-g",
+        provider: "codex",
+        startedAt: reconnectAttemptAt,
+        finishedAt: reconnectAttemptAt,
+        status: "blocked",
+        failureReason: "unknown_error",
+        failureDetails: reconnectFailureDetails,
+        workspaceDirtyBefore: true,
+        workspaceDirtyAfter: true,
+        changedFiles: [],
+      },
+      now: reconnectAttemptAt,
+    });
+    await journal.markPartial({
+      taskId: manifest.taskId,
+      status: "partial",
+      reason: "unknown_error",
+      details: reconnectFailureDetails,
+      now: reconnectAttemptAt,
+    });
     await writeFile(resultPath, `${JSON.stringify(reconnectResult)}\n`);
     await expect(
       projectControlStartStoredJobView(
@@ -361,9 +391,9 @@ describe("admitted input-patch capacity continuation", () => {
       resultPath,
       `${JSON.stringify({
         ...reconnectResult,
+        status: "failed",
         details: {
-          rawCause:
-            "codex_app_server_reconnect_timeout:Reconnecting... 2/5",
+          ...reconnectFailureDetails,
         },
       })}\n`,
     );
@@ -383,6 +413,27 @@ describe("admitted input-patch capacity continuation", () => {
     expect(startAdmissionWorkspaceModes.at(-1)).toBe(
       "admitted_input_patch_continuation",
     );
+    expect(reservedLaunch?.config.maxAccountCycles).toBe(3);
+
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...reconnectResult,
+        details: {
+          ...reconnectFailureDetails,
+        },
+      })}\n`,
+    );
+    await expect(
+      projectControlStartStoredJobView(
+        { ...args, forceStart: true },
+        continuationDeps,
+      ),
+    ).resolves.toMatchObject({ ok: true });
+    expect(startAdmissionWorkspaceModes.at(-1)).toBe(
+      "admitted_input_patch_continuation",
+    );
+    expect(reservedLaunch?.config.maxAccountCycles).toBe(3);
 
     if (!reservedLaunch) throw new Error("expected reserved launch");
     await writeFile(
