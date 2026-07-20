@@ -16,6 +16,8 @@
   <sub>Free desktop app for AI agent teams. Start with a free model with no auth - no signup, API key, or card - or connect Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro, and many more. For coding and broader project work.</sub>
 </p>
 
+<img width="1672" height="941" alt="telegram-cloud-photo-size-2-5400238943531374644-w" src="https://github.com/user-attachments/assets/c6de5cdf-74c2-417b-b69a-172e66425d14" />
+
 <table>
 <tr>
 <td width="50%">
@@ -48,7 +50,7 @@
   </a>
 </td>
 <td width="50%">
-  <a href="docs/screenshots/4.png">
+  <a href="docs/screenshots/4.jpg">
     <img src="docs/screenshots/previews/4.webp" alt="Create an AI team with roles and models" width="100%" loading="lazy" />
   </a>
 </td>
@@ -63,6 +65,14 @@
   <a href="docs/screenshots/task-detail-animated.gif">
     <img src="docs/screenshots/previews/task-detail-animated.webp" alt="Agent Teams AI product demo" width="100%" loading="lazy" />
   </a>
+</td>
+</tr>
+<tr>
+<td width="50%">
+  <img src="docs/screenshots/2.png" alt="Organization hierarchy with teams, agents, and active tasks" width="100%" />
+</td>
+<td width="50%">
+  <img src="docs/screenshots/12.jpg" alt="Organization structure map with team and task details" width="100%" />
 </td>
 </tr>
 </table>

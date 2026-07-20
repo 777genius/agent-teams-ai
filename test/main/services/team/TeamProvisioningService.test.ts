@@ -20620,7 +20620,7 @@ describe('TeamProvisioningService', () => {
                       bootstrapConfirmed: true,
                       hardFailure: false,
                       diagnostics: [],
-                    },
+                },
               ])
             ),
             warnings: [],
