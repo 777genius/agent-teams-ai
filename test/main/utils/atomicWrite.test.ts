@@ -53,6 +53,28 @@ function getTmpPath(): string {
   return filePath;
 }
 
+type DirectoryFailureStage = 'open' | 'sync' | 'close';
+
+function mockDirectoryFailure(stage: DirectoryFailureStage, error: Error): void {
+  const fileHandle = {
+    sync: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+  } as unknown as fs.promises.FileHandle;
+  mockOpen.mockReset().mockResolvedValueOnce(fileHandle);
+
+  if (stage === 'open') {
+    mockOpen.mockRejectedValueOnce(error);
+    return;
+  }
+
+  mockOpen.mockResolvedValueOnce({
+    sync:
+      stage === 'sync' ? vi.fn().mockRejectedValue(error) : vi.fn().mockResolvedValue(undefined),
+    close:
+      stage === 'close' ? vi.fn().mockRejectedValue(error) : vi.fn().mockResolvedValue(undefined),
+  } as unknown as fs.promises.FileHandle);
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
 
@@ -199,11 +221,134 @@ describe('atomicWriteAsync', () => {
   });
 
   it('syncs the parent directory only when requested', async () => {
-    await atomicWriteAsync(TARGET_PATH, CONTENT, { syncDirectory: true });
+    const onDirectorySyncOutcome = vi.fn();
+    await atomicWriteAsync(TARGET_PATH, CONTENT, {
+      syncDirectory: true,
+      onDirectorySyncOutcome,
+    });
 
     expect(mockOpen).toHaveBeenNthCalledWith(1, getTmpPath(), 'r+');
     expect(mockOpen).toHaveBeenNthCalledWith(2, TARGET_DIR, 'r');
+    expect(onDirectorySyncOutcome).toHaveBeenCalledWith('durable');
   });
+
+  it.each(['open', 'sync'] as const)(
+    'fails strict parent-directory %s before publish',
+    async (stage) => {
+      const failure = new Error(`directory ${stage} failed`);
+      mockDirectoryFailure(stage, failure);
+
+      await expect(
+        atomicWriteAsync(TARGET_PATH, CONTENT, {
+          durability: 'strict',
+          syncDirectory: true,
+        })
+      ).rejects.toBe(failure);
+
+      expect(mockRename).not.toHaveBeenCalled();
+      expect(mockOpen).toHaveBeenNthCalledWith(2, TARGET_DIR, 'r');
+    }
+  );
+
+  it('does not misreport a close failure after strict publication succeeds', async () => {
+    const onDirectorySyncOutcome = vi.fn();
+    mockDirectoryFailure('close', new Error('directory close failed'));
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+        onDirectorySyncOutcome,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(mockRename).toHaveBeenCalledOnce();
+    expect(onDirectorySyncOutcome).toHaveBeenCalledWith('durable');
+  });
+
+  it('does not misreport a directory sync failure after strict publication succeeds', async () => {
+    const onDirectorySyncOutcome = vi.fn();
+    const directorySync = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('post-publish directory sync failed'));
+    mockOpen
+      .mockResolvedValueOnce({
+        sync: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
+      } as unknown as fs.promises.FileHandle)
+      .mockResolvedValueOnce({
+        sync: directorySync,
+        close: vi.fn().mockResolvedValue(undefined),
+      } as unknown as fs.promises.FileHandle);
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+        onDirectorySyncOutcome,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(directorySync).toHaveBeenCalledTimes(2);
+    expect(mockRename).toHaveBeenCalledOnce();
+    expect(onDirectorySyncOutcome).toHaveBeenCalledWith('failed-after-publish');
+  });
+
+  it('does not let a directory-sync outcome observer misreport a published write', async () => {
+    const observerFailure = new Error('directory outcome observer failed');
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+        onDirectorySyncOutcome: () => {
+          throw observerFailure;
+        },
+      })
+    ).resolves.toBeUndefined();
+
+    expect(mockRename).toHaveBeenCalledOnce();
+  });
+
+  it('uses strict file durability with supported Windows directory-sync fallback', async () => {
+    const platform = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const onDirectorySyncOutcome = vi.fn();
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+        onDirectorySyncOutcome,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(mockOpen).toHaveBeenCalledTimes(1);
+    expect(mockOpen).toHaveBeenCalledWith(getTmpPath(), 'r+');
+    expect(mockRename).toHaveBeenCalledOnce();
+    expect(onDirectorySyncOutcome).toHaveBeenCalledWith('unsupported-platform');
+    platform.mockRestore();
+  });
+
+  it.each(['open', 'sync', 'close'] as const)(
+    'keeps parent-directory %s failure best-effort without strict durability',
+    async (stage) => {
+      const onDirectorySyncOutcome = vi.fn();
+      mockDirectoryFailure(stage, new Error(`directory ${stage} unavailable`));
+
+      await expect(
+        atomicWriteAsync(TARGET_PATH, CONTENT, {
+          syncDirectory: true,
+          onDirectorySyncOutcome,
+        })
+      ).resolves.toBeUndefined();
+
+      expect(mockRename).toHaveBeenCalledOnce();
+      expect(onDirectorySyncOutcome).toHaveBeenCalledWith(
+        stage === 'close' ? 'durable' : 'best-effort-unavailable'
+      );
+    }
+  );
 
   it('continues retrying beyond short antivirus-style locks', async () => {
     const transientError = Object.assign(new Error('Transient EPERM'), { code: 'EPERM' });

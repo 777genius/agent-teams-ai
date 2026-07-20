@@ -1,6 +1,10 @@
 import { readFile } from 'node:fs/promises';
 
-import { describe, expect, it } from 'vitest';
+import {
+  registerStandaloneShutdownSignalHandlers,
+  runStandaloneShutdownLifecycle,
+} from '@main/standalone';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('standalone Phase 2 read wiring', () => {
   it('admits hosted bootstrap and immutable identity before constructing ambient services', async () => {
@@ -75,5 +79,108 @@ describe('standalone Phase 2 read wiring', () => {
     expect(standalone).not.toContain('internalStorageFeature.dispose');
     expect(desktop).toContain('phase2ReadHost = createUnavailablePhase2ReadHost()');
     expect(desktop).not.toContain('new Phase2ReadBootstrapSource');
+  });
+
+  it('obtains and flushes the shared ConfigManager singleton only after root admission', async () => {
+    const source = await readFile('src/main/standalone.ts', 'utf8');
+    const configImport = "await import('./services/infrastructure/ConfigManager')";
+
+    expect(source).not.toMatch(/^import .*ConfigManager/m);
+    expect(source).toContain(configImport);
+    expect(source).toContain('configManager = admittedConfigManager');
+    expect(source.indexOf(configImport)).toBeGreaterThan(
+      source.indexOf('await readPorts.teamIdentities.listTeamIdentities()')
+    );
+    expect(source.indexOf(configImport)).toBeGreaterThan(
+      source.indexOf('setClaudeBasePathOverride(CLAUDE_ROOT)')
+    );
+
+    const shutdownStart = source.indexOf('async function shutdown(): Promise<void>');
+    const shutdownEnd = source.indexOf('// Signal Handlers', shutdownStart);
+    const shutdownSource = source.slice(shutdownStart, shutdownEnd);
+    const flushIndex = shutdownSource.indexOf('await configManager?.flush();');
+    const lifecycleStart = source.indexOf('export async function runStandaloneShutdownLifecycle');
+    const lifecycleEnd = source.indexOf('type StandaloneShutdownSignal', lifecycleStart);
+    const lifecycleSource = source.slice(lifecycleStart, lifecycleEnd);
+
+    expect(flushIndex).toBeGreaterThan(shutdownSource.indexOf('await httpServer.stop();'));
+    expect(flushIndex).toBeGreaterThan(shutdownSource.indexOf('localContext.dispose();'));
+    expect(shutdownSource.indexOf('exit: (code) => process.exit(code)')).toBeGreaterThan(
+      flushIndex
+    );
+    expect(lifecycleSource).toContain("recordFailure('ConfigManager flush failed during shutdown'");
+    expect(lifecycleSource).toContain('if (exitCode === 0) {');
+    expect(lifecycleSource).toContain("actions.logInfo('Shutdown complete');");
+    expect(lifecycleSource).toContain('actions.exit(exitCode);');
+    expect(shutdownSource).toContain('process.exitCode = code;');
+    expect(shutdownSource).not.toContain('process.exit(0)');
+  });
+
+  it('exits non-zero and never reports completion when final flush fails', async () => {
+    const flushFailure = new Error('injected standalone flush failure');
+    const logInfo = vi.fn();
+    const logError = vi.fn();
+    const setExitCode = vi.fn();
+    const exit = vi.fn();
+
+    await runStandaloneShutdownLifecycle({
+      stopHttpServer: () => Promise.resolve(),
+      disposeLocalContext: vi.fn(),
+      flushConfig: () => Promise.reject(flushFailure),
+      logInfo,
+      logError,
+      setExitCode,
+      exit,
+    });
+
+    expect(logError).toHaveBeenCalledWith(
+      'ConfigManager flush failed during shutdown:',
+      flushFailure
+    );
+    expect(logInfo).not.toHaveBeenCalledWith('Shutdown complete');
+    expect(setExitCode).toHaveBeenCalledWith(1);
+    expect(exit).toHaveBeenCalledWith(1);
+  });
+
+  it('runs the executable shutdown path from SIGINT and SIGTERM and exits successfully', async () => {
+    const listeners = new Map<'SIGINT' | 'SIGTERM', () => void>();
+    const exit = vi.fn();
+    const shutdown = vi.fn(() =>
+      runStandaloneShutdownLifecycle({
+        stopHttpServer: () => Promise.resolve(),
+        disposeLocalContext: vi.fn(),
+        flushConfig: () => Promise.resolve(),
+        logInfo: vi.fn(),
+        logError: vi.fn(),
+        setExitCode: vi.fn(),
+        exit,
+      })
+    );
+    registerStandaloneShutdownSignalHandlers({
+      platform: 'linux',
+      onSignal: (signal, listener) => listeners.set(signal, listener),
+      shutdown,
+    });
+
+    listeners.get('SIGINT')?.();
+    await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(0));
+    exit.mockClear();
+    listeners.get('SIGTERM')?.();
+    await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(0));
+
+    expect(shutdown).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not register unsupported SIGTERM handling on Windows', () => {
+    const onSignal = vi.fn();
+
+    registerStandaloneShutdownSignalHandlers({
+      platform: 'win32',
+      onSignal,
+      shutdown: () => Promise.resolve(),
+    });
+
+    expect(onSignal).toHaveBeenCalledOnce();
+    expect(onSignal).toHaveBeenCalledWith('SIGINT', expect.any(Function));
   });
 });

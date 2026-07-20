@@ -358,6 +358,17 @@ export interface AppConfig {
 // Config section keys for type-safe updates
 export type ConfigSection = keyof AppConfig;
 
+/** The most recent persistence failure that has not been superseded by a successful publication. */
+export interface ConfigPersistenceFailure {
+  readonly revision: number;
+  readonly error: unknown;
+}
+
+interface ConfigPersistenceSnapshot {
+  readonly revision: number;
+  readonly write: () => Promise<void> | void;
+}
+
 // ===========================================================================
 // Default Configuration
 // ===========================================================================
@@ -554,14 +565,17 @@ export class ConfigManager {
   private static instance: ConfigManager | null = null;
   private triggerManager: TriggerManager;
   private readonly configChangeListeners = new Set<(section: ConfigSection | 'reload') => void>();
+  private persistenceTail: Promise<void> = Promise.resolve();
+  private persistenceRevision = 0;
+  private persistenceFailure: ConfigPersistenceFailure | null = null;
+  private persistenceDirtySnapshot: ConfigPersistenceSnapshot | null = null;
+  private readonly pendingPersistenceRevisions = new Set<number>();
 
   constructor(configPath?: string) {
     this.configPath = configPath ?? getDefaultConfigPath();
     this.config = this.loadConfig();
     applyConfiguredClaudeRootPath(this.config.general.claudeRootPath);
-    this.triggerManager = new TriggerManager(this.config.notifications.triggers, () =>
-      this.saveConfig()
-    );
+    this.triggerManager = new TriggerManager(this.config.notifications.triggers);
   }
 
   // ===========================================================================
@@ -618,24 +632,109 @@ export class ConfigManager {
    * Saves the current configuration to disk.
    */
   private saveConfig(): void {
-    try {
-      this.persistConfig(this.config);
-      logger.info('Config saved');
-    } catch (error) {
-      logger.error('Error saving config:', error);
-    }
+    this.persistConfig(this.config);
   }
 
   /**
-   * Persists configuration to the canonical path asynchronously.
-   * Uses async I/O to avoid blocking the main process event loop.
-   * mkdir({ recursive: true }) is idempotent — no need for an existsSync guard.
+   * Queues an immutable configuration snapshot for atomic publication with strict durability where
+   * the platform supports it.
+   *
+   * The tail always settles successfully so a failed write cannot become an unhandled rejection or
+   * poison later writes. Callers observe the failure through flush()/getPersistenceFailure().
    */
   private persistConfig(config: AppConfig): void {
-    const content = JSON.stringify(config, null, 2);
-    void atomicWriteAsync(this.configPath, content).catch((error) => {
-      logger.error('Error persisting config:', error);
+    const revision = ++this.persistenceRevision;
+    let writeSnapshot: () => Promise<void> | void;
+
+    try {
+      const content = JSON.stringify(config, null, 2);
+      writeSnapshot = () =>
+        atomicWriteAsync(this.configPath, content, {
+          durability: 'strict',
+          syncDirectory: true,
+          onDirectorySyncOutcome: (outcome) => {
+            if (outcome !== 'durable') {
+              logger.warn(`Config published with directory durability fallback: ${outcome}`);
+            }
+          },
+        });
+    } catch (error) {
+      writeSnapshot = () => {
+        throw error;
+      };
+    }
+
+    const snapshot = { revision, write: writeSnapshot } satisfies ConfigPersistenceSnapshot;
+    this.persistenceDirtySnapshot = snapshot;
+    this.queuePersistenceAttempt(snapshot);
+  }
+
+  /** Queues at most one attempt for a revision while preserving the monotonic writer tail. */
+  private queuePersistenceAttempt(snapshot: ConfigPersistenceSnapshot): void {
+    if (this.pendingPersistenceRevisions.has(snapshot.revision)) return;
+    this.pendingPersistenceRevisions.add(snapshot.revision);
+    this.persistenceTail = this.persistenceTail.then(async () => {
+      try {
+        try {
+          await snapshot.write();
+        } catch (error) {
+          this.persistenceFailure = { revision: snapshot.revision, error };
+          try {
+            logger.error('Error persisting config:', error);
+          } catch {
+            // Failure state remains observable even if a custom logger fails.
+          }
+          return;
+        }
+
+        // Keep all post-publication work outside the write-failure catch. Once atomicWriteAsync
+        // resolves, the canonical rename succeeded and this attempt must never be reported failed.
+        if (
+          this.persistenceDirtySnapshot &&
+          this.persistenceDirtySnapshot.revision <= snapshot.revision
+        ) {
+          this.persistenceDirtySnapshot = null;
+        }
+        if (this.persistenceFailure && this.persistenceFailure.revision <= snapshot.revision) {
+          this.persistenceFailure = null;
+        }
+        try {
+          logger.info('Config saved');
+        } catch {
+          // Logging after publication cannot change or poison the persistence outcome.
+        }
+      } finally {
+        this.pendingPersistenceRevisions.delete(snapshot.revision);
+      }
     });
+  }
+
+  /**
+   * Waits for every snapshot accepted before this call to reach a published success or explicit
+   * pre-publication failure. If a prior call observed a failed dirty snapshot, this call queues one
+   * retry of the newest dirty snapshot. Concurrent flushes share that attempt, and an already queued
+   * newer mutation is not duplicated. Directory durability fallbacks are reported by
+   * atomicWriteAsync's outcome observer.
+   */
+  async flush(): Promise<void> {
+    const targetRevision = this.persistenceRevision;
+
+    if (this.persistenceFailure && this.persistenceDirtySnapshot) {
+      this.queuePersistenceAttempt(this.persistenceDirtySnapshot);
+    }
+
+    const targetTail = this.persistenceTail;
+    await targetTail;
+
+    const failure = this.persistenceFailure;
+    if (failure && failure.revision <= targetRevision) {
+      throw failure.error;
+    }
+  }
+
+  /** Returns the unresolved persistence failure, if any. */
+  getPersistenceFailure(): ConfigPersistenceFailure | null {
+    return this.persistenceFailure ? { ...this.persistenceFailure } : null;
   }
 
   /**
@@ -1007,6 +1106,7 @@ export class ConfigManager {
    */
   addTrigger(trigger: NotificationTrigger): AppConfig {
     this.config.notifications.triggers = this.triggerManager.add(trigger);
+    this.saveConfig();
     return this.deepClone(this.config);
   }
 
@@ -1018,6 +1118,7 @@ export class ConfigManager {
    */
   updateTrigger(triggerId: string, updates: Partial<NotificationTrigger>): AppConfig {
     this.config.notifications.triggers = this.triggerManager.update(triggerId, updates);
+    this.saveConfig();
     return this.deepClone(this.config);
   }
 
@@ -1029,6 +1130,7 @@ export class ConfigManager {
    */
   removeTrigger(triggerId: string): AppConfig {
     this.config.notifications.triggers = this.triggerManager.remove(triggerId);
+    this.saveConfig();
     return this.deepClone(this.config);
   }
 

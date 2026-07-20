@@ -104,6 +104,69 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
+let configManager: { flush(): Promise<void> } | null = null;
+let shutdownPromise: Promise<void> | null = null;
+
+export interface StandaloneShutdownActions {
+  stopHttpServer: () => Promise<void>;
+  disposeLocalContext: () => void;
+  flushConfig: () => Promise<void>;
+  logInfo: (message: string) => void;
+  logError: (message: string, error: unknown) => void;
+  setExitCode: (code: number) => void;
+  exit: (code: number) => void;
+}
+
+export async function runStandaloneShutdownLifecycle(
+  actions: StandaloneShutdownActions
+): Promise<void> {
+  actions.logInfo('Shutting down...');
+  let exitCode = 0;
+  const recordFailure = (label: string, error: unknown): void => {
+    exitCode = 1;
+    actions.setExitCode(1);
+    actions.logError(`${label}:`, error);
+  };
+
+  try {
+    await actions.stopHttpServer();
+  } catch (error) {
+    recordFailure('HTTP server shutdown failed', error);
+  }
+
+  try {
+    actions.disposeLocalContext();
+  } catch (error) {
+    recordFailure('Local context shutdown failed', error);
+  }
+
+  try {
+    await actions.flushConfig();
+  } catch (error) {
+    recordFailure('ConfigManager flush failed during shutdown', error);
+  }
+
+  if (exitCode === 0) {
+    actions.logInfo('Shutdown complete');
+  }
+  actions.exit(exitCode);
+}
+
+type StandaloneShutdownSignal = 'SIGINT' | 'SIGTERM';
+
+export function registerStandaloneShutdownSignalHandlers(input: {
+  platform: NodeJS.Platform;
+  onSignal: (signal: StandaloneShutdownSignal, listener: () => void) => void;
+  shutdown: () => Promise<void>;
+}): void {
+  const requestShutdown = (): void => {
+    void input.shutdown();
+  };
+  input.onSignal('SIGINT', requestShutdown);
+  if (input.platform !== 'win32') {
+    input.onSignal('SIGTERM', requestShutdown);
+  }
+}
 
 function admitHostedReadRoot(reference: string): string {
   if (
@@ -188,6 +251,12 @@ async function start(): Promise<void> {
     logger.info(`Using CLAUDE_ROOT: ${CLAUDE_ROOT}`);
   }
 
+  // ConfigManager is intentionally obtained only after hosted/non-hosted root admission.
+  // The dynamic module export is the same singleton used by the desktop composition.
+  const { configManager: admittedConfigManager } =
+    await import('./services/infrastructure/ConfigManager');
+  configManager = admittedConfigManager;
+
   // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
   const [{ HttpServer }, { NotificationManager }, { ServiceContext }] = await Promise.all([
     import('./services/infrastructure/HttpServer'),
@@ -265,40 +334,57 @@ async function start(): Promise<void> {
 }
 
 async function shutdown(): Promise<void> {
-  logger.info('Shutting down...');
+  if (shutdownPromise) return shutdownPromise;
 
-  if (httpServer?.isRunning()) {
-    await httpServer.stop();
-  }
+  shutdownPromise = runStandaloneShutdownLifecycle({
+    stopHttpServer: async () => {
+      if (httpServer?.isRunning()) {
+        await httpServer.stop();
+      }
+    },
+    disposeLocalContext: () => {
+      if (localContext) {
+        localContext.dispose();
+      }
+    },
+    flushConfig: async () => {
+      // Keep ConfigManager as the final persistence drain before process exit.
+      await configManager?.flush();
+    },
+    logInfo: (message) => logger.info(message),
+    logError: (message, error) => logger.error(message, error),
+    setExitCode: (code) => {
+      process.exitCode = code;
+    },
+    exit: (code) => process.exit(code),
+  });
 
-  if (localContext) {
-    localContext.dispose();
-  }
-
-  logger.info('Shutdown complete');
-  process.exit(0);
+  return shutdownPromise;
 }
 
 // =============================================================================
 // Signal Handlers
 // =============================================================================
 
-// SIGINT works on all platforms (Ctrl+C), but SIGTERM does not exist on Windows.
-process.on('SIGINT', () => void shutdown());
-if (process.platform !== 'win32') {
-  process.on('SIGTERM', () => void shutdown());
+if (!process.env.VITEST) {
+  // SIGINT works on all platforms (Ctrl+C), but SIGTERM does not exist on Windows.
+  registerStandaloneShutdownSignalHandlers({
+    platform: process.platform,
+    onSignal: (signal, listener) => process.on(signal, listener),
+    shutdown,
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    logger.error('Unhandled promise rejection:', reason);
+  });
+
+  process.on('uncaughtException', (error) => {
+    logger.error('Uncaught exception:', error);
+  });
+
+  // =============================================================================
+  // Start
+  // =============================================================================
+
+  void start();
 }
-
-process.on('unhandledRejection', (reason) => {
-  logger.error('Unhandled promise rejection:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught exception:', error);
-});
-
-// =============================================================================
-// Start
-// =============================================================================
-
-void start();

@@ -14,6 +14,8 @@ export interface AtomicWriteOptions {
   durability?: 'best-effort' | 'strict';
   /** Persist the directory entry after publish when the caller needs crash durability. */
   syncDirectory?: boolean;
+  /** Reports whether requested directory durability was achieved or used a safe fallback. */
+  onDirectorySyncOutcome?: (outcome: AtomicWriteDirectorySyncOutcome) => void;
   /**
    * Runs after the temporary file is complete and synced, immediately before every
    * publish attempt (including Windows retries).
@@ -22,6 +24,12 @@ export interface AtomicWriteOptions {
    */
   beforeCommit?: () => Promise<void>;
 }
+
+export type AtomicWriteDirectorySyncOutcome =
+  | 'durable'
+  | 'unsupported-platform'
+  | 'best-effort-unavailable'
+  | 'failed-after-publish';
 
 export interface AtomicCreateResult {
   dev: number;
@@ -269,7 +277,7 @@ export function atomicWriteSync(
 
 /**
  * Async atomic write: write tmp file then rename over target.
- * Uses best-effort fsync and bounded Windows transient rename retries for safety.
+ * Supports strict or best-effort fsync and bounded Windows transient rename retries for safety.
  */
 export async function atomicWriteAsync(
   targetPath: string,
@@ -278,6 +286,7 @@ export async function atomicWriteAsync(
 ): Promise<void> {
   const dir = path.dirname(targetPath);
   const tmpPath = path.join(dir, `.tmp.${randomUUID()}`);
+  let directorySync: DirectorySyncPreparation | null = null;
 
   try {
     await fs.promises.mkdir(dir, { recursive: true });
@@ -288,11 +297,24 @@ export async function atomicWriteAsync(
     });
 
     await syncFile(tmpPath, options.durability === 'strict');
-    await renameWithRetry(tmpPath, targetPath, options.beforeCommit);
     if (options.syncDirectory) {
-      await syncDirectoryBestEffort(dir);
+      // Establish directory-fsync support before the rename. Once rename succeeds the new bytes are
+      // already published, so a later fsync/close error must not be surfaced as a failed write.
+      directorySync = await prepareDirectorySync(dir, options.durability === 'strict');
+    }
+    await renameWithRetry(tmpPath, targetPath, options.beforeCommit);
+    const directorySyncOutcome = await finishDirectorySyncAfterPublish(directorySync);
+    directorySync = null;
+    if (directorySyncOutcome) {
+      try {
+        options.onDirectorySyncOutcome?.(directorySyncOutcome);
+      } catch {
+        // Publication and any supported durability work are already complete. Observers cannot
+        // retroactively turn that terminal outcome into an ambiguous write failure.
+      }
     }
   } catch (error) {
+    await closeDirectorySync(directorySync);
     await fs.promises.unlink(tmpPath).catch(() => undefined);
     throw error;
   }
@@ -734,6 +756,61 @@ async function syncFile(filePath: string, strict: boolean): Promise<void> {
   }
 }
 
+type DirectorySyncPreparation =
+  | { readonly status: 'ready'; readonly handle: fs.promises.FileHandle }
+  | { readonly status: 'unsupported-platform' | 'best-effort-unavailable' };
+
+async function prepareDirectorySync(
+  dirPath: string,
+  strict: boolean
+): Promise<DirectorySyncPreparation> {
+  // Node cannot reliably open directory handles on Windows. File fsync plus atomic rename remains
+  // the strongest supported behavior there; treating that platform limitation as a failed write
+  // would break callers even though their target was publishable.
+  if (process.platform === 'win32') {
+    return { status: 'unsupported-platform' };
+  }
+
+  let fd: fs.promises.FileHandle | null = null;
+  try {
+    fd = await fs.promises.open(dirPath, 'r');
+    // Probe support before publication. This also persists the temporary directory entry.
+    await fd.sync();
+    return { status: 'ready', handle: fd };
+  } catch (error) {
+    await fd?.close().catch(() => undefined);
+    if (strict) {
+      throw error instanceof Error
+        ? error
+        : new Error('Directory synchronization failed with a non-Error value', { cause: error });
+    }
+    return { status: 'best-effort-unavailable' };
+  }
+}
+
+async function closeDirectorySync(preparation: DirectorySyncPreparation | null): Promise<void> {
+  if (preparation?.status !== 'ready') return;
+  await preparation.handle.close().catch(() => undefined);
+}
+
+async function finishDirectorySyncAfterPublish(
+  preparation: DirectorySyncPreparation | null
+): Promise<AtomicWriteDirectorySyncOutcome | null> {
+  if (!preparation) return null;
+  if (preparation.status !== 'ready') return preparation.status;
+
+  try {
+    await preparation.handle.sync();
+    return 'durable';
+  } catch {
+    // rename already published the complete file. Do not turn a durability uncertainty into a
+    // misleading publication failure; a later write can safely retry the same current snapshot.
+    return 'failed-after-publish';
+  } finally {
+    await closeDirectorySync(preparation);
+  }
+}
+
 async function syncDirectoryBestEffort(dirPath: string): Promise<void> {
   let fd: fs.promises.FileHandle | null = null;
   try {
@@ -742,11 +819,7 @@ async function syncDirectoryBestEffort(dirPath: string): Promise<void> {
   } catch {
     // Directory fsync is unsupported on some platforms (notably Windows).
   } finally {
-    try {
-      await fd?.close();
-    } catch {
-      // Best-effort close after best-effort fsync.
-    }
+    await fd?.close().catch(() => undefined);
   }
 }
 
