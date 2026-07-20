@@ -76,7 +76,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     description: 'Use your SuperGrok subscription with secure xAI browser sign-in.',
     credentialKind: 'oauth',
     credentialUrl: null,
-    preferredModelFragments: ['grok-4.3', 'grok-code', 'grok-4'],
+    preferredModelFragments: ['grok-4.5', 'grok-4.3', 'grok-build', 'grok-code', 'grok-4'],
     requireOAuthCredentialHint: true,
     connectionStrategy: { kind: 'opencode-auth' },
   },
@@ -90,6 +90,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     preferredModelFragments: [
       'glm-5.2',
       'glm-5.1',
+      'glm-5v-turbo',
       'glm-5',
       'glm-5-turbo',
       'glm-4.7',
@@ -117,9 +118,9 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
       'Use GitHub Copilot through OpenCode. Compatible models are verified automatically for your plan, including Copilot Free.',
     credentialKind: 'oauth',
     credentialUrl: null,
-    // gpt-4.1 is available on Copilot Free while gpt-5-mini can be catalogued
-    // but rejected by that tier. Keep paid/premium routes as fallbacks.
-    preferredModelFragments: ['gpt-4.1', 'gpt-5-mini', 'gpt-5', 'claude-sonnet', 'gemini'],
+    // GPT-4.1 retired from Copilot on 2026-06-01. Prefer the current Free-compatible
+    // route, then let live plan discovery expose paid and premium alternatives.
+    preferredModelFragments: ['gpt-5-mini', 'gpt-5.5', 'gpt-5.6', 'claude-sonnet', 'gemini'],
     requireOAuthCredentialHint: false,
     connectionStrategy: { kind: 'opencode-auth' },
   },
@@ -132,6 +133,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     credentialUrl: 'https://www.kimi.com/code/console',
     preferredModelFragments: [
       'kimi-for-coding/kimi-for-coding',
+      'kimi-for-coding/k3',
       'kimi-for-coding/kimi-for-coding-highspeed',
     ],
     requireOAuthCredentialHint: false,
