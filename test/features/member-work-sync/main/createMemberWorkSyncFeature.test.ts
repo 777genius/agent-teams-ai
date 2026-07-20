@@ -4192,7 +4192,13 @@ describe('createMemberWorkSyncFeature composition', () => {
       await vi.advanceTimersByTimeAsync(60_000);
       await readinessStarted;
       await vi.advanceTimersByTimeAsync(120_000);
-      await feature.dispose();
+
+      let disposeSettled = false;
+      const dispose = feature.dispose().then(() => {
+        disposeSettled = true;
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(disposeSettled).toBe(false);
 
       expect(logger.warn).toHaveBeenCalledWith('member work sync scheduled nudge dispatch failed', {
         error: 'Error: member work sync scheduled nudge dispatch timed out after 120000ms',
@@ -4205,6 +4211,8 @@ describe('createMemberWorkSyncFeature composition', () => {
       readinessGateControl.release?.();
       readinessGateControl.release = null;
       await readinessFinished;
+      await dispose;
+      expect(disposeSettled).toBe(true);
       await vi.advanceTimersByTimeAsync(0);
 
       expect(
@@ -4390,7 +4398,8 @@ describe('createMemberWorkSyncFeature composition', () => {
       ]);
 
       await vi.advanceTimersByTimeAsync(120_000);
-      await feature.dispose();
+
+      const dispose = feature.dispose();
       expect(logger.warn).toHaveBeenCalledWith('member work sync scheduled nudge dispatch failed', {
         error: 'Error: member work sync scheduled nudge dispatch timed out after 120000ms',
       });
@@ -4398,6 +4407,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       busyGateControl.release?.();
       busyGateControl.release = null;
       await busyCheckFinished;
+      await dispose;
       await vi.advanceTimersByTimeAsync(0);
 
       expect(
