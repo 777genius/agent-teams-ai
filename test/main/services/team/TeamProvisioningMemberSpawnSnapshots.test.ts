@@ -64,7 +64,7 @@ function makeMutationPorts(): MemberSpawnStatusMutationPorts<MemberSpawnStatusRu
     appendMemberBootstrapDiagnostic: vi.fn(),
     isCurrentTrackedRun: () => true,
     emitMemberSpawnChange: vi.fn(),
-    persistLaunchStateSnapshot: vi.fn(async () => undefined),
+    persistLaunchStateSnapshot: vi.fn(() => Promise.resolve(undefined)),
   };
 }
 
@@ -74,10 +74,10 @@ function makeAuditPorts(
   const ports: MemberSpawnStatusAuditPorts<MemberSpawnStatusAuditRun> = {
     nowMs: () => 1_000,
     minAuditIntervalMs: 500,
-    auditMemberSpawnStatuses: vi.fn(async () => undefined),
-    findBootstrapTranscriptFailureReason: vi.fn(async () => null),
-    findBootstrapRuntimeProofObservedAt: vi.fn(async () => null),
-    findBootstrapTranscriptOutcome: vi.fn(async () => null),
+    auditMemberSpawnStatuses: vi.fn(() => Promise.resolve(undefined)),
+    findBootstrapTranscriptFailureReason: vi.fn(() => Promise.resolve(null)),
+    findBootstrapRuntimeProofObservedAt: vi.fn(() => Promise.resolve(null)),
+    findBootstrapTranscriptOutcome: vi.fn(() => Promise.resolve(null)),
     setMemberSpawnStatus: vi.fn((run, memberName, status, error) => {
       run.memberSpawnStatuses.set(memberName, {
         ...baseStatus({
@@ -151,6 +151,17 @@ type TestInFlightByTeam = Map<
   }
 >;
 
+function createDeferred<T = void>(): {
+  promise: Promise<T>;
+  resolve(value: T): void;
+} {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 function makeSnapshotPorts(params?: {
   run?: MemberSpawnStatusRun;
   generation?: number;
@@ -179,21 +190,25 @@ function makeSnapshotPorts(params?: {
       persistedCacheTtlMs: 5_000,
     },
     persisted: {
-      readTaskActivityRepairLaunchSnapshot: vi.fn(async () => null),
+      readTaskActivityRepairLaunchSnapshot: vi.fn(() => Promise.resolve(null)),
       repairStaleTaskActivityIntervalsOnce: vi.fn(),
-      reconcilePersistedLaunchState: vi.fn(async () => ({
-        snapshot,
-        statuses: { alice: baseStatus({ runtimeAlive: true }) },
-      })),
-      attachLiveRuntimeMetadataToStatuses: vi.fn(async (_teamName, statuses) => statuses),
+      reconcilePersistedLaunchState: vi.fn(() =>
+        Promise.resolve({
+          snapshot,
+          statuses: { alice: baseStatus({ runtimeAlive: true }) },
+        })
+      ),
+      attachLiveRuntimeMetadataToStatuses: vi.fn((_teamName, statuses) =>
+        Promise.resolve(statuses)
+      ),
       getOpenCodeSecondaryBootstrapPendingMemberNames: vi.fn(() => new Set<string>()),
       resumeActiveTaskActivityForMembers: vi.fn(),
     },
     live: {
-      refreshMemberSpawnStatusesFromLeadInbox: vi.fn(async () => undefined),
-      maybeAuditMemberSpawnStatuses: vi.fn(async () => undefined),
-      persistLaunchStateSnapshot: vi.fn(async () => undefined),
-      readLaunchState: vi.fn(async () => null),
+      refreshMemberSpawnStatusesFromLeadInbox: vi.fn(() => Promise.resolve(undefined)),
+      maybeAuditMemberSpawnStatuses: vi.fn(() => Promise.resolve(undefined)),
+      persistLaunchStateSnapshot: vi.fn(() => Promise.resolve(undefined)),
+      readLaunchState: vi.fn(() => Promise.resolve(null)),
       syncRunMemberSpawnStatusesFromSnapshot: vi.fn(),
       buildLiveLaunchSnapshotForRun: vi.fn(() => {
         liveBuilds.count += 1;
@@ -201,7 +216,7 @@ function makeSnapshotPorts(params?: {
       }),
       buildSnapshotFromRuntimeMemberStatuses: vi.fn(() => snapshot),
       buildRuntimeSpawnStatusRecord: vi.fn(() => ({ alice: baseStatus() })),
-      getMembersMeta: vi.fn(async () => []),
+      getMembersMeta: vi.fn(() => Promise.resolve([])),
       filterRemovedMembersFromLaunchSnapshot: vi.fn((targetSnapshot) => targetSnapshot),
       snapshotToMemberSpawnStatuses: vi.fn(() => ({
         alice: baseStatus({ status: 'online', launchState: 'confirmed_alive' }),
@@ -295,7 +310,7 @@ describe('TeamProvisioningMemberSpawnSnapshots', () => {
     });
 
     const result = await getMemberSpawnStatusesSnapshot('team-a', ports);
-    result.statuses.alice!.pendingPermissionRequestIds!.push('perm-2');
+    result.statuses.alice.pendingPermissionRequestIds!.push('perm-2');
     result.expectedMembers!.push('bob');
 
     expect(liveBuilds.count).toBe(0);
@@ -321,6 +336,85 @@ describe('TeamProvisioningMemberSpawnSnapshots', () => {
     });
   });
 
+  it('does not let a read stalled in refresh persist or replace a newer-generation snapshot', async () => {
+    const run = makeRun();
+    const refreshStaleGeneration = createDeferred();
+    let generation = 1;
+    let persistedRunId: string | null = null;
+    const { ports, snapshotCache } = makeSnapshotPorts({ run });
+    ports.cache.getCacheGeneration = () => generation;
+    ports.live.refreshMemberSpawnStatusesFromLeadInbox = vi
+      .fn()
+      .mockImplementationOnce(() => refreshStaleGeneration.promise)
+      .mockResolvedValue(undefined);
+    ports.live.persistLaunchStateSnapshot = vi.fn((run) => {
+      persistedRunId = run.runId;
+      return Promise.resolve(undefined);
+    });
+
+    const staleRead = getMemberSpawnStatusesSnapshot('team-a', ports);
+    expect(ports.live.refreshMemberSpawnStatusesFromLeadInbox).toHaveBeenCalledWith(run);
+
+    generation = 2;
+    const currentSnapshot = await getMemberSpawnStatusesSnapshot('team-a', ports);
+    const cachedCurrentSnapshot = snapshotCache.get('team-a');
+
+    refreshStaleGeneration.resolve();
+    const retriedSnapshot = await staleRead;
+
+    expect(currentSnapshot.runId).toBe(run.runId);
+    expect(retriedSnapshot.runId).toBe(run.runId);
+    expect(persistedRunId).toBe(run.runId);
+    expect(ports.live.maybeAuditMemberSpawnStatuses).toHaveBeenCalledTimes(1);
+    expect(ports.live.maybeAuditMemberSpawnStatuses).toHaveBeenCalledWith(run);
+    expect(ports.live.persistLaunchStateSnapshot).toHaveBeenCalledTimes(1);
+    expect(ports.live.persistLaunchStateSnapshot).toHaveBeenCalledWith(run, 'active');
+    expect(snapshotCache.get('team-a')).toBe(cachedCurrentSnapshot);
+    expect(cachedCurrentSnapshot).toMatchObject({ generation: 2, runId: run.runId });
+  });
+
+  it('does not let a read stalled in audit overwrite newer launch persistence', async () => {
+    const oldRun = makeRun();
+    const newRun = makeRun({ runId: 'run-2', detectedSessionId: 'session-2' });
+    const auditOldRun = createDeferred();
+    const auditOldRunStarted = createDeferred();
+    let trackedRunId = oldRun.runId;
+    const persistedRunIds: string[] = [];
+    const { ports, snapshotCache } = makeSnapshotPorts({ run: oldRun });
+    ports.getRun = (runId) => {
+      if (runId === oldRun.runId) return oldRun;
+      if (runId === newRun.runId) return newRun;
+      return undefined;
+    };
+    ports.cache.getTrackedRunId = () => trackedRunId;
+    ports.live.maybeAuditMemberSpawnStatuses = vi.fn((run) => {
+      if (run.runId !== oldRun.runId) return Promise.resolve();
+      auditOldRunStarted.resolve();
+      return auditOldRun.promise;
+    });
+    ports.live.persistLaunchStateSnapshot = vi.fn((run) => {
+      persistedRunIds.push(run.runId);
+      return Promise.resolve(undefined);
+    });
+
+    const staleRead = getMemberSpawnStatusesSnapshot('team-a', ports);
+    await auditOldRunStarted.promise;
+    expect(ports.live.maybeAuditMemberSpawnStatuses).toHaveBeenCalledWith(oldRun);
+
+    trackedRunId = newRun.runId;
+    const currentSnapshot = await getMemberSpawnStatusesSnapshot('team-a', ports);
+    const cachedCurrentSnapshot = snapshotCache.get('team-a');
+
+    auditOldRun.resolve();
+    const retriedSnapshot = await staleRead;
+
+    expect(currentSnapshot.runId).toBe(newRun.runId);
+    expect(retriedSnapshot.runId).toBe(newRun.runId);
+    expect(persistedRunIds).toEqual([newRun.runId]);
+    expect(snapshotCache.get('team-a')).toBe(cachedCurrentSnapshot);
+    expect(cachedCurrentSnapshot).toMatchObject({ generation: 1, runId: newRun.runId });
+  });
+
   it('reconciles bootstrap transcript failures before auditing pending members', async () => {
     const run = makeAuditRun({
       memberSpawnStatuses: new Map([
@@ -333,7 +427,7 @@ describe('TeamProvisioningMemberSpawnSnapshots', () => {
       ]),
     });
     const ports = makeAuditPorts({
-      findBootstrapTranscriptFailureReason: vi.fn(async () => 'bootstrap failed'),
+      findBootstrapTranscriptFailureReason: vi.fn(() => Promise.resolve('bootstrap failed')),
     });
 
     await maybeAuditMemberSpawnStatusesForRun(run, ports);
@@ -361,15 +455,14 @@ describe('TeamProvisioningMemberSpawnSnapshots', () => {
             status: 'error',
             launchState: 'failed_to_start',
             hardFailure: true,
-            hardFailureReason:
-              'CLI process exited (code 1) - team provisioned but not alive',
+            hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
             firstSpawnAcceptedAt: '2026-01-01T00:00:05.000Z',
           }),
         ],
       ]),
     });
     const ports = makeAuditPorts({
-      findBootstrapRuntimeProofObservedAt: vi.fn(async () => '2026-01-01T00:00:09.000Z'),
+      findBootstrapRuntimeProofObservedAt: vi.fn(() => Promise.resolve('2026-01-01T00:00:09.000Z')),
     });
 
     await maybeAuditMemberSpawnStatusesForRun(run, ports, { force: true });

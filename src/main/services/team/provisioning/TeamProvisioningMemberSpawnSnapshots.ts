@@ -303,6 +303,18 @@ export function shouldCacheMemberSpawnStatusesSnapshot(run: {
   return run.isLaunch === true && run.provisioningComplete !== true;
 }
 
+function isMemberSpawnStatusesSnapshotReadCurrent<TRun extends MemberSpawnStatusRun>(params: {
+  teamName: string;
+  runIdAtStart: string | null;
+  generationAtStart: number;
+  ports: MemberSpawnStatusesSnapshotPorts<TRun>;
+}): boolean {
+  return (
+    params.ports.cache.getCacheGeneration(params.teamName) === params.generationAtStart &&
+    params.ports.cache.getTrackedRunId(params.teamName) === params.runIdAtStart
+  );
+}
+
 export function setMemberSpawnStatusForRun<TRun extends MemberSpawnStatusRun>(
   params: {
     run: TRun;
@@ -522,6 +534,13 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
 }): Promise<MemberSpawnStatusesSnapshot> {
   const { teamName, resolvedRunId, ports } = params;
   const generationAtStart = ports.cache.getCacheGeneration(teamName);
+  const isCurrentRead = (): boolean =>
+    isMemberSpawnStatusesSnapshotReadCurrent({
+      teamName,
+      runIdAtStart: resolvedRunId,
+      generationAtStart,
+      ports,
+    });
   const cached = ports.cache.snapshotCache.get(teamName);
   if (
     cached &&
@@ -533,8 +552,17 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
   }
 
   const repairSnapshot = await ports.persisted.readTaskActivityRepairLaunchSnapshot(teamName);
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
   ports.persisted.repairStaleTaskActivityIntervalsOnce(teamName, repairSnapshot);
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
   const { snapshot, statuses } = await ports.persisted.reconcilePersistedLaunchState(teamName);
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
   const nextStatuses = await ports.persisted.attachLiveRuntimeMetadataToStatuses(
     teamName,
     statuses,
@@ -543,6 +571,9 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
         ports.persisted.getOpenCodeSecondaryBootstrapPendingMemberNames(snapshot),
     }
   );
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
   const runtimeObservedAt = ports.nowIso();
   const aliveMemberNames = Object.entries(nextStatuses)
     .filter(([, entry]) => entry.runtimeAlive === true)
@@ -570,10 +601,7 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
     summary: summary ?? snapshot?.summary,
     source: 'persisted',
   };
-  if (
-    ports.cache.getCacheGeneration(teamName) === generationAtStart &&
-    ports.cache.getTrackedRunId(teamName) === resolvedRunId
-  ) {
+  if (isCurrentRead()) {
     ports.cache.snapshotCache.set(teamName, {
       expiresAtMs: ports.cache.nowMs() + ports.cache.persistedCacheTtlMs,
       generation: generationAtStart,
@@ -590,14 +618,38 @@ export async function buildMemberSpawnStatusesSnapshotForRun<TRun extends Member
   generationAtStart?: number
 ): Promise<MemberSpawnStatusesSnapshot> {
   const teamName = run.teamName;
+  const snapshotGenerationAtStart = generationAtStart ?? ports.cache.getCacheGeneration(teamName);
+  const isCurrentRead = (): boolean =>
+    isMemberSpawnStatusesSnapshotReadCurrent({
+      teamName,
+      runIdAtStart: run.runId,
+      generationAtStart: snapshotGenerationAtStart,
+      ports,
+    });
+
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
   await ports.live.refreshMemberSpawnStatusesFromLeadInbox(run);
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
   await ports.live.maybeAuditMemberSpawnStatuses(run);
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
   await ports.live.persistLaunchStateSnapshot(
     run,
     run.provisioningComplete ? 'finished' : 'active'
   );
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
 
   const persisted = await ports.live.readLaunchState(teamName);
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
   if (persisted) {
     ports.live.syncRunMemberSpawnStatusesFromSnapshot(run, persisted);
   }
@@ -615,6 +667,9 @@ export async function buildMemberSpawnStatusesSnapshotForRun<TRun extends Member
     });
   const rawSnapshot = liveSnapshot ?? persisted;
   const metaMembers = await ports.live.getMembersMeta(teamName).catch(() => []);
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
   const launchSnapshot = ports.live.filterRemovedMembersFromLaunchSnapshot(
     rawSnapshot,
     metaMembers
@@ -627,6 +682,9 @@ export async function buildMemberSpawnStatusesSnapshotForRun<TRun extends Member
         ports.persisted.getOpenCodeSecondaryBootstrapPendingMemberNames(launchSnapshot),
     }
   );
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
   const expectedMembers = ports.live.getPersistedLaunchMemberNames(launchSnapshot);
   const summary = summarizeMemberSpawnStatusRecord(expectedMembers, statuses);
   const spawnSnapshot: MemberSpawnStatusesSnapshot = {
@@ -639,15 +697,10 @@ export async function buildMemberSpawnStatusesSnapshotForRun<TRun extends Member
     summary,
     source: persisted ? 'merged' : 'live',
   };
-  if (
-    generationAtStart != null &&
-    shouldCacheMemberSpawnStatusesSnapshot(run) &&
-    ports.cache.getCacheGeneration(teamName) === generationAtStart &&
-    ports.cache.getTrackedRunId(teamName) === run.runId
-  ) {
+  if (generationAtStart != null && shouldCacheMemberSpawnStatusesSnapshot(run) && isCurrentRead()) {
     ports.cache.snapshotCache.set(teamName, {
       expiresAtMs: ports.cache.nowMs() + ports.cache.liveCacheTtlMs,
-      generation: generationAtStart,
+      generation: snapshotGenerationAtStart,
       runId: run.runId,
       snapshot: cloneMemberSpawnStatusesSnapshot(spawnSnapshot),
     });
@@ -668,11 +721,11 @@ export async function getMemberSpawnStatusesSnapshot<TRun extends MemberSpawnSta
     return readPersistedMemberSpawnStatusesSnapshot({ teamName, resolvedRunId: runId, ports });
   }
 
+  const generationAtStart = ports.cache.getCacheGeneration(teamName);
   if (!shouldCacheMemberSpawnStatusesSnapshot(run)) {
-    return buildMemberSpawnStatusesSnapshotForRun(run, ports);
+    return buildMemberSpawnStatusesSnapshotForRun(run, ports, generationAtStart);
   }
 
-  const generationAtStart = ports.cache.getCacheGeneration(teamName);
   const cached = ports.cache.snapshotCache.get(teamName);
   if (
     cached &&
