@@ -19,6 +19,17 @@ import type {
   TeamProvisioningProgress,
 } from '@shared/types';
 
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+} {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
 function snapshot(teamName = 'team-a'): PersistedTeamLaunchSnapshot {
   return {
     teamName,
@@ -74,9 +85,11 @@ function makePorts(
     secondaryRuns?: SecondaryRuntimeRunEntry[];
     previousLaunchState?: PersistedTeamLaunchSnapshot | null;
     nowIsoValues?: string[];
+    clearLane?: OpenCodeRuntimeStopFlowPorts['clearOpenCodeRuntimeLaneStorage'];
   } = {}
 ): OpenCodeRuntimeStopFlowPorts & {
   aliveRunByTeam: Map<string, string>;
+  aliveDeleteRunIds: (string | null)[];
   clearCalls: Array<{ teamName: string; laneId: string }>;
   emittedEvents: unknown[];
   progressUpdates: TeamProvisioningProgress[];
@@ -95,6 +108,7 @@ function makePorts(
   ]);
   const provisioningRunByTeam = new Map([['team-a', 'run-primary']]);
   const aliveRunByTeam = new Map([['team-a', 'run-primary']]);
+  const aliveDeleteRunIds: (string | null)[] = [];
   const runtimeAdapterProgressByRunId = new Map<string, TeamProvisioningProgress>();
   const clearCalls: Array<{ teamName: string; laneId: string }> = [];
   const progressUpdates: TeamProvisioningProgress[] = [];
@@ -124,8 +138,9 @@ function makePorts(
     readLaunchState: vi.fn(async () => input.previousLaunchState ?? snapshot()),
     writeLaunchStateSnapshot: vi.fn(async (_teamName, nextSnapshot) => nextSnapshot),
     readPersistedTeamProjectPath: vi.fn(() => '/persisted-cwd'),
-    clearOpenCodeRuntimeLaneStorage: vi.fn(async ({ teamName, laneId }) => {
-      clearCalls.push({ teamName, laneId });
+    clearOpenCodeRuntimeLaneStorage: vi.fn(async (clearInput) => {
+      clearCalls.push({ teamName: clearInput.teamName, laneId: clearInput.laneId });
+      await input.clearLane?.(clearInput);
     }),
     deleteSecondaryRuntimeRun: vi.fn(),
     clearSecondaryRuntimeRuns: vi.fn(),
@@ -137,7 +152,9 @@ function makePorts(
       return progress;
     }),
     clearOpenCodeRuntimeToolApprovals: vi.fn(),
+    getAliveRunId: vi.fn((teamName) => aliveRunByTeam.get(teamName) ?? null),
     deleteAliveRunId: vi.fn((teamName) => {
+      aliveDeleteRunIds.push(aliveRunByTeam.get(teamName) ?? null);
       aliveRunByTeam.delete(teamName);
     }),
     provisioningRunByTeam,
@@ -148,6 +165,7 @@ function makePorts(
     logger,
     nowIso: vi.fn(() => nowIsoValues.shift() ?? '2026-01-01T00:00:01.000Z'),
     aliveRunByTeam,
+    aliveDeleteRunIds,
     clearCalls,
     emittedEvents,
     progressUpdates,
@@ -363,8 +381,9 @@ describe('OpenCode runtime stop flow', () => {
       { teamName: 'team-a', laneId: 'lane-a' },
       { teamName: 'team-a', laneId: 'lane-b' },
     ]);
-    expect(ports.clearSecondaryRuntimeRuns).toHaveBeenCalledWith('team-a');
-    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('team-a', 'lane-a');
+    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('team-a', 'lane-b');
+    expect(ports.clearSecondaryRuntimeRuns).not.toHaveBeenCalled();
     expect(ports.stoppingSecondaryRuntimeTeams.has('team-a')).toBe(false);
   });
 
@@ -429,11 +448,59 @@ describe('OpenCode runtime stop flow', () => {
     );
     expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('team-a', 'lane-a');
     expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('team-a', 'lane-b');
-    expect(ports.clearSecondaryRuntimeRuns).toHaveBeenCalledWith('team-a');
+    expect(ports.clearSecondaryRuntimeRuns).not.toHaveBeenCalled();
     expect(ports.logger.warn).toHaveBeenCalledWith(
       '[team-a] Failed to stop mixed OpenCode secondary lane lane-a: lane stop failed'
     );
     expect(ports.stoppingSecondaryRuntimeTeams.has('team-a')).toBe(false);
+  });
+
+  it('preserves a same-lane replacement installed while the immutable old run stop is awaiting', async () => {
+    const stopRelease = createDeferred<void>();
+    const stopStarted = createDeferred<void>();
+    const secondaryRun: SecondaryRuntimeRunEntry = {
+      runId: 'run-old',
+      providerId: 'opencode',
+      laneId: 'lane-a',
+      memberName: 'A',
+    };
+    const laneStorageOwner = new Map([['lane-a', 'run-old']]);
+    const stop = vi.fn(async (input) => {
+      stopStarted.resolve();
+      await stopRelease.promise;
+      return {
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      };
+    });
+    const ports = makePorts({
+      adapter: makeAdapter(stop),
+      secondaryRuns: [secondaryRun],
+      clearLane: async ({ laneId }) => {
+        laneStorageOwner.delete(laneId);
+      },
+    });
+
+    const stopping = stopMixedSecondaryRuntimeLanes('team-a', ports);
+    await stopStarted.promise;
+
+    // Reuse and mutate the exact object returned by the store, matching the
+    // verifier's run-old -> run-new replacement rather than swapping fixtures.
+    secondaryRun.runId = 'run-new';
+    laneStorageOwner.set('lane-a', 'run-new');
+    stopRelease.resolve();
+    await stopping;
+
+    expect(stop).toHaveBeenCalledWith(expect.objectContaining({ runId: 'run-old' }));
+    expect(secondaryRun.runId).toBe('run-new');
+    expect(laneStorageOwner.get('lane-a')).toBe('run-new');
+    expect(ports.clearCalls).toEqual([{ teamName: 'team-a', laneId: 'lane-a' }]);
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(ports.clearSecondaryRuntimeRuns).not.toHaveBeenCalled();
   });
 
   it('clears primary lane storage and run tracking when no adapter is available', async () => {
@@ -550,34 +617,37 @@ describe('OpenCode runtime stop flow', () => {
     });
   });
 
-  it('does not wipe a newer run registered during the stop await (ownership-fenced cleanup)', async () => {
-    // While the primary run's adapter.stop is awaiting, a concurrent (lockless)
-    // relaunch registers a NEWER run (run-B) for the same team. The stop's
-    // post-await cleanup must not delete run-B's tracking by teamName.
-    const stop = vi.fn(async (input) => {
-      ports.runtimeAdapterRunByTeam.set('team-a', {
-        runId: 'run-B',
-        providerId: 'opencode',
-        cwd: '/runtime-cwd-b',
-      });
-      ports.provisioningRunByTeam.set('team-a', 'run-B');
-      ports.aliveRunByTeam.set('team-a', 'run-B');
-      return {
-        runId: input.runId,
-        teamName: input.teamName,
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      };
+  it('preserves newer primary storage and alive ownership installed during the first clear await', async () => {
+    const firstClearRelease = createDeferred<void>();
+    const firstClearStarted = createDeferred<void>();
+    const primaryStorageOwner = new Map([['primary', 'run-primary']]);
+    let clearCount = 0;
+    const ports = makePorts({
+      adapter: makeAdapter(),
+      previousLaunchState: snapshot(),
+      clearLane: async ({ laneId }) => {
+        clearCount += 1;
+        primaryStorageOwner.delete(laneId);
+        if (clearCount === 1) {
+          firstClearStarted.resolve();
+          await firstClearRelease.promise;
+        }
+      },
     });
-    const ports = makePorts({ adapter: makeAdapter(stop), previousLaunchState: snapshot() });
 
-    await stopOpenCodeRuntimeAdapterTeam('team-a', 'run-primary', ports);
+    const stopping = stopOpenCodeRuntimeAdapterTeam('team-a', 'run-primary', ports);
+    await firstClearStarted.promise;
 
-    // run-B's tracking survives; the stop of run-primary did not orphan it.
-    expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-B');
-    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-B');
-    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-B');
+    // An alive-only newer owner is sufficient authority. It installs its lane
+    // storage while the old run's already-issued clear is still settling.
+    ports.aliveRunByTeam.set('team-a', 'run-new');
+    primaryStorageOwner.set('primary', 'run-new');
+    firstClearRelease.resolve();
+    await stopping;
+
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-new');
+    expect(ports.aliveDeleteRunIds).toEqual(['run-primary']);
+    expect(primaryStorageOwner.get('primary')).toBe('run-new');
+    expect(ports.clearCalls).toEqual([{ teamName: 'team-a', laneId: 'primary' }]);
   });
 });

@@ -17,9 +17,18 @@ import type {
   TeamProvisioningProgress,
 } from '@shared/types';
 
-function progress(
-  overrides: Partial<TeamProvisioningProgress> = {}
-): TeamProvisioningProgress {
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+} {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
+function progress(overrides: Partial<TeamProvisioningProgress> = {}): TeamProvisioningProgress {
   return {
     runId: 'run-1',
     teamName: 'team-a',
@@ -58,12 +67,14 @@ function adapter(stop: TeamLaunchRuntimeAdapter['stop']): TeamLaunchRuntimeAdapt
   } as unknown as TeamLaunchRuntimeAdapter;
 }
 
-function makePorts(input: {
-  adapter?: TeamLaunchRuntimeAdapter | null;
-  readLaunchState?: () => Promise<PersistedTeamLaunchSnapshot | null>;
-  clearLane?: RuntimeAdapterCancellationPorts['clearOpenCodeRuntimeLaneStorage'];
-  nowIso?: () => string;
-} = {}): RuntimeAdapterCancellationPorts & {
+function makePorts(
+  input: {
+    adapter?: TeamLaunchRuntimeAdapter | null;
+    readLaunchState?: () => Promise<PersistedTeamLaunchSnapshot | null>;
+    clearLane?: RuntimeAdapterCancellationPorts['clearOpenCodeRuntimeLaneStorage'];
+    nowIso?: () => string;
+  } = {}
+): RuntimeAdapterCancellationPorts & {
   aliveRunByTeam: Map<string, string>;
   events: string[];
   progressUpdates: TeamProvisioningProgress[];
@@ -164,17 +175,11 @@ function makePorts(input: {
 describe('TeamProvisioningRuntimeAdapterCancellation', () => {
   it('identifies only active runtime adapter provisioning states as cancellable', () => {
     expect(
-      [
-        'validating',
-        'spawning',
-        'configuring',
-        'assembling',
-        'finalizing',
-        'verifying',
-      ].every((state) =>
-        isCancellableRuntimeAdapterProgress({
-          state: state as TeamProvisioningProgress['state'],
-        })
+      ['validating', 'spawning', 'configuring', 'assembling', 'finalizing', 'verifying'].every(
+        (state) =>
+          isCancellableRuntimeAdapterProgress({
+            state: state as TeamProvisioningProgress['state'],
+          })
       )
     ).toBe(true);
     expect(isCancellableRuntimeAdapterProgress({ state: 'cancelled' })).toBe(false);
@@ -277,7 +282,52 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
     expect(ports.events.at(-1)).toBe('clear-lane');
   });
 
-  it('detects primary lane ownership by provisioning, alive, runtime, or empty state', () => {
+  it('does not clear a newer primary owner installed while adapter stop is awaiting', async () => {
+    const stopStarted = createDeferred<void>();
+    const stopRelease = createDeferred<void>();
+    const clearLane = vi.fn(async () => undefined);
+    const ports = makePorts({
+      adapter: adapter(
+        vi.fn(async (stopInput) => {
+          stopStarted.resolve();
+          await stopRelease.promise;
+          return {
+            runId: stopInput.runId,
+            teamName: stopInput.teamName,
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+          };
+        })
+      ),
+      clearLane,
+    });
+
+    const cancelling = cancelRuntimeAdapterProvisioning({
+      runId: 'run-1',
+      runtimeProgress: progress(),
+      ports,
+    });
+    await stopStarted.promise;
+
+    ports.runtimeAdapterRunByTeam.set('team-a', {
+      runId: 'run-new',
+      providerId: 'opencode',
+    });
+    ports.provisioningRunByTeam.set('team-a', 'run-new');
+    ports.aliveRunByTeam.set('team-a', 'run-new');
+    stopRelease.resolve();
+    await cancelling;
+
+    expect(clearLane).not.toHaveBeenCalled();
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-new');
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-new');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-new');
+    expect(ports.events.filter((event) => event === 'delete-alive')).toHaveLength(1);
+  });
+
+  it('detects primary lane ownership only when every installed owner is exact', () => {
     expect(
       ownsOpenCodeRuntimeAdapterPrimaryLane({
         currentProvisioningRunId: 'run-1',
@@ -315,6 +365,14 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
         currentProvisioningRunId: 'other-run',
         currentAliveRunId: undefined,
         currentRuntimeRun: undefined,
+        runId: 'run-1',
+      })
+    ).toBe(false);
+    expect(
+      ownsOpenCodeRuntimeAdapterPrimaryLane({
+        currentProvisioningRunId: 'run-1',
+        currentAliveRunId: 'other-run',
+        currentRuntimeRun: { runId: 'run-1', providerId: 'opencode' },
         runId: 'run-1',
       })
     ).toBe(false);

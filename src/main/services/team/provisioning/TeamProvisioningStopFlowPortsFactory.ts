@@ -186,6 +186,7 @@ export function createOpenCodeRuntimeStopFlowPortsFromDeps<TRun extends TeamProv
     setRuntimeAdapterProgress: (progress) => deps.setRuntimeAdapterProgress(progress),
     clearOpenCodeRuntimeToolApprovals: (teamName, options) =>
       deps.clearOpenCodeRuntimeToolApprovals(teamName, options),
+    getAliveRunId: (teamName) => deps.getAliveRunId(teamName),
     deleteAliveRunId: (teamName) => deps.deleteAliveRunId(teamName),
     provisioningRunByTeam: deps.provisioningRunByTeam,
     invalidateRuntimeSnapshotCaches: (teamName) => deps.invalidateRuntimeSnapshotCaches(teamName),

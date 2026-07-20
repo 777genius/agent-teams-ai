@@ -397,6 +397,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
         runtimeAdapterProgressByRunId: new Map(),
         setRuntimeAdapterProgress: (nextProgress) => nextProgress,
         clearOpenCodeRuntimeToolApprovals: vi.fn(),
+        getAliveRunId: () => null,
         deleteAliveRunId: vi.fn(),
         provisioningRunByTeam: new Map(),
         invalidateRuntimeSnapshotCaches: vi.fn(),

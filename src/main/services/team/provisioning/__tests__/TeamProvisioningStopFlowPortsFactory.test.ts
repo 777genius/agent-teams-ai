@@ -227,6 +227,7 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
 
     expect(ports.teamsBasePath).toBe('/teams');
     expect(ports.runtimeAdapterRunByTeam).toBe(deps.runtimeAdapterRunByTeam);
+    expect(ports.getAliveRunId('team-a')).toBe(deps.getAliveRunId('team-a'));
     await ports.clearOpenCodeRuntimeLaneStorage({
       teamsBasePath: ports.teamsBasePath,
       teamName: 'team-a',

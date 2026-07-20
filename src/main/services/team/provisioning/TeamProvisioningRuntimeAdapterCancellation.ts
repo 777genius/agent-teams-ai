@@ -62,14 +62,14 @@ export function isCancellableRuntimeAdapterProgress(
   ].includes(progress.state);
 }
 
-export function ownsOpenCodeRuntimeAdapterPrimaryLane(
-  input: PrimaryLaneOwnershipInput
-): boolean {
-  return (
-    input.currentProvisioningRunId === input.runId ||
-    input.currentAliveRunId === input.runId ||
-    input.currentRuntimeRun?.runId === input.runId ||
-    (!input.currentProvisioningRunId && !input.currentAliveRunId && !input.currentRuntimeRun)
+export function ownsOpenCodeRuntimeAdapterPrimaryLane(input: PrimaryLaneOwnershipInput): boolean {
+  const currentOwnerRunIds = [
+    input.currentProvisioningRunId,
+    input.currentAliveRunId,
+    input.currentRuntimeRun?.runId,
+  ];
+  return currentOwnerRunIds.every(
+    (currentOwnerRunId) => !currentOwnerRunId || currentOwnerRunId === input.runId
   );
 }
 
@@ -101,15 +101,20 @@ export async function cancelRuntimeAdapterProvisioning(input: {
   }
 
   const teamName = runtimeProgress.teamName;
-  const runtimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
+  const currentRuntimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
+  const runtimeRun = currentRuntimeRun?.runId === runId ? currentRuntimeRun : undefined;
   ports.cancelledRuntimeAdapterRunIds.add(runId);
   ports.clearOpenCodeRuntimeToolApprovals(teamName, {
     runId,
     laneId: 'primary',
     emitDismiss: true,
   });
-  ports.runtimeAdapterRunByTeam.delete(teamName);
-  ports.deleteAliveRunId(teamName);
+  if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
+    ports.runtimeAdapterRunByTeam.delete(teamName);
+  }
+  if (ports.aliveRunByTeam.get(teamName) === runId) {
+    ports.deleteAliveRunId(teamName);
+  }
   if (ports.provisioningRunByTeam.get(teamName) === runId) {
     ports.provisioningRunByTeam.delete(teamName);
   }
@@ -150,13 +155,22 @@ export async function cancelRuntimeAdapterProvisioning(input: {
     }
   }
 
-  await ports
-    .clearOpenCodeRuntimeLaneStorage({
-      teamsBasePath: ports.teamsBasePath,
-      teamName,
-      laneId: 'primary',
+  if (
+    ownsOpenCodeRuntimeAdapterPrimaryLane({
+      currentProvisioningRunId: ports.provisioningRunByTeam.get(teamName),
+      currentAliveRunId: ports.aliveRunByTeam.get(teamName),
+      currentRuntimeRun: ports.runtimeAdapterRunByTeam.get(teamName),
+      runId,
     })
-    .catch(() => undefined);
+  ) {
+    await ports
+      .clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: ports.teamsBasePath,
+        teamName,
+        laneId: 'primary',
+      })
+      .catch(() => undefined);
+  }
 }
 
 export async function clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(input: {
