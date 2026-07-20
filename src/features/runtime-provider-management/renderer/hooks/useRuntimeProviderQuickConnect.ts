@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
+import {
+  getRuntimeProviderDirectoryCacheSnapshot,
+  publishRuntimeProviderDirectoryCache,
+} from '../runtimeProviderDirectoryCache';
+
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
 
 interface UseRuntimeProviderQuickConnectOptions {
@@ -31,18 +36,25 @@ export function useRuntimeProviderQuickConnect({
   projectPath = null,
   refreshKey = 0,
 }: UseRuntimeProviderQuickConnectOptions): RuntimeProviderQuickConnectDirectoryState {
+  const currentProjectScope = projectPath?.trim() ?? '';
+  const initialDirectoryCache = getRuntimeProviderDirectoryCacheSnapshot(projectPath);
   const requestSequence = useRef(0);
   const previousRefreshKey = useRef(refreshKey);
   const previousManualRefreshSequence = useRef(0);
   const previousProjectScope = useRef(projectPath?.trim() ?? '');
   const hasStartedLoad = useRef(false);
-  const [entries, setEntries] = useState<readonly RuntimeProviderDirectoryEntryDto[]>([]);
+  const [entries, setEntries] = useState<readonly RuntimeProviderDirectoryEntryDto[]>(
+    initialDirectoryCache?.entries ?? []
+  );
   const [loading, setLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [authoritativeLoaded, setAuthoritativeLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(Boolean(initialDirectoryCache));
+  const [authoritativeLoaded, setAuthoritativeLoaded] = useState(
+    initialDirectoryCache?.authoritative ?? false
+  );
   const [authoritativePending, setAuthoritativePending] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [manualRefreshSequence, setManualRefreshSequence] = useState(0);
+  const [directoryProjectScope, setDirectoryProjectScope] = useState(currentProjectScope);
 
   const refresh = useCallback(() => {
     setManualRefreshSequence((current) => current + 1);
@@ -50,6 +62,7 @@ export function useRuntimeProviderQuickConnect({
 
   useEffect(() => {
     if (!enabled) {
+      setLoading(false);
       return;
     }
 
@@ -66,9 +79,11 @@ export function useRuntimeProviderQuickConnect({
     const projectScopeChanged = previousProjectScope.current !== projectScope;
     previousProjectScope.current = projectScope;
     if (projectScopeChanged) {
-      setEntries([]);
-      setLoaded(false);
-      setAuthoritativeLoaded(false);
+      const cachedDirectory = getRuntimeProviderDirectoryCacheSnapshot(projectPath);
+      setDirectoryProjectScope(projectScope);
+      setEntries(cachedDirectory?.entries ?? []);
+      setLoaded(Boolean(cachedDirectory));
+      setAuthoritativeLoaded(cachedDirectory?.authoritative ?? false);
       setError(null);
     }
     setAuthoritativePending(true);
@@ -113,6 +128,12 @@ export function useRuntimeProviderQuickConnect({
           return 'terminal-error';
         }
         setEntries(response.directory.entries);
+        publishRuntimeProviderDirectoryCache({
+          projectPath,
+          entries: response.directory.entries,
+          fetchedAt: response.directory.fetchedAt,
+          authoritative: !input.summary,
+        });
         setError(null);
         setLoaded(true);
         setAuthoritativeLoaded(!input.summary);
@@ -207,13 +228,24 @@ export function useRuntimeProviderQuickConnect({
     };
   }, [enabled, manualRefreshSequence, projectPath, refreshKey]);
 
+  // Passive effects run after React commits. Gate the returned snapshot during
+  // that short transition so a project-only provider can never flash in the
+  // picker for a different project.
+  const transitionDirectoryCache =
+    directoryProjectScope === currentProjectScope
+      ? null
+      : getRuntimeProviderDirectoryCacheSnapshot(projectPath);
+  const isProjectScopeTransition = directoryProjectScope !== currentProjectScope;
+
   return {
-    entries,
-    loading,
-    loaded,
-    authoritativeLoaded,
-    authoritativePending,
-    error,
+    entries: isProjectScopeTransition ? (transitionDirectoryCache?.entries ?? []) : entries,
+    loading: isProjectScopeTransition ? enabled : loading,
+    loaded: isProjectScopeTransition ? Boolean(transitionDirectoryCache) : loaded,
+    authoritativeLoaded: isProjectScopeTransition
+      ? (transitionDirectoryCache?.authoritative ?? false)
+      : authoritativeLoaded,
+    authoritativePending: isProjectScopeTransition ? true : authoritativePending,
+    error: isProjectScopeTransition ? null : error,
     refresh,
   };
 }

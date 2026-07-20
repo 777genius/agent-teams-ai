@@ -7,6 +7,10 @@ import {
   type RuntimeProviderQuickConnectDirectoryState,
   useRuntimeProviderQuickConnect,
 } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
+import {
+  getRuntimeProviderDirectoryCacheSnapshot,
+  resetRuntimeProviderDirectoryCacheForTests,
+} from '../../../../src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
 
 import type { RuntimeProviderManagementDirectoryResponse } from '../../../../src/features/runtime-provider-management/contracts';
 import type { ElectronAPI } from '../../../../src/shared/types/api';
@@ -81,6 +85,7 @@ describe('useRuntimeProviderQuickConnect', () => {
   }
 
   beforeEach(() => {
+    resetRuntimeProviderDirectoryCacheForTests();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
     host = document.createElement('div');
@@ -101,6 +106,7 @@ describe('useRuntimeProviderQuickConnect', () => {
     Reflect.deleteProperty(window, 'electronAPI');
     vi.unstubAllGlobals();
     vi.useRealTimers();
+    resetRuntimeProviderDirectoryCacheForTests();
     current = null;
   });
 
@@ -149,6 +155,10 @@ describe('useRuntimeProviderQuickConnect', () => {
     expect(current?.entries[0]?.providerId).toBe('github-copilot');
     expect(current?.authoritativeLoaded).toBe(true);
     expect(current?.authoritativePending).toBe(false);
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/test-project')).toMatchObject({
+      authoritative: true,
+      entries: [{ providerId: 'github-copilot' }],
+    });
   });
 
   it('does not query OpenCode while the prerequisite is unavailable', async () => {
@@ -204,7 +214,11 @@ describe('useRuntimeProviderQuickConnect', () => {
       .mockResolvedValueOnce({
         schemaVersion: 1,
         runtimeId: 'opencode',
-        error: { code: 'runtime-unhealthy', message: 'OpenCode host is starting', recoverable: true },
+        error: {
+          code: 'runtime-unhealthy',
+          message: 'OpenCode host is starting',
+          recoverable: true,
+        },
       });
 
     await act(async () => root.render(React.createElement(Harness)));
@@ -363,5 +377,78 @@ describe('useRuntimeProviderQuickConnect', () => {
       projectPath: '/tmp/project-b',
     });
     expect(current?.entries[0]?.providerId).toBe('vercel');
+  });
+
+  it('does not publish an obsolete response after the picker closes and reopens', async () => {
+    let resolveObsolete!: (value: RuntimeProviderManagementDirectoryResponse) => void;
+    const obsoleteResponse = new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+      resolveObsolete = resolve;
+    });
+    loadProviderDirectory
+      .mockReturnValueOnce(obsoleteResponse)
+      .mockResolvedValueOnce(directoryResponse('github-copilot'));
+
+    await act(async () => root.render(React.createElement(Harness)));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(current?.loading).toBe(true);
+
+    await act(async () => root.render(React.createElement(Harness, { enabled: false })));
+    expect(current?.loading).toBe(false);
+
+    await act(async () => {
+      resolveObsolete(directoryResponse('obsolete-provider'));
+      await Promise.resolve();
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/test-project')).toBeNull();
+
+    await act(async () => root.render(React.createElement(Harness)));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(current?.entries[0]?.providerId).toBe('github-copilot');
+    expect(
+      getRuntimeProviderDirectoryCacheSnapshot('/tmp/test-project')?.entries[0]?.providerId
+    ).toBe('github-copilot');
+  });
+
+  it('keeps project scopes isolated during a rapid A to B to A transition', async () => {
+    let resolveProjectB!: (value: RuntimeProviderManagementDirectoryResponse) => void;
+    const projectBResponse = new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+      resolveProjectB = resolve;
+    });
+    loadProviderDirectory
+      .mockResolvedValueOnce(directoryResponse('project-a-provider'))
+      .mockReturnValueOnce(projectBResponse);
+
+    await act(async () =>
+      root.render(React.createElement(Harness, { projectPath: '/tmp/project-a' }))
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(current?.entries[0]?.providerId).toBe('project-a-provider');
+
+    await act(async () =>
+      root.render(React.createElement(Harness, { projectPath: '/tmp/project-b' }))
+    );
+    expect(current?.entries).toEqual([]);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    await act(async () =>
+      root.render(React.createElement(Harness, { projectPath: '/tmp/project-a' }))
+    );
+    expect(current?.entries[0]?.providerId).toBe('project-a-provider');
+
+    await act(async () => {
+      resolveProjectB(directoryResponse('project-b-provider'));
+      await Promise.resolve();
+    });
+    expect(current?.entries[0]?.providerId).toBe('project-a-provider');
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-b')).toBeNull();
   });
 });

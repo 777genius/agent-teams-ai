@@ -73,18 +73,49 @@ export function useEffectiveCliProviderStatus(
       scopedProviderStatus && isTeamProviderModelCatalogSettled(providerId, scopedProviderStatus)
     );
     const projectProviderBase = scopedProviderStatus ?? globalProvider ?? null;
-    const projectProvider: CliProviderStatus | null =
-      scopedProviderSettled || scopedProviderFailed
-        ? scopedProviderStatus
-        : projectProviderBase
+    const catalogFallbackProvider =
+      scopedProviderStatus?.modelCatalog != null ? scopedProviderStatus : (globalProvider ?? null);
+    const canReuseOpenCodeCatalog = Boolean(
+      providerId === 'opencode' && (catalogFallbackProvider?.modelCatalog?.models.length ?? 0) > 0
+    );
+    const projectProviderWithCatalogFallback =
+      projectProviderBase && catalogFallbackProvider && canReuseOpenCodeCatalog
+        ? {
+            ...projectProviderBase,
+            models:
+              projectProviderBase.models.length > 0
+                ? projectProviderBase.models
+                : catalogFallbackProvider.models,
+            modelAvailability:
+              (projectProviderBase.modelAvailability?.length ?? 0) > 0
+                ? projectProviderBase.modelAvailability
+                : catalogFallbackProvider.modelAvailability,
+            modelCatalog: projectProviderBase.modelCatalog ?? catalogFallbackProvider.modelCatalog,
+          }
+        : projectProviderBase;
+    let projectProvider: CliProviderStatus | null = null;
+    if (scopedProviderSettled) {
+      projectProvider = scopedProviderStatus;
+    } else if (scopedProviderFailed) {
+      projectProvider =
+        canReuseOpenCodeCatalog && projectProviderWithCatalogFallback
+          ? projectProviderWithCatalogFallback
+          : scopedProviderStatus;
+    } else if (projectProviderBase) {
+      projectProvider =
+        canReuseOpenCodeCatalog && projectProviderWithCatalogFallback
           ? {
+              ...projectProviderWithCatalogFallback,
+              modelCatalogRefreshState: 'loading',
+            }
+          : {
               ...projectProviderBase,
               models: [],
               modelAvailability: [],
               modelCatalog: null,
               modelCatalogRefreshState: 'loading',
-            }
-          : null;
+            };
+    }
     if (!projectProvider) {
       return withCodexSnapshot;
     }

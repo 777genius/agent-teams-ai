@@ -12,6 +12,13 @@ export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOn
 export type { OpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { resolveOpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { OpenCodeLocalModelLimitsCard } from './OpenCodeLocalModelLimitsCard';
+export type { RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
+export {
+  getRuntimeProviderDirectoryCacheSnapshot,
+  getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
+  useRuntimeProviderDirectoryCache,
+  useRuntimeProviderDirectoryCacheWithGlobalFallback,
+} from './runtimeProviderDirectoryCache';
 export { RuntimeProviderManagementPanel } from './RuntimeProviderManagementPanel';
 export { RuntimeProviderOnboardingDialog } from './RuntimeProviderOnboardingDialog';
 export { RuntimeProviderQuickConnect } from './RuntimeProviderQuickConnect';
