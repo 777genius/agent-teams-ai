@@ -760,4 +760,38 @@ describe("Codex provider adapter", () => {
     expect(error).toMatchObject({ code: "codex_json_agent_dispose_failed" });
     expect(materializerDisposed).toBe(true);
   });
+
+  it("does not report provider task start before session materialization", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-json-start-boundary-"));
+    let taskStarted = false;
+    const driver = new CodexJsonAgentDriver({
+      engine: new RecordingJsonEngine(),
+      sessionMaterializer: {
+        mode: "ephemeral",
+        async materialize() {
+          throw new Error("materialization_failed");
+        },
+      } satisfies CodexSessionMaterializer,
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "inspect diff" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+        onTaskStarted: () => {
+          taskStarted = true;
+        },
+      });
+
+      expect(result.status).toBe("failed");
+      expect(taskStarted).toBe(false);
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+      await driver.dispose();
+    }
+  });
 });

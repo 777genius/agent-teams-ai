@@ -63,6 +63,46 @@ describe("LocalFileWorkerControlInboxStore", () => {
     }
   });
 
+  it("persists deferred multi-signal confirmation as one delivery batch", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "worker-control-inbox-batch-"));
+    const target = { jobId: "job-deferred-batch" };
+    try {
+      const service = new WorkerControlService({
+        store: new LocalFileWorkerControlInboxStore({ rootDir }),
+        idFactory: sequentialIds("deferred-batch"),
+      });
+      await service.enqueueSignal({
+        target,
+        intent: "guidance",
+        body: "First item.",
+      });
+      await service.enqueueSignal({
+        target,
+        intent: "policy_update",
+        body: "Second item.",
+      });
+      const batch = await service.consumeForContinuation({
+        target,
+        deliveryAttemptId: "attempt-deferred-batch",
+        deferDeliveryConfirmation: true,
+      });
+
+      expect(
+        (await service.listSignals({ target })).map((view) => view.state),
+      ).toEqual(["accepted", "accepted"]);
+      await service.confirmContinuationDelivery({ batch });
+
+      const restarted = new WorkerControlService({
+        store: new LocalFileWorkerControlInboxStore({ rootDir }),
+      });
+      expect(
+        (await restarted.listSignals({ target })).map((view) => view.state),
+      ).toEqual(["delivered", "delivered"]);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   it("claims broad job-level delivery atomically across concurrent consumers", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "worker-control-inbox-"));
     const service = new WorkerControlService({

@@ -64,6 +64,7 @@ export type WorkerCapacitySnapshot = {
 
 export type SubscriptionWorkerRunOptions = {
   readonly abortSignal?: AbortSignal;
+  readonly onProviderTaskStarted?: () => Promise<void> | void;
 };
 
 export interface SubscriptionWorker<Job, Result> {
@@ -129,6 +130,7 @@ export type WorkerPoolTimerHandle = unknown;
 export type WorkerPoolRunOptions = {
   readonly idempotencyKey?: string;
   readonly abortSignal?: AbortSignal;
+  readonly onProviderTaskStarted?: () => Promise<void> | void;
   readonly retryPolicy?: WorkerPoolRetryPolicy;
 };
 

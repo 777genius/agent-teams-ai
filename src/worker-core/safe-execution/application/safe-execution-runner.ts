@@ -1,5 +1,6 @@
 import type {
   WorkerControlContinuationBatch,
+  WorkerControlContinuationSource,
   WorkerControlTarget,
 } from "../../control";
 import {
@@ -99,6 +100,7 @@ export class SafeExecutionRunner {
         : { staleLockMs: input.workspace.staleLockMs }),
       now: this.clock.now(),
     });
+    const controlDeliveries: DeferredWorkerControlDelivery[] = [];
 
     try {
       const firstAttemptNumber = (existing?.attempts.length ?? 0) + 1;
@@ -212,9 +214,22 @@ export class SafeExecutionRunner {
                 workspaceId: workspacePath,
               },
               deliveryAttemptId: `${input.taskId}:attempt-${firstAttemptNumber}`,
+              ...(supportsDeferredControlDelivery(this.options.controlInbox)
+                ? { deferDeliveryConfirmation: true }
+                : {}),
               now: this.clock.now(),
             })
           : undefined;
+      if (
+        startupControlBatch &&
+        startupControlBatch.signalIds.length > 0 &&
+        supportsDeferredControlDelivery(this.options.controlInbox)
+      ) {
+        controlDeliveries.push(new DeferredWorkerControlDelivery({
+          source: this.options.controlInbox,
+          batch: startupControlBatch,
+        }));
+      }
       if (
         startupControlBatch &&
         startupControlBatch.signalIds.length > 0 &&
@@ -298,6 +313,8 @@ export class SafeExecutionRunner {
           ...(startupControlBatch === undefined
             ? {}
             : { controlBatch: startupControlBatch }),
+          onDeferredControlDelivery: (delivery) =>
+            controlDeliveries.push(delivery),
         });
         const continuationJob = continuationJobFor({
           factory: input.continuationJobFactory,
@@ -395,11 +412,22 @@ export class SafeExecutionRunner {
           const result = await input.pool.run(job, {
             idempotencyKey: `${input.taskId}:${attemptNumber}`,
             abortSignal: attemptAbort.controller.signal,
+            ...(controlDeliveries.length === 0
+              ? {}
+              : {
+                  onProviderTaskStarted: () =>
+                    Promise.all(
+                      controlDeliveries.map((delivery) => delivery.confirm()),
+                    ).then(() => undefined),
+                }),
             retryPolicy: {
               maxAttempts: 1,
               retryOnSlotCapacityUnavailable: false,
             },
           });
+          await Promise.all(
+            controlDeliveries.map((delivery) => delivery.confirm()),
+          );
           const after = await this.snapshotter
             .capture({
               workspacePath,
@@ -549,6 +577,8 @@ export class SafeExecutionRunner {
             ...(input.controlTarget === undefined
               ? {}
               : { controlTarget: input.controlTarget }),
+            onDeferredControlDelivery: (delivery) =>
+              controlDeliveries.push(delivery),
           });
           const continuationJob = continuationJobFor({
             factory: input.continuationJobFactory,
@@ -613,7 +643,15 @@ export class SafeExecutionRunner {
           : { failureDetails: exhausted.lastFailureDetails }),
       };
     } finally {
-      await lock.release();
+      try {
+        // A stale accepted claim is repairable; never mask the primary run
+        // result when best-effort claim release itself is unavailable.
+        await Promise.allSettled(
+          controlDeliveries.map((delivery) => delivery.release()),
+        );
+      } finally {
+        await lock.release();
+      }
     }
   }
 
@@ -659,21 +697,37 @@ export class SafeExecutionRunner {
     readonly previousOutputSummary?: string;
     readonly controlTarget?: WorkerControlTarget;
     readonly controlBatch?: WorkerControlContinuationBatch;
+    readonly onDeferredControlDelivery?: (
+      delivery: DeferredWorkerControlDelivery,
+    ) => void;
   }): Promise<ContinuationPacket> {
-    const controlBatch = input.controlBatch ??
-      (this.options.controlInbox &&
-          shouldDeliverSafeExecutionControlForContinuation(
-            input.previousFailureReason,
-          )
-        ? await this.options.controlInbox.consumeForContinuation({
-            target: input.controlTarget ?? {
-              jobId: input.taskId,
-              workspaceId: input.workspacePath,
-            },
-            deliveryAttemptId: `${input.taskId}:attempt-${input.attemptNumber}`,
-            now: this.clock.now(),
-          })
-        : undefined);
+    let controlBatch = input.controlBatch;
+    if (
+      controlBatch === undefined &&
+      this.options.controlInbox &&
+      shouldDeliverSafeExecutionControlForContinuation(
+        input.previousFailureReason,
+      )
+    ) {
+      const deferred = supportsDeferredControlDelivery(this.options.controlInbox);
+      controlBatch = await this.options.controlInbox.consumeForContinuation({
+        target: input.controlTarget ?? {
+          jobId: input.taskId,
+          workspaceId: input.workspacePath,
+        },
+        deliveryAttemptId: `${input.taskId}:attempt-${input.attemptNumber}`,
+        ...(deferred ? { deferDeliveryConfirmation: true } : {}),
+        now: this.clock.now(),
+      });
+      if (deferred && controlBatch.signalIds.length > 0) {
+        input.onDeferredControlDelivery?.(
+          new DeferredWorkerControlDelivery({
+            source: this.options.controlInbox,
+            batch: controlBatch,
+          }),
+        );
+      }
+    }
     return this.continuationPacketBuilder.build({
       taskId: input.taskId,
       attemptNumber: input.attemptNumber,
@@ -687,6 +741,59 @@ export class SafeExecutionRunner {
         : { previousOutputSummary: input.previousOutputSummary }),
       ...(controlBatch === undefined ? {} : { controlBatch }),
     });
+  }
+}
+
+function supportsDeferredControlDelivery(
+  source: WorkerControlContinuationSource | undefined,
+): source is WorkerControlContinuationSource & {
+  confirmContinuationDelivery(input: {
+    readonly batch: WorkerControlContinuationBatch;
+    readonly now?: Date;
+  }): Promise<void>;
+  releaseContinuationDelivery(input: {
+    readonly batch: WorkerControlContinuationBatch;
+  }): Promise<void>;
+} {
+  return Boolean(
+    source?.supportsDeferredDeliveryConfirmation === true &&
+      source.confirmContinuationDelivery &&
+      source.releaseContinuationDelivery,
+  );
+}
+
+class DeferredWorkerControlDelivery {
+  private state: "claimed" | "confirmed" | "released" = "claimed";
+
+  constructor(
+    private readonly input: {
+      readonly source: WorkerControlContinuationSource & {
+        confirmContinuationDelivery(input: {
+          readonly batch: WorkerControlContinuationBatch;
+          readonly now?: Date;
+        }): Promise<void>;
+        releaseContinuationDelivery(input: {
+          readonly batch: WorkerControlContinuationBatch;
+        }): Promise<void>;
+      };
+      readonly batch: WorkerControlContinuationBatch;
+    },
+  ) {}
+
+  async confirm(): Promise<void> {
+    if (this.state !== "claimed") return;
+    await this.input.source.confirmContinuationDelivery({
+      batch: this.input.batch,
+    });
+    this.state = "confirmed";
+  }
+
+  async release(): Promise<void> {
+    if (this.state !== "claimed") return;
+    await this.input.source.releaseContinuationDelivery({
+      batch: this.input.batch,
+    });
+    this.state = "released";
   }
 }
 

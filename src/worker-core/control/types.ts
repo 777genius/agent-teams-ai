@@ -260,6 +260,7 @@ export type ConsumeWorkerControlContinuationInput = {
   readonly target: WorkerControlTarget;
   readonly deliveryAttemptId: string;
   readonly capabilities?: WorkerControlCapability;
+  readonly deferDeliveryConfirmation?: boolean;
   readonly now?: Date;
 };
 
@@ -279,6 +280,9 @@ export interface WorkerControlInboxStore {
   appendReceipt(
     receipt: WorkerControlDeliveryReceipt,
   ): Promise<WorkerControlDeliveryReceipt>;
+  appendReceipts?(
+    receipts: readonly WorkerControlDeliveryReceipt[],
+  ): Promise<readonly WorkerControlDeliveryReceipt[]>;
   listReceipts(input?: {
     readonly target?: WorkerControlTarget;
     readonly signalIds?: readonly string[];
@@ -286,7 +290,17 @@ export interface WorkerControlInboxStore {
 }
 
 export interface WorkerControlContinuationSource {
+  readonly supportsDeferredDeliveryConfirmation?: boolean;
   consumeForContinuation(
     input: ConsumeWorkerControlContinuationInput,
   ): Promise<WorkerControlContinuationBatch>;
+  confirmContinuationDelivery?(input: {
+    readonly batch: WorkerControlContinuationBatch;
+    readonly now?: Date;
+  }): Promise<void>;
+  releaseContinuationDelivery?(
+    input: {
+      readonly batch: WorkerControlContinuationBatch;
+    },
+  ): Promise<void>;
 }

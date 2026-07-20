@@ -9,10 +9,12 @@ import {
   InMemoryWorkspaceLockStore,
   SafeExecutionRunner,
   SubscriptionWorkerError,
+  WorkerControlService,
 } from "../../index";
 import {
   cleanupTemporaryPaths,
   gitWorkspace,
+  InMemoryWorkerControlInboxStore,
   type PromptJob,
   type PromptResult,
 } from "./safe-execution-test-support";
@@ -81,6 +83,80 @@ describe("SafeExecutionRunner startup guidance", () => {
     if (result.status !== "completed") throw new Error("expected completed");
     expect(result.replayed).toBe(false);
     expect(result.attempts).toHaveLength(1);
+  });
+
+  it("releases startup guidance when account refresh fails before provider task start", async () => {
+    const workspacePath = await gitWorkspace(
+      cleanupPaths,
+      "safe-execution-pre-task-guidance-",
+    );
+    const journal = new InMemoryAttemptJournal();
+    const control = new WorkerControlService({
+      store: new InMemoryWorkerControlInboxStore(),
+    });
+    const taskId = "task-pre-task-guidance";
+    const target = { jobId: taskId, workspaceId: workspacePath };
+    await control.enqueueSignal({
+      target,
+      intent: "guidance",
+      body: "Continue the same immutable reviewer input.",
+    });
+    const runner = new SafeExecutionRunner({
+      snapshotter: new DefaultWorkspaceSnapshotter(),
+      workspaceAccess: new NodeSafeExecutionWorkspaceAccess(),
+      runtime: new NodeSafeExecutionRuntime(),
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal,
+      controlInbox: control,
+    });
+    const run = (
+      pool: {
+        run(
+          job: PromptJob,
+          options?: {
+            readonly onProviderTaskStarted?: () => Promise<void> | void;
+          },
+        ): Promise<PromptResult>;
+      },
+    ) =>
+      runner.run({
+        taskId,
+        workspace: { mode: "existing_locked" as const, path: workspacePath },
+        effectMode: "workspace_patch" as const,
+        provider: "codex",
+        pool,
+        job: { prompt: "Review the patch.", workspacePath },
+        originalPrompt: "Review the patch.",
+        controlTarget: target,
+        controlContinuationJobFactory: ({ job, originalPrompt, controlBatch }) => {
+          const prompt = `${originalPrompt}\n${controlBatch.message ?? ""}`;
+          return { job: { ...job, prompt }, originalPrompt: prompt };
+        },
+        policy: { maxAttempts: 1 },
+      });
+
+    const unavailable = await run({
+      async run(job) {
+        expect(job.prompt).toContain("same immutable reviewer input");
+        throw new SubscriptionWorkerError(
+          "subscription_worker_account_unavailable",
+          "Account refresh failed before provider task start.",
+          { details: { reason: "account_unavailable" } },
+        );
+      },
+    });
+    expect(unavailable.status).toBe("waiting_capacity");
+    expect((await control.listSignals({ target }))[0]?.state).toBe("pending");
+
+    const completed = await run({
+      async run(job, options) {
+        expect(job.prompt).toContain("same immutable reviewer input");
+        await options?.onProviderTaskStarted?.();
+        return { output: "formal accept" };
+      },
+    });
+    expect(completed.status).toBe("completed");
+    expect((await control.listSignals({ target }))[0]?.state).toBe("delivered");
   });
 
   it("grants a fresh retry budget when guidance resumes a completed task", async () => {

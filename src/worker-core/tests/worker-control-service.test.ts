@@ -65,6 +65,87 @@ describe("WorkerControlService", () => {
     expect(secondBatch.signalIds).toEqual([]);
   });
 
+  it("confirms deferred continuation delivery only after the provider starts", async () => {
+    const store = new InMemoryWorkerControlInboxStore();
+    const service = new WorkerControlService({
+      store,
+      clock: { now: () => new Date("2026-07-20T00:00:00.000Z") },
+      idFactory: sequentialIds("deferred"),
+    });
+    const target = {
+      jobId: "job-deferred",
+      taskId: "task-deferred",
+      workspaceId: "/tmp/deferred-work",
+    };
+    const signal = await service.enqueueSignal({
+      target,
+      intent: "guidance",
+      body: "Continue the same immutable review.",
+    });
+
+    const first = await service.consumeForContinuation({
+      target,
+      deliveryAttemptId: "attempt-pre-task-failure",
+      deferDeliveryConfirmation: true,
+    });
+    expect((await service.listSignals({ target }))[0]?.state).toBe("accepted");
+
+    await service.releaseContinuationDelivery({ batch: first });
+    expect((await service.listSignals({ target }))[0]?.state).toBe("pending");
+
+    const second = await service.consumeForContinuation({
+      target,
+      deliveryAttemptId: "attempt-provider-started",
+      deferDeliveryConfirmation: true,
+    });
+    expect(second.signalIds).toEqual([signal.signalId]);
+    await service.confirmContinuationDelivery({ batch: second });
+    await service.confirmContinuationDelivery({ batch: second });
+    expect((await service.listSignals({ target }))[0]?.state).toBe("delivered");
+    expect(
+      (await store.listReceipts({ target, signalIds: [signal.signalId] }))
+        .filter((receipt) => receipt.state === "delivered"),
+    ).toHaveLength(1);
+  });
+
+  it("does not partially confirm a deferred multi-signal batch", async () => {
+    const store = new InMemoryWorkerControlInboxStore();
+    const service = new WorkerControlService({
+      store,
+      idFactory: sequentialIds("atomic-confirm"),
+    });
+    const target = { jobId: "job-atomic-confirm" };
+    await service.enqueueSignal({
+      target,
+      intent: "guidance",
+      body: "First guidance item.",
+    });
+    await service.enqueueSignal({
+      target,
+      intent: "policy_update",
+      body: "Second guidance item.",
+    });
+    const batch = await service.consumeForContinuation({
+      target,
+      deliveryAttemptId: "attempt-atomic-confirm",
+      deferDeliveryConfirmation: true,
+    });
+    store.failBatchAppend = true;
+
+    await expect(
+      service.confirmContinuationDelivery({ batch }),
+    ).rejects.toThrow("worker_control_test_batch_append_failed");
+    expect(
+      (await service.listSignals({ target })).map((view) => view.state),
+    ).toEqual(["accepted", "accepted"]);
+
+    store.failBatchAppend = false;
+    await service.releaseContinuationDelivery({ batch });
+    expect(
+      (await service.listSignals({ target })).map((view) => view.state),
+    ).toEqual(["pending", "pending"]);
+  });
+
   it("does not report delivered signals as blocked during reconciliation", async () => {
     const store = new InMemoryWorkerControlInboxStore();
     const service = new WorkerControlService({
@@ -519,6 +600,7 @@ describe("WorkerControlService", () => {
 class InMemoryWorkerControlInboxStore implements WorkerControlInboxStore {
   private readonly signals: WorkerControlSignal[] = [];
   private readonly receipts: WorkerControlDeliveryReceipt[] = [];
+  failBatchAppend = false;
 
   async appendSignal(signal: WorkerControlSignal): Promise<WorkerControlSignal> {
     this.signals.push(signal);
@@ -544,6 +626,48 @@ class InMemoryWorkerControlInboxStore implements WorkerControlInboxStore {
   ): Promise<WorkerControlDeliveryReceipt> {
     this.receipts.push(receipt);
     return receipt;
+  }
+
+  async appendReceipts(
+    receipts: readonly WorkerControlDeliveryReceipt[],
+  ): Promise<readonly WorkerControlDeliveryReceipt[]> {
+    if (this.failBatchAppend) {
+      throw new Error("worker_control_test_batch_append_failed");
+    }
+    this.receipts.push(...receipts);
+    return receipts;
+  }
+
+  async tryClaimDelivery(
+    receipt: WorkerControlDeliveryReceipt,
+  ): Promise<WorkerControlDeliveryReceipt | null> {
+    if (
+      this.receipts.some((existing) =>
+        existing.signalId === receipt.signalId &&
+        existing.state === "accepted"
+      )
+    ) {
+      return null;
+    }
+    this.receipts.push(receipt);
+    return receipt;
+  }
+
+  async releaseDeliveryClaim(input: {
+    readonly target: WorkerControlTarget;
+    readonly signalId: string;
+    readonly deliveryAttemptId?: string;
+  }): Promise<boolean> {
+    const index = this.receipts.findIndex((receipt) =>
+      receipt.signalId === input.signalId &&
+      receipt.state === "accepted" &&
+      (input.deliveryAttemptId === undefined ||
+        receipt.deliveryAttemptId === input.deliveryAttemptId) &&
+      workerControlTargetMatches(input.target, receipt.target)
+    );
+    if (index < 0) return false;
+    this.receipts.splice(index, 1);
+    return true;
   }
 
   async listReceipts(input: {

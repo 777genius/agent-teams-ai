@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BoundedSubscriptionWorkerPool,
   type SubscriptionWorker,
+  type SubscriptionWorkerRunOptions,
   type WorkerCapacitySnapshot,
   type SubscriptionWorkerPrewarmResult,
   type SubscriptionWorkerState,
@@ -40,6 +41,31 @@ describe("BoundedSubscriptionWorkerPool", () => {
       failed: 0,
       state: "disposed",
     });
+  });
+
+  it("forwards provider task start callbacks to the selected worker", async () => {
+    let callbackCalls = 0;
+    const pool = new BoundedSubscriptionWorkerPool<string, string>({
+      poolId: "provider-start-callback",
+      slots: 1,
+      workerFactory: ({ workerId }) =>
+        new FakeWorker(workerId, async (job, options) => {
+          await options?.onProviderTaskStarted?.();
+          return `done:${job}`;
+        }),
+    });
+
+    await pool.start();
+    await expect(
+      pool.run("review", {
+        onProviderTaskStarted: () => {
+          callbackCalls += 1;
+        },
+      }),
+    ).resolves.toBe("done:review");
+    await pool.dispose();
+
+    expect(callbackCalls).toBe(1);
   });
 
   it("skips idle slots that report unavailable capacity", async () => {
@@ -801,8 +827,10 @@ class FakeWorker implements SubscriptionWorker<string, string> {
 
   constructor(
     readonly workerId: string,
-    private readonly handler: (job: string) => Promise<string> = async (job) =>
-      `ok:${job}`,
+    private readonly handler: (
+      job: string,
+      options?: SubscriptionWorkerRunOptions,
+    ) => Promise<string> = async (job) => `ok:${job}`,
   ) {}
 
   onDispose: (() => void) | null = null;
@@ -828,8 +856,11 @@ class FakeWorker implements SubscriptionWorker<string, string> {
     };
   }
 
-  async run(job: string): Promise<string> {
-    return this.handler(job);
+  async run(
+    job: string,
+    options?: SubscriptionWorkerRunOptions,
+  ): Promise<string> {
+    return this.handler(job, options);
   }
 
   async health() {

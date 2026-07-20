@@ -94,6 +94,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
     readonly runner: Parameters<AgentDriver["runTask"]>[0]["runner"];
     readonly redactor: RedactorPort;
     readonly abortSignal: AbortSignal;
+    readonly onTaskStarted?: () => Promise<void> | void;
   }): Promise<ProviderTaskResult> {
     assertProviderTaskSystemPrompt(input.task.systemPrompt, "task.systemPrompt");
 
@@ -127,7 +128,7 @@ export class CodexJsonAgentDriver implements AgentDriver {
         input.task.controls?.outputSchemaName ?? input.task.outputSchemaName;
       const goalObjective = readTaskGoalObjective(input.task);
       const runId = readTaskManagedRunId(input.task);
-      const result = await this.engine.run({
+      const engineInput = {
         ...(runId ? { runId } : {}),
         prompt: input.task.prompt,
         ...(goalObjective ? { goalObjective } : {}),
@@ -146,7 +147,9 @@ export class CodexJsonAgentDriver implements AgentDriver {
           : { serviceTier: this.serviceTier }),
         sandboxMode: codexSandboxModeForControls(input.task.controls),
         abortSignal: input.abortSignal,
-      });
+      };
+      await input.onTaskStarted?.();
+      const result = await this.engine.run(engineInput);
       if (result.status === "waiting_for_input") {
         this.managedRunSessions.set(result.runId, materialized);
         materialized = null;

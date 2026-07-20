@@ -165,11 +165,35 @@ export class InMemoryWorkerControlInboxStore implements WorkerControlInboxStore 
     return receipt;
   }
 
+  async releaseDeliveryClaim(input: {
+    readonly target: WorkerControlTarget;
+    readonly signalId: string;
+    readonly deliveryAttemptId?: string;
+  }): Promise<boolean> {
+    const index = this.receipts.findIndex((receipt) =>
+      receipt.signalId === input.signalId &&
+      receipt.state === "accepted" &&
+      (input.deliveryAttemptId === undefined ||
+        receipt.deliveryAttemptId === input.deliveryAttemptId) &&
+      workerControlTargetMatches(input.target, receipt.target)
+    );
+    if (index < 0) return false;
+    this.receipts.splice(index, 1);
+    return true;
+  }
+
   async appendReceipt(
     receipt: WorkerControlDeliveryReceipt,
   ): Promise<WorkerControlDeliveryReceipt> {
     this.receipts.push(receipt);
     return receipt;
+  }
+
+  async appendReceipts(
+    receipts: readonly WorkerControlDeliveryReceipt[],
+  ): Promise<readonly WorkerControlDeliveryReceipt[]> {
+    this.receipts.push(...receipts);
+    return receipts;
   }
 
   async listReceipts(input: {

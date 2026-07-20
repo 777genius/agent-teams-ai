@@ -669,9 +669,6 @@ class RuntimeKernel {
 
     try {
       const taskStartedAt = this.deps.clock.monotonicMs();
-      this.emit("provider.task.started", input.runContext.runId, {
-        taskKind: input.task.kind,
-      });
       const result = await this.deps.agentDriver.runTask({
         session: input.session,
         task: input.task,
@@ -679,6 +676,12 @@ class RuntimeKernel {
         runner: this.deps.runner,
         redactor: this.deps.redactor,
         abortSignal: input.runContext.abortSignal,
+        onTaskStarted: async () => {
+          await input.runContext.onProviderTaskStarted?.();
+          this.emit("provider.task.started", input.runContext.runId, {
+            taskKind: input.task.kind,
+          });
+        },
       });
       this.emit(
         "provider.task.completed",

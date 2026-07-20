@@ -224,7 +224,9 @@ export class FakeAgentDriver implements AgentDriver {
 
   async runTask(input: {
     readonly task: { readonly prompt: string };
+    readonly onTaskStarted?: () => Promise<void> | void;
   }): Promise<ProviderTaskResult> {
+    await input.onTaskStarted?.();
     this.lastPrompt = input.task.prompt;
     return {
       status: "completed",
@@ -254,7 +256,9 @@ export class FakeNoSessionAgentDriver implements AgentDriver {
   async runTask(input: {
     readonly session: SessionArtifact | null;
     readonly task: ProviderTask;
+    readonly onTaskStarted?: () => Promise<void> | void;
   }): Promise<ProviderTaskResult> {
+    await input.onTaskStarted?.();
     this.lastPrompt = input.task.prompt;
     this.lastSessionWasNull = input.session === null;
     return {

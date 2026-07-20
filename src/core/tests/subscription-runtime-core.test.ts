@@ -357,6 +357,7 @@ describe("subscription runtime use cases", () => {
     const runtime = createSubscriptionRuntime(
       makeFakeRuntimeDeps({ store, agent }),
     );
+    let providerTaskStarted = false;
 
     const result = await runtime.refreshThenRunTask({
       providerInstanceId: "provider-instance-1",
@@ -365,10 +366,15 @@ describe("subscription runtime use cases", () => {
         runId: "run-1",
         attempt: 1,
         abortSignal: new AbortController().signal,
+        onProviderTaskStarted: () => {
+          expect(agent.lastPrompt).toBeNull();
+          providerTaskStarted = true;
+        },
       },
     });
 
     expect(result.status).toBe("completed");
+    expect(providerTaskStarted).toBe(true);
     expect(agent.lastPrompt).toBe("inspect diff");
     const next = await store.read({
       providerInstanceId: "provider-instance-1",
@@ -565,6 +571,7 @@ describe("subscription runtime use cases", () => {
     const runtime = createSubscriptionRuntime(
       makeFakeRuntimeDeps({ provider, agent, store }),
     );
+    let providerTaskStarted = false;
 
     const result = await runtime.refreshThenRunTask({
       providerInstanceId: "provider-instance-1",
@@ -573,6 +580,9 @@ describe("subscription runtime use cases", () => {
         runId: "run-quota",
         attempt: 1,
         abortSignal: new AbortController().signal,
+        onProviderTaskStarted: () => {
+          providerTaskStarted = true;
+        },
       },
     });
 
@@ -581,6 +591,7 @@ describe("subscription runtime use cases", () => {
       reason: "quota_limited",
     });
     expect(agent.lastPrompt).toBeNull();
+    expect(providerTaskStarted).toBe(false);
     const current = await store.read({
       providerInstanceId: "provider-instance-1",
       expectedProviderId: "fake",

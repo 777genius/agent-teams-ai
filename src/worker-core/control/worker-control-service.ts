@@ -61,6 +61,14 @@ export class WorkerControlService {
       options.authorizationPolicy ?? new PermissiveWorkerControlAuthorizationPolicy();
   }
 
+  get supportsDeferredDeliveryConfirmation(): boolean {
+    return Boolean(
+      this.options.store.tryClaimDelivery &&
+        this.options.store.releaseDeliveryClaim &&
+        this.options.store.appendReceipts,
+    );
+  }
+
   async enqueueSignal(
     input: EnqueueWorkerControlSignalInput,
   ): Promise<WorkerControlSignal> {
@@ -305,14 +313,16 @@ export class WorkerControlService {
       });
       if (!accepted) continue;
       claimed.push(signal);
-      await this.appendReceipt({
-        target: signal.target,
-        signalId: signal.signalId,
-        state: "delivered",
-        createdAt: now,
-        deliveryAttemptId: input.deliveryAttemptId,
-        deliveredAt: now,
-      });
+      if (!input.deferDeliveryConfirmation) {
+        await this.appendReceipt({
+          target: signal.target,
+          signalId: signal.signalId,
+          state: "delivered",
+          createdAt: now,
+          deliveryAttemptId: input.deliveryAttemptId,
+          deliveredAt: now,
+        });
+      }
     }
 
     const message = compileWorkerControlSignalsForContinuation(claimed);
@@ -323,6 +333,77 @@ export class WorkerControlService {
       signalIds: claimed.map((signal) => signal.signalId),
       ...(message === undefined ? {} : { message }),
     };
+  }
+
+  async confirmContinuationDelivery(input: {
+    readonly batch: WorkerControlContinuationBatch;
+    readonly now?: Date;
+  }): Promise<void> {
+    const now = input.now ?? this.clock.now();
+    const receipts: WorkerControlDeliveryReceipt[] = [];
+    for (const signalId of input.batch.signalIds) {
+      const signal = await this.findSignalOrThrow(input.batch.target, signalId);
+      const view = await this.signalViewFor({
+        signal,
+        target: input.batch.target,
+        capabilities: defaultCapabilities,
+        now,
+      });
+      if (
+        view.state === "delivered" &&
+        view.latestReceipt?.deliveryAttemptId === input.batch.deliveryAttemptId
+      ) {
+        continue;
+      }
+      if (
+        view.state !== "accepted" ||
+        view.latestReceipt?.deliveryAttemptId !== input.batch.deliveryAttemptId
+      ) {
+        throw new Error("worker_control_signal_delivery_claim_mismatch");
+      }
+      receipts.push(this.deliveryReceipt({
+        target: signal.target,
+        signalId,
+        state: "delivered",
+        createdAt: now,
+        deliveryAttemptId: input.batch.deliveryAttemptId,
+        deliveredAt: now,
+      }));
+    }
+    if (receipts.length === 0) return;
+    const appendReceipts = this.options.store.appendReceipts;
+    if (!appendReceipts) {
+      throw new Error("worker_control_delivery_batch_append_unsupported");
+    }
+    await appendReceipts.call(this.options.store, receipts);
+  }
+
+  async releaseContinuationDelivery(input: {
+    readonly batch: WorkerControlContinuationBatch;
+  }): Promise<void> {
+    const release = this.options.store.releaseDeliveryClaim;
+    if (!release && input.batch.signalIds.length > 0) {
+      throw new Error("worker_control_delivery_claim_release_unsupported");
+    }
+    for (const signalId of input.batch.signalIds) {
+      const released = await release?.call(this.options.store, {
+        target: input.batch.target,
+        signalId,
+        deliveryAttemptId: input.batch.deliveryAttemptId,
+      });
+      if (!released) {
+        const signal = await this.findSignalOrThrow(input.batch.target, signalId);
+        const view = await this.signalViewFor({
+          signal,
+          target: input.batch.target,
+          capabilities: defaultCapabilities,
+          now: this.clock.now(),
+        });
+        if (view.state !== "delivered") {
+          throw new Error("worker_control_signal_delivery_claim_mismatch");
+        }
+      }
+    }
   }
 
   private async signalViews(input: {

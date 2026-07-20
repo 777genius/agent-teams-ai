@@ -82,6 +82,7 @@ export interface AgentDriver {
     readonly runner: RunnerPort;
     readonly redactor: RedactorPort;
     readonly abortSignal: AbortSignal;
+    readonly onTaskStarted?: () => Promise<void> | void;
   }): Promise<ProviderTaskResult>;
 
   classifyRunFailure(error: unknown): ProviderFailure;

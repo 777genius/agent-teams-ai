@@ -456,18 +456,13 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
     options: SubscriptionWorkerRunOptions = {},
   ): Promise<FileBackendClaudeWorkerResult | FileBackendClaudeWorkerThreadResult> {
     if (isThreadJob(job)) return this.runThreadJob(job, options);
-    return this.runProviderTask(job, {
-      ...(options.abortSignal === undefined
-        ? {}
-        : { abortSignal: options.abortSignal }),
-    });
+    return this.runProviderTask(job, options);
   }
 
   private async runProviderTask(
     job: FileBackendClaudeWorkerJob | FileBackendClaudeWorkerThreadJob,
-    input: {
+    input: SubscriptionWorkerRunOptions & {
       readonly workspaceId?: string;
-      readonly abortSignal?: AbortSignal;
     } = {},
   ): Promise<FileBackendClaudeWorkerResult> {
     this.assertStarted();
@@ -548,6 +543,9 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
           runId,
           attempt: 1,
           abortSignal,
+          ...(input.onProviderTaskStarted
+            ? { onProviderTaskStarted: input.onProviderTaskStarted }
+            : {}),
         },
       });
 
@@ -668,10 +666,8 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
                   }),
             },
           }, {
+            ...options,
             workspaceId: workspacePath,
-            ...(options.abortSignal === undefined
-              ? {}
-              : { abortSignal: options.abortSignal }),
           });
           const latestSessionId = result.telemetry?.providerSessionId;
           if (!latestSessionId) {

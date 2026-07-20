@@ -510,6 +510,7 @@ export type RunContext = {
   readonly runId: string;
   readonly attempt: number;
   readonly abortSignal: AbortSignal;
+  readonly onProviderTaskStarted?: () => Promise<void> | void;
 };
 
 export type SessionFreshnessAssessment =

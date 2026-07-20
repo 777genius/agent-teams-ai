@@ -68,6 +68,7 @@ export class ClaudeTaskAgentDriver implements AgentDriver, StreamingAgentDriver 
     readonly runner: RunnerPort;
     readonly redactor: RedactorPort;
     readonly abortSignal: AbortSignal;
+    readonly onTaskStarted?: () => Promise<void> | void;
   }): Promise<ProviderTaskResult> {
     assertProviderTaskSystemPrompt(input.task.systemPrompt, "task.systemPrompt");
 
@@ -82,6 +83,7 @@ export class ClaudeTaskAgentDriver implements AgentDriver, StreamingAgentDriver 
         this.model,
         { ...input, session: input.session },
       );
+      await input.onTaskStarted?.();
       const result = await this.options.engine.run(prepared.engineInput);
       return redactProviderTaskResult({
         status: "completed",

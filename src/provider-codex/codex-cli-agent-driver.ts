@@ -48,6 +48,7 @@ export class CodexCliAgentDriver implements AgentDriver {
     readonly runner: Parameters<AgentDriver["runTask"]>[0]["runner"];
     readonly redactor: Parameters<AgentDriver["runTask"]>[0]["redactor"];
     readonly abortSignal: AbortSignal;
+    readonly onTaskStarted?: () => Promise<void> | void;
   }): Promise<ProviderTaskResult> {
     assertProviderTaskSystemPrompt(input.task.systemPrompt, "task.systemPrompt");
 
@@ -83,6 +84,7 @@ export class CodexCliAgentDriver implements AgentDriver {
         authJson,
         sandboxMode,
       });
+      await input.onTaskStarted?.();
       const result = await input.runner.run({
         command: this.options.codexBinaryPath ?? "codex",
         args: [

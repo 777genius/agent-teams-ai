@@ -403,7 +403,12 @@ export class BoundedSubscriptionWorkerPool<Job, Result> {
     slot.busy = true;
     this.inFlightCount += 1;
     return slot.worker
-      .run(job, options.abortSignal ? { abortSignal: options.abortSignal } : {})
+      .run(job, {
+        ...(options.abortSignal ? { abortSignal: options.abortSignal } : {}),
+        ...(options.onProviderTaskStarted
+          ? { onProviderTaskStarted: options.onProviderTaskStarted }
+          : {}),
+      })
       .then((result) => {
         this.completedCount += 1;
         return result;

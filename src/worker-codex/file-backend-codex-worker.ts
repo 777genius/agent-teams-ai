@@ -304,6 +304,9 @@ export class FileBackendCodexWorker implements CapacityAwareSubscriptionWorker<
               runId,
               attempt,
               abortSignal,
+              ...(options.onProviderTaskStarted
+                ? { onProviderTaskStarted: options.onProviderTaskStarted }
+                : {}),
             },
           });
         } catch (error) {

@@ -88,6 +88,18 @@ export class LocalFileWorkerControlInboxStore
     return receipt;
   }
 
+  async appendReceipts(
+    receipts: readonly WorkerControlDeliveryReceipt[],
+  ): Promise<readonly WorkerControlDeliveryReceipt[]> {
+    if (receipts.length === 0) return receipts;
+    const path = this.receiptsPath(receipts[0]!.target);
+    if (receipts.some((receipt) => this.receiptsPath(receipt.target) !== path)) {
+      throw new Error("worker_control_receipt_batch_target_mismatch");
+    }
+    await appendJsonLines(path, receipts.map(persistReceipt));
+    return receipts;
+  }
+
   async tryClaimDelivery(
     receipt: WorkerControlDeliveryReceipt,
   ): Promise<WorkerControlDeliveryReceipt | null> {
@@ -353,8 +365,16 @@ function parseReceipt(value: unknown): WorkerControlDeliveryReceipt | null {
 }
 
 async function appendJsonLine(path: string, value: unknown): Promise<void> {
+  await appendJsonLines(path, [value]);
+}
+
+async function appendJsonLines(
+  path: string,
+  values: readonly unknown[],
+): Promise<void> {
+  if (values.length === 0) return;
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  await appendFile(path, `${JSON.stringify(value)}\n`, {
+  await appendFile(path, `${values.map((value) => JSON.stringify(value)).join("\n")}\n`, {
     encoding: "utf8",
     mode: 0o600,
   });
