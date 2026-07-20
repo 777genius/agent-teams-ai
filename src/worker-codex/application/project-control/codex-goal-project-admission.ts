@@ -476,7 +476,23 @@ async function debtFromConsumedJobSummary(input: {
     input.knownWorkspacePaths,
     input.summary.workspacePath,
   );
-  return consumedDebt(consumed);
+  return consumedRecordDebt(input.consumedOutput, consumed);
+}
+
+function consumedRecordDebt(
+  ledger: ConsumedOutputLedger,
+  record: Parameters<typeof consumedDebt>[0],
+): readonly ProjectDebtItem[] {
+  const debt = consumedDebt(record);
+  const ledgerAlreadyReportedInvalidRecord = ledger.debt.some((item) =>
+    item.reason === ProjectDebtReason.IncompleteConsumedOutputRecord &&
+    item.subject === record.ledgerPath
+  );
+  return ledgerAlreadyReportedInvalidRecord
+    ? debt.filter((item) =>
+      item.reason !== ProjectDebtReason.IncompleteConsumedOutputRecord
+    )
+    : debt;
 }
 
 async function debtFromOverviewItem(input: {
@@ -576,7 +592,7 @@ async function debtFromOverviewItem(input: {
     ...(resolvedWorkspacePath ? { resolvedWorkspacePath } : {}),
   });
   if (consumed) {
-    debt.push(...consumedDebt(consumed));
+    debt.push(...consumedRecordDebt(input.consumedOutput, consumed));
     return debt;
   }
   const resultStatus = stringValue(item.resultStatus);
@@ -751,7 +767,7 @@ async function orphanDirtyWorkspaceDebt(input: {
       ...(resolved ? { resolvedWorkspacePath: resolved } : {}),
     });
     if (consumed) {
-      debt.push(...consumedDebt(consumed));
+      debt.push(...consumedRecordDebt(input.consumedOutput, consumed));
       continue;
     }
     const status = await gitStatusShort(workspacePath);

@@ -131,6 +131,9 @@ export type CodexProjectControlBrokerInput = {
     "workerJobId" | "taskId" | "workspacePath"
   >;
   readonly reviewedContinuation?: ReviewedWorkerOutputSnapshot;
+  readonly rejectedUncapturedTerminalHandoffRecovery?:
+    | { readonly patchSha256: string }
+    | undefined;
 };
 
 export function createCodexProjectControlBroker(
@@ -308,6 +311,12 @@ function codexProjectControlPorts(
               input.startAdmissionWorkspaceMode ===
                 "clean_capacity_continuation"
               ? { capacityContinuation: true as const }
+              : {}),
+            ...(input.rejectedUncapturedTerminalHandoffRecovery
+              ? {
+                  rejectedUncapturedContinuationPatchSha256:
+                    input.rejectedUncapturedTerminalHandoffRecovery.patchSha256,
+                }
               : {}),
           });
           await prepareCodexGoalLaunchPaths(startLaunch);

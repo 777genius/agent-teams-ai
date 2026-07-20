@@ -1,11 +1,18 @@
 import { createHash } from "node:crypto";
-import { lstat } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open } from "node:fs/promises";
 import { join } from "node:path";
 
+import { consumedOutputRecordFor } from "@vioxen/subscription-runtime/worker-core";
 import type { CodexGoalJobManifest } from "../../codex-goal-jobs";
 import type { CodexGoalStatus } from "../../codex-goal-ops";
 import { readVerifiedProducerHandoff } from "./codex-goal-project-verifier-handoff";
 import type { ReviewedWorkerOutputSnapshotterPort } from "../../reviewed-worker-output";
+import {
+  hasRelevantConsumedOutputDebt,
+  readCodexGoalConsumedOutputLedgers,
+  resolveRejectedUncapturedOutputPatchSha256,
+} from "./codex-goal-consumed-output-ledger-io";
 
 export type VerifiedTerminalHandoffRecovery = {
   readonly manifestPath: string;
@@ -13,6 +20,7 @@ export type VerifiedTerminalHandoffRecovery = {
   readonly patchSha256: string;
   readonly baseCommit: string;
   readonly changedFiles: readonly string[];
+  readonly reviewDisposition: "unreviewed" | "rejected_uncaptured";
 };
 
 export function terminalHandoffDependencyRecoveryRequested(input: {
@@ -46,11 +54,20 @@ export async function verifyTerminalHandoffRecovery(input: {
   readonly producer: CodexGoalJobManifest;
   readonly workspacePath: string;
   readonly snapshotter: ReviewedWorkerOutputSnapshotterPort;
+  readonly consumedOutputLedgerRoots?: readonly string[];
   readonly expected?: VerifiedTerminalHandoffRecovery;
 }): Promise<VerifiedTerminalHandoffRecovery> {
-  await assertNoReviewDecision(input.producer);
   const handoff = await readVerifiedProducerHandoff({
     producer: input.producer,
+  });
+  const reviewDisposition = await terminalHandoffReviewDisposition({
+    producer: input.producer,
+    workspacePath: input.workspacePath,
+    patchSha256: handoff.patchSha256,
+    consumedOutputLedgerRoots:
+      input.consumedOutputLedgerRoots ??
+      input.producer.projectAccessScope?.consumedOutputLedgerRoots ??
+      [],
   });
   const current = await input.snapshotter.capture({
     workspacePath: input.workspacePath,
@@ -72,6 +89,7 @@ export async function verifyTerminalHandoffRecovery(input: {
     patchSha256: handoff.patchSha256,
     baseCommit: handoff.baseCommit,
     changedFiles: handoffChangedFiles,
+    reviewDisposition,
   };
   if (input.expected && !sameRecovery(input.expected, verified)) {
     throw new Error(
@@ -81,22 +99,91 @@ export async function verifyTerminalHandoffRecovery(input: {
   return verified;
 }
 
-async function assertNoReviewDecision(
-  producer: CodexGoalJobManifest,
-): Promise<void> {
+async function terminalHandoffReviewDisposition(input: {
+  readonly producer: CodexGoalJobManifest;
+  readonly workspacePath: string;
+  readonly patchSha256: string;
+  readonly consumedOutputLedgerRoots: readonly string[];
+}): Promise<"unreviewed" | "rejected_uncaptured"> {
   const reviewPath = join(
-    producer.jobRootDir,
-    `${producer.taskId}.review.json`,
+    input.producer.jobRootDir,
+    `${input.producer.taskId}.review.json`,
   );
+  let markerBody: string;
+  let markerHandle;
   try {
-    const item = await lstat(reviewPath);
-    if (item.isSymbolicLink() || !item.isFile()) {
+    markerHandle = await open(
+      reviewPath,
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
+    const item = await markerHandle.stat();
+    if (!item.isFile() || item.size > 1024 * 1024) {
       throw new Error("project_control_terminal_handoff_review_marker_unsafe");
     }
-    throw new Error("project_control_terminal_handoff_already_reviewed");
+    markerBody = await markerHandle.readFile("utf8");
   } catch (error) {
-    if (isNodeError(error, "ENOENT")) return;
+    if (isNodeError(error, "ENOENT")) {
+      await assertNoRejectedLedgerWithoutMarker(input);
+      return "unreviewed";
+    }
+    if (isNodeError(error, "ELOOP")) {
+      throw new Error("project_control_terminal_handoff_review_marker_unsafe");
+    }
     throw error;
+  } finally {
+    await markerHandle?.close().catch(() => undefined);
+  }
+
+  let marker: unknown;
+  try {
+    marker = JSON.parse(markerBody);
+  } catch {
+    throw new Error("project_control_terminal_handoff_review_marker_unsafe");
+  }
+  if (
+    !isRecord(marker) ||
+    marker.schemaVersion !== 1 ||
+    marker.jobId !== input.producer.jobId ||
+    marker.taskId !== input.producer.taskId ||
+    !isRecord(marker.status) ||
+    marker.reviewedOutput !== undefined ||
+    marker.decision !== undefined ||
+    input.consumedOutputLedgerRoots.length !== 1
+  ) {
+    throw new Error("project_control_terminal_handoff_already_reviewed");
+  }
+  const ledger = await readCodexGoalConsumedOutputLedgers({
+    roots: input.consumedOutputLedgerRoots,
+  });
+  const patchSha256 = resolveRejectedUncapturedOutputPatchSha256({
+    ledger,
+    jobId: input.producer.jobId,
+    workspacePath: input.workspacePath,
+  });
+  if (patchSha256 !== input.patchSha256.toLowerCase()) {
+    throw new Error("project_control_terminal_handoff_already_reviewed");
+  }
+  return "rejected_uncaptured";
+}
+
+async function assertNoRejectedLedgerWithoutMarker(input: {
+  readonly producer: CodexGoalJobManifest;
+  readonly workspacePath: string;
+  readonly consumedOutputLedgerRoots: readonly string[];
+}): Promise<void> {
+  if (input.consumedOutputLedgerRoots.length === 0) return;
+  const ledger = await readCodexGoalConsumedOutputLedgers({
+    roots: input.consumedOutputLedgerRoots,
+  });
+  if (
+    hasRelevantConsumedOutputDebt(ledger, input.producer.jobId) ||
+    consumedOutputRecordFor({
+      ledger,
+      jobId: input.producer.jobId,
+      workspacePath: input.workspacePath,
+    }) !== undefined
+  ) {
+    throw new Error("project_control_terminal_handoff_already_reviewed");
   }
 }
 
@@ -109,8 +196,13 @@ function sameRecovery(
     left.manifestSha256 === right.manifestSha256 &&
     left.patchSha256 === right.patchSha256 &&
     left.baseCommit === right.baseCommit &&
+    left.reviewDisposition === right.reviewDisposition &&
     sameStrings(left.changedFiles, right.changedFiles)
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function uniqueSorted(values: readonly string[]): readonly string[] {

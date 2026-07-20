@@ -22,6 +22,7 @@ const REVIEWED_NO_CHANGE_STATUS = "reviewed_no_change";
 
 export type ConsumedOutputRecord = {
   readonly jobId: string;
+  readonly attemptId?: string;
   readonly status: string;
   readonly ledgerPath: string;
   readonly closedAt?: string;
@@ -29,6 +30,7 @@ export type ConsumedOutputRecord = {
   readonly resolvedWorkspace?: string;
   readonly commitSha?: string;
   readonly backup?: TerminalOutputBackup;
+  readonly backupPatchSha256?: string;
   readonly backupEvidenceValid?: boolean;
   readonly backupWorkspaceDirty?: boolean;
   readonly preexistingWorkspacePatchValid?: boolean;
@@ -88,7 +90,27 @@ export async function readConsumedOutputLedgers(input: {
       ledgerPath: entry.ledgerPath,
       source: input.source,
     });
-    if (!record) continue;
+    if (!record) {
+      if (hasTerminalOutputIntent(entry.value)) {
+        debt.push({
+          reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+          subject: entry.ledgerPath,
+          severity: "blocking",
+          evidence: [
+            "terminal consumed-output record has an unknown or invalid status",
+          ],
+        });
+      }
+      continue;
+    }
+    if (!record.valid) {
+      debt.push({
+        reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+        subject: entry.ledgerPath,
+        severity: "blocking",
+        evidence: record.evidence,
+      });
+    }
     setLatestRecord(byJobId, record.jobId, record);
     if (
       record.status !== NO_OUTPUT_STATUS &&
@@ -106,6 +128,14 @@ export async function readConsumedOutputLedgers(input: {
     }
   }
   return { byJobId, byWorkspace, debt };
+}
+
+function hasTerminalOutputIntent(value: unknown): boolean {
+  return isRecord(value) &&
+    typeof value.jobId === "string" &&
+    value.jobId.length > 0 &&
+    typeof value.status === "string" &&
+    value.status.length > 0;
 }
 
 function setLatestRecord(
@@ -157,10 +187,14 @@ export async function consumedOutputRecordFromJson(input: {
   const backup = isRecord(input.value.backup) ? input.value.backup : undefined;
   const workspace = backup ? stringValue(backup.workspace) : undefined;
   const terminalBackup = terminalOutputBackup(backup);
+  const attemptId = stringValue(input.value.attemptId);
   const closedAt = stringValue(input.value.closedAt);
   const hasActiveClaim = isRecord(input.value.claim) ||
     input.value.active === true || input.value.claimed === true;
   if (!closedAt) evidence.push("terminal consumed-output record is missing closedAt");
+  if (closedAt && !Number.isFinite(Date.parse(closedAt))) {
+    evidence.push("terminal consumed-output record has invalid closedAt");
+  }
   if (!backup) evidence.push("terminal consumed-output record is missing backup");
   if (!workspace) evidence.push("terminal consumed-output backup is missing workspace");
   if (isRecord(input.value.claim)) {
@@ -216,6 +250,7 @@ export async function consumedOutputRecordFromJson(input: {
   );
   return {
     jobId,
+    ...(attemptId ? { attemptId } : {}),
     status,
     ledgerPath: input.ledgerPath,
     ...(closedAt ? { closedAt } : {}),
@@ -223,6 +258,9 @@ export async function consumedOutputRecordFromJson(input: {
     ...(resolvedWorkspace ? { resolvedWorkspace } : {}),
     ...(commit ? { commitSha: commit } : {}),
     ...(terminalBackup ? { backup: terminalBackup } : {}),
+    ...(backupEvidence.patchSha256
+      ? { backupPatchSha256: backupEvidence.patchSha256 }
+      : {}),
     backupEvidenceValid: backupEvidence.ok,
     backupWorkspaceDirty: backupEvidence.workspaceDirty,
     preexistingWorkspacePatchValid: preexistingWorkspacePatch.valid,
@@ -329,11 +367,15 @@ export function projectAdmissionDebtCounts(
 
 async function consumedOutputBackupEvidence(
   backup: Record<string, unknown>,
-  source: Pick<ConsumedOutputLedgerSourcePort, "pathExists" | "pathSize">,
+  source: Pick<
+    ConsumedOutputLedgerSourcePort,
+    "pathExists" | "pathSize" | "pathSha256"
+  >,
 ): Promise<{
   readonly ok: boolean;
   readonly hasAuthoredOutput: boolean;
   readonly workspaceDirty: boolean;
+  readonly patchSha256?: string;
   readonly evidence: readonly string[];
 }> {
   const evidence: string[] = [];
@@ -357,6 +399,10 @@ async function consumedOutputBackupEvidence(
   const payloadSizes = await Promise.all(
     payloadPaths.map(async (path) => await source.pathSize(path)),
   );
+  const patchPath = stringValue(backup.patchPath);
+  const patchSha256 = patchPath
+    ? await source.pathSha256(patchPath)
+    : undefined;
   if (payloadPaths.length > 0 && payloadSizes.every((size) => size === undefined)) {
       evidence.push("none of backup patch/numstat/untracked archive paths exists");
   }
@@ -364,6 +410,7 @@ async function consumedOutputBackupEvidence(
     ok: evidence.length === 0,
     hasAuthoredOutput: payloadSizes.some((size) => size !== undefined && size > 0),
     workspaceDirty: statusSize !== undefined && statusSize > 0,
+    ...(patchSha256 ? { patchSha256 } : {}),
     evidence,
   };
 }

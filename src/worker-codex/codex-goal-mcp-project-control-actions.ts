@@ -449,9 +449,7 @@ export async function projectControlStartStoredJobView(
         : terminalRecovery
           ? ("terminal_handoff_dependency_recovery" as const)
           : (continuationDecision?.workspaceMode ??
-            (cleanExplicitContinuation
-              ? ("clean_explicit_continuation" as const)
-              : undefined));
+            (cleanExplicitContinuation ? ("clean_explicit_continuation" as const) : undefined));
       let result;
       try {
         const broker = deps.codexProjectControlBroker({
@@ -466,6 +464,8 @@ export async function projectControlStartStoredJobView(
           startWorkspaceLease: workspace,
           startSkipDoctor: booleanValue(args.skipDoctor) ?? false,
           ...(reviewedContinuation ? { reviewedContinuation } : {}),
+          rejectedUncapturedTerminalHandoffRecovery: terminalRecovery?.reviewDisposition === "rejected_uncaptured"
+            ? { patchSha256: terminalRecovery.patchSha256 } : undefined,
         });
         result = await broker.startWorker({
           jobId: loaded.manifest.jobId,

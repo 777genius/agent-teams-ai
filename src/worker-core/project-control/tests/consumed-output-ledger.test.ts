@@ -26,6 +26,29 @@ import {
 } from "../index";
 
 describe("consumed output ledger", () => {
+  it.each([
+    { name: "incomplete terminal schema", value: { jobId: "worker-1", status: "rejected" } },
+    { name: "unknown terminal status", value: { jobId: "worker-1", status: "unknown" } },
+    { name: "invalid terminal closedAt", value: { jobId: "worker-1", status: "rejected", closedAt: "not-a-date" } },
+  ])("records $name as blocking ledger debt", async ({ value }) => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-ledger-invalid-"));
+    const ledgerPath = join(root, "worker-1--zz.json");
+    const source: ConsumedOutputLedgerSourcePort = {
+      ...localConsumedOutputLedgerSource(),
+      async readEntries() {
+        return { entries: [{ ledgerPath, value }], failures: [] };
+      },
+    };
+
+    const ledger = await readConsumedOutputLedgers({ roots: [root], source });
+
+    expect(ledger.debt).toContainEqual(expect.objectContaining({
+      reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+      subject: ledgerPath,
+      severity: "blocking",
+    }));
+  });
+
   it("selects the latest attempt record deterministically for the same job", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-ledger-latest-"));
     const workspace = join(root, "workspace");

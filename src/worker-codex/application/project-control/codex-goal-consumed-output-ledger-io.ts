@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { open, readdir, readFile, realpath, stat } from "node:fs/promises";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import {
   consumedOutputRecordFor,
   readConsumedOutputLedgers,
+  type ConsumedOutputRecord,
   type ConsumedOutputLedger,
   type ConsumedOutputLedgerEntry,
   type ConsumedOutputLedgerReadFailure,
@@ -25,6 +26,36 @@ export async function readCodexGoalConsumedOutputLedgers(input: {
   });
 }
 
+export function rejectedUncapturedOutputPatchSha256(
+  record: ConsumedOutputRecord,
+): string | undefined {
+  if (record.status !== "rejected" || !record.valid) return undefined;
+  const match = record.attemptId?.match(
+    /^uncaptured-rejection-([a-f0-9]{64})$/i,
+  );
+  if (!match || !record.backupPatchSha256) return undefined;
+  const patchSha256 = match[1]!.toLowerCase();
+  return record.backupPatchSha256.toLowerCase() === patchSha256
+    ? patchSha256
+    : undefined;
+}
+
+export function resolveRejectedUncapturedOutputPatchSha256(input: {
+  readonly ledger: ConsumedOutputLedger;
+  readonly jobId: string;
+  readonly workspacePath: string;
+}): string | undefined {
+  if (hasRelevantConsumedOutputDebt(input.ledger, input.jobId)) {
+    return undefined;
+  }
+  const record = consumedOutputRecordFor({
+    ledger: input.ledger,
+    jobId: input.jobId,
+    workspacePath: input.workspacePath,
+  });
+  return record ? rejectedUncapturedOutputPatchSha256(record) : undefined;
+}
+
 export async function assertCodexGoalProjectJobNotTerminal(input: {
   readonly roots: readonly string[];
   readonly projectId: string;
@@ -34,11 +65,38 @@ export async function assertCodexGoalProjectJobNotTerminal(input: {
   readonly workspacePath: string;
   readonly reviewedContinuation?: ReviewedWorkerOutputSnapshot;
   readonly capacityContinuation?: true;
+  readonly rejectedUncapturedContinuationPatchSha256?: string;
 }): Promise<void> {
-  if (input.roots.length === 0) return;
+  if (
+    input.rejectedUncapturedContinuationPatchSha256 &&
+    input.roots.length !== 1
+  ) {
+    throw new Error(
+      "project_control_terminal_job_start_denied:rejected_ledger_root_invalid",
+    );
+  }
+  if (input.roots.length === 0) {
+    return;
+  }
   const ledger = await readCodexGoalConsumedOutputLedgers({
     roots: input.roots,
   });
+  if (input.rejectedUncapturedContinuationPatchSha256) {
+    const patchSha256 = resolveRejectedUncapturedOutputPatchSha256({
+      ledger,
+      jobId: input.jobId,
+      workspacePath: input.workspacePath,
+    });
+    if (
+      patchSha256 ===
+      input.rejectedUncapturedContinuationPatchSha256.toLowerCase()
+    ) {
+      return;
+    }
+    throw new Error(
+      "project_control_terminal_job_start_denied:rejected_evidence_mismatch",
+    );
+  }
   const record = consumedOutputRecordFor({
     ledger,
     jobId: input.jobId,
@@ -63,6 +121,18 @@ export async function assertCodexGoalProjectJobNotTerminal(input: {
   throw new Error(
     `project_control_terminal_job_start_denied:${record.status}`,
   );
+}
+
+export function hasRelevantConsumedOutputDebt(
+  ledger: ConsumedOutputLedger,
+  jobId: string,
+): boolean {
+  const safeJobId = jobId.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return ledger.debt.some((item) => {
+    const subjectName = basename(item.subject);
+    return subjectName === "items" ||
+      relevantLedgerEntryName(subjectName, safeJobId);
+  });
 }
 
 class LocalConsumedOutputLedgerSource implements ConsumedOutputLedgerSourcePort {
@@ -97,12 +167,31 @@ class LocalConsumedOutputLedgerSource implements ConsumedOutputLedgerSourcePort 
         continue;
       }
       for (const entry of dirEntries) {
-        if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+        if (!entry.name.endsWith(".json")) continue;
         const ledgerPath = join(itemsDir, entry.name);
+        if (!entry.isFile()) {
+          failures.push({
+            subject: ledgerPath,
+            evidence: [
+              "consumed output ledger record is not a regular file",
+            ],
+          });
+          continue;
+        }
         try {
+          const value: unknown = JSON.parse(await readFile(ledgerPath, "utf8"));
+          if (!ledgerFilenameMatchesPayload(entry.name, value)) {
+            failures.push({
+              subject: ledgerPath,
+              evidence: [
+                "consumed output ledger filename does not match payload jobId",
+              ],
+            });
+            continue;
+          }
           entries.push({
             ledgerPath,
-            value: JSON.parse(await readFile(ledgerPath, "utf8")),
+            value,
           });
         } catch (error) {
           failures.push({
@@ -183,6 +272,28 @@ class LocalConsumedOutputLedgerSource implements ConsumedOutputLedgerSourcePort 
   }
 }
 
+function ledgerFilenameMatchesPayload(
+  filename: string,
+  value: unknown,
+): boolean {
+  if (
+    !isRecord(value) ||
+    typeof value.jobId !== "string" ||
+    !value.jobId ||
+    typeof value.status !== "string" ||
+    !value.status
+  ) {
+    return false;
+  }
+  const safeJobId = value.jobId.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return relevantLedgerEntryName(filename, safeJobId);
+}
+
+function relevantLedgerEntryName(filename: string, safeJobId: string): boolean {
+  return filename === `${safeJobId}.json` ||
+    filename.startsWith(`${safeJobId}--`);
+}
+
 function pathInsideOrEqual(path: string, root: string): boolean {
   const pathRelative = relative(resolve(root), resolve(path));
   return pathRelative === "" ||
@@ -191,4 +302,8 @@ function pathInsideOrEqual(path: string, root: string): boolean {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

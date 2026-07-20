@@ -1,4 +1,11 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -22,6 +29,8 @@ import {
 } from "../application/project-control/codex-goal-project-terminal-handoff-recovery";
 import { localReviewedWorkerOutputDeps } from "../reviewed-worker-output";
 import { projectControlStartStoredJobView } from "../codex-goal-mcp-project-control-actions";
+import { recordRejectedUncapturedOutput } from "../codex-goal-mcp-project-control-reviewed-rejection";
+import { assertCodexGoalProjectJobNotTerminal } from "../application/project-control/codex-goal-consumed-output-ledger-io";
 import { git, gitInitRepository } from "./codex-goal-mcp-test-support";
 
 const roots: string[] = [];
@@ -167,6 +176,259 @@ describe("terminal worker handoff dependency recovery", () => {
       verifyTerminalHandoffRecovery(fixture.verifyInput),
     ).rejects.toThrow("project_control_terminal_handoff_already_reviewed");
   });
+
+  it("permits same-job start only with the exact rejected uncaptured patch", async () => {
+    const fixture = await actionFixture();
+    const receipt = await writeRejectedUncapturedReview(fixture);
+    const verified = await verifyActionFixture(fixture);
+    expect(verified).toMatchObject({
+      reviewDisposition: "rejected_uncaptured",
+      patchSha256: receipt.decision.attemptId?.replace(
+        "uncaptured-rejection-",
+        "",
+      ),
+    });
+
+    let startCalled = false;
+    const started = await projectControlStartStoredJobView(
+      fixture.startArgs,
+      {
+        ...fixture.deps(async () => {}),
+        codexProjectControlBroker: (input) => ({
+          startWorker: async () => {
+            startCalled = true;
+            const recovery =
+              input.rejectedUncapturedTerminalHandoffRecovery;
+            expect(
+              recovery,
+            ).toEqual({ patchSha256: verified.patchSha256 });
+            if (!recovery) throw new Error("expected rejected recovery");
+            await assertCodexGoalProjectJobNotTerminal({
+              roots: input.scope.consumedOutputLedgerRoots ?? [],
+              projectId: input.scope.projectId,
+              controllerJobId: input.controller.jobId,
+              jobId: fixture.jobId,
+              taskId: fixture.jobId,
+              workspacePath: fixture.workspacePath,
+              rejectedUncapturedContinuationPatchSha256:
+                recovery.patchSha256,
+            });
+            return { status: "started" };
+          },
+        }) as unknown as ProjectControlBroker,
+      },
+    );
+    expect(started).toMatchObject({ ok: true, jobId: fixture.jobId });
+    expect(startCalled).toBe(true);
+  });
+
+  it("rejects archive tamper at recovery and terminal admission", async () => {
+    const fixture = await actionFixture();
+    const receipt = await writeRejectedUncapturedReview(fixture);
+    const verified = await verifyActionFixture(fixture);
+    await writeFile(
+      receipt.decision.backup.patchPath!,
+      `${await readFile(receipt.decision.backup.patchPath!, "utf8")}tampered\n`,
+    );
+    await expect(
+      verifyActionFixture(fixture),
+    ).rejects.toThrow("project_control_terminal_handoff_already_reviewed");
+    await expect(
+      assertTerminalAdmission(fixture, verified.patchSha256),
+    ).rejects.toThrow(
+      "project_control_terminal_job_start_denied:rejected_evidence_mismatch",
+    );
+  });
+
+  it("rejects an unexpected rejected patch identity at terminal admission", async () => {
+    const fixture = await actionFixture();
+    await writeRejectedUncapturedReview(fixture);
+    await expect(
+      assertTerminalAdmission(fixture, "f".repeat(64)),
+    ).rejects.toThrow(
+      "project_control_terminal_job_start_denied:rejected_evidence_mismatch",
+    );
+  });
+
+  it.each([
+    "malformed",
+    "semantic-invalid",
+    "invalid-date",
+    "unknown-status",
+    "missing-status",
+    "null-status",
+    "empty-status",
+    "missing-job-id",
+    "wrong-job-id",
+    "symlink",
+  ])(
+    "rejects relevant %s newer ledger evidence",
+    async (kind) => {
+      const fixture = await actionFixture();
+      const receipt = await writeRejectedUncapturedReview(fixture);
+      const items = join(fixture.ledgerRoot, "items");
+      const path = join(items, `${fixture.jobId}--zz-newer.json`);
+      if (kind === "malformed") {
+        await writeFile(path, "{not-json\n");
+      } else if (kind === "semantic-invalid") {
+        await writeFile(path, `${JSON.stringify({
+          schemaVersion: 1,
+          jobId: fixture.jobId,
+          attemptId: "newer-ambiguous",
+          status: "rejected",
+          note: "Missing backup evidence.",
+        })}\n`);
+      } else if (kind === "unknown-status") {
+        await writeFile(path, `${JSON.stringify({
+          jobId: fixture.jobId,
+          status: "unknown",
+        })}\n`);
+      } else if (kind === "invalid-date") {
+        const value = JSON.parse(await readFile(receipt.ledgerPath, "utf8"));
+        await writeFile(path, `${JSON.stringify({
+          ...value,
+          attemptId: "newer-invalid-date",
+          closedAt: "not-a-date",
+        })}\n`);
+      } else if (
+        kind === "missing-status" ||
+        kind === "null-status" ||
+        kind === "empty-status"
+      ) {
+        await writeFile(path, `${JSON.stringify({
+          jobId: fixture.jobId,
+          ...(kind === "missing-status"
+            ? {}
+            : { status: kind === "null-status" ? null : "" }),
+        })}\n`);
+      } else if (kind === "missing-job-id" || kind === "wrong-job-id") {
+        await writeFile(path, `${JSON.stringify({
+          schemaVersion: 1,
+          ...(kind === "wrong-job-id" ? { jobId: "project-other" } : {}),
+          status: "rejected",
+          closedAt: "2027-01-01T00:00:00.000Z",
+        })}\n`);
+      } else {
+        await symlink("missing-ledger-target", path);
+      }
+      await expect(
+        verifyActionFixture(fixture),
+      ).rejects.toThrow("project_control_terminal_handoff_already_reviewed");
+    },
+  );
+
+  it("rejects rejected ledger evidence when its review marker is missing", async () => {
+    const fixture = await actionFixture();
+    await recordRejectedUncapturedOutput({
+      scope: fixture.scope,
+      jobId: fixture.jobId,
+      jobRootDir: fixture.jobRootDir,
+      workspacePath: fixture.workspacePath,
+      closedAt: "2026-07-21T00:00:00.000Z",
+      reason: "Marker intentionally absent.",
+    });
+    let bootstrapCalled = false;
+    await expect(
+      projectControlStartStoredJobView(
+        fixture.startArgs,
+        fixture.deps(async () => {
+          bootstrapCalled = true;
+        }),
+      ),
+    ).rejects.toThrow("project_control_terminal_handoff_already_reviewed");
+    expect(bootstrapCalled).toBe(false);
+  });
+
+  it.each([
+    "malformed",
+    "unknown-status",
+    "missing-status",
+    "null-status",
+    "empty-status",
+    "symlink",
+  ])(
+    "rejects marker-missing target-prefixed %s debt before bootstrap",
+    async (kind) => {
+      const fixture = await actionFixture();
+      const items = join(fixture.ledgerRoot, "items");
+      const path = join(items, `${fixture.jobId}--zz.json`);
+      await mkdir(items, { recursive: true });
+      if (kind === "malformed") {
+        await writeFile(path, "{not-json\n");
+      } else if (kind === "unknown-status") {
+        await writeFile(path, `${JSON.stringify({
+          jobId: fixture.jobId,
+          status: "unknown",
+        })}\n`);
+      } else if (
+        kind === "missing-status" ||
+        kind === "null-status" ||
+        kind === "empty-status"
+      ) {
+        await writeFile(path, `${JSON.stringify({
+          jobId: fixture.jobId,
+          ...(kind === "missing-status"
+            ? {}
+            : { status: kind === "null-status" ? null : "" }),
+        })}\n`);
+      } else {
+        await symlink("missing-ledger-target", path);
+      }
+      let bootstrapCalled = false;
+      await expect(
+        projectControlStartStoredJobView(
+          fixture.startArgs,
+          fixture.deps(async () => {
+            bootstrapCalled = true;
+          }),
+        ),
+      ).rejects.toThrow("project_control_terminal_handoff_already_reviewed");
+      expect(bootstrapCalled).toBe(false);
+    },
+  );
+
+  it("rejects a configured missing ledger items directory before bootstrap", async () => {
+    const fixture = await actionFixture();
+    await rm(join(fixture.ledgerRoot, "items"), { recursive: true });
+    let bootstrapCalled = false;
+    await expect(
+      projectControlStartStoredJobView(
+        fixture.startArgs,
+        fixture.deps(async () => {
+          bootstrapCalled = true;
+        }),
+      ),
+    ).rejects.toThrow("project_control_terminal_handoff_already_reviewed");
+    expect(bootstrapCalled).toBe(false);
+  });
+
+  it.each([0, 2])(
+    "rejects rejected recovery with %i consumed-output ledger roots",
+    async (rootCount) => {
+      const fixture = await actionFixture();
+      await writeRejectedUncapturedReview(fixture);
+      const roots = rootCount === 0
+        ? []
+        : [fixture.ledgerRoot, join(fixture.registryRootDir, "other-ledger")];
+      await expect(
+        verifyActionFixture(fixture, roots),
+      ).rejects.toThrow("project_control_terminal_handoff_already_reviewed");
+    },
+  );
+
+  it.each(["approved", "rejected"])(
+    "rejects captured %s review marker despite uncaptured ledger evidence",
+    async (decision) => {
+      const fixture = await actionFixture();
+      await writeRejectedUncapturedReview(fixture);
+      await writeReviewMarker(fixture, {
+        reviewedOutput: { decision, reviewedOutputId: "a".repeat(64) },
+      });
+      await expect(
+        verifyActionFixture(fixture),
+      ).rejects.toThrow("project_control_terminal_handoff_already_reviewed");
+    },
+  );
 
   it("holds the project start lock across dependency bootstrap verification", async () => {
     const fixture = await actionFixture();
@@ -346,10 +608,12 @@ async function actionFixture() {
   const jobRootDir = join(root, "jobs", "project-worker");
   const promptPath = join(jobRootDir, "prompt.md");
   const jobId = "project-worker";
+  const ledgerRoot = join(root, "consumed-output-ledger");
   await Promise.all([
     mkdir(workspacePath, { recursive: true }),
     mkdir(canonicalWorkspacePath, { recursive: true }),
     mkdir(jobRootDir, { recursive: true }),
+    mkdir(join(ledgerRoot, "items"), { recursive: true }),
   ]);
   await gitInitRepository(workspacePath);
   await gitInitRepository(canonicalWorkspacePath);
@@ -376,6 +640,7 @@ async function actionFixture() {
     allowedAccountIds: ["account-a", "account-b"],
     allowedBranches: ["main"],
     allowedGitRemotes: ["origin"],
+    consumedOutputLedgerRoots: [ledgerRoot],
   };
   await createCodexGoalJob({
     registryRootDir,
@@ -406,11 +671,26 @@ async function actionFixture() {
     accessBoundary: AccessBoundary.ProjectScopedControl,
     projectAccessScope: scope,
   } as CodexGoalJobManifest;
+  const producer = {
+    jobId,
+    taskId: jobId,
+    workspacePath,
+    jobRootDir,
+    projectAccessScope: scope,
+  } as CodexGoalJobManifest;
+  const snapshotter = localReviewedWorkerOutputDeps({
+    rootDir: join(root, "reviewed-output"),
+  }).snapshotter;
   return {
     registryRootDir,
     workspacePath,
     jobRootDir,
     jobId,
+    ledgerRoot,
+    scope,
+    controller,
+    producer,
+    snapshotter,
     startArgs: {
       registryRootDir,
       controllerJobId: controller.jobId,
@@ -447,4 +727,64 @@ async function actionFixture() {
       },
     }),
   };
+}
+
+async function writeRejectedUncapturedReview(
+  fixture: Awaited<ReturnType<typeof actionFixture>>,
+) {
+  const receipt = await recordRejectedUncapturedOutput({
+    scope: fixture.scope,
+    jobId: fixture.jobId,
+    jobRootDir: fixture.jobRootDir,
+    workspacePath: fixture.workspacePath,
+    closedAt: "2026-07-21T00:00:00.000Z",
+    reason: "Rejected for same-job remediation.",
+  });
+  await writeReviewMarker(fixture, {});
+  return receipt;
+}
+
+async function writeReviewMarker(
+  fixture: Awaited<ReturnType<typeof actionFixture>>,
+  overrides: Record<string, unknown>,
+): Promise<void> {
+  await writeFile(
+    join(fixture.jobRootDir, `${fixture.jobId}.review.json`),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      jobId: fixture.jobId,
+      taskId: fixture.jobId,
+      reviewedAt: "2026-07-21T00:00:00.000Z",
+      note: "FORMAL REJECT",
+      status: { resultStatus: "done", workspaceDirty: true },
+      ...overrides,
+    })}\n`,
+  );
+}
+
+async function assertTerminalAdmission(
+  fixture: Awaited<ReturnType<typeof actionFixture>>,
+  patchSha256: string,
+): Promise<void> {
+  await assertCodexGoalProjectJobNotTerminal({
+    roots: [fixture.ledgerRoot],
+    projectId: fixture.scope.projectId,
+    controllerJobId: fixture.controller.jobId,
+    jobId: fixture.jobId,
+    taskId: fixture.jobId,
+    workspacePath: fixture.workspacePath,
+    rejectedUncapturedContinuationPatchSha256: patchSha256,
+  });
+}
+
+async function verifyActionFixture(
+  fixture: Awaited<ReturnType<typeof actionFixture>>,
+  roots: readonly string[] = [fixture.ledgerRoot],
+) {
+  return await verifyTerminalHandoffRecovery({
+    producer: fixture.producer,
+    workspacePath: fixture.workspacePath,
+    snapshotter: fixture.snapshotter,
+    consumedOutputLedgerRoots: roots,
+  });
 }
