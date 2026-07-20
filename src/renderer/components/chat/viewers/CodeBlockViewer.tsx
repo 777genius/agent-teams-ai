@@ -128,12 +128,15 @@ export const CodeBlockViewer = memo(function CodeBlockViewer({
 }: CodeBlockViewerProps): React.JSX.Element {
   const { t } = useAppTranslation('common');
   const [isCopied, setIsCopied] = useState(false);
+  const safeFileName =
+    typeof fileName === 'string' && fileName.trim().length > 0 ? fileName : 'code';
+  const safeContent = typeof content === 'string' ? content : '';
 
   // Infer language from file extension if not provided
-  const detectedLanguage = language ?? inferLanguage(fileName);
+  const detectedLanguage = language ?? inferLanguage(safeFileName);
 
   // Split content into lines
-  const lines = useMemo(() => content.split('\n'), [content]);
+  const lines = useMemo(() => safeContent.split('\n'), [safeContent]);
   const totalLines = lines.length;
 
   // Calculate the actual line range for display
@@ -142,7 +145,7 @@ export const CodeBlockViewer = memo(function CodeBlockViewer({
   // Handle copy
   const handleCopy = async (): Promise<void> => {
     try {
-      await navigator.clipboard.writeText(content);
+      await navigator.clipboard.writeText(safeContent);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch {
@@ -151,7 +154,7 @@ export const CodeBlockViewer = memo(function CodeBlockViewer({
   };
 
   // Extract just the filename for display
-  const displayFileName = getBaseName(fileName) || fileName;
+  const displayFileName = getBaseName(safeFileName) || safeFileName;
 
   return (
     <div
@@ -173,7 +176,7 @@ export const CodeBlockViewer = memo(function CodeBlockViewer({
           <FileCode className="size-4 shrink-0" style={{ color: 'var(--color-text-muted)' }} />
           <span
             className="truncate font-mono text-sm"
-            title={fileName}
+            title={safeFileName}
             style={{ color: 'var(--code-filename)' }}
           >
             {displayFileName}
