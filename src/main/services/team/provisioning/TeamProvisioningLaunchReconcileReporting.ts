@@ -134,15 +134,23 @@ export async function reconcilePersistedLaunchMember(input: {
     now,
     ports,
   } = input;
-  let current = input.current ?? {
-    name: expected,
-    launchState: 'starting',
-    agentToolAccepted: false,
-    runtimeAlive: false,
-    bootstrapConfirmed: false,
-    hardFailure: false,
-    lastEvaluatedAt: now,
-  };
+  let current: PersistedTeamLaunchMemberState = input.current
+    ? {
+        ...input.current,
+        sources: input.current.sources ? { ...input.current.sources } : undefined,
+        diagnostics: input.current.diagnostics
+          ? [...input.current.diagnostics]
+          : input.current.diagnostics,
+      }
+    : {
+        name: expected,
+        launchState: 'starting',
+        agentToolAccepted: false,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        lastEvaluatedAt: now,
+      };
   const isOpenCodeSecondaryLaneMember = isPersistedOpenCodeSecondaryLaneMember(current);
   const matchedConfigNames = [...configMembers].filter((name) =>
     matchesObservedMemberNameForExpected(name, expected)
@@ -372,7 +380,8 @@ export async function reconcilePersistedLaunchMember(input: {
   const graceExpired =
     Number.isFinite(acceptedAtMs) && ports.nowMs() - acceptedAtMs >= MEMBER_LAUNCH_GRACE_MS;
   if (!isOpenCodeSecondaryLaneMember) {
-    current = ports.applyProcessBootstrapTransportOverlay({
+    const diagnosticsBeforeTransportOverlay = current.diagnostics;
+    const overlaid = ports.applyProcessBootstrapTransportOverlay({
       member: current,
       summary: await ports.readProcessBootstrapTransportSummary({
         teamName,
@@ -382,6 +391,14 @@ export async function reconcilePersistedLaunchMember(input: {
       launchPhase,
       finalTimeoutReached: graceExpired,
     });
+    current = {
+      ...overlaid,
+      sources: overlaid.sources ? { ...overlaid.sources } : undefined,
+      diagnostics:
+        overlaid.diagnostics === undefined
+          ? diagnosticsBeforeTransportOverlay
+          : [...overlaid.diagnostics],
+    };
   }
   if (current.bootstrapConfirmed && !current.hardFailure && !isOpenCodeSecondaryLaneMember) {
     current.livenessKind =
@@ -437,8 +454,5 @@ export async function reconcilePersistedLaunchMember(input: {
   }
   current.launchState = deriveMemberLaunchState(current);
   current.lastEvaluatedAt = now;
-  return {
-    ...current,
-    diagnostics: undefined,
-  };
+  return current;
 }

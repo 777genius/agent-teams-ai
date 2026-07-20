@@ -38,7 +38,7 @@ function ports(
     findBootstrapRuntimeProofObservedAt: vi.fn(async () => null),
     findBootstrapTranscriptOutcome: vi.fn(async () => null),
     readProcessBootstrapTransportSummary: vi.fn(async () => null),
-    applyProcessBootstrapTransportOverlay: ({ member }) => member,
+    applyProcessBootstrapTransportOverlay: ({ member: reconciledMember }) => reconciledMember,
     nowMs: () => Date.parse(at),
     ...overrides,
   };
@@ -68,16 +68,22 @@ describe('launch reconcile reporting helpers', () => {
     const runtime = new Map<string, LiveTeamAgentRuntimeMetadata>([
       ['Builder', { alive: true, livenessKind: 'runtime_process', pidSource: 'runtime_bootstrap' }],
     ]);
+    const current = member({
+      agentToolAccepted: true,
+      firstSpawnAcceptedAt: acceptedAt,
+      hardFailure: true,
+      hardFailureReason: 'Teammate did not join within the launch grace window.',
+      sources: { hardFailureSignal: true },
+      diagnostics: ['launch failure observed'],
+    });
+    Object.freeze(current.sources);
+    Object.freeze(current.diagnostics);
+    Object.freeze(current);
 
     const next = await reconcilePersistedLaunchMember({
       teamName: 'demo',
       expected: 'Builder',
-      current: member({
-        agentToolAccepted: true,
-        firstSpawnAcceptedAt: acceptedAt,
-        hardFailure: true,
-        hardFailureReason: 'Teammate did not join within the launch grace window.',
-      }),
+      current,
       bootstrapMember: undefined,
       persistedMemberNames: ['Builder'],
       configMembers: new Set(['Builder']),
@@ -109,7 +115,18 @@ describe('launch reconcile reporting helpers', () => {
         configRegistered: true,
       },
     });
-    expect(next.diagnostics).toBeUndefined();
+    expect(next.diagnostics).toEqual(['launch failure observed']);
+    expect(next).not.toBe(current);
+    expect(next.sources).not.toBe(current.sources);
+    expect(next.diagnostics).not.toBe(current.diagnostics);
+    expect(current).toMatchObject({
+      launchState: 'starting',
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: true,
+      sources: { hardFailureSignal: true },
+      diagnostics: ['launch failure observed'],
+    });
   });
 
   it('overlays lead inbox bootstrap failure reasons before transcript probing', async () => {
@@ -120,14 +137,18 @@ describe('launch reconcile reporting helpers', () => {
       messageId: 'message-1',
     };
     const findBootstrapRuntimeProofObservedAt = vi.fn(async () => observedAt);
+    const current = member({
+      agentToolAccepted: true,
+      firstSpawnAcceptedAt: acceptedAt,
+      diagnostics: ['spawn failure observed'],
+    });
+    Object.freeze(current.diagnostics);
+    Object.freeze(current);
 
     const next = await reconcilePersistedLaunchMember({
       teamName: 'demo',
       expected: 'Builder',
-      current: member({
-        agentToolAccepted: true,
-        firstSpawnAcceptedAt: acceptedAt,
-      }),
+      current,
       bootstrapMember: undefined,
       persistedMemberNames: ['Builder'],
       configMembers: new Set<string>(),
@@ -155,5 +176,70 @@ describe('launch reconcile reporting helpers', () => {
         hardFailureSignal: true,
       },
     });
+    expect(next.diagnostics).toEqual(['spawn failure observed', heartbeat.text]);
+    expect(next.diagnostics).not.toBe(current.diagnostics);
+    expect(current).toMatchObject({
+      launchState: 'starting',
+      hardFailure: false,
+      diagnostics: ['spawn failure observed'],
+    });
+  });
+
+  it.each([
+    ['a typed replacement', ['transport diagnostic']],
+    ['an explicitly empty replacement', []],
+  ])('honors %s from the transport overlay', async (_label, diagnostics) => {
+    const current = member({ diagnostics: ['persisted diagnostic'] });
+
+    const next = await reconcilePersistedLaunchMember({
+      teamName: 'demo',
+      expected: 'Builder',
+      current,
+      bootstrapMember: undefined,
+      persistedMemberNames: ['Builder'],
+      configMembers: new Set<string>(),
+      configBootstrapRunIds: new Map(),
+      leadInboxMessages: [],
+      liveRuntimeByMember: new Map(),
+      launchPhase: 'active',
+      now: at,
+      ports: ports({
+        applyProcessBootstrapTransportOverlay: ({ member: reconciledMember }) => ({
+          ...reconciledMember,
+          diagnostics,
+        }),
+      }),
+    });
+
+    expect(next.diagnostics).toEqual(diagnostics);
+    expect(next.diagnostics).not.toBe(diagnostics);
+    expect(current.diagnostics).toEqual(['persisted diagnostic']);
+  });
+
+  it('retains diagnostics when the transport overlay does not supply a typed replacement', async () => {
+    const current = member({ diagnostics: ['persisted diagnostic'] });
+
+    const next = await reconcilePersistedLaunchMember({
+      teamName: 'demo',
+      expected: 'Builder',
+      current,
+      bootstrapMember: undefined,
+      persistedMemberNames: ['Builder'],
+      configMembers: new Set<string>(),
+      configBootstrapRunIds: new Map(),
+      leadInboxMessages: [],
+      liveRuntimeByMember: new Map(),
+      launchPhase: 'active',
+      now: at,
+      ports: ports({
+        applyProcessBootstrapTransportOverlay: ({ member: reconciledMember }) => ({
+          ...reconciledMember,
+          diagnostics: undefined,
+        }),
+      }),
+    });
+
+    expect(next.diagnostics).toEqual(['persisted diagnostic']);
+    expect(next.diagnostics).not.toBe(current.diagnostics);
   });
 });
