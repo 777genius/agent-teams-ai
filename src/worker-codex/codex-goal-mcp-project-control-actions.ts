@@ -429,6 +429,9 @@ export async function projectControlStartStoredJobView(
         ...(continuationReservation.continuation
           ? { continuation: continuationReservation.continuation }
           : {}),
+        ...(terminalRecovery
+          ? { verifiedTerminalHandoffRecovery: true }
+          : {}),
         excludedAccountIds: continuationReservation.excludedAccountIds,
         allowedAccountIds: controller.scope.allowedAccountIds ?? [],
         ...(deps.listAccountStatuses

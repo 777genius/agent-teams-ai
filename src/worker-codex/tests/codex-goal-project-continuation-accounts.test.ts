@@ -43,6 +43,29 @@ describe("project continuation accounts", () => {
     );
   });
 
+  it("allows a scoped ready account for an already verified terminal handoff recovery", async () => {
+    const launch = launchFixture();
+    const continued = await withProjectContinuationAccounts({
+      launch,
+      requestedAccounts: ["account-c"],
+      verifiedTerminalHandoffRecovery: true,
+      excludedAccountIds: [],
+      allowedAccountIds: ["account-c", "account-e"],
+      listAccountStatuses: async () => [
+        readyAccount("account-c"),
+        readyAccount("account-e"),
+      ],
+    });
+
+    expect(continued.config.accounts).toEqual([
+      {
+        name: "account-c",
+        authJsonPath: "/auth/account-c/auth.json",
+      },
+    ]);
+    expect(launch.config.accounts).toEqual([{ name: "account-e" }]);
+  });
+
   it("rejects empty, duplicate, out-of-scope, and unavailable accounts", async () => {
     const base = {
       launch: launchFixture(),

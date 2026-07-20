@@ -7,12 +7,13 @@ export async function withProjectContinuationAccounts(input: {
   readonly launch: CodexGoalLaunchInput;
   readonly requestedAccounts?: readonly string[];
   readonly continuation?: CodexProjectAccountContinuation;
+  readonly verifiedTerminalHandoffRecovery?: boolean;
   readonly excludedAccountIds: readonly string[];
   readonly allowedAccountIds: readonly string[];
   readonly listAccountStatuses?: typeof listCodexGoalAccountStatuses;
 }): Promise<CodexGoalLaunchInput> {
   if (input.requestedAccounts === undefined) return input.launch;
-  if (!input.continuation) {
+  if (!input.continuation && input.verifiedTerminalHandoffRecovery !== true) {
     throw new Error(
       "project_control_continuation_accounts_account_unavailable_proof_required",
     );
