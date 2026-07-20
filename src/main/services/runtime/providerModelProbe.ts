@@ -126,7 +126,7 @@ export function getProviderPreflightModel(
 
   switch (resolveProbeProviderId(providerId)) {
     case 'codex':
-      return 'gpt-5.4-mini';
+      return 'gpt-5.6-sol';
     case 'gemini':
       return 'gemini-2.5-flash-lite';
     case 'anthropic':

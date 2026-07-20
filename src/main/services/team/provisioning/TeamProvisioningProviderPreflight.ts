@@ -154,14 +154,14 @@ export function resolveProviderCompatibilityModel(params: {
         params.runtimeFacts.modelCatalog != null ||
         params.runtimeFacts.runtimeCapabilities?.modelCatalog?.dynamic === false;
 
-  if (params.providerId === 'codex' && (dynamicCatalog || !hasAuthoritativeCatalog)) {
+  if (params.providerId === 'codex' && !hasAuthoritativeCatalog) {
     return {
       kind: 'available',
       resolvedModelId: trimmedModelId,
     };
   }
 
-  if (dynamicCatalog || !hasAuthoritativeCatalog) {
+  if (params.providerId !== 'codex' && (dynamicCatalog || !hasAuthoritativeCatalog)) {
     return {
       kind: 'compatible',
       reason: dynamicCatalog
