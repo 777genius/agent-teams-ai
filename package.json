@@ -22,6 +22,7 @@
   "main": "dist-electron/main/index.cjs",
   "scripts": {
     "preinstall": "node ./scripts/ci/enforce-pnpm-install.mjs",
+    "screenshots:previews": "node ./scripts/generate-screenshot-previews.mjs",
     "dev": "node ./scripts/dev-with-runtime.mjs",
     "dev:mcp": "node ./scripts/dev-with-runtime.mjs --remoteDebuggingPort 9222",
     "dev:kill": "node bin/kill-dev.js",

@@ -19,37 +19,55 @@
 <table>
 <tr>
 <td width="50%">
-  <img src="https://i.imgur.com/2avkEET.jpeg" alt="Agent Teams AI screenshot" width="100%" />
+  <a href="docs/screenshots/13.jpg">
+    <img src="docs/screenshots/previews/13.webp" alt="Connected AI coding providers and subscription limits" width="100%" loading="lazy" />
+  </a>
 </td>
 <td width="50%">
-  <img src="https://i.imgur.com/cBTjmYU.png" alt="Agent Teams AI screenshot" width="100%" />
-</td>
-</tr>
-<tr>
-<td width="50%">
-  <img src="docs/screenshots/8.png" alt="Task details, attachments, and execution logs" width="100%" />
-</td>
-<td width="50%">
-  <img src="docs/screenshots/9.png" alt="Agent execution log with tool calls" width="100%" />
+  <a href="docs/screenshots/14.png">
+    <img src="docs/screenshots/previews/14.webp" alt="Token usage, costs, runs, and budget analytics" width="100%" loading="lazy" />
+  </a>
 </td>
 </tr>
 <tr>
 <td width="50%">
-  <img src="docs/screenshots/7.png" alt="Code review with hunk-level controls" width="100%" />
+  <a href="docs/screenshots/8.png">
+    <img src="docs/screenshots/previews/8.webp" alt="Task details, attachments, and execution logs" width="100%" loading="lazy" />
+  </a>
 </td>
 <td width="50%">
-  <img src="docs/screenshots/4.png" alt="Create an AI team with roles and models" width="100%" />
+  <a href="docs/screenshots/9.png">
+    <img src="docs/screenshots/previews/9.webp" alt="Agent execution log with tool calls" width="100%" loading="lazy" />
+  </a>
 </td>
 </tr>
 <tr>
 <td width="50%">
-  <img src="docs/screenshots/1.jpg" alt="Kanban board with agent tasks" width="100%" />
+  <a href="docs/screenshots/7.png">
+    <img src="docs/screenshots/previews/7.webp" alt="Code review with hunk-level controls" width="100%" loading="lazy" />
+  </a>
 </td>
 <td width="50%">
-  <img src="docs/screenshots/task-detail-animated.gif" alt="Agent Teams AI product demo" width="100%" />
+  <a href="docs/screenshots/4.png">
+    <img src="docs/screenshots/previews/4.webp" alt="Create an AI team with roles and models" width="100%" loading="lazy" />
+  </a>
+</td>
+</tr>
+<tr>
+<td width="50%">
+  <a href="docs/screenshots/1.jpg">
+    <img src="docs/screenshots/previews/1.webp" alt="Kanban board with agent tasks" width="100%" loading="lazy" />
+  </a>
+</td>
+<td width="50%">
+  <a href="docs/screenshots/task-detail-animated.gif">
+    <img src="docs/screenshots/previews/task-detail-animated.webp" alt="Agent Teams AI product demo" width="100%" loading="lazy" />
+  </a>
 </td>
 </tr>
 </table>
+
+<p align="center"><sub>Click any preview to open the full-size image.</sub></p>
 
 <!--
 <img width="1304" height="820" alt="image" src="https://github.com/user-attachments/assets/dea53a01-68b3-4c36-bcf6-e4d1ad4cdb31" />
@@ -254,7 +272,7 @@ Agent Teams product evidence checked in local source on July 11, 2026: [organiza
 3. **Create a team** — Pick a project, define roles, write a provisioning prompt
 4. **Watch** — Agents spawn, create tasks, and work. You see it all on the kanban board
 
-Use the desktop app as the primary product. The browser/web path is not needed for normal use and does not provide the full desktop runtime, IPC, terminal, provider auth, or team lifecycle behavior.
+The desktop app is the main product. The web version is currently in active development.
 
 
 ---

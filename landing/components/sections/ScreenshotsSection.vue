@@ -23,6 +23,7 @@ type SwiperContainerElement = HTMLElement & {
 
 const screenshots = computed(() => screenshotData.map((s) => ({
   src: publicPath(s.path),
+  previewSrc: publicPath(s.previewPath),
   alt: locale.value === 'ru' ? (s.ruAlt ?? s.alt) : s.alt,
   width: s.width,
   height: s.height,
@@ -166,7 +167,7 @@ function slideNext() {
         >
           <div class="screenshots-section__card" @click="openLightbox(idx)">
             <img
-              :src="shot.src"
+              :src="shot.previewSrc"
               :alt="shot.alt"
               :width="shot.width"
               :height="shot.height"
