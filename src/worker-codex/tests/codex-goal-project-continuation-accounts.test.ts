@@ -66,6 +66,33 @@ describe("project continuation accounts", () => {
     expect(launch.config.accounts).toEqual([{ name: "account-e" }]);
   });
 
+  it("requires an exact non-empty scope and a genuinely alternative terminal recovery account", async () => {
+    const base = {
+      launch: launchFixture(),
+      requestedAccounts: ["account-c"],
+      verifiedTerminalHandoffRecovery: true,
+      excludedAccountIds: [],
+      listAccountStatuses: async () => [readyAccount("account-c")],
+    };
+    await expect(
+      withProjectContinuationAccounts({
+        ...base,
+        allowedAccountIds: [],
+      }),
+    ).rejects.toThrow(
+      "project_control_terminal_recovery_account_scope_required",
+    );
+    await expect(
+      withProjectContinuationAccounts({
+        ...base,
+        requestedAccounts: ["account-e"],
+        allowedAccountIds: ["account-c", "account-e"],
+      }),
+    ).rejects.toThrow(
+      "project_control_terminal_recovery_alternative_account_required:account-e",
+    );
+  });
+
   it("rejects empty, duplicate, out-of-scope, and unavailable accounts", async () => {
     const base = {
       launch: launchFixture(),

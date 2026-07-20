@@ -21,6 +21,15 @@ export async function withProjectContinuationAccounts(input: {
   if (input.requestedAccounts.length === 0) {
     throw new Error("project_control_continuation_accounts_required");
   }
+  if (
+    !input.continuation &&
+    input.verifiedTerminalHandoffRecovery === true &&
+    input.allowedAccountIds.length === 0
+  ) {
+    throw new Error(
+      "project_control_terminal_recovery_account_scope_required",
+    );
+  }
   const uniqueAccounts = new Set(input.requestedAccounts);
   if (uniqueAccounts.size !== input.requestedAccounts.length) {
     throw new Error("project_control_continuation_accounts_duplicate");
@@ -30,6 +39,22 @@ export async function withProjectContinuationAccounts(input: {
   );
   if (invalidAccountId) {
     throw new Error("project_control_continuation_account_id_invalid");
+  }
+  if (
+    !input.continuation &&
+    input.verifiedTerminalHandoffRecovery === true
+  ) {
+    const configured = new Set(
+      input.launch.config.accounts.map((account) => account.name),
+    );
+    const notAlternative = input.requestedAccounts.find((accountId) =>
+      configured.has(accountId),
+    );
+    if (notAlternative) {
+      throw new Error(
+        `project_control_terminal_recovery_alternative_account_required:${notAlternative}`,
+      );
+    }
   }
   const excluded = new Set(input.excludedAccountIds);
   const previouslyFailed = input.requestedAccounts.find((accountId) =>

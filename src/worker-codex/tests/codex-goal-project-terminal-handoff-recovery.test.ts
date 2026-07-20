@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   AccessBoundary,
   NetworkAccessMode,
+  ProjectAdmissionWorkerRole,
+  type ProjectControlBroker,
   type ProjectAccessScope,
 } from "@vioxen/subscription-runtime/worker-core";
 
@@ -191,6 +193,62 @@ describe("terminal worker handoff dependency recovery", () => {
     );
   });
 
+  it("routes an exact terminal handoff recovery to a scoped alternative account", async () => {
+    const fixture = await actionFixture();
+    let brokerLaunchAccounts: readonly string[] = [];
+    let brokerStartAccounts: readonly string[] = [];
+    let brokerWorkerRole:
+      Parameters<ProjectControlBroker["startWorker"]>[0]["workerRole"];
+    let brokerMaxAccountCycles: number | undefined;
+    const started = await projectControlStartStoredJobView(
+      {
+        ...fixture.startArgs,
+        continuationAccounts: ["account-b"],
+      },
+      {
+        ...fixture.deps(async () => {}),
+        listAccountStatuses: async () => [{
+          name: "account-b",
+          authJsonPath: "/auth/account-b/auth.json",
+          status: "ready",
+          availability: "available",
+          schedulerEligible: true,
+          recommendedAction: "none",
+          warnings: [],
+          safeMessage: "ready",
+        }],
+        codexProjectControlBroker: (input) => {
+          brokerLaunchAccounts =
+            input.startLaunch?.config.accounts.map((account) => account.name) ??
+              [];
+          brokerMaxAccountCycles =
+            input.startLaunch?.config.maxAccountCycles;
+          return {
+            startWorker: async (
+              request: Parameters<ProjectControlBroker["startWorker"]>[0],
+            ) => {
+              brokerStartAccounts = request.accounts ?? [];
+              brokerWorkerRole = request.workerRole;
+              return { status: "started" };
+            },
+          } as unknown as ProjectControlBroker;
+        },
+      },
+    );
+
+    expect(started).toMatchObject({
+      ok: true,
+      accountReservation: {
+        mode: "shared",
+        accountId: "account-b",
+      },
+    });
+    expect(brokerLaunchAccounts).toEqual(["account-b"]);
+    expect(brokerStartAccounts).toEqual(["account-b"]);
+    expect(brokerWorkerRole).toBe(ProjectAdmissionWorkerRole.Adoption);
+    expect(brokerMaxAccountCycles).toBe(1);
+  });
+
   it.each(["approved", "rejected"])(
     "rejects a %s review marker before dependency bootstrap",
     async (decision) => {
@@ -315,7 +373,7 @@ async function actionFixture() {
     registryRoot: registryRootDir,
     jobIdPrefixes: ["project-"],
     tmuxSessionPrefixes: ["project-"],
-    allowedAccountIds: ["account-a"],
+    allowedAccountIds: ["account-a", "account-b"],
     allowedBranches: ["main"],
     allowedGitRemotes: ["origin"],
   };
