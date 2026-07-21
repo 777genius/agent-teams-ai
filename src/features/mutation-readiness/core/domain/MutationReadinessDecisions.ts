@@ -1,4 +1,10 @@
 import {
+  INSTANCE_LEASE_PROTOCOL_VERSION,
+  type InstanceLeaseAdmissionInspection,
+  type InstanceLeaseAnchorEvidence,
+  type InstanceLeaseLauncherEvidence,
+} from '@features/instance-lease/contracts';
+import {
   createRuntimeInstanceContext,
   type RuntimeInstanceContext,
   type RuntimeRootReference,
@@ -11,45 +17,41 @@ import {
 } from '@features/workspace-registry/contracts';
 
 import {
-  INSTANCE_LEASE_PROTOCOL_VERSION,
-  type InstanceLeaseAdmissionInspection,
-  type InstanceLeaseAnchorEvidence,
-  type InstanceLeaseLauncherEvidence,
-  MAX_PHASE3_MUTATION_ASSESSMENT_TIMEOUT_MS,
-  PHASE3_MUTATION_ADMISSION_DIMENSIONS,
-  type Phase3ExternalWriterClassification,
-  type Phase3ExternalWriterCoordination,
-  type Phase3ExternalWriterDecision,
-  type Phase3FilesystemDecision,
-  type Phase3InstanceLeaseDecision,
-  type Phase3MutationAdmissionDecisions,
-  type Phase3MutationAdmissionDecisionStatus,
-  type Phase3MutationAdmissionDiagnosticCode,
-  type Phase3MutationAdmissionDimension,
-  type Phase3MutationAdmissionRequirements,
-  type Phase3MutationAdmissionScope,
-  type Phase3MutationAdmissionWorkspaceTarget,
-  type Phase3MutationDimensionDecision,
-  type Phase3RecoveryOutboxDecision,
-  type Phase3RuntimeBindingDecision,
-  type Phase3StorageDecision,
-  type Phase3WorkspaceBindingDecision,
+  type ExternalWriterReadinessClassification,
+  type ExternalWriterReadinessCoordination,
+  type ExternalWriterReadinessDecision,
+  type FilesystemReadinessDecision,
+  type InstanceLeaseReadinessDecision,
+  MAX_MUTATION_READINESS_ASSESSMENT_TIMEOUT_MS,
+  MUTATION_READINESS_DIMENSIONS,
+  type MutationReadinessDecisions,
+  type MutationReadinessDecisionStatus,
+  type MutationReadinessDiagnosticCode,
+  type MutationReadinessDimension,
+  type MutationReadinessDimensionDecision,
+  type MutationReadinessRequirements,
+  type MutationReadinessScope,
+  type MutationReadinessWorkspaceTarget,
+  type RecoveryOutboxReadinessDecision,
+  type RuntimeBindingReadinessDecision,
+  type StorageReadinessDecision,
+  type WorkspaceBindingReadinessDecision,
 } from '../../contracts';
 
 const DECIMAL_KERNEL_ID = /^(?:0|[1-9][0-9]*)$/;
 
-export type Phase3PortInspectionOutcome =
+export type ReadinessEvidenceInspectionOutcome =
   | { readonly status: 'settled'; readonly value: unknown }
   | { readonly status: 'unavailable' | 'timeout' };
 
-export interface Phase3PortInspectionOutcomes {
-  readonly instanceLease: Phase3PortInspectionOutcome;
-  readonly runtimeBinding: Phase3PortInspectionOutcome;
-  readonly workspaceBinding: Phase3PortInspectionOutcome;
-  readonly storage: Phase3PortInspectionOutcome;
-  readonly filesystem: Phase3PortInspectionOutcome;
-  readonly externalWriter: Phase3PortInspectionOutcome;
-  readonly recoveryOutbox: Phase3PortInspectionOutcome;
+export interface MutationReadinessInspectionOutcomes {
+  readonly instanceLease: ReadinessEvidenceInspectionOutcome;
+  readonly runtimeBinding: ReadinessEvidenceInspectionOutcome;
+  readonly workspaceBinding: ReadinessEvidenceInspectionOutcome;
+  readonly storage: ReadinessEvidenceInspectionOutcome;
+  readonly filesystem: ReadinessEvidenceInspectionOutcome;
+  readonly externalWriter: ReadinessEvidenceInspectionOutcome;
+  readonly recoveryOutbox: ReadinessEvidenceInspectionOutcome;
 }
 
 interface VerifiedInspection {
@@ -145,7 +147,7 @@ function parseLeaseEvidence(value: unknown): InstanceLeaseLauncherEvidence | nul
   });
 }
 
-function parseLeaseInspection(outcome: Phase3PortInspectionOutcome): ParsedLeaseInspection {
+function parseLeaseInspection(outcome: ReadinessEvidenceInspectionOutcome): ParsedLeaseInspection {
   if (outcome.status !== 'settled') return Object.freeze({ status: outcome.status });
   const terminal = readExactRecord(outcome.value, ['status']);
   if (terminal?.status === 'invalid' || terminal?.status === 'released') {
@@ -157,7 +159,7 @@ function parseLeaseInspection(outcome: Phase3PortInspectionOutcome): ParsedLease
   return Object.freeze({ status: 'held', evidence });
 }
 
-function parseInspection(outcome: Phase3PortInspectionOutcome): ParsedInspection {
+function parseInspection(outcome: ReadinessEvidenceInspectionOutcome): ParsedInspection {
   if (outcome.status !== 'settled') return Object.freeze({ status: outcome.status });
   const statusRecord = readExactRecord(outcome.value, ['status']);
   if (statusRecord?.status === 'unavailable' || statusRecord?.status === 'unknown') {
@@ -215,7 +217,7 @@ function parseWorkspaceBinding(value: unknown): WorkspaceMountBindingRef | null 
   }
 }
 
-function snapshotWorkspaceTarget(value: unknown): Phase3MutationAdmissionWorkspaceTarget | null {
+function snapshotWorkspaceTarget(value: unknown): MutationReadinessWorkspaceTarget | null {
   const record = readExactRecord(value, [
     'binding',
     'rootReference',
@@ -246,9 +248,9 @@ function snapshotRuntimeInstance(value: unknown): RuntimeInstanceContext | null 
   }
 }
 
-export function snapshotPhase3MutationAdmissionRequirements(
+export function snapshotMutationReadinessRequirements(
   value: unknown
-): Phase3MutationAdmissionRequirements {
+): MutationReadinessRequirements {
   const record = readExactRecord(value, [
     'storageSchemaVersion',
     'minimumFreeBytes',
@@ -261,9 +263,9 @@ export function snapshotPhase3MutationAdmissionRequirements(
     !positiveInteger(record.minimumFreeBytes) ||
     !positiveInteger(record.evidenceMaxAgeMs) ||
     !positiveInteger(record.evaluationTimeoutMs) ||
-    record.evaluationTimeoutMs > MAX_PHASE3_MUTATION_ASSESSMENT_TIMEOUT_MS
+    record.evaluationTimeoutMs > MAX_MUTATION_READINESS_ASSESSMENT_TIMEOUT_MS
   ) {
-    throw new TypeError('phase3-mutation-admission-requirements-invalid');
+    throw new TypeError('mutation-readiness-requirements-invalid');
   }
   return Object.freeze({
     storageSchemaVersion: record.storageSchemaVersion,
@@ -273,11 +275,11 @@ export function snapshotPhase3MutationAdmissionRequirements(
   });
 }
 
-export function snapshotPhase3MutationAdmissionScope(input: {
+export function snapshotMutationReadinessScope(input: {
   readonly runtimeInstance: unknown;
   readonly workspace: unknown;
-  readonly requirements: Phase3MutationAdmissionRequirements;
-}): Phase3MutationAdmissionScope | null {
+  readonly requirements: MutationReadinessRequirements;
+}): MutationReadinessScope | null {
   const runtimeInstance = snapshotRuntimeInstance(input.runtimeInstance);
   const workspace = snapshotWorkspaceTarget(input.workspace);
   return runtimeInstance && workspace
@@ -345,13 +347,13 @@ function nonNegativeInteger(value: unknown): value is number {
 }
 
 function decision<
-  TDimension extends Phase3MutationAdmissionDimension,
-  TCode extends Phase3MutationAdmissionDiagnosticCode,
+  TDimension extends MutationReadinessDimension,
+  TCode extends MutationReadinessDiagnosticCode,
 >(
   dimension: TDimension,
-  status: Phase3MutationAdmissionDecisionStatus,
+  status: MutationReadinessDecisionStatus,
   code: TCode
-): Phase3MutationDimensionDecision<TDimension, TCode> {
+): MutationReadinessDimensionDecision<TDimension, TCode> {
   return Object.freeze({ dimension, status, code });
 }
 
@@ -373,7 +375,7 @@ function unavailableUnknownOrTimeoutCode<TCode extends string>(
 function decideLease(
   initial: ParsedLeaseInspection,
   final: ParsedLeaseInspection
-): Phase3InstanceLeaseDecision {
+): InstanceLeaseReadinessDecision {
   if (initial.status === 'timeout' || final.status === 'timeout') {
     return decision('instanceLease', 'denied', 'instance_lease_evidence_timeout');
   }
@@ -394,10 +396,10 @@ function decideLease(
 
 function decideRuntimeBinding(
   inspection: ParsedInspection,
-  scope: Phase3MutationAdmissionScope | null,
+  scope: MutationReadinessScope | null,
   lease: ParsedLeaseInspection,
   nowMs: number | null
-): Phase3RuntimeBindingDecision {
+): RuntimeBindingReadinessDecision {
   if (!scope) {
     return decision('runtimeBinding', 'denied', 'runtime_context_unavailable');
   }
@@ -442,9 +444,9 @@ function decideRuntimeBinding(
 
 function decideWorkspaceBinding(
   inspection: ParsedInspection,
-  scope: Phase3MutationAdmissionScope | null,
+  scope: MutationReadinessScope | null,
   nowMs: number | null
-): Phase3WorkspaceBindingDecision {
+): WorkspaceBindingReadinessDecision {
   if (!scope) {
     return decision('workspaceBinding', 'denied', 'workspace_binding_context_unavailable');
   }
@@ -515,9 +517,9 @@ function decideWorkspaceBinding(
 
 function decideStorage(
   inspection: ParsedInspection,
-  scope: Phase3MutationAdmissionScope | null,
+  scope: MutationReadinessScope | null,
   nowMs: number | null
-): Phase3StorageDecision {
+): StorageReadinessDecision {
   if (inspection.status !== 'verified') {
     return decision(
       'storage',
@@ -576,9 +578,9 @@ function decideStorage(
 
 function decideFilesystem(
   inspection: ParsedInspection,
-  scope: Phase3MutationAdmissionScope | null,
+  scope: MutationReadinessScope | null,
   nowMs: number | null
-): Phase3FilesystemDecision {
+): FilesystemReadinessDecision {
   if (inspection.status !== 'verified') {
     return decision(
       'filesystem',
@@ -638,8 +640,8 @@ function decideFilesystem(
 }
 
 function expectedExternalCoordination(
-  classification: Phase3ExternalWriterClassification
-): Phase3ExternalWriterCoordination | null {
+  classification: ExternalWriterReadinessClassification
+): ExternalWriterReadinessCoordination | null {
   switch (classification) {
     case 'app_exclusive':
       return 'lease_fenced';
@@ -657,9 +659,9 @@ function expectedExternalCoordination(
 
 function decideExternalWriter(
   inspection: ParsedInspection,
-  scope: Phase3MutationAdmissionScope | null,
+  scope: MutationReadinessScope | null,
   nowMs: number | null
-): Phase3ExternalWriterDecision {
+): ExternalWriterReadinessDecision {
   if (inspection.status !== 'verified') {
     return decision(
       'externalWriter',
@@ -711,7 +713,7 @@ function decideExternalWriter(
     return decision('externalWriter', 'denied', 'external_writer_class_unavailable');
   }
   const expected = expectedExternalCoordination(
-    record.classification as Phase3ExternalWriterClassification
+    record.classification as ExternalWriterReadinessClassification
   );
   if (!expected || record.coordination !== expected) {
     return decision('externalWriter', 'denied', 'external_writer_coordination_unverified');
@@ -724,9 +726,9 @@ function decideExternalWriter(
 
 function decideRecoveryOutbox(
   inspection: ParsedInspection,
-  scope: Phase3MutationAdmissionScope | null,
+  scope: MutationReadinessScope | null,
   nowMs: number | null
-): Phase3RecoveryOutboxDecision {
+): RecoveryOutboxReadinessDecision {
   if (inspection.status !== 'verified') {
     return decision(
       'recoveryOutbox',
@@ -794,19 +796,17 @@ function decideRecoveryOutbox(
   return decision('recoveryOutbox', 'verified', 'recovery_outbox_ready');
 }
 
-export function decidePhase3MutationAdmission(input: {
-  readonly initial: Phase3PortInspectionOutcomes;
-  readonly final: Phase3PortInspectionOutcomes;
-  readonly scope: Phase3MutationAdmissionScope | null;
+export function decideMutationReadiness(input: {
+  readonly initial: MutationReadinessInspectionOutcomes;
+  readonly final: MutationReadinessInspectionOutcomes;
+  readonly scope: MutationReadinessScope | null;
   readonly nowMs: number | null;
-}): Phase3MutationAdmissionDecisions {
+}): MutationReadinessDecisions {
   const initialLease = parseLeaseInspection(input.initial.instanceLease);
   const finalLease = parseLeaseInspection(input.final.instanceLease);
   const initial = input.initial;
   const final = input.final;
-  const stableDecision = <
-    TDecision extends { readonly status: Phase3MutationAdmissionDecisionStatus },
-  >(
+  const stableDecision = <TDecision extends { readonly status: MutationReadinessDecisionStatus }>(
     initialDecision: TDecision,
     finalDecision: TDecision
   ): TDecision => {
@@ -853,10 +853,8 @@ export function decidePhase3MutationAdmission(input: {
   });
 }
 
-export function phase3AssessmentDiagnosticCodes(
-  decisions: Phase3MutationAdmissionDecisions
-): readonly Phase3MutationAdmissionDiagnosticCode[] {
-  return Object.freeze(
-    PHASE3_MUTATION_ADMISSION_DIMENSIONS.map((dimension) => decisions[dimension].code)
-  );
+export function mutationReadinessDiagnosticCodes(
+  decisions: MutationReadinessDecisions
+): readonly MutationReadinessDiagnosticCode[] {
+  return Object.freeze(MUTATION_READINESS_DIMENSIONS.map((dimension) => decisions[dimension].code));
 }

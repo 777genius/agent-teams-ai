@@ -1,7 +1,6 @@
-export const ROUTE_CATALOG_DRIFT_DIAGNOSTIC = 'phase1-route-catalog-drift';
-export const CAPABILITY_DESCRIPTOR_DRIFT_DIAGNOSTIC = 'phase1-capability-descriptor-drift';
-export const TEST_CAPABILITY_PRODUCTION_MOUNT_DIAGNOSTIC =
-  'phase1-test-capability-production-mount';
+export const ROUTE_CATALOG_DRIFT_DIAGNOSTIC = 'route-catalog-drift';
+export const CAPABILITY_DESCRIPTOR_DRIFT_DIAGNOSTIC = 'capability-descriptor-drift';
+export const TEST_CAPABILITY_PRODUCTION_MOUNT_DIAGNOSTIC = 'test-capability-production-mount';
 
 export const ROUTE_METHODS = Object.freeze([
   'DELETE',

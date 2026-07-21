@@ -9,21 +9,4 @@ export {
   type InstanceLeaseLauncherEvidence,
   type VerifiedInstanceLeaseHandle,
 } from './contracts';
-export * from './contracts/phase3MutationAdmissionContracts';
-export {
-  createPhase3MutationAdmissionAssessor,
-  type InstanceLeaseAdmissionInspectionContext,
-  type InstanceLeaseAdmissionPort,
-  type Phase3AdmissionInspectionContext,
-  type Phase3ExternalWriterEvidencePort,
-  type Phase3FilesystemCapabilityEvidencePort,
-  type Phase3MutationAdmissionAssessor,
-  type Phase3MutationAdmissionClock,
-  type Phase3MutationAdmissionEvidencePorts,
-  type Phase3MutationAdmissionInput,
-  type Phase3RecoveryOutboxEvidencePort,
-  type Phase3RuntimeBindingEvidencePort,
-  type Phase3StorageReadinessEvidencePort,
-  type Phase3WorkspaceBindingEvidencePort,
-} from './core/application';
 export { InstanceLeaseGuard, InstanceLeaseGuardError } from './core/domain';

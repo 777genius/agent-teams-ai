@@ -1,43 +1,43 @@
 import {
-  decidePhase3MutationAdmission,
-  phase3AssessmentDiagnosticCodes,
-  type Phase3PortInspectionOutcome,
-  type Phase3PortInspectionOutcomes,
-  snapshotPhase3MutationAdmissionRequirements,
-  snapshotPhase3MutationAdmissionScope,
+  decideMutationReadiness,
+  mutationReadinessDiagnosticCodes,
+  type MutationReadinessInspectionOutcomes,
+  type ReadinessEvidenceInspectionOutcome,
+  snapshotMutationReadinessRequirements,
+  snapshotMutationReadinessScope,
 } from '../domain';
 
 import type {
-  InstanceLeaseAdmissionInspection,
-  Phase3EvidenceInspection,
-  Phase3MutationAdmissionAssessment,
-  Phase3MutationAdmissionRequirements,
-  Phase3MutationAdmissionScope,
-  Phase3MutationAdmissionWorkspaceTarget,
-  Phase3VerifiedExternalWriterEvidence,
-  Phase3VerifiedFilesystemEvidence,
-  Phase3VerifiedRecoveryOutboxEvidence,
-  Phase3VerifiedRuntimeBindingEvidence,
-  Phase3VerifiedStorageEvidence,
-  Phase3VerifiedWorkspaceBindingEvidence,
+  MutationReadinessAssessment,
+  MutationReadinessRequirements,
+  MutationReadinessScope,
+  MutationReadinessWorkspaceTarget,
+  ReadinessEvidenceInspection,
+  VerifiedExternalWriterReadinessEvidence,
+  VerifiedFilesystemReadinessEvidence,
+  VerifiedRecoveryOutboxReadinessEvidence,
+  VerifiedRuntimeBindingReadinessEvidence,
+  VerifiedStorageReadinessEvidence,
+  VerifiedWorkspaceBindingReadinessEvidence,
 } from '../../contracts';
+import type { InstanceLeaseAdmissionInspection } from '@features/instance-lease/contracts';
 
 type MaybePromise<T> = T | Promise<T>;
 type InspectionInvocation = (() => unknown | Promise<unknown>) | null;
 
-export interface InstanceLeaseAdmissionInspectionContext {
+export interface InstanceLeaseReadinessInspectionContext {
   /** Cooperative cancellation; the assessor also enforces its own deadline. */
   readonly signal: AbortSignal;
 }
 
-/** Narrow, non-ambient lease evidence port used by admission assessment. */
-export interface InstanceLeaseAdmissionPort {
+/** Narrow, non-ambient lease evidence port used by readiness assessment. */
+export interface InstanceLeaseReadinessEvidencePort {
   inspectForAdmission(
-    context: InstanceLeaseAdmissionInspectionContext
+    context: InstanceLeaseReadinessInspectionContext
   ): MaybePromise<InstanceLeaseAdmissionInspection>;
 }
 
-export interface Phase3AdmissionInspectionContext {
+export interface MutationReadinessInspectionContext {
   /**
    * Cooperative cancellation only. Core enforces the deadline independently,
    * aborts this signal once, and discards any later result.
@@ -45,95 +45,95 @@ export interface Phase3AdmissionInspectionContext {
   readonly signal: AbortSignal;
 }
 
-export interface Phase3RuntimeBindingEvidencePort {
+export interface RuntimeBindingReadinessEvidencePort {
   inspectRuntimeBinding(
-    scope: Phase3MutationAdmissionScope,
-    context: Phase3AdmissionInspectionContext
-  ): MaybePromise<Phase3EvidenceInspection<Phase3VerifiedRuntimeBindingEvidence>>;
+    scope: MutationReadinessScope,
+    context: MutationReadinessInspectionContext
+  ): MaybePromise<ReadinessEvidenceInspection<VerifiedRuntimeBindingReadinessEvidence>>;
 }
 
-export interface Phase3WorkspaceBindingEvidencePort {
+export interface WorkspaceBindingReadinessEvidencePort {
   inspectWorkspaceBinding(
-    scope: Phase3MutationAdmissionScope,
-    context: Phase3AdmissionInspectionContext
-  ): MaybePromise<Phase3EvidenceInspection<Phase3VerifiedWorkspaceBindingEvidence>>;
+    scope: MutationReadinessScope,
+    context: MutationReadinessInspectionContext
+  ): MaybePromise<ReadinessEvidenceInspection<VerifiedWorkspaceBindingReadinessEvidence>>;
 }
 
-export interface Phase3StorageReadinessEvidencePort {
+export interface StorageReadinessEvidencePort {
   inspectStorageReadiness(
-    scope: Phase3MutationAdmissionScope,
-    context: Phase3AdmissionInspectionContext
-  ): MaybePromise<Phase3EvidenceInspection<Phase3VerifiedStorageEvidence>>;
+    scope: MutationReadinessScope,
+    context: MutationReadinessInspectionContext
+  ): MaybePromise<ReadinessEvidenceInspection<VerifiedStorageReadinessEvidence>>;
 }
 
-export interface Phase3FilesystemCapabilityEvidencePort {
-  inspectFilesystemCapability(
-    scope: Phase3MutationAdmissionScope,
-    context: Phase3AdmissionInspectionContext
-  ): MaybePromise<Phase3EvidenceInspection<Phase3VerifiedFilesystemEvidence>>;
+export interface FilesystemReadinessEvidencePort {
+  inspectFilesystemReadiness(
+    scope: MutationReadinessScope,
+    context: MutationReadinessInspectionContext
+  ): MaybePromise<ReadinessEvidenceInspection<VerifiedFilesystemReadinessEvidence>>;
 }
 
-export interface Phase3ExternalWriterEvidencePort {
-  inspectExternalWriterCoordination(
-    scope: Phase3MutationAdmissionScope,
-    context: Phase3AdmissionInspectionContext
-  ): MaybePromise<Phase3EvidenceInspection<Phase3VerifiedExternalWriterEvidence>>;
+export interface ExternalWriterReadinessEvidencePort {
+  inspectExternalWriterReadiness(
+    scope: MutationReadinessScope,
+    context: MutationReadinessInspectionContext
+  ): MaybePromise<ReadinessEvidenceInspection<VerifiedExternalWriterReadinessEvidence>>;
 }
 
-export interface Phase3RecoveryOutboxEvidencePort {
+export interface RecoveryOutboxReadinessEvidencePort {
   inspectRecoveryOutboxReadiness(
-    scope: Phase3MutationAdmissionScope,
-    context: Phase3AdmissionInspectionContext
-  ): MaybePromise<Phase3EvidenceInspection<Phase3VerifiedRecoveryOutboxEvidence>>;
+    scope: MutationReadinessScope,
+    context: MutationReadinessInspectionContext
+  ): MaybePromise<ReadinessEvidenceInspection<VerifiedRecoveryOutboxReadinessEvidence>>;
 }
 
-export interface Phase3MutationAdmissionEvidencePorts {
-  readonly runtimeBinding?: Phase3RuntimeBindingEvidencePort | null;
-  readonly workspaceBinding?: Phase3WorkspaceBindingEvidencePort | null;
-  readonly storage?: Phase3StorageReadinessEvidencePort | null;
-  readonly filesystem?: Phase3FilesystemCapabilityEvidencePort | null;
-  readonly externalWriter?: Phase3ExternalWriterEvidencePort | null;
-  readonly recoveryOutbox?: Phase3RecoveryOutboxEvidencePort | null;
+export interface MutationReadinessEvidencePorts {
+  readonly runtimeBinding?: RuntimeBindingReadinessEvidencePort | null;
+  readonly workspaceBinding?: WorkspaceBindingReadinessEvidencePort | null;
+  readonly storage?: StorageReadinessEvidencePort | null;
+  readonly filesystem?: FilesystemReadinessEvidencePort | null;
+  readonly externalWriter?: ExternalWriterReadinessEvidencePort | null;
+  readonly recoveryOutbox?: RecoveryOutboxReadinessEvidencePort | null;
 }
 
-export interface Phase3MutationAdmissionClock {
+export interface MutationReadinessClock {
   nowMs(): number;
 }
 
-export interface Phase3MutationAdmissionInput {
-  readonly instanceLease?: InstanceLeaseAdmissionPort | null;
-  readonly runtimeInstance: Phase3MutationAdmissionScope['runtimeInstance'] | null;
-  readonly workspace: Phase3MutationAdmissionWorkspaceTarget | null;
-  readonly requirements: Phase3MutationAdmissionRequirements;
-  readonly clock: Phase3MutationAdmissionClock;
-  readonly evidence?: Phase3MutationAdmissionEvidencePorts;
+export interface MutationReadinessAssessmentInput {
+  readonly instanceLease?: InstanceLeaseReadinessEvidencePort | null;
+  readonly runtimeInstance: MutationReadinessScope['runtimeInstance'] | null;
+  readonly workspace: MutationReadinessWorkspaceTarget | null;
+  readonly requirements: MutationReadinessRequirements;
+  readonly clock: MutationReadinessClock;
+  readonly evidence?: MutationReadinessEvidencePorts;
 }
 
-export interface Phase3MutationAdmissionAssessor {
+export interface MutationReadinessAssessor {
   readonly authoritativeForMutation: false;
-  assess(): Promise<Phase3MutationAdmissionAssessment>;
+  assess(): Promise<MutationReadinessAssessment>;
 }
 
-const UNAVAILABLE_OUTCOME: Phase3PortInspectionOutcome = Object.freeze({
+const UNAVAILABLE_OUTCOME: ReadinessEvidenceInspectionOutcome = Object.freeze({
   status: 'unavailable',
 });
-const TIMEOUT_OUTCOME: Phase3PortInspectionOutcome = Object.freeze({ status: 'timeout' });
+const TIMEOUT_OUTCOME: ReadinessEvidenceInspectionOutcome = Object.freeze({ status: 'timeout' });
 
-function invokeSafely(invoke: InspectionInvocation): Promise<Phase3PortInspectionOutcome> {
+function invokeSafely(invoke: InspectionInvocation): Promise<ReadinessEvidenceInspectionOutcome> {
   if (!invoke) return Promise.resolve(UNAVAILABLE_OUTCOME);
   return Promise.resolve()
     .then(invoke)
     .then(
-      (value): Phase3PortInspectionOutcome => Object.freeze({ status: 'settled', value }),
-      (): Phase3PortInspectionOutcome => UNAVAILABLE_OUTCOME
+      (value): ReadinessEvidenceInspectionOutcome => Object.freeze({ status: 'settled', value }),
+      (): ReadinessEvidenceInspectionOutcome => UNAVAILABLE_OUTCOME
     );
 }
 
 function invokeEvidencePort(
-  evidence: Phase3MutationAdmissionEvidencePorts,
-  dimension: Exclude<keyof Phase3PortInspectionOutcomes, 'instanceLease'>,
-  scope: Phase3MutationAdmissionScope,
-  context: Phase3AdmissionInspectionContext
+  evidence: MutationReadinessEvidencePorts,
+  dimension: Exclude<keyof MutationReadinessInspectionOutcomes, 'instanceLease'>,
+  scope: MutationReadinessScope,
+  context: MutationReadinessInspectionContext
 ): unknown | Promise<unknown> {
   switch (dimension) {
     case 'runtimeBinding': {
@@ -155,17 +155,17 @@ function invokeEvidencePort(
     }
     case 'filesystem': {
       const port = evidence.filesystem;
-      if (!port || typeof port.inspectFilesystemCapability !== 'function') {
+      if (!port || typeof port.inspectFilesystemReadiness !== 'function') {
         throw new Error('unavailable');
       }
-      return port.inspectFilesystemCapability(scope, context);
+      return port.inspectFilesystemReadiness(scope, context);
     }
     case 'externalWriter': {
       const port = evidence.externalWriter;
-      if (!port || typeof port.inspectExternalWriterCoordination !== 'function') {
+      if (!port || typeof port.inspectExternalWriterReadiness !== 'function') {
         throw new Error('unavailable');
       }
-      return port.inspectExternalWriterCoordination(scope, context);
+      return port.inspectExternalWriterReadiness(scope, context);
     }
     case 'recoveryOutbox': {
       const port = evidence.recoveryOutbox;
@@ -178,13 +178,13 @@ function invokeEvidencePort(
 }
 
 function buildInvocations(input: {
-  readonly instanceLease: Phase3MutationAdmissionInput['instanceLease'];
-  readonly evidence: Phase3MutationAdmissionEvidencePorts;
-  readonly scope: Phase3MutationAdmissionScope | null;
-  readonly context: Phase3AdmissionInspectionContext;
-}): Readonly<Record<keyof Phase3PortInspectionOutcomes, InspectionInvocation>> {
+  readonly instanceLease: MutationReadinessAssessmentInput['instanceLease'];
+  readonly evidence: MutationReadinessEvidencePorts;
+  readonly scope: MutationReadinessScope | null;
+  readonly context: MutationReadinessInspectionContext;
+}): Readonly<Record<keyof MutationReadinessInspectionOutcomes, InspectionInvocation>> {
   const evidenceInvocation = (
-    dimension: Exclude<keyof Phase3PortInspectionOutcomes, 'instanceLease'>
+    dimension: Exclude<keyof MutationReadinessInspectionOutcomes, 'instanceLease'>
   ): InspectionInvocation =>
     input.scope
       ? () => invokeEvidencePort(input.evidence, dimension, input.scope!, input.context)
@@ -204,12 +204,16 @@ function buildInvocations(input: {
 }
 
 async function collectInspectionsBeforeDeadline(input: {
-  readonly invocations: Readonly<Record<keyof Phase3PortInspectionOutcomes, InspectionInvocation>>;
-  readonly deadline: Promise<Phase3PortInspectionOutcome>;
+  readonly invocations: Readonly<
+    Record<keyof MutationReadinessInspectionOutcomes, InspectionInvocation>
+  >;
+  readonly deadline: Promise<ReadinessEvidenceInspectionOutcome>;
   readonly deadlineAtMs: number;
   readonly abortController: AbortController;
-}): Promise<Phase3PortInspectionOutcomes> {
-  const settle = async (invoke: InspectionInvocation): Promise<Phase3PortInspectionOutcome> => {
+}): Promise<MutationReadinessInspectionOutcomes> {
+  const settle = async (
+    invoke: InspectionInvocation
+  ): Promise<ReadinessEvidenceInspectionOutcome> => {
     const outcome = await Promise.race([invokeSafely(invoke), input.deadline]);
     if (Date.now() >= input.deadlineAtMs) {
       input.abortController.abort();
@@ -245,11 +249,11 @@ async function collectInspectionsBeforeDeadline(input: {
   });
 }
 
-function containsTimeout(outcomes: Phase3PortInspectionOutcomes): boolean {
+function containsTimeout(outcomes: MutationReadinessInspectionOutcomes): boolean {
   return Object.values(outcomes).some((outcome) => outcome.status === 'timeout');
 }
 
-function readPhase3MutationAdmissionClock(clock: Phase3MutationAdmissionClock): number | null {
+function readMutationReadinessClock(clock: MutationReadinessClock): number | null {
   try {
     const nowMs = clock.nowMs();
     return Number.isSafeInteger(nowMs) && nowMs >= 0 ? nowMs : null;
@@ -264,11 +268,11 @@ function readPhase3MutationAdmissionClock(clock: Phase3MutationAdmissionClock): 
  * deadline. The final pass catches evidence invalidated while another initial
  * inspection was pending. Late adapter results are ignored.
  */
-export function createPhase3MutationAdmissionAssessor(
-  input: Phase3MutationAdmissionInput
-): Phase3MutationAdmissionAssessor {
-  const requirements = snapshotPhase3MutationAdmissionRequirements(input.requirements);
-  const scope = snapshotPhase3MutationAdmissionScope({
+export function createMutationReadinessAssessor(
+  input: MutationReadinessAssessmentInput
+): MutationReadinessAssessor {
+  const requirements = snapshotMutationReadinessRequirements(input.requirements);
+  const scope = snapshotMutationReadinessScope({
     runtimeInstance: input.runtimeInstance,
     workspace: input.workspace,
     requirements,
@@ -279,15 +283,15 @@ export function createPhase3MutationAdmissionAssessor(
 
   return Object.freeze({
     authoritativeForMutation: false as const,
-    async assess(): Promise<Phase3MutationAdmissionAssessment> {
+    async assess(): Promise<MutationReadinessAssessment> {
       const abortController = new AbortController();
-      const context: Phase3AdmissionInspectionContext = Object.freeze({
+      const context: MutationReadinessInspectionContext = Object.freeze({
         signal: abortController.signal,
       });
       let deadlineReached = false;
       let deadlineHandle: ReturnType<typeof setTimeout> | undefined;
       const deadlineAtMs = Date.now() + requirements.evaluationTimeoutMs;
-      const deadline = new Promise<Phase3PortInspectionOutcome>((resolve) => {
+      const deadline = new Promise<ReadinessEvidenceInspectionOutcome>((resolve) => {
         deadlineHandle = setTimeout(() => {
           deadlineReached = true;
           abortController.abort();
@@ -296,8 +300,8 @@ export function createPhase3MutationAdmissionAssessor(
       });
 
       const invocations = buildInvocations({ instanceLease, evidence, scope, context });
-      let initial: Phase3PortInspectionOutcomes;
-      let final: Phase3PortInspectionOutcomes;
+      let initial: MutationReadinessInspectionOutcomes;
+      let final: MutationReadinessInspectionOutcomes;
       try {
         initial = await collectInspectionsBeforeDeadline({
           invocations,
@@ -319,15 +323,15 @@ export function createPhase3MutationAdmissionAssessor(
         abortController.abort();
       }
 
-      const decisions = decidePhase3MutationAdmission({
+      const decisions = decideMutationReadiness({
         initial,
         final,
         scope,
-        nowMs: readPhase3MutationAdmissionClock(clock),
+        nowMs: readMutationReadinessClock(clock),
       });
-      const diagnosticCodes = phase3AssessmentDiagnosticCodes(decisions);
+      const diagnosticCodes = mutationReadinessDiagnosticCodes(decisions);
       return Object.freeze({
-        kind: 'phase3_mutation_admission_diagnostic' as const,
+        kind: 'mutation_readiness_diagnostic' as const,
         assessment: Object.values(decisions).every((value) => value.status === 'verified')
           ? ('all_evidence_verified' as const)
           : ('denied' as const),

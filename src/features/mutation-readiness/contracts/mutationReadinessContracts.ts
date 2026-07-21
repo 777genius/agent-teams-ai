@@ -1,11 +1,11 @@
-import type { InstanceLeaseAnchorEvidence } from './instanceLeaseContracts';
+import type { InstanceLeaseAnchorEvidence } from '@features/instance-lease/contracts';
 import type {
   RuntimeInstanceContext,
   RuntimeRootReference,
 } from '@features/runtime-instance-context';
 import type { WorkspaceMountBindingRef } from '@features/workspace-registry/contracts';
 
-export const PHASE3_MUTATION_ADMISSION_DIMENSIONS = Object.freeze([
+export const MUTATION_READINESS_DIMENSIONS = Object.freeze([
   'instanceLease',
   'runtimeBinding',
   'workspaceBinding',
@@ -15,14 +15,13 @@ export const PHASE3_MUTATION_ADMISSION_DIMENSIONS = Object.freeze([
   'recoveryOutbox',
 ] as const);
 
-export const MAX_PHASE3_MUTATION_ASSESSMENT_TIMEOUT_MS = 30_000;
+export const MAX_MUTATION_READINESS_ASSESSMENT_TIMEOUT_MS = 30_000;
 
-export type Phase3MutationAdmissionDimension =
-  (typeof PHASE3_MUTATION_ADMISSION_DIMENSIONS)[number];
-export type Phase3MutationAdmissionDecisionStatus = 'verified' | 'denied';
-export type Phase3EvidenceAvailability = 'unavailable' | 'unknown';
+export type MutationReadinessDimension = (typeof MUTATION_READINESS_DIMENSIONS)[number];
+export type MutationReadinessDecisionStatus = 'verified' | 'denied';
+export type MutationReadinessEvidenceAvailability = 'unavailable' | 'unknown';
 
-export type Phase3InstanceLeaseDiagnosticCode =
+export type InstanceLeaseReadinessDiagnosticCode =
   | 'instance_lease_held'
   | 'instance_lease_unavailable'
   | 'instance_lease_evidence_timeout'
@@ -30,7 +29,7 @@ export type Phase3InstanceLeaseDiagnosticCode =
   | 'instance_lease_released'
   | 'instance_lease_changed';
 
-export type Phase3RuntimeBindingDiagnosticCode =
+export type RuntimeBindingReadinessDiagnosticCode =
   | 'runtime_binding_verified'
   | 'runtime_context_unavailable'
   | 'runtime_binding_evidence_unavailable'
@@ -44,7 +43,7 @@ export type Phase3RuntimeBindingDiagnosticCode =
   | 'runtime_binding_lease_anchor_unverified'
   | 'runtime_binding_lease_anchor_mismatch';
 
-export type Phase3WorkspaceBindingDiagnosticCode =
+export type WorkspaceBindingReadinessDiagnosticCode =
   | 'workspace_binding_verified'
   | 'workspace_binding_context_unavailable'
   | 'workspace_binding_evidence_unavailable'
@@ -59,7 +58,7 @@ export type Phase3WorkspaceBindingDiagnosticCode =
   | 'workspace_binding_registration_mismatch'
   | 'workspace_binding_not_writable';
 
-export type Phase3StorageDiagnosticCode =
+export type StorageReadinessDiagnosticCode =
   | 'storage_ready'
   | 'storage_evidence_unavailable'
   | 'storage_evidence_timeout'
@@ -74,7 +73,7 @@ export type Phase3StorageDiagnosticCode =
   | 'storage_integrity_unverified'
   | 'storage_critical_fallback_enabled';
 
-export type Phase3FilesystemDiagnosticCode =
+export type FilesystemReadinessDiagnosticCode =
   | 'filesystem_ready'
   | 'filesystem_evidence_unavailable'
   | 'filesystem_evidence_timeout'
@@ -88,7 +87,7 @@ export type Phase3FilesystemDiagnosticCode =
   | 'filesystem_atomic_replace_unverified'
   | 'filesystem_directory_durability_unverified';
 
-export type Phase3ExternalWriterDiagnosticCode =
+export type ExternalWriterReadinessDiagnosticCode =
   | 'external_writer_coordinated'
   | 'external_writer_evidence_unavailable'
   | 'external_writer_evidence_timeout'
@@ -101,7 +100,7 @@ export type Phase3ExternalWriterDiagnosticCode =
   | 'external_writer_coordination_unverified'
   | 'external_writer_observation_dirty';
 
-export type Phase3RecoveryOutboxDiagnosticCode =
+export type RecoveryOutboxReadinessDiagnosticCode =
   | 'recovery_outbox_ready'
   | 'recovery_outbox_evidence_unavailable'
   | 'recovery_outbox_evidence_timeout'
@@ -115,61 +114,61 @@ export type Phase3RecoveryOutboxDiagnosticCode =
   | 'recovery_unknown_records'
   | 'outbox_unavailable';
 
-export type Phase3MutationAdmissionDiagnosticCode =
-  | Phase3InstanceLeaseDiagnosticCode
-  | Phase3RuntimeBindingDiagnosticCode
-  | Phase3WorkspaceBindingDiagnosticCode
-  | Phase3StorageDiagnosticCode
-  | Phase3FilesystemDiagnosticCode
-  | Phase3ExternalWriterDiagnosticCode
-  | Phase3RecoveryOutboxDiagnosticCode;
+export type MutationReadinessDiagnosticCode =
+  | InstanceLeaseReadinessDiagnosticCode
+  | RuntimeBindingReadinessDiagnosticCode
+  | WorkspaceBindingReadinessDiagnosticCode
+  | StorageReadinessDiagnosticCode
+  | FilesystemReadinessDiagnosticCode
+  | ExternalWriterReadinessDiagnosticCode
+  | RecoveryOutboxReadinessDiagnosticCode;
 
-export interface Phase3MutationDimensionDecision<
-  TDimension extends Phase3MutationAdmissionDimension,
-  TCode extends Phase3MutationAdmissionDiagnosticCode,
+export interface MutationReadinessDimensionDecision<
+  TDimension extends MutationReadinessDimension,
+  TCode extends MutationReadinessDiagnosticCode,
 > {
   readonly dimension: TDimension;
-  readonly status: Phase3MutationAdmissionDecisionStatus;
+  readonly status: MutationReadinessDecisionStatus;
   readonly code: TCode;
 }
 
-export type Phase3InstanceLeaseDecision = Phase3MutationDimensionDecision<
+export type InstanceLeaseReadinessDecision = MutationReadinessDimensionDecision<
   'instanceLease',
-  Phase3InstanceLeaseDiagnosticCode
+  InstanceLeaseReadinessDiagnosticCode
 >;
-export type Phase3RuntimeBindingDecision = Phase3MutationDimensionDecision<
+export type RuntimeBindingReadinessDecision = MutationReadinessDimensionDecision<
   'runtimeBinding',
-  Phase3RuntimeBindingDiagnosticCode
+  RuntimeBindingReadinessDiagnosticCode
 >;
-export type Phase3WorkspaceBindingDecision = Phase3MutationDimensionDecision<
+export type WorkspaceBindingReadinessDecision = MutationReadinessDimensionDecision<
   'workspaceBinding',
-  Phase3WorkspaceBindingDiagnosticCode
+  WorkspaceBindingReadinessDiagnosticCode
 >;
-export type Phase3StorageDecision = Phase3MutationDimensionDecision<
+export type StorageReadinessDecision = MutationReadinessDimensionDecision<
   'storage',
-  Phase3StorageDiagnosticCode
+  StorageReadinessDiagnosticCode
 >;
-export type Phase3FilesystemDecision = Phase3MutationDimensionDecision<
+export type FilesystemReadinessDecision = MutationReadinessDimensionDecision<
   'filesystem',
-  Phase3FilesystemDiagnosticCode
+  FilesystemReadinessDiagnosticCode
 >;
-export type Phase3ExternalWriterDecision = Phase3MutationDimensionDecision<
+export type ExternalWriterReadinessDecision = MutationReadinessDimensionDecision<
   'externalWriter',
-  Phase3ExternalWriterDiagnosticCode
+  ExternalWriterReadinessDiagnosticCode
 >;
-export type Phase3RecoveryOutboxDecision = Phase3MutationDimensionDecision<
+export type RecoveryOutboxReadinessDecision = MutationReadinessDimensionDecision<
   'recoveryOutbox',
-  Phase3RecoveryOutboxDiagnosticCode
+  RecoveryOutboxReadinessDiagnosticCode
 >;
 
-export interface Phase3MutationAdmissionDecisions {
-  readonly instanceLease: Phase3InstanceLeaseDecision;
-  readonly runtimeBinding: Phase3RuntimeBindingDecision;
-  readonly workspaceBinding: Phase3WorkspaceBindingDecision;
-  readonly storage: Phase3StorageDecision;
-  readonly filesystem: Phase3FilesystemDecision;
-  readonly externalWriter: Phase3ExternalWriterDecision;
-  readonly recoveryOutbox: Phase3RecoveryOutboxDecision;
+export interface MutationReadinessDecisions {
+  readonly instanceLease: InstanceLeaseReadinessDecision;
+  readonly runtimeBinding: RuntimeBindingReadinessDecision;
+  readonly workspaceBinding: WorkspaceBindingReadinessDecision;
+  readonly storage: StorageReadinessDecision;
+  readonly filesystem: FilesystemReadinessDecision;
+  readonly externalWriter: ExternalWriterReadinessDecision;
+  readonly recoveryOutbox: RecoveryOutboxReadinessDecision;
 }
 
 /**
@@ -179,22 +178,22 @@ export interface Phase3MutationAdmissionDecisions {
  * mount fence, then revalidate every dimension under one evidence generation
  * while those fences remain held.
  */
-export interface Phase3MutationAdmissionAssessment {
-  readonly kind: 'phase3_mutation_admission_diagnostic';
+export interface MutationReadinessAssessment {
+  readonly kind: 'mutation_readiness_diagnostic';
   readonly assessment: 'all_evidence_verified' | 'denied';
   readonly authoritativeForMutation: false;
-  readonly decisions: Phase3MutationAdmissionDecisions;
-  readonly diagnosticCodes: readonly Phase3MutationAdmissionDiagnosticCode[];
+  readonly decisions: MutationReadinessDecisions;
+  readonly diagnosticCodes: readonly MutationReadinessDiagnosticCode[];
 }
 
-export interface Phase3MutationAdmissionWorkspaceTarget {
+export interface MutationReadinessWorkspaceTarget {
   readonly binding: WorkspaceMountBindingRef;
   readonly rootReference: RuntimeRootReference<'workspace'>;
   readonly declaredRootHash: string;
   readonly registrationRevision: number;
 }
 
-export interface Phase3MutationAdmissionRequirements {
+export interface MutationReadinessRequirements {
   readonly storageSchemaVersion: number;
   readonly minimumFreeBytes: number;
   readonly evidenceMaxAgeMs: number;
@@ -202,18 +201,18 @@ export interface Phase3MutationAdmissionRequirements {
   readonly evaluationTimeoutMs: number;
 }
 
-export interface Phase3MutationAdmissionScope {
+export interface MutationReadinessScope {
   readonly runtimeInstance: RuntimeInstanceContext;
-  readonly workspace: Phase3MutationAdmissionWorkspaceTarget;
-  readonly requirements: Phase3MutationAdmissionRequirements;
+  readonly workspace: MutationReadinessWorkspaceTarget;
+  readonly requirements: MutationReadinessRequirements;
 }
 
-export interface Phase3VerifiedRuntimeBindingEvidence {
+export interface VerifiedRuntimeBindingReadinessEvidence {
   readonly runtimeInstance: RuntimeInstanceContext;
   readonly leaseAnchor: InstanceLeaseAnchorEvidence;
 }
 
-export interface Phase3VerifiedWorkspaceBindingEvidence {
+export interface VerifiedWorkspaceBindingReadinessEvidence {
   readonly binding: WorkspaceMountBindingRef;
   readonly rootReference: RuntimeRootReference<'workspace'>;
   readonly declaredRootHash: string;
@@ -221,7 +220,7 @@ export interface Phase3VerifiedWorkspaceBindingEvidence {
   readonly health: 'healthy' | 'read-only' | 'unavailable';
 }
 
-export interface Phase3VerifiedStorageEvidence {
+export interface VerifiedStorageReadinessEvidence {
   readonly deploymentId: RuntimeInstanceContext['deploymentId'];
   readonly appDataRootReference: RuntimeInstanceContext['appDataRoot']['reference'];
   readonly backend: 'sqlite' | 'unavailable' | 'unknown';
@@ -232,7 +231,7 @@ export interface Phase3VerifiedStorageEvidence {
   readonly criticalFallback: 'disabled' | 'enabled' | 'unknown';
 }
 
-export interface Phase3VerifiedFilesystemEvidence {
+export interface VerifiedFilesystemReadinessEvidence {
   readonly deploymentId: RuntimeInstanceContext['deploymentId'];
   readonly bootId: RuntimeInstanceContext['bootId'];
   readonly workspaceBinding: WorkspaceMountBindingRef;
@@ -244,7 +243,7 @@ export interface Phase3VerifiedFilesystemEvidence {
   readonly directoryDurability: 'verified' | 'unverified' | 'unknown';
 }
 
-export type Phase3ExternalWriterClassification =
+export type ExternalWriterReadinessClassification =
   | 'app_exclusive'
   | 'cooperative_external'
   | 'provider_mediated'
@@ -252,7 +251,7 @@ export type Phase3ExternalWriterClassification =
   | 'unavailable'
   | 'unknown';
 
-export type Phase3ExternalWriterCoordination =
+export type ExternalWriterReadinessCoordination =
   | 'lease_fenced'
   | 'protocol_verified'
   | 'provider_protocol_verified'
@@ -261,18 +260,18 @@ export type Phase3ExternalWriterCoordination =
   | 'dirty'
   | 'unknown';
 
-export interface Phase3VerifiedExternalWriterEvidence {
+export interface VerifiedExternalWriterReadinessEvidence {
   readonly deploymentId: RuntimeInstanceContext['deploymentId'];
   readonly bootId: RuntimeInstanceContext['bootId'];
   readonly workspaceBinding: WorkspaceMountBindingRef;
-  readonly classification: Phase3ExternalWriterClassification;
-  readonly coordination: Phase3ExternalWriterCoordination;
+  readonly classification: ExternalWriterReadinessClassification;
+  readonly coordination: ExternalWriterReadinessCoordination;
   readonly observation: 'clean' | 'dirty' | 'unknown';
   readonly fileWriterEpoch: number;
   readonly observationWatermark: number;
 }
 
-export interface Phase3VerifiedRecoveryOutboxEvidence {
+export interface VerifiedRecoveryOutboxReadinessEvidence {
   readonly deploymentId: RuntimeInstanceContext['deploymentId'];
   readonly storageSchemaVersion: number;
   readonly scanState: 'complete' | 'incomplete' | 'unknown';
@@ -284,12 +283,12 @@ export interface Phase3VerifiedRecoveryOutboxEvidence {
   readonly unknownRecordCount: number;
 }
 
-export type Phase3EvidenceInspection<TEvidence> =
+export type ReadinessEvidenceInspection<TEvidence> =
   | {
       readonly status: 'verified';
       readonly checkedAtMs: number;
       readonly evidence: TEvidence;
     }
   | {
-      readonly status: Phase3EvidenceAvailability;
+      readonly status: MutationReadinessEvidenceAvailability;
     };

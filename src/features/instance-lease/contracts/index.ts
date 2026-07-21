@@ -9,4 +9,3 @@ export {
   type InstanceLeaseLauncherEvidence,
   type VerifiedInstanceLeaseHandle,
 } from './instanceLeaseContracts';
-export * from './phase3MutationAdmissionContracts';

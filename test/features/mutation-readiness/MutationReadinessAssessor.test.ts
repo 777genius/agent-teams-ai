@@ -1,35 +1,37 @@
+// @vitest-environment node
+
 import {
-  type InstanceLeaseAdmissionPort,
   InstanceLeaseGuard,
   type InstanceLeaseLauncherEvidence,
   type VerifiedInstanceLeaseHandle,
 } from '@features/instance-lease';
 import {
+  createMutationReadinessAssessor,
+  type ExternalWriterReadinessDiagnosticCode,
+  type FilesystemReadinessDiagnosticCode,
+  type InstanceLeaseReadinessEvidencePort,
+  MAX_MUTATION_READINESS_ASSESSMENT_TIMEOUT_MS,
+  type MutationReadinessAssessor,
+  type MutationReadinessDecisionStatus,
+  type MutationReadinessDimension,
+  type MutationReadinessEvidencePorts,
+  type MutationReadinessWorkspaceTarget,
+  type ReadinessEvidenceInspection,
+  type RecoveryOutboxReadinessDiagnosticCode,
+  type RuntimeBindingReadinessDiagnosticCode,
+  type StorageReadinessDiagnosticCode,
+  type VerifiedExternalWriterReadinessEvidence,
+  type VerifiedFilesystemReadinessEvidence,
+  type VerifiedRecoveryOutboxReadinessEvidence,
+  type VerifiedRuntimeBindingReadinessEvidence,
+  type VerifiedStorageReadinessEvidence,
+  type VerifiedWorkspaceBindingReadinessEvidence,
+  type WorkspaceBindingReadinessDiagnosticCode,
+} from '@features/mutation-readiness';
+import {
   createRuntimeInstanceContext,
   type RuntimeInstanceContext,
 } from '@features/runtime-instance-context';
-import {
-  createPhase3MutationAdmissionAssessor,
-  MAX_PHASE3_MUTATION_ASSESSMENT_TIMEOUT_MS,
-  type Phase3EvidenceInspection,
-  type Phase3ExternalWriterDiagnosticCode,
-  type Phase3FilesystemDiagnosticCode,
-  type Phase3MutationAdmissionAssessor,
-  type Phase3MutationAdmissionDecisionStatus,
-  type Phase3MutationAdmissionDimension,
-  type Phase3MutationAdmissionEvidencePorts,
-  type Phase3MutationAdmissionWorkspaceTarget,
-  type Phase3RecoveryOutboxDiagnosticCode,
-  type Phase3RuntimeBindingDiagnosticCode,
-  type Phase3StorageDiagnosticCode,
-  type Phase3VerifiedExternalWriterEvidence,
-  type Phase3VerifiedFilesystemEvidence,
-  type Phase3VerifiedRecoveryOutboxEvidence,
-  type Phase3VerifiedRuntimeBindingEvidence,
-  type Phase3VerifiedStorageEvidence,
-  type Phase3VerifiedWorkspaceBindingEvidence,
-  type Phase3WorkspaceBindingDiagnosticCode,
-} from '@main/composition/hosted/phase3MutationAdmission';
 import { parseWorkspaceId } from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -45,39 +47,39 @@ interface MutableLeaseHandle extends VerifiedInstanceLeaseHandle {
 }
 
 interface FixtureInspections {
-  runtimeBinding: Phase3EvidenceInspection<Phase3VerifiedRuntimeBindingEvidence>;
-  workspaceBinding: Phase3EvidenceInspection<Phase3VerifiedWorkspaceBindingEvidence>;
-  storage: Phase3EvidenceInspection<Phase3VerifiedStorageEvidence>;
-  filesystem: Phase3EvidenceInspection<Phase3VerifiedFilesystemEvidence>;
-  externalWriter: Phase3EvidenceInspection<Phase3VerifiedExternalWriterEvidence>;
-  recoveryOutbox: Phase3EvidenceInspection<Phase3VerifiedRecoveryOutboxEvidence>;
+  runtimeBinding: ReadinessEvidenceInspection<VerifiedRuntimeBindingReadinessEvidence>;
+  workspaceBinding: ReadinessEvidenceInspection<VerifiedWorkspaceBindingReadinessEvidence>;
+  storage: ReadinessEvidenceInspection<VerifiedStorageReadinessEvidence>;
+  filesystem: ReadinessEvidenceInspection<VerifiedFilesystemReadinessEvidence>;
+  externalWriter: ReadinessEvidenceInspection<VerifiedExternalWriterReadinessEvidence>;
+  recoveryOutbox: ReadinessEvidenceInspection<VerifiedRecoveryOutboxReadinessEvidence>;
 }
 
-interface AdmissionFixture {
+interface ReadinessFixture {
   runtimeInstance: RuntimeInstanceContext;
-  workspace: Phase3MutationAdmissionWorkspaceTarget;
+  workspace: MutationReadinessWorkspaceTarget;
   leaseEvidence: InstanceLeaseLauncherEvidence;
   leaseHandle: MutableLeaseHandle;
   leaseGuard: InstanceLeaseGuard;
   evidence: {
-    runtimeBinding: Phase3VerifiedRuntimeBindingEvidence;
-    workspaceBinding: Phase3VerifiedWorkspaceBindingEvidence;
-    storage: Phase3VerifiedStorageEvidence;
-    filesystem: Phase3VerifiedFilesystemEvidence;
-    externalWriter: Phase3VerifiedExternalWriterEvidence;
-    recoveryOutbox: Phase3VerifiedRecoveryOutboxEvidence;
+    runtimeBinding: VerifiedRuntimeBindingReadinessEvidence;
+    workspaceBinding: VerifiedWorkspaceBindingReadinessEvidence;
+    storage: VerifiedStorageReadinessEvidence;
+    filesystem: VerifiedFilesystemReadinessEvidence;
+    externalWriter: VerifiedExternalWriterReadinessEvidence;
+    recoveryOutbox: VerifiedRecoveryOutboxReadinessEvidence;
   };
   inspections: FixtureInspections;
   createAssessor(
-    evidenceOverrides?: Phase3MutationAdmissionEvidencePorts,
-    instanceLease?: InstanceLeaseAdmissionPort | null
-  ): Phase3MutationAdmissionAssessor;
+    evidenceOverrides?: MutationReadinessEvidencePorts,
+    instanceLease?: InstanceLeaseReadinessEvidencePort | null
+  ): MutationReadinessAssessor;
 }
 
 function verified<TEvidence>(
   evidence: TEvidence,
   checkedAtMs = NOW_MS
-): Phase3EvidenceInspection<TEvidence> {
+): ReadinessEvidenceInspection<TEvidence> {
   return { status: 'verified', checkedAtMs, evidence };
 }
 
@@ -92,24 +94,24 @@ function deferred<T>(): {
   return { promise, resolve };
 }
 
-function createFixture(fill: '1' | '2' = '1'): AdmissionFixture {
+function createFixture(fill: '1' | '2' = '1'): ReadinessFixture {
   const suffix = fill === '1' ? 'primary' : 'secondary';
   const runtimeInstance = createRuntimeInstanceContext({
-    deploymentId: `deployment_phase3-${suffix}`,
-    bootId: `boot_phase3-${suffix}`,
+    deploymentId: `deployment_mutation-readiness-${suffix}`,
+    bootId: `boot_mutation-readiness-${suffix}`,
     claudeRoot: { kind: 'claude', reference: `runtime://${suffix}/claude` },
     appDataRoot: { kind: 'app-data', reference: `runtime://${suffix}/app-data` },
     workspaceRoots: [{ kind: 'workspace', reference: `runtime://${suffix}/workspace` }],
     tempRoot: { kind: 'temp', reference: `runtime://${suffix}/temp` },
     logsRoot: { kind: 'logs', reference: `runtime://${suffix}/logs` },
   });
-  const workspace: Phase3MutationAdmissionWorkspaceTarget = {
+  const workspace: MutationReadinessWorkspaceTarget = {
     binding: {
       workspaceId: parseWorkspaceId(`workspace_${fill.repeat(32)}`),
       bootId: runtimeInstance.bootId,
       mountGeneration: fill === '1' ? 4 : 7,
     },
-    rootReference: runtimeInstance.workspaceRoots[0]!,
+    rootReference: runtimeInstance.workspaceRoots[0],
     declaredRootHash: fill.repeat(64),
     registrationRevision: fill === '1' ? 6 : 8,
   };
@@ -141,11 +143,11 @@ function createFixture(fill: '1' | '2' = '1'): AdmissionFixture {
     runtimeBinding: {
       runtimeInstance,
       leaseAnchor: leaseEvidence.anchor,
-    } satisfies Phase3VerifiedRuntimeBindingEvidence,
+    } satisfies VerifiedRuntimeBindingReadinessEvidence,
     workspaceBinding: {
       ...workspace,
       health: 'healthy',
-    } satisfies Phase3VerifiedWorkspaceBindingEvidence,
+    } satisfies VerifiedWorkspaceBindingReadinessEvidence,
     storage: {
       deploymentId: runtimeInstance.deploymentId,
       appDataRootReference: runtimeInstance.appDataRoot.reference,
@@ -155,7 +157,7 @@ function createFixture(fill: '1' | '2' = '1'): AdmissionFixture {
       migrationState: 'complete',
       integrity: 'ok',
       criticalFallback: 'disabled',
-    } satisfies Phase3VerifiedStorageEvidence,
+    } satisfies VerifiedStorageReadinessEvidence,
     filesystem: {
       deploymentId: runtimeInstance.deploymentId,
       bootId: runtimeInstance.bootId,
@@ -166,7 +168,7 @@ function createFixture(fill: '1' | '2' = '1'): AdmissionFixture {
       freeBytes: MINIMUM_FREE_BYTES * 2,
       atomicReplace: 'verified',
       directoryDurability: 'verified',
-    } satisfies Phase3VerifiedFilesystemEvidence,
+    } satisfies VerifiedFilesystemReadinessEvidence,
     externalWriter: {
       deploymentId: runtimeInstance.deploymentId,
       bootId: runtimeInstance.bootId,
@@ -176,7 +178,7 @@ function createFixture(fill: '1' | '2' = '1'): AdmissionFixture {
       observation: 'clean',
       fileWriterEpoch: 3,
       observationWatermark: 12,
-    } satisfies Phase3VerifiedExternalWriterEvidence,
+    } satisfies VerifiedExternalWriterReadinessEvidence,
     recoveryOutbox: {
       deploymentId: runtimeInstance.deploymentId,
       storageSchemaVersion: STORAGE_SCHEMA_VERSION,
@@ -187,7 +189,7 @@ function createFixture(fill: '1' | '2' = '1'): AdmissionFixture {
       recoveringCommandCount: 0,
       operatorRequiredCount: 0,
       unknownRecordCount: 0,
-    } satisfies Phase3VerifiedRecoveryOutboxEvidence,
+    } satisfies VerifiedRecoveryOutboxReadinessEvidence,
   };
   const inspections: FixtureInspections = {
     runtimeBinding: verified(evidence.runtimeBinding),
@@ -197,7 +199,7 @@ function createFixture(fill: '1' | '2' = '1'): AdmissionFixture {
     externalWriter: verified(evidence.externalWriter),
     recoveryOutbox: verified(evidence.recoveryOutbox),
   };
-  const fixture: AdmissionFixture = {
+  const fixture: ReadinessFixture = {
     runtimeInstance,
     workspace,
     leaseEvidence,
@@ -206,7 +208,7 @@ function createFixture(fill: '1' | '2' = '1'): AdmissionFixture {
     evidence,
     inspections,
     createAssessor(evidenceOverrides = {}, instanceLease = fixture.leaseGuard) {
-      const defaultEvidence: Phase3MutationAdmissionEvidencePorts = {
+      const defaultEvidence: MutationReadinessEvidencePorts = {
         runtimeBinding: {
           inspectRuntimeBinding: () => fixture.inspections.runtimeBinding,
         },
@@ -217,16 +219,16 @@ function createFixture(fill: '1' | '2' = '1'): AdmissionFixture {
           inspectStorageReadiness: () => fixture.inspections.storage,
         },
         filesystem: {
-          inspectFilesystemCapability: () => fixture.inspections.filesystem,
+          inspectFilesystemReadiness: () => fixture.inspections.filesystem,
         },
         externalWriter: {
-          inspectExternalWriterCoordination: () => fixture.inspections.externalWriter,
+          inspectExternalWriterReadiness: () => fixture.inspections.externalWriter,
         },
         recoveryOutbox: {
           inspectRecoveryOutboxReadiness: () => fixture.inspections.recoveryOutbox,
         },
       };
-      return createPhase3MutationAdmissionAssessor({
+      return createMutationReadinessAssessor({
         instanceLease,
         runtimeInstance: fixture.runtimeInstance,
         workspace: fixture.workspace,
@@ -245,8 +247,8 @@ function createFixture(fill: '1' | '2' = '1'): AdmissionFixture {
 }
 
 function replaceInspection(
-  fixture: AdmissionFixture,
-  dimension: Exclude<Phase3MutationAdmissionDimension, 'instanceLease'>,
+  fixture: ReadinessFixture,
+  dimension: Exclude<MutationReadinessDimension, 'instanceLease'>,
   inspection: { readonly status: 'unavailable' | 'unknown' }
 ): void {
   switch (dimension) {
@@ -272,8 +274,8 @@ function replaceInspection(
 }
 
 function makeStale(
-  fixture: AdmissionFixture,
-  dimension: Exclude<Phase3MutationAdmissionDimension, 'instanceLease'>
+  fixture: ReadinessFixture,
+  dimension: Exclude<MutationReadinessDimension, 'instanceLease'>
 ): void {
   const staleAt = NOW_MS - EVIDENCE_MAX_AGE_MS - 1;
   switch (dimension) {
@@ -298,7 +300,7 @@ function makeStale(
   }
 }
 
-describe('Phase 3 hosted mutation admission', () => {
+describe('Mutation readiness', () => {
   it('reports a fully verified fixture without exposing reusable mutation authority', async () => {
     const assessor = createFixture().createAssessor();
 
@@ -306,7 +308,7 @@ describe('Phase 3 hosted mutation admission', () => {
 
     expect(assessor.authoritativeForMutation).toBe(false);
     expect(result).toMatchObject({
-      kind: 'phase3_mutation_admission_diagnostic',
+      kind: 'mutation_readiness_diagnostic',
       assessment: 'all_evidence_verified',
       authoritativeForMutation: false,
       diagnosticCodes: [
@@ -321,7 +323,7 @@ describe('Phase 3 hosted mutation admission', () => {
     });
     expect(
       Object.values(result.decisions).every(
-        (value) => value.status === ('verified' satisfies Phase3MutationAdmissionDecisionStatus)
+        (value) => value.status === ('verified' satisfies MutationReadinessDecisionStatus)
       )
     ).toBe(true);
     expect(Object.isFrozen(result)).toBe(true);
@@ -354,7 +356,7 @@ describe('Phase 3 hosted mutation admission', () => {
 
   it('defaults every missing evidence port to a typed denial', async () => {
     const fixture = createFixture();
-    const result = await createPhase3MutationAdmissionAssessor({
+    const result = await createMutationReadinessAssessor({
       instanceLease: fixture.leaseGuard,
       runtimeInstance: fixture.runtimeInstance,
       workspace: fixture.workspace,
@@ -382,7 +384,7 @@ describe('Phase 3 hosted mutation admission', () => {
 
   it('denies a missing lease port without consulting ambient process state', async () => {
     const fixture = createFixture();
-    const result = await createPhase3MutationAdmissionAssessor({
+    const result = await createMutationReadinessAssessor({
       instanceLease: null,
       runtimeInstance: fixture.runtimeInstance,
       workspace: fixture.workspace,
@@ -403,13 +405,13 @@ describe('Phase 3 hosted mutation admission', () => {
     });
   });
 
-  it.each([0, MAX_PHASE3_MUTATION_ASSESSMENT_TIMEOUT_MS + 1])(
+  it.each([0, MAX_MUTATION_READINESS_ASSESSMENT_TIMEOUT_MS + 1])(
     'rejects an unbounded evaluation timeout of %dms',
     (evaluationTimeoutMs) => {
       const fixture = createFixture();
 
       expect(() =>
-        createPhase3MutationAdmissionAssessor({
+        createMutationReadinessAssessor({
           instanceLease: fixture.leaseGuard,
           runtimeInstance: fixture.runtimeInstance,
           workspace: fixture.workspace,
@@ -421,7 +423,7 @@ describe('Phase 3 hosted mutation admission', () => {
           },
           clock: { nowMs: () => NOW_MS },
         })
-      ).toThrowError('phase3-mutation-admission-requirements-invalid');
+      ).toThrowError('mutation-readiness-requirements-invalid');
     }
   );
 
@@ -595,7 +597,7 @@ describe('Phase 3 hosted mutation admission', () => {
     {
       dimension: 'instanceLease',
       code: 'instance_lease_evidence_timeout',
-      create(fixture: AdmissionFixture) {
+      create(fixture: ReadinessFixture) {
         return fixture.createAssessor(
           {},
           { inspectForAdmission: () => new Promise<never>(() => undefined) }
@@ -605,7 +607,7 @@ describe('Phase 3 hosted mutation admission', () => {
     {
       dimension: 'runtimeBinding',
       code: 'runtime_binding_evidence_timeout',
-      create(fixture: AdmissionFixture) {
+      create(fixture: ReadinessFixture) {
         return fixture.createAssessor({
           runtimeBinding: {
             inspectRuntimeBinding: () => new Promise<never>(() => undefined),
@@ -616,7 +618,7 @@ describe('Phase 3 hosted mutation admission', () => {
     {
       dimension: 'workspaceBinding',
       code: 'workspace_binding_evidence_timeout',
-      create(fixture: AdmissionFixture) {
+      create(fixture: ReadinessFixture) {
         return fixture.createAssessor({
           workspaceBinding: {
             inspectWorkspaceBinding: () => new Promise<never>(() => undefined),
@@ -627,7 +629,7 @@ describe('Phase 3 hosted mutation admission', () => {
     {
       dimension: 'storage',
       code: 'storage_evidence_timeout',
-      create(fixture: AdmissionFixture) {
+      create(fixture: ReadinessFixture) {
         return fixture.createAssessor({
           storage: {
             inspectStorageReadiness: () => new Promise<never>(() => undefined),
@@ -638,10 +640,10 @@ describe('Phase 3 hosted mutation admission', () => {
     {
       dimension: 'filesystem',
       code: 'filesystem_evidence_timeout',
-      create(fixture: AdmissionFixture) {
+      create(fixture: ReadinessFixture) {
         return fixture.createAssessor({
           filesystem: {
-            inspectFilesystemCapability: () => new Promise<never>(() => undefined),
+            inspectFilesystemReadiness: () => new Promise<never>(() => undefined),
           },
         });
       },
@@ -649,10 +651,10 @@ describe('Phase 3 hosted mutation admission', () => {
     {
       dimension: 'externalWriter',
       code: 'external_writer_evidence_timeout',
-      create(fixture: AdmissionFixture) {
+      create(fixture: ReadinessFixture) {
         return fixture.createAssessor({
           externalWriter: {
-            inspectExternalWriterCoordination: () => new Promise<never>(() => undefined),
+            inspectExternalWriterReadiness: () => new Promise<never>(() => undefined),
           },
         });
       },
@@ -660,7 +662,7 @@ describe('Phase 3 hosted mutation admission', () => {
     {
       dimension: 'recoveryOutbox',
       code: 'recovery_outbox_evidence_timeout',
-      create(fixture: AdmissionFixture) {
+      create(fixture: ReadinessFixture) {
         return fixture.createAssessor({
           recoveryOutbox: {
             inspectRecoveryOutboxReadiness: () => new Promise<never>(() => undefined),
@@ -689,7 +691,7 @@ describe('Phase 3 hosted mutation admission', () => {
     vi.useFakeTimers();
     try {
       const fixture = createFixture();
-      const lateStorage = deferred<Phase3EvidenceInspection<Phase3VerifiedStorageEvidence>>();
+      const lateStorage = deferred<ReadinessEvidenceInspection<VerifiedStorageReadinessEvidence>>();
       const assessor = fixture.createAssessor({
         storage: {
           inspectStorageReadiness: () => lateStorage.promise,
@@ -715,7 +717,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'lease',
       expectedDimension: 'instanceLease',
       expectedCode: 'instance_lease_released',
-      invalidate(fixture: AdmissionFixture) {
+      invalidate(fixture: ReadinessFixture) {
         fixture.leaseGuard.release();
       },
     },
@@ -723,7 +725,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'workspace mount',
       expectedDimension: 'workspaceBinding',
       expectedCode: 'workspace_binding_mount_generation_mismatch',
-      invalidate(fixture: AdmissionFixture) {
+      invalidate(fixture: ReadinessFixture) {
         fixture.inspections.workspaceBinding = verified({
           ...fixture.evidence.workspaceBinding,
           binding: {
@@ -737,7 +739,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'external writer observation',
       expectedDimension: 'externalWriter',
       expectedCode: 'external_writer_observation_dirty',
-      invalidate(fixture: AdmissionFixture) {
+      invalidate(fixture: ReadinessFixture) {
         fixture.inspections.externalWriter = verified({
           ...fixture.evidence.externalWriter,
           observation: 'dirty',
@@ -748,7 +750,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'recovery state',
       expectedDimension: 'recoveryOutbox',
       expectedCode: 'recovery_pending',
-      invalidate(fixture: AdmissionFixture) {
+      invalidate(fixture: ReadinessFixture) {
         fixture.inspections.recoveryOutbox = verified({
           ...fixture.evidence.recoveryOutbox,
           recoveryState: 'pending',
@@ -760,7 +762,8 @@ describe('Phase 3 hosted mutation admission', () => {
     'denies $name invalidation while another initial inspection is pending',
     async ({ expectedDimension, expectedCode, invalidate }) => {
       const fixture = createFixture();
-      const pendingStorage = deferred<Phase3EvidenceInspection<Phase3VerifiedStorageEvidence>>();
+      const pendingStorage =
+        deferred<ReadinessEvidenceInspection<VerifiedStorageReadinessEvidence>>();
       let storageInspectionCount = 0;
       const assessor = fixture.createAssessor({
         storage: {
@@ -794,7 +797,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'changed deployment',
       dimension: 'runtimeBinding',
       code: 'runtime_binding_deployment_mismatch',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         const foreign = createFixture('2');
         fixture.inspections.runtimeBinding = verified({
           runtimeInstance: foreign.runtimeInstance,
@@ -806,7 +809,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'changed workspace',
       dimension: 'workspaceBinding',
       code: 'workspace_binding_workspace_mismatch',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         const foreign = createFixture('2');
         fixture.inspections.workspaceBinding = verified({
           ...fixture.evidence.workspaceBinding,
@@ -821,7 +824,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'changed mount generation',
       dimension: 'workspaceBinding',
       code: 'workspace_binding_mount_generation_mismatch',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         fixture.inspections.workspaceBinding = verified({
           ...fixture.evidence.workspaceBinding,
           binding: {
@@ -835,7 +838,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'storage schema mismatch',
       dimension: 'storage',
       code: 'storage_schema_mismatch',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         fixture.inspections.storage = verified({
           ...fixture.evidence.storage,
           schemaVersion: STORAGE_SCHEMA_VERSION + 1,
@@ -846,7 +849,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'storage migration pending',
       dimension: 'storage',
       code: 'storage_migration_incomplete',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         fixture.inspections.storage = verified({
           ...fixture.evidence.storage,
           migrationState: 'pending',
@@ -857,7 +860,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'filesystem permission denied',
       dimension: 'filesystem',
       code: 'filesystem_permission_unverified',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         fixture.inspections.filesystem = verified({
           ...fixture.evidence.filesystem,
           permission: 'denied',
@@ -868,7 +871,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'filesystem free space insufficient',
       dimension: 'filesystem',
       code: 'filesystem_free_space_insufficient',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         fixture.inspections.filesystem = verified({
           ...fixture.evidence.filesystem,
           freeBytes: MINIMUM_FREE_BYTES - 1,
@@ -879,7 +882,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'filesystem capability unsupported',
       dimension: 'filesystem',
       code: 'filesystem_unsupported',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         fixture.inspections.filesystem = verified({
           ...fixture.evidence.filesystem,
           filesystem: 'unsupported',
@@ -890,7 +893,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'unknown external writer',
       dimension: 'externalWriter',
       code: 'external_writer_class_unknown',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         fixture.inspections.externalWriter = verified({
           ...fixture.evidence.externalWriter,
           classification: 'unknown',
@@ -902,7 +905,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'dirty external writer observation',
       dimension: 'externalWriter',
       code: 'external_writer_observation_dirty',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         fixture.inspections.externalWriter = verified({
           ...fixture.evidence.externalWriter,
           observation: 'dirty',
@@ -913,7 +916,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'recovery pending',
       dimension: 'recoveryOutbox',
       code: 'recovery_pending',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         fixture.inspections.recoveryOutbox = verified({
           ...fixture.evidence.recoveryOutbox,
           recoveryState: 'pending',
@@ -925,7 +928,7 @@ describe('Phase 3 hosted mutation admission', () => {
       name: 'outbox unavailable',
       dimension: 'recoveryOutbox',
       code: 'outbox_unavailable',
-      arrange(fixture: AdmissionFixture) {
+      arrange(fixture: ReadinessFixture) {
         fixture.inspections.recoveryOutbox = verified({
           ...fixture.evidence.recoveryOutbox,
           outboxState: 'unavailable',
@@ -934,15 +937,15 @@ describe('Phase 3 hosted mutation admission', () => {
     },
   ] satisfies readonly {
     name: string;
-    dimension: Exclude<Phase3MutationAdmissionDimension, 'instanceLease'>;
+    dimension: Exclude<MutationReadinessDimension, 'instanceLease'>;
     code:
-      | Phase3RuntimeBindingDiagnosticCode
-      | Phase3WorkspaceBindingDiagnosticCode
-      | Phase3StorageDiagnosticCode
-      | Phase3FilesystemDiagnosticCode
-      | Phase3ExternalWriterDiagnosticCode
-      | Phase3RecoveryOutboxDiagnosticCode;
-    arrange(fixture: AdmissionFixture): void;
+      | RuntimeBindingReadinessDiagnosticCode
+      | WorkspaceBindingReadinessDiagnosticCode
+      | StorageReadinessDiagnosticCode
+      | FilesystemReadinessDiagnosticCode
+      | ExternalWriterReadinessDiagnosticCode
+      | RecoveryOutboxReadinessDiagnosticCode;
+    arrange(fixture: ReadinessFixture): void;
   }[])('fails closed for $name', async ({ arrange, dimension, code }) => {
     const fixture = createFixture();
     arrange(fixture);

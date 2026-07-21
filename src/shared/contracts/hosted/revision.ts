@@ -2,7 +2,7 @@ declare const opaqueTokenBrand: unique symbol;
 export type Revision = string & { readonly [opaqueTokenBrand]: 'Revision' };
 export type Cursor = string & { readonly [opaqueTokenBrand]: 'Cursor' };
 export const HOSTED_SCHEMA_VERSION = 1 as const;
-export const SCHEMA_VERSION_DIAGNOSTIC = 'phase1-schema-version-invalid-or-unsupported';
+export const SCHEMA_VERSION_DIAGNOSTIC = 'schema-version-invalid-or-unsupported';
 export interface HostedRevisionContract {
   schemaVersion: typeof HOSTED_SCHEMA_VERSION;
   revision: Revision;
