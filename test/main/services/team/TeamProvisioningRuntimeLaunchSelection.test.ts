@@ -2,6 +2,7 @@ import {
   addModelCatalogLaunchModels,
   extractJsonObjectFromCli,
   filterOutSettingsPathArgs,
+  hasAuthoritativeAnthropicLaunchCatalog,
   hasAuthoritativeCodexLaunchCatalog,
   hasPathBasedSettingsArgs,
   isCodexEffortRuntimeSupported,
@@ -11,6 +12,51 @@ import {
   validateRuntimeLaunchSelection,
 } from '@main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection';
 import { describe, expect, it } from 'vitest';
+
+import type { RuntimeProviderLaunchFacts } from '@main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection';
+
+function createAnthropicCatalogFacts(
+  source: 'anthropic-models-api' | 'static-fallback'
+): RuntimeProviderLaunchFacts {
+  return {
+    defaultModel: 'sonnet',
+    modelIds: new Set(['sonnet']),
+    modelListParsed: true,
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'anthropic',
+      source,
+      status: source === 'static-fallback' ? 'degraded' : 'ready',
+      fetchedAt: '2026-07-21T00:00:00.000Z',
+      staleAt: '2026-07-21T00:10:00.000Z',
+      defaultModelId: 'sonnet',
+      defaultLaunchModel: 'sonnet',
+      models: [
+        {
+          id: 'sonnet',
+          launchModel: 'sonnet',
+          displayName: 'Sonnet 4.6',
+          hidden: false,
+          supportedReasoningEfforts: ['low', 'medium', 'high'],
+          defaultReasoningEffort: 'high',
+          inputModalities: ['text', 'image'],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source,
+        },
+      ],
+      diagnostics: {
+        configReadState: source === 'static-fallback' ? 'failed' : 'ready',
+        appServerState: source === 'static-fallback' ? 'degraded' : 'healthy',
+      },
+    },
+    runtimeCapabilities: {
+      modelCatalog: { dynamic: true, source },
+    },
+    providerStatus: null,
+  };
+}
 
 describe('TeamProvisioningRuntimeLaunchSelection', () => {
   it('extracts the last provider JSON object from noisy CLI output', () => {
@@ -86,12 +132,15 @@ describe('TeamProvisioningRuntimeLaunchSelection', () => {
 
   it('deduplicates selected model checks by model and effort', () => {
     expect(
-      normalizeProviderSelectedModelChecks(['fallback'], [
-        { modelId: ' gpt-5.5 ', effort: 'high' },
-        { modelId: 'gpt-5.5', effort: 'high' },
-        { modelId: 'gpt-5.5', effort: 'xhigh' },
-        { modelId: '   ' },
-      ])
+      normalizeProviderSelectedModelChecks(
+        ['fallback'],
+        [
+          { modelId: ' gpt-5.5 ', effort: 'high' },
+          { modelId: 'gpt-5.5', effort: 'high' },
+          { modelId: 'gpt-5.5', effort: 'xhigh' },
+          { modelId: '   ' },
+        ]
+      )
     ).toEqual([
       { modelId: 'gpt-5.5', effort: 'high' },
       { modelId: 'gpt-5.5', effort: 'xhigh' },
@@ -153,6 +202,40 @@ describe('TeamProvisioningRuntimeLaunchSelection', () => {
         runtimeCapabilities: { modelCatalog: { dynamic: true } },
       })
     ).toBe(false);
+  });
+
+  it('does not treat an Anthropic static fallback as proof that a curated model is unavailable', () => {
+    const facts = createAnthropicCatalogFacts('static-fallback');
+
+    expect(hasAuthoritativeAnthropicLaunchCatalog(facts)).toBe(false);
+    expect(() =>
+      validateRuntimeLaunchSelection({
+        actorLabel: 'Member jack',
+        providerId: 'anthropic',
+        model: 'claude-sonnet-5',
+        facts,
+        anthropicFastModeDefault: false,
+        getProviderLabel: () => 'Anthropic',
+      })
+    ).not.toThrow();
+  });
+
+  it('keeps a live Anthropic account catalog authoritative', () => {
+    const facts = createAnthropicCatalogFacts('anthropic-models-api');
+
+    expect(hasAuthoritativeAnthropicLaunchCatalog(facts)).toBe(true);
+    expect(() =>
+      validateRuntimeLaunchSelection({
+        actorLabel: 'Member jack',
+        providerId: 'anthropic',
+        model: 'claude-sonnet-5',
+        facts,
+        anthropicFastModeDefault: false,
+        getProviderLabel: () => 'Anthropic',
+      })
+    ).toThrow(
+      'Member jack resolves to Anthropic model "claude-sonnet-5", but the current runtime does not list it as launchable.'
+    );
   });
 
   it('rejects stale Codex models even when the live catalog is dynamic', () => {

@@ -1,6 +1,10 @@
 // @vitest-environment node
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import {
+  addModelCatalogLaunchModels,
+  validateRuntimeLaunchSelection,
+} from '@main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection';
+import {
   getAvailableTeamProviderModelOptions,
   getAvailableTeamProviderModels,
   getTeamModelSelectionError,
@@ -8,7 +12,13 @@ import {
 } from '@renderer/utils/teamModelAvailability';
 import { describe, expect, it } from 'vitest';
 
-import type { CliProviderId, CliProviderStatus } from '@shared/types';
+import type { RuntimeProviderLaunchFacts } from '@main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection';
+import type {
+  CliProviderId,
+  CliProviderModelCatalogSource,
+  CliProviderModelCatalogStatus,
+  CliProviderStatus,
+} from '@shared/types';
 
 interface RuntimeStatusMapper {
   mapRuntimeProviderStatus: (
@@ -56,8 +66,20 @@ function createRuntimeCatalogModel(
   };
 }
 
-function createAnthropicRuntimeStatus(models: Record<string, unknown>[]): unknown {
-  const visibleModels = models
+function createAnthropicRuntimeStatus(
+  models: Record<string, unknown>[],
+  options: {
+    catalogSource?: CliProviderModelCatalogSource;
+    catalogStatus?: CliProviderModelCatalogStatus;
+  } = {}
+): unknown {
+  const catalogSource = options.catalogSource ?? 'anthropic-models-api';
+  const catalogStatus = options.catalogStatus ?? 'ready';
+  const catalogModels: Record<string, unknown>[] = models.map((model) => ({
+    ...model,
+    source: catalogSource,
+  }));
+  const visibleModels = catalogModels
     .filter((model) => model.hidden !== true)
     .map((model) => String(model.launchModel));
 
@@ -81,7 +103,7 @@ function createAnthropicRuntimeStatus(models: Record<string, unknown>[]): unknow
     runtimeCapabilities: {
       modelCatalog: {
         dynamic: true,
-        source: 'anthropic-models-api',
+        source: catalogSource,
       },
       reasoningEffort: {
         supported: true,
@@ -92,20 +114,36 @@ function createAnthropicRuntimeStatus(models: Record<string, unknown>[]): unknow
     modelCatalog: {
       schemaVersion: 1,
       providerId: 'anthropic',
-      source: 'anthropic-models-api',
-      status: 'ready',
+      source: catalogSource,
+      status: catalogStatus,
       fetchedAt: '2026-07-02T00:00:00.000Z',
       staleAt: '2026-07-02T00:10:00.000Z',
-      defaultModelId: models[0]?.id ?? null,
-      defaultLaunchModel: models[0]?.launchModel ?? null,
-      models,
+      defaultModelId: catalogModels[0]?.id ?? null,
+      defaultLaunchModel: catalogModels[0]?.launchModel ?? null,
+      models: catalogModels,
       diagnostics: {
-        configReadState: 'ready',
-        appServerState: 'healthy',
+        configReadState: catalogSource === 'static-fallback' ? 'failed' : 'ready',
+        appServerState: catalogSource === 'static-fallback' ? 'degraded' : 'healthy',
         message: null,
         code: null,
       },
     },
+  };
+}
+
+function createLaunchFacts(provider: CliProviderStatus): RuntimeProviderLaunchFacts {
+  const modelIds = new Set(provider.models);
+  if (provider.modelCatalog) {
+    addModelCatalogLaunchModels(modelIds, provider.modelCatalog);
+  }
+
+  return {
+    defaultModel: provider.modelCatalog?.defaultLaunchModel ?? provider.models[0] ?? null,
+    modelIds,
+    modelListParsed: true,
+    modelCatalog: provider.modelCatalog ?? null,
+    runtimeCapabilities: provider.runtimeCapabilities ?? null,
+    providerStatus: provider,
   };
 }
 
@@ -145,13 +183,54 @@ describe('Anthropic model catalog picker safe e2e', () => {
         availabilityReason: null,
       },
     ]);
-    expect(normalizeTeamModelForUi('anthropic', 'claude-fable-5', provider)).toBe(
-      'claude-fable-5'
-    );
+    expect(normalizeTeamModelForUi('anthropic', 'claude-fable-5', provider)).toBe('claude-fable-5');
     expect(normalizeTeamModelForUi('anthropic', 'claude-mythos-5', provider)).toBe('');
     expect(getTeamModelSelectionError('anthropic', 'claude-mythos-5', provider)).toContain(
       'not available for the current Anthropic runtime'
     );
+    expect(() =>
+      validateRuntimeLaunchSelection({
+        actorLabel: 'Member jack',
+        providerId: 'anthropic',
+        model: 'claude-mythos-5',
+        facts: createLaunchFacts(provider),
+        anthropicFastModeDefault: false,
+        getProviderLabel: () => 'Anthropic',
+      })
+    ).toThrow('current runtime does not list it as launchable');
+  });
+
+  it('launches a curated model when model discovery degraded to static fallback', () => {
+    const provider = mapRuntimeProviderStatus(
+      'anthropic',
+      createAnthropicRuntimeStatus(
+        [createRuntimeCatalogModel('sonnet', 'Sonnet 4.6', { isDefault: true })],
+        {
+          catalogSource: 'static-fallback',
+          catalogStatus: 'degraded',
+        }
+      )
+    );
+    const launchFacts = createLaunchFacts(provider);
+
+    expect(provider.modelCatalog?.source).toBe('static-fallback');
+    expect(launchFacts.modelIds.has('claude-sonnet-5')).toBe(false);
+    expect(
+      getAvailableTeamProviderModelOptions('anthropic', provider).map((option) => option.value)
+    ).toContain('claude-sonnet-5');
+    expect(normalizeTeamModelForUi('anthropic', 'claude-sonnet-5', provider)).toBe(
+      'claude-sonnet-5'
+    );
+    expect(() =>
+      validateRuntimeLaunchSelection({
+        actorLabel: 'Member jack',
+        providerId: 'anthropic',
+        model: 'claude-sonnet-5',
+        facts: launchFacts,
+        anthropicFastModeDefault: false,
+        getProviderLabel: () => 'Anthropic',
+      })
+    ).not.toThrow();
   });
 
   it('makes Mythos selectable only when the runtime catalog reports access', () => {

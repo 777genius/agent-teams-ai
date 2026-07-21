@@ -348,6 +348,32 @@ export function hasAuthoritativeCodexLaunchCatalog(
   );
 }
 
+export function hasAuthoritativeAnthropicLaunchCatalog(
+  facts: Pick<RuntimeProviderLaunchFacts, 'modelIds' | 'modelCatalog'>
+): boolean {
+  const catalog = facts.modelCatalog;
+  if (!catalog || catalog.providerId !== 'anthropic') {
+    return facts.modelIds.size > 0;
+  }
+
+  const hasVisibleModels = catalog.models.some(
+    (model) => !model.hidden && Boolean(model.launchModel.trim() || model.id.trim())
+  );
+  if (!hasVisibleModels || catalog.status === 'unavailable') {
+    return false;
+  }
+
+  if (catalog.source === 'static-fallback') {
+    return false;
+  }
+
+  if (catalog.source === 'anthropic-compatible-api') {
+    return catalog.status === 'ready';
+  }
+
+  return true;
+}
+
 export function resolveAnthropicSelectionFromFacts(params: {
   selectedModel?: string;
   limitContext?: boolean;
@@ -789,7 +815,11 @@ export function validateRuntimeLaunchSelection(params: {
         `${params.actorLabel} could not resolve the selected Anthropic model against the current runtime catalog.`
       );
     }
-    if (params.facts.modelIds.size > 0 && !params.facts.modelIds.has(resolvedLaunchModel)) {
+    if (
+      params.facts.modelIds.size > 0 &&
+      hasAuthoritativeAnthropicLaunchCatalog(params.facts) &&
+      !params.facts.modelIds.has(resolvedLaunchModel)
+    ) {
       throw new Error(
         `${params.actorLabel} resolves to Anthropic model "${resolvedLaunchModel}", but the current runtime does not list it as launchable.`
       );
