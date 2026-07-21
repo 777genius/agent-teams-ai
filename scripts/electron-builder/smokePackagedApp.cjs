@@ -7,6 +7,10 @@ const STARTUP_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_TIMEOUT_MS ?? 30_00
 const POST_STARTUP_STABLE_MS = Number(process.env.PACKAGED_SMOKE_STABLE_MS ?? 8_000);
 const SHUTDOWN_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS ?? 5_000);
 const REQUIRED_LOG_MARKERS = ['renderer did-finish-load'];
+const SQLITE_HEADER = Buffer.from('SQLite format 3\0', 'utf8');
+const INTERNAL_STORAGE_FALLBACK_PATTERNS = [
+  /internal-storage sqlite backend unavailable; falling back to JSON stores for this session/i,
+];
 const FAILURE_PATTERNS = [
   /Cannot find module/i,
   /MODULE_NOT_FOUND/i,
@@ -14,7 +18,39 @@ const FAILURE_PATTERNS = [
   /Unable to set login item/i,
   /\[DEP0180\]/i,
   /DeprecationWarning: fs\.Stats constructor is deprecated/i,
+  ...INTERNAL_STORAGE_FALLBACK_PATTERNS,
 ];
+
+function getInternalStorageVerificationError(userDataDir, log) {
+  if (INTERNAL_STORAGE_FALLBACK_PATTERNS.some((pattern) => pattern.test(log))) {
+    return 'Detected internal-storage SQLite fallback warning';
+  }
+
+  const databasePath = path.join(userDataDir, 'storage', 'app.db');
+  if (!fs.existsSync(databasePath)) {
+    return `Internal-storage SQLite database was not created: ${databasePath}`;
+  }
+
+  let fileDescriptor;
+  try {
+    fileDescriptor = fs.openSync(databasePath, 'r');
+    const header = Buffer.alloc(SQLITE_HEADER.length);
+    const bytesRead = fs.readSync(fileDescriptor, header, 0, header.length, 0);
+    if (bytesRead !== SQLITE_HEADER.length || !header.equals(SQLITE_HEADER)) {
+      return `Internal-storage database has an invalid SQLite header: ${databasePath}`;
+    }
+  } catch (error) {
+    return `Unable to verify internal-storage SQLite database ${databasePath}: ${
+      error instanceof Error ? error.message : String(error)
+    }`;
+  } finally {
+    if (fileDescriptor !== undefined) {
+      fs.closeSync(fileDescriptor);
+    }
+  }
+
+  return null;
+}
 
 function isMacBundle(candidatePath) {
   return (
@@ -233,6 +269,7 @@ async function main() {
 
   const deadline = Date.now() + STARTUP_TIMEOUT_MS;
   let startupSeenAt = null;
+  let storageVerificationError = null;
   while (Date.now() < deadline) {
     if (FAILURE_PATTERNS.some((pattern) => pattern.test(log))) {
       await terminateChild(child, exitPromise, platform);
@@ -244,9 +281,12 @@ async function main() {
     }
 
     if (startupSeenAt !== null && Date.now() - startupSeenAt >= POST_STARTUP_STABLE_MS) {
-      await terminateChild(child, exitPromise, platform);
-      console.log(`[smokePackagedApp] OK ${platform}: ${bundlePath}`);
-      return;
+      storageVerificationError = getInternalStorageVerificationError(userDataDir, log);
+      if (storageVerificationError === null) {
+        await terminateChild(child, exitPromise, platform);
+        console.log(`[smokePackagedApp] OK ${platform}: ${bundlePath}`);
+        return;
+      }
     }
 
     const exit = await Promise.race([
@@ -262,6 +302,9 @@ async function main() {
   }
 
   await terminateChild(child, exitPromise, platform);
+  if (startupSeenAt !== null && storageVerificationError) {
+    fail(storageVerificationError, log);
+  }
   fail(`Timed out after ${STARTUP_TIMEOUT_MS}ms waiting for packaged startup`, log);
 }
 
@@ -271,6 +314,7 @@ if (require.main === module) {
 
 module.exports = {
   _internal: {
+    getInternalStorageVerificationError,
     terminateChild,
     waitForProcessClose,
   },

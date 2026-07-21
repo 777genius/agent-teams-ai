@@ -1,9 +1,13 @@
 // @vitest-environment node
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
+import path from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
 interface SmokePackagedAppInternals {
+  getInternalStorageVerificationError(userDataDir: string, log: string): string | null;
   terminateChild(
     child: { exitCode: number | null; signalCode: string | null; kill: () => void },
     exitPromise: Promise<unknown>,
@@ -30,7 +34,69 @@ const smokePackagedAppInternals =
 if (!smokePackagedAppInternals) {
   throw new Error('smokePackagedApp internals were not exported');
 }
-const { terminateChild, waitForProcessClose } = smokePackagedAppInternals;
+const { getInternalStorageVerificationError, terminateChild, waitForProcessClose } =
+  smokePackagedAppInternals;
+
+describe('smokePackagedApp internal storage verification', () => {
+  it('accepts an app.db file with the SQLite format header', () => {
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-storage-test-'));
+    try {
+      const storageDir = path.join(userDataDir, 'storage');
+      fs.mkdirSync(storageDir);
+      fs.writeFileSync(path.join(storageDir, 'app.db'), Buffer.from('SQLite format 3\0payload'));
+
+      expect(getInternalStorageVerificationError(userDataDir, 'renderer did-finish-load')).toBe(
+        null
+      );
+    } finally {
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a missing app.db file', () => {
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-storage-test-'));
+    try {
+      expect(getInternalStorageVerificationError(userDataDir, '')).toContain(
+        'SQLite database was not created'
+      );
+    } finally {
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a file without the SQLite format header', () => {
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-storage-test-'));
+    try {
+      const storageDir = path.join(userDataDir, 'storage');
+      fs.mkdirSync(storageDir);
+      fs.writeFileSync(path.join(storageDir, 'app.db'), 'not sqlite');
+
+      expect(getInternalStorageVerificationError(userDataDir, '')).toContain(
+        'invalid SQLite header'
+      );
+    } finally {
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects the internal-storage JSON fallback warning even with a valid database', () => {
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-storage-test-'));
+    try {
+      const storageDir = path.join(userDataDir, 'storage');
+      fs.mkdirSync(storageDir);
+      fs.writeFileSync(path.join(storageDir, 'app.db'), Buffer.from('SQLite format 3\0payload'));
+
+      expect(
+        getInternalStorageVerificationError(
+          userDataDir,
+          'internal-storage sqlite backend unavailable; falling back to JSON stores for this session'
+        )
+      ).toBe('Detected internal-storage SQLite fallback warning');
+    } finally {
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+    }
+  });
+});
 
 describe('smokePackagedApp shutdown handling', () => {
   it('reports successful process closure before the timeout', async () => {
