@@ -1321,6 +1321,39 @@ export class TeamProvisioningMemberLifecycleController {
     return this.persistLaunchStateSnapshot(run, phase);
   }
 
+  private async drainSuccessfulDirectRestartLaunchSnapshot(
+    run: ProvisioningRun,
+    memberName: string
+  ): Promise<void> {
+    if (!run.isLaunch) {
+      return;
+    }
+
+    let persistenceFailed = false;
+    let persistenceError: unknown;
+    try {
+      await this.persistLaunchStateSnapshotForCurrentRun(
+        run,
+        run.provisioningComplete ? 'finished' : 'active'
+      );
+    } catch (error) {
+      persistenceFailed = true;
+      persistenceError = error;
+    }
+
+    // Persistence drains queued status publications. The direct launch is already live at this
+    // point, so a storage failure must not report the restart as failed. A replacement or cancelled
+    // run remains authoritative, including when it changes while the publication is draining.
+    this.assertRunStillCurrentAndAlive(run, run.teamName);
+    if (persistenceFailed) {
+      logger.warn(
+        `[${run.teamName}] Failed to persist successful direct restart launch snapshot for ${memberName}: ${
+          persistenceError instanceof Error ? persistenceError.message : String(persistenceError)
+        }`
+      );
+    }
+  }
+
   async attachLiveRosterMember(
     teamName: string,
     memberName: string,
@@ -1813,12 +1846,7 @@ export class TeamProvisioningMemberLifecycleController {
       }
       // Status mutations publish in the background for low-latency runtime event handling.
       // Do not resolve the lifecycle command until all earlier status publications are drained.
-      if (run.isLaunch) {
-        await this.persistLaunchStateSnapshotForCurrentRun(
-          run,
-          run.provisioningComplete ? 'finished' : 'active'
-        );
-      }
+      await this.drainSuccessfulDirectRestartLaunchSnapshot(run, memberName);
       return;
     }
 
@@ -1853,12 +1881,7 @@ export class TeamProvisioningMemberLifecycleController {
         }
         throw error;
       }
-      if (run.isLaunch) {
-        await this.persistLaunchStateSnapshotForCurrentRun(
-          run,
-          run.provisioningComplete ? 'finished' : 'active'
-        );
-      }
+      await this.drainSuccessfulDirectRestartLaunchSnapshot(run, memberName);
       return;
     }
 

@@ -855,6 +855,121 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     expect(spawnStatuses).toEqual(['offline', 'spawning']);
   });
 
+  it('resolves a successful direct process restart when final snapshot persistence fails', async () => {
+    const member: TeamCreateRequest['members'][number] = {
+      name: 'Worker',
+      role: 'Developer',
+      providerId: 'codex',
+    };
+    const run = createRun(member);
+    let launched = false;
+    const persistedPhases: string[] = [];
+    const host = createHost(run, {
+      async persistLaunchStateSnapshot(_targetRun, phase) {
+        persistedPhases.push(phase);
+        throw new Error('snapshot write failed');
+      },
+    });
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases,
+      {
+        restart: {
+          async preparePrimaryOwnedMemberRestartRuntime() {
+            return { directTmuxRestartPaneId: null, shouldDirectProcessRestart: true };
+          },
+          async launchDirectProcessMemberRestart() {
+            launched = true;
+          },
+        },
+      }
+    );
+
+    await expect(controller.restartMember('team-a', 'Worker')).resolves.toBeUndefined();
+
+    expect(launched).toBe(true);
+    expect(persistedPhases).toEqual(['active']);
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'Failed to persist successful direct restart launch snapshot for Worker: snapshot write failed'
+    );
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('rejects a successful direct process restart when its run is replaced during the persistence drain', async () => {
+    const member: TeamCreateRequest['members'][number] = {
+      name: 'Worker',
+      role: 'Developer',
+      providerId: 'codex',
+    };
+    const run = createRun(member);
+    const replacementRun = createRunWithId(member, 'run-2');
+    let aliveRunId = run.runId;
+    const host = createHost(run, {
+      runs: new Map([
+        [run.runId, run],
+        [replacementRun.runId, replacementRun],
+      ]),
+      getAliveRunId: () => aliveRunId,
+      getTrackedRunId: () => aliveRunId,
+      isCurrentTrackedRun: (candidateRun) => aliveRunId === candidateRun.runId,
+      async persistLaunchStateSnapshot() {
+        aliveRunId = replacementRun.runId;
+        return null;
+      },
+    });
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases,
+      {
+        restart: {
+          async preparePrimaryOwnedMemberRestartRuntime() {
+            return { directTmuxRestartPaneId: null, shouldDirectProcessRestart: true };
+          },
+          async launchDirectProcessMemberRestart() {
+            return undefined;
+          },
+        },
+      }
+    );
+
+    await expect(controller.restartMember('team-a', 'Worker')).rejects.toThrow(
+      'Team "team-a" is not currently running'
+    );
+  });
+
+  it('rejects a successful direct process restart when its run is cancelled during a failed persistence drain', async () => {
+    const member: TeamCreateRequest['members'][number] = {
+      name: 'Worker',
+      role: 'Developer',
+      providerId: 'codex',
+    };
+    const run = createRun(member);
+    const host = createHost(run, {
+      async persistLaunchStateSnapshot() {
+        run.cancelRequested = true;
+        throw new Error('snapshot write failed');
+      },
+    });
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases,
+      {
+        restart: {
+          async preparePrimaryOwnedMemberRestartRuntime() {
+            return { directTmuxRestartPaneId: null, shouldDirectProcessRestart: true };
+          },
+          async launchDirectProcessMemberRestart() {
+            return undefined;
+          },
+        },
+      }
+    );
+
+    await expect(controller.restartMember('team-a', 'Worker')).rejects.toThrow(
+      'Team "team-a" is not currently running'
+    );
+  });
+
   it('does not track a direct process MCP config after its write observes a stale run', async () => {
     const member: TeamCreateRequest['members'][number] = {
       name: 'Worker',
@@ -1029,7 +1144,7 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     expect(sendKeysToTmuxPaneForCurrentPlatform).not.toHaveBeenCalled();
   });
 
-  it('persists direct restart config and relaunches when the admitted run remains current', async () => {
+  it('keeps a successful direct tmux restart resolved when final snapshot persistence fails', async () => {
     const member: TeamCreateRequest['members'][number] = {
       name: 'Worker',
       role: 'Developer',
@@ -1039,6 +1154,7 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     let writtenConfig: string | null = null;
     let invalidatedConfig = false;
     let promptEnqueued = false;
+    let persistenceAttempts = 0;
     vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
       new Map([['pane-1', { currentCommand: 'bash' }]]) as Awaited<
         ReturnType<typeof listTmuxPaneRuntimeInfoForCurrentPlatform>
@@ -1061,6 +1177,10 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
       isCurrentTrackedRun: (candidateRun) => candidateRun === run,
       persistInboxMessage() {
         promptEnqueued = true;
+      },
+      async persistLaunchStateSnapshot() {
+        persistenceAttempts += 1;
+        throw new Error('snapshot write failed');
       },
     });
     const controller = new TeamProvisioningMemberLifecycleController(
@@ -1093,6 +1213,11 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     expect(invalidatedConfig).toBe(true);
     expect(promptEnqueued).toBe(true);
     expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
+    expect(persistenceAttempts).toBe(1);
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'Failed to persist successful direct restart launch snapshot for Worker: snapshot write failed'
+    );
+    vi.mocked(console.warn).mockClear();
   });
 
   it('does not persist pure OpenCode restart messages or relaunch after adapter generation replacement before persistence', async () => {
