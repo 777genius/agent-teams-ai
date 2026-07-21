@@ -71,6 +71,38 @@ describe("codex goal MCP project scope helpers", () => {
     ).toThrow("project_control_consumed_output_ledger_root_outside_scope");
   });
 
+  it("allows append-only account registration during confirmed scope repair", () => {
+    const existing = projectScope();
+
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing,
+        proposed: {
+          ...existing,
+          allowedAccountIds: ["account-a", "account-j"],
+        },
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing,
+        proposed: {
+          ...existing,
+          allowedAccountIds: ["account-j"],
+        },
+      }),
+    ).toThrow("project_control_scope_allowedAccountIds_repair_denied");
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing,
+        proposed: {
+          ...existing,
+          allowedAccountIds: ["account-a", "account-a"],
+        },
+      }),
+    ).toThrow("project_control_scope_allowedAccountIds_repair_denied");
+  });
+
   it("allows only a fail-closed builtin admission upgrade", () => {
     const existing = projectScope();
     const upgraded = {
@@ -98,6 +130,42 @@ describe("codex goal MCP project scope helpers", () => {
           preStartAdmission: {
             required: false,
             mode: "serial-builtin",
+          },
+        },
+      }),
+    ).toThrow("project_control_scope_preStartAdmission_repair_denied");
+
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing: {
+          ...upgraded,
+          preStartAdmission: {
+            ...upgraded.preStartAdmission,
+            contractSchema: "worker-start-v1",
+          } as NonNullable<ProjectAccessScope["preStartAdmission"]>,
+        },
+        proposed: upgraded,
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing: {
+          ...existing,
+          preStartAdmission: {
+            required: true,
+            mode: "serial",
+            validatorBundle: [
+              { path: "/tmp/validator", sha256: "a".repeat(64) },
+            ],
+          },
+        },
+        proposed: {
+          ...existing,
+          preStartAdmission: {
+            required: true,
+            mode: "serial",
+            validatorBundle: [{ path: "/tmp/other", sha256: "b".repeat(64) }],
           },
         },
       }),

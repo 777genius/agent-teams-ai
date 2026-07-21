@@ -15,6 +15,7 @@ import {
 } from "./codex-goal-jobs";
 import {
   collectCodexGoalStatus,
+  listCodexGoalAccountStatuses,
   resolveCodexGoalWorkerLiveness,
 } from "./codex-goal-ops";
 import { goalLaunchInput } from "./codex-goal-mcp-launch-input";
@@ -58,6 +59,7 @@ import {
 } from "./application/project-control/codex-goal-project-admission";
 import {
   assertProjectControlScopeRepairAllowed,
+  projectControlAddedAllowedAccountIds,
   projectScopeFieldFingerprint,
 } from "./codex-goal-mcp-project-scope";
 import {
@@ -156,6 +158,13 @@ export async function projectControlUpdateControllerScopeView(
     existing: controller.scope,
     proposed: proposedScope,
   });
+  await assertProjectControlAddedAccountsUsable({
+    existing: controller.scope,
+    proposed: proposedScope,
+    ...(controller.scope.authRoot ?? controller.controller.authRootDir
+      ? { authRootDir: controller.scope.authRoot ?? controller.controller.authRootDir }
+      : {}),
+  });
 
   if (booleanValue(args.confirmUpdate) !== true) {
     return {
@@ -186,6 +195,34 @@ export async function projectControlUpdateControllerScopeView(
     manifest,
     summary: summarizeCodexGoalJob(manifest, controller.registryRootDir),
   };
+}
+
+async function assertProjectControlAddedAccountsUsable(input: {
+  readonly existing: ProjectAccessScope;
+  readonly proposed: ProjectAccessScope;
+  readonly authRootDir?: string;
+}): Promise<void> {
+  const addedAccountIds = projectControlAddedAllowedAccountIds({
+    existing: input.existing.allowedAccountIds,
+    proposed: input.proposed.allowedAccountIds,
+  });
+  if (addedAccountIds.length === 0) return;
+  if (!input.authRootDir) {
+    throw new Error("project_control_scope_allowedAccountIds_auth_root_required");
+  }
+  if (addedAccountIds.some((accountId) => !/^[a-z0-9][a-z0-9._-]*$/.test(accountId))) {
+    throw new Error("project_control_scope_allowedAccountIds_account_id_invalid");
+  }
+  const statuses = await listCodexGoalAccountStatuses({
+    authRootDir: input.authRootDir,
+    accounts: addedAccountIds,
+  });
+  if (
+    statuses.length !== addedAccountIds.length ||
+    statuses.some((status) => status.status !== "ready")
+  ) {
+    throw new Error("project_control_scope_allowedAccountIds_account_unavailable");
+  }
 }
 
 export async function projectControlRepairJobManifestView(

@@ -460,6 +460,90 @@ describe("codex goal MCP server", () => {
         },
       });
 
+      await writeFakeAuth(join(root, "auth"), "account-j", {
+        lastRefresh: new Date().toISOString(),
+      });
+      const accountRegistrationScope = {
+        ...legacyScope,
+        allowedAccountIds: ["account-a", "account-j"],
+        preStartAdmission: {
+          required: true as const,
+          mode: "serial-builtin" as const,
+        },
+      };
+      const accountRegistrationPreview = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: accountRegistrationScope,
+        },
+      );
+      expect(accountRegistrationPreview).toMatchObject({
+        ok: false,
+        reason: "confirm_update_required",
+      });
+      expect((await readCodexGoalJob({
+        registryRootDir,
+        jobId: "infinity-context-controller-v1",
+      })).projectAccessScope?.allowedAccountIds).toEqual(["account-a"]);
+
+      const accountRegistration = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: accountRegistrationScope,
+          confirmUpdate: true,
+        },
+      );
+      expect(accountRegistration).toMatchObject({
+        ok: true,
+        manifest: {
+          projectAccessScope: {
+            allowedAccountIds: ["account-a", "account-j"],
+          },
+        },
+      });
+
+      const unavailableAccount = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: {
+            ...accountRegistrationScope,
+            allowedAccountIds: ["account-a", "account-j", "account-missing"],
+          },
+          confirmUpdate: true,
+        },
+      );
+      expect(unavailableAccount).toMatchObject({
+        ok: false,
+        error: "project_control_scope_allowedAccountIds_account_unavailable",
+      });
+
+      const invalidAccount = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: {
+            ...accountRegistrationScope,
+            allowedAccountIds: ["account-a", "account-j", "../escape"],
+          },
+          confirmUpdate: true,
+        },
+      );
+      expect(invalidAccount).toMatchObject({
+        ok: false,
+        error: "project_control_scope_allowedAccountIds_account_id_invalid",
+      });
+
       const widened = await callToolJson(
         client,
         "codex_goal_project_update_controller_scope",

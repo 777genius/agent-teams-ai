@@ -74,11 +74,24 @@ export function assertProjectControlScopeRepairAllowed(input: {
 }): void {
   for (const field of PROJECT_CONTROL_SCOPE_REPAIR_IMMUTABLE_FIELDS) {
     if (
+      field === "allowedAccountIds" &&
+      projectControlAllowedAccountIdsAppendAllowed({
+        existing: input.existing.allowedAccountIds,
+        proposed: input.proposed.allowedAccountIds,
+      })
+    ) {
+      continue;
+    }
+    if (
       field === "preStartAdmission" &&
-      projectControlPreStartAdmissionUpgradeAllowed({
+      (projectControlPreStartAdmissionUpgradeAllowed({
         existing: input.existing.preStartAdmission,
         proposed: input.proposed.preStartAdmission,
-      })
+      }) ||
+        projectControlPreStartAdmissionEquivalent({
+          existing: input.existing.preStartAdmission,
+          proposed: input.proposed.preStartAdmission,
+        }))
     ) {
       continue;
     }
@@ -111,13 +124,50 @@ export function assertProjectControlScopeRepairAllowed(input: {
   }
 }
 
+function projectControlAllowedAccountIdsAppendAllowed(input: {
+  readonly existing: ProjectAccessScope["allowedAccountIds"];
+  readonly proposed: ProjectAccessScope["allowedAccountIds"];
+}): boolean {
+  const existing = input.existing ?? [];
+  const proposed = input.proposed ?? [];
+  return (
+    proposed.length >= existing.length &&
+    existing.every((accountId, index) => proposed[index] === accountId) &&
+    new Set(proposed).size === proposed.length
+  );
+}
+
+export function projectControlAddedAllowedAccountIds(input: {
+  readonly existing: ProjectAccessScope["allowedAccountIds"];
+  readonly proposed: ProjectAccessScope["allowedAccountIds"];
+}): readonly string[] {
+  const existing = new Set(input.existing ?? []);
+  return (input.proposed ?? []).filter((accountId) => !existing.has(accountId));
+}
+
 function projectControlPreStartAdmissionUpgradeAllowed(input: {
   readonly existing: ProjectAccessScope["preStartAdmission"];
   readonly proposed: ProjectAccessScope["preStartAdmission"];
 }): boolean {
-  return input.existing === undefined &&
+  return (
+    input.existing === undefined &&
     input.proposed?.required === true &&
-    input.proposed.mode === "serial-builtin";
+    input.proposed.mode === "serial-builtin"
+  );
+}
+
+function projectControlPreStartAdmissionEquivalent(input: {
+  readonly existing: ProjectAccessScope["preStartAdmission"];
+  readonly proposed: ProjectAccessScope["preStartAdmission"];
+}): boolean {
+  return (
+    input.existing !== undefined &&
+    input.proposed !== undefined &&
+    input.existing.mode === "serial-builtin" &&
+    input.proposed.mode === "serial-builtin" &&
+    input.existing.required === input.proposed.required &&
+    input.existing.mode === input.proposed.mode
+  );
 }
 
 export function projectScopeFieldFingerprint(value: unknown): string {
