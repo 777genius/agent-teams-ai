@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  isCodexAccountSnapshotPending,
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
@@ -168,6 +169,9 @@ export const SkillsPanel = ({
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
   });
+  const codexSnapshotPending =
+    isCodexAccountSnapshotPending(codexAccount.loading, codexAccount.snapshot) &&
+    Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex'));
   const effectiveCliStatus = useMemo(
     () =>
       loadingCliStatus
@@ -209,7 +213,8 @@ export const SkillsPanel = ({
     [mergedSkills]
   );
   const sharedSkillsCount = mergedSkills.length - codexOnlySkillsCount;
-  const showCodexOnlyUi = codexSkillOverlayAvailable || codexOnlySkillsCount > 0;
+  const showCodexOnlyUi =
+    codexSnapshotPending || codexSkillOverlayAvailable || codexOnlySkillsCount > 0;
   const selectedDetail = selectedSkillId ? (detailById[selectedSkillId] ?? null) : null;
   selectedSkillItemRef.current = selectedSkillId
     ? (selectedDetail?.item ?? mergedSkills.find((skill) => skill.id === selectedSkillId) ?? null)
@@ -346,9 +351,11 @@ export const SkillsPanel = ({
     <div className="flex flex-col gap-4">
       {effectiveCliStatus?.flavor === 'agent_teams_orchestrator' && (
         <div className="rounded-md border border-blue-500/30 bg-blue-500/5 px-4 py-3 text-sm text-blue-300">
-          {t('skillsPanel.runtimeAudience', {
-            audience: skillsAudienceLabel ?? t('skillsPanel.configuredRuntime'),
-          })}
+          {codexSnapshotPending
+            ? t('store.provider.checkingStatus')
+            : t('skillsPanel.runtimeAudience', {
+                audience: skillsAudienceLabel ?? t('skillsPanel.configuredRuntime'),
+              })}
         </div>
       )}
       <div className="bg-surface-raised/20 rounded-xl border border-border p-4">
@@ -366,9 +373,11 @@ export const SkillsPanel = ({
             </p>
             <p className="max-w-2xl text-xs leading-5 text-text-muted">
               {t('skillsPanel.hero.guidance')}
-              {codexSkillOverlayAvailable
-                ? ` ${t('skillsPanel.hero.codexAvailable')}`
-                : ` ${t('skillsPanel.hero.codexUnavailable')}`}
+              {codexSnapshotPending
+                ? ` ${t('store.provider.checkingStatus')}`
+                : codexSkillOverlayAvailable
+                  ? ` ${t('skillsPanel.hero.codexAvailable')}`
+                  : ` ${t('skillsPanel.hero.codexUnavailable')}`}
             </p>
           </div>
 

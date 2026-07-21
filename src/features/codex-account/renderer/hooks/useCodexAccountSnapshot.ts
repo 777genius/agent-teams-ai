@@ -105,7 +105,6 @@ export function useCodexAccountSnapshot(options: {
   const [initialRefreshAttempted, setInitialRefreshAttempted] = useState(false);
   const [initialRateLimitsAttempted, setInitialRateLimitsAttempted] = useState(false);
   const enabled = electronMode && options.enabled;
-  enabledRef.current = enabled;
 
   useEffect(() => {
     const loadingTokens = loadingTokensRef.current;
@@ -118,6 +117,10 @@ export function useCodexAccountSnapshot(options: {
       rateLimitsLoadingTokens.clear();
     };
   }, []);
+
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
 
   useEffect(() => {
     if (enabled) {
@@ -172,7 +175,7 @@ export function useCodexAccountSnapshot(options: {
       forceRefreshToken?: boolean;
       silent?: boolean;
     }) => {
-      if (!electronMode || !options.enabled) {
+      if (!electronMode || !mountedRef.current || !enabledRef.current) {
         return false;
       }
 
@@ -356,6 +359,9 @@ export function useCodexAccountSnapshot(options: {
       return;
     }
 
+    // Visibility may have changed while this hook was disabled and unsubscribed.
+    setVisible(isDocumentVisible());
+
     const handleVisibilityChange = (): void => {
       const nextVisible = isDocumentVisible();
       setVisible(nextVisible);
@@ -434,12 +440,11 @@ export function useCodexAccountSnapshot(options: {
 
   const runAction = useCallback(
     async (runner: () => Promise<CodexAccountSnapshotDto>): Promise<boolean> => {
-      if (!electronMode || !options.enabled) {
+      if (!electronMode || !mountedRef.current || !enabledRef.current) {
         return false;
       }
 
       const lifecycleId = lifecycleIdRef.current;
-      const snapshotRevision = snapshotRevisionRef.current;
       const errorRequestId = ++latestErrorRequestIdRef.current;
       const loadingToken = Symbol('codex-account-action');
       loadingTokensRef.current.add(loadingToken);
@@ -457,7 +462,6 @@ export function useCodexAccountSnapshot(options: {
           mountedRef.current &&
           enabledRef.current &&
           lifecycleIdRef.current === lifecycleId &&
-          snapshotRevisionRef.current === snapshotRevision &&
           latestErrorRequestIdRef.current === errorRequestId
         ) {
           setError(nextError instanceof Error ? nextError.message : 'Codex account action failed');

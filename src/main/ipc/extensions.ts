@@ -54,8 +54,9 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const logger = createLogger('IPC:extensions');
 
-/** Allowed scope values */
-const VALID_SCOPES = new Set(['local', 'user', 'project']);
+/** Allowed scope values. Multimodel runtimes expose `global` for MCPs, not Claude plugins. */
+const VALID_PLUGIN_SCOPES = new Set(['local', 'user', 'project']);
+const VALID_MCP_SCOPES = new Set(['local', 'user', 'project', 'global']);
 
 // ── Module state ───────────────────────────────────────────────────────────
 
@@ -269,7 +270,7 @@ async function handlePluginInstall(
     if (!request || typeof request.pluginId !== 'string' || !request.pluginId) {
       throw new Error('Invalid install request: pluginId is required');
     }
-    if (request.scope && !VALID_SCOPES.has(request.scope)) {
+    if (request.scope && !VALID_PLUGIN_SCOPES.has(request.scope)) {
       throw new Error(`Invalid scope: "${request.scope}"`);
     }
     const result = await getPluginInstaller().install(request);
@@ -290,7 +291,7 @@ async function handlePluginUninstall(
     if (typeof pluginId !== 'string' || !pluginId) {
       throw new Error('pluginId is required');
     }
-    if (scope && !VALID_SCOPES.has(scope)) {
+    if (scope && !VALID_PLUGIN_SCOPES.has(scope)) {
       throw new Error(`Invalid scope: "${scope}"`);
     }
     const result = await getPluginInstaller().uninstall(
@@ -316,7 +317,7 @@ async function handleMcpInstall(
     if (typeof request.serverName !== 'string' || !request.serverName) {
       throw new Error('Invalid install request: serverName is required');
     }
-    if (request.scope && !VALID_SCOPES.has(request.scope)) {
+    if (request.scope && !VALID_MCP_SCOPES.has(request.scope)) {
       throw new Error(`Invalid scope: "${request.scope}"`);
     }
     const result = await getMcpInstaller().install(request);
@@ -338,7 +339,7 @@ async function handleMcpInstallCustom(
     if (!request.installSpec) {
       throw new Error('Invalid custom install request: installSpec is required');
     }
-    if (request.scope && !VALID_SCOPES.has(request.scope)) {
+    if (request.scope && !VALID_MCP_SCOPES.has(request.scope)) {
       throw new Error(`Invalid scope: "${request.scope}"`);
     }
     const result = await getMcpInstaller().installCustom(request);
@@ -359,7 +360,7 @@ async function handleMcpUninstall(
     if (typeof name !== 'string' || !name) {
       throw new Error('Server name is required');
     }
-    if (scope && !VALID_SCOPES.has(scope)) {
+    if (scope && !VALID_MCP_SCOPES.has(scope)) {
       throw new Error(`Invalid scope: "${scope}"`);
     }
     const result = await getMcpInstaller().uninstall(

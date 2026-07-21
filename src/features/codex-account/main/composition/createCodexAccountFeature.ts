@@ -44,6 +44,7 @@ const LAST_KNOWN_GOOD_MANAGED_ACCOUNT_TTL_MS = 60_000;
 const CODEX_BINARY_COLD_RETRY_TIMEOUT_MS = 12_000;
 const CODEX_CLI_NOT_FOUND_MESSAGE =
   'Codex CLI not found. Install Codex to use native account management.';
+const CODEX_ACCOUNT_FEATURE_DISPOSED_MESSAGE = 'Codex account feature has been disposed.';
 
 interface CodexLastKnownAccount {
   payload: CodexAppServerGetAccountResponse;
@@ -294,6 +295,8 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
   private readonly envBuilder = new CodexAccountEnvBuilder();
   private readonly appServerClient: CodexAccountAppServerClient;
   private readonly loginSessionManager: CodexLoginSessionManager;
+  private readonly unsubscribeLoginState: () => void;
+  private readonly unsubscribeLoginSettled: () => void;
 
   private snapshotCache: CodexAccountSnapshotDto | null = null;
   private snapshotObservedAt = 0;
@@ -324,26 +327,21 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     this.appServerClient = new CodexAccountAppServerClient(sessionFactory);
     this.loginSessionManager = new CodexLoginSessionManager(sessionFactory, logger);
 
-    this.loginSessionManager.subscribe(() => {
-      void this.emitCurrentSnapshot();
-    });
-    this.loginSessionManager.onSettled(() => {
-      void this.refreshSnapshot({
-        includeRateLimits: true,
-        forceRefreshToken: true,
+    this.unsubscribeLoginState = this.loginSessionManager.subscribe(() => {
+      void this.emitCurrentSnapshot().catch((error) => {
+        this.logBackgroundFailure('codex account login-state snapshot refresh failed', error);
       });
+    });
+    this.unsubscribeLoginSettled = this.loginSessionManager.onSettled(() => {
+      void this.refreshSnapshot({ includeRateLimits: true, forceRefreshToken: true }).catch(
+        (error) => {
+          this.logBackgroundFailure('codex account settled snapshot refresh failed', error);
+        }
+      );
     });
   }
 
   async getSnapshot(): Promise<CodexAccountSnapshotDto> {
-    const cached = this.getCachedSnapshotForOptions({
-      includeRateLimits: false,
-      forceRefreshToken: false,
-    });
-    if (cached) {
-      return cached;
-    }
-
     return this.refreshSnapshot();
   }
 
@@ -351,12 +349,8 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     includeRateLimits?: boolean;
     forceRefreshToken?: boolean;
   }): Promise<CodexAccountSnapshotDto> {
+    this.ensureActive();
     const normalizedOptions = normalizeRefreshOptions(options);
-    const cached = this.getCachedSnapshotForOptions(normalizedOptions);
-    if (cached) {
-      return cached;
-    }
-
     if (this.refreshBatch?.acceptingRequests) {
       if (
         doRefreshOptionsCover(this.refreshBatch.initialOptions, normalizedOptions) ||
@@ -370,6 +364,11 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
         normalizedOptions
       );
       return this.refreshBatch.promise;
+    }
+
+    const cached = this.getCachedSnapshotForOptions(normalizedOptions);
+    if (cached) {
+      return cached;
     }
 
     const previousOperation = this.operationQueue.catch(() => undefined);
@@ -453,6 +452,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
   }
 
   subscribe(listener: (snapshot: CodexAccountSnapshotDto) => void): () => void {
+    this.ensureActive();
     this.listeners.add(listener);
     return (): void => {
       this.listeners.delete(listener);
@@ -476,7 +476,13 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
   }
 
   async dispose(): Promise<void> {
+    if (this.disposed) {
+      return;
+    }
+
     this.disposed = true;
+    this.unsubscribeLoginState();
+    this.unsubscribeLoginSettled();
     await this.loginSessionManager.dispose();
     this.listeners.clear();
     this.snapshotCache = null;
@@ -498,6 +504,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     batch.initialOptions = null;
 
     while (nextOptions) {
+      this.ensureActive();
       batch.activeOptions = nextOptions;
       lastSnapshot =
         this.getCachedSnapshotForOptions(nextOptions) ?? (await this.loadSnapshot(nextOptions));
@@ -520,6 +527,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     includeRateLimits?: boolean;
     forceRefreshToken?: boolean;
   }): Promise<CodexAccountSnapshotDto> {
+    this.ensureActive();
     const preferredAuthMode = getPreferredAuthMode(this.configManager);
     const apiKey = await this.loadApiKeyAvailability();
     const localAccountState = await detectCodexLocalAccountState();
@@ -610,7 +618,8 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
       this.lastKnownRateLimits?.accountSignature ===
         getCodexAccountSignature(accountPayload?.account ?? null);
     const shouldRequestRateLimits =
-      options?.includeRateLimits === true && !cachedRateLimitsAreFresh;
+      options?.includeRateLimits === true &&
+      (options.forceRefreshToken === true || !cachedRateLimitsAreFresh);
     let rateLimitsReadFailure: unknown | null = null;
     let rateLimitsReadReturnedEmpty = false;
 
@@ -899,6 +908,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
   }
 
   private runSerializedMutation<T>(operation: () => Promise<T>): Promise<T> {
+    this.ensureActive();
     if (this.refreshBatch) {
       this.refreshBatch.acceptingRequests = false;
     }
@@ -906,6 +916,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     const previousOperation = this.operationQueue.catch(() => undefined);
     this.queuedMutationCount += 1;
     const mutationPromise = previousOperation.then(async () => {
+      this.ensureActive();
       this.activeMutationCount += 1;
       try {
         return await operation();
@@ -919,6 +930,22 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
       () => undefined
     );
     return mutationPromise;
+  }
+
+  private ensureActive(): void {
+    if (this.disposed) {
+      throw new Error(CODEX_ACCOUNT_FEATURE_DISPOSED_MESSAGE);
+    }
+  }
+
+  private logBackgroundFailure(message: string, error: unknown): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.logger.warn(message, {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   private async loadApiKeyAvailability(): Promise<CodexApiKeyAvailabilityDto> {

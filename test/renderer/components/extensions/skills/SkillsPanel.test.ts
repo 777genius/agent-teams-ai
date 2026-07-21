@@ -569,6 +569,114 @@ describe('SkillsPanel', () => {
     });
   });
 
+  it('keeps the codex-only filter stable while a stale negative snapshot is revalidated', async () => {
+    storeState.cliStatus = makeMultimodelStatus({
+      providers: [
+        ...makeMultimodelStatus().providers,
+        {
+          providerId: 'codex',
+          displayName: 'Codex',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusMessage: 'Codex CLI not found',
+          models: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+            extensions: createDefaultCliExtensionCapabilities({
+              plugins: { status: 'unsupported', ownership: 'provider-scoped', reason: null },
+            }),
+          },
+          connection: null,
+          backend: null,
+        },
+      ],
+    });
+    codexAccountHookState.snapshot = {
+      preferredAuthMode: 'chatgpt',
+      effectiveAuthMode: 'chatgpt',
+      launchAllowed: true,
+      launchIssueMessage: null,
+      launchReadinessState: 'ready_chatgpt',
+      appServerState: 'healthy',
+      appServerStatusMessage: null,
+      managedAccount: {
+        type: 'chatgpt',
+        email: 'user@example.com',
+        planType: 'pro',
+      },
+      apiKey: { available: false, source: null, sourceLabel: null },
+      requiresOpenaiAuth: false,
+      login: { status: 'idle', error: null, startedAt: null },
+      rateLimits: null,
+      updatedAt: '2026-07-21T10:00:00.000Z',
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const renderPanel = async (): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(SkillsPanel, {
+            projectPath: '/tmp/project-a',
+            projectLabel: 'Project A',
+            skillsSearchQuery: '',
+            setSkillsSearchQuery: vi.fn(),
+            skillsSort: 'name-asc',
+            setSkillsSort: vi.fn(),
+            selectedSkillId: null,
+            setSelectedSkillId: vi.fn(),
+          })
+        );
+        await Promise.resolve();
+      });
+    };
+
+    await renderPanel();
+    const codexOnlyButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Codex only')
+    );
+    expect(codexOnlyButton).toBeDefined();
+    await act(async () => {
+      (codexOnlyButton as HTMLButtonElement).click();
+      await Promise.resolve();
+    });
+    expect(host.textContent).not.toContain('Review Helper');
+
+    codexAccountHookState.snapshot = {
+      ...codexAccountHookState.snapshot,
+      effectiveAuthMode: null,
+      launchAllowed: false,
+      launchIssueMessage: 'Codex CLI not found',
+      launchReadinessState: 'runtime_missing',
+      appServerState: 'runtime-missing',
+      appServerStatusMessage: 'Codex CLI not found',
+      managedAccount: null,
+      updatedAt: '2026-07-21T10:00:01.000Z',
+    };
+    codexAccountHookState.loading = true;
+    await renderPanel();
+
+    expect(host.textContent).toContain('Checking provider status...');
+    expect(host.textContent).not.toContain('new Codex-only skills need the Codex runtime enabled');
+    expect(host.textContent).not.toContain('Review Helper');
+    expect(host.textContent).toContain('Codex only');
+
+    codexAccountHookState.loading = false;
+    await renderPanel();
+    expect(host.textContent).toContain('Review Helper');
+    expect(host.textContent).not.toContain('Codex only');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('resets the codex-only quick filter when codex entries disappear', async () => {
     storeState.cliStatus = makeMultimodelStatus({
       providers: [

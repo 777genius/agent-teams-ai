@@ -460,6 +460,101 @@ describe('useCodexAccountSnapshot', () => {
     });
   });
 
+  it('shows the latest action error even when an older background refresh succeeds first', async () => {
+    const initialSnapshot = withSnapshotOverrides(createSnapshot(), {
+      updatedAt: '2026-07-21T10:00:00.000Z',
+    });
+    const refreshedSnapshot = withSnapshotOverrides(createSnapshot(), {
+      updatedAt: '2026-07-21T10:00:01.000Z',
+    });
+    const backgroundRefresh = createDeferred<CodexAccountSnapshotDto>();
+    const logoutRequest = createDeferred<CodexAccountSnapshotDto>();
+    apiMocks.getCodexAccountSnapshot.mockResolvedValue(initialSnapshot);
+    apiMocks.refreshCodexAccountSnapshot.mockReturnValue(backgroundRefresh.promise);
+    apiMocks.logoutCodexAccount.mockReturnValue(logoutRequest.promise);
+    let refreshSilently!: () => Promise<boolean>;
+    let logoutNow!: () => Promise<boolean>;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness(): React.ReactElement {
+      const state = useCodexAccountSnapshot({ enabled: true });
+      refreshSilently = () => state.refresh({ silent: true });
+      logoutNow = state.logout;
+      return React.createElement('div', null, state.error ?? 'no-error');
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    let backgroundPromise!: Promise<boolean>;
+    let logoutPromise!: Promise<boolean>;
+    await act(async () => {
+      backgroundPromise = refreshSilently();
+      logoutPromise = logoutNow();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      backgroundRefresh.resolve(refreshedSnapshot);
+      await backgroundPromise;
+      logoutRequest.reject(new Error('logout failed'));
+      await logoutPromise;
+    });
+
+    expect(host.textContent).toContain('logout failed');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('does not invoke captured account callbacks after the hook is disabled', async () => {
+    apiMocks.getCodexAccountSnapshot.mockResolvedValue(createSnapshot());
+    apiMocks.refreshCodexAccountSnapshot.mockResolvedValue(createSnapshot());
+    apiMocks.logoutCodexAccount.mockResolvedValue(createSnapshot());
+    let capturedRefresh!: () => Promise<boolean>;
+    let capturedLogout!: () => Promise<boolean>;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness({ enabled }: { enabled: boolean }): React.ReactElement {
+      const state = useCodexAccountSnapshot({ enabled });
+      if (enabled) {
+        capturedRefresh = state.refresh;
+        capturedLogout = state.logout;
+      }
+      return React.createElement('div', null, enabled ? 'enabled' : 'disabled');
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: true }));
+      await Promise.resolve();
+    });
+    apiMocks.refreshCodexAccountSnapshot.mockClear();
+    apiMocks.logoutCodexAccount.mockClear();
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: false }));
+      await Promise.resolve();
+    });
+
+    await expect(capturedRefresh()).resolves.toBe(false);
+    await expect(capturedLogout()).resolves.toBe(false);
+    expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
+    expect(apiMocks.logoutCodexAccount).not.toHaveBeenCalled();
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it('turns a synchronous initial API failure into settled hook error state', async () => {
     apiMocks.getCodexAccountSnapshot.mockImplementation(() => {
       throw new Error('synchronous bridge failure');
@@ -1035,6 +1130,60 @@ describe('useCodexAccountSnapshot', () => {
 
     expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(1);
     expect(host.firstElementChild?.getAttribute('data-loading')).toBe('false');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('re-reads document visibility when re-enabled after being unsubscribed', async () => {
+    vi.useFakeTimers();
+    let visibilityState: DocumentVisibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+
+    apiMocks.refreshCodexAccountSnapshot.mockResolvedValue(createSnapshot());
+    apiMocks.getCodexAccountSnapshot.mockResolvedValue(createSnapshot());
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness({ enabled }: { enabled: boolean }): React.ReactElement {
+      useCodexAccountSnapshot({ enabled, includeRateLimits: true });
+      return React.createElement('div', null, enabled ? 'enabled' : 'disabled');
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: true }));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: false }));
+      visibilityState = 'hidden';
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: true }));
+      await Promise.resolve();
+    });
+    apiMocks.refreshCodexAccountSnapshot.mockClear();
+
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+      await Promise.resolve();
+    });
+    expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(4 * 60_000);
+      await Promise.resolve();
+    });
+    expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(1);
 
     act(() => {
       root.unmount();
