@@ -981,6 +981,15 @@ Before opening the app:
 - Mount the DMG read-only and confirm the app bundle version equals the exact
   requested version.
 - Verify the macOS signature and notarization before launching the app.
+- Unless the user explicitly asks to run directly from the DMG, reproduce the
+  normal installed-user flow: quit the currently running app, keep any existing
+  `/Applications/Agent Teams AI.app` copy recoverable, install the verified app
+  bundle into `/Applications`, and launch it with `open` without `-n`.
+- Do not set an alternate `--user-data-dir`, temporary profile, sandbox profile,
+  or release-test environment overrides. Confirm the launched process runs from
+  `/Applications/Agent Teams AI.app` and uses the standard
+  `~/Library/Application Support/agent-teams-ai` profile.
+- Eject the DMG after the installed app starts successfully.
 
 Never report that the requested build was launched based only on its filename.
 The GitHub digest and bundle version must both match.
