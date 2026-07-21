@@ -12,27 +12,24 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.11.0 -->
-Expanded model support and made team launches, provider setup, and background recovery more reliable.
+This release focuses on fixes and stability.
 
-### What's New
+### Fixes and Stability
 
-- Added image attachments for more Kimi, MiniMax, GLM, Grok, Copilot, and MiMo models.
-- Added reasoning effort selection for supported OpenCode models.
-- Added configurable reviews for draft pull requests, including conflicted drafts.
-
-### Improvements
-
-- Updated subscription model recommendations and kept provider model lists stable while they refresh.
-- Improved large pull request reviews with bounded batches and configurable timeouts.
-- Improved teammate work recovery without delayed or duplicate follow-up messages.
-- Improved first-run runtime setup for fresh installations.
-
-### Bug Fixes
-
+- Fixed image attachments for Kimi, MiniMax, GLM, Grok, GitHub Copilot, and MiMo models.
 - Fixed team launches continuing after provider checks fail.
 - Fixed Anthropic models being blocked when live model discovery temporarily falls back.
 - Fixed slow Codex startup affecting account status, model lists, and recent projects.
 - Fixed malformed tool output and provider errors breaking or obscuring chat messages.
+- Kept the current model list visible while providers refresh.
+- Made large pull request reviews less likely to time out.
+- Prevented delayed or duplicate follow-up messages during teammate recovery.
+- Fixed runtime setup on fresh installations.
+
+### Other Changes
+
+- Added reasoning effort selection for supported OpenCode models.
+- Added configurable reviews for draft pull requests, including conflicted drafts.
 
 ### Downloads
 
