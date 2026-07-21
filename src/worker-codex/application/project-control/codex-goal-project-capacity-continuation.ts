@@ -6,7 +6,9 @@ import { isCleanPreStartAdmissionCapacityContinuation } from "./codex-goal-proje
 
 export type ProjectPreStartCapacityContinuationMode = Extract<
   ProjectPreStartAdmissionLaunchWorkspaceMode,
-  "admitted_input_patch_continuation" | "clean_capacity_continuation"
+  | "admitted_input_patch_continuation"
+  | "admitted_input_patch_runtime_continuation"
+  | "clean_capacity_continuation"
 >;
 
 export function projectPreStartCapacityContinuationMode(input: {

@@ -736,8 +736,12 @@ describe("clean-first producer runtime interruption continuation", () => {
       jobRootDir: manifest.jobRootDir,
     });
     if (!handoff) throw new Error("expected interrupted handoff");
+    const resultPath = join(
+      manifest.jobRootDir,
+      `${manifest.taskId}.latest-result.json`,
+    );
     await writeFile(
-      join(manifest.jobRootDir, `${manifest.taskId}.latest-result.json`),
+      resultPath,
       `${JSON.stringify({
         schemaVersion: 1,
         taskId: manifest.taskId,
@@ -752,6 +756,50 @@ describe("clean-first producer runtime interruption continuation", () => {
       })}\n`,
     );
 
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest,
+        scope: fixture.scope,
+        workspaceMode: "admitted_input_patch_runtime_continuation",
+      }),
+    ).resolves.toBeUndefined();
+
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        taskId: manifest.taskId,
+        status: "partial",
+        reason: "account_unavailable",
+        updatedAt: new Date().toISOString(),
+        changedFiles: ["src/example.ts", "src/second.ts"],
+        evidence: ["safe_execution_status:partial"],
+        blockers: ["account_unavailable"],
+        nextAction: "switch_account",
+        artifacts: handoff.artifacts,
+      })}\n`,
+    );
+    const status = {
+      workspaceDirty: true,
+      recommendedAction: "continue_after_capacity",
+      resultExists: true,
+      resultPath,
+      resultStatus: "partial",
+      resultReason: "account_unavailable",
+      warnings: [],
+    } as CodexGoalStatus;
+    await expect(
+      resolveProjectPreStartContinuation({
+        manifest,
+        launch: {
+          config: { taskId: manifest.taskId },
+        } as CodexGoalLaunchInput,
+        status,
+      }),
+    ).resolves.toEqual({
+      kind: "capacity",
+      workspaceMode: "admitted_input_patch_runtime_continuation",
+    });
     await expect(
       assertProjectPreStartAdmissionLaunchBinding({
         manifest,

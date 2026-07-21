@@ -7,7 +7,9 @@ import { isAdmittedInputPatchControlledRuntimeInterruption } from "./codex-goal-
 
 type ContinuationWorkspaceMode = Extract<
   ProjectPreStartAdmissionLaunchWorkspaceMode,
-  "admitted_input_patch_continuation" | "clean_capacity_continuation"
+  | "admitted_input_patch_continuation"
+  | "admitted_input_patch_runtime_continuation"
+  | "clean_capacity_continuation"
 >;
 
 export type ProjectPreStartContinuationDecision =

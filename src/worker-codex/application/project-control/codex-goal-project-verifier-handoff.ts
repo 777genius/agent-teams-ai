@@ -10,6 +10,13 @@ import { readRuntimeResultBrief } from "../codex-goal-runtime-result";
 const execFileAsync = promisify(execFile);
 const maxManifestBytes = 1024 * 1024;
 const maxPatchBytes = 16 * 1024 * 1024;
+const runtimePreservedContinuationReasons = new Set([
+  "runtime_interrupted",
+  "quota_limited",
+  "capacity_unavailable",
+  "account_unavailable",
+  "reconnect_required",
+]);
 
 export type VerifiedProducerHandoff = {
   readonly producerJobId: string;
@@ -178,16 +185,16 @@ async function currentResultHandoff(input: {
     (result.status === "failed" || result.status === "partial") &&
     result.lastFailureReason === "provider_output_invalid" &&
     result.handoffArtifactError === undefined;
-  const controlledRuntimeInterruption =
+  const runtimePreservedContinuation =
     input.allowControlledRuntimeInterruption &&
     result.status === "partial" &&
-    result.lastFailureReason === "runtime_interrupted" &&
+    runtimePreservedContinuationReasons.has(result.lastFailureReason ?? "") &&
     result.handoffArtifactError === undefined;
   if (
     result.strict !== true ||
     (!completed &&
       !verifiableProviderOutputFailure &&
-      !controlledRuntimeInterruption) ||
+      !runtimePreservedContinuation) ||
     !result.manifestPath ||
     !result.manifestSha256 ||
     !/^[0-9a-f]{64}$/i.test(result.manifestSha256)
