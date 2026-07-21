@@ -21,7 +21,7 @@ import {
   validateBuiltinWorkerLaunchSpec,
 } from "./codex-goal-project-builtin-pre-start-admission";
 import { readControlledRuntimeInterruptionHandoff } from "./codex-goal-project-verifier-handoff";
-import { parseWorkerLaunchSpec } from "./worker-launch-spec";
+import { parseWorkerLaunchSpec, workerLaunchOwnsChangedPath } from "./worker-launch-spec";
 import type { ProjectPreStartAdmissionLaunchWorkspaceMode } from "./codex-goal-project-pre-start-admission-types";
 export type {
   ProjectPreStartAdmissionDirtyContinuationMode,
@@ -389,7 +389,6 @@ async function controlledRuntimeInputPatchBindingValid(input: {
     workspacePath: input.manifest.workspacePath,
     expectedBaseCommit: launch.phaseStartSha,
   });
-  const ownedPaths = new Set(launch.ownedPaths);
   return (
     fresh !== null &&
     handoff.baseCommit === launch.phaseStartSha &&
@@ -397,7 +396,7 @@ async function controlledRuntimeInputPatchBindingValid(input: {
     fresh.patchSha256 === handoff.patchSha256 &&
     handoff.changedPaths.length > 0 &&
     samePaths(fresh.changedPaths, handoff.changedPaths) &&
-    handoff.changedPaths.every((path) => ownedPaths.has(path))
+    handoff.changedPaths.every((path) => workerLaunchOwnsChangedPath(launch, path))
   );
 }
 

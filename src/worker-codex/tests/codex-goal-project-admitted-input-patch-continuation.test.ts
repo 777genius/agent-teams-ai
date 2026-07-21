@@ -680,7 +680,7 @@ describe("clean-first producer runtime interruption continuation", () => {
       ...fixture.contract,
       reviewKind: "implementation",
       inputPatchHash: null,
-      ownedPaths: ["src/example.ts", "src/second.ts"],
+      ownedPaths: ["src/"],
     });
     const state = {
       ...fixture.state,
@@ -759,6 +759,18 @@ describe("clean-first producer runtime interruption continuation", () => {
         workspaceMode: "admitted_input_patch_runtime_continuation",
       }),
     ).resolves.toBeUndefined();
+
+    await writeFile(join(manifest.workspacePath, "outside.ts"), "export {}\n");
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest,
+        scope: fixture.scope,
+        workspaceMode: "admitted_input_patch_runtime_continuation",
+      }),
+    ).rejects.toThrow(
+      "project_control_pre_start_launch_binding_mismatch:input_patch_binding",
+    );
+    await rm(join(manifest.workspacePath, "outside.ts"));
 
     await writeFile(
       join(manifest.workspacePath, "src", "example.ts"),

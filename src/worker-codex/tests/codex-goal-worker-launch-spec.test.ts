@@ -3,9 +3,36 @@ import {
   parseWorkerLaunchRequest,
   parseWorkerLaunchSpec,
   parseWorkerLaunchState,
+  workerLaunchOwnsChangedPath,
 } from "../index";
 
 describe("worker launch spec", () => {
+  it("treats trailing-slash ownership as a bounded directory scope", () => {
+    const launch = { ownedPaths: ["src/feature/", "README.md"] };
+
+    expect(workerLaunchOwnsChangedPath(launch, "src/feature/file.ts")).toBe(
+      true,
+    );
+    expect(
+      workerLaunchOwnsChangedPath(launch, "src/feature/deep/file.ts"),
+    ).toBe(true);
+    expect(workerLaunchOwnsChangedPath(launch, "README.md")).toBe(true);
+    expect(workerLaunchOwnsChangedPath(launch, "README.md.bak")).toBe(false);
+    expect(
+      workerLaunchOwnsChangedPath(launch, "src/feature-extra/file.ts"),
+    ).toBe(false);
+    for (const unsafePath of [
+      "src/../outside.ts",
+      "src//child.ts",
+      "src/./child.ts",
+      "/src/child.ts",
+      "src\\child.ts",
+      "src/control\u0000.ts",
+    ]) {
+      expect(workerLaunchOwnsChangedPath(launch, unsafePath)).toBe(false);
+    }
+  });
+
   it("accepts the stable kind and format without a versioned type name", () => {
     expect(parseWorkerLaunchRequest(workerLaunchRequest())).toMatchObject({
       kind: "worker-launch",

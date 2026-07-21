@@ -16,6 +16,7 @@ export {
   parseWorkerLaunchRequest,
   parseWorkerLaunchSpec,
   parseWorkerLaunchState,
+  workerLaunchOwnsChangedPath,
   workerLaunchAdmissionSchema,
   workerLaunchExecutionPolicySchema,
   workerLaunchRequestSchema,

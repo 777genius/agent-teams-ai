@@ -296,6 +296,47 @@ export type WorkerLaunchAdmission = z.infer<typeof workerLaunchAdmissionSchema>;
 export type WorkerLaunchSpec = z.infer<typeof workerLaunchSpecSchema>;
 export type WorkerLaunchState = z.infer<typeof workerLaunchStateSchema>;
 
+function isSafeOwnedPath(value: string, allowDirectory: boolean): boolean {
+  if (
+    !value ||
+    isAbsolute(value) ||
+    value.includes("\\") ||
+    /[\u0000-\u001f\u007f]/u.test(value)
+  ) {
+    return false;
+  }
+  const parts = value.split("/");
+  if (allowDirectory && parts.at(-1) === "") {
+    parts.pop();
+  }
+  return (
+    parts.length > 0 &&
+    parts.every((part) => part !== "" && part !== "." && part !== "..")
+  );
+}
+
+/**
+ * Match a concrete changed file against the ownership declared by a worker.
+ * File entries are exact. A trailing slash deliberately declares a directory
+ * boundary, so `src/feature/` owns descendants but never the sibling
+ * `src/feature-extra/`.
+ */
+export function workerLaunchOwnsChangedPath(
+  launch: Pick<WorkerLaunchSpec, "ownedPaths">,
+  changedPath: string,
+): boolean {
+  return (
+    isSafeOwnedPath(changedPath, false) &&
+    launch.ownedPaths.some(
+      (ownedPath) =>
+        isSafeOwnedPath(ownedPath, true) &&
+        (ownedPath.endsWith("/")
+          ? changedPath.startsWith(ownedPath)
+          : changedPath === ownedPath),
+    )
+  );
+}
+
 export function parseWorkerLaunchRequest(value: unknown): WorkerLaunchRequest {
   return parseWorkerLaunchValue(workerLaunchRequestSchema, value, "request");
 }
