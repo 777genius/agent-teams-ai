@@ -6,6 +6,9 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import { ReviewDecisionStatus } from "@vioxen/subscription-runtime/worker-core";
+import {
+  materializeCodexGoalHandoffArtifacts,
+} from "../../codex-goal-handoff-artifacts";
 import { captureGitWorkspacePatch } from "../../codex-goal-runtime-result-io";
 import {
   captureReviewedWorkerOutput,
@@ -500,6 +503,65 @@ describe("reviewed worker output", () => {
       changedFiles: ["src/config.fixture.env", "src/new.ts", "src/value.ts"],
       patch: expect.stringContaining("config.fixture.env"),
     });
+  });
+
+  it("captures both sides of a rename with the immutable handoff patch", async () => {
+    const root = await mkdtemp(
+      join(tmpdir(), "subscription-runtime-reviewed-rename-"),
+    );
+    roots.push(root);
+    const workspacePath = join(root, "workspace");
+    await execFileAsync("git", ["init", workspacePath]);
+    await execFileAsync("git", [
+      "-C",
+      workspacePath,
+      "config",
+      "user.email",
+      "test@example.com",
+    ]);
+    await execFileAsync("git", [
+      "-C",
+      workspacePath,
+      "config",
+      "user.name",
+      "Test",
+    ]);
+    await writeFile(
+      join(workspacePath, "old-name.ts"),
+      "export const value = 1;\n",
+    );
+    await execFileAsync("git", ["-C", workspacePath, "add", "old-name.ts"]);
+    await execFileAsync("git", [
+      "-C",
+      workspacePath,
+      "commit",
+      "-m",
+      "test: base",
+    ]);
+    await execFileAsync("git", [
+      "-C",
+      workspacePath,
+      "mv",
+      "old-name.ts",
+      "new-name.ts",
+    ]);
+    const handoff = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: "rename-worker",
+      taskId: "rename-task",
+      workspacePath,
+      jobRootDir: join(root, "job"),
+    });
+    if (!handoff) throw new Error("expected rename handoff");
+
+    const snapshot = await new GitReviewedWorkerOutputSnapshotter({
+      tempRootDir: join(root, "captures"),
+    }).capture({ workspacePath });
+    expect(snapshot.changedFiles).toEqual(["new-name.ts", "old-name.ts"]);
+    expect(sha256(snapshot.patch)).toBe(
+      handoff.manifest.artifacts.patch.sha256,
+    );
+    expect(snapshot.patch).toContain("diff --git a/old-name.ts b/old-name.ts");
+    expect(snapshot.patch).toContain("diff --git a/new-name.ts b/new-name.ts");
   });
 
   it("rejects provider-shaped material embedded in a reviewed binary blob", async () => {

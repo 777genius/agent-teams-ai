@@ -103,7 +103,7 @@ export async function captureGitWorkspaceChangedFiles(input: {
     gitBinaryPath,
     workspacePath: input.workspacePath,
     args: hasHead
-      ? ["diff", "--name-only", "-z", "HEAD", "--"]
+      ? ["diff", "--name-only", "--no-renames", "-z", "HEAD", "--"]
       : ["diff", "--name-only", "-z", "--"],
   });
   const untracked = await gitUntrackedPaths({

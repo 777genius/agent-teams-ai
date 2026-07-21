@@ -131,6 +131,53 @@ describe("project verifier handoff", () => {
     });
   });
 
+  it("admits an unchanged immutable handoff after a runtime interruption", async () => {
+    const root = await temporaryRoot("verifier-runtime-interrupted-");
+    const workspacePath = join(root, "producer");
+    const jobRootDir = join(root, "jobs", "producer-1");
+    await initRepository(workspacePath);
+    await mkdir(jobRootDir, { recursive: true });
+    await writeFile(join(workspacePath, "feature.txt"), "interrupted output\n");
+    const materialized = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: "producer-1",
+      taskId: "task-1",
+      workspacePath,
+      jobRootDir,
+    });
+    if (!materialized) throw new Error("expected producer handoff");
+    await writeFile(
+      join(jobRootDir, "task-1.latest-result.json"),
+      `${JSON.stringify({
+        status: "partial",
+        reason: "runtime_interrupted",
+        changedFiles: materialized.changedPaths,
+        evidence: ["immutable_handoff_captured"],
+        blockers: ["runtime_interrupted"],
+        nextAction: "preserve_patch",
+        artifacts: materialized.artifacts,
+        details: { baseCommit: materialized.baseCommit },
+      })}\n`,
+    );
+    const producer = manifest({ workspacePath, jobRootDir });
+
+    await expect(readVerifiedProducerHandoff({ producer })).rejects.toThrow(
+      "project_control_verifier_handoff_result_invalid",
+    );
+    await expect(
+      readVerifiableProducerHandoff({ producer }),
+    ).resolves.toMatchObject({
+      producerJobId: "producer-1",
+      baseCommit: materialized.baseCommit,
+      changedPaths: ["feature.txt"],
+      patchSha256: materialized.manifest.artifacts.patch.sha256,
+    });
+
+    await writeFile(join(workspacePath, "feature.txt"), "changed after capture\n");
+    await expect(readVerifiableProducerHandoff({ producer })).rejects.toThrow(
+      "project_control_verifier_handoff_workspace_changed_after_capture",
+    );
+  });
+
   it("rejects unrelated failed producer output from verifier admission", async () => {
     const root = await temporaryRoot("verifier-unrelated-failure-");
     const workspacePath = join(root, "producer");

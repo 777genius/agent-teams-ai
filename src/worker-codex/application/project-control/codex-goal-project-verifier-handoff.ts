@@ -5,6 +5,7 @@ import { isAbsolute, join, relative } from "node:path";
 import { promisify } from "node:util";
 import { detectSecretLikeContent } from "@vioxen/subscription-runtime/worker-core";
 import type { CodexGoalJobManifest } from "../../codex-goal-jobs";
+import { captureCodexGoalHandoffPatchFingerprint } from "../../codex-goal-handoff-artifacts";
 import { readRuntimeResultBrief } from "../codex-goal-runtime-result";
 
 const execFileAsync = promisify(execFile);
@@ -48,10 +49,13 @@ export async function readVerifiedProducerHandoff(input: {
 export async function readVerifiableProducerHandoff(input: {
   readonly producer: CodexGoalJobManifest;
 }): Promise<VerifiedProducerHandoff> {
-  return readProducerHandoff({
+  const handoff = await readProducerHandoff({
     producer: input.producer,
     allowProviderOutputInvalid: true,
+    allowRuntimeInterrupted: true,
   });
+  await assertProducerHandoffMatchesWorkspace(input.producer, handoff);
+  return handoff;
 }
 
 /**
@@ -73,6 +77,7 @@ async function readProducerHandoff(input: {
   readonly producer: CodexGoalJobManifest;
   readonly allowProviderOutputInvalid: boolean;
   readonly allowControlledRuntimeInterruption?: boolean;
+  readonly allowRuntimeInterrupted?: boolean;
 }): Promise<VerifiedProducerHandoff> {
   const producerJobRoot = await canonicalDirectory(input.producer.jobRootDir);
   const producerWorkspace = await canonicalDirectory(
@@ -84,6 +89,7 @@ async function readProducerHandoff(input: {
     allowProviderOutputInvalid: input.allowProviderOutputInvalid,
     allowControlledRuntimeInterruption:
       input.allowControlledRuntimeInterruption === true,
+    allowRuntimeInterrupted: input.allowRuntimeInterrupted === true,
   });
   const manifestPath = await realpath(
     resultHandoff?.manifestPath ??
@@ -148,6 +154,7 @@ async function currentResultHandoff(input: {
   readonly producerJobRoot: string;
   readonly allowProviderOutputInvalid: boolean;
   readonly allowControlledRuntimeInterruption: boolean;
+  readonly allowRuntimeInterrupted: boolean;
 }): Promise<
   | {
       readonly resultPath: string;
@@ -190,11 +197,17 @@ async function currentResultHandoff(input: {
     result.status === "partial" &&
     runtimePreservedContinuationReasons.has(result.lastFailureReason ?? "") &&
     result.handoffArtifactError === undefined;
+  const verifiableRuntimeInterruption =
+    input.allowRuntimeInterrupted &&
+    result.status === "partial" &&
+    result.lastFailureReason === "runtime_interrupted" &&
+    result.handoffArtifactError === undefined;
   if (
     result.strict !== true ||
     (!completed &&
       !verifiableProviderOutputFailure &&
-      !runtimePreservedContinuation) ||
+      !runtimePreservedContinuation &&
+      !verifiableRuntimeInterruption) ||
     !result.manifestPath ||
     !result.manifestSha256 ||
     !/^[0-9a-f]{64}$/i.test(result.manifestSha256)
@@ -207,6 +220,33 @@ async function currentResultHandoff(input: {
     manifestSha256: result.manifestSha256.toLowerCase(),
     ...(result.changedFiles ? { changedFiles: result.changedFiles } : {}),
   };
+}
+
+async function assertProducerHandoffMatchesWorkspace(
+  producer: CodexGoalJobManifest,
+  handoff: VerifiedProducerHandoff,
+): Promise<void> {
+  let current;
+  try {
+    current = await captureCodexGoalHandoffPatchFingerprint({
+      workspacePath: producer.workspacePath,
+      expectedBaseCommit: handoff.baseCommit,
+    });
+  } catch {
+    throw new Error(
+      "project_control_verifier_handoff_workspace_changed_after_capture",
+    );
+  }
+  if (
+    !current ||
+    current.baseCommit !== handoff.baseCommit ||
+    current.patchSha256 !== handoff.patchSha256 ||
+    !sameStrings(current.changedPaths, handoff.changedPaths)
+  ) {
+    throw new Error(
+      "project_control_verifier_handoff_workspace_changed_after_capture",
+    );
+  }
 }
 
 type ParsedManifest = {
