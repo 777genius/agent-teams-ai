@@ -7,6 +7,7 @@ minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - '@esbuild/*'
   - esbuild
+  - fast-uri@3.1.4
   - tmp@0.2.6
 strictPeerDependencies: true
 peerDependencyRules:
@@ -39,7 +40,7 @@ overrides:
   'devalue': '5.8.1'
   'dompurify': '3.4.12'
   'esbuild': '0.28.1'
-  'fast-uri': '3.1.3'
+  'fast-uri': '3.1.4'
   'file-type@21': '21.3.2'
   'flatted': '3.4.2'
   'follow-redirects': '1.16.0'
