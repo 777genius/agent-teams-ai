@@ -25,6 +25,7 @@ export async function stagedPatchSha256(
       "diff",
       "--cached",
       "--binary",
+      "--no-renames",
       "HEAD",
       "--",
     ], {
@@ -74,6 +75,7 @@ export async function stagedPatchSha256ForRevision(input: {
       "diff",
       "--cached",
       "--binary",
+      "--no-renames",
       input.revision,
       "--",
     ], options);

@@ -22,7 +22,10 @@ import {
 } from "../codex-goal-mcp-project-broker";
 import { createOrReuseProjectWorktree } from "../application/project-control/codex-goal-project-refill";
 import type { CodexGoalProjectCreateWorktreeInput } from "../application/project-control/codex-goal-project-control-contracts";
-import { stagedPatchSha256 } from "../application/project-control/codex-goal-project-git";
+import {
+  stagedPatchSha256,
+  stagedPatchSha256ForRevision,
+} from "../application/project-control/codex-goal-project-git";
 import {
   git,
   gitInitRepository,
@@ -284,6 +287,176 @@ describe("project refill worktree identity", () => {
         });
       }
       await expect(access(fixture.input.path)).resolves.toBeUndefined();
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves both exact changed paths when Git could detect a staged rename", async () => {
+    const fixture = await createFixture();
+    const producerPath = join(fixture.root, "worktrees", "rename-producer");
+    const targetPath = join(fixture.root, "worktrees", "rename-target");
+    const patchPath = join(fixture.root, "rename.patch");
+    const producerBranch = "fix/rename-producer";
+    const targetBranch = "fix/rename-target";
+    try {
+      await writeFile(join(fixture.sourceWorkspacePath, "old-name.ts"), "export const value = 1;\n");
+      await git(fixture.sourceWorkspacePath, ["add", "old-name.ts"]);
+      await git(fixture.sourceWorkspacePath, ["commit", "-m", "test: add rename source"]);
+      const baseCommit = (
+        await gitStdout(fixture.sourceWorkspacePath, ["rev-parse", "HEAD"])
+      ).trim();
+      await git(fixture.sourceWorkspacePath, [
+        "worktree",
+        "add",
+        "-b",
+        producerBranch,
+        producerPath,
+        baseCommit,
+      ]);
+      await git(producerPath, ["mv", "old-name.ts", "new-name.ts"]);
+      const patch = await gitStdout(producerPath, [
+        "diff",
+        "--cached",
+        "--binary",
+        "--no-renames",
+        "HEAD",
+        "--",
+      ]);
+      await writeFile(patchPath, patch);
+      await git(fixture.sourceWorkspacePath, [
+        "worktree",
+        "add",
+        "-b",
+        targetBranch,
+        targetPath,
+        baseCommit,
+      ]);
+      await git(targetPath, ["apply", "--index", "--binary", patchPath]);
+      const exactPatchSha256 = createHash("sha256").update(patch).digest("hex");
+      await expect(stagedPatchSha256(targetPath)).resolves.toBe(exactPatchSha256);
+      await expect(stagedPatchSha256ForRevision({
+        workspacePath: targetPath,
+        revision: baseCommit,
+        patchPath,
+      })).resolves.toBe(exactPatchSha256);
+
+      await expect(createOrReuseProjectWorktree({
+        scope: createScope(fixture),
+        createWorktreeInput: {
+          ...createInput(fixture, targetPath, targetBranch),
+          expectedRealPath: await realpath(targetPath),
+          expectedRevision: baseCommit,
+          inputPatch: {
+            path: patchPath,
+            sha256: exactPatchSha256,
+            stagedSha256: exactPatchSha256,
+            baseCommit,
+            changedPaths: ["old-name.ts", "new-name.ts"],
+          },
+        },
+        broker: brokerWithCreate(async () => ({
+          status: "noop",
+          resourceId: targetPath,
+        })),
+      })).resolves.toMatchObject({
+        created: false,
+        result: { status: "noop" },
+      });
+      await expect(gitStdout(targetPath, [
+        "diff",
+        "--cached",
+        "--name-only",
+        "--no-renames",
+        "HEAD",
+        "--",
+      ])).resolves.toBe("new-name.ts\nold-name.ts\n");
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it("removes only a broker-created staged worktree after post-create validation fails", async () => {
+    const fixture = await createFixture();
+    const producerPath = join(fixture.root, "worktrees", "rollback-producer");
+    const createdPath = join(fixture.root, "worktrees", "rollback-created");
+    const existingPath = join(fixture.root, "worktrees", "rollback-existing");
+    const patchPath = join(fixture.root, "rollback.patch");
+    const createdBranch = "fix/rollback-created";
+    const existingBranch = "fix/rollback-existing";
+    try {
+      await git(fixture.sourceWorkspacePath, [
+        "worktree",
+        "add",
+        "-b",
+        "fix/rollback-producer",
+        producerPath,
+        fixture.phaseStartSha,
+      ]);
+      await writeFile(join(producerPath, "README.md"), "staged input\n");
+      await git(producerPath, ["add", "README.md"]);
+      const patch = await gitStdout(producerPath, [
+        "diff",
+        "--cached",
+        "--binary",
+        "--no-renames",
+        "HEAD",
+        "--",
+      ]);
+      await writeFile(patchPath, patch);
+      const mismatchedInputPatch = {
+        path: patchPath,
+        sha256: createHash("sha256").update(patch).digest("hex"),
+        stagedSha256: "f".repeat(64),
+        baseCommit: fixture.phaseStartSha,
+        changedPaths: ["README.md"],
+      };
+
+      await expect(createOrReuseProjectWorktree({
+        scope: createScope(fixture),
+        createWorktreeInput: {
+          ...createInput(fixture, createdPath, createdBranch),
+          inputPatch: mismatchedInputPatch,
+        },
+        broker: brokerWithCreate(async () => {
+          await git(fixture.sourceWorkspacePath, [
+            "worktree",
+            "add",
+            "-b",
+            createdBranch,
+            createdPath,
+            fixture.phaseStartSha,
+          ]);
+          await git(createdPath, ["apply", "--cached", "--binary", patchPath]);
+          return applied(createdPath);
+        }),
+      })).rejects.toThrow(
+        "project_control_existing_worktree_input_patch_mismatch; rollback=worktree",
+      );
+      await expect(access(createdPath)).rejects.toMatchObject({ code: "ENOENT" });
+
+      await git(fixture.sourceWorkspacePath, [
+        "worktree",
+        "add",
+        "-b",
+        existingBranch,
+        existingPath,
+        fixture.phaseStartSha,
+      ]);
+      await git(existingPath, ["apply", "--cached", "--binary", patchPath]);
+      await expect(createOrReuseProjectWorktree({
+        scope: createScope(fixture),
+        createWorktreeInput: {
+          ...createInput(fixture, existingPath, existingBranch),
+          expectedRealPath: await realpath(existingPath),
+          inputPatch: mismatchedInputPatch,
+        },
+        broker: brokerWithCreate(async () => applied(existingPath)),
+      })).rejects.toThrow("project_control_existing_worktree_input_patch_mismatch");
+      await expect(access(existingPath)).resolves.toBeUndefined();
+      await expect(gitStdout(existingPath, ["diff", "--cached", "--name-only"])).resolves.toBe(
+        "README.md\n",
+      );
     } finally {
       await rm(fixture.root, { recursive: true, force: true });
     }

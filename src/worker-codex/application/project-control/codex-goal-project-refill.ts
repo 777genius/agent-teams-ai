@@ -198,6 +198,7 @@ async function assertReusableInputPatch(input: {
     "diff",
     "--cached",
     "--name-only",
+    "--no-renames",
     "-z",
     "HEAD",
     "--",
@@ -253,6 +254,7 @@ async function removeFailedProjectWorktreeMaterialization(
       input.expectedSourceRealPath,
       "worktree",
       "remove",
+      "--force",
       input.path,
     ]);
     return "worktree";
