@@ -97,7 +97,8 @@ export interface TeamProvisioningLaunchStateCompatibilityBoundary<
   ): Promise<PersistedTeamLaunchSnapshot>;
   writeLaunchStateSnapshot(
     teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: { allowNoopSkip?: boolean; runId?: string }
   ): Promise<PersistedTeamLaunchSnapshot>;
   writeLaunchStateSnapshotNow(
     teamName: string,
@@ -293,8 +294,10 @@ export function createTeamProvisioningLaunchStateCompatibilityBoundaryFromServic
       return service.bootstrapEvidenceFacade.applyOpenCodeSecondaryEvidenceOverlay(params);
     },
 
-    writeLaunchStateSnapshot(teamName, snapshot) {
-      return service.persistenceReconcileFacade.writeLaunchStateSnapshot(teamName, snapshot);
+    writeLaunchStateSnapshot(teamName, snapshot, options) {
+      return options === undefined
+        ? service.persistenceReconcileFacade.writeLaunchStateSnapshot(teamName, snapshot)
+        : service.persistenceReconcileFacade.writeLaunchStateSnapshot(teamName, snapshot, options);
     },
 
     writeLaunchStateSnapshotNow(teamName, snapshot, options) {
@@ -517,9 +520,12 @@ export abstract class TeamProvisioningLaunchStateCompatibilityFacade<
 
   protected writeLaunchStateSnapshot(
     teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: { allowNoopSkip?: boolean; runId?: string }
   ): Promise<PersistedTeamLaunchSnapshot> {
-    return this.launchStateCompatibilityBoundary.writeLaunchStateSnapshot(teamName, snapshot);
+    return options === undefined
+      ? this.launchStateCompatibilityBoundary.writeLaunchStateSnapshot(teamName, snapshot)
+      : this.launchStateCompatibilityBoundary.writeLaunchStateSnapshot(teamName, snapshot, options);
   }
 
   protected writeLaunchStateSnapshotNow(

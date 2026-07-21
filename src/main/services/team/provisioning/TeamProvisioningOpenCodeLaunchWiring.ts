@@ -85,7 +85,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
   ): TeamLaunchResponse;
   resetTeamScopedTransientStateForNewRun(teamName: string): void;
   readLaunchState(teamName: string): Promise<TeamRuntimeLaunchInput['previousLaunchState']>;
-  clearPersistedLaunchState(teamName: string): Promise<void>;
+  clearPersistedLaunchState(teamName: string, options?: { expectedRunId?: string }): Promise<void>;
   invalidateRuntimeSnapshotCaches(teamName: string): void;
   launchOpenCodeAggregatePrimaryLane(input: {
     run: Run;
@@ -228,7 +228,10 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
     resetTeamScopedTransientStateForNewRun: (teamName) =>
       service.resetTeamScopedTransientStateForNewRun(teamName),
     readLaunchState: (teamName) => service.launchStateStore.read(teamName),
-    clearPersistedLaunchState: (teamName) => service.clearPersistedLaunchState(teamName),
+    clearPersistedLaunchState: (teamName, options) =>
+      options === undefined
+        ? service.clearPersistedLaunchState(teamName)
+        : service.clearPersistedLaunchState(teamName, options),
     invalidateRuntimeSnapshotCaches: (teamName) =>
       service.invalidateRuntimeSnapshotCaches(teamName),
     launchOpenCodeAggregatePrimaryLane: (input) =>
@@ -295,7 +298,10 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           resetTeamScopedTransientStateForNewRun: (teamName) =>
             host.resetTeamScopedTransientStateForNewRun(teamName),
           readLaunchState: (teamName) => host.readLaunchState(teamName),
-          clearPersistedLaunchState: (teamName) => host.clearPersistedLaunchState(teamName),
+          clearPersistedLaunchState: (teamName, options) =>
+            options === undefined
+              ? host.clearPersistedLaunchState(teamName)
+              : host.clearPersistedLaunchState(teamName, options),
           setRun: (runId, run) => {
             host.runs.set(runId, run as Run);
           },

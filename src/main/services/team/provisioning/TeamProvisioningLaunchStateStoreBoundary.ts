@@ -123,10 +123,11 @@ export class TeamProvisioningLaunchStateStoreBoundary {
 
   async writeLaunchStateSnapshot(
     teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: { allowNoopSkip?: boolean; runId?: string }
   ): Promise<PersistedTeamLaunchSnapshot> {
     const result = await this.enqueue(teamName, async () => {
-      const writeResult = await this.writeLaunchStateSnapshotNow(teamName, snapshot);
+      const writeResult = await this.writeLaunchStateSnapshotNow(teamName, snapshot, options);
       if (writeResult.wrote) {
         this.ports.invalidateRuntimeSnapshotCaches(teamName);
       }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { TeamProvisioningLaunchStateStoreBoundary } from '../TeamProvisioningLaunchStateStoreBoundary';
 import {
   launchOpenCodeAggregatePrimaryLane,
   type LaunchOpenCodeAggregatePrimaryLanePorts,
@@ -16,7 +17,22 @@ import type {
 } from '../../runtime';
 import type { OpenCodeRuntimeBootstrapEvidencePorts } from '../TeamProvisioningOpenCodeBootstrapEvidence';
 import type { MixedSecondaryRuntimeLaneState } from '../TeamProvisioningSecondaryRuntimeRuns';
-import type { MemberSpawnStatusEntry, TeamCreateRequest } from '@shared/types';
+import type {
+  MemberSpawnStatusEntry,
+  PersistedTeamLaunchSnapshot,
+  TeamCreateRequest,
+} from '@shared/types';
+
+function deferred<T = void>(): {
+  promise: Promise<T>;
+  resolve(value?: T | PromiseLike<T>): void;
+} {
+  let resolve!: (value?: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = (value) => promiseResolve(value as T | PromiseLike<T>);
+  });
+  return { promise, resolve };
+}
 
 function bootstrapEvidencePorts(): OpenCodeRuntimeBootstrapEvidencePorts {
   return {
@@ -273,6 +289,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
 
     expect(writeLaunchStateSnapshot).toHaveBeenCalledTimes(1);
     expect(writeLaunchStateSnapshot.mock.calls[0][0]).toBe('team-a');
+    expect(writeLaunchStateSnapshot.mock.calls[0][2]).toEqual({ runId: 'run-1' });
     expect(persisted.result).toBe(result);
     expect(persisted.snapshot).toMatchObject({
       teamName: 'team-a',
@@ -294,6 +311,84 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
         },
       },
     });
+  });
+
+  it('fences a superseded primary write and preserves a queued successor snapshot', async () => {
+    const staleWriteStarted = deferred();
+    const staleWriteGate = deferred();
+    const storeEvents: string[] = [];
+    let trackedRunId = 'run-1';
+    let persistedSnapshot: PersistedTeamLaunchSnapshot | null = null;
+    let writeCount = 0;
+    const boundary = new TeamProvisioningLaunchStateStoreBoundary({
+      launchStateStore: {
+        read: async () => persistedSnapshot,
+        write: async (_teamName, snapshot) => {
+          writeCount += 1;
+          storeEvents.push(`write:${snapshot.members.alice?.model}`);
+          if (writeCount === 1) {
+            staleWriteStarted.resolve();
+            await staleWriteGate.promise;
+          }
+          persistedSnapshot = snapshot;
+        },
+        clear: async () => {
+          storeEvents.push('clear');
+          persistedSnapshot = null;
+        },
+      },
+      membersMetaStore: {
+        getMembers: async () => [],
+      },
+      getTrackedRunId: () => trackedRunId,
+      applyOpenCodeSecondaryEvidenceOverlay: async ({ snapshot }) => snapshot,
+      applyBootstrapStallOverlay: () => null,
+      areSnapshotsSemanticallyEqual: () => false,
+      clearBootstrapState: async () => undefined,
+      invalidateRuntimeSnapshotCaches: () => undefined,
+      logDebug: () => undefined,
+      nowMs: () => Date.parse('2026-01-01T00:00:00.000Z'),
+    });
+    const persistencePorts: PersistOpenCodeRuntimeAdapterLaunchResultPorts = {
+      createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
+      nowIso: () => '2026-01-01T00:00:00.000Z',
+      writeLaunchStateSnapshot: (teamName, snapshot, options) =>
+        boundary.writeLaunchStateSnapshot(teamName, snapshot, options),
+    };
+    const launchResult = (runId: string, model: string): TeamRuntimeLaunchResult => ({
+      runId,
+      teamName: 'team-a',
+      launchPhase: 'finished',
+      teamLaunchState: 'clean_success',
+      members: {
+        alice: confirmedMemberEvidence('alice', model),
+      },
+      warnings: [],
+      diagnostics: [],
+    });
+
+    const stalePersistence = persistOpenCodeRuntimeAdapterLaunchResult(
+      launchResult('run-1', 'stale-model'),
+      launchInput({ runId: 'run-1' }),
+      persistencePorts
+    );
+    await staleWriteStarted.promise;
+
+    trackedRunId = 'run-2';
+    const successorPersistence = persistOpenCodeRuntimeAdapterLaunchResult(
+      launchResult('run-2', 'successor-model'),
+      launchInput({ runId: 'run-2' }),
+      persistencePorts
+    );
+    staleWriteGate.resolve();
+
+    const [, successor] = await Promise.all([stalePersistence, successorPersistence]);
+    expect(storeEvents).toEqual(['write:stale-model', 'clear', 'write:successor-model']);
+    expect(persistedSnapshot).toEqual(successor.snapshot);
+    expect((persistedSnapshot as PersistedTeamLaunchSnapshot | null)?.members.alice?.model).toBe(
+      'successor-model'
+    );
+    expect(boundary.getWrittenRunIdByTeam().get('team-a')).toBe('run-2');
   });
 
   it('launches the aggregate primary lane through ordered ports and records live runtime state', async () => {

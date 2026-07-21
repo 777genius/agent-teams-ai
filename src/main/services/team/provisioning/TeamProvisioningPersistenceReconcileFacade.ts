@@ -104,9 +104,12 @@ export class TeamProvisioningPersistenceReconcileFacade<
 
   async writeLaunchStateSnapshot(
     teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: { allowNoopSkip?: boolean; runId?: string }
   ): Promise<PersistedTeamLaunchSnapshot> {
-    return this.ports.launchStateStoreBoundary.writeLaunchStateSnapshot(teamName, snapshot);
+    return options === undefined
+      ? this.ports.launchStateStoreBoundary.writeLaunchStateSnapshot(teamName, snapshot)
+      : this.ports.launchStateStoreBoundary.writeLaunchStateSnapshot(teamName, snapshot, options);
   }
 
   async writeLaunchStateSnapshotNow(

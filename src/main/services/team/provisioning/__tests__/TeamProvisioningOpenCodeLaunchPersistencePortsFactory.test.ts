@@ -26,8 +26,12 @@ describe('TeamProvisioningOpenCodeLaunchPersistencePortsFactory', () => {
 
     expect(ports.createOpenCodeRuntimeBootstrapEvidencePorts()).toBe(evidencePorts);
     expect(ports.nowIso()).toBe('2026-07-08T00:00:00.000Z');
-    await expect(ports.writeLaunchStateSnapshot('alpha', snapshot)).resolves.toBe(snapshot);
+    await expect(
+      ports.writeLaunchStateSnapshot('alpha', snapshot, { runId: 'run-alpha' })
+    ).resolves.toBe(snapshot);
     expect(service.createOpenCodeRuntimeBootstrapEvidencePorts).toHaveBeenCalledTimes(1);
-    expect(service.writeLaunchStateSnapshot).toHaveBeenCalledWith('alpha', snapshot);
+    expect(service.writeLaunchStateSnapshot).toHaveBeenCalledWith('alpha', snapshot, {
+      runId: 'run-alpha',
+    });
   });
 });

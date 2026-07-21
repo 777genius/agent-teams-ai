@@ -18,7 +18,7 @@ export function createTeamProvisioningOpenCodeLaunchPersistencePortsFromService(
     createOpenCodeRuntimeBootstrapEvidencePorts: () =>
       service.createOpenCodeRuntimeBootstrapEvidencePorts(),
     nowIso: deps.nowIso,
-    writeLaunchStateSnapshot: (teamName, snapshot) =>
-      service.writeLaunchStateSnapshot(teamName, snapshot),
+    writeLaunchStateSnapshot: (teamName, snapshot, options) =>
+      service.writeLaunchStateSnapshot(teamName, snapshot, options),
   };
 }
