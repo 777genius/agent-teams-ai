@@ -17,10 +17,7 @@ import type {
   CodexGoalJobManifestInput,
 } from "../codex-goal-jobs";
 import { codexGoalJobManifestPath, readCodexGoalJob } from "../codex-goal-jobs";
-import type {
-  CodexGoalLaunchInput,
-  CodexGoalStatus,
-} from "../codex-goal-ops";
+import type { CodexGoalLaunchInput, CodexGoalStatus } from "../codex-goal-ops";
 import { resolveProjectPreStartContinuation } from "../codex-goal-project-continuation-runtime";
 import {
   projectControlStartStoredJobView,
@@ -256,7 +253,7 @@ describe("admitted input-patch capacity continuation", () => {
       }).trim(),
       inputPatchHash: patchSha256,
       reviewKind: "remediation",
-      ownedPaths: ["src/example.ts"],
+      ownedPaths: ["src/owned.ts"],
       executionPolicy: {
         mode: "sandbox-only",
         sandboxRoot: workspacePath,
@@ -440,8 +437,7 @@ describe("admitted input-patch capacity continuation", () => {
     };
     const reconnectAttemptAt = new Date("2026-07-14T00:01:00.000Z");
     const reconnectFailureDetails = {
-      rawCause:
-        "codex_app_server_reconnect_timeout:Reconnecting... 2/5",
+      rawCause: "codex_app_server_reconnect_timeout:Reconnecting... 2/5",
     };
     await journal.appendAttempt({
       taskId: manifest.taskId,
@@ -565,10 +561,6 @@ describe("admitted input-patch capacity continuation", () => {
     expect(reservedLaunch?.config.maxAccountCycles).toBe(3);
 
     if (!reservedLaunch) throw new Error("expected reserved launch");
-    await writeFile(
-      join(workspacePath, "src", "example.ts"),
-      "export const value = 2;\n",
-    );
     const signal = await codexGoalWorkerControlService(
       reservedLaunch,
     ).enqueueSignal({
