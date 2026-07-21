@@ -282,6 +282,7 @@ function memberLifecycleContent(
 export async function createSemanticMergeFixture(
   input: {
     readonly includeUnrelatedPath?: boolean;
+    readonly includeSourceChangedSemanticPath?: boolean;
   } = {},
 ): Promise<{
   readonly rootDir: string;
@@ -330,6 +331,12 @@ export async function createSemanticMergeFixture(
     join(workspacePath, "pnpm-workspace.yaml"),
     "packages:\n  - packages/*\nallowBuilds:\n  better-sqlite3: true\n",
   );
+  if (input.includeSourceChangedSemanticPath) {
+    await writeFile(
+      join(workspacePath, "README.md"),
+      "base automatic change\n",
+    );
+  }
   await git(workspacePath, ["add", "."]);
   await git(workspacePath, ["commit", "-m", "feat: update base policy"]);
   const sourceCommit = (
@@ -370,12 +377,16 @@ export async function createSemanticMergeFixture(
     ".github/workflows/ci.yml",
     "package.json",
     "pnpm-workspace.yaml",
-    ...(input.includeUnrelatedPath ? ["README.md"] : []),
+    ...(input.includeUnrelatedPath || input.includeSourceChangedSemanticPath
+      ? ["README.md"]
+      : []),
   ];
-  if (input.includeUnrelatedPath) {
+  if (input.includeUnrelatedPath || input.includeSourceChangedSemanticPath) {
     await writeFile(
       join(workspacePath, "README.md"),
-      "unrelated semantic edit\n",
+      input.includeSourceChangedSemanticPath
+        ? "reviewed semantic resolution\n"
+        : "unrelated semantic edit\n",
     );
   }
   const patch = await gitOutput(workspacePath, [

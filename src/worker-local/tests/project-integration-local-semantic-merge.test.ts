@@ -98,6 +98,34 @@ describe("local semantic merge integration", () => {
     ).resolves.toBe("unrelated semantic edit\n");
   });
 
+  it("rebuilds a reviewed source-changed semantic path after unrelated live drift", async () => {
+    const fixture = await createSemanticMergeFixture({
+      includeSourceChangedSemanticPath: true,
+    });
+    await git(fixture.workspacePath, ["checkout", "base"]);
+    await writeFile(
+      join(fixture.workspacePath, "LIVE_DRIFT.md"),
+      "unrelated live drift\n",
+    );
+    await git(fixture.workspacePath, ["add", "LIVE_DRIFT.md"]);
+    await git(fixture.workspacePath, ["commit", "-m", "feat: advance live base"]);
+    await git(fixture.workspacePath, ["push", "origin", "base"]);
+    await git(fixture.workspacePath, ["checkout", "main"]);
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+
+    const applied = await adapter.applyWorkerOutput({
+      attempt: semanticAttempt(fixture),
+      workerOutput: semanticWorkerOutput(fixture),
+    });
+
+    expect(applied.changedFiles).toContain("README.md");
+    await expect(
+      readFile(join(fixture.workspacePath, "README.md"), "utf8"),
+    ).resolves.toBe("reviewed semantic resolution\n");
+  });
+
   it("rejects an unapproved semantic path outside both pinned parent deltas", async () => {
     const fixture = await createSemanticMergeFixture({
       includeUnrelatedPath: true,
@@ -244,6 +272,68 @@ describe("local semantic merge integration", () => {
     await expectCleanTarget(fixture.workspacePath, advancedTarget);
   });
 
+  it("rejects matching conflict paths when their merge stages changed", async () => {
+    const fixture = await createSemanticMergeFixture();
+    await writeSemanticParentFiles(fixture.workspacePath, {
+      packagePolicy: "middle",
+      workflowName: "Hosted Web CI",
+      workspacePackage: "middle/*",
+    });
+    await git(fixture.workspacePath, ["add", "."]);
+    await git(fixture.workspacePath, ["commit", "-m", "feat: middle target"]);
+    const middleTarget = (
+      await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])
+    ).trim();
+    await writeSemanticParentFiles(fixture.workspacePath, {
+      packagePolicy: "target",
+      workflowName: "Hosted Web CI",
+      workspacePackage: "apps/*",
+    });
+    await git(fixture.workspacePath, ["add", "."]);
+    await git(fixture.workspacePath, ["commit", "-m", "feat: final target"]);
+    const finalTarget = (
+      await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])
+    ).trim();
+
+    await git(fixture.workspacePath, ["checkout", "base"]);
+    await git(fixture.workspacePath, [
+      "merge",
+      "--no-ff",
+      "--no-commit",
+      middleTarget,
+    ]).catch(() => undefined);
+    await writeSemanticParentFiles(fixture.workspacePath, {
+      packagePolicy: "base",
+      workflowName: "CI",
+      workspacePackage: "packages/*",
+      includeSourcePolicy: true,
+    });
+    await git(fixture.workspacePath, ["add", "."]);
+    await git(fixture.workspacePath, ["commit", "-m", "merge: retain source"]);
+    await git(fixture.workspacePath, ["push", "origin", "base"]);
+    await git(fixture.workspacePath, ["checkout", "main"]);
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: {
+        ...semanticAttempt(fixture),
+        merge: {
+          ...semanticAttempt(fixture).merge,
+          expectedTargetCommit: finalTarget,
+        },
+      },
+      workerOutput: {
+        ...semanticWorkerOutput(fixture),
+        baseCommit: finalTarget,
+      },
+    })).rejects.toThrow(
+      "local_git_integration_merge_semantic_conflict_stages_changed",
+    );
+    await expectCleanTarget(fixture.workspacePath, finalTarget);
+  });
+
   it("rejects a rewritten non-ancestor source", async () => {
     const fixture = await createSemanticMergeFixture();
     await git(fixture.workspacePath, ["checkout", "--orphan", "rewritten-base"]);
@@ -380,6 +470,31 @@ async function createUnpushedBaseAdvance(
   ).trim();
   await git(workspacePath, ["checkout", "main"]);
   return advancedHead;
+}
+
+async function writeSemanticParentFiles(
+  workspacePath: string,
+  input: {
+    readonly packagePolicy: string;
+    readonly workflowName: string;
+    readonly workspacePackage: string;
+    readonly includeSourcePolicy?: boolean;
+  },
+): Promise<void> {
+  await writeFile(
+    join(workspacePath, "package.json"),
+    `{"policy":"${input.packagePolicy}"}\n`,
+  );
+  await writeFile(
+    join(workspacePath, ".github", "workflows", "ci.yml"),
+    `${input.workflowName === "CI" ? "name: CI" : `name: ${input.workflowName}`}\njobs:\n  test:\n    runs-on: ubuntu-latest\n${input.includeSourcePolicy ? "    timeout-minutes: 20\n" : ""}`,
+  );
+  await writeFile(
+    join(workspacePath, "pnpm-workspace.yaml"),
+    input.includeSourcePolicy
+      ? `packages:\n  - ${input.workspacePackage}\nallowBuilds:\n  better-sqlite3: true\n`
+      : `packages:\n  - packages/*\n  - ${input.workspacePackage}\n`,
+  );
 }
 
 async function expectCleanTarget(
