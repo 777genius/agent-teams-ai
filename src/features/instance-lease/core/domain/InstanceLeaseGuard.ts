@@ -1,5 +1,6 @@
 import {
   INSTANCE_LEASE_PROTOCOL_VERSION,
+  type InstanceLeaseAdmissionInspection,
   type InstanceLeaseGuardState,
   type InstanceLeaseLauncherEvidence,
   type VerifiedInstanceLeaseHandle,
@@ -89,8 +90,35 @@ export class InstanceLeaseGuard {
     if (this.stateValue !== 'held') {
       throw new InstanceLeaseGuardError('released');
     }
-    this.handle.assertValid();
+    let validationFailed = false;
+    let validationError: unknown;
+    try {
+      this.handle.assertValid();
+    } catch (error) {
+      validationFailed = true;
+      validationError = error;
+    }
+    if (this.state !== 'held') {
+      throw new InstanceLeaseGuardError('released');
+    }
+    if (validationFailed) {
+      throw validationError;
+    }
     return this.evidenceValue;
+  }
+
+  inspectForAdmission(): InstanceLeaseAdmissionInspection {
+    if (this.stateValue === 'released') {
+      return Object.freeze({ status: 'released' });
+    }
+    try {
+      this.handle.assertValid();
+    } catch {
+      return Object.freeze({ status: this.state === 'released' ? 'released' : 'invalid' });
+    }
+    return this.state === 'released'
+      ? Object.freeze({ status: 'released' })
+      : Object.freeze({ status: 'held', evidence: this.evidenceValue });
   }
 
   release(): void {

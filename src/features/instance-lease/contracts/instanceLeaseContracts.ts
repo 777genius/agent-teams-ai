@@ -30,3 +30,17 @@ export interface VerifiedInstanceLeaseHandle {
 }
 
 export type InstanceLeaseGuardState = 'held' | 'released';
+
+/**
+ * Safe, path-free evidence for admission checks. `invalid` deliberately does
+ * not expose adapter errors because descriptor and launcher diagnostics can
+ * carry process-local details that must not cross the composition boundary.
+ */
+export type InstanceLeaseAdmissionInspection =
+  | {
+      readonly status: 'held';
+      readonly evidence: InstanceLeaseLauncherEvidence;
+    }
+  | {
+      readonly status: 'invalid' | 'released';
+    };

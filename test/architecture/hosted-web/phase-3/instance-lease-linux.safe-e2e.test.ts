@@ -81,6 +81,18 @@ const [markerPath, mode, descendantMarker] = process.argv.slice(2);
 const handle = openNodeInheritedInstanceLease();
 const guard = InstanceLeaseGuard.takeOwnership(handle);
 
+if (mode === 'inspect-release') {
+  const before = guard.inspectForAdmission().status;
+  guard.release();
+  const after = guard.inspectForAdmission().status;
+  writeFileSync(markerPath, JSON.stringify({ before, after }));
+  process.exit(0);
+}
+if (mode === 'inspect-invalid') {
+  closeSync(3);
+  writeFileSync(markerPath, JSON.stringify({ status: guard.inspectForAdmission().status }));
+  process.exit(0);
+}
 if (mode === 'close-node-half') {
   closeSync(3);
 }
@@ -479,6 +491,25 @@ describeLinux('ADR-16 Linux instance lease sandbox', () => {
         return true;
       }
     }, 'orphan controller exit');
+  });
+
+  it('reports held, released, and invalid admission evidence from real inherited descriptors', async () => {
+    const releasedFixture = createAnchor('admission-release');
+    const releasedMarker = join(releasedFixture.parent, 'released.marker');
+    const released = startLauncher(releasedFixture, releasedMarker, 'inspect-release');
+
+    expect(await released.exit).toEqual({ code: 0, signal: null });
+    expect(JSON.parse(requireFileText(releasedMarker))).toEqual({
+      before: 'held',
+      after: 'released',
+    });
+
+    const invalidFixture = createAnchor('admission-invalid');
+    const invalidMarker = join(invalidFixture.parent, 'invalid.marker');
+    const invalid = startLauncher(invalidFixture, invalidMarker, 'inspect-invalid');
+
+    expect(await invalid.exit).toEqual({ code: 0, signal: null });
+    expect(JSON.parse(requireFileText(invalidMarker))).toEqual({ status: 'invalid' });
   });
 
   it('does not leak the lease to descendants and full exit admits exactly one successor', async () => {

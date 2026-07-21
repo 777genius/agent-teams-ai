@@ -1,16 +1,4 @@
 export {
-  INSTANCE_LEASE_CONTROL_FD,
-  INSTANCE_LEASE_EVIDENCE_MAX_BYTES,
-  INSTANCE_LEASE_FD,
-  INSTANCE_LEASE_PROTOCOL_VERSION,
-  type InstanceLeaseAdmissionInspection,
-  type InstanceLeaseAnchorEvidence,
-  type InstanceLeaseGuardState,
-  type InstanceLeaseLauncherEvidence,
-  type VerifiedInstanceLeaseHandle,
-} from './contracts';
-export * from './contracts/phase3MutationAdmissionContracts';
-export {
   createPhase3MutationAdmissionAssessor,
   type InstanceLeaseAdmissionInspectionContext,
   type InstanceLeaseAdmissionPort,
@@ -25,5 +13,4 @@ export {
   type Phase3RuntimeBindingEvidencePort,
   type Phase3StorageReadinessEvidencePort,
   type Phase3WorkspaceBindingEvidencePort,
-} from './core/application';
-export { InstanceLeaseGuard, InstanceLeaseGuardError } from './core/domain';
+} from './Phase3MutationAdmissionAssessor';
