@@ -448,13 +448,16 @@ describe('JsonMemberWorkSyncStore', () => {
       'status_evaluated',
       'fingerprint_changed',
     ]);
-    expect(metrics.phase2Readiness).toMatchObject({
+    expect(metrics.deliveryReadiness).toMatchObject({
       state: 'collecting_shadow_data',
       reasons: expect.arrayContaining([
         'insufficient_status_events',
         'insufficient_observation_window',
       ]),
     });
+    const serializedMetrics = JSON.stringify(metrics);
+    expect(serializedMetrics).toContain('"deliveryReadiness":');
+    expect(serializedMetrics).not.toContain('"phase2Readiness":');
   });
 
   it('refreshes undelivered outbox payloads but rejects delivered payload conflicts', async () => {

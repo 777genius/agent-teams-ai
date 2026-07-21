@@ -1,5 +1,3 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import {
   MEMBER_WORK_SYNC_GET_METRICS,
   MEMBER_WORK_SYNC_GET_STATUS,
@@ -10,6 +8,7 @@ import {
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from '@features/member-work-sync/main';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   MemberWorkSyncMetricsRequest,
@@ -94,7 +93,7 @@ function makeFeature(): MemberWorkSyncFeatureFacade {
       reportAcceptedCount: 0,
       reportRejectedCount: 0,
       recentEvents: [],
-      phase2Readiness: {
+      deliveryReadiness: {
         state: 'collecting_shadow_data' as const,
         reasons: ['insufficient_members' as const],
         thresholds: {

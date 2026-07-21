@@ -22,7 +22,7 @@ export interface CurrentReviewCycle {
   reviewStartedEventId?: string;
   reviewStartedAt?: string;
   reviewStartedBy?: string;
-  canBypassPhase2: boolean;
+  canBypassDeliveryReadiness: boolean;
   diagnostics: string[];
 }
 
@@ -145,7 +145,7 @@ export function resolveCurrentReviewCycle(input: {
       obligation: 'review_in_progress',
       reviewCycleId: `kanban:${kanbanReviewer}`,
       historyEventIds: [],
-      canBypassPhase2: false,
+      canBypassDeliveryReadiness: false,
       diagnostics,
     };
   }
@@ -198,7 +198,7 @@ export function resolveCurrentReviewCycle(input: {
   }
 
   const reviewCycleId = requestEventId ?? startedEventId ?? `kanban:${reviewer}`;
-  const canBypassPhase2 =
+  const canBypassDeliveryReadiness =
     obligation === 'review_pickup_required' && Boolean(requestEventId) && diagnostics.length === 0;
 
   return {
@@ -215,7 +215,7 @@ export function resolveCurrentReviewCycle(input: {
       ? { reviewStartedAt: historyEventTimestamp(openCycle.started) }
       : {}),
     ...(startedBy ? { reviewStartedBy: startedBy } : {}),
-    canBypassPhase2,
+    canBypassDeliveryReadiness,
     diagnostics,
   };
 }

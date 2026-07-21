@@ -1,11 +1,11 @@
 import type {
+  MemberWorkSyncDeliveryReadinessAssessment,
+  MemberWorkSyncDeliveryReadinessReason,
+  MemberWorkSyncDeliveryReadinessThresholds,
   MemberWorkSyncMetricEvent,
-  MemberWorkSyncPhase2ReadinessAssessment,
-  MemberWorkSyncPhase2ReadinessReason,
-  MemberWorkSyncPhase2ReadinessThresholds,
 } from '../../contracts';
 
-export const DEFAULT_MEMBER_WORK_SYNC_PHASE2_READINESS_THRESHOLDS: MemberWorkSyncPhase2ReadinessThresholds =
+export const DEFAULT_MEMBER_WORK_SYNC_DELIVERY_READINESS_THRESHOLDS: MemberWorkSyncDeliveryReadinessThresholds =
   {
     minObservedMembers: 1,
     minStatusEvents: 20,
@@ -15,10 +15,10 @@ export const DEFAULT_MEMBER_WORK_SYNC_PHASE2_READINESS_THRESHOLDS: MemberWorkSyn
     maxReportRejectionRate: 0.2,
   };
 
-interface AssessMemberWorkSyncPhase2ReadinessInput {
+interface AssessMemberWorkSyncDeliveryReadinessInput {
   memberCount: number;
   recentEvents: MemberWorkSyncMetricEvent[];
-  thresholds?: Partial<MemberWorkSyncPhase2ReadinessThresholds>;
+  thresholds?: Partial<MemberWorkSyncDeliveryReadinessThresholds>;
 }
 
 function parseTime(value: string): number | null {
@@ -44,22 +44,22 @@ function roundRate(value: number): number {
 }
 
 function pushIf(
-  reasons: MemberWorkSyncPhase2ReadinessReason[],
+  reasons: MemberWorkSyncDeliveryReadinessReason[],
   condition: boolean,
-  reason: MemberWorkSyncPhase2ReadinessReason
+  reason: MemberWorkSyncDeliveryReadinessReason
 ): void {
   if (condition) {
     reasons.push(reason);
   }
 }
 
-export function assessMemberWorkSyncPhase2Readiness({
+export function assessMemberWorkSyncDeliveryReadiness({
   memberCount,
   recentEvents,
   thresholds: thresholdOverrides,
-}: AssessMemberWorkSyncPhase2ReadinessInput): MemberWorkSyncPhase2ReadinessAssessment {
+}: AssessMemberWorkSyncDeliveryReadinessInput): MemberWorkSyncDeliveryReadinessAssessment {
   const thresholds = {
-    ...DEFAULT_MEMBER_WORK_SYNC_PHASE2_READINESS_THRESHOLDS,
+    ...DEFAULT_MEMBER_WORK_SYNC_DELIVERY_READINESS_THRESHOLDS,
     ...thresholdOverrides,
   };
   const statusEvents = recentEvents.filter((event) => event.kind === 'status_evaluated');
@@ -77,7 +77,7 @@ export function assessMemberWorkSyncPhase2Readiness({
   const reportRejectionRate =
     reportEventCount > 0 ? reportRejectedEvents.length / reportEventCount : 0;
 
-  const collectingReasons: MemberWorkSyncPhase2ReadinessReason[] = [];
+  const collectingReasons: MemberWorkSyncDeliveryReadinessReason[] = [];
   pushIf(collectingReasons, memberCount < thresholds.minObservedMembers, 'insufficient_members');
   pushIf(
     collectingReasons,
@@ -90,7 +90,7 @@ export function assessMemberWorkSyncPhase2Readiness({
     'insufficient_observation_window'
   );
 
-  const blockingReasons: MemberWorkSyncPhase2ReadinessReason[] = [];
+  const blockingReasons: MemberWorkSyncDeliveryReadinessReason[] = [];
   pushIf(
     blockingReasons,
     wouldNudgesPerMemberHour > thresholds.maxWouldNudgesPerMemberHour,
@@ -126,6 +126,6 @@ export function assessMemberWorkSyncPhase2Readiness({
       fingerprintChangesPerMemberHour: roundRate(fingerprintChangesPerMemberHour),
       reportRejectionRate: roundRate(reportRejectionRate),
     },
-    diagnostics: reasons.map((reason) => `phase2_readiness:${reason}`),
+    diagnostics: reasons.map((reason) => `delivery_readiness:${reason}`),
   };
 }

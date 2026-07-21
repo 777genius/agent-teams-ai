@@ -1,4 +1,4 @@
-import type { MemberWorkSyncPhase2ReadinessAssessment } from '../../contracts';
+import type { MemberWorkSyncDeliveryReadinessAssessment } from '../../contracts';
 import type {
   MemberWorkSyncAuditEvent,
   MemberWorkSyncAuditEventName,
@@ -31,26 +31,26 @@ export async function appendMemberWorkSyncAudit(
   }
 }
 
-export function buildMemberWorkSyncPhase2ReadinessAuditFields(
-  phase2Readiness?: MemberWorkSyncPhase2ReadinessAssessment
+export function buildMemberWorkSyncDeliveryReadinessAuditFields(
+  deliveryReadiness?: MemberWorkSyncDeliveryReadinessAssessment
 ): Pick<MemberWorkSyncAuditEvent, 'diagnostics' | 'metadata'> {
-  if (!phase2Readiness) {
+  if (!deliveryReadiness) {
     return {};
   }
   return {
-    diagnostics: phase2Readiness.diagnostics,
+    diagnostics: deliveryReadiness.diagnostics,
     metadata: {
-      phase2ReadinessState: phase2Readiness.state,
-      phase2ReadinessReasons: phase2Readiness.reasons.join(','),
-      observationHours: phase2Readiness.rates.observationHours,
-      statusEventCount: phase2Readiness.rates.statusEventCount,
-      wouldNudgesPerMemberHour: phase2Readiness.rates.wouldNudgesPerMemberHour,
-      maxWouldNudgesPerMemberHour: phase2Readiness.thresholds.maxWouldNudgesPerMemberHour,
-      fingerprintChangesPerMemberHour: phase2Readiness.rates.fingerprintChangesPerMemberHour,
+      deliveryReadinessState: deliveryReadiness.state,
+      deliveryReadinessReasons: deliveryReadiness.reasons.join(','),
+      observationHours: deliveryReadiness.rates.observationHours,
+      statusEventCount: deliveryReadiness.rates.statusEventCount,
+      wouldNudgesPerMemberHour: deliveryReadiness.rates.wouldNudgesPerMemberHour,
+      maxWouldNudgesPerMemberHour: deliveryReadiness.thresholds.maxWouldNudgesPerMemberHour,
+      fingerprintChangesPerMemberHour: deliveryReadiness.rates.fingerprintChangesPerMemberHour,
       maxFingerprintChangesPerMemberHour:
-        phase2Readiness.thresholds.maxFingerprintChangesPerMemberHour,
-      reportRejectionRate: phase2Readiness.rates.reportRejectionRate,
-      maxReportRejectionRate: phase2Readiness.thresholds.maxReportRejectionRate,
+        deliveryReadiness.thresholds.maxFingerprintChangesPerMemberHour,
+      reportRejectionRate: deliveryReadiness.rates.reportRejectionRate,
+      maxReportRejectionRate: deliveryReadiness.thresholds.maxReportRejectionRate,
     },
   };
 }

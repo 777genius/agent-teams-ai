@@ -1,6 +1,6 @@
+import { assessMemberWorkSyncDeliveryReadiness } from '@features/member-work-sync/core/domain';
 import { describe, expect, it } from 'vitest';
 
-import { assessMemberWorkSyncPhase2Readiness } from '@features/member-work-sync/core/domain';
 import type { MemberWorkSyncMetricEvent } from '@features/member-work-sync/contracts';
 
 function event(
@@ -26,9 +26,9 @@ function statusEvents(count: number, start = Date.parse('2026-04-29T00:00:00.000
   );
 }
 
-describe('assessMemberWorkSyncPhase2Readiness', () => {
-  it('keeps Phase 2 collecting until enough shadow data exists', () => {
-    const assessment = assessMemberWorkSyncPhase2Readiness({
+describe('assessMemberWorkSyncDeliveryReadiness', () => {
+  it('keeps delivery readiness collecting until enough shadow data exists', () => {
+    const assessment = assessMemberWorkSyncDeliveryReadiness({
       memberCount: 0,
       recentEvents: [],
     });
@@ -42,7 +42,7 @@ describe('assessMemberWorkSyncPhase2Readiness', () => {
   });
 
   it('reports shadow-ready only when sample size and rates are acceptable', () => {
-    const assessment = assessMemberWorkSyncPhase2Readiness({
+    const assessment = assessMemberWorkSyncDeliveryReadiness({
       memberCount: 2,
       recentEvents: statusEvents(24),
     });
@@ -53,7 +53,7 @@ describe('assessMemberWorkSyncPhase2Readiness', () => {
     expect(assessment.rates.observationHours).toBeGreaterThan(1);
   });
 
-  it('blocks Phase 2 when would-nudge or fingerprint churn rates are too high', () => {
+  it('blocks delivery readiness when would-nudge or fingerprint churn rates are too high', () => {
     const base = statusEvents(24);
     const noisyEvents = [
       ...base,
@@ -65,7 +65,7 @@ describe('assessMemberWorkSyncPhase2Readiness', () => {
         .map((source, index) => event(200 + index, 'fingerprint_changed', source.recordedAt)),
     ];
 
-    const assessment = assessMemberWorkSyncPhase2Readiness({
+    const assessment = assessMemberWorkSyncDeliveryReadiness({
       memberCount: 1,
       recentEvents: noisyEvents,
     });
