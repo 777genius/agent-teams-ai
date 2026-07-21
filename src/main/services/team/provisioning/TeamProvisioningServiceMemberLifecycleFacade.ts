@@ -178,6 +178,18 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     string,
     { teamName: string; runId: string; promise: Promise<void> }
   >();
+  protected override getOpenCodeAggregatePrimaryRestartTeamNamesForShutdown(): Iterable<string> {
+    return Array.from(
+      this.openCodeAggregatePrimaryRestartByTeam.values(),
+      (restart) => restart.teamName
+    );
+  }
+  protected override getOpenCodeRuntimeAdapterStopInFlightTeamNamesForShutdown(): Iterable<string> {
+    return Array.from(
+      this.openCodeRuntimeAdapterStopInFlightByTeam.values(),
+      (stop) => stop.teamName
+    );
+  }
   protected readonly memberLifecycleCompletionByKey = new Map<
     string,
     { teamKey: string; token: symbol; completion: Promise<void> }

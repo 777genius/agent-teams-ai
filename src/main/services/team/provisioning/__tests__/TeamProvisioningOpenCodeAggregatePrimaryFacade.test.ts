@@ -110,6 +110,29 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
     return this.runtimeAdapterRunByTeam.get(teamName);
   }
 
+  trackAggregatePrimaryRestartForShutdown(teamName: string): void {
+    this.openCodeAggregatePrimaryRestartByTeam.set(teamName.toLowerCase(), {
+      teamName,
+      runId: 'restart-run',
+      memberName: 'Worker',
+      completion: Promise.resolve(),
+      precedingLifecycleOperations: [],
+      cancelRequested: false,
+    });
+  }
+
+  trackRuntimeAdapterStopForShutdown(teamName: string): void {
+    this.openCodeRuntimeAdapterStopInFlightByTeam.set(teamName.toLowerCase(), {
+      teamName,
+      runId: 'stop-run',
+      promise: Promise.resolve(),
+    });
+  }
+
+  getShutdownTrackedTeamNames(): string[] {
+    return this.shutdownCoordination.getShutdownTrackedTeamNames();
+  }
+
   cancelRestart(teamName: string): void {
     const restart = this.openCodeAggregatePrimaryRestartByTeam.get(teamName.toLowerCase());
     if (!restart) {
@@ -167,6 +190,20 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
 }
 
 describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
+  it('keeps aggregate primary restart ownership visible to shutdown coordination', () => {
+    const facade = new TestOpenCodeAggregatePrimaryFacade();
+    facade.trackAggregatePrimaryRestartForShutdown('Restart-Team');
+
+    expect(facade.getShutdownTrackedTeamNames()).toEqual(['Restart-Team']);
+  });
+
+  it('keeps runtime adapter stop ownership visible to shutdown coordination', () => {
+    const facade = new TestOpenCodeAggregatePrimaryFacade();
+    facade.trackRuntimeAdapterStopForShutdown('Stopping-Team');
+
+    expect(facade.getShutdownTrackedTeamNames()).toEqual(['Stopping-Team']);
+  });
+
   it('stops a cancelled rollback candidate that has not published ownership', async () => {
     const stop = vi.fn(async (input: TeamRuntimeStopInput) => ({
       runId: input.runId,

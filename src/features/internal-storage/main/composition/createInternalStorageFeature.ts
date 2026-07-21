@@ -61,6 +61,8 @@ export interface InternalStorageFeature {
    * worker bundle is unavailable, so callers must leave durable commands off.
    */
   applicationCommandLedgerBackend: InternalStorageApplicationCommandLedgerBackend | null;
+  /** Forces the lazy backend decision for startup diagnostics and packaged smoke checks. */
+  probeBackend(): Promise<InternalStorageBackendKind>;
   getBackendKind(): InternalStorageBackendKind;
   dispose(): Promise<void>;
 }
@@ -88,6 +90,7 @@ export function createInternalStorageFeature(
       taskCommentNotificationJournalStore: jsonCommentStore,
       memberWorkSyncBackend: null,
       applicationCommandLedgerBackend: null,
+      probeBackend: async () => 'json-fallback',
       getBackendKind: () => 'json-fallback',
       dispose: async () => undefined,
     };
@@ -142,6 +145,7 @@ export function createInternalStorageFeature(
     ),
     memberWorkSyncBackend: { gateway: client, selector },
     applicationCommandLedgerBackend: { gateway: client, selector },
+    probeBackend: () => selector.select('sqlite', 'json-fallback'),
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),
   };

@@ -62,6 +62,8 @@ function makePorts(
       ['validating', 'spawning', 'configuring', 'assembling', 'finalizing', 'verifying'].includes(
         progress.state
       ),
+    getOpenCodeAggregatePrimaryRestartTeamNames: () => [],
+    getOpenCodeRuntimeAdapterStopInFlightTeamNames: () => [],
     stopTeam: vi.fn(),
     cancelRuntimeAdapterProvisioning: vi.fn(),
     killProcessTree: vi.fn(),

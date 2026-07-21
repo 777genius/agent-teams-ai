@@ -18,6 +18,8 @@ export interface TeamProvisioningShutdownCoordinationState<TProbeProcess> {
 
 export interface TeamProvisioningShutdownCoordinationPorts<TProbeProcess> {
   isCancellableRuntimeAdapterProgress(progress: TeamProvisioningProgress): boolean;
+  getOpenCodeAggregatePrimaryRestartTeamNames(): Iterable<string>;
+  getOpenCodeRuntimeAdapterStopInFlightTeamNames(): Iterable<string>;
   stopTeam(teamName: string): Promise<void>;
   cancelRuntimeAdapterProvisioning(
     runId: string,
@@ -59,7 +61,9 @@ export function getShutdownTrackedTeamNames(
   >,
   ports: Pick<
     TeamProvisioningShutdownCoordinationPorts<unknown>,
-    'isCancellableRuntimeAdapterProgress'
+    | 'isCancellableRuntimeAdapterProgress'
+    | 'getOpenCodeAggregatePrimaryRestartTeamNames'
+    | 'getOpenCodeRuntimeAdapterStopInFlightTeamNames'
   >
 ): string[] {
   const teamNames = new Set<string>();
@@ -68,6 +72,12 @@ export function getShutdownTrackedTeamNames(
   for (const teamName of state.runtimeAdapterRunByTeam.keys()) teamNames.add(teamName);
   for (const teamName of state.secondaryRuntimeRunByTeam.keys()) teamNames.add(teamName);
   for (const teamName of state.teamOpLocks.keys()) teamNames.add(teamName);
+  for (const teamName of ports.getOpenCodeAggregatePrimaryRestartTeamNames()) {
+    teamNames.add(teamName);
+  }
+  for (const teamName of ports.getOpenCodeRuntimeAdapterStopInFlightTeamNames()) {
+    teamNames.add(teamName);
+  }
   for (const progress of getPendingRuntimeAdapterLaunchesForShutdown(state, ports)) {
     teamNames.add(progress.teamName);
   }
@@ -87,7 +97,11 @@ export async function stopTrackedTeamsForShutdown(
   >,
   ports: Pick<
     TeamProvisioningShutdownCoordinationPorts<unknown>,
-    'isCancellableRuntimeAdapterProgress' | 'stopTeam' | 'logger'
+    | 'isCancellableRuntimeAdapterProgress'
+    | 'getOpenCodeAggregatePrimaryRestartTeamNames'
+    | 'getOpenCodeRuntimeAdapterStopInFlightTeamNames'
+    | 'stopTeam'
+    | 'logger'
   >
 ): Promise<string[]> {
   const teamNames = getShutdownTrackedTeamNames(state, ports);

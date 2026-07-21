@@ -2093,6 +2093,9 @@ async function initializeServices(): Promise<void> {
   internalStorageFeature = createInternalStorageFeature({
     userDataPath: app.getPath('userData'),
   });
+  if (process.env.AGENT_TEAMS_PACKAGED_SMOKE?.trim() === '1') {
+    void internalStorageFeature.probeBackend();
+  }
   teamDataService = new TeamDataService();
   if (internalStorageFeature.applicationCommandLedgerBackend) {
     const applicationCommandLedgerFeature = createApplicationCommandLedgerFeature({
