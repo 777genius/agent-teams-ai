@@ -645,6 +645,38 @@ describe('providerConnectionUi', () => {
     expect(shouldMaskCodexNegativeBootstrapState(provider, provider)).toBe(true);
   });
 
+  it('masks transient Codex runtime-missing state while runtime verification is loading', () => {
+    const provider = createCodexProvider({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      statusMessage: 'Codex CLI not found',
+      models: [],
+      codex: {
+        preferredAuthMode: 'chatgpt',
+        effectiveAuthMode: null,
+        appServerState: 'runtime-missing',
+        appServerStatusMessage: 'Codex CLI not found',
+        managedAccount: null,
+        requiresOpenaiAuth: false,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        launchAllowed: false,
+        launchIssueMessage: 'Codex CLI not found',
+        launchReadinessState: 'runtime_missing',
+      },
+    });
+
+    expect(
+      shouldMaskCodexNegativeBootstrapState(provider, provider, { runtimeLoading: true })
+    ).toBe(true);
+    expect(shouldMaskCodexNegativeBootstrapState(provider, provider)).toBe(false);
+  });
+
   it('surfaces native auth-required state from the selected backend option', () => {
     const provider = createCodexProvider({
       authenticated: false,

@@ -8,6 +8,7 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { captureRendererException } from '@renderer/sentry';
 import { AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -35,6 +36,7 @@ class EditorErrorBoundaryInner extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
     console.error(`[EditorErrorBoundary] ${this.props.filePath}:`, error, info.componentStack);
+    captureRendererException(error, { componentStack: info.componentStack });
   }
 
   handleRetry = (): void => {

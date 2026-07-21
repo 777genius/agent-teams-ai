@@ -136,10 +136,37 @@ describe('bootstrapRendererTelemetryFromConfig', () => {
 
     const telemetry = await loadTelemetryModule();
 
-    await telemetry.bootstrapRendererTelemetryFromConfig();
+    await expect(telemetry.bootstrapRendererTelemetryFromConfig()).resolves.toBeUndefined();
 
     expect(SentryElectron.init).not.toHaveBeenCalled();
     expect(posthogMock.init).not.toHaveBeenCalled();
+  });
+
+  it('keeps renderer capture inactive and allows a retry when Sentry init fails', async () => {
+    setElectronApiForTest({
+      config: {
+        get: vi.fn().mockResolvedValue({ general: { telemetryEnabled: true } }),
+      },
+      telemetry: {
+        getSentryContext: vi.fn().mockResolvedValue(null),
+      },
+    });
+    vi.mocked(SentryElectron.init)
+      .mockImplementationOnce(() => {
+        throw new Error('renderer SDK unavailable');
+      })
+      .mockImplementationOnce(() => undefined);
+
+    const telemetry = await loadTelemetryModule();
+    const sentry = await import('../../../src/renderer/sentry');
+
+    await expect(telemetry.bootstrapRendererTelemetryFromConfig()).resolves.toBeUndefined();
+    expect(sentry.isSentryRendererActive()).toBe(false);
+
+    telemetry.syncRendererTelemetry(true);
+
+    expect(SentryElectron.init).toHaveBeenCalledTimes(2);
+    expect(sentry.isSentryRendererActive()).toBe(true);
   });
 
   it('does not let a stale startup config response override a newer sync', async () => {

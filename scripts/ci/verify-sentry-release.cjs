@@ -143,6 +143,9 @@ function postbuild() {
   if (!mainBundleText.includes(env.dsn)) {
     fail('SENTRY_DSN was not baked into the main process bundle');
   }
+  if (!/SENTRY_ENVIRONMENT\s*=\s*["']production["']/.test(mainBundleText)) {
+    fail('production Sentry environment was not baked into the main process bundle');
+  }
 
   const rendererBundleText = walkFiles(RENDERER_OUTPUT_DIR)
     .filter((file) => /\.(?:js|cjs|mjs)$/.test(file))

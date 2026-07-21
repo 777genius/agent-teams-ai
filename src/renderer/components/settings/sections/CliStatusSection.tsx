@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
+  isCodexAccountSnapshotPending,
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
@@ -178,9 +179,8 @@ export const CliStatusSection = (): React.JSX.Element | null => {
     includeRateLimits: true,
   });
   const codexSnapshotPending =
-    codexAccount.loading &&
-    Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')) &&
-    !codexAccount.snapshot;
+    isCodexAccountSnapshotPending(codexAccount.loading, codexAccount.snapshot) &&
+    Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex'));
   const effectiveCliStatus = useMemo(
     () =>
       loadingCliStatus
@@ -502,7 +502,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                           const maskNegativeBootstrapState = shouldMaskCodexNegativeBootstrapState(
                             sourceProvider,
                             provider,
-                            { providerLoading }
+                            { providerLoading, runtimeLoading: codexRuntimeStatusLoading }
                           );
                           const effectiveShowSkeleton = showSkeleton || maskNegativeBootstrapState;
                           const statusText = effectiveShowSkeleton

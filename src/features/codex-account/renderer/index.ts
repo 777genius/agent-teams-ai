@@ -2,6 +2,7 @@ export {
   CODEX_ACCOUNT_STARTUP_IDLE_DELAY_MS,
   CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS,
   CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS,
+  isCodexAccountSnapshotPending,
   useCodexAccountSnapshot,
 } from './hooks/useCodexAccountSnapshot';
 export { mergeCodexCliStatusWithSnapshot } from './mergeCodexCliStatusWithSnapshot';

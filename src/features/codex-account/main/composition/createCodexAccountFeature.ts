@@ -71,6 +71,13 @@ interface CodexSnapshotRefreshOptions {
   forceRefreshToken: boolean;
 }
 
+interface CodexSnapshotRefreshBatch {
+  acceptingRequests: boolean;
+  initialOptions: CodexSnapshotRefreshOptions | null;
+  pendingOptions: CodexSnapshotRefreshOptions | null;
+  promise: Promise<CodexAccountSnapshotDto>;
+}
+
 function hasChatgptManagedAccount(
   payload: CodexAppServerGetAccountResponse | null | undefined
 ): boolean {
@@ -238,22 +245,6 @@ function mergeRefreshOptions(
   };
 }
 
-function createDeferred(): { promise: Promise<void>; resolve: () => void } {
-  let resolve: (() => void) | null = null;
-  const promise = new Promise<void>((fulfill) => {
-    resolve = fulfill;
-  });
-
-  if (!resolve) {
-    throw new Error('Failed to create deferred promise.');
-  }
-
-  return {
-    promise,
-    resolve,
-  };
-}
-
 async function resolveCodexBinaryForAccountSnapshot(): Promise<string | null> {
   const binaryPath = await CodexBinaryResolver.resolve();
   if (binaryPath) {
@@ -295,13 +286,12 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
   private snapshotCache: CodexAccountSnapshotDto | null = null;
   private snapshotObservedAt = 0;
   private lastPublishedSnapshotUpdatedAtMs = 0;
-  private refreshPromise: Promise<CodexAccountSnapshotDto> | null = null;
-  private pendingRefreshOptions: CodexSnapshotRefreshOptions | null = null;
+  private refreshBatch: CodexSnapshotRefreshBatch | null = null;
+  private operationQueue: Promise<void> = Promise.resolve();
   private lastKnownAccount: CodexLastKnownAccount | null = null;
   private lastKnownRateLimits: CodexLastKnownRateLimits | null = null;
   private lastKnownRuntimeContext: CodexLastKnownRuntimeContext | null = null;
-  private mutationQueue: Promise<void> = Promise.resolve();
-  private mutationQueueRelease: (() => void) | null = null;
+  private queuedMutationCount = 0;
   private activeMutationCount = 0;
   private disposed = false;
 
@@ -355,15 +345,42 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
       return cached;
     }
 
-    this.pendingRefreshOptions = mergeRefreshOptions(this.pendingRefreshOptions, normalizedOptions);
-
-    if (!this.refreshPromise) {
-      this.refreshPromise = this.drainRefreshQueue().finally(() => {
-        this.refreshPromise = null;
-      });
+    if (this.refreshBatch?.acceptingRequests) {
+      this.refreshBatch.pendingOptions = mergeRefreshOptions(
+        this.refreshBatch.pendingOptions,
+        normalizedOptions
+      );
+      return this.refreshBatch.promise;
     }
 
-    return this.refreshPromise;
+    const previousOperation = this.operationQueue.catch(() => undefined);
+    const batch = {
+      acceptingRequests: true,
+      initialOptions: normalizedOptions,
+      pendingOptions: null,
+      promise: Promise.resolve(null as unknown as CodexAccountSnapshotDto),
+    } satisfies CodexSnapshotRefreshBatch;
+    const batchPromise = previousOperation.then(() => this.drainRefreshBatch(batch));
+    batch.promise = batchPromise;
+    this.refreshBatch = batch;
+    this.operationQueue = batchPromise.then(
+      () => undefined,
+      () => undefined
+    );
+    void batchPromise.then(
+      () => {
+        if (this.refreshBatch === batch) {
+          this.refreshBatch = null;
+        }
+      },
+      () => {
+        if (this.refreshBatch === batch) {
+          this.refreshBatch = null;
+        }
+      }
+    );
+
+    return batchPromise;
   }
 
   async startChatgptLogin(options?: {
@@ -443,30 +460,28 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     await this.loginSessionManager.dispose();
     this.listeners.clear();
     this.snapshotCache = null;
-    this.refreshPromise = null;
-    this.pendingRefreshOptions = null;
+    this.refreshBatch = null;
+    this.operationQueue = Promise.resolve();
     this.lastKnownAccount = null;
     this.lastKnownRateLimits = null;
     this.lastKnownRuntimeContext = null;
     this.lastPublishedSnapshotUpdatedAtMs = 0;
+    this.queuedMutationCount = 0;
     this.activeMutationCount = 0;
-    if (this.mutationQueueRelease) {
-      this.mutationQueueRelease();
-      this.mutationQueueRelease = null;
-    }
-    this.mutationQueue = Promise.resolve();
   }
 
-  private async drainRefreshQueue(): Promise<CodexAccountSnapshotDto> {
+  private async drainRefreshBatch(
+    batch: CodexSnapshotRefreshBatch
+  ): Promise<CodexAccountSnapshotDto> {
     let lastSnapshot: CodexAccountSnapshotDto | null = null;
+    let nextOptions = batch.initialOptions;
+    batch.initialOptions = null;
 
-    while (this.pendingRefreshOptions) {
-      const nextOptions = this.pendingRefreshOptions;
-      this.pendingRefreshOptions = null;
-      await this.mutationQueue.catch(() => undefined);
-
+    while (nextOptions) {
       lastSnapshot =
         this.getCachedSnapshotForOptions(nextOptions) ?? (await this.loadSnapshot(nextOptions));
+      nextOptions = batch.pendingOptions;
+      batch.pendingOptions = null;
     }
 
     if (!lastSnapshot) {
@@ -489,7 +504,6 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     const localAccountArtifactsPresent = localAccountState.hasArtifacts;
     const localActiveChatgptAccountPresent = localAccountState.hasActiveChatgptAccount;
     const binaryPath = await resolveCodexBinaryForAccountSnapshot();
-    const login = this.loginSessionManager.getState();
     const now = Date.now();
 
     if (!binaryPath) {
@@ -520,7 +534,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
           localAccountArtifactsPresent,
           localActiveChatgptAccountPresent,
           runtimeContext: freshRuntimeContext,
-          login,
+          login: this.loginSessionManager.getState(),
           rateLimits: this.snapshotCache?.rateLimits ?? null,
           updatedAt: new Date().toISOString(),
         });
@@ -540,7 +554,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
         requiresOpenaiAuth: null,
         localAccountArtifactsPresent,
         localActiveChatgptAccountPresent,
-        login,
+        login: this.loginSessionManager.getState(),
         rateLimits: null,
         updatedAt: new Date().toISOString(),
       });
@@ -569,7 +583,10 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
       payload: runtimeContext,
       observedAt: now,
     };
-    const cachedRateLimitsAreFresh = this.hasFreshRateLimits(now);
+    const cachedRateLimitsAreFresh =
+      this.hasFreshRateLimits(now) &&
+      this.lastKnownRateLimits?.accountSignature ===
+        getCodexAccountSignature(accountPayload?.account ?? null);
     const shouldRequestRateLimits =
       options?.includeRateLimits === true && !cachedRateLimitsAreFresh;
     let rateLimitsReadFailure: unknown | null = null;
@@ -700,7 +717,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
       localAccountArtifactsPresent,
       localActiveChatgptAccountPresent,
       runtimeContext,
-      login,
+      login: this.loginSessionManager.getState(),
       rateLimits,
       updatedAt: new Date().toISOString(),
     });
@@ -742,15 +759,34 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
       return null;
     }
 
-    if (options.includeRateLimits && !this.hasFreshRateLimits(Date.now())) {
-      return null;
+    if (options.includeRateLimits) {
+      const cachedAccountSignature = this.getSnapshotAccountSignature(this.snapshotCache);
+      if (
+        !this.hasFreshRateLimits(Date.now()) ||
+        this.lastKnownRateLimits?.accountSignature !== cachedAccountSignature ||
+        this.snapshotCache.rateLimits === null
+      ) {
+        return null;
+      }
     }
 
     return deepClone(this.snapshotCache);
   }
 
   private hasPendingMutation(): boolean {
-    return this.activeMutationCount > 0 || this.mutationQueueRelease !== null;
+    return this.queuedMutationCount > 0;
+  }
+
+  private getSnapshotAccountSignature(snapshot: CodexAccountSnapshotDto): string | null {
+    if (!snapshot.managedAccount) {
+      return null;
+    }
+
+    if (snapshot.managedAccount.type === 'api_key') {
+      return 'api_key';
+    }
+
+    return `chatgpt:${snapshot.managedAccount.email ?? 'unknown'}:${snapshot.managedAccount.planType ?? 'unknown'}`;
   }
 
   private hasFreshRateLimits(now: number): boolean {
@@ -840,25 +876,27 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     };
   }
 
-  private async runSerializedMutation<T>(operation: () => Promise<T>): Promise<T> {
-    const previousMutation = this.mutationQueue.catch(() => undefined);
-    const deferred = createDeferred();
-    this.mutationQueue = deferred.promise;
-    this.mutationQueueRelease = deferred.resolve;
-
-    await previousMutation;
-    await this.refreshPromise?.catch(() => undefined);
-
-    this.activeMutationCount += 1;
-    try {
-      return await operation();
-    } finally {
-      this.activeMutationCount = Math.max(0, this.activeMutationCount - 1);
-      deferred.resolve();
-      if (this.mutationQueueRelease === deferred.resolve) {
-        this.mutationQueueRelease = null;
-      }
+  private runSerializedMutation<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.refreshBatch) {
+      this.refreshBatch.acceptingRequests = false;
     }
+
+    const previousOperation = this.operationQueue.catch(() => undefined);
+    this.queuedMutationCount += 1;
+    const mutationPromise = previousOperation.then(async () => {
+      this.activeMutationCount += 1;
+      try {
+        return await operation();
+      } finally {
+        this.activeMutationCount = Math.max(0, this.activeMutationCount - 1);
+        this.queuedMutationCount = Math.max(0, this.queuedMutationCount - 1);
+      }
+    });
+    this.operationQueue = mutationPromise.then(
+      () => undefined,
+      () => undefined
+    );
+    return mutationPromise;
   }
 
   private async loadApiKeyAvailability(): Promise<CodexApiKeyAvailabilityDto> {

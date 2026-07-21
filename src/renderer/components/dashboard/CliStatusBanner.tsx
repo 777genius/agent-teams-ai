@@ -12,6 +12,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import {
   CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS,
   CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS,
+  isCodexAccountSnapshotPending,
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
@@ -1163,7 +1164,7 @@ const InstalledBanner = ({
             const maskNegativeBootstrapState = shouldMaskCodexNegativeBootstrapState(
               sourceProvider,
               provider,
-              { providerLoading }
+              { providerLoading, runtimeLoading: codexRuntimeStatusLoading }
             );
             const showSkeleton =
               shouldShowProviderStatusSkeleton(provider, providerLoading) ||
@@ -1657,9 +1658,8 @@ export const CliStatusBanner = ({
     [cliStatusLoading, openCodeRuntimeStatus, openCodeRuntimeStatusLoading, visibleCliProviders]
   );
   const codexSnapshotPending =
-    codexAccount.loading &&
-    Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')) &&
-    !codexAccount.snapshot;
+    isCodexAccountSnapshotPending(codexAccount.loading, codexAccount.snapshot) &&
+    Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex'));
   const effectiveCliStatus = useMemo(
     () =>
       loadingCliStatus

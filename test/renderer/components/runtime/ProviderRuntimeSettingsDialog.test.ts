@@ -2272,6 +2272,66 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(host.textContent).toContain('Install Codex CLI');
   });
 
+  it('masks stale Codex runtime-missing UI while account and runtime checks are pending', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    codexAccountHookState.loading = true;
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [
+            createCodexProvider({
+              authenticated: false,
+              authMethod: null,
+              statusMessage: 'Codex CLI not found',
+              codex: {
+                appServerState: 'runtime-missing',
+                appServerStatusMessage: 'Codex CLI not found',
+                launchAllowed: false,
+                launchIssueMessage: 'Codex CLI not found',
+                launchReadinessState: 'runtime_missing',
+              },
+              availableBackends: [
+                {
+                  id: 'codex-native',
+                  label: 'Codex native',
+                  description: 'Use the local codex exec JSON seam.',
+                  selectable: false,
+                  recommended: true,
+                  available: false,
+                  state: 'runtime-missing',
+                  audience: 'general',
+                  statusMessage: 'Codex CLI not found',
+                },
+              ],
+            }),
+          ],
+          initialProviderId: 'codex',
+          codexRuntimeStatus: {
+            installed: false,
+            latestVersion: null,
+            updateAvailable: false,
+            source: 'missing',
+            state: 'idle',
+          },
+          codexRuntimeStatusLoading: true,
+          onInstallCodexRuntime: vi.fn(),
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Checking...');
+    expect(host.textContent).not.toContain('Codex CLI not found');
+    expect(host.textContent).not.toContain('Install Codex CLI');
+  });
+
   it('keeps the API key form open and shows an error when delete fails', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

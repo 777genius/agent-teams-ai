@@ -688,6 +688,66 @@ describe('createCodexAccountFeature', () => {
     }
   });
 
+  it('does not reuse fresh rate limits from a different ChatGPT account', async () => {
+    const accountA = createAccountResponse({
+      account: { type: 'chatgpt', email: 'account-a@example.com', planType: 'pro' },
+    });
+    const accountB = createAccountResponse({
+      account: { type: 'chatgpt', email: 'account-b@example.com', planType: 'plus' },
+    });
+    readAccountMock
+      .mockResolvedValueOnce({
+        account: accountA,
+        initialize: {
+          codexHome: '/Users/test/.codex',
+          platformFamily: 'unix',
+          platformOs: 'macos',
+        },
+      })
+      .mockResolvedValue({
+        account: accountB,
+        initialize: {
+          codexHome: '/Users/test/.codex',
+          platformFamily: 'unix',
+          platformOs: 'macos',
+        },
+      });
+    readRateLimitsMock
+      .mockResolvedValueOnce(createRateLimitsResponse())
+      .mockResolvedValueOnce({
+        ...createRateLimitsResponse(),
+        rateLimits: {
+          ...createRateLimitsResponse().rateLimits,
+          primary: {
+            ...createRateLimitsResponse().rateLimits.primary,
+            usedPercent: 12,
+          },
+        },
+      });
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+
+    try {
+      const firstSnapshot = await feature.refreshSnapshot({ includeRateLimits: true });
+      const switchedSnapshot = await feature.refreshSnapshot({ forceRefreshToken: true });
+      const accountBLimits = await feature.refreshSnapshot({ includeRateLimits: true });
+
+      expect(firstSnapshot.managedAccount?.email).toBe('account-a@example.com');
+      expect(firstSnapshot.rateLimits?.primary?.usedPercent).toBe(77);
+      expect(switchedSnapshot.managedAccount?.email).toBe('account-b@example.com');
+      expect(switchedSnapshot.rateLimits).toBeNull();
+      expect(accountBLimits.managedAccount?.email).toBe('account-b@example.com');
+      expect(accountBLimits.rateLimits?.primary?.usedPercent).toBe(12);
+      expect(readAccountMock).toHaveBeenCalledTimes(3);
+      expect(readRateLimitsMock).toHaveBeenCalledTimes(2);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('force-refreshes account truth even when a fresh snapshot exists', async () => {
     readAccountMock.mockResolvedValue({
       account: createAccountResponse(),
@@ -770,6 +830,42 @@ describe('createCodexAccountFeature', () => {
       expect(duringLogoutSnapshot.managedAccount).toBeNull();
       expect(afterLogoutSnapshot.managedAccount).toBeNull();
       expect(afterLogoutSnapshot.requiresOpenaiAuth).toBe(false);
+      expect(readAccountMock.mock.calls.at(-1)?.[0]).toMatchObject({
+        refreshToken: true,
+      });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('serializes a same-tick logout and refresh without deadlocking', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse({ account: null, requiresOpenaiAuth: false }),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+    readRateLimitsMock.mockResolvedValue(createRateLimitsResponse());
+    logoutMock.mockResolvedValue({});
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+
+    try {
+      const logoutPromise = feature.logout();
+      const refreshPromise = feature.refreshSnapshot();
+      const [logoutSnapshot, refreshedSnapshot] = await Promise.all([
+        logoutPromise,
+        refreshPromise,
+      ]);
+
+      expect(logoutMock).toHaveBeenCalledTimes(1);
+      expect(logoutSnapshot.managedAccount).toBeNull();
+      expect(refreshedSnapshot.managedAccount).toBeNull();
       expect(readAccountMock.mock.calls.at(-1)?.[0]).toMatchObject({
         refreshToken: true,
       });
@@ -1328,6 +1424,61 @@ describe('createCodexAccountFeature', () => {
         authUrl: 'https://chatgpt.com/auth',
       });
       expect(loginStartMock).toHaveBeenCalledTimes(1);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('does not republish a captured pending login state after a newer idle state', async () => {
+    const delayedRead = createDeferred<{
+      account: ReturnType<typeof createAccountResponse>;
+      initialize: { codexHome: string; platformFamily: string; platformOs: string };
+    }>();
+    const healthyRead = {
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    };
+    loginStateContainer.current = {
+      status: 'pending',
+      error: null,
+      startedAt: '2026-04-20T12:00:00.000Z',
+      authUrl: 'https://chatgpt.com/auth',
+    };
+    readAccountMock.mockResolvedValueOnce(healthyRead).mockReturnValueOnce(delayedRead.promise);
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+    const publishedSnapshots: CodexAccountSnapshotDto[] = [];
+    feature.subscribe((snapshot) => publishedSnapshots.push(snapshot));
+
+    try {
+      const initialSnapshot = await feature.refreshSnapshot();
+      expect(initialSnapshot.login.status).toBe('pending');
+
+      const delayedRefresh = feature.refreshSnapshot({ forceRefreshToken: true });
+      await vi.waitFor(() => {
+        expect(readAccountMock).toHaveBeenCalledTimes(2);
+      });
+
+      emitLoginState({
+        status: 'idle',
+        error: null,
+        startedAt: null,
+        authUrl: null,
+      });
+      expect(publishedSnapshots.at(-1)?.login.status).toBe('idle');
+
+      delayedRead.resolve(healthyRead);
+      const refreshedSnapshot = await delayedRefresh;
+
+      expect(refreshedSnapshot.login.status).toBe('idle');
+      expect(publishedSnapshots.at(-1)?.login.status).toBe('idle');
     } finally {
       await feature.dispose();
     }

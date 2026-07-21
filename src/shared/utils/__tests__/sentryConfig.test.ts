@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterSafeSentryIntegrations, redactSentryEvent } from '../sentryConfig';
+import { filterSafeSentryIntegrations, isValidDsn, redactSentryEvent } from '../sentryConfig';
 
 describe('sentryConfig privacy helpers', () => {
+  it('accepts only an HTTPS Sentry DSN with a public key and numeric project id', () => {
+    expect(isValidDsn('https://public@example.ingest.sentry.io/4511088289120336')).toBe(true);
+    expect(isValidDsn('http://public@example.com/1')).toBe(false);
+    expect(isValidDsn('https://user:secret@example.com/1')).toBe(false);
+    expect(isValidDsn('https://public@example.com/project')).toBe(false);
+    expect(isValidDsn('not-a-url')).toBe(false);
+  });
+
   it('redacts high-risk event data recursively', () => {
     const event = redactSentryEvent({
       message:

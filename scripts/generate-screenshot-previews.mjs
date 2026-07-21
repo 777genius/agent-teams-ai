@@ -13,10 +13,6 @@ const staticEntries = [
     source: path.replace(/^screenshots\//, ''),
     preview: previewPath.replace(/^screenshots\//, ''),
   })),
-  {
-    source: 'overview.jpg',
-    preview: 'previews/overview.webp',
-  },
 ];
 
 const magickCheck = spawnSync('magick', ['-version'], { stdio: 'ignore' });

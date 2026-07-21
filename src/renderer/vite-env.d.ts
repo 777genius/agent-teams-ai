@@ -4,6 +4,7 @@ declare const __APP_VERSION__: string;
 declare const __BUILD_GIT_SHA__: string;
 declare const __BUILD_ID__: string;
 declare const __RELEASE_CHANNEL__: string;
+declare const __SENTRY_ENVIRONMENT__: string;
 declare const __OFFICIAL_POSTHOG_BUILD__: boolean;
 
 interface ImportMetaEnv {

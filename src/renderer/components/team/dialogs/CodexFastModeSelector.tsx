@@ -30,7 +30,7 @@ export const CodexFastModeSelector: React.FC<CodexFastModeSelectorProps> = ({
   id,
 }) => {
   const { t } = useAppTranslation('team');
-  const { providerStatus } = useEffectiveCliProviderStatus('codex');
+  const { providerStatus, codexSnapshotPending } = useEffectiveCliProviderStatus('codex');
   const selection = useMemo(
     () =>
       resolveCodexRuntimeSelection({
@@ -55,8 +55,9 @@ export const CodexFastModeSelector: React.FC<CodexFastModeSelectorProps> = ({
     return null;
   }
 
-  const helperText =
-    value === 'inherit'
+  const helperText = codexSnapshotPending
+    ? 'Checking Codex account availability...'
+    : value === 'inherit'
       ? resolution.selectable
         ? `Default is Off. Enable Fast for about ${CODEX_FAST_SPEED_MULTIPLIER}x speed at ${CODEX_FAST_CREDIT_COST_MULTIPLIER}x credits.`
         : (resolution.disabledReason ??
@@ -81,7 +82,7 @@ export const CodexFastModeSelector: React.FC<CodexFastModeSelectorProps> = ({
             {
               value: 'on' as const,
               label: t('modelSelector.fastMode.fast'),
-              disabled: !resolution.selectable,
+              disabled: codexSnapshotPending || !resolution.selectable,
             },
             { value: 'off' as const, label: t('modelSelector.fastMode.off'), disabled: false },
           ].map((option) => (

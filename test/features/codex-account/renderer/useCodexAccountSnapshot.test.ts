@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useCodexAccountSnapshot } from '../../../../src/features/codex-account/renderer/hooks/useCodexAccountSnapshot';
+import {
+  isCodexAccountSnapshotPending,
+  useCodexAccountSnapshot,
+} from '../../../../src/features/codex-account/renderer/hooks/useCodexAccountSnapshot';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 
@@ -96,6 +99,7 @@ function createDeferred<T>() {
 describe('useCodexAccountSnapshot', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    apiMocks.onCodexAccountSnapshotChanged.mockImplementation(() => () => undefined);
     (
       globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
     ).IS_REACT_ACT_ENVIRONMENT = true;
@@ -106,6 +110,390 @@ describe('useCodexAccountSnapshot', () => {
     document.body.innerHTML = '';
     Reflect.deleteProperty(window, 'requestIdleCallback');
     Reflect.deleteProperty(window, 'cancelIdleCallback');
+  });
+
+  it('keeps stale negative snapshots pending during revalidation but preserves useful states', () => {
+    const runtimeMissingSnapshot = withSnapshotOverrides(createSnapshot(), {
+      launchAllowed: false,
+      launchReadinessState: 'runtime_missing',
+      appServerState: 'runtime-missing',
+    });
+    const loginPendingSnapshot = withSnapshotOverrides(runtimeMissingSnapshot, {
+      login: {
+        status: 'pending',
+        error: null,
+        startedAt: '2026-07-21T10:00:00.000Z',
+      },
+    });
+
+    expect(isCodexAccountSnapshotPending(true, null)).toBe(true);
+    expect(isCodexAccountSnapshotPending(true, runtimeMissingSnapshot)).toBe(true);
+    expect(isCodexAccountSnapshotPending(true, createSnapshot())).toBe(false);
+    expect(isCodexAccountSnapshotPending(true, loginPendingSnapshot)).toBe(false);
+    expect(isCodexAccountSnapshotPending(false, runtimeMissingSnapshot)).toBe(false);
+  });
+
+  it('reports loading on the first render before an immediate initial request starts', async () => {
+    const snapshot = createSnapshot();
+    const snapshotDeferred = createDeferred<CodexAccountSnapshotDto>();
+    apiMocks.getCodexAccountSnapshot.mockReturnValue(snapshotDeferred.promise);
+    const observedLoadingStates: boolean[] = [];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness(): React.ReactElement {
+      const state = useCodexAccountSnapshot({ enabled: true });
+      observedLoadingStates.push(state.loading);
+      return React.createElement('div', null, state.loading ? 'checking' : 'settled');
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    expect(observedLoadingStates[0]).toBe(true);
+    expect(host.textContent).toBe('checking');
+
+    await act(async () => {
+      snapshotDeferred.resolve(snapshot);
+      await snapshotDeferred.promise;
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toBe('settled');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('clears loading when disabled during the initial request and ignores its stale result', async () => {
+    const snapshot = createSnapshot();
+    const snapshotDeferred = createDeferred<CodexAccountSnapshotDto>();
+    apiMocks.getCodexAccountSnapshot.mockReturnValue(snapshotDeferred.promise);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness({ enabled }: { enabled: boolean }): React.ReactElement {
+      const state = useCodexAccountSnapshot({ enabled });
+      return React.createElement(
+        'div',
+        { 'data-loading': state.loading ? 'true' : 'false' },
+        state.snapshot?.managedAccount?.email ?? 'empty'
+      );
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: true }));
+      await Promise.resolve();
+    });
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('true');
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: false }));
+      await Promise.resolve();
+    });
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('false');
+
+    await act(async () => {
+      snapshotDeferred.resolve(snapshot);
+      await snapshotDeferred.promise;
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('empty');
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('false');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('restores first-render loading when re-enabled after an initial failure', async () => {
+    const retrySnapshot = createSnapshot();
+    const retryDeferred = createDeferred<CodexAccountSnapshotDto>();
+    apiMocks.getCodexAccountSnapshot
+      .mockRejectedValueOnce(new Error('temporary Codex outage'))
+      .mockReturnValueOnce(retryDeferred.promise);
+    const observations: Array<{ enabled: boolean; loading: boolean }> = [];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness({ enabled }: { enabled: boolean }): React.ReactElement {
+      const state = useCodexAccountSnapshot({ enabled });
+      observations.push({ enabled, loading: state.loading });
+      return React.createElement(
+        'div',
+        { 'data-loading': state.loading ? 'true' : 'false' },
+        state.error ?? state.snapshot?.managedAccount?.email ?? 'empty'
+      );
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('temporary Codex outage');
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('false');
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: false }));
+      await Promise.resolve();
+    });
+
+    const reenableObservationIndex = observations.length;
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: true }));
+      await Promise.resolve();
+    });
+
+    expect(observations[reenableObservationIndex]).toEqual({ enabled: true, loading: true });
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('true');
+
+    await act(async () => {
+      retryDeferred.resolve(retrySnapshot);
+      await retryDeferred.promise;
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('belief@example.com');
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('false');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('drops a cached snapshot and revalidates immediately after being re-enabled', async () => {
+    const firstSnapshot = withSnapshotOverrides(createSnapshot(), {
+      managedAccount: {
+        type: 'chatgpt',
+        email: 'old-account@example.com',
+        planType: 'pro',
+      },
+      updatedAt: '2026-07-21T10:00:00.000Z',
+    });
+    const secondSnapshot = withSnapshotOverrides(createSnapshot(), {
+      managedAccount: {
+        type: 'chatgpt',
+        email: 'current-account@example.com',
+        planType: 'pro',
+      },
+      updatedAt: '2026-07-21T10:00:01.000Z',
+    });
+    const secondRequest = createDeferred<CodexAccountSnapshotDto>();
+    apiMocks.getCodexAccountSnapshot
+      .mockResolvedValueOnce(firstSnapshot)
+      .mockReturnValueOnce(secondRequest.promise);
+    const observations: Array<{ enabled: boolean; loading: boolean; email: string | null }> = [];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness({ enabled }: { enabled: boolean }): React.ReactElement {
+      const state = useCodexAccountSnapshot({ enabled });
+      observations.push({
+        enabled,
+        loading: state.loading,
+        email: state.snapshot?.managedAccount?.email ?? null,
+      });
+      return React.createElement(
+        'div',
+        { 'data-loading': state.loading ? 'true' : 'false' },
+        state.snapshot?.managedAccount?.email ?? 'empty'
+      );
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('old-account@example.com');
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: false }));
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('empty');
+
+    const reenableObservationIndex = observations.length;
+    await act(async () => {
+      root.render(React.createElement(Harness, { enabled: true }));
+      await Promise.resolve();
+    });
+
+    expect(observations[reenableObservationIndex]).toEqual({
+      enabled: true,
+      loading: true,
+      email: null,
+    });
+    expect(apiMocks.getCodexAccountSnapshot).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      secondRequest.resolve(secondSnapshot);
+      await secondRequest.promise;
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('current-account@example.com');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('does not surface an older initial failure after a newer pushed snapshot', async () => {
+    const initialRequest = createDeferred<CodexAccountSnapshotDto>();
+    apiMocks.getCodexAccountSnapshot.mockReturnValue(initialRequest.promise);
+    let snapshotListener:
+      | ((event: unknown, snapshot: CodexAccountSnapshotDto) => void)
+      | null = null;
+    apiMocks.onCodexAccountSnapshotChanged.mockImplementation((callback) => {
+      snapshotListener = callback;
+      return () => undefined;
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness(): React.ReactElement {
+      const state = useCodexAccountSnapshot({ enabled: true });
+      return React.createElement(
+        'div',
+        null,
+        state.error ?? state.snapshot?.managedAccount?.email ?? 'empty'
+      );
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      snapshotListener?.({}, createSnapshot());
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('belief@example.com');
+
+    await act(async () => {
+      initialRequest.reject(new Error('stale initial failure'));
+      await initialRequest.promise.catch(() => undefined);
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('belief@example.com');
+    expect(host.textContent).not.toContain('stale initial failure');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('keeps loading active until overlapping refresh and account action both settle', async () => {
+    const initialSnapshot = withSnapshotOverrides(createSnapshot(), {
+      updatedAt: '2026-07-21T10:00:00.000Z',
+    });
+    const refreshedSnapshot = withSnapshotOverrides(createSnapshot(), {
+      updatedAt: '2026-07-21T10:00:01.000Z',
+    });
+    const loggedOutSnapshot = withSnapshotOverrides(createSnapshot(), {
+      managedAccount: null,
+      updatedAt: '2026-07-21T10:00:02.000Z',
+    });
+    const refreshRequest = createDeferred<CodexAccountSnapshotDto>();
+    const logoutRequest = createDeferred<CodexAccountSnapshotDto>();
+    apiMocks.getCodexAccountSnapshot.mockResolvedValue(initialSnapshot);
+    apiMocks.refreshCodexAccountSnapshot.mockReturnValue(refreshRequest.promise);
+    apiMocks.logoutCodexAccount.mockReturnValue(logoutRequest.promise);
+    let refreshNow!: () => Promise<boolean>;
+    let logoutNow!: () => Promise<boolean>;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness(): React.ReactElement {
+      const state = useCodexAccountSnapshot({ enabled: true });
+      refreshNow = () => state.refresh();
+      logoutNow = state.logout;
+      return React.createElement('div', {
+        'data-loading': state.loading ? 'true' : 'false',
+      });
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    let refreshPromise!: Promise<boolean>;
+    let logoutPromise!: Promise<boolean>;
+    await act(async () => {
+      refreshPromise = refreshNow();
+      logoutPromise = logoutNow();
+      await Promise.resolve();
+    });
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('true');
+
+    await act(async () => {
+      refreshRequest.resolve(refreshedSnapshot);
+      await refreshPromise;
+      await Promise.resolve();
+    });
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('true');
+
+    await act(async () => {
+      logoutRequest.resolve(loggedOutSnapshot);
+      await logoutPromise;
+      await Promise.resolve();
+    });
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('false');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('turns a synchronous initial API failure into settled hook error state', async () => {
+    apiMocks.getCodexAccountSnapshot.mockImplementation(() => {
+      throw new Error('synchronous bridge failure');
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness(): React.ReactElement {
+      const state = useCodexAccountSnapshot({ enabled: true });
+      return React.createElement(
+        'div',
+        { 'data-loading': state.loading ? 'true' : 'false' },
+        state.error ?? 'no-error'
+      );
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('false');
+    expect(host.textContent).toContain('synchronous bridge failure');
+
+    act(() => {
+      root.unmount();
+    });
   });
 
   it('loads the initial Codex snapshot through refresh when rate limits are requested', async () => {
@@ -330,6 +718,146 @@ describe('useCodexAccountSnapshot', () => {
       root.unmount();
     });
     expect(cancelIdleCallback).not.toHaveBeenCalled();
+  });
+
+  it('still runs the deferred rate-limit refresh after a pushed snapshot without limits', async () => {
+    vi.useFakeTimers();
+    const updatedAtMs = Date.now();
+    const pushedSnapshot = withSnapshotOverrides(createSnapshot(), {
+      rateLimits: null,
+      updatedAt: new Date(updatedAtMs).toISOString(),
+    });
+    const refreshedSnapshot = withSnapshotOverrides(createSnapshot(), {
+      updatedAt: new Date(updatedAtMs + 1).toISOString(),
+    });
+    const refreshDeferred = createDeferred<CodexAccountSnapshotDto>();
+    apiMocks.refreshCodexAccountSnapshot.mockReturnValue(refreshDeferred.promise);
+    let snapshotListener:
+      | ((event: unknown, snapshot: CodexAccountSnapshotDto) => void)
+      | null = null;
+    apiMocks.onCodexAccountSnapshotChanged.mockImplementation(
+      (callback: (event: unknown, snapshot: CodexAccountSnapshotDto) => void) => {
+        snapshotListener = callback;
+        return () => undefined;
+      }
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness(): React.ReactElement {
+      const state = useCodexAccountSnapshot({
+        enabled: true,
+        includeRateLimits: true,
+        initialRefreshDelayMs: 30_000,
+      });
+
+      return React.createElement(
+        'div',
+        {
+          'data-loading': state.loading ? 'true' : 'false',
+          'data-rate-limits-loading': state.rateLimitsLoading ? 'true' : 'false',
+        },
+        state.snapshot?.managedAccount?.email ?? 'empty'
+      );
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      snapshotListener?.({}, pushedSnapshot);
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('belief@example.com');
+    expect(host.firstElementChild?.getAttribute('data-loading')).toBe('false');
+    expect(host.firstElementChild?.getAttribute('data-rate-limits-loading')).toBe('true');
+    expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+      await Promise.resolve();
+    });
+
+    expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledWith({
+      includeRateLimits: true,
+    });
+
+    await act(async () => {
+      refreshDeferred.resolve(refreshedSnapshot);
+      await refreshDeferred.promise;
+      await Promise.resolve();
+    });
+
+    expect(host.firstElementChild?.getAttribute('data-rate-limits-loading')).toBe('false');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('starts rate-limit loading on the first render after includeRateLimits is enabled', async () => {
+    const updatedAtMs = Date.now();
+    const accountSnapshot = withSnapshotOverrides(createSnapshot(), {
+      rateLimits: null,
+      updatedAt: new Date(updatedAtMs).toISOString(),
+    });
+    const rateLimitSnapshot = withSnapshotOverrides(createSnapshot(), {
+      updatedAt: new Date(updatedAtMs + 1).toISOString(),
+    });
+    const refreshDeferred = createDeferred<CodexAccountSnapshotDto>();
+    apiMocks.getCodexAccountSnapshot.mockResolvedValue(accountSnapshot);
+    apiMocks.refreshCodexAccountSnapshot.mockReturnValue(refreshDeferred.promise);
+    const rateLoadingObservations: boolean[] = [];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    function Harness({ includeRateLimits }: { includeRateLimits: boolean }): React.ReactElement {
+      const state = useCodexAccountSnapshot({ enabled: true, includeRateLimits });
+      rateLoadingObservations.push(state.rateLimitsLoading);
+      return React.createElement(
+        'div',
+        { 'data-rate-limits-loading': state.rateLimitsLoading ? 'true' : 'false' },
+        state.snapshot?.managedAccount?.email ?? 'empty'
+      );
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { includeRateLimits: false }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('belief@example.com');
+    expect(host.firstElementChild?.getAttribute('data-rate-limits-loading')).toBe('false');
+
+    const firstEnabledObservation = rateLoadingObservations.length;
+    await act(async () => {
+      root.render(React.createElement(Harness, { includeRateLimits: true }));
+      await Promise.resolve();
+    });
+
+    expect(rateLoadingObservations[firstEnabledObservation]).toBe(true);
+    expect(host.firstElementChild?.getAttribute('data-rate-limits-loading')).toBe('true');
+    expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledWith({
+      includeRateLimits: true,
+    });
+
+    await act(async () => {
+      refreshDeferred.resolve(rateLimitSnapshot);
+      await refreshDeferred.promise;
+      await Promise.resolve();
+    });
+    expect(host.firstElementChild?.getAttribute('data-rate-limits-loading')).toBe('false');
+
+    act(() => {
+      root.unmount();
+    });
   });
 
   it('clears a deferred initial Codex snapshot timer on unmount', async () => {

@@ -18,7 +18,7 @@
 
 <p align="center">
   <a href="docs/screenshots/overview.jpg">
-    <img src="docs/screenshots/previews/overview.webp" alt="Agent Teams AI workspace overview" width="100%" />
+    <img src="docs/screenshots/overview.jpg" alt="Agent Teams AI workspace overview" width="100%" />
   </a>
 </p>
 

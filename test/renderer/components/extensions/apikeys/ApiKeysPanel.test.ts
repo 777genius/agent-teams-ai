@@ -264,6 +264,39 @@ describe('ApiKeysPanel', () => {
     });
   });
 
+  it('does not claim the Codex key is missing while the first account check is pending', async () => {
+    codexAccountHookState.loading = true;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ApiKeysPanel, {
+          projectPath: null,
+          projectLabel: null,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const codexLabel = Array.from(host.querySelectorAll('p')).find(
+      (element) => element.textContent === 'Codex runtime'
+    );
+    const codexCardText = codexLabel?.parentElement?.parentElement?.parentElement?.textContent ?? '';
+    expect(codexCardText).toContain('Checking Codex account and credential status...');
+    expect(codexCardText).not.toContain('Key missing');
+    expect(codexCardText).not.toContain(
+      'No stored or environment key detected for this provider.'
+    );
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('uses the live Codex snapshot even while multimodel provider status is still loading', async () => {
     storeState.cliStatus = null;
     storeState.cliStatusLoading = true;

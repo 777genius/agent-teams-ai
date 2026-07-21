@@ -33,6 +33,9 @@ export const APP_GET_WINDOWS_ELEVATION_STATUS = 'app:getWindowsElevationStatus';
 /** Get Sentry-safe anonymous telemetry context */
 export const TELEMETRY_GET_SENTRY_CONTEXT = 'telemetry:getSentryContext';
 
+/** Get sanitized Sentry initialization health */
+export const TELEMETRY_GET_SENTRY_STATUS = 'telemetry:getSentryStatus';
+
 // =============================================================================
 // Config API Channels
 // =============================================================================
@@ -622,10 +625,8 @@ export const REVIEW_SAVE_DECISIONS = 'review:saveDecisions';
 export const REVIEW_CLEAR_DECISIONS = 'review:clearDecisions';
 
 /** Load/resolve durable renderer branches preserved after decision CAS conflicts. */
-export const REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES =
-  'review:loadDecisionConflictCandidates';
-export const REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE =
-  'review:resolveDecisionConflictCandidate';
+export const REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES = 'review:loadDecisionConflictCandidates';
+export const REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE = 'review:resolveDecisionConflictCandidate';
 
 /** Load the exact-scope durable CodeMirror manual-edit history. */
 export const REVIEW_LOAD_DRAFT_HISTORY = 'review:loadDraftHistory';

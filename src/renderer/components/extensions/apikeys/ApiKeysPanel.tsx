@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
+  isCodexAccountSnapshotPending,
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
@@ -138,6 +139,9 @@ export const ApiKeysPanel = ({
       return [
         {
           ...item,
+          pending:
+            item.providerId === 'codex' &&
+            isCodexAccountSnapshotPending(codexAccount.loading, codexAccount.snapshot),
           authenticated: provider.authenticated,
           apiKeyConfigured: provider.connection?.apiKeyConfigured ?? false,
           sourceLabel: provider.connection?.apiKeySourceLabel ?? null,
@@ -145,7 +149,7 @@ export const ApiKeysPanel = ({
         },
       ];
     });
-  }, [effectiveCliStatus]);
+  }, [codexAccount.loading, codexAccount.snapshot, effectiveCliStatus]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -163,25 +167,31 @@ export const ApiKeysPanel = ({
                 </div>
                 <span
                   className={`rounded-full px-2 py-0.5 text-[11px] ${
-                    provider.authenticated
-                      ? 'bg-emerald-500/10 text-emerald-300'
-                      : provider.apiKeyConfigured
-                        ? 'bg-blue-500/10 text-blue-300'
-                        : 'bg-amber-500/10 text-amber-300'
+                    provider.pending
+                      ? 'bg-white/5 text-text-muted'
+                      : provider.authenticated
+                        ? 'bg-emerald-500/10 text-emerald-300'
+                        : provider.apiKeyConfigured
+                          ? 'bg-blue-500/10 text-blue-300'
+                          : 'bg-amber-500/10 text-amber-300'
                   }`}
                 >
-                  {provider.authenticated
-                    ? 'Connected'
-                    : provider.apiKeyConfigured
-                      ? 'Key configured'
-                      : 'Key missing'}
+                  {provider.pending
+                    ? 'Checking...'
+                    : provider.authenticated
+                      ? 'Connected'
+                      : provider.apiKeyConfigured
+                        ? 'Key configured'
+                        : 'Key missing'}
                 </span>
               </div>
               <p className="mt-2 text-xs text-text-muted">
-                {provider.sourceLabel
-                  ? `Current source: ${provider.sourceLabel}.`
-                  : 'No stored or environment key detected for this provider.'}
-                {provider.statusMessage ? ` ${provider.statusMessage}` : ''}
+                {provider.pending
+                  ? 'Checking Codex account and credential status...'
+                  : provider.sourceLabel
+                    ? `Current source: ${provider.sourceLabel}.`
+                    : 'No stored or environment key detected for this provider.'}
+                {!provider.pending && provider.statusMessage ? ` ${provider.statusMessage}` : ''}
               </p>
             </div>
           ))}

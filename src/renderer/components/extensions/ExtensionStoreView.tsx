@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
+  isCodexAccountSnapshotPending,
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
@@ -183,13 +184,12 @@ export const ExtensionStoreView = (): React.JSX.Element => {
     includeRateLimits: true,
   });
   const codexSnapshotPending =
-    codexAccount.loading &&
+    isCodexAccountSnapshotPending(codexAccount.loading, codexAccount.snapshot) &&
     Boolean(
       loadingCliStatus?.providers.some(
         (provider: CliProviderStatus) => provider.providerId === 'codex'
       )
-    ) &&
-    !codexAccount.snapshot;
+    );
   const effectiveCliStatus = useMemo(
     () =>
       loadingCliStatus

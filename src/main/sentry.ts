@@ -28,6 +28,8 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 
+import type { SentryTelemetryStatus } from '@shared/types/api';
+
 // ---------------------------------------------------------------------------
 // Telemetry gate
 // ---------------------------------------------------------------------------
@@ -104,7 +106,7 @@ export function syncTelemetryFlag(enabled: boolean): void {
     return;
   }
 
-  initializeSentryIfAllowed();
+  initializeMainSentry();
   void syncTelemetryIdentity();
 }
 
@@ -117,7 +119,12 @@ export function filterSentryEventForTelemetry(event: unknown): unknown {
 // ---------------------------------------------------------------------------
 
 interface SentryMainApi {
+  IPCMode?: { Classic?: number };
   init?: (options: SentryInitOptions) => void;
+  captureException?: (
+    error: unknown,
+    context?: { tags?: Record<string, string> }
+  ) => string | undefined;
   setUser?: (user: { id: string } | null) => void;
   setTags?: (tags: Record<string, string>) => void;
   close?: (timeout?: number) => PromiseLike<boolean> | boolean;
@@ -141,15 +148,41 @@ interface SentryInitOptions {
   integrations: <TIntegration extends { name?: string }>(
     integrations: TIntegration[]
   ) => TIntegration[];
+  ipcMode: number;
 }
+
+type SentryMainLoader = () => unknown;
+
+const defaultSentryMainLoader: SentryMainLoader = () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy optional Electron runtime dependency.
+  return require('@sentry/electron/main') as SentryMainApi;
+};
 
 let Sentry: SentryMainApi | null = null;
 let initialized = false;
+let initFailureReason: SentryTelemetryStatus['reason'] = null;
+let loadSentryMainApi = defaultSentryMainLoader;
+
+const SENTRY_IPC_NAMESPACE = 'sentry-ipc';
+const SENTRY_IPC_CHANNELS = [
+  'start',
+  'scope',
+  'envelope',
+  'status',
+  'structured-log',
+  'metric',
+] as const;
 
 export function setMainSentryApiForTesting(sentryApi: SentryMainApi): void {
   if (process.env.NODE_ENV !== 'test') return;
   Sentry = sentryApi;
   initialized = true;
+  initFailureReason = null;
+}
+
+export function setMainSentryLoaderForTesting(loader: SentryMainLoader | null): void {
+  if (process.env.NODE_ENV !== 'test') return;
+  loadSentryMainApi = loader ?? defaultSentryMainLoader;
 }
 
 function clearSentryUser(): void {
@@ -157,19 +190,66 @@ function clearSentryUser(): void {
   Sentry.setUser?.(null);
 }
 
+function removeMainSentryIpcListeners(): void {
+  try {
+    // Keep Electron optional so standalone mode can import this module.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- optional Electron runtime dependency.
+    const electron = require('electron') as {
+      ipcMain?: { removeAllListeners: (channel: string) => unknown };
+    };
+    for (const channel of SENTRY_IPC_CHANNELS) {
+      electron.ipcMain?.removeAllListeners(`${SENTRY_IPC_NAMESPACE}.${channel}`);
+    }
+  } catch {
+    // Electron is unavailable in standalone mode.
+  }
+}
+
+function closeSentryClient(sentry: SentryMainApi): void {
+  try {
+    void Promise.resolve(sentry.close?.(2000)).catch(() => undefined);
+  } catch {
+    // Best effort only. The telemetry gate still blocks later events.
+  }
+}
+
 function shutdownSentry(): void {
   const sentry = Sentry;
+  removeMainSentryIpcListeners();
   if (initialized && sentry) {
     sentry.setUser?.(null);
-    try {
-      void Promise.resolve(sentry.close?.(2000)).catch(() => undefined);
-    } catch {
-      // Best effort only. The telemetry gate still blocks later events.
-    }
+    closeSentryClient(sentry);
   }
 
   initialized = false;
   Sentry = null;
+}
+
+export function getMainSentryStatus(): SentryTelemetryStatus {
+  const dsnConfigured = isValidDsn(process.env.SENTRY_DSN);
+  let state: SentryTelemetryStatus['state'];
+  let reason: SentryTelemetryStatus['reason'];
+
+  if (!telemetryAllowed) {
+    state = 'disabled';
+    reason = 'telemetry-disabled';
+  } else if (!dsnConfigured) {
+    state = 'unconfigured';
+    reason = 'invalid-dsn';
+  } else if (initialized && Sentry) {
+    state = 'active';
+    reason = null;
+  } else {
+    state = 'failed';
+    reason = initFailureReason ?? 'sdk-init-failed';
+  }
+
+  return {
+    state,
+    reason,
+    environment: SENTRY_ENVIRONMENT,
+    release: SENTRY_RELEASE ?? null,
+  };
 }
 
 export async function getCurrentSentryTelemetryContext(): Promise<SentryTelemetryContext | null> {
@@ -223,24 +303,35 @@ async function syncTelemetryIdentity(): Promise<void> {
   }
 }
 
-function initializeSentryIfAllowed(): void {
+export function initializeMainSentry(): void {
   if (initialized || !telemetryAllowed) {
     return;
   }
 
   const dsn = process.env.SENTRY_DSN;
   if (!isValidDsn(dsn)) {
+    initFailureReason = null;
     return;
   }
 
+  let sentryApi: SentryMainApi;
   try {
-    // Dynamic import would be cleaner but top-level await is not available
-    // in all contexts. require() is synchronous and works in both Electron
-    // and Node.js - it simply throws in standalone mode where the electron
-    // module is not resolvable.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy optional Electron runtime dependency.
-    Sentry = require('@sentry/electron/main') as SentryMainApi;
-    Sentry.init?.({
+    sentryApi = loadSentryMainApi() as SentryMainApi;
+  } catch {
+    Sentry = null;
+    initialized = false;
+    initFailureReason = 'sdk-load-failed';
+    return;
+  }
+
+  Sentry = sentryApi;
+  try {
+    const classicIpcMode = sentryApi.IPCMode?.Classic;
+    if (typeof sentryApi.init !== 'function' || typeof classicIpcMode !== 'number') {
+      throw new Error('Sentry Electron classic IPC is unavailable');
+    }
+
+    sentryApi.init({
       dsn,
       release: SENTRY_RELEASE,
       environment: SENTRY_ENVIRONMENT,
@@ -250,19 +341,21 @@ function initializeSentryIfAllowed(): void {
       beforeSend: filterSentryEventForTelemetry,
       beforeSendTransaction: filterSentryEventForTelemetry,
       integrations: filterSafeSentryIntegrations,
+      // The app provides an explicit classic preload bridge. Protocol mode
+      // cannot be registered after Electron ready when telemetry is enabled later.
+      ipcMode: classicIpcMode,
     });
     initialized = true;
+    initFailureReason = null;
     void syncTelemetryIdentity();
   } catch {
+    removeMainSentryIpcListeners();
+    closeSentryClient(sentryApi);
     Sentry = null;
     initialized = false;
-    // @sentry/electron/main requires Electron runtime - not available in
-    // standalone (pure Node.js) mode. All exported helpers are no-ops when
-    // initialized is false, so this is safe to swallow.
+    initFailureReason = 'sdk-init-failed';
   }
 }
-
-initializeSentryIfAllowed();
 
 // ---------------------------------------------------------------------------
 // Public helpers (no-op when Sentry is not configured)
@@ -276,6 +369,19 @@ export function addMainBreadcrumb(
 ): void {
   if (!initialized) return;
   Sentry?.addBreadcrumb?.({ category, message, level: 'info' });
+}
+
+/** Capture a handled main-process exception with a bounded, low-cardinality operation tag. */
+export function captureMainException(error: unknown, operation: string): string | undefined {
+  if (!initialized || !telemetryAllowed || !Sentry?.captureException) {
+    return undefined;
+  }
+
+  const safeOperation = /^[a-z0-9_.:-]{1,64}$/.test(operation) ? operation : 'main_unknown';
+  const exception = error instanceof Error ? error : new Error('Non-Error exception');
+  return Sentry.captureException(exception, {
+    tags: { 'error.operation': safeOperation },
+  });
 }
 
 /**

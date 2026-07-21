@@ -1241,6 +1241,60 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
+  it('hides a transient Codex install action while account status is loading', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    codexAccountHookState.loading = true;
+    storeState.cliInstallerState = 'idle';
+    storeState.codexRuntimeStatus = {
+      installed: false,
+      source: 'missing',
+      state: 'idle',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: false,
+      providers: [
+        createCodexNativeRolloutProvider({
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'error',
+          state: 'runtime-missing',
+          available: false,
+          selectable: false,
+          statusMessage: 'Codex CLI not found. Install Codex to use native account management.',
+          detailMessage: 'Codex native runtime is missing.',
+          models: [],
+        }),
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Checking...');
+    expect(host.textContent).not.toContain('Codex CLI not found');
+    expect(
+      Array.from(host.querySelectorAll('button')).some(
+        (button) => button.textContent?.trim() === 'Install'
+      )
+    ).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('opens the shared Codex update dialog for an installed stale runtime', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';

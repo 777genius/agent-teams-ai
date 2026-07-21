@@ -90,6 +90,22 @@ describe('preload electronAPI memberWorkSync wiring', () => {
     expect(mocks.ipcRenderer.send).toHaveBeenCalledWith('sentry-ipc.start');
   });
 
+  it('exposes sanitized Sentry health through the telemetry bridge', async () => {
+    await import('../../src/preload/index');
+
+    const electronAPI = getExposedValue<ElectronAPI>('electronAPI');
+    const expectedStatus = {
+      state: 'active' as const,
+      reason: null,
+      environment: 'production' as const,
+      release: 'agent-teams-ai@2.10.0',
+    };
+    mocks.ipcRenderer.invoke.mockResolvedValueOnce(expectedStatus);
+
+    await expect(electronAPI.telemetry.getSentryStatus()).resolves.toBe(expectedStatus);
+    expect(mocks.ipcRenderer.invoke).toHaveBeenCalledWith('telemetry:getSentryStatus');
+  });
+
   it('wires the Windows elevation status API to the app IPC channel', async () => {
     await import('../../src/preload/index');
 

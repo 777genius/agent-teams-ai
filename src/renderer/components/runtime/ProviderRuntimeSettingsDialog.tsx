@@ -60,6 +60,7 @@ import {
   getProviderConnectLabel,
   getProviderCurrentRuntimeSummary,
   isConnectionManagedRuntimeProvider,
+  shouldMaskCodexNegativeBootstrapState,
 } from './providerConnectionUi';
 import {
   buildProviderRuntimeBackendSummaryText,
@@ -1181,8 +1182,15 @@ export const ProviderRuntimeSettingsDialog = ({
   const runtimeSummary = selectedProvider
     ? getProviderRuntimeBackendSummary(selectedProvider, runtimeBackendSummaryText)
     : null;
-  const codexConnection =
+  const sourceCodexConnection =
     selectedProvider?.providerId === 'codex' ? (selectedProvider.connection?.codex ?? null) : null;
+  const maskCodexNegativeBootstrapState = selectedProvider
+    ? shouldMaskCodexNegativeBootstrapState(statusSelectedProvider, selectedProvider, {
+        providerLoading: selectedProviderLoading || codexAccount.loading,
+        runtimeLoading: codexRuntimeStatusLoading,
+      })
+    : false;
+  const codexConnection = maskCodexNegativeBootstrapState ? null : sourceCodexConnection;
   const codexHasActiveChatgptSession =
     codexConnection?.effectiveAuthMode === 'chatgpt' && codexConnection.launchAllowed === true;
   const codexNeedsReconnect =
@@ -1238,10 +1246,14 @@ export const ProviderRuntimeSettingsDialog = ({
     apiKeyConfig &&
     (selectedProvider?.providerId !== 'codex' || !selectedProvider.connection?.supportsOAuth)
   );
-  const connectionAlert = selectedProvider ? getConnectionAlert(selectedProvider, t) : null;
+  const connectionAlert =
+    selectedProvider && !maskCodexNegativeBootstrapState
+      ? getConnectionAlert(selectedProvider, t)
+      : null;
   const connectionLoading =
     selectedProviderLoading ||
     connectionSaving ||
+    maskCodexNegativeBootstrapState ||
     Boolean(selectedProvider?.providerId === 'codex' && codexAccount.loading && !codexConnection);
   const connectionBusy = disabled || connectionLoading;
   const codexActionBusy =
@@ -1252,6 +1264,7 @@ export const ProviderRuntimeSettingsDialog = ({
   );
   const showCodexRuntimeInstallAction =
     selectedProvider?.providerId === 'codex' &&
+    !maskCodexNegativeBootstrapState &&
     typeof onInstallCodexRuntime === 'function' &&
     isCodexProviderRuntimeMissing(selectedProvider) &&
     shouldOfferCodexRuntimeInstall(codexRuntimeStatus);
@@ -1272,13 +1285,11 @@ export const ProviderRuntimeSettingsDialog = ({
   const connectionMethodCardsHint = selectedProvider
     ? getConnectionMethodCardsHint(selectedProvider, t)
     : null;
-  const codexAccountPanelHint = getCodexAccountPanelHint(
-    selectedProvider ?? null,
-    configuredAuthMode,
-    t
-  );
+  const codexAccountPanelHint = maskCodexNegativeBootstrapState
+    ? null
+    : getCodexAccountPanelHint(selectedProvider ?? null, configuredAuthMode, t);
   const codexFastCapability = useMemo(() => {
-    if (selectedProvider?.providerId !== 'codex') {
+    if (selectedProvider?.providerId !== 'codex' || maskCodexNegativeBootstrapState) {
       return null;
     }
     const fastProbeModel =
@@ -1295,7 +1306,7 @@ export const ProviderRuntimeSettingsDialog = ({
       selection,
       selectedFastMode: 'on',
     });
-  }, [codexAccount.snapshot, selectedProvider]);
+  }, [codexAccount.snapshot, maskCodexNegativeBootstrapState, selectedProvider]);
   const codexFastCapabilityHint =
     selectedProvider?.providerId === 'codex' && codexFastCapability
       ? codexFastCapability.selectable
@@ -1374,17 +1385,21 @@ export const ProviderRuntimeSettingsDialog = ({
     selectedProvider?.providerId === 'opencode'
       ? getOpenCodeVersionLabel(selectedProvider.detailMessage)
       : null;
-  const selectedProviderSummaryLabel = selectedProvider
-    ? (selectedOpenCodeVersionLabel ?? getProviderUsageLabel(selectedProvider, t))
-    : null;
-  const selectedProviderDetailMessage =
-    selectedProvider?.providerId === 'opencode'
+  const selectedProviderSummaryLabel = maskCodexNegativeBootstrapState
+    ? t('providerRuntime.connectionUi.status.checking')
+    : selectedProvider
+      ? (selectedOpenCodeVersionLabel ?? getProviderUsageLabel(selectedProvider, t))
+      : null;
+  const selectedProviderDetailMessage = maskCodexNegativeBootstrapState
+    ? null
+    : selectedProvider?.providerId === 'opencode'
       ? selectedOpenCodeVersionLabel
         ? null
         : getCompactOpenCodeProviderDetailMessage(selectedProvider.detailMessage)
       : (selectedProvider?.detailMessage ?? null);
-  const selectedProviderDiagnostics =
-    selectedProvider?.providerId === 'opencode'
+  const selectedProviderDiagnostics = maskCodexNegativeBootstrapState
+    ? []
+    : selectedProvider?.providerId === 'opencode'
       ? []
       : (selectedProvider?.externalRuntimeDiagnostics ?? []);
 
@@ -2780,13 +2795,15 @@ export const ProviderRuntimeSettingsDialog = ({
                               : 'rgba(255, 255, 255, 0.05)',
                         }}
                       >
-                        {codexHasActiveChatgptSession
-                          ? t('providerRuntime.codex.account.connected')
-                          : codexNeedsReconnect
-                            ? t('providerRuntime.codex.account.reconnectRequired')
-                            : codexLoginPending
-                              ? t('providerRuntime.codex.account.loginInProgress')
-                              : t('providerRuntime.usage.notConnected')}
+                        {maskCodexNegativeBootstrapState
+                          ? t('providerRuntime.connectionUi.status.checking')
+                          : codexHasActiveChatgptSession
+                            ? t('providerRuntime.codex.account.connected')
+                            : codexNeedsReconnect
+                              ? t('providerRuntime.codex.account.reconnectRequired')
+                              : codexLoginPending
+                                ? t('providerRuntime.codex.account.loginInProgress')
+                                : t('providerRuntime.usage.notConnected')}
                       </span>
                       {codexConnection ? (
                         <span

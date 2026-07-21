@@ -23,7 +23,7 @@ import {
   earlyElectronDevPathOverrideResult,
   earlyElectronUserDataMigrationResult,
 } from './bootstrapUserDataMigration';
-import './sentry';
+import './sentryBootstrap';
 
 import type {
   AppCloseReadinessResult,
@@ -255,7 +255,7 @@ import {
   captureStartupMemorySnapshot,
   formatStartupMemorySnapshot,
 } from './utils/startupTelemetry';
-import { syncTelemetryFlag } from './sentry';
+import { captureMainException, getMainSentryStatus, syncTelemetryFlag } from './sentry';
 import { setCodexRuntimeMainWindow } from './ipc/codexRuntime';
 import {
   ActiveTeamRegistry,
@@ -3289,6 +3289,7 @@ function createWindow(): void {
   } else {
     void mainWindow.loadFile(getRendererIndexPath()).catch((error: unknown) => {
       logger.error('Failed to load renderer entry HTML:', error);
+      captureMainException(error, 'renderer_load_file');
     });
   }
 
@@ -3345,6 +3346,10 @@ function createWindow(): void {
       if (isMainFrame) {
         logger.error(
           `Failed to load renderer (code=${errorCode}): ${errorDescription} - ${validatedURL}`
+        );
+        captureMainException(
+          new Error(`Renderer main-frame load failed with code ${errorCode}`),
+          'renderer_did_fail_load'
         );
       }
     }
@@ -3455,6 +3460,12 @@ function createWindow(): void {
     if (isShutdownStarted()) {
       return;
     }
+    if (details.reason !== 'clean-exit' && details.reason !== 'killed') {
+      captureMainException(
+        new Error(`Renderer process terminated: ${details.reason}`),
+        'renderer_process_gone'
+      );
+    }
     markRendererUnavailable(mainWindow);
     rendererDidFinishLoad = false;
     fileWatcherStartupStarted = false;
@@ -3478,6 +3489,16 @@ void app.whenReady().then(async () => {
     directory: app.getPath('logs'),
     appVersion: app.getVersion(),
   });
+  const sentryStatus = getMainSentryStatus();
+  if (
+    sentryStatus.state === 'failed' ||
+    (sentryStatus.environment === 'production' && sentryStatus.state === 'unconfigured')
+  ) {
+    logger.error(
+      `[sentry] unavailable: state=${sentryStatus.state} reason=${sentryStatus.reason} ` +
+        `environment=${sentryStatus.environment} release=${sentryStatus.release ?? 'unknown'}`
+    );
+  }
   logger.info('App ready, initializing...');
   configureFatalDiagnosticReport({
     directory: join(app.getPath('userData'), 'diagnostics'),
@@ -3542,6 +3563,7 @@ void app.whenReady().then(async () => {
     });
   } catch (error) {
     logger.error('Startup initialization failed:', error);
+    captureMainException(error, 'startup_initialization');
     publishStartupStatus({
       phase: 'failed',
       message: 'Startup failed',

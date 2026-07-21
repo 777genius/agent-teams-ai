@@ -6,6 +6,7 @@ import {
   resolveAnthropicRuntimeSelection,
 } from '@features/anthropic-runtime-profile/renderer';
 import {
+  isCodexAccountSnapshotPending,
   mergeCodexCliStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
@@ -387,9 +388,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     [loadingCliStatus, codexAccount.snapshot]
   );
   const codexSnapshotPending =
-    codexAccount.loading &&
-    Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')) &&
-    !codexAccount.snapshot;
+    isCodexAccountSnapshotPending(codexAccount.loading, codexAccount.snapshot) &&
+    Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex'));
   const globalRuntimeProviderStatusById = useMemo(
     () =>
       new Map(
@@ -1228,6 +1228,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setAnthropicRuntimeNotice(null);
       return;
     }
+    if (selectedProviderId === 'codex' && codexSnapshotPending) {
+      setAnthropicRuntimeNotice(null);
+      return;
+    }
 
     const reconciliation =
       selectedProviderId === 'anthropic'
@@ -1297,6 +1301,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     anthropicProviderFastModeDefault,
     anthropicRuntimeSelection,
     codexRuntimeSelection,
+    codexSnapshotPending,
     effectiveAnthropicRuntimeLimitContext,
     previousLaunchParams?.providerBackendId,
     runtimeProviderStatusById,

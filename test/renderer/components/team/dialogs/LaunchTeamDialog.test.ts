@@ -2032,6 +2032,100 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
+  it('does not reset Codex Fast mode while the account snapshot is still pending', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.getCodexAccountSnapshot).mockImplementationOnce(
+      () => new Promise(() => undefined)
+    );
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'codex',
+          supported: true,
+          authenticated: false,
+          verificationState: 'error',
+          selectedBackendId: 'codex-native',
+          resolvedBackendId: 'codex-native',
+          models: ['gpt-5.4'],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'codex',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-07-21T00:00:00.000Z',
+            defaultModelId: 'gpt-5.4',
+            defaultLaunchModel: 'gpt-5.4',
+            models: [],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'runtime-missing',
+            },
+          },
+          connection: {
+            codex: {
+              effectiveAuthMode: null,
+              launchAllowed: false,
+              launchIssueMessage: 'Codex CLI not found',
+              launchReadinessState: 'runtime_missing',
+            },
+          },
+        },
+      ],
+    } as any;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'schedule',
+          open: true,
+          teamName: 'team-alpha',
+          onClose: vi.fn(),
+          schedule: {
+            id: 'schedule-pending-codex',
+            teamName: 'team-alpha',
+            label: 'Codex pending account',
+            cronExpression: '0 10 * * 1-5',
+            timezone: 'UTC',
+            status: 'active',
+            warmUpMinutes: 15,
+            maxConsecutiveFailures: 3,
+            consecutiveFailures: 0,
+            maxTurns: 50,
+            createdAt: '2026-07-21T00:00:00.000Z',
+            updatedAt: '2026-07-21T00:00:00.000Z',
+            launchConfig: {
+              cwd: '/tmp/project',
+              prompt: 'Run Codex scheduled check',
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              model: 'gpt-5.4',
+              effort: 'xhigh',
+              fastMode: 'on',
+              resolvedFastMode: true,
+              skipPermissions: true,
+            },
+          } as any,
+        })
+      );
+      await flush();
+    });
+
+    expect(host.querySelector('[data-testid="codex-fast-mode-selector"]')?.textContent).toContain(
+      'codex-fast:on'
+    );
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
   it('saves Codex schedule Fast mode when GPT-5.4 ChatGPT eligibility is available', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {

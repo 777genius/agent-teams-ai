@@ -1,6 +1,7 @@
 import { Component, type JSX, type ReactNode } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { captureRendererException } from '@renderer/sentry';
 import { AlertTriangle } from 'lucide-react';
 
 interface DiffErrorBoundaryProps {
@@ -42,6 +43,7 @@ class DiffErrorBoundaryInner extends Component<
       error,
       errorInfo
     );
+    captureRendererException(error, { componentStack: errorInfo.componentStack });
   }
 
   render(): JSX.Element {

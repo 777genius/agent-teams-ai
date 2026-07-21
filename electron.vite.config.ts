@@ -9,6 +9,7 @@ import {
   isOfficialPostHogReleaseBuild,
   resolvePostHogBuildKey,
 } from './src/shared/utils/posthogBuildPolicy'
+import { resolveSentryBuildEnvironment } from './src/shared/utils/sentryBuildPolicy'
 
 // Read all production dependencies from package.json
 // so they get bundled into the main process output.
@@ -21,6 +22,7 @@ const rendererDependencyEsbuildTarget = 'esnext'
 const localEnv = loadEnv(process.env.NODE_ENV ?? 'development', __dirname, '')
 const buildGitSha = resolveBuildGitSha()
 const buildId = resolveBuildId(buildGitSha)
+const sentryEnvironment = resolveSentryBuildEnvironment(process.env)
 const releaseChannel = resolveReleaseChannel()
 const officialPostHogBuild = isOfficialPostHogReleaseBuild(process.env)
 const posthogKey = resolvePostHogBuildKey(process.env, localEnv)
@@ -94,7 +96,7 @@ function resolveReleaseChannel(): string {
       localEnv.AGENT_TEAMS_RELEASE_CHANNEL,
       process.env.VITE_RELEASE_CHANNEL,
       localEnv.VITE_RELEASE_CHANNEL
-    ) || (process.env.NODE_ENV === 'production' ? 'production' : 'development')
+    ) || sentryEnvironment
   )
 }
 
@@ -183,6 +185,7 @@ export default defineConfig({
       __BUILD_GIT_SHA__: JSON.stringify(buildGitSha),
       __BUILD_ID__: JSON.stringify(buildId),
       __RELEASE_CHANNEL__: JSON.stringify(releaseChannel),
+      __SENTRY_ENVIRONMENT__: JSON.stringify(sentryEnvironment),
       // Inject DSN at compile time - process.env.SENTRY_DSN is NOT available
       // at runtime in packaged Electron apps (only during CI build).
       'process.env.SENTRY_DSN': JSON.stringify(process.env.SENTRY_DSN ?? ''),
@@ -275,6 +278,7 @@ export default defineConfig({
       __BUILD_GIT_SHA__: JSON.stringify(buildGitSha),
       __BUILD_ID__: JSON.stringify(buildId),
       __RELEASE_CHANNEL__: JSON.stringify(releaseChannel),
+      __SENTRY_ENVIRONMENT__: JSON.stringify(sentryEnvironment),
       __OFFICIAL_POSTHOG_BUILD__: JSON.stringify(officialPostHogBuild),
       // Pass SENTRY_DSN to renderer as VITE_SENTRY_DSN (Vite replaces at compile time)
       'import.meta.env.VITE_SENTRY_DSN': JSON.stringify(process.env.SENTRY_DSN ?? ''),

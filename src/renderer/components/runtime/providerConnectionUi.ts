@@ -260,17 +260,24 @@ export function shouldMaskCodexNegativeBootstrapState(
     | null
     | undefined,
   mergedProvider: Pick<CliProviderStatus, 'providerId' | 'connection' | 'modelCatalogRefreshState'>,
-  options: { providerLoading?: boolean } = {}
+  options: { providerLoading?: boolean; runtimeLoading?: boolean } = {}
 ): boolean {
+  const codexConnection = mergedProvider.connection?.codex;
+  const launchReadinessState = codexConnection?.launchReadinessState;
   if (
     mergedProvider.providerId !== 'codex' ||
-    mergedProvider.connection?.codex?.launchReadinessState !== 'missing_auth' ||
-    mergedProvider.connection.codex.login.status !== 'idle'
+    !codexConnection ||
+    (launchReadinessState !== 'missing_auth' && launchReadinessState !== 'runtime_missing') ||
+    codexConnection.login.status !== 'idle'
   ) {
     return false;
   }
 
-  if (options.providerLoading || mergedProvider.modelCatalogRefreshState === 'loading') {
+  if (
+    options.providerLoading ||
+    options.runtimeLoading ||
+    mergedProvider.modelCatalogRefreshState === 'loading'
+  ) {
     return true;
   }
 

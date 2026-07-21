@@ -44,6 +44,11 @@ if (process.env.AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE !== '1') {
 // Mock Sentry Electron SDK - it requires the real `electron` package at import
 // time which is unavailable in the vitest/happy-dom environment.
 const sentryNoOp = {
+  IPCMode: {
+    Classic: 1,
+    Protocol: 2,
+    Both: 3,
+  },
   init: vi.fn(),
   addBreadcrumb: vi.fn(),
   captureException: vi.fn(),

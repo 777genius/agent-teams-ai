@@ -41,6 +41,7 @@ import {
   type TokenUsageElectronApi,
   type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
+import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
 import type {
   CodexAccountSnapshotDto,
@@ -196,6 +197,12 @@ export class HttpAPIClient implements ElectronAPI {
   private eventListeners = new Map<string, Set<(...args: any[]) => void>>();
   telemetry = {
     getSentryContext: async (): Promise<null> => null,
+    getSentryStatus: async () => ({
+      state: 'unconfigured' as const,
+      reason: 'invalid-dsn' as const,
+      environment: SENTRY_ENVIRONMENT,
+      release: SENTRY_RELEASE ?? null,
+    }),
   };
   teamImport: TeamImportApi = {
     chooseFolderAndPreview: async () => {

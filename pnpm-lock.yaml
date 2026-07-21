@@ -18,10 +18,10 @@ overrides:
   '@hono/node-server@1': 1.19.13
   '@opentelemetry/core': 2.8.0
   '@xmldom/xmldom': 0.8.13
-  axios: 1.16.1
-  brace-expansion@1: 1.1.13
-  brace-expansion@2: 2.0.3
-  brace-expansion@5: 5.0.6
+  axios: 1.18.1
+  brace-expansion@1: 1.1.16
+  brace-expansion@2: 2.1.2
+  brace-expansion@5: 5.0.7
   defu: 6.1.5
   devalue: 5.8.1
   esbuild: 0.28.1
@@ -52,11 +52,11 @@ overrides:
   qs: 6.15.2
   rollup: 4.59.0
   serialize-javascript: 7.0.5
-  shell-quote: 1.8.4
+  shell-quote: 1.10.0
   simple-git: 3.36.0
   smol-toml: 1.6.1
   srvx: 0.11.13
-  tar: 7.5.17
+  tar: 7.5.20
   form-data: 4.0.6
   tmp: 0.2.7
   undici@6: 6.27.0
@@ -68,39 +68,17 @@ overrides:
   yaml: 2.9.0
 
 patchedDependencies:
-  '@radix-ui/react-checkbox@1.3.3':
-    hash: 80a226b85c8e8a94674990c0eedf6d3709af6649df83bbed6f3ae930783e6d7d
-    path: patches/@radix-ui__react-checkbox@1.3.3.patch
-  '@radix-ui/react-dismissable-layer@1.1.11':
-    hash: c9a989c59554b1942cebb761daaaeb964304d965d236cb0bd2142c4d8f8032c3
-    path: patches/@radix-ui__react-dismissable-layer@1.1.11.patch
-  '@radix-ui/react-focus-scope@1.1.7':
-    hash: cce5af533d09e336a548ebb15555869267a2545df720cfe228aa0a98da80e829
-    path: patches/@radix-ui__react-focus-scope@1.1.7.patch
-  '@radix-ui/react-menu@2.1.16':
-    hash: a59dc5aa0792599fc395b6db50cae81f2bcdb76e9d28205b12ce88906d3aeaa0
-    path: patches/@radix-ui__react-menu@2.1.16.patch
-  '@radix-ui/react-popper@1.2.8':
-    hash: bab709aa37cbdb3023036cd85534ddb1400f2fccfe54bd6321fe405d5d199404
-    path: patches/@radix-ui__react-popper@1.2.8.patch
-  '@radix-ui/react-presence@1.1.5':
-    hash: afe90f800cfb3b1ce1a9c457772e2441a9202e1aa3f8658eb3b9613b3ba0ef7e
-    path: patches/@radix-ui__react-presence@1.1.5.patch
-  '@radix-ui/react-select@2.2.6':
-    hash: 93cdd02c858fd8e3669eb902abbbd15644c2581c4c33aa63862fa351fefb4231
-    path: patches/@radix-ui__react-select@2.2.6.patch
-  '@radix-ui/react-slot@1.2.3':
-    hash: cc153761e59f07565f64cf0883bb098c78bb27bed60b7363eaadb74ad4317504
-    path: patches/@radix-ui__react-slot@1.2.3.patch
-  '@radix-ui/react-slot@1.2.4':
-    hash: 5c525e90054caa3bbfa5599b10f7650914e2085f54b773bd115ad0e41eeca30a
-    path: patches/@radix-ui__react-slot@1.2.4.patch
-  '@radix-ui/react-tooltip@1.2.8':
-    hash: 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
-    path: patches/@radix-ui__react-tooltip@1.2.8.patch
-  fastmcp@3.35.0:
-    hash: 7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df
-    path: patches/fastmcp@3.35.0.patch
+  '@radix-ui/react-checkbox@1.3.3': 80a226b85c8e8a94674990c0eedf6d3709af6649df83bbed6f3ae930783e6d7d
+  '@radix-ui/react-dismissable-layer@1.1.11': c9a989c59554b1942cebb761daaaeb964304d965d236cb0bd2142c4d8f8032c3
+  '@radix-ui/react-focus-scope@1.1.7': cce5af533d09e336a548ebb15555869267a2545df720cfe228aa0a98da80e829
+  '@radix-ui/react-menu@2.1.16': a59dc5aa0792599fc395b6db50cae81f2bcdb76e9d28205b12ce88906d3aeaa0
+  '@radix-ui/react-popper@1.2.8': bab709aa37cbdb3023036cd85534ddb1400f2fccfe54bd6321fe405d5d199404
+  '@radix-ui/react-presence@1.1.5': afe90f800cfb3b1ce1a9c457772e2441a9202e1aa3f8658eb3b9613b3ba0ef7e
+  '@radix-ui/react-select@2.2.6': 93cdd02c858fd8e3669eb902abbbd15644c2581c4c33aa63862fa351fefb4231
+  '@radix-ui/react-slot@1.2.3': cc153761e59f07565f64cf0883bb098c78bb27bed60b7363eaadb74ad4317504
+  '@radix-ui/react-slot@1.2.4': 5c525e90054caa3bbfa5599b10f7650914e2085f54b773bd115ad0e41eeca30a
+  '@radix-ui/react-tooltip@1.2.8': 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
+  fastmcp@3.35.0: 7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df
 
 importers:
 
@@ -361,12 +339,12 @@ importers:
       isbinaryfile:
         specifier: ^6.0.0
         version: 6.0.0
-      jsonc-parser:
-        specifier: 3.3.1
-        version: 3.3.1
       json-schema-ref-resolver:
         specifier: ^3.0.0
         version: 3.0.0
+      jsonc-parser:
+        specifier: 3.3.1
+        version: 3.3.1
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)
@@ -694,7 +672,7 @@ importers:
         version: 2.1.3(vite@7.3.5(@types/node@25.0.7)(jiti@2.7.0)(sass@1.98.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.9.0))(vue@3.5.30(typescript@5.9.3))(vuetify@3.12.3)
       vitepress:
         specifier: 2.0.0-alpha.17
-        version: 2.0.0-alpha.17(@types/node@25.0.7)(axios@1.16.1)(change-case@5.4.4)(fuse.js@7.3.0)(idb-keyval@6.2.2)(jiti@2.7.0)(oxc-minify@0.132.0)(postcss@8.5.10)(sass@1.98.0)(terser@5.46.0)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 2.0.0-alpha.17(@types/node@25.0.7)(axios@1.18.1)(change-case@5.4.4)(fuse.js@7.3.0)(idb-keyval@6.2.2)(jiti@2.7.0)(oxc-minify@0.132.0)(postcss@8.5.10)(sass@1.98.0)(terser@5.46.0)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       vitepress-codeblock-collapse:
         specifier: ^1.0.0
         version: 1.0.0(vue@3.5.30(typescript@5.9.3))
@@ -5049,7 +5027,7 @@ packages:
     resolution: {integrity: sha512-76I5FT2ESvCmCaSwapI+a/u/CFtNXmzl9f9lNp1hRtx8vKB8hfiokJr8IvQqcQG5ckGXElyXK516b54ozV3MvA==}
     peerDependencies:
       async-validator: ^4
-      axios: 1.16.1
+      axios: 1.18.1
       change-case: ^5
       drauu: ^0.4
       focus-trap: ^7 || ^8
@@ -5376,8 +5354,8 @@ packages:
     resolution: {integrity: sha512-BASOg+YwO2C+346x3LZOeoovTIoTrRqEsqMa6fmfAV0P+U9mFr9NsyOEpiYvFjbc64NMrSswhV50WdXzdb/Z5A==}
     engines: {node: '>=4'}
 
-  axios@1.16.1:
-    resolution: {integrity: sha512-caYkukvroVPO8KrzuJEb50Hm07KwfBZPEC3VeFHTsqWHvKTsy54hjJz9BS/cdaypROE2rH6xvm9mHX4fgWkr3A==}
+  axios@1.18.1:
+    resolution: {integrity: sha512-3nTvFlvpn9Zu/RkHUqtc7/+al4UpRW5az71ap5zccp6e8RAYEzhMTecX8Dz1wWDYrPpUoB1HAQEGEAEvUr7S9g==}
 
   axobject-query@4.1.0:
     resolution: {integrity: sha512-qIj0G9wZbMGNLjLmg1PT6v2mE9AH2zlnADJD/2tC6E00hgmhUOfEB6greHPAfLRSufHqROIUTkw6E+M3lH0PTQ==}
@@ -5478,14 +5456,14 @@ packages:
     resolution: {integrity: sha512-d0II/GO9uf9lfUHH2BQsjxzRJZBdsjgsBiW4BvhWk/3qoKwQFjIDVN19PfX8F2D/r9PCMTtLWjYVCFrpeYUzsw==}
     deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
-  brace-expansion@1.1.13:
-    resolution: {integrity: sha512-9ZLprWS6EENmhEOpjCYW2c8VkmOvckIJZfkr7rBW6dObmfgJ/L1GpSYW5Hpo9lDz4D1+n0Ckz8rU7FwHDQiG/w==}
+  brace-expansion@1.1.16:
+    resolution: {integrity: sha512-IDw48K2/2kRkg9LdJxurvq3lV3aBgq0REY89duEqFRthjlPdXHKMj7EnQOXVckxzgisinf3nHfrcE2FufFLXMw==}
 
-  brace-expansion@2.0.3:
-    resolution: {integrity: sha512-MCV/fYJEbqx68aE58kv2cA/kiky1G8vux3OR6/jbS+jIMe/6fJWa0DTzJU7dqijOWYwHi1t29FlfYI9uytqlpA==}
+  brace-expansion@2.1.2:
+    resolution: {integrity: sha512-w5JZcKgdhDOgOwm8H+KgbosopHMuGcl6qbulwjtz3SM7I7P3yW1eAjzMPLrIE+NQ9vjgANKHWeMHnrT0OXW1oA==}
 
-  brace-expansion@5.0.6:
-    resolution: {integrity: sha512-kLpxurY4Z4r9sgMsyG0Z9uzsBlgiU/EFKhj/h91/8yHu0edo7XuixOIH3VcJ8kkxs6/jPzoI6U9Vj3WqbMQ94g==}
+  brace-expansion@5.0.7:
+    resolution: {integrity: sha512-7oFy703dxfY3/NLxC1fh2SUCQ0H9rmAY+5EpDVfXjUTTs+HEwR2nYaqLv+GWcTsumwxPfiz6CzCNkwXwBUwqCA==}
     engines: {node: 18 || 20 || >=22}
 
   braces@3.0.3:
@@ -9949,8 +9927,8 @@ packages:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
 
-  shell-quote@1.8.4:
-    resolution: {integrity: sha512-VsC6n6vz1ihYYyZZwX7YZSF5l5x36ca17OC+a69h94YqB7X6XLwf+5MOgynYir2SLFUbl8gIYvBo8K8RoNQ6bQ==}
+  shell-quote@1.10.0:
+    resolution: {integrity: sha512-w1aiOKwKuRgtwAReIIj89puqg+I7GvX4IbLrvmhXbzQsj1+Zwi4VO3+fa6ZF91TWSjIxoEkKnMeHcLEODK5ZXA==}
     engines: {node: '>= 0.4'}
 
   shiki@3.23.0:
@@ -10298,8 +10276,8 @@ packages:
   tar-stream@3.1.8:
     resolution: {integrity: sha512-U6QpVRyCGHva435KoNWy9PRoi2IFYCgtEhq9nmrPPpbRacPs9IH4aJ3gbrFC8dPcXvdSZ4XXfXT5Fshbp2MtlQ==}
 
-  tar@7.5.17:
-    resolution: {integrity: sha512-wPEBwzapC+2PaTYPH6e2L+cNOEE227S47wUYFqlegcs8zlLLmeb9Fcff1HVZY4Fwku/1Eyv38n7GYwB2aaS71g==}
+  tar@7.5.20:
+    resolution: {integrity: sha512-9FcyK4PA6+WbzlTM9WhQm6vB5W7cP7dUiPsv1g7YDwEQnQ1CGpK3MGlKk/ITVWMk05kHZuBhmVhiv8LZoy/PFQ==}
     engines: {node: '>=18'}
 
   teex@1.0.1:
@@ -12827,7 +12805,7 @@ snapshots:
       node-fetch: 2.7.0(encoding@0.1.13)
       nopt: 8.1.0
       semver: 7.8.0
-      tar: 7.5.17
+      tar: 7.5.20
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -16231,13 +16209,13 @@ snapshots:
       '@vueuse/shared': 14.3.0(vue@3.5.30(typescript@5.9.3))
       vue: 3.5.30(typescript@5.9.3)
 
-  '@vueuse/integrations@14.3.0(axios@1.16.1)(change-case@5.4.4)(focus-trap@8.2.0)(fuse.js@7.3.0)(idb-keyval@6.2.2)(vue@3.5.30(typescript@5.9.3))':
+  '@vueuse/integrations@14.3.0(axios@1.18.1)(change-case@5.4.4)(focus-trap@8.2.0)(fuse.js@7.3.0)(idb-keyval@6.2.2)(vue@3.5.30(typescript@5.9.3))':
     dependencies:
       '@vueuse/core': 14.3.0(vue@3.5.30(typescript@5.9.3))
       '@vueuse/shared': 14.3.0(vue@3.5.30(typescript@5.9.3))
       vue: 3.5.30(typescript@5.9.3)
     optionalDependencies:
-      axios: 1.16.1(debug@4.4.3)
+      axios: 1.18.1(debug@4.4.3)
       change-case: 5.4.4
       focus-trap: 8.2.0
       fuse.js: 7.3.0
@@ -16402,7 +16380,7 @@ snapshots:
       proper-lockfile: 4.1.2
       resedit: 1.7.2
       semver: 7.7.4
-      tar: 7.5.17
+      tar: 7.5.20
       temp-file: 3.4.0
       tiny-async-pool: 1.3.0
       which: 5.0.0
@@ -16599,7 +16577,7 @@ snapshots:
 
   axe-core@4.11.1: {}
 
-  axios@1.16.1(debug@4.4.3):
+  axios@1.18.1(debug@4.4.3):
     dependencies:
       follow-redirects: 1.16.0(debug@4.4.3)
       form-data: 4.0.6
@@ -16691,16 +16669,16 @@ snapshots:
   boolean@3.2.0:
     optional: true
 
-  brace-expansion@1.1.13:
+  brace-expansion@1.1.16:
     dependencies:
       balanced-match: 1.0.2
       concat-map: 0.0.1
 
-  brace-expansion@2.0.3:
+  brace-expansion@2.1.2:
     dependencies:
       balanced-match: 1.0.2
 
-  brace-expansion@5.0.6:
+  brace-expansion@5.0.7:
     dependencies:
       balanced-match: 4.0.3
 
@@ -19688,7 +19666,7 @@ snapshots:
   launch-editor@2.14.1:
     dependencies:
       picocolors: 1.1.1
-      shell-quote: 1.8.4
+      shell-quote: 1.10.0
 
   layout-base@1.0.2: {}
 
@@ -20386,19 +20364,19 @@ snapshots:
 
   minimatch@10.2.3:
     dependencies:
-      brace-expansion: 5.0.6
+      brace-expansion: 5.0.7
 
   minimatch@3.1.4:
     dependencies:
-      brace-expansion: 1.1.13
+      brace-expansion: 1.1.16
 
   minimatch@5.1.8:
     dependencies:
-      brace-expansion: 2.0.3
+      brace-expansion: 2.1.2
 
   minimatch@9.0.7:
     dependencies:
-      brace-expansion: 5.0.6
+      brace-expansion: 5.0.7
 
   minimist@1.2.8: {}
 
@@ -20620,7 +20598,7 @@ snapshots:
       nopt: 9.0.0
       proc-log: 6.1.0
       semver: 7.7.4
-      tar: 7.5.17
+      tar: 7.5.20
       tinyglobby: 0.2.15
       undici: 6.27.0
       which: 6.0.1
@@ -21209,7 +21187,7 @@ snapshots:
 
   pipenet@1.4.0:
     dependencies:
-      axios: 1.16.1(debug@4.4.3)
+      axios: 1.18.1(debug@4.4.3)
       debug: 4.4.3
       human-readable-ids: 1.0.4
       koa: 3.1.2
@@ -22291,7 +22269,7 @@ snapshots:
 
   shebang-regex@3.0.0: {}
 
-  shell-quote@1.8.4: {}
+  shell-quote@1.10.0: {}
 
   shiki@3.23.0:
     dependencies:
@@ -22695,7 +22673,7 @@ snapshots:
       - bare-buffer
       - react-native-b4a
 
-  tar@7.5.17:
+  tar@7.5.20:
     dependencies:
       '@isaacs/fs-minipass': 4.0.1
       chownr: 3.0.0
@@ -23510,7 +23488,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  vitepress@2.0.0-alpha.17(@types/node@25.0.7)(axios@1.16.1)(change-case@5.4.4)(fuse.js@7.3.0)(idb-keyval@6.2.2)(jiti@2.7.0)(oxc-minify@0.132.0)(postcss@8.5.10)(sass@1.98.0)(terser@5.46.0)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0):
+  vitepress@2.0.0-alpha.17(@types/node@25.0.7)(axios@1.18.1)(change-case@5.4.4)(fuse.js@7.3.0)(idb-keyval@6.2.2)(jiti@2.7.0)(oxc-minify@0.132.0)(postcss@8.5.10)(sass@1.98.0)(terser@5.46.0)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0):
     dependencies:
       '@docsearch/css': 4.6.3
       '@docsearch/js': 4.6.3
@@ -23524,7 +23502,7 @@ snapshots:
       '@vue/devtools-api': 8.1.1
       '@vue/shared': 3.5.30
       '@vueuse/core': 14.3.0(vue@3.5.30(typescript@5.9.3))
-      '@vueuse/integrations': 14.3.0(axios@1.16.1)(change-case@5.4.4)(focus-trap@8.2.0)(fuse.js@7.3.0)(idb-keyval@6.2.2)(vue@3.5.30(typescript@5.9.3))
+      '@vueuse/integrations': 14.3.0(axios@1.18.1)(change-case@5.4.4)(focus-trap@8.2.0)(fuse.js@7.3.0)(idb-keyval@6.2.2)(vue@3.5.30(typescript@5.9.3))
       focus-trap: 8.2.0
       mark.js: 8.11.1
       minisearch: 7.2.0
