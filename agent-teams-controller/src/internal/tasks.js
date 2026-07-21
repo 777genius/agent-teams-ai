@@ -26,6 +26,85 @@ function assertKnownTaskActor(context, value, label) {
     });
 }
 
+function resolveAgentTaskMutationActor(context, actor, action) {
+    const normalizedActor = normalizeActorName(actor);
+    if (context.allowUserMessageSender !== false) {
+        return normalizedActor || undefined;
+    }
+    if (!normalizedActor) {
+        throw new Error(`${action} requires actor to be your configured teammate name.`);
+    }
+    return assertKnownTaskActor(context, normalizedActor, 'task actor');
+}
+
+function isLeadTaskActor(context, actor) {
+    const leadName = runtimeHelpers.inferLeadName(context.paths);
+    return isSameTaskMember(actor, leadName, leadName);
+}
+
+function assertTaskOwnerMutation(context, task, actor, action, options = {}) {
+    const resolvedActor = resolveAgentTaskMutationActor(context, actor, action);
+    if (context.allowUserMessageSender !== false) {
+        return resolvedActor;
+    }
+
+    const owner = normalizeActorName(task && task.owner);
+    const leadName = runtimeHelpers.inferLeadName(context.paths);
+    if (owner && isSameTaskMember(owner, resolvedActor, leadName)) {
+        return resolvedActor;
+    }
+    if (options.allowLeadOverride === true && isLeadTaskActor(context, resolvedActor)) {
+        return resolvedActor;
+    }
+
+    const taskLabel = `#${task.displayId || task.id}`;
+    if (!owner) {
+        throw new Error(
+            `Task ${taskLabel} is unassigned; ${resolvedActor} cannot ${action}. ` +
+                'Claim it with task_set_owner before changing its lifecycle.'
+        );
+    }
+    throw new Error(
+        `Task ${taskLabel} is owned by ${owner}; ${resolvedActor} cannot ${action}. ` +
+            'Refresh with task_get and ask the current owner or lead to reassign it first.'
+    );
+}
+
+function assertTaskOwnerChange(context, task, nextOwner, actor) {
+    const resolvedActor = resolveAgentTaskMutationActor(context, actor, 'task_set_owner');
+    if (context.allowUserMessageSender !== false) {
+        return resolvedActor;
+    }
+
+    const currentOwner = normalizeActorName(task && task.owner);
+    const normalizedNextOwner = normalizeActorName(nextOwner);
+    const leadName = runtimeHelpers.inferLeadName(context.paths);
+    if (isLeadTaskActor(context, resolvedActor)) {
+        return resolvedActor;
+    }
+    if (currentOwner && isSameTaskMember(currentOwner, resolvedActor, leadName)) {
+        return resolvedActor;
+    }
+    if (
+        !currentOwner &&
+        (!normalizedNextOwner || isSameTaskMember(normalizedNextOwner, resolvedActor, leadName))
+    ) {
+        return resolvedActor;
+    }
+
+    const taskLabel = `#${task.displayId || task.id}`;
+    if (!currentOwner) {
+        throw new Error(
+            `Task ${taskLabel} is unassigned; ${resolvedActor} may only assign it to themselves. ` +
+                'Ask the lead to assign another owner.'
+        );
+    }
+    throw new Error(
+        `Task ${taskLabel} is owned by ${currentOwner}; ${resolvedActor} cannot reassign it. ` +
+            'Ask the current owner or lead to hand it off.'
+    );
+}
+
 function assertTaskNotDeleted(task, action) {
     if (task && task.status === 'deleted') {
         throw new Error(`Task #${task.displayId || task.id} is deleted; use task_restore before ${action}`);
@@ -131,13 +210,13 @@ function buildAssignmentMessage(context, task, options = {}) {
    task_get { teamName: "${context.teamName}", taskId: "${task.id}" }
 2. Assignment notifications can become stale after a reassignment or completion. After task_get, compare task.owner with your configured teammate name and check task.status. If task.owner is empty or belongs to someone else, or task.status is completed or deleted, do not start or reopen the task, modify files for it, add a completion comment, or complete it. Stop and wait unless the current owner explicitly asks you to collaborate on fresh follow-up work.
 3. If you are still the current owner, are idle, and the task is ready to start after checking dependencies and context, call task_start now:
-   task_start { teamName: "${context.teamName}", taskId: "${task.id}" }
+   task_start { teamName: "${context.teamName}", taskId: "${task.id}", actor: "<your-name>" }
 4. If you are still the current owner but are busy on another task, blocked, or still need more context, immediately add a task comment on this task with the reason and your best ETA or what you are waiting on, keep it pending/TODO, and do not call task_start until you truly begin:
    task_add_comment { teamName: "${context.teamName}", taskId: "${task.id}", text: "<reason + ETA or blocker>", from: "<your-name>" }
 5. When the work is done, FIRST post a task comment with your full results, THEN mark it completed:
    task_add_comment { teamName: "${context.teamName}", taskId: "${task.id}", text: "<full results>", from: "<your-name>" }
    The response contains comment.id (UUID). Take its first 8 characters as the short commentId.
-   task_complete { teamName: "${context.teamName}", taskId: "${task.id}" }
+   task_complete { teamName: "${context.teamName}", taskId: "${task.id}", actor: "<your-name>" }
 6. After task_complete, notify your lead via ${messagingProtocol.sendLeadPhrase} with a brief summary and a pointer to the full comment (use the short commentId from step 5).
    Example: ${notifyLeadExample}${runtimeVisibleMessageRule}${runtimeTaskToolHint}`)
     );
@@ -400,14 +479,21 @@ function resolveTaskId(context, taskRef) {
     return taskStore.resolveTaskRef(context.paths, taskRef, { includeDeleted: true });
 }
 
-function setTaskStatus(context, taskId, status, actor) {
+function setTaskStatus(context, taskId, status, actor, options = {}) {
     return withTeamBoardLock(context.paths, () => {
         const before = taskStore.readTask(context.paths, taskId, { includeDeleted: true });
         const normalizedStatus = String(status || '').trim();
         if (before.status === 'deleted' && normalizedStatus !== 'deleted') {
             throw new Error(`Task #${before.displayId || before.id} is deleted; use task_restore before changing status`);
         }
-        let task = taskStore.setTaskStatus(context.paths, taskId, status, actor);
+        const actorForWrite =
+            options.trustedInternalWrite === true
+                ? actor
+                : assertTaskOwnerMutation(context, before, actor, `set its status to ${normalizedStatus}`, {
+                      allowLeadOverride:
+                          normalizedStatus !== 'in_progress' && normalizedStatus !== 'completed',
+                  });
+        let task = taskStore.setTaskStatus(context.paths, taskId, status, actorForWrite);
         if (normalizedStatus === 'deleted' || normalizedStatus === 'in_progress' || normalizedStatus === 'pending') {
             const state = kanbanStore.readKanbanState(context.paths, context.teamName);
             if (hasKanbanReference(state, task.id)) {
@@ -436,7 +522,8 @@ function startTask(context, taskId, actor) {
     return withTeamBoardLock(context.paths, () => {
         const before = taskStore.readTask(context.paths, taskId, { includeDeleted: true });
         assertTaskNotDeleted(before, 'starting work');
-        let task = taskStore.setTaskStatus(context.paths, taskId, 'in_progress', actor);
+        const actorForWrite = assertTaskOwnerMutation(context, before, actor, 'start it');
+        let task = taskStore.setTaskStatus(context.paths, taskId, 'in_progress', actorForWrite);
         const state = kanbanStore.readKanbanState(context.paths, context.teamName);
         if (hasKanbanReference(state, task.id)) {
             kanbanStore.clearKanban(context.paths, context.teamName, task.id, { nextReviewState: 'none' });
@@ -488,7 +575,7 @@ function notifyUnblockedOwners(context, completedTask) {
                         `All dependencies for this task are now resolved.\n` +
                         `If you are idle, start working on it now:\n` +
                         `1. Check the full context: task_get { teamName: "${context.teamName}", taskId: "${blockedTask.id}" }\n` +
-                        `2. Start the task: task_start { teamName: "${context.teamName}", taskId: "${blockedTask.id}" }`
+                        `2. Start the task: task_start { teamName: "${context.teamName}", taskId: "${blockedTask.id}", actor: "${blockedTask.owner}" }`
                     )
                 );
             }
@@ -524,7 +611,11 @@ function completeTask(context, taskId, actor) {
 
 function softDeleteTask(context, taskId, actor) {
     return withTeamBoardLock(context.paths, () => {
-        let task = taskStore.setTaskStatus(context.paths, taskId, 'deleted', actor);
+        const before = taskStore.readTask(context.paths, taskId, { includeDeleted: true });
+        const actorForWrite = assertTaskOwnerMutation(context, before, actor, 'delete it', {
+            allowLeadOverride: true,
+        });
+        let task = taskStore.setTaskStatus(context.paths, taskId, 'deleted', actorForWrite);
         const state = kanbanStore.readKanbanState(context.paths, context.teamName);
         if (hasKanbanReference(state, task.id)) {
             kanbanStore.clearKanban(context.paths, context.teamName, task.id, { nextReviewState: 'none' });
@@ -540,7 +631,10 @@ function restoreTask(context, taskId, actor) {
         if (before.status !== 'deleted') {
             throw new Error(`Task #${before.displayId || before.id} is not deleted; task_restore only restores deleted tasks`);
         }
-        let task = taskStore.setTaskStatus(context.paths, taskId, 'pending', actor || 'user');
+        const actorForWrite = assertTaskOwnerMutation(context, before, actor, 'restore it', {
+            allowLeadOverride: true,
+        });
+        let task = taskStore.setTaskStatus(context.paths, taskId, 'pending', actorForWrite || 'user');
         const state = kanbanStore.readKanbanState(context.paths, context.teamName);
         if (hasKanbanReference(state, task.id)) {
             kanbanStore.clearKanban(context.paths, context.teamName, task.id, { nextReviewState: 'none' });
@@ -562,7 +656,8 @@ function setTaskOwner(context, taskId, owner, actor) {
         const nextOwner = isClearOwnerValue(owner)
             ? owner
             : assertKnownTaskActor(context, owner, 'task owner');
-        const after = taskStore.setTaskOwner(context.paths, taskId, nextOwner, normalizeActorName(actor) || undefined);
+        const actorForWrite = assertTaskOwnerChange(context, before, nextOwner, actor);
+        const after = taskStore.setTaskOwner(context.paths, taskId, nextOwner, actorForWrite);
         return {
             previousTask: before,
             updatedTask: after,
@@ -805,16 +900,17 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
    - task_briefing may show short display labels like #abcd1234; MCP task tools also accept that short task ref.
    - Human-facing summaries should use the short display label like #abcd1234 for readability.
 1. If you are about to do implementation/fix work on a task yourself, make sure the owner reflects the actual implementer:
-   - If the task is unassigned or assigned to someone else, FIRST reassign it to yourself with MCP tool task_set_owner:
+   - If the task is unassigned, FIRST claim it for yourself with MCP tool task_set_owner:
      { teamName: "${teamName}", taskId: "<taskId>", owner: "<your-name>", actor: "<your-name>" }
-   - Do this only when you are genuinely taking over the work.
+   - If the task belongs to someone else, do NOT take it yourself. Ask the current owner or team lead to hand it off. The team lead may explicitly reassign it with task_set_owner.
+   - Do this only when you are genuinely taking over the work. Collaboration alone does not grant lifecycle ownership.
    - Reviewing, approving, or leaving comments does NOT require changing ownership.
 2. Use MCP tool task_start to mark task started:
-   { teamName: "${teamName}", taskId: "<taskId>" }
+   { teamName: "${teamName}", taskId: "<taskId>", actor: "<your-name>" }
    - Start the task ONLY when you are actually beginning work on it.
    - Do NOT start multiple tasks at once unless the team lead explicitly directs parallel work.
 3. Use MCP tool task_complete BEFORE sending your final reply:
-   { teamName: "${teamName}", taskId: "<taskId>" }
+   { teamName: "${teamName}", taskId: "<taskId>", actor: "<your-name>" }
    - CRITICAL: Before calling task_complete, you MUST post a task comment with your results via task_add_comment. Save the comment.id from the response — you will need it in the next step. The task comment is the primary delivery channel — the user reads results on the task board. A direct message to the lead is NOT a substitute: direct messages are ephemeral and not visible on the board. If you only send a direct message without a task comment, the user will never see your work.
    - If a new task comment means you must do more real work on that same task, FIRST add a short task comment saying what you are going to do, THEN run task_start again before doing the follow-up work.
    - After that follow-up work finishes, add a short task comment with the result, what changed, or what you verified.
@@ -878,10 +974,10 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
     - Awareness items are watch-only context. Do NOT start work from Awareness unless the lead reroutes the task or you become the actionOwner first.
     - Finish existing in_progress tasks first.
     - A newly assigned task must NOT remain silently pending/TODO. If you are idle and the task is ready to start, start it now. If it must wait because you are still busy on another task, blocked, or still need more context, immediately add a short task comment on that waiting task with the reason and your best ETA or what you are waiting on.
-    - Keep any task you have not actually started in pending/TODO (use task_set_status pending if it was moved too early).
+    - Keep any task you have not actually started in pending/TODO (use task_set_status with status pending and actor "<your-name>" if it was moved too early).
     - If you need more context for an in_progress task, you MAY call task_get, but it is not mandatory when task_briefing already gives enough detail.
     - Before starting a needsFix or pending task, call task_get for that specific task first.
-    - If you are the one doing the implementation/fixes and the owner is missing or someone else, run task_set_owner to yourself immediately before task_start.
+    - If you are the one doing the implementation/fixes and the owner is missing, self-claim with task_set_owner immediately before task_start. If someone else owns it, ask that owner or the lead to hand it off instead of taking it yourself.
     - Then run task_start only when you truly begin.
     - If you complete fixes for a needsFix task, mark it completed and then send it back through review_request when ready for another review pass.
 15. MEMBER WORK SYNC REPORTING:

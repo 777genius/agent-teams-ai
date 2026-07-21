@@ -783,6 +783,8 @@ function reconcileTaskCreation(paths, input = {}) {
     ) {
       throw new Error(`Task creation command conflict: ${taskId}`);
     }
+  } else if (input.allowLegacyAdoption === false) {
+    throw new Error(`Task creation command conflict: ${taskId} is not owned by this command`);
   } else {
     assertLegacyTaskMatchesCreationInput(task, input);
   }

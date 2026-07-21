@@ -2117,6 +2117,9 @@ describe('TeamDataService', () => {
     expect(sendMessage.mock.calls[0]?.[1]?.text).toContain(
       'If the owner changed or the task is completed/deleted, do not start or reopen it'
     );
+    expect(sendMessage.mock.calls[0]?.[1]?.text).toContain(
+      'task_complete { teamName: "my-team", taskId: "11111111-1111-4111-8111-111111111111", actor: "lead-agent" }'
+    );
   });
 
   it.each(['reconciled', 'replayed'])(

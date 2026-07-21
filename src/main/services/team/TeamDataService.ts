@@ -2381,7 +2381,7 @@ export class TeamDataService {
               [
                 `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
                 `Update task status using the board MCP tools:`,
-                `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
+                `task_complete { teamName: "${teamName}", taskId: "${task.id}", actor: "${task.owner}" }`,
               ].join('\n')
             )
           );
@@ -2469,7 +2469,7 @@ export class TeamDataService {
           `To fetch the full task context (description, comments, attachments) use:`,
           `task_get { teamName: "${teamName}", taskId: "${task.id}" }`,
           `When done, update task status:`,
-          `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
+          `task_complete { teamName: "${teamName}", taskId: "${task.id}", actor: "${task.owner}" }`,
         ].join('\n')
       )
     );
