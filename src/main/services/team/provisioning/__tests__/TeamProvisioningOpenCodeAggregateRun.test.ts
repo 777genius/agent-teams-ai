@@ -680,11 +680,14 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     const alice = member('alice');
     const bob = member('bob');
     const calls: string[] = [];
+    const stopUntrackedPrimary = vi.fn(async () => {
+      calls.push('stopUntrackedPrimary');
+    });
 
     await expect(
       runOpenCodeWorktreeRootAggregateLaunch(
         {
-          adapter: {} as TeamLaunchRuntimeAdapter,
+          adapter: { stop: stopUntrackedPrimary } as unknown as TeamLaunchRuntimeAdapter,
           request: request([alice, bob]),
           members: [alice, bob],
           lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [bob] }),
@@ -713,6 +716,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       'invalidateRuntimeSnapshotCaches',
       'setProgress:spawning',
       'launchPrimary',
+      'stopUntrackedPrimary',
       'getTeamsBasePath',
       'clearLaneStorage:secondary:opencode:bob',
       'getTeamsBasePath',
@@ -724,6 +728,15 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       'cleanupRun',
       'invalidateRuntimeSnapshotCaches',
     ]);
+    expect(stopUntrackedPrimary).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run-open-code',
+        teamName: 'open-code-team',
+        laneId: 'primary',
+        reason: 'cleanup',
+        force: true,
+      })
+    );
   });
 
   it('stops the owned primary OpenCode adapter process before clearing storage on launch error', async () => {
@@ -868,10 +881,11 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     const alice = member('alice');
     const calls: string[] = [];
     let superseded = false;
+    const stopUntrackedPrimary = vi.fn(async () => {});
 
     await runOpenCodeWorktreeRootAggregateLaunch(
       {
-        adapter: {} as TeamLaunchRuntimeAdapter,
+        adapter: { stop: stopUntrackedPrimary } as unknown as TeamLaunchRuntimeAdapter,
         request: request([alice]),
         members: [alice],
         lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [] }),
@@ -891,6 +905,15 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       }
     );
 
+    expect(stopUntrackedPrimary).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run-open-code',
+        teamName: 'open-code-team',
+        laneId: 'primary',
+        reason: 'cleanup',
+        force: true,
+      })
+    );
     expect(calls).toContain('cleanupRun');
     expect(calls).not.toContain('setAliveRun');
     expect(calls).not.toContain('launchSecondary');

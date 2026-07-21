@@ -351,12 +351,26 @@ async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
     primaryCwd: string;
     secondaryCwds: ReadonlyMap<string, string>;
+    untrackedPrimaryLaunchMayBeRunning: boolean;
   },
   ports: OpenCodeWorktreeRootAggregateLaunchPorts
 ): Promise<void> {
   const ownedRuntimeRun = ports.getRuntimeAdapterRun(run.teamName);
   if (ownedRuntimeRun?.providerId === 'opencode' && ownedRuntimeRun.runId === run.runId) {
     await ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId).catch(() => undefined);
+  } else if (input.untrackedPrimaryLaunchMayBeRunning) {
+    await input.adapter
+      .stop({
+        runId: run.runId,
+        teamName: run.teamName,
+        laneId: 'primary',
+        cwd: input.primaryCwd,
+        providerId: 'opencode',
+        reason: 'cleanup',
+        force: true,
+        previousLaunchState: input.previousLaunchState,
+      })
+      .catch(() => undefined);
   }
 
   // Secondary lanes are stopped one-by-one by exact lane/run identity. A
@@ -513,6 +527,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   ports.setRun(runId, run);
   ports.resetTeamScopedTransientStateForNewRun(teamName);
   let cancellationConsumed = false;
+  let untrackedPrimaryLaunchMayBeRunning = false;
   const aggregateLaunchNoLongerCurrent = (): boolean => {
     cancellationConsumed ||= ports.consumeCancelledRuntimeAdapterRunId(runId);
     const runtimeOwner = ports.getRuntimeAdapterRun(teamName);
@@ -534,7 +549,13 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     run.processKilled = true;
     await stopAndRollbackOpenCodeAggregateRuntimeLanes(
       run,
-      { adapter: input.adapter, previousLaunchState, primaryCwd, secondaryCwds },
+      {
+        adapter: input.adapter,
+        previousLaunchState,
+        primaryCwd,
+        secondaryCwds,
+        untrackedPrimaryLaunchMayBeRunning,
+      },
       ports
     );
     ports.deleteProvisioningRunIfCurrent(teamName, runId);
@@ -563,6 +584,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   run.progress = launching;
 
   try {
+    untrackedPrimaryLaunchMayBeRunning = true;
     const primaryResult = await ports.launchOpenCodeAggregatePrimaryLane({
       run,
       adapter: input.adapter,
@@ -576,6 +598,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
         }
       },
     });
+    untrackedPrimaryLaunchMayBeRunning = false;
     if (aggregateLaunchNoLongerCurrent()) {
       return await finishCancelledAggregateLaunch();
     }
@@ -674,7 +697,13 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       // Stop all lanes before cleanupRun removes their tracking.
       await stopAndRollbackOpenCodeAggregateRuntimeLanes(
         run,
-        { adapter: input.adapter, previousLaunchState, primaryCwd, secondaryCwds },
+        {
+          adapter: input.adapter,
+          previousLaunchState,
+          primaryCwd,
+          secondaryCwds,
+          untrackedPrimaryLaunchMayBeRunning,
+        },
         ports
       );
       if (aggregateLaunchNoLongerCurrent()) {
@@ -706,7 +735,13 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     // an explicit stop it is orphaned when the maps/storage below are cleared.
     await stopAndRollbackOpenCodeAggregateRuntimeLanes(
       run,
-      { adapter: input.adapter, previousLaunchState, primaryCwd, secondaryCwds },
+      {
+        adapter: input.adapter,
+        previousLaunchState,
+        primaryCwd,
+        secondaryCwds,
+        untrackedPrimaryLaunchMayBeRunning,
+      },
       ports
     );
     if (aggregateLaunchNoLongerCurrent()) {
