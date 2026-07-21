@@ -26,6 +26,7 @@ import {
 import {
   createQueryContext,
   parseBootId,
+  parseCursor,
   parseTeamId,
   parseWorkspaceId,
   type QueryContext,
@@ -308,6 +309,29 @@ describe('teamLifecycleReadComposition semantic isolation', () => {
       kind: 'failure',
       error: { code: 'conflict', reason: 'snapshot_changed' },
     });
+  });
+
+  it('accepts the read-only compatibility cursor while emitting only stable cursors', async () => {
+    const harness = createHarness({
+      identities: [identity('a'), identity('b')],
+      pageSize: 1,
+    });
+    const first = await harness.host.listTeamLifecycle(listRequest());
+    if (first.kind !== 'success' || first.nextCursor === null) {
+      throw new Error('expected stable source cursor');
+    }
+
+    const compatibilityCursor = parseCursor(
+      first.nextCursor.replace('cursor_team_lifecycle_read_', 'cursor_phase2_')
+    );
+    await expect(
+      harness.host.listTeamLifecycle(listRequest({ cursor: compatibilityCursor }))
+    ).resolves.toMatchObject({
+      kind: 'success',
+      items: [{ teamId: parseTeamId(`team_${'b'.repeat(32)}`) }],
+      nextCursor: null,
+    });
+    expect(first.nextCursor).toMatch(/^cursor_team_lifecycle_read_/);
   });
 
   it('changes item and snapshot revisions for lifecycle-only summary changes and stales cursors', async () => {

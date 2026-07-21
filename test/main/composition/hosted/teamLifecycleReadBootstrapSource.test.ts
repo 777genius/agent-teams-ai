@@ -98,7 +98,7 @@ describe('TeamLifecycleReadBootstrapSource', () => {
     );
   });
 
-  it('prefers the stable bootstrap env and uses the legacy env only as fallback', () => {
+  it('prefers the stable bootstrap env and uses the compatibility env only as fallback', () => {
     expect(
       readTeamLifecycleReadBootstrapEnvironment({
         AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: 'stable-envelope',
@@ -149,7 +149,7 @@ describe('TeamLifecycleReadBootstrapSource', () => {
 
   it.each([
     ['stable', TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT],
-    ['legacy read alias', 'agent-teams.phase2-read-bootstrap/v1'],
+    ['compatibility read alias', 'agent-teams.phase2-read-bootstrap/v1'],
   ])(
     'reads the %s serialized format while builders write the stable format',
     async (_name, format) => {

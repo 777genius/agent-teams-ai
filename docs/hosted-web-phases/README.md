@@ -1,52 +1,34 @@
 # Hosted-web execution packets
 
-Current authority is the stable [PR #252 latest-base sync gate](phase-01/controller-packet.md),
-revision `pr252-latest-base-sync-router-v1`. Start with [START_HERE.md](START_HERE.md) and treat
+Current authority is the [PR #252 live-head sync controller packet](phase-01/controller-packet.md),
+revision `pr252-live-head-sync-router-v2`. Start with [START_HERE.md](START_HERE.md) and use
 [EXECUTION_INDEX.json](EXECUTION_INDEX.json) as the machine-readable source of truth.
 
-The Phase 2 product wave at
-`eee2389f7ee9300df93ef02d92e9ae114949aff4` is accepted and integrated. The Phase 2 milestone and
-the next phase are blocked only by the PR #252 latest-base sync gate. The files under
-`phase-02/` remain read-only accepted product inputs; their earlier candidate/product-launch wording
-is superseded and is not current execution authority. Active router commit
-`81e79295e199bad0e6bf426537564ea7bc67dfcd` is the immutable canonical PR head and materialization
-source; the accepted product-wave commit is its historical ancestor.
+## Live-head attempt binding
 
-## Stable latest-base rule
+The packet never pins an observed PR head or base SHA. During each atomic prepare/start, the broker:
 
-No observed PR base SHA is a durable packet pin. At each atomic product-attempt prepare/start,
-`ProjectScopedControl` resolves the live PR #252 base exactly once and records the full 40-hex commit
-in the immutable `pr252.latest-base-binding/v1` product-worker pre-start contract. The runtime
-materializes from active router/canonical head `81e79295e199bad0e6bf426537564ea7bc67dfcd`,
-mechanically merges the bound base, records the exact actual conflict paths, and binds the canonical
-head and same base as the ordered first and second parents.
+1. resolves the live PR head into immutable `attempt.canonicalHeadSha`;
+2. resolves the live PR base once into immutable `attempt.resolvedBaseSha`;
+3. materializes from `attempt.canonicalHeadSha`; and
+4. binds ordered parents
+   `[attempt.canonicalHeadSha, attempt.resolvedBaseSha]` and expected old head
+   `attempt.canonicalHeadSha`.
 
-Later base drift invalidates only the bound product attempt. Once that attempt is terminal, the
-controller may prepare one replacement under the same packet and format. Drift never revives an old
-source pin, reuses a dirty worker, or requires another docs/router version.
+A later head or base mismatch invalidates only the bound attempt. Once it is terminal, the same
+stable packet may admit a fresh atomic attempt; no docs revision or source-pin update is needed.
 
 ## Bounded route
 
-The controller DAG permits one active product merge-resolution producer, writable only on the actual
-conflict paths. The producer preserves both the accepted Phase 2 wave behavior and the bound latest-base
-behavior, runs focused tests and every mechanical gate, self-reviews, and ends `HOLD`.
-`ProjectScopedControl` directly reruns the mechanical gates; there is no separate mechanical
-reviewer. One fresh independent reviewer then makes the combined integration, architecture, security,
-and semantic decision.
+One producer may resolve only the actual attempt-bound conflict paths. It preserves both parent
+behaviors, runs focused tests and every mechanical gate, self-reviews, and ends `HOLD`. The
+controller directly reruns all mechanical checks. One fresh independent reviewer then makes the
+combined integration, architecture, security, and semantic decision.
 
-Only an independent `ACCEPT` with P0/P1/P2 `0/0/0` lets the broker create the reviewed tree as a
-true two-parent merge ordered
-`[81e79295e199bad0e6bf426537564ea7bc67dfcd, resolvedBaseSha]`, promote and push it with
-`81e79295e199bad0e6bf426537564ea7bc67dfcd` as the expected old PR head, and prove the exact pushed
-head/base pair is non-conflicting on GitHub. Git commit SHAs are primary provenance.
-Repository handoff manifests and hash-of-manifest bookkeeping are forbidden.
+Only `ACCEPT` with P0/P1/P2 `0/0/0` permits a true two-parent merge of the exact reviewed tree. The
+broker rechecks the bound head/base, pushes with `attempt.canonicalHeadSha` as expected old head, and
+proves the remote and GitHub head/base state matches the attempt and is non-conflicting.
 
-## Ownership and stop boundary
-
-The subscription runtime owns execution primitives only. `ProjectScopedControl` owns the DAG,
-dependencies, admissions, mechanical-gate decisions, drift invalidation, semantic review policy,
-promotion authorization, and phase release.
-
-No route here authorizes real-project access, team launch/provisioning, product terminal or smoke
-flows, providers/auth, raw lifecycle calls, other repositories, broad docs work, or Fast mode. Every
-actor ends `HOLD`; this router author launches no successor.
+The runtime owns execution primitives only. `ProjectScopedControl` owns admission, dependencies,
+checks, review policy, drift invalidation, promotion authorization, and gate release. All actors end
+`HOLD`; no successor is launched.

@@ -34,10 +34,10 @@ import {
 import type { WorkspaceMountBinding } from '@features/workspace-registry';
 
 export const TEAM_LIFECYCLE_READ_BOOTSTRAP_ENV = 'AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP';
-const LEGACY_PHASE2_READ_BOOTSTRAP_ENV = 'AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP';
+const COMPATIBILITY_READ_BOOTSTRAP_ENV = 'AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP';
 export const TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT =
   'agent-teams.team-lifecycle-read-bootstrap/v1' as const;
-const LEGACY_PHASE2_READ_BOOTSTRAP_FORMAT = ['agent-teams.phase', '2-read-bootstrap/v1'].join('');
+const COMPATIBILITY_READ_BOOTSTRAP_FORMAT = 'agent-teams.phase2-read-bootstrap/v1';
 export const TEAM_LIFECYCLE_READ_AUTHORIZED_SCOPE = 'scope_team-lifecycle.read' as const;
 
 const LAUNCHER_MANIFEST_SOURCE_LOCATION = 'launcher-owned:team-lifecycle-read-bootstrap-manifest';
@@ -128,22 +128,22 @@ interface ParsedBootstrapEnvelope {
 }
 
 /**
- * Reads the stable launcher key first and falls back to the one legacy Phase 2 key. Keeping the
- * legacy identifier private makes this the only environment compatibility boundary; callers can
- * export or inject only the stable key.
+ * Reads the stable launcher key first and falls back to the private compatibility key. Keeping the
+ * compatibility identifier private makes this the only environment compatibility boundary;
+ * callers can export or inject only the stable key.
  */
 export function readTeamLifecycleReadBootstrapEnvironment(
   environment: Readonly<Record<string, string | undefined>>
 ): string | undefined {
   return (
-    environment[TEAM_LIFECYCLE_READ_BOOTSTRAP_ENV] ?? environment[LEGACY_PHASE2_READ_BOOTSTRAP_ENV]
+    environment[TEAM_LIFECYCLE_READ_BOOTSTRAP_ENV] ?? environment[COMPATIBILITY_READ_BOOTSTRAP_ENV]
   );
 }
 
-/** Accepts the legacy serialized tag only at bootstrap ingress. */
+/** Accepts the compatibility serialized tag only at bootstrap ingress. */
 function isTeamLifecycleReadBootstrapReadFormat(value: unknown): boolean {
   return (
-    value === TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT || value === LEGACY_PHASE2_READ_BOOTSTRAP_FORMAT
+    value === TEAM_LIFECYCLE_READ_BOOTSTRAP_FORMAT || value === COMPATIBILITY_READ_BOOTSTRAP_FORMAT
   );
 }
 

@@ -1,117 +1,129 @@
 {
-  "schemaVersion": 2,
-  "packetRevision": "pr252-latest-base-sync-router-v1",
+  "schemaVersion": 3,
+  "packetRevision": "pr252-live-head-sync-router-v2",
   "currentPhase": "phase-02",
   "currentNode": "PR252.LATEST_BASE_SYNC",
-  "status": "product-wave-accepted-integrated-latest-base-sync-blocked",
+  "status": "live-head-latest-base-sync-blocked",
   "terminalState": "HOLD",
   "authority": {
     "repository": "777genius/agent-teams-ai",
     "pullRequestNumber": 252,
-    "historicalAcceptedProductWaveSha": "eee2389f7ee9300df93ef02d92e9ae114949aff4",
-    "activeRouterCanonicalHeadSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
-    "canonicalRemoteHeadSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
-    "canonicalRemoteHeadEqualAtRouterActivation": true,
-    "canonicalProductWaveIsAncestorOfActiveRouter": true,
-    "routerAuthoringWorktreeCleanBeforePacketEdits": true,
-    "phase2ProductWaveDisposition": "accepted-integrated",
-    "latestBaseSha": null,
-    "latestBaseAuthority": "resolve-once-at-each-atomic-product-attempt-prepare-start",
+    "canonicalHeadAuthority": "attempt.canonicalHeadSha",
+    "baseAuthority": "attempt.resolvedBaseSha",
+    "durableHeadPinForbidden": true,
     "durableBasePinForbidden": true,
-    "stalePr252SourcePinsSuperseded": true,
-    "phase2CandidateLaunchWordingSuperseded": true
-  },
-  "phaseGate": {
-    "phase2ProductWaveComplete": true,
-    "phase2MilestoneBlocked": true,
-    "nextPhaseBlocked": true,
-    "onlyBlocker": "PR252.LATEST_BASE_SYNC",
-    "releaseCondition": "The broker pushes and proves a reviewed ordered two-parent merge for the attempt-bound live base, with GitHub reporting PR #252 non-conflicting at that same head and base.",
     "routerAuthorLaunchAuthorized": false,
     "successorLaunchAuthorizedNow": false
   },
-  "latestBaseBindingContract": {
+  "attemptBindingContract": {
     "format": "pr252.latest-base-binding/v1",
     "owner": "ProjectScopedControl",
-    "storage": "immutable runtime-owned product-worker pre-start contract",
+    "resolver": "broker",
+    "storage": "immutable runtime-owned pre-start contract",
     "repositoryArtifact": false,
-    "createdAt": "the atomic product-attempt prepare/start transition",
+    "createdAt": "atomic product-attempt prepare/start",
     "fields": {
-      "format": {
-        "type": "literal",
-        "value": "pr252.latest-base-binding/v1"
-      },
-      "productAttemptId": {
-        "type": "non-empty-string"
-      },
-      "repository": {
-        "type": "literal",
-        "value": "777genius/agent-teams-ai"
-      },
-      "pullRequestNumber": {
-        "type": "literal",
-        "value": 252
-      },
-      "routerAuthoritySha": {
-        "type": "literal",
-        "value": "81e79295e199bad0e6bf426537564ea7bc67dfcd"
-      },
-      "canonicalHeadSha": {
-        "type": "literal",
-        "value": "81e79295e199bad0e6bf426537564ea7bc67dfcd"
-      },
-      "materializationSourceSha": {
-        "type": "literal",
-        "value": "81e79295e199bad0e6bf426537564ea7bc67dfcd"
-      },
-      "resolvedBaseSha": {
-        "type": "lowercase-40-hex-git-commit"
-      },
-      "orderedParentShas": {
-        "type": "tuple",
-        "items": ["81e79295e199bad0e6bf426537564ea7bc67dfcd", "same-value-as-resolvedBaseSha"]
-      },
-      "conflictPaths": {
-        "type": "sorted-distinct-repository-relative-path-array",
-        "minimumItems": 1
-      },
-      "focusedTestCommands": {
-        "type": "non-empty-array-of-exact-deterministic-repository-local-commands"
-      },
-      "resolvedAt": {
-        "type": "rfc3339-timestamp"
-      }
+      "attemptId": "attempt.id",
+      "canonicalHeadSha": "attempt.canonicalHeadSha",
+      "resolvedBaseSha": "attempt.resolvedBaseSha",
+      "materializationSourceSha": "attempt.canonicalHeadSha",
+      "orderedParentShas": ["attempt.canonicalHeadSha", "attempt.resolvedBaseSha"],
+      "expectedOldHeadSha": "attempt.canonicalHeadSha",
+      "conflictPaths": "attempt.conflictPaths",
+      "focusedTestCommands": "attempt.focusedTestCommands",
+      "resolvedAt": "attempt.resolvedAt"
     },
     "invariants": [
-      "ProjectScopedControl reads the live PR #252 base exactly once while atomically preparing and starting one product attempt.",
-      "The resolved base is a full exact 40-hex commit SHA; a symbolic ref, branch name, abbreviated SHA, prior observation, or packet-authored value is invalid.",
-      "routerAuthoritySha, canonicalHeadSha, materializationSourceSha and orderedParentShas[0] all equal active router commit 81e79295e199bad0e6bf426537564ea7bc67dfcd.",
-      "The product worktree is materialized from active router/canonical head 81e79295e199bad0e6bf426537564ea7bc67dfcd, never from historical product-wave ancestor eee2389f7ee9300df93ef02d92e9ae114949aff4 or the resolved base.",
-      "The exact resolvedBaseSha is orderedParentShas[1] and can never be re-resolved or substituted inside the attempt.",
-      "The runtime performs the ordered mechanical merge materialization before worker start and records its exact actual conflict paths in the same pre-start contract.",
-      "ProjectScopedControl selects and freezes the exact focused test commands after conflict discovery and before worker start.",
-      "Any later live-base inequality invalidates only this productAttemptId and all of its output; the stable packet and format remain valid for a new atomic attempt.",
-      "At most one product attempt is active, under review, or eligible for promotion at a time."
+      "The broker resolves the live PR head and records attempt.canonicalHeadSha during atomic prepare/start before worker start.",
+      "The broker resolves the live PR base exactly once and records attempt.resolvedBaseSha during the same transition.",
+      "Both SHA fields are full exact commit object IDs and immutable for the attempt.",
+      "attempt.canonicalHeadSha is the materialization source, ordered first parent, and expected old PR head.",
+      "attempt.resolvedBaseSha is the ordered second parent.",
+      "The runtime records the actual conflict paths and controller-selected focused tests before worker start.",
+      "Later head or base drift invalidates only this attempt and all attempt-bound results.",
+      "At most one attempt is active, under review, or eligible for promotion."
     ]
   },
-  "ownershipBoundary": {
-    "runtimeOwnsOnly": [
-      "subscription-runtime builtin worker-start-v1 atomic admission/start primitive",
-      "commit-object and worktree materialization primitives",
-      "command and evidence capture primitives",
-      "review admission primitives",
-      "merge-commit construction, promotion and push primitives"
+  "nodes": [
+    {
+      "id": "PR252.BINDING.ATOMIC",
+      "kind": "broker-live-head-base-binding-and-materialization",
+      "dependsOn": ["PR252.ROUTER.ACTIVE"],
+      "source": "attempt.canonicalHeadSha",
+      "orderedParents": ["attempt.canonicalHeadSha", "attempt.resolvedBaseSha"],
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "PR252.SYNC.PRODUCER",
+      "kind": "bounded-product-merge-resolution",
+      "dependsOn": ["PR252.BINDING.ATOMIC"],
+      "capacity": 1,
+      "writablePaths": "attempt.conflictPaths",
+      "requiredBeforeResult": [
+        "attempt.focusedTestCommands",
+        "all product mechanical gates",
+        "complete producer self-review"
+      ],
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "PR252.SYNC.CONTROLLER_MECHANICAL",
+      "kind": "direct-controller-mechanical-rerun",
+      "dependsOn": ["PR252.SYNC.PRODUCER"],
+      "worker": false,
+      "separateMechanicalReviewer": false,
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "PR252.SYNC.SEMANTIC_REVIEW",
+      "kind": "independent-integration-architecture-security-semantic-review",
+      "dependsOn": ["PR252.SYNC.CONTROLLER_MECHANICAL"],
+      "reviewerCount": 1,
+      "writeOrRepairAuthority": false,
+      "requiredDisposition": "ACCEPT-with-P0-P1-P2-0-0-0",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "PR252.SYNC.BROKER_PROMOTION_PROOF",
+      "kind": "broker-ordered-two-parent-merge-promotion-push-proof",
+      "dependsOn": ["PR252.SYNC.SEMANTIC_REVIEW"],
+      "expectedOldHeadSha": "attempt.canonicalHeadSha",
+      "orderedParents": ["attempt.canonicalHeadSha", "attempt.resolvedBaseSha"],
+      "tree": "attempt.acceptedReviewedTreeSha",
+      "requiredProof": [
+        "merge commit has exactly the attempt's two ordered parents",
+        "merge tree equals attempt.acceptedReviewedTreeSha",
+        "push uses attempt.canonicalHeadSha as expected old PR head",
+        "remote and GitHub head equal the pushed merge commit",
+        "GitHub base still equals attempt.resolvedBaseSha",
+        "GitHub mergeability is resolved and non-conflicting for the exact pushed head/base pair"
+      ],
+      "terminalState": "HOLD"
+    }
+  ],
+  "productMechanicalGates": [
+    "attempt contract, full commit object, ordered-parent, source and expected-old-head equality",
+    "fresh live head and base comparison with attempt.canonicalHeadSha and attempt.resolvedBaseSha",
+    "exact actual-conflict scope and non-conflict byte equality",
+    "zero unmerged index entries and zero unresolved conflict markers",
+    "every attempt.focusedTestCommands entry",
+    "pnpm typecheck",
+    "pnpm lint:fast:files -- <exact changed TypeScript and TSX conflict paths>",
+    "pnpm exec prettier --check <exact changed text conflict paths>",
+    "git diff --check",
+    "exact diff, binary, symlink, secret, credential, provider/auth payload and private-path classification"
+  ],
+  "driftPolicy": {
+    "comparisonFields": ["attempt.canonicalHeadSha", "attempt.resolvedBaseSha"],
+    "comparisonPoints": [
+      "before controller mechanical rerun",
+      "before semantic reviewer admission",
+      "immediately before broker merge construction and push",
+      "during post-push GitHub head/base proof"
     ],
-    "controllerOwns": [
-      "the complete DAG and all dependency ordering",
-      "live-base resolution timing and attempt admission",
-      "worker count, role, scope and replacement decisions",
-      "mechanical gate selection and pass/fail evaluation",
-      "semantic review policy",
-      "base-drift invalidation",
-      "promotion authorization and phase-gate release"
-    ],
-    "rawLifecycleAuthorized": false
+    "onMismatch": "invalidate-only-the-bound-attempt",
+    "reusePacketRevision": true,
+    "newAtomicAttemptAllowedAfterTerminalState": true
   },
   "routerExclusiveOwnership": {
     "pathCount": 7,
@@ -125,154 +137,25 @@
       "docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md"
     ]
   },
-  "mandatoryReadOrder": [
-    "AGENTS.md",
-    "docs/hosted-web-phases/START_HERE.md",
-    "docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md",
-    "docs/hosted-web-phases/README.md",
-    "docs/hosted-web-phases/EXECUTION_INDEX.json",
-    "docs/hosted-web-phases/phase-01/README.md",
-    "docs/hosted-web-phases/phase-01/controller-packet.md",
-    "docs/hosted-web-phases/phase-01/execution-dag.md",
-    "docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md",
-    "CLAUDE.md",
-    "AGENT_CRITICAL_GUARDRAILS.md",
-    "docs/FEATURE_ARCHITECTURE_STANDARD.md",
-    "docs/hosted-web-phases/PACKET_STANDARD.md",
-    "docs/hosted-web-phases/ORCHESTRATION_GUARDS.md",
-    "the immutable pr252.latest-base-binding/v1 pre-start contract",
-    "the exact attempt-bound conflict paths and their nearest focused tests"
-  ],
-  "nodes": [
-    {
-      "id": "PR252.SYNC.PRODUCER",
-      "kind": "bounded-product-merge-resolution",
-      "dependsOn": ["PR252.ROUTER.ACTIVE", "PR252.BINDING.ATOMIC"],
-      "capacity": 1,
-      "materializationSourceSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
-      "writablePathRule": "exact-actual-conflictPaths-only",
-      "preserve": [
-        "accepted-integrated Phase 2 product-wave behavior inherited by canonicalHeadSha from historicalAcceptedProductWaveSha",
-        "attempt-bound latest-base behavior from resolvedBaseSha",
-        "mechanically materialized non-conflicting merge bytes"
-      ],
-      "requiredBeforeResult": [
-        "all focused tests selected for every actual conflict path",
-        "all product mechanical gates",
-        "complete producer self-review"
-      ],
-      "resultStorage": "immutable runtime-owned result keyed by productAttemptId",
-      "repositoryHandoffManifest": false,
-      "terminalState": "HOLD"
-    },
-    {
-      "id": "PR252.SYNC.CONTROLLER_MECHANICAL",
-      "kind": "direct-controller-mechanical-rerun",
-      "dependsOn": ["PR252.SYNC.PRODUCER"],
-      "worker": false,
-      "separateMechanicalReviewer": false,
-      "required": "ProjectScopedControl invokes runtime execution primitives and directly evaluates the complete mechanical gate set against the producer's exact resolved tree.",
-      "terminalState": "HOLD"
-    },
-    {
-      "id": "PR252.SYNC.SEMANTIC_REVIEW",
-      "kind": "independent-integration-architecture-security-semantic-review",
-      "dependsOn": ["PR252.SYNC.CONTROLLER_MECHANICAL"],
-      "reviewerCount": 1,
-      "independentFrom": [
-        "router author",
-        "product producer",
-        "prior invalidated attempt actors",
-        "broker"
-      ],
-      "writeOrRepairAuthority": false,
-      "requiredDisposition": "ACCEPT-with-P0-P1-P2-0-0-0",
-      "resultStorage": "immutable runtime-owned review result keyed by productAttemptId and accepted tree SHA",
-      "repositoryHandoffManifest": false,
-      "terminalState": "HOLD"
-    },
-    {
-      "id": "PR252.SYNC.BROKER_PROMOTION_PROOF",
-      "kind": "broker-ordered-two-parent-merge-promotion-push-proof",
-      "dependsOn": ["PR252.SYNC.SEMANTIC_REVIEW"],
-      "expectedOldHeadSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
-      "orderedParents": ["81e79295e199bad0e6bf426537564ea7bc67dfcd", "attempt.resolvedBaseSha"],
-      "tree": "exact accepted reviewed resolved tree",
-      "requiredProof": [
-        "merge commit has exactly the ordered two parents",
-        "merge tree equals the accepted reviewed tree",
-        "push uses canonicalHeadSha as the expected old PR head",
-        "remote PR head equals the merge commit after push",
-        "GitHub PR #252 head OID equals the merge commit and base OID still equals attempt.resolvedBaseSha",
-        "GitHub mergeability is resolved and non-conflicting for that exact head/base pair"
-      ],
-      "terminalState": "HOLD"
-    }
-  ],
-  "productMechanicalGates": [
-    "binding schema, exact-40-hex values, canonical source, ordered-parent and attempt-ID equality",
-    "fresh live-base comparison with attempt.resolvedBaseSha; inequality invalidates the attempt",
-    "exact actual-conflict scope and byte equality for every mechanically merged non-conflict path",
-    "zero unmerged index entries and zero unresolved conflict markers",
-    "all focused tests selected for every conflict path and both parent behaviors",
-    "pnpm typecheck",
-    "pnpm lint:fast:files -- <exact changed TypeScript and TSX conflict paths>",
-    "pnpm exec prettier --check <exact changed text conflict paths>",
-    "git diff --check",
-    "exact diff, binary, symlink, secret, credential, provider/auth payload and private/real-project path classification"
-  ],
-  "semanticReview": {
-    "singleCombinedReviewer": true,
-    "separateMechanicalReviewer": false,
-    "dimensions": [
-      "both-parent behavior preservation in every conflict resolution",
-      "integration coherence across the complete resolved tree",
-      "Clean Architecture, DDD, SOLID and documented feature-boundary compliance",
-      "security, trust-boundary, path, auth/provider and data-exposure regression review",
-      "focused-test adequacy and consistency with controller mechanical evidence",
-      "absence of whole-side selection, unrelated cleanup, scope widening or concealed behavior deletion"
-    ],
-    "acceptance": "One fresh independent reviewer returns ACCEPT with P0/P1/P2 0/0/0 for the exact attempt ID, base SHA and accepted tree SHA.",
-    "rejection": "No promotion; only the controller may decide whether to admit a bounded replacement attempt under this same router."
-  },
-  "driftPolicy": {
-    "comparisonPoints": [
-      "before controller mechanical rerun",
-      "before semantic reviewer admission",
-      "immediately before broker merge construction and push",
-      "during post-push GitHub head/base conflict proof"
-    ],
-    "onMismatch": "invalidate-only-the-bound-product-attempt",
-    "reusePacketRevision": true,
-    "reuseBindingFormat": true,
-    "newDocsRouterRequired": false,
-    "replacementCapacity": "one-new-atomic-attempt-after-the-invalidated-attempt-is-terminal"
+  "ownershipBoundary": {
+    "runtime": "execution primitives only",
+    "controller": "DAG, admission, checks, review policy, drift invalidation, promotion authorization and gate release",
+    "rawLifecycleAuthorized": false
   },
   "provenancePolicy": {
-    "primary": "Git commit SHA",
-    "acceptedTreeBinding": "Git tree SHA plus productAttemptId in runtime-owned records",
+    "primary": "Git commit and tree objects",
+    "runtimeAttemptBinding": true,
     "repositoryHandoffManifests": false,
     "hashOfManifestBookkeeping": false
   },
-  "phase2PacketDisposition": {
-    "pathsReadOnly": true,
-    "productInputsAcceptedIntegrated": true,
-    "candidateOrProductLaunchLanguageCurrentAuthority": false,
-    "currentAuthority": "this execution index and its exact six companion router paths"
-  },
   "forbidden": [
-    "durable packet pinning of an observed PR base SHA",
-    "old same-job continuation or dirty-worktree reuse",
-    "product edits outside exact actual conflict paths",
-    "Phase 2 packet edits by this router",
-    "a separate mechanical reviewer",
-    "one-parent, squash, patch-only, reversed-parent or whole-side merge promotion",
-    "repository handoff manifests or manifest-hash provenance",
-    "real-project access",
-    "agent-team launch or provisioning",
-    "product terminal, smoke, provider, auth or raw lifecycle activity",
-    "other repositories, broad documentation work or Fast mode",
-    "runtime DAG selection or successor authorization"
+    "durable packet pinning of an observed PR head or base SHA",
+    "old job, dirty worktree, patch, or attempt reuse",
+    "product edits outside attempt.conflictPaths",
+    "separate mechanical reviewer",
+    "one-parent, squash, patch-only, reversed-parent, octopus, or whole-side promotion",
+    "repository handoff manifests or manifest hashes",
+    "real-project, team launch, product terminal, smoke, provider/auth, raw lifecycle, other-repository, broad-docs, dependency-update, or Fast activity"
   ],
   "nextAction": "HOLD_FOR_PROJECT_CONTROLLER_PACKET_INTEGRATION",
   "launchSuccessor": false

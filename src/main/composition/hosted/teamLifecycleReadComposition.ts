@@ -70,7 +70,7 @@ const MAX_HOSTED_TEAM_CONFIG_BYTES = 2 * 1024 * 1024;
 const MAX_HOSTED_TEAM_IDENTITY_BYTES = 4 * 1024;
 const TEAM_LIFECYCLE_READ_CURSOR_PREFIX = 'cursor_team_lifecycle_read';
 const TEAM_LIFECYCLE_READ_CURSOR_PATTERN = /^cursor_team_lifecycle_read_(\d+)_([0-9a-f]{64})$/;
-const LEGACY_PHASE2_CURSOR_READ_PATTERN = /^cursor_phase2_(\d+)_([0-9a-f]{64})$/;
+const COMPATIBILITY_CURSOR_READ_PATTERN = /^cursor_phase2_(\d+)_([0-9a-f]{64})$/;
 const TEAM_LIFECYCLE_READ_DIAGNOSTIC_IDS = Object.freeze({
   identityCorrupt: 'team-lifecycle-read.identity-corrupt',
   dataCorrupt: 'team-lifecycle-read.data-corrupt',
@@ -171,10 +171,10 @@ interface DirectoryEntryIdentity {
 
 type IdentityProjectionPurpose = 'lifecycle' | 'runtime';
 
-/** Reads stable cursors and the one legacy Phase 2 wire form; cursor writes stay stable-only. */
+/** Reads stable cursors and the compatibility wire form; cursor writes stay stable-only. */
 function matchTeamLifecycleReadCursorForRead(value: string): RegExpExecArray | null {
   return (
-    TEAM_LIFECYCLE_READ_CURSOR_PATTERN.exec(value) ?? LEGACY_PHASE2_CURSOR_READ_PATTERN.exec(value)
+    TEAM_LIFECYCLE_READ_CURSOR_PATTERN.exec(value) ?? COMPATIBILITY_CURSOR_READ_PATTERN.exec(value)
   );
 }
 
