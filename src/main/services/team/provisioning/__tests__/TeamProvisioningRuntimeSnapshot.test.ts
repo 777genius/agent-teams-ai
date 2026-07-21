@@ -190,17 +190,44 @@ function runtimeAdapterRun(
   };
 }
 
-function mixedRunWithConfirmedSecondaryEvidence(): TeamProvisioningRuntimeSnapshotRun {
+function mixedRunWithConfirmedSecondaryEvidence(
+  overrides: {
+    laneMemberName?: string;
+    laneRunId?: string | null;
+    resultRunId?: string;
+    evidenceKey?: string;
+    evidenceMemberName?: string;
+    evidenceRuntimePid?: number;
+  } = {}
+): TeamProvisioningRuntimeSnapshotRun {
   const currentRun = run();
-  const member = currentRun.request.members[0];
-  if (!member) {
+  const configuredMember = currentRun.request.members[0];
+  const evidence = runtimeAdapterRun({
+    runtimePid: overrides.evidenceRuntimePid,
+  }).members?.Worker;
+  if (!configuredMember || !evidence) {
     throw new Error('expected mixed secondary member fixture');
   }
+  const member = {
+    ...configuredMember,
+    name: overrides.laneMemberName ?? configuredMember.name,
+  };
+  const laneRunId =
+    overrides.laneRunId === undefined ? 'run-secondary-current' : overrides.laneRunId;
   currentRun.mixedSecondaryLanes = [
     {
       laneId: 'secondary:opencode:Worker',
       member,
-      result: { members: runtimeAdapterRun().members },
+      runId: laneRunId,
+      result: {
+        runId: overrides.resultRunId ?? 'run-secondary-current',
+        members: {
+          [overrides.evidenceKey ?? 'Worker']: {
+            ...evidence,
+            memberName: overrides.evidenceMemberName ?? evidence.memberName,
+          },
+        },
+      },
     },
   ];
   return currentRun;
@@ -219,6 +246,104 @@ function processRows(): RuntimeTelemetryProcessTableRow[] {
       command: 'opencode run --team-name runtime-snapshot-precedence-test --agent-id Worker',
     },
   ];
+}
+
+interface MixedRuntimeFixtureOptions {
+  run?: TeamProvisioningRuntimeSnapshotRun;
+  primaryRuntime?: RuntimeAdapterRunSnapshotSource;
+  processRows?: RuntimeTelemetryProcessTableRow[];
+  processTableAvailable?: boolean;
+}
+
+async function buildMixedRuntimeMetadata(
+  options: MixedRuntimeFixtureOptions
+): Promise<Map<string, LiveTeamAgentRuntimeMetadata>> {
+  return buildLiveTeamAgentRuntimeMetadata({
+    teamName: TEAM_NAME,
+    runId: RUN_ID,
+    generationAtStart: 0,
+    runs: new Map([[RUN_ID, options.run ?? mixedRunWithConfirmedSecondaryEvidence()]]),
+    runtimeAdapterRunByTeam: options.primaryRuntime
+      ? new Map([[TEAM_NAME, options.primaryRuntime]])
+      : new Map(),
+    teamMetaStore: {
+      getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
+    },
+    membersMetaStore: {
+      getMembers: vi.fn(async () => []),
+    },
+    launchStateStore: {
+      read: vi.fn(async () => null),
+    },
+    readConfigSnapshot: vi.fn(async () => config()),
+    readPersistedRuntimeMembers: vi.fn(() => [] satisfies PersistedRuntimeMemberLike[]),
+    readRuntimeProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
+      rows: options.processRows ?? processRows(),
+      processTableAvailable: options.processTableAvailable ?? true,
+    })),
+    readWindowsHostProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
+      rows: [],
+      processTableAvailable: false,
+    })),
+    getRuntimeSnapshotCacheGeneration: vi.fn(() => 0),
+    getTrackedRunId: vi.fn(() => RUN_ID),
+    getAgentRuntimeSnapshotCacheTtlMs: vi.fn(() => 1_000),
+    liveRuntimeMetadataCache: {
+      rememberLiveTeamAgentRuntimeMetadata: vi.fn(),
+    },
+    logDebug: vi.fn(),
+  });
+}
+
+async function buildMixedRuntimeSnapshot(
+  options: MixedRuntimeFixtureOptions
+): Promise<Awaited<ReturnType<typeof buildTeamAgentRuntimeSnapshot>>> {
+  const currentRun = options.run ?? mixedRunWithConfirmedSecondaryEvidence();
+  const liveRuntimeByMember = await buildMixedRuntimeMetadata({
+    ...options,
+    run: currentRun,
+  });
+  return buildTeamAgentRuntimeSnapshot({
+    teamName: TEAM_NAME,
+    runId: RUN_ID,
+    generationAtStart: 0,
+    runs: new Map([[RUN_ID, currentRun]]),
+    runtimeAdapterRunByTeam: options.primaryRuntime
+      ? new Map([[TEAM_NAME, options.primaryRuntime]])
+      : new Map(),
+    teamMetaStore: {
+      getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
+    },
+    membersMetaStore: {
+      getMembers: vi.fn(async () => []),
+    },
+    launchStateStore: {
+      read: vi.fn(async () => null),
+    },
+    readConfigSnapshot: vi.fn(async () => config()),
+    readPersistedRuntimeMembers: vi.fn(() => [] satisfies PersistedRuntimeMemberLike[]),
+    getMemberSpawnStatuses: vi.fn(
+      async (): Promise<MemberSpawnStatusesSnapshot> => ({
+        runId: RUN_ID,
+        source: 'live',
+        statuses: {},
+      })
+    ),
+    getLiveTeamAgentRuntimeMetadata: vi.fn(async () => liveRuntimeByMember),
+    readRuntimeProcessRowsForUsageSnapshot: vi.fn(async () => []),
+    readProcessUsageStatsByPid: vi.fn(async () => new Map()),
+    buildRuntimeUsageProcessTrees: vi.fn(() => new Map()),
+    buildRuntimeProcessLoadStats: vi.fn(() => undefined),
+    agentRuntimeResourceHistory: {
+      record: vi.fn(() => undefined),
+      prune: vi.fn(),
+    },
+    getRuntimeSnapshotCacheGeneration: vi.fn(() => 0),
+    getTrackedRunId: vi.fn(() => RUN_ID),
+    getAgentRuntimeSnapshotCacheTtlMs: vi.fn(() => 1_000),
+    rememberAgentRuntimeSnapshot: vi.fn(),
+    logDebug: vi.fn(),
+  });
 }
 
 function claudeConfig(): TeamConfig {
@@ -680,44 +805,19 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
     }
   });
 
-  it('uses confirmed mixed secondary lane evidence for live runtime liveness', async () => {
+  it('uses live exact mixed secondary evidence across case-only member variants', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(UPDATED_AT));
     try {
-      const metadata = await buildLiveTeamAgentRuntimeMetadata({
-        teamName: TEAM_NAME,
-        runId: RUN_ID,
-        generationAtStart: 0,
-        runs: new Map([[RUN_ID, mixedRunWithConfirmedSecondaryEvidence()]]),
-        runtimeAdapterRunByTeam: new Map(),
-        teamMetaStore: {
-          getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
-        },
-        membersMetaStore: {
-          getMembers: vi.fn(async () => []),
-        },
-        launchStateStore: {
-          read: vi.fn(async () => null),
-        },
-        readConfigSnapshot: vi.fn(async () => config()),
-        readPersistedRuntimeMembers: vi.fn(() => [] satisfies PersistedRuntimeMemberLike[]),
-        readRuntimeProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
-          rows: processRows(),
-          processTableAvailable: true,
-        })),
-        readWindowsHostProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
-          rows: [],
-          processTableAvailable: false,
-        })),
-        getRuntimeSnapshotCacheGeneration: vi.fn(() => 0),
-        getTrackedRunId: vi.fn(() => RUN_ID),
-        getAgentRuntimeSnapshotCacheTtlMs: vi.fn(() => 1_000),
-        liveRuntimeMetadataCache: {
-          rememberLiveTeamAgentRuntimeMetadata: vi.fn(),
-        },
-        logDebug: vi.fn(),
+      const currentRun = mixedRunWithConfirmedSecondaryEvidence({
+        laneMemberName: 'wOrKeR',
+        evidenceKey: 'WORKER',
+        evidenceMemberName: 'worker',
       });
+      const metadata = await buildMixedRuntimeMetadata({ run: currentRun });
+      const snapshot = await buildMixedRuntimeSnapshot({ run: currentRun });
 
+      expect([...metadata.keys()]).toEqual(['Worker']);
       expect(metadata.get('Worker')).toMatchObject({
         alive: true,
         providerId: 'opencode',
@@ -728,10 +828,124 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
         runtimeSessionId: 'session-current',
         runtimeDiagnostic: 'OpenCode runtime process detected after bootstrap confirmation',
       });
+      expect(snapshot.members.Worker).toMatchObject({
+        alive: true,
+        laneId: 'secondary:opencode:Worker',
+        laneKind: 'secondary',
+        runtimeSessionId: 'session-current',
+      });
     } finally {
       vi.useRealTimers();
     }
   });
+
+  it('does not rejoin sibling suffix evidence to an exact mixed secondary owner', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const currentRun = mixedRunWithConfirmedSecondaryEvidence({
+        evidenceKey: 'Worker2',
+        evidenceMemberName: 'Worker2',
+      });
+      const metadata = await buildMixedRuntimeMetadata({ run: currentRun });
+      const snapshot = await buildMixedRuntimeSnapshot({ run: currentRun });
+
+      expect(metadata.get('Worker')).toMatchObject({
+        alive: false,
+        livenessKind: 'registered_only',
+        runtimeDiagnostic: 'registered runtime metadata without live process',
+      });
+      expect(metadata.get('Worker')?.metricsPid).toBeUndefined();
+      expect(metadata.get('Worker')?.runtimeSessionId).toBeUndefined();
+      expect(snapshot.members.Worker).toMatchObject({
+        alive: false,
+        laneKind: 'secondary',
+      });
+      expect(snapshot.members.Worker?.runtimeSessionId).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('lets stale exact mixed lane evidence suppress current primary evidence for that owner', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const currentRun = mixedRunWithConfirmedSecondaryEvidence({ resultRunId: OLD_RUN_ID });
+      const metadata = await buildMixedRuntimeMetadata({
+        run: currentRun,
+        primaryRuntime: runtimeAdapterRun(),
+        processRows: [],
+      });
+      const snapshot = await buildMixedRuntimeSnapshot({
+        run: currentRun,
+        primaryRuntime: runtimeAdapterRun(),
+        processRows: [],
+      });
+
+      expect(metadata.get('Worker')).toMatchObject({
+        alive: false,
+        livenessKind: 'registered_only',
+        runtimeDiagnostic: 'registered runtime metadata without live process',
+      });
+      expect(metadata.get('Worker')?.metricsPid).toBeUndefined();
+      expect(metadata.get('Worker')?.runtimeSessionId).toBeUndefined();
+      expect(snapshot.members.Worker).toMatchObject({
+        alive: false,
+        laneKind: 'secondary',
+      });
+      expect(snapshot.members.Worker?.runtimeSessionId).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    {
+      probe: 'dead',
+      processTableAvailable: true,
+      livenessKind: 'stale_metadata',
+      runtimeDiagnostic: 'persisted runtime pid is not alive',
+    },
+    {
+      probe: 'unknown',
+      processTableAvailable: false,
+      livenessKind: 'registered_only',
+      runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+    },
+  ])(
+    'does not revive exact mixed secondary evidence when its runtime probe is $probe',
+    async ({ processTableAvailable, livenessKind, runtimeDiagnostic }) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(UPDATED_AT));
+      try {
+        const metadata = await buildMixedRuntimeMetadata({
+          processRows: [],
+          processTableAvailable,
+        });
+        const snapshot = await buildMixedRuntimeSnapshot({
+          processRows: [],
+          processTableAvailable,
+        });
+
+        expect(metadata.get('Worker')).toMatchObject({
+          alive: false,
+          livenessKind,
+          runtimeDiagnostic,
+          runtimeSessionId: 'session-current',
+        });
+        expect(snapshot.members.Worker).toMatchObject({
+          alive: false,
+          livenessKind,
+          runtimeDiagnostic,
+          runtimeSessionId: 'session-current',
+          laneKind: 'secondary',
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
 
   it('ignores stale runtime adapter run evidence when resolving the active run', async () => {
     vi.useFakeTimers();
