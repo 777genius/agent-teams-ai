@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
@@ -109,5 +109,39 @@ describe('Phase 3 coordination event architecture boundary', () => {
     expect(appendIndex).toBeGreaterThan(-1);
     expect(wakeupIndex).toBeGreaterThan(appendIndex);
     expect(applicationSource).not.toContain('Promise.all([');
+  });
+
+  it('keeps SQLite composition main-owned and exports only the narrow feature factory', () => {
+    const mainPaths = [
+      'src/features/coordination-events/main/adapters/output/SqliteCoordinationEventJournal.ts',
+      'src/features/coordination-events/main/adapters/output/SqliteSnapshotRetentionLeaseCoordinator.ts',
+      'src/features/coordination-events/main/adapters/output/SqliteCoordinationEventRecoveryPointParticipant.ts',
+      'src/features/coordination-events/main/composition/createCoordinationEventsFeature.ts',
+    ] as const;
+    for (const relativePath of mainPaths) {
+      // Paths come only from the fixed repository-owned allowlist above.
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      expect(existsSync(resolve(ROOT, relativePath)), relativePath).toBe(true);
+    }
+    // This resolves one fixed repository-owned public entrypoint.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const mainEntrypoint = readFileSync(
+      resolve(ROOT, 'src/features/coordination-events/main/index.ts'),
+      'utf8'
+    );
+    expect(mainEntrypoint).toContain(
+      "export * from './composition/createCoordinationEventsFeature'"
+    );
+    expect(mainEntrypoint).not.toMatch(/adapters|SqliteCoordinationEventJournal/);
+    // This resolves one fixed repository-owned composition root.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const composition = readFileSync(
+      resolve(
+        ROOT,
+        'src/features/coordination-events/main/composition/createCoordinationEventsFeature.ts'
+      ),
+      'utf8'
+    );
+    expect(composition).not.toMatch(/return Object\.freeze\(\{\s*(?:journal|retentionLeases)/);
   });
 });

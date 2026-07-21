@@ -31,6 +31,13 @@ import {
 import { and, asc, eq, gt, isNull, lt } from 'drizzle-orm';
 
 import {
+  appendCommandOutboxEventToJournal,
+  assertCoordinationMutationAdmissionOpen,
+  canonicalCoordinationStorageJson,
+  createLegacyCommandCoordinationAttribution,
+  materializeCommandCoordinationAttribution,
+} from './coordinationDurabilityWorkerOps';
+import {
   applicationCommandLedger,
   durableApplicationCommandConsumerApplications,
   durableApplicationCommandConsumerProjections,
@@ -40,6 +47,10 @@ import {
   durableApplicationCommands,
 } from './internalStorageSchema';
 
+import type {
+  ApplicationCommandLedgerWorkerPayloadByOp,
+  StoredCommandCoordinationAttribution,
+} from './internalStorageWorkerProtocol';
 import type {
   DurableApplicationCommandAttemptClaim,
   DurableApplicationCommandAttemptLeaseRequest,
@@ -73,7 +84,10 @@ import type {
   EffectRecoveryClass,
   ValidatedDurableEffectEvidence,
 } from '@features/application-command-ledger/contracts';
+import type DatabaseConstructor from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+
+type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
 
 type AppCommandRecord = ApplicationCommandLedgerRecord<string>;
 type AppCommandBeginRequest = ApplicationCommandLedgerBeginRequest<string>;
@@ -101,6 +115,7 @@ interface DurableCommandRow {
   state: string;
   retentionClass: string;
   auditSessionId: string | null;
+  coordinationAttributionJson: string;
   outcomeJson: string | null;
   errorCode: string | null;
   errorJson: string | null;
@@ -197,7 +212,9 @@ export function handleApplicationCommandLedgerOp(
     case 'appCommandLedger.listByScope':
       return ops.listByScope(payload as ApplicationCommandLedgerListScopeRequest);
     case 'appCommandLedger.durable.claim':
-      return ops.durableClaim(payload as DurableApplicationCommandPersistClaimRequest);
+      return ops.durableClaim(
+        payload as ApplicationCommandLedgerWorkerPayloadByOp['appCommandLedger.durable.claim']
+      );
     case 'appCommandLedger.durable.getStatus':
       return ops.durableGetStatus(payload as DurableApplicationCommandStatusRequest);
     case 'appCommandLedger.durable.getByClaim':
@@ -235,16 +252,30 @@ export function handleApplicationCommandLedgerOp(
 }
 
 export class ApplicationCommandLedgerWorkerOps {
-  constructor(private readonly getOrm: () => BetterSQLite3Database) {}
+  constructor(
+    private readonly getOrm: () => BetterSQLite3Database,
+    private readonly getDb: () => SqliteDatabase
+  ) {}
 
   durableClaim<TCommandKind extends string>(
-    input: DurableApplicationCommandPersistClaimRequest<TCommandKind>
+    input: DurableApplicationCommandPersistClaimRequest<TCommandKind> & {
+      readonly coordinationAttribution?: StoredCommandCoordinationAttribution;
+    }
   ): DurableApplicationCommandClaimResult<TCommandKind> {
     const validated = validateDurableClaim(input);
+    const attribution = materializeCommandCoordinationAttribution(
+      input.coordinationAttribution ??
+        createLegacyCommandCoordinationAttribution(validated.scope.stableActorId)
+    );
+    const attributionJson = canonicalCoordinationStorageJson(attribution);
     const orm = this.getOrm();
 
     return orm.transaction(
       () => {
+        const preexistingClaim = this.readDurableRecordByClaim({ scope: validated.scope });
+        if (!preexistingClaim) {
+          assertCoordinationMutationAdmissionOpen(this.getDb(), validated.scope.deploymentId);
+        }
         const insertResult = orm
           .insert(durableApplicationCommands)
           .values({
@@ -269,6 +300,7 @@ export class ApplicationCommandLedgerWorkerOps {
             state: 'prepared',
             retentionClass: validated.retentionClass,
             auditSessionId: validated.auditSessionId,
+            coordinationAttributionJson: attributionJson,
             outcomeJson: null,
             errorCode: null,
             errorJson: null,
@@ -311,6 +343,9 @@ export class ApplicationCommandLedgerWorkerOps {
         let command = byClaim ?? byCommandId;
         if (!command) {
           throw new Error('Durable application command claim did not converge to a stored record');
+        }
+        if (this.requireCoordinationAttributionJson(command.commandId) !== attributionJson) {
+          throw new Error('Durable application command coordination attribution conflicts');
         }
 
         const incoming: CommandClaimRecord<TCommandKind> = {
@@ -615,6 +650,12 @@ export class ApplicationCommandLedgerWorkerOps {
             deliveryAcknowledgedAt: null,
           })
           .run();
+        appendCommandOutboxEventToJournal(this.getDb(), {
+          commandId: current.commandId,
+          deploymentId: current.claim.scope.deploymentId,
+          attribution: this.readCoordinationAttribution(current.commandId),
+          outbox: input.outbox,
+        });
         orm
           .update(durableApplicationCommands)
           .set({
@@ -1291,6 +1332,35 @@ export class ApplicationCommandLedgerWorkerOps {
     return rows[0] ? mapOutboxRow(rows[0]) : null;
   }
 
+  private requireCoordinationAttributionJson(commandId: string): string {
+    const row = this.getOrm()
+      .select({ value: durableApplicationCommands.coordinationAttributionJson })
+      .from(durableApplicationCommands)
+      .where(eq(durableApplicationCommands.commandId, commandId))
+      .all()[0];
+    if (!row) throw new Error(`Durable application command not found: ${commandId}`);
+    return row.value;
+  }
+
+  private readCoordinationAttribution(commandId: string): StoredCommandCoordinationAttribution {
+    const value = this.requireCoordinationAttributionJson(commandId);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(value) as unknown;
+    } catch (error) {
+      throw new Error('Durable application command coordination attribution is corrupt', {
+        cause: error,
+      });
+    }
+    const attribution = materializeCommandCoordinationAttribution(
+      parsed as StoredCommandCoordinationAttribution
+    );
+    if (canonicalCoordinationStorageJson(attribution) !== value) {
+      throw new Error('Durable application command coordination attribution is not canonical');
+    }
+    return attribution;
+  }
+
   private beginExistingCommand(
     current: AppCommandRecord,
     input: AppCommandBeginRequest
@@ -1665,6 +1735,21 @@ function assertKnownDurableCommandRow(row: DurableCommandRow): void {
   assertKnownCommandState(row.state);
   assertIdentifier('retentionClass', row.retentionClass);
   if (row.auditSessionId !== null) assertIdentifier('auditSessionId', row.auditSessionId);
+  if (typeof row.coordinationAttributionJson !== 'string') {
+    throw new Error('Invalid durable application command coordination attribution');
+  }
+  try {
+    const attribution = materializeCommandCoordinationAttribution(
+      JSON.parse(row.coordinationAttributionJson) as StoredCommandCoordinationAttribution
+    );
+    if (canonicalCoordinationStorageJson(attribution) !== row.coordinationAttributionJson) {
+      throw new Error('non-canonical');
+    }
+  } catch (error) {
+    throw new Error('Invalid durable application command coordination attribution', {
+      cause: error,
+    });
+  }
   if (row.outcomeJson !== null) assertSafeJson('outcomeJson', row.outcomeJson);
   if (row.errorCode !== null) assertIdentifier('errorCode', row.errorCode);
   if (row.errorJson !== null) assertSafeJson('errorJson', row.errorJson);

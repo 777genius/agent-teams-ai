@@ -8,6 +8,7 @@ export { BackendSelectingTaskCommentNotificationJournalStore } from './compositi
 export { BackendSelectingTaskStallJournalStore } from './composition/BackendSelectingTaskStallJournalStore';
 export type {
   InternalStorageApplicationCommandLedgerBackend,
+  InternalStorageCoordinationDurabilityBackend,
   InternalStorageFeature,
   InternalStorageFeatureDeps,
   InternalStorageMemberWorkSyncBackend,
@@ -17,3 +18,19 @@ export {
   getInternalStorageDatabasePath,
 } from './composition/createInternalStorageFeature';
 export { InternalStorageBackendSelector } from './composition/InternalStorageBackendSelector';
+export type {
+  CoordinationDrainStorageEvidence,
+  CoordinationDurabilityStorageGateway,
+  SqliteBackupChunkStorageResult,
+  SqliteOnlineBackupStorageResult,
+  SqliteSnapshotVerificationStorageResult,
+  StoredCoordinationEventRow,
+  StoredEventJournalMetadata,
+  StoredSnapshotRetentionLease,
+  StoredSnapshotRetentionLeaseUse,
+} from './infrastructure/CoordinationDurabilityStorageGateway';
+export {
+  INTERNAL_STORAGE_APPLICATION_ID,
+  INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
+  INTERNAL_STORAGE_SCHEMA_VERSION,
+} from './infrastructure/worker/internalStorageMigrations';

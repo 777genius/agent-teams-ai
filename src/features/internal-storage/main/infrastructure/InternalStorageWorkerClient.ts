@@ -30,11 +30,22 @@ import type {
   InternalStorageGateway,
   MemberWorkSyncStorageGateway,
 } from '../../core/application/ports';
+import type { CoordinationDurabilityStorageGateway } from './CoordinationDurabilityStorageGateway';
 import type {
   ApplicationCommandLedgerWorkerPayloadByOp,
+  CoordinationDrainStorageEvidence,
   InternalStorageWorkerData,
   InternalStorageWorkerRequest,
   InternalStorageWorkerResponse,
+} from './worker/internalStorageWorkerProtocol';
+import type {
+  SqliteBackupChunkStorageResult,
+  SqliteOnlineBackupStorageResult,
+  SqliteSnapshotVerificationStorageResult,
+  StoredCoordinationEventRow,
+  StoredEventJournalMetadata,
+  StoredSnapshotRetentionLease,
+  StoredSnapshotRetentionLeaseUse,
 } from './worker/internalStorageWorkerProtocol';
 import type {
   ApplicationCommandLedgerBeginRequest,
@@ -65,6 +76,16 @@ import type {
   DurableApplicationCommandStatusRequest,
   DurableApplicationCommandTransitionRequest,
 } from '@features/application-command-ledger';
+import type {
+  BackupFenceCompletionDisposition,
+  BackupRunRecord,
+  BackupRunState,
+} from '@features/coordination-backup/contracts';
+import type { CoordinationSnapshotRequest } from '@features/coordination-events';
+import type {
+  CoordinationEventDraft,
+  CoordinationJsonValue,
+} from '@features/coordination-events/contracts';
 import type { TeamId } from '@shared/contracts/hosted';
 
 const logger = createLogger('Service:InternalStorageWorkerClient');
@@ -86,6 +107,7 @@ interface PendingEntry {
   reject: (error: Error) => void;
   op: InternalStorageWorkerRequest['op'];
   createdAt: number;
+  timeoutAtMs: number;
 }
 
 interface QueuedEntry extends PendingEntry {
@@ -134,7 +156,8 @@ export class InternalStorageWorkerClient
     MemberWorkSyncStorageGateway,
     ApplicationCommandLedgerStorageGateway,
     DurableApplicationCommandLedgerStorageGateway,
-    TeamIdentityReadGateway
+    TeamIdentityReadGateway,
+    CoordinationDurabilityStorageGateway
 {
   private worker: Worker | null = null;
   private readonly workerPath: string | null = resolveWorkerPath();
@@ -522,6 +545,204 @@ export class InternalStorageWorkerClient
     )) as DurableApplicationCommandConsumerProjectionRecord | null;
   }
 
+  async coordinationEventInitialize(input: {
+    readonly deploymentId: string;
+    readonly eventEpoch?: string;
+    readonly nowIso: string;
+  }): Promise<StoredEventJournalMetadata> {
+    return (await this.call('coordinationEvents.initialize', input)) as StoredEventJournalMetadata;
+  }
+
+  async coordinationEventGetWatermark(deploymentId: string): Promise<StoredEventJournalMetadata> {
+    return (await this.call('coordinationEvents.getWatermark', {
+      deploymentId,
+    })) as StoredEventJournalMetadata;
+  }
+
+  async coordinationEventRead(input: {
+    readonly deploymentId: string;
+    readonly afterSequence: number;
+    readonly throughSequence: number;
+    readonly limit: number;
+  }): Promise<{
+    readonly rows: readonly StoredCoordinationEventRow[];
+    readonly watermark: StoredEventJournalMetadata;
+  }> {
+    return (await this.call('coordinationEvents.read', input)) as {
+      readonly rows: readonly StoredCoordinationEventRow[];
+      readonly watermark: StoredEventJournalMetadata;
+    };
+  }
+
+  async coordinationEventAppend(input: {
+    readonly deploymentId: string;
+    readonly eventEpoch: string;
+    readonly draft: CoordinationEventDraft<CoordinationJsonValue>;
+    readonly bodyJson: string;
+    readonly nowIso: string;
+  }): Promise<{
+    readonly row: StoredCoordinationEventRow;
+    readonly watermark: StoredEventJournalMetadata;
+  }> {
+    return (await this.call('coordinationEvents.append', input)) as {
+      readonly row: StoredCoordinationEventRow;
+      readonly watermark: StoredEventJournalMetadata;
+    };
+  }
+
+  async coordinationEventPrune(input: {
+    readonly deploymentId: string;
+    readonly eventEpoch: string;
+    readonly throughSequence: number;
+    readonly nowMs: number;
+    readonly nowIso: string;
+  }): Promise<StoredEventJournalMetadata> {
+    return (await this.call('coordinationEvents.prune', input)) as StoredEventJournalMetadata;
+  }
+
+  async coordinationEventAcquireLease(input: {
+    readonly deploymentId: string;
+    readonly leaseId: string;
+    readonly request: CoordinationSnapshotRequest;
+    readonly nowMs: number;
+    readonly deadlineAtMs: number;
+  }): Promise<StoredSnapshotRetentionLease> {
+    return (await this.call(
+      'coordinationEvents.lease.acquire',
+      input
+    )) as StoredSnapshotRetentionLease;
+  }
+
+  async coordinationEventBeginLeaseUse(input: {
+    readonly leaseId: string;
+    readonly useToken: string;
+    readonly nowMs: number;
+  }): Promise<StoredSnapshotRetentionLeaseUse> {
+    return (await this.call(
+      'coordinationEvents.lease.beginUse',
+      input
+    )) as StoredSnapshotRetentionLeaseUse;
+  }
+
+  async coordinationEventEndLeaseUse(input: {
+    readonly leaseId: string;
+    readonly useToken: string;
+  }): Promise<void> {
+    await this.call('coordinationEvents.lease.endUse', input);
+  }
+
+  async coordinationEventReleaseLease(leaseId: string): Promise<void> {
+    await this.call('coordinationEvents.lease.release', { leaseId });
+  }
+
+  async coordinationBackupRunCreate(record: BackupRunRecord): Promise<BackupRunRecord> {
+    return (await this.call('coordinationBackupRuns.create', { record })) as BackupRunRecord;
+  }
+
+  async coordinationBackupRunGet(backupRunId: string): Promise<BackupRunRecord | null> {
+    return (await this.call('coordinationBackupRuns.get', {
+      backupRunId,
+    })) as BackupRunRecord | null;
+  }
+
+  async coordinationBackupRunListRecoverable(): Promise<readonly BackupRunRecord[]> {
+    return (await this.call(
+      'coordinationBackupRuns.listRecoverable',
+      {}
+    )) as readonly BackupRunRecord[];
+  }
+
+  async coordinationBackupRunCompareAndSet(input: {
+    readonly backupRunId: string;
+    readonly expectedRevision: number;
+    readonly expectedState: BackupRunState;
+    readonly record: BackupRunRecord;
+  }): Promise<BackupRunRecord> {
+    return (await this.call('coordinationBackupRuns.compareAndSet', input)) as BackupRunRecord;
+  }
+
+  async coordinationBackupFenceAcquire(input: {
+    readonly deploymentId: string;
+    readonly backupRunId: string;
+    readonly expectedGeneration: number | null;
+    readonly leaseId: string;
+    readonly acquiredAt: string;
+  }): Promise<
+    | { readonly status: 'acquired'; readonly generation: number; readonly leaseId: string }
+    | { readonly status: 'busy'; readonly activeRunId: string }
+  > {
+    return (await this.call('coordinationBackupFence.acquire', input)) as
+      | { readonly status: 'acquired'; readonly generation: number; readonly leaseId: string }
+      | { readonly status: 'busy'; readonly activeRunId: string };
+  }
+
+  async coordinationBackupFenceComplete(input: {
+    readonly deploymentId: string;
+    readonly backupRunId: string;
+    readonly generation: number;
+    readonly leaseId: string;
+    readonly disposition: BackupFenceCompletionDisposition;
+    readonly completedAt: string;
+  }): Promise<void> {
+    await this.call('coordinationBackupFence.complete', input);
+  }
+
+  async coordinationBackupDrain(input: {
+    readonly deploymentId: string;
+    readonly backupRunId: string;
+    readonly fenceGeneration: number;
+  }): Promise<CoordinationDrainStorageEvidence> {
+    return (await this.call(
+      'coordinationBackupFlush.drain',
+      input
+    )) as CoordinationDrainStorageEvidence;
+  }
+
+  async coordinationBackupCapture(input: {
+    readonly deploymentId: string;
+    readonly evidence: CoordinationDrainStorageEvidence;
+  }): Promise<CoordinationDrainStorageEvidence> {
+    return (await this.call(
+      'coordinationBackupFlush.capture',
+      input
+    )) as CoordinationDrainStorageEvidence;
+  }
+
+  async coordinationBackupSqliteOnline(input: {
+    readonly backupRunId: string;
+    readonly deadlineAtMs: number;
+    readonly busyRetryMs: number;
+    readonly pagesPerStep: number;
+  }): Promise<SqliteOnlineBackupStorageResult> {
+    return (await this.call('coordinationBackup.sqlite.online', input, {
+      timeoutAtMs: input.deadlineAtMs + 2_000,
+    })) as SqliteOnlineBackupStorageResult;
+  }
+
+  async coordinationBackupSqliteVerify(input: {
+    readonly backupRunId: string;
+  }): Promise<SqliteSnapshotVerificationStorageResult> {
+    return (await this.call(
+      'coordinationBackup.sqlite.verify',
+      input
+    )) as SqliteSnapshotVerificationStorageResult;
+  }
+
+  async coordinationBackupSqliteReadChunk(input: {
+    readonly backupRunId: string;
+    readonly offset: number;
+    readonly maximumBytes: number;
+  }): Promise<SqliteBackupChunkStorageResult> {
+    return (await this.call(
+      'coordinationBackup.sqlite.readChunk',
+      input
+    )) as SqliteBackupChunkStorageResult;
+  }
+
+  async coordinationBackupSqliteDiscard(backupRunId: string): Promise<void> {
+    await this.call('coordinationBackup.sqlite.discard', { backupRunId });
+  }
+
   async close(): Promise<void> {
     this.closed = true;
     const worker = this.worker;
@@ -628,12 +849,13 @@ export class InternalStorageWorkerClient
 
     this.pending.set(entry.id, entry);
     this.activeCallId = entry.id;
+    const timeoutMs = Math.max(1, entry.timeoutAtMs - Date.now());
     this.activeTimeout = setTimeout(() => {
       if (this.activeCallId !== entry.id) {
         return;
       }
       const timeoutError = new Error(
-        `internal-storage worker call timeout after ${WORKER_CALL_TIMEOUT_MS}ms (${entry.op})`
+        `internal-storage worker call timeout after ${Date.now() - entry.createdAt}ms (${entry.op})`
       );
       logger.warn(
         `worker call timeout op=${entry.op} ms=${Date.now() - entry.createdAt} pendingNow=${this.pending.size} queued=${this.queue.length}`
@@ -642,7 +864,7 @@ export class InternalStorageWorkerClient
       // The worker may be stuck in native IO; terminate and recreate lazily.
       // SQLite's journal makes a mid-transaction kill safe (auto-rollback).
       void worker.terminate().catch(() => undefined);
-    }, WORKER_CALL_TIMEOUT_MS);
+    }, timeoutMs);
 
     try {
       worker.postMessage({
@@ -662,19 +884,21 @@ export class InternalStorageWorkerClient
   private call<TOp extends InternalStorageWorkerRequest['op']>(
     op: TOp,
     payload: InternalStorageWorkerPayloadFor<TOp>,
-    options: { allowWhenClosed?: boolean } = {}
+    options: { allowWhenClosed?: boolean; timeoutAtMs?: number } = {}
   ): Promise<unknown> {
     if (this.closed && !options.allowWhenClosed) {
       return Promise.reject(new Error('internal-storage client is closed'));
     }
     const id = makeId();
     const createdAt = Date.now();
+    const timeoutAtMs = options.timeoutAtMs ?? createdAt + WORKER_CALL_TIMEOUT_MS;
     return new Promise((resolve, reject) => {
       this.queue.push({
         id,
         op,
         payload,
         createdAt,
+        timeoutAtMs,
         resolve: (value) => {
           const ms = Date.now() - createdAt;
           if (ms >= 1500) {

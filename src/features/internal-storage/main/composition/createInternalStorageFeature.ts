@@ -27,6 +27,7 @@ import { InternalStorageBackendSelector } from './InternalStorageBackendSelector
 import type { InternalStorageBackendKind } from '../../contracts/internalStorageContracts';
 import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '../../core/application/ports';
+import type { CoordinationDurabilityStorageGateway } from '../infrastructure/CoordinationDurabilityStorageGateway';
 import type { ApplicationCommandLedgerStorageGateway } from '@features/application-command-ledger';
 import type { TaskStallJournalStore } from '@main/services/team/stallMonitor/TaskStallJournalStore';
 import type { TaskCommentNotificationJournalStore } from '@main/services/team/TaskCommentNotificationJournalStore';
@@ -52,6 +53,11 @@ export interface InternalStorageTeamIdentityReadBackend {
   gateway: TeamIdentityReadGateway;
 }
 
+export interface InternalStorageCoordinationDurabilityBackend {
+  gateway: CoordinationDurabilityStorageGateway;
+  selector: InternalStorageBackendSelector;
+}
+
 export interface InternalStorageFeature {
   taskStallJournalStore: TaskStallJournalStore;
   taskCommentNotificationJournalStore: TaskCommentNotificationJournalStore;
@@ -68,6 +74,8 @@ export interface InternalStorageFeature {
   applicationCommandLedgerBackend: InternalStorageApplicationCommandLedgerBackend | null;
   /** Durable identity reads never degrade to directory or JSON discovery. */
   teamIdentityReadBackend: InternalStorageTeamIdentityReadBackend | null;
+  /** Critical coordination durability never degrades to a JSON fallback. */
+  coordinationDurabilityBackend: InternalStorageCoordinationDurabilityBackend | null;
   getBackendKind(): InternalStorageBackendKind;
   dispose(): Promise<void>;
 }
@@ -96,6 +104,7 @@ export function createInternalStorageFeature(
       memberWorkSyncBackend: null,
       applicationCommandLedgerBackend: null,
       teamIdentityReadBackend: null,
+      coordinationDurabilityBackend: null,
       getBackendKind: () => 'json-fallback',
       dispose: async () => undefined,
     };
@@ -151,6 +160,7 @@ export function createInternalStorageFeature(
     memberWorkSyncBackend: { gateway: client, selector },
     applicationCommandLedgerBackend: { gateway: client, selector },
     teamIdentityReadBackend: { gateway: client },
+    coordinationDurabilityBackend: { gateway: client, selector },
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),
   };

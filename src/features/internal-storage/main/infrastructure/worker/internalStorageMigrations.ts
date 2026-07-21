@@ -4,6 +4,20 @@ import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
 
+/** "ATAI" in big-endian ASCII. Backups reject databases owned by another application. */
+export const INTERNAL_STORAGE_APPLICATION_ID = 0x41544149;
+export const INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES = Object.freeze([
+  'coordination_backup_runs',
+  'coordination_backup_writer_fences',
+  'coordination_event_journal',
+  'coordination_event_journal_metadata',
+  'durable_application_command_outbox',
+  'durable_application_commands',
+  'snapshot_retention_leases',
+  'team_identity_records',
+  'team_identity_storage_metadata',
+] as const);
+
 interface InternalStorageMigration {
   version: number;
   statements: string[];
@@ -338,6 +352,92 @@ const MIGRATIONS: InternalStorageMigration[] = [
       )`,
     ],
   },
+  {
+    version: 8,
+    statements: [
+      `PRAGMA application_id = ${INTERNAL_STORAGE_APPLICATION_ID}`,
+      `CREATE TABLE IF NOT EXISTS coordination_event_journal_metadata (
+        deployment_id TEXT PRIMARY KEY,
+        event_epoch TEXT NOT NULL,
+        retention_floor_sequence INTEGER NOT NULL DEFAULT 0
+          CHECK (retention_floor_sequence >= 0),
+        high_watermark_sequence INTEGER NOT NULL DEFAULT 0
+          CHECK (high_watermark_sequence >= retention_floor_sequence),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (deployment_id, event_epoch)
+      )`,
+      `CREATE TABLE IF NOT EXISTS coordination_event_journal (
+        deployment_id TEXT NOT NULL,
+        event_epoch TEXT NOT NULL,
+        event_sequence INTEGER NOT NULL CHECK (event_sequence > 0),
+        event_id TEXT NOT NULL UNIQUE,
+        body_json TEXT NOT NULL CHECK (json_valid(body_json)),
+        emitted_at TEXT NOT NULL,
+        origin_command_id TEXT,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (deployment_id, event_epoch, event_sequence),
+        FOREIGN KEY (deployment_id, event_epoch)
+          REFERENCES coordination_event_journal_metadata(deployment_id, event_epoch)
+          ON DELETE RESTRICT ON UPDATE RESTRICT,
+        FOREIGN KEY (origin_command_id)
+          REFERENCES durable_application_commands(command_id)
+          ON DELETE RESTRICT ON UPDATE RESTRICT
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_coordination_event_journal_replay
+        ON coordination_event_journal (deployment_id, event_epoch, event_sequence)`,
+      `CREATE TABLE IF NOT EXISTS snapshot_retention_leases (
+        lease_id TEXT PRIMARY KEY,
+        deployment_id TEXT NOT NULL,
+        event_epoch TEXT NOT NULL,
+        scope_kind TEXT NOT NULL,
+        scope_id TEXT NOT NULL,
+        retention_floor_sequence INTEGER NOT NULL CHECK (retention_floor_sequence >= 0),
+        high_watermark_sequence INTEGER NOT NULL
+          CHECK (high_watermark_sequence >= retention_floor_sequence),
+        expires_at_ms INTEGER NOT NULL CHECK (expires_at_ms > 0),
+        use_token TEXT,
+        use_deadline_at_ms INTEGER,
+        release_requested INTEGER NOT NULL DEFAULT 0 CHECK (release_requested IN (0, 1)),
+        created_at_ms INTEGER NOT NULL CHECK (created_at_ms > 0),
+        FOREIGN KEY (deployment_id, event_epoch)
+          REFERENCES coordination_event_journal_metadata(deployment_id, event_epoch)
+          ON DELETE RESTRICT ON UPDATE RESTRICT,
+        CHECK ((use_token IS NULL AND use_deadline_at_ms IS NULL)
+          OR (use_token IS NOT NULL AND use_deadline_at_ms IS NOT NULL))
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_snapshot_retention_lease_floor
+        ON snapshot_retention_leases (
+          deployment_id, event_epoch, release_requested, expires_at_ms, high_watermark_sequence
+        )`,
+      `CREATE TABLE IF NOT EXISTS coordination_backup_runs (
+        backup_run_id TEXT PRIMARY KEY,
+        deployment_id TEXT NOT NULL,
+        state TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision > 0),
+        fence_completion_status TEXT,
+        record_json TEXT NOT NULL CHECK (json_valid(record_json)),
+        requested_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_coordination_backup_runs_recoverable
+        ON coordination_backup_runs (state, fence_completion_status, updated_at)`,
+      `CREATE TABLE IF NOT EXISTS coordination_backup_writer_fences (
+        deployment_id TEXT PRIMARY KEY,
+        generation INTEGER NOT NULL CHECK (generation > 0),
+        admitted_run_id TEXT NOT NULL,
+        lease_id TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL CHECK (status IN ('active', 'released', 'operator_required')),
+        disposition TEXT CHECK (disposition IN ('committed', 'aborted', 'operator_required')),
+        acquired_at TEXT NOT NULL,
+        completed_at TEXT,
+        FOREIGN KEY (admitted_run_id) REFERENCES coordination_backup_runs(backup_run_id)
+          ON DELETE RESTRICT ON UPDATE RESTRICT,
+        CHECK ((status = 'active' AND disposition IS NULL AND completed_at IS NULL)
+          OR (status <> 'active' AND disposition IS NOT NULL AND completed_at IS NOT NULL))
+      )`,
+    ],
+  },
 ];
 
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
@@ -354,11 +454,360 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
       continue;
     }
     const apply = db.transaction(() => {
+      if (migration.version === 7) ensureHistoricalV6DurabilityTables(db);
+      if (migration.version === 8) {
+        ensureHistoricalV6DurabilityTables(db);
+        ensureCommandCoordinationAttribution(db);
+      }
       for (const statement of migration.statements) {
         db.exec(statement);
       }
+      if (migration.version === 8) backfillCoordinationEventJournal(db);
       db.pragma(`user_version = ${migration.version}`);
     });
     apply();
   }
+}
+
+function ensureHistoricalV6DurabilityTables(db: SqliteDatabase): void {
+  const migration = MIGRATIONS.find((candidate) => candidate.version === 6);
+  if (!migration) throw new Error('internal-storage-v6-migration-missing');
+  for (const statement of migration.statements) db.exec(statement);
+  const crossDeployment = db
+    .prepare(
+      `SELECT command_id
+       FROM durable_application_command_outbox
+       GROUP BY command_id
+       HAVING COUNT(DISTINCT deployment_id) <> 1
+       LIMIT 1`
+    )
+    .get() as { readonly command_id: string } | undefined;
+  if (crossDeployment) throw new Error('internal-storage-legacy-command-deployment-ambiguous');
+  // One historical v6 fixture shipped the outbox without its command parent
+  // table. Preserve those events under explicit recovery provenance instead of
+  // inventing an operator or silently dropping rows during the v8 journal import.
+  db.exec(
+    `INSERT INTO durable_application_commands (
+       command_id, deployment_id, stable_actor_id, command_kind, idempotency_key,
+       descriptor_id, descriptor_version, input_schema_version, fingerprint_version,
+       effect_plan_version, fingerprint_key_version, fingerprint_digest,
+       attempt_generation, attempt_id, attempt_owner_id, attempt_lease_token,
+       attempt_claimed_at, attempt_lease_expires_at, state, retention_class,
+       audit_session_id, outcome_json, error_code, error_json,
+       created_at, updated_at, committed_at
+     )
+     SELECT
+       outbox.command_id,
+       MIN(outbox.deployment_id),
+       'legacy-unattributed:' || outbox.command_id,
+       'legacy_recovery',
+       'legacy-event:' || outbox.command_id,
+       'legacy-recovery-v1', 1, 1, 'hmac-sha256-ld-v1', 1,
+       'legacy-unavailable',
+       '0000000000000000000000000000000000000000000000000000000000000000',
+       1,
+       'legacy-attempt:' || outbox.command_id,
+       'legacy-recovery',
+       'legacy-lease:' || outbox.command_id,
+       MIN(outbox.created_at),
+       '9999-12-31T23:59:59.999Z',
+       'committed',
+       'legacy_recovery',
+       NULL,
+       json_object('provenance', 'legacy_recovery_v1'),
+       NULL,
+       NULL,
+       MIN(outbox.created_at),
+       MAX(outbox.created_at),
+       MAX(outbox.created_at)
+     FROM durable_application_command_outbox AS outbox
+     WHERE NOT EXISTS (
+       SELECT 1 FROM durable_application_commands AS commands
+       WHERE commands.command_id = outbox.command_id
+     )
+     GROUP BY outbox.command_id`
+  );
+  db.exec(
+    `INSERT INTO durable_application_command_effects (
+       command_id, ordinal, effect_id, effect_version, recovery_class,
+       evidence_schema_version, state, updated_at
+     )
+     SELECT
+       commands.command_id,
+       0,
+       'legacy-recovery:' || commands.command_id,
+       1,
+       'transactional_local',
+       1,
+       'observed_succeeded',
+       commands.updated_at
+     FROM durable_application_commands AS commands
+     WHERE commands.descriptor_id = 'legacy-recovery-v1'
+       AND commands.stable_actor_id = 'legacy-unattributed:' || commands.command_id
+       AND NOT EXISTS (
+         SELECT 1 FROM durable_application_command_effects AS effects
+         WHERE effects.command_id = commands.command_id
+       )`
+  );
+  db.exec(
+    `INSERT INTO durable_application_command_effect_evidence (
+       command_id, ordinal, sequence, outcome, evidence_schema_version,
+       evidence_json, recorded_at
+     )
+     SELECT
+       commands.command_id,
+       0,
+       1,
+       'observed_succeeded',
+       1,
+       json_object('provenance', 'legacy_recovery_v1'),
+       commands.updated_at
+     FROM durable_application_commands AS commands
+     WHERE commands.descriptor_id = 'legacy-recovery-v1'
+       AND commands.stable_actor_id = 'legacy-unattributed:' || commands.command_id
+       AND NOT EXISTS (
+         SELECT 1 FROM durable_application_command_effect_evidence AS evidence
+         WHERE evidence.command_id = commands.command_id AND evidence.ordinal = 0
+       )`
+  );
+}
+
+function ensureCommandCoordinationAttribution(db: SqliteDatabase): void {
+  const columns = db.pragma('table_info(durable_application_commands)') as {
+    readonly name: string;
+  }[];
+  if (!columns.some((column) => column.name === 'coordination_attribution_json')) {
+    db.exec(
+      `ALTER TABLE durable_application_commands
+       ADD COLUMN coordination_attribution_json TEXT NOT NULL
+       DEFAULT '{"actor":{"actorRef":"legacy-command:unknown","kind":"recovery"},"provenance":"legacy_recovery_v1"}'
+       CHECK (json_valid(coordination_attribution_json))`
+    );
+  }
+  db.exec(
+    `UPDATE durable_application_commands
+     SET coordination_attribution_json = json_object(
+       'actor', json_object(
+         'actorRef', 'legacy-command:' || stable_actor_id,
+         'kind', 'recovery'
+       ),
+       'provenance', 'legacy_recovery_v1'
+     )
+     WHERE json_extract(coordination_attribution_json, '$.provenance') = 'legacy_recovery_v1'`
+  );
+}
+
+interface LegacyOutboxEventRow {
+  readonly deployment_id: string;
+  readonly sequence: number;
+  readonly event_id: string;
+  readonly command_id: string;
+  readonly event_type: string;
+  readonly scope_kind: string;
+  readonly scope_id: string;
+  readonly schema_version: number;
+  readonly payload_json: string;
+  readonly created_at: string;
+  readonly coordination_attribution_json: string;
+}
+
+const LEGACY_EVENT_SCOPE_KINDS = new Set([
+  'instance',
+  'catalog',
+  'workspace',
+  'team',
+  'run',
+  'session',
+]);
+
+/** Imports the v6/v7 outbox into the one journal using runtime-identical canonical JSON. */
+function backfillCoordinationEventJournal(db: SqliteDatabase): void {
+  const mismatchedCommand = db
+    .prepare(
+      `SELECT outbox.command_id
+       FROM durable_application_command_outbox AS outbox
+       JOIN durable_application_commands AS commands ON commands.command_id = outbox.command_id
+       WHERE commands.deployment_id <> outbox.deployment_id
+       LIMIT 1`
+    )
+    .get() as { readonly command_id: string } | undefined;
+  if (mismatchedCommand) throw new Error('internal-storage-command-outbox-deployment-mismatch');
+
+  const rows = db
+    .prepare(
+      `SELECT
+         outbox.deployment_id,
+         outbox.sequence,
+         outbox.event_id,
+         outbox.command_id,
+         outbox.event_type,
+         outbox.scope_kind,
+         outbox.scope_id,
+         outbox.schema_version,
+         outbox.payload_json,
+         outbox.created_at,
+         commands.coordination_attribution_json
+       FROM durable_application_command_outbox AS outbox
+       JOIN durable_application_commands AS commands ON commands.command_id = outbox.command_id
+       ORDER BY outbox.deployment_id ASC, outbox.sequence ASC, outbox.event_id ASC`
+    )
+    .all() as LegacyOutboxEventRow[];
+
+  const deployments = db
+    .prepare(
+      `SELECT
+         deployment_id,
+         COUNT(*) AS event_count,
+         MIN(created_at) AS created_at,
+         MAX(created_at) AS updated_at
+       FROM durable_application_command_outbox
+       GROUP BY deployment_id
+       ORDER BY deployment_id ASC`
+    )
+    .all() as {
+    readonly deployment_id: string;
+    readonly event_count: number;
+    readonly created_at: string;
+    readonly updated_at: string;
+  }[];
+  for (const deployment of deployments) {
+    const result = db
+      .prepare(
+        `INSERT INTO coordination_event_journal_metadata (
+           deployment_id, event_epoch, retention_floor_sequence,
+           high_watermark_sequence, created_at, updated_at
+         ) VALUES (?, 'epoch-initial-v1', 0, ?, ?, ?)
+         ON CONFLICT(deployment_id) DO NOTHING`
+      )
+      .run(
+        deployment.deployment_id,
+        deployment.event_count,
+        deployment.created_at,
+        deployment.updated_at
+      );
+    if (result.changes === 0) {
+      const existing = db
+        .prepare(
+          `SELECT event_epoch, retention_floor_sequence, high_watermark_sequence
+           FROM coordination_event_journal_metadata WHERE deployment_id = ?`
+        )
+        .get(deployment.deployment_id) as {
+        readonly event_epoch: string;
+        readonly retention_floor_sequence: number;
+        readonly high_watermark_sequence: number;
+      };
+      if (
+        existing.event_epoch !== 'epoch-initial-v1' ||
+        existing.retention_floor_sequence !== 0 ||
+        existing.high_watermark_sequence !== deployment.event_count
+      ) {
+        throw new Error('internal-storage-event-journal-metadata-backfill-conflict');
+      }
+    }
+  }
+
+  let deploymentId: string | null = null;
+  let eventSequence = 0;
+  for (const row of rows) {
+    if (row.deployment_id !== deploymentId) {
+      deploymentId = row.deployment_id;
+      eventSequence = 0;
+    }
+    eventSequence += 1;
+    const bodyJson = legacyOutboxEventBodyJson(row);
+    const existing = db
+      .prepare(
+        `SELECT deployment_id, event_epoch, event_sequence, body_json
+         FROM coordination_event_journal
+         WHERE event_id = ?`
+      )
+      .get(row.event_id) as
+      | {
+          readonly deployment_id: string;
+          readonly event_epoch: string;
+          readonly event_sequence: number;
+          readonly body_json: string;
+        }
+      | undefined;
+    if (existing) {
+      if (
+        existing.deployment_id !== row.deployment_id ||
+        existing.event_epoch !== 'epoch-initial-v1' ||
+        existing.event_sequence !== eventSequence ||
+        existing.body_json !== bodyJson
+      ) {
+        throw new Error('internal-storage-event-journal-backfill-conflict');
+      }
+      continue;
+    }
+    db.prepare(
+      `INSERT INTO coordination_event_journal (
+         deployment_id, event_epoch, event_sequence, event_id, body_json,
+         emitted_at, origin_command_id, created_at
+       ) VALUES (?, 'epoch-initial-v1', ?, ?, ?, ?, ?, ?)`
+    ).run(
+      row.deployment_id,
+      eventSequence,
+      row.event_id,
+      bodyJson,
+      row.created_at,
+      row.command_id,
+      row.created_at
+    );
+  }
+}
+
+function legacyOutboxEventBodyJson(row: LegacyOutboxEventRow): string {
+  if (row.schema_version !== 1 || !LEGACY_EVENT_SCOPE_KINDS.has(row.scope_kind)) {
+    throw new Error('internal-storage-legacy-outbox-event-contract-invalid');
+  }
+  const attribution = parseMigrationJsonObject(row.coordination_attribution_json);
+  const actor = attribution.actor;
+  if (!actor || typeof actor !== 'object' || Array.isArray(actor)) {
+    throw new Error('internal-storage-legacy-outbox-attribution-invalid');
+  }
+  const runId = row.scope_kind === 'run' ? row.scope_id : attribution.runId;
+  if (runId !== undefined && typeof runId !== 'string') {
+    throw new Error('internal-storage-legacy-outbox-run-id-invalid');
+  }
+  return canonicalMigrationJson({
+    actor,
+    eventId: row.event_id,
+    emittedAt: row.created_at,
+    eventType: row.event_type,
+    payload: JSON.parse(row.payload_json) as unknown,
+    ...(runId === undefined ? {} : { runId }),
+    schemaVersion: row.schema_version,
+    scope: { kind: row.scope_kind, scopeId: row.scope_id },
+    ...(row.scope_kind === 'team' ? { teamId: row.scope_id } : {}),
+    ...(row.scope_kind === 'workspace' ? { workspaceId: row.scope_id } : {}),
+  });
+}
+
+function parseMigrationJsonObject(value: string): Readonly<Record<string, unknown>> {
+  const parsed = JSON.parse(value) as unknown;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('internal-storage-migration-json-object-invalid');
+  }
+  return parsed as Readonly<Record<string, unknown>>;
+}
+
+function canonicalMigrationJson(value: unknown): string {
+  return JSON.stringify(normalizeMigrationJson(value));
+}
+
+function normalizeMigrationJson(value: unknown): unknown {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new Error('internal-storage-migration-json-number-invalid');
+    return value;
+  }
+  if (Array.isArray(value)) return value.map(normalizeMigrationJson);
+  if (typeof value !== 'object') throw new Error('internal-storage-migration-json-value-invalid');
+  const record = value as Readonly<Record<string, unknown>>;
+  const normalized: Record<string, unknown> = {};
+  for (const key of Object.keys(record).sort((left, right) => left.localeCompare(right))) {
+    if (record[key] !== undefined) normalized[key] = normalizeMigrationJson(record[key]);
+  }
+  return normalized;
 }

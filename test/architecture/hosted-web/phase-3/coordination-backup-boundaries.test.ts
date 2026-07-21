@@ -30,6 +30,12 @@ const FORBIDDEN_IMPORTS = [
   '@preload/',
 ] as const;
 const NODE_ADAPTER_PATHS = [
+  'src/features/coordination-backup/main/adapters/output/DurableBackupIdentityInventory.ts',
+  'src/features/coordination-backup/main/adapters/output/SqliteBackupCoordinationFlush.ts',
+  'src/features/coordination-backup/main/adapters/output/SqliteBackupRunRepository.ts',
+  'src/features/coordination-backup/main/adapters/output/SqliteBackupWriterFence.ts',
+  'src/features/coordination-backup/main/adapters/output/SqliteOnlineBackupAdapter.ts',
+  'src/features/coordination-backup/main/composition/createCoordinationBackupFeature.ts',
   'src/features/coordination-backup/main/infrastructure/backupPathLayout.ts',
   'src/features/coordination-backup/main/infrastructure/canonicalBackupJson.ts',
   'src/features/coordination-backup/main/infrastructure/NodeBackupManifestHasher.ts',
@@ -37,6 +43,7 @@ const NODE_ADAPTER_PATHS = [
   'src/features/coordination-backup/main/infrastructure/NodeImmutableBackupVerifier.ts',
   'src/features/coordination-backup/main/infrastructure/index.ts',
   'src/features/coordination-backup/main/participants/TypedFileBackupParticipant.ts',
+  'src/features/coordination-backup/main/participants/CoordinationEventBackupParticipant.ts',
   'src/features/coordination-backup/main/participants/index.ts',
 ] as const;
 
@@ -59,11 +66,11 @@ describe('Phase 3D coordination backup architecture boundary', () => {
     }
   });
 
-  it('adds only the bounded Node publication/participant adapters without composition or raw copy', () => {
+  it('owns bounded main composition and adapters without raw copy or public primitive leakage', () => {
     // These resolve fixed repository-owned feature paths.
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     expect(existsSync(resolve(ROOT, 'src/features/coordination-backup/main/composition'))).toBe(
-      false
+      true
     );
     for (const relativePath of NODE_ADAPTER_PATHS) {
       // eslint-disable-next-line security/detect-non-literal-fs-filename
@@ -84,6 +91,26 @@ describe('Phase 3D coordination backup architecture boundary', () => {
       expect(source).not.toMatch(/\b(copyFile|copyFileSync|cpSync|copyDatabase|copyWal|copyShm)\b/);
       expect(source).not.toMatch(/better-sqlite3|(?:^|[^A-Za-z])(?:-wal|-shm)(?:[^A-Za-z]|$)/);
     }
+    // This resolves one fixed repository-owned public entrypoint.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const mainEntrypoint = readFileSync(
+      resolve(ROOT, 'src/features/coordination-backup/main/index.ts'),
+      'utf8'
+    );
+    expect(mainEntrypoint).toContain(
+      "export * from './composition/createCoordinationBackupFeature'"
+    );
+    expect(mainEntrypoint).not.toMatch(/adapters|infrastructure|participants/);
+    // This resolves one fixed repository-owned composition root.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const composition = readFileSync(
+      resolve(
+        ROOT,
+        'src/features/coordination-backup/main/composition/createCoordinationBackupFeature.ts'
+      ),
+      'utf8'
+    );
+    expect(composition).toContain('return Object.freeze({ service });');
   });
 
   it('keeps the generic typed-file source pathless and stages only through the artifact writer', () => {

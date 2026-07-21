@@ -82,6 +82,28 @@ export interface BackupPublicationArtifactWriter {
   measureStagedArtifact(request: BackupArtifactMeasureRequest): Promise<MeasuredBackupEntry>;
 }
 
+export interface SqliteBackupArtifactChunk {
+  readonly offset: number;
+  readonly totalByteLength: number;
+  readonly bytes: Uint8Array;
+  readonly eof: boolean;
+}
+
+/**
+ * A run/entry-bound publication sink. The SQLite worker supplies immutable
+ * chunks from its private Online Backup scratch file; no reusable filesystem
+ * path capability crosses the main/worker boundary.
+ */
+export interface SqliteBackupArtifactPublisher {
+  publishSqliteSnapshot(request: {
+    readonly backupRunId: BackupRunId;
+    readonly entryId: string;
+    readonly byteLength: number;
+    readonly sha256: Sha256Digest;
+    readonly readChunk: (offset: number) => Promise<SqliteBackupArtifactChunk>;
+  }): Promise<MeasuredBackupEntry>;
+}
+
 export class BackupPublicationError extends Error {
   constructor(readonly code: string) {
     super(`coordination-backup-publication-${code}`);
@@ -90,7 +112,7 @@ export class BackupPublicationError extends Error {
 }
 
 export class NodeBackupPublication
-  implements BackupPublicationPort, BackupPublicationArtifactWriter
+  implements BackupPublicationPort, BackupPublicationArtifactWriter, SqliteBackupArtifactPublisher
 {
   private readonly configuredLayout: BackupPathLayout;
   private readonly manifestHasher = new NodeBackupManifestHasher();
@@ -195,6 +217,113 @@ export class NodeBackupPublication
         request.entryId
       );
       return Object.freeze(measured);
+    });
+  }
+
+  async publishSqliteSnapshot(request: {
+    readonly backupRunId: BackupRunId;
+    readonly entryId: string;
+    readonly byteLength: number;
+    readonly sha256: Sha256Digest;
+    readonly readChunk: (offset: number) => Promise<SqliteBackupArtifactChunk>;
+  }): Promise<MeasuredBackupEntry> {
+    return this.withRunLock(request.backupRunId, async () => {
+      validateArtifactEntryId(request.entryId);
+      if (!Number.isSafeInteger(request.byteLength) || request.byteLength <= 0) {
+        throw publicationError('sqlite-source-length-invalid');
+      }
+      parseSha256Digest(request.sha256);
+      const layout = await this.ensureLayout();
+      const paths = stagePaths(layout, request.backupRunId);
+      await requireOwnedStage(paths, request.backupRunId, layout.stagingRoot);
+      await requireUnsealedAndManifestFree(paths);
+      await createArtifactParents(paths.directory, request.entryId);
+      const artifactPath = resolveArtifactPath(paths.directory, request.entryId);
+      const existing = await lstatOrNull(artifactPath);
+      if (existing) {
+        const measured = await measureRegularFile(artifactPath, request.entryId);
+        if (
+          measured.byteLength !== request.byteLength ||
+          measured.sha256 !== request.sha256 ||
+          measured.mode !== BACKUP_METADATA_FILE_MODE
+        ) {
+          throw publicationError('sqlite-artifact-existing-mismatch');
+        }
+        return Object.freeze(measured);
+      }
+
+      let handle: fs.promises.FileHandle | null = null;
+      let createdIdentity: fs.Stats | null = null;
+      try {
+        handle = await fs.promises.open(
+          artifactPath,
+          fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | NO_FOLLOW,
+          BACKUP_METADATA_FILE_MODE
+        );
+        await handle.chmod(BACKUP_METADATA_FILE_MODE);
+        createdIdentity = await handle.stat();
+        if (!createdIdentity.isFile()) throw publicationError('sqlite-artifact-not-regular');
+        const hash = createHash('sha256');
+        let offset = 0;
+        while (offset < request.byteLength) {
+          const chunk = await request.readChunk(offset);
+          if (
+            chunk.offset !== offset ||
+            chunk.totalByteLength !== request.byteLength ||
+            !(chunk.bytes instanceof Uint8Array) ||
+            chunk.bytes.byteLength === 0 ||
+            offset + chunk.bytes.byteLength > request.byteLength ||
+            chunk.eof !== (offset + chunk.bytes.byteLength === request.byteLength)
+          ) {
+            throw publicationError('sqlite-source-chunk-invalid');
+          }
+          const bytes = Buffer.from(chunk.bytes);
+          let written = 0;
+          while (written < bytes.byteLength) {
+            const result = await handle.write(
+              bytes,
+              written,
+              bytes.byteLength - written,
+              offset + written
+            );
+            if (result.bytesWritten === 0) throw publicationError('sqlite-artifact-short-write');
+            written += result.bytesWritten;
+          }
+          hash.update(bytes);
+          offset += bytes.byteLength;
+        }
+        if (hash.digest('hex') !== request.sha256) {
+          throw publicationError('sqlite-source-digest-mismatch');
+        }
+        await handle.sync();
+        const finalized = await handle.stat();
+        if (
+          !sameIdentity(createdIdentity, finalized) ||
+          finalized.size !== request.byteLength ||
+          (finalized.mode & 0o777) !== BACKUP_METADATA_FILE_MODE
+        ) {
+          throw publicationError('sqlite-artifact-finalize-mismatch');
+        }
+        await handle.close();
+        handle = null;
+        await requireOwnedStage(paths, request.backupRunId, layout.stagingRoot);
+        await requireUnsealedAndManifestFree(paths);
+        await createArtifactParents(paths.directory, request.entryId);
+        const measured = await measureRegularFile(artifactPath, request.entryId);
+        if (
+          measured.byteLength !== request.byteLength ||
+          measured.sha256 !== request.sha256 ||
+          measured.mode !== BACKUP_METADATA_FILE_MODE
+        ) {
+          throw publicationError('sqlite-artifact-measurement-mismatch');
+        }
+        await fsyncArtifactParents(paths.directory, request.entryId);
+        return Object.freeze(measured);
+      } catch (error) {
+        await handle?.close().catch(() => undefined);
+        if (createdIdentity) await unlinkIfSameIdentity(artifactPath, createdIdentity);
+        throw error;
+      }
     });
   }
 
@@ -918,6 +1047,15 @@ async function lstatOrNull(filePath: string): Promise<fs.Stats | null> {
     if (isNotFound(error)) return null;
     throw error;
   }
+}
+
+async function unlinkIfSameIdentity(filePath: string, expected: fs.Stats): Promise<void> {
+  const observed = await lstatOrNull(filePath);
+  if (!observed) return;
+  if (!sameIdentity(expected, observed) || observed.isSymbolicLink() || !observed.isFile()) {
+    throw publicationError('sqlite-artifact-cleanup-identity-mismatch');
+  }
+  await fs.promises.unlink(filePath);
 }
 
 function sameIdentity(left: fs.Stats, right: fs.Stats): boolean {

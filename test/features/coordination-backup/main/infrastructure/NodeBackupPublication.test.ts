@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,6 +11,7 @@ import {
   COORDINATION_BACKUP_COMMIT_MARKER_FORMAT,
   COORDINATION_BACKUP_FORMAT,
   parseBackupRunId,
+  parseSha256Digest,
 } from '@features/coordination-backup/contracts';
 import {
   BACKUP_COMMIT_MARKER_FILE,
@@ -83,6 +85,97 @@ describe('NodeBackupPublication', () => {
     await expect(fs.promises.readFile(generation.marker, 'utf8')).resolves.toBe(
       canonicalBackupJson(marker)
     );
+  });
+
+  it('publishes a worker-owned SQLite snapshot by bound chunks without exposing a destination path', async () => {
+    const { publication } = await makePublication(roots);
+    await publication.preparePrivateStage(RUN_ID);
+    const bytes = Buffer.from('sqlite-online-backup-bytes');
+    const sha256 = parseSha256Digest(createHash('sha256').update(bytes).digest('hex'));
+    const request = {
+      backupRunId: RUN_ID,
+      entryId: 'sqlite/internal-storage.sqlite',
+      byteLength: bytes.byteLength,
+      sha256,
+      readChunk: (offset: number) => {
+        const chunk = bytes.subarray(offset, Math.min(offset + 5, bytes.byteLength));
+        return Promise.resolve({
+          offset,
+          totalByteLength: bytes.byteLength,
+          bytes: Uint8Array.from(chunk),
+          eof: offset + chunk.byteLength === bytes.byteLength,
+        });
+      },
+    };
+
+    await expect(publication.publishSqliteSnapshot(request)).resolves.toMatchObject({
+      entryId: request.entryId,
+      byteLength: bytes.byteLength,
+      mode: 0o600,
+      sha256,
+    });
+    await expect(publication.publishSqliteSnapshot(request)).resolves.toMatchObject({ sha256 });
+  });
+
+  it('refuses a symlinked SQLite artifact ancestor and writes nothing outside the owned stage', async () => {
+    const { root, publication } = await makePublication(roots);
+    await publication.preparePrivateStage(RUN_ID);
+    const outside = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'sqlite-stage-outside-'));
+    roots.push(outside);
+    const layout = createBackupPathLayout(await fs.promises.realpath(root));
+    const stage = stagePaths(layout, RUN_ID);
+    await fs.promises.symlink(outside, path.join(stage.directory, 'sqlite'));
+    const bytes = Buffer.from('must-not-escape');
+
+    await expect(
+      publication.publishSqliteSnapshot({
+        backupRunId: RUN_ID,
+        entryId: 'sqlite/internal-storage.sqlite',
+        byteLength: bytes.byteLength,
+        sha256: parseSha256Digest(createHash('sha256').update(bytes).digest('hex')),
+        readChunk: (offset) =>
+          Promise.resolve({
+            offset,
+            totalByteLength: bytes.byteLength,
+            bytes: Uint8Array.from(bytes.subarray(offset)),
+            eof: true,
+          }),
+      })
+    ).rejects.toThrow('coordination-backup-publication-directory-invalid');
+    await expect(fs.promises.readdir(outside)).resolves.toEqual([]);
+  });
+
+  it('fails closed when the owned stage is swapped during SQLite chunk publication', async () => {
+    const { root, publication } = await makePublication(roots);
+    await publication.preparePrivateStage(RUN_ID);
+    const outside = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'sqlite-stage-swap-'));
+    roots.push(outside);
+    const layout = createBackupPathLayout(await fs.promises.realpath(root));
+    const stage = stagePaths(layout, RUN_ID);
+    const movedStage = `${stage.directory}.moved`;
+    const bytes = Buffer.from('stage-swap-must-fail-closed');
+
+    await expect(
+      publication.publishSqliteSnapshot({
+        backupRunId: RUN_ID,
+        entryId: 'sqlite/internal-storage.sqlite',
+        byteLength: bytes.byteLength,
+        sha256: parseSha256Digest(createHash('sha256').update(bytes).digest('hex')),
+        readChunk: async (offset) => {
+          if (offset === 0) {
+            await fs.promises.rename(stage.directory, movedStage);
+            await fs.promises.symlink(outside, stage.directory);
+          }
+          return {
+            offset,
+            totalByteLength: bytes.byteLength,
+            bytes: Uint8Array.from(bytes.subarray(offset)),
+            eof: true,
+          };
+        },
+      })
+    ).rejects.toThrow('coordination-backup-publication-directory-invalid');
+    await expect(fs.promises.readdir(outside)).resolves.toEqual([]);
   });
 
   it('makes destination publication durable before attempting durable source removal', async () => {

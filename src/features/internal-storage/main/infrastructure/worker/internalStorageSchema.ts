@@ -1,4 +1,6 @@
+import { sql } from 'drizzle-orm';
 import {
+  check,
   foreignKey,
   index,
   integer,
@@ -207,6 +209,7 @@ export const durableApplicationCommands = sqliteTable(
     state: text('state').notNull(),
     retentionClass: text('retention_class').notNull(),
     auditSessionId: text('audit_session_id'),
+    coordinationAttributionJson: text('coordination_attribution_json').notNull(),
     outcomeJson: text('outcome_json'),
     errorCode: text('error_code'),
     errorJson: text('error_json'),
@@ -297,6 +300,141 @@ export const durableApplicationCommandOutbox = sqliteTable(
     uniqueIndex('idx_durable_app_cmd_outbox_command').on(table.commandId),
     index('idx_durable_app_cmd_outbox_sequence').on(table.sequence),
   ]
+);
+
+export const coordinationEventJournalMetadata = sqliteTable(
+  'coordination_event_journal_metadata',
+  {
+    deploymentId: text('deployment_id').primaryKey(),
+    eventEpoch: text('event_epoch').notNull(),
+    retentionFloorSequence: integer('retention_floor_sequence').notNull(),
+    highWatermarkSequence: integer('high_watermark_sequence').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_coordination_event_metadata_identity').on(
+      table.deploymentId,
+      table.eventEpoch
+    ),
+    check(
+      'ck_coordination_event_metadata_watermark',
+      sql`${table.retentionFloorSequence} >= 0
+        AND ${table.highWatermarkSequence} >= ${table.retentionFloorSequence}`
+    ),
+  ]
+);
+
+export const coordinationEventJournal = sqliteTable(
+  'coordination_event_journal',
+  {
+    deploymentId: text('deployment_id').notNull(),
+    eventEpoch: text('event_epoch').notNull(),
+    eventSequence: integer('event_sequence').notNull(),
+    eventId: text('event_id').notNull(),
+    bodyJson: text('body_json').notNull(),
+    emittedAt: text('emitted_at').notNull(),
+    originCommandId: text('origin_command_id').references(
+      () => durableApplicationCommands.commandId,
+      { onDelete: 'restrict', onUpdate: 'restrict' }
+    ),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.deploymentId, table.eventEpoch, table.eventSequence] }),
+    uniqueIndex('idx_coordination_event_journal_event_id').on(table.eventId),
+    index('idx_coordination_event_journal_replay').on(
+      table.deploymentId,
+      table.eventEpoch,
+      table.eventSequence
+    ),
+    foreignKey({
+      columns: [table.deploymentId, table.eventEpoch],
+      foreignColumns: [
+        coordinationEventJournalMetadata.deploymentId,
+        coordinationEventJournalMetadata.eventEpoch,
+      ],
+    })
+      .onDelete('restrict')
+      .onUpdate('restrict'),
+  ]
+);
+
+export const snapshotRetentionLeases = sqliteTable(
+  'snapshot_retention_leases',
+  {
+    leaseId: text('lease_id').primaryKey(),
+    deploymentId: text('deployment_id').notNull(),
+    eventEpoch: text('event_epoch').notNull(),
+    scopeKind: text('scope_kind').notNull(),
+    scopeId: text('scope_id').notNull(),
+    retentionFloorSequence: integer('retention_floor_sequence').notNull(),
+    highWatermarkSequence: integer('high_watermark_sequence').notNull(),
+    expiresAtMs: integer('expires_at_ms').notNull(),
+    useToken: text('use_token'),
+    useDeadlineAtMs: integer('use_deadline_at_ms'),
+    releaseRequested: integer('release_requested').notNull(),
+    createdAtMs: integer('created_at_ms').notNull(),
+  },
+  (table) => [
+    index('idx_snapshot_retention_lease_floor').on(
+      table.deploymentId,
+      table.eventEpoch,
+      table.releaseRequested,
+      table.expiresAtMs,
+      table.highWatermarkSequence
+    ),
+    foreignKey({
+      columns: [table.deploymentId, table.eventEpoch],
+      foreignColumns: [
+        coordinationEventJournalMetadata.deploymentId,
+        coordinationEventJournalMetadata.eventEpoch,
+      ],
+    })
+      .onDelete('restrict')
+      .onUpdate('restrict'),
+  ]
+);
+
+export const coordinationBackupRuns = sqliteTable(
+  'coordination_backup_runs',
+  {
+    backupRunId: text('backup_run_id').primaryKey(),
+    deploymentId: text('deployment_id').notNull(),
+    state: text('state').notNull(),
+    revision: integer('revision').notNull(),
+    fenceCompletionStatus: text('fence_completion_status'),
+    recordJson: text('record_json').notNull(),
+    requestedAt: text('requested_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    index('idx_coordination_backup_runs_recoverable').on(
+      table.state,
+      table.fenceCompletionStatus,
+      table.updatedAt
+    ),
+  ]
+);
+
+export const coordinationBackupWriterFences = sqliteTable(
+  'coordination_backup_writer_fences',
+  {
+    deploymentId: text('deployment_id').primaryKey(),
+    generation: integer('generation').notNull(),
+    admittedRunId: text('admitted_run_id')
+      .notNull()
+      .references(() => coordinationBackupRuns.backupRunId, {
+        onDelete: 'restrict',
+        onUpdate: 'restrict',
+      }),
+    leaseId: text('lease_id').notNull(),
+    status: text('status').notNull(),
+    disposition: text('disposition'),
+    acquiredAt: text('acquired_at').notNull(),
+    completedAt: text('completed_at'),
+  },
+  (table) => [uniqueIndex('idx_coordination_backup_writer_fence_lease').on(table.leaseId)]
 );
 
 export const durableApplicationCommandConsumerApplications = sqliteTable(

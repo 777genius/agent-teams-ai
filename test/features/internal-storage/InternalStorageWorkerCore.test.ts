@@ -261,7 +261,7 @@ describe('InternalStorageWorkerCore', () => {
         eventId: 'legacy-team-a-2',
         commandId: 'legacy-command-a-2',
         scopeId: 'team-a',
-        payloadJson: '{"legacyOrder":2,"projection":"team-a"}',
+        payloadJson: '{"projection":"team-a","nested":{"z":1,"a":2},"legacyOrder":2}',
       },
       {
         sequence: 10,
@@ -297,7 +297,45 @@ describe('InternalStorageWorkerCore', () => {
     legacyDb.close();
 
     const core = track(makeCore(dbPath));
-    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 7, integrity: 'ok' });
+    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 8, integrity: 'ok' });
+    expect(
+      core.handle('appCommandLedger.durable.getStatus', {
+        deploymentId: 'deployment-a',
+        commandId: 'legacy-command-a-1',
+      })
+    ).toMatchObject({
+      state: 'committed',
+      effects: [{ state: 'observed_succeeded', recoveryClass: 'transactional_local' }],
+    });
+    const migratedDb = new Database(dbPath, { readonly: true });
+    const migratedEvents = migratedDb
+      .prepare(
+        `SELECT event_id, body_json FROM coordination_event_journal
+         ORDER BY event_sequence ASC`
+      )
+      .all() as { event_id: string; body_json: string }[];
+    const migratedCommands = migratedDb
+      .prepare(`SELECT coordination_attribution_json FROM durable_application_commands`)
+      .all() as { coordination_attribution_json: string }[];
+    migratedDb.close();
+    expect(migratedEvents).toHaveLength(3);
+    expect(migratedCommands).toHaveLength(3);
+    expect(migratedEvents.find((row) => row.event_id === 'legacy-team-a-2')?.body_json).toContain(
+      '"payload":{"legacyOrder":2,"nested":{"a":2,"z":1},"projection":"team-a"}'
+    );
+    for (const row of migratedEvents) {
+      expect(row.body_json.startsWith('{"actor":')).toBe(true);
+      expect(JSON.parse(row.body_json)).toMatchObject({
+        actor: { kind: 'recovery' },
+        teamId: expect.stringMatching(/^team-/),
+      });
+    }
+    for (const row of migratedCommands) {
+      expect(JSON.parse(row.coordination_attribution_json)).toMatchObject({
+        actor: { kind: 'recovery' },
+        provenance: 'legacy_recovery_v1',
+      });
+    }
     const deliveryLease = {
       ownerId: 'legacy-replay-worker',
       leaseToken: 'legacy-replay-lease',
@@ -305,10 +343,7 @@ describe('InternalStorageWorkerCore', () => {
       leaseExpiresAtIso: '2026-07-20T10:02:00.000Z',
       limit: 10,
     };
-    const replayBatch = core.handle(
-      'appCommandLedger.durable.claimOutbox',
-      deliveryLease
-    ) as Array<{
+    const replayBatch = core.handle('appCommandLedger.durable.claimOutbox', deliveryLease) as {
       sequence: number;
       eventId: string;
       scopeKind: string;
@@ -316,7 +351,7 @@ describe('InternalStorageWorkerCore', () => {
       semanticRevision: number;
       payloadJson: string;
       deliveryLease: { generation: number } | null;
-    }>;
+    }[];
     expect(
       replayBatch.map(({ sequence, eventId, scopeId, semanticRevision }) => ({
         sequence,
@@ -371,14 +406,14 @@ describe('InternalStorageWorkerCore', () => {
     core.close();
 
     const reopened = track(makeCore(dbPath));
-    expect(reopened.handle('ping', {})).toMatchObject({ schemaVersion: 7, integrity: 'ok' });
+    expect(reopened.handle('ping', {})).toMatchObject({ schemaVersion: 8, integrity: 'ok' });
     expect(
       reopened.handle('appCommandLedger.durable.applyConsumerEvent', {
         consumerId: 'legacy-task-projection-v1',
         projectionKey: 'team/team-a',
         eventId: 'legacy-team-a-2',
         semanticRevision: 2,
-        stateJson: '{"legacyOrder":2,"projection":"team-a"}',
+        stateJson: '{"projection":"team-a","nested":{"z":1,"a":2},"legacyOrder":2}',
         appliedAtIso: '2026-07-20T10:03:00.000Z',
       })
     ).toMatchObject({
