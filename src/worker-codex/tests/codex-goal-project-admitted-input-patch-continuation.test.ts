@@ -37,6 +37,7 @@ import {
 import { authorizeProjectPreStartAdmissionLaunch } from "../application/project-control/codex-goal-project-pre-start-launch-authorization";
 import { materializeCodexGoalHandoffArtifacts } from "../codex-goal-handoff-artifacts";
 import { codexGoalProgressPath } from "../codex-goal-runner";
+import { tryMaterializeTerminalCodexGoalHandoff } from "../codex-goal-terminal-handoff-materialization";
 import {
   cleanupProjectPreStartAdmissionFixtures,
   createBuiltinFixture,
@@ -199,9 +200,10 @@ describe("admitted input-patch capacity continuation", () => {
       cwd: workspacePath,
     });
     await mkdir(join(workspacePath, "src"), { recursive: true });
+    const providerToken = ["sk-", "v".repeat(24)].join("");
     await writeFile(
       join(workspacePath, "src", "example.ts"),
-      "export const value = 1;\n",
+      `export const providerToken = ${JSON.stringify(providerToken)};\n`,
     );
     execFileSync("git", ["add", "src/example.ts"], { cwd: workspacePath });
     const stagedPatch = execFileSync(
@@ -252,7 +254,7 @@ describe("admitted input-patch capacity continuation", () => {
         encoding: "utf8",
       }).trim(),
       inputPatchHash: patchSha256,
-      reviewKind: "remediation",
+      reviewKind: "review",
       ownedPaths: ["src/owned.ts"],
       executionPolicy: {
         mode: "sandbox-only",
@@ -575,13 +577,15 @@ describe("admitted input-patch capacity continuation", () => {
       priority: "high",
       signalId: "runtime-interrupt-signal-1",
     });
-    const interruptedHandoff = await materializeCodexGoalHandoffArtifacts({
-      workerJobId: manifest.jobId,
+    const interruptedHandoff = await tryMaterializeTerminalCodexGoalHandoff({
+      jobId: manifest.jobId,
       taskId: manifest.taskId,
       workspacePath,
       jobRootDir: manifest.jobRootDir,
     });
-    if (!interruptedHandoff) throw new Error("expected interrupted handoff");
+    if (!interruptedHandoff.continuationFingerprint) {
+      throw new Error("expected interrupted continuation fingerprint");
+    }
     const interruptedResultPath = resultPath;
     const interruptedResult = {
       schemaVersion: 1,
@@ -596,9 +600,13 @@ describe("admitted input-patch capacity continuation", () => {
       details: {
         runtimeControl: "interrupt_then_continue",
         signalId: signal.signalId,
-        baseCommit: interruptedHandoff.baseCommit,
+        baseCommit: interruptedHandoff.continuationFingerprint.baseCommit,
+        handoffArtifactError: interruptedHandoff.errorCode,
+        continuationWorkspaceFingerprintSchema:
+          interruptedHandoff.continuationFingerprint.schema,
+        continuationWorkspaceFingerprintSha256:
+          interruptedHandoff.continuationFingerprint.sha256,
       },
-      artifacts: interruptedHandoff.artifacts,
     };
     await writeFile(
       interruptedResultPath,
@@ -631,7 +639,9 @@ describe("admitted input-patch capacity continuation", () => {
         scope,
         workspaceMode: "admitted_input_patch_runtime_continuation",
       }),
-    ).rejects.toThrow("project_control_verifier_handoff_result_invalid");
+    ).rejects.toThrow(
+      "project_control_runtime_interruption_snapshot_unavailable",
+    );
 
     await rm(interruptedResultPath);
     await expect(
@@ -790,41 +800,8 @@ describe("clean-first producer runtime interruption continuation", () => {
       }),
     ).resolves.toEqual({
       kind: "capacity",
-      workspaceMode: "admitted_input_patch_runtime_continuation",
+      workspaceMode: "admitted_input_patch_continuation",
     });
-    await expect(
-      assertProjectPreStartAdmissionLaunchBinding({
-        manifest,
-        scope: fixture.scope,
-        workspaceMode: "admitted_input_patch_runtime_continuation",
-      }),
-    ).resolves.toBeUndefined();
-
-    await writeFile(join(manifest.workspacePath, "outside.ts"), "export {}\n");
-    await expect(
-      assertProjectPreStartAdmissionLaunchBinding({
-        manifest,
-        scope: fixture.scope,
-        workspaceMode: "admitted_input_patch_runtime_continuation",
-      }),
-    ).rejects.toThrow(
-      "project_control_pre_start_launch_binding_mismatch:input_patch_binding",
-    );
-    await rm(join(manifest.workspacePath, "outside.ts"));
-
-    await writeFile(
-      join(manifest.workspacePath, "src", "example.ts"),
-      "export const value = 2;\n",
-    );
-    await expect(
-      assertProjectPreStartAdmissionLaunchBinding({
-        manifest,
-        scope: fixture.scope,
-        workspaceMode: "admitted_input_patch_runtime_continuation",
-      }),
-    ).rejects.toThrow(
-      "project_control_pre_start_launch_binding_mismatch:input_patch_binding",
-    );
   });
 });
 

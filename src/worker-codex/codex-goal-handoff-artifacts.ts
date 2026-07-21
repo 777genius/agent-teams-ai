@@ -27,6 +27,10 @@ import { readGitBlobBatch } from "@vioxen/subscription-runtime/worker-local";
 import { assertGitPatchBlobsSecretSafe } from "./git-patch-secret-validator";
 import { withLiteralGitPathspecs } from "./git-literal-pathspecs";
 import { publishImmutableTextArtifact } from "./local-immutable-text-artifact";
+import {
+  CODEX_GOAL_CONTINUATION_WORKSPACE_FINGERPRINT_SCHEMA,
+  type CodexGoalContinuationWorkspaceFingerprint,
+} from "./codex-goal-continuation-workspace-fingerprint";
 
 const execFileAsync = promisify(execFile);
 const maximumHandoffByteLimit = 64 * 1024 * 1024;
@@ -109,6 +113,34 @@ export async function captureCodexGoalHandoffPatchFingerprint(input: {
         baseCommit: snapshot.baseCommit,
         changedPaths: snapshot.changedPaths,
         patchSha256: sha256(snapshot.patch),
+      }
+    : null;
+}
+
+/** Hash-only evidence for continuing the same isolated workspace. Never a publishable handoff. */
+export async function captureCodexGoalContinuationWorkspaceFingerprint(input: {
+  readonly workspacePath: string;
+  readonly expectedBaseCommit?: string;
+  readonly limits?: Partial<HandoffArtifactLimits>;
+}): Promise<CodexGoalContinuationWorkspaceFingerprint | null> {
+  const workspacePath = await canonicalOwnedDirectory(
+    input.workspacePath,
+    "handoff_workspace",
+  );
+  const snapshot = await captureStableHandoffPatch({
+    workspacePath,
+    limits: handoffArtifactLimits(input.limits),
+    scanSecretContent: false,
+    ...(input.expectedBaseCommit
+      ? { expectedBaseCommit: input.expectedBaseCommit }
+      : {}),
+  });
+  return snapshot
+    ? {
+        schema: CODEX_GOAL_CONTINUATION_WORKSPACE_FINGERPRINT_SCHEMA,
+        baseCommit: snapshot.baseCommit,
+        changedPaths: snapshot.changedPaths,
+        sha256: continuationWorkspaceFingerprint(snapshot),
       }
     : null;
 }
@@ -219,6 +251,7 @@ async function captureStableHandoffPatch(input: {
   readonly workspacePath: string;
   readonly expectedBaseCommit?: string;
   readonly limits: HandoffArtifactLimits;
+  readonly scanSecretContent?: boolean;
   readonly testHooks?: {
     readonly afterSafetyScan?: (scan: 1 | 2) => Promise<void>;
     readonly afterPatchSnapshot?: (snapshot: 1 | 2) => Promise<void>;
@@ -251,6 +284,7 @@ async function captureStableHandoffPatch(input: {
     changedPaths,
     baseCommit,
     limits,
+    scanSecretContent: input.scanSecretContent !== false,
   });
   await input.testHooks?.afterSafetyScan?.(1);
   const patch = await buildDeterministicPatch({
@@ -274,6 +308,7 @@ async function captureStableHandoffPatch(input: {
     changedPaths: confirmedChangedPaths,
     baseCommit,
     limits,
+    scanSecretContent: input.scanSecretContent !== false,
   });
   await input.testHooks?.afterSafetyScan?.(2);
   const confirmedPatch = await buildDeterministicPatch({
@@ -338,6 +373,7 @@ async function assertSafeChangedFiles(input: {
   readonly changedPaths: readonly string[];
   readonly baseCommit: string;
   readonly limits: HandoffArtifactLimits;
+  readonly scanSecretContent: boolean;
 }): Promise<number> {
   let totalBytes = 0;
   const currentBlobs = new Map<string, Buffer>();
@@ -405,7 +441,7 @@ async function assertSafeChangedFiles(input: {
       if (totalBytes > input.limits.maxTotalFileBytes) {
         throw new Error("handoff_total_byte_limit_exceeded");
       }
-      assertNoRawSecret(currentBytes, changedPath);
+      if (input.scanSecretContent) assertNoRawSecret(currentBytes, changedPath);
     }
   }
   const baseObjects = await gitBaseBlobObjects({
@@ -456,9 +492,24 @@ async function assertSafeChangedFiles(input: {
     if (totalBytes > input.limits.maxTotalFileBytes) {
       throw new Error("handoff_total_byte_limit_exceeded");
     }
-    assertNoRawSecret(baseBytes, changedPath);
+    if (input.scanSecretContent) assertNoRawSecret(baseBytes, changedPath);
   }
   return totalBytes;
+}
+
+function continuationWorkspaceFingerprint(input: {
+  readonly baseCommit: string;
+  readonly changedPaths: readonly string[];
+  readonly patch: string;
+}): string {
+  const hash = createHash("sha256");
+  hash.update(CODEX_GOAL_CONTINUATION_WORKSPACE_FINGERPRINT_SCHEMA);
+  hash.update("\0");
+  hash.update(input.baseCommit);
+  for (const path of input.changedPaths) hash.update(`\0${path}`);
+  hash.update("\0");
+  hash.update(input.patch);
+  return hash.digest("hex");
 }
 
 async function readExactBoundedFile(

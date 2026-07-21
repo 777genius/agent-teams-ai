@@ -322,13 +322,6 @@ export async function projectControlStartStoredJobView(
           };
         }
       }
-      if (continuationDecision) {
-        await assertProjectPreStartAdmissionLaunchBinding({
-          manifest: loaded.manifest,
-          scope: controller.scope,
-          workspaceMode: continuationDecision.workspaceMode,
-        });
-      }
       const canonicalLaunch: CodexGoalLaunchInput = {
         ...loaded.launch,
         config: {
@@ -341,6 +334,13 @@ export async function projectControlStartStoredJobView(
         manifest: loaded.manifest,
         launch: canonicalLaunch,
       });
+      if (continuationDecision) {
+        await assertProjectPreStartAdmissionLaunchBinding({
+          manifest: loaded.manifest,
+          scope: controller.scope,
+          workspaceMode: continuationDecision.workspaceMode,
+        });
+      }
       const capacitySupervisorReap =
         await reapProjectPreStartCapacitySupervisor({
           workerAlive: lockedObservation.workerAlive,

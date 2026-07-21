@@ -6,7 +6,10 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import type { CodexGoalJobManifest } from "../codex-goal-jobs";
-import { materializeCodexGoalHandoffArtifacts } from "../codex-goal-handoff-artifacts";
+import {
+  captureCodexGoalContinuationWorkspaceFingerprint,
+  materializeCodexGoalHandoffArtifacts,
+} from "../codex-goal-handoff-artifacts";
 import {
   applyVerifiedInputPatch,
   assertCanonicalRemoteRevision,
@@ -16,6 +19,7 @@ import {
 } from "../application/project-control/codex-goal-project-git";
 import { resolveProjectSourceReference } from "../application/project-control/codex-goal-project-source-revision";
 import {
+  readControlledRuntimeInterruptionSnapshot,
   readVerifiableProducerHandoff,
   readVerifiedProducerHandoff,
 } from "../application/project-control/codex-goal-project-verifier-handoff";
@@ -175,6 +179,87 @@ describe("project verifier handoff", () => {
     await writeFile(join(workspacePath, "feature.txt"), "changed after capture\n");
     await expect(readVerifiableProducerHandoff({ producer })).rejects.toThrow(
       "project_control_verifier_handoff_workspace_changed_after_capture",
+    );
+  });
+
+  it("keeps continuation fingerprints out of verifier handoff paths", async () => {
+    const root = await temporaryRoot("verifier-secret-continuation-");
+    const workspacePath = join(root, "producer");
+    const jobRootDir = join(root, "jobs", "producer-1");
+    await initRepository(workspacePath);
+    await mkdir(jobRootDir, { recursive: true });
+    await writeFile(
+      join(workspacePath, "provider-output.txt"),
+      ["sk-", "q".repeat(24)].join(""),
+    );
+    const fingerprint = await captureCodexGoalContinuationWorkspaceFingerprint({
+      workspacePath,
+    });
+    if (!fingerprint) throw new Error("expected continuation fingerprint");
+    const resultPath = join(jobRootDir, "task-1.latest-result.json");
+    const result = {
+      status: "partial",
+      reason: "account_unavailable",
+      changedFiles: fingerprint.changedPaths,
+      evidence: ["continuation_workspace_fingerprint_captured"],
+      blockers: ["account_unavailable"],
+      nextAction: "switch_account",
+      details: {
+        baseCommit: fingerprint.baseCommit,
+        handoffArtifactError: "handoff_raw_secret_rejected",
+        continuationWorkspaceFingerprintSchema: fingerprint.schema,
+        continuationWorkspaceFingerprintSha256: fingerprint.sha256,
+      },
+    };
+    await writeFile(resultPath, `${JSON.stringify(result)}\n`);
+    const producer = manifest({ workspacePath, jobRootDir });
+
+    await expect(
+      readControlledRuntimeInterruptionSnapshot({ producer }),
+    ).rejects.toThrow(
+      "project_control_runtime_interruption_snapshot_unavailable",
+    );
+    const controlledResult = {
+      ...result,
+      schemaVersion: 1,
+      taskId: "task-1",
+      reason: "runtime_interrupted",
+      updatedAt: "2026-07-21T12:00:00.000Z",
+      blockers: ["runtime_interrupted"],
+      nextAction: "preserve_patch",
+      details: {
+        ...result.details,
+        runtimeControl: "interrupt_then_continue",
+        signalId: "signal-1",
+      },
+    };
+    await writeFile(resultPath, `${JSON.stringify(controlledResult)}\n`);
+    await expect(
+      readControlledRuntimeInterruptionSnapshot({ producer }),
+    ).resolves.toMatchObject({
+      kind: "continuation_fingerprint",
+      sha256: fingerprint.sha256,
+    });
+    await expect(readVerifiedProducerHandoff({ producer })).rejects.toThrow(
+      "project_control_verifier_handoff_result_invalid",
+    );
+    await expect(readVerifiableProducerHandoff({ producer })).rejects.toThrow(
+      "project_control_verifier_handoff_result_invalid",
+    );
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...controlledResult,
+        details: {
+          ...controlledResult.details,
+          continuationWorkspaceFingerprintSha256: undefined,
+        },
+      })}\n`,
+    );
+    await expect(
+      readControlledRuntimeInterruptionSnapshot({ producer }),
+    ).rejects.toThrow(
+      "project_control_runtime_interruption_snapshot_unavailable",
     );
   });
 

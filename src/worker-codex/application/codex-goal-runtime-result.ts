@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { RuntimeResultArtifact } from "@vioxen/subscription-runtime/worker-core";
+import { CODEX_GOAL_CONTINUATION_WORKSPACE_FINGERPRINT_SCHEMA } from "../codex-goal-continuation-workspace-fingerprint";
 import { tailCodexGoalLog } from "../codex-goal-ops";
 
 export async function readRuntimeResultBrief(path: string): Promise<{
@@ -15,6 +16,10 @@ export async function readRuntimeResultBrief(path: string): Promise<{
   readonly manifestPath?: string;
   readonly manifestSha256?: string;
   readonly handoffArtifactError?: string;
+  readonly continuationWorkspaceFingerprint?: {
+    readonly schema: typeof CODEX_GOAL_CONTINUATION_WORKSPACE_FINGERPRINT_SCHEMA;
+    readonly sha256: string;
+  };
   readonly artifacts?: readonly RuntimeResultArtifact[];
 }> {
   try {
@@ -29,6 +34,8 @@ export async function readRuntimeResultBrief(path: string): Promise<{
     const manifestSha256 = runtimeResultArtifactSha256(artifacts, "manifest");
     const baseCommit = runtimeResultBaseCommit(parsed);
     const handoffArtifactError = runtimeResultHandoffArtifactError(parsed);
+    const continuationWorkspaceFingerprint =
+      runtimeResultContinuationWorkspaceFingerprint(parsed);
     const strict = isStrictRuntimeResultBrief(parsed);
     return {
       ...(strict
@@ -54,12 +61,32 @@ export async function readRuntimeResultBrief(path: string): Promise<{
       ...(manifestPath === undefined ? {} : { manifestPath }),
       ...(manifestSha256 === undefined ? {} : { manifestSha256 }),
       ...(handoffArtifactError === undefined ? {} : { handoffArtifactError }),
+      ...(continuationWorkspaceFingerprint === undefined
+        ? {}
+        : { continuationWorkspaceFingerprint }),
       ...(artifacts.length === 0 ? {} : { artifacts }),
       strict,
     };
   } catch {
     return {};
   }
+}
+
+function runtimeResultContinuationWorkspaceFingerprint(
+  parsed: Record<string, unknown>,
+):
+  | {
+      readonly schema: typeof CODEX_GOAL_CONTINUATION_WORKSPACE_FINGERPRINT_SCHEMA;
+      readonly sha256: string;
+    }
+  | undefined {
+  if (!isRecord(parsed.details)) return undefined;
+  const schema = parsed.details.continuationWorkspaceFingerprintSchema;
+  const sha256 = parsed.details.continuationWorkspaceFingerprintSha256;
+  return schema === CODEX_GOAL_CONTINUATION_WORKSPACE_FINGERPRINT_SCHEMA &&
+      typeof sha256 === "string" && /^[a-f0-9]{64}$/i.test(sha256)
+    ? { schema, sha256: sha256.toLowerCase() }
+    : undefined;
 }
 
 function runtimeResultHandoffArtifactError(

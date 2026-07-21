@@ -1,11 +1,16 @@
 import type { RuntimeResultArtifact } from "@vioxen/subscription-runtime/worker-core";
 
-import { materializeCodexGoalHandoffArtifacts } from "./codex-goal-handoff-artifacts";
+import type { CodexGoalContinuationWorkspaceFingerprint } from "./codex-goal-continuation-workspace-fingerprint";
+import {
+  captureCodexGoalContinuationWorkspaceFingerprint,
+  materializeCodexGoalHandoffArtifacts,
+} from "./codex-goal-handoff-artifacts";
 
 export type TerminalCodexGoalHandoffMaterialization = {
   readonly artifacts: readonly RuntimeResultArtifact[];
   readonly changedPaths?: readonly string[];
   readonly errorCode?: string;
+  readonly continuationFingerprint?: CodexGoalContinuationWorkspaceFingerprint;
 };
 
 export async function tryMaterializeTerminalCodexGoalHandoff(input: {
@@ -35,10 +40,61 @@ export async function tryMaterializeTerminalCodexGoalHandoff(input: {
           changedPaths: materialized.changedPaths,
         };
   } catch (error) {
+    const errorCode = safeHandoffMaterializationErrorCode(error);
+    const continuationFingerprint = errorCode === "handoff_raw_secret_rejected"
+      ? await tryCaptureContinuationFingerprint(input)
+      : undefined;
     return {
       artifacts: [],
-      errorCode: safeHandoffMaterializationErrorCode(error),
+      errorCode,
+      ...(continuationFingerprint
+        ? {
+            continuationFingerprint,
+            changedPaths: continuationFingerprint.changedPaths,
+          }
+        : {}),
     };
+  }
+}
+
+export function terminalCodexGoalHandoffResultDetails(
+  handoff: TerminalCodexGoalHandoffMaterialization | null,
+): Readonly<Record<string, string>> {
+  return {
+    ...(handoff?.errorCode ? { handoffArtifactError: handoff.errorCode } : {}),
+    ...(handoff?.continuationFingerprint
+      ? {
+          continuationWorkspaceFingerprintSchema:
+            handoff.continuationFingerprint.schema,
+          continuationWorkspaceFingerprintSha256:
+            handoff.continuationFingerprint.sha256,
+        }
+      : {}),
+  };
+}
+
+export function terminalCodexGoalHandoffEvidence(
+  handoff: TerminalCodexGoalHandoffMaterialization | null,
+): readonly string[] {
+  return [
+    ...(handoff?.errorCode
+      ? [`handoff_artifact_materialization_failed:${handoff.errorCode}`]
+      : []),
+    ...(handoff?.continuationFingerprint
+      ? ["continuation_workspace_fingerprint_captured"]
+      : []),
+  ];
+}
+
+async function tryCaptureContinuationFingerprint(input: {
+  readonly workspacePath: string;
+  readonly expectedBaseCommit?: string;
+}): Promise<CodexGoalContinuationWorkspaceFingerprint | undefined> {
+  try {
+    return (await captureCodexGoalContinuationWorkspaceFingerprint(input)) ??
+      undefined;
+  } catch {
+    return undefined;
   }
 }
 

@@ -15,12 +15,15 @@ import type {
   CodexGoalJobManifestInput,
   CodexGoalProjectPreStartAdmission,
 } from "../../codex-goal-jobs";
-import { captureCodexGoalHandoffPatchFingerprint } from "../../codex-goal-handoff-artifacts";
+import {
+  captureCodexGoalContinuationWorkspaceFingerprint,
+  captureCodexGoalHandoffPatchFingerprint,
+} from "../../codex-goal-handoff-artifacts";
 import {
   materializeBuiltinWorkerLaunchSpec,
   validateBuiltinWorkerLaunchSpec,
 } from "./codex-goal-project-builtin-pre-start-admission";
-import { readControlledRuntimeInterruptionHandoff } from "./codex-goal-project-verifier-handoff";
+import { readControlledRuntimeInterruptionSnapshot } from "./codex-goal-project-verifier-handoff";
 import {
   parseWorkerLaunchSpec,
   workerLaunchOwnsChangedPath,
@@ -379,35 +382,38 @@ async function controlledRuntimeInputPatchBindingValid(input: {
     return false;
   }
   const launch = parseWorkerLaunchSpec(input.contract);
-  if (launch.reviewKind === "review") {
-    return (
-      input.verifiedInputPatch !== undefined &&
-      verifiedInputPatchBindingValid(input.binding, input.verifiedInputPatch)
-    );
-  }
-  const handoff = await readControlledRuntimeInterruptionHandoff({
+  const snapshot = await readControlledRuntimeInterruptionSnapshot({
     producer: input.manifest,
   });
-  const fresh = await captureCodexGoalHandoffPatchFingerprint({
-    workspacePath: input.manifest.workspacePath,
-    expectedBaseCommit: launch.phaseStartSha,
-  });
+  const fresh = snapshot.kind === "materialized_handoff"
+    ? await captureCodexGoalHandoffPatchFingerprint({
+        workspacePath: input.manifest.workspacePath,
+        expectedBaseCommit: launch.phaseStartSha,
+      })
+    : await captureCodexGoalContinuationWorkspaceFingerprint({
+        workspacePath: input.manifest.workspacePath,
+        expectedBaseCommit: launch.phaseStartSha,
+      });
+  const freshSha = fresh && ("patchSha256" in fresh
+    ? fresh.patchSha256
+    : fresh.sha256);
   const handoffBindingValid =
     fresh !== null &&
-    handoff.baseCommit === launch.phaseStartSha &&
-    fresh.baseCommit === handoff.baseCommit &&
-    fresh.patchSha256 === handoff.patchSha256 &&
-    handoff.changedPaths.length > 0 &&
-    samePaths(fresh.changedPaths, handoff.changedPaths);
+    snapshot.baseCommit === launch.phaseStartSha &&
+    fresh.baseCommit === snapshot.baseCommit &&
+    freshSha === snapshot.sha256 &&
+    snapshot.changedPaths.length > 0 &&
+    samePaths(fresh.changedPaths, snapshot.changedPaths);
   if (
     input.verifiedInputPatch !== undefined &&
     verifiedInputPatchBindingValid(input.binding, input.verifiedInputPatch)
   ) {
     return handoffBindingValid;
   }
+  if (launch.reviewKind === "review") return false;
   return (
     handoffBindingValid &&
-    handoff.changedPaths.every((path) =>
+    snapshot.changedPaths.every((path) =>
       workerLaunchOwnsChangedPath(launch, path),
     )
   );

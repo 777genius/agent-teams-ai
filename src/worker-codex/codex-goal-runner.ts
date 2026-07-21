@@ -50,6 +50,8 @@ import {
 import { readLocalGitHeadCommit } from "./codex-goal-git-revision";
 import { createCodexGoalResultRecorder } from "./codex-goal-runtime-result-io";
 import {
+  terminalCodexGoalHandoffEvidence,
+  terminalCodexGoalHandoffResultDetails,
   tryMaterializeTerminalCodexGoalHandoff,
 } from "./codex-goal-terminal-handoff-materialization";
 import {
@@ -756,9 +758,7 @@ async function codexRuntimeResultInput(input: {
       ? { failureDetails: input.result.failureDetails }
       : {}),
     ...(input.baseCommit === undefined ? {} : { baseCommit: input.baseCommit }),
-    ...(handoff?.errorCode === undefined
-      ? {}
-      : { handoffArtifactError: handoff.errorCode }),
+    handoffDetails: terminalCodexGoalHandoffResultDetails(handoff),
   });
   return {
     status,
@@ -771,9 +771,7 @@ async function codexRuntimeResultInput(input: {
       ...runtimeEvidenceFromSafeExecutionResult(input.result),
       ...(workspace.warning ? [workspace.warning] : []),
       ...artifacts.map((artifact) => `patch_preserved:${artifact.path ?? ""}`),
-      ...(handoff?.errorCode === undefined
-        ? []
-        : [`handoff_artifact_materialization_failed:${handoff.errorCode}`]),
+      ...terminalCodexGoalHandoffEvidence(handoff),
       ...(changedFiles.length > 0 && artifacts.length === 0
         ? ["patch_preserve_unavailable"]
         : []),
@@ -817,9 +815,7 @@ async function codexExceptionRuntimeResultInput(input: {
         : { errorCode: failure.errorCode }),
     },
     ...(input.baseCommit === undefined ? {} : { baseCommit: input.baseCommit }),
-    ...(handoff?.errorCode === undefined
-      ? {}
-      : { handoffArtifactError: handoff.errorCode }),
+    handoffDetails: terminalCodexGoalHandoffResultDetails(handoff),
   });
   return {
     status: changedFiles.length > 0 ? "partial" : "failed",
@@ -832,9 +828,7 @@ async function codexExceptionRuntimeResultInput(input: {
       failure.evidence,
       ...(workspace.warning ? [workspace.warning] : []),
       ...artifacts.map((artifact) => `patch_preserved:${artifact.path ?? ""}`),
-      ...(handoff?.errorCode === undefined
-        ? []
-        : [`handoff_artifact_materialization_failed:${handoff.errorCode}`]),
+      ...terminalCodexGoalHandoffEvidence(handoff),
       ...(changedFiles.length > 0 && artifacts.length === 0
         ? ["patch_preserve_unavailable"]
         : []),
@@ -898,14 +892,12 @@ function errorCauseChain(error: unknown): readonly unknown[] {
 function runtimeResultDetails(input: {
   readonly failureDetails?: Readonly<Record<string, string>>;
   readonly baseCommit?: string;
-  readonly handoffArtifactError?: string;
+  readonly handoffDetails: Readonly<Record<string, string>>;
 }): Readonly<Record<string, string>> | undefined {
   const details = {
     ...(input.failureDetails ?? {}),
     ...(input.baseCommit === undefined ? {} : { baseCommit: input.baseCommit }),
-    ...(input.handoffArtifactError === undefined
-      ? {}
-      : { handoffArtifactError: input.handoffArtifactError }),
+    ...input.handoffDetails,
   };
   return Object.keys(details).length === 0 ? undefined : details;
 }

@@ -13,7 +13,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { materializeCodexGoalHandoffArtifacts } from "../codex-goal-handoff-artifacts";
+import {
+  captureCodexGoalContinuationWorkspaceFingerprint,
+  materializeCodexGoalHandoffArtifacts,
+} from "../codex-goal-handoff-artifacts";
 import { captureGitWorkspacePatch } from "../codex-goal-runtime-result-io";
 import { git } from "./codex-goal-mcp-test-support";
 
@@ -171,6 +174,32 @@ describe("Codex goal handoff artifact materialization", () => {
     await expect(materialize(safeSourceFixture)).resolves.toMatchObject({
       changedPaths: ["config.ts"],
     });
+  });
+
+  it("captures raw-secret workspace identity without publishing its bytes", async () => {
+    const fixture = await createFixture();
+    const secret = ["sk-", "x".repeat(24)].join("");
+    const path = join(fixture.workspacePath, "provider-output.txt");
+    await writeFile(path, `${secret}\n`);
+    await expect(materialize(fixture)).rejects.toThrow(
+      "handoff_raw_secret_rejected",
+    );
+
+    const first = await captureCodexGoalContinuationWorkspaceFingerprint({
+      workspacePath: fixture.workspacePath,
+      expectedBaseCommit: fixture.baseCommit,
+    });
+    expect(first).toMatchObject({
+      schema: "workspace-diff-sha256-v1",
+      baseCommit: fixture.baseCommit,
+      changedPaths: ["provider-output.txt"],
+      sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+    expect(JSON.stringify(first)).not.toContain(secret);
+    await writeFile(path, `${secret}-drift\n`);
+    await expect(captureCodexGoalContinuationWorkspaceFingerprint({
+      workspacePath: fixture.workspacePath,
+    })).resolves.not.toMatchObject({ sha256: first?.sha256 });
   });
 
   it("enforces the remaining aggregate current-file budget before reading", async () => {

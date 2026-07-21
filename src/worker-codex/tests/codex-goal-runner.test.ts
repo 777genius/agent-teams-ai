@@ -921,6 +921,12 @@ describe("codex goal runner", () => {
         "handoff_artifact_materialization_failed:handoff_sensitive_path_rejected",
         "patch_preserve_unavailable",
       ]));
+      expect(result.evidence).not.toContain(
+        "continuation_workspace_fingerprint_captured",
+      );
+      expect(result.details).not.toHaveProperty(
+        "continuationWorkspaceFingerprintSha256",
+      );
       expect(result).not.toHaveProperty("artifacts");
     } finally {
       await rm(root, { recursive: true, force: true });

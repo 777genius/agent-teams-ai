@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { detectSecretLikeContent } from "@vioxen/subscription-runtime/worker-core";
 import type { CodexGoalJobManifest } from "../../codex-goal-jobs";
 import { captureCodexGoalHandoffPatchFingerprint } from "../../codex-goal-handoff-artifacts";
+import { readControlledRuntimeInterruptionEvidence } from "../../codex-goal-runtime-control-evidence";
 import { readRuntimeResultBrief } from "../codex-goal-runtime-result";
 
 const execFileAsync = promisify(execFile);
@@ -29,6 +30,15 @@ export type VerifiedProducerHandoff = {
   readonly patchByteLength: number;
   readonly baseCommit: string;
   readonly changedPaths: readonly string[];
+};
+
+export type ControlledRuntimeInterruptionSnapshot = {
+  readonly kind: "materialized_handoff" | "continuation_fingerprint";
+  readonly producerJobId: string;
+  readonly resultPath?: string;
+  readonly baseCommit: string;
+  readonly changedPaths: readonly string[];
+  readonly sha256: string;
 };
 
 export async function readVerifiedProducerHandoff(input: {
@@ -71,6 +81,71 @@ export async function readControlledRuntimeInterruptionHandoff(input: {
     allowProviderOutputInvalid: false,
     allowControlledRuntimeInterruption: true,
   });
+}
+
+/** Hash-only snapshots prove same-workspace continuation, never reviewable output. */
+export async function readControlledRuntimeInterruptionSnapshot(input: {
+  readonly producer: CodexGoalJobManifest;
+}): Promise<ControlledRuntimeInterruptionSnapshot> {
+  const producerJobRoot = await canonicalDirectory(input.producer.jobRootDir);
+  const requestedResultPath = input.producer.outputPath ??
+    join(producerJobRoot, `${input.producer.taskId}.latest-result.json`);
+  let resultPath: string;
+  try {
+    resultPath = await realpath(requestedResultPath);
+  } catch (error) {
+    if (isNodeError(error, "ENOENT")) {
+      throw new Error("project_control_runtime_interruption_handoff_result_required");
+    }
+    throw error;
+  }
+  if (!pathInside(producerJobRoot, resultPath)) {
+    throw new Error("project_control_verifier_handoff_result_unowned");
+  }
+  const result = await readRuntimeResultBrief(resultPath);
+  if (result.handoffArtifactError === undefined) {
+    const handoff = await readControlledRuntimeInterruptionHandoff(input);
+    return {
+      kind: "materialized_handoff",
+      producerJobId: handoff.producerJobId,
+      ...(handoff.resultPath ? { resultPath: handoff.resultPath } : {}),
+      baseCommit: handoff.baseCommit,
+      changedPaths: handoff.changedPaths,
+      sha256: handoff.patchSha256,
+    };
+  }
+  const fingerprint = result.continuationWorkspaceFingerprint;
+  const controlledInterruptionEvidence =
+    await readControlledRuntimeInterruptionEvidence({
+      resultPath,
+      taskId: input.producer.taskId,
+    });
+  if (
+    result.handoffArtifactError !== "handoff_raw_secret_rejected" ||
+    result.strict !== true ||
+    result.status !== "partial" ||
+    result.lastFailureReason !== "runtime_interrupted" ||
+    controlledInterruptionEvidence === undefined ||
+    !result.baseCommit ||
+    !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/i.test(result.baseCommit) ||
+    !result.changedFiles?.length ||
+    fingerprint === undefined ||
+    result.patchPath !== undefined ||
+    result.summaryPath !== undefined ||
+    result.manifestPath !== undefined
+  ) {
+    throw new Error(
+      `project_control_runtime_interruption_snapshot_unavailable:${result.handoffArtifactError}`,
+    );
+  }
+  return {
+    kind: "continuation_fingerprint",
+    producerJobId: input.producer.jobId,
+    resultPath,
+    baseCommit: result.baseCommit.toLowerCase(),
+    changedPaths: uniqueSorted(result.changedFiles),
+    sha256: fingerprint.sha256,
+  };
 }
 
 async function readProducerHandoff(input: {

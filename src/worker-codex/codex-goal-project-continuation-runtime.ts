@@ -9,7 +9,6 @@ import {
 } from "./application/codex-goal-worker-control";
 import { assertControlledRuntimeInterruptionSignal } from "./application/project-control/codex-goal-project-controlled-runtime-interruption-continuation";
 import { assertReadablePrompt } from "./application/project-control/codex-goal-project-refill";
-import { readControlledRuntimeInterruptionHandoff } from "./application/project-control/codex-goal-project-verifier-handoff";
 import {
   projectPreStartContinuationDecision,
   type ProjectPreStartContinuationDecision,
@@ -60,16 +59,6 @@ export async function resolveProjectPreStartContinuation(input: {
       ? { controlledInterruptionEvidence }
       : {}),
   });
-  if (
-    decision?.kind === "capacity" &&
-    decision.workspaceMode === "admitted_input_patch_continuation" &&
-    (await hasRuntimePreservedContinuationHandoff(input.manifest))
-  ) {
-    return {
-      kind: "capacity",
-      workspaceMode: "admitted_input_patch_runtime_continuation",
-    };
-  }
   if (decision) return decision;
   if (await isRecoverableAdmittedInputPatchProviderFailure(input)) {
     return {
@@ -83,17 +72,6 @@ export async function resolveProjectPreStartContinuation(input: {
         workspaceMode: "admitted_input_patch_continuation",
       }
     : undefined;
-}
-
-async function hasRuntimePreservedContinuationHandoff(
-  manifest: CodexGoalJobManifest,
-): Promise<boolean> {
-  try {
-    await readControlledRuntimeInterruptionHandoff({ producer: manifest });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export async function assertProjectPreStartContinuationEvidence(input: {
