@@ -273,6 +273,21 @@ export async function projectControlRepairJobManifestView(
       patch.accounts = repairedAccounts;
     }
   }
+  const repairedAccounts = Array.isArray(patch.accounts)
+    ? patch.accounts.map(String)
+    : undefined;
+  if (
+    existing.projectAccessScope &&
+    repairedAccounts?.some(
+      (account) =>
+        !(existing.projectAccessScope?.allowedAccountIds ?? []).includes(account),
+    )
+  ) {
+    patch.projectAccessScope = {
+      ...existing.projectAccessScope,
+      allowedAccountIds: controller.scope.allowedAccountIds ?? repairedAccounts,
+    };
+  }
   if (args.serviceTier !== undefined) {
     const requestedServiceTier = stringValue(args.serviceTier);
     if (

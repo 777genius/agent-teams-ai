@@ -237,6 +237,15 @@ describe("codex goal MCP server", () => {
         lastRefresh: new Date().toISOString(),
       });
 
+      const controllerScope = {
+        projectId: "infinity-context",
+        workspaceRoots: [join(root, "workspaces")],
+        worktreeRoots: [join(root, "worktrees")],
+        registryRoot: registryRootDir,
+        jobIdPrefixes: ["infinity-context-"],
+        tmuxSessionPrefixes: ["infinity-context-"],
+        allowedAccountIds: ["account-a"],
+      };
       await callToolJson(client, "codex_goal_create_job", {
         registryRootDir,
         jobId: "infinity-context-controller-v1",
@@ -248,15 +257,7 @@ describe("codex goal MCP server", () => {
         accounts: ["account-a"],
         accessBoundary: AccessBoundary.ProjectScopedControl,
         networkAccess: NetworkAccessMode.Restricted,
-        projectAccessScope: {
-          projectId: "infinity-context",
-          workspaceRoots: [join(root, "workspaces")],
-          worktreeRoots: [join(root, "worktrees")],
-          registryRoot: registryRootDir,
-          jobIdPrefixes: ["infinity-context-"],
-          tmuxSessionPrefixes: ["infinity-context-"],
-          allowedAccountIds: ["account-a", "account-b"],
-        },
+        projectAccessScope: controllerScope,
       });
 
       const created = await callToolJson(client, "codex_goal_project_create_job", {
@@ -280,6 +281,20 @@ describe("codex goal MCP server", () => {
       await writeFakeAuth(authRootDir, "account-b", {
         lastRefresh: new Date().toISOString(),
       });
+      const controllerScopeUpdate = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: {
+            ...controllerScope,
+            allowedAccountIds: ["account-a", "account-b"],
+          },
+          confirmUpdate: true,
+        },
+      );
+      expect(controllerScopeUpdate).toMatchObject({ ok: true });
       const preview = await callToolJson(client, "brokered_project_manifest_repair", {
         registryRootDir,
         controllerJobId: "infinity-context-controller-v1",
@@ -307,6 +322,9 @@ describe("codex goal MCP server", () => {
         manifest: {
           accounts: ["account-a", "account-b"],
           serviceTier: "default",
+          projectAccessScope: {
+            allowedAccountIds: ["account-a", "account-b"],
+          },
         },
       });
 
