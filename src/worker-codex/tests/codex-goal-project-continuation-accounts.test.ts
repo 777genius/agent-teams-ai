@@ -5,6 +5,27 @@ import type { CodexGoalLaunchInput } from "../codex-goal-ops";
 import { withProjectContinuationAccounts } from "../application/project-control/codex-goal-project-continuation-accounts";
 
 describe("project continuation accounts", () => {
+  it("preserves the stored account set when no fallback override is requested", async () => {
+    const launch = {
+      ...launchFixture(),
+      config: {
+        ...launchFixture().config,
+        accounts: [{ name: "account-j" }],
+      },
+    };
+    const continued = await withProjectContinuationAccounts({
+      launch,
+      excludedAccountIds: [],
+      allowedAccountIds: ["account-j"],
+      listAccountStatuses: async () => {
+        throw new Error("account status lookup must not run without an override");
+      },
+    });
+
+    expect(continued).toBe(launch);
+    expect(continued.config.accounts).toEqual([{ name: "account-j" }]);
+  });
+
   it("materializes an ephemeral account-c launch for a validated continuation", async () => {
     const launch = launchFixture();
     const statusInputs: unknown[] = [];

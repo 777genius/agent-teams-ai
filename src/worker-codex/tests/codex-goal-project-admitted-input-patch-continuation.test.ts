@@ -1056,6 +1056,31 @@ describe("clean pre-start capacity continuation", () => {
     await writeFile(
       resultPath,
       `${JSON.stringify({
+        status: "partial",
+        reason: "runtime_interrupted",
+        changedFiles: [],
+        evidence: ["runtime interruption captured"],
+        blockers: ["runtime_interrupted"],
+        nextAction: "continue",
+      })}\n`,
+    );
+    await expect(
+      projectControlStartStoredJobView(
+        {
+          ...args,
+          forceStart: true,
+        },
+        {
+          ...deps,
+          safeExecutionJournal: new InMemoryAttemptJournal(),
+        },
+      ),
+    ).resolves.toMatchObject({ ok: true });
+    expect(startAdmissionWorkspaceMode).toBe("clean_explicit_continuation");
+
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
         status: "blocked",
         reason: "provider_failure",
         changedFiles: [],
@@ -1109,7 +1134,7 @@ describe("clean pre-start capacity continuation", () => {
       ok: true,
       accountReservation: { accountId: "account-g" },
     });
-    expect(bootstrapCalls).toBe(3);
+    expect(bootstrapCalls).toBe(4);
     expect(reservedLaunch?.config.accounts).toEqual([{ name: "account-g" }]);
     expect(reservedLaunch?.config.maxAccountCycles).toBe(2);
     expect(startAdmissionWorkspaceMode).toBe("clean_capacity_continuation");
