@@ -7,11 +7,15 @@ import type {
   CodexAppServerSessionFactory,
 } from '@main/services/infrastructure/codexAppServer';
 
+type WithSessionOptions = Parameters<CodexAppServerSessionFactory['withSession']>[0];
+
 function createFactory(request: CodexAppServerSession['request']): {
   factory: CodexAppServerSessionFactory;
   requests: { method: string; params: unknown }[];
+  sessionOptions: WithSessionOptions[];
 } {
   const requests: { method: string; params: unknown }[] = [];
+  const sessionOptions: WithSessionOptions[] = [];
   const session: CodexAppServerSession = {
     initializeResponse: {
       userAgent: 'codex-cli 0.117.0',
@@ -30,18 +34,21 @@ function createFactory(request: CodexAppServerSession['request']): {
 
   const factory = {
     withSession: async <TResult>(
-      _options: unknown,
+      options: WithSessionOptions,
       handler: (session: CodexAppServerSession) => Promise<TResult>
-    ): Promise<TResult> => handler(session),
+    ): Promise<TResult> => {
+      sessionOptions.push(options);
+      return handler(session);
+    },
   } as unknown as CodexAppServerSessionFactory;
 
-  return { factory, requests };
+  return { factory, requests, sessionOptions };
 }
 
 describe('CodexAccountAppServerClient', () => {
   it('reads account and optional rate limits in one app-server session', async () => {
     let sessionCount = 0;
-    const { factory, requests } = createFactory(async <TResult>(method: string) => {
+    const { factory, requests, sessionOptions } = createFactory(async <TResult>(method: string) => {
       if (method === 'account/read') {
         return {
           account: { type: 'chatgpt', email: 'user@example.com', planType: 'pro' },
@@ -98,6 +105,13 @@ describe('CodexAccountAppServerClient', () => {
     expect(requests).toEqual([
       { method: 'account/read', params: { refreshToken: true } },
       { method: 'account/rateLimits/read', params: undefined },
+    ]);
+    expect(sessionOptions).toEqual([
+      expect.objectContaining({
+        requestTimeoutMs: 8_000,
+        initializeTimeoutMs: 12_000,
+        totalTimeoutMs: 26_500,
+      }),
     ]);
   });
 

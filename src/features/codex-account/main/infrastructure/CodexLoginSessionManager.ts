@@ -1,15 +1,15 @@
 import {
+  CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
   type CodexAppServerAccountLoginCompletedNotification,
   type CodexAppServerCancelLoginAccountResponse,
   type CodexAppServerLoginAccountResponse,
   type CodexAppServerSession,
+  type CodexAppServerSessionFactory,
 } from '@main/services/infrastructure/codexAppServer';
 
 import type { CodexChatgptLoginMode, CodexLoginStateDto } from '@features/codex-account/contracts';
-import type { CodexAppServerSessionFactory } from '@main/services/infrastructure/codexAppServer';
 
 const LOGIN_REQUEST_TIMEOUT_MS = 5_000;
-const INITIALIZE_TIMEOUT_MS = 6_000;
 const LOGIN_PENDING_TIMEOUT_MS = 10 * 60 * 1_000;
 
 type CodexLoginStateListener = (state: CodexLoginStateDto) => void;
@@ -85,7 +85,7 @@ export class CodexLoginSessionManager {
         binaryPath: options.binaryPath,
         env: options.env,
         requestTimeoutMs: LOGIN_REQUEST_TIMEOUT_MS,
-        initializeTimeoutMs: INITIALIZE_TIMEOUT_MS,
+        initializeTimeoutMs: CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
       });
 
       if (this.pendingStartToken !== startToken) {

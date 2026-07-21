@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import { CodexAppServerClient } from '@features/recent-projects/main/infrastructure/codex/CodexAppServerClient';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   JsonRpcSession,
@@ -59,7 +58,7 @@ describe('CodexAppServerClient', () => {
       expect.objectContaining({
         binaryPath: '/usr/local/bin/codex',
         requestTimeoutMs: 4500,
-        totalTimeoutMs: 14500,
+        totalTimeoutMs: 20500,
       }),
       expect.any(Function)
     );
@@ -199,7 +198,7 @@ describe('CodexAppServerClient', () => {
 
     expect(withSession).toHaveBeenCalledWith(
       expect.objectContaining({
-        totalTimeoutMs: 14500,
+        totalTimeoutMs: 20500,
       }),
       expect.any(Function)
     );
@@ -235,7 +234,7 @@ describe('CodexAppServerClient', () => {
       expect.objectContaining({
         binaryPath: '/usr/local/bin/codex',
         requestTimeoutMs: 4500,
-        totalTimeoutMs: 12000,
+        totalTimeoutMs: 18000,
         label: 'codex app-server thread/list live',
       }),
       expect.any(Function)
@@ -250,7 +249,7 @@ describe('CodexAppServerClient', () => {
       .fn()
       .mockImplementation((method: string, _params?: unknown, timeoutMs?: number) => {
         if (method === 'initialize') {
-          expect(timeoutMs).toBe(6000);
+          expect(timeoutMs).toBe(12000);
           return Promise.resolve({});
         }
 

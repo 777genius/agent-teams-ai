@@ -407,7 +407,7 @@ describe('useCodexAccountSnapshot', () => {
     expect(host.textContent).toContain('temporary Codex outage');
 
     await act(async () => {
-      vi.advanceTimersByTime(10_000);
+      vi.advanceTimersByTime(60_000);
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -507,7 +507,7 @@ describe('useCodexAccountSnapshot', () => {
     apiMocks.refreshCodexAccountSnapshot.mockClear();
 
     await act(async () => {
-      vi.advanceTimersByTime(10_000);
+      vi.advanceTimersByTime(60_000);
       await Promise.resolve();
     });
 
@@ -557,14 +557,14 @@ describe('useCodexAccountSnapshot', () => {
     });
 
     await act(async () => {
-      vi.advanceTimersByTime(10_000);
+      vi.advanceTimersByTime(60_000);
       await Promise.resolve();
     });
 
     expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
 
     await act(async () => {
-      vi.advanceTimersByTime(50_000);
+      vi.advanceTimersByTime(4 * 60_000);
       await Promise.resolve();
     });
 
@@ -573,7 +573,7 @@ describe('useCodexAccountSnapshot', () => {
     apiMocks.refreshCodexAccountSnapshot.mockClear();
 
     await act(async () => {
-      vi.advanceTimersByTime(10_000);
+      vi.advanceTimersByTime(60_000);
       visibilityState = 'visible';
       document.dispatchEvent(new Event('visibilitychange'));
       await Promise.resolve();

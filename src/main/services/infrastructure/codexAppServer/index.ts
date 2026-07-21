@@ -1,5 +1,6 @@
 export type { CodexAppServerSession } from './CodexAppServerSessionFactory';
 export {
+  CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
   CodexAppServerSessionFactory,
   DEFAULT_CODEX_APP_SERVER_SUPPRESSED_NOTIFICATION_METHODS,
 } from './CodexAppServerSessionFactory';

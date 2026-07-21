@@ -1,18 +1,23 @@
 import {
+  CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
   type CodexAppServerGetAccountParams,
   type CodexAppServerGetAccountRateLimitsResponse,
   type CodexAppServerGetAccountResponse,
   type CodexAppServerLogoutAccountResponse,
+  type CodexAppServerSessionFactory,
 } from '@main/services/infrastructure/codexAppServer';
 
-import type { CodexAppServerSessionFactory } from '@main/services/infrastructure/codexAppServer';
-
-const ACCOUNT_READ_TIMEOUT_MS = 3_500;
-const ACCOUNT_RATE_LIMITS_TIMEOUT_MS = 4_500;
-const ACCOUNT_LOGOUT_TIMEOUT_MS = 3_500;
-const INITIALIZE_TIMEOUT_MS = 6_000;
-const TOTAL_TIMEOUT_MS = 9_000;
-const TOTAL_WITH_RATE_LIMITS_TIMEOUT_MS = 15_000;
+const ACCOUNT_READ_TIMEOUT_MS = 5_000;
+const ACCOUNT_RATE_LIMITS_TIMEOUT_MS = 8_000;
+const ACCOUNT_LOGOUT_TIMEOUT_MS = 5_000;
+const SESSION_OVERHEAD_TIMEOUT_MS = 1_500;
+const ACCOUNT_TOTAL_TIMEOUT_MS =
+  CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS + ACCOUNT_READ_TIMEOUT_MS + SESSION_OVERHEAD_TIMEOUT_MS;
+const RATE_LIMITS_TOTAL_TIMEOUT_MS =
+  CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS +
+  ACCOUNT_RATE_LIMITS_TIMEOUT_MS +
+  SESSION_OVERHEAD_TIMEOUT_MS;
+const TOTAL_WITH_RATE_LIMITS_TIMEOUT_MS = ACCOUNT_TOTAL_TIMEOUT_MS + ACCOUNT_RATE_LIMITS_TIMEOUT_MS;
 
 type CodexAccountRateLimitsReadResult =
   | { ok: true; payload: CodexAppServerGetAccountRateLimitsResponse }
@@ -40,8 +45,10 @@ export class CodexAccountAppServerClient {
         requestTimeoutMs: includeRateLimits
           ? ACCOUNT_RATE_LIMITS_TIMEOUT_MS
           : ACCOUNT_READ_TIMEOUT_MS,
-        initializeTimeoutMs: INITIALIZE_TIMEOUT_MS,
-        totalTimeoutMs: includeRateLimits ? TOTAL_WITH_RATE_LIMITS_TIMEOUT_MS : TOTAL_TIMEOUT_MS,
+        initializeTimeoutMs: CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
+        totalTimeoutMs: includeRateLimits
+          ? TOTAL_WITH_RATE_LIMITS_TIMEOUT_MS
+          : ACCOUNT_TOTAL_TIMEOUT_MS,
         label: includeRateLimits
           ? 'codex app-server account/read with rateLimits/read'
           : 'codex app-server account/read',
@@ -108,8 +115,8 @@ export class CodexAccountAppServerClient {
         binaryPath: options.binaryPath,
         env: options.env,
         requestTimeoutMs: ACCOUNT_RATE_LIMITS_TIMEOUT_MS,
-        initializeTimeoutMs: INITIALIZE_TIMEOUT_MS,
-        totalTimeoutMs: TOTAL_TIMEOUT_MS,
+        initializeTimeoutMs: CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
+        totalTimeoutMs: RATE_LIMITS_TOTAL_TIMEOUT_MS,
         label: 'codex app-server account/rateLimits/read',
       },
       async (session) =>
@@ -130,8 +137,8 @@ export class CodexAccountAppServerClient {
         binaryPath: options.binaryPath,
         env: options.env,
         requestTimeoutMs: ACCOUNT_LOGOUT_TIMEOUT_MS,
-        initializeTimeoutMs: INITIALIZE_TIMEOUT_MS,
-        totalTimeoutMs: TOTAL_TIMEOUT_MS,
+        initializeTimeoutMs: CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
+        totalTimeoutMs: ACCOUNT_TOTAL_TIMEOUT_MS,
         label: 'codex app-server account/logout',
       },
       async (session) =>

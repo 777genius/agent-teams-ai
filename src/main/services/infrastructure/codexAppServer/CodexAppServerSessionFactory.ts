@@ -1,9 +1,10 @@
 import type { JsonRpcSession, JsonRpcStdioClient } from './JsonRpcStdioClient';
 import type { CodexAppServerInitializeResponse } from './protocol';
 
-const DEFAULT_INITIALIZE_TIMEOUT_MS = 6_000;
+export const CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS = 12_000;
 const DEFAULT_REQUEST_TIMEOUT_MS = 3_000;
 const DEFAULT_TOTAL_TIMEOUT_MS = 8_000;
+const MIN_SESSION_OVERHEAD_TIMEOUT_MS = 1_500;
 
 export const DEFAULT_CODEX_APP_SERVER_SUPPRESSED_NOTIFICATION_METHODS = [
   'thread/started',
@@ -41,8 +42,12 @@ export class CodexAppServerSessionFactory {
   ): Promise<T> {
     const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     const initializeTimeoutMs = Math.max(
-      options.initializeTimeoutMs ?? DEFAULT_INITIALIZE_TIMEOUT_MS,
+      options.initializeTimeoutMs ?? CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
       requestTimeoutMs
+    );
+    const totalTimeoutMs = Math.max(
+      options.totalTimeoutMs ?? DEFAULT_TOTAL_TIMEOUT_MS,
+      initializeTimeoutMs + requestTimeoutMs + MIN_SESSION_OVERHEAD_TIMEOUT_MS
     );
 
     return this.rpcClient.withSession(
@@ -51,7 +56,7 @@ export class CodexAppServerSessionFactory {
         args: ['app-server'],
         env: options.env,
         requestTimeoutMs,
-        totalTimeoutMs: options.totalTimeoutMs ?? DEFAULT_TOTAL_TIMEOUT_MS,
+        totalTimeoutMs,
         label: options.label,
       },
       async (session) => {
@@ -77,7 +82,7 @@ export class CodexAppServerSessionFactory {
   }): Promise<CodexAppServerSession> {
     const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     const initializeTimeoutMs = Math.max(
-      options.initializeTimeoutMs ?? DEFAULT_INITIALIZE_TIMEOUT_MS,
+      options.initializeTimeoutMs ?? CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
       requestTimeoutMs
     );
     const session = await this.rpcClient.openSession({

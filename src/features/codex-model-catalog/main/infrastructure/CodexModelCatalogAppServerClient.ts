@@ -1,18 +1,20 @@
-import type {
-  CodexAppServerListModelsParams,
-  CodexAppServerListModelsResponse,
-  CodexAppServerReadConfigParams,
-  CodexAppServerReadConfigResponse,
-  CodexAppServerSession,
-  CodexAppServerSessionFactory,
+import {
+  CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
+  type CodexAppServerListModelsParams,
+  type CodexAppServerListModelsResponse,
+  type CodexAppServerReadConfigParams,
+  type CodexAppServerReadConfigResponse,
+  type CodexAppServerSession,
+  type CodexAppServerSessionFactory,
 } from '@main/services/infrastructure/codexAppServer';
 
 const MODEL_LIST_PAGE_LIMIT = 100;
 const MODEL_LIST_MAX_PAGES = 5;
 const MODEL_LIST_TIMEOUT_MS = 4_500;
 const CONFIG_READ_TIMEOUT_MS = 3_500;
-const INITIALIZE_TIMEOUT_MS = 6_000;
-const TOTAL_TIMEOUT_MS = 9_000;
+const SESSION_OVERHEAD_TIMEOUT_MS = 1_500;
+const TOTAL_TIMEOUT_MS =
+  CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS + MODEL_LIST_TIMEOUT_MS + SESSION_OVERHEAD_TIMEOUT_MS;
 
 export class CodexModelCatalogAppServerClient {
   constructor(private readonly sessionFactory: CodexAppServerSessionFactory) {}
@@ -34,7 +36,7 @@ export class CodexModelCatalogAppServerClient {
         binaryPath: options.binaryPath,
         env: options.env,
         requestTimeoutMs: MODEL_LIST_TIMEOUT_MS,
-        initializeTimeoutMs: INITIALIZE_TIMEOUT_MS,
+        initializeTimeoutMs: CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
         totalTimeoutMs: TOTAL_TIMEOUT_MS,
         label: 'codex app-server model/list with config/read',
         experimentalApi: false,
@@ -70,7 +72,7 @@ export class CodexModelCatalogAppServerClient {
         binaryPath: options.binaryPath,
         env: options.env,
         requestTimeoutMs: MODEL_LIST_TIMEOUT_MS,
-        initializeTimeoutMs: INITIALIZE_TIMEOUT_MS,
+        initializeTimeoutMs: CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
         totalTimeoutMs: TOTAL_TIMEOUT_MS,
         label: 'codex app-server model/list',
         experimentalApi: false,
@@ -95,7 +97,7 @@ export class CodexModelCatalogAppServerClient {
         binaryPath: options.binaryPath,
         env: options.env,
         requestTimeoutMs: CONFIG_READ_TIMEOUT_MS,
-        initializeTimeoutMs: INITIALIZE_TIMEOUT_MS,
+        initializeTimeoutMs: CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
         totalTimeoutMs: TOTAL_TIMEOUT_MS,
         label: 'codex app-server config/read',
         experimentalApi: false,

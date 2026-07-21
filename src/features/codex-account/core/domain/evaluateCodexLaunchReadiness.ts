@@ -7,6 +7,9 @@ import type {
   CodexManagedAccountDto,
 } from '@features/codex-account/contracts';
 
+const DEGRADED_ACCOUNT_VERIFICATION_MESSAGE =
+  'ChatGPT account detected, but account verification is currently degraded.';
+
 export interface CodexLaunchReadinessResult {
   state: CodexLaunchReadinessState;
   effectiveAuthMode: CodexAccountEffectiveAuthMode;
@@ -43,10 +46,7 @@ export function evaluateCodexLaunchReadiness(input: {
         effectiveAuthMode: 'chatgpt',
         launchAllowed: true,
         issueMessage:
-          input.appServerState === 'degraded'
-            ? (input.appServerStatusMessage ??
-              'ChatGPT account detected, but account verification is currently degraded.')
-            : null,
+          input.appServerState === 'degraded' ? DEGRADED_ACCOUNT_VERIFICATION_MESSAGE : null,
       };
     }
 
@@ -93,10 +93,7 @@ export function evaluateCodexLaunchReadiness(input: {
       effectiveAuthMode: 'chatgpt',
       launchAllowed: true,
       issueMessage:
-        input.appServerState === 'degraded'
-          ? (input.appServerStatusMessage ??
-            'ChatGPT account detected, but account verification is currently degraded.')
-          : null,
+        input.appServerState === 'degraded' ? DEGRADED_ACCOUNT_VERIFICATION_MESSAGE : null,
     };
   }
 

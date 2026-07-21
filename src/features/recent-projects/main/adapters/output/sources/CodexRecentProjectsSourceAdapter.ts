@@ -1,5 +1,6 @@
 import { resolveProjectFilesystemState } from '@features/recent-projects/main/infrastructure/filesystem/resolveProjectFilesystemState';
 import { normalizeIdentityPath } from '@features/recent-projects/main/infrastructure/identity/normalizeIdentityPath';
+import { CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS } from '@main/services/infrastructure/codexAppServer';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import path from 'path';
 
@@ -18,18 +19,19 @@ import type { RecentProjectIdentityResolver } from '@features/recent-projects/ma
 import type { ServiceContext } from '@main/services';
 
 const CODEX_THREAD_LIMIT = 20;
-const CODEX_INITIALIZE_TIMEOUT_MS = 6_000;
 const CODEX_LIVE_FETCH_TIMEOUT_MS = 18_000;
 const CODEX_ARCHIVED_FETCH_TIMEOUT_MS = 6_000;
 const CODEX_SESSION_OVERHEAD_TIMEOUT_MS = 1_500;
 const CODEX_TOTAL_FETCH_TIMEOUT_MS =
-  CODEX_INITIALIZE_TIMEOUT_MS +
+  CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS +
   CODEX_ARCHIVED_FETCH_TIMEOUT_MS +
   CODEX_LIVE_FETCH_TIMEOUT_MS +
   CODEX_SESSION_OVERHEAD_TIMEOUT_MS;
 const CODEX_SOURCE_TIMEOUT_MS = CODEX_TOTAL_FETCH_TIMEOUT_MS + 500;
 const CODEX_LIVE_ONLY_FALLBACK_TOTAL_TIMEOUT_MS =
-  CODEX_INITIALIZE_TIMEOUT_MS + CODEX_LIVE_FETCH_TIMEOUT_MS + CODEX_SESSION_OVERHEAD_TIMEOUT_MS;
+  CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS +
+  CODEX_LIVE_FETCH_TIMEOUT_MS +
+  CODEX_SESSION_OVERHEAD_TIMEOUT_MS;
 const CODEX_STALE_CANDIDATES_TTL_MS = 5 * 60_000;
 const CODEX_FULL_FAILURE_COOLDOWN_MS = 30_000;
 
@@ -217,7 +219,7 @@ export class CodexRecentProjectsSourceAdapter implements RecentProjectsSourcePor
       limit: CODEX_THREAD_LIMIT,
       liveRequestTimeoutMs: CODEX_LIVE_FETCH_TIMEOUT_MS,
       archivedRequestTimeoutMs: CODEX_ARCHIVED_FETCH_TIMEOUT_MS,
-      initializeTimeoutMs: CODEX_INITIALIZE_TIMEOUT_MS,
+      initializeTimeoutMs: CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
       totalTimeoutMs: CODEX_TOTAL_FETCH_TIMEOUT_MS,
     });
 
@@ -275,7 +277,7 @@ export class CodexRecentProjectsSourceAdapter implements RecentProjectsSourcePor
         const liveFallback = await this.deps.appServerClient.listRecentLiveThreads(binaryPath, {
           limit: CODEX_THREAD_LIMIT,
           requestTimeoutMs: CODEX_LIVE_FETCH_TIMEOUT_MS,
-          initializeTimeoutMs: CODEX_INITIALIZE_TIMEOUT_MS,
+          initializeTimeoutMs: CODEX_APP_SERVER_INITIALIZE_TIMEOUT_MS,
           totalTimeoutMs: CODEX_LIVE_ONLY_FALLBACK_TOTAL_TIMEOUT_MS,
         });
 

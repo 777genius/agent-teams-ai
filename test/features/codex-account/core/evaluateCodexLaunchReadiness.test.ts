@@ -1,7 +1,6 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest';
-
 import { evaluateCodexLaunchReadiness } from '@features/codex-account/core/domain/evaluateCodexLaunchReadiness';
+import { describe, expect, it } from 'vitest';
 
 describe('evaluateCodexLaunchReadiness', () => {
   it('prefers a managed ChatGPT account in auto mode when both auth sources are available', () => {
@@ -110,7 +109,7 @@ describe('evaluateCodexLaunchReadiness', () => {
       state: 'warning_degraded_but_launchable',
       effectiveAuthMode: 'chatgpt',
       launchAllowed: true,
-      issueMessage: 'Temporary app-server probe failure',
+      issueMessage: 'ChatGPT account detected, but account verification is currently degraded.',
     });
   });
 
