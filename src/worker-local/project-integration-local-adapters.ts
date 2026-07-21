@@ -28,6 +28,7 @@ import {
 import { LocalFileWorkspaceLockStore } from "@vioxen/subscription-runtime/store-local-file";
 import {
   CheckRunStatus,
+  IntegrationAttemptStatus,
   IntegrationError,
   IntegrationErrorReason,
   assertCommitIdentity,
@@ -388,6 +389,8 @@ export class LocalGitIntegrationAdapter implements GitPort {
       workspacePath,
       input.attempt.merge?.expectedTargetCommit,
       input.attempt.expectedFiles,
+      input.attempt.status === IntegrationAttemptStatus.Opened &&
+        input.attempt.workerOutput.baseStatus === "stale",
     );
   }
 

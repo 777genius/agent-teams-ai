@@ -184,6 +184,12 @@ describe("evaluateProjectAdmission", () => {
     const debt: ProjectAdmissionSnapshot["debt"] = [
       consumedDebtItem,
       {
+        reason: ProjectDebtReason.LegacyOutputQuarantineRequired,
+        subject: "legacy-worker-ledger.json",
+        severity: "info",
+        evidence: ["retention-owned quarantine required"],
+      },
+      {
         reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
         subject: "infinity-context-memory-v1",
         severity: "blocking",
@@ -200,6 +206,7 @@ describe("evaluateProjectAdmission", () => {
       counts: {
         consumedDirtyWorkspaces: 1,
         incompleteConsumedOutputRecords: 1,
+        legacyOutputQuarantineRequired: 1,
       },
     });
     expect(evaluateProjectAdmission({

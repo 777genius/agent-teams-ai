@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   CheckRunStatus,
+  IntegrationAttemptStatus,
   IntegrationErrorReason,
   SecretScanStatus,
   type IntegrationAttempt,
@@ -443,6 +444,110 @@ describe("local project integration adapters", () => {
       join(fixture.workspacePath, "src", "base-change.ts"),
       "utf8",
     )).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("archives an opened stale merge attempt without rolling back an unmaterialized target", async () => {
+    const fixture = await createMergeFixture();
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+    await writeFile(
+      join(fixture.workspacePath, "src", "memory.ts"),
+      "export const value = 9;\n",
+    );
+    await git(fixture.workspacePath, ["add", "src/memory.ts"]);
+    await git(fixture.workspacePath, [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "commit",
+      "-m",
+      "test: advance target",
+    ]);
+    const advancedHead = (
+      await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])
+    ).trim();
+
+    await expect(adapter.abortMerge({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/memory.ts"],
+        status: IntegrationAttemptStatus.Opened,
+        merge: {
+          sourceRemote: "origin",
+          sourceBranch: "base",
+          sourceCommit: fixture.sourceCommit,
+          expectedTargetCommit: fixture.targetCommit,
+        },
+        workerOutput: {
+          baseStatus: "stale",
+        },
+      } as unknown as IntegrationAttempt,
+    })).resolves.toBeUndefined();
+
+    expect((await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])).trim())
+      .toBe(advancedHead);
+    expect(await gitOutput(fixture.workspacePath, ["status", "--porcelain"]))
+      .toBe("");
+    await expect(readFile(
+      join(fixture.workspacePath, "src", "memory.ts"),
+      "utf8",
+    )).resolves.toBe("export const value = 9;\n");
+  });
+
+  it("refuses to archive an opened stale merge attempt from a dirty advanced target without mutating it", async () => {
+    const fixture = await createMergeFixture();
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+    await writeFile(
+      join(fixture.workspacePath, "src", "memory.ts"),
+      "export const value = 9;\n",
+    );
+    await git(fixture.workspacePath, ["add", "src/memory.ts"]);
+    await git(fixture.workspacePath, [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "commit",
+      "-m",
+      "test: advance target",
+    ]);
+    const advancedHead = (
+      await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])
+    ).trim();
+    await writeFile(
+      join(fixture.workspacePath, "src", "memory.ts"),
+      "export const value = 10;\n",
+    );
+
+    await expect(adapter.abortMerge({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/memory.ts"],
+        status: IntegrationAttemptStatus.Opened,
+        merge: {
+          sourceRemote: "origin",
+          sourceBranch: "base",
+          sourceCommit: fixture.sourceCommit,
+          expectedTargetCommit: fixture.targetCommit,
+        },
+        workerOutput: {
+          baseStatus: "stale",
+        },
+      } as unknown as IntegrationAttempt,
+    })).rejects.toThrow("local_git_integration_merge_abort_left_dirty_workspace");
+
+    expect((await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])).trim())
+      .toBe(advancedHead);
+    expect(await gitOutput(fixture.workspacePath, ["status", "--porcelain"]))
+      .toContain(" M src/memory.ts");
+    await expect(readFile(
+      join(fixture.workspacePath, "src", "memory.ts"),
+      "utf8",
+    )).resolves.toBe("export const value = 10;\n");
   });
 
   it("merges the reviewed ancestor when the remote branch has advanced", async () => {

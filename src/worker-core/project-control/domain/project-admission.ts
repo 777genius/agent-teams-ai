@@ -36,6 +36,7 @@ export enum ProjectDebtReason {
   OrphanLegacyWorkspace = "orphan_legacy_workspace",
   ConsumedDirtyWorkspace = "consumed_dirty_workspace",
   IncompleteConsumedOutputRecord = "incomplete_consumed_output_record",
+  LegacyOutputQuarantineRequired = "legacy_output_quarantine_required",
   ActiveWriterConflict = "active_writer_conflict",
   StaleDirtyWorker = "stale_dirty_worker",
   UnreadableRoot = "unreadable_root",
@@ -64,6 +65,7 @@ export type ProjectAdmissionSnapshot = {
     readonly orphanLegacyWorkspaces?: number;
     readonly consumedDirtyWorkspaces?: number;
     readonly incompleteConsumedOutputRecords?: number;
+    readonly legacyOutputQuarantineRequired?: number;
     readonly activeWriterConflicts?: number;
     readonly staleDirtyWorkers?: number;
     readonly unreadableRoots?: number;
@@ -250,6 +252,9 @@ function projectAdmissionDebtCounts(
     orphanLegacyWorkspaces: count(ProjectDebtReason.OrphanLegacyWorkspace),
     consumedDirtyWorkspaces: count(ProjectDebtReason.ConsumedDirtyWorkspace),
     incompleteConsumedOutputRecords: count(ProjectDebtReason.IncompleteConsumedOutputRecord),
+    legacyOutputQuarantineRequired: count(
+      ProjectDebtReason.LegacyOutputQuarantineRequired,
+    ),
     activeWriterConflicts: count(ProjectDebtReason.ActiveWriterConflict),
     staleDirtyWorkers: count(ProjectDebtReason.StaleDirtyWorker),
     unreadableRoots: count(ProjectDebtReason.UnreadableRoot),

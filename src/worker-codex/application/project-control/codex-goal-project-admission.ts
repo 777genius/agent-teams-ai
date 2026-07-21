@@ -299,7 +299,6 @@ export async function buildCodexProjectAdmissionSnapshot(
   const consumedOutput = await readCodexGoalConsumedOutputLedgers({
     roots: input.scope.consumedOutputLedgerRoots ?? [],
   });
-  debt.push(...consumedOutput.debt);
   let summaries;
   try {
     summaries = await input.deps.listJobs({ registryRootDir: input.registryRootDir });
@@ -314,8 +313,17 @@ export async function buildCodexProjectAdmissionSnapshot(
     });
     summaries = [];
   }
+  const matchingProjectSummaries = summaries.filter((summary) =>
+    matchesProjectControlPrefix(summary.jobId, prefixes)
+  );
+  debt.push(...consumedOutputDebtForCurrentRegistry({
+    ledger: consumedOutput,
+    currentJobIds: new Set(
+      matchingProjectSummaries.map((summary) => summary.jobId),
+    ),
+  }));
   const projectSummaries = limitCodexProjectSummaries(
-    summaries.filter((summary) => matchesProjectControlPrefix(summary.jobId, prefixes)),
+    matchingProjectSummaries,
   );
   const overviewSummaries: CodexGoalJobSummary[] = [];
   for (const summary of projectSummaries) {
@@ -376,6 +384,47 @@ export async function buildCodexProjectAdmissionSnapshot(
     debt,
     counts: projectAdmissionDebtCounts(debt),
   };
+}
+
+const LEGACY_FAILED_NO_OUTPUT_DIRTY_EVIDENCE =
+  "failed_no_output record contradicts non-empty workspace status evidence";
+
+function consumedOutputDebtForCurrentRegistry(input: {
+  readonly ledger: ConsumedOutputLedger;
+  readonly currentJobIds: ReadonlySet<string>;
+}): readonly ProjectDebtItem[] {
+  const recordsByLedgerPath = new Map(
+    [...input.ledger.byJobId.values()].map((record) => [
+      resolve(record.ledgerPath),
+      record,
+    ]),
+  );
+  return input.ledger.debt.map((item) => {
+    if (item.reason !== ProjectDebtReason.IncompleteConsumedOutputRecord) {
+      return item;
+    }
+    const record = recordsByLedgerPath.get(resolve(item.subject));
+    if (
+      !record ||
+      record.status !== "failed_no_output" ||
+      record.valid ||
+      input.currentJobIds.has(record.jobId) ||
+      record.evidence.length !== 1 ||
+      record.evidence[0] !== LEGACY_FAILED_NO_OUTPUT_DIRTY_EVIDENCE
+    ) {
+      return item;
+    }
+    return {
+      reason: ProjectDebtReason.LegacyOutputQuarantineRequired,
+      subject: item.subject,
+      severity: "info",
+      evidence: [
+        ...item.evidence,
+        `legacy job ${record.jobId} is absent from the current registry`,
+        "record remains invalid and requires retention-owned immutable capture/quarantine before cleanup",
+      ],
+    };
+  });
 }
 
 export function projectAdmissionOperation(value: unknown): ProjectOperation | undefined {

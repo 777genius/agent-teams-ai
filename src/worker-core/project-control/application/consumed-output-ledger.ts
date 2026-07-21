@@ -357,6 +357,9 @@ export function projectAdmissionDebtCounts(
     orphanLegacyWorkspaces: count(ProjectDebtReason.OrphanLegacyWorkspace),
     consumedDirtyWorkspaces: count(ProjectDebtReason.ConsumedDirtyWorkspace),
     incompleteConsumedOutputRecords: count(ProjectDebtReason.IncompleteConsumedOutputRecord),
+    legacyOutputQuarantineRequired: count(
+      ProjectDebtReason.LegacyOutputQuarantineRequired,
+    ),
     activeWriterConflicts: count(ProjectDebtReason.ActiveWriterConflict),
     staleDirtyWorkers: count(ProjectDebtReason.StaleDirtyWorker),
     unreadableRoots: count(ProjectDebtReason.UnreadableRoot),

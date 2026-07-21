@@ -569,6 +569,7 @@ export async function abortPendingMerge(
   workspacePath: string,
   expectedTargetCommit: string | undefined,
   reviewedConflictFiles: readonly string[] = [],
+  allowCleanUnmaterializedStaleTarget = false,
 ): Promise<void> {
   const normalizedConflictFiles = uniqueSorted(
     reviewedConflictFiles.map(normalizeProjectRelativePath),
@@ -595,8 +596,19 @@ export async function abortPendingMerge(
     ).stdout
       .trim()
       .toLowerCase();
-    if (head !== expectedTargetCommit) {
+    const cleanUnmaterializedStaleTarget =
+      head !== expectedTargetCommit &&
+      allowCleanUnmaterializedStaleTarget &&
+      !mergeInProgress;
+    if (head !== expectedTargetCommit && !cleanUnmaterializedStaleTarget) {
       throw new Error("local_git_integration_merge_abort_head_mismatch");
+    }
+    if (cleanUnmaterializedStaleTarget) {
+      const status = await runtime.getStatus(workspacePath);
+      if (status.dirtyFiles.length > 0) {
+        throw new Error("local_git_integration_merge_abort_left_dirty_workspace");
+      }
+      return;
     }
     if (normalizedConflictFiles.length > 0) {
       await restoreExactFilesToCommit(
