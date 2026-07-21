@@ -259,7 +259,7 @@ export function useCodexAccountSnapshot(options: {
         }
       }
     },
-    [applySnapshot, electronMode, options.enabled, options.includeRateLimits]
+    [applySnapshot, electronMode, options.includeRateLimits]
   );
 
   useEffect(() => {
@@ -497,7 +497,7 @@ export function useCodexAccountSnapshot(options: {
         }
       }
     },
-    [applySnapshot, electronMode, options.enabled]
+    [applySnapshot, electronMode]
   );
 
   // Derived pending state covers the first render, before the initial effect can run.

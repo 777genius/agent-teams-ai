@@ -1,8 +1,9 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getMcpOperationKey } from '@shared/utils/extensionNormalizers';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { InstalledMcpEntry, McpCatalogItem } from '@shared/types/extensions';
 
 interface StoreState {
@@ -60,9 +61,15 @@ vi.mock('@renderer/components/extensions/common/InstallButton', () => ({
   InstallButton: ({
     state,
     errorMessage,
+    isInstalled,
+    onInstall,
+    onUninstall,
   }: {
     state?: string;
     errorMessage?: string;
+    isInstalled: boolean;
+    onInstall: () => void;
+    onUninstall: () => void;
   }) =>
     React.createElement(
       'button',
@@ -71,6 +78,7 @@ vi.mock('@renderer/components/extensions/common/InstallButton', () => ({
         'data-testid': 'install-button',
         'data-state': state,
         'data-error': errorMessage,
+        onClick: () => (isInstalled ? onUninstall() : onInstall()),
       },
       'Install'
     ),
@@ -315,6 +323,43 @@ describe('McpServerCard direct action safety', () => {
     });
 
     expect(host.querySelector('[data-testid="install-button"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('carries the active project context through a global direct install', async () => {
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator' };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(McpServerCard, {
+          server: makeServer(),
+          isInstalled: false,
+          installedEntry: null,
+          installedEntries: [],
+          diagnostic: null,
+          diagnosticsLoading: false,
+          projectPath: '/tmp/project',
+          onClick: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      (host.querySelector('[data-testid="install-button"]') as HTMLButtonElement).click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.installMcpServer).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: 'global', projectPath: '/tmp/project' })
+    );
 
     await act(async () => {
       root.unmount();

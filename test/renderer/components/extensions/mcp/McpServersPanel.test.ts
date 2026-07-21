@@ -1,29 +1,19 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CLI_NOT_FOUND_MARKER } from '@shared/constants/cli';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { InstalledMcpEntry, McpCatalogItem } from '@shared/types/extensions';
 
 interface StoreState {
-  mcpBrowseCatalog: {
-    id: string;
-    name: string;
-    description: string;
-    source: 'official' | 'glama';
-    installSpec: null;
-    envVars: [];
-    tools: [];
-    requiresAuth: boolean;
-  }[];
+  mcpBrowseCatalog: McpCatalogItem[];
   mcpBrowseNextCursor?: string;
   mcpBrowseLoading: boolean;
   mcpBrowseError: string | null;
   mcpBrowse: ReturnType<typeof vi.fn>;
-  mcpInstalledServers: { name: string; scope: 'local' | 'user' | 'project' }[];
-  mcpInstalledServersByProjectPath?: Record<
-    string,
-    { name: string; scope: 'local' | 'user' | 'project' }[]
-  >;
+  mcpInstalledServers: InstalledMcpEntry[];
+  mcpInstalledServersByProjectPath?: Record<string, InstalledMcpEntry[]>;
   fetchMcpGitHubStars: ReturnType<typeof vi.fn>;
   mcpDiagnostics: Record<string, never>;
   mcpDiagnosticsByProjectPath?: Record<string, Record<string, never>>;
@@ -99,10 +89,26 @@ vi.mock('@renderer/components/extensions/common/SearchInput', () => ({
 }));
 
 vi.mock('@renderer/components/extensions/mcp/McpServerCard', () => ({
-  McpServerCard: ({ server }: { server: { id: string; name: string } }) =>
+  McpServerCard: ({
+    server,
+    isInstalled,
+    installedEntries,
+    projectPath,
+  }: {
+    server: { id: string; name: string };
+    isInstalled: boolean;
+    installedEntries: InstalledMcpEntry[];
+    projectPath?: string | null;
+  }) =>
     React.createElement(
       'div',
-      { 'data-testid': 'mcp-card', 'data-server-id': server.id },
+      {
+        'data-testid': 'mcp-card',
+        'data-server-id': server.id,
+        'data-installed': String(isInstalled),
+        'data-installed-names': installedEntries.map((entry) => entry.name).join(','),
+        'data-project-path': projectPath ?? '',
+      },
       server.name
     ),
 }));
@@ -185,6 +191,61 @@ describe('McpServersPanel initial browse loading', () => {
 
     expect(storeState.mcpBrowse).toHaveBeenCalledTimes(1);
     expect(storeState.runMcpDiagnostics).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('associates a custom installed name by target and preserves the project context', async () => {
+    storeState.mcpBrowseCatalog = [
+      {
+        id: 'io.github.upstash/context7',
+        name: 'Context7',
+        description: 'Docs MCP',
+        source: 'official',
+        installSpec: { type: 'stdio', npmPackage: '@upstash/context7-mcp' },
+        envVars: [],
+        tools: [],
+        requiresAuth: false,
+      },
+    ];
+    storeState.mcpInstalledServersByProjectPath = {
+      '/tmp/project': [
+        {
+          name: 'my-context7',
+          scope: 'global',
+          transport: 'stdio',
+          targetKey: 'npm:@upstash/context7-mcp',
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(McpServersPanel, {
+          projectPath: '/tmp/project',
+          mcpSearchQuery: '',
+          mcpSearch: vi.fn(),
+          mcpSearchResults: [],
+          mcpSearchLoading: false,
+          mcpSearchWarnings: [],
+          selectedMcpServerId: null,
+          setSelectedMcpServerId: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const card = host.querySelector('[data-testid="mcp-card"]') as HTMLElement;
+    expect(card.dataset.installed).toBe('true');
+    expect(card.dataset.installedNames).toBe('my-context7');
+    expect(card.dataset.projectPath).toBe('/tmp/project');
 
     await act(async () => {
       root.unmount();

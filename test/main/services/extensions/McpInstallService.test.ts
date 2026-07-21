@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { McpInstallService } from '@main/services/extensions/install/McpInstallService';
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
+import { execCli } from '@main/utils/childProcess';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { McpCatalogAggregator } from '@main/services/extensions/catalog/McpCatalogAggregator';
 import type { McpCatalogItem } from '@shared/types/extensions';
@@ -16,10 +17,6 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
     resolve: vi.fn().mockResolvedValue('/usr/local/bin/claude'),
   },
 }));
-
-import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
-
-import { execCli } from '@main/utils/childProcess';
 
 const mockExecCli = vi.mocked(execCli);
 
@@ -157,6 +154,25 @@ describe('McpInstallService', () => {
 
       const args = findMcpCliArgs('add');
       expect(args).not.toContain('-s');
+    });
+
+    it('keeps the active project cwd for a global multimodel install', async () => {
+      mockExecCli.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await service.install({
+        registryId: 'upstash/context7-mcp',
+        serverName: 'custom-context7',
+        scope: 'global',
+        projectPath: '/tmp/project',
+        envValues: {},
+        headers: [],
+      });
+
+      expect(mockExecCli).toHaveBeenCalledWith(
+        '/usr/local/bin/claude',
+        expect.arrayContaining(['mcp', 'add', '-s', 'global', 'custom-context7']),
+        expect.objectContaining({ cwd: '/tmp/project' })
+      );
     });
   });
 

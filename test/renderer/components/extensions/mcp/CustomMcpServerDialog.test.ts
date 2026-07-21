@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 interface StoreState {
@@ -164,17 +165,33 @@ describe('CustomMcpServerDialog project scope', () => {
   });
 
   it('defaults to global scope in multimodel mode', async () => {
-    storeState.cliStatus = { flavor: 'agent_teams_orchestrator' };
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      installed: true,
+      authLoggedIn: true,
+      binaryPath: '/usr/local/bin/claude',
+      launchError: null,
+      providers: [
+        {
+          capabilities: {
+            extensions: {
+              mcp: { status: 'supported', ownership: 'shared', reason: null },
+            },
+          },
+        },
+      ],
+    };
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    const projectPath = '/tmp/project';
 
     await act(async () => {
       root.render(
         React.createElement(CustomMcpServerDialog, {
           open: true,
           onClose: vi.fn(),
-          projectPath: null,
+          projectPath,
         })
       );
       await Promise.resolve();
@@ -182,6 +199,26 @@ describe('CustomMcpServerDialog project scope', () => {
 
     const scopeSelect = host.querySelector('[data-testid="scope-select"]') as HTMLSelectElement;
     expect(scopeSelect.value).toBe('global');
+
+    const nameInput = host.querySelector('#custom-name') as HTMLInputElement;
+    const packageInput = host.querySelector('#custom-npm') as HTMLInputElement;
+    await act(async () => {
+      setNativeValue(nameInput, 'custom-context7', 'input');
+      setNativeValue(packageInput, '@upstash/context7-mcp', 'input');
+      await Promise.resolve();
+    });
+
+    const installButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Install'
+    ) as HTMLButtonElement;
+    await act(async () => {
+      installButton.click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.installCustomMcpServer).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: 'global', projectPath })
+    );
 
     await act(async () => {
       root.unmount();

@@ -1,8 +1,9 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getMcpOperationKey } from '@shared/utils/extensionNormalizers';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { InstalledMcpEntry, McpCatalogItem } from '@shared/types/extensions';
 
 interface StoreState {
@@ -398,6 +399,7 @@ describe('McpServerDetailDialog installed entry handling', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    const projectPath = '/tmp/project';
 
     await act(async () => {
       root.render(
@@ -408,7 +410,7 @@ describe('McpServerDetailDialog installed entry handling', () => {
           installedEntries: [],
           diagnostic: null,
           diagnosticsLoading: false,
-          projectPath: null,
+          projectPath,
           open: true,
           onClose: vi.fn(),
         })
@@ -418,6 +420,15 @@ describe('McpServerDetailDialog installed entry handling', () => {
 
     const scopeSelect = host.querySelector('[data-testid="scope-select"]') as HTMLSelectElement;
     expect(scopeSelect.value).toBe('global');
+
+    await act(async () => {
+      (host.querySelector('[data-testid="install-button"]') as HTMLButtonElement).click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.installMcpServer).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: 'global', projectPath })
+    );
 
     await act(async () => {
       root.unmount();

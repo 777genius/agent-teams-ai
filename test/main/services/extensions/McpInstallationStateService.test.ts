@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { ClaudeExtensionsAdapter } from '@main/services/extensions/runtime/ExtensionsRuntimeAdapter';
 import { McpConfigStateReader } from '@main/services/extensions/runtime/McpConfigStateReader';
 import { McpInstallationStateService } from '@main/services/extensions/state/McpInstallationStateService';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const TEST_ROOT = path.parse(process.cwd()).root || path.sep;
 const MOCK_HOME_PATH = path.join(TEST_ROOT, 'tmp', 'mock-home');
@@ -58,7 +58,7 @@ describe('McpInstallationStateService', () => {
         if (normalizedPath === normalizeMockPath(path.join(MOCK_HOME_PATH, '.claude.json'))) {
           return JSON.stringify({
             mcpServers: {
-              context7: { command: 'npx -y @upstash/context7-mcp' },
+              context7: { command: 'npx', args: ['-y', '@upstash/context7-mcp'] },
             },
             projects: {
               [PROJECT_A_PATH]: {
@@ -84,9 +84,24 @@ describe('McpInstallationStateService', () => {
       const entries = await service.getInstalled(PROJECT_A_PATH);
 
       expect(entries).toEqual([
-        { name: 'context7', scope: 'user', transport: 'stdio' },
-        { name: 'stripe', scope: 'local', transport: 'http' },
-        { name: 'paypal', scope: 'project', transport: 'http' },
+        {
+          name: 'context7',
+          scope: 'user',
+          transport: 'stdio',
+          targetKey: 'npm:@upstash/context7-mcp',
+        },
+        {
+          name: 'stripe',
+          scope: 'local',
+          transport: 'http',
+          targetKey: 'http:https://mcp.stripe.com/',
+        },
+        {
+          name: 'paypal',
+          scope: 'project',
+          transport: 'http',
+          targetKey: 'http:https://mcp.paypal.com/mcp',
+        },
       ]);
     });
 
@@ -165,8 +180,18 @@ describe('McpInstallationStateService', () => {
 
       expect(projectAEntries).toEqual([
         { name: 'context7', scope: 'user', transport: 'stdio' },
-        { name: 'stripe', scope: 'local', transport: 'http' },
-        { name: 'repo-a-server', scope: 'project', transport: 'http' },
+        {
+          name: 'stripe',
+          scope: 'local',
+          transport: 'http',
+          targetKey: 'http:https://mcp.stripe.com/',
+        },
+        {
+          name: 'repo-a-server',
+          scope: 'project',
+          transport: 'http',
+          targetKey: 'http:https://repo-a.example.com/mcp',
+        },
       ]);
       expect(projectBEntries).toEqual([
         { name: 'context7', scope: 'user', transport: 'stdio' },

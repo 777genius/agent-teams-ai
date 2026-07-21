@@ -1,10 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import {
   CODEX_ACCOUNT_REFRESH_SNAPSHOT,
   CODEX_ACCOUNT_START_CHATGPT_LOGIN,
 } from '@features/codex-account/contracts';
 import { registerCodexAccountIpc } from '@features/codex-account/main/adapters/input/ipc/registerCodexAccountIpc';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { CodexAccountFeatureFacade } from '@features/codex-account/main/composition/createCodexAccountFeature';
 
@@ -28,10 +27,13 @@ describe('registerCodexAccountIpc', () => {
   it('forwards validated refresh and login options', () => {
     const { handlers, feature } = createHarness();
 
-    handlers.get(CODEX_ACCOUNT_REFRESH_SNAPSHOT)?.({}, {
-      includeRateLimits: true,
-      forceRefreshToken: false,
-    });
+    handlers.get(CODEX_ACCOUNT_REFRESH_SNAPSHOT)?.(
+      {},
+      {
+        includeRateLimits: true,
+        forceRefreshToken: false,
+      }
+    );
     handlers.get(CODEX_ACCOUNT_START_CHATGPT_LOGIN)?.({}, { mode: 'device_code' });
 
     expect(feature.refreshSnapshot).toHaveBeenCalledWith({

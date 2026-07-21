@@ -8,8 +8,11 @@ import {
   MCP_REGISTRY_INSTALL_CUSTOM,
   MCP_REGISTRY_UNINSTALL,
   PLUGIN_INSTALL,
+  PLUGIN_UNINSTALL,
 } from '@preload/constants/ipcChannels';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
+
+import type { PluginInstallRequest, PluginInstallScope } from '@shared/types/extensions';
 
 type IpcHandler = (...args: unknown[]) => Promise<unknown>;
 type ExtensionHandlerDependencies = Parameters<typeof initializeExtensionHandlers>;
@@ -25,7 +28,10 @@ describe('extension IPC handlers', () => {
       removeHandler: vi.fn(),
     };
     const facade = { invalidateInstalledCache: vi.fn() };
-    const pluginInstaller = { install: vi.fn().mockResolvedValue({ state: 'success' }) };
+    const pluginInstaller = {
+      install: vi.fn().mockResolvedValue({ state: 'success' }),
+      uninstall: vi.fn().mockResolvedValue({ state: 'success' }),
+    };
     const mcpInstaller = {
       install: vi.fn().mockResolvedValue({ state: 'success' }),
       installCustom: vi.fn().mockResolvedValue({ state: 'success' }),
@@ -76,6 +82,32 @@ describe('extension IPC handlers', () => {
 
     expect(pluginResult).toEqual({ success: false, error: 'Invalid scope: "global"' });
     expect(pluginInstaller.install).not.toHaveBeenCalled();
+
+    for (const invalidScope of ['', null, undefined]) {
+      await expect(
+        handlers.get(PLUGIN_INSTALL)?.({}, { pluginId: 'example@marketplace', scope: invalidScope })
+      ).resolves.toMatchObject({ success: false });
+      await expect(
+        handlers.get(MCP_REGISTRY_INSTALL)?.({}, { ...installRequest, scope: invalidScope })
+      ).resolves.toMatchObject({ success: false });
+      await expect(
+        handlers
+          .get(MCP_REGISTRY_INSTALL_CUSTOM)
+          ?.({}, { ...customInstallRequest, scope: invalidScope })
+      ).resolves.toMatchObject({ success: false });
+    }
+
+    for (const invalidScope of ['', null]) {
+      await expect(
+        handlers.get(PLUGIN_UNINSTALL)?.({}, 'example@marketplace', invalidScope)
+      ).resolves.toMatchObject({ success: false });
+      await expect(
+        handlers.get(MCP_REGISTRY_UNINSTALL)?.({}, 'example', invalidScope)
+      ).resolves.toMatchObject({ success: false });
+    }
+
+    expectTypeOf<PluginInstallRequest['scope']>().toEqualTypeOf<PluginInstallScope>();
+    expectTypeOf<PluginInstallScope>().toEqualTypeOf<'local' | 'user' | 'project'>();
 
     removeExtensionHandlers(ipcMain as unknown as Parameters<typeof removeExtensionHandlers>[0]);
     consoleErrorSpy.mockRestore();

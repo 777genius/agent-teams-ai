@@ -153,7 +153,7 @@ export const ApiKeysPanel = ({
         },
       ];
     });
-  }, [codexAccount.loading, codexAccount.snapshot, effectiveCliStatus]);
+  }, [codexAccount.error, codexAccount.loading, codexAccount.snapshot, effectiveCliStatus]);
 
   return (
     <div className="flex flex-col gap-4">
