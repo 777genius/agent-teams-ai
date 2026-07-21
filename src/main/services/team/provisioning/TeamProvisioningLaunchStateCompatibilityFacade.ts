@@ -18,7 +18,10 @@ import {
   finalizeMissingRegisteredMembersAsFailed as finalizeMissingRegisteredMembersAsFailedHelper,
   type OpenCodeSecondaryEvidenceOverlayParams,
 } from './TeamProvisioningLaunchStateReconciliation';
-import { type LaunchStateWriteResult } from './TeamProvisioningLaunchStateStoreBoundary';
+import {
+  type LaunchStateWriteOptions,
+  type LaunchStateWriteResult,
+} from './TeamProvisioningLaunchStateStoreBoundary';
 import { type TeamProvisioningLiveLaunchSnapshotBoundary } from './TeamProvisioningLiveLaunchSnapshotBoundaryFactory';
 import { MEMBER_LAUNCH_GRACE_MS } from './TeamProvisioningMemberSpawnStatusPolicy';
 import { buildRuntimeSpawnStatusRecord as buildRuntimeSpawnStatusRecordHelper } from './TeamProvisioningMemberStatusProjection';
@@ -98,12 +101,12 @@ export interface TeamProvisioningLaunchStateCompatibilityBoundary<
   writeLaunchStateSnapshot(
     teamName: string,
     snapshot: PersistedTeamLaunchSnapshot,
-    options?: { allowNoopSkip?: boolean; runId?: string }
+    options?: LaunchStateWriteOptions
   ): Promise<PersistedTeamLaunchSnapshot>;
   writeLaunchStateSnapshotNow(
     teamName: string,
     snapshot: PersistedTeamLaunchSnapshot,
-    options?: { allowNoopSkip?: boolean; runId?: string }
+    options?: LaunchStateWriteOptions
   ): Promise<LaunchStateWriteResult>;
   isLaunchStateNoopRefreshDue(snapshot: PersistedTeamLaunchSnapshot): boolean;
   enqueueLaunchStateStoreOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
@@ -521,7 +524,7 @@ export abstract class TeamProvisioningLaunchStateCompatibilityFacade<
   protected writeLaunchStateSnapshot(
     teamName: string,
     snapshot: PersistedTeamLaunchSnapshot,
-    options?: { allowNoopSkip?: boolean; runId?: string }
+    options?: LaunchStateWriteOptions
   ): Promise<PersistedTeamLaunchSnapshot> {
     return options === undefined
       ? this.launchStateCompatibilityBoundary.writeLaunchStateSnapshot(teamName, snapshot)
@@ -531,7 +534,7 @@ export abstract class TeamProvisioningLaunchStateCompatibilityFacade<
   protected writeLaunchStateSnapshotNow(
     teamName: string,
     snapshot: PersistedTeamLaunchSnapshot,
-    options?: { allowNoopSkip?: boolean; runId?: string }
+    options?: LaunchStateWriteOptions
   ): Promise<LaunchStateWriteResult> {
     return this.launchStateCompatibilityBoundary.writeLaunchStateSnapshotNow(
       teamName,

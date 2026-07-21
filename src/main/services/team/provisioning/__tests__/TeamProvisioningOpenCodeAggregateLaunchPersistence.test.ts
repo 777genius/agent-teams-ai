@@ -289,7 +289,10 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
 
     expect(writeLaunchStateSnapshot).toHaveBeenCalledTimes(1);
     expect(writeLaunchStateSnapshot.mock.calls[0][0]).toBe('team-a');
-    expect(writeLaunchStateSnapshot.mock.calls[0][2]).toEqual({ runId: 'run-1' });
+    expect(writeLaunchStateSnapshot.mock.calls[0][2]).toEqual({
+      requireTrackedRun: true,
+      runId: 'run-1',
+    });
     expect(persisted.result).toBe(result);
     expect(persisted.snapshot).toMatchObject({
       teamName: 'team-a',

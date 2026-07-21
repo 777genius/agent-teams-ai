@@ -417,6 +417,30 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     }
   );
 
+  it.each([null, undefined])(
+    'rejects an unobserved strictly tracked snapshot when the tracked run id is %s',
+    async (trackedRunId) => {
+      const previousSnapshot = snapshot({ updatedAt: '2026-01-01T00:00:01.000Z' });
+      const nextSnapshot = snapshot();
+      const { boundary, ports, setCurrentSnapshot, setTrackedRunId } = createBoundary();
+      setCurrentSnapshot(previousSnapshot);
+      setTrackedRunId(trackedRunId);
+
+      const result = await boundary.writeLaunchStateSnapshotNow('demo', nextSnapshot, {
+        requireTrackedRun: true,
+        runId: 'run-1',
+      });
+
+      expect(result).toEqual({ snapshot: previousSnapshot, wrote: false });
+      expect(ports.launchStateStore.write).not.toHaveBeenCalled();
+      expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
+      expect(boundary.getWrittenRunIdByTeam().has('demo')).toBe(false);
+      expect(ports.logDebug).toHaveBeenCalledWith(
+        '[demo] Skipping stale launch-state write for run run-1'
+      );
+    }
+  );
+
   it('does not overwrite a successor snapshot when a stale write starts after authority changed', async () => {
     const successorSnapshot = snapshot({ updatedAt: '2026-01-01T00:00:02.000Z' });
     const writtenRunIdByTeam = new Map([['demo', 'run-2']]);
