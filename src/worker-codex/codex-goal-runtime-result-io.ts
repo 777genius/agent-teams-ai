@@ -77,7 +77,7 @@ export async function captureGitWorkspacePatch(input: {
     gitBinaryPath,
     workspacePath: input.workspacePath,
     args: hasHead
-      ? ["diff", "--binary", "HEAD", "--"]
+      ? ["diff", "--binary", "--no-renames", "HEAD", "--"]
       : ["diff", "--binary", "--"],
   });
   const untrackedPatch = await gitUntrackedPatch({
@@ -192,7 +192,7 @@ async function gitUntrackedPatch(input: {
       allowDifferenceExitCode: true,
     }));
   }
-  return patches.join("\n");
+  return patches.map(ensureTrailingNewline).join("");
 }
 
 async function gitUntrackedPaths(input: {

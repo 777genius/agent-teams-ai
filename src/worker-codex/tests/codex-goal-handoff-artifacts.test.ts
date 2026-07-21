@@ -14,6 +14,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { materializeCodexGoalHandoffArtifacts } from "../codex-goal-handoff-artifacts";
+import { captureGitWorkspacePatch } from "../codex-goal-runtime-result-io";
 import { git } from "./codex-goal-mcp-test-support";
 
 const cleanup: string[] = [];
@@ -207,6 +208,23 @@ describe("Codex goal handoff artifact materialization", () => {
       jobRootDir: boundedFixture.jobRootDir,
       limits: { maxChangedFiles: 1 },
     })).rejects.toThrow("handoff_changed_file_limit_exceeded");
+  });
+
+  it("uses identical patch bytes for handoff and reviewed-output capture", async () => {
+    const fixture = await createFixture();
+    await writeFile(join(fixture.workspacePath, "README.md"), "changed\n");
+    await writeFile(join(fixture.workspacePath, "first.txt"), "first\n");
+    await writeFile(join(fixture.workspacePath, "second.txt"), "second\n");
+    await writeFile(join(fixture.workspacePath, "third.txt"), "third\n");
+
+    const handoff = await materialize(fixture);
+    const reviewedOutputPatch = await captureGitWorkspacePatch({
+      workspacePath: fixture.workspacePath,
+    });
+
+    await expect(readFile(handoff!.patchPath, "utf8")).resolves.toBe(
+      reviewedOutputPatch,
+    );
   });
 
   it("rejects special files and a symlinked job-root escape", async () => {
