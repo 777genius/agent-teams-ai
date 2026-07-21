@@ -6652,6 +6652,25 @@ describe(
         runtimeAlive: false,
         pendingPermissionRequestIds: ['perm-tom'],
       });
+
+      const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+      expect(runtimeSnapshot.members.alice).toMatchObject({
+        alive: true,
+        providerId: 'codex',
+        laneKind: 'primary',
+      });
+      expect(runtimeSnapshot.members.bob).toMatchObject({
+        alive: true,
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:bob',
+        laneKind: 'secondary',
+      });
+      expect(runtimeSnapshot.members.tom).toMatchObject({
+        alive: false,
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:tom',
+        laneKind: 'secondary',
+      });
     });
 
     it('waits for mixed OpenCode secondary lane completion during final launch reporting', async () => {

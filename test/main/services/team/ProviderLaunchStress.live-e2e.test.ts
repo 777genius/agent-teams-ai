@@ -290,10 +290,16 @@ async function runProviderStressScenario(
       });
     }, 240_000);
 
-    await waitUntil(async () => {
-      const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
-      return expectedMembers.every((memberName) => snapshot.members[memberName]?.alive === true);
-    }, 180_000);
+    await waitForStressCondition(
+      `all teammate runtimes alive ${teamName}`,
+      async () => {
+        const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+        return expectedMembers.every((memberName) => snapshot.members[memberName]?.alive === true);
+      },
+      180_000,
+      2_000,
+      () => formatStressDiagnostics(svc, teamName, progressEvents)
+    );
     process.stderr.write(`[ProviderLaunchStress.live] ${scenario} confirmed all teammates\n`);
 
     await runRestartStressChecks(active, expectedMembers, progressEvents);

@@ -190,6 +190,22 @@ function runtimeAdapterRun(
   };
 }
 
+function mixedRunWithConfirmedSecondaryEvidence(): TeamProvisioningRuntimeSnapshotRun {
+  const currentRun = run();
+  const member = currentRun.request.members[0];
+  if (!member) {
+    throw new Error('expected mixed secondary member fixture');
+  }
+  currentRun.mixedSecondaryLanes = [
+    {
+      laneId: 'secondary:opencode:Worker',
+      member,
+      result: { members: runtimeAdapterRun().members },
+    },
+  ];
+  return currentRun;
+}
+
 function processRows(): RuntimeTelemetryProcessTableRow[] {
   return [
     {
@@ -652,6 +668,59 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
 
       expect(metadata.get('Worker')).toMatchObject({
         alive: true,
+        model: 'gpt-current',
+        pid: CURRENT_PID,
+        metricsPid: CURRENT_PID,
+        pidSource: 'opencode_bridge',
+        runtimeSessionId: 'session-current',
+        runtimeDiagnostic: 'OpenCode runtime process detected after bootstrap confirmation',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('uses confirmed mixed secondary lane evidence for live runtime liveness', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const metadata = await buildLiveTeamAgentRuntimeMetadata({
+        teamName: TEAM_NAME,
+        runId: RUN_ID,
+        generationAtStart: 0,
+        runs: new Map([[RUN_ID, mixedRunWithConfirmedSecondaryEvidence()]]),
+        runtimeAdapterRunByTeam: new Map(),
+        teamMetaStore: {
+          getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
+        },
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        },
+        launchStateStore: {
+          read: vi.fn(async () => null),
+        },
+        readConfigSnapshot: vi.fn(async () => config()),
+        readPersistedRuntimeMembers: vi.fn(() => [] satisfies PersistedRuntimeMemberLike[]),
+        readRuntimeProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
+          rows: processRows(),
+          processTableAvailable: true,
+        })),
+        readWindowsHostProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
+          rows: [],
+          processTableAvailable: false,
+        })),
+        getRuntimeSnapshotCacheGeneration: vi.fn(() => 0),
+        getTrackedRunId: vi.fn(() => RUN_ID),
+        getAgentRuntimeSnapshotCacheTtlMs: vi.fn(() => 1_000),
+        liveRuntimeMetadataCache: {
+          rememberLiveTeamAgentRuntimeMetadata: vi.fn(),
+        },
+        logDebug: vi.fn(),
+      });
+
+      expect(metadata.get('Worker')).toMatchObject({
+        alive: true,
+        providerId: 'opencode',
         model: 'gpt-current',
         pid: CURRENT_PID,
         metricsPid: CURRENT_PID,

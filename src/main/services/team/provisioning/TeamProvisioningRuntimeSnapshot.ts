@@ -265,6 +265,40 @@ function resolveActiveRunLaneIdentity(
   return normalizeRuntimeLaneIdentity(findEffectiveRunMember(run, memberName));
 }
 
+function resolveActiveRunRuntimeAdapterEvidence(
+  run: TeamProvisioningRuntimeSnapshotRun | null,
+  runtimeAdapterRun: RuntimeAdapterRunSnapshotSource | undefined,
+  memberName: string
+): TeamRuntimeMemberLaunchEvidence | undefined {
+  for (const [candidateName, evidence] of Object.entries(runtimeAdapterRun?.members ?? {})) {
+    if (
+      matchesMemberNameOrBase(candidateName, memberName) ||
+      matchesMemberNameOrBase(evidence.memberName, memberName)
+    ) {
+      return evidence;
+    }
+  }
+  for (const lane of run?.mixedSecondaryLanes ?? []) {
+    const laneMemberName = lane.member.name?.trim() ?? '';
+    if (
+      !laneMemberName ||
+      (!matchesMemberNameOrBase(laneMemberName, memberName) &&
+        !matchesMemberNameOrBase(memberName, laneMemberName))
+    ) {
+      continue;
+    }
+    for (const [candidateName, evidence] of Object.entries(lane.result?.members ?? {})) {
+      if (
+        matchesMemberNameOrBase(candidateName, memberName) ||
+        matchesMemberNameOrBase(evidence.memberName, memberName)
+      ) {
+        return evidence;
+      }
+    }
+  }
+  return undefined;
+}
+
 function normalizeRuntimePositiveInteger(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
     ? Math.trunc(value)
@@ -933,7 +967,11 @@ export async function buildTeamAgentRuntimeSnapshot(
     )
       ? launchSnapshot?.members[memberName]
       : undefined;
-    const candidateRuntimeAdapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
+    const candidateRuntimeAdapterEvidence = resolveActiveRunRuntimeAdapterEvidence(
+      run,
+      currentRuntimeAdapterRun,
+      memberName
+    );
     const leadRuntimeProviderId =
       normalizeOptionalTeamProviderId(candidateRuntimeAdapterEvidence?.providerId) ??
       normalizeOptionalTeamProviderId(candidateLaunchMember?.providerId) ??
@@ -1020,7 +1058,11 @@ export async function buildTeamAgentRuntimeSnapshot(
       ? launchSnapshot?.members[memberName]
       : undefined;
     const activeRunLaneIdentity = resolveActiveRunLaneIdentity(run, memberName);
-    const runtimeAdapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
+    const runtimeAdapterEvidence = resolveActiveRunRuntimeAdapterEvidence(
+      run,
+      currentRuntimeAdapterRun,
+      memberName
+    );
     const activeRunMember = activeRunMemberByName.get(memberName);
     const activeRunModel = activeRunMember?.model?.trim();
     const activeRunProviderId =
@@ -1685,7 +1727,11 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     )
       ? persistedLaunchSnapshot?.members[memberName]
       : undefined;
-    const adapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
+    const adapterEvidence = resolveActiveRunRuntimeAdapterEvidence(
+      run,
+      currentRuntimeAdapterRun,
+      memberName
+    );
     const adapterStatus: MemberSpawnStatusEntry | undefined = adapterEvidence
       ? {
           status: adapterEvidence.hardFailure
