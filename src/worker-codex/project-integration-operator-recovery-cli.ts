@@ -9,6 +9,7 @@ import { z } from "zod";
 import { LocalIntegrationAttemptStore } from "@vioxen/subscription-runtime/store-local-file";
 import {
   IntegrationAttemptStatus,
+  matchesAnyPattern,
   recoverOperatorCheckArtifact,
   type OperatorArtifactRecoveryPermit,
   type OperatorArtifactRecoveryResult,
@@ -194,13 +195,12 @@ async function executeRecovery(input: {
   if (canonicalWorkspacePath !== input.permit.targetWorkspacePath) {
     throw new Error("operator_artifact_recovery_workspace_not_canonical");
   }
-  if (
-    controller.scope.allowedBranches &&
-    !controller.scope.allowedBranches.includes(input.permit.targetBranch)
-  ) {
-    throw new Error("operator_artifact_recovery_branch_outside_scope");
+  if (controller.scope.allowedBranches) {
+    assertOperatorRecoveryBranchAllowed(
+      input.permit.targetBranch,
+      controller.scope.allowedBranches,
+    );
   }
-
   const archiveRoot = join(controller.controller.jobRootDir, "archives");
   return await recoverOperatorCheckArtifact(
     {
@@ -222,6 +222,15 @@ async function executeRecovery(input: {
     },
     input,
   );
+}
+
+export function assertOperatorRecoveryBranchAllowed(
+  branch: string,
+  allowedBranches: readonly string[],
+): void {
+  if (!matchesAnyPattern(branch, allowedBranches)) {
+    throw new Error("operator_artifact_recovery_branch_outside_scope");
+  }
 }
 
 function parseArgs(argv: readonly string[]): {

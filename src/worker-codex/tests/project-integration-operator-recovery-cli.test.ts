@@ -8,6 +8,7 @@ import {
   OperatorArtifactRecoveryState,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
+  assertOperatorRecoveryBranchAllowed,
   assertOperatorRecoveryPermitFileSecurity,
   runProjectIntegrationOperatorRecoveryCli,
 } from "../project-integration-operator-recovery-cli";
@@ -131,6 +132,21 @@ describe("project integration operator recovery CLI", () => {
         1000,
       ),
     ).toThrow("operator_artifact_recovery_root_required");
+  });
+
+  it("uses project branch patterns for recovery scope", () => {
+    expect(() =>
+      assertOperatorRecoveryBranchAllowed(
+        "refactor/hosted-web-feature-boundaries",
+        ["main", "refactor/hosted-web-*"],
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertOperatorRecoveryBranchAllowed("feature/outside", [
+        "main",
+        "refactor/hosted-web-*",
+      ]),
+    ).toThrow("operator_artifact_recovery_branch_outside_scope");
   });
 });
 
