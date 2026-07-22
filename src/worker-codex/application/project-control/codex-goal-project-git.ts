@@ -174,6 +174,105 @@ export async function isGitAncestor(input: {
   }
 }
 
+export async function fastForwardMaterializedWorktreeBranch(input: {
+  readonly workspacePath: string;
+  readonly branch: string;
+  readonly expectedCurrentRevision: string;
+  readonly expectedNextRevision: string;
+  readonly beforeFastForwardForTest?: () => Promise<void>;
+}): Promise<void> {
+  await assertGitCurrentBranch({
+    workspacePath: input.workspacePath,
+    branch: input.branch,
+  });
+  const expectedCurrent = input.expectedCurrentRevision.toLowerCase();
+  const expectedNext = input.expectedNextRevision.toLowerCase();
+  const current = (
+    await execGitStdout([
+      "-C",
+      input.workspacePath,
+      "rev-parse",
+      "--verify",
+      "HEAD^{commit}",
+    ])
+  )
+    .trim()
+    .toLowerCase();
+  if (current !== expectedCurrent) {
+    throw new Error("project_control_existing_branch_revision_changed");
+  }
+  const status = await execGitStdout([
+    "-C",
+    input.workspacePath,
+    "status",
+    "--porcelain",
+    "--untracked-files=all",
+  ]);
+  if (status.length > 0) {
+    throw new Error("project_control_existing_branch_materialized_dirty");
+  }
+  if (current === expectedNext) return;
+  if (
+    !(await isGitAncestor({
+      workspacePath: input.workspacePath,
+      ancestor: current,
+      descendant: expectedNext,
+    }))
+  ) {
+    throw new Error("project_control_existing_branch_not_fast_forwardable");
+  }
+
+  await input.beforeFastForwardForTest?.();
+  const confirmedCurrent = (
+    await execGitStdout([
+      "-C",
+      input.workspacePath,
+      "rev-parse",
+      "--verify",
+      "HEAD^{commit}",
+    ])
+  )
+    .trim()
+    .toLowerCase();
+  if (confirmedCurrent !== expectedCurrent) {
+    throw new Error("project_control_existing_branch_revision_changed");
+  }
+  await execGit([
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-C",
+    input.workspacePath,
+    "merge",
+    "--ff-only",
+    "--no-stat",
+    expectedNext,
+  ]);
+  const [confirmedNext, statusAfter] = await Promise.all([
+    execGitStdout([
+      "-C",
+      input.workspacePath,
+      "rev-parse",
+      "--verify",
+      "HEAD^{commit}",
+    ]),
+    execGitStdout([
+      "-C",
+      input.workspacePath,
+      "status",
+      "--porcelain",
+      "--untracked-files=all",
+    ]),
+  ]);
+  if (
+    confirmedNext.trim().toLowerCase() !== expectedNext ||
+    statusAfter.length > 0
+  ) {
+    throw new Error(
+      "project_control_existing_branch_fast_forward_verification_failed",
+    );
+  }
+}
+
 export type CanonicalRemoteHead = {
   readonly remote: string;
   readonly branch: string;

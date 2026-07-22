@@ -415,7 +415,7 @@ describe("codex goal MCP server", () => {
       );
       expect(branchMismatch).toEqual({
         ok: false,
-        error: "project_control_existing_worktree_revision_mismatch; rollback=worktree",
+        error: "project_control_existing_branch_not_fast_forwardable",
       });
       const rejectedWorkspace = join(root, "worktrees", "infinity-context-invalid-v1");
       const rejectedJobRoot = join(root, "worker-jobs", "infinity-context-invalid-v1");

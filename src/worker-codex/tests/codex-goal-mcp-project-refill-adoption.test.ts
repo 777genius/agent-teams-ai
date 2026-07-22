@@ -1,5 +1,12 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -24,9 +31,10 @@ import {
 describe("project refill adoption", () => {
   it.each([
     {
-      name: "seeds rejected output after unrelated canonical advance",
+      name: "retries rejected output from a rolled-back stale branch after canonical advance",
       canonicalPath: "unrelated.md",
       canonicalContent: "canonical advance\n",
+      existingBranch: "stale" as const,
       expectedError: undefined,
     },
     {
@@ -34,9 +42,29 @@ describe("project refill adoption", () => {
       canonicalPath: "README.md",
       canonicalContent:
         "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\ncanonical changed line 12\n",
+      existingBranch: undefined,
       expectedError: "project_control_input_patch_changed_paths_advanced",
     },
-  ])("$name", async ({ canonicalPath, canonicalContent, expectedError }) => {
+    {
+      name: "rejects a divergent rolled-back remediation branch",
+      canonicalPath: "unrelated.md",
+      canonicalContent: "canonical advance\n",
+      existingBranch: "divergent" as const,
+      expectedError: "project_control_existing_branch_not_fast_forwardable",
+    },
+    {
+      name: "rejects a rolled-back remediation branch checked out elsewhere",
+      canonicalPath: "unrelated.md",
+      canonicalContent: "canonical advance\n",
+      existingBranch: "checked-out" as const,
+      expectedError: "project_control_existing_branch_materialization_failed",
+    },
+  ])("$name", async ({
+    canonicalPath,
+    canonicalContent,
+    existingBranch,
+    expectedError,
+  }) => {
     const root = await mkdtemp(
       join(tmpdir(), "subscription-runtime-project-refill-adoption-patch-"),
     );
@@ -221,6 +249,52 @@ describe("project refill adoption", () => {
         "refs/remotes/origin/main",
         canonicalSha,
       ]);
+      const childBranch = "fix/project-adoption";
+      if (existingBranch === "stale") {
+        await git(sourceWorkspacePath, ["branch", childBranch, baseSha]);
+      } else if (existingBranch === "divergent") {
+        const divergentWorkspace = join(
+          root,
+          "worktrees",
+          "project-adoption-divergent",
+        );
+        await git(sourceWorkspacePath, ["branch", childBranch, baseSha]);
+        await git(sourceWorkspacePath, [
+          "worktree",
+          "add",
+          divergentWorkspace,
+          childBranch,
+        ]);
+        await writeFile(
+          join(divergentWorkspace, "divergent.md"),
+          "divergent branch\n",
+        );
+        await git(divergentWorkspace, ["add", "divergent.md"]);
+        await git(divergentWorkspace, [
+          "commit",
+          "-m",
+          "test: diverge remediation branch",
+        ]);
+        await git(sourceWorkspacePath, [
+          "worktree",
+          "remove",
+          "--force",
+          divergentWorkspace,
+        ]);
+      } else if (existingBranch === "checked-out") {
+        const checkedOutWorkspace = join(
+          root,
+          "worktrees",
+          "project-adoption-checked-out",
+        );
+        await git(sourceWorkspacePath, ["branch", childBranch, baseSha]);
+        await git(sourceWorkspacePath, [
+          "worktree",
+          "add",
+          checkedOutWorkspace,
+          childBranch,
+        ]);
+      }
 
       const result = await callToolJson(
         client,
@@ -235,7 +309,7 @@ describe("project refill adoption", () => {
           authRootDir,
           sourceWorkspacePath,
           sourceRef: "main",
-          newBranch: "fix/project-adoption",
+          newBranch: childBranch,
           workspacePath: childWorkspace,
           promptBody: "Adopt and remediate immutable producer output.\n",
           taskId: "project-adoption",
@@ -278,6 +352,9 @@ describe("project refill adoption", () => {
       );
       if (expectedError) {
         expect(result).toEqual({ ok: false, error: expectedError });
+        await expect(access(childWorkspace)).rejects.toMatchObject({
+          code: "ENOENT",
+        });
         return;
       }
       if (result.ok !== true) throw new Error(JSON.stringify(result));
@@ -301,6 +378,9 @@ describe("project refill adoption", () => {
       expect(
         (await gitStdout(childWorkspace, ["rev-parse", "HEAD"])).trim(),
       ).toBe(canonicalSha);
+      await expect(
+        readFile(join(childWorkspace, canonicalPath), "utf8"),
+      ).resolves.toBe(canonicalContent);
       await expect(
         readFile(join(childWorkspace, "README.md"), "utf8"),
       ).resolves.toContain("producer changed line 6\n");

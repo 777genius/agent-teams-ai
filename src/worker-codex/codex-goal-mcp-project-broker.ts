@@ -61,6 +61,7 @@ import {
   assertGitCurrentBranch,
   execGit,
   execGitStdout,
+  fastForwardMaterializedWorktreeBranch,
   isGitAncestor,
 } from "./codex-goal-mcp-project-git";
 import { pushProjectBranch } from "./application/project-control/codex-goal-project-external-rewrite-recovery";
@@ -506,7 +507,20 @@ function codexProjectControlPorts(
               ])
             ).trim()
           : "";
+        const existingBranchRevision = existingBranch
+          ? (
+              await execGitStdout([
+                "-C",
+                sourceWorkspacePath,
+                "rev-parse",
+                "--verify",
+                `${existingBranch}^{commit}`,
+              ])
+            ).trim()
+          : undefined;
         const args = [
+          "-c",
+          "core.hooksPath=/dev/null",
           "-C",
           sourceWorkspacePath,
           "worktree",
@@ -525,9 +539,27 @@ function codexProjectControlPorts(
                       input.createWorktreeInput.expectedRevision,
                   ]),
         ];
-        await execGit(args);
-        if (input.createWorktreeInput.inputPatch) {
-          try {
+        try {
+          await execGit(args);
+        } catch (error) {
+          if (existingBranch) {
+            throw new Error(
+              "project_control_existing_branch_materialization_failed",
+              { cause: error },
+            );
+          }
+          throw error;
+        }
+        try {
+          if (newBranch && existingBranchRevision) {
+            await fastForwardMaterializedWorktreeBranch({
+              workspacePath: input.createWorktreeInput.path,
+              branch: newBranch,
+              expectedCurrentRevision: existingBranchRevision,
+              expectedNextRevision: input.createWorktreeInput.expectedRevision,
+            });
+          }
+          if (input.createWorktreeInput.inputPatch) {
             await applyVerifiedInputPatch({
               workspacePath: input.createWorktreeInput.path,
               patchPath: input.createWorktreeInput.inputPatch.path,
@@ -537,17 +569,17 @@ function codexProjectControlPorts(
               expectedTargetCommit: input.createWorktreeInput.expectedRevision,
               changedPaths: input.createWorktreeInput.inputPatch.changedPaths,
             });
-          } catch (error) {
-            await execGit([
-              "-C",
-              sourceWorkspacePath,
-              "worktree",
-              "remove",
-              "--force",
-              input.createWorktreeInput.path,
-            ]).catch(() => undefined);
-            throw error;
           }
+        } catch (error) {
+          await execGit([
+            "-C",
+            sourceWorkspacePath,
+            "worktree",
+            "remove",
+            "--force",
+            input.createWorktreeInput.path,
+          ]);
+          throw error;
         }
         return operationResult(input.createWorktreeInput.path);
       },
