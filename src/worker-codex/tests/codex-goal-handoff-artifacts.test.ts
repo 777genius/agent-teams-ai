@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import {
   mkdtemp,
   mkdir,
+  lstat,
   readFile,
   realpath,
   rm,
@@ -17,6 +18,7 @@ import {
   captureCodexGoalContinuationWorkspaceFingerprint,
   materializeCodexGoalHandoffArtifacts,
 } from "../codex-goal-handoff-artifacts";
+import { tryMaterializeTerminalCodexGoalHandoff } from "../codex-goal-terminal-handoff-materialization";
 import { captureGitWorkspacePatch } from "../codex-goal-runtime-result-io";
 import { git } from "./codex-goal-mcp-test-support";
 
@@ -239,6 +241,34 @@ describe("Codex goal handoff artifact materialization", () => {
     })).rejects.toThrow("handoff_changed_file_limit_exceeded");
   });
 
+  it("removes unsafe dependency links before freezing terminal output", async () => {
+    const fixture = await createFixture();
+    const sharedDependencies = join(fixture.root, "shared-node-modules");
+    await mkdir(sharedDependencies);
+    await mkdir(join(fixture.workspacePath, "mcp-server"));
+    await symlink(
+      sharedDependencies,
+      join(fixture.workspacePath, "mcp-server", "node_modules"),
+    );
+    await writeFile(join(fixture.workspacePath, "product.ts"), "export const ready = true;\n");
+
+    const result = await tryMaterializeTerminalCodexGoalHandoff({
+      jobId: "worker-1",
+      taskId: "task-terminal",
+      workspacePath: fixture.workspacePath,
+      jobRootDir: fixture.jobRootDir,
+      expectedBaseCommit: fixture.baseCommit,
+    });
+
+    expect(result).toMatchObject({
+      changedPaths: ["product.ts"],
+    });
+    expect(result.errorCode).toBeUndefined();
+    await expect(
+      lstat(join(fixture.workspacePath, "mcp-server", "node_modules")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
   it("uses identical patch bytes for handoff and reviewed-output capture", async () => {
     const fixture = await createFixture();
     await writeFile(join(fixture.workspacePath, "README.md"), "changed\n");
@@ -326,7 +356,6 @@ async function createFixture() {
   const baseCommit = await gitOutput(workspacePath, ["rev-parse", "HEAD"]);
   return { root, workspacePath, jobRootDir, baseCommit };
 }
-
 async function materialize(fixture: Awaited<ReturnType<typeof createFixture>>) {
   return await materializeCodexGoalHandoffArtifacts({
     workerJobId: "worker-1",

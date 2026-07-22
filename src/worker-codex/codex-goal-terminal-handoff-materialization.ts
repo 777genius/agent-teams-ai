@@ -5,6 +5,7 @@ import {
   captureCodexGoalContinuationWorkspaceFingerprint,
   materializeCodexGoalHandoffArtifacts,
 } from "./codex-goal-handoff-artifacts";
+import { sanitizeNodeDependencyEnvironment } from "./dependency-environment-safety";
 
 export type TerminalCodexGoalHandoffMaterialization = {
   readonly artifacts: readonly RuntimeResultArtifact[];
@@ -21,6 +22,14 @@ export async function tryMaterializeTerminalCodexGoalHandoff(input: {
   readonly expectedBaseCommit?: string;
 }): Promise<TerminalCodexGoalHandoffMaterialization> {
   try {
+    // Dependency bootstrap may create worktree-local links to a shared cache.
+    // They are execution infrastructure, never authored output. Remove only
+    // dependency roots proven unsafe by the bounded dependency scanner before
+    // freezing the terminal workspace. All other symlinks still fail closed in
+    // handoff materialization.
+    await sanitizeNodeDependencyEnvironment({
+      workspacePath: input.workspacePath,
+    });
     const materialized = await materializeCodexGoalHandoffArtifacts({
       workerJobId: input.jobId ?? input.taskId,
       taskId: input.taskId,
@@ -56,7 +65,6 @@ export async function tryMaterializeTerminalCodexGoalHandoff(input: {
     };
   }
 }
-
 export function terminalCodexGoalHandoffResultDetails(
   handoff: TerminalCodexGoalHandoffMaterialization | null,
 ): Readonly<Record<string, string>> {
