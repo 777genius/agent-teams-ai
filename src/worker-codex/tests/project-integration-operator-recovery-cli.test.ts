@@ -10,6 +10,7 @@ import {
 import {
   assertOperatorRecoveryBranchAllowed,
   assertOperatorRecoveryPermitFileSecurity,
+  operatorRecoveryArchiveRoot,
   runProjectIntegrationOperatorRecoveryCli,
 } from "../project-integration-operator-recovery-cli";
 
@@ -147,6 +148,12 @@ describe("project integration operator recovery CLI", () => {
         "refactor/hosted-web-*",
       ]),
     ).toThrow("operator_artifact_recovery_branch_outside_scope");
+  });
+
+  it("isolates recovery state beneath a private archive root", () => {
+    expect(operatorRecoveryArchiveRoot("/jobs/controller-1")).toBe(
+      "/jobs/controller-1/archives/operator-artifact-recovery",
+    );
   });
 });
 

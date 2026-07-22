@@ -201,7 +201,13 @@ async function executeRecovery(input: {
       controller.scope.allowedBranches,
     );
   }
-  const archiveRoot = join(controller.controller.jobRootDir, "archives");
+  const controllerArchiveRoot = join(
+    controller.controller.jobRootDir,
+    "archives",
+  );
+  const archiveRoot = operatorRecoveryArchiveRoot(
+    controller.controller.jobRootDir,
+  );
   return await recoverOperatorCheckArtifact(
     {
       store: new LocalIntegrationAttemptStore({
@@ -210,7 +216,7 @@ async function executeRecovery(input: {
       locks: projectControlWorkspaceLocks(controller.registryRootDir),
       recovery: new LocalOperatorArtifactRecoveryAdapter({
         archiveRoot,
-        controllerArchiveRoot: archiveRoot,
+        controllerArchiveRoot,
         allowedPatchRoots: [
           ...(controller.scope.workspaceRoots ?? []),
           ...(controller.scope.worktreeRoots ?? []),
@@ -222,6 +228,10 @@ async function executeRecovery(input: {
     },
     input,
   );
+}
+
+export function operatorRecoveryArchiveRoot(jobRootDir: string): string {
+  return join(jobRootDir, "archives", "operator-artifact-recovery");
 }
 
 export function assertOperatorRecoveryBranchAllowed(
