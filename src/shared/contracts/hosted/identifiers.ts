@@ -6,10 +6,14 @@ export type BootId = string & { readonly [hostedIdBrand]: 'BootId' };
 export type RequestId = string & { readonly [hostedIdBrand]: 'RequestId' };
 export type TeamId = string & { readonly [hostedIdBrand]: 'TeamId' };
 export type WorkspaceId = string & { readonly [hostedIdBrand]: 'WorkspaceId' };
+export type RunId = string & { readonly [hostedIdBrand]: 'RunId' };
+export type MemberId = string & { readonly [hostedIdBrand]: 'MemberId' };
+export type LegacyMemberKey = string & { readonly [hostedIdBrand]: 'LegacyMemberKey' };
 
 const MAX_PHASE_ONE_ID_LENGTH = 128;
 const CANONICAL_ID_PAYLOAD_LENGTH = 32;
 const CANONICAL_ID_PAYLOAD_PATTERN = /^[0-9a-f]{32}$/;
+const LEGACY_MEMBER_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 const PHASE_ONE_ID_PATTERNS = new Map<string, RegExp>();
 function parsePhaseOneId<T extends string>(value: unknown, prefix: string): T {
@@ -24,7 +28,10 @@ function parsePhaseOneId<T extends string>(value: unknown, prefix: string): T {
   return value as T;
 }
 
-function parseCanonicalId<T extends string>(value: unknown, prefix: 'team' | 'workspace'): T {
+function parseCanonicalId<T extends string>(
+  value: unknown,
+  prefix: 'team' | 'workspace' | 'run' | 'member'
+): T {
   const separatorIndex = prefix.length;
   const expectedLength = separatorIndex + 1 + CANONICAL_ID_PAYLOAD_LENGTH;
   if (
@@ -48,6 +55,14 @@ export const parseRequestId = (value: unknown): RequestId => parsePhaseOneId(val
 export const parseTeamId = (value: unknown): TeamId => parseCanonicalId(value, 'team');
 export const parseWorkspaceId = (value: unknown): WorkspaceId =>
   parseCanonicalId(value, 'workspace');
+export const parseRunId = (value: unknown): RunId => parseCanonicalId(value, 'run');
+export const parseMemberId = (value: unknown): MemberId => parseCanonicalId(value, 'member');
+export const parseLegacyMemberKey = (value: unknown): LegacyMemberKey => {
+  if (typeof value !== 'string' || !LEGACY_MEMBER_KEY_PATTERN.test(value)) {
+    throw new TypeError('hosted-contract-legacy-member-key-invalid');
+  }
+  return value as LegacyMemberKey;
+};
 
 /**
  * Phase 1 compatibility values are synthetic fixture identities, never canonical IDs or legacy team
