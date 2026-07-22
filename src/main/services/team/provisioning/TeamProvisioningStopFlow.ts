@@ -1,3 +1,4 @@
+import type { SecondaryRuntimeStopFence } from './TeamProvisioningOpenCodeRuntimeStopFlow';
 import type { TeamProvisioningProgress } from '@shared/types';
 
 interface StopLogger {
@@ -37,7 +38,11 @@ export interface TeamProvisioningStopTeamPorts<TRun extends TeamProvisioningStop
   withTeamLock<T>(teamName: string, fn: () => Promise<T>): Promise<T>;
   stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
   hasSecondaryRuntimeRuns(teamName: string): boolean;
-  stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
+  getSecondaryRuntimeStopFence(teamName: string): SecondaryRuntimeStopFence;
+  stopMixedSecondaryRuntimeLanes(
+    teamName: string,
+    ownershipFence: SecondaryRuntimeStopFence
+  ): Promise<void>;
   provisioningRunByTeam: Map<string, string>;
   deleteAliveRunId(teamName: string): void;
   killTeamProcess(child: TRun['child']): void;
@@ -81,17 +86,19 @@ async function stopRuntimeLanesOwnedByRun<TRun extends TeamProvisioningStopRun>(
   const runtimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
   const shouldStopPrimaryRuntime =
     runtimeRun?.runId === runId && runtimeRun.providerId === 'opencode';
-  const shouldStopSecondaryRuntimes = ports.hasSecondaryRuntimeRuns(teamName);
+  const secondaryRuntimeStopFence = ports.hasSecondaryRuntimeRuns(teamName)
+    ? ports.getSecondaryRuntimeStopFence(teamName)
+    : [];
 
   // Keep the order deterministic and leave secondary tracking untouched when
-  // the required primary stop fails. The low-level stop flows own their lane
-  // cleanup after each confirmed stop, snapshot their run IDs before awaiting,
-  // and clear only the owners that still match those snapshots.
+  // the required primary stop fails. Secondary ownership is frozen before the
+  // primary await; the low-level stop flow then stops and cleans only owners
+  // that still match this fence.
   if (shouldStopPrimaryRuntime) {
     await ports.stopOpenCodeRuntimeAdapterTeam(teamName, runId);
   }
-  if (shouldStopSecondaryRuntimes) {
-    await ports.stopMixedSecondaryRuntimeLanes(teamName);
+  if (secondaryRuntimeStopFence.length > 0) {
+    await ports.stopMixedSecondaryRuntimeLanes(teamName, secondaryRuntimeStopFence);
   }
 }
 
@@ -107,7 +114,10 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   let runId = ports.getTrackedRunId(teamName);
   if (!runId) {
     if (ports.hasSecondaryRuntimeRuns(teamName)) {
-      await ports.stopMixedSecondaryRuntimeLanes(teamName);
+      await ports.stopMixedSecondaryRuntimeLanes(
+        teamName,
+        ports.getSecondaryRuntimeStopFence(teamName)
+      );
     }
     return;
   }
@@ -131,16 +141,16 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
       await ports.withTeamLock(teamName, async () => {
         const currentRuntimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
         if (currentRuntimeRun?.runId === runId && currentRuntimeRun.providerId === 'opencode') {
-          await ports.stopOpenCodeRuntimeAdapterTeam(teamName, runId);
-          if (ports.hasSecondaryRuntimeRuns(teamName)) {
-            await ports.stopMixedSecondaryRuntimeLanes(teamName);
-          }
+          await stopRuntimeLanesOwnedByRun(teamName, runId, ports);
         }
       });
       return;
     }
     if (ports.hasSecondaryRuntimeRuns(teamName)) {
-      await ports.stopMixedSecondaryRuntimeLanes(teamName);
+      await ports.stopMixedSecondaryRuntimeLanes(
+        teamName,
+        ports.getSecondaryRuntimeStopFence(teamName)
+      );
     }
     if (ports.provisioningRunByTeam.get(teamName) === runId) {
       ports.provisioningRunByTeam.delete(teamName);

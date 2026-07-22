@@ -17,6 +17,10 @@ interface StopFlowRun {
   onProgress(progress: TeamProvisioningProgress): void;
 }
 
+const DEFAULT_SECONDARY_STOP_FENCE = Object.freeze([
+  Object.freeze({ laneId: 'secondary-worker', runId: 'secondary-run' }),
+]);
+
 function progress(runId: string, teamName: string): TeamProvisioningProgress {
   return {
     runId,
@@ -77,6 +81,7 @@ function makePorts(
     withTeamLock,
     stopOpenCodeRuntimeAdapterTeam: vi.fn(),
     hasSecondaryRuntimeRuns: vi.fn(() => false),
+    getSecondaryRuntimeStopFence: vi.fn(() => DEFAULT_SECONDARY_STOP_FENCE),
     stopMixedSecondaryRuntimeLanes: vi.fn(),
     provisioningRunByTeam,
     deleteAliveRunId: vi.fn((candidateTeamName: string) => {
@@ -238,7 +243,10 @@ describe('team provisioning stop flow', () => {
     await stopTeamFlow(teamName, ports);
 
     expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(teamName, currentRun.runId);
-    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(teamName);
+    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(
+      teamName,
+      DEFAULT_SECONDARY_STOP_FENCE
+    );
     expect(ports.cleanupRun).toHaveBeenCalledWith(currentRun);
     expect(ports.cleanupRun).toHaveBeenCalledOnce();
     expect(events).toEqual(['primary stopped', 'secondaries stopped', 'cleanup']);
@@ -315,7 +323,10 @@ describe('team provisioning stop flow', () => {
 
     const stopping = stopTeamFlow(teamName, ports);
     await vi.waitFor(() => {
-      expect(stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(teamName);
+      expect(stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(
+        teamName,
+        DEFAULT_SECONDARY_STOP_FENCE
+      );
     });
 
     expect(ports.cleanupRun).not.toHaveBeenCalled();
@@ -342,7 +353,10 @@ describe('team provisioning stop flow', () => {
     await stopTeamFlow(teamName, ports);
 
     expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(teamName, currentRun.runId);
-    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(teamName);
+    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(
+      teamName,
+      DEFAULT_SECONDARY_STOP_FENCE
+    );
     expect(ports.killTeamProcess).not.toHaveBeenCalled();
   });
 

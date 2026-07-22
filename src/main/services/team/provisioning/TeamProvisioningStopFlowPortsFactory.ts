@@ -1,5 +1,7 @@
 import {
+  createSecondaryRuntimeStopFence,
   type OpenCodeRuntimeStopFlowPorts,
+  type SecondaryRuntimeStopFence,
   stopMixedSecondaryRuntimeLanes,
   stopOpenCodeRuntimeAdapterTeam,
 } from './TeamProvisioningOpenCodeRuntimeStopFlow';
@@ -63,6 +65,11 @@ export interface TeamProvisioningStopFlowBoundary {
   stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
   stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
 }
+
+type StopMixedSecondaryRuntimeLanes = (
+  teamName: string,
+  ownershipFence: SecondaryRuntimeStopFence
+) => Promise<void>;
 
 export interface TeamProvisioningStopFlowServiceHost<TRun extends TeamProvisioningStopRun> {
   getSecondaryRuntimeRuns: TeamProvisioningStopFlowFactoryDeps<TRun>['getSecondaryRuntimeRuns'];
@@ -224,8 +231,14 @@ export function createTeamProvisioningStopTeamPortsFromDeps<TRun extends TeamPro
         createOpenCodeRuntimeStopFlowPortsFromDeps(deps)
       ),
     hasSecondaryRuntimeRuns: (teamName) => deps.hasSecondaryRuntimeRuns(teamName),
-    stopMixedSecondaryRuntimeLanes: (teamName) =>
-      stopMixedSecondaryRuntimeLanes(teamName, createOpenCodeRuntimeStopFlowPortsFromDeps(deps)),
+    getSecondaryRuntimeStopFence: (teamName) =>
+      createSecondaryRuntimeStopFence(deps.getSecondaryRuntimeRuns(teamName)),
+    stopMixedSecondaryRuntimeLanes: ((teamName, ownershipFence) =>
+      stopMixedSecondaryRuntimeLanes(
+        teamName,
+        createOpenCodeRuntimeStopFlowPortsFromDeps(deps),
+        ownershipFence
+      )) satisfies StopMixedSecondaryRuntimeLanes,
     provisioningRunByTeam: deps.provisioningRunByTeam,
     deleteAliveRunId: (teamName) => deps.deleteAliveRunId(teamName),
     killTeamProcess: (child) => deps.killTeamProcess(child),

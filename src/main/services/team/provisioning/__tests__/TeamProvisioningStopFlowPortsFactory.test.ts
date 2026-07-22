@@ -4,6 +4,7 @@ import {
   createOpenCodeRuntimeStopFlowPortsFromDeps,
   createTeamProvisioningStopFlowBoundary,
   createTeamProvisioningStopFlowDepsFromService,
+  createTeamProvisioningStopTeamPortsFromDeps,
   type TeamProvisioningStopFlowFactoryDeps,
   type TeamProvisioningStopFlowServiceHost,
 } from '../TeamProvisioningStopFlowPortsFactory';
@@ -69,6 +70,17 @@ function makeAdapter(
     reconcile: vi.fn(),
     stop,
   } as unknown as TeamLaunchRuntimeAdapter;
+}
+
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve(value: T): void;
+} {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
 }
 
 function createDeps(
@@ -285,6 +297,26 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
     });
   });
 
+  it('snapshots immutable secondary runtime ownership for the stop fence', () => {
+    const secondaryRun: SecondaryRuntimeRunEntry = {
+      runId: 'secondary-run-old',
+      providerId: 'opencode',
+      laneId: 'secondary-worker',
+      memberName: 'Worker',
+    };
+    const deps = createDeps({
+      getSecondaryRuntimeRuns: vi.fn(() => [secondaryRun]),
+    });
+
+    const fence =
+      createTeamProvisioningStopTeamPortsFromDeps(deps).getSecondaryRuntimeStopFence('team-a');
+    secondaryRun.runId = 'secondary-run-new';
+
+    expect(fence).toEqual([{ laneId: 'secondary-worker', runId: 'secondary-run-old' }]);
+    expect(Object.isFrozen(fence)).toBe(true);
+    expect(Object.isFrozen(fence[0])).toBe(true);
+  });
+
   it('stops tracked process runs through the extracted stop boundary', async () => {
     const teamName = 'team-a';
     const run = makeRun('run-1', teamName);
@@ -369,5 +401,149 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
     expect(
       deps.persistentRuntimeCleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam
     ).toHaveBeenCalledWith(teamName);
+  });
+
+  it('does not stop or clean a replacement secondary owner installed while primary stop awaits', async () => {
+    const teamName = 'team-a';
+    const run = makeRun('aggregate-run', teamName);
+    const oldSecondaryRun: SecondaryRuntimeRunEntry = {
+      runId: 'secondary-run-old',
+      providerId: 'opencode',
+      laneId: 'secondary-worker',
+      memberName: 'Worker',
+      cwd: '/worker-old',
+    };
+    const replacementSecondaryRun: SecondaryRuntimeRunEntry = {
+      ...oldSecondaryRun,
+      runId: 'secondary-run-new',
+      cwd: '/worker-new',
+    };
+    let secondaryRuns = [oldSecondaryRun];
+    const primaryStopStarted = deferred<void>();
+    const releasePrimaryStop = deferred<void>();
+    const stop = vi.fn(async (input) => {
+      if (input.laneId === 'primary') {
+        primaryStopStarted.resolve();
+        await releasePrimaryStop.promise;
+      }
+      return {
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      };
+    });
+    const deleteSecondaryRuntimeRun = vi.fn((_: string, laneId: string) => {
+      secondaryRuns = secondaryRuns.filter((secondaryRun) => secondaryRun.laneId !== laneId);
+    });
+    const clearSecondaryRuntimeRuns = vi.fn(() => {
+      secondaryRuns = [];
+    });
+    const deps = createDeps({
+      getSecondaryRuntimeRuns: vi.fn(() => secondaryRuns),
+      getOpenCodeRuntimeAdapter: vi.fn(() => makeAdapter(stop)),
+      hasSecondaryRuntimeRuns: vi.fn(() => secondaryRuns.length > 0),
+      deleteSecondaryRuntimeRun,
+      clearSecondaryRuntimeRuns,
+    });
+    deps.mutableRuns.set(run.runId, run);
+    deps.provisioningRunByTeam.set(teamName, run.runId);
+    deps.aliveRunByTeam.set(teamName, run.runId);
+    deps.runtimeAdapterRunByTeam.set(teamName, {
+      runId: run.runId,
+      providerId: 'opencode',
+      cwd: '/runtime-cwd',
+    });
+
+    const stopping = createTeamProvisioningStopFlowBoundary(deps).stopTeam(teamName);
+    await primaryStopStarted.promise;
+    secondaryRuns = [replacementSecondaryRun];
+    releasePrimaryStop.resolve();
+    await stopping;
+
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(stop).toHaveBeenCalledWith(
+      expect.objectContaining({ laneId: 'primary', runId: run.runId })
+    );
+    expect(deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(clearSecondaryRuntimeRuns).not.toHaveBeenCalled();
+    expect(deps.clearOpenCodeRuntimeLaneStorage).not.toHaveBeenCalledWith(
+      expect.objectContaining({ laneId: replacementSecondaryRun.laneId })
+    );
+    expect(secondaryRuns).toEqual([replacementSecondaryRun]);
+  });
+
+  it('stops and cleans the same secondary owner after deferred primary stop completes', async () => {
+    const teamName = 'team-a';
+    const run = makeRun('aggregate-run', teamName);
+    const secondaryRun: SecondaryRuntimeRunEntry = {
+      runId: 'secondary-run',
+      providerId: 'opencode',
+      laneId: 'secondary-worker',
+      memberName: 'Worker',
+      cwd: '/worker',
+    };
+    let secondaryRuns = [secondaryRun];
+    const primaryStopStarted = deferred<void>();
+    const releasePrimaryStop = deferred<void>();
+    const stop = vi.fn(async (input) => {
+      if (input.laneId === 'primary') {
+        primaryStopStarted.resolve();
+        await releasePrimaryStop.promise;
+      }
+      return {
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      };
+    });
+    const deleteSecondaryRuntimeRun = vi.fn((_: string, laneId: string) => {
+      secondaryRuns = secondaryRuns.filter((candidate) => candidate.laneId !== laneId);
+    });
+    const clearSecondaryRuntimeRuns = vi.fn(() => {
+      secondaryRuns = [];
+    });
+    const deps = createDeps({
+      getSecondaryRuntimeRuns: vi.fn(() => secondaryRuns),
+      getOpenCodeRuntimeAdapter: vi.fn(() => makeAdapter(stop)),
+      hasSecondaryRuntimeRuns: vi.fn(() => secondaryRuns.length > 0),
+      deleteSecondaryRuntimeRun,
+      clearSecondaryRuntimeRuns,
+    });
+    deps.mutableRuns.set(run.runId, run);
+    deps.provisioningRunByTeam.set(teamName, run.runId);
+    deps.aliveRunByTeam.set(teamName, run.runId);
+    deps.runtimeAdapterRunByTeam.set(teamName, {
+      runId: run.runId,
+      providerId: 'opencode',
+      cwd: '/runtime-cwd',
+    });
+
+    const stopping = createTeamProvisioningStopFlowBoundary(deps).stopTeam(teamName);
+    await primaryStopStarted.promise;
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    releasePrimaryStop.resolve();
+    await stopping;
+
+    expect(stop).toHaveBeenCalledTimes(2);
+    expect(stop).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ laneId: secondaryRun.laneId, runId: secondaryRun.runId })
+    );
+    expect(deps.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        laneId: secondaryRun.laneId,
+        expectedRunId: secondaryRun.runId,
+      })
+    );
+    expect(deleteSecondaryRuntimeRun).toHaveBeenCalledWith(teamName, secondaryRun.laneId);
+    expect(clearSecondaryRuntimeRuns).toHaveBeenCalledWith(teamName);
+    expect(secondaryRuns).toEqual([]);
   });
 });

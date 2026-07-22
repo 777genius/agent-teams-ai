@@ -90,6 +90,26 @@ export interface SingleMixedSecondaryRuntimeLaneStopPorts {
   logger: StopLogger;
 }
 
+export interface SecondaryRuntimeStopOwner {
+  readonly laneId: string;
+  readonly runId: string;
+}
+
+export type SecondaryRuntimeStopFence = readonly SecondaryRuntimeStopOwner[];
+
+export function createSecondaryRuntimeStopFence(
+  secondaryRuns: readonly Pick<SecondaryRuntimeRunEntry, 'laneId' | 'runId'>[]
+): SecondaryRuntimeStopFence {
+  return Object.freeze(
+    secondaryRuns.map(({ laneId, runId }) =>
+      Object.freeze({
+        laneId,
+        runId,
+      })
+    )
+  );
+}
+
 function isSecondaryRuntimeRunCurrent(
   teamName: string,
   expectedRun: Pick<SecondaryRuntimeRunEntry, 'laneId' | 'runId'>,
@@ -200,12 +220,20 @@ export async function stopSingleMixedSecondaryRuntimeLane(
 
 export async function stopMixedSecondaryRuntimeLanes(
   teamName: string,
-  ports: OpenCodeRuntimeStopFlowPorts
+  ports: OpenCodeRuntimeStopFlowPorts,
+  ownershipFence?: SecondaryRuntimeStopFence
 ): Promise<void> {
+  const ownedRunIdByLaneId = ownershipFence
+    ? new Map(ownershipFence.map(({ laneId, runId }) => [laneId, runId] as const))
+    : null;
   // The store returns live lane objects. Snapshot every stop target before the
   // first await so a same-lane relaunch cannot retarget this cleanup in place.
   const secondaryRuns = ports
     .getSecondaryRuntimeRuns(teamName)
+    .filter(
+      (secondaryRun) =>
+        !ownedRunIdByLaneId || ownedRunIdByLaneId.get(secondaryRun.laneId) === secondaryRun.runId
+    )
     .map((secondaryRun) => ({ ...secondaryRun }));
   if (secondaryRuns.length === 0) {
     return;
