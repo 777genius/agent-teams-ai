@@ -1,4 +1,7 @@
-import { CrossTeamService } from '@main/services/team/CrossTeamService';
+import {
+  CrossTeamService,
+  type CrossTeamRecipientMetadataReader,
+} from '@main/services/team/CrossTeamService';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
   CROSS_TEAM_SENT_SOURCE,
@@ -98,6 +101,9 @@ describe('CrossTeamService', () => {
     getLeadMemberName: ReturnType<typeof vi.fn>;
     listTeams: ReturnType<typeof vi.fn>;
   };
+  let recipientMetadataReader: {
+    getMembers: ReturnType<typeof vi.fn>;
+  };
   let inboxWriter: { sendMessage: ReturnType<typeof vi.fn> };
   let provisioning: {
     isTeamAlive: ReturnType<typeof vi.fn>;
@@ -116,6 +122,9 @@ describe('CrossTeamService', () => {
     dataService = {
       getLeadMemberName: vi.fn().mockResolvedValue('team-lead'),
       listTeams: vi.fn().mockResolvedValue([]),
+    };
+    recipientMetadataReader = {
+      getMembers: vi.fn<CrossTeamRecipientMetadataReader['getMembers']>().mockResolvedValue([]),
     };
     inboxWriter = {
       sendMessage: vi.fn().mockResolvedValue({ deliveredToInbox: true, messageId: 'mock-id' }),
@@ -136,7 +145,8 @@ describe('CrossTeamService', () => {
       configReader as unknown as TeamConfigReader,
       dataService as unknown as TeamDataService,
       inboxWriter as unknown as TeamInboxWriter,
-      provisioning as unknown as TeamProvisioningService
+      provisioning as unknown as TeamProvisioningService,
+      recipientMetadataReader
     );
   });
 
@@ -163,6 +173,114 @@ describe('CrossTeamService', () => {
       expect(prefix?.from).toBe('team-a.team-lead');
       expect(prefix?.chainDepth).toBe(0);
       expect(prefix?.conversationId).toBeTruthy();
+    });
+
+    it('filters a removed metadata lead and resolves the active metadata lead', async () => {
+      configReader.getConfig.mockImplementation((teamName: string) =>
+        Promise.resolve(teamName === 'team-b' ? makeConfig({ members: [] }) : makeConfig())
+      );
+      recipientMetadataReader.getMembers.mockResolvedValue([
+        { name: 'OldLead', agentType: 'team-lead', removedAt: 1 },
+        { name: 'Captain', agentType: 'team-lead' },
+      ]);
+
+      await expect(service.send(makeRequest())).resolves.toMatchObject({
+        deliveredToInbox: true,
+        toMember: 'Captain',
+      });
+      expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
+        'team-b',
+        expect.objectContaining({ member: 'Captain' })
+      );
+      expect(dataService.getLeadMemberName).not.toHaveBeenCalled();
+    });
+
+    it('does not resurrect a configured direct member tombstoned by raw metadata', async () => {
+      configReader.getConfig.mockImplementation((teamName: string) =>
+        Promise.resolve(
+          teamName === 'team-b'
+            ? makeConfig({
+                members: [
+                  { name: 'Captain', agentType: 'team-lead' },
+                  { name: 'Builder', agentType: 'developer' },
+                ],
+              })
+            : makeConfig()
+        )
+      );
+      recipientMetadataReader.getMembers.mockResolvedValue([
+        { name: 'builder', agentType: 'developer', removedAt: 1 },
+      ]);
+
+      await expect(service.send(makeRequest({ toMember: 'BUILDER' }))).rejects.toThrow(
+        'Unknown toMember: BUILDER'
+      );
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('fails closed before writing when the target lead identity is unavailable', async () => {
+      configReader.getConfig.mockImplementation((teamName: string) =>
+        Promise.resolve(teamName === 'team-b' ? makeConfig({ members: [] }) : makeConfig())
+      );
+
+      await expect(service.send(makeRequest())).rejects.toThrow(
+        'Cross-team target lead identity is unavailable'
+      );
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('fails closed before writing when active metadata lead identity is ambiguous', async () => {
+      configReader.getConfig.mockImplementation((teamName: string) =>
+        Promise.resolve(teamName === 'team-b' ? makeConfig({ members: [] }) : makeConfig())
+      );
+      recipientMetadataReader.getMembers.mockResolvedValue([
+        { name: 'Captain', agentType: 'team-lead' },
+        { name: 'Commander', agentType: 'lead' },
+      ]);
+
+      await expect(service.send(makeRequest())).rejects.toThrow(
+        'Ambiguous active team lead identity'
+      );
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('fails closed when config and metadata identify distinct active leads', async () => {
+      configReader.getConfig.mockImplementation((teamName: string) =>
+        Promise.resolve(
+          teamName === 'team-b'
+            ? makeConfig({ members: [{ name: 'Captain', agentType: 'team-lead' }] })
+            : makeConfig()
+        )
+      );
+      recipientMetadataReader.getMembers.mockResolvedValue([
+        { name: 'Commander', agentType: 'team-lead' },
+      ]);
+
+      await expect(service.send(makeRequest())).rejects.toThrow(
+        'Ambiguous active team lead identity: Captain, Commander'
+      );
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('resolves an active metadata-only non-lead recipient', async () => {
+      configReader.getConfig.mockImplementation((teamName: string) =>
+        Promise.resolve(teamName === 'team-b' ? makeConfig({ members: [] }) : makeConfig())
+      );
+      recipientMetadataReader.getMembers.mockResolvedValue([
+        { name: 'Captain', agentType: 'team-lead' },
+        { name: 'MetadataWorker', agentType: 'developer' },
+      ]);
+
+      await expect(
+        service.send(makeRequest({ toMember: 'metadataworker' }))
+      ).resolves.toMatchObject({
+        deliveredToInbox: true,
+        toMember: 'MetadataWorker',
+      });
+      expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
+        'team-b',
+        expect.objectContaining({ member: 'MetadataWorker' })
+      );
     });
 
     it('delivers and best-effort relays to an explicit target member when requested', async () => {
@@ -471,12 +589,7 @@ describe('CrossTeamService', () => {
         messageId: 'cross-runtime-retry-1',
       });
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
-      expect(provisioning.relayInboxFileToLiveRecipient).toHaveBeenNthCalledWith(
-        3,
-        'team-b',
-        'team-lead',
-        { onlyMessageId: 'cross-runtime-retry-1' }
-      );
+      expect(provisioning.relayInboxFileToLiveRecipient).toHaveBeenCalledTimes(2);
       expect(JSON.parse(fs.readFileSync(sentMessagesPath, 'utf8'))).toHaveLength(1);
       expect(provisioning.clearPendingCrossTeamReplyExpectation).toHaveBeenCalledTimes(2);
     });
@@ -616,13 +729,13 @@ describe('CrossTeamService', () => {
       await expect(service.send(makeRequest({ toTeam: 'team-z' }))).rejects.toThrow('rate limit');
     });
 
-    it('uses "team-lead" as fallback when getLeadMemberName returns null', async () => {
-      dataService.getLeadMemberName.mockResolvedValue(null);
-
+    it('uses the configured lead when raw metadata is empty', async () => {
       await service.send(makeRequest());
 
       const [, req] = inboxWriter.sendMessage.mock.calls[0];
       expect(req.member).toBe('team-lead');
+      expect(recipientMetadataReader.getMembers).toHaveBeenCalledWith('team-b');
+      expect(dataService.getLeadMemberName).not.toHaveBeenCalled();
     });
 
     it('uses from format "team.member"', async () => {

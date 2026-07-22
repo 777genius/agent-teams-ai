@@ -65,6 +65,70 @@ describe('CrossTeamOutbox', () => {
     expect(result).toHaveLength(2);
   });
 
+  it('returns only an exact durably accepted runtime delivery proof', async () => {
+    const timestamp = '2026-07-22T00:00:00.000Z';
+    const message = makeMessage({
+      messageId: 'runtime-message-1',
+      fromMember: 'Builder',
+      toMember: 'Captain',
+      conversationId: 'runtime-key-1',
+      text: 'recover this exact delivery',
+      summary: 'Recovery proof',
+      taskRefs: [{ taskId: 'task-1', displayId: '#1', teamName: 'team-a' }],
+      timestamp,
+    });
+    await outbox.append('test-team', message);
+    await outbox.markRuntimeDeliveryAccepted('test-team', {
+      messageId: message.messageId,
+      toTeam: message.toTeam,
+      toMember: message.toMember ?? '',
+      acceptedAt: '2026-07-22T00:00:01.000Z',
+    });
+    const expected = {
+      messageId: message.messageId,
+      fromTeam: message.fromTeam,
+      fromMember: message.fromMember,
+      toTeam: message.toTeam,
+      toMember: message.toMember ?? '',
+      conversationId: message.conversationId ?? '',
+      text: message.text,
+      taskRefs: message.taskRefs,
+      summary: message.summary,
+      timestamp,
+    };
+
+    await expect(outbox.findAcceptedRuntimeDelivery('test-team', expected)).resolves.toMatchObject({
+      messageId: 'runtime-message-1',
+      toMember: 'Captain',
+      runtimeDeliveryAcceptedAt: '2026-07-22T00:00:01.000Z',
+    });
+    await expect(
+      outbox.findAcceptedRuntimeDelivery('test-team', { ...expected, text: 'changed payload' })
+    ).resolves.toBeNull();
+    await expect(
+      outbox.findAcceptedRuntimeDelivery('test-team', {
+        ...expected,
+        conversationId: 'different-logical-delivery',
+      })
+    ).resolves.toBeNull();
+    await expect(
+      outbox.findAcceptedRuntimeDelivery('test-team', { ...expected, toMember: 'Reviewer' })
+    ).resolves.toBeNull();
+
+    const corruptReceipt = {
+      ...message,
+      messageId: 'runtime-message-corrupt-receipt',
+      runtimeDeliveryAcceptedAt: 'corrupt',
+    };
+    await outbox.append('test-team', corruptReceipt);
+    await expect(
+      outbox.findAcceptedRuntimeDelivery('test-team', {
+        ...expected,
+        messageId: corruptReceipt.messageId,
+      })
+    ).resolves.toBeNull();
+  });
+
   it('appendIfNotRecent returns duplicate for recent equivalent message', async () => {
     const existing = makeMessage({
       messageId: 'msg-existing',

@@ -1,4 +1,6 @@
-import { isLeadMember } from '@shared/utils/leadDetection';
+import { CROSS_TEAM_SOURCE } from '@shared/constants/crossTeam';
+
+import { resolveCrossTeamRecipientIdentity } from '../CrossTeamRecipientIdentity';
 
 import {
   isCrossTeamPseudoRecipientName,
@@ -10,7 +12,7 @@ import type {
   OpenCodeMemberInboxRelayOptions,
   OpenCodeMemberInboxRelayResult,
 } from './TeamProvisioningOpenCodeMemberInboxRelay';
-import type { TeamConfig, TeamMember } from '@shared/types';
+import type { InboxMessage, TeamConfig, TeamMember } from '@shared/types';
 
 export enum LiveInboxRelayKind {
   Ignored = 'ignored',
@@ -24,6 +26,8 @@ export interface LiveInboxRelayResult {
   relayed: number;
   /** Exact scoped message confirmed by a native-lead relay or its recent-delivery ledger. */
   recentlyDeliveredMessageId?: string;
+  /** Exact message verified in the durable inbox for a native non-lead recipient. */
+  durablyStoredMessageId?: string;
   diagnostics?: string[];
   lastDelivery?: OpenCodeMemberInboxDelivery;
 }
@@ -41,6 +45,7 @@ export interface NativeLeadInboxRelayOptions {
 export interface RelayInboxFileToLiveRecipientPorts {
   readConfigSnapshot(teamName: string): Promise<TeamConfig | null>;
   readMetaMembers(teamName: string): Promise<readonly TeamMember[]>;
+  readInboxMessages(teamName: string, memberName: string): Promise<readonly InboxMessage[]>;
   isOpenCodeRuntimeRecipientFromSources(input: {
     memberName: string;
     config: TeamConfig | null | undefined;
@@ -69,27 +74,64 @@ export async function relayInboxFileToLiveRecipientWithPorts(
     return { kind: LiveInboxRelayKind.Ignored, relayed: 0 };
   }
 
-  const [config, metaMembers] = await Promise.all([
-    ports.readConfigSnapshot(teamName).catch(() => null),
-    ports.readMetaMembers(teamName).catch(() => []),
+  const [configResult, metaMembersResult] = await Promise.allSettled([
+    ports.readConfigSnapshot(teamName),
+    ports.readMetaMembers(teamName),
   ]);
-  const leadName = resolveLeadName(config);
-  const isOpenCodeRecipient = ports.isOpenCodeRuntimeRecipientFromSources({
-    memberName: inboxName,
-    config,
-    metaMembers,
-  });
+  const config = configResult.status === 'fulfilled' ? configResult.value : null;
+  const metaMembers = metaMembersResult.status === 'fulfilled' ? metaMembersResult.value : [];
+  const identityReadDiagnostics = [
+    ...(configResult.status === 'rejected'
+      ? [`config identity read failed: ${describeError(configResult.reason)}`]
+      : []),
+    ...(metaMembersResult.status === 'rejected'
+      ? [`metadata identity read failed: ${describeError(metaMembersResult.reason)}`]
+      : []),
+  ];
 
-  if (isSameInboxRecipient(inboxName, leadName)) {
-    if (isOpenCodeRecipient) {
-      return projectOpenCodeMemberRelay(
-        await ports.relayOpenCodeMemberInboxMessages(
-          teamName,
-          inboxName,
-          buildOpenCodeRelayOptions(options)
-        )
-      );
-    }
+  if (identityReadDiagnostics.length > 0) {
+    return failClosedIdentityRelay(identityReadDiagnostics);
+  }
+
+  let recipientIdentity: ReturnType<typeof resolveCrossTeamRecipientIdentity>;
+  try {
+    recipientIdentity = resolveCrossTeamRecipientIdentity({
+      sources: { config, metaMembers },
+      rawToMember: inboxName,
+    });
+  } catch (error) {
+    return failClosedIdentityRelay([`recipient identity unavailable: ${describeError(error)}`]);
+  }
+
+  const canonicalMemberName = recipientIdentity.memberName;
+  if (!isSameInboxRecipient(inboxName, canonicalMemberName)) {
+    return failClosedIdentityRelay([
+      `recipient identity canonicalizes to a different inbox: ${canonicalMemberName}`,
+    ]);
+  }
+
+  let isOpenCodeRecipient = false;
+  try {
+    isOpenCodeRecipient = ports.isOpenCodeRuntimeRecipientFromSources({
+      memberName: canonicalMemberName,
+      config,
+      metaMembers,
+    });
+  } catch (error) {
+    return failClosedIdentityRelay([`runtime identity resolution failed: ${describeError(error)}`]);
+  }
+
+  if (isOpenCodeRecipient) {
+    return projectOpenCodeMemberRelay(
+      await ports.relayOpenCodeMemberInboxMessages(
+        teamName,
+        canonicalMemberName,
+        buildOpenCodeRelayOptions(options)
+      )
+    );
+  }
+
+  if (recipientIdentity.isLead) {
     const leadOptions = buildNativeLeadRelayOptions(options);
     const relayed = ports.isTeamAlive(teamName)
       ? leadOptions
@@ -124,25 +166,63 @@ export async function relayInboxFileToLiveRecipientWithPorts(
     };
   }
 
-  if (isOpenCodeRecipient) {
-    return projectOpenCodeMemberRelay(
-      await ports.relayOpenCodeMemberInboxMessages(
-        teamName,
-        inboxName,
-        buildOpenCodeRelayOptions(options)
-      )
-    );
+  const onlyMessageId = options.onlyMessageId?.trim();
+  if (!onlyMessageId) {
+    return { kind: LiveInboxRelayKind.NativeMemberNoop, relayed: 0 };
   }
 
-  return { kind: LiveInboxRelayKind.NativeMemberNoop, relayed: 0 };
+  try {
+    const messages = await ports.readInboxMessages(teamName, canonicalMemberName);
+    const found = messages.some((message) =>
+      isExactDurableCrossTeamInboxMessage(message, canonicalMemberName, onlyMessageId)
+    );
+    return {
+      kind: LiveInboxRelayKind.NativeMemberNoop,
+      relayed: 0,
+      ...(found ? { durablyStoredMessageId: onlyMessageId } : {}),
+      ...(!found ? { diagnostics: [`durable inbox message not found: ${onlyMessageId}`] } : {}),
+    };
+  } catch (error) {
+    return {
+      kind: LiveInboxRelayKind.NativeMemberNoop,
+      relayed: 0,
+      diagnostics: [
+        `durable inbox verification failed: ${error instanceof Error ? error.message : String(error)}`,
+      ],
+    };
+  }
 }
 
-function resolveLeadName(config: TeamConfig | null | undefined): string | null {
-  return config?.members?.find((member) => isLeadMember(member))?.name?.trim() || null;
+function isExactDurableCrossTeamInboxMessage(
+  message: InboxMessage,
+  inboxName: string,
+  messageId: string
+): boolean {
+  return (
+    typeof message.messageId === 'string' &&
+    message.messageId.trim() === messageId &&
+    message.source === CROSS_TEAM_SOURCE &&
+    typeof message.from === 'string' &&
+    message.from.trim().length > 0 &&
+    typeof message.to === 'string' &&
+    message.to.trim().toLowerCase() === inboxName.trim().toLowerCase() &&
+    typeof message.text === 'string' &&
+    message.text.trim().length > 0 &&
+    typeof message.timestamp === 'string' &&
+    Number.isFinite(Date.parse(message.timestamp))
+  );
 }
 
 function isSameInboxRecipient(inboxName: string, recipientName: string | null): boolean {
   return inboxName.trim().toLowerCase() === recipientName?.toLowerCase();
+}
+
+function failClosedIdentityRelay(diagnostics: string[]): LiveInboxRelayResult {
+  return { kind: LiveInboxRelayKind.Ignored, relayed: 0, diagnostics };
+}
+
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function buildOpenCodeRelayOptions(

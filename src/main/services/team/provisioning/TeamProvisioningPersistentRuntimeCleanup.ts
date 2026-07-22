@@ -46,6 +46,7 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
             error instanceof Error ? error.message : String(error)
           }`
         );
+        throw error;
       }
     },
   };

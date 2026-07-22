@@ -106,6 +106,8 @@ function makeRun(): TestRun {
     processKilled: false,
     cancelRequested: false,
     provisioningComplete: false,
+    anthropicApiKeyHelper: null,
+    anthropicApiKeyHelperCleanupPromise: null,
     child: null,
     onProgress: vi.fn(),
     expectedMembers: [],
@@ -175,6 +177,9 @@ function makeFacade(service = makeService()): TeamProvisioningOutputRecoveryFaca
       validateAgentTeamsMcpRuntime: vi.fn(async () => undefined),
     },
     killTeamProcess: vi.fn(),
+    killTeamProcessAndWait: vi.fn(async () => undefined),
+    cleanupRunOwnedAnthropicApiKeyHelper: vi.fn(async () => undefined),
+    retainAnthropicApiKeyHelperCleanupRetryOwner: vi.fn(),
     updateProgress: vi.fn((run: TestRun) => run.progress),
     nowIso: () => '2026-01-01T00:00:00.000Z',
   });
@@ -189,6 +194,7 @@ describe('TeamProvisioningOutputRecoveryFacade', () => {
     };
     const service = {
       ...serviceAdapter,
+      anthropicApiKeyHelperCleanupRetryOwner: { retainRunOwner: vi.fn() },
       stopAllTeamsGeneration: 7,
       mcpConfigBuilder,
       providerRuntimeCompatibility,
@@ -197,12 +203,16 @@ describe('TeamProvisioningOutputRecoveryFacade', () => {
     };
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const killTeamProcess = vi.fn();
+    const killTeamProcessAndWait = vi.fn(async () => undefined);
+    const cleanupRunOwnedAnthropicApiKeyHelper = vi.fn(async () => undefined);
     const updateProgress = vi.fn((run: TestRun) => run.progress);
     const emitLogsProgress = vi.fn();
     const nowIso = () => '2026-01-01T00:00:00.000Z';
     const deps = createTeamProvisioningOutputRecoveryFacadeDepsFromService(service, {
       logger,
       killTeamProcess,
+      killTeamProcessAndWait,
+      cleanupRunOwnedAnthropicApiKeyHelper,
       updateProgress,
       emitLogsProgress,
       nowIso,
@@ -210,6 +220,8 @@ describe('TeamProvisioningOutputRecoveryFacade', () => {
     const facade = createTeamProvisioningOutputRecoveryFacadeFromService(service, {
       logger,
       killTeamProcess,
+      killTeamProcessAndWait,
+      cleanupRunOwnedAnthropicApiKeyHelper,
       updateProgress,
       emitLogsProgress,
       nowIso,

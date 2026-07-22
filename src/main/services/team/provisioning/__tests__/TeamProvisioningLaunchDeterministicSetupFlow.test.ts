@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  AnthropicApiKeyHelperCleanupCapacityError,
+  createAnthropicApiKeyHelperCleanupRetryOwner,
+  createAnthropicApiKeyHelperSetupLease,
+} from '../TeamProvisioningAnthropicApiKeyHelperLease';
+import {
   type DeterministicLaunchSetupPorts,
   prepareDeterministicLaunchSetup,
 } from '../TeamProvisioningLaunchDeterministicSetupFlow';
@@ -87,6 +92,7 @@ function createPorts(
   };
 
   return {
+    anthropicApiKeyHelperCleanupRetryOwner: createAnthropicApiKeyHelperCleanupRetryOwner(),
     readTeamConfigRaw: vi.fn(async () => configRaw),
     getExistingAliveRunId: vi.fn(() => null),
     getExistingRun: vi.fn(() => null),
@@ -219,21 +225,30 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
     });
     expect(result.shellEnv.ANTHROPIC_API_KEY).toBeUndefined();
     expect(result.shellEnv.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
-    expect(ports.buildProvisioningEnv).toHaveBeenCalledWith('codex', undefined, {
-      includeCodexTeammateAuth: false,
-      teamRuntimeAuth: {
-        teamName: 'demo',
-        authMaterialId: 'run-1',
-        allowAnthropicApiKeyHelper: true,
-      },
-    });
-    expect(ports.buildCrossProviderMemberArgs).toHaveBeenCalledWith('codex', [createMembers()[0]], {
-      teamRuntimeAuth: {
-        teamName: 'demo',
-        authMaterialId: 'run-1',
-        allowAnthropicApiKeyHelper: true,
-      },
-    });
+    expect(result.anthropicApiKeyHelperLease.getOwnedMaterial()).toBe(anthropicApiKeyHelper);
+    expect(ports.buildProvisioningEnv).toHaveBeenCalledWith(
+      'codex',
+      undefined,
+      expect.objectContaining({
+        includeCodexTeammateAuth: false,
+        teamRuntimeAuth: expect.objectContaining({
+          teamName: 'demo',
+          authMaterialId: 'run-1',
+          allowAnthropicApiKeyHelper: true,
+        }),
+      })
+    );
+    expect(ports.buildCrossProviderMemberArgs).toHaveBeenCalledWith(
+      'codex',
+      [createMembers()[0]],
+      expect.objectContaining({
+        teamRuntimeAuth: expect.objectContaining({
+          teamName: 'demo',
+          authMaterialId: 'run-1',
+          allowAnthropicApiKeyHelper: true,
+        }),
+      })
+    );
     expect(ports.resolveAndValidateLaunchIdentity).toHaveBeenCalledWith(
       expect.objectContaining({
         claudePath: '/usr/local/bin/claude',
@@ -242,5 +257,93 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
         effectiveMembers: [createMembers()[0]],
       })
     );
+  });
+
+  it('cleans a Gemini-primary dynamic Anthropic helper and restores config on later setup failure', async () => {
+    const setupError = new Error('Gemini launch identity failed');
+    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async () => undefined);
+    const ports = createPorts({
+      cleanupAnthropicApiKeyHelperMaterial,
+      resolveAndValidateLaunchIdentity: vi.fn(async () => {
+        throw setupError;
+      }),
+    });
+
+    await expect(
+      prepareDeterministicLaunchSetup(
+        { ...request, providerId: 'gemini', model: 'gemini-2.5-pro' },
+        ports
+      )
+    ).rejects.toBe(setupError);
+
+    expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledOnce();
+    expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledWith({
+      directory: anthropicApiKeyHelper.directory,
+    });
+    expect(ports.restorePrelaunchConfig).toHaveBeenCalledWith('demo');
+  });
+
+  it('rejects boundedly with the exact overflow helper reachable from production launch setup', async () => {
+    const setupError = new Error('launch identity failed');
+    const retryOwner = createAnthropicApiKeyHelperCleanupRetryOwner({
+      maxPendingOwners: 1,
+      retryDelaysMs: [0],
+    });
+    const occupiedCleanup = vi
+      .fn<(input: { directory: string }) => Promise<void>>()
+      .mockRejectedValue(new Error('occupied cleanup remains busy'));
+    const occupiedLease = createAnthropicApiKeyHelperSetupLease(occupiedCleanup);
+    occupiedLease.coalesce({
+      ...anthropicApiKeyHelper,
+      teamName: 'occupied-team',
+      directory: '/repo/.agent-teams/helpers/occupied',
+    });
+    await expect(occupiedLease.cleanup()).rejects.toThrow('occupied cleanup remains busy');
+    await retryOwner.retainSetupLease(occupiedLease);
+    await vi.waitFor(() => {
+      expect(occupiedCleanup).toHaveBeenCalledTimes(2);
+    });
+    // launchTeamInnerWithService performs this team-scoped admission retry.
+    // It must not make team B depend on exhausted cleanup owned by team A.
+    await retryOwner.retryPendingForTeam('demo');
+    expect(occupiedCleanup).toHaveBeenCalledTimes(2);
+
+    const cleanupAnthropicApiKeyHelperMaterial = vi
+      .fn<(input: { directory: string }) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('cleanup busy'))
+      .mockResolvedValueOnce(undefined);
+    const ports = createPorts({
+      anthropicApiKeyHelperCleanupRetryOwner: retryOwner,
+      cleanupAnthropicApiKeyHelperMaterial,
+      resolveAndValidateLaunchIdentity: vi.fn(async () => {
+        throw setupError;
+      }),
+    });
+
+    const setupOutcome = await prepareDeterministicLaunchSetup(request, ports).then(
+      () => ({ error: null }),
+      (error: unknown) => ({ error })
+    );
+
+    expect(setupOutcome.error).toBeInstanceOf(AnthropicApiKeyHelperCleanupCapacityError);
+    const error = setupOutcome.error as AnthropicApiKeyHelperCleanupCapacityError;
+    expect(error.cause).toBe(setupError);
+    expect(error.cleanupOwner.kind).toBe('setup');
+    expect(error.cleanupOwner.teamName).toBe('demo');
+    expect(error.cleanupOwner.directory).toBe(anthropicApiKeyHelper.directory);
+    if (error.cleanupOwner.kind !== 'setup') {
+      throw new Error('Expected setup cleanup owner');
+    }
+    expect(error.cleanupOwner.lease.getOwnedMaterial()).toEqual(anthropicApiKeyHelper);
+    expect(occupiedCleanup).toHaveBeenCalledTimes(3);
+    expect(retryOwner.getPendingOwnerCount()).toBe(1);
+    expect(retryOwner.hasPendingForTeam('occupied-team')).toBe(true);
+
+    await error.cleanupOwner.retryCleanup();
+    expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledTimes(2);
+    expect(error.cleanupOwner.lease.getOwnedMaterial()).toBeNull();
+    expect(retryOwner.getPendingOwnerCount()).toBe(1);
+    expect(retryOwner.hasPendingForTeam('demo')).toBe(false);
+    expect(ports.restorePrelaunchConfig).toHaveBeenCalledWith('demo');
   });
 });

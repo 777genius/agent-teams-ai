@@ -1,3 +1,4 @@
+import { resolveCrossTeamRecipientIdentity } from '../CrossTeamRecipientIdentity';
 import {
   createOpenCodePromptDeliveryLedgerStore,
   type OpenCodePromptDeliveryLedgerRecord,
@@ -9,7 +10,11 @@ import {
   createOpenCodeRuntimeDeliveryPorts as createOpenCodeRuntimeDeliveryDestinationPorts,
   type OpenCodeRuntimeDeliveryCrossTeamSender,
 } from '../opencode/delivery/OpenCodeRuntimeDeliveryPorts';
-import { createRuntimeDeliveryJournalStore } from '../opencode/delivery/RuntimeDeliveryJournal';
+import {
+  createRuntimeDeliveryJournalStore,
+  type RuntimeDeliveryEnvelope,
+  type RuntimeDeliveryJournalRecord,
+} from '../opencode/delivery/RuntimeDeliveryJournal';
 import {
   type RuntimeDeliveryDestinationPort,
   RuntimeDeliveryDestinationRegistry,
@@ -37,7 +42,6 @@ import {
   type OpenCodeRuntimeCheckinPortCallbacks,
   type OpenCodeRuntimeCheckinPorts,
   type OpenCodeRuntimeCheckinRun,
-  type OpenCodeRuntimeControlAck,
   recordOpenCodeRuntimeBootstrapCheckin,
   recordOpenCodeRuntimeHeartbeat,
   recordOpenCodeRuntimeTaskEvent,
@@ -55,6 +59,8 @@ import type {
   PersistedTeamLaunchSnapshot,
   TaskRef,
   TeamChangeEvent,
+  TeamConfig,
+  TeamMember,
 } from '@shared/types';
 
 type RuntimeDeliveryLogger = Pick<Console, 'warn'>;
@@ -65,6 +71,8 @@ export interface OpenCodeRuntimeDeliveryStorePaths {
 
 export interface OpenCodeRuntimeDeliveryServicePorts extends OpenCodeRuntimeDeliveryStorePaths {
   resolveCurrentOpenCodeRuntimeRunId(teamName: string, laneId: string): Promise<string | null>;
+  readConfigForStrictDecision?(teamName: string): Promise<TeamConfig | null>;
+  readMetaMembers?(teamName: string): Promise<readonly TeamMember[]>;
   createOpenCodeRuntimeDeliveryPorts(): RuntimeDeliveryDestinationPort[];
   emitTeamChange(event: RuntimeDeliveryTeamChangeEvent): void;
   logger: RuntimeDeliveryLogger;
@@ -168,6 +176,8 @@ export interface OpenCodeRuntimeDeliveryPortsDependencies {
 
 export interface OpenCodeRuntimeDeliveryJournalRecoveryPorts extends OpenCodeRuntimeDeliveryStorePaths {
   createOpenCodeRuntimeDeliveryPorts(): RuntimeDeliveryDestinationPort[];
+  readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null>;
+  readMetaMembers(teamName: string): Promise<readonly TeamMember[]>;
   readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
   nowIso(): string;
   logger: RuntimeDeliveryLogger;
@@ -274,6 +284,9 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<
       teamsBasePath: ports.getTeamsBasePath(),
       resolveCurrentOpenCodeRuntimeRunId: (candidateTeamName, candidateLaneId) =>
         ports.resolveCurrentOpenCodeRuntimeRunId(candidateTeamName, candidateLaneId),
+      readConfigForStrictDecision: (candidateTeamName) =>
+        ports.readConfigForStrictDecision(candidateTeamName),
+      readMetaMembers: (candidateTeamName) => ports.readMetaMembers(candidateTeamName),
       createOpenCodeRuntimeDeliveryPorts: createDeliveryDestinationPorts,
       emitTeamChange: (event) => {
         ports.emitTeamChange({
@@ -418,6 +431,9 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<
       recoverOpenCodeRuntimeDeliveryJournal(teamName, {
         teamsBasePath: ports.getTeamsBasePath(),
         createOpenCodeRuntimeDeliveryPorts: createDeliveryDestinationPorts,
+        readConfigForStrictDecision: (candidateTeamName) =>
+          ports.readConfigForStrictDecision(candidateTeamName),
+        readMetaMembers: (candidateTeamName) => ports.readMetaMembers(candidateTeamName),
         readLaunchState: (candidateTeamName) =>
           ports.readLaunchStateForDeliveryRecovery(candidateTeamName),
         nowIso: ports.nowIso,
@@ -431,6 +447,8 @@ export function createOpenCodeRuntimeDeliveryService(
   laneId: string,
   ports: OpenCodeRuntimeDeliveryServicePorts
 ): RuntimeDeliveryService {
+  const readConfigForStrictDecision = ports.readConfigForStrictDecision;
+  const readMetaMembers = ports.readMetaMembers;
   const journal = createRuntimeDeliveryJournalStore({
     filePath: getOpenCodeLaneScopedRuntimeFilePath({
       teamsBasePath: ports.teamsBasePath,
@@ -453,8 +471,230 @@ export function createOpenCodeRuntimeDeliveryService(
     },
     {
       emit: (event) => ports.emitTeamChange(event),
-    }
+    },
+    undefined,
+    readConfigForStrictDecision
+      ? {
+          canonicalize: (envelope) =>
+            canonicalizeRuntimeDeliveryCrossTeamIdentities(
+              envelope,
+              readConfigForStrictDecision,
+              readMetaMembers ??
+                (async () => {
+                  throw new Error('Cross-team member metadata reader is unavailable');
+                })
+            ),
+        }
+      : undefined
   );
+}
+
+export async function canonicalizeRuntimeDeliveryCrossTeamIdentities(
+  envelope: RuntimeDeliveryEnvelope,
+  readConfig: (teamName: string) => Promise<TeamConfig | null>,
+  readMetaMembers: (teamName: string) => Promise<readonly TeamMember[]>
+): Promise<RuntimeDeliveryEnvelope> {
+  const targetTeamName =
+    envelope.to !== 'user' && 'teamName' in envelope.to ? envelope.to.teamName : null;
+  const teamNames = [...new Set([envelope.teamName, ...(targetTeamName ? [targetTeamName] : [])])];
+  const identitySources = await readRuntimeDeliveryIdentitySources(
+    teamNames,
+    envelope.teamName,
+    readConfig,
+    readMetaMembers
+  );
+  const senderSources = requireRuntimeDeliveryIdentitySources(
+    identitySources,
+    envelope.teamName,
+    'sender'
+  );
+  const canonicalFromMemberName = resolveCrossTeamRecipientIdentity({
+    sources: senderSources,
+    rawToMember: envelope.fromMemberName,
+  }).memberName;
+
+  let canonicalTarget = envelope.to;
+  if (targetTeamName && envelope.to !== 'user' && 'teamName' in envelope.to) {
+    const targetSources = requireRuntimeDeliveryIdentitySources(
+      identitySources,
+      targetTeamName,
+      'target'
+    );
+    const canonicalMemberName = resolveCrossTeamRecipientIdentity({
+      sources: targetSources,
+      rawToMember: envelope.to.memberName,
+    }).memberName;
+    canonicalTarget = {
+      teamName: targetTeamName,
+      memberName: canonicalMemberName,
+    };
+  }
+
+  if (
+    canonicalFromMemberName === envelope.fromMemberName &&
+    (canonicalTarget === envelope.to ||
+      (canonicalTarget !== 'user' &&
+        envelope.to !== 'user' &&
+        'teamName' in canonicalTarget &&
+        'teamName' in envelope.to &&
+        canonicalTarget.teamName === envelope.to.teamName &&
+        canonicalTarget.memberName === envelope.to.memberName))
+  ) {
+    return envelope;
+  }
+  return {
+    ...envelope,
+    fromMemberName: canonicalFromMemberName,
+    to: canonicalTarget,
+  };
+}
+
+export async function canonicalizeRuntimeDeliveryJournalRecordIdentities(
+  record: RuntimeDeliveryJournalRecord,
+  readConfig: (teamName: string) => Promise<TeamConfig | null>,
+  readMetaMembers: (teamName: string) => Promise<readonly TeamMember[]>
+): Promise<RuntimeDeliveryJournalRecord> {
+  const targetTeamName = getRuntimeDeliveryDestinationTeamName(record);
+  const identitySources = await readRuntimeDeliveryIdentitySources(
+    [record.teamName, ...(targetTeamName ? [targetTeamName] : [])],
+    record.teamName,
+    readConfig,
+    readMetaMembers
+  );
+  const senderSources = requireRuntimeDeliveryIdentitySources(
+    identitySources,
+    record.teamName,
+    'sender'
+  );
+  const canonicalFromMemberName = resolveCrossTeamRecipientIdentity({
+    sources: senderSources,
+    rawToMember: record.fromMemberName,
+  }).memberName;
+
+  if (!targetTeamName) {
+    return canonicalFromMemberName === record.fromMemberName
+      ? record
+      : { ...record, fromMemberName: canonicalFromMemberName };
+  }
+
+  const targetSources = requireRuntimeDeliveryIdentitySources(
+    identitySources,
+    targetTeamName,
+    'target'
+  );
+  const canonicalDestination = canonicalizeRuntimeDeliveryJournalDestination(
+    record.destination,
+    targetSources
+  );
+  const canonicalCommittedLocation = record.committedLocation
+    ? canonicalizeRuntimeDeliveryJournalLocation(record.committedLocation, targetSources)
+    : null;
+  if (
+    canonicalFromMemberName === record.fromMemberName &&
+    canonicalDestination === record.destination &&
+    canonicalCommittedLocation === record.committedLocation
+  ) {
+    return record;
+  }
+  return {
+    ...record,
+    fromMemberName: canonicalFromMemberName,
+    destination: canonicalDestination,
+    committedLocation: canonicalCommittedLocation,
+  };
+}
+
+interface RuntimeDeliveryIdentitySources {
+  config: TeamConfig;
+  metaMembers: readonly TeamMember[];
+}
+
+async function readRuntimeDeliveryIdentitySources(
+  teamNames: readonly string[],
+  senderTeamName: string,
+  readConfig: (teamName: string) => Promise<TeamConfig | null>,
+  readMetaMembers: (teamName: string) => Promise<readonly TeamMember[]>
+): Promise<Map<string, RuntimeDeliveryIdentitySources>> {
+  const identitySources = new Map<string, RuntimeDeliveryIdentitySources>();
+  await Promise.all(
+    [...new Set(teamNames)].map(async (teamName) => {
+      const [config, metaMembers] = await Promise.all([
+        readConfig(teamName),
+        readMetaMembers(teamName),
+      ]);
+      if (!config || config.deletedAt) {
+        const identityKind = teamName === senderTeamName ? 'sender' : 'target';
+        throw new Error(`Cross-team ${identityKind} identity is unavailable: ${teamName}`);
+      }
+      identitySources.set(teamName, { config, metaMembers });
+    })
+  );
+  return identitySources;
+}
+
+function requireRuntimeDeliveryIdentitySources(
+  identitySources: ReadonlyMap<string, RuntimeDeliveryIdentitySources>,
+  teamName: string,
+  kind: 'sender' | 'target'
+): RuntimeDeliveryIdentitySources {
+  const sources = identitySources.get(teamName);
+  if (!sources) {
+    throw new Error(`Cross-team ${kind} identity is unavailable: ${teamName}`);
+  }
+  return sources;
+}
+
+function getRuntimeDeliveryDestinationTeamName(
+  record: RuntimeDeliveryJournalRecord
+): string | null {
+  if (record.destination.kind === 'user_sent_messages') {
+    return null;
+  }
+  return record.destination.kind === 'member_inbox'
+    ? record.destination.teamName
+    : record.destination.toTeamName;
+}
+
+function canonicalizeRuntimeDeliveryJournalDestination(
+  destination: RuntimeDeliveryJournalRecord['destination'],
+  sources: RuntimeDeliveryIdentitySources
+): RuntimeDeliveryJournalRecord['destination'] {
+  if (destination.kind === 'user_sent_messages') {
+    return destination;
+  }
+  const rawMemberName =
+    destination.kind === 'member_inbox' ? destination.memberName : destination.toMemberName;
+  const canonicalMemberName = resolveCrossTeamRecipientIdentity({
+    sources,
+    rawToMember: rawMemberName,
+  }).memberName;
+  if (canonicalMemberName === rawMemberName) {
+    return destination;
+  }
+  return destination.kind === 'member_inbox'
+    ? { ...destination, memberName: canonicalMemberName }
+    : { ...destination, toMemberName: canonicalMemberName };
+}
+
+function canonicalizeRuntimeDeliveryJournalLocation(
+  location: NonNullable<RuntimeDeliveryJournalRecord['committedLocation']>,
+  sources: RuntimeDeliveryIdentitySources
+): NonNullable<RuntimeDeliveryJournalRecord['committedLocation']> {
+  if (location.kind === 'user_sent_messages') {
+    return location;
+  }
+  const rawMemberName =
+    location.kind === 'member_inbox' ? location.memberName : location.toMemberName;
+  const canonicalMemberName = resolveCrossTeamRecipientIdentity({
+    sources,
+    rawToMember: rawMemberName,
+  }).memberName;
+  if (canonicalMemberName === rawMemberName) {
+    return location;
+  }
+  return location.kind === 'member_inbox'
+    ? { ...location, memberName: canonicalMemberName }
+    : { ...location, toMemberName: canonicalMemberName };
 }
 
 export function createOpenCodePromptDeliveryLedger(
@@ -783,6 +1023,15 @@ export async function recoverOpenCodeRuntimeDeliveryJournal(
         append: async (event) => {
           ports.logger.warn(`[${event.teamName}] ${event.message}`);
         },
+      },
+      undefined,
+      {
+        canonicalize: (record) =>
+          canonicalizeRuntimeDeliveryJournalRecordIdentities(
+            record,
+            (candidateTeamName) => ports.readConfigForStrictDecision(candidateTeamName),
+            (candidateTeamName) => ports.readMetaMembers(candidateTeamName)
+          ),
       }
     );
     await reconciler.reconcileTeam(teamName);

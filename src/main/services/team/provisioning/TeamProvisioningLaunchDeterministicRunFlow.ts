@@ -1,3 +1,8 @@
+import {
+  type AnthropicApiKeyHelperCleanupRetryOwner,
+  cleanupRunOwnedAnthropicApiKeyHelper,
+  throwIfAnthropicApiKeyHelperCleanupRemainsSourceOwned,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
 import { type DeterministicLaunchSetupResult } from './TeamProvisioningLaunchDeterministicSetupFlow';
 import {
   type DeterministicLaunchSpawnFlowRun,
@@ -57,6 +62,7 @@ export interface RunDeterministicLaunchRunFlowPorts<
     run: DeterministicLaunchRunFlowRun<TMixedSecondaryLane>,
     lane: TMixedSecondaryLane
   ): Promise<void>;
+  anthropicApiKeyHelperCleanupRetryOwner: AnthropicApiKeyHelperCleanupRetryOwner;
 }
 
 export async function runDeterministicLaunchRunFlow<TMixedSecondaryLane>(
@@ -84,6 +90,7 @@ export async function runDeterministicLaunchRunFlow<TMixedSecondaryLane>(
     mixedSecondaryLanes,
     initialLaunchWarnings,
     initialLaunchWarningSource,
+    anthropicApiKeyHelperLease,
   } = setup;
 
   const run = createDeterministicLaunchProvisioningRun({
@@ -99,51 +106,67 @@ export async function runDeterministicLaunchRunFlow<TMixedSecondaryLane>(
     launchIdentity,
     mixedSecondaryLanes,
     workspaceTrustFullPlan,
-    anthropicApiKeyHelper: provisioningEnv.anthropicApiKeyHelper ?? null,
+    anthropicApiKeyHelper: null,
     initialLaunchWarnings,
     initialLaunchWarningSource,
     createInitialMemberSpawnStatusEntry: ports.createInitialMemberSpawnStatusEntry,
   }) as DeterministicLaunchRunFlowRun<TMixedSecondaryLane>;
+  anthropicApiKeyHelperLease.transferTo(run);
 
-  await prepareDeterministicLaunchRunState({
-    teamName: request.teamName,
-    run,
-    prepareWorkspaceTrustForDeterministicRun: () =>
-      ports.prepareWorkspaceTrustForDeterministicRun({
-        mode: 'launch',
+  try {
+    await prepareDeterministicLaunchRunState({
+      teamName: request.teamName,
+      run,
+      prepareWorkspaceTrustForDeterministicRun: () =>
+        ports.prepareWorkspaceTrustForDeterministicRun({
+          mode: 'launch',
+          run,
+          claudePath,
+          shellEnv,
+          stopAllGenerationAtStart,
+          workspaceTrustPlan: workspaceTrustFullPlan,
+          featureFlags: workspaceTrustFeatureFlags,
+          provisioningEnv,
+        }),
+      resetTeamScopedTransientStateForNewRun: ports.resetTeamScopedTransientStateForNewRun,
+      registerRun: ports.registerRun,
+      setProvisioningRunByTeam: ports.setProvisioningRunByTeam,
+      clearPersistedLaunchState: ports.clearPersistedLaunchState,
+      publishMixedSecondaryLaneStatusChange: ports.publishMixedSecondaryLaneStatusChange,
+    });
+
+    return await runDeterministicLaunchSpawnFlow(
+      {
+        request,
+        syntheticRequest,
         run,
+        runId,
         claudePath,
         shellEnv,
-        stopAllGenerationAtStart,
-        workspaceTrustPlan: workspaceTrustFullPlan,
-        featureFlags: workspaceTrustFeatureFlags,
         provisioningEnv,
-      }),
-    resetTeamScopedTransientStateForNewRun: ports.resetTeamScopedTransientStateForNewRun,
-    registerRun: ports.registerRun,
-    setProvisioningRunByTeam: ports.setProvisioningRunByTeam,
-    clearPersistedLaunchState: ports.clearPersistedLaunchState,
-    publishMixedSecondaryLaneStatusChange: ports.publishMixedSecondaryLaneStatusChange,
-  });
-
-  return runDeterministicLaunchSpawnFlow(
-    {
-      request,
-      syntheticRequest,
-      run,
-      runId,
-      claudePath,
-      shellEnv,
-      provisioningEnv,
-      stopAllGenerationAtStart,
-      resolvedProviderId,
-      providerArgsForLaunch,
-      crossProviderMemberArgsForLaunch,
-      launchIdentity,
-      effectiveMemberSpecs,
-      allEffectiveMemberSpecs,
-      teammateRuntimeDisallowedTools: input.teammateRuntimeDisallowedTools,
-    },
-    ports
-  );
+        stopAllGenerationAtStart,
+        resolvedProviderId,
+        providerArgsForLaunch,
+        crossProviderMemberArgsForLaunch,
+        launchIdentity,
+        effectiveMemberSpecs,
+        allEffectiveMemberSpecs,
+        teammateRuntimeDisallowedTools: input.teammateRuntimeDisallowedTools,
+      },
+      ports
+    );
+  } catch (error) {
+    try {
+      await cleanupRunOwnedAnthropicApiKeyHelper(run);
+    } catch {
+      const retention = await ports.anthropicApiKeyHelperCleanupRetryOwner.retainRunOwner(run, {
+        onReleased: () => ports.cleanupRun(run),
+      });
+      throwIfAnthropicApiKeyHelperCleanupRemainsSourceOwned(retention, error);
+    }
+    if (!run.anthropicApiKeyHelper) {
+      ports.cleanupRun(run);
+    }
+    throw error;
+  }
 }

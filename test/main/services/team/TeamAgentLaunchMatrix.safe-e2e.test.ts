@@ -1,7 +1,41 @@
+/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unused-vars -- Synthetic adapter methods preserve the real async interface and named request parameters. */
+/* eslint-disable @typescript-eslint/array-type, @typescript-eslint/consistent-type-definitions -- The matrix fixture mirrors runtime contract shapes and table types. */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents, @typescript-eslint/no-unnecessary-type-assertion -- Assertions document fixture boundaries exercised across runtime variants. */
+/* eslint-disable @typescript-eslint/restrict-template-expressions, @typescript-eslint/prefer-nullish-coalescing -- Diagnostic fixture strings deliberately expose aggregate values and empty fallbacks. */
+/* eslint-disable sonarjs/no-alphabetical-sort -- Deterministic fixture comparisons intentionally use default and explicit lexical sorting. */
+/* eslint-disable sonarjs/no-nested-conditional, sonarjs/cognitive-complexity -- The in-file fake adapters model a bounded runtime state matrix. */
+/* eslint-disable sonarjs/file-permissions -- The executable permission applies only to an isolated test fixture. */
+
+import { EventEmitter } from 'events';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@main/utils/childProcess', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@main/utils/childProcess')>();
+  return {
+    ...actual,
+    // Synthetic launch-matrix PIDs do not exist in the host process table.
+    // Model the awaited boundary while retaining the real ChildProcess event
+    // contract; childProcess.ts owns OS-level identity verification tests.
+    killProcessTreeAndWait: vi.fn(
+      (child: import('child_process').ChildProcess | null | undefined, signal?: string) => {
+        if (!child?.pid || child.exitCode != null || child.signalCode != null) {
+          return Promise.resolve();
+        }
+        if (vi.isMockFunction(process.kill)) {
+          process.kill(child.pid, signal ?? 'SIGTERM');
+        }
+        const terminationSignal = (signal ?? 'SIGTERM') as NodeJS.Signals;
+        Object.assign(child, { signalCode: terminationSignal });
+        child.emit('exit', null, terminationSignal);
+        child.emit('close', null, terminationSignal);
+        return Promise.resolve();
+      }
+    ),
+  };
+});
 
 import { agentTeamsMcpHttpServer } from '../../../../src/main/services/team/AgentTeamsMcpHttpServer';
 import { ClaudeBinaryResolver } from '../../../../src/main/services/team/ClaudeBinaryResolver';
@@ -138,6 +172,29 @@ function createRuntimeUsageStatsMap(
   entries: readonly (readonly [number, number])[]
 ): Map<number, RuntimeUsageStatsForTest> {
   return new Map(entries.map(([pid, rssBytes]) => [pid, { rssBytes }]));
+}
+
+function createProvisioningChildFixture(input: {
+  pid: number;
+  stdin: { writable: boolean; write?: (...args: never[]) => unknown };
+  onDirectKill?: () => void;
+}): EventEmitter & {
+  pid: number;
+  exitCode: number | null;
+  signalCode: NodeJS.Signals | null;
+  stdin: typeof input.stdin;
+  kill: () => boolean;
+} {
+  return Object.assign(new EventEmitter(), {
+    pid: input.pid,
+    exitCode: null as number | null,
+    signalCode: null as NodeJS.Signals | null,
+    stdin: input.stdin,
+    kill: () => {
+      input.onDirectKill?.();
+      return true;
+    },
+  });
 }
 
 function stubRuntimeUsageStatsByPid(
@@ -4677,7 +4734,11 @@ describe(
       });
       addCodexPrimaryToMixedRun(firstRun);
       firstRun.runId = `run-${teamName}-first`;
-      firstRun.child = { pid: 64_901, kill: () => undefined, stdin: { writable: true } };
+      firstRun.child = Object.assign(new EventEmitter(), {
+        pid: 64_901,
+        kill: () => undefined,
+        stdin: { writable: true },
+      });
       trackLiveRun(svc, firstRun);
 
       await mixedLaneHarness.launchMixedSecondaryLaneIfNeeded(firstRun);
@@ -4737,7 +4798,11 @@ describe(
       });
       addCodexPrimaryToMixedRun(secondRun);
       secondRun.runId = `run-${teamName}-second`;
-      secondRun.child = { pid: 64_911, kill: () => undefined, stdin: { writable: true } };
+      secondRun.child = Object.assign(new EventEmitter(), {
+        pid: 64_911,
+        kill: () => undefined,
+        stdin: { writable: true },
+      });
       trackLiveRun(svc, secondRun);
 
       await mixedLaneHarness.launchMixedSecondaryLaneIfNeeded(secondRun);
@@ -12061,8 +12126,14 @@ describe(
       const svc = new TeamProvisioningService();
       const stoppedRun = createPureAnthropicLiveRun({ teamName: stoppedTeamName, projectPath });
       const liveRun = createPureAnthropicLiveRun({ teamName: liveTeamName, projectPath });
-      stoppedRun.child = { pid: 61101, kill: () => undefined, stdin: { writable: true } };
-      liveRun.child = { pid: 61201, kill: () => undefined, stdin: { writable: true } };
+      stoppedRun.child = createProvisioningChildFixture({
+        pid: 61101,
+        stdin: { writable: true },
+      });
+      liveRun.child = createProvisioningChildFixture({
+        pid: 61201,
+        stdin: { writable: true },
+      });
       trackLiveRun(svc, stoppedRun);
       trackLiveRun(svc, liveRun);
 
@@ -12114,8 +12185,14 @@ describe(
       const svc = new TeamProvisioningService();
       const firstRun = createPureAnthropicLiveRun({ teamName: firstTeamName, projectPath });
       const secondRun = createPureAnthropicLiveRun({ teamName: secondTeamName, projectPath });
-      firstRun.child = { pid: 62101, kill: () => undefined, stdin: { writable: true } };
-      secondRun.child = { pid: 62201, kill: () => undefined, stdin: { writable: true } };
+      firstRun.child = createProvisioningChildFixture({
+        pid: 62101,
+        stdin: { writable: true },
+      });
+      secondRun.child = createProvisioningChildFixture({
+        pid: 62201,
+        stdin: { writable: true },
+      });
       trackLiveRun(svc, firstRun);
       trackLiveRun(svc, secondRun);
 
@@ -16520,12 +16597,20 @@ describe(
       currentRun.runId = `run-${teamName}-current`;
       let staleKillCount = 0;
       let currentKillCount = 0;
-      staleRun.child = { pid: 64901, kill: () => (staleKillCount += 1), stdin: { writable: true } };
-      currentRun.child = {
-        pid: 64902,
-        kill: () => (currentKillCount += 1),
+      staleRun.child = createProvisioningChildFixture({
+        pid: 64901,
+        onDirectKill: () => {
+          staleKillCount += 1;
+        },
         stdin: { writable: true },
-      };
+      });
+      currentRun.child = createProvisioningChildFixture({
+        pid: 64902,
+        onDirectKill: () => {
+          currentKillCount += 1;
+        },
+        stdin: { writable: true },
+      });
       trackLiveRun(svc, staleRun);
       trackLiveRun(svc, currentRun);
 
@@ -16592,12 +16677,20 @@ describe(
       currentRun.runId = `run-${teamName}-current`;
       let staleKillCount = 0;
       let currentKillCount = 0;
-      staleRun.child = { pid: 65001, kill: () => (staleKillCount += 1), stdin: { writable: true } };
-      currentRun.child = {
+      staleRun.child = createProvisioningChildFixture({
+        pid: 65001,
+        onDirectKill: () => {
+          staleKillCount += 1;
+        },
+        stdin: { writable: true },
+      });
+      currentRun.child = createProvisioningChildFixture({
         pid: 65002,
-        kill: () => (currentKillCount += 1),
+        onDirectKill: () => {
+          currentKillCount += 1;
+        },
         stdin: createWritableStdin([]),
-      };
+      });
       trackLiveRun(svc, staleRun);
       trackLiveRun(svc, currentRun);
 
@@ -16664,12 +16757,20 @@ describe(
       currentRun.runId = `run-${teamName}-current`;
       let staleKillCount = 0;
       let currentKillCount = 0;
-      staleRun.child = { pid: 63101, kill: () => (staleKillCount += 1), stdin: { writable: true } };
-      currentRun.child = {
-        pid: 63102,
-        kill: () => (currentKillCount += 1),
+      staleRun.child = createProvisioningChildFixture({
+        pid: 63101,
+        onDirectKill: () => {
+          staleKillCount += 1;
+        },
         stdin: { writable: true },
-      };
+      });
+      currentRun.child = createProvisioningChildFixture({
+        pid: 63102,
+        onDirectKill: () => {
+          currentKillCount += 1;
+        },
+        stdin: { writable: true },
+      });
       trackLiveRun(svc, staleRun);
       trackLiveRun(svc, currentRun);
 
@@ -16712,12 +16813,20 @@ describe(
       currentRun.runId = `run-${teamName}-current`;
       let staleKillCount = 0;
       let currentKillCount = 0;
-      staleRun.child = { pid: 63301, kill: () => (staleKillCount += 1), stdin: { writable: true } };
-      currentRun.child = {
+      staleRun.child = createProvisioningChildFixture({
+        pid: 63301,
+        onDirectKill: () => {
+          staleKillCount += 1;
+        },
+        stdin: { writable: true },
+      });
+      currentRun.child = createProvisioningChildFixture({
         pid: 63302,
-        kill: () => (currentKillCount += 1),
+        onDirectKill: () => {
+          currentKillCount += 1;
+        },
         stdin: createWritableStdin([]),
-      };
+      });
       trackLiveRun(svc, staleRun);
       trackLiveRun(svc, currentRun);
 
@@ -16756,12 +16865,20 @@ describe(
       currentRun.runId = `run-${teamName}-current`;
       let staleKillCount = 0;
       let currentKillCount = 0;
-      staleRun.child = { pid: 63501, kill: () => (staleKillCount += 1), stdin: { writable: true } };
-      currentRun.child = {
+      staleRun.child = createProvisioningChildFixture({
+        pid: 63501,
+        onDirectKill: () => {
+          staleKillCount += 1;
+        },
+        stdin: { writable: true },
+      });
+      currentRun.child = createProvisioningChildFixture({
         pid: 63502,
-        kill: () => (currentKillCount += 1),
+        onDirectKill: () => {
+          currentKillCount += 1;
+        },
         stdin: createWritableStdin([]),
-      };
+      });
       trackLiveRun(svc, staleRun);
       trackLiveRun(svc, currentRun);
 
@@ -16846,7 +16963,10 @@ describe(
       const svc = new TeamProvisioningService();
       const firstRun = createPureAnthropicLiveRun({ teamName, projectPath });
       firstRun.runId = `run-${teamName}-first`;
-      firstRun.child = { pid: 64501, kill: () => undefined, stdin: { writable: true } };
+      firstRun.child = createProvisioningChildFixture({
+        pid: 64501,
+        stdin: { writable: true },
+      });
       trackLiveRun(svc, firstRun);
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
@@ -16864,7 +16984,7 @@ describe(
         },
       });
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
 
       const secondRun = createPureAnthropicLiveRun({ teamName, projectPath });
       secondRun.runId = `run-${teamName}-second`;
@@ -17753,7 +17873,10 @@ describe(
       const svc = new TeamProvisioningService();
       const stoppedRun = createPureAnthropicLiveRun({ teamName: stoppedTeamName, projectPath });
       const liveRun = createPureAnthropicLiveRun({ teamName: liveTeamName, projectPath });
-      stoppedRun.child = { pid: 60101, kill: () => undefined, stdin: { writable: true } };
+      stoppedRun.child = createProvisioningChildFixture({
+        pid: 60101,
+        stdin: { writable: true },
+      });
       liveRun.child = { pid: 60201, kill: () => undefined, stdin: { writable: true } };
       trackLiveRun(svc, stoppedRun);
       trackLiveRun(svc, liveRun);

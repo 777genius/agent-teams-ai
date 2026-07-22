@@ -2,6 +2,11 @@ import { createLogger } from '@shared/utils/logger';
 import { randomUUID } from 'crypto';
 
 import {
+  type AnthropicApiKeyHelperCleanupRetryOwner,
+  type AnthropicApiKeyHelperSetupLease,
+  throwIfAnthropicApiKeyHelperCleanupRemainsSourceOwned,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
+import {
   type DeterministicCreateRunFlowPorts,
   runDeterministicCreateRunFlow,
 } from './TeamProvisioningCreateDeterministicRunFlow';
@@ -41,6 +46,7 @@ import type {
 const logger = createLogger('Service:TeamProvisioning');
 
 export interface TeamProvisioningCreateLaunchOrchestrationServiceHost {
+  anthropicApiKeyHelperCleanupRetryOwner: AnthropicApiKeyHelperCleanupRetryOwner;
   cleanedStoppedTeamOpenCodeRuntimeLanes: Set<string>;
   runTracking: {
     getResolvableProvisioningRunId(teamName: string): string | null;
@@ -90,12 +96,28 @@ export interface TeamProvisioningCreateLaunchOrchestrationServiceHost {
   };
 }
 
+async function cleanupSetupLeaseOrRetainRetryOwner(
+  lease: AnthropicApiKeyHelperSetupLease | null,
+  retryOwner: AnthropicApiKeyHelperCleanupRetryOwner
+): Promise<void> {
+  if (!lease) {
+    return;
+  }
+  try {
+    await lease.cleanup();
+  } catch (error) {
+    const retention = await retryOwner.retainSetupLease(lease);
+    throwIfAnthropicApiKeyHelperCleanupRemainsSourceOwned(retention, error);
+  }
+}
+
 export async function createTeamInnerWithService(
   service: TeamProvisioningCreateLaunchOrchestrationServiceHost,
   request: TeamCreateRequest,
   onProgress: (progress: TeamProvisioningProgress) => void
 ): Promise<TeamCreateResponse> {
   service.cleanedStoppedTeamOpenCodeRuntimeLanes.delete(request.teamName);
+  await service.anthropicApiKeyHelperCleanupRetryOwner.retryPendingForTeam(request.teamName);
   const existingProvisioningRunId = service.runTracking.getResolvableProvisioningRunId(
     request.teamName
   );
@@ -106,7 +128,6 @@ export async function createTeamInnerWithService(
       alreadyLaunching: true,
     };
   }
-
   const stopAllGenerationAtStart = service.stopAllTeamsGeneration;
   const previousLaunchSnapshot =
     await service.configTaskActivityBoundary.readTaskActivityRepairLaunchSnapshot(request.teamName);
@@ -125,6 +146,9 @@ export async function createTeamInnerWithService(
 
   const pendingKey = `pending-${randomUUID()}`;
   service.provisioningRunByTeam.set(request.teamName, pendingKey);
+  let createSetupLease:
+    | Awaited<ReturnType<typeof prepareDeterministicCreateSetupFlow>>['anthropicApiKeyHelperLease']
+    | null = null;
 
   try {
     const runtimeAuthMaterialId = randomUUID();
@@ -133,6 +157,7 @@ export async function createTeamInnerWithService(
       runtimeAuthMaterialId,
       ports: service.createDeterministicCreateSetupFlowPorts(),
     });
+    createSetupLease = createSetup.anthropicApiKeyHelperLease;
     return await runDeterministicCreateRunFlow({
       request,
       onProgress,
@@ -150,10 +175,19 @@ export async function createTeamInnerWithService(
       ports: service.createDeterministicCreateRunFlowPorts(),
     });
   } catch (error) {
+    let cleanupOwnershipError: unknown = null;
+    try {
+      await cleanupSetupLeaseOrRetainRetryOwner(
+        createSetupLease,
+        service.anthropicApiKeyHelperCleanupRetryOwner
+      );
+    } catch (cleanupError) {
+      cleanupOwnershipError = cleanupError;
+    }
     if (service.provisioningRunByTeam.get(request.teamName) === pendingKey) {
       service.provisioningRunByTeam.delete(request.teamName);
     }
-    throw error;
+    throw cleanupOwnershipError ?? error;
   }
 }
 
@@ -162,6 +196,7 @@ export async function launchTeamInnerWithService(
   request: TeamLaunchRequest,
   onProgress: (progress: TeamProvisioningProgress) => void
 ): Promise<TeamLaunchResponse> {
+  await service.anthropicApiKeyHelperCleanupRetryOwner.retryPendingForTeam(request.teamName);
   const existingProvisioningRunId = service.runTracking.getResolvableProvisioningRunId(
     request.teamName
   );
@@ -172,7 +207,6 @@ export async function launchTeamInnerWithService(
       alreadyLaunching: true,
     };
   }
-
   const stopAllGenerationAtStart = service.stopAllTeamsGeneration;
   assertAppDeterministicBootstrapEnabled();
   if (service.shouldRouteOpenCodeToRuntimeAdapter(request)) {
@@ -182,6 +216,12 @@ export async function launchTeamInnerWithService(
 
   const pendingKey = `pending-${randomUUID()}`;
   service.provisioningRunByTeam.set(request.teamName, pendingKey);
+  let launchSetupLease:
+    | Extract<
+        DeterministicLaunchSetupResult<MixedSecondaryRuntimeLaneState>,
+        { kind: 'prepared' }
+      >['anthropicApiKeyHelperLease']
+    | null = null;
 
   try {
     const setup = await prepareDeterministicLaunchSetup(
@@ -195,6 +235,7 @@ export async function launchTeamInnerWithService(
         alreadyRunning: true,
       };
     }
+    launchSetupLease = setup.anthropicApiKeyHelperLease;
 
     return runDeterministicLaunchRunFlow(
       {
@@ -207,9 +248,18 @@ export async function launchTeamInnerWithService(
       service.deterministicLaunchFlowBoundary.createRunFlowPorts({ request, setup })
     );
   } catch (error) {
+    let cleanupOwnershipError: unknown = null;
+    try {
+      await cleanupSetupLeaseOrRetainRetryOwner(
+        launchSetupLease,
+        service.anthropicApiKeyHelperCleanupRetryOwner
+      );
+    } catch (cleanupError) {
+      cleanupOwnershipError = cleanupError;
+    }
     if (service.provisioningRunByTeam.get(request.teamName) === pendingKey) {
       service.provisioningRunByTeam.delete(request.teamName);
     }
-    throw error;
+    throw cleanupOwnershipError ?? error;
   }
 }

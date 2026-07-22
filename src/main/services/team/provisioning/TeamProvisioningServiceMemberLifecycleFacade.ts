@@ -9,7 +9,7 @@ import { randomUUID } from 'crypto';
 import { cleanupAnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropicTeamApiKeyHelper';
 import { boundLaunchDiagnostics } from '../progressPayload';
 
-import { scheduleStaleAnthropicTeamApiKeyHelperCleanup } from './TeamProvisioningAnthropicApiKeyHelperCleanup';
+import { createStaleAnthropicTeamApiKeyHelperCleanupRetryOwner } from './TeamProvisioningAnthropicApiKeyHelperCleanup';
 import {
   createAppendDirectProcessRuntimeEventUseCase,
   createNodeAppendDirectProcessRuntimeEventUseCasePorts,
@@ -174,6 +174,11 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     await this.executeLiveRosterMutation(teamName, mutation);
   }
 
+  private readonly staleAnthropicApiKeyHelperCleanupRetryOwner =
+    createStaleAnthropicTeamApiKeyHelperCleanupRetryOwner({
+      baseClaudeDir: getClaudeBasePath(),
+      logger,
+    });
   protected readonly openCodeAggregatePrimaryRestartByTeam = new Map<
     string,
     OpenCodeAggregatePrimaryRestartLease
@@ -389,7 +394,7 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     createTeamProvisioningServiceComposition(this);
     preserveAuthoritativeMembersMetaResolution(this.configFacade, membersMetaStore);
     this.preserveAtomicOpenCodeRuntimePreparation();
-    scheduleStaleAnthropicTeamApiKeyHelperCleanup({ baseClaudeDir: getClaudeBasePath(), logger });
+    this.staleAnthropicApiKeyHelperCleanupRetryOwner.start();
   }
 
   private createMemberLifecycleHostPortGroups(): TeamProvisioningServiceMemberLifecycleHostPortGroups {

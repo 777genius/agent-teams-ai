@@ -9,6 +9,10 @@ import {
 import { type TeamMetaFile } from '../TeamMetaStore';
 
 import {
+  type AnthropicApiKeyHelperRunOwner,
+  cleanupRunOwnedAnthropicApiKeyHelper,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
+import {
   getProvisioningRunTimeoutMs,
   removeDeterministicBootstrapSpecFile,
   removeDeterministicBootstrapUserPromptFile,
@@ -58,7 +62,8 @@ import type {
 
 export type LaunchTeamMetaPayload = Omit<TeamMetaFile, 'version'>;
 
-export interface DeterministicLaunchSpawnFlowRun extends TeamProvisioningLaunchBootstrapRun {
+export interface DeterministicLaunchSpawnFlowRun
+  extends TeamProvisioningLaunchBootstrapRun, AnthropicApiKeyHelperRunOwner {
   runId: string;
   teamName: string;
   child: ChildProcess | null;
@@ -172,7 +177,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
   startStallWatchdog(run: TRun): void;
   setTimeout(callback: () => void, ms: number): NodeJS.Timeout;
   tryCompleteAfterTimeout(run: TRun): Promise<boolean>;
-  killTeamProcess(child: ChildProcess | null | undefined): void;
+  killTeamProcessAndWait(child: ChildProcess | null | undefined): Promise<void>;
   cleanupRun(run: TRun): void;
   handleProcessExit(run: TRun, code: number | null): Promise<void> | void;
 }
@@ -254,16 +259,17 @@ export function isDeterministicLaunchSpawnCancelled(input: {
 }
 
 async function cleanupAnthropicHelperIfPresent<TRun extends DeterministicLaunchSpawnFlowRun>(
-  input: {
-    provisioningEnv: DeterministicLaunchSpawnEnvResolution;
-  },
+  run: TRun,
   ports: Pick<RunDeterministicLaunchSpawnFlowPorts<TRun>, 'cleanupAnthropicApiKeyHelperMaterial'>
-): Promise<void> {
-  const helperDirectory = input.provisioningEnv.anthropicApiKeyHelper?.directory;
-  if (!helperDirectory) {
-    return;
+): Promise<boolean> {
+  try {
+    await cleanupRunOwnedAnthropicApiKeyHelper(run, ({ directory }) =>
+      ports.cleanupAnthropicApiKeyHelperMaterial(directory)
+    );
+  } catch {
+    return false;
   }
-  await ports.cleanupAnthropicApiKeyHelperMaterial(helperDirectory).catch(() => undefined);
+  return true;
 }
 
 async function removeLaunchMaterializedFiles<TRun extends DeterministicLaunchSpawnFlowRun>(
@@ -305,11 +311,13 @@ export async function cleanupDeterministicLaunchMaterializationFailure<
     | 'restorePrelaunchConfig'
   >
 ): Promise<void> {
-  ports.deleteRun(input.runId);
-  ports.deleteProvisioningRunByTeam(input.request.teamName);
-  await cleanupAnthropicHelperIfPresent(input, ports);
+  const helperReleased = await cleanupAnthropicHelperIfPresent(input.run, ports);
   await removeLaunchMaterializedFiles(input.run, ports);
   await ports.restorePrelaunchConfig(input.request.teamName);
+  if (helperReleased) {
+    ports.deleteRun(input.runId);
+    ports.deleteProvisioningRunByTeam(input.request.teamName);
+  }
 }
 
 export async function cleanupDeterministicLaunchSpawnFailure<
@@ -344,9 +352,11 @@ export async function cleanupDeterministicLaunchSpawnFailure<
   );
   input.run.bootstrapUserPromptPath = null;
   await ports.removeRunMemberMcpConfigFiles(input.run).catch(() => {});
-  await cleanupAnthropicHelperIfPresent(input, ports);
-  ports.deleteRun(input.runId);
-  ports.deleteProvisioningRunByTeam(input.request.teamName);
+  const helperReleased = await cleanupAnthropicHelperIfPresent(input.run, ports);
+  if (helperReleased) {
+    ports.deleteRun(input.runId);
+    ports.deleteProvisioningRunByTeam(input.request.teamName);
+  }
   await ports.restorePrelaunchConfig(input.request.teamName);
 }
 
@@ -361,29 +371,70 @@ export function registerDeterministicLaunchChildHandlers<
     RunDeterministicLaunchSpawnFlowPorts<TRun>,
     | 'setTimeout'
     | 'tryCompleteAfterTimeout'
-    | 'killTeamProcess'
+    | 'killTeamProcessAndWait'
     | 'updateProgress'
+    | 'cleanupAnthropicApiKeyHelperMaterial'
     | 'cleanupRun'
     | 'handleProcessExit'
   >
 ): void {
   const { run, child } = input;
   run.timeoutHandle = ports.setTimeout(() => {
-    if (!run.processKilled && !run.provisioningComplete) {
-      run.processKilled = true;
+    if (!run.processKilled && !run.provisioningComplete && run.child === child) {
       run.finalizingByTimeout = true;
       void (async () => {
         const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
         if (readyOnTimeout) {
           return;
         }
+        if (
+          run.provisioningComplete ||
+          run.cancelRequested ||
+          run.processKilled ||
+          run.child !== child
+        ) {
+          run.finalizingByTimeout = false;
+          return;
+        }
 
-        ports.killTeamProcess(run.child);
+        run.processKilled = true;
+        try {
+          await ports.killTeamProcessAndWait(child);
+        } catch {
+          run.finalizingByTimeout = false;
+          const progress = ports.updateProgress(
+            run,
+            'failed',
+            'Failed to confirm timed-out CLI termination (launch)',
+            {
+              error:
+                'Timed out waiting for CLI during team launch, and the app could not confirm that the owned process tree stopped. The run remains tracked so termination can be retried.',
+              cliLogsTail: extractCliLogsFromRun(run),
+            }
+          );
+          run.onProgress(progress);
+          return;
+        }
         const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI (launch)', {
           error: 'Timed out waiting for CLI during team launch.',
           cliLogsTail: extractCliLogsFromRun(run),
         });
         run.onProgress(progress);
+        if (!(await cleanupAnthropicHelperIfPresent(run, ports))) {
+          run.finalizingByTimeout = false;
+          const cleanupProgress = ports.updateProgress(
+            run,
+            'failed',
+            'Timed-out launch stopped; helper cleanup will be retried',
+            {
+              error:
+                'The owned process tree stopped, but app-managed authentication material could not be removed. The run remains tracked so cleanup can be retried.',
+              cliLogsTail: extractCliLogsFromRun(run),
+            }
+          );
+          run.onProgress(cleanupProgress);
+          return;
+        }
         ports.cleanupRun(run);
       })();
     }
@@ -395,7 +446,11 @@ export function registerDeterministicLaunchChildHandlers<
       cliLogsTail: extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    ports.cleanupRun(run);
+    void cleanupAnthropicHelperIfPresent(run, ports).then((helperReleased) => {
+      if (helperReleased) {
+        ports.cleanupRun(run);
+      }
+    });
   });
 
   child.once('close', (code: number | null) => {
@@ -426,10 +481,16 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
   } = input;
 
   shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';
-  const teammateModeDecision = await resolveDesktopTeammateModeDecision(
-    request.extraCliArgs,
-    shellEnv
-  );
+  let teammateModeDecision: Awaited<ReturnType<typeof resolveDesktopTeammateModeDecision>>;
+  try {
+    teammateModeDecision = await resolveDesktopTeammateModeDecision(request.extraCliArgs, shellEnv);
+  } catch (error) {
+    await cleanupDeterministicLaunchMaterializationFailure(
+      { request, run, runId, provisioningEnv },
+      ports
+    );
+    throw error;
+  }
   applyDesktopTeammateModeDecisionToEnv(shellEnv, teammateModeDecision);
 
   let prompt!: string;
@@ -562,6 +623,15 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
     if (request.skipPermissions === false) {
       emitProvisioningCheckpoint(run, 'Seeding lead bootstrap permission rules');
       await ports.seedLeadBootstrapPermissionRules(request.teamName, request.cwd);
+    }
+    if (
+      isDeterministicLaunchSpawnCancelled({
+        run,
+        stopAllGenerationAtStart,
+        currentStopAllGeneration: ports.getStopAllTeamsGeneration(),
+      })
+    ) {
+      throw new Error('Team launch cancelled by app shutdown');
     }
     emitProvisioningCheckpoint(
       run,

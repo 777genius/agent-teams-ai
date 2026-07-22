@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createAnthropicApiKeyHelperCleanupRetryOwner } from '../TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   createTeamProvisioningCreateDeterministicRunFlowPortsFromService,
   type TeamProvisioningCreateDeterministicRunFlowServiceHost,
@@ -10,6 +11,7 @@ import type { TeamCreateRequest } from '@shared/types';
 
 function createHost(): TeamProvisioningCreateDeterministicRunFlowServiceHost {
   return {
+    anthropicApiKeyHelperCleanupRetryOwner: createAnthropicApiKeyHelperCleanupRetryOwner(),
     runs: new Map(),
     provisioningRunByTeam: new Map(),
     resetTeamScopedTransientStateForNewRun: vi.fn(),

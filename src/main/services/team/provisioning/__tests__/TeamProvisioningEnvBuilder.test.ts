@@ -6,6 +6,7 @@ import os from 'os';
 import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
+import { createAnthropicApiKeyHelperSetupLease } from '../TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   buildCrossProviderMemberArgs,
   buildProvisioningEnv,
@@ -211,68 +212,77 @@ describe('TeamProvisioningEnvBuilder', () => {
     expect(result.usesAnthropicApiKeyHelper).toBe(false);
   });
 
-  it('pre-materializes app-managed Anthropic helper auth for a future dynamic spawn', async () => {
-    const helper = {
-      teamName: 'mixed-team',
-      directory: '/tmp/team-runtime-auth/mixed-team/run-1',
-      helperPath: '/tmp/team-runtime-auth/mixed-team/run-1/helper.sh',
-      keyPath: '/tmp/team-runtime-auth/mixed-team/run-1/key',
-      settingsPath: '/tmp/team-runtime-auth/mixed-team/run-1/settings.json',
-      settingsObject: { apiKeyHelper: "'/tmp/team-runtime-auth/mixed-team/run-1/helper.sh'" },
-      settingsArgs: ['--settings', '/tmp/team-runtime-auth/mixed-team/run-1/settings.json'],
-      envPatch: {
-        CLAUDE_TEAM_ANTHROPIC_AUTH_MODE: 'api_key_helper',
-        CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH:
-          '/tmp/team-runtime-auth/mixed-team/run-1/settings.json',
-      },
-    };
-    const buildProvisioningEnvForMember = vi.fn(async () => ({
-      env: {
-        [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'api_key',
-        ...helper.envPatch,
-      },
-      authSource: 'anthropic_api_key_helper' as const,
-      geminiRuntimeAuth: null,
-      providerArgs: helper.settingsArgs,
-      anthropicApiKeyHelper: helper,
-    }));
-    const buildRuntimeTurnSettledHookSettingsArgs = vi.fn(async () => ['--runtime-hook-arg']);
-
-    const result = await buildCrossProviderMemberArgs({
-      primaryProviderId: 'codex',
-      memberSpecs: [{ name: 'Codex', providerId: 'codex', role: 'only initial member' }],
-      options: {
-        teamRuntimeAuth: {
-          teamName: 'mixed-team',
-          authMaterialId: 'run-1',
-          allowAnthropicApiKeyHelper: true,
+  it.each(['codex', 'gemini'] as const)(
+    'pre-materializes and leases Anthropic helper auth for a future %s-primary dynamic spawn',
+    async (primaryProviderId) => {
+      const helper = {
+        teamName: 'mixed-team',
+        directory: '/tmp/team-runtime-auth/mixed-team/run-1',
+        helperPath: '/tmp/team-runtime-auth/mixed-team/run-1/helper.sh',
+        keyPath: '/tmp/team-runtime-auth/mixed-team/run-1/key',
+        settingsPath: '/tmp/team-runtime-auth/mixed-team/run-1/settings.json',
+        settingsObject: { apiKeyHelper: "'/tmp/team-runtime-auth/mixed-team/run-1/helper.sh'" },
+        settingsArgs: ['--settings', '/tmp/team-runtime-auth/mixed-team/run-1/settings.json'],
+        envPatch: {
+          CLAUDE_TEAM_ANTHROPIC_AUTH_MODE: 'api_key_helper',
+          CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH:
+            '/tmp/team-runtime-auth/mixed-team/run-1/settings.json',
         },
-      },
-      ports: {
-        buildProvisioningEnv: buildProvisioningEnvForMember,
-        buildRuntimeTurnSettledHookSettingsArgs,
-        logger: { error: vi.fn() },
-      },
-    });
-
-    expect(buildProvisioningEnvForMember).toHaveBeenCalledWith('anthropic', undefined, {
-      teamRuntimeAuth: {
+      };
+      const buildProvisioningEnvForMember = vi.fn(async () => ({
+        env: {
+          [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'api_key',
+          ...helper.envPatch,
+        },
+        authSource: 'anthropic_api_key_helper' as const,
+        geminiRuntimeAuth: null,
+        providerArgs: helper.settingsArgs,
+        anthropicApiKeyHelper: helper,
+      }));
+      const buildRuntimeTurnSettledHookSettingsArgs = vi.fn(async () => ['--runtime-hook-arg']);
+      const anthropicApiKeyHelperLease = createAnthropicApiKeyHelperSetupLease();
+      const teamRuntimeAuth = {
         teamName: 'mixed-team',
         authMaterialId: 'run-1',
         allowAnthropicApiKeyHelper: true,
-      },
-    });
-    expect(buildRuntimeTurnSettledHookSettingsArgs).not.toHaveBeenCalled();
-    expect(result.args).toEqual([]);
-    expect(result.providerArgsByProvider.has('anthropic')).toBe(false);
-    expect(result.anthropicApiKeyHelper).toBe(helper);
-    expect(result.envPatch).toMatchObject({
-      [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'api_key',
-      CLAUDE_TEAM_ANTHROPIC_AUTH_MODE: 'api_key_helper',
-      CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH:
-        '/tmp/team-runtime-auth/mixed-team/run-1/settings.json',
-    });
-  });
+        anthropicApiKeyHelperLease,
+      };
+
+      const result = await buildCrossProviderMemberArgs({
+        primaryProviderId,
+        memberSpecs: [
+          {
+            name: primaryProviderId === 'codex' ? 'Codex' : 'Gemini',
+            providerId: primaryProviderId,
+            role: 'only initial member',
+          },
+        ],
+        options: {
+          teamRuntimeAuth,
+        },
+        ports: {
+          buildProvisioningEnv: buildProvisioningEnvForMember,
+          buildRuntimeTurnSettledHookSettingsArgs,
+          logger: { error: vi.fn() },
+        },
+      });
+
+      expect(buildProvisioningEnvForMember).toHaveBeenCalledWith('anthropic', undefined, {
+        teamRuntimeAuth,
+      });
+      expect(buildRuntimeTurnSettledHookSettingsArgs).not.toHaveBeenCalled();
+      expect(result.args).toEqual([]);
+      expect(result.providerArgsByProvider.has('anthropic')).toBe(false);
+      expect(result.anthropicApiKeyHelper).toBe(helper);
+      expect(anthropicApiKeyHelperLease.getOwnedMaterial()).toBe(helper);
+      expect(result.envPatch).toMatchObject({
+        [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'api_key',
+        CLAUDE_TEAM_ANTHROPIC_AUTH_MODE: 'api_key_helper',
+        CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH:
+          '/tmp/team-runtime-auth/mixed-team/run-1/settings.json',
+      });
+    }
+  );
 
   it('cleans Anthropic helper material when a later cross-provider validation fails', async () => {
     const helperDirectory = await fs.promises.mkdtemp(

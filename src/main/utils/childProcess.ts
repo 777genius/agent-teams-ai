@@ -12,6 +12,8 @@ import path from 'path';
 const EXEC_CLI_TIMEOUT_OUTPUT_BUFFER_LIMIT = 128 * 1024;
 const EXEC_CLI_NATIVE_MAX_BUFFER_HEADROOM_BYTES = 1024 * 1024;
 const WINDOWS_PROCESS_TREE_KILL_TIMEOUT_MS = 10_000;
+const UNIX_PROCESS_TREE_EXIT_TIMEOUT_MS = 5_000;
+const UNIX_PROCESS_TREE_EXIT_POLL_MS = 25;
 
 function boundExecCliTimeoutOutput(text: string): string {
   if (text.length <= EXEC_CLI_TIMEOUT_OUTPUT_BUFFER_LIMIT) {
@@ -535,6 +537,20 @@ const CLI_ENV_DEFAULTS: Record<string, string> = {
 
 const activeCliProcesses = new Set<ChildProcess>();
 
+interface UnixProcessIdentity {
+  pid: number;
+  parentPid: number;
+  processGroupId: number;
+  startIdentity: string;
+}
+
+interface OwnedUnixProcessGroup {
+  processGroupId: number;
+  rootStartIdentity: string | null;
+}
+
+const ownedUnixProcessGroups = new WeakMap<ChildProcess, OwnedUnixProcessGroup>();
+
 export function untrackCliProcess(child: ChildProcess | null): void {
   if (child) {
     activeCliProcesses.delete(child);
@@ -543,6 +559,14 @@ export function untrackCliProcess(child: ChildProcess | null): void {
 
 function trackCliProcess<T extends ChildProcess>(child: T): T {
   activeCliProcesses.add(child);
+  if (process.platform !== 'win32' && child.pid) {
+    const rootIdentity = tryReadUnixProcessTable()?.get(child.pid);
+    ownedUnixProcessGroups.set(child, {
+      processGroupId: child.pid,
+      rootStartIdentity:
+        rootIdentity?.processGroupId === child.pid ? rootIdentity.startIdentity : null,
+    });
+  }
   const cleanup = (): void => {
     activeCliProcesses.delete(child);
   };
@@ -565,12 +589,14 @@ export function killTrackedCliProcesses(signal: NodeJS.Signals = 'SIGKILL'): voi
 /** Apply shared CLI process defaults without overriding explicit caller choices. */
 function withCliProcessDefaults<
   T extends {
+    detached?: boolean;
     env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
     windowsHide?: boolean;
   },
->(options: T): T & { windowsHide: boolean } {
+>(options: T): T & { detached: boolean; windowsHide: boolean } {
   return {
     ...options,
+    detached: options.detached ?? process.platform !== 'win32',
     windowsHide: options.windowsHide ?? true,
     env: { ...(options.env ?? process.env), ...CLI_ENV_DEFAULTS },
   };
@@ -721,6 +747,15 @@ export async function killProcessTreeAndWait(
   }
 
   if (process.platform === 'win32') {
+    // taskkill has no process-birth or runtime-handle argument. After this
+    // ChildProcess has exited, its retained PID is not proof of ownership and
+    // may already identify an unrelated process. Windows descendants cannot
+    // be targeted safely from that stale root PID, so fail closed here.
+    if (child.exitCode != null || child.signalCode != null) {
+      activeCliProcesses.delete(child);
+      return;
+    }
+
     let taskkillError: unknown = null;
     try {
       const taskkillPath = path.join(
@@ -750,6 +785,7 @@ export async function killProcessTreeAndWait(
       // A successful taskkill /T /F result is the Windows process-tree
       // termination acknowledgement. Do not probe and signal this PID again:
       // Windows may already have reused it for an unrelated process.
+      activeCliProcesses.delete(child);
       return;
     } catch (error) {
       taskkillError = error;
@@ -757,7 +793,10 @@ export async function killProcessTreeAndWait(
 
     let fallbackError: unknown = null;
     try {
-      process.kill(child.pid, signal ?? 'SIGTERM');
+      // ChildProcess.kill() uses the process handle retained by Node. Unlike
+      // process.kill(pid), that handle remains bound to the process we spawned
+      // if taskkill returns only after the original PID has been recycled.
+      child.kill(signal ?? 'SIGTERM');
     } catch (error) {
       fallbackError = error;
       if (
@@ -782,14 +821,63 @@ export async function killProcessTreeAndWait(
   }
 
   const childPid = child.pid;
-  const descendants = getDescendantProcessIds(childPid);
   const targetSignal = signal ?? 'SIGTERM';
-  for (const pid of [childPid, ...descendants.reverse()]) {
-    try {
-      process.kill(pid, targetSignal);
-    } catch {
-      // Best-effort - process may have already exited.
+  const identities = getOwnedUnixProcessTreeIdentities(child, childPid);
+  const remainingIdentities = new Map(
+    identities.map((identity) => [identity.pid, identity] as const)
+  );
+  for (const identity of [...identities].reverse()) {
+    const currentIdentity = readUnixProcessTable(childPid).get(identity.pid);
+    if (!isSameUnixProcessIdentity(identity, currentIdentity)) {
+      remainingIdentities.delete(identity.pid);
+      continue;
     }
+    try {
+      process.kill(identity.pid, targetSignal);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ESRCH') {
+        remainingIdentities.delete(identity.pid);
+        continue;
+      }
+      throw error;
+    }
+  }
+  await waitForUnixProcessIdentitiesToExit(remainingIdentities, childPid);
+  activeCliProcesses.delete(child);
+}
+
+async function waitForUnixProcessIdentitiesToExit(
+  processIdentities: Map<number, UnixProcessIdentity>,
+  rootPid: number
+): Promise<void> {
+  const deadline = Date.now() + UNIX_PROCESS_TREE_EXIT_TIMEOUT_MS;
+  while (processIdentities.size > 0) {
+    const currentProcesses = readUnixProcessTable(rootPid);
+    for (const [pid, identity] of [...processIdentities]) {
+      if (!isSameUnixProcessIdentity(identity, currentProcesses.get(pid))) {
+        processIdentities.delete(pid);
+        continue;
+      }
+      try {
+        process.kill(pid, 0);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ESRCH') {
+          processIdentities.delete(pid);
+          continue;
+        }
+        throw error;
+      }
+    }
+    if (processIdentities.size === 0) {
+      return;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `Failed to verify termination of Unix process tree ${rootPid}; ` +
+          `still observable: ${[...processIdentities.keys()].join(', ')}`
+      );
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, UNIX_PROCESS_TREE_EXIT_POLL_MS));
   }
 }
 
@@ -797,50 +885,163 @@ function normalizeKillSignal(signal: ExecFileOptions['killSignal']): NodeJS.Sign
   return typeof signal === 'string' ? signal : 'SIGTERM';
 }
 
-function getDescendantProcessIds(parentPid: number): number[] {
-  if (process.platform === 'win32') {
-    return [];
-  }
-
+function tryReadUnixProcessTable(): Map<number, UnixProcessIdentity> | null {
   try {
-    const result = spawnSync('ps', ['-axo', 'pid=,ppid='], {
+    return readUnixProcessTable(0);
+  } catch {
+    return null;
+  }
+}
+
+function readUnixProcessTable(rootPid: number): Map<number, UnixProcessIdentity> {
+  try {
+    const result = spawnSync('ps', ['-axo', 'pid=,ppid=,pgid=,lstart='], {
       encoding: 'utf8',
       windowsHide: true,
     });
     if (result.error || result.status !== 0 || typeof result.stdout !== 'string') {
-      return [];
+      throw new Error(`Failed to inspect Unix process tree ${rootPid}`);
     }
 
-    const childrenByParent = new Map<number, number[]>();
-    for (const line of result.stdout.split('\n')) {
-      const match = /^(\d+)\s+(\d+)$/.exec(line.trim());
-      if (!match) {
+    const processes = new Map<number, UnixProcessIdentity>();
+    for (const rawLine of result.stdout.split('\n')) {
+      const line = rawLine.trim();
+      if (!line) {
         continue;
+      }
+      const match = /^(\d+)\s+(\d+)\s+(\d+)\s+(.+)$/.exec(line);
+      if (!match) {
+        throw new Error(`Unix process table omitted process birth identity for tree ${rootPid}`);
       }
       const pid = Number(match[1]);
-      const ppid = Number(match[2]);
-      const children = childrenByParent.get(ppid);
-      if (children) {
-        children.push(pid);
-      } else {
-        childrenByParent.set(ppid, [pid]);
-      }
-    }
-
-    const descendants: number[] = [];
-    const stack = [...(childrenByParent.get(parentPid) ?? [])];
-    const seen = new Set<number>();
-    while (stack.length > 0) {
-      const pid = stack.pop();
-      if (!pid || seen.has(pid) || pid === process.pid) {
+      const startIdentity = readPreciseUnixProcessStartIdentity(pid, match[4].trim());
+      if (startIdentity === null) {
         continue;
       }
-      seen.add(pid);
-      descendants.push(pid);
-      stack.push(...(childrenByParent.get(pid) ?? []));
+      processes.set(pid, {
+        pid,
+        parentPid: Number(match[2]),
+        processGroupId: Number(match[3]),
+        startIdentity,
+      });
     }
-    return descendants;
-  } catch {
-    return [];
+    if (processes.size === 0 && result.stdout.trim().length > 0) {
+      throw new Error(`Unix process table omitted process birth identity for tree ${rootPid}`);
+    }
+    return processes;
+  } catch (error) {
+    throw new Error(`Failed to inspect Unix process tree ${rootPid}`, { cause: error });
   }
+}
+
+function readPreciseUnixProcessStartIdentity(pid: number, fallbackIdentity: string): string | null {
+  if (process.platform !== 'linux') {
+    return `ps:${fallbackIdentity}`;
+  }
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+    const commandEnd = stat.lastIndexOf(')');
+    if (commandEnd < 0) {
+      throw new Error(`Malformed /proc/${pid}/stat`);
+    }
+    const fieldsAfterCommand = stat
+      .slice(commandEnd + 2)
+      .trim()
+      .split(/\s+/);
+    const startTimeTicks = fieldsAfterCommand[19];
+    if (!startTimeTicks || !/^\d+$/.test(startTimeTicks)) {
+      throw new Error(`Missing start time in /proc/${pid}/stat`);
+    }
+    return `proc:${startTimeTicks}`;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function isSameUnixProcessIdentity(
+  expected: UnixProcessIdentity,
+  current: UnixProcessIdentity | undefined
+): boolean {
+  if (current === undefined || current.startIdentity !== expected.startIdentity) {
+    return false;
+  }
+  if (current.processGroupId !== expected.processGroupId) {
+    throw new Error(
+      `Failed to verify Unix process ${expected.pid}: captured birth identity changed process groups`
+    );
+  }
+  return true;
+}
+
+function getOwnedUnixProcessTreeIdentities(
+  child: ChildProcess,
+  parentPid: number
+): UnixProcessIdentity[] {
+  const processes = readUnixProcessTable(parentPid);
+  const ownedGroup = ownedUnixProcessGroups.get(child);
+  if (ownedGroup) {
+    const currentRoot = processes.get(parentPid);
+    if (ownedGroup.rootStartIdentity === null) {
+      throw new Error(
+        `Failed to verify exited Unix process tree ${parentPid}: root birth identity was not captured`
+      );
+    }
+    if (currentRoot && currentRoot.startIdentity !== ownedGroup.rootStartIdentity) {
+      throw new Error(
+        `Failed to verify Unix process tree ${parentPid}: root pid was reused after ownership capture`
+      );
+    }
+    if (currentRoot && currentRoot.processGroupId !== ownedGroup.processGroupId) {
+      throw new Error(
+        `Failed to verify Unix process tree ${parentPid}: owned root changed process groups`
+      );
+    }
+    return [...processes.values()].filter(
+      (identity) => identity.processGroupId === ownedGroup.processGroupId
+    );
+  }
+
+  if (child.exitCode != null || child.signalCode != null) {
+    throw new Error(
+      `Failed to verify exited Unix process tree ${parentPid}: root birth identity was not captured`
+    );
+  }
+
+  const root = processes.get(parentPid);
+  if (!root) {
+    throw new Error(
+      `Failed to verify exited Unix process tree ${parentPid}: no owned process-group identity`
+    );
+  }
+
+  const childrenByParent = new Map<number, number[]>();
+  for (const identity of processes.values()) {
+    const children = childrenByParent.get(identity.parentPid);
+    if (children) {
+      children.push(identity.pid);
+    } else {
+      childrenByParent.set(identity.parentPid, [identity.pid]);
+    }
+  }
+
+  const descendants: UnixProcessIdentity[] = [root];
+  const stack = [...(childrenByParent.get(parentPid) ?? [])];
+  const seen = new Set<number>([parentPid]);
+  while (stack.length > 0) {
+    const pid = stack.pop();
+    if (!pid || seen.has(pid) || pid === process.pid) {
+      continue;
+    }
+    seen.add(pid);
+    const identity = processes.get(pid);
+    if (!identity) {
+      throw new Error(`Unix process ${pid} disappeared while capturing tree ${parentPid}`);
+    }
+    descendants.push(identity);
+    stack.push(...(childrenByParent.get(pid) ?? []));
+  }
+  return descendants;
 }

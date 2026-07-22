@@ -27,6 +27,10 @@ import {
   resolveGeminiRuntimeAuth,
 } from '../../runtime/geminiRuntimeAuth';
 
+import {
+  AnthropicApiKeyHelperLeaseConflictError,
+  type AnthropicApiKeyHelperSetupLease,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
 import { hasAnthropicCompatibleAuthTokenEnv } from './TeamProvisioningDirectRestart';
 import { normalizeTeamMemberProviderId } from './TeamProvisioningMemberSpecs';
 import {
@@ -53,6 +57,8 @@ export interface TeamRuntimeAuthContext {
   teamName?: string;
   authMaterialId?: string;
   allowAnthropicApiKeyHelper?: boolean;
+  /** Setup-scoped ownership for any helper materialized through this context. */
+  anthropicApiKeyHelperLease?: AnthropicApiKeyHelperSetupLease;
 }
 
 export interface ProvisioningEnvResolution {
@@ -431,6 +437,8 @@ export async function buildProvisioningEnv({
         throw error;
       }
 
+      teamRuntimeAuth.anthropicApiKeyHelperLease?.coalesce(helper);
+
       for (const key of ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS) {
         delete providerEnv[key];
       }
@@ -534,6 +542,9 @@ export async function buildCrossProviderMemberArgs({
           teamRuntimeAuth: options?.teamRuntimeAuth,
         });
       } catch (error) {
+        if (error instanceof AnthropicApiKeyHelperLeaseConflictError) {
+          throw error;
+        }
         ports.logger.error(
           `[TeamProvisioningService] Failed to build cross-provider args for provider "${providerId}"`,
           error
@@ -565,6 +576,7 @@ export async function buildCrossProviderMemberArgs({
         Object.assign(envPatch, buildAnthropicCrossProviderConnectionEnvPatch(env.env));
       }
       if (env.anthropicApiKeyHelper) {
+        options?.teamRuntimeAuth?.anthropicApiKeyHelperLease?.coalesce(env.anthropicApiKeyHelper);
         usesAnthropicApiKeyHelper = true;
         anthropicApiKeyHelper = env.anthropicApiKeyHelper;
         Object.assign(envPatch, env.anthropicApiKeyHelper.envPatch);
@@ -595,7 +607,7 @@ export async function buildCrossProviderMemberArgs({
       anthropicApiKeyHelper,
     };
   } catch (error) {
-    if (anthropicApiKeyHelper) {
+    if (anthropicApiKeyHelper && !options?.teamRuntimeAuth?.anthropicApiKeyHelperLease) {
       await cleanupAnthropicTeamApiKeyHelperMaterial({
         directory: anthropicApiKeyHelper.directory,
       }).catch(() => undefined);

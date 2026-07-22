@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  createAnthropicApiKeyHelperCleanupRetryOwner,
+  createAnthropicApiKeyHelperSetupLease,
+} from '../TeamProvisioningAnthropicApiKeyHelperLease';
+import {
   type DeterministicLaunchRunFlowRun,
   type PreparedDeterministicLaunchSetup,
   runDeterministicLaunchRunFlow,
@@ -56,6 +60,18 @@ const request: TeamLaunchRequest = {
   fastMode: 'off',
   skipPermissions: false,
 };
+
+const anthropicApiKeyHelperLease = createAnthropicApiKeyHelperSetupLease();
+anthropicApiKeyHelperLease.coalesce({
+  teamName: 'team-a',
+  directory: authHelperDirectory,
+  helperPath: authHelperPath,
+  keyPath: authHelperKeyPath,
+  settingsPath: authHelperSettingsPath,
+  settingsObject: { apiKeyHelper: authHelperPath },
+  settingsArgs: ['--settings', authHelperSettingsPath],
+  envPatch: { ANTHROPIC_API_KEY_HELPER: authHelperPath },
+});
 
 const setup: PreparedDeterministicLaunchSetup<TestLane> = {
   kind: 'prepared',
@@ -132,6 +148,7 @@ const setup: PreparedDeterministicLaunchSetup<TestLane> = {
   mixedSecondaryLanes: [{ laneId: 'secondary-opencode' }],
   initialLaunchWarnings: ['Recovered launch roster'],
   initialLaunchWarningSource: 'members-meta',
+  anthropicApiKeyHelperLease,
 };
 
 function createMemberSpawnStatusEntry(): MemberSpawnStatusEntry {
@@ -176,7 +193,7 @@ describe('TeamProvisioningLaunchDeterministicRunFlow', () => {
         launchIdentity: setup.launchIdentity,
         mixedSecondaryLanes: setup.mixedSecondaryLanes,
         workspaceTrustFullPlan: setup.workspaceTrustFullPlan,
-        anthropicApiKeyHelper: setup.provisioningEnv.anthropicApiKeyHelper,
+        anthropicApiKeyHelper: null,
         initialLaunchWarnings: setup.initialLaunchWarnings,
         initialLaunchWarningSource: setup.initialLaunchWarningSource,
       });
@@ -188,6 +205,10 @@ describe('TeamProvisioningLaunchDeterministicRunFlow', () => {
       order.push('prepare-run-state');
       expect(input.teamName).toBe('demo');
       expect(input.run).toBe(run);
+      expect(input.run.anthropicApiKeyHelper).toMatchObject({
+        directory: authHelperDirectory,
+        helperPath: authHelperPath,
+      });
       input.resetTeamScopedTransientStateForNewRun('demo');
       input.registerRun('run-1', run);
       input.setProvisioningRunByTeam('demo', 'run-1');
@@ -222,6 +243,7 @@ describe('TeamProvisioningLaunchDeterministicRunFlow', () => {
     });
 
     const ports = {
+      anthropicApiKeyHelperCleanupRetryOwner: createAnthropicApiKeyHelperCleanupRetryOwner(),
       createInitialMemberSpawnStatusEntry: vi.fn(createMemberSpawnStatusEntry),
       prepareWorkspaceTrustForDeterministicRun: vi.fn(async (input) => {
         order.push('workspace-trust');

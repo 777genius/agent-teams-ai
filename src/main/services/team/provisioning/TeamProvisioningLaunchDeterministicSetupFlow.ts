@@ -8,6 +8,13 @@ import {
 import { ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS } from '../../runtime/anthropicTeamApiKeyHelper';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 
+import {
+  type AnthropicApiKeyHelperCleanupRetryOwner,
+  type AnthropicApiKeyHelperMaterialCleanup,
+  type AnthropicApiKeyHelperSetupLease,
+  createAnthropicApiKeyHelperSetupLease,
+  throwIfAnthropicApiKeyHelperCleanupRemainsSourceOwned,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
 import { ensureCwdExists } from './TeamProvisioningAsyncUtils';
 import {
   assertDeterministicBootstrapPrimaryMemberLimit,
@@ -140,6 +147,8 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
   randomUUID(): string;
   nowIso(): string;
   logger: DeterministicLaunchSetupLogger;
+  cleanupAnthropicApiKeyHelperMaterial?: AnthropicApiKeyHelperMaterialCleanup;
+  anthropicApiKeyHelperCleanupRetryOwner: AnthropicApiKeyHelperCleanupRetryOwner;
 }
 
 export type DeterministicLaunchSetupResult<TMixedSecondaryLane> =
@@ -165,6 +174,7 @@ export type DeterministicLaunchSetupResult<TMixedSecondaryLane> =
       mixedSecondaryLanes: TMixedSecondaryLane[];
       initialLaunchWarnings: string[];
       initialLaunchWarningSource: LaunchRosterSource;
+      anthropicApiKeyHelperLease: AnthropicApiKeyHelperSetupLease;
     };
 
 export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
@@ -256,173 +266,198 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
   const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
   const runId = ports.randomUUID();
   const startedAt = ports.nowIso();
+  const anthropicApiKeyHelperLease = createAnthropicApiKeyHelperSetupLease(
+    ports.cleanupAnthropicApiKeyHelperMaterial
+  );
   const teamRuntimeAuth: TeamRuntimeAuthContext = {
     teamName: request.teamName,
     authMaterialId: runId,
     allowAnthropicApiKeyHelper: true,
+    anthropicApiKeyHelperLease,
   };
 
-  const provisioningEnv = await ports.buildProvisioningEnv(
-    request.providerId,
-    request.providerBackendId,
-    { includeCodexTeammateAuth: teamRequestIncludesCodexMember(request), teamRuntimeAuth }
-  );
-  const { env: shellEnv, providerArgs = [], warning: envWarning } = provisioningEnv;
-  if (envWarning) {
-    throw new Error(envWarning);
-  }
-  const workspaceTrustFeatureFlags = resolveWorkspaceTrustFeatureFlags();
-  const workspaceTrustProviders = workspaceTrustFeatureFlags.enabled
-    ? collectWorkspaceTrustProviders({
-        leadProviderId: request.providerId,
-        members: expectedMemberSpecs,
-      })
-    : [];
-  const workspaceTrustEarlyWorkspaces = workspaceTrustFeatureFlags.enabled
-    ? await collectWorkspaceTrustWorkspaces({
-        cwd: request.cwd,
-        members: [],
-        ports: ports.workspaceTrustWorkspaceCollectionPorts,
-      })
-    : [];
-  const workspaceTrustEarlyPlan = workspaceTrustFeatureFlags.enabled
-    ? await planWorkspaceTrustArgsOnlySafely({
-        coordinator: ports.workspaceTrustCoordinator,
-        request: {
-          providers: workspaceTrustProviders,
-          workspaces: workspaceTrustEarlyWorkspaces,
-          targetSurfaces: ['default_model_probe'],
-          featureFlags: workspaceTrustFeatureFlags,
-        },
-      })
-    : { launchArgPatches: [] };
-  const workspaceTrustProviderArgsResolver =
-    createDefaultModelWorkspaceTrustProviderArgsResolver(workspaceTrustEarlyPlan);
-
-  const materializedMemberSpecs = await ports.materializeEffectiveTeamMemberSpecs({
-    claudePath,
-    cwd: request.cwd,
-    members: expectedMemberSpecs,
-    defaults: {
-      providerId: request.providerId,
-      model: request.model,
-      effort: request.effort,
-    },
-    primaryProviderId: request.providerId,
-    primaryEnv: provisioningEnv,
-    teamRuntimeAuth,
-    limitContext: request.limitContext,
-    providerArgsResolver: workspaceTrustProviderArgsResolver,
-  });
-  const allEffectiveMemberSpecs = await ports.resolveOpenCodeMemberWorkspacesForRuntime({
-    teamName: request.teamName,
-    baseCwd: request.cwd,
-    leadProviderId: request.providerId,
-    members: materializedMemberSpecs,
-  });
-  Object.assign(
-    shellEnv,
-    await buildRuntimeTurnSettledEnvironmentForMembers(
-      {
-        primaryProviderId: request.providerId,
-        memberSpecs: allEffectiveMemberSpecs,
-      },
-      {
-        environmentProvider: ports.runtimeTurnSettledEnvironmentProvider,
-        logger: ports.logger,
-      }
-    )
-  );
-  const lanePlan = ports.planRuntimeLanesOrThrow(
-    request.providerId,
-    allEffectiveMemberSpecs,
-    request.cwd
-  );
-  const primaryMemberNames = new Set(lanePlan.primaryMembers.map((member) => member.name));
-  const effectiveMemberSpecs = allEffectiveMemberSpecs.filter((member) =>
-    primaryMemberNames.has(member.name)
-  );
-  assertDeterministicBootstrapPrimaryMemberLimit(effectiveMemberSpecs.length);
-  const largeTeamWarning = buildLargeDeterministicBootstrapWarning(effectiveMemberSpecs.length);
-  const initialLaunchWarnings = [warning, largeTeamWarning].filter((value): value is string =>
-    Boolean(value)
-  );
-  const expectedMembers = effectiveMemberSpecs.map((member) => member.name);
-  const resolvedProviderId = resolveTeamProviderId(request.providerId);
-  const crossProviderMemberArgs = await ports.buildCrossProviderMemberArgs(
-    resolvedProviderId,
-    effectiveMemberSpecs,
-    { teamRuntimeAuth }
-  );
-  const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
-    ? await collectWorkspaceTrustWorkspaces({
-        cwd: request.cwd,
-        members: allEffectiveMemberSpecs,
-        ports: ports.workspaceTrustWorkspaceCollectionPorts,
-      })
-    : [];
-  const workspaceTrustFullPlan = workspaceTrustFeatureFlags.enabled
-    ? await planWorkspaceTrustFullSafely({
-        coordinator: ports.workspaceTrustCoordinator,
-        request: {
-          providers: collectWorkspaceTrustProviders({
-            leadProviderId: request.providerId,
-            members: allEffectiveMemberSpecs,
-          }),
-          workspaces: workspaceTrustFullWorkspaces,
-          featureFlags: workspaceTrustFeatureFlags,
-        },
-      })
-    : null;
-  const workspaceTrustPatches = workspaceTrustFullPlan?.launchArgPatches ?? [];
-  const { providerArgsForLaunch, crossProviderMemberArgsForLaunch, providerArgsByProvider } =
-    buildWorkspaceTrustLaunchArgs({
-      providerArgs,
-      resolvedProviderId,
-      crossProviderMemberArgs,
-      workspaceTrustPatches,
-    });
-  Object.assign(shellEnv, crossProviderMemberArgs.envPatch);
-  if (crossProviderMemberArgs.usesAnthropicApiKeyHelper) {
-    for (const key of ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS) {
-      delete shellEnv[key];
+  try {
+    const provisioningEnv = await ports.buildProvisioningEnv(
+      request.providerId,
+      request.providerBackendId,
+      { includeCodexTeammateAuth: teamRequestIncludesCodexMember(request), teamRuntimeAuth }
+    );
+    anthropicApiKeyHelperLease.coalesce(provisioningEnv.anthropicApiKeyHelper);
+    const { env: shellEnv, providerArgs = [], warning: envWarning } = provisioningEnv;
+    if (envWarning) {
+      throw new Error(envWarning);
     }
+    const workspaceTrustFeatureFlags = resolveWorkspaceTrustFeatureFlags();
+    const workspaceTrustProviders = workspaceTrustFeatureFlags.enabled
+      ? collectWorkspaceTrustProviders({
+          leadProviderId: request.providerId,
+          members: expectedMemberSpecs,
+        })
+      : [];
+    const workspaceTrustEarlyWorkspaces = workspaceTrustFeatureFlags.enabled
+      ? await collectWorkspaceTrustWorkspaces({
+          cwd: request.cwd,
+          members: [],
+          ports: ports.workspaceTrustWorkspaceCollectionPorts,
+        })
+      : [];
+    const workspaceTrustEarlyPlan = workspaceTrustFeatureFlags.enabled
+      ? await planWorkspaceTrustArgsOnlySafely({
+          coordinator: ports.workspaceTrustCoordinator,
+          request: {
+            providers: workspaceTrustProviders,
+            workspaces: workspaceTrustEarlyWorkspaces,
+            targetSurfaces: ['default_model_probe'],
+            featureFlags: workspaceTrustFeatureFlags,
+          },
+        })
+      : { launchArgPatches: [] };
+    const workspaceTrustProviderArgsResolver =
+      createDefaultModelWorkspaceTrustProviderArgsResolver(workspaceTrustEarlyPlan);
+
+    const materializedMemberSpecs = await ports.materializeEffectiveTeamMemberSpecs({
+      claudePath,
+      cwd: request.cwd,
+      members: expectedMemberSpecs,
+      defaults: {
+        providerId: request.providerId,
+        model: request.model,
+        effort: request.effort,
+      },
+      primaryProviderId: request.providerId,
+      primaryEnv: provisioningEnv,
+      teamRuntimeAuth,
+      limitContext: request.limitContext,
+      providerArgsResolver: workspaceTrustProviderArgsResolver,
+    });
+    const allEffectiveMemberSpecs = await ports.resolveOpenCodeMemberWorkspacesForRuntime({
+      teamName: request.teamName,
+      baseCwd: request.cwd,
+      leadProviderId: request.providerId,
+      members: materializedMemberSpecs,
+    });
+    Object.assign(
+      shellEnv,
+      await buildRuntimeTurnSettledEnvironmentForMembers(
+        {
+          primaryProviderId: request.providerId,
+          memberSpecs: allEffectiveMemberSpecs,
+        },
+        {
+          environmentProvider: ports.runtimeTurnSettledEnvironmentProvider,
+          logger: ports.logger,
+        }
+      )
+    );
+    const lanePlan = ports.planRuntimeLanesOrThrow(
+      request.providerId,
+      allEffectiveMemberSpecs,
+      request.cwd
+    );
+    const primaryMemberNames = new Set(lanePlan.primaryMembers.map((member) => member.name));
+    const effectiveMemberSpecs = allEffectiveMemberSpecs.filter((member) =>
+      primaryMemberNames.has(member.name)
+    );
+    assertDeterministicBootstrapPrimaryMemberLimit(effectiveMemberSpecs.length);
+    const largeTeamWarning = buildLargeDeterministicBootstrapWarning(effectiveMemberSpecs.length);
+    const initialLaunchWarnings = [warning, largeTeamWarning].filter((value): value is string =>
+      Boolean(value)
+    );
+    const expectedMembers = effectiveMemberSpecs.map((member) => member.name);
+    const resolvedProviderId = resolveTeamProviderId(request.providerId);
+    const crossProviderMemberArgs = await ports.buildCrossProviderMemberArgs(
+      resolvedProviderId,
+      effectiveMemberSpecs,
+      { teamRuntimeAuth }
+    );
+    anthropicApiKeyHelperLease.coalesce(crossProviderMemberArgs.anthropicApiKeyHelper);
+    const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
+      ? await collectWorkspaceTrustWorkspaces({
+          cwd: request.cwd,
+          members: allEffectiveMemberSpecs,
+          ports: ports.workspaceTrustWorkspaceCollectionPorts,
+        })
+      : [];
+    const workspaceTrustFullPlan = workspaceTrustFeatureFlags.enabled
+      ? await planWorkspaceTrustFullSafely({
+          coordinator: ports.workspaceTrustCoordinator,
+          request: {
+            providers: collectWorkspaceTrustProviders({
+              leadProviderId: request.providerId,
+              members: allEffectiveMemberSpecs,
+            }),
+            workspaces: workspaceTrustFullWorkspaces,
+            featureFlags: workspaceTrustFeatureFlags,
+          },
+        })
+      : null;
+    const workspaceTrustPatches = workspaceTrustFullPlan?.launchArgPatches ?? [];
+    const { providerArgsForLaunch, crossProviderMemberArgsForLaunch, providerArgsByProvider } =
+      buildWorkspaceTrustLaunchArgs({
+        providerArgs,
+        resolvedProviderId,
+        crossProviderMemberArgs,
+        workspaceTrustPatches,
+      });
+    Object.assign(shellEnv, crossProviderMemberArgs.envPatch);
+    if (crossProviderMemberArgs.usesAnthropicApiKeyHelper) {
+      for (const key of ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS) {
+        delete shellEnv[key];
+      }
+    }
+    const launchIdentity = await ports.resolveAndValidateLaunchIdentity({
+      claudePath,
+      cwd: request.cwd,
+      env: shellEnv,
+      request,
+      effectiveMembers: effectiveMemberSpecs,
+      providerArgsByProvider,
+    });
+
+    const syntheticRequest = buildLaunchSyntheticRequest({
+      request,
+      members: allEffectiveMemberSpecs,
+      configRaw,
+    });
+
+    return {
+      kind: 'prepared',
+      teamsBasePathsToProbe,
+      runId,
+      startedAt,
+      claudePath,
+      shellEnv,
+      provisioningEnv,
+      workspaceTrustFeatureFlags,
+      workspaceTrustFullPlan,
+      resolvedProviderId,
+      providerArgsForLaunch,
+      crossProviderMemberArgsForLaunch,
+      expectedMembers,
+      effectiveMemberSpecs,
+      allEffectiveMemberSpecs,
+      launchIdentity,
+      syntheticRequest,
+      mixedSecondaryLanes: ports.createMixedSecondaryLaneStates(lanePlan),
+      initialLaunchWarnings,
+      initialLaunchWarningSource: source,
+      anthropicApiKeyHelperLease,
+    };
+  } catch (error) {
+    let cleanupOwnershipError: unknown = null;
+    try {
+      await anthropicApiKeyHelperLease.cleanup();
+    } catch {
+      const retention = await ports.anthropicApiKeyHelperCleanupRetryOwner.retainSetupLease(
+        anthropicApiKeyHelperLease
+      );
+      try {
+        throwIfAnthropicApiKeyHelperCleanupRemainsSourceOwned(retention, error);
+      } catch (ownershipError) {
+        cleanupOwnershipError = ownershipError;
+      }
+    }
+    await ports.restorePrelaunchConfig(request.teamName).catch(() => undefined);
+    throw cleanupOwnershipError ?? error;
   }
-  const launchIdentity = await ports.resolveAndValidateLaunchIdentity({
-    claudePath,
-    cwd: request.cwd,
-    env: shellEnv,
-    request,
-    effectiveMembers: effectiveMemberSpecs,
-    providerArgsByProvider,
-  });
-
-  const syntheticRequest = buildLaunchSyntheticRequest({
-    request,
-    members: allEffectiveMemberSpecs,
-    configRaw,
-  });
-
-  return {
-    kind: 'prepared',
-    teamsBasePathsToProbe,
-    runId,
-    startedAt,
-    claudePath,
-    shellEnv,
-    provisioningEnv,
-    workspaceTrustFeatureFlags,
-    workspaceTrustFullPlan,
-    resolvedProviderId,
-    providerArgsForLaunch,
-    crossProviderMemberArgsForLaunch,
-    expectedMembers,
-    effectiveMemberSpecs,
-    allEffectiveMemberSpecs,
-    launchIdentity,
-    syntheticRequest,
-    mixedSecondaryLanes: ports.createMixedSecondaryLaneStates(lanePlan),
-    initialLaunchWarnings,
-    initialLaunchWarningSource: source,
-  };
 }

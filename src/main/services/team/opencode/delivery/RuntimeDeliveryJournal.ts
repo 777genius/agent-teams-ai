@@ -68,6 +68,10 @@ type RuntimeDeliveryJournalEntry = RuntimeDeliveryJournalRecord | RuntimeDeliver
 export interface RuntimeDeliveryJournalBeginInput {
   idempotencyKey: string;
   payloadHash: string;
+  /** Exact logical hash from before recipient canonicalization; never a legacy transport hash. */
+  preCanonicalPayloadHash?: string;
+  /** Exact destination represented by preCanonicalPayloadHash. */
+  preCanonicalDestination?: RuntimeDeliveryDestinationRef;
   compatiblePayloadHashes?: string[];
   runId: string;
   teamName: string;
@@ -90,7 +94,41 @@ export type RuntimeDeliveryJournalBeginResult = (
   | { state: 'already_committed'; record: RuntimeDeliveryJournalRecord }
   | { state: 'resume_pending'; record: RuntimeDeliveryJournalRecord }
   | { state: 'payload_conflict'; record: RuntimeDeliveryJournalRecord }
-) & { recoveryRecords?: RuntimeDeliveryJournalRecord[] };
+) & {
+  recoveryRecords?: RuntimeDeliveryJournalRecord[];
+  /** Old rows that must be proven at their persisted destination before canonical migration. */
+  preCanonicalRecoveryRecords?: RuntimeDeliveryJournalRecord[];
+};
+
+export interface RuntimeDeliveryCanonicalRecoveryMigration {
+  recoveryRecords: RuntimeDeliveryJournalRecord[];
+  fromMemberName: string;
+  payloadHash: string;
+  destination: RuntimeDeliveryDestinationRef;
+  destinationMessageId: string;
+}
+
+export class RuntimeDeliveryJournalCommitRevalidationError extends Error {
+  constructor() {
+    super('Runtime delivery destination changed during journal commit; journal is not committed');
+    this.name = 'RuntimeDeliveryJournalCommitRevalidationError';
+  }
+}
+
+export interface RuntimeDeliveryJournalCommit {
+  /**
+   * Compare-and-restore only the exact entries changed by this commit. Callers use this only when a
+   * destination postcheck invalidates the proof that authorized the commit.
+   */
+  rollback(): Promise<void>;
+}
+
+interface RuntimeDeliveryJournalRollbackEntry {
+  identity: string;
+  previous: RuntimeDeliveryJournalEntry | null;
+  committed: RuntimeDeliveryJournalEntry | null;
+  previousIndex: number;
+}
 
 export class RuntimeDeliveryJournalStore {
   constructor(
@@ -104,6 +142,13 @@ export class RuntimeDeliveryJournalStore {
       fromMemberName: input.fromMemberName.trim(),
       runtimeSessionId: input.runtimeSessionId.trim(),
       destination: normalizeRuntimeDeliveryDestinationRef(input.destination),
+      ...(input.preCanonicalDestination
+        ? {
+            preCanonicalDestination: normalizeRuntimeDeliveryDestinationRef(
+              input.preCanonicalDestination
+            ),
+          }
+        : {}),
     };
     let result: RuntimeDeliveryJournalBeginResult | null = null;
     await this.store.updateLocked((entries) => {
@@ -113,54 +158,93 @@ export class RuntimeDeliveryJournalStore {
           isRuntimeDeliveryCommittedReceipt(entry) &&
           matchesRuntimeDeliveryLogicalKey(entry, canonicalInput)
       );
-      if (committedReceipt) {
+      if (
+        committedReceipt &&
+        committedReceipt.logicalPayloadHash !== null &&
+        matchesRuntimeDeliveryLogicalPayloadHash(
+          committedReceipt.logicalPayloadHash,
+          canonicalInput
+        )
+      ) {
         const committedRecord = buildRuntimeDeliveryRecordFromReceipt(
           canonicalInput,
           committedReceipt
         );
-        result =
-          committedReceipt.logicalPayloadHash !== null &&
-          committedReceipt.logicalPayloadHash === canonicalInput.payloadHash
-            ? { state: 'already_committed', record: committedRecord }
-            : { state: 'payload_conflict', record: committedRecord };
+        result = { state: 'already_committed', record: committedRecord };
         return pruneRuntimeDeliveryJournalEntries(entries, this.maxTerminalRecords);
       }
 
       const logicalKeyRecords = records.filter((record) =>
         matchesRuntimeDeliveryLogicalKey(record, canonicalInput)
       );
+      const preCanonicalRecoveryRecords = logicalKeyRecords.filter(
+        (record) =>
+          classifyRuntimeDeliveryPayload(record, canonicalInput) === 'pre_canonical' &&
+          canRecoverPreCanonicalRuntimeDelivery(record, canonicalInput)
+      );
+      if (
+        committedReceipt &&
+        !preCanonicalRecoveryRecords.some((record) => record.status === 'committed')
+      ) {
+        result = {
+          state: 'payload_conflict',
+          record: buildRuntimeDeliveryRecordFromReceipt(canonicalInput, committedReceipt),
+        };
+        return pruneRuntimeDeliveryJournalEntries(entries, this.maxTerminalRecords);
+      }
       const conflictingRecord = logicalKeyRecords.find(
-        (record) => !hasCompatibleRuntimeDeliveryPayload(record, canonicalInput)
+        (record) => classifyRuntimeDeliveryPayload(record, canonicalInput) === 'conflict'
       );
       if (conflictingRecord) {
         result = { state: 'payload_conflict', record: conflictingRecord };
         return pruneRuntimeDeliveryJournalEntries(entries, this.maxTerminalRecords);
       }
 
-      const recoveryRecords = logicalKeyRecords.filter((record) =>
-        canCarryRuntimeDeliveryAcrossRuns(record, canonicalInput)
+      const recoveryRecords = logicalKeyRecords.filter(
+        (record) =>
+          classifyRuntimeDeliveryPayload(record, canonicalInput) === 'canonical' &&
+          canCarryRuntimeDeliveryAcrossRuns(record, canonicalInput)
       );
       const existing = records.find((record) =>
         matchesRuntimeDeliveryJournalKey(record, canonicalInput)
       );
       if (existing) {
         if (existing.status === 'committed') {
+          if (preCanonicalRecoveryRecords.includes(existing)) {
+            result = {
+              state: 'resume_pending',
+              record: existing,
+              preCanonicalRecoveryRecords,
+            };
+            return pruneRuntimeDeliveryJournalEntries(entries, this.maxTerminalRecords);
+          }
           result = { state: 'already_committed', record: existing };
           return pruneRuntimeDeliveryJournalEntries(entries, this.maxTerminalRecords);
         }
 
+        const isPreCanonicalExisting = preCanonicalRecoveryRecords.includes(existing);
         const resumed = {
           ...existing,
-          payloadHash: canonicalInput.payloadHash,
-          logicalPayloadHash: canonicalInput.payloadHash,
+          ...(!isPreCanonicalExisting
+            ? {
+                payloadHash: canonicalInput.payloadHash,
+                logicalPayloadHash: canonicalInput.payloadHash,
+              }
+            : {}),
           attempts: existing.attempts + 1,
           status: existing.status === 'failed_terminal' ? existing.status : 'pending',
           updatedAt: canonicalInput.now,
         } satisfies RuntimeDeliveryJournalRecord;
+        const resumedPreCanonicalRecoveryRecords = preCanonicalRecoveryRecords.map((record) =>
+          record === existing ? resumed : record
+        );
         result = {
           state: 'resume_pending',
           record: resumed,
           ...(recoveryRecords.length > 0 ? { recoveryRecords } : {}),
+          ...(resumedPreCanonicalRecoveryRecords.length > 0
+            ? { preCanonicalRecoveryRecords: resumedPreCanonicalRecoveryRecords }
+            : {}),
         };
         return pruneRuntimeDeliveryJournalEntries(
           entries.map((entry) =>
@@ -197,6 +281,7 @@ export class RuntimeDeliveryJournalStore {
         state: 'new',
         record: created,
         ...(recoveryRecords.length > 0 ? { recoveryRecords } : {}),
+        ...(preCanonicalRecoveryRecords.length > 0 ? { preCanonicalRecoveryRecords } : {}),
       };
       return pruneRuntimeDeliveryJournalEntries([...entries, created], this.maxTerminalRecords);
     });
@@ -213,9 +298,12 @@ export class RuntimeDeliveryJournalStore {
     teamName: string;
     location: RuntimeDeliveryLocation;
     committedAt: string;
-  }): Promise<void> {
+    canonicalRecoveryMigration?: RuntimeDeliveryCanonicalRecoveryMigration;
+  }): Promise<RuntimeDeliveryJournalCommit> {
     const canonicalInput = canonicalizeRuntimeDeliveryJournalInput(input);
     let found = false;
+    let migrationFound = !canonicalInput.canonicalRecoveryMigration;
+    let rollbackEntries: RuntimeDeliveryJournalRollbackEntry[] | null = null;
     await this.store.updateLocked((entries) => {
       const records = entries.filter(isRuntimeDeliveryJournalRecord);
       const current = records.find((record) =>
@@ -225,34 +313,102 @@ export class RuntimeDeliveryJournalStore {
         return entries;
       }
       found = true;
-      const committed = entries.map((entry) =>
-        isRuntimeDeliveryJournalRecord(entry) &&
-        (matchesRuntimeDeliveryJournalKey(entry, canonicalInput) ||
-          belongsToRuntimeDeliveryRecoveryLineage(entry, current))
-          ? ({
-              ...entry,
+      const migration = canonicalInput.canonicalRecoveryMigration;
+      const persistedMigrationRecords = migration
+        ? migration.recoveryRecords.map((candidate) =>
+            records.find((record) => matchesExactRuntimeDeliveryRecoveryRecord(record, candidate))
+          )
+        : [];
+      if (migration && persistedMigrationRecords.some((record) => !record)) {
+        return entries;
+      }
+      migrationFound = true;
+      const canonicalCurrent = migration
+        ? ({
+            ...current,
+            fromMemberName: migration.fromMemberName.trim(),
+            payloadHash: migration.payloadHash,
+            logicalPayloadHash: migration.payloadHash,
+            destination: normalizeRuntimeDeliveryDestinationRef(migration.destination),
+            destinationMessageId: migration.destinationMessageId.trim(),
+          } satisfies RuntimeDeliveryJournalRecord)
+        : current;
+      const migrationRecords = new Set(
+        persistedMigrationRecords.filter(
+          (record): record is RuntimeDeliveryJournalRecord => record !== undefined
+        )
+      );
+      const committed = entries.flatMap((entry): RuntimeDeliveryJournalEntry[] => {
+        if (!isRuntimeDeliveryJournalRecord(entry)) {
+          return [entry];
+        }
+        if (migration && migrationRecords.has(entry) && entry !== current) {
+          return [];
+        }
+        if (
+          matchesRuntimeDeliveryJournalKey(entry, canonicalInput) ||
+          (!migration && belongsToRuntimeDeliveryRecoveryLineage(entry, current))
+        ) {
+          return [
+            {
+              ...(entry === current ? canonicalCurrent : entry),
               committedLocation: canonicalInput.location,
               status: 'committed' as const,
               updatedAt: canonicalInput.committedAt,
               committedAt: canonicalInput.committedAt,
               lastError: null,
-            } satisfies RuntimeDeliveryJournalRecord)
-          : entry
-      );
+            } satisfies RuntimeDeliveryJournalRecord,
+          ];
+        }
+        return [entry];
+      });
+      const entriesForReceipt = migration
+        ? committed.filter(
+            (entry) =>
+              !isRuntimeDeliveryCommittedReceipt(entry) ||
+              !matchesRuntimeDeliveryLogicalKey(entry, canonicalCurrent)
+          )
+        : committed;
       const withReceipt = upsertRuntimeDeliveryCommittedReceipt(
-        committed,
+        entriesForReceipt,
         createRuntimeDeliveryCommittedReceipt(
-          current,
+          canonicalCurrent,
           canonicalInput.location,
           canonicalInput.committedAt
         )
       );
-      return pruneRuntimeDeliveryJournalEntries(withReceipt, this.maxTerminalRecords);
+      const nextEntries = pruneRuntimeDeliveryJournalEntries(withReceipt, this.maxTerminalRecords);
+      rollbackEntries = buildRuntimeDeliveryJournalRollbackEntries(
+        entries,
+        nextEntries,
+        canonicalInput
+      );
+      return nextEntries;
     });
 
     if (!found) {
       throwRuntimeDeliveryJournalRecordNotFound(canonicalInput);
     }
+    if (!migrationFound) {
+      throw new Error('Runtime delivery canonical recovery record changed before commit');
+    }
+    if (!rollbackEntries) {
+      throw new Error('Runtime delivery journal commit snapshot missing');
+    }
+
+    const commitRollbackEntries = rollbackEntries;
+    let rolledBack = false;
+    return {
+      rollback: async () => {
+        if (rolledBack) {
+          return;
+        }
+        await this.store.updateLocked((entries) => {
+          rolledBack = true;
+          return rollbackRuntimeDeliveryJournalEntries(entries, commitRollbackEntries);
+        });
+      },
+    };
   }
 
   async markFailed(input: {
@@ -356,19 +512,188 @@ function matchesRuntimeDeliveryLogicalKey(
   return record.idempotencyKey === input.idempotencyKey && record.teamName === input.teamName;
 }
 
-function hasCompatibleRuntimeDeliveryPayload(
+function buildRuntimeDeliveryJournalRollbackEntries(
+  previousEntries: RuntimeDeliveryJournalEntry[],
+  committedEntries: RuntimeDeliveryJournalEntry[],
+  input: RuntimeDeliveryJournalKeyInput
+): RuntimeDeliveryJournalRollbackEntry[] {
+  const previousByIdentity = new Map(
+    previousEntries.map((entry, index) => [
+      buildRuntimeDeliveryJournalEntryIdentity(entry),
+      { entry, index },
+    ])
+  );
+  const committedByIdentity = new Map(
+    committedEntries.map((entry) => [buildRuntimeDeliveryJournalEntryIdentity(entry), entry])
+  );
+  const lineageIdentities = new Set(
+    [...previousEntries, ...committedEntries]
+      .filter((entry) => matchesRuntimeDeliveryLogicalKey(entry, input))
+      .map(buildRuntimeDeliveryJournalEntryIdentity)
+  );
+
+  return [...lineageIdentities]
+    .map((identity): RuntimeDeliveryJournalRollbackEntry | null => {
+      const previous = previousByIdentity.get(identity);
+      const committed = committedByIdentity.get(identity) ?? null;
+      if (hasSameRuntimeDeliveryJournalEntry(previous?.entry ?? null, committed)) {
+        return null;
+      }
+      return {
+        identity,
+        previous: previous?.entry ?? null,
+        committed,
+        previousIndex: previous?.index ?? previousEntries.length,
+      };
+    })
+    .filter((entry): entry is RuntimeDeliveryJournalRollbackEntry => entry !== null);
+}
+
+function rollbackRuntimeDeliveryJournalEntries(
+  entries: RuntimeDeliveryJournalEntry[],
+  rollbackEntries: RuntimeDeliveryJournalRollbackEntry[]
+): RuntimeDeliveryJournalEntry[] {
+  const rollbackByIdentity = new Map(rollbackEntries.map((entry) => [entry.identity, entry]));
+  const restoredIdentities = new Set<string>();
+  const restored = entries.flatMap((entry): RuntimeDeliveryJournalEntry[] => {
+    const identity = buildRuntimeDeliveryJournalEntryIdentity(entry);
+    const rollback = rollbackByIdentity.get(identity);
+    if (!rollback || !hasSameRuntimeDeliveryJournalEntry(entry, rollback.committed)) {
+      return [entry];
+    }
+    restoredIdentities.add(identity);
+    return rollback.previous ? [rollback.previous] : [];
+  });
+
+  const missingPreviousEntries = rollbackEntries
+    .filter(
+      (rollback) =>
+        rollback.previous !== null &&
+        rollback.committed === null &&
+        !restoredIdentities.has(rollback.identity) &&
+        !restored.some(
+          (entry) => buildRuntimeDeliveryJournalEntryIdentity(entry) === rollback.identity
+        )
+    )
+    .toSorted((left, right) => left.previousIndex - right.previousIndex);
+  for (const rollback of missingPreviousEntries) {
+    restored.splice(Math.min(rollback.previousIndex, restored.length), 0, rollback.previous!);
+  }
+  return restored;
+}
+
+function buildRuntimeDeliveryJournalEntryIdentity(entry: RuntimeDeliveryJournalEntry): string {
+  return isRuntimeDeliveryCommittedReceipt(entry)
+    ? stableJsonStringify(['receipt', entry.teamName, entry.idempotencyKey])
+    : stableJsonStringify(['record', entry.teamName, entry.runId, entry.idempotencyKey]);
+}
+
+function hasSameRuntimeDeliveryJournalEntry(
+  left: RuntimeDeliveryJournalEntry | null,
+  right: RuntimeDeliveryJournalEntry | null
+): boolean {
+  return stableJsonStringify(left) === stableJsonStringify(right);
+}
+
+type RuntimeDeliveryPayloadCompatibility = 'canonical' | 'pre_canonical' | 'conflict';
+
+function classifyRuntimeDeliveryPayload(
+  record: RuntimeDeliveryJournalRecord,
+  input: RuntimeDeliveryJournalBeginInput
+): RuntimeDeliveryPayloadCompatibility {
+  if (record.logicalPayloadHash !== null) {
+    if (record.logicalPayloadHash === input.payloadHash) {
+      if (matchesRuntimeDeliveryDestination(record.destination, input.destination)) {
+        return 'canonical';
+      }
+      if (
+        input.preCanonicalDestination !== undefined &&
+        matchesRuntimeDeliveryDestination(record.destination, input.preCanonicalDestination)
+      ) {
+        return 'pre_canonical';
+      }
+      return 'conflict';
+    }
+    if (
+      record.logicalPayloadHash === input.preCanonicalPayloadHash &&
+      input.preCanonicalDestination !== undefined &&
+      matchesRuntimeDeliveryDestination(record.destination, input.preCanonicalDestination)
+    ) {
+      return 'pre_canonical';
+    }
+    if (isRecoverableRuntimeDeliverySenderAlias(record, input)) {
+      return 'pre_canonical';
+    }
+    return 'conflict';
+  }
+  if (record.status === 'committed') {
+    return 'conflict';
+  }
+  return (record.payloadHash === input.payloadHash ||
+    input.compatiblePayloadHashes?.includes(record.payloadHash) === true) &&
+    matchesRuntimeDeliveryDestination(record.destination, input.destination)
+    ? 'canonical'
+    : 'conflict';
+}
+
+function canRecoverPreCanonicalRuntimeDelivery(
   record: RuntimeDeliveryJournalRecord,
   input: RuntimeDeliveryJournalBeginInput
 ): boolean {
-  if (record.logicalPayloadHash !== null) {
-    return record.logicalPayloadHash === input.payloadHash;
-  }
-  if (record.status === 'committed') {
-    return false;
+  if (isRecoverableRuntimeDeliverySenderAlias(record, input)) {
+    return true;
   }
   return (
-    record.payloadHash === input.payloadHash ||
-    input.compatiblePayloadHashes?.includes(record.payloadHash) === true
+    record.teamName === input.teamName &&
+    record.idempotencyKey === input.idempotencyKey &&
+    input.preCanonicalDestination !== undefined &&
+    matchesRuntimeDeliveryDestination(record.destination, input.preCanonicalDestination)
+  );
+}
+
+function isRecoverableRuntimeDeliverySenderAlias(
+  record: RuntimeDeliveryJournalRecord,
+  input: RuntimeDeliveryJournalBeginInput
+): boolean {
+  const persistedSender = record.fromMemberName.trim();
+  const canonicalSender = input.fromMemberName.trim();
+  const persistedDestination = record.destination;
+  if (
+    record.logicalPayloadHash === null ||
+    !persistedSender ||
+    persistedSender === canonicalSender ||
+    persistedSender.toLowerCase() !== canonicalSender.toLowerCase()
+  ) {
+    return false;
+  }
+
+  return (
+    matchesRuntimeDeliveryDestination(persistedDestination, input.destination) ||
+    (input.preCanonicalDestination !== undefined &&
+      matchesRuntimeDeliveryDestination(persistedDestination, input.preCanonicalDestination))
+  );
+}
+
+function matchesExactRuntimeDeliveryRecoveryRecord(
+  record: RuntimeDeliveryJournalRecord,
+  candidate: RuntimeDeliveryJournalRecord
+): boolean {
+  return (
+    matchesRuntimeDeliveryJournalKey(record, candidate) &&
+    record.fromMemberName === candidate.fromMemberName &&
+    record.payloadHash === candidate.payloadHash &&
+    record.logicalPayloadHash === candidate.logicalPayloadHash &&
+    record.destinationMessageId === candidate.destinationMessageId &&
+    matchesRuntimeDeliveryDestination(record.destination, candidate.destination)
+  );
+}
+
+function matchesRuntimeDeliveryLogicalPayloadHash(
+  logicalPayloadHash: string,
+  input: RuntimeDeliveryJournalBeginInput
+): boolean {
+  return (
+    logicalPayloadHash === input.payloadHash || logicalPayloadHash === input.preCanonicalPayloadHash
   );
 }
 

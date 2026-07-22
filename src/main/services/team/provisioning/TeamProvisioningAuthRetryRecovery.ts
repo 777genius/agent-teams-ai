@@ -1,3 +1,12 @@
+import {
+  finalizeAuthRetryCleanupOwnership,
+  retainAuthRetryCleanupOwnership,
+} from './TeamProvisioningAuthRetryCleanupOwnership';
+
+import type {
+  AnthropicApiKeyHelperCleanupRetryOwner,
+  AnthropicApiKeyHelperRunOwner,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
 import type { TeamProvisioningOutputRecoveryRun } from './TeamProvisioningOutputRecovery';
 import type {
   TeamCreateRequest,
@@ -16,7 +25,8 @@ export interface TeamProvisioningAuthRetrySpawnContext {
   prompt: string;
 }
 
-export interface TeamProvisioningAuthRetryRun extends TeamProvisioningOutputRecoveryRun {
+export interface TeamProvisioningAuthRetryRun
+  extends TeamProvisioningOutputRecoveryRun, AnthropicApiKeyHelperRunOwner {
   child: ChildProcess | null;
   timeoutHandle: NodeJS.Timeout | null;
   stdoutLogLineBuf: string;
@@ -68,7 +78,9 @@ export interface TeamProvisioningAuthRetryPorts<TRun extends TeamProvisioningAut
   getStopAllTeamsGeneration(): number;
   stopFilesystemMonitor(run: TRun): void;
   stopStallWatchdog(run: TRun): void;
-  killTeamProcess(child: ChildProcess | null): void;
+  killTeamProcessAndWait(child: ChildProcess | null): Promise<void>;
+  cleanupRunOwnedAnthropicApiKeyHelper(run: TRun): Promise<void>;
+  retainAnthropicApiKeyHelperCleanupRetryOwner: AnthropicApiKeyHelperCleanupRetryOwner['retainRunOwner'];
   updateProgress(
     run: TRun,
     state: Exclude<TeamProvisioningState, 'idle'>,
@@ -90,6 +102,100 @@ export interface TeamProvisioningAuthRetryOptions {
   preflightAuthRetryDelayMs: number;
 }
 
+async function finalizeFailedAuthRetry<TRun extends TeamProvisioningAuthRetryRun>(
+  run: TRun,
+  child: ChildProcess | null,
+  ports: TeamProvisioningAuthRetryPorts<TRun>,
+  options: {
+    terminationConfirmed: boolean;
+    message: string;
+    error: string;
+    cliLogsTail?: string;
+  }
+): Promise<void> {
+  run.authRetryInProgress = false;
+  const ownership = await finalizeAuthRetryCleanupOwnership({
+    run,
+    child,
+    terminationConfirmed: options.terminationConfirmed,
+    ports,
+  });
+  const progress = ports.updateProgress(run, 'failed', options.message, {
+    error: options.error,
+    cliLogsTail: options.cliLogsTail ?? ports.extractCliLogsFromRun(run),
+  });
+  run.onProgress(progress);
+  if (ownership === 'released') {
+    ports.cleanupRun(run);
+  }
+}
+
+async function terminateAndReleaseAuthRetryRun<TRun extends TeamProvisioningAuthRetryRun>(
+  run: TRun,
+  child: ChildProcess,
+  ports: TeamProvisioningAuthRetryPorts<TRun>,
+  context: 'timeout' | 'child error'
+): Promise<boolean> {
+  try {
+    await ports.killTeamProcessAndWait(child);
+  } catch (error) {
+    run.finalizingByTimeout = false;
+    await retainAuthRetryCleanupOwnership({
+      run,
+      child,
+      terminationConfirmed: false,
+      ports,
+    });
+    ports.logger.error(
+      `[${run.teamName}] Failed to confirm auth-retry process termination after ${context}: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    const progress = ports.updateProgress(
+      run,
+      'failed',
+      'Failed to confirm auth-retry CLI termination',
+      {
+        error:
+          'The auth-retry CLI could not be confirmed stopped. The run and its authentication helper remain tracked for retry.',
+        cliLogsTail: ports.extractCliLogsFromRun(run),
+      }
+    );
+    run.onProgress(progress);
+    return false;
+  }
+
+  try {
+    await ports.cleanupRunOwnedAnthropicApiKeyHelper(run);
+  } catch (error) {
+    run.finalizingByTimeout = false;
+    await retainAuthRetryCleanupOwnership({
+      run,
+      child,
+      terminationConfirmed: true,
+      ports,
+    });
+    ports.logger.error(
+      `[${run.teamName}] Failed to release auth-retry helper after ${context}: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    const progress = ports.updateProgress(
+      run,
+      'failed',
+      'Auth-retry helper cleanup will be retried',
+      {
+        error:
+          'The auth-retry CLI stopped, but app-managed authentication material could not be removed. The run remains tracked for retry.',
+        cliLogsTail: ports.extractCliLogsFromRun(run),
+      }
+    );
+    run.onProgress(progress);
+    return false;
+  }
+  return true;
+}
+
 export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAuthRetryRun>(
   run: TRun,
   ports: TeamProvisioningAuthRetryPorts<TRun>,
@@ -97,11 +203,6 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
 ): Promise<void> {
   const ctx = run.spawnContext;
   const stopAllGenerationAtStart = ports.getStopAllTeamsGeneration();
-  if (!ctx) {
-    ports.logger.error(`[${run.teamName}] Cannot respawn - no spawn context saved`);
-    run.authRetryInProgress = false;
-    return;
-  }
 
   // Tear down current process without full cleanupRun (keep run alive)
   if (run.timeoutHandle) {
@@ -110,14 +211,45 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   }
   ports.stopFilesystemMonitor(run);
   ports.stopStallWatchdog(run);
-  if (run.child) {
-    run.child.stdout?.removeAllListeners('data');
-    run.child.stderr?.removeAllListeners('data');
-    run.child.removeAllListeners('error');
-    run.child.removeAllListeners('exit');
-    run.child.removeAllListeners('close');
-    ports.killTeamProcess(run.child);
-    run.child = null;
+  const previousChild = run.child;
+  if (previousChild) {
+    previousChild.stdout?.removeAllListeners('data');
+    previousChild.stderr?.removeAllListeners('data');
+    previousChild.removeAllListeners('error');
+    previousChild.removeAllListeners('exit');
+    previousChild.removeAllListeners('close');
+    try {
+      await ports.killTeamProcessAndWait(previousChild);
+    } catch (error) {
+      await retainAuthRetryCleanupOwnership({
+        run,
+        child: previousChild,
+        terminationConfirmed: false,
+        ports,
+      });
+      run.authRetryInProgress = false;
+      const progress = ports.updateProgress(
+        run,
+        'failed',
+        'Failed to confirm previous CLI termination before auth retry',
+        {
+          error: error instanceof Error ? error.message : String(error),
+          cliLogsTail: ports.extractCliLogsFromRun(run),
+        }
+      );
+      run.onProgress(progress);
+      return;
+    }
+  }
+
+  if (!ctx) {
+    ports.logger.error(`[${run.teamName}] Cannot respawn - no spawn context saved`);
+    await finalizeFailedAuthRetry(run, previousChild, ports, {
+      terminationConfirmed: true,
+      message: 'Cannot retry Claude CLI authentication',
+      error: 'The saved CLI spawn context is unavailable.',
+    });
+    return;
   }
 
   // Reset buffers for fresh attempt
@@ -137,7 +269,11 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   await ports.sleep(options.preflightAuthRetryDelayMs);
 
   if (run.cancelRequested) {
-    run.authRetryInProgress = false;
+    await finalizeFailedAuthRetry(run, previousChild, ports, {
+      terminationConfirmed: true,
+      message: 'Authentication retry cancelled',
+      error: 'The authentication retry was cancelled before the replacement CLI was spawned.',
+    });
     return;
   }
 
@@ -146,7 +282,18 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   const bootstrapPromptFlagIdx = ctx.args.indexOf('--team-bootstrap-user-prompt-file');
   if (mcpFlagIdx !== -1 && mcpFlagIdx + 1 < ctx.args.length) {
     const existingConfigPath = ctx.args[mcpFlagIdx + 1];
-    if (!(await ports.pathExists(existingConfigPath))) {
+    let configExists: boolean;
+    try {
+      configExists = await ports.pathExists(existingConfigPath);
+    } catch (pathError) {
+      await finalizeFailedAuthRetry(run, previousChild, ports, {
+        terminationConfirmed: true,
+        message: 'Failed to inspect MCP config for auth retry',
+        error: pathError instanceof Error ? pathError.message : String(pathError),
+      });
+      return;
+    }
+    if (!configExists) {
       ports.logger.warn(`[${run.teamName}] MCP config ${existingConfigPath} missing, regenerating`);
       try {
         const newConfigPath = await ports.mcpConfigBuilder.writeConfigFile(ctx.cwd, {
@@ -156,13 +303,11 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
         run.mcpConfigPath = newConfigPath;
         ports.logger.info(`[${run.teamName}] Regenerated MCP config at ${newConfigPath}`);
       } catch (regenErr) {
-        run.authRetryInProgress = false;
-        const progress = ports.updateProgress(run, 'failed', 'Failed to regenerate MCP config', {
+        await finalizeFailedAuthRetry(run, previousChild, ports, {
+          terminationConfirmed: true,
+          message: 'Failed to regenerate MCP config',
           error: regenErr instanceof Error ? regenErr.message : String(regenErr),
-          cliLogsTail: ports.extractCliLogsFromRun(run),
         });
-        run.onProgress(progress);
-        ports.cleanupRun(run);
         return;
       }
     }
@@ -170,41 +315,48 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
 
   if (bootstrapPromptFlagIdx !== -1 && bootstrapPromptFlagIdx + 1 < ctx.args.length) {
     const existingPromptPath = ctx.args[bootstrapPromptFlagIdx + 1];
-    if (!(await ports.pathExists(existingPromptPath))) {
-      const submissionState = await ports.readBootstrapRealTaskSubmissionState(run.teamName);
+    let promptFileExists: boolean;
+    try {
+      promptFileExists = await ports.pathExists(existingPromptPath);
+    } catch (pathError) {
+      await finalizeFailedAuthRetry(run, previousChild, ports, {
+        terminationConfirmed: true,
+        message: 'Failed to inspect deferred first task file for auth retry',
+        error: pathError instanceof Error ? pathError.message : String(pathError),
+      });
+      return;
+    }
+    if (!promptFileExists) {
+      let submissionState: BootstrapRealTaskSubmissionState;
+      try {
+        submissionState = await ports.readBootstrapRealTaskSubmissionState(run.teamName);
+      } catch (stateError) {
+        await finalizeFailedAuthRetry(run, previousChild, ports, {
+          terminationConfirmed: true,
+          message: 'Failed to inspect deferred first task state for auth retry',
+          error: stateError instanceof Error ? stateError.message : String(stateError),
+        });
+        return;
+      }
       if (submissionState === 'submitted') {
         ctx.args.splice(bootstrapPromptFlagIdx, 2);
         ctx.prompt = '';
         run.bootstrapUserPromptPath = null;
       } else if (submissionState === 'unknown') {
-        run.authRetryInProgress = false;
-        const progress = ports.updateProgress(
-          run,
-          'failed',
-          'Unable to safely retry first task after auth failure',
-          {
-            error:
-              'deterministic bootstrap recorded the first real task as unknown, so retry would risk a duplicate submission',
-            cliLogsTail: ports.extractCliLogsFromRun(run),
-          }
-        );
-        run.onProgress(progress);
-        ports.cleanupRun(run);
+        await finalizeFailedAuthRetry(run, previousChild, ports, {
+          terminationConfirmed: true,
+          message: 'Unable to safely retry first task after auth failure',
+          error:
+            'deterministic bootstrap recorded the first real task as unknown, so retry would risk a duplicate submission',
+        });
         return;
       } else if (ctx.prompt.trim().length === 0) {
-        run.authRetryInProgress = false;
-        const progress = ports.updateProgress(
-          run,
-          'failed',
-          'Failed to restore deferred first task after auth retry',
-          {
-            error:
-              'deterministic bootstrap user prompt file was missing and no prompt was available to regenerate it',
-            cliLogsTail: ports.extractCliLogsFromRun(run),
-          }
-        );
-        run.onProgress(progress);
-        ports.cleanupRun(run);
+        await finalizeFailedAuthRetry(run, previousChild, ports, {
+          terminationConfirmed: true,
+          message: 'Failed to restore deferred first task after auth retry',
+          error:
+            'deterministic bootstrap user prompt file was missing and no prompt was available to regenerate it',
+        });
         return;
       } else {
         ports.logger.warn(
@@ -215,18 +367,11 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
           ctx.args[bootstrapPromptFlagIdx + 1] = newPromptPath;
           run.bootstrapUserPromptPath = newPromptPath;
         } catch (regenErr) {
-          run.authRetryInProgress = false;
-          const progress = ports.updateProgress(
-            run,
-            'failed',
-            'Failed to regenerate deferred first task for auth retry',
-            {
-              error: regenErr instanceof Error ? regenErr.message : String(regenErr),
-              cliLogsTail: ports.extractCliLogsFromRun(run),
-            }
-          );
-          run.onProgress(progress);
-          ports.cleanupRun(run);
+          await finalizeFailedAuthRetry(run, previousChild, ports, {
+            terminationConfirmed: true,
+            message: 'Failed to regenerate deferred first task for auth retry',
+            error: regenErr instanceof Error ? regenErr.message : String(regenErr),
+          });
           return;
         }
       }
@@ -263,12 +408,11 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
       stdio: ['pipe', 'pipe', 'pipe'],
     });
   } catch (error) {
-    run.authRetryInProgress = false;
-    const progress = ports.updateProgress(run, 'failed', 'Failed to respawn Claude CLI', {
+    await finalizeFailedAuthRetry(run, previousChild, ports, {
+      terminationConfirmed: true,
+      message: 'Failed to respawn Claude CLI',
       error: error instanceof Error ? error.message : String(error),
     });
-    run.onProgress(progress);
-    ports.cleanupRun(run);
     return;
   }
 
@@ -325,12 +469,14 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
 
   // Restart timeout
   run.timeoutHandle = ports.setTimeout(() => {
-    if (!run.processKilled && !run.provisioningComplete) {
+    if (!run.processKilled && !run.provisioningComplete && run.child === child) {
       run.processKilled = true;
       run.finalizingByTimeout = true;
       void (async () => {
-        const readyOnTimeout = await ports.tryCompleteAfterTimeout(run);
-        ports.killTeamProcess(run.child);
+        if (!(await terminateAndReleaseAuthRetryRun(run, child, ports, 'timeout'))) {
+          return;
+        }
+        const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
         if (readyOnTimeout) return;
 
         const hint = run.isLaunch ? ' (launch)' : '';
@@ -346,12 +492,17 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
 
   child.once('error', (error) => {
     const hint = run.isLaunch ? ' (launch)' : '';
-    const progress = ports.updateProgress(run, 'failed', `Failed to start Claude CLI${hint}`, {
-      error: error.message,
-      cliLogsTail: ports.extractCliLogsFromRun(run),
-    });
-    run.onProgress(progress);
-    ports.cleanupRun(run);
+    run.processKilled = true;
+    void (async () => {
+      if (await terminateAndReleaseAuthRetryRun(run, child, ports, 'child error')) {
+        const progress = ports.updateProgress(run, 'failed', `Failed to start Claude CLI${hint}`, {
+          error: error.message,
+          cliLogsTail: ports.extractCliLogsFromRun(run),
+        });
+        run.onProgress(progress);
+        ports.cleanupRun(run);
+      }
+    })();
   });
 
   child.once('close', (code) => {

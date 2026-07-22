@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createAnthropicApiKeyHelperCleanupRetryOwner } from '../TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   createTeamProvisioningLaunchDeterministicFlowBoundary,
   createTeamProvisioningLaunchDeterministicFlowHostFromService,
@@ -240,7 +241,7 @@ function createDeps(
     >['spawnCli'],
     updateProgress: vi.fn((run) => run.progress),
     setTimeout: vi.fn(() => ({}) as NodeJS.Timeout),
-    killTeamProcess: vi.fn(),
+    killTeamProcessAndWait: vi.fn(async () => undefined),
   };
 }
 
@@ -249,6 +250,7 @@ describe('createTeamProvisioningLaunchDeterministicFlowBoundary', () => {
     const boundHost = new BoundCallbackHost();
     const targetRun = createRun();
     const serviceHost = {
+      anthropicApiKeyHelperCleanupRetryOwner: createAnthropicApiKeyHelperCleanupRetryOwner(),
       runTracking: boundHost.runTracking,
       runs: boundHost.runs,
       provisioningRunByTeam: boundHost.provisioningRunByTeam,

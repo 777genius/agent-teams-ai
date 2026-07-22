@@ -9,6 +9,7 @@ import type { WorkspaceTrustPlanningLogger } from './TeamProvisioningWorkspaceTr
 type CreateSetupPorts = DeterministicCreateSetupFlowPorts<MixedSecondaryRuntimeLaneState>;
 
 export interface TeamProvisioningCreateDeterministicSetupFlowServiceHost {
+  anthropicApiKeyHelperCleanupRetryOwner: CreateSetupPorts['anthropicApiKeyHelperCleanupRetryOwner'];
   pathExists: CreateSetupPorts['pathExists'];
   buildProvisioningEnv: CreateSetupPorts['buildProvisioningEnv'];
   materializeEffectiveTeamMemberSpecs: CreateSetupPorts['materializeEffectiveTeamMemberSpecs'];
@@ -35,6 +36,7 @@ export function createTeamProvisioningCreateDeterministicSetupFlowPortsFromServi
   deps: TeamProvisioningCreateDeterministicSetupFlowFactoryDeps
 ): CreateSetupPorts {
   return {
+    anthropicApiKeyHelperCleanupRetryOwner: service.anthropicApiKeyHelperCleanupRetryOwner,
     pathExists: (filePath) => service.pathExists(filePath),
     resolveClaudePath: deps.resolveClaudePath ?? (() => ClaudeBinaryResolver.resolve()),
     buildMissingCliError: deps.buildMissingCliError ?? buildMissingCliError,

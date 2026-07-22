@@ -46,7 +46,9 @@ export interface TeamProvisioningAuthRetryRecoveryBoundaryDeps<
   logger: TeamProvisioningAuthRetryPorts<TRun>['logger'];
   mcpConfigBuilder: TeamProvisioningAuthRetryPorts<TRun>['mcpConfigBuilder'];
   providerRuntime: Pick<TeamProvisioningProviderRuntimeFacade, 'validateAgentTeamsMcpRuntime'>;
-  killTeamProcess: TeamProvisioningAuthRetryPorts<TRun>['killTeamProcess'];
+  killTeamProcessAndWait: TeamProvisioningAuthRetryPorts<TRun>['killTeamProcessAndWait'];
+  cleanupRunOwnedAnthropicApiKeyHelper: TeamProvisioningAuthRetryPorts<TRun>['cleanupRunOwnedAnthropicApiKeyHelper'];
+  retainAnthropicApiKeyHelperCleanupRetryOwner: TeamProvisioningAuthRetryPorts<TRun>['retainAnthropicApiKeyHelperCleanupRetryOwner'];
   updateProgress: TeamProvisioningAuthRetryPorts<TRun>['updateProgress'];
 }
 
@@ -93,7 +95,10 @@ export function createTeamProvisioningAuthRetryRecoveryBoundary<
           stopFilesystemMonitor: (provisioningRun) =>
             deps.service.stopFilesystemMonitor(provisioningRun),
           stopStallWatchdog: (provisioningRun) => deps.service.stopStallWatchdog(provisioningRun),
-          killTeamProcess: deps.killTeamProcess,
+          killTeamProcessAndWait: deps.killTeamProcessAndWait,
+          cleanupRunOwnedAnthropicApiKeyHelper: deps.cleanupRunOwnedAnthropicApiKeyHelper,
+          retainAnthropicApiKeyHelperCleanupRetryOwner:
+            deps.retainAnthropicApiKeyHelperCleanupRetryOwner,
           updateProgress: deps.updateProgress,
           extractCliLogsFromRun,
           cleanupRun: (provisioningRun) => deps.service.cleanupRun(provisioningRun),

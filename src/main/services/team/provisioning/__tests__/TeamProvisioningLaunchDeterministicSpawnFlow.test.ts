@@ -146,6 +146,8 @@ function createRun(
     provisioningOutputIndexByMessageId: new Map<string, number>(),
     stallWarningIndex: null,
     apiRetryWarningIndex: null,
+    anthropicApiKeyHelper,
+    anthropicApiKeyHelperCleanupPromise: null,
     onProgress: vi.fn(),
     ...overrides,
   } as DeterministicLaunchSpawnFlowRun;
@@ -208,7 +210,7 @@ function createSpawnFlowPorts(
     startStallWatchdog: vi.fn(),
     setTimeout: vi.fn(() => ({ timeout: true }) as unknown as NodeJS.Timeout),
     tryCompleteAfterTimeout: vi.fn(async () => false),
-    killTeamProcess: vi.fn(),
+    killTeamProcessAndWait: vi.fn(async () => undefined),
     cleanupRun: vi.fn(),
     handleProcessExit: vi.fn(),
   } as unknown as RunDeterministicLaunchSpawnFlowPorts<DeterministicLaunchSpawnFlowRun>;
@@ -384,12 +386,12 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
 
     expect(order).toEqual([
       'plan-runtime-args',
-      'delete-run',
-      'delete-team-run',
       'cleanup-auth',
       'remove-mcp',
       'remove-member-mcp',
       'restore-config',
+      'delete-run',
+      'delete-team-run',
     ]);
     expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).toHaveBeenCalledOnce();
     expect(flowMocks.removeDeterministicBootstrapSpecFile).toHaveBeenCalledWith(bootstrapSpecPath);
@@ -426,12 +428,12 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       'write-team-meta',
       'read-members-meta',
       'write-members-meta',
-      'delete-run',
-      'delete-team-run',
       'cleanup-auth',
       'remove-mcp',
       'remove-member-mcp',
       'restore-config',
+      'delete-run',
+      'delete-team-run',
     ]);
     expect(ports.buildTeamRuntimeLaunchArgsPlan).toHaveBeenCalledOnce();
     expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).toHaveBeenCalledOnce();
@@ -476,7 +478,26 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     ).toBe(true);
   });
 
-  it('cleans materialization failures in the legacy state-removal order', async () => {
+  it('rechecks cancellation after permission seeding and does not spawn an orphan', async () => {
+    const run = createRun();
+    const ports = createSpawnFlowPorts([]);
+    ports.seedLeadBootstrapPermissionRules = vi.fn(async () => {
+      run.cancelRequested = true;
+    });
+
+    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toThrow(
+      'Team launch cancelled by app shutdown'
+    );
+
+    expect(ports.seedLeadBootstrapPermissionRules).toHaveBeenCalledOnce();
+    expect(ports.spawnCli).not.toHaveBeenCalled();
+    expect(ports.cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledWith(authHelperDirectory);
+    expect(run.anthropicApiKeyHelper).toBeNull();
+    expect(ports.deleteRun).toHaveBeenCalledWith(run.runId);
+    expect(ports.deleteProvisioningRunByTeam).toHaveBeenCalledWith(run.teamName);
+  });
+
+  it('retains tracking through helper and artifact cleanup before state removal', async () => {
     const order: string[] = [];
     const run = createRun();
 
@@ -509,16 +530,55 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     );
 
     expect(order).toEqual([
-      'delete-run',
-      'delete-team-run',
       'cleanup-auth',
       'remove-mcp',
       'remove-member-mcp',
       'restore-config',
+      'delete-run',
+      'delete-team-run',
     ]);
     expect(run.bootstrapSpecPath).toBeNull();
     expect(run.bootstrapUserPromptPath).toBeNull();
     expect(run.mcpConfigPath).toBeNull();
+  });
+
+  it('retains launch tracking when helper cleanup fails and releases it on retry', async () => {
+    const run = createRun();
+    const deleteRun = vi.fn();
+    const deleteProvisioningRunByTeam = vi.fn();
+    const cleanupAnthropicApiKeyHelperMaterial = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(new Error('remove failed'))
+      .mockResolvedValueOnce(undefined);
+    const cleanupPorts = {
+      deleteRun,
+      deleteProvisioningRunByTeam,
+      cleanupAnthropicApiKeyHelperMaterial,
+      mcpConfigBuilder: {
+        writeConfigFile: vi.fn(async () => mcpConfigPath),
+        removeConfigFile: vi.fn(async () => undefined),
+      },
+      removeRunMemberMcpConfigFiles: vi.fn(async () => undefined),
+      restorePrelaunchConfig: vi.fn(async () => undefined),
+    };
+
+    await cleanupDeterministicLaunchMaterializationFailure(
+      { request, run, runId: run.runId, provisioningEnv: { env: {}, anthropicApiKeyHelper } },
+      cleanupPorts
+    );
+
+    expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
+    expect(deleteRun).not.toHaveBeenCalled();
+    expect(deleteProvisioningRunByTeam).not.toHaveBeenCalled();
+
+    await cleanupDeterministicLaunchMaterializationFailure(
+      { request, run, runId: run.runId, provisioningEnv: { env: {}, anthropicApiKeyHelper } },
+      cleanupPorts
+    );
+
+    expect(run.anthropicApiKeyHelper).toBeNull();
+    expect(deleteRun).toHaveBeenCalledWith(run.runId);
+    expect(deleteProvisioningRunByTeam).toHaveBeenCalledWith(run.teamName);
   });
 
   it('cleans spawn failures in the legacy artifact-first order', async () => {
@@ -566,22 +626,18 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     expect(run.mcpConfigPath).toBeNull();
   });
 
-  it('registers launch child timeout, error, and close handlers without spawning', () => {
+  it('registers launch child timeout, error, and close handlers without spawning', async () => {
     let timeoutCallback: (() => void) | null = null;
     const child = new EventEmitter() as ChildProcess;
     const run = createRun({ child });
     const cleanupRun = vi.fn();
     const handleProcessExit = vi.fn();
-    const updateProgress = vi.fn(
-      (
-        nextRun: DeterministicLaunchSpawnFlowRun,
-        state: Exclude<TeamProvisioningState, 'idle'>,
-        message: string
-      ) => {
-        nextRun.progress = { ...nextRun.progress, state, message };
-        return nextRun.progress;
-      }
-    );
+    const updateProgress = vi.fn<
+      RunDeterministicLaunchSpawnFlowPorts<DeterministicLaunchSpawnFlowRun>['updateProgress']
+    >((nextRun, state, message) => {
+      nextRun.progress = { ...nextRun.progress, state, message };
+      return nextRun.progress;
+    });
 
     registerDeterministicLaunchChildHandlers(
       { run, child },
@@ -591,7 +647,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
           return { timeout: true } as unknown as NodeJS.Timeout;
         }),
         tryCompleteAfterTimeout: vi.fn(async () => false),
-        killTeamProcess: vi.fn(),
+        killTeamProcessAndWait: vi.fn(async () => undefined),
+        cleanupAnthropicApiKeyHelperMaterial: vi.fn(async () => undefined),
         updateProgress,
         cleanupRun,
         handleProcessExit,
@@ -605,7 +662,9 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       'Failed to start Claude CLI (launch)',
       expect.objectContaining({ error: 'spawn failed' })
     );
-    expect(cleanupRun).toHaveBeenCalledWith(run);
+    await vi.waitFor(() => {
+      expect(cleanupRun).toHaveBeenCalledWith(run);
+    });
 
     child.emit('close', 7);
     expect(handleProcessExit).toHaveBeenCalledWith(run, 7);
@@ -618,7 +677,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     const child = new EventEmitter() as ChildProcess;
     const run = createRun({ child });
     const tryCompleteAfterTimeout = vi.fn(async () => true);
-    const killTeamProcess = vi.fn();
+    const killTeamProcessAndWait = vi.fn(async () => undefined);
     const updateProgress = vi.fn();
     const cleanupRun = vi.fn();
 
@@ -630,7 +689,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
           return { timeout: true } as unknown as NodeJS.Timeout;
         }),
         tryCompleteAfterTimeout,
-        killTeamProcess,
+        killTeamProcessAndWait,
+        cleanupAnthropicApiKeyHelperMaterial: vi.fn(async () => undefined),
         updateProgress,
         cleanupRun,
         handleProcessExit: vi.fn(),
@@ -646,10 +706,10 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       expect(tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
     });
 
-    expect(killTeamProcess).not.toHaveBeenCalled();
+    expect(killTeamProcessAndWait).not.toHaveBeenCalled();
     expect(updateProgress).not.toHaveBeenCalled();
     expect(cleanupRun).not.toHaveBeenCalled();
-    expect(run.processKilled).toBe(true);
+    expect(run.processKilled).toBe(false);
     expect(run.finalizingByTimeout).toBe(true);
   });
 
@@ -658,7 +718,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     const child = new EventEmitter() as ChildProcess;
     const run = createRun({ child });
     const tryCompleteAfterTimeout = vi.fn(async () => false);
-    const killTeamProcess = vi.fn();
+    const killTeamProcessAndWait = vi.fn(async () => undefined);
+    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async () => undefined);
     const cleanupRun = vi.fn();
     const updateProgress = vi.fn(
       (
@@ -679,7 +740,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
           return { timeout: true } as unknown as NodeJS.Timeout;
         }),
         tryCompleteAfterTimeout,
-        killTeamProcess,
+        killTeamProcessAndWait,
+        cleanupAnthropicApiKeyHelperMaterial,
         updateProgress,
         cleanupRun,
         handleProcessExit: vi.fn(),
@@ -696,7 +758,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     });
 
     expect(tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
-    expect(killTeamProcess).toHaveBeenCalledWith(child);
+    expect(killTeamProcessAndWait).toHaveBeenCalledWith(child);
     expect(updateProgress).toHaveBeenCalledWith(
       run,
       'failed',
@@ -704,5 +766,201 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       expect.objectContaining({ error: 'Timed out waiting for CLI during team launch.' })
     );
     expect(run.onProgress).toHaveBeenCalledWith(run.progress);
+    expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledWith(authHelperDirectory);
+    expect(run.anthropicApiKeyHelper).toBeNull();
+  });
+
+  it('retains the timed-out launch and helper when process termination is unconfirmed', async () => {
+    let timeoutCallback: (() => void) | null = null;
+    const child = new EventEmitter() as ChildProcess;
+    const run = createRun({ child });
+    const killTeamProcessAndWait = vi.fn(async () => {
+      throw new Error('termination unconfirmed');
+    });
+    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async () => undefined);
+    const cleanupRun = vi.fn();
+    const updateProgress = vi.fn<
+      RunDeterministicLaunchSpawnFlowPorts<DeterministicLaunchSpawnFlowRun>['updateProgress']
+    >((nextRun, state, message) => {
+      nextRun.progress = { ...nextRun.progress, state, message };
+      return nextRun.progress;
+    });
+
+    registerDeterministicLaunchChildHandlers(
+      { run, child },
+      {
+        setTimeout: vi.fn((callback: () => void) => {
+          timeoutCallback = callback;
+          return { timeout: true } as unknown as NodeJS.Timeout;
+        }),
+        tryCompleteAfterTimeout: vi.fn(async () => false),
+        killTeamProcessAndWait,
+        cleanupAnthropicApiKeyHelperMaterial,
+        updateProgress,
+        cleanupRun,
+        handleProcessExit: vi.fn(),
+      }
+    );
+
+    const triggerTimeout = timeoutCallback as (() => void) | null;
+    if (!triggerTimeout) {
+      throw new Error('Expected launch timeout callback to be registered.');
+    }
+    triggerTimeout();
+    await vi.waitFor(() => {
+      const terminationFailureCall = updateProgress.mock.calls.find(
+        (call) => call[2] === 'Failed to confirm timed-out CLI termination (launch)'
+      );
+      expect(terminationFailureCall?.[3]?.error).toContain('remains tracked');
+    });
+
+    expect(killTeamProcessAndWait).toHaveBeenCalledWith(child);
+    expect(cleanupAnthropicApiKeyHelperMaterial).not.toHaveBeenCalled();
+    expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
+    expect(cleanupRun).not.toHaveBeenCalled();
+  });
+
+  it('retains a terminated timed-out launch when helper cleanup needs retry', async () => {
+    let timeoutCallback: (() => void) | null = null;
+    const child = new EventEmitter() as ChildProcess;
+    const run = createRun({ child });
+    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async () => {
+      throw new Error('helper cleanup failed');
+    });
+    const cleanupRun = vi.fn();
+
+    registerDeterministicLaunchChildHandlers(
+      { run, child },
+      {
+        setTimeout: vi.fn((callback: () => void) => {
+          timeoutCallback = callback;
+          return { timeout: true } as unknown as NodeJS.Timeout;
+        }),
+        tryCompleteAfterTimeout: vi.fn(async () => false),
+        killTeamProcessAndWait: vi.fn(async () => undefined),
+        cleanupAnthropicApiKeyHelperMaterial,
+        updateProgress: vi.fn((nextRun: DeterministicLaunchSpawnFlowRun) => nextRun.progress),
+        cleanupRun,
+        handleProcessExit: vi.fn(),
+      }
+    );
+
+    const triggerTimeout = timeoutCallback as (() => void) | null;
+    if (!triggerTimeout) {
+      throw new Error('Expected launch timeout callback to be registered.');
+    }
+    triggerTimeout();
+    await vi.waitFor(() => {
+      expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledWith(authHelperDirectory);
+    });
+
+    expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
+    expect(cleanupRun).not.toHaveBeenCalled();
+  });
+
+  it('does not release the launch helper or run before termination is confirmed', async () => {
+    let timeoutCallback: (() => void) | null = null;
+    const child = new EventEmitter() as ChildProcess;
+    const run = createRun({ child });
+    let confirmTermination!: () => void;
+    const killTeamProcessAndWait = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          confirmTermination = resolve;
+        })
+    );
+    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async () => undefined);
+    const cleanupRun = vi.fn();
+
+    registerDeterministicLaunchChildHandlers(
+      { run, child },
+      {
+        setTimeout: vi.fn((callback: () => void) => {
+          timeoutCallback = callback;
+          return { timeout: true } as unknown as NodeJS.Timeout;
+        }),
+        tryCompleteAfterTimeout: vi.fn(async () => false),
+        killTeamProcessAndWait,
+        cleanupAnthropicApiKeyHelperMaterial,
+        updateProgress: vi.fn((nextRun: DeterministicLaunchSpawnFlowRun) => nextRun.progress),
+        cleanupRun,
+        handleProcessExit: vi.fn(),
+      }
+    );
+
+    const triggerTimeout = timeoutCallback as (() => void) | null;
+    if (!triggerTimeout) {
+      throw new Error('Expected launch timeout callback to be registered.');
+    }
+    triggerTimeout();
+    await vi.waitFor(() => {
+      expect(killTeamProcessAndWait).toHaveBeenCalledWith(child);
+    });
+
+    expect(cleanupAnthropicApiKeyHelperMaterial).not.toHaveBeenCalled();
+    expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
+    expect(cleanupRun).not.toHaveBeenCalled();
+
+    confirmTermination();
+    await vi.waitFor(() => {
+      expect(cleanupRun).toHaveBeenCalledWith(run);
+    });
+
+    expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledWith(authHelperDirectory);
+    expect(run.anthropicApiKeyHelper).toBeNull();
+  });
+
+  it('does not terminate or clean a replacement launch child after timeout probing', async () => {
+    let timeoutCallback: (() => void) | null = null;
+    const child = new EventEmitter() as ChildProcess;
+    const replacementChild = new EventEmitter() as ChildProcess;
+    const run = createRun({ child });
+    let finishProbe!: (ready: boolean) => void;
+    const tryCompleteAfterTimeout = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finishProbe = resolve;
+        })
+    );
+    const killTeamProcessAndWait = vi.fn(async () => undefined);
+    const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async () => undefined);
+    const cleanupRun = vi.fn();
+
+    registerDeterministicLaunchChildHandlers(
+      { run, child },
+      {
+        setTimeout: vi.fn((callback: () => void) => {
+          timeoutCallback = callback;
+          return { timeout: true } as unknown as NodeJS.Timeout;
+        }),
+        tryCompleteAfterTimeout,
+        killTeamProcessAndWait,
+        cleanupAnthropicApiKeyHelperMaterial,
+        updateProgress: vi.fn((nextRun: DeterministicLaunchSpawnFlowRun) => nextRun.progress),
+        cleanupRun,
+        handleProcessExit: vi.fn(),
+      }
+    );
+
+    const triggerTimeout = timeoutCallback as (() => void) | null;
+    if (!triggerTimeout) {
+      throw new Error('Expected launch timeout callback to be registered.');
+    }
+    triggerTimeout();
+    await vi.waitFor(() => {
+      expect(tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
+    });
+
+    run.child = replacementChild;
+    finishProbe(false);
+    await vi.waitFor(() => {
+      expect(run.finalizingByTimeout).toBe(false);
+    });
+
+    expect(run.processKilled).toBe(false);
+    expect(killTeamProcessAndWait).not.toHaveBeenCalled();
+    expect(cleanupAnthropicApiKeyHelperMaterial).not.toHaveBeenCalled();
+    expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
+    expect(cleanupRun).not.toHaveBeenCalled();
   });
 });

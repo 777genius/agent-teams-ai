@@ -267,6 +267,8 @@ export interface TeamCrossTeamMessagingApi {
     relayed: number;
     /** Exact scoped message confirmed by the recent native-lead delivery ledger. */
     recentlyDeliveredMessageId?: string;
+    /** Exact message verified in the durable inbox for a native non-lead recipient. */
+    durablyStoredMessageId?: string;
     diagnostics?: string[];
     lastDelivery?: TeamOpenCodeMemberInboxDelivery;
   }>;

@@ -8,6 +8,8 @@ import { randomUUID } from 'crypto';
 import { buildActionModeAgentBlock } from './actionModeInstructions';
 import { CascadeGuard } from './CascadeGuard';
 import { CrossTeamOutbox } from './CrossTeamOutbox';
+import { resolveCrossTeamRecipientIdentity } from './CrossTeamRecipientIdentity';
+import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 
 import type { TeamCrossTeamMessagingApi } from './contracts/TeamProvisioningApis';
 import type { TeamConfigReader } from './TeamConfigReader';
@@ -18,6 +20,7 @@ import type {
   CrossTeamSendRequest,
   CrossTeamSendResult,
   TeamConfig,
+  TeamMember,
 } from '@shared/types';
 
 const logger = createLogger('CrossTeamService');
@@ -48,30 +51,6 @@ function resolveCrossTeamFromMember(config: TeamConfig, rawFromMember: string): 
   throw new Error(`Unknown fromMember: ${rawFromMember}. Use a configured team member name.`);
 }
 
-function resolveCrossTeamTargetMember(
-  config: TeamConfig,
-  rawToMember: string | undefined,
-  fallbackLeadName: string
-): string {
-  const requestedKey = normalizeMemberKey(rawToMember);
-  if (!requestedKey) {
-    return fallbackLeadName;
-  }
-
-  const members = Array.isArray(config.members) ? config.members : [];
-  const direct = members.find((member) => normalizeMemberKey(member.name) === requestedKey);
-  if (direct?.name?.trim()) {
-    return direct.name.trim();
-  }
-
-  const leadKey = normalizeMemberKey(fallbackLeadName);
-  if (requestedKey === 'lead' || requestedKey === 'team-lead' || requestedKey === leadKey) {
-    return fallbackLeadName;
-  }
-
-  throw new Error(`Unknown toMember: ${rawToMember}. Use a configured target team member name.`);
-}
-
 export interface CrossTeamTarget {
   teamName: string;
   displayName: string;
@@ -82,6 +61,10 @@ export interface CrossTeamTarget {
   isOnline?: boolean;
 }
 
+export interface CrossTeamRecipientMetadataReader {
+  getMembers(teamName: string): Promise<readonly TeamMember[]>;
+}
+
 export class CrossTeamService {
   private cascadeGuard = new CascadeGuard();
   private outbox = new CrossTeamOutbox();
@@ -90,7 +73,8 @@ export class CrossTeamService {
     private configReader: TeamConfigReader,
     private dataService: TeamDataService,
     private inboxWriter: TeamInboxWriter,
-    private messaging: TeamCrossTeamMessagingApi | null
+    private messaging: TeamCrossTeamMessagingApi | null,
+    private recipientMetadataReader: CrossTeamRecipientMetadataReader = new TeamMembersMetaStore()
   ) {}
 
   async send(request: CrossTeamSendRequest): Promise<CrossTeamSendResult> {
@@ -145,12 +129,14 @@ export class CrossTeamService {
       throw new Error(`Target team not found: ${toTeam}`);
     }
 
-    // 2. Resolve lead. Reuse the verified target config before falling back to meta storage.
-    const leadName =
-      targetConfig.members?.find((m) => isLeadMember(m))?.name?.trim() ||
-      (await this.dataService.getLeadMemberName(toTeam)) ||
-      'team-lead';
-    const targetMemberName = resolveCrossTeamTargetMember(targetConfig, toMember, leadName);
+    // 2. Resolve the recipient and lead through the same authority used by runtime delivery.
+    const metaMembers = await this.recipientMetadataReader.getMembers(toTeam);
+    const targetIdentity = resolveCrossTeamRecipientIdentity({
+      sources: { config: targetConfig, metaMembers },
+      rawToMember: toMember,
+    });
+    const targetMemberName = targetIdentity.memberName;
+    const leadName = targetIdentity.leadName;
 
     // 3. Format
     const from = `${fromTeam}.${fromMember}`;
@@ -199,7 +185,11 @@ export class CrossTeamService {
         });
       },
       undefined,
-      { stableIdentity: stableDedupeIdentity, callerMessageId, legacyToMember: leadName }
+      {
+        stableIdentity: stableDedupeIdentity,
+        callerMessageId,
+        ...(leadName ? { legacyToMember: leadName } : {}),
+      }
     );
 
     if (duplicate) {
@@ -212,11 +202,19 @@ export class CrossTeamService {
         toMember: duplicateTargetMemberName,
       };
       if (request.requireRuntimeDelivery) {
-        await this.requireCrossTeamRuntimeDelivery({
-          teamName: toTeam,
-          memberName: duplicateTargetMemberName,
-          messageId: result.messageId,
-        });
+        if (!duplicate.runtimeDeliveryAcceptedAt) {
+          await this.requireCrossTeamRuntimeDelivery({
+            teamName: toTeam,
+            memberName: duplicateTargetMemberName,
+            messageId: result.messageId,
+          });
+          await this.outbox.markRuntimeDeliveryAccepted(fromTeam, {
+            messageId: result.messageId,
+            toTeam,
+            toMember: duplicateTargetMemberName,
+            acceptedAt: new Date().toISOString(),
+          });
+        }
         this.appendSenderCopy({
           fromTeam: duplicate.fromTeam,
           fromMember: duplicate.fromMember,
@@ -239,6 +237,12 @@ export class CrossTeamService {
         teamName: toTeam,
         memberName: targetMemberName,
         messageId,
+      });
+      await this.outbox.markRuntimeDeliveryAccepted(fromTeam, {
+        messageId,
+        toTeam,
+        toMember: targetMemberName,
+        acceptedAt: new Date().toISOString(),
       });
       this.appendSenderCopy({
         fromTeam,
@@ -274,12 +278,11 @@ export class CrossTeamService {
 
     // 7. Best-effort relay (if online)
     if (this.messaging?.isTeamAlive(toTeam)) {
-      const relay =
-        targetMemberName === leadName
-          ? this.messaging.relayLeadInboxMessages(toTeam)
-          : this.messaging.relayInboxFileToLiveRecipient(toTeam, targetMemberName, {
-              onlyMessageId: messageId,
-            });
+      const relay = targetIdentity.isLead
+        ? this.messaging.relayLeadInboxMessages(toTeam)
+        : this.messaging.relayInboxFileToLiveRecipient(toTeam, targetMemberName, {
+            onlyMessageId: messageId,
+          });
       void relay.catch((e: unknown) => {
         logger.warn(
           `Cross-team relay to ${toTeam}.${targetMemberName}: ${
@@ -419,6 +422,10 @@ function hasRuntimeDeliveryProof(
 ): boolean {
   if (relay.kind === 'native_lead') {
     return relay.recentlyDeliveredMessageId === expectedMessageId;
+  }
+
+  if (relay.kind === 'native_member_noop') {
+    return relay.durablyStoredMessageId === expectedMessageId;
   }
 
   if (relay.kind !== 'opencode_member') {

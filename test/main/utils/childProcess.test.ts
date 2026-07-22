@@ -44,6 +44,29 @@ function setPlatform(value: string) {
   });
 }
 
+function reportProcessGoneForProbe(_pid: number, signal?: string | number): true {
+  if (signal === 0) {
+    throw Object.assign(new Error('process exited'), { code: 'ESRCH' });
+  }
+  return true;
+}
+
+function unixProcessTable(
+  rows: readonly {
+    pid: number;
+    parentPid: number;
+    processGroupId: number;
+    startIdentity?: string;
+  }[]
+): string {
+  return rows
+    .map(
+      ({ pid, parentPid, processGroupId, startIdentity = `birth-${pid}` }) =>
+        `${pid} ${parentPid} ${processGroupId} ${startIdentity}`
+    )
+    .join('\n');
+}
+
 // restore platform after tests
 const originalPlatform = process.platform;
 
@@ -380,10 +403,17 @@ describe('cli child process helpers', () => {
     });
 
     it('kills tracked CLI processes on shutdown', () => {
-      setPlatform('linux');
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      spawnSyncMock.mockReturnValue({
+        status: 0,
+        stdout: unixProcessTable([{ pid: 123, parentPid: 1, processGroupId: 123 }]),
+      });
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
       const fakeChild = {
         pid: 123,
+        exitCode: null,
+        signalCode: null,
         kill: vi.fn(),
         once: vi.fn(function once() {
           return fakeChild;
@@ -793,7 +823,7 @@ describe('cli child process helpers', () => {
       setPlatform('darwin');
       const execFileMock = child.execFile as unknown as Mock;
       const spawnSyncMock = child.spawnSync as unknown as Mock;
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
       const childProcess = new EventEmitter() as EventEmitter & {
         pid: number;
         stdout: EventEmitter;
@@ -802,13 +832,23 @@ describe('cli child process helpers', () => {
       childProcess.pid = 799;
       childProcess.stdout = new EventEmitter();
       childProcess.stderr = new EventEmitter();
-      spawnSyncMock.mockReturnValue({ status: 0, stdout: ['799 1', '800 799'].join('\n') });
+      spawnSyncMock.mockReturnValue({
+        status: 0,
+        stdout: unixProcessTable([
+          { pid: 799, parentPid: 1, processGroupId: 799 },
+          { pid: 800, parentPid: 799, processGroupId: 799 },
+        ]),
+      });
       execFileMock.mockImplementation(() => childProcess);
 
       try {
-        const result = execCli('/tmp/agent-teams-controller', ['runtime', 'opencode-command'], {
-          maxBuffer: 16,
-        });
+        const result = execCli(
+          path.join(tmpdir(), 'agent-teams-controller'),
+          ['runtime', 'opencode-command'],
+          {
+            maxBuffer: 16,
+          }
+        );
         childProcess.stdout.emit('data', Buffer.from('output larger than sixteen bytes'));
 
         await expect(result).rejects.toMatchObject({
@@ -830,7 +870,7 @@ describe('cli child process helpers', () => {
       setPlatform('darwin');
       const execFileMock = child.execFile as unknown as Mock;
       const spawnSyncMock = child.spawnSync as unknown as Mock;
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
       const childProcess = new EventEmitter() as EventEmitter & {
         pid: number;
         stdout: EventEmitter;
@@ -839,14 +879,21 @@ describe('cli child process helpers', () => {
       childProcess.pid = 801;
       childProcess.stdout = new EventEmitter();
       childProcess.stderr = new EventEmitter();
-      spawnSyncMock.mockReturnValue({ status: 0, stdout: '801 1' });
+      spawnSyncMock.mockReturnValue({
+        status: 0,
+        stdout: unixProcessTable([{ pid: 801, parentPid: 1, processGroupId: 801 }]),
+      });
       execFileMock.mockImplementation(() => childProcess);
 
       try {
-        const result = execCli('/tmp/agent-teams-controller', ['runtime', 'opencode-command'], {
-          stdoutMaxBuffer: 32,
-          stderrMaxBuffer: 8,
-        });
+        const result = execCli(
+          path.join(tmpdir(), 'agent-teams-controller'),
+          ['runtime', 'opencode-command'],
+          {
+            stdoutMaxBuffer: 32,
+            stderrMaxBuffer: 8,
+          }
+        );
         childProcess.stderr.emit('data', Buffer.from('ninebytes'));
 
         await expect(result).rejects.toMatchObject({
@@ -867,7 +914,7 @@ describe('cli child process helpers', () => {
       vi.useFakeTimers();
       const execFileMock = child.execFile as unknown as Mock;
       const spawnSyncMock = child.spawnSync as unknown as Mock;
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
       const childProcess = new EventEmitter() as EventEmitter & {
         pid: number;
         stdout: EventEmitter;
@@ -878,12 +925,19 @@ describe('cli child process helpers', () => {
       childProcess.stderr = new EventEmitter();
       spawnSyncMock.mockReturnValue({
         status: 0,
-        stdout: ['100 1', '101 100', '102 101', '103 100'].join('\n'),
+        stdout: unixProcessTable([
+          { pid: 100, parentPid: 1, processGroupId: 100 },
+          { pid: 101, parentPid: 100, processGroupId: 100 },
+          { pid: 102, parentPid: 101, processGroupId: 100 },
+          { pid: 103, parentPid: 100, processGroupId: 100 },
+        ]),
       });
       execFileMock.mockImplementation(() => childProcess);
 
       try {
-        const result = execCli('/tmp/cli-dev', ['runtime', 'status'], { timeout: 100 });
+        const result = execCli(path.join(tmpdir(), 'cli-dev'), ['runtime', 'status'], {
+          timeout: 100,
+        });
         const expectation = expect(result).rejects.toMatchObject({
           killed: true,
           signal: 'SIGTERM',
@@ -1001,7 +1055,7 @@ describe('cli child process helpers', () => {
       setPlatform('darwin');
       const execFileMock = child.execFile as unknown as Mock;
       const spawnSyncMock = child.spawnSync as unknown as Mock;
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
       const childProcess = new EventEmitter() as EventEmitter & {
         pid: number;
         stdout: EventEmitter;
@@ -1012,13 +1066,17 @@ describe('cli child process helpers', () => {
       childProcess.stderr = new EventEmitter();
       spawnSyncMock.mockReturnValue({
         status: 0,
-        stdout: ['200 1', '201 200', '202 201'].join('\n'),
+        stdout: unixProcessTable([
+          { pid: 200, parentPid: 1, processGroupId: 200 },
+          { pid: 201, parentPid: 200, processGroupId: 200 },
+          { pid: 202, parentPid: 201, processGroupId: 200 },
+        ]),
       });
       execFileMock.mockImplementation(() => childProcess);
       const controller = new AbortController();
 
       try {
-        const result = execCli('/tmp/cli-dev', ['runtime', 'providers', 'models'], {
+        const result = execCli(path.join(tmpdir(), 'cli-dev'), ['runtime', 'providers', 'models'], {
           signal: controller.signal,
         });
         childProcess.stdout.emit('data', Buffer.from('partial stdout'));
@@ -1044,7 +1102,7 @@ describe('cli child process helpers', () => {
       vi.useFakeTimers();
       const execFileMock = child.execFile as unknown as Mock;
       const spawnSyncMock = child.spawnSync as unknown as Mock;
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
       const childProcess = new EventEmitter() as EventEmitter & {
         pid: number;
         stdout: EventEmitter;
@@ -1055,12 +1113,14 @@ describe('cli child process helpers', () => {
       childProcess.stderr = new EventEmitter();
       spawnSyncMock.mockReturnValue({
         status: 0,
-        stdout: '150 1',
+        stdout: unixProcessTable([{ pid: 150, parentPid: 1, processGroupId: 150 }]),
       });
       execFileMock.mockImplementation(() => childProcess);
 
       try {
-        const result = execCli('/tmp/cli-dev', ['runtime', 'status'], { timeout: 100 });
+        const result = execCli(path.join(tmpdir(), 'cli-dev'), ['runtime', 'status'], {
+          timeout: 100,
+        });
         const caughtPromise = result.then(
           () => null,
           (error) =>
@@ -1106,7 +1166,7 @@ describe('cli child process helpers', () => {
       vi.useFakeTimers();
       const execFileMock = child.execFile as unknown as Mock;
       const spawnSyncMock = child.spawnSync as unknown as Mock;
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
       const childProcess = new EventEmitter() as EventEmitter & {
         pid: number;
         stdout: EventEmitter;
@@ -1117,12 +1177,18 @@ describe('cli child process helpers', () => {
       childProcess.stderr = new EventEmitter();
       spawnSyncMock.mockReturnValue({
         status: 0,
-        stdout: ['500 1', '501 500', '502 501'].join('\n'),
+        stdout: unixProcessTable([
+          { pid: 500, parentPid: 1, processGroupId: 500 },
+          { pid: 501, parentPid: 500, processGroupId: 500 },
+          { pid: 502, parentPid: 501, processGroupId: 500 },
+        ]),
       });
       execFileMock.mockImplementation(() => childProcess);
 
       try {
-        const result = execCli('/tmp/cli-dev', ['runtime', 'status', '--json'], { timeout: 100 });
+        const result = execCli(path.join(tmpdir(), 'cli-dev'), ['runtime', 'status', '--json'], {
+          timeout: 100,
+        });
         const expectation = expect(result).rejects.toMatchObject({
           killed: true,
           signal: 'SIGTERM',
@@ -1156,18 +1222,33 @@ describe('cli child process helpers', () => {
       );
     });
 
-    it('reports an unknown tree outcome when taskkill fails after direct launcher termination', async () => {
+    it('does not pass an already-exited Windows root PID to taskkill or direct kill', async () => {
       setPlatform('win32');
       const execFileMock = child.execFile as unknown as Mock;
-      let launcherAlive = true;
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation((_pid, signal) => {
-        if (signal === 0) {
-          if (launcherAlive) return true;
-          throw Object.assign(new Error('process exited'), { code: 'ESRCH' });
-        }
-        launcherAlive = false;
-        return true;
-      });
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+      try {
+        await killProcessTreeAndWait(
+          {
+            pid: 200,
+            exitCode: 0,
+            signalCode: null,
+          } as Parameters<typeof killProcessTreeAndWait>[0],
+          'SIGKILL'
+        );
+
+        expect(execFileMock).not.toHaveBeenCalled();
+        expect(killSpy).not.toHaveBeenCalled();
+      } finally {
+        killSpy.mockRestore();
+      }
+    });
+
+    it('uses the retained Windows process handle when taskkill fails', async () => {
+      setPlatform('win32');
+      const execFileMock = child.execFile as unknown as Mock;
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const childKill = vi.fn(() => true);
       execFileMock.mockImplementation(
         (_cmd: string, _args: string[], _opts: unknown, callback: ExecCallback) => {
           callback(new Error('Access is denied'), '', 'ERROR: Access is denied');
@@ -1178,21 +1259,61 @@ describe('cli child process helpers', () => {
       try {
         await expect(
           killProcessTreeAndWait(
-            { pid: 200 } as Parameters<typeof killProcessTreeAndWait>[0],
+            { pid: 200, kill: childKill } as unknown as Parameters<
+              typeof killProcessTreeAndWait
+            >[0],
             'SIGKILL'
           )
         ).rejects.toThrow('descendant outcome is unknown');
 
-        expect(killSpy).toHaveBeenCalledWith(200, 'SIGKILL');
+        expect(childKill).toHaveBeenCalledWith('SIGKILL');
+        expect(killSpy).not.toHaveBeenCalled();
       } finally {
         killSpy.mockRestore();
       }
     });
 
-    it('rejects awaited Windows termination when taskkill and direct kill both fail', async () => {
+    it('never falls back to a recycled Windows PID after taskkill fails', async () => {
       setPlatform('win32');
       const execFileMock = child.execFile as unknown as Mock;
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => {
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const childProcess = {
+        pid: 201,
+        exitCode: null as number | null,
+        signalCode: null as NodeJS.Signals | null,
+        kill: vi.fn(() => {
+          childProcess.exitCode = 0;
+          return false;
+        }),
+      };
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, callback: ExecCallback) => {
+          childProcess.exitCode = 0;
+          callback(new Error('Access is denied'), '', 'ERROR: Access is denied');
+          return createMockProcess<ExecChild>();
+        }
+      );
+
+      try {
+        await expect(
+          killProcessTreeAndWait(
+            childProcess as unknown as Parameters<typeof killProcessTreeAndWait>[0],
+            'SIGKILL'
+          )
+        ).rejects.toThrow('descendant outcome is unknown');
+
+        expect(childProcess.kill).toHaveBeenCalledWith('SIGKILL');
+        expect(killSpy).not.toHaveBeenCalled();
+      } finally {
+        killSpy.mockRestore();
+      }
+    });
+
+    it('rejects awaited Windows termination when taskkill and handle-bound kill both fail', async () => {
+      setPlatform('win32');
+      const execFileMock = child.execFile as unknown as Mock;
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const childKill = vi.fn(() => {
         throw Object.assign(new Error('operation not permitted'), { code: 'EPERM' });
       });
       execFileMock.mockImplementation(
@@ -1205,10 +1326,14 @@ describe('cli child process helpers', () => {
       try {
         await expect(
           killProcessTreeAndWait(
-            { pid: 201 } as Parameters<typeof killProcessTreeAndWait>[0],
+            { pid: 202, kill: childKill } as unknown as Parameters<
+              typeof killProcessTreeAndWait
+            >[0],
             'SIGKILL'
           )
-        ).rejects.toThrow('Failed to verify termination of Windows process tree 201');
+        ).rejects.toThrow('Failed to verify termination of Windows process tree 202');
+        expect(childKill).toHaveBeenCalledWith('SIGKILL');
+        expect(killSpy).not.toHaveBeenCalled();
       } finally {
         killSpy.mockRestore();
       }
@@ -1217,10 +1342,14 @@ describe('cli child process helpers', () => {
     it('kills POSIX descendants discovered from ps output', () => {
       setPlatform('darwin');
       const spawnSyncMock = child.spawnSync as unknown as Mock;
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
       spawnSyncMock.mockReturnValue({
         status: 0,
-        stdout: ['200 1', '201 200', '202 201'].join('\n'),
+        stdout: unixProcessTable([
+          { pid: 200, parentPid: 1, processGroupId: 200 },
+          { pid: 201, parentPid: 200, processGroupId: 200 },
+          { pid: 202, parentPid: 201, processGroupId: 200 },
+        ]),
       });
 
       try {
@@ -1230,6 +1359,233 @@ describe('cli child process helpers', () => {
           expect.arrayContaining([200, 201, 202])
         );
       } finally {
+        killSpy.mockRestore();
+      }
+    });
+
+    it('does not resolve awaited POSIX termination while a discovered descendant is alive', async () => {
+      setPlatform('darwin');
+      vi.useFakeTimers();
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      let descendantAlive = true;
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation((pid, signal) => {
+        if (signal !== 0) {
+          return true;
+        }
+        if (pid === 201 && descendantAlive) {
+          return true;
+        }
+        throw Object.assign(new Error('process exited'), { code: 'ESRCH' });
+      });
+      spawnSyncMock.mockReturnValue({
+        status: 0,
+        stdout: unixProcessTable([
+          { pid: 200, parentPid: 1, processGroupId: 200 },
+          { pid: 201, parentPid: 200, processGroupId: 200 },
+        ]),
+      });
+
+      try {
+        let settled = false;
+        const stopping = killProcessTreeAndWait(
+          { pid: 200 } as Parameters<typeof killProcessTreeAndWait>[0],
+          'SIGKILL'
+        ).then(() => {
+          settled = true;
+        });
+        await Promise.resolve();
+
+        expect(killSpy).toHaveBeenCalledWith(201, 0);
+        expect(settled).toBe(false);
+
+        descendantAlive = false;
+        await vi.advanceTimersByTimeAsync(25);
+        await stopping;
+        expect(settled).toBe(true);
+      } finally {
+        killSpy.mockRestore();
+        vi.useRealTimers();
+      }
+    });
+
+    it('rejects awaited POSIX termination when descendants cannot be enumerated', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+      spawnSyncMock.mockReturnValue({ status: 1, stdout: '' });
+
+      try {
+        await expect(
+          killProcessTreeAndWait(
+            { pid: 200 } as Parameters<typeof killProcessTreeAndWait>[0],
+            'SIGKILL'
+          )
+        ).rejects.toThrow('Failed to inspect Unix process tree 200');
+        expect(killSpy).not.toHaveBeenCalled();
+      } finally {
+        killSpy.mockRestore();
+      }
+    });
+
+    it('does not signal a Unix pid whose birth identity changed after capture', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      spawnSyncMock
+        .mockReturnValueOnce({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 200, parentPid: 1, processGroupId: 200, startIdentity: 'old-birth' },
+          ]),
+        })
+        .mockReturnValue({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 200, parentPid: 1, processGroupId: 200, startIdentity: 'new-birth' },
+          ]),
+        });
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+
+      try {
+        await expect(
+          killProcessTreeAndWait(
+            { pid: 200 } as Parameters<typeof killProcessTreeAndWait>[0],
+            'SIGKILL'
+          )
+        ).resolves.toBeUndefined();
+        expect(killSpy).not.toHaveBeenCalled();
+      } finally {
+        killSpy.mockRestore();
+      }
+    });
+
+    it('fails closed when a captured Unix birth identity changes process groups', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      spawnSyncMock
+        .mockReturnValueOnce({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 250, parentPid: 1, processGroupId: 250, startIdentity: 'same-birth' },
+          ]),
+        })
+        .mockReturnValue({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 250, parentPid: 1, processGroupId: 999, startIdentity: 'same-birth' },
+          ]),
+        });
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+
+      try {
+        await expect(
+          killProcessTreeAndWait(
+            { pid: 250 } as Parameters<typeof killProcessTreeAndWait>[0],
+            'SIGKILL'
+          )
+        ).rejects.toThrow('captured birth identity changed process groups');
+        expect(killSpy).not.toHaveBeenCalled();
+      } finally {
+        killSpy.mockRestore();
+      }
+    });
+
+    it('fails closed for an untracked exited root even when its pid is observable again', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      spawnSyncMock.mockReturnValue({
+        status: 0,
+        stdout: unixProcessTable([
+          { pid: 275, parentPid: 1, processGroupId: 275, startIdentity: 'reused-birth' },
+        ]),
+      });
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+
+      try {
+        await expect(
+          killProcessTreeAndWait(
+            { pid: 275, exitCode: 0, signalCode: null } as Parameters<
+              typeof killProcessTreeAndWait
+            >[0],
+            'SIGKILL'
+          )
+        ).rejects.toThrow('root birth identity was not captured');
+        expect(killSpy).not.toHaveBeenCalled();
+      } finally {
+        killSpy.mockRestore();
+      }
+    });
+
+    it('terminates owned process-group descendants after the tracked root exits', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      spawnSyncMock
+        .mockReturnValueOnce({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 300, parentPid: 1, processGroupId: 300, startIdentity: 'root-birth' },
+          ]),
+        })
+        .mockReturnValue({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 301, parentPid: 1, processGroupId: 300, startIdentity: 'child-birth' },
+          ]),
+        });
+      const trackedChild = Object.assign(createMockProcess<SpawnCliChild>(), {
+        pid: 300,
+        exitCode: null as number | null,
+        signalCode: null as NodeJS.Signals | null,
+      });
+      (child.spawn as unknown as Mock).mockReturnValue(trackedChild);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+
+      try {
+        spawnCli('/usr/bin/claude', ['--version']);
+        trackedChild.exitCode = 0;
+
+        await killProcessTreeAndWait(trackedChild, 'SIGKILL');
+
+        expect(killSpy).toHaveBeenCalledWith(301, 'SIGKILL');
+        expect(killSpy).not.toHaveBeenCalledWith(300, 'SIGKILL');
+      } finally {
+        trackedChild.emit('close', 0);
+        killSpy.mockRestore();
+      }
+    });
+
+    it('fails closed when a tracked root pid is reused before descendant proof', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      spawnSyncMock
+        .mockReturnValueOnce({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 400, parentPid: 1, processGroupId: 400, startIdentity: 'root-birth' },
+          ]),
+        })
+        .mockReturnValue({
+          status: 0,
+          stdout: unixProcessTable([
+            { pid: 400, parentPid: 1, processGroupId: 400, startIdentity: 'reused-birth' },
+            { pid: 401, parentPid: 400, processGroupId: 400, startIdentity: 'unknown-child' },
+          ]),
+        });
+      const trackedChild = Object.assign(createMockProcess<SpawnCliChild>(), {
+        pid: 400,
+        exitCode: 0,
+        signalCode: null,
+      });
+      (child.spawn as unknown as Mock).mockReturnValue(trackedChild);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+
+      try {
+        spawnCli('/usr/bin/claude', ['--version']);
+        await expect(killProcessTreeAndWait(trackedChild, 'SIGKILL')).rejects.toThrow(
+          'root pid was reused after ownership capture'
+        );
+        expect(killSpy).not.toHaveBeenCalled();
+      } finally {
+        trackedChild.emit('close', 0);
         killSpy.mockRestore();
       }
     });

@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-empty-function -- Synthetic service ports preserve async contracts and intentional no-op callbacks. */
+/* eslint-disable @typescript-eslint/array-type, @typescript-eslint/consistent-type-definitions -- Fixture declarations mirror the service contract vocabulary. */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/non-nullable-type-assertion-style -- Assertions make fixture phase expectations explicit. */
+/* eslint-disable sonarjs/publicly-writable-directories -- Test-only paths are isolated and never used for production writes. */
+
 import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
@@ -81,6 +86,18 @@ vi.mock('@main/utils/childProcess', () => ({
   }),
   spawnCli: vi.fn(),
   killProcessTree: vi.fn(),
+  killProcessTreeAndWait: vi.fn(
+    (child: import('child_process').ChildProcess | null | undefined, signal?: string) => {
+      if (!child?.pid || child.exitCode != null || child.signalCode != null) {
+        return Promise.resolve();
+      }
+      const terminationSignal = (signal ?? 'SIGTERM') as NodeJS.Signals;
+      Object.assign(child, { signalCode: terminationSignal });
+      child.emit('exit', null, terminationSignal);
+      child.emit('close', null, terminationSignal);
+      return Promise.resolve();
+    }
+  ),
 }));
 
 vi.mock('@main/utils/shellEnv', async (importOriginal) => {
@@ -129,6 +146,8 @@ function createFakeChild() {
   const endSpy = vi.fn();
   const child = Object.assign(new EventEmitter(), {
     pid: 12345,
+    exitCode: null as number | null,
+    signalCode: null as NodeJS.Signals | null,
     stdin: { writable: true, write: writeSpy, end: endSpy },
     stdout: new EventEmitter(),
     stderr: new EventEmitter(),

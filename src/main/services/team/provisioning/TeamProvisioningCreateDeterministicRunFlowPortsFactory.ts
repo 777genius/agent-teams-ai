@@ -10,6 +10,10 @@ import { type ProvisioningRun } from './TeamProvisioningRunModel';
 import { type MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 
 export interface TeamProvisioningCreateDeterministicRunFlowServiceHost {
+  anthropicApiKeyHelperCleanupRetryOwner: DeterministicCreateRunFlowPorts<
+    ProvisioningRun,
+    MixedSecondaryRuntimeLaneState
+  >['anthropicApiKeyHelperCleanupRetryOwner'];
   runs: Map<string, ProvisioningRun>;
   provisioningRunByTeam: Map<string, string>;
   resetTeamScopedTransientStateForNewRun(teamName: string): void;
@@ -28,6 +32,7 @@ export function createTeamProvisioningCreateDeterministicRunFlowPortsFromService
     ProvisioningRun,
     MixedSecondaryRuntimeLaneState
   >({
+    anthropicApiKeyHelperCleanupRetryOwner: service.anthropicApiKeyHelperCleanupRetryOwner,
     createProvisioningRun: (input) =>
       createDeterministicCreateProvisioningRun({
         ...input,

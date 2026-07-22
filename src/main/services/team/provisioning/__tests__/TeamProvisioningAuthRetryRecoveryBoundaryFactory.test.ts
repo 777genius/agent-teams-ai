@@ -65,6 +65,8 @@ function makeRun(): TestRun {
     processKilled: false,
     cancelRequested: false,
     provisioningComplete: false,
+    anthropicApiKeyHelper: null,
+    anthropicApiKeyHelperCleanupPromise: null,
     child: null,
     onProgress: vi.fn(),
     expectedMembers: [],
@@ -152,14 +154,18 @@ describe('TeamProvisioningAuthRetryRecoveryBoundaryFactory', () => {
         this.calls.push(claudePath);
       },
     };
-    const killTeamProcess = vi.fn();
+    const killTeamProcessAndWait = vi.fn(async () => undefined);
+    const cleanupRunOwnedAnthropicApiKeyHelper = vi.fn(async () => undefined);
+    const retainAnthropicApiKeyHelperCleanupRetryOwner = vi.fn();
     const updateProgress = vi.fn((targetRun: TestRun) => targetRun.progress);
     const boundary = createTeamProvisioningAuthRetryRecoveryBoundary<TestRun>({
       service,
       logger,
       mcpConfigBuilder,
       providerRuntime,
-      killTeamProcess,
+      killTeamProcessAndWait,
+      cleanupRunOwnedAnthropicApiKeyHelper,
+      retainAnthropicApiKeyHelperCleanupRetryOwner,
       updateProgress,
     });
 
@@ -171,7 +177,9 @@ describe('TeamProvisioningAuthRetryRecoveryBoundaryFactory', () => {
       expect.objectContaining({
         logger,
         mcpConfigBuilder,
-        killTeamProcess,
+        killTeamProcessAndWait,
+        cleanupRunOwnedAnthropicApiKeyHelper,
+        retainAnthropicApiKeyHelperCleanupRetryOwner,
         updateProgress,
       }),
       { preflightAuthRetryDelayMs: PREFLIGHT_AUTH_RETRY_DELAY_MS }

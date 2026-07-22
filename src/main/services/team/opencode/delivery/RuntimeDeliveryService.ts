@@ -6,8 +6,10 @@ import {
   hashRuntimeDeliveryEnvelopeLegacyTransport,
   normalizeRuntimeDeliveryEnvelope,
   resolveRuntimeDeliveryDestination,
+  type RuntimeDeliveryCanonicalRecoveryMigration,
   type RuntimeDeliveryDestinationRef,
   type RuntimeDeliveryEnvelope,
+  RuntimeDeliveryJournalCommitRevalidationError,
   type RuntimeDeliveryJournalRecord,
   type RuntimeDeliveryLocation,
 } from './RuntimeDeliveryJournal';
@@ -18,6 +20,16 @@ export interface RuntimeDeliveryVerifyResult {
   found: boolean;
   location: RuntimeDeliveryLocation | null;
   diagnostics: string[];
+  recoveryEvidence?: RuntimeDeliveryRecoveryEvidence;
+}
+
+export interface RuntimeDeliveryRecoveryEvidence {
+  fromMemberName: string;
+  runtimeSessionId: string;
+  text: string;
+  createdAt: string;
+  summary: string | null;
+  taskRefs?: RuntimeDeliveryEnvelope['taskRefs'];
 }
 
 export interface RuntimeDeliveryDestinationPort {
@@ -32,6 +44,11 @@ export interface RuntimeDeliveryDestinationPort {
     destination: RuntimeDeliveryDestinationRef;
     destinationMessageId: string;
     location?: RuntimeDeliveryLocation;
+    preCanonicalRecovery?: {
+      envelope: RuntimeDeliveryEnvelope;
+      canonicalDestination: RuntimeDeliveryDestinationRef;
+    };
+    includeRecoveryEvidence?: boolean;
   }): Promise<RuntimeDeliveryVerifyResult>;
 
   buildChangeEvent(input: {
@@ -48,6 +65,14 @@ export interface RuntimeDeliveryTeamChangeEvent {
 
 export interface RuntimeDeliveryRunStateReader {
   getCurrentRunId(teamName: string): Promise<string | null>;
+}
+
+export interface RuntimeDeliveryRecipientCanonicalizer {
+  canonicalize(envelope: RuntimeDeliveryEnvelope): Promise<RuntimeDeliveryEnvelope>;
+}
+
+export interface RuntimeDeliveryJournalRecordCanonicalizer {
+  canonicalize(record: RuntimeDeliveryJournalRecord): Promise<RuntimeDeliveryJournalRecord>;
 }
 
 export interface RuntimeDeliveryDiagnosticsSink {
@@ -122,7 +147,8 @@ export class RuntimeDeliveryService {
     private readonly destinations: RuntimeDeliveryDestinationRegistry,
     private readonly diagnostics: RuntimeDeliveryDiagnosticsSink,
     private readonly teamChangeEmitter: RuntimeDeliveryTeamChangeEmitter,
-    private readonly clock: () => Date = () => new Date()
+    private readonly clock: () => Date = () => new Date(),
+    private readonly recipientCanonicalizer?: RuntimeDeliveryRecipientCanonicalizer
   ) {}
 
   async deliver(raw: unknown): Promise<RuntimeDeliveryAck> {
@@ -130,21 +156,35 @@ export class RuntimeDeliveryService {
     return await serializeRuntimeDelivery(envelope, () => this.deliverEnvelope(envelope));
   }
 
-  private async deliverEnvelope(envelope: RuntimeDeliveryEnvelope): Promise<RuntimeDeliveryAck> {
+  private async deliverEnvelope(
+    requestedEnvelope: RuntimeDeliveryEnvelope
+  ): Promise<RuntimeDeliveryAck> {
     const now = this.clock().toISOString();
-    const staleRun = await this.rejectIfRunIsStale(envelope);
+    const staleRun = await this.rejectIfRunIsStale(requestedEnvelope);
     if (staleRun) {
       return staleRun;
     }
 
+    const envelope = this.recipientCanonicalizer
+      ? normalizeRuntimeDeliveryEnvelope(
+          await this.recipientCanonicalizer.canonicalize(requestedEnvelope)
+        )
+      : requestedEnvelope;
+
+    const preCanonicalDestination = resolveRuntimeDeliveryDestination(requestedEnvelope);
     const requestedDestination = resolveRuntimeDeliveryDestination(envelope);
     const requestedDestinationMessageId = buildRuntimeDestinationMessageId(envelope);
     const payloadHash = hashRuntimeDeliveryEnvelope(envelope);
+    const requestedPayloadHash = hashRuntimeDeliveryEnvelope(requestedEnvelope);
     const legacyTransportPayloadHash = hashRuntimeDeliveryEnvelopeLegacyTransport(envelope);
     const legacyPayloadHash = hashRuntimeDeliveryEnvelopeLegacyTaskRefs(envelope);
     const begin = await this.journal.begin({
       idempotencyKey: envelope.idempotencyKey,
       payloadHash,
+      preCanonicalPayloadHash:
+        requestedPayloadHash === payloadHash ? undefined : requestedPayloadHash,
+      preCanonicalDestination:
+        requestedPayloadHash === payloadHash ? undefined : preCanonicalDestination,
       compatiblePayloadHashes: [legacyTransportPayloadHash, legacyPayloadHash].filter(
         (candidate): candidate is string => candidate !== null
       ),
@@ -205,6 +245,89 @@ export class RuntimeDeliveryService {
     const destination = begin.record.destination;
     const destinationMessageId = begin.record.destinationMessageId;
     const port = this.destinations.get(destination.kind);
+    const preCanonicalRecoveryRecords = begin.preCanonicalRecoveryRecords ?? [];
+    if (preCanonicalRecoveryRecords.length > 0) {
+      for (const candidate of preCanonicalRecoveryRecords) {
+        const candidatePort = this.destinations.get(candidate.destination.kind);
+        const verificationInput: Parameters<RuntimeDeliveryDestinationPort['verify']>[0] = {
+          destination: candidate.destination,
+          destinationMessageId: candidate.destinationMessageId,
+          ...(candidate.committedLocation ? { location: candidate.committedLocation } : {}),
+          preCanonicalRecovery: {
+            envelope,
+            canonicalDestination: requestedDestination,
+          },
+        };
+        const preExisting = await candidatePort.verify(verificationInput);
+        if (!preExisting.found || !preExisting.location) {
+          continue;
+        }
+        try {
+          const verifiedLocation = preExisting.location;
+          await markRuntimeDeliveryCommittedWithBoundProof({
+            journal: this.journal,
+            port: candidatePort,
+            verificationInput,
+            isValidProof: (candidateProof) =>
+              candidateProof.found &&
+              candidateProof.location !== null &&
+              hasSameRuntimeDeliveryLocationIdentity(verifiedLocation, candidateProof.location),
+            commit: {
+              idempotencyKey: envelope.idempotencyKey,
+              runId: envelope.runId,
+              teamName: envelope.teamName,
+              location: verifiedLocation,
+              committedAt: now,
+              canonicalRecoveryMigration: {
+                recoveryRecords: preCanonicalRecoveryRecords,
+                fromMemberName: envelope.fromMemberName,
+                payloadHash,
+                destination: requestedDestination,
+                destinationMessageId: requestedDestinationMessageId,
+              },
+            },
+          });
+        } catch (error) {
+          if (error instanceof RuntimeDeliveryJournalCommitRevalidationError) {
+            continue;
+          }
+          throw error;
+        }
+        return {
+          ok: true,
+          delivered: false,
+          reason: 'duplicate_destination_found',
+          idempotencyKey: envelope.idempotencyKey,
+          location: preExisting.location,
+        };
+      }
+
+      await this.diagnostics.append({
+        type: 'runtime_delivery_conflict',
+        providerId: 'opencode',
+        teamName: envelope.teamName,
+        runId: envelope.runId,
+        severity: 'error',
+        message:
+          'Pre-canonical runtime delivery could not be verified at its persisted destination',
+        data: {
+          idempotencyKey: envelope.idempotencyKey,
+          recoveryDestinations: preCanonicalRecoveryRecords.map((record) => ({
+            destination: record.destination,
+            destinationMessageId: record.destinationMessageId,
+            status: record.status,
+          })),
+        },
+        createdAt: now,
+      });
+      return {
+        ok: false,
+        delivered: false,
+        reason: 'idempotency_conflict',
+        idempotencyKey: envelope.idempotencyKey,
+      };
+    }
+
     const verifiedDestinationMessageIds = new Set<string>();
     for (const candidate of [...(begin.recoveryRecords ?? []), begin.record]) {
       if (verifiedDestinationMessageIds.has(candidate.destinationMessageId)) {
@@ -212,18 +335,36 @@ export class RuntimeDeliveryService {
       }
       verifiedDestinationMessageIds.add(candidate.destinationMessageId);
       const candidatePort = this.destinations.get(candidate.destination.kind);
-      const preExisting = await candidatePort.verify({
+      const verificationInput: Parameters<RuntimeDeliveryDestinationPort['verify']>[0] = {
         destination: candidate.destination,
         destinationMessageId: candidate.destinationMessageId,
-      });
+      };
+      const preExisting = await candidatePort.verify(verificationInput);
       if (preExisting.found && preExisting.location) {
-        await this.journal.markCommitted({
-          idempotencyKey: envelope.idempotencyKey,
-          runId: envelope.runId,
-          teamName: envelope.teamName,
-          location: preExisting.location,
-          committedAt: now,
-        });
+        const verifiedLocation = preExisting.location;
+        try {
+          await markRuntimeDeliveryCommittedWithBoundProof({
+            journal: this.journal,
+            port: candidatePort,
+            verificationInput,
+            isValidProof: (candidateProof) =>
+              candidateProof.found &&
+              candidateProof.location !== null &&
+              hasSameRuntimeDeliveryLocationIdentity(verifiedLocation, candidateProof.location),
+            commit: {
+              idempotencyKey: envelope.idempotencyKey,
+              runId: envelope.runId,
+              teamName: envelope.teamName,
+              location: verifiedLocation,
+              committedAt: now,
+            },
+          });
+        } catch (error) {
+          if (error instanceof RuntimeDeliveryJournalCommitRevalidationError) {
+            continue;
+          }
+          throw error;
+        }
         return {
           ok: true,
           delivered: false,
@@ -251,12 +392,22 @@ export class RuntimeDeliveryService {
       }
 
       const committedLocation = verified.location ?? location;
-      await this.journal.markCommitted({
-        idempotencyKey: envelope.idempotencyKey,
-        runId: envelope.runId,
-        teamName: envelope.teamName,
-        location: committedLocation,
-        committedAt: this.clock().toISOString(),
+      const verificationInput = { destination, destinationMessageId, location: committedLocation };
+      await markRuntimeDeliveryCommittedWithBoundProof({
+        journal: this.journal,
+        port,
+        verificationInput,
+        isValidProof: (candidateProof) =>
+          candidateProof.found &&
+          candidateProof.location !== null &&
+          hasSameRuntimeDeliveryLocationIdentity(committedLocation, candidateProof.location),
+        commit: {
+          idempotencyKey: envelope.idempotencyKey,
+          runId: envelope.runId,
+          teamName: envelope.teamName,
+          location: committedLocation,
+          committedAt: this.clock().toISOString(),
+        },
       });
 
       await this.emitChangeEventBestEffort(port, envelope, committedLocation);
@@ -276,14 +427,16 @@ export class RuntimeDeliveryService {
         return staleRunAfterDeliveryFailure;
       }
 
-      await this.journal.markFailed({
-        idempotencyKey: envelope.idempotencyKey,
-        runId: envelope.runId,
-        teamName: envelope.teamName,
-        status: 'failed_retryable',
-        error: stringifyError(error),
-        updatedAt: this.clock().toISOString(),
-      });
+      if (!(error instanceof RuntimeDeliveryJournalCommitRevalidationError)) {
+        await this.journal.markFailed({
+          idempotencyKey: envelope.idempotencyKey,
+          runId: envelope.runId,
+          teamName: envelope.teamName,
+          status: 'failed_retryable',
+          error: stringifyError(error),
+          updatedAt: this.clock().toISOString(),
+        });
+      }
       await this.diagnostics.append({
         type: 'runtime_delivery_failed',
         providerId: 'opencode',
@@ -394,7 +547,8 @@ export class RuntimeDeliveryReconciler {
     private readonly journal: RuntimeDeliveryJournalStore,
     private readonly destinations: RuntimeDeliveryDestinationRegistry,
     private readonly diagnostics: RuntimeDeliveryDiagnosticsSink,
-    private readonly clock: () => Date = () => new Date()
+    private readonly clock: () => Date = () => new Date(),
+    private readonly recordCanonicalizer?: RuntimeDeliveryJournalRecordCanonicalizer
   ) {}
 
   async reconcileTeam(teamName: string): Promise<void> {
@@ -405,38 +559,318 @@ export class RuntimeDeliveryReconciler {
   }
 
   private async reconcileRecord(record: RuntimeDeliveryJournalRecord): Promise<void> {
-    const port = this.destinations.get(record.destination.kind);
-    const verified = await port.verify({
-      destination: record.destination,
-      destinationMessageId: record.destinationMessageId,
-    });
+    const canonicalRecord = this.recordCanonicalizer
+      ? await this.recordCanonicalizer.canonicalize(record)
+      : record;
+    assertSameRuntimeDeliveryJournalIdentity(record, canonicalRecord);
+    const identityWasCanonicalized = hasCanonicalRuntimeDeliveryIdentityChange(
+      record,
+      canonicalRecord
+    );
+    const port = this.destinations.get(canonicalRecord.destination.kind);
+    const verificationInput: Parameters<RuntimeDeliveryDestinationPort['verify']>[0] = {
+      destination: canonicalRecord.destination,
+      destinationMessageId: canonicalRecord.destinationMessageId,
+      ...(canonicalRecord.committedLocation ? { location: canonicalRecord.committedLocation } : {}),
+      ...(identityWasCanonicalized ? { includeRecoveryEvidence: true } : {}),
+    };
+    const verified = await port.verify(verificationInput);
+    const canonicalRecoveryMigration = identityWasCanonicalized
+      ? deriveCanonicalRecoveryMigration(record, canonicalRecord, verified.recoveryEvidence)
+      : null;
+    const recoveryDiagnostics = [...verified.diagnostics];
 
-    if (verified.found && verified.location) {
-      await this.journal.markCommitted({
-        idempotencyKey: record.idempotencyKey,
-        runId: record.runId,
-        teamName: record.teamName,
-        location: verified.location,
-        committedAt: this.clock().toISOString(),
-      });
-      return;
+    if (
+      verified.found &&
+      verified.location &&
+      (!identityWasCanonicalized || canonicalRecoveryMigration !== null)
+    ) {
+      const verifiedLocation = verified.location;
+      try {
+        const commit = {
+          idempotencyKey: canonicalRecord.idempotencyKey,
+          runId: canonicalRecord.runId,
+          teamName: canonicalRecord.teamName,
+          location: verifiedLocation,
+          committedAt: this.clock().toISOString(),
+          ...(canonicalRecoveryMigration ? { canonicalRecoveryMigration } : {}),
+        };
+        await markRuntimeDeliveryCommittedWithBoundProof({
+          journal: this.journal,
+          port,
+          verificationInput,
+          isValidProof: (candidateProof) => {
+            if (
+              !candidateProof.found ||
+              candidateProof.location === null ||
+              !hasSameRuntimeDeliveryLocationIdentity(verifiedLocation, candidateProof.location)
+            ) {
+              return false;
+            }
+            if (!identityWasCanonicalized) {
+              return true;
+            }
+            const candidateMigration = deriveCanonicalRecoveryMigration(
+              record,
+              canonicalRecord,
+              candidateProof.recoveryEvidence
+            );
+            return (
+              candidateMigration !== null &&
+              canonicalRecoveryMigration !== null &&
+              hasSameCanonicalRecoveryMigration(candidateMigration, canonicalRecoveryMigration)
+            );
+          },
+          commit,
+        });
+        return;
+      } catch (error) {
+        if (!(error instanceof RuntimeDeliveryJournalCommitRevalidationError)) {
+          throw error;
+        }
+        recoveryDiagnostics.push(error.message);
+      }
     }
 
     await this.diagnostics.append({
       type: 'runtime_delivery_recovery_needed',
       providerId: 'opencode',
-      teamName: record.teamName,
-      runId: record.runId,
+      teamName: canonicalRecord.teamName,
+      runId: canonicalRecord.runId,
       severity: 'warning',
-      message: `Runtime delivery ${record.idempotencyKey} is pending and destination write is not visible`,
+      message: `Runtime delivery ${canonicalRecord.idempotencyKey} is pending and destination write is not visible`,
       data: {
-        destination: record.destination,
-        attempts: record.attempts,
-        lastError: record.lastError,
+        destination: canonicalRecord.destination,
+        attempts: canonicalRecord.attempts,
+        lastError: canonicalRecord.lastError,
+        diagnostics: recoveryDiagnostics,
+        ...(identityWasCanonicalized && canonicalRecoveryMigration === null
+          ? { canonicalRecoveryEvidenceInvalid: true }
+          : {}),
       },
       createdAt: this.clock().toISOString(),
     });
   }
+}
+
+async function markRuntimeDeliveryCommittedWithBoundProof(input: {
+  journal: RuntimeDeliveryJournalStore;
+  port: RuntimeDeliveryDestinationPort;
+  verificationInput: Parameters<RuntimeDeliveryDestinationPort['verify']>[0];
+  isValidProof: (proof: RuntimeDeliveryVerifyResult) => boolean;
+  commit: Parameters<RuntimeDeliveryJournalStore['markCommitted']>[0];
+}): Promise<void> {
+  // Every commit uses a fail-closed compare/revalidation contract: the destination proof must
+  // match immediately before the journal CAS and again after persistence. If the postcheck fails,
+  // the journal restores the exact pre-commit logical lineage. Destination callbacks never run
+  // while the journal lock is held, avoiding cross-store lock inversion.
+  const preCommitProof = await input.port.verify(input.verificationInput).catch(() => null);
+  if (!preCommitProof || !input.isValidProof(preCommitProof)) {
+    throw new RuntimeDeliveryJournalCommitRevalidationError();
+  }
+
+  const journalCommit = await input.journal.markCommitted(input.commit);
+  const postCommitProof = await input.port.verify(input.verificationInput).catch(() => null);
+  if (postCommitProof && input.isValidProof(postCommitProof)) {
+    return;
+  }
+
+  await journalCommit.rollback();
+  throw new RuntimeDeliveryJournalCommitRevalidationError();
+}
+
+function deriveCanonicalRecoveryMigration(
+  record: RuntimeDeliveryJournalRecord,
+  canonicalRecord: RuntimeDeliveryJournalRecord,
+  evidence: RuntimeDeliveryRecoveryEvidence | undefined
+): RuntimeDeliveryCanonicalRecoveryMigration | null {
+  if (
+    !evidence ||
+    record.logicalPayloadHash === null ||
+    evidence.fromMemberName.trim().toLowerCase() !== record.fromMemberName.trim().toLowerCase() ||
+    evidence.runtimeSessionId !== record.runtimeSessionId
+  ) {
+    return null;
+  }
+
+  try {
+    const persistedEnvelope = normalizeRuntimeDeliveryEnvelope({
+      idempotencyKey: record.idempotencyKey,
+      runId: record.runId,
+      teamName: record.teamName,
+      fromMemberName: record.fromMemberName,
+      providerId: record.providerId,
+      runtimeSessionId: record.runtimeSessionId,
+      to: getRuntimeDeliveryTarget(record.destination),
+      text: evidence.text,
+      createdAt: evidence.createdAt,
+      summary: evidence.summary,
+      ...(evidence.taskRefs ? { taskRefs: evidence.taskRefs } : {}),
+    });
+    if (hashRuntimeDeliveryEnvelope(persistedEnvelope) !== record.logicalPayloadHash) {
+      return null;
+    }
+    const canonicalEnvelope = normalizeRuntimeDeliveryEnvelope({
+      ...persistedEnvelope,
+      fromMemberName: canonicalRecord.fromMemberName,
+      to: getRuntimeDeliveryTarget(canonicalRecord.destination),
+    });
+    return {
+      recoveryRecords: [record],
+      fromMemberName: canonicalEnvelope.fromMemberName,
+      payloadHash: hashRuntimeDeliveryEnvelope(canonicalEnvelope),
+      destination: canonicalRecord.destination,
+      destinationMessageId: canonicalRecord.destinationMessageId,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function hasSameCanonicalRecoveryMigration(
+  left: RuntimeDeliveryCanonicalRecoveryMigration,
+  right: RuntimeDeliveryCanonicalRecoveryMigration
+): boolean {
+  return (
+    left.payloadHash === right.payloadHash &&
+    left.fromMemberName === right.fromMemberName &&
+    hasSameRuntimeDeliveryDestinationIdentity(left.destination, right.destination) &&
+    left.destinationMessageId === right.destinationMessageId
+  );
+}
+
+// eslint-disable-next-line sonarjs/function-return-type -- destination kinds map to the target union by design
+function getRuntimeDeliveryTarget(
+  destination: RuntimeDeliveryDestinationRef
+): RuntimeDeliveryEnvelope['to'] {
+  switch (destination.kind) {
+    case 'user_sent_messages':
+      return 'user';
+    case 'member_inbox':
+      return { memberName: destination.memberName };
+    case 'cross_team_outbox':
+      return { teamName: destination.toTeamName, memberName: destination.toMemberName };
+  }
+}
+
+function hasCanonicalRuntimeDeliveryIdentityChange(
+  record: RuntimeDeliveryJournalRecord,
+  canonicalRecord: RuntimeDeliveryJournalRecord
+): boolean {
+  return (
+    record.fromMemberName !== canonicalRecord.fromMemberName ||
+    !hasSameRuntimeDeliveryDestinationIdentity(record.destination, canonicalRecord.destination)
+  );
+}
+
+function hasSameRuntimeDeliveryLocationIdentity(
+  left: RuntimeDeliveryLocation,
+  right: RuntimeDeliveryLocation
+): boolean {
+  if (left.kind !== right.kind || left.messageId !== right.messageId) {
+    return false;
+  }
+  if (left.kind === 'user_sent_messages' && right.kind === 'user_sent_messages') {
+    return left.teamName === right.teamName;
+  }
+  if (left.kind === 'member_inbox' && right.kind === 'member_inbox') {
+    return left.teamName === right.teamName && left.memberName === right.memberName;
+  }
+  return (
+    left.kind === 'cross_team_outbox' &&
+    right.kind === 'cross_team_outbox' &&
+    left.fromTeamName === right.fromTeamName &&
+    left.toTeamName === right.toTeamName &&
+    left.toMemberName === right.toMemberName
+  );
+}
+
+function hasSameRuntimeDeliveryDestinationIdentity(
+  left: RuntimeDeliveryDestinationRef,
+  right: RuntimeDeliveryDestinationRef
+): boolean {
+  if (left.kind === 'user_sent_messages' && right.kind === 'user_sent_messages') {
+    return left.teamName === right.teamName;
+  }
+  if (left.kind === 'member_inbox' && right.kind === 'member_inbox') {
+    return left.teamName === right.teamName && left.memberName === right.memberName;
+  }
+  return (
+    left.kind === 'cross_team_outbox' &&
+    right.kind === 'cross_team_outbox' &&
+    left.fromTeamName === right.fromTeamName &&
+    left.toTeamName === right.toTeamName &&
+    left.toMemberName === right.toMemberName
+  );
+}
+
+function assertSameRuntimeDeliveryJournalIdentity(
+  record: RuntimeDeliveryJournalRecord,
+  canonicalRecord: RuntimeDeliveryJournalRecord
+): void {
+  if (
+    canonicalRecord.idempotencyKey !== record.idempotencyKey ||
+    canonicalRecord.runId !== record.runId ||
+    canonicalRecord.teamName !== record.teamName ||
+    canonicalRecord.providerId !== record.providerId ||
+    canonicalRecord.runtimeSessionId !== record.runtimeSessionId ||
+    canonicalRecord.payloadHash !== record.payloadHash ||
+    canonicalRecord.logicalPayloadHash !== record.logicalPayloadHash ||
+    canonicalRecord.destinationMessageId !== record.destinationMessageId ||
+    canonicalRecord.status !== record.status ||
+    !hasSameRuntimeDeliveryDestinationScope(record.destination, canonicalRecord.destination) ||
+    !hasSameRuntimeDeliveryLocationScope(
+      record.committedLocation,
+      canonicalRecord.committedLocation
+    )
+  ) {
+    throw new Error('Runtime delivery journal canonicalizer changed immutable record identity');
+  }
+}
+
+function hasSameRuntimeDeliveryDestinationScope(
+  left: RuntimeDeliveryDestinationRef,
+  right: RuntimeDeliveryDestinationRef
+): boolean {
+  if (left.kind !== right.kind) {
+    return false;
+  }
+  if (left.kind === 'user_sent_messages' && right.kind === 'user_sent_messages') {
+    return left.teamName === right.teamName;
+  }
+  if (left.kind === 'member_inbox' && right.kind === 'member_inbox') {
+    return left.teamName === right.teamName;
+  }
+  return (
+    left.kind === 'cross_team_outbox' &&
+    right.kind === 'cross_team_outbox' &&
+    left.fromTeamName === right.fromTeamName &&
+    left.toTeamName === right.toTeamName
+  );
+}
+
+function hasSameRuntimeDeliveryLocationScope(
+  left: RuntimeDeliveryLocation | null,
+  right: RuntimeDeliveryLocation | null
+): boolean {
+  if (left === null || right === null) {
+    return left === right;
+  }
+  if (left.kind !== right.kind || left.messageId !== right.messageId) {
+    return false;
+  }
+  if (left.kind === 'user_sent_messages' && right.kind === 'user_sent_messages') {
+    return left.teamName === right.teamName;
+  }
+  if (left.kind === 'member_inbox' && right.kind === 'member_inbox') {
+    return left.teamName === right.teamName;
+  }
+  return (
+    left.kind === 'cross_team_outbox' &&
+    right.kind === 'cross_team_outbox' &&
+    left.fromTeamName === right.fromTeamName &&
+    left.toTeamName === right.toTeamName
+  );
 }
 
 function stringifyError(error: unknown): string {
