@@ -30,51 +30,101 @@ afterEach(async () => {
 });
 
 describe("project account reservation", () => {
-  it("selects another shared account after account_unavailable", async () => {
-    const root = await mkdtemp(join(tmpdir(), "project-account-excluded-"));
+  it.each(["account_unavailable", "capacity_unavailable"] as const)(
+    "selects another shared account after %s",
+    async (failureReason) => {
+      const root = await mkdtemp(
+        join(tmpdir(), "project-account-excluded-"),
+      );
+      roots.push(root);
+      const capacityStore = new InMemoryWorkerAccountCapacityStore();
+      const scoped = fixture(root, "job-1");
+      const deps = {
+        capacityStore,
+        leaseMode: "shared" as const,
+        now: new Date("2026-07-13T00:00:00.000Z"),
+      };
+      const first = await reserveCodexProjectAccount({ ...scoped, deps });
+      const journal = new InMemoryAttemptJournal();
+      await recordUnavailableAttempt(
+        journal,
+        first.accountId,
+        scoped.launch.config.workspacePath,
+        failureReason,
+      );
+      const continuation = await codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "continue_after_capacity",
+          resultReason: failureReason,
+        },
+        launch: scoped.launch,
+        journal,
+      });
+      await expect(
+        codexProjectContinuationReservationInput({
+          status: {
+            recommendedAction: "continue_after_capacity",
+            resultReason: failureReason,
+            progressAttemptCount: 0,
+          },
+          launch: scoped.launch,
+          journal,
+        }),
+      ).rejects.toThrow(
+        "project_control_continuation_attempt_history_mismatch",
+      );
+      const continued = await reserveCodexProjectAccount({
+        ...scoped,
+        ...continuation,
+        deps,
+      });
+
+      expect(continued.accountId).not.toBe(first.accountId);
+      expect(
+        continued.launch.config.accounts.map((item) => item.name),
+      ).toEqual([continued.accountId]);
+      expect(continued.launch.config.maxAccountCycles).toBe(2);
+    },
+  );
+
+  it("continues after an account-less capacity_unavailable pool failure", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-pool-capacity-"));
     roots.push(root);
-    const capacityStore = new InMemoryWorkerAccountCapacityStore();
     const scoped = fixture(root, "job-1");
-    const deps = {
-      capacityStore,
-      leaseMode: "shared" as const,
-      now: new Date("2026-07-13T00:00:00.000Z"),
-    };
-    const first = await reserveCodexProjectAccount({ ...scoped, deps });
     const journal = new InMemoryAttemptJournal();
     await recordUnavailableAttempt(
       journal,
-      first.accountId,
+      undefined,
       scoped.launch.config.workspacePath,
+      "capacity_unavailable",
     );
-    const continuation = await codexProjectContinuationReservationInput({
-      status: {
-        recommendedAction: "continue_after_capacity",
-        resultReason: "account_unavailable",
-      },
-      launch: scoped.launch,
-      journal,
-    });
-    await expect(codexProjectContinuationReservationInput({
-      status: {
-        recommendedAction: "continue_after_capacity",
-        resultReason: "account_unavailable",
-        progressAttemptCount: 0,
-      },
-      launch: scoped.launch,
-      journal,
-    })).rejects.toThrow("project_control_continuation_attempt_history_mismatch");
-    const continued = await reserveCodexProjectAccount({
-      ...scoped,
-      ...continuation,
-      deps,
+
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "continue_after_capacity",
+          resultReason: "capacity_unavailable",
+          progressAttemptCount: 1,
+        },
+        launch: scoped.launch,
+        journal,
+      }),
+    ).resolves.toEqual({
+      excludedAccountIds: [],
+      continuation: { previousAttemptCount: 1 },
     });
 
-    expect(continued.accountId).not.toBe(first.accountId);
-    expect(continued.launch.config.accounts.map((item) => item.name)).toEqual([
-      continued.accountId,
-    ]);
-    expect(continued.launch.config.maxAccountCycles).toBe(2);
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "continue_after_capacity",
+          resultReason: "capacity_unavailable",
+          progressAttemptCount: 1,
+        },
+        launch: scoped.launch,
+        journal: { readTask: async () => null },
+      }),
+    ).rejects.toThrow("project_control_continuation_attempt_history_required");
   });
 
   it("grants one new attempt after an evidenced app-server reconnect timeout", async () => {
@@ -585,8 +635,10 @@ function fixture(
 
 async function recordUnavailableAttempt(
   journal: InMemoryAttemptJournal,
-  accountId: string,
+  accountId: string | undefined,
   workspacePath: string,
+  failureReason: "account_unavailable" | "capacity_unavailable" =
+    "account_unavailable",
 ): Promise<void> {
   const now = new Date("2026-07-13T00:00:00.000Z");
   await journal.startTask({
@@ -602,12 +654,12 @@ async function recordUnavailableAttempt(
     attempt: {
       taskId: "job-1-task",
       attemptNumber: 1,
-      accountId,
+      ...(accountId ? { accountId } : {}),
       provider: "codex",
       startedAt: now,
       finishedAt: now,
       status: "blocked",
-      failureReason: "account_unavailable",
+      failureReason,
       workspaceDirtyBefore: true,
       workspaceDirtyAfter: true,
       changedFiles: [],
@@ -617,7 +669,7 @@ async function recordUnavailableAttempt(
   await journal.markPartial({
     taskId: "job-1-task",
     status: "waiting_capacity",
-    reason: "account_unavailable",
+    reason: failureReason,
     now,
   });
 }

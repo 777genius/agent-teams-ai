@@ -291,6 +291,7 @@ const APP_SERVER_RECONNECT_TIMEOUT_PREFIX =
 
 type ProvenCapacityContinuationFailureReason =
   | "account_unavailable"
+  | "capacity_unavailable"
   | "quota_limited";
 
 function capacityContinuationFailureReason(status: Pick<
@@ -317,7 +318,9 @@ function capacityContinuationFailureReason(status: Pick<
 function provenCapacityContinuationFailureReason(
   value: string | undefined,
 ): ProvenCapacityContinuationFailureReason | undefined {
-  return value === "account_unavailable" || value === "quota_limited"
+  return value === "account_unavailable" ||
+    value === "capacity_unavailable" ||
+    value === "quota_limited"
     ? value
     : undefined;
 }
@@ -358,7 +361,7 @@ function continuationAttemptHistory(input: {
     (input.launchAccountIds.length === 1
       ? input.launchAccountIds[0]
       : undefined);
-  if (!failedAccountId) {
+  if (!failedAccountId && input.failureReason !== "capacity_unavailable") {
     throw new Error("project_control_continuation_attempt_history_required");
   }
   if (
@@ -370,7 +373,7 @@ function continuationAttemptHistory(input: {
     throw new Error("project_control_continuation_attempt_history_mismatch");
   }
   return {
-    excludedAccountIds: [failedAccountId],
+    excludedAccountIds: failedAccountId ? [failedAccountId] : [],
     continuation: { previousAttemptCount: input.task.attempts.length },
   };
 }
