@@ -6,8 +6,12 @@ import {
 } from "../../codex-goal-project-workspace-lock";
 import {
   assertProjectPreStartAdmissionLaunchBinding,
+  type ProjectPreStartAdmissionLaunchWorkspaceMode,
   validateStoredProjectPreStartAdmission,
 } from "./codex-goal-project-pre-start-admission";
+
+export type ProjectRefillPreStartAdmissionWorkspaceMode =
+  ProjectPreStartAdmissionLaunchWorkspaceMode | undefined;
 
 export async function validateProjectRefillPreStartAdmission(input: {
   readonly registryRootDir: string;
@@ -16,8 +20,8 @@ export async function validateProjectRefillPreStartAdmission(input: {
   readonly scope: ProjectAccessScope;
   readonly expectedCanonicalWorkspacePath: string;
   readonly admittedInputPatch: boolean;
-}): Promise<void> {
-  await withValidatedProjectWorkspaceLock({
+}): Promise<ProjectRefillPreStartAdmissionWorkspaceMode> {
+  return await withValidatedProjectWorkspaceLock({
     locks: projectControlWorkspaceLocks(input.registryRootDir),
     scope: input.scope,
     requestedWorkspacePath: input.manifest.workspacePath,
@@ -25,18 +29,52 @@ export async function validateProjectRefillPreStartAdmission(input: {
     owner:
       `project-refill-admission:${input.controllerJobId}:` +
       input.manifest.jobId,
-    effect: async () => {
-      await validateStoredProjectPreStartAdmission({
-        manifest: input.manifest,
-        scope: input.scope,
-      });
-      await assertProjectPreStartAdmissionLaunchBinding({
-        manifest: input.manifest,
-        scope: input.scope,
-        ...(input.admittedInputPatch
-          ? { workspaceMode: "admitted_input_patch" as const }
-          : {}),
-      });
-    },
+    effect: async () =>
+      await validateProjectRefillPreStartAdmissionLocked(input),
   });
+}
+
+/**
+ * Validates the immutable pre-start admission while the caller holds the
+ * project workspace lock. A fresh receipt still traverses the complete stored
+ * validator path. A previously launch-authorized same-job refill is a
+ * continuation: it must preserve the original receipt and prove every launch
+ * binding instead of attempting to admit the job as fresh again.
+ */
+export async function validateProjectRefillPreStartAdmissionLocked(input: {
+  readonly manifest: CodexGoalJobManifest;
+  readonly scope: ProjectAccessScope;
+  readonly admittedInputPatch: boolean;
+}): Promise<ProjectRefillPreStartAdmissionWorkspaceMode> {
+  try {
+    await validateStoredProjectPreStartAdmission({
+      manifest: input.manifest,
+      scope: input.scope,
+    });
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      error.message !== "project_control_pre_start_admission_already_authorized"
+    ) {
+      throw error;
+    }
+    const workspaceMode = input.admittedInputPatch
+      ? ("admitted_input_patch_continuation" as const)
+      : ("clean_capacity_continuation" as const);
+    await assertProjectPreStartAdmissionLaunchBinding({
+      manifest: input.manifest,
+      scope: input.scope,
+      workspaceMode,
+    });
+    return workspaceMode;
+  }
+
+  await assertProjectPreStartAdmissionLaunchBinding({
+    manifest: input.manifest,
+    scope: input.scope,
+    ...(input.admittedInputPatch
+      ? { workspaceMode: "admitted_input_patch" as const }
+      : {}),
+  });
+  return input.admittedInputPatch ? "admitted_input_patch" : undefined;
 }

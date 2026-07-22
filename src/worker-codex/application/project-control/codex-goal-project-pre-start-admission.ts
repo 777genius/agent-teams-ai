@@ -163,6 +163,7 @@ export async function prepareProjectPreStartAdmission(input: {
   readonly plan: PlannedProjectPreStartAdmission;
   readonly manifest: CodexGoalJobManifestInput;
   readonly scope: ProjectAccessScope;
+  readonly existingManifest?: CodexGoalJobManifest;
   readonly verifiedInputPatchArtifactSha256?: string;
   readonly verifiedInputPatchStagedSha256?: string;
 }): Promise<{ readonly createdPaths: readonly string[] }> {
@@ -198,24 +199,47 @@ export async function prepareProjectPreStartAdmission(input: {
     ) {
       createdPaths.push(input.plan.descriptor.statePath);
     }
-    await validateProjectPreStartAdmission({
-      manifest: {
-        ...input.manifest,
-        projectPreStartAdmission: input.plan.descriptor,
-      },
-      scope: input.scope,
-      ...(input.verifiedInputPatchArtifactSha256
-        ? {
-            verifiedInputPatch: {
-              artifactSha256: input.verifiedInputPatchArtifactSha256,
-              stagedPatchSha256: requiredSha256(
-                input.verifiedInputPatchStagedSha256,
-                "verifiedInputPatchStagedSha256",
-              ),
-            },
-          }
-        : {}),
-    });
+    try {
+      await validateProjectPreStartAdmission({
+        manifest: {
+          ...input.manifest,
+          projectPreStartAdmission: input.plan.descriptor,
+        },
+        scope: input.scope,
+        ...(input.verifiedInputPatchArtifactSha256
+          ? {
+              verifiedInputPatch: {
+                artifactSha256: input.verifiedInputPatchArtifactSha256,
+                stagedPatchSha256: requiredSha256(
+                  input.verifiedInputPatchStagedSha256,
+                  "verifiedInputPatchStagedSha256",
+                ),
+              },
+            }
+          : {}),
+      });
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        error.message !==
+          "project_control_pre_start_admission_already_authorized" ||
+        input.existingManifest === undefined ||
+        createdPaths.length > 0
+      ) {
+        throw error;
+      }
+      await assertProjectPreStartAdmissionLaunchBinding({
+        manifest: input.existingManifest,
+        scope: input.scope,
+        ...(input.verifiedInputPatchArtifactSha256
+          ? {
+              expectedInputPatchArtifactSha256:
+                input.verifiedInputPatchArtifactSha256,
+              workspaceMode: "admitted_input_patch_continuation" as const,
+            }
+          : { workspaceMode: "clean_capacity_continuation" as const }),
+      });
+    }
     if (createdPaths.length > 0) {
       createdPaths.push(input.plan.descriptor.receiptPath);
     }

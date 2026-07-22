@@ -95,9 +95,11 @@ import {
   planProjectPreStartAdmission,
   prepareProjectPreStartAdmission,
   removeProjectPreStartAdmissionPaths,
-  validateStoredProjectPreStartAdmission,
 } from "./application/project-control/codex-goal-project-pre-start-admission";
-import { validateProjectRefillPreStartAdmission } from "./application/project-control/codex-goal-project-refill-admission";
+import {
+  validateProjectRefillPreStartAdmission,
+  validateProjectRefillPreStartAdmissionLocked,
+} from "./application/project-control/codex-goal-project-refill-admission";
 import { projectControlChildManifestInput } from "./application/project-control/codex-goal-project-child-manifest";
 import {
   projectControlWorkspaceLocks,
@@ -514,10 +516,20 @@ export async function projectControlRefillWorkerView(
     });
 
     if (preStartAdmission) {
+      let existingManifest: CodexGoalJobManifest | undefined;
+      try {
+        existingManifest = await readCodexGoalJob({
+          registryRootDir: controller.registryRootDir,
+          jobId: createManifest.jobId,
+        });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
       const prepared = await prepareProjectPreStartAdmission({
         plan: preStartAdmission,
         manifest: createManifest,
         scope: controller.scope,
+        ...(existingManifest ? { existingManifest } : {}),
         ...(producerInputPatch
           ? {
               verifiedInputPatchArtifactSha256: producerInputPatch.sha256,
@@ -612,10 +624,12 @@ export async function projectControlRefillWorkerView(
             booleanValue(args.confirmDependencyBootstrap) === true,
         });
         assertProjectControlDependencyBootstrapReady(dependencyPreflight);
-        await validateStoredProjectPreStartAdmission({
-          manifest,
-          scope: controller.scope,
-        });
+        const startAdmissionWorkspaceMode =
+          await validateProjectRefillPreStartAdmissionLocked({
+            manifest,
+            scope: controller.scope,
+            admittedInputPatch: Boolean(producerInputPatch),
+          });
         const canonicalLaunch = {
           ...launch,
           config: {
@@ -635,8 +649,8 @@ export async function projectControlRefillWorkerView(
             scope: controller.scope,
             startLaunch: reservedLaunch,
             startManifest: manifest,
-            ...(producerInputPatch
-              ? { startAdmissionWorkspaceMode: "admitted_input_patch" as const }
+            ...(startAdmissionWorkspaceMode
+              ? { startAdmissionWorkspaceMode }
               : {}),
             startWorkspaceLease: workspace,
             startSkipDoctor: booleanValue(args.skipDoctor) ?? false,
