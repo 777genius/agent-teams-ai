@@ -5,11 +5,6 @@ import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
-  BoardTaskActivityDetailResult,
-  BoardTaskActivityEntry,
-  BoardTaskExactLogDetailResult,
-  BoardTaskExactLogSummariesResponse,
-  BoardTaskLogStreamResponse,
   InboxMessage,
   MessagesPage,
   OpenCodeRuntimeDeliveryStatus,
@@ -97,9 +92,6 @@ function mockCallArg(call: readonly unknown[] | undefined, index: number): unkno
 
 const TEST_PROJECT_PATH = path.join(os.tmpdir(), 'project');
 const DRAFT_TEAM_CWD = path.join(os.tmpdir(), 'draft-team');
-const TASK_LOG_JSONL_PATH = path.join(os.tmpdir(), 'task.jsonl');
-const TASK_LOG_BUNDLE_ID = `tool:${TASK_LOG_JSONL_PATH}:tool-1`;
-const TRANSCRIPT_JSONL_PATH = path.join(os.tmpdir(), 'transcript.jsonl');
 
 vi.mock('@main/services/infrastructure/NotificationManager', () => ({
   NotificationManager: {
@@ -187,14 +179,8 @@ import {
   TEAM_GET_PROJECT_BRANCH,
   TEAM_GET_SAVED_REQUEST,
   TEAM_GET_TASK,
-  TEAM_GET_TASK_ACTIVITY,
-  TEAM_GET_TASK_ACTIVITY_DETAIL,
   TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_TASK_CHANGE_PRESENCE,
-  TEAM_GET_TASK_EXACT_LOG_DETAIL,
-  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
-  TEAM_GET_TASK_LOG_STREAM,
-  TEAM_GET_TASK_LOG_STREAM_SUMMARY,
   TEAM_GET_WORKTREE_GIT_STATUS,
   TEAM_INITIALIZE_GIT_REPOSITORY,
   TEAM_KILL_PROCESS,
@@ -280,14 +266,8 @@ const TEAM_HANDLER_KEYS = [
   TEAM_GET_PROJECT_BRANCH,
   TEAM_GET_SAVED_REQUEST,
   TEAM_GET_TASK,
-  TEAM_GET_TASK_ACTIVITY,
-  TEAM_GET_TASK_ACTIVITY_DETAIL,
   TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_TASK_CHANGE_PRESENCE,
-  TEAM_GET_TASK_EXACT_LOG_DETAIL,
-  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
-  TEAM_GET_TASK_LOG_STREAM,
-  TEAM_GET_TASK_LOG_STREAM_SUMMARY,
   TEAM_GET_WORKTREE_GIT_STATUS,
   TEAM_INITIALIZE_GIT_REPOSITORY,
   TEAM_KILL_PROCESS,
@@ -634,38 +614,6 @@ describe('ipc teams handlers', () => {
       updateToolApprovalSettings: teamHandlerMocks.updateToolApprovalSettings,
     },
   } satisfies TeamIpcHandlerApis;
-  const boardTaskActivityService = {
-    getTaskActivity: vi.fn<() => Promise<BoardTaskActivityEntry[]>>(() => resolved([])),
-  };
-  const boardTaskActivityDetailService = {
-    getTaskActivityDetail: vi.fn<() => Promise<BoardTaskActivityDetailResult>>(() =>
-      resolved({
-        status: 'missing',
-      })
-    ),
-  };
-  const boardTaskLogStreamService = {
-    getTaskLogStream: vi.fn<() => Promise<BoardTaskLogStreamResponse>>(() =>
-      resolved({
-        participants: [],
-        defaultFilter: 'all',
-        segments: [],
-      })
-    ),
-  };
-  const boardTaskExactLogsService = {
-    getTaskExactLogSummaries: vi.fn<() => Promise<BoardTaskExactLogSummariesResponse>>(() =>
-      resolved({ items: [] })
-    ),
-  };
-  const boardTaskExactLogDetailService = {
-    getTaskExactLogDetail: vi.fn<() => Promise<BoardTaskExactLogDetailResult>>(() =>
-      resolved({
-        status: 'missing',
-      })
-    ),
-  };
-
   beforeEach(() => {
     resetTeamWatchScopeForTests();
     handlers.clear();
@@ -750,11 +698,6 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       undefined,
-      boardTaskActivityService as never,
-      boardTaskActivityDetailService as never,
-      boardTaskLogStreamService as never,
-      boardTaskExactLogsService as never,
-      boardTaskExactLogDetailService as never,
       launchIoGovernor
     );
     registerTeamHandlers(ipcMain as never);
@@ -1098,149 +1041,6 @@ describe('ipc teams handlers', () => {
     } finally {
       await fs.promises.rm(attachmentDir, { recursive: true, force: true });
     }
-  });
-
-  it('returns explicit exact task-log summaries for a task', async () => {
-    boardTaskExactLogsService.getTaskExactLogSummaries.mockResolvedValueOnce({
-      items: [
-        {
-          id: TASK_LOG_BUNDLE_ID,
-          timestamp: '2026-04-12T16:00:00.000Z',
-          actor: {
-            memberName: 'alice',
-            role: 'member',
-            sessionId: 'session-1',
-            agentId: 'agent-1',
-            isSidechain: true,
-          },
-          source: {
-            filePath: TASK_LOG_JSONL_PATH,
-            messageUuid: 'msg-1',
-            toolUseId: 'tool-1',
-            sourceOrder: 1,
-          },
-          anchorKind: 'tool',
-          actionLabel: 'Added a comment',
-          actionCategory: 'comment',
-          canonicalToolName: 'task_add_comment',
-          linkKinds: ['board_action'],
-          canLoadDetail: true,
-          sourceGeneration: 'gen-1',
-        },
-      ],
-    });
-
-    const handler = handlers.get(TEAM_GET_TASK_EXACT_LOG_SUMMARIES);
-    expect(handler).toBeDefined();
-
-    const result = (await handler!(
-      {} as never,
-      'my-team',
-      '123e4567-e89b-12d3-a456-426614174000'
-    )) as {
-      success: boolean;
-      data?: BoardTaskExactLogSummariesResponse;
-    };
-
-    expect(result.success).toBe(true);
-    expect(result.data?.items).toHaveLength(1);
-    expect(boardTaskExactLogsService.getTaskExactLogSummaries).toHaveBeenCalledWith(
-      'my-team',
-      '123e4567-e89b-12d3-a456-426614174000'
-    );
-  });
-
-  it('returns one task log stream for a task', async () => {
-    boardTaskLogStreamService.getTaskLogStream.mockResolvedValueOnce({
-      participants: [
-        {
-          key: 'member:alice',
-          label: 'alice',
-          role: 'member',
-          isLead: false,
-          isSidechain: true,
-        },
-      ],
-      defaultFilter: 'all',
-      segments: [],
-    });
-
-    const handler = handlers.get(TEAM_GET_TASK_LOG_STREAM);
-    expect(handler).toBeDefined();
-
-    const result = (await handler!(
-      {} as never,
-      'my-team',
-      '123e4567-e89b-12d3-a456-426614174000'
-    )) as {
-      success: boolean;
-      data?: BoardTaskLogStreamResponse;
-    };
-
-    expect(result.success).toBe(true);
-    expect(result.data?.participants).toHaveLength(1);
-    expect(boardTaskLogStreamService.getTaskLogStream).toHaveBeenCalledWith(
-      'my-team',
-      '123e4567-e89b-12d3-a456-426614174000'
-    );
-  });
-
-  it('returns exact task-log detail for a task bundle', async () => {
-    boardTaskExactLogDetailService.getTaskExactLogDetail.mockResolvedValueOnce({
-      status: 'ok',
-      detail: {
-        id: TASK_LOG_BUNDLE_ID,
-        chunks: [],
-      },
-    });
-
-    const handler = handlers.get(TEAM_GET_TASK_EXACT_LOG_DETAIL);
-    expect(handler).toBeDefined();
-
-    const result = (await handler!(
-      {} as never,
-      'my-team',
-      '123e4567-e89b-12d3-a456-426614174000',
-      TASK_LOG_BUNDLE_ID,
-      'gen-1'
-    )) as {
-      success: boolean;
-      data?: BoardTaskExactLogDetailResult;
-    };
-
-    expect(result.success).toBe(true);
-    expect(result.data?.status).toBe('ok');
-    expect(boardTaskExactLogDetailService.getTaskExactLogDetail).toHaveBeenCalledWith(
-      'my-team',
-      '123e4567-e89b-12d3-a456-426614174000',
-      TASK_LOG_BUNDLE_ID,
-      'gen-1'
-    );
-  });
-
-  it('returns exact task-log detail stale status without rewriting the service result', async () => {
-    boardTaskExactLogDetailService.getTaskExactLogDetail.mockResolvedValueOnce({
-      status: 'stale',
-    });
-
-    const handler = handlers.get(TEAM_GET_TASK_EXACT_LOG_DETAIL);
-    expect(handler).toBeDefined();
-
-    const result = (await handler!(
-      {} as never,
-      'my-team',
-      '123e4567-e89b-12d3-a456-426614174000',
-      TASK_LOG_BUNDLE_ID,
-      'gen-2'
-    )) as {
-      success: boolean;
-      data?: BoardTaskExactLogDetailResult;
-    };
-
-    expect(result).toEqual({
-      success: true,
-      data: { status: 'stale' },
-    });
   });
 
   it('returns success false on invalid sendMessage args', async () => {
@@ -5402,76 +5202,6 @@ describe('ipc teams handlers', () => {
       new Set(TEAM_HANDLER_KEYS)
     );
     expect(handlers.size).toBe(0);
-  });
-
-  it('returns explicit task activity rows', async () => {
-    const handler = handlers.get(TEAM_GET_TASK_ACTIVITY);
-    expect(handler).toBeDefined();
-
-    const activityRows: BoardTaskActivityEntry[] = [
-      {
-        id: 'activity-1',
-        timestamp: '2026-04-12T10:00:00.000Z',
-        task: {
-          locator: { ref: 'abcd1234', refKind: 'display' },
-          resolution: 'resolved',
-        },
-        linkKind: 'lifecycle',
-        targetRole: 'subject',
-        actor: {
-          role: 'lead',
-          sessionId: 'session-1',
-          isSidechain: false,
-        },
-        actorContext: {
-          relation: 'idle',
-        },
-        source: {
-          messageUuid: 'message-1',
-          filePath: TRANSCRIPT_JSONL_PATH,
-          sourceOrder: 1,
-        },
-      },
-    ];
-    boardTaskActivityService.getTaskActivity.mockResolvedValueOnce(activityRows);
-
-    const result = (await handler!({} as never, 'my-team', 'task-1')) as {
-      success: boolean;
-      data: typeof activityRows;
-    };
-
-    expect(result).toEqual({ success: true, data: activityRows });
-    expect(boardTaskActivityService.getTaskActivity).toHaveBeenCalledWith('my-team', 'task-1');
-  });
-
-  it('returns focused task activity detail for one row', async () => {
-    const handler = handlers.get(TEAM_GET_TASK_ACTIVITY_DETAIL);
-    expect(handler).toBeDefined();
-
-    boardTaskActivityDetailService.getTaskActivityDetail.mockResolvedValueOnce({
-      status: 'ok',
-      detail: {
-        entryId: 'activity-1',
-        summaryLabel: 'Added a comment',
-        actorLabel: 'bob',
-        timestamp: '2026-04-13T10:35:00.000Z',
-        contextLines: ['while working on #peer12345'],
-        metadataRows: [{ label: 'Comment', value: '42' }],
-      },
-    });
-
-    const result = (await handler!({} as never, 'my-team', 'task-1', 'activity-1')) as {
-      success: boolean;
-      data?: BoardTaskActivityDetailResult;
-    };
-
-    expect(result.success).toBe(true);
-    expect(result.data?.status).toBe('ok');
-    expect(boardTaskActivityDetailService.getTaskActivityDetail).toHaveBeenCalledWith(
-      'my-team',
-      'task-1',
-      'activity-1'
-    );
   });
 
   describe('addTaskRelationship', () => {
