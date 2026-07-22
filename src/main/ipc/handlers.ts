@@ -14,6 +14,10 @@
  * - httpServer.ts: HTTP sidecar server control
  */
 
+import {
+  registerTaskLogObservabilityIpc,
+  removeTaskLogObservabilityIpc,
+} from '@features/task-log-observability/main';
 import { createLogger } from '@shared/utils/logger';
 import { ipcMain } from 'electron';
 
@@ -133,6 +137,7 @@ import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 
 const logger = createLogger('IPC:handlers');
+const taskLogObservabilityLogger = createLogger('IPC:teams');
 
 /**
  * Initializes IPC handlers with service registry.
@@ -200,11 +205,6 @@ export function initializeIpcHandlers(
     teammateToolTracker,
     teamLogSourceTracker,
     branchStatusService,
-    boardTaskActivityService,
-    boardTaskActivityDetailService,
-    boardTaskLogStreamService,
-    boardTaskExactLogsService,
-    boardTaskExactLogDetailService,
     launchIoGovernor
   );
   initializeConfigHandlers({
@@ -263,6 +263,16 @@ export function initializeIpcHandlers(
   registerSshHandlers(ipcMain);
   registerContextHandlers(ipcMain);
   registerTeamHandlers(ipcMain);
+  registerTaskLogObservabilityIpc(ipcMain, {
+    readers: {
+      activity: boardTaskActivityService,
+      activityDetail: boardTaskActivityDetailService,
+      stream: boardTaskLogStreamService,
+      exactLogSummaries: boardTaskExactLogsService,
+      exactLogDetail: boardTaskExactLogDetailService,
+    },
+    logger: taskLogObservabilityLogger,
+  });
   registerReviewHandlers(ipcMain);
   registerEditorHandlers(ipcMain);
   registerWindowHandlers(ipcMain);
@@ -311,6 +321,7 @@ export function removeIpcHandlers(): void {
   removeSshHandlers(ipcMain);
   removeContextHandlers(ipcMain);
   removeTeamHandlers(ipcMain);
+  removeTaskLogObservabilityIpc(ipcMain);
   removeReviewHandlers(ipcMain);
   removeEditorHandlers(ipcMain);
   removeWindowHandlers(ipcMain);

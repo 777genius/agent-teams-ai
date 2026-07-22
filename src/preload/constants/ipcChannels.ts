@@ -344,23 +344,14 @@ export const TEAM_GET_MEMBER_LOGS = 'team:getMemberLogs';
 /** Get session logs that reference a task */
 export const TEAM_GET_LOGS_FOR_TASK = 'team:getLogsForTask';
 
-/** Get explicit board-task activity derived from transcript metadata */
-export const TEAM_GET_TASK_ACTIVITY = 'team:getTaskActivity';
-
-/** Get focused inline detail for one task-activity entry */
-export const TEAM_GET_TASK_ACTIVITY_DETAIL = 'team:getTaskActivityDetail';
-
-/** Get one task-scoped log stream derived from explicit board-task activity */
-export const TEAM_GET_TASK_LOG_STREAM = 'team:getTaskLogStream';
-
-/** Get lightweight task log stream summary for header badges/live counters */
-export const TEAM_GET_TASK_LOG_STREAM_SUMMARY = 'team:getTaskLogStreamSummary';
-
-/** Get exact task-log summaries derived from explicit board-task activity records */
-export const TEAM_GET_TASK_EXACT_LOG_SUMMARIES = 'team:getTaskExactLogSummaries';
-
-/** Get one exact task-log detail bundle for renderer reuse */
-export const TEAM_GET_TASK_EXACT_LOG_DETAIL = 'team:getTaskExactLogDetail';
+export {
+  TEAM_GET_TASK_ACTIVITY,
+  TEAM_GET_TASK_ACTIVITY_DETAIL,
+  TEAM_GET_TASK_EXACT_LOG_DETAIL,
+  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
+  TEAM_GET_TASK_LOG_STREAM,
+  TEAM_GET_TASK_LOG_STREAM_SUMMARY,
+} from '@features/task-log-observability/contracts';
 
 /** Update team config (name, description) */
 export const TEAM_UPDATE_CONFIG = 'team:updateConfig';
