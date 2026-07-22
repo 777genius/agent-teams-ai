@@ -12,6 +12,8 @@ on:
       - refactor/hosted-web-feature-boundaries
     paths:
       - 'src/**'
+      - 'landing/**'
+      - 'bin/**'
       - 'scripts/**'
       - 'agent-teams-controller/**'
       - 'mcp-server/**'
@@ -33,9 +35,16 @@ on:
       - 'vitest*.config.*'
       - 'tailwind.config.*'
       - 'eslint.config.*'
+      - '*.js'
+      - '*.cjs'
+      - '*.mjs'
+      - '*.ts'
+      - '*.tsx'
   pull_request:
     paths:
       - 'src/**'
+      - 'landing/**'
+      - 'bin/**'
       - 'scripts/**'
       - 'agent-teams-controller/**'
       - 'mcp-server/**'
@@ -57,6 +66,11 @@ on:
       - 'vitest*.config.*'
       - 'tailwind.config.*'
       - 'eslint.config.*'
+      - '*.js'
+      - '*.cjs'
+      - '*.mjs'
+      - '*.ts'
+      - '*.tsx'
 
 jobs:
   validate:
@@ -68,6 +82,12 @@ jobs:
 
       - name: Guard runtime artifacts
         run: node ./scripts/ci/forbid-runtime-artifacts.cjs
+
+      - name: Guard production source file size
+        run: node ./scripts/ci/check-source-file-size.mjs
+
+      - name: Guard Team Provisioning architecture
+        run: node ./scripts/ci/check-team-provisioning-architecture.mjs
 
       - name: Verify runtime lock
         run: node ./scripts/ci/verify-runtime-lock.mjs
