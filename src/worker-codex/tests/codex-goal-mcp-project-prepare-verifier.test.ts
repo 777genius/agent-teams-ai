@@ -985,6 +985,16 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
         nextAction: "wait",
       })}\n`;
       await writeFile(latestResultPath, accountUnavailableResult);
+      await expect(callToolJson(client, "codex_goal_project_start", {
+        registryRootDir,
+        controllerJobId: controller.jobId,
+        jobId: initialVerifierManifest.jobId,
+        continuationAccounts: ["account-g"],
+        confirmStart: true,
+      })).resolves.toMatchObject({
+        ok: false,
+        error: "project_control_continuation_attempt_history_required",
+      });
       const journal = new InMemoryAttemptJournal();
       await recordUnavailableAttempt({
         journal,

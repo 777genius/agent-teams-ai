@@ -24,8 +24,8 @@ import {
 import { createOrReuseProjectWorktree } from "./application/project-control/codex-goal-project-refill";
 import {
   assertProjectPreStartAdmissionLaunchBinding,
-  validateStoredProjectPreStartAdmission,
 } from "./application/project-control/codex-goal-project-pre-start-admission";
+import { validateProjectRefillPreStartAdmissionLocked } from "./application/project-control/codex-goal-project-refill-admission";
 import {
   terminalHandoffDependencyRecoveryRequested,
   verifyTerminalHandoffRecovery,
@@ -363,6 +363,10 @@ export async function projectControlStartStoredJobView(
         confirmInstall: booleanValue(args.confirmDependencyBootstrap) === true,
       });
       assertProjectControlDependencyBootstrapReady(dependencyPreflight);
+      let authorizedContinuationWorkspaceMode:
+        | "admitted_input_patch_continuation"
+        | "clean_capacity_continuation"
+        | undefined;
       if (reviewedContinuation) {
         await assertReviewedWorkerOutputStillMatchesLocked(
           reviewedOutputDeps,
@@ -403,10 +407,17 @@ export async function projectControlStartStoredJobView(
             "clean_explicit_continuation",
         });
       } else {
-        await validateStoredProjectPreStartAdmission({
-          manifest: loaded.manifest,
-          scope: controller.scope,
-        });
+        const validatedWorkspaceMode =
+          await validateProjectRefillPreStartAdmissionLocked({
+            manifest: loaded.manifest,
+            scope: controller.scope,
+          });
+        if (
+          validatedWorkspaceMode === "admitted_input_patch_continuation" ||
+          validatedWorkspaceMode === "clean_capacity_continuation"
+        ) {
+          authorizedContinuationWorkspaceMode = validatedWorkspaceMode;
+        }
       }
       const continuationReservation =
         await codexProjectContinuationReservationInput({
@@ -449,7 +460,9 @@ export async function projectControlStartStoredJobView(
         : terminalRecovery
           ? ("terminal_handoff_dependency_recovery" as const)
           : (continuationDecision?.workspaceMode ??
-            (cleanExplicitContinuation ? ("clean_explicit_continuation" as const) : undefined));
+            (cleanExplicitContinuation
+              ? ("clean_explicit_continuation" as const)
+              : authorizedContinuationWorkspaceMode));
       let result;
       try {
         const broker = deps.codexProjectControlBroker({

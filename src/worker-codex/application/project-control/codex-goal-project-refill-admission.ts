@@ -44,7 +44,7 @@ export async function validateProjectRefillPreStartAdmission(input: {
 export async function validateProjectRefillPreStartAdmissionLocked(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly scope: ProjectAccessScope;
-  readonly admittedInputPatch: boolean;
+  readonly admittedInputPatch?: boolean;
 }): Promise<ProjectRefillPreStartAdmissionWorkspaceMode> {
   try {
     await validateStoredProjectPreStartAdmission({
@@ -58,15 +58,20 @@ export async function validateProjectRefillPreStartAdmissionLocked(input: {
     ) {
       throw error;
     }
-    const workspaceMode = input.admittedInputPatch
-      ? ("admitted_input_patch_continuation" as const)
-      : ("clean_capacity_continuation" as const);
+    if (input.admittedInputPatch !== false) {
+      await assertProjectPreStartAdmissionLaunchBinding({
+        manifest: input.manifest,
+        scope: input.scope,
+        workspaceMode: "admitted_input_patch_continuation",
+      });
+      return "admitted_input_patch_continuation";
+    }
     await assertProjectPreStartAdmissionLaunchBinding({
       manifest: input.manifest,
       scope: input.scope,
-      workspaceMode,
+      workspaceMode: "clean_capacity_continuation",
     });
-    return workspaceMode;
+    return "clean_capacity_continuation";
   }
 
   await assertProjectPreStartAdmissionLaunchBinding({
