@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TmuxInstallerBannerView } from '../TmuxInstallerBannerView';
 
-import type { TmuxInstallerBannerViewModel } from '../../adapters/TmuxInstallerBannerAdapter';
+import type { TmuxInstallerBannerViewModel } from '../../view-models/TmuxInstallerBannerViewModelBuilder';
 
 const { mockUseTmuxInstallerBanner } = vi.hoisted(() => ({
   mockUseTmuxInstallerBanner: vi.fn(),

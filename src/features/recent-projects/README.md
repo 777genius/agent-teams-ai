@@ -56,6 +56,8 @@ enter through the layer-specific public entrypoints:
   the renderer
 - `renderer/hooks/useRecentProjectsSection.ts` coordinates renderer interaction
   and data access
+- `renderer/view-models/recentProjectsSectionViewModel.ts` projects contracts
+  and renderer state into card models
 - `renderer/ui/RecentProjectsSection.tsx` keeps the visual component focused on
   rendering and callbacks
 
@@ -79,9 +81,10 @@ When adding another transport:
 
 When changing renderer behavior:
 
-- keep data fetching and app API calls in hooks or renderer adapters
+- keep data fetching and app API calls in hooks or genuine boundary adapters
 - keep UI components presentational
-- transform DTOs into view models before they reach reusable UI where practical
+- transform DTOs in `renderer/view-models/` before they reach reusable UI where
+  practical
 - update renderer utility tests when sorting, navigation, active-team state, or
   client cache behavior changes
 
@@ -100,7 +103,7 @@ Reference tests live under `test/features/recent-projects/`:
 - `core/application/` covers use-case orchestration through ports
 - `main/adapters/output/` and `main/infrastructure/` cover provider and runtime
   integration boundaries with fakes
-- `renderer/adapters/` and `renderer/utils/` cover view-model mapping and
+- `renderer/view-models/` and `renderer/utils/` cover presentation mapping and
   interaction helpers
 
 For new medium or large features, this test shape is a good starting point:

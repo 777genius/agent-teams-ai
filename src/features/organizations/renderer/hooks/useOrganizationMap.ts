@@ -3,9 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 
-import { buildOrganizationMapViewModel } from '../adapters/organizationMapViewModel';
+import { buildOrganizationMapViewModel } from '../view-models/organizationMapViewModel';
 
-import type { OrganizationMapPayload, OrganizationMapScope, OrganizationNodeDto } from '../../contracts';
+import type {
+  OrganizationMapPayload,
+  OrganizationMapScope,
+  OrganizationNodeDto,
+} from '../../contracts';
 
 interface UseOrganizationMapInput {
   isActive: boolean;
@@ -42,59 +46,62 @@ export function useOrganizationMap(input: UseOrganizationMapInput): UseOrganizat
   const inFlightRefreshRef = useRef<{ key: string; promise: Promise<void> } | null>(null);
   const refreshSequenceRef = useRef(0);
 
-  const refresh = useCallback(async (options: { force?: boolean } = {}) => {
-    const requestKey = `${scope}:${organizationId ?? DEFAULT_ORGANIZATION_REQUEST_KEY}`;
-    if (!options.force && inFlightRefreshRef.current?.key === requestKey) {
-      return inFlightRefreshRef.current.promise;
-    }
-
-    const sequence = refreshSequenceRef.current + 1;
-    refreshSequenceRef.current = sequence;
-    const organizationsApi = api.organizations;
-    const run = (async () => {
-      if (!organizationsApi?.getOrganizationMap) {
-        if (sequence !== refreshSequenceRef.current) return;
-        setPayload(null);
-        setError('Organization map API is unavailable.');
-        setLoading(false);
-        return;
+  const refresh = useCallback(
+    async (options: { force?: boolean } = {}) => {
+      const requestKey = `${scope}:${organizationId ?? DEFAULT_ORGANIZATION_REQUEST_KEY}`;
+      if (!options.force && inFlightRefreshRef.current?.key === requestKey) {
+        return inFlightRefreshRef.current.promise;
       }
 
-      try {
-        setLoading(true);
-        setError(null);
-        const nextPayload = await organizationsApi.getOrganizationMap({
-          scope,
-          organizationId,
-          maxTeams: scope === 'all' ? 160 : 120,
-          maxAgentsPerTeam: scope === 'all' ? 4 : 8,
-          maxTasksPerAgent: scope === 'all' ? 1 : 2,
-          maxCrossTeamMessages: scope === 'all' ? 160 : 240,
-        });
-        if (sequence !== refreshSequenceRef.current) return;
-        setPayload(nextPayload);
-        setSelectedNodeId((current) =>
-          current && nextPayload.nodes.some((node) => node.id === current) ? current : null
-        );
-      } catch (err) {
-        if (sequence !== refreshSequenceRef.current) return;
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        if (sequence === refreshSequenceRef.current) {
+      const sequence = refreshSequenceRef.current + 1;
+      refreshSequenceRef.current = sequence;
+      const organizationsApi = api.organizations;
+      const run = (async () => {
+        if (!organizationsApi?.getOrganizationMap) {
+          if (sequence !== refreshSequenceRef.current) return;
+          setPayload(null);
+          setError('Organization map API is unavailable.');
           setLoading(false);
+          return;
+        }
+
+        try {
+          setLoading(true);
+          setError(null);
+          const nextPayload = await organizationsApi.getOrganizationMap({
+            scope,
+            organizationId,
+            maxTeams: scope === 'all' ? 160 : 120,
+            maxAgentsPerTeam: scope === 'all' ? 4 : 8,
+            maxTasksPerAgent: scope === 'all' ? 1 : 2,
+            maxCrossTeamMessages: scope === 'all' ? 160 : 240,
+          });
+          if (sequence !== refreshSequenceRef.current) return;
+          setPayload(nextPayload);
+          setSelectedNodeId((current) =>
+            current && nextPayload.nodes.some((node) => node.id === current) ? current : null
+          );
+        } catch (err) {
+          if (sequence !== refreshSequenceRef.current) return;
+          setError(err instanceof Error ? err.message : String(err));
+        } finally {
+          if (sequence === refreshSequenceRef.current) {
+            setLoading(false);
+          }
+        }
+      })();
+
+      inFlightRefreshRef.current = { key: requestKey, promise: run };
+      try {
+        await run;
+      } finally {
+        if (inFlightRefreshRef.current?.promise === run) {
+          inFlightRefreshRef.current = null;
         }
       }
-    })();
-
-    inFlightRefreshRef.current = { key: requestKey, promise: run };
-    try {
-      await run;
-    } finally {
-      if (inFlightRefreshRef.current?.promise === run) {
-        inFlightRefreshRef.current = null;
-      }
-    }
-  }, [organizationId, scope]);
+    },
+    [organizationId, scope]
+  );
 
   const viewModel = useMemo(
     () => (payload ? buildOrganizationMapViewModel(payload) : null),
@@ -102,15 +109,16 @@ export function useOrganizationMap(input: UseOrganizationMapInput): UseOrganizat
   );
   const isLargeMap = Boolean(
     viewModel &&
-      (viewModel.stats.teamCount > 10 ||
-        viewModel.stats.agentCount > 60 ||
-        viewModel.stats.communicationEdgeCount > 80)
+    (viewModel.stats.teamCount > 10 ||
+      viewModel.stats.agentCount > 60 ||
+      viewModel.stats.communicationEdgeCount > 80)
   );
-  const refreshIntervalMs = scope === 'all'
-    ? ALL_ORGANIZATIONS_REFRESH_INTERVAL_MS
-    : isLargeMap
-    ? LARGE_ORGANIZATION_REFRESH_INTERVAL_MS
-    : REFRESH_INTERVAL_MS;
+  const refreshIntervalMs =
+    scope === 'all'
+      ? ALL_ORGANIZATIONS_REFRESH_INTERVAL_MS
+      : isLargeMap
+        ? LARGE_ORGANIZATION_REFRESH_INTERVAL_MS
+        : REFRESH_INTERVAL_MS;
 
   useEffect(() => {
     if (!input.isActive) return;
