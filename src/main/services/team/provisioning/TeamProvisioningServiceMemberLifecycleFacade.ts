@@ -170,6 +170,10 @@ function preserveAuthoritativeMembersMetaResolution(
 
 /** Owns lifecycle host construction and launch-preparation adaptation. */
 export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamProvisioningServiceRuntimeStateFacade {
+  async runLiveRosterMutation(teamName: string, mutation: () => Promise<void>): Promise<void> {
+    await this.executeLiveRosterMutation(teamName, mutation);
+  }
+
   protected readonly openCodeAggregatePrimaryRestartByTeam = new Map<
     string,
     OpenCodeAggregatePrimaryRestartLease

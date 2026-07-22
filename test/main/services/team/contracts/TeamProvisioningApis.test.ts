@@ -68,6 +68,9 @@ function createSource() {
     getMemberSpawnStatuses: vi.fn(() =>
       Promise.resolve({ statuses: {}, runId: 'run-1', updatedAt: TEST_TIMESTAMP })
     ),
+    runLiveRosterMutation: vi.fn(
+      async (_teamName: string, mutation: () => Promise<void>): Promise<void> => mutation()
+    ),
     attachLiveRosterMember: vi.fn(() => Promise.resolve()),
     detachLiveRosterMember: vi.fn(() => Promise.resolve()),
     restartMember: vi.fn(() => Promise.resolve()),
@@ -183,6 +186,7 @@ describe('bindTeamIpcHandlerApis', () => {
       'getMemberSpawnStatuses',
       'restartMember',
       'retryFailedOpenCodeSecondaryLanes',
+      'runLiveRosterMutation',
       'skipMemberForLaunch',
     ]);
     expect(sortedKeys(api.diagnostics)).toEqual([

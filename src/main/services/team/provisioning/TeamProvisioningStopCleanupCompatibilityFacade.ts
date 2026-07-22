@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
@@ -72,6 +74,11 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   protected readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
   protected readonly cleanupRunPorts!: TeamProvisioningCleanupPorts<TRun>;
 
+  private readonly liveRosterMutationLockContext = new AsyncLocalStorage<{
+    teamKey: string;
+    token: symbol;
+  }>();
+  private readonly activeLiveRosterMutationTokens = new Map<string, symbol>();
   private stopFlowBoundaryValue: TeamProvisioningStopFlowBoundary | null = null;
   private openCodeStoppedLaneCleanupBoundary: TeamProvisioningOpenCodeStoppedLaneCleanupBoundary | null =
     null;
@@ -131,12 +138,57 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
     return this.stopFlowBoundaryValue;
   }
 
+  protected async executeLiveRosterMutation(
+    teamName: string,
+    mutation: () => Promise<void>
+  ): Promise<void> {
+    const teamKey = teamName.trim().toLowerCase();
+    if (this.isLiveRosterMutationLockHeld(teamName)) {
+      await mutation();
+      return;
+    }
+
+    await this.stopCleanupServiceHost.withTeamLock(teamName, async () => {
+      const token = Symbol(`live-roster-mutation:${teamKey}`);
+      this.activeLiveRosterMutationTokens.set(teamKey, token);
+      try {
+        await this.liveRosterMutationLockContext.run({ teamKey, token }, mutation);
+      } finally {
+        if (this.activeLiveRosterMutationTokens.get(teamKey) === token) {
+          this.activeLiveRosterMutationTokens.delete(teamKey);
+        }
+      }
+    });
+  }
+
+  protected isLiveRosterMutationLockHeld(teamName: string): boolean {
+    const context = this.liveRosterMutationLockContext.getStore();
+    const teamKey = teamName.trim().toLowerCase();
+    return (
+      context?.teamKey === teamKey &&
+      this.activeLiveRosterMutationTokens.get(teamKey) === context.token
+    );
+  }
+
+  private hasActiveLiveRosterMutation(teamName: string): boolean {
+    return this.activeLiveRosterMutationTokens.has(teamName.trim().toLowerCase());
+  }
+
   /**
    * Stop the running process for a team. No-op if team is not running.
    * Always uses SIGKILL via killTeamProcess() to prevent CLI cleanup.
    */
   async stopTeam(teamName: string): Promise<void> {
-    await this.stopFlowBoundary.stopTeam(teamName);
+    const stop = (): Promise<void> => this.stopFlowBoundary.stopTeam(teamName);
+    if (
+      this.hasActiveLiveRosterMutation(teamName) &&
+      !this.isLiveRosterMutationLockHeld(teamName)
+    ) {
+      await this.stopCleanupServiceHost.withTeamLock(teamName, stop);
+      return;
+    }
+
+    await stop();
   }
 
   protected async stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void> {

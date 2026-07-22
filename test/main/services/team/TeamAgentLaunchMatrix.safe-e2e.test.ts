@@ -4646,6 +4646,146 @@ describe(
       });
     });
 
+    it('runs an exact Anthropic Codex OpenCode lifecycle through stop relaunch and persisted recovery', async () => {
+      const teamName = 'mixed-anthropic-codex-opencode-lifecycle-safe-e2e';
+      await writeMixedTeamConfig({
+        teamName,
+        projectPath,
+        primaryProviderId: 'anthropic',
+        includeCodexPrimary: true,
+      });
+      await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+      await writeMembersMeta(teamName, {
+        primaryProviderId: 'anthropic',
+        includeCodexPrimary: true,
+      });
+
+      const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', {
+        bob: 'confirmed',
+        tom: 'confirmed',
+      });
+      const svc = new TeamProvisioningService();
+      svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+      const mixedLaneHarness = svc as unknown as {
+        launchMixedSecondaryLaneIfNeeded(run: unknown): Promise<unknown>;
+      };
+
+      const firstRun = createMixedLiveRun({
+        teamName,
+        projectPath,
+        primaryProviderId: 'anthropic',
+      });
+      addCodexPrimaryToMixedRun(firstRun);
+      firstRun.runId = `run-${teamName}-first`;
+      firstRun.child = { pid: 64_901, kill: () => undefined, stdin: { writable: true } };
+      trackLiveRun(svc, firstRun);
+
+      await mixedLaneHarness.launchMixedSecondaryLaneIfNeeded(firstRun);
+      await waitForCondition(() => adapter.launchInputs.length === 2);
+      await waitForCondition(() =>
+        firstRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
+      );
+
+      const firstStatuses = await svc.getMemberSpawnStatuses(teamName);
+      expect(firstStatuses.teamLaunchState).toBe('clean_success');
+      expect(firstStatuses.expectedMembers).toEqual(['alice', 'cody', 'bob', 'tom']);
+      for (const memberName of ['alice', 'cody', 'bob', 'tom']) {
+        expect(firstStatuses.statuses[memberName]).toMatchObject({
+          status: 'online',
+          launchState: 'confirmed_alive',
+          bootstrapConfirmed: true,
+          hardFailure: false,
+        });
+      }
+      await expect(svc.getTeamAgentRuntimeSnapshot(teamName)).resolves.toMatchObject({
+        runId: firstRun.runId,
+        members: {
+          alice: { providerId: 'anthropic', laneKind: 'primary', runtimeModel: 'haiku' },
+          cody: {
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            laneKind: 'primary',
+            runtimeModel: 'gpt-5.4-mini',
+          },
+          bob: {
+            providerId: 'opencode',
+            laneKind: 'secondary',
+            runtimeModel: 'opencode/minimax-m2.5-free',
+          },
+          tom: {
+            providerId: 'opencode',
+            laneKind: 'secondary',
+            runtimeModel: 'opencode/nemotron-3-super-free',
+          },
+        },
+      });
+
+      await svc.stopTeam(teamName);
+      await waitForCondition(() => !svc.isTeamAlive(teamName));
+      expect(adapter.stopInputs.map((input) => input.laneId).sort()).toEqual([
+        'secondary:opencode:bob',
+        'secondary:opencode:tom',
+      ]);
+      await expect(
+        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+      ).resolves.toMatchObject({ lanes: {} });
+
+      const secondRun = createMixedLiveRun({
+        teamName,
+        projectPath,
+        primaryProviderId: 'anthropic',
+      });
+      addCodexPrimaryToMixedRun(secondRun);
+      secondRun.runId = `run-${teamName}-second`;
+      secondRun.child = { pid: 64_911, kill: () => undefined, stdin: { writable: true } };
+      trackLiveRun(svc, secondRun);
+
+      await mixedLaneHarness.launchMixedSecondaryLaneIfNeeded(secondRun);
+      await waitForCondition(() => adapter.launchInputs.length === 4);
+      await waitForCondition(() =>
+        secondRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
+      );
+
+      const relaunchedStatuses = await svc.getMemberSpawnStatuses(teamName);
+      expect(relaunchedStatuses.teamLaunchState).toBe('clean_success');
+      expect(relaunchedStatuses.expectedMembers).toEqual(['alice', 'cody', 'bob', 'tom']);
+      for (const memberName of ['alice', 'cody', 'bob', 'tom']) {
+        expect(relaunchedStatuses.statuses[memberName]).toMatchObject({
+          status: 'online',
+          launchState: 'confirmed_alive',
+          bootstrapConfirmed: true,
+          hardFailure: false,
+        });
+      }
+
+      const restartedService = new TeamProvisioningService();
+      const recoveredStatuses = await restartedService.getMemberSpawnStatuses(teamName);
+      expect(recoveredStatuses.teamLaunchState).toBe('clean_success');
+      expect(recoveredStatuses.expectedMembers).toEqual(['alice', 'cody', 'bob', 'tom']);
+      const recoveredSnapshot = await restartedService.getTeamAgentRuntimeSnapshot(teamName);
+      expect(recoveredSnapshot.members).toMatchObject({
+        alice: { providerId: 'anthropic', laneKind: 'primary', runtimeModel: 'haiku' },
+        cody: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          laneKind: 'primary',
+          runtimeModel: 'gpt-5.4-mini',
+        },
+        bob: {
+          providerId: 'opencode',
+          laneId: 'secondary:opencode:bob',
+          laneKind: 'secondary',
+          runtimeModel: 'opencode/minimax-m2.5-free',
+        },
+        tom: {
+          providerId: 'opencode',
+          laneId: 'secondary:opencode:tom',
+          laneKind: 'secondary',
+          runtimeModel: 'opencode/nemotron-3-super-free',
+        },
+      });
+    });
+
     it('does not resurrect removed OpenCode secondary teammates in mixed Anthropic launch recovery', async () => {
       const teamName = 'mixed-anthropic-removed-opencode-stale-state-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
@@ -22111,6 +22251,39 @@ function addGeminiPrimaryToMixedRun(run: any): void {
   });
 }
 
+function addCodexPrimaryToMixedRun(run: ReturnType<typeof createMixedLiveRun>): void {
+  const now = '2026-04-23T10:00:00.000Z';
+  const freshHeartbeatAt = new Date().toISOString();
+  const cody = {
+    name: 'cody',
+    role: 'Developer',
+    providerId: 'codex',
+    providerBackendId: 'codex-native',
+    model: 'gpt-5.4-mini',
+  };
+  run.expectedMembers = Array.from(new Set([...(run.expectedMembers ?? []), 'cody']));
+  run.effectiveMembers = [...(run.effectiveMembers ?? []), cody];
+  run.allEffectiveMembers = [
+    ...run.effectiveMembers,
+    ...((run.allEffectiveMembers ?? []) as Array<Record<string, unknown>>).filter(
+      (member) => member.providerId === 'opencode'
+    ),
+  ];
+  run.memberSpawnStatuses.set('cody', {
+    status: 'online',
+    launchState: 'confirmed_alive',
+    agentToolAccepted: true,
+    runtimeAlive: true,
+    bootstrapConfirmed: true,
+    hardFailure: false,
+    lastHeartbeatAt: freshHeartbeatAt,
+    lastRuntimeAliveAt: now,
+    lastEvaluatedAt: now,
+    updatedAt: now,
+    livenessSource: 'heartbeat',
+  });
+}
+
 function createPureAnthropicLiveRun(input: { teamName: string; projectPath: string }): any {
   const now = '2026-04-23T10:00:00.000Z';
   const freshHeartbeatAt = new Date().toISOString();
@@ -22686,6 +22859,7 @@ async function writeMixedTeamConfig(input: {
   teamName: string;
   projectPath: string;
   includeGeminiPrimary?: boolean;
+  includeCodexPrimary?: boolean;
   primaryProviderId?: MixedPrimaryProviderId;
   removedMembers?: string[];
   extraMembers?: Array<{ name: string; providerId: 'opencode'; model: string }>;
@@ -22728,6 +22902,18 @@ async function writeMixedTeamConfig(input: {
                   providerId: 'gemini',
                   model: 'gemini-2.5-flash',
                   ...(removedMembers.has('reviewer') ? { removedAt: 1_777_000_000_000 } : {}),
+                },
+              ]
+            : []),
+          ...(input.includeCodexPrimary
+            ? [
+                {
+                  name: 'cody',
+                  role: 'Developer',
+                  providerId: 'codex',
+                  providerBackendId: 'codex-native',
+                  model: 'gpt-5.4-mini',
+                  ...(removedMembers.has('cody') ? { removedAt: 1_777_000_000_000 } : {}),
                 },
               ]
             : []),
@@ -23345,6 +23531,7 @@ async function writeMembersMeta(
   teamName: string,
   options: {
     includeGeminiPrimary?: boolean;
+    includeCodexPrimary?: boolean;
     primaryProviderId?: MixedPrimaryProviderId;
     removedMembers?: string[];
     extraMembers?: Array<{ name: string; providerId: 'opencode'; model: string }>;
@@ -23379,6 +23566,18 @@ async function writeMembersMeta(
                   model: 'gemini-2.5-flash',
                   ...(options.memberCwd ? { cwd: options.memberCwd } : {}),
                   ...(removedMembers.has('reviewer') ? { removedAt: 1_777_000_000_000 } : {}),
+                },
+              ]
+            : []),
+          ...(options.includeCodexPrimary
+            ? [
+                {
+                  name: 'cody',
+                  providerId: 'codex',
+                  providerBackendId: 'codex-native',
+                  model: 'gpt-5.4-mini',
+                  ...(options.memberCwd ? { cwd: options.memberCwd } : {}),
+                  ...(removedMembers.has('cody') ? { removedAt: 1_777_000_000_000 } : {}),
                 },
               ]
             : []),

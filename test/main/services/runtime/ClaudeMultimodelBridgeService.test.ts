@@ -501,20 +501,69 @@ describe('ClaudeMultimodelBridgeService', () => {
     vi.mocked(console.warn).mockClear();
   });
 
-  it('allows the dev source runtime enough time to return OpenCode summary status', async () => {
+  it.each(['anthropic', 'codex', 'gemini', 'opencode'] as const)(
+    'allows the dev source runtime enough time to return %s summary status',
+    async (providerId) => {
+      execCliMock.mockImplementation((_binaryPath, args) => {
+        const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+        if (normalizedArgs === `runtime status --json --provider ${providerId} --summary`) {
+          return Promise.resolve({
+            stdout: JSON.stringify({
+              schemaVersion: 2,
+              providers: {
+                [providerId]: {
+                  supported: true,
+                  authenticated: true,
+                  authMethod: providerId === 'opencode' ? 'opencode_managed' : 'subscription',
+                  verificationState: 'verified',
+                  canLoginFromUi: providerId !== 'opencode',
+                  capabilities: { teamLaunch: true, oneShot: false },
+                },
+              },
+            }),
+            stderr: '',
+          });
+        }
+
+        return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
+      });
+
+      const { ClaudeMultimodelBridgeService } =
+        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+      const service = new ClaudeMultimodelBridgeService();
+
+      const provider = await service.getProviderStatus('/mock/cli-source', providerId);
+
+      expect(provider).toMatchObject({
+        providerId,
+        supported: true,
+        authenticated: true,
+        verificationState: 'verified',
+      });
+      expect(execCliMock.mock.calls[0][2]?.timeout).toBe(45_000);
+    }
+  );
+
+  it('allows the dev source runtime enough time to hydrate the initial provider status batch', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
-      if (normalizedArgs === 'runtime status --json --provider opencode --summary') {
+      const providerId = ['anthropic', 'codex', 'opencode'].find((candidate) =>
+        normalizedArgs.includes(`--provider ${candidate}`)
+      );
+      if (
+        providerId &&
+        normalizedArgs === `runtime status --json --provider ${providerId} --summary`
+      ) {
         return Promise.resolve({
           stdout: JSON.stringify({
             schemaVersion: 2,
             providers: {
-              opencode: {
+              [providerId]: {
                 supported: true,
                 authenticated: true,
-                authMethod: 'opencode_managed',
+                authMethod: providerId === 'opencode' ? 'opencode_managed' : 'subscription',
                 verificationState: 'verified',
-                canLoginFromUi: false,
+                canLoginFromUi: providerId !== 'opencode',
                 capabilities: { teamLaunch: true, oneShot: false },
               },
             },
@@ -530,15 +579,17 @@ describe('ClaudeMultimodelBridgeService', () => {
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
     const service = new ClaudeMultimodelBridgeService();
 
-    const provider = await service.getProviderStatus('/mock/cli-source', 'opencode');
+    const providers = await service.getProviderStatuses('/mock/cli-source');
 
-    expect(provider).toMatchObject({
-      providerId: 'opencode',
-      supported: true,
-      authenticated: true,
-      verificationState: 'verified',
-    });
-    expect(execCliMock.mock.calls[0][2]?.timeout).toBe(45_000);
+    expect(providers.map((provider) => provider.providerId)).toEqual([
+      'anthropic',
+      'codex',
+      'opencode',
+    ]);
+    expect(execCliMock).toHaveBeenCalledTimes(3);
+    expect(execCliMock.mock.calls.map((call) => call[2]?.timeout)).toEqual([
+      45_000, 45_000, 45_000,
+    ]);
   });
 
   it('resolves project-scoped OpenCode catalogs from the selected project cwd', async () => {

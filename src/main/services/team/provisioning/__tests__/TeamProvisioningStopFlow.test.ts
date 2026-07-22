@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { stopTeamFlow, type TeamProvisioningStopTeamPorts } from '../TeamProvisioningStopFlow';
+import {
+  stopAllTeamsFlow,
+  stopTeamFlow,
+  type TeamProvisioningStopTeamPorts,
+} from '../TeamProvisioningStopFlow';
 
 import type { TeamProvisioningProgress } from '@shared/types';
 
@@ -103,6 +107,61 @@ function makePorts(
 }
 
 describe('team provisioning stop flow', () => {
+  it('kills tracked processes before waiting for a slow roster-aware team stop', async () => {
+    let releaseInitialStop!: () => void;
+    const initialStopGate = new Promise<void>((resolve) => {
+      releaseInitialStop = resolve;
+    });
+    const events: string[] = [];
+    let stopPass = 0;
+
+    const stopping = stopAllTeamsFlow({
+      incrementStopAllTeamsGeneration: () => events.push('generation'),
+      getShutdownTrackedTeamNames: () => ['team-a'],
+      pauseActiveIntervalsForTeam: () => events.push('pause'),
+      killTrackedCliProcesses: () => events.push('kill-cli'),
+      killTransientProbeProcessesForShutdown: () => events.push('kill-probes'),
+      stopTrackedTeamsForShutdown: async () => {
+        stopPass += 1;
+        events.push(`stop-${stopPass}:start`);
+        if (stopPass === 1) {
+          await initialStopGate;
+        }
+        events.push(`stop-${stopPass}:end`);
+        return ['team-a'];
+      },
+      cancelPendingRuntimeAdapterLaunchesForShutdown: async () => {
+        events.push('cancel-adapter');
+      },
+      waitForInFlightTeamOperationsForShutdown: async () => {
+        events.push('wait-locks');
+      },
+      listPersistedTeamNames: () => [],
+      stopPersistentTeamMembers: () => events.push('stop-persisted'),
+      cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: async () => undefined,
+      logger: { info: vi.fn() },
+    });
+    await Promise.resolve();
+
+    expect(events).toEqual(['generation', 'pause', 'kill-cli', 'kill-probes', 'stop-1:start']);
+
+    releaseInitialStop();
+    await stopping;
+    expect(events).toEqual([
+      'generation',
+      'pause',
+      'kill-cli',
+      'kill-probes',
+      'stop-1:start',
+      'stop-1:end',
+      'cancel-adapter',
+      'wait-locks',
+      'cancel-adapter',
+      'stop-2:start',
+      'stop-2:end',
+    ]);
+  });
+
   it('cancels OpenCode runtime advisory timers even when no tracked run remains', async () => {
     const teamName = 'team-a';
     const ports = makePorts(teamName, new Map());

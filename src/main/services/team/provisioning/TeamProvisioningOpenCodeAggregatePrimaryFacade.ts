@@ -37,6 +37,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     teamName: string,
     operation: () => Promise<T>
   ): Promise<T> {
+    if (this.isLiveRosterMutationLockHeld(teamName)) {
+      return operation();
+    }
     const pendingTeamOperation = this.teamOpLocks.get(teamName);
     return pendingTeamOperation ? pendingTeamOperation.then(operation) : operation();
   }

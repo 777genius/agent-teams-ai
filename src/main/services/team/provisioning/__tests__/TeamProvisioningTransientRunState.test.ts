@@ -348,4 +348,83 @@ describe('TeamProvisioningTransientRunState', () => {
     expect(events).toEqual(['first:start', 'first:end', 'second']);
     expect(ports.teamOpLocks.has('alpha')).toBe(false);
   });
+
+  it('allows the current async owner to reenter the same team lock without deadlocking', async () => {
+    const ports = makePorts();
+    const state = new TeamProvisioningTransientRunState(ports);
+    const events: string[] = [];
+
+    const outcome = await Promise.race([
+      state.withTeamLock('alpha', async () => {
+        events.push('outer');
+        await state.withTeamLock('alpha', async () => {
+          events.push('inner');
+        });
+        return 'completed';
+      }),
+      new Promise<string>((resolve) => setTimeout(() => resolve('deadlocked'), 100)),
+    ]);
+
+    expect(outcome).toBe('completed');
+    expect(events).toEqual(['outer', 'inner']);
+    expect(ports.teamOpLocks.has('alpha')).toBe(false);
+  });
+
+  it('starts an uncontended team operation synchronously', async () => {
+    const ports = makePorts();
+    const state = new TeamProvisioningTransientRunState(ports);
+    let started = false;
+
+    const operation = state.withTeamLock('alpha', async () => {
+      started = true;
+    });
+
+    expect(started).toBe(true);
+    await operation;
+  });
+
+  it('does not let stale async ownership bypass a later team lock owner', async () => {
+    const ports = makePorts();
+    const state = new TeamProvisioningTransientRunState(ports);
+    const events: string[] = [];
+    let releaseDetached!: () => void;
+    const detachedGate = new Promise<void>((resolve) => {
+      releaseDetached = resolve;
+    });
+    let detachedOperation!: Promise<void>;
+
+    await state.withTeamLock('alpha', async () => {
+      detachedOperation = (async () => {
+        await detachedGate;
+        await state.withTeamLock('alpha', async () => {
+          events.push('detached');
+        });
+      })();
+    });
+
+    let releaseCurrent!: () => void;
+    let currentStarted!: () => void;
+    const currentStartedSignal = new Promise<void>((resolve) => {
+      currentStarted = resolve;
+    });
+    const currentOperation = state.withTeamLock('alpha', async () => {
+      events.push('current:start');
+      currentStarted();
+      await new Promise<void>((resolve) => {
+        releaseCurrent = resolve;
+      });
+      events.push('current:end');
+    });
+    await currentStartedSignal;
+
+    releaseDetached();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(events).toEqual(['current:start']);
+
+    releaseCurrent();
+    await Promise.all([currentOperation, detachedOperation]);
+    expect(events).toEqual(['current:start', 'current:end', 'detached']);
+    expect(ports.teamOpLocks.has('alpha')).toBe(false);
+  });
 });

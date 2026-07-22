@@ -145,6 +145,7 @@ export type TeamLiveRosterAttachReason = 'member_added' | 'member_restored' | 'm
 
 export interface TeamMemberLifecycleApi {
   getMemberSpawnStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
+  runLiveRosterMutation(teamName: string, mutation: () => Promise<void>): Promise<void>;
   attachLiveRosterMember(
     teamName: string,
     memberName: string,
@@ -415,6 +416,7 @@ export function bindTeamIpcHandlerApis(
 export function bindTeamMemberLifecycleApi(source: TeamMemberLifecycleApi): TeamMemberLifecycleApi {
   return {
     getMemberSpawnStatuses: source.getMemberSpawnStatuses.bind(source),
+    runLiveRosterMutation: source.runLiveRosterMutation.bind(source),
     attachLiveRosterMember: source.attachLiveRosterMember.bind(source),
     detachLiveRosterMember: source.detachLiveRosterMember.bind(source),
     restartMember: source.restartMember.bind(source),

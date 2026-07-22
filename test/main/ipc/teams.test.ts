@@ -91,6 +91,10 @@ function secondMockArgString(call: unknown[] | undefined): string {
   return typeof value === 'string' ? value : '';
 }
 
+function mockCallArg(call: readonly unknown[] | undefined, index: number): unknown {
+  return call?.[index];
+}
+
 const TEST_PROJECT_PATH = path.join(os.tmpdir(), 'project');
 const DRAFT_TEAM_CWD = path.join(os.tmpdir(), 'draft-team');
 const TASK_LOG_JSONL_PATH = path.join(os.tmpdir(), 'task.jsonl');
@@ -544,6 +548,9 @@ describe('ipc teams handlers', () => {
         updatedAt: new Date().toISOString(),
       })
     ),
+    runLiveRosterMutation: vi.fn(
+      async (_teamName: string, mutation: () => Promise<void>): Promise<void> => mutation()
+    ),
     restartMember: vi.fn(() => resolvedUndefined()),
     retryFailedOpenCodeSecondaryLanes: vi.fn(() =>
       resolved({
@@ -589,6 +596,7 @@ describe('ipc teams handlers', () => {
     },
     memberLifecycle: {
       getMemberSpawnStatuses: teamHandlerMocks.getMemberSpawnStatuses,
+      runLiveRosterMutation: teamHandlerMocks.runLiveRosterMutation,
       attachLiveRosterMember: teamHandlerMocks.attachLiveRosterMember,
       detachLiveRosterMember: teamHandlerMocks.detachLiveRosterMember,
       restartMember: teamHandlerMocks.restartMember,
@@ -3694,6 +3702,22 @@ describe('ipc teams handlers', () => {
   });
 
   describe('addMember', () => {
+    it('runs the complete roster persistence and runtime attach transaction under the team lifecycle lock', async () => {
+      const handler = handlers.get(TEAM_ADD_MEMBER)!;
+
+      const result = (await handler({} as never, 'my-team', {
+        name: 'alice',
+        role: 'developer',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(teamHandlerMocks.runLiveRosterMutation).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function)
+      );
+      expect(service.addMember).toHaveBeenCalled();
+    });
+
     it('calls service on valid input', async () => {
       const handler = handlers.get(TEAM_ADD_MEMBER)!;
       const result = (await handler({} as never, 'my-team', {
@@ -4760,6 +4784,345 @@ describe('ipc teams handlers', () => {
       vi.mocked(console.error).mockClear();
     });
 
+    it.each([
+      { failurePosition: 1, label: 'first' },
+      { failurePosition: 2, label: 'middle' },
+      { failurePosition: 3, label: 'last' },
+    ])(
+      'rolls back every added live member when the $label lifecycle attach fails',
+      async ({ failurePosition }) => {
+        const addedNames = ['alice', 'bob', 'carol'];
+        const previousMetaMembers = [
+          {
+            name: 'team-lead',
+            providerId: 'codex' as const,
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+        ];
+        mockGetMembersMetaFile.mockResolvedValueOnce({
+          version: 1,
+          providerBackendId: 'codex-native',
+          members: previousMetaMembers,
+        });
+        service.getTeamData.mockResolvedValueOnce({
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: previousMetaMembers.map((member) => ({
+            ...member,
+            currentTaskId: null,
+            taskCount: 0,
+          })),
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
+        });
+        let attachAttempt = 0;
+        teamHandlerMocks.attachLiveRosterMember.mockImplementation(async () => {
+          attachAttempt += 1;
+          if (attachAttempt === failurePosition) {
+            throw new Error(`attach failed at ${failurePosition}`);
+          }
+        });
+
+        const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+          members: addedNames.map((name) => ({
+            name,
+            role: 'Developer',
+            providerId: 'codex',
+          })),
+        })) as { success: boolean; error?: string };
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain(`attach failed at ${failurePosition}`);
+        expect(
+          teamHandlerMocks.attachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 1))
+        ).toEqual(addedNames.slice(0, failurePosition));
+        expect(
+          teamHandlerMocks.detachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 1))
+        ).toEqual(addedNames);
+        expect(mockWriteMembersMeta).toHaveBeenCalledWith('my-team', previousMetaMembers, {
+          providerBackendId: 'codex-native',
+        });
+        vi.mocked(console.error).mockClear();
+      }
+    );
+
+    it.each([
+      { failurePosition: 1, label: 'first' },
+      { failurePosition: 2, label: 'middle' },
+      { failurePosition: 3, label: 'last' },
+    ])(
+      'restores every removed live member when the $label lifecycle detach fails',
+      async ({ failurePosition }) => {
+        const removedNames = ['alice', 'bob', 'carol'];
+        const previousMetaMembers = [
+          {
+            name: 'team-lead',
+            providerId: 'codex' as const,
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+          ...removedNames.map((name) => ({
+            name,
+            providerId: 'codex' as const,
+            role: 'Developer',
+            agentType: 'general-purpose',
+            agentId: `agent-${name}`,
+          })),
+        ];
+        mockGetMembersMetaFile.mockResolvedValueOnce({
+          version: 1,
+          providerBackendId: 'codex-native',
+          members: previousMetaMembers,
+        });
+        service.getTeamData.mockResolvedValueOnce({
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: previousMetaMembers.map((member) => ({
+            ...member,
+            currentTaskId: null,
+            taskCount: 0,
+          })),
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
+        });
+        let detachAttempt = 0;
+        teamHandlerMocks.detachLiveRosterMember.mockImplementation(async () => {
+          detachAttempt += 1;
+          if (detachAttempt === failurePosition) {
+            throw new Error(`detach failed at ${failurePosition}`);
+          }
+        });
+
+        const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+          members: [],
+        })) as { success: boolean; error?: string };
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain(`detach failed at ${failurePosition}`);
+        expect(
+          teamHandlerMocks.detachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 1))
+        ).toEqual(removedNames.slice(0, failurePosition));
+        expect(mockWriteMembersMeta).toHaveBeenCalledWith('my-team', previousMetaMembers, {
+          providerBackendId: 'codex-native',
+        });
+        expect(
+          teamHandlerMocks.attachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 1))
+        ).toEqual(removedNames);
+        expect(
+          teamHandlerMocks.attachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 2))
+        ).toEqual(removedNames.map(() => ({ reason: 'member_updated' })));
+        vi.mocked(console.error).mockClear();
+      }
+    );
+
+    it.each([
+      { failurePosition: 1, label: 'first' },
+      { failurePosition: 2, label: 'middle' },
+      { failurePosition: 3, label: 'last' },
+    ])(
+      'restores every updated live member when the $label lifecycle reattach fails',
+      async ({ failurePosition }) => {
+        const updatedNames = ['alice', 'bob', 'carol'];
+        const previousMetaMembers = [
+          {
+            name: 'team-lead',
+            providerId: 'codex' as const,
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+          ...updatedNames.map((name) => ({
+            name,
+            providerId: 'codex' as const,
+            role: 'Developer',
+            workflow: 'previous workflow',
+            agentType: 'general-purpose',
+            agentId: `agent-${name}`,
+          })),
+        ];
+        mockGetMembersMetaFile.mockResolvedValueOnce({
+          version: 1,
+          providerBackendId: 'codex-native',
+          members: previousMetaMembers,
+        });
+        service.getTeamData.mockResolvedValueOnce({
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: previousMetaMembers.map((member) => ({
+            ...member,
+            currentTaskId: null,
+            taskCount: 0,
+          })),
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
+        });
+        let attachAttempt = 0;
+        teamHandlerMocks.attachLiveRosterMember.mockImplementation(async () => {
+          attachAttempt += 1;
+          if (attachAttempt === failurePosition) {
+            throw new Error(`reattach failed at ${failurePosition}`);
+          }
+        });
+
+        const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+          members: updatedNames.map((name) => ({
+            name,
+            role: 'Developer',
+            workflow: 'next workflow',
+            providerId: 'codex',
+          })),
+        })) as { success: boolean; error?: string };
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain(`reattach failed at ${failurePosition}`);
+        expect(
+          teamHandlerMocks.attachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 1))
+        ).toEqual([...updatedNames.slice(0, failurePosition), ...updatedNames]);
+        expect(mockWriteMembersMeta).toHaveBeenCalledWith('my-team', previousMetaMembers, {
+          providerBackendId: 'codex-native',
+        });
+        const firstRollbackAttachOrder =
+          teamHandlerMocks.attachLiveRosterMember.mock.invocationCallOrder[failurePosition];
+        expect(mockWriteMembersMeta.mock.invocationCallOrder[0]).toBeLessThan(
+          firstRollbackAttachOrder!
+        );
+        vi.mocked(console.error).mockClear();
+      }
+    );
+
+    it('falls back to TeamDataService when exact metadata restoration fails', async () => {
+      const previousMetaMembers = [
+        {
+          name: 'team-lead',
+          providerId: 'codex' as const,
+          role: 'Team Lead',
+          agentType: 'team-lead',
+        },
+        {
+          name: 'alice',
+          providerId: 'codex' as const,
+          role: 'Developer',
+          agentType: 'general-purpose',
+          agentId: 'agent-alice',
+        },
+      ];
+      mockGetMembersMetaFile.mockResolvedValueOnce({
+        version: 1,
+        providerBackendId: 'codex-native',
+        members: previousMetaMembers,
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: previousMetaMembers.map((member) => ({
+          ...member,
+          currentTaskId: null,
+          taskCount: 0,
+        })),
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      mockWriteMembersMeta.mockRejectedValueOnce(new Error('exact restore failed'));
+      teamHandlerMocks.detachLiveRosterMember.mockRejectedValueOnce(
+        new Error('lifecycle detach failed')
+      );
+
+      const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+        members: [],
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('lifecycle detach failed');
+      expect(service.replaceMembers).toHaveBeenNthCalledWith(2, 'my-team', {
+        members: [
+          {
+            name: 'alice',
+            role: 'Developer',
+            workflow: undefined,
+            isolation: undefined,
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: undefined,
+            effort: undefined,
+            fastMode: undefined,
+            mcpPolicy: undefined,
+          },
+        ],
+      });
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
+        reason: 'member_updated',
+      });
+      vi.mocked(console.error).mockClear();
+    });
+
+    it('returns the lifecycle failure and releases the handler after both metadata rollbacks fail', async () => {
+      const previousMetaMembers = [
+        {
+          name: 'team-lead',
+          providerId: 'codex' as const,
+          role: 'Team Lead',
+          agentType: 'team-lead',
+        },
+        {
+          name: 'alice',
+          providerId: 'codex' as const,
+          role: 'Developer',
+          agentType: 'general-purpose',
+          agentId: 'agent-alice',
+        },
+      ];
+      mockGetMembersMetaFile.mockResolvedValueOnce({
+        version: 1,
+        providerBackendId: 'codex-native',
+        members: previousMetaMembers,
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: previousMetaMembers.map((member) => ({
+          ...member,
+          currentTaskId: null,
+          taskCount: 0,
+        })),
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      mockWriteMembersMeta.mockRejectedValueOnce(new Error('exact restore failed'));
+      service.replaceMembers
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('fallback restore failed'));
+      teamHandlerMocks.detachLiveRosterMember.mockRejectedValueOnce(
+        new Error('lifecycle detach failed')
+      );
+
+      const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+        members: [],
+      })) as { success: boolean; error?: string };
+      const stopResult = (await handlers.get(TEAM_STOP)!({} as never, 'my-team')) as {
+        success: boolean;
+      };
+      const restartResult = (await handlers.get(TEAM_RESTART_MEMBER)!(
+        {} as never,
+        'my-team',
+        'alice'
+      )) as { success: boolean };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('lifecycle detach failed');
+      expect(service.replaceMembers).toHaveBeenCalledTimes(2);
+      expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
+      expect(stopResult.success).toBe(true);
+      expect(teamHandlerMocks.stopTeam).toHaveBeenCalledWith('my-team');
+      expect(restartResult.success).toBe(true);
+      expect(teamHandlerMocks.restartMember).toHaveBeenCalledWith('my-team', 'alice');
+      vi.mocked(console.error).mockClear();
+    });
+
     it('blocks live replaceMembers when a member migrates from primary runtime ownership to OpenCode', async () => {
       const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
       service.getTeamData.mockResolvedValueOnce({
@@ -4874,6 +5237,19 @@ describe('ipc teams handlers', () => {
       };
       expect(result.success).toBe(true);
       expect(service.updateMemberRole).toHaveBeenCalledWith('my-team', 'alice', undefined);
+    });
+
+    it('rejects a non-string role without mutating persisted member metadata', async () => {
+      const handler = handlers.get(TEAM_UPDATE_MEMBER_ROLE)!;
+
+      const result = (await handler({} as never, 'my-team', 'alice', { role: 'developer' })) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('role must be a string, null, or undefined');
+      expect(service.updateMemberRole).not.toHaveBeenCalled();
     });
 
     it('rejects invalid team name', async () => {

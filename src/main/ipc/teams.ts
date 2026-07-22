@@ -4689,50 +4689,52 @@ async function handleAddMember(
 
   return wrapTeamHandler('addMember', async () => {
     const tn = vTeam.value!;
-    const memberName = vName.value!;
-    const teamDataService = getTeamDataService();
-    const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-    const previousTeamData = await teamDataService.getTeamData(tn);
-    const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
-    const memberLifecycle = getTeamMemberLifecycleApi();
-    const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
-    if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
-      throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
-    }
-
-    await teamDataService.addMember(tn, {
-      name: memberName,
-      role: role,
-      workflow: typeof workflow === 'string' ? workflow.trim() || undefined : undefined,
-      isolation: isolation === 'worktree' ? ('worktree' as const) : undefined,
-      providerId: providerValidation.value,
-      ...(providerBackendValidation.value
-        ? { providerBackendId: providerBackendValidation.value }
-        : {}),
-      model: typeof model === 'string' ? model.trim() || undefined : undefined,
-      effort: effortValidation.value,
-      ...(fastModeValidation.value ? { fastMode: fastModeValidation.value } : {}),
-      mcpPolicy: normalizeTeamMemberMcpPolicy(mcpPolicy),
-    });
-    invalidateTeamRosterSnapshotCaches(tn);
-
-    if (isTeamAlive) {
-      try {
-        await memberLifecycle.attachLiveRosterMember(tn, memberName, {
-          reason: 'member_added',
-        });
-      } catch (error) {
-        await rollbackLiveRosterMutation({
-          teamName: tn,
-          teamDataService,
-          memberLifecycle,
-          previousMembers,
-          previousMembersMeta,
-          detachLiveMemberNames: [memberName],
-        });
-        throw error;
+    return getTeamMemberLifecycleApi().runLiveRosterMutation(tn, async () => {
+      const memberName = vName.value!;
+      const teamDataService = getTeamDataService();
+      const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
+      const previousTeamData = await teamDataService.getTeamData(tn);
+      const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
+      const memberLifecycle = getTeamMemberLifecycleApi();
+      const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
+      if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
+        throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
       }
-    }
+
+      await teamDataService.addMember(tn, {
+        name: memberName,
+        role: role,
+        workflow: typeof workflow === 'string' ? workflow.trim() || undefined : undefined,
+        isolation: isolation === 'worktree' ? ('worktree' as const) : undefined,
+        providerId: providerValidation.value,
+        ...(providerBackendValidation.value
+          ? { providerBackendId: providerBackendValidation.value }
+          : {}),
+        model: typeof model === 'string' ? model.trim() || undefined : undefined,
+        effort: effortValidation.value,
+        ...(fastModeValidation.value ? { fastMode: fastModeValidation.value } : {}),
+        mcpPolicy: normalizeTeamMemberMcpPolicy(mcpPolicy),
+      });
+      invalidateTeamRosterSnapshotCaches(tn);
+
+      if (isTeamAlive) {
+        try {
+          await memberLifecycle.attachLiveRosterMember(tn, memberName, {
+            reason: 'member_added',
+          });
+        } catch (error) {
+          await rollbackLiveRosterMutation({
+            teamName: tn,
+            teamDataService,
+            memberLifecycle,
+            previousMembers,
+            previousMembersMeta,
+            detachLiveMemberNames: [memberName],
+          });
+          throw error;
+        }
+      }
+    });
   });
 }
 
@@ -4836,152 +4838,154 @@ async function handleReplaceMembers(
 
   return wrapTeamHandler('replaceMembers', async () => {
     const tn = vTeam.value!;
-    const teamDataService = getTeamDataService();
-    const memberLifecycle = getTeamMemberLifecycleApi();
-    const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
-    if (!isTeamAlive) {
+    return getTeamMemberLifecycleApi().runLiveRosterMutation(tn, async () => {
+      const teamDataService = getTeamDataService();
+      const memberLifecycle = getTeamMemberLifecycleApi();
+      const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
+      if (!isTeamAlive) {
+        await teamDataService.replaceMembers(tn, { members });
+        invalidateTeamRosterSnapshotCaches(tn);
+        return;
+      }
+
+      const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
+      const previousTeamData = await teamDataService.getTeamData(tn);
+      const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
+      const useSecondaryOpenCodeLaneRouting = isTeamAlive && !isOpenCodeLedRoster(previousMembers);
+      if (!useSecondaryOpenCodeLaneRouting) {
+        throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
+      }
+      if (useSecondaryOpenCodeLaneRouting) {
+        const ownershipMigrationNames = findOpenCodeOwnershipMigrationNames({
+          previousMembers,
+          nextMembers: members,
+        });
+        if (ownershipMigrationNames.length > 0) {
+          throw new Error(
+            `${OPENCODE_OWNERSHIP_MIGRATION_BLOCK_MESSAGE} Affected member(s): ${ownershipMigrationNames.join(', ')}`
+          );
+        }
+      }
+      const primaryDiff = buildReplaceMembersDiff(
+        previousMembers.filter((member) =>
+          useSecondaryOpenCodeLaneRouting ? !isOpenCodeRosterMutationMember(member) : true
+        ),
+        members.filter((member) =>
+          useSecondaryOpenCodeLaneRouting ? !isOpenCodeRosterMutationMember(member) : true
+        )
+      );
+      const previousByName = new Map(
+        previousMembers
+          .filter((member) => !member.removedAt)
+          .map((member) => [member.name.trim().toLowerCase(), member])
+      );
+      const nextByName = new Map(
+        members.map((member) => [
+          member.name.trim().toLowerCase(),
+          member as RuntimeRosterMutationMember,
+        ])
+      );
+      const removedOpenCodeMembers = useSecondaryOpenCodeLaneRouting
+        ? previousMembers.filter((member) => {
+            const normalizedName = member.name.trim().toLowerCase();
+            return (
+              !member.removedAt &&
+              isOpenCodeRosterMutationMember(member) &&
+              !nextByName.has(normalizedName)
+            );
+          })
+        : [];
+      const addedOpenCodeMembers = useSecondaryOpenCodeLaneRouting
+        ? members.filter((member) => {
+            const normalizedName = member.name.trim().toLowerCase();
+            return isOpenCodeRosterMutationMember(member) && !previousByName.has(normalizedName);
+          })
+        : [];
+      const updatedOpenCodeMembers = useSecondaryOpenCodeLaneRouting
+        ? members.filter((member) => {
+            const normalizedName = member.name.trim().toLowerCase();
+            const previousMember = previousByName.get(normalizedName);
+            return (
+              isOpenCodeRosterMutationMember(member) &&
+              isOpenCodeRosterMutationMember(previousMember) &&
+              didOpenCodeRosterMemberChange(previousMember, member)
+            );
+          })
+        : [];
+
       await teamDataService.replaceMembers(tn, { members });
       invalidateTeamRosterSnapshotCaches(tn);
-      return;
-    }
 
-    const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-    const previousTeamData = await teamDataService.getTeamData(tn);
-    const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
-    const useSecondaryOpenCodeLaneRouting = isTeamAlive && !isOpenCodeLedRoster(previousMembers);
-    if (!useSecondaryOpenCodeLaneRouting) {
-      throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
-    }
-    if (useSecondaryOpenCodeLaneRouting) {
-      const ownershipMigrationNames = findOpenCodeOwnershipMigrationNames({
-        previousMembers,
-        nextMembers: members,
+      if (!isTeamAlive) {
+        return;
+      }
+
+      try {
+        for (const removedMember of removedOpenCodeMembers) {
+          await memberLifecycle.detachLiveRosterMember(tn, removedMember.name);
+        }
+
+        for (const addedMember of addedOpenCodeMembers) {
+          await memberLifecycle.attachLiveRosterMember(tn, addedMember.name, {
+            reason: 'member_added',
+          });
+        }
+
+        for (const updatedMember of updatedOpenCodeMembers) {
+          await memberLifecycle.attachLiveRosterMember(tn, updatedMember.name, {
+            reason: 'member_updated',
+          });
+        }
+
+        for (const removedMemberName of primaryDiff.removed) {
+          await memberLifecycle.detachLiveRosterMember(tn, removedMemberName);
+        }
+
+        for (const addedMember of primaryDiff.added) {
+          await memberLifecycle.attachLiveRosterMember(tn, addedMember.name, {
+            reason: 'member_added',
+          });
+        }
+
+        for (const updatedMember of primaryDiff.updated) {
+          await memberLifecycle.attachLiveRosterMember(tn, updatedMember.name, {
+            reason: 'member_updated',
+          });
+        }
+      } catch (error) {
+        await rollbackLiveRosterMutation({
+          teamName: tn,
+          teamDataService,
+          memberLifecycle,
+          previousMembers,
+          previousMembersMeta,
+          restoreLiveMemberNames: [
+            ...removedOpenCodeMembers.map((member) => member.name),
+            ...primaryDiff.removed,
+            ...updatedOpenCodeMembers.map((member) => member.name),
+            ...primaryDiff.updated.map((member) => member.name),
+          ],
+          detachLiveMemberNames: [
+            ...addedOpenCodeMembers.map((member) => member.name),
+            ...primaryDiff.added.map((member) => member.name),
+          ],
+        });
+        throw error;
+      }
+
+      const summaryMessage = buildReplaceMembersSummaryMessage({
+        ...primaryDiff,
+        updated: [],
       });
-      if (ownershipMigrationNames.length > 0) {
-        throw new Error(
-          `${OPENCODE_OWNERSHIP_MIGRATION_BLOCK_MESSAGE} Affected member(s): ${ownershipMigrationNames.join(', ')}`
-        );
+      if (!summaryMessage) {
+        return;
       }
-    }
-    const primaryDiff = buildReplaceMembersDiff(
-      previousMembers.filter((member) =>
-        useSecondaryOpenCodeLaneRouting ? !isOpenCodeRosterMutationMember(member) : true
-      ),
-      members.filter((member) =>
-        useSecondaryOpenCodeLaneRouting ? !isOpenCodeRosterMutationMember(member) : true
-      )
-    );
-    const previousByName = new Map(
-      previousMembers
-        .filter((member) => !member.removedAt)
-        .map((member) => [member.name.trim().toLowerCase(), member])
-    );
-    const nextByName = new Map(
-      members.map((member) => [
-        member.name.trim().toLowerCase(),
-        member as RuntimeRosterMutationMember,
-      ])
-    );
-    const removedOpenCodeMembers = useSecondaryOpenCodeLaneRouting
-      ? previousMembers.filter((member) => {
-          const normalizedName = member.name.trim().toLowerCase();
-          return (
-            !member.removedAt &&
-            isOpenCodeRosterMutationMember(member) &&
-            !nextByName.has(normalizedName)
-          );
-        })
-      : [];
-    const addedOpenCodeMembers = useSecondaryOpenCodeLaneRouting
-      ? members.filter((member) => {
-          const normalizedName = member.name.trim().toLowerCase();
-          return isOpenCodeRosterMutationMember(member) && !previousByName.has(normalizedName);
-        })
-      : [];
-    const updatedOpenCodeMembers = useSecondaryOpenCodeLaneRouting
-      ? members.filter((member) => {
-          const normalizedName = member.name.trim().toLowerCase();
-          const previousMember = previousByName.get(normalizedName);
-          return (
-            isOpenCodeRosterMutationMember(member) &&
-            isOpenCodeRosterMutationMember(previousMember) &&
-            didOpenCodeRosterMemberChange(previousMember, member)
-          );
-        })
-      : [];
-
-    await teamDataService.replaceMembers(tn, { members });
-    invalidateTeamRosterSnapshotCaches(tn);
-
-    if (!isTeamAlive) {
-      return;
-    }
-
-    try {
-      for (const removedMember of removedOpenCodeMembers) {
-        await memberLifecycle.detachLiveRosterMember(tn, removedMember.name);
+      try {
+        await getTeamMessagingApi().sendMessageToTeam(tn, summaryMessage);
+      } catch {
+        logger.warn(`Failed to notify lead about member updates in ${tn}`);
       }
-
-      for (const addedMember of addedOpenCodeMembers) {
-        await memberLifecycle.attachLiveRosterMember(tn, addedMember.name, {
-          reason: 'member_added',
-        });
-      }
-
-      for (const updatedMember of updatedOpenCodeMembers) {
-        await memberLifecycle.attachLiveRosterMember(tn, updatedMember.name, {
-          reason: 'member_updated',
-        });
-      }
-
-      for (const removedMemberName of primaryDiff.removed) {
-        await memberLifecycle.detachLiveRosterMember(tn, removedMemberName);
-      }
-
-      for (const addedMember of primaryDiff.added) {
-        await memberLifecycle.attachLiveRosterMember(tn, addedMember.name, {
-          reason: 'member_added',
-        });
-      }
-
-      for (const updatedMember of primaryDiff.updated) {
-        await memberLifecycle.attachLiveRosterMember(tn, updatedMember.name, {
-          reason: 'member_updated',
-        });
-      }
-    } catch (error) {
-      await rollbackLiveRosterMutation({
-        teamName: tn,
-        teamDataService,
-        memberLifecycle,
-        previousMembers,
-        previousMembersMeta,
-        restoreLiveMemberNames: [
-          ...removedOpenCodeMembers.map((member) => member.name),
-          ...primaryDiff.removed,
-          ...updatedOpenCodeMembers.map((member) => member.name),
-          ...primaryDiff.updated.map((member) => member.name),
-        ],
-        detachLiveMemberNames: [
-          ...addedOpenCodeMembers.map((member) => member.name),
-          ...primaryDiff.added.map((member) => member.name),
-        ],
-      });
-      throw error;
-    }
-
-    const summaryMessage = buildReplaceMembersSummaryMessage({
-      ...primaryDiff,
-      updated: [],
     });
-    if (!summaryMessage) {
-      return;
-    }
-    try {
-      await getTeamMessagingApi().sendMessageToTeam(tn, summaryMessage);
-    } catch {
-      logger.warn(`Failed to notify lead about member updates in ${tn}`);
-    }
   });
 }
 
@@ -4997,52 +5001,54 @@ async function handleRemoveMember(
 
   return wrapTeamHandler('removeMember', async () => {
     const tn = vTeam.value!;
-    const name = vMember.value!;
-    const teamDataService = getTeamDataService();
-    const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-    const previousTeamData = await teamDataService.getTeamData(tn);
-    const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
-    const normalizedMemberName = name.trim().toLowerCase();
-    const isAlreadyRemoved = previousMembersMeta?.members.some(
-      (member) =>
-        member.name.trim().toLowerCase() === normalizedMemberName &&
-        typeof member.removedAt === 'number'
-    );
-    if (isAlreadyRemoved) {
-      return;
-    }
-    const memberLifecycle = getTeamMemberLifecycleApi();
-    const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
-    if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
-      throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
-    }
-    await teamDataService.removeMember(tn, name);
-    invalidateTeamRosterSnapshotCaches(tn);
-
-    try {
-      await memberLifecycle.detachLiveRosterMember(tn, name);
-    } catch (error) {
-      await rollbackLiveRosterMutation({
-        teamName: tn,
-        teamDataService,
-        memberLifecycle,
-        previousMembers,
-        previousMembersMeta,
-        restoreLiveMemberNames: isTeamAlive ? [name] : [],
-      });
-      throw error;
-    }
-
-    if (isTeamAlive) {
-      const message =
-        `Teammate "${name}" has been removed from the team. ` +
-        `They will no longer participate in team activities. Please reassign their tasks if needed.`;
-      try {
-        await getTeamMessagingApi().sendMessageToTeam(tn, message);
-      } catch {
-        logger.warn(`Failed to notify lead about removal of "${name}" in ${tn}`);
+    return getTeamMemberLifecycleApi().runLiveRosterMutation(tn, async () => {
+      const name = vMember.value!;
+      const teamDataService = getTeamDataService();
+      const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
+      const previousTeamData = await teamDataService.getTeamData(tn);
+      const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
+      const normalizedMemberName = name.trim().toLowerCase();
+      const isAlreadyRemoved = previousMembersMeta?.members.some(
+        (member) =>
+          member.name.trim().toLowerCase() === normalizedMemberName &&
+          typeof member.removedAt === 'number'
+      );
+      if (isAlreadyRemoved) {
+        return;
       }
-    }
+      const memberLifecycle = getTeamMemberLifecycleApi();
+      const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
+      if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
+        throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
+      }
+      await teamDataService.removeMember(tn, name);
+      invalidateTeamRosterSnapshotCaches(tn);
+
+      try {
+        await memberLifecycle.detachLiveRosterMember(tn, name);
+      } catch (error) {
+        await rollbackLiveRosterMutation({
+          teamName: tn,
+          teamDataService,
+          memberLifecycle,
+          previousMembers,
+          previousMembersMeta,
+          restoreLiveMemberNames: isTeamAlive ? [name] : [],
+        });
+        throw error;
+      }
+
+      if (isTeamAlive) {
+        const message =
+          `Teammate "${name}" has been removed from the team. ` +
+          `They will no longer participate in team activities. Please reassign their tasks if needed.`;
+        try {
+          await getTeamMessagingApi().sendMessageToTeam(tn, message);
+        } catch {
+          logger.warn(`Failed to notify lead about removal of "${name}" in ${tn}`);
+        }
+      }
+    });
   });
 }
 
@@ -5058,39 +5064,41 @@ async function handleRestoreMember(
 
   return wrapTeamHandler('restoreMember', async () => {
     const tn = vTeam.value!;
-    const name = vMember.value!;
-    const teamDataService = getTeamDataService();
-    const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-    const previousTeamData = await teamDataService.getTeamData(tn);
-    const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
-    const memberLifecycle = getTeamMemberLifecycleApi();
-    const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
-    if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
-      throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
-    }
+    return getTeamMemberLifecycleApi().runLiveRosterMutation(tn, async () => {
+      const name = vMember.value!;
+      const teamDataService = getTeamDataService();
+      const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
+      const previousTeamData = await teamDataService.getTeamData(tn);
+      const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
+      const memberLifecycle = getTeamMemberLifecycleApi();
+      const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
+      if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
+        throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
+      }
 
-    await teamDataService.restoreMember(tn, name);
-    invalidateTeamRosterSnapshotCaches(tn);
+      await teamDataService.restoreMember(tn, name);
+      invalidateTeamRosterSnapshotCaches(tn);
 
-    if (!isTeamAlive) {
-      return;
-    }
+      if (!isTeamAlive) {
+        return;
+      }
 
-    try {
-      await memberLifecycle.attachLiveRosterMember(tn, name, {
-        reason: 'member_restored',
-      });
-    } catch (error) {
-      await rollbackLiveRosterMutation({
-        teamName: tn,
-        teamDataService,
-        memberLifecycle,
-        previousMembers,
-        previousMembersMeta,
-        detachLiveMemberNames: [name],
-      });
-      throw error;
-    }
+      try {
+        await memberLifecycle.attachLiveRosterMember(tn, name, {
+          reason: 'member_restored',
+        });
+      } catch (error) {
+        await rollbackLiveRosterMutation({
+          teamName: tn,
+          teamDataService,
+          memberLifecycle,
+          previousMembers,
+          previousMembersMeta,
+          detachLiveMemberNames: [name],
+        });
+        throw error;
+      }
+    });
   });
 }
 
@@ -5159,6 +5167,10 @@ async function handleUpdateMemberRole(
   const vMember = validateMemberName(memberName);
   if (!vMember.valid) return { success: false, error: vMember.error ?? 'Invalid memberName' };
 
+  if (role !== undefined && role !== null && typeof role !== 'string') {
+    return { success: false, error: 'role must be a string, null, or undefined' };
+  }
+
   const normalizedRole =
     role === undefined || role === null
       ? undefined
@@ -5168,26 +5180,28 @@ async function handleUpdateMemberRole(
 
   return wrapTeamHandler('updateMemberRole', async () => {
     const tn = vTeam.value!;
-    const name = vMember.value!;
-    const { oldRole, changed } = await getTeamDataService().updateMemberRole(
-      tn,
-      name,
-      normalizedRole
-    );
+    return getTeamMemberLifecycleApi().runLiveRosterMutation(tn, async () => {
+      const name = vMember.value!;
+      const { oldRole, changed } = await getTeamDataService().updateMemberRole(
+        tn,
+        name,
+        normalizedRole
+      );
 
-    if (changed) {
-      invalidateTeamRosterSnapshotCaches(tn);
-      if (getTeamRuntimeApi().isTeamAlive(tn)) {
-        const oldDesc = oldRole ? `"${oldRole}"` : 'none';
-        const newDesc = normalizedRole ? `"${normalizedRole}"` : 'none';
-        const message = `Teammate "${name}" role changed from ${oldDesc} to ${newDesc}. This will take effect on next launch.`;
-        try {
-          await getTeamMessagingApi().sendMessageToTeam(tn, message);
-        } catch {
-          logger.warn(`Failed to notify lead about role change for "${name}" in ${tn}`);
+      if (changed) {
+        invalidateTeamRosterSnapshotCaches(tn);
+        if (getTeamRuntimeApi().isTeamAlive(tn)) {
+          const oldDesc = oldRole ? `"${oldRole}"` : 'none';
+          const newDesc = normalizedRole ? `"${normalizedRole}"` : 'none';
+          const message = `Teammate "${name}" role changed from ${oldDesc} to ${newDesc}. This will take effect on next launch.`;
+          try {
+            await getTeamMessagingApi().sendMessageToTeam(tn, message);
+          } catch {
+            logger.warn(`Failed to notify lead about role change for "${name}" in ${tn}`);
+          }
         }
       }
-    }
+    });
   });
 }
 

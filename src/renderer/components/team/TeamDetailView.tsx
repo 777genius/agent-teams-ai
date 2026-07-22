@@ -103,6 +103,7 @@ import { TrashDialog } from './kanban/TrashDialog';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
+import { resolvePinnedTeamActionTop } from './teamDetailLayout';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
@@ -1438,6 +1439,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   const [graphOpen, setGraphOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const visualizeButtonAnchorRef = useRef<HTMLDivElement>(null);
+  const teamHeaderActionsRef = useRef<HTMLDivElement>(null);
   const taskDetailDialogRef = useRef<TaskDetailDialogHostHandle>(null);
   const taskDetailDialogPreloadScheduledRef = useRef(false);
   const [pinnedVisualizeButtonPosition, setPinnedVisualizeButtonPosition] = useState<{
@@ -1756,9 +1758,13 @@ export const TeamDetailView = memo(function TeamDetailView({
 
       const containerRect = currentContainer.getBoundingClientRect();
       const anchorRect = anchor.getBoundingClientRect();
-      const top = Math.round(containerRect.top + 12);
+      const pinThresholdTop = Math.round(containerRect.top + 12);
+      const top = resolvePinnedTeamActionTop({
+        containerTop: containerRect.top,
+        headerActionsBottom: teamHeaderActionsRef.current?.getBoundingClientRect().bottom,
+      });
       const right = Math.round(Math.max(window.innerWidth - containerRect.right + 16, 16));
-      const shouldPin = currentContainer.scrollTop > 0 && anchorRect.top <= top;
+      const shouldPin = currentContainer.scrollTop > 0 && anchorRect.top <= pinThresholdTop;
 
       setPinnedVisualizeButtonPosition((current) => {
         if (!shouldPin) return current === null ? current : null;
@@ -1774,6 +1780,9 @@ export const TeamDetailView = memo(function TeamDetailView({
     const resizeObserver =
       typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updatePinnedButton);
     resizeObserver?.observe(container);
+    if (teamHeaderActionsRef.current) {
+      resizeObserver?.observe(teamHeaderActionsRef.current);
+    }
 
     return () => {
       container.removeEventListener('scroll', updatePinnedButton);
@@ -3047,7 +3056,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                     )}
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div ref={teamHeaderActionsRef} className="flex shrink-0 items-center gap-1">
                     {data.isAlive && (
                       <Tooltip>
                         <TooltipTrigger asChild>

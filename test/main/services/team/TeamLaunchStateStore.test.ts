@@ -150,6 +150,39 @@ describe('TeamLaunchStateStore', () => {
     ]);
   });
 
+  it('publishes a complete successor generation after a partial publication fails', async () => {
+    const summaryFailure = Object.assign(new Error('summary disk failure'), { code: 'EIO' });
+    mocks.atomicWriteAsync
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(summaryFailure)
+      .mockResolvedValue(undefined);
+
+    await expect(
+      new TeamLaunchStateStore().write('demo', snapshot('2026-01-01T00:00:00.000Z'))
+    ).rejects.toBe(summaryFailure);
+    vi.mocked(console.warn).mockClear();
+
+    await expect(
+      new TeamLaunchStateStore().write('demo', snapshot('2026-01-01T00:00:01.000Z'))
+    ).resolves.toBeUndefined();
+
+    expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(4);
+    const publications = mocks.atomicWriteAsync.mock.calls.map(([targetPath, payload]) => ({
+      targetPath,
+      updatedAt: (JSON.parse(payload as string) as { updatedAt: string }).updatedAt,
+    }));
+    expect(publications.slice(2)).toEqual([
+      {
+        targetPath: getTeamLaunchStatePath('demo'),
+        updatedAt: '2026-01-01T00:00:01.000Z',
+      },
+      {
+        targetPath: getTeamLaunchSummaryPath('demo'),
+        updatedAt: '2026-01-01T00:00:01.000Z',
+      },
+    ]);
+  });
+
   it('does not revoke a publication while its summary is still being persisted', async () => {
     let finishSummaryWrite!: () => void;
     const summaryWrite = new Promise<void>((resolve) => {

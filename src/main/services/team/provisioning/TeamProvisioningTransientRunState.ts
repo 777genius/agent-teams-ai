@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import {
   boundPendingLogLineCarry,
   boundRunClaudeLogLines,
@@ -145,6 +147,9 @@ export function createTeamProvisioningTransientRunStatePortsFromService(
 }
 
 export class TeamProvisioningTransientRunState {
+  private readonly teamLockOwnership = new AsyncLocalStorage<ReadonlyMap<string, symbol>>();
+  private readonly activeTeamLockTokens = new Map<string, symbol>();
+
   constructor(private readonly ports: TeamProvisioningTransientRunStatePorts) {}
 
   clearSameTeamRetryTimers(teamName: string): void {
@@ -234,16 +239,31 @@ export class TeamProvisioningTransientRunState {
   }
 
   async withTeamLock<T>(teamName: string, fn: () => Promise<T>): Promise<T> {
-    const prev = this.ports.teamOpLocks.get(teamName) ?? Promise.resolve();
+    const ownedTeamLocks = this.teamLockOwnership.getStore();
+    const ownedToken = ownedTeamLocks?.get(teamName);
+    if (ownedToken && this.activeTeamLockTokens.get(teamName) === ownedToken) {
+      return fn();
+    }
+
+    const prev = this.ports.teamOpLocks.get(teamName);
     let release!: () => void;
     const mine = new Promise<void>((resolve) => {
       release = resolve;
     });
     this.ports.teamOpLocks.set(teamName, mine);
-    await prev;
+    if (prev) {
+      await prev;
+    }
+    const ownershipToken = Symbol(`team-lock:${teamName}`);
+    this.activeTeamLockTokens.set(teamName, ownershipToken);
     try {
-      return await fn();
+      const nextOwnedTeamLocks = new Map(ownedTeamLocks);
+      nextOwnedTeamLocks.set(teamName, ownershipToken);
+      return await this.teamLockOwnership.run(nextOwnedTeamLocks, fn);
     } finally {
+      if (this.activeTeamLockTokens.get(teamName) === ownershipToken) {
+        this.activeTeamLockTokens.delete(teamName);
+      }
       release();
       if (this.ports.teamOpLocks.get(teamName) === mine) {
         this.ports.teamOpLocks.delete(teamName);

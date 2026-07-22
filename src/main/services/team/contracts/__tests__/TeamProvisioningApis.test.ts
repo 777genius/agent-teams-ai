@@ -599,6 +599,7 @@ describe('TeamProvisioning API binders', () => {
     };
     const lifecycleSource: TeamMemberLifecycleApi = {
       getMemberSpawnStatuses: () => Promise.resolve({ statuses: {}, runId: 'run-bound' }),
+      runLiveRosterMutation: (_teamName, mutation) => mutation(),
       attachLiveRosterMember: () => Promise.resolve(),
       detachLiveRosterMember: () => Promise.resolve(),
       restartMember: () => Promise.resolve(),
@@ -647,6 +648,7 @@ describe('TeamProvisioning API binders', () => {
       'getMemberSpawnStatuses',
       'restartMember',
       'retryFailedOpenCodeSecondaryLanes',
+      'runLiveRosterMutation',
       'skipMemberForLaunch',
     ]);
     const runtimeKeys = new Set(Object.keys(runtimeApi));
@@ -682,6 +684,13 @@ describe('TeamProvisioning API binders', () => {
       skippedMemberName: null,
       getMemberSpawnStatuses(this: MemberLifecycleSource): Promise<MemberSpawnStatusesSnapshot> {
         return Promise.resolve({ statuses: {}, runId: this.runId });
+      },
+      runLiveRosterMutation(
+        this: MemberLifecycleSource,
+        _teamName: string,
+        mutation: () => Promise<void>
+      ): Promise<void> {
+        return mutation();
       },
       attachLiveRosterMember(
         this: MemberLifecycleSource,
@@ -754,6 +763,12 @@ describe('TeamProvisioning API binders', () => {
     const restartMember = memberLifecycleApi.restartMember.bind(undefined);
     const skipMemberForLaunch = memberLifecycleApi.skipMemberForLaunch.bind(undefined);
     const getTeamAgentRuntimeSnapshot = diagnosticsApi.getTeamAgentRuntimeSnapshot.bind(undefined);
+
+    let mutationRan = false;
+    await memberLifecycleApi.runLiveRosterMutation('team-bound', async () => {
+      mutationRan = true;
+    });
+    expect(mutationRan).toBe(true);
 
     await expect(memberLifecycleApi.getMemberSpawnStatuses('team-bound')).resolves.toEqual({
       statuses: {},
