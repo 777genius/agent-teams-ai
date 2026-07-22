@@ -103,6 +103,71 @@ describe("codex goal MCP project scope helpers", () => {
     ).toThrow("project_control_scope_allowedAccountIds_repair_denied");
   });
 
+  it("allows only safe exact append-only branches during scope repair", () => {
+    const existing = { ...projectScope(), allowedBranches: ["main"] };
+
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing,
+        proposed: {
+          ...existing,
+          allowedBranches: [...(existing.allowedBranches ?? []), "dev"],
+        },
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing,
+        proposed: { ...existing, allowedBranches: ["dev"] },
+      }),
+    ).toThrow("project_control_scope_allowedBranches_repair_denied");
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing,
+        proposed: {
+          ...existing,
+          allowedBranches: ["dev", ...(existing.allowedBranches ?? [])],
+        },
+      }),
+    ).toThrow("project_control_scope_allowedBranches_repair_denied");
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing,
+        proposed: {
+          ...existing,
+          allowedBranches: [...(existing.allowedBranches ?? []), "feature/*"],
+        },
+      }),
+    ).toThrow("project_control_scope_allowedBranches_repair_denied");
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing,
+        proposed: {
+          ...existing,
+          allowedBranches: [...(existing.allowedBranches ?? []), "bad branch"],
+        },
+      }),
+    ).toThrow("project_control_scope_allowedBranches_repair_denied");
+    for (const invalid of [
+      "",
+      "@",
+      "feature/@{upstream}",
+      "feature/topic.lock",
+      "feature/.hidden",
+      "feature\\topic",
+    ]) {
+      expect(() =>
+        assertProjectControlScopeRepairAllowed({
+          existing,
+          proposed: {
+            ...existing,
+            allowedBranches: [...(existing.allowedBranches ?? []), invalid],
+          },
+        }),
+      ).toThrow("project_control_scope_allowedBranches_repair_denied");
+    }
+  });
+
   it("allows only a fail-closed builtin admission upgrade", () => {
     const existing = projectScope();
     const upgraded = {

@@ -5,6 +5,7 @@ import type {
   DependencyBootstrapMode,
   DependencyPreflightResult,
 } from "./dependency-bootstrap";
+import { assertSafeGitRefName } from "./application/project-control/codex-goal-project-git";
 import type { ProjectControlMcpArgs } from "./codex-goal-mcp-inputs";
 export {
   projectControlCanonicalWorkspacePath,
@@ -83,6 +84,15 @@ export function assertProjectControlScopeRepairAllowed(input: {
       continue;
     }
     if (
+      field === "allowedBranches" &&
+      projectControlAllowedBranchesAppendAllowed({
+        existing: input.existing.allowedBranches,
+        proposed: input.proposed.allowedBranches,
+      })
+    ) {
+      continue;
+    }
+    if (
       field === "preStartAdmission" &&
       (projectControlPreStartAdmissionUpgradeAllowed({
         existing: input.existing.preStartAdmission,
@@ -121,6 +131,41 @@ export function assertProjectControlScopeRepairAllowed(input: {
     if (pathInsideAnyProjectRoot(root, deniedRoots)) {
       throw new Error("project_control_consumed_output_ledger_root_denied");
     }
+  }
+}
+
+function projectControlAllowedBranchesAppendAllowed(input: {
+  readonly existing: ProjectAccessScope["allowedBranches"];
+  readonly proposed: ProjectAccessScope["allowedBranches"];
+}): boolean {
+  const existing = input.existing ?? [];
+  const proposed = input.proposed ?? [];
+  const added = proposed.slice(existing.length);
+  return (
+    proposed.length >= existing.length &&
+    existing.every((branch, index) => proposed[index] === branch) &&
+    new Set(proposed).size === proposed.length &&
+    added.every(isSafeExactBranchName)
+  );
+}
+
+function isSafeExactBranchName(value: string): boolean {
+  if (
+    value.length === 0 ||
+    value === "@" ||
+    value.includes("@{") ||
+    value.includes("\\") ||
+    value.split("/").some(
+      (component) => component.startsWith(".") || component.endsWith(".lock"),
+    )
+  ) {
+    return false;
+  }
+  try {
+    assertSafeGitRefName(value, "allowed_branch");
+    return true;
+  } catch {
+    return false;
   }
 }
 

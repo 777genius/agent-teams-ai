@@ -362,6 +362,7 @@ describe("codex goal MCP server", () => {
       deniedRoots: [join(root, "secrets")],
       jobIdPrefixes: ["infinity-context-"],
       tmuxSessionPrefixes: ["infinity-context-"],
+      allowedBranches: ["main"],
       allowedAccountIds: ["account-a"],
     };
     const server = createCodexGoalMcpServer();
@@ -578,6 +579,66 @@ describe("codex goal MCP server", () => {
       expect(widened).toMatchObject({
         ok: false,
         error: "project_control_scope_readRoots_repair_denied",
+      });
+
+      const branchRegistrationScope = {
+        ...accountRegistrationScope,
+        allowedBranches: ["main", "dev"],
+      };
+      const branchRegistrationPreview = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: branchRegistrationScope,
+        },
+      );
+      expect(branchRegistrationPreview).toMatchObject({
+        ok: false,
+        reason: "confirm_update_required",
+      });
+      expect((await readCodexGoalJob({
+        registryRootDir,
+        jobId: "infinity-context-controller-v1",
+      })).projectAccessScope).toMatchObject({
+        allowedBranches: ["main"],
+        allowedAccountIds: ["account-a", "account-j"],
+      });
+
+      const branchRegistration = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: branchRegistrationScope,
+          confirmUpdate: true,
+        },
+      );
+      expect(branchRegistration).toMatchObject({
+        ok: true,
+        manifest: {
+          projectAccessScope: {
+            allowedBranches: ["main", "dev"],
+            allowedAccountIds: ["account-a", "account-j"],
+          },
+        },
+      });
+
+      const branchRemoval = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: accountRegistrationScope,
+          confirmUpdate: true,
+        },
+      );
+      expect(branchRemoval).toMatchObject({
+        ok: false,
+        error: "project_control_scope_allowedBranches_repair_denied",
       });
     } finally {
       await client.close();
