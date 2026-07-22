@@ -155,6 +155,8 @@ describe("codex goal MCP project scope helpers", () => {
       "feature/topic.lock",
       "feature/.hidden",
       "feature\\topic",
+      "/feature",
+      "feature//topic",
     ]) {
       expect(() =>
         assertProjectControlScopeRepairAllowed({
@@ -163,6 +165,25 @@ describe("codex goal MCP project scope helpers", () => {
             ...existing,
             allowedBranches: [...(existing.allowedBranches ?? []), invalid],
           },
+        }),
+      ).toThrow("project_control_scope_allowedBranches_repair_denied");
+    }
+
+    const implicitMain = projectScope();
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing: implicitMain,
+        proposed: {
+          ...implicitMain,
+          allowedBranches: ["main", "dev"],
+        },
+      }),
+    ).not.toThrow();
+    for (const allowedBranches of [[], ["dev"]]) {
+      expect(() =>
+        assertProjectControlScopeRepairAllowed({
+          existing: implicitMain,
+          proposed: { ...implicitMain, allowedBranches },
         }),
       ).toThrow("project_control_scope_allowedBranches_repair_denied");
     }

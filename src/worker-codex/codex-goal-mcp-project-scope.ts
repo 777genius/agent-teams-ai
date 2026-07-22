@@ -138,8 +138,9 @@ function projectControlAllowedBranchesAppendAllowed(input: {
   readonly existing: ProjectAccessScope["allowedBranches"];
   readonly proposed: ProjectAccessScope["allowedBranches"];
 }): boolean {
-  const existing = input.existing ?? [];
-  const proposed = input.proposed ?? [];
+  if (input.proposed === undefined) return input.existing === undefined;
+  const existing = input.existing ?? ["main"];
+  const proposed = input.proposed;
   const added = proposed.slice(existing.length);
   return (
     proposed.length >= existing.length &&
@@ -156,7 +157,10 @@ function isSafeExactBranchName(value: string): boolean {
     value.includes("@{") ||
     value.includes("\\") ||
     value.split("/").some(
-      (component) => component.startsWith(".") || component.endsWith(".lock"),
+      (component) =>
+        component.length === 0 ||
+        component.startsWith(".") ||
+        component.endsWith(".lock"),
     )
   ) {
     return false;
