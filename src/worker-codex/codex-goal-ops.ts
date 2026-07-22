@@ -11,6 +11,7 @@ import {
   type RuntimeResultEnvelope,
   type RuntimeResultStatus,
 } from "@vioxen/subscription-runtime/worker-core";
+import { codexChildPath } from "@vioxen/subscription-runtime/provider-codex";
 import {
   createCodexGoalResultRecorder,
   GitPatchPreserver,
@@ -252,7 +253,9 @@ export function buildCodexGoalNoTmuxCommand(input: CodexGoalLaunchInput): string
   if (config.allowDuplicateAccountIdentities) args.push("--allow-duplicate-accounts");
   if (config.requireGitWorkspace === false) args.push("--no-require-git-workspace");
   if (config.prewarmOnStart) args.push("--prewarm");
-  const envAssignments: string[] = [];
+  const envAssignments: string[] = [
+    `PATH=${shellQuote(codexChildPath(process.env))}`,
+  ];
   const extraWritableRoots = config.projectAccessScope
     ? ""
     : process.env.SUBSCRIPTION_RUNTIME_CODEX_EXTRA_WRITABLE_ROOTS?.trim();

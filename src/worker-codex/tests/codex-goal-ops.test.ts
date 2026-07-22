@@ -58,6 +58,27 @@ describe("codex goal ops", () => {
     expect(tmux.preview).toContain("tee -a");
   });
 
+  it("pins a usable host PATH inside tmux worker commands", async () => {
+    const fixture = await createGoalFixture();
+    const previousPath = process.env.PATH;
+    process.env.PATH = "/stale-tmux/bin";
+    try {
+      const command = buildCodexGoalNoTmuxCommand(
+        launchInput(fixture.config, fixture.root),
+      );
+      expect(command).toContain(
+        "PATH=/stale-tmux/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      );
+    } finally {
+      if (previousPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = previousPath;
+      }
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
   it("fails closed before building a Codex project-scoped-control launch command", async () => {
     const fixture = await createGoalFixture();
     const launch = launchInput({
