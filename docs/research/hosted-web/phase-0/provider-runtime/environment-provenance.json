@@ -444,6 +444,7 @@
         "AGENT_TEAMS_ELECTRON_USER_DATA_DIR",
         "AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP",
         "AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP",
+        "AGENT_TEAMS_PACKAGED_SMOKE",
         "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS",
         "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND",
         "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON",
@@ -969,6 +970,7 @@
         "kp-26",
         "sp-59"
       ],
+      ["AGENT_TEAMS_PACKAGED_SMOKE", "host-only-and-injection-inputs", "kp-26", "sp-08"],
       ["AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS", "host-only-and-injection-inputs", "kp-26", "sp-08"],
       [
         "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND",

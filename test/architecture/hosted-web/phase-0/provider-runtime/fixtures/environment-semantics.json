@@ -276,6 +276,40 @@
       }
     },
     {
+      "key": "AGENT_TEAMS_PACKAGED_SMOKE",
+      "policyProfileId": "kp-26",
+      "semanticRole": "host_policy_input",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "platformScope": "cross_platform_or_provider_conditional",
+      "childVisibility": "currently_possible_target_forbidden",
+      "credentialExposureSetId": "ces-host-only-denied",
+      "authority": {
+        "path": "src/main/index.ts",
+        "token": "AGENT_TEAMS_PACKAGED_SMOKE"
+      }
+    },
+    {
       "key": "AGENT_TEAMS_IDENTITY_STORE_PATH",
       "policyProfileId": "kp-18",
       "semanticRole": "selected_child_input",
