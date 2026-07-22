@@ -165,7 +165,7 @@ describe('CrossTeamService', () => {
       expect(prefix?.conversationId).toBeTruthy();
     });
 
-    it('delivers to an explicit target member when requested', async () => {
+    it('delivers and best-effort relays to an explicit target member when requested', async () => {
       configReader.getConfig.mockImplementation((teamName: string) =>
         Promise.resolve(
           teamName === 'team-b'
@@ -182,12 +182,19 @@ describe('CrossTeamService', () => {
               })
         )
       );
+      provisioning.isTeamAlive.mockReturnValue(true);
+      provisioning.relayInboxFileToLiveRecipient.mockRejectedValue(new Error('relay fail'));
 
-      await service.send(makeRequest({ toMember: 'worker' }));
+      const result = await service.send(makeRequest({ toMember: 'worker' }));
 
       const [teamName, req] = inboxWriter.sendMessage.mock.calls[0];
       expect(teamName).toBe('team-b');
       expect(req.member).toBe('worker');
+      expect(result).toMatchObject({ deliveredToInbox: true, toMember: 'worker' });
+      expect(provisioning.relayInboxFileToLiveRecipient).toHaveBeenCalledWith('team-b', 'worker', {
+        onlyMessageId: result.messageId,
+      });
+      expect(provisioning.relayLeadInboxMessages).not.toHaveBeenCalled();
 
       const sentMessagesPath = `${MOCK_TEAMS_BASE_PATH}/teams/team-a/sentMessages.json`;
       const sentRows = JSON.parse(fs.readFileSync(sentMessagesPath, 'utf8')) as Record<

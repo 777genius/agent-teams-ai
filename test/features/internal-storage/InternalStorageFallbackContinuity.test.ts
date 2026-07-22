@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import {
   COMMENT_JOURNAL_STORE_ID,
+  MEMBER_WORK_SYNC_STORE_ID,
   STALL_JOURNAL_STORE_ID,
 } from '@features/internal-storage/contracts/internalStorageContracts';
 import { ImportLegacyJsonStoreUseCase } from '@features/internal-storage/core/application/ImportLegacyJsonStoreUseCase';
@@ -26,11 +27,13 @@ import { InternalStorageBackendSelector } from '@features/internal-storage/main/
 import { InternalStorageJsonReplica } from '@features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { BackendSelectingMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore';
+import { MemberWorkSyncPendingReportIntentReplayer } from '@features/member-work-sync/core/application';
 import {
   buildPendingReportIntentId,
   JsonMemberWorkSyncStore,
 } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncSqliteImporter } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncSqliteImporter';
+import { reportIntentToRecord } from '@features/member-work-sync/main/infrastructure/memberWorkSyncSqliteMappers';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import { SqliteMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/SqliteMemberWorkSyncStore';
 import {
@@ -50,8 +53,10 @@ import { InProcessGateway } from './helpers/InProcessGateway';
 import type { MemberWorkSyncStorageGateway } from '@features/internal-storage/main';
 import type {
   MemberWorkSyncNudgePayload,
+  MemberWorkSyncReportIntent,
   MemberWorkSyncStatus,
 } from '@features/member-work-sync/contracts';
+import type { MemberWorkSyncUseCaseDeps } from '@features/member-work-sync/core/application';
 import type { TaskStallJournalStore } from '@main/services/team/stallMonitor/TaskStallJournalStore';
 import type { TaskCommentNotificationJournalStore } from '@main/services/team/TaskCommentNotificationJournalStore';
 
@@ -233,7 +238,7 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
     await sqlite.markDelivered({
       teamName: TEAM,
       id: 'nudge-1',
-      attemptGeneration: claim!.attemptGeneration,
+      attemptGeneration: claim.attemptGeneration,
       deliveredMessageId: 'message-1',
       nowIso: T1,
     });
@@ -301,6 +306,114 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
     expect(persisted.ok && persisted.item.status).toBe('delivered');
   });
 
+  it('normalizes a marked legacy alias through two SQLite replica sessions and replays its report', async () => {
+    const { databasePath, teamsBasePath } = await setup();
+    const gatewayA = openGateway(databasePath);
+    const legacyAlias = TEAM.toUpperCase();
+    const intent: MemberWorkSyncReportIntent = {
+      id: 'legacy-intent',
+      teamName: legacyAlias,
+      memberName: 'bob',
+      request: {
+        teamName: legacyAlias,
+        memberName: 'bob',
+        state: 'caught_up',
+        agendaFingerprint: 'agenda:v1:fixed',
+        reportToken: 'legacy-token',
+      },
+      reason: 'control_api_unavailable',
+      status: 'pending',
+      recordedAt: T0,
+    };
+    await gatewayA.reportsAppend(reportIntentToRecord(intent));
+    await gatewayA.recordStoreImport(MEMBER_WORK_SYNC_STORE_ID, TEAM, 1);
+
+    const firstSession = createMwsStore({
+      kind: 'sqlite',
+      gateway: gatewayA,
+      teamsBasePath,
+      fallbackRequiresReplica: false,
+    });
+    await expect(firstSession.listPendingReports(TEAM)).resolves.toEqual([
+      expect.objectContaining({
+        id: intent.id,
+        teamName: TEAM,
+        request: expect.objectContaining({ teamName: TEAM }),
+      }),
+    ]);
+    const replicaPath = new MemberWorkSyncStorePaths(teamsBasePath).getSqliteFallbackReplicaPath(
+      TEAM
+    );
+    expect(JSON.parse(await readFile(replicaPath, 'utf8'))).toMatchObject({
+      state: 'clean',
+      snapshot: {
+        reportIntents: [
+          {
+            teamName: TEAM,
+            request: { teamName: TEAM },
+          },
+        ],
+      },
+    });
+    gatewayA.close();
+
+    const gatewayB = openGateway(`${databasePath}.second-session`);
+    const secondSession = createMwsStore({
+      kind: 'sqlite',
+      gateway: gatewayB,
+      teamsBasePath,
+      fallbackRequiresReplica: true,
+    });
+    const replayedTeamNames: string[] = [];
+    const replayDeps: MemberWorkSyncUseCaseDeps = {
+      clock: { now: () => new Date(T2) },
+      hash: { sha256Hex: () => 'fixed' },
+      agendaSource: {
+        loadAgenda: (input) => {
+          replayedTeamNames.push(input.teamName);
+          if (input.teamName !== TEAM) {
+            return Promise.reject(new Error(`pending report replay used alias ${input.teamName}`));
+          }
+          return Promise.resolve({
+            agenda: {
+              teamName: TEAM,
+              memberName: input.memberName,
+              generatedAt: T2,
+              items: [],
+              diagnostics: [],
+            },
+            activeMemberNames: [input.memberName],
+            inactive: false,
+            diagnostics: [],
+          });
+        },
+      },
+      statusStore: secondSession,
+      reportStore: secondSession,
+      reportToken: {
+        create: () => Promise.resolve({ token: 'fresh-token', expiresAt: T2 }),
+        verify: () => Promise.resolve({ ok: true }),
+      },
+      lifecycle: {
+        isTeamActive: () => true,
+        isMemberActive: () => true,
+      },
+    };
+
+    await expect(
+      new MemberWorkSyncPendingReportIntentReplayer(replayDeps).replayTeam(TEAM)
+    ).resolves.toEqual({ processed: 1, accepted: 1, rejected: 0, superseded: 0 });
+    expect(replayedTeamNames).toEqual([TEAM]);
+    await expect(secondSession.listPendingReports(TEAM)).resolves.toEqual([]);
+    expect((await gatewayB.listTeamSnapshot(TEAM)).reportIntents).toEqual([
+      expect.objectContaining({
+        teamName: TEAM,
+        id: intent.id,
+        status: 'accepted',
+      }),
+    ]);
+  });
+
   it('preserves alerted, sent, and initialized-empty journal state across forced fallback', async () => {
     const { databasePath } = await setup();
     const gatewayA = openGateway(databasePath);
@@ -338,7 +451,7 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
       changed: false,
     }));
     await first.comment.ensureInitialized(TEAM);
-    await first.comment.withEntries(TEAM, async (entries) => {
+    await first.comment.withEntries(TEAM, (entries) => {
       entries.push({
         key: 'task-1:comment-1',
         taskId: 'task-1',
@@ -350,7 +463,7 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
         updatedAt: T1,
         sentAt: T1,
       });
-      return { result: undefined, changed: true };
+      return Promise.resolve({ result: undefined, changed: true });
     });
     await first.comment.ensureInitialized('empty-team');
     await expect(first.comment.exists('untouched-team')).resolves.toBe(false);
@@ -386,8 +499,8 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
       })),
       result: undefined,
     }));
-    await fallback.comment.withEntries(TEAM, async (entries) => {
-      const entry = entries[0]!;
+    await fallback.comment.withEntries(TEAM, (entries) => {
+      const entry = entries[0];
       entries[0] = {
         ...entry,
         state: 'pending_send',
@@ -395,7 +508,7 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
         messageId: undefined,
         sentAt: undefined,
       };
-      return { result: undefined, changed: true };
+      return Promise.resolve({ result: undefined, changed: true });
     });
 
     const gatewayC = openGateway(`${databasePath}.recovered`);
@@ -541,14 +654,14 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
 
     let commentStateDuringPreparation: string | undefined;
     const failingCommentStore: TaskCommentNotificationJournalStore = {
-      exists: vi.fn(async () => false),
+      exists: vi.fn(() => Promise.resolve(false)),
       ensureInitialized: vi.fn(async () => {
         commentStateDuringPreparation = JSON.parse(
           await readFile(commentReplicaPath, 'utf8')
         ).state;
         throw new Error('simulated comment importer crash');
       }),
-      read: vi.fn(async () => []),
+      read: vi.fn(() => Promise.resolve([])),
       withEntries: vi.fn(async (_teamName, mutate) => {
         const mutation = await mutate([]);
         return mutation.result;

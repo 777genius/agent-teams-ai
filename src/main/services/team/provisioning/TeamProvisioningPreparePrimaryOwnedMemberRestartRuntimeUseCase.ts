@@ -129,11 +129,16 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
       if (!matchesMemberNameOrBase(candidateName, input.memberName)) {
         continue;
       }
+      if (metadata.backendType?.trim().toLowerCase() === 'in-process') {
+        throw new Error(
+          `Member "${input.memberName}" uses an in-process runtime and cannot be restarted here`
+        );
+      }
       if (metadata.pid) {
         livePids.add(metadata.pid);
         continue;
       }
-      if (metadata.alive && metadata.backendType !== 'in-process') {
+      if (metadata.alive) {
         hasAliveRuntimeWithoutPid = true;
       }
     }

@@ -11,7 +11,11 @@ import {
   type MemberWorkSyncStoreSnapshot,
 } from './JsonMemberWorkSyncStore';
 import { mergeMemberWorkSyncSnapshots } from './memberWorkSyncSnapshotMerge';
-import { recordsToSnapshot, snapshotToRecords } from './memberWorkSyncSqliteMappers';
+import {
+  normalizeMemberWorkSyncStoreSnapshotTeamIdentity,
+  recordsToSnapshot,
+  snapshotToRecords,
+} from './memberWorkSyncSqliteMappers';
 
 import type {
   MemberWorkSyncOutboxClaimInput,
@@ -98,7 +102,12 @@ export class BackendSelectingMemberWorkSyncStore
             teamName,
             this.options!.fallbackRequiresReplica
           );
-          if (snapshot) await this.jsonStore.restoreReplicaSnapshot(teamName, snapshot);
+          if (snapshot) {
+            await this.jsonStore.restoreReplicaSnapshot(
+              teamName,
+              normalizeMemberWorkSyncStoreSnapshotTeamIdentity(teamName, snapshot)
+            );
+          }
           this.jsonHydratedTeams.add(teamName);
         }
         return jsonAction(this.jsonStore as FullStore);
@@ -114,7 +123,11 @@ export class BackendSelectingMemberWorkSyncStore
           const canonical = await this.options!.gateway.listTeamSnapshot(teamName);
           await this.options!.gateway.importTeam(
             teamName,
-            mergeMemberWorkSyncSnapshots(canonical, snapshotToRecords(replicaSnapshot))
+            mergeMemberWorkSyncSnapshots(
+              teamName,
+              canonical,
+              snapshotToRecords(teamName, replicaSnapshot)
+            )
           );
         }
       }
@@ -123,6 +136,7 @@ export class BackendSelectingMemberWorkSyncStore
       if (publishReplica) {
         try {
           const snapshot = recordsToSnapshot(
+            teamName,
             await this.options!.gateway.listTeamSnapshot(teamName)
           );
           await this.replica!.writeClean(teamName, snapshot);

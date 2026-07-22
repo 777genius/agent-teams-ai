@@ -86,10 +86,10 @@ export function resolveRuntimeRecipientProviderIdFromSources(input: {
     normalizeTeamProviderLike(metaProvider) ??
     normalizeTeamProviderLike(configMember?.providerId) ??
     normalizeTeamProviderLike(configProvider) ??
-    normalizeTeamProviderLike(configLead?.providerId) ??
-    normalizeTeamProviderLike(inheritedProvider) ??
     inferTeamProviderIdFromModel(metaMember?.model) ??
     inferTeamProviderIdFromModel(configMember?.model) ??
+    normalizeTeamProviderLike(configLead?.providerId) ??
+    normalizeTeamProviderLike(inheritedProvider) ??
     inferTeamProviderIdFromModel(configLead?.model)
   );
 }

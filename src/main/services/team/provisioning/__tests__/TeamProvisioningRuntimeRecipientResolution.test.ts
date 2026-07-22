@@ -140,6 +140,22 @@ describe('TeamProvisioningRuntimeRecipientResolution', () => {
       ).toBe('codex');
     });
 
+    it('infers the recipient provider from its model before inheriting the lead provider', () => {
+      expect(
+        resolveRuntimeRecipientProviderIdFromSources({
+          memberName: 'dev',
+          config: {
+            name: 'team-a',
+            members: [
+              { name: 'team-lead', providerId: 'opencode' },
+              { name: 'dev', model: 'gpt-5.4' },
+            ],
+          },
+          metaMembers: [],
+        })
+      ).toBe('codex');
+    });
+
     it('inherits the request provider and model from the configured lead', () => {
       expect(
         resolveRuntimeRecipientProviderIdFromSources({

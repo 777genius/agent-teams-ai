@@ -188,12 +188,9 @@ describe('HTTP team runtime-control validation', () => {
     }
   });
 
-  it('maps OpenCode runtime permission validation failures to 400', async () => {
+  it('does not delegate OpenCode runtime permission answers from HTTP', async () => {
     const answerOpenCodeRuntimePermission =
       vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
-    answerOpenCodeRuntimePermission.mockRejectedValueOnce(
-      new Error('OpenCode runtime permission expectedMembers must be an array')
-    );
     const app = Fastify();
     registerTeamRoutes(
       app,
@@ -207,14 +204,16 @@ describe('HTTP team runtime-control validation', () => {
         url: '/api/teams/demo-team/opencode/runtime/permission-answer',
         payload: {
           runId: 'run-opencode',
-          expectedMembers: 'not-an-array',
+          memberName: 'builder',
+          requestId: 'provider-request-1',
+          decision: 'allow',
+          cwd: '/repo',
+          expectedMembers: [],
         },
       });
 
-      expect(response.statusCode).toBe(400);
-      expect(response.json()).toEqual({
-        error: 'OpenCode runtime permission expectedMembers must be an array',
-      });
+      expect(response.statusCode).toBe(404);
+      expect(answerOpenCodeRuntimePermission).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

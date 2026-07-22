@@ -5,7 +5,6 @@ import {
   assertRuntimeControlAckMatchesCommand,
   createRuntimeControlEventFromAck,
 } from './domain/RuntimeControlEventFactory';
-import { canonicalizeRuntimeIdempotencyKey } from './domain/RuntimeIdempotencyKey';
 
 import type { RuntimeControlEventSink } from './application/RuntimeControlPorts';
 import type { RuntimeControlAck } from './domain/RuntimeControlAck';
@@ -128,7 +127,7 @@ export class RuntimeControlService {
   deliverMessage(command: RuntimeDeliverMessageCommand): Promise<RuntimeControlAck> {
     return this.withRecordedEvent(command, () => {
       const handler = this.providers.requireOperation(command.providerId, 'deliverMessage');
-      return this.deliveryWriteFence.runExclusive(buildDeliveryWriteFenceKey(command), () =>
+      return this.deliveryWriteFence.runExclusive(buildLaneWriteFenceKey(command), () =>
         handler.deliverMessage!(command)
       );
     });
@@ -151,7 +150,7 @@ export class RuntimeControlService {
   answerPermission(command: RuntimePermissionAnswerCommand): Promise<RuntimeControlAck> {
     return this.withRecordedEvent(command, () => {
       const handler = this.providers.requireOperation(command.providerId, 'answerPermission');
-      return this.deliveryWriteFence.runExclusive(buildPermissionAnswerWriteFenceKey(command), () =>
+      return this.deliveryWriteFence.runExclusive(buildLaneWriteFenceKey(command), () =>
         handler.answerPermission!(command)
       );
     });
@@ -170,23 +169,8 @@ export class RuntimeControlService {
   }
 }
 
-function buildDeliveryWriteFenceKey(command: RuntimeDeliverMessageCommand): string {
-  return JSON.stringify([
-    command.kind,
-    command.providerId,
-    command.teamName,
-    command.laneId,
-    command.runId,
-    canonicalizeRuntimeIdempotencyKey(command.idempotencyKey),
-  ]);
-}
-
-function buildPermissionAnswerWriteFenceKey(command: RuntimePermissionAnswerCommand): string {
-  return JSON.stringify([
-    command.kind,
-    command.providerId,
-    command.teamName,
-    command.laneId,
-    command.runId,
-  ]);
+function buildLaneWriteFenceKey(
+  command: RuntimeDeliverMessageCommand | RuntimePermissionAnswerCommand
+): string {
+  return JSON.stringify([command.providerId, command.teamName, command.laneId, command.runId]);
 }

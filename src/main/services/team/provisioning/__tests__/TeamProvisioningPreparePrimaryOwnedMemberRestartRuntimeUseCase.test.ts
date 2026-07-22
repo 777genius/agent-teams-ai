@@ -569,6 +569,28 @@ describe('TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase', () =>
     expect(noPidPorts.calls.killedPids).toEqual([]);
   });
 
+  it('rejects live in-process runtime metadata with a pid before stop attempts', async () => {
+    const { calls, ports } = createPorts();
+    const prepareRestartRuntime = createPreparePrimaryOwnedMemberRestartRuntimeUseCase(ports);
+
+    await expect(
+      prepareRestartRuntime({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        persistedRuntimeMembers: [],
+        invalidateRuntimeSnapshotCaches: () => undefined,
+        loadLiveRuntimeByMember: async () =>
+          new Map([['Worker', { alive: true, backendType: ' in-PROCESS ', pid: 222 }]]),
+      })
+    ).rejects.toThrow('Member "Worker" uses an in-process runtime and cannot be restarted here');
+
+    expect(calls.listedPaneIds).toEqual([]);
+    expect(calls.killedPanes).toEqual([]);
+    expect(calls.killedPids).toEqual([]);
+    expect(calls.waitPidCalls).toEqual([]);
+    expect(calls.waitPaneCalls).toEqual([]);
+  });
+
   it('honors stale-run guards after live runtime loading before stop attempts', async () => {
     const { calls, ports } = createPorts({
       paneRuntimeInfo: new Map([['pane-a', { panePid: 460, currentCommand: 'node' }]]),

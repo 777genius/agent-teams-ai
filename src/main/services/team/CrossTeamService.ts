@@ -274,8 +274,18 @@ export class CrossTeamService {
 
     // 7. Best-effort relay (if online)
     if (this.messaging?.isTeamAlive(toTeam)) {
-      void this.messaging.relayLeadInboxMessages(toTeam).catch((e: unknown) => {
-        logger.warn(`Cross-team relay to ${toTeam}: ${e instanceof Error ? e.message : String(e)}`);
+      const relay =
+        targetMemberName === leadName
+          ? this.messaging.relayLeadInboxMessages(toTeam)
+          : this.messaging.relayInboxFileToLiveRecipient(toTeam, targetMemberName, {
+              onlyMessageId: messageId,
+            });
+      void relay.catch((e: unknown) => {
+        logger.warn(
+          `Cross-team relay to ${toTeam}.${targetMemberName}: ${
+            e instanceof Error ? e.message : String(e)
+          }`
+        );
       });
     }
 

@@ -158,5 +158,7 @@ function reconcileCrossTeamBlocks<TRun extends TeamProvisioningNativeTeammateRun
       toTeam: match.toTeam,
       conversationId: match.conversationId,
     }));
-  })();
+  })().catch(() => {
+    // best-effort
+  });
 }

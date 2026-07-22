@@ -1098,7 +1098,6 @@ describe('HTTP team runtime routes', () => {
       deliverOpenCodeRuntimeMessage,
       recordOpenCodeRuntimeTaskEvent,
       recordOpenCodeRuntimeHeartbeat,
-      answerOpenCodeRuntimePermission,
     } = await createApp();
     const callbackPayload = {
       runId: 'run-opencode',
@@ -1126,11 +1125,6 @@ describe('HTTP team runtime routes', () => {
         url: '/api/teams/demo-team/opencode/runtime/heartbeat',
         handler: recordOpenCodeRuntimeHeartbeat,
         state: 'recorded',
-      },
-      {
-        url: '/api/teams/demo-team/opencode/runtime/permission-answer',
-        handler: answerOpenCodeRuntimePermission,
-        state: 'accepted',
       },
     ] as const;
 
@@ -1257,28 +1251,25 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('maps runtime-control provider routing failures to 501', async () => {
+  it('does not expose runtime permission answers over HTTP', async () => {
     const { app, answerOpenCodeRuntimePermission } = await createApp();
-    const error = new Error('Runtime control provider opencode does not support answerPermission');
-    error.name = 'RuntimeControlProviderRoutingError';
-    answerOpenCodeRuntimePermission.mockRejectedValueOnce(error);
 
     try {
       const response = await app.inject({
         method: 'POST',
         url: '/api/teams/demo-team/opencode/runtime/permission-answer',
         payload: {
-          teamName: 'demo-team',
           runId: 'run-opencode',
-          requestId: 'approval-1',
-          answer: { allow: true },
+          memberName: 'builder',
+          requestId: 'provider-request-1',
+          decision: 'allow',
+          cwd: '/repo',
+          expectedMembers: [],
         },
       });
 
-      expect(response.statusCode).toBe(501);
-      expect(response.json()).toEqual({
-        error: 'Runtime control provider opencode does not support answerPermission',
-      });
+      expect(response.statusCode).toBe(404);
+      expect(answerOpenCodeRuntimePermission).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

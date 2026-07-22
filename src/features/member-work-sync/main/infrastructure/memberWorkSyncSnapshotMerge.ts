@@ -1,3 +1,5 @@
+import { normalizeMemberWorkSyncSnapshotTeamIdentity } from '@features/internal-storage/contracts';
+
 import type {
   MemberWorkSyncMetricEventRecord,
   MemberWorkSyncOutboxItemRecord,
@@ -10,29 +12,35 @@ const PROCESSED_REPORT_STATUSES = new Set(['accepted', 'rejected', 'superseded']
 const METRIC_EVENTS_CAP = 200;
 
 export function mergeMemberWorkSyncSnapshots(
+  teamName: string,
   canonical: MemberWorkSyncTeamSnapshotRecords,
   incoming: MemberWorkSyncTeamSnapshotRecords
 ): MemberWorkSyncTeamSnapshotRecords {
+  const normalizedCanonical = normalizeMemberWorkSyncSnapshotTeamIdentity(teamName, canonical);
+  const normalizedIncoming = normalizeMemberWorkSyncSnapshotTeamIdentity(teamName, incoming);
   return {
     statuses: mergeByIdentity(
-      canonical.statuses,
-      incoming.statuses,
+      normalizedCanonical.statuses,
+      normalizedIncoming.statuses,
       (row) => row.memberKey,
       pickStatus
     ),
     reportIntents: mergeByIdentity(
-      canonical.reportIntents,
-      incoming.reportIntents,
+      normalizedCanonical.reportIntents,
+      normalizedIncoming.reportIntents,
       (row) => row.id,
       pickReportIntent
     ),
     outboxItems: mergeByIdentity(
-      canonical.outboxItems,
-      incoming.outboxItems,
+      normalizedCanonical.outboxItems,
+      normalizedIncoming.outboxItems,
       (row) => row.id,
       pickOutboxItem
     ),
-    metricEvents: mergeMetricEvents(canonical.metricEvents, incoming.metricEvents),
+    metricEvents: mergeMetricEvents(
+      normalizedCanonical.metricEvents,
+      normalizedIncoming.metricEvents
+    ),
   };
 }
 
@@ -44,7 +52,9 @@ function mergeByIdentity<T>(
 ): T[] {
   const merged = new Map<string, T>();
   for (const record of canonical) {
-    merged.set(identity(record), record);
+    const key = identity(record);
+    const current = merged.get(key);
+    merged.set(key, current ? pick(current, record) : record);
   }
   for (const record of incoming) {
     const key = identity(record);
@@ -111,7 +121,7 @@ function mergeMetricEvents(
     (_current, next) => next
   );
   return union
-    .sort((left, right) => {
+    .toSorted((left, right) => {
       const byTime = compareIso(left.recordedAt, right.recordedAt);
       return byTime === 0 ? left.id.localeCompare(right.id) : byTime;
     })

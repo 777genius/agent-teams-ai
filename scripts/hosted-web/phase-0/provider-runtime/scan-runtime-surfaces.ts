@@ -21,7 +21,6 @@ const EXPECTED_ROUTES = [
   '/api/teams/:teamName/opencode/runtime/deliver-message',
   '/api/teams/:teamName/opencode/runtime/task-event',
   '/api/teams/:teamName/opencode/runtime/heartbeat',
-  '/api/teams/:teamName/opencode/runtime/permission-answer',
 ] as const;
 const EXPECTED_COMMANDS = [
   'runtime.bootstrap-checkin',
@@ -1133,7 +1132,9 @@ function validateEvidence(root: string): string[] {
   errors.push(
     ...compareSet(
       'inventory routes',
-      ingressRows.map((row) => String(row.currentRoute)),
+      ingressRows.flatMap((row) =>
+        typeof row.currentRoute === 'string' ? [row.currentRoute] : []
+      ),
       EXPECTED_ROUTES
     )
   );

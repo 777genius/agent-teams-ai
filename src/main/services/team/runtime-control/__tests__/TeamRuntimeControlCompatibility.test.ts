@@ -401,7 +401,7 @@ describe('TeamRuntimeControlCompatibility', () => {
     expect(service.createOpenCodeRuntimePermissionAnswerBoundary).toHaveBeenCalledTimes(2);
   });
 
-  it('lets unrelated production compatibility delivery keys commit concurrently', async () => {
+  it('lets unrelated production compatibility lanes commit concurrently', async () => {
     const release = createDeferred();
     const enteredKeys = new Set<string>();
     const openCode = createOpenCodePort(createOpenCodeAck('accepted'));
@@ -414,12 +414,19 @@ describe('TeamRuntimeControlCompatibility', () => {
     const service = {
       createOpenCodeRuntimeDeliveryBoundary: vi.fn(() => openCode),
       createOpenCodeRuntimePermissionAnswerBoundary: vi.fn(() => openCode),
-      resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'lane-1'),
+      resolveOpenCodeRuntimeLaneId: vi.fn(async ({ memberName }: { memberName?: string }) =>
+        memberName === 'Builder' ? 'lane-1' : 'lane-2'
+      ),
     };
     const api = createTeamRuntimeControlCompatibilityApiFromService(service);
     const deliveries = [
       api.deliverOpenCodeRuntimeMessage(createDeliveryPayload()),
-      api.deliverOpenCodeRuntimeMessage(createDeliveryPayload({ idempotencyKey: 'message-key-2' })),
+      api.deliverOpenCodeRuntimeMessage(
+        createDeliveryPayload({
+          fromMemberName: 'Reviewer',
+          idempotencyKey: 'message-key-2',
+        })
+      ),
     ];
 
     try {

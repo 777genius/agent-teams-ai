@@ -72,6 +72,7 @@ export const commentJournalTeams = sqliteTable('comment_journal_teams', {
 export const memberWorkSyncStatus = sqliteTable(
   'member_work_sync_status',
   {
+    teamKey: text('team_key').notNull(),
     teamName: text('team_name').notNull(),
     memberKey: text('member_key').notNull(),
     memberName: text('member_name').notNull(),
@@ -80,12 +81,16 @@ export const memberWorkSyncStatus = sqliteTable(
     providerId: text('provider_id'),
     statusJson: text('status_json').notNull(),
   },
-  (table) => [primaryKey({ columns: [table.teamName, table.memberKey] })]
+  (table) => [
+    primaryKey({ columns: [table.teamName, table.memberKey] }),
+    index('idx_mws_status_team_key').on(table.teamKey),
+  ]
 );
 
 export const memberWorkSyncReportIntents = sqliteTable(
   'member_work_sync_report_intents',
   {
+    teamKey: text('team_key').notNull(),
     teamName: text('team_name').notNull(),
     id: text('id').notNull(),
     memberKey: text('member_key').notNull(),
@@ -99,6 +104,7 @@ export const memberWorkSyncReportIntents = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.teamName, table.id] }),
+    index('idx_mws_report_intents_team_key').on(table.teamKey),
     index('idx_mws_report_intents_pending').on(table.teamName, table.status, table.recordedAt),
   ]
 );
@@ -106,6 +112,7 @@ export const memberWorkSyncReportIntents = sqliteTable(
 export const memberWorkSyncOutbox = sqliteTable(
   'member_work_sync_outbox',
   {
+    teamKey: text('team_key').notNull(),
     teamName: text('team_name').notNull(),
     id: text('id').notNull(),
     memberKey: text('member_key').notNull(),
@@ -130,6 +137,7 @@ export const memberWorkSyncOutbox = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.teamName, table.id] }),
+    index('idx_mws_outbox_team_key').on(table.teamKey),
     index('idx_mws_outbox_due').on(table.teamName, table.status, table.nextAttemptAt),
     index('idx_mws_outbox_member').on(table.teamName, table.memberKey, table.status),
   ]
@@ -138,6 +146,7 @@ export const memberWorkSyncOutbox = sqliteTable(
 export const memberWorkSyncMetricEvents = sqliteTable(
   'member_work_sync_metric_events',
   {
+    teamKey: text('team_key').notNull(),
     teamName: text('team_name').notNull(),
     id: text('id').notNull(),
     memberKey: text('member_key').notNull(),
@@ -148,6 +157,7 @@ export const memberWorkSyncMetricEvents = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.teamName, table.id] }),
+    index('idx_mws_metric_events_team_key').on(table.teamKey),
     index('idx_mws_metric_events_recent').on(table.teamName, table.recordedAt),
   ]
 );

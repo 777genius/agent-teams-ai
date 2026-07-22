@@ -1,3 +1,5 @@
+import { normalizeMemberWorkSyncTeamKey } from '../../../contracts/memberWorkSyncTeamIdentity';
+
 import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from './teamIdentityStorageSchema';
 
 import type DatabaseConstructor from 'better-sqlite3';
@@ -438,6 +440,27 @@ const MIGRATIONS: InternalStorageMigration[] = [
       )`,
     ],
   },
+  {
+    version: 9,
+    statements: [
+      `ALTER TABLE member_work_sync_status
+        ADD COLUMN team_key TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE member_work_sync_report_intents
+        ADD COLUMN team_key TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE member_work_sync_outbox
+        ADD COLUMN team_key TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE member_work_sync_metric_events
+        ADD COLUMN team_key TEXT NOT NULL DEFAULT ''`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_status_team_key
+        ON member_work_sync_status (team_key)`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_report_intents_team_key
+        ON member_work_sync_report_intents (team_key)`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_outbox_team_key
+        ON member_work_sync_outbox (team_key)`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_metric_events_team_key
+        ON member_work_sync_metric_events (team_key)`,
+    ],
+  },
 ];
 
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
@@ -463,10 +486,46 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
         db.exec(statement);
       }
       if (migration.version === 8) backfillCoordinationEventJournal(db);
+      if (migration.version === 9) backfillMemberWorkSyncTeamKeys(db);
       db.pragma(`user_version = ${migration.version}`);
     });
     apply();
   }
+  if (current >= 9) {
+    db.transaction(() => ensureMemberWorkSyncTeamKeyIndexes(db))();
+  }
+}
+
+const MEMBER_WORK_SYNC_TEAM_KEY_TABLES = [
+  'member_work_sync_status',
+  'member_work_sync_report_intents',
+  'member_work_sync_outbox',
+  'member_work_sync_metric_events',
+] as const;
+
+/** Runs inside the v9 migration transaction and deliberately uses the shared JS contract. */
+function backfillMemberWorkSyncTeamKeys(db: SqliteDatabase): void {
+  for (const tableName of MEMBER_WORK_SYNC_TEAM_KEY_TABLES) {
+    const rows = db.prepare(`SELECT rowid, team_name FROM ${tableName}`).all() as Array<{
+      readonly rowid: number;
+      readonly team_name: string;
+    }>;
+    const update = db.prepare(`UPDATE ${tableName} SET team_key = ? WHERE rowid = ?`);
+    for (const row of rows) {
+      update.run(normalizeMemberWorkSyncTeamKey(row.team_name), row.rowid);
+    }
+  }
+}
+
+function ensureMemberWorkSyncTeamKeyIndexes(db: SqliteDatabase): void {
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_mws_status_team_key
+    ON member_work_sync_status (team_key)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_mws_report_intents_team_key
+    ON member_work_sync_report_intents (team_key)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_mws_outbox_team_key
+    ON member_work_sync_outbox (team_key)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_mws_metric_events_team_key
+    ON member_work_sync_metric_events (team_key)`);
 }
 
 function ensureHistoricalV6DurabilityTables(db: SqliteDatabase): void {

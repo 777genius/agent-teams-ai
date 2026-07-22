@@ -187,4 +187,35 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
       )
     ).toBe('unsafe');
   });
+
+  it('does not stop a user-managed OpenCode serve process without persisted command identity', () => {
+    const killProcessByPid = vi.fn();
+    const ports = {
+      readProcessCommandByPid: vi.fn(() => '/usr/local/bin/opencode serve --port 4096'),
+      isOpenCodeServeCommand: vi.fn(() => true),
+      killProcessByPid,
+      logInfo: vi.fn(),
+      logWarning: vi.fn(),
+    };
+
+    expect(
+      tryStopPersistedOpenCodeRuntimePidForStoppedLane(
+        {
+          teamName: 'team',
+          laneId: 'secondary:opencode:Builder',
+          previousLaunchState: buildLaunchSnapshot({
+            providerId: 'opencode',
+            laneId: 'secondary:opencode:Builder',
+            runtimePid: 123,
+          }),
+        },
+        ports
+      )
+    ).toBe('unsafe');
+    expect(killProcessByPid).not.toHaveBeenCalled();
+    expect(ports.isOpenCodeServeCommand).not.toHaveBeenCalled();
+    expect(ports.logWarning).toHaveBeenCalledWith(
+      '[team] Refusing to stop persisted OpenCode pid 123 for lane secondary:opencode:Builder: persisted process command is unavailable.'
+    );
+  });
 });

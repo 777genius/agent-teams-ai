@@ -68,6 +68,29 @@ describe('lead permission scan helpers', () => {
     ]);
   });
 
+  it('leaves failed permission requests unread while continuing with later messages', async () => {
+    const ports = createPorts([
+      createMessage(),
+      createMessage({ text: permissionText('req-2'), messageId: 'msg-2' }),
+    ]);
+    ports.handleTeammatePermissionRequest
+      .mockImplementationOnce(() => {
+        throw new Error('handler failed');
+      })
+      .mockImplementationOnce(() => {});
+
+    const result = await scanLeadInboxPermissionRequests(
+      { teamName: 'alpha', leadName: 'team-lead', run: createRun(), isStaleRelayRun: () => false },
+      ports
+    );
+
+    expect(result).toBe('ok');
+    expect(ports.handleTeammatePermissionRequest).toHaveBeenCalledTimes(2);
+    expect(ports.markInboxMessagesRead).toHaveBeenCalledWith('alpha', 'team-lead', [
+      { messageId: 'msg-2' },
+    ]);
+  });
+
   it('ignores stale permission messages from before the run started', async () => {
     const ports = createPorts([
       createMessage({ timestamp: '2025-12-31T23:59:00.000Z', messageId: 'old' }),
@@ -121,7 +144,12 @@ describe('lead permission scan helpers', () => {
 
     await expect(
       scanLeadInboxPermissionRequests(
-        { teamName: 'alpha', leadName: 'team-lead', run: createRun(), isStaleRelayRun: () => false },
+        {
+          teamName: 'alpha',
+          leadName: 'team-lead',
+          run: createRun(),
+          isStaleRelayRun: () => false,
+        },
         ports
       )
     ).resolves.toBe('unavailable');

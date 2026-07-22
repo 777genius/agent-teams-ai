@@ -517,8 +517,8 @@ describe('SqliteMemberWorkSyncStore', () => {
       await new MemberWorkSyncSqliteImporter({
         gateway,
         jsonStore: {
-          readSnapshotForImport: async () => snapshot,
-          readArchivedSnapshotForImport: async () => null,
+          readSnapshotForImport: () => Promise.resolve(snapshot),
+          readArchivedSnapshotForImport: () => Promise.resolve(null),
         },
       }).ensureImported('team-a');
     }
@@ -543,7 +543,7 @@ describe('SqliteMemberWorkSyncStore', () => {
       const harness = await makeHarness('sqlite');
       const gateway = requireGateway(harness.gateway);
       const canonical = twoMemberSnapshot();
-      await gateway.importTeam('team-a', snapshotToRecords(canonical));
+      await gateway.importTeam('team-a', snapshotToRecords('team-a', canonical));
 
       await importSnapshot(
         gateway,
@@ -565,7 +565,7 @@ describe('SqliteMemberWorkSyncStore', () => {
     it('lets changed JSON identities replace canonical rows without deleting missing identities', async () => {
       const harness = await makeHarness('sqlite');
       const gateway = requireGateway(harness.gateway);
-      await gateway.importTeam('team-a', snapshotToRecords(twoMemberSnapshot()));
+      await gateway.importTeam('team-a', snapshotToRecords('team-a', twoMemberSnapshot()));
 
       await importSnapshot(
         gateway,
@@ -600,7 +600,7 @@ describe('SqliteMemberWorkSyncStore', () => {
     it('keeps missing rows and adds new rows when changed plus new input has the old count', async () => {
       const harness = await makeHarness('sqlite');
       const gateway = requireGateway(harness.gateway);
-      await gateway.importTeam('team-a', snapshotToRecords(twoMemberSnapshot()));
+      await gateway.importTeam('team-a', snapshotToRecords('team-a', twoMemberSnapshot()));
 
       await importSnapshot(
         gateway,

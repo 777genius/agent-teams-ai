@@ -143,7 +143,7 @@ export function createUpdateDirectTmuxRestartMemberConfigUseCase(
       existingIndex >= 0 ? (members[existingIndex] ?? {}) : {};
     const backendType = input.backendType ?? 'tmux';
     const existingForRestart = { ...existing };
-    if (existing.backendType === 'process' && backendType === 'tmux') {
+    if (existing.backendType === 'process') {
       for (const field of PROCESS_BACKEND_OPTIONAL_METADATA_FIELDS) {
         delete existingForRestart[field];
       }

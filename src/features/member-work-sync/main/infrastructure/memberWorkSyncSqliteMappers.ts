@@ -1,3 +1,5 @@
+import { normalizeMemberWorkSyncSnapshotTeamIdentity } from '@features/internal-storage/contracts';
+
 import { buildMetricEvents, normalizeMemberKey } from './JsonMemberWorkSyncStore';
 
 import type {
@@ -18,7 +20,7 @@ import type {
 } from '@features/internal-storage/contracts/internalStorageContracts';
 
 export function statusToRecord(status: MemberWorkSyncStatus): MemberWorkSyncStatusRecord {
-  return {
+  const record: MemberWorkSyncStatusRecord = {
     teamName: status.teamName,
     memberKey: normalizeMemberKey(status.memberName),
     memberName: status.memberName,
@@ -27,16 +29,28 @@ export function statusToRecord(status: MemberWorkSyncStatus): MemberWorkSyncStat
     providerId: status.providerId ?? null,
     statusJson: JSON.stringify(status),
   };
+  return normalizeMemberWorkSyncSnapshotTeamIdentity(status.teamName, {
+    statuses: [record],
+    reportIntents: [],
+    outboxItems: [],
+    metricEvents: [],
+  }).statuses[0];
 }
 
 export function recordToStatus(record: MemberWorkSyncStatusRecord): MemberWorkSyncStatus {
-  return JSON.parse(record.statusJson) as MemberWorkSyncStatus;
+  const normalized = normalizeMemberWorkSyncSnapshotTeamIdentity(record.teamName, {
+    statuses: [record],
+    reportIntents: [],
+    outboxItems: [],
+    metricEvents: [],
+  }).statuses[0];
+  return JSON.parse(normalized.statusJson) as MemberWorkSyncStatus;
 }
 
 export function metricEventToRecord(
   event: MemberWorkSyncMetricEvent
 ): MemberWorkSyncMetricEventRecord {
-  return {
+  const record: MemberWorkSyncMetricEventRecord = {
     teamName: event.teamName,
     id: event.id,
     memberKey: normalizeMemberKey(event.memberName),
@@ -45,12 +59,24 @@ export function metricEventToRecord(
     recordedAt: event.recordedAt,
     eventJson: JSON.stringify(event),
   };
+  return normalizeMemberWorkSyncSnapshotTeamIdentity(event.teamName, {
+    statuses: [],
+    reportIntents: [],
+    outboxItems: [],
+    metricEvents: [record],
+  }).metricEvents[0];
 }
 
 export function recordToMetricEvent(
   record: MemberWorkSyncMetricEventRecord
 ): MemberWorkSyncMetricEvent {
-  return JSON.parse(record.eventJson) as MemberWorkSyncMetricEvent;
+  const normalized = normalizeMemberWorkSyncSnapshotTeamIdentity(record.teamName, {
+    statuses: [],
+    reportIntents: [],
+    outboxItems: [],
+    metricEvents: [record],
+  }).metricEvents[0];
+  return JSON.parse(normalized.eventJson) as MemberWorkSyncMetricEvent;
 }
 
 export function statusToMetricEventRecords(
@@ -62,7 +88,7 @@ export function statusToMetricEventRecords(
 export function reportIntentToRecord(
   intent: MemberWorkSyncReportIntent
 ): MemberWorkSyncReportIntentRecord {
-  return {
+  const record: MemberWorkSyncReportIntentRecord = {
     teamName: intent.teamName,
     id: intent.id,
     memberKey: normalizeMemberKey(intent.memberName),
@@ -74,21 +100,33 @@ export function reportIntentToRecord(
     resultCode: intent.resultCode ?? null,
     requestJson: JSON.stringify(intent.request),
   };
+  return normalizeMemberWorkSyncSnapshotTeamIdentity(intent.teamName, {
+    statuses: [],
+    reportIntents: [record],
+    outboxItems: [],
+    metricEvents: [],
+  }).reportIntents[0];
 }
 
 export function recordToReportIntent(
   record: MemberWorkSyncReportIntentRecord
 ): MemberWorkSyncReportIntent {
+  const normalized = normalizeMemberWorkSyncSnapshotTeamIdentity(record.teamName, {
+    statuses: [],
+    reportIntents: [record],
+    outboxItems: [],
+    metricEvents: [],
+  }).reportIntents[0];
   return {
-    id: record.id,
-    teamName: record.teamName,
-    memberName: record.memberName,
-    request: JSON.parse(record.requestJson) as MemberWorkSyncReportIntent['request'],
-    reason: record.reason,
-    status: record.status as MemberWorkSyncReportIntentStatus,
-    recordedAt: record.recordedAt,
-    ...(record.processedAt ? { processedAt: record.processedAt } : {}),
-    ...(record.resultCode ? { resultCode: record.resultCode } : {}),
+    id: normalized.id,
+    teamName: normalized.teamName,
+    memberName: normalized.memberName,
+    request: JSON.parse(normalized.requestJson) as MemberWorkSyncReportIntent['request'],
+    reason: normalized.reason,
+    status: normalized.status as MemberWorkSyncReportIntentStatus,
+    recordedAt: normalized.recordedAt,
+    ...(normalized.processedAt ? { processedAt: normalized.processedAt } : {}),
+    ...(normalized.resultCode ? { resultCode: normalized.resultCode } : {}),
   };
 }
 
@@ -151,25 +189,38 @@ export function recordToOutboxItem(
 }
 
 export function snapshotToRecords(
+  teamName: string,
   snapshot: MemberWorkSyncStoreSnapshot
 ): MemberWorkSyncTeamSnapshotRecords {
-  return {
+  return normalizeMemberWorkSyncSnapshotTeamIdentity(teamName, {
     statuses: snapshot.statuses.map(statusToRecord),
     reportIntents: snapshot.reportIntents.map(reportIntentToRecord),
     outboxItems: snapshot.outboxItems.map(outboxItemToRecord),
     metricEvents: snapshot.metricEvents.map(metricEventToRecord),
-  };
+  });
 }
 
 export function recordsToSnapshot(
+  teamName: string,
   records: MemberWorkSyncTeamSnapshotRecords
 ): MemberWorkSyncStoreSnapshot {
+  const normalized = normalizeMemberWorkSyncSnapshotTeamIdentity(teamName, records);
   return {
-    statuses: records.statuses.map(recordToStatus),
-    reportIntents: records.reportIntents.map(recordToReportIntent),
-    outboxItems: records.outboxItems.map(recordToOutboxItem),
-    metricEvents: records.metricEvents.map(recordToMetricEvent),
+    statuses: normalized.statuses.map(recordToStatus),
+    reportIntents: normalized.reportIntents.map(recordToReportIntent),
+    outboxItems: normalized.outboxItems.map(recordToOutboxItem),
+    metricEvents: normalized.metricEvents.map(recordToMetricEvent),
     filesToArchive: [],
+  };
+}
+
+export function normalizeMemberWorkSyncStoreSnapshotTeamIdentity(
+  teamName: string,
+  snapshot: MemberWorkSyncStoreSnapshot
+): MemberWorkSyncStoreSnapshot {
+  return {
+    ...recordsToSnapshot(teamName, snapshotToRecords(teamName, snapshot)),
+    filesToArchive: snapshot.filesToArchive,
   };
 }
 

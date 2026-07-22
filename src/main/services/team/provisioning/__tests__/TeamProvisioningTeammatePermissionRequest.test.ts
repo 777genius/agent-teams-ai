@@ -164,6 +164,28 @@ describe('teammate permission request intake', () => {
     );
   });
 
+  it('rolls back processed and pending state after a synchronous failure so intake can retry', () => {
+    const run = buildRun();
+    const perm = buildPermissionRequest();
+    maybeShowToolApprovalOsNotification.mockImplementationOnce(() => {
+      throw new Error('notification failed');
+    });
+    const ports = createPorts();
+
+    expect(() =>
+      handleTeammatePermissionRequest(run, perm, '2026-01-01T00:00:00.000Z', ports)
+    ).toThrow('notification failed');
+    expect(run.processedPermissionRequestIds.has('req-1')).toBe(false);
+    expect(run.pendingApprovals.has('req-1')).toBe(false);
+
+    expect(() =>
+      handleTeammatePermissionRequest(run, perm, '2026-01-01T00:00:00.000Z', ports)
+    ).not.toThrow();
+    expect(run.processedPermissionRequestIds.has('req-1')).toBe(true);
+    expect(run.pendingApprovals.get('req-1')).toMatchObject({ requestId: 'req-1' });
+    expect(maybeShowToolApprovalOsNotification).toHaveBeenCalledTimes(2);
+  });
+
   it('auto-allows teammate requests, responds fire-and-forget, and emits auto-resolved event', () => {
     const run = buildRun();
     const suggestions = [
@@ -216,6 +238,7 @@ describe('teammate permission request intake', () => {
       reason: 'auto_allow_category',
     });
     expect(emitToolApprovalEvent).toHaveBeenCalledWith(autoResolved);
+    expect(run.processedPermissionRequestIds.has('req-1')).toBe(true);
     expect(run.pendingApprovals.size).toBe(0);
     expect(startApprovalTimeout).not.toHaveBeenCalled();
     expect(maybeShowToolApprovalOsNotification).not.toHaveBeenCalled();

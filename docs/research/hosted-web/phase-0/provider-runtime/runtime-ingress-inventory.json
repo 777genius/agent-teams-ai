@@ -92,10 +92,10 @@
       "id": "runtime-permission-answer",
       "operation": "permission",
       "commandKind": "runtime.permission-answer",
-      "currentRoute": "/api/teams/:teamName/opencode/runtime/permission-answer",
-      "direction": "runtime_to_app_but_semantically_operator_to_runtime",
-      "caller": "legacy OpenCode compatibility callback (and any browser able to reach the same route surface)",
-      "currentAuthority": "body supplies decision, cwd, member and expectedMembers; write fence is in-memory and route has no machine/operator authority split",
+      "currentRoute": null,
+      "direction": "operator_to_runtime_non_network",
+      "caller": "trusted non-HTTP application compatibility boundary",
+      "currentAuthority": "no HTTP route is registered; trusted application callers reach runtime control through the process-local compatibility boundary",
       "idempotency": "derived from requestId+decision; bridge command ledger may recover the provider effect, but ingress claim is not durably persisted first",
       "bodyIds": [
         "teamName",
@@ -116,7 +116,7 @@
     }
   ],
   "trustSurfaceProof": {
-    "currentNegativeControl": "All five callbacks remain under /api/teams and register beside browser/operator routes; source contains no /api/runtime/v1 route or lane credential check.",
+    "currentNegativeControl": "Four runtime callbacks remain under /api/teams and register beside browser/operator routes; runtime.permission-answer is a non-network domain command with no currentRoute. Source contains no /api/runtime/v1 route or lane credential check.",
     "targetBrowserAuthority": "/api/hosted/v1/* uses operator session plus CSRF/Origin and cannot present runtime credentials.",
     "targetRuntimeAuthority": "/api/runtime/v1/runs/:runId/* uses only hash-verified lane/run-scoped relay credentials, ignores browser session/CSRF semantics, and cannot invoke operator verbs.",
     "targetProviderExposure": "Provider process receives a narrow local relay, never the canonical bearer in argv, env, settings, MCP config or run files.",

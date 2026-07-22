@@ -54,6 +54,7 @@ export async function scanLeadInboxPermissionRequests<TRun extends LeadPermissio
       ports.handleTeammatePermissionRequest(input.run, perm, msg.timestamp);
     } catch {
       // best-effort — a failing permission handler must not abort the relay turn
+      continue;
     }
     if (!msg.read && hasStableInboxMessageId(msg)) {
       permMsgsToMarkRead.push({ messageId: msg.messageId });

@@ -231,11 +231,16 @@ export function tryStopPersistedOpenCodeRuntimePidForStoppedLane(
   if (!command) {
     return 'no_pid';
   }
-  const persistedProcessCommand = (persistedMember as { processCommand?: unknown })
-    .processCommand;
+  const persistedProcessCommand = (persistedMember as { processCommand?: unknown }).processCommand;
   const expectedCommand =
     typeof persistedProcessCommand === 'string' ? persistedProcessCommand.trim() : '';
-  if (expectedCommand && command !== expectedCommand) {
+  if (!expectedCommand) {
+    ports.logWarning(
+      `[${input.teamName}] Refusing to stop persisted OpenCode pid ${pid} for lane ${input.laneId}: persisted process command is unavailable.`
+    );
+    return 'unsafe';
+  }
+  if (command !== expectedCommand) {
     ports.logWarning(
       `[${input.teamName}] Refusing to stop persisted OpenCode pid ${pid} for lane ${input.laneId}: process command changed.`
     );

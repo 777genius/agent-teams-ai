@@ -214,11 +214,17 @@ export function createStopPrimaryOwnedRosterRuntimeUseCase(
           hasStopHandle = true;
         }
       }
-      if (typeof metadata.pid === 'number' && Number.isFinite(metadata.pid) && metadata.pid > 0) {
+      if (
+        metadata.alive &&
+        typeof metadata.pid === 'number' &&
+        Number.isFinite(metadata.pid) &&
+        metadata.pid > 0
+      ) {
         pidsToStop.add(metadata.pid);
         hasStopHandle = true;
       }
       if (
+        metadata.alive &&
         typeof metadata.metricsPid === 'number' &&
         Number.isFinite(metadata.metricsPid) &&
         metadata.metricsPid > 0

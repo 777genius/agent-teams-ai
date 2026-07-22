@@ -14,8 +14,7 @@ import type {
 } from '@shared/types';
 import type { ParsedPermissionRequest } from '@shared/utils/inboxNoise';
 
-export interface TeamProvisioningTeammatePermissionRequestRun
-  extends TeamProvisioningTeammatePermissionRun {
+export interface TeamProvisioningTeammatePermissionRequestRun extends TeamProvisioningTeammatePermissionRun {
   request: TeamProvisioningTeammatePermissionRun['request'] & {
     color?: string;
     displayName?: string;
@@ -44,9 +43,7 @@ export interface TeamProvisioningTeammatePermissionRequestPorts<
     toolName: string,
     toolInput: Record<string, unknown>
   ): TeamProvisioningTeammatePermissionRequestAutoAllowResult;
-  buildTeammateToolApprovalRequest(
-    input: TeammateToolApprovalRequestInput
-  ): ToolApprovalRequest;
+  buildTeammateToolApprovalRequest(input: TeammateToolApprovalRequestInput): ToolApprovalRequest;
   respondToTeammatePermission(input: RespondToTeammatePermissionInput): Promise<void>;
   buildToolApprovalAutoResolvedEvent(
     input: ToolApprovalAutoResolvedEventInput
@@ -70,55 +67,61 @@ export function handleTeammatePermissionRequest<
   if (run.pendingApprovals.has(perm.requestId)) return;
   run.processedPermissionRequestIds.add(perm.requestId);
 
-  ports.logger.warn(
-    `[${run.teamName}] [PERM-TRACE] handleTeammatePermissionRequest: agent=${perm.agentId} tool=${perm.toolName} requestId=${perm.requestId}`
-  );
-
-  const approval = ports.buildTeammateToolApprovalRequest({
-    requestId: perm.requestId,
-    runId: run.runId,
-    teamName: run.teamName,
-    source: perm.agentId,
-    toolName: perm.toolName,
-    toolInput: perm.input,
-    receivedAt: messageTimestamp || new Date().toISOString(),
-    teamColor: run.request.color,
-    teamDisplayName: run.request.displayName,
-    permissionSuggestions:
-      perm.permissionSuggestions.length > 0 ? perm.permissionSuggestions : undefined,
-  });
-
-  const autoResult = ports.shouldAutoAllow(
-    ports.getSettings(run.teamName),
-    perm.toolName,
-    perm.input
-  );
-  if (autoResult.autoAllow) {
-    ports.logger.info(
-      `[${run.teamName}] Auto-allowing teammate ${perm.agentId} ${perm.toolName} (${autoResult.reason})`
+  try {
+    ports.logger.warn(
+      `[${run.teamName}] [PERM-TRACE] handleTeammatePermissionRequest: agent=${perm.agentId} tool=${perm.toolName} requestId=${perm.requestId}`
     );
-    void ports.respondToTeammatePermission({
-      run,
-      agentId: perm.agentId,
+
+    const approval = ports.buildTeammateToolApprovalRequest({
       requestId: perm.requestId,
-      allow: true,
-      permissionSuggestions: perm.permissionSuggestions,
+      runId: run.runId,
+      teamName: run.teamName,
+      source: perm.agentId,
       toolName: perm.toolName,
       toolInput: perm.input,
+      receivedAt: messageTimestamp || new Date().toISOString(),
+      teamColor: run.request.color,
+      teamDisplayName: run.request.displayName,
+      permissionSuggestions:
+        perm.permissionSuggestions.length > 0 ? perm.permissionSuggestions : undefined,
     });
-    ports.emitToolApprovalEvent(
-      ports.buildToolApprovalAutoResolvedEvent({
-        requestId: perm.requestId,
-        runId: run.runId,
-        teamName: run.teamName,
-        reason: 'auto_allow_category',
-      })
-    );
-    return;
-  }
 
-  run.pendingApprovals.set(perm.requestId, approval);
-  ports.emitToolApprovalEvent(approval);
-  ports.startApprovalTimeout(run, perm.requestId);
-  ports.maybeShowToolApprovalOsNotification(run, approval);
+    const autoResult = ports.shouldAutoAllow(
+      ports.getSettings(run.teamName),
+      perm.toolName,
+      perm.input
+    );
+    if (autoResult.autoAllow) {
+      ports.logger.info(
+        `[${run.teamName}] Auto-allowing teammate ${perm.agentId} ${perm.toolName} (${autoResult.reason})`
+      );
+      void ports.respondToTeammatePermission({
+        run,
+        agentId: perm.agentId,
+        requestId: perm.requestId,
+        allow: true,
+        permissionSuggestions: perm.permissionSuggestions,
+        toolName: perm.toolName,
+        toolInput: perm.input,
+      });
+      ports.emitToolApprovalEvent(
+        ports.buildToolApprovalAutoResolvedEvent({
+          requestId: perm.requestId,
+          runId: run.runId,
+          teamName: run.teamName,
+          reason: 'auto_allow_category',
+        })
+      );
+      return;
+    }
+
+    run.pendingApprovals.set(perm.requestId, approval);
+    ports.emitToolApprovalEvent(approval);
+    ports.startApprovalTimeout(run, perm.requestId);
+    ports.maybeShowToolApprovalOsNotification(run, approval);
+  } catch (error) {
+    run.pendingApprovals.delete(perm.requestId);
+    run.processedPermissionRequestIds.delete(perm.requestId);
+    throw error;
+  }
 }

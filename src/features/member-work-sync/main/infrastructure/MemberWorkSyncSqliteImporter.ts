@@ -74,33 +74,25 @@ export class MemberWorkSyncSqliteImporter {
       MEMBER_WORK_SYNC_STORE_ID,
       teamName
     );
-    if (activeSnapshot === null && hasRecordedImport) {
-      this.importedTeams.add(teamName);
-      return;
-    }
-
     const archivedSnapshot = hasRecordedImport
       ? null
       : await this.deps.jsonStore.readArchivedSnapshotForImport(teamName);
-    if (activeSnapshot === null && archivedSnapshot === null) {
+    const usedArchivedSnapshot = archivedSnapshot !== null;
+    const snapshot =
+      activeSnapshot || archivedSnapshot
+        ? combineSnapshots(archivedSnapshot, activeSnapshot)
+        : null;
+    const incomingRecords = snapshot
+      ? snapshotToRecords(teamName, snapshot)
+      : { statuses: [], reportIntents: [], outboxItems: [], metricEvents: [] };
+    const canonicalRecords = await this.deps.gateway.listTeamSnapshot(teamName);
+    const records = mergeMemberWorkSyncSnapshots(teamName, canonicalRecords, incomingRecords);
+    const repairRequired = !areSnapshotRecordSetsEquivalent(canonicalRecords, records);
+    if (!snapshot && !repairRequired) {
       this.importedTeams.add(teamName);
       return;
     }
-    const usedArchivedSnapshot = archivedSnapshot !== null;
-    const snapshot = combineSnapshots(archivedSnapshot, activeSnapshot);
 
-    // Canonicalize the routing column to the import argument: legacy entries
-    // may carry a differently-cased teamName, and rows keyed by it would be
-    // invisible to queries (and to the verification read-back below).
-    const mapped = snapshotToRecords(snapshot);
-    const incomingRecords = {
-      statuses: mapped.statuses.map((record) => ({ ...record, teamName })),
-      reportIntents: mapped.reportIntents.map((record) => ({ ...record, teamName })),
-      outboxItems: mapped.outboxItems.map((record) => ({ ...record, teamName })),
-      metricEvents: mapped.metricEvents.map((record) => ({ ...record, teamName })),
-    };
-    const canonicalRecords = await this.deps.gateway.listTeamSnapshot(teamName);
-    const records = mergeMemberWorkSyncSnapshots(canonicalRecords, incomingRecords);
     await this.deps.gateway.importTeam(teamName, records);
 
     const roundTrip = await this.deps.gateway.listTeamSnapshot(teamName);
@@ -111,24 +103,27 @@ export class MemberWorkSyncSqliteImporter {
       );
     }
 
-    await this.deps.gateway.recordStoreImport(
-      MEMBER_WORK_SYNC_STORE_ID,
-      teamName,
-      records.statuses.length + records.reportIntents.length + records.outboxItems.length
-    );
+    if (snapshot || repairRequired) {
+      await this.deps.gateway.recordStoreImport(
+        MEMBER_WORK_SYNC_STORE_ID,
+        teamName,
+        records.statuses.length + records.reportIntents.length + records.outboxItems.length
+      );
+    }
     if (activeSnapshot) {
-      for (const filePath of snapshot.filesToArchive) {
+      for (const filePath of snapshot?.filesToArchive ?? []) {
         await archiveFileWithGenerations(filePath);
       }
     }
-    this.deps.logger?.warn('member-work-sync legacy JSON imported into sqlite', {
+    this.deps.logger?.warn('member-work-sync sqlite snapshot imported or repaired', {
       teamName,
       statuses: records.statuses.length,
       reportIntents: records.reportIntents.length,
       outboxItems: records.outboxItems.length,
       metricEvents: records.metricEvents.length,
-      archivedFiles: activeSnapshot ? snapshot.filesToArchive.length : 0,
+      archivedFiles: activeSnapshot ? (snapshot?.filesToArchive.length ?? 0) : 0,
       recoveredFromArchives: usedArchivedSnapshot,
+      repairedCanonicalIdentity: repairRequired,
     });
     this.importedTeams.add(teamName);
   }

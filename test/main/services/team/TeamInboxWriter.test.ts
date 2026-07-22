@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { SendMessageRequest } from '@shared/types';
+
 const hoisted = vi.hoisted(() => {
   const files = new Map<string, string>();
   const realpaths = new Map<string, string>();
@@ -317,6 +319,94 @@ describe('TeamInboxWriter', () => {
 
     const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as { text: string }[];
     expect(persisted).toEqual([expect.objectContaining({ text: 'Original notification' })]);
+  });
+
+  it('fails closed when explicit messageId retries change immutable runtime metadata', async () => {
+    const cases: {
+      name: string;
+      original: Partial<SendMessageRequest>;
+      conflicting: Partial<SendMessageRequest>;
+    }[] = [
+      {
+        name: 'color',
+        original: { color: 'purple' },
+        conflicting: { color: 'blue' },
+      },
+      {
+        name: 'agent-error',
+        original: {
+          agentError: {
+            schemaVersion: 1,
+            type: 'api_error',
+            phase: 'terminal',
+            detail: 'Original provider error',
+            failedMessageId: 'failed-message-1',
+            innerRecoveryAttempts: 0,
+          },
+        },
+        conflicting: {
+          agentError: {
+            schemaVersion: 1,
+            type: 'api_error',
+            phase: 'terminal',
+            detail: 'Different provider error',
+            failedMessageId: 'failed-message-1',
+            innerRecoveryAttempts: 0,
+          },
+        },
+      },
+      {
+        name: 'runtime-recovery',
+        original: {
+          runtimeRecovery: {
+            schemaVersion: 1,
+            recoveryId: 'recovery-1',
+            sourceFailureId: 'failure-1',
+            attempt: 1,
+            reasonCode: 'provider_overloaded',
+            payloadHash: 'sha256:original',
+          },
+        },
+        conflicting: {
+          runtimeRecovery: {
+            schemaVersion: 1,
+            recoveryId: 'recovery-1',
+            sourceFailureId: 'failure-1',
+            attempt: 1,
+            reasonCode: 'provider_overloaded',
+            payloadHash: 'sha256:different',
+          },
+        },
+      },
+    ];
+
+    for (const testCase of cases) {
+      const request = {
+        member: 'alice',
+        from: 'system',
+        text: 'Runtime notification',
+        source: 'system_notification' as const,
+        messageId: `notification-${testCase.name}`,
+      };
+      await writer.sendMessage('my-team', { ...request, ...testCase.original });
+
+      await expect(
+        writer.sendMessage('my-team', { ...request, ...testCase.conflicting })
+      ).rejects.toThrow(
+        `Inbox messageId collision for immutable payload: notification-${testCase.name}`
+      );
+    }
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(persisted).toEqual([
+      expect.objectContaining({ color: 'purple' }),
+      expect.objectContaining({
+        agentError: expect.objectContaining({ detail: 'Original provider error' }),
+      }),
+      expect.objectContaining({
+        runtimeRecovery: expect.objectContaining({ payloadHash: 'sha256:original' }),
+      }),
+    ]);
   });
 
   it('retries the same explicit message after a failure before the durable write', async () => {

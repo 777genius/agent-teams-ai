@@ -243,6 +243,62 @@ describe('TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase', () => {
     expect(member).not.toHaveProperty('bootstrapBriefingHash');
   });
 
+  it('replaces stale process runtime metadata when restarting the member in another process', async () => {
+    let written = '';
+    const useCase = createUpdateDirectTmuxRestartMemberConfigUseCase({
+      async readTeamConfigJson() {
+        return JSON.stringify({
+          name: 'Team A',
+          members: [
+            {
+              name: 'Worker',
+              backendType: 'process',
+              runtimePid: 123,
+              runtimeSessionId: 'old-process-session',
+              bootstrapRuntimeEventsPath: '/safe-test-project/runtime/old.runtime.jsonl',
+              bootstrapProofToken: 'old-proof-token',
+              bootstrapRunId: 'old-run',
+              bootstrapProofMode: 'native_app_managed_context',
+              bootstrapContextHash: 'old-context-hash',
+              bootstrapBriefingHash: 'old-briefing-hash',
+              staleField: 'preserved',
+            },
+          ],
+        });
+      },
+      async writeTeamConfigJson(_teamName, contents) {
+        written = contents;
+      },
+      invalidateTeamConfig() {
+        return undefined;
+      },
+    });
+
+    await useCase({
+      ...restartInput('Worker', 'process restart prompt', 789),
+      backendType: 'process',
+      runtimePid: 789,
+    });
+
+    const parsed = JSON.parse(written) as { members: Record<string, unknown>[] };
+    const member = parsed.members[0] ?? {};
+    expect(member).toMatchObject({
+      name: 'Worker',
+      backendType: 'process',
+      tmuxPaneId: '%789',
+      runtimePid: 789,
+      bootstrapExpectedAfter: '2026-07-09T00:00:00.000Z',
+      staleField: 'preserved',
+    });
+    expect(member).not.toHaveProperty('runtimeSessionId');
+    expect(member).not.toHaveProperty('bootstrapRuntimeEventsPath');
+    expect(member).not.toHaveProperty('bootstrapProofToken');
+    expect(member).not.toHaveProperty('bootstrapRunId');
+    expect(member).not.toHaveProperty('bootstrapProofMode');
+    expect(member).not.toHaveProperty('bootstrapContextHash');
+    expect(member).not.toHaveProperty('bootstrapBriefingHash');
+  });
+
   it('preserves newly supplied runtime metadata during a process-to-tmux transition', async () => {
     let written = '';
     const useCase = createUpdateDirectTmuxRestartMemberConfigUseCase({

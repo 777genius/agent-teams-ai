@@ -147,25 +147,41 @@ describe('native teammate message helpers', () => {
     );
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(ports.matchCrossTeamLeadInboxMessages).toHaveBeenCalledWith(
-      'alpha',
-      'lead',
-      [
-        expect.objectContaining({
-          teammateId: 'beta.team-lead',
-          toTeam: 'beta',
-          conversationId: 'conv-1',
-        }),
-      ]
-    );
-    expect(ports.markInboxMessagesRead).toHaveBeenCalledWith(
-      'alpha',
-      'lead',
-      [expect.objectContaining({ messageId: 'msg-1' })]
-    );
-    expect(run.activeCrossTeamReplyHints).toEqual([
-      { toTeam: 'beta', conversationId: 'conv-1' },
+    expect(ports.matchCrossTeamLeadInboxMessages).toHaveBeenCalledWith('alpha', 'lead', [
+      expect.objectContaining({
+        teammateId: 'beta.team-lead',
+        toTeam: 'beta',
+        conversationId: 'conv-1',
+      }),
     ]);
+    expect(ports.markInboxMessagesRead).toHaveBeenCalledWith('alpha', 'lead', [
+      expect.objectContaining({ messageId: 'msg-1' }),
+    ]);
+    expect(run.activeCrossTeamReplyHints).toEqual([{ toTeam: 'beta', conversationId: 'conv-1' }]);
+  });
+
+  it('isolates cross-team matching failures from the fire-and-forget caller', async () => {
+    const existingHints = [{ toTeam: 'gamma', conversationId: 'conv-existing' }];
+    const run = createRun({ activeCrossTeamReplyHints: existingHints });
+    const ports = createPorts({
+      matchCrossTeamLeadInboxMessages: vi.fn().mockRejectedValue(new Error('inbox unavailable')),
+    });
+
+    handleNativeTeammateUserMessage(
+      run,
+      {
+        content: teammateMessage(
+          'beta.team-lead',
+          '<cross-team from="beta.team-lead" depth="0" conversationId="conv-1" />\nhello'
+        ),
+      },
+      ports
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(ports.matchCrossTeamLeadInboxMessages).toHaveBeenCalledOnce();
+    expect(ports.markInboxMessagesRead).not.toHaveBeenCalled();
+    expect(run.activeCrossTeamReplyHints).toBe(existingHints);
   });
 
   it('ignores stale cross-team matches for active reply hints', async () => {

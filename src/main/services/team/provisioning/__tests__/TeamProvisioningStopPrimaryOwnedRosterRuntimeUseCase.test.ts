@@ -122,6 +122,26 @@ describe('TeamProvisioningStopPrimaryOwnedRosterRuntimeUseCase', () => {
     ]);
   });
 
+  it('ignores stale live runtime pids when metadata reports the runtime is not alive', async () => {
+    const { calls, ports } = createPorts();
+    const stopPrimaryOwnedRosterRuntime = createStopPrimaryOwnedRosterRuntimeUseCase(ports);
+
+    await expect(
+      stopPrimaryOwnedRosterRuntime({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        actionLabel: 'Detach for teammate "Worker"',
+        persistedRuntimeMembers: [],
+        liveRuntimeByMember: new Map([
+          ['Worker', { alive: false, backendType: 'process', pid: 222, metricsPid: 333 }],
+        ]),
+      })
+    ).resolves.toBeUndefined();
+
+    expect(calls.killedPids).toEqual([]);
+    expect(calls.waitPidCalls).toEqual([]);
+  });
+
   it('logs stop-handle kill failures and still waits for collected handles', async () => {
     const { calls, ports } = createPorts({ throwOnPane: 'pane-a', throwOnPid: 111 });
     const stopPrimaryOwnedRosterRuntime = createStopPrimaryOwnedRosterRuntimeUseCase(ports);

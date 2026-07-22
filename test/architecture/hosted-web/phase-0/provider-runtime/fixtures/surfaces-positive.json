@@ -3,8 +3,7 @@
     "/api/teams/:teamName/opencode/runtime/bootstrap-checkin",
     "/api/teams/:teamName/opencode/runtime/deliver-message",
     "/api/teams/:teamName/opencode/runtime/task-event",
-    "/api/teams/:teamName/opencode/runtime/heartbeat",
-    "/api/teams/:teamName/opencode/runtime/permission-answer"
+    "/api/teams/:teamName/opencode/runtime/heartbeat"
   ],
   "commands": [
     "runtime.bootstrap-checkin",
