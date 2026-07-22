@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { delimiter, dirname, isAbsolute } from "node:path";
 import { codexEnvironmentPolicy } from "./capabilities";
 import { codexProviderEgressCliConfigArgs } from "./codex-provider-egress-policy";
+import { codexAgentTempRootFromEnv } from "./app-server/domain/app-server-types";
 
 export const codexAuthJsonMaxBytes = 32 * 1024;
 
@@ -155,15 +156,15 @@ export function classifyCodexRuntimeFailure(message: string): string {
   return "unknown_auth_state";
 }
 
-function isCodexReconnectableAuthShapeFailure(normalizedMessage: string): boolean {
+function isCodexReconnectableAuthShapeFailure(
+  normalizedMessage: string,
+): boolean {
   return (
     normalizedMessage.includes("missing field") &&
-    (
-      normalizedMessage.includes("id_token") ||
+    (normalizedMessage.includes("id_token") ||
       normalizedMessage.includes("access_token") ||
       normalizedMessage.includes("refresh_token") ||
-      normalizedMessage.includes("auth.json")
-    )
+      normalizedMessage.includes("auth.json"))
   );
 }
 
@@ -254,6 +255,16 @@ export function pruneCodexChildEnv(
     allowed[key] = value;
   }
   allowed.PATH = codexChildPath(env);
+  const agentTempRoot = codexAgentTempRootFromEnv(env);
+  if (agentTempRoot) {
+    allowed.TMPDIR = agentTempRoot;
+    allowed.TMP = agentTempRoot;
+    allowed.TEMP = agentTempRoot;
+    // Dependency bootstrap has already validated and installed the exact
+    // lockfile. Prevent pnpm from reopening its shared store database from
+    // inside the narrower provider sandbox before every script execution.
+    allowed.PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN = "false";
+  }
   return allowed;
 }
 
@@ -459,14 +470,13 @@ function availableExecutableDirs(
   const candidates = [
     ...explicitGhPathEnvNames
       .map((name) => env[name]?.trim())
-      .filter((path): path is string =>
-        path !== undefined && path.length > 0 && isAbsolute(path),
+      .filter(
+        (path): path is string =>
+          path !== undefined && path.length > 0 && isAbsolute(path),
       ),
     ...ghPathCandidates,
   ];
-  return candidates
-    .filter(isExecutable)
-    .map((path) => dirname(path));
+  return candidates.filter(isExecutable).map((path) => dirname(path));
 }
 
 function isExecutable(path: string): boolean {

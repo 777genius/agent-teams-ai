@@ -119,7 +119,9 @@ describe("Codex provider adapter", () => {
       "backend_unavailable",
     );
     expect(
-      classifyCodexRuntimeFailure("codex_app_server_goal_max_turns_exceeded:20"),
+      classifyCodexRuntimeFailure(
+        "codex_app_server_goal_max_turns_exceeded:20",
+      ),
     ).toBe("goal_slice_exhausted");
     expect(
       classifyCodexRuntimeFailure(
@@ -327,15 +329,17 @@ describe("Codex provider adapter", () => {
       CI: "true",
       CODEX_HOME: "/tmp/codex-home",
     });
-    expect(env.PATH!.split(delimiter)).toEqual(expect.arrayContaining([
-      "/codex/bin",
-      "/usr/local/sbin",
-      "/usr/local/bin",
-      "/usr/sbin",
-      "/usr/bin",
-      "/sbin",
-      "/bin",
-    ]));
+    expect(env.PATH!.split(delimiter)).toEqual(
+      expect.arrayContaining([
+        "/codex/bin",
+        "/usr/local/sbin",
+        "/usr/local/bin",
+        "/usr/sbin",
+        "/usr/bin",
+        "/sbin",
+        "/bin",
+      ]),
+    );
     expect(env).not.toHaveProperty("GITHUB_TOKEN");
     expect(env).not.toHaveProperty("OPENAI_API_KEY");
     expect(env).not.toHaveProperty("REVIEWROUTER_CODEX_AUTH_JSON");
@@ -350,12 +354,46 @@ describe("Codex provider adapter", () => {
 
     const entries = env.PATH!.split(delimiter);
     expect(entries[0]).toBe("/codex/sandbox/bin");
-    expect(entries).toEqual(expect.arrayContaining([
-      "/usr/local/bin",
-      "/usr/bin",
-      "/bin",
-    ]));
+    expect(entries).toEqual(
+      expect.arrayContaining(["/usr/local/bin", "/usr/bin", "/bin"]),
+    );
     expect(env).not.toHaveProperty("GH_TOKEN");
+  });
+
+  it("passes only validated job-scoped tool temp environment to Codex", () => {
+    const env = pruneCodexChildEnv({
+      PATH: "/codex/bin",
+      SUBSCRIPTION_RUNTIME_JOB_ROOT: "/jobs/job-1",
+      SUBSCRIPTION_RUNTIME_TMPDIR: "/jobs/job-1/tmp",
+      TMPDIR: "/jobs/job-1/tmp/agent",
+      TMP: "/host/tmp-must-not-pass",
+      TEMP: "/host/tmp-must-not-pass",
+      PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "true",
+    });
+
+    expect(env).toMatchObject({
+      TMPDIR: "/jobs/job-1/tmp/agent",
+      TMP: "/jobs/job-1/tmp/agent",
+      TEMP: "/jobs/job-1/tmp/agent",
+      PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "false",
+    });
+    expect(env).not.toHaveProperty("SUBSCRIPTION_RUNTIME_JOB_ROOT");
+    expect(env).not.toHaveProperty("SUBSCRIPTION_RUNTIME_TMPDIR");
+  });
+
+  it("rejects unbound host temp and pnpm environment", () => {
+    const env = pruneCodexChildEnv({
+      PATH: "/codex/bin",
+      TMPDIR: "/tmp/unbound",
+      TMP: "/tmp/unbound",
+      TEMP: "/tmp/unbound",
+      PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "false",
+    });
+
+    expect(env).not.toHaveProperty("TMPDIR");
+    expect(env).not.toHaveProperty("TMP");
+    expect(env).not.toHaveProperty("TEMP");
+    expect(env).not.toHaveProperty("PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN");
   });
 
   it("adds an explicit GitHub CLI directory to Codex child PATH when configured", async () => {
@@ -484,13 +522,15 @@ describe("Codex provider adapter", () => {
     });
 
     try {
-      await expect(driver.refreshSession({
-        session: sessionArtifactFromCodexAuthJson(validAuthJson),
-        workspace: { path: workspace },
-        runner: taskRunner,
-        redactor: new DefaultRedactor(),
-        abortSignal: new AbortController().signal,
-      })).resolves.toMatchObject({ providerState: "refreshed" });
+      await expect(
+        driver.refreshSession({
+          session: sessionArtifactFromCodexAuthJson(validAuthJson),
+          workspace: { path: workspace },
+          runner: taskRunner,
+          redactor: new DefaultRedactor(),
+          abortSignal: new AbortController().signal,
+        }),
+      ).resolves.toMatchObject({ providerState: "refreshed" });
       expect(refreshBootstrapRunner.lastArgs).toEqual([]);
       expect(taskRunner.lastArgs).toContain("exec");
     } finally {
@@ -626,7 +666,9 @@ describe("Codex provider adapter", () => {
 
   it("uses the shared Codex default model when none is configured", async () => {
     const runner = new StaticRunner("review output");
-    const workspace = await mkdtemp(join(tmpdir(), "codex-agent-default-model-"));
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-agent-default-model-"),
+    );
     const driver = new CodexCliAgentDriver({
       codexBinaryPath: "/bin/codex-test",
     });
