@@ -2302,6 +2302,15 @@ export class TeamDataService {
               throw error;
             }
           },
+          findByIdempotencyKey: (idempotencyKey) =>
+            ([...taskBoard.listTasks(), ...taskBoard.listDeletedTasks()] as TeamTask[]).filter(
+              (task) =>
+                (
+                  task as TeamTask & {
+                    creationCommand?: { idempotencyKey?: unknown };
+                  }
+                ).creationCommand?.idempotencyKey === idempotencyKey
+            ),
           create: async (input) => {
             const projectPath = await this.readTaskCreateProjectPath(teamName);
             return taskBoard.createTask({

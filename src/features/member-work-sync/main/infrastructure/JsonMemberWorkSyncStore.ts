@@ -1453,12 +1453,9 @@ export class JsonMemberWorkSyncStore
       }
     }
     for (const intent of Object.values((await this.readLegacyPendingFile(teamName)).intents)) {
-      if (
-        !reportIntents.has(intent.id) &&
-        isReportIntentOwnedBy(teamName, intent.memberName, intent)
-      ) {
-        reportIntents.set(intent.id, intent);
-      }
+      if (!isReportIntentOwnedBy(teamName, intent.memberName, intent)) continue;
+      const current = reportIntents.get(intent.id);
+      reportIntents.set(intent.id, current ? pickDomainReportIntent(current, intent) : intent);
     }
 
     const outboxItems = new Map<string, MemberWorkSyncOutboxItem>();
@@ -1471,9 +1468,9 @@ export class JsonMemberWorkSyncStore
       }
     }
     for (const item of Object.values((await this.readLegacyOutboxFile(teamName)).items)) {
-      if (!outboxItems.has(item.id) && isOutboxItemOwnedBy(teamName, item.memberName, item)) {
-        outboxItems.set(item.id, item);
-      }
+      if (!isOutboxItemOwnedBy(teamName, item.memberName, item)) continue;
+      const current = outboxItems.get(item.id);
+      outboxItems.set(item.id, current ? pickDomainOutboxItem(current, item) : item);
     }
 
     const metricEvents = new Map<string, MemberWorkSyncMetricEvent>();
@@ -1567,7 +1564,8 @@ export class JsonMemberWorkSyncStore
     )) {
       for (const intent of Object.values(legacyReports.intents)) {
         if (isReportIntentOwnedBy(teamName, intent.memberName, intent)) {
-          reportIntents.set(intent.id, intent);
+          const current = reportIntents.get(intent.id);
+          reportIntents.set(intent.id, current ? pickDomainReportIntent(current, intent) : intent);
         }
       }
     }
@@ -1579,7 +1577,11 @@ export class JsonMemberWorkSyncStore
       )) {
         for (const intent of Object.values(memberReports.intents)) {
           if (isReportIntentOwnedBy(teamName, memberName, intent)) {
-            reportIntents.set(intent.id, intent);
+            const current = reportIntents.get(intent.id);
+            reportIntents.set(
+              intent.id,
+              current ? pickDomainReportIntent(current, intent) : intent
+            );
           }
         }
       }
@@ -1593,7 +1595,8 @@ export class JsonMemberWorkSyncStore
     )) {
       for (const item of Object.values(legacyOutbox.items)) {
         if (isOutboxItemOwnedBy(teamName, item.memberName, item)) {
-          outboxItems.set(item.id, item);
+          const current = outboxItems.get(item.id);
+          outboxItems.set(item.id, current ? pickDomainOutboxItem(current, item) : item);
         }
       }
     }
@@ -1605,7 +1608,8 @@ export class JsonMemberWorkSyncStore
       )) {
         for (const item of Object.values(memberOutbox.items)) {
           if (isOutboxItemOwnedBy(teamName, memberName, item)) {
-            outboxItems.set(item.id, item);
+            const current = outboxItems.get(item.id);
+            outboxItems.set(item.id, current ? pickDomainOutboxItem(current, item) : item);
           }
         }
       }

@@ -1993,6 +1993,7 @@ describe('TeamDataService', () => {
         payload: expect.objectContaining({ subject: durableTask.subject, createdBy: 'user' }),
         destination: expect.objectContaining({
           findById: expect.any(Function),
+          findByIdempotencyKey: expect.any(Function),
           create: expect.any(Function),
           reconcile: expect.any(Function),
         }),
@@ -2036,6 +2037,8 @@ describe('TeamDataService', () => {
       return storedTask;
     });
     const reconcileTaskCreation = vi.fn(() => storedTask);
+    const listTasks = vi.fn(() => (storedTask ? [storedTask] : []));
+    const listDeletedTasks = vi.fn(() => []);
     const service = new TeamDataService(
       {
         getConfig: vi.fn(async () => ({
@@ -2057,6 +2060,8 @@ describe('TeamDataService', () => {
         ({
           taskBoard: {
             getTask,
+            listTasks,
+            listDeletedTasks,
             createTask: directCreate,
             reconcileTaskCreation,
           },
@@ -2068,6 +2073,15 @@ describe('TeamDataService', () => {
         subject: legacyTask.subject,
         command: {
           commandId,
+          idempotencyKey: 'create-task-intent-3',
+        },
+      })
+    ).resolves.toEqual(legacyTask);
+    await expect(
+      service.createTask('my-team', {
+        subject: legacyTask.subject,
+        command: {
+          commandId: '34343434-3434-4434-8434-343434343434',
           idempotencyKey: 'create-task-intent-3',
         },
       })
@@ -2085,9 +2099,19 @@ describe('TeamDataService', () => {
         operation: 'task.create',
         commandId,
         payloadHash: expect.stringMatching(/^sha256:/),
+        idempotencyKey: 'create-task-intent-3',
       },
     });
-    expect(reconcileTaskCreation).toHaveBeenCalledOnce();
+    expect(reconcileTaskCreation).toHaveBeenCalledTimes(2);
+    expect(reconcileTaskCreation).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        id: commandId,
+        creationCommand: expect.objectContaining({
+          commandId,
+          idempotencyKey: 'create-task-intent-3',
+        }),
+      })
+    );
   });
 
   it('notifies a lead-owned task from the final started state on fresh durable execution', async () => {
