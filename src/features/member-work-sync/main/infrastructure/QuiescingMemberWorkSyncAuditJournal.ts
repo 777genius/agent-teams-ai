@@ -47,11 +47,7 @@ export class QuiescingMemberWorkSyncAuditJournal implements MemberWorkSyncAuditJ
   }
 
   private invokeDelegate(event: MemberWorkSyncAuditEvent): Promise<void> {
-    try {
-      return Promise.resolve(this.delegate.append(event));
-    } catch (error) {
-      return Promise.reject(error);
-    }
+    return Promise.resolve().then(() => this.delegate.append(event));
   }
 
   private releaseAppend(teamName: string, append: Promise<void>): void {
