@@ -191,6 +191,14 @@ describe('TeamProvisioningToolApprovalTimeouts', () => {
     expect(pendingTimeouts.has('req-timer')).toBe(false);
   });
 
+  it('ignores partial legacy runs that do not carry an approval map', () => {
+    const partialRun = { progress: { state: 'spawning' } } as unknown as typeof run;
+
+    expect(() => timeouts.reEvaluate([partialRun, run])).not.toThrow();
+    expect(ports.getSettings).toHaveBeenCalledOnce();
+    expect(ports.getSettings).toHaveBeenCalledWith('team-a');
+  });
+
   it('does not resolve a re-evaluated teammate approval before delivery succeeds', async () => {
     settings = buildSettings({ autoAllowAll: true, timeoutAction: 'wait' });
     run.pendingApprovals.set(

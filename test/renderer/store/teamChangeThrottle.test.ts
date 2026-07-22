@@ -17,6 +17,7 @@ const hoisted = vi.hoisted(() => ({
   onProvisioningProgressCb: null as
     | ((event: unknown, data: { runId: string; teamName: string }) => void)
     | null,
+  updateToolApprovalSettings: vi.fn(async () => undefined),
 }));
 
 vi.mock('@renderer/api', () => ({
@@ -74,6 +75,7 @@ vi.mock('@renderer/api', () => ({
       ),
       getAllTasks: vi.fn(async () => []),
       list: vi.fn(async () => []),
+      updateToolApprovalSettings: hoisted.updateToolApprovalSettings,
     },
     schedules: {
       list: vi.fn(async () => []),
@@ -129,6 +131,7 @@ describe('team change throttling', () => {
       currentRuntimeRunIdByTeam: {},
       ignoredProvisioningRunIds: {},
       ignoredRuntimeRunIds: {},
+      toolApprovalSettingsByTeam: {},
       activeTaskLogActivityByTeam: {},
       memberSpawnStatusesByTeam: {},
       memberSpawnSnapshotsByTeam: {},
@@ -190,6 +193,27 @@ describe('team change throttling', () => {
     expect(fetchTeamsSpy).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1200);
     expect(fetchTeamsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('rehydrates every cached team approval policy to main on initialization', async () => {
+    cleanup?.();
+    cleanup = null;
+    hoisted.updateToolApprovalSettings.mockClear();
+    const alpha = {
+      autoAllowAll: true,
+      autoAllowFileEdits: false,
+      autoAllowSafeBash: false,
+      timeoutAction: 'wait' as const,
+      timeoutSeconds: 30,
+    };
+    const beta = { ...alpha, autoAllowAll: false, autoAllowSafeBash: true };
+    useStore.setState({ toolApprovalSettingsByTeam: { alpha, beta } });
+
+    cleanup = initializeNotificationListeners();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(hoisted.updateToolApprovalSettings).toHaveBeenCalledWith('alpha', alpha);
+    expect(hoisted.updateToolApprovalSettings).toHaveBeenCalledWith('beta', beta);
   });
 
   it('does not scan repository groups during centralized startup initialization', async () => {
