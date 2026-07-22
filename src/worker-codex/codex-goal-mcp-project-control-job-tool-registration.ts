@@ -54,6 +54,7 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
         "Create a scoped worktree, write a prompt, create a child job and optionally start it through one ProjectScopedControl broker flow.",
       inputSchema: {
         ...goalInputSchema(),
+        workspacePath: z.string(),
         ...jobRegistryInputSchema(),
         controllerJobId: z.string().optional(),
         sourceWorkspacePath: z.string().optional(),

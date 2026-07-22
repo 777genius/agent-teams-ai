@@ -50,6 +50,12 @@ export type ProjectDebtItem = {
   readonly subject: string;
   readonly evidence: readonly string[];
   readonly affectedPaths?: readonly string[];
+  /**
+   * Runtime proof that this is one healthy live producer whose complete
+   * declared ownership is available in `affectedPaths`. Unsafe/unknown writer
+   * debt deliberately omits this marker and therefore remains fail-closed.
+   */
+  readonly pathDisjointProducerEligible?: true;
   readonly severity?: "info" | "warning" | "blocking";
 };
 
@@ -210,10 +216,18 @@ function producerBlockingAdmissionDebt(input: {
     return input.debt;
   }
   return input.debt.filter((item) =>
-    item.reason !== ProjectDebtReason.UnconsumedCompletedJob ||
-    !validAdmissionPaths(item.affectedPaths) ||
+    !producerDebtCanBeBypassedByDisjointPaths(item) ||
     admissionPathsOverlap(ownedPaths, item.affectedPaths)
   );
+}
+
+function producerDebtCanBeBypassedByDisjointPaths(
+  item: ProjectDebtItem,
+): item is ProjectDebtItem & { readonly affectedPaths: readonly string[] } {
+  if (!validAdmissionPaths(item.affectedPaths)) return false;
+  if (item.reason === ProjectDebtReason.UnconsumedCompletedJob) return true;
+  return item.reason === ProjectDebtReason.ActiveWriterConflict &&
+    item.pathDisjointProducerEligible === true;
 }
 
 function validAdmissionPaths(

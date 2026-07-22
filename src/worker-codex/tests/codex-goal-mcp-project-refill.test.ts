@@ -575,6 +575,7 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
           enum: ["workspace-write", "danger-full-access"],
         },
       });
+      expect(refillTool?.inputSchema.required).toContain("workspacePath");
       expect(verifierTool?.inputSchema.properties).toMatchObject({
         mergeBinding: {
           type: "object",

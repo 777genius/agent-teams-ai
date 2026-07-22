@@ -1,5 +1,13 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -15,6 +23,13 @@ import {
   codexProjectAdmissionGate,
   type CodexProjectAdmissionDeps,
 } from "../application/project-control/codex-goal-project-admission";
+import {
+  planProjectPreStartAdmission,
+  prepareProjectPreStartAdmission,
+  readLaunchAuthorizedWorkerLaunchSpec,
+} from "../application/project-control/codex-goal-project-pre-start-admission";
+import { authorizeProjectPreStartAdmissionLaunch } from "../application/project-control/codex-goal-project-pre-start-launch-authorization";
+import type { CodexGoalJobManifest } from "../codex-goal-jobs";
 
 const execFileAsync = promisify(execFile);
 
@@ -287,6 +302,221 @@ describe("Codex project admission snapshot", () => {
           reason: ProjectDebtReason.ActiveWriterConflict,
         })],
       });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("admits parallel live producers only from complete disjoint stored ownership", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-live-path-admission-"));
+    const nextWorkspace = join(root, "worktrees", "project-next");
+    const aliasWorkspace = join(root, "worktrees", "project-live-a-alias");
+    const scope: ProjectAccessScope = {
+      projectId: "project",
+      jobIdPrefixes: ["project-"],
+      preStartAdmission: { required: true, mode: "serial-builtin" },
+    };
+    let roleB = "producer";
+    let riskB = "active_worker";
+    let staleB = false;
+    let workspaceConflictB = false;
+    let includeWorkspaceAlias = false;
+    let manifestAOverride: CodexGoalJobManifest | undefined;
+    let readJobCalls = 0;
+    try {
+      const producerA = await createAttestedLiveProducer({
+        root,
+        jobId: "project-live-a",
+        ownedPaths: ["src/a/"],
+        scope,
+      });
+      const producerB = await createAttestedLiveProducer({
+        root,
+        jobId: "project-live-b",
+        ownedPaths: ["src/b/file.ts"],
+        scope,
+      });
+      await readLaunchAuthorizedWorkerLaunchSpec({
+        manifest: producerA.manifest,
+        scope,
+      });
+      await readLaunchAuthorizedWorkerLaunchSpec({
+        manifest: producerB.manifest,
+        scope,
+      });
+      await mkdir(nextWorkspace, { recursive: true });
+      await symlink(producerA.manifest.workspacePath, aliasWorkspace, "dir");
+      const deps: CodexProjectAdmissionDeps = {
+        listJobs: async () => [
+          producerA.summary,
+          { ...producerB.summary, tags: [`worker-role-${roleB}`] },
+          ...(includeWorkspaceAlias
+            ? [{
+                ...producerA.summary,
+                jobId: "project-live-a-alias",
+                taskId: "project-live-a-alias",
+                workspacePath: aliasWorkspace,
+              }]
+            : []),
+        ],
+        readJob: async ({ jobId }) => {
+          readJobCalls += 1;
+          if (jobId === producerA.manifest.jobId) {
+            return manifestAOverride ?? producerA.manifest;
+          }
+          if (jobId === producerB.manifest.jobId) return producerB.manifest;
+          throw new Error("test manifest unavailable");
+        },
+        buildOverviewItems: async () => [
+          {
+            ok: true,
+            jobId: "project-live-a",
+            workspacePath: producerA.manifest.workspacePath,
+            workspaceDirty: false,
+            workerAlive: true,
+            silentStale: false,
+            workerFreshProgressAlive: true,
+            activeWriterRisk: "active_worker",
+          },
+          {
+            ok: true,
+            jobId: "project-live-b",
+            workspacePath: producerB.manifest.workspacePath,
+            workspaceDirty: false,
+            workerAlive: true,
+            silentStale: staleB,
+            workerFreshProgressAlive: !staleB,
+            activeWriterRisk: riskB,
+            workspaceConflict: workspaceConflictB,
+          },
+          ...(includeWorkspaceAlias
+            ? [{
+                ok: true,
+                jobId: "project-live-a-alias",
+                workspacePath: aliasWorkspace,
+                workspaceDirty: false,
+                workerAlive: true,
+                silentStale: false,
+                workerFreshProgressAlive: true,
+                activeWriterRisk: "active_worker",
+              }]
+            : []),
+        ],
+      };
+      const gate = codexProjectAdmissionGate({
+        registryRootDir: join(root, "registry"),
+        scope,
+        deps,
+      });
+      const request = (
+        ownedPaths: readonly string[],
+        workspacePath = nextWorkspace,
+      ) => gate.evaluate({
+        operation: ProjectOperation.CreateWorktree,
+        jobId: "project-next",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath,
+        ownedPaths,
+      });
+
+      const initialDecision = await request(["src/new/"]);
+      expect(readJobCalls).toBe(2);
+      expect(initialDecision).toMatchObject({
+        allowed: true,
+        debt: [],
+      });
+      await expect(request(["src/a/child.ts"])).resolves.toMatchObject({
+        allowed: false,
+        debt: [expect.objectContaining({ subject: "project-live-a" })],
+      });
+      await expect(request(["src/b/"])).resolves.toMatchObject({
+        allowed: false,
+        debt: [expect.objectContaining({ subject: "project-live-b" })],
+      });
+      await expect(request(
+        ["src/new/"],
+        producerA.manifest.workspacePath,
+      )).resolves.toMatchObject({
+        allowed: false,
+        debt: [expect.objectContaining({
+          evidence: expect.arrayContaining([
+            expect.stringContaining("requested workspace already has active worker"),
+          ]),
+        })],
+      });
+
+      const descriptorA = producerA.manifest.projectPreStartAdmission!;
+      const originalContractA = await readFile(descriptorA.contractPath, "utf8");
+      const originalReceiptA = await readFile(descriptorA.receiptPath, "utf8");
+      const tamperedContract = {
+        ...JSON.parse(originalContractA),
+        ownedPaths: ["src/tampered/"],
+      };
+      const tamperedContractBody = `${JSON.stringify(tamperedContract, null, 2)}\n`;
+      const tamperedReceipt = {
+        ...JSON.parse(originalReceiptA),
+        contractSha256: createHash("sha256")
+          .update(tamperedContractBody)
+          .digest("hex"),
+      };
+      await writeFile(descriptorA.contractPath, tamperedContractBody);
+      await writeFile(
+        descriptorA.receiptPath,
+        `${JSON.stringify(tamperedReceipt, null, 2)}\n`,
+      );
+      await expect(request(["src/new/"])).resolves.toMatchObject({ allowed: false });
+      await writeFile(descriptorA.contractPath, originalContractA);
+      await writeFile(descriptorA.receiptPath, originalReceiptA);
+
+      manifestAOverride = {
+        ...producerA.manifest,
+        projectPreStartAdmission: {
+          ...descriptorA,
+          contractPath: producerB.manifest.projectPreStartAdmission!.contractPath,
+        },
+      };
+      await expect(request(["src/new/"])).resolves.toMatchObject({ allowed: false });
+      manifestAOverride = undefined;
+
+      const authorizedReceiptB = await readFile(
+        producerB.manifest.projectPreStartAdmission!.receiptPath,
+        "utf8",
+      );
+      await writeFile(
+        producerB.manifest.projectPreStartAdmission!.receiptPath,
+        `${JSON.stringify({
+          ...JSON.parse(authorizedReceiptB),
+          status: "validated_not_launched",
+        }, null, 2)}\n`,
+      );
+      await expect(request(["src/new/"])).resolves.toMatchObject({ allowed: false });
+      await writeFile(
+        producerB.manifest.projectPreStartAdmission!.receiptPath,
+        authorizedReceiptB,
+      );
+
+      includeWorkspaceAlias = true;
+      await expect(request(["src/new/"])).resolves.toMatchObject({
+        allowed: false,
+        debt: expect.arrayContaining([expect.objectContaining({
+          evidence: expect.arrayContaining([
+            "workspace realpath is shared by multiple job summaries",
+          ]),
+        })]),
+      });
+      includeWorkspaceAlias = false;
+
+      roleB = "reviewer";
+      await expect(request(["src/new/"])).resolves.toMatchObject({ allowed: false });
+      roleB = "producer";
+      staleB = true;
+      await expect(request(["src/new/"])).resolves.toMatchObject({ allowed: false });
+      staleB = false;
+      riskB = "unknown";
+      await expect(request(["src/new/"])).resolves.toMatchObject({ allowed: false });
+      riskB = "active_worker";
+      workspaceConflictB = true;
+      await expect(request(["src/new/"])).resolves.toMatchObject({ allowed: false });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -1111,3 +1341,128 @@ describe("Codex project admission snapshot", () => {
     }
   });
 });
+
+async function createAttestedLiveProducer(input: {
+  readonly root: string;
+  readonly jobId: string;
+  readonly ownedPaths: readonly string[];
+  readonly scope: ProjectAccessScope;
+}): Promise<{
+  readonly manifest: CodexGoalJobManifest;
+  readonly summary: {
+    readonly jobId: string;
+    readonly tags: readonly string[];
+    readonly taskId: string;
+    readonly workspacePath: string;
+    readonly promptPath: string;
+    readonly accountNames: readonly string[];
+    readonly updatedAt: string;
+    readonly manifestPath: string;
+  };
+}> {
+  const workspacePath = join(input.root, "worktrees", input.jobId);
+  const jobRootDir = join(input.root, "jobs", input.jobId);
+  const promptPath = join(jobRootDir, "prompt.md");
+  await Promise.all([
+    mkdir(join(workspacePath, "docs"), { recursive: true }),
+    mkdir(join(workspacePath, "src"), { recursive: true }),
+    mkdir(join(workspacePath, "sandbox"), { recursive: true }),
+    mkdir(jobRootDir, { recursive: true }),
+  ]);
+  await Promise.all([
+    writeFile(join(workspacePath, "docs", "controller.md"), "controller\n"),
+    writeFile(join(workspacePath, "docs", "lane.md"), "lane\n"),
+    writeFile(join(workspacePath, "src", "base.ts"), "export {};\n"),
+    writeFile(promptPath, "Implement exact owned paths.\n"),
+  ]);
+  await execFileAsync("git", ["init", "-b", "main"], { cwd: workspacePath });
+  await execFileAsync("git", ["config", "user.email", "test@example.com"], {
+    cwd: workspacePath,
+  });
+  await execFileAsync("git", ["config", "user.name", "Runtime Test"], {
+    cwd: workspacePath,
+  });
+  await execFileAsync("git", ["add", "."], { cwd: workspacePath });
+  await execFileAsync("git", ["commit", "-m", "test: base"], {
+    cwd: workspacePath,
+  });
+  const head = (await execFileAsync("git", ["rev-parse", "HEAD"], {
+    cwd: workspacePath,
+  })).stdout.trim();
+  const createdAt = "2026-07-22T00:00:00.000Z";
+  const manifestBase = {
+    schemaVersion: 1 as const,
+    createdAt,
+    updatedAt: createdAt,
+    jobId: input.jobId,
+    tags: ["worker-role-producer"],
+    jobRootDir,
+    workspacePath,
+    promptPath,
+    taskId: input.jobId,
+    accounts: ["account-a"],
+  };
+  const plan = planProjectPreStartAdmission({
+    value: {
+      mode: "serial-builtin",
+      contract: {
+        kind: "worker-launch",
+        format: 1,
+        canonicalSha: head,
+        baseSha: head,
+        phaseStartSha: head,
+        packetRevision: "live-producer-r1",
+        controllerPacket: "docs/controller.md",
+        lanePacket: "docs/lane.md",
+        phaseId: "phase-01",
+        laneId: "live-producer",
+        inputPatchHash: null,
+        reviewKind: "implementation",
+        ownedPaths: input.ownedPaths,
+        mandatoryDocs: ["docs/controller.md", "docs/lane.md"],
+        mandatoryScripts: [],
+        mandatoryFixtures: [],
+        requiredChecks: [{
+          id: "focused",
+          cwd: "src",
+          command: "npm test",
+        }],
+        executionPolicy: {
+          mode: "sandbox-only",
+          sandboxRoot: join(workspacePath, "sandbox"),
+          forbiddenRealProjects: [join(input.root, "forbidden-real-project")],
+        },
+      },
+    },
+    confirmed: true,
+    scope: input.scope,
+    manifest: manifestBase,
+  });
+  if (!plan) throw new Error("expected pre-start admission plan");
+  await prepareProjectPreStartAdmission({
+    plan,
+    manifest: manifestBase,
+    scope: input.scope,
+  });
+  const manifest: CodexGoalJobManifest = {
+    ...manifestBase,
+    projectPreStartAdmission: plan.descriptor,
+  };
+  await authorizeProjectPreStartAdmissionLaunch({
+    manifest,
+    scope: input.scope,
+  });
+  return {
+    manifest,
+    summary: {
+      jobId: manifest.jobId,
+      tags: manifest.tags ?? [],
+      taskId: manifest.taskId,
+      workspacePath: manifest.workspacePath,
+      promptPath: manifest.promptPath,
+      accountNames: manifest.accounts,
+      updatedAt: manifest.updatedAt,
+      manifestPath: join(jobRootDir, "job.json"),
+    },
+  };
+}

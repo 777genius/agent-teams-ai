@@ -130,6 +130,72 @@ describe("evaluateProjectAdmission", () => {
     }
   });
 
+  it("admits a producer only when every healthy live producer proves disjoint ownership", () => {
+    const liveProducer = (
+      subject: string,
+      affectedPaths: readonly string[],
+    ) => ({
+      reason: ProjectDebtReason.ActiveWriterConflict,
+      subject,
+      affectedPaths,
+      pathDisjointProducerEligible: true as const,
+      evidence: ["healthy live producer has complete runtime-attested ownership"],
+    });
+    const decide = (
+      ownedPaths: readonly string[],
+      debt: ProjectAdmissionSnapshot["debt"],
+      workerRole = ProjectAdmissionWorkerRole.Producer,
+    ) => evaluateProjectAdmission({
+      request: {
+        operation: ProjectOperation.StartWorker,
+        workerRole,
+        ownedPaths,
+      },
+      snapshot: snapshot(debt),
+    });
+
+    expect(decide(["src/new/"], [
+      liveProducer("producer-a", ["src/a/"]),
+      liveProducer("producer-b", ["src/b/file.ts"]),
+    ])).toMatchObject({ allowed: true, debt: [] });
+
+    for (const ownedPaths of [
+      ["src/a/"],
+      ["src/a/child.ts"],
+      ["src"],
+    ]) {
+      expect(decide(ownedPaths, [liveProducer("producer-a", ["src/a/"])]))
+        .toMatchObject({ allowed: false });
+    }
+
+    expect(decide(["src/new/"], [{
+      reason: ProjectDebtReason.ActiveWriterConflict,
+      subject: "producer-a",
+      pathDisjointProducerEligible: true,
+      evidence: ["ownership paths are missing"],
+    }])).toMatchObject({ allowed: false });
+    expect(decide(["src/new/"], [{
+      ...liveProducer("producer-a", ["../escape.ts"]),
+    }])).toMatchObject({ allowed: false });
+    expect(decide(["src/new/"], [{
+      reason: ProjectDebtReason.ActiveWriterConflict,
+      subject: "producer-a",
+      affectedPaths: ["src/a/"],
+      evidence: ["runtime eligibility proof is missing"],
+    }])).toMatchObject({ allowed: false });
+    expect(decide(
+      ["src/new/"],
+      [liveProducer("producer-a", ["src/a/"])],
+      ProjectAdmissionWorkerRole.Reviewer,
+    )).toMatchObject({
+      allowed: true,
+      status: ProjectAdmissionDecisionStatus.AllowedForDrainOnly,
+      debt: [expect.objectContaining({
+        reason: ProjectDebtReason.ActiveWriterConflict,
+      })],
+    });
+  });
+
   it("allows reviewer and fastgate roles only as drain work when output debt exists", () => {
     const reviewer = evaluateProjectAdmission({
       request: {

@@ -17,7 +17,10 @@ import {
   type ProjectAdmissionSnapshot,
   type ProjectDebtItem,
 } from "@vioxen/subscription-runtime/worker-core";
-import type { CodexGoalJobSummary } from "../../codex-goal-jobs";
+import type {
+  CodexGoalJobManifest,
+  CodexGoalJobSummary,
+} from "../../codex-goal-jobs";
 import { stringValue } from "../codex-goal-input-values";
 import { readCodexGoalConsumedOutputLedgers } from "./codex-goal-consumed-output-ledger-io";
 import {
@@ -26,6 +29,7 @@ import {
   stringArrayArg,
   uniqueProjectControlStrings,
 } from "./codex-goal-project-utils";
+import { readLaunchAuthorizedWorkerLaunchSpec } from "./codex-goal-project-pre-start-admission";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
@@ -41,6 +45,10 @@ export type CodexProjectAdmissionDeps = {
     readonly staleAfterMs: number;
     readonly tailLines: number;
   }[]) => Promise<readonly JsonObject[]>;
+  readonly readJob?: (input: {
+    readonly registryRootDir: string;
+    readonly jobId: string;
+  }) => Promise<CodexGoalJobManifest>;
 };
 
 type CodexProjectAdmissionInput = {
@@ -109,11 +117,11 @@ export function codexProjectAdmissionGate(
       // longer prove that another writer did not start in the meantime.
       const observedSnapshot = await buildCodexProjectAdmissionSnapshot({
         ...input,
-        ...(request.ownedPaths
-          ? { blockAnyLiveWriter: true }
-          : request.workspacePath
+        ...(request.workspacePath
           ? { requestedWorkspacePath: request.workspacePath }
-          : { blockAnyLiveWriter: true }),
+          : {}),
+        blockAnyLiveWriter: request.ownedPaths !== undefined ||
+          request.workspacePath === undefined,
       });
       const inputPatchSnapshot = await withoutAdmittedInputPatchDebt({
         snapshot: observedSnapshot,
@@ -351,6 +359,9 @@ export async function buildCodexProjectAdmissionSnapshot(
   const summariesByJobId = new Map(
     projectSummaries.map((summary) => [summary.jobId, summary]),
   );
+  const duplicateWorkspaceJobIds = await duplicateWorkspaceIdentityJobIds(
+    overviewItems,
+  );
   for (const item of overviewItems) {
     if (typeof item.workspacePath === "string") {
       await rememberKnownWorkspacePath(knownWorkspacePaths, item.workspacePath);
@@ -359,6 +370,12 @@ export async function buildCodexProjectAdmissionSnapshot(
       item,
       consumedOutput,
       summariesByJobId,
+      registryRootDir: input.registryRootDir,
+      scope: input.scope,
+      readJob: input.deps.readJob,
+      duplicateWorkspaceIdentity: duplicateWorkspaceJobIds.has(
+        stringValue(item.jobId) ?? "unknown-job",
+      ),
       ...(input.requestedWorkspacePath
         ? { requestedWorkspacePath: input.requestedWorkspacePath }
         : {}),
@@ -546,10 +563,35 @@ function consumedRecordDebt(
     : debt;
 }
 
+async function duplicateWorkspaceIdentityJobIds(
+  items: readonly JsonObject[],
+): Promise<ReadonlySet<string>> {
+  const jobsByWorkspaceIdentity = new Map<string, string[]>();
+  for (const item of items) {
+    const jobId = stringValue(item.jobId);
+    const workspacePath = stringValue(item.workspacePath);
+    if (!jobId || !workspacePath) continue;
+    const identity = await optionalRealPathForAdmission(workspacePath) ??
+      resolve(workspacePath);
+    const jobs = jobsByWorkspaceIdentity.get(identity) ?? [];
+    jobs.push(jobId);
+    jobsByWorkspaceIdentity.set(identity, jobs);
+  }
+  return new Set(
+    [...jobsByWorkspaceIdentity.values()]
+      .filter((jobIds) => jobIds.length > 1)
+      .flat(),
+  );
+}
+
 async function debtFromOverviewItem(input: {
   readonly item: JsonObject;
   readonly consumedOutput: ConsumedOutputLedger;
   readonly summariesByJobId: ReadonlyMap<string, CodexGoalJobSummary>;
+  readonly registryRootDir: string;
+  readonly scope: ProjectAccessScope;
+  readonly readJob: CodexProjectAdmissionDeps["readJob"];
+  readonly duplicateWorkspaceIdentity: boolean;
   readonly requestedWorkspacePath?: string;
   readonly blockAnyLiveWriter: boolean;
 }): Promise<ProjectDebtItem[]> {
@@ -575,16 +617,31 @@ async function debtFromOverviewItem(input: {
   if (
     (workerAlive && (input.blockAnyLiveWriter || sameRequestedWorkspace)) ||
     hasBlockingActiveWriterRisk(item.activeWriterRisk, workerAlive) ||
-    item.workspaceConflict === true
+    item.workspaceConflict === true ||
+    input.duplicateWorkspaceIdentity
   ) {
+    const pathDisjointProducerEvidence = await healthyLiveProducerPathEvidence({
+      item,
+      summary: input.summariesByJobId.get(jobId),
+      workerAlive,
+      sameRequestedWorkspace,
+      duplicateWorkspaceIdentity: input.duplicateWorkspaceIdentity,
+      registryRootDir: input.registryRootDir,
+      scope: input.scope,
+      readJob: input.readJob,
+    });
     debt.push({
       reason: ProjectDebtReason.ActiveWriterConflict,
       subject: jobId,
       severity: "blocking",
+      ...pathDisjointProducerEvidence,
       evidence: uniqueProjectControlStrings([
         ...safeStringArray(item.activeWriterRiskReasons),
         ...(sameRequestedWorkspace
           ? [`requested workspace already has active worker: ${workspacePath}`]
+          : []),
+        ...(input.duplicateWorkspaceIdentity
+          ? ["workspace realpath is shared by multiple job summaries"]
           : []),
         "active writer conflict risk",
       ]),
@@ -670,6 +727,67 @@ async function debtFromOverviewItem(input: {
     ],
   });
   return terminalDebt;
+}
+
+async function healthyLiveProducerPathEvidence(input: {
+  readonly item: JsonObject;
+  readonly summary: CodexGoalJobSummary | undefined;
+  readonly workerAlive: boolean;
+  readonly sameRequestedWorkspace: boolean;
+  readonly duplicateWorkspaceIdentity: boolean;
+  readonly registryRootDir: string;
+  readonly scope: ProjectAccessScope;
+  readonly readJob: CodexProjectAdmissionDeps["readJob"];
+}): Promise<Pick<
+  ProjectDebtItem,
+  "affectedPaths" | "pathDisjointProducerEligible"
+>> {
+  const { item, summary } = input;
+  if (
+    !input.workerAlive ||
+    stringValue(item.activeWriterRisk) !== "active_worker" ||
+    item.silentStale === true ||
+    item.workerFreshProgressAlive === false ||
+    item.workspaceConflict === true ||
+    input.sameRequestedWorkspace ||
+    input.duplicateWorkspaceIdentity ||
+    !summary ||
+    !strictProducerRole(summary.tags) ||
+    !input.readJob
+  ) {
+    return {};
+  }
+  try {
+    const manifest = await input.readJob({
+      registryRootDir: input.registryRootDir,
+      jobId: summary.jobId,
+    });
+    if (
+      !strictProducerRole(manifest.tags ?? []) ||
+      !await admissionWorkspacePathsMatch(
+        manifest.workspacePath,
+        summary.workspacePath,
+      )
+    ) {
+      return {};
+    }
+    const launch = await readLaunchAuthorizedWorkerLaunchSpec({
+      manifest,
+      scope: input.scope,
+    });
+    return {
+      affectedPaths: launch.ownedPaths,
+      pathDisjointProducerEligible: true,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function strictProducerRole(tags: readonly string[]): boolean {
+  const roleTags = tags.filter((tag) => tag.startsWith("worker-role-"));
+  return roleTags.length === 1 &&
+    roleTags[0] === `worker-role-${ProjectAdmissionWorkerRole.Producer}`;
 }
 
 function withoutInactiveDirtyWorkspaceConflict(

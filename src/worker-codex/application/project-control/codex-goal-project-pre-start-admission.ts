@@ -22,11 +22,13 @@ import {
 import {
   materializeBuiltinWorkerLaunchSpec,
   validateBuiltinWorkerLaunchSpec,
+  workerLaunchSpecHasOwnershipBoundWorkKey,
 } from "./codex-goal-project-builtin-pre-start-admission";
 import { readControlledRuntimeInterruptionSnapshot } from "./codex-goal-project-verifier-handoff";
 import {
   parseWorkerLaunchSpec,
   workerLaunchOwnsChangedPath,
+  type WorkerLaunchSpec,
 } from "./worker-launch-spec";
 import type { ProjectPreStartAdmissionLaunchWorkspaceMode } from "./codex-goal-project-pre-start-admission-types";
 export type {
@@ -368,6 +370,71 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
       `project_control_pre_start_launch_binding_mismatch:${mismatches.join(",")}`,
     );
   }
+}
+
+/**
+ * Reads ownership only from a fully launch-authorized broker attestation.
+ * Unlike launch continuation policy, this observation accepts either a clean
+ * or dirty live producer workspace while keeping every immutable launch
+ * binding (descriptor confinement, contract/state/prompt/manifest hashes and
+ * validator receipt) under the normal pre-start verifier.
+ */
+export async function readLaunchAuthorizedWorkerLaunchSpec(input: {
+  readonly manifest: CodexGoalJobManifest;
+  readonly scope: ProjectAccessScope;
+}): Promise<WorkerLaunchSpec> {
+  const descriptor = input.manifest.projectPreStartAdmission;
+  if (!descriptor) {
+    throw new Error("project_control_pre_start_admission_required");
+  }
+  const observedBinding = await captureProjectPreStartBinding(
+    input.manifest,
+    descriptor,
+  );
+  const [contractBefore, receiptBefore] = await Promise.all([
+    readBoundedFile(descriptor.contractPath, MAX_CONTRACT_BYTES, "contract"),
+    readBoundedFile(descriptor.receiptPath, 64 * 1024, "receipt"),
+  ]);
+  const receipt = JSON.parse(receiptBefore) as JsonObject;
+  if (receipt.status !== "launch_authorized") {
+    throw new Error("project_control_pre_start_launch_authorized_required");
+  }
+  await assertProjectPreStartAdmissionLaunchBinding({
+    manifest: input.manifest,
+    scope: input.scope,
+    workspaceMode: observedBinding.workspaceStatus === ""
+      ? "clean_capacity_continuation"
+      : "reviewed_dirty_continuation",
+  });
+  const [contractAfter, receiptAfter] = await Promise.all([
+    readBoundedFile(descriptor.contractPath, MAX_CONTRACT_BYTES, "contract"),
+    readBoundedFile(descriptor.receiptPath, 64 * 1024, "receipt"),
+  ]);
+  if (contractBefore !== contractAfter || receiptBefore !== receiptAfter) {
+    throw new Error("project_control_pre_start_attestation_changed_during_read");
+  }
+  const contract = JSON.parse(contractBefore) as JsonObject;
+  if (!isBuiltinDescriptor(descriptor)) {
+    throw new Error("project_control_pre_start_builtin_attestation_required");
+  }
+  const state = await readJsonObject(
+    descriptor.statePath,
+    "state",
+    MAX_STATE_BYTES,
+  );
+  await validateBuiltinWorkerLaunchSpec({
+    contract,
+    state,
+    manifest: input.manifest,
+    scope: input.scope,
+  });
+  const launch = parseWorkerLaunchSpec(contract);
+  if (!workerLaunchSpecHasOwnershipBoundWorkKey(launch)) {
+    throw new Error(
+      "project_control_pre_start_ownership_bound_work_key_required",
+    );
+  }
+  return launch;
 }
 
 async function controlledRuntimeInputPatchBindingValid(input: {

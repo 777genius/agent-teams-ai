@@ -53,6 +53,7 @@ export async function loadProjectControlController(
 
 export const codexProjectAdmissionDeps: CodexProjectAdmissionDeps = {
   listJobs: listCodexGoalJobs,
+  readJob: readCodexGoalJob,
   buildOverviewItems: (inputs) => buildCodexGoalOverviewItems(inputs),
 };
 

@@ -27,9 +27,13 @@ const WORK_KEY_FIELDS = [
   "packetRevision",
   "inputPatchHash",
   "reviewKind",
+  "ownedPaths",
   "revision",
   "merge",
 ] as const;
+const LEGACY_WORK_KEY_FIELDS = WORK_KEY_FIELDS.filter(
+  (field) => field !== "ownedPaths",
+);
 const STATE_IDENTITY_FIELDS = [
   "workKey",
   "jobId",
@@ -132,6 +136,12 @@ export async function validateBuiltinWorkerLaunchSpec(input: {
   await assertWorkerLaunchFilesystem(contract, input.manifest, input.scope);
 }
 
+export function workerLaunchSpecHasOwnershipBoundWorkKey(
+  contract: WorkerLaunchSpec,
+): boolean {
+  return contract.workKey === computeWorkerLaunchWorkKey(contract);
+}
+
 function assertSerialState(
   contract: WorkerLaunchSpec,
   state: WorkerLaunchState,
@@ -148,7 +158,10 @@ function assertSerialState(
     fail("contract_serial_initial_only");
   }
   const expectedWorkKey = computeWorkerLaunchWorkKey(contract);
-  if (contract.workKey !== expectedWorkKey) fail("contract_workKey_mismatch");
+  const legacyWorkKey = computeWorkerLaunchWorkKey(contract, LEGACY_WORK_KEY_FIELDS);
+  if (contract.workKey !== expectedWorkKey && contract.workKey !== legacyWorkKey) {
+    fail("contract_workKey_mismatch");
+  }
 
   const record = state.records[0];
   if (!record) fail("state_record_missing");
@@ -184,9 +197,10 @@ function isImmutableInputPatchProducer(
 
 function computeWorkerLaunchWorkKey(
   contract: Readonly<Record<string, unknown>>,
+  fields: readonly string[] = WORK_KEY_FIELDS,
 ): string {
   return sha256(JSON.stringify(Object.fromEntries(
-    WORK_KEY_FIELDS.map((field) => [field, contract[field]]),
+    fields.map((field) => [field, contract[field]]),
   )));
 }
 
