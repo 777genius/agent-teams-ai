@@ -85,7 +85,9 @@ function createMockIpcMain(): IpcMain & {
   };
 }
 
-function provider(overrides: Partial<CliProviderStatus> & { providerId: CliProviderId }): CliProviderStatus {
+function provider(
+  overrides: Partial<CliProviderStatus> & { providerId: CliProviderId }
+): CliProviderStatus {
   const { providerId, ...rest } = overrides;
   return {
     providerId,
@@ -185,7 +187,9 @@ describe('cliInstaller IPC handlers', () => {
       })
     );
 
-    const initial = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+    const initial = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
     expect(initial.success).toBe(true);
     expect(initial.data?.providers.map((entry) => entry.providerId)).toEqual([
       'anthropic',
@@ -200,7 +204,9 @@ describe('cliInstaller IPC handlers', () => {
     expect(gemini.success).toBe(true);
     expect(gemini.data?.authenticated).toBe(true);
 
-    const cached = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+    const cached = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
     expect(service.getStatus).toHaveBeenCalledTimes(1);
     expect(cached.success).toBe(true);
     expect(cached.data?.providers.map((entry) => entry.providerId)).toEqual([
@@ -272,10 +278,9 @@ describe('cliInstaller IPC handlers', () => {
     ) as Promise<IpcResult<CliProviderStatus | null>>;
     await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(1));
 
-    const codexInvoke = ipcMain.invoke(
-      CLI_INSTALLER_GET_PROVIDER_STATUS,
-      'codex'
-    ) as Promise<IpcResult<CliProviderStatus | null>>;
+    const codexInvoke = ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'codex') as Promise<
+      IpcResult<CliProviderStatus | null>
+    >;
     await Promise.resolve();
     await Promise.resolve();
 
@@ -306,16 +311,14 @@ describe('cliInstaller IPC handlers', () => {
       return providerId === 'codex' ? codexRequest.promise : opencodeRequest.promise;
     });
 
-    const codexInvoke = ipcMain.invoke(
-      CLI_INSTALLER_GET_PROVIDER_STATUS,
-      'codex'
-    ) as Promise<IpcResult<CliProviderStatus | null>>;
+    const codexInvoke = ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'codex') as Promise<
+      IpcResult<CliProviderStatus | null>
+    >;
     await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(1));
 
-    const opencodeInvoke = ipcMain.invoke(
-      CLI_INSTALLER_GET_PROVIDER_STATUS,
-      'opencode'
-    ) as Promise<IpcResult<CliProviderStatus | null>>;
+    const opencodeInvoke = ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'opencode') as Promise<
+      IpcResult<CliProviderStatus | null>
+    >;
     await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(2));
 
     expect(startedProviders).toEqual(['codex', 'opencode']);
@@ -378,7 +381,9 @@ describe('cliInstaller IPC handlers', () => {
       data: { authLoggedIn: true, authMethod: 'chatgpt' },
     });
 
-    const cached = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+    const cached = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
 
     expect(service.getStatus).toHaveBeenCalledTimes(2);
     expect(cached.success).toBe(true);
@@ -477,7 +482,9 @@ describe('cliInstaller IPC handlers', () => {
     ]);
     service.getStatus.mockResolvedValueOnce(fullStatus);
 
-    const first = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+    const first = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
     expect(first.success).toBe(true);
     expect(first.data?.providers[0]?.statusMessage).toBe('Connected');
 
@@ -528,8 +535,12 @@ describe('cliInstaller IPC handlers', () => {
       .mockResolvedValueOnce(incompleteFullStatus)
       .mockResolvedValueOnce(freshFullStatus);
 
-    const first = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
-    const second = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+    const first = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
+    const second = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
 
     expect(service.getStatus).toHaveBeenCalledTimes(2);
     expect(first.success).toBe(true);
@@ -564,7 +575,9 @@ describe('cliInstaller IPC handlers', () => {
       );
     service.getProviderStatus.mockReturnValueOnce(staleProviderRequest.promise);
 
-    const initial = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+    const initial = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
     expect(initial.success).toBe(true);
     expect(initial.data?.authLoggedIn).toBe(false);
 
@@ -575,7 +588,9 @@ describe('cliInstaller IPC handlers', () => {
     await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(1));
 
     await ipcMain.invoke(CLI_INSTALLER_INVALIDATE_STATUS);
-    const fresh = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+    const fresh = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
     expect(fresh.success).toBe(true);
     expect(fresh.data?.authLoggedIn).toBe(true);
 
@@ -591,14 +606,16 @@ describe('cliInstaller IPC handlers', () => {
       data: { statusMessage: 'Codex CLI not found' },
     });
 
-    const cached = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+    const cached = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
 
     expect(service.getStatus).toHaveBeenCalledTimes(2);
     expect(cached.success).toBe(true);
     expect(cached.data?.authLoggedIn).toBe(true);
-    expect(cached.data?.providers.find((entry) => entry.providerId === 'codex')?.statusMessage).toBe(
-      'ChatGPT account ready'
-    );
+    expect(
+      cached.data?.providers.find((entry) => entry.providerId === 'codex')?.statusMessage
+    ).toBe('ChatGPT account ready');
   });
 
   it('does not let a stale model verification patch the cache after invalidation', async () => {
@@ -662,8 +679,8 @@ describe('cliInstaller IPC handlers', () => {
     expect(service.getStatus).toHaveBeenCalledTimes(2);
     expect(cached.success).toBe(true);
     expect(cached.data?.authLoggedIn).toBe(true);
-    expect(cached.data?.providers.find((entry) => entry.providerId === 'codex')?.statusMessage).toBe(
-      'ChatGPT account ready'
-    );
+    expect(
+      cached.data?.providers.find((entry) => entry.providerId === 'codex')?.statusMessage
+    ).toBe('ChatGPT account ready');
   });
 });

@@ -54,11 +54,7 @@ if (mode === 'create-and-crash') {
       editorState: editorState('AC'),
     })
     .catch(() => undefined);
-  const [candidate] = await drafts.loadConflictCandidates(
-    teamName,
-    scopeKey,
-    draftScopeToken
-  );
+  const [candidate] = await drafts.loadConflictCandidates(teamName, scopeKey, draftScopeToken);
   await drafts.replaceConflictCandidate(
     teamName,
     scopeKey,

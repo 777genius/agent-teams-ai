@@ -2502,9 +2502,7 @@ describe('cliInstallerSlice', () => {
       });
       vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(summaryProvider);
 
-      const loaded = await useStore
-        .getState()
-        .fetchCliProviderStatus('opencode', { projectPath });
+      const loaded = await useStore.getState().fetchCliProviderStatus('opencode', { projectPath });
 
       expect(loaded).toBe(true);
       expect(

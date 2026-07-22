@@ -62,9 +62,7 @@ describe('review conflict recovery process safety', () => {
     expect(first.decisionCandidates).toMatchObject([
       { state: { hunkDecisions: { 'synthetic:0': 'rejected' } } },
     ]);
-    expect(first.draftCandidates).toMatchObject([
-      { entry: { editorState: { doc: 'ACD' } } },
-    ]);
+    expect(first.draftCandidates).toMatchObject([{ entry: { editorState: { doc: 'ACD' } } }]);
 
     const swapped = await runWorker('swap-and-crash', root);
     expect(swapped.signal === 'SIGKILL' || swapped.code === 137, swapped.stderr).toBe(true);

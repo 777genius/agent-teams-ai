@@ -54,7 +54,8 @@ const liveDescribe =
     ? describe
     : describe.skip;
 
-const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
+const DEFAULT_ORCHESTRATOR_CLI =
+  '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 const DEFAULT_MODEL = 'gpt-5.6-sol';
 const DEFAULT_EFFORT = 'low' as const;
 const LIVE_CODEX_WORKSPACE_TRUST_TARGET_SURFACES: WorkspaceTrustLaunchArgTargetSurface[] = [
@@ -90,10 +91,15 @@ liveDescribe('Member work sync Codex live e2e', () => {
     setControlApiBaseUrlResolver(resolver: (() => Promise<string | null>) | null): void;
     setRuntimeTurnSettledEnvironmentProvider(
       provider:
-        | ((input: { provider: 'claude' | 'codex' | 'opencode' }) => Promise<Record<string, string> | null>)
+        | ((input: {
+            provider: 'claude' | 'codex' | 'opencode';
+          }) => Promise<Record<string, string> | null>)
         | null
     ): void;
-    relayInboxFileToLiveRecipient(teamName: string, inboxName: string): Promise<{ relayed: number }>;
+    relayInboxFileToLiveRecipient(
+      teamName: string,
+      inboxName: string
+    ): Promise<{ relayed: number }>;
     createTeam(
       request: Parameters<
         InstanceType<
@@ -109,11 +115,14 @@ liveDescribe('Member work sync Codex live e2e', () => {
 
   const createLiveNudgeDeliveryWake = (activeService: NonNullable<typeof svc>) => ({
     schedule: async (input: { teamName: string; memberName: string; delayMs?: number }) => {
-      const timer = setTimeout(() => {
-        void activeService
-          .relayInboxFileToLiveRecipient(input.teamName, input.memberName)
-          .catch(() => undefined);
-      }, Math.max(0, input.delayMs ?? 0));
+      const timer = setTimeout(
+        () => {
+          void activeService
+            .relayInboxFileToLiveRecipient(input.teamName, input.memberName)
+            .catch(() => undefined);
+        },
+        Math.max(0, input.delayMs ?? 0)
+      );
       timer.unref?.();
     },
   });
@@ -200,157 +209,159 @@ liveDescribe('Member work sync Codex live e2e', () => {
     }
   });
 
-  it(
-    'lets a real Codex teammate report still-working for the current actionable agenda with active nudge guards',
-    async () => {
-      const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
-      expect(orchestratorCli).toBeTruthy();
-      await assertExecutable(orchestratorCli!);
+  it('lets a real Codex teammate report still-working for the current actionable agenda with active nudge guards', async () => {
+    const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+    expect(orchestratorCli).toBeTruthy();
+    await assertExecutable(orchestratorCli!);
 
-      const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
-      const effort = (process.env.MEMBER_WORK_SYNC_CODEX_EFFORT?.trim() ||
-        DEFAULT_EFFORT) as 'low' | 'medium' | 'high' | 'xhigh';
-      const marker = `member-work-sync-codex-live-${Date.now()}`;
-      teamName = `member-work-sync-codex-${Date.now()}`;
-      const projectPath = path.join(tempDir, 'project');
-      await fs.mkdir(projectPath, { recursive: true });
-      await fs.writeFile(
-        path.join(projectPath, 'README.md'),
-        '# Member work sync Codex live e2e\n\nKeep this project intentionally tiny.\n',
-        'utf8'
-      );
+    const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
+    const effort = (process.env.MEMBER_WORK_SYNC_CODEX_EFFORT?.trim() || DEFAULT_EFFORT) as
+      | 'low'
+      | 'medium'
+      | 'high'
+      | 'xhigh';
+    const marker = `member-work-sync-codex-live-${Date.now()}`;
+    teamName = `member-work-sync-codex-${Date.now()}`;
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'README.md'),
+      '# Member work sync Codex live e2e\n\nKeep this project intentionally tiny.\n',
+      'utf8'
+    );
 
-      const [
-        { TeamProvisioningService },
-        { TeamDataService },
-        { TeamConfigReader },
-        { TeamTaskReader },
-        { TeamKanbanManager },
-        { TeamMembersMetaStore },
-        { createCodexAccountFeature },
-        { ProviderConnectionService },
-      ] = await Promise.all([
-        import('../../../../src/main/services/team/TeamProvisioningService'),
-        import('../../../../src/main/services/team/TeamDataService'),
-        import('../../../../src/main/services/team/TeamConfigReader'),
-        import('../../../../src/main/services/team/TeamTaskReader'),
-        import('../../../../src/main/services/team/TeamKanbanManager'),
-        import('../../../../src/main/services/team/TeamMembersMetaStore'),
-        import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
-        import('../../../../src/main/services/runtime/ProviderConnectionService'),
-      ]);
+    const [
+      { TeamProvisioningService },
+      { TeamDataService },
+      { TeamConfigReader },
+      { TeamTaskReader },
+      { TeamKanbanManager },
+      { TeamMembersMetaStore },
+      { createCodexAccountFeature },
+      { ProviderConnectionService },
+    ] = await Promise.all([
+      import('../../../../src/main/services/team/TeamProvisioningService'),
+      import('../../../../src/main/services/team/TeamDataService'),
+      import('../../../../src/main/services/team/TeamConfigReader'),
+      import('../../../../src/main/services/team/TeamTaskReader'),
+      import('../../../../src/main/services/team/TeamKanbanManager'),
+      import('../../../../src/main/services/team/TeamMembersMetaStore'),
+      import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
+      import('../../../../src/main/services/runtime/ProviderConnectionService'),
+    ]);
 
-      codexAccountFeature = createCodexAccountFeature({
-        logger: {
-          info: () => undefined,
-          warn: () => undefined,
-          error: () => undefined,
-        },
-        configManager: {
-          getConfig: () => ({
-            providerConnections: {
-              codex: {
-                preferredAuthMode: hasLiveCodexApiKey() ? 'auto' : ('chatgpt' as const),
-              },
+    codexAccountFeature = createCodexAccountFeature({
+      logger: {
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      },
+      configManager: {
+        getConfig: () => ({
+          providerConnections: {
+            codex: {
+              preferredAuthMode: hasLiveCodexApiKey() ? 'auto' : ('chatgpt' as const),
             },
-          }),
-        },
-      });
-      providerConnectionService = ProviderConnectionService.getInstance();
-      providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+          },
+        }),
+      },
+    });
+    providerConnectionService = ProviderConnectionService.getInstance();
+    providerConnectionService.setCodexAccountFeature(codexAccountFeature);
 
-      svc = new TeamProvisioningService();
-      const activeService = svc;
-      const teamDataService = new TeamDataService();
-      feature = createMemberWorkSyncFeature({
-        teamsBasePath: getTeamsBasePath(),
-        configReader: new TeamConfigReader(),
-        taskReader: new TeamTaskReader(),
-        kanbanManager: new TeamKanbanManager(),
-        membersMetaStore: new TeamMembersMetaStore(),
-        isTeamActive: (name) =>
-          activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
-        listLifecycleActiveTeamNames: async () => [teamName!],
-        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
-        nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
-      });
-      activeService.setTeamChangeEmitter((event: TeamChangeEvent) =>
-        feature!.noteTeamChange(event)
-      );
-      activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
-        feature!.buildRuntimeTurnSettledEnvironment(input)
-      );
-      controlServer = await startMemberWorkSyncControlServer(feature);
-      process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
-      activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
-      await fs.writeFile(
-        path.join(tempClaudeRoot, 'team-control-api.json'),
-        JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
-        'utf8'
-      );
+    svc = new TeamProvisioningService();
+    const activeService = svc;
+    const teamDataService = new TeamDataService();
+    feature = createMemberWorkSyncFeature({
+      teamsBasePath: getTeamsBasePath(),
+      configReader: new TeamConfigReader(),
+      taskReader: new TeamTaskReader(),
+      kanbanManager: new TeamKanbanManager(),
+      membersMetaStore: new TeamMembersMetaStore(),
+      isTeamActive: (name) =>
+        activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
+      listLifecycleActiveTeamNames: async () => [teamName!],
+      resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+      nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
+    });
+    activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
+    activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
+      feature!.buildRuntimeTurnSettledEnvironment(input)
+    );
+    controlServer = await startMemberWorkSyncControlServer(feature);
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+    await fs.writeFile(
+      path.join(tempClaudeRoot, 'team-control-api.json'),
+      JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
+      'utf8'
+    );
 
-      const progressEvents: TeamProvisioningProgress[] = [];
-      await activeService.createTeam(
-        {
-          teamName,
-          cwd: projectPath,
-          providerId: 'codex',
-          providerBackendId: 'codex-native',
-          model,
-          effort,
-          fastMode: 'off',
-          skipPermissions: true,
-          prompt: [
-            'Keep launch work minimal.',
-            'If you receive a task, follow task instructions exactly.',
-            'Do not call member_work_sync_status until a task instruction or member_work_sync_nudge provides exact teamName, memberName, and controlUrl.',
-          ].join(' '),
-          members: [],
-        },
-        (progress) => {
-          progressEvents.push(progress);
-        }
-      );
-
-      await waitUntil(async () => {
-        const last = progressEvents.at(-1);
-        if (last?.state === 'failed') {
-          throw new Error(formatProgressDump(progressEvents));
-        }
-        return last?.state === 'ready';
-      }, 240_000);
-
-      const config = await new TeamConfigReader().getConfig(teamName);
-      const memberName =
-        config?.members?.find((member) => member.agentType === 'team-lead')?.name?.trim() ||
-        config?.members?.find((member) => member.role?.toLowerCase().includes('lead'))?.name?.trim() ||
-        config?.members?.[0]?.name?.trim() ||
-        'team-lead';
-      const task = await teamDataService.createTask(teamName, {
-        subject: `Member work sync live lease ${marker}`,
-        owner: memberName,
-        startImmediately: true,
+    const progressEvents: TeamProvisioningProgress[] = [];
+    await activeService.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model,
+        effort,
+        fastMode: 'off',
+        skipPermissions: true,
         prompt: [
-          `This is a live member-work-sync validation task. Marker: ${marker}.`,
-          'Do not edit files and do not complete this task.',
-          'Call task_start for this task.',
-          `Then call member_work_sync_status with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
-          `Then call member_work_sync_report with teamName "${teamName}", memberName "${memberName}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken returned by member_work_sync_status, and the current task id if available.`,
-          `Only after member_work_sync_report is accepted, add one task comment containing exactly: ${marker}:still-working.`,
-          'After that stop. Do not send a user-visible message.',
-        ].join('\n'),
-      });
-      feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
+          'Keep launch work minimal.',
+          'If you receive a task, follow task instructions exactly.',
+          'Do not call member_work_sync_status until a task instruction or member_work_sync_nudge provides exact teamName, memberName, and controlUrl.',
+        ].join(' '),
+        members: [],
+      },
+      (progress) => {
+        progressEvents.push(progress);
+      }
+    );
 
-      const preRelayStatus = await feature.refreshStatus({ teamName, memberName });
-      expect(preRelayStatus.memberName).toBe(memberName);
-      expect(preRelayStatus.providerId).toBe('codex');
-      expect(preRelayStatus.agenda.items.some((item) => item.taskId === task.id)).toBe(true);
-      expect(preRelayStatus.shadow?.wouldNudge).toBe(true);
+    await waitUntil(async () => {
+      const last = progressEvents.at(-1);
+      if (last?.state === 'failed') {
+        throw new Error(formatProgressDump(progressEvents));
+      }
+      return last?.state === 'ready';
+    }, 240_000);
 
-      await relayInboxIfNotAlreadyConsumed(activeService, memberName);
+    const config = await new TeamConfigReader().getConfig(teamName);
+    const memberName =
+      config?.members?.find((member) => member.agentType === 'team-lead')?.name?.trim() ||
+      config?.members
+        ?.find((member) => member.role?.toLowerCase().includes('lead'))
+        ?.name?.trim() ||
+      config?.members?.[0]?.name?.trim() ||
+      'team-lead';
+    const task = await teamDataService.createTask(teamName, {
+      subject: `Member work sync live lease ${marker}`,
+      owner: memberName,
+      startImmediately: true,
+      prompt: [
+        `This is a live member-work-sync validation task. Marker: ${marker}.`,
+        'Do not edit files and do not complete this task.',
+        'Call task_start for this task.',
+        `Then call member_work_sync_status with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
+        `Then call member_work_sync_report with teamName "${teamName}", memberName "${memberName}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken returned by member_work_sync_status, and the current task id if available.`,
+        `Only after member_work_sync_report is accepted, add one task comment containing exactly: ${marker}:still-working.`,
+        'After that stop. Do not send a user-visible message.',
+      ].join('\n'),
+    });
+    feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
 
-      await waitUntil(async () => {
+    const preRelayStatus = await feature.refreshStatus({ teamName, memberName });
+    expect(preRelayStatus.memberName).toBe(memberName);
+    expect(preRelayStatus.providerId).toBe('codex');
+    expect(preRelayStatus.agenda.items.some((item) => item.taskId === task.id)).toBe(true);
+    expect(preRelayStatus.shadow?.wouldNudge).toBe(true);
+
+    await relayInboxIfNotAlreadyConsumed(activeService, memberName);
+
+    await waitUntil(
+      async () => {
         const fatalRuntimeMessage = await readFatalRuntimeMessage(teamName!);
         if (fatalRuntimeMessage) {
           throw new FatalWaitError(fatalRuntimeMessage);
@@ -366,256 +377,265 @@ liveDescribe('Member work sync Codex live e2e', () => {
           comment.text.includes(`${marker}:still-working`)
         );
         return Boolean(hasMarkerComment && status.report?.accepted);
-      }, 240_000, 2_000, async () =>
+      },
+      240_000,
+      2_000,
+      async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
           teamName: teamName!,
           memberName,
           taskId: task.id,
         })
+    );
+
+    const [finalStatus, metrics] = await Promise.all([
+      feature.getStatus({ teamName, memberName }),
+      feature.getMetrics({ teamName }),
+    ]);
+    expect(finalStatus.state).toBe('still_working');
+    expect(finalStatus.report).toMatchObject({
+      accepted: true,
+      state: 'still_working',
+    });
+    expect(metrics.recentEvents.some((event) => event.kind === 'report_accepted')).toBe(true);
+    await waitUntil(async () => {
+      await feature!.drainRuntimeTurnSettledEvents();
+      const metas = await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
+      return metas.some(
+        ({ meta }) =>
+          (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.provider ===
+            'codex' &&
+          (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.teamName ===
+            teamName
       );
+    }, 60_000);
 
-      const [finalStatus, metrics] = await Promise.all([
-        feature.getStatus({ teamName, memberName }),
-        feature.getMetrics({ teamName }),
-      ]);
-      expect(finalStatus.state).toBe('still_working');
-      expect(finalStatus.report).toMatchObject({
-        accepted: true,
-        state: 'still_working',
-      });
-      expect(metrics.recentEvents.some((event) => event.kind === 'report_accepted')).toBe(true);
-      await waitUntil(async () => {
-        await feature!.drainRuntimeTurnSettledEvents();
-        const metas = await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
-        return metas.some(
-          ({ meta }) =>
-            (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.provider ===
-              'codex' &&
-            (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.teamName ===
-              teamName
-        );
-      }, 60_000);
-
-      const leaseNudgeIdsBefore = (await readInboxMessages(teamName, memberName))
-        .filter((message) => message.messageKind === 'member_work_sync_nudge')
-        .map((message) => message.messageId);
-      const leaseOutboxBefore = await readMemberOutboxItems(teamName, memberName);
-      await seedTeamWideSelfNoisyMetrics({
-        teamName,
-        targetMemberName: memberName,
-        noisyMemberName: memberName,
-      });
-      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
-          state: 'blocked',
-          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
-        },
-      });
-      const leaseReconcileBaseline = feature.getQueueDiagnostics().reconciled;
-      feature.noteTeamChange({ type: 'config', teamName });
-      await waitUntil(async () => {
+    const leaseNudgeIdsBefore = (await readInboxMessages(teamName, memberName))
+      .filter((message) => message.messageKind === 'member_work_sync_nudge')
+      .map((message) => message.messageId);
+    const leaseOutboxBefore = await readMemberOutboxItems(teamName, memberName);
+    await seedTeamWideSelfNoisyMetrics({
+      teamName,
+      targetMemberName: memberName,
+      noisyMemberName: memberName,
+    });
+    await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+      phase2Readiness: {
+        state: 'blocked',
+        reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+      },
+    });
+    const leaseReconcileBaseline = feature.getQueueDiagnostics().reconciled;
+    feature.noteTeamChange({ type: 'config', teamName });
+    await waitUntil(
+      async () => {
         const diagnostics = feature!.getQueueDiagnostics();
         return (
           diagnostics.queued === 0 &&
           diagnostics.running === 0 &&
           diagnostics.reconciled >= leaseReconcileBaseline + 1
         );
-      }, 60_000, 500, async () =>
+      },
+      60_000,
+      500,
+      async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
           teamName: teamName!,
           memberName,
           taskId: task.id,
         })
-      );
-      await expect(feature.getStatus({ teamName, memberName })).resolves.toMatchObject({
+    );
+    await expect(feature.getStatus({ teamName, memberName })).resolves.toMatchObject({
+      state: 'still_working',
+      report: {
+        accepted: true,
         state: 'still_working',
-        report: {
-          accepted: true,
-          state: 'still_working',
-        },
-      });
-      expect(
-        (await readInboxMessages(teamName, memberName)).filter(
-          (message) => message.messageKind === 'member_work_sync_nudge'
-        ).map((message) => message.messageId)
-      ).toEqual(leaseNudgeIdsBefore);
-      await expect(readMemberOutboxItems(teamName, memberName)).resolves.toEqual(
-        leaseOutboxBefore
-      );
+      },
+    });
+    expect(
+      (await readInboxMessages(teamName, memberName))
+        .filter((message) => message.messageKind === 'member_work_sync_nudge')
+        .map((message) => message.messageId)
+    ).toEqual(leaseNudgeIdsBefore);
+    await expect(readMemberOutboxItems(teamName, memberName)).resolves.toEqual(leaseOutboxBefore);
 
-      const postReportDispatch = await feature.dispatchDueNudges([teamName]);
-      expect(postReportDispatch.delivered).toBe(0);
-      expect(postReportDispatch.retryable).toBe(0);
-      expect(postReportDispatch.terminal).toBe(0);
-      expect(postReportDispatch.claimed).toBe(postReportDispatch.superseded);
-      expect(postReportDispatch.claimed).toBeLessThanOrEqual(1);
-    },
-    360_000
-  );
+    const postReportDispatch = await feature.dispatchDueNudges([teamName]);
+    expect(postReportDispatch.delivered).toBe(0);
+    expect(postReportDispatch.retryable).toBe(0);
+    expect(postReportDispatch.terminal).toBe(0);
+    expect(postReportDispatch.claimed).toBe(postReportDispatch.superseded);
+    expect(postReportDispatch.claimed).toBeLessThanOrEqual(1);
+  }, 360_000);
 
-  it(
-    'delivers a real work-sync nudge to a Codex teammate and accepts the follow-up report',
-    async () => {
-      const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
-      expect(orchestratorCli).toBeTruthy();
-      await assertExecutable(orchestratorCli!);
+  it('delivers a real work-sync nudge to a Codex teammate and accepts the follow-up report', async () => {
+    const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+    expect(orchestratorCli).toBeTruthy();
+    await assertExecutable(orchestratorCli!);
 
-      const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
-      const effort = (process.env.MEMBER_WORK_SYNC_CODEX_EFFORT?.trim() ||
-        DEFAULT_EFFORT) as 'low' | 'medium' | 'high' | 'xhigh';
-      const marker = `member-work-sync-codex-nudge-${Date.now()}`;
-      teamName = `member-work-sync-codex-nudge-${Date.now()}`;
-      const projectPath = path.join(tempDir, 'project');
-      await fs.mkdir(projectPath, { recursive: true });
-      await fs.writeFile(
-        path.join(projectPath, 'README.md'),
-        '# Member work sync Codex nudge live e2e\n\nKeep this project intentionally tiny.\n',
-        'utf8'
-      );
+    const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
+    const effort = (process.env.MEMBER_WORK_SYNC_CODEX_EFFORT?.trim() || DEFAULT_EFFORT) as
+      | 'low'
+      | 'medium'
+      | 'high'
+      | 'xhigh';
+    const marker = `member-work-sync-codex-nudge-${Date.now()}`;
+    teamName = `member-work-sync-codex-nudge-${Date.now()}`;
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'README.md'),
+      '# Member work sync Codex nudge live e2e\n\nKeep this project intentionally tiny.\n',
+      'utf8'
+    );
 
-      const [
-        { TeamProvisioningService },
-        { TeamDataService },
-        { TeamConfigReader },
-        { TeamTaskReader },
-        { TeamKanbanManager },
-        { TeamMembersMetaStore },
-        { createCodexAccountFeature },
-        { ProviderConnectionService },
-      ] = await Promise.all([
-        import('../../../../src/main/services/team/TeamProvisioningService'),
-        import('../../../../src/main/services/team/TeamDataService'),
-        import('../../../../src/main/services/team/TeamConfigReader'),
-        import('../../../../src/main/services/team/TeamTaskReader'),
-        import('../../../../src/main/services/team/TeamKanbanManager'),
-        import('../../../../src/main/services/team/TeamMembersMetaStore'),
-        import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
-        import('../../../../src/main/services/runtime/ProviderConnectionService'),
-      ]);
+    const [
+      { TeamProvisioningService },
+      { TeamDataService },
+      { TeamConfigReader },
+      { TeamTaskReader },
+      { TeamKanbanManager },
+      { TeamMembersMetaStore },
+      { createCodexAccountFeature },
+      { ProviderConnectionService },
+    ] = await Promise.all([
+      import('../../../../src/main/services/team/TeamProvisioningService'),
+      import('../../../../src/main/services/team/TeamDataService'),
+      import('../../../../src/main/services/team/TeamConfigReader'),
+      import('../../../../src/main/services/team/TeamTaskReader'),
+      import('../../../../src/main/services/team/TeamKanbanManager'),
+      import('../../../../src/main/services/team/TeamMembersMetaStore'),
+      import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
+      import('../../../../src/main/services/runtime/ProviderConnectionService'),
+    ]);
 
-      codexAccountFeature = createCodexAccountFeature({
-        logger: {
-          info: () => undefined,
-          warn: () => undefined,
-          error: () => undefined,
-        },
-        configManager: {
-          getConfig: () => ({
-            providerConnections: {
-              codex: {
-                preferredAuthMode: 'chatgpt' as const,
-              },
+    codexAccountFeature = createCodexAccountFeature({
+      logger: {
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      },
+      configManager: {
+        getConfig: () => ({
+          providerConnections: {
+            codex: {
+              preferredAuthMode: 'chatgpt' as const,
             },
-          }),
-        },
-      });
-      providerConnectionService = ProviderConnectionService.getInstance();
-      providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+          },
+        }),
+      },
+    });
+    providerConnectionService = ProviderConnectionService.getInstance();
+    providerConnectionService.setCodexAccountFeature(codexAccountFeature);
 
-      svc = new TeamProvisioningService();
-      const activeService = svc;
-      const teamDataService = new TeamDataService();
-      feature = createMemberWorkSyncFeature({
-        teamsBasePath: getTeamsBasePath(),
-        configReader: new TeamConfigReader(),
-        taskReader: new TeamTaskReader(),
-        kanbanManager: new TeamKanbanManager(),
-        membersMetaStore: new TeamMembersMetaStore(),
-        isTeamActive: (name) =>
-          activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
-        listLifecycleActiveTeamNames: async () => [teamName!],
-        queueQuietWindowMs: 1,
-        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
-        nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
-      });
-      activeService.setTeamChangeEmitter((event: TeamChangeEvent) =>
-        feature!.noteTeamChange(event)
-      );
-      activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
-        feature!.buildRuntimeTurnSettledEnvironment(input)
-      );
-      controlServer = await startMemberWorkSyncControlServer(feature);
-      process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
-      activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
-      await fs.writeFile(
-        path.join(tempClaudeRoot, 'team-control-api.json'),
-        JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
-        'utf8'
-      );
+    svc = new TeamProvisioningService();
+    const activeService = svc;
+    const teamDataService = new TeamDataService();
+    feature = createMemberWorkSyncFeature({
+      teamsBasePath: getTeamsBasePath(),
+      configReader: new TeamConfigReader(),
+      taskReader: new TeamTaskReader(),
+      kanbanManager: new TeamKanbanManager(),
+      membersMetaStore: new TeamMembersMetaStore(),
+      isTeamActive: (name) =>
+        activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
+      listLifecycleActiveTeamNames: async () => [teamName!],
+      queueQuietWindowMs: 1,
+      resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+      nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
+    });
+    activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
+    activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
+      feature!.buildRuntimeTurnSettledEnvironment(input)
+    );
+    controlServer = await startMemberWorkSyncControlServer(feature);
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+    await fs.writeFile(
+      path.join(tempClaudeRoot, 'team-control-api.json'),
+      JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
+      'utf8'
+    );
 
-      const progressEvents: TeamProvisioningProgress[] = [];
-      await activeService.createTeam(
-        {
-          teamName,
-          cwd: projectPath,
-          providerId: 'codex',
-          providerBackendId: 'codex-native',
-          model,
-          effort,
-          fastMode: 'off',
-          skipPermissions: true,
-          prompt: [
-            'Keep launch work minimal.',
-            'If you receive a member_work_sync_nudge, do not complete the task.',
-            'For a member_work_sync_nudge, call member_work_sync_status first, then call member_work_sync_report with state "still_working", the returned agendaFingerprint/reportToken, and taskIds for the current agenda.',
-            'After reporting, stop without a user-visible message.',
-          ].join(' '),
-          members: [],
-        },
-        (progress) => {
-          progressEvents.push(progress);
-        }
-      );
-
-      await waitUntil(async () => {
-        const last = progressEvents.at(-1);
-        if (last?.state === 'failed') {
-          throw new Error(formatProgressDump(progressEvents));
-        }
-        return last?.state === 'ready';
-      }, 240_000);
-
-      const config = await new TeamConfigReader().getConfig(teamName);
-      const memberName =
-        config?.members?.find((member) => member.agentType === 'team-lead')?.name?.trim() ||
-        config?.members?.find((member) => member.role?.toLowerCase().includes('lead'))?.name?.trim() ||
-        config?.members?.[0]?.name?.trim() ||
-        'team-lead';
-      await seedShadowReadyMetrics({ teamName, memberName });
-
-      const task = await teamDataService.createTask(teamName, {
-        subject: `Member work sync live nudge ${marker}`,
-        owner: memberName,
-        startImmediately: false,
+    const progressEvents: TeamProvisioningProgress[] = [];
+    await activeService.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model,
+        effort,
+        fastMode: 'off',
+        skipPermissions: true,
         prompt: [
-          `This is a live member-work-sync nudge validation task. Marker: ${marker}.`,
-          'Do not edit files and do not complete this task.',
-          'Only report still_working if member-work-sync asks you to synchronize.',
-        ].join('\n'),
-      });
-      feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
+          'Keep launch work minimal.',
+          'If you receive a member_work_sync_nudge, do not complete the task.',
+          'For a member_work_sync_nudge, call member_work_sync_status first, then call member_work_sync_report with state "still_working", the returned agendaFingerprint/reportToken, and taskIds for the current agenda.',
+          'After reporting, stop without a user-visible message.',
+        ].join(' '),
+        members: [],
+      },
+      (progress) => {
+        progressEvents.push(progress);
+      }
+    );
 
-      await waitUntil(async () => {
+    await waitUntil(async () => {
+      const last = progressEvents.at(-1);
+      if (last?.state === 'failed') {
+        throw new Error(formatProgressDump(progressEvents));
+      }
+      return last?.state === 'ready';
+    }, 240_000);
+
+    const config = await new TeamConfigReader().getConfig(teamName);
+    const memberName =
+      config?.members?.find((member) => member.agentType === 'team-lead')?.name?.trim() ||
+      config?.members
+        ?.find((member) => member.role?.toLowerCase().includes('lead'))
+        ?.name?.trim() ||
+      config?.members?.[0]?.name?.trim() ||
+      'team-lead';
+    await seedShadowReadyMetrics({ teamName, memberName });
+
+    const task = await teamDataService.createTask(teamName, {
+      subject: `Member work sync live nudge ${marker}`,
+      owner: memberName,
+      startImmediately: false,
+      prompt: [
+        `This is a live member-work-sync nudge validation task. Marker: ${marker}.`,
+        'Do not edit files and do not complete this task.',
+        'Only report still_working if member-work-sync asks you to synchronize.',
+      ].join('\n'),
+    });
+    feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
+
+    await waitUntil(
+      async () => {
         const status = await feature!.refreshStatus({ teamName: teamName!, memberName });
         if (!status.agenda.items.some((item) => item.taskId === task.id)) {
           return false;
         }
         await feature!.dispatchDueNudges([teamName!]);
         return true;
-      }, 60_000, 500, async () =>
+      },
+      60_000,
+      500,
+      async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
           teamName: teamName!,
           memberName,
           taskId: task.id,
         })
-      );
+    );
 
-      await relayInboxIfNotAlreadyConsumed(activeService, memberName);
+    await relayInboxIfNotAlreadyConsumed(activeService, memberName);
 
-      await waitUntil(async () => {
+    await waitUntil(
+      async () => {
         const fatalRuntimeMessage = await readFatalRuntimeMessage(teamName!);
         if (fatalRuntimeMessage) {
           throw new FatalWaitError(fatalRuntimeMessage);
@@ -623,312 +643,329 @@ liveDescribe('Member work sync Codex live e2e', () => {
         await feature!.replayPendingReports([teamName!]);
         const status = await feature!.getStatus({ teamName: teamName!, memberName });
         return status.report?.accepted === true && status.report.state === 'still_working';
-      }, 240_000, 2_000, async () =>
+      },
+      240_000,
+      2_000,
+      async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
           teamName: teamName!,
           memberName,
           taskId: task.id,
         })
+    );
+
+    const finalStatus = await feature.getStatus({ teamName, memberName });
+    expect(finalStatus.state).toBe('still_working');
+    expect(finalStatus.report).toMatchObject({
+      accepted: true,
+      state: 'still_working',
+    });
+    await waitUntil(async () => {
+      await feature!.drainRuntimeTurnSettledEvents();
+      const metas = await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
+      return metas.some(
+        ({ meta }) =>
+          (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.provider ===
+            'codex' &&
+          (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.teamName ===
+            teamName
       );
+    }, 60_000);
+    await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
+      claimed: 0,
+      delivered: 0,
+    });
+  }, 420_000);
 
-      const finalStatus = await feature.getStatus({ teamName, memberName });
-      expect(finalStatus.state).toBe('still_working');
-      expect(finalStatus.report).toMatchObject({
-        accepted: true,
-        state: 'still_working',
-      });
-      await waitUntil(async () => {
-        await feature!.drainRuntimeTurnSettledEvents();
-        const metas = await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
-        return metas.some(
-          ({ meta }) =>
-            (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.provider ===
-              'codex' &&
-            (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.teamName ===
-              teamName
-        );
-      }, 60_000);
-      await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
-        claimed: 0,
-        delivered: 0,
-      });
-    },
-    420_000
-  );
+  it('wakes a real Codex teammate when another member makes team metrics self-noisy', async () => {
+    const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+    expect(orchestratorCli).toBeTruthy();
+    await assertExecutable(orchestratorCli!);
 
-  it(
-    'wakes a real Codex teammate when another member makes team metrics self-noisy',
-    async () => {
-      const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
-      expect(orchestratorCli).toBeTruthy();
-      await assertExecutable(orchestratorCli!);
+    const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
+    const effort = (process.env.MEMBER_WORK_SYNC_CODEX_EFFORT?.trim() || DEFAULT_EFFORT) as
+      | 'low'
+      | 'medium'
+      | 'high'
+      | 'xhigh';
+    const requestedMemberName = 'NickName';
+    const requestedNoisyMemberName = 'NoisyPeer';
+    const marker = `member-work-sync-codex-runtime-meta-${Date.now()}`;
+    teamName = `member-work-sync-codex-runtime-meta-${Date.now()}`;
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'README.md'),
+      '# Member work sync Codex runtime meta live e2e\n\nKeep this project intentionally tiny.\n',
+      'utf8'
+    );
+    await trustProjectInTempClaudeGlobalConfig({ claudeRoot: tempClaudeRoot, projectPath });
+    process.env.CLAUDE_CODE_CODEX_NATIVE_IGNORE_USER_CONFIG = 'false';
+    if (ownsCodexHomeDir) {
+      await trustProjectInOwnedCodexHome({ codexHomeDir, projectPath });
+    }
 
-      const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
-      const effort = (process.env.MEMBER_WORK_SYNC_CODEX_EFFORT?.trim() ||
-        DEFAULT_EFFORT) as 'low' | 'medium' | 'high' | 'xhigh';
-      const requestedMemberName = 'NickName';
-      const requestedNoisyMemberName = 'NoisyPeer';
-      const marker = `member-work-sync-codex-runtime-meta-${Date.now()}`;
-      teamName = `member-work-sync-codex-runtime-meta-${Date.now()}`;
-      const projectPath = path.join(tempDir, 'project');
-      await fs.mkdir(projectPath, { recursive: true });
-      await fs.writeFile(
-        path.join(projectPath, 'README.md'),
-        '# Member work sync Codex runtime meta live e2e\n\nKeep this project intentionally tiny.\n',
-        'utf8'
-      );
-      await trustProjectInTempClaudeGlobalConfig({ claudeRoot: tempClaudeRoot, projectPath });
-      process.env.CLAUDE_CODE_CODEX_NATIVE_IGNORE_USER_CONFIG = 'false';
-      if (ownsCodexHomeDir) {
-        await trustProjectInOwnedCodexHome({ codexHomeDir, projectPath });
+    const [
+      { TeamProvisioningService },
+      { TeamConfigReader },
+      { TeamTaskReader },
+      { TeamTaskWriter },
+      { TeamKanbanManager },
+      { TeamMembersMetaStore },
+      { createCodexAccountFeature },
+      { ProviderConnectionService },
+    ] = await Promise.all([
+      import('../../../../src/main/services/team/TeamProvisioningService'),
+      import('../../../../src/main/services/team/TeamConfigReader'),
+      import('../../../../src/main/services/team/TeamTaskReader'),
+      import('../../../../src/main/services/team/TeamTaskWriter'),
+      import('../../../../src/main/services/team/TeamKanbanManager'),
+      import('../../../../src/main/services/team/TeamMembersMetaStore'),
+      import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
+      import('../../../../src/main/services/runtime/ProviderConnectionService'),
+    ]);
+
+    codexAccountFeature = createCodexAccountFeature({
+      logger: {
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      },
+      configManager: {
+        getConfig: () => ({
+          providerConnections: {
+            codex: {
+              preferredAuthMode: hasLiveCodexApiKey() ? 'auto' : ('chatgpt' as const),
+            },
+          },
+        }),
+      },
+    });
+    providerConnectionService = ProviderConnectionService.getInstance();
+    providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+
+    const provisioningService = new TeamProvisioningService();
+    provisioningService.setWorkspaceTrustCoordinator(createCodexOnlyWorkspaceTrustCoordinator());
+    svc = provisioningService;
+    const activeService = provisioningService;
+    const taskReader = new TeamTaskReader();
+    const membersMetaStore = new TeamMembersMetaStore();
+    feature = createMemberWorkSyncFeature({
+      teamsBasePath: getTeamsBasePath(),
+      configReader: new TeamConfigReader(),
+      taskReader,
+      kanbanManager: new TeamKanbanManager(),
+      membersMetaStore,
+      isTeamActive: (name) =>
+        activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
+      listLifecycleActiveTeamNames: async () => [teamName!],
+      queueQuietWindowMs: 1,
+      resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+      nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
+    });
+    activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
+    activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
+      feature!.buildRuntimeTurnSettledEnvironment(input)
+    );
+    controlServer = await startMemberWorkSyncControlServer(feature);
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+    await fs.writeFile(
+      path.join(tempClaudeRoot, 'team-control-api.json'),
+      JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
+      'utf8'
+    );
+
+    const progressEvents: TeamProvisioningProgress[] = [];
+    await activeService.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model,
+        effort,
+        fastMode: 'off',
+        skipPermissions: true,
+        prompt: [
+          'Keep launch work minimal.',
+          'If you receive a member_work_sync_nudge, do not complete the task.',
+          'For a member_work_sync_nudge, call member_work_sync_status first.',
+          'Then call member_work_sync_report with state "still_working", the returned agendaFingerprint/reportToken, and taskIds for the current agenda.',
+          `After member_work_sync_report is accepted, add one task comment containing exactly: ${marker}:still-working.`,
+          'After that stop without a user-visible message.',
+        ].join(' '),
+        members: [
+          {
+            name: requestedMemberName,
+            role: 'developer',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model,
+            effort,
+          },
+          {
+            name: requestedNoisyMemberName,
+            role: 'developer',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model,
+            effort,
+          },
+        ],
+      },
+      (progress) => {
+        progressEvents.push(progress);
       }
+    );
 
-      const [
-        { TeamProvisioningService },
-        { TeamConfigReader },
-        { TeamTaskReader },
-        { TeamTaskWriter },
-        { TeamKanbanManager },
-        { TeamMembersMetaStore },
-        { createCodexAccountFeature },
-        { ProviderConnectionService },
-      ] = await Promise.all([
-        import('../../../../src/main/services/team/TeamProvisioningService'),
-        import('../../../../src/main/services/team/TeamConfigReader'),
-        import('../../../../src/main/services/team/TeamTaskReader'),
-        import('../../../../src/main/services/team/TeamTaskWriter'),
-        import('../../../../src/main/services/team/TeamKanbanManager'),
-        import('../../../../src/main/services/team/TeamMembersMetaStore'),
-        import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
-        import('../../../../src/main/services/runtime/ProviderConnectionService'),
-      ]);
-
-      codexAccountFeature = createCodexAccountFeature({
-        logger: {
-          info: () => undefined,
-          warn: () => undefined,
-          error: () => undefined,
-        },
-        configManager: {
-          getConfig: () => ({
-            providerConnections: {
-              codex: {
-                preferredAuthMode: hasLiveCodexApiKey() ? 'auto' : ('chatgpt' as const),
-              },
-            },
-          }),
-        },
-      });
-      providerConnectionService = ProviderConnectionService.getInstance();
-      providerConnectionService.setCodexAccountFeature(codexAccountFeature);
-
-      const provisioningService = new TeamProvisioningService();
-      provisioningService.setWorkspaceTrustCoordinator(createCodexOnlyWorkspaceTrustCoordinator());
-      svc = provisioningService;
-      const activeService = provisioningService;
-      const taskReader = new TeamTaskReader();
-      const membersMetaStore = new TeamMembersMetaStore();
-      feature = createMemberWorkSyncFeature({
-        teamsBasePath: getTeamsBasePath(),
-        configReader: new TeamConfigReader(),
-        taskReader,
-        kanbanManager: new TeamKanbanManager(),
-        membersMetaStore,
-        isTeamActive: (name) =>
-          activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
-        listLifecycleActiveTeamNames: async () => [teamName!],
-        queueQuietWindowMs: 1,
-        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
-        nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
-      });
-      activeService.setTeamChangeEmitter((event: TeamChangeEvent) =>
-        feature!.noteTeamChange(event)
-      );
-      activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
-        feature!.buildRuntimeTurnSettledEnvironment(input)
-      );
-      controlServer = await startMemberWorkSyncControlServer(feature);
-      process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
-      activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
-      await fs.writeFile(
-        path.join(tempClaudeRoot, 'team-control-api.json'),
-        JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
-        'utf8'
-      );
-
-      const progressEvents: TeamProvisioningProgress[] = [];
-      await activeService.createTeam(
-        {
-          teamName,
-          cwd: projectPath,
-          providerId: 'codex',
-          providerBackendId: 'codex-native',
-          model,
-          effort,
-          fastMode: 'off',
-          skipPermissions: true,
-          prompt: [
-            'Keep launch work minimal.',
-            'If you receive a member_work_sync_nudge, do not complete the task.',
-            'For a member_work_sync_nudge, call member_work_sync_status first.',
-            'Then call member_work_sync_report with state "still_working", the returned agendaFingerprint/reportToken, and taskIds for the current agenda.',
-            `After member_work_sync_report is accepted, add one task comment containing exactly: ${marker}:still-working.`,
-            'After that stop without a user-visible message.',
-          ].join(' '),
-          members: [
-            {
-              name: requestedMemberName,
-              role: 'developer',
-              providerId: 'codex',
-              providerBackendId: 'codex-native',
-              model,
-              effort,
-            },
-            {
-              name: requestedNoisyMemberName,
-              role: 'developer',
-              providerId: 'codex',
-              providerBackendId: 'codex-native',
-              model,
-              effort,
-            },
-          ],
-        },
-        (progress) => {
-          progressEvents.push(progress);
-        }
-      );
-
-      await waitUntil(async () => {
+    await waitUntil(
+      async () => {
         const last = progressEvents.at(-1);
         if (last?.state === 'failed') {
           throw new Error(formatProgressDump(progressEvents));
         }
         return last?.state === 'ready';
-      }, 360_000, 1_000, async () => formatProgressDump(progressEvents));
+      },
+      360_000,
+      1_000,
+      async () => formatProgressDump(progressEvents)
+    );
 
-      const config = await new TeamConfigReader().getConfig(teamName);
-      const memberName = config?.members
-        ?.find((member) => sameMemberName(member.name, requestedMemberName))
-        ?.name?.trim();
-      const noisyMemberName = config?.members
-        ?.find((member) => sameMemberName(member.name, requestedNoisyMemberName))
-        ?.name?.trim();
-      expect(memberName).toBeTruthy();
-      expect(noisyMemberName).toBeTruthy();
-      expect(
-        config?.members?.find((member) => sameMemberName(member.name, memberName!))
-      ).toMatchObject({
-        providerId: 'codex',
-      });
-      expect(
-        config?.members?.find((member) => sameMemberName(member.name, noisyMemberName!))
-      ).toMatchObject({
-        providerId: 'codex',
-      });
+    const config = await new TeamConfigReader().getConfig(teamName);
+    const memberName = config?.members
+      ?.find((member) => sameMemberName(member.name, requestedMemberName))
+      ?.name?.trim();
+    const noisyMemberName = config?.members
+      ?.find((member) => sameMemberName(member.name, requestedNoisyMemberName))
+      ?.name?.trim();
+    expect(memberName).toBeTruthy();
+    expect(noisyMemberName).toBeTruthy();
+    expect(
+      config?.members?.find((member) => sameMemberName(member.name, memberName!))
+    ).toMatchObject({
+      providerId: 'codex',
+    });
+    expect(
+      config?.members?.find((member) => sameMemberName(member.name, noisyMemberName!))
+    ).toMatchObject({
+      providerId: 'codex',
+    });
 
-      await stripMemberProviderMetadataFromMembersMeta({
-        teamName,
-        memberName: memberName!,
-        fallbackRole: 'developer',
-      });
-      expect(
-        (await membersMetaStore.getMembers(teamName)).find((member) =>
-          sameMemberName(member.name, memberName!)
-        )
-      ).toMatchObject({
-        name: memberName,
-        providerId: undefined,
-        providerBackendId: undefined,
-        model: undefined,
-        effort: undefined,
-      });
-      await waitUntil(async () => {
+    await stripMemberProviderMetadataFromMembersMeta({
+      teamName,
+      memberName: memberName!,
+      fallbackRole: 'developer',
+    });
+    expect(
+      (await membersMetaStore.getMembers(teamName)).find((member) =>
+        sameMemberName(member.name, memberName!)
+      )
+    ).toMatchObject({
+      name: memberName,
+      providerId: undefined,
+      providerBackendId: undefined,
+      model: undefined,
+      effort: undefined,
+    });
+    await waitUntil(
+      async () => {
         await feature!.drainRuntimeTurnSettledEvents();
         const diagnostics = feature!.getQueueDiagnostics();
         return diagnostics.queued === 0 && diagnostics.running === 0;
-      }, 60_000, 1_000, async () =>
+      },
+      60_000,
+      1_000,
+      async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
           teamName: teamName!,
           memberName: memberName!,
         })
-      );
+    );
 
-      await seedTeamWideSelfNoisyMetrics({
-        teamName,
-        targetMemberName: memberName!,
-        noisyMemberName: noisyMemberName!,
-      });
-      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
-          state: 'blocked',
-          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
-        },
-      });
+    await seedTeamWideSelfNoisyMetrics({
+      teamName,
+      targetMemberName: memberName!,
+      noisyMemberName: noisyMemberName!,
+    });
+    await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+      phase2Readiness: {
+        state: 'blocked',
+        reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+      },
+    });
 
-      const idleReconcileBaseline = feature.getQueueDiagnostics().reconciled;
-      feature.noteTeamChange({ type: 'config', teamName });
-      await waitUntil(async () => {
+    const idleReconcileBaseline = feature.getQueueDiagnostics().reconciled;
+    feature.noteTeamChange({ type: 'config', teamName });
+    await waitUntil(
+      async () => {
         const diagnostics = feature!.getQueueDiagnostics();
         return (
           diagnostics.queued === 0 &&
           diagnostics.running === 0 &&
           diagnostics.reconciled >= idleReconcileBaseline + 2
         );
-      }, 60_000, 500, async () =>
+      },
+      60_000,
+      500,
+      async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
           teamName: teamName!,
           memberName: memberName!,
         })
-      );
-      expect(
-        (await readInboxMessages(teamName, memberName!)).filter(
-          (message) => message.messageKind === 'member_work_sync_nudge'
-        )
-      ).toHaveLength(0);
-      expect(
-        (await readInboxMessages(teamName, noisyMemberName!)).filter(
-          (message) => message.messageKind === 'member_work_sync_nudge'
-        )
-      ).toHaveLength(0);
-      await expect(readMemberOutboxItems(teamName, memberName!)).resolves.toEqual({});
-      await expect(readMemberOutboxItems(teamName, noisyMemberName!)).resolves.toEqual({});
+    );
+    expect(
+      (await readInboxMessages(teamName, memberName!)).filter(
+        (message) => message.messageKind === 'member_work_sync_nudge'
+      )
+    ).toHaveLength(0);
+    expect(
+      (await readInboxMessages(teamName, noisyMemberName!)).filter(
+        (message) => message.messageKind === 'member_work_sync_nudge'
+      )
+    ).toHaveLength(0);
+    await expect(readMemberOutboxItems(teamName, memberName!)).resolves.toEqual({});
+    await expect(readMemberOutboxItems(teamName, noisyMemberName!)).resolves.toEqual({});
 
-      await seedTeamWideSelfNoisyMetrics({
-        teamName,
-        targetMemberName: memberName!,
-        noisyMemberName: noisyMemberName!,
-      });
-      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
-          state: 'blocked',
-          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
-        },
-      });
+    await seedTeamWideSelfNoisyMetrics({
+      teamName,
+      targetMemberName: memberName!,
+      noisyMemberName: noisyMemberName!,
+    });
+    await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+      phase2Readiness: {
+        state: 'blocked',
+        reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+      },
+    });
 
-      const createdAt = new Date().toISOString();
-      const taskId = `runtime-meta-${Date.now()}`;
-      const displayId = String(Date.now()).slice(-8);
-      await new TeamTaskWriter().createTask(teamName, {
-        id: taskId,
-        displayId,
-        subject: `Member work sync live runtime meta ${marker}`,
-        description: 'Verify native stale recovery when runtime member meta lacks provider fields.',
-        owner: memberName!,
-        createdBy: 'user',
-        status: 'in_progress',
-        projectPath,
-        createdAt,
-        updatedAt: createdAt,
-      });
-      feature.noteTeamChange({ type: 'task', teamName, taskId });
+    const createdAt = new Date().toISOString();
+    const taskId = `runtime-meta-${Date.now()}`;
+    const displayId = String(Date.now()).slice(-8);
+    await new TeamTaskWriter().createTask(teamName, {
+      id: taskId,
+      displayId,
+      subject: `Member work sync live runtime meta ${marker}`,
+      description: 'Verify native stale recovery when runtime member meta lacks provider fields.',
+      owner: memberName!,
+      createdBy: 'user',
+      status: 'in_progress',
+      projectPath,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    feature.noteTeamChange({ type: 'task', teamName, taskId });
 
-      let agendaFingerprint = '';
-      await waitUntil(async () => {
-        const status = await feature!.refreshStatus({ teamName: teamName!, memberName: memberName! });
+    let agendaFingerprint = '';
+    await waitUntil(
+      async () => {
+        const status = await feature!.refreshStatus({
+          teamName: teamName!,
+          memberName: memberName!,
+        });
         if (!status.agenda.items.some((item) => item.taskId === taskId)) {
           return false;
         }
@@ -948,98 +985,110 @@ liveDescribe('Member work sync Codex live e2e', () => {
         );
         agendaFingerprint = status.agenda.fingerprint;
         return true;
-      }, 60_000, 500, async () =>
+      },
+      60_000,
+      500,
+      async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
           teamName: teamName!,
           memberName: memberName!,
           taskId,
         })
-      );
-      await waitUntil(async () => {
+    );
+    await waitUntil(
+      async () => {
         const diagnostics = feature!.getQueueDiagnostics();
         return diagnostics.queued === 0 && diagnostics.running === 0;
-      }, 30_000, 500, async () =>
+      },
+      30_000,
+      500,
+      async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
           teamName: teamName!,
           memberName: memberName!,
           taskId,
         })
-      );
-      const stableStatus = await feature.refreshStatus({
-        teamName,
-        memberName: memberName!,
-      });
-      expect(stableStatus.providerId).toBe('codex');
-      expect(stableStatus.agenda.fingerprint).toBe(agendaFingerprint);
-      expect((await feature.getStatus({ teamName, memberName: memberName! })).providerId).toBe(
-        'codex'
-      );
+    );
+    const stableStatus = await feature.refreshStatus({
+      teamName,
+      memberName: memberName!,
+    });
+    expect(stableStatus.providerId).toBe('codex');
+    expect(stableStatus.agenda.fingerprint).toBe(agendaFingerprint);
+    expect((await feature.getStatus({ teamName, memberName: memberName! })).providerId).toBe(
+      'codex'
+    );
 
-      await waitUntil(async () => {
+    await waitUntil(
+      async () => {
         const nudges = (await readInboxMessages(teamName!, memberName!)).filter(
           (message) => message.messageKind === 'member_work_sync_nudge'
         );
         return nudges.length === 1;
-      }, 60_000, 1_000, async () =>
+      },
+      60_000,
+      1_000,
+      async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
           teamName: teamName!,
           memberName: memberName!,
           taskId,
         })
-      );
+    );
 
-      const metrics = await feature.getMetrics({ teamName });
-      expect(metrics.phase2Readiness.state).toBe('blocked');
-      expect(metrics.phase2Readiness.reasons).toContain('would_nudge_rate_high');
-      expect(metrics.phase2Readiness.reasons).toContain('fingerprint_churn_high');
-      expect(metrics.phase2Readiness.rates.wouldNudgesPerMemberHour).toBeGreaterThan(
-        metrics.phase2Readiness.thresholds.maxWouldNudgesPerMemberHour
-      );
-      expect(metrics.phase2Readiness.rates.fingerprintChangesPerMemberHour).toBeGreaterThan(
-        metrics.phase2Readiness.thresholds.maxFingerprintChangesPerMemberHour
-      );
-      expect(metrics.recentEvents).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            memberName: noisyMemberName,
-            kind: 'would_nudge',
-          }),
-          expect.objectContaining({
-            memberName: noisyMemberName,
-            kind: 'fingerprint_changed',
-          }),
-        ])
-      );
-      expect(
-        (await readInboxMessages(teamName, noisyMemberName!)).filter(
-          (message) => message.messageKind === 'member_work_sync_nudge'
-        )
-      ).toHaveLength(0);
-      const journalPath = path.join(
-        getTeamsBasePath(),
-        teamName,
-        'members',
-        memberName!,
-        '.member-work-sync',
-        'journal.jsonl'
-      );
-      const journal = await fs.readFile(journalPath, 'utf8');
-      const nudgeOutcomes = journal
-        .trim()
-        .split('\n')
-        .map((line) => JSON.parse(line) as { event?: string; reason?: string })
-        .filter((event) => event.event === 'nudge_skipped' || event.event === 'nudge_delivered');
-      expect(nudgeOutcomes).toContainEqual(expect.objectContaining({ event: 'nudge_delivered' }));
-      expect(nudgeOutcomes).not.toContainEqual(
-        expect.objectContaining({ reason: 'blocking_metrics' })
-      );
+    const metrics = await feature.getMetrics({ teamName });
+    expect(metrics.phase2Readiness.state).toBe('blocked');
+    expect(metrics.phase2Readiness.reasons).toContain('would_nudge_rate_high');
+    expect(metrics.phase2Readiness.reasons).toContain('fingerprint_churn_high');
+    expect(metrics.phase2Readiness.rates.wouldNudgesPerMemberHour).toBeGreaterThan(
+      metrics.phase2Readiness.thresholds.maxWouldNudgesPerMemberHour
+    );
+    expect(metrics.phase2Readiness.rates.fingerprintChangesPerMemberHour).toBeGreaterThan(
+      metrics.phase2Readiness.thresholds.maxFingerprintChangesPerMemberHour
+    );
+    expect(metrics.recentEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          memberName: noisyMemberName,
+          kind: 'would_nudge',
+        }),
+        expect.objectContaining({
+          memberName: noisyMemberName,
+          kind: 'fingerprint_changed',
+        }),
+      ])
+    );
+    expect(
+      (await readInboxMessages(teamName, noisyMemberName!)).filter(
+        (message) => message.messageKind === 'member_work_sync_nudge'
+      )
+    ).toHaveLength(0);
+    const journalPath = path.join(
+      getTeamsBasePath(),
+      teamName,
+      'members',
+      memberName!,
+      '.member-work-sync',
+      'journal.jsonl'
+    );
+    const journal = await fs.readFile(journalPath, 'utf8');
+    const nudgeOutcomes = journal
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as { event?: string; reason?: string })
+      .filter((event) => event.event === 'nudge_skipped' || event.event === 'nudge_delivered');
+    expect(nudgeOutcomes).toContainEqual(expect.objectContaining({ event: 'nudge_delivered' }));
+    expect(nudgeOutcomes).not.toContainEqual(
+      expect.objectContaining({ reason: 'blocking_metrics' })
+    );
 
-      await relayInboxIfNotAlreadyConsumed(activeService, memberName!);
+    await relayInboxIfNotAlreadyConsumed(activeService, memberName!);
 
-      await waitUntil(async () => {
+    await waitUntil(
+      async () => {
         const fatalRuntimeMessage = await readFatalRuntimeMessage(teamName!);
         if (fatalRuntimeMessage) {
           throw new FatalWaitError(fatalRuntimeMessage);
@@ -1047,190 +1096,193 @@ liveDescribe('Member work sync Codex live e2e', () => {
         await feature!.replayPendingReports([teamName!]);
         const status = await feature!.getStatus({ teamName: teamName!, memberName: memberName! });
         return status.report?.accepted === true && status.report.state === 'still_working';
-      }, 240_000, 2_000, async () =>
+      },
+      240_000,
+      2_000,
+      async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
           teamName: teamName!,
           memberName: memberName!,
           taskId,
         })
+    );
+
+    const finalStatus = await feature.getStatus({ teamName, memberName: memberName! });
+    expect(finalStatus.state).toBe('still_working');
+    expect(finalStatus.report).toMatchObject({
+      accepted: true,
+      state: 'still_working',
+    });
+    await waitUntil(async () => {
+      await feature!.drainRuntimeTurnSettledEvents();
+      const metas = await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
+      return metas.some(
+        ({ meta }) =>
+          (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.provider ===
+            'codex' &&
+          (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.teamName ===
+            teamName
       );
+    }, 60_000);
+    await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
+      delivered: 0,
+    });
+  }, 720_000);
 
-      const finalStatus = await feature.getStatus({ teamName, memberName: memberName! });
-      expect(finalStatus.state).toBe('still_working');
-      expect(finalStatus.report).toMatchObject({
-        accepted: true,
-        state: 'still_working',
-      });
-      await waitUntil(async () => {
-        await feature!.drainRuntimeTurnSettledEvents();
-        const metas = await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
-        return metas.some(
-          ({ meta }) =>
-            (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.provider ===
-              'codex' &&
-            (meta.event as { provider?: unknown; teamName?: unknown } | undefined)?.teamName ===
-              teamName
-        );
-      }, 60_000);
-      await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
-        delivered: 0,
-      });
-    },
-    720_000
-  );
+  it('lets a real Codex teammate complete the task and report caught-up after the board clears', async () => {
+    const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+    expect(orchestratorCli).toBeTruthy();
+    await assertExecutable(orchestratorCli!);
 
-  it(
-    'lets a real Codex teammate complete the task and report caught-up after the board clears',
-    async () => {
-      const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
-      expect(orchestratorCli).toBeTruthy();
-      await assertExecutable(orchestratorCli!);
+    const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
+    const effort = (process.env.MEMBER_WORK_SYNC_CODEX_EFFORT?.trim() || DEFAULT_EFFORT) as
+      | 'low'
+      | 'medium'
+      | 'high'
+      | 'xhigh';
+    const marker = `member-work-sync-codex-complete-${Date.now()}`;
+    teamName = `member-work-sync-codex-complete-${Date.now()}`;
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'README.md'),
+      '# Member work sync Codex complete live e2e\n\nKeep this project intentionally tiny.\n',
+      'utf8'
+    );
 
-      const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
-      const effort = (process.env.MEMBER_WORK_SYNC_CODEX_EFFORT?.trim() ||
-        DEFAULT_EFFORT) as 'low' | 'medium' | 'high' | 'xhigh';
-      const marker = `member-work-sync-codex-complete-${Date.now()}`;
-      teamName = `member-work-sync-codex-complete-${Date.now()}`;
-      const projectPath = path.join(tempDir, 'project');
-      await fs.mkdir(projectPath, { recursive: true });
-      await fs.writeFile(
-        path.join(projectPath, 'README.md'),
-        '# Member work sync Codex complete live e2e\n\nKeep this project intentionally tiny.\n',
-        'utf8'
-      );
+    const [
+      { TeamProvisioningService },
+      { TeamDataService },
+      { TeamConfigReader },
+      { TeamTaskReader },
+      { TeamKanbanManager },
+      { TeamMembersMetaStore },
+      { createCodexAccountFeature },
+      { ProviderConnectionService },
+    ] = await Promise.all([
+      import('../../../../src/main/services/team/TeamProvisioningService'),
+      import('../../../../src/main/services/team/TeamDataService'),
+      import('../../../../src/main/services/team/TeamConfigReader'),
+      import('../../../../src/main/services/team/TeamTaskReader'),
+      import('../../../../src/main/services/team/TeamKanbanManager'),
+      import('../../../../src/main/services/team/TeamMembersMetaStore'),
+      import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
+      import('../../../../src/main/services/runtime/ProviderConnectionService'),
+    ]);
 
-      const [
-        { TeamProvisioningService },
-        { TeamDataService },
-        { TeamConfigReader },
-        { TeamTaskReader },
-        { TeamKanbanManager },
-        { TeamMembersMetaStore },
-        { createCodexAccountFeature },
-        { ProviderConnectionService },
-      ] = await Promise.all([
-        import('../../../../src/main/services/team/TeamProvisioningService'),
-        import('../../../../src/main/services/team/TeamDataService'),
-        import('../../../../src/main/services/team/TeamConfigReader'),
-        import('../../../../src/main/services/team/TeamTaskReader'),
-        import('../../../../src/main/services/team/TeamKanbanManager'),
-        import('../../../../src/main/services/team/TeamMembersMetaStore'),
-        import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
-        import('../../../../src/main/services/runtime/ProviderConnectionService'),
-      ]);
-
-      codexAccountFeature = createCodexAccountFeature({
-        logger: {
-          info: () => undefined,
-          warn: () => undefined,
-          error: () => undefined,
-        },
-        configManager: {
-          getConfig: () => ({
-            providerConnections: {
-              codex: {
-                preferredAuthMode: hasLiveCodexApiKey() ? 'auto' : ('chatgpt' as const),
-              },
+    codexAccountFeature = createCodexAccountFeature({
+      logger: {
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      },
+      configManager: {
+        getConfig: () => ({
+          providerConnections: {
+            codex: {
+              preferredAuthMode: hasLiveCodexApiKey() ? 'auto' : ('chatgpt' as const),
             },
-          }),
-        },
-      });
-      providerConnectionService = ProviderConnectionService.getInstance();
-      providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+          },
+        }),
+      },
+    });
+    providerConnectionService = ProviderConnectionService.getInstance();
+    providerConnectionService.setCodexAccountFeature(codexAccountFeature);
 
-      svc = new TeamProvisioningService();
-      const activeService = svc;
-      const teamDataService = new TeamDataService();
-      const taskReader = new TeamTaskReader();
-      feature = createMemberWorkSyncFeature({
-        teamsBasePath: getTeamsBasePath(),
-        configReader: new TeamConfigReader(),
-        taskReader,
-        kanbanManager: new TeamKanbanManager(),
-        membersMetaStore: new TeamMembersMetaStore(),
-        isTeamActive: (name) =>
-          activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
-        listLifecycleActiveTeamNames: async () => [teamName!],
-        queueQuietWindowMs: 1,
-        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
-        nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
-      });
-      activeService.setTeamChangeEmitter((event: TeamChangeEvent) =>
-        feature!.noteTeamChange(event)
-      );
-      activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
-        feature!.buildRuntimeTurnSettledEnvironment(input)
-      );
-      controlServer = await startMemberWorkSyncControlServer(feature);
-      process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
-      activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
-      await fs.writeFile(
-        path.join(tempClaudeRoot, 'team-control-api.json'),
-        JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
-        'utf8'
-      );
+    svc = new TeamProvisioningService();
+    const activeService = svc;
+    const teamDataService = new TeamDataService();
+    const taskReader = new TeamTaskReader();
+    feature = createMemberWorkSyncFeature({
+      teamsBasePath: getTeamsBasePath(),
+      configReader: new TeamConfigReader(),
+      taskReader,
+      kanbanManager: new TeamKanbanManager(),
+      membersMetaStore: new TeamMembersMetaStore(),
+      isTeamActive: (name) =>
+        activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
+      listLifecycleActiveTeamNames: async () => [teamName!],
+      queueQuietWindowMs: 1,
+      resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+      nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
+    });
+    activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
+    activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
+      feature!.buildRuntimeTurnSettledEnvironment(input)
+    );
+    controlServer = await startMemberWorkSyncControlServer(feature);
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+    await fs.writeFile(
+      path.join(tempClaudeRoot, 'team-control-api.json'),
+      JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
+      'utf8'
+    );
 
-      const progressEvents: TeamProvisioningProgress[] = [];
-      await activeService.createTeam(
-        {
-          teamName,
-          cwd: projectPath,
-          providerId: 'codex',
-          providerBackendId: 'codex-native',
-          model,
-          effort,
-          fastMode: 'off',
-          skipPermissions: true,
-          prompt: [
-            'Keep launch work minimal.',
-            'If you receive a task, follow task instructions exactly.',
-            'Use member_work_sync_status and member_work_sync_report whenever the task asks you to synchronize work state.',
-          ].join(' '),
-          members: [],
-        },
-        (progress) => {
-          progressEvents.push(progress);
-        }
-      );
-
-      await waitUntil(async () => {
-        const last = progressEvents.at(-1);
-        if (last?.state === 'failed') {
-          throw new Error(formatProgressDump(progressEvents));
-        }
-        return last?.state === 'ready';
-      }, 240_000);
-
-      const config = await new TeamConfigReader().getConfig(teamName);
-      const memberName =
-        config?.members?.find((member) => member.agentType === 'team-lead')?.name?.trim() ||
-        config?.members?.find((member) => member.role?.toLowerCase().includes('lead'))?.name?.trim() ||
-        config?.members?.[0]?.name?.trim() ||
-        'team-lead';
-      await seedShadowReadyMetrics({ teamName, memberName });
-
-      const task = await teamDataService.createTask(teamName, {
-        subject: `Member work sync live completion ${marker}`,
-        owner: memberName,
-        startImmediately: true,
+    const progressEvents: TeamProvisioningProgress[] = [];
+    await activeService.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model,
+        effort,
+        fastMode: 'off',
+        skipPermissions: true,
         prompt: [
-          `This is a live member-work-sync completion validation task. Marker: ${marker}.`,
-          'Do not edit files.',
-          'Call task_start for this task.',
-          `Then call member_work_sync_status with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
-          `Then call member_work_sync_report with teamName "${teamName}", memberName "${memberName}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken returned by member_work_sync_status, and the current task id if available.`,
-          'After that, call task_complete for this task.',
-          `Then call member_work_sync_status again with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
-          'If the returned agenda has no items, call member_work_sync_report with state "caught_up", no taskIds, and the exact agendaFingerprint/reportToken returned by that second status call.',
-          `Only after the caught_up report is accepted, add one task comment containing exactly: ${marker}:completed-and-caught-up.`,
-          'After that stop. Do not send a user-visible message.',
-        ].join('\n'),
-      });
-      feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
-      await relayInboxIfNotAlreadyConsumed(activeService, memberName);
+          'Keep launch work minimal.',
+          'If you receive a task, follow task instructions exactly.',
+          'Use member_work_sync_status and member_work_sync_report whenever the task asks you to synchronize work state.',
+        ].join(' '),
+        members: [],
+      },
+      (progress) => {
+        progressEvents.push(progress);
+      }
+    );
 
-      await waitUntil(async () => {
+    await waitUntil(async () => {
+      const last = progressEvents.at(-1);
+      if (last?.state === 'failed') {
+        throw new Error(formatProgressDump(progressEvents));
+      }
+      return last?.state === 'ready';
+    }, 240_000);
+
+    const config = await new TeamConfigReader().getConfig(teamName);
+    const memberName =
+      config?.members?.find((member) => member.agentType === 'team-lead')?.name?.trim() ||
+      config?.members
+        ?.find((member) => member.role?.toLowerCase().includes('lead'))
+        ?.name?.trim() ||
+      config?.members?.[0]?.name?.trim() ||
+      'team-lead';
+    await seedShadowReadyMetrics({ teamName, memberName });
+
+    const task = await teamDataService.createTask(teamName, {
+      subject: `Member work sync live completion ${marker}`,
+      owner: memberName,
+      startImmediately: true,
+      prompt: [
+        `This is a live member-work-sync completion validation task. Marker: ${marker}.`,
+        'Do not edit files.',
+        'Call task_start for this task.',
+        `Then call member_work_sync_status with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
+        `Then call member_work_sync_report with teamName "${teamName}", memberName "${memberName}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken returned by member_work_sync_status, and the current task id if available.`,
+        'After that, call task_complete for this task.',
+        `Then call member_work_sync_status again with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
+        'If the returned agenda has no items, call member_work_sync_report with state "caught_up", no taskIds, and the exact agendaFingerprint/reportToken returned by that second status call.',
+        `Only after the caught_up report is accepted, add one task comment containing exactly: ${marker}:completed-and-caught-up.`,
+        'After that stop. Do not send a user-visible message.',
+      ].join('\n'),
+    });
+    feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
+    await relayInboxIfNotAlreadyConsumed(activeService, memberName);
+
+    await waitUntil(
+      async () => {
         const fatalRuntimeMessage = await readFatalRuntimeMessage(teamName!);
         if (fatalRuntimeMessage) {
           throw new FatalWaitError(fatalRuntimeMessage);
@@ -1247,42 +1299,43 @@ liveDescribe('Member work sync Codex live e2e', () => {
         );
         return Boolean(
           currentTask?.status === 'completed' &&
-            hasCompletionMarker &&
-            status.state === 'caught_up' &&
-            status.agenda.items.length === 0 &&
-            status.report?.accepted === true &&
-            status.report.state === 'caught_up'
+          hasCompletionMarker &&
+          status.state === 'caught_up' &&
+          status.agenda.items.length === 0 &&
+          status.report?.accepted === true &&
+          status.report.state === 'caught_up'
         );
-      }, 300_000, 2_000, async () =>
+      },
+      300_000,
+      2_000,
+      async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
           teamName: teamName!,
           memberName,
           taskId: task.id,
         })
-      );
+    );
 
-      const [tasks, finalStatus, metrics] = await Promise.all([
-        taskReader.getTasks(teamName),
-        feature.getStatus({ teamName, memberName }),
-        feature.getMetrics({ teamName }),
-      ]);
-      const completedTask = tasks.find((candidate) => candidate.id === task.id);
-      expect(completedTask?.status).toBe('completed');
-      expect(finalStatus.state).toBe('caught_up');
-      expect(finalStatus.agenda.items).toEqual([]);
-      expect(finalStatus.report).toMatchObject({
-        accepted: true,
-        state: 'caught_up',
-      });
-      expect(metrics.recentEvents.some((event) => event.kind === 'report_accepted')).toBe(true);
-      await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
-        claimed: 0,
-        delivered: 0,
-      });
-    },
-    480_000
-  );
+    const [tasks, finalStatus, metrics] = await Promise.all([
+      taskReader.getTasks(teamName),
+      feature.getStatus({ teamName, memberName }),
+      feature.getMetrics({ teamName }),
+    ]);
+    const completedTask = tasks.find((candidate) => candidate.id === task.id);
+    expect(completedTask?.status).toBe('completed');
+    expect(finalStatus.state).toBe('caught_up');
+    expect(finalStatus.agenda.items).toEqual([]);
+    expect(finalStatus.report).toMatchObject({
+      accepted: true,
+      state: 'caught_up',
+    });
+    expect(metrics.recentEvents.some((event) => event.kind === 'report_accepted')).toBe(true);
+    await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
+      claimed: 0,
+      delivered: 0,
+    });
+  }, 480_000);
 });
 
 async function readFatalRuntimeMessage(teamName: string): Promise<string | null> {
@@ -1592,8 +1645,7 @@ async function seedTeamWideSelfNoisyMetrics(input: {
         members,
         recentEvents: [
           ...Array.from({ length: 24 }, (_, index) => {
-            const memberName =
-              index % 2 === 0 ? input.targetMemberName : input.noisyMemberName;
+            const memberName = index % 2 === 0 ? input.targetMemberName : input.noisyMemberName;
             return {
               id: `cross-member-status-${index}`,
               teamName: input.teamName,
@@ -1640,7 +1692,10 @@ async function seedTeamWideSelfNoisyMetrics(input: {
   );
 }
 
-async function readInboxMessages(teamName: string, memberName: string): Promise<
+async function readInboxMessages(
+  teamName: string,
+  memberName: string
+): Promise<
   Array<{
     messageId?: string;
     messageKind?: string;
@@ -1655,8 +1710,9 @@ async function readInboxMessages(teamName: string, memberName: string): Promise<
     return [];
   }
   return parsed
-    .filter((message): message is Record<string, unknown> =>
-      Boolean(message) && typeof message === 'object'
+    .filter(
+      (message): message is Record<string, unknown> =>
+        Boolean(message) && typeof message === 'object'
     )
     .flatMap((message) => {
       const text = typeof message.text === 'string' ? message.text : '';
@@ -1666,9 +1722,7 @@ async function readInboxMessages(teamName: string, memberName: string): Promise<
       return [
         {
           ...(typeof message.messageId === 'string' ? { messageId: message.messageId } : {}),
-          ...(typeof message.messageKind === 'string'
-            ? { messageKind: message.messageKind }
-            : {}),
+          ...(typeof message.messageKind === 'string' ? { messageKind: message.messageKind } : {}),
           text,
           ...(typeof message.read === 'boolean' ? { read: message.read } : {}),
         },

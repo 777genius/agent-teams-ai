@@ -44,9 +44,7 @@ export function OrgOverviewHud({
               <article
                 key={summary.organizationId}
                 data-organization-overview-card={summary.organizationId}
-                role="button"
-                tabIndex={0}
-                className={`pointer-events-auto relative w-[238px] cursor-pointer overflow-hidden rounded-xl border bg-[rgba(7,14,29,0.97)] shadow-2xl shadow-black/35 backdrop-blur-xl transition-[opacity,transform,filter] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 ${
+                className={`pointer-events-auto relative w-[238px] cursor-pointer overflow-hidden rounded-xl border bg-[rgba(7,14,29,0.97)] shadow-2xl shadow-black/35 backdrop-blur-xl transition-[opacity,transform,filter] duration-200 ${
                   isDimmed ? 'opacity-60 saturate-50' : 'opacity-100 hover:scale-[1.015]'
                 }`}
                 style={{
@@ -55,28 +53,22 @@ export function OrgOverviewHud({
                 }}
                 onMouseEnter={() => setHoveredRootNodeId(summary.rootNodeId)}
                 onMouseLeave={() => setHoveredRootNodeId(null)}
-                onClick={() => onSelectNode(summary.rootNodeId, true)}
-                onKeyDown={(event) => {
-                  if (
-                    event.target === event.currentTarget &&
-                    (event.key === 'Enter' || event.key === ' ')
-                  ) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onSelectNode(summary.rootNodeId, true);
-                  }
-                }}
               >
-                <header className="flex items-start justify-between gap-3 border-b border-white/[0.07] px-4 pb-2.5 pt-3">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      data-organization-overview-select={summary.organizationId}
+                      aria-label={summary.name}
+                      className="absolute inset-0 z-10 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-300/70"
+                      onClick={() => onSelectNode(summary.rootNodeId, true)}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{summary.name}</TooltipContent>
+                </Tooltip>
+                <header className="pointer-events-none relative z-20 flex items-start justify-between gap-3 border-b border-white/[0.07] px-4 pb-2.5 pt-3">
                   <div className="min-w-0">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <h3 className="truncate text-sm font-semibold text-slate-50">
-                          {summary.name}
-                        </h3>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">{summary.name}</TooltipContent>
-                    </Tooltip>
+                    <h3 className="truncate text-sm font-semibold text-slate-50">{summary.name}</h3>
                     <p className="mt-0.5 text-[10px] text-slate-400">
                       {t('organizations.graph.overviewCard.summary', {
                         groupCount: summary.groupCount,
@@ -87,7 +79,7 @@ export function OrgOverviewHud({
                   </div>
                   <ChevronRight size={15} className="mt-0.5 shrink-0 text-sky-200/70" />
                 </header>
-                <div className="px-4 py-2.5">
+                <div className="pointer-events-none relative z-20 px-4 py-2.5">
                   <div className="flex items-center justify-between text-[10px]">
                     <span className="font-medium text-emerald-300">
                       {t('organizations.graph.overviewCard.activeTasks', {
@@ -123,7 +115,7 @@ export function OrgOverviewHud({
                         <TooltipTrigger asChild>
                           <button
                             type="button"
-                            className="inline-flex max-w-[98px] items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.035] px-1.5 py-0.5 text-[9px] text-slate-300 transition-colors hover:border-sky-300/30 hover:bg-sky-400/10"
+                            className="pointer-events-auto inline-flex max-w-[98px] items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.035] px-1.5 py-0.5 text-[9px] text-slate-300 transition-colors hover:border-sky-300/30 hover:bg-sky-400/10"
                             onClick={(event) => {
                               event.stopPropagation();
                               onSelectNode(group.nodeId, true);

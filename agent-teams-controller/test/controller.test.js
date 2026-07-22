@@ -38,6 +38,18 @@ describe('agent-teams-controller API', () => {
     return dir;
   }
 
+  function readTaskFile(claudeDir, taskId) {
+    return JSON.parse(
+      fs.readFileSync(path.join(claudeDir, 'tasks', 'my-team', `${taskId}.json`), 'utf8')
+    );
+  }
+
+  function readKanbanFile(claudeDir) {
+    return JSON.parse(
+      fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'kanban-state.json'), 'utf8')
+    );
+  }
+
   async function startControlServer(handler) {
     const server = http.createServer(async (req, res) => {
       const chunks = [];
@@ -187,6 +199,261 @@ controller.messages.sendMessage({
     expect(controller.processes.listProcesses()).toHaveLength(1);
     const stopped = controller.processes.stopProcess({ pid: process.pid });
     expect(typeof stopped.stoppedAt).toBe('string');
+  });
+
+  it('routes task and review lifecycle through taskBoard without changing persisted state', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    const task = controller.taskBoard.createTask({ subject: 'Facade task', owner: 'bob' });
+    expect(task.status).toBe('pending');
+    expect(task.reviewState).toBe('none');
+
+    expect(controller.taskBoard.startTask(task.id, 'bob').status).toBe('in_progress');
+    expect(controller.taskBoard.completeTask(task.id, 'bob').status).toBe('completed');
+    expect(
+      controller.taskBoard.requestReview(task.id, { from: 'alice', reviewer: 'alice' }).reviewState
+    ).toBe('review');
+    expect(controller.taskBoard.startReview(task.id, { from: 'alice' }).column).toBe('review');
+
+    const approved = controller.taskBoard.approveReview(task.id, {
+      from: 'alice',
+      note: 'Looks good',
+      'notify-owner': true,
+    });
+
+    expect(approved.status).toBe('completed');
+    expect(approved.reviewState).toBe('approved');
+    expect(readTaskFile(claudeDir, task.id).reviewState).toBe('approved');
+    expect(readKanbanFile(claudeDir).tasks[task.id].column).toBe('approved');
+    expect(() => controller.taskBoard.clearKanban(task.id)).toThrow('reviewState=approved');
+
+    const ownerInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json');
+    const ownerInbox = JSON.parse(fs.readFileSync(ownerInboxPath, 'utf8'));
+    expect(ownerInbox.at(-1).summary).toContain('Approved');
+
+    const reopened = controller.taskBoard.setTaskStatus(task.id, 'pending', 'alice');
+    expect(reopened.status).toBe('pending');
+    expect(reopened.reviewState).toBe('none');
+    expect(readKanbanFile(claudeDir).tasks[task.id]).toBeUndefined();
+  });
+
+  it('reconciles command task provenance and repairs missing relationship backlinks', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const dependency = controller.taskBoard.createTask({ subject: 'Dependency' });
+    const related = controller.taskBoard.createTask({ subject: 'Related' });
+    const commandId = '11111111-1111-4111-8111-111111111111';
+    const input = {
+      id: commandId,
+      subject: 'Command task',
+      blockedBy: [dependency.id],
+      related: [related.id],
+      createdBy: 'user',
+      creationCommand: {
+        namespace: 'task-board',
+        scopeKey: 'my-team',
+        operation: 'task.create',
+        commandId,
+        payloadHash: 'sha256:payload',
+      },
+    };
+    controller.taskBoard.createTask(input);
+
+    const dependencyRow = readTaskFile(claudeDir, dependency.id);
+    dependencyRow.blocks = 'legacy-block-value';
+    dependencyRow.status = 'deleted';
+    dependencyRow.deletedAt = new Date().toISOString();
+    fs.writeFileSync(
+      path.join(claudeDir, 'tasks', 'my-team', `${dependency.id}.json`),
+      JSON.stringify(dependencyRow, null, 2)
+    );
+    const relatedRow = readTaskFile(claudeDir, related.id);
+    relatedRow.related = 'legacy-related-value';
+    fs.writeFileSync(
+      path.join(claudeDir, 'tasks', 'my-team', `${related.id}.json`),
+      JSON.stringify(relatedRow, null, 2)
+    );
+
+    const reconciled = controller.taskBoard.reconcileTaskCreation(input);
+
+    expect(reconciled.creationCommand).toEqual(input.creationCommand);
+    expect(readTaskFile(claudeDir, dependency.id).blocks).toEqual([commandId]);
+    expect(readTaskFile(claudeDir, related.id).related).toEqual([commandId]);
+    expect(() =>
+      controller.taskBoard.reconcileTaskCreation({
+        ...input,
+        creationCommand: { ...input.creationCommand, payloadHash: 'sha256:other' },
+      })
+    ).toThrow(`Task creation command conflict: ${commandId}`);
+  });
+
+  it('adopts matching legacy command tasks before completing reconciliation', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const commandId = '22222222-2222-4222-8222-222222222222';
+    controller.taskBoard.createTask({
+      id: commandId,
+      subject: 'Legacy command task',
+      description: 'Original description',
+      createdBy: 'user',
+    });
+    const legacyRow = readTaskFile(claudeDir, commandId);
+    legacyRow.subject = 'Edited subject after the original create';
+    legacyRow.description = 'Edited after the original create';
+    legacyRow.owner = 'new-owner';
+    fs.writeFileSync(
+      path.join(claudeDir, 'tasks', 'my-team', `${commandId}.json`),
+      JSON.stringify(legacyRow, null, 2)
+    );
+    const input = {
+      id: commandId,
+      subject: 'Legacy command task',
+      description: 'Original description',
+      createdBy: 'user',
+      creationCommand: {
+        namespace: 'task-board',
+        scopeKey: 'my-team',
+        operation: 'task.create',
+        commandId,
+        payloadHash: 'sha256:legacy',
+      },
+    };
+
+    const reconciled = controller.taskBoard.reconcileTaskCreation(input);
+
+    expect(reconciled.creationCommand).toEqual(input.creationCommand);
+    expect(reconciled.subject).toBe('Edited subject after the original create');
+    expect(readTaskFile(claudeDir, commandId).creationCommand).toEqual(input.creationCommand);
+  });
+
+  it('rejects legacy command adoption when the stable creator does not match', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const commandId = '55555555-5555-4555-8555-555555555555';
+    controller.taskBoard.createTask({
+      id: commandId,
+      subject: 'Different legacy command',
+      createdBy: 'agent',
+    });
+
+    expect(() =>
+      controller.taskBoard.reconcileTaskCreation({
+        id: commandId,
+        subject: 'Requested command',
+        createdBy: 'user',
+        creationCommand: {
+          namespace: 'task-board',
+          scopeKey: 'my-team',
+          operation: 'task.create',
+          commandId,
+          payloadHash: 'sha256:legacy',
+        },
+      })
+    ).toThrow(`Task creation command conflict: legacy task ${commandId} does not match payload`);
+  });
+
+  it('rejects mismatched creation provenance before writing a task row', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const taskId = '33333333-3333-4333-8333-333333333333';
+
+    expect(() =>
+      controller.taskBoard.createTask({
+        id: taskId,
+        subject: 'Invalid provenance',
+        creationCommand: {
+          namespace: 'task-board',
+          scopeKey: 'my-team',
+          operation: 'task.create',
+          commandId: '44444444-4444-4444-8444-444444444444',
+          payloadHash: 'sha256:payload',
+        },
+      })
+    ).toThrow('Task creation command conflict: command id does not match task id');
+
+    expect(() =>
+      controller.taskBoard.createTask({
+        id: taskId,
+        subject: 'Wrong scope',
+        creationCommand: {
+          namespace: 'task-board',
+          scopeKey: 'another-team',
+          operation: 'task.create',
+          commandId: taskId,
+          payloadHash: 'sha256:payload',
+        },
+      })
+    ).toThrow('Task creation command conflict: scope does not match team');
+    expect(controller.taskBoard.listTasks()).toHaveLength(0);
+  });
+
+  it('keeps request-changes and restart semantics behind taskBoard', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    const task = controller.taskBoard.createTask({ subject: 'Needs review', owner: 'bob' });
+    controller.taskBoard.startTask(task.id, 'bob');
+    controller.taskBoard.completeTask(task.id, 'bob');
+    controller.taskBoard.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    controller.taskBoard.startReview(task.id, { from: 'alice' });
+
+    const changed = controller.taskBoard.requestChanges(task.id, {
+      from: 'alice',
+      comment: 'Fix the edge case',
+    });
+
+    expect(changed.status).toBe('pending');
+    expect(changed.reviewState).toBe('needsFix');
+    expect(readKanbanFile(claudeDir).tasks[task.id]).toBeUndefined();
+    expect(changed.comments.at(-1).type).toBe('review_request');
+
+    const ownerInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json');
+    const ownerInbox = JSON.parse(fs.readFileSync(ownerInboxPath, 'utf8'));
+    expect(ownerInbox.at(-1).summary).toContain('Fix request');
+
+    const restarted = controller.taskBoard.startTask(task.id, 'bob');
+    expect(restarted.status).toBe('in_progress');
+    expect(restarted.reviewState).toBe('none');
+    expect(readKanbanFile(claudeDir).tasks[task.id]).toBeUndefined();
+  });
+
+  it('keeps delete, restore, and dependency unblock idempotency behind taskBoard', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    const dependency = controller.taskBoard.createTask({ subject: 'Dependency', owner: 'alice' });
+    const blocked = controller.taskBoard.createTask({
+      subject: 'Blocked implementation',
+      owner: 'bob',
+      'blocked-by': dependency.id,
+    });
+
+    controller.taskBoard.startTask(dependency.id, 'alice');
+    controller.taskBoard.completeTask(dependency.id, 'alice');
+    controller.taskBoard.completeTask(dependency.id, 'alice');
+
+    const blockedAfterDependency = controller.taskBoard.getTask(blocked.id);
+    const unblockCommentId = `dep-resolved-${dependency.id}-${blocked.id}`;
+    expect(
+      blockedAfterDependency.comments.filter((entry) => entry.id === unblockCommentId)
+    ).toHaveLength(1);
+
+    controller.taskBoard.startTask(blocked.id, 'bob');
+    controller.taskBoard.completeTask(blocked.id, 'bob');
+    controller.taskBoard.requestReview(blocked.id, { from: 'alice', reviewer: 'alice' });
+    controller.taskBoard.approveReview(blocked.id, { from: 'alice' });
+    expect(readKanbanFile(claudeDir).tasks[blocked.id].column).toBe('approved');
+
+    const deleted = controller.taskBoard.softDeleteTask(blocked.id, 'alice');
+    expect(deleted.status).toBe('deleted');
+    expect(deleted.reviewState).toBe('none');
+    expect(readKanbanFile(claudeDir).tasks[blocked.id]).toBeUndefined();
+
+    const restored = controller.taskBoard.restoreTask(blocked.id, 'alice');
+    expect(restored.status).toBe('pending');
+    expect(restored.reviewState).toBe('none');
+    expect(readKanbanFile(claudeDir).tasks[blocked.id]).toBeUndefined();
   });
 
   it('builds member briefing from team config language and known member metadata', async () => {
@@ -618,6 +885,12 @@ controller.messages.sendMessage({
     expect(ownerInbox).toHaveLength(4);
     expect(ownerInbox[0].summary).toContain(`#${pendingTask.displayId}`);
     expect(ownerInbox[0].text).toContain('task_get');
+    expect(ownerInbox[0].text).toContain(
+      'Assignment notifications can become stale after a reassignment or completion.'
+    );
+    expect(ownerInbox[0].text).toContain(
+      'or task.status is completed or deleted, do not start or reopen the task'
+    );
     expect(ownerInbox[0].text).toContain('task_start');
     expect(ownerInbox[0].text).toContain('task_add_comment');
     expect(ownerInbox[0].text).toContain(
@@ -659,6 +932,42 @@ controller.messages.sendMessage({
     expect(briefing).not.toContain('Completed task description should stay out of compact rows');
     expect(briefing).toContain(`#${approvedTask.displayId}`);
     expect(briefing).toContain('Counters: actionable=4, awareness=3');
+  });
+
+  it('revokes the previous owner notification when a live task is reassigned', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    const task = controller.tasks.createTask({
+      subject: 'Move before work starts',
+      owner: 'alice',
+      createdBy: 'user',
+    });
+    controller.tasks.setTaskOwner(task.id, 'bob', 'user');
+
+    const aliceInbox = JSON.parse(
+      fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json'), 'utf8')
+    );
+    const bobInbox = JSON.parse(
+      fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json'), 'utf8')
+    );
+
+    expect(aliceInbox).toHaveLength(2);
+    expect(aliceInbox[0].text).toContain('New task assigned to you:');
+    expect(aliceInbox[1]).toMatchObject({
+      from: 'user',
+      summary: `Task #${task.displayId} reassigned away from you`,
+      source: 'system_notification',
+    });
+    expect(aliceInbox[1].text).toContain('was reassigned away from you to @bob');
+    expect(aliceInbox[1].text).toContain('This supersedes any earlier assignment notification');
+    expect(aliceInbox[1].text).toContain('Stop work on it');
+
+    expect(bobInbox).toHaveLength(1);
+    expect(bobInbox[0].text).toContain('New task assigned to you:');
+    expect(bobInbox[0].text).toContain(
+      'Assignment notifications can become stale after a reassignment or completion.'
+    );
   });
 
   it('treats stale legacy terminal reviewState on pending tasks as owner-ready work', async () => {
@@ -766,6 +1075,54 @@ controller.messages.sendMessage({
     expect(second.staleKanbanEntriesRemoved).toBe(0);
     expect(second.staleColumnOrderRefsRemoved).toBe(0);
     expect(second.linkedCommentsCreated).toBe(0);
+  });
+
+  it('holds the board lock while reconcileArtifacts syncs linked comments', () => {
+    const taskStore = require('../src/internal/taskStore.js');
+    const { getTeamBoardLockContext } = require('../src/internal/boardLock.js');
+
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({ subject: 'Locked reconcile', owner: 'bob' });
+    const paths = { teamDir: path.join(claudeDir, 'teams', 'my-team') };
+
+    const inboxDir = path.join(claudeDir, 'teams', 'my-team', 'inboxes');
+    fs.mkdirSync(inboxDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(inboxDir, 'bob.json'),
+      JSON.stringify(
+        [
+          {
+            from: 'alice',
+            to: 'bob',
+            summary: `Please revisit #${task.displayId}`,
+            messageId: 'lock-m-1',
+            timestamp: '2026-02-23T10:00:00.000Z',
+            read: false,
+            text: 'Sync this comment under the lock.',
+          },
+        ],
+        null,
+        2
+      )
+    );
+
+    const original = taskStore.addTaskComment;
+    let lockHeldDuringWrite = null;
+    const spy = vi.spyOn(taskStore, 'addTaskComment').mockImplementation((...args) => {
+      // The write must run under the board lock so a concurrent cross-process
+      // mutation cannot be clobbered by reconcile's read-modify-write.
+      lockHeldDuringWrite = getTeamBoardLockContext(paths) !== undefined;
+      return original(...args);
+    });
+
+    try {
+      const result = controller.maintenance.reconcileArtifacts({ reason: 'manual' });
+      expect(result.linkedCommentsCreated).toBe(1);
+      expect(lockHeldDuringWrite).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('tracks lifecycle history and intervals without duplicate same-status transitions', () => {
@@ -1741,6 +2098,129 @@ controller.messages.sendMessage({
     expect(comments.map((comment) => comment.author)).toEqual(['user', 'bob']);
   });
 
+  it('rejects stale owner lifecycle and ownership writes after reassignment', () => {
+    const claudeDir = makeClaudeDir();
+    fs.writeFileSync(
+      path.join(claudeDir, 'teams', 'my-team', 'config.json'),
+      JSON.stringify(
+        {
+          name: 'my-team',
+          leadSessionId: 'lead-session-1',
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice', role: 'developer' },
+            { name: 'bob', role: 'developer' },
+          ],
+        },
+        null,
+        2
+      )
+    );
+
+    const appController = createController({ teamName: 'my-team', claudeDir });
+    const agentController = createController({
+      teamName: 'my-team',
+      claudeDir,
+      allowUserMessageSender: false,
+    });
+    const task = appController.taskBoard.createTask({
+      subject: 'Ownership handoff',
+      owner: 'alice',
+      notifyOwner: false,
+    });
+
+    agentController.taskBoard.setTaskOwner(task.id, 'bob', 'team-lead');
+
+    expect(() => agentController.taskBoard.startTask(task.id, 'alice')).toThrow(
+      `Task #${task.displayId} is owned by bob; alice cannot start it`
+    );
+    expect(() => agentController.taskBoard.completeTask(task.id, 'alice')).toThrow(
+      `Task #${task.displayId} is owned by bob; alice cannot set its status to completed`
+    );
+    expect(() => agentController.taskBoard.setTaskStatus(task.id, 'in_progress', 'alice')).toThrow(
+      `Task #${task.displayId} is owned by bob`
+    );
+    expect(() => agentController.taskBoard.setTaskStatus(task.id, 'pending', 'alice')).toThrow(
+      `Task #${task.displayId} is owned by bob`
+    );
+    expect(() => agentController.taskBoard.softDeleteTask(task.id, 'alice')).toThrow(
+      `Task #${task.displayId} is owned by bob`
+    );
+    expect(() => agentController.taskBoard.setTaskOwner(task.id, 'alice', 'alice')).toThrow(
+      `Task #${task.displayId} is owned by bob; alice cannot reassign it`
+    );
+
+    const unchanged = appController.taskBoard.getTask(task.id);
+    expect(unchanged).toMatchObject({ owner: 'bob', status: 'pending' });
+    expect(unchanged.historyEvents.at(-1)).toMatchObject({
+      type: 'owner_changed',
+      from: 'alice',
+      to: 'bob',
+      actor: 'team-lead',
+    });
+
+    expect(agentController.taskBoard.startTask(task.id, 'bob').status).toBe('in_progress');
+    expect(agentController.taskBoard.completeTask(task.id, 'bob').status).toBe('completed');
+  });
+
+  it('keeps lead administration explicit while preventing collaborator task theft', () => {
+    const claudeDir = makeClaudeDir();
+    fs.writeFileSync(
+      path.join(claudeDir, 'teams', 'my-team', 'config.json'),
+      JSON.stringify(
+        {
+          name: 'my-team',
+          leadSessionId: 'lead-session-1',
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice', role: 'developer' },
+            { name: 'bob', role: 'developer' },
+          ],
+        },
+        null,
+        2
+      )
+    );
+
+    const appController = createController({ teamName: 'my-team', claudeDir });
+    const agentController = createController({
+      teamName: 'my-team',
+      claudeDir,
+      allowUserMessageSender: false,
+    });
+    const owned = appController.taskBoard.createTask({
+      subject: 'Lead-managed task',
+      owner: 'bob',
+      notifyOwner: false,
+    });
+    const unassigned = appController.taskBoard.createTask({
+      subject: 'Self-claim task',
+      notifyOwner: false,
+    });
+
+    expect(() => agentController.taskBoard.startTask(owned.id)).toThrow(
+      'start it requires actor to be your configured teammate name'
+    );
+    expect(() => agentController.taskBoard.setTaskOwner(owned.id, 'alice', 'alice')).toThrow(
+      `Task #${owned.displayId} is owned by bob`
+    );
+    expect(() => agentController.taskBoard.setTaskOwner(unassigned.id, 'bob', 'alice')).toThrow(
+      `Task #${unassigned.displayId} is unassigned; alice may only assign it to themselves`
+    );
+
+    expect(agentController.taskBoard.setTaskOwner(unassigned.id, 'alice', 'alice').owner).toBe(
+      'alice'
+    );
+    expect(agentController.taskBoard.setTaskStatus(owned.id, 'deleted', 'team-lead').status).toBe(
+      'deleted'
+    );
+    expect(agentController.taskBoard.restoreTask(owned.id, 'team-lead').status).toBe('pending');
+    expect(agentController.taskBoard.setTaskOwner(owned.id, 'team-lead', 'team-lead').owner).toBe(
+      'team-lead'
+    );
+    expect(agentController.taskBoard.startTask(owned.id, 'team-lead').status).toBe('in_progress');
+  });
+
   it('keeps internal dependency comments when agent-facing task_complete unblocks a task', () => {
     const claudeDir = makeClaudeDir();
     const appController = createController({ teamName: 'my-team', claudeDir });
@@ -2286,6 +2766,114 @@ controller.messages.sendMessage({
     expect(leadBriefing).toContain('Board anomalies:');
     expect(leadBriefing).toContain('unreadable_task (broken)');
     expect(leadBriefing).toContain('anomalies=1');
+  });
+
+  it('keeps a mismatched legacy task listable, gettable, and mutable by its file id', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.taskBoard.createTask({ subject: 'Legacy mismatch' });
+    const taskPath = path.join(claudeDir, 'tasks', 'my-team', `${task.id}.json`);
+    const foreignTaskId = '11111111-1111-4111-8111-111111111111';
+    const persistedTask = readTaskFile(claudeDir, task.id);
+    persistedTask.id = foreignTaskId;
+    fs.writeFileSync(taskPath, JSON.stringify(persistedTask, null, 2), 'utf8');
+
+    expect(controller.taskBoard.listTasks().map((listedTask) => listedTask.id)).toContain(task.id);
+    expect(controller.taskBoard.getTask(task.id)).toMatchObject({
+      id: task.id,
+      subject: 'Legacy mismatch',
+    });
+    expect(() => controller.taskBoard.getTask(foreignTaskId)).toThrow(
+      `Non-canonical task reference "${foreignTaskId}"`
+    );
+
+    const updated = controller.taskBoard.updateTaskFields(task.id, {
+      description: 'Updated without forking the row',
+    });
+    expect(updated).toMatchObject({
+      id: task.id,
+      description: 'Updated without forking the row',
+    });
+    expect(controller.taskBoard.startTask(task.id, 'bob')).toMatchObject({
+      id: task.id,
+      status: 'in_progress',
+    });
+
+    expect(readTaskFile(claudeDir, task.id)).toMatchObject({
+      id: foreignTaskId,
+      description: 'Updated without forking the row',
+      status: 'in_progress',
+    });
+    expect(fs.existsSync(path.join(claudeDir, 'tasks', 'my-team', `${foreignTaskId}.json`))).toBe(
+      false
+    );
+    expect(() =>
+      controller.taskBoard.createTask({ id: foreignTaskId, subject: 'Duplicate identity' })
+    ).toThrow(`Task id collision: "${foreignTaskId}"`);
+
+    const leadBriefing = await controller.taskBoard.leadBriefing();
+    expect(leadBriefing).toContain('Board anomalies:');
+    expect(leadBriefing).toContain(`task_id_mismatch (${task.id})`);
+    expect(leadBriefing).toContain(`contains id "${foreignTaskId}"`);
+    expect(leadBriefing).toContain(`use canonical task id "${task.id}"`);
+  });
+
+  it('fails closed when a mismatched payload id collides with another task file', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const mismatched = controller.taskBoard.createTask({ subject: 'Mismatched collision' });
+    const canonical = controller.taskBoard.createTask({ subject: 'Canonical collision target' });
+    const mismatchedPath = path.join(claudeDir, 'tasks', 'my-team', `${mismatched.id}.json`);
+    const mismatchedPayload = readTaskFile(claudeDir, mismatched.id);
+    mismatchedPayload.id = canonical.id;
+    fs.writeFileSync(mismatchedPath, JSON.stringify(mismatchedPayload, null, 2), 'utf8');
+    const beforeMismatched = fs.readFileSync(mismatchedPath, 'utf8');
+    const canonicalPath = path.join(claudeDir, 'tasks', 'my-team', `${canonical.id}.json`);
+    const beforeCanonical = fs.readFileSync(canonicalPath, 'utf8');
+
+    expect(controller.taskBoard.listTasks().map((taskRow) => taskRow.id)).toEqual(
+      expect.arrayContaining([mismatched.id, canonical.id])
+    );
+    expect(() => controller.taskBoard.getTask(mismatched.id)).toThrow('Task identity collision');
+    expect(() =>
+      controller.taskBoard.updateTaskFields(mismatched.id, { description: 'wrong row' })
+    ).toThrow('Task identity collision');
+    expect(() =>
+      controller.taskBoard.updateTaskFields(canonical.id, { description: 'also unsafe' })
+    ).toThrow('Task identity collision');
+    expect(fs.readFileSync(mismatchedPath, 'utf8')).toBe(beforeMismatched);
+    expect(fs.readFileSync(canonicalPath, 'utf8')).toBe(beforeCanonical);
+
+    const leadBriefing = await controller.taskBoard.leadBriefing();
+    expect(leadBriefing).toContain(`task_id_mismatch (${mismatched.id})`);
+    expect(leadBriefing).toContain(`task_id_collision (${canonical.id})`);
+    expect(leadBriefing).toContain(`"${mismatched.id}.json"`);
+    expect(leadBriefing).toContain(`"${canonical.id}.json"`);
+  });
+
+  it('rejects ambiguous display-id mutations without changing either task file', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const first = controller.taskBoard.createTask({ subject: 'First ambiguous task' });
+    const second = controller.taskBoard.createTask({ subject: 'Second ambiguous task' });
+    const taskPaths = [first.id, second.id].map((taskId) =>
+      path.join(claudeDir, 'tasks', 'my-team', `${taskId}.json`)
+    );
+
+    for (const taskPath of taskPaths) {
+      const payload = JSON.parse(fs.readFileSync(taskPath, 'utf8'));
+      payload.displayId = 'legacy-shared';
+      fs.writeFileSync(taskPath, JSON.stringify(payload, null, 2), 'utf8');
+    }
+    const before = taskPaths.map((taskPath) => fs.readFileSync(taskPath, 'utf8'));
+
+    expect(() => controller.taskBoard.getTask('legacy-shared')).toThrow(
+      'Ambiguous task reference "legacy-shared"'
+    );
+    expect(() =>
+      controller.taskBoard.updateTaskFields('legacy-shared', { description: 'wrong row' })
+    ).toThrow('Ambiguous task reference "legacy-shared"');
+    expect(taskPaths.map((taskPath) => fs.readFileSync(taskPath, 'utf8'))).toEqual(before);
   });
 
   it('caps large member briefings and points agents to drill-down tools', async () => {

@@ -8,6 +8,7 @@ import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
+import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
@@ -253,6 +254,9 @@ async function stageRuntime(options) {
         assetName: asset.file,
       });
     }
+
+    await verifyRuntimeArchiveChecksum(archivePath, asset, platformKey);
+    process.stdout.write(`Verified ${asset.file} sha256\n`);
 
     process.stdout.write(`Extracting ${asset.file}\n`);
     extractArchive(archivePath, extractDir, asset.archiveKind);

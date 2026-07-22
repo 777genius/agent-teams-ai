@@ -32,7 +32,9 @@ describe('TeamProvisioningLaunchCompatibility', () => {
         providerId: 'opencode',
         members: [{ providerId: 'opencode' }],
       })
-    ).toThrow('OpenCode team launch is not enabled in the legacy Claude stream-json provisioning path');
+    ).toThrow(
+      'OpenCode team launch is not enabled in the legacy Claude stream-json provisioning path'
+    );
 
     expect(() =>
       assertOpenCodeNotLaunchedThroughLegacyProvisioning({

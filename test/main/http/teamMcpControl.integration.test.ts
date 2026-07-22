@@ -3,7 +3,7 @@
 import { registerTeamRoutes } from '@main/http/teams';
 import { TeamDataService } from '@main/services/team/TeamDataService';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
-import Fastify from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -12,18 +12,28 @@ import { registerTools } from '../../../mcp-server/src/tools';
 
 import type { HttpServices } from '@main/http';
 import type {
+  OpenCodeRuntimeControlAck,
+  TeamHttpHandlerApis,
+  TeamHttpRuntimeApi,
+  TeamProvisioningStartApi,
+  TeamProvisioningStatusApi,
+  TeamRuntimeControlCompatibilityApi,
+  TeamTaskActivityRepairApi,
+} from '@main/services/team/contracts/TeamProvisioningApis';
+import type {
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamProvisioningProgress,
   TeamRuntimeState,
 } from '@shared/types/team';
-import type { AddressInfo } from 'net';
 
 interface RegisteredTool {
   name: string;
   execute: (args: Record<string, unknown>) => unknown;
 }
+
+type InjectHttpMethod = 'DELETE' | 'GET' | 'HEAD' | 'PATCH' | 'POST' | 'PUT' | 'OPTIONS';
 
 function collectTools(): Map<string, RegisteredTool> {
   const tools = new Map<string, RegisteredTool>();
@@ -53,6 +63,101 @@ async function fetchJson(
   return {
     status: response.status,
     body: await response.json(),
+  };
+}
+
+function toInjectHttpMethod(method: string | undefined): InjectHttpMethod {
+  switch ((method ?? 'GET').toUpperCase()) {
+    case 'DELETE':
+      return 'DELETE';
+    case 'HEAD':
+      return 'HEAD';
+    case 'PATCH':
+      return 'PATCH';
+    case 'POST':
+      return 'POST';
+    case 'PUT':
+      return 'PUT';
+    case 'OPTIONS':
+      return 'OPTIONS';
+    default:
+      return 'GET';
+  }
+}
+
+async function readInjectedFetchBody(
+  body: BodyInit | null | undefined
+): Promise<string | Buffer | undefined> {
+  if (body == null) {
+    return undefined;
+  }
+  if (typeof body === 'string') {
+    return body;
+  }
+  if (body instanceof URLSearchParams) {
+    return body.toString();
+  }
+  if (body instanceof ArrayBuffer) {
+    return Buffer.from(body);
+  }
+  if (ArrayBuffer.isView(body)) {
+    return Buffer.from(body.buffer, body.byteOffset, body.byteLength);
+  }
+  if (body instanceof Blob) {
+    return Buffer.from(await body.arrayBuffer());
+  }
+  return typeof body === 'string' ? body : JSON.stringify(body);
+}
+
+function responseHeadersFromInject(
+  headers: Record<string, string | string[] | number | undefined>
+): Headers {
+  const responseHeaders = new Headers();
+  for (const [key, value] of Object.entries(headers)) {
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        responseHeaders.append(key, entry);
+      }
+    } else if (value != null) {
+      responseHeaders.set(key, String(value));
+    }
+  }
+  return responseHeaders;
+}
+
+function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () => void {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const request = input instanceof Request ? input : null;
+    if (!request && typeof input !== 'string' && !(input instanceof URL)) {
+      return originalFetch(input, init);
+    }
+    const requestUrl = request?.url ?? (input instanceof URL ? input.href : String(input));
+    const url = new URL(requestUrl);
+    if (url.origin !== baseUrl) {
+      return originalFetch(input, init);
+    }
+
+    const headers = new Headers(request?.headers);
+    if (init?.headers) {
+      new Headers(init.headers).forEach((value, key) => headers.set(key, value));
+    }
+    const injected = await app.inject({
+      method: toInjectHttpMethod(init?.method ?? request?.method),
+      url: `${url.pathname}${url.search}`,
+      headers: Object.fromEntries(headers),
+      payload: await readInjectedFetchBody(
+        init?.body ?? (request ? await request.clone().text() : undefined)
+      ),
+    });
+
+    return new Response(injected.body, {
+      status: injected.statusCode,
+      headers: responseHeadersFromInject(injected.headers),
+    });
+  };
+  return () => {
+    globalThis.fetch = originalFetch;
   };
 }
 
@@ -124,7 +229,19 @@ function createServices(claudeRoot: string): {
     return { runId };
   }
 
-  const teamProvisioningService = {
+  function runtimeAck(state: OpenCodeRuntimeControlAck['state']): OpenCodeRuntimeControlAck {
+    return {
+      ok: true,
+      providerId: 'opencode',
+      teamName: 'mcp-e2e-team',
+      runId: 'run-mcp-e2e-team',
+      state,
+      diagnostics: [],
+      observedAt: '2026-04-29T00:00:02.000Z',
+    };
+  }
+
+  const teamProvisioningStartApi = {
     createTeam,
     launchTeam: async (
       request: TeamLaunchRequest,
@@ -148,6 +265,8 @@ function createServices(claudeRoot: string): {
         onProgress
       );
     },
+  } satisfies TeamProvisioningStartApi;
+  const teamProvisioningStatusApi = {
     getProvisioningStatus: (runId: string): Promise<TeamProvisioningProgress> => {
       const progress = progressByRunId.get(runId);
       if (!progress) {
@@ -155,6 +274,11 @@ function createServices(claudeRoot: string): {
       }
       return Promise.resolve(progress);
     },
+  } satisfies TeamProvisioningStatusApi;
+  const teamTaskActivityRepairApi = {
+    repairStaleTaskActivityIntervalsBeforeSnapshot: (): Promise<void> => Promise.resolve(),
+  } satisfies TeamTaskActivityRepairApi;
+  const teamRuntimeApi = {
     getRuntimeState: (teamName: string): Promise<TeamRuntimeState> => {
       const runId = runIdByTeam.get(teamName) ?? null;
       return Promise.resolve({
@@ -169,7 +293,19 @@ function createServices(claudeRoot: string): {
       return Promise.resolve();
     },
     getAliveTeams: (): string[] => [...aliveTeams],
-  } as HttpServices['teamProvisioningService'];
+  } satisfies TeamHttpRuntimeApi;
+  const teamRuntimeControlApi = {
+    recordOpenCodeRuntimeBootstrapCheckin: (): Promise<OpenCodeRuntimeControlAck> =>
+      Promise.resolve(runtimeAck('accepted')),
+    deliverOpenCodeRuntimeMessage: (): Promise<OpenCodeRuntimeControlAck> =>
+      Promise.resolve(runtimeAck('delivered')),
+    recordOpenCodeRuntimeTaskEvent: (): Promise<OpenCodeRuntimeControlAck> =>
+      Promise.resolve(runtimeAck('recorded')),
+    recordOpenCodeRuntimeHeartbeat: (): Promise<OpenCodeRuntimeControlAck> =>
+      Promise.resolve(runtimeAck('recorded')),
+    answerOpenCodeRuntimePermission: (): Promise<OpenCodeRuntimeControlAck> =>
+      Promise.resolve(runtimeAck('accepted')),
+  } satisfies TeamRuntimeControlCompatibilityApi;
 
   return {
     createTeamCalls,
@@ -181,8 +317,14 @@ function createServices(claudeRoot: string): {
       dataCache: {} as HttpServices['dataCache'],
       updaterService: {} as HttpServices['updaterService'],
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
-      teamDataService,
-      teamProvisioningService,
+      teamDataApi: teamDataService,
+      teamApis: {
+        provisioningStart: teamProvisioningStartApi,
+        provisioningStatus: teamProvisioningStatusApi,
+        taskActivity: teamTaskActivityRepairApi,
+        runtime: teamRuntimeApi,
+        runtimeControl: teamRuntimeControlApi,
+      } satisfies TeamHttpHandlerApis,
     },
   };
 }
@@ -205,11 +347,9 @@ describe('MCP team tools over the local REST control API', () => {
     const { createTeamCalls, services } = createServices(claudeRoot);
     registerTeamRoutes(app, services);
 
+    const controlUrl = 'http://agent-teams-control.test';
+    const restoreFetch = installControlApiFetchMock(app, controlUrl);
     try {
-      await app.listen({ host: '127.0.0.1', port: 0 });
-      const address = app.server.address() as AddressInfo;
-      const controlUrl = `http://127.0.0.1:${address.port}`;
-
       const created = parseJsonToolResult(
         await getTool('team_create').execute({
           claudeDir: claudeRoot,
@@ -387,6 +527,7 @@ describe('MCP team tools over the local REST control API', () => {
         ]),
       });
     } finally {
+      restoreFetch();
       await app.close();
       setClaudeBasePathOverride(null);
       await rm(claudeRoot, { recursive: true, force: true });
@@ -403,21 +544,24 @@ describe('MCP team tools over the local REST control API', () => {
     const app = Fastify();
     const { services } = createServices(claudeRoot);
     let launchRequest: TeamLaunchRequest | null = null;
-    services.teamProvisioningService!.launchTeam = async (
+    services.teamApis!.provisioningStart!.launchTeam = (
       request: TeamLaunchRequest
     ): Promise<TeamLaunchResponse> => {
       launchRequest = request;
-      return {
+      return Promise.resolve({
         runId: 'active-run-1',
         launchStatus: 'already_launching',
         alreadyLaunching: true,
-      };
+      });
     };
-    services.teamProvisioningService!.getProvisioningStatus = async () => {
-      throw new Error('team_launch should not wait for provisioning status after already_launching');
-    };
+    services.teamApis!.provisioningStatus!.getProvisioningStatus = () =>
+      Promise.reject(
+        new Error('team_launch should not wait for provisioning status after already_launching')
+      );
     registerTeamRoutes(app, services);
 
+    const controlUrl = 'http://agent-teams-control-active.test';
+    const restoreFetch = installControlApiFetchMock(app, controlUrl);
     try {
       const teamDir = path.join(claudeRoot, 'teams', teamName);
       await mkdir(teamDir, { recursive: true });
@@ -430,10 +574,6 @@ describe('MCP team tools over the local REST control API', () => {
         }),
         'utf8'
       );
-
-      await app.listen({ host: '127.0.0.1', port: 0 });
-      const address = app.server.address() as AddressInfo;
-      const controlUrl = `http://127.0.0.1:${address.port}`;
 
       const launched = parseJsonToolResult(
         await getTool('team_launch').execute({
@@ -458,6 +598,7 @@ describe('MCP team tools over the local REST control API', () => {
         effort: 'low',
       });
     } finally {
+      restoreFetch();
       await app.close().catch(() => undefined);
       await rm(claudeRoot, { recursive: true, force: true });
       await rm(projectDir, { recursive: true, force: true });

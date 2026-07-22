@@ -115,7 +115,6 @@ import type {
   TeamLogSourceTracker,
   TeammateToolTracker,
   TeamMemberLogsFinder,
-  TeamProvisioningService,
   UpdaterService,
 } from '../services';
 import type { ApiKeyService } from '../services/extensions/apikeys/ApiKeyService';
@@ -128,6 +127,7 @@ import type { SkillsWatcherService } from '../services/extensions/skills/SkillsW
 import type { McpHealthDiagnosticsService } from '../services/extensions/state/McpHealthDiagnosticsService';
 import type { HttpServer } from '../services/infrastructure/HttpServer';
 import type { SchedulerService } from '../services/schedule/SchedulerService';
+import type { TeamIpcHandlerApis } from '../services/team/contracts/TeamProvisioningApis';
 import type { CrossTeamService } from '../services/team/CrossTeamService';
 import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
@@ -142,7 +142,7 @@ export function initializeIpcHandlers(
   updater: UpdaterService,
   sshManager: SshConnectionManager,
   teamDataService: TeamDataService,
-  teamProvisioningService: TeamProvisioningService,
+  teamHandlerApis: TeamIpcHandlerApis,
   teamMemberLogsFinder: TeamMemberLogsFinder,
   memberStatsComputer: MemberStatsComputer,
   boardTaskActivityService: BoardTaskActivityService,
@@ -157,6 +157,7 @@ export function initializeIpcHandlers(
     rewire: (context: ServiceContext) => void;
     full: (context: ServiceContext) => void;
     onClaudeRootPathUpdated: (claudeRootPath: string | null) => Promise<void> | void;
+    onAgentLanguageUpdated: (newLangCode: string) => Promise<void> | void;
   },
   httpServerDeps?: {
     httpServer: HttpServer;
@@ -180,7 +181,12 @@ export function initializeIpcHandlers(
   skillsWatcherService?: SkillsWatcherService,
   crossTeamService?: CrossTeamService,
   teamBackupService?: TeamBackupService,
-  launchIoGovernor?: LaunchIoGovernor
+  launchIoGovernor?: LaunchIoGovernor,
+  teamPermanentDeletionLifecycle?: {
+    prepareTeamDeletion(teamName: string): Promise<void>;
+    completeTeamDeletion(teamName: string): void;
+    resumeTeam(teamName: string): void;
+  }
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -192,7 +198,7 @@ export function initializeIpcHandlers(
   initializeContextHandlers(registry, contextCallbacks.rewire);
   initializeTeamHandlers(
     teamDataService,
-    teamProvisioningService,
+    teamHandlerApis,
     teamMemberLogsFinder,
     memberStatsComputer,
     teamBackupService,
@@ -204,13 +210,12 @@ export function initializeIpcHandlers(
     boardTaskLogStreamService,
     boardTaskExactLogsService,
     boardTaskExactLogDetailService,
-    launchIoGovernor
+    launchIoGovernor,
+    teamPermanentDeletionLifecycle
   );
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,
-    onAgentLanguageUpdated: (newLangCode) => {
-      void teamProvisioningService.notifyLanguageChange(newLangCode);
-    },
+    onAgentLanguageUpdated: contextCallbacks.onAgentLanguageUpdated,
   });
   if (httpServerDeps) {
     initializeHttpServerHandlers(httpServerDeps.httpServer, httpServerDeps.startHttpServer);

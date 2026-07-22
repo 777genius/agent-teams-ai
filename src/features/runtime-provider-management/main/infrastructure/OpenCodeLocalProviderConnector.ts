@@ -107,6 +107,11 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
   private readonly fetchImpl: typeof fetch;
   private readonly homePath: string;
   private readonly now: () => number;
+  // Serializes config read-modify-write so concurrent configureLocalProvider
+  // calls cannot clobber each other (each reads the previous write's result
+  // instead of a stale snapshot). Configure is a rare user action, so a single
+  // chain is sufficient and avoids config-path key subtleties.
+  private configWriteChain: Promise<unknown> = Promise.resolve();
 
   constructor(options: OpenCodeLocalProviderConnectorOptions = {}) {
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch;
@@ -583,6 +588,29 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     defaultModelId: string;
     setAsDefault: boolean;
     selectedModelConfig: LocalModelConfigMetadata | null;
+  }): Promise<string> {
+    // Chain onto any in-flight write so the read-modify-write below runs after
+    // the previous one fully committed (no lost update on concurrent configures).
+    const run = this.configWriteChain.then(
+      () => this.writeConfigNow(input),
+      () => this.writeConfigNow(input)
+    );
+    this.configWriteChain = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+
+  private async writeConfigNow(input: {
+    scope: RuntimeLocalProviderScopeDto;
+    projectPath?: string | null;
+    providerId: string;
+    baseUrl: string;
+    modelIds: readonly string[];
+    defaultModelId: string;
+    setAsDefault: boolean;
+    selectedModelConfig?: LocalModelConfigMetadata | null;
   }): Promise<string> {
     const configTarget = await this.readConfigTarget(input.scope, input.projectPath, true);
     const configPath = configTarget.configPath;

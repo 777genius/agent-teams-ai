@@ -2,7 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches:
+      - main
+      - dev
+      # Long-lived integration branches: pushes here previously ran no CI at all,
+      # which let multi-day test regressions land unnoticed (they only surfaced
+      # through PR #252's merge CI).
+      - refactor/team-provisioning-round2-reapply
+      - refactor/hosted-web-feature-boundaries
     paths:
       - 'src/**'
       - 'scripts/**'
@@ -87,6 +94,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Rebuild test SQLite native module for Node
+        run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
+
       - name: Audit dependencies
         run: pnpm dlx pnpm@11.4.0 --pm-on-fail=ignore audit --audit-level high
 
@@ -128,6 +138,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Rebuild test SQLite native module for Node
+        run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
 
       - name: Test workspace packages
         if: matrix.shard == 1

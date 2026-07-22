@@ -1,7 +1,4 @@
-import type {
-  AppCloseCoordinationElectronApi,
-  AppCloseReadinessRequest,
-} from '../contracts';
+import type { AppCloseCoordinationElectronApi, AppCloseReadinessRequest } from '../contracts';
 
 export interface AppCloseParticipantResult {
   ok: boolean;
@@ -20,10 +17,7 @@ interface RegisteredParticipant {
 const participants = new Map<string, RegisteredParticipant>();
 let removeReadinessListener: (() => void) | null = null;
 
-export function registerAppCloseParticipant(
-  id: string,
-  handler: AppCloseParticipant
-): () => void {
+export function registerAppCloseParticipant(id: string, handler: AppCloseParticipant): () => void {
   const token = Symbol(id);
   participants.set(id, { token, handler });
   return (): void => {

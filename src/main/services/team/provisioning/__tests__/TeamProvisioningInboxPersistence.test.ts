@@ -4,7 +4,12 @@ import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { buildLegacyInboxMessageId } from '../../inboxMessageIdentity';
-import { markTeamInboxMessagesRead } from '../TeamProvisioningInboxPersistence';
+import { MAX_INBOX_FILE_BYTES } from '../../TeamInboxReader';
+import {
+  markTeamInboxMessagesRead,
+  markTeamInboxMessagesReadWithDefaults,
+} from '../TeamProvisioningInboxPersistence';
+import * as regularFileRead from '../TeamProvisioningRegularFileRead';
 
 const tmpRoots: string[] = [];
 
@@ -20,7 +25,74 @@ async function readRegularFileUtf8(filePath: string): Promise<string | null> {
 
 describe('team inbox persistence', () => {
   afterEach(async () => {
+    vi.restoreAllMocks();
     await Promise.all(tmpRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+  });
+
+  it('marks rows read through the default-bound helper using a sandbox teams root', async () => {
+    const teamsRoot = await makeTeamsRoot();
+    const inboxDir = path.join(teamsRoot, 'team-a', 'inboxes');
+    const inboxPath = path.join(inboxDir, 'lead.json');
+    await mkdir(inboxDir, { recursive: true });
+    await writeFile(inboxPath, JSON.stringify([{ messageId: 'stable-1', read: false }], null, 2));
+
+    await markTeamInboxMessagesReadWithDefaults({
+      teamName: 'team-a',
+      member: 'lead',
+      teamsBasePath: teamsRoot,
+      messages: [{ messageId: 'stable-1' }],
+    });
+
+    expect(JSON.parse(await readFile(inboxPath, 'utf8'))).toEqual([
+      { messageId: 'stable-1', read: true },
+    ]);
+  });
+
+  it('binds default read-mark persistence to the reader byte limit', async () => {
+    const teamsRoot = await makeTeamsRoot();
+    const inboxDir = path.join(teamsRoot, 'team-a', 'inboxes');
+    const inboxPath = path.join(inboxDir, 'lead.json');
+    await mkdir(inboxDir, { recursive: true });
+    await writeFile(inboxPath, JSON.stringify([{ messageId: 'stable-1', read: false }], null, 2));
+    const readSpy = vi.spyOn(regularFileRead, 'tryReadRegularFileUtf8');
+
+    await markTeamInboxMessagesReadWithDefaults({
+      teamName: 'team-a',
+      member: 'lead',
+      teamsBasePath: teamsRoot,
+      messages: [{ messageId: 'stable-1' }],
+    });
+
+    expect(readSpy).toHaveBeenCalledWith(inboxPath, {
+      timeoutMs: 5_000,
+      maxBytes: MAX_INBOX_FILE_BYTES,
+    });
+  });
+
+  it('marks rows read in inboxes larger than the provisioning scan limit', async () => {
+    const teamsRoot = await makeTeamsRoot();
+    const inboxDir = path.join(teamsRoot, 'team-a', 'inboxes');
+    const inboxPath = path.join(inboxDir, 'lead.json');
+    await mkdir(inboxDir, { recursive: true });
+    await writeFile(
+      inboxPath,
+      JSON.stringify([{ messageId: 'stable-1', read: false, text: 'x'.repeat(2 * 1024 * 1024) }])
+    );
+
+    await markTeamInboxMessagesReadWithDefaults({
+      teamName: 'team-a',
+      member: 'lead',
+      teamsBasePath: teamsRoot,
+      messages: [{ messageId: 'stable-1' }],
+    });
+
+    const [row] = JSON.parse(await readFile(inboxPath, 'utf8')) as {
+      messageId: string;
+      read: boolean;
+      text: string;
+    }[];
+    expect(row).toMatchObject({ messageId: 'stable-1', read: true });
+    expect(row?.text).toHaveLength(2 * 1024 * 1024);
   });
 
   it('marks matching inbox rows read by stable and legacy message ids', async () => {

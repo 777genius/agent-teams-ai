@@ -2,6 +2,7 @@ import {
   buildGeminiPostLaunchHydrationPrompt,
   buildMemberSpawnPrompt,
   buildPersistentLeadContext,
+  buildReconnectMemberSpawnPrompt,
 } from '@main/services/team/provisioning/TeamProvisioningPromptBuilders';
 import { describe, expect, it } from 'vitest';
 
@@ -49,6 +50,35 @@ describe('TeamProvisioningPromptBuilders', () => {
     expect(prompt).toContain(
       'This lead-only delegation rule does NOT restrict assigned teammates.'
     );
+    expect(prompt).toContain('idempotencyKey: "<stable-task-intent-key>"');
+    expect(prompt).toContain('requestKey: "<stable-task-intent-key-within-message>"');
+    expect(prompt).toContain(
+      'task_start { teamName: "signal-ops", taskId: "<id>", actor: "lead" }'
+    );
+    expect(prompt).toContain(
+      'task_set_owner { teamName: "signal-ops", taskId: "<id>", owner: "<member-name>", actor: "lead" }'
+    );
+    expect(prompt).toContain('As lead, use actor: "lead" only on tasks you own.');
+    expect(prompt).toContain(
+      "Never pass a teammate's name as actor or transition execution on their behalf"
+    );
+  });
+
+  it('allows reconnecting members to self-claim only unassigned tasks', () => {
+    const prompt = buildReconnectMemberSpawnPrompt(
+      { name: 'tom', role: 'developer' },
+      'signal-ops',
+      'lead',
+      true
+    );
+
+    expect(prompt).toContain(
+      'If you are the one about to do the implementation/fixes and the task is unassigned, claim it for yourself'
+    );
+    expect(prompt).toContain(
+      'If another member owns the task, do NOT take it yourself. Ask the current owner or team lead to hand it off first.'
+    );
+    expect(prompt).not.toContain('the owner is missing or someone else');
   });
 
   it('keeps errored provisioned-but-not-alive members failed in Gemini hydration prompts', () => {

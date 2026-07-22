@@ -17,7 +17,7 @@ import {
   Users,
 } from 'lucide-react';
 
-import { KanbanColumn } from './kanban/KanbanColumn';
+import { KANBAN_COLUMN_CONTROL_INSET_CLASS, KanbanColumn } from './kanban/KanbanColumn';
 import { KanbanTaskCardSkeleton } from './kanban/KanbanTaskCardSkeleton';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
@@ -435,7 +435,12 @@ const TeamContentLoadingSkeleton = ({
                     />
                   ))}
                   {column.showAddButton ? (
-                    <div className="ml-2 flex w-[calc(100%_-_0.5rem)] shrink-0 items-center justify-center rounded-md border border-dashed border-[var(--color-border)] p-3">
+                    <div
+                      className={cn(
+                        KANBAN_COLUMN_CONTROL_INSET_CLASS,
+                        'flex shrink-0 items-center justify-center rounded-md border border-dashed border-[var(--color-border)] p-3'
+                      )}
+                    >
                       <SkeletonPill className="h-4 w-28" />
                     </div>
                   ) : null}

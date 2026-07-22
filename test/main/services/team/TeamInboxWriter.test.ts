@@ -1,15 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { SendMessageRequest } from '@shared/types';
+
 const hoisted = vi.hoisted(() => {
   const files = new Map<string, string>();
   const realpaths = new Map<string, string>();
   let idCounter = 0;
   let dropWrites = 0;
+  let failWrites = 0;
+  let failReadAfterWrite = 0;
+  let pendingReadFailures = 0;
+  const fileLockTails = new Map<string, Promise<void>>();
 
   // Normalize path separators so tests pass on Windows (backslash → forward slash)
   const norm = (p: string): string => p.replace(/\\/g, '/');
 
   const readFile = vi.fn(async (filePath: string) => {
+    if (pendingReadFailures > 0) {
+      pendingReadFailures -= 1;
+      const error = new Error('EIO') as NodeJS.ErrnoException;
+      error.code = 'EIO';
+      throw error;
+    }
     const data = files.get(norm(filePath));
     if (data === undefined) {
       const error = new Error('ENOENT') as NodeJS.ErrnoException;
@@ -20,13 +32,43 @@ const hoisted = vi.hoisted(() => {
   });
 
   const atomicWrite = vi.fn(async (filePath: string, data: string) => {
+    if (failWrites > 0) {
+      failWrites -= 1;
+      const error = new Error('EIO') as NodeJS.ErrnoException;
+      error.code = 'EIO';
+      throw error;
+    }
     if (dropWrites > 0) {
       dropWrites -= 1;
       files.set(norm(filePath), '[]');
       return;
     }
     files.set(norm(filePath), data);
+    if (failReadAfterWrite > 0) {
+      failReadAfterWrite -= 1;
+      pendingReadFailures += 1;
+    }
   });
+
+  const withFileLock = async <T>(filePath: string, fn: () => Promise<T>): Promise<T> => {
+    const key = norm(filePath);
+    const previous = fileLockTails.get(key) ?? Promise.resolve();
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const tail = previous.then(() => gate);
+    fileLockTails.set(key, tail);
+    await previous;
+    try {
+      return await fn();
+    } finally {
+      release();
+      if (fileLockTails.get(key) === tail) {
+        fileLockTails.delete(key);
+      }
+    }
+  };
 
   const realpathSync = vi.fn((filePath: string) => {
     const data = realpaths.get(norm(filePath));
@@ -44,12 +86,25 @@ const hoisted = vi.hoisted(() => {
     readFile,
     atomicWrite,
     realpathSync,
+    withFileLock,
     nextId: () => `msg-${++idCounter}`,
     resetCounter: () => {
       idCounter = 0;
     },
     setDropWrites: (count: number) => {
       dropWrites = count;
+    },
+    setFailWrites: (count: number) => {
+      failWrites = count;
+    },
+    setFailReadAfterWrite: (count: number) => {
+      failReadAfterWrite = count;
+    },
+    resetFailures: () => {
+      failWrites = 0;
+      failReadAfterWrite = 0;
+      pendingReadFailures = 0;
+      fileLockTails.clear();
     },
   };
 });
@@ -83,7 +138,7 @@ vi.mock('../../../../src/main/services/team/atomicWrite', () => ({
 }));
 
 vi.mock('../../../../src/main/services/team/fileLock', () => ({
-  withFileLock: async (_path: string, fn: () => Promise<unknown>) => await fn(),
+  withFileLock: hoisted.withFileLock,
   withFileLockSync: (_path: string, fn: () => unknown) => fn(),
 }));
 
@@ -105,6 +160,7 @@ describe('TeamInboxWriter', () => {
     hoisted.realpathSync.mockClear();
     hoisted.resetCounter();
     hoisted.setDropWrites(0);
+    hoisted.resetFailures();
   });
 
   it('writes message with metadata and verifies messageId', async () => {
@@ -186,6 +242,212 @@ describe('TeamInboxWriter', () => {
     const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as { text: string }[];
     expect(persisted).toHaveLength(2);
     expect(persisted.map((row) => row.text).sort()).toEqual(['first', 'second']);
+  });
+
+  it('atomically deduplicates an explicit messageId across writer instances', async () => {
+    const firstWriter = new TeamInboxWriter();
+    const secondWriter = new TeamInboxWriter();
+    const [first, second] = await Promise.all([
+      firstWriter.sendMessage('my-team', {
+        member: 'alice',
+        from: 'system',
+        text: 'Start durable task',
+        summary: 'Task started',
+        source: 'system_notification',
+        messageId: 'task-start:my-team:task-1',
+      }),
+      secondWriter.sendMessage('my-team', {
+        member: 'alice',
+        from: 'system',
+        text: 'Start durable task',
+        summary: 'Task started',
+        source: 'system_notification',
+        messageId: 'task-start:my-team:task-1',
+      }),
+    ]);
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.messageId).toBe('task-start:my-team:task-1');
+    expect([first.deduplicated, second.deduplicated].filter(Boolean)).toHaveLength(1);
+  });
+
+  it('merges taskRefs when deduplicating an ordinary explicit messageId', async () => {
+    const firstTaskRef = { taskId: 'task-1', displayId: '11111111', teamName: 'my-team' };
+    const secondTaskRef = { taskId: 'task-2', displayId: '22222222', teamName: 'my-team' };
+    await writer.sendMessage('my-team', {
+      member: 'alice',
+      from: 'system',
+      text: 'Task notification',
+      source: 'system_notification',
+      messageId: 'notification-1',
+      taskRefs: [firstTaskRef],
+    });
+    const replay = await writer.sendMessage('my-team', {
+      member: 'alice',
+      from: 'system',
+      text: 'Task notification',
+      source: 'system_notification',
+      messageId: 'notification-1',
+      taskRefs: [secondTaskRef],
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(replay.deduplicated).toBe(true);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.taskRefs).toEqual([firstTaskRef, secondTaskRef]);
+  });
+
+  it('fails closed when an explicit messageId is reused for different immutable content', async () => {
+    await writer.sendMessage('my-team', {
+      member: 'alice',
+      from: 'system',
+      text: 'Original notification',
+      source: 'system_notification',
+      messageId: 'notification-1',
+    });
+
+    await expect(
+      writer.sendMessage('my-team', {
+        member: 'alice',
+        from: 'system',
+        text: 'Contradictory notification',
+        source: 'system_notification',
+        messageId: 'notification-1',
+      })
+    ).rejects.toThrow('Inbox messageId collision for immutable payload: notification-1');
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as { text: string }[];
+    expect(persisted).toEqual([expect.objectContaining({ text: 'Original notification' })]);
+  });
+
+  it('fails closed when explicit messageId retries change immutable runtime metadata', async () => {
+    const cases: {
+      name: string;
+      original: Partial<SendMessageRequest>;
+      conflicting: Partial<SendMessageRequest>;
+    }[] = [
+      {
+        name: 'color',
+        original: { color: 'purple' },
+        conflicting: { color: 'blue' },
+      },
+      {
+        name: 'agent-error',
+        original: {
+          agentError: {
+            schemaVersion: 1,
+            type: 'api_error',
+            phase: 'terminal',
+            detail: 'Original provider error',
+            failedMessageId: 'failed-message-1',
+            innerRecoveryAttempts: 0,
+          },
+        },
+        conflicting: {
+          agentError: {
+            schemaVersion: 1,
+            type: 'api_error',
+            phase: 'terminal',
+            detail: 'Different provider error',
+            failedMessageId: 'failed-message-1',
+            innerRecoveryAttempts: 0,
+          },
+        },
+      },
+      {
+        name: 'runtime-recovery',
+        original: {
+          runtimeRecovery: {
+            schemaVersion: 1,
+            recoveryId: 'recovery-1',
+            sourceFailureId: 'failure-1',
+            attempt: 1,
+            reasonCode: 'provider_overloaded',
+            payloadHash: 'sha256:original',
+          },
+        },
+        conflicting: {
+          runtimeRecovery: {
+            schemaVersion: 1,
+            recoveryId: 'recovery-1',
+            sourceFailureId: 'failure-1',
+            attempt: 1,
+            reasonCode: 'provider_overloaded',
+            payloadHash: 'sha256:different',
+          },
+        },
+      },
+    ];
+
+    for (const testCase of cases) {
+      const request = {
+        member: 'alice',
+        from: 'system',
+        text: 'Runtime notification',
+        source: 'system_notification' as const,
+        messageId: `notification-${testCase.name}`,
+      };
+      await writer.sendMessage('my-team', { ...request, ...testCase.original });
+
+      await expect(
+        writer.sendMessage('my-team', { ...request, ...testCase.conflicting })
+      ).rejects.toThrow(
+        `Inbox messageId collision for immutable payload: notification-${testCase.name}`
+      );
+    }
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(persisted).toEqual([
+      expect.objectContaining({ color: 'purple' }),
+      expect.objectContaining({
+        agentError: expect.objectContaining({ detail: 'Original provider error' }),
+      }),
+      expect.objectContaining({
+        runtimeRecovery: expect.objectContaining({ payloadHash: 'sha256:original' }),
+      }),
+    ]);
+  });
+
+  it('retries the same explicit message after a failure before the durable write', async () => {
+    hoisted.setFailWrites(1);
+    const request = {
+      member: 'alice',
+      from: 'system',
+      text: 'Durable notification',
+      source: 'system_notification' as const,
+      messageId: 'notification-1',
+    };
+
+    await expect(writer.sendMessage('my-team', request)).rejects.toThrow('EIO');
+    await expect(writer.sendMessage('my-team', request)).resolves.toMatchObject({
+      deliveredToInbox: true,
+      messageId: 'notification-1',
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(persisted).toHaveLength(1);
+  });
+
+  it('deduplicates retry after a durable write loses its acknowledgement', async () => {
+    hoisted.setFailReadAfterWrite(1);
+    const request = {
+      member: 'alice',
+      from: 'system',
+      text: 'Durable notification',
+      source: 'system_notification' as const,
+      messageId: 'notification-1',
+    };
+
+    await expect(writer.sendMessage('my-team', request)).rejects.toThrow('EIO');
+    await expect(writer.sendMessage('my-team', request)).resolves.toMatchObject({
+      deliveredToInbox: true,
+      messageId: 'notification-1',
+      deduplicated: true,
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(persisted).toHaveLength(1);
   });
 
   it('includes source field in payload when provided in request', async () => {
@@ -361,6 +623,40 @@ describe('TeamInboxWriter', () => {
       deduplicated: true,
       messageId: first.messageId,
     });
+  });
+
+  it('preserves normalized runtime-delivery dedupe for a repeated explicit messageId', async () => {
+    await writer.sendMessage('my-team', {
+      member: 'user',
+      from: 'Alice',
+      to: 'user',
+      text: 'Reply with stable identity',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'inbound-1',
+      messageId: 'runtime-reply-1',
+    });
+    const replay = await writer.sendMessage('my-team', {
+      member: 'user',
+      from: ' alice ',
+      to: 'USER',
+      text: ' Reply   with stable identity ',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'inbound-1',
+      messageId: 'runtime-reply-1',
+    });
+
+    const userInboxPath = '/mock/teams/my-team/inboxes/user.json';
+    const persisted = JSON.parse(hoisted.files.get(userInboxPath) ?? '[]') as Record<
+      string,
+      unknown
+    >[];
+    expect(replay).toMatchObject({
+      deliveredToInbox: true,
+      deduplicated: true,
+      messageId: 'runtime-reply-1',
+    });
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.text).toBe('Reply with stable identity');
   });
 
   it('merges taskRefs when deduplicating repeated runtime delivery replies', async () => {

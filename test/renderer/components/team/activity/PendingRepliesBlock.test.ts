@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 const storeState = {
-  pendingApprovals: [] as Array<{ toolName: string; receivedAt: string }>,
+  pendingApprovals: [] as { toolName: string; receivedAt: string }[],
 };
 
 vi.mock('@renderer/store', () => ({
@@ -18,6 +18,7 @@ vi.mock('@renderer/hooks/useTheme', () => ({
 }));
 
 import { PendingRepliesBlock } from '@renderer/components/team/activity/PendingRepliesBlock';
+import { StatusBlock } from '@renderer/components/team/messages/StatusBlock';
 
 const member: ResolvedTeamMember = {
   name: 'alice',
@@ -79,6 +80,101 @@ describe('PendingRepliesBlock', () => {
     expect(coloredName).toBeDefined();
     expect(coloredName?.style.backgroundColor).toBe('');
     expect(coloredName?.style.border).toBe('');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('uses the parent clock for deterministic retry expiration and relative timing', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2030-01-01T00:00:00.000Z'));
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const pendingRepliesByMember = {
+      alice: Date.parse('2026-04-09T09:59:00.000Z'),
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(PendingRepliesBlock, {
+          members: [member],
+          nowMs: Date.parse('2026-04-09T10:00:00.000Z'),
+          pendingRepliesByMember,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Gemini quota retry');
+    expect(host.textContent).toContain('1m');
+    expect(host.textContent).not.toContain('1 minute ago');
+
+    await act(async () => {
+      root.render(
+        React.createElement(PendingRepliesBlock, {
+          members: [member],
+          nowMs: Date.parse('2026-04-09T10:01:00.000Z'),
+          pendingRepliesByMember,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Gemini quota retry');
+    expect(host.textContent).not.toContain('Gemini quota retry ·');
+    expect(host.textContent).toContain('2m');
+    expect(host.textContent).not.toContain('2 minutes ago');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps cross-team replies through their TTL boundary and expires them on the next tick', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-09T10:00:00.000Z'));
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = {
+      from: 'team-lead',
+      to: 'team-best.team-lead',
+      text: 'Can you review this?',
+      timestamp: '2026-04-09T10:00:00.000Z',
+      read: true,
+      source: 'cross_team_sent',
+      messageId: 'cross-team-message-1',
+      conversationId: 'cross-team-conversation-1',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(StatusBlock, {
+          members: [],
+          tasks: [],
+          messages: [message],
+          pendingRepliesByMember: {},
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('team-best');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(host.textContent).toContain('team-best');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(host.textContent).not.toContain('team-best');
 
     await act(async () => {
       root.unmount();

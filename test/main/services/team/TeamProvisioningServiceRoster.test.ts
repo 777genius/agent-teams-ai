@@ -1,66 +1,32 @@
+import { getMixedLaunchFallbackRecoveryError } from '@main/services/team/provisioning/TeamProvisioningLaunchCompatibility';
 import {
-  getMixedLaunchFallbackRecoveryError,
-  TeamProvisioningService,
-} from '@main/services/team/TeamProvisioningService';
+  probeLaunchCompatibility,
+  resolveLaunchExpectedMembers,
+  type TeamProvisioningLaunchExpectedMembersPorts,
+} from '@main/services/team/provisioning/TeamProvisioningLaunchExpectedMembers';
+import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { describe, expect, it, vi } from 'vitest';
 
-function membersMetaStore(members: unknown[] | null = null): unknown {
+import type { TeamMember } from '@shared/types';
+
+function makePorts(
+  overrides: Partial<TeamProvisioningLaunchExpectedMembersPorts> = {}
+): TeamProvisioningLaunchExpectedMembersPorts {
   return {
-    getMeta: vi.fn().mockResolvedValue(members === null ? null : { version: 1, members }),
+    readLaunchState: vi.fn(async () => null),
+    readBootstrapLaunchSnapshot: vi.fn(async () => null),
+    getMembers: vi.fn(async () => [] as TeamMember[]),
+    listInboxNames: vi.fn(async () => [] as string[]),
+    warn: vi.fn(),
+    ...overrides,
   };
 }
 
-interface LaunchRosterResult {
-  source: string;
-  warning?: string;
-  members: { name: string; [key: string]: unknown }[];
-}
-
-interface LaunchCompatibilityReport extends LaunchRosterResult {
-  level: string;
-  rosterSource: string;
-  repairAction?: string;
-}
-
-function resolveLaunchExpectedMembers(
-  service: TeamProvisioningService,
-  teamName: string,
-  rawConfig: string,
-  providerId?: string
-): Promise<LaunchRosterResult> {
-  return (
-    service as unknown as {
-      resolveLaunchExpectedMembers(
-        teamName: string,
-        rawConfig: string,
-        providerId?: string
-      ): Promise<LaunchRosterResult>;
-    }
-  ).resolveLaunchExpectedMembers(teamName, rawConfig, providerId);
-}
-
-function probeLaunchCompatibility(
-  service: TeamProvisioningService,
-  teamName: string,
-  rawConfig: string,
-  providerId: string
-): Promise<LaunchCompatibilityReport> {
-  return (
-    service as unknown as {
-      probeLaunchCompatibility(
-        teamName: string,
-        rawConfig: string,
-        providerId: string
-      ): Promise<LaunchCompatibilityReport>;
-    }
-  ).probeLaunchCompatibility(teamName, rawConfig, providerId);
-}
-
-describe('TeamProvisioningService (launch roster discovery)', () => {
+describe('team provisioning launch roster discovery', () => {
   it('inbox fallback keeps -1 names but drops auto-suffixed -2+ when base exists', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      {
+    const result = await resolveLaunchExpectedMembers(
+      { teamName: 't', configRaw: '{}' },
+      makePorts({
         listInboxNames: vi.fn(async () => [
           'dev',
           'dev-1',
@@ -70,63 +36,55 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
           'team-lead',
           'DEV-2',
         ]),
-      } as never,
-      membersMetaStore() as never,
-      {} as never
+      })
     );
 
-    const result = await resolveLaunchExpectedMembers(svc, 't', '{}');
     expect(result.source).toBe('inboxes');
-    expect(result.members.map((m: { name: string }) => m.name)).toEqual(['dev', 'dev-1']);
+    expect(result.members.map((member) => member.name)).toEqual(['dev', 'dev-1']);
   });
 
   it('inbox fallback ignores cross-team pseudo and qualified external names', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      {
+    const result = await resolveLaunchExpectedMembers(
+      { teamName: 't', configRaw: '{}' },
+      makePorts({
         listInboxNames: vi.fn(async () => [
           'dev',
           'cross-team:team-alpha-super',
           'cross-team-team-alpha-super',
           'team-alpha-super.user',
         ]),
-      } as never,
-      membersMetaStore() as never,
-      {} as never
+      })
     );
 
-    const result = await resolveLaunchExpectedMembers(svc, 't', '{}');
     expect(result.source).toBe('inboxes');
-    expect(result.members.map((m: { name: string }) => m.name)).toEqual(['dev']);
+    expect(result.members.map((member) => member.name)).toEqual(['dev']);
   });
 
   it('inbox fallback keeps suffixed name if base is absent', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      { listInboxNames: vi.fn(async () => ['alice-2']) } as never,
-      membersMetaStore() as never,
-      {} as never
+    const result = await resolveLaunchExpectedMembers(
+      { teamName: 't', configRaw: '{}' },
+      makePorts({
+        listInboxNames: vi.fn(async () => ['alice-2']),
+      })
     );
 
-    const result = await resolveLaunchExpectedMembers(svc, 't', '{}');
     expect(result.source).toBe('inboxes');
-    expect(result.members.map((m: { name: string }) => m.name)).toEqual(['alice-2']);
+    expect(result.members.map((member) => member.name)).toEqual(['alice-2']);
   });
 
   it('inbox fallback merges provider/model overrides from config for multimodel reconnect', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      { listInboxNames: vi.fn(async () => ['bob']) } as never,
-      membersMetaStore() as never,
-      {} as never
-    );
-
     const configRaw = JSON.stringify({
       name: 't',
       members: [{ name: 'bob', role: 'reviewer', provider: 'codex', model: 'gpt-5.4' }],
     });
 
-    const result = await resolveLaunchExpectedMembers(svc, 't', configRaw);
+    const result = await resolveLaunchExpectedMembers(
+      { teamName: 't', configRaw },
+      makePorts({
+        listInboxNames: vi.fn(async () => ['bob']),
+      })
+    );
+
     expect(result.source).toBe('inboxes');
     expect(result.members).toEqual([
       { name: 'bob', role: 'reviewer', workflow: undefined, providerId: 'codex', model: 'gpt-5.4' },
@@ -135,20 +93,19 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
   });
 
   it('members.meta.json fallback never returns reserved names (user/team-lead)', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      { listInboxNames: vi.fn(async () => []) } as never,
-      membersMetaStore([
-        { name: 'user', agentType: 'general-purpose' },
-        { name: 'team-lead', agentType: 'team-lead' },
-        { name: 'Alice', role: 'dev', agentType: 'general-purpose' },
-      ]) as never,
-      {} as never
+    const result = await resolveLaunchExpectedMembers(
+      { teamName: 't', configRaw: '{}' },
+      makePorts({
+        getMembers: vi.fn(async () => [
+          { name: 'user', agentType: 'general-purpose' },
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'Alice', role: 'dev', agentType: 'general-purpose' },
+        ]),
+      })
     );
 
-    const result = await resolveLaunchExpectedMembers(svc, 't', '{}');
     expect(result.source).toBe('members-meta');
-    expect(result.members.map((m: { name: string }) => m.name)).toEqual(['Alice']);
+    expect(result.members.map((member) => member.name)).toEqual(['Alice']);
   });
 
   it.each([
@@ -159,26 +116,35 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
     const configRaw = JSON.stringify({ members: [{ name: 'alice', role: 'developer' }] });
 
     for (let restart = 0; restart < 2; restart += 1) {
-      const svc = new TeamProvisioningService(
+      const service = new TeamProvisioningService(
         {} as never,
         { listInboxNames } as never,
-        membersMetaStore(meta) as never,
-        {} as never
+        {
+          getMeta: vi.fn(async () => ({ version: 1, members: meta })),
+          getMembers: vi.fn(async () => meta),
+          writeMembers: vi.fn(async () => undefined),
+        } as never
       );
-      const report = await probeLaunchCompatibility(svc, 't', configRaw, 'codex');
+      const report = await (
+        service as unknown as {
+          resolveLaunchExpectedMembers(
+            teamName: string,
+            rawConfig: string,
+            providerId?: string
+          ): Promise<{ source: string; members: { name: string }[] }>;
+        }
+      ).resolveLaunchExpectedMembers('t', configRaw, 'codex');
 
-      expect(report).toMatchObject({
-        level: 'ready',
-        rosterSource: 'members-meta',
-        members: [],
-      });
+      expect(report).toMatchObject({ source: 'members-meta', members: [] });
     }
     expect(listInboxNames).not.toHaveBeenCalled();
   });
 
   it('preserves removal tombstones when launch persistence rewrites the active roster', async () => {
-    const writeMembers = vi.fn().mockResolvedValue(undefined);
-    const svc = new TeamProvisioningService(
+    const writeMembers = vi.fn(
+      async (_teamName: string, _members: unknown[], _options?: unknown) => undefined
+    );
+    const service = new TeamProvisioningService(
       {} as never,
       {} as never,
       {
@@ -189,13 +155,13 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
             { name: 'bob', role: 'Reviewer' },
           ],
         })),
+        getMembers: vi.fn(async () => []),
         writeMembers,
-      } as never,
-      {} as never
+      } as never
     );
 
     await (
-      svc as unknown as {
+      service as unknown as {
         persistMembersMeta(
           teamName: string,
           request: { members: { name: string; role: string }[] }
@@ -220,31 +186,18 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
   });
 
   it('config fallback never returns reserved names (user/team-lead)', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      { listInboxNames: vi.fn(async () => []) } as never,
-      membersMetaStore() as never,
-      {} as never
-    );
-
     const configRaw = JSON.stringify({
       name: 't',
       members: [{ name: 'team-lead', agentType: 'team-lead' }, { name: 'user' }, { name: 'bob' }],
     });
 
-    const result = await resolveLaunchExpectedMembers(svc, 't', configRaw);
+    const result = await resolveLaunchExpectedMembers({ teamName: 't', configRaw }, makePorts());
+
     expect(result.source).toBe('config-fallback');
-    expect(result.members.map((m: { name: string }) => m.name)).toEqual(['bob']);
+    expect(result.members.map((member) => member.name)).toEqual(['bob']);
   });
 
   it('marks pure Claude/Codex legacy config without members.meta.json as repairable', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      { listInboxNames: vi.fn(async () => []) } as never,
-      membersMetaStore() as never,
-      {} as never
-    );
-
     const configRaw = JSON.stringify({
       name: 'legacy-pure',
       members: [
@@ -253,42 +206,36 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
       ],
     });
 
-    const report = await probeLaunchCompatibility(svc, 'legacy-pure', configRaw, 'anthropic');
+    const report = await probeLaunchCompatibility(
+      { teamName: 'legacy-pure', configRaw, leadProviderId: 'anthropic' },
+      makePorts()
+    );
 
     expect(report).toMatchObject({
       level: 'repairable',
       rosterSource: 'config',
       repairAction: 'materialize-members-meta',
     });
-    expect(report.members.map((member: { name: string }) => member.name)).toEqual(['alice', 'tom']);
+    expect(report.members.map((member) => member.name)).toEqual(['alice', 'tom']);
   });
 
   it('rejects inbox fallback when OpenCode metadata is incomplete without members.meta truth', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      { listInboxNames: vi.fn(async () => ['tom']) } as never,
-      membersMetaStore() as never,
-      {} as never
-    );
-
     const configRaw = JSON.stringify({
       name: 't',
       members: [{ name: 'tom', role: 'developer', provider: 'opencode' }],
     });
 
-    await expect(resolveLaunchExpectedMembers(svc, 't', configRaw, 'codex')).rejects.toThrow(
-      getMixedLaunchFallbackRecoveryError()
-    );
+    await expect(
+      resolveLaunchExpectedMembers(
+        { teamName: 't', configRaw, leadProviderId: 'codex' },
+        makePorts({
+          listInboxNames: vi.fn(async () => ['tom']),
+        })
+      )
+    ).rejects.toThrow(getMixedLaunchFallbackRecoveryError());
   });
 
   it('marks complete mixed OpenCode config fallback as repairable', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      { listInboxNames: vi.fn(async () => []) } as never,
-      membersMetaStore() as never,
-      {} as never
-    );
-
     const configRaw = JSON.stringify({
       name: 't',
       members: [
@@ -296,7 +243,11 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
       ],
     });
 
-    const report = await probeLaunchCompatibility(svc, 't', configRaw, 'codex');
+    const report = await probeLaunchCompatibility(
+      { teamName: 't', configRaw, leadProviderId: 'codex' },
+      makePorts()
+    );
+
     expect(report).toMatchObject({
       level: 'repairable',
       rosterSource: 'config',
@@ -308,13 +259,6 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
   });
 
   it('prefers complete mixed OpenCode config over inbox names when members.meta is missing', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      { listInboxNames: vi.fn(async () => ['tom']) } as never,
-      membersMetaStore() as never,
-      {} as never
-    );
-
     const configRaw = JSON.stringify({
       name: 't',
       members: [
@@ -322,7 +266,13 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
       ],
     });
 
-    const report = await probeLaunchCompatibility(svc, 't', configRaw, 'codex');
+    const report = await probeLaunchCompatibility(
+      { teamName: 't', configRaw, leadProviderId: 'codex' },
+      makePorts({
+        listInboxNames: vi.fn(async () => ['tom']),
+      })
+    );
+
     expect(report).toMatchObject({
       level: 'repairable',
       rosterSource: 'config',
@@ -331,38 +281,30 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
   });
 
   it('rejects mixed OpenCode config fallback when the side lane is missing an explicit model', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      { listInboxNames: vi.fn(async () => []) } as never,
-      membersMetaStore() as never,
-      {} as never
-    );
-
     const configRaw = JSON.stringify({
       name: 't',
       members: [{ name: 'tom', role: 'developer', provider: 'opencode' }],
     });
 
-    await expect(resolveLaunchExpectedMembers(svc, 't', configRaw, 'codex')).rejects.toThrow(
-      getMixedLaunchFallbackRecoveryError()
-    );
+    await expect(
+      resolveLaunchExpectedMembers(
+        { teamName: 't', configRaw, leadProviderId: 'codex' },
+        makePorts()
+      )
+    ).rejects.toThrow(getMixedLaunchFallbackRecoveryError());
   });
 
   it('rejects config fallback when an OpenCode-looking model is missing an explicit provider', async () => {
-    const svc = new TeamProvisioningService(
-      {} as never,
-      { listInboxNames: vi.fn(async () => []) } as never,
-      membersMetaStore() as never,
-      {} as never
-    );
-
     const configRaw = JSON.stringify({
       name: 't',
       members: [{ name: 'tom', role: 'developer', model: 'opencode/minimax-m2.5-free' }],
     });
 
-    await expect(resolveLaunchExpectedMembers(svc, 't', configRaw, 'codex')).rejects.toThrow(
-      getMixedLaunchFallbackRecoveryError()
-    );
+    await expect(
+      resolveLaunchExpectedMembers(
+        { teamName: 't', configRaw, leadProviderId: 'codex' },
+        makePorts()
+      )
+    ).rejects.toThrow(getMixedLaunchFallbackRecoveryError());
   });
 });

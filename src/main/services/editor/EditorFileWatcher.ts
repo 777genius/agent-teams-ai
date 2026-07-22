@@ -198,11 +198,7 @@ export class EditorFileWatcher {
     ): void => {
       if (!isReady) startupObservedPaths.add(filePath);
       if (!this.watchedFiles.has(filePath)) return;
-      if (
-        type === 'change' &&
-        !forceConservativeChange &&
-        Date.now() < this.ignoreChangeUntilMs
-      ) {
+      if (type === 'change' && !forceConservativeChange && Date.now() < this.ignoreChangeUntilMs) {
         return;
       }
       if (!isPathWithinRoot(filePath, this.projectRoot!)) {

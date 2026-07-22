@@ -233,7 +233,7 @@ async function readCompactTaskBriefing(params: {
   memberName: string;
 }): Promise<string> {
   try {
-    return String(await params.controller.tasks.taskBriefing(params.memberName));
+    return String(await params.controller.taskBoard.taskBriefing(params.memberName));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return `Task briefing unavailable during startup context generation: ${message}`;
@@ -323,7 +323,7 @@ export async function buildNativeAppManagedBootstrapSpecsWithDiagnostics(params:
     } else {
       try {
         briefing = String(
-          await controller.tasks.memberBriefing(member.name, {
+          await controller.taskBoard.memberBriefing(member.name, {
             runtimeProvider: resolveMemberBriefingRuntimeProvider(providerId),
             includeActiveProcesses: false,
           })

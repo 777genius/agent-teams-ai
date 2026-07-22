@@ -496,9 +496,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     await vi.waitFor(() => {
       expect(host.textContent).toContain('Local providers');
       expect(host.textContent).toContain('1 of 2 local providers running.');
-      expect(host.textContent).toContain(
-        'Offline providers remain configured but cannot launch.'
-      );
+      expect(host.textContent).toContain('Offline providers remain configured but cannot launch.');
       expect(host.textContent).toContain('Global default');
       expect(host.textContent).toContain('Offline');
       expect(host.textContent).toContain('1 configured model');

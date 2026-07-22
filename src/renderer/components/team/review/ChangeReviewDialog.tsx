@@ -624,11 +624,7 @@ export const ChangeReviewDialog = ({
     setReviewConflictRefreshPending(true);
     try {
       const [decisionCandidates, draftCandidates] = await Promise.all([
-        api.review.loadDecisionConflictCandidates(
-          teamName,
-          decisionScopeKey,
-          decisionScopeToken
-        ),
+        api.review.loadDecisionConflictCandidates(teamName, decisionScopeKey, decisionScopeToken),
         api.review.loadDraftHistoryConflictCandidates(
           teamName,
           decisionScopeKey,
@@ -659,9 +655,7 @@ export const ChangeReviewDialog = ({
       setDraftHistoryConflictCandidates(draftCandidates);
       setReviewConflictLoadError(null);
       useStore.setState((state) =>
-        state.applyError?.startsWith(REVIEW_CONFLICT_LOAD_ERROR_PREFIX)
-          ? { applyError: null }
-          : {}
+        state.applyError?.startsWith(REVIEW_CONFLICT_LOAD_ERROR_PREFIX) ? { applyError: null } : {}
       );
     } catch (error) {
       if (
@@ -713,8 +707,7 @@ export const ChangeReviewDialog = ({
   );
 
   useLayoutEffect(() => {
-    const activeHydrationKey =
-      open && lifecycleAuthorized ? decisionHydrationKey : null;
+    const activeHydrationKey = open && lifecycleAuthorized ? decisionHydrationKey : null;
     expectedDraftHistoryKeyRef.current = activeHydrationKey;
     reviewConflictRefreshGenerationRef.current += 1;
     conflictResolutionOperationRef.current = null;
@@ -733,9 +726,7 @@ export const ChangeReviewDialog = ({
       open && lifecycleAuthorized
         ? (decisionHydrationKey ?? `unscoped:${teamName}:${scopeKey}`)
         : null;
-    const operationScope = activeScopeKey
-      ? createReviewOperationScopeToken(activeScopeKey)
-      : null;
+    const operationScope = activeScopeKey ? createReviewOperationScopeToken(activeScopeKey) : null;
     reviewOperationScopeRef.current = operationScope;
     // Busy state belongs to one operation generation. Never carry it into a
     // reopened or re-hydrated scope, but preserve recent-write evidence so late
@@ -759,7 +750,9 @@ export const ChangeReviewDialog = ({
   }, []);
 
   const isCurrentReviewOperationScope = useCallback(
-    (operationScope: ReviewOperationScopeToken | null): operationScope is ReviewOperationScopeToken =>
+    (
+      operationScope: ReviewOperationScopeToken | null
+    ): operationScope is ReviewOperationScopeToken =>
       isReviewOperationScopeCurrent(reviewOperationScopeRef.current, operationScope),
     []
   );
@@ -773,12 +766,7 @@ export const ChangeReviewDialog = ({
       return;
     }
     void refreshReviewConflictCandidates();
-  }, [
-    decisionHydrationKey,
-    lifecycleAuthorized,
-    open,
-    refreshReviewConflictCandidates,
-  ]);
+  }, [decisionHydrationKey, lifecycleAuthorized, open, refreshReviewConflictCandidates]);
 
   const publishReviewActionPersistenceStatus = useCallback(
     (status: ReviewActionPersistenceStatus): void => {
@@ -800,68 +788,71 @@ export const ChangeReviewDialog = ({
     publishReviewActionPersistenceStatus('saved');
   }, [decisionHydrationKey, publishReviewActionPersistenceStatus]);
 
-  const startDraftHistoryDrain = useCallback((writeKey: string): Promise<void> => {
-    const active = draftHistoryWriteChainsRef.current.get(writeKey);
-    if (active) return active;
+  const startDraftHistoryDrain = useCallback(
+    (writeKey: string): Promise<void> => {
+      const active = draftHistoryWriteChainsRef.current.get(writeKey);
+      if (active) return active;
 
-    const drain = (async () => {
-      while (true) {
-        const pending = draftHistoryWriteBufferRef.current.takeNext(writeKey);
-        if (!pending) return;
-        try {
-          const expectedVersion = draftHistoryPersistedVersionsRef.current.get(writeKey);
-          const saved = await api.review.saveDraftHistoryEntry(
-            pending.teamName,
-            pending.scopeKey,
-            pending.scopeToken,
-            pending.entry,
-            expectedVersion?.revision ?? 0,
-            expectedVersion?.generation ?? null
-          );
-          draftHistoryPersistedVersionsRef.current.set(writeKey, {
-            revision: saved.revision,
-            generation: saved.generation,
-          });
-          draftHistoryWriteErrorsRef.current.delete(writeKey);
-          const current = draftHistoryEntriesRef.current[pending.entry.filePath];
-          if (
-            expectedDraftHistoryKeyRef.current === pending.hydrationKey &&
-            current?.revision === saved.revision
-          ) {
-            const updatedEntries = {
-              ...draftHistoryEntriesRef.current,
-              [pending.entry.filePath]: saved,
-            };
-            draftHistoryEntriesRef.current = updatedEntries;
-            setDraftHistoryEntries(updatedEntries);
-          }
-        } catch (error) {
-          // A reply can be lost after the main process durably commits the write. Keep that
-          // exact predecessor separate from the coalesced latest draft so it can be retried
-          // idempotently before any newer revision is sent.
-          draftHistoryWriteBufferRef.current.markFailed(writeKey, pending);
-          draftHistoryWriteErrorsRef.current.set(writeKey, error);
-          setDraftConflictPromotionNonce((nonce) => nonce + 1);
-          if (expectedDraftHistoryKeyRef.current === pending.hydrationKey) {
-            useStore.setState({
-              applyError: 'Unable to save manual edit history. Retry Save or keep Changes open.',
+      const drain = (async () => {
+        while (true) {
+          const pending = draftHistoryWriteBufferRef.current.takeNext(writeKey);
+          if (!pending) return;
+          try {
+            const expectedVersion = draftHistoryPersistedVersionsRef.current.get(writeKey);
+            const saved = await api.review.saveDraftHistoryEntry(
+              pending.teamName,
+              pending.scopeKey,
+              pending.scopeToken,
+              pending.entry,
+              expectedVersion?.revision ?? 0,
+              expectedVersion?.generation ?? null
+            );
+            draftHistoryPersistedVersionsRef.current.set(writeKey, {
+              revision: saved.revision,
+              generation: saved.generation,
             });
-            void refreshReviewConflictCandidates();
+            draftHistoryWriteErrorsRef.current.delete(writeKey);
+            const current = draftHistoryEntriesRef.current[pending.entry.filePath];
+            if (
+              expectedDraftHistoryKeyRef.current === pending.hydrationKey &&
+              current?.revision === saved.revision
+            ) {
+              const updatedEntries = {
+                ...draftHistoryEntriesRef.current,
+                [pending.entry.filePath]: saved,
+              };
+              draftHistoryEntriesRef.current = updatedEntries;
+              setDraftHistoryEntries(updatedEntries);
+            }
+          } catch (error) {
+            // A reply can be lost after the main process durably commits the write. Keep that
+            // exact predecessor separate from the coalesced latest draft so it can be retried
+            // idempotently before any newer revision is sent.
+            draftHistoryWriteBufferRef.current.markFailed(writeKey, pending);
+            draftHistoryWriteErrorsRef.current.set(writeKey, error);
+            setDraftConflictPromotionNonce((nonce) => nonce + 1);
+            if (expectedDraftHistoryKeyRef.current === pending.hydrationKey) {
+              useStore.setState({
+                applyError: 'Unable to save manual edit history. Retry Save or keep Changes open.',
+              });
+              void refreshReviewConflictCandidates();
+            }
+            throw error;
           }
-          throw error;
         }
-      }
-    })();
-    draftHistoryWriteChainsRef.current.set(writeKey, drain);
-    void drain
-      .catch(() => undefined)
-      .finally(() => {
-        if (draftHistoryWriteChainsRef.current.get(writeKey) === drain) {
-          draftHistoryWriteChainsRef.current.delete(writeKey);
-        }
-      });
-    return drain;
-  }, [refreshReviewConflictCandidates]);
+      })();
+      draftHistoryWriteChainsRef.current.set(writeKey, drain);
+      void drain
+        .catch(() => undefined)
+        .finally(() => {
+          if (draftHistoryWriteChainsRef.current.get(writeKey) === drain) {
+            draftHistoryWriteChainsRef.current.delete(writeKey);
+          }
+        });
+      return drain;
+    },
+    [refreshReviewConflictCandidates]
+  );
 
   const enqueueDraftHistoryWrite = useCallback(
     (entry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>): void => {
@@ -890,11 +881,7 @@ export const ChangeReviewDialog = ({
       if (draftConflictPromotionChainsRef.current.has(writeKey)) continue;
       const failed = draftHistoryWriteBufferRef.current.peekFailed(writeKey);
       const pending = draftHistoryWriteBufferRef.current.peekPending(writeKey);
-      if (
-        !failed ||
-        !pending ||
-        failed.hydrationKey !== hydrationKey
-      ) {
+      if (!failed || !pending || failed.hydrationKey !== hydrationKey) {
         continue;
       }
       const promotion = (async () => {
@@ -909,11 +896,7 @@ export const ChangeReviewDialog = ({
             candidate.observedCurrentGeneration
           );
           if (expectedDraftHistoryKeyRef.current !== hydrationKey) return;
-          draftHistoryWriteBufferRef.current.promotePendingToFailed(
-            writeKey,
-            failed,
-            pending
-          );
+          draftHistoryWriteBufferRef.current.promotePendingToFailed(writeKey, failed, pending);
           await refreshReviewConflictCandidates();
         } catch (error) {
           if (expectedDraftHistoryKeyRef.current !== hydrationKey) return;
@@ -1562,10 +1545,7 @@ export const ChangeReviewDialog = ({
   }, [decisionHydrationKey]);
 
   const handleResolveReviewConflictCandidate = useCallback(
-    async (
-      resolution: ReviewConflictResolution,
-      expectedCandidateId?: string
-    ): Promise<void> => {
+    async (resolution: ReviewConflictResolution, expectedCandidateId?: string): Promise<void> => {
       if (
         !activeReviewConflictCandidate ||
         (resolution === 'recover-candidate' && !activeReviewConflictRecoverable) ||
@@ -4316,10 +4296,7 @@ export const ChangeReviewDialog = ({
         useStore.setState({ applyError: blocker });
         return { ok: false, blocker };
       }
-      if (
-        decisionScopeToken &&
-        pendingApplyCleanupKeyRef.current === decisionHydrationKey
-      ) {
+      if (decisionScopeToken && pendingApplyCleanupKeyRef.current === decisionHydrationKey) {
         const cleared = await clearDecisionsFromDisk(
           teamName,
           decisionScopeKey,
@@ -5004,11 +4981,7 @@ export const ChangeReviewDialog = ({
     closingRef.current = true;
     setClosing(true);
     try {
-      const cleared = await clearDecisionsFromDisk(
-        teamName,
-        decisionScopeKey,
-        decisionScopeToken
-      );
+      const cleared = await clearDecisionsFromDisk(teamName, decisionScopeKey, decisionScopeToken);
       if (!isCurrentReviewOperationScope(operationScope)) return;
       if (!cleared) {
         useStore.setState({
@@ -5148,15 +5121,14 @@ export const ChangeReviewDialog = ({
                 const operationScope = captureReviewOperationScope();
                 if (!operationScope) return;
                 const candidateId = pendingRecoveryDiscard.value.id;
-                void handleResolveReviewConflictCandidate(
-                  'keep-current',
-                  candidateId
-                ).finally(() => {
-                  if (!isCurrentReviewOperationScope(operationScope)) return;
-                  setPendingRecoveryDiscard((current) =>
-                    current?.value.id === candidateId ? null : current
-                  );
-                });
+                void handleResolveReviewConflictCandidate('keep-current', candidateId).finally(
+                  () => {
+                    if (!isCurrentReviewOperationScope(operationScope)) return;
+                    setPendingRecoveryDiscard((current) =>
+                      current?.value.id === candidateId ? null : current
+                    );
+                  }
+                );
               }}
             >
               Discard recovery branch
@@ -5267,8 +5239,8 @@ export const ChangeReviewDialog = ({
                     'file-not-in-current-review'
                   ? `An earlier manual-edit branch targets ${activeReviewConflictCandidate.value.filePath}, which is not part of the current review.`
                   : activeReviewConflictCandidate.value.entryRevision === null
-                  ? `The recovery branch has no saved manual edits for ${activeReviewConflictCandidate.value.filePath}.`
-                  : `Another window saved different manual edit history for ${activeReviewConflictCandidate.value.filePath}.`}
+                    ? `The recovery branch has no saved manual edits for ${activeReviewConflictCandidate.value.filePath}.`
+                    : `Another window saved different manual edit history for ${activeReviewConflictCandidate.value.filePath}.`}
               {reviewConflictCandidateCount > 1
                 ? ` ${reviewConflictCandidateCount - 1} more recovery ${reviewConflictCandidateCount === 2 ? 'copy is' : 'copies are'} queued.`
                 : ''}

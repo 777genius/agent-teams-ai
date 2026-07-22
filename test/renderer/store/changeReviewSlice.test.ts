@@ -2682,12 +2682,7 @@ describe('changeReviewSlice task changes', () => {
       decisionHydrationScopeKey: scopeKey,
       decisionHydrationStatus: 'loaded',
     });
-    store.getState().recordDecisionRevision(
-      'team-a',
-      'agent-alice',
-      'response-loss-scope',
-      0
-    );
+    store.getState().recordDecisionRevision('team-a', 'agent-alice', 'response-loss-scope', 0);
     hoisted.saveDecisions.mockResolvedValueOnce({
       revision: 2,
       reconciledState: {

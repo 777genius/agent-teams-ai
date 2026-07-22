@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
 import { ensureMinimumNodeOldSpaceEnv } from './lib/node-options.mjs';
+import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
 import { spawnSyncWithWindowsShell } from './lib/windows-shell-spawn.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -658,6 +659,8 @@ async function ensureBootstrappedRuntime() {
       if (!downloadReleaseAssetWithGh(download, archivePath)) {
         await downloadWithProgress(download, archivePath);
       }
+
+      await verifyRuntimeArchiveChecksum(archivePath, asset, platformKey);
 
       const extractDir = path.join(workDir, 'extracted');
       extractArchive(archivePath, extractDir, asset.archiveKind);

@@ -33,7 +33,7 @@ const PROVIDER_STATUS_TIMEOUT_MS = 90_000;
 const PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 30_000;
 const LEGACY_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 5_000;
 const OPENCODE_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 12_000;
-const OPENCODE_SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 45_000;
+const SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 45_000;
 const LEGACY_PROVIDER_AUTH_TIMEOUT_MS = 15_000;
 const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
 const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
@@ -972,11 +972,10 @@ export class ClaudeMultimodelBridgeService {
   ): number {
     if (
       options.summary &&
-      providerId === 'opencode' &&
       options.timeoutMs === undefined &&
       path.basename(binaryPath).toLowerCase() === 'cli-source'
     ) {
-      return OPENCODE_SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS;
+      return SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS;
     }
     if (options.summary && this.shouldUseLegacyProviderTimeoutFallback(providerId)) {
       const fallbackTimeout =
@@ -1917,7 +1916,6 @@ export class ClaudeMultimodelBridgeService {
         onUpdate,
         {
           summary: true,
-          timeoutMs: PROVIDER_STATUS_SUMMARY_TIMEOUT_MS,
           providerIds: DEFAULT_PROVIDER_STATUS_IDS,
         }
       );

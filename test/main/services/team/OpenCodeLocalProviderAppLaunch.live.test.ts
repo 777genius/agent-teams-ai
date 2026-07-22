@@ -288,10 +288,7 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
       providerId: 'opencode',
       runtimeModel: LOCAL_MODEL,
     });
-    const beforeOutageLaneIndex = await readOpenCodeRuntimeLaneIndex(
-      getTeamsBasePath(),
-      teamName
-    );
+    const beforeOutageLaneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
     expect(beforeOutageLaneIndex.lanes.primary).toMatchObject({
       laneId: 'primary',
       state: 'active',

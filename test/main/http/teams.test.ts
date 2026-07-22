@@ -4,8 +4,19 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { HttpServices } from '@main/http';
 import type {
+  OpenCodeRuntimeControlAck,
+  TeamHttpDataApi,
+  TeamHttpHandlerApis,
+  TeamHttpRuntimeApi,
+  TeamProvisioningStartApi,
+  TeamProvisioningStatusApi,
+  TeamRuntimeControlCompatibilityApi,
+  TeamTaskActivityRepairApi,
+} from '@main/services/team/contracts/TeamProvisioningApis';
+import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
+  TeamCreateResponse,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamProvisioningProgress,
@@ -25,14 +36,27 @@ describe('HTTP team runtime routes', () => {
       >();
     const getRuntimeState = vi.fn<(teamName: string) => Promise<TeamRuntimeState>>();
     const getProvisioningStatus = vi.fn<(runId: string) => Promise<TeamProvisioningProgress>>();
+    const repairStaleTaskActivityIntervalsBeforeSnapshot = vi.fn<
+      (teamName: string) => Promise<void>
+    >(() => Promise.resolve());
     const stopTeam = vi.fn<(teamName: string) => Promise<void>>(() => Promise.resolve());
     const getAliveTeams = vi.fn<() => string[]>();
+    const recordOpenCodeRuntimeBootstrapCheckin =
+      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    const deliverOpenCodeRuntimeMessage =
+      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    const recordOpenCodeRuntimeTaskEvent =
+      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    const recordOpenCodeRuntimeHeartbeat =
+      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    const answerOpenCodeRuntimePermission =
+      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
     const createTeam =
       vi.fn<
         (
           request: TeamCreateRequest,
           onProgress: (progress: TeamProvisioningProgress) => void
-        ) => Promise<TeamLaunchResponse>
+        ) => Promise<TeamCreateResponse>
       >();
     const listTeams = vi.fn<() => Promise<TeamSummary[]>>();
     const getTeamData = vi.fn<(teamName: string) => Promise<TeamViewSnapshot>>();
@@ -40,31 +64,45 @@ describe('HTTP team runtime routes', () => {
     const createTeamConfig = vi.fn<(request: TeamCreateConfigRequest) => Promise<void>>(() =>
       Promise.resolve()
     );
-    const teamProvisioningService = {
+    const resumeTeam = vi.fn<(teamName: string) => void>();
+    const teamProvisioningStartApi = {
       createTeam,
       launchTeam,
-      getRuntimeState,
+    } satisfies TeamProvisioningStartApi;
+    const teamProvisioningStatusApi = {
       getProvisioningStatus,
+    } satisfies TeamProvisioningStatusApi;
+    const teamTaskActivityRepairApi = {
+      repairStaleTaskActivityIntervalsBeforeSnapshot,
+    } satisfies TeamTaskActivityRepairApi;
+    const teamRuntimeApi = {
+      getRuntimeState,
       stopTeam,
       getAliveTeams,
-    } as Pick<
-      NonNullable<HttpServices['teamProvisioningService']>,
-      | 'createTeam'
-      | 'launchTeam'
-      | 'getRuntimeState'
-      | 'getProvisioningStatus'
-      | 'stopTeam'
-      | 'getAliveTeams'
-    > as HttpServices['teamProvisioningService'];
-    const teamDataService = {
+    } satisfies TeamHttpRuntimeApi;
+    const teamRuntimeControlApi = {
+      recordOpenCodeRuntimeBootstrapCheckin,
+      deliverOpenCodeRuntimeMessage,
+      recordOpenCodeRuntimeTaskEvent,
+      recordOpenCodeRuntimeHeartbeat,
+      answerOpenCodeRuntimePermission,
+    } satisfies TeamRuntimeControlCompatibilityApi;
+    const teamDataApi = {
       listTeams,
       getTeamData,
       getSavedRequest,
       createTeamConfig,
     } as Pick<
-      NonNullable<HttpServices['teamDataService']>,
+      TeamHttpDataApi,
       'listTeams' | 'getTeamData' | 'getSavedRequest' | 'createTeamConfig'
-    > as HttpServices['teamDataService'];
+    > as HttpServices['teamDataApi'];
+    const teamApis = {
+      provisioningStart: teamProvisioningStartApi,
+      provisioningStatus: teamProvisioningStatusApi,
+      taskActivity: teamTaskActivityRepairApi,
+      runtime: teamRuntimeApi,
+      runtimeControl: teamRuntimeControlApi,
+    } satisfies TeamHttpHandlerApis;
 
     const services = {
       projectScanner: {} as HttpServices['projectScanner'],
@@ -74,8 +112,11 @@ describe('HTTP team runtime routes', () => {
       dataCache: {} as HttpServices['dataCache'],
       updaterService: {} as HttpServices['updaterService'],
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
-      teamDataService,
-      teamProvisioningService,
+      teamDataApi,
+      teamApis,
+      memberWorkSyncFeature: {
+        resumeTeam,
+      } as unknown as HttpServices['memberWorkSyncFeature'],
     } satisfies HttpServices;
 
     return {
@@ -83,13 +124,20 @@ describe('HTTP team runtime routes', () => {
       launchTeam,
       getRuntimeState,
       getProvisioningStatus,
+      repairStaleTaskActivityIntervalsBeforeSnapshot,
       stopTeam,
       getAliveTeams,
+      recordOpenCodeRuntimeBootstrapCheckin,
+      deliverOpenCodeRuntimeMessage,
+      recordOpenCodeRuntimeTaskEvent,
+      recordOpenCodeRuntimeHeartbeat,
+      answerOpenCodeRuntimePermission,
       createTeam,
       listTeams,
       getTeamData,
       getSavedRequest,
       createTeamConfig,
+      resumeTeam,
     };
   }
 
@@ -102,7 +150,7 @@ describe('HTTP team runtime routes', () => {
   }
 
   it('lists, gets, and creates draft teams through team data service', async () => {
-    const { app, listTeams, getTeamData, createTeamConfig } = await createApp();
+    const { app, listTeams, getTeamData, createTeamConfig, resumeTeam } = await createApp();
     listTeams.mockResolvedValue([
       {
         teamName: 'demo-team',
@@ -193,6 +241,35 @@ describe('HTTP team runtime routes', () => {
         fastMode: 'on',
         limitContext: true,
       });
+      expect(resumeTeam).toHaveBeenCalledWith('new-team');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('repairs stale task activity before reading a team snapshot', async () => {
+    const { app, getTeamData, repairStaleTaskActivityIntervalsBeforeSnapshot } = await createApp();
+    getTeamData.mockResolvedValue({
+      teamName: 'demo-team',
+      config: null,
+      tasks: [],
+      members: [],
+      messages: [],
+      processes: [],
+      kanban: null,
+    } as unknown as TeamViewSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/demo-team',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(repairStaleTaskActivityIntervalsBeforeSnapshot).toHaveBeenCalledWith('demo-team');
+      expect(
+        repairStaleTaskActivityIntervalsBeforeSnapshot.mock.invocationCallOrder[0]
+      ).toBeLessThan(getTeamData.mock.invocationCallOrder[0]);
     } finally {
       await app.close();
     }
@@ -270,6 +347,115 @@ describe('HTTP team runtime routes', () => {
           skipPermissions: false,
           clearContext: true,
           limitContext: true,
+        },
+        expect.any(Function)
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('maps provisioning not-found errors with an embedded team name to 404', async () => {
+    const { app, launchTeam } = await createApp();
+    launchTeam.mockRejectedValue(
+      new Error('Team "demo-team" not found — config.json does not exist')
+    );
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toEqual({
+        error: 'Team "demo-team" not found — config.json does not exist',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not expose unexpected launch service errors in HTTP responses', async () => {
+    const { app, launchTeam } = await createApp();
+    launchTeam.mockRejectedValue(new Error('private provider runtime diagnostic'));
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(500);
+      expect(response.json()).toEqual({ error: 'Internal server error' });
+      expect(response.body).not.toContain('private provider runtime diagnostic');
+      expect(console.error).toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('returns 501 for launch without the optional team HTTP aggregate', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    registerTeamRoutes(app, {
+      ...mocks.services,
+      teamApis: undefined,
+    });
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(501);
+      expect(response.json()).toEqual({
+        error: 'Team launch control is not available in this mode',
+      });
+      expect(mocks.launchTeam).not.toHaveBeenCalled();
+      expect(mocks.createTeam).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('launches through the grouped HTTP facade exposed to the app shell', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    mocks.launchTeam.mockResolvedValue({ runId: 'run-grouped-http' });
+    expect('teamProvisioningStartApi' in mocks.services).toBe(false);
+    expect('teamRuntimeApi' in mocks.services).toBe(false);
+    registerTeamRoutes(app, mocks.services);
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ runId: 'run-grouped-http' });
+      expect(mocks.launchTeam).toHaveBeenCalledWith(
+        {
+          teamName: 'demo-team',
+          cwd: '/Users/test/project',
+          providerId: 'anthropic',
         },
         expect.any(Function)
       );
@@ -391,7 +577,7 @@ describe('HTTP team runtime routes', () => {
   });
 
   it('routes draft team launch through createTeam with saved metadata', async () => {
-    const { app, createTeam, getSavedRequest, launchTeam } = await createApp();
+    const { app, createTeam, getSavedRequest, launchTeam, resumeTeam } = await createApp();
     getSavedRequest.mockResolvedValue({
       teamName: 'draft-team',
       displayName: 'Draft Team',
@@ -422,6 +608,7 @@ describe('HTTP team runtime routes', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual({ runId: 'run-draft' });
       expect(launchTeam).not.toHaveBeenCalled();
+      expect(resumeTeam).toHaveBeenCalledWith('draft-team');
       expect(createTeam).toHaveBeenCalledWith(
         {
           teamName: 'draft-team',
@@ -733,6 +920,290 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
+  it('routes OpenCode runtime callbacks through the runtime API facade', async () => {
+    const {
+      app,
+      recordOpenCodeRuntimeBootstrapCheckin,
+      deliverOpenCodeRuntimeMessage,
+      recordOpenCodeRuntimeTaskEvent,
+      recordOpenCodeRuntimeHeartbeat,
+    } = await createApp();
+    const callbackPayload = {
+      runId: 'run-opencode',
+      idempotencyKey: 'callback-1',
+      observedAt: '2026-03-12T00:00:02.000Z',
+      location: { line: 12 },
+    };
+    const callbackCases = [
+      {
+        url: '/api/teams/demo-team/opencode/runtime/bootstrap-checkin',
+        handler: recordOpenCodeRuntimeBootstrapCheckin,
+        state: 'accepted',
+      },
+      {
+        url: '/api/teams/demo-team/opencode/runtime/deliver-message',
+        handler: deliverOpenCodeRuntimeMessage,
+        state: 'delivered',
+      },
+      {
+        url: '/api/teams/demo-team/opencode/runtime/task-event',
+        handler: recordOpenCodeRuntimeTaskEvent,
+        state: 'recorded',
+      },
+      {
+        url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+        handler: recordOpenCodeRuntimeHeartbeat,
+        state: 'recorded',
+      },
+    ] as const;
+
+    try {
+      for (const callbackCase of callbackCases) {
+        const ack: OpenCodeRuntimeControlAck = {
+          ok: true,
+          providerId: 'opencode',
+          teamName: 'demo-team',
+          runId: 'run-opencode',
+          state: callbackCase.state,
+          idempotencyKey: 'callback-1',
+          diagnostics: [],
+          observedAt: '2026-03-12T00:00:02.000Z',
+        };
+        callbackCase.handler.mockResolvedValueOnce(ack);
+
+        const response = await app.inject({
+          method: 'POST',
+          url: callbackCase.url,
+          payload: callbackPayload,
+        });
+
+        expect(response.statusCode).toBe(200);
+        expect(response.json()).toEqual(ack);
+        expect(callbackCase.handler).toHaveBeenCalledWith({
+          ...callbackPayload,
+          teamName: 'demo-team',
+        });
+      }
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('maps OpenCode runtime callback payload validation failures to 400', async () => {
+    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
+    recordOpenCodeRuntimeHeartbeat.mockRejectedValueOnce(
+      new Error('OpenCode runtime payload missing runId')
+    );
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+        payload: {
+          teamName: 'demo-team',
+          observedAt: '2026-03-12T00:00:02.000Z',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        error: 'OpenCode runtime payload missing runId',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('accepts heartbeats without observedAt for service-side normalization', async () => {
+    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
+    const ack: OpenCodeRuntimeControlAck = {
+      ok: true,
+      providerId: 'opencode',
+      teamName: 'demo-team',
+      runId: 'run-opencode',
+      state: 'recorded',
+      memberName: 'builder',
+      runtimeSessionId: 'session-1',
+      diagnostics: [],
+      observedAt: '2026-03-12T00:00:02.000Z',
+    };
+    recordOpenCodeRuntimeHeartbeat.mockResolvedValueOnce(ack);
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+        payload: {
+          runId: 'run-opencode',
+          memberName: 'builder',
+          runtimeSessionId: 'session-1',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual(ack);
+      expect(recordOpenCodeRuntimeHeartbeat).toHaveBeenCalledWith({
+        teamName: 'demo-team',
+        runId: 'run-opencode',
+        memberName: 'builder',
+        runtimeSessionId: 'session-1',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rejects provided invalid or non-string heartbeat observedAt before delegation', async () => {
+    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
+
+    try {
+      for (const observedAt of ['not-a-date', 42]) {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+          payload: {
+            runId: 'run-opencode',
+            memberName: 'builder',
+            runtimeSessionId: 'session-1',
+            observedAt,
+          },
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json()).toEqual({
+          error: 'OpenCode runtime payload invalid observedAt',
+        });
+      }
+      expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not expose runtime permission answers over HTTP', async () => {
+    const { app, answerOpenCodeRuntimePermission } = await createApp();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/permission-answer',
+        payload: {
+          runId: 'run-opencode',
+          memberName: 'builder',
+          requestId: 'provider-request-1',
+          decision: 'allow',
+          cwd: '/repo',
+          expectedMembers: [],
+        },
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(answerOpenCodeRuntimePermission).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('returns 501 for provisioning status without the optional team HTTP aggregate', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    registerTeamRoutes(app, {
+      ...mocks.services,
+      teamApis: undefined,
+    });
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/provisioning/run-2',
+      });
+
+      expect(response.statusCode).toBe(501);
+      expect(response.json()).toEqual({
+        error: 'Team provisioning status is not available in this mode',
+      });
+      expect(mocks.getProvisioningStatus).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rejects OpenCode runtime callback bodies for a different team', async () => {
+    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+        payload: {
+          teamName: 'other-team',
+          runId: 'run-opencode',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        error: 'runtime body teamName must match route teamName',
+      });
+      expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rejects malformed OpenCode runtime callback bodies before delegation', async () => {
+    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
+
+    try {
+      for (const payload of ['null', '[]']) {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+          headers: { 'content-type': 'application/json' },
+          payload,
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json()).toEqual({
+          error: 'runtime body must be an object',
+        });
+      }
+      expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('returns 501 for OpenCode runtime callbacks without the optional team HTTP aggregate', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    registerTeamRoutes(app, {
+      ...mocks.services,
+      teamApis: undefined,
+    });
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+        payload: {
+          teamName: 'demo-team',
+          runId: 'run-opencode',
+        },
+      });
+
+      expect(response.statusCode).toBe(501);
+      expect(response.json()).toEqual({
+        error: 'Team runtime callbacks are not available in this mode',
+      });
+      expect(mocks.recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
   it('returns 501 when team runtime routes are registered without a runtime service', async () => {
     const app = Fastify();
     registerTeamRoutes(app, {
@@ -831,14 +1302,16 @@ describe('HTTP team runtime routes', () => {
     };
     const memberWorkSyncFeature = {
       getStatus: vi.fn(),
-      refreshStatus: vi.fn(async () => refreshedStatus),
-      getMetrics: vi.fn(async () => metrics),
-      report: vi.fn(async () => ({
-        accepted: true,
-        code: 'accepted',
-        message: 'ok',
-        status: refreshedStatus,
-      })),
+      refreshStatus: vi.fn(() => Promise.resolve(refreshedStatus)),
+      getMetrics: vi.fn(() => Promise.resolve(metrics)),
+      report: vi.fn(() =>
+        Promise.resolve({
+          accepted: true,
+          code: 'accepted',
+          message: 'ok',
+          status: refreshedStatus,
+        })
+      ),
       noteTeamChange: vi.fn(),
       enqueueStartupScan: vi.fn(),
       replayPendingReports: vi.fn(),

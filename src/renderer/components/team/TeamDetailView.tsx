@@ -103,6 +103,7 @@ import { TrashDialog } from './kanban/TrashDialog';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
+import { resolvePinnedTeamActionTop } from './teamDetailLayout';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
@@ -182,11 +183,11 @@ import type { SessionInjection } from './session-injection-types';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
+  CreateTaskRequest,
   KanbanColumnId,
   KanbanTaskState,
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
-  TaskRef,
   TeamAgentRuntimeEntry,
   TeamCreateRequest,
   TeamLaunchRequest,
@@ -1438,6 +1439,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   const [graphOpen, setGraphOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const visualizeButtonAnchorRef = useRef<HTMLDivElement>(null);
+  const teamHeaderActionsRef = useRef<HTMLDivElement>(null);
   const taskDetailDialogRef = useRef<TaskDetailDialogHostHandle>(null);
   const taskDetailDialogPreloadScheduledRef = useRef(false);
   const [pinnedVisualizeButtonPosition, setPinnedVisualizeButtonPosition] = useState<{
@@ -1756,9 +1758,13 @@ export const TeamDetailView = memo(function TeamDetailView({
 
       const containerRect = currentContainer.getBoundingClientRect();
       const anchorRect = anchor.getBoundingClientRect();
-      const top = Math.round(containerRect.top + 12);
+      const pinThresholdTop = Math.round(containerRect.top + 12);
+      const top = resolvePinnedTeamActionTop({
+        containerTop: containerRect.top,
+        headerActionsBottom: teamHeaderActionsRef.current?.getBoundingClientRect().bottom,
+      });
       const right = Math.round(Math.max(window.innerWidth - containerRect.right + 16, 16));
-      const shouldPin = currentContainer.scrollTop > 0 && anchorRect.top <= top;
+      const shouldPin = currentContainer.scrollTop > 0 && anchorRect.top <= pinThresholdTop;
 
       setPinnedVisualizeButtonPosition((current) => {
         if (!shouldPin) return current === null ? current : null;
@@ -1774,6 +1780,9 @@ export const TeamDetailView = memo(function TeamDetailView({
     const resizeObserver =
       typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updatePinnedButton);
     resizeObserver?.observe(container);
+    if (teamHeaderActionsRef.current) {
+      resizeObserver?.observe(teamHeaderActionsRef.current);
+    }
 
     return () => {
       container.removeEventListener('scroll', updatePinnedButton);
@@ -2450,12 +2459,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       initialFilePath: request.filePath,
       taskChangeRequestOptions: request.requestOptions,
     });
-  }, [
-    isThisTabActive,
-    pendingReviewRequest,
-    requestOpenChangeReview,
-    setPendingReviewRequest,
-  ]);
+  }, [isThisTabActive, pendingReviewRequest, requestOpenChangeReview, setPendingReviewRequest]);
 
   const pendingTeamSectionFocus = useStore((s) => s.pendingTeamSectionFocus);
   const clearTeamSectionFocus = useStore((s) => s.clearTeamSectionFocus);
@@ -2741,48 +2745,27 @@ export const TeamDetailView = memo(function TeamDetailView({
     })();
   }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId]);
 
-  const handleCreateTask = (
-    subject: string,
-    description: string,
-    owner?: string,
-    blockedBy?: string[],
-    related?: string[],
-    prompt?: string,
-    startImmediately?: boolean,
-    descriptionTaskRefs?: TaskRef[],
-    promptTaskRefs?: TaskRef[]
-  ): void => {
+  const handleCreateTask = async (request: CreateTaskRequest): Promise<void> => {
+    const { owner, prompt, startImmediately, subject } = request;
     setCreatingTask(true);
-    void (async () => {
-      try {
-        await createTeamTask(teamName, {
-          subject,
-          description: description || undefined,
-          owner,
-          blockedBy,
-          related,
-          prompt,
-          descriptionTaskRefs,
-          promptTaskRefs,
-          startImmediately,
-        });
+    try {
+      await createTeamTask(teamName, request);
 
-        if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
-          const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
-          try {
-            await api.teams.processSend(teamName, msg);
-          } catch {
-            // best-effort
-          }
+      if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
+        const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
+        try {
+          await api.teams.processSend(teamName, msg);
+        } catch {
+          // best-effort
         }
-
-        closeCreateTaskDialog();
-      } catch {
-        // error shown via store
-      } finally {
-        setCreatingTask(false);
       }
-    })();
+
+      closeCreateTaskDialog();
+    } catch {
+      // error shown via store
+    } finally {
+      setCreatingTask(false);
+    }
   };
 
   const messagesPanelTasks = useStableMessagesPanelTasks(data?.tasks);
@@ -3073,7 +3056,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                     )}
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div ref={teamHeaderActionsRef} className="flex shrink-0 items-center gap-1">
                     {data.isAlive && (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -3122,15 +3105,13 @@ export const TeamDetailView = memo(function TeamDetailView({
                           variant="ghost"
                           size="sm"
                           className="size-7 rounded-full p-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                          aria-label={t('detail.tooltips.deleteTeam')}
+                          aria-label={t('list.moveToTrash.title')}
                           onClick={handleDeleteTeam}
                         >
                           <Trash2 size={12} />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        {t('detail.tooltips.deleteTeam')}
-                      </TooltipContent>
+                      <TooltipContent side="bottom">{t('list.moveToTrash.title')}</TooltipContent>
                     </Tooltip>
                   </div>
                 </div>
@@ -3668,9 +3649,9 @@ export const TeamDetailView = memo(function TeamDetailView({
                 <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
                   <DialogContent className="max-w-sm">
                     <DialogHeader>
-                      <DialogTitle>{t('detail.deleteTeam.title')}</DialogTitle>
+                      <DialogTitle>{t('list.moveToTrash.title')}</DialogTitle>
                       <DialogDescription>
-                        {t('detail.deleteTeam.description', { team: data.config.name })}
+                        {t('list.moveToTrash.message', { teamName: data.config.name })}
                       </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -3678,7 +3659,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                         {t('detail.actions.cancel')}
                       </Button>
                       <Button variant="destructive" size="sm" onClick={confirmDeleteTeam}>
-                        {t('detail.actions.delete')}
+                        {t('list.moveToTrash.confirmLabel')}
                       </Button>
                     </DialogFooter>
                   </DialogContent>

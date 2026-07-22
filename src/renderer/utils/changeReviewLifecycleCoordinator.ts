@@ -37,7 +37,7 @@ let pendingLifecycleOperationCount = 0;
 export function buildChangeReviewLifecycleSessionId(
   identity: ChangeReviewLifecycleIdentity
 ): string {
-  const target = identity.mode === 'task' ? identity.taskId ?? '' : identity.memberName ?? '';
+  const target = identity.mode === 'task' ? (identity.taskId ?? '') : (identity.memberName ?? '');
   const signature =
     identity.mode === 'task'
       ? buildTaskChangeSignature(identity.taskChangeRequestOptions ?? {})
@@ -82,10 +82,7 @@ export function requestChangeReviewLifecycleReservation(
   next: ChangeReviewLifecycleReservation
 ): Promise<boolean> {
   return enqueueLifecycleOperation(async () => {
-    if (
-      activeOwner?.hostId === next.hostId &&
-      activeOwner.sessionId === next.sessionId
-    ) {
+    if (activeOwner?.hostId === next.hostId && activeOwner.sessionId === next.sessionId) {
       reservation = next;
       return true;
     }
@@ -139,10 +136,7 @@ export function registerChangeReviewLifecycleOwner(
     accepted: true,
     unregister: () => {
       if (activeOwner === owner) activeOwner = null;
-      if (
-        reservation?.hostId === owner.hostId &&
-        reservation.sessionId === owner.sessionId
-      ) {
+      if (reservation?.hostId === owner.hostId && reservation.sessionId === owner.sessionId) {
         reservation = null;
       }
     },

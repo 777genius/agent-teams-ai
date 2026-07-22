@@ -597,7 +597,9 @@ function requestChanges(context, taskId, flags = {}) {
       nextReviewState: 'needsFix',
       transition: 'request_changes',
     });
-    tasks.setTaskStatus(context, currentTask.id, 'pending', nextFrom);
+    tasks.setTaskStatus(context, currentTask.id, 'pending', nextFrom, {
+      trustedInternalWrite: true,
+    });
     tasks.addTaskComment(context, currentTask.id, {
       text: nextComment,
       from: nextFrom,

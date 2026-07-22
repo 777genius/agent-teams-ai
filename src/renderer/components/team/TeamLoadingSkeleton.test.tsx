@@ -76,6 +76,16 @@ describe('TeamLoadingSkeleton Kanban', () => {
     ]);
     expect(host.querySelectorAll('.kanban-column-header-glow')).toHaveLength(5);
     expect(host.querySelectorAll('.kanban-task-card-skeleton')).toHaveLength(8);
+    const columnControls = Array.from(
+      host.querySelectorAll<HTMLElement>('.kanban-column-glow > div > div.border-dashed')
+    );
+    expect(columnControls).toHaveLength(2);
+    expect(columnControls.every((control) => control.classList.contains('mx-2'))).toBe(true);
+    expect(
+      columnControls.every(
+        (control) => !Array.from(control.classList).some((className) => className.startsWith('w-['))
+      )
+    ).toBe(true);
 
     await act(async () => {
       root.unmount();

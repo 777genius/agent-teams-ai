@@ -18,32 +18,32 @@ hero:
       text: 概念
       link: /zh/reference/concepts
 features:
-  - icon: "01"
+  - icon: '01'
     title: 团队优先的工作流
     details: 定义角色，启动一名 lead，让智能体拆分、认领并协调任务。
     link: /zh/guide/create-team
     linkText: 创建团队
-  - icon: "02"
+  - icon: '02'
     title: 实时看板
     details: 在智能体工作时，观察任务在 todo、in progress、review、done 和 approved 之间流转。
     link: /zh/guide/agent-workflow
     linkText: 了解工作流
-  - icon: "03"
+  - icon: '03'
     title: 内置代码审查
     details: 检查以任务为范围的 diff，接受或拒绝代码块（hunk），并在智能体需要指引时留下评论。
     link: /zh/guide/code-review
     linkText: 审查变更
-  - icon: "04"
+  - icon: '04'
     title: 运行时感知的设置
     details: 通过你已有的访问权限，使用 Claude、Codex、OpenCode 或多模型提供方。
     link: /zh/guide/runtime-setup
     linkText: 配置运行时
-  - icon: "05"
+  - icon: '05'
     title: 本地优先的掌控
     details: 该桌面应用读取本地项目与运行时状态。除非选定的提供方接收到提示词上下文，否则你的代码始终留在你的机器上。
     link: /zh/reference/privacy-local-data
     linkText: 隐私模型
-  - icon: "06"
+  - icon: '06'
     title: 可调试的团队
     details: 当启动或任务卡住时，可追踪任务日志、运行时输出、队友消息以及运行中的进程。
     link: /zh/guide/troubleshooting

@@ -6,6 +6,7 @@ import * as path from 'path';
 import { buildMemberWorkSyncRuntimeTurnSettledEnvironment } from '../../../../src/features/member-work-sync/main';
 import { registerTeamRoutes } from '../../../../src/main/http/teams';
 import { applyOpenCodeAutoUpdatePolicy } from '../../../../src/main/services/runtime/openCodeAutoUpdatePolicy';
+import { bindTeamHttpHandlerApis } from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
 import { OpenCodeBridgeCommandClient } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import {
   createOpenCodeBridgeCommandLeaseStore,
@@ -38,7 +39,8 @@ import type { HttpServices } from '../../../../src/main/http';
 import type { RuntimeStoreManifestEvidence } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import type { TaskRef } from '../../../../src/shared/types';
 
-const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
+const DEFAULT_ORCHESTRATOR_CLI =
+  '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 
 export interface InboxMessage {
   from?: string;
@@ -222,8 +224,9 @@ export async function waitForOpenCodePeerRelay(
   timeoutMs: number
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
-  let lastRelay: Awaited<ReturnType<TeamProvisioningService['relayOpenCodeMemberInboxMessages']>> | null =
-    null;
+  let lastRelay: Awaited<
+    ReturnType<TeamProvisioningService['relayOpenCodeMemberInboxMessages']>
+  > | null = null;
 
   while (Date.now() < deadline) {
     lastRelay = await svc.relayOpenCodeMemberInboxMessages(teamName, memberName, {
@@ -313,10 +316,7 @@ export async function getRuntimeTranscript(input: {
     }));
 }
 
-async function resolveOpenCodeMemberLaneId(
-  teamName: string,
-  memberName: string
-): Promise<string> {
+async function resolveOpenCodeMemberLaneId(teamName: string, memberName: string): Promise<string> {
   const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
   const laneIds = Object.keys(laneIndex.lanes);
   for (const laneId of laneIds) {
@@ -378,10 +378,7 @@ async function startLiveTeamControlApi(
   close: () => Promise<void>;
 }> {
   const app = Fastify({ logger: false });
-  registerTeamRoutes(app, {
-    teamProvisioningService: svc,
-    ...extraServices,
-  } as HttpServices);
+  registerTeamRoutes(app, buildLiveTeamControlApiServices(svc, extraServices) as HttpServices);
   await app.listen({ host: '127.0.0.1', port: 0 });
   const address = app.server.address();
   if (!address || typeof address === 'string') {
@@ -394,6 +391,20 @@ async function startLiveTeamControlApi(
     close: async () => {
       await app.close();
     },
+  };
+}
+
+export function buildLiveTeamControlApiServices(
+  svc: TeamProvisioningService,
+  extraServices: Partial<HttpServices> = {}
+): Partial<HttpServices> {
+  const { teamApis: overrideTeamApis, ...restServices } = extraServices;
+  return {
+    teamApis: {
+      ...bindTeamHttpHandlerApis(svc),
+      ...overrideTeamApis,
+    },
+    ...restServices,
   };
 }
 

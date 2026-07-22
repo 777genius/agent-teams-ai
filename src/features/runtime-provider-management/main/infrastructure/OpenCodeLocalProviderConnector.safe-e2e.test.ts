@@ -409,6 +409,49 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     });
   });
 
+  it('serializes concurrent configures so neither provider block is lost', async () => {
+    const projectPath = path.join(tempDir, 'concurrent-config-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ data: [{ id: 'qwen3:8b', object: 'model' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as typeof fetch;
+    const connector = new OpenCodeLocalProviderConnector({ fetchImpl });
+
+    // Both configures read-modify-write the same opencode.json concurrently.
+    // Without serialization the second read observes a stale snapshot and its
+    // write drops the first provider block.
+    const [a, b] = await Promise.all([
+      connector.configureLocalProvider({
+        runtimeId: 'opencode',
+        scope: 'project',
+        projectPath,
+        presetId: 'custom',
+        providerId: 'provider-a',
+        baseUrl: 'http://127.0.0.1:18123/v1',
+        defaultModelId: 'qwen3:8b',
+        setAsDefault: false,
+      }),
+      connector.configureLocalProvider({
+        runtimeId: 'opencode',
+        scope: 'project',
+        projectPath,
+        presetId: 'custom',
+        providerId: 'provider-b',
+        baseUrl: 'http://127.0.0.1:18124/v1',
+        defaultModelId: 'qwen3:8b',
+        setAsDefault: false,
+      }),
+    ]);
+
+    expect(a.error).toBeUndefined();
+    expect(b.error).toBeUndefined();
+    const config = await fs.readFile(path.join(projectPath, 'opencode.json'), 'utf8');
+    expect(config).toContain('"provider-a"');
+    expect(config).toContain('"provider-b"');
+  });
+
   it('creates a private global config and can set the global default without a project', async () => {
     const fetchImpl = (async () =>
       new Response(JSON.stringify({ data: [{ id: 'qwen3:8b', object: 'model' }] }), {

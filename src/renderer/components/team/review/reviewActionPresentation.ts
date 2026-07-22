@@ -90,7 +90,7 @@ export function getReviewActionFilePath(action: ReviewUndoAction): string | null
   }
   if (action.kind === 'hunk') return action.action.filePath;
   if (action.kind === 'disk') return action.action.snapshot.filePath;
-  return action.diskSnapshots.length === 1 ? action.diskSnapshots[0]?.filePath ?? null : null;
+  return action.diskSnapshots.length === 1 ? (action.diskSnapshots[0]?.filePath ?? null) : null;
 }
 
 /** Returns the stack top first without cloning an unbounded durable history. */

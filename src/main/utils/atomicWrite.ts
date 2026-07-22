@@ -76,10 +76,7 @@ function assertReviewTransactionId(id: string): void {
   if (!/^[a-f0-9-]{36}$/i.test(id)) throw new Error('Invalid review file transaction id');
 }
 
-function getReviewFileTransactionPaths(
-  targetPath: string,
-  id: string
-): ReviewFileTransactionPaths {
+function getReviewFileTransactionPaths(targetPath: string, id: string): ReviewFileTransactionPaths {
   assertReviewTransactionId(id);
   const directoryPath = path.join(
     path.dirname(path.resolve(targetPath)),
@@ -227,11 +224,7 @@ export async function renamePathWithRetry(
     try {
       await fs.promises.rename(src, dest);
       if (options.syncDirectories) {
-        await syncRenamedDirectories(
-          src,
-          dest,
-          options.durability === 'strict'
-        );
+        await syncRenamedDirectories(src, dest, options.durability === 'strict');
       }
       return;
     } catch (error) {
@@ -363,9 +356,7 @@ function buildReviewFileTransactionManifest(
     targetPath: path.resolve(transaction.targetPath),
     expectedSha256: hashReviewTransactionPart(transaction.expectedContent),
     nextSha256:
-      transaction.nextContent === null
-        ? null
-        : hashReviewTransactionPart(transaction.nextContent),
+      transaction.nextContent === null ? null : hashReviewTransactionPart(transaction.nextContent),
     phase,
   };
 }
@@ -569,11 +560,7 @@ async function inspectOrDetachReviewTransactionSource(
       throw new Error('Review mutation refuses symbolic or multiply-linked files');
     }
     await fs.promises.link(transaction.sourcePath, paths.beforePath);
-    before = await assertRegularTextArtifact(
-      paths.beforePath,
-      transaction.expectedContent,
-      source
-    );
+    before = await assertRegularTextArtifact(paths.beforePath, transaction.expectedContent, source);
     const latestSource = await lstatOrNull(transaction.sourcePath);
     if (!latestSource || !isSameFileIdentity(latestSource, before)) {
       throw new Error('File changed during review update; refusing to mutate it');
@@ -747,12 +734,7 @@ async function syncFile(filePath: string, strict: boolean): Promise<void> {
   }
 }
 
-const UNSUPPORTED_DIRECTORY_SYNC_CODES = new Set([
-  'EINVAL',
-  'ENOSYS',
-  'ENOTSUP',
-  'EOPNOTSUPP',
-]);
+const UNSUPPORTED_DIRECTORY_SYNC_CODES = new Set(['EINVAL', 'ENOSYS', 'ENOTSUP', 'EOPNOTSUPP']);
 
 function isUnsupportedDirectorySyncError(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException).code;
@@ -802,11 +784,7 @@ async function syncRenamedDirectoriesBestEffort(src: string, dest: string): Prom
   await syncRenamedDirectories(src, dest, false);
 }
 
-async function syncRenamedDirectories(
-  src: string,
-  dest: string,
-  strict: boolean
-): Promise<void> {
+async function syncRenamedDirectories(src: string, dest: string, strict: boolean): Promise<void> {
   const sourceDir = path.dirname(src);
   const destinationDir = path.dirname(dest);
   await syncDirectory(destinationDir, strict);

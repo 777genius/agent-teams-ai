@@ -31,7 +31,8 @@ vi.mock('@renderer/components/team/MemberBadge', () => ({
   MemberBadge: ({ name }: { name: string }) => React.createElement('span', null, name),
 }));
 vi.mock('@renderer/components/team/TaskTooltip', () => ({
-  TaskTooltip: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+  TaskTooltip: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
 }));
 vi.mock('@renderer/components/ui/ExpandableContent', () => ({
   ExpandableContent: ({ children }: { children: React.ReactNode }) =>
@@ -40,7 +41,8 @@ vi.mock('@renderer/components/ui/ExpandableContent', () => ({
 vi.mock('@renderer/components/ui/tooltip', () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
-  Tooltip: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+  Tooltip: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
   TooltipTrigger: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
   TooltipContent: ({ children }: { children: React.ReactNode }) =>

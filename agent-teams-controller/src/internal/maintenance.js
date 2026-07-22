@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
+const { withTeamBoardLock } = require('./boardLock.js');
 const kanbanStore = require('./kanbanStore.js');
 const taskStore = require('./taskStore.js');
 
@@ -144,25 +145,35 @@ function syncLinkedComments(paths, tasks, messages) {
 function reconcileArtifacts(context, options = {}) {
   const garbageCollectKanban = options.garbageCollectKanban !== false;
   const shouldSyncLinkedComments = options.syncLinkedComments !== false;
-  const tasks = taskStore.listTasks(context.paths);
 
-  const gcResult = garbageCollectKanban
-    ? kanbanStore.garbageCollect(
-        context.paths,
-        context.teamName,
-        new Set(tasks.map((task) => task.id))
-      )
-    : { staleKanbanEntriesRemoved: 0, staleColumnOrderRefsRemoved: 0 };
+  // Hold the board lock across the read-modify-write. reconcileArtifacts runs
+  // outside the controller facade (which is where per-operation locking lives),
+  // so without this its listTasks/addTaskComment reads would use the unlocked
+  // scan cache and its whole-file writes could clobber a change another process
+  // (e.g. the MCP server, which also embeds this controller) committed under the
+  // lock in between. Under the lock, scans read fresh and the cross-process
+  // lockfile serializes the writes.
+  return withTeamBoardLock(context.paths, () => {
+    const tasks = taskStore.listTasks(context.paths);
 
-  const linkedCommentsCreated = shouldSyncLinkedComments
-    ? syncLinkedComments(context.paths, tasks, readInboxMessages(context.paths))
-    : 0;
+    const gcResult = garbageCollectKanban
+      ? kanbanStore.garbageCollect(
+          context.paths,
+          context.teamName,
+          new Set(tasks.map((task) => task.id))
+        )
+      : { staleKanbanEntriesRemoved: 0, staleColumnOrderRefsRemoved: 0 };
 
-  return {
-    staleKanbanEntriesRemoved: gcResult.staleKanbanEntriesRemoved,
-    staleColumnOrderRefsRemoved: gcResult.staleColumnOrderRefsRemoved,
-    linkedCommentsCreated,
-  };
+    const linkedCommentsCreated = shouldSyncLinkedComments
+      ? syncLinkedComments(context.paths, tasks, readInboxMessages(context.paths))
+      : 0;
+
+    return {
+      staleKanbanEntriesRemoved: gcResult.staleKanbanEntriesRemoved,
+      staleColumnOrderRefsRemoved: gcResult.staleColumnOrderRefsRemoved,
+      linkedCommentsCreated,
+    };
+  });
 }
 
 module.exports = {

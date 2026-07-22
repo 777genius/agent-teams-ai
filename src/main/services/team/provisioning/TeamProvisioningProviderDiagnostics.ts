@@ -14,8 +14,8 @@ import {
 import { ProviderConnectionService } from '../../runtime/ProviderConnectionService';
 import {
   buildProviderPreflightPingArgs,
-  getProviderModelProbeExpectedOutput,
   getProviderModelProbeTimeoutMs,
+  isProviderModelProbeSuccessOutput,
   normalizeProviderModelProbeFailureReason,
 } from '../../runtime/providerModelProbe';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
@@ -520,10 +520,7 @@ export async function runProviderOneShotDiagnostic({
       };
     }
 
-    const pongCandidate = pingProbe.stdout.trim() || pingProbe.stderr.trim();
-    const isPong = new RegExp(`\\b${getProviderModelProbeExpectedOutput()}\\b`, 'i').test(
-      pongCandidate
-    );
+    const isPong = isProviderModelProbeSuccessOutput(combinedOutput);
     if (!isPong) {
       ports.appendPreflightDebugLog('provider_one_shot_diagnostic_complete', {
         providerId: resolvedProviderId,
@@ -567,17 +564,6 @@ export function buildAgentTeamsMcpValidationError(
   return buildAgentTeamsMcpValidationErrorMessage(output, normalizeApiRetryErrorMessage);
 }
 
-interface AgentTeamsMcpConfigEntry {
-  command?: unknown;
-  args?: unknown;
-  env?: unknown;
-  cwd?: unknown;
-}
-
-interface AgentTeamsMcpConfigFile {
-  mcpServers?: Record<string, AgentTeamsMcpConfigEntry>;
-}
-
 export interface AgentTeamsMcpLaunchSpec {
   command: string;
   args: string[];
@@ -618,12 +604,18 @@ interface AgentTeamsMcpValidationFixture {
 }
 
 export function parseAgentTeamsMcpLaunchSpec(
-  parsed: AgentTeamsMcpConfigFile,
+  parsed: unknown,
   mcpConfigPath: string,
   buildValidationError: (output: string) => string = buildAgentTeamsMcpValidationError
 ): AgentTeamsMcpLaunchSpec {
-  const server = parsed.mcpServers?.['agent-teams'];
-  if (!server) {
+  if (!isUnknownRecord(parsed)) {
+    throw new Error(
+      buildValidationError(`Generated MCP config ${mcpConfigPath} must be a JSON object.`)
+    );
+  }
+
+  const server = isUnknownRecord(parsed.mcpServers) ? parsed.mcpServers['agent-teams'] : undefined;
+  if (!isUnknownRecord(server)) {
     throw new Error(
       buildValidationError(
         `Generated MCP config ${mcpConfigPath} does not contain an "agent-teams" server entry.`
@@ -671,10 +663,10 @@ export async function readAgentTeamsMcpLaunchSpec({
     'readFileUtf8' | 'normalizeApiRetryErrorMessage'
   >;
 }): Promise<AgentTeamsMcpLaunchSpec> {
-  let parsed: AgentTeamsMcpConfigFile;
+  let parsed: unknown;
   try {
     const raw = await ports.readFileUtf8(mcpConfigPath);
-    parsed = JSON.parse(raw) as AgentTeamsMcpConfigFile;
+    parsed = JSON.parse(raw) as unknown;
   } catch (error) {
     throw new Error(
       buildAgentTeamsMcpValidationError(
@@ -746,8 +738,7 @@ export async function validateAgentTeamsMcpRuntime({
   };
   ports: TeamProvisioningProviderDiagnosticsPorts;
 }): Promise<void> {
-  const launchSpec = await readAgentTeamsMcpLaunchSpec({ mcpConfigPath, ports });
-  const fixture = await createAgentTeamsMcpValidationFixture({ projectPath: cwd, ports });
+  let fixture: AgentTeamsMcpValidationFixture | null = null;
   let child: TeamProvisioningProbeChild | null = null;
   let stdoutBuffer = '';
   let stderrBuffer = '';
@@ -755,6 +746,7 @@ export async function validateAgentTeamsMcpRuntime({
   let cancellationTriggered = false;
   let cancellationTimer: ReturnType<typeof setInterval> | null = null;
   const cancellationMessage = 'agent-teams MCP preflight cancelled by app shutdown';
+  const cancellationError = new Error(cancellationMessage);
   const pending = new Map<
     number,
     {
@@ -772,7 +764,6 @@ export async function validateAgentTeamsMcpRuntime({
     }
   };
 
-  const getCancellationError = (): Error => new Error(cancellationMessage);
   const cancelPreflightIfNeeded = (): boolean => {
     if (cancellationTriggered) {
       return true;
@@ -781,8 +772,7 @@ export async function validateAgentTeamsMcpRuntime({
       return false;
     }
     cancellationTriggered = true;
-    const error = getCancellationError();
-    rejectAll(error);
+    rejectAll(cancellationError);
     if (child?.pid) {
       ports.killProcessTree(child);
     }
@@ -790,11 +780,15 @@ export async function validateAgentTeamsMcpRuntime({
   };
   const throwIfCancelled = (): void => {
     if (cancelPreflightIfNeeded()) {
-      throw getCancellationError();
+      throw cancellationError;
     }
   };
 
   try {
+    throwIfCancelled();
+    const launchSpec = await readAgentTeamsMcpLaunchSpec({ mcpConfigPath, ports });
+    throwIfCancelled();
+    fixture = await createAgentTeamsMcpValidationFixture({ projectPath: cwd, ports });
     throwIfCancelled();
     child = ports.spawnCli(launchSpec.command, launchSpec.args, {
       cwd: launchSpec.cwd ?? cwd,
@@ -899,7 +893,7 @@ export async function validateAgentTeamsMcpRuntime({
     ): Promise<TResult> =>
       new Promise<TResult>((resolve, reject) => {
         if (cancelPreflightIfNeeded()) {
-          reject(getCancellationError());
+          reject(cancellationError);
           return;
         }
         if (!child?.stdin) {
@@ -922,7 +916,7 @@ export async function validateAgentTeamsMcpRuntime({
         if (cancelPreflightIfNeeded()) {
           clearTimeout(timeoutHandle);
           pending.delete(id);
-          reject(getCancellationError());
+          reject(cancellationError);
           return;
         }
 
@@ -970,6 +964,7 @@ export async function validateAgentTeamsMcpRuntime({
     );
     throwIfCancelled();
     await notify('notifications/initialized');
+    throwIfCancelled();
 
     const toolsList = await request<McpToolsListResult>('tools/list', {});
     throwIfCancelled();
@@ -1038,8 +1033,8 @@ export async function validateAgentTeamsMcpRuntime({
       throw new Error('agent-teams MCP returned empty content for lead_briefing');
     }
   } catch (error) {
-    if (error instanceof Error && error.message === cancellationMessage) {
-      throw error;
+    if (cancellationTriggered || options.isCancelled?.() || error === cancellationError) {
+      throw cancellationError;
     }
     const detail = buildCombinedLogs('', stderrBuffer).trim();
     const errorText =
@@ -1080,7 +1075,9 @@ export async function validateAgentTeamsMcpRuntime({
         await waitForChildProcessToExit(child, MCP_PREFLIGHT_SHUTDOWN_GRACE_MS, ports);
       }
     }
-    await ports.removeDirectory(fixture.claudeDir).catch(() => {});
+    if (fixture) {
+      await ports.removeDirectory(fixture.claudeDir).catch(() => {});
+    }
   }
 }
 
@@ -1208,6 +1205,10 @@ async function pathExistsAsDirectory(candidatePath: string): Promise<boolean> {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function normalizeRecordStringValues(value: unknown): Record<string, string> {

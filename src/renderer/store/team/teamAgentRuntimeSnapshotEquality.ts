@@ -60,9 +60,42 @@ export function areTeamAgentRuntimeResourceSamplesEqual(left: unknown, right: un
   );
 }
 
+export interface TeamAgentRuntimeSnapshotEqualityOptions {
+  compareFreshnessTimestamps?: boolean;
+}
+
+const DEFAULT_FRESHNESS_UPDATE_CADENCE_MS = 5_000;
+
+function parseFreshnessTimestampMs(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function areFreshnessTimestampsEqual(
+  left: string | undefined,
+  right: string | undefined,
+  options: TeamAgentRuntimeSnapshotEqualityOptions
+): boolean {
+  if (left === right || options.compareFreshnessTimestamps === false) return true;
+  if (options.compareFreshnessTimestamps === true) return false;
+
+  const rightMs = parseFreshnessTimestampMs(right);
+  if (rightMs === null) return true;
+
+  const leftMs = parseFreshnessTimestampMs(left);
+  if (leftMs === null) return false;
+
+  // Production callers omit options. Only a forward observation at least one
+  // cadence newer is renderer-visible; sub-cadence and regressive timestamps
+  // remain equal so polling cannot cause millisecond churn or stale rewrites.
+  return rightMs - leftMs < DEFAULT_FRESHNESS_UPDATE_CADENCE_MS;
+}
+
 export function areTeamAgentRuntimeEntriesEqual(
   left: TeamAgentRuntimeEntry | undefined,
-  right: TeamAgentRuntimeEntry | undefined
+  right: TeamAgentRuntimeEntry | undefined,
+  options: TeamAgentRuntimeSnapshotEqualityOptions = {}
 ): boolean {
   if (left === right) return true;
   if (!left || !right) return left === right;
@@ -77,6 +110,7 @@ export function areTeamAgentRuntimeEntriesEqual(
     left.laneKind === right.laneKind &&
     left.pid === right.pid &&
     left.runtimeModel === right.runtimeModel &&
+    left.cwd === right.cwd &&
     left.rssBytes === right.rssBytes &&
     left.cpuPercent === right.cpuPercent &&
     left.primaryCpuPercent === right.primaryCpuPercent &&
@@ -94,9 +128,11 @@ export function areTeamAgentRuntimeEntriesEqual(
     left.paneCurrentCommand === right.paneCurrentCommand &&
     left.runtimePid === right.runtimePid &&
     left.runtimeSessionId === right.runtimeSessionId &&
+    left.runtimeLeaseExpiresAt === right.runtimeLeaseExpiresAt &&
     left.runtimeDiagnostic === right.runtimeDiagnostic &&
     left.runtimeDiagnosticSeverity === right.runtimeDiagnosticSeverity &&
-    left.runtimeLastSeenAt === right.runtimeLastSeenAt &&
+    areFreshnessTimestampsEqual(left.updatedAt, right.updatedAt, options) &&
+    areFreshnessTimestampsEqual(left.runtimeLastSeenAt, right.runtimeLastSeenAt, options) &&
     left.historicalBootstrapConfirmed === right.historicalBootstrapConfirmed &&
     areDiagnosticsEqual(left.diagnostics, right.diagnostics) &&
     areResourceHistoryEntriesEqual(left.resourceHistory, right.resourceHistory)
@@ -105,10 +141,19 @@ export function areTeamAgentRuntimeEntriesEqual(
 
 export function areTeamAgentRuntimeSnapshotsEqual(
   left: TeamAgentRuntimeSnapshot | undefined,
-  right: TeamAgentRuntimeSnapshot
+  right: TeamAgentRuntimeSnapshot,
+  options: TeamAgentRuntimeSnapshotEqualityOptions = {}
 ): boolean {
   if (!left) return false;
-  if (left.teamName !== right.teamName || left.runId !== right.runId) {
+  if (
+    left.teamName !== right.teamName ||
+    left.runId !== right.runId ||
+    left.providerBackendId !== right.providerBackendId ||
+    left.fastMode !== right.fastMode
+  ) {
+    return false;
+  }
+  if (!areFreshnessTimestampsEqual(left.updatedAt, right.updatedAt, options)) {
     return false;
   }
   const leftKeys = Object.keys(left.members);
@@ -120,7 +165,7 @@ export function areTeamAgentRuntimeSnapshotsEqual(
     if (!(key in right.members)) {
       return false;
     }
-    if (!areTeamAgentRuntimeEntriesEqual(left.members[key], right.members[key])) {
+    if (!areTeamAgentRuntimeEntriesEqual(left.members[key], right.members[key], options)) {
       return false;
     }
   }

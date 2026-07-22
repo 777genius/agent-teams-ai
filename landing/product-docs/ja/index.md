@@ -18,32 +18,32 @@ hero:
       text: コンセプト
       link: /ja/reference/concepts
 features:
-  - icon: "01"
+  - icon: '01'
     title: チームファーストのワークフロー
     details: ロールを定義し、リードを起動して、エージェントがタスクを分割・取得・調整できるようにします。
     link: /ja/guide/create-team
     linkText: チームを作成する
-  - icon: "02"
+  - icon: '02'
     title: ライブ カンバンボード
     details: エージェントが作業する中で、タスクが todo、in progress、review、done、approved を移動していく様子を見守ります。
     link: /ja/guide/agent-workflow
     linkText: ワークフローを理解する
-  - icon: "03"
+  - icon: '03'
     title: 組み込みのコードレビュー
     details: タスク単位の差分を確認し、ハンクを承認または却下し、エージェントに方向性が必要な箇所にコメントします。
     link: /ja/guide/code-review
     linkText: 変更をレビューする
-  - icon: "04"
+  - icon: '04'
     title: ランタイムを意識したセットアップ
     details: すでにお持ちのアクセス権を通じて、Claude、Codex、OpenCode、またはマルチモデルのプロバイダーを利用します。
     link: /ja/guide/runtime-setup
     linkText: ランタイムを設定する
-  - icon: "05"
+  - icon: '05'
     title: ローカルファーストの制御
     details: デスクトップアプリはローカルのプロジェクトとランタイムの状態を読み取ります。選択したプロバイダーがプロンプトのコンテキストを受け取らない限り、コードはお使いのマシンに留まります。
     link: /ja/reference/privacy-local-data
     linkText: プライバシーモデル
-  - icon: "06"
+  - icon: '06'
     title: デバッグ可能なチーム
     details: 起動やタスクが行き詰まったときに、タスクログ、ランタイム出力、チームメイトのメッセージ、ライブプロセスをトレースします。
     link: /ja/guide/troubleshooting

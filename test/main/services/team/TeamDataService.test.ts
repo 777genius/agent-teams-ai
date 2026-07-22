@@ -422,7 +422,7 @@ describe('TeamDataService task projection cache invalidation', () => {
       {} as never,
       { getMembers: vi.fn(async () => []) } as never,
       { readMessages: vi.fn(async () => []) } as never,
-      (() => ({ tasks: taskController })) as never
+      (() => ({ taskBoard: taskController })) as never
     );
     const invalidateSpy = vi.spyOn(TeamTaskReader, 'invalidateAllTasksCache');
 
@@ -460,6 +460,7 @@ describe('TeamDataService task projection cache invalidation', () => {
 
     const configInvalidateSpy = vi.spyOn(TeamConfigReader, 'invalidateTeam');
     const taskInvalidateSpy = vi.spyOn(TeamTaskReader, 'invalidateAllTasksCache');
+    const removeSpy = vi.spyOn(nodeFs.promises, 'rm');
 
     const service = new TeamDataService();
     await service.permanentlyDeleteTeam('gone-team');
@@ -468,6 +469,19 @@ describe('TeamDataService task projection cache invalidation', () => {
     await expect(fs.access(path.join(claudeRoot, 'tasks', 'gone-team'))).rejects.toThrow();
     expect(configInvalidateSpy).toHaveBeenCalledWith('gone-team');
     expect(taskInvalidateSpy).toHaveBeenCalledTimes(1);
+    expect(removeSpy).toHaveBeenCalledWith(
+      path.join(claudeRoot, 'teams', 'gone-team'),
+      expect.objectContaining({
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 50,
+      })
+    );
+    expect(removeSpy).toHaveBeenCalledWith(
+      path.join(claudeRoot, 'tasks', 'gone-team'),
+      expect.objectContaining({ maxRetries: 5, retryDelay: 50 })
+    );
   });
 
   it('keeps team deletion mutations on verified config reads', async () => {
@@ -720,18 +734,20 @@ describe('TeamDataService draft metadata', () => {
 
     for (let restart = 0; restart < 2; restart += 1) {
       const provisioning = new TeamProvisioningService();
-      const report = await (
+      const resolution = await (
         provisioning as unknown as {
-          probeLaunchCompatibility(
-            teamName: string,
-            rawConfig: string,
-            providerId: string
-          ): Promise<{ rosterSource: string; members: Array<{ name: string }> }>;
+          configFacade: {
+            resolveLaunchExpectedMembers(
+              teamName: string,
+              rawConfig: string,
+              providerId: string
+            ): Promise<{ source: string; members: Array<{ name: string }> }>;
+          };
         }
-      ).probeLaunchCompatibility('restart-team', configRaw, 'codex');
+      ).configFacade.resolveLaunchExpectedMembers('restart-team', configRaw, 'codex');
 
-      expect(report.rosterSource).toBe('members-meta');
-      expect(report.members.map((member) => member.name)).toEqual(['bob']);
+      expect(resolution.source).toBe('members-meta');
+      expect(resolution.members.map((member) => member.name)).toEqual(['bob']);
     }
   });
 });
@@ -947,7 +963,7 @@ function createGetTeamDataHarness(
     sentMessagesStore as never,
     (() =>
       ({
-        tasks: {
+        taskBoard: {
           getTask: options.getTask ?? (() => null),
         },
         processes: {
@@ -984,6 +1000,67 @@ function buildResolvedMember(name: string): ResolvedTeamMember {
     lastActiveAt: null,
     messageCount: 0,
   };
+}
+
+function createDurableTaskStartNotificationHarness(options: {
+  task: TeamTask;
+  commandResults?: Array<{ outcome: string; createdInAttempt: boolean }>;
+  commandFacadeCreateTask?: ReturnType<typeof vi.fn>;
+  sendMessage?: ReturnType<typeof vi.fn>;
+}): {
+  service: TeamDataService;
+  sendMessage: ReturnType<typeof vi.fn>;
+  commandFacadeCreateTask: ReturnType<typeof vi.fn>;
+} {
+  const sendMessage =
+    options.sendMessage ??
+    vi.fn(async (_teamName: string, request: { messageId?: string }) => ({
+      deliveredToInbox: true,
+      messageId: request.messageId ?? 'generated-message-id',
+    }));
+  const commandResults = options.commandResults ?? [
+    { outcome: 'executed', createdInAttempt: true },
+  ];
+  let commandAttempt = 0;
+  const commandFacadeCreateTask =
+    options.commandFacadeCreateTask ??
+    vi.fn(async () => {
+      const result = commandResults[Math.min(commandAttempt, commandResults.length - 1)];
+      commandAttempt += 1;
+      return {
+        task: options.task,
+        outcome: result?.outcome ?? 'replayed',
+        createdInAttempt: result?.createdInAttempt ?? false,
+      };
+    });
+  const service = new TeamDataService(
+    {
+      getConfig: vi.fn(async () => ({
+        name: 'My team',
+        members: [{ name: 'lead-agent', agentType: 'team-lead', role: 'Lead' }],
+        leadSessionId: 'lead-session-1',
+      })),
+    } as never,
+    {} as never,
+    {} as never,
+    { sendMessage } as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    null,
+    {} as never,
+    {} as never,
+    () =>
+      ({
+        taskBoard: {
+          getTask: vi.fn(() => options.task),
+          createTask: vi.fn(() => options.task),
+          reconcileTaskCreation: vi.fn(() => options.task),
+        },
+      }) as never
+  );
+  service.setTaskBoardCommandFacade({ createTask: commandFacadeCreateTask } as never);
+  return { service, sendMessage, commandFacadeCreateTask };
 }
 
 describe('TeamDataService', () => {
@@ -1788,7 +1865,7 @@ describe('TeamDataService', () => {
       {} as never,
       () =>
         ({
-          tasks: {
+          taskBoard: {
             addTaskComment,
             setNeedsClarification: vi.fn(),
           },
@@ -1846,7 +1923,7 @@ describe('TeamDataService', () => {
       {} as never,
       (_teamName: string) =>
         ({
-          tasks: {
+          taskBoard: {
             createTask: createTaskMock,
           },
         }) as never
@@ -1860,6 +1937,575 @@ describe('TeamDataService', () => {
     );
     expect(getConfigSnapshot).toHaveBeenCalledWith('my-team');
     expect(getConfig).not.toHaveBeenCalled();
+  });
+
+  it('routes identified task creates through the durable command facade without legacy fallback', async () => {
+    const directCreate = vi.fn();
+    const durableTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      subject: 'Durable task',
+      status: 'pending' as const,
+    };
+    const commandFacade = {
+      createTask: vi.fn(async () => ({
+        task: durableTask,
+        outcome: 'executed',
+        createdInAttempt: true,
+      })),
+    };
+    let supportsReconciliation = true;
+    const reconcileTaskCreation = vi.fn();
+    const service = new TeamDataService(
+      {
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [] })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      null,
+      {} as never,
+      {} as never,
+      () =>
+        ({
+          taskBoard: {
+            getTask: vi.fn(),
+            createTask: directCreate,
+            reconcileTaskCreation: supportsReconciliation ? reconcileTaskCreation : undefined,
+          },
+        }) as never
+    );
+    service.setTaskBoardCommandFacade(commandFacade as never);
+    const command = {
+      commandId: durableTask.id,
+      idempotencyKey: 'create-task-intent-1',
+    };
+
+    await expect(
+      service.createTask('my-team', { subject: durableTask.subject, command })
+    ).resolves.toEqual(durableTask);
+    expect(commandFacade.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName: 'my-team',
+        identity: command,
+        payload: expect.objectContaining({ subject: durableTask.subject, createdBy: 'user' }),
+        destination: expect.objectContaining({
+          findById: expect.any(Function),
+          create: expect.any(Function),
+          reconcile: expect.any(Function),
+        }),
+      })
+    );
+    expect(directCreate).not.toHaveBeenCalled();
+
+    supportsReconciliation = false;
+    await expect(
+      service.createTask('my-team', {
+        subject: 'Mixed controller must fail before create',
+        command: {
+          commandId: '22222222-2222-4222-8222-222222222222',
+          idempotencyKey: 'create-task-intent-2',
+        },
+      })
+    ).rejects.toThrow('Durable task-board commands are unavailable');
+    expect(commandFacade.createTask).toHaveBeenCalledTimes(1);
+    expect(directCreate).not.toHaveBeenCalled();
+  });
+
+  it('uses one legacy create when durable task commands are unavailable', async () => {
+    const commandId = '33333333-3333-4333-8333-333333333333';
+    const legacyTask: TeamTask = {
+      id: commandId,
+      subject: 'Legacy task',
+      status: 'pending',
+    };
+    let storedTask: (TeamTask & { creationCommand?: unknown }) | null = null;
+    const directCreate = vi.fn((input: Record<string, unknown>) => {
+      storedTask = {
+        ...legacyTask,
+        creationCommand: input.creationCommand,
+      };
+      return storedTask;
+    });
+    const getTask = vi.fn((taskId: string) => {
+      if (!storedTask || storedTask.id !== taskId) {
+        throw new Error(`Task not found: ${taskId}`);
+      }
+      return storedTask;
+    });
+    const reconcileTaskCreation = vi.fn(() => storedTask);
+    const service = new TeamDataService(
+      {
+        getConfig: vi.fn(async () => ({
+          name: 'My team',
+          members: [],
+          projectPath: '/projects/legacy',
+        })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      null,
+      {} as never,
+      {} as never,
+      () =>
+        ({
+          taskBoard: {
+            getTask,
+            createTask: directCreate,
+            reconcileTaskCreation,
+          },
+        }) as never
+    );
+
+    await expect(
+      service.createTask('my-team', {
+        subject: legacyTask.subject,
+        command: {
+          commandId,
+          idempotencyKey: 'create-task-intent-3',
+        },
+      })
+    ).resolves.toEqual(legacyTask);
+
+    expect(directCreate).toHaveBeenCalledOnce();
+    expect(directCreate).toHaveBeenCalledWith({
+      subject: legacyTask.subject,
+      createdBy: 'user',
+      projectPath: '/projects/legacy',
+      id: commandId,
+      creationCommand: {
+        namespace: 'task-board',
+        scopeKey: 'my-team',
+        operation: 'task.create',
+        commandId,
+        payloadHash: expect.stringMatching(/^sha256:/),
+      },
+    });
+    expect(reconcileTaskCreation).toHaveBeenCalledOnce();
+  });
+
+  it('notifies a lead-owned task from the final started state on fresh durable execution', async () => {
+    const task: TeamTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      displayId: '11111111',
+      subject: 'Durable lead task',
+      description: 'Use the final task description.',
+      owner: 'lead-agent',
+      status: 'in_progress',
+    };
+    const { service, sendMessage } = createDurableTaskStartNotificationHarness({ task });
+
+    await expect(
+      service.createTask('my-team', {
+        subject: task.subject,
+        owner: 'lead-agent',
+        startImmediately: true,
+        command: {
+          commandId: task.id,
+          idempotencyKey: 'durable-lead-task',
+        },
+      })
+    ).resolves.toEqual(task);
+
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({
+        member: 'lead-agent',
+        from: 'user',
+        source: 'system_notification',
+        leadSessionId: 'lead-session-1',
+        messageId: 'task-start:my-team:11111111-1111-4111-8111-111111111111',
+        summary: 'Start working on #11111111',
+      })
+    );
+    expect(sendMessage.mock.calls[0]?.[1]?.text).toContain(
+      'This start notification can become stale after reassignment or completion.'
+    );
+    expect(sendMessage.mock.calls[0]?.[1]?.text).toContain(
+      'If the owner changed or the task is completed/deleted, do not start or reopen it'
+    );
+    expect(sendMessage.mock.calls[0]?.[1]?.text).toContain(
+      'task_complete { teamName: "my-team", taskId: "11111111-1111-4111-8111-111111111111", actor: "lead-agent" }'
+    );
+  });
+
+  it.each(['reconciled', 'replayed'])(
+    'notifies from the resolved lead-owned started state when a durable command is %s',
+    async (outcome) => {
+      const task: TeamTask = {
+        id: '11111111-1111-4111-8111-111111111111',
+        subject: 'Recovered lead task',
+        owner: 'lead-agent',
+        status: 'in_progress',
+      };
+      const { service, sendMessage } = createDurableTaskStartNotificationHarness({
+        task,
+        commandResults: [{ outcome, createdInAttempt: false }],
+      });
+
+      await service.createTask('my-team', {
+        subject: task.subject,
+        owner: 'lead-agent',
+        startImmediately: true,
+        command: {
+          commandId: task.id,
+          idempotencyKey: 'recovered-lead-task',
+        },
+      });
+
+      expect(sendMessage).toHaveBeenCalledWith(
+        'my-team',
+        expect.objectContaining({
+          messageId: 'task-start:my-team:11111111-1111-4111-8111-111111111111',
+        })
+      );
+    }
+  );
+
+  it.each([
+    {
+      name: 'a non-lead owner',
+      owner: 'alice',
+      status: 'in_progress' as const,
+    },
+    {
+      name: 'a non-started final state',
+      owner: 'lead-agent',
+      status: 'pending' as const,
+    },
+  ])('does not send the durable lead notification for $name', async ({ owner, status }) => {
+    const task: TeamTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      subject: 'No lead notification',
+      owner,
+      status,
+    };
+    const { service, sendMessage } = createDurableTaskStartNotificationHarness({
+      task,
+      commandResults: [{ outcome: 'replayed', createdInAttempt: false }],
+    });
+
+    await service.createTask('my-team', {
+      subject: task.subject,
+      owner: 'lead-agent',
+      startImmediately: true,
+      command: {
+        commandId: task.id,
+        idempotencyKey: 'no-lead-notification',
+      },
+    });
+
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('attempts the same deterministic lead notification on every durable replay', async () => {
+    const task: TeamTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      subject: 'Replay notification',
+      owner: 'lead-agent',
+      status: 'in_progress',
+    };
+    const { service, sendMessage } = createDurableTaskStartNotificationHarness({
+      task,
+      commandResults: [
+        { outcome: 'replayed', createdInAttempt: false },
+        { outcome: 'replayed', createdInAttempt: false },
+      ],
+    });
+    const request = {
+      subject: task.subject,
+      owner: 'lead-agent',
+      startImmediately: true,
+      command: {
+        commandId: task.id,
+        idempotencyKey: 'replay-notification',
+      },
+    };
+
+    await service.createTask('my-team', request);
+    await service.createTask('my-team', request);
+
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+    expect(sendMessage.mock.calls.map((call) => call[1]?.messageId)).toEqual([
+      'task-start:my-team:11111111-1111-4111-8111-111111111111',
+      'task-start:my-team:11111111-1111-4111-8111-111111111111',
+    ]);
+  });
+
+  it('keeps a post-commit notification failure nonfatal and deduplicates its replay', async () => {
+    const task: TeamTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      subject: 'Retry notification',
+      owner: 'lead-agent',
+      status: 'in_progress',
+    };
+    const notificationFailure = {
+      message: 'notification-message-field-marker',
+      stack: 'notification-stack-field-marker',
+      path: '/private/notification-path-field-marker/team.json',
+      details: { value: 'notification-object-field-marker' },
+      cause: { message: 'notification-cause-field-marker' },
+      code: 'notification-code-field-marker',
+      toString: () => 'notification-string-field-marker',
+    };
+    const deliveredMessageIds = new Set<string>();
+    const deliveryDeduplication: boolean[] = [];
+    let deliveryAttempt = 0;
+    const sendMessage = vi.fn(async (_teamName: string, notification: { messageId?: string }) => {
+      const messageId = notification.messageId ?? 'missing-message-id';
+      const deduplicated = deliveredMessageIds.has(messageId);
+      deliveryAttempt += 1;
+      deliveredMessageIds.add(messageId);
+      if (deliveryAttempt === 1) {
+        throw notificationFailure;
+      }
+      deliveryDeduplication.push(deduplicated);
+      return {
+        deliveredToInbox: true,
+        messageId,
+        ...(deduplicated ? { deduplicated: true } : {}),
+      };
+    });
+    let commitFirstAttempt: ((value: unknown) => void) | undefined;
+    const commandFacadeCreateTask = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            commitFirstAttempt = resolve;
+          })
+      )
+      .mockResolvedValueOnce({
+        task,
+        outcome: 'replayed',
+        createdInAttempt: false,
+      });
+    const { service } = createDurableTaskStartNotificationHarness({
+      task,
+      sendMessage,
+      commandFacadeCreateTask,
+    });
+    const request = {
+      subject: task.subject,
+      owner: 'lead-agent',
+      startImmediately: true,
+      command: {
+        commandId: task.id,
+        idempotencyKey: 'retry-notification',
+      },
+    };
+
+    const firstCreate = service.createTask('my-team', request);
+    expect(commandFacadeCreateTask).toHaveBeenCalledTimes(1);
+    expect(sendMessage).not.toHaveBeenCalled();
+
+    commitFirstAttempt?.({
+      task,
+      outcome: 'executed',
+      createdInAttempt: true,
+    });
+    await expect(firstCreate).resolves.toEqual(task);
+    await expect(service.createTask('my-team', request)).resolves.toEqual(task);
+
+    expect(commandFacadeCreateTask).toHaveBeenCalledTimes(2);
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+    expect(sendMessage.mock.calls.map((call) => call[1]?.messageId)).toEqual([
+      'task-start:my-team:11111111-1111-4111-8111-111111111111',
+      'task-start:my-team:11111111-1111-4111-8111-111111111111',
+    ]);
+    expect([...deliveredMessageIds]).toEqual([
+      'task-start:my-team:11111111-1111-4111-8111-111111111111',
+    ]);
+    expect(deliveryDeduplication).toEqual([true]);
+
+    const warningCalls = vi.mocked(console.warn).mock.calls;
+    expect(warningCalls).toEqual([
+      [
+        '[Service:TeamDataService]',
+        '[TeamDataService] category=post_commit_notification code=task_start_notification_failed team=my-team task=11111111-1111-4111-8111-111111111111',
+      ],
+    ]);
+    const warningOutput = warningCalls.flat().map(String).join('\n');
+    expect(warningOutput.length).toBeLessThanOrEqual(256);
+    for (const rawValue of [
+      notificationFailure.message,
+      notificationFailure.stack,
+      notificationFailure.path,
+      notificationFailure.details.value,
+      notificationFailure.cause.message,
+      notificationFailure.code,
+      String(notificationFailure),
+    ]) {
+      expect(warningOutput).not.toContain(rawValue);
+    }
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('rejects a pre-commit persistence failure without sending a notification', async () => {
+    const task: TeamTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      subject: 'Persistence retry',
+      owner: 'lead-agent',
+      status: 'in_progress',
+    };
+    const persistenceFailure = new Error('pre-commit-persistence-failure');
+    const { service, sendMessage, commandFacadeCreateTask } =
+      createDurableTaskStartNotificationHarness({ task });
+    commandFacadeCreateTask.mockRejectedValueOnce(persistenceFailure);
+    const request = {
+      subject: task.subject,
+      owner: 'lead-agent',
+      startImmediately: true,
+      command: {
+        commandId: task.id,
+        idempotencyKey: 'persistence-retry',
+      },
+    };
+
+    await expect(service.createTask('my-team', request)).rejects.toBe(persistenceFailure);
+    expect(sendMessage).not.toHaveBeenCalled();
+
+    await expect(service.createTask('my-team', request)).resolves.toEqual(task);
+    expect(commandFacadeCreateTask).toHaveBeenCalledTimes(2);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({
+        messageId: 'task-start:my-team:11111111-1111-4111-8111-111111111111',
+      })
+    );
+  });
+
+  it('keeps non-durable task-start notification failure best-effort', async () => {
+    const task: TeamTask = {
+      id: 'legacy-task-1',
+      subject: 'Legacy best-effort task',
+      owner: 'lead-agent',
+      status: 'in_progress',
+    };
+    const sendMessage = vi.fn(() => {
+      throw new Error('legacy inbox unavailable');
+    });
+    const service = new TeamDataService(
+      {
+        getConfig: vi.fn(async () => ({
+          name: 'My team',
+          members: [{ name: 'lead-agent', agentType: 'team-lead', role: 'Lead' }],
+        })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      null,
+      {} as never,
+      {} as never,
+      () =>
+        ({
+          taskBoard: { createTask: vi.fn(() => task) },
+          messages: { sendMessage },
+        }) as never
+    );
+
+    await expect(
+      service.createTask('my-team', {
+        subject: task.subject,
+        owner: 'lead-agent',
+        startImmediately: true,
+      })
+    ).resolves.toEqual(task);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps derived projectPath outside the durable command payload', async () => {
+    const directCreate = vi.fn((input: Record<string, unknown>) => ({
+      ...input,
+      status: 'pending' as const,
+    }));
+    const commandFacade = {
+      createTask: vi.fn(
+        async (command: {
+          identity: { commandId: string };
+          payload: Record<string, unknown>;
+          destination: { create(input: Record<string, unknown>): Promise<TeamTask> | TeamTask };
+        }) => ({
+          task: await command.destination.create({
+            ...command.payload,
+            id: command.identity.commandId,
+            creationCommand: {
+              namespace: 'task-board',
+              scopeKey: 'my-team',
+              operation: 'task.create',
+              commandId: command.identity.commandId,
+              payloadHash: 'sha256:test',
+            },
+          }),
+          outcome: 'executed',
+          createdInAttempt: true,
+        })
+      ),
+    };
+    const service = new TeamDataService(
+      {
+        getConfig: vi.fn(() =>
+          Promise.resolve({
+            name: 'My team',
+            members: [],
+            projectPath: '/projects/current',
+          })
+        ),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      null,
+      {} as never,
+      {} as never,
+      () =>
+        ({
+          taskBoard: {
+            getTask: vi.fn(),
+            createTask: directCreate,
+            reconcileTaskCreation: vi.fn(),
+          },
+        }) as never
+    );
+    service.setTaskBoardCommandFacade(commandFacade as never);
+
+    await service.createTask('my-team', {
+      subject: 'Stable intent',
+      blockedBy: ['task-b', 'task-a', 'task-b'],
+      related: ['task-d', 'task-c', 'task-d'],
+      command: {
+        commandId: '33333333-3333-4333-8333-333333333333',
+        idempotencyKey: 'stable-intent',
+      },
+    });
+
+    expect(commandFacade.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          blockedBy: ['task-a', 'task-b'],
+          related: ['task-c', 'task-d'],
+        }),
+      })
+    );
+    expect(commandFacade.createTask.mock.calls[0]?.[0].payload).not.toHaveProperty('projectPath');
+    expect(directCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ projectPath: '/projects/current' })
+    );
   });
 
   it('returns lightweight notification context from config without hydrating team data', async () => {
@@ -1979,7 +2625,7 @@ describe('TeamDataService', () => {
       {} as never,
       (_teamName: string) =>
         ({
-          tasks: {
+          taskBoard: {
             createTask: createTaskMock,
           },
         }) as never
@@ -2032,7 +2678,7 @@ describe('TeamDataService', () => {
       {} as never,
       (_teamName: string) =>
         ({
-          tasks: {
+          taskBoard: {
             createTask: createTaskMock,
           },
         }) as never
@@ -2091,7 +2737,7 @@ describe('TeamDataService', () => {
       {} as never,
       (_teamName: string) =>
         ({
-          tasks: {
+          taskBoard: {
             createTask: createTaskMock,
           },
         }) as never
@@ -2175,7 +2821,7 @@ describe('TeamDataService', () => {
       {} as never,
       () =>
         ({
-          review: {
+          taskBoard: {
             requestReview: requestReviewMock,
           },
         }) as never
@@ -2215,7 +2861,7 @@ describe('TeamDataService', () => {
       {} as never,
       () =>
         ({
-          review: {
+          taskBoard: {
             requestReview: requestReviewMock,
           },
         }) as never
@@ -2808,14 +3454,12 @@ describe('TeamDataService', () => {
       {} as never,
       () =>
         ({
-          tasks: {
+          taskBoard: {
             getTask: vi.fn(() => ({
               id: 'task-1',
               status: 'completed',
               reviewState: 'none',
             })),
-          },
-          kanban: {
             getKanbanState: vi.fn(() => ({
               teamName: 'my-team',
               reviewers: [],
@@ -2826,8 +3470,6 @@ describe('TeamDataService', () => {
                 },
               },
             })),
-          },
-          review: {
             requestReview: requestReviewMock,
             approveReview: approveReviewMock,
             requestChanges: requestChangesMock,
@@ -2883,23 +3525,19 @@ describe('TeamDataService', () => {
       {} as never,
       () =>
         ({
-          tasks: {
+          taskBoard: {
             getTask: vi.fn(() => ({
               id: 'task-1',
               status: 'completed',
               reviewState: 'none',
               historyEvents: [],
             })),
-          },
-          kanban: {
             getKanbanState: vi.fn(() => ({
               teamName: 'my-team',
               reviewers: [],
               tasks: {},
             })),
             setKanbanColumn: setKanbanColumnMock,
-          },
-          review: {
             approveReview: approveReviewMock,
           },
         }) as never

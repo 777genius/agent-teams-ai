@@ -3,53 +3,54 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const hoisted = vi.hoisted(() => {
   const files = new Map<string, string>();
   const dirs = new Map<string, string[]>();
+  const sizes = new Map<string, number>();
 
   // Normalize path separators so tests pass on Windows (backslash → forward slash)
   const norm = (p: string): string => p.replace(/\\/g, '/');
 
-  const stat = vi.fn(async (filePath: string) => {
+  const stat = vi.fn((filePath: string) => {
     const data = files.get(norm(filePath));
     if (data === undefined) {
       const error = new Error('ENOENT') as NodeJS.ErrnoException;
       error.code = 'ENOENT';
-      throw error;
+      return Promise.reject(error);
     }
     const signatureStride = Math.max(1, Math.floor(data.length / 128));
     let signatureValue = Buffer.byteLength(data, 'utf8');
     for (let i = 0; i < data.length; i += signatureStride) {
       signatureValue = (signatureValue * 33 + data.charCodeAt(i)) % 1_000_000_007;
     }
-    return {
+    return Promise.resolve({
       isFile: () => true,
-      size: Buffer.byteLength(data, 'utf8'),
+      size: sizes.get(norm(filePath)) ?? Buffer.byteLength(data, 'utf8'),
       mtimeMs: signatureValue,
       ctimeMs: signatureValue,
       dev: 1,
       ino: signatureValue,
-    };
+    });
   });
 
-  const readdir = vi.fn(async (dirPath: string) => {
+  const readdir = vi.fn((dirPath: string) => {
     const entries = dirs.get(norm(dirPath));
     if (!entries) {
       const error = new Error('ENOENT') as NodeJS.ErrnoException;
       error.code = 'ENOENT';
-      throw error;
+      return Promise.reject(error);
     }
-    return entries;
+    return Promise.resolve(entries);
   });
 
-  const readFile = vi.fn(async (filePath: string) => {
+  const readFile = vi.fn((filePath: string) => {
     const data = files.get(norm(filePath));
     if (data === undefined) {
       const error = new Error('ENOENT') as NodeJS.ErrnoException;
       error.code = 'ENOENT';
-      throw error;
+      return Promise.reject(error);
     }
-    return data;
+    return Promise.resolve(data);
   });
 
-  return { files, dirs, stat, readdir, readFile };
+  return { files, dirs, sizes, stat, readdir, readFile };
 });
 
 vi.mock('fs', async (importOriginal) => {
@@ -69,7 +70,10 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
   getTeamsBasePath: () => '/mock/teams',
 }));
 
-import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
+import {
+  MAX_INBOX_FILE_BYTES,
+  TeamInboxReader,
+} from '../../../../src/main/services/team/TeamInboxReader';
 
 describe('TeamInboxReader', () => {
   let reader: TeamInboxReader;
@@ -79,6 +83,7 @@ describe('TeamInboxReader', () => {
     reader = new TeamInboxReader();
     hoisted.files.clear();
     hoisted.dirs.clear();
+    hoisted.sizes.clear();
     hoisted.stat.mockClear();
     hoisted.readdir.mockClear();
     hoisted.readFile.mockClear();
@@ -275,6 +280,66 @@ describe('TeamInboxReader', () => {
 
     expect(older.messages.map((message) => message.messageId)).toEqual(['m-2', 'm-1']);
     expect(older.sourceRevision).toBe(head.sourceRevision);
+  });
+
+  it('keeps sourceRevision stable across directory and inbox-row ordering', async () => {
+    const writeInboxes = (reversed: boolean) => {
+      hoisted.dirs.set(
+        inboxDir,
+        reversed ? ['Alice-2.json', 'Alice.json'] : ['Alice.json', 'Alice-2.json']
+      );
+      const aliceRows = [
+        {
+          from: 'alice',
+          text: 'first',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          read: false,
+          messageId: 'm-1',
+        },
+        {
+          from: 'alice',
+          text: 'second',
+          timestamp: '2026-01-02T00:00:00.000Z',
+          read: false,
+          messageId: 'm-2',
+        },
+      ];
+      const duplicateRows = [
+        {
+          from: 'alice',
+          text: 'third',
+          timestamp: '2026-01-03T00:00:00.000Z',
+          read: false,
+          messageId: 'm-3',
+        },
+        {
+          from: 'alice',
+          text: 'fourth',
+          timestamp: '2026-01-04T00:00:00.000Z',
+          read: false,
+          messageId: 'm-4',
+        },
+      ];
+      hoisted.files.set(
+        '/mock/teams/my-team/inboxes/Alice.json',
+        JSON.stringify(reversed ? [...aliceRows].reverse() : aliceRows)
+      );
+      hoisted.files.set(
+        '/mock/teams/my-team/inboxes/Alice-2.json',
+        JSON.stringify(reversed ? [...duplicateRows].reverse() : duplicateRows)
+      );
+    };
+    writeInboxes(false);
+    const forward = await reader.getMessagesWindow('my-team', { limit: 10 });
+
+    writeInboxes(true);
+    reader = new TeamInboxReader();
+    const reverse = await reader.getMessagesWindow('my-team', { limit: 10 });
+
+    expect(reverse.messages.map((message) => message.messageId)).toEqual(
+      forward.messages.map((message) => message.messageId)
+    );
+    expect(reverse.sourceRevision).toBe(forward.sourceRevision);
   });
 
   it('getMessagesWindow ignores native bootstrap-control text in sourceRevision', async () => {
@@ -505,7 +570,7 @@ describe('TeamInboxReader', () => {
     );
 
     const first = await reader.getMessagesFor('my-team', 'alice');
-    first[0]!.to = 'mutated';
+    first[0].to = 'mutated';
     const second = await reader.getMessagesFor('my-team', 'alice');
 
     expect(hoisted.stat).toHaveBeenCalledTimes(2);
@@ -539,6 +604,29 @@ describe('TeamInboxReader', () => {
     expect(first[0]?.messageId).toBe('m-large');
     expect(second[0]?.messageId).toBe('m-large');
     expect(hoisted.readFile).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads inboxes at the shared byte limit and skips files above it', async () => {
+    const inboxPath = '/mock/teams/my-team/inboxes/alice.json';
+    hoisted.files.set(
+      inboxPath,
+      JSON.stringify([
+        {
+          from: 'alice',
+          text: 'at limit',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          read: false,
+          messageId: 'm-limit',
+        },
+      ])
+    );
+    hoisted.sizes.set(inboxPath, MAX_INBOX_FILE_BYTES);
+
+    expect(await reader.getMessagesFor('my-team', 'alice')).toHaveLength(1);
+
+    hoisted.sizes.set(inboxPath, MAX_INBOX_FILE_BYTES + 1);
+    expect(await reader.getMessagesFor('my-team', 'alice')).toEqual([]);
+    expect(hoisted.readFile).toHaveBeenCalledTimes(1);
   });
 
   it('evicts old inbox payloads when the cache byte budget is exceeded', async () => {

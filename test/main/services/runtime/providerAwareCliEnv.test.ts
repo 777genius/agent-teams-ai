@@ -254,14 +254,11 @@ describe('buildProviderAwareCliEnv', () => {
       allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
     });
 
-    expect(augmentAllConfiguredConnectionEnvMock).toHaveBeenCalledWith(
-      expect.any(Object),
-      {
-        allowStoredApiKeyDecryption: false,
-        allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
-        allowClaudeUserSettingsAuthEnv: false,
-      }
-    );
+    expect(augmentAllConfiguredConnectionEnvMock).toHaveBeenCalledWith(expect.any(Object), {
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+      allowClaudeUserSettingsAuthEnv: false,
+    });
     expect(applyAllConfiguredConnectionEnvMock).not.toHaveBeenCalled();
   });
 
@@ -605,11 +602,9 @@ describe('buildProviderAwareCliEnv', () => {
     });
     expect(connectionIssuesEnv?.OPENAI_API_KEY).toBeUndefined();
     expect(connectionIssuesEnv?.CODEX_API_KEY).toBeUndefined();
-    expect(getConfiguredConnectionIssuesMock).toHaveBeenCalledWith(
-      connectionIssuesEnv,
-      ['codex'],
-      { codex: undefined }
-    );
+    expect(getConfiguredConnectionIssuesMock).toHaveBeenCalledWith(connectionIssuesEnv, ['codex'], {
+      codex: undefined,
+    });
     expect(result.env.CODEX_CLI_PATH).toBe('/Users/tester/.local/bin/codex');
     expect(result.env.CODEX_HOME).toBe('/Users/tester/.codex-custom');
     expect(result.env.CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD).toBe('chatgpt');
@@ -655,9 +650,9 @@ describe('buildProviderAwareCliEnv', () => {
     expect(result.env.OPENCODE_BIN_PATH).toBe(appManagedBinaryPath);
     expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(appManagedBinaryPath));
     expect(
-      result.env.PATH
-        ?.split(path.delimiter)
-        .filter((entry) => entry === path.dirname(appManagedBinaryPath))
+      result.env.PATH?.split(path.delimiter).filter(
+        (entry) => entry === path.dirname(appManagedBinaryPath)
+      )
     ).toHaveLength(1);
   });
 

@@ -2,10 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TeamTaskStallMonitor } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallMonitor';
 
-function neverResolves(): Promise<never> {
-  return new Promise(() => undefined);
-}
-
 interface Deferred<T> {
   promise: Promise<T>;
   resolve: (value: T) => void;
@@ -92,7 +88,7 @@ describe('TeamTaskStallMonitor', () => {
         taskId: 'task-a',
         branch: 'work',
         signal: 'turn_ended_after_touch',
-        epochKey: 'task-a:epoch',
+        epochKey: 'work-a:epoch',
         reason: 'Potential work stall.',
       })),
       evaluateReview: vi.fn(),
@@ -107,7 +103,7 @@ describe('TeamTaskStallMonitor', () => {
             taskId: 'task-a',
             branch: 'work',
             signal: 'turn_ended_after_touch',
-            epochKey: 'task-a:epoch',
+            epochKey: 'work-a:epoch',
             reason: 'Potential work stall.',
           },
         ]),
@@ -132,11 +128,7 @@ describe('TeamTaskStallMonitor', () => {
 
     expect(snapshotSource.getSnapshot).toHaveBeenCalledTimes(2);
     expect(notifier.notifyLead).toHaveBeenCalledTimes(1);
-    expect(journal.markAlerted).toHaveBeenCalledWith(
-      'demo',
-      'task-a:epoch',
-      expect.any(String)
-    );
+    expect(journal.markAlerted).toHaveBeenCalledWith('demo', 'work-a:epoch', expect.any(String));
   });
 
   it('times out a hung scan so later stall scans continue', async () => {
@@ -145,8 +137,12 @@ describe('TeamTaskStallMonitor', () => {
     vi.stubEnv('CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS', '1');
     vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS', '1');
 
+    const hungSnapshot = createDeferred<null>();
     const snapshotSource = {
-      getSnapshot: vi.fn().mockImplementationOnce(neverResolves).mockResolvedValueOnce(null),
+      getSnapshot: vi
+        .fn()
+        .mockImplementationOnce(() => hungSnapshot.promise)
+        .mockResolvedValueOnce(null),
     };
     const monitor = new TeamTaskStallMonitor(
       {
@@ -173,6 +169,8 @@ describe('TeamTaskStallMonitor', () => {
     await vi.advanceTimersByTimeAsync(1_001);
     expect(snapshotSource.getSnapshot).toHaveBeenCalledTimes(2);
 
+    hungSnapshot.resolve(null);
+    await flushAsyncWork();
     await monitor.stop();
   });
 
@@ -195,10 +193,11 @@ describe('TeamTaskStallMonitor', () => {
       epochKey: 'task-healthy:epoch',
       reason: 'Potential work stall.',
     };
+    const stuckSnapshot = createDeferred<null>();
     const snapshotSource = {
       getSnapshot: vi.fn(async (teamName: string) => {
         if (teamName === 'stuck') {
-          return neverResolves();
+          return stuckSnapshot.promise;
         }
         return {
           teamName: 'healthy',
@@ -257,6 +256,8 @@ describe('TeamTaskStallMonitor', () => {
       expect.any(String)
     );
 
+    stuckSnapshot.resolve(null);
+    await flushAsyncWork();
     await monitor.stop();
   });
 
@@ -269,13 +270,13 @@ describe('TeamTaskStallMonitor', () => {
     const staleJournalScan = createDeferred<unknown[]>();
     const readyEvaluation = {
       status: 'alert',
-      taskId: 'task-a',
+      taskId: 'work-a',
       branch: 'work',
       signal: 'turn_ended_after_touch',
-      epochKey: 'task-a:epoch',
+      epochKey: 'work-a:epoch',
       reason: 'Potential work stall.',
     };
-    const task = { id: 'task-a', displayId: 'abcd1234', subject: 'Task A' };
+    const task = { id: 'work-a', displayId: 'abcd1234', subject: 'Work A' };
     const notifier = {
       notifyLead: vi.fn(async () => undefined),
       notifyOpenCodeOwners: vi.fn(async () => []),
@@ -299,7 +300,7 @@ describe('TeamTaskStallMonitor', () => {
           teamName: 'demo',
           inProgressTasks: [task],
           reviewOpenTasks: [],
-          allTasksById: new Map([['task-a', task]]),
+          allTasksById: new Map([['work-a', task]]),
         })),
       } as never,
       {
@@ -333,6 +334,77 @@ describe('TeamTaskStallMonitor', () => {
     await monitor.stop();
   });
 
+  it('idempotently waits for a timed-out scan body before stop resolves', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '1000');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS', '1');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS', '1');
+
+    const pendingJournalWrite = createDeferred<unknown[]>();
+    const registry = {
+      start: vi.fn(),
+      stop: vi.fn(async () => undefined),
+      noteTeamChange: vi.fn(),
+      listActiveTeams: vi.fn(async () => ['demo']),
+    };
+    const task = { id: 'work-a', displayId: 'abcd1234', subject: 'Work A' };
+    const monitor = new TeamTaskStallMonitor(
+      registry as never,
+      {
+        getSnapshot: vi.fn(async () => ({
+          teamName: 'demo',
+          inProgressTasks: [task],
+          reviewOpenTasks: [],
+          allTasksById: new Map([['work-a', task]]),
+        })),
+      } as never,
+      {
+        evaluateWork: vi.fn(() => ({
+          status: 'alert',
+          taskId: 'work-a',
+          branch: 'work',
+          signal: 'turn_ended_after_touch',
+          epochKey: 'work-a:epoch',
+          reason: 'Potential work stall.',
+        })),
+        evaluateReview: vi.fn(),
+      } as never,
+      {
+        reconcileScan: vi.fn(() => pendingJournalWrite.promise),
+        markAlerted: vi.fn(async () => undefined),
+      } as never,
+      { notifyLead: vi.fn(), notifyOpenCodeOwners: vi.fn() } as never,
+      { scanTimeoutMs: 10 }
+    );
+
+    monitor.start();
+    await vi.advanceTimersByTimeAsync(3_010);
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'task stall monitor scan timed out after 10ms'
+    );
+    vi.mocked(console.warn).mockClear();
+
+    let stopped = false;
+    const firstStop = monitor.stop();
+    const secondStop = monitor.stop();
+    void firstStop.then(() => {
+      stopped = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(secondStop).toBe(firstStop);
+    expect(registry.stop).toHaveBeenCalledOnce();
+    expect(stopped).toBe(false);
+
+    pendingJournalWrite.resolve([]);
+    await firstStop;
+    expect(stopped).toBe(true);
+    expect(monitor.stop()).toBe(firstStop);
+
+    monitor.start();
+    expect(registry.start).toHaveBeenCalledOnce();
+  });
+
   it('defaults to OpenCode owner remediation without duplicate lead alerts when remediation is accepted', async () => {
     vi.useFakeTimers();
     vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '1000');
@@ -351,7 +423,7 @@ describe('TeamTaskStallMonitor', () => {
       branch: 'work',
       signal: 'turn_ended_after_touch',
       progressSignal: 'weak_start_only',
-      epochKey: 'task-a:epoch',
+      epochKey: 'work-a:epoch',
       reason: 'Potential work stall after weak start-only task comment.',
     };
     const journal = {
@@ -397,11 +469,7 @@ describe('TeamTaskStallMonitor', () => {
         scopeTaskIds: expect.any(Array),
       })
     );
-    expect(journal.markAlerted).toHaveBeenCalledWith(
-      'demo',
-      'task-a:epoch',
-      expect.any(String)
-    );
+    expect(journal.markAlerted).toHaveBeenCalledWith('demo', 'work-a:epoch', expect.any(String));
   });
 
   it('uses OpenCode owner remediation without lead alerts when only remediation is enabled', async () => {
@@ -441,7 +509,7 @@ describe('TeamTaskStallMonitor', () => {
       branch: 'work',
       signal: 'turn_ended_after_touch',
       progressSignal: 'weak_start_only',
-      epochKey: 'task-a:epoch',
+      epochKey: 'work-a:epoch',
       reason: 'Potential work stall after weak start-only task comment.',
     };
     const policy = {
@@ -477,11 +545,7 @@ describe('TeamTaskStallMonitor', () => {
       })
     );
     expect(notifier.notifyLead).not.toHaveBeenCalled();
-    expect(journal.markAlerted).toHaveBeenCalledWith(
-      'demo',
-      'task-a:epoch',
-      expect.any(String)
-    );
+    expect(journal.markAlerted).toHaveBeenCalledWith('demo', 'work-a:epoch', expect.any(String));
   });
 
   it('does not journal non-OpenCode task alerts when only OpenCode remediation is enabled', async () => {

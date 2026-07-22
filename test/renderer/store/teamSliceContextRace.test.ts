@@ -142,34 +142,35 @@ async function flushMicrotasks(): Promise<void> {
 }
 
 function createSliceStore() {
-  return create<AppState>()((set, get, store) =>
-    ({
-      ...createTeamSlice(set as never, get as never, store as never),
-      activeContextId: 'local',
-      appConfig: null,
-      paneLayout: {
-        focusedPaneId: 'pane-default',
-        panes: [
-          {
-            id: 'pane-default',
-            widthFraction: 1,
-            tabs: [],
-            activeTabId: null,
-          },
-        ],
-      },
-      openTab: vi.fn(),
-      setActiveTab: vi.fn(),
-      updateTabLabel: vi.fn(),
-      getAllPaneTabs: vi.fn(() => []),
-      warmTaskChangeSummaries: vi.fn(async () => undefined),
-      invalidateTaskChangePresence: vi.fn(),
-      projects: [],
-      repositoryGroups: [],
-      selectedProjectId: null,
-      selectedWorktreeId: null,
-      fetchSessionsInitial: vi.fn(async () => undefined),
-    }) as unknown as AppState
+  return create<AppState>()(
+    (set, get, store) =>
+      ({
+        ...createTeamSlice(set as never, get as never, store as never),
+        activeContextId: 'local',
+        appConfig: null,
+        paneLayout: {
+          focusedPaneId: 'pane-default',
+          panes: [
+            {
+              id: 'pane-default',
+              widthFraction: 1,
+              tabs: [],
+              activeTabId: null,
+            },
+          ],
+        },
+        openTab: vi.fn(),
+        setActiveTab: vi.fn(),
+        updateTabLabel: vi.fn(),
+        getAllPaneTabs: vi.fn(() => []),
+        warmTaskChangeSummaries: vi.fn(async () => undefined),
+        invalidateTaskChangePresence: vi.fn(),
+        projects: [],
+        repositoryGroups: [],
+        selectedProjectId: null,
+        selectedWorktreeId: null,
+        fetchSessionsInitial: vi.fn(async () => undefined),
+      }) as unknown as AppState
   );
 }
 
@@ -191,6 +192,7 @@ describe('team slice context races', () => {
 
   afterEach(() => {
     __resetTeamSliceModuleStateForTests();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -601,6 +603,77 @@ describe('team slice context races', () => {
     expect(store.getState().teamAgentRuntimeByTeam).toEqual({});
   });
 
+  it('does not reuse runtime freshness memory after a context switch clears visible runtime state', async () => {
+    vi.useFakeTimers();
+    const store = createSliceStore();
+    const firstLiveSnapshot = {
+      ...runtimeSnapshot,
+      updatedAt: '2026-03-12T10:00:00.000Z',
+      members: {
+        lead: {
+          ...runtimeSnapshot.members.lead,
+          runtimeLastSeenAt: '2026-03-12T10:00:00.000Z',
+          updatedAt: '2026-03-12T10:00:00.000Z',
+        },
+      },
+    };
+    vi.setSystemTime(new Date('2026-03-12T10:00:00.000Z'));
+    apiMock.teams.getTeamAgentRuntime.mockResolvedValue(firstLiveSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('shared-team');
+    const firstVisibleSnapshot = store.getState().teamAgentRuntimeByTeam['shared-team'];
+
+    // Sub-cadence timestamp-only refresh: remembered, not visible.
+    const refreshedLiveSnapshot = {
+      ...runtimeSnapshot,
+      updatedAt: '2026-03-12T10:00:02.000Z',
+      members: {
+        lead: {
+          ...runtimeSnapshot.members.lead,
+          runtimeLastSeenAt: '2026-03-12T10:00:02.000Z',
+          updatedAt: '2026-03-12T10:00:02.000Z',
+        },
+      },
+    };
+    vi.setSystemTime(new Date('2026-03-12T10:00:02.000Z'));
+    apiMock.teams.getTeamAgentRuntime.mockResolvedValue(refreshedLiveSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('shared-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['shared-team']).toBe(firstVisibleSnapshot);
+
+    invalidateContextScopedRequestEpoch();
+    store.setState({
+      activeContextId: 'context-dev',
+      teamAgentRuntimeByTeam: {},
+    });
+
+    const offlineSnapshotAfterSwitch = {
+      ...runtimeSnapshot,
+      updatedAt: '2026-03-12T10:00:12.000Z',
+      members: {
+        lead: {
+          ...runtimeSnapshot.members.lead,
+          alive: false,
+          livenessKind: 'registered_only',
+          runtimeDiagnostic: 'registered runtime metadata without live process',
+          runtimeDiagnosticSeverity: 'warning',
+          runtimeLastSeenAt: undefined,
+          updatedAt: '2026-03-12T10:00:12.000Z',
+        },
+      },
+    };
+    vi.setSystemTime(new Date('2026-03-12T10:00:12.000Z'));
+    apiMock.teams.getTeamAgentRuntime.mockResolvedValue(offlineSnapshotAfterSwitch);
+
+    await store.getState().fetchTeamAgentRuntime('shared-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['shared-team']).toEqual(
+      offlineSnapshotAfterSwitch
+    );
+    expect(store.getState().teamAgentRuntimeByTeam['shared-team'].members.lead.alive).toBe(false);
+  });
+
   it('ignores change presence loaded before a same-context team reset', async () => {
     const store = createSliceStore();
     const staleData = teamSnapshot('shared-team', '/local/project', [
@@ -682,12 +755,14 @@ describe('team slice context races', () => {
       feedRevision: string;
       members: Record<string, never>;
     }>();
-    apiMock.teams.getMemberActivityMeta.mockReturnValueOnce(localMeta.promise).mockResolvedValueOnce({
-      teamName: 'shared-team',
-      computedAt: '2026-03-12T10:00:01.000Z',
-      feedRevision: 'unexpected-feed',
-      members: {},
-    });
+    apiMock.teams.getMemberActivityMeta
+      .mockReturnValueOnce(localMeta.promise)
+      .mockResolvedValueOnce({
+        teamName: 'shared-team',
+        computedAt: '2026-03-12T10:00:01.000Z',
+        feedRevision: 'unexpected-feed',
+        members: {},
+      });
     store.setState({
       teamMessagesByName: {
         'shared-team': {

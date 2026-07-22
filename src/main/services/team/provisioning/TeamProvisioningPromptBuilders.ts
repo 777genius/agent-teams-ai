@@ -608,7 +608,8 @@ ${actionModeProtocol}
      - If an assigned task requires implementation, fixes, review follow-up, or concrete investigation, you may inspect, read/search, and edit files in your working directory as needed. Stay within the task scope, repository rules, and normal permission boundaries.
      - If a newly assigned needsFix or pending task must wait because you are still finishing another task, leave a short task comment on that waiting task with the reason and your best ETA, keep it in pending/TODO (use task_set_status pending if needed), and only run task_start when you truly begin.
      - CRITICAL: If someone comments on your task, you MUST reply on that same task via task_add_comment. Never leave a user/lead/teammate task comment unanswered, even if the reply is only a short acknowledgement or status update. Do NOT treat status changes or direct messages as a substitute for an on-task reply.
-     - If you are the one about to do the implementation/fixes and the owner is missing or someone else, run task_set_owner to yourself immediately before task_start.
+     - If you are the one about to do the implementation/fixes and the task is unassigned, claim it for yourself with task_set_owner immediately before task_start.
+     - If another member owns the task, do NOT take it yourself. Ask the current owner or team lead to hand it off first.
      - Only then run task_start when you truly begin.
      - If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on it, FIRST leave a short task comment saying what you are about to do, THEN run task_start, then do the work, and when finished leave a short result comment and run task_complete again. Never skip this comment -> reopen -> work -> comment -> done cycle.
      - CRITICAL: When you finish a task, your results (findings, research report, analysis, code changes summary, or any deliverable) MUST be posted as a task comment BEFORE calling task_complete. The task comment is the primary delivery channel — the user reads results on the task board. A SendMessage to the lead is NOT a substitute: direct messages are ephemeral and not visible on the board. If you only SendMessage without a task comment, the user will never see your work.
@@ -763,19 +764,20 @@ export function buildTeamCtlOpsInstructions(teamName: string, leadName: string):
       `  When an inbox row provides structured task metadata (teamName/taskId/commentId), treat those identifiers as authoritative and use them directly. Do NOT infer alternate task ids or namespaces from visible prose.`,
       `- Browse/search compact inventory rows only: task_list { teamName: "${teamName}", owner?: "<member>", status?: "pending|in_progress|completed", reviewState?: "none|review|needsFix|approved", kanbanColumn?: "review|approved", relatedTo?: "<taskId or #displayId>", blockedBy?: "<taskId or #displayId>", limit?: <n> }`,
       `  task_list is inventory/search/drill-down only. Do NOT treat task_list as the lead's working queue.`,
-      `- Create task: task_create { teamName: "${teamName}", subject: "...", description?: "...", owner?: "<actual-member-name>", createdBy?: "<your-name>", blockedBy?: ["1","2"], related?: ["3"] }`,
-      `- Create task from user message (preferred when you have a MessageId from a relayed inbox message): task_create_from_message { teamName: "${teamName}", messageId: "<exact-messageId>", subject: "...", owner?: "<member>", createdBy?: "<your-name>", blockedBy?: ["1","2"], related?: ["3"] }`,
-      `- Assign/reassign owner: task_set_owner { teamName: "${teamName}", taskId: "<id>", owner: "<member-name>" }`,
-      `- Clear owner: task_set_owner { teamName: "${teamName}", taskId: "<id>", owner: null }`,
-      `- Start task (preferred over set-status): task_start { teamName: "${teamName}", taskId: "<id>" }`,
-      `- Complete task (preferred over set-status): task_complete { teamName: "${teamName}", taskId: "<id>" }`,
-      `- Update status: task_set_status { teamName: "${teamName}", taskId: "<id>", status: "pending|in_progress|completed|deleted" }`,
+      `- Create task: task_create { teamName: "${teamName}", subject: "...", description?: "...", owner?: "<actual-member-name>", createdBy?: "<your-name>", blockedBy?: ["1","2"], related?: ["3"], idempotencyKey: "<stable-task-intent-key>" }`,
+      `- Create task from user message (preferred when you have a MessageId from a relayed inbox message): task_create_from_message { teamName: "${teamName}", messageId: "<exact-messageId>", requestKey: "<stable-task-intent-key-within-message>", subject: "...", owner?: "<member>", createdBy?: "<your-name>", blockedBy?: ["1","2"], related?: ["3"] }`,
+      `- Assign/reassign owner: task_set_owner { teamName: "${teamName}", taskId: "<id>", owner: "<member-name>", actor: "${leadName}" }`,
+      `- Clear owner: task_set_owner { teamName: "${teamName}", taskId: "<id>", owner: null, actor: "${leadName}" }`,
+      `- Start a task owned by you (preferred over set-status): task_start { teamName: "${teamName}", taskId: "<id>", actor: "${leadName}" }`,
+      `- Complete a task owned by you (preferred over set-status): task_complete { teamName: "${teamName}", taskId: "<id>", actor: "${leadName}" }`,
+      `- Administrative status update: task_set_status { teamName: "${teamName}", taskId: "<id>", status: "pending|deleted", actor: "${leadName}" }`,
+      `  Ownership rule: task_start, task_complete, and execution statuses (in_progress/completed) may be applied only by the task's current owner. As lead, use actor: "${leadName}" only on tasks you own. Never pass a teammate's name as actor or transition execution on their behalf; the current owner must make that call. Reassign first only when work is genuinely being handed off.`,
       `- Add comment: task_add_comment { teamName: "${teamName}", taskId: "<id>", text: "...", from: "${leadName}" }`,
       `- Attach file to task: task_attach_file { teamName: "${teamName}", taskId: "<id>", filePath: "<path>", mode?: "copy|link", filename?: "<name>", mimeType?: "<type>" }`,
       `- Attach file to a specific comment:`,
       `  1) Find commentId: task_get { teamName: "${teamName}", taskId: "<id>" }`,
       `  2) Attach: task_attach_comment_file { teamName: "${teamName}", taskId: "<id>", commentId: "<commentId>", filePath: "<path>", mode?: "copy|link", filename?: "<name>", mimeType?: "<type>" }`,
-      `- Create with deps (blocked work MUST be pending): task_create { teamName: "${teamName}", subject: "...", owner: "<member>", createdBy: "<your-name>", blockedBy: ["1","2"], related?: ["3"], startImmediately: false }`,
+      `- Create with deps (blocked work MUST be pending): task_create { teamName: "${teamName}", subject: "...", owner: "<member>", createdBy: "<your-name>", blockedBy: ["1","2"], related?: ["3"], startImmediately: false, idempotencyKey: "<stable-task-intent-key>" }`,
       `- Link dependency: task_link { teamName: "${teamName}", taskId: "<id>", targetId: "<targetId>", relationship: "blocked-by" }`,
       `- Link related: task_link { teamName: "${teamName}", taskId: "<id>", targetId: "<targetId>", relationship: "related" }`,
       `- Unlink: task_unlink { teamName: "${teamName}", taskId: "<id>", targetId: "<targetId>", relationship: "blocked-by" }`,

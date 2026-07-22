@@ -1,3 +1,5 @@
+import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
+import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -65,6 +67,7 @@ import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 
 import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenceCacheTypes';
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
+import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
 import type {
@@ -116,10 +119,38 @@ const TASK_COMMENT_NOTIFICATION_SOURCE = 'system_notification';
 const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
 const MEMBER_RUNTIME_ADVISORY_SNAPSHOT_BUDGET_MS = 250;
 const GLOBAL_TASK_TEAM_CONFIG_CONCURRENCY = 12;
+const PERMANENT_DELETE_RM_OPTIONS = {
+  recursive: true,
+  force: true,
+  maxRetries: 5,
+  retryDelay: 50,
+} as const;
+
+function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
+  const hasher = new NodeApplicationCommandHasher();
+  return new TaskBoardCommandFacade(null, {
+    hashPayload: (payload) => hasher.hashJson(payload),
+  });
+}
 const TEAM_NOTIFICATION_CONTEXT_CACHE_MAX_AGE_MS = 5_000;
 const MAX_MESSAGES_PAGE_LIVE_OVERLAY_PAYLOAD = 200;
+const SAFE_DIAGNOSTIC_IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const MIXED_TEAM_LIVE_MUTATION_BLOCK_MESSAGE =
   'Live roster mutation on a running mixed team is not supported in V1. Stop the team, edit the roster, then relaunch.';
+
+function toSafeDiagnosticIdentifier(value: string): string {
+  return SAFE_DIAGNOSTIC_IDENTIFIER_PATTERN.test(value) ? value : 'redacted';
+}
+
+type RuntimeAgentTeamsController = Omit<
+  AgentTeamsController,
+  'tasks' | 'kanban' | 'review' | 'taskBoard'
+> & {
+  tasks?: Partial<AgentTeamsController['tasks']>;
+  kanban?: Partial<AgentTeamsController['kanban']>;
+  review?: Partial<AgentTeamsController['review']>;
+  taskBoard?: AgentTeamsController['taskBoard'];
+};
 
 interface TeamNotificationContext {
   displayName: string;
@@ -135,6 +166,10 @@ interface TeamNotificationContextCacheEntry {
 interface InFlightTeamNotificationContext {
   promise: Promise<TeamNotificationContext>;
   generation: number;
+}
+
+function isControllerTaskNotFoundError(error: unknown, taskId: string): boolean {
+  return error instanceof Error && error.message === `Task not found: ${taskId}`;
 }
 
 function compareInboxMessagesNewestFirst(left: InboxMessage, right: InboxMessage): number {
@@ -466,6 +501,7 @@ export class TeamDataService {
   private readonly notificationContextCache = new Map<string, TeamNotificationContextCacheEntry>();
   private readonly notificationContextInFlight = new Map<string, InFlightTeamNotificationContext>();
   private readonly notificationContextGenerationByTeam = new Map<string, number>();
+  private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -593,6 +629,28 @@ export class TeamDataService {
     return this.controllerFactory(teamName);
   }
 
+  private getTaskBoard(teamName: string): AgentTeamsController['taskBoard'] {
+    const controller = this.getController(teamName) as RuntimeAgentTeamsController;
+    const taskBoard = controller.taskBoard ?? this.buildLegacyTaskBoard(controller);
+    if (!taskBoard) {
+      throw new Error('Agent teams controller taskBoard API is unavailable');
+    }
+    return taskBoard;
+  }
+
+  private buildLegacyTaskBoard(
+    controller: RuntimeAgentTeamsController
+  ): AgentTeamsController['taskBoard'] | null {
+    if (!controller.tasks && !controller.kanban && !controller.review) {
+      return null;
+    }
+    return {
+      ...(controller.tasks ?? {}),
+      ...(controller.kanban ?? {}),
+      ...(controller.review ?? {}),
+    } as AgentTeamsController['taskBoard'];
+  }
+
   private async readTeamLaneMutationContext(teamName: string): Promise<{
     leadProviderId: TeamProviderId | undefined;
     activeMembers: ReturnType<typeof toProvisioningMemberShape>;
@@ -656,6 +714,15 @@ export class TeamDataService {
 
   setMemberRuntimeAdvisoryService(service: TeamMemberRuntimeAdvisoryService): void {
     this.memberRuntimeAdvisoryService = service;
+  }
+
+  setTaskBoardCommandFacade(facade: TaskBoardCommandFacade | null): void {
+    this.taskBoardCommandFacade = facade ?? createNonDurableTaskBoardCommandFacade();
+  }
+
+  /** Composition-time backend swap; must run before notification processing starts. */
+  setTaskCommentNotificationJournalStore(store: TaskCommentNotificationJournalStore): void {
+    this.taskCommentNotificationJournal.setStore(store);
   }
 
   invalidateMemberRuntimeAdvisory(teamName: string, memberName: string): void {
@@ -838,8 +905,8 @@ export class TeamDataService {
   }
 
   async getTask(teamName: string, taskId: string): Promise<TeamTaskWithKanban | null> {
-    const controller = this.getController(teamName);
-    const task = controller.tasks?.getTask?.(taskId) as TeamTask | null | undefined;
+    const taskBoard = this.getTaskBoard(teamName);
+    const task = taskBoard.getTask?.(taskId) as TeamTask | null | undefined;
     if (!task) {
       return null;
     }
@@ -1365,12 +1432,12 @@ export class TeamDataService {
 
   async permanentlyDeleteTeam(teamName: string): Promise<void> {
     const teamsDir = path.join(getTeamsBasePath(), teamName);
-    await fs.promises.rm(teamsDir, { recursive: true, force: true });
+    await fs.promises.rm(teamsDir, PERMANENT_DELETE_RM_OPTIONS);
     TeamConfigReader.invalidateTeam(teamName);
     this.invalidateNotificationContext(teamName);
 
     const tasksDir = path.join(getTasksBasePath(), teamName);
-    await fs.promises.rm(tasksDir, { recursive: true, force: true });
+    await fs.promises.rm(tasksDir, PERMANENT_DELETE_RM_OPTIONS);
     TeamTaskReader.invalidateAllTasksCache();
   }
 
@@ -2184,20 +2251,19 @@ export class TeamDataService {
   }
 
   async createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask> {
-    const controller = this.getController(teamName);
-    const blockedBy = request.blockedBy?.filter((id) => id.length > 0) ?? [];
-    const related = request.related?.filter((id) => id.length > 0) ?? [];
+    return (await this.createTaskWithOutcome(teamName, request)).task;
+  }
 
-    let projectPath: string | undefined;
-    try {
-      const config = await readConfigForUiSnapshot(this.configReader, teamName);
-      projectPath = config?.projectPath;
-    } catch {
-      /* best-effort */
-    }
+  private async createTaskWithOutcome(
+    teamName: string,
+    request: CreateTaskRequest
+  ): Promise<{ task: TeamTask; createdInAttempt: boolean }> {
+    const taskBoard = this.getTaskBoard(teamName);
+    const blockedBy = [...new Set(request.blockedBy?.filter((id) => id.length > 0) ?? [])].sort();
+    const related = [...new Set(request.related?.filter((id) => id.length > 0) ?? [])].sort();
 
-    const shouldStart = request.owner && request.startImmediately === true;
-    const task = controller.tasks.createTask({
+    const shouldStart = Boolean(request.owner && request.startImmediately === true);
+    const commandPayload: Record<string, unknown> = {
       subject: request.subject,
       ...(request.description?.trim() ? { description: request.description.trim() } : {}),
       ...(request.descriptionTaskRefs?.length
@@ -2206,28 +2272,88 @@ export class TeamDataService {
       ...(request.owner ? { owner: request.owner } : {}),
       ...(blockedBy.length > 0 ? { blockedBy } : {}),
       ...(related.length > 0 ? { related } : {}),
-      ...(projectPath ? { projectPath } : {}),
       createdBy: 'user',
       ...(request.prompt?.trim() ? { prompt: request.prompt.trim() } : {}),
       ...(request.promptTaskRefs?.length ? { promptTaskRefs: request.promptTaskRefs } : {}),
       ...(shouldStart ? { startImmediately: true } : {}),
-    }) as TeamTask;
+    };
+
+    let task: TeamTask;
+    let createdInAttempt = true;
+    if (request.command) {
+      if (
+        typeof taskBoard.getTask !== 'function' ||
+        typeof taskBoard.reconcileTaskCreation !== 'function'
+      ) {
+        throw new Error('Durable task-board commands are unavailable');
+      }
+      const commandResult = await this.taskBoardCommandFacade.createTask({
+        teamName,
+        identity: request.command,
+        payload: commandPayload,
+        destination: {
+          findById: (taskId) => {
+            try {
+              return taskBoard.getTask(taskId) as TeamTask;
+            } catch (error) {
+              if (isControllerTaskNotFoundError(error, taskId)) {
+                return null;
+              }
+              throw error;
+            }
+          },
+          create: async (input) => {
+            const projectPath = await this.readTaskCreateProjectPath(teamName);
+            return taskBoard.createTask({
+              ...input,
+              ...(projectPath ? { projectPath } : {}),
+            }) as TeamTask;
+          },
+          reconcile: (input) => taskBoard.reconcileTaskCreation(input) as TeamTask,
+        },
+      });
+      task = commandResult.task;
+      createdInAttempt = commandResult.createdInAttempt;
+    } else {
+      const projectPath = await this.readTaskCreateProjectPath(teamName);
+      task = taskBoard.createTask({
+        ...commandPayload,
+        ...(projectPath ? { projectPath } : {}),
+      }) as TeamTask;
+    }
     this.invalidateGlobalTaskProjectionCache();
 
-    // Controller's maybeNotifyAssignedOwner skips the lead (owner === lead).
-    // For user-created tasks with startImmediately, ensure the lead also gets notified.
-    if (shouldStart) {
+    // Controller's maybeNotifyAssignedOwner skips the lead (owner === lead). Base notification on
+    // the resolved task so reconciled/replayed durable commands repair a missing notification.
+    if (task.status === 'in_progress' && task.owner) {
       try {
         const leadName = await this.resolveLeadName(teamName);
-        if (this.isLeadOwner(task.owner!, leadName)) {
-          await this.sendUserTaskStartNotification(teamName, task);
+        if (this.isLeadOwner(task.owner, leadName)) {
+          if (request.command) {
+            await this.sendDurableUserTaskStartNotification(teamName, task, leadName);
+          } else {
+            await this.sendUserTaskStartNotification(teamName, task);
+          }
         }
       } catch {
-        /* best-effort */
+        if (request.command) {
+          logger.warn(
+            `[TeamDataService] category=post_commit_notification code=task_start_notification_failed team=${toSafeDiagnosticIdentifier(teamName)} task=${toSafeDiagnosticIdentifier(task.id)}`
+          );
+        }
       }
     }
 
-    return task;
+    return { task, createdInAttempt };
+  }
+
+  private async readTaskCreateProjectPath(teamName: string): Promise<string | undefined> {
+    try {
+      const config = await readConfigForUiSnapshot(this.configReader, teamName);
+      return config?.projectPath;
+    } catch {
+      return undefined;
+    }
   }
 
   async startTask(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }> {
@@ -2240,7 +2366,7 @@ export class TeamDataService {
       throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
     }
 
-    this.getController(teamName).tasks.startTask(taskId, 'user');
+    this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
 
     if (task.owner) {
@@ -2261,7 +2387,7 @@ export class TeamDataService {
               [
                 `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
                 `Update task status using the board MCP tools:`,
-                `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
+                `task_complete { teamName: "${teamName}", taskId: "${task.id}", actor: "${task.owner}" }`,
               ].join('\n')
             )
           );
@@ -2296,7 +2422,7 @@ export class TeamDataService {
       throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
     }
 
-    this.getController(teamName).tasks.startTask(taskId, 'user');
+    this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
 
     if (task.owner) {
@@ -2314,36 +2440,53 @@ export class TeamDataService {
   private async sendUserTaskStartNotification(teamName: string, task: TeamTask): Promise<void> {
     if (!task.owner) return;
     try {
-      const parts = [`**start working on task now** ${this.getTaskLabel(task)} "${task.subject}"`];
-      if (task.description?.trim()) {
-        parts.push(`\nDetails:\n${task.description.trim()}`);
-      }
-      if (task.prompt?.trim()) {
-        parts.push(`\nInstructions:\n${task.prompt.trim()}`);
-      }
-      parts.push(
-        '',
-        wrapAgentBlock(
-          [
-            `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
-            `To fetch the full task context (description, comments, attachments) use:`,
-            `task_get { teamName: "${teamName}", taskId: "${task.id}" }`,
-            `When done, update task status:`,
-            `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
-          ].join('\n')
-        )
-      );
-      await this.sendMessage(teamName, {
-        member: task.owner,
-        from: 'user',
-        text: parts.join('\n'),
-        taskRefs: task.descriptionTaskRefs,
-        summary: `Start working on ${this.getTaskLabel(task)}`,
-        source: 'system_notification',
-      });
+      await this.sendMessage(teamName, this.buildUserTaskStartNotification(teamName, task));
     } catch {
       // Best-effort notification
     }
+  }
+
+  private async sendDurableUserTaskStartNotification(
+    teamName: string,
+    task: TeamTask,
+    leadName: string
+  ): Promise<void> {
+    await this.sendRuntimeRecipientMessage(teamName, {
+      ...this.buildUserTaskStartNotification(teamName, task),
+      member: leadName,
+      messageId: `task-start:${teamName}:${task.id}`,
+    });
+  }
+
+  private buildUserTaskStartNotification(teamName: string, task: TeamTask): SendMessageRequest {
+    const parts = [`**start working on task now** ${this.getTaskLabel(task)} "${task.subject}"`];
+    if (task.description?.trim()) {
+      parts.push(`\nDetails:\n${task.description.trim()}`);
+    }
+    if (task.prompt?.trim()) {
+      parts.push(`\nInstructions:\n${task.prompt.trim()}`);
+    }
+    parts.push(
+      '',
+      wrapAgentBlock(
+        [
+          `This start notification can become stale after reassignment or completion. Before modifying anything, fetch the current task and verify that task.owner is your configured teammate name and task.status is pending or in_progress. If the owner changed or the task is completed/deleted, do not start or reopen it, modify files, add a completion comment, or complete it; stop unless the current owner explicitly asks you to collaborate on fresh follow-up work.`,
+          `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
+          `To fetch the full task context (description, comments, attachments) use:`,
+          `task_get { teamName: "${teamName}", taskId: "${task.id}" }`,
+          `When done, update task status:`,
+          `task_complete { teamName: "${teamName}", taskId: "${task.id}", actor: "${task.owner}" }`,
+        ].join('\n')
+      )
+    );
+    return {
+      member: task.owner!,
+      from: 'user',
+      text: parts.join('\n'),
+      taskRefs: task.descriptionTaskRefs,
+      summary: `Start working on ${this.getTaskLabel(task)}`,
+      source: 'system_notification',
+    };
   }
 
   async updateTaskStatus(
@@ -2352,7 +2495,7 @@ export class TeamDataService {
     status: TeamTaskStatus,
     actor?: string
   ): Promise<void> {
-    this.getController(teamName).tasks.setTaskStatus(taskId, status, actor);
+    this.getTaskBoard(teamName).setTaskStatus(taskId, status, actor);
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2412,12 +2555,12 @@ export class TeamDataService {
   }
 
   async softDeleteTask(teamName: string, taskId: string): Promise<void> {
-    this.getController(teamName).tasks.softDeleteTask(taskId, 'user');
+    this.getTaskBoard(teamName).softDeleteTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
   }
 
   async restoreTask(teamName: string, taskId: string): Promise<void> {
-    this.getController(teamName).tasks.restoreTask(taskId, 'user');
+    this.getTaskBoard(teamName).restoreTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2426,7 +2569,7 @@ export class TeamDataService {
   }
 
   async updateTaskOwner(teamName: string, taskId: string, owner: string | null): Promise<void> {
-    this.getController(teamName).tasks.setTaskOwner(taskId, owner, 'user');
+    this.getTaskBoard(teamName).setTaskOwner(taskId, owner, 'user');
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2435,7 +2578,7 @@ export class TeamDataService {
     taskId: string,
     fields: { subject?: string; description?: string }
   ): Promise<void> {
-    this.getController(teamName).tasks.updateTaskFields(taskId, fields);
+    this.getTaskBoard(teamName).updateTaskFields(taskId, fields);
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2444,7 +2587,7 @@ export class TeamDataService {
     taskId: string,
     meta: TaskAttachmentMeta
   ): Promise<void> {
-    this.getController(teamName).tasks.addTaskAttachmentMeta(
+    this.getTaskBoard(teamName).addTaskAttachmentMeta(
       taskId,
       meta as unknown as Record<string, unknown>
     );
@@ -2456,7 +2599,7 @@ export class TeamDataService {
     taskId: string,
     attachmentId: string
   ): Promise<void> {
-    this.getController(teamName).tasks.removeTaskAttachment(taskId, attachmentId);
+    this.getTaskBoard(teamName).removeTaskAttachment(taskId, attachmentId);
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2465,7 +2608,7 @@ export class TeamDataService {
     taskId: string,
     value: 'lead' | 'user' | null
   ): Promise<void> {
-    this.getController(teamName).tasks.setNeedsClarification(taskId, value);
+    this.getTaskBoard(teamName).setNeedsClarification(taskId, value);
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2475,7 +2618,7 @@ export class TeamDataService {
     targetId: string,
     type: 'blockedBy' | 'blocks' | 'related'
   ): Promise<void> {
-    this.getController(teamName).tasks.linkTask(
+    this.getTaskBoard(teamName).linkTask(
       taskId,
       targetId,
       type === 'blockedBy' ? 'blocked-by' : type
@@ -2489,7 +2632,7 @@ export class TeamDataService {
     targetId: string,
     type: 'blockedBy' | 'blocks' | 'related'
   ): Promise<void> {
-    this.getController(teamName).tasks.unlinkTask(
+    this.getTaskBoard(teamName).unlinkTask(
       taskId,
       targetId,
       type === 'blockedBy' ? 'blocked-by' : type
@@ -2504,8 +2647,8 @@ export class TeamDataService {
     attachments?: TaskAttachmentMeta[],
     taskRefs?: TaskRef[]
   ): Promise<TaskComment> {
-    const controller = this.getController(teamName);
-    const addResult = controller.tasks.addTaskComment(taskId, {
+    const taskBoard = this.getTaskBoard(teamName);
+    const addResult = taskBoard.addTaskComment(taskId, {
       from: 'user',
       text,
       attachments,
@@ -3274,8 +3417,7 @@ export class TeamDataService {
     const generation = this.getNotificationContextGeneration(teamName);
     const cached = this.notificationContextCache.get(teamName);
     if (
-      cached &&
-      cached.generation === generation &&
+      cached?.generation === generation &&
       now - cached.cachedAt < TEAM_NOTIFICATION_CONTEXT_CACHE_MAX_AGE_MS
     ) {
       return cached.value;
@@ -3333,26 +3475,26 @@ export class TeamDataService {
 
   async requestReview(teamName: string, taskId: string): Promise<void> {
     const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-    this.getController(teamName).review.requestReview(taskId, {
+    this.getTaskBoard(teamName).requestReview(taskId, {
       from: leadName,
       ...(leadSessionId ? { leadSessionId } : {}),
     });
   }
 
   private getControllerTaskWorkflowColumn(
-    controller: AgentTeamsController,
+    taskBoard: AgentTeamsController['taskBoard'],
     taskId: string
   ): 'review' | 'approved' | undefined | null {
-    if (!controller.tasks?.getTask || !controller.kanban?.getKanbanState) {
+    if (!taskBoard.getTask || !taskBoard.getKanbanState) {
       return null;
     }
 
-    const task = controller.tasks.getTask(taskId) as TeamTask | null | undefined;
+    const task = taskBoard.getTask(taskId) as TeamTask | null | undefined;
     if (!task || typeof task.status !== 'string') {
       return null;
     }
 
-    const kanbanState = controller.kanban.getKanbanState() as KanbanState | null | undefined;
+    const kanbanState = taskBoard.getKanbanState() as KanbanState | null | undefined;
     const kanbanColumn = kanbanState?.tasks?.[task.id]?.column;
     const kanbanWorkflowColumn = kanbanColumn
       ? getTeamTaskWorkflowColumn({
@@ -3943,29 +4085,29 @@ export class TeamDataService {
   }
 
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
-    const controller = this.getController(teamName);
+    const taskBoard = this.getTaskBoard(teamName);
 
     if (patch.op === 'remove') {
-      controller.kanban.clearKanban(taskId);
+      taskBoard.clearKanban(taskId);
       return;
     }
 
     if (patch.op === 'set_column') {
       if (patch.column === 'review') {
         const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-        controller.review.requestReview(taskId, {
+        taskBoard.requestReview(taskId, {
           from: leadName,
           ...(leadSessionId ? { leadSessionId } : {}),
         });
       } else {
         const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-        const workflowColumn = this.getControllerTaskWorkflowColumn(controller, taskId);
+        const workflowColumn = this.getControllerTaskWorkflowColumn(taskBoard, taskId);
         if (workflowColumn === undefined) {
-          controller.kanban.setKanbanColumn(taskId, 'approved', {
+          taskBoard.setKanbanColumn(taskId, 'approved', {
             transition: 'manual_approve',
           });
         } else {
-          controller.review.approveReview(taskId, {
+          taskBoard.approveReview(taskId, {
             from: leadName,
             suppressTaskComment: true,
             'notify-owner': true,
@@ -3977,7 +4119,7 @@ export class TeamDataService {
     }
 
     const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-    controller.review.requestChanges(taskId, {
+    taskBoard.requestChanges(taskId, {
       from: leadName,
       comment: patch.comment?.trim() || 'Reviewer requested changes.',
       ...(patch.op === 'request_changes' && patch.taskRefs?.length
@@ -3992,6 +4134,6 @@ export class TeamDataService {
     columnId: KanbanColumnId,
     orderedTaskIds: string[]
   ): Promise<void> {
-    this.getController(teamName).kanban.updateColumnOrder(columnId, orderedTaskIds);
+    this.getTaskBoard(teamName).updateColumnOrder(columnId, orderedTaskIds);
   }
 }

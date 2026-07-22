@@ -57,6 +57,10 @@ import {
   removeMemberWorkSyncIpc,
 } from '@features/member-work-sync/main';
 import {
+  createInternalStorageFeature,
+  type InternalStorageFeature,
+} from '@features/internal-storage/main';
+import {
   createOrganizationsFeature,
   type OrganizationsFeatureFacade,
   registerOrganizationsIpc,
@@ -97,6 +101,11 @@ import {
 } from '@features/team-runtime-recovery/main';
 import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
 import {
+  createApplicationCommandLedgerFeature,
+  NodeApplicationCommandHasher,
+} from '@features/application-command-ledger/main';
+import { TaskBoardCommandFacade } from '@features/task-board-commands';
+import {
   createTokenUsageFeature,
   registerTokenUsageIpc,
   removeTokenUsageIpc,
@@ -134,6 +143,15 @@ import {
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
+import {
+  bindTeamCrossTeamMessagingApi,
+  bindTeamHttpDataApi,
+  bindTeamHttpHandlerApis,
+  bindTeamIpcHandlerApis,
+  type TeamDiagnosticsApi,
+  type TeamHttpHandlerApis,
+  type TeamIpcHandlerApis,
+} from '@main/services/team/contracts/TeamProvisioningApis';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
@@ -1107,6 +1125,7 @@ let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
 let teamRuntimeRecoveryFeature: TeamRuntimeRecoveryFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
+let teamHttpHandlerApis: TeamHttpHandlerApis | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let cliInstallerService: CliInstallerService;
 let openCodeRuntimeInstallerService: OpenCodeRuntimeInstallerService;
@@ -1114,6 +1133,7 @@ let ptyTerminalService: PtyTerminalService;
 let httpServer: HttpServer;
 let schedulerService: SchedulerService;
 let teamTaskStallMonitor: TeamTaskStallMonitor | null = null;
+let internalStorageFeature: InternalStorageFeature | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
 let teamBackupService: TeamBackupService | null = null;
 let branchStatusService: BranchStatusService | null = null;
@@ -1543,6 +1563,68 @@ async function runShutdownStep(
     if (timeout) {
       clearTimeout(timeout);
     }
+  }
+}
+
+export interface InternalStorageShutdownServices {
+  teamDataService?: Pick<TeamDataService, 'stopProcessHealthPolling'>;
+  teamTaskStallMonitor?: Pick<TeamTaskStallMonitor, 'stop'> | null;
+  memberWorkSyncFeature?: Pick<MemberWorkSyncFeatureFacade, 'dispose'> | null;
+  internalStorageFeature?: Pick<InternalStorageFeature, 'dispose'> | null;
+}
+
+function beginShutdownWork(action: () => void | Promise<void>): Promise<void> {
+  try {
+    return Promise.resolve(action());
+  } catch (error) {
+    return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
+/**
+ * Closes storage-backed polling and writer ingress immediately, then keeps the
+ * storage close dependent on the actual writer drains. Each visible shutdown
+ * step remains bounded, but a timeout never detaches storage disposal from the
+ * underlying work that is still settling.
+ */
+export async function disposeInternalStorageAfterWriterDrains(
+  services: InternalStorageShutdownServices,
+  options: { stepTimeoutMs?: number } = {}
+): Promise<void> {
+  const stepTimeoutMs = options.stepTimeoutMs ?? SHUTDOWN_STEP_TIMEOUT_MS;
+
+  // Invoke every stop synchronously before awaiting so all ingress is closed
+  // even when an earlier stop takes a long time to drain.
+  const teamDataPollingStop = beginShutdownWork(() =>
+    services.teamDataService?.stopProcessHealthPolling()
+  );
+  const stallMonitorDrain = beginShutdownWork(() => services.teamTaskStallMonitor?.stop());
+  const memberWorkSyncDrain = beginShutdownWork(() => services.memberWorkSyncFeature?.dispose());
+
+  // Start the dependency now. If a bounded step below times out, this promise
+  // still waits for its real work before it is allowed to close storage.
+  const internalStorageDispose = Promise.allSettled([
+    teamDataPollingStop,
+    stallMonitorDrain,
+    memberWorkSyncDrain,
+  ]).then(() => services.internalStorageFeature?.dispose());
+
+  if (services.teamDataService) {
+    await runShutdownStep('team data polling stop', () => teamDataPollingStop, stepTimeoutMs);
+  }
+  if (services.teamTaskStallMonitor) {
+    await runShutdownStep('team task stall monitor stop', () => stallMonitorDrain, stepTimeoutMs);
+  }
+  if (services.memberWorkSyncFeature) {
+    await runShutdownStep('member work sync dispose', () => memberWorkSyncDrain, stepTimeoutMs);
+  }
+  if (services.internalStorageFeature) {
+    // WAL checkpoint + close inside the worker, then terminate it.
+    await runShutdownStep(
+      'internal storage dispose',
+      () => internalStorageDispose.then(() => undefined),
+      stepTimeoutMs
+    );
   }
 }
 
@@ -2011,9 +2093,37 @@ async function initializeServices(): Promise<void> {
   const teamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService(
     teamMemberLogsFinder
   );
+  internalStorageFeature = createInternalStorageFeature({
+    userDataPath: app.getPath('userData'),
+  });
+  if (process.env.AGENT_TEAMS_PACKAGED_SMOKE?.trim() === '1') {
+    void internalStorageFeature.probeBackend();
+  }
   teamDataService = new TeamDataService();
+  const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
+  if (applicationCommandLedgerBackend) {
+    const applicationCommandHasher = new NodeApplicationCommandHasher();
+    const applicationCommandLedgerFeature = createApplicationCommandLedgerFeature({
+      storageGateway: applicationCommandLedgerBackend.gateway,
+    });
+    teamDataService.setTaskBoardCommandFacade(
+      new TaskBoardCommandFacade(applicationCommandLedgerFeature.runner, {
+        isDurableStorageAvailable: () =>
+          applicationCommandLedgerBackend.selector.select(true, false),
+        hashPayload: (payload) => applicationCommandHasher.hashJson(payload),
+      })
+    );
+  }
   teamDataService.setMemberRuntimeAdvisoryService(teamMemberRuntimeAdvisoryService);
+  teamDataService.setTaskCommentNotificationJournalStore(
+    internalStorageFeature.taskCommentNotificationJournalStore
+  );
   teamProvisioningService = new TeamProvisioningService();
+  const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
+  const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
+  const teamMessagingApi = teamIpcHandlerApis.messaging;
+  const teamProvisioningRunApi = teamIpcHandlerApis.provisioningRun;
+  const teamRuntimeApi = teamIpcHandlerApis.runtime;
   teamProvisioningService.setWorkspaceTrustCoordinator(
     createWorkspaceTrustCoordinator({
       claudeConfigDir: () => getClaudeBasePath(),
@@ -2094,7 +2204,7 @@ async function initializeServices(): Promise<void> {
     crossTeamConfigReader,
     teamDataService,
     crossTeamInboxWriter,
-    teamProvisioningService
+    bindTeamCrossTeamMessagingApi(teamProvisioningService)
   );
   teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
 
@@ -2103,7 +2213,7 @@ async function initializeServices(): Promise<void> {
     new ActiveTeamRegistry(teamDataService, teamLogSourceTracker),
     new TeamTaskStallSnapshotSource(teamTranscriptSourceLocator),
     new TeamTaskStallPolicy(),
-    new TeamTaskStallJournal(),
+    new TeamTaskStallJournal({ store: internalStorageFeature.taskStallJournalStore }),
     new TeamTaskStallNotifier(teamDataService, teamProvisioningService)
   );
   let teammateToolTracker: TeammateToolTracker | null = null;
@@ -2292,7 +2402,9 @@ async function initializeServices(): Promise<void> {
     getLocalContext: () => contextRegistry.get('local'),
     logger: createLogger('Feature:RecentProjects'),
   });
-  teamImportFeature = createTeamImportFeature(teamDataService);
+  teamImportFeature = createTeamImportFeature(teamDataService, (teamName) => {
+    memberWorkSyncFeature?.resumeTeam(teamName);
+  });
   organizationsFeature = createOrganizationsFeature({
     teamDataService,
     crossTeamService,
@@ -2378,7 +2490,7 @@ async function initializeServices(): Promise<void> {
   tokenUsageStartupRefreshTimer.unref?.();
   const memberWorkSyncLogger = createLogger('Feature:MemberWorkSync');
   type MemberWorkSyncRuntimeSnapshot = Awaited<
-    ReturnType<TeamProvisioningService['getTeamAgentRuntimeSnapshot']>
+    ReturnType<TeamDiagnosticsApi['getTeamAgentRuntimeSnapshot']>
   >;
   const memberWorkSyncRuntimeSnapshotInFlightByTeam = new Map<
     string,
@@ -2400,7 +2512,7 @@ async function initializeServices(): Promise<void> {
     }
 
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const snapshot = teamProvisioningService.getTeamAgentRuntimeSnapshot(input.teamName);
+    const snapshot = teamDiagnosticsApi.getTeamAgentRuntimeSnapshot(input.teamName);
     let timedOut = false;
     const request = Promise.race([
       snapshot.then((value) => {
@@ -2490,8 +2602,7 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamProvisioningService.isTeamAlive(teamName) ||
-      teamProvisioningService.hasProvisioningRun(teamName)
+      teamRuntimeApi.isTeamAlive(teamName) || teamProvisioningRunApi.hasProvisioningRun(teamName)
     );
   };
   const canDispatchMemberWorkSyncNudges = async (teamName: string): Promise<boolean> => {
@@ -2499,7 +2610,7 @@ async function initializeServices(): Promise<void> {
     if (runtimeActive != null) {
       return runtimeActive;
     }
-    return teamProvisioningService.isTeamAlive(teamName);
+    return teamRuntimeApi.isTeamAlive(teamName);
   };
   const isMemberActiveForMemberWorkSync = async (input: {
     teamName: string;
@@ -2510,8 +2621,8 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamProvisioningService.isTeamAlive(input.teamName) ||
-      teamProvisioningService.hasProvisioningRun(input.teamName)
+      teamRuntimeApi.isTeamAlive(input.teamName) ||
+      teamProvisioningRunApi.hasProvisioningRun(input.teamName)
     );
   };
   const listMemberWorkSyncLifecycleActiveTeamNames = async (): Promise<string[]> => {
@@ -2531,8 +2642,8 @@ async function initializeServices(): Promise<void> {
             error: String(error),
           });
           if (
-            teamProvisioningService.isTeamAlive(team.teamName) ||
-            teamProvisioningService.hasProvisioningRun(team.teamName)
+            teamRuntimeApi.isTeamAlive(team.teamName) ||
+            teamProvisioningRunApi.hasProvisioningRun(team.teamName)
           ) {
             activeTeamNames.push(team.teamName);
           }
@@ -2547,6 +2658,7 @@ async function initializeServices(): Promise<void> {
     taskReader: new TeamTaskReader(),
     kanbanManager: new TeamKanbanManager(),
     membersMetaStore: new TeamMembersMetaStore(),
+    internalStorageBackend: internalStorageFeature?.memberWorkSyncBackend ?? null,
     isTeamActive: isTeamActiveForMemberWorkSync,
     isMemberActive: isMemberActiveForMemberWorkSync,
     canDispatchNudges: canDispatchMemberWorkSyncNudges,
@@ -2571,7 +2683,7 @@ async function initializeServices(): Promise<void> {
           return { ok: true };
         }
 
-        const status = await teamProvisioningService.getOpenCodeRuntimeDeliveryStatus(
+        const status = await teamMessagingApi.getOpenCodeRuntimeDeliveryStatus(
           input.teamName,
           input.originalMessageId
         );
@@ -2626,7 +2738,7 @@ async function initializeServices(): Promise<void> {
 
         const timer = setTimeout(
           () => {
-            void teamProvisioningService
+            void teamMessagingApi
               .relayLeadInboxMessages(input.teamName)
               .catch((error: unknown) =>
                 logger.warn(
@@ -2658,7 +2770,7 @@ async function initializeServices(): Promise<void> {
           };
         }
 
-        const relay = await teamProvisioningService.relayOpenCodeMemberInboxMessages(
+        const relay = await teamMessagingApi.relayOpenCodeMemberInboxMessages(
           input.teamName,
           input.memberName,
           {
@@ -2804,6 +2916,7 @@ async function initializeServices(): Promise<void> {
     message: 'Wiring app actions...',
   });
 
+  teamHttpHandlerApis = bindTeamHttpHandlerApis(teamProvisioningService);
   configureWindowLifecycleActions({
     quit: async () => {
       await requestGuardedAppQuit('app-quit');
@@ -2819,7 +2932,7 @@ async function initializeServices(): Promise<void> {
     updaterService,
     sshConnectionManager,
     teamDataService,
-    teamProvisioningService,
+    teamIpcHandlerApis,
     teamMemberLogsFinder,
     memberStatsComputer,
     boardTaskActivityService,
@@ -2839,6 +2952,9 @@ async function initializeServices(): Promise<void> {
         if (httpServer?.isRunning()) {
           void syncTeamControlApiState().catch(() => undefined);
         }
+      },
+      onAgentLanguageUpdated: (newLangCode: string) => {
+        void teamProvisioningService.notifyLanguageChange(newLangCode);
       },
     },
     {
@@ -2863,7 +2979,8 @@ async function initializeServices(): Promise<void> {
     skillsWatcherService,
     crossTeamService,
     teamBackupService ?? undefined,
-    launchIoGovernor ?? undefined
+    launchIoGovernor ?? undefined,
+    memberWorkSyncFeature ?? undefined
   );
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
@@ -2925,6 +3042,9 @@ async function startHttpServer(
 
     const config = configManager.getConfig();
     const activeContext = contextRegistry.getActive();
+    if (!teamHttpHandlerApis) {
+      throw new Error('Team HTTP APIs are not initialized');
+    }
     const port = await httpServer.start(
       {
         projectScanner: activeContext.projectScanner,
@@ -2938,8 +3058,8 @@ async function startHttpServer(
         memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
         updaterService,
         sshConnectionManager,
-        teamDataService,
-        teamProvisioningService,
+        teamDataApi: bindTeamHttpDataApi(teamDataService),
+        teamApis: teamHttpHandlerApis,
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456
@@ -3042,19 +3162,19 @@ async function shutdownServices(): Promise<void> {
       await runShutdownStep('SSH connection manager dispose', () => sshConnectionManager.dispose());
     }
 
-    if (teamDataService) {
-      await runShutdownStep('team data polling stop', () =>
-        teamDataService.stopProcessHealthPolling()
-      );
-    }
+    await disposeInternalStorageAfterWriterDrains({
+      teamDataService,
+      teamTaskStallMonitor,
+      memberWorkSyncFeature,
+      internalStorageFeature,
+    });
+    teamTaskStallMonitor = null;
+    memberWorkSyncFeature = null;
+    internalStorageFeature = null;
     if (updaterService) {
       await runShutdownStep('updater periodic check stop', () =>
         updaterService.stopPeriodicCheck()
       );
-    }
-    if (teamTaskStallMonitor) {
-      await runShutdownStep('team task stall monitor stop', () => teamTaskStallMonitor?.stop());
-      teamTaskStallMonitor = null;
     }
     await runShutdownStep('branch status dispose', () => branchStatusService?.dispose());
     branchStatusService = null;
@@ -3072,8 +3192,6 @@ async function shutdownServices(): Promise<void> {
     codexModelCatalogFeature = null;
     await runShutdownStep('Codex account dispose', () => codexAccountFeature?.dispose());
     codexAccountFeature = null;
-    await runShutdownStep('member work sync dispose', () => memberWorkSyncFeature?.dispose());
-    memberWorkSyncFeature = null;
     await runShutdownStep('terminal workspace dispose', () => terminalWorkspaceFeature?.dispose());
     terminalWorkspaceFeature = null;
 

@@ -3,7 +3,6 @@ import {
   boundProgressLogLines,
   buildProgressLiveOutput,
   buildProgressTraceLine,
-  PROGRESS_RETAINED_LOG_CHARS,
   PROGRESS_RETAINED_LOG_LINE_CHARS,
 } from '../progressPayload';
 
@@ -14,7 +13,7 @@ const CLI_LOG_LINE_CARRY_LIMIT = PROGRESS_RETAINED_LOG_LINE_CHARS;
 // newline. Must stay large enough to hold a full single NDJSON event (large
 // assistant messages, tool_result payloads, bootstrap-transcript events) so we
 // never truncate mid-JSON and silently drop the event when JSON.parse fails.
-const STDOUT_PARSER_CARRY_LIMIT = PROGRESS_RETAINED_LOG_CHARS;
+const STDOUT_PARSER_CARRY_LIMIT = 8 * 1024 * 1024;
 const PROBE_OUTPUT_BUFFER_LIMIT = 128 * 1024;
 const LIVE_LEAD_PROCESS_MESSAGE_TEXT_LIMIT = 32 * 1024;
 const PROVISIONING_TRACE_STORAGE_LIMIT = 500;

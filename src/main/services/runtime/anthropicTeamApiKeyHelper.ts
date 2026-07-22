@@ -73,6 +73,38 @@ function resolveInside(basePath: string, ...segments: string[]): string {
   throw new Error('Refusing to write Anthropic team auth material outside the auth root');
 }
 
+async function lstatIfExists(targetPath: string): Promise<fs.Stats | null> {
+  try {
+    return await fs.promises.lstat(targetPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function readDirectoryIfExists(targetPath: string): Promise<fs.Dirent[] | null> {
+  try {
+    return await fs.promises.readdir(targetPath, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function removeDirectoryIfExists(targetPath: string): Promise<void> {
+  try {
+    await fs.promises.rmdir(targetPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+}
+
 async function ensureOwnedDirectory(dirPath: string): Promise<void> {
   try {
     const stat = await fs.promises.lstat(dirPath);
@@ -232,9 +264,15 @@ export async function cleanupAnthropicTeamApiKeyHelperMaterial(input: {
   if (input.skipIfLiveProcessReferences === true && liveProcessMayReferencePath(input.directory)) {
     return;
   }
-  const entries = await fs.promises
-    .readdir(input.directory, { withFileTypes: true })
-    .catch(() => []);
+  let entries: fs.Dirent[];
+  try {
+    entries = await fs.promises.readdir(input.directory, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return;
+    }
+    throw error;
+  }
   const expected = new Set(['helper.sh', 'key', 'settings.json']);
   for (const entry of entries) {
     if (!entry.isFile()) {
@@ -247,13 +285,27 @@ export async function cleanupAnthropicTeamApiKeyHelperMaterial(input: {
       continue;
     }
     const filePath = path.join(input.directory, fileName);
-    const stat = await fs.promises.lstat(filePath).catch(() => null);
-    if (!stat || stat.isSymbolicLink() || !stat.isFile()) {
+    let stat: fs.Stats;
+    try {
+      stat = await fs.promises.lstat(filePath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        continue;
+      }
+      throw error;
+    }
+    if (stat.isSymbolicLink() || !stat.isFile()) {
       continue;
     }
-    await fs.promises.rm(filePath, { force: true }).catch(() => undefined);
+    await fs.promises.rm(filePath, { force: true });
   }
-  await fs.promises.rmdir(input.directory).catch(() => undefined);
+  try {
+    await fs.promises.rmdir(input.directory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
 }
 
 export async function cleanupAnthropicTeamApiKeyHelperForTeam(input: {
@@ -265,21 +317,21 @@ export async function cleanupAnthropicTeamApiKeyHelperForTeam(input: {
     authMaterialId: 'cleanup-placeholder',
     baseClaudeDir: input.baseClaudeDir,
   });
-  const stat = await fs.promises.lstat(teamDir).catch(() => null);
+  const stat = await lstatIfExists(teamDir);
   if (!stat || stat.isSymbolicLink() || !stat.isDirectory()) {
     return;
   }
   const processCommands = readLiveProcessCommandsForReferenceCheck();
   const runsDir = path.join(teamDir, 'runs');
-  const runsStat = await fs.promises.lstat(runsDir).catch(() => null);
+  const runsStat = await lstatIfExists(runsDir);
   if (runsStat?.isDirectory() && !runsStat.isSymbolicLink()) {
-    const entries = await fs.promises.readdir(runsDir, { withFileTypes: true }).catch(() => []);
+    const entries = (await readDirectoryIfExists(runsDir)) ?? [];
     for (const entry of entries) {
       if (!entry.isDirectory() || !isOwnedPathSegment(entry.name)) {
         continue;
       }
       const runDir = path.join(runsDir, entry.name);
-      const runStat = await fs.promises.lstat(runDir).catch(() => null);
+      const runStat = await lstatIfExists(runDir);
       if (!runStat?.isDirectory() || runStat.isSymbolicLink()) {
         continue;
       }
@@ -288,9 +340,9 @@ export async function cleanupAnthropicTeamApiKeyHelperForTeam(input: {
       }
       await cleanupAnthropicTeamApiKeyHelperMaterial({ directory: runDir });
     }
-    await fs.promises.rmdir(runsDir).catch(() => undefined);
+    await removeDirectoryIfExists(runsDir);
   }
-  await fs.promises.rmdir(teamDir).catch(() => undefined);
+  await removeDirectoryIfExists(teamDir);
 }
 
 export async function cleanupStaleAnthropicTeamApiKeyHelpers(input: {
@@ -298,7 +350,7 @@ export async function cleanupStaleAnthropicTeamApiKeyHelpers(input: {
   maxAgeMs: number;
 }): Promise<void> {
   const authRoot = path.resolve(input.baseClaudeDir, 'team-runtime-auth');
-  const rootStat = await fs.promises.lstat(authRoot).catch(() => null);
+  const rootStat = await lstatIfExists(authRoot);
   if (!rootStat?.isDirectory() || rootStat.isSymbolicLink()) {
     return;
   }
@@ -306,30 +358,30 @@ export async function cleanupStaleAnthropicTeamApiKeyHelpers(input: {
   const now = Date.now();
   const processCommands = readLiveProcessCommandsForReferenceCheck();
   if (processCommands === null) {
-    return;
+    throw new Error('Unable to inspect live process references before stale helper cleanup');
   }
-  const teamEntries = await fs.promises.readdir(authRoot, { withFileTypes: true }).catch(() => []);
+  const teamEntries = (await readDirectoryIfExists(authRoot)) ?? [];
   for (const teamEntry of teamEntries) {
     if (!teamEntry.isDirectory() || !isOwnedPathSegment(teamEntry.name)) {
       continue;
     }
     const teamDir = path.join(authRoot, teamEntry.name);
-    const teamStat = await fs.promises.lstat(teamDir).catch(() => null);
+    const teamStat = await lstatIfExists(teamDir);
     if (!teamStat?.isDirectory() || teamStat.isSymbolicLink()) {
       continue;
     }
     const runsDir = path.join(teamDir, 'runs');
-    const runsStat = await fs.promises.lstat(runsDir).catch(() => null);
+    const runsStat = await lstatIfExists(runsDir);
     if (!runsStat?.isDirectory() || runsStat.isSymbolicLink()) {
       continue;
     }
-    const runEntries = await fs.promises.readdir(runsDir, { withFileTypes: true }).catch(() => []);
+    const runEntries = (await readDirectoryIfExists(runsDir)) ?? [];
     for (const runEntry of runEntries) {
       if (!runEntry.isDirectory() || !isOwnedPathSegment(runEntry.name)) {
         continue;
       }
       const runDir = path.join(runsDir, runEntry.name);
-      const runStat = await fs.promises.lstat(runDir).catch(() => null);
+      const runStat = await lstatIfExists(runDir);
       if (!runStat?.isDirectory() || runStat.isSymbolicLink()) {
         continue;
       }
@@ -341,7 +393,15 @@ export async function cleanupStaleAnthropicTeamApiKeyHelpers(input: {
       }
       await cleanupAnthropicTeamApiKeyHelperMaterial({ directory: runDir });
     }
-    await fs.promises.rmdir(runsDir).catch(() => undefined);
-    await fs.promises.rmdir(teamDir).catch(() => undefined);
+    for (const directory of [runsDir, teamDir]) {
+      try {
+        await fs.promises.rmdir(directory);
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== 'ENOENT' && code !== 'ENOTEMPTY') {
+          throw error;
+        }
+      }
+    }
   }
 }

@@ -272,28 +272,31 @@ describe('EditorFileWatcher', () => {
         mutate: (filePath: string) => unlinkSync(filePath),
         expectedType: 'delete',
       },
-    ])('recovers a $name that happens before chokidar is ready', ({ prepare, mutate, expectedType }) => {
-      const projectRoot = mkdtempSync(join(tmpdir(), 'editor-watcher-ready-'));
-      const filePath = join(projectRoot, 'reviewed.ts');
-      const onChange = vi.fn();
+    ])(
+      'recovers a $name that happens before chokidar is ready',
+      ({ prepare, mutate, expectedType }) => {
+        const projectRoot = mkdtempSync(join(tmpdir(), 'editor-watcher-ready-'));
+        const filePath = join(projectRoot, 'reviewed.ts');
+        const onChange = vi.fn();
 
-      try {
-        prepare(filePath);
-        const reviewWatcher = new EditorFileWatcher({ ignoreStartupChanges: false });
-        reviewWatcher.start(projectRoot, onChange);
-        reviewWatcher.setWatchedFiles([filePath]);
+        try {
+          prepare(filePath);
+          const reviewWatcher = new EditorFileWatcher({ ignoreStartupChanges: false });
+          reviewWatcher.start(projectRoot, onChange);
+          reviewWatcher.setWatchedFiles([filePath]);
 
-        mutate(filePath);
-        const readyHandler = mockOn.mock.calls.find((call) => call[0] === 'ready')?.[1];
-        readyHandler?.();
-        vi.advanceTimersByTime(FLUSH_DEBOUNCE_MS);
+          mutate(filePath);
+          const readyHandler = mockOn.mock.calls.find((call) => call[0] === 'ready')?.[1];
+          readyHandler?.();
+          vi.advanceTimersByTime(FLUSH_DEBOUNCE_MS);
 
-        expect(onChange).toHaveBeenCalledWith({ type: expectedType, path: filePath });
-        reviewWatcher.stop();
-      } finally {
-        rmSync(projectRoot, { recursive: true, force: true });
+          expect(onChange).toHaveBeenCalledWith({ type: expectedType, path: filePath });
+          reviewWatcher.stop();
+        } finally {
+          rmSync(projectRoot, { recursive: true, force: true });
+        }
       }
-    });
+    );
   });
 
   describe('stop', () => {

@@ -21,13 +21,14 @@ describe('TeamAgentRuntimeResourceHistory', () => {
     expect(
       history.buildKey({
         memberName: ' alice ',
+        runId: 'run-a',
         pid: 222,
         runtimePid: 333,
         pidSource: 'tmux_child',
       })
-    ).toBe(['alice', 222, 'tmux_child'].join('\0'));
+    ).toBe(['run-a', 'alice', 222, 'tmux_child'].join('\0'));
     expect(history.buildKey({ memberName: 'alice', runtimePid: 333 })).toBe(
-      ['alice', 333, 'unknown'].join('\0')
+      ['unknown-run', 'alice', 333, 'unknown'].join('\0')
     );
     expect(history.buildKey({ memberName: ' ', pid: 222 })).toBeNull();
     expect(history.buildKey({ memberName: 'alice' })).toBeNull();
@@ -43,7 +44,7 @@ describe('TeamAgentRuntimeResourceHistory', () => {
         runtimePid: 333.9,
         pidSource: 'agent_process_table',
       })
-    ).toBe(['alice', 222, 'agent_process_table'].join('\0'));
+    ).toBe(['unknown-run', 'alice', 222, 'agent_process_table'].join('\0'));
     expect(history.buildKey({ memberName: 'alice', pid: 0.9 })).toBeNull();
 
     const samples = history.record({
@@ -142,6 +143,42 @@ describe('TeamAgentRuntimeResourceHistory', () => {
     expect(second?.[0]).toMatchObject({ cpuPercent: 4, rssBytes: 100 });
   });
 
+  it('isolates history by runtime run id for reused pids', () => {
+    const history = createHistory();
+
+    const runA = history.record({
+      teamName: 'runtime-team',
+      memberName: 'alice',
+      runId: 'run-a',
+      timestamp: '2026-04-24T12:00:00.000Z',
+      cpuPercent: 4,
+      rssBytes: 100,
+      pidSource: 'agent_process_table',
+      pid: 222,
+    });
+    const runBReadBeforeSample = history.record({
+      teamName: 'runtime-team',
+      memberName: 'alice',
+      runId: 'run-b',
+      timestamp: '2026-04-24T12:01:00.000Z',
+      pidSource: 'agent_process_table',
+      pid: 222,
+    });
+    const runB = history.record({
+      teamName: 'runtime-team',
+      memberName: 'alice',
+      runId: 'run-b',
+      timestamp: '2026-04-24T12:01:00.000Z',
+      cpuPercent: 8,
+      rssBytes: 200,
+      pidSource: 'agent_process_table',
+      pid: 222,
+    });
+
+    expect(runA).toEqual([expect.objectContaining({ cpuPercent: 4, rssBytes: 100 })]);
+    expect(runBReadBeforeSample).toBeUndefined();
+    expect(runB).toEqual([expect.objectContaining({ cpuPercent: 8, rssBytes: 200 })]);
+  });
   it('preserves existing history when incoming metrics are invalid', () => {
     const history = createHistory();
 

@@ -52,6 +52,7 @@ export interface TeamRuntimePermissionAnswerInput {
   memberName: string;
   requestId: string;
   decision: 'allow' | 'reject';
+  message?: string;
   expectedMembers: TeamRuntimeMemberSpec[];
   previousLaunchState: PersistedTeamLaunchSnapshot | null;
 }

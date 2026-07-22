@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildIncompleteLaunchCleanupReason,
   cleanupProvisioningRun,
+  finalizeIncompleteLaunchStateBeforeCleanup,
   type IncompleteLaunchCleanupRun,
   shouldFinalizeIncompleteLaunchState,
   type TeamProvisioningCleanupPorts,
@@ -89,6 +90,8 @@ function makeCleanupPorts(
   aliveRunByTeam: Map<string, string>;
   leadInboxRelayInFlight: Map<string, string>;
   relayedLeadInboxMessageIds: Map<string, string>;
+  leadRecoveryMessageIds: Map<string, string>;
+  successfulLeadRecoveryMessageIds: Map<string, string>;
   pendingCrossTeamFirstReplies: Map<string, string>;
   recentCrossTeamLeadDeliveryMessageIds: Map<string, string>;
   recentSameTeamNativeFingerprints: Map<string, string>;
@@ -126,6 +129,8 @@ function makeCleanupPorts(
     invalidateMemberSpawnStatusesCache: vi.fn(),
     leadInboxRelayInFlight: new Map(),
     relayedLeadInboxMessageIds: new Map(),
+    leadRecoveryMessageIds: new Map(),
+    successfulLeadRecoveryMessageIds: new Map(),
     pendingCrossTeamFirstReplies: new Map(),
     recentCrossTeamLeadDeliveryMessageIds: new Map(),
     recentSameTeamNativeFingerprints: new Map(),
@@ -139,6 +144,7 @@ function makeCleanupPorts(
     openCodeMemberInboxRelayInFlight: new Map(),
     openCodeMemberSendInFlightByLane: new Map(),
     openCodePromptDeliveryWatchdogScheduler: { cancelTeam: vi.fn() },
+    openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn() },
     relayedMemberInboxMessageIds: new Map(),
     liveLeadProcessMessages: new Map(),
     pruneLiveLeadMessagesForCleanedRun: vi.fn(),
@@ -163,6 +169,8 @@ function seedTeamScopedCleanupState(
   ports.aliveRunByTeam.set(run.teamName, trackedRunId);
   ports.leadInboxRelayInFlight.set(run.teamName, 'lead');
   ports.relayedLeadInboxMessageIds.set(run.teamName, 'lead-message');
+  ports.leadRecoveryMessageIds.set(run.teamName, 'known-recovery-message');
+  ports.successfulLeadRecoveryMessageIds.set(run.teamName, 'recovery-message');
   ports.pendingCrossTeamFirstReplies.set(run.teamName, 'cross-team');
   ports.recentCrossTeamLeadDeliveryMessageIds.set(run.teamName, 'cross-team-message');
   ports.recentSameTeamNativeFingerprints.set(run.teamName, 'same-team');
@@ -225,6 +233,44 @@ describe('team provisioning cleanup policy', () => {
     expect(buildIncompleteLaunchCleanupReason(run(), 'fallback')).toBe('fallback');
   });
 
+  it('finalizes incomplete launch state before cleanup and rolls back the finalized flag on persist failure', async () => {
+    const cleanup = run();
+    const persistError = new Error('write failed');
+    const ports = {
+      markIncompleteLaunchStateFinalized: vi.fn((targetRun: IncompleteLaunchCleanupRun) => {
+        targetRun.launchCleanupStateFinalized = true;
+      }),
+      persistLaunchStateSnapshot: vi.fn(() => Promise.reject(persistError)),
+    };
+    const onPersistFailure = vi.fn();
+
+    await finalizeIncompleteLaunchStateBeforeCleanup(cleanup, ports, {
+      fallbackReason: 'fallback reason',
+      onPersistFailure,
+    });
+
+    expect(ports.markIncompleteLaunchStateFinalized).toHaveBeenCalledWith(
+      cleanup,
+      'fallback reason'
+    );
+    expect(ports.persistLaunchStateSnapshot).toHaveBeenCalledWith(cleanup, 'finished');
+    expect(cleanup.launchCleanupStateFinalized).toBe(false);
+    expect(onPersistFailure).toHaveBeenCalledWith(cleanup, persistError);
+  });
+
+  it('does not finalize launch state before cleanup when the run is already finalized', async () => {
+    const cleanup = run({ launchCleanupStateFinalized: true });
+    const ports = {
+      markIncompleteLaunchStateFinalized: vi.fn(),
+      persistLaunchStateSnapshot: vi.fn(() => Promise.resolve()),
+    };
+
+    await finalizeIncompleteLaunchStateBeforeCleanup(cleanup, ports);
+
+    expect(ports.markIncompleteLaunchStateFinalized).not.toHaveBeenCalled();
+    expect(ports.persistLaunchStateSnapshot).not.toHaveBeenCalled();
+  });
+
   it('clears current-run team-scoped cleanup state', () => {
     const cleanup = cleanupRun();
     const ports = makeCleanupPorts(cleanup.runId);
@@ -249,6 +295,8 @@ describe('team provisioning cleanup policy', () => {
     expect(ports.invalidateMemberSpawnStatusesCache).toHaveBeenCalledWith(cleanup.teamName);
     expect(ports.leadInboxRelayInFlight.has(cleanup.teamName)).toBe(false);
     expect(ports.relayedLeadInboxMessageIds.has(cleanup.teamName)).toBe(false);
+    expect(ports.leadRecoveryMessageIds.has(cleanup.teamName)).toBe(false);
+    expect(ports.successfulLeadRecoveryMessageIds.has(cleanup.teamName)).toBe(false);
     expect(ports.pendingCrossTeamFirstReplies.has(cleanup.teamName)).toBe(false);
     expect(ports.recentCrossTeamLeadDeliveryMessageIds.has(cleanup.teamName)).toBe(false);
     expect(ports.recentSameTeamNativeFingerprints.has(cleanup.teamName)).toBe(false);
@@ -268,6 +316,7 @@ describe('team provisioning cleanup policy', () => {
     expect(ports.openCodePromptDeliveryWatchdogScheduler.cancelTeam).toHaveBeenCalledWith(
       cleanup.teamName
     );
+    expect(ports.openCodeRuntimeDeliveryAdvisory.cancelTeam).toHaveBeenCalledWith(cleanup.teamName);
     expect(ports.pruneLiveLeadMessagesForCleanedRun).not.toHaveBeenCalled();
     expect(ports.markIncompleteLaunchStateFinalized).toHaveBeenCalledWith(
       cleanup,
@@ -316,6 +365,8 @@ describe('team provisioning cleanup policy', () => {
     expect(ports.invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
     expect(ports.leadInboxRelayInFlight.get(cleanup.teamName)).toBe('lead');
     expect(ports.relayedLeadInboxMessageIds.get(cleanup.teamName)).toBe('lead-message');
+    expect(ports.leadRecoveryMessageIds.get(cleanup.teamName)).toBe('known-recovery-message');
+    expect(ports.successfulLeadRecoveryMessageIds.get(cleanup.teamName)).toBe('recovery-message');
     expect(ports.pendingCrossTeamFirstReplies.get(cleanup.teamName)).toBe('cross-team');
     expect(ports.recentSameTeamNativeFingerprints.get(cleanup.teamName)).toBe('same-team');
     expect(ports.memberInboxRelayInFlight.get(`${cleanup.teamName}:worker-a`)).toBe('member');

@@ -773,7 +773,6 @@ describe('review IPC path confinement', () => {
         scopeToken
       )
     ).resolves.toEqual({ success: true, data: [] });
-
   });
 
   it('accepts a lost-response retry when the canonical branch is a proven append-only superset', async () => {
@@ -1159,9 +1158,7 @@ describe('review IPC path confinement', () => {
       data: { hunkDecisions: { [`${projectFile}:1`]: 'rejected' } },
     });
 
-    const { ReviewDraftHistoryStore } = await import(
-      '@features/change-review-history/main'
-    );
+    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
     const draftPath = path.join(
       decisionTeamsBasePath,
       'safe-team',
@@ -1206,15 +1203,19 @@ describe('review IPC path confinement', () => {
       ipcMain.invoke(REVIEW_CLEAR_DRAFT_HISTORY, 'safe-team', scopeKey, scopeToken)
     ).resolves.toEqual({
       success: false,
-      error:
-        'Saved manual edit history became readable; refusing destructive recovery discard',
+      error: 'Saved manual edit history became readable; refusing destructive recovery discard',
     });
     await expect(
       ipcMain.invoke(REVIEW_LOAD_DRAFT_HISTORY, 'safe-team', scopeKey, scopeToken)
     ).resolves.toMatchObject({
       success: true,
       data: {
-        entries: { [projectFile]: { generation: replacement.generation, editorState: { doc: 'new draft\n' } } },
+        entries: {
+          [projectFile]: {
+            generation: replacement.generation,
+            editorState: { doc: 'new draft\n' },
+          },
+        },
       },
     });
   });

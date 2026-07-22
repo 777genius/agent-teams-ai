@@ -13,9 +13,7 @@ const SESSION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const SUBAGENT_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const NOTIFICATION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const TRIGGER_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
-const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const TASK_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/;
-const MEMBER_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const FROM_FIELD_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
 const MAX_QUERY_LENGTH = 512;
@@ -28,8 +26,11 @@ interface ValidationResult<T> {
   error?: string;
 }
 
-const RESERVED_MEMBER_NAMES = new Set<string>(['user']);
-const RESERVED_TEAMMATE_NAMES = new Set<string>(['team-lead']);
+export {
+  validateMemberName,
+  validateTeammateName,
+  validateTeamName,
+} from '@main/services/team/TeamIdentifierValidation';
 
 function validateString(
   value: unknown,
@@ -123,24 +124,6 @@ export function validateTriggerId(triggerId: unknown): ValidationResult<string> 
   return { valid: true, value: basic.value };
 }
 
-export function validateTeamName(teamName: unknown): ValidationResult<string> {
-  const basic = validateString(teamName, 'teamName', 128);
-  if (!basic.valid) {
-    return basic;
-  }
-
-  if (!TEAM_NAME_PATTERN.test(basic.value!)) {
-    return { valid: false, error: 'teamName contains invalid characters' };
-  }
-
-  const reserved = rejectWindowsReserved(basic.value!, 'teamName');
-  if (reserved) {
-    return reserved;
-  }
-
-  return { valid: true, value: basic.value };
-}
-
 export function validateTaskId(taskId: unknown): ValidationResult<string> {
   const basic = validateString(taskId, 'taskId', 64);
   if (!basic.valid) {
@@ -157,50 +140,6 @@ export function validateTaskId(taskId: unknown): ValidationResult<string> {
   }
 
   return { valid: true, value: basic.value };
-}
-
-export function validateMemberName(memberName: unknown): ValidationResult<string> {
-  const basic = validateString(memberName, 'member', 128);
-  if (!basic.valid) {
-    return basic;
-  }
-
-  if (!MEMBER_NAME_PATTERN.test(basic.value!)) {
-    return { valid: false, error: 'member contains invalid characters' };
-  }
-
-  if (/[. ]$/.test(basic.value!)) {
-    return { valid: false, error: 'member cannot end with a space or period' };
-  }
-
-  const windowsReserved = rejectWindowsReserved(basic.value!, 'member');
-  if (windowsReserved) {
-    return windowsReserved;
-  }
-
-  const lower = basic.value!.toLowerCase();
-  if (RESERVED_MEMBER_NAMES.has(lower)) {
-    return { valid: false, error: `member name "${basic.value!}" is reserved` };
-  }
-
-  return { valid: true, value: basic.value };
-}
-
-/**
- * Teammate names are user-created members (not the lead process).
- * This validation forbids reserved system names (lead + human).
- */
-export function validateTeammateName(memberName: unknown): ValidationResult<string> {
-  const basic = validateMemberName(memberName);
-  if (!basic.valid) {
-    return basic;
-  }
-
-  const lower = basic.value!.toLowerCase();
-  if (RESERVED_TEAMMATE_NAMES.has(lower)) {
-    return { valid: false, error: `member name "${basic.value!}" is reserved` };
-  }
-  return basic;
 }
 
 export function validateFromField(from: unknown): ValidationResult<string> {

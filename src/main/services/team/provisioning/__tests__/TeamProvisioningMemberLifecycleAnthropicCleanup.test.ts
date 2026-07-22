@@ -2,11 +2,6 @@ import {
   listTmuxPaneRuntimeInfoForCurrentPlatform,
   sendKeysToTmuxPaneForCurrentPlatform,
 } from '@features/tmux-installer/main';
-import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
-import {
-  TeamProvisioningMemberLifecycleController,
-  type TeamProvisioningMemberLifecycleHost,
-} from '@main/services/team/provisioning/TeamProvisioningMemberLifecycle';
 import { spawnCli } from '@main/utils/childProcess';
 import { killProcessByPid } from '@main/utils/processKill';
 import { EventEmitter } from 'events';
@@ -14,6 +9,12 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { TeamProvisioningMemberLifecycleController } from '../TeamProvisioningMemberLifecycle';
+
+import type { TeamProvisioningMemberLifecycleHost } from '../TeamProvisioningMemberLifecycleHostPorts';
+import type { TeamProvisioningMemberLifecycleOperationUseCases } from '../TeamProvisioningMemberLifecycleOperationUseCases';
+import type * as PathDecoderModule from '@main/utils/pathDecoder';
 
 type DirectProcessRestartInput = Parameters<
   TeamProvisioningMemberLifecycleController['launchDirectProcessMemberRestartInternal']
@@ -23,10 +24,26 @@ interface DirectTmuxRestartController {
   launchDirectTmuxMemberRestart(input: DirectTmuxRestartInput): Promise<void>;
 }
 
-const hoisted = vi.hoisted(() => ({ teamsBase: '' }));
+type LifecycleHostMock = TeamProvisioningMemberLifecycleHost & {
+  materializeEffectiveTeamMemberSpecs: ReturnType<typeof vi.fn>;
+  appendDirectProcessRuntimeEvent: ReturnType<typeof vi.fn>;
+  updateDirectTmuxRestartMemberConfig: ReturnType<typeof vi.fn>;
+};
+
+const immediateOperationUseCases: TeamProvisioningMemberLifecycleOperationUseCases = {
+  isMemberLifecycleOperationActive: () => false,
+  async runMemberLifecycleOperation(_teamName, _memberName, _kind, operation) {
+    return operation();
+  },
+};
+
+const hoisted = vi.hoisted(() => ({
+  teamsBase: '',
+  resolveClaudeBinary: vi.fn<() => Promise<string | null>>(),
+}));
 
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
-  ClaudeBinaryResolver: { resolve: vi.fn() },
+  ClaudeBinaryResolver: { resolve: hoisted.resolveClaudeBinary },
 }));
 
 vi.mock('@features/tmux-installer/main', () => ({
@@ -64,7 +81,7 @@ vi.mock('@main/services/team/bootstrap/NativeAppManagedBootstrapContextBuilder',
 }));
 
 vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@main/utils/pathDecoder')>();
+  const actual = await importOriginal<typeof PathDecoderModule>();
   return {
     ...actual,
     getTeamsBasePath: () => hoisted.teamsBase,
@@ -78,7 +95,7 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
     testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'member-lifecycle-anthropic-cleanup-'));
     hoisted.teamsBase = path.join(testRoot, 'teams');
     fs.mkdirSync(hoisted.teamsBase, { recursive: true });
-    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    hoisted.resolveClaudeBinary.mockResolvedValue('/mock/claude');
     vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockReset();
     vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mockReset();
     vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mockResolvedValue(undefined);
@@ -135,8 +152,14 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
     } as unknown as DirectProcessRestartInput;
   }
 
-  function createHost(helperDirectory: string) {
+  function createHost(
+    helperDirectory: string,
+    run: DirectProcessRestartInput['run']
+  ): LifecycleHostMock {
     return {
+      runs: new Map([[run.runId, run]]),
+      getAliveRunId: () => run.runId,
+      isCurrentTrackedRun: (candidateRun: DirectProcessRestartInput['run']) => candidateRun === run,
       getRunTrackedCwd: () => testRoot,
       buildPrimaryOwnedMemberSpecForRuntime: ({
         configuredMember,
@@ -172,62 +195,72 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
       appendMemberBootstrapDiagnostic: vi.fn(),
       setMemberSpawnStatus: vi.fn(),
       upsertRunAllEffectiveMember: vi.fn(),
-    };
+    } as unknown as LifecycleHostMock;
+  }
+
+  function createController(
+    host: ReturnType<typeof createHost>
+  ): TeamProvisioningMemberLifecycleController {
+    return new TeamProvisioningMemberLifecycleController(host, immediateOperationUseCases, {
+      restart: {
+        appendDirectProcessRuntimeEvent: host.appendDirectProcessRuntimeEvent,
+        updateDirectTmuxRestartMemberConfig: host.updateDirectTmuxRestartMemberConfig,
+      },
+    });
   }
 
   it('removes pending helper material when direct process preparation fails', async () => {
     const helperDirectory = createHelperDirectory();
-    const host = createHost(helperDirectory);
+    const input = createInput();
+    const host = createHost(helperDirectory, input.run);
     host.materializeEffectiveTeamMemberSpecs.mockRejectedValueOnce(
       new Error('member materialization failed')
     );
-    const controller = new TeamProvisioningMemberLifecycleController(
-      host as unknown as TeamProvisioningMemberLifecycleHost
+    const controller = createController(host);
+
+    await expect(controller.launchDirectProcessMemberRestartInternal(input)).rejects.toThrow(
+      'member materialization failed'
     );
 
-    await expect(
-      controller.launchDirectProcessMemberRestartInternal(createInput())
-    ).rejects.toThrow('member materialization failed');
-
+    expect(host.buildProvisioningEnv).toHaveBeenCalledTimes(1);
     expect(fs.existsSync(helperDirectory)).toBe(false);
   });
 
   it('removes pending helper material when direct tmux preparation fails', async () => {
     const helperDirectory = createHelperDirectory();
-    const host = createHost(helperDirectory);
+    const input = createInput();
+    const host = createHost(helperDirectory, input.run);
     host.materializeEffectiveTeamMemberSpecs.mockRejectedValueOnce(
       new Error('member materialization failed')
     );
-    const controller = new TeamProvisioningMemberLifecycleController(
-      host as unknown as TeamProvisioningMemberLifecycleHost
-    );
+    const controller = createController(host);
     vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValueOnce(
       new Map([['%7', { paneId: '%7', panePid: 777, currentCommand: 'zsh' }]])
     );
 
     await expect(
       (controller as unknown as DirectTmuxRestartController).launchDirectTmuxMemberRestart({
-        ...createInput(),
+        ...input,
         paneId: '%7',
       })
     ).rejects.toThrow('member materialization failed');
 
+    expect(host.buildProvisioningEnv).toHaveBeenCalledTimes(1);
     expect(fs.existsSync(helperDirectory)).toBe(false);
     expect(sendKeysToTmuxPaneForCurrentPlatform).not.toHaveBeenCalled();
   });
 
   it('retains helper material after a direct tmux restart command is delivered', async () => {
     const helperDirectory = createHelperDirectory();
-    const host = createHost(helperDirectory);
-    const controller = new TeamProvisioningMemberLifecycleController(
-      host as unknown as TeamProvisioningMemberLifecycleHost
-    );
+    const input = createInput();
+    const host = createHost(helperDirectory, input.run);
+    const controller = createController(host);
     vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValueOnce(
       new Map([['%8', { paneId: '%8', panePid: 778, currentCommand: 'zsh' }]])
     );
 
     await (controller as unknown as DirectTmuxRestartController).launchDirectTmuxMemberRestart({
-      ...createInput(),
+      ...input,
       paneId: '%8',
     });
 
@@ -237,7 +270,8 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
 
   it('removes helper material when a spawned direct process is rolled back', async () => {
     const helperDirectory = createHelperDirectory();
-    const host = createHost(helperDirectory);
+    const input = createInput();
+    const host = createHost(helperDirectory, input.run);
     host.appendDirectProcessRuntimeEvent.mockRejectedValueOnce(
       new Error('runtime event persistence failed')
     );
@@ -249,13 +283,11 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
       unref: vi.fn(),
     });
     vi.mocked(spawnCli).mockReturnValue(child as never);
-    const controller = new TeamProvisioningMemberLifecycleController(
-      host as unknown as TeamProvisioningMemberLifecycleHost
-    );
+    const controller = createController(host);
 
-    await expect(
-      controller.launchDirectProcessMemberRestartInternal(createInput())
-    ).rejects.toThrow('runtime event persistence failed');
+    await expect(controller.launchDirectProcessMemberRestartInternal(input)).rejects.toThrow(
+      'runtime event persistence failed'
+    );
 
     expect(killProcessByPid).toHaveBeenCalledWith(4567);
     expect(fs.existsSync(helperDirectory)).toBe(false);
@@ -263,7 +295,8 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
 
   it('queues the native bootstrap marker when a direct process restart has app-managed context', async () => {
     const helperDirectory = createHelperDirectory();
-    const host = createHost(helperDirectory);
+    const input = createInput();
+    const host = createHost(helperDirectory, input.run);
     fs.mkdirSync(path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime'), {
       recursive: true,
     });
@@ -275,12 +308,22 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
       unref: vi.fn(),
     });
     vi.mocked(spawnCli).mockReturnValue(child as never);
-    const controller = new TeamProvisioningMemberLifecycleController(
-      host as unknown as TeamProvisioningMemberLifecycleHost
-    );
+    const controller = createController(host);
 
-    await controller.launchDirectProcessMemberRestartInternal(createInput());
+    await controller.launchDirectProcessMemberRestartInternal(input);
 
+    await vi.waitFor(() => {
+      expect(
+        fs.existsSync(
+          path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime', 'alice.stdout.log')
+        )
+      ).toBe(true);
+      expect(
+        fs.existsSync(
+          path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime', 'alice.stderr.log')
+        )
+      ).toBe(true);
+    });
     expect(host.enqueueDirectRestartPrompt).toHaveBeenCalledWith(
       expect.objectContaining({
         memberName: 'alice',

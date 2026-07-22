@@ -7,7 +7,7 @@ import { usePersistedGridLayout } from '@renderer/hooks/usePersistedGridLayout';
 import { cn } from '@renderer/lib/utils';
 import { browserGridLayoutRepository } from '@renderer/services/layout-system/BrowserGridLayoutRepository';
 
-import { KanbanColumn } from './KanbanColumn';
+import { KANBAN_COLUMN_CONTROL_INSET_CLASS, KanbanColumn } from './KanbanColumn';
 import { KanbanTaskCardSkeleton } from './KanbanTaskCardSkeleton';
 
 import type { PersistedGridLayoutItem } from '@renderer/services/layout-system/gridLayoutTypes';
@@ -231,17 +231,32 @@ const LoadingKanbanGridLayout = ({
                       />
                     ))}
                     {showAddButton ? (
-                      <div className="ml-2 flex w-[calc(100%_-_0.5rem)] shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
+                      <div
+                        className={cn(
+                          KANBAN_COLUMN_CONTROL_INSET_CLASS,
+                          'flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]'
+                        )}
+                      >
                         {t('kanban.grid.addTask')}
                       </div>
                     ) : null}
                   </>
                 ) : showAddButton ? (
-                  <div className="ml-2 flex w-[calc(100%_-_0.5rem)] shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
+                  <div
+                    className={cn(
+                      KANBAN_COLUMN_CONTROL_INSET_CLASS,
+                      'flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]'
+                    )}
+                  >
                     {t('kanban.grid.addTask')}
                   </div>
                 ) : (
-                  <div className="ml-2 w-[calc(100%_-_0.5rem)] rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
+                  <div
+                    className={cn(
+                      KANBAN_COLUMN_CONTROL_INSET_CLASS,
+                      'rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]'
+                    )}
+                  >
                     {t('kanban.grid.noTasks')}
                   </div>
                 )}

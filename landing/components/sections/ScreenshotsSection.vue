@@ -21,13 +21,15 @@ type SwiperContainerElement = HTMLElement & {
   swiper?: SwiperApi;
 };
 
-const screenshots = computed(() => screenshotData.map((s) => ({
-  src: publicPath(s.path),
-  previewSrc: publicPath(s.previewPath),
-  alt: locale.value === 'ru' ? (s.ruAlt ?? s.alt) : s.alt,
-  width: s.width,
-  height: s.height,
-})));
+const screenshots = computed(() =>
+  screenshotData.map((s) => ({
+    src: publicPath(s.path),
+    previewSrc: publicPath(s.previewPath),
+    alt: locale.value === 'ru' ? (s.ruAlt ?? s.alt) : s.alt,
+    width: s.width,
+    height: s.height,
+  })),
+);
 const prevLabel = computed(() => t('common.previous'));
 const nextLabel = computed(() => t('common.next'));
 
@@ -48,7 +50,8 @@ function closeLightbox() {
 }
 
 function lightboxPrev() {
-  lightboxIndex.value = (lightboxIndex.value - 1 + screenshots.value.length) % screenshots.value.length;
+  lightboxIndex.value =
+    (lightboxIndex.value - 1 + screenshots.value.length) % screenshots.value.length;
 }
 
 function lightboxNext() {
@@ -80,7 +83,8 @@ onMounted(() => {
       pagination: {
         clickable: true,
       },
-      injectStyles: [`
+      injectStyles: [
+        `
         .swiper-pagination {
           position: relative !important;
           bottom: auto !important;
@@ -104,7 +108,8 @@ onMounted(() => {
         :host-context(.v-theme--light) .swiper-pagination-bullet-active {
           background: #0891b2;
         }
-      `],
+      `,
+      ],
       breakpoints: {
         600: {
           slidesPerView: 1.5,
@@ -155,11 +160,7 @@ function slideNext() {
     </v-container>
 
     <div class="screenshots-section__carousel-wrap" :class="{ 'is-ready': swiperReady }">
-      <swiper-container
-        ref="swiperRef"
-        init="false"
-        class="screenshots-section__swiper"
-      >
+      <swiper-container ref="swiperRef" init="false" class="screenshots-section__swiper">
         <swiper-slide
           v-for="(shot, idx) in screenshots"
           :key="idx"
@@ -174,7 +175,7 @@ function slideNext() {
               class="screenshots-section__img"
               loading="lazy"
               decoding="async"
-            >
+            />
             <div class="screenshots-section__card-overlay">
               <v-icon :icon="mdiArrowExpand" size="24" />
             </div>
@@ -202,16 +203,15 @@ function slideNext() {
     <!-- Lightbox -->
     <Teleport to="body">
       <Transition name="lightbox-fade">
-        <div
-          v-if="lightboxOpen"
-          class="screenshots-lightbox"
-          @click.self="closeLightbox"
-        >
+        <div v-if="lightboxOpen" class="screenshots-lightbox" @click.self="closeLightbox">
           <button class="screenshots-lightbox__close" @click="closeLightbox">
             <v-icon :icon="mdiClose" size="28" />
           </button>
 
-          <button class="screenshots-lightbox__nav screenshots-lightbox__nav--prev" @click="lightboxPrev">
+          <button
+            class="screenshots-lightbox__nav screenshots-lightbox__nav--prev"
+            @click="lightboxPrev"
+          >
             <v-icon :icon="mdiChevronLeft" size="36" />
           </button>
 
@@ -221,13 +221,16 @@ function slideNext() {
               :alt="screenshots[lightboxIndex].alt"
               class="screenshots-lightbox__img"
               decoding="async"
-            >
+            />
             <div class="screenshots-lightbox__counter">
               {{ lightboxIndex + 1 }} / {{ screenshots.length }}
             </div>
           </div>
 
-          <button class="screenshots-lightbox__nav screenshots-lightbox__nav--next" @click="lightboxNext">
+          <button
+            class="screenshots-lightbox__nav screenshots-lightbox__nav--next"
+            @click="lightboxNext"
+          >
             <v-icon :icon="mdiChevronRight" size="36" />
           </button>
         </div>
@@ -298,13 +301,18 @@ function slideNext() {
   border: 1px solid rgba(0, 240, 255, 0.1);
   background: rgba(10, 10, 15, 0.6);
   cursor: pointer;
-  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .screenshots-section__card:hover {
   transform: translateY(-4px);
   border-color: rgba(0, 240, 255, 0.3);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 240, 255, 0.08);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(0, 240, 255, 0.08);
 }
 
 .screenshots-section__card-overlay {
@@ -451,7 +459,7 @@ function slideNext() {
 .screenshots-lightbox__counter {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.6);
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   letter-spacing: 0.05em;
 }
 

@@ -622,9 +622,18 @@ export function buildAgentTeamsMcpValidationError(
   output: string,
   normalizeApiRetryErrorMessage: (text: string) => string = (text) => text.trim()
 ): string {
-  const detail = normalizeApiRetryErrorMessage(output) || output.trim();
-  if (!detail) {
-    return 'agent-teams MCP preflight failed before team launch.';
+  const prefix = 'agent-teams MCP preflight failed before team launch.';
+  const rawDetail = output.trim();
+  if (rawDetail === prefix || rawDetail.startsWith(`${prefix} Details:`)) {
+    return rawDetail;
   }
-  return `agent-teams MCP preflight failed before team launch. Details: ${detail}`;
+
+  const detail = normalizeApiRetryErrorMessage(output) || rawDetail;
+  if (detail === prefix || detail.startsWith(`${prefix} Details:`)) {
+    return detail;
+  }
+  if (!detail) {
+    return prefix;
+  }
+  return `${prefix} Details: ${detail}`;
 }

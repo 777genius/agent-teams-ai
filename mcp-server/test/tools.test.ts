@@ -167,6 +167,32 @@ describe('agent-teams-mcp tools', () => {
     ).toBe(true);
   });
 
+  it('requires an explicit actor for task ownership and lifecycle mutations', () => {
+    const lifecycleInputs: Array<[string, Record<string, unknown>]> = [
+      ['task_start', { teamName: 'alpha', taskId: 'task-1' }],
+      ['task_complete', { teamName: 'alpha', taskId: 'task-1' }],
+      ['task_set_status', { teamName: 'alpha', taskId: 'task-1', status: 'pending' }],
+      ['task_restore', { teamName: 'alpha', taskId: 'task-1' }],
+      ['task_set_owner', { teamName: 'alpha', taskId: 'task-1', owner: 'bob' }],
+    ];
+
+    for (const [toolName, input] of lifecycleInputs) {
+      expect(getTool(toolName).parameters?.safeParse(input).success).toBe(false);
+      expect(getTool(toolName).parameters?.safeParse({ ...input, actor: 'alice' }).success).toBe(
+        true
+      );
+    }
+  });
+
+  it('accepts an omitted team_create roster while rejecting malformed provided rosters', () => {
+    const parameters = getTool('team_create').parameters;
+
+    expect(parameters?.safeParse({ teamName: 'alpha' }).success).toBe(true);
+    expect(parameters?.safeParse({ teamName: 'alpha', members: 'builder' }).success).toBe(false);
+    expect(parameters?.safeParse({ teamName: 'alpha', members: null }).success).toBe(false);
+    expect(parameters?.safeParse({ teamName: 'alpha', members: [{}] }).success).toBe(false);
+  });
+
   it('launches and stops teams through the runtime MCP tools', async () => {
     const claudeDir = makeClaudeDir();
     writeTeamConfig(claudeDir, 'alpha', {
@@ -973,6 +999,7 @@ describe('agent-teams-mcp tools', () => {
       teamName,
       taskId: createdTask.id,
       status: 'completed',
+      actor: 'alice',
     });
 
     parseJsonToolResult(
@@ -1164,6 +1191,7 @@ describe('agent-teams-mcp tools', () => {
       teamName,
       taskId: unassignedTask.id,
       owner: 'alice',
+      actor: 'lead',
     });
 
     const queuedByHashRef = parseJsonToolResult(
@@ -1638,6 +1666,76 @@ describe('agent-teams-mcp tools', () => {
         actor: 'lead',
       })
     ).rejects.toThrow('task_restore only restores deleted tasks');
+  });
+
+  it('rejects stale MCP owner mutations after a lead reassigns the task', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'stale-owner-guards';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'team-lead', agentType: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+        { name: 'bob', role: 'developer' },
+      ],
+    });
+
+    const task = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'MCP ownership handoff',
+        owner: 'alice',
+        notifyOwner: false,
+      })
+    );
+    await getTool('task_set_owner').execute({
+      claudeDir,
+      teamName,
+      taskId: task.id,
+      owner: 'bob',
+      actor: 'team-lead',
+    });
+
+    await expect(
+      getTool('task_start').execute({
+        claudeDir,
+        teamName,
+        taskId: task.id,
+        actor: 'alice',
+      })
+    ).rejects.toThrow(`Task #${task.displayId} is owned by bob`);
+    await expect(
+      getTool('task_complete').execute({
+        claudeDir,
+        teamName,
+        taskId: task.id,
+        actor: 'alice',
+      })
+    ).rejects.toThrow(`Task #${task.displayId} is owned by bob`);
+    await expect(
+      getTool('task_set_owner').execute({
+        claudeDir,
+        teamName,
+        taskId: task.id,
+        owner: 'alice',
+        actor: 'alice',
+      })
+    ).rejects.toThrow(`Task #${task.displayId} is owned by bob`);
+
+    const unchanged = parseJsonToolResult(
+      await getTool('task_get').execute({ claudeDir, teamName, taskId: task.id })
+    );
+    expect(unchanged).toMatchObject({ owner: 'bob', status: 'pending' });
+
+    const started = parseJsonToolResult(
+      await getTool('task_start').execute({
+        claudeDir,
+        teamName,
+        taskId: task.id,
+        actor: 'bob',
+      })
+    );
+    expect(started.status).toBe('in_progress');
   });
 
   it('only notifies the owner on review_approve when notifyOwner is explicit', async () => {

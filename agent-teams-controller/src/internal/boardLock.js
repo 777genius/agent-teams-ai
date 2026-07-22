@@ -2,41 +2,44 @@ const path = require('path');
 
 const { withFileLockSync } = require('./fileLock.js');
 
-const reentrantLockDepthByScope = new Map();
+const reentrantLockStateByScope = new Map();
 
 function getTeamBoardLockScope(paths) {
   return path.join(paths.teamDir, 'board-state');
 }
 
+function getTeamBoardLockContext(paths) {
+  return reentrantLockStateByScope.get(getTeamBoardLockScope(paths))?.context;
+}
+
 function withTeamBoardLock(paths, fn) {
   const scope = getTeamBoardLockScope(paths);
-  const currentDepth = reentrantLockDepthByScope.get(scope) || 0;
+  const currentState = reentrantLockStateByScope.get(scope);
 
-  if (currentDepth > 0) {
-    reentrantLockDepthByScope.set(scope, currentDepth + 1);
+  if (currentState) {
+    currentState.depth += 1;
     try {
       return fn();
     } finally {
-      const nextDepth = (reentrantLockDepthByScope.get(scope) || 1) - 1;
-      if (nextDepth <= 0) {
-        reentrantLockDepthByScope.delete(scope);
-      } else {
-        reentrantLockDepthByScope.set(scope, nextDepth);
-      }
+      currentState.depth -= 1;
     }
   }
 
   return withFileLockSync(scope, () => {
-    reentrantLockDepthByScope.set(scope, 1);
+    reentrantLockStateByScope.set(scope, {
+      context: new Map(),
+      depth: 1,
+    });
     try {
       return fn();
     } finally {
-      reentrantLockDepthByScope.delete(scope);
+      reentrantLockStateByScope.delete(scope);
     }
   });
 }
 
 module.exports = {
+  getTeamBoardLockContext,
   getTeamBoardLockScope,
   withTeamBoardLock,
 };

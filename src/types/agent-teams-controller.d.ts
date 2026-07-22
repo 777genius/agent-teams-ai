@@ -5,8 +5,7 @@ declare module 'agent-teams-controller' {
     allowUserMessageSender?: boolean;
   }
 
-  export interface ControllerTaskApi {
-    createTask(flags: Record<string, unknown>): unknown;
+  export interface ControllerTaskReadApi {
     getTask(taskId: string): unknown;
     getTaskComment(
       taskId: string,
@@ -52,22 +51,114 @@ declare module 'agent-teams-controller' {
     taskBriefing(memberName: string): Promise<string>;
   }
 
-  export interface ControllerKanbanApi {
+  export interface ControllerTaskWriteApi {
+    createTask(flags: Record<string, unknown>): unknown;
+    setTaskStatus(taskId: string, status: string, actor?: string): unknown;
+    startTask(taskId: string, actor?: string): unknown;
+    completeTask(taskId: string, actor?: string): unknown;
+    softDeleteTask(taskId: string, actor?: string): unknown;
+    restoreTask(taskId: string, actor?: string): unknown;
+    setTaskOwner(taskId: string, owner: string | null, actor?: string): unknown;
+    updateTaskFields(taskId: string, fields: { subject?: string; description?: string }): unknown;
+    addTaskComment(taskId: string, flags: Record<string, unknown>): unknown;
+    attachTaskFile(taskId: string, flags: Record<string, unknown>): unknown;
+    attachCommentFile(taskId: string, commentId: string, flags: Record<string, unknown>): unknown;
+    addTaskAttachmentMeta(taskId: string, meta: Record<string, unknown>): unknown;
+    removeTaskAttachment(taskId: string, attachmentId: string): unknown;
+    setNeedsClarification(taskId: string, value: string | null): unknown;
+    linkTask(taskId: string, targetId: string, linkType: string): unknown;
+    unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
+  }
+
+  export interface ControllerTaskBoardTaskApi
+    extends ControllerTaskReadApi, ControllerTaskWriteApi {
+    reconcileTaskCreation(flags: Record<string, unknown>): unknown;
+  }
+
+  export interface ControllerTaskApi extends ControllerTaskBoardTaskApi {
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.createTask. */
+    createTask(flags: Record<string, unknown>): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.setTaskStatus. */
+    setTaskStatus(taskId: string, status: string, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.startTask. */
+    startTask(taskId: string, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.completeTask. */
+    completeTask(taskId: string, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.softDeleteTask. */
+    softDeleteTask(taskId: string, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.restoreTask. */
+    restoreTask(taskId: string, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.setTaskOwner. */
+    setTaskOwner(taskId: string, owner: string | null, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.updateTaskFields. */
+    updateTaskFields(taskId: string, fields: { subject?: string; description?: string }): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.addTaskComment. */
+    addTaskComment(taskId: string, flags: Record<string, unknown>): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.attachTaskFile. */
+    attachTaskFile(taskId: string, flags: Record<string, unknown>): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.attachCommentFile. */
+    attachCommentFile(taskId: string, commentId: string, flags: Record<string, unknown>): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.addTaskAttachmentMeta. */
+    addTaskAttachmentMeta(taskId: string, meta: Record<string, unknown>): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.removeTaskAttachment. */
+    removeTaskAttachment(taskId: string, attachmentId: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.setNeedsClarification. */
+    setNeedsClarification(taskId: string, value: string | null): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.linkTask. */
+    linkTask(taskId: string, targetId: string, linkType: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.unlinkTask. */
+    unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
+  }
+
+  export interface ControllerKanbanReadApi {
     getKanbanState(): unknown;
+    listReviewers(): string[];
+  }
+
+  export interface ControllerKanbanWriteApi {
     setKanbanColumn(taskId: string, column: string, options?: Record<string, unknown>): unknown;
     clearKanban(taskId: string): unknown;
-    listReviewers(): string[];
     addReviewer(reviewer: string): string[];
     removeReviewer(reviewer: string): string[];
     updateColumnOrder(columnId: string, orderedTaskIds: string[]): unknown;
   }
 
-  export interface ControllerReviewApi {
+  export interface ControllerTaskBoardKanbanApi
+    extends ControllerKanbanReadApi, ControllerKanbanWriteApi {}
+
+  export interface ControllerKanbanApi extends ControllerTaskBoardKanbanApi {
+    /** @deprecated Internal board lifecycle write. Use controller.taskBoard.setKanbanColumn. */
+    setKanbanColumn(taskId: string, column: string, options?: Record<string, unknown>): unknown;
+    /** @deprecated Internal board lifecycle write. Use controller.taskBoard.clearKanban. */
+    clearKanban(taskId: string): unknown;
+    /** @deprecated Internal board lifecycle write. Use controller.taskBoard.addReviewer. */
+    addReviewer(reviewer: string): string[];
+    /** @deprecated Internal board lifecycle write. Use controller.taskBoard.removeReviewer. */
+    removeReviewer(reviewer: string): string[];
+    /** @deprecated Internal board lifecycle write. Use controller.taskBoard.updateColumnOrder. */
+    updateColumnOrder(columnId: string, orderedTaskIds: string[]): unknown;
+  }
+
+  export interface ControllerReviewWriteApi {
     requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
     startReview(taskId: string, flags?: Record<string, unknown>): unknown;
   }
+
+  export interface ControllerReviewApi extends ControllerReviewWriteApi {
+    /** @deprecated Internal review lifecycle write. Use controller.taskBoard.requestReview. */
+    requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    /** @deprecated Internal review lifecycle write. Use controller.taskBoard.approveReview. */
+    approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    /** @deprecated Internal review lifecycle write. Use controller.taskBoard.requestChanges. */
+    requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
+    /** @deprecated Internal review lifecycle write. Use controller.taskBoard.startReview. */
+    startReview(taskId: string, flags?: Record<string, unknown>): unknown;
+  }
+
+  export interface ControllerTaskBoardApi
+    extends ControllerTaskBoardTaskApi, ControllerTaskBoardKanbanApi, ControllerReviewWriteApi {}
 
   export interface ControllerMessageApi {
     appendSentMessage(flags: Record<string, unknown>): unknown;
@@ -118,6 +209,7 @@ declare module 'agent-teams-controller' {
     tasks: ControllerTaskApi;
     kanban: ControllerKanbanApi;
     review: ControllerReviewApi;
+    taskBoard: ControllerTaskBoardApi;
     messages: ControllerMessageApi;
     processes: ControllerProcessApi;
     maintenance: ControllerMaintenanceApi;

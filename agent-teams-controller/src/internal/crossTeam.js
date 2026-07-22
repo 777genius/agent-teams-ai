@@ -89,12 +89,13 @@ function normalizeForDedupe(value) {
     .toLowerCase();
 }
 
-function getCrossTeamMessageDedupeKey(message) {
-  if (!message || typeof message !== 'object') return '';
+function getCrossTeamMessageDedupeKey(message, legacyToMember) {
+  if (!message || typeof message !== 'object' || Array.isArray(message)) return '';
   return buildCrossTeamDedupeKey(
     message.fromTeam,
     message.fromMember,
     message.toTeam,
+    message.toMember || legacyToMember,
     message.text,
     message.summary,
     message.taskRefs
@@ -118,32 +119,106 @@ function normalizeTaskRefs(taskRefs) {
   return normalized.length > 0 ? normalized : undefined;
 }
 
+function isRecord(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readRequiredString(row, key) {
+  const value = row[key];
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function readOptionalString(row, key) {
+  const value = row[key];
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function normalizePersistedTaskRefs(value) {
+  if (!Array.isArray(value)) return undefined;
+  const taskRefs = value
+    .filter(isRecord)
+    .map((taskRef) => ({
+      taskId: readRequiredString(taskRef, 'taskId'),
+      displayId: readRequiredString(taskRef, 'displayId'),
+      teamName: readRequiredString(taskRef, 'teamName'),
+    }))
+    .filter((taskRef) => taskRef.taskId && taskRef.displayId && taskRef.teamName)
+    .map((taskRef) => ({
+      taskId: taskRef.taskId.trim(),
+      displayId: taskRef.displayId.trim(),
+      teamName: taskRef.teamName.trim(),
+    }));
+  return taskRefs.length > 0 ? taskRefs : undefined;
+}
+
+function normalizePersistedMessage(value) {
+  if (!isRecord(value)) return null;
+
+  const messageId = readRequiredString(value, 'messageId');
+  const fromTeam = readRequiredString(value, 'fromTeam');
+  const fromMember = readRequiredString(value, 'fromMember');
+  const toTeam = readRequiredString(value, 'toTeam');
+  const text = readRequiredString(value, 'text');
+  const timestamp = readRequiredString(value, 'timestamp');
+  if (!messageId || !fromTeam || !fromMember || !toTeam || !text || !timestamp) {
+    return null;
+  }
+
+  const toMember = readOptionalString(value, 'toMember');
+  const conversationId = readOptionalString(value, 'conversationId');
+  const replyToConversationId = readOptionalString(value, 'replyToConversationId');
+  const summary = readOptionalString(value, 'summary');
+  const taskRefs = normalizePersistedTaskRefs(value.taskRefs);
+  const chainDepth =
+    typeof value.chainDepth === 'number' && Number.isFinite(value.chainDepth)
+      ? value.chainDepth
+      : 0;
+
+  return {
+    messageId,
+    fromTeam,
+    fromMember,
+    toTeam,
+    ...(toMember ? { toMember } : {}),
+    ...(conversationId ? { conversationId } : {}),
+    ...(replyToConversationId ? { replyToConversationId } : {}),
+    text,
+    ...(taskRefs ? { taskRefs } : {}),
+    ...(summary ? { summary } : {}),
+    chainDepth,
+    timestamp,
+  };
+}
+
 function normalizeTaskRefsForDedupe(taskRefs) {
   const normalized = normalizeTaskRefs(taskRefs);
   return normalized ? JSON.stringify(normalized) : '';
 }
 
-function buildCrossTeamDedupeKey(fromTeam, fromMember, toTeam, text, summary, taskRefs) {
+function buildCrossTeamDedupeKey(fromTeam, fromMember, toTeam, toMember, text, summary, taskRefs) {
   return [
     normalizeForDedupe(fromTeam),
     normalizeForDedupe(fromMember),
     normalizeForDedupe(toTeam),
+    normalizeForDedupe(toMember),
     normalizeForDedupe(summary),
     normalizeForDedupe(text),
     normalizeTaskRefsForDedupe(taskRefs),
   ].join('||');
 }
 
-function findRecentDuplicate(outboxList, dedupeKey) {
+function findRecentDuplicate(outboxList, message, legacyToMember) {
+  const dedupeKey = getCrossTeamMessageDedupeKey(message);
   if (!Array.isArray(outboxList) || !dedupeKey) return null;
   const cutoff = Date.now() - CROSS_TEAM_DEDUPE_WINDOW_MS;
   for (let i = outboxList.length - 1; i >= 0; i -= 1) {
-    const entry = outboxList[i];
-    const ts = Date.parse(entry && entry.timestamp ? entry.timestamp : '');
+    const entry = normalizePersistedMessage(outboxList[i]);
+    if (!entry) continue;
+    const ts = Date.parse(entry.timestamp);
     if (!Number.isFinite(ts) || ts < cutoff) {
-      break;
+      continue;
     }
-    if (getCrossTeamMessageDedupeKey(entry) === dedupeKey) {
+    if (getCrossTeamMessageDedupeKey(entry, legacyToMember) === dedupeKey) {
       return entry;
     }
   }
@@ -183,9 +258,14 @@ function sendCrossTeamMessage(context, flags) {
     throw new Error('Message text is required');
   }
   const fromMember = rawFromMember
-    ? runtimeHelpers.assertExplicitTeamMemberName(context.paths, rawFromMember, 'cross-team sender', {
-        allowLeadAliases: true,
-      })
+    ? runtimeHelpers.assertExplicitTeamMemberName(
+        context.paths,
+        rawFromMember,
+        'cross-team sender',
+        {
+          allowLeadAliases: true,
+        }
+      )
     : runtimeHelpers.inferLeadName(context.paths);
 
   // Target context + config
@@ -211,7 +291,15 @@ function sendCrossTeamMessage(context, flags) {
   });
   const messageId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
   const timestamp = new Date().toISOString();
-  const dedupeKey = buildCrossTeamDedupeKey(fromTeam, fromMember, toTeam, text, summary, taskRefs);
+  const dedupeMessage = {
+    fromTeam,
+    fromMember,
+    toTeam,
+    toMember: leadName,
+    text,
+    summary,
+    taskRefs,
+  };
 
   const inboxPath = path.join(targetContext.paths.teamDir, 'inboxes', `${leadName}.json`);
   const outboxPath = path.join(context.paths.teamDir, 'sent-cross-team.json');
@@ -219,7 +307,7 @@ function sendCrossTeamMessage(context, flags) {
   withFileLockSync(outboxPath, () => {
     const outbox = readJson(outboxPath, []);
     const outList = Array.isArray(outbox) ? outbox : [];
-    duplicate = findRecentDuplicate(outList, dedupeKey);
+    duplicate = findRecentDuplicate(outList, dedupeMessage, leadName);
     if (duplicate) {
       return;
     }
@@ -274,6 +362,7 @@ function sendCrossTeamMessage(context, flags) {
       fromTeam,
       fromMember,
       toTeam,
+      toMember: leadName,
       conversationId: resolvedConversationId,
       replyToConversationId: replyToConversationId || undefined,
       text,

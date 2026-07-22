@@ -6,8 +6,7 @@ import {
 } from '../../src/main/services/team/ReviewPersistenceScopeLock';
 import { setClaudeBasePathOverride } from '../../src/main/utils/pathDecoder';
 
-const [mode, claudeBasePath, logPath, counterPath, workerId, delayValue] =
-  process.argv.slice(2);
+const [mode, claudeBasePath, logPath, counterPath, workerId, delayValue] = process.argv.slice(2);
 if (
   (mode !== 'run' && mode !== 'crash') ||
   !claudeBasePath ||

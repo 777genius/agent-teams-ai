@@ -65,9 +65,10 @@ describe('changeReviewLifecycleCoordinator', () => {
   it('defers a matching tab mutation until the active review flushes', async () => {
     let finishClose!: (closed: boolean) => void;
     const requestClose = vi.fn(
-      () => new Promise<boolean>((resolve) => {
-        finishClose = resolve;
-      })
+      () =>
+        new Promise<boolean>((resolve) => {
+          finishClose = resolve;
+        })
     );
     const mutation = vi.fn();
     await requestChangeReviewLifecycleReservation({ hostId: 'host-a', sessionId: 'session-a' });

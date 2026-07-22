@@ -1,27 +1,29 @@
-import { validateTeammateName, validateTeamName } from '@main/ipc/guards';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { extractUserFlags, PROTECTED_CLI_FLAGS } from '@shared/utils/cliArgsParser';
-import {
-  formatEffortLevelListForProvider,
-  isTeamEffortLevelForProvider,
-} from '@shared/utils/effortLevels';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
-import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
-import { isAbsolute, join } from 'path';
+import { join } from 'path';
+
+import {
+  HttpBadRequestError,
+  parseCreateTeamRequest,
+  parseDraftLaunchCreateRequest,
+  parseLaunchRequest,
+  withRuntimeTeamName,
+} from './teamRouteParsers';
 
 import type { HttpServices } from './index';
 import type { MemberWorkSyncReportState } from '@features/member-work-sync/contracts';
 import type {
-  EffortLevel,
+  TeamHttpHandlerApis,
+  TeamHttpRuntimeApi,
+} from '@main/services/team/contracts/TeamProvisioningApis';
+import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
-  TeamFastMode,
   TeamLaunchRequest,
 } from '@shared/types/team';
 import type { FastifyInstance } from 'fastify';
@@ -31,43 +33,80 @@ const logger = createLogger('HTTP:teams');
 type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
 type CreateTeamBody = TeamCreateConfigRequest;
 
-class HttpBadRequestError extends Error {}
 class HttpFeatureUnavailableError extends Error {}
 
-const PROVIDER_BACKEND_ERROR =
-  'providerBackendId must be valid for the selected provider (auto, adapter, api, cli-sdk, codex-native, or opencode-cli)';
+type TeamHttpProvisioningStartApi = TeamHttpHandlerApis['provisioningStart'];
+type TeamHttpProvisioningStatusApi = TeamHttpHandlerApis['provisioningStatus'];
+type TeamHttpRuntimeControlApi = TeamHttpHandlerApis['runtimeControl'];
 
 function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncReportState {
   return value === 'still_working' || value === 'blocked' || value === 'caught_up';
 }
 
-function getTeamProvisioningService(
-  services: HttpServices
-): NonNullable<HttpServices['teamProvisioningService']> {
-  if (!services.teamProvisioningService) {
-    throw new HttpFeatureUnavailableError('Team runtime control is not available in this mode');
+function assertValidMemberName(memberName: string): string {
+  const validatedMemberName = validateMemberName(memberName);
+  if (!validatedMemberName.valid) {
+    throw new HttpBadRequestError(validatedMemberName.error ?? 'Invalid memberName');
   }
-  return services.teamProvisioningService;
+  return validatedMemberName.value!;
 }
 
-function getTeamDataService(services: HttpServices): NonNullable<HttpServices['teamDataService']> {
-  if (!services.teamDataService) {
+function getTeamProvisioningStartApi(services: HttpServices): TeamHttpProvisioningStartApi {
+  const api = services.teamApis?.provisioningStart;
+  if (!api) {
+    throw new HttpFeatureUnavailableError('Team launch control is not available in this mode');
+  }
+  return api;
+}
+
+function getTeamProvisioningStatusApi(services: HttpServices): TeamHttpProvisioningStatusApi {
+  const api = services.teamApis?.provisioningStatus;
+  if (!api) {
+    throw new HttpFeatureUnavailableError('Team provisioning status is not available in this mode');
+  }
+  return api;
+}
+
+function getTeamRuntimeApi(services: HttpServices): TeamHttpRuntimeApi {
+  const api = services.teamApis?.runtime;
+  if (!api) {
+    throw new HttpFeatureUnavailableError('Team runtime control is not available in this mode');
+  }
+  return api;
+}
+
+function getTeamRuntimeControlApi(services: HttpServices): TeamHttpRuntimeControlApi {
+  const api = services.teamApis?.runtimeControl;
+  if (!api) {
+    throw new HttpFeatureUnavailableError('Team runtime callbacks are not available in this mode');
+  }
+  return api;
+}
+
+function getTeamDataApi(services: HttpServices): NonNullable<HttpServices['teamDataApi']> {
+  if (!services.teamDataApi) {
     throw new HttpFeatureUnavailableError('Team data control is not available in this mode');
   }
-  return services.teamDataService;
+  return services.teamDataApi;
 }
 
 function getStatusCode(error: unknown, fallback: number = 500): number {
   if (error instanceof HttpBadRequestError) {
     return 400;
   }
+  if (isOpenCodeRuntimeValidationError(error)) {
+    return 400;
+  }
   if (error instanceof HttpFeatureUnavailableError) {
+    return 501;
+  }
+  if (isRuntimeControlProviderRoutingError(error)) {
     return 501;
   }
   if (error instanceof Error && error.name === 'RuntimeStaleEvidenceError') {
     return 409;
   }
-  if (error instanceof Error && error.message.startsWith('Team not found')) {
+  if (isTeamNotFoundError(error)) {
     return 404;
   }
   if (error instanceof Error && error.message.startsWith('Team already exists')) {
@@ -76,418 +115,72 @@ function getStatusCode(error: unknown, fallback: number = 500): number {
   return fallback;
 }
 
+function isOpenCodeRuntimeValidationError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.startsWith('OpenCode runtime payload ') ||
+      error.message.startsWith('OpenCode runtime permission ') ||
+      error.message.startsWith('Runtime delivery envelope ') ||
+      error.message.startsWith('Runtime delivery target '))
+  );
+}
+
+function isRuntimeControlProviderRoutingError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'RuntimeControlProviderRoutingError';
+}
+
+function isTeamNotFoundError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.startsWith('Team not found') || /^Team "[^"]+" not found\b/.test(error.message))
+  );
+}
+
+function withValidatedRuntimeObservedAt(teamName: string, body: unknown): Record<string, unknown> {
+  const payload = withRuntimeTeamName(teamName, body);
+  if (!Object.prototype.hasOwnProperty.call(payload, 'observedAt')) {
+    return payload;
+  }
+  const observedAt = payload.observedAt;
+  if (
+    typeof observedAt !== 'string' ||
+    !observedAt.trim() ||
+    !Number.isFinite(Date.parse(observedAt))
+  ) {
+    throw new HttpBadRequestError('OpenCode runtime payload invalid observedAt');
+  }
+  return payload;
+}
+
 function shouldLogError(error: unknown): boolean {
   const statusCode = getStatusCode(error);
   return (
     statusCode >= 500 &&
     !(error instanceof HttpBadRequestError) &&
-    !(error instanceof HttpFeatureUnavailableError)
+    !(error instanceof HttpFeatureUnavailableError) &&
+    !isRuntimeControlProviderRoutingError(error)
   );
 }
 
-function assertProvisioningTeamName(value: unknown): string {
-  const validated = validateTeamName(value);
-  if (!validated.valid) {
-    throw new HttpBadRequestError(validated.error ?? 'Invalid teamName');
+function getResponseErrorMessage(
+  error: unknown,
+  statusCode: number = getStatusCode(error)
+): string {
+  if (
+    statusCode >= 500 &&
+    !(error instanceof HttpFeatureUnavailableError) &&
+    !isRuntimeControlProviderRoutingError(error)
+  ) {
+    return 'Internal server error';
   }
-  const teamName = validated.value!;
-  const parts = teamName.split('-');
-  if (teamName.length > 64 || !parts.every((part) => /^[a-z0-9]+$/.test(part))) {
-    throw new HttpBadRequestError('teamName must be kebab-case [a-z0-9-], max 64 chars');
-  }
-  return teamName;
-}
-
-function assertAbsoluteCwd(cwd: unknown): string {
-  if (typeof cwd !== 'string' || cwd.trim().length === 0) {
-    throw new HttpBadRequestError('cwd must be a non-empty string');
-  }
-
-  const normalized = cwd.trim();
-  if (!isAbsolute(normalized)) {
-    throw new HttpBadRequestError('cwd must be an absolute path');
-  }
-
-  return normalized;
-}
-
-function assertOptionalString(value: unknown, fieldName: string): string | undefined {
-  if (value == null) {
-    return undefined;
-  }
-
-  if (typeof value !== 'string') {
-    throw new HttpBadRequestError(`${fieldName} must be a string`);
-  }
-
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : undefined;
-}
-
-function assertOptionalBoolean(value: unknown, fieldName: string): boolean | undefined {
-  if (value == null) {
-    return undefined;
-  }
-
-  if (typeof value !== 'boolean') {
-    throw new HttpBadRequestError(`${fieldName} must be a boolean`);
-  }
-
-  return value;
-}
-
-function assertOptionalCwd(value: unknown): string | undefined {
-  if (value == null) {
-    return undefined;
-  }
-  const cwd = assertOptionalString(value, 'cwd');
-  if (!cwd) {
-    return undefined;
-  }
-  if (!isAbsolute(cwd)) {
-    throw new HttpBadRequestError('cwd must be an absolute path');
-  }
-  return cwd;
-}
-
-function assertOptionalExtraCliArgs(value: unknown): string | undefined {
-  const extraCliArgs = assertOptionalString(value, 'extraCliArgs');
-  if (!extraCliArgs) {
-    return undefined;
-  }
-  if (extraCliArgs.length > 1024) {
-    throw new HttpBadRequestError('extraCliArgs too long (max 1024)');
-  }
-
-  const protectedFlags = extractUserFlags(extraCliArgs).filter((flag) =>
-    PROTECTED_CLI_FLAGS.has(flag)
-  );
-  if (protectedFlags.length > 0) {
-    throw new HttpBadRequestError(
-      `extraCliArgs contains app-managed flags: ${[...new Set(protectedFlags)].join(', ')}`
-    );
-  }
-  return extraCliArgs;
-}
-
-function assertOptionalEffort(
-  value: unknown,
-  providerId: TeamLaunchRequest['providerId']
-): EffortLevel | undefined {
-  if (value == null) {
-    return undefined;
-  }
-
-  if (!isTeamEffortLevelForProvider(value, providerId)) {
-    throw new HttpBadRequestError(
-      `effort must be one of: ${formatEffortLevelListForProvider(providerId)}`
-    );
-  }
-
-  return value;
-}
-
-function assertOptionalFastMode(value: unknown): TeamFastMode | undefined {
-  if (value == null) {
-    return undefined;
-  }
-
-  if (value !== 'inherit' && value !== 'on' && value !== 'off') {
-    throw new HttpBadRequestError('fastMode must be one of: inherit, on, off');
-  }
-
-  return value;
-}
-
-function parseProviderId(value: unknown): TeamLaunchRequest['providerId'] {
-  if (value == null) {
-    return 'anthropic';
-  }
-  if (isTeamProviderId(value)) {
-    return value;
-  }
-  throw new HttpBadRequestError('providerId must be anthropic, codex, gemini, or opencode');
-}
-
-function parseProviderBackendId(
-  providerId: TeamLaunchRequest['providerId'],
-  value: unknown
-): TeamLaunchRequest['providerBackendId'] | undefined {
-  const rawProviderBackendId = assertOptionalString(value, 'providerBackendId');
-  const providerBackendId = migrateProviderBackendId(providerId, rawProviderBackendId);
-  if (rawProviderBackendId && !providerBackendId) {
-    throw new HttpBadRequestError(PROVIDER_BACKEND_ERROR);
-  }
-  return providerBackendId;
-}
-
-function parseLaunchProviderBackendId(
-  providerId: TeamLaunchRequest['providerId'],
-  value: unknown
-): TeamLaunchRequest['providerBackendId'] | undefined {
-  const rawProviderBackendId = assertOptionalString(value, 'providerBackendId');
-  const providerBackendId = migrateProviderBackendId(providerId, rawProviderBackendId);
-  if (providerBackendId || !rawProviderBackendId) {
-    return providerBackendId;
-  }
-  if (isTeamProviderBackendId(rawProviderBackendId)) {
-    return undefined;
-  }
-  throw new HttpBadRequestError(PROVIDER_BACKEND_ERROR);
-}
-
-function parseCreateMembers(
-  payloadMembers: unknown,
-  defaultProviderId: TeamLaunchRequest['providerId']
-): TeamCreateConfigRequest['members'] {
-  if (payloadMembers == null) {
-    return [];
-  }
-  if (!Array.isArray(payloadMembers)) {
-    throw new HttpBadRequestError('members must be an array');
-  }
-
-  const seenNames = new Set<string>();
-  return payloadMembers.map((member) => {
-    if (!member || typeof member !== 'object') {
-      throw new HttpBadRequestError('member must be object');
-    }
-    const rawMember = member as Record<string, unknown>;
-    const nameValidation = validateTeammateName(rawMember.name);
-    if (!nameValidation.valid) {
-      throw new HttpBadRequestError(nameValidation.error ?? 'Invalid member name');
-    }
-    const name = nameValidation.value!;
-    if (seenNames.has(name)) {
-      throw new HttpBadRequestError('member names must be unique');
-    }
-    seenNames.add(name);
-
-    const role = assertOptionalString(rawMember.role, 'member role');
-    const workflow = assertOptionalString(rawMember.workflow, 'member workflow');
-    if (rawMember.isolation !== undefined && rawMember.isolation !== 'worktree') {
-      throw new HttpBadRequestError('member isolation must be "worktree" when provided');
-    }
-    const providerId =
-      rawMember.providerId == null ? undefined : parseProviderId(rawMember.providerId);
-    const providerBackendId = parseProviderBackendId(
-      providerId ?? defaultProviderId,
-      rawMember.providerBackendId
-    );
-    const model = assertOptionalString(rawMember.model, 'member model');
-    const effort = assertOptionalEffort(rawMember.effort, providerId ?? defaultProviderId);
-    const fastMode = assertOptionalFastMode(rawMember.fastMode);
-    const mcpPolicy = normalizeTeamMemberMcpPolicy(rawMember.mcpPolicy);
-
-    return {
-      name,
-      ...(role ? { role } : {}),
-      ...(workflow ? { workflow } : {}),
-      ...(rawMember.isolation === 'worktree' ? { isolation: 'worktree' as const } : {}),
-      ...(providerId ? { providerId } : {}),
-      ...(providerBackendId ? { providerBackendId } : {}),
-      ...(model ? { model } : {}),
-      ...(effort ? { effort } : {}),
-      ...(fastMode ? { fastMode } : {}),
-      ...(mcpPolicy ? { mcpPolicy } : {}),
-    };
-  });
-}
-
-function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest {
-  const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
-  const providerId = parseProviderId(payload.providerId);
-  const prompt = assertOptionalString(payload.prompt, 'prompt');
-  const providerBackendId = parseLaunchProviderBackendId(providerId, payload.providerBackendId);
-  const model = assertOptionalString(payload.model, 'model');
-  const effort = assertOptionalEffort(payload.effort, providerId ?? 'anthropic');
-  const fastMode = assertOptionalFastMode(payload.fastMode);
-  const limitContext = assertOptionalBoolean(payload.limitContext, 'limitContext');
-  const clearContext = assertOptionalBoolean(payload.clearContext, 'clearContext');
-  const skipPermissions = assertOptionalBoolean(payload.skipPermissions, 'skipPermissions');
-  const worktree = assertOptionalString(payload.worktree, 'worktree');
-  const extraCliArgs = assertOptionalExtraCliArgs(payload.extraCliArgs);
-
-  return {
-    teamName,
-    cwd: assertAbsoluteCwd(payload.cwd),
-    providerId,
-    ...(providerBackendId && {
-      providerBackendId,
-    }),
-    ...(prompt && {
-      prompt,
-    }),
-    ...(model && {
-      model,
-    }),
-    ...(effort && {
-      effort,
-    }),
-    ...(fastMode && {
-      fastMode,
-    }),
-    ...(limitContext !== undefined && {
-      limitContext,
-    }),
-    ...(clearContext !== undefined && {
-      clearContext,
-    }),
-    ...(skipPermissions !== undefined && {
-      skipPermissions,
-    }),
-    ...(worktree && {
-      worktree,
-    }),
-    ...(extraCliArgs && {
-      extraCliArgs,
-    }),
-  };
-}
-
-function parseCreateTeamRequest(body: unknown): TeamCreateConfigRequest {
-  const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
-  const teamName = assertProvisioningTeamName(payload.teamName);
-  const providerId = payload.providerId == null ? undefined : parseProviderId(payload.providerId);
-  const providerBackendId = parseLaunchProviderBackendId(providerId, payload.providerBackendId);
-  const displayName = assertOptionalString(payload.displayName, 'displayName');
-  const description = assertOptionalString(payload.description, 'description');
-  const color = assertOptionalString(payload.color, 'color');
-  const cwd = assertOptionalCwd(payload.cwd);
-  const prompt = assertOptionalString(payload.prompt, 'prompt');
-  const model = assertOptionalString(payload.model, 'model');
-  const effort = assertOptionalEffort(payload.effort, providerId ?? 'anthropic');
-  const fastMode = assertOptionalFastMode(payload.fastMode);
-  const limitContext = assertOptionalBoolean(payload.limitContext, 'limitContext');
-  const skipPermissions = assertOptionalBoolean(payload.skipPermissions, 'skipPermissions');
-  const worktree = assertOptionalString(payload.worktree, 'worktree');
-  const extraCliArgs = assertOptionalExtraCliArgs(payload.extraCliArgs);
-
-  return {
-    teamName,
-    members: parseCreateMembers(payload.members, providerId ?? 'anthropic'),
-    ...(displayName ? { displayName } : {}),
-    ...(description ? { description } : {}),
-    ...(color ? { color } : {}),
-    ...(cwd ? { cwd } : {}),
-    ...(prompt ? { prompt } : {}),
-    ...(providerId ? { providerId } : {}),
-    ...(providerBackendId ? { providerBackendId } : {}),
-    ...(model ? { model } : {}),
-    ...(effort ? { effort } : {}),
-    ...(fastMode ? { fastMode } : {}),
-    ...(limitContext !== undefined ? { limitContext } : {}),
-    ...(skipPermissions !== undefined ? { skipPermissions } : {}),
-    ...(worktree ? { worktree } : {}),
-    ...(extraCliArgs ? { extraCliArgs } : {}),
-  };
-}
-
-function getObjectPayload(body: unknown): Record<string, unknown> {
-  return body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
-}
-
-function pickOptionalString(
-  payload: Record<string, unknown>,
-  key: string,
-  fallback: string | undefined,
-  fieldName: string
-): string | undefined {
-  return Object.hasOwn(payload, key) ? assertOptionalString(payload[key], fieldName) : fallback;
-}
-
-function pickOptionalBoolean(
-  payload: Record<string, unknown>,
-  key: string,
-  fallback: boolean | undefined,
-  fieldName: string
-): boolean | undefined {
-  return Object.hasOwn(payload, key) ? assertOptionalBoolean(payload[key], fieldName) : fallback;
-}
-
-function parseDraftLaunchCreateRequest(
-  savedRequest: TeamCreateRequest,
-  body: unknown
-): TeamCreateRequest {
-  const payload = getObjectPayload(body);
-  const cwd = Object.hasOwn(payload, 'cwd') ? assertAbsoluteCwd(payload.cwd) : savedRequest.cwd;
-  if (!cwd) {
-    throw new HttpBadRequestError('cwd is required');
-  }
-
-  const providerId = Object.hasOwn(payload, 'providerId')
-    ? parseProviderId(payload.providerId)
-    : (savedRequest.providerId ?? 'anthropic');
-  const providerChangedFromSaved =
-    Object.hasOwn(payload, 'providerId') && providerId !== (savedRequest.providerId ?? 'anthropic');
-  const providerBackendId = parseLaunchProviderBackendId(
-    providerId,
-    Object.hasOwn(payload, 'providerBackendId')
-      ? payload.providerBackendId
-      : providerChangedFromSaved
-        ? undefined
-        : savedRequest.providerBackendId
-  );
-  const effort = assertOptionalEffort(
-    Object.hasOwn(payload, 'effort')
-      ? payload.effort
-      : providerChangedFromSaved
-        ? undefined
-        : savedRequest.effort,
-    providerId
-  );
-  const fastMode = Object.hasOwn(payload, 'fastMode')
-    ? assertOptionalFastMode(payload.fastMode)
-    : providerChangedFromSaved
-      ? undefined
-      : savedRequest.fastMode;
-  const extraCliArgs = Object.hasOwn(payload, 'extraCliArgs')
-    ? assertOptionalExtraCliArgs(payload.extraCliArgs)
-    : savedRequest.extraCliArgs;
-  if (extraCliArgs) {
-    assertOptionalExtraCliArgs(extraCliArgs);
-  }
-
-  return {
-    teamName: savedRequest.teamName,
-    displayName: savedRequest.displayName,
-    description: savedRequest.description,
-    color: savedRequest.color,
-    members: savedRequest.members,
-    cwd,
-    prompt: pickOptionalString(payload, 'prompt', savedRequest.prompt, 'prompt'),
-    providerId,
-    ...(providerBackendId ? { providerBackendId } : {}),
-    model: pickOptionalString(
-      payload,
-      'model',
-      providerChangedFromSaved ? undefined : savedRequest.model,
-      'model'
-    ),
-    ...(effort ? { effort } : {}),
-    ...(fastMode ? { fastMode } : {}),
-    limitContext: pickOptionalBoolean(
-      payload,
-      'limitContext',
-      providerChangedFromSaved ? undefined : savedRequest.limitContext,
-      'limitContext'
-    ),
-    skipPermissions: pickOptionalBoolean(
-      payload,
-      'skipPermissions',
-      savedRequest.skipPermissions,
-      'skipPermissions'
-    ),
-    worktree: pickOptionalString(payload, 'worktree', savedRequest.worktree, 'worktree'),
-    ...(extraCliArgs ? { extraCliArgs } : {}),
-  };
+  return getErrorMessage(error);
 }
 
 async function getDraftSavedRequest(
   services: HttpServices,
   teamName: string
 ): Promise<TeamCreateRequest | null> {
-  if (!services.teamDataService) {
+  if (!services.teamDataApi) {
     return null;
   }
 
@@ -501,19 +194,7 @@ async function getDraftSavedRequest(
     }
   }
 
-  return getTeamDataService(services).getSavedRequest(teamName);
-}
-
-function withRuntimeTeamName(teamName: string, body: unknown): Record<string, unknown> {
-  const payload =
-    body && typeof body === 'object' && !Array.isArray(body)
-      ? (body as Record<string, unknown>)
-      : {};
-  const bodyTeamName = typeof payload.teamName === 'string' ? payload.teamName.trim() : '';
-  if (bodyTeamName && bodyTeamName !== teamName) {
-    throw new HttpBadRequestError('runtime body teamName must match route teamName');
-  }
-  return { ...payload, teamName };
+  return getTeamDataApi(services).getSavedRequest(teamName);
 }
 
 function getMemberWorkSyncFeature(
@@ -528,13 +209,12 @@ function getMemberWorkSyncFeature(
 async function getTeamDataWithRuntimeOverlay(
   services: HttpServices,
   teamName: string
-): Promise<Awaited<ReturnType<NonNullable<HttpServices['teamDataService']>['getTeamData']>>> {
-  const data = await getTeamDataService(services).getTeamData(teamName);
-  let runtimeState: Awaited<
-    ReturnType<NonNullable<HttpServices['teamProvisioningService']>['getRuntimeState']>
-  > | null = null;
+): Promise<Awaited<ReturnType<NonNullable<HttpServices['teamDataApi']>['getTeamData']>>> {
+  const data = await getTeamDataApi(services).getTeamData(teamName);
+  let runtimeState: Awaited<ReturnType<TeamHttpRuntimeApi['getRuntimeState']>> | null = null;
   try {
-    runtimeState = (await services.teamProvisioningService?.getRuntimeState(teamName)) ?? null;
+    const runtimeApi = services.teamApis?.runtime;
+    runtimeState = (await runtimeApi?.getRuntimeState(teamName)) ?? null;
   } catch {
     runtimeState = null;
   }
@@ -547,25 +227,26 @@ async function getTeamDataWithRuntimeOverlay(
 export function registerTeamRoutes(app: FastifyInstance, services: HttpServices): void {
   app.get('/api/teams', async (_request, reply) => {
     try {
-      return reply.send(await getTeamDataService(services).listTeams());
+      return reply.send(await getTeamDataApi(services).listTeams());
     } catch (error) {
       if (shouldLogError(error)) {
         logger.error('Error in GET /api/teams:', getErrorMessage(error));
       }
-      return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
     }
   });
 
   app.post<{ Body: CreateTeamBody }>('/api/teams', async (request, reply) => {
     try {
       const createRequest = parseCreateTeamRequest(request.body);
-      await getTeamDataService(services).createTeamConfig(createRequest);
+      await getTeamDataApi(services).createTeamConfig(createRequest);
+      services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
       return reply.status(201).send({ teamName: createRequest.teamName });
     } catch (error) {
       if (shouldLogError(error)) {
         logger.error('Error in POST /api/teams:', getErrorMessage(error));
       }
-      return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
     }
   });
 
@@ -586,15 +267,14 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         });
       }
 
-      await services.teamProvisioningService?.repairStaleTaskActivityIntervalsBeforeSnapshot?.(
-        teamName
-      );
+      const taskActivityApi = services.teamApis?.taskActivity;
+      await taskActivityApi?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
       return reply.send(await getTeamDataWithRuntimeOverlay(services, teamName));
     } catch (error) {
       if (shouldLogError(error)) {
         logger.error(`Error in GET /api/teams/${request.params.teamName}:`, getErrorMessage(error));
       }
-      return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
     }
   });
 
@@ -610,14 +290,17 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         const teamName = validatedTeamName.value!;
         const draftSavedRequest = await getDraftSavedRequest(services, teamName);
         const response = draftSavedRequest
-          ? await getTeamProvisioningService(services).createTeam(
+          ? await getTeamProvisioningStartApi(services).createTeam(
               parseDraftLaunchCreateRequest(draftSavedRequest, request.body),
               () => undefined
             )
-          : await getTeamProvisioningService(services).launchTeam(
+          : await getTeamProvisioningStartApi(services).launchTeam(
               parseLaunchRequest(teamName, request.body),
               () => undefined
             );
+        if (draftSavedRequest) {
+          services.memberWorkSyncFeature?.resumeTeam(teamName);
+        }
         TeamConfigReader.invalidateListTeamsCache();
         return reply.send(response);
       } catch (error) {
@@ -628,7 +311,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(statusCode).send({ error: getErrorMessage(error) });
+        return reply.status(statusCode).send({ error: getResponseErrorMessage(error, statusCode) });
       }
     }
   );
@@ -642,9 +325,9 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
 
-        const teamProvisioningService = getTeamProvisioningService(services);
-        await teamProvisioningService.stopTeam(validatedTeamName.value!);
-        return reply.send(await teamProvisioningService.getRuntimeState(validatedTeamName.value!));
+        const teamRuntimeApi = getTeamRuntimeApi(services);
+        await teamRuntimeApi.stopTeam(validatedTeamName.value!);
+        return reply.send(await teamRuntimeApi.getRuntimeState(validatedTeamName.value!));
       } catch (error) {
         if (shouldLogError(error)) {
           logger.error(
@@ -652,7 +335,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -667,7 +350,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         }
 
         return reply.send(
-          await getTeamProvisioningService(services).getRuntimeState(validatedTeamName.value!)
+          await getTeamRuntimeApi(services).getRuntimeState(validatedTeamName.value!)
         );
       } catch (error) {
         if (shouldLogError(error)) {
@@ -676,7 +359,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -690,32 +373,32 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: 'runId is required' });
         }
 
-        return reply.send(await getTeamProvisioningService(services).getProvisioningStatus(runId));
+        return reply.send(
+          await getTeamProvisioningStatusApi(services).getProvisioningStatus(runId)
+        );
       } catch (error) {
         const message = getErrorMessage(error);
         const statusCode = message === 'Unknown runId' ? 404 : getStatusCode(error);
         if (shouldLogError(error) && statusCode !== 404) {
           logger.error(`Error in GET /api/teams/provisioning/${request.params.runId}:`, message);
         }
-        return reply.status(statusCode).send({ error: message });
+        return reply.status(statusCode).send({ error: getResponseErrorMessage(error, statusCode) });
       }
     }
   );
 
   app.get('/api/teams/runtime/alive', async (_request, reply) => {
     try {
-      const teamProvisioningService = getTeamProvisioningService(services);
+      const teamRuntimeApi = getTeamRuntimeApi(services);
       const runtimeStates = await Promise.all(
-        teamProvisioningService
-          .getAliveTeams()
-          .map((teamName) => teamProvisioningService.getRuntimeState(teamName))
+        teamRuntimeApi.getAliveTeams().map((teamName) => teamRuntimeApi.getRuntimeState(teamName))
       );
       return reply.send(runtimeStates);
     } catch (error) {
       if (shouldLogError(error)) {
         logger.error('Error in GET /api/teams/runtime/alive:', getErrorMessage(error));
       }
-      return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
     }
   });
 
@@ -728,7 +411,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
         return reply.send(
-          await getTeamProvisioningService(services).recordOpenCodeRuntimeBootstrapCheckin(
+          await getTeamRuntimeControlApi(services).recordOpenCodeRuntimeBootstrapCheckin(
             withRuntimeTeamName(validatedTeamName.value!, request.body)
           )
         );
@@ -739,7 +422,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -753,7 +436,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
         return reply.send(
-          await getTeamProvisioningService(services).deliverOpenCodeRuntimeMessage(
+          await getTeamRuntimeControlApi(services).deliverOpenCodeRuntimeMessage(
             withRuntimeTeamName(validatedTeamName.value!, request.body)
           )
         );
@@ -764,7 +447,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -778,7 +461,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
         return reply.send(
-          await getTeamProvisioningService(services).recordOpenCodeRuntimeTaskEvent(
+          await getTeamRuntimeControlApi(services).recordOpenCodeRuntimeTaskEvent(
             withRuntimeTeamName(validatedTeamName.value!, request.body)
           )
         );
@@ -789,7 +472,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -803,8 +486,8 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
         return reply.send(
-          await getTeamProvisioningService(services).recordOpenCodeRuntimeHeartbeat(
-            withRuntimeTeamName(validatedTeamName.value!, request.body)
+          await getTeamRuntimeControlApi(services).recordOpenCodeRuntimeHeartbeat(
+            withValidatedRuntimeObservedAt(validatedTeamName.value!, request.body)
           )
         );
       } catch (error) {
@@ -814,7 +497,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -842,7 +525,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -867,7 +550,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -887,7 +570,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         return reply.send(
           await getMemberWorkSyncFeature(services).getStatus({
             teamName: validatedTeamName.value!,
-            memberName,
+            memberName: assertValidMemberName(memberName),
           })
         );
       } catch (error) {
@@ -897,7 +580,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -917,7 +600,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         return reply.send(
           await getMemberWorkSyncFeature(services).refreshStatus({
             teamName: validatedTeamName.value!,
-            memberName,
+            memberName: assertValidMemberName(memberName),
             ...(request.body?.forceNudge === true ? { forceNudge: true } : {}),
           })
         );
@@ -928,7 +611,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -951,6 +634,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             error: 'memberName, state, and agendaFingerprint are required',
           });
         }
+        const validatedMemberName = assertValidMemberName(memberName);
         if (!isMemberWorkSyncReportState(state)) {
           return reply
             .status(400)
@@ -969,7 +653,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         return reply.send(
           await getMemberWorkSyncFeature(services).report({
             teamName: validatedTeamName.value!,
-            memberName,
+            memberName: validatedMemberName,
             state,
             agendaFingerprint,
             ...(typeof payload.reportToken === 'string'
@@ -989,7 +673,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );

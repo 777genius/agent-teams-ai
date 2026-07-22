@@ -2,11 +2,27 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { writeJsonFileSync } = require('./atomicFile.js');
+const { getTeamBoardLockContext } = require('./boardLock.js');
 const reviewStateHelpers = require('./reviewState.js');
 
 const TASK_STATUSES = new Set(['pending', 'in_progress', 'completed', 'deleted']);
 const UUID_TASK_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const TASK_STORAGE_IDENTITY = Symbol('taskStorageIdentity');
+const TASK_SCAN_SNAPSHOTS = Symbol('taskScanSnapshots');
+const DEFAULT_TASK_SCAN_SNAPSHOT_TTL_MS = 250;
+const DEFAULT_TASK_SCAN_SNAPSHOT_LIMIT = 32;
+const unlockedTaskScanSnapshots = new Map();
+
+function monotonicNowMs() {
+  return Number(process.hrtime.bigint()) / 1_000_000;
+}
+
+let taskScanSnapshotCacheConfig = Object.freeze({
+  clock: monotonicNowMs,
+  ttlMs: DEFAULT_TASK_SCAN_SNAPSHOT_TTL_MS,
+  maxEntries: DEFAULT_TASK_SCAN_SNAPSHOT_LIMIT,
+});
 
 function nowIso() {
   return new Date().toISOString();
@@ -42,16 +58,63 @@ function deriveDisplayId(taskId) {
   return looksLikeCanonicalTaskId(normalized) ? normalized.slice(0, 8).toLowerCase() : normalized;
 }
 
+function getPersistedTaskId(rawTask) {
+  return typeof rawTask?.id === 'string' || typeof rawTask?.id === 'number'
+    ? String(rawTask.id)
+    : '';
+}
+
+function attachTaskStorageIdentity(task, identity) {
+  Object.defineProperty(task, TASK_STORAGE_IDENTITY, {
+    configurable: false,
+    enumerable: false,
+    value: Object.freeze({ ...identity }),
+    writable: false,
+  });
+  return task;
+}
+
+function cloneTaskValue(value, seen = new Map()) {
+  if (value === null || typeof value !== 'object') return value;
+  if (seen.has(value)) return seen.get(value);
+
+  const clone = Array.isArray(value)
+    ? []
+    : Object.create(Object.getPrototypeOf(value) || Object.prototype);
+  seen.set(value, clone);
+
+  for (const key of Reflect.ownKeys(value)) {
+    if (Array.isArray(value) && key === 'length') continue;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor) continue;
+    if ('value' in descriptor) {
+      descriptor.value = cloneTaskValue(descriptor.value, seen);
+    }
+    Object.defineProperty(clone, key, descriptor);
+  }
+
+  return clone;
+}
+
+function cloneTaskForCaller(task) {
+  const clonedTask = cloneTaskValue(task);
+  const storageIdentity = clonedTask[TASK_STORAGE_IDENTITY];
+  if (storageIdentity && !Object.isFrozen(storageIdentity)) {
+    Object.freeze(storageIdentity);
+  }
+  return clonedTask;
+}
+
 function normalizeTask(rawTask, filePath) {
   if (!rawTask || typeof rawTask !== 'object') {
     throw new Error(`Invalid task payload${filePath ? `: ${filePath}` : ''}`);
   }
 
-  const id =
-    typeof rawTask.id === 'string' || typeof rawTask.id === 'number' ? String(rawTask.id) : '';
-  if (!id) {
+  const persistedTaskId = getPersistedTaskId(rawTask);
+  if (!persistedTaskId) {
     throw new Error(`Task is missing id${filePath ? `: ${filePath}` : ''}`);
   }
+  const id = filePath ? path.basename(filePath, '.json') : persistedTaskId;
 
   const task = {
     ...rawTask,
@@ -70,18 +133,40 @@ function normalizeTask(rawTask, filePath) {
   }
   task.status = String(task.status).trim();
 
-  return task;
+  return filePath
+    ? attachTaskStorageIdentity(task, {
+        canonicalTaskId: id,
+        persistedTaskId,
+        filePath,
+      })
+    : task;
 }
 
 function normalizeTaskReviewState(value) {
   return reviewStateHelpers.normalizeReviewState(value);
 }
 
-function listTaskRows(paths, options = {}) {
+function normalizeCreationCommand(value) {
+  if (value == null) return undefined;
+  if (!value || typeof value !== 'object') {
+    throw new Error('Task creation command conflict: invalid provenance');
+  }
+  const namespace = typeof value.namespace === 'string' ? value.namespace.trim() : '';
+  const scopeKey = typeof value.scopeKey === 'string' ? value.scopeKey.trim() : '';
+  const operation = typeof value.operation === 'string' ? value.operation.trim() : '';
+  const commandId = typeof value.commandId === 'string' ? value.commandId.trim() : '';
+  const payloadHash = typeof value.payloadHash === 'string' ? value.payloadHash.trim() : '';
+  if (!namespace || !scopeKey || !operation || !commandId || !payloadHash) {
+    throw new Error('Task creation command conflict: incomplete provenance');
+  }
+  return { namespace, scopeKey, operation, commandId, payloadHash };
+}
+
+function buildTaskScanSnapshot(paths) {
   ensureDir(paths.tasksDir);
   const entries = fs.readdirSync(paths.tasksDir);
-  const includeDeleted = options.includeDeleted === true;
-  const tasks = [];
+  const rows = [];
+  const identityRows = [];
   const anomalies = [];
 
   for (const fileName of entries) {
@@ -101,16 +186,29 @@ function listTaskRows(paths, options = {}) {
     }
     if (!rawTask) continue;
     if (rawTask.metadata && rawTask.metadata._internal === true) continue;
+    const canonicalTaskId = path.basename(fileName, '.json');
+    const persistedTaskId = getPersistedTaskId(rawTask);
+    if (persistedTaskId) {
+      identityRows.push({ canonicalTaskId, persistedTaskId, filePath });
+      if (persistedTaskId !== canonicalTaskId) {
+        anomalies.push({
+          code: 'task_id_mismatch',
+          taskId: canonicalTaskId,
+          filePath,
+          detail: `Task file "${canonicalTaskId}.json" contains id "${persistedTaskId}"; use canonical task id "${canonicalTaskId}" for lookup and mutation.`,
+        });
+      }
+    }
     try {
       const task = normalizeTask(rawTask, filePath);
-      if (includeDeleted || task.status !== 'deleted') {
-        tasks.push(task);
-      }
+      rows.push({
+        canonicalTaskId: task.id,
+        persistedTaskId,
+        filePath,
+        task,
+      });
     } catch (error) {
-      const taskId =
-        typeof rawTask?.id === 'string' || typeof rawTask?.id === 'number'
-          ? String(rawTask.id)
-          : path.basename(fileName, '.json');
+      const taskId = getPersistedTaskId(rawTask) || path.basename(fileName, '.json');
       anomalies.push({
         code: 'unreadable_task',
         taskId,
@@ -120,6 +218,160 @@ function listTaskRows(paths, options = {}) {
     }
   }
 
+  const identityClaims = new Map();
+  for (const row of identityRows) {
+    for (const claimedId of new Set([row.canonicalTaskId, row.persistedTaskId])) {
+      const claimants = identityClaims.get(claimedId) || [];
+      claimants.push(row);
+      identityClaims.set(claimedId, claimants);
+    }
+  }
+
+  const collidingTaskIds = new Set();
+  for (const [claimedId, claimants] of identityClaims) {
+    if (claimants.length < 2) continue;
+    const canonicalTaskIds = claimants.map((row) => row.canonicalTaskId).sort();
+    for (const taskId of canonicalTaskIds) {
+      collidingTaskIds.add(taskId);
+    }
+    anomalies.push({
+      code: 'task_id_collision',
+      taskId: claimedId,
+      detail: `Task identity "${claimedId}" is claimed by multiple files: ${canonicalTaskIds
+        .map((taskId) => `"${taskId}.json"`)
+        .join(', ')}.`,
+    });
+  }
+
+  const rowsByCanonicalId = new Map(rows.map((row) => [row.canonicalTaskId, row]));
+  const identityRowsByPersistedId = new Map();
+  for (const row of identityRows) {
+    const persistedRows = identityRowsByPersistedId.get(row.persistedTaskId) || [];
+    persistedRows.push(row);
+    identityRowsByPersistedId.set(row.persistedTaskId, persistedRows);
+  }
+  const rowsByDisplayId = new Map();
+  for (const row of rows) {
+    const displayRows = rowsByDisplayId.get(row.task.displayId) || [];
+    displayRows.push(row);
+    rowsByDisplayId.set(row.task.displayId, displayRows);
+  }
+
+  return {
+    rows,
+    rowsByCanonicalId,
+    rowsByDisplayId,
+    identityRows,
+    identityRowsByPersistedId,
+    identityClaims,
+    anomalies,
+    collidingTaskIds,
+  };
+}
+
+function readUnlockedTaskScanSnapshot(snapshotKey) {
+  const cached = unlockedTaskScanSnapshots.get(snapshotKey);
+  if (!cached) return null;
+
+  const ageMs = readTaskScanSnapshotCacheClock() - cached.cachedAtMs;
+  if (ageMs < 0 || ageMs >= taskScanSnapshotCacheConfig.ttlMs) {
+    unlockedTaskScanSnapshots.delete(snapshotKey);
+    return null;
+  }
+
+  unlockedTaskScanSnapshots.delete(snapshotKey);
+  unlockedTaskScanSnapshots.set(snapshotKey, cached);
+  return cached.snapshot;
+}
+
+function cacheUnlockedTaskScanSnapshot(snapshotKey, snapshot) {
+  unlockedTaskScanSnapshots.delete(snapshotKey);
+  unlockedTaskScanSnapshots.set(snapshotKey, {
+    cachedAtMs: readTaskScanSnapshotCacheClock(),
+    snapshot,
+  });
+
+  while (unlockedTaskScanSnapshots.size > taskScanSnapshotCacheConfig.maxEntries) {
+    const oldestSnapshotKey = unlockedTaskScanSnapshots.keys().next().value;
+    unlockedTaskScanSnapshots.delete(oldestSnapshotKey);
+  }
+}
+
+function scanUnlockedTaskRows(paths, snapshotKey) {
+  const cachedSnapshot = readUnlockedTaskScanSnapshot(snapshotKey);
+  if (cachedSnapshot) return cachedSnapshot;
+
+  const snapshot = buildTaskScanSnapshot(paths);
+  cacheUnlockedTaskScanSnapshot(snapshotKey, snapshot);
+  return snapshot;
+}
+
+function readTaskScanSnapshotCacheClock() {
+  const clockMs = taskScanSnapshotCacheConfig.clock();
+  if (!Number.isFinite(clockMs)) {
+    throw new Error('Task scan snapshot cache clock must return a finite number');
+  }
+  return clockMs;
+}
+
+function scanTaskRows(paths) {
+  const lockContext = getTeamBoardLockContext(paths);
+  const snapshotKey = path.resolve(paths.tasksDir);
+  if (!lockContext) {
+    return scanUnlockedTaskRows(paths, snapshotKey);
+  }
+
+  const lockSnapshots = lockContext.get(TASK_SCAN_SNAPSHOTS);
+  const existingSnapshot = lockSnapshots?.get(snapshotKey);
+  if (existingSnapshot) {
+    return existingSnapshot;
+  }
+
+  const snapshot = buildTaskScanSnapshot(paths);
+  const snapshots = lockSnapshots || new Map();
+  snapshots.set(snapshotKey, snapshot);
+  lockContext.set(TASK_SCAN_SNAPSHOTS, snapshots);
+  return snapshot;
+}
+
+function invalidateTaskScanSnapshot(paths) {
+  const snapshotKey = path.resolve(paths.tasksDir);
+  unlockedTaskScanSnapshots.delete(snapshotKey);
+  const lockContext = getTeamBoardLockContext(paths);
+  lockContext?.get(TASK_SCAN_SNAPSHOTS)?.delete(snapshotKey);
+}
+
+// Standalone reads may share a full directory scan for at most 250 ms by default. The hard
+// TTL intentionally does not depend on filesystem metadata, so every external change becomes
+// observable on the first read after expiry even if an atomic replacement preserves metadata.
+function configureTaskScanSnapshotCache(options = {}) {
+  const clock = options.clock ?? monotonicNowMs;
+  const ttlMs = options.ttlMs ?? DEFAULT_TASK_SCAN_SNAPSHOT_TTL_MS;
+  const maxEntries = options.maxEntries ?? DEFAULT_TASK_SCAN_SNAPSHOT_LIMIT;
+  if (typeof clock !== 'function') {
+    throw new Error('Task scan snapshot cache clock must be a function');
+  }
+  if (!Number.isFinite(ttlMs) || ttlMs <= 0) {
+    throw new Error('Task scan snapshot cache ttlMs must be a positive finite number');
+  }
+  if (!Number.isSafeInteger(maxEntries) || maxEntries <= 0) {
+    throw new Error('Task scan snapshot cache maxEntries must be a positive safe integer');
+  }
+
+  const previousConfig = taskScanSnapshotCacheConfig;
+  taskScanSnapshotCacheConfig = Object.freeze({ clock, ttlMs, maxEntries });
+  unlockedTaskScanSnapshots.clear();
+
+  let restored = false;
+  return function restoreTaskScanSnapshotCacheConfig() {
+    if (restored) return;
+    restored = true;
+    unlockedTaskScanSnapshots.clear();
+    taskScanSnapshotCacheConfig = previousConfig;
+  };
+}
+
+function sortTasks(tasks) {
   tasks.sort((a, b) => {
     const byDisplay = String(a.displayId || a.id).localeCompare(
       String(b.displayId || b.id),
@@ -135,8 +387,16 @@ function listTaskRows(paths, options = {}) {
       sensitivity: 'base',
     });
   });
+}
 
-  return { tasks, anomalies };
+function listTaskRows(paths, options = {}) {
+  const includeDeleted = options.includeDeleted === true;
+  const { rows, anomalies } = scanTaskRows(paths);
+  const tasks = rows
+    .map((row) => cloneTaskForCaller(row.task))
+    .filter((task) => includeDeleted || task.status !== 'deleted');
+  sortTasks(tasks);
+  return { tasks, anomalies: anomalies.map((anomaly) => cloneTaskValue(anomaly)) };
 }
 
 function listRawTasks(paths) {
@@ -147,7 +407,14 @@ function listTasks(paths, options = {}) {
   return listTaskRows(paths, options).tasks;
 }
 
-function resolveTaskRef(paths, taskRef, options = {}) {
+function assertTaskRowHasUnambiguousIdentity(scan, row, taskRef) {
+  if (!scan.collidingTaskIds.has(row.canonicalTaskId)) return;
+  throw new Error(
+    `Task identity collision for "${String(taskRef)}": canonical task file "${row.canonicalTaskId}.json" shares an identity with another task file`
+  );
+}
+
+function resolveTaskRow(paths, taskRef, options = {}) {
   const normalizedRef = String(taskRef || '')
     .trim()
     .replace(/^#/, '');
@@ -156,41 +423,56 @@ function resolveTaskRef(paths, taskRef, options = {}) {
   }
 
   const includeDeleted = options.includeDeleted === true;
+  const scan = scanTaskRows(paths);
+  const exact = scan.rowsByCanonicalId.get(normalizedRef);
 
-  // Fast path: if taskRef looks like a canonical UUID, try direct file read first
-  if (looksLikeCanonicalTaskId(normalizedRef)) {
-    const taskPath = getTaskPath(paths, normalizedRef);
-    const rawTask = readJson(taskPath, null);
-    if (rawTask && (includeDeleted || rawTask.status !== 'deleted')) {
-      return normalizedRef;
+  if (exact) {
+    if (!includeDeleted && exact.task.status === 'deleted') {
+      throw new Error(`Task not found: ${normalizedRef}`);
     }
+    assertTaskRowHasUnambiguousIdentity(scan, exact, normalizedRef);
+    return exact;
   }
 
-  // Fallback: scan all tasks for displayId match or non-UUID refs
-  const tasks = listRawTasks(paths);
-  const exact = tasks.find((task) => task.id === normalizedRef);
-  if (exact && (includeDeleted || exact.status !== 'deleted')) {
-    return exact.id;
-  }
-
-  const byDisplay = tasks.find(
-    (task) => task.displayId === normalizedRef && (includeDeleted || task.status !== 'deleted')
+  const nonCanonicalIdentityClaims = (
+    scan.identityRowsByPersistedId.get(normalizedRef) || []
+  ).filter(
+    (row) => row.persistedTaskId !== row.canonicalTaskId && row.persistedTaskId === normalizedRef
   );
-  if (byDisplay) {
-    return byDisplay.id;
+  if (nonCanonicalIdentityClaims.length > 0) {
+    throw new Error(
+      `Non-canonical task reference "${normalizedRef}" is persisted in ${nonCanonicalIdentityClaims
+        .map((row) => `"${row.canonicalTaskId}.json"`)
+        .sort()
+        .join(', ')}; use the canonical file task id instead`
+    );
+  }
+
+  const byDisplay = (scan.rowsByDisplayId.get(normalizedRef) || []).filter(
+    (row) => includeDeleted || row.task.status !== 'deleted'
+  );
+  if (byDisplay.length > 1) {
+    throw new Error(
+      `Ambiguous task reference "${normalizedRef}" matches task files: ${byDisplay
+        .map((row) => `"${row.canonicalTaskId}.json"`)
+        .sort()
+        .join(', ')}`
+    );
+  }
+  if (byDisplay.length === 1) {
+    assertTaskRowHasUnambiguousIdentity(scan, byDisplay[0], normalizedRef);
+    return byDisplay[0];
   }
 
   throw new Error(`Task not found: ${normalizedRef}`);
 }
 
+function resolveTaskRef(paths, taskRef, options = {}) {
+  return resolveTaskRow(paths, taskRef, options).canonicalTaskId;
+}
+
 function readTask(paths, taskRef, options = {}) {
-  const taskId = resolveTaskRef(paths, taskRef, options);
-  const taskPath = getTaskPath(paths, taskId);
-  const rawTask = readJson(taskPath, null);
-  if (!rawTask) {
-    throw new Error(`Task not found: ${String(taskRef)}`);
-  }
-  return normalizeTask(rawTask, taskPath);
+  return cloneTaskForCaller(resolveTaskRow(paths, taskRef, options).task);
 }
 
 function appendHistoryEvent(events, event) {
@@ -225,7 +507,7 @@ function normalizeStatus(status) {
   return TASK_STATUSES.has(normalized) ? normalized : null;
 }
 
-function parseRelationshipList(paths, value) {
+function parseRelationshipList(paths, value, options = {}) {
   const rawValues = Array.isArray(value)
     ? value
     : typeof value === 'string'
@@ -235,7 +517,7 @@ function parseRelationshipList(paths, value) {
           .filter(Boolean)
       : [];
 
-  return rawValues.map((entry) => resolveTaskRef(paths, entry));
+  return rawValues.map((entry) => resolveTaskRef(paths, entry, options));
 }
 
 function normalizeTaskRefs(taskRefs) {
@@ -318,7 +600,32 @@ function wouldCreateBlockCycle(paths, sourceId, targetId) {
 }
 
 function writeTask(paths, task) {
-  writeJson(getTaskPath(paths, task.id), task);
+  const storageIdentity = task[TASK_STORAGE_IDENTITY];
+  const canonicalTaskId = storageIdentity?.canonicalTaskId || String(task.id);
+  const persistedTaskId = storageIdentity?.persistedTaskId || canonicalTaskId;
+  if (String(task.id) !== canonicalTaskId) {
+    throw new Error(
+      `Task id is immutable: canonical task file "${canonicalTaskId}.json" cannot be written as "${String(task.id)}.json"`
+    );
+  }
+  const persistedTask =
+    persistedTaskId === canonicalTaskId ? task : { ...task, id: persistedTaskId };
+  try {
+    writeJson(getTaskPath(paths, canonicalTaskId), persistedTask);
+  } finally {
+    invalidateTaskScanSnapshot(paths);
+  }
+}
+
+function assertTaskIdIsAvailable(paths, canonicalTaskId) {
+  const claimedRows = scanTaskRows(paths).identityClaims.get(canonicalTaskId) || [];
+  if (claimedRows.length === 0) return;
+  throw new Error(
+    `Task id collision: "${canonicalTaskId}" is already claimed by ${claimedRows
+      .map((row) => `"${row.canonicalTaskId}.json"`)
+      .sort()
+      .join(', ')}`
+  );
 }
 
 function createTask(paths, input = {}) {
@@ -327,6 +634,13 @@ function createTask(paths, input = {}) {
   const canonicalId = pickTaskId(input);
   if (fs.existsSync(getTaskPath(paths, canonicalId))) {
     throw new Error(`Task already exists: ${canonicalId}`);
+  }
+  assertTaskIdIsAvailable(paths, canonicalId);
+  const creationCommand = input.creationCommand
+    ? normalizeCreationCommand(input.creationCommand)
+    : undefined;
+  if (creationCommand && creationCommand.commandId !== canonicalId) {
+    throw new Error('Task creation command conflict: command id does not match task id');
   }
 
   const blockedByIds = parseRelationshipList(paths, input['blocked-by'] ?? input.blockedBy);
@@ -412,6 +726,7 @@ function createTask(paths, input = {}) {
     ...(input.sourceMessage && typeof input.sourceMessage === 'object'
       ? { sourceMessage: input.sourceMessage }
       : {}),
+    ...(creationCommand ? { creationCommand } : {}),
   });
 
   if (!task.subject) {
@@ -443,9 +758,95 @@ function createTask(paths, input = {}) {
   return task;
 }
 
+function reconcileTaskCreation(paths, input = {}) {
+  const taskId = String(input.id || '').trim();
+  if (!taskId) {
+    throw new Error('Task creation command conflict: missing task id');
+  }
+  const expectedCommand = normalizeCreationCommand(input.creationCommand);
+  if (!expectedCommand || expectedCommand.commandId !== taskId) {
+    throw new Error('Task creation command conflict: command id does not match task id');
+  }
+
+  const task = readTask(paths, taskId, { includeDeleted: true });
+  const existingCommand = normalizeCreationCommand(task.creationCommand);
+  const blockedByIds = Array.isArray(task.blockedBy) ? task.blockedBy.map(String) : [];
+  const relatedIds = Array.isArray(task.related) ? task.related.map(String) : [];
+
+  if (existingCommand) {
+    if (
+      existingCommand.namespace !== expectedCommand.namespace ||
+      existingCommand.scopeKey !== expectedCommand.scopeKey ||
+      existingCommand.operation !== expectedCommand.operation ||
+      existingCommand.commandId !== expectedCommand.commandId ||
+      existingCommand.payloadHash !== expectedCommand.payloadHash
+    ) {
+      throw new Error(`Task creation command conflict: ${taskId}`);
+    }
+  } else if (input.allowLegacyAdoption === false) {
+    throw new Error(`Task creation command conflict: ${taskId} is not owned by this command`);
+  } else {
+    assertLegacyTaskMatchesCreationInput(task, input);
+  }
+
+  ensureTaskCreationBacklinks(paths, taskId, blockedByIds, relatedIds);
+
+  const reconciled = readTask(paths, taskId, { includeDeleted: true });
+  if (!existingCommand) {
+    reconciled.creationCommand = expectedCommand;
+    writeTask(paths, reconciled);
+  }
+  return readTask(paths, taskId, { includeDeleted: true });
+}
+
+function ensureTaskCreationBacklinks(paths, taskId, blockedByIds, relatedIds) {
+  for (const dependencyId of blockedByIds) {
+    const dependency = readTask(paths, dependencyId, { includeDeleted: true });
+    const blocks = Array.isArray(dependency.blocks) ? dependency.blocks : [];
+    if (!blocks.includes(taskId)) {
+      dependency.blocks = [...blocks, taskId];
+      dependency.updatedAt = nowIso();
+      writeTask(paths, dependency);
+    }
+  }
+  for (const relatedId of relatedIds) {
+    const related = readTask(paths, relatedId, { includeDeleted: true });
+    const existingRelatedIds = Array.isArray(related.related) ? related.related : [];
+    if (!existingRelatedIds.includes(taskId)) {
+      related.related = [...existingRelatedIds, taskId];
+      related.updatedAt = nowIso();
+      writeTask(paths, related);
+    }
+  }
+}
+
+function assertLegacyTaskMatchesCreationInput(task, input) {
+  const expectedCreatedBy =
+    typeof input.from === 'string' && input.from.trim()
+      ? input.from.trim()
+      : typeof input.createdBy === 'string' && input.createdBy.trim()
+        ? input.createdBy.trim()
+        : undefined;
+  if (task.createdBy !== expectedCreatedBy) {
+    throw new Error(
+      `Task creation command conflict: legacy task ${task.id} does not match payload`
+    );
+  }
+}
+
 function updateTask(paths, taskRef, updater, options = {}) {
   const existingTask = readTask(paths, taskRef, { includeDeleted: true });
-  const nextTask = normalizeTask(updater({ ...existingTask }) || existingTask);
+  const updatedTask = updater({ ...existingTask }) || existingTask;
+  if (String(updatedTask.id) !== existingTask.id) {
+    throw new Error(
+      `Task id is immutable: canonical task file "${existingTask.id}.json" cannot be changed to "${String(updatedTask.id)}"`
+    );
+  }
+  const nextTask = normalizeTask(updatedTask);
+  const storageIdentity = existingTask[TASK_STORAGE_IDENTITY];
+  if (storageIdentity) {
+    attachTaskStorageIdentity(nextTask, storageIdentity);
+  }
   nextTask.updatedAt = nowIso();
   writeTask(paths, nextTask);
   return nextTask;
@@ -889,6 +1290,7 @@ module.exports = {
   addTaskComment,
   appendHistoryEvent,
   buildTaskReference,
+  configureTaskScanSnapshotCache,
   createTask,
   deriveDisplayId,
   formatTaskBriefing,
@@ -896,6 +1298,7 @@ module.exports = {
   listTaskRows,
   listTasks,
   readTask,
+  reconcileTaskCreation,
   removeTaskAttachment,
   resolveTaskRef,
   setNeedsClarification,

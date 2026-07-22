@@ -60,5 +60,5 @@ export interface RuntimeTurnSettledReconcileQueuePort {
     teamName: string;
     memberName: string;
     event: RuntimeTurnSettledEvent;
-  }): void;
+  }): boolean;
 }

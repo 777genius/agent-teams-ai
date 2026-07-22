@@ -128,6 +128,9 @@ export class MemberWorkSyncEventQueue {
   private readonly running = new Map<string, RunningItem>();
   private readonly activeKeys = new Set<string>();
   private readonly inFlight = new Set<Promise<void>>();
+  private readonly inFlightByTeam = new Map<string, Set<Promise<void>>>();
+  private readonly auditInFlightByTeam = new Map<string, Set<Promise<void>>>();
+  private readonly quiescedTeams = new Set<string>();
   private readonly quietWindowMs: number;
   private readonly concurrency: number;
   private readonly retryDelayMs: number;
@@ -184,16 +187,16 @@ export class MemberWorkSyncEventQueue {
     triggerReason: MemberWorkSyncTriggerReason;
     runAfterMs?: number;
     recovery?: MemberWorkSyncReconcileContext['recovery'];
-  }): void {
-    if (this.stopped) {
-      return;
+  }): boolean {
+    if (this.stopped || this.quiescedTeams.has(input.teamName.trim())) {
+      return false;
     }
 
     const teamName = input.teamName.trim();
     const memberName = input.memberName.trim();
     if (!teamName || !memberName) {
       this.counters.dropped += 1;
-      return;
+      return false;
     }
 
     const key = keyOf(teamName, memberName);
@@ -215,7 +218,7 @@ export class MemberWorkSyncEventQueue {
         source: 'event_queue',
         reason: input.triggerReason,
       });
-      return;
+      return true;
     }
 
     const existing = this.items.get(key);
@@ -248,7 +251,7 @@ export class MemberWorkSyncEventQueue {
         reason: input.triggerReason,
       });
       this.schedule();
-      return;
+      return true;
     }
 
     this.items.set(key, {
@@ -272,6 +275,7 @@ export class MemberWorkSyncEventQueue {
       reason: input.triggerReason,
     });
     this.schedule();
+    return true;
   }
 
   dropTeam(teamName: string): void {
@@ -282,6 +286,32 @@ export class MemberWorkSyncEventQueue {
       }
     }
     this.schedule();
+  }
+
+  async quiesceTeam(teamName: string): Promise<void> {
+    const normalizedTeamName = teamName.trim();
+    if (!normalizedTeamName) return;
+
+    this.quiescedTeams.add(normalizedTeamName);
+    this.dropTeam(normalizedTeamName);
+    for (const running of this.running.values()) {
+      if (running.teamName === normalizedTeamName) {
+        running.rerunRequested = false;
+      }
+    }
+
+    while (true) {
+      const pending = [
+        ...(this.inFlightByTeam.get(normalizedTeamName) ?? []),
+        ...(this.auditInFlightByTeam.get(normalizedTeamName) ?? []),
+      ];
+      if (pending.length === 0) break;
+      await Promise.allSettled(pending);
+    }
+  }
+
+  resumeTeam(teamName: string): void {
+    this.quiescedTeams.delete(teamName.trim());
   }
 
   getDiagnostics(): MemberWorkSyncQueueDiagnostics {
@@ -419,6 +449,7 @@ export class MemberWorkSyncEventQueue {
       })
       .finally(() => {
         this.inFlight.delete(promise);
+        this.removeTrackedPromise(this.inFlightByTeam, item.teamName, promise);
         const settlePromise = getReconcileTimeoutSettlePromise(failure);
         if (settlePromise) {
           this.activeKeys.delete(key);
@@ -432,6 +463,7 @@ export class MemberWorkSyncEventQueue {
       });
 
     this.inFlight.add(promise);
+    this.addTrackedPromise(this.inFlightByTeam, item.teamName, promise);
   }
 
   private finishItem(key: string, item: QueueItem, running: RunningItem, failed: boolean): void {
@@ -440,7 +472,7 @@ export class MemberWorkSyncEventQueue {
     }
     this.activeKeys.delete(key);
     this.running.delete(key);
-    if (running.rerunRequested && !this.stopped) {
+    if (running.rerunRequested && !this.stopped && !this.quiescedTeams.has(item.teamName)) {
       this.enqueueFollowUp(item, running);
     } else if (failed && !this.stopped) {
       this.enqueueRetryAfterFailure(key, item, running);
@@ -541,6 +573,7 @@ export class MemberWorkSyncEventQueue {
       {
         reconciledBy: 'queue',
         triggerReasons: [...running.triggerReasons].sort(),
+        isCancelled: () => this.quiescedTeams.has(item.teamName),
         ...(recovery ? { recovery } : {}),
       }
     );
@@ -595,7 +628,7 @@ export class MemberWorkSyncEventQueue {
     if (!this.deps.auditJournal) {
       return;
     }
-    void this.deps.auditJournal
+    const promise = this.deps.auditJournal
       .append({
         ...input,
         timestamp: this.nowIso(),
@@ -607,7 +640,32 @@ export class MemberWorkSyncEventQueue {
           event: input.event,
           error: String(error),
         });
+      })
+      .finally(() => {
+        this.removeTrackedPromise(this.auditInFlightByTeam, input.teamName, promise);
       });
+    this.addTrackedPromise(this.auditInFlightByTeam, input.teamName, promise);
+  }
+
+  private addTrackedPromise(
+    target: Map<string, Set<Promise<void>>>,
+    teamName: string,
+    promise: Promise<void>
+  ): void {
+    const teamPromises = target.get(teamName) ?? new Set<Promise<void>>();
+    teamPromises.add(promise);
+    target.set(teamName, teamPromises);
+  }
+
+  private removeTrackedPromise(
+    target: Map<string, Set<Promise<void>>>,
+    teamName: string,
+    promise: Promise<void>
+  ): void {
+    const teamPromises = target.get(teamName);
+    if (!teamPromises) return;
+    teamPromises.delete(promise);
+    if (teamPromises.size === 0) target.delete(teamName);
   }
 }
 

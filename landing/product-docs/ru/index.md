@@ -18,32 +18,32 @@ hero:
       text: Концепции
       link: /ru/reference/concepts
 features:
-  - icon: "01"
+  - icon: '01'
     title: Командный workflow
     details: Опишите роли, запустите lead-агента и дайте команде разбивать, брать и координировать задачи.
     link: /ru/guide/create-team
     linkText: Создать команду
-  - icon: "02"
+  - icon: '02'
     title: Живая канбан-доска
     details: Видно, как задачи проходят todo, in progress, review, done и approved во время работы агентов.
     link: /ru/guide/agent-workflow
     linkText: Разобрать workflow
-  - icon: "03"
+  - icon: '03'
     title: Встроенное код-ревью
     details: Проверяйте diff по задаче, принимайте или отклоняйте hunks и оставляйте комментарии.
     link: /ru/guide/code-review
     linkText: Ревью изменений
-  - icon: "04"
+  - icon: '04'
     title: Настройка рантайма
     details: Используйте Claude, Codex, OpenCode или multimodel-провайдеры через доступ, который у вас уже есть.
     link: /ru/guide/runtime-setup
     linkText: Настроить рантаймы
-  - icon: "05"
+  - icon: '05'
     title: Local-first контроль
     details: Приложение читает локальный проект и runtime-состояние. Код остаётся у вас, если выбранный провайдер не получает контекст для model call.
     link: /ru/reference/privacy-local-data
     linkText: Модель приватности
-  - icon: "06"
+  - icon: '06'
     title: Диагностируемые команды
     details: Отслеживайте task logs, runtime output, сообщения агентов и live processes, когда запуск или задача застряли.
     link: /ru/guide/troubleshooting

@@ -2,13 +2,14 @@ export function getMemberLifecycleOperationKey(teamName: string, memberName: str
   return `${teamName.trim().toLowerCase()}\u0000${memberName.trim().toLowerCase()}`;
 }
 
+class MemberLifecycleOperationInProgressError extends Error {}
+
 export function createMemberLifecycleOperationInProgressError(memberName: string): Error {
-  return new Error(`Lifecycle operation for teammate "${memberName}" is already in progress`);
+  return new MemberLifecycleOperationInProgressError(
+    `Lifecycle operation for teammate "${memberName}" is already in progress`
+  );
 }
 
 export function isMemberLifecycleOperationInProgressError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    /^Lifecycle operation for teammate ".+" is already in progress$/.test(error.message)
-  );
+  return error instanceof MemberLifecycleOperationInProgressError;
 }

@@ -1,21 +1,8 @@
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import * as fs from 'fs';
-import * as path from 'path';
-
-import { atomicWriteAsync } from '../atomicWrite';
-import { withFileLock } from '../fileLock';
-
 import { getTeamTaskStallAlertCooldownMs } from './featureGates';
+import { JsonTaskStallJournalStore } from './JsonTaskStallJournalStore';
 
-import type {
-  TaskStallEvaluation,
-  TaskStallJournalEntry,
-  TaskStallJournalState,
-} from './TeamTaskStallTypes';
-
-function isValidState(value: unknown): value is TaskStallJournalState {
-  return value === 'suspected' || value === 'alert_ready' || value === 'alerted';
-}
+import type { TaskStallJournalStore } from './TaskStallJournalStore';
+import type { TaskStallEvaluation } from './TeamTaskStallTypes';
 
 function parseTime(value: string | undefined): number | null {
   if (!value) {
@@ -27,20 +14,20 @@ function parseTime(value: string | undefined): number | null {
 
 export interface TeamTaskStallJournalOptions {
   alertCooldownMs?: number;
+  /** Persistence backend. Defaults to the legacy per-team JSON file store. */
+  store?: TaskStallJournalStore;
 }
 
 export class TeamTaskStallJournal {
   private readonly alertCooldownMs: number;
+  private readonly store: TaskStallJournalStore;
 
   constructor(options: TeamTaskStallJournalOptions = {}) {
     this.alertCooldownMs =
       options.alertCooldownMs != null && options.alertCooldownMs > 0
         ? options.alertCooldownMs
         : getTeamTaskStallAlertCooldownMs();
-  }
-
-  private getFilePath(teamName: string): string {
-    return path.join(getTeamsBasePath(), teamName, 'stall-monitor-journal.json');
+    this.store = options.store ?? new JsonTaskStallJournalStore();
   }
 
   async reconcileScan(args: {
@@ -50,11 +37,8 @@ export class TeamTaskStallJournal {
     scopeTaskIds?: string[];
     now: string;
   }): Promise<TaskStallEvaluation[]> {
-    const filePath = this.getFilePath(args.teamName);
-    const readyEvaluations: TaskStallEvaluation[] = [];
-
-    await withFileLock(filePath, async () => {
-      const entries = await this.readUnlocked(filePath);
+    return this.store.update(args.teamName, (entries) => {
+      const readyEvaluations: TaskStallEvaluation[] = [];
       const candidateByEpoch = new Map(
         args.evaluations
           .filter(
@@ -129,68 +113,20 @@ export class TeamTaskStallJournal {
         }
       }
 
-      await atomicWriteAsync(filePath, JSON.stringify(entries, null, 2));
+      return { entries, result: readyEvaluations };
     });
-
-    return readyEvaluations;
   }
 
   async markAlerted(teamName: string, epochKey: string, now: string): Promise<void> {
-    const filePath = this.getFilePath(teamName);
-    await withFileLock(filePath, async () => {
-      const entries = await this.readUnlocked(filePath);
+    await this.store.update<void>(teamName, (entries) => {
       const target = entries.find((entry) => entry.epochKey === epochKey);
       if (!target) {
-        return;
+        return { entries, result: undefined, changed: false };
       }
       target.state = 'alerted';
       target.updatedAt = now;
       target.alertedAt = now;
-      await atomicWriteAsync(filePath, JSON.stringify(entries, null, 2));
+      return { entries, result: undefined };
     });
-  }
-
-  private async readUnlocked(filePath: string): Promise<TaskStallJournalEntry[]> {
-    try {
-      const raw = await fs.promises.readFile(filePath, 'utf8');
-      const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-
-      return parsed
-        .filter(
-          (item): item is TaskStallJournalEntry =>
-            item != null &&
-            typeof item === 'object' &&
-            typeof (item as TaskStallJournalEntry).epochKey === 'string' &&
-            typeof (item as TaskStallJournalEntry).teamName === 'string' &&
-            typeof (item as TaskStallJournalEntry).taskId === 'string' &&
-            ((item as TaskStallJournalEntry).branch === 'work' ||
-              (item as TaskStallJournalEntry).branch === 'review') &&
-            ((item as TaskStallJournalEntry).signal === 'turn_ended_after_touch' ||
-              (item as TaskStallJournalEntry).signal === 'mid_turn_after_touch' ||
-              (item as TaskStallJournalEntry).signal === 'touch_then_other_turns') &&
-            isValidState((item as TaskStallJournalEntry).state) &&
-            typeof (item as TaskStallJournalEntry).consecutiveScans === 'number' &&
-            typeof (item as TaskStallJournalEntry).createdAt === 'string' &&
-            typeof (item as TaskStallJournalEntry).updatedAt === 'string'
-        )
-        .map((entry) => ({
-          ...entry,
-          ...(typeof entry.memberName === 'string' && entry.memberName.trim()
-            ? { memberName: entry.memberName }
-            : {}),
-          ...(entry.alertedAt ? { alertedAt: entry.alertedAt } : {}),
-        }));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return [];
-      }
-      if (error instanceof SyntaxError) {
-        return [];
-      }
-      throw error;
-    }
   }
 }

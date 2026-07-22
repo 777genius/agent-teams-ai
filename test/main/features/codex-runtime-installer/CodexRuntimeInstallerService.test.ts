@@ -193,6 +193,7 @@ describe('CodexRuntimeInstallerService resolver', () => {
 
   it('detects a PATH Codex binary from best-effort shell env when process PATH is cold', async () => {
     const binDir = path.join(tempRoot!, 'shell-bin');
+    const coldPath = path.join(tempRoot!, 'cold-path');
     const executableName = process.platform === 'win32' ? 'codex.exe' : 'codex';
     const binaryPath = path.join(binDir, executableName);
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- test uses isolated temp dir
@@ -203,8 +204,9 @@ describe('CodexRuntimeInstallerService resolver', () => {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- test uses isolated temp dir
       await chmod(binaryPath, 0o755);
     }
-    process.env.PATH = '/usr/bin:/bin';
-    buildMergedCliPathMock.mockReturnValue('/usr/bin:/bin');
+    await mkdir(coldPath, { recursive: true });
+    process.env.PATH = coldPath;
+    buildMergedCliPathMock.mockReturnValue(coldPath);
     resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: binDir });
 
     const status = await createCodexRuntimeInstallerFeature({

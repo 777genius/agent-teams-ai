@@ -78,6 +78,29 @@ async function flushMicrotasks(): Promise<void> {
   await Promise.resolve();
 }
 
+function resolved<T>(value: T): Promise<T> {
+  return Promise.resolve(value);
+}
+
+function resolvedUndefined(): Promise<void> {
+  return Promise.resolve();
+}
+
+function secondMockArgString(call: unknown[] | undefined): string {
+  const [, value] = call ?? [];
+  return typeof value === 'string' ? value : '';
+}
+
+function mockCallArg(call: readonly unknown[] | undefined, index: number): unknown {
+  return call?.[index];
+}
+
+const TEST_PROJECT_PATH = path.join(os.tmpdir(), 'project');
+const DRAFT_TEAM_CWD = path.join(os.tmpdir(), 'draft-team');
+const TASK_LOG_JSONL_PATH = path.join(os.tmpdir(), 'task.jsonl');
+const TASK_LOG_BUNDLE_ID = `tool:${TASK_LOG_JSONL_PATH}:tool-1`;
+const TRANSCRIPT_JSONL_PATH = path.join(os.tmpdir(), 'transcript.jsonl');
+
 vi.mock('@main/services/infrastructure/NotificationManager', () => ({
   NotificationManager: {
     getInstance: vi.fn().mockReturnValue({
@@ -105,6 +128,17 @@ vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
     );
   },
 }));
+vi.mock('@main/services/team/AutoResumeService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@main/services/team/AutoResumeService')>();
+  return {
+    ...actual,
+    getAutoResumeService: () => ({
+      handleRateLimitMessage: () => undefined,
+      cancelPendingAutoResume: () => undefined,
+      clearAllPendingAutoResume: () => undefined,
+    }),
+  };
+});
 
 import {
   initializeTeamHandlers,
@@ -126,11 +160,15 @@ import {
   TEAM_CANCEL_PROVISIONING,
   TEAM_CREATE,
   TEAM_CREATE_CONFIG,
+  TEAM_CREATE_INITIAL_GIT_COMMIT,
   TEAM_CREATE_TASK,
+  TEAM_DELETE_DRAFT,
   TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
+  TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
+  TEAM_GET_CLAUDE_LOGS,
   TEAM_GET_DATA,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_LOGS_FOR_TASK,
@@ -138,7 +176,10 @@ import {
   TEAM_GET_MEMBER_LOGS,
   TEAM_GET_MEMBER_STATS,
   TEAM_GET_MESSAGES_PAGE,
+  TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
   TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_SAVED_REQUEST,
+  TEAM_GET_TASK,
   TEAM_GET_TASK_ACTIVITY,
   TEAM_GET_TASK_ACTIVITY_DETAIL,
   TEAM_GET_TASK_ATTACHMENT,
@@ -146,11 +187,16 @@ import {
   TEAM_GET_TASK_EXACT_LOG_DETAIL,
   TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
   TEAM_GET_TASK_LOG_STREAM,
+  TEAM_GET_TASK_LOG_STREAM_SUMMARY,
+  TEAM_GET_WORKTREE_GIT_STATUS,
+  TEAM_INITIALIZE_GIT_REPOSITORY,
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
+  TEAM_LAUNCH_FAILURE_DIAGNOSTICS,
   TEAM_LEAD_ACTIVITY,
   TEAM_LEAD_CONTEXT,
   TEAM_LIST,
+  TEAM_MEMBER_SPAWN_STATUSES,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
   TEAM_PROCESS_ALIVE,
@@ -160,17 +206,27 @@ import {
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REPLACE_MEMBERS,
   TEAM_REQUEST_REVIEW,
+  TEAM_RESTART_MEMBER,
   TEAM_RESTORE,
   TEAM_RESTORE_MEMBER,
   TEAM_RESTORE_TASK,
+  TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
   TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
+  TEAM_SET_PROJECT_BRANCH_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SET_TASK_LOG_STREAM_TRACKING,
+  TEAM_SET_TOOL_ACTIVITY_TRACKING,
   TEAM_SHOW_MESSAGE_NOTIFICATION,
+  TEAM_SKIP_MEMBER_FOR_LAUNCH,
   TEAM_SOFT_DELETE_TASK,
   TEAM_START_TASK,
+  TEAM_START_TASK_BY_USER,
   TEAM_STOP,
+  TEAM_TOOL_APPROVAL_READ_FILE,
+  TEAM_TOOL_APPROVAL_RESPOND,
+  TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
@@ -178,7 +234,100 @@ import {
   TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
+  TEAM_VALIDATE_CLI_ARGS,
 } from '../../../src/preload/constants/ipcChannels';
+
+import type { TeamIpcHandlerApis } from '../../../src/main/services/team/contracts/TeamProvisioningApis';
+
+type CreateTeamMock = (
+  request: TeamCreateRequest,
+  onProgress: (progress: TeamProvisioningProgress) => void
+) => Promise<{ runId: string }>;
+
+const TEAM_HANDLER_KEYS = [
+  TEAM_ADD_MEMBER,
+  TEAM_ADD_TASK_COMMENT,
+  TEAM_ADD_TASK_RELATIONSHIP,
+  TEAM_ALIVE_LIST,
+  TEAM_CANCEL_PROVISIONING,
+  TEAM_CREATE,
+  TEAM_CREATE_CONFIG,
+  TEAM_CREATE_INITIAL_GIT_COMMIT,
+  TEAM_CREATE_TASK,
+  TEAM_DELETE_DRAFT,
+  TEAM_DELETE_TASK_ATTACHMENT,
+  TEAM_DELETE_TEAM,
+  TEAM_GET_AGENT_RUNTIME,
+  TEAM_GET_ALL_TASKS,
+  TEAM_GET_ATTACHMENTS,
+  TEAM_GET_CLAUDE_LOGS,
+  TEAM_GET_DATA,
+  TEAM_GET_DELETED_TASKS,
+  TEAM_GET_LOGS_FOR_TASK,
+  TEAM_GET_MEMBER_ACTIVITY_META,
+  TEAM_GET_MEMBER_LOGS,
+  TEAM_GET_MEMBER_STATS,
+  TEAM_GET_MESSAGES_PAGE,
+  TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
+  TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_SAVED_REQUEST,
+  TEAM_GET_TASK,
+  TEAM_GET_TASK_ACTIVITY,
+  TEAM_GET_TASK_ACTIVITY_DETAIL,
+  TEAM_GET_TASK_ATTACHMENT,
+  TEAM_GET_TASK_CHANGE_PRESENCE,
+  TEAM_GET_TASK_EXACT_LOG_DETAIL,
+  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
+  TEAM_GET_TASK_LOG_STREAM,
+  TEAM_GET_TASK_LOG_STREAM_SUMMARY,
+  TEAM_GET_WORKTREE_GIT_STATUS,
+  TEAM_INITIALIZE_GIT_REPOSITORY,
+  TEAM_KILL_PROCESS,
+  TEAM_LAUNCH,
+  TEAM_LAUNCH_FAILURE_DIAGNOSTICS,
+  TEAM_LEAD_ACTIVITY,
+  TEAM_LEAD_CONTEXT,
+  TEAM_LIST,
+  TEAM_MEMBER_SPAWN_STATUSES,
+  TEAM_PERMANENTLY_DELETE,
+  TEAM_PREPARE_PROVISIONING,
+  TEAM_PROCESS_ALIVE,
+  TEAM_PROCESS_SEND,
+  TEAM_PROVISIONING_STATUS,
+  TEAM_REMOVE_MEMBER,
+  TEAM_REMOVE_TASK_RELATIONSHIP,
+  TEAM_REPLACE_MEMBERS,
+  TEAM_REQUEST_REVIEW,
+  TEAM_RESTART_MEMBER,
+  TEAM_RESTORE,
+  TEAM_RESTORE_MEMBER,
+  TEAM_RESTORE_TASK,
+  TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
+  TEAM_SAVE_TASK_ATTACHMENT,
+  TEAM_SEND_MESSAGE,
+  TEAM_SET_CHANGE_PRESENCE_TRACKING,
+  TEAM_SET_PROJECT_BRANCH_TRACKING,
+  TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SET_TASK_LOG_STREAM_TRACKING,
+  TEAM_SET_TOOL_ACTIVITY_TRACKING,
+  TEAM_SHOW_MESSAGE_NOTIFICATION,
+  TEAM_SKIP_MEMBER_FOR_LAUNCH,
+  TEAM_SOFT_DELETE_TASK,
+  TEAM_START_TASK,
+  TEAM_START_TASK_BY_USER,
+  TEAM_STOP,
+  TEAM_TOOL_APPROVAL_READ_FILE,
+  TEAM_TOOL_APPROVAL_RESPOND,
+  TEAM_TOOL_APPROVAL_SETTINGS,
+  TEAM_UPDATE_CONFIG,
+  TEAM_UPDATE_KANBAN,
+  TEAM_UPDATE_KANBAN_COLUMN_ORDER,
+  TEAM_UPDATE_MEMBER_ROLE,
+  TEAM_UPDATE_TASK_FIELDS,
+  TEAM_UPDATE_TASK_OWNER,
+  TEAM_UPDATE_TASK_STATUS,
+  TEAM_VALIDATE_CLI_ARGS,
+] as const;
 
 describe('ipc teams handlers', () => {
   const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
@@ -191,56 +340,71 @@ describe('ipc teams handlers', () => {
     }),
   };
   let launchIoGovernor: LaunchIoGovernor;
+  const permanentDeletionLifecycle = {
+    prepareTeamDeletion: vi.fn(() => resolvedUndefined()),
+    completeTeamDeletion: vi.fn(),
+    resumeTeam: vi.fn(),
+  };
 
   const service = {
-    listTeams: vi.fn(async () => [{ teamName: 'my-team', displayName: 'My Team' }]),
+    listTeams: vi.fn(() => resolved([{ teamName: 'my-team', displayName: 'My Team' }])),
     getTeamData: vi.fn(
-      async (): Promise<TeamViewSnapshot & { messages?: InboxMessage[] }> => ({
+      (): Promise<TeamViewSnapshot & { messages?: InboxMessage[] }> =>
+        resolved({
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: [],
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
+        })
+    ),
+    getMessageFeed: vi.fn(() =>
+      resolved({
         teamName: 'my-team',
-        config: { name: 'My Team' },
-        tasks: [],
-        members: [],
-        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
-        processes: [],
+        feedRevision: 'rev-1',
+        messages: [] as InboxMessage[],
       })
     ),
-    getMessageFeed: vi.fn(async () => ({
-      teamName: 'my-team',
-      feedRevision: 'rev-1',
-      messages: [] as InboxMessage[],
-    })),
-    getAllTasks: vi.fn(async () => [{ id: 'task-1', teamName: 'my-team', subject: 'Task 1' }]),
+    getAllTasks: vi.fn(() => resolved([{ id: 'task-1', teamName: 'my-team', subject: 'Task 1' }])),
     getMessagesPage: vi.fn(
-      async (..._args: unknown[]): Promise<MessagesPage> => ({
-        messages: [] as InboxMessage[],
-        nextCursor: null,
-        hasMore: false,
+      (): Promise<MessagesPage> =>
+        resolved({
+          messages: [] as InboxMessage[],
+          nextCursor: null,
+          hasMore: false,
+          feedRevision: 'rev-1',
+        })
+    ),
+    getMemberActivityMeta: vi.fn(() =>
+      resolved({
+        teamName: 'my-team',
+        computedAt: '2026-03-12T10:00:00.000Z',
+        members: {},
         feedRevision: 'rev-1',
       })
     ),
-    getMemberActivityMeta: vi.fn(async () => ({
-      teamName: 'my-team',
-      computedAt: '2026-03-12T10:00:00.000Z',
-      members: {},
-      feedRevision: 'rev-1',
-    })),
-    getTaskChangePresence: vi.fn(async () => ({ 'task-1': 'has_changes' })),
-    reconcileTeamArtifacts: vi.fn(async () => undefined),
+    getTaskChangePresence: vi.fn(() => resolved({ 'task-1': 'has_changes' })),
+    reconcileTeamArtifacts: vi.fn(() => resolvedUndefined()),
     setTaskChangePresenceTracking: vi.fn(() => undefined),
-    getTeamNotificationContext: vi.fn(async () => ({
-      displayName: 'My Team',
-      projectPath: '/tmp/project',
-    })),
-    deleteTeam: vi.fn(async () => undefined),
-    restoreTeam: vi.fn(async () => undefined),
-    permanentlyDeleteTeam: vi.fn(async () => undefined),
-    getLeadMemberName: vi.fn(async () => 'team-lead'),
-    getTeamDisplayName: vi.fn(async () => 'My Team'),
-    updateConfig: vi.fn(async () => ({ name: 'My Team' })),
-    sendMessage: vi.fn(async (_teamName: string, _request: unknown) => ({
-      deliveredToInbox: true,
-      messageId: 'm1',
-    })) as ReturnType<
+    getTeamNotificationContext: vi.fn(() =>
+      resolved({
+        displayName: 'My Team',
+        projectPath: TEST_PROJECT_PATH,
+      })
+    ),
+    deleteTeam: vi.fn(() => resolvedUndefined()),
+    restoreTeam: vi.fn(() => resolvedUndefined()),
+    permanentlyDeleteTeam: vi.fn(() => resolvedUndefined()),
+    getLeadMemberName: vi.fn(() => resolved('team-lead')),
+    getTeamDisplayName: vi.fn(() => resolved('My Team')),
+    updateConfig: vi.fn(() => resolved({ name: 'My Team' })),
+    sendMessage: vi.fn(() =>
+      resolved({
+        deliveredToInbox: true,
+        messageId: 'm1',
+      })
+    ) as ReturnType<
       typeof vi.fn<
         (
           teamName: string,
@@ -248,10 +412,12 @@ describe('ipc teams handlers', () => {
         ) => Promise<{ deliveredToInbox: boolean; messageId: string }>
       >
     >,
-    sendRuntimeRecipientMessage: vi.fn(async (_teamName: string, _request: unknown) => ({
-      deliveredToInbox: true,
-      messageId: 'm1',
-    })) as ReturnType<
+    sendRuntimeRecipientMessage: vi.fn(() =>
+      resolved({
+        deliveredToInbox: true,
+        messageId: 'm1',
+      })
+    ) as ReturnType<
       typeof vi.fn<
         (
           teamName: string,
@@ -259,132 +425,242 @@ describe('ipc teams handlers', () => {
         ) => Promise<{ deliveredToInbox: boolean; messageId: string }>
       >
     >,
-    sendDirectToLead: vi.fn(async () => ({ deliveredToInbox: false, messageId: 'direct-1' })),
-    createTask: vi.fn(async () => ({ id: '1', subject: 'Test', status: 'pending' })),
-    requestReview: vi.fn(async () => undefined),
-    updateKanban: vi.fn(async () => undefined),
-    updateKanbanColumnOrder: vi.fn(async () => undefined),
-    updateTaskStatus: vi.fn(async () => undefined),
-    startTask: vi.fn(async () => undefined),
-    addTaskComment: vi.fn(async () => ({
-      id: 'c1',
-      author: 'user',
-      text: 'test comment',
-      createdAt: new Date().toISOString(),
-    })),
-    addMember: vi.fn(async () => undefined),
-    removeMember: vi.fn(async () => undefined),
-    restoreMember: vi.fn(async () => ({
-      name: 'alice',
-      role: 'Developer',
-      providerId: 'codex' as TeamProviderId,
-    })),
-    updateMemberRole: vi.fn(async () => ({ oldRole: undefined, changed: true })),
-    softDeleteTask: vi.fn(async () => undefined),
-    getDeletedTasks: vi.fn(async () => []),
-    setTaskNeedsClarification: vi.fn(async () => undefined),
-    addTaskRelationship: vi.fn(async () => undefined),
-    removeTaskRelationship: vi.fn(async () => undefined),
-    replaceMembers: vi.fn(async () => undefined),
+    sendDirectToLead: vi.fn(() => resolved({ deliveredToInbox: false, messageId: 'direct-1' })),
+    createTask: vi.fn(() => resolved({ id: '1', subject: 'Test', status: 'pending' })),
+    requestReview: vi.fn(() => resolvedUndefined()),
+    updateKanban: vi.fn(() => resolvedUndefined()),
+    updateKanbanColumnOrder: vi.fn(() => resolvedUndefined()),
+    updateTaskStatus: vi.fn(() => resolvedUndefined()),
+    startTask: vi.fn(() => resolvedUndefined()),
+    addTaskComment: vi.fn(() =>
+      resolved({
+        id: 'c1',
+        author: 'user',
+        text: 'test comment',
+        createdAt: new Date().toISOString(),
+      })
+    ),
+    addMember: vi.fn(() => resolvedUndefined()),
+    removeMember: vi.fn(() => resolvedUndefined()),
+    restoreMember: vi.fn(() =>
+      resolved({
+        name: 'alice',
+        role: 'Developer',
+        providerId: 'codex' as TeamProviderId,
+      })
+    ),
+    updateMemberRole: vi.fn(() => resolved({ oldRole: undefined, changed: true })),
+    softDeleteTask: vi.fn(() => resolvedUndefined()),
+    getDeletedTasks: vi.fn(() => resolved([])),
+    setTaskNeedsClarification: vi.fn(() => resolvedUndefined()),
+    addTaskRelationship: vi.fn(() => resolvedUndefined()),
+    removeTaskRelationship: vi.fn(() => resolvedUndefined()),
+    replaceMembers: vi.fn(() => resolvedUndefined()),
     invalidateMessageFeed: vi.fn(() => undefined),
     invalidateTeamRuntimeAdvisories: vi.fn(() => undefined),
-    createTeamConfig: vi.fn(async () => undefined),
-    getSavedRequest: vi.fn(async (): Promise<TeamCreateRequest | null> => null),
+    createTeamConfig: vi.fn(() => resolvedUndefined()),
+    getSavedRequest: vi.fn<() => Promise<TeamCreateRequest | null>>(() => resolved(null)),
   };
-  const provisioningService = {
-    prepareForProvisioning: vi.fn(async () => ({
-      ready: true,
-      message: 'CLI прогрет и готов к запуску',
-    })),
-    createTeam: vi.fn(
-      async (_req: TeamCreateRequest, _onProgress: (p: TeamProvisioningProgress) => void) => ({
+  const teamHandlerMocks = {
+    getCliHelpOutput: vi.fn(() => resolved('Usage')),
+    prepareForProvisioning: vi.fn(() =>
+      resolved({
+        ready: true,
+        message: 'CLI прогрет и готов к запуску',
+      })
+    ),
+    createTeam: vi.fn<CreateTeamMock>(() =>
+      resolved({
         runId: 'run-1',
       })
     ),
-    getProvisioningStatus: vi.fn(async () => ({
-      runId: 'run-1',
-      teamName: 'my-team',
-      state: 'spawning',
-      message: 'Starting',
-      startedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })),
-    cancelProvisioning: vi.fn(async () => undefined),
-    launchTeam: vi.fn(async () => ({ runId: 'run-2' })),
-    sendMessageToTeam: vi.fn(async () => undefined),
-    prepareLiveMemberMcpLaunchConfig: vi.fn(async () => null),
-    discardLiveMemberMcpLaunchConfig: vi.fn(async () => undefined),
+    getProvisioningStatus: vi.fn(() =>
+      resolved({
+        runId: 'run-1',
+        teamName: 'my-team',
+        state: 'spawning' as const,
+        message: 'Starting',
+        startedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+    ),
+    cancelProvisioning: vi.fn(() => resolvedUndefined()),
+    hasProvisioningRun: vi.fn(() => false),
+    getClaudeLogs: vi.fn(() => resolved({ lines: [], total: 0, hasMore: false })),
+    launchTeam: vi.fn(() => resolved({ runId: 'run-2' })),
+    sendMessageToTeam: vi.fn(() => resolvedUndefined()),
+    getRuntimeState: vi.fn(() =>
+      resolved({
+        teamName: 'my-team',
+        isAlive: true,
+        runId: 'run-2',
+        progress: null,
+      })
+    ),
     isTeamAlive: vi.fn(() => true),
     getCurrentRunId: vi.fn(() => 'run-2' as string | null),
     pushLiveLeadProcessMessage: vi.fn(),
-    relayLeadInboxMessages: vi.fn(async () => 0),
-    relayMemberInboxMessages: vi.fn(async () => 0),
+    respondToToolApproval: vi.fn(() => resolvedUndefined()),
+    updateToolApprovalSettings: vi.fn(),
+    relayLeadInboxMessages: vi.fn(() => resolved(0)),
     resolveRuntimeRecipientProviderId: vi.fn(
-      async (_teamName: string, _memberName: string): Promise<TeamProviderId | undefined> =>
-        undefined
+      (): Promise<TeamProviderId | undefined> => resolved(undefined)
     ) as ReturnType<
       typeof vi.fn<(teamName: string, memberName: string) => Promise<TeamProviderId | undefined>>
     >,
-    isOpenCodeRuntimeRecipient: vi.fn(async () => false),
-    relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
-      relayed: 0,
-      attempted: 0,
-      delivered: 0,
-      failed: 0,
-      lastDelivery: undefined as
-        | {
-            delivered: boolean;
-            accepted?: boolean;
-            responsePending?: boolean;
-            acceptanceUnknown?: boolean;
-            responseState?: NonNullable<SendMessageResult['runtimeDelivery']>['responseState'];
-            ledgerStatus?: NonNullable<SendMessageResult['runtimeDelivery']>['ledgerStatus'];
-            ledgerRecordId?: string;
-            laneId?: string;
-            reason?: string;
-            diagnostics?: string[];
-          }
-        | undefined,
-    })),
-    getOpenCodeRuntimeDeliveryStatus: vi.fn(
-      async () => null as OpenCodeRuntimeDeliveryStatus | null
+    relayOpenCodeMemberInboxMessages: vi.fn(() =>
+      resolved({
+        relayed: 0,
+        attempted: 0,
+        delivered: 0,
+        failed: 0,
+        lastDelivery: undefined as
+          | {
+              delivered: boolean;
+              accepted?: boolean;
+              responsePending?: boolean;
+              acceptanceUnknown?: boolean;
+              responseState?: NonNullable<SendMessageResult['runtimeDelivery']>['responseState'];
+              ledgerStatus?: NonNullable<SendMessageResult['runtimeDelivery']>['ledgerStatus'];
+              ledgerRecordId?: string;
+              laneId?: string;
+              reason?: string;
+              diagnostics?: string[];
+            }
+          | undefined,
+      })
     ),
-    buildOpenCodeRuntimeDeliveryUserVisibleImpact: vi.fn(() => ({ state: 'none' })),
+    getOpenCodeRuntimeDeliveryStatus: vi.fn(() =>
+      resolved(null as OpenCodeRuntimeDeliveryStatus | null)
+    ),
     getLiveLeadProcessMessages: vi.fn(() => [] as InboxMessage[]),
     getCurrentLeadSessionId: vi.fn(() => null as string | null),
     getAliveTeams: vi.fn(() => ['my-team']),
-    getLeadActivityState: vi.fn(() => 'idle'),
+    getLeadActivityState: vi.fn(() => ({ state: 'idle' as const, runId: 'run-2' })),
+    getLeadContextUsage: vi.fn(() => ({ usage: null, runId: 'run-2' })),
+    getTeamAgentRuntimeSnapshot: vi.fn(() =>
+      resolved({
+        teamName: 'my-team',
+        runId: 'run-2',
+        updatedAt: new Date().toISOString(),
+        members: {},
+      })
+    ),
+    getMemberSpawnStatuses: vi.fn(() =>
+      resolved({
+        statuses: {},
+        runId: 'run-2',
+        updatedAt: new Date().toISOString(),
+      })
+    ),
+    runLiveRosterMutation: vi.fn(
+      async (_teamName: string, mutation: () => Promise<void>): Promise<void> => mutation()
+    ),
+    restartMember: vi.fn(() => resolvedUndefined()),
+    retryFailedOpenCodeSecondaryLanes: vi.fn(() =>
+      resolved({
+        attempted: [],
+        confirmed: [],
+        pending: [],
+        failed: [],
+        skipped: [],
+      })
+    ),
+    skipMemberForLaunch: vi.fn(() => resolvedUndefined()),
     stopTeam: vi.fn(() => Promise.resolve()),
     repairStaleTaskActivityIntervalsBeforeSnapshot: vi.fn(() => Promise.resolve(undefined)),
-    reattachOpenCodeOwnedMemberLane: vi.fn(async () => undefined),
-    detachOpenCodeOwnedMemberLane: vi.fn(async () => undefined),
-    attachLiveRosterMember: vi.fn(async () => undefined),
-    detachLiveRosterMember: vi.fn(async () => undefined),
+    attachLiveRosterMember: vi.fn(() => resolvedUndefined()),
+    detachLiveRosterMember: vi.fn(() => resolvedUndefined()),
   };
+  const teamHandlerApis = {
+    provisioningStart: {
+      createTeam: teamHandlerMocks.createTeam,
+      launchTeam: teamHandlerMocks.launchTeam,
+    },
+    provisioningStatus: {
+      getProvisioningStatus: teamHandlerMocks.getProvisioningStatus,
+    },
+    preflight: {
+      getCliHelpOutput: teamHandlerMocks.getCliHelpOutput,
+      prepareForProvisioning: teamHandlerMocks.prepareForProvisioning,
+    },
+    provisioningRun: {
+      cancelProvisioning: teamHandlerMocks.cancelProvisioning,
+      hasProvisioningRun: teamHandlerMocks.hasProvisioningRun,
+    },
+    taskActivity: {
+      repairStaleTaskActivityIntervalsBeforeSnapshot:
+        teamHandlerMocks.repairStaleTaskActivityIntervalsBeforeSnapshot,
+    },
+    runtime: {
+      getRuntimeState: teamHandlerMocks.getRuntimeState,
+      stopTeam: teamHandlerMocks.stopTeam,
+      isTeamAlive: teamHandlerMocks.isTeamAlive,
+      getAliveTeams: teamHandlerMocks.getAliveTeams,
+      getCurrentRunId: teamHandlerMocks.getCurrentRunId,
+    },
+    memberLifecycle: {
+      getMemberSpawnStatuses: teamHandlerMocks.getMemberSpawnStatuses,
+      runLiveRosterMutation: teamHandlerMocks.runLiveRosterMutation,
+      attachLiveRosterMember: teamHandlerMocks.attachLiveRosterMember,
+      detachLiveRosterMember: teamHandlerMocks.detachLiveRosterMember,
+      restartMember: teamHandlerMocks.restartMember,
+      retryFailedOpenCodeSecondaryLanes: teamHandlerMocks.retryFailedOpenCodeSecondaryLanes,
+      skipMemberForLaunch: teamHandlerMocks.skipMemberForLaunch,
+    },
+    diagnostics: {
+      getLeadActivityState: teamHandlerMocks.getLeadActivityState,
+      getLeadContextUsage: teamHandlerMocks.getLeadContextUsage,
+      getTeamAgentRuntimeSnapshot: teamHandlerMocks.getTeamAgentRuntimeSnapshot,
+    },
+    claudeLogs: {
+      getClaudeLogs: teamHandlerMocks.getClaudeLogs,
+    },
+    messaging: {
+      sendMessageToTeam: teamHandlerMocks.sendMessageToTeam,
+      relayOpenCodeMemberInboxMessages: teamHandlerMocks.relayOpenCodeMemberInboxMessages,
+      relayLeadInboxMessages: teamHandlerMocks.relayLeadInboxMessages,
+      getOpenCodeRuntimeDeliveryStatus: teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus,
+      resolveRuntimeRecipientProviderId: teamHandlerMocks.resolveRuntimeRecipientProviderId,
+      getLiveLeadProcessMessages: teamHandlerMocks.getLiveLeadProcessMessages,
+      getCurrentLeadSessionId: teamHandlerMocks.getCurrentLeadSessionId,
+      pushLiveLeadProcessMessage: teamHandlerMocks.pushLiveLeadProcessMessage,
+    },
+    toolApproval: {
+      respondToToolApproval: teamHandlerMocks.respondToToolApproval,
+      updateToolApprovalSettings: teamHandlerMocks.updateToolApprovalSettings,
+    },
+  } satisfies TeamIpcHandlerApis;
   const boardTaskActivityService = {
-    getTaskActivity: vi.fn<() => Promise<BoardTaskActivityEntry[]>>(async () => []),
+    getTaskActivity: vi.fn<() => Promise<BoardTaskActivityEntry[]>>(() => resolved([])),
   };
   const boardTaskActivityDetailService = {
-    getTaskActivityDetail: vi.fn<() => Promise<BoardTaskActivityDetailResult>>(async () => ({
-      status: 'missing',
-    })),
+    getTaskActivityDetail: vi.fn<() => Promise<BoardTaskActivityDetailResult>>(() =>
+      resolved({
+        status: 'missing',
+      })
+    ),
   };
   const boardTaskLogStreamService = {
-    getTaskLogStream: vi.fn<() => Promise<BoardTaskLogStreamResponse>>(async () => ({
-      participants: [],
-      defaultFilter: 'all',
-      segments: [],
-    })),
+    getTaskLogStream: vi.fn<() => Promise<BoardTaskLogStreamResponse>>(() =>
+      resolved({
+        participants: [],
+        defaultFilter: 'all',
+        segments: [],
+      })
+    ),
   };
   const boardTaskExactLogsService = {
-    getTaskExactLogSummaries: vi.fn<() => Promise<BoardTaskExactLogSummariesResponse>>(
-      async () => ({ items: [] })
+    getTaskExactLogSummaries: vi.fn<() => Promise<BoardTaskExactLogSummariesResponse>>(() =>
+      resolved({ items: [] })
     ),
   };
   const boardTaskExactLogDetailService = {
-    getTaskExactLogDetail: vi.fn<() => Promise<BoardTaskExactLogDetailResult>>(async () => ({
-      status: 'missing',
-    })),
+    getTaskExactLogDetail: vi.fn<() => Promise<BoardTaskExactLogDetailResult>>(() =>
+      resolved({
+        status: 'missing',
+      })
+    ),
   };
 
   beforeEach(() => {
@@ -430,24 +706,24 @@ describe('ipc teams handlers', () => {
     mockTeamDataWorkerClient.invalidateTeamConfig.mockReset();
     mockTeamDataWorkerClient.invalidateTeamMessageFeed.mockReset();
     mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory.mockReset();
-    provisioningService.sendMessageToTeam.mockReset();
-    provisioningService.sendMessageToTeam.mockResolvedValue(undefined);
-    provisioningService.resolveRuntimeRecipientProviderId.mockReset();
-    provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValue(undefined);
-    provisioningService.prepareLiveMemberMcpLaunchConfig.mockReset();
-    provisioningService.prepareLiveMemberMcpLaunchConfig.mockResolvedValue(null);
-    provisioningService.discardLiveMemberMcpLaunchConfig.mockReset();
-    provisioningService.discardLiveMemberMcpLaunchConfig.mockResolvedValue(undefined);
-    provisioningService.attachLiveRosterMember.mockReset();
-    provisioningService.attachLiveRosterMember.mockResolvedValue(undefined);
-    provisioningService.detachLiveRosterMember.mockReset();
-    provisioningService.detachLiveRosterMember.mockResolvedValue(undefined);
-    provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot.mockReset();
-    provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot.mockResolvedValue(undefined);
+    teamHandlerMocks.getCliHelpOutput.mockReset();
+    teamHandlerMocks.getCliHelpOutput.mockResolvedValue('Usage');
+    teamHandlerMocks.sendMessageToTeam.mockReset();
+    teamHandlerMocks.sendMessageToTeam.mockResolvedValue(undefined);
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockReset();
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValue(undefined);
+    teamHandlerMocks.attachLiveRosterMember.mockReset();
+    teamHandlerMocks.attachLiveRosterMember.mockResolvedValue(undefined);
+    teamHandlerMocks.detachLiveRosterMember.mockReset();
+    teamHandlerMocks.detachLiveRosterMember.mockResolvedValue(undefined);
+    teamHandlerMocks.isTeamAlive.mockReset();
+    teamHandlerMocks.isTeamAlive.mockReturnValue(true);
+    teamHandlerMocks.repairStaleTaskActivityIntervalsBeforeSnapshot.mockReset();
+    teamHandlerMocks.repairStaleTaskActivityIntervalsBeforeSnapshot.mockResolvedValue(undefined);
     launchIoGovernor = new LaunchIoGovernor({ quietWindowMs: 100 });
     initializeTeamHandlers(
       service as never,
-      provisioningService as never,
+      teamHandlerApis,
       undefined,
       undefined,
       undefined,
@@ -459,7 +735,8 @@ describe('ipc teams handlers', () => {
       boardTaskLogStreamService as never,
       boardTaskExactLogsService as never,
       boardTaskExactLogDetailService as never,
-      launchIoGovernor
+      launchIoGovernor,
+      permanentDeletionLifecycle
     );
     registerTeamHandlers(ipcMain as never);
   });
@@ -472,64 +749,30 @@ describe('ipc teams handlers', () => {
   });
 
   it('registers all expected handlers', () => {
-    expect(handlers.has(TEAM_LIST)).toBe(true);
-    expect(handlers.has(TEAM_GET_DATA)).toBe(true);
-    expect(handlers.has(TEAM_GET_MESSAGES_PAGE)).toBe(true);
-    expect(handlers.has(TEAM_GET_MEMBER_ACTIVITY_META)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_CHANGE_PRESENCE)).toBe(true);
-    expect(handlers.has(TEAM_SET_CHANGE_PRESENCE_TRACKING)).toBe(true);
-    expect(handlers.has(TEAM_DELETE_TEAM)).toBe(true);
-    expect(handlers.has(TEAM_PREPARE_PROVISIONING)).toBe(true);
-    expect(handlers.has(TEAM_CREATE)).toBe(true);
-    expect(handlers.has(TEAM_LAUNCH)).toBe(true);
-    expect(handlers.has(TEAM_CREATE_TASK)).toBe(true);
-    expect(handlers.has(TEAM_PROVISIONING_STATUS)).toBe(true);
-    expect(handlers.has(TEAM_CANCEL_PROVISIONING)).toBe(true);
-    expect(handlers.has(TEAM_SEND_MESSAGE)).toBe(true);
-    expect(handlers.has(TEAM_REQUEST_REVIEW)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_KANBAN)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_KANBAN_COLUMN_ORDER)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_TASK_STATUS)).toBe(true);
-    expect(handlers.has(TEAM_START_TASK)).toBe(true);
-    expect(handlers.has(TEAM_PROCESS_SEND)).toBe(true);
-    expect(handlers.has(TEAM_PROCESS_ALIVE)).toBe(true);
-    expect(handlers.has(TEAM_ALIVE_LIST)).toBe(true);
-    expect(handlers.has(TEAM_STOP)).toBe(true);
-    expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(true);
-    expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(true);
-    expect(handlers.has(TEAM_GET_LOGS_FOR_TASK)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_ACTIVITY)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_LOG_STREAM)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_EXACT_LOG_SUMMARIES)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_EXACT_LOG_DETAIL)).toBe(true);
-    expect(handlers.has(TEAM_GET_MEMBER_STATS)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_CONFIG)).toBe(true);
-    expect(handlers.has(TEAM_GET_ALL_TASKS)).toBe(true);
-    expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(true);
-    expect(handlers.has(TEAM_ADD_MEMBER)).toBe(true);
-    expect(handlers.has(TEAM_REMOVE_MEMBER)).toBe(true);
-    expect(handlers.has(TEAM_RESTORE_MEMBER)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_MEMBER_ROLE)).toBe(true);
-    expect(handlers.has(TEAM_KILL_PROCESS)).toBe(true);
-    expect(handlers.has(TEAM_LEAD_ACTIVITY)).toBe(true);
-    expect(handlers.has(TEAM_SOFT_DELETE_TASK)).toBe(true);
-    expect(handlers.has(TEAM_GET_DELETED_TASKS)).toBe(true);
-    expect(handlers.has(TEAM_SET_TASK_CLARIFICATION)).toBe(true);
-    expect(handlers.has(TEAM_RESTORE)).toBe(true);
-    expect(handlers.has(TEAM_PERMANENTLY_DELETE)).toBe(true);
-    expect(handlers.has(TEAM_ADD_TASK_RELATIONSHIP)).toBe(true);
-    expect(handlers.has(TEAM_REMOVE_TASK_RELATIONSHIP)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_TASK_OWNER)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_TASK_FIELDS)).toBe(true);
-    expect(handlers.has(TEAM_REPLACE_MEMBERS)).toBe(true);
-    expect(handlers.has(TEAM_GET_PROJECT_BRANCH)).toBe(true);
-    expect(handlers.has(TEAM_GET_ATTACHMENTS)).toBe(true);
-    expect(handlers.has(TEAM_LEAD_CONTEXT)).toBe(true);
-    expect(handlers.has(TEAM_RESTORE_TASK)).toBe(true);
-    expect(handlers.has(TEAM_SHOW_MESSAGE_NOTIFICATION)).toBe(true);
-    expect(handlers.has(TEAM_SAVE_TASK_ATTACHMENT)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_ATTACHMENT)).toBe(true);
-    expect(handlers.has(TEAM_DELETE_TASK_ATTACHMENT)).toBe(true);
+    expect(ipcMain.handle).toHaveBeenCalledTimes(TEAM_HANDLER_KEYS.length);
+    expect(new Set(handlers.keys())).toEqual(new Set(TEAM_HANDLER_KEYS));
+  });
+
+  it('preserves narrow facade receivers when a team handler invokes its runtime dependency', async () => {
+    const runtimeCalls: string[] = [];
+    const runtimeFacade = {
+      ...teamHandlerApis.runtime,
+      stopTeam(teamName: string): Promise<void> {
+        if (this !== runtimeFacade) throw new Error('runtime facade receiver lost');
+        runtimeCalls.push(`stop:${teamName}`);
+        return Promise.resolve();
+      },
+    };
+
+    initializeTeamHandlers(service as never, {
+      ...teamHandlerApis,
+      runtime: runtimeFacade,
+    });
+
+    const result = await handlers.get(TEAM_STOP)!({} as never, 'my-team');
+
+    expect(result).toEqual({ success: true, data: undefined });
+    expect(runtimeCalls).toEqual(['stop:my-team']);
   });
 
   it('forwards selected model checks with effort to prepareProvisioning', async () => {
@@ -552,7 +795,7 @@ describe('ipc teams handlers', () => {
     )) as { success: boolean };
 
     expect(result.success).toBe(true);
-    expect(provisioningService.prepareForProvisioning).toHaveBeenCalledWith(os.tmpdir(), {
+    expect(teamHandlerMocks.prepareForProvisioning).toHaveBeenCalledWith(os.tmpdir(), {
       providerId: 'anthropic',
       providerIds: ['anthropic'],
       modelIds: ['claude-opus-4-6[1m]'],
@@ -589,6 +832,123 @@ describe('ipc teams handlers', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('selectedModelChecks effort must be one of');
+  });
+
+  it.each([
+    { kind: 'omitted', selectedModels: undefined, expectedModelIds: undefined },
+    { kind: 'empty', selectedModels: [], expectedModelIds: [] },
+    {
+      kind: 'trimmed and deduplicated',
+      selectedModels: [' model-b ', 'model-a', 'model-b'],
+      expectedModelIds: ['model-b', 'model-a'],
+    },
+  ])('preserves $kind selected model input', async ({ selectedModels, expectedModelIds }) => {
+    const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+    const result = (await handler(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'anthropic',
+      ['anthropic'],
+      selectedModels
+    )) as { success: boolean };
+
+    expect(result.success).toBe(true);
+    expect(teamHandlerMocks.prepareForProvisioning).toHaveBeenCalledWith(
+      os.tmpdir(),
+      expect.objectContaining({ modelIds: expectedModelIds })
+    );
+  });
+
+  it.each([
+    { kind: 'non-string', selectedModels: ['claude-opus-4-6', 42] },
+    { kind: 'undefined', selectedModels: ['claude-opus-4-6', undefined] },
+    { kind: 'empty', selectedModels: ['claude-opus-4-6', '   '] },
+    { kind: 'fully sparse', selectedModels: new Array<string>(2) },
+    {
+      kind: 'mixed sparse',
+      selectedModels: Object.assign(new Array<string>(2), { 0: 'claude-opus-4-6' }),
+    },
+  ])(
+    'rejects $kind selected model entries before preflight dispatch',
+    async ({ selectedModels }) => {
+      const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+      const result = (await handler(
+        { sender: { send: vi.fn() } } as never,
+        os.tmpdir(),
+        'anthropic',
+        ['anthropic'],
+        selectedModels
+      )) as { success: boolean; error: string };
+
+      expect(result).toEqual({
+        success: false,
+        error: 'selectedModels entries must be non-empty strings',
+      });
+      expect(teamHandlerMocks.prepareForProvisioning).not.toHaveBeenCalled();
+    }
+  );
+
+  it('rejects a sparse selected model inherited from Array.prototype before preflight dispatch', async () => {
+    const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+    const inheritedIndex = 1_000;
+    const originalDescriptor = Object.getOwnPropertyDescriptor(Array.prototype, inheritedIndex);
+    const selectedModels = Array.from({ length: inheritedIndex + 1 }, () => 'own-model');
+    Reflect.deleteProperty(selectedModels, inheritedIndex);
+
+    Object.defineProperty(Array.prototype, inheritedIndex, {
+      configurable: true,
+      value: 'inherited-model',
+      writable: true,
+    });
+    try {
+      const result = (await handler(
+        { sender: { send: vi.fn() } } as never,
+        os.tmpdir(),
+        'anthropic',
+        ['anthropic'],
+        selectedModels
+      )) as { success: boolean; error: string };
+
+      expect(result).toEqual({
+        success: false,
+        error: 'selectedModels entries must be non-empty strings',
+      });
+      expect(teamHandlerMocks.prepareForProvisioning).not.toHaveBeenCalled();
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(Array.prototype, inheritedIndex, originalDescriptor);
+      } else {
+        Reflect.deleteProperty(Array.prototype, inheritedIndex);
+      }
+    }
+  });
+
+  it('rejects a proxy-backed sparse selected model before invoking its get trap or preflight', async () => {
+    const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+    const getTrap = vi.fn((target: string[], property: string | symbol, receiver: unknown) => {
+      if (property === '1') {
+        return 'proxy-model';
+      }
+      return Reflect.get(target, property, receiver);
+    });
+    const sparseTarget = ['own-model', 'deleted-model', 'later-own-model'];
+    Reflect.deleteProperty(sparseTarget, 1);
+    const selectedModels = new Proxy(sparseTarget, { get: getTrap });
+
+    const result = (await handler(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'anthropic',
+      ['anthropic'],
+      selectedModels
+    )) as { success: boolean; error: string };
+
+    expect(result).toEqual({
+      success: false,
+      error: 'selectedModels entries must be non-empty strings',
+    });
+    expect(getTrap.mock.calls.map(([, property]) => property)).not.toContain('1');
+    expect(teamHandlerMocks.prepareForProvisioning).not.toHaveBeenCalled();
   });
 
   it('updates change presence tracking for a team', async () => {
@@ -653,7 +1013,7 @@ describe('ipc teams handlers', () => {
     boardTaskExactLogsService.getTaskExactLogSummaries.mockResolvedValueOnce({
       items: [
         {
-          id: 'tool:/tmp/task.jsonl:tool-1',
+          id: TASK_LOG_BUNDLE_ID,
           timestamp: '2026-04-12T16:00:00.000Z',
           actor: {
             memberName: 'alice',
@@ -663,7 +1023,7 @@ describe('ipc teams handlers', () => {
             isSidechain: true,
           },
           source: {
-            filePath: '/tmp/task.jsonl',
+            filePath: TASK_LOG_JSONL_PATH,
             messageUuid: 'msg-1',
             toolUseId: 'tool-1',
             sourceOrder: 1,
@@ -738,7 +1098,7 @@ describe('ipc teams handlers', () => {
     boardTaskExactLogDetailService.getTaskExactLogDetail.mockResolvedValueOnce({
       status: 'ok',
       detail: {
-        id: 'tool:/tmp/task.jsonl:tool-1',
+        id: TASK_LOG_BUNDLE_ID,
         chunks: [],
       },
     });
@@ -750,7 +1110,7 @@ describe('ipc teams handlers', () => {
       {} as never,
       'my-team',
       '123e4567-e89b-12d3-a456-426614174000',
-      'tool:/tmp/task.jsonl:tool-1',
+      TASK_LOG_BUNDLE_ID,
       'gen-1'
     )) as {
       success: boolean;
@@ -762,7 +1122,7 @@ describe('ipc teams handlers', () => {
     expect(boardTaskExactLogDetailService.getTaskExactLogDetail).toHaveBeenCalledWith(
       'my-team',
       '123e4567-e89b-12d3-a456-426614174000',
-      'tool:/tmp/task.jsonl:tool-1',
+      TASK_LOG_BUNDLE_ID,
       'gen-1'
     );
   });
@@ -779,7 +1139,7 @@ describe('ipc teams handlers', () => {
       {} as never,
       'my-team',
       '123e4567-e89b-12d3-a456-426614174000',
-      'tool:/tmp/task.jsonl:tool-1',
+      TASK_LOG_BUNDLE_ID,
       'gen-2'
     )) as {
       success: boolean;
@@ -803,7 +1163,7 @@ describe('ipc teams handlers', () => {
   });
 
   it('uses Agent Teams MCP reply instructions for Codex user direct messages', async () => {
-    provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('codex');
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('codex');
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
 
@@ -835,7 +1195,7 @@ describe('ipc teams handlers', () => {
   it.each([['anthropic' as const], ['gemini' as const], [undefined]])(
     'keeps SendMessage reply instructions for %s user direct messages',
     async (providerId) => {
-      provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce(providerId);
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce(providerId);
       const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
       expect(sendHandler).toBeDefined();
 
@@ -857,8 +1217,8 @@ describe('ipc teams handlers', () => {
   );
 
   it('stores base text and returns runtimeDelivery success for OpenCode teammate sends', async () => {
-    provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
-    provisioningService.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
       relayed: 1,
       attempted: 1,
       delivered: 1,
@@ -899,7 +1259,7 @@ describe('ipc teams handlers', () => {
         text: expect.stringContaining('SendMessage'),
       })
     );
-    expect(provisioningService.relayOpenCodeMemberInboxMessages).toHaveBeenCalledWith(
+    expect(teamHandlerMocks.relayOpenCodeMemberInboxMessages).toHaveBeenCalledWith(
       'my-team',
       'bob',
       expect.objectContaining({
@@ -924,19 +1284,19 @@ describe('ipc teams handlers', () => {
       laneId: 'secondary:opencode:bob',
       diagnostics: ['opencode_delivery_response_pending'],
     });
-    expect(provisioningService.getOpenCodeRuntimeDeliveryStatus).not.toHaveBeenCalled();
+    expect(teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus).not.toHaveBeenCalled();
   });
 
   it('hydrates bare OpenCode read-shortcut relay success from durable delivery status', async () => {
-    provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
-    provisioningService.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
       relayed: 0,
       attempted: 1,
       delivered: 1,
       failed: 0,
       lastDelivery: { delivered: true },
     });
-    provisioningService.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce({
+    teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce({
       messageId: 'm1',
       providerId: 'opencode',
       attempted: true,
@@ -961,10 +1321,7 @@ describe('ipc teams handlers', () => {
     })) as { success: boolean; data?: SendMessageResult };
 
     expect(result.success).toBe(true);
-    expect(provisioningService.getOpenCodeRuntimeDeliveryStatus).toHaveBeenCalledWith(
-      'my-team',
-      'm1'
-    );
+    expect(teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus).toHaveBeenCalledWith('my-team', 'm1');
     expect(result.data?.runtimeDelivery).toMatchObject({
       providerId: 'opencode',
       attempted: true,
@@ -982,8 +1339,8 @@ describe('ipc teams handlers', () => {
   });
 
   it('returns runtimeDelivery failure without hiding the persisted OpenCode message', async () => {
-    provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
-    provisioningService.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
       relayed: 0,
       attempted: 1,
       delivered: 0,
@@ -1017,8 +1374,8 @@ describe('ipc teams handlers', () => {
   });
 
   it('returns runtimeDelivery acceptanceUnknown for OpenCode observe-pending timeout sends', async () => {
-    provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
-    provisioningService.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
       relayed: 0,
       attempted: 1,
       delivered: 0,
@@ -1057,11 +1414,11 @@ describe('ipc teams handlers', () => {
   it('maps OpenCode UI relay timeout to pending acceptance-unknown delivery', async () => {
     vi.useFakeTimers();
     try {
-      provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
-      provisioningService.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+      teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
         new Promise(() => undefined)
       );
-      provisioningService.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce(null);
+      teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce(null);
       const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
       expect(sendHandler).toBeDefined();
 
@@ -1083,7 +1440,7 @@ describe('ipc teams handlers', () => {
         responseState: 'not_observed',
         reason: 'opencode_runtime_delivery_ui_timeout_pending',
       });
-      expect(provisioningService.getOpenCodeRuntimeDeliveryStatus).toHaveBeenCalledWith(
+      expect(teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus).toHaveBeenCalledWith(
         'my-team',
         result.data?.messageId
       );
@@ -1095,11 +1452,11 @@ describe('ipc teams handlers', () => {
   it('uses durable OpenCode delivery status when UI relay timeout fires after prompt acceptance', async () => {
     vi.useFakeTimers();
     try {
-      provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
-      provisioningService.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+      teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
         new Promise(() => undefined)
       );
-      provisioningService.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce({
+      teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce({
         messageId: 'msg-123',
         providerId: 'opencode',
         attempted: true,
@@ -1113,9 +1470,6 @@ describe('ipc teams handlers', () => {
         reason: 'opencode_delivery_response_pending',
         diagnostics: ['prompt accepted'],
         userVisibleImpact: { state: 'none' },
-      });
-      provisioningService.buildOpenCodeRuntimeDeliveryUserVisibleImpact.mockReturnValueOnce({
-        state: 'checking',
       });
       const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
       expect(sendHandler).toBeDefined();
@@ -1144,15 +1498,6 @@ describe('ipc teams handlers', () => {
         userVisibleImpact: { state: 'checking' },
       });
       expect(result.data?.runtimeDelivery?.acceptanceUnknown).toBeUndefined();
-      const impactCalls = provisioningService.buildOpenCodeRuntimeDeliveryUserVisibleImpact.mock
-        .calls as unknown as Array<[Partial<NonNullable<SendMessageResult['runtimeDelivery']>>]>;
-      const impactInput = impactCalls.at(-1)?.[0];
-      expect(impactInput).toMatchObject({
-        delivered: true,
-        accepted: true,
-        responsePending: true,
-      });
-      expect(impactInput).not.toHaveProperty('userVisibleImpact');
     } finally {
       vi.useRealTimers();
     }
@@ -1161,11 +1506,11 @@ describe('ipc teams handlers', () => {
   it('preserves terminal durable OpenCode delivery status after UI relay timeout', async () => {
     vi.useFakeTimers();
     try {
-      provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
-      provisioningService.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+      teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
         new Promise(() => undefined)
       );
-      provisioningService.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce({
+      teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce({
         messageId: 'msg-responded',
         providerId: 'opencode',
         attempted: true,
@@ -1209,9 +1554,6 @@ describe('ipc teams handlers', () => {
         acceptanceUnknown: false,
         userVisibleImpact: { state: 'none' },
       });
-      expect(
-        provisioningService.buildOpenCodeRuntimeDeliveryUserVisibleImpact
-      ).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }
@@ -1220,11 +1562,11 @@ describe('ipc teams handlers', () => {
   it('does not let a slow OpenCode delivery status lookup extend the UI timeout indefinitely', async () => {
     vi.useFakeTimers();
     try {
-      provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
-      provisioningService.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+      teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
         new Promise(() => undefined)
       );
-      provisioningService.getOpenCodeRuntimeDeliveryStatus.mockReturnValueOnce(
+      teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockReturnValueOnce(
         new Promise(() => undefined)
       );
       const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
@@ -1264,11 +1606,11 @@ describe('ipc teams handlers', () => {
   it('falls back to acceptance-unknown when OpenCode delivery status lookup rejects after UI timeout', async () => {
     vi.useFakeTimers();
     try {
-      provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
-      provisioningService.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+      teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
         new Promise(() => undefined)
       );
-      provisioningService.getOpenCodeRuntimeDeliveryStatus.mockRejectedValueOnce(
+      teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockRejectedValueOnce(
         new Error('status read failed')
       );
       const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
@@ -1311,13 +1653,11 @@ describe('ipc teams handlers', () => {
     try {
       const deferredRelay =
         createDeferred<
-          Awaited<ReturnType<typeof provisioningService.relayOpenCodeMemberInboxMessages>>
+          Awaited<ReturnType<typeof teamHandlerMocks.relayOpenCodeMemberInboxMessages>>
         >();
-      provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
-      provisioningService.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
-        deferredRelay.promise
-      );
-      provisioningService.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce(null);
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+      teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(deferredRelay.promise);
+      teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce(null);
       const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
       expect(sendHandler).toBeDefined();
 
@@ -1348,13 +1688,11 @@ describe('ipc teams handlers', () => {
     try {
       const deferredRelay =
         createDeferred<
-          Awaited<ReturnType<typeof provisioningService.relayOpenCodeMemberInboxMessages>>
+          Awaited<ReturnType<typeof teamHandlerMocks.relayOpenCodeMemberInboxMessages>>
         >();
-      provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
-      provisioningService.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
-        deferredRelay.promise
-      );
-      provisioningService.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce(null);
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
+      teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(deferredRelay.promise);
+      teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockResolvedValueOnce(null);
       const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
       expect(sendHandler).toBeDefined();
 
@@ -1401,12 +1739,12 @@ describe('ipc teams handlers', () => {
     })) as { success: boolean };
 
     expect(result.success).toBe(true);
-    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+    expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
       'my-team',
       expect.stringContaining('TURN ACTION MODE: ASK'),
       undefined
     );
-    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+    expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
       'my-team',
       expect.stringContaining(
         'FORBIDDEN: editing files, changing code, changing task/board state, delegating work, launching Agent/subagents'
@@ -1439,19 +1777,19 @@ describe('ipc teams handlers', () => {
     })) as { success: boolean };
 
     expect(result.success).toBe(true);
-    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+    expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
       'my-team',
       expect.stringContaining('Current durable team context:'),
       undefined
     );
-    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+    expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
       'my-team',
       expect.stringContaining(
         'Persistent teammates currently configured: alice (reviewer), jack (developer)'
       ),
       undefined
     );
-    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+    expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
       'my-team',
       expect.stringContaining('This team is NOT in solo mode'),
       undefined
@@ -1469,12 +1807,12 @@ describe('ipc teams handlers', () => {
     })) as { success: boolean };
 
     expect(result.success).toBe(true);
-    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+    expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
       'my-team',
       expect.stringContaining('DELEGATE MODE USER ACK CONTRACT:'),
       undefined
     );
-    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+    expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
       'my-team',
       expect.stringContaining(
         'Make the acknowledgement at least 40 characters so it is preserved in the Messages panel.'
@@ -1502,10 +1840,10 @@ describe('ipc teams handlers', () => {
     })) as { success: boolean };
 
     expect(result.success).toBe(true);
-    const stdinCall = vi.mocked(provisioningService.sendMessageToTeam).mock.calls[0] as
+    const stdinCall = vi.mocked(teamHandlerMocks.sendMessageToTeam).mock.calls[0] as
       | unknown[]
       | undefined;
-    expect(String(stdinCall?.[1] ?? '')).not.toContain('Current durable team context:');
+    expect(secondMockArgString(stdinCall)).not.toContain('Current durable team context:');
   });
 
   it('sends standalone slash commands to lead stdin without the UI routing wrapper', async () => {
@@ -1518,16 +1856,17 @@ describe('ipc teams handlers', () => {
     })) as { success: boolean };
 
     expect(result.success).toBe(true);
-    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+    expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
       'my-team',
       '/COMPACT keep kanban',
       undefined
     );
-    const compactCall = vi.mocked(provisioningService.sendMessageToTeam).mock.calls as unknown[][];
-    expect(String(compactCall[0]?.[1] ?? '')).not.toContain(
+    const compactCall = vi.mocked(teamHandlerMocks.sendMessageToTeam).mock.calls as unknown[][];
+    const [firstCompactCall] = compactCall;
+    expect(secondMockArgString(firstCompactCall)).not.toContain(
       'You received a direct message from the user'
     );
-    expect(String(compactCall[0]?.[1] ?? '')).not.toContain('Current durable team context:');
+    expect(secondMockArgString(firstCompactCall)).not.toContain('Current durable team context:');
     expect(service.sendDirectToLead).toHaveBeenCalledWith(
       'my-team',
       'team-lead',
@@ -1549,17 +1888,20 @@ describe('ipc teams handlers', () => {
     })) as { success: boolean };
 
     expect(result.success).toBe(true);
-    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+    expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
       'my-team',
       '/foo bar',
       undefined
     );
-    const unknownSlashCall = vi.mocked(provisioningService.sendMessageToTeam).mock
+    const unknownSlashCall = vi.mocked(teamHandlerMocks.sendMessageToTeam).mock
       .calls as unknown[][];
-    expect(String(unknownSlashCall[0]?.[1] ?? '')).not.toContain(
+    const [firstUnknownSlashCall] = unknownSlashCall;
+    expect(secondMockArgString(firstUnknownSlashCall)).not.toContain(
       'You received a direct message from the user'
     );
-    expect(String(unknownSlashCall[0]?.[1] ?? '')).not.toContain('Current durable team context:');
+    expect(secondMockArgString(firstUnknownSlashCall)).not.toContain(
+      'Current durable team context:'
+    );
     expect(service.sendDirectToLead).toHaveBeenCalledWith(
       'my-team',
       'team-lead',
@@ -1591,7 +1933,7 @@ describe('ipc teams handlers', () => {
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
         'my-team',
         expect.stringContaining('You received a direct message from the user'),
         expect.arrayContaining([
@@ -1609,8 +1951,8 @@ describe('ipc teams handlers', () => {
   it('preserves attachment delivery errors when the lead process is still alive', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
-    provisioningService.isTeamAlive.mockReturnValue(true);
-    provisioningService.sendMessageToTeam.mockRejectedValueOnce(
+    teamHandlerMocks.isTeamAlive.mockReturnValue(true);
+    teamHandlerMocks.sendMessageToTeam.mockRejectedValueOnce(
       new Error('Claude attachment MIME unsupported: image/avif')
     );
 
@@ -1640,8 +1982,8 @@ describe('ipc teams handlers', () => {
   it('reports attachment delivery as unavailable only when liveness confirms it', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
-    provisioningService.isTeamAlive.mockReturnValueOnce(true).mockReturnValueOnce(false);
-    provisioningService.sendMessageToTeam.mockRejectedValueOnce(new Error('write EPIPE'));
+    teamHandlerMocks.isTeamAlive.mockReturnValueOnce(true).mockReturnValueOnce(false);
+    teamHandlerMocks.sendMessageToTeam.mockRejectedValueOnce(new Error('write EPIPE'));
 
     const result = (await sendHandler!({} as never, 'my-team', {
       member: 'team-lead',
@@ -1693,19 +2035,19 @@ describe('ipc teams handlers', () => {
       cwd: os.tmpdir(),
     })) as { success: boolean };
     expect(createResult.success).toBe(true);
-    expect(provisioningService.createTeam).toHaveBeenCalledTimes(1);
+    expect(teamHandlerMocks.createTeam).toHaveBeenCalledTimes(1);
 
     const statusResult = (await handlers.get(TEAM_PROVISIONING_STATUS)!({} as never, 'run-1')) as {
       success: boolean;
     };
     expect(statusResult.success).toBe(true);
-    expect(provisioningService.getProvisioningStatus).toHaveBeenCalledWith('run-1');
+    expect(teamHandlerMocks.getProvisioningStatus).toHaveBeenCalledWith('run-1');
 
     const cancelResult = (await handlers.get(TEAM_CANCEL_PROVISIONING)!({} as never, 'run-1')) as {
       success: boolean;
     };
     expect(cancelResult.success).toBe(true);
-    expect(provisioningService.cancelProvisioning).toHaveBeenCalledWith('run-1');
+    expect(teamHandlerMocks.cancelProvisioning).toHaveBeenCalledWith('run-1');
 
     const reviewResult = (await handlers.get(TEAM_REQUEST_REVIEW)!(
       {} as never,
@@ -1730,9 +2072,9 @@ describe('ipc teams handlers', () => {
 
   it('marks created teams engaged before provisioning writes startup artifacts', async () => {
     const createTeam = 'created-watch-scope';
-    provisioningService.createTeam.mockImplementationOnce(async () => {
+    teamHandlerMocks.createTeam.mockImplementationOnce(() => {
       expect(computeTeamWatchScope()?.has(createTeam)).toBe(true);
-      return { runId: 'run-created-watch-scope' };
+      return resolved({ runId: 'run-created-watch-scope' });
     });
 
     const result = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
@@ -1855,7 +2197,7 @@ describe('ipc teams handlers', () => {
       success: boolean;
     };
     expect(first.success).toBe(true);
-    provisioningService.createTeam.mockRejectedValueOnce(new Error('bootstrap failed early'));
+    teamHandlerMocks.createTeam.mockRejectedValueOnce(new Error('bootstrap failed early'));
     service.listTeams
       .mockResolvedValueOnce([{ teamName: 'background-fresh', displayName: 'Background Fresh' }])
       .mockResolvedValueOnce([{ teamName: 'fresh-team', displayName: 'Fresh' }]);
@@ -1892,7 +2234,7 @@ describe('ipc teams handlers', () => {
   });
 
   it('keeps TEAM_GET_DATA structural and does not expose message transport', async () => {
-    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([
+    teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([
       {
         from: 'team-lead',
         text: 'Hello there',
@@ -1996,11 +2338,11 @@ describe('ipc teams handlers', () => {
     };
 
     expect(result.success).toBe(true);
-    expect(provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot).toHaveBeenCalledWith(
+    expect(teamHandlerMocks.repairStaleTaskActivityIntervalsBeforeSnapshot).toHaveBeenCalledWith(
       'my-team'
     );
     expect(
-      provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot.mock.invocationCallOrder[0]
+      teamHandlerMocks.repairStaleTaskActivityIntervalsBeforeSnapshot.mock.invocationCallOrder[0]
     ).toBeLessThan(mockTeamDataWorkerClient.getTeamData.mock.invocationCallOrder[0]);
   });
 
@@ -2093,7 +2435,7 @@ describe('ipc teams handlers', () => {
       path.join(teamDir, 'team.meta.json'),
       JSON.stringify({
         version: 1,
-        cwd: '/tmp/draft-team',
+        cwd: DRAFT_TEAM_CWD,
         createdAt: Date.now(),
       })
     );
@@ -2124,7 +2466,7 @@ describe('ipc teams handlers', () => {
       path.join(teamDir, 'team.meta.json'),
       JSON.stringify({
         version: 1,
-        cwd: '/tmp/draft-team',
+        cwd: DRAFT_TEAM_CWD,
         createdAt: Date.now(),
       })
     );
@@ -2154,7 +2496,7 @@ describe('ipc teams handlers', () => {
     const { TeamMetaStore } = await import('../../../src/main/services/team/TeamMetaStore');
     const metaSpy = vi
       .spyOn(TeamMetaStore.prototype, 'getMeta')
-      .mockImplementation(async () => new Promise(() => undefined));
+      .mockImplementation(() => new Promise(() => undefined));
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
     mockTeamDataWorkerClient.getTeamData.mockResolvedValueOnce({
       teamName: 'slow-meta-team',
@@ -2192,7 +2534,7 @@ describe('ipc teams handlers', () => {
     const { TeamMetaStore } = await import('../../../src/main/services/team/TeamMetaStore');
     const metaSpy = vi
       .spyOn(TeamMetaStore.prototype, 'getMeta')
-      .mockImplementation(async () => new Promise(() => undefined));
+      .mockImplementation(() => new Promise(() => undefined));
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(false);
     service.getTeamData.mockRejectedValueOnce(new Error('Team not found: slow-missing-team'));
 
@@ -2232,9 +2574,9 @@ describe('ipc teams handlers', () => {
     );
 
     try {
-      provisioningService.isTeamAlive.mockReturnValue(true);
-      provisioningService.getCurrentLeadSessionId.mockReturnValue('sess-123');
-      provisioningService.sendMessageToTeam.mockResolvedValue(undefined);
+      teamHandlerMocks.isTeamAlive.mockReturnValue(true);
+      teamHandlerMocks.getCurrentLeadSessionId.mockReturnValue('sess-123');
+      teamHandlerMocks.sendMessageToTeam.mockResolvedValue(undefined);
       service.getTeamData.mockResolvedValueOnce({
         teamName: 'my-team',
         config: { name: 'My Team' },
@@ -2254,7 +2596,7 @@ describe('ipc teams handlers', () => {
         kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
         processes: [],
       });
-      provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([
+      teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([
         {
           from: 'team-lead',
           text: "You've hit your limit. Resets in 5 minutes.",
@@ -2281,10 +2623,10 @@ describe('ipc teams handlers', () => {
       ]);
 
       await vi.advanceTimersByTimeAsync(4 * 60 * 1000 + 59 * 1000);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(1100);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       getConfigSpy.mockRestore();
     }
@@ -2347,7 +2689,7 @@ describe('ipc teams handlers', () => {
       hasMore: false,
       feedRevision: 'rev-worker',
     });
-    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
+    teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
 
     const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
     const result = (await handler({} as never, 'my-team', {
@@ -2383,7 +2725,7 @@ describe('ipc teams handlers', () => {
       hasMore: false,
       feedRevision: 'rev-worker',
     });
-    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce(liveMessages);
+    teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce(liveMessages);
 
     const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
     const result = (await handler({} as never, 'my-team', {
@@ -2417,7 +2759,7 @@ describe('ipc teams handlers', () => {
     mockTeamDataWorkerClient.getMessagesPage.mockRejectedValueOnce(
       new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
     );
-    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
+    teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
 
     const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
     const result = (await handler({} as never, 'my-team', {
@@ -2497,7 +2839,7 @@ describe('ipc teams handlers', () => {
     expect(result.data.feedRevision).toBe('rev-worker');
     expect(mockAddTeamNotification).not.toHaveBeenCalled();
 
-    context.resolve({ displayName: 'My Team', projectPath: '/tmp/project' });
+    context.resolve({ displayName: 'My Team', projectPath: TEST_PROJECT_PATH });
     await flushMicrotasks();
     expect(mockAddTeamNotification).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -2646,9 +2988,9 @@ describe('ipc teams handlers', () => {
     );
 
     try {
-      provisioningService.isTeamAlive.mockReturnValue(true);
-      provisioningService.getCurrentLeadSessionId.mockReturnValue('sess-live');
-      provisioningService.sendMessageToTeam.mockResolvedValue(undefined);
+      teamHandlerMocks.isTeamAlive.mockReturnValue(true);
+      teamHandlerMocks.getCurrentLeadSessionId.mockReturnValue('sess-live');
+      teamHandlerMocks.sendMessageToTeam.mockResolvedValue(undefined);
       service.getTeamData.mockResolvedValueOnce({
         teamName: 'my-team',
         config: { name: 'My Team' },
@@ -2678,10 +3020,10 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(true);
 
       await vi.advanceTimersByTimeAsync(3 * 60 * 1000 + 29 * 1000);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(1100);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       getConfigSpy.mockRestore();
     }
@@ -2705,9 +3047,9 @@ describe('ipc teams handlers', () => {
     );
 
     try {
-      provisioningService.isTeamAlive.mockReturnValue(true);
-      provisioningService.getCurrentLeadSessionId.mockReturnValue('sess-live');
-      provisioningService.sendMessageToTeam.mockResolvedValue(undefined);
+      teamHandlerMocks.isTeamAlive.mockReturnValue(true);
+      teamHandlerMocks.getCurrentLeadSessionId.mockReturnValue('sess-live');
+      teamHandlerMocks.sendMessageToTeam.mockResolvedValue(undefined);
       service.getTeamData.mockResolvedValue({
         teamName: 'my-team',
         config: { name: 'My Team' },
@@ -2734,7 +3076,7 @@ describe('ipc teams handlers', () => {
         success: boolean;
       };
       expect(firstResult.success).toBe(true);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
 
       autoResumeEnabled = true;
 
@@ -2744,10 +3086,10 @@ describe('ipc teams handlers', () => {
       expect(secondResult.success).toBe(true);
 
       await vi.advanceTimersByTimeAsync(3 * 60 * 1000 + 29 * 1000);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(1100);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       getConfigSpy.mockRestore();
     }
@@ -2771,9 +3113,9 @@ describe('ipc teams handlers', () => {
     );
 
     try {
-      provisioningService.isTeamAlive.mockReturnValue(true);
-      provisioningService.getCurrentLeadSessionId.mockReturnValue('sess-live');
-      provisioningService.sendMessageToTeam.mockResolvedValue(undefined);
+      teamHandlerMocks.isTeamAlive.mockReturnValue(true);
+      teamHandlerMocks.getCurrentLeadSessionId.mockReturnValue('sess-live');
+      teamHandlerMocks.sendMessageToTeam.mockResolvedValue(undefined);
       service.getTeamData.mockResolvedValue({
         teamName: 'my-team',
         config: { name: 'My Team' },
@@ -2800,7 +3142,7 @@ describe('ipc teams handlers', () => {
         success: boolean;
       };
       expect(firstResult.success).toBe(true);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
 
       vi.setSystemTime(new Date('2026-04-17T12:20:00.000Z'));
 
@@ -2810,10 +3152,10 @@ describe('ipc teams handlers', () => {
       expect(secondResult.success).toBe(true);
 
       await vi.advanceTimersByTimeAsync(29 * 1000);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(1500);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       warnSpy.mockRestore();
       getConfigSpy.mockRestore();
@@ -2837,8 +3179,8 @@ describe('ipc teams handlers', () => {
     );
 
     try {
-      provisioningService.isTeamAlive.mockReturnValue(false);
-      provisioningService.sendMessageToTeam.mockResolvedValue(undefined);
+      teamHandlerMocks.isTeamAlive.mockReturnValue(false);
+      teamHandlerMocks.sendMessageToTeam.mockResolvedValue(undefined);
       service.getTeamData.mockResolvedValue({
         teamName: 'my-team',
         config: { name: 'My Team' },
@@ -2866,10 +3208,10 @@ describe('ipc teams handlers', () => {
 
       // Simulate the user manually starting a fresh run later; stale persisted history
       // should not have armed an auto-resume timer while the team was offline.
-      provisioningService.isTeamAlive.mockReturnValue(true);
+      teamHandlerMocks.isTeamAlive.mockReturnValue(true);
 
       await vi.advanceTimersByTimeAsync(3 * 60 * 1000 + 31 * 1000);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       getConfigSpy.mockRestore();
     }
@@ -2892,9 +3234,9 @@ describe('ipc teams handlers', () => {
     );
 
     try {
-      provisioningService.isTeamAlive.mockReturnValue(true);
-      provisioningService.getCurrentLeadSessionId.mockReturnValue('sess-new');
-      provisioningService.sendMessageToTeam.mockResolvedValue(undefined);
+      teamHandlerMocks.isTeamAlive.mockReturnValue(true);
+      teamHandlerMocks.getCurrentLeadSessionId.mockReturnValue('sess-new');
+      teamHandlerMocks.sendMessageToTeam.mockResolvedValue(undefined);
       service.getTeamData.mockResolvedValue({
         teamName: 'my-team',
         config: { name: 'My Team' },
@@ -2922,7 +3264,7 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(true);
 
       await vi.advanceTimersByTimeAsync(3 * 60 * 1000 + 31 * 1000);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       getConfigSpy.mockRestore();
     }
@@ -2945,9 +3287,9 @@ describe('ipc teams handlers', () => {
     );
 
     try {
-      provisioningService.isTeamAlive.mockReturnValue(true);
-      provisioningService.getCurrentLeadSessionId.mockReturnValue('sess-live');
-      provisioningService.sendMessageToTeam.mockResolvedValue(undefined);
+      teamHandlerMocks.isTeamAlive.mockReturnValue(true);
+      teamHandlerMocks.getCurrentLeadSessionId.mockReturnValue('sess-live');
+      teamHandlerMocks.sendMessageToTeam.mockResolvedValue(undefined);
       service.getTeamData.mockResolvedValue({
         teamName: 'my-team',
         config: { name: 'My Team' },
@@ -2974,7 +3316,7 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(true);
 
       await vi.advanceTimersByTimeAsync(3 * 60 * 1000 + 31 * 1000);
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       getConfigSpy.mockRestore();
     }
@@ -3012,7 +3354,7 @@ describe('ipc teams handlers', () => {
       hasMore: false,
       feedRevision: 'rev-1',
     });
-    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([
+    teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([
       {
         from: 'team-lead',
         text: 'Already persisted thought',
@@ -3078,7 +3420,7 @@ describe('ipc teams handlers', () => {
       hasMore: false,
       feedRevision: 'rev-worker',
     });
-    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
+    teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
 
     const getDataHandler = handlers.get(TEAM_GET_DATA)!;
     const result = (await getDataHandler({} as never, 'my-team')) as {
@@ -3123,7 +3465,7 @@ describe('ipc teams handlers', () => {
     mockTeamDataWorkerClient.getMessagesPage.mockRejectedValueOnce(
       new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
     );
-    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
+    teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
 
     const getDataHandler = handlers.get(TEAM_GET_DATA)!;
     const result = (await getDataHandler({} as never, 'my-team')) as {
@@ -3158,7 +3500,7 @@ describe('ipc teams handlers', () => {
       hasMore: true,
       feedRevision: 'rev-1',
     });
-    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([
+    teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([
       {
         from: 'team-lead',
         text: 'Команда поднята, приступаю к раздаче задач.',
@@ -3205,7 +3547,7 @@ describe('ipc teams handlers', () => {
       hasMore: false,
       feedRevision: 'rev-1',
     });
-    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([
+    teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([
       {
         from: 'team-lead',
         text: 'Hello there',
@@ -3255,7 +3597,7 @@ describe('ipc teams handlers', () => {
     };
 
     expect(result.success).toBe(true);
-    expect(provisioningService.getLiveLeadProcessMessages).not.toHaveBeenCalled();
+    expect(teamHandlerMocks.getLiveLeadProcessMessages).not.toHaveBeenCalled();
     expect(result.data.messages).toHaveLength(1);
     expect(result.data.messages[0]?.messageId).toBe('durable-older-1');
   });
@@ -3274,6 +3616,43 @@ describe('ipc teams handlers', () => {
   });
 
   describe('createTask prompt validation', () => {
+    it('passes a valid durable command identity to the service', async () => {
+      const handler = handlers.get(TEAM_CREATE_TASK)!;
+      const result = (await handler({} as never, 'my-team', {
+        subject: 'Do something once',
+        command: {
+          commandId: '11111111-1111-4111-8111-111111111111',
+          idempotencyKey: ' create-task-intent-1 ',
+        },
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(service.createTask).toHaveBeenCalledWith(
+        'my-team',
+        expect.objectContaining({
+          command: {
+            commandId: '11111111-1111-4111-8111-111111111111',
+            idempotencyKey: 'create-task-intent-1',
+          },
+          subject: 'Do something once',
+        })
+      );
+    });
+
+    it('rejects a non-UUID task command id before calling the service', async () => {
+      const handler = handlers.get(TEAM_CREATE_TASK)!;
+      service.createTask.mockClear();
+
+      const result = (await handler({} as never, 'my-team', {
+        subject: 'Unsafe identity',
+        command: { commandId: '../task', idempotencyKey: 'intent-1' },
+      })) as { success: boolean; error: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('command.commandId must be a UUID');
+      expect(service.createTask).not.toHaveBeenCalled();
+    });
+
     it('accepts valid prompt string', async () => {
       const handler = handlers.get(TEAM_CREATE_TASK)!;
       const result = (await handler({} as never, 'my-team', {
@@ -3329,6 +3708,22 @@ describe('ipc teams handlers', () => {
   });
 
   describe('addMember', () => {
+    it('runs the complete roster persistence and runtime attach transaction under the team lifecycle lock', async () => {
+      const handler = handlers.get(TEAM_ADD_MEMBER)!;
+
+      const result = (await handler({} as never, 'my-team', {
+        name: 'alice',
+        role: 'developer',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(teamHandlerMocks.runLiveRosterMutation).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function)
+      );
+      expect(service.addMember).toHaveBeenCalled();
+    });
+
     it('calls service on valid input', async () => {
       const handler = handlers.get(TEAM_ADD_MEMBER)!;
       const result = (await handler({} as never, 'my-team', {
@@ -3354,10 +3749,10 @@ describe('ipc teams handlers', () => {
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
         reason: 'member_added',
       });
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     });
 
     it('preserves runtime backend and fast mode when adding a live teammate', async () => {
@@ -3380,7 +3775,7 @@ describe('ipc teams handlers', () => {
           fastMode: 'on',
         })
       );
-      expect(provisioningService.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
         reason: 'member_added',
       });
     });
@@ -3412,11 +3807,10 @@ describe('ipc teams handlers', () => {
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
         reason: 'member_added',
       });
-      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).not.toHaveBeenCalled();
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     });
 
     it('rolls back live addMember metadata when lifecycle attach fails', async () => {
@@ -3425,7 +3819,7 @@ describe('ipc teams handlers', () => {
         providerBackendId: 'codex-native',
         members: [],
       });
-      provisioningService.attachLiveRosterMember.mockRejectedValueOnce(new Error('attach failed'));
+      teamHandlerMocks.attachLiveRosterMember.mockRejectedValueOnce(new Error('attach failed'));
 
       const handler = handlers.get(TEAM_ADD_MEMBER)!;
       const result = (await handler({} as never, 'my-team', {
@@ -3440,12 +3834,12 @@ describe('ipc teams handlers', () => {
       expect(mockWriteMembersMeta).toHaveBeenCalledWith('my-team', [], {
         providerBackendId: 'codex-native',
       });
-      expect(provisioningService.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
-      const detachOrder = provisioningService.detachLiveRosterMember.mock.invocationCallOrder[0];
+      expect(teamHandlerMocks.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
+      const detachOrder = teamHandlerMocks.detachLiveRosterMember.mock.invocationCallOrder[0];
       const metadataRestoreOrder = mockWriteMembersMeta.mock.invocationCallOrder[0];
       expect(detachOrder).toBeDefined();
       expect(metadataRestoreOrder).toBeDefined();
-      expect(detachOrder!).toBeLessThan(metadataRestoreOrder!);
+      expect(detachOrder).toBeLessThan(metadataRestoreOrder);
       vi.mocked(console.error).mockClear();
     });
 
@@ -3499,7 +3893,7 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('running OpenCode-led team');
       expect(service.addMember).not.toHaveBeenCalled();
-      expect(provisioningService.attachLiveRosterMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
       vi.mocked(console.error).mockClear();
     });
 
@@ -3549,9 +3943,7 @@ describe('ipc teams handlers', () => {
         kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
         processes: [],
       });
-      provisioningService.attachLiveRosterMember.mockRejectedValueOnce(
-        new Error('reattach failed')
-      );
+      teamHandlerMocks.attachLiveRosterMember.mockRejectedValueOnce(new Error('reattach failed'));
 
       const result = (await handler({} as never, 'my-team', {
         name: 'alice',
@@ -3594,7 +3986,7 @@ describe('ipc teams handlers', () => {
         ],
         { providerBackendId: 'codex-native' }
       );
-      expect(provisioningService.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(teamHandlerMocks.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
       vi.mocked(console.error).mockClear();
     });
   });
@@ -3603,7 +3995,7 @@ describe('ipc teams handlers', () => {
     it('notifies a live lead only when the team name actually changes', async () => {
       const handler = handlers.get(TEAM_UPDATE_CONFIG)!;
       service.getTeamDisplayName.mockResolvedValueOnce('My Team');
-      provisioningService.isTeamAlive = vi.fn(() => true);
+      teamHandlerMocks.isTeamAlive.mockReturnValue(true);
 
       const result = (await handler({} as never, 'my-team', {
         name: 'Renamed Team',
@@ -3616,7 +4008,7 @@ describe('ipc teams handlers', () => {
         color: undefined,
       });
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
-      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
         'my-team',
         'The team has been renamed to "Renamed Team". Please use this name when referring to the team going forward.'
       );
@@ -3625,7 +4017,7 @@ describe('ipc teams handlers', () => {
     it('does not notify the lead when the submitted team name is unchanged', async () => {
       const handler = handlers.get(TEAM_UPDATE_CONFIG)!;
       service.getTeamDisplayName.mockResolvedValueOnce('My Team');
-      provisioningService.isTeamAlive = vi.fn(() => true);
+      teamHandlerMocks.isTeamAlive.mockReturnValue(true);
 
       const result = (await handler({} as never, 'my-team', {
         name: 'My Team',
@@ -3637,7 +4029,7 @@ describe('ipc teams handlers', () => {
         description: undefined,
         color: undefined,
       });
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     });
   });
 
@@ -3663,8 +4055,34 @@ describe('ipc teams handlers', () => {
 
       result = (await permanentlyDeleteHandler({} as never, 'my-team')) as { success: boolean };
       expect(result.success).toBe(true);
+      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith('my-team');
       expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith('my-team');
+      expect(permanentDeletionLifecycle.completeTeamDeletion).toHaveBeenCalledWith('my-team');
+      expect(
+        permanentDeletionLifecycle.prepareTeamDeletion.mock.invocationCallOrder[0]
+      ).toBeLessThan(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]!);
+      expect(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]).toBeLessThan(
+        permanentDeletionLifecycle.completeTeamDeletion.mock.invocationCallOrder[0]!
+      );
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
+    });
+
+    it('does not delete team files before member work sync is quiesced', async () => {
+      permanentDeletionLifecycle.prepareTeamDeletion.mockRejectedValueOnce(
+        new Error('quiesce failed')
+      );
+
+      const result = (await handlers.get(TEAM_PERMANENTLY_DELETE)!({} as never, 'my-team')) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('quiesce failed');
+      expect(service.permanentlyDeleteTeam).not.toHaveBeenCalled();
+      expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+      expect(mockTeamDataWorkerClient.invalidateTeamConfig).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
     });
 
     it('invalidates worker config cache after roster metadata mutations', async () => {
@@ -3766,14 +4184,14 @@ describe('ipc teams handlers', () => {
     });
 
     it('requests persisted runtime detach even when mutable team-alive tracking is absent', async () => {
-      provisioningService.isTeamAlive.mockReturnValueOnce(false);
+      teamHandlerMocks.isTeamAlive.mockReturnValueOnce(false);
       const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
 
       const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     });
 
     it('treats repeated removal of a persisted tombstone as a successful no-op', async () => {
@@ -3803,8 +4221,8 @@ describe('ipc teams handlers', () => {
       expect(secondResult.success).toBe(true);
       expect(service.getTeamData).toHaveBeenCalledTimes(2);
       expect(service.removeMember).toHaveBeenCalledTimes(1);
-      expect(provisioningService.detachLiveRosterMember).toHaveBeenCalledTimes(1);
-      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledTimes(1);
+      expect(teamHandlerMocks.detachLiveRosterMember).toHaveBeenCalledTimes(1);
+      expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledTimes(1);
     });
 
     it('rejects invalid team name', async () => {
@@ -3853,7 +4271,7 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('running OpenCode-led team');
       expect(service.removeMember).not.toHaveBeenCalled();
-      expect(provisioningService.detachLiveRosterMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.detachLiveRosterMember).not.toHaveBeenCalled();
       vi.mocked(console.error).mockClear();
     });
 
@@ -3903,7 +4321,7 @@ describe('ipc teams handlers', () => {
         kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
         processes: [],
       });
-      provisioningService.detachLiveRosterMember.mockRejectedValueOnce(new Error('detach failed'));
+      teamHandlerMocks.detachLiveRosterMember.mockRejectedValueOnce(new Error('detach failed'));
 
       const result = (await handler({} as never, 'my-team', 'alice')) as {
         success: boolean;
@@ -3934,7 +4352,7 @@ describe('ipc teams handlers', () => {
         ],
         { providerBackendId: undefined }
       );
-      expect(provisioningService.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
         reason: 'member_updated',
       });
       vi.mocked(console.error).mockClear();
@@ -3997,11 +4415,10 @@ describe('ipc teams handlers', () => {
       const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
         reason: 'member_restored',
       });
-      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).not.toHaveBeenCalled();
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     });
 
     it('attaches a restored OpenCode teammate through the lifecycle service', async () => {
@@ -4039,10 +4456,10 @@ describe('ipc teams handlers', () => {
       const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
         reason: 'member_restored',
       });
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     });
 
     it('blocks live restoreMember for a running OpenCode-led team before metadata is changed', async () => {
@@ -4080,14 +4497,14 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('running OpenCode-led team');
       expect(service.restoreMember).not.toHaveBeenCalled();
-      expect(provisioningService.attachLiveRosterMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
       vi.mocked(console.error).mockClear();
     });
   });
 
   describe('replaceMembers', () => {
     it('updates non-live draft members without requiring a full team snapshot', async () => {
-      provisioningService.isTeamAlive.mockReturnValueOnce(false);
+      teamHandlerMocks.isTeamAlive.mockReturnValue(false);
       service.getTeamData.mockRejectedValueOnce(new Error('Team not found: draft-team'));
 
       const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
@@ -4119,8 +4536,8 @@ describe('ipc teams handlers', () => {
           },
         ],
       });
-      expect(provisioningService.attachLiveRosterMember).not.toHaveBeenCalled();
-      expect(provisioningService.detachLiveRosterMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.detachLiveRosterMember).not.toHaveBeenCalled();
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('draft-team');
       expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
         'draft-team'
@@ -4158,11 +4575,10 @@ describe('ipc teams handlers', () => {
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
         reason: 'member_added',
       });
-      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).not.toHaveBeenCalled();
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     });
 
     it('reattaches updated primary-owned teammates through lifecycle during live replaceMembers', async () => {
@@ -4203,11 +4619,10 @@ describe('ipc teams handlers', () => {
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
         reason: 'member_updated',
       });
-      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).not.toHaveBeenCalled();
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     });
 
     it('blocks live replaceMembers for a running OpenCode-led team before metadata is changed', async () => {
@@ -4243,8 +4658,8 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('running OpenCode-led team');
       expect(service.replaceMembers).not.toHaveBeenCalled();
-      expect(provisioningService.attachLiveRosterMember).not.toHaveBeenCalled();
-      expect(provisioningService.detachLiveRosterMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.detachLiveRosterMember).not.toHaveBeenCalled();
       vi.mocked(console.error).mockClear();
     });
 
@@ -4310,9 +4725,7 @@ describe('ipc teams handlers', () => {
         kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
         processes: [],
       });
-      provisioningService.attachLiveRosterMember.mockRejectedValueOnce(
-        new Error('reattach failed')
-      );
+      teamHandlerMocks.attachLiveRosterMember.mockRejectedValueOnce(new Error('reattach failed'));
 
       const result = (await handler({} as never, 'my-team', {
         members: [
@@ -4388,18 +4801,357 @@ describe('ipc teams handlers', () => {
         ],
         { providerBackendId: 'codex-native' }
       );
-      expect(provisioningService.attachLiveRosterMember).toHaveBeenNthCalledWith(
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenNthCalledWith(
         1,
         'my-team',
         'alice',
         { reason: 'member_updated' }
       );
-      expect(provisioningService.attachLiveRosterMember).toHaveBeenNthCalledWith(
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenNthCalledWith(
         2,
         'my-team',
         'alice',
         { reason: 'member_updated' }
       );
+      vi.mocked(console.error).mockClear();
+    });
+
+    it.each([
+      { failurePosition: 1, label: 'first' },
+      { failurePosition: 2, label: 'middle' },
+      { failurePosition: 3, label: 'last' },
+    ])(
+      'rolls back every added live member when the $label lifecycle attach fails',
+      async ({ failurePosition }) => {
+        const addedNames = ['alice', 'bob', 'carol'];
+        const previousMetaMembers = [
+          {
+            name: 'team-lead',
+            providerId: 'codex' as const,
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+        ];
+        mockGetMembersMetaFile.mockResolvedValueOnce({
+          version: 1,
+          providerBackendId: 'codex-native',
+          members: previousMetaMembers,
+        });
+        service.getTeamData.mockResolvedValueOnce({
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: previousMetaMembers.map((member) => ({
+            ...member,
+            currentTaskId: null,
+            taskCount: 0,
+          })),
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
+        });
+        let attachAttempt = 0;
+        teamHandlerMocks.attachLiveRosterMember.mockImplementation(async () => {
+          attachAttempt += 1;
+          if (attachAttempt === failurePosition) {
+            throw new Error(`attach failed at ${failurePosition}`);
+          }
+        });
+
+        const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+          members: addedNames.map((name) => ({
+            name,
+            role: 'Developer',
+            providerId: 'codex',
+          })),
+        })) as { success: boolean; error?: string };
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain(`attach failed at ${failurePosition}`);
+        expect(
+          teamHandlerMocks.attachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 1))
+        ).toEqual(addedNames.slice(0, failurePosition));
+        expect(
+          teamHandlerMocks.detachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 1))
+        ).toEqual(addedNames);
+        expect(mockWriteMembersMeta).toHaveBeenCalledWith('my-team', previousMetaMembers, {
+          providerBackendId: 'codex-native',
+        });
+        vi.mocked(console.error).mockClear();
+      }
+    );
+
+    it.each([
+      { failurePosition: 1, label: 'first' },
+      { failurePosition: 2, label: 'middle' },
+      { failurePosition: 3, label: 'last' },
+    ])(
+      'restores every removed live member when the $label lifecycle detach fails',
+      async ({ failurePosition }) => {
+        const removedNames = ['alice', 'bob', 'carol'];
+        const previousMetaMembers = [
+          {
+            name: 'team-lead',
+            providerId: 'codex' as const,
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+          ...removedNames.map((name) => ({
+            name,
+            providerId: 'codex' as const,
+            role: 'Developer',
+            agentType: 'general-purpose',
+            agentId: `agent-${name}`,
+          })),
+        ];
+        mockGetMembersMetaFile.mockResolvedValueOnce({
+          version: 1,
+          providerBackendId: 'codex-native',
+          members: previousMetaMembers,
+        });
+        service.getTeamData.mockResolvedValueOnce({
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: previousMetaMembers.map((member) => ({
+            ...member,
+            currentTaskId: null,
+            taskCount: 0,
+          })),
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
+        });
+        let detachAttempt = 0;
+        teamHandlerMocks.detachLiveRosterMember.mockImplementation(async () => {
+          detachAttempt += 1;
+          if (detachAttempt === failurePosition) {
+            throw new Error(`detach failed at ${failurePosition}`);
+          }
+        });
+
+        const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+          members: [],
+        })) as { success: boolean; error?: string };
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain(`detach failed at ${failurePosition}`);
+        expect(
+          teamHandlerMocks.detachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 1))
+        ).toEqual(removedNames.slice(0, failurePosition));
+        expect(mockWriteMembersMeta).toHaveBeenCalledWith('my-team', previousMetaMembers, {
+          providerBackendId: 'codex-native',
+        });
+        expect(
+          teamHandlerMocks.attachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 1))
+        ).toEqual(removedNames);
+        expect(
+          teamHandlerMocks.attachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 2))
+        ).toEqual(removedNames.map(() => ({ reason: 'member_updated' })));
+        vi.mocked(console.error).mockClear();
+      }
+    );
+
+    it.each([
+      { failurePosition: 1, label: 'first' },
+      { failurePosition: 2, label: 'middle' },
+      { failurePosition: 3, label: 'last' },
+    ])(
+      'restores every updated live member when the $label lifecycle reattach fails',
+      async ({ failurePosition }) => {
+        const updatedNames = ['alice', 'bob', 'carol'];
+        const previousMetaMembers = [
+          {
+            name: 'team-lead',
+            providerId: 'codex' as const,
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+          ...updatedNames.map((name) => ({
+            name,
+            providerId: 'codex' as const,
+            role: 'Developer',
+            workflow: 'previous workflow',
+            agentType: 'general-purpose',
+            agentId: `agent-${name}`,
+          })),
+        ];
+        mockGetMembersMetaFile.mockResolvedValueOnce({
+          version: 1,
+          providerBackendId: 'codex-native',
+          members: previousMetaMembers,
+        });
+        service.getTeamData.mockResolvedValueOnce({
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: previousMetaMembers.map((member) => ({
+            ...member,
+            currentTaskId: null,
+            taskCount: 0,
+          })),
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
+        });
+        let attachAttempt = 0;
+        teamHandlerMocks.attachLiveRosterMember.mockImplementation(async () => {
+          attachAttempt += 1;
+          if (attachAttempt === failurePosition) {
+            throw new Error(`reattach failed at ${failurePosition}`);
+          }
+        });
+
+        const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+          members: updatedNames.map((name) => ({
+            name,
+            role: 'Developer',
+            workflow: 'next workflow',
+            providerId: 'codex',
+          })),
+        })) as { success: boolean; error?: string };
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain(`reattach failed at ${failurePosition}`);
+        expect(
+          teamHandlerMocks.attachLiveRosterMember.mock.calls.map((call) => mockCallArg(call, 1))
+        ).toEqual([...updatedNames.slice(0, failurePosition), ...updatedNames]);
+        expect(mockWriteMembersMeta).toHaveBeenCalledWith('my-team', previousMetaMembers, {
+          providerBackendId: 'codex-native',
+        });
+        const firstRollbackAttachOrder =
+          teamHandlerMocks.attachLiveRosterMember.mock.invocationCallOrder[failurePosition];
+        expect(mockWriteMembersMeta.mock.invocationCallOrder[0]).toBeLessThan(
+          firstRollbackAttachOrder!
+        );
+        vi.mocked(console.error).mockClear();
+      }
+    );
+
+    it('falls back to TeamDataService when exact metadata restoration fails', async () => {
+      const previousMetaMembers = [
+        {
+          name: 'team-lead',
+          providerId: 'codex' as const,
+          role: 'Team Lead',
+          agentType: 'team-lead',
+        },
+        {
+          name: 'alice',
+          providerId: 'codex' as const,
+          role: 'Developer',
+          agentType: 'general-purpose',
+          agentId: 'agent-alice',
+        },
+      ];
+      mockGetMembersMetaFile.mockResolvedValueOnce({
+        version: 1,
+        providerBackendId: 'codex-native',
+        members: previousMetaMembers,
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: previousMetaMembers.map((member) => ({
+          ...member,
+          currentTaskId: null,
+          taskCount: 0,
+        })),
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      mockWriteMembersMeta.mockRejectedValueOnce(new Error('exact restore failed'));
+      teamHandlerMocks.detachLiveRosterMember.mockRejectedValueOnce(
+        new Error('lifecycle detach failed')
+      );
+
+      const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+        members: [],
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('lifecycle detach failed');
+      expect(service.replaceMembers).toHaveBeenNthCalledWith(2, 'my-team', {
+        members: [
+          {
+            name: 'alice',
+            role: 'Developer',
+            workflow: undefined,
+            isolation: undefined,
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: undefined,
+            effort: undefined,
+            fastMode: undefined,
+            mcpPolicy: undefined,
+          },
+        ],
+      });
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
+        reason: 'member_updated',
+      });
+      vi.mocked(console.error).mockClear();
+    });
+
+    it('returns the lifecycle failure and releases the handler after both metadata rollbacks fail', async () => {
+      const previousMetaMembers = [
+        {
+          name: 'team-lead',
+          providerId: 'codex' as const,
+          role: 'Team Lead',
+          agentType: 'team-lead',
+        },
+        {
+          name: 'alice',
+          providerId: 'codex' as const,
+          role: 'Developer',
+          agentType: 'general-purpose',
+          agentId: 'agent-alice',
+        },
+      ];
+      mockGetMembersMetaFile.mockResolvedValueOnce({
+        version: 1,
+        providerBackendId: 'codex-native',
+        members: previousMetaMembers,
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: previousMetaMembers.map((member) => ({
+          ...member,
+          currentTaskId: null,
+          taskCount: 0,
+        })),
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      mockWriteMembersMeta.mockRejectedValueOnce(new Error('exact restore failed'));
+      service.replaceMembers
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('fallback restore failed'));
+      teamHandlerMocks.detachLiveRosterMember.mockRejectedValueOnce(
+        new Error('lifecycle detach failed')
+      );
+
+      const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+        members: [],
+      })) as { success: boolean; error?: string };
+      const stopResult = (await handlers.get(TEAM_STOP)!({} as never, 'my-team')) as {
+        success: boolean;
+      };
+      const restartResult = (await handlers.get(TEAM_RESTART_MEMBER)!(
+        {} as never,
+        'my-team',
+        'alice'
+      )) as { success: boolean };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('lifecycle detach failed');
+      expect(service.replaceMembers).toHaveBeenCalledTimes(2);
+      expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
+      expect(stopResult.success).toBe(true);
+      expect(teamHandlerMocks.stopTeam).toHaveBeenCalledWith('my-team');
+      expect(restartResult.success).toBe(true);
+      expect(teamHandlerMocks.restartMember).toHaveBeenCalledWith('my-team', 'alice');
       vi.mocked(console.error).mockClear();
     });
 
@@ -4446,8 +5198,8 @@ describe('ipc teams handlers', () => {
       );
       expect(result.error).toContain('alice');
       expect(service.replaceMembers).not.toHaveBeenCalled();
-      expect(provisioningService.attachLiveRosterMember).not.toHaveBeenCalled();
-      expect(provisioningService.detachLiveRosterMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.detachLiveRosterMember).not.toHaveBeenCalled();
       vi.mocked(console.error).mockClear();
     });
 
@@ -4494,8 +5246,8 @@ describe('ipc teams handlers', () => {
       );
       expect(result.error).toContain('alice');
       expect(service.replaceMembers).not.toHaveBeenCalled();
-      expect(provisioningService.attachLiveRosterMember).not.toHaveBeenCalled();
-      expect(provisioningService.detachLiveRosterMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.detachLiveRosterMember).not.toHaveBeenCalled();
       vi.mocked(console.error).mockClear();
     });
   });
@@ -4517,6 +5269,19 @@ describe('ipc teams handlers', () => {
       };
       expect(result.success).toBe(true);
       expect(service.updateMemberRole).toHaveBeenCalledWith('my-team', 'alice', undefined);
+    });
+
+    it('rejects a non-string role without mutating persisted member metadata', async () => {
+      const handler = handlers.get(TEAM_UPDATE_MEMBER_ROLE)!;
+
+      const result = (await handler({} as never, 'my-team', 'alice', { role: 'developer' })) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('role must be a string, null, or undefined');
+      expect(service.updateMemberRole).not.toHaveBeenCalled();
     });
 
     it('rejects invalid team name', async () => {
@@ -4546,7 +5311,7 @@ describe('ipc teams handlers', () => {
         prompt: 'Build a web app',
       })) as { success: boolean };
       expect(result.success).toBe(true);
-      const callArg = provisioningService.createTeam.mock.calls[0][0];
+      const callArg = teamHandlerMocks.createTeam.mock.calls[0][0];
       expect(callArg.prompt).toBe('Build a web app');
     });
 
@@ -4563,60 +5328,13 @@ describe('ipc teams handlers', () => {
     });
   });
 
-  it('removes handlers', () => {
+  it('removes all expected handlers', () => {
     removeTeamHandlers(ipcMain as never);
-    expect(handlers.has(TEAM_LIST)).toBe(false);
-    expect(handlers.has(TEAM_GET_DATA)).toBe(false);
-    expect(handlers.has(TEAM_DELETE_TEAM)).toBe(false);
-    expect(handlers.has(TEAM_PREPARE_PROVISIONING)).toBe(false);
-    expect(handlers.has(TEAM_CREATE)).toBe(false);
-    expect(handlers.has(TEAM_LAUNCH)).toBe(false);
-    expect(handlers.has(TEAM_CREATE_TASK)).toBe(false);
-    expect(handlers.has(TEAM_PROVISIONING_STATUS)).toBe(false);
-    expect(handlers.has(TEAM_CANCEL_PROVISIONING)).toBe(false);
-    expect(handlers.has(TEAM_SEND_MESSAGE)).toBe(false);
-    expect(handlers.has(TEAM_REQUEST_REVIEW)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_KANBAN)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_KANBAN_COLUMN_ORDER)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_TASK_STATUS)).toBe(false);
-    expect(handlers.has(TEAM_START_TASK)).toBe(false);
-    expect(handlers.has(TEAM_PROCESS_SEND)).toBe(false);
-    expect(handlers.has(TEAM_PROCESS_ALIVE)).toBe(false);
-    expect(handlers.has(TEAM_ALIVE_LIST)).toBe(false);
-    expect(handlers.has(TEAM_STOP)).toBe(false);
-    expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(false);
-    expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(false);
-    expect(handlers.has(TEAM_GET_LOGS_FOR_TASK)).toBe(false);
-    expect(handlers.has(TEAM_GET_TASK_ACTIVITY)).toBe(false);
-    expect(handlers.has(TEAM_GET_TASK_LOG_STREAM)).toBe(false);
-    expect(handlers.has(TEAM_GET_MEMBER_STATS)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_CONFIG)).toBe(false);
-    expect(handlers.has(TEAM_GET_ALL_TASKS)).toBe(false);
-    expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(false);
-    expect(handlers.has(TEAM_ADD_MEMBER)).toBe(false);
-    expect(handlers.has(TEAM_REMOVE_MEMBER)).toBe(false);
-    expect(handlers.has(TEAM_RESTORE_MEMBER)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_MEMBER_ROLE)).toBe(false);
-    expect(handlers.has(TEAM_GET_PROJECT_BRANCH)).toBe(false);
-    expect(handlers.has(TEAM_GET_ATTACHMENTS)).toBe(false);
-    expect(handlers.has(TEAM_KILL_PROCESS)).toBe(false);
-    expect(handlers.has(TEAM_LEAD_ACTIVITY)).toBe(false);
-    expect(handlers.has(TEAM_SOFT_DELETE_TASK)).toBe(false);
-    expect(handlers.has(TEAM_GET_DELETED_TASKS)).toBe(false);
-    expect(handlers.has(TEAM_SET_TASK_CLARIFICATION)).toBe(false);
-    expect(handlers.has(TEAM_RESTORE)).toBe(false);
-    expect(handlers.has(TEAM_PERMANENTLY_DELETE)).toBe(false);
-    expect(handlers.has(TEAM_ADD_TASK_RELATIONSHIP)).toBe(false);
-    expect(handlers.has(TEAM_REMOVE_TASK_RELATIONSHIP)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_TASK_OWNER)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_TASK_FIELDS)).toBe(false);
-    expect(handlers.has(TEAM_REPLACE_MEMBERS)).toBe(false);
-    expect(handlers.has(TEAM_LEAD_CONTEXT)).toBe(false);
-    expect(handlers.has(TEAM_RESTORE_TASK)).toBe(false);
-    expect(handlers.has(TEAM_SHOW_MESSAGE_NOTIFICATION)).toBe(false);
-    expect(handlers.has(TEAM_SAVE_TASK_ATTACHMENT)).toBe(false);
-    expect(handlers.has(TEAM_GET_TASK_ATTACHMENT)).toBe(false);
-    expect(handlers.has(TEAM_DELETE_TASK_ATTACHMENT)).toBe(false);
+    expect(ipcMain.removeHandler).toHaveBeenCalledTimes(TEAM_HANDLER_KEYS.length);
+    expect(new Set(ipcMain.removeHandler.mock.calls.map(([channel]) => channel))).toEqual(
+      new Set(TEAM_HANDLER_KEYS)
+    );
+    expect(handlers.size).toBe(0);
   });
 
   it('returns explicit task activity rows', async () => {
@@ -4643,7 +5361,7 @@ describe('ipc teams handlers', () => {
         },
         source: {
           messageUuid: 'message-1',
-          filePath: '/tmp/transcript.jsonl',
+          filePath: TRANSCRIPT_JSONL_PATH,
           sourceOrder: 1,
         },
       },
@@ -4768,8 +5486,8 @@ describe('ipc teams handlers', () => {
         cwd: os.tmpdir(),
       })) as { success: boolean };
       expect(result.success).toBe(true);
-      expect(provisioningService.createTeam).toHaveBeenCalledTimes(1);
-      const callArg = provisioningService.createTeam.mock.calls[0][0];
+      expect(teamHandlerMocks.createTeam).toHaveBeenCalledTimes(1);
+      const callArg = teamHandlerMocks.createTeam.mock.calls[0][0];
       expect(callArg.members).toEqual([]);
     });
 
@@ -4786,15 +5504,19 @@ describe('ipc teams handlers', () => {
             model: 'gpt-5.4',
             effort: 'high',
             fastMode: 'on',
+            mcpPolicy: { mode: 'appOnly' },
           },
         ],
         cwd: os.tmpdir(),
         providerId: 'codex',
         providerBackendId: 'codex-native',
+        limitContext: true,
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.createTeam.mock.calls[0][0].members).toEqual([
+      const createRequest = teamHandlerMocks.createTeam.mock.calls[0][0];
+      expect(createRequest.limitContext).toBe(true);
+      expect(createRequest.members).toEqual([
         {
           name: 'builder',
           role: 'Engineer',
@@ -4805,6 +5527,7 @@ describe('ipc teams handlers', () => {
           model: 'gpt-5.4',
           effort: 'high',
           fastMode: 'on',
+          mcpPolicy: { mode: 'appOnly' },
         },
       ]);
     });
@@ -4826,7 +5549,7 @@ describe('ipc teams handlers', () => {
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.createTeam.mock.calls[0][0].members).toEqual([
+      expect(teamHandlerMocks.createTeam.mock.calls[0][0].members).toEqual([
         {
           name: 'builder',
           role: undefined,
@@ -4857,7 +5580,7 @@ describe('ipc teams handlers', () => {
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.createTeam).toHaveBeenCalledWith(
+      expect(teamHandlerMocks.createTeam).toHaveBeenCalledWith(
         expect.objectContaining({
           teamName: 'opencode-runtime-team',
           providerId: 'opencode',
@@ -4902,6 +5625,11 @@ describe('ipc teams handlers', () => {
             model: ' gpt-5.2 ',
             effort: 'high',
             fastMode: 'on',
+            mcpPolicy: {
+              mode: 'strictAllowlist',
+              scopes: { project: true, user: false },
+              serverNames: ['agent-teams'],
+            },
           },
         ],
         cwd: '/Users/test/project',
@@ -4933,6 +5661,11 @@ describe('ipc teams handlers', () => {
             model: 'gpt-5.2',
             effort: 'high',
             fastMode: 'on',
+            mcpPolicy: {
+              mode: 'strictAllowlist',
+              scopes: { project: true, user: false },
+              serverNames: ['agent-teams'],
+            },
           },
         ],
         cwd: '/Users/test/project',
@@ -5121,8 +5854,8 @@ describe('ipc teams handlers', () => {
 
         expect(result.success).toBe(true);
         expect(computeTeamWatchScope()?.has('draft-team')).toBe(true);
-        expect(provisioningService.launchTeam).not.toHaveBeenCalled();
-        expect(provisioningService.createTeam).toHaveBeenCalledWith(
+        expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+        expect(teamHandlerMocks.createTeam).toHaveBeenCalledWith(
           {
             teamName: 'draft-team',
             displayName: 'Draft Team',
@@ -5199,7 +5932,7 @@ describe('ipc teams handlers', () => {
         })) as { success: boolean };
 
         expect(result.success).toBe(true);
-        expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+        expect(teamHandlerMocks.launchTeam).toHaveBeenCalledWith(
           expect.objectContaining({
             teamName: 'anthropic-team',
             providerId: 'anthropic',
@@ -5260,7 +5993,7 @@ describe('ipc teams handlers', () => {
         })) as { success: boolean };
 
         expect(result).toMatchObject({ success: true });
-        expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+        expect(teamHandlerMocks.launchTeam).toHaveBeenCalledWith(
           expect.objectContaining({
             teamName: 'anthropic-team',
             providerId: 'anthropic',
@@ -5326,7 +6059,7 @@ describe('ipc teams handlers', () => {
         })) as { success: boolean };
 
         expect(result).toMatchObject({ success: true });
-        expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+        expect(teamHandlerMocks.launchTeam).toHaveBeenCalledWith(
           expect.objectContaining({
             teamName: 'runtime-change-team',
             providerId: 'anthropic',
@@ -5393,7 +6126,7 @@ describe('ipc teams handlers', () => {
         })) as { success: boolean };
 
         expect(result).toMatchObject({ success: true });
-        const [request] = provisioningService.launchTeam.mock.calls.at(-1) as unknown as [
+        const [request] = teamHandlerMocks.launchTeam.mock.calls.at(-1) as unknown as [
           TeamLaunchRequest,
           (progress: TeamProvisioningProgress) => void,
         ];
@@ -5444,7 +6177,7 @@ describe('ipc teams handlers', () => {
         })) as { success: boolean };
 
         expect(result).toMatchObject({ success: true });
-        expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+        expect(teamHandlerMocks.launchTeam).toHaveBeenCalledWith(
           expect.objectContaining({
             teamName: 'gemini-backend-team',
             providerId: 'gemini',
@@ -5510,7 +6243,7 @@ describe('ipc teams handlers', () => {
         })) as { success: boolean };
 
         expect(result).toMatchObject({ success: true });
-        expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+        expect(teamHandlerMocks.launchTeam).toHaveBeenCalledWith(
           expect.objectContaining({
             teamName: 'codex-default-model-team',
             providerId: 'codex',
@@ -5561,7 +6294,7 @@ describe('ipc teams handlers', () => {
         })) as { success: boolean };
 
         expect(result).toMatchObject({ success: true });
-        expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+        expect(teamHandlerMocks.launchTeam).toHaveBeenCalledWith(
           expect.objectContaining({
             teamName: 'runtime-backend-change-team',
             providerId: 'anthropic',
@@ -5589,7 +6322,21 @@ describe('ipc teams handlers', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('providerBackendId must be valid');
-      expect(provisioningService.launchTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+    });
+
+    it('rejects invalid launch limitContext before dispatching', async () => {
+      const handler = handlers.get(TEAM_LAUNCH)!;
+      const result = (await handler({ sender: { send: vi.fn() } } as never, {
+        teamName: 'my-team',
+        cwd: os.tmpdir(),
+        limitContext: 'true',
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('limitContext must be a boolean');
+      expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
     });
 
     it('launchTeam preserves top-level OpenCode provider and backend', async () => {
@@ -5604,7 +6351,7 @@ describe('ipc teams handlers', () => {
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+      expect(teamHandlerMocks.launchTeam).toHaveBeenCalledWith(
         expect.objectContaining({
           teamName: 'opencode-runtime-team',
           providerId: 'opencode',

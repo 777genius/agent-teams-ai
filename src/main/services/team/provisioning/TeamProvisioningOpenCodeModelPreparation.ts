@@ -13,7 +13,6 @@ import {
 } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
 
 import type { TeamLaunchRuntimeAdapter, TeamRuntimePrepareResult } from '../runtime';
-import type { OpenCodeLocalModelRuntimeReadiness } from '@features/runtime-provider-management/main';
 import type {
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareIssue,
@@ -26,6 +25,32 @@ export interface OpenCodeSelectedModelPreparationResult {
   blockingMessages: string[];
   issues: TeamProvisioningPrepareIssue[];
   supportDiagnostics: TeamProvisioningSupportDiagnostic[];
+}
+
+export interface OpenCodeLocalModelRuntimeReadiness {
+  readonly providerId: string;
+  readonly modelId: string;
+  readonly presetId: string;
+  readonly toolCapable: boolean | null;
+  readonly parameterCount: number | null;
+  readonly trainedContextTokens: number | null;
+  readonly configuredContextTokens: number | null;
+  readonly effectiveContextTokens: number | null;
+  readonly coordinationProbeStatus: 'passed' | 'failed' | 'unavailable' | null;
+  readonly severity: 'ready' | 'warning' | 'blocking';
+  readonly code:
+    | 'local_coordination_verified'
+    | 'local_coordination_probe_failed'
+    | 'local_coordination_probe_unavailable'
+    | 'local_team_tools_unverified'
+    | 'local_model_too_small'
+    | 'local_tools_unsupported'
+    | 'local_context_too_small'
+    | 'local_provider_unavailable'
+    | 'local_model_not_loaded'
+    | 'local_runtime_inspection_failed'
+    | 'local_runtime_unverified';
+  readonly message: string;
 }
 
 export interface OpenCodeSelectedModelPreparationInput {

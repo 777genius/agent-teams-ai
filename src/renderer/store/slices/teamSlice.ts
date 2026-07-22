@@ -3,16 +3,12 @@ import {
   classifyAnalyticsError,
   elapsedMsBetweenIso,
   elapsedMsSince,
-  recordAttachmentAttachEnd,
-  recordCrossTeamMessageSend,
   recordTaskCreate,
   recordTaskEnd,
-  recordTaskFirstOutput,
   recordTeamCreate,
-  recordTeamDelete,
   recordTeamLaunchEnd,
-  recordTeamLaunchStepEnd,
 } from '@renderer/analytics/productAnalytics';
+import * as productAnalytics from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
 import {
@@ -202,6 +198,25 @@ import type {
   ToolApprovalSettings,
   UpdateKanbanPatch,
 } from '@shared/types';
+
+interface CurrentDevProductAnalytics {
+  recordAttachmentAttachEnd(input: Record<string, unknown>): void;
+  recordCrossTeamMessageSend(input: Record<string, unknown>): void;
+  recordTaskFirstOutput(input: Record<string, unknown>): void;
+  recordTeamDelete(input: Record<string, unknown>): void;
+  recordTeamLaunchStepEnd(input: Record<string, unknown>): void;
+}
+
+const currentDevProductAnalytics =
+  productAnalytics as unknown as Partial<CurrentDevProductAnalytics>;
+const recordAttachmentAttachEnd =
+  currentDevProductAnalytics.recordAttachmentAttachEnd ?? (() => undefined);
+const recordCrossTeamMessageSend =
+  currentDevProductAnalytics.recordCrossTeamMessageSend ?? (() => undefined);
+const recordTaskFirstOutput = currentDevProductAnalytics.recordTaskFirstOutput ?? (() => undefined);
+const recordTeamDelete = currentDevProductAnalytics.recordTeamDelete ?? (() => undefined);
+const recordTeamLaunchStepEnd =
+  currentDevProductAnalytics.recordTeamLaunchStepEnd ?? (() => undefined);
 import type { StateCreator } from 'zustand';
 
 export { getLastResolvedTeamDataRefreshAt } from '../team/teamDataRefreshTimestamps';
@@ -276,6 +291,10 @@ const reportedTeamLaunchStepKeys = new Set<string>();
 const teamLaunchAnalyticsByRunId = new Map<string, TeamLaunchAnalyticsContext>();
 const teamLaunchStepStartedAtByKey = new Map<string, number>();
 const taskFirstOutputAnalyticsByKey = new Map<string, TaskFirstOutputAnalyticsContext>();
+const teamAgentRuntimeFreshnessSnapshotsByTeamAndRun = new Map<
+  string,
+  Map<string | null, TeamAgentRuntimeSnapshot>
+>();
 
 type GlobalTaskNotificationParams = Parameters<typeof processGlobalTaskNotifications>[0];
 
@@ -312,6 +331,101 @@ function clearTeamDataRequestsForTeam(teamName: string): void {
       inFlightTeamDataRequests.delete(key);
     }
   }
+}
+
+function parseRuntimeFreshnessTimestampMs(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function doesRuntimeFreshnessTimestampExtendVisible(
+  visibleTimestamp: string | undefined,
+  cachedTimestamp: string | undefined
+): boolean {
+  if (!visibleTimestamp) return true;
+  if (!cachedTimestamp) return false;
+
+  const visibleMs = parseRuntimeFreshnessTimestampMs(visibleTimestamp);
+  const cachedMs = parseRuntimeFreshnessTimestampMs(cachedTimestamp);
+  if (visibleMs === null || cachedMs === null) {
+    return cachedTimestamp === visibleTimestamp;
+  }
+  return cachedMs >= visibleMs;
+}
+
+function doesTeamAgentRuntimeFreshnessSnapshotExtendVisible(
+  visibleSnapshot: TeamAgentRuntimeSnapshot,
+  cachedSnapshot: TeamAgentRuntimeSnapshot
+): boolean {
+  if (!areTeamAgentRuntimeSnapshotsEqual(visibleSnapshot, cachedSnapshot)) {
+    return false;
+  }
+  if (
+    !doesRuntimeFreshnessTimestampExtendVisible(visibleSnapshot.updatedAt, cachedSnapshot.updatedAt)
+  ) {
+    return false;
+  }
+
+  for (const [memberName, visibleEntry] of Object.entries(visibleSnapshot.members)) {
+    const cachedEntry = cachedSnapshot.members[memberName];
+    if (
+      !cachedEntry ||
+      !doesRuntimeFreshnessTimestampExtendVisible(visibleEntry.updatedAt, cachedEntry.updatedAt) ||
+      !doesRuntimeFreshnessTimestampExtendVisible(
+        visibleEntry.runtimeLastSeenAt,
+        cachedEntry.runtimeLastSeenAt
+      )
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function getTeamAgentRuntimeFreshnessSnapshot(
+  teamName: string,
+  visibleSnapshot: TeamAgentRuntimeSnapshot | undefined,
+  incomingSnapshot: TeamAgentRuntimeSnapshot
+): TeamAgentRuntimeSnapshot | undefined {
+  if (
+    !visibleSnapshot ||
+    visibleSnapshot.teamName !== incomingSnapshot.teamName ||
+    visibleSnapshot.runId !== incomingSnapshot.runId
+  ) {
+    return visibleSnapshot;
+  }
+
+  const cachedSnapshot = teamAgentRuntimeFreshnessSnapshotsByTeamAndRun
+    .get(teamName)
+    ?.get(incomingSnapshot.runId);
+  // The module cache may only extend the visible snapshot's freshness, never seed a reset scope.
+  if (
+    !cachedSnapshot ||
+    cachedSnapshot.teamName !== incomingSnapshot.teamName ||
+    cachedSnapshot.runId !== incomingSnapshot.runId ||
+    !doesTeamAgentRuntimeFreshnessSnapshotExtendVisible(visibleSnapshot, cachedSnapshot)
+  ) {
+    return visibleSnapshot;
+  }
+  return cachedSnapshot;
+}
+
+function rememberTeamAgentRuntimeFreshnessSnapshot(
+  teamName: string,
+  snapshot: TeamAgentRuntimeSnapshot
+): void {
+  let snapshotsByRun = teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.get(teamName);
+  if (!snapshotsByRun) {
+    snapshotsByRun = new Map<string | null, TeamAgentRuntimeSnapshot>();
+    teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.set(teamName, snapshotsByRun);
+  }
+  snapshotsByRun.set(snapshot.runId, snapshot);
+}
+
+function clearTeamAgentRuntimeFreshnessSnapshot(teamName: string): void {
+  teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.delete(teamName);
 }
 
 export function isTeamDataRefreshPending(teamName: string): boolean {
@@ -352,6 +466,7 @@ export function __resetTeamSliceModuleStateForTests(): void {
   teamLaunchStepStartedAtByKey.clear();
   teamLaunchAnalyticsByRunId.clear();
   taskFirstOutputAnalyticsByKey.clear();
+  teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.clear();
   clearAllPendingReplyRefreshWaits();
   clearAllLastResolvedTeamDataRefreshes();
   clearAllTeamLocalStateEpochs();
@@ -385,6 +500,7 @@ function clearTeamScopedTransientState(teamName: string): void {
   clearMemberSpawnStatusesIpcBackoff(teamName);
   clearTeamRefreshBurstDiagnostics(teamName);
   clearMemberSpawnUiEqualLastWarn(teamName);
+  clearTeamAgentRuntimeFreshnessSnapshot(teamName);
   clearTeamScopedSelectorCaches(teamName);
 }
 
@@ -1885,9 +2001,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         ) {
           return {};
         }
-        const previousSnapshot = prev.teamAgentRuntimeByTeam[teamName];
+        const visibleSnapshot = prev.teamAgentRuntimeByTeam[teamName];
+        const previousSnapshot = getTeamAgentRuntimeFreshnessSnapshot(
+          teamName,
+          visibleSnapshot,
+          snapshot
+        );
         const stabilizedSnapshot = stabilizeTeamAgentRuntimeSnapshot(previousSnapshot, snapshot);
-        if (areTeamAgentRuntimeSnapshotsEqual(previousSnapshot, stabilizedSnapshot)) {
+        rememberTeamAgentRuntimeFreshnessSnapshot(teamName, stabilizedSnapshot);
+        if (areTeamAgentRuntimeSnapshotsEqual(visibleSnapshot, stabilizedSnapshot)) {
           return {};
         }
         return {
@@ -3040,7 +3162,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
 
     const requestScope = captureTeamRequestScope(get, teamName);
-    const refreshToken = beginInFlightTeamDataRefresh(teamName);
+    const refreshHandle = beginInFlightTeamDataRefresh(teamName);
     // Silent refresh — update data without showing loading skeleton.
     // Only selectTeam() sets loading: true (for initial load).
     noteTeamRefreshBurst(teamName, TEAM_REFRESH_BURST_WINDOW_MS);
@@ -3181,7 +3303,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       set({ selectedTeamError: msg });
     } finally {
-      endInFlightTeamDataRefresh(teamName, refreshToken);
+      endInFlightTeamDataRefresh(teamName, refreshHandle);
       if (
         reusedInFlightRequest &&
         pendingFreshTeamDataRefreshes.delete(teamName) &&
@@ -4646,6 +4768,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         delete nextSpawnStatuses[existing.teamName];
         delete nextSpawnSnapshots[existing.teamName];
         delete nextRuntime[existing.teamName];
+        clearTeamAgentRuntimeFreshnessSnapshot(existing.teamName);
       }
       const nextActiveTools = { ...state.activeToolsByTeam };
       const nextFinishedVisible = { ...state.finishedVisibleByTeam };
@@ -4822,6 +4945,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         if (!currentStatuses) {
           if (progress.state !== 'ready') {
             delete nextRuntime[progress.teamName];
+            clearTeamAgentRuntimeFreshnessSnapshot(progress.teamName);
           }
           return {
             memberSpawnStatusesByTeam: next,
@@ -4847,6 +4971,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           delete nextSnapshots[progress.teamName];
         }
         delete nextRuntime[progress.teamName];
+        clearTeamAgentRuntimeFreshnessSnapshot(progress.teamName);
         return {
           memberSpawnStatusesByTeam: next,
           memberSpawnSnapshotsByTeam: nextSnapshots,

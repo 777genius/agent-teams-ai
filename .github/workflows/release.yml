@@ -474,9 +474,22 @@ jobs:
           exit 1
 
   verify-public-runtime:
+    name: verify public runtime (${{ matrix.platform }})
     needs: prepare-runtime
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64
+            runner: ubuntu-24.04
+          - platform: win32-x64
+            runner: windows-2022
+          - platform: darwin-arm64
+            runner: macos-14
+          - platform: darwin-x64
+            runner: macos-15-intel
 
     steps:
       - name: Checkout
@@ -486,6 +499,9 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
+
+      - name: Verify runtime lock pins on the release ref
+        run: node ./scripts/ci/verify-runtime-lock.mjs
 
       - name: Verify anonymous runtime bootstrap before packaging
         run: node ./scripts/ci/verify-public-runtime-bootstrap.mjs

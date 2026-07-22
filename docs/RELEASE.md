@@ -86,6 +86,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.10.0 -->
+
 Improved local model setup, team launches, Changes recovery, and provider error messages.
 
 ### What's New
@@ -166,6 +167,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.9.0 -->
+
 Redesigned the team page and related workflows, added simple setup for local models, improved Cursor-style control over code changes, and fixed issues in agent setup, launch, and recovery.
 
 <img width="2624" height="1652" alt="image" src="https://github.com/user-attachments/assets/b23a09f3-0f08-446f-824d-5623ff111574" />
@@ -252,6 +254,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.8.0 -->
+
 Use more of the AI subscriptions you already pay for in the same Agent Team. Guided setup connects supported plans, lets you choose a provider and model for each teammate, and keeps the whole flow in one place. This release also adds safe team-folder import, newer Codex models, and fuller usage and cost reporting.
 
 ### What's New
@@ -343,6 +346,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.5.1 -->
+
 Reduces memory growth in long-running teams and large projects. Fixes OOM risks in transcript/project matching, duplicate runtime probes, and unbounded runtime/provisioning diagnostic buffers.
 
 ### What's New
@@ -414,6 +418,7 @@ GitHub release: [v2.5.0](https://github.com/777genius/agent-teams-ai/releases/ta
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.5.0 -->
+
 Built-in terminal for command and graph screens.
 
 <img width="762" height="338" alt="image" src="https://github.com/user-attachments/assets/c8aa4e93-1223-4caa-b3be-cf22852f1c10" />
@@ -485,6 +490,7 @@ Target commit: `ad5a2dc5808eeddde30ab17eecf3afbb32b24214` (`origin/dev`).
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.4.0 -->
+
 Minor release focused on more capable team runtime workflows, better Agent Graph controls, faster team screens, and stronger recovery for OpenCode, Codex, and member work sync. It also refreshes onboarding docs, screenshots, and Simplified Chinese localization.
 
 ### What's New
@@ -638,8 +644,8 @@ EOF
 
 Format: `MAJOR.MINOR.PATCH`
 
-| Bump  | When                                                                  | Example       |
-| ----- | --------------------------------------------------------------------- | ------------- |
+| Bump  | When                                                                  | Example        |
+| ----- | --------------------------------------------------------------------- | -------------- |
 | MAJOR | Breaking changes, major UI overhaul, incompatible data format changes | 1.0.0 -> 2.0.0 |
 | MINOR | New features, new panels/views, new integrations                      | 1.0.0 -> 1.1.0 |
 | PATCH | Bug fixes, performance improvements, small UI tweaks                  | 1.0.0 -> 1.0.1 |

@@ -575,9 +575,9 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
     expect(hasRecoverableOpenCodeBootstrapDiagnostic(['runtime_bootstrap_checkin pending'])).toBe(
       true
     );
-    expect(hasRecoverableOpenCodeBootstrapDiagnostic(['provider unavailable: quota exceeded'])).toBe(
-      false
-    );
+    expect(
+      hasRecoverableOpenCodeBootstrapDiagnostic(['provider unavailable: quota exceeded'])
+    ).toBe(false);
     expect(hasRecoverableOpenCodeBootstrapDiagnostic([])).toBe(false);
   });
 
@@ -735,7 +735,9 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
         'OpenCode secondary lane timing: 100ms',
         'member_briefing delivery pending',
       ])
-    ).toBe('member_briefing delivery pending; runtime_bootstrap_checkin did not complete after 5 min.');
+    ).toBe(
+      'member_briefing delivery pending; runtime_bootstrap_checkin did not complete after 5 min.'
+    );
     expect(getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted(makePersisted())).toBe(
       OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC
     );
@@ -746,7 +748,9 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
           diagnostics: ['member_briefing delivery pending'],
         })
       )
-    ).toBe('member_briefing delivery pending; runtime_bootstrap_checkin did not complete after 5 min.');
+    ).toBe(
+      'member_briefing delivery pending; runtime_bootstrap_checkin did not complete after 5 min.'
+    );
     expect(
       getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted(
         makePersisted({
@@ -778,7 +782,10 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
     ).toBe(false);
     expect(
       shouldMarkPersistedOpenCodeBootstrapStalled(
-        makePersisted({ runtimeSessionId: 'runtime-session', hardFailureReason: 'model not found' }),
+        makePersisted({
+          runtimeSessionId: 'runtime-session',
+          hardFailureReason: 'model not found',
+        }),
         stalledAtMs
       )
     ).toBe(false);
@@ -877,9 +884,11 @@ describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
     expect(isRecoverableOpenCodeRuntimeEvidence(evidence as TeamRuntimeMemberLaunchEvidence)).toBe(
       true
     );
-    expect(isRecoverableOpenCodeRuntimeEvidence({ runtimeAlive: true } as TeamRuntimeMemberLaunchEvidence)).toBe(
-      true
-    );
+    expect(
+      isRecoverableOpenCodeRuntimeEvidence({
+        runtimeAlive: true,
+      } as TeamRuntimeMemberLaunchEvidence)
+    ).toBe(true);
     expect(isRecoverableOpenCodeRuntimeEvidence(undefined)).toBe(false);
   });
 

@@ -54,6 +54,12 @@
     "vitepress-plugin-llms": "^1.12.2"
   },
   "overrides": {
-    "esbuild": "0.28.1"
+    "esbuild": "0.28.1",
+    "immutable": "5.1.9",
+    "linkify-it": "5.0.2",
+    "shell-quote": "1.10.0",
+    "svgo": "4.0.2",
+    "tar": "7.5.20",
+    "axios": "1.18.1"
   }
 }

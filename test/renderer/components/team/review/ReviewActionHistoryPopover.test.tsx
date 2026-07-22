@@ -49,9 +49,7 @@ function makeAction(index: number): ReviewUndoAction {
 
 function openHistory(container: HTMLElement): void {
   act(() =>
-    container
-      .querySelector<HTMLButtonElement>('button[aria-label^="Review history:"]')
-      ?.click()
+    container.querySelector<HTMLButtonElement>('button[aria-label^="Review history:"]')?.click()
   );
 }
 
@@ -70,9 +68,7 @@ describe('ReviewActionHistoryPopover', () => {
     const older = makeAction(1);
     const current = makeAction(2);
     act(() => {
-      root.render(
-        <ReviewActionHistoryPopover undoHistory={[older, current]} redoHistory={[]} />
-      );
+      root.render(<ReviewActionHistoryPopover undoHistory={[older, current]} redoHistory={[]} />);
     });
 
     const staleOpen = popoverMock.current?.onOpenChange;
@@ -80,9 +76,7 @@ describe('ReviewActionHistoryPopover', () => {
     expect(popoverMock.current?.open).toBe(true);
 
     act(() => {
-      root.render(
-        <ReviewActionHistoryPopover undoHistory={[older, current]} redoHistory={[]} />
-      );
+      root.render(<ReviewActionHistoryPopover undoHistory={[older, current]} redoHistory={[]} />);
     });
     expect(popoverMock.current?.open).toBe(true);
 

@@ -18,32 +18,32 @@ hero:
       text: Konzepte
       link: /de/reference/concepts
 features:
-  - icon: "01"
+  - icon: '01'
     title: Team-orientierter Workflow
     details: Definieren Sie Rollen, starten Sie einen Lead und lassen Sie Agenten Aufgaben aufteilen, übernehmen und koordinieren.
     link: /de/guide/create-team
     linkText: Team erstellen
-  - icon: "02"
+  - icon: '02'
     title: Live-Kanban-Board
     details: Verfolgen Sie, wie Aufgaben durch todo, in progress, review, done und approved wandern, während die Agenten arbeiten.
     link: /de/guide/agent-workflow
     linkText: Workflow verstehen
-  - icon: "03"
+  - icon: '03'
     title: Integriertes Code-Review
     details: Untersuchen Sie aufgabenbezogene Diffs, akzeptieren oder verwerfen Sie Hunks und kommentieren Sie dort, wo Agenten eine Richtung brauchen.
     link: /de/guide/code-review
     linkText: Änderungen überprüfen
-  - icon: "04"
+  - icon: '04'
     title: Runtime-bewusste Einrichtung
     details: Nutzen Sie Claude, Codex, OpenCode oder Multimodell-Anbieter über den Zugang, den Sie bereits haben.
     link: /de/guide/runtime-setup
     linkText: Runtimes konfigurieren
-  - icon: "05"
+  - icon: '05'
     title: Local-first-Kontrolle
     details: Die Desktop-App liest den lokalen Projekt- und Runtime-Zustand. Ihr Code bleibt auf Ihrem Rechner, sofern nicht ein ausgewählter Anbieter Prompt-Kontext erhält.
     link: /de/reference/privacy-local-data
     linkText: Datenschutzmodell
-  - icon: "06"
+  - icon: '06'
     title: Debugbare Teams
     details: Verfolgen Sie Aufgabenprotokolle, Runtime-Ausgaben, Teamkollegen-Nachrichten und laufende Prozesse, wenn ein Start oder eine Aufgabe hängen bleibt.
     link: /de/guide/troubleshooting

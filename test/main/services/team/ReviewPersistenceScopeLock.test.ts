@@ -83,10 +83,14 @@ describe('ReviewPersistenceScopeLock', () => {
       await import('@main/services/team/ReviewPersistenceScopeLock');
 
     await expect(
-      withReviewPersistenceScopeLock('../outside', {
-        scopeKey: 'task-task-1',
-        scopeToken: 'scope',
-      }, async () => undefined)
+      withReviewPersistenceScopeLock(
+        '../outside',
+        {
+          scopeKey: 'task-task-1',
+          scopeToken: 'scope',
+        },
+        async () => undefined
+      )
     ).rejects.toThrow('Invalid review persistence lock team name');
   });
 

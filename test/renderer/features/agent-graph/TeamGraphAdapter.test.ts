@@ -1948,7 +1948,8 @@ describe('TeamGraphAdapter particles', () => {
             hardFailure: true,
             hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
             livenessKind: 'confirmed_bootstrap',
-            runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+            runtimeDiagnostic:
+              'runtime pid could not be verified because process table is unavailable',
             runtimeDiagnosticSeverity: 'warning',
             updatedAt: '2026-05-25T20:14:02.147Z',
           },

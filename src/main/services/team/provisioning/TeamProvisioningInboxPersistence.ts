@@ -7,6 +7,10 @@ import { atomicWriteAsync } from '../atomicWrite';
 import { withFileLock } from '../fileLock';
 import { withInboxLock } from '../inboxLock';
 import { getEffectiveInboxMessageId } from '../inboxMessageIdentity';
+import { MAX_INBOX_FILE_BYTES } from '../TeamInboxReader';
+
+import { tryReadRegularFileUtf8 } from './TeamProvisioningRegularFileRead';
+import { TEAM_JSON_READ_TIMEOUT_MS } from './TeamProvisioningRunModel';
 
 export interface TeamInboxReadFileOptions {
   timeoutMs: number;
@@ -110,5 +114,22 @@ export async function markTeamInboxMessagesRead(
       if (!changed) return;
       await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
     });
+  });
+}
+
+export type MarkTeamInboxMessagesReadWithDefaultsInput = Pick<
+  MarkTeamInboxMessagesReadInput,
+  'teamName' | 'member' | 'messages'
+> &
+  Pick<Partial<MarkTeamInboxMessagesReadInput>, 'teamsBasePath'>;
+
+export function markTeamInboxMessagesReadWithDefaults(
+  input: MarkTeamInboxMessagesReadWithDefaultsInput
+): Promise<void> {
+  return markTeamInboxMessagesRead({
+    ...input,
+    readRegularFileUtf8: tryReadRegularFileUtf8,
+    timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+    maxBytes: MAX_INBOX_FILE_BYTES,
   });
 }

@@ -1,16 +1,9 @@
-import { buildPlannedMemberLaneIdentity } from '@features/team-runtime-lanes';
 import {
-  killTmuxPaneForCurrentPlatformSync,
-  listRuntimeProcessTableForCurrentPlatform,
-  listTmuxPanePidsForCurrentPlatform,
   listTmuxPaneRuntimeInfoForCurrentPlatform,
   sendKeysToTmuxPaneForCurrentPlatform,
-  type TmuxPaneRuntimeInfo,
 } from '@features/tmux-installer/main';
 import { spawnCli } from '@main/utils/childProcess';
-import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
@@ -36,62 +29,95 @@ import { buildNativeAppManagedBootstrapSpecs } from '../bootstrap/NativeAppManag
 import { ClaudeBinaryResolver } from '../ClaudeBinaryResolver';
 import { getConfiguredCliFlavor } from '../cliFlavor';
 import { sanitizeProcessRuntimeEventFilePrefix } from '../ProcessBootstrapTransportEvidence';
-import { TeamConfigReader } from '../TeamConfigReader';
 import { createPersistedLaunchSnapshot } from '../TeamLaunchStateEvaluator';
-import { commandArgEquals } from '../TeamRuntimeLivenessResolver';
 
+import {
+  createAppendDirectProcessRuntimeEventUseCase,
+  type DirectProcessRuntimeEventInput,
+} from './TeamProvisioningAppendDirectProcessRuntimeEventUseCase';
+import {
+  createCollectFailedOpenCodeSecondaryRetryCandidatesUseCase,
+  type OpenCodeSecondaryRetryCandidate,
+} from './TeamProvisioningCollectFailedOpenCodeSecondaryRetryCandidatesUseCase';
 import {
   buildDirectTmuxRestartLauncher,
   isInteractiveShellCommand,
 } from './TeamProvisioningDirectRestart';
+import {
+  createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase,
+  type HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchInput,
+} from './TeamProvisioningHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase';
 import {
   matchesExactTeamMemberName,
   matchesMemberNameOrBase,
   matchesObservedMemberNameForExpected,
   matchesTeamMemberIdentity,
 } from './TeamProvisioningMemberIdentity';
-import {
-  createMemberLifecycleOperationInProgressError,
-  getMemberLifecycleOperationKey,
-  isMemberLifecycleOperationInProgressError,
-} from './TeamProvisioningMemberLifecycleKeys';
+import { isMemberLifecycleOperationInProgressError } from './TeamProvisioningMemberLifecycleKeys';
+import { type MemberLifecycleOperationKind } from './TeamProvisioningMemberLifecycleOperationRunner';
 import { parseOptionalIsoMs } from './TeamProvisioningMemberSpawnStatusPolicy';
 import {
-  hasOpenCodeRuntimeEntryHandle,
-  hasOpenCodeRuntimeHandle,
-  hasOpenCodeRuntimeLivenessMarker,
-  MEMBER_BOOTSTRAP_STALL_MS,
-} from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+  createPersistOpenCodeMemberRestartSystemMessageUseCase,
+  type OpenCodeMemberRestartSystemMessageInput,
+} from './TeamProvisioningOpenCodeMemberRestartSystemMessageUseCase';
+import { MEMBER_BOOTSTRAP_STALL_MS } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import {
+  createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase,
+  type PreparePrimaryOwnedMemberRestartRuntimeInput,
+  type PreparePrimaryOwnedMemberRestartRuntimeResult,
+} from './TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase';
 import {
   buildMemberSpawnPrompt,
   buildRestartMemberSpawnMessage,
 } from './TeamProvisioningPromptBuilders';
+import {
+  createReadOpenCodeSecondaryRetryOutcomeUseCase,
+  type OpenCodeSecondaryRetryOutcome,
+} from './TeamProvisioningReadOpenCodeSecondaryRetryOutcomeUseCase';
+import { createNodeResolveDirectRestartRuntimeCwdUseCase } from './TeamProvisioningResolveDirectRestartRuntimeCwdUseCase';
+import {
+  createNodeStopPrimaryOwnedRosterRuntimeUseCase,
+  type StopPrimaryOwnedRosterRuntimeInput,
+} from './TeamProvisioningStopPrimaryOwnedRosterRuntimeUseCase';
+import {
+  createNodeUpdateDirectTmuxRestartMemberConfigUseCase,
+  type DirectTmuxRestartMemberConfigInput,
+} from './TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase';
 
 import type { NativeAppManagedBootstrapSpec } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
-import type {
-  TeamLaunchRuntimeAdapter,
-  TeamRuntimeLaunchResult,
-  TeamRuntimeMemberLaunchEvidence,
-} from '../runtime';
-import type { TeamMcpConfigBuilder } from '../TeamMcpConfigBuilder';
 import type { TeamMembersMetaStore } from '../TeamMembersMetaStore';
-import type { RuntimeTelemetryProcessTableRow } from '../TeamRuntimeTelemetry';
 import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
-import type { LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
 import type {
-  EffortLevel,
-  MemberLaunchState,
-  MemberSpawnStatusEntry,
-  PersistedTeamLaunchMemberState,
+  DirectRestartPromptInput,
+  ProvisioningEnvResolution,
+  TeamProvisioningMemberLifecycleHost,
+  TeamRuntimeLaunchArgsPlan,
+} from './TeamProvisioningMemberLifecycleHostPorts';
+import type { TeamProvisioningMemberLifecycleOperationUseCases } from './TeamProvisioningMemberLifecycleOperationUseCases';
+import type {
+  DirectProcessMemberLaunchReason,
+  DirectProcessMemberRestartInput,
+  EffectiveConfiguredMember,
+  LiveRosterAttachReason,
+  PersistedRuntimeMemberLike,
+  ProvisioningRun,
+  ReattachOpenCodeOwnedMemberLaneOptions,
+} from './TeamProvisioningMemberLifecycleTypes';
+import type {
+  TeamProvisioningMemberLifecycleActionUseCaseSeams,
+  TeamProvisioningMemberLifecycleControllerUseCaseSeams,
+  TeamProvisioningMemberLifecycleOpenCodeRetryUseCaseSeams,
+  TeamProvisioningMemberLifecycleRestartUseCaseSeams,
+} from './TeamProvisioningMemberLifecycleUseCaseSeams';
+import type { LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
+import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
+import type {
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSnapshot,
   ProviderModelLaunchIdentity,
   RetryFailedOpenCodeSecondaryLanesResult,
-  TeamAgentRuntimeEntry,
   TeamConfig,
   TeamCreateRequest,
-  TeamFastMode,
-  TeamLaunchRequest,
   TeamProviderBackendId,
   TeamProviderId,
 } from '@shared/types';
@@ -103,38 +129,21 @@ const TEAMMATE_RUNTIME_EVENTS_ENV = 'CLAUDE_CODE_TEAMMATE_RUNTIME_EVENTS_PATH';
 const TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV = 'CLAUDE_CODE_BOOTSTRAP_PROOF_TOKEN';
 const NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_ENV =
   'CLAUDE_CODE_NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_PATH';
-const TEAM_JSON_READ_TIMEOUT_MS = 5_000;
-const TEAM_CONFIG_MAX_BYTES = 10 * 1024 * 1024;
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS =
   'TeamDelete,TodoWrite,TaskCreate,TaskUpdate,mcp__agent-teams__team_launch,mcp__agent-teams__team_stop';
 
-async function tryReadRegularFileUtf8(
-  filePath: string,
-  opts: { timeoutMs: number; maxBytes: number }
-): Promise<string | null> {
-  let stat: fs.Stats;
-  try {
-    stat = await fs.promises.stat(filePath);
-  } catch {
-    return null;
-  }
+type RuntimeAdapterRunEntry = NonNullable<
+  ReturnType<TeamProvisioningMemberLifecycleHost['runtimeAdapterRunByTeam']['get']>
+>;
 
-  if (!stat.isFile() || stat.size > opts.maxBytes) {
-    return null;
-  }
-
-  try {
-    return await readFileUtf8WithTimeout(filePath, opts.timeoutMs);
-  } catch (error) {
-    if (error instanceof FileReadTimeoutError) {
-      return null;
-    }
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    throw error;
-  }
-}
+type MemberLifecycleOpenCodeRuntimeAdapter = Exclude<
+  ReturnType<TeamProvisioningMemberLifecycleHost['getOpenCodeRuntimeAdapter']>,
+  null
+> & {
+  preflightLocalModels?: (input: {
+    targets: readonly { projectPath: string; modelRoute: string }[];
+  }) => Promise<{ ok: boolean; warnings: string[]; diagnostics: string[] }>;
+};
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -164,67 +173,6 @@ function applyAppManagedRuntimeSettingsPathEnv(
   }
 }
 
-async function waitForPidsToExit(
-  pids: readonly number[],
-  options: { timeoutMs: number; pollMs: number }
-): Promise<number[]> {
-  const uniquePids = [...new Set(pids.filter((pid) => Number.isFinite(pid) && pid > 0))];
-  if (uniquePids.length === 0) {
-    return [];
-  }
-  const deadline = Date.now() + options.timeoutMs;
-  while (Date.now() < deadline) {
-    const alive = uniquePids.filter((pid) => isProcessAlive(pid));
-    if (alive.length === 0) {
-      return [];
-    }
-    await new Promise((resolve) => setTimeout(resolve, options.pollMs));
-  }
-  return uniquePids.filter((pid) => isProcessAlive(pid));
-}
-
-async function waitForTmuxPanesToExit(
-  paneIds: readonly string[],
-  options: { timeoutMs: number; pollMs: number }
-): Promise<string[]> {
-  const uniquePaneIds = [...new Set(paneIds.map((paneId) => paneId.trim()).filter(Boolean))];
-  if (uniquePaneIds.length === 0) {
-    return [];
-  }
-  const deadline = Date.now() + options.timeoutMs;
-  while (Date.now() < deadline) {
-    let paneInfo: Map<string, number>;
-    try {
-      paneInfo = await listTmuxPanePidsForCurrentPlatform(uniquePaneIds);
-    } catch (error) {
-      if (isTmuxServerUnavailableError(error)) {
-        return [];
-      }
-      throw error;
-    }
-    const alive = uniquePaneIds.filter((paneId) => paneInfo.has(paneId));
-    if (alive.length === 0) {
-      return [];
-    }
-    await new Promise((resolve) => setTimeout(resolve, options.pollMs));
-  }
-  let finalPaneInfo: Map<string, number>;
-  try {
-    finalPaneInfo = await listTmuxPanePidsForCurrentPlatform(uniquePaneIds);
-  } catch (error) {
-    if (isTmuxServerUnavailableError(error)) {
-      return [];
-    }
-    throw error;
-  }
-  return uniquePaneIds.filter((paneId) => finalPaneInfo.has(paneId));
-}
-
-function isTmuxServerUnavailableError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /error connecting to .*tmux.*No such file or directory/i.test(message);
-}
-
 async function ensureCwdExists(cwd: string): Promise<void> {
   const stat = await fs.promises.stat(cwd).catch(() => null);
   if (!stat?.isDirectory()) {
@@ -232,162 +180,19 @@ async function ensureCwdExists(cwd: string): Promise<void> {
   }
 }
 
-export type MemberLifecycleOperationKind =
-  | 'manual_restart'
-  | 'opencode_retry'
-  | 'opencode_member_added'
-  | 'opencode_member_updated'
-  | 'opencode_member_removed'
-  | 'primary_member_added'
-  | 'primary_member_restored'
-  | 'primary_member_updated'
-  | 'primary_member_removed';
-
-interface DirectRestartPromptInput {
-  teamName: string;
-  memberName: string;
-  leadName: string;
-  leadSessionId: string | null;
-  prompt: string;
-  operation?: DirectProcessMemberLaunchReason;
-}
-
-interface DirectTmuxRestartMemberConfigInput {
-  teamName: string;
-  memberName: string;
-  member: TeamCreateRequest['members'][number] & { agentType?: string };
-  agentId: string;
-  color: string;
-  prompt: string;
-  paneId: string;
-  cwd: string;
-  providerId: TeamProviderId;
-  joinedAt: number;
-  bootstrapExpectedAfter: string;
-  backendType?: 'tmux' | 'process';
-  runtimePid?: number;
-  bootstrapRuntimeEventsPath?: string;
-  bootstrapProofToken?: string;
-  bootstrapRunId?: string;
-  bootstrapContextHash?: string;
-  bootstrapBriefingHash?: string;
-}
-
-interface DirectProcessRuntimeEventInput {
-  type: string;
-  eventsPath: string;
-  pid: number;
-  teamName: string;
-  agentName: string;
-  agentId: string;
-  runId: string;
-  bootstrapRunId: string;
-  source: string;
-  detail?: string;
-}
-
-export type LiveRosterAttachReason = 'member_added' | 'member_restored' | 'member_updated';
-type DirectProcessMemberLaunchReason = 'manual_restart' | LiveRosterAttachReason;
-
-export interface MemberLifecycleOperation {
-  kind: MemberLifecycleOperationKind;
-  token: symbol;
-  startedAtMs: number;
-}
-
-export interface OpenCodeSecondaryRetryCandidate {
-  memberName: string;
-  laneId: string;
-}
-
-export interface OpenCodeSecondaryRetryOutcome {
-  launchState: MemberLaunchState;
-  reason?: string;
-}
-
-type EffectiveConfiguredMember = TeamCreateRequest['members'][number] & {
-  agentType?: string;
-  removedAt?: number;
-};
-
-interface PendingMemberRestartContextLike {
-  requestedAt: string;
-  desired?: {
-    name: string;
-    role?: string;
-    workflow?: string;
-    isolation?: 'worktree';
-    providerId?: TeamProviderId;
-    model?: string;
-    effort?: EffortLevel;
-  };
-}
-
-interface MixedSecondaryRuntimeLaneState {
-  laneId: string;
-  providerId: 'opencode';
-  member: TeamCreateRequest['members'][number];
-  runId: string | null;
-  state: 'queued' | 'launching' | 'finished';
-  result: TeamRuntimeLaunchResult | null;
-  warnings: string[];
-  diagnostics: string[];
-  launchScheduled?: boolean;
-  queuedAtMs?: number;
-  launchStartedAtMs?: number;
-  launchFinishedAtMs?: number;
-}
-
-interface ProvisioningRun {
-  runId: string;
-  teamName: string;
-  request: TeamCreateRequest;
-  spawnContext?: { claudePath?: string };
-  detectedSessionId: string | null;
-  memberMcpConfigPaths: string[];
-  memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;
-  memberSpawnToolUseIds: Map<string, string>;
-  pendingMemberRestarts: Map<string, PendingMemberRestartContextLike>;
-  mixedSecondaryLanes: MixedSecondaryRuntimeLaneState[];
-  processKilled: boolean;
-  cancelRequested: boolean;
-  isLaunch: boolean;
-  provisioningComplete: boolean;
-}
-
-interface PersistedRuntimeMemberLike {
-  name?: string;
-  agentId?: string;
-  tmuxPaneId?: string;
-  backendType?: string;
-  providerId?: string;
-  cwd?: string;
-  bootstrapExpectedAfter?: string;
-  bootstrapProofToken?: string;
-  bootstrapRunId?: string;
-  bootstrapProofMode?: string;
-  bootstrapContextHash?: string;
-  bootstrapBriefingHash?: string;
-  bootstrapRuntimeEventsPath?: string;
-  runtimePid?: number;
-  runtimeSessionId?: string;
-}
-
-interface ProvisioningEnvResolution {
-  env: NodeJS.ProcessEnv;
-  providerArgs?: string[];
-  anthropicApiKeyHelper?: { directory: string } | null;
-  warning?: string;
-}
-
 async function cleanupPendingAnthropicApiKeyHelper(
   envResolution: ProvisioningEnvResolution,
   contextLabel: string
 ): Promise<void> {
-  const helper = envResolution.anthropicApiKeyHelper;
+  const helper = (
+    envResolution as ProvisioningEnvResolution & {
+      anthropicApiKeyHelper?: { directory: string } | null;
+    }
+  ).anthropicApiKeyHelper;
   if (!helper) {
     return;
   }
+  // Cleanup stays best-effort so the original provisioning failure remains authoritative.
   await cleanupAnthropicTeamApiKeyHelperMaterial({
     directory: helper.directory,
     skipIfLiveProcessReferences: true,
@@ -400,201 +205,70 @@ async function cleanupPendingAnthropicApiKeyHelper(
   });
 }
 
-async function runWithPendingAnthropicApiKeyHelperCleanup<T>(
-  envResolution: ProvisioningEnvResolution,
-  contextLabel: string,
-  operation: () => Promise<T>
-): Promise<T> {
-  try {
-    return await operation();
-  } catch (error) {
-    await cleanupPendingAnthropicApiKeyHelper(envResolution, contextLabel);
-    throw error;
-  }
-}
-
-interface TeamRuntimeLaunchArgsPlan {
-  settingsArgs: string[];
-  fastModeArgs: string[];
-  runtimeTurnSettledHookArgs: string[];
-  providerArgs: string[];
-  appManagedSettingsPath: string | null;
-}
-
-interface TeamMetaLike {
-  providerId?: TeamProviderId;
-  providerBackendId?: string;
-  cwd?: string;
-  prompt?: string;
-  model?: string;
-  effort?: EffortLevel;
-  fastMode?: TeamFastMode;
-  limitContext?: boolean;
-  skipPermissions?: boolean;
-  worktree?: string;
-  extraCliArgs?: string;
-}
-
-export interface TeamProvisioningMemberLifecycleHost {
-  runs: Map<string, ProvisioningRun>;
-  runtimeAdapterRunByTeam: Map<string, { providerId: TeamProviderId; runId: string; cwd?: string }>;
-  failedOpenCodeSecondaryRetryInFlightByTeam: Map<
-    string,
-    Promise<RetryFailedOpenCodeSecondaryLanesResult>
-  >;
-  memberLifecycleOperations: Map<string, MemberLifecycleOperation>;
-  mcpConfigBuilder: Pick<TeamMcpConfigBuilder, 'writeConfigFile'>;
-  membersMetaStore: Pick<TeamMembersMetaStore, 'getMembers'>;
-  teamMetaStore: { getMeta(teamName: string): Promise<TeamMetaLike | null> };
-  launchStateStore: { read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null> };
-  getRunTrackedCwd(run: ProvisioningRun | null | undefined): string | null;
-  buildPrimaryOwnedMemberSpecForRuntime(input: {
-    configuredMember: EffectiveConfiguredMember;
-    run: ProvisioningRun;
-  }): TeamCreateRequest['members'][number];
-  buildProvisioningEnv(
-    providerId: TeamProviderId,
-    providerBackendId: TeamProviderBackendId | undefined,
-    options: {
-      teamRuntimeAuth: {
-        teamName: string;
-        authMaterialId: string;
-        allowAnthropicApiKeyHelper: boolean;
-      };
-    }
-  ): Promise<ProvisioningEnvResolution>;
-  materializeEffectiveTeamMemberSpecs(input: {
-    claudePath: string;
-    cwd: string;
-    members: TeamCreateRequest['members'];
-    defaults: {
-      providerId: TeamProviderId;
-      model?: string;
-      effort?: EffortLevel;
-    };
-    primaryProviderId: TeamProviderId;
-    primaryEnv: ProvisioningEnvResolution;
-    teamRuntimeAuth: {
-      teamName: string;
-      authMaterialId: string;
-      allowAnthropicApiKeyHelper: boolean;
-    };
-  }): Promise<TeamCreateRequest['members']>;
-  resolveDirectMemberLaunchIdentity(input: {
-    claudePath: string;
-    cwd: string;
-    providerId: TeamProviderId;
-    providerBackendId?: TeamProviderBackendId;
-    provisioningEnv: ProvisioningEnvResolution;
-    memberSpec: TeamCreateRequest['members'][number];
-    run: ProvisioningRun;
-  }): Promise<ProviderModelLaunchIdentity | null>;
-  buildTeamRuntimeLaunchArgsPlan(input: {
-    teamName: string;
-    providerId: TeamProviderId;
-    launchIdentity: ProviderModelLaunchIdentity | null;
-    envResolution: ProvisioningEnvResolution;
-    extraArgs: string[];
-    includeAnthropicHelper: boolean;
-    contextLabel: string;
-  }): Promise<TeamRuntimeLaunchArgsPlan>;
-  persistInboxMessage(teamName: string, memberName: string, message: Record<string, unknown>): void;
-  persistSentMessage(teamName: string, message: Record<string, unknown>): void;
-  appendMemberBootstrapDiagnostic(run: ProvisioningRun, memberName: string, text: string): void;
-  setMemberSpawnStatus(
-    run: ProvisioningRun,
-    memberName: string,
-    status: 'spawning' | 'waiting' | 'online' | 'error' | 'offline' | 'skipped',
-    error?: string,
-    livenessSource?: 'heartbeat' | 'process',
-    heartbeatAt?: string
-  ): void;
-  upsertRunAllEffectiveMember(
-    run: ProvisioningRun,
-    member: TeamCreateRequest['members'][number]
-  ): void;
-  removeRunAllEffectiveMember(run: ProvisioningRun, memberName: string): void;
-  invalidateRuntimeSnapshotCaches(teamName: string): void;
-  resetRuntimeToolActivity(run: ProvisioningRun, memberName?: string): void;
-  clearMemberSpawnToolTracking(run: ProvisioningRun, memberName: string): void;
-  getAliveRunId(teamName: string): string | null;
-  getTrackedRunId(teamName: string): string | null;
-  getProvisioningRunId(teamName: string): string | null;
-  isCurrentTrackedRun(run: ProvisioningRun): boolean;
-  readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null>;
-  resolveEffectiveConfiguredMember(
-    configMembers: TeamConfig['members'],
-    metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>,
-    memberName: string
-  ): EffectiveConfiguredMember | null;
-  resolveLeadMemberName(
-    configMembers: TeamConfig['members'],
-    metaMembers: Awaited<ReturnType<TeamMembersMetaStore['getMembers']>>
-  ): string;
-  getLiveTeamAgentRuntimeMetadata(
-    teamName: string
-  ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>>;
-  readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
-  persistLaunchStateSnapshot(
-    run: ProvisioningRun,
-    phase: PersistedTeamLaunchPhase
-  ): Promise<PersistedTeamLaunchSnapshot | null>;
-  buildTrackedMemberMcpLaunchConfig(input: {
-    cwd: string;
-    mcpPolicy: TeamCreateRequest['members'][number]['mcpPolicy'];
-    run: ProvisioningRun;
-  }): Promise<RuntimeBootstrapMemberMcpLaunchConfig>;
-  removeTrackedMemberMcpLaunchConfig(
-    run: ProvisioningRun,
-    config: RuntimeBootstrapMemberMcpLaunchConfig | null
-  ): Promise<void>;
-  sendMessageToRun(run: ProvisioningRun, message: string): Promise<unknown>;
-  getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
-  resolveOpenCodeMemberWorkspacesForRuntime(input: {
-    teamName: string;
-    baseCwd: string;
-    leadProviderId: TeamProviderId;
-    members: TeamCreateRequest['members'];
-  }): Promise<TeamCreateRequest['members']>;
-  buildConfiguredProvisioningMember(
-    member: EffectiveConfiguredMember
-  ): TeamCreateRequest['members'][number];
-  runOpenCodeTeamRuntimeAdapterLaunch(input: {
-    request: TeamCreateRequest | TeamLaunchRequest;
-    members: TeamCreateRequest['members'];
-    prompt: string;
-    sourceWarning?: string;
-    onProgress: (progress: unknown) => void;
-  }): Promise<unknown>;
-  restartPureOpenCodeAggregatePrimaryMember(teamName: string, memberName: string): Promise<boolean>;
-  createMixedSecondaryLaneStateForMember(
-    run: ProvisioningRun,
-    member: TeamCreateRequest['members'][number]
-  ): MixedSecondaryRuntimeLaneState;
-  stopSingleMixedSecondaryRuntimeLane(
-    run: ProvisioningRun,
-    lane: MixedSecondaryRuntimeLaneState,
-    reason: 'cleanup' | 'relaunch'
-  ): Promise<void>;
-  getRunLeadName(run: ProvisioningRun): string;
-  launchSingleMixedSecondaryLane(
-    run: ProvisioningRun,
-    lane: MixedSecondaryRuntimeLaneState
-  ): Promise<void>;
-  getMixedSecondaryLaunchPhase(run: ProvisioningRun): PersistedTeamLaunchPhase;
-  writeLaunchStateSnapshot(
-    teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
-  ): Promise<unknown>;
-  readPersistedTeamProjectPath(teamName: string): string | null;
-}
+export type { OpenCodeSecondaryRetryCandidate } from './TeamProvisioningCollectFailedOpenCodeSecondaryRetryCandidatesUseCase';
+export type {
+  MemberLifecycleOperation,
+  MemberLifecycleOperationKind,
+} from './TeamProvisioningMemberLifecycleOperationRunner';
+export type {
+  DirectProcessMemberLaunchReason,
+  DirectProcessMemberRestartInput,
+  EffectiveConfiguredMember,
+  LiveRosterAttachReason,
+  PersistedRuntimeMemberLike,
+  ProvisioningRun,
+  ReattachOpenCodeOwnedMemberLaneOptions,
+} from './TeamProvisioningMemberLifecycleTypes';
+export type { OpenCodeSecondaryRetryOutcome } from './TeamProvisioningReadOpenCodeSecondaryRetryOutcomeUseCase';
 
 export class TeamProvisioningMemberLifecycleController {
-  constructor(private readonly host: TeamProvisioningMemberLifecycleHost) {}
+  private readonly actionUseCases: TeamProvisioningMemberLifecycleActionUseCaseSeams;
+  private readonly restartUseCases: TeamProvisioningMemberLifecycleRestartUseCaseSeams;
+  private readonly openCodeRetryUseCases: TeamProvisioningMemberLifecycleOpenCodeRetryUseCaseSeams;
 
-  private getHostSeam<T>(name: string): T | null {
-    const value = (this.host as unknown as Record<string, unknown>)[name];
-    return typeof value === 'function' ? (value.bind(this.host) as T) : null;
+  private readonly persistOpenCodeMemberRestartSystemMessageFallback =
+    createPersistOpenCodeMemberRestartSystemMessageUseCase({
+      persistSentMessage: (teamName, message) => this.persistSentMessage(teamName, message),
+      nowIso,
+      randomUUID,
+    });
+  private readonly appendDirectProcessRuntimeEventFallback =
+    createAppendDirectProcessRuntimeEventUseCase();
+  private readonly updateDirectTmuxRestartMemberConfigFallback =
+    createNodeUpdateDirectTmuxRestartMemberConfigUseCase();
+  private readonly stopPrimaryOwnedRosterRuntimeFallback =
+    createNodeStopPrimaryOwnedRosterRuntimeUseCase();
+  private readonly preparePrimaryOwnedMemberRestartRuntimeFallback =
+    createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase();
+  private readonly resolveDirectRestartRuntimeCwdFallback =
+    createNodeResolveDirectRestartRuntimeCwdUseCase();
+  private readonly readOpenCodeSecondaryRetryOutcomeFallback =
+    createReadOpenCodeSecondaryRetryOutcomeUseCase({
+      readLaunchStateSnapshot: (teamName) => this.launchStateStore.read(teamName),
+    });
+  private readonly collectFailedOpenCodeSecondaryRetryCandidatesFallback =
+    createCollectFailedOpenCodeSecondaryRetryCandidatesUseCase({
+      hasOpenCodeRuntimeAdapter: () => Boolean(this.getOpenCodeRuntimeAdapter()),
+      readConfigForStrictDecision: (teamName) => this.readConfigForStrictDecision(teamName),
+      readMetaMembers: (teamName) => this.membersMetaStore.getMembers(teamName),
+      readLaunchStateSnapshot: (teamName) => this.launchStateStore.read(teamName),
+      resolveEffectiveConfiguredMember: (configMembers, metaMembers, memberName) =>
+        this.resolveEffectiveConfiguredMember(configMembers, metaMembers, memberName),
+    });
+  private readonly hasOpenCodeMemberRuntimeEvidenceForControlledRelaunchFallback =
+    createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase({
+      readLaunchStateSnapshot: (teamName) => this.launchStateStore.read(teamName),
+      getLiveTeamAgentRuntimeMetadata: (teamName) => this.getLiveTeamAgentRuntimeMetadata(teamName),
+    });
+
+  constructor(
+    private readonly host: TeamProvisioningMemberLifecycleHost,
+    private readonly operationUseCases: TeamProvisioningMemberLifecycleOperationUseCases,
+    useCases: TeamProvisioningMemberLifecycleControllerUseCaseSeams = {}
+  ) {
+    this.actionUseCases = useCases.actions ?? {};
+    this.restartUseCases = useCases.restart ?? {};
+    this.openCodeRetryUseCases = useCases.openCodeRetry ?? {};
   }
 
   private get runs(): TeamProvisioningMemberLifecycleHost['runs'] {
@@ -607,10 +281,6 @@ export class TeamProvisioningMemberLifecycleController {
 
   private get failedOpenCodeSecondaryRetryInFlightByTeam(): TeamProvisioningMemberLifecycleHost['failedOpenCodeSecondaryRetryInFlightByTeam'] {
     return this.host.failedOpenCodeSecondaryRetryInFlightByTeam;
-  }
-
-  private get memberLifecycleOperations(): TeamProvisioningMemberLifecycleHost['memberLifecycleOperations'] {
-    return this.host.memberLifecycleOperations;
   }
 
   private get mcpConfigBuilder(): TeamProvisioningMemberLifecycleHost['mcpConfigBuilder'] {
@@ -774,7 +444,7 @@ export class TeamProvisioningMemberLifecycleController {
 
   private buildTrackedMemberMcpLaunchConfig(
     input: Parameters<TeamProvisioningMemberLifecycleHost['buildTrackedMemberMcpLaunchConfig']>[0]
-  ): Promise<RuntimeBootstrapMemberMcpLaunchConfig> {
+  ): Promise<RuntimeBootstrapMemberMcpLaunchConfig | null> {
     return this.host.buildTrackedMemberMcpLaunchConfig(input);
   }
 
@@ -789,8 +459,8 @@ export class TeamProvisioningMemberLifecycleController {
     return this.host.sendMessageToRun(run, message);
   }
 
-  private getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null {
-    return this.host.getOpenCodeRuntimeAdapter();
+  private getOpenCodeRuntimeAdapter(): MemberLifecycleOpenCodeRuntimeAdapter | null {
+    return this.host.getOpenCodeRuntimeAdapter() as MemberLifecycleOpenCodeRuntimeAdapter | null;
   }
 
   private resolveOpenCodeMemberWorkspacesForRuntime(
@@ -854,145 +524,30 @@ export class TeamProvisioningMemberLifecycleController {
     return this.host.readPersistedTeamProjectPath(teamName);
   }
 
-  private getDirectTmuxRestartPaneId(
-    persistedRuntimeMembers: readonly PersistedRuntimeMemberLike[],
-    memberName: string
-  ): string | null {
-    for (const persistedRuntimeMember of persistedRuntimeMembers) {
-      const backendType = persistedRuntimeMember.backendType?.trim().toLowerCase();
-      const paneId =
-        typeof persistedRuntimeMember.tmuxPaneId === 'string'
-          ? persistedRuntimeMember.tmuxPaneId.trim()
-          : '';
-      const runtimeMemberName =
-        typeof persistedRuntimeMember.name === 'string' ? persistedRuntimeMember.name : '';
-      if (
-        backendType === 'tmux' &&
-        paneId &&
-        matchesMemberNameOrBase(runtimeMemberName, memberName)
-      ) {
-        return paneId;
-      }
-    }
-    return null;
-  }
-
   private resolveDirectRestartRuntimeCwd(params: {
     configuredMember: NonNullable<EffectiveConfiguredMember | null>;
     persistedRuntimeMembers: readonly PersistedRuntimeMemberLike[];
     config: TeamConfig;
     run: ProvisioningRun;
   }): string {
-    const configuredCwd = params.configuredMember.cwd?.trim();
-    if (configuredCwd) {
-      return path.resolve(configuredCwd);
-    }
-
-    for (const runtimeMember of params.persistedRuntimeMembers) {
-      const cwd = typeof runtimeMember.cwd === 'string' ? runtimeMember.cwd.trim() : '';
-      if (cwd) {
-        return path.resolve(cwd);
-      }
-    }
-
-    const projectPath = params.config.projectPath?.trim();
-    if (projectPath) {
-      return path.resolve(projectPath);
-    }
-
-    const runCwd = this.getRunTrackedCwd(params.run);
-    if (runCwd) {
-      return path.resolve(runCwd);
-    }
-
-    throw new Error('Cannot restart teammate because its runtime cwd is unavailable');
+    const seam = this.restartUseCases.resolveDirectRestartRuntimeCwd;
+    return (seam ?? this.resolveDirectRestartRuntimeCwdFallback)({
+      configuredMember: params.configuredMember,
+      persistedRuntimeMembers: params.persistedRuntimeMembers,
+      projectPath: params.config.projectPath,
+      runTrackedCwd: this.getRunTrackedCwd(params.run),
+    });
   }
 
   private async updateDirectTmuxRestartMemberConfig(
     input: DirectTmuxRestartMemberConfigInput
   ): Promise<void> {
-    const seam = this.getHostSeam<(input: DirectTmuxRestartMemberConfigInput) => Promise<void>>(
-      'updateDirectTmuxRestartMemberConfig'
-    );
-    if (seam) {
-      await seam(input);
-      return;
-    }
-    await this.updateDirectTmuxRestartMemberConfigInternal(input);
-  }
-
-  private async updateDirectTmuxRestartMemberConfigInternal(
-    input: DirectTmuxRestartMemberConfigInput
-  ): Promise<void> {
-    const configPath = path.join(getTeamsBasePath(), input.teamName, 'config.json');
-    const raw = await tryReadRegularFileUtf8(configPath, {
-      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-      maxBytes: TEAM_CONFIG_MAX_BYTES,
-    });
-    if (!raw) {
-      throw new Error(`Team "${input.teamName}" configuration is no longer available`);
-    }
-
-    const parsed = JSON.parse(raw) as TeamConfig & { members?: Record<string, unknown>[] };
-    const members = Array.isArray(parsed.members) ? parsed.members : [];
-    const existingIndex = members.findIndex((member) => {
-      const candidateName = typeof member?.name === 'string' ? member.name.trim() : '';
-      return (
-        candidateName.length > 0 && matchesExactTeamMemberName(candidateName, input.memberName)
-      );
-    });
-    const existing: Record<string, unknown> =
-      existingIndex >= 0 ? (members[existingIndex] ?? {}) : {};
-    const nextMember = {
-      ...existing,
-      agentId: input.agentId,
-      name: input.member.name,
-      ...(input.member.role ? { role: input.member.role } : {}),
-      ...(input.member.workflow ? { workflow: input.member.workflow } : {}),
-      ...(input.member.agentType ? { agentType: input.member.agentType } : {}),
-      provider: input.providerId,
-      providerId: input.providerId,
-      ...(input.member.model ? { model: input.member.model } : {}),
-      ...(input.member.effort ? { effort: input.member.effort } : {}),
-      prompt: input.prompt,
-      color: input.color,
-      joinedAt: input.joinedAt,
-      bootstrapExpectedAfter: input.bootstrapExpectedAfter,
-      ...(input.bootstrapProofToken ? { bootstrapProofToken: input.bootstrapProofToken } : {}),
-      ...(input.bootstrapRunId ? { bootstrapRunId: input.bootstrapRunId } : {}),
-      ...(input.bootstrapRuntimeEventsPath
-        ? { bootstrapRuntimeEventsPath: input.bootstrapRuntimeEventsPath }
-        : {}),
-      ...(input.bootstrapContextHash
-        ? {
-            bootstrapProofMode: 'native_app_managed_context',
-            bootstrapContextHash: input.bootstrapContextHash,
-          }
-        : {}),
-      ...(input.bootstrapBriefingHash
-        ? { bootstrapBriefingHash: input.bootstrapBriefingHash }
-        : {}),
-      tmuxPaneId: input.paneId,
-      ...(typeof input.runtimePid === 'number' ? { runtimePid: input.runtimePid } : {}),
-      cwd: input.cwd,
-      subscriptions: Array.isArray(existing.subscriptions) ? existing.subscriptions : [],
-      backendType: input.backendType ?? 'tmux',
-    };
-
-    if (existingIndex >= 0) {
-      members[existingIndex] = nextMember;
-    } else {
-      members.push(nextMember);
-    }
-    parsed.members = members;
-    await atomicWriteAsync(configPath, `${JSON.stringify(parsed, null, 2)}\n`);
-    TeamConfigReader.invalidateTeam(input.teamName);
+    const seam = this.restartUseCases.updateDirectTmuxRestartMemberConfig;
+    await (seam ?? this.updateDirectTmuxRestartMemberConfigFallback)(input);
   }
 
   private enqueueDirectRestartPrompt(input: DirectRestartPromptInput): void {
-    const seam = this.getHostSeam<(input: DirectRestartPromptInput) => void>(
-      'enqueueDirectRestartPrompt'
-    );
+    const seam = this.host.enqueueDirectRestartPrompt;
     if (seam) {
       seam(input);
       return;
@@ -1020,17 +575,9 @@ export class TeamProvisioningMemberLifecycleController {
   }
 
   private persistOpenCodeMemberRestartSystemMessage(
-    input: Parameters<
-      TeamProvisioningMemberLifecycleController['persistOpenCodeMemberRestartSystemMessageInternal']
-    >[0]
+    input: OpenCodeMemberRestartSystemMessageInput
   ): void {
-    const seam = this.getHostSeam<
-      (
-        input: Parameters<
-          TeamProvisioningMemberLifecycleController['persistOpenCodeMemberRestartSystemMessageInternal']
-        >[0]
-      ) => void
-    >('persistOpenCodeMemberRestartSystemMessage');
+    const seam = this.restartUseCases.persistOpenCodeMemberRestartSystemMessage;
     if (seam) {
       seam(input);
       return;
@@ -1038,35 +585,10 @@ export class TeamProvisioningMemberLifecycleController {
     this.persistOpenCodeMemberRestartSystemMessageInternal(input);
   }
 
-  persistOpenCodeMemberRestartSystemMessageInternal(input: {
-    teamName: string;
-    leadName: string;
-    leadSessionId: string | null;
-    displayName: string;
-    member: TeamCreateRequest['members'][number];
-    reason: 'manual_restart' | 'member_updated';
-  }): void {
-    const timestamp = nowIso();
-    const prompt = buildMemberSpawnPrompt(
-      input.member,
-      input.displayName,
-      input.teamName,
-      input.leadName,
-      { restart: true }
-    );
-    const reasonSummary =
-      input.reason === 'member_updated' ? 'after member settings update' : 'by user request';
-    this.persistSentMessage(input.teamName, {
-      from: input.leadName,
-      to: input.member.name,
-      text: prompt,
-      timestamp,
-      read: true,
-      source: 'system_notification',
-      leadSessionId: input.leadSessionId ?? undefined,
-      messageId: `member-restart:${input.teamName}:${input.member.name}:${randomUUID()}`,
-      summary: `Restarting ${input.member.name} ${reasonSummary}`,
-    });
+  persistOpenCodeMemberRestartSystemMessageInternal(
+    input: OpenCodeMemberRestartSystemMessageInput
+  ): void {
+    this.persistOpenCodeMemberRestartSystemMessageFallback(input);
   }
 
   private async launchDirectTmuxMemberRestart(input: {
@@ -1124,170 +646,172 @@ export class TeamProvisioningMemberLifecycleController {
         allowAnthropicApiKeyHelper: true,
       },
     });
-    await runWithPendingAnthropicApiKeyHelperCleanup(
-      provisioningEnv,
-      `${input.teamName} direct tmux restart for ${input.configuredMember.name}`,
-      async () => {
-        if (provisioningEnv.warning) {
-          throw new Error(provisioningEnv.warning);
-        }
-
-        const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
-          claudePath,
-          cwd,
-          members: [preliminaryMemberSpec],
-          defaults: {
-            providerId: resolveTeamProviderId(input.run.request.providerId),
-            model: input.run.request.model,
-            effort: input.run.request.effort,
-          },
-          primaryProviderId: providerId,
-          primaryEnv: provisioningEnv,
-          teamRuntimeAuth: {
-            teamName: input.teamName,
-            authMaterialId: `${input.run.runId}-direct-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
-            allowAnthropicApiKeyHelper: true,
-          },
-        });
-        const memberSpec = materializedMemberSpec ?? preliminaryMemberSpec;
-        const launchIdentity = await this.resolveDirectMemberLaunchIdentity({
-          claudePath,
-          cwd,
-          providerId,
-          ...(providerBackendId ? { providerBackendId } : {}),
-          provisioningEnv,
-          memberSpec,
-          run: input.run,
-        });
-        const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
-        const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
-          mcpPolicy: memberMcpPolicy,
-          controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
-        });
-        const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
-        input.run.memberMcpConfigPaths = memberMcpConfigPaths;
-        memberMcpConfigPaths.push(mcpConfigPath);
-        const memberMcpSettingSources = buildTeamMemberMcpSettingSources(memberMcpPolicy);
-        const strictMemberMcpConfig = requiresStrictTeamMemberMcpConfig(memberMcpPolicy);
-        const agentId = `${input.configuredMember.name}@${input.teamName}`;
-        const color =
-          input.config.members
-            ?.find((member) => matchesExactTeamMemberName(member.name, input.memberName))
-            ?.color?.trim() || getMemberColorByName(input.configuredMember.name);
-        const parentSessionId =
-          input.run.detectedSessionId?.trim() ||
-          input.config.leadSessionId?.trim() ||
-          input.run.runId;
-        const prompt = buildMemberSpawnPrompt(
-          memberSpec,
-          input.displayName,
-          input.teamName,
-          input.leadName,
-          { restart: true }
-        );
-        const bootstrapExpectedAfter = nowIso();
-        const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
-          teamName: input.teamName,
-          providerId,
-          launchIdentity,
-          envResolution: provisioningEnv,
-          extraArgs: [],
-          includeAnthropicHelper: providerId === 'anthropic',
-          contextLabel: `Direct teammate restart (${input.configuredMember.name})`,
-        });
-        applyAppManagedRuntimeSettingsPathEnv(
-          provisioningEnv.env,
-          runtimeArgsPlan.appManagedSettingsPath
-        );
-
-        const runtimeArgs = mergeJsonSettingsArgs([
-          '--agent-id',
-          agentId,
-          '--agent-name',
-          input.configuredMember.name,
-          '--team-name',
-          input.teamName,
-          '--agent-color',
-          color,
-          '--parent-session-id',
-          parentSessionId,
-          ...(input.configuredMember.agentType
-            ? ['--agent-type', input.configuredMember.agentType]
-            : []),
-          '--setting-sources',
-          memberMcpSettingSources,
-          '--mcp-config',
-          mcpConfigPath,
-          ...(strictMemberMcpConfig ? ['--strict-mcp-config'] : []),
-          '--disallowedTools',
-          APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
-          ...(input.run.request.skipPermissions !== false
-            ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
-            : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
-          ...(memberSpec.model ? ['--model', memberSpec.model] : []),
-          ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
-          ...runtimeArgsPlan.providerArgs,
-          ...runtimeArgsPlan.fastModeArgs,
-          ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
-          ...runtimeArgsPlan.settingsArgs,
-        ]);
-        const launcher = await buildDirectTmuxRestartLauncher({
-          cwd,
-          env: provisioningEnv.env,
-          providerId,
-          binaryPath: claudePath,
-          args: runtimeArgs,
-        });
-
-        try {
-          await this.updateDirectTmuxRestartMemberConfig({
-            teamName: input.teamName,
-            memberName: input.memberName,
-            member: memberSpec,
-            agentId,
-            color,
-            prompt,
-            paneId: input.paneId,
-            cwd,
-            providerId,
-            joinedAt: Date.now(),
-            bootstrapExpectedAfter,
-          });
-          this.enqueueDirectRestartPrompt({
-            teamName: input.teamName,
-            memberName: input.configuredMember.name,
-            leadName: input.leadName,
-            leadSessionId: parentSessionId,
-            prompt,
-            operation,
-          });
-          await sendKeysToTmuxPaneForCurrentPlatform(input.paneId, launcher.command);
-        } catch (error) {
-          await launcher.cleanup();
-          throw error;
-        }
+    let directTmuxLaunchSucceeded = false;
+    try {
+      if (provisioningEnv.warning) {
+        throw new Error(provisioningEnv.warning);
       }
-    );
-    this.appendMemberBootstrapDiagnostic(
-      input.run,
-      input.memberName,
-      `restart command delivered to tmux pane ${input.paneId}`
-    );
-    this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
+
+      const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
+        claudePath,
+        cwd,
+        members: [preliminaryMemberSpec],
+        defaults: {
+          providerId: resolveTeamProviderId(input.run.request.providerId),
+          model: input.run.request.model,
+          effort: input.run.request.effort,
+        },
+        primaryProviderId: providerId,
+        primaryEnv: provisioningEnv,
+        teamRuntimeAuth: {
+          teamName: input.teamName,
+          authMaterialId: `${input.run.runId}-direct-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
+          allowAnthropicApiKeyHelper: true,
+        },
+      });
+      const memberSpec = materializedMemberSpec ?? preliminaryMemberSpec;
+      const launchIdentity = await this.resolveDirectMemberLaunchIdentity({
+        claudePath,
+        cwd,
+        providerId,
+        ...(providerBackendId ? { providerBackendId } : {}),
+        provisioningEnv,
+        memberSpec,
+        run: input.run,
+      });
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+      const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
+      const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
+        mcpPolicy: memberMcpPolicy,
+        controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
+      });
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+      const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
+      input.run.memberMcpConfigPaths = memberMcpConfigPaths;
+      memberMcpConfigPaths.push(mcpConfigPath);
+      const memberMcpSettingSources = buildTeamMemberMcpSettingSources(memberMcpPolicy);
+      const strictMemberMcpConfig = requiresStrictTeamMemberMcpConfig(memberMcpPolicy);
+      const agentId = `${input.configuredMember.name}@${input.teamName}`;
+      const color =
+        input.config.members
+          ?.find((member) => matchesExactTeamMemberName(member.name, input.memberName))
+          ?.color?.trim() || getMemberColorByName(input.configuredMember.name);
+      const parentSessionId =
+        input.run.detectedSessionId?.trim() ||
+        input.config.leadSessionId?.trim() ||
+        input.run.runId;
+      const prompt = buildMemberSpawnPrompt(
+        memberSpec,
+        input.displayName,
+        input.teamName,
+        input.leadName,
+        { restart: true }
+      );
+      const bootstrapExpectedAfter = nowIso();
+      const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
+        teamName: input.teamName,
+        providerId,
+        launchIdentity,
+        envResolution: provisioningEnv,
+        extraArgs: [],
+        includeAnthropicHelper: providerId === 'anthropic',
+        contextLabel: `Direct teammate restart (${input.configuredMember.name})`,
+      });
+      applyAppManagedRuntimeSettingsPathEnv(
+        provisioningEnv.env,
+        runtimeArgsPlan.appManagedSettingsPath
+      );
+
+      const runtimeArgs = mergeJsonSettingsArgs([
+        '--agent-id',
+        agentId,
+        '--agent-name',
+        input.configuredMember.name,
+        '--team-name',
+        input.teamName,
+        '--agent-color',
+        color,
+        '--parent-session-id',
+        parentSessionId,
+        ...(input.configuredMember.agentType
+          ? ['--agent-type', input.configuredMember.agentType]
+          : []),
+        '--setting-sources',
+        memberMcpSettingSources,
+        '--mcp-config',
+        mcpConfigPath,
+        ...(strictMemberMcpConfig ? ['--strict-mcp-config'] : []),
+        '--disallowedTools',
+        APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
+        ...(input.run.request.skipPermissions !== false
+          ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
+          : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
+        ...(memberSpec.model ? ['--model', memberSpec.model] : []),
+        ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
+        ...runtimeArgsPlan.providerArgs,
+        ...runtimeArgsPlan.fastModeArgs,
+        ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
+        ...runtimeArgsPlan.settingsArgs,
+      ]);
+      const launcher = await buildDirectTmuxRestartLauncher({
+        cwd,
+        env: provisioningEnv.env,
+        providerId,
+        binaryPath: claudePath,
+        args: runtimeArgs,
+      });
+
+      try {
+        this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+        await this.updateDirectTmuxRestartMemberConfig({
+          teamName: input.teamName,
+          memberName: input.memberName,
+          member: memberSpec,
+          agentId,
+          color,
+          prompt,
+          paneId: input.paneId,
+          cwd,
+          providerId,
+          joinedAt: Date.now(),
+          bootstrapExpectedAfter,
+          assertStillCurrent: this.createRunStillCurrentGuard(input.run, input.teamName),
+        });
+        this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+        this.enqueueDirectRestartPrompt({
+          teamName: input.teamName,
+          memberName: input.configuredMember.name,
+          leadName: input.leadName,
+          leadSessionId: parentSessionId,
+          prompt,
+          operation,
+        });
+        await sendKeysToTmuxPaneForCurrentPlatform(input.paneId, launcher.command);
+        this.appendMemberBootstrapDiagnostic(
+          input.run,
+          input.memberName,
+          `restart command delivered to tmux pane ${input.paneId}`
+        );
+        this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
+        directTmuxLaunchSucceeded = true;
+      } catch (error) {
+        await launcher.cleanup();
+        throw error;
+      }
+    } finally {
+      if (!directTmuxLaunchSucceeded) {
+        await cleanupPendingAnthropicApiKeyHelper(
+          provisioningEnv,
+          `${input.teamName} direct tmux restart for ${input.configuredMember.name}`
+        );
+      }
+    }
   }
 
   private async launchDirectProcessMemberRestart(
-    input: Parameters<
-      TeamProvisioningMemberLifecycleController['launchDirectProcessMemberRestartInternal']
-    >[0]
+    input: DirectProcessMemberRestartInput
   ): Promise<void> {
-    const seam = this.getHostSeam<
-      (
-        input: Parameters<
-          TeamProvisioningMemberLifecycleController['launchDirectProcessMemberRestartInternal']
-        >[0]
-      ) => Promise<void>
-    >('launchDirectProcessMemberRestart');
+    const seam = this.restartUseCases.launchDirectProcessMemberRestart;
     if (seam) {
       await seam(input);
       return;
@@ -1295,17 +819,9 @@ export class TeamProvisioningMemberLifecycleController {
     await this.launchDirectProcessMemberRestartInternal(input);
   }
 
-  async launchDirectProcessMemberRestartInternal(input: {
-    run: ProvisioningRun;
-    teamName: string;
-    displayName: string;
-    leadName: string;
-    memberName: string;
-    config: TeamConfig;
-    configuredMember: NonNullable<EffectiveConfiguredMember | null>;
-    persistedRuntimeMembers: readonly PersistedRuntimeMemberLike[];
-    operation?: DirectProcessMemberLaunchReason;
-  }): Promise<void> {
+  async launchDirectProcessMemberRestartInternal(
+    input: DirectProcessMemberRestartInput
+  ): Promise<void> {
     const operation = input.operation ?? 'manual_restart';
     const claudePath = input.run.spawnContext?.claudePath ?? (await ClaudeBinaryResolver.resolve());
     if (!claudePath) {
@@ -1336,350 +852,322 @@ export class TeamProvisioningMemberLifecycleController {
         allowAnthropicApiKeyHelper: true,
       },
     });
-    const launch = await runWithPendingAnthropicApiKeyHelperCleanup(
-      provisioningEnv,
-      `${input.teamName} direct process ${operation} for ${input.configuredMember.name}`,
-      async () => {
-        if (provisioningEnv.warning) {
-          throw new Error(provisioningEnv.warning);
-        }
-
-        const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
-          claudePath,
-          cwd,
-          members: [preliminaryMemberSpec],
-          defaults: {
-            providerId: resolveTeamProviderId(input.run.request.providerId),
-            model: input.run.request.model,
-            effort: input.run.request.effort,
-          },
-          primaryProviderId: providerId,
-          primaryEnv: provisioningEnv,
-          teamRuntimeAuth: {
-            teamName: input.teamName,
-            authMaterialId: `${input.run.runId}-process-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
-            allowAnthropicApiKeyHelper: true,
-          },
-        });
-        const memberSpec = materializedMemberSpec ?? preliminaryMemberSpec;
-        const launchIdentity = await this.resolveDirectMemberLaunchIdentity({
-          claudePath,
-          cwd,
-          providerId,
-          ...(providerBackendId ? { providerBackendId } : {}),
-          provisioningEnv,
-          memberSpec,
-          run: input.run,
-        });
-        const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
-        const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
-          mcpPolicy: memberMcpPolicy,
-          controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
-        });
-        const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
-        input.run.memberMcpConfigPaths = memberMcpConfigPaths;
-        memberMcpConfigPaths.push(mcpConfigPath);
-        const memberMcpSettingSources = buildTeamMemberMcpSettingSources(memberMcpPolicy);
-        const strictMemberMcpConfig = requiresStrictTeamMemberMcpConfig(memberMcpPolicy);
-        const agentId = `${input.configuredMember.name}@${input.teamName}`;
-        const color =
-          input.config.members
-            ?.find((member) => matchesExactTeamMemberName(member.name, input.memberName))
-            ?.color?.trim() || getMemberColorByName(input.configuredMember.name);
-        const parentSessionId =
-          input.run.detectedSessionId?.trim() ||
-          input.config.leadSessionId?.trim() ||
-          input.run.runId;
-        const prompt = buildMemberSpawnPrompt(
-          memberSpec,
-          input.displayName,
-          input.teamName,
-          input.leadName,
-          operation === 'manual_restart' ? { restart: true } : undefined
-        );
-        const bootstrapExpectedAfter = nowIso();
-        const bootstrapProofToken = randomUUID();
-        const runtimePaths = this.getDirectProcessRestartRuntimePaths(
-          input.teamName,
-          input.configuredMember.name
-        );
-        await atomicWriteAsync(runtimePaths.eventsPath, '', { mode: 0o600 });
-
-        const nativeBootstrapSpec =
-          (
-            await buildNativeAppManagedBootstrapSpecs({
-              teamName: input.teamName,
-              cwd,
-              members: [memberSpec],
-            })
-          ).get(input.configuredMember.name) ?? null;
-        const nativeBootstrapEnv = await this.materializeDirectProcessNativeBootstrapContext({
-          teamName: input.teamName,
-          memberName: input.configuredMember.name,
-          agentId,
-          providerId,
-          runId: input.run.runId,
-          bootstrapProofToken,
-          spec: nativeBootstrapSpec,
-        });
-
-        const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
-          teamName: input.teamName,
-          providerId,
-          launchIdentity,
-          envResolution: provisioningEnv,
-          extraArgs: [],
-          includeAnthropicHelper: providerId === 'anthropic',
-          contextLabel: `Direct process teammate ${operation} (${input.configuredMember.name})`,
-        });
-        applyAppManagedRuntimeSettingsPathEnv(
-          provisioningEnv.env,
-          runtimeArgsPlan.appManagedSettingsPath
-        );
-
-        const runtimeArgs = mergeJsonSettingsArgs([
-          '--teammate-runtime',
-          'headless',
-          '--agent-id',
-          agentId,
-          '--agent-name',
-          input.configuredMember.name,
-          '--team-name',
-          input.teamName,
-          '--agent-color',
-          color,
-          '--parent-session-id',
-          parentSessionId,
-          ...(input.configuredMember.agentType
-            ? ['--agent-type', input.configuredMember.agentType]
-            : []),
-          '--setting-sources',
-          memberMcpSettingSources,
-          '--mcp-config',
-          mcpConfigPath,
-          ...(strictMemberMcpConfig ? ['--strict-mcp-config'] : []),
-          '--disallowedTools',
-          APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
-          ...(input.run.request.skipPermissions !== false
-            ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
-            : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
-          ...(memberSpec.model ? ['--model', memberSpec.model] : []),
-          ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
-          ...runtimeArgsPlan.providerArgs,
-          ...runtimeArgsPlan.fastModeArgs,
-          ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
-          ...runtimeArgsPlan.settingsArgs,
-        ]);
-
-        const stdoutLog = fs.createWriteStream(runtimePaths.stdoutPath, {
-          flags: 'a',
-          mode: 0o600,
-        });
-        const stderrLog = fs.createWriteStream(runtimePaths.stderrPath, {
-          flags: 'a',
-          mode: 0o600,
-        });
-        let child: ReturnType<typeof spawnCli>;
-        try {
-          child = spawnCli(claudePath, runtimeArgs, {
-            cwd,
-            detached: true,
-            env: {
-              ...provisioningEnv.env,
-              ...nativeBootstrapEnv,
-              [TEAMMATE_RUNTIME_ENV]: 'headless',
-              [TEAMMATE_RUNTIME_EVENTS_ENV]: runtimePaths.eventsPath,
-              [TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV]: bootstrapProofToken,
-            },
-            stdio: ['pipe', 'pipe', 'pipe'],
-          });
-        } catch (error) {
-          stdoutLog.destroy();
-          stderrLog.destroy();
-          throw error;
-        }
-        if (!child.pid) {
-          stdoutLog.destroy();
-          stderrLog.destroy();
-          throw new Error(`Failed to spawn teammate process for ${agentId}: missing pid`);
-        }
-
-        return {
-          memberSpec,
-          agentId,
-          color,
-          parentSessionId,
-          prompt,
-          bootstrapExpectedAfter,
-          bootstrapProofToken,
-          runtimePaths,
-          nativeBootstrapSpec,
-          child,
-          stdoutLog,
-          stderrLog,
-          runtimePid: child.pid,
-        };
-      }
-    );
-    const {
-      memberSpec,
-      agentId,
-      color,
-      parentSessionId,
-      prompt,
-      bootstrapExpectedAfter,
-      bootstrapProofToken,
-      runtimePaths,
-      nativeBootstrapSpec,
-      child,
-      stdoutLog,
-      stderrLog,
-      runtimePid,
-    } = launch;
-
-    const processPaneId = `process:${runtimePid}`;
-    const runtimeEventSource = `TeamProvisioningService.direct_process_${operation}`;
-    child.stdout?.pipe(stdoutLog);
-    child.stderr?.pipe(stderrLog);
-    child.stdin?.on('error', (error) => {
-      logger.debug(
-        `[${input.teamName}] Direct process ${operation} stdin failed for ${agentId}: ${error.message}`
-      );
-    });
-    child.once('close', (code, signal) => {
-      void this.appendDirectProcessRuntimeEvent({
-        type: 'exited',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail:
-          code !== null
-            ? `process exited with code ${code}`
-            : signal
-              ? `process exited from signal ${signal}`
-              : 'process exited',
-      });
-      stdoutLog.end();
-      stderrLog.end();
-    });
-    child.once('error', (error) => {
-      void this.appendDirectProcessRuntimeEvent({
-        type: 'failed',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail: `process error: ${error.message}`,
-      });
-    });
-    (child.stdin as { unref?: () => void } | null)?.unref?.();
-    (child.stdout as { unref?: () => void } | null)?.unref?.();
-    (child.stderr as { unref?: () => void } | null)?.unref?.();
-    child.unref();
-
+    let directProcessLaunchSucceeded = false;
     try {
-      await this.appendDirectProcessRuntimeEvent({
-        type: 'process_spawned',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail: 'process spawned',
+      if (provisioningEnv.warning) {
+        throw new Error(provisioningEnv.warning);
+      }
+
+      const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
+        claudePath,
+        cwd,
+        members: [preliminaryMemberSpec],
+        defaults: {
+          providerId: resolveTeamProviderId(input.run.request.providerId),
+          model: input.run.request.model,
+          effort: input.run.request.effort,
+        },
+        primaryProviderId: providerId,
+        primaryEnv: provisioningEnv,
+        teamRuntimeAuth: {
+          teamName: input.teamName,
+          authMaterialId: `${input.run.runId}-process-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
+          allowAnthropicApiKeyHelper: true,
+        },
       });
-      await this.appendDirectProcessRuntimeEvent({
-        type: 'stdout_attached',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail: 'stdout and stderr attached',
-      });
-      await this.updateDirectTmuxRestartMemberConfig({
-        teamName: input.teamName,
-        memberName: input.memberName,
-        member: memberSpec,
-        agentId,
-        color,
-        prompt,
-        paneId: processPaneId,
+      const memberSpec = materializedMemberSpec ?? preliminaryMemberSpec;
+      const launchIdentity = await this.resolveDirectMemberLaunchIdentity({
+        claudePath,
         cwd,
         providerId,
-        joinedAt: Date.now(),
-        bootstrapExpectedAfter,
-        backendType: 'process',
-        runtimePid,
-        bootstrapRuntimeEventsPath: runtimePaths.eventsPath,
-        bootstrapProofToken,
-        bootstrapRunId: input.run.runId,
-        ...(nativeBootstrapSpec
-          ? {
-              bootstrapContextHash: nativeBootstrapSpec.contextHash,
-              bootstrapBriefingHash: nativeBootstrapSpec.briefingHash,
-            }
-          : {}),
+        ...(providerBackendId ? { providerBackendId } : {}),
+        provisioningEnv,
+        memberSpec,
+        run: input.run,
       });
-      this.enqueueDirectRestartPrompt({
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+      const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
+      const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
+        mcpPolicy: memberMcpPolicy,
+        controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
+      });
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+      const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
+      input.run.memberMcpConfigPaths = memberMcpConfigPaths;
+      memberMcpConfigPaths.push(mcpConfigPath);
+      const memberMcpSettingSources = buildTeamMemberMcpSettingSources(memberMcpPolicy);
+      const strictMemberMcpConfig = requiresStrictTeamMemberMcpConfig(memberMcpPolicy);
+      const agentId = `${input.configuredMember.name}@${input.teamName}`;
+      const color =
+        input.config.members
+          ?.find((member) => matchesExactTeamMemberName(member.name, input.memberName))
+          ?.color?.trim() || getMemberColorByName(input.configuredMember.name);
+      const parentSessionId =
+        input.run.detectedSessionId?.trim() ||
+        input.config.leadSessionId?.trim() ||
+        input.run.runId;
+      const prompt = buildMemberSpawnPrompt(
+        memberSpec,
+        input.displayName,
+        input.teamName,
+        input.leadName,
+        operation === 'manual_restart' ? { restart: true } : undefined
+      );
+      const bootstrapExpectedAfter = nowIso();
+      const bootstrapProofToken = randomUUID();
+      const runtimePaths = this.getDirectProcessRestartRuntimePaths(
+        input.teamName,
+        input.configuredMember.name
+      );
+      await atomicWriteAsync(runtimePaths.eventsPath, '', { mode: 0o600 });
+
+      const nativeBootstrapSpec =
+        (
+          await buildNativeAppManagedBootstrapSpecs({
+            teamName: input.teamName,
+            cwd,
+            members: [memberSpec],
+          })
+        ).get(input.configuredMember.name) ?? null;
+      const nativeBootstrapEnv = await this.materializeDirectProcessNativeBootstrapContext({
         teamName: input.teamName,
         memberName: input.configuredMember.name,
-        leadName: input.leadName,
-        leadSessionId: parentSessionId,
-        prompt: nativeBootstrapSpec ? buildNativeAppManagedBootstrapCheckText() : prompt,
-        operation,
-      });
-      await this.appendDirectProcessRuntimeEvent({
-        type: 'mailbox_bootstrap_written',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
         agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
+        providerId,
+        runId: input.run.runId,
+        bootstrapProofToken,
+        spec: nativeBootstrapSpec,
       });
-      this.upsertRunAllEffectiveMember(input.run, memberSpec);
-      this.appendMemberBootstrapDiagnostic(
-        input.run,
-        input.memberName,
-        operation === 'manual_restart'
-          ? `restart process spawned with pid ${runtimePid}`
-          : `runtime process spawned with pid ${runtimePid}`
+
+      const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
+        teamName: input.teamName,
+        providerId,
+        launchIdentity,
+        envResolution: provisioningEnv,
+        extraArgs: [],
+        includeAnthropicHelper: providerId === 'anthropic',
+        contextLabel: `Direct process teammate ${operation} (${input.configuredMember.name})`,
+      });
+      applyAppManagedRuntimeSettingsPathEnv(
+        provisioningEnv.env,
+        runtimeArgsPlan.appManagedSettingsPath
       );
-      this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
-    } catch (error) {
+
+      const runtimeArgs = mergeJsonSettingsArgs([
+        '--teammate-runtime',
+        'headless',
+        '--agent-id',
+        agentId,
+        '--agent-name',
+        input.configuredMember.name,
+        '--team-name',
+        input.teamName,
+        '--agent-color',
+        color,
+        '--parent-session-id',
+        parentSessionId,
+        ...(input.configuredMember.agentType
+          ? ['--agent-type', input.configuredMember.agentType]
+          : []),
+        '--setting-sources',
+        memberMcpSettingSources,
+        '--mcp-config',
+        mcpConfigPath,
+        ...(strictMemberMcpConfig ? ['--strict-mcp-config'] : []),
+        '--disallowedTools',
+        APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
+        ...(input.run.request.skipPermissions !== false
+          ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
+          : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
+        ...(memberSpec.model ? ['--model', memberSpec.model] : []),
+        ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
+        ...runtimeArgsPlan.providerArgs,
+        ...runtimeArgsPlan.fastModeArgs,
+        ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
+        ...runtimeArgsPlan.settingsArgs,
+      ]);
+
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+      const stdoutLog = fs.createWriteStream(runtimePaths.stdoutPath, { flags: 'a', mode: 0o600 });
+      const stderrLog = fs.createWriteStream(runtimePaths.stderrPath, { flags: 'a', mode: 0o600 });
+      let child: ReturnType<typeof spawnCli>;
       try {
-        killProcessByPid(runtimePid);
-      } catch (killError) {
-        logger.warn(
-          `[${input.teamName}] Failed to stop orphaned direct process ${agentId} pid=${runtimePid}: ${
-            killError instanceof Error ? killError.message : String(killError)
-          }`
+        child = spawnCli(claudePath, runtimeArgs, {
+          cwd,
+          detached: true,
+          env: {
+            ...provisioningEnv.env,
+            ...nativeBootstrapEnv,
+            [TEAMMATE_RUNTIME_ENV]: 'headless',
+            [TEAMMATE_RUNTIME_EVENTS_ENV]: runtimePaths.eventsPath,
+            [TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV]: bootstrapProofToken,
+          },
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+      } catch (error) {
+        stdoutLog.destroy();
+        stderrLog.destroy();
+        throw error;
+      }
+      if (!child.pid) {
+        stdoutLog.destroy();
+        stderrLog.destroy();
+        throw new Error(`Failed to spawn teammate process for ${agentId}: missing pid`);
+      }
+
+      const runtimePid = child.pid;
+      const processPaneId = `process:${runtimePid}`;
+      const runtimeEventSource = `TeamProvisioningService.direct_process_${operation}`;
+      child.stdout?.pipe(stdoutLog);
+      child.stderr?.pipe(stderrLog);
+      child.stdin?.on('error', (error) => {
+        logger.debug(
+          `[${input.teamName}] Direct process ${operation} stdin failed for ${agentId}: ${error.message}`
+        );
+      });
+      child.once('close', (code, signal) => {
+        void this.appendDirectProcessRuntimeEvent({
+          type: 'exited',
+          eventsPath: runtimePaths.eventsPath,
+          pid: runtimePid,
+          teamName: input.teamName,
+          agentName: input.configuredMember.name,
+          agentId,
+          runId: parentSessionId,
+          bootstrapRunId: input.run.runId,
+          source: runtimeEventSource,
+          detail:
+            code !== null
+              ? `process exited with code ${code}`
+              : signal
+                ? `process exited from signal ${signal}`
+                : 'process exited',
+        });
+        stdoutLog.end();
+        stderrLog.end();
+      });
+      child.once('error', (error) => {
+        void this.appendDirectProcessRuntimeEvent({
+          type: 'failed',
+          eventsPath: runtimePaths.eventsPath,
+          pid: runtimePid,
+          teamName: input.teamName,
+          agentName: input.configuredMember.name,
+          agentId,
+          runId: parentSessionId,
+          bootstrapRunId: input.run.runId,
+          source: runtimeEventSource,
+          detail: `process error: ${error.message}`,
+        });
+      });
+      (child.stdin as { unref?: () => void } | null)?.unref?.();
+      (child.stdout as { unref?: () => void } | null)?.unref?.();
+      (child.stderr as { unref?: () => void } | null)?.unref?.();
+      child.unref();
+
+      try {
+        this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+        await this.appendDirectProcessRuntimeEvent({
+          type: 'process_spawned',
+          eventsPath: runtimePaths.eventsPath,
+          pid: runtimePid,
+          teamName: input.teamName,
+          agentName: input.configuredMember.name,
+          agentId,
+          runId: parentSessionId,
+          bootstrapRunId: input.run.runId,
+          source: runtimeEventSource,
+          detail: 'process spawned',
+        });
+        await this.appendDirectProcessRuntimeEvent({
+          type: 'stdout_attached',
+          eventsPath: runtimePaths.eventsPath,
+          pid: runtimePid,
+          teamName: input.teamName,
+          agentName: input.configuredMember.name,
+          agentId,
+          runId: parentSessionId,
+          bootstrapRunId: input.run.runId,
+          source: runtimeEventSource,
+          detail: 'stdout and stderr attached',
+        });
+        this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+        await this.updateDirectTmuxRestartMemberConfig({
+          teamName: input.teamName,
+          memberName: input.memberName,
+          member: memberSpec,
+          agentId,
+          color,
+          prompt,
+          paneId: processPaneId,
+          cwd,
+          providerId,
+          joinedAt: Date.now(),
+          bootstrapExpectedAfter,
+          backendType: 'process',
+          runtimePid,
+          bootstrapRuntimeEventsPath: runtimePaths.eventsPath,
+          bootstrapProofToken,
+          bootstrapRunId: input.run.runId,
+          ...(nativeBootstrapSpec
+            ? {
+                bootstrapContextHash: nativeBootstrapSpec.contextHash,
+                bootstrapBriefingHash: nativeBootstrapSpec.briefingHash,
+              }
+            : {}),
+          assertStillCurrent: this.createRunStillCurrentGuard(input.run, input.teamName),
+        });
+        this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+        this.enqueueDirectRestartPrompt({
+          teamName: input.teamName,
+          memberName: input.configuredMember.name,
+          leadName: input.leadName,
+          leadSessionId: parentSessionId,
+          prompt: nativeBootstrapSpec ? buildNativeAppManagedBootstrapCheckText() : prompt,
+          operation,
+        });
+        await this.appendDirectProcessRuntimeEvent({
+          type: 'mailbox_bootstrap_written',
+          eventsPath: runtimePaths.eventsPath,
+          pid: runtimePid,
+          teamName: input.teamName,
+          agentName: input.configuredMember.name,
+          agentId,
+          runId: parentSessionId,
+          bootstrapRunId: input.run.runId,
+          source: runtimeEventSource,
+        });
+        this.upsertRunAllEffectiveMember(input.run, memberSpec);
+        this.appendMemberBootstrapDiagnostic(
+          input.run,
+          input.memberName,
+          operation === 'manual_restart'
+            ? `restart process spawned with pid ${runtimePid}`
+            : `runtime process spawned with pid ${runtimePid}`
+        );
+        this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
+      } catch (error) {
+        try {
+          killProcessByPid(runtimePid);
+        } catch (killError) {
+          logger.warn(
+            `[${input.teamName}] Failed to stop orphaned direct process ${agentId} pid=${runtimePid}: ${
+              killError instanceof Error ? killError.message : String(killError)
+            }`
+          );
+        }
+        stdoutLog.end();
+        stderrLog.end();
+        throw error;
+      }
+      directProcessLaunchSucceeded = true;
+    } finally {
+      if (!directProcessLaunchSucceeded) {
+        await cleanupPendingAnthropicApiKeyHelper(
+          provisioningEnv,
+          `${input.teamName} direct process ${operation} rollback for ${input.configuredMember.name}`
         );
       }
-      stdoutLog.end();
-      stderrLog.end();
-      await cleanupPendingAnthropicApiKeyHelper(
-        provisioningEnv,
-        `${input.teamName} direct process ${operation} rollback for ${input.configuredMember.name}`
-      );
-      throw error;
     }
   }
 
@@ -1731,60 +1219,12 @@ export class TeamProvisioningMemberLifecycleController {
   private async appendDirectProcessRuntimeEvent(
     input: DirectProcessRuntimeEventInput
   ): Promise<void> {
-    const seam = this.getHostSeam<(input: DirectProcessRuntimeEventInput) => Promise<void>>(
-      'appendDirectProcessRuntimeEvent'
-    );
-    if (seam) {
-      await seam(input);
-      return;
-    }
-    await this.appendDirectProcessRuntimeEventInternal(input);
-  }
-
-  private async appendDirectProcessRuntimeEventInternal(
-    input: DirectProcessRuntimeEventInput
-  ): Promise<void> {
-    await fs.promises.mkdir(path.dirname(input.eventsPath), { recursive: true });
-    await fs.promises.appendFile(
-      input.eventsPath,
-      `${JSON.stringify({
-        version: 1,
-        type: input.type,
-        timestamp: nowIso(),
-        pid: input.pid,
-        teamName: input.teamName,
-        agentName: input.agentName,
-        agentId: input.agentId,
-        runId: input.runId,
-        bootstrapRunId: input.bootstrapRunId,
-        source: input.source,
-        ...(input.detail ? { detail: input.detail } : {}),
-      })}\n`,
-      { encoding: 'utf8', mode: 0o600 }
-    );
-  }
-
-  private getMemberLifecycleOperationKey(teamName: string, memberName: string): string {
-    return getMemberLifecycleOperationKey(teamName, memberName);
-  }
-
-  private getActiveMemberLifecycleOperation(
-    teamName: string,
-    memberName: string
-  ): MemberLifecycleOperation | null {
-    return (
-      this.memberLifecycleOperations.get(
-        this.getMemberLifecycleOperationKey(teamName, memberName)
-      ) ?? null
-    );
+    const seam = this.restartUseCases.appendDirectProcessRuntimeEvent;
+    await (seam ?? this.appendDirectProcessRuntimeEventFallback)(input);
   }
 
   isMemberLifecycleOperationActive(teamName: string, memberName: string): boolean {
-    return this.getActiveMemberLifecycleOperation(teamName, memberName) !== null;
-  }
-
-  private createMemberLifecycleOperationInProgressError(memberName: string): Error {
-    return createMemberLifecycleOperationInProgressError(memberName);
+    return this.operationUseCases.isMemberLifecycleOperationActive(teamName, memberName);
   }
 
   private isMemberLifecycleOperationInProgressError(error: unknown): boolean {
@@ -1797,17 +1237,6 @@ export class TeamProvisioningMemberLifecycleController {
     kind: MemberLifecycleOperationKind,
     operation: () => Promise<T>
   ): Promise<T> {
-    const seam = this.getHostSeam<
-      <TValue>(
-        teamName: string,
-        memberName: string,
-        kind: MemberLifecycleOperationKind,
-        operation: () => Promise<TValue>
-      ) => Promise<TValue>
-    >('runMemberLifecycleOperation');
-    if (seam) {
-      return await seam(teamName, memberName, kind, operation);
-    }
     return await this.runMemberLifecycleOperationInternal(teamName, memberName, kind, operation);
   }
 
@@ -1817,26 +1246,12 @@ export class TeamProvisioningMemberLifecycleController {
     kind: MemberLifecycleOperationKind,
     operation: () => Promise<T>
   ): Promise<T> {
-    const key = this.getMemberLifecycleOperationKey(teamName, memberName);
-    if (this.memberLifecycleOperations.has(key)) {
-      throw this.createMemberLifecycleOperationInProgressError(memberName);
-    }
-
-    const token = Symbol(`${kind}:${teamName}:${memberName}`);
-    this.memberLifecycleOperations.set(key, {
+    return this.operationUseCases.runMemberLifecycleOperation(
+      teamName,
+      memberName,
       kind,
-      token,
-      startedAtMs: Date.now(),
-    });
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    try {
-      return await operation();
-    } finally {
-      if (this.memberLifecycleOperations.get(key)?.token === token) {
-        this.memberLifecycleOperations.delete(key);
-      }
-      this.invalidateRuntimeSnapshotCaches(teamName);
-    }
+      operation
+    );
   }
 
   private getOpenCodeReattachLifecycleKind(
@@ -1855,31 +1270,111 @@ export class TeamProvisioningMemberLifecycleController {
     return 'primary_member_added';
   }
 
+  private isRunStillCurrentAndAlive(run: ProvisioningRun, teamName: string): boolean {
+    return (
+      this.getAliveRunId(teamName) === run.runId &&
+      this.runs.get(run.runId) === run &&
+      this.isCurrentTrackedRun(run) &&
+      !run.processKilled &&
+      !run.cancelRequested
+    );
+  }
+
+  private assertRunStillCurrentAndAlive(run: ProvisioningRun, teamName: string): void {
+    if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+      throw new Error(`Team "${teamName}" is not currently running`);
+    }
+  }
+
+  private createRunStillCurrentGuard(run: ProvisioningRun, teamName: string): () => void {
+    return () => this.assertRunStillCurrentAndAlive(run, teamName);
+  }
+
+  private createRuntimeAdapterRunStillCurrentGuard(
+    teamName: string,
+    runtimeRun: RuntimeAdapterRunEntry
+  ): () => void {
+    const expectedRunId = runtimeRun.runId;
+    const expectedProviderId = runtimeRun.providerId;
+    const expectedCwd = runtimeRun.cwd;
+
+    return () => {
+      const currentRuntimeRun = this.runtimeAdapterRunByTeam.get(teamName);
+      if (currentRuntimeRun !== runtimeRun) {
+        throw new Error(`Team "${teamName}" is not currently running`);
+      }
+      if (
+        currentRuntimeRun.runId !== expectedRunId ||
+        currentRuntimeRun.providerId !== expectedProviderId ||
+        currentRuntimeRun.cwd !== expectedCwd
+      ) {
+        throw new Error(`Team "${teamName}" is not currently running`);
+      }
+    };
+  }
+
+  private async persistLaunchStateSnapshotForCurrentRun(
+    run: ProvisioningRun,
+    phase: PersistedTeamLaunchPhase
+  ): Promise<PersistedTeamLaunchSnapshot | null> {
+    this.assertRunStillCurrentAndAlive(run, run.teamName);
+    return this.persistLaunchStateSnapshot(run, phase);
+  }
+
+  private async drainSuccessfulDirectRestartLaunchSnapshot(
+    run: ProvisioningRun,
+    memberName: string
+  ): Promise<void> {
+    if (!run.isLaunch) {
+      return;
+    }
+
+    let persistenceFailed = false;
+    let persistenceError: unknown;
+    try {
+      await this.persistLaunchStateSnapshotForCurrentRun(
+        run,
+        run.provisioningComplete ? 'finished' : 'active'
+      );
+    } catch (error) {
+      persistenceFailed = true;
+      persistenceError = error;
+    }
+
+    // Persistence drains queued status publications. The direct launch is already live at this
+    // point, so a storage failure must not report the restart as failed. A replacement or cancelled
+    // run remains authoritative, including when it changes while the publication is draining.
+    this.assertRunStillCurrentAndAlive(run, run.teamName);
+    if (persistenceFailed) {
+      logger.warn(
+        `[${run.teamName}] Failed to persist successful direct restart launch snapshot for ${memberName}: ${
+          persistenceError instanceof Error ? persistenceError.message : String(persistenceError)
+        }`
+      );
+    }
+  }
+
   async attachLiveRosterMember(
     teamName: string,
     memberName: string,
     options?: { reason?: LiveRosterAttachReason }
   ): Promise<void> {
+    const seam = this.actionUseCases.attachLiveRosterMember;
     return this.runMemberLifecycleOperation(
       teamName,
       memberName,
       this.getLiveRosterAttachLifecycleKind(options?.reason),
-      () => this.attachLiveRosterMemberUnlocked(teamName, memberName, options)
+      () =>
+        seam
+          ? seam(teamName, memberName, options)
+          : this.attachLiveRosterMemberUnlocked(teamName, memberName, options)
     );
   }
 
   private async stopPrimaryOwnedRosterRuntime(
-    input: Parameters<
-      TeamProvisioningMemberLifecycleController['stopPrimaryOwnedRosterRuntimeInternal']
-    >[0]
+    input: StopPrimaryOwnedRosterRuntimeInput
   ): Promise<void> {
-    const seam = this.getHostSeam<
-      (
-        input: Parameters<
-          TeamProvisioningMemberLifecycleController['stopPrimaryOwnedRosterRuntimeInternal']
-        >[0]
-      ) => Promise<void>
-    >('stopPrimaryOwnedRosterRuntime');
+    const seam = this.restartUseCases.stopPrimaryOwnedRosterRuntime;
     if (seam) {
       await seam(input);
       return;
@@ -1887,207 +1382,26 @@ export class TeamProvisioningMemberLifecycleController {
     await this.stopPrimaryOwnedRosterRuntimeInternal(input);
   }
 
-  async stopPrimaryOwnedRosterRuntimeInternal(input: {
-    teamName: string;
-    memberName: string;
-    persistedRuntimeMembers: readonly PersistedRuntimeMemberLike[];
-    liveRuntimeByMember: Map<string, LiveTeamAgentRuntimeMetadata>;
-    actionLabel: string;
-  }): Promise<void> {
-    const pidsToStop = new Set<number>();
-    const tmuxPaneIdsToStop = new Set<string>();
-    const persistedTmuxPaneIds = new Set(
-      input.persistedRuntimeMembers
-        .filter((member) => member.backendType?.trim().toLowerCase() === 'tmux')
-        .map((member) => (typeof member.tmuxPaneId === 'string' ? member.tmuxPaneId.trim() : ''))
-        .filter(Boolean)
-    );
-    let hasAliveRuntimeWithoutStopHandle = false;
+  async stopPrimaryOwnedRosterRuntimeInternal(
+    input: StopPrimaryOwnedRosterRuntimeInput
+  ): Promise<void> {
+    await this.stopPrimaryOwnedRosterRuntimeFallback(input);
+  }
 
-    const readProcessCommandByPid =
-      this.getHostSeam<(pid: number) => string | null>('readProcessCommandByPid');
-    let persistedTmuxPaneInfo = new Map<string, TmuxPaneRuntimeInfo>();
-    if (persistedTmuxPaneIds.size > 0) {
-      try {
-        persistedTmuxPaneInfo = await listTmuxPaneRuntimeInfoForCurrentPlatform([
-          ...persistedTmuxPaneIds,
-        ]);
-      } catch (error) {
-        throw new Error(
-          `${input.actionLabel} cannot verify the persisted tmux runtime identity: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
+  private async preparePrimaryOwnedMemberRestartRuntime(
+    input: PreparePrimaryOwnedMemberRestartRuntimeInput
+  ): Promise<PreparePrimaryOwnedMemberRestartRuntimeResult> {
+    const seam = this.restartUseCases.preparePrimaryOwnedMemberRestartRuntime;
+    if (seam) {
+      return await seam(input);
     }
+    return await this.preparePrimaryOwnedMemberRestartRuntimeInternal(input);
+  }
 
-    const hasExactRuntimeIdentity = (command: string | null): boolean =>
-      commandArgEquals(command ?? '', '--team-name', input.teamName) &&
-      (commandArgEquals(command ?? '', '--agent-name', input.memberName) ||
-        commandArgEquals(command ?? '', '--agent-id', `${input.memberName}@${input.teamName}`));
-
-    for (const runtimeMember of input.persistedRuntimeMembers) {
-      const backendType = runtimeMember.backendType?.trim().toLowerCase();
-      if (backendType === 'in-process') {
-        throw new Error(
-          `Member "${input.memberName}" uses an in-process runtime and cannot be detached here`
-        );
-      }
-      if (
-        backendType === 'process' &&
-        typeof runtimeMember.runtimePid === 'number' &&
-        Number.isFinite(runtimeMember.runtimePid) &&
-        runtimeMember.runtimePid > 0
-      ) {
-        const pid = runtimeMember.runtimePid;
-        const command = readProcessCommandByPid?.(pid) ?? null;
-        if (hasExactRuntimeIdentity(command)) {
-          pidsToStop.add(pid);
-        } else if (isProcessAlive(pid)) {
-          hasAliveRuntimeWithoutStopHandle = true;
-          logger.warn(
-            `[${input.teamName}] Refusing to stop persisted teammate pid=${pid} for ${input.memberName}: process identity does not match the exact team and member.`
-          );
-        }
-      }
-      const paneId =
-        typeof runtimeMember.tmuxPaneId === 'string' ? runtimeMember.tmuxPaneId.trim() : '';
-      if (backendType === 'tmux' && paneId) {
-        const paneInfo = persistedTmuxPaneInfo.get(paneId);
-        if (paneInfo) {
-          const paneCommand = readProcessCommandByPid?.(paneInfo.panePid) ?? null;
-          let verifiedRuntimePid = hasExactRuntimeIdentity(paneCommand)
-            ? paneInfo.panePid
-            : undefined;
-          if (verifiedRuntimePid == null) {
-            const processRows = await listRuntimeProcessTableForCurrentPlatform({
-              bypassCache: true,
-            });
-            if (processRows) {
-              const childrenByParent = new Map<number, RuntimeTelemetryProcessTableRow[]>();
-              for (const row of processRows) {
-                const children = childrenByParent.get(row.ppid) ?? [];
-                children.push(row);
-                childrenByParent.set(row.ppid, children);
-              }
-              const queue = [...(childrenByParent.get(paneInfo.panePid) ?? [])];
-              const seen = new Set<number>();
-              while (queue.length > 0) {
-                const row = queue.shift();
-                if (!row || seen.has(row.pid)) continue;
-                seen.add(row.pid);
-                if (
-                  hasExactRuntimeIdentity(row.command) &&
-                  (typeof runtimeMember.runtimePid !== 'number' ||
-                    runtimeMember.runtimePid === row.pid)
-                ) {
-                  verifiedRuntimePid = row.pid;
-                  break;
-                }
-                queue.push(...(childrenByParent.get(row.pid) ?? []));
-              }
-            }
-          }
-          if (verifiedRuntimePid != null) {
-            tmuxPaneIdsToStop.add(paneId);
-          } else {
-            hasAliveRuntimeWithoutStopHandle = true;
-            logger.warn(
-              `[${input.teamName}] Refusing to stop persisted teammate pane=${paneId} for ${input.memberName}: pane runtime identity does not match the exact team and member.`
-            );
-          }
-        }
-      }
-    }
-
-    for (const [candidateName, metadata] of input.liveRuntimeByMember.entries()) {
-      if (!matchesObservedMemberNameForExpected(candidateName, input.memberName)) {
-        continue;
-      }
-      if (metadata.backendType === 'in-process') {
-        throw new Error(
-          `Member "${input.memberName}" uses an in-process runtime and cannot be detached here`
-        );
-      }
-
-      let hasStopHandle = false;
-      if (metadata.backendType === 'tmux') {
-        const paneId = metadata.tmuxPaneId?.trim();
-        if (paneId && !persistedTmuxPaneIds.has(paneId)) {
-          tmuxPaneIdsToStop.add(paneId);
-          hasStopHandle = true;
-        } else if (paneId && tmuxPaneIdsToStop.has(paneId)) {
-          hasStopHandle = true;
-        }
-      }
-      if (typeof metadata.pid === 'number' && Number.isFinite(metadata.pid) && metadata.pid > 0) {
-        pidsToStop.add(metadata.pid);
-        hasStopHandle = true;
-      }
-      if (
-        typeof metadata.metricsPid === 'number' &&
-        Number.isFinite(metadata.metricsPid) &&
-        metadata.metricsPid > 0
-      ) {
-        pidsToStop.add(metadata.metricsPid);
-        hasStopHandle = true;
-      }
-      if (metadata.alive && !hasStopHandle) {
-        hasAliveRuntimeWithoutStopHandle = true;
-      }
-    }
-
-    if (hasAliveRuntimeWithoutStopHandle && pidsToStop.size === 0 && tmuxPaneIdsToStop.size === 0) {
-      throw new Error(
-        `${input.actionLabel} cannot stop the existing runtime because it does not expose a pid or tmux pane.`
-      );
-    }
-
-    for (const paneId of tmuxPaneIdsToStop) {
-      try {
-        killTmuxPaneForCurrentPlatformSync(paneId);
-      } catch (error) {
-        logger.debug(
-          `[${input.teamName}] Failed to stop teammate pane ${input.memberName} ${paneId} for live roster lifecycle: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-    for (const pid of pidsToStop) {
-      try {
-        killProcessByPid(pid);
-      } catch (error) {
-        logger.debug(
-          `[${input.teamName}] Failed to stop teammate process ${input.memberName} pid=${pid} for live roster lifecycle: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    if (pidsToStop.size > 0) {
-      const lingeringPids = await waitForPidsToExit([...pidsToStop], {
-        timeoutMs: 1_500,
-        pollMs: 100,
-      });
-      if (lingeringPids.length > 0) {
-        throw new Error(
-          `${input.actionLabel} is still waiting for process exit (${lingeringPids.join(', ')}).`
-        );
-      }
-    }
-    if (tmuxPaneIdsToStop.size > 0) {
-      const lingeringPaneIds = await waitForTmuxPanesToExit([...tmuxPaneIdsToStop], {
-        timeoutMs: 1_500,
-        pollMs: 100,
-      });
-      if (lingeringPaneIds.length > 0) {
-        throw new Error(
-          `${input.actionLabel} is still waiting for tmux pane exit (${lingeringPaneIds.join(', ')}).`
-        );
-      }
-    }
+  async preparePrimaryOwnedMemberRestartRuntimeInternal(
+    input: PreparePrimaryOwnedMemberRestartRuntimeInput
+  ): Promise<PreparePrimaryOwnedMemberRestartRuntimeResult> {
+    return await this.preparePrimaryOwnedMemberRestartRuntimeFallback(input);
   }
 
   private async attachLiveRosterMemberUnlocked(
@@ -2101,6 +1415,7 @@ export class TeamProvisioningMemberLifecycleController {
       throw new Error(`Team "${teamName}" configuration is no longer available`);
     }
     const metaMembers = await this.membersMetaStore.getMembers(teamName).catch(() => []);
+    this.assertRunStillCurrentAndAlive(run, teamName);
     const configuredMember = this.resolveEffectiveConfiguredMember(
       config.members ?? [],
       metaMembers,
@@ -2150,6 +1465,7 @@ export class TeamProvisioningMemberLifecycleController {
       [...liveRuntimeByMember.entries()].find(([candidateName]) =>
         matchesObservedMemberNameForExpected(candidateName, memberName)
       )?.[1];
+    this.assertRunStillCurrentAndAlive(run, teamName);
     if (
       !replaceExistingRuntime &&
       liveRuntimeMember?.alive &&
@@ -2189,6 +1505,7 @@ export class TeamProvisioningMemberLifecycleController {
         `Member "${memberName}" uses an in-process runtime and cannot be attached here`
       );
     }
+    this.assertRunStillCurrentAndAlive(run, teamName);
     if (replaceExistingRuntime) {
       await this.stopPrimaryOwnedRosterRuntime({
         teamName,
@@ -2197,6 +1514,7 @@ export class TeamProvisioningMemberLifecycleController {
         liveRuntimeByMember,
         actionLabel: `Update for teammate "${memberName}"`,
       });
+      this.assertRunStillCurrentAndAlive(run, teamName);
       this.setMemberSpawnStatus(run, memberName, 'offline');
     }
 
@@ -2231,6 +1549,9 @@ export class TeamProvisioningMemberLifecycleController {
         operation: options?.reason ?? 'member_added',
       });
     } catch (error) {
+      if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+        throw error;
+      }
       this.setMemberSpawnStatus(
         run,
         memberName,
@@ -2248,8 +1569,9 @@ export class TeamProvisioningMemberLifecycleController {
   }
 
   async detachLiveRosterMember(teamName: string, memberName: string): Promise<void> {
+    const seam = this.actionUseCases.detachLiveRosterMember;
     return this.runMemberLifecycleOperation(teamName, memberName, 'primary_member_removed', () =>
-      this.detachLiveRosterMemberUnlocked(teamName, memberName)
+      seam ? seam(teamName, memberName) : this.detachLiveRosterMemberUnlocked(teamName, memberName)
     );
   }
 
@@ -2267,10 +1589,8 @@ export class TeamProvisioningMemberLifecycleController {
       () => new Map<string, LiveTeamAgentRuntimeMetadata>()
     );
 
-    // A process-backed team can outlive the mutable provisioning run that created it
-    // (for example after the desktop service is recreated). Persisted launch evidence
-    // remains member-scoped and is sufficient to detach that exact runtime without a
-    // team-wide process scan.
+    // Process-backed teammates can outlive the mutable provisioning run that created them.
+    // Persisted member-scoped identity is sufficient for the exact-runtime stop boundary.
     if (!run || run.processKilled || run.cancelRequested) {
       await this.stopPrimaryOwnedRosterRuntime({
         teamName,
@@ -2286,6 +1606,7 @@ export class TeamProvisioningMemberLifecycleController {
     const leadProviderId = resolveTeamProviderId(run.request.providerId);
     const config = await this.readConfigForStrictDecision(teamName);
     const metaMembers = await this.membersMetaStore.getMembers(teamName).catch(() => []);
+    this.assertRunStillCurrentAndAlive(run, teamName);
     const configuredMember = this.resolveEffectiveConfiguredMember(
       config?.members ?? [],
       metaMembers,
@@ -2303,6 +1624,7 @@ export class TeamProvisioningMemberLifecycleController {
       );
     }
 
+    this.assertRunStillCurrentAndAlive(run, teamName);
     await this.stopPrimaryOwnedRosterRuntime({
       teamName,
       memberName,
@@ -2310,6 +1632,7 @@ export class TeamProvisioningMemberLifecycleController {
       liveRuntimeByMember,
       actionLabel: `Detach for teammate "${memberName}"`,
     });
+    this.assertRunStillCurrentAndAlive(run, teamName);
 
     this.removeRunAllEffectiveMember(run, memberName);
     this.invalidateRuntimeSnapshotCaches(teamName);
@@ -2323,8 +1646,9 @@ export class TeamProvisioningMemberLifecycleController {
   }
 
   async restartMember(teamName: string, memberName: string): Promise<void> {
+    const seam = this.actionUseCases.restartMember;
     return this.runMemberLifecycleOperation(teamName, memberName, 'manual_restart', () =>
-      this.restartMemberUnlocked(teamName, memberName)
+      seam ? seam(teamName, memberName) : this.restartMemberUnlocked(teamName, memberName)
     );
   }
 
@@ -2372,6 +1696,7 @@ export class TeamProvisioningMemberLifecycleController {
     };
 
     let currentConfiguredMemberState = await readCurrentConfiguredMember();
+    this.assertRunStillCurrentAndAlive(run, teamName);
     let config = currentConfiguredMemberState.config;
     let configuredMember = currentConfiguredMemberState.configuredMember;
     if (!config) {
@@ -2401,12 +1726,15 @@ export class TeamProvisioningMemberLifecycleController {
       return;
     }
     if (desiredProviderId === 'opencode' && leadProviderId === 'opencode') {
-      const restartAggregatePrimary = this.getHostSeam<
-        (targetTeamName: string, targetMemberName: string) => Promise<boolean>
-      >('restartPureOpenCodeAggregatePrimaryMember');
-      if (restartAggregatePrimary && (await restartAggregatePrimary(teamName, memberName))) {
-        return;
-      }
+      // Aggregate-primary restart is destructive: it replaces the shared primary
+      // lane before reattaching this member. Only the service facade owns the
+      // serialized restart lease, local-model preflight, and transactional
+      // rollback needed for that operation. Reaching the member-lifecycle
+      // fallback means the facade could not prove exact primary ownership, so
+      // fail closed without stopping or mutating any runtime.
+      throw new Error(
+        `OpenCode aggregate restart for teammate "${memberName}" requires an exact active primary runtime owner`
+      );
     }
     if (run.pendingMemberRestarts.has(memberName)) {
       throw new Error(`Restart for teammate "${memberName}" is already in progress`);
@@ -2416,135 +1744,19 @@ export class TeamProvisioningMemberLifecycleController {
       const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
       return candidateName.length > 0 && matchesMemberNameOrBase(candidateName, memberName);
     });
-    const directTmuxRestartCandidatePaneId = this.getDirectTmuxRestartPaneId(
+
+    this.assertRunStillCurrentAndAlive(run, teamName);
+    const restartRuntimePreparation = await this.preparePrimaryOwnedMemberRestartRuntime({
+      teamName,
+      memberName,
       persistedRuntimeMembers,
-      memberName
-    );
+      assertStillCurrent: () => this.assertRunStillCurrentAndAlive(run, teamName),
+      invalidateRuntimeSnapshotCaches: () => this.invalidateRuntimeSnapshotCaches(teamName),
+      loadLiveRuntimeByMember: () => this.getLiveTeamAgentRuntimeMetadata(teamName),
+    });
+    const { directTmuxRestartPaneId, shouldDirectProcessRestart } = restartRuntimePreparation;
 
-    const backendTypes = new Set(
-      persistedRuntimeMembers
-        .map((member) => member.backendType?.trim().toLowerCase())
-        .filter((value): value is string => Boolean(value))
-    );
-    if (backendTypes.has('in-process')) {
-      throw new Error(
-        `Member "${memberName}" uses an in-process runtime and cannot be restarted here`
-      );
-    }
-
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(teamName);
-    const livePids = new Set<number>();
-    let hasAliveRuntimeWithoutPid = false;
-    for (const [candidateName, metadata] of liveRuntimeByMember.entries()) {
-      if (!matchesMemberNameOrBase(candidateName, memberName)) {
-        continue;
-      }
-      if (metadata.pid) {
-        livePids.add(metadata.pid);
-        continue;
-      }
-      if (metadata.alive && metadata.backendType !== 'in-process') {
-        hasAliveRuntimeWithoutPid = true;
-      }
-    }
-
-    if (hasAliveRuntimeWithoutPid) {
-      throw new Error(
-        `Member "${memberName}" is running, but its backend does not expose a restartable pid yet`
-      );
-    }
-
-    let directTmuxRestartPaneId: string | null = null;
-    if (directTmuxRestartCandidatePaneId) {
-      try {
-        const paneInfo = (
-          await listTmuxPaneRuntimeInfoForCurrentPlatform([directTmuxRestartCandidatePaneId])
-        ).get(directTmuxRestartCandidatePaneId);
-        if (paneInfo && isInteractiveShellCommand(paneInfo.currentCommand)) {
-          directTmuxRestartPaneId = directTmuxRestartCandidatePaneId;
-        }
-      } catch (error) {
-        logger.debug(
-          `[${teamName}] Direct tmux restart probe failed for ${memberName}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    const tmuxPaneIdsToVerify: string[] = [];
-    if (!directTmuxRestartPaneId) {
-      for (const persistedRuntimeMember of persistedRuntimeMembers) {
-        const paneId =
-          typeof persistedRuntimeMember.tmuxPaneId === 'string'
-            ? persistedRuntimeMember.tmuxPaneId.trim()
-            : '';
-        const backendType = persistedRuntimeMember.backendType?.trim().toLowerCase();
-        if (!paneId || backendType !== 'tmux') {
-          continue;
-        }
-        tmuxPaneIdsToVerify.push(paneId);
-        try {
-          killTmuxPaneForCurrentPlatformSync(paneId);
-          logger.info(
-            `[${teamName}] Killed teammate pane ${memberName} (${paneId}) for manual restart`
-          );
-        } catch (error) {
-          logger.debug(
-            `[${teamName}] Failed to kill teammate pane ${memberName} (${paneId}) for manual restart: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        }
-      }
-    }
-
-    for (const pid of livePids) {
-      try {
-        killProcessByPid(pid);
-      } catch (error) {
-        logger.debug(
-          `[${teamName}] Failed to kill teammate process ${memberName} pid=${pid} for manual restart: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    if (livePids.size > 0) {
-      const lingeringPids = await waitForPidsToExit(Array.from(livePids), {
-        timeoutMs: 1_500,
-        pollMs: 100,
-      });
-      if (lingeringPids.length > 0) {
-        throw new Error(
-          `Restart for teammate "${memberName}" is still waiting for the previous process to exit (${lingeringPids.join(', ')}).`
-        );
-      }
-    }
-
-    if (tmuxPaneIdsToVerify.length > 0) {
-      let lingeringPaneIds: string[];
-      try {
-        lingeringPaneIds = await waitForTmuxPanesToExit(tmuxPaneIdsToVerify, {
-          timeoutMs: 1_500,
-          pollMs: 100,
-        });
-      } catch (error) {
-        throw new Error(
-          `Restart for teammate "${memberName}" could not verify that the previous tmux pane exited: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-      if (lingeringPaneIds.length > 0) {
-        throw new Error(
-          `Restart for teammate "${memberName}" is still waiting for the previous tmux pane to exit (${lingeringPaneIds.join(', ')}).`
-        );
-      }
-    }
-
+    this.assertRunStillCurrentAndAlive(run, teamName);
     this.setMemberSpawnStatus(run, memberName, 'offline');
 
     const latestRunId = this.getAliveRunId(teamName);
@@ -2560,6 +1772,7 @@ export class TeamProvisioningMemberLifecycleController {
     }
 
     currentConfiguredMemberState = await readCurrentConfiguredMember();
+    this.assertRunStillCurrentAndAlive(run, teamName);
     config = currentConfiguredMemberState.config;
     configuredMember = currentConfiguredMemberState.configuredMember;
     if (!config) {
@@ -2612,8 +1825,10 @@ export class TeamProvisioningMemberLifecycleController {
           persistedRuntimeMembers,
           paneId: directTmuxRestartPaneId,
         });
-        return;
       } catch (error) {
+        if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+          throw error;
+        }
         run.pendingMemberRestarts.delete(memberName);
         this.setMemberSpawnStatus(
           run,
@@ -2622,16 +1837,19 @@ export class TeamProvisioningMemberLifecycleController {
           error instanceof Error ? error.message : String(error)
         );
         if (run.isLaunch) {
-          await this.persistLaunchStateSnapshot(
+          await this.persistLaunchStateSnapshotForCurrentRun(
             run,
             run.provisioningComplete ? 'finished' : 'active'
           );
         }
         throw error;
       }
+      // Status mutations publish in the background for low-latency runtime event handling.
+      // Do not resolve the lifecycle command until all earlier status publications are drained.
+      await this.drainSuccessfulDirectRestartLaunchSnapshot(run, memberName);
+      return;
     }
 
-    const shouldDirectProcessRestart = backendTypes.has('process') || livePids.size > 0;
     if (shouldDirectProcessRestart) {
       try {
         await this.launchDirectProcessMemberRestart({
@@ -2644,8 +1862,10 @@ export class TeamProvisioningMemberLifecycleController {
           configuredMember,
           persistedRuntimeMembers,
         });
-        return;
       } catch (error) {
+        if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+          throw error;
+        }
         run.pendingMemberRestarts.delete(memberName);
         this.setMemberSpawnStatus(
           run,
@@ -2654,13 +1874,15 @@ export class TeamProvisioningMemberLifecycleController {
           error instanceof Error ? error.message : String(error)
         );
         if (run.isLaunch) {
-          await this.persistLaunchStateSnapshot(
+          await this.persistLaunchStateSnapshotForCurrentRun(
             run,
             run.provisioningComplete ? 'finished' : 'active'
           );
         }
         throw error;
       }
+      await this.drainSuccessfulDirectRestartLaunchSnapshot(run, memberName);
+      return;
     }
 
     let restartMcpLaunchConfig: RuntimeBootstrapMemberMcpLaunchConfig | null = null;
@@ -2670,6 +1892,7 @@ export class TeamProvisioningMemberLifecycleController {
         mcpPolicy: configuredMember.mcpPolicy,
         run,
       });
+      this.assertRunStillCurrentAndAlive(run, teamName);
       const restartMessage = buildRestartMemberSpawnMessage(
         teamName,
         config?.name?.trim() || teamName,
@@ -2688,6 +1911,9 @@ export class TeamProvisioningMemberLifecycleController {
       await this.sendMessageToRun(run, restartMessage);
     } catch (error) {
       await this.removeTrackedMemberMcpLaunchConfig(run, restartMcpLaunchConfig).catch(() => {});
+      if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+        throw error;
+      }
       run.pendingMemberRestarts.delete(memberName);
       this.setMemberSpawnStatus(
         run,
@@ -2696,12 +1922,18 @@ export class TeamProvisioningMemberLifecycleController {
         error instanceof Error ? error.message : String(error)
       );
       if (run.isLaunch) {
-        await this.persistLaunchStateSnapshot(
+        await this.persistLaunchStateSnapshotForCurrentRun(
           run,
           run.provisioningComplete ? 'finished' : 'active'
         );
       }
       throw error;
+    }
+    if (run.isLaunch) {
+      await this.persistLaunchStateSnapshotForCurrentRun(
+        run,
+        run.provisioningComplete ? 'finished' : 'active'
+      );
     }
   }
 
@@ -2713,6 +1945,10 @@ export class TeamProvisioningMemberLifecycleController {
     if (runtimeRun?.providerId !== 'opencode') {
       return false;
     }
+    const assertRuntimeAdapterRunStillCurrent = this.createRuntimeAdapterRunStillCurrentGuard(
+      teamName,
+      runtimeRun
+    );
 
     const adapter = this.getOpenCodeRuntimeAdapter();
     if (!adapter) {
@@ -2806,6 +2042,7 @@ export class TeamProvisioningMemberLifecycleController {
       leadProviderId: 'opencode',
       members: activeMembers.map((member) => this.buildConfiguredProvisioningMember(member)),
     });
+    assertRuntimeAdapterRunStillCurrent();
     const targetRuntimeMember = effectiveMembers.find((member) =>
       matchesExactTeamMemberName(member.name, targetMember.name)
     );
@@ -2819,6 +2056,7 @@ export class TeamProvisioningMemberLifecycleController {
         modelRoute: member.model?.trim() ?? '',
       })),
     });
+    assertRuntimeAdapterRunStillCurrent();
     if (localModelPreflight && !localModelPreflight.ok) {
       throw new Error(
         localModelPreflight.diagnostics[0] ??
@@ -2831,6 +2069,7 @@ export class TeamProvisioningMemberLifecycleController {
       );
     }
 
+    assertRuntimeAdapterRunStillCurrent();
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.persistOpenCodeMemberRestartSystemMessage({
       teamName,
@@ -2839,8 +2078,10 @@ export class TeamProvisioningMemberLifecycleController {
       displayName: config.description?.trim() || config.name,
       member: targetRuntimeMember,
       reason: 'manual_restart',
+      assertStillCurrent: assertRuntimeAdapterRunStillCurrent,
     });
 
+    assertRuntimeAdapterRunStillCurrent();
     await this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: {
         teamName,
@@ -2879,9 +2120,12 @@ export class TeamProvisioningMemberLifecycleController {
       return existing;
     }
 
-    const retry = this.retryFailedOpenCodeSecondaryLanesNow(teamName).finally(() => {
-      this.failedOpenCodeSecondaryRetryInFlightByTeam.delete(teamName);
-    });
+    const seam = this.actionUseCases.retryFailedOpenCodeSecondaryLanes;
+    const retry = Promise.resolve()
+      .then(() => (seam ? seam(teamName) : this.retryFailedOpenCodeSecondaryLanesNow(teamName)))
+      .finally(() => {
+        this.failedOpenCodeSecondaryRetryInFlightByTeam.delete(teamName);
+      });
     this.failedOpenCodeSecondaryRetryInFlightByTeam.set(teamName, retry);
     return retry;
   }
@@ -2904,7 +2148,7 @@ export class TeamProvisioningMemberLifecycleController {
     const candidates = await this.collectFailedOpenCodeSecondaryRetryCandidates(run);
 
     for (const candidate of candidates) {
-      if (!this.isCurrentTrackedRun(run) || run.processKilled || run.cancelRequested) {
+      if (!this.isRunStillCurrentAndAlive(run, teamName)) {
         result.skipped.push({
           memberName: candidate.memberName,
           reason: 'Team stopped during retry',
@@ -2924,11 +2168,26 @@ export class TeamProvisioningMemberLifecycleController {
         );
         result.attempted.push(candidate.memberName);
 
+        if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+          result.skipped.push({
+            memberName: candidate.memberName,
+            reason: 'Team stopped during retry',
+          });
+          continue;
+        }
+
         const outcome = await this.readOpenCodeSecondaryRetryOutcome(
           run,
           candidate.memberName,
           candidate.laneId
         );
+        if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+          result.skipped.push({
+            memberName: candidate.memberName,
+            reason: 'Team stopped during retry',
+          });
+          continue;
+        }
         if (outcome.launchState === 'confirmed_alive') {
           result.confirmed.push(candidate.memberName);
         } else if (outcome.launchState === 'failed_to_start') {
@@ -2959,18 +2218,16 @@ export class TeamProvisioningMemberLifecycleController {
       }
     }
 
-    await this.notifyLeadAboutConfirmedOpenCodeRetries(run, result);
+    if (this.isRunStillCurrentAndAlive(run, teamName)) {
+      await this.notifyLeadAboutConfirmedOpenCodeRetries(run, result);
+    }
     return result;
   }
 
   private async collectFailedOpenCodeSecondaryRetryCandidates(
-    run: Parameters<
-      TeamProvisioningMemberLifecycleController['collectFailedOpenCodeSecondaryRetryCandidatesInternal']
-    >[0]
+    run: ProvisioningRun
   ): Promise<OpenCodeSecondaryRetryCandidate[]> {
-    const seam = this.getHostSeam<
-      (run: ProvisioningRun) => Promise<OpenCodeSecondaryRetryCandidate[]>
-    >('collectFailedOpenCodeSecondaryRetryCandidates');
+    const seam = this.openCodeRetryUseCases.collectFailedOpenCodeSecondaryRetryCandidates;
     if (seam) {
       return await seam(run);
     }
@@ -2980,171 +2237,7 @@ export class TeamProvisioningMemberLifecycleController {
   async collectFailedOpenCodeSecondaryRetryCandidatesInternal(
     run: ProvisioningRun
   ): Promise<OpenCodeSecondaryRetryCandidate[]> {
-    const teamName = run.teamName;
-    const leadProviderId = resolveTeamProviderId(run.request.providerId);
-    const isOpenCodeAggregateRun =
-      leadProviderId === 'opencode' && (run.mixedSecondaryLanes?.length ?? 0) > 0;
-    if (leadProviderId === 'opencode' && !isOpenCodeAggregateRun) {
-      throw new Error(
-        'Retrying OpenCode secondary lanes requires an active OpenCode member lane run.'
-      );
-    }
-    if (!this.getOpenCodeRuntimeAdapter()) {
-      throw new Error('OpenCode runtime adapter is not available for secondary lane retry.');
-    }
-
-    const config = await this.readConfigForStrictDecision(teamName);
-    if (!config) {
-      throw new Error(`Team "${teamName}" configuration is no longer available`);
-    }
-    const metaMembers = await this.membersMetaStore.getMembers(teamName).catch(() => []);
-    const persistedSnapshot = await this.launchStateStore.read(teamName).catch(() => null);
-
-    const names = new Set<string>();
-    for (const member of config.members ?? []) {
-      const name = member.name?.trim();
-      if (name) {
-        names.add(name);
-      }
-    }
-    for (const member of metaMembers) {
-      const name = member.name?.trim();
-      if (name) {
-        names.add(name);
-      }
-    }
-    for (const lane of run.mixedSecondaryLanes ?? []) {
-      const name = lane.member.name?.trim();
-      if (name) {
-        names.add(name);
-      }
-    }
-    for (const name of persistedSnapshot?.expectedMembers ?? []) {
-      if (name.trim()) {
-        names.add(name.trim());
-      }
-    }
-    for (const name of Object.keys(persistedSnapshot?.members ?? {})) {
-      if (name.trim()) {
-        names.add(name.trim());
-      }
-    }
-
-    const candidates: OpenCodeSecondaryRetryCandidate[] = [];
-    for (const memberName of [...names].sort((left, right) => left.localeCompare(right))) {
-      const configuredMember = this.resolveEffectiveConfiguredMember(
-        config.members ?? [],
-        metaMembers,
-        memberName
-      );
-      if (!configuredMember || configuredMember.removedAt) {
-        continue;
-      }
-      if (isLeadMember({ name: memberName, agentType: configuredMember.agentType })) {
-        continue;
-      }
-      const desiredProviderId =
-        normalizeOptionalTeamProviderId(configuredMember.providerId) ?? leadProviderId;
-      if (desiredProviderId !== 'opencode') {
-        continue;
-      }
-
-      const existingLane = (run.mixedSecondaryLanes ?? []).find((lane) =>
-        matchesTeamMemberIdentity(lane.member.name, memberName)
-      );
-      const liveEntry = run.memberSpawnStatuses.get(memberName);
-      const persistedMemberByName =
-        persistedSnapshot?.members[memberName] ??
-        Object.values(persistedSnapshot?.members ?? {}).find((member) =>
-          matchesTeamMemberIdentity(member.name, memberName)
-        );
-      let laneId: string | null = null;
-      if (leadProviderId === 'opencode') {
-        const persistedLaneId = persistedMemberByName?.laneId?.startsWith('secondary:opencode:')
-          ? persistedMemberByName.laneId
-          : null;
-        laneId = existingLane?.laneId ?? persistedLaneId;
-        if (!laneId) {
-          continue;
-        }
-      } else {
-        const laneIdentity = buildPlannedMemberLaneIdentity({
-          leadProviderId,
-          member: {
-            name: memberName,
-            providerId: 'opencode',
-          },
-        });
-        if (
-          laneIdentity.laneKind !== 'secondary' ||
-          laneIdentity.laneOwnerProviderId !== 'opencode'
-        ) {
-          continue;
-        }
-        laneId = laneIdentity.laneId;
-      }
-      const persistedMember =
-        persistedMemberByName ??
-        Object.values(persistedSnapshot?.members ?? {}).find((member) => member.laneId === laneId);
-
-      if (
-        this.isRetryableFailedOpenCodeSecondaryLane({
-          liveEntry,
-          persistedMember,
-          existingLane,
-        })
-      ) {
-        candidates.push({ memberName, laneId });
-      }
-    }
-    return candidates;
-  }
-
-  private isRetryableFailedOpenCodeSecondaryLane(input: {
-    liveEntry?: MemberSpawnStatusEntry;
-    persistedMember?: PersistedTeamLaunchMemberState;
-    existingLane?: MixedSecondaryRuntimeLaneState;
-  }): boolean {
-    const { liveEntry, persistedMember, existingLane } = input;
-    if (existingLane?.state === 'queued' || existingLane?.state === 'launching') {
-      return false;
-    }
-    if (
-      liveEntry?.launchState === 'skipped_for_launch' ||
-      liveEntry?.skippedForLaunch === true ||
-      persistedMember?.launchState === 'skipped_for_launch' ||
-      persistedMember?.skippedForLaunch === true
-    ) {
-      return false;
-    }
-    if (
-      liveEntry?.launchState === 'runtime_pending_permission' ||
-      liveEntry?.launchState === 'runtime_pending_bootstrap' ||
-      persistedMember?.launchState === 'runtime_pending_permission' ||
-      persistedMember?.launchState === 'runtime_pending_bootstrap' ||
-      (liveEntry?.pendingPermissionRequestIds?.length ?? 0) > 0 ||
-      (persistedMember?.pendingPermissionRequestIds?.length ?? 0) > 0
-    ) {
-      return false;
-    }
-    if (liveEntry?.launchState === 'starting' || liveEntry?.status === 'spawning') {
-      return false;
-    }
-    if (
-      liveEntry?.launchState === 'confirmed_alive' ||
-      liveEntry?.bootstrapConfirmed === true ||
-      persistedMember?.launchState === 'confirmed_alive' ||
-      persistedMember?.bootstrapConfirmed === true
-    ) {
-      return false;
-    }
-
-    return (
-      liveEntry?.launchState === 'failed_to_start' ||
-      liveEntry?.status === 'error' ||
-      persistedMember?.launchState === 'failed_to_start' ||
-      persistedMember?.hardFailure === true
-    );
+    return await this.collectFailedOpenCodeSecondaryRetryCandidatesFallback(run);
   }
 
   private async readOpenCodeSecondaryRetryOutcome(
@@ -3152,13 +2245,7 @@ export class TeamProvisioningMemberLifecycleController {
     memberName: string,
     laneId: string
   ): Promise<OpenCodeSecondaryRetryOutcome> {
-    const seam = this.getHostSeam<
-      (
-        run: ProvisioningRun,
-        memberName: string,
-        laneId: string
-      ) => Promise<OpenCodeSecondaryRetryOutcome>
-    >('readOpenCodeSecondaryRetryOutcome');
+    const seam = this.openCodeRetryUseCases.readOpenCodeSecondaryRetryOutcome;
     if (seam) {
       return await seam(run, memberName, laneId);
     }
@@ -3170,101 +2257,14 @@ export class TeamProvisioningMemberLifecycleController {
     memberName: string,
     laneId: string
   ): Promise<OpenCodeSecondaryRetryOutcome> {
-    const lane = (run.mixedSecondaryLanes ?? []).find(
-      (candidate) =>
-        candidate.laneId === laneId || matchesTeamMemberIdentity(candidate.member.name, memberName)
-    );
-    const memberEvidence =
-      lane?.result?.members[memberName] ??
-      Object.values(lane?.result?.members ?? {}).find((member) =>
-        matchesTeamMemberIdentity(member.memberName, memberName)
-      );
-    const persistedSnapshot = await this.launchStateStore.read(run.teamName).catch(() => null);
-    const persistedMember =
-      persistedSnapshot?.members[memberName] ??
-      Object.values(persistedSnapshot?.members ?? {}).find((member) => member.laneId === laneId);
-    const liveEntry = run.memberSpawnStatuses.get(memberName);
-
-    if (
-      memberEvidence?.launchState === 'confirmed_alive' ||
-      memberEvidence?.bootstrapConfirmed === true ||
-      liveEntry?.launchState === 'confirmed_alive' ||
-      liveEntry?.bootstrapConfirmed === true ||
-      persistedMember?.launchState === 'confirmed_alive' ||
-      persistedMember?.bootstrapConfirmed === true
-    ) {
-      return { launchState: 'confirmed_alive' };
-    }
-
-    if (
-      liveEntry?.launchState === 'skipped_for_launch' ||
-      liveEntry?.skippedForLaunch === true ||
-      persistedMember?.launchState === 'skipped_for_launch' ||
-      persistedMember?.skippedForLaunch === true
-    ) {
-      return {
-        launchState: 'skipped_for_launch',
-        reason: liveEntry?.skipReason ?? persistedMember?.skipReason,
-      };
-    }
-
-    if (
-      memberEvidence?.launchState === 'failed_to_start' ||
-      memberEvidence?.hardFailure === true ||
-      liveEntry?.launchState === 'failed_to_start' ||
-      liveEntry?.status === 'error' ||
-      persistedMember?.launchState === 'failed_to_start' ||
-      persistedMember?.hardFailure === true
-    ) {
-      return {
-        launchState: 'failed_to_start',
-        reason: this.selectOpenCodeSecondaryRetryFailureReason({
-          memberEvidence,
-          liveEntry,
-          persistedMember,
-        }),
-      };
-    }
-
-    return {
-      launchState:
-        memberEvidence?.launchState ??
-        liveEntry?.launchState ??
-        persistedMember?.launchState ??
-        'runtime_pending_bootstrap',
-    };
-  }
-
-  private selectOpenCodeSecondaryRetryFailureReason(input: {
-    memberEvidence?: TeamRuntimeMemberLaunchEvidence;
-    liveEntry?: MemberSpawnStatusEntry;
-    persistedMember?: PersistedTeamLaunchMemberState;
-  }): string | undefined {
-    const diagnostics = [
-      input.memberEvidence?.hardFailureReason,
-      input.memberEvidence?.runtimeDiagnostic,
-      ...(input.memberEvidence?.diagnostics ?? []),
-      input.liveEntry?.hardFailureReason,
-      input.liveEntry?.runtimeDiagnostic,
-      input.liveEntry?.error,
-      input.persistedMember?.hardFailureReason,
-      input.persistedMember?.runtimeDiagnostic,
-    ];
-    return diagnostics
-      .find(
-        (diagnostic): diagnostic is string =>
-          typeof diagnostic === 'string' && diagnostic.trim().length > 0
-      )
-      ?.trim();
+    return await this.readOpenCodeSecondaryRetryOutcomeFallback(run, memberName, laneId);
   }
 
   private async notifyLeadAboutConfirmedOpenCodeRetries(
     run: ProvisioningRun,
     result: RetryFailedOpenCodeSecondaryLanesResult
   ): Promise<void> {
-    const seam = this.getHostSeam<
-      (run: ProvisioningRun, result: RetryFailedOpenCodeSecondaryLanesResult) => Promise<void>
-    >('notifyLeadAboutConfirmedOpenCodeRetries');
+    const seam = this.openCodeRetryUseCases.notifyLeadAboutConfirmedOpenCodeRetries;
     if (seam) {
       await seam(run, result);
       return;
@@ -3294,6 +2294,13 @@ export class TeamProvisioningMemberLifecycleController {
   }
 
   async skipMemberForLaunch(teamName: string, memberName: string): Promise<void> {
+    const seam = this.actionUseCases.skipMemberForLaunch;
+    return this.runMemberLifecycleOperation(teamName, memberName, 'skip_for_launch', () =>
+      seam ? seam(teamName, memberName) : this.skipMemberForLaunchInternal(teamName, memberName)
+    );
+  }
+
+  private async skipMemberForLaunchInternal(teamName: string, memberName: string): Promise<void> {
     const normalizedMemberName = memberName.trim();
     if (!normalizedMemberName) {
       throw new Error('Member name is required');
@@ -3454,23 +2461,11 @@ export class TeamProvisioningMemberLifecycleController {
   }
 
   private async reattachOpenCodeOwnedMemberLaneUnlocked(
-    teamName: Parameters<
-      TeamProvisioningMemberLifecycleController['reattachOpenCodeOwnedMemberLaneUnlockedInternal']
-    >[0],
-    memberName: Parameters<
-      TeamProvisioningMemberLifecycleController['reattachOpenCodeOwnedMemberLaneUnlockedInternal']
-    >[1],
-    options?: Parameters<
-      TeamProvisioningMemberLifecycleController['reattachOpenCodeOwnedMemberLaneUnlockedInternal']
-    >[2]
+    teamName: string,
+    memberName: string,
+    options?: ReattachOpenCodeOwnedMemberLaneOptions
   ): Promise<void> {
-    const seam = this.getHostSeam<
-      (
-        teamName: string,
-        memberName: string,
-        options?: { reason?: 'member_added' | 'member_updated' | 'manual_restart' }
-      ) => Promise<void>
-    >('reattachOpenCodeOwnedMemberLaneUnlocked');
+    const seam = this.openCodeRetryUseCases.reattachOpenCodeOwnedMemberLaneUnlocked;
     if (seam) {
       await seam(teamName, memberName, options);
       return;
@@ -3481,7 +2476,7 @@ export class TeamProvisioningMemberLifecycleController {
   async reattachOpenCodeOwnedMemberLaneUnlockedInternal(
     teamName: string,
     memberName: string,
-    options?: { reason?: 'member_added' | 'member_updated' | 'manual_restart' }
+    options?: ReattachOpenCodeOwnedMemberLaneOptions
   ): Promise<void> {
     const run = this.getMutableAliveRunOrThrow(teamName);
     const leadProviderId = resolveTeamProviderId(run.request.providerId);
@@ -3505,6 +2500,7 @@ export class TeamProvisioningMemberLifecycleController {
     } catch {
       metaMembers = [];
     }
+    this.assertRunStillCurrentAndAlive(run, teamName);
     const configuredMember = this.resolveEffectiveConfiguredMember(
       config.members ?? [],
       metaMembers,
@@ -3536,6 +2532,7 @@ export class TeamProvisioningMemberLifecycleController {
     if (!memberSpec) {
       throw new Error(`Member "${memberName}" could not be resolved for OpenCode lane reattach.`);
     }
+    this.assertRunStillCurrentAndAlive(run, teamName);
     const localModelPreflight = await adapter.preflightLocalModels?.({
       targets: [
         {
@@ -3544,6 +2541,7 @@ export class TeamProvisioningMemberLifecycleController {
         },
       ],
     });
+    this.assertRunStillCurrentAndAlive(run, teamName);
     if (localModelPreflight && !localModelPreflight.ok) {
       throw new Error(
         localModelPreflight.diagnostics[0] ??
@@ -3555,6 +2553,7 @@ export class TeamProvisioningMemberLifecycleController {
         `[${teamName}] Local model restart preflight warnings for ${memberName}: ${localModelPreflight.warnings.join(' ')}`
       );
     }
+    this.assertRunStillCurrentAndAlive(run, teamName);
     const nextLane = this.createMixedSecondaryLaneStateForMember(run, memberSpec);
     const existingLaneIndex = run.mixedSecondaryLanes.findIndex(
       (lane) => lane.laneId === nextLane.laneId || lane.member.name.trim() === memberName
@@ -3574,9 +2573,11 @@ export class TeamProvisioningMemberLifecycleController {
       laneId: nextLane.laneId,
       existingLane,
     });
+    this.assertRunStillCurrentAndAlive(run, teamName);
 
     if (existingLane) {
       await this.stopSingleMixedSecondaryRuntimeLane(run, existingLane, 'relaunch');
+      this.assertRunStillCurrentAndAlive(run, teamName);
     }
 
     const laneState = existingLane ?? nextLane;
@@ -3611,49 +2612,21 @@ export class TeamProvisioningMemberLifecycleController {
         displayName: config.description?.trim() || config.name,
         member: this.buildConfiguredProvisioningMember(configuredMember),
         reason: options.reason,
+        assertStillCurrent: this.createRunStillCurrentGuard(run, teamName),
       });
     }
 
+    this.assertRunStillCurrentAndAlive(run, teamName);
     await this.launchSingleMixedSecondaryLane(run, laneState);
   }
 
-  private async hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch(params: {
-    teamName: string;
-    memberName: string;
-    laneId: string;
-    existingLane: MixedSecondaryRuntimeLaneState | null;
-  }): Promise<boolean> {
-    const laneResultMember =
-      params.existingLane?.result?.members[params.memberName] ??
-      Object.values(params.existingLane?.result?.members ?? {}).find(
-        (member) => member.memberName?.trim() === params.memberName
-      );
-    if (hasOpenCodeRuntimeHandle(laneResultMember)) {
-      return true;
-    }
-
-    const persistedSnapshot = await this.launchStateStore.read(params.teamName).catch(() => null);
-    const persistedMember =
-      persistedSnapshot?.members[params.memberName] ??
-      Object.values(persistedSnapshot?.members ?? {}).find(
-        (member) => member.laneId === params.laneId
-      );
-    if (
-      hasOpenCodeRuntimeHandle(persistedMember) ||
-      hasOpenCodeRuntimeLivenessMarker(persistedMember)
-    ) {
-      return true;
-    }
-
-    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(params.teamName).catch(
-      () => new Map<string, TeamAgentRuntimeEntry>()
+  private async hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch(
+    input: HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchInput
+  ): Promise<boolean> {
+    const seam = this.openCodeRetryUseCases.hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch;
+    return await (seam ?? this.hasOpenCodeMemberRuntimeEvidenceForControlledRelaunchFallback)(
+      input
     );
-    const liveRuntimeMember =
-      liveRuntimeByMember.get(params.memberName) ??
-      [...liveRuntimeByMember.entries()].find(([candidateName]) =>
-        matchesObservedMemberNameForExpected(candidateName, params.memberName)
-      )?.[1];
-    return hasOpenCodeRuntimeEntryHandle(liveRuntimeMember);
   }
 
   async detachOpenCodeOwnedMemberLane(teamName: string, memberName: string): Promise<void> {
@@ -3663,16 +2636,10 @@ export class TeamProvisioningMemberLifecycleController {
   }
 
   private async detachOpenCodeOwnedMemberLaneUnlocked(
-    teamName: Parameters<
-      TeamProvisioningMemberLifecycleController['detachOpenCodeOwnedMemberLaneUnlockedInternal']
-    >[0],
-    memberName: Parameters<
-      TeamProvisioningMemberLifecycleController['detachOpenCodeOwnedMemberLaneUnlockedInternal']
-    >[1]
+    teamName: string,
+    memberName: string
   ): Promise<void> {
-    const seam = this.getHostSeam<(teamName: string, memberName: string) => Promise<void>>(
-      'detachOpenCodeOwnedMemberLaneUnlocked'
-    );
+    const seam = this.openCodeRetryUseCases.detachOpenCodeOwnedMemberLaneUnlocked;
     if (seam) {
       await seam(teamName, memberName);
       return;
@@ -3695,8 +2662,13 @@ export class TeamProvisioningMemberLifecycleController {
       return;
     }
 
-    const [lane] = run.mixedSecondaryLanes.splice(laneIndex, 1);
+    const lane = run.mixedSecondaryLanes[laneIndex];
     await this.stopSingleMixedSecondaryRuntimeLane(run, lane, 'cleanup');
+    this.assertRunStillCurrentAndAlive(run, teamName);
+    const ownedLaneIndex = run.mixedSecondaryLanes.indexOf(lane);
+    if (ownedLaneIndex >= 0) {
+      run.mixedSecondaryLanes.splice(ownedLaneIndex, 1);
+    }
     this.removeRunAllEffectiveMember(run, memberName);
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.resetRuntimeToolActivity(run, memberName);

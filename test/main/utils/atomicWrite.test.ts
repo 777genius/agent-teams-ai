@@ -239,7 +239,9 @@ describe('atomicWriteAsync', () => {
     const directoryHandle = {
       sync: vi
         .fn()
-        .mockRejectedValue(Object.assign(new Error('unsupported directory sync'), { code: 'EINVAL' })),
+        .mockRejectedValue(
+          Object.assign(new Error('unsupported directory sync'), { code: 'EINVAL' })
+        ),
       close: vi.fn().mockResolvedValue(undefined),
     };
     mockOpen

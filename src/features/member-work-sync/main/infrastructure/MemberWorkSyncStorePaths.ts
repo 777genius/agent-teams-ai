@@ -16,6 +16,10 @@ export class MemberWorkSyncStorePaths {
     return join(this.teamsBasePath, teamName, '.member-work-sync');
   }
 
+  getSqliteFallbackReplicaPath(teamName: string): string {
+    return join(this.getTeamDir(teamName), 'sqlite-fallback-replica.json');
+  }
+
   getStatusPath(teamName: string): string {
     return join(this.getTeamDir(teamName), 'status.json');
   }

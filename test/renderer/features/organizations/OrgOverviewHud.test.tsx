@@ -77,6 +77,46 @@ function buildViewModel() {
   return buildOrganizationMapViewModel(payload);
 }
 
+type ButtonActivation = 'click' | 'Enter' | 'Space';
+
+async function activateNativeButton(
+  button: HTMLButtonElement,
+  activation: ButtonActivation
+): Promise<void> {
+  await act(async () => {
+    button.focus();
+
+    if (activation === 'click') {
+      button.click();
+    } else {
+      // happy-dom dispatches key events but does not perform the native button default action.
+      // Pair them with click() in browser order so a manual key handler would be caught as a duplicate.
+      const key = activation === 'Enter' ? 'Enter' : ' ';
+      const code = activation === 'Enter' ? 'Enter' : 'Space';
+      const keyDown = new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        code,
+        key,
+      });
+
+      expect(button.dispatchEvent(keyDown)).toBe(true);
+      if (activation === 'Enter') button.click();
+
+      const keyUp = new KeyboardEvent('keyup', {
+        bubbles: true,
+        cancelable: true,
+        code,
+        key,
+      });
+      expect(button.dispatchEvent(keyUp)).toBe(true);
+      if (activation === 'Space') button.click();
+    }
+
+    await Promise.resolve();
+  });
+}
+
 describe('OrgOverviewHud', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -90,7 +130,7 @@ describe('OrgOverviewHud', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders a semantic organization card in the dedicated overview and drills into groups', async () => {
+  it('renders a semantic organization card in the dedicated overview', async () => {
     const onSelectNode = vi.fn();
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -108,41 +148,59 @@ describe('OrgOverviewHud', () => {
         ?.classList.contains('pointer-events-auto')
     ).toBe(true);
     expect(host.querySelector('[data-organization-overview-grid]')).not.toBeNull();
+    expect(card?.tagName).toBe('ARTICLE');
+    expect(card?.hasAttribute('role')).toBe(false);
+    expect(card?.hasAttribute('tabindex')).toBe(false);
     expect(card?.classList.contains('absolute')).toBe(false);
     expect(card?.textContent).toContain('Acme Platform');
     expect(card?.textContent).toContain('1 groups · 1 teams · 4 agents');
     expect(card?.textContent).toContain('2 active tasks');
 
-    act(() => {
-      card?.focus();
-      card?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
-    });
-    expect(onSelectNode).toHaveBeenCalledWith('org:acme', true);
-    onSelectNode.mockClear();
-
-    const group = Array.from(card?.querySelectorAll('button') ?? []).find((button) =>
-      button.textContent?.includes('Runtime')
+    const selectButton = card?.querySelector<HTMLButtonElement>(
+      '[data-organization-overview-select="acme"]'
     );
-    act(() => {
-      group?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    expect(onSelectNode).toHaveBeenCalledWith('group:runtime', true);
+    expect(selectButton?.type).toBe('button');
+    expect(selectButton?.getAttribute('aria-label')).toBe('Acme Platform');
 
-    onSelectNode.mockClear();
-    const onWindowKeyDown = vi.fn();
-    window.addEventListener('keydown', onWindowKeyDown);
-    const spaceEvent = new KeyboardEvent('keydown', {
-      bubbles: true,
-      cancelable: true,
-      key: ' ',
+    act(() => root.unmount());
+  });
+
+  it('uses one native activation for card and nested group click, Enter, and Space', async () => {
+    const onSelectNode = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(<OrgOverviewHud viewModel={buildViewModel()} onSelectNode={onSelectNode} />);
+      await Promise.resolve();
     });
-    act(() => {
-      card?.dispatchEvent(spaceEvent);
-    });
-    window.removeEventListener('keydown', onWindowKeyDown);
-    expect(spaceEvent.defaultPrevented).toBe(true);
-    expect(onWindowKeyDown).not.toHaveBeenCalled();
-    expect(onSelectNode).toHaveBeenCalledWith('org:acme', true);
+
+    const card = host.querySelector<HTMLElement>('[data-organization-overview-card="acme"]');
+    const selectButton = card?.querySelector<HTMLButtonElement>(
+      '[data-organization-overview-select="acme"]'
+    );
+    const groupButton = Array.from(card?.querySelectorAll<HTMLButtonElement>('button') ?? []).find(
+      (button) => button.textContent?.includes('Runtime')
+    );
+
+    expect(selectButton).toBeInstanceOf(HTMLButtonElement);
+    expect(groupButton).toBeInstanceOf(HTMLButtonElement);
+
+    for (const activation of ['click', 'Enter', 'Space'] as const) {
+      onSelectNode.mockClear();
+      await activateNativeButton(selectButton!, activation);
+      expect(onSelectNode, `card ${activation} activation`).toHaveBeenCalledTimes(1);
+      expect(onSelectNode).toHaveBeenCalledWith('org:acme', true);
+    }
+
+    for (const activation of ['click', 'Enter', 'Space'] as const) {
+      onSelectNode.mockClear();
+      await activateNativeButton(groupButton!, activation);
+      expect(onSelectNode, `nested group ${activation} activation`).toHaveBeenCalledTimes(1);
+      expect(onSelectNode).toHaveBeenCalledWith('group:runtime', true);
+      expect(onSelectNode).not.toHaveBeenCalledWith('org:acme', true);
+    }
 
     act(() => root.unmount());
   });

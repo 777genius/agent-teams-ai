@@ -1093,7 +1093,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
               launchState: 'failed',
               model: 'openai/gpt-5.4-mini',
               diagnostics: [
-                'Provider failed with --api-key sk-openroutersecret000000000000 and Bearer abc.def.ghi',
+                'Provider failed with --api-key test-fixture-literal and Bearer abc.def.ghi',
               ],
               evidence: [],
             },

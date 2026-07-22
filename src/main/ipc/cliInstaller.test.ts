@@ -1,3 +1,5 @@
+import { resolve as resolvePath } from 'node:path';
+
 import {
   CLI_INSTALLER_GET_PROVIDER_STATUS,
   CLI_INSTALLER_GET_STATUS,
@@ -5,7 +7,6 @@ import {
   CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
 } from '@preload/constants/ipcChannels';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
-import * as path from 'path';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { initializeCliInstallerHandlers, registerCliInstallerHandlers } from './cliInstaller';
@@ -37,6 +38,14 @@ interface Deferred<T> {
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
 
 const PARALLEL_PROVIDER_STATUS_ENV = 'CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS';
+const LOCAL_MODEL_PROJECT_A_PATH = resolvePath(
+  process.cwd(),
+  'test-fixtures/local-model-project-a'
+);
+const LOCAL_MODEL_PROJECT_B_PATH = resolvePath(
+  process.cwd(),
+  'test-fixtures/local-model-project-b'
+);
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -251,31 +260,28 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
       .mockImplementationOnce(() => secondDeferred.promise);
     const service = createInstallerService({ getProviderStatus });
     const { invoke } = setupHandlers(service);
-    const firstProjectPath = path.join(process.cwd(), 'local-model-project-a');
-    const secondProjectPath = path.join(process.cwd(), 'local-model-project-b');
-
     const firstRequest = invoke<IpcResult<CliProviderStatus | null>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
       'opencode',
-      { projectPath: firstProjectPath }
+      { projectPath: LOCAL_MODEL_PROJECT_A_PATH }
     );
     const secondRequest = invoke<IpcResult<CliProviderStatus | null>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
       'opencode',
-      { projectPath: secondProjectPath }
+      { projectPath: LOCAL_MODEL_PROJECT_B_PATH }
     );
 
     await flushMicrotasks();
     expect(getProviderStatus).toHaveBeenCalledTimes(1);
     expect(getProviderStatus).toHaveBeenNthCalledWith(1, 'opencode', {
-      projectPath: firstProjectPath,
+      projectPath: LOCAL_MODEL_PROJECT_A_PATH,
     });
 
     firstDeferred.resolve(createProviderStatus('opencode'));
     await flushMicrotasks();
     expect(getProviderStatus).toHaveBeenCalledTimes(2);
     expect(getProviderStatus).toHaveBeenNthCalledWith(2, 'opencode', {
-      projectPath: secondProjectPath,
+      projectPath: LOCAL_MODEL_PROJECT_B_PATH,
     });
 
     secondDeferred.resolve(createProviderStatus('opencode'));

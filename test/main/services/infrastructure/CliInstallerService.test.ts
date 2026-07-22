@@ -934,11 +934,7 @@ describe('CliInstallerService', () => {
           modelVerificationState: 'idle',
           statusMessage: null,
           detailMessage: null,
-          models: [
-            'opencode/big-pickle',
-            'openai/gpt-5.4',
-            'openrouter/openai/gpt-oss-20b:free',
-          ],
+          models: ['opencode/big-pickle', 'openai/gpt-5.4', 'openrouter/openai/gpt-oss-20b:free'],
           modelCatalog: {
             schemaVersion: 1,
             providerId: 'opencode',
@@ -1224,10 +1220,9 @@ describe('CliInstallerService', () => {
       const providerStatuses = new Promise<CliProviderStatus[]>((resolve) => {
         resolveProviders = resolve;
       });
-      const providerStatusesSpy = vi.spyOn(
-        ClaudeMultimodelBridgeService.prototype,
-        'getProviderStatuses'
-      ).mockReturnValue(providerStatuses);
+      const providerStatusesSpy = vi
+        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses')
+        .mockReturnValue(providerStatuses);
 
       const statusPromise = service.getStatus();
       await vi.advanceTimersByTimeAsync(1_600);
@@ -1280,10 +1275,9 @@ describe('CliInstallerService', () => {
       const providerStatuses = new Promise<CliProviderStatus[]>((resolve) => {
         resolveProviders = resolve;
       });
-      const providerStatusesSpy = vi.spyOn(
-        ClaudeMultimodelBridgeService.prototype,
-        'getProviderStatuses'
-      ).mockReturnValue(providerStatuses);
+      const providerStatusesSpy = vi
+        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses')
+        .mockReturnValue(providerStatuses);
       const hydrationInvalidationSpy = vi.spyOn(
         ClaudeMultimodelBridgeService.prototype,
         'invalidateProviderStatusHydrations'

@@ -651,6 +651,7 @@ describe('LaunchTeamDialog', () => {
     createTeamDraftMock.state.members[0].model = 'opencode/big-pickle';
     createTeamDraftMock.state.cwdMode = 'project';
     createTeamDraftMock.state.selectedProjectPath = '/tmp/project';
+    createTeamDraftMock.state.customCwd = '';
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(() => true);
     teamRosterEditorSectionMock.lastProps = null;
   });
@@ -947,6 +948,97 @@ describe('LaunchTeamDialog', () => {
       root.unmount();
       await flush();
     });
+  });
+
+  it('uses one custom cwd for the scoped OpenCode catalog and Create preflight', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    const customCwd = '/tmp/custom-catalog-project';
+    const localModel = 'ollama/qwen2.5-coder:0.5b';
+    createTeamDraftMock.state.cwdMode = 'custom';
+    createTeamDraftMock.state.customCwd = customCwd;
+    createTeamDraftMock.state.members[0].model = localModel;
+    vi.mocked(isTeamModelAvailableForUi).mockImplementation(
+      (_providerId, model, providerStatus) => providerStatus?.models?.includes(model ?? '') ?? false
+    );
+    const globalProvider = {
+      providerId: 'opencode',
+      supported: true,
+      authenticated: true,
+      authMethod: 'opencode_managed',
+      verificationState: 'verified',
+      modelVerificationState: 'idle',
+      modelCatalogRefreshState: 'ready',
+      statusMessage: null,
+      models: ['opencode/big-pickle'],
+      modelAvailability: [],
+      capabilities: { teamLaunch: true, oneShot: false },
+      backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+    };
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [globalProvider],
+    } as any;
+    storeState.cliProviderStatusByScope = {
+      [getCliProviderStatusScopeKey('opencode', customCwd)]: {
+        ...globalProvider,
+        models: [localModel],
+        modelCatalog: {
+          schemaVersion: 1,
+          providerId: 'opencode',
+          source: 'app-server',
+          status: 'ready',
+          fetchedAt: '2026-07-20T00:00:00.000Z',
+          staleAt: '2099-07-20T00:10:00.000Z',
+          defaultModelId: localModel,
+          defaultLaunchModel: localModel,
+          models: [],
+          diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+        },
+      },
+    } as any;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          clearProvisioningError: vi.fn(),
+          existingTeamNames: [],
+          provisioningTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate: vi.fn(async () => {}),
+          onOpenTeam: vi.fn(),
+        })
+      );
+      await flush();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ providerId: 'opencode', model: localModel }),
+      ])
+    );
+    expect(
+      vi
+        .mocked(runProviderPrepareDiagnostics)
+        .mock.calls.find((call) => call[0]?.providerId === 'opencode')?.[0]
+    ).toMatchObject({
+      cwd: customCwd,
+      selectedModelChecks: [expect.objectContaining({ model: localModel })],
+    });
+
+    await act(async () => root.unmount());
   });
 
   it('forces navigation project mode once and then allows a custom path', async () => {

@@ -5,6 +5,12 @@ import { agentBlocks, getController } from '../controller';
 import { assertConfiguredTeam } from '../utils/teamConfig';
 import { jsonTextContent, taskWriteResult, slimTask } from '../utils/format';
 import { taskRefSchema } from '../utils/schemas';
+import {
+  CANONICAL_TASK_UUID_PATTERN,
+  createTaskWithOptionalIdempotency,
+  resolveMessageTaskCommandId,
+  resolveOptionalTaskCreateCommandId,
+} from '../utils/taskCreationIdempotency';
 
 /** stripAgentBlocks from canonical agentBlocks module — single source of truth for the tag format. */
 const stripAgentBlocksFn = (text: string): string => agentBlocks.stripAgentBlocks(text);
@@ -22,6 +28,10 @@ const relationshipTypeSchema = z.enum(['blocked-by', 'blocks', 'related']);
 const inventoryTaskStatusSchema = z.enum(['pending', 'in_progress', 'completed']);
 const reviewStateSchema = z.enum(['none', 'review', 'needsFix', 'approved']);
 const inventoryKanbanColumnSchema = z.enum(['review', 'approved']);
+const taskMutationActorSchema = z
+  .string()
+  .min(1)
+  .describe('Your configured teammate name. Required for ownership and lifecycle enforcement.');
 const DEFAULT_TASK_LIST_LIMIT = 50;
 const MAX_TASK_LIST_LIMIT = 200;
 
@@ -79,7 +89,8 @@ function buildCreateTaskPayload(params: {
 export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'task_create',
-    description: 'Create a team task',
+    description:
+      'Create a team task. Always provide a stable idempotencyKey (or commandId UUID) and reuse it only when retrying the exact same request after timeout or response loss. Use a new key for every distinct task intent.',
     parameters: z.object({
       ...toolContextSchema,
       subject: z.string().min(1),
@@ -93,6 +104,18 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       descriptionTaskRefs: z.array(taskRefSchema).optional(),
       promptTaskRefs: z.array(taskRefSchema).optional(),
       startImmediately: z.boolean().optional(),
+      commandId: z
+        .string()
+        .regex(CANONICAL_TASK_UUID_PATTERN, 'Must be a canonical task UUID (version 1-5)')
+        .optional()
+        .describe('Stable UUID for retrying the same task creation request.'),
+      idempotencyKey: z
+        .string()
+        .trim()
+        .min(1)
+        .max(256)
+        .optional()
+        .describe('Stable retry key. Opaque keys are deterministically mapped to a command UUID.'),
     }),
     execute: async ({
       teamName,
@@ -108,26 +131,39 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       descriptionTaskRefs,
       promptTaskRefs,
       startImmediately,
+      commandId,
+      idempotencyKey,
     }) => {
       assertConfiguredTeam(teamName, claudeDir);
       const controller = getController(teamName, claudeDir);
+      const { taskBoard } = controller;
+      const payload = buildCreateTaskPayload({
+        subject,
+        description,
+        owner,
+        createdBy,
+        from,
+        blockedBy,
+        related,
+        prompt,
+        descriptionTaskRefs,
+        promptTaskRefs,
+        startImmediately,
+      });
+      const resolvedCommandId = resolveOptionalTaskCreateCommandId({
+        teamName,
+        commandId,
+        idempotencyKey,
+      });
       return await Promise.resolve(
         jsonTextContent(
-          controller.tasks.createTask(
-            buildCreateTaskPayload({
-              subject,
-              description,
-              owner,
-              createdBy,
-              from,
-              blockedBy,
-              related,
-              prompt,
-              descriptionTaskRefs,
-              promptTaskRefs,
-              startImmediately,
-            })
-          )
+          createTaskWithOptionalIdempotency({
+            taskBoard,
+            teamName,
+            operation: 'task.create',
+            payload,
+            commandId: resolvedCommandId,
+          })
         )
       );
     },
@@ -144,7 +180,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'task_create_from_message',
     description:
-      'Create a task from a persisted user message. Resolves the message by exact messageId, builds sanitized provenance, and creates the task through the canonical path.',
+      'Create a task from a persisted user message. Always provide a stable requestKey for this exact task intent and reuse the same messageId + requestKey only on retry. Use a different requestKey to create another legitimate task from the same message.',
     parameters: z.object({
       ...toolContextSchema,
       messageId: z.string().min(1),
@@ -158,6 +194,15 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       descriptionTaskRefs: z.array(taskRefSchema).optional(),
       promptTaskRefs: z.array(taskRefSchema).optional(),
       startImmediately: z.boolean().optional(),
+      requestKey: z
+        .string()
+        .trim()
+        .min(1)
+        .max(256)
+        .optional()
+        .describe(
+          'Stable discriminator for this task intent within the exact messageId. Reuse it only when retrying the same task creation request.'
+        ),
     }),
     execute: async ({
       teamName,
@@ -173,9 +218,11 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       descriptionTaskRefs,
       promptTaskRefs,
       startImmediately,
+      requestKey,
     }) => {
       assertConfiguredTeam(teamName, claudeDir);
       const controller = getController(teamName, claudeDir);
+      const { taskBoard } = controller;
 
       // 1. Lookup message by exact messageId
       let message: Record<string, unknown>;
@@ -236,24 +283,30 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       }
 
       // 5. Forward into canonical create-task path
+      const payload = buildCreateTaskPayload({
+        subject,
+        description,
+        owner,
+        createdBy,
+        blockedBy,
+        related,
+        prompt,
+        descriptionTaskRefs,
+        promptTaskRefs,
+        startImmediately,
+        sourceMessageId: messageId,
+        sourceMessage,
+      });
+      const commandId = resolveMessageTaskCommandId({ teamName, messageId, requestKey });
       return await Promise.resolve(
         jsonTextContent(
-          controller.tasks.createTask(
-            buildCreateTaskPayload({
-              subject,
-              description,
-              owner,
-              createdBy,
-              blockedBy,
-              related,
-              prompt,
-              descriptionTaskRefs,
-              promptTaskRefs,
-              startImmediately,
-              sourceMessageId: messageId,
-              sourceMessage,
-            })
-          )
+          createTaskWithOptionalIdempotency({
+            taskBoard,
+            teamName,
+            operation: 'task.create_from_message',
+            payload,
+            commandId,
+          })
         )
       );
     },
@@ -273,7 +326,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
     execute: async ({ teamName, claudeDir, taskId }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
-        jsonTextContent(getController(teamName, claudeDir).tasks.getTask(taskId))
+        jsonTextContent(getController(teamName, claudeDir).taskBoard.getTask(taskId))
       );
     },
   });
@@ -290,7 +343,9 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
     execute: async ({ teamName, claudeDir, taskId, commentId }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
-        jsonTextContent(getController(teamName, claudeDir).tasks.getTaskComment(taskId, commentId))
+        jsonTextContent(
+          getController(teamName, claudeDir).taskBoard.getTaskComment(taskId, commentId)
+        )
       );
     },
   });
@@ -323,7 +378,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
-          getController(teamName, claudeDir).tasks.listTaskInventory({
+          getController(teamName, claudeDir).taskBoard.listTaskInventory({
             ...(owner ? { owner } : {}),
             ...(status ? { status } : {}),
             ...(reviewState ? { reviewState } : {}),
@@ -339,22 +394,24 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'task_set_status',
-    description: 'Set task work status',
+    description:
+      'Set task work status. Execution transitions require the current owner; lead override is limited to administrative transitions.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
       status: z.enum(['pending', 'in_progress', 'completed', 'deleted']),
-      actor: z.string().optional(),
+      actor: taskMutationActorSchema,
     }),
     execute: async ({ teamName, claudeDir, taskId, status, actor }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
           slimTask(
-            getController(teamName, claudeDir).tasks.setTaskStatus(taskId, status, actor) as Record<
-              string,
-              unknown
-            >
+            getController(teamName, claudeDir).taskBoard.setTaskStatus(
+              taskId,
+              status,
+              actor
+            ) as Record<string, unknown>
           )
         )
       );
@@ -363,18 +420,19 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'task_restore',
-    description: 'Restore a deleted task back to pending work state',
+    description:
+      'Restore a deleted task back to pending work state as its current owner or the team lead',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
-      actor: z.string().optional(),
+      actor: taskMutationActorSchema,
     }),
     execute: async ({ teamName, claudeDir, taskId, actor }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
           slimTask(
-            getController(teamName, claudeDir).tasks.restoreTask(taskId, actor) as Record<
+            getController(teamName, claudeDir).taskBoard.restoreTask(taskId, actor) as Record<
               string,
               unknown
             >
@@ -386,18 +444,18 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'task_start',
-    description: 'Mark task as in progress',
+    description: 'Mark task as in progress. Only the current owner may start it.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
-      actor: z.string().optional(),
+      actor: taskMutationActorSchema,
     }),
     execute: async ({ teamName, claudeDir, taskId, actor }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
           slimTask(
-            getController(teamName, claudeDir).tasks.startTask(taskId, actor) as Record<
+            getController(teamName, claudeDir).taskBoard.startTask(taskId, actor) as Record<
               string,
               unknown
             >
@@ -409,18 +467,18 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'task_complete',
-    description: 'Mark task as completed',
+    description: 'Mark task as completed. Only the current owner may complete it.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
-      actor: z.string().optional(),
+      actor: taskMutationActorSchema,
     }),
     execute: async ({ teamName, claudeDir, taskId, actor }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
           slimTask(
-            getController(teamName, claudeDir).tasks.completeTask(taskId, actor) as Record<
+            getController(teamName, claudeDir).taskBoard.completeTask(taskId, actor) as Record<
               string,
               unknown
             >
@@ -432,22 +490,24 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'task_set_owner',
-    description: 'Assign, reassign, or clear task owner',
+    description:
+      'Assign, reassign, or clear task owner. Lead may reassign any task; current owner may hand off; other members may only self-claim an unassigned task.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
       owner: z.string().nullable(),
-      actor: z.string().optional(),
+      actor: taskMutationActorSchema,
     }),
     execute: async ({ teamName, claudeDir, taskId, owner, actor }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
           slimTask(
-            getController(teamName, claudeDir).tasks.setTaskOwner(taskId, owner, actor) as Record<
-              string,
-              unknown
-            >
+            getController(teamName, claudeDir).taskBoard.setTaskOwner(
+              taskId,
+              owner,
+              actor
+            ) as Record<string, unknown>
           )
         )
       );
@@ -470,7 +530,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       return await Promise.resolve(
         jsonTextContent(
           taskWriteResult(
-            getController(teamName, claudeDir).tasks.addTaskComment(taskId, {
+            getController(teamName, claudeDir).taskBoard.addTaskComment(taskId, {
               text,
               ...(from ? { from } : {}),
               ...(taskRefs?.length ? { taskRefs } : {}),
@@ -508,7 +568,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       return await Promise.resolve(
         jsonTextContent(
           taskWriteResult(
-            getController(teamName, claudeDir).tasks.attachTaskFile(taskId, {
+            getController(teamName, claudeDir).taskBoard.attachTaskFile(taskId, {
               file: filePath,
               ...(mode ? { mode } : {}),
               ...(filename ? { filename } : {}),
@@ -550,7 +610,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       return await Promise.resolve(
         jsonTextContent(
           taskWriteResult(
-            getController(teamName, claudeDir).tasks.attachCommentFile(taskId, commentId, {
+            getController(teamName, claudeDir).taskBoard.attachCommentFile(taskId, commentId, {
               file: filePath,
               ...(mode ? { mode } : {}),
               ...(filename ? { filename } : {}),
@@ -576,7 +636,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       return await Promise.resolve(
         jsonTextContent(
           slimTask(
-            getController(teamName, claudeDir).tasks.setNeedsClarification(
+            getController(teamName, claudeDir).taskBoard.setNeedsClarification(
               taskId,
               value === 'clear' ? null : value
             ) as Record<string, unknown>
@@ -600,7 +660,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       return await Promise.resolve(
         jsonTextContent(
           slimTask(
-            getController(teamName, claudeDir).tasks.linkTask(
+            getController(teamName, claudeDir).taskBoard.linkTask(
               taskId,
               targetId,
               relationship
@@ -625,7 +685,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       return await Promise.resolve(
         jsonTextContent(
           slimTask(
-            getController(teamName, claudeDir).tasks.unlinkTask(
+            getController(teamName, claudeDir).taskBoard.unlinkTask(
               taskId,
               targetId,
               relationship
@@ -658,7 +718,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
         content: [
           {
             type: 'text' as const,
-            text: await getController(teamName, claudeDir).tasks.memberBriefing(memberName, {
+            text: await getController(teamName, claudeDir).taskBoard.memberBriefing(memberName, {
               ...(runtimeProvider ? { runtimeProvider } : {}),
               ...(includeActiveProcesses !== undefined ? { includeActiveProcesses } : {}),
             }),
@@ -681,7 +741,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
         content: [
           {
             type: 'text' as const,
-            text: await getController(teamName, claudeDir).tasks.taskBriefing(memberName),
+            text: await getController(teamName, claudeDir).taskBoard.taskBriefing(memberName),
           },
         ],
       };

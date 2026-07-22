@@ -9,15 +9,27 @@ import {
   parseAgentTeamsMcpLaunchSpec,
   readAgentTeamsMcpLaunchSpec,
   runProviderOneShotDiagnostic,
+  type TeamProvisioningProbeChild,
   type TeamProvisioningProviderDiagnosticsPorts,
+  validateAgentTeamsMcpRuntime,
 } from '../TeamProvisioningProviderDiagnostics';
+import {
+  buildTeamProvisioningProviderDiagnosticsPorts,
+  createTeamProvisioningProviderDiagnosticsBasePorts,
+} from '../TeamProvisioningProviderDiagnosticsPorts';
 
 function createFakePorts(
   overrides: Partial<TeamProvisioningProviderDiagnosticsPorts> = {}
 ): TeamProvisioningProviderDiagnosticsPorts {
+  const execCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['execCli']>();
+  const spawnCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnCli']>();
+  const spawnProbe = vi
+    .fn<TeamProvisioningProviderDiagnosticsPorts['spawnProbe']>()
+    .mockResolvedValue({ exitCode: 0, stdout: 'PONG', stderr: '' });
+
   return {
-    execCli: vi.fn() as unknown as TeamProvisioningProviderDiagnosticsPorts['execCli'],
-    spawnCli: vi.fn() as unknown as TeamProvisioningProviderDiagnosticsPorts['spawnCli'],
+    execCli,
+    spawnCli,
     killProcessTree: vi.fn(),
     isProcessAlive: vi.fn().mockReturnValue(false),
     addTransientProbeProcess: vi.fn(),
@@ -29,7 +41,7 @@ function createFakePorts(
     writeFileUtf8: vi.fn().mockResolvedValue(undefined),
     removeDirectory: vi.fn().mockResolvedValue(undefined),
     tmpdir: vi.fn().mockReturnValue('/tmp'),
-    spawnProbe: vi.fn().mockResolvedValue({ exitCode: 0, stdout: 'PONG', stderr: '' }),
+    spawnProbe,
     getConfiguredCodexCustomProviderModel: vi.fn().mockReturnValue(null),
     isAuthFailureWarning: vi.fn().mockReturnValue(false),
     normalizeApiRetryErrorMessage: vi.fn((text: string) =>
@@ -111,6 +123,169 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
     ).rejects.toThrow(
       'agent-teams MCP preflight failed before team launch. Details: Failed to read generated MCP config /tmp/mcp.json: EACCES'
     );
+  });
+
+  it('formats a non-object MCP config as a normalized validation error', async () => {
+    const normalizeApiRetryErrorMessage = vi.fn((text: string) => text);
+    const ports = createFakePorts({
+      readFileUtf8: vi.fn().mockResolvedValue('null'),
+      normalizeApiRetryErrorMessage,
+    });
+
+    await expect(
+      readAgentTeamsMcpLaunchSpec({
+        mcpConfigPath: '/tmp/mcp.json',
+        ports,
+      })
+    ).rejects.toThrow(
+      'agent-teams MCP preflight failed before team launch. Details: Generated MCP config /tmp/mcp.json must be a JSON object.'
+    );
+    expect(normalizeApiRetryErrorMessage).toHaveBeenCalledWith(
+      'Generated MCP config /tmp/mcp.json must be a JSON object.'
+    );
+  });
+
+  it('preserves a pre-normalized validation error through runtime validation', async () => {
+    const normalizedError =
+      'agent-teams MCP preflight failed before team launch. Details: generated config is invalid';
+    const makeTempDir = vi.fn<TeamProvisioningProviderDiagnosticsPorts['makeTempDir']>();
+    const spawnCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnCli']>();
+    const ports = createFakePorts({
+      readFileUtf8: vi.fn().mockResolvedValue(JSON.stringify({ mcpServers: {} })),
+      normalizeApiRetryErrorMessage: vi.fn(() => normalizedError),
+      makeTempDir,
+      spawnCli,
+    });
+
+    await expect(
+      validateAgentTeamsMcpRuntime({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        mcpConfigPath: '/tmp/mcp.json',
+        ports,
+      })
+    ).rejects.toThrow(normalizedError);
+
+    expect(makeTempDir).not.toHaveBeenCalled();
+    expect(spawnCli).not.toHaveBeenCalled();
+  });
+
+  it('short-circuits MCP validation when cancellation is already requested', async () => {
+    const readFileUtf8 = vi.fn<TeamProvisioningProviderDiagnosticsPorts['readFileUtf8']>();
+    const makeTempDir = vi.fn<TeamProvisioningProviderDiagnosticsPorts['makeTempDir']>();
+    const spawnCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnCli']>();
+    const ports = createFakePorts({ readFileUtf8, makeTempDir, spawnCli });
+
+    await expect(
+      validateAgentTeamsMcpRuntime({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        mcpConfigPath: '/tmp/mcp.json',
+        options: { isCancelled: () => true },
+        ports,
+      })
+    ).rejects.toThrow('agent-teams MCP preflight cancelled by app shutdown');
+
+    expect(readFileUtf8).not.toHaveBeenCalled();
+    expect(makeTempDir).not.toHaveBeenCalled();
+    expect(spawnCli).not.toHaveBeenCalled();
+  });
+
+  it('normalizes unrelated errors that share the cancellation message', async () => {
+    const cancellationMessage = 'agent-teams MCP preflight cancelled by app shutdown';
+    const ports = createFakePorts({
+      readFileUtf8: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          mcpServers: {
+            'agent-teams': { command: 'node', args: ['server.js'] },
+          },
+        })
+      ),
+      makeTempDir: vi.fn().mockRejectedValue(new Error(cancellationMessage)),
+    });
+
+    await expect(
+      validateAgentTeamsMcpRuntime({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        mcpConfigPath: '/tmp/mcp.json',
+        options: { isCancelled: () => false },
+        ports,
+      })
+    ).rejects.toThrow(
+      new RegExp(
+        `^agent-teams MCP preflight failed before team launch\\. Details: Error: ${cancellationMessage}$`
+      )
+    );
+  });
+
+  it('honors cancellation after launch-spec and fixture async boundaries', async () => {
+    let cancelled = false;
+    const launchSpecMakeTempDir = vi.fn<TeamProvisioningProviderDiagnosticsPorts['makeTempDir']>();
+    const launchSpecSpawnCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnCli']>();
+    const launchSpecPorts = createFakePorts({
+      readFileUtf8: vi.fn().mockImplementation(async () => {
+        cancelled = true;
+        return JSON.stringify({
+          mcpServers: {
+            'agent-teams': { command: 'node', args: ['server.js'] },
+          },
+        });
+      }),
+      makeTempDir: launchSpecMakeTempDir,
+      spawnCli: launchSpecSpawnCli,
+    });
+
+    await expect(
+      validateAgentTeamsMcpRuntime({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        mcpConfigPath: '/tmp/mcp.json',
+        options: { isCancelled: () => cancelled },
+        ports: launchSpecPorts,
+      })
+    ).rejects.toThrow('agent-teams MCP preflight cancelled by app shutdown');
+
+    expect(launchSpecMakeTempDir).not.toHaveBeenCalled();
+    expect(launchSpecSpawnCli).not.toHaveBeenCalled();
+
+    cancelled = false;
+    const fixtureSpawnCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnCli']>();
+    const removeDirectory = vi
+      .fn<TeamProvisioningProviderDiagnosticsPorts['removeDirectory']>()
+      .mockResolvedValue(undefined);
+    const fixturePorts = createFakePorts({
+      readFileUtf8: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          mcpServers: {
+            'agent-teams': { command: 'node', args: ['server.js'] },
+          },
+        })
+      ),
+      writeFileUtf8: vi.fn().mockImplementation(async () => {
+        cancelled = true;
+      }),
+      spawnCli: fixtureSpawnCli,
+      removeDirectory,
+    });
+
+    await expect(
+      validateAgentTeamsMcpRuntime({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        mcpConfigPath: '/tmp/mcp.json',
+        options: { isCancelled: () => cancelled },
+        ports: fixturePorts,
+      })
+    ).rejects.toThrow('agent-teams MCP preflight cancelled by app shutdown');
+
+    expect(fixtureSpawnCli).not.toHaveBeenCalled();
+    expect(removeDirectory).toHaveBeenCalledWith('/tmp/agent-teams-mcp-validate-test');
   });
 
   it('creates the MCP validation fixture through filesystem ports', async () => {
@@ -195,6 +370,35 @@ describe('TeamProvisioningProviderDiagnostics provider probes', () => {
     ]);
   });
 
+  it('accepts PONG from stderr when stdout also contains diagnostic output', async () => {
+    const spawnProbe = vi
+      .fn<TeamProvisioningProviderDiagnosticsPorts['spawnProbe']>()
+      .mockResolvedValue({
+        exitCode: 0,
+        stdout: 'provider diagnostic banner',
+        stderr: 'PONG',
+      });
+    const appendPreflightDebugLog =
+      vi.fn<TeamProvisioningProviderDiagnosticsPorts['appendPreflightDebugLog']>();
+    const ports = createFakePorts({ spawnProbe, appendPreflightDebugLog });
+
+    await expect(
+      runProviderOneShotDiagnostic({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        providerId: 'codex',
+        ports,
+      })
+    ).resolves.toEqual({});
+
+    expect(spawnProbe).toHaveBeenCalledOnce();
+    expect(appendPreflightDebugLog).toHaveBeenLastCalledWith(
+      'provider_one_shot_diagnostic_complete',
+      expect.objectContaining({ ok: true })
+    );
+  });
+
   it('reports Gemini authentication without suggesting Anthropic credentials', async () => {
     const ports = createFakePorts({
       isAuthFailureWarning: vi.fn().mockReturnValue(true),
@@ -217,5 +421,48 @@ describe('TeamProvisioningProviderDiagnostics provider probes', () => {
     expect(result.warning).toContain('Authenticate Gemini');
     expect(result.warning).not.toContain('Anthropic');
     expect(result.warning).not.toContain('ANTHROPIC_API_KEY');
+  });
+});
+
+describe('TeamProvisioningProviderDiagnostics ports factory', () => {
+  it('overlays spawnProbe while preserving base ports', () => {
+    const basePorts = createFakePorts();
+    const spawnProbe = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnProbe']>();
+
+    const ports = buildTeamProvisioningProviderDiagnosticsPorts({ basePorts, spawnProbe });
+
+    expect(ports.execCli).toBe(basePorts.execCli);
+    expect(ports.pathExistsAsDirectory).toBe(basePorts.pathExistsAsDirectory);
+    expect(ports.spawnProbe).toBe(spawnProbe);
+  });
+
+  it('wires default base ports to injected process, provider, and policy ports', () => {
+    const transientProbeProcesses = new Set<TeamProvisioningProbeChild>();
+    const child = { pid: 123 } as unknown as TeamProvisioningProbeChild;
+    const providerConnectionService = {
+      getConfiguredCodexCustomProviderModel: vi.fn(() => 'gpt-5'),
+    };
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+    };
+    const isAuthFailureWarning = vi.fn(() => true);
+    const normalizeApiRetryErrorMessage = vi.fn((text: string) => `normalized:${text}`);
+
+    const ports = createTeamProvisioningProviderDiagnosticsBasePorts({
+      transientProbeProcesses,
+      providerConnectionService,
+      logger,
+      isAuthFailureWarning,
+      normalizeApiRetryErrorMessage,
+    });
+
+    ports.addTransientProbeProcess(child);
+    expect(transientProbeProcesses.has(child)).toBe(true);
+    ports.removeTransientProbeProcess(child);
+    expect(transientProbeProcesses.has(child)).toBe(false);
+    expect(ports.getConfiguredCodexCustomProviderModel()).toBe('gpt-5');
+    expect(ports.isAuthFailureWarning('auth failed', 'probe')).toBe(true);
+    expect(ports.normalizeApiRetryErrorMessage('api error')).toBe('normalized:api error');
   });
 });

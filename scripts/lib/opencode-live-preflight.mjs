@@ -81,11 +81,7 @@ function shouldUseManagedAppCredentials(env) {
 
 function runManagedOpenCodeModels(requiredModels, cwd, env) {
   const providers = Array.from(
-    new Set(
-      requiredModels
-        .map((model) => model.slice(0, model.indexOf('/')))
-        .filter(Boolean)
-    )
+    new Set(requiredModels.map((model) => model.slice(0, model.indexOf('/'))).filter(Boolean))
   );
   const availableModels = [];
   for (const provider of providers) {

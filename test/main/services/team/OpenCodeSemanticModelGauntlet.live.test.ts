@@ -307,10 +307,7 @@ describe('OpenCode semantic model gauntlet report helpers', () => {
   it('keeps transcript failures without provider signals as model behavior', () => {
     const stages = createPassingStages({ peerRelayAB: false });
     const category = classifyGauntletFailure({
-      diagnostics: [
-        'runId=abc429def',
-        'transcript: peer relay reply missing expected taskRef',
-      ],
+      diagnostics: ['runId=abc429def', 'transcript: peer relay reply missing expected taskRef'],
       stages,
     });
 
@@ -1289,8 +1286,9 @@ async function inspectMessageHygiene(input: {
     diagnostics.push(`badMessages=${JSON.stringify(badMessages.slice(0, 5))}`);
   }
   const duplicateTokens = input.expectedUserReplyTokens.filter((token) => {
-    const count = userMessages.filter((message) => textContainsExactToken(message.text, token))
-      .length;
+    const count = userMessages.filter((message) =>
+      textContainsExactToken(message.text, token)
+    ).length;
     return count !== 1;
   });
   if (duplicateTokens.length > 0) {

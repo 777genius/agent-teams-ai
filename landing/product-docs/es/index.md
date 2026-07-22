@@ -18,32 +18,32 @@ hero:
       text: Conceptos
       link: /es/reference/concepts
 features:
-  - icon: "01"
+  - icon: '01'
     title: Flujo de trabajo centrado en el equipo
     details: Define roles, lanza un lead y deja que los agentes dividan, reclamen y coordinen las tareas.
     link: /es/guide/create-team
     linkText: Crear un equipo
-  - icon: "02"
+  - icon: '02'
     title: Tablero kanban en vivo
     details: Observa cómo las tareas avanzan por todo, in progress, review, done y approved a medida que los agentes trabajan.
     link: /es/guide/agent-workflow
     linkText: Entender el flujo de trabajo
-  - icon: "03"
+  - icon: '03'
     title: Revisión de código integrada
     details: Inspecciona los diffs por tarea, acepta o rechaza hunks y comenta donde los agentes necesiten orientación.
     link: /es/guide/code-review
     linkText: Revisar cambios
-  - icon: "04"
+  - icon: '04'
     title: Configuración adaptada al runtime
     details: Usa Claude, Codex, OpenCode o proveedores multimodelo a través del acceso que ya tienes.
     link: /es/guide/runtime-setup
     linkText: Configurar los runtimes
-  - icon: "05"
+  - icon: '05'
     title: Control local-first
     details: La aplicación de escritorio lee el estado local del proyecto y del runtime. Tu código permanece en tu máquina a menos que un proveedor seleccionado reciba el contexto del prompt.
     link: /es/reference/privacy-local-data
     linkText: Modelo de privacidad
-  - icon: "06"
+  - icon: '06'
     title: Equipos depurables
     details: Rastrea los logs de las tareas, la salida del runtime, los mensajes de los compañeros de equipo y los procesos en vivo cuando un lanzamiento o una tarea se atasca.
     link: /es/guide/troubleshooting

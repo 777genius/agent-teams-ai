@@ -301,10 +301,7 @@ export class ReviewMutationJournalStore {
   async remove(record: ReviewMutationJournalRecord): Promise<void> {
     const recordPath = this.getRecordPath(record);
     if (
-      !(await assertConstrainedPersistenceDirectory(
-        getTeamsBasePath(),
-        path.dirname(recordPath)
-      ))
+      !(await assertConstrainedPersistenceDirectory(getTeamsBasePath(), path.dirname(recordPath)))
     ) {
       return;
     }
@@ -420,12 +417,7 @@ export class ReviewMutationJournalStore {
     const filePath = path.join(scopeDir, entry);
     const parsed = await this.readRecord(filePath);
     try {
-      return this.parseRecord(
-        parsed,
-        path.basename(entry, '.json'),
-        teamName,
-        persistenceScope
-      );
+      return this.parseRecord(parsed, path.basename(entry, '.json'), teamName, persistenceScope);
     } catch (error) {
       throw new CorruptReviewMutationJournalError(
         `Invalid review mutation journal record at ${filePath}`,
@@ -439,9 +431,7 @@ export class ReviewMutationJournalStore {
     try {
       const pathStats = await fs.promises.lstat(filePath);
       if (pathStats.isSymbolicLink()) {
-        throw new CorruptReviewMutationJournalError(
-          'Unsafe review mutation journal symlink'
-        );
+        throw new CorruptReviewMutationJournalError('Unsafe review mutation journal symlink');
       }
       handle = await fs.promises.open(filePath, 'r');
       const stats = await handle.stat();
@@ -470,10 +460,9 @@ export class ReviewMutationJournalStore {
       try {
         return JSON.parse(raw) as unknown;
       } catch (error) {
-        throw new CorruptReviewMutationJournalError(
-          'Corrupted review mutation journal record',
-          { cause: error }
-        );
+        throw new CorruptReviewMutationJournalError('Corrupted review mutation journal record', {
+          cause: error,
+        });
       }
     } finally {
       await handle?.close().catch(() => undefined);

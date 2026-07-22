@@ -7,6 +7,7 @@ minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - '@esbuild/*'
   - esbuild
+  - fast-uri@3.1.4
   - tmp@0.2.6
 strictPeerDependencies: true
 peerDependencyRules:
@@ -31,20 +32,24 @@ overrides:
   '@opentelemetry/core': '2.8.0'
   '@xmldom/xmldom': '0.8.13'
   'axios': '1.18.1'
+  'body-parser': '2.3.0'
   'brace-expansion@1': '1.1.16'
   'brace-expansion@2': '2.1.2'
   'brace-expansion@5': '5.0.7'
   'defu': '6.1.5'
   'devalue': '5.8.1'
+  'dompurify': '3.4.12'
   'esbuild': '0.28.1'
-  'fast-uri': '3.1.2'
+  'fast-uri': '3.1.4'
   'file-type@21': '21.3.2'
   'flatted': '3.4.2'
   'follow-redirects': '1.16.0'
   'handlebars': '4.7.9'
-  'hono': '4.12.25'
+  'hono': '4.12.30'
   'ip-address': '10.1.1'
+  'immutable': '5.1.9'
   'launch-editor': '2.14.1'
+  'linkify-it': '5.0.2'
   'lodash': '^4.18.1'
   'lodash-es': '^4.18.1'
   'markdown-it': '14.2.0'
@@ -68,6 +73,7 @@ overrides:
   'simple-git': '3.36.0'
   'smol-toml': '1.6.1'
   'srvx': '0.11.13'
+  'svgo': '4.0.2'
   'tar': '7.5.20'
   'form-data': '4.0.6'
   'tmp': '0.2.7'
@@ -82,6 +88,7 @@ allowBuilds:
   '@parcel/watcher': false
   '@sentry/cli': false
   '@swc/core': false
+  better-sqlite3: true
   core-js: false
   cpu-features: true
   electron: true

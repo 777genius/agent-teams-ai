@@ -47,6 +47,7 @@ function persistedMember(
 function persistedSnapshot(params: {
   expectedMembers: string[];
   members: Record<string, PersistedTeamLaunchMemberState>;
+  summary?: Partial<PersistedTeamLaunchSnapshot['summary']>;
 }): PersistedTeamLaunchSnapshot {
   return {
     version: 2,
@@ -60,6 +61,7 @@ function persistedSnapshot(params: {
       pendingCount: 0,
       failedCount: 0,
       runtimeAlivePendingCount: 0,
+      ...params.summary,
     },
     teamLaunchState: 'partial_failure',
   };
@@ -197,6 +199,316 @@ describe('launch incomplete notification helpers', () => {
           failedCount: 0,
           runtimeAlivePendingCount: 0,
         },
+        suppressToast: false,
+      })
+    ).toBeNull();
+  });
+
+  it('does not build a payload for pending-only teammates that are still joining', () => {
+    const expectedMembers = ['alice', 'bob', 'jack', 'tom'];
+    const run = runLike({
+      teamName: 'beacon-desk-15',
+      runId: 'run-beacon-desk-15',
+      request: {
+        displayName: 'beacon-desk-15',
+        cwd: '/tmp/beacon-desk-15',
+      },
+      expectedMembers,
+      allEffectiveMembers: expectedMembers.map((name) => ({ name })),
+      memberSpawnStatuses: new Map(
+        expectedMembers.map((name) => [
+          name,
+          liveStatus({
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            runtimeAlive: true,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+          }),
+        ])
+      ),
+    });
+    const snapshot = persistedSnapshot({
+      expectedMembers,
+      members: Object.fromEntries(
+        expectedMembers.map((name) => [
+          name,
+          persistedMember(name, {
+            launchState: 'runtime_pending_bootstrap',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+          }),
+        ])
+      ),
+      summary: {
+        pendingCount: 4,
+        runtimeAlivePendingCount: 4,
+      },
+    });
+
+    expect(
+      buildTeamLaunchIncompleteNotificationPayload({
+        run,
+        failedMembers: [],
+        launchSummary: snapshot.summary,
+        snapshot,
+        suppressToast: false,
+      })
+    ).toBeNull();
+  });
+
+  it('ignores stale failed summaries without concrete failed member evidence', () => {
+    const run = runLike({
+      teamName: 'stale-summary-team',
+      runId: 'run-stale-summary',
+      expectedMembers: ['alice'],
+      allEffectiveMembers: [{ name: 'alice' }],
+      memberSpawnStatuses: new Map([
+        [
+          'alice',
+          liveStatus({
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            runtimeAlive: true,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+          }),
+        ],
+      ]),
+    });
+    const snapshot = persistedSnapshot({
+      expectedMembers: ['alice'],
+      members: {
+        alice: persistedMember('alice', {
+          launchState: 'runtime_pending_bootstrap',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+        }),
+      },
+      summary: {
+        failedCount: 1,
+      },
+    });
+
+    expect(
+      buildTeamLaunchIncompleteNotificationPayload({
+        run,
+        failedMembers: [],
+        launchSummary: snapshot.summary,
+        snapshot,
+        suppressToast: false,
+      })
+    ).toBeNull();
+  });
+
+  it('prefers live confirmed evidence over stale persisted failed member evidence', () => {
+    const run = runLike({
+      teamName: 'live-confirmed-team',
+      runId: 'run-live-confirmed',
+      expectedMembers: ['alice'],
+      allEffectiveMembers: [{ name: 'alice' }],
+      memberSpawnStatuses: new Map([
+        [
+          'alice',
+          liveStatus({
+            status: 'online',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+          }),
+        ],
+      ]),
+    });
+    const snapshot = persistedSnapshot({
+      expectedMembers: ['alice'],
+      members: {
+        alice: persistedMember('alice', {
+          launchState: 'failed_to_start',
+          agentToolAccepted: true,
+          hardFailure: true,
+          hardFailureReason: 'stale failure',
+        }),
+      },
+      summary: {
+        failedCount: 1,
+      },
+    });
+
+    expect(
+      buildTeamLaunchIncompleteNotificationPayload({
+        run,
+        failedMembers: [],
+        launchSummary: snapshot.summary,
+        snapshot,
+        suppressToast: false,
+      })
+    ).toBeNull();
+  });
+
+  it('uses live member evidence instead of stale summary values for notification copy', () => {
+    const expectedMembers = ['bob', 'jack', 'alice', 'tom'];
+    const run = runLike({
+      teamName: 'relay-works-18',
+      runId: 'run-relay-works-18',
+      request: {
+        displayName: 'relay-works-18',
+        cwd: '/tmp/relay-works-18',
+      },
+      expectedMembers,
+      allEffectiveMembers: expectedMembers.map((name) => ({ name })),
+      memberSpawnStatuses: new Map([
+        [
+          'bob',
+          liveStatus({
+            status: 'online',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+          }),
+        ],
+        [
+          'jack',
+          liveStatus({
+            status: 'online',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+          }),
+        ],
+        [
+          'alice',
+          liveStatus({
+            status: 'error',
+            launchState: 'failed_to_start',
+            hardFailure: true,
+            hardFailureReason: 'Insufficient credits',
+          }),
+        ],
+        [
+          'tom',
+          liveStatus({
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            runtimeAlive: true,
+            bootstrapConfirmed: false,
+          }),
+        ],
+      ]),
+    });
+    const snapshot = persistedSnapshot({
+      expectedMembers,
+      members: Object.fromEntries(
+        expectedMembers.map((name) => [
+          name,
+          persistedMember(name, {
+            launchState: 'runtime_pending_bootstrap',
+            agentToolAccepted: true,
+          }),
+        ])
+      ),
+      summary: {
+        pendingCount: 4,
+      },
+    });
+
+    const payload = buildTeamLaunchIncompleteNotificationPayload({
+      run,
+      failedMembers: [{ name: 'alice' }],
+      launchSummary: snapshot.summary,
+      snapshot,
+      suppressToast: false,
+    });
+
+    expect(payload?.body).toBe('2/4 joined · failed: @alice · still joining: @tom');
+    expect(payload?.body).not.toContain('0/4');
+    expect(payload?.body).not.toContain('did not join');
+  });
+
+  it('does not report persisted bootstrap-confirmed primary members from a stale failed list', () => {
+    const expectedMembers = ['bob', 'jack', 'alice', 'tom'];
+    const run = runLike({
+      teamName: 'forge-labs-15',
+      runId: 'run-forge-labs-15',
+      expectedMembers,
+      allEffectiveMembers: expectedMembers.map((name) => ({ name })),
+      memberSpawnStatuses: new Map([
+        [
+          'bob',
+          liveStatus({
+            status: 'error',
+            launchState: 'failed_to_start',
+            hardFailure: true,
+            hardFailureReason: 'Teammate was never spawned during launch.',
+          }),
+        ],
+        [
+          'jack',
+          liveStatus({
+            status: 'error',
+            launchState: 'failed_to_start',
+            hardFailure: true,
+            hardFailureReason: 'Teammate was never spawned during launch.',
+          }),
+        ],
+        [
+          'alice',
+          liveStatus({
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+          }),
+        ],
+        [
+          'tom',
+          liveStatus({
+            status: 'online',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+          }),
+        ],
+      ]),
+    });
+    const snapshot = persistedSnapshot({
+      expectedMembers,
+      members: {
+        bob: persistedMember('bob', {
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+        }),
+        jack: persistedMember('jack', {
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+        }),
+        alice: persistedMember('alice', {
+          launchState: 'runtime_pending_bootstrap',
+          agentToolAccepted: true,
+        }),
+        tom: persistedMember('tom', {
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+        }),
+      },
+      summary: {
+        confirmedCount: 3,
+        pendingCount: 1,
+      },
+    });
+
+    expect(
+      buildTeamLaunchIncompleteNotificationPayload({
+        run,
+        failedMembers: [{ name: 'bob' }, { name: 'jack' }],
+        launchSummary: snapshot.summary,
+        snapshot,
         suppressToast: false,
       })
     ).toBeNull();

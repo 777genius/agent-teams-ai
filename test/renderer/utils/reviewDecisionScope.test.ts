@@ -24,12 +24,12 @@ describe('buildReviewDecisionScopeToken', () => {
     expect(
       reviewChangeSetMatchesScope(changeSet, { teamName: 'team-b', memberName: 'alice' })
     ).toBe(false);
-    expect(
-      reviewChangeSetMatchesScope(changeSet, { teamName: 'team-a', memberName: 'bob' })
-    ).toBe(false);
-    expect(
-      reviewChangeSetMatchesScope(changeSet, { teamName: 'team-a', taskId: 'task-1' })
-    ).toBe(false);
+    expect(reviewChangeSetMatchesScope(changeSet, { teamName: 'team-a', memberName: 'bob' })).toBe(
+      false
+    );
+    expect(reviewChangeSetMatchesScope(changeSet, { teamName: 'team-a', taskId: 'task-1' })).toBe(
+      false
+    );
   });
 
   it('includes task request signature so filtered task variants do not collide', () => {

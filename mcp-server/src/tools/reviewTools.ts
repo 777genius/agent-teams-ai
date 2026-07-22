@@ -27,7 +27,7 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
       return await Promise.resolve(
         jsonTextContent(
           slimTask(
-            getController(teamName, claudeDir).review.requestReview(taskId, {
+            getController(teamName, claudeDir).taskBoard.requestReview(taskId, {
               ...(from ? { from } : {}),
               ...(reviewer ? { reviewer } : {}),
               ...(leadSessionId ? { leadSessionId } : {}),
@@ -50,7 +50,7 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
-          getController(teamName, claudeDir).review.startReview(taskId, {
+          getController(teamName, claudeDir).taskBoard.startReview(taskId, {
             ...(from ? { from } : {}),
           }) as Record<string, unknown>
         )
@@ -74,7 +74,7 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
       return await Promise.resolve(
         jsonTextContent(
           slimTask(
-            getController(teamName, claudeDir).review.approveReview(taskId, {
+            getController(teamName, claudeDir).taskBoard.approveReview(taskId, {
               ...(from ? { from } : {}),
               ...(note ? { note } : {}),
               ...(notifyOwner === true ? { 'notify-owner': true } : {}),
@@ -102,7 +102,7 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
       return await Promise.resolve(
         jsonTextContent(
           slimTask(
-            getController(teamName, claudeDir).review.requestChanges(taskId, {
+            getController(teamName, claudeDir).taskBoard.requestChanges(taskId, {
               ...(from ? { from } : {}),
               ...(comment ? { comment } : {}),
               ...(leadSessionId ? { leadSessionId } : {}),

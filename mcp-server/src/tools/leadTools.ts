@@ -27,7 +27,7 @@ export function registerLeadTools(server: Pick<FastMCP, 'addTool'>) {
         content: [
           {
             type: 'text' as const,
-            text: await getController(teamName, claudeDir).tasks.leadBriefing(),
+            text: await getController(teamName, claudeDir).taskBoard.leadBriefing(),
           },
         ],
       };

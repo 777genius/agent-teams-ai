@@ -31,32 +31,60 @@ export function registerSshRoutes(
   modeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>
 ): void {
   const configManager = ConfigManager.getInstance();
+  let lifecycleTail = Promise.resolve();
+
+  const runLifecycleOperation = <T>(operation: () => Promise<T>): Promise<T> => {
+    const result = lifecycleTail.then(operation, operation);
+    lifecycleTail = result.then(
+      () => undefined,
+      () => undefined
+    );
+    return result;
+  };
 
   // Connect
-  app.post<{ Body: SshConnectionConfig }>('/api/ssh/connect', async (request) => {
-    try {
-      await connectionManager.connect(request.body);
-      await modeSwitchCallback('ssh');
-      return { success: true, data: connectionManager.getStatus() };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      logger.error('SSH connect failed:', message);
-      return { success: false, error: message };
-    }
-  });
+  app.post<{ Body: SshConnectionConfig }>('/api/ssh/connect', (request) =>
+    runLifecycleOperation(async () => {
+      let connected = false;
+      try {
+        await connectionManager.connect(request.body);
+        connected = true;
+        await modeSwitchCallback('ssh');
+        return { success: true, data: connectionManager.getStatus() };
+      } catch (err) {
+        if (connected) {
+          try {
+            connectionManager.disconnect();
+          } catch (rollbackError) {
+            logger.error('Failed to roll back SSH connection:', rollbackError);
+          }
+          try {
+            await modeSwitchCallback('local');
+          } catch (rollbackError) {
+            logger.error('Failed to restore local mode after SSH connect failure:', rollbackError);
+          }
+        }
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error('SSH connect failed:', message);
+        return { success: false, error: message };
+      }
+    })
+  );
 
   // Disconnect
-  app.post('/api/ssh/disconnect', async () => {
-    try {
-      connectionManager.disconnect();
-      await modeSwitchCallback('local');
-      return { success: true, data: connectionManager.getStatus() };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      logger.error('SSH disconnect failed:', message);
-      return { success: false, error: message };
-    }
-  });
+  app.post('/api/ssh/disconnect', () =>
+    runLifecycleOperation(async () => {
+      try {
+        connectionManager.disconnect();
+        await modeSwitchCallback('local');
+        return { success: true, data: connectionManager.getStatus() };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error('SSH disconnect failed:', message);
+        return { success: false, error: message };
+      }
+    })
+  );
 
   // Get state
   app.get('/api/ssh/state', async () => {

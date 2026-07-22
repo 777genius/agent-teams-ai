@@ -10,9 +10,7 @@ import {
   isReviewFileExpectedDeleted,
 } from './reviewContentPreview';
 
-import type {
-  ReviewDraftHistoryConflictCandidateSummary,
-} from '@features/change-review-history/contracts';
+import type { ReviewDraftHistoryConflictCandidateSummary } from '@features/change-review-history/contracts';
 import type {
   ConflictCheckResult,
   FileChangeSummary,
@@ -103,9 +101,7 @@ export function isReviewActionLocked(state: {
 
 export type ReviewActionPersistenceStatus = 'saved' | 'saving' | 'error';
 
-export function isReviewActionPersistenceBlocking(
-  status: ReviewActionPersistenceStatus
-): boolean {
+export function isReviewActionPersistenceBlocking(status: ReviewActionPersistenceStatus): boolean {
   return status !== 'saved';
 }
 

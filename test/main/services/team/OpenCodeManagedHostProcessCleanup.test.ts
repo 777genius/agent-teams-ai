@@ -160,6 +160,7 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
       readProcessDetails: () => resolved(MANAGED_DETAILS),
       readProcessStartTimeMs: () => resolved(Date.parse('2026-05-13T16:27:14.000Z')),
       disposeServeHost,
+      isProcessAlive: () => false,
       killProcess,
     });
 
@@ -240,6 +241,7 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
       readProcessDetails: () => resolved(MANAGED_DETAILS),
       readProcessStartTimeMs: () => resolved(Date.parse('2026-05-13T16:27:14.000Z')),
       disposeServeHost,
+      isProcessAlive: () => false,
       killProcess,
     });
 

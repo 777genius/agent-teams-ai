@@ -132,5 +132,16 @@ try {
     `[public-runtime-bootstrap-e2e] anonymous ${process.platform}/${process.arch} bootstrap succeeded: ${versionText}\n`
   );
 } finally {
-  fs.rmSync(cacheRoot, { recursive: true, force: true });
+  try {
+    fs.rmSync(cacheRoot, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 200,
+    });
+  } catch (error) {
+    process.stderr.write(
+      `[public-runtime-bootstrap-e2e] warning: failed to remove temporary cache ${cacheRoot}: ${error instanceof Error ? error.message : String(error)}\n`
+    );
+  }
 }

@@ -141,6 +141,17 @@ function createFsError(code: string): NodeJS.ErrnoException {
   return error;
 }
 
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 // =============================================================================
 // Tests
 // =============================================================================
@@ -254,6 +265,34 @@ describe('Editor IPC handlers', () => {
         error: expect.stringContaining('ENOENT'),
       });
     });
+
+    it('does not let a slower open replace a newer project', async () => {
+      const firstStat = createDeferred<Awaited<ReturnType<typeof fs.stat>>>();
+      const secondStat = createDeferred<Awaited<ReturnType<typeof fs.stat>>>();
+      vi.mocked(fs.stat)
+        .mockReturnValueOnce(firstStat.promise)
+        .mockReturnValueOnce(secondStat.promise);
+
+      const firstOpen = mockIpc.invoke('editor:open', '/Users/test/first-project');
+      const secondOpen = mockIpc.invoke('editor:open', '/Users/test/second-project');
+
+      secondStat.resolve(createStats({ isDirectory: true }));
+      await expect(secondOpen).resolves.toEqual({ success: true, data: undefined });
+      firstStat.resolve(createStats({ isDirectory: true }));
+      await expect(firstOpen).resolves.toEqual({
+        success: false,
+        error: expect.stringContaining('superseded'),
+      });
+
+      vi.mocked(fs.lstat).mockResolvedValue(createStats({ isDirectory: true }) as never);
+      vi.mocked(fs.readdir).mockResolvedValue([] as never);
+      await expect(mockIpc.invoke('editor:readDir', '/Users/test/second-project')).resolves.toEqual(
+        {
+          success: true,
+          data: { entries: [], truncated: false },
+        }
+      );
+    });
   });
 
   describe('editor:close', () => {
@@ -265,6 +304,27 @@ describe('Editor IPC handlers', () => {
       const result = await mockIpc.invoke('editor:close');
 
       expect(result).toEqual({ success: true, data: undefined });
+    });
+
+    it('invalidates an open that is still awaiting validation', async () => {
+      const pendingStat = createDeferred<Awaited<ReturnType<typeof fs.stat>>>();
+      vi.mocked(fs.stat).mockReturnValueOnce(pendingStat.promise);
+
+      const pendingOpen = mockIpc.invoke('editor:open', '/Users/test/slow-project');
+      await expect(mockIpc.invoke('editor:close')).resolves.toEqual({
+        success: true,
+        data: undefined,
+      });
+
+      pendingStat.resolve(createStats({ isDirectory: true }));
+      await expect(pendingOpen).resolves.toEqual({
+        success: false,
+        error: expect.stringContaining('superseded'),
+      });
+      await expect(mockIpc.invoke('editor:readDir', '/Users/test/slow-project')).resolves.toEqual({
+        success: false,
+        error: expect.stringContaining('not initialized'),
+      });
     });
   });
 

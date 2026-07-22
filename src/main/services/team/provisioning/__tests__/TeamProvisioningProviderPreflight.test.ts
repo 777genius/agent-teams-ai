@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildAgentTeamsMcpValidationError,
   buildRuntimeProviderReadinessWarning,
+  type CliHelpOutputPorts,
   extractAuthStatusReadiness,
   getCliHelpOutputForProvisioning,
   resolveProviderCompatibilityModel,
@@ -192,11 +193,20 @@ describe('provider runtime readiness normalization', () => {
       )
     ).toBe('agent-teams MCP preflight failed before team launch. Details: retry later');
 
+    const normalizedError =
+      'agent-teams MCP preflight failed before team launch. Details: retry later';
+    expect(buildAgentTeamsMcpValidationError(normalizedError, (text) => `normalized:${text}`)).toBe(
+      normalizedError
+    );
+
     const cache = { output: null, cachedAtMs: 0 };
-    const ports = {
+    const spawnProbe = vi
+      .fn<CliHelpOutputPorts['spawnProbe']>()
+      .mockResolvedValue({ exitCode: 0, stdout: 'Usage', stderr: 'Flags' });
+    const ports: CliHelpOutputPorts = {
       getCachedOrProbeResult: vi.fn().mockResolvedValue({ claudePath: '/fake/claude' }),
       buildProvisioningEnv: vi.fn().mockResolvedValue({ env: { PATH: '/bin' } }),
-      spawnProbe: vi.fn().mockResolvedValue({ exitCode: 0, stdout: 'Usage', stderr: 'Flags' }),
+      spawnProbe,
     };
 
     await expect(
@@ -208,7 +218,7 @@ describe('provider runtime readiness normalization', () => {
       })
     ).resolves.toBe('Usage\nFlags');
 
-    ports.spawnProbe.mockClear();
+    spawnProbe.mockClear();
     await expect(
       getCliHelpOutputForProvisioning({
         cwd: '/repo',
@@ -217,6 +227,6 @@ describe('provider runtime readiness normalization', () => {
         now: () => 1001,
       })
     ).resolves.toBe('Usage\nFlags');
-    expect(ports.spawnProbe).not.toHaveBeenCalled();
+    expect(spawnProbe).not.toHaveBeenCalled();
   });
 });

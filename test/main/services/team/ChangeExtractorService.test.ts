@@ -2416,19 +2416,22 @@ describe('ChangeExtractorService', () => {
         settled = true;
       });
 
-    await vi.waitFor(() => {
-      expect(backfillOpenCodeTaskLedger).toHaveBeenCalledWith(
-        expect.objectContaining({
-          teamName: TEAM_NAME,
-          taskId: TASK_ID,
-          projectDir,
-          workspaceRoot: projectPath,
-          deliveryContextPath: expect.stringContaining('delivery-context.json'),
-          deliveryContextHash: expect.stringMatching(/^[a-f0-9]{64}$/),
-          attributionMode: 'strict-delivery',
-        })
-      );
-    });
+    await vi.waitFor(
+      () => {
+        expect(backfillOpenCodeTaskLedger).toHaveBeenCalledWith(
+          expect.objectContaining({
+            teamName: TEAM_NAME,
+            taskId: TASK_ID,
+            projectDir,
+            workspaceRoot: projectPath,
+            deliveryContextPath: expect.stringContaining('delivery-context.json'),
+            deliveryContextHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+            attributionMode: 'strict-delivery',
+          })
+        );
+      },
+      { timeout: 5_000 }
+    );
     expect(settled).toBe(false);
     expect(workerClient.computeTaskChanges).not.toHaveBeenCalled();
     pendingBackfill.resolve({

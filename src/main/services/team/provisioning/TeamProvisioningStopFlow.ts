@@ -1,3 +1,8 @@
+import {
+  type AnthropicApiKeyHelperRunOwner,
+  cleanupRunOwnedAnthropicApiKeyHelper,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
+
 import type { TeamProvisioningProgress } from '@shared/types';
 
 interface StopLogger {
@@ -9,7 +14,17 @@ interface RuntimeAdapterRunEntry {
   providerId: string;
 }
 
-interface StopRun {
+async function awaitAllOwnedProcessStops(stops: Promise<void>[]): Promise<void> {
+  const results = await Promise.allSettled(stops);
+  const failedStop = results.find(
+    (result): result is PromiseRejectedResult => result.status === 'rejected'
+  );
+  if (failedStop) {
+    throw failedStop.reason;
+  }
+}
+
+export interface TeamProvisioningStopRun extends AnthropicApiKeyHelperRunOwner {
   runId: string;
   teamName: string;
   processKilled: boolean;
@@ -18,10 +33,11 @@ interface StopRun {
   onProgress(progress: TeamProvisioningProgress): void;
 }
 
-export interface TeamProvisioningStopTeamPorts<TRun extends StopRun> {
+export interface TeamProvisioningStopTeamPorts<TRun extends TeamProvisioningStopRun> {
   invalidateRuntimeSnapshotCaches(teamName: string): void;
   pauseActiveIntervalsForTeam(teamName: string): void;
   stopPersistentTeamMembers(teamName: string): void;
+  openCodeRuntimeDeliveryAdvisory: { cancelTeam(teamName: string): void };
   getTrackedRunId(teamName: string): string | null;
   getAliveRunId(teamName: string): string | null;
   runs: ReadonlyMap<string, TRun>;
@@ -40,12 +56,14 @@ export interface TeamProvisioningStopTeamPorts<TRun extends StopRun> {
   provisioningRunByTeam: Map<string, string>;
   deleteAliveRunId(teamName: string): void;
   killTeamProcess(child: TRun['child']): void;
+  killTeamProcessAndWait(child: TRun['child']): Promise<void>;
   updateProgress(
     run: TRun,
     state: Exclude<TeamProvisioningProgress['state'], 'idle'>,
     message: string
   ): TeamProvisioningProgress;
   cleanupRun(run: TRun): void;
+  cleanupRunOwnedAnthropicApiKeyHelper?(run: TRun): Promise<void>;
   logger: StopLogger;
 }
 
@@ -64,12 +82,6 @@ export interface TeamProvisioningStopAllPorts {
   logger: StopLogger;
 }
 
-export interface TeamProvisioningPersistentStopPorts<TMember> {
-  readPersistedRuntimeMembers(teamName: string): TMember[];
-  killPersistedPaneMembers(teamName: string, members: TMember[]): void;
-  killOrphanedTeamAgentProcesses(teamName: string): void;
-}
-
 export function getOrphanPersistedTeamNames(
   persistedTeamNames: readonly string[],
   trackedTeamNames: Iterable<string>
@@ -78,13 +90,14 @@ export function getOrphanPersistedTeamNames(
   return persistedTeamNames.filter((teamName) => !tracked.has(teamName));
 }
 
-export async function stopTeamFlow<TRun extends StopRun>(
+async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   teamName: string,
   ports: TeamProvisioningStopTeamPorts<TRun>
 ): Promise<void> {
   ports.invalidateRuntimeSnapshotCaches(teamName);
   ports.pauseActiveIntervalsForTeam(teamName);
   ports.stopPersistentTeamMembers(teamName);
+  ports.openCodeRuntimeDeliveryAdvisory.cancelTeam(teamName);
   const stopRuntimeLanesForRun = async (targetRunId: string): Promise<void> => {
     const runtimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
     const stopPrimaryRuntimeLane =
@@ -106,7 +119,6 @@ export async function stopTeamFlow<TRun extends StopRun>(
     if (ports.hasSecondaryRuntimeRuns(teamName)) {
       await ports.stopMixedSecondaryRuntimeLanes(teamName);
     }
-    await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
     return;
   }
   let run = ports.runs.get(runId);
@@ -122,7 +134,6 @@ export async function stopTeamFlow<TRun extends StopRun>(
     const runtimeProgress = ports.runtimeAdapterProgressByRunId.get(runId);
     if (runtimeProgress && ports.isCancellableRuntimeAdapterProgress(runtimeProgress)) {
       await ports.cancelRuntimeAdapterProvisioning(runId, runtimeProgress);
-      await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
       return;
     }
     const runtimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
@@ -133,7 +144,6 @@ export async function stopTeamFlow<TRun extends StopRun>(
           await ports.stopOpenCodeRuntimeAdapterTeam(teamName, runId);
         }
       });
-      await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
       return;
     }
     if (ports.hasSecondaryRuntimeRuns(teamName)) {
@@ -145,35 +155,39 @@ export async function stopTeamFlow<TRun extends StopRun>(
     if (ports.getAliveRunId(teamName) === runId) {
       ports.deleteAliveRunId(teamName);
     }
-    await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
     return;
   }
   if (run.processKilled || run.cancelRequested) {
-    await stopRuntimeLanesForRun(run.runId);
-    await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
+    await awaitAllOwnedProcessStops([
+      ports.killTeamProcessAndWait(run.child),
+      stopRuntimeLanesForRun(run.runId),
+    ]);
+    await (ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
+      cleanupRunOwnedAnthropicApiKeyHelper(run));
+    ports.cleanupRun(run);
     return;
   }
   run.processKilled = true;
   run.cancelRequested = true;
-  ports.killTeamProcess(run.child);
+  const stopCurrentTeamProcess = ports.killTeamProcessAndWait(run.child);
   const stopCurrentRuntimeLanes = stopRuntimeLanesForRun(run.runId);
   const progress = ports.updateProgress(run, 'disconnected', 'Team stopped by user');
   run.onProgress(progress);
-  ports.cleanupRun(run);
   ports.logger.info(`[${teamName}] Process stopped (SIGKILL)`);
-  await stopCurrentRuntimeLanes;
-  await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
+  await awaitAllOwnedProcessStops([stopCurrentTeamProcess, stopCurrentRuntimeLanes]);
+  await (ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
+    cleanupRunOwnedAnthropicApiKeyHelper(run));
+  // Secondary lane cleanup revalidates immutable run ownership after async
+  // adapter calls. Keep the owning run tracked until those checks complete.
+  ports.cleanupRun(run);
 }
 
-export function stopPersistentTeamMembersFlow<TMember>(
+export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
   teamName: string,
-  ports: TeamProvisioningPersistentStopPorts<TMember>
-): void {
-  const members = ports.readPersistedRuntimeMembers(teamName);
-  if (members.length > 0) {
-    ports.killPersistedPaneMembers(teamName, members);
-  }
-  ports.killOrphanedTeamAgentProcesses(teamName);
+  ports: TeamProvisioningStopTeamPorts<TRun>
+): Promise<void> {
+  await stopTeamRuntimeFlow(teamName, ports);
+  await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
 }
 
 export async function stopAllTeamsFlow(ports: TeamProvisioningStopAllPorts): Promise<void> {

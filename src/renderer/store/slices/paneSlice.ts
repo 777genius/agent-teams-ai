@@ -188,9 +188,8 @@ export const createPaneSlice: StateCreator<AppState, [], [], PaneSlice> = (set, 
     const pane = findPane(paneLayout, paneId);
     if (!pane) return;
     if (
-      deferTabMutationForActiveChangeReview(
-        new Set(pane.tabs.map((tab) => tab.id)),
-        () => get().closePane(paneId)
+      deferTabMutationForActiveChangeReview(new Set(pane.tabs.map((tab) => tab.id)), () =>
+        get().closePane(paneId)
       )
     ) {
       return;

@@ -156,9 +156,8 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
       const activeTab = focusedPane.tabs.find((t) => t.id === focusedPane.activeTabId);
       if (activeTab && (options?.replaceActiveTab || activeTab.type === 'dashboard')) {
         if (
-          deferTabMutationForActiveChangeReview(
-            new Set([activeTab.id]),
-            () => get().openTab(tab, options)
+          deferTabMutationForActiveChangeReview(new Set([activeTab.id]), () =>
+            get().openTab(tab, options)
           )
         ) {
           return;
@@ -206,9 +205,7 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
 
   // Close a tab by ID in whichever pane contains it
   closeTab: (tabId: string) => {
-    if (
-      deferTabMutationForActiveChangeReview(new Set([tabId]), () => get().closeTab(tabId))
-    ) {
+    if (deferTabMutationForActiveChangeReview(new Set([tabId]), () => get().closeTab(tabId))) {
       return;
     }
     const state = get();
@@ -602,9 +599,8 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
 
     const tabsToClose = pane.tabs.filter((t) => t.id !== tabId);
     if (
-      deferTabMutationForActiveChangeReview(
-        new Set(tabsToClose.map((tab) => tab.id)),
-        () => get().closeOtherTabs(tabId)
+      deferTabMutationForActiveChangeReview(new Set(tabsToClose.map((tab) => tab.id)), () =>
+        get().closeOtherTabs(tabId)
       )
     ) {
       return;
@@ -642,9 +638,8 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
 
     const tabsToClose = pane.tabs.slice(index + 1);
     if (
-      deferTabMutationForActiveChangeReview(
-        new Set(tabsToClose.map((tab) => tab.id)),
-        () => get().closeTabsToRight(tabId)
+      deferTabMutationForActiveChangeReview(new Set(tabsToClose.map((tab) => tab.id)), () =>
+        get().closeTabsToRight(tabId)
       )
     ) {
       return;
@@ -705,9 +700,7 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
 
   // Close multiple tabs by ID (within the pane containing them)
   closeTabs: (tabIds: string[]) => {
-    if (
-      deferTabMutationForActiveChangeReview(new Set(tabIds), () => get().closeTabs(tabIds))
-    ) {
+    if (deferTabMutationForActiveChangeReview(new Set(tabIds), () => get().closeTabs(tabIds))) {
       return;
     }
     const state = get();

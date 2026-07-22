@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-empty-function -- Synthetic service ports preserve async contracts and intentional no-op callbacks. */
+/* eslint-disable @typescript-eslint/array-type, @typescript-eslint/consistent-type-definitions -- Fixture declarations mirror the service contract vocabulary. */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/non-nullable-type-assertion-style -- Assertions make fixture phase expectations explicit. */
+/* eslint-disable sonarjs/publicly-writable-directories -- Test-only paths are isolated and never used for production writes. */
+
 import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
@@ -81,6 +86,18 @@ vi.mock('@main/utils/childProcess', () => ({
   }),
   spawnCli: vi.fn(),
   killProcessTree: vi.fn(),
+  killProcessTreeAndWait: vi.fn(
+    (child: import('child_process').ChildProcess | null | undefined, signal?: string) => {
+      if (!child?.pid || child.exitCode != null || child.signalCode != null) {
+        return Promise.resolve();
+      }
+      const terminationSignal = (signal ?? 'SIGTERM') as NodeJS.Signals;
+      Object.assign(child, { signalCode: terminationSignal });
+      child.emit('exit', null, terminationSignal);
+      child.emit('close', null, terminationSignal);
+      return Promise.resolve();
+    }
+  ),
 }));
 
 vi.mock('@main/utils/shellEnv', async (importOriginal) => {
@@ -117,6 +134,10 @@ import {
 import { execCli, spawnCli } from '@main/utils/childProcess';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
 
+import { toMetaMembers } from './provisioningHarness';
+
+import type { TeamCreateRequest, TeamMember, TeamProviderId } from '@shared/types';
+
 function createFakeChild() {
   const writeSpy = vi.fn((_data: unknown, cb?: (err?: Error | null) => void) => {
     if (typeof cb === 'function') cb(null);
@@ -125,6 +146,8 @@ function createFakeChild() {
   const endSpy = vi.fn();
   const child = Object.assign(new EventEmitter(), {
     pid: 12345,
+    exitCode: null as number | null,
+    signalCode: null as NodeJS.Signals | null,
     stdin: { writable: true, write: writeSpy, end: endSpy },
     stdout: new EventEmitter(),
     stderr: new EventEmitter(),
@@ -210,6 +233,136 @@ function registerNoopOpenCodeRuntimeAdapter(svc: TeamProvisioningService): void 
   );
 }
 
+type ProvisioningEnvHarness = {
+  env: NodeJS.ProcessEnv;
+  authSource?: string;
+  geminiRuntimeAuth?: unknown;
+  providerArgs?: string[];
+  warning?: string;
+};
+
+type ProviderRuntimeHarness = {
+  buildProvisioningEnv(
+    providerId?: TeamProviderId,
+    providerBackendId?: string | null,
+    options?: unknown
+  ): Promise<ProvisioningEnvHarness>;
+  buildCrossProviderMemberArgs(
+    primaryProviderId: TeamProviderId,
+    memberSpecs: TeamCreateRequest['members'],
+    options?: unknown
+  ): Promise<{
+    args: string[];
+    providerArgsByProvider: Map<TeamProviderId, string[]>;
+    envPatch: NodeJS.ProcessEnv;
+    usesAnthropicApiKeyHelper: boolean;
+  }>;
+  validateAgentTeamsMcpRuntime(...args: unknown[]): Promise<void>;
+};
+
+type ConfigFacadeHarness = {
+  normalizeTeamConfigForLaunch(teamName: string, configRaw: string): Promise<void>;
+  updateConfigProjectPath(teamName: string, cwd: string): Promise<void>;
+  restorePrelaunchConfig(teamName: string): Promise<void>;
+  assertConfigLeadOnlyForLaunch(teamName: string): Promise<void>;
+  launchExpectedMembersPorts: {
+    getMembers(teamName: string): Promise<TeamMember[]>;
+    listInboxNames(teamName: string): Promise<string[]>;
+  };
+};
+
+type PrepareFacadeHarness = {
+  resolveOpenCodeMemberWorkspacesForRuntime(params: {
+    members: TeamCreateRequest['members'];
+  }): Promise<TeamCreateRequest['members']>;
+};
+
+function providerRuntimeHarness(svc: TeamProvisioningService): ProviderRuntimeHarness {
+  return (svc as unknown as { providerRuntime: ProviderRuntimeHarness }).providerRuntime;
+}
+
+function configFacadeHarness(svc: TeamProvisioningService): ConfigFacadeHarness {
+  return (svc as unknown as { configFacade: ConfigFacadeHarness }).configFacade;
+}
+
+function prepareFacadeHarness(svc: TeamProvisioningService): PrepareFacadeHarness {
+  return (svc as unknown as { prepareFacade: PrepareFacadeHarness }).prepareFacade;
+}
+
+function mockProviderRuntime(
+  svc: TeamProvisioningService,
+  buildProvisioningEnv: ProviderRuntimeHarness['buildProvisioningEnv'] = async () => ({
+    env: { ANTHROPIC_API_KEY: 'test' },
+    authSource: 'anthropic_api_key',
+  })
+): void {
+  const providerRuntime = providerRuntimeHarness(svc);
+  vi.spyOn(providerRuntime, 'buildProvisioningEnv').mockImplementation(buildProvisioningEnv);
+  vi.spyOn(providerRuntime, 'buildCrossProviderMemberArgs').mockImplementation(
+    async (primaryProviderId, memberSpecs, options) => {
+      const effectivePrimaryProviderId = primaryProviderId ?? 'anthropic';
+      const crossProviderIds = new Set<TeamProviderId>();
+      for (const member of memberSpecs) {
+        const memberProviderId = member.providerId ?? effectivePrimaryProviderId;
+        if (memberProviderId !== effectivePrimaryProviderId) {
+          crossProviderIds.add(memberProviderId);
+        }
+      }
+
+      const args: string[] = [];
+      const providerArgsByProvider = new Map<TeamProviderId, string[]>();
+      const envPatch: NodeJS.ProcessEnv = {};
+      const teamRuntimeAuth = (options as { teamRuntimeAuth?: unknown } | undefined)
+        ?.teamRuntimeAuth;
+      for (const providerId of crossProviderIds) {
+        const envResolution = await providerRuntime.buildProvisioningEnv(providerId, undefined, {
+          teamRuntimeAuth,
+        });
+        const providerArgs = envResolution.providerArgs ?? [];
+        providerArgsByProvider.set(providerId, providerArgs);
+        args.push(...providerArgs);
+        if (providerId === 'codex') {
+          for (const key of [
+            'CLAUDE_CODE_CODEX_BACKEND',
+            'CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD',
+          ]) {
+            if (envResolution.env[key]) {
+              envPatch[key] = envResolution.env[key];
+            }
+          }
+        }
+      }
+
+      return { args, providerArgsByProvider, envPatch, usesAnthropicApiKeyHelper: false };
+    }
+  );
+  vi.spyOn(providerRuntime, 'validateAgentTeamsMcpRuntime').mockResolvedValue(undefined);
+}
+
+function mockLaunchConfigFacade(
+  svc: TeamProvisioningService,
+  members?: TeamCreateRequest['members']
+): void {
+  const configFacade = configFacadeHarness(svc);
+  vi.spyOn(configFacade, 'normalizeTeamConfigForLaunch').mockResolvedValue(undefined);
+  vi.spyOn(configFacade, 'updateConfigProjectPath').mockResolvedValue(undefined);
+  vi.spyOn(configFacade, 'restorePrelaunchConfig').mockResolvedValue(undefined);
+  vi.spyOn(configFacade, 'assertConfigLeadOnlyForLaunch').mockResolvedValue(undefined);
+  if (members) {
+    vi.spyOn(configFacade.launchExpectedMembersPorts, 'getMembers').mockResolvedValue(
+      toMetaMembers(members)
+    );
+    vi.spyOn(configFacade.launchExpectedMembersPorts, 'listInboxNames').mockResolvedValue([]);
+  }
+}
+
+function mockOpenCodeWorkspaceResolution(svc: TeamProvisioningService): void {
+  vi.spyOn(
+    prepareFacadeHarness(svc),
+    'resolveOpenCodeMemberWorkspacesForRuntime'
+  ).mockImplementation(async (params) => params.members);
+}
+
 describe('TeamProvisioningService prompt content (solo mode discipline)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -240,11 +393,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
-      env: { ANTHROPIC_API_KEY: 'test' },
-      authSource: 'anthropic_api_key',
-    }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    mockProviderRuntime(svc);
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -280,6 +429,49 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     await svc.cancelProvisioning(runId);
   });
 
+  it('createTeam resolves deterministic teammate mode from the spawn shell environment', async () => {
+    const originalAmbientMode = process.env.CLAUDE_TEAM_TEAMMATE_MODE;
+    process.env.CLAUDE_TEAM_TEAMMATE_MODE = 'in-process';
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
+    const { child } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService();
+    mockProviderRuntime(svc, async () => ({
+      env: { CLAUDE_TEAM_TEAMMATE_MODE: 'tmux' },
+      authSource: 'none',
+    }));
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).pathExists = vi.fn(async () => false);
+    let runId: string | undefined;
+
+    try {
+      ({ runId } = await svc.createTeam(
+        {
+          teamName: 'shell-env-create-team',
+          cwd: process.cwd(),
+          members: [],
+        },
+        () => {}
+      ));
+
+      const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+      const launchEnv = vi.mocked(spawnCli).mock.calls[0]?.[2]?.env as NodeJS.ProcessEnv;
+      expect(launchArgs).toEqual(expect.arrayContaining(['--teammate-mode', 'tmux']));
+      expect(launchEnv.CLAUDE_TEAM_TEAMMATE_MODE).toBe('tmux');
+      expect(launchEnv.CLAUDE_TEAM_FORCE_PROCESS_TEAMMATES).toBeUndefined();
+    } finally {
+      if (runId) {
+        await svc.cancelProvisioning(runId);
+      }
+      if (originalAmbientMode === undefined) {
+        delete process.env.CLAUDE_TEAM_TEAMMATE_MODE;
+      } else {
+        process.env.CLAUDE_TEAM_TEAMMATE_MODE = originalAmbientMode;
+      }
+    }
+  });
+
   it('launchTeam prompt (solo) uses deterministic refresh-only launch instructions', async () => {
     // Seed config.json so launchTeam can validate team existence.
     const teamName = 'solo-team-launch';
@@ -300,21 +492,9 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
-      env: { ANTHROPIC_API_KEY: 'test' },
-      authSource: 'anthropic_api_key',
-    }));
-    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
-    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    mockProviderRuntime(svc);
+    mockLaunchConfigFacade(svc, []);
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
-    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
-      members: [],
-      source: 'config-fallback',
-      warning: undefined,
-    }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).pathExists = vi.fn(async () => false);
     (svc as any).startFilesystemMonitor = vi.fn();
 
@@ -362,17 +542,70 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     await svc.cancelProvisioning(runId);
   });
 
+  it('launchTeam resolves deterministic teammate mode from the spawn shell environment', async () => {
+    const originalAmbientMode = process.env.CLAUDE_TEAM_TEAMMATE_MODE;
+    process.env.CLAUDE_TEAM_TEAMMATE_MODE = 'in-process';
+    const teamName = 'shell-env-launch-team';
+    const teamDir = path.join(tempTeamsBase, teamName);
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
+    const { child } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService();
+    mockProviderRuntime(svc, async () => ({
+      env: { CLAUDE_TEAM_TEAMMATE_MODE: 'tmux' },
+      authSource: 'none',
+    }));
+    mockLaunchConfigFacade(svc, []);
+    (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
+    (svc as any).pathExists = vi.fn(async () => false);
+    (svc as any).startFilesystemMonitor = vi.fn();
+    let runId: string | undefined;
+
+    try {
+      ({ runId } = await svc.launchTeam(
+        {
+          teamName,
+          cwd: process.cwd(),
+          clearContext: true,
+        } as any,
+        () => {}
+      ));
+
+      const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+      const launchEnv = vi.mocked(spawnCli).mock.calls[0]?.[2]?.env as NodeJS.ProcessEnv;
+      expect(launchArgs).toEqual(expect.arrayContaining(['--teammate-mode', 'tmux']));
+      expect(launchEnv.CLAUDE_TEAM_TEAMMATE_MODE).toBe('tmux');
+      expect(launchEnv.CLAUDE_TEAM_FORCE_PROCESS_TEAMMATES).toBeUndefined();
+    } finally {
+      if (runId) {
+        await svc.cancelProvisioning(runId);
+      }
+      if (originalAmbientMode === undefined) {
+        delete process.env.CLAUDE_TEAM_TEAMMATE_MODE;
+      } else {
+        process.env.CLAUDE_TEAM_TEAMMATE_MODE = originalAmbientMode;
+      }
+    }
+  });
+
   it('createTeam bootstrap spec carries teammate descriptors for deterministic startup', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child, writeSpy } = createFakeChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
-      env: { ANTHROPIC_API_KEY: 'test' },
-      authSource: 'anthropic_api_key',
-    }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    mockProviderRuntime(svc);
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -412,11 +645,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
-      env: { ANTHROPIC_API_KEY: 'test' },
-      authSource: 'anthropic_api_key',
-    }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    mockProviderRuntime(svc);
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -458,11 +687,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
-      env: { ANTHROPIC_API_KEY: 'test' },
-      authSource: 'anthropic_api_key',
-    }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    mockProviderRuntime(svc);
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -494,12 +719,11 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    mockProviderRuntime(svc, async () => ({
       env: {},
       authSource: 'codex_runtime',
       providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
     }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -528,7 +752,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     const svc = new TeamProvisioningService();
     registerNoopOpenCodeRuntimeAdapter(svc);
-    (svc as any).buildProvisioningEnv = vi.fn(async (providerId: string | undefined) =>
+    mockProviderRuntime(svc, async (providerId) =>
       providerId === 'codex'
         ? {
             env: {
@@ -546,7 +770,6 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
             providerArgs: [],
           }
     );
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -588,12 +811,11 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReset();
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    mockProviderRuntime(svc, async () => ({
       env: {},
       authSource: 'codex_runtime',
       providerArgs: [],
     }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -618,12 +840,11 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReset();
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    mockProviderRuntime(svc, async () => ({
       env: {},
       authSource: 'codex_runtime',
       providerArgs: [],
     }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -655,20 +876,26 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    mockProviderRuntime(svc, async () => ({
       env: {},
       authSource: 'codex_runtime',
       providerArgs: [],
     }));
-    (svc as any).readRuntimeProviderLaunchFacts = vi.fn(async () => ({
-      defaultModel: null,
-      modelIds: new Set(),
-      modelListParsed: false,
-      modelCatalog: null,
-      runtimeCapabilities: { modelCatalog: { dynamic: false, source: 'runtime' } },
-      providerStatus: null,
-    }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.mocked(execCli)
+      .mockImplementationOnce(async () => {
+        throw new Error('model list unavailable');
+      })
+      .mockImplementationOnce(async () => ({
+        stdout: JSON.stringify({
+          providers: {
+            codex: {
+              runtimeCapabilities: { modelCatalog: { dynamic: false, source: 'runtime' } },
+              modelCatalog: null,
+            },
+          },
+        }),
+        stderr: '',
+      }));
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -770,13 +997,11 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    mockProviderRuntime(svc, async () => ({
       env: { PATH: '/usr/bin' },
       authSource: 'codex_runtime',
       geminiRuntimeAuth: null,
     }));
-    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -807,13 +1032,22 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReset();
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    mockProviderRuntime(svc, async () => ({
       env: { PATH: '/usr/bin' },
       authSource: 'codex_runtime',
       geminiRuntimeAuth: null,
     }));
-    (svc as any).resolveProviderDefaultModel = vi.fn(async () => null);
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    vi.mocked(execCli).mockImplementationOnce(async () => ({
+      stdout: JSON.stringify({
+        providers: {
+          codex: {
+            defaultModel: null,
+            models: [],
+          },
+        },
+      }),
+      stderr: '',
+    }));
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -918,22 +1152,9 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
-      env: { ANTHROPIC_API_KEY: 'test' },
-      authSource: 'anthropic_api_key',
-    }));
-    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
-    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    mockProviderRuntime(svc);
+    mockLaunchConfigFacade(svc, [{ name: 'alice', role: 'developer' }]);
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
-    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
-      members: [{ name: 'alice', role: 'developer' }],
-      source: 'config-fallback',
-      warning: undefined,
-    }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -975,22 +1196,9 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
-      env: { ANTHROPIC_API_KEY: 'test' },
-      authSource: 'anthropic_api_key',
-    }));
-    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
-    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    mockProviderRuntime(svc);
+    mockLaunchConfigFacade(svc, [{ name: 'alice', role: 'developer' }]);
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
-    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
-      members: [{ name: 'alice', role: 'developer' }],
-      source: 'config-fallback',
-      warning: undefined,
-    }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).pathExists = vi.fn(async () => false);
     (svc as any).startFilesystemMonitor = vi.fn();
 
@@ -1068,19 +1276,13 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    mockProviderRuntime(svc, async () => ({
       env: { PATH: '/usr/bin' },
       authSource: 'codex_runtime',
       geminiRuntimeAuth: null,
     }));
-    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
-    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
-    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    mockLaunchConfigFacade(svc, [{ name: 'alice', role: 'developer', providerId: 'codex' }]);
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).pathExists = vi.fn(async () => false);
     (svc as any).startFilesystemMonitor = vi.fn();
 
@@ -1127,24 +1329,16 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
-    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    mockProviderRuntime(svc, async () => ({
       env: {},
       authSource: 'codex_runtime',
       geminiRuntimeAuth: null,
       providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
     }));
-    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
-    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    mockLaunchConfigFacade(svc, [
+      { name: 'alice', role: 'developer', providerId: 'codex', isolation: 'worktree' },
+    ]);
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
-    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
-      members: [{ name: 'alice', role: 'developer', providerId: 'codex', isolation: 'worktree' }],
-      source: 'config-fallback',
-      warning: undefined,
-    }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).pathExists = vi.fn(async () => false);
     (svc as any).startFilesystemMonitor = vi.fn();
 
@@ -1207,7 +1401,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     const svc = new TeamProvisioningService();
     registerNoopOpenCodeRuntimeAdapter(svc);
-    (svc as any).buildProvisioningEnv = vi.fn(async (providerId: string | undefined) =>
+    mockProviderRuntime(svc, async (providerId) =>
       providerId === 'codex'
         ? {
             env: {
@@ -1225,35 +1419,24 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
             providerArgs: [],
           }
     );
-    (svc as any).resolveProviderDefaultModel = vi.fn(async (providerId: string | undefined) =>
-      providerId === 'codex' ? 'gpt-5.4' : 'opus'
-    );
-    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
-    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
-    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
-    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    mockLaunchConfigFacade(svc, [
+      {
+        name: 'alice',
+        role: 'developer',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+        isolation: 'worktree',
+      },
+      {
+        name: 'bob',
+        role: 'reviewer',
+        providerId: 'opencode',
+        model: 'minimax-m2.5-free',
+        isolation: 'worktree',
+      },
+    ]);
+    mockOpenCodeWorkspaceResolution(svc);
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
-    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
-      members: [
-        {
-          name: 'alice',
-          role: 'developer',
-          providerId: 'codex',
-          model: 'gpt-5.4',
-          isolation: 'worktree',
-        },
-        {
-          name: 'bob',
-          role: 'reviewer',
-          providerId: 'opencode',
-          model: 'minimax-m2.5-free',
-          isolation: 'worktree',
-        },
-      ],
-      source: 'config-fallback',
-      warning: undefined,
-    }));
-    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).pathExists = vi.fn(async () => false);
     (svc as any).startFilesystemMonitor = vi.fn();
 

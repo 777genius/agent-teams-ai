@@ -85,7 +85,9 @@ interface TeamProvisioningSideEffectAccess {
   handleOpenCodeRuntimeDeliveryUserFacingSideEffects: (
     record: OpenCodePromptDeliveryLedgerRecord
   ) => Promise<void>;
-  openCodeRuntimeDeliveryAdvisoryReviewTimers: Map<string, ReturnType<typeof setTimeout>>;
+  openCodeRuntimeDeliveryAdvisory: {
+    cancelTeam(teamName: string): void;
+  };
 }
 
 const baseMember: ResolvedTeamMember = {
@@ -220,7 +222,7 @@ describe('MemberCard OpenCode delivery advisory fixture e2e', () => {
       ],
     });
     await writeDeliveryFixture(record);
-    const scheduleProofMissingRecovery = vi.fn(async () => ({
+    const scheduleProofMissingRecovery = vi.fn(() => Promise.resolve({
       scheduled: true,
       reason: 'scheduled' as const,
       intentKey: 'proof-missing:msg-empty-turn',
@@ -256,7 +258,7 @@ describe('MemberCard OpenCode delivery advisory fixture e2e', () => {
     });
     await writeDeliveryFixture(record);
     await writeVisibleRuntimeReplyProof(record);
-    const scheduleProofMissingRecovery = vi.fn(async () => ({
+    const scheduleProofMissingRecovery = vi.fn(() => Promise.resolve({
       scheduled: true,
       reason: 'scheduled' as const,
       intentKey: 'proof-missing:msg-empty-turn',
@@ -350,11 +352,11 @@ async function runUserFacingSideEffects(
     cancelRequested: false,
   });
 
-  await access.handleOpenCodeRuntimeDeliveryUserFacingSideEffects(record);
-  for (const timer of access.openCodeRuntimeDeliveryAdvisoryReviewTimers.values()) {
-    clearTimeout(timer);
+  try {
+    await access.handleOpenCodeRuntimeDeliveryUserFacingSideEffects(record);
+  } finally {
+    access.openCodeRuntimeDeliveryAdvisory.cancelTeam(TEAM_NAME);
   }
-  access.openCodeRuntimeDeliveryAdvisoryReviewTimers.clear();
 
   return {
     addTeamNotification,

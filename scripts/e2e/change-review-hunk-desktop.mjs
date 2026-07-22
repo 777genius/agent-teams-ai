@@ -1154,7 +1154,11 @@ async function main() {
       }
     })()`);
     assert.equal(staleSave.ok, false, 'Divergent stale save must not replace the current branch');
-    assert.match(staleSave.error, /revision|changed|stale/i, 'Expected an explicit stale CAS error');
+    assert.match(
+      staleSave.error,
+      /revision|changed|stale/i,
+      'Expected an explicit stale CAS error'
+    );
     const capturedCandidates = await invokeReviewApi('loadDecisionConflictCandidates', [
       fixture.teamName,
       persistenceScope.scopeKey,
@@ -1235,11 +1239,16 @@ async function main() {
         return { ok: false, error: String(error) };
       }
     })()`);
-    assert.equal(priorSnapshotSave.ok, false, 'Prior-snapshot fixture must begin as a CAS conflict');
-    const [currentSnapshotCandidate] = await invokeReviewApi(
-      'loadDecisionConflictCandidates',
-      [fixture.teamName, persistenceScope.scopeKey, persistenceScope.scopeToken]
+    assert.equal(
+      priorSnapshotSave.ok,
+      false,
+      'Prior-snapshot fixture must begin as a CAS conflict'
     );
+    const [currentSnapshotCandidate] = await invokeReviewApi('loadDecisionConflictCandidates', [
+      fixture.teamName,
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+    ]);
     assert.equal(
       currentSnapshotCandidate.origin,
       'current-snapshot',
@@ -1250,10 +1259,11 @@ async function main() {
       persistenceScope,
       currentSnapshotCandidate.id
     );
-    const [priorSnapshotCandidate] = await invokeReviewApi(
-      'loadDecisionConflictCandidates',
-      [fixture.teamName, persistenceScope.scopeKey, persistenceScope.scopeToken]
-    );
+    const [priorSnapshotCandidate] = await invokeReviewApi('loadDecisionConflictCandidates', [
+      fixture.teamName,
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+    ]);
     assert.equal(priorSnapshotCandidate.id, priorCandidateId);
     assert.equal(priorSnapshotCandidate.origin, 'prior-snapshot');
     assert.equal(priorSnapshotCandidate.recoverability, 'different-review-snapshot');

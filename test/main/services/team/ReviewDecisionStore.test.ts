@@ -148,9 +148,7 @@ describe('ReviewDecisionStore', () => {
       fileDecisions: {},
     });
 
-    await expect(
-      store.clearUnreadableExactScope('demo', 'task-123', scopeToken)
-    ).rejects.toThrow(
+    await expect(store.clearUnreadableExactScope('demo', 'task-123', scopeToken)).rejects.toThrow(
       'Saved review decisions became readable; refusing destructive recovery discard'
     );
     await expect(store.load('demo', 'task-123', scopeToken)).resolves.toMatchObject({
@@ -274,7 +272,9 @@ describe('ReviewDecisionStore', () => {
     );
     await Promise.all(oldPaths.map((filePath) => writeFile(filePath, '{}', 'utf8')));
     const sameMtime = new Date('2026-01-01T00:00:00.000Z');
-    await Promise.all([...oldPaths, currentPath].map((filePath) => utimes(filePath, sameMtime, sameMtime)));
+    await Promise.all(
+      [...oldPaths, currentPath].map((filePath) => utimes(filePath, sameMtime, sameMtime))
+    );
 
     await (
       store as unknown as {
@@ -373,11 +373,7 @@ describe('ReviewDecisionStore', () => {
     await expect(store.load('demo', scopeKey, conflictedToken)).resolves.toMatchObject({
       hunkDecisions: { 'file:0': 'accepted' },
     });
-    const [candidate] = await store.loadConflictCandidates(
-      'demo',
-      scopeKey,
-      conflictedToken
-    );
+    const [candidate] = await store.loadConflictCandidates('demo', scopeKey, conflictedToken);
     expect(candidate).toBeDefined();
     await store.resolveConflictCandidate(
       'demo',
@@ -445,11 +441,7 @@ describe('ReviewDecisionStore', () => {
     ).rejects.toThrow('Review decisions changed; refusing stale state overwrite');
 
     const restarted = new ReviewDecisionStore();
-    const [candidate] = await restarted.loadConflictCandidates(
-      'demo',
-      'task-123',
-      scopeToken
-    );
+    const [candidate] = await restarted.loadConflictCandidates('demo', 'task-123', scopeToken);
     expect(candidate).toMatchObject({
       expectedRevision: 0,
       observedCurrentRevision: 1,
@@ -569,9 +561,9 @@ describe('ReviewDecisionStore', () => {
         1
       )
     ).resolves.toBe(1);
-    await expect(
-      store.loadConflictCandidates('demo', 'task-123', scopeTokenB)
-    ).resolves.toEqual([]);
+    await expect(store.loadConflictCandidates('demo', 'task-123', scopeTokenB)).resolves.toEqual(
+      []
+    );
     await expect(store.load('demo', 'task-123', scopeTokenA)).resolves.toMatchObject({
       hunkDecisions: { 'file:0': 'accepted' },
     });
@@ -684,9 +676,9 @@ describe('ReviewDecisionStore', () => {
         expectedRevision: 0,
       })
     ).rejects.toThrow('Too many unresolved review recovery copies');
-    await expect(
-      store.loadConflictCandidates('demo', 'task-123', scopeToken)
-    ).resolves.toEqual(before);
+    await expect(store.loadConflictCandidates('demo', 'task-123', scopeToken)).resolves.toEqual(
+      before
+    );
 
     const selected = before[0]!;
     await expect(
@@ -708,7 +700,9 @@ describe('ReviewDecisionStore', () => {
     expect(afterSwap.some((candidate) => candidate.id === selected.id)).toBe(false);
     expect(afterSwap).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ state: expect.objectContaining({ hunkDecisions: { canonical: 'accepted' } }) }),
+        expect.objectContaining({
+          state: expect.objectContaining({ hunkDecisions: { canonical: 'accepted' } }),
+        }),
       ])
     );
   });
@@ -761,12 +755,7 @@ describe('ReviewDecisionStore', () => {
     const sentinelPath = path.join(external, 'sentinel.json');
     try {
       await writeFile(sentinelPath, 'sentinel', 'utf8');
-      const scopeParent = path.join(
-        teamsBasePath,
-        'demo',
-        'review-decisions',
-        'v2'
-      );
+      const scopeParent = path.join(teamsBasePath, 'demo', 'review-decisions', 'v2');
       await mkdir(scopeParent, { recursive: true });
       await symlink(external, path.join(scopeParent, 'task-123'), 'dir');
 
@@ -778,9 +767,7 @@ describe('ReviewDecisionStore', () => {
           expectedRevision: 0,
         })
       ).rejects.toThrow('Unsafe persistence directory');
-      await expect(store.clear('demo', 'task-123')).rejects.toThrow(
-        'Unsafe persistence directory'
-      );
+      await expect(store.clear('demo', 'task-123')).rejects.toThrow('Unsafe persistence directory');
       await expect(readFile(sentinelPath, 'utf8')).resolves.toBe('sentinel');
       await expect(readdir(external)).resolves.toEqual(['sentinel.json']);
     } finally {
@@ -817,9 +804,9 @@ describe('ReviewDecisionStore', () => {
     );
     await writeFile(path.join(conflictDir, 'c'.repeat(64) + '.json'), '{broken', 'utf8');
 
-    await expect(
-      store.loadConflictCandidates('demo', 'task-123', scopeToken)
-    ).rejects.toThrow('was quarantined');
+    await expect(store.loadConflictCandidates('demo', 'task-123', scopeToken)).rejects.toThrow(
+      'was quarantined'
+    );
     await expect(
       store.loadConflictCandidates('demo', 'task-123', scopeToken)
     ).resolves.toMatchObject([{ state: { hunkDecisions: { local: 'rejected' } } }]);
@@ -848,9 +835,9 @@ describe('ReviewDecisionStore', () => {
     const failure = Object.assign(new Error('temporary recovery read failure'), { code: 'EIO' });
     const readdirSpy = vi.spyOn(fs.promises, 'readdir').mockRejectedValueOnce(failure);
     try {
-      await expect(
-        store.loadConflictCandidates('demo', 'task-123', scopeToken)
-      ).rejects.toThrow('temporary recovery read failure');
+      await expect(store.loadConflictCandidates('demo', 'task-123', scopeToken)).rejects.toThrow(
+        'temporary recovery read failure'
+      );
     } finally {
       readdirSpy.mockRestore();
     }

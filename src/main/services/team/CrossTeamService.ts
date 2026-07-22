@@ -8,20 +8,24 @@ import { randomUUID } from 'crypto';
 import { buildActionModeAgentBlock } from './actionModeInstructions';
 import { CascadeGuard } from './CascadeGuard';
 import { CrossTeamOutbox } from './CrossTeamOutbox';
+import { resolveCrossTeamRecipientIdentity } from './CrossTeamRecipientIdentity';
+import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 
+import type { TeamCrossTeamMessagingApi } from './contracts/TeamProvisioningApis';
 import type { TeamConfigReader } from './TeamConfigReader';
 import type { TeamDataService } from './TeamDataService';
 import type { TeamInboxWriter } from './TeamInboxWriter';
-import type { TeamProvisioningService } from './TeamProvisioningService';
 import type {
   CrossTeamMessage,
   CrossTeamSendRequest,
   CrossTeamSendResult,
   TeamConfig,
+  TeamMember,
 } from '@shared/types';
 
 const logger = createLogger('CrossTeamService');
 const { createController } = agentTeamsControllerModule;
+type AgentTeamsController = ReturnType<typeof createController>;
 
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 
@@ -57,6 +61,10 @@ export interface CrossTeamTarget {
   isOnline?: boolean;
 }
 
+export interface CrossTeamRecipientMetadataReader {
+  getMembers(teamName: string): Promise<readonly TeamMember[]>;
+}
+
 export class CrossTeamService {
   private cascadeGuard = new CascadeGuard();
   private outbox = new CrossTeamOutbox();
@@ -65,18 +73,20 @@ export class CrossTeamService {
     private configReader: TeamConfigReader,
     private dataService: TeamDataService,
     private inboxWriter: TeamInboxWriter,
-    private provisioning: TeamProvisioningService | null
+    private messaging: TeamCrossTeamMessagingApi | null,
+    private recipientMetadataReader: CrossTeamRecipientMetadataReader = new TeamMembersMetaStore()
   ) {}
 
   async send(request: CrossTeamSendRequest): Promise<CrossTeamSendResult> {
-    const { fromTeam, toTeam, text, taskRefs, summary, actionMode } = request;
+    const { fromTeam, toTeam, toMember, text, taskRefs, summary, actionMode } = request;
     const rawFromMember = request.fromMember;
     const chainDepth = request.chainDepth ?? 0;
-    const messageId = request.messageId?.trim() || randomUUID();
+    const callerMessageId = request.messageId?.trim() || undefined;
+    const messageId = callerMessageId || randomUUID();
     const timestamp = request.timestamp ?? new Date().toISOString();
     const inferredReplyMeta =
       !request.conversationId && !request.replyToConversationId
-        ? (this.provisioning?.resolveCrossTeamReplyMetadata(fromTeam, toTeam) ?? null)
+        ? (this.messaging?.resolveCrossTeamReplyMetadata(fromTeam, toTeam) ?? null)
         : null;
     const replyToConversationId =
       request.replyToConversationId?.trim() ||
@@ -87,6 +97,9 @@ export class CrossTeamService {
       inferredReplyMeta?.conversationId ||
       replyToConversationId ||
       randomUUID();
+    const stableDedupeIdentity = Boolean(
+      request.requireRuntimeDelivery && (callerMessageId || request.conversationId?.trim())
+    );
 
     // 1. Validate
     if (!TEAM_NAME_PATTERN.test(fromTeam)) {
@@ -116,11 +129,14 @@ export class CrossTeamService {
       throw new Error(`Target team not found: ${toTeam}`);
     }
 
-    // 2. Resolve lead. Reuse the verified target config before falling back to meta storage.
-    const leadName =
-      targetConfig.members?.find((m) => isLeadMember(m))?.name?.trim() ||
-      (await this.dataService.getLeadMemberName(toTeam)) ||
-      'team-lead';
+    // 2. Resolve the recipient and lead through the same authority used by runtime delivery.
+    const metaMembers = await this.recipientMetadataReader.getMembers(toTeam);
+    const targetIdentity = resolveCrossTeamRecipientIdentity({
+      sources: { config: targetConfig, metaMembers },
+      rawToMember: toMember,
+    });
+    const targetMemberName = targetIdentity.memberName;
+    const leadName = targetIdentity.leadName;
 
     // 3. Format
     const from = `${fromTeam}.${fromMember}`;
@@ -135,6 +151,7 @@ export class CrossTeamService {
       fromTeam,
       fromMember,
       toTeam,
+      toMember: targetMemberName,
       conversationId,
       replyToConversationId,
       text,
@@ -144,64 +161,138 @@ export class CrossTeamService {
       timestamp,
     };
 
-    const { duplicate } = await this.outbox.appendIfNotRecent(fromTeam, outboxMessage, async () => {
-      // 4. Cascade check only for real new deliveries
-      this.cascadeGuard.check(fromTeam, toTeam, chainDepth);
-      this.cascadeGuard.record(fromTeam, toTeam);
-      this.provisioning?.registerPendingCrossTeamReplyExpectation(fromTeam, toTeam, conversationId);
+    const { duplicate } = await this.outbox.appendIfNotRecent(
+      fromTeam,
+      outboxMessage,
+      async () => {
+        // 4. Cascade check only for real new deliveries
+        this.cascadeGuard.check(fromTeam, toTeam, chainDepth);
+        this.cascadeGuard.record(fromTeam, toTeam);
+        this.messaging?.registerPendingCrossTeamReplyExpectation(fromTeam, toTeam, conversationId);
 
-      // 5. Inbox write to TARGET team (TeamInboxWriter handles file lock + in-process lock internally)
-      await this.inboxWriter.sendMessage(toTeam, {
-        member: leadName,
-        text: formattedText,
-        from,
-        timestamp,
-        messageId,
-        summary: summary ?? `Cross-team message from ${fromTeam}`,
-        source: CROSS_TEAM_SOURCE,
-        conversationId,
-        replyToConversationId,
-        taskRefs,
-      });
-    });
+        // 5. Inbox write to TARGET team (TeamInboxWriter handles file lock + in-process lock internally)
+        await this.inboxWriter.sendMessage(toTeam, {
+          member: targetMemberName,
+          text: formattedText,
+          from,
+          timestamp,
+          messageId,
+          summary: summary ?? `Cross-team message from ${fromTeam}`,
+          source: CROSS_TEAM_SOURCE,
+          conversationId,
+          replyToConversationId,
+          taskRefs,
+        });
+      },
+      undefined,
+      {
+        stableIdentity: stableDedupeIdentity,
+        callerMessageId,
+        ...(leadName ? { legacyToMember: leadName } : {}),
+      }
+    );
 
     if (duplicate) {
-      return { messageId: duplicate.messageId, deliveredToInbox: true, deduplicated: true };
+      const duplicateTargetMemberName = duplicate.toMember ?? targetMemberName;
+      const result: CrossTeamSendResult = {
+        messageId: duplicate.messageId,
+        deliveredToInbox: true,
+        deduplicated: true,
+        toTeam: duplicate.toTeam,
+        toMember: duplicateTargetMemberName,
+      };
+      if (request.requireRuntimeDelivery) {
+        if (!duplicate.runtimeDeliveryAcceptedAt) {
+          await this.requireCrossTeamRuntimeDelivery({
+            teamName: toTeam,
+            memberName: duplicateTargetMemberName,
+            messageId: result.messageId,
+          });
+          await this.outbox.markRuntimeDeliveryAccepted(fromTeam, {
+            messageId: result.messageId,
+            toTeam,
+            toMember: duplicateTargetMemberName,
+            acceptedAt: new Date().toISOString(),
+          });
+        }
+        this.appendSenderCopy({
+          fromTeam: duplicate.fromTeam,
+          fromMember: duplicate.fromMember,
+          toTeam: duplicate.toTeam,
+          targetMemberName: duplicateTargetMemberName,
+          text: duplicate.text,
+          taskRefs: duplicate.taskRefs,
+          timestamp: duplicate.timestamp,
+          messageId: duplicate.messageId,
+          summary: duplicate.summary,
+          conversationId: duplicate.conversationId ?? conversationId,
+          replyToConversationId: duplicate.replyToConversationId ?? replyToConversationId,
+        });
+      }
+      return result;
     }
 
-    // 6. Write a non-actionable sender copy so the message appears in activity without
-    // waking the local lead through their inbox controller.
-    try {
-      createController({
-        teamName: fromTeam,
-        claudeDir: getClaudeBasePath(),
-      }).messages.appendSentMessage({
-        from: fromMember,
-        to: `${toTeam}.${leadName}`,
+    if (request.requireRuntimeDelivery) {
+      await this.requireCrossTeamRuntimeDelivery({
+        teamName: toTeam,
+        memberName: targetMemberName,
+        messageId,
+      });
+      await this.outbox.markRuntimeDeliveryAccepted(fromTeam, {
+        messageId,
+        toTeam,
+        toMember: targetMemberName,
+        acceptedAt: new Date().toISOString(),
+      });
+      this.appendSenderCopy({
+        fromTeam,
+        fromMember,
+        toTeam,
+        targetMemberName,
         text,
         taskRefs,
         timestamp,
         messageId,
-        summary: summary ?? `Cross-team message to ${toTeam}`,
-        source: CROSS_TEAM_SENT_SOURCE,
+        summary,
         conversationId,
         replyToConversationId,
       });
-      this.provisioning?.clearPendingCrossTeamReplyExpectation(fromTeam, toTeam, conversationId);
-    } catch (e: unknown) {
-      logger.warn(
-        `Failed to write sender copy for ${fromTeam}: ${e instanceof Error ? e.message : String(e)}`
-      );
+      return { messageId, deliveredToInbox: true, toTeam, toMember: targetMemberName };
     }
 
+    // 6. Write a non-actionable sender copy so the message appears in activity without
+    // waking the local lead through their inbox controller.
+    this.appendSenderCopy({
+      fromTeam,
+      fromMember,
+      toTeam,
+      targetMemberName,
+      text,
+      taskRefs,
+      timestamp,
+      messageId,
+      summary,
+      conversationId,
+      replyToConversationId,
+    });
+
     // 7. Best-effort relay (if online)
-    if (this.provisioning?.isTeamAlive(toTeam)) {
-      void this.provisioning.relayLeadInboxMessages(toTeam).catch((e: unknown) => {
-        logger.warn(`Cross-team relay to ${toTeam}: ${e instanceof Error ? e.message : String(e)}`);
+    if (this.messaging?.isTeamAlive(toTeam)) {
+      const relay = targetIdentity.isLead
+        ? this.messaging.relayLeadInboxMessages(toTeam)
+        : this.messaging.relayInboxFileToLiveRecipient(toTeam, targetMemberName, {
+            onlyMessageId: messageId,
+          });
+      void relay.catch((e: unknown) => {
+        logger.warn(
+          `Cross-team relay to ${toTeam}.${targetMemberName}: ${
+            e instanceof Error ? e.message : String(e)
+          }`
+        );
       });
     }
 
-    return { messageId, deliveredToInbox: true };
+    return { messageId, deliveredToInbox: true, toTeam, toMember: targetMemberName };
   }
 
   async listAvailableTargets(excludeTeam?: string): Promise<CrossTeamTarget[]> {
@@ -230,7 +321,7 @@ export class CrossTeamService {
           color: team.color,
           ...(summaryLead?.name ? { leadName: summaryLead.name } : {}),
           ...(summaryLead?.color ? { leadColor: summaryLead.color } : {}),
-          isOnline: this.provisioning?.isTeamAlive(team.teamName) ?? false,
+          isOnline: this.messaging?.isTeamAlive(team.teamName) ?? false,
         };
       });
 
@@ -244,4 +335,129 @@ export class CrossTeamService {
   async getOutbox(teamName: string): Promise<CrossTeamMessage[]> {
     return this.outbox.read(teamName);
   }
+
+  private async requireCrossTeamRuntimeDelivery(input: {
+    teamName: string;
+    memberName: string;
+    messageId: string;
+  }): Promise<void> {
+    if (!this.messaging) {
+      throw new Error('Cross-team runtime delivery guard is not configured');
+    }
+
+    const relay = await this.messaging.relayInboxFileToLiveRecipient(
+      input.teamName,
+      input.memberName,
+      { onlyMessageId: input.messageId }
+    );
+    if (hasRuntimeDeliveryProof(relay, input.messageId)) {
+      return;
+    }
+
+    throw new Error(
+      `Cross-team runtime delivery was not confirmed for ${input.teamName}.${input.memberName}: ` +
+        describeRuntimeDeliveryRelay(relay)
+    );
+  }
+
+  private appendSenderCopy(input: {
+    fromTeam: string;
+    fromMember: string;
+    toTeam: string;
+    targetMemberName: string;
+    text: string;
+    taskRefs: CrossTeamSendRequest['taskRefs'];
+    timestamp: string;
+    messageId: string;
+    summary: CrossTeamSendRequest['summary'];
+    conversationId: string;
+    replyToConversationId: string | undefined;
+  }): void {
+    try {
+      const controller = createController({
+        teamName: input.fromTeam,
+        claudeDir: getClaudeBasePath(),
+      });
+      if (!hasExistingSentCopy(controller, input.messageId)) {
+        controller.messages.appendSentMessage({
+          from: input.fromMember,
+          to: `${input.toTeam}.${input.targetMemberName}`,
+          text: input.text,
+          taskRefs: input.taskRefs,
+          timestamp: input.timestamp,
+          messageId: input.messageId,
+          summary: input.summary ?? `Cross-team message to ${input.toTeam}`,
+          source: CROSS_TEAM_SENT_SOURCE,
+          conversationId: input.conversationId,
+          replyToConversationId: input.replyToConversationId,
+        });
+      }
+    } catch (e: unknown) {
+      logger.warn(
+        `Failed to write sender copy for ${input.fromTeam}: ${
+          e instanceof Error ? e.message : String(e)
+        }`
+      );
+    }
+
+    try {
+      this.messaging?.clearPendingCrossTeamReplyExpectation(
+        input.fromTeam,
+        input.toTeam,
+        input.conversationId
+      );
+    } catch (e: unknown) {
+      logger.warn(
+        `Failed to clear pending cross-team reply expectation for ${input.fromTeam}: ${
+          e instanceof Error ? e.message : String(e)
+        }`
+      );
+    }
+  }
+}
+
+function hasRuntimeDeliveryProof(
+  relay: Awaited<ReturnType<TeamCrossTeamMessagingApi['relayInboxFileToLiveRecipient']>>,
+  expectedMessageId: string
+): boolean {
+  if (relay.kind === 'native_lead') {
+    return relay.recentlyDeliveredMessageId === expectedMessageId;
+  }
+
+  if (relay.kind === 'native_member_noop') {
+    return relay.durablyStoredMessageId === expectedMessageId;
+  }
+
+  if (relay.kind !== 'opencode_member') {
+    return false;
+  }
+
+  if (relay.relayed > 0) {
+    return true;
+  }
+
+  const delivery = relay.lastDelivery;
+  return Boolean(
+    delivery?.delivered &&
+    delivery.accepted === true &&
+    !delivery.acceptanceUnknown &&
+    !delivery.queuedBehindMessageId
+  );
+}
+
+function hasExistingSentCopy(controller: AgentTeamsController, messageId: string): boolean {
+  try {
+    return controller.messages.lookupMessage(messageId).store === 'sent';
+  } catch {
+    return false;
+  }
+}
+
+function describeRuntimeDeliveryRelay(
+  relay: Awaited<ReturnType<TeamCrossTeamMessagingApi['relayInboxFileToLiveRecipient']>>
+): string {
+  const diagnostics = relay.diagnostics?.filter(Boolean) ?? [];
+  const lastDelivery = relay.lastDelivery;
+  const reason = lastDelivery?.reason;
+  return reason || diagnostics[0] || `relay kind ${relay.kind} relayed ${relay.relayed}`;
 }

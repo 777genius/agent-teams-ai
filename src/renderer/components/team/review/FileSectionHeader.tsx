@@ -317,10 +317,10 @@ export const FileSectionHeader = ({
                     {externalChange
                       ? externalMutationDisabledLabel
                       : hasEdits
-                      ? draftDecisionDisabledLabel
-                      : isContentUnavailable
-                        ? t('review.fileHeader.disabled.acceptRejectContentUnavailable')
-                        : t('review.fileHeader.disabled.acceptRejectMissingOnDisk')}
+                        ? draftDecisionDisabledLabel
+                        : isContentUnavailable
+                          ? t('review.fileHeader.disabled.acceptRejectContentUnavailable')
+                          : t('review.fileHeader.disabled.acceptRejectMissingOnDisk')}
                   </TooltipContent>
                 )}
               </Tooltip>
@@ -348,14 +348,14 @@ export const FileSectionHeader = ({
                     {externalChange
                       ? externalMutationDisabledLabel
                       : hasEdits
-                      ? draftDecisionDisabledLabel
-                      : rejectBlockReason === 'manual-ledger-review'
-                        ? t('review.fileHeader.disabled.rejectManualLedgerReview')
-                        : rejectBlockReason === 'content-unavailable'
-                          ? t('review.fileHeader.disabled.rejectContentUnavailable')
-                          : rejectBlockReason === 'missing-on-disk'
-                            ? t('review.fileHeader.disabled.acceptRejectMissingOnDisk')
-                            : t('review.fileHeader.disabled.rejectBaselineUnavailable')}
+                        ? draftDecisionDisabledLabel
+                        : rejectBlockReason === 'manual-ledger-review'
+                          ? t('review.fileHeader.disabled.rejectManualLedgerReview')
+                          : rejectBlockReason === 'content-unavailable'
+                            ? t('review.fileHeader.disabled.rejectContentUnavailable')
+                            : rejectBlockReason === 'missing-on-disk'
+                              ? t('review.fileHeader.disabled.acceptRejectMissingOnDisk')
+                              : t('review.fileHeader.disabled.rejectBaselineUnavailable')}
                   </TooltipContent>
                 )}
               </Tooltip>

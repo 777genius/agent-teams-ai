@@ -19,7 +19,9 @@ export function registerKanbanTools(server: Pick<FastMCP, 'addTool'>) {
     }),
     execute: async ({ teamName, claudeDir }) => {
       assertConfiguredTeam(teamName, claudeDir);
-      return await Promise.resolve(jsonTextContent(getController(teamName, claudeDir).kanban.getKanbanState()));
+      return await Promise.resolve(
+        jsonTextContent(getController(teamName, claudeDir).taskBoard.getKanbanState())
+      );
     },
   });
 
@@ -35,7 +37,9 @@ export function registerKanbanTools(server: Pick<FastMCP, 'addTool'>) {
     execute: async ({ teamName, claudeDir, taskId, column }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
-        jsonTextContent(getController(teamName, claudeDir).kanban.setKanbanColumn(taskId, column))
+        jsonTextContent(
+          getController(teamName, claudeDir).taskBoard.setKanbanColumn(taskId, column)
+        )
       );
     },
   });
@@ -50,7 +54,9 @@ export function registerKanbanTools(server: Pick<FastMCP, 'addTool'>) {
     }),
     execute: async ({ teamName, claudeDir, taskId }) => {
       assertConfiguredTeam(teamName, claudeDir);
-      return await Promise.resolve(jsonTextContent(getController(teamName, claudeDir).kanban.clearKanban(taskId)));
+      return await Promise.resolve(
+        jsonTextContent(getController(teamName, claudeDir).taskBoard.clearKanban(taskId))
+      );
     },
   });
 
@@ -62,7 +68,9 @@ export function registerKanbanTools(server: Pick<FastMCP, 'addTool'>) {
     }),
     execute: async ({ teamName, claudeDir }) => {
       assertConfiguredTeam(teamName, claudeDir);
-      return await Promise.resolve(jsonTextContent(getController(teamName, claudeDir).kanban.listReviewers()));
+      return await Promise.resolve(
+        jsonTextContent(getController(teamName, claudeDir).taskBoard.listReviewers())
+      );
     },
   });
 
@@ -75,7 +83,9 @@ export function registerKanbanTools(server: Pick<FastMCP, 'addTool'>) {
     }),
     execute: async ({ teamName, claudeDir, reviewer }) => {
       assertConfiguredTeam(teamName, claudeDir);
-      return await Promise.resolve(jsonTextContent(getController(teamName, claudeDir).kanban.addReviewer(reviewer)));
+      return await Promise.resolve(
+        jsonTextContent(getController(teamName, claudeDir).taskBoard.addReviewer(reviewer))
+      );
     },
   });
 
@@ -89,7 +99,7 @@ export function registerKanbanTools(server: Pick<FastMCP, 'addTool'>) {
     execute: async ({ teamName, claudeDir, reviewer }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
-        jsonTextContent(getController(teamName, claudeDir).kanban.removeReviewer(reviewer))
+        jsonTextContent(getController(teamName, claudeDir).taskBoard.removeReviewer(reviewer))
       );
     },
   });

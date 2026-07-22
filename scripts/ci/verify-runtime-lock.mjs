@@ -54,10 +54,18 @@ if (releaseTag !== `runtime-${sourceRef}`) {
   );
 }
 
+const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+
 for (const [platform, asset] of Object.entries(lock.assets ?? {})) {
   const file = typeof asset.file === 'string' ? asset.file : '';
   if (!file.includes(`-v${version}.`)) {
     fail(`asset ${platform} file must include -v${version}: ${file || '<empty>'}`);
+  }
+  const sha256 = typeof asset.sha256 === 'string' ? asset.sha256.trim().toLowerCase() : '';
+  if (!SHA256_PATTERN.test(sha256)) {
+    fail(
+      `asset ${platform} must pin a 64-hex sha256 of the published archive, got ${asset.sha256 ?? '<missing>'}.`
+    );
   }
 }
 

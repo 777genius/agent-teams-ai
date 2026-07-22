@@ -1084,7 +1084,14 @@ export interface TeamLaunchResponse {
   alreadyRunning?: boolean;
 }
 
+export interface ApplicationCommandRequestIdentity {
+  commandId: string;
+  idempotencyKey: string;
+}
+
 export interface CreateTaskRequest {
+  /** Stable for one user intent so transport retries cannot create a second task. */
+  command?: ApplicationCommandRequestIdentity;
   subject: string;
   description?: string;
   descriptionTaskRefs?: TaskRef[];
@@ -1810,6 +1817,7 @@ export interface CrossTeamMessage {
   fromTeam: string;
   fromMember: string;
   toTeam: string;
+  toMember?: string;
   conversationId?: string;
   replyToConversationId?: string;
   text: string;
@@ -1823,6 +1831,7 @@ export interface CrossTeamSendRequest {
   fromTeam: string;
   fromMember: string;
   toTeam: string;
+  toMember?: string;
   timestamp?: string;
   messageId?: string;
   conversationId?: string;
@@ -1832,12 +1841,17 @@ export interface CrossTeamSendRequest {
   actionMode?: AgentActionMode;
   summary?: string;
   chainDepth?: number;
+  /** Runtime-control sends require live relay proof before acknowledging delivery. */
+  requireRuntimeDelivery?: boolean;
 }
 
 export interface CrossTeamSendResult {
   messageId: string;
   deliveredToInbox: boolean;
   deduplicated?: boolean;
+  /** Canonical target used by runtime delivery to verify or repair sender-copy proof. */
+  toTeam?: string;
+  toMember?: string;
 }
 
 // =============================================================================

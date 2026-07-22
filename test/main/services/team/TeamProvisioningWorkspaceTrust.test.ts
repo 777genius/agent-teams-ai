@@ -12,7 +12,12 @@ describe('TeamProvisioningWorkspaceTrust', () => {
     expect(
       collectWorkspaceTrustProviders({
         leadProviderId: 'codex',
-        memberProviderIds: ['opencode', 'anthropic', 'gemini', 'codex'],
+        members: [
+          { name: 'OpenCode', providerId: 'opencode' },
+          { name: 'Anthropic', providerId: 'anthropic' },
+          { name: 'Gemini', providerId: 'gemini' },
+          { name: 'Codex', providerId: 'codex' },
+        ],
       })
     ).toEqual(['claude', 'codex', 'gemini', 'opencode']);
   });

@@ -70,7 +70,9 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
       },
     });
 
-    await expect(service(ports).check(readinessInput({ selectedModel: null }))).resolves.toMatchObject({
+    await expect(
+      service(ports).check(readinessInput({ selectedModel: null }))
+    ).resolves.toMatchObject({
       state: 'ready',
       launchAllowed: true,
       modelId: 'opencode/big-pickle',

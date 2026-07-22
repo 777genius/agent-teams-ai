@@ -15,6 +15,8 @@ interface KanbanColumnProps {
   children: React.ReactNode;
 }
 
+export const KANBAN_COLUMN_CONTROL_INSET_CLASS = 'mx-2';
+
 export const KanbanColumn = memo(function KanbanColumn({
   title,
   count,

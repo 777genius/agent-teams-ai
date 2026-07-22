@@ -39,11 +39,7 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
 
     expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binaryPath);
     expect(env.OPENCODE_BIN_PATH).toBe(binaryPath);
-    expect(env.PATH?.split(path.delimiter)).toEqual([
-      path.dirname(binaryPath),
-      '/usr/bin',
-      '/bin',
-    ]);
+    expect(env.PATH?.split(path.delimiter)).toEqual([path.dirname(binaryPath), '/usr/bin', '/bin']);
   });
 
   it('recovers when managed OpenCode is installed after the bridge base env was created', async () => {
@@ -103,9 +99,7 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
       OPENCODE_BIN_PATH: unsupportedBinaryPath,
       PATH: '/usr/bin',
     };
-    const resolver = vi
-      .fn<() => Promise<string | null>>()
-      .mockResolvedValue(verifiedBinaryPath);
+    const resolver = vi.fn<() => Promise<string | null>>().mockResolvedValue(verifiedBinaryPath);
     const validator = vi.fn<(binaryPath: string) => Promise<boolean>>().mockResolvedValue(false);
     const onWarning = vi.fn();
 

@@ -3,8 +3,6 @@ import {
   budgetWorkspaceTrustDiagnosticsManifest,
   buildWorkspaceTrustPathCandidates,
   buildWorkspaceTrustPreflightEnv,
-  resolveWorkspaceTrustCanonicalGitRoot,
-  resolveWorkspaceTrustFilesystemGitRoot,
   type WorkspaceTrustArgsOnlyPlanRequest,
   type WorkspaceTrustArgsOnlyPlanResult,
   type WorkspaceTrustCoordinator,
@@ -17,17 +15,16 @@ import {
   type WorkspaceTrustProvider,
   type WorkspaceTrustWorkspace,
 } from '@features/workspace-trust/main';
-import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
-import { execFile } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
+
+import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 
 import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility';
 import {
   buildWorkspaceTrustPreflightLaunchDiagnostic,
   mergeLaunchDiagnosticItem,
 } from './TeamProvisioningLaunchDiagnostics';
+import { normalizeTeamMemberProviderId } from './TeamProvisioningMemberSpecs';
 
 import type {
   TeamCreateRequest,
@@ -38,6 +35,24 @@ import type {
 } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
+
+export interface WorkspaceTrustPlanningLogger {
+  warn(message: string): void;
+}
+
+export interface WorkspaceTrustGitRootResolutionPorts {
+  resolveGitTopLevel(cwd: string): Promise<string | null>;
+  resolveFilesystemGitRoot(cwd: string): Promise<string | null>;
+  isAbsolutePath(value: string): boolean;
+}
+
+export interface WorkspaceTrustWorkspaceCollectionPorts {
+  getHomeDir(): string;
+  realpath(value: string): Promise<string | null>;
+  resolveGitRoot(cwd: string): Promise<string | null>;
+  resolveCanonicalGitRoot(gitRoot: string): Promise<string>;
+  platform: 'posix' | 'win32';
+}
 
 export type WorkspaceTrustProviderArgsResolver = (input: {
   providerId: TeamProviderId;
@@ -111,12 +126,15 @@ export function toWorkspaceTrustProvider(providerId: TeamProviderId): WorkspaceT
 }
 
 export function collectWorkspaceTrustProviders(input: {
-  leadProviderId: TeamProviderId;
-  memberProviderIds: readonly (TeamProviderId | null | undefined)[];
+  leadProviderId?: TeamProviderId;
+  members: TeamCreateRequest['members'];
 }): WorkspaceTrustProvider[] {
   const providers = new Set<WorkspaceTrustProvider>();
-  providers.add(toWorkspaceTrustProvider(input.leadProviderId));
-  for (const providerId of input.memberProviderIds) {
+  providers.add(toWorkspaceTrustProvider(resolveTeamProviderId(input.leadProviderId)));
+  for (const member of input.members) {
+    const providerId =
+      normalizeTeamMemberProviderId(member.providerId) ??
+      normalizeTeamMemberProviderId((member as { provider?: unknown }).provider);
     if (providerId) {
       providers.add(toWorkspaceTrustProvider(providerId));
     }
@@ -128,39 +146,26 @@ export function collectWorkspaceTrustProviders(input: {
   return providerOrder.filter((provider) => providers.has(provider));
 }
 
-export async function resolveWorkspaceTrustGitRoot(cwd: string): Promise<string | null> {
+export async function resolveWorkspaceTrustGitRoot(
+  cwd: string,
+  ports: WorkspaceTrustGitRootResolutionPorts
+): Promise<string | null> {
   const normalizedCwd = cwd.trim();
   if (!normalizedCwd) {
     return null;
   }
-  const gitRoot = await new Promise<string | null>((resolve) => {
-    execFile(
-      'git',
-      ['-C', normalizedCwd, 'rev-parse', '--show-toplevel'],
-      {
-        encoding: 'utf8',
-        maxBuffer: 16 * 1024,
-        timeout: 1000,
-        windowsHide: true,
-      },
-      (error, stdout) => {
-        if (error) {
-          resolve(null);
-          return;
-        }
-        const gitRoot = stdout.trim();
-        resolve(gitRoot && path.isAbsolute(gitRoot) ? gitRoot : null);
-      }
-    );
-  });
-  return gitRoot ?? resolveWorkspaceTrustFilesystemGitRoot(normalizedCwd);
+  const gitRoot = (await ports.resolveGitTopLevel(normalizedCwd))?.trim() ?? null;
+  return gitRoot && ports.isAbsolutePath(gitRoot)
+    ? gitRoot
+    : ports.resolveFilesystemGitRoot(normalizedCwd);
 }
 
 export async function collectWorkspaceTrustWorkspaces(input: {
   cwd: string;
   members: TeamCreateRequest['members'];
+  ports: WorkspaceTrustWorkspaceCollectionPorts;
 }): Promise<WorkspaceTrustWorkspace[]> {
-  const homeDir = getHomeDir();
+  const homeDir = input.ports.getHomeDir();
   const candidates: WorkspaceTrustWorkspace[] = [];
   const gitRootCache = new Map<string, string | null>();
   const addPath = async (
@@ -168,14 +173,14 @@ export async function collectWorkspaceTrustWorkspaces(input: {
     source: WorkspaceTrustWorkspace['source'],
     memberId?: string
   ): Promise<void> => {
-    const realCwd = await fs.promises.realpath(cwd).catch(() => null);
+    const realCwd = await input.ports.realpath(cwd);
     let gitRoot = gitRootCache.get(cwd);
     if (gitRoot === undefined) {
-      const resolvedGitRoot = await resolveWorkspaceTrustGitRoot(cwd);
-      const realGitRoot = resolvedGitRoot
-        ? await fs.promises.realpath(resolvedGitRoot).catch(() => resolvedGitRoot)
-        : null;
-      gitRoot = realGitRoot ? await resolveWorkspaceTrustCanonicalGitRoot(realGitRoot) : null;
+      const resolvedGitRoot = await input.ports.resolveGitRoot(cwd);
+      const realGitRoot = resolvedGitRoot ? await input.ports.realpath(resolvedGitRoot) : null;
+      gitRoot = realGitRoot
+        ? await input.ports.resolveCanonicalGitRoot(realGitRoot)
+        : resolvedGitRoot;
       gitRootCache.set(cwd, gitRoot);
     }
     candidates.push(
@@ -186,7 +191,7 @@ export async function collectWorkspaceTrustWorkspaces(input: {
         homeDir,
         source,
         memberId,
-        platform: process.platform === 'win32' ? 'win32' : 'posix',
+        platform: input.ports.platform,
       })
     );
   };
@@ -245,6 +250,7 @@ export function createDefaultModelWorkspaceTrustProviderArgsResolver(
 export async function planWorkspaceTrustArgsOnlySafely(input: {
   coordinator: WorkspaceTrustCoordinator | null;
   request: WorkspaceTrustArgsOnlyPlanRequest;
+  logger?: WorkspaceTrustPlanningLogger;
 }): Promise<WorkspaceTrustArgsOnlyPlanResult> {
   if (!input.coordinator) {
     return { launchArgPatches: [] };
@@ -252,7 +258,7 @@ export async function planWorkspaceTrustArgsOnlySafely(input: {
   try {
     return await input.coordinator.planArgsOnly(input.request);
   } catch (error) {
-    logger.warn(
+    (input.logger ?? logger).warn(
       `Workspace trust args-only planning failed; continuing without trust arg patches: ${
         error instanceof Error ? error.message : String(error)
       }`
@@ -264,6 +270,7 @@ export async function planWorkspaceTrustArgsOnlySafely(input: {
 export async function planWorkspaceTrustFullSafely(input: {
   coordinator: WorkspaceTrustCoordinator | null;
   request: WorkspaceTrustFullPlanRequest;
+  logger?: WorkspaceTrustPlanningLogger;
 }): Promise<WorkspaceTrustFullPlanResult | null> {
   if (!input.coordinator) {
     return null;
@@ -271,7 +278,7 @@ export async function planWorkspaceTrustFullSafely(input: {
   try {
     return await input.coordinator.planFull(input.request);
   } catch (error) {
-    logger.warn(
+    (input.logger ?? logger).warn(
       `Workspace trust full planning failed; continuing without trust arg patches: ${
         error instanceof Error ? error.message : String(error)
       }`

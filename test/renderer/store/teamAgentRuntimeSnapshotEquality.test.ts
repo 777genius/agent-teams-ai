@@ -45,7 +45,7 @@ function createRuntimeEntry(overrides: Partial<TeamAgentRuntimeEntry> = {}): Tea
     laneKind: 'primary',
     pid: 111,
     runtimeModel: 'gpt-5.3-codex',
-    cwd: '/tmp/old',
+    cwd: '/workspace/old',
     rssBytes: 1024,
     cpuPercent: 4,
     primaryCpuPercent: 3,
@@ -105,19 +105,31 @@ describe('teamAgentRuntimeSnapshotEquality', () => {
     expect(areTeamAgentRuntimeResourceSamplesEqual(null, createResourceSample())).toBe(false);
   });
 
-  it('ignores runtime entry fields that do not currently affect equality', () => {
-    const left = createRuntimeEntry({
-      cwd: '/tmp/old',
-      runtimeLeaseExpiresAt: '2026-05-22T10:10:00.000Z',
-      updatedAt: '2026-05-22T10:00:00.000Z',
-    });
-    const right = createRuntimeEntry({
-      cwd: '/tmp/new',
-      runtimeLeaseExpiresAt: '2026-05-22T10:20:00.000Z',
-      updatedAt: '2026-05-22T10:05:00.000Z',
-    });
-
-    expect(areTeamAgentRuntimeEntriesEqual(left, right)).toBe(true);
+  it('detects renderer-facing runtime entry metadata and default freshness changes', () => {
+    expect(
+      areTeamAgentRuntimeEntriesEqual(
+        createRuntimeEntry({ cwd: '/workspace/old' }),
+        createRuntimeEntry({ cwd: '/workspace/new' })
+      )
+    ).toBe(false);
+    expect(
+      areTeamAgentRuntimeEntriesEqual(
+        createRuntimeEntry({ runtimeLeaseExpiresAt: '2026-05-22T10:10:00.000Z' }),
+        createRuntimeEntry({ runtimeLeaseExpiresAt: '2026-05-22T10:20:00.000Z' })
+      )
+    ).toBe(false);
+    expect(
+      areTeamAgentRuntimeEntriesEqual(
+        createRuntimeEntry({ updatedAt: '2026-05-22T10:00:00.000Z' }),
+        createRuntimeEntry({ updatedAt: '2026-05-22T10:05:00.000Z' })
+      )
+    ).toBe(false);
+    expect(
+      areTeamAgentRuntimeEntriesEqual(
+        createRuntimeEntry({ runtimeLastSeenAt: '2026-05-22T10:00:00.000Z' }),
+        createRuntimeEntry({ runtimeLastSeenAt: '2026-05-22T10:00:05.000Z' })
+      )
+    ).toBe(false);
   });
 
   it('detects visible runtime entry field changes', () => {
@@ -160,10 +172,10 @@ describe('teamAgentRuntimeSnapshotEquality', () => {
     ).toBe(false);
   });
 
-  it('compares runtime snapshots by team, run id, and semantic member entries', () => {
-    expect(areTeamAgentRuntimeSnapshotsEqual(createRuntimeSnapshot(), createRuntimeSnapshot())).toBe(
-      true
-    );
+  it('returns true for unchanged snapshots and compares structural snapshot fields', () => {
+    expect(
+      areTeamAgentRuntimeSnapshotsEqual(createRuntimeSnapshot(), createRuntimeSnapshot())
+    ).toBe(true);
     expect(
       areTeamAgentRuntimeSnapshotsEqual(
         createRuntimeSnapshot(),
@@ -183,19 +195,136 @@ describe('teamAgentRuntimeSnapshotEquality', () => {
     ).toBe(false);
   });
 
-  it('ignores snapshot metadata fields that do not currently affect equality', () => {
+  it('detects renderer-facing snapshot metadata changes', () => {
+    expect(
+      areTeamAgentRuntimeSnapshotsEqual(
+        createRuntimeSnapshot({ providerBackendId: 'codex-native' }),
+        createRuntimeSnapshot({ providerBackendId: 'api' })
+      )
+    ).toBe(false);
+    expect(
+      areTeamAgentRuntimeSnapshotsEqual(
+        createRuntimeSnapshot({ fastMode: 'inherit' }),
+        createRuntimeSnapshot({ fastMode: 'on' })
+      )
+    ).toBe(false);
+  });
+
+  it('uses a bounded freshness cadence with the default production options', () => {
     const left = createRuntimeSnapshot({
       updatedAt: '2026-05-22T10:00:00.000Z',
-      providerBackendId: 'codex-native',
-      fastMode: 'inherit',
+      members: {
+        alice: createRuntimeEntry({
+          updatedAt: '2026-05-22T10:00:00.000Z',
+          runtimeLastSeenAt: '2026-05-22T10:00:00.000Z',
+        }),
+      },
     });
-    const right = createRuntimeSnapshot({
-      updatedAt: '2026-05-22T10:05:00.000Z',
-      providerBackendId: 'api',
-      fastMode: 'on',
+    const subCadence = createRuntimeSnapshot({
+      updatedAt: '2026-05-22T10:00:04.999Z',
+      members: {
+        alice: createRuntimeEntry({
+          updatedAt: '2026-05-22T10:00:04.999Z',
+          runtimeLastSeenAt: '2026-05-22T10:00:04.999Z',
+        }),
+      },
+    });
+    const nextCadence = createRuntimeSnapshot({
+      updatedAt: '2026-05-22T10:00:05.000Z',
+      members: {
+        alice: createRuntimeEntry({
+          updatedAt: '2026-05-22T10:00:05.000Z',
+          runtimeLastSeenAt: '2026-05-22T10:00:05.000Z',
+        }),
+      },
     });
 
+    expect(areTeamAgentRuntimeSnapshotsEqual(left, subCadence)).toBe(true);
+    expect(areTeamAgentRuntimeSnapshotsEqual(left, nextCadence)).toBe(false);
+  });
+
+  it('surfaces a heartbeat-only refresh without explicit production options', () => {
+    const left = createRuntimeSnapshot({
+      updatedAt: '2026-05-22T10:00:00.000Z',
+      members: {
+        alice: createRuntimeEntry({
+          updatedAt: '2026-05-22T10:00:00.000Z',
+          runtimeLastSeenAt: '2026-05-22T10:00:00.000Z',
+        }),
+      },
+    });
+    const right = createRuntimeSnapshot({
+      updatedAt: '2026-05-22T10:00:10.000Z',
+      members: {
+        alice: createRuntimeEntry({
+          updatedAt: '2026-05-22T10:00:10.000Z',
+          runtimeLastSeenAt: '2026-05-22T10:00:10.000Z',
+        }),
+      },
+    });
+
+    expect(areTeamAgentRuntimeSnapshotsEqual(left, right)).toBe(false);
+  });
+
+  it('keeps timestamp-only comparisons monotonic', () => {
+    const newer = createRuntimeSnapshot({
+      updatedAt: '2026-05-22T10:00:10.000Z',
+      members: {
+        alice: createRuntimeEntry({
+          updatedAt: '2026-05-22T10:00:10.000Z',
+          runtimeLastSeenAt: '2026-05-22T10:00:10.000Z',
+        }),
+      },
+    });
+    const older = createRuntimeSnapshot({
+      updatedAt: '2026-05-22T10:00:00.000Z',
+      members: {
+        alice: createRuntimeEntry({
+          updatedAt: '2026-05-22T10:00:00.000Z',
+          runtimeLastSeenAt: '2026-05-22T10:00:00.000Z',
+        }),
+      },
+    });
+
+    expect(areTeamAgentRuntimeSnapshotsEqual(newer, older)).toBe(true);
+  });
+
+  it('supports exact freshness checks and an explicit freshness opt-out', () => {
+    const left = createRuntimeSnapshot();
+    const right = createRuntimeSnapshot({ updatedAt: '2026-05-22T10:00:00.001Z' });
+
     expect(areTeamAgentRuntimeSnapshotsEqual(left, right)).toBe(true);
+    expect(
+      areTeamAgentRuntimeSnapshotsEqual(left, right, { compareFreshnessTimestamps: true })
+    ).toBe(false);
+    expect(
+      areTeamAgentRuntimeSnapshotsEqual(left, right, { compareFreshnessTimestamps: false })
+    ).toBe(true);
+  });
+
+  it('does not let regressive freshness hide structural changes', () => {
+    const newer = createRuntimeSnapshot({
+      updatedAt: '2026-05-22T10:00:10.000Z',
+      members: {
+        alice: createRuntimeEntry({
+          alive: true,
+          updatedAt: '2026-05-22T10:00:10.000Z',
+          runtimeLastSeenAt: '2026-05-22T10:00:10.000Z',
+        }),
+      },
+    });
+    const structurallyChangedOlder = createRuntimeSnapshot({
+      updatedAt: '2026-05-22T10:00:00.000Z',
+      members: {
+        alice: createRuntimeEntry({
+          alive: false,
+          updatedAt: '2026-05-22T10:00:00.000Z',
+          runtimeLastSeenAt: '2026-05-22T10:00:00.000Z',
+        }),
+      },
+    });
+
+    expect(areTeamAgentRuntimeSnapshotsEqual(newer, structurallyChangedOlder)).toBe(false);
   });
 
   it('returns false when there is no previous runtime snapshot', () => {

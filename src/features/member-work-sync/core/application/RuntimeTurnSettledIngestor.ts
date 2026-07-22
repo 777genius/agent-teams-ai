@@ -152,11 +152,21 @@ export class RuntimeTurnSettledIngestor {
           continue;
         }
 
-        this.deps.reconcileQueue.enqueueRuntimeTurnSettled({
+        const accepted = this.deps.reconcileQueue.enqueueRuntimeTurnSettled({
           teamName: resolution.teamName,
           memberName: resolution.memberName,
           event: normalized.event,
         });
+        if (!accepted) {
+          summary.failed += 1;
+          this.deps.logger?.warn('runtime turn settled reconcile enqueue rejected', {
+            filePath: payload.filePath,
+            provider: payload.provider,
+            teamName: resolution.teamName,
+            memberName: resolution.memberName,
+          });
+          continue;
+        }
         summary.enqueued += 1;
         await this.deps.eventStore.markProcessed(payload, {
           event: normalized.event,

@@ -22,6 +22,7 @@ export class RuntimeTurnSettledDrainScheduler {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private activeDrain: Promise<RuntimeTurnSettledDrainSummary> | null = null;
   private disposed = false;
+  private disposePromise: Promise<void> | null = null;
 
   constructor(private readonly deps: RuntimeTurnSettledDrainSchedulerDeps) {
     this.intervalMs = Math.max(1_000, deps.intervalMs ?? 15_000);
@@ -71,12 +72,21 @@ export class RuntimeTurnSettledDrainScheduler {
     }
   }
 
-  dispose(): void {
+  dispose(): Promise<void> {
+    if (this.disposePromise) {
+      return this.disposePromise;
+    }
+
     this.disposed = true;
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
     }
+
+    this.disposePromise = this.activeDrain
+      ? this.waitForActiveDrainDuringDispose(this.activeDrain)
+      : Promise.resolve();
+    return this.disposePromise;
   }
 
   private schedule(delayMs: number = this.intervalMs): void {
@@ -105,6 +115,28 @@ export class RuntimeTurnSettledDrainScheduler {
               new Error(`runtime turn settled drain timed out after ${this.drainTimeoutMs}ms`)
             );
           }, this.drainTimeoutMs);
+          unrefTimer(timeout);
+        }),
+      ]);
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
+  }
+
+  private async waitForActiveDrainDuringDispose(
+    drain: Promise<RuntimeTurnSettledDrainSummary>
+  ): Promise<void> {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    try {
+      await Promise.race([
+        drain.then(
+          () => undefined,
+          () => undefined
+        ),
+        new Promise<void>((resolve) => {
+          timeout = setTimeout(resolve, this.drainTimeoutMs);
           unrefTimer(timeout);
         }),
       ]);

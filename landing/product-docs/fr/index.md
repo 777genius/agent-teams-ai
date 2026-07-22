@@ -18,32 +18,32 @@ hero:
       text: Concepts
       link: /fr/reference/concepts
 features:
-  - icon: "01"
+  - icon: '01'
     title: Flux de travail axé sur l'équipe
     details: Définissez des rôles, lancez un lead et laissez les agents répartir, revendiquer et coordonner les tâches.
     link: /fr/guide/create-team
     linkText: Créer une équipe
-  - icon: "02"
+  - icon: '02'
     title: Tableau kanban en direct
     details: Suivez les tâches passer par todo, in progress, review, done et approved au fil du travail des agents.
     link: /fr/guide/agent-workflow
     linkText: Comprendre le flux de travail
-  - icon: "03"
+  - icon: '03'
     title: Revue de code intégrée
     details: Inspectez les diffs au périmètre des tâches, acceptez ou rejetez des hunks et commentez là où les agents ont besoin d'orientation.
     link: /fr/guide/code-review
     linkText: Examiner les modifications
-  - icon: "04"
+  - icon: '04'
     title: Configuration adaptée au runtime
     details: Utilisez Claude, Codex, OpenCode ou des fournisseurs multimodèles via l'accès dont vous disposez déjà.
     link: /fr/guide/runtime-setup
     linkText: Configurer les runtimes
-  - icon: "05"
+  - icon: '05'
     title: Contrôle local d'abord
     details: L'application de bureau lit l'état local des projets et des runtimes. Votre code reste sur votre machine, sauf si un fournisseur sélectionné reçoit le contexte du prompt.
     link: /fr/reference/privacy-local-data
     linkText: Modèle de confidentialité
-  - icon: "06"
+  - icon: '06'
     title: Équipes débogables
     details: Tracez les journaux de tâches, la sortie du runtime, les messages des coéquipiers et les processus en direct lorsqu'un lancement ou une tâche se bloque.
     link: /fr/guide/troubleshooting

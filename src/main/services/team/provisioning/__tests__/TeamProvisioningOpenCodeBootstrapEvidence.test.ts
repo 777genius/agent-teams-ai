@@ -110,6 +110,29 @@ describe('TeamProvisioningOpenCodeBootstrapEvidence', () => {
     ]);
   });
 
+  it('replaces a stale session when the same member uses different name casing', () => {
+    const replacement = {
+      id: 'session-new',
+      memberName: 'alice',
+      runId: 'run-1',
+      laneId: 'lane-a',
+    };
+
+    expect(
+      mergeOpenCodeRuntimeSessionRecords(
+        [
+          {
+            id: 'session-old',
+            memberName: 'Alice',
+            runId: 'run-1',
+            laneId: 'lane-a',
+          },
+        ],
+        replacement
+      )
+    ).toEqual([replacement]);
+  });
+
   it('matches committed evidence by run, session, source, candidate fields, and member name case', () => {
     const candidate = buildAppManagedCandidate();
     const evidence = buildCommittedEvidence([

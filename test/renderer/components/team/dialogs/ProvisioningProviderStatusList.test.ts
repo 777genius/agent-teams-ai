@@ -181,9 +181,7 @@ describe('ProvisioningProviderStatusList', () => {
           ],
         },
       ])
-    ).toBe(
-      'Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.'
-    );
+    ).toBe('Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.');
   });
 
   it('renders Copy diagnostics for OpenCode support diagnostics and copies the prepared payload', async () => {

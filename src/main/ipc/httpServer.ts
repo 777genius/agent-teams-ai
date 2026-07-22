@@ -19,6 +19,16 @@ const logger = createLogger('IPC:httpServer');
 
 let httpServer: HttpServer;
 let startServer: () => Promise<void>;
+let lifecycleTail: Promise<void> = Promise.resolve();
+
+function enqueueLifecycleOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const result = lifecycleTail.then(operation);
+  lifecycleTail = result.then(
+    () => undefined,
+    () => undefined
+  );
+  return result;
+}
 
 /**
  * Initializes HTTP server handlers with service instances.
@@ -57,41 +67,45 @@ export function removeHttpServerHandlers(ipcMain: IpcMain): void {
 // Handler Implementations
 // =============================================================================
 
-async function handleStart(): Promise<{
+function handleStart(): Promise<{
   success: boolean;
   data?: { running: boolean; port: number | null };
   error?: string;
 }> {
-  try {
-    await startServer();
-    configManager.updateConfig('httpServer', { enabled: true, port: httpServer.getPort() });
-    return { success: true, data: { running: true, port: httpServer.getPort() } };
-  } catch (error) {
-    logger.error('Failed to start HTTP server via IPC:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to start server',
-    };
-  }
+  return enqueueLifecycleOperation(async () => {
+    try {
+      await startServer();
+      configManager.updateConfig('httpServer', { enabled: true, port: httpServer.getPort() });
+      return { success: true, data: { running: true, port: httpServer.getPort() } };
+    } catch (error) {
+      logger.error('Failed to start HTTP server via IPC:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to start server',
+      };
+    }
+  });
 }
 
-async function handleStop(): Promise<{
+function handleStop(): Promise<{
   success: boolean;
   data?: { running: boolean; port: number | null };
   error?: string;
 }> {
-  try {
-    await httpServer.stop();
-    await clearTeamControlApiState();
-    configManager.updateConfig('httpServer', { enabled: false });
-    return { success: true, data: { running: false, port: httpServer.getPort() } };
-  } catch (error) {
-    logger.error('Failed to stop HTTP server via IPC:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to stop server',
-    };
-  }
+  return enqueueLifecycleOperation(async () => {
+    try {
+      await httpServer.stop();
+      await clearTeamControlApiState();
+      configManager.updateConfig('httpServer', { enabled: false });
+      return { success: true, data: { running: false, port: httpServer.getPort() } };
+    } catch (error) {
+      logger.error('Failed to stop HTTP server via IPC:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to stop server',
+      };
+    }
+  });
 }
 
 function handleGetStatus(): {

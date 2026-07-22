@@ -883,6 +883,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       memberName: input.memberName,
       requestId: input.requestId,
       decision: input.decision,
+      ...(input.message === undefined ? {} : { message: input.message }),
       expectedCapabilitySnapshotId: null,
       manifestHighWatermark: null,
     });

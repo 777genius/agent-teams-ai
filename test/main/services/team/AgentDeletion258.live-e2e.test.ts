@@ -12,6 +12,7 @@ import {
   registerTeamHandlers,
   removeTeamHandlers,
 } from '../../../../src/main/ipc/teams';
+import { bindTeamIpcHandlerApis } from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
 import { TeamInboxWriter } from '../../../../src/main/services/team/TeamInboxWriter';
@@ -140,7 +141,7 @@ liveDescribe('issue #258 member deletion live e2e', () => {
 
       const handlers = new Map<string, RegisteredHandler>();
       ipcMain = createIpcMainHarness(handlers);
-      initializeTeamHandlers(new TeamDataService(), activeService);
+      initializeTeamHandlers(new TeamDataService(), bindTeamIpcHandlerApis(activeService));
       registerTeamHandlers(ipcMain);
       const remove = handlers.get(TEAM_REMOVE_MEMBER);
       if (!remove) throw new Error('TEAM_REMOVE_MEMBER IPC handler was not registered');
@@ -168,7 +169,7 @@ liveDescribe('issue #258 member deletion live e2e', () => {
         await activeService.stopTeam(teamName);
         terminateOwnedProcesses(lastSnapshot);
         activeService = createProvisioningService();
-        initializeTeamHandlers(new TeamDataService(), activeService);
+        initializeTeamHandlers(new TeamDataService(), bindTeamIpcHandlerApis(activeService));
         const relaunchProgress: TeamProvisioningProgress[] = [];
         await activeService.launchTeam(
           {
