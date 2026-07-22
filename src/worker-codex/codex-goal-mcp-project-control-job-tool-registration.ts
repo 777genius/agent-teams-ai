@@ -109,7 +109,7 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
       title: "Project Control Prepare Verifier",
       description:
         "Create a verifier worktree at canonical remote HEAD, atomically apply a terminal producer handoff, create the verifier job and optionally start it.",
-      inputSchema: {
+      inputSchema: z.object({
         ...goalInputSchema(),
         ...jobRegistryInputSchema(),
         controllerJobId: z.string().optional(),
@@ -131,6 +131,7 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
         }).strict().optional().describe(
           "Atomically bind this verifier to the current canonical target and exact remote merge source. Requires requireCanonicalRemoteHead=true and omitted expectedSourceCommit/canonicalSha/phaseStartSha; runtime resolves and pins both commits into the immutable admission receipt.",
         ),
+        requireCanonicalRemoteHead: z.boolean().optional(),
         newBranch: z.string().optional(),
         promptBody: z.string().optional(),
         preStartAdmission: workerLaunchAdmissionSchema
@@ -148,7 +149,39 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
         confirmDependencyBootstrap: z.boolean().optional(),
         executionMode: z.enum(["sync", "bounded", "async"]).optional(),
         confirmRefill: z.boolean().optional(),
-      },
+      }).check((context) => {
+        if (context.value.mergeBinding === undefined) return;
+        const conflicts: ReadonlyArray<readonly [
+          string,
+          unknown,
+          (string | number)[],
+        ]> = [
+          [
+            "project_control_merge_binding_expected_source_conflict",
+            context.value.expectedSourceCommit,
+            ["expectedSourceCommit"],
+          ],
+          [
+            "project_control_merge_binding_canonicalSha_must_be_omitted",
+            context.value.preStartAdmission?.contract.canonicalSha,
+            ["preStartAdmission", "contract", "canonicalSha"],
+          ],
+          [
+            "project_control_merge_binding_phaseStartSha_must_be_omitted",
+            context.value.preStartAdmission?.contract.phaseStartSha,
+            ["preStartAdmission", "contract", "phaseStartSha"],
+          ],
+          [
+            "project_control_merge_binding_merge_override_denied",
+            context.value.preStartAdmission?.contract.merge,
+            ["preStartAdmission", "contract", "merge"],
+          ],
+        ];
+        for (const [message, value, path] of conflicts) {
+          if (value === undefined) continue;
+          context.issues.push({ code: "custom", input: value, path, message });
+        }
+      }),
     },
     async (args) => withMcpErrors(async () =>
       projectControlPrepareVerifier(args as ProjectControlMcpArgs),

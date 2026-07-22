@@ -49,6 +49,7 @@ export type ProjectDebtItem = {
   readonly reason: ProjectDebtReason;
   readonly subject: string;
   readonly evidence: readonly string[];
+  readonly affectedPaths?: readonly string[];
   readonly severity?: "info" | "warning" | "blocking";
 };
 
@@ -89,6 +90,7 @@ export type ProjectAdmissionRequest = {
   readonly workspacePath?: string;
   readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
   readonly tags?: readonly string[];
+  readonly ownedPaths?: readonly string[];
 };
 
 export type ProjectAdmissionDecision = {
@@ -159,13 +161,21 @@ export function evaluateProjectAdmission(input: {
       debt: debtSummary.diskPressure,
     });
   }
-  if (debtSummary.blockingAdmissionDebt.length === 0) {
+  const requestOwnedPaths = input.request.ownedPaths;
+  const blockingAdmissionDebt = producerBlockingAdmissionDebt({
+    workerRole,
+    ...(requestOwnedPaths ? { ownedPaths: requestOwnedPaths } : {}),
+    debt: debtSummary.blockingAdmissionDebt,
+  });
+  if (blockingAdmissionDebt.length === 0) {
     return {
       ...base,
       status: ProjectAdmissionDecisionStatus.Allowed,
       allowed: true,
       reason: ProjectAdmissionDecisionReason.Allowed,
-      evidence: ["project admission snapshot has no blocking debt"],
+      evidence: debtSummary.blockingAdmissionDebt.length === 0
+        ? ["project admission snapshot has no blocking debt"]
+        : ["producer owned paths are disjoint from all unconsumed completed output"],
       debt: [],
     };
   }
@@ -176,15 +186,69 @@ export function evaluateProjectAdmission(input: {
       allowed: true,
       reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
       evidence: ["project output debt exists; only drain/review roles are admitted"],
-      debt: debtSummary.blockingAdmissionDebt,
+      debt: blockingAdmissionDebt,
     };
   }
   return denied({
     ...base,
     reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
     evidence: ["project output debt blocks producer work"],
-    debt: debtSummary.blockingAdmissionDebt,
+    debt: blockingAdmissionDebt,
   });
+}
+
+function producerBlockingAdmissionDebt(input: {
+  readonly workerRole: ProjectAdmissionWorkerRole;
+  readonly ownedPaths?: readonly string[];
+  readonly debt: readonly ProjectDebtItem[];
+}): readonly ProjectDebtItem[] {
+  const ownedPaths = input.ownedPaths;
+  if (
+    input.workerRole !== ProjectAdmissionWorkerRole.Producer ||
+    !validAdmissionPaths(ownedPaths)
+  ) {
+    return input.debt;
+  }
+  return input.debt.filter((item) =>
+    item.reason !== ProjectDebtReason.UnconsumedCompletedJob ||
+    !validAdmissionPaths(item.affectedPaths) ||
+    admissionPathsOverlap(ownedPaths, item.affectedPaths)
+  );
+}
+
+function validAdmissionPaths(
+  paths: readonly string[] | undefined,
+): paths is readonly string[] {
+  return Array.isArray(paths) && paths.length > 0 && paths.every((path) => {
+    if (
+      typeof path !== "string" ||
+      path.length === 0 ||
+      path.startsWith("/") ||
+      path.includes("\\") ||
+      /[\u0000-\u001f\u007f]/u.test(path)
+    ) {
+      return false;
+    }
+    const parts = path.endsWith("/")
+      ? path.slice(0, -1).split("/")
+      : path.split("/");
+    return parts.length > 0 && parts.every(
+      (part) => part.length > 0 && part !== "." && part !== "..",
+    );
+  });
+}
+
+function admissionPathsOverlap(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  return left.some((leftPath) => right.some((rightPath) => {
+    const leftBase = leftPath.endsWith("/") ? leftPath.slice(0, -1) : leftPath;
+    const rightBase = rightPath.endsWith("/") ? rightPath.slice(0, -1) : rightPath;
+    return leftBase === rightBase ||
+      leftBase.startsWith(`${rightBase}/`) ||
+      rightBase.startsWith(`${leftBase}/`);
+  }));
 }
 
 export function summarizeProjectAdmissionDebt(

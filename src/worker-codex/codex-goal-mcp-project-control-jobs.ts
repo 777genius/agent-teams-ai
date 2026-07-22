@@ -250,6 +250,9 @@ export async function projectControlRefillWorkerView(
   const expectedSourceCommit = stringValue(args.expectedSourceCommit);
   const newBranch = stringValue(args.newBranch);
   if (newBranch) assertSafeGitRefName(newBranch, "newBranch");
+  const requestedOwnedPaths = projectControlAdmissionOwnedPaths(
+    args.preStartAdmission,
+  );
   const realSourceWorkspacePath =
     await projectControlRealPathOutsideWorkspaceScope(
       sourceWorkspacePath,
@@ -273,6 +276,9 @@ export async function projectControlRefillWorkerView(
     ...(newBranch ? { newBranch } : {}),
     workerRole: role,
     ...(baseCreateManifest.tags ? { tags: baseCreateManifest.tags } : {}),
+    ...(requestedOwnedPaths
+      ? { ownedPaths: requestedOwnedPaths }
+      : {}),
   };
 
   if (!args.confirmRefill) {
@@ -544,6 +550,9 @@ export async function projectControlRefillWorkerView(
       manifest: createManifest,
       promptBody,
       workerRole: role,
+      ...(requestedOwnedPaths
+        ? { ownedPaths: requestedOwnedPaths }
+        : {}),
     });
     createJob = createResult.result;
     manifest = createResult.manifest;
@@ -642,6 +651,9 @@ export async function projectControlRefillWorkerView(
             accounts: [reservedAccount.accountId],
             workerRole: role,
             ...(manifest.tags ? { tags: manifest.tags } : {}),
+            ...(requestedOwnedPaths
+              ? { ownedPaths: requestedOwnedPaths }
+              : {}),
           });
           return {
             start: startResult,
@@ -1260,4 +1272,17 @@ function jsonRecordFromProjectControlArgs(
   args: ProjectControlMcpArgs,
 ): ProjectControlOperationJsonRecord {
   return JSON.parse(JSON.stringify(args)) as ProjectControlOperationJsonRecord;
+}
+
+function projectControlAdmissionOwnedPaths(value: unknown): readonly string[] | undefined {
+  if (!value || typeof value !== "object" || !("contract" in value)) return undefined;
+  const contract = value.contract;
+  if (!contract || typeof contract !== "object" || !("ownedPaths" in contract)) {
+    return undefined;
+  }
+  return Array.isArray(contract.ownedPaths) &&
+      contract.ownedPaths.length > 0 &&
+      contract.ownedPaths.every((path): path is string => typeof path === "string")
+    ? contract.ownedPaths
+    : undefined;
 }

@@ -55,6 +55,81 @@ describe("evaluateProjectAdmission", () => {
     });
   });
 
+  it("admits only producer ownership proven disjoint from completed output", () => {
+    const completedOutput = {
+      reason: ProjectDebtReason.UnconsumedCompletedJob,
+      subject: "infinity-context-memory-worker-v1",
+      affectedPaths: ["src/memory/reader.ts", "docs/runtime.md"],
+      evidence: ["reviewed marker exists but output is not integrated"],
+    };
+    const decide = (ownedPaths?: readonly string[]) => evaluateProjectAdmission({
+      request: {
+        operation: ProjectOperation.CreateWorktree,
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        ...(ownedPaths ? { ownedPaths } : {}),
+      },
+      snapshot: snapshot([completedOutput]),
+    });
+
+    expect(decide(["src/billing/"])).toMatchObject({
+      allowed: true,
+      reason: ProjectAdmissionDecisionReason.Allowed,
+      debt: [],
+    });
+    expect(decide(["src/memory/"])).toMatchObject({
+      allowed: false,
+      reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
+    });
+    expect(decide(["src/memory/reader.ts/generated.ts"])).toMatchObject({
+      allowed: false,
+      reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
+    });
+    expect(decide()).toMatchObject({
+      allowed: false,
+      reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
+    });
+    expect(evaluateProjectAdmission({
+      request: {
+        operation: ProjectOperation.CreateWorktree,
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        ownedPaths: ["src/billing/"],
+      },
+      snapshot: snapshot([{
+        reason: ProjectDebtReason.UnconsumedCompletedJob,
+        subject: "infinity-context-memory-worker-v1",
+        evidence: ["completed output paths are missing"],
+      }]),
+    })).toMatchObject({
+      allowed: false,
+      reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
+    });
+  });
+
+  it("does not bypass non-terminal safety debt for disjoint producer paths", () => {
+    for (const reason of [
+      ProjectDebtReason.ActiveWriterConflict,
+      ProjectDebtReason.StaleDirtyWorker,
+      ProjectDebtReason.UnreadableWorkspace,
+    ]) {
+      expect(evaluateProjectAdmission({
+        request: {
+          operation: ProjectOperation.StartWorker,
+          workerRole: ProjectAdmissionWorkerRole.Producer,
+          ownedPaths: ["src/disjoint/"],
+        },
+        snapshot: snapshot([{
+          reason,
+          subject: "infinity-context-active-v1",
+          affectedPaths: ["src/other.ts"],
+          evidence: ["unsafe writer state"],
+        }]),
+      })).toMatchObject({
+        allowed: false,
+        reason: ProjectAdmissionDecisionReason.OutputDebtPresent,
+      });
+    }
+  });
+
   it("allows reviewer and fastgate roles only as drain work when output debt exists", () => {
     const reviewer = evaluateProjectAdmission({
       request: {

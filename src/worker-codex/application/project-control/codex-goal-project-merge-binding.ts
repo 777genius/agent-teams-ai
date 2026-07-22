@@ -44,6 +44,7 @@ export function parseProjectMergeBindingRequest(input: {
   if (input.expectedSourceCommit !== undefined) {
     throw new Error("project_control_merge_binding_expected_source_conflict");
   }
+  assertProjectMergeAdmissionCallerFieldsOmitted(input.admission);
   if (typeof input.value.sourceRemote !== "string" || !input.value.sourceRemote) {
     throw new Error("mergeBinding.sourceRemote is required");
   }
@@ -272,4 +273,21 @@ function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
 function projectAdmissionHasCallerMerge(value: unknown): boolean {
   if (!isObject(value) || !isObject(value.contract)) return false;
   return "merge" in value.contract;
+}
+
+function assertProjectMergeAdmissionCallerFieldsOmitted(value: unknown): void {
+  if (!isObject(value) || !isObject(value.contract)) return;
+  if (value.contract.canonicalSha !== undefined) {
+    throw new Error(
+      "project_control_merge_binding_canonicalSha_must_be_omitted",
+    );
+  }
+  if (value.contract.phaseStartSha !== undefined) {
+    throw new Error(
+      "project_control_merge_binding_phaseStartSha_must_be_omitted",
+    );
+  }
+  if (value.contract.merge !== undefined) {
+    throw new Error("project_control_merge_binding_merge_override_denied");
+  }
 }

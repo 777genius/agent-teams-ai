@@ -304,6 +304,7 @@ export async function createOrReuseProjectJob(input: {
   readonly manifest: CodexGoalJobManifestInput;
   readonly promptBody: string;
   readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
+  readonly ownedPaths?: readonly string[];
 }): Promise<{
   readonly result: ProjectControlOperationResult;
   readonly manifest: CodexGoalJobManifest;
@@ -341,6 +342,7 @@ export async function createOrReuseProjectJob(input: {
     accounts: input.manifest.accounts,
     ...(input.workerRole ? { workerRole: input.workerRole } : {}),
     ...(input.manifest.tags ? { tags: input.manifest.tags } : {}),
+    ...(input.ownedPaths ? { ownedPaths: input.ownedPaths } : {}),
   });
   return {
     result,

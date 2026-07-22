@@ -280,6 +280,117 @@ describe("codex goal MCP server", () => {
     }
   });
 
+  it("admits only contract-path-disjoint producer refill past completed output", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-disjoint-output-debt-"));
+    const registryRootDir = join(root, "worker-jobs", "registry");
+    const controllerJobRoot = join(root, "worker-jobs", "infinity-context-controller-v1");
+    const sourceWorkspacePath = join(root, "workspaces", "infinity-context-main");
+    const worktreeRoot = join(root, "worktrees");
+    const server = createCodexGoalMcpServer();
+    const client = new Client({ name: "subscription-runtime-test", version: "0.0.0" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await mkdir(join(sourceWorkspacePath, "sandbox"), { recursive: true });
+      await gitInitRepository(sourceWorkspacePath);
+      await Promise.all([
+        writeFile(join(sourceWorkspacePath, "controller.md"), "controller\n"),
+        writeFile(join(sourceWorkspacePath, "lane.md"), "lane\n"),
+        writeFile(join(sourceWorkspacePath, "sandbox", ".keep"), ""),
+      ]);
+      await git(sourceWorkspacePath, ["add", "."]);
+      await git(sourceWorkspacePath, ["commit", "-m", "test: base"]);
+      await git(sourceWorkspacePath, ["update-ref", "refs/remotes/origin/main", "HEAD"]);
+      const baseSha = (await gitStdout(sourceWorkspacePath, ["rev-parse", "HEAD"])).trim();
+      await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: "infinity-context-controller-v1",
+        jobRootDir: controllerJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: sourceWorkspacePath,
+        promptPath: join(controllerJobRoot, "prompt.md"),
+        taskId: "infinity-context-controller-v1",
+        accounts: ["account-a"],
+        accessBoundary: AccessBoundary.ProjectScopedControl,
+        networkAccess: NetworkAccessMode.Restricted,
+        projectAccessScope: {
+          projectId: "infinity-context",
+          workspaceRoots: [join(root, "workspaces")],
+          worktreeRoots: [worktreeRoot],
+          registryRoot: registryRootDir,
+          jobIdPrefixes: ["infinity-context-"],
+          tmuxSessionPrefixes: ["infinity-context-"],
+          allowedBranches: ["main", "test/*"],
+          allowedGitRemotes: ["origin"],
+          allowedAccountIds: ["account-a"],
+          preStartAdmission: { required: true, mode: "serial-builtin" },
+        },
+      });
+      const refill = async (jobId: string, ownedPaths: readonly string[]) => {
+        const jobRootDir = join(root, "worker-jobs", jobId);
+        const workspacePath = join(worktreeRoot, jobId);
+        return callToolJson(client, "codex_goal_project_refill_worker", {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          jobId,
+          jobRootDir,
+          authRootDir: join(root, "auth"),
+          sourceWorkspacePath,
+          baseBranch: "origin/main",
+          newBranch: `test/${jobId}`,
+          workspacePath,
+          promptPath: join(jobRootDir, "prompt.md"),
+          outputPath: join(jobRootDir, `${jobId}.latest-result.json`),
+          promptBody: `Implement ${jobId}.\n`,
+          taskId: jobId,
+          accounts: ["account-a"],
+          workerRole: "producer",
+          preStartAdmission: projectOutputDebtAdmission({
+            root,
+            workspacePath,
+            baseSha,
+            laneId: jobId,
+            ownedPaths,
+          }),
+          confirmPreStartAdmission: true,
+          startWorker: false,
+          executionMode: "sync",
+          confirmRefill: true,
+        });
+      };
+
+      const heldJobId = "infinity-context-held-output-v1";
+      const heldRefill = await refill(heldJobId, ["src/held/"]);
+      expect(heldRefill).toMatchObject({ ok: true });
+      const heldWorkspace = join(worktreeRoot, heldJobId);
+      const heldJobRoot = join(root, "worker-jobs", heldJobId);
+      await mkdir(join(heldWorkspace, "src", "held"), { recursive: true });
+      await writeFile(join(heldWorkspace, "src", "held", "output.ts"), "export const held = true;\n");
+      await writeFile(
+        join(heldJobRoot, `${heldJobId}.latest-result.json`),
+        `${JSON.stringify({ status: "completed" })}\n`,
+      );
+
+      await expect(
+        refill("infinity-context-disjoint-v1", ["src/disjoint/"]),
+      ).resolves.toMatchObject({ ok: true });
+      const overlapping = await refill(
+        "infinity-context-overlap-v1",
+        ["src/held/"],
+      );
+      expect(overlapping).toMatchObject({
+        ok: false,
+        error: "project_control_admission_denied:output_debt_present",
+      });
+      await expect(access(join(worktreeRoot, "infinity-context-overlap-v1")))
+        .rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await client.close();
+      await server.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("admits producer refill when dirty legacy output has valid consumed ledger evidence", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-consumed-output-"));
     const registryRootDir = join(root, "worker-jobs", "registry");
@@ -707,3 +818,39 @@ describe("codex goal MCP server", () => {
     }
   });
 });
+
+function projectOutputDebtAdmission(input: {
+  readonly root: string;
+  readonly workspacePath: string;
+  readonly baseSha: string;
+  readonly laneId: string;
+  readonly ownedPaths: readonly string[];
+}) {
+  return {
+    mode: "serial-builtin",
+    contract: {
+      kind: "worker-launch",
+      format: 1,
+      canonicalSha: input.baseSha,
+      baseSha: input.baseSha,
+      phaseStartSha: input.baseSha,
+      packetRevision: "phase-01-r1",
+      controllerPacket: "controller.md",
+      lanePacket: "lane.md",
+      phaseId: "phase-01",
+      laneId: input.laneId,
+      inputPatchHash: null,
+      reviewKind: "implementation",
+      ownedPaths: input.ownedPaths,
+      mandatoryDocs: ["controller.md", "lane.md"],
+      mandatoryScripts: [],
+      mandatoryFixtures: [],
+      requiredChecks: [{ id: "focused", cwd: "sandbox", command: "true" }],
+      executionPolicy: {
+        mode: "sandbox-only",
+        sandboxRoot: join(input.workspacePath, "sandbox"),
+        forbiddenRealProjects: [join(input.root, "real")],
+      },
+    },
+  };
+}

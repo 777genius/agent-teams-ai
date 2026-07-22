@@ -34,6 +34,7 @@ export type ProjectControlCreateJobInput = ProjectJobAccessRequest & {
   readonly accounts?: readonly string[];
   readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
   readonly tags?: readonly string[];
+  readonly ownedPaths?: readonly string[];
 };
 
 export type ProjectControlWriteReviewMarkerInput = ProjectJobAccessRequest & {
@@ -45,6 +46,7 @@ export type ProjectControlAdmissionMetadata = {
   readonly jobId?: string;
   readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
   readonly tags?: readonly string[];
+  readonly ownedPaths?: readonly string[];
 };
 
 export type ProjectControlCreateWorktreeInput =
@@ -192,6 +194,7 @@ export class ProjectControlBroker {
       workspacePath: input.path,
       ...(input.workerRole ? { workerRole: input.workerRole } : {}),
       ...(input.tags ? { tags: input.tags } : {}),
+      ...(input.ownedPaths ? { ownedPaths: input.ownedPaths } : {}),
     });
     return this.ports.workspace.createWorktree(input);
   }
@@ -251,6 +254,7 @@ export class ProjectControlBroker {
       ...(input.workspacePath ? { workspacePath: input.workspacePath } : {}),
       ...(input.workerRole ? { workerRole: input.workerRole } : {}),
       ...(input.tags ? { tags: input.tags } : {}),
+      ...(input.ownedPaths ? { ownedPaths: input.ownedPaths } : {}),
     };
     const decision = this.ports.admission
       ? await this.ports.admission.evaluate(request)
@@ -288,6 +292,7 @@ function missingAdmissionDecision(input: {
   readonly workspacePath?: string;
   readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
   readonly tags?: readonly string[];
+  readonly ownedPaths?: readonly string[];
 }): ProjectAdmissionDecision {
   return {
     operation: input.operation,

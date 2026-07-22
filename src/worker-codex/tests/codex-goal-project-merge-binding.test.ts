@@ -241,6 +241,23 @@ describe("project merge binding", () => {
         expectedSourceCommit: "4".repeat(40),
       }),
     ).toThrow("project_control_merge_binding_expected_source_conflict");
+    for (const [field, message] of [
+      ["canonicalSha", "project_control_merge_binding_canonicalSha_must_be_omitted"],
+      ["phaseStartSha", "project_control_merge_binding_phaseStartSha_must_be_omitted"],
+      ["merge", "project_control_merge_binding_merge_override_denied"],
+    ] as const) {
+      expect(() =>
+        parseProjectMergeBindingRequest({
+          value: mergeBinding,
+          admission: {
+            mode: "serial-builtin",
+            contract: { [field]: field === "merge" ? {} : "4".repeat(40) },
+          },
+          requireCanonicalRemoteHead: true,
+          expectedSourceCommit: undefined,
+        })
+      ).toThrow(message);
+    }
     expect(() =>
       parseProjectMergeBindingRequest({
         value: undefined,

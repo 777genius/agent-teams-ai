@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -59,6 +59,107 @@ describe("project merge-bound refill", () => {
           "runtime resolves and pins both commits",
         );
       }
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
+  it("rejects verifier merge conflicts before durable operation creation", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-verifier-merge-validation-"));
+    roots.push(root);
+    const server = createCodexGoalMcpServer();
+    const client = new Client({ name: "merge-validation-test", version: "0.0.0" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const controllerId = "test-controller";
+    const controllerRoot = join(root, "controller");
+    const source = join(root, "source");
+    const registry = join(root, "registry");
+    const operationsRoot = join(controllerRoot, "project-control-operations");
+    const admission = {
+      mode: "serial-builtin" as const,
+      contract: launchContract(root, join(root, "verifier")),
+    };
+    const mergeBinding = { sourceRemote: "origin", sourceBranch: "feature/source" };
+    const conflicts = [
+      {
+        expectedSourceCommit: "a".repeat(40),
+        message: "project_control_merge_binding_expected_source_conflict",
+      },
+      {
+        preStartAdmission: {
+          ...admission,
+          contract: { ...admission.contract, canonicalSha: "b".repeat(40) },
+        },
+        message: "project_control_merge_binding_canonicalSha_must_be_omitted",
+      },
+      {
+        preStartAdmission: {
+          ...admission,
+          contract: { ...admission.contract, phaseStartSha: "c".repeat(40) },
+        },
+        message: "project_control_merge_binding_phaseStartSha_must_be_omitted",
+      },
+      {
+        preStartAdmission: {
+          ...admission,
+          contract: {
+            ...admission.contract,
+            merge: {
+              sourceRemote: "origin",
+              sourceBranch: "feature/source",
+              sourceCommit: "d".repeat(40),
+              expectedTargetCommit: "e".repeat(40),
+            },
+          },
+        },
+        message: "project_control_merge_binding_merge_override_denied",
+      },
+    ];
+    try {
+      await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+      await mkdir(source, { recursive: true });
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir: registry,
+        jobId: controllerId,
+        jobRootDir: controllerRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: source,
+        promptPath: join(controllerRoot, "prompt.md"),
+        taskId: controllerId,
+        accounts: ["account-a"],
+        accessBoundary: AccessBoundary.ProjectScopedControl,
+        networkAccess: NetworkAccessMode.Restricted,
+        projectAccessScope: {
+          projectId: "test",
+          workspaceRoots: [source],
+          worktreeRoots: [join(root, "worktrees")],
+          registryRoot: registry,
+          jobIdPrefixes: ["test-"],
+          tmuxSessionPrefixes: ["test-"],
+          allowedBranches: ["main", "feature/*"],
+          allowedGitRemotes: ["origin"],
+          allowedAccountIds: ["account-a"],
+          preStartAdmission: { required: true, mode: "serial-builtin" },
+        },
+      });
+      for (const { message, ...conflict } of conflicts) {
+        const result = await client.callTool({
+          name: "codex_goal_project_prepare_verifier",
+          arguments: {
+            registryRootDir: registry,
+            controllerJobId: controllerId,
+            mergeBinding,
+            requireCanonicalRemoteHead: true,
+            executionMode: "bounded",
+            confirmRefill: true,
+            ...conflict,
+          },
+        });
+        expect(result.isError).toBe(true);
+        expect(JSON.stringify(result.content)).toContain(message);
+      }
+      await expect(access(operationsRoot)).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       await client.close();
       await server.close();

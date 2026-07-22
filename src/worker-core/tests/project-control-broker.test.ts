@@ -15,6 +15,7 @@ import {
   type ProjectAccessScope,
   type ProjectAdmissionDecision,
   type ProjectAdmissionGate,
+  type ProjectAdmissionRequest,
   type ProjectControlBrokerEvent,
   type ProjectControlBrokerPorts,
   type ProjectControlOperationResult,
@@ -400,6 +401,42 @@ describe("ProjectControlBroker", () => {
     })).rejects.toBeInstanceOf(ProjectControlAdmissionDeniedError);
 
     expect(calls).toEqual([]);
+  });
+
+  it("forwards owned paths to admission before worktree side effects", async () => {
+    const calls: string[] = [];
+    let request: ProjectAdmissionRequest | undefined;
+    const gate: ProjectAdmissionGate = {
+      evaluate(value) {
+        request = value;
+        return {
+          operation: value.operation,
+          workerRole: ProjectAdmissionWorkerRole.Producer,
+          allowed: true,
+          status: ProjectAdmissionDecisionStatus.Allowed,
+          reason: ProjectAdmissionDecisionReason.Allowed,
+          evidence: ["test admission allowed"],
+          debt: [],
+        };
+      },
+    };
+    const broker = new ProjectControlBroker({
+      boundary: AccessBoundary.ProjectScopedControl,
+      scope: scope(),
+    }, ports(calls, [], gate));
+
+    await broker.createWorktree({
+      path: "/work/infinity-context-child",
+      baseBranch: "main",
+      workerRole: ProjectAdmissionWorkerRole.Producer,
+      ownedPaths: ["src/payments/"],
+    });
+
+    expect(request).toMatchObject({
+      operation: "create_worktree",
+      ownedPaths: ["src/payments/"],
+    });
+    expect(calls).toEqual(["worktree:/work/infinity-context-child"]);
   });
 });
 

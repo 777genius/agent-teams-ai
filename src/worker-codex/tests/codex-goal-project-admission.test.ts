@@ -202,6 +202,96 @@ describe("Codex project admission snapshot", () => {
     }
   });
 
+  it("admits only path-disjoint producers past terminal output debt", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-terminal-path-admission-"));
+    const heldWorkspace = join(root, "worktrees", "project-held-output");
+    const nextWorkspace = join(root, "worktrees", "project-next-producer");
+    let heldChangedFiles: readonly string[] | undefined = ["src/held/output.ts"];
+    let workerAlive = false;
+    let activeWriterRisk = "dirty_workspace_without_worker";
+    try {
+      await mkdir(heldWorkspace, { recursive: true });
+      await mkdir(nextWorkspace, { recursive: true });
+      const deps: CodexProjectAdmissionDeps = {
+        listJobs: async () => [{
+          jobId: "project-held-output",
+          tags: ["worker-role-producer"],
+          taskId: "project-held-output",
+          workspacePath: heldWorkspace,
+          promptPath: join(root, "held.md"),
+          accountNames: ["account-a"],
+          updatedAt: "2026-07-20T00:00:00.000Z",
+          manifestPath: join(root, "held.json"),
+        }],
+        buildOverviewItems: async () => [{
+          ok: true,
+          jobId: "project-held-output",
+          workspacePath: heldWorkspace,
+          workspaceDirty: true,
+          workerAlive,
+          activeWriterRisk,
+          activeWriterRiskReasons: [activeWriterRisk],
+          resultStatus: "completed",
+          recommendedAction: "review_completed",
+          lifecycleMarkerTypes: ["review"],
+          ...(heldChangedFiles ? { changedFiles: heldChangedFiles } : {}),
+        }],
+      };
+      const gate = codexProjectAdmissionGate({
+        registryRootDir: join(root, "registry"),
+        scope: { projectId: "project", jobIdPrefixes: ["project-"] },
+        deps,
+      });
+      const request = (ownedPaths?: readonly string[]) => ({
+        operation: ProjectOperation.CreateWorktree,
+        jobId: "project-next-producer",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: nextWorkspace,
+        ...(ownedPaths ? { ownedPaths } : {}),
+      });
+
+      const snapshot = await buildCodexProjectAdmissionSnapshot({
+        registryRootDir: join(root, "registry"),
+        scope: { projectId: "project", jobIdPrefixes: ["project-"] },
+        deps,
+        requestedWorkspacePath: nextWorkspace,
+      });
+      expect(snapshot.debt).toEqual([expect.objectContaining({
+        reason: ProjectDebtReason.UnconsumedCompletedJob,
+        subject: heldWorkspace,
+        affectedPaths: ["src/held/output.ts"],
+      })]);
+      await expect(gate.evaluate(request(["src/new/"]))).resolves.toMatchObject({
+        allowed: true,
+        debt: [],
+      });
+      await expect(gate.evaluate(request(["src/held/"]))).resolves.toMatchObject({
+        allowed: false,
+        debt: [expect.objectContaining({
+          reason: ProjectDebtReason.UnconsumedCompletedJob,
+        })],
+      });
+      await expect(gate.evaluate(request())).resolves.toMatchObject({ allowed: false });
+
+      heldChangedFiles = undefined;
+      await expect(gate.evaluate(request(["src/new/"]))).resolves.toMatchObject({
+        allowed: false,
+      });
+
+      heldChangedFiles = ["src/held/output.ts"];
+      workerAlive = true;
+      activeWriterRisk = "active_worker";
+      await expect(gate.evaluate(request(["src/new/"]))).resolves.toMatchObject({
+        allowed: false,
+        debt: [expect.objectContaining({
+          reason: ProjectDebtReason.ActiveWriterConflict,
+        })],
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("admits only the verified input-patch target through its self debt", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-admitted-patch-start-"));
     const workspacePath = join(root, "worktrees", "project-remediation");
@@ -378,10 +468,6 @@ describe("Codex project admission snapshot", () => {
           expect.objectContaining({
             reason: ProjectDebtReason.UnconsumedCompletedJob,
             subject: siblingWorkspacePath,
-          }),
-          expect.objectContaining({
-            reason: ProjectDebtReason.ActiveWriterConflict,
-            subject: "project-held-sibling",
           }),
         ]),
       });

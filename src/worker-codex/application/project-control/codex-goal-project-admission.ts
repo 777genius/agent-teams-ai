@@ -109,7 +109,9 @@ export function codexProjectAdmissionGate(
       // longer prove that another writer did not start in the meantime.
       const observedSnapshot = await buildCodexProjectAdmissionSnapshot({
         ...input,
-        ...(request.workspacePath
+        ...(request.ownedPaths
+          ? { blockAnyLiveWriter: true }
+          : request.workspacePath
           ? { requestedWorkspacePath: request.workspacePath }
           : { blockAnyLiveWriter: true }),
       });
@@ -648,19 +650,26 @@ async function debtFromOverviewItem(input: {
   const completedOrReviewed = resultStatus === "completed" ||
     recommendedAction === "review_completed" ||
     markerTypes.includes("review");
-  debt.push({
+  const terminalDebt = completedOrReviewed
+    ? withoutInactiveDirtyWorkspaceConflict(debt, item)
+    : debt;
+  const affectedPaths = safeStringArray(item.changedFiles);
+  terminalDebt.push({
     reason: completedOrReviewed
       ? ProjectDebtReason.UnconsumedCompletedJob
       : ProjectDebtReason.InactiveDirtyWorkspace,
     subject,
     severity: "blocking",
+    ...(completedOrReviewed && affectedPaths.length > 0
+      ? { affectedPaths }
+      : {}),
     evidence: [
       `${jobId} is inactive with dirty workspace`,
       `reviewed marker present: ${String(markerTypes.includes("review"))}`,
       "reviewed is not consumed; output must be integrated/rejected/archived",
     ],
   });
-  return debt;
+  return terminalDebt;
 }
 
 function withoutInactiveDirtyWorkspaceConflict(

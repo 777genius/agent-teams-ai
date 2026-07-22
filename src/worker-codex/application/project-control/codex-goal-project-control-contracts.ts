@@ -28,6 +28,7 @@ export type CodexGoalProjectCreateWorktreeInput = {
   };
   readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
   readonly tags?: readonly string[];
+  readonly ownedPaths?: readonly string[];
 };
 
 export function noopOperationResult(
