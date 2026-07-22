@@ -3105,15 +3105,13 @@ export const TeamDetailView = memo(function TeamDetailView({
                           variant="ghost"
                           size="sm"
                           className="size-7 rounded-full p-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                          aria-label={t('detail.tooltips.deleteTeam')}
+                          aria-label={t('list.moveToTrash.title')}
                           onClick={handleDeleteTeam}
                         >
                           <Trash2 size={12} />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        {t('detail.tooltips.deleteTeam')}
-                      </TooltipContent>
+                      <TooltipContent side="bottom">{t('list.moveToTrash.title')}</TooltipContent>
                     </Tooltip>
                   </div>
                 </div>
@@ -3651,9 +3649,9 @@ export const TeamDetailView = memo(function TeamDetailView({
                 <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
                   <DialogContent className="max-w-sm">
                     <DialogHeader>
-                      <DialogTitle>{t('detail.deleteTeam.title')}</DialogTitle>
+                      <DialogTitle>{t('list.moveToTrash.title')}</DialogTitle>
                       <DialogDescription>
-                        {t('detail.deleteTeam.description', { team: data.config.name })}
+                        {t('list.moveToTrash.message', { teamName: data.config.name })}
                       </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -3661,7 +3659,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                         {t('detail.actions.cancel')}
                       </Button>
                       <Button variant="destructive" size="sm" onClick={confirmDeleteTeam}>
-                        {t('detail.actions.delete')}
+                        {t('list.moveToTrash.confirmLabel')}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
