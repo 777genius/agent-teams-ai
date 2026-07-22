@@ -26,9 +26,11 @@ interface InternalStorageMigration {
 }
 
 /**
- * Versioned via PRAGMA user_version. Statements must stay append-only and
- * idempotent (IF NOT EXISTS) — released versions are never edited, new schema
- * changes get a new version entry. Keep in sync with internalStorageSchema.ts.
+ * Versioned via PRAGMA user_version. Released versions are append-only: new
+ * schema changes get a new version entry and existing entries are never edited.
+ * CREATE statements stay idempotent where recovery replays them; ALTER
+ * statements intentionally require the true historical source schema selected
+ * by user_version. Keep the latest result in sync with internalStorageSchema.ts.
  */
 const MIGRATIONS: InternalStorageMigration[] = [
   {

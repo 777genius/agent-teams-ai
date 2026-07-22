@@ -229,6 +229,14 @@ describe('InternalStorageWorkerCore', () => {
     const dbPath = await makeTmpDbPath();
     await fs.mkdir(path.dirname(dbPath), { recursive: true });
     const legacyDb = new Database(dbPath);
+    createHistoricalMemberWorkSyncSchema(legacyDb);
+    legacyDb
+      .prepare(
+        `INSERT INTO member_work_sync_status (
+           team_name, member_key, member_name, state, evaluated_at, provider_id, status_json
+         ) VALUES (?, 'bob', 'bob', 'still_working', ?, NULL, '{}')`
+      )
+      .run(' TEAM-A ', '2026-07-20T10:00:00.000Z');
     legacyDb.exec(`CREATE TABLE durable_application_command_outbox (
       sequence INTEGER PRIMARY KEY AUTOINCREMENT,
       event_id TEXT NOT NULL,
@@ -297,7 +305,10 @@ describe('InternalStorageWorkerCore', () => {
     legacyDb.close();
 
     const core = track(makeCore(dbPath));
-    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 8, integrity: 'ok' });
+    expect(core.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+      integrity: 'ok',
+    });
     expect(
       core.handle('appCommandLedger.durable.getStatus', {
         deploymentId: 'deployment-a',
@@ -317,9 +328,20 @@ describe('InternalStorageWorkerCore', () => {
     const migratedCommands = migratedDb
       .prepare(`SELECT coordination_attribution_json FROM durable_application_commands`)
       .all() as { coordination_attribution_json: string }[];
+    const migratedMemberWorkSyncStatus = migratedDb
+      .prepare(
+        `SELECT team_name, team_key
+         FROM member_work_sync_status
+         WHERE member_key = 'bob'`
+      )
+      .get();
     migratedDb.close();
     expect(migratedEvents).toHaveLength(3);
     expect(migratedCommands).toHaveLength(3);
+    expect(migratedMemberWorkSyncStatus).toEqual({
+      team_name: ' TEAM-A ',
+      team_key: 'team-a',
+    });
     expect(migratedEvents.find((row) => row.event_id === 'legacy-team-a-2')?.body_json).toContain(
       '"payload":{"legacyOrder":2,"nested":{"a":2,"z":1},"projection":"team-a"}'
     );
@@ -406,7 +428,10 @@ describe('InternalStorageWorkerCore', () => {
     core.close();
 
     const reopened = track(makeCore(dbPath));
-    expect(reopened.handle('ping', {})).toMatchObject({ schemaVersion: 8, integrity: 'ok' });
+    expect(reopened.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+      integrity: 'ok',
+    });
     expect(
       reopened.handle('appCommandLedger.durable.applyConsumerEvent', {
         consumerId: 'legacy-task-projection-v1',
@@ -807,3 +832,73 @@ describe('InternalStorageWorkerCore', () => {
     expect(core.handle('commentJournal.exists', { teamName: record.teamName })).toBe(true);
   });
 });
+
+function createHistoricalMemberWorkSyncSchema(database: InstanceType<typeof Database>): void {
+  database.exec(`
+    CREATE TABLE member_work_sync_status (
+      team_name TEXT NOT NULL,
+      member_key TEXT NOT NULL,
+      member_name TEXT NOT NULL,
+      state TEXT NOT NULL,
+      evaluated_at TEXT NOT NULL,
+      provider_id TEXT,
+      status_json TEXT NOT NULL,
+      PRIMARY KEY (team_name, member_key)
+    );
+    CREATE TABLE member_work_sync_report_intents (
+      team_name TEXT NOT NULL,
+      id TEXT NOT NULL,
+      member_key TEXT NOT NULL,
+      member_name TEXT NOT NULL,
+      status TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      recorded_at TEXT NOT NULL,
+      processed_at TEXT,
+      result_code TEXT,
+      request_json TEXT NOT NULL,
+      PRIMARY KEY (team_name, id)
+    );
+    CREATE INDEX idx_mws_report_intents_pending
+      ON member_work_sync_report_intents (team_name, status, recorded_at);
+    CREATE TABLE member_work_sync_outbox (
+      team_name TEXT NOT NULL,
+      id TEXT NOT NULL,
+      member_key TEXT NOT NULL,
+      member_name TEXT NOT NULL,
+      agenda_fingerprint TEXT NOT NULL,
+      payload_hash TEXT NOT NULL,
+      status TEXT NOT NULL,
+      attempt_generation INTEGER NOT NULL,
+      claimed_by TEXT,
+      claimed_at TEXT,
+      delivered_message_id TEXT,
+      delivery_state TEXT,
+      last_error TEXT,
+      next_attempt_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      work_sync_intent TEXT NOT NULL,
+      work_sync_intent_key TEXT,
+      review_request_event_ids_json TEXT,
+      delivery_diagnostics_json TEXT,
+      payload_json TEXT NOT NULL,
+      PRIMARY KEY (team_name, id)
+    );
+    CREATE INDEX idx_mws_outbox_due
+      ON member_work_sync_outbox (team_name, status, next_attempt_at);
+    CREATE INDEX idx_mws_outbox_member
+      ON member_work_sync_outbox (team_name, member_key, status);
+    CREATE TABLE member_work_sync_metric_events (
+      team_name TEXT NOT NULL,
+      id TEXT NOT NULL,
+      member_key TEXT NOT NULL,
+      member_name TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      recorded_at TEXT NOT NULL,
+      event_json TEXT NOT NULL,
+      PRIMARY KEY (team_name, id)
+    );
+    CREATE INDEX idx_mws_metric_events_recent
+      ON member_work_sync_metric_events (team_name, recorded_at);
+  `);
+}

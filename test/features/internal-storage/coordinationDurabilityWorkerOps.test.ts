@@ -3,19 +3,20 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { HMAC_SHA256_LD_V1 } from '@features/application-command-ledger/contracts';
-import type { DurableApplicationCommandPersistClaimRequest } from '@features/application-command-ledger/core/application';
-import type { BackupRunRecord } from '@features/coordination-backup/contracts';
 import { parseBackupRunId, parseSha256Digest } from '@features/coordination-backup/contracts';
-import type { CoordinationEventDraft } from '@features/coordination-events/contracts';
+import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
-import type {
-  InternalStorageWorkerOp,
-  StoredCoordinationEventRow,
-} from '@features/internal-storage/main/infrastructure/worker/internalStorageWorkerProtocol';
 import { parseDeploymentId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { DurableApplicationCommandPersistClaimRequest } from '@features/application-command-ledger/core/application';
+import type { BackupRunRecord } from '@features/coordination-backup/contracts';
+import type { CoordinationEventDraft } from '@features/coordination-events/contracts';
+import type {
+  InternalStorageWorkerOp,
+  StoredCoordinationEventRow,
+} from '@features/internal-storage/main/infrastructure/worker/internalStorageWorkerProtocol';
 import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
@@ -230,7 +231,7 @@ describe('coordination durability worker operations', () => {
     });
   });
 
-  it('migrates a populated v7 command outbox to the canonical v8 journal with recovery provenance', async () => {
+  it('migrates a populated historical v7 database through the v8 journal and v9 team keys', async () => {
     const first = await makeCore();
     initializeJournal(first.core);
     prepareCommittableCommand(first.core, {
@@ -243,20 +244,40 @@ describe('coordination durability worker operations', () => {
 
     const v7 = new Database(first.databasePath);
     v7.pragma('foreign_keys = OFF');
+    v7.prepare(
+      `INSERT INTO member_work_sync_status (
+           team_name, team_key, member_key, member_name, state, evaluated_at,
+           provider_id, status_json
+         ) VALUES (?, ?, 'bob', 'bob', 'still_working', ?, NULL, '{}')`
+    ).run(' TEAM-A ', 'team-a', NOW_ISO);
     v7.exec(`
       DROP TABLE snapshot_retention_leases;
       DROP TABLE coordination_event_journal;
       DROP TABLE coordination_event_journal_metadata;
       DROP TABLE coordination_backup_writer_fences;
       DROP TABLE coordination_backup_runs;
+      DROP INDEX idx_mws_status_team_key;
+      DROP INDEX idx_mws_report_intents_team_key;
+      DROP INDEX idx_mws_outbox_team_key;
+      DROP INDEX idx_mws_metric_events_team_key;
+      ALTER TABLE member_work_sync_status DROP COLUMN team_key;
+      ALTER TABLE member_work_sync_report_intents DROP COLUMN team_key;
+      ALTER TABLE member_work_sync_outbox DROP COLUMN team_key;
+      ALTER TABLE member_work_sync_metric_events DROP COLUMN team_key;
       ALTER TABLE durable_application_commands DROP COLUMN coordination_attribution_json;
     `);
+    for (const tableName of MEMBER_WORK_SYNC_TABLES) {
+      const columns = v7.pragma(`table_info(${tableName})`) as { name: string }[];
+      expect(columns.map(({ name }) => name)).not.toContain('team_key');
+    }
     v7.pragma('application_id = 0');
     v7.pragma('user_version = 7');
     v7.close();
 
     const migrated = track(makeCoreAt(first.databasePath));
-    expect(migrated.handle('ping', {})).toMatchObject({ schemaVersion: 8 });
+    expect(migrated.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+    });
     const result = migrated.handle('coordinationEvents.read', {
       deploymentId: DEPLOYMENT_ID,
       afterSequence: 0,
@@ -273,6 +294,20 @@ describe('coordination durability worker operations', () => {
       scope: { kind: 'team', scopeId: 'team-a' },
       teamId: 'team-a',
     });
+    const current = new Database(first.databasePath, { readonly: true });
+    try {
+      expect(
+        current
+          .prepare(
+            `SELECT team_name, team_key
+             FROM member_work_sync_status
+             WHERE member_key = 'bob'`
+          )
+          .get()
+      ).toEqual({ team_name: ' TEAM-A ', team_key: 'team-a' });
+    } finally {
+      current.close();
+    }
   });
 
   it('persists writer fence and backup run CAS across restart and rejects stale conflicting CAS', async () => {
@@ -420,7 +455,7 @@ describe('coordination durability worker operations', () => {
     expect(completed).toMatchObject({
       status: 'completed',
       applicationId: 0x41544149,
-      userVersion: 8,
+      userVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
       mode: 0o600,
     });
     expect(completed).not.toHaveProperty('snapshotPath');
@@ -444,7 +479,11 @@ describe('coordination durability worker operations', () => {
     expect(chunk.totalByteLength).toBe((completed as { byteLength: number }).byteLength);
     expect(
       reopened.handle('coordinationBackup.sqlite.verify', { backupRunId: RUN_ID })
-    ).toMatchObject({ status: 'valid', applicationId: 0x41544149, userVersion: 8 });
+    ).toMatchObject({
+      status: 'valid',
+      applicationId: 0x41544149,
+      userVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+    });
 
     const scratchFile = await onlyScratchFile(first.databasePath);
     await fs.promises.writeFile(scratchFile, 'corrupt');
@@ -570,6 +609,13 @@ function makeCoreAt(databasePath: string): InternalStorageWorkerCore {
     createDatabase: (file, options) => new Database(file, options),
   });
 }
+
+const MEMBER_WORK_SYNC_TABLES = [
+  'member_work_sync_status',
+  'member_work_sync_report_intents',
+  'member_work_sync_outbox',
+  'member_work_sync_metric_events',
+] as const;
 
 function initializeJournal(core: InternalStorageWorkerCore): {
   deploymentId: string;
