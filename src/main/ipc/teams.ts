@@ -770,6 +770,11 @@ let boardTaskActivityDetailService: BoardTaskActivityDetailService | null = null
 let boardTaskLogStreamService: BoardTaskLogStreamService | null = null;
 let boardTaskExactLogsService: BoardTaskExactLogsService | null = null;
 let boardTaskExactLogDetailService: BoardTaskExactLogDetailService | null = null;
+let teamPermanentDeletionLifecycle: {
+  prepareTeamDeletion(teamName: string): Promise<void>;
+  completeTeamDeletion(teamName: string): void;
+  resumeTeam(teamName: string): void;
+} | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
@@ -818,7 +823,12 @@ export function initializeTeamHandlers(
   taskLogStreamService?: BoardTaskLogStreamService,
   taskExactLogsService?: BoardTaskExactLogsService,
   taskExactLogDetailService?: BoardTaskExactLogDetailService,
-  ioGovernor?: LaunchIoGovernor
+  ioGovernor?: LaunchIoGovernor,
+  permanentDeletionLifecycle?: {
+    prepareTeamDeletion(teamName: string): Promise<void>;
+    completeTeamDeletion(teamName: string): void;
+    resumeTeam(teamName: string): void;
+  }
 ): void {
   teamDataService = service;
   teamProvisioningStartApi = teamHandlerApis.provisioningStart;
@@ -844,6 +854,7 @@ export function initializeTeamHandlers(
   boardTaskLogStreamService = taskLogStreamService ?? null;
   boardTaskExactLogsService = taskExactLogsService ?? null;
   boardTaskExactLogDetailService = taskExactLogDetailService ?? null;
+  teamPermanentDeletionLifecycle = permanentDeletionLifecycle ?? null;
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
@@ -1581,7 +1592,10 @@ async function handlePermanentlyDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('permanentlyDeleteTeam', async () => {
-    await getTeamDataService().permanentlyDeleteTeam(validated.value!);
+    const teamName = validated.value!;
+    await teamPermanentDeletionLifecycle?.prepareTeamDeletion(teamName);
+    await getTeamDataService().permanentlyDeleteTeam(teamName);
+    teamPermanentDeletionLifecycle?.completeTeamDeletion(teamName);
     getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
     // Clean up app-owned data (attachments, task-attachments) that lives outside ~/.claude/
     const appData = getAppDataPath();
@@ -2324,6 +2338,7 @@ async function handleCreateTeam(
           sendProvisioningProgress(progressTargetWindow, progress);
         }
       );
+      teamPermanentDeletionLifecycle?.resumeTeam(validation.value.teamName);
       invalidateTeamRosterSnapshotCaches(validation.value.teamName);
       return response;
     } catch (error) {
@@ -2495,6 +2510,7 @@ async function handleLaunchTeam(
             sendProvisioningProgress(progressTargetWindow, progress);
           }
         );
+        teamPermanentDeletionLifecycle?.resumeTeam(tn);
         invalidateTeamRosterSnapshotCaches(tn);
         return response;
       } catch (error) {
@@ -4185,6 +4201,7 @@ async function handleCreateConfig(
           ? payload.extraCliArgs.trim()
           : undefined,
     });
+    teamPermanentDeletionLifecycle?.resumeTeam(teamName);
     getTeamDataWorkerClient().invalidateTeamConfig(teamName);
   });
 }
@@ -5792,6 +5809,8 @@ async function handleDeleteDraft(
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
+    await teamPermanentDeletionLifecycle?.prepareTeamDeletion(validated.value!);
     await getTeamDataService().permanentlyDeleteTeam(validated.value!);
+    teamPermanentDeletionLifecycle?.completeTeamDeletion(validated.value!);
   });
 }

@@ -61,6 +61,9 @@ function parseMemberTurnSettled(detail: string | undefined): MemberTurnSettledEv
 }
 
 export class MemberWorkSyncTeamChangeRouter {
+  private readonly quiescedTeams = new Set<string>();
+  private readonly inFlightByTeam = new Map<string, Set<Promise<void>>>();
+
   constructor(
     private readonly rosterSource: MemberWorkSyncRosterSource,
     private readonly queue: MemberWorkSyncEventQueue,
@@ -70,14 +73,19 @@ export class MemberWorkSyncTeamChangeRouter {
 
   async enqueueStartupScan(teamNames: string[]): Promise<void> {
     for (const teamName of teamNames) {
-      await this.enqueueTeam(teamName, 'startup_scan', 30_000).catch(() => undefined);
+      if (this.quiescedTeams.has(teamName)) continue;
+      await this.runTracked(teamName, () => this.enqueueTeam(teamName, 'startup_scan', 30_000));
     }
   }
 
   noteTeamChange(event: TeamChangeEvent): void {
+    if (this.quiescedTeams.has(event.teamName)) return;
+
     if (event.type === 'lead-activity' && event.detail === 'offline') {
       this.queue.dropTeam(event.teamName);
-      void this.enqueueTeam(event.teamName, 'runtime_activity', 0).catch(() => undefined);
+      this.runTracked(event.teamName, () =>
+        this.enqueueTeam(event.teamName, 'runtime_activity', 0)
+      );
       return;
     }
 
@@ -123,9 +131,11 @@ export class MemberWorkSyncTeamChangeRouter {
 
     if (event.type === 'task' || event.type === 'task-log-change') {
       const triggerReason = event.type === 'task' ? 'task_changed' : 'runtime_activity';
-      void this.enqueueTaskRelatedMembers(event, triggerReason).catch(() =>
-        this.enqueueTeam(event.teamName, triggerReason).catch(() => undefined)
-      );
+      this.runTracked(event.teamName, async () => {
+        await this.enqueueTaskRelatedMembers(event, triggerReason).catch(() =>
+          this.enqueueTeam(event.teamName, triggerReason).catch(() => undefined)
+        );
+      });
       return;
     }
 
@@ -143,8 +153,27 @@ export class MemberWorkSyncTeamChangeRouter {
 
     const teamWideReason = TEAM_WIDE_REASONS[event.type];
     if (teamWideReason) {
-      void this.enqueueTeam(event.teamName, teamWideReason).catch(() => undefined);
+      this.runTracked(event.teamName, () => this.enqueueTeam(event.teamName, teamWideReason));
     }
+  }
+
+  async quiesceTeam(teamName: string): Promise<void> {
+    const normalizedTeamName = teamName.trim();
+    if (!normalizedTeamName) return;
+    this.quiescedTeams.add(normalizedTeamName);
+    await this.queue.quiesceTeam(normalizedTeamName);
+    while (true) {
+      const pending = [...(this.inFlightByTeam.get(normalizedTeamName) ?? [])];
+      if (pending.length === 0) break;
+      await Promise.allSettled(pending);
+    }
+    await this.queue.quiesceTeam(normalizedTeamName);
+  }
+
+  resumeTeam(teamName: string): void {
+    const normalizedTeamName = teamName.trim();
+    this.quiescedTeams.delete(normalizedTeamName);
+    this.queue.resumeTeam(normalizedTeamName);
   }
 
   private async enqueueTeam(
@@ -152,12 +181,15 @@ export class MemberWorkSyncTeamChangeRouter {
     triggerReason: MemberWorkSyncTriggerReason,
     runAfterMs?: number
   ): Promise<void> {
+    if (this.quiescedTeams.has(teamName)) return;
     const activeMembers = await this.rosterSource.loadActiveMemberNames(teamName);
+    if (this.quiescedTeams.has(teamName)) return;
     const materializer = this.materializer;
     if (materializer) {
       await this.materializeMembers(teamName, activeMembers);
     }
     for (const memberName of activeMembers) {
+      if (this.quiescedTeams.has(teamName)) return;
       this.queue.enqueue({ teamName, memberName, triggerReason, runAfterMs });
     }
   }
@@ -204,7 +236,25 @@ export class MemberWorkSyncTeamChangeRouter {
       return;
     }
     for (const memberName of memberNames) {
+      if (this.quiescedTeams.has(teamName)) return;
       await this.materializer.materializeMember(teamName, memberName).catch(() => undefined);
     }
+  }
+
+  private runTracked(teamName: string, operation: () => Promise<void>): Promise<void> {
+    if (this.quiescedTeams.has(teamName)) return Promise.resolve();
+    const promise = (async () => {
+      if (!this.quiescedTeams.has(teamName)) await operation();
+    })()
+      .catch(() => undefined)
+      .finally(() => {
+        const teamPromises = this.inFlightByTeam.get(teamName);
+        teamPromises?.delete(promise);
+        if (teamPromises?.size === 0) this.inFlightByTeam.delete(teamName);
+      });
+    const teamPromises = this.inFlightByTeam.get(teamName) ?? new Set<Promise<void>>();
+    teamPromises.add(promise);
+    this.inFlightByTeam.set(teamName, teamPromises);
+    return promise;
   }
 }

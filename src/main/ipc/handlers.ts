@@ -181,7 +181,12 @@ export function initializeIpcHandlers(
   skillsWatcherService?: SkillsWatcherService,
   crossTeamService?: CrossTeamService,
   teamBackupService?: TeamBackupService,
-  launchIoGovernor?: LaunchIoGovernor
+  launchIoGovernor?: LaunchIoGovernor,
+  teamPermanentDeletionLifecycle?: {
+    prepareTeamDeletion(teamName: string): Promise<void>;
+    completeTeamDeletion(teamName: string): void;
+    resumeTeam(teamName: string): void;
+  }
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -205,7 +210,8 @@ export function initializeIpcHandlers(
     boardTaskLogStreamService,
     boardTaskExactLogsService,
     boardTaskExactLogDetailService,
-    launchIoGovernor
+    launchIoGovernor,
+    teamPermanentDeletionLifecycle
   );
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,

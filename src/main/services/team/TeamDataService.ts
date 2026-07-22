@@ -119,6 +119,12 @@ const TASK_COMMENT_NOTIFICATION_SOURCE = 'system_notification';
 const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
 const MEMBER_RUNTIME_ADVISORY_SNAPSHOT_BUDGET_MS = 250;
 const GLOBAL_TASK_TEAM_CONFIG_CONCURRENCY = 12;
+const PERMANENT_DELETE_RM_OPTIONS = {
+  recursive: true,
+  force: true,
+  maxRetries: 5,
+  retryDelay: 50,
+} as const;
 
 function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
   const hasher = new NodeApplicationCommandHasher();
@@ -1426,12 +1432,12 @@ export class TeamDataService {
 
   async permanentlyDeleteTeam(teamName: string): Promise<void> {
     const teamsDir = path.join(getTeamsBasePath(), teamName);
-    await fs.promises.rm(teamsDir, { recursive: true, force: true });
+    await fs.promises.rm(teamsDir, PERMANENT_DELETE_RM_OPTIONS);
     TeamConfigReader.invalidateTeam(teamName);
     this.invalidateNotificationContext(teamName);
 
     const tasksDir = path.join(getTasksBasePath(), teamName);
-    await fs.promises.rm(tasksDir, { recursive: true, force: true });
+    await fs.promises.rm(tasksDir, PERMANENT_DELETE_RM_OPTIONS);
     TeamTaskReader.invalidateAllTasksCache();
   }
 

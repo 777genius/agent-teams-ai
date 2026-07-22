@@ -238,6 +238,39 @@ describe('MemberWorkSyncTeamChangeRouter', () => {
     });
   });
 
+  it('fences a late offline refresh before it can recreate member storage', async () => {
+    let releaseRoster!: () => void;
+    const materializeMember = vi.fn(async () => undefined);
+    const queue = {
+      enqueue: vi.fn(),
+      dropTeam: vi.fn(),
+      quiesceTeam: vi.fn(async () => undefined),
+      resumeTeam: vi.fn(),
+    };
+    const router = new MemberWorkSyncTeamChangeRouter(
+      {
+        loadActiveMemberNames: () =>
+          new Promise<string[]>((resolve) => {
+            releaseRoster = () => resolve(['alice']);
+          }),
+      },
+      queue as never,
+      { materializeMember }
+    );
+
+    router.noteTeamChange({ type: 'lead-activity', teamName: 'team-a', detail: 'offline' });
+    await Promise.resolve();
+    const quiesce = router.quiesceTeam('team-a');
+    releaseRoster();
+    await quiesce;
+
+    expect(materializeMember).not.toHaveBeenCalled();
+    expect(queue.enqueue).not.toHaveBeenCalled();
+
+    router.resumeTeam('team-a');
+    expect(queue.resumeTeam).toHaveBeenCalledWith('team-a');
+  });
+
   it('routes member-turn-settled events to one member reconcile', () => {
     const { queue, router } = createRouter();
 

@@ -25,6 +25,45 @@ describe('MemberWorkSyncEventQueue', () => {
     ).toBe(false);
   });
 
+  it('quiesces one team, drains admitted work, and resumes same-name admission', async () => {
+    let releaseReconcile!: () => void;
+    const reconcile = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseReconcile = resolve;
+        })
+    );
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 0,
+      reconcile,
+      isTeamActive: () => true,
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'alice', triggerReason: 'task_changed' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconcile).toHaveBeenCalledTimes(1);
+
+    let quiesced = false;
+    const quiesce = queue.quiesceTeam('team-a').then(() => {
+      quiesced = true;
+    });
+    expect(
+      queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'task_changed' })
+    ).toBe(false);
+    await Promise.resolve();
+    expect(quiesced).toBe(false);
+
+    releaseReconcile();
+    await quiesce;
+    expect(queue.getDiagnostics()).toMatchObject({ queued: 0, running: 0 });
+
+    queue.resumeTeam('team-a');
+    expect(
+      queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'task_changed' })
+    ).toBe(true);
+    await queue.stop();
+  });
+
   it('coalesces duplicate member events into one queue reconcile', async () => {
     const reconciles: unknown[] = [];
     const auditEvents: string[] = [];

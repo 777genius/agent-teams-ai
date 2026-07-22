@@ -64,6 +64,7 @@ describe('HTTP team runtime routes', () => {
     const createTeamConfig = vi.fn<(request: TeamCreateConfigRequest) => Promise<void>>(() =>
       Promise.resolve()
     );
+    const resumeTeam = vi.fn<(teamName: string) => void>();
     const teamProvisioningStartApi = {
       createTeam,
       launchTeam,
@@ -113,6 +114,9 @@ describe('HTTP team runtime routes', () => {
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
       teamDataApi,
       teamApis,
+      memberWorkSyncFeature: {
+        resumeTeam,
+      } as unknown as HttpServices['memberWorkSyncFeature'],
     } satisfies HttpServices;
 
     return {
@@ -133,6 +137,7 @@ describe('HTTP team runtime routes', () => {
       getTeamData,
       getSavedRequest,
       createTeamConfig,
+      resumeTeam,
     };
   }
 
@@ -145,7 +150,7 @@ describe('HTTP team runtime routes', () => {
   }
 
   it('lists, gets, and creates draft teams through team data service', async () => {
-    const { app, listTeams, getTeamData, createTeamConfig } = await createApp();
+    const { app, listTeams, getTeamData, createTeamConfig, resumeTeam } = await createApp();
     listTeams.mockResolvedValue([
       {
         teamName: 'demo-team',
@@ -236,6 +241,7 @@ describe('HTTP team runtime routes', () => {
         fastMode: 'on',
         limitContext: true,
       });
+      expect(resumeTeam).toHaveBeenCalledWith('new-team');
     } finally {
       await app.close();
     }
@@ -571,7 +577,7 @@ describe('HTTP team runtime routes', () => {
   });
 
   it('routes draft team launch through createTeam with saved metadata', async () => {
-    const { app, createTeam, getSavedRequest, launchTeam } = await createApp();
+    const { app, createTeam, getSavedRequest, launchTeam, resumeTeam } = await createApp();
     getSavedRequest.mockResolvedValue({
       teamName: 'draft-team',
       displayName: 'Draft Team',
@@ -602,6 +608,7 @@ describe('HTTP team runtime routes', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual({ runId: 'run-draft' });
       expect(launchTeam).not.toHaveBeenCalled();
+      expect(resumeTeam).toHaveBeenCalledWith('draft-team');
       expect(createTeam).toHaveBeenCalledWith(
         {
           teamName: 'draft-team',

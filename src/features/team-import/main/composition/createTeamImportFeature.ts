@@ -17,7 +17,10 @@ export interface TeamImportFeatureFacade {
   createDraft(request: CreateTeamImportDraftRequest): Promise<CreateTeamImportDraftResult>;
 }
 
-export function createTeamImportFeature(teamDataService: TeamDataService): TeamImportFeatureFacade {
+export function createTeamImportFeature(
+  teamDataService: TeamDataService,
+  onTeamCreated?: (teamName: string) => void
+): TeamImportFeatureFacade {
   const reviewStore = new InMemoryTeamImportReviewStore();
   const reviewUseCase = new ReviewTeamImportUseCase(
     new ElectronTeamImportFolderPicker(),
@@ -26,7 +29,7 @@ export function createTeamImportFeature(teamDataService: TeamDataService): TeamI
   );
   const createDraftUseCase = new CreateTeamImportDraftUseCase(
     reviewStore,
-    new TeamDataImportDraftRepository(teamDataService)
+    new TeamDataImportDraftRepository(teamDataService, onTeamCreated)
   );
 
   return {

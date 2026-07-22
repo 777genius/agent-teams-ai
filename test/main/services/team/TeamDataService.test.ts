@@ -460,6 +460,7 @@ describe('TeamDataService task projection cache invalidation', () => {
 
     const configInvalidateSpy = vi.spyOn(TeamConfigReader, 'invalidateTeam');
     const taskInvalidateSpy = vi.spyOn(TeamTaskReader, 'invalidateAllTasksCache');
+    const removeSpy = vi.spyOn(nodeFs.promises, 'rm');
 
     const service = new TeamDataService();
     await service.permanentlyDeleteTeam('gone-team');
@@ -468,6 +469,19 @@ describe('TeamDataService task projection cache invalidation', () => {
     await expect(fs.access(path.join(claudeRoot, 'tasks', 'gone-team'))).rejects.toThrow();
     expect(configInvalidateSpy).toHaveBeenCalledWith('gone-team');
     expect(taskInvalidateSpy).toHaveBeenCalledTimes(1);
+    expect(removeSpy).toHaveBeenCalledWith(
+      path.join(claudeRoot, 'teams', 'gone-team'),
+      expect.objectContaining({
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 50,
+      })
+    );
+    expect(removeSpy).toHaveBeenCalledWith(
+      path.join(claudeRoot, 'tasks', 'gone-team'),
+      expect.objectContaining({ maxRetries: 5, retryDelay: 50 })
+    );
   });
 
   it('keeps team deletion mutations on verified config reads', async () => {

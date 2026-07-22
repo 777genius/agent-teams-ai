@@ -1,5 +1,3 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import {
   MEMBER_WORK_SYNC_GET_METRICS,
   MEMBER_WORK_SYNC_GET_STATUS,
@@ -10,6 +8,7 @@ import {
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from '@features/member-work-sync/main';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   MemberWorkSyncMetricsRequest,
@@ -139,6 +138,9 @@ function makeFeature(): MemberWorkSyncFeatureFacade {
       scheduled: true,
       reason: 'scheduled' as const,
     })),
+    prepareTeamDeletion: vi.fn(),
+    completeTeamDeletion: vi.fn(),
+    resumeTeam: vi.fn(),
     noteTeamChange: vi.fn(),
     enqueueStartupScan: vi.fn(),
     replayPendingReports: vi.fn(),

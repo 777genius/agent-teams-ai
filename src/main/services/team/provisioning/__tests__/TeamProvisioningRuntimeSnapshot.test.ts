@@ -253,11 +253,52 @@ function processRows(): RuntimeTelemetryProcessTableRow[] {
   ];
 }
 
+function mixedRunWithPendingSharedHostEvidence(): TeamProvisioningRuntimeSnapshotRun {
+  const currentRun = mixedRunWithConfirmedSecondaryEvidence();
+  const laneEvidence = currentRun.mixedSecondaryLanes?.[0]?.result?.members?.Worker;
+  if (!laneEvidence) {
+    throw new Error('expected mixed secondary runtime evidence');
+  }
+  laneEvidence.launchState = 'runtime_pending_bootstrap';
+  laneEvidence.bootstrapConfirmed = false;
+  laneEvidence.livenessKind = 'runtime_process_candidate';
+  laneEvidence.runtimeDiagnostic =
+    'OpenCode runtime pid reported by bridge without local process verification';
+  return currentRun;
+}
+
+function sharedOpenCodeHostProcessRows(): RuntimeTelemetryProcessTableRow[] {
+  return [
+    {
+      pid: CURRENT_PID,
+      ppid: 1,
+      command: 'opencode serve --hostname 127.0.0.1 --port 62013',
+    },
+  ];
+}
+
+function confirmedCurrentSpawnStatus(): MemberSpawnStatusEntry {
+  return {
+    status: 'online',
+    launchState: 'confirmed_alive',
+    agentToolAccepted: true,
+    runtimeAlive: true,
+    bootstrapConfirmed: true,
+    hardFailure: false,
+    livenessKind: 'confirmed_bootstrap',
+    updatedAt: UPDATED_AT,
+  };
+}
+
 interface MixedRuntimeFixtureOptions {
   run?: TeamProvisioningRuntimeSnapshotRun;
   primaryRuntime?: RuntimeAdapterRunSnapshotSource;
   processRows?: RuntimeTelemetryProcessTableRow[];
   processTableAvailable?: boolean;
+  spawnStatuses?: Record<string, MemberSpawnStatusEntry>;
+  spawnStatusRunId?: string;
+  spawnStatusSource?: MemberSpawnStatusesSnapshot['source'];
+  advanceClockInSpawnStatusReadMs?: number;
 }
 
 async function buildMixedRuntimeMetadata(
@@ -327,13 +368,18 @@ async function buildMixedRuntimeSnapshot(
     },
     readConfigSnapshot: vi.fn(async () => config()),
     readPersistedRuntimeMembers: vi.fn(() => [] satisfies PersistedRuntimeMemberLike[]),
-    getMemberSpawnStatuses: vi.fn(
-      async (): Promise<MemberSpawnStatusesSnapshot> => ({
-        runId: RUN_ID,
-        source: 'live',
-        statuses: {},
-      })
-    ),
+    getMemberSpawnStatuses: vi.fn(async (): Promise<MemberSpawnStatusesSnapshot> => {
+      if (options.advanceClockInSpawnStatusReadMs) {
+        vi.setSystemTime(
+          new Date(Date.parse(UPDATED_AT) + options.advanceClockInSpawnStatusReadMs)
+        );
+      }
+      return {
+        runId: options.spawnStatusRunId ?? RUN_ID,
+        source: options.spawnStatusSource ?? 'live',
+        statuses: options.spawnStatuses ?? {},
+      };
+    }),
     getLiveTeamAgentRuntimeMetadata: vi.fn(async () => liveRuntimeByMember),
     readRuntimeProcessRowsForUsageSnapshot: vi.fn(async () => []),
     readProcessUsageStatsByPid: vi.fn(async () => new Map()),
@@ -843,6 +889,73 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
       vi.useRealTimers();
     }
   });
+
+  it.each(['live', 'merged'] as const)(
+    'combines a verified shared OpenCode host candidate with current %s bootstrap truth',
+    async (spawnStatusSource) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(UPDATED_AT));
+      try {
+        const snapshot = await buildMixedRuntimeSnapshot({
+          run: mixedRunWithPendingSharedHostEvidence(),
+          processRows: sharedOpenCodeHostProcessRows(),
+          spawnStatusSource,
+          advanceClockInSpawnStatusReadMs: 1,
+          spawnStatuses: {
+            Worker: {
+              ...confirmedCurrentSpawnStatus(),
+              lastHeartbeatAt: '2026-01-01T00:00:00.001Z',
+              updatedAt: '2026-01-01T00:00:00.001Z',
+            },
+          },
+        });
+
+        expect(snapshot.members.Worker).toMatchObject({
+          alive: true,
+          livenessKind: 'confirmed_bootstrap',
+          pidSource: 'opencode_bridge',
+          runtimeSessionId: 'session-current',
+          laneKind: 'secondary',
+          historicalBootstrapConfirmed: true,
+          runtimeDiagnostic: 'OpenCode bootstrap confirmed; runtime host/session evidence present.',
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
+
+  it.each([
+    { label: 'persisted source', spawnStatusSource: 'persisted' as const },
+    { label: 'mismatched run', spawnStatusSource: 'live' as const, spawnStatusRunId: OLD_RUN_ID },
+  ])(
+    'does not revive a shared OpenCode host candidate from $label bootstrap truth',
+    async ({ spawnStatusSource, spawnStatusRunId }) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(UPDATED_AT));
+      try {
+        const snapshot = await buildMixedRuntimeSnapshot({
+          run: mixedRunWithPendingSharedHostEvidence(),
+          processRows: sharedOpenCodeHostProcessRows(),
+          spawnStatusSource,
+          spawnStatusRunId,
+          spawnStatuses: {
+            Worker: confirmedCurrentSpawnStatus(),
+          },
+        });
+
+        expect(snapshot.members.Worker).toMatchObject({
+          alive: false,
+          livenessKind: 'runtime_process_candidate',
+          pidSource: 'opencode_bridge',
+          runtimeSessionId: 'session-current',
+          laneKind: 'secondary',
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
 
   it('reserves exact live runtime keys for their current candidate owner', async () => {
     const currentRun = run();

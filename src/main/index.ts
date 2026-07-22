@@ -2402,7 +2402,9 @@ async function initializeServices(): Promise<void> {
     getLocalContext: () => contextRegistry.get('local'),
     logger: createLogger('Feature:RecentProjects'),
   });
-  teamImportFeature = createTeamImportFeature(teamDataService);
+  teamImportFeature = createTeamImportFeature(teamDataService, (teamName) => {
+    memberWorkSyncFeature?.resumeTeam(teamName);
+  });
   organizationsFeature = createOrganizationsFeature({
     teamDataService,
     crossTeamService,
@@ -2977,7 +2979,8 @@ async function initializeServices(): Promise<void> {
     skillsWatcherService,
     crossTeamService,
     teamBackupService ?? undefined,
-    launchIoGovernor ?? undefined
+    launchIoGovernor ?? undefined,
+    memberWorkSyncFeature ?? undefined
   );
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
