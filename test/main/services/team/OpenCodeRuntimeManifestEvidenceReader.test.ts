@@ -631,7 +631,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
     });
   });
 
-  it('requires both lane-index and manifest ownership before clearing known-run storage', async () => {
+  it('fails closed when either durable owner differs before clearing known-run storage', async () => {
     const teamName = 'team-cas-owner';
     const laneId = 'secondary:opencode:cas';
     const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
@@ -690,6 +690,103 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
       })
     ).resolves.toBe('owner_changed');
     await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('replacement');
+  });
+
+  it('resumes manifest-first partial cleanup for a matching durable lane owner', async () => {
+    const teamName = 'team-cas-partial-cleanup';
+    const laneId = 'secondary:opencode:partial-cleanup';
+    const manifestPath = getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId);
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'remaining.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-partial',
+      state: 'stopped',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-partial',
+      clock: () => now,
+    });
+    await fs.writeFile(markerPath, 'remaining', 'utf8');
+    await fs.rm(manifestPath);
+
+    const clear = () =>
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-partial',
+      });
+    await expect(clear()).resolves.toBe('cleared');
+    await expect(clear()).resolves.toBe('cleared');
+
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {},
+    });
+    await expect(fs.stat(path.dirname(manifestPath))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('preserves replacement storage when the index owner changes after manifest-first deletion', async () => {
+    const teamName = 'team-cas-replacement-race';
+    const laneId = 'secondary:opencode:replacement-race';
+    const manifestPath = getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId);
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'replacement.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-old',
+      state: 'stopped',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-old',
+      clock: () => now,
+    });
+    await fs.rm(manifestPath);
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-replacement',
+      state: 'active',
+    });
+    await fs.writeFile(markerPath, 'replacement', 'utf8');
+
+    await expect(
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-old',
+      })
+    ).resolves.toBe('owner_changed');
+
+    await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('replacement');
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {
+        [laneId]: {
+          runId: 'run-replacement',
+          state: 'active',
+        },
+      },
+    });
   });
 
   it('clears a matching durable owner atomically and is idempotent for that owner', async () => {

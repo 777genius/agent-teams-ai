@@ -965,18 +965,18 @@ export async function clearOpenCodeRuntimeLaneStorage(
         if (!laneEntry && !manifestExists) {
           return (await fileExists(laneDirectory)) ? 'owner_changed' : 'cleared';
         }
-        const manifest = manifestExists
-          ? await readRuntimeStoreManifestEvidenceData(
-              manifestPath,
-              params.teamName,
-              () => new Date()
-            )
-          : null;
-        if (
-          laneEntry?.runId !== params.expectedRunId ||
-          manifest?.activeRunId !== params.expectedRunId
-        ) {
+        if (laneEntry?.runId !== params.expectedRunId) {
           return 'owner_changed';
+        }
+        if (manifestExists) {
+          const manifest = await readRuntimeStoreManifestEvidenceData(
+            manifestPath,
+            params.teamName,
+            () => new Date()
+          );
+          if (manifest?.activeRunId !== params.expectedRunId) {
+            return 'owner_changed';
+          }
         }
       }
 
