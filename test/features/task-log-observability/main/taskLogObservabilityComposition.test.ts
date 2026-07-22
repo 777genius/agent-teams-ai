@@ -2,9 +2,9 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { describe, expect, it } from 'vitest';
 
-const root = process.cwd();
-const handlersSource = readFileSync(resolve(root, 'src/main/ipc/handlers.ts'), 'utf8');
-const legacyTeamsSource = readFileSync(resolve(root, 'src/main/ipc/teams.ts'), 'utf8');
+const ROOT = process.cwd();
+const handlersSource = readFileSync(resolve(ROOT, 'src/main/ipc/handlers.ts'), 'utf8');
+const legacyTeamsSource = readFileSync(resolve(ROOT, 'src/main/ipc/teams.ts'), 'utf8');
 
 const OWNED_CHANNELS = [
   'TEAM_GET_TASK_ACTIVITY',
