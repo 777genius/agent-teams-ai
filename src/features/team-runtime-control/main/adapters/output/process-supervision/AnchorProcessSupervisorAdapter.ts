@@ -58,6 +58,7 @@ import type {
   RecoverProcessExecutionUnitRequest,
   ResolvedProcessLaunchSpec,
   StartProcessExecutionUnitRequest,
+  StartProcessExecutionUnitResult,
   StopProcessExecutionUnitRequest,
   StopProcessExecutionUnitResult,
   SupervisedProcessRef,
@@ -149,6 +150,7 @@ export class AnchorProcessSupervisorAdapter
   private readonly recoverOwnership: RecoverProcessOwnership;
   private readonly stopOwnership: StopOwnedProcess;
   private readonly sessions = new Map<OwnedProcessRef, LiveAnchorSession>();
+  private readonly inFlightStarts = new Map<Sha256Hash, Promise<StartProcessExecutionUnitResult>>();
 
   constructor(private readonly options: AnchorProcessSupervisorAdapterOptions) {
     this.createIntent = new CreateSpawnIntent(options.store);
@@ -157,9 +159,9 @@ export class AnchorProcessSupervisorAdapter
     this.stopOwnership = new StopOwnedProcess(options.store, this, options.clock);
   }
 
-  async start(request: StartProcessExecutionUnitRequest) {
+  async start(request: StartProcessExecutionUnitRequest): Promise<StartProcessExecutionUnitResult> {
     if (isCancellationRequested(request.cancellation)) {
-      return { status: 'rejected' as const, reason: 'cancelled' as const };
+      return { status: 'rejected', reason: 'cancelled' };
     }
 
     // Recompute before IDs, durable intent, spawn marker, or any other effect.
@@ -167,13 +169,38 @@ export class AnchorProcessSupervisorAdapter
     try {
       actualArgvDigest = computeCanonicalArgvDigest(request.launchSpec.argvAuthority.argv);
     } catch {
-      return { status: 'rejected' as const, reason: 'not_owned' as const };
+      return { status: 'rejected', reason: 'not_owned' };
     }
     if (actualArgvDigest !== request.launchSpec.argvAuthority.argvHash) {
-      return { status: 'rejected' as const, reason: 'not_owned' as const };
+      return { status: 'rejected', reason: 'not_owned' };
     }
     if (!isExactLaunchSpec(request.executionUnit, request.launchSpec)) {
-      return { status: 'rejected' as const, reason: 'stale_plan' as const };
+      return { status: 'rejected', reason: 'stale_plan' };
+    }
+
+    let requestKey: Sha256Hash;
+    try {
+      requestKey = exactStartRequestKey(request);
+    } catch {
+      return { status: 'rejected', reason: 'not_owned' };
+    }
+    const existing = this.inFlightStarts.get(requestKey);
+    if (existing) return existing;
+
+    const inFlight = this.startExactRequest(request).finally(() => {
+      if (this.inFlightStarts.get(requestKey) === inFlight) {
+        this.inFlightStarts.delete(requestKey);
+      }
+    });
+    this.inFlightStarts.set(requestKey, inFlight);
+    return inFlight;
+  }
+
+  private async startExactRequest(
+    request: StartProcessExecutionUnitRequest
+  ): Promise<StartProcessExecutionUnitResult> {
+    if (isCancellationRequested(request.cancellation)) {
+      return { status: 'rejected', reason: 'cancelled' };
     }
 
     const deadline = createProcessSupervisionDeadline(
@@ -682,6 +709,15 @@ export class AnchorProcessSupervisorAdapter
       // The original typed failure is returned; store-unavailable is never treated as cleanup proof.
     }
   }
+}
+
+function exactStartRequestKey(request: StartProcessExecutionUnitRequest): Sha256Hash {
+  // The opaque cancellation ID is its request identity; the callback reports changing state.
+  return computeCanonicalPolicyDigest({
+    executionUnit: request.executionUnit,
+    launchSpec: request.launchSpec,
+    cancellationId: request.cancellation.cancellationId,
+  });
 }
 
 function isExactLaunchSpec(

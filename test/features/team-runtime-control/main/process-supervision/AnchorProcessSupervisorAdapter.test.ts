@@ -57,6 +57,20 @@ import type {
 
 const hash = (character: string): Sha256Hash => `sha256:${character.repeat(64)}`;
 
+function deferred() {
+  let resolve: (() => void) | undefined;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return {
+    promise,
+    resolve: () => {
+      if (!resolve) throw new Error('deferred promise was not initialized');
+      resolve();
+    },
+  };
+}
+
 class FakeClock implements MonotonicClockPort {
   value = 0;
   now(): number {
@@ -249,6 +263,9 @@ class FakeSpawner implements AnchorSpawnPort {
   advanceReadMs = 0;
   advanceCloseMs = 0;
   advanceSpawnMs = 0;
+  spawnGate: Promise<void> | undefined;
+  spawnFailure: unknown;
+  onSpawn: (() => void) | undefined;
   ownerAnchorIdentityRef = parseAnchorIdentityRef('anchor-identity-00000000001');
   readonly fakeReusedNativePid = 42_424;
 
@@ -266,6 +283,9 @@ class FakeSpawner implements AnchorSpawnPort {
     this.remainingTimes.push(options.remainingTimeMs);
     this.store.events.push('spawn-called');
     if (this.hang) return await new Promise<never>(() => undefined);
+    this.onSpawn?.();
+    if (this.spawnGate) await this.spawnGate;
+    if (this.spawnFailure !== undefined) throw this.spawnFailure;
     if (this.clock instanceof FakeClock) this.clock.advance(this.advanceSpawnMs);
 
     this.sink = new FakeControlSink(this.clock, this.advanceWriteMs, this.advanceCloseMs);
@@ -474,6 +494,216 @@ describe('AnchorProcessSupervisorAdapter', () => {
       processRef: 'process-ref-0000000000000001',
     });
     expect(spawner.calls).toBe(1);
+    expect(store.state?.intent.processRef).toBe('process-ref-0000000000000001');
+  });
+
+  it('shares one exact in-flight start outcome without allocating another process identity', async () => {
+    const store = new FakeStore();
+    const clock = new FakeClock();
+    const identities = new FakeIdentities();
+    const spawner = new FakeSpawner(store, clock);
+    const spawnEntered = deferred();
+    const releaseSpawn = deferred();
+    spawner.onSpawn = spawnEntered.resolve;
+    spawner.spawnGate = releaseSpawn.promise;
+    const adapter = createAdapter(store, identities, spawner, clock, undefined, 5_000);
+    const fixture = executionFixture();
+
+    const first = adapter.start(fixture);
+    await spawnEntered.promise;
+    const concurrent = adapter.start(fixture);
+
+    expect(identities.calls).toBe(2);
+    expect(spawner.calls).toBe(1);
+    expect(store.state?.phase).toBe('spawn_intent');
+
+    releaseSpawn.resolve();
+    await expect(Promise.all([first, concurrent])).resolves.toEqual([
+      { status: 'started', processRef: 'process-ref-0000000000000001' },
+      { status: 'started', processRef: 'process-ref-0000000000000001' },
+    ]);
+    expect(store.state?.phase).toBe('owned');
+    expect(store.state?.intent.processRef).toBe('process-ref-0000000000000001');
+  });
+
+  it.each([
+    {
+      difference: 'plan',
+      change: (fixture: ReturnType<typeof executionFixture>) => ({
+        ...fixture,
+        launchSpec: {
+          ...fixture.launchSpec,
+          planRef: {
+            ...fixture.launchSpec.planRef,
+            generation: fixture.launchSpec.planRef.generation + 1,
+            planHash: hash('d') as CompositeRuntimePlanHash,
+          },
+        },
+      }),
+      firstOutcome: {
+        status: 'started' as const,
+        processRef: 'process-ref-0000000000000001',
+      },
+    },
+    {
+      difference: 'execution unit',
+      change: (fixture: ReturnType<typeof executionFixture>) => {
+        const executionUnitId = parseExecutionUnitId('unit-secondary');
+        return {
+          ...fixture,
+          executionUnit: { ...fixture.executionUnit, executionUnitId },
+          launchSpec: { ...fixture.launchSpec, executionUnitId },
+        };
+      },
+      firstOutcome: {
+        status: 'started' as const,
+        processRef: 'process-ref-0000000000000001',
+      },
+    },
+    {
+      difference: 'workspace binding',
+      change: (fixture: ReturnType<typeof executionFixture>) => ({
+        ...fixture,
+        launchSpec: {
+          ...fixture.launchSpec,
+          workdirAuthority: {
+            ...fixture.launchSpec.workdirAuthority,
+            grant: {
+              ...fixture.launchSpec.workdirAuthority.grant,
+              bindingGeneration: fixture.launchSpec.workdirAuthority.grant.bindingGeneration + 1,
+            },
+          },
+        },
+      }),
+      firstOutcome: {
+        status: 'started' as const,
+        processRef: 'process-ref-0000000000000001',
+      },
+    },
+    {
+      difference: 'cancellation',
+      change: (fixture: ReturnType<typeof executionFixture>) => ({
+        ...fixture,
+        cancellation: {
+          cancellationId: 'different-cancellation-001' as RuntimeCancellationId,
+          isCancellationRequested: () => false,
+        },
+      }),
+      firstOutcome: { status: 'rejected' as const, reason: 'unavailable' as const },
+    },
+  ])(
+    'does not coalesce an in-flight request with a different $difference request',
+    async ({ change, firstOutcome }) => {
+      const store = new FakeStore();
+      const clock = new FakeClock();
+      const identities = new FakeIdentities();
+      const spawner = new FakeSpawner(store, clock);
+      const spawnEntered = deferred();
+      const releaseSpawn = deferred();
+      spawner.onSpawn = spawnEntered.resolve;
+      spawner.spawnGate = releaseSpawn.promise;
+      const adapter = createAdapter(store, identities, spawner, clock, undefined, 5_000);
+      const fixture = executionFixture();
+
+      const first = adapter.start(fixture);
+      await spawnEntered.promise;
+      const differing = adapter.start(change(fixture));
+
+      await expect(differing).resolves.toEqual({ status: 'rejected', reason: 'not_owned' });
+      expect(identities.calls).toBe(4);
+      expect(spawner.calls).toBe(1);
+
+      releaseSpawn.resolve();
+      await expect(first).resolves.toEqual(firstOutcome);
+    }
+  );
+
+  it('cleans a failed exact in-flight start so a later call observes durable state', async () => {
+    const store = new FakeStore();
+    const clock = new FakeClock();
+    const identities = new FakeIdentities();
+    const spawner = new FakeSpawner(store, clock);
+    const spawnEntered = deferred();
+    const releaseSpawn = deferred();
+    spawner.onSpawn = spawnEntered.resolve;
+    spawner.spawnGate = releaseSpawn.promise;
+    spawner.spawnFailure = new Error('deterministic-spawn-failure');
+    const adapter = createAdapter(store, identities, spawner, clock, undefined, 5_000);
+    const fixture = executionFixture();
+
+    const first = adapter.start(fixture);
+    await spawnEntered.promise;
+    const concurrent = adapter.start(fixture);
+
+    releaseSpawn.resolve();
+    await expect(Promise.all([first, concurrent])).resolves.toEqual([
+      { status: 'rejected', reason: 'unavailable' },
+      { status: 'rejected', reason: 'unavailable' },
+    ]);
+    expect(store.state?.phase).toBe('unclassified_residual');
+
+    const afterFailure = adapter.start(fixture);
+    await expect(afterFailure).resolves.toEqual({ status: 'rejected', reason: 'not_owned' });
+    expect(identities.calls).toBe(4);
+    expect(spawner.calls).toBe(1);
+  });
+
+  it('does not retain a successful exact start after the in-flight operation completes', async () => {
+    const store = new FakeStore();
+    const clock = new FakeClock();
+    const identities = new FakeIdentities();
+    const spawner = new FakeSpawner(store, clock);
+    const spawnEntered = deferred();
+    const releaseSpawn = deferred();
+    spawner.onSpawn = spawnEntered.resolve;
+    spawner.spawnGate = releaseSpawn.promise;
+    const adapter = createAdapter(store, identities, spawner, clock, undefined, 5_000);
+    const fixture = executionFixture();
+
+    const first = adapter.start(fixture);
+    await spawnEntered.promise;
+    releaseSpawn.resolve();
+    await expect(first).resolves.toEqual({
+      status: 'started',
+      processRef: 'process-ref-0000000000000001',
+    });
+
+    const afterCompletion = adapter.start(fixture);
+    await expect(afterCompletion).resolves.toEqual({
+      status: 'already_started',
+      processRef: 'process-ref-0000000000000001',
+    });
+    expect(identities.calls).toBe(4);
+    expect(spawner.calls).toBe(1);
+    expect(store.state?.intent.processRef).toBe('process-ref-0000000000000001');
+  });
+
+  it('does not treat an exact durable intent as in-flight ownership after restart', async () => {
+    const store = new FakeStore();
+    const clock = new FakeClock();
+    const firstSpawner = new FakeSpawner(store, clock);
+    const fixture = executionFixture();
+    const first = createAdapter(store, new FakeIdentities(), firstSpawner, clock);
+
+    await expect(first.start(fixture)).resolves.toEqual({
+      status: 'started',
+      processRef: 'process-ref-0000000000000001',
+    });
+
+    const replacementSpawner = new FakeSpawner(store, clock);
+    const replacement = createAdapter(
+      store,
+      new FakeIdentities(),
+      replacementSpawner,
+      clock,
+      'controller-instance-00000002'
+    );
+    await expect(replacement.start(fixture)).resolves.toEqual({
+      status: 'rejected',
+      reason: 'not_owned',
+    });
+    expect(replacementSpawner.calls).toBe(0);
+    expect(store.state?.phase).toBe('unclassified_residual');
     expect(store.state?.intent.processRef).toBe('process-ref-0000000000000001');
   });
 
