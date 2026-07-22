@@ -355,6 +355,7 @@ export class FakeChecks implements CheckRunnerPort {
   constructor(public status: CheckRunStatus) {}
 
   runCheck(input: {
+    readonly allowedWorkspaceFiles: readonly string[];
     readonly check: ProjectIntegrationCheckSpec;
     readonly startedAt: string;
   }): CheckRun {

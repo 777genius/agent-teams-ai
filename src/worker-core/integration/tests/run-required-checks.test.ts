@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CheckRunStatus,
+  CheckWorkspaceIntegrityDisposition,
   IntegrationAuditEventType,
   IntegrationAttemptStatus,
   ReviewDecisionStatus,
@@ -61,11 +62,13 @@ describe("runRequiredChecks", () => {
     expect(checks.calls).toEqual([
       {
         workspacePath: "/work/project-main",
+        allowedWorkspaceFiles: ["src/memory.ts"],
         check: requiredChecks[0],
         startedAt: "2026-01-01T00:00:02.000Z",
       },
       {
         workspacePath: "/work/project-main",
+        allowedWorkspaceFiles: ["src/memory.ts"],
         check: requiredChecks[1],
         startedAt: "2026-01-01T00:00:03.000Z",
       },
@@ -155,6 +158,62 @@ describe("runRequiredChecks", () => {
     expect(store.events.map((event) => event.type)).toEqual([
       IntegrationAuditEventType.ChecksStarted,
       IntegrationAuditEventType.ChecksFailed,
+    ]);
+  });
+
+  it.each([
+    CheckWorkspaceIntegrityDisposition.Restored,
+    CheckWorkspaceIntegrityDisposition.Unverified,
+  ])("fails closed for passed+%s integrity and stops later checks", async (
+    workspaceIntegrity,
+  ) => {
+    const attempt = createAttempt({
+      requiredChecks: [
+        { checkId: "mutating", command: ["npm", "test"] },
+        { checkId: "must-not-run", command: ["npm", "run", "lint"] },
+      ],
+      status: IntegrationAttemptStatus.Applied,
+    });
+    const store = new MemoryAttemptStore(attempt);
+    const calls: string[] = [];
+    const checks: CheckRunnerPort = {
+      runCheck(input) {
+        calls.push(input.check.checkId);
+        return {
+          checkId: input.check.checkId,
+          command: input.check.command,
+          status: CheckRunStatus.Passed,
+          startedAt: input.startedAt,
+          completedAt: input.startedAt,
+          workspaceIntegrity,
+        };
+      },
+    };
+
+    const checked = await runRequiredChecks(
+      {
+        store,
+        checks,
+        locks: immediateWorkspaceLock(),
+        clock: new SequenceClock([
+          "2026-01-01T00:00:01.000Z",
+          "2026-01-01T00:00:02.000Z",
+          "2026-01-01T00:00:03.000Z",
+        ]),
+      },
+      { attemptId: attempt.attemptId },
+    );
+
+    expect(calls).toEqual(["mutating"]);
+    expect(checked.status).toBe(IntegrationAttemptStatus.ChecksFailed);
+    expect(checked.checkRuns).toHaveLength(1);
+    expect(checked.checkRuns[0]).toMatchObject({
+      status: CheckRunStatus.Passed,
+      workspaceIntegrity,
+    });
+    expect(store.updates.map((update) => update.status)).toEqual([
+      IntegrationAttemptStatus.ChecksRunning,
+      IntegrationAttemptStatus.ChecksFailed,
     ]);
   });
 

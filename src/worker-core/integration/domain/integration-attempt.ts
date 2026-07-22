@@ -26,6 +26,12 @@ export enum CheckRunStatus {
   TimedOut = "timed_out",
 }
 
+export enum CheckWorkspaceIntegrityDisposition {
+  Unchanged = "unchanged",
+  Restored = "restored",
+  Unverified = "unverified",
+}
+
 export enum SecretScanStatus {
   Passed = "passed",
   Failed = "failed",
@@ -78,6 +84,7 @@ export type CheckRun = {
   readonly completedAt: string;
   readonly exitCode?: number;
   readonly safeOutputTail?: string;
+  readonly workspaceIntegrity?: CheckWorkspaceIntegrityDisposition;
 };
 
 export type CheckRunRollup = {
@@ -269,7 +276,7 @@ export function recordCheckRuns(
 }
 
 export function allCheckRunsPassed(checkRuns: readonly CheckRun[]): boolean {
-  return checkRuns.every((run) => run.status === CheckRunStatus.Passed);
+  return checkRuns.every(checkRunPassedWithIntegrity);
 }
 
 export function integrationStatusForCheckRuns(
@@ -286,7 +293,7 @@ export function rollupCheckRuns(
   const failedCheckIds = [
     ...new Set(
       checkRuns
-        .filter((run) => run.status !== CheckRunStatus.Passed)
+        .filter((run) => !checkRunPassedWithIntegrity(run))
         .map((run) => run.checkId),
     ),
   ].sort();
@@ -297,6 +304,14 @@ export function rollupCheckRuns(
         : IntegrationAttemptStatus.ChecksPassed,
     failedCheckIds,
   };
+}
+
+function checkRunPassedWithIntegrity(run: CheckRun): boolean {
+  return (
+    run.status === CheckRunStatus.Passed &&
+    (run.workspaceIntegrity === undefined ||
+      run.workspaceIntegrity === CheckWorkspaceIntegrityDisposition.Unchanged)
+  );
 }
 
 export function markCommitCreated(

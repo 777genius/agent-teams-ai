@@ -24,18 +24,18 @@ import {
   localWorkerOutputTargetCommit,
   rollbackLocalWorkerOutput,
 } from "./project-integration-local-output-rollback";
+import {
+  safeProjectIntegrationOutputTail,
+} from "./project-integration-local-safe-output";
 
 import { LocalFileWorkspaceLockStore } from "@vioxen/subscription-runtime/store-local-file";
 import {
-  CheckRunStatus,
   IntegrationAttemptStatus,
   IntegrationError,
   IntegrationErrorReason,
   assertCommitIdentity,
   assertFilesWithinExpected,
   normalizeProjectRelativePath,
-  type CheckRun,
-  type CheckRunnerPort,
   type CommitIdentity,
   type CommitIdentityPort,
   type GitApplyWorkerOutputResult,
@@ -137,7 +137,7 @@ export class LocalGitIntegrationAdapter implements GitPort {
                 input.workerOutput.workerJobId ?? "",
               ),
             ];
-      const patchPath = await canonicalPatchPath({
+      const patchPath = await canonicalProjectIntegrationPatchPath({
         workspacePath: input.workerOutput.workspacePath,
         path: input.workerOutput.patchPath,
         ...(input.workerOutput.workerJobId === undefined
@@ -151,7 +151,7 @@ export class LocalGitIntegrationAdapter implements GitPort {
           ? {}
           : { controllerArchiveRoot: this.options.controllerArchiveRoot }),
       });
-      await assertPatchSha256(patchPath, input.workerOutput.patchSha256);
+      await assertProjectIntegrationPatchSha256(patchPath, input.workerOutput.patchSha256);
       const targetCommit = input.workerOutput.targetCommit ??
         input.workerOutput.baseCommit ??
         (await this.git(["rev-parse", "HEAD"], workspacePath)).stdout.trim();
@@ -165,14 +165,14 @@ export class LocalGitIntegrationAdapter implements GitPort {
         patchPath,
       });
       changedFiles = patchOutput.changedFiles;
-      await assertPatchSha256(patchPath, input.workerOutput.patchSha256);
+      await assertProjectIntegrationPatchSha256(patchPath, input.workerOutput.patchSha256);
       assertFilesWithinExpected(changedFiles, input.attempt.expectedFiles);
       const forwardCheck = await this.tryGit(
         ["apply", "--check", "--whitespace=nowarn", patchPath],
         workspacePath,
       );
       if (forwardCheck.exitCode === 0) {
-        await assertPatchSha256(patchPath, input.workerOutput.patchSha256);
+        await assertProjectIntegrationPatchSha256(patchPath, input.workerOutput.patchSha256);
         await this.git(
           ["apply", "--whitespace=nowarn", patchPath],
           workspacePath,
@@ -181,7 +181,7 @@ export class LocalGitIntegrationAdapter implements GitPort {
         input.allowAlreadyApplied === true &&
         sameFiles(changedFiles, input.attempt.expectedFiles)
       ) {
-        await assertPatchSha256(patchPath, input.workerOutput.patchSha256);
+        await assertProjectIntegrationPatchSha256(patchPath, input.workerOutput.patchSha256);
         const reverseCheck = await this.tryGit(
           ["apply", "--reverse", "--check", "--whitespace=nowarn", patchPath],
           workspacePath,
@@ -219,7 +219,7 @@ export class LocalGitIntegrationAdapter implements GitPort {
             workerOutput.workerJobId,
           ),
         ];
-    return canonicalPatchPath({
+    return canonicalProjectIntegrationPatchPath({
       workspacePath: workerOutput.workspacePath,
       path: workerOutput.patchPath,
       workerJobId: workerOutput.workerJobId,
@@ -245,7 +245,7 @@ export class LocalGitIntegrationAdapter implements GitPort {
     if (working.exitCode === 0 && staged.exitCode === 0) return { ok: true };
     return {
       ok: false,
-      safeMessage: safeTail(
+      safeMessage: safeProjectIntegrationOutputTail(
         `${working.stdout}\n${working.stderr}\n${staged.stdout}\n${staged.stderr}`,
       ),
     };
@@ -504,7 +504,7 @@ export class LocalGitIntegrationAdapter implements GitPort {
       remoteBranchCommit: (input) => this.remoteBranchCommit(input),
       canonicalWorkerPatch: (workerOutput) =>
         this.canonicalWorkerPatch(workerOutput),
-      assertPatchSha256,
+      assertPatchSha256: assertProjectIntegrationPatchSha256,
       patchChangedFiles: (patchPath, cwd) =>
         this.patchChangedFiles(patchPath, cwd),
     };
@@ -518,7 +518,9 @@ export class LocalGitIntegrationAdapter implements GitPort {
     const result = await this.tryGit(args, cwd, env);
     if (result.exitCode !== 0) {
       throw new Error(
-        `local_git_integration_failed:${safeTail(result.stderr || result.stdout)}`,
+        `local_git_integration_failed:${safeProjectIntegrationOutputTail(
+          result.stderr || result.stdout,
+        )}`,
       );
     }
     return result;
@@ -591,7 +593,7 @@ function sameCommits(left: readonly string[], right: readonly string[]): boolean
   );
 }
 
-async function assertPatchSha256(
+export async function assertProjectIntegrationPatchSha256(
   patchPath: string,
   expectedSha256: string | undefined,
 ): Promise<void> {
@@ -644,88 +646,6 @@ export class ConfiguredCommitIdentityAdapter implements CommitIdentityPort {
     const value = result.stdout.trim();
     return value.length === 0 ? undefined : value;
   }
-}
-
-export type LocalProjectCheckRunnerOptions = {
-  readonly env?: Readonly<Record<string, string | undefined>>;
-  readonly timeoutMs?: number;
-  readonly maxBuffer?: number;
-};
-
-export class LocalProjectCheckRunner implements CheckRunnerPort {
-  constructor(private readonly options: LocalProjectCheckRunnerOptions = {}) {}
-
-  async runCheck(input: {
-    readonly workspacePath: string;
-    readonly check: {
-      readonly checkId: string;
-      readonly command: readonly string[];
-      readonly cwd?: string;
-      readonly timeoutMs?: number;
-    };
-    readonly startedAt: string;
-  }): Promise<CheckRun> {
-    const completedAt = () => new Date().toISOString();
-    if (input.check.command.length === 0) {
-      return {
-        checkId: input.check.checkId,
-        command: input.check.command,
-        status: CheckRunStatus.Failed,
-        startedAt: input.startedAt,
-        completedAt: completedAt(),
-        safeOutputTail: "check_command_required",
-      };
-    }
-    let cwd: string;
-    try {
-      cwd = await checkCwd(input.workspacePath, input.check.cwd);
-    } catch {
-      return {
-        checkId: input.check.checkId,
-        command: input.check.command,
-        status: CheckRunStatus.Failed,
-        startedAt: input.startedAt,
-        completedAt: completedAt(),
-        safeOutputTail: "check_cwd_outside_workspace",
-      };
-    }
-    const [rawCommand, ...rawArgs] = input.check.command;
-    const { command, args } = resolveCheckCommand(rawCommand ?? "", rawArgs);
-    const result = await runCommand({
-      command,
-      args,
-      cwd,
-      ...(this.options.env === undefined ? {} : { env: this.options.env }),
-      timeoutMs: input.check.timeoutMs ?? this.options.timeoutMs ?? 120_000,
-      maxBuffer: this.options.maxBuffer ?? 10 * 1024 * 1024,
-    });
-    return {
-      checkId: input.check.checkId,
-      command: input.check.command,
-      status: result.timedOut
-        ? CheckRunStatus.TimedOut
-        : result.exitCode === 0
-          ? CheckRunStatus.Passed
-          : CheckRunStatus.Failed,
-      startedAt: input.startedAt,
-      completedAt: completedAt(),
-      exitCode: result.exitCode,
-      safeOutputTail: safeTail(`${result.stdout}\n${result.stderr}`),
-    };
-  }
-}
-
-function resolveCheckCommand(
-  command: string,
-  args: readonly string[],
-): { readonly command: string; readonly args: readonly string[] } {
-  if (command === "pnpm" || command === "yarn") {
-    return {
-      command: "corepack",
-      args: [command, ...args],
-    };
-  }
-  return { command, args };
 }
 
 export {
@@ -834,7 +754,7 @@ async function pathExists(path: string): Promise<boolean> {
   }
 }
 
-async function canonicalPatchPath(input: {
+export async function canonicalProjectIntegrationPatchPath(input: {
   readonly workspacePath: string;
   readonly path: string;
   readonly workerJobId?: string;
@@ -934,24 +854,6 @@ function workerJobRootPath(
   return root;
 }
 
-async function checkCwd(
-  workspacePath: string,
-  cwd: string | undefined,
-): Promise<string> {
-  const workspace = await canonicalDirectory(workspacePath);
-  const candidate =
-    cwd === undefined
-      ? workspace
-      : isAbsolute(cwd)
-        ? cwd
-        : resolve(workspace, cwd);
-  const canonical = await realpath(candidate);
-  if (!isPathInside(canonical, workspace)) {
-    throw new Error("local_project_check_cwd_outside_workspace");
-  }
-  return canonical;
-}
-
 function isPathInside(path: string, root: string): boolean {
   const rel = relative(root, path);
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
@@ -959,25 +861,6 @@ function isPathInside(path: string, root: string): boolean {
 
 function uniqueSorted(values: readonly string[]): readonly string[] {
   return [...new Set(values)].sort();
-}
-
-function safeTail(value: string, maxLength = 4000): string {
-  const redacted = redactSecrets(value);
-  return redacted.length <= maxLength
-    ? redacted
-    : redacted.slice(redacted.length - maxLength);
-}
-
-function redactSecrets(value: string): string {
-  return value
-    .replaceAll(/sk-[A-Za-z0-9_-]{12,}/g, "sk-<redacted>")
-    .replaceAll(/ghp_[A-Za-z0-9_]{12,}/g, "ghp_<redacted>")
-    .replaceAll(/github_pat_[A-Za-z0-9_]{12,}/g, "github_pat_<redacted>")
-    .replaceAll(/xox[baprs]-[A-Za-z0-9-]{12,}/g, "xox<redacted>")
-    .replaceAll(
-      /(api[_-]?key|access[_-]?token|refresh[_-]?token|secret)\s*[:=]\s*["']?[^"'\s]+/gi,
-      "$1=<redacted>",
-    );
 }
 
 function bufferToString(value: string | Buffer | undefined): string {

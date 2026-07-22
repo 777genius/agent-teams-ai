@@ -7,6 +7,8 @@ export * from "./git-blob-batch-reader";
 export * from "./node-process-runner";
 export * from "./observability";
 export * from "./project-integration-local-adapters";
+export * from "./project-integration-local-check-runner";
+export * from "./project-integration-local-operator-artifact-recovery";
 export * from "./consumed-output-ledger-local-adapter";
 export * from "./stdout-run-event-publisher";
 export * from "./temp-workspace";

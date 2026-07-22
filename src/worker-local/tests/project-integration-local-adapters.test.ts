@@ -983,6 +983,7 @@ describe("local project integration adapters", () => {
 
     await expect(runner.runCheck({
       workspacePath: fixture.workspacePath,
+      allowedWorkspaceFiles: ["src/memory.ts"],
       startedAt: "2026-01-01T00:00:00.000Z",
       check: {
         checkId: "pass",
@@ -997,6 +998,7 @@ describe("local project integration adapters", () => {
 
     await expect(runner.runCheck({
       workspacePath: fixture.workspacePath,
+      allowedWorkspaceFiles: ["src/memory.ts"],
       startedAt: "2026-01-01T00:00:00.000Z",
       check: {
         checkId: "redact",
@@ -1206,6 +1208,7 @@ describe("local project integration adapters", () => {
 
     await expect(runner.runCheck({
       workspacePath: fixture.workspacePath,
+      allowedWorkspaceFiles: ["src/memory.ts"],
       startedAt: "2026-01-01T00:00:00.000Z",
       check: {
         checkId: "pnpm-check",
@@ -1225,6 +1228,7 @@ describe("local project integration adapters", () => {
 
     await expect(runner.runCheck({
       workspacePath: fixture.workspacePath,
+      allowedWorkspaceFiles: ["src/memory.ts"],
       startedAt: "2026-01-01T00:00:00.000Z",
       check: {
         checkId: "outside",

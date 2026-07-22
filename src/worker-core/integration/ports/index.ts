@@ -6,3 +6,4 @@ export * from "./integration-attempt-store-port";
 export * from "./integration-audit-port";
 export * from "./secret-scanner-port";
 export * from "./workspace-lock-port";
+export * from "./operator-artifact-recovery-port";

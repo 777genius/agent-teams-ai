@@ -12,14 +12,70 @@ import type { LocalGitMergeRuntime } from "./project-integration-local-merge-coo
 
 export type LocalGitOutputRollbackRuntime = Pick<
   LocalGitMergeRuntime,
-  | "git"
-  | "tryGit"
-  | "getStatus"
-  | "canonicalWorkerPatch"
-  | "assertPatchSha256"
+  "git" | "tryGit" | "getStatus" | "canonicalWorkerPatch" | "assertPatchSha256"
 >;
 
 type LocalOutputState = "applied" | "target";
+
+export async function assertLocalWorkerPatchBytesExactlyApplied(input: {
+  readonly runtime: LocalGitOutputRollbackRuntime;
+  readonly workspacePath: string;
+  readonly appliedFiles: readonly string[];
+  readonly expectedCommit: string;
+  readonly patchBytes: Buffer;
+}): Promise<void> {
+  const untracked = new Set(
+    (
+      await input.runtime.git(
+        ["ls-files", "--others", "--exclude-standard", "-z"],
+        input.workspacePath,
+      )
+    ).stdout
+      .split("\0")
+      .filter(Boolean),
+  );
+  const trackedPatch = (
+    await input.runtime.git(
+      [
+        "-c",
+        "core.quotepath=false",
+        "diff",
+        "--binary",
+        "--no-renames",
+        input.expectedCommit,
+        "--",
+      ],
+      input.workspacePath,
+    )
+  ).stdout;
+  const parts = trackedPatch ? [ensureTrailingNewline(trackedPatch)] : [];
+  for (const file of input.appliedFiles.filter((path) => untracked.has(path))) {
+    const result = await input.runtime.tryGit(
+      [
+        "-c",
+        "core.quotepath=false",
+        "diff",
+        "--binary",
+        "--no-index",
+        "--",
+        "/dev/null",
+        file,
+      ],
+      input.workspacePath,
+    );
+    if (result.exitCode !== 1) {
+      throw new Error("local_git_integration_patch_state_capture_failed");
+    }
+    parts.push(ensureTrailingNewline(result.stdout));
+  }
+  if (!Buffer.from(parts.join(""), "utf8").equals(input.patchBytes)) {
+    throw new Error("local_git_integration_patch_not_exactly_applied");
+  }
+}
+
+function ensureTrailingNewline(value: string): string {
+  return value.endsWith("\n") ? value : `${value}\n`;
+}
 
 export function localWorkerOutputTargetCommit(output: {
   readonly targetCommit?: string;
@@ -88,21 +144,26 @@ export async function rollbackLocalWorkerOutput(input: {
       expectedCommit,
     });
     if (state === "applied") {
-      await input.runtime.git([
-        "restore",
-        `--source=${expectedCommit}`,
-        "--staged",
-        "--worktree",
-        "--",
-        ...appliedFiles,
-      ], input.workspacePath);
+      await input.runtime.git(
+        [
+          "restore",
+          `--source=${expectedCommit}`,
+          "--staged",
+          "--worktree",
+          "--",
+          ...appliedFiles,
+        ],
+        input.workspacePath,
+      );
     }
-    if (await commitOutputState({
-      ...input,
-      appliedFiles,
-      commitSha: input.attempt.workerOutput.commitSha,
-      expectedCommit,
-    }) !== "target") {
+    if (
+      (await commitOutputState({
+        ...input,
+        appliedFiles,
+        commitSha: input.attempt.workerOutput.commitSha,
+        expectedCommit,
+      })) !== "target"
+    ) {
       throw new Error("local_git_integration_output_rollback_not_restored");
     }
   } else if (input.attempt.workerOutput.patchPath) {
@@ -153,10 +214,12 @@ async function reverseImmutableWorkerPatch(input: {
     ["apply", "--reverse", "--whitespace=nowarn", patchPath],
     input.workspacePath,
   );
-  if (await patchOutputState({
-    ...input,
-    patchPath,
-  }) !== "target") {
+  if (
+    (await patchOutputState({
+      ...input,
+      patchPath,
+    })) !== "target"
+  ) {
     throw new Error("local_git_integration_output_rollback_not_restored");
   }
 }
@@ -168,22 +231,21 @@ async function patchOutputState(input: {
   readonly expectedCommit: string;
   readonly patchPath: string;
 }): Promise<LocalOutputState> {
-  const [patchOutput, indexTree, currentWorktreeTree] =
-    await Promise.all([
-      inspectLocalPatchOutputTree({
-        runtime: input.runtime,
-        workspacePath: input.workspacePath,
-        baseCommit: input.expectedCommit,
-        patchPath: input.patchPath,
-      }),
-      writeIndexTree(input.runtime, input.workspacePath),
-      writeTemporaryIndexTree({
-        runtime: input.runtime,
-        workspacePath: input.workspacePath,
-        baseCommit: input.expectedCommit,
-        worktreeFiles: input.appliedFiles,
-      }),
-    ]);
+  const [patchOutput, indexTree, currentWorktreeTree] = await Promise.all([
+    inspectLocalPatchOutputTree({
+      runtime: input.runtime,
+      workspacePath: input.workspacePath,
+      baseCommit: input.expectedCommit,
+      patchPath: input.patchPath,
+    }),
+    writeIndexTree(input.runtime, input.workspacePath),
+    writeTemporaryIndexTree({
+      runtime: input.runtime,
+      workspacePath: input.workspacePath,
+      baseCommit: input.expectedCommit,
+      worktreeFiles: input.appliedFiles,
+    }),
+  ]);
   if (!sameFiles(patchOutput.changedFiles, input.appliedFiles)) {
     throw new Error("local_git_integration_output_rollback_patch_mismatch");
   }
@@ -297,18 +359,20 @@ async function resolveTree(
   workspacePath: string,
   revision: string,
 ): Promise<string> {
-  return (await runtime.git(
-    ["rev-parse", `${revision}^{tree}`],
-    workspacePath,
-  )).stdout.trim().toLowerCase();
+  return (
+    await runtime.git(["rev-parse", `${revision}^{tree}`], workspacePath)
+  ).stdout
+    .trim()
+    .toLowerCase();
 }
 
 async function writeIndexTree(
   runtime: LocalGitOutputRollbackRuntime,
   workspacePath: string,
 ): Promise<string> {
-  return (await runtime.git(["write-tree"], workspacePath))
-    .stdout.trim().toLowerCase();
+  return (await runtime.git(["write-tree"], workspacePath)).stdout
+    .trim()
+    .toLowerCase();
 }
 
 async function writeTemporaryIndexTree(input: {
@@ -362,11 +426,11 @@ async function writeTemporaryIndexTree(input: {
     } else {
       throw new Error("local_git_integration_output_tree_source_required");
     }
-    return (await input.runtime.git(
-      ["write-tree"],
-      input.workspacePath,
-      env,
-    )).stdout.trim().toLowerCase();
+    return (
+      await input.runtime.git(["write-tree"], input.workspacePath, env)
+    ).stdout
+      .trim()
+      .toLowerCase();
   } finally {
     await rm(tempRoot, { recursive: true, force: true });
   }
@@ -378,7 +442,9 @@ async function pathExists(path: string): Promise<boolean> {
     return true;
   } catch (error) {
     if (
-      typeof error === "object" && error !== null && "code" in error &&
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
       error.code === "ENOENT"
     ) {
       return false;
@@ -393,22 +459,27 @@ async function treeChangedFiles(input: {
   readonly baseTree: string;
   readonly outputTree: string;
 }): Promise<readonly string[]> {
-  const result = await input.runtime.git([
-    "diff",
-    "--name-only",
-    "--no-renames",
-    "-z",
-    input.baseTree,
-    input.outputTree,
-  ], input.workspacePath);
+  const result = await input.runtime.git(
+    [
+      "diff",
+      "--name-only",
+      "--no-renames",
+      "-z",
+      input.baseTree,
+      input.outputTree,
+    ],
+    input.workspacePath,
+  );
   return result.stdout.split("\0").filter((file) => file.length > 0);
 }
 
 function sameFiles(left: readonly string[], right: readonly string[]): boolean {
   const normalizedLeft = uniqueSorted(left.map(normalizeProjectRelativePath));
   const normalizedRight = uniqueSorted(right.map(normalizeProjectRelativePath));
-  return normalizedLeft.length === normalizedRight.length &&
-    normalizedLeft.every((file, index) => file === normalizedRight[index]);
+  return (
+    normalizedLeft.length === normalizedRight.length &&
+    normalizedLeft.every((file, index) => file === normalizedRight[index])
+  );
 }
 
 function hasFilesOutside(

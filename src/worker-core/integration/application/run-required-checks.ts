@@ -1,8 +1,10 @@
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import {
+  CheckWorkspaceIntegrityDisposition,
   IntegrationAttemptStatus,
   allCheckRunsPassed,
+  integrationAppliedFiles,
   markChecksRunning,
   recordCheckRuns,
   type CheckRun,
@@ -101,13 +103,19 @@ async function runDeclaredRequiredChecks(
 ): Promise<readonly CheckRun[]> {
   const checkRuns: CheckRun[] = [];
   for (const check of attempt.reviewDecision.requiredChecks) {
-    checkRuns.push(
-      await deps.checks.runCheck({
-        workspacePath: attempt.targetWorkspacePath,
-        check: rebaseReviewedCheckCwd(attempt, check),
-        startedAt: nowIso(deps.clock),
-      }),
-    );
+    const run = await deps.checks.runCheck({
+      workspacePath: attempt.targetWorkspacePath,
+      allowedWorkspaceFiles: integrationAppliedFiles(attempt),
+      check: rebaseReviewedCheckCwd(attempt, check),
+      startedAt: nowIso(deps.clock),
+    });
+    checkRuns.push(run);
+    if (
+      run.workspaceIntegrity !== undefined &&
+      run.workspaceIntegrity !== CheckWorkspaceIntegrityDisposition.Unchanged
+    ) {
+      break;
+    }
   }
   return checkRuns;
 }

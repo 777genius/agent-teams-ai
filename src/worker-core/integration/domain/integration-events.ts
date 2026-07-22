@@ -6,6 +6,8 @@ export enum IntegrationAuditEventType {
   ChecksStarted = "integration_attempt.check_started",
   ChecksPassed = "integration_attempt.check_passed",
   ChecksFailed = "integration_attempt.check_failed",
+  OperatorArtifactRecoveryPrepared = "integration_attempt.operator_artifact_recovery_prepared",
+  OperatorArtifactRecoveryCompleted = "integration_attempt.operator_artifact_recovery_completed",
   CommitCreated = "integration_attempt.commit_created",
   Pushed = "integration_attempt.pushed",
   Promoted = "integration_attempt.promoted",

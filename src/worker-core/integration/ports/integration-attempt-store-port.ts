@@ -11,4 +11,7 @@ export interface IntegrationAttemptStorePort {
     attemptId: string,
     event: IntegrationAuditEvent,
   ): Promise<void> | void;
+  readEvents?(
+    attemptId: string,
+  ): Promise<readonly IntegrationAuditEvent[]> | readonly IntegrationAuditEvent[];
 }
