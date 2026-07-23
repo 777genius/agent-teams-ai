@@ -19,6 +19,7 @@ describe('team runtime selection validation', () => {
     ['Uppercase', false],
     ['bad_team', false],
     ['-leading', false],
+    [`a${'b'.repeat(63)}`, true],
     [`a${'b'.repeat(64)}`, false],
   ])('validates provisioning team name %j', (teamName, expected) => {
     expect(isProvisioningTeamName(teamName)).toBe(expected);
@@ -59,6 +60,10 @@ describe('team runtime selection validation', () => {
   });
 
   it('drops a known stale launch backend while rejecting unknown values', () => {
+    expect(parseOptionalLaunchProviderBackendId('codex-native', 'codex')).toEqual({
+      valid: true,
+      value: 'codex-native',
+    });
     expect(parseOptionalLaunchProviderBackendId('codex-native', 'anthropic')).toEqual({
       valid: true,
       value: undefined,
