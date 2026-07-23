@@ -433,6 +433,16 @@ test('detects implementation exports through transitive internal barrels', () =>
 test('recognizes JavaScript feature root entrypoints', () => {
   withFixture(
     {
+      'src/features/commonjs-default/index.cjs': `
+        module.exports = require('./infrastructure/DefaultStore');
+      `,
+      'src/features/commonjs-default/infrastructure/DefaultStore.cjs':
+        'module.exports = class DefaultStore {};',
+      'src/features/commonjs-named/main/index.js': `
+        exports.NamedStore = require('./infrastructure/NamedStore');
+      `,
+      'src/features/commonjs-named/main/infrastructure/NamedStore.js':
+        'module.exports = class NamedStore {};',
       'src/features/js-feature/adapters/Adapter.js': 'export class Adapter {}',
       'src/features/js-feature/index.jsx': `export { Adapter } from './adapters/Adapter';`,
     },
@@ -443,6 +453,18 @@ test('recognizes JavaScript feature root entrypoints', () => {
           .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
           .map(toBaselineEntry),
         [
+          {
+            publicEntrypoint: 'src/features/commonjs-default/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-default/index.cjs',
+            specifier: './infrastructure/DefaultStore',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-named/main/index.js',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-named/main/index.js',
+            specifier: './infrastructure/NamedStore',
+          },
           {
             publicEntrypoint: 'src/features/js-feature/index.jsx',
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
@@ -471,6 +493,7 @@ test('preserves member selection through local aliases', () => {
       'src/features/namespace-safe/main/index.ts': `
         const barrel = await import('./mixedBarrel');
         export const Safe = barrel.Safe;
+        export const InlineSafe = (await import('./mixedBarrel')).Safe;
       `,
       'src/features/namespace-safe/main/mixedBarrel.ts': `
         export { Safe } from './safe';

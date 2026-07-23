@@ -5,10 +5,12 @@ import path from 'node:path';
 import ts from 'typescript';
 
 import {
+  commonJsExportNameForAssignment,
   findPublicMutationOwner,
   importedNameForReference,
   objectBindingSelections,
   selectImportedName,
+  selectedMemberAfterTransparentWrappers,
   selectedMemberForReference,
 } from './feature-export-analysis.mjs';
 import {
@@ -214,6 +216,10 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
       localNames = [current.name.text];
     } else if (ts.isExpressionStatement(current)) {
+      const commonJsExportName = commonJsExportNameForAssignment(current.expression);
+      if (commonJsExportName) {
+        return { bindingSelections: null, exportedNames: [commonJsExportName], localNames: [] };
+      }
       const mutationOwner = findPublicMutationOwner(current.expression, exportedLocalNames);
       if (mutationOwner) localNames = [mutationOwner];
     }
@@ -330,12 +336,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         const edge = addEdge(node, argument, 'import');
         const owner = publicReferenceOwner(node);
         if (edge && owner) {
-          const importedName =
-            isRequireCall &&
-            ts.isPropertyAccessExpression(node.parent) &&
-            node.parent.expression === node
-              ? node.parent.name.text
-              : '*';
+          const importedName = selectedMemberAfterTransparentWrappers(node) ?? '*';
           addOwnerDependency(owner, { edge, importedName });
         }
       }

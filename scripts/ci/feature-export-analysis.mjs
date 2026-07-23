@@ -37,6 +37,61 @@ function bindingNames(bindingName) {
   );
 }
 
+function unwrapExpression(expression) {
+  let current = expression;
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isAsExpression(current) ||
+    ts.isTypeAssertionExpression(current) ||
+    ts.isNonNullExpression(current) ||
+    ts.isSatisfiesExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return current;
+}
+
+function memberAccess(expression) {
+  const current = unwrapExpression(expression);
+  if (ts.isPropertyAccessExpression(current)) {
+    return { name: current.name.text, receiver: unwrapExpression(current.expression) };
+  }
+  if (
+    ts.isElementAccessExpression(current) &&
+    current.argumentExpression &&
+    ts.isStringLiteralLike(current.argumentExpression)
+  ) {
+    return { name: current.argumentExpression.text, receiver: unwrapExpression(current.expression) };
+  }
+  return null;
+}
+
+function isModuleExports(expression) {
+  const access = memberAccess(expression);
+  return (
+    access?.name === 'exports' &&
+    ts.isIdentifier(access.receiver) &&
+    access.receiver.text === 'module'
+  );
+}
+
+export function commonJsExportNameForAssignment(expression) {
+  if (
+    !ts.isBinaryExpression(expression) ||
+    expression.operatorToken.kind !== ts.SyntaxKind.EqualsToken
+  ) {
+    return null;
+  }
+
+  const target = unwrapExpression(expression.left);
+  if (isModuleExports(target)) return '*';
+
+  const access = memberAccess(target);
+  if (!access) return null;
+  if (ts.isIdentifier(access.receiver) && access.receiver.text === 'exports') return access.name;
+  return isModuleExports(access.receiver) ? access.name : null;
+}
+
 export function findPublicMutationOwner(expression, exportedLocalNames) {
   let target = ts.isAssignmentExpression(expression) ? expression.left : null;
   if (ts.isCallExpression(expression) && ts.isPropertyAccessExpression(expression.expression)) {
@@ -75,6 +130,29 @@ export function selectedMemberForReference(reference) {
     return parent.name?.text ?? parent.right.text;
   }
   return null;
+}
+
+export function selectedMemberAfterTransparentWrappers(reference) {
+  let current = reference;
+  while (current.parent) {
+    const parent = current.parent;
+    if (
+      (ts.isAwaitExpression(parent) ||
+        ts.isParenthesizedExpression(parent) ||
+        ts.isAsExpression(parent) ||
+        ts.isTypeAssertionExpression(parent) ||
+        ts.isNonNullExpression(parent) ||
+        ts.isSatisfiesExpression(parent)) &&
+      parent.expression === current
+    ) {
+      current = parent;
+      continue;
+    }
+    break;
+  }
+
+  const access = memberAccess(current.parent ?? current);
+  return access?.receiver === unwrapExpression(current) ? access.name : null;
 }
 
 export function importedNameForReference(reference, importedBinding) {
