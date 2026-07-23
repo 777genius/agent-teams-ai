@@ -669,6 +669,7 @@ export interface RuntimeLocalProviderProbeInput {
   presetId: RuntimeLocalProviderPresetIdDto;
   baseUrl?: string | null;
   providerId?: string | null;
+  allowPrivateNetwork?: boolean;
 }
 
 export interface RuntimeLocalProviderProbeResponse {
@@ -687,6 +688,9 @@ export interface RuntimeLocalProviderConfigureInput {
   providerId?: string | null;
   defaultModelId: string;
   setAsDefault: boolean;
+  /** Also route OpenCode's lightweight-task model (small_model) to this provider. Defaults to setAsDefault. */
+  setAsSmallModel?: boolean;
+  allowPrivateNetwork?: boolean;
 }
 
 export interface RuntimeLocalProviderConfigurationDto {

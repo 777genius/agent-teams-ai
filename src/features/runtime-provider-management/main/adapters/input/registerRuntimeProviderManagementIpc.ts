@@ -174,6 +174,8 @@ export function registerRuntimeProviderManagementIpc(
     typeof value === 'string' && LOCAL_PROVIDER_SCOPE_SET.has(value);
   const validOptionalString = (value: unknown): boolean =>
     value === undefined || value === null || typeof value === 'string';
+  const validOptionalBoolean = (value: unknown): boolean =>
+    value === undefined || typeof value === 'boolean';
 
   ipcMain.handle(
     RUNTIME_LOCAL_PROVIDER_LIST,
@@ -232,7 +234,8 @@ export function registerRuntimeProviderManagementIpc(
         input?.runtimeId !== 'opencode' ||
         !isPresetId(input.presetId) ||
         !validOptionalString(input.baseUrl) ||
-        !validOptionalString(input.providerId)
+        !validOptionalString(input.providerId) ||
+        !validOptionalBoolean(input.allowPrivateNetwork)
       ) {
         return localProviderError('invalid-input', 'Local provider probe request is invalid.');
       }
@@ -263,7 +266,9 @@ export function registerRuntimeProviderManagementIpc(
         !validOptionalString(input.providerId) ||
         typeof input.defaultModelId !== 'string' ||
         input.defaultModelId.length > 256 ||
-        typeof input.setAsDefault !== 'boolean'
+        typeof input.setAsDefault !== 'boolean' ||
+        !validOptionalBoolean(input.setAsSmallModel) ||
+        !validOptionalBoolean(input.allowPrivateNetwork)
       ) {
         return localProviderError('invalid-input', 'Local provider configuration is invalid.');
       }
