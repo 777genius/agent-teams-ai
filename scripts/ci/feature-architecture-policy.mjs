@@ -78,7 +78,7 @@ function lineForNode(sourceFile, node) {
   return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
 }
 
-export function collectModuleEdgesFromSource(source, sourcePath) {
+function collectModuleAnalysisFromSource(source, sourcePath) {
   const sourceFile = ts.createSourceFile(
     sourcePath,
     source,
@@ -87,39 +87,164 @@ export function collectModuleEdgesFromSource(source, sourcePath) {
     sourcePath.endsWith('.tsx') || sourcePath.endsWith('.jsx') ? ts.ScriptKind.TSX : undefined
   );
   const edges = [];
+  const importedBindings = new Map();
+  const localExports = [];
+  const localExportNames = new Set();
+  const reexports = [];
 
   const addEdge = (node, moduleSpecifier, kind) => {
-    if (!ts.isStringLiteralLike(moduleSpecifier)) return;
-    edges.push({
+    if (!ts.isStringLiteralLike(moduleSpecifier)) return null;
+    const edge = {
       kind,
       line: lineForNode(sourceFile, node),
       source: sourcePath,
       specifier: moduleSpecifier.text,
-    });
+    };
+    edges.push(edge);
+    return edge;
+  };
+
+  const addImportBindings = (importClause, edge) => {
+    if (!importClause || !edge) return;
+    if (importClause.name) {
+      importedBindings.set(importClause.name.text, { edge, importedName: 'default' });
+    }
+
+    const bindings = importClause.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) {
+      importedBindings.set(bindings.name.text, { edge, importedName: '*' });
+    } else if (bindings && ts.isNamedImports(bindings)) {
+      for (const element of bindings.elements) {
+        importedBindings.set(element.name.text, {
+          edge,
+          importedName: element.propertyName?.text ?? element.name.text,
+        });
+      }
+    }
+  };
+
+  const addDirectReexports = (node, edge) => {
+    if (!edge) return;
+    if (!node.exportClause) {
+      reexports.push({ ...edge, exportedName: '*', importedName: '*' });
+    } else if (ts.isNamespaceExport(node.exportClause)) {
+      reexports.push({
+        ...edge,
+        exportedName: node.exportClause.name.text,
+        importedName: '*',
+      });
+    } else {
+      for (const element of node.exportClause.elements) {
+        reexports.push({
+          ...edge,
+          exportedName: element.name.text,
+          importedName: element.propertyName?.text ?? element.name.text,
+        });
+      }
+    }
   };
 
   const visit = (node) => {
     if (ts.isImportDeclaration(node)) {
-      addEdge(node, node.moduleSpecifier, 'import');
+      const edge = addEdge(node, node.moduleSpecifier, 'import');
+      addImportBindings(node.importClause, edge);
     } else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
-      addEdge(node, node.moduleSpecifier, 'export');
+      const edge = addEdge(node, node.moduleSpecifier, 'export');
+      addDirectReexports(node, edge);
+    } else if (
+      ts.isExportDeclaration(node) &&
+      node.exportClause &&
+      ts.isNamedExports(node.exportClause)
+    ) {
+      for (const element of node.exportClause.elements) {
+        localExports.push({
+          exportedName: element.name.text,
+          line: lineForNode(sourceFile, node),
+          localName: element.propertyName?.text ?? element.name.text,
+        });
+      }
+    } else if (ts.isExportAssignment(node) && ts.isIdentifier(node.expression)) {
+      localExports.push({
+        exportedName: 'default',
+        line: lineForNode(sourceFile, node),
+        localName: node.expression.text,
+      });
+    } else if (
+      ts.isExportAssignment(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      ts.isIdentifier(node.expression.expression)
+    ) {
+      localExports.push({
+        exportedName: 'default',
+        importedName: node.expression.name.text,
+        line: lineForNode(sourceFile, node),
+        localName: node.expression.expression.text,
+      });
+    } else if (ts.isExportAssignment(node)) {
+      localExportNames.add('default');
     } else if (
       ts.isImportEqualsDeclaration(node) &&
       ts.isExternalModuleReference(node.moduleReference) &&
       node.moduleReference.expression
     ) {
-      addEdge(node, node.moduleReference.expression, 'import');
-    } else if (ts.isCallExpression(node) && node.arguments.length === 1) {
+      const edge = addEdge(node, node.moduleReference.expression, 'import');
+      if (edge) importedBindings.set(node.name.text, { edge, importedName: '*' });
+    } else if (ts.isCallExpression(node) && node.arguments.length >= 1) {
       const [argument] = node.arguments;
       const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
-      const isRequireCall = ts.isIdentifier(node.expression) && node.expression.text === 'require';
+      const isRequireCall =
+        node.arguments.length === 1 &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === 'require';
       if (isDynamicImport || isRequireCall) addEdge(node, argument, 'import');
     }
     ts.forEachChild(node, visit);
   };
 
   visit(sourceFile);
-  return edges;
+  for (const localExport of localExports) {
+    const importedBinding = importedBindings.get(localExport.localName);
+    if (!importedBinding) {
+      localExportNames.add(localExport.exportedName);
+      continue;
+    }
+    reexports.push({
+      ...importedBinding.edge,
+      exportedName: localExport.exportedName,
+      importedName: localExport.importedName ?? importedBinding.importedName,
+      kind: 'export',
+      line: localExport.line,
+    });
+  }
+
+  const collectBindingNames = (bindingName) => {
+    if (ts.isIdentifier(bindingName)) {
+      localExportNames.add(bindingName.text);
+      return;
+    }
+    for (const element of bindingName.elements) {
+      if (ts.isBindingElement(element)) collectBindingNames(element.name);
+    }
+  };
+  for (const statement of sourceFile.statements) {
+    const modifiers = ts.canHaveModifiers(statement) ? ts.getModifiers(statement) : undefined;
+    if (!modifiers?.some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword)) continue;
+    if (modifiers.some(({ kind }) => kind === ts.SyntaxKind.DefaultKeyword)) {
+      localExportNames.add('default');
+    } else if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        collectBindingNames(declaration.name);
+      }
+    } else if ('name' in statement && statement.name && ts.isIdentifier(statement.name)) {
+      localExportNames.add(statement.name.text);
+    }
+  }
+
+  return { edges, localExportNames, reexports, source: sourcePath };
+}
+
+export function collectModuleEdgesFromSource(source, sourcePath) {
+  return collectModuleAnalysisFromSource(source, sourcePath).edges;
 }
 
 function parseFeaturePath(filePath) {
@@ -295,13 +420,16 @@ function needsDependencyParsing(sourcePath, source) {
   return source.includes('@features/') || source.includes('features/');
 }
 
-function collectPublicApiImplementationExports(edges, sourceFilePaths) {
-  const exportEdgesBySource = new Map();
-  for (const edge of edges) {
-    if (edge.kind !== 'export') continue;
-    const sourceEdges = exportEdgesBySource.get(edge.source) ?? [];
-    sourceEdges.push(edge);
-    exportEdgesBySource.set(edge.source, sourceEdges);
+function collectPublicApiImplementationExports(
+  reexports,
+  localExportNamesBySource,
+  sourceFilePaths
+) {
+  const reexportsBySource = new Map();
+  for (const reexport of reexports) {
+    const sourceReexports = reexportsBySource.get(reexport.source) ?? [];
+    sourceReexports.push(reexport);
+    reexportsBySource.set(reexport.source, sourceReexports);
   }
 
   const violations = [];
@@ -309,12 +437,30 @@ function collectPublicApiImplementationExports(edges, sourceFilePaths) {
     const publicFeature = parseFeaturePath(publicEntrypoint)?.feature;
     const visited = new Set();
 
-    const visit = (sourcePath) => {
-      if (visited.has(sourcePath)) return;
-      visited.add(sourcePath);
+    const visit = (sourcePath, requestedExport = '*') => {
+      const visitKey = `${sourcePath}:${requestedExport}`;
+      if (visited.has(visitKey)) return;
+      visited.add(visitKey);
 
-      for (const edge of exportEdgesBySource.get(sourcePath) ?? []) {
-        const targetPath = resolveProjectTarget(edge, sourceFilePaths);
+      if (
+        requestedExport !== '*' &&
+        localExportNamesBySource.get(sourcePath)?.has(requestedExport)
+      ) {
+        return;
+      }
+
+      const sourceReexports = reexportsBySource.get(sourcePath) ?? [];
+      const explicitReexports =
+        requestedExport === '*'
+          ? sourceReexports
+          : sourceReexports.filter(({ exportedName }) => exportedName === requestedExport);
+      const relevantReexports =
+        requestedExport === '*' || explicitReexports.length > 0
+          ? explicitReexports
+          : sourceReexports.filter(({ exportedName }) => exportedName === '*');
+
+      for (const reexport of relevantReexports) {
+        const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
         if (!targetPath) continue;
 
         const targetFeature = parseFeaturePath(targetPath);
@@ -323,14 +469,17 @@ function collectPublicApiImplementationExports(edges, sourceFilePaths) {
           violations.push(
             createViolation(
               FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
-              edge,
+              reexport,
               `public entrypoint ${publicEntrypoint} must not expose adapters or infrastructure`,
               publicEntrypoint
             )
           );
           continue;
         }
-        visit(targetPath);
+
+        const targetExport =
+          reexport.exportedName === '*' ? requestedExport : reexport.importedName;
+        visit(targetPath, targetExport);
       }
     };
 
@@ -366,12 +515,17 @@ export function collectFeatureArchitectureViolations(repoRoot) {
   const sourceRoot = path.join(repoRoot, 'src');
   const sourceFiles = collectSourceFiles(sourceRoot, repoRoot).sort();
   const sourceFilePaths = new Set(sourceFiles);
-  const edges = sourceFiles.flatMap((sourcePath) => {
+  const moduleAnalyses = sourceFiles.flatMap((sourcePath) => {
     const source = readFileSync(path.join(repoRoot, sourcePath), 'utf8');
     return needsDependencyParsing(sourcePath, source)
-      ? collectModuleEdgesFromSource(source, sourcePath)
+      ? [collectModuleAnalysisFromSource(source, sourcePath)]
       : [];
   });
+  const edges = moduleAnalyses.flatMap(({ edges: moduleEdges }) => moduleEdges);
+  const localExportNamesBySource = new Map(
+    moduleAnalyses.map(({ localExportNames, source }) => [source, localExportNames])
+  );
+  const reexports = moduleAnalyses.flatMap(({ reexports: moduleReexports }) => moduleReexports);
   const violations = [];
 
   for (const edge of edges) {
@@ -385,7 +539,9 @@ export function collectFeatureArchitectureViolations(repoRoot) {
     if (applicationViolation) violations.push(applicationViolation);
   }
 
-  violations.push(...collectPublicApiImplementationExports(edges, sourceFilePaths));
+  violations.push(
+    ...collectPublicApiImplementationExports(reexports, localExportNamesBySource, sourceFilePaths)
+  );
 
   const uniqueViolations = new Map();
   for (const violation of violations) uniqueViolations.set(violationKey(violation), violation);

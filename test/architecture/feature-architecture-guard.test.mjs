@@ -56,7 +56,9 @@ test('collects static, dynamic, CommonJS, and re-export dependency edges', () =>
       import type { Contract } from './contract';
       export { facade } from './facade';
       const lazy = import('./lazy');
+      const attributed = import('./attributed', { with: { type: 'json' } });
       const legacy = require('./legacy');
+      const invalidLegacy = require('./ignored', 'utf8');
     `,
     'src/features/example/main/index.ts'
   );
@@ -67,6 +69,7 @@ test('collects static, dynamic, CommonJS, and re-export dependency edges', () =>
       { kind: 'import', specifier: './contract' },
       { kind: 'export', specifier: './facade' },
       { kind: 'import', specifier: './lazy' },
+      { kind: 'import', specifier: './attributed' },
       { kind: 'import', specifier: './legacy' },
     ]
   );
@@ -201,14 +204,27 @@ test('fails the end-to-end gate for a new violation in a new feature', () => {
 test('detects implementation exports through transitive internal barrels', () => {
   withFixture(
     {
-      'src/features/example/main/composition/createExample.ts':
-        'export const createExample = true;',
       'src/features/example/main/index.ts': `
-        export * from './composition/createExample';
-        export * from './public';
+        import { Store } from './public';
+        import { safe } from './safePublic';
+        export { safe, Store };
       `,
       'src/features/example/main/infrastructure/Store.ts': 'export class Store {}',
-      'src/features/example/main/public.ts': `export { Store } from './infrastructure/Store';`,
+      'src/features/example/main/public.ts': `
+        import { Store } from './infrastructure/Store';
+        export { Store };
+      `,
+      'src/features/example/main/safePublic.ts': `
+        export const safe = true;
+        export * from './infrastructure/Store';
+      `,
+      'src/features/example/renderer/adapters/Adapter.ts': `
+        export class Adapter {}
+      `,
+      'src/features/example/renderer/index.ts': `
+        import * as adapters from './adapters/Adapter';
+        export default adapters.Adapter;
+      `,
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
@@ -222,6 +238,12 @@ test('detects implementation exports through transitive internal barrels', () =>
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
           source: 'src/features/example/main/public.ts',
           specifier: './infrastructure/Store',
+        },
+        {
+          publicEntrypoint: 'src/features/example/renderer/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/renderer/index.ts',
+          specifier: './adapters/Adapter',
         },
       ]);
     }
