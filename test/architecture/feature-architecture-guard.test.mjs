@@ -220,8 +220,11 @@ test('detects implementation exports through transitive internal barrels', () =>
         type ChainedInfra = ImportedInfra;
         export interface PublicShape { value: ChainedInfra }
         export const ExportedAlias = AliasInfra;
+        export const RequiredInfra = require('./infrastructure/RequiredInfra').RequiredInfra;
+        export const LazyInfra = import('./infrastructure/LazyInfra', { with: { type: 'json' } });
         export type DirectInfra = import('./infrastructure/DirectInfra').DirectInfra;
         export { TransitiveInfra } from './publicTypes';
+        export { SelectiveSafe, SelectedInfra } from './mixedBarrel';
         type HiddenInfra = import('./infrastructure/HiddenInfra').HiddenInfra;
         export interface SafeProperty { PropertyName: string }
         export interface SafeShadow<ShadowOnly> { value: ShadowOnly }
@@ -237,8 +240,11 @@ test('detects implementation exports through transitive internal barrels', () =>
       'src/features/example/main/infrastructure/ImportedInfra.ts':
         'export interface ImportedInfra {}',
       'src/features/example/main/infrastructure/LocalInfra.ts': 'export interface LocalInfra {}',
+      'src/features/example/main/infrastructure/LazyInfra.ts': 'export class LazyInfra {}',
       'src/features/example/main/infrastructure/PropertyName.ts':
         'export interface PropertyName {}',
+      'src/features/example/main/infrastructure/RequiredInfra.ts': 'export class RequiredInfra {}',
+      'src/features/example/main/infrastructure/SelectedInfra.ts': 'export class SelectedInfra {}',
       'src/features/example/main/infrastructure/ShadowOnly.ts': 'export interface ShadowOnly {}',
       'src/features/example/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/example/main/infrastructure/TransitiveInfra.ts':
@@ -251,6 +257,11 @@ test('detects implementation exports through transitive internal barrels', () =>
         type InternalInfra = import('./infrastructure/TransitiveInfra').TransitiveInfra;
         export { InternalInfra as TransitiveInfra };
       `,
+      'src/features/example/main/mixedBarrel.ts': `
+        export * from './selectiveSafe';
+        export * from './infrastructure/SelectedInfra';
+      `,
+      'src/features/example/main/selectiveSafe.ts': 'export const SelectiveSafe = true;',
       'src/features/example/main/safePublic.ts': `
         export const safe = true;
         export * from './infrastructure/Store';
@@ -287,6 +298,24 @@ test('detects implementation exports through transitive internal barrels', () =>
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
           source: 'src/features/example/main/index.ts',
           specifier: './infrastructure/ImportedInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/index.ts',
+          specifier: './infrastructure/LazyInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/index.ts',
+          specifier: './infrastructure/RequiredInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/mixedBarrel.ts',
+          specifier: './infrastructure/SelectedInfra',
         },
         {
           publicEntrypoint: 'src/features/example/main/index.ts',

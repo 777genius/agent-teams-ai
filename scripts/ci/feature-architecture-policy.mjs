@@ -211,6 +211,9 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       localNames = [current.name.text];
     }
 
+    if (ts.isExportAssignment(current)) {
+      return { exportedNames: ['default'], localNames: [] };
+    }
     if (!hasModifier(current, ts.SyntaxKind.ExportKeyword)) {
       return { exportedNames: [], localNames };
     }
@@ -306,7 +309,19 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         node.arguments.length === 1 &&
         ts.isIdentifier(node.expression) &&
         node.expression.text === 'require';
-      if (isDynamicImport || isRequireCall) addEdge(node, argument, 'import');
+      if (isDynamicImport || isRequireCall) {
+        const edge = addEdge(node, argument, 'import');
+        const owner = publicReferenceOwner(node);
+        if (edge && owner) {
+          const importedName =
+            isRequireCall &&
+            ts.isPropertyAccessExpression(node.parent) &&
+            node.parent.expression === node
+              ? node.parent.name.text
+              : '*';
+          addOwnerDependency(owner, { edge, importedName });
+        }
+      }
     }
     ts.forEachChild(node, visit);
   };
@@ -638,6 +653,23 @@ function collectPublicApiImplementationExports(
     reexportsBySource.set(reexport.source, sourceReexports);
   }
 
+  const exposesNamedExport = (sourcePath, requestedExport, visited = new Set()) => {
+    if (requestedExport === '*' || visited.has(sourcePath)) return requestedExport === '*';
+    if (localExportNamesBySource.get(sourcePath)?.has(requestedExport)) return true;
+
+    const nextVisited = new Set(visited).add(sourcePath);
+    const sourceReexports = reexportsBySource.get(sourcePath) ?? [];
+    if (sourceReexports.some(({ exportedName }) => exportedName === requestedExport)) return true;
+    if (requestedExport === 'default') return false;
+
+    return sourceReexports
+      .filter(({ exportedName }) => exportedName === '*')
+      .some((reexport) => {
+        const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
+        return targetPath && exposesNamedExport(targetPath, requestedExport, nextVisited);
+      });
+  };
+
   const violations = [];
   for (const publicEntrypoint of [...sourceFilePaths].filter(isFeaturePublicEntrypoint).sort()) {
     const publicFeature = parseFeaturePath(publicEntrypoint)?.feature;
@@ -663,7 +695,11 @@ function collectPublicApiImplementationExports(
       const relevantReexports =
         requestedExport === '*' || explicitReexports.length > 0
           ? explicitReexports
-          : sourceReexports.filter(({ exportedName }) => exportedName === '*');
+          : sourceReexports.filter((reexport) => {
+              if (reexport.exportedName !== '*') return false;
+              const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
+              return targetPath && exposesNamedExport(targetPath, requestedExport);
+            });
 
       for (const reexport of relevantReexports) {
         const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
