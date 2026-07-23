@@ -12,6 +12,7 @@ import { hostedElectronApiFixtureSource } from '../fixtures/hosted-electron-api'
 
 const HOSTED_SOURCE_ROOTS = [
   'src/features/team-lifecycle',
+  'src/features/team-message-delivery',
   'src/shared/contracts/hosted',
   'src/main/composition/hosted',
 ] as const;
