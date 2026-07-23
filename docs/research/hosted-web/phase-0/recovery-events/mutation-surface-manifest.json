@@ -985,6 +985,23 @@
       "commandKind": "review.clear_decisions"
     },
     {
+      "id": "ReviewAPI.loadDecisionConflictCandidates",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "loadDecisionConflictCandidates",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.resolveDecisionConflictCandidate",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "resolveDecisionConflictCandidate",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
       "id": "ReviewAPI.loadDraftHistory",
       "interfaceName": "ReviewAPI",
       "sourceMethod": "loadDraftHistory",
@@ -1005,6 +1022,32 @@
       "id": "ReviewAPI.clearDraftHistory",
       "interfaceName": "ReviewAPI",
       "sourceMethod": "clearDraftHistory",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.loadDraftHistoryConflictCandidates",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "loadDraftHistoryConflictCandidates",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.resolveDraftHistoryConflictCandidate",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "resolveDraftHistoryConflictCandidate",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.replaceDraftHistoryConflictCandidate",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "replaceDraftHistoryConflictCandidate",
       "sourceFile": "src/shared/types/api.ts",
       "disposition": "deferred",
       "owner": "team-review",
