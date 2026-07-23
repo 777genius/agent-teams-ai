@@ -799,6 +799,52 @@ async function main() {
   await assertViewportFits();
   await assertDiskLines(fixture.changedFile, 'after-0', 'after-1');
 
+  // Exercise the public bulk-Reject control before the longer mixed-history flow.
+  // Restart on both sides of Undo so the test proves the disk mutation and the
+  // durable Undo/Redo cursor, not only the optimistic renderer state.
+  await client.waitFor(enabledButtonWithText('Reject All'), 'Reject All for durable rollback');
+  await client.domClick(enabledButtonWithText('Reject All'));
+  await client.waitFor(`document.body?.innerText.includes('12 rejected')`, 'bulk Reject action');
+  await waitForDiskLines(fixture.changedFile, 'before-0', 'before-1');
+  await client.waitFor(
+    `document.querySelector('button[aria-label^="Review history:"][aria-label$="; saved"]')`,
+    'durable bulk Reject action'
+  );
+
+  await restartApp(port, fixture);
+  await openReview();
+  await client.waitFor(
+    `document.body?.innerText.includes('12 rejected') &&
+      Boolean(${enabledButtonWithText('Undo')})`,
+    'bulk Reject restored after restart'
+  );
+  await assertDiskLines(fixture.changedFile, 'before-0', 'before-1');
+
+  await client.domClick(enabledButtonWithText('Undo'));
+  await client.waitFor(`document.body?.innerText.includes('12 pending')`, 'bulk Reject Undo');
+  await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
+  await client.waitFor(
+    `document.querySelector('button[aria-label^="Review history:"][aria-label$="; saved"]')`,
+    'durable bulk Reject Undo'
+  );
+
+  await restartApp(port, fixture);
+  await openReview();
+  await client.waitFor(
+    `document.body?.innerText.includes('12 pending') &&
+      Boolean(${enabledButtonWithText('Redo')})`,
+    'bulk Reject Redo restored after restart'
+  );
+  await client.domClick(enabledButtonWithText('Redo'));
+  await client.waitFor(`document.body?.innerText.includes('12 rejected')`, 'bulk Reject Redo');
+  await waitForDiskLines(fixture.changedFile, 'before-0', 'before-1');
+  await client.domClick(enabledButtonWithText('Undo'));
+  await client.waitFor(
+    `document.body?.innerText.includes('12 pending')`,
+    'bulk Reject cleanup Undo'
+  );
+  await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
+
   await client.waitFor(enabledButtonWithText('Accept All'), 'Accept All for history restore');
   await client.domClick(enabledButtonWithText('Accept All'));
   await client.waitFor(`document.body?.innerText.includes('12 accepted')`, 'bulk Accept action');
@@ -1323,6 +1369,7 @@ async function main() {
 
     process.stdout.write(
       `Changes desktop E2E passed (dev:mcp${singleWindowMode ? ', single-window' : ''}): ` +
+        'Reject All -> restart -> Undo -> restart -> Redo -> Undo -> ' +
         'Accept All -> Reject file -> Restore back -> hydrate -> Restore forward -> ' +
         'Undo to start -> hydrate -> stale branch -> reload -> reversible recovery -> ' +
         'Discard backup -> reload -> prior snapshot -> discard -> reload -> ' +
@@ -1471,6 +1518,7 @@ async function main() {
 
   process.stdout.write(
     `Changes desktop E2E passed (${devMcpMode ? 'dev:mcp' : 'preview'}): ` +
+      `Reject All -> restart -> Undo -> restart -> Redo -> Undo -> ` +
       `Accept All -> Reject file -> Restore back -> restart -> Restore forward -> ` +
       `exact disk/history -> ` +
       `Reject -> Undo -> Redo -> restart -> exact history -> external conflict -> Reload -> ` +
