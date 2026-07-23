@@ -10,7 +10,7 @@ import { cleanupAnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropi
 import { boundLaunchDiagnostics } from '../progressPayload';
 import { TeamMembersMetaStore } from '../TeamMembersMetaStore';
 
-import { scheduleStaleAnthropicTeamApiKeyHelperCleanup } from './TeamProvisioningAnthropicApiKeyHelperCleanup';
+import { createStaleAnthropicTeamApiKeyHelperCleanupRetryOwner } from './TeamProvisioningAnthropicApiKeyHelperCleanup';
 import {
   createAppendDirectProcessRuntimeEventUseCase,
   createNodeAppendDirectProcessRuntimeEventUseCasePorts,
@@ -188,6 +188,11 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     await this.executeLiveRosterMutation(teamName, mutation);
   }
 
+  private readonly staleAnthropicApiKeyHelperCleanupRetryOwner =
+    createStaleAnthropicTeamApiKeyHelperCleanupRetryOwner({
+      baseClaudeDir: getClaudeBasePath(),
+      logger,
+    });
   protected override getOpenCodeAggregatePrimaryRestartTeamNamesForShutdown(): Iterable<string> {
     return Array.from(
       this.openCodeAggregatePrimaryRestartByTeam.values(),
@@ -389,7 +394,7 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     createTeamProvisioningServiceComposition(this);
     preserveAuthoritativeMembersMetaResolution(this.configFacade, membersMetaStore);
     this.preserveAtomicOpenCodeRuntimePreparation();
-    scheduleStaleAnthropicTeamApiKeyHelperCleanup({ baseClaudeDir: getClaudeBasePath(), logger });
+    this.staleAnthropicApiKeyHelperCleanupRetryOwner.start();
   }
 
   private createMemberLifecycleHostPortGroups(): TeamProvisioningServiceMemberLifecycleHostPortGroups {

@@ -233,6 +233,8 @@ export interface ProvisioningRun {
   } | null;
   /** Run-scoped helper material used by Anthropic API-key team runtimes. */
   anthropicApiKeyHelper: AnthropicTeamApiKeyHelperMaterial | null;
+  /** In-flight exact-owner cleanup, used to make cancellation and spawn rollback idempotent. */
+  anthropicApiKeyHelperCleanupPromise: Promise<void> | null;
   /** Pending tool approval requests awaiting user response (control_request protocol). */
   pendingApprovals: Map<string, ToolApprovalRequest>;
   /** Teammate permission_request IDs already intercepted (prevents re-processing read messages). */

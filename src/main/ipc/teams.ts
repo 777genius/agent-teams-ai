@@ -70,6 +70,11 @@ let teammateToolTracker: TeammateToolTracker | null = null;
 let teamLogSourceTracker: TeamLogSourceTracker | null = null;
 let branchStatusService: BranchStatusService | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
+let teamPermanentDeletionLifecycle: {
+  prepareTeamDeletion(teamName: string): Promise<void>;
+  completeTeamDeletion(teamName: string): void;
+  resumeTeam(teamName: string): void;
+} | null = null;
 
 const taskAttachmentStore = new TeamTaskAttachmentStore();
 const worktreeGitService = new TeamWorktreeGitService();
@@ -125,7 +130,12 @@ export function initializeTeamHandlers(
   toolTracker?: TeammateToolTracker,
   logSourceTracker?: TeamLogSourceTracker,
   branchTracker?: BranchStatusService,
-  ioGovernor?: LaunchIoGovernor
+  ioGovernor?: LaunchIoGovernor,
+  permanentDeletionLifecycle?: {
+    prepareTeamDeletion(teamName: string): Promise<void>;
+    completeTeamDeletion(teamName: string): void;
+    resumeTeam(teamName: string): void;
+  }
 ): void {
   teamDataService = service;
   teamRuntimeApi = runtimeApi;
@@ -134,6 +144,7 @@ export function initializeTeamHandlers(
   teamLogSourceTracker = logSourceTracker ?? null;
   branchStatusService = branchTracker ?? null;
   launchIoGovernor = ioGovernor ?? null;
+  teamPermanentDeletionLifecycle = permanentDeletionLifecycle ?? null;
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
@@ -411,7 +422,10 @@ async function handlePermanentlyDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('permanentlyDeleteTeam', async () => {
-    await getTeamDataService().permanentlyDeleteTeam(validated.value!);
+    const teamName = validated.value!;
+    await teamPermanentDeletionLifecycle?.prepareTeamDeletion(teamName);
+    await getTeamDataService().permanentlyDeleteTeam(teamName);
+    teamPermanentDeletionLifecycle?.completeTeamDeletion(teamName);
     getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
     // Clean up app-owned data (attachments, task-attachments) that lives outside ~/.claude/
     const appData = getAppDataPath();

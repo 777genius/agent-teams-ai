@@ -34,7 +34,10 @@ vi.mock('agent-teams-controller', () => ({
 function teamConfig(name: string): TeamConfig {
   return {
     name,
-    members: [{ name: 'team-lead', agentType: 'team-lead' }],
+    members: [
+      { name: 'team-lead', agentType: 'team-lead' },
+      { name: 'Worker', agentType: 'general-purpose' },
+    ],
   };
 }
 
@@ -137,6 +140,12 @@ describe('CrossTeamService runtime delivery dedupe', () => {
     expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
     expect(sentToInbox.map((entry) => entry.message.messageId)).toEqual(['runtime-message-1']);
     expect(messaging.relayInboxFileToLiveRecipient).toHaveBeenCalledTimes(1);
+    expect(messaging.relayInboxFileToLiveRecipient).toHaveBeenNthCalledWith(
+      1,
+      'target-team',
+      'team-lead',
+      { onlyMessageId: 'runtime-message-1' }
+    );
   });
 
   it('dedupes runtime retries without caller message ids by conversation identity', async () => {
@@ -181,6 +190,114 @@ describe('CrossTeamService runtime delivery dedupe', () => {
       { onlyMessageId: 'runtime-message-1' }
     );
     expect(controllerMocks.appendSentMessage).not.toHaveBeenCalled();
+  });
+
+  it('accepts only exact durable native member inbox proof', async () => {
+    const { service, messaging } = createService();
+    vi.mocked(messaging.relayInboxFileToLiveRecipient).mockResolvedValue({
+      kind: 'native_member_noop',
+      relayed: 0,
+      durablyStoredMessageId: 'runtime-message-1',
+    });
+
+    await expect(service.send(runtimeRequest({ toMember: 'worker' }))).resolves.toMatchObject({
+      messageId: 'runtime-message-1',
+      deliveredToInbox: true,
+      toMember: 'Worker',
+    });
+
+    const genericNoop = createService();
+    vi.mocked(genericNoop.messaging.relayInboxFileToLiveRecipient).mockResolvedValue({
+      kind: 'native_member_noop',
+      relayed: 0,
+    });
+    await expect(
+      genericNoop.service.send(
+        runtimeRequest({
+          messageId: 'runtime-message-2',
+          conversationId: 'runtime-key-2',
+          toMember: 'Worker',
+        })
+      )
+    ).rejects.toThrow('relay kind native_member_noop relayed 0');
+
+    const mismatched = createService();
+    vi.mocked(mismatched.messaging.relayInboxFileToLiveRecipient).mockResolvedValue({
+      kind: 'native_member_noop',
+      relayed: 0,
+      durablyStoredMessageId: 'another-message',
+    });
+    await expect(
+      mismatched.service.send(
+        runtimeRequest({
+          messageId: 'runtime-message-3',
+          conversationId: 'runtime-key-3',
+          toMember: 'Worker',
+        })
+      )
+    ).rejects.toThrow('relay kind native_member_noop relayed 0');
+  });
+
+  it('uses a durable exact acceptance receipt after restart beyond ordinary body dedupe', async () => {
+    vi.useFakeTimers({ now: new Date('2026-07-09T00:00:00.000Z') });
+    const firstRuntime = createService();
+    await expect(firstRuntime.service.send(runtimeRequest())).resolves.toMatchObject({
+      messageId: 'runtime-message-1',
+      deliveredToInbox: true,
+    });
+    expect(firstRuntime.messaging.relayInboxFileToLiveRecipient).toHaveBeenCalledOnce();
+    const outboxPath = path.join(tempRoot, 'teams', 'source-team', 'sent-cross-team.json');
+    expect(JSON.parse(fs.readFileSync(outboxPath, 'utf8'))).toEqual([
+      expect.objectContaining({
+        messageId: 'runtime-message-1',
+        runtimeDeliveryAcceptedAt: '2026-07-09T00:00:00.000Z',
+      }),
+    ]);
+
+    vi.advanceTimersByTime(6 * 60 * 1000);
+    const restartedRuntime = createService();
+    vi.mocked(restartedRuntime.messaging.relayInboxFileToLiveRecipient).mockResolvedValue({
+      kind: 'native_lead',
+      relayed: 0,
+      diagnostics: ['accepted inbox row was already read and cleared'],
+    });
+    await expect(
+      restartedRuntime.service.send(
+        runtimeRequest({
+          messageId: 'runtime-message-after-restart',
+          conversationId: 'runtime-idempotency-1',
+          timestamp: '2026-07-09T00:06:00.000Z',
+        })
+      )
+    ).resolves.toMatchObject({
+      messageId: 'runtime-message-1',
+      deliveredToInbox: true,
+      deduplicated: true,
+    });
+
+    expect(restartedRuntime.inboxWriter.sendMessage).not.toHaveBeenCalled();
+    expect(restartedRuntime.messaging.relayInboxFileToLiveRecipient).not.toHaveBeenCalled();
+  });
+
+  it('does not trust a corrupt durable acceptance receipt after restart', async () => {
+    const firstRuntime = createService();
+    await firstRuntime.service.send(runtimeRequest());
+
+    const outboxPath = path.join(tempRoot, 'teams', 'source-team', 'sent-cross-team.json');
+    const rows = JSON.parse(fs.readFileSync(outboxPath, 'utf8')) as Record<string, unknown>[];
+    rows[0] = { ...rows[0], runtimeDeliveryAcceptedAt: 'not-an-iso-date' };
+    fs.writeFileSync(outboxPath, JSON.stringify(rows, null, 2));
+
+    const restartedRuntime = createService();
+    vi.mocked(restartedRuntime.messaging.relayInboxFileToLiveRecipient).mockResolvedValue({
+      kind: 'native_lead',
+      relayed: 0,
+      diagnostics: ['already-read row has no durable acceptance proof'],
+    });
+    await expect(restartedRuntime.service.send(runtimeRequest())).rejects.toThrow(
+      'already-read row has no durable acceptance proof'
+    );
+    expect(restartedRuntime.messaging.relayInboxFileToLiveRecipient).toHaveBeenCalledOnce();
   });
 
   it('keeps body-based dedupe for normal callers without stable ids', async () => {
@@ -327,9 +444,9 @@ describe('CrossTeamService runtime delivery dedupe', () => {
     expect(sentToInbox.map((entry) => entry.message.messageId)).toEqual([
       'runtime-delivery-run1-abc',
     ]);
-    expect(messaging.relayInboxFileToLiveRecipient).toHaveBeenCalledTimes(2);
+    expect(messaging.relayInboxFileToLiveRecipient).toHaveBeenCalledTimes(1);
     expect(messaging.relayInboxFileToLiveRecipient).toHaveBeenNthCalledWith(
-      2,
+      1,
       'target-team',
       'team-lead',
       { onlyMessageId: 'runtime-delivery-run1-abc' }

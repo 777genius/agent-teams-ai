@@ -89,7 +89,7 @@ describe('TeamProvisioningRuntimeRecipientResolution', () => {
       ).toBe(false);
     });
 
-    it('resolves provider ids from metadata before config and normalizes legacy provider fields', () => {
+    it('fails closed on config/metadata provider disagreement and normalizes legacy fields', () => {
       const config: TeamConfig = {
         name: 'team-a',
         members: [
@@ -111,13 +111,15 @@ describe('TeamProvisioningRuntimeRecipientResolution', () => {
         } as TeamMember & { provider: string },
       ];
 
-      expect(
+      expect(() =>
         resolveRuntimeRecipientProviderIdFromSources({
           memberName: ' ALICE ',
           config,
           metaMembers,
         })
-      ).toBe('opencode');
+      ).toThrow(
+        'Ambiguous runtime recipient provider identity for Alice: config=codex, metadata=opencode'
+      );
       expect(
         resolveRuntimeRecipientProviderIdFromSources({
           memberName: 'bob',
@@ -125,6 +127,19 @@ describe('TeamProvisioningRuntimeRecipientResolution', () => {
           metaMembers,
         })
       ).toBe('opencode');
+    });
+
+    it('fails closed for an active metadata-only OpenCode member', () => {
+      expect(() =>
+        resolveRuntimeRecipientProviderIdFromSources({
+          memberName: 'builder',
+          config: {
+            name: 'team-a',
+            members: [{ name: 'team-lead', providerId: 'codex' }],
+          },
+          metaMembers: [{ name: 'Builder', providerId: 'opencode' }],
+        })
+      ).toThrow('OpenCode runtime recipient Builder has no authoritative config identity');
     });
 
     it('falls back to model inference when no explicit provider exists', () => {
@@ -234,7 +249,7 @@ describe('TeamProvisioningRuntimeRecipientResolution', () => {
   });
 
   describe('runtime recipient provider ports', () => {
-    it('reads config and metadata sources through explicit ports', async () => {
+    it('reads both sources and rejects their provider disagreement through explicit ports', async () => {
       const ports = {
         readConfigSnapshot: vi.fn(async () => ({
           name: 'team-a',
@@ -245,10 +260,10 @@ describe('TeamProvisioningRuntimeRecipientResolution', () => {
 
       await expect(
         resolveRuntimeRecipientProviderId({ teamName: 'team-a', memberName: 'Alice' }, ports)
-      ).resolves.toBe('opencode');
+      ).rejects.toThrow('Ambiguous runtime recipient provider identity');
       await expect(
         isOpenCodeRuntimeRecipient({ teamName: 'team-a', memberName: 'Alice' }, ports)
-      ).resolves.toBe(true);
+      ).rejects.toThrow('Ambiguous runtime recipient provider identity');
       expect(ports.readConfigSnapshot).toHaveBeenCalledWith('team-a');
       expect(ports.readMembersMeta).toHaveBeenCalledWith('team-a');
     });

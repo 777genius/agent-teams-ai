@@ -9,6 +9,13 @@ import {
 import { ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS } from '../../runtime/anthropicTeamApiKeyHelper';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 
+import {
+  type AnthropicApiKeyHelperCleanupRetryOwner,
+  type AnthropicApiKeyHelperMaterialCleanup,
+  type AnthropicApiKeyHelperSetupLease,
+  createAnthropicApiKeyHelperSetupLease,
+  throwIfAnthropicApiKeyHelperCleanupRemainsSourceOwned,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
 import { ensureCwdExists } from './TeamProvisioningAsyncUtils';
 import { assertCreateTeamDoesNotExist } from './TeamProvisioningCreateTeamFlow';
 import {
@@ -41,11 +48,7 @@ import {
 } from './TeamProvisioningWorkspaceTrust';
 import { buildWorkspaceTrustLaunchArgs } from './TeamProvisioningWorkspaceTrustLaunchArgs';
 
-import type {
-  ProviderModelLaunchIdentity,
-  TeamCreateRequest,
-  TeamProviderId,
-} from '@shared/types';
+import type { ProviderModelLaunchIdentity, TeamCreateRequest, TeamProviderId } from '@shared/types';
 
 export interface DeterministicCreateSetupFlowPorts<TMixedSecondaryLane> {
   pathExists(filePath: string): Promise<boolean>;
@@ -109,6 +112,8 @@ export interface DeterministicCreateSetupFlowPorts<TMixedSecondaryLane> {
   getTeamsBasePathsToProbe?(): { location: TeamsBaseLocation; basePath: string }[];
   ensureCwdExists?(cwd: string): Promise<void>;
   resolveWorkspaceTrustFeatureFlags?(): WorkspaceTrustFeatureFlags;
+  cleanupAnthropicApiKeyHelperMaterial?: AnthropicApiKeyHelperMaterialCleanup;
+  anthropicApiKeyHelperCleanupRetryOwner: AnthropicApiKeyHelperCleanupRetryOwner;
 }
 
 export interface DeterministicCreateSetupFlowInput<TMixedSecondaryLane> {
@@ -133,6 +138,7 @@ export interface DeterministicCreateSetupFlowResult<TMixedSecondaryLane> {
   workspaceTrustFeatureFlags: WorkspaceTrustFeatureFlags;
   workspaceTrustFullPlan: WorkspaceTrustFullPlanResult | null;
   largeTeamWarning: string | null;
+  anthropicApiKeyHelperLease: AnthropicApiKeyHelperSetupLease;
 }
 
 export async function prepareDeterministicCreateSetupFlow<TMixedSecondaryLane>({
@@ -142,6 +148,37 @@ export async function prepareDeterministicCreateSetupFlow<TMixedSecondaryLane>({
 }: DeterministicCreateSetupFlowInput<TMixedSecondaryLane>): Promise<
   DeterministicCreateSetupFlowResult<TMixedSecondaryLane>
 > {
+  const anthropicApiKeyHelperLease = createAnthropicApiKeyHelperSetupLease(
+    ports.cleanupAnthropicApiKeyHelperMaterial
+  );
+  try {
+    return await prepareDeterministicCreateSetupFlowWithLease({
+      request,
+      runtimeAuthMaterialId,
+      ports,
+      anthropicApiKeyHelperLease,
+    });
+  } catch (error) {
+    try {
+      await anthropicApiKeyHelperLease.cleanup();
+    } catch {
+      const retention = await ports.anthropicApiKeyHelperCleanupRetryOwner.retainSetupLease(
+        anthropicApiKeyHelperLease
+      );
+      throwIfAnthropicApiKeyHelperCleanupRemainsSourceOwned(retention, error);
+    }
+    throw error;
+  }
+}
+
+async function prepareDeterministicCreateSetupFlowWithLease<TMixedSecondaryLane>({
+  request,
+  runtimeAuthMaterialId,
+  ports,
+  anthropicApiKeyHelperLease,
+}: DeterministicCreateSetupFlowInput<TMixedSecondaryLane> & {
+  anthropicApiKeyHelperLease: AnthropicApiKeyHelperSetupLease;
+}): Promise<DeterministicCreateSetupFlowResult<TMixedSecondaryLane>> {
   const teamsBasePathsToProbe = (ports.getTeamsBasePathsToProbe ?? getTeamsBasePathsToProbe)();
   await assertCreateTeamDoesNotExist(request.teamName, teamsBasePathsToProbe, (filePath) =>
     ports.pathExists(filePath)
@@ -158,6 +195,7 @@ export async function prepareDeterministicCreateSetupFlow<TMixedSecondaryLane>({
     teamName: request.teamName,
     authMaterialId: runtimeAuthMaterialId,
     allowAnthropicApiKeyHelper: true,
+    anthropicApiKeyHelperLease,
   };
   const provisioningEnv = await ports.buildProvisioningEnv(
     request.providerId,
@@ -170,6 +208,7 @@ export async function prepareDeterministicCreateSetupFlow<TMixedSecondaryLane>({
     providerArgs = [],
     warning: envWarning,
   } = provisioningEnv;
+  anthropicApiKeyHelperLease.coalesce(provisioningEnv.anthropicApiKeyHelper);
   if (envWarning) {
     throw new Error(envWarning);
   }
@@ -254,6 +293,7 @@ export async function prepareDeterministicCreateSetupFlow<TMixedSecondaryLane>({
     effectiveMemberSpecs,
     { teamRuntimeAuth }
   );
+  anthropicApiKeyHelperLease.coalesce(crossProviderMemberArgs.anthropicApiKeyHelper);
   const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
     ? await collectWorkspaceTrustWorkspaces({
         cwd: request.cwd,
@@ -314,5 +354,6 @@ export async function prepareDeterministicCreateSetupFlow<TMixedSecondaryLane>({
     workspaceTrustFeatureFlags,
     workspaceTrustFullPlan,
     largeTeamWarning,
+    anthropicApiKeyHelperLease,
   };
 }

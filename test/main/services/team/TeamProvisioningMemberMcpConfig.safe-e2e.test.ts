@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   markTeamRunAlive,
+  memberLifecycleUseCasesHarness,
   stubMemberLifecycleHostOptionalSeam,
 } from './provisioningHarness';
 
@@ -79,6 +80,12 @@ vi.mock('@main/utils/childProcess', () => ({
   }),
   spawnCli: vi.fn(),
   killProcessTree: vi.fn(),
+  killProcessTreeAndWait: vi.fn(
+    (child: { emit?: (...args: unknown[]) => unknown } | null | undefined) => {
+      child?.emit?.('close', null, 'SIGKILL');
+      return Promise.resolve();
+    }
+  ),
 }));
 
 vi.mock('@features/tmux-installer/main', () => ({
@@ -407,6 +414,25 @@ async function expectPathRemovedEventually(targetPath: string): Promise<void> {
   expect(fs.existsSync(targetPath)).toBe(false);
 }
 
+async function stopSafeE2eRun(
+  svc: TeamProvisioningService,
+  teamName: string,
+  runId: string
+): Promise<void> {
+  try {
+    await svc.cancelProvisioning(runId);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === 'Provisioning cannot be cancelled in current state'
+    ) {
+      await svc.stopTeam(teamName);
+      return;
+    }
+    throw error;
+  }
+}
+
 function writeCodexTeamWithAppOnlyMeta(teamName: string): void {
   const teamDir = path.join(tempTeamsBase, teamName);
   fs.mkdirSync(teamDir, { recursive: true });
@@ -512,12 +538,12 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       expectAppOnlyMemberMcpConfig(member);
 
       const memberMcpConfigPath = member?.mcpConfigPath ?? '';
-      await svc.cancelProvisioning(runId);
+      await stopSafeE2eRun(svc, teamName, runId);
       runId = undefined;
       await expectPathRemovedEventually(memberMcpConfigPath);
     } finally {
       if (runId) {
-        await svc.cancelProvisioning(runId);
+        await stopSafeE2eRun(svc, teamName, runId);
       }
       fs.rmSync(projectDir, { recursive: true, force: true });
     }
@@ -556,11 +582,11 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[] | undefined;
       expectExplicitFastModeWithoutFlex(launchArgs);
 
-      await svc.cancelProvisioning(runId);
+      await stopSafeE2eRun(svc, teamName, runId);
       runId = undefined;
     } finally {
       if (runId) {
-        await svc.cancelProvisioning(runId);
+        await stopSafeE2eRun(svc, teamName, runId);
       }
       fs.rmSync(projectDir, { recursive: true, force: true });
     }
@@ -600,11 +626,11 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[] | undefined;
       expectExplicitFastModeWithoutFlex(launchArgs);
 
-      await svc.cancelProvisioning(runId);
+      await stopSafeE2eRun(svc, teamName, runId);
       runId = undefined;
     } finally {
       if (runId) {
-        await svc.cancelProvisioning(runId);
+        await stopSafeE2eRun(svc, teamName, runId);
       }
       fs.rmSync(projectDir, { recursive: true, force: true });
     }
@@ -651,12 +677,12 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       expectAppOnlyMemberMcpConfig(member);
 
       const memberMcpConfigPath = member?.mcpConfigPath ?? '';
-      await svc.cancelProvisioning(runId);
+      await stopSafeE2eRun(svc, teamName, runId);
       runId = undefined;
       await expectPathRemovedEventually(memberMcpConfigPath);
     } finally {
       if (runId) {
-        await svc.cancelProvisioning(runId);
+        await stopSafeE2eRun(svc, teamName, runId);
       }
       fs.rmSync(projectDir, { recursive: true, force: true });
     }
@@ -713,11 +739,11 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       });
       await expectPathRemovedEventually(liveMcpConfigPath);
 
-      await svc.cancelProvisioning(runId);
+      await stopSafeE2eRun(svc, teamName, runId);
       runId = undefined;
     } finally {
       if (runId) {
-        await svc.cancelProvisioning(runId);
+        await stopSafeE2eRun(svc, teamName, runId);
       }
       fs.rmSync(projectDir, { recursive: true, force: true });
     }
@@ -759,23 +785,27 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       runId = created.runId;
       markTeamRunAlive(svc, teamName, runId);
 
-      (svc as unknown as { readConfigForStrictDecision: () => Promise<unknown> }).readConfigForStrictDecision =
-        vi.fn(async () => ({
-          name: teamName,
-          projectPath: projectDir,
-          members: [
-            { name: 'team-lead', agentType: 'team-lead', providerId: 'codex' },
-            {
-              name: 'alice',
-              role: 'developer',
-              providerId: 'codex',
-              model: 'gpt-5.4',
-              mcpPolicy: { mode: 'appOnly' },
-            },
-          ],
-        }));
-      (svc as unknown as { readPersistedRuntimeMembers: () => unknown[] }).readPersistedRuntimeMembers =
-        vi.fn(() => [{ name: 'alice', backendType: 'process', cwd: projectDir }]);
+      (
+        svc as unknown as { readConfigForStrictDecision: () => Promise<unknown> }
+      ).readConfigForStrictDecision = vi.fn(async () => ({
+        name: teamName,
+        projectPath: projectDir,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead', providerId: 'codex' },
+          {
+            name: 'alice',
+            role: 'developer',
+            providerId: 'codex',
+            model: 'gpt-5.4',
+            mcpPolicy: { mode: 'appOnly' },
+          },
+        ],
+      }));
+      (
+        svc as unknown as { readPersistedRuntimeMembers: () => unknown[] }
+      ).readPersistedRuntimeMembers = vi.fn(() => [
+        { name: 'alice', backendType: 'process', cwd: projectDir },
+      ]);
       (
         svc as unknown as { getLiveTeamAgentRuntimeMetadata: () => Promise<Map<string, unknown>> }
       ).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
@@ -785,10 +815,18 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
         'updateDirectTmuxRestartMemberConfig',
         vi.fn(async () => {})
       );
+      memberLifecycleUseCasesHarness(svc).appendDirectProcessRuntimeEvent = vi.fn(() =>
+        Promise.resolve()
+      );
       stubMemberLifecycleHostOptionalSeam(svc, 'enqueueDirectRestartPrompt', vi.fn());
 
       vi.mocked(spawnCli).mockClear();
       await svc.restartMember(teamName, 'alice');
+      await vi.waitFor(() => {
+        const runtimeDir = path.join(tempTeamsBase, teamName, 'runtime');
+        expect(fs.existsSync(path.join(runtimeDir, 'alice.stdout.log'))).toBe(true);
+        expect(fs.existsSync(path.join(runtimeDir, 'alice.stderr.log'))).toBe(true);
+      });
 
       const restartArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[] | undefined;
       expect(restartArgs).toEqual(
@@ -804,12 +842,12 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       restartMcpConfigPath = extractMcpConfigPathFromArgs(restartArgs ?? []);
       expectAppOnlyMcpConfigPath(restartMcpConfigPath);
 
-      await svc.cancelProvisioning(runId);
+      await stopSafeE2eRun(svc, teamName, runId);
       runId = undefined;
       await expectPathRemovedEventually(restartMcpConfigPath);
     } finally {
       if (runId) {
-        await svc.cancelProvisioning(runId);
+        await stopSafeE2eRun(svc, teamName, runId);
       }
       fs.rmSync(projectDir, { recursive: true, force: true });
     }
@@ -864,31 +902,33 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       runId = created.runId;
       markTeamRunAlive(svc, teamName, runId);
 
-      (svc as unknown as { readConfigForStrictDecision: () => Promise<unknown> }).readConfigForStrictDecision =
-        vi.fn(async () => ({
-          name: teamName,
-          projectPath: projectDir,
-          members: [
-            { name: 'team-lead', agentType: 'team-lead', providerId: 'codex' },
-            {
-              name: 'alice',
-              role: 'developer',
-              providerId: 'codex',
-              model: 'gpt-5.4',
-              mcpPolicy: { mode: 'appOnly' },
-            },
-          ],
-        }));
-      (svc as unknown as { readPersistedRuntimeMembers: () => unknown[] }).readPersistedRuntimeMembers =
-        vi.fn(() => [
+      (
+        svc as unknown as { readConfigForStrictDecision: () => Promise<unknown> }
+      ).readConfigForStrictDecision = vi.fn(async () => ({
+        name: teamName,
+        projectPath: projectDir,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead', providerId: 'codex' },
           {
             name: 'alice',
-            agentId: 'alice@codex-fast-tier-tmux-restart',
-            backendType: 'tmux',
-            tmuxPaneId: '%7',
-            cwd: projectDir,
+            role: 'developer',
+            providerId: 'codex',
+            model: 'gpt-5.4',
+            mcpPolicy: { mode: 'appOnly' },
           },
-        ]);
+        ],
+      }));
+      (
+        svc as unknown as { readPersistedRuntimeMembers: () => unknown[] }
+      ).readPersistedRuntimeMembers = vi.fn(() => [
+        {
+          name: 'alice',
+          agentId: 'alice@codex-fast-tier-tmux-restart',
+          backendType: 'tmux',
+          tmuxPaneId: '%7',
+          cwd: projectDir,
+        },
+      ]);
       (
         svc as unknown as { getLiveTeamAgentRuntimeMetadata: () => Promise<Map<string, unknown>> }
       ).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
@@ -905,23 +945,20 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
 
       expect(killTmuxPaneForCurrentPlatformSync).not.toHaveBeenCalled();
       expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
-      const [paneId, command] =
-        vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls[0] ?? [];
+      const [paneId, command] = vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls[0] ?? [];
       expect(paneId).toBe('%7');
       const launcher = readDirectTmuxRestartLauncher(command);
       launcherScriptPath = launcher.scriptPath;
       expect(command).not.toContain('--agent-id');
-      expect(launcher.script).toContain(
-        "'--agent-id' 'alice@codex-fast-tier-tmux-restart'"
-      );
+      expect(launcher.script).toContain("'--agent-id' 'alice@codex-fast-tier-tmux-restart'");
       expect(launcher.script).toContain("'--mcp-config'");
       expectExplicitFastModeWithoutFlexCommand(launcher.script);
 
-      await svc.cancelProvisioning(runId);
+      await stopSafeE2eRun(svc, teamName, runId);
       runId = undefined;
     } finally {
       if (runId) {
-        await svc.cancelProvisioning(runId);
+        await stopSafeE2eRun(svc, teamName, runId);
       }
       if (launcherScriptPath) {
         fs.rmSync(path.dirname(launcherScriptPath), { recursive: true, force: true });

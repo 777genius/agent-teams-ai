@@ -1,4 +1,9 @@
 import {
+  type AnthropicApiKeyHelperCleanupRetryOwner,
+  cleanupRunOwnedAnthropicApiKeyHelper,
+  throwIfAnthropicApiKeyHelperCleanupRemainsSourceOwned,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
+import {
   emitProvisioningCheckpoint,
   initializeProvisioningTrace,
   type TeamProvisioningCheckpointRun,
@@ -76,6 +81,7 @@ export interface DeterministicCreateRunFlowPorts<
   ): Promise<void>;
   emitProvisioningCheckpoint(run: TRun, message: string, detail?: string): void;
   clearPersistedLaunchState(teamName: string, options: { expectedRunId: string }): Promise<void>;
+  anthropicApiKeyHelperCleanupRetryOwner: AnthropicApiKeyHelperCleanupRetryOwner;
   runDeterministicCreateSpawnFlow(
     input: RunDeterministicCreateSpawnFlowInput<TRun>
   ): Promise<TeamCreateResponse>;
@@ -144,6 +150,7 @@ export async function runDeterministicCreateRunFlow<
     workspaceTrustFeatureFlags,
     workspaceTrustFullPlan,
     largeTeamWarning,
+    anthropicApiKeyHelperLease,
   } = createSetup;
   const run = ports.createProvisioningRun({
     runId,
@@ -158,46 +165,62 @@ export async function runDeterministicCreateRunFlow<
     mixedSecondaryLanes,
     workspaceTrustFullPlan,
     largeTeamWarning,
-    anthropicApiKeyHelper: provisioningEnv.anthropicApiKeyHelper ?? null,
+    anthropicApiKeyHelper: null,
     createInitialMemberSpawnStatusEntry: ports.createInitialMemberSpawnStatusEntry,
   });
+  anthropicApiKeyHelperLease.transferTo(run);
 
-  ports.resetTeamScopedTransientStateForNewRun(request.teamName);
-  ports.registerRun(runId, run);
-  ports.setProvisioningRunByTeam(request.teamName, runId);
-  ports.initializeProvisioningTrace(run);
-  run.onProgress(run.progress);
-  await ports.prepareWorkspaceTrustForDeterministicRun({
-    mode: 'create',
-    run,
-    claudePath,
-    shellEnv,
-    stopAllGenerationAtStart,
-    workspaceTrustPlan: workspaceTrustFullPlan,
-    featureFlags: workspaceTrustFeatureFlags,
-    provisioningEnv,
-  });
-  ports.emitProvisioningCheckpoint(run, 'Clearing persisted launch state');
-  await ports.clearPersistedLaunchState(request.teamName, { expectedRunId: run.runId });
-  run.launchStateClearedForRun = true;
+  try {
+    ports.resetTeamScopedTransientStateForNewRun(request.teamName);
+    ports.registerRun(runId, run);
+    ports.setProvisioningRunByTeam(request.teamName, runId);
+    ports.initializeProvisioningTrace(run);
+    run.onProgress(run.progress);
+    await ports.prepareWorkspaceTrustForDeterministicRun({
+      mode: 'create',
+      run,
+      claudePath,
+      shellEnv,
+      stopAllGenerationAtStart,
+      workspaceTrustPlan: workspaceTrustFullPlan,
+      featureFlags: workspaceTrustFeatureFlags,
+      provisioningEnv,
+    });
+    ports.emitProvisioningCheckpoint(run, 'Clearing persisted launch state');
+    await ports.clearPersistedLaunchState(request.teamName, { expectedRunId: run.runId });
+    run.launchStateClearedForRun = true;
 
-  return await ports.runDeterministicCreateSpawnFlow({
-    request,
-    run,
-    runId,
-    effectiveMemberSpecs,
-    allEffectiveMemberSpecs,
-    launchIdentity,
-    provisioningEnv,
-    claudePath,
-    shellEnv,
-    resolvedProviderId,
-    providerArgsForLaunch,
-    inheritedProviderArgsForLaunch,
-    geminiRuntimeAuth,
-    stopAllGenerationAtStart,
-    disallowedTools,
-    logger,
-    ports: spawnPorts,
-  });
+    return await ports.runDeterministicCreateSpawnFlow({
+      request,
+      run,
+      runId,
+      effectiveMemberSpecs,
+      allEffectiveMemberSpecs,
+      launchIdentity,
+      provisioningEnv,
+      claudePath,
+      shellEnv,
+      resolvedProviderId,
+      providerArgsForLaunch,
+      inheritedProviderArgsForLaunch,
+      geminiRuntimeAuth,
+      stopAllGenerationAtStart,
+      disallowedTools,
+      logger,
+      ports: spawnPorts,
+    });
+  } catch (error) {
+    try {
+      await cleanupRunOwnedAnthropicApiKeyHelper(run);
+    } catch {
+      const retention = await ports.anthropicApiKeyHelperCleanupRetryOwner.retainRunOwner(run, {
+        onReleased: () => spawnPorts.cleanupRun(run),
+      });
+      throwIfAnthropicApiKeyHelperCleanupRemainsSourceOwned(retention, error);
+    }
+    if (!run.anthropicApiKeyHelper) {
+      spawnPorts.cleanupRun(run);
+    }
+    throw error;
+  }
 }

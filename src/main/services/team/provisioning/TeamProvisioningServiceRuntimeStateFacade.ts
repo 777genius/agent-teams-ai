@@ -23,6 +23,7 @@ import { boundLaunchDiagnostics } from '../progressPayload';
 import { readBootstrapLaunchSnapshot } from '../TeamBootstrapStateReader';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
+import { createAnthropicApiKeyHelperCleanupRetryOwner } from './TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   createTeamProvisioningCancellationBoundary,
   createTeamProvisioningCancellationBoundaryPortsFromService,
@@ -174,6 +175,8 @@ export abstract class TeamProvisioningServiceRuntimeStateFacade extends TeamProv
       bootstrapToolNames: AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES,
       logger,
     });
+  protected readonly anthropicApiKeyHelperCleanupRetryOwner =
+    createAnthropicApiKeyHelperCleanupRetryOwner();
   protected readonly runs = new Map<string, ProvisioningRun>();
   protected readonly provisioningRunByTeam = new Map<string, string>();
   private readonly aliveRunByTeam = new Map<string, string>();

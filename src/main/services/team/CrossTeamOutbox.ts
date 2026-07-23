@@ -25,6 +25,24 @@ export class CrossTeamIdempotencyConflictError extends Error {
   }
 }
 
+export interface CrossTeamOutboxMessage extends CrossTeamMessage {
+  /** Durable proof that exact runtime handoff was accepted for this outbox row. */
+  runtimeDeliveryAcceptedAt?: string;
+}
+
+export interface CrossTeamRuntimeDeliveryProofInput {
+  messageId: string;
+  fromTeam: string;
+  fromMember: string;
+  toTeam: string;
+  toMember: string;
+  conversationId: string;
+  text: string;
+  taskRefs?: TaskRef[];
+  summary?: string;
+  timestamp: string;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -61,7 +79,7 @@ function normalizePersistedTaskRefs(value: unknown): TaskRef[] | undefined {
   return taskRefs.length ? taskRefs : undefined;
 }
 
-function normalizePersistedMessage(value: unknown): CrossTeamMessage | null {
+function normalizePersistedMessage(value: unknown): CrossTeamOutboxMessage | null {
   if (!isRecord(value)) return null;
 
   const messageId = readRequiredString(value, 'messageId');
@@ -83,6 +101,11 @@ function normalizePersistedMessage(value: unknown): CrossTeamMessage | null {
   const replyToConversationId = readOptionalString(value, 'replyToConversationId');
   const summary = readOptionalString(value, 'summary');
   const taskRefs = normalizePersistedTaskRefs(value.taskRefs);
+  const runtimeDeliveryAcceptedAt = readOptionalString(value, 'runtimeDeliveryAcceptedAt');
+  const validRuntimeDeliveryAcceptedAt =
+    runtimeDeliveryAcceptedAt && Number.isFinite(Date.parse(runtimeDeliveryAcceptedAt))
+      ? new Date(Date.parse(runtimeDeliveryAcceptedAt)).toISOString()
+      : undefined;
 
   return {
     messageId,
@@ -97,6 +120,9 @@ function normalizePersistedMessage(value: unknown): CrossTeamMessage | null {
     ...(summary ? { summary } : {}),
     chainDepth,
     timestamp,
+    ...(validRuntimeDeliveryAcceptedAt
+      ? { runtimeDeliveryAcceptedAt: validRuntimeDeliveryAcceptedAt }
+      : {}),
   };
 }
 
@@ -109,6 +135,57 @@ function normalizeForDedupe(value: string | undefined): string {
 
 function normalizeTaskRefsForDedupe(message: CrossTeamMessage): string {
   return message.taskRefs?.length ? JSON.stringify(message.taskRefs) : '';
+}
+
+function isExactAcceptedRuntimeDelivery(
+  message: CrossTeamOutboxMessage,
+  expected: CrossTeamRuntimeDeliveryProofInput
+): boolean {
+  return (
+    message.runtimeDeliveryAcceptedAt !== undefined &&
+    message.messageId.trim() === expected.messageId.trim() &&
+    message.fromTeam.trim() === expected.fromTeam.trim() &&
+    message.fromMember.trim() === expected.fromMember.trim() &&
+    message.toTeam.trim() === expected.toTeam.trim() &&
+    message.toMember?.trim() === expected.toMember.trim() &&
+    message.conversationId?.trim() === expected.conversationId.trim() &&
+    message.replyToConversationId === undefined &&
+    message.text === expected.text &&
+    (message.summary ?? '') === (expected.summary ?? '') &&
+    normalizeTaskRefsForDedupe(message) ===
+      normalizeTaskRefsForDedupe({ ...message, taskRefs: expected.taskRefs }) &&
+    message.timestamp === expected.timestamp &&
+    message.chainDepth === 0
+  );
+}
+
+function hasValidRuntimeDeliveryProofShape(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const acceptedAtMs =
+    typeof value.runtimeDeliveryAcceptedAt === 'string'
+      ? Date.parse(value.runtimeDeliveryAcceptedAt)
+      : Number.NaN;
+  if (
+    !Number.isFinite(acceptedAtMs) ||
+    new Date(acceptedAtMs).toISOString() !== value.runtimeDeliveryAcceptedAt
+  ) {
+    return false;
+  }
+  if (value.summary !== undefined && typeof value.summary !== 'string') {
+    return false;
+  }
+  if (value.replyToConversationId !== undefined) {
+    return false;
+  }
+  if (value.chainDepth !== undefined && value.chainDepth !== 0) {
+    return false;
+  }
+  return (
+    value.taskRefs === undefined ||
+    (Array.isArray(value.taskRefs) && value.taskRefs.every(isTaskRef))
+  );
 }
 
 function buildCrossTeamRouteKey(message: CrossTeamMessage, legacyToMember?: string): string[] {
@@ -155,11 +232,9 @@ function hasMatchingStableIdentity(
   // path the caller messageId is the run-scoped destinationMessageId
   // (hash of idempotencyKey + runId + teamName), so the SAME logical delivery
   // gets a DIFFERENT messageId after a relaunch while conversationId
-  // (= idempotencyKey) stays stable. The RuntimeDeliveryJournal deliberately
-  // does not carry cross-team entries across runs and relies on this fallback
-  // ("Cross-team sends retain run-scoped message ids and use conversationId for
-  // duplicate proof"). Skipping it would double-deliver on relaunch. Distinct
-  // logical messages carry distinct idempotencyKeys, hence distinct
+  // (= idempotencyKey) stays stable. This durable fallback remains necessary if
+  // a runtime journal is cleaned up or unavailable during a later relaunch.
+  // Distinct logical messages carry distinct idempotencyKeys, hence distinct
   // conversationIds, so this cannot over-dedupe them.
   const leftConversationId = stableConversationId(left);
   const rightConversationId = stableConversationId(right);
@@ -173,7 +248,10 @@ function findDedupeMatch(
   message: CrossTeamMessage,
   windowMs: number,
   options: CrossTeamDedupeOptions
-): { duplicate: CrossTeamMessage | null; conflict: CrossTeamMessage | null } {
+): {
+  duplicate: CrossTeamOutboxMessage | null;
+  conflict: CrossTeamOutboxMessage | null;
+} {
   const dedupeKey = buildCrossTeamDedupeKey(message);
 
   if (options.stableIdentity) {
@@ -196,7 +274,7 @@ function findDedupeMatch(
     const entry = normalizePersistedMessage(list[i]);
     if (!entry) continue;
     const ts = Date.parse(entry.timestamp);
-    if (!Number.isFinite(ts) || ts < cutoff) {
+    if (!options.stableIdentity && (!Number.isFinite(ts) || ts < cutoff)) {
       continue;
     }
     if (buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey) {
@@ -238,9 +316,9 @@ export class CrossTeamOutbox {
     onBeforeAppend: () => Promise<void>,
     windowMs = CROSS_TEAM_DEDUPE_WINDOW_MS,
     options: CrossTeamDedupeOptions = {}
-  ): Promise<{ duplicate: CrossTeamMessage | null }> {
+  ): Promise<{ duplicate: CrossTeamOutboxMessage | null }> {
     const outboxPath = this.getOutboxPath(teamName);
-    let duplicate: CrossTeamMessage | null = null;
+    let duplicate: CrossTeamOutboxMessage | null = null;
 
     await withFileLock(outboxPath, async () => {
       const list = await this.readUnlocked(outboxPath);
@@ -258,6 +336,84 @@ export class CrossTeamOutbox {
     });
 
     return { duplicate };
+  }
+
+  async markRuntimeDeliveryAccepted(
+    teamName: string,
+    input: {
+      messageId: string;
+      toTeam: string;
+      toMember: string;
+      acceptedAt: string;
+    }
+  ): Promise<void> {
+    const outboxPath = this.getOutboxPath(teamName);
+    const messageId = input.messageId.trim();
+    const toTeam = input.toTeam.trim();
+    const toMember = input.toMember.trim();
+    const acceptedAtMs = Date.parse(input.acceptedAt);
+    if (!messageId || !toTeam || !toMember || !Number.isFinite(acceptedAtMs)) {
+      throw new Error('Invalid cross-team runtime delivery receipt');
+    }
+    const acceptedAt = new Date(acceptedAtMs).toISOString();
+    let marked = false;
+
+    await withFileLock(outboxPath, async () => {
+      const list = await this.readUnlocked(outboxPath);
+      const matchingIndexes = list.flatMap((entry, index) => {
+        const message = normalizePersistedMessage(entry);
+        const matches =
+          message?.messageId.trim() === messageId &&
+          message.toTeam.trim() === toTeam &&
+          message.toMember?.trim() === toMember;
+        return matches ? [index] : [];
+      });
+      if (matchingIndexes.length !== 1) {
+        return;
+      }
+      const index = matchingIndexes.at(0);
+      if (index === undefined) {
+        return;
+      }
+      const row = list[index];
+      if (!isRecord(row)) {
+        return;
+      }
+      list[index] = { ...row, runtimeDeliveryAcceptedAt: acceptedAt };
+      await atomicWriteAsync(outboxPath, JSON.stringify(list, null, 2));
+      const written = await this.readUnlocked(outboxPath);
+      marked = written.some((entry) => {
+        const message = normalizePersistedMessage(entry);
+        return (
+          message?.messageId.trim() === messageId &&
+          message.toTeam.trim() === toTeam &&
+          message.toMember?.trim() === toMember &&
+          message.runtimeDeliveryAcceptedAt === acceptedAt
+        );
+      });
+    });
+
+    if (!marked) {
+      throw new Error(`Failed to persist cross-team runtime delivery receipt: ${messageId}`);
+    }
+  }
+
+  async findAcceptedRuntimeDelivery(
+    teamName: string,
+    expected: CrossTeamRuntimeDeliveryProofInput
+  ): Promise<CrossTeamOutboxMessage | null> {
+    const outboxPath = this.getOutboxPath(teamName);
+    const list = await this.readUnlocked(outboxPath);
+    for (let index = list.length - 1; index >= 0; index -= 1) {
+      if (!hasValidRuntimeDeliveryProofShape(list[index])) {
+        continue;
+      }
+      const message = normalizePersistedMessage(list[index]);
+      if (message && isExactAcceptedRuntimeDelivery(message, expected)) {
+        return message;
+      }
+    }
+    return null;
   }
 
   async read(teamName: string): Promise<CrossTeamMessage[]> {

@@ -510,6 +510,8 @@ export class TeamProvisioningLeadInboxRelayCompatibilityFacade<
       {
         readConfigSnapshot: (teamName) => this.host.readConfigSnapshot(teamName),
         readMetaMembers: (teamName) => this.host.readMetaMembers(teamName),
+        readInboxMessages: (teamName, memberName) =>
+          this.host.readInboxMessages(teamName, memberName),
         isOpenCodeRuntimeRecipientFromSources: ({ memberName, config, metaMembers }) =>
           isOpenCodeRuntimeRecipientFromSources({ memberName, config, metaMembers }),
         relayOpenCodeMemberInboxMessages: (teamName, memberName, relayOptions) =>

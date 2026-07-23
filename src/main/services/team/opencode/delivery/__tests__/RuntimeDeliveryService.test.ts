@@ -130,7 +130,7 @@ describe('RuntimeDeliveryService stale run guard', () => {
       location,
     });
     expect(getCurrentRunId).toHaveBeenCalledTimes(2);
-    expect(destination.verify).toHaveBeenCalledOnce();
+    expect(destination.verify).toHaveBeenCalledTimes(3);
     expect(destination.write).not.toHaveBeenCalled();
     expect(journal.markCommitted).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -162,7 +162,8 @@ describe('RuntimeDeliveryService stale run guard', () => {
       .mockImplementationOnce(async () => {
         currentRunId = 'run-2';
         return { found: true, location, diagnostics: [] };
-      });
+      })
+      .mockResolvedValue({ found: true, location, diagnostics: [] });
     const emit = vi.fn();
     const service = createService({
       runState: { getCurrentRunId },
@@ -182,6 +183,7 @@ describe('RuntimeDeliveryService stale run guard', () => {
     });
     expect(getCurrentRunId).toHaveBeenCalledTimes(3);
     expect(destination.write).toHaveBeenCalledOnce();
+    expect(destination.verify).toHaveBeenCalledTimes(4);
     expect(journal.markCommitted).toHaveBeenCalledWith(
       expect.objectContaining({
         idempotencyKey: 'runtime-key-1',

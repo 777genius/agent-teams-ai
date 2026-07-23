@@ -1,4 +1,4 @@
-import { killProcessTree } from '@main/utils/childProcess';
+import { killProcessTree, killProcessTreeAndWait } from '@main/utils/childProcess';
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 
 import { boundLaunchDiagnostics, buildProgressLogsTail } from '../progressPayload';
@@ -16,6 +16,8 @@ import type { ProvisioningRun } from './TeamProvisioningRunModel';
 import type { TeamProvisioningProgress, TeamProvisioningState } from '@shared/types';
 import type { ChildProcess } from 'child_process';
 
+const TEAM_PROCESS_EXIT_CONFIRM_TIMEOUT_MS = 5_000;
+
 /**
  * Kill a team CLI process using SIGKILL (uncatchable).
  *
@@ -26,7 +28,93 @@ import type { ChildProcess } from 'child_process';
  * stdin.end() is also forbidden - EOF triggers the same cleanup.
  */
 export function killTeamProcess(child: ChildProcess | null | undefined): void {
+  if (!child?.pid || child.exitCode != null || child.signalCode != null) {
+    return;
+  }
   killProcessTree(child, 'SIGKILL');
+}
+
+/** Kill the owned team process tree and confirm it is gone before resource release. */
+export async function killTeamProcessAndWait(
+  child: ChildProcess | null | undefined
+): Promise<void> {
+  if (!child?.pid) {
+    return;
+  }
+
+  const rootAlreadyExited = child.exitCode != null || child.signalCode != null;
+
+  // Windows taskkill accepts only a PID. Once Node has observed this exact
+  // ChildProcess exit, that PID can already belong to another process and is
+  // no longer safe to use as tree ownership. Unix cleanup can still use the
+  // birth/process-group identity captured for spawnCli children to terminate
+  // surviving descendants without signalling a reused root PID.
+  if (rootAlreadyExited) {
+    if (process.platform !== 'win32') {
+      await killProcessTreeAndWait(child, 'SIGKILL');
+    }
+    return;
+  }
+
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+  let settled = false;
+  let resolveExit!: () => void;
+  let rejectExit!: (error: Error) => void;
+  const exitConfirmed = new Promise<void>((resolve, reject) => {
+    resolveExit = resolve;
+    rejectExit = reject;
+  });
+  const removeListeners = (): void => {
+    child.off('close', confirmExit);
+    child.off('exit', confirmExit);
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+      timeoutHandle = null;
+    }
+  };
+  const confirmExit = (): void => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    removeListeners();
+    resolveExit();
+  };
+  const cancelExitWait = (): void => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    removeListeners();
+  };
+
+  child.once('close', confirmExit);
+  child.once('exit', confirmExit);
+  // The process can exit after the initial guard while listeners are being
+  // installed. Recheck before delegating to PID-based tree termination so a
+  // retained/reused pid is never signalled after this ChildProcess has exited.
+  if (child.exitCode != null || child.signalCode != null) {
+    confirmExit();
+    if (process.platform === 'win32') {
+      return;
+    }
+  } else {
+    timeoutHandle = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      removeListeners();
+      rejectExit(new Error(`Team process ${child.pid} did not stop after SIGKILL`));
+    }, TEAM_PROCESS_EXIT_CONFIRM_TIMEOUT_MS);
+  }
+
+  try {
+    await Promise.all([killProcessTreeAndWait(child, 'SIGKILL'), exitConfirmed]);
+  } catch (error) {
+    cancelExitWait();
+    throw error;
+  }
 }
 
 export function nowIso(): string {

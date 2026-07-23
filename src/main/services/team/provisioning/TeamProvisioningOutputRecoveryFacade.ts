@@ -38,7 +38,10 @@ export interface TeamProvisioningOutputRecoveryFacadeDeps<
     TeamProvisioningAuthRetryRecoveryBoundaryDeps<TRun>['logger'];
   mcpConfigBuilder: TeamProvisioningAuthRetryRecoveryBoundaryDeps<TRun>['mcpConfigBuilder'];
   providerRuntime: Pick<TeamProvisioningProviderRuntimeFacade, 'validateAgentTeamsMcpRuntime'>;
-  killTeamProcess: TeamProvisioningAuthRetryRecoveryBoundaryDeps<TRun>['killTeamProcess'];
+  killTeamProcess: TeamProvisioningOutputRecoveryFacadeServiceAdapter<TRun>['killTeamProcess'];
+  killTeamProcessAndWait: TeamProvisioningAuthRetryRecoveryBoundaryDeps<TRun>['killTeamProcessAndWait'];
+  cleanupRunOwnedAnthropicApiKeyHelper: TeamProvisioningAuthRetryRecoveryBoundaryDeps<TRun>['cleanupRunOwnedAnthropicApiKeyHelper'];
+  retainAnthropicApiKeyHelperCleanupRetryOwner: TeamProvisioningAuthRetryRecoveryBoundaryDeps<TRun>['retainAnthropicApiKeyHelperCleanupRetryOwner'];
   updateProgress: TeamProvisioningAuthRetryRecoveryBoundaryDeps<TRun>['updateProgress'];
   nowMs?: TeamProvisioningOutputRecoveryBoundaryDeps<TRun>['nowMs'];
   nowIso?: TeamProvisioningOutputRecoveryBoundaryDeps<TRun>['nowIso'];
@@ -49,6 +52,9 @@ export interface TeamProvisioningOutputRecoveryFacadeDeps<
 export interface TeamProvisioningOutputRecoveryFacadeServiceHost<
   TRun extends TeamProvisioningOutputRecoveryFacadeRun,
 > {
+  anthropicApiKeyHelperCleanupRetryOwner: {
+    retainRunOwner: TeamProvisioningOutputRecoveryFacadeDeps<TRun>['retainAnthropicApiKeyHelperCleanupRetryOwner'];
+  };
   mcpConfigBuilder: TeamProvisioningOutputRecoveryFacadeDeps<TRun>['mcpConfigBuilder'];
   providerRuntimeCompatibility: TeamProvisioningOutputRecoveryFacadeDeps<TRun>['providerRuntime'];
   cleanupRun: TeamProvisioningOutputRecoveryFacadeServiceAdapter<TRun>['cleanupRun'];
@@ -67,6 +73,8 @@ export interface TeamProvisioningOutputRecoveryFacadeServiceHostOptions<
 > {
   logger: TeamProvisioningOutputRecoveryFacadeDeps<TRun>['logger'];
   killTeamProcess: TeamProvisioningOutputRecoveryFacadeDeps<TRun>['killTeamProcess'];
+  killTeamProcessAndWait: TeamProvisioningOutputRecoveryFacadeDeps<TRun>['killTeamProcessAndWait'];
+  cleanupRunOwnedAnthropicApiKeyHelper: TeamProvisioningOutputRecoveryFacadeDeps<TRun>['cleanupRunOwnedAnthropicApiKeyHelper'];
   updateProgress: TeamProvisioningOutputRecoveryFacadeDeps<TRun>['updateProgress'];
   emitLogsProgress: TeamProvisioningOutputRecoveryFacadeServiceAdapter<TRun>['emitLogsProgress'];
   nowIso?: TeamProvisioningOutputRecoveryFacadeDeps<TRun>['nowIso'];
@@ -119,7 +127,10 @@ export class TeamProvisioningOutputRecoveryFacade<
       logger: deps.logger,
       mcpConfigBuilder: deps.mcpConfigBuilder,
       providerRuntime: deps.providerRuntime,
-      killTeamProcess: deps.killTeamProcess,
+      killTeamProcessAndWait: deps.killTeamProcessAndWait,
+      cleanupRunOwnedAnthropicApiKeyHelper: deps.cleanupRunOwnedAnthropicApiKeyHelper,
+      retainAnthropicApiKeyHelperCleanupRetryOwner:
+        deps.retainAnthropicApiKeyHelperCleanupRetryOwner,
       updateProgress: deps.updateProgress,
     });
   }
@@ -211,6 +222,12 @@ export function createTeamProvisioningOutputRecoveryFacadeDepsFromService<
     mcpConfigBuilder: service.mcpConfigBuilder,
     providerRuntime: service.providerRuntimeCompatibility,
     killTeamProcess: options.killTeamProcess,
+    killTeamProcessAndWait: options.killTeamProcessAndWait,
+    cleanupRunOwnedAnthropicApiKeyHelper: options.cleanupRunOwnedAnthropicApiKeyHelper,
+    retainAnthropicApiKeyHelperCleanupRetryOwner:
+      service.anthropicApiKeyHelperCleanupRetryOwner.retainRunOwner.bind(
+        service.anthropicApiKeyHelperCleanupRetryOwner
+      ),
     updateProgress: options.updateProgress,
     nowIso: options.nowIso,
   };

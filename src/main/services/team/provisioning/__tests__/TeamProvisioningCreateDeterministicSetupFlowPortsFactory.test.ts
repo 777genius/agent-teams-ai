@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createAnthropicApiKeyHelperCleanupRetryOwner } from '../TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   createTeamProvisioningCreateDeterministicSetupFlowPortsFromService,
   type TeamProvisioningCreateDeterministicSetupFlowServiceHost,
@@ -9,6 +10,7 @@ import type { TeamCreateRequest } from '@shared/types';
 
 function createHost(): TeamProvisioningCreateDeterministicSetupFlowServiceHost {
   return {
+    anthropicApiKeyHelperCleanupRetryOwner: createAnthropicApiKeyHelperCleanupRetryOwner(),
     pathExists: vi.fn(async () => true),
     buildProvisioningEnv: vi.fn(async () => ({
       env: { PATH: '/bin' },

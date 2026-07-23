@@ -24,6 +24,12 @@ vi.mock('@main/utils/childProcess', () => ({
   spawnCli: vi.fn(),
   execCli: vi.fn(),
   killProcessTree: vi.fn(),
+  killProcessTreeAndWait: vi.fn(
+    (child: { emit?: (...args: unknown[]) => unknown } | null | undefined) => {
+      child?.emit?.('close', null, 'SIGKILL');
+      return Promise.resolve();
+    }
+  ),
 }));
 
 vi.mock('@main/utils/pathDecoder', async (importOriginal) => {

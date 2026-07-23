@@ -41,6 +41,36 @@ afterEach(() => {
   }
 });
 
+it('resumes a deleted same-name team only after config is materialized again', async () => {
+  const teamsBasePath = path.join(makeTempRoot(), 'teams');
+  const teamName = 'recreated-team';
+  const resumeTeam = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'resumeTeam');
+  const feature = createMemberWorkSyncFeature({
+    teamsBasePath,
+    configReader: { getConfig: vi.fn(async () => null) } as never,
+    taskReader: { getTasks: vi.fn(async () => []) } as never,
+    kanbanManager: { getState: vi.fn(async () => null) } as never,
+    membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+    listLifecycleActiveTeamNames: async () => [],
+  });
+
+  try {
+    await feature.prepareTeamDeletion(teamName);
+    feature.completeTeamDeletion(teamName);
+    feature.noteTeamChange({ type: 'config', teamName, detail: 'config.json' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(resumeTeam).not.toHaveBeenCalledWith(teamName);
+
+    await fs.promises.mkdir(path.join(teamsBasePath, teamName), { recursive: true });
+    await fs.promises.writeFile(path.join(teamsBasePath, teamName, 'config.json'), '{}');
+    feature.noteTeamChange({ type: 'config', teamName, detail: 'config.json' });
+    await vi.waitFor(() => expect(resumeTeam).toHaveBeenCalledWith(teamName));
+  } finally {
+    await feature.dispose();
+    resumeTeam.mockRestore();
+  }
+});
+
 async function seedShadowReadyMetrics(input: {
   teamsBasePath: string;
   teamName: string;

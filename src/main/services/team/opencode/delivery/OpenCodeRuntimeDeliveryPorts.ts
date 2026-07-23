@@ -1,10 +1,15 @@
 import { CROSS_TEAM_SENT_SOURCE } from '@shared/constants/crossTeam';
 
+import { CrossTeamOutbox, type CrossTeamRuntimeDeliveryProofInput } from '../../CrossTeamOutbox';
+
 import type { TeamInboxReader } from '../../TeamInboxReader';
 import type { TeamInboxWriter } from '../../TeamInboxWriter';
 import type { TeamSentMessagesStore } from '../../TeamSentMessagesStore';
 import type { RuntimeDeliveryLocation } from './RuntimeDeliveryJournal';
-import type { RuntimeDeliveryDestinationPort } from './RuntimeDeliveryService';
+import type {
+  RuntimeDeliveryDestinationPort,
+  RuntimeDeliveryRecoveryEvidence,
+} from './RuntimeDeliveryService';
 import type { CrossTeamSendResult, InboxMessage, TaskRef } from '@shared/types/team';
 
 export type OpenCodeRuntimeDeliveryCrossTeamSender = (request: {
@@ -26,6 +31,7 @@ export interface OpenCodeRuntimeDeliveryPortsDependencies {
   inboxReader: Pick<TeamInboxReader, 'getMessagesFor'>;
   inboxWriter: Pick<TeamInboxWriter, 'sendMessage'>;
   getCrossTeamSender: () => OpenCodeRuntimeDeliveryCrossTeamSender | null;
+  crossTeamOutbox?: Pick<CrossTeamOutbox, 'findAcceptedRuntimeDelivery'>;
 }
 
 function isRuntimeTaskRef(value: unknown): value is TaskRef {
@@ -128,9 +134,66 @@ function isExactCrossTeamRuntimeProof(input: {
   );
 }
 
+function isExactPreCanonicalRuntimeMessage(input: {
+  message: InboxMessage;
+  envelope: Parameters<RuntimeDeliveryDestinationPort['write']>[0]['envelope'];
+  destinationMessageId: string;
+  to: string;
+  source: InboxMessage['source'];
+}): boolean {
+  const expectedTaskRefs = runtimeTaskRefs(input.envelope.teamName, input.envelope.taskRefs);
+  return (
+    typeof input.message.from === 'string' &&
+    typeof input.message.to === 'string' &&
+    input.message.messageId === input.destinationMessageId &&
+    input.message.from.trim().toLowerCase() ===
+      input.envelope.fromMemberName.trim().toLowerCase() &&
+    input.message.to.trim().toLowerCase() === input.to.trim().toLowerCase() &&
+    input.message.text === input.envelope.text &&
+    input.message.timestamp === input.envelope.createdAt &&
+    input.message.source === input.source &&
+    input.message.leadSessionId === input.envelope.runtimeSessionId &&
+    (input.message.summary ?? undefined) === (input.envelope.summary ?? undefined) &&
+    JSON.stringify(input.message.taskRefs ?? []) === JSON.stringify(expectedTaskRefs ?? [])
+  );
+}
+
+function buildRuntimeDeliveryRecoveryEvidence(input: {
+  message: InboxMessage;
+  destinationMessageId: string;
+  expectedTo: string;
+  source: InboxMessage['source'];
+}): RuntimeDeliveryRecoveryEvidence | undefined {
+  if (
+    input.message.messageId !== input.destinationMessageId ||
+    typeof input.message.from !== 'string' ||
+    input.message.from.trim().length === 0 ||
+    input.message.to?.trim().toLowerCase() !== input.expectedTo.trim().toLowerCase() ||
+    input.message.source !== input.source ||
+    typeof input.message.leadSessionId !== 'string' ||
+    input.message.leadSessionId.trim().length === 0 ||
+    typeof input.message.text !== 'string' ||
+    input.message.text.length === 0 ||
+    typeof input.message.timestamp !== 'string' ||
+    !Number.isFinite(Date.parse(input.message.timestamp))
+  ) {
+    return undefined;
+  }
+
+  return {
+    fromMemberName: input.message.from,
+    runtimeSessionId: input.message.leadSessionId,
+    text: input.message.text,
+    createdAt: input.message.timestamp,
+    summary: input.message.summary ?? null,
+    ...(input.message.taskRefs ? { taskRefs: input.message.taskRefs } : {}),
+  };
+}
+
 export function createOpenCodeRuntimeDeliveryPorts(
   deps: OpenCodeRuntimeDeliveryPortsDependencies
 ): RuntimeDeliveryDestinationPort[] {
+  const crossTeamOutbox = deps.crossTeamOutbox ?? new CrossTeamOutbox();
   const userMessagesPort: RuntimeDeliveryDestinationPort = {
     kind: 'user_sent_messages',
     write: async ({ envelope, destinationMessageId }) => {
@@ -152,12 +215,41 @@ export function createOpenCodeRuntimeDeliveryPorts(
         messageId: destinationMessageId,
       };
     },
-    verify: async ({ destination, destinationMessageId }) => {
+    verify: async ({
+      destination,
+      destinationMessageId,
+      preCanonicalRecovery,
+      includeRecoveryEvidence,
+    }) => {
       if (destination.kind !== 'user_sent_messages') {
         return { found: false, location: null, diagnostics: ['destination kind mismatch'] };
       }
       const messages = await deps.sentMessagesStore.readMessages(destination.teamName);
-      const found = messages.some((message) => message.messageId === destinationMessageId);
+      const message = messages.find((candidate) => candidate.messageId === destinationMessageId);
+      const recoveryEvidence =
+        includeRecoveryEvidence && message
+          ? buildRuntimeDeliveryRecoveryEvidence({
+              message,
+              destinationMessageId,
+              expectedTo: 'user',
+              source: 'lead_process',
+            })
+          : undefined;
+      const found = preCanonicalRecovery
+        ? preCanonicalRecovery.canonicalDestination.kind === 'user_sent_messages' &&
+          preCanonicalRecovery.canonicalDestination.teamName === destination.teamName &&
+          messages.some((persistedMessage) =>
+            isExactPreCanonicalRuntimeMessage({
+              message: persistedMessage,
+              envelope: preCanonicalRecovery.envelope,
+              destinationMessageId,
+              to: 'user',
+              source: 'lead_process',
+            })
+          )
+        : includeRecoveryEvidence
+          ? recoveryEvidence !== undefined
+          : message !== undefined;
       return {
         found,
         location: found
@@ -167,7 +259,16 @@ export function createOpenCodeRuntimeDeliveryPorts(
               messageId: destinationMessageId,
             }
           : null,
-        diagnostics: [],
+        diagnostics: !found
+          ? [
+              preCanonicalRecovery
+                ? 'pre-canonical user runtime delivery proof missing'
+                : includeRecoveryEvidence
+                  ? 'canonical user runtime delivery payload proof missing'
+                  : 'user runtime delivery proof missing',
+            ]
+          : [],
+        ...(recoveryEvidence ? { recoveryEvidence } : {}),
       };
     },
     buildChangeEvent: ({ teamName }) => ({
@@ -203,26 +304,86 @@ export function createOpenCodeRuntimeDeliveryPorts(
         messageId: destinationMessageId,
       };
     },
-    verify: async ({ destination, destinationMessageId }) => {
+    verify: async ({
+      destination,
+      destinationMessageId,
+      location,
+      preCanonicalRecovery,
+      includeRecoveryEvidence,
+    }) => {
       if (destination.kind !== 'member_inbox') {
         return { found: false, location: null, diagnostics: ['destination kind mismatch'] };
       }
-      const messages = await deps.inboxReader.getMessagesFor(
-        destination.teamName,
-        destination.memberName
-      );
-      const found = messages.some((message) => message.messageId === destinationMessageId);
+      if (
+        preCanonicalRecovery &&
+        (preCanonicalRecovery.canonicalDestination.kind !== 'member_inbox' ||
+          preCanonicalRecovery.canonicalDestination.teamName !== destination.teamName)
+      ) {
+        return {
+          found: false,
+          location: null,
+          diagnostics: ['pre-canonical member runtime delivery destination mismatch'],
+        };
+      }
+      const proofLocation = preCanonicalRecovery && location;
+      if (
+        proofLocation &&
+        (proofLocation.kind !== 'member_inbox' ||
+          proofLocation.teamName !== destination.teamName ||
+          proofLocation.messageId !== destinationMessageId)
+      ) {
+        return {
+          found: false,
+          location: null,
+          diagnostics: ['pre-canonical member runtime delivery location mismatch'],
+        };
+      }
+      const proofMemberName =
+        proofLocation?.kind === 'member_inbox' ? proofLocation.memberName : destination.memberName;
+      const messages = await deps.inboxReader.getMessagesFor(destination.teamName, proofMemberName);
+      const message = messages.find((candidate) => candidate.messageId === destinationMessageId);
+      const recoveryEvidence =
+        includeRecoveryEvidence && message
+          ? buildRuntimeDeliveryRecoveryEvidence({
+              message,
+              destinationMessageId,
+              expectedTo: proofMemberName,
+              source: 'inbox',
+            })
+          : undefined;
+      const found = preCanonicalRecovery
+        ? messages.some((persistedMessage) =>
+            isExactPreCanonicalRuntimeMessage({
+              message: persistedMessage,
+              envelope: preCanonicalRecovery.envelope,
+              destinationMessageId,
+              to: proofMemberName,
+              source: 'inbox',
+            })
+          )
+        : includeRecoveryEvidence
+          ? recoveryEvidence !== undefined
+          : message !== undefined;
       return {
         found,
         location: found
-          ? {
+          ? (proofLocation ?? {
               kind: 'member_inbox',
               teamName: destination.teamName,
               memberName: destination.memberName,
               messageId: destinationMessageId,
-            }
+            })
           : null,
-        diagnostics: [],
+        diagnostics: !found
+          ? [
+              preCanonicalRecovery
+                ? 'pre-canonical member runtime delivery proof missing'
+                : includeRecoveryEvidence
+                  ? 'canonical member runtime delivery payload proof missing'
+                  : 'member runtime delivery proof missing',
+            ]
+          : [],
+        ...(recoveryEvidence ? { recoveryEvidence } : {}),
       };
     },
     buildChangeEvent: ({ teamName, location }) => ({
@@ -296,9 +457,64 @@ export function createOpenCodeRuntimeDeliveryPorts(
 
       return location;
     },
-    verify: async ({ destination, location }) => {
+    verify: async ({
+      destination,
+      destinationMessageId,
+      location,
+      preCanonicalRecovery,
+      includeRecoveryEvidence,
+    }) => {
       if (destination.kind !== 'cross_team_outbox') {
         return { found: false, location: null, diagnostics: ['destination kind mismatch'] };
+      }
+      if (preCanonicalRecovery) {
+        const canonicalDestination = preCanonicalRecovery.canonicalDestination;
+        const envelope = preCanonicalRecovery.envelope;
+        if (
+          canonicalDestination.kind !== 'cross_team_outbox' ||
+          envelope.to === 'user' ||
+          !('teamName' in envelope.to) ||
+          destination.fromTeamName !== canonicalDestination.fromTeamName ||
+          destination.toTeamName !== canonicalDestination.toTeamName
+        ) {
+          return {
+            found: false,
+            location: null,
+            diagnostics: ['pre-canonical cross-team recovery destination mismatch'],
+          };
+        }
+        const expected: CrossTeamRuntimeDeliveryProofInput = {
+          messageId: destinationMessageId,
+          fromTeam: canonicalDestination.fromTeamName,
+          fromMember: envelope.fromMemberName,
+          toTeam: canonicalDestination.toTeamName,
+          toMember: canonicalDestination.toMemberName,
+          conversationId: envelope.idempotencyKey,
+          text: envelope.text,
+          ...(envelope.taskRefs ? { taskRefs: envelope.taskRefs } : {}),
+          ...(envelope.summary ? { summary: envelope.summary } : {}),
+          timestamp: envelope.createdAt,
+        };
+        const accepted = await crossTeamOutbox.findAcceptedRuntimeDelivery(
+          canonicalDestination.fromTeamName,
+          expected
+        );
+        const acceptedLocation: RuntimeDeliveryLocation | null = accepted
+          ? {
+              kind: 'cross_team_outbox',
+              fromTeamName: accepted.fromTeam,
+              toTeamName: accepted.toTeam,
+              toMemberName: accepted.toMember ?? canonicalDestination.toMemberName,
+              messageId: accepted.messageId,
+            }
+          : null;
+        return {
+          found: acceptedLocation !== null,
+          location: acceptedLocation,
+          diagnostics: acceptedLocation
+            ? []
+            : ['pre-canonical cross-team runtime acceptance proof missing'],
+        };
       }
       if (!isCrossTeamLocation(location)) {
         return {
@@ -316,11 +532,30 @@ export function createOpenCodeRuntimeDeliveryPorts(
       }
       const expectedLocation = location;
       const messages = await deps.sentMessagesStore.readMessages(expectedLocation.fromTeamName);
-      const found = Boolean(findCrossTeamSenderCopy(messages, expectedLocation));
+      const message = findCrossTeamSenderCopy(messages, expectedLocation);
+      const recoveryEvidence =
+        includeRecoveryEvidence && message
+          ? buildRuntimeDeliveryRecoveryEvidence({
+              message,
+              destinationMessageId,
+              expectedTo: `${expectedLocation.toTeamName}.${expectedLocation.toMemberName}`,
+              source: CROSS_TEAM_SENT_SOURCE,
+            })
+          : undefined;
+      const found = includeRecoveryEvidence
+        ? recoveryEvidence !== undefined
+        : message !== undefined;
       return {
         found,
         location: found ? expectedLocation : null,
-        diagnostics: found ? [] : ['cross-team sender copy proof missing'],
+        diagnostics: found
+          ? []
+          : [
+              includeRecoveryEvidence
+                ? 'canonical cross-team runtime delivery payload proof missing'
+                : 'cross-team sender copy proof missing',
+            ],
+        ...(recoveryEvidence ? { recoveryEvidence } : {}),
       };
     },
     buildChangeEvent: ({ teamName }) => ({

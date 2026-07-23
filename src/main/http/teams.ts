@@ -284,6 +284,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     try {
       const createRequest = parseCreateTeamRequest(request.body);
       await getTeamDataApi(services).createTeamConfig(createRequest);
+      services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
       return reply.status(201).send({ teamName: createRequest.teamName });
     } catch (error) {
       if (shouldLogError(error)) {
@@ -341,6 +342,9 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
               parseLaunchRequest(teamName, request.body),
               () => undefined
             );
+        if (draftSavedRequest) {
+          services.memberWorkSyncFeature?.resumeTeam(teamName);
+        }
         TeamConfigReader.invalidateListTeamsCache();
         return reply.send(response);
       } catch (error) {

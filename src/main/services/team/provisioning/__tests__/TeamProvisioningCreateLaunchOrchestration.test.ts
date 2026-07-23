@@ -1,5 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
 
+const deterministicMocks = vi.hoisted(() => ({
+  prepareCreateSetup: vi.fn(),
+  runCreate: vi.fn(),
+}));
+
+vi.mock('../TeamProvisioningCreateDeterministicSetupFlow', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../TeamProvisioningCreateDeterministicSetupFlow')>()),
+  prepareDeterministicCreateSetupFlow: deterministicMocks.prepareCreateSetup,
+}));
+
+vi.mock('../TeamProvisioningCreateDeterministicRunFlow', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../TeamProvisioningCreateDeterministicRunFlow')>()),
+  runDeterministicCreateRunFlow: deterministicMocks.runCreate,
+}));
+
+import {
+  createAnthropicApiKeyHelperCleanupRetryOwner,
+  createAnthropicApiKeyHelperSetupLease,
+} from '../TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   createTeamInnerWithService,
   launchTeamInnerWithService,
@@ -74,11 +93,14 @@ function createHost(
       createRunFlowPorts: vi.fn(unexpected),
     },
     ...overrides,
+    anthropicApiKeyHelperCleanupRetryOwner:
+      overrides.anthropicApiKeyHelperCleanupRetryOwner ??
+      createAnthropicApiKeyHelperCleanupRetryOwner(),
   };
 }
 
 describe('TeamProvisioningCreateLaunchOrchestration', () => {
-  it('returns an in-flight create run before preparing launch state', async () => {
+  it('returns an in-flight create run before preparing launch state when no cleanup is pending', async () => {
     const host = createHost({
       runTracking: {
         getResolvableProvisioningRunId: vi.fn(() => 'run-active'),
@@ -98,6 +120,71 @@ describe('TeamProvisioningCreateLaunchOrchestration', () => {
     ).not.toHaveBeenCalled();
     expect(host.shouldRouteOpenCodeToRuntimeAdapter).not.toHaveBeenCalled();
   });
+
+  it.each([
+    {
+      name: 'create',
+      invoke: (host: TeamProvisioningCreateLaunchOrchestrationServiceHost) =>
+        createTeamInnerWithService(host, { ...createRequest, teamName: 'beta' }, vi.fn()),
+    },
+    {
+      name: 'launch',
+      invoke: (host: TeamProvisioningCreateLaunchOrchestrationServiceHost) =>
+        launchTeamInnerWithService(host, { ...launchRequest, teamName: 'beta' }, vi.fn()),
+    },
+  ])(
+    'does not let exhausted cleanup for team A block production team B $name admission',
+    async ({ invoke }) => {
+      vi.useFakeTimers();
+      const cleanupMaterial = vi
+        .fn<(input: { directory: string }) => Promise<void>>()
+        .mockRejectedValue(new Error('team A cleanup remains busy'));
+      const lease = createAnthropicApiKeyHelperSetupLease(cleanupMaterial);
+      lease.coalesce({
+        teamName: 'team-a',
+        directory: '/test-artifacts/team-a/exhausted-helper',
+        helperPath: '/test-artifacts/team-a/exhausted-helper/helper.sh',
+        keyPath: '/test-artifacts/team-a/exhausted-helper/key',
+        settingsPath: '/test-artifacts/team-a/exhausted-helper/settings.json',
+        settingsObject: {
+          apiKeyHelper: '/test-artifacts/team-a/exhausted-helper/helper.sh',
+        },
+        settingsArgs: ['--settings', '/test-artifacts/team-a/exhausted-helper/settings.json'],
+        envPatch: {},
+      });
+      const retryOwner = createAnthropicApiKeyHelperCleanupRetryOwner({
+        maxPendingOwners: 1,
+        retryDelaysMs: [10],
+      });
+      try {
+        await expect(lease.cleanup()).rejects.toThrow('team A cleanup remains busy');
+        await retryOwner.retainSetupLease(lease);
+        await vi.advanceTimersByTimeAsync(10);
+        expect(cleanupMaterial).toHaveBeenCalledTimes(2);
+        expect(vi.getTimerCount()).toBe(0);
+
+        const host = createHost({
+          anthropicApiKeyHelperCleanupRetryOwner: retryOwner,
+          runTracking: {
+            getResolvableProvisioningRunId: vi.fn(() => 'run-active'),
+          },
+        });
+
+        await expect(invoke(host)).resolves.toMatchObject({
+          runId: 'run-active',
+          launchStatus: 'already_launching',
+        });
+
+        expect(cleanupMaterial).toHaveBeenCalledTimes(2);
+        expect(retryOwner.getPendingOwnerCount()).toBe(1);
+        expect(retryOwner.hasPendingForTeam('team-a')).toBe(true);
+        expect(retryOwner.hasPendingForTeam('beta')).toBe(false);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
 
   it('routes create requests to the OpenCode runtime adapter after stale activity repair', async () => {
     const host = createHost();
@@ -119,6 +206,88 @@ describe('TeamProvisioningCreateLaunchOrchestration', () => {
       onProgress
     );
     expect(host.provisioningRunByTeam.has('alpha')).toBe(false);
+  });
+
+  it('retries an explicitly retained setup owner before production orchestration continues', async () => {
+    const cleanupMaterial = vi
+      .fn<(input: { directory: string }) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('cleanup busy'))
+      .mockResolvedValueOnce(undefined);
+    const lease = createAnthropicApiKeyHelperSetupLease(cleanupMaterial);
+    lease.coalesce({
+      teamName: 'alpha',
+      directory: '/test-artifacts/alpha/helper',
+      helperPath: '/test-artifacts/alpha/helper/helper.sh',
+      keyPath: '/test-artifacts/alpha/helper/key',
+      settingsPath: '/test-artifacts/alpha/helper/settings.json',
+      settingsObject: { apiKeyHelper: '/test-artifacts/alpha/helper/helper.sh' },
+      settingsArgs: ['--settings', '/test-artifacts/alpha/helper/settings.json'],
+      envPatch: {},
+    });
+    const retryOwner = createAnthropicApiKeyHelperCleanupRetryOwner();
+    await expect(lease.cleanup()).rejects.toThrow('cleanup busy');
+    await retryOwner.retainSetupLease(lease);
+    const host = createHost({ anthropicApiKeyHelperCleanupRetryOwner: retryOwner });
+
+    await createTeamInnerWithService(host, createRequest, vi.fn());
+
+    expect(cleanupMaterial).toHaveBeenCalledTimes(2);
+    expect(retryOwner.getPendingOwnerCount()).toBe(0);
+    expect(host.createOpenCodeTeamThroughRuntimeAdapter).toHaveBeenCalledOnce();
+  });
+
+  it('retains the setup lease when orchestration cleanup fails', async () => {
+    const cleanupMaterial = vi
+      .fn<(input: { directory: string }) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('cleanup busy'))
+      .mockResolvedValueOnce(undefined);
+    const lease = createAnthropicApiKeyHelperSetupLease(cleanupMaterial);
+    lease.coalesce({
+      teamName: 'alpha',
+      directory: '/test-artifacts/alpha/orchestration-helper',
+      helperPath: '/test-artifacts/alpha/orchestration-helper/helper.sh',
+      keyPath: '/test-artifacts/alpha/orchestration-helper/key',
+      settingsPath: '/test-artifacts/alpha/orchestration-helper/settings.json',
+      settingsObject: {
+        apiKeyHelper: '/test-artifacts/alpha/orchestration-helper/helper.sh',
+      },
+      settingsArgs: ['--settings', '/test-artifacts/alpha/orchestration-helper/settings.json'],
+      envPatch: {},
+    });
+    deterministicMocks.prepareCreateSetup.mockResolvedValueOnce({
+      anthropicApiKeyHelperLease: lease,
+      claudePath: '/bin/claude',
+      shellEnv: {},
+    });
+    deterministicMocks.runCreate.mockRejectedValueOnce(new Error('run setup failed'));
+    const retryOwner = createAnthropicApiKeyHelperCleanupRetryOwner();
+    const host = createHost({
+      anthropicApiKeyHelperCleanupRetryOwner: retryOwner,
+      shouldRouteOpenCodeToRuntimeAdapter: vi.fn(() => false),
+      createDeterministicCreateSetupFlowPorts: vi.fn(() => ({}) as never),
+      createDeterministicCreateRunFlowPorts: vi.fn(() => ({}) as never),
+      createDeterministicCreateSpawnFlowPorts: vi.fn(() => ({}) as never),
+    });
+
+    await expect(
+      createTeamInnerWithService(
+        {
+          ...host,
+          shouldRouteOpenCodeToRuntimeAdapter: vi.fn(() => false),
+        },
+        {
+          ...createRequest,
+          providerId: 'codex',
+          members: [{ name: 'Lead', role: 'Lead', providerId: 'codex' }],
+        },
+        vi.fn()
+      )
+    ).rejects.toThrow('run setup failed');
+
+    expect(retryOwner.getPendingOwnerCount()).toBe(1);
+    await retryOwner.retryPendingForTeam('alpha');
+    expect(cleanupMaterial).toHaveBeenCalledTimes(2);
+    expect(retryOwner.getPendingOwnerCount()).toBe(0);
   });
 
   it('cancels create when stop-all occurs during the launch snapshot preflight', async () => {

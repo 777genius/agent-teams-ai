@@ -45,6 +45,7 @@ export interface TeamProvisioningLaunchDeterministicFlowHost<
   };
   runs: Map<string, TRun>;
   provisioningRunByTeam: Map<string, string>;
+  anthropicApiKeyHelperCleanupRetryOwner: RunDeterministicLaunchRunFlowPorts<TMixedSecondaryLane>['anthropicApiKeyHelperCleanupRetryOwner'];
   getStopAllTeamsGeneration(): number;
   providerRuntime: Pick<
     TeamProvisioningProviderRuntimeFacade,
@@ -114,7 +115,7 @@ export interface TeamProvisioningLaunchDeterministicFlowBoundaryDeps<
   spawnCli: RunDeterministicLaunchRunFlowPorts<TMixedSecondaryLane>['spawnCli'];
   updateProgress: RunDeterministicLaunchRunFlowPorts<TMixedSecondaryLane>['updateProgress'];
   setTimeout(callback: () => void, ms: number): NodeJS.Timeout;
-  killTeamProcess(child: ChildProcess | null | undefined): void;
+  killTeamProcessAndWait(child: ChildProcess | null | undefined): Promise<void>;
 }
 
 export interface TeamProvisioningLaunchDeterministicFlowServiceHost<
@@ -130,6 +131,10 @@ export interface TeamProvisioningLaunchDeterministicFlowServiceHost<
     TRun,
     TMixedSecondaryLane
   >['provisioningRunByTeam'];
+  anthropicApiKeyHelperCleanupRetryOwner: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['anthropicApiKeyHelperCleanupRetryOwner'];
   stopAllTeamsGeneration: number;
   workspaceTrustPreSpawnBoundary: Pick<
     TeamProvisioningLaunchDeterministicFlowHost<TRun, TMixedSecondaryLane>,
@@ -282,6 +287,7 @@ export function createTeamProvisioningLaunchDeterministicFlowHostFromService<
     },
     runs: service.runs,
     provisioningRunByTeam: service.provisioningRunByTeam,
+    anthropicApiKeyHelperCleanupRetryOwner: service.anthropicApiKeyHelperCleanupRetryOwner,
     getStopAllTeamsGeneration: () => service.stopAllTeamsGeneration,
     providerRuntime: {
       buildProvisioningEnv: (...args) => service.buildProvisioningEnv(...args),
@@ -345,6 +351,7 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
 
   return {
     createSetupPorts: () => ({
+      anthropicApiKeyHelperCleanupRetryOwner: host.anthropicApiKeyHelperCleanupRetryOwner,
       readTeamConfigRaw: (teamName) => {
         const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
         return tryReadRegularFileUtf8(configPath, {
@@ -392,6 +399,7 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
       assertPreparedSetup(setup);
 
       return {
+        anthropicApiKeyHelperCleanupRetryOwner: host.anthropicApiKeyHelperCleanupRetryOwner,
         createInitialMemberSpawnStatusEntry: deps.createInitialMemberSpawnStatusEntry,
         prepareWorkspaceTrustForDeterministicRun: (input) =>
           host.prepareWorkspaceTrustForDeterministicRun({
@@ -454,7 +462,7 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
         setTimeout: (callback, ms) => deps.setTimeout(callback, ms),
         tryCompleteAfterTimeout: (provisioningRun) =>
           host.tryCompleteAfterTimeout(provisioningRun as TRun),
-        killTeamProcess: deps.killTeamProcess,
+        killTeamProcessAndWait: deps.killTeamProcessAndWait,
         cleanupRun: (provisioningRun) => host.cleanupRun(provisioningRun as TRun),
         handleProcessExit: (provisioningRun, code) =>
           host.handleProcessExit(provisioningRun as TRun, code),

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createTeamProvisioningWorkspaceTrustPreSpawnBoundary } from '../TeamProvisioningWorkspaceTrustPreSpawnBoundary';
 
+import type { AnthropicTeamApiKeyHelperMaterial } from '../../../runtime/anthropicTeamApiKeyHelper';
 import type {
   WorkspaceTrustCoordinator,
   WorkspaceTrustExecutionResult,
@@ -39,6 +40,8 @@ function createRun(overrides: Partial<TestRun> = {}): TestRun {
     teamName: 'team-1',
     cancelRequested: false,
     processKilled: false,
+    anthropicApiKeyHelper: null,
+    anthropicApiKeyHelperCleanupPromise: null,
     progress,
     onProgress: vi.fn(),
     ...overrides,
@@ -50,6 +53,8 @@ interface TestRun {
   teamName: string;
   cancelRequested: boolean;
   processKilled: boolean;
+  anthropicApiKeyHelper: AnthropicTeamApiKeyHelperMaterial | null;
+  anthropicApiKeyHelperCleanupPromise: Promise<void> | null;
   progress: TeamProvisioningProgress;
   onProgress(progress: TeamProvisioningProgress): void;
   workspaceTrustPlan?: WorkspaceTrustFullPlanResult | null;
@@ -91,7 +96,23 @@ function createBoundary(input: {
 
 describe('TeamProvisioningWorkspaceTrustPreSpawnBoundary', () => {
   it('fails before spawn through injected cleanup callbacks when workspace trust blocks launch', async () => {
-    const run = createRun();
+    const run = createRun({
+      anthropicApiKeyHelper: {
+        teamName: 'team-1',
+        directory: '/workspace/.agent-teams-ai-test/anthropic-helper',
+        helperPath: '/workspace/.agent-teams-ai-test/anthropic-helper/helper.sh',
+        keyPath: '/workspace/.agent-teams-ai-test/anthropic-helper/key',
+        settingsPath: '/workspace/.agent-teams-ai-test/anthropic-helper/settings.json',
+        settingsObject: {
+          apiKeyHelper: '/workspace/.agent-teams-ai-test/anthropic-helper/helper.sh',
+        },
+        settingsArgs: [
+          '--settings',
+          '/workspace/.agent-teams-ai-test/anthropic-helper/settings.json',
+        ],
+        envPatch: {},
+      },
+    });
     const cleanupAnthropicApiKeyHelperMaterial = vi.fn(async () => undefined);
     const restorePrelaunchConfig = vi.fn(async () => undefined);
     const cleanupRun = vi.fn();
@@ -136,8 +157,68 @@ describe('TeamProvisioningWorkspaceTrustPreSpawnBoundary', () => {
     expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledWith({
       directory: '/workspace/.agent-teams-ai-test/anthropic-helper',
     });
+    expect(run.anthropicApiKeyHelper).toBeNull();
     expect(restorePrelaunchConfig).toHaveBeenCalledWith('team-1');
     expect(cleanupRun).toHaveBeenCalledWith(run);
+  });
+
+  it('retains the failed launch run when workspace-trust helper cleanup needs retry', async () => {
+    const helper = {
+      teamName: 'team-1',
+      directory: '/workspace/.agent-teams-ai-test/anthropic-helper',
+      helperPath: '/workspace/.agent-teams-ai-test/anthropic-helper/helper.sh',
+      keyPath: '/workspace/.agent-teams-ai-test/anthropic-helper/key',
+      settingsPath: '/workspace/.agent-teams-ai-test/anthropic-helper/settings.json',
+      settingsObject: {
+        apiKeyHelper: '/workspace/.agent-teams-ai-test/anthropic-helper/helper.sh',
+      },
+      settingsArgs: [
+        '--settings',
+        '/workspace/.agent-teams-ai-test/anthropic-helper/settings.json',
+      ],
+      envPatch: {},
+    };
+    const run = createRun({ anthropicApiKeyHelper: helper });
+    const cleanupError = new Error('helper cleanup failed');
+    const restorePrelaunchConfig = vi.fn(async () => undefined);
+    const cleanupRun = vi.fn();
+    const boundary = createBoundary({
+      cleanupAnthropicApiKeyHelperMaterial: vi.fn(async () => {
+        throw cleanupError;
+      }),
+      restorePrelaunchConfig,
+      cleanupRun,
+      coordinator: {
+        planArgsOnly: vi.fn(),
+        planFull: vi.fn(),
+        execute: vi.fn(async () => ({
+          id: 'workspace-trust',
+          provider: 'claude',
+          status: 'blocked',
+          workspaceIds: [],
+          errorMessage: 'Workspace trust required for /repo',
+          evidence: ['trust prompt'],
+        })),
+      } as WorkspaceTrustCoordinator,
+    });
+
+    await expect(
+      boundary.prepareWorkspaceTrustForDeterministicRun({
+        mode: 'launch',
+        run,
+        claudePath: '/bin/claude',
+        shellEnv: {},
+        stopAllGenerationAtStart: 1,
+        workspaceTrustPlan,
+        featureFlags,
+        provisioningEnv: { anthropicApiKeyHelper: helper },
+      })
+    ).rejects.toBe(cleanupError);
+
+    expect(run.progress.state).toBe('failed');
+    expect(run.anthropicApiKeyHelper).toBe(helper);
+    expect(restorePrelaunchConfig).toHaveBeenCalledWith('team-1');
+    expect(cleanupRun).not.toHaveBeenCalled();
   });
 
   it('cancels before spawn through injected cleanup callbacks when workspace trust is cancelled', async () => {
@@ -177,5 +258,60 @@ describe('TeamProvisioningWorkspaceTrustPreSpawnBoundary', () => {
       message: 'Team launch cancelled',
     });
     expect(cleanupRun).toHaveBeenCalledWith(run);
+  });
+
+  it('retains the cancelled run when workspace-trust helper cleanup needs retry', async () => {
+    const helper = {
+      teamName: 'team-1',
+      directory: '/workspace/.agent-teams-ai-test/anthropic-helper',
+      helperPath: '/workspace/.agent-teams-ai-test/anthropic-helper/helper.sh',
+      keyPath: '/workspace/.agent-teams-ai-test/anthropic-helper/key',
+      settingsPath: '/workspace/.agent-teams-ai-test/anthropic-helper/settings.json',
+      settingsObject: {
+        apiKeyHelper: '/workspace/.agent-teams-ai-test/anthropic-helper/helper.sh',
+      },
+      settingsArgs: [
+        '--settings',
+        '/workspace/.agent-teams-ai-test/anthropic-helper/settings.json',
+      ],
+      envPatch: {},
+    };
+    const run = createRun({ anthropicApiKeyHelper: helper });
+    const cleanupError = new Error('helper cleanup failed');
+    const cleanupRun = vi.fn();
+    const boundary = createBoundary({
+      cleanupAnthropicApiKeyHelperMaterial: vi.fn(async () => {
+        throw cleanupError;
+      }),
+      cleanupRun,
+      coordinator: {
+        planArgsOnly: vi.fn(),
+        planFull: vi.fn(),
+        execute: vi.fn(async () => ({
+          id: 'workspace-trust',
+          provider: 'claude',
+          status: 'cancelled',
+          workspaceIds: [],
+          evidence: [],
+        })),
+      } as WorkspaceTrustCoordinator,
+    });
+
+    await expect(
+      boundary.prepareWorkspaceTrustForDeterministicRun({
+        mode: 'create',
+        run,
+        claudePath: '/bin/claude',
+        shellEnv: {},
+        stopAllGenerationAtStart: 1,
+        workspaceTrustPlan,
+        featureFlags,
+        provisioningEnv: { anthropicApiKeyHelper: helper },
+      })
+    ).rejects.toBe(cleanupError);
+
+    expect(run.progress.state).toBe('cancelled');
+    expect(run.anthropicApiKeyHelper).toBe(helper);
+    expect(cleanupRun).not.toHaveBeenCalled();
   });
 });

@@ -6,6 +6,7 @@ import {
   type TeamProvisioningStopTeamPorts,
 } from '../TeamProvisioningStopFlow';
 
+import type { AnthropicTeamApiKeyHelperMaterial } from '../../../runtime/anthropicTeamApiKeyHelper';
 import type { TeamProvisioningProgress } from '@shared/types';
 
 interface StopFlowRun {
@@ -14,6 +15,8 @@ interface StopFlowRun {
   processKilled: boolean;
   cancelRequested: boolean;
   child: { killed?: boolean } | null;
+  anthropicApiKeyHelper: AnthropicTeamApiKeyHelperMaterial | null;
+  anthropicApiKeyHelperCleanupPromise: Promise<void> | null;
   onProgress(progress: TeamProvisioningProgress): void;
 }
 
@@ -39,7 +42,23 @@ function makeRun(runId: string, teamName = 'team-a'): StopFlowRun {
     processKilled: false,
     cancelRequested: false,
     child: {},
+    anthropicApiKeyHelper: null,
+    anthropicApiKeyHelperCleanupPromise: null,
     onProgress: vi.fn(),
+  };
+}
+
+function makeAnthropicHelper(teamName: string, runId: string): AnthropicTeamApiKeyHelperMaterial {
+  const directory = `/helpers/${teamName}/${runId}`;
+  return {
+    teamName,
+    directory,
+    helperPath: `${directory}/helper.sh`,
+    keyPath: `${directory}/key`,
+    settingsPath: `${directory}/settings.json`,
+    settingsObject: { apiKeyHelper: `${directory}/helper.sh` },
+    settingsArgs: ['--settings', `${directory}/settings.json`],
+    envPatch: {},
   };
 }
 
@@ -56,6 +75,7 @@ function makePorts(
   cleanupRun: ReturnType<typeof vi.fn>;
   deleteAliveRunId: ReturnType<typeof vi.fn>;
   killTeamProcess: ReturnType<typeof vi.fn>;
+  killTeamProcessAndWait: ReturnType<typeof vi.fn>;
   runtimeAdapterRunByTeam: Map<string, { runId: string; providerId: string }>;
 } {
   const ports = {
@@ -88,6 +108,11 @@ function makePorts(
       aliveRunByTeam.delete(candidateTeamName);
     }),
     killTeamProcess: vi.fn((child: StopFlowRun['child']) => {
+      if (child) {
+        child.killed = true;
+      }
+    }),
+    killTeamProcessAndWait: vi.fn(async (child: StopFlowRun['child']) => {
       if (child) {
         child.killed = true;
       }
@@ -178,7 +203,19 @@ describe('team provisioning stop flow', () => {
     expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledWith(teamName);
   });
 
-  it('cleans API-key helper material when stopping secondary lanes fails', async () => {
+  it('propagates the stopped-team helper sweep failure to its production caller', async () => {
+    const teamName = 'team-sweep-failure';
+    const ports = makePorts(teamName, new Map());
+    vi.mocked(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).mockRejectedValue(
+      new Error('helper sweep failed')
+    );
+
+    await expect(stopTeamFlow(teamName, ports)).rejects.toThrow('helper sweep failed');
+
+    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledWith(teamName);
+  });
+
+  it('retains API-key helper material when stopping secondary lanes fails', async () => {
     const teamName = 'team-a';
     const ports = makePorts(teamName, new Map());
     ports.hasSecondaryRuntimeRuns = vi.fn(() => true);
@@ -188,7 +225,58 @@ describe('team provisioning stop flow', () => {
 
     await expect(stopTeamFlow(teamName, ports)).rejects.toThrow('secondary stop failed');
 
-    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledOnce();
+    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).not.toHaveBeenCalled();
+  });
+
+  it('retains exact run ownership when the team process cannot be confirmed stopped', async () => {
+    const teamName = 'team-stop-failure';
+    const currentRun = makeRun('run-stop-failure', teamName);
+    currentRun.anthropicApiKeyHelper = makeAnthropicHelper(teamName, currentRun.runId);
+    const runs = new Map([[currentRun.runId, currentRun]]);
+    const provisioningRunByTeam = new Map([[teamName, currentRun.runId]]);
+    const ports = makePorts(teamName, runs, provisioningRunByTeam);
+    ports.killTeamProcessAndWait.mockRejectedValue(new Error('process still running'));
+    const cleanupRunOwnedAnthropicApiKeyHelper = vi.fn(async () => undefined);
+    ports.cleanupRunOwnedAnthropicApiKeyHelper = cleanupRunOwnedAnthropicApiKeyHelper;
+
+    await expect(stopTeamFlow(teamName, ports)).rejects.toThrow('process still running');
+
+    expect(cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).not.toHaveBeenCalled();
+    expect(runs.get(currentRun.runId)).toBe(currentRun);
+    expect(currentRun.anthropicApiKeyHelper).not.toBeNull();
+  });
+
+  it('retains the stopped run when helper cleanup fails and releases it on retry', async () => {
+    const teamName = 'team-helper-cleanup-retry';
+    const currentRun = makeRun('run-helper-cleanup-retry', teamName);
+    currentRun.anthropicApiKeyHelper = makeAnthropicHelper(teamName, currentRun.runId);
+    const runs = new Map([[currentRun.runId, currentRun]]);
+    const provisioningRunByTeam = new Map([[teamName, currentRun.runId]]);
+    const ports = makePorts(teamName, runs, provisioningRunByTeam);
+    const cleanupRunOwnedAnthropicApiKeyHelper = vi
+      .fn<(run: StopFlowRun) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('helper cleanup failed'))
+      .mockImplementationOnce(async (run) => {
+        run.anthropicApiKeyHelper = null;
+      });
+    ports.cleanupRunOwnedAnthropicApiKeyHelper = cleanupRunOwnedAnthropicApiKeyHelper;
+
+    await expect(stopTeamFlow(teamName, ports)).rejects.toThrow('helper cleanup failed');
+
+    expect(currentRun.processKilled).toBe(true);
+    expect(currentRun.cancelRequested).toBe(true);
+    expect(runs.get(currentRun.runId)).toBe(currentRun);
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).not.toHaveBeenCalled();
+
+    await stopTeamFlow(teamName, ports);
+
+    expect(cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledTimes(2);
+    expect(currentRun.anthropicApiKeyHelper).toBeNull();
+    expect(ports.cleanupRun).toHaveBeenCalledWith(currentRun);
+    expect(runs.has(currentRun.runId)).toBe(false);
     expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledWith(teamName);
   });
 
@@ -204,7 +292,7 @@ describe('team provisioning stop flow', () => {
 
     expect(provisioningRunByTeam.has(teamName)).toBe(false);
     expect(ports.openCodeRuntimeDeliveryAdvisory.cancelTeam).toHaveBeenCalledWith(teamName);
-    expect(ports.killTeamProcess).toHaveBeenCalledWith(currentRun.child);
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledWith(currentRun.child);
     expect(currentRun.processKilled).toBe(true);
     expect(currentRun.cancelRequested).toBe(true);
     expect(currentRun.onProgress).toHaveBeenCalledWith(
@@ -272,7 +360,7 @@ describe('team provisioning stop flow', () => {
     expect(ports.cleanupRun).not.toHaveBeenCalled();
     expect(runs.get(currentRun.runId)).toBe(currentRun);
     expect(aliveRunByTeam.get(teamName)).toBe(currentRun.runId);
-    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledOnce();
+    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).not.toHaveBeenCalled();
   });
 
   it('preserves run tracking and rejects when secondary stop fails after primary success', async () => {
@@ -307,9 +395,14 @@ describe('team provisioning stop flow', () => {
   it('retains secondary lane ownership until asynchronous lane cleanup completes', async () => {
     const teamName = 'opencode-team-owned-stop';
     const currentRun = makeRun('aggregate-run-owned-stop', teamName);
+    currentRun.anthropicApiKeyHelper = makeAnthropicHelper(teamName, currentRun.runId);
     const runs = new Map([[currentRun.runId, currentRun]]);
     const aliveRunByTeam = new Map([[teamName, currentRun.runId]]);
     const ports = makePorts(teamName, runs, new Map(), aliveRunByTeam);
+    let releaseTeamProcessStop: (() => void) | undefined;
+    const teamProcessStopReleased = new Promise<void>((resolve) => {
+      releaseTeamProcessStop = resolve;
+    });
     let releaseLaneStop: (() => void) | undefined;
     const laneStopReleased = new Promise<void>((resolve) => {
       releaseLaneStop = resolve;
@@ -320,6 +413,13 @@ describe('team provisioning stop flow', () => {
       expect(runs.has(currentRun.runId)).toBe(true);
     });
     ports.stopMixedSecondaryRuntimeLanes = stopMixedSecondaryRuntimeLanes;
+    ports.killTeamProcessAndWait.mockImplementation(async () => {
+      await teamProcessStopReleased;
+    });
+    const cleanupRunOwnedAnthropicApiKeyHelper = vi.fn(async (run: StopFlowRun) => {
+      run.anthropicApiKeyHelper = null;
+    });
+    ports.cleanupRunOwnedAnthropicApiKeyHelper = cleanupRunOwnedAnthropicApiKeyHelper;
 
     const stopping = stopTeamFlow(teamName, ports);
     await vi.waitFor(() => {
@@ -330,8 +430,17 @@ describe('team provisioning stop flow', () => {
     });
 
     expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
+    expect(currentRun.anthropicApiKeyHelper).not.toBeNull();
     releaseLaneStop?.();
+    await laneStopReleased;
+    await Promise.resolve();
+    expect(cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
+    expect(currentRun.anthropicApiKeyHelper).not.toBeNull();
+    releaseTeamProcessStop?.();
     await stopping;
+    expect(cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledWith(currentRun);
+    expect(currentRun.anthropicApiKeyHelper).toBeNull();
     expect(ports.cleanupRun).toHaveBeenCalledWith(currentRun);
     expect(runs.has(currentRun.runId)).toBe(false);
   });
@@ -358,6 +467,7 @@ describe('team provisioning stop flow', () => {
       DEFAULT_SECONDARY_STOP_FENCE
     );
     expect(ports.killTeamProcess).not.toHaveBeenCalled();
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledWith(currentRun.child);
   });
 
   it('does not let a stale pre-lock owner stop secondary lanes registered by a newer run', async () => {

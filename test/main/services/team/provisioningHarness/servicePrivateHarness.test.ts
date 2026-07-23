@@ -1,5 +1,5 @@
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   getRegisteredProvisioningRunId,
@@ -51,7 +51,11 @@ const MEMBER_LIFECYCLE_SERVICE_USE_CASE_KEYS = [
 
 describe('team provisioning private harness seams', () => {
   beforeEach(() => {
-    cleanupStaleAnthropicTeamApiKeyHelpersMock.mockClear();
+    cleanupStaleAnthropicTeamApiKeyHelpersMock.mockReset().mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('returns service facade seams without cloning or constructing runtime services', () => {
@@ -195,5 +199,27 @@ describe('team provisioning private harness seams', () => {
     expect(Reflect.get(controller, 'openCodeRetryUseCases')).toBe(useCases);
     expect(Reflect.get(controller, 'actionUseCases')).toEqual({});
     expect(cleanupStaleAnthropicTeamApiKeyHelpersMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a failed startup helper sweep owned and retries it from the production service', async () => {
+    vi.useFakeTimers();
+    cleanupStaleAnthropicTeamApiKeyHelpersMock
+      .mockRejectedValueOnce(new Error('fixture filesystem unavailable'))
+      .mockResolvedValueOnce(undefined);
+
+    const service = new TeamProvisioningService();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service).toBeInstanceOf(TeamProvisioningService);
+    expect(cleanupStaleAnthropicTeamApiKeyHelpersMock).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
+      '[Service:TeamProvisioning] Failed to cleanup stale Anthropic team API-key helper material: fixture filesystem unavailable',
+    ]);
+    vi.mocked(console.warn).mockClear();
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(cleanupStaleAnthropicTeamApiKeyHelpersMock).toHaveBeenCalledTimes(2);
   });
 });

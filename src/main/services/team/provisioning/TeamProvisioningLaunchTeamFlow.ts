@@ -320,6 +320,7 @@ export function createDeterministicLaunchProvisioningRun<
     authRetryInProgress: false,
     spawnContext: null,
     anthropicApiKeyHelper: input.anthropicApiKeyHelper,
+    anthropicApiKeyHelperCleanupPromise: null,
     pendingApprovals: new Map<string, never>(),
     processedPermissionRequestIds: new Set<string>(),
     pendingPostCompactReminder: false,

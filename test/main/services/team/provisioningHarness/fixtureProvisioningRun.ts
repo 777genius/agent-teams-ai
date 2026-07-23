@@ -123,6 +123,7 @@ export function makeProvisioningRun(options: ProvisioningRunFixtureOptions = {})
     leadContextUsage: null,
     spawnContext: null,
     anthropicApiKeyHelper: null,
+    anthropicApiKeyHelperCleanupPromise: null,
     pendingApprovals: new Map(),
     processedPermissionRequestIds: new Set(),
     pendingPostCompactReminder: false,

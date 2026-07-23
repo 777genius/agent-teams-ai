@@ -25,6 +25,142 @@ describe('MemberWorkSyncEventQueue', () => {
     ).toBe(false);
   });
 
+  it('quiesces one team, drains admitted work, and resumes same-name admission', async () => {
+    let releaseReconcile!: () => void;
+    const reconcile = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseReconcile = resolve;
+        })
+    );
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 0,
+      reconcile,
+      isTeamActive: () => true,
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'alice', triggerReason: 'task_changed' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconcile).toHaveBeenCalledTimes(1);
+
+    let quiesced = false;
+    const quiesce = queue.quiesceTeam('team-a').then(() => {
+      quiesced = true;
+    });
+    expect(
+      queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'task_changed' })
+    ).toBe(false);
+    await Promise.resolve();
+    expect(quiesced).toBe(false);
+
+    releaseReconcile();
+    await quiesce;
+    expect(queue.getDiagnostics()).toMatchObject({ queued: 0, running: 0 });
+
+    queue.resumeTeam('team-a');
+    expect(
+      queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'task_changed' })
+    ).toBe(true);
+    await queue.stop();
+  });
+
+  it('keeps quiesce pending after timeout until the underlying reconcile settles', async () => {
+    let releaseReconcile!: () => void;
+    const reconcile = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseReconcile = resolve;
+        })
+    );
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 0,
+      reconcileTimeoutMs: 20,
+      reconcile,
+      isTeamActive: () => true,
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'alice', triggerReason: 'task_changed' });
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(20);
+
+    expect(queue.getDiagnostics()).toMatchObject({
+      failed: 1,
+      running: 1,
+      runningItems: [{ memberName: 'alice', settlingAfterTimeout: true }],
+    });
+
+    let quiesced = false;
+    const quiesce = queue.quiesceTeam('team-a').then(() => {
+      quiesced = true;
+    });
+    await Promise.resolve();
+    expect(quiesced).toBe(false);
+
+    releaseReconcile();
+    await quiesce;
+
+    expect(quiesced).toBe(true);
+    expect(queue.getDiagnostics()).toMatchObject({ running: 0 });
+    await queue.stop();
+  });
+
+  it('does not retry failed in-flight work while quiesced and resumes later new work', async () => {
+    let rejectFirstReconcile!: (error: Error) => void;
+    const auditEvents: string[] = [];
+    const reconcile = vi.fn(() => {
+      if (reconcile.mock.calls.length === 1) {
+        return new Promise<void>((_resolve, reject) => {
+          rejectFirstReconcile = reject;
+        });
+      }
+      return Promise.resolve();
+    });
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 0,
+      retryDelayMs: 0,
+      reconcile,
+      isTeamActive: () => true,
+      auditJournal: {
+        append: async (event) => {
+          auditEvents.push(event.event);
+        },
+      },
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'alice', triggerReason: 'task_changed' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconcile).toHaveBeenCalledTimes(1);
+
+    const quiesce = queue.quiesceTeam('team-a');
+    rejectFirstReconcile(new Error('reconcile failed during deletion'));
+    await quiesce;
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    expect(queue.getDiagnostics()).toMatchObject({
+      queued: 0,
+      running: 0,
+      failed: 1,
+      reconciled: 0,
+    });
+    expect(auditEvents).toEqual(['queue_enqueued']);
+
+    queue.resumeTeam('team-a');
+    expect(
+      queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'task_changed' })
+    ).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(reconcile).toHaveBeenCalledTimes(2);
+    expect(queue.getDiagnostics()).toMatchObject({
+      queued: 0,
+      running: 0,
+      failed: 1,
+      reconciled: 1,
+    });
+    await queue.stop();
+  });
+
   it('coalesces duplicate member events into one queue reconcile', async () => {
     const reconciles: unknown[] = [];
     const auditEvents: string[] = [];

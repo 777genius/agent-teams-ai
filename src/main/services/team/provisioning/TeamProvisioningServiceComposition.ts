@@ -39,6 +39,7 @@ import { TeamInboxReader } from '../TeamInboxReader';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 import { TeamMembersMetaStore } from '../TeamMembersMetaStore';
 
+import { cleanupRunOwnedAnthropicApiKeyHelper } from './TeamProvisioningAnthropicApiKeyHelperLease';
 import { ensureCwdExists, sleep } from './TeamProvisioningAsyncUtils';
 import {
   createTeamProvisioningBootstrapEvidenceFacadeFromService,
@@ -164,6 +165,7 @@ import {
 import {
   emitLogsProgress,
   killTeamProcess,
+  killTeamProcessAndWait,
   nowIso,
   updateProgress,
 } from './TeamProvisioningRunProgress';
@@ -599,6 +601,8 @@ export function createTeamProvisioningServiceComposition(
     createTeamProvisioningOutputRecoveryFacadeFromService<ProvisioningRun>(host.outputRecovery, {
       logger,
       killTeamProcess,
+      killTeamProcessAndWait,
+      cleanupRunOwnedAnthropicApiKeyHelper,
       updateProgress,
       emitLogsProgress,
       nowIso,
@@ -621,7 +625,7 @@ export function createTeamProvisioningServiceComposition(
     spawnCli,
     updateProgress,
     setTimeout: (callback, ms) => setTimeout(callback, ms),
-    killTeamProcess,
+    killTeamProcessAndWait,
   });
   assignCompositionPart(
     host.installTarget,
@@ -635,7 +639,7 @@ export function createTeamProvisioningServiceComposition(
         {
           spawnCli,
           updateProgress,
-          killTeamProcess,
+          killTeamProcessAndWait,
         }
       )
     );

@@ -37,7 +37,7 @@ export interface TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<
   startFilesystemMonitor: DeterministicCreateSpawnFlowPorts<TRun>['startFilesystemMonitor'];
   tryCompleteAfterTimeout: DeterministicCreateSpawnFlowPorts<TRun>['tryCompleteAfterTimeout'];
   handleProcessExit: DeterministicCreateSpawnFlowPorts<TRun>['handleProcessExit'];
-  killTeamProcess: DeterministicCreateSpawnFlowPorts<TRun>['killTeamProcess'];
+  killTeamProcessAndWait: DeterministicCreateSpawnFlowPorts<TRun>['killTeamProcessAndWait'];
   cleanupRun: DeterministicCreateSpawnFlowPorts<TRun>['cleanupRun'];
   removeRunMemberMcpConfigFiles: DeterministicCreateSpawnFlowPorts<TRun>['removeRunMemberMcpConfigFiles'];
   deleteRun(runId: string): void;
@@ -80,7 +80,7 @@ export interface TeamProvisioningCreateDeterministicSpawnFlowServiceHostOptions<
 > {
   spawnCli: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['spawnCli'];
   updateProgress: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['updateProgress'];
-  killTeamProcess: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['killTeamProcess'];
+  killTeamProcessAndWait: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['killTeamProcessAndWait'];
 }
 
 export interface TeamProvisioningCreateDeterministicSpawnFlowBoundary<
@@ -123,7 +123,7 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowDepsFromServic
     startFilesystemMonitor: (run, request) => service.startFilesystemMonitor(run, request),
     tryCompleteAfterTimeout: (run) => service.tryCompleteAfterTimeout(run),
     handleProcessExit: (run, code) => service.handleProcessExit(run, code),
-    killTeamProcess: options.killTeamProcess,
+    killTeamProcessAndWait: options.killTeamProcessAndWait,
     cleanupRun: (run) => service.cleanupRun(run),
     removeRunMemberMcpConfigFiles: (run) => service.removeRunMemberMcpConfigFiles(run),
     deleteRun: (runId) => {
@@ -168,7 +168,7 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowBoundary<
         deps.startFilesystemMonitor(run, targetRequest),
       tryCompleteAfterTimeout: (run) => deps.tryCompleteAfterTimeout(run),
       handleProcessExit: (run, code) => deps.handleProcessExit(run, code),
-      killTeamProcess: (child) => deps.killTeamProcess(child),
+      killTeamProcessAndWait: (child) => deps.killTeamProcessAndWait(child),
       cleanupRun: (run) => deps.cleanupRun(run),
       removeRunMemberMcpConfigFiles: (run) => deps.removeRunMemberMcpConfigFiles(run),
       unregisterRun: (runId, teamName) => {

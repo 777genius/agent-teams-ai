@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createAnthropicApiKeyHelperCleanupRetryOwner } from '../TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   createTeamProvisioningRequestAdmissionBoundary,
   getTeamProvisioningRequestLockKey,
@@ -65,6 +66,9 @@ function createHost(
       createRunFlowPorts: vi.fn(unexpected),
     },
     ...overrides,
+    anthropicApiKeyHelperCleanupRetryOwner:
+      overrides.anthropicApiKeyHelperCleanupRetryOwner ??
+      createAnthropicApiKeyHelperCleanupRetryOwner(),
   };
 }
 

@@ -251,7 +251,7 @@ function expectFinalSingleLaneState(lane: MixedSecondaryRuntimeLaneState): void 
 }
 
 describe('OpenCode runtime stop flow', () => {
-  it('retries retained secondary stops after the primary stop clears run ownership', async () => {
+  it('retries a retained secondary stop after the primary stop clears run ownership', async () => {
     const teamName = 'team-a';
     const runId = 'run-primary';
     const progress: TeamProvisioningProgress = {
@@ -269,6 +269,8 @@ describe('OpenCode runtime stop flow', () => {
       cancelRequested: false,
       processKilled: false,
       child: null,
+      anthropicApiKeyHelper: null,
+      anthropicApiKeyHelperCleanupPromise: null,
       onProgress: vi.fn(),
     };
     const runs = new Map([[runId, run]]);
@@ -341,6 +343,7 @@ describe('OpenCode runtime stop flow', () => {
       stopMixedSecondaryRuntimeLanes: stopSecondaries,
       stopOpenCodeRuntimeAdapterTeam: stopPrimary,
       killTeamProcess: vi.fn(),
+      killTeamProcessAndWait: vi.fn(async () => undefined),
       updateProgress: (targetRun, state, message) => {
         targetRun.progress = { ...targetRun.progress, state, message };
         return targetRun.progress;
@@ -369,14 +372,18 @@ describe('OpenCode runtime stop flow', () => {
     expect(runs.get(runId)).toBe(run);
     expect(secondaryTracked).toBe(true);
     expect(secondaryRuntimeAlive).toBe(true);
+    expect(run.progress.state).toBe('cancelled');
 
-    await expect(cancellation.cancelProvisioning(runId)).resolves.toBeUndefined();
+    await expect(cancellation.cancelProvisioning(runId)).rejects.toThrow(
+      'Provisioning cannot be cancelled in current state'
+    );
+    await expect(stopMixedSecondaryRuntimeLanes(teamName, stopFlowPorts)).resolves.toBeUndefined();
 
     expect(stopPrimary).toHaveBeenCalledTimes(1);
-    expect(stopSecondaries).toHaveBeenCalledTimes(2);
+    expect(stopSecondaries).toHaveBeenCalledTimes(1);
     expect(adapterStop).toHaveBeenCalledTimes(2);
-    expect(cleanupRun).toHaveBeenCalledTimes(1);
-    expect(runs.has(runId)).toBe(false);
+    expect(cleanupRun).not.toHaveBeenCalled();
+    expect(runs.get(runId)).toBe(run);
     expect(secondaryTracked).toBe(false);
     expect(secondaryRuntimeAlive).toBe(false);
   });

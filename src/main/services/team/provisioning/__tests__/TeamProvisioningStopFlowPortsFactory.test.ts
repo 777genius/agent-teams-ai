@@ -23,6 +23,8 @@ interface StopFactoryRun {
   processKilled: boolean;
   cancelRequested: boolean;
   child: { killed?: boolean } | null;
+  anthropicApiKeyHelper: null;
+  anthropicApiKeyHelperCleanupPromise: Promise<void> | null;
   onProgress(progress: TeamProvisioningProgress): void;
 }
 
@@ -33,6 +35,8 @@ function makeRun(runId = 'run-1', teamName = 'team-a'): StopFactoryRun {
     processKilled: false,
     cancelRequested: false,
     child: {},
+    anthropicApiKeyHelper: null,
+    anthropicApiKeyHelperCleanupPromise: null,
     onProgress: vi.fn(),
   };
 }
@@ -153,6 +157,11 @@ function createDeps(
         child.killed = true;
       }
     }),
+    killTeamProcessAndWait: vi.fn(async (child) => {
+      if (child) {
+        child.killed = true;
+      }
+    }),
     updateProgress: vi.fn((run, state, message) =>
       makeProgress(run.runId, run.teamName, { state, message })
     ),
@@ -231,6 +240,7 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
       getTeamsBasePath: deps.getTeamsBasePath,
       clearOpenCodeRuntimeLaneStorage: deps.clearOpenCodeRuntimeLaneStorage,
       killTeamProcess: deps.killTeamProcess,
+      killTeamProcessAndWait: deps.killTeamProcessAndWait,
       updateProgress: deps.updateProgress,
       logger: deps.logger,
       nowIso: deps.nowIso,
@@ -331,7 +341,7 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
     expect(deps.pauseActiveIntervalsForTeam).toHaveBeenCalledWith(teamName);
     expect(deps.persistentRuntimeCleanup.stopPersistentTeamMembers).toHaveBeenCalledWith(teamName);
     expect(deps.openCodeRuntimeDeliveryAdvisory.cancelTeam).toHaveBeenCalledWith(teamName);
-    expect(deps.killTeamProcess).toHaveBeenCalledWith(run.child);
+    expect(deps.killTeamProcessAndWait).toHaveBeenCalledWith(run.child);
     expect(run.processKilled).toBe(true);
     expect(run.cancelRequested).toBe(true);
     expect(run.onProgress).toHaveBeenCalledWith(

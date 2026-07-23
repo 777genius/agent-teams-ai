@@ -5,6 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createOpenCodeRuntimeDeliveryPorts } from '../../../../src/main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryPorts';
 import {
+  canonicalizeRuntimeDeliveryCrossTeamIdentities,
+  canonicalizeRuntimeDeliveryJournalRecordIdentities,
+} from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
+import {
   buildRuntimeDestinationMessageId,
   createRuntimeDeliveryJournalStore,
   hashRuntimeDeliveryEnvelope,
@@ -19,6 +23,7 @@ import {
   type RuntimeDeliveryDestinationPort,
   RuntimeDeliveryDestinationRegistry,
   type RuntimeDeliveryDiagnosticsSink,
+  type RuntimeDeliveryRecipientCanonicalizer,
   RuntimeDeliveryReconciler,
   type RuntimeDeliveryRunStateReader,
   RuntimeDeliveryService,
@@ -29,7 +34,11 @@ import {
 import { VersionedJsonStore } from '../../../../src/main/services/team/opencode/store/VersionedJsonStore';
 import { CROSS_TEAM_SENT_SOURCE } from '../../../../src/shared/constants/crossTeam';
 
-import type { InboxMessage } from '../../../../src/shared/types/team';
+import type {
+  CrossTeamOutboxMessage,
+  CrossTeamRuntimeDeliveryProofInput,
+} from '../../../../src/main/services/team/CrossTeamOutbox';
+import type { InboxMessage, TeamConfig } from '../../../../src/shared/types/team';
 
 let tempDir: string;
 let now: Date;
@@ -185,6 +194,46 @@ describe('RuntimeDeliveryService', () => {
     });
   });
 
+  it('rolls a fresh delivery back to pending when destination identity changes during commit', async () => {
+    const changedLocation: RuntimeDeliveryLocation = {
+      kind: 'member_inbox',
+      teamName: 'team-a',
+      memberName: 'OtherReviewer',
+      messageId: buildRuntimeDestinationMessageId(envelope()),
+    };
+    const verifyDestination = destination.verify.bind(destination);
+    let verificationCount = 0;
+    vi.spyOn(destination, 'verify').mockImplementation(async (input) => {
+      verificationCount += 1;
+      if (verificationCount === 4) {
+        return { found: true, location: changedLocation, diagnostics: [] };
+      }
+      return verifyDestination(input);
+    });
+    const service = createService();
+
+    await expect(service.deliver(envelope())).rejects.toThrow(
+      'Runtime delivery destination changed during journal commit'
+    );
+
+    expect(verificationCount).toBe(4);
+    await expect(journal.get(journalKey())).resolves.toMatchObject({
+      status: 'pending',
+      committedLocation: null,
+      committedAt: null,
+      lastError: null,
+    });
+    expect(emitter.events).toHaveLength(0);
+    expect(diagnostics.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'runtime_delivery_failed',
+        data: expect.objectContaining({
+          error: expect.stringContaining('journal is not committed'),
+        }),
+      })
+    );
+  });
+
   it('commits duplicate destination found without writing a second message', async () => {
     const message = envelope();
     const destinationMessageId = buildRuntimeDestinationMessageId(message);
@@ -207,6 +256,105 @@ describe('RuntimeDeliveryService', () => {
     await expect(journal.get(journalKey(message))).resolves.toMatchObject({
       status: 'committed',
     });
+  });
+
+  it('rolls back only ordinary duplicate recovery lineage when the destination disappears during commit', async () => {
+    const message = envelope({ idempotencyKey: 'ordinary-duplicate-race' });
+    const payloadHash = hashRuntimeDeliveryEnvelope(message);
+    const destinationRef = resolveRuntimeDeliveryDestination(message);
+    const destinationMessageId = buildRuntimeDestinationMessageId(message);
+    const location = locationForDestination(destinationRef, destinationMessageId);
+    await journal.begin({
+      idempotencyKey: message.idempotencyKey,
+      payloadHash,
+      runId: message.runId,
+      teamName: message.teamName,
+      fromMemberName: message.fromMemberName,
+      providerId: message.providerId,
+      runtimeSessionId: message.runtimeSessionId,
+      destination: destinationRef,
+      destinationMessageId,
+      now: now.toISOString(),
+    });
+    destination.messages.set(destinationMessageId, location);
+
+    const concurrentRecord = {
+      idempotencyKey: message.idempotencyKey,
+      payloadHash,
+      logicalPayloadHash: payloadHash,
+      runId: 'unrelated-run',
+      teamName: message.teamName,
+      fromMemberName: message.fromMemberName,
+      providerId: message.providerId,
+      runtimeSessionId: 'unrelated-session',
+      destination: {
+        kind: 'member_inbox' as const,
+        teamName: message.teamName,
+        memberName: 'UnrelatedRecipient',
+      },
+      destinationMessageId: 'unrelated-message',
+      committedLocation: null,
+      status: 'failed_retryable' as const,
+      attempts: 7,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      committedAt: null,
+      lastError: 'unrelated concurrent mutation',
+    };
+    const concurrentStore = new VersionedJsonStore<unknown[]>({
+      filePath: path.join(tempDir, 'delivery-journal.json'),
+      schemaVersion: 1,
+      defaultData: () => [],
+      validate: (value) => {
+        if (!Array.isArray(value)) {
+          throw new Error('Runtime delivery journal must be an array');
+        }
+        return value;
+      },
+    });
+    const verifyDestination = destination.verify.bind(destination);
+    let verificationCount = 0;
+    vi.spyOn(destination, 'verify').mockImplementation(async (input) => {
+      verificationCount += 1;
+      if (verificationCount === 3) {
+        await concurrentStore.updateLocked((entries) => [...entries, concurrentRecord]);
+        destination.messages.delete(destinationMessageId);
+        return { found: false, location: null, diagnostics: ['destination disappeared'] };
+      }
+      return verifyDestination(input);
+    });
+    let statusBeforeReplacementWrite: string | null = null;
+    destination.writeImpl = async (input) => {
+      statusBeforeReplacementWrite = (await journal.get(journalKey(message)))?.status ?? null;
+      const replacementLocation = locationForDestination(
+        resolveRuntimeDeliveryDestination(input.envelope),
+        input.destinationMessageId
+      );
+      destination.messages.set(input.destinationMessageId, replacementLocation);
+      return replacementLocation;
+    };
+    const service = createService();
+
+    await expect(service.deliver(message)).resolves.toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+      location,
+    });
+
+    expect(statusBeforeReplacementWrite).toBe('pending');
+    expect(destination.writeCalls).toBe(1);
+    const records = await journal.list();
+    expect(records).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          idempotencyKey: message.idempotencyKey,
+          runId: message.runId,
+          status: 'committed',
+        }),
+        expect.objectContaining(concurrentRecord),
+      ])
+    );
   });
 
   it('uses the canonical idempotency key for journal identity and destination ids', async () => {
@@ -417,7 +565,7 @@ describe('RuntimeDeliveryService', () => {
         location: originalLocation,
       });
       expect(destination.writeCalls).toBe(1);
-      expect(destination.verifyInputs).toHaveLength(2);
+      expect(destination.verifyInputs).toHaveLength(4);
 
       await expect(
         service.deliver({ ...relaunchedRetry, text: 'Changed logical payload' })
@@ -427,7 +575,7 @@ describe('RuntimeDeliveryService', () => {
         reason: 'idempotency_conflict',
       });
       expect(destination.writeCalls).toBe(1);
-      expect(destination.verifyInputs).toHaveLength(2);
+      expect(destination.verifyInputs).toHaveLength(4);
 
       await expect(
         service.deliver({ ...relaunchedRetry, idempotencyKey: 'fresh-delivery' })
@@ -658,6 +806,614 @@ describe('RuntimeDeliveryService', () => {
       logicalPayloadHash: null,
       committedLocation: originalLocation,
     });
+  });
+
+  it.each([
+    { label: 'lead alias', memberName: 'lead' },
+    { label: 'member-name case', memberName: 'captain' },
+  ])(
+    'accepts an exact retry of a pre-upgrade committed receipt hashed with raw $label after restart',
+    async ({ memberName }) => {
+      const original = envelope({
+        idempotencyKey: `legacy-${memberName}`,
+        to: { teamName: 'team-b', memberName },
+      });
+      const originalDestination = resolveRuntimeDeliveryDestination(original);
+      const originalLocation = locationForDestination(
+        originalDestination,
+        buildRuntimeDestinationMessageId(original)
+      );
+      await writeVersionedJournalEntries(path.join(tempDir, 'delivery-journal.json'), [
+        {
+          kind: 'committed_receipt',
+          idempotencyKey: original.idempotencyKey,
+          teamName: original.teamName,
+          logicalPayloadHash: hashRuntimeDeliveryEnvelope(original),
+          committedLocation: originalLocation,
+          committedAt: now.toISOString(),
+        },
+      ]);
+
+      now = new Date('2026-04-21T12:06:00.000Z');
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      destination = new FakeDestinationPort('cross_team_outbox');
+      runState.currentRunId = 'run-2';
+      const service = createService(createCaptainCanonicalizer());
+
+      await expect(
+        service.deliver({ ...original, runId: 'run-2', runtimeSessionId: 'session-2' })
+      ).resolves.toEqual({
+        ok: true,
+        delivered: false,
+        reason: 'duplicate',
+        idempotencyKey: original.idempotencyKey,
+        location: originalLocation,
+      });
+      expect(destination.writeCalls).toBe(0);
+      expect(destination.verifyInputs).toHaveLength(0);
+      expect(diagnostics.append).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    { status: 'pending' as const, memberName: 'lead', verified: true },
+    { status: 'failed_retryable' as const, memberName: 'captain', verified: false },
+  ])(
+    'does not let a prematurely canonicalized $status $memberName row bypass old-message recovery when proof=$verified',
+    async ({ status, memberName, verified }) => {
+      const original = envelope({
+        idempotencyKey: `partial-upgrade-${status}-${memberName}`,
+        to: { teamName: 'team-b', memberName },
+      });
+      const canonical = {
+        ...original,
+        to: { teamName: 'team-b', memberName: 'Captain' },
+      } satisfies RuntimeDeliveryEnvelope;
+      const canonicalHash = hashRuntimeDeliveryEnvelope(canonical);
+      await writePreCanonicalRuntimeRecord(original, status, {
+        payloadHash: canonicalHash,
+        logicalPayloadHash: canonicalHash,
+      });
+      destination = new FakeDestinationPort('cross_team_outbox');
+      const oldDestination = resolveRuntimeDeliveryDestination(original);
+      const oldMessageId = buildRuntimeDestinationMessageId(original);
+      if (verified) {
+        destination.messages.set(
+          oldMessageId,
+          locationForDestination(oldDestination, oldMessageId)
+        );
+      }
+      now = new Date('2026-04-21T12:06:00.000Z');
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      runState.currentRunId = 'run-2';
+      const service = createService(createCaptainCanonicalizer());
+
+      await expect(
+        service.deliver({ ...original, runId: 'run-2', runtimeSessionId: 'session-2' })
+      ).resolves.toMatchObject(
+        verified
+          ? { ok: true, delivered: false, reason: 'duplicate_destination_found' }
+          : { ok: false, delivered: false, reason: 'idempotency_conflict' }
+      );
+      expect(destination.writeCalls).toBe(0);
+      expect(destination.verifyInputs).toHaveLength(verified ? 3 : 1);
+    }
+  );
+
+  it.each([
+    { status: 'pending' as const, memberName: 'lead' },
+    { status: 'pending' as const, memberName: 'captain' },
+    { status: 'failed_retryable' as const, memberName: 'lead' },
+    { status: 'failed_retryable' as const, memberName: 'captain' },
+    { status: 'failed_terminal' as const, memberName: 'lead' },
+    { status: 'failed_terminal' as const, memberName: 'captain' },
+  ])(
+    'recovers a verified pre-canonical $status $memberName destination after relaunch without writing',
+    async ({ status, memberName }) => {
+      const original = envelope({
+        idempotencyKey: `recover-${status}-${memberName}`,
+        to: { teamName: 'team-b', memberName },
+      });
+      const originalDestination = resolveRuntimeDeliveryDestination(original);
+      const originalMessageId = buildRuntimeDestinationMessageId(original);
+      await writePreCanonicalRuntimeRecord(original, status);
+      destination = new FakeDestinationPort('cross_team_outbox');
+      destination.messages.set(
+        originalMessageId,
+        locationForDestination(originalDestination, originalMessageId)
+      );
+
+      now = new Date('2026-04-21T12:06:00.000Z');
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      runState.currentRunId = 'run-2';
+      const retry = {
+        ...original,
+        runId: 'run-2',
+        runtimeSessionId: 'session-2',
+      };
+      const canonicalRetry = {
+        ...retry,
+        to: { teamName: 'team-b', memberName: 'Captain' },
+      } satisfies RuntimeDeliveryEnvelope;
+      const service = createService(createCaptainCanonicalizer());
+
+      await expect(service.deliver(retry)).resolves.toEqual({
+        ok: true,
+        delivered: false,
+        reason: 'duplicate_destination_found',
+        idempotencyKey: original.idempotencyKey,
+        location: locationForDestination(originalDestination, originalMessageId),
+      });
+      expect(destination.writeCalls).toBe(0);
+      expect(destination.verifyInputs[0]).toMatchObject({
+        destination: originalDestination,
+        destinationMessageId: originalMessageId,
+      });
+      const records = await journal.list();
+      expect(records).toMatchObject([
+        {
+          runId: 'run-2',
+          status: 'committed',
+          payloadHash: hashRuntimeDeliveryEnvelope(canonicalRetry),
+          logicalPayloadHash: hashRuntimeDeliveryEnvelope(canonicalRetry),
+          destination: {
+            kind: 'cross_team_outbox',
+            toMemberName: 'Captain',
+          },
+          destinationMessageId: buildRuntimeDestinationMessageId(canonicalRetry),
+          committedLocation: { messageId: originalMessageId },
+        },
+      ]);
+
+      await expect(service.deliver(retry)).resolves.toMatchObject({
+        ok: true,
+        delivered: false,
+        reason: 'duplicate',
+      });
+      expect(destination.writeCalls).toBe(0);
+    }
+  );
+
+  it.each([
+    { status: 'pending' as const, memberName: 'lead' },
+    { status: 'failed_retryable' as const, memberName: 'captain' },
+    { status: 'failed_terminal' as const, memberName: 'lead' },
+  ])(
+    'fails closed when pre-canonical $status $memberName destination proof is absent after relaunch',
+    async ({ status, memberName }) => {
+      const original = envelope({
+        idempotencyKey: `missing-${status}-${memberName}`,
+        to: { teamName: 'team-b', memberName },
+      });
+      await writePreCanonicalRuntimeRecord(original, status);
+      destination = new FakeDestinationPort('cross_team_outbox');
+      now = new Date('2026-04-21T12:06:00.000Z');
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      runState.currentRunId = 'run-2';
+      const retry = { ...original, runId: 'run-2', runtimeSessionId: 'session-2' };
+      const service = createService(createCaptainCanonicalizer());
+
+      await expect(service.deliver(retry)).resolves.toMatchObject({
+        ok: false,
+        delivered: false,
+        reason: 'idempotency_conflict',
+      });
+      await expect(service.deliver(retry)).resolves.toMatchObject({
+        ok: false,
+        delivered: false,
+        reason: 'idempotency_conflict',
+      });
+      expect(destination.writeCalls).toBe(0);
+      expect(destination.verifyInputs).toHaveLength(2);
+      expect(diagnostics.append).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'runtime_delivery_conflict',
+          message:
+            'Pre-canonical runtime delivery could not be verified at its persisted destination',
+        })
+      );
+    }
+  );
+
+  it.each(['pending', 'failed_retryable', 'failed_terminal'] as const)(
+    'rejects changed payload and target for pre-canonical %s records before recovery',
+    async (status) => {
+      const original = envelope({
+        idempotencyKey: `changed-pre-canonical-${status}`,
+        to: { teamName: 'team-b', memberName: 'lead' },
+      });
+      await writePreCanonicalRuntimeRecord(original, status);
+      destination = new FakeDestinationPort('cross_team_outbox');
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      runState.currentRunId = 'run-2';
+      const service = createService(createCaptainCanonicalizer());
+
+      await expect(
+        service.deliver({
+          ...original,
+          runId: 'run-2',
+          runtimeSessionId: 'session-2',
+          text: 'changed payload',
+        })
+      ).resolves.toMatchObject({ ok: false, reason: 'idempotency_conflict' });
+      await expect(
+        service.deliver({
+          ...original,
+          runId: 'run-2',
+          runtimeSessionId: 'session-2',
+          to: { teamName: 'team-b', memberName: 'Reviewer' },
+        })
+      ).resolves.toMatchObject({ ok: false, reason: 'idempotency_conflict' });
+      expect(destination.verifyInputs).toHaveLength(0);
+      expect(destination.writeCalls).toBe(0);
+    }
+  );
+
+  it('rejects a pre-canonical pending record without a trustworthy logical hash', async () => {
+    const original = envelope({
+      idempotencyKey: 'pre-canonical-missing-logical-proof',
+      to: { teamName: 'team-b', memberName: 'lead' },
+    });
+    await writePreCanonicalRuntimeRecord(original, 'pending', { logicalPayloadHash: null });
+    destination = new FakeDestinationPort('cross_team_outbox');
+    journal = createRuntimeDeliveryJournalStore({
+      filePath: path.join(tempDir, 'delivery-journal.json'),
+      clock: () => now,
+    });
+    runState.currentRunId = 'run-2';
+
+    await expect(
+      createService(createCaptainCanonicalizer()).deliver({
+        ...original,
+        runId: 'run-2',
+        runtimeSessionId: 'session-2',
+      })
+    ).resolves.toMatchObject({ ok: false, reason: 'idempotency_conflict' });
+    expect(destination.verifyInputs).toHaveLength(0);
+    expect(destination.writeCalls).toBe(0);
+  });
+
+  it.each([
+    {
+      status: 'pending' as const,
+      memberName: 'lead',
+      senderAvailable: true,
+      verified: true,
+    },
+    {
+      status: 'failed_retryable' as const,
+      memberName: 'captain',
+      senderAvailable: false,
+      verified: true,
+    },
+    {
+      status: 'pending' as const,
+      memberName: 'captain',
+      senderAvailable: true,
+      verified: false,
+    },
+    {
+      status: 'failed_retryable' as const,
+      memberName: 'lead',
+      senderAvailable: false,
+      verified: false,
+    },
+  ])(
+    'uses durable old-message proof for $status $memberName with sender available=$senderAvailable and proof=$verified',
+    async ({ status, memberName, senderAvailable, verified }) => {
+      const original = envelope({
+        idempotencyKey: `durable-${status}-${memberName}-${String(senderAvailable)}-${String(verified)}`,
+        to: { teamName: 'team-b', memberName },
+      });
+      const oldMessageId = buildRuntimeDestinationMessageId(original);
+      await writePreCanonicalRuntimeRecord(original, status);
+      now = new Date('2026-04-21T12:06:00.000Z');
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      runState.currentRunId = 'run-2';
+      const crossTeamSender = vi.fn(() =>
+        Promise.resolve({
+          messageId: oldMessageId,
+          deliveredToInbox: true,
+          toTeam: 'team-b',
+          toMember: 'Captain',
+        })
+      );
+      const acceptedMessage: CrossTeamOutboxMessage = {
+        messageId: oldMessageId,
+        fromTeam: 'team-a',
+        fromMember: original.fromMemberName,
+        toTeam: 'team-b',
+        toMember: 'Captain',
+        conversationId: original.idempotencyKey,
+        text: original.text,
+        taskRefs: original.taskRefs,
+        chainDepth: 0,
+        timestamp: original.createdAt,
+        runtimeDeliveryAcceptedAt: original.createdAt,
+      };
+      const findAcceptedRuntimeDelivery = vi.fn(() =>
+        Promise.resolve(verified ? acceptedMessage : null)
+      );
+      const ports = createOpenCodeRuntimeDeliveryPorts({
+        sentMessagesStore: {
+          appendMessage: vi.fn(),
+          readMessages: vi.fn(() => Promise.resolve([])),
+        },
+        inboxReader: { getMessagesFor: vi.fn(() => Promise.resolve([])) },
+        inboxWriter: { sendMessage: vi.fn() },
+        getCrossTeamSender: () => (senderAvailable ? crossTeamSender : null),
+        crossTeamOutbox: { findAcceptedRuntimeDelivery },
+      });
+      const service = new RuntimeDeliveryService(
+        runState,
+        journal,
+        new RuntimeDeliveryDestinationRegistry(ports),
+        diagnostics,
+        emitter,
+        () => now,
+        createCaptainCanonicalizer()
+      );
+      const retry = { ...original, runId: 'run-2', runtimeSessionId: 'session-2' };
+
+      await expect(service.deliver(retry)).resolves.toMatchObject(
+        verified
+          ? {
+              ok: true,
+              delivered: false,
+              reason: 'duplicate_destination_found',
+              location: { toMemberName: 'Captain', messageId: oldMessageId },
+            }
+          : { ok: false, delivered: false, reason: 'idempotency_conflict' }
+      );
+      expect(findAcceptedRuntimeDelivery).toHaveBeenCalledWith(
+        'team-a',
+        expect.objectContaining({
+          messageId: oldMessageId,
+          toMember: 'Captain',
+          conversationId: original.idempotencyKey,
+        })
+      );
+      expect(crossTeamSender).not.toHaveBeenCalled();
+    }
+  );
+
+  it('recovers an accepted pre-canonical sender-case alias without redelivery', async () => {
+    const original = envelope({
+      idempotencyKey: 'durable-sender-case-alias',
+      fromMemberName: 'builder',
+      to: { teamName: 'team-b', memberName: 'Captain' },
+    });
+    const oldMessageId = buildRuntimeDestinationMessageId(original);
+    await writePreCanonicalRuntimeRecord(original, 'failed_retryable');
+    now = new Date('2026-04-21T12:06:00.000Z');
+    journal = createRuntimeDeliveryJournalStore({
+      filePath: path.join(tempDir, 'delivery-journal.json'),
+      clock: () => now,
+    });
+    runState.currentRunId = 'run-2';
+    const acceptedMessage: CrossTeamOutboxMessage = {
+      messageId: oldMessageId,
+      fromTeam: 'team-a',
+      fromMember: 'Builder',
+      toTeam: 'team-b',
+      toMember: 'Captain',
+      conversationId: original.idempotencyKey,
+      text: original.text,
+      taskRefs: original.taskRefs,
+      chainDepth: 0,
+      timestamp: original.createdAt,
+      runtimeDeliveryAcceptedAt: original.createdAt,
+    };
+    const findAcceptedRuntimeDelivery = vi.fn(
+      (_teamName: string, expected: CrossTeamRuntimeDeliveryProofInput) =>
+        Promise.resolve(
+          expected.fromMember === 'Builder' && expected.text === original.text
+            ? acceptedMessage
+            : null
+        )
+    );
+    const crossTeamSender = vi.fn();
+    const ports = createOpenCodeRuntimeDeliveryPorts({
+      sentMessagesStore: {
+        appendMessage: vi.fn(),
+        readMessages: vi.fn(() => Promise.resolve([])),
+      },
+      inboxReader: { getMessagesFor: vi.fn(() => Promise.resolve([])) },
+      inboxWriter: { sendMessage: vi.fn() },
+      getCrossTeamSender: () => crossTeamSender,
+      crossTeamOutbox: { findAcceptedRuntimeDelivery },
+    });
+    const service = new RuntimeDeliveryService(
+      runState,
+      journal,
+      new RuntimeDeliveryDestinationRegistry(ports),
+      diagnostics,
+      emitter,
+      () => now,
+      createCaptainCanonicalizer()
+    );
+
+    await expect(
+      service.deliver({
+        ...original,
+        runId: 'run-2',
+        runtimeSessionId: 'session-2',
+        fromMemberName: 'BUILDER',
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      delivered: false,
+      reason: 'duplicate_destination_found',
+      location: { toMemberName: 'Captain', messageId: oldMessageId },
+    });
+    expect(findAcceptedRuntimeDelivery).toHaveBeenCalledWith(
+      'team-a',
+      expect.objectContaining({ fromMember: 'Builder', messageId: oldMessageId })
+    );
+    expect(crossTeamSender).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])(
+    'migrates a committed pre-canonical sender alias only with exact destination proof=%s',
+    async (verified) => {
+      destination = new FakeDestinationPort('cross_team_outbox');
+      const original = envelope({
+        idempotencyKey: `committed-sender-alias-${verified}`,
+        fromMemberName: 'builder',
+        to: { teamName: 'team-b', memberName: 'Captain' },
+      });
+      const originalService = createService();
+      await expect(originalService.deliver(original)).resolves.toMatchObject({
+        ok: true,
+        delivered: true,
+      });
+      expect(destination.writeCalls).toBe(1);
+      if (!verified) {
+        destination.messages.clear();
+      }
+
+      now = new Date('2026-04-21T12:06:00.000Z');
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      runState.currentRunId = 'run-2';
+      const restartedService = createService(createCaptainCanonicalizer());
+      const retry = {
+        ...original,
+        runId: 'run-2',
+        runtimeSessionId: 'session-2',
+        fromMemberName: 'BUILDER',
+      };
+
+      await expect(restartedService.deliver(retry)).resolves.toMatchObject(
+        verified
+          ? { ok: true, delivered: false, reason: 'duplicate_destination_found' }
+          : { ok: false, delivered: false, reason: 'idempotency_conflict' }
+      );
+      expect(destination.writeCalls).toBe(1);
+      if (verified) {
+        await expect(journal.get(journalKey(retry))).resolves.toMatchObject({
+          status: 'committed',
+          fromMemberName: 'Builder',
+          logicalPayloadHash: hashRuntimeDeliveryEnvelope({
+            ...retry,
+            fromMemberName: 'Builder',
+          }),
+        });
+      }
+    }
+  );
+
+  it('writes canonical logical receipts and reuses them across aliases after restart', async () => {
+    destination = new FakeDestinationPort('cross_team_outbox');
+    const first = envelope({
+      idempotencyKey: 'canonical-recipient',
+      to: { teamName: 'team-b', memberName: 'lead' },
+    });
+    const service = createService(createCaptainCanonicalizer());
+
+    await expect(service.deliver(first)).resolves.toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+      location: { kind: 'cross_team_outbox', toMemberName: 'Captain' },
+    });
+    await expect(journal.get(journalKey(first))).resolves.toMatchObject({
+      logicalPayloadHash: hashRuntimeDeliveryEnvelope({
+        ...first,
+        to: { teamName: 'team-b', memberName: 'Captain' },
+      }),
+      destination: { kind: 'cross_team_outbox', toMemberName: 'Captain' },
+    });
+
+    now = new Date('2026-04-21T12:06:00.000Z');
+    journal = createRuntimeDeliveryJournalStore({
+      filePath: path.join(tempDir, 'delivery-journal.json'),
+      clock: () => now,
+    });
+    runState.currentRunId = 'run-2';
+    const restartedService = createService(createCaptainCanonicalizer());
+
+    await expect(
+      restartedService.deliver({
+        ...first,
+        runId: 'run-2',
+        runtimeSessionId: 'session-2',
+        to: { teamName: 'team-b', memberName: 'cApTaIn' },
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      delivered: false,
+      reason: 'duplicate',
+      location: { kind: 'cross_team_outbox', toMemberName: 'Captain' },
+    });
+    expect(destination.writeCalls).toBe(1);
+    expect(destination.verifyInputs).toHaveLength(4);
+  });
+
+  it('rejects a genuinely different payload against a compatible pre-upgrade alias receipt', async () => {
+    const original = envelope({
+      idempotencyKey: 'legacy-alias-conflict',
+      to: { teamName: 'team-b', memberName: 'lead' },
+    });
+    const originalDestination = resolveRuntimeDeliveryDestination(original);
+    await writeVersionedJournalEntries(path.join(tempDir, 'delivery-journal.json'), [
+      {
+        kind: 'committed_receipt',
+        idempotencyKey: original.idempotencyKey,
+        teamName: original.teamName,
+        logicalPayloadHash: hashRuntimeDeliveryEnvelope(original),
+        committedLocation: locationForDestination(
+          originalDestination,
+          buildRuntimeDestinationMessageId(original)
+        ),
+        committedAt: now.toISOString(),
+      },
+    ]);
+    journal = createRuntimeDeliveryJournalStore({
+      filePath: path.join(tempDir, 'delivery-journal.json'),
+      clock: () => now,
+    });
+    destination = new FakeDestinationPort('cross_team_outbox');
+    runState.currentRunId = 'run-2';
+    const service = createService(createCaptainCanonicalizer());
+
+    await expect(
+      service.deliver({
+        ...original,
+        runId: 'run-2',
+        runtimeSessionId: 'session-2',
+        text: 'genuinely different payload',
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      delivered: false,
+      reason: 'idempotency_conflict',
+    });
+    expect(destination.writeCalls).toBe(0);
+    expect(destination.verifyInputs).toHaveLength(0);
+    expect(diagnostics.append).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'runtime_delivery_conflict', severity: 'error' })
+    );
   });
 
   it('retains the first committed receipt beyond the 512 full-record boundary', async () => {
@@ -1069,6 +1825,389 @@ describe('RuntimeDeliveryJournal', () => {
 });
 
 describe('RuntimeDeliveryReconciler', () => {
+  it('rolls non-canonical reconciliation back when destination visibility disappears during commit', async () => {
+    const message = envelope({ idempotencyKey: 'ordinary-reconciliation-race' });
+    const destinationRef = resolveRuntimeDeliveryDestination(message);
+    const destinationMessageId = buildRuntimeDestinationMessageId(message);
+    await journal.begin({
+      idempotencyKey: message.idempotencyKey,
+      payloadHash: hashRuntimeDeliveryEnvelope(message),
+      runId: message.runId,
+      teamName: message.teamName,
+      fromMemberName: message.fromMemberName,
+      providerId: message.providerId,
+      runtimeSessionId: message.runtimeSessionId,
+      destination: destinationRef,
+      destinationMessageId,
+      now: now.toISOString(),
+    });
+    destination.messages.set(
+      destinationMessageId,
+      locationForDestination(destinationRef, destinationMessageId)
+    );
+    const verifyDestination = destination.verify.bind(destination);
+    let verificationCount = 0;
+    vi.spyOn(destination, 'verify').mockImplementation(async (input) => {
+      verificationCount += 1;
+      if (verificationCount === 3) {
+        destination.messages.delete(destinationMessageId);
+        return { found: false, location: null, diagnostics: ['destination disappeared'] };
+      }
+      return verifyDestination(input);
+    });
+    const reconciler = new RuntimeDeliveryReconciler(
+      journal,
+      new RuntimeDeliveryDestinationRegistry([destination]),
+      diagnostics,
+      () => now
+    );
+
+    await reconciler.reconcileTeam(message.teamName);
+
+    expect(verificationCount).toBe(3);
+    await expect(journal.get(journalKey(message))).resolves.toMatchObject({
+      status: 'pending',
+      committedLocation: null,
+      committedAt: null,
+      lastError: null,
+    });
+    expect(diagnostics.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'runtime_delivery_recovery_needed',
+        data: expect.objectContaining({
+          diagnostics: expect.arrayContaining([
+            expect.stringContaining('journal is not committed'),
+          ]),
+        }),
+      })
+    );
+  });
+
+  it('persists the canonical sender and hash when recovery resolves semantic lead aliases', async () => {
+    const directory = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'opencode-runtime-delivery-reconcile-alias-')
+    );
+    try {
+      const recoveryNow = new Date('2026-04-21T12:00:00.000Z');
+      const journalPath = path.join(directory, 'delivery-journal.json');
+      let recoveryJournal = createRuntimeDeliveryJournalStore({
+        filePath: journalPath,
+        clock: () => recoveryNow,
+      });
+      const original = envelope({
+        idempotencyKey: 'reconciled-sender-alias',
+        teamName: 'Team',
+        fromMemberName: 'lead',
+        to: 'user',
+      });
+      const destinationMessageId = buildRuntimeDestinationMessageId(original);
+      await recoveryJournal.begin({
+        idempotencyKey: original.idempotencyKey,
+        payloadHash: hashRuntimeDeliveryEnvelope(original),
+        runId: original.runId,
+        teamName: original.teamName,
+        fromMemberName: original.fromMemberName,
+        providerId: original.providerId,
+        runtimeSessionId: original.runtimeSessionId,
+        destination: resolveRuntimeDeliveryDestination(original),
+        destinationMessageId,
+        now: recoveryNow.toISOString(),
+      });
+
+      const persistedMessages: InboxMessage[] = [
+        {
+          from: original.fromMemberName,
+          to: 'user',
+          text: original.text,
+          timestamp: original.createdAt,
+          read: true,
+          messageId: destinationMessageId,
+          source: 'lead_process',
+          leadSessionId: original.runtimeSessionId,
+          taskRefs: original.taskRefs,
+        },
+      ];
+      const appendMessage = vi.fn();
+      const ports = createOpenCodeRuntimeDeliveryPorts({
+        sentMessagesStore: {
+          appendMessage,
+          readMessages: vi.fn(() => Promise.resolve(persistedMessages)),
+        },
+        inboxReader: { getMessagesFor: vi.fn(() => Promise.resolve([])) },
+        inboxWriter: { sendMessage: vi.fn() },
+        getCrossTeamSender: () => null,
+      });
+      const readMetaMembers = () => Promise.resolve([]);
+      const reconciler = new RuntimeDeliveryReconciler(
+        recoveryJournal,
+        new RuntimeDeliveryDestinationRegistry(ports),
+        new FakeDiagnosticsSink(),
+        () => recoveryNow,
+        {
+          canonicalize: (record) =>
+            canonicalizeRuntimeDeliveryJournalRecordIdentities(
+              record,
+              readBuilderLeadConfig,
+              readMetaMembers
+            ),
+        }
+      );
+
+      await reconciler.reconcileTeam(original.teamName);
+
+      const canonicalOriginal = await canonicalizeRuntimeDeliveryCrossTeamIdentities(
+        original,
+        readBuilderLeadConfig,
+        readMetaMembers
+      );
+      await expect(recoveryJournal.get(journalKey(original))).resolves.toMatchObject({
+        status: 'committed',
+        fromMemberName: 'Builder',
+        payloadHash: hashRuntimeDeliveryEnvelope(canonicalOriginal),
+        logicalPayloadHash: hashRuntimeDeliveryEnvelope(canonicalOriginal),
+      });
+
+      recoveryJournal = createRuntimeDeliveryJournalStore({
+        filePath: journalPath,
+        clock: () => recoveryNow,
+      });
+      const delivery = new RuntimeDeliveryService(
+        new FakeRunStateReader(original.runId),
+        recoveryJournal,
+        new RuntimeDeliveryDestinationRegistry(ports),
+        new FakeDiagnosticsSink(),
+        new FakeTeamChangeEmitter(),
+        () => recoveryNow,
+        {
+          canonicalize: (message) =>
+            canonicalizeRuntimeDeliveryCrossTeamIdentities(
+              message,
+              readBuilderLeadConfig,
+              readMetaMembers
+            ),
+        }
+      );
+
+      await expect(
+        delivery.deliver({ ...original, fromMemberName: 'team-lead' })
+      ).resolves.toMatchObject({
+        ok: true,
+        delivered: false,
+        reason: 'duplicate',
+      });
+      expect(appendMessage).not.toHaveBeenCalled();
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a verifier-forged canonical hash when persisted payload evidence does not bind', async () => {
+    const directory = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'opencode-runtime-delivery-reconcile-forged-proof-')
+    );
+    try {
+      const recoveryNow = new Date('2026-04-21T12:00:00.000Z');
+      const recoveryJournal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(directory, 'delivery-journal.json'),
+        clock: () => recoveryNow,
+      });
+      const original = envelope({
+        idempotencyKey: 'reconciled-sender-forged-proof',
+        teamName: 'Team',
+        fromMemberName: 'lead',
+        to: 'user',
+      });
+      const originalHash = hashRuntimeDeliveryEnvelope(original);
+      const destinationMessageId = buildRuntimeDestinationMessageId(original);
+      await recoveryJournal.begin({
+        idempotencyKey: original.idempotencyKey,
+        payloadHash: originalHash,
+        runId: original.runId,
+        teamName: original.teamName,
+        fromMemberName: original.fromMemberName,
+        providerId: original.providerId,
+        runtimeSessionId: original.runtimeSessionId,
+        destination: resolveRuntimeDeliveryDestination(original),
+        destinationMessageId,
+        now: recoveryNow.toISOString(),
+      });
+
+      const canonical = await canonicalizeRuntimeDeliveryCrossTeamIdentities(
+        original,
+        readBuilderLeadConfig,
+        () => Promise.resolve([])
+      );
+      const forgedVerify = vi.fn(() =>
+        Promise.resolve({
+          found: true,
+          location: {
+            kind: 'user_sent_messages' as const,
+            teamName: original.teamName,
+            messageId: destinationMessageId,
+          },
+          diagnostics: [],
+          recoveryEvidence: {
+            fromMemberName: original.fromMemberName,
+            runtimeSessionId: original.runtimeSessionId,
+            text: 'forged destination payload',
+            createdAt: original.createdAt,
+            summary: original.summary ?? null,
+            taskRefs: original.taskRefs,
+          },
+          canonicalPayloadHash: hashRuntimeDeliveryEnvelope(canonical),
+        })
+      );
+      const forgedPort: RuntimeDeliveryDestinationPort = {
+        kind: 'user_sent_messages',
+        write: vi.fn(),
+        verify: forgedVerify,
+        buildChangeEvent: () => null,
+      };
+      const diagnostics = new FakeDiagnosticsSink();
+      const reconciler = new RuntimeDeliveryReconciler(
+        recoveryJournal,
+        new RuntimeDeliveryDestinationRegistry([forgedPort]),
+        diagnostics,
+        () => recoveryNow,
+        {
+          canonicalize: (record) =>
+            canonicalizeRuntimeDeliveryJournalRecordIdentities(record, readBuilderLeadConfig, () =>
+              Promise.resolve([])
+            ),
+        }
+      );
+
+      await reconciler.reconcileTeam(original.teamName);
+
+      expect(forgedVerify).toHaveBeenCalledOnce();
+      await expect(recoveryJournal.get(journalKey(original))).resolves.toMatchObject({
+        status: 'pending',
+        fromMemberName: original.fromMemberName,
+        payloadHash: originalHash,
+        logicalPayloadHash: originalHash,
+        committedLocation: null,
+      });
+      expect(diagnostics.append).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'runtime_delivery_recovery_needed',
+          data: expect.objectContaining({ canonicalRecoveryEvidenceInvalid: true }),
+        })
+      );
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('rolls back canonical recovery when destination visibility disappears after precommit proof', async () => {
+    const directory = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'opencode-runtime-delivery-reconcile-disappearance-')
+    );
+    try {
+      const recoveryNow = new Date('2026-04-21T12:00:00.000Z');
+      const recoveryJournal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(directory, 'delivery-journal.json'),
+        clock: () => recoveryNow,
+      });
+      const original = envelope({
+        idempotencyKey: 'reconciled-sender-alias-disappears',
+        teamName: 'Team',
+        fromMemberName: 'lead',
+        to: 'user',
+      });
+      const originalHash = hashRuntimeDeliveryEnvelope(original);
+      const destinationMessageId = buildRuntimeDestinationMessageId(original);
+      await recoveryJournal.begin({
+        idempotencyKey: original.idempotencyKey,
+        payloadHash: originalHash,
+        runId: original.runId,
+        teamName: original.teamName,
+        fromMemberName: original.fromMemberName,
+        providerId: original.providerId,
+        runtimeSessionId: original.runtimeSessionId,
+        destination: resolveRuntimeDeliveryDestination(original),
+        destinationMessageId,
+        now: recoveryNow.toISOString(),
+      });
+
+      const persistedMessages: InboxMessage[] = [
+        {
+          from: original.fromMemberName,
+          to: 'user',
+          text: original.text,
+          timestamp: original.createdAt,
+          read: true,
+          messageId: destinationMessageId,
+          source: 'lead_process',
+          leadSessionId: original.runtimeSessionId,
+          taskRefs: original.taskRefs,
+        },
+      ];
+      const readMessages = vi.fn(() => Promise.resolve([...persistedMessages]));
+      const ports = createOpenCodeRuntimeDeliveryPorts({
+        sentMessagesStore: { appendMessage: vi.fn(), readMessages },
+        inboxReader: { getMessagesFor: vi.fn(() => Promise.resolve([])) },
+        inboxWriter: { sendMessage: vi.fn() },
+        getCrossTeamSender: () => null,
+      });
+      const userMessagesPort = ports.find((candidate) => candidate.kind === 'user_sent_messages');
+      expect(userMessagesPort).toBeDefined();
+      if (!userMessagesPort) {
+        return;
+      }
+      let verificationCount = 0;
+      const verify = vi.fn(async (input: Parameters<typeof userMessagesPort.verify>[0]) => {
+        verificationCount += 1;
+        const result = await userMessagesPort.verify(input);
+        if (verificationCount === 2) {
+          queueMicrotask(() => persistedMessages.splice(0));
+        }
+        return result;
+      });
+      const disappearingPort: RuntimeDeliveryDestinationPort = {
+        ...userMessagesPort,
+        verify,
+      };
+      const diagnostics = new FakeDiagnosticsSink();
+      const reconciler = new RuntimeDeliveryReconciler(
+        recoveryJournal,
+        new RuntimeDeliveryDestinationRegistry([disappearingPort]),
+        diagnostics,
+        () => recoveryNow,
+        {
+          canonicalize: (record) =>
+            canonicalizeRuntimeDeliveryJournalRecordIdentities(record, readBuilderLeadConfig, () =>
+              Promise.resolve([])
+            ),
+        }
+      );
+
+      await reconciler.reconcileTeam(original.teamName);
+
+      expect(verify).toHaveBeenCalledTimes(3);
+      expect(readMessages).toHaveBeenCalledTimes(3);
+      await expect(recoveryJournal.get(journalKey(original))).resolves.toMatchObject({
+        status: 'pending',
+        fromMemberName: 'lead',
+        payloadHash: originalHash,
+        logicalPayloadHash: originalHash,
+        committedLocation: null,
+        committedAt: null,
+      });
+      expect(diagnostics.append).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'runtime_delivery_recovery_needed',
+          data: expect.objectContaining({
+            diagnostics: expect.arrayContaining([
+              expect.stringContaining('journal is not committed'),
+            ]),
+          }),
+        })
+      );
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('diagnoses pending records that are not visible in destination', async () => {
     const tempDir = await fs.mkdtemp(
       path.join(os.tmpdir(), 'opencode-runtime-delivery-reconcile-')
@@ -1116,15 +2255,81 @@ describe('RuntimeDeliveryReconciler', () => {
   });
 });
 
-function createService(): RuntimeDeliveryService {
+function createService(
+  recipientCanonicalizer?: RuntimeDeliveryRecipientCanonicalizer
+): RuntimeDeliveryService {
   return new RuntimeDeliveryService(
     runState,
     journal,
     new RuntimeDeliveryDestinationRegistry([destination]),
     diagnostics,
     emitter,
-    () => now
+    () => now,
+    recipientCanonicalizer
   );
+}
+
+function createCaptainCanonicalizer(): RuntimeDeliveryRecipientCanonicalizer {
+  return {
+    canonicalize: (message) => {
+      const canonicalMessage =
+        message.fromMemberName.trim().toLowerCase() === 'builder'
+          ? { ...message, fromMemberName: 'Builder' }
+          : message;
+      if (message.to === 'user' || !('teamName' in message.to)) {
+        return Promise.resolve(canonicalMessage);
+      }
+      const requestedMember = message.to.memberName.trim().toLowerCase();
+      if (
+        requestedMember !== 'lead' &&
+        requestedMember !== 'team-lead' &&
+        requestedMember !== 'captain'
+      ) {
+        return Promise.resolve(canonicalMessage);
+      }
+      return Promise.resolve({
+        ...canonicalMessage,
+        to: { teamName: message.to.teamName, memberName: 'Captain' },
+      });
+    },
+  };
+}
+
+async function writePreCanonicalRuntimeRecord(
+  message: RuntimeDeliveryEnvelope,
+  status: 'pending' | 'failed_retryable' | 'failed_terminal',
+  options: { payloadHash?: string; logicalPayloadHash?: string | null } = {}
+): Promise<void> {
+  const payloadHash = options.payloadHash ?? hashRuntimeDeliveryEnvelope(message);
+  await writeVersionedJournalEntries(path.join(tempDir, 'delivery-journal.json'), [
+    {
+      idempotencyKey: message.idempotencyKey,
+      payloadHash,
+      logicalPayloadHash:
+        options.logicalPayloadHash === undefined ? payloadHash : options.logicalPayloadHash,
+      runId: message.runId,
+      teamName: message.teamName,
+      fromMemberName: message.fromMemberName,
+      providerId: message.providerId,
+      runtimeSessionId: message.runtimeSessionId,
+      destination: resolveRuntimeDeliveryDestination(message),
+      destinationMessageId: buildRuntimeDestinationMessageId(message),
+      committedLocation: null,
+      status,
+      attempts: 1,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      committedAt: null,
+      lastError: status === 'pending' ? null : 'simulated pre-upgrade delivery failure',
+    },
+  ]);
+}
+
+function readBuilderLeadConfig(teamName: string): Promise<TeamConfig> {
+  return Promise.resolve({
+    name: teamName,
+    members: [{ name: 'Builder', agentType: 'team-lead' }],
+  });
 }
 
 function envelope(overrides: Partial<RuntimeDeliveryEnvelope> = {}): RuntimeDeliveryEnvelope {

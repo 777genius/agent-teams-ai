@@ -9,6 +9,10 @@ import {
 } from '@features/workspace-trust/main';
 
 import {
+  type AnthropicApiKeyHelperRunOwner,
+  cleanupRunOwnedAnthropicApiKeyHelper,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
+import {
   collectWorkspaceTrustProviders as collectWorkspaceTrustProvidersHelper,
   collectWorkspaceTrustWorkspaces as collectWorkspaceTrustWorkspacesHelper,
   planWorkspaceTrustArgsOnlySafely as planWorkspaceTrustArgsOnlySafelyHelper,
@@ -29,7 +33,8 @@ import type {
   TeamProvisioningState,
 } from '@shared/types';
 
-export interface WorkspaceTrustDeterministicPreSpawnRun extends WorkspaceTrustProvisioningRun {
+export interface WorkspaceTrustDeterministicPreSpawnRun
+  extends WorkspaceTrustProvisioningRun, AnthropicApiKeyHelperRunOwner {
   teamName: string;
 }
 
@@ -39,7 +44,6 @@ export interface WorkspaceTrustPreSpawnProvisioningEnv {
 
 export interface TeamProvisioningWorkspaceTrustPreSpawnBoundaryDeps<
   TRun extends WorkspaceTrustDeterministicPreSpawnRun,
-  TProvisioningEnv extends WorkspaceTrustPreSpawnProvisioningEnv,
 > {
   getWorkspaceTrustCoordinator(): WorkspaceTrustCoordinator | null;
   getStopAllTeamsGeneration(): number;
@@ -93,7 +97,7 @@ export function createTeamProvisioningWorkspaceTrustPreSpawnBoundary<
   TRun extends WorkspaceTrustDeterministicPreSpawnRun,
   TProvisioningEnv extends WorkspaceTrustPreSpawnProvisioningEnv,
 >(
-  deps: TeamProvisioningWorkspaceTrustPreSpawnBoundaryDeps<TRun, TProvisioningEnv>
+  deps: TeamProvisioningWorkspaceTrustPreSpawnBoundaryDeps<TRun>
 ): TeamProvisioningWorkspaceTrustPreSpawnBoundary<TRun, TProvisioningEnv> {
   const workspaceTrustWorkspaceCollectionPorts =
     deps.workspaceTrustWorkspaceCollectionPorts ??
@@ -148,7 +152,7 @@ async function failDeterministicRunBeforeSpawn<
     launchDiagnostics?: TeamLaunchDiagnosticItem[];
     provisioningEnv: TProvisioningEnv;
   },
-  ports: TeamProvisioningWorkspaceTrustPreSpawnBoundaryDeps<TRun, TProvisioningEnv>
+  ports: TeamProvisioningWorkspaceTrustPreSpawnBoundaryDeps<TRun>
 ): Promise<never> {
   ports.updateProgress(run, 'failed', input.message, {
     error: input.error,
@@ -157,9 +161,12 @@ async function failDeterministicRunBeforeSpawn<
   });
   run.onProgress(run.progress);
 
-  await cleanupAnthropicHelperMaterial(input.provisioningEnv, ports);
+  const helperCleanupError = await cleanupAnthropicHelperMaterial(run, ports);
   if (input.mode === 'launch') {
     await ports.restorePrelaunchConfig(run.teamName).catch(() => undefined);
+  }
+  if (helperCleanupError) {
+    throw helperCleanupError;
   }
   ports.cleanupRun(run);
   throw new Error(input.error);
@@ -174,7 +181,7 @@ async function cancelDeterministicRunBeforeSpawn<
     mode: 'create' | 'launch';
     provisioningEnv: TProvisioningEnv;
   },
-  ports: TeamProvisioningWorkspaceTrustPreSpawnBoundaryDeps<TRun, TProvisioningEnv>
+  ports: TeamProvisioningWorkspaceTrustPreSpawnBoundaryDeps<TRun>
 ): Promise<never> {
   ports.updateProgress(run, 'cancelled', 'Team launch cancelled', {
     warnings: run.progress.warnings,
@@ -182,27 +189,29 @@ async function cancelDeterministicRunBeforeSpawn<
   run.cancelRequested = true;
   run.onProgress(run.progress);
 
-  await cleanupAnthropicHelperMaterial(input.provisioningEnv, ports);
+  const helperCleanupError = await cleanupAnthropicHelperMaterial(run, ports);
   if (input.mode === 'launch') {
     await ports.restorePrelaunchConfig(run.teamName).catch(() => undefined);
+  }
+  if (helperCleanupError) {
+    throw helperCleanupError;
   }
   ports.cleanupRun(run);
   throw new Error('Team launch cancelled by app shutdown');
 }
 
-async function cleanupAnthropicHelperMaterial<
-  TRun extends WorkspaceTrustDeterministicPreSpawnRun,
-  TProvisioningEnv extends WorkspaceTrustPreSpawnProvisioningEnv,
->(
-  provisioningEnv: TProvisioningEnv,
-  ports: TeamProvisioningWorkspaceTrustPreSpawnBoundaryDeps<TRun, TProvisioningEnv>
-): Promise<void> {
-  if (!provisioningEnv.anthropicApiKeyHelper) {
-    return;
+async function cleanupAnthropicHelperMaterial<TRun extends WorkspaceTrustDeterministicPreSpawnRun>(
+  run: TRun,
+  ports: TeamProvisioningWorkspaceTrustPreSpawnBoundaryDeps<TRun>
+): Promise<Error | null> {
+  try {
+    await cleanupRunOwnedAnthropicApiKeyHelper(run, (input) =>
+      ports.cleanupAnthropicApiKeyHelperMaterial(input)
+    );
+    return null;
+  } catch (error) {
+    return error instanceof Error
+      ? error
+      : new Error('Failed to clean app-managed Anthropic authentication material');
   }
-  await ports
-    .cleanupAnthropicApiKeyHelperMaterial({
-      directory: provisioningEnv.anthropicApiKeyHelper.directory,
-    })
-    .catch(() => undefined);
 }

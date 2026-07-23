@@ -461,6 +461,11 @@ describe('ipc teams handlers', () => {
   const teamRosterMutationLogger = { error: vi.fn(), warn: vi.fn() };
   const teamRuntimeOperationsLogger = { error: vi.fn(), warn: vi.fn() };
   let launchIoGovernor: LaunchIoGovernor;
+  const permanentDeletionLifecycle = {
+    prepareTeamDeletion: vi.fn(() => resolvedUndefined()),
+    completeTeamDeletion: vi.fn(),
+    resumeTeam: vi.fn(),
+  };
 
   const service = {
     listTeams: vi.fn(() => resolved([{ teamName: 'my-team', displayName: 'My Team' }])),
@@ -845,7 +850,8 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       undefined,
-      launchIoGovernor
+      launchIoGovernor,
+      permanentDeletionLifecycle
     );
     registerTeamHandlers(ipcMain as never);
     const teamRuntimeOperationsFeature = createTeamRuntimeOperationsFeature({
@@ -4990,8 +4996,34 @@ describe('ipc teams handlers', () => {
 
       result = (await permanentlyDeleteHandler({} as never, 'my-team')) as { success: boolean };
       expect(result.success).toBe(true);
+      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith('my-team');
       expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith('my-team');
+      expect(permanentDeletionLifecycle.completeTeamDeletion).toHaveBeenCalledWith('my-team');
+      expect(
+        permanentDeletionLifecycle.prepareTeamDeletion.mock.invocationCallOrder[0]
+      ).toBeLessThan(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]!);
+      expect(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]).toBeLessThan(
+        permanentDeletionLifecycle.completeTeamDeletion.mock.invocationCallOrder[0]!
+      );
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
+    });
+
+    it('does not delete team files before member work sync is quiesced', async () => {
+      permanentDeletionLifecycle.prepareTeamDeletion.mockRejectedValueOnce(
+        new Error('quiesce failed')
+      );
+
+      const result = (await handlers.get(TEAM_PERMANENTLY_DELETE)!({} as never, 'my-team')) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('quiesce failed');
+      expect(service.permanentlyDeleteTeam).not.toHaveBeenCalled();
+      expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+      expect(mockTeamDataWorkerClient.invalidateTeamConfig).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
     });
 
     it('invalidates worker config cache after roster metadata mutations', async () => {

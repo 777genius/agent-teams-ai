@@ -62,13 +62,24 @@ export function resolveRuntimeRecipientProviderIdFromSources(input: {
     return undefined;
   }
 
-  const configMember = input.config?.members?.find(
+  const matchingConfigMembers =
+    input.config?.members?.filter(
+      (member) => member.name?.trim().toLowerCase() === normalizedMemberName
+    ) ?? [];
+  const matchingMetaMembers = input.metaMembers.filter(
     (member) => member.name?.trim().toLowerCase() === normalizedMemberName
   );
-  const metaMember = input.metaMembers.find(
-    (member) => member.name?.trim().toLowerCase() === normalizedMemberName
+  if (
+    [...matchingConfigMembers, ...matchingMetaMembers].some((member) => member.removedAt != null)
+  ) {
+    return undefined;
+  }
+
+  const configMember = matchingConfigMembers.find((member) => member.removedAt == null);
+  const metaMember = matchingMetaMembers.find((member) => member.removedAt == null);
+  const configLead = input.config?.members?.find(
+    (member) => member.removedAt == null && isLeadMember(member)
   );
-  const configLead = input.config?.members?.find((member) => isLeadMember(member));
   const configProvider = (configMember as { provider?: unknown } | undefined)?.provider;
   const metaProvider = (metaMember as { provider?: unknown } | undefined)?.provider;
   const inheritedProvider = (configLead as { provider?: unknown } | undefined)?.provider;
@@ -81,17 +92,31 @@ export function resolveRuntimeRecipientProviderIdFromSources(input: {
     });
   }
 
-  return (
+  const configProviderId = configMember
+    ? (normalizeTeamProviderLike(configMember.providerId) ??
+      normalizeTeamProviderLike(configProvider) ??
+      inferTeamProviderIdFromModel(configMember.model) ??
+      normalizeTeamProviderLike(configLead?.providerId) ??
+      normalizeTeamProviderLike(inheritedProvider) ??
+      inferTeamProviderIdFromModel(configLead?.model))
+    : undefined;
+  const metaProviderId =
     normalizeTeamProviderLike(metaMember?.providerId) ??
     normalizeTeamProviderLike(metaProvider) ??
-    normalizeTeamProviderLike(configMember?.providerId) ??
-    normalizeTeamProviderLike(configProvider) ??
-    inferTeamProviderIdFromModel(metaMember?.model) ??
-    inferTeamProviderIdFromModel(configMember?.model) ??
-    normalizeTeamProviderLike(configLead?.providerId) ??
-    normalizeTeamProviderLike(inheritedProvider) ??
-    inferTeamProviderIdFromModel(configLead?.model)
-  );
+    inferTeamProviderIdFromModel(metaMember?.model);
+
+  if (configProviderId && metaProviderId && configProviderId !== metaProviderId) {
+    throw new Error(
+      `Ambiguous runtime recipient provider identity for ${configMember?.name ?? metaMember?.name ?? normalizedMemberName}: config=${configProviderId}, metadata=${metaProviderId}`
+    );
+  }
+  if (!configMember && metaProviderId === 'opencode') {
+    throw new Error(
+      `OpenCode runtime recipient ${metaMember?.name ?? normalizedMemberName} has no authoritative config identity`
+    );
+  }
+
+  return configProviderId ?? metaProviderId;
 }
 
 export function isOpenCodeRuntimeRecipientFromSources(input: {

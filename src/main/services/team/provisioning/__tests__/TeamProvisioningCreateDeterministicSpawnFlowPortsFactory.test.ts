@@ -57,6 +57,8 @@ function createRun(): TestRun {
     provisioningComplete: false,
     finalizingByTimeout: false,
     cancelRequested: false,
+    anthropicApiKeyHelper: null,
+    anthropicApiKeyHelperCleanupPromise: null,
     bootstrapSpecPath: null,
     bootstrapUserPromptPath: null,
     mcpConfigPath: null,
@@ -132,7 +134,7 @@ function createDeps(host: BoundCallbackHost): {
         host.startFilesystemMonitor(run, targetRequest),
       tryCompleteAfterTimeout: vi.fn(async () => false),
       handleProcessExit: vi.fn(async () => undefined),
-      killTeamProcess: vi.fn(),
+      killTeamProcessAndWait: vi.fn(async () => undefined),
       cleanupRun: (run) => host.cleanupRun(run),
       removeRunMemberMcpConfigFiles: vi.fn(async () => undefined),
       deleteRun: (runId) => {
@@ -177,7 +179,7 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
     const builtDeps = createTeamProvisioningCreateDeterministicSpawnFlowDepsFromService(service, {
       spawnCli: deps.spawnCli,
       updateProgress: deps.updateProgress,
-      killTeamProcess: deps.killTeamProcess,
+      killTeamProcessAndWait: deps.killTeamProcessAndWait,
     });
     const boundary = createTeamProvisioningCreateDeterministicSpawnFlowBoundary(builtDeps);
     const ports = boundary.createSpawnFlowPorts({

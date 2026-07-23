@@ -234,8 +234,25 @@ export function initializeIpcHandlers(
   skillsWatcherService?: SkillsWatcherService,
   crossTeamService?: CrossTeamService,
   teamBackupService?: TeamBackupService,
-  launchIoGovernor?: LaunchIoGovernor
+  launchIoGovernor?: LaunchIoGovernor,
+  teamPermanentDeletionLifecycle?: {
+    prepareTeamDeletion(teamName: string): Promise<void>;
+    completeTeamDeletion(teamName: string): void;
+    resumeTeam(teamName: string): void;
+  }
 ): void {
+  const lifecycleAwareProvisioningStart: typeof teamHandlerApis.provisioningStart = {
+    createTeam: async (request, onProgress) => {
+      const response = await teamHandlerApis.provisioningStart.createTeam(request, onProgress);
+      teamPermanentDeletionLifecycle?.resumeTeam(request.teamName);
+      return response;
+    },
+    launchTeam: async (request, onProgress) => {
+      const response = await teamHandlerApis.provisioningStart.launchTeam(request, onProgress);
+      teamPermanentDeletionLifecycle?.resumeTeam(request.teamName);
+      return response;
+    },
+  };
   const teamApprovalsFeature = createTeamApprovalsFeature({
     toolApprovalApi: teamHandlerApis.toolApproval,
   });
@@ -260,6 +277,21 @@ export function initializeIpcHandlers(
     messaging: teamHandlerApis.messaging,
     logger: teamConfigurationLogger,
   });
+  const createConfig = teamConfigurationFeature.createConfig.execute.bind(
+    teamConfigurationFeature.createConfig
+  );
+  teamConfigurationFeature.createConfig.execute = async (request) => {
+    await createConfig(request);
+    teamPermanentDeletionLifecycle?.resumeTeam(request.teamName);
+  };
+  const deleteDraft = teamConfigurationFeature.deleteDraft.execute.bind(
+    teamConfigurationFeature.deleteDraft
+  );
+  teamConfigurationFeature.deleteDraft.execute = async (teamName) => {
+    await teamPermanentDeletionLifecycle?.prepareTeamDeletion(teamName);
+    await deleteDraft(teamName);
+    teamPermanentDeletionLifecycle?.completeTeamDeletion(teamName);
+  };
   const teamMessageDeliveryFeature = createTeamMessageDeliveryFeature({
     repository: teamDataService,
     runtime: teamHandlerApis.runtime,
@@ -274,7 +306,7 @@ export function initializeIpcHandlers(
     logger: teamRosterMutationLogger,
   });
   const teamProvisioningFeature = createTeamProvisioningFeature({
-    start: teamHandlerApis.provisioningStart,
+    start: lifecycleAwareProvisioningStart,
     status: teamHandlerApis.provisioningStatus,
     preflight: teamHandlerApis.preflight,
     provisioningRun: teamHandlerApis.provisioningRun,
@@ -309,7 +341,8 @@ export function initializeIpcHandlers(
     teammateToolTracker,
     teamLogSourceTracker,
     branchStatusService,
-    launchIoGovernor
+    launchIoGovernor,
+    teamPermanentDeletionLifecycle
   );
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,

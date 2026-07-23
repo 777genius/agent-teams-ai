@@ -26,8 +26,8 @@ import { BackendSelectingTaskStallJournalStore } from '@features/internal-storag
 import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { InternalStorageJsonReplica } from '@features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
-import { BackendSelectingMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore';
 import { MemberWorkSyncPendingReportIntentReplayer } from '@features/member-work-sync/core/application';
+import { BackendSelectingMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore';
 import {
   buildPendingReportIntentId,
   JsonMemberWorkSyncStore,
@@ -304,6 +304,112 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
       nowIso: T2,
     });
     expect(persisted.ok && persisted.item.status).toBe('delivered');
+  });
+
+  it('purgeTeam replaces the gateway team snapshot with an exact empty snapshot', async () => {
+    const { databasePath, teamsBasePath } = await setup();
+    const gateway = openGateway(databasePath);
+    const importTeam = vi.spyOn(gateway, 'importTeam');
+    const store = createMwsStore({
+      kind: 'sqlite',
+      gateway,
+      teamsBasePath,
+      fallbackRequiresReplica: false,
+    });
+
+    await store.purgeTeam(TEAM);
+
+    expect(importTeam).toHaveBeenCalledTimes(1);
+    expect(importTeam).toHaveBeenCalledWith(TEAM, {
+      statuses: [],
+      reportIntents: [],
+      outboxItems: [],
+      metricEvents: [],
+    });
+  });
+
+  it('purgeTeam waits for an in-flight same-team store operation', async () => {
+    const { databasePath, teamsBasePath } = await setup();
+    const gateway = openGateway(databasePath);
+    const originalStatusRead = gateway.statusRead.bind(gateway);
+    let releaseStatusRead!: () => void;
+    const statusReadRelease = new Promise<void>((resolve) => {
+      releaseStatusRead = resolve;
+    });
+    let announceStatusRead!: () => void;
+    const statusReadStarted = new Promise<void>((resolve) => {
+      announceStatusRead = resolve;
+    });
+    vi.spyOn(gateway, 'statusRead').mockImplementation(async (teamName, memberKey) => {
+      announceStatusRead();
+      await statusReadRelease;
+      return originalStatusRead(teamName, memberKey);
+    });
+    const importTeam = vi.spyOn(gateway, 'importTeam');
+    const store = createMwsStore({
+      kind: 'sqlite',
+      gateway,
+      teamsBasePath,
+      fallbackRequiresReplica: false,
+    });
+
+    const read = store.read({ teamName: TEAM, memberName: 'bob' });
+    await statusReadStarted;
+    const purge = store.purgeTeam(TEAM);
+    await Promise.resolve();
+
+    expect(importTeam).not.toHaveBeenCalled();
+
+    releaseStatusRead();
+    await expect(read).resolves.toBeNull();
+    await purge;
+    expect(importTeam).toHaveBeenCalledWith(TEAM, {
+      statuses: [],
+      reportIntents: [],
+      outboxItems: [],
+      metricEvents: [],
+    });
+  });
+
+  it('purgeTeam prevents a same-name resume from hydrating the deleted team from stale state', async () => {
+    const { databasePath, teamsBasePath } = await setup();
+    const gateway = openGateway(databasePath);
+    const store = createMwsStore({
+      kind: 'sqlite',
+      gateway,
+      teamsBasePath,
+      fallbackRequiresReplica: false,
+    });
+    const staleStatus: MemberWorkSyncStatus = {
+      teamName: TEAM,
+      memberName: 'bob',
+      state: 'caught_up',
+      agenda: {
+        teamName: TEAM,
+        memberName: 'bob',
+        generatedAt: T1,
+        fingerprint: 'stale-before-purge',
+        items: [],
+        diagnostics: [],
+      },
+      evaluatedAt: T1,
+      diagnostics: [],
+    };
+    await store.write(staleStatus);
+    await expect(store.read({ teamName: TEAM, memberName: 'bob' })).resolves.toMatchObject({
+      state: 'caught_up',
+    });
+
+    await store.purgeTeam(TEAM);
+
+    await expect(store.read({ teamName: TEAM, memberName: 'bob' })).resolves.toBeNull();
+    const fallbackResume = createMwsStore({
+      kind: 'json',
+      gateway,
+      teamsBasePath,
+      fallbackRequiresReplica: false,
+    });
+    await expect(fallbackResume.read({ teamName: TEAM, memberName: 'bob' })).resolves.toBeNull();
   });
 
   it('normalizes a marked legacy alias through two SQLite replica sessions and replays its report', async () => {

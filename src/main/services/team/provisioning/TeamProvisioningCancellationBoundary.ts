@@ -1,7 +1,12 @@
 import { randomUUID } from 'crypto';
 
 import {
+  type AnthropicApiKeyHelperRunOwner,
+  cleanupRunOwnedAnthropicApiKeyHelper,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
+import {
   killTeamProcess as killTeamProcessDefault,
+  killTeamProcessAndWait as killTeamProcessAndWaitDefault,
   nowIso as nowIsoDefault,
   updateProgress as updateProgressDefault,
 } from './TeamProvisioningRunProgress';
@@ -24,7 +29,7 @@ import type {
   TeamProvisioningState,
 } from '@shared/types';
 
-export interface TeamProvisioningCancellationRun {
+export interface TeamProvisioningCancellationRun extends AnthropicApiKeyHelperRunOwner {
   runId: string;
   teamName: string;
   progress: TeamProvisioningProgress;
@@ -49,12 +54,14 @@ export interface TeamProvisioningCancellationBoundaryPorts<
   stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
   stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
   killTeamProcess(child: TRun['child']): void;
+  killTeamProcessAndWait(child: TRun['child']): Promise<void>;
   updateProgress(
     run: TRun,
     state: Exclude<TeamProvisioningState, 'idle'>,
     message: string
   ): TeamProvisioningProgress;
   cleanupRun(run: TRun): void;
+  cleanupRunOwnedAnthropicApiKeyHelper?(run: TRun): Promise<void>;
   nowIso(): string;
   clearOpenCodeRuntimeToolApprovals(
     teamName: string,
@@ -125,6 +132,7 @@ export interface TeamProvisioningCancellationBoundaryServiceHostOptions<
   TRun extends TeamProvisioningCancellationRun,
 > {
   killTeamProcess?: TeamProvisioningCancellationBoundaryPorts<TRun>['killTeamProcess'];
+  killTeamProcessAndWait?: TeamProvisioningCancellationBoundaryPorts<TRun>['killTeamProcessAndWait'];
   updateProgress?: TeamProvisioningCancellationBoundaryPorts<TRun>['updateProgress'];
   nowIso?: TeamProvisioningCancellationBoundaryPorts<TRun>['nowIso'];
   logWarning?: TeamProvisioningCancellationBoundaryPorts<TRun>['logWarning'];
@@ -161,6 +169,9 @@ export function createTeamProvisioningCancellationBoundaryPortsFromService<
     killTeamProcess:
       options.killTeamProcess ??
       (killTeamProcessDefault as TeamProvisioningCancellationBoundaryPorts<TRun>['killTeamProcess']),
+    killTeamProcessAndWait:
+      options.killTeamProcessAndWait ??
+      (killTeamProcessAndWaitDefault as TeamProvisioningCancellationBoundaryPorts<TRun>['killTeamProcessAndWait']),
     updateProgress:
       options.updateProgress ??
       (updateProgressDefault as unknown as TeamProvisioningCancellationBoundaryPorts<TRun>['updateProgress']),
@@ -259,7 +270,8 @@ export function createTeamProvisioningCancellationBoundary<
       // lane AND any secondary lanes, otherwise cancelling mid-launch (state
       // 'spawning', after the primary lane came up) orphans the primary runtime
       // process.
-      ports.killTeamProcess(run.child);
+      let failedStop: PromiseRejectedResult | undefined;
+      let helperCleanupError: unknown = null;
       const trackedRunId = ports.getTrackedRunId(run.teamName);
       const provisioningRunId = ports.provisioningRunByTeam.get(run.teamName) ?? null;
       const aliveRunId = ports.aliveRunByTeam.get(run.teamName) ?? null;
@@ -270,7 +282,7 @@ export function createTeamProvisioningCancellationBoundary<
         aliveRunId,
         primaryRun?.runId ?? null,
       ].some((ownerRunId) => ownerRunId !== null && ownerRunId !== run.runId);
-      const stops: Promise<void>[] = [];
+      const stops: Promise<void>[] = [ports.killTeamProcessAndWait(run.child)];
       if (primaryRun?.providerId === 'opencode' && primaryRun.runId === run.runId) {
         stops.push(ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId));
       }
@@ -287,21 +299,40 @@ export function createTeamProvisioningCancellationBoundary<
           stops.push(ports.stopMixedSecondaryRuntimeLanes(run.teamName));
         }
       }
-      let failedStop: PromiseRejectedResult | undefined;
       if (stops.length > 0) {
         const stopResults = await Promise.allSettled(stops);
         failedStop = stopResults.find(
           (result): result is PromiseRejectedResult => result.status === 'rejected'
         );
       }
-      if (failedStop) {
-        throw failedStop.reason;
+      if (!failedStop) {
+        await (
+          ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
+          cleanupRunOwnedAnthropicApiKeyHelper(run)
+        ).catch((error: unknown) => {
+          helperCleanupError = error;
+          ports.logWarning(
+            `[${run.teamName}] Failed to clean Anthropic API-key helper after cancellation: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        });
       }
       try {
         const progress = ports.updateProgress(run, 'cancelled', 'Provisioning cancelled by user');
         run.onProgress(progress);
       } finally {
-        ports.cleanupRun(run);
+        if (!failedStop && !helperCleanupError) {
+          ports.cleanupRun(run);
+        }
+      }
+      if (failedStop) {
+        throw failedStop.reason;
+      }
+      if (helperCleanupError) {
+        throw helperCleanupError instanceof Error
+          ? helperCleanupError
+          : new Error('Failed to clean app-managed Anthropic authentication material');
       }
     },
 

@@ -128,6 +128,9 @@ export class MemberWorkSyncEventQueue {
   private readonly running = new Map<string, RunningItem>();
   private readonly activeKeys = new Set<string>();
   private readonly inFlight = new Set<Promise<void>>();
+  private readonly inFlightByTeam = new Map<string, Set<Promise<void>>>();
+  private readonly auditInFlightByTeam = new Map<string, Set<Promise<void>>>();
+  private readonly quiescedTeams = new Set<string>();
   private readonly quietWindowMs: number;
   private readonly concurrency: number;
   private readonly retryDelayMs: number;
@@ -185,7 +188,7 @@ export class MemberWorkSyncEventQueue {
     runAfterMs?: number;
     recovery?: MemberWorkSyncReconcileContext['recovery'];
   }): boolean {
-    if (this.stopped) {
+    if (this.stopped || this.quiescedTeams.has(input.teamName.trim())) {
       return false;
     }
 
@@ -285,6 +288,32 @@ export class MemberWorkSyncEventQueue {
     this.schedule();
   }
 
+  async quiesceTeam(teamName: string): Promise<void> {
+    const normalizedTeamName = teamName.trim();
+    if (!normalizedTeamName) return;
+
+    this.quiescedTeams.add(normalizedTeamName);
+    this.dropTeam(normalizedTeamName);
+    for (const running of this.running.values()) {
+      if (running.teamName === normalizedTeamName) {
+        running.rerunRequested = false;
+      }
+    }
+
+    while (true) {
+      const pending = [
+        ...(this.inFlightByTeam.get(normalizedTeamName) ?? []),
+        ...(this.auditInFlightByTeam.get(normalizedTeamName) ?? []),
+      ];
+      if (pending.length === 0) break;
+      await Promise.allSettled(pending);
+    }
+  }
+
+  resumeTeam(teamName: string): void {
+    this.quiescedTeams.delete(teamName.trim());
+  }
+
   getDiagnostics(): MemberWorkSyncQueueDiagnostics {
     const now = this.now();
     const queuedItems = [...this.items.values()]
@@ -380,6 +409,18 @@ export class MemberWorkSyncEventQueue {
       .sort((left, right) => left[1].runAt - right[1].runAt);
 
     for (const [key, item] of due) {
+      if (this.quiescedTeams.has(item.teamName)) {
+        this.items.delete(key);
+        this.counters.dropped += 1;
+        this.appendAudit({
+          teamName: item.teamName,
+          memberName: item.memberName,
+          event: 'queue_dropped',
+          source: 'event_queue',
+          reason: 'team_quiesced',
+        });
+        continue;
+      }
       if (this.activeKeys.size >= this.concurrency) {
         break;
       }
@@ -407,6 +448,23 @@ export class MemberWorkSyncEventQueue {
 
     let failed = false;
     let failure: unknown = null;
+    let resolveTeamCompletion!: () => void;
+    const teamCompletion = new Promise<void>((resolve) => {
+      resolveTeamCompletion = resolve;
+    });
+    this.addTrackedPromise(this.inFlightByTeam, item.teamName, teamCompletion);
+    void teamCompletion.finally(() => {
+      this.removeTrackedPromise(this.inFlightByTeam, item.teamName, teamCompletion);
+    });
+
+    const finishTrackedItem = (): void => {
+      try {
+        this.finishItem(key, item, running, failed);
+      } finally {
+        resolveTeamCompletion();
+      }
+    };
+
     const promise = this.executeItem(key, item, running)
       .catch((error: unknown) => {
         failed = true;
@@ -425,11 +483,11 @@ export class MemberWorkSyncEventQueue {
           this.activeKeys.delete(key);
           this.pump();
           void settlePromise.finally(() => {
-            this.finishItem(key, item, running, failed);
+            finishTrackedItem();
           });
           return;
         }
-        this.finishItem(key, item, running, failed);
+        finishTrackedItem();
       });
 
     this.inFlight.add(promise);
@@ -441,9 +499,10 @@ export class MemberWorkSyncEventQueue {
     }
     this.activeKeys.delete(key);
     this.running.delete(key);
-    if (running.rerunRequested && !this.stopped) {
+    const canAdmitFollowUp = !this.stopped && !this.quiescedTeams.has(item.teamName);
+    if (running.rerunRequested && canAdmitFollowUp) {
       this.enqueueFollowUp(item, running);
-    } else if (failed && !this.stopped) {
+    } else if (failed && canAdmitFollowUp) {
       this.enqueueRetryAfterFailure(key, item, running);
     }
     this.pump();
@@ -542,6 +601,7 @@ export class MemberWorkSyncEventQueue {
       {
         reconciledBy: 'queue',
         triggerReasons: [...running.triggerReasons].sort(),
+        isCancelled: () => this.quiescedTeams.has(item.teamName),
         ...(recovery ? { recovery } : {}),
       }
     );
@@ -596,7 +656,7 @@ export class MemberWorkSyncEventQueue {
     if (!this.deps.auditJournal) {
       return;
     }
-    void this.deps.auditJournal
+    const promise = this.deps.auditJournal
       .append({
         ...input,
         timestamp: this.nowIso(),
@@ -608,7 +668,32 @@ export class MemberWorkSyncEventQueue {
           event: input.event,
           error: String(error),
         });
+      })
+      .finally(() => {
+        this.removeTrackedPromise(this.auditInFlightByTeam, input.teamName, promise);
       });
+    this.addTrackedPromise(this.auditInFlightByTeam, input.teamName, promise);
+  }
+
+  private addTrackedPromise(
+    target: Map<string, Set<Promise<void>>>,
+    teamName: string,
+    promise: Promise<void>
+  ): void {
+    const teamPromises = target.get(teamName) ?? new Set<Promise<void>>();
+    teamPromises.add(promise);
+    target.set(teamName, teamPromises);
+  }
+
+  private removeTrackedPromise(
+    target: Map<string, Set<Promise<void>>>,
+    teamName: string,
+    promise: Promise<void>
+  ): void {
+    const teamPromises = target.get(teamName);
+    if (!teamPromises) return;
+    teamPromises.delete(promise);
+    if (teamPromises.size === 0) target.delete(teamName);
   }
 }
 

@@ -1,3 +1,6 @@
+import { access } from 'node:fs/promises';
+import path from 'node:path';
+
 import {
   MemberWorkSyncDiagnosticsReader,
   MemberWorkSyncMetricsReader,
@@ -8,6 +11,7 @@ import {
   type MemberWorkSyncReconcileContext,
   MemberWorkSyncReconciler,
   MemberWorkSyncReporter,
+  MemberWorkSyncTeamOperationGate,
   type RuntimeTurnSettledDrainSummary,
   RuntimeTurnSettledIngestor,
   type RuntimeTurnSettledTargetResolverPort,
@@ -40,6 +44,7 @@ import { MemberWorkSyncStorePaths } from '../infrastructure/MemberWorkSyncStoreP
 import { MemberWorkSyncToolActivityBusySignal } from '../infrastructure/MemberWorkSyncToolActivityBusySignal';
 import { NodeHashAdapter } from '../infrastructure/NodeHashAdapter';
 import { OpenCodeTurnSettledPayloadNormalizer } from '../infrastructure/OpenCodeTurnSettledPayloadNormalizer';
+import { QuiescingMemberWorkSyncAuditJournal } from '../infrastructure/QuiescingMemberWorkSyncAuditJournal';
 import { RuntimeTurnSettledDrainScheduler } from '../infrastructure/RuntimeTurnSettledDrainScheduler';
 import { RuntimeTurnSettledSpoolInitializer } from '../infrastructure/RuntimeTurnSettledSpoolInitializer';
 import { SqliteMemberWorkSyncStore } from '../infrastructure/SqliteMemberWorkSyncStore';
@@ -207,6 +212,9 @@ export interface MemberWorkSyncFeatureFacade {
   scheduleProofMissingRecovery(
     request: MemberWorkSyncProofMissingRecoveryScheduleRequest
   ): Promise<MemberWorkSyncProofMissingRecoveryScheduleResult>;
+  prepareTeamDeletion(teamName: string): Promise<void>;
+  completeTeamDeletion(teamName: string): void;
+  resumeTeam(teamName: string): void;
   noteTeamChange(event: TeamChangeEvent): void;
   enqueueStartupScan(teamNames: string[]): Promise<void>;
   replayPendingReports(teamNames: string[]): Promise<MemberWorkSyncPendingReportReplaySummary>;
@@ -289,6 +297,8 @@ export function createMemberWorkSyncFeature(deps: {
 }): MemberWorkSyncFeatureFacade {
   const clock = new SystemClockAdapter();
   const hash = new NodeHashAdapter();
+  const operationGate = new MemberWorkSyncTeamOperationGate();
+  const deletionStates = new Map<string, 'deleting' | 'deleted'>();
   const configReaderForReadOnlySync = {
     listTeams: () =>
       typeof deps.configReader.listTeams === 'function'
@@ -308,7 +318,9 @@ export function createMemberWorkSyncFeature(deps: {
     clock,
   });
   const storePaths = new MemberWorkSyncStorePaths(deps.teamsBasePath);
-  const auditJournal = new FileMemberWorkSyncAuditJournal(storePaths, deps.logger);
+  const auditJournal = new QuiescingMemberWorkSyncAuditJournal(
+    new FileMemberWorkSyncAuditJournal(storePaths, deps.logger)
+  );
   const jsonStore = new JsonMemberWorkSyncStore(storePaths, {
     auditJournal,
     logger: deps.logger,
@@ -725,15 +737,60 @@ export function createMemberWorkSyncFeature(deps: {
     return { scheduled: true, reason: 'scheduled', intentKey };
   };
 
+  const resumeTeam = (teamName: string): void => {
+    deletionStates.delete(teamName.trim());
+    operationGate.resumeTeam(teamName);
+    auditJournal.resumeTeam(teamName);
+    router.resumeTeam(teamName);
+    void router.enqueueStartupScan([teamName]);
+  };
+
   return {
-    getStatus: readStatusWithStaleRefresh,
-    refreshStatus: (request) => reconciler.execute(request, { reconciledBy: 'request' }),
-    getMetrics: (request) => metricsReader.execute(request),
-    report: (request) => reporter.execute(request),
-    scheduleProofMissingRecovery,
+    getStatus: (request) =>
+      operationGate.run(request.teamName, () => readStatusWithStaleRefresh(request)),
+    refreshStatus: (request) =>
+      operationGate.run(request.teamName, () =>
+        reconciler.execute(request, { reconciledBy: 'request' })
+      ),
+    getMetrics: (request) =>
+      operationGate.run(request.teamName, () => metricsReader.execute(request)),
+    report: (request) => operationGate.run(request.teamName, () => reporter.execute(request)),
+    scheduleProofMissingRecovery: (request) =>
+      operationGate.run(request.teamName, () => scheduleProofMissingRecovery(request)),
+    prepareTeamDeletion: async (teamName) => {
+      deletionStates.set(teamName.trim(), 'deleting');
+      operationGate.beginTeamQuiesce(teamName);
+      auditJournal.beginTeamQuiesce(teamName);
+      const routerQuiesce = router.quiesceTeam(teamName);
+      await operationGate.awaitTeamIdle(teamName);
+      await routerQuiesce;
+      await auditJournal.awaitTeamIdle(teamName);
+      if (store instanceof BackendSelectingMemberWorkSyncStore) {
+        await store.purgeTeam(teamName);
+      }
+      await auditJournal.awaitTeamIdle(teamName);
+    },
+    completeTeamDeletion: (teamName) => {
+      deletionStates.set(teamName.trim(), 'deleted');
+    },
+    resumeTeam,
     noteTeamChange: (event) => {
       toolActivityBusySignal.noteTeamChange(event);
       router.noteTeamChange(event);
+      const teamName = event.teamName.trim();
+      if (
+        event.type === 'config' &&
+        event.detail === 'config.json' &&
+        deletionStates.get(teamName) === 'deleted'
+      ) {
+        void access(path.join(deps.teamsBasePath, teamName, 'config.json'))
+          .then(() => {
+            if (deletionStates.get(teamName) === 'deleted') {
+              resumeTeam(teamName);
+            }
+          })
+          .catch(() => undefined);
+      }
     },
     enqueueStartupScan: (teamNames) => router.enqueueStartupScan(teamNames),
     replayPendingReports: async (teamNames) => {

@@ -56,6 +56,7 @@ import {
 } from './TeamProvisioningMemberStatusProjection';
 import {
   isExplicitLegacyOpenCodeBootstrap,
+  isMaterializedOpenCodeSessionId,
   OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
@@ -852,7 +853,6 @@ export async function buildTeamAgentRuntimeSnapshot(
     TeamProvisioningRuntimeSnapshotBuildCacheWritePort<TeamAgentRuntimeSnapshot> &
     RuntimeSnapshotLogging
 ): Promise<TeamAgentRuntimeSnapshot> {
-  const updatedAt = nowIso();
   const run = params.runId ? (params.runs.get(params.runId) ?? null) : null;
   const runtimeAdapterRun = params.runtimeAdapterRunByTeam.get(params.teamName);
   const activeRuntimeRunId = resolveActiveRuntimeRunId(run, params.runId, runtimeAdapterRun);
@@ -885,8 +885,8 @@ export async function buildTeamAgentRuntimeSnapshot(
   const canUseSpawnStatusEvidence =
     spawnStatusSnapshot != null &&
     (activeRuntimeRunId.length === 0 || spawnStatusRunId === activeRuntimeRunId);
-  const canUseLiveSpawnStatusRuntimeTruth =
-    spawnStatusSnapshot?.source === 'live' &&
+  const canUseCurrentSpawnStatusRuntimeTruth =
+    (spawnStatusSnapshot?.source === 'live' || spawnStatusSnapshot?.source === 'merged') &&
     activeRuntimeRunId.length > 0 &&
     spawnStatusRunId === activeRuntimeRunId;
   const runtimeRootOwnersByPid = new Map<number, Set<string>>();
@@ -974,6 +974,10 @@ export async function buildTeamAgentRuntimeSnapshot(
       }`
     );
   }
+  // Status/runtime reads can publish evidence while this snapshot is being built.
+  // Timestamp the projection after those asynchronous reads so fresh evidence is
+  // never rejected as future-dated merely because it is newer than function entry.
+  const updatedAt = nowIso();
   const persistedRuntimeMembers = params.readPersistedRuntimeMembers(params.teamName);
   const snapshotMembers: Record<string, TeamAgentRuntimeEntry> = {};
   const activeResourceHistoryKeys = new Set<string>();
@@ -1308,14 +1312,26 @@ export async function buildTeamAgentRuntimeSnapshot(
         spawnStatusMember,
         runtimeAdapterEvidence
       );
+    const hasVerifiedCurrentSecondaryRuntimeCandidate =
+      runtimeAdapterEvidenceResolution.owner === 'secondary' &&
+      liveRuntimeMember?.livenessKind === 'runtime_process_candidate' &&
+      liveRuntimeMember.pidSource === 'opencode_bridge' &&
+      typeof liveRuntimeMember.metricsPid === 'number' &&
+      liveRuntimeMember.metricsPid > 0 &&
+      isMaterializedOpenCodeSessionId(liveRuntimeMember.runtimeSessionId);
+    const hasConfirmedCurrentSecondaryRuntimeCandidate =
+      hasVerifiedCurrentSecondaryRuntimeCandidate &&
+      canUseCurrentSpawnStatusRuntimeTruth &&
+      spawnStatusBootstrapEvidence.bootstrapConfirmed;
     const currentOwnershipAllowsRuntimeBootstrapConfirmation =
       runtimeAdapterEvidenceResolution.owner !== 'secondary' ||
-      (liveRuntimeMember?.alive === true && isStrongRuntimeEvidence(liveRuntimeMember));
+      (liveRuntimeMember?.alive === true && isStrongRuntimeEvidence(liveRuntimeMember)) ||
+      hasConfirmedCurrentSecondaryRuntimeCandidate;
     const confirmedOpenCodeRuntimeAlive =
       isOpenCodeMember &&
       !permissionBlocked &&
       currentOwnershipAllowsRuntimeBootstrapConfirmation &&
-      canUseLiveSpawnStatusRuntimeTruth &&
+      canUseCurrentSpawnStatusRuntimeTruth &&
       (spawnStatusBootstrapEvidence.bootstrapConfirmed ||
         launchBootstrapEvidence.bootstrapConfirmed) &&
       hasOpenCodeRuntimeHandle &&

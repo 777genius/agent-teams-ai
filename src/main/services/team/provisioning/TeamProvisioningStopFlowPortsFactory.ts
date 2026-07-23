@@ -5,6 +5,7 @@ import {
   stopMixedSecondaryRuntimeLanes,
   stopOpenCodeRuntimeAdapterTeam,
 } from './TeamProvisioningOpenCodeRuntimeStopFlow';
+import { killTeamProcessAndWait as killTeamProcessAndWaitDefault } from './TeamProvisioningRunProgress';
 import {
   stopTeamFlow,
   type TeamProvisioningStopRun,
@@ -53,6 +54,7 @@ export interface TeamProvisioningStopFlowFactoryDeps<TRun extends TeamProvisioni
   withTeamLock: TeamProvisioningStopTeamPorts<TRun>['withTeamLock'];
   hasSecondaryRuntimeRuns: TeamProvisioningStopTeamPorts<TRun>['hasSecondaryRuntimeRuns'];
   killTeamProcess: TeamProvisioningStopTeamPorts<TRun>['killTeamProcess'];
+  killTeamProcessAndWait: TeamProvisioningStopTeamPorts<TRun>['killTeamProcessAndWait'];
   updateProgress: TeamProvisioningStopTeamPorts<TRun>['updateProgress'];
   cleanupRun: TeamProvisioningStopTeamPorts<TRun>['cleanupRun'];
   emitTeamChange: OpenCodeRuntimeStopFlowPorts['emitTeamChange'];
@@ -118,6 +120,7 @@ export interface TeamProvisioningStopFlowServiceHostOptions<TRun extends TeamPro
   getTeamsBasePath: TeamProvisioningStopFlowFactoryDeps<TRun>['getTeamsBasePath'];
   clearOpenCodeRuntimeLaneStorage: TeamProvisioningStopFlowFactoryDeps<TRun>['clearOpenCodeRuntimeLaneStorage'];
   killTeamProcess: TeamProvisioningStopFlowFactoryDeps<TRun>['killTeamProcess'];
+  killTeamProcessAndWait?: TeamProvisioningStopFlowFactoryDeps<TRun>['killTeamProcessAndWait'];
   updateProgress: TeamProvisioningStopFlowFactoryDeps<TRun>['updateProgress'];
   logger: TeamProvisioningStopFlowFactoryDeps<TRun>['logger'];
   nowIso: TeamProvisioningStopFlowFactoryDeps<TRun>['nowIso'];
@@ -164,6 +167,9 @@ export function createTeamProvisioningStopFlowDepsFromService<TRun extends TeamP
     withTeamLock: (teamName, fn) => service.withTeamLock(teamName, fn),
     hasSecondaryRuntimeRuns: (teamName) => service.hasSecondaryRuntimeRuns(teamName),
     killTeamProcess: (child) => options.killTeamProcess(child),
+    killTeamProcessAndWait:
+      options.killTeamProcessAndWait ??
+      (killTeamProcessAndWaitDefault as TeamProvisioningStopFlowFactoryDeps<TRun>['killTeamProcessAndWait']),
     updateProgress: (run, state, message) => options.updateProgress(run, state, message),
     cleanupRun: (run) => service.cleanupRun(run),
     emitTeamChange: (event) => service.teamChangeEmitter?.(event),
@@ -242,6 +248,7 @@ export function createTeamProvisioningStopTeamPortsFromDeps<TRun extends TeamPro
     provisioningRunByTeam: deps.provisioningRunByTeam,
     deleteAliveRunId: (teamName) => deps.deleteAliveRunId(teamName),
     killTeamProcess: (child) => deps.killTeamProcess(child),
+    killTeamProcessAndWait: (child) => deps.killTeamProcessAndWait(child),
     updateProgress: (run, state, message) => deps.updateProgress(run, state, message),
     cleanupRun: (run) => deps.cleanupRun(run),
     logger: deps.logger,

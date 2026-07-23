@@ -1,5 +1,10 @@
+import fs from 'fs';
 import { describe, expect, it, vi } from 'vitest';
 
+import {
+  createAnthropicApiKeyHelperCleanupRetryOwner,
+  createAnthropicApiKeyHelperSetupLease,
+} from '../TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   type DeterministicCreateRunFlowRun,
   runDeterministicCreateRunFlow,
@@ -45,7 +50,20 @@ const progress: TeamProvisioningProgress = {
   updatedAt: '2026-07-03T00:00:00.000Z',
 };
 
+const dynamicAnthropicHelper = {
+  teamName: 'demo',
+  directory: '/fixtures/demo/run-1',
+  helperPath: '/fixtures/demo/run-1/helper.sh',
+  keyPath: '/fixtures/demo/run-1/key',
+  settingsPath: '/fixtures/demo/run-1/settings.json',
+  settingsObject: { apiKeyHelper: '/fixtures/demo/run-1/helper.sh' },
+  settingsArgs: ['--settings', '/fixtures/demo/run-1/settings.json'],
+  envPatch: {},
+};
+
 function createSetup(): DeterministicCreateSetupFlowResult<TestLane> {
+  const anthropicApiKeyHelperLease = createAnthropicApiKeyHelperSetupLease();
+  anthropicApiKeyHelperLease.coalesce(dynamicAnthropicHelper);
   return {
     teamsBasePathsToProbe: [{ location: 'configured', basePath: '/teams' }],
     claudePath: '/bin/claude',
@@ -78,6 +96,7 @@ function createSetup(): DeterministicCreateSetupFlowResult<TestLane> {
       workspaces: [],
     },
     largeTeamWarning: null,
+    anthropicApiKeyHelperLease,
   };
 }
 
@@ -97,6 +116,8 @@ function createTestRun(onProgress: (progress: TeamProvisioningProgress) => void)
     provisioningComplete: false,
     finalizingByTimeout: false,
     cancelRequested: false,
+    anthropicApiKeyHelper: null,
+    anthropicApiKeyHelperCleanupPromise: null,
     bootstrapSpecPath: null,
     bootstrapUserPromptPath: null,
     mcpConfigPath: null,
@@ -129,83 +150,94 @@ function createSpawnPorts(order: string[]): DeterministicCreateSpawnFlowPorts<Te
 }
 
 describe('TeamProvisioningCreateDeterministicRunFlow', () => {
-  it('registers and prepares the run before clearing launch state and spawning', async () => {
-    const order: string[] = [];
-    const onProgress = vi.fn();
-    const setup = createSetup();
-    const spawnPorts = createSpawnPorts(order);
-    const spawnFlow = vi.fn(async (input) => {
-      order.push('spawn-flow');
-      expect(input.run.launchStateClearedForRun).toBe(true);
-      expect(input.ports).toBe(spawnPorts);
-      expect(input.stopAllGenerationAtStart).toBe(3);
-      expect(input.providerArgsForLaunch).toBe(setup.providerArgsForLaunch);
-      return { runId: input.runId };
-    });
+  it.each(['codex', 'gemini'] as const)(
+    'retains a dynamically prepared Anthropic helper on a successful %s run',
+    async (providerId) => {
+      const order: string[] = [];
+      const onProgress = vi.fn();
+      const setup = createSetup();
+      const providerRequest: TeamCreateRequest = {
+        ...request,
+        providerId,
+        providerBackendId: providerId === 'codex' ? 'codex-native' : undefined,
+        model: providerId === 'codex' ? 'gpt-5' : 'gemini-2.5-pro',
+      };
+      const spawnPorts = createSpawnPorts(order);
+      const spawnFlow = vi.fn(async (input) => {
+        order.push('spawn-flow');
+        expect(input.run.launchStateClearedForRun).toBe(true);
+        expect(input.run.anthropicApiKeyHelper).toBe(dynamicAnthropicHelper);
+        expect(input.ports).toBe(spawnPorts);
+        expect(input.stopAllGenerationAtStart).toBe(3);
+        expect(input.providerArgsForLaunch).toBe(setup.providerArgsForLaunch);
+        return { runId: input.runId };
+      });
 
-    const result = await runDeterministicCreateRunFlow({
-      request,
-      onProgress,
-      createSetup: setup,
-      runId: 'run-1',
-      startedAt: '2026-07-03T00:00:00.000Z',
-      stopAllGenerationAtStart: 3,
-      disallowedTools: 'TeamDelete',
-      logger: { info: vi.fn() },
-      spawnPorts,
-      ports: {
-        createInitialMemberSpawnStatusEntry: vi.fn(
-          (): MemberSpawnStatusEntry => ({
-            status: 'waiting',
-            launchState: 'starting',
-            updatedAt: '2026-07-03T00:00:00.000Z',
-          })
-        ),
-        createProvisioningRun: vi.fn((input) => {
-          order.push('create-run');
-          expect(input.runId).toBe('run-1');
-          expect(input.startedAt).toBe('2026-07-03T00:00:00.000Z');
-          expect(input.mixedSecondaryLanes).toBe(setup.mixedSecondaryLanes);
-          return createTestRun(input.onProgress);
-        }),
-        resetTeamScopedTransientStateForNewRun: vi.fn(() => order.push('reset-transient')),
-        registerRun: vi.fn(() => order.push('register-run')),
-        setProvisioningRunByTeam: vi.fn(() => order.push('set-team-run')),
-        initializeProvisioningTrace: vi.fn(() => order.push('initialize-trace')),
-        prepareWorkspaceTrustForDeterministicRun: vi.fn(async (input) => {
-          order.push('workspace-trust');
-          expect(input.mode).toBe('create');
-          expect(input.claudePath).toBe('/bin/claude');
-          expect(input.shellEnv).toBe(setup.shellEnv);
-          expect(input.stopAllGenerationAtStart).toBe(3);
-        }),
-        emitProvisioningCheckpoint: vi.fn((run, message) => {
-          order.push(`checkpoint:${message}`);
-          expect(run.runId).toBe('run-1');
-        }),
-        clearPersistedLaunchState: vi.fn(async (teamName, options) => {
-          order.push('clear-launch-state');
-          expect(teamName).toBe('demo');
-          expect(options).toEqual({ expectedRunId: 'run-1' });
-        }),
-        runDeterministicCreateSpawnFlow: spawnFlow,
-      },
-    });
+      const result = await runDeterministicCreateRunFlow({
+        request: providerRequest,
+        onProgress,
+        createSetup: setup,
+        runId: 'run-1',
+        startedAt: '2026-07-03T00:00:00.000Z',
+        stopAllGenerationAtStart: 3,
+        disallowedTools: 'TeamDelete',
+        logger: { info: vi.fn() },
+        spawnPorts,
+        ports: {
+          anthropicApiKeyHelperCleanupRetryOwner: createAnthropicApiKeyHelperCleanupRetryOwner(),
+          createInitialMemberSpawnStatusEntry: vi.fn(
+            (): MemberSpawnStatusEntry => ({
+              status: 'waiting',
+              launchState: 'starting',
+              updatedAt: '2026-07-03T00:00:00.000Z',
+            })
+          ),
+          createProvisioningRun: vi.fn((input) => {
+            order.push('create-run');
+            expect(input.runId).toBe('run-1');
+            expect(input.startedAt).toBe('2026-07-03T00:00:00.000Z');
+            expect(input.mixedSecondaryLanes).toBe(setup.mixedSecondaryLanes);
+            return createTestRun(input.onProgress);
+          }),
+          resetTeamScopedTransientStateForNewRun: vi.fn(() => order.push('reset-transient')),
+          registerRun: vi.fn(() => order.push('register-run')),
+          setProvisioningRunByTeam: vi.fn(() => order.push('set-team-run')),
+          initializeProvisioningTrace: vi.fn(() => order.push('initialize-trace')),
+          prepareWorkspaceTrustForDeterministicRun: vi.fn(async (input) => {
+            order.push('workspace-trust');
+            expect(input.mode).toBe('create');
+            expect(input.claudePath).toBe('/bin/claude');
+            expect(input.shellEnv).toBe(setup.shellEnv);
+            expect(input.stopAllGenerationAtStart).toBe(3);
+          }),
+          emitProvisioningCheckpoint: vi.fn((run, message) => {
+            order.push(`checkpoint:${message}`);
+            expect(run.runId).toBe('run-1');
+          }),
+          clearPersistedLaunchState: vi.fn(async (teamName, options) => {
+            order.push('clear-launch-state');
+            expect(teamName).toBe('demo');
+            expect(options).toEqual({ expectedRunId: 'run-1' });
+          }),
+          runDeterministicCreateSpawnFlow: spawnFlow,
+        },
+      });
 
-    expect(result).toEqual({ runId: 'run-1' });
-    expect(onProgress).toHaveBeenCalledWith(progress);
-    expect(order).toEqual([
-      'create-run',
-      'reset-transient',
-      'register-run',
-      'set-team-run',
-      'initialize-trace',
-      'workspace-trust',
-      'checkpoint:Clearing persisted launch state',
-      'clear-launch-state',
-      'spawn-flow',
-    ]);
-  });
+      expect(result).toEqual({ runId: 'run-1' });
+      expect(onProgress).toHaveBeenCalledWith(progress);
+      expect(order).toEqual([
+        'create-run',
+        'reset-transient',
+        'register-run',
+        'set-team-run',
+        'initialize-trace',
+        'workspace-trust',
+        'checkpoint:Clearing persisted launch state',
+        'clear-launch-state',
+        'spawn-flow',
+      ]);
+    }
+  );
 
   it('passes cleanup and unregister hooks through the spawn-flow ports', async () => {
     const order: string[] = [];
@@ -224,6 +256,7 @@ describe('TeamProvisioningCreateDeterministicRunFlow', () => {
       logger: { info: vi.fn() },
       spawnPorts,
       ports: {
+        anthropicApiKeyHelperCleanupRetryOwner: createAnthropicApiKeyHelperCleanupRetryOwner(),
         createInitialMemberSpawnStatusEntry: vi.fn(
           (): MemberSpawnStatusEntry => ({
             status: 'waiting',
@@ -251,5 +284,59 @@ describe('TeamProvisioningCreateDeterministicRunFlow', () => {
 
     expect(capturedRunId).toBe('run-1');
     expect(order).toEqual(['cleanup-run', 'remove-member-mcp', 'unregister-run']);
+  });
+
+  it('retains an explicit retry owner when transfer cleanup fails before registration', async () => {
+    const setup = createSetup();
+    const retryOwner = createAnthropicApiKeyHelperCleanupRetryOwner();
+    const cleanupError = Object.assign(new Error('helper cleanup busy'), { code: 'EACCES' });
+    const readDirectory = vi.spyOn(fs.promises, 'readdir').mockRejectedValueOnce(cleanupError);
+    let createdRun!: TestRun;
+
+    await expect(
+      runDeterministicCreateRunFlow({
+        request,
+        onProgress: vi.fn(),
+        createSetup: setup,
+        runId: 'run-transfer-failure',
+        startedAt: '2026-07-03T00:00:00.000Z',
+        stopAllGenerationAtStart: 3,
+        disallowedTools: 'TeamDelete',
+        logger: { info: vi.fn() },
+        spawnPorts: createSpawnPorts([]),
+        ports: {
+          anthropicApiKeyHelperCleanupRetryOwner: retryOwner,
+          createInitialMemberSpawnStatusEntry: vi.fn(
+            (): MemberSpawnStatusEntry => ({
+              status: 'waiting',
+              launchState: 'starting',
+              updatedAt: '2026-07-03T00:00:00.000Z',
+            })
+          ),
+          createProvisioningRun: vi.fn((input) => {
+            createdRun = createTestRun(input.onProgress);
+            return createdRun;
+          }),
+          resetTeamScopedTransientStateForNewRun: vi.fn(() => {
+            throw new Error('pre-registration failure');
+          }),
+          registerRun: vi.fn(),
+          setProvisioningRunByTeam: vi.fn(),
+          initializeProvisioningTrace: vi.fn(),
+          prepareWorkspaceTrustForDeterministicRun: vi.fn(async () => undefined),
+          emitProvisioningCheckpoint: vi.fn(),
+          clearPersistedLaunchState: vi.fn(async () => undefined),
+          runDeterministicCreateSpawnFlow: vi.fn(),
+        },
+      })
+    ).rejects.toThrow('pre-registration failure');
+
+    expect(createdRun.anthropicApiKeyHelper).toBe(dynamicAnthropicHelper);
+    expect(retryOwner.getPendingOwnerCount()).toBe(1);
+
+    readDirectory.mockRestore();
+    await retryOwner.retryPendingForTeam('demo');
+    expect(retryOwner.getPendingOwnerCount()).toBe(0);
+    expect(createdRun.anthropicApiKeyHelper).toBeNull();
   });
 });

@@ -12,6 +12,7 @@ export * from './MemberWorkSyncReporter';
 export * from './MemberWorkSyncRuntimeActivity';
 export * from './MemberWorkSyncRuntimeStallDiagnostics';
 export * from './MemberWorkSyncTargetedRecoveryPolicy';
+export * from './MemberWorkSyncTeamOperationGate';
 export type * from './ports';
 export * from './RuntimeTurnSettledIngestor';
 export type * from './RuntimeTurnSettledPorts';

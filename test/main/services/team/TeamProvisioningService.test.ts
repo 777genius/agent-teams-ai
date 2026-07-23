@@ -137,6 +137,12 @@ vi.mock('@main/utils/childProcess', () => ({
   }),
   spawnCli: vi.fn(),
   killProcessTree: vi.fn(),
+  killProcessTreeAndWait: vi.fn(
+    (child: { emit?: (...args: unknown[]) => unknown } | null | undefined) => {
+      child?.emit?.('close', null, 'SIGKILL');
+      return Promise.resolve();
+    }
+  ),
 }));
 
 vi.mock('@main/utils/processKill', () => ({
@@ -970,7 +976,12 @@ function createOpenCodeRuntimeDeliveryBoundaryForTest(
     readLaunchState: async () => null,
     readLaunchStateForDeliveryRecovery: async () => null,
     writeLaunchState: async () => {},
-    readConfigForStrictDecision: async () => null,
+    readConfigForStrictDecision: (teamName) =>
+      Promise.resolve({
+        name: teamName,
+        projectPath: tempClaudeRoot,
+        members: [{ name: 'alice' }, { name: 'bob' }],
+      }),
     readMetaMembers: async () => [],
     readPersistedRuntimeMembers: () => [],
     getTrackedRun: () => null,

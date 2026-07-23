@@ -58,7 +58,7 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(ports.logger.warn).not.toHaveBeenCalled();
   });
 
-  it('logs and swallows Anthropic helper cleanup failures', async () => {
+  it('logs and propagates Anthropic helper cleanup failures to the stop caller', async () => {
     const ports = createPorts({
       cleanupAnthropicTeamApiKeyHelperForTeam: vi.fn(async () => {
         throw new Error('permission denied');
@@ -66,7 +66,9 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     });
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
 
-    await cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a');
+    await expect(
+      cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a')
+    ).rejects.toThrow('permission denied');
 
     expect(ports.logger.warn).toHaveBeenCalledWith(
       '[team-a] Failed to cleanup Anthropic team API-key helper material: permission denied'

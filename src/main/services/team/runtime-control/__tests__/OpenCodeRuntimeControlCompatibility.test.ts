@@ -180,7 +180,13 @@ function createBoundaryPorts(
     resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'run-1'),
     readLaunchState: vi.fn(async () => null),
     writeLaunchState: vi.fn(async () => undefined),
-    readConfigForStrictDecision: vi.fn(async () => null),
+    readConfigForStrictDecision: vi.fn((teamName) =>
+      Promise.resolve({
+        name: teamName,
+        projectPath: '/test/project',
+        members: [{ name: 'Builder' }],
+      })
+    ),
     readMetaMembers: vi.fn(async () => []),
     readPersistedRuntimeMembers: vi.fn(() => []),
     getTrackedRun: vi.fn(() => null),

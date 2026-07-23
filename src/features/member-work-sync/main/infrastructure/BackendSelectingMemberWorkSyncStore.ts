@@ -83,6 +83,23 @@ export class BackendSelectingMemberWorkSyncStore
       : null;
   }
 
+  async purgeTeam(teamName: string): Promise<void> {
+    if (!this.options) return;
+    await this.replicaMutex.run(teamName, async () => {
+      const emptySnapshot: MemberWorkSyncStoreSnapshot = {
+        statuses: [],
+        reportIntents: [],
+        outboxItems: [],
+        metricEvents: [],
+        filesToArchive: [],
+      };
+      await this.options!.gateway.importTeam(teamName, snapshotToRecords(teamName, emptySnapshot));
+      await this.replica?.writeClean(teamName, emptySnapshot);
+      this.sqlitePreparedTeams.delete(teamName);
+      this.jsonHydratedTeams.delete(teamName);
+    });
+  }
+
   private async run<T>(
     teamName: string,
     mutation: boolean,
