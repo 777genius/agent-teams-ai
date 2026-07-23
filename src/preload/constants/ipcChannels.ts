@@ -227,6 +227,12 @@ export const APP_RELAUNCH = 'app:relaunch';
 export const TEAM_LIST = 'team:list';
 
 export {
+  TEAM_CREATE_CONFIG,
+  TEAM_DELETE_DRAFT,
+  TEAM_GET_SAVED_REQUEST,
+  TEAM_UPDATE_CONFIG,
+} from '@features/team-configuration/contracts';
+export {
   TEAM_GET_DATA,
   TEAM_GET_MEMBER_ACTIVITY_META,
   TEAM_GET_MESSAGES_PAGE,
@@ -299,9 +305,6 @@ export const TEAM_PERMANENTLY_DELETE = 'team:permanentlyDeleteTeam';
 export const TEAM_ALIVE_LIST = 'team:aliveList';
 export const TEAM_STOP = 'team:stop';
 
-/** Create team config without provisioning CLI */
-export const TEAM_CREATE_CONFIG = 'team:createConfig';
-
 /** Get member subagent logs */
 export const TEAM_GET_MEMBER_LOGS = 'team:getMemberLogs';
 
@@ -316,9 +319,6 @@ export {
   TEAM_GET_TASK_LOG_STREAM,
   TEAM_GET_TASK_LOG_STREAM_SUMMARY,
 } from '@features/task-log-observability/contracts';
-
-/** Update team config (name, description) */
-export const TEAM_UPDATE_CONFIG = 'team:updateConfig';
 
 /** Get aggregated member stats */
 export const TEAM_GET_MEMBER_STATS = 'team:getMemberStats';
@@ -417,9 +417,6 @@ export {
 
 /** Validate custom CLI args against `claude --help` output */
 export const TEAM_VALIDATE_CLI_ARGS = 'team:validateCliArgs';
-
-export const TEAM_GET_SAVED_REQUEST = 'team:getSavedRequest';
-export const TEAM_DELETE_DRAFT = 'team:deleteDraft';
 
 // =============================================================================
 // Cross-Team Communication Channels
