@@ -51,6 +51,7 @@ import {
   extractFakePrompt,
   FakeAppServerFactory,
 } from "../app-server/testing/fake-app-server";
+import { CodexAppServerTurnError } from "../app-server/application/app-server-client";
 import {
   RecordingJsonEngine,
   RecordingManagedRunStore,
@@ -63,6 +64,29 @@ import {
 } from "./codex-provider-test-support";
 
 describe("Codex provider app-server adapter", () => {
+  it("preserves the turn cause and typed diagnostics through timeout classification", () => {
+    const cause = new Error("node_process_runner_timeout:50000");
+    const error = new CodexAppServerTurnError({
+      cause,
+      phase: "turn_start_rejected",
+      turnNumber: 2,
+      elapsedMs: 50_000,
+    });
+
+    expect(error.cause).toBe(cause);
+    expect(classifyCodexFailure(error)).toMatchObject({
+      code: "task_timeout",
+      retryable: true,
+      details: {
+        phase: "turn_start_rejected",
+        turnNumber: "2",
+        outputObserved: "false",
+        outputCharCount: "0",
+        elapsedMs: "50000",
+      },
+    });
+  });
+
   it("runs first-class Codex goal mode through the app-server protocol", async () => {
     const workspace = await mkdtemp(join(tmpdir(), "codex-app-goal-test-"));
     const fakeFactory = new FakeAppServerFactory();
@@ -96,7 +120,8 @@ describe("Codex provider app-server adapter", () => {
 
       expect(result).toMatchObject({
         status: "completed",
-        outputText: "app-server output:finish the benchmark goal with full instructions",
+        outputText:
+          "app-server output:finish the benchmark goal with full instructions",
       });
       expect(fakeFactory.requests.map((request) => request.method)).toEqual(
         expect.arrayContaining([
@@ -143,7 +168,9 @@ describe("Codex provider app-server adapter", () => {
   });
 
   it("can disable native app-server environments in goal mode without clearing dynamic tools", async () => {
-    const workspace = await mkdtemp(join(tmpdir(), "codex-app-goal-native-tools-test-"));
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-goal-native-tools-test-"),
+    );
     const fakeFactory = new FakeAppServerFactory();
     const driver = new CodexJsonAgentDriver({
       engine: new CodexAppServerExecutionEngine({
@@ -194,7 +221,9 @@ describe("Codex provider app-server adapter", () => {
   });
 
   it("reports overlong app-server goal objectives before goal set", async () => {
-    const workspace = await mkdtemp(join(tmpdir(), "codex-app-goal-objective-test-"));
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-goal-objective-test-"),
+    );
     const fakeFactory = new FakeAppServerFactory();
     const driver = new CodexJsonAgentDriver({
       engine: new CodexAppServerExecutionEngine({
@@ -234,9 +263,9 @@ describe("Codex provider app-server adapter", () => {
           },
         },
       });
-      expect(fakeFactory.requests.map((request) => request.method)).not.toContain(
-        "thread/goal/set",
-      );
+      expect(
+        fakeFactory.requests.map((request) => request.method),
+      ).not.toContain("thread/goal/set");
     } finally {
       await driver.dispose();
       await rm(workspace, { recursive: true, force: true });
@@ -290,6 +319,253 @@ describe("Codex provider app-server adapter", () => {
           (request) => request.method === "thread/goal/get",
         ),
       ).toHaveLength(2);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a synchronous turn/start rejection with bounded turn diagnostics", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-goal-turn-rejected-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      onRequest: (request) => {
+        if (request.method !== "turn/start") return;
+        fakeFactory.processes[0]?.stdout.emit(
+          "data",
+          `${JSON.stringify({
+            id: request.id,
+            error: { message: "fake turn start rejection" },
+          })}\n`,
+        );
+      },
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        goalMode: true,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "observe start rejection",
+          controls: { editMode: "allow-edits" },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          details: {
+            phase: "turn_start_rejected",
+            turnNumber: "1",
+            outputObserved: "false",
+            outputCharCount: "0",
+            elapsedMs: expect.any(String),
+            rawCause: expect.stringContaining(
+              '"phase":"turn_start_rejected","turnNumber":1,"outputObserved":false,"outputCharCount":0,"elapsedMs":',
+            ),
+          },
+        },
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("reports an accepted turn error before output without content metadata", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-goal-turn-before-output-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      emitTopLevelErrorOnTurn: "fake accepted turn failure",
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        goalMode: true,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "observe failure before output",
+          controls: { editMode: "allow-edits" },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          details: {
+            phase: "turn_error_before_output",
+            turnNumber: "1",
+            outputObserved: "false",
+            outputCharCount: "0",
+            elapsedMs: expect.any(String),
+            rawCause: expect.stringContaining(
+              '"phase":"turn_error_before_output","turnNumber":1,"outputObserved":false,"outputCharCount":0,"elapsedMs":',
+            ),
+          },
+        },
+      });
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("reports an accepted turn error after output by count without raw output", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-goal-turn-after-output-test-"),
+    );
+    const partialOutput = "private partial provider output";
+    const fakeFactory = new FakeAppServerFactory({
+      onRequest: (request) => {
+        if (request.method !== "turn/start") return;
+        setTimeout(() => {
+          const process = fakeFactory.processes[0];
+          process?.stdout.emit(
+            "data",
+            [
+              JSON.stringify({
+                method: "item/agentMessage/delta",
+                params: { turnId: "turn-1", delta: partialOutput },
+              }),
+              JSON.stringify({
+                method: "error",
+                params: {
+                  turnId: "turn-1",
+                  error: "fake failure after output",
+                },
+              }),
+            ].join("\n") + "\n",
+          );
+        }, 0);
+      },
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        goalMode: true,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "observe failure after output",
+          controls: { editMode: "allow-edits" },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          details: {
+            phase: "turn_error_after_output",
+            turnNumber: "1",
+            outputObserved: "true",
+            outputCharCount: String(partialOutput.length),
+            elapsedMs: expect.any(String),
+            rawCause: expect.stringContaining(
+              `"phase":"turn_error_after_output","turnNumber":1,"outputObserved":true,"outputCharCount":${partialOutput.length},"elapsedMs":`,
+            ),
+          },
+        },
+      });
+      expect(JSON.stringify(result)).not.toContain(partialOutput);
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("reports the exact goal turn number when a later turn fails", async () => {
+    const workspace = await mkdtemp(
+      join(tmpdir(), "codex-app-goal-second-turn-error-test-"),
+    );
+    const fakeFactory = new FakeAppServerFactory({
+      goalStatusesAfterTurns: ["active"],
+      emitTopLevelErrorsOnTurns: [null, "fake second turn failure"],
+    });
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        cleanThreadPrewarm: false,
+        goalMode: true,
+        maxGoalTurns: 2,
+      }),
+      model: "gpt-test",
+      reasoningEffort: "low",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: {
+          kind: "structured-prompt",
+          prompt: "continue into a failing second turn",
+          controls: { editMode: "allow-edits" },
+        },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          details: {
+            phase: "turn_error_before_output",
+            turnNumber: "2",
+            outputObserved: "false",
+            outputCharCount: "0",
+            elapsedMs: expect.any(String),
+            rawCause: expect.stringContaining(
+              '"phase":"turn_error_before_output","turnNumber":2,"outputObserved":false,"outputCharCount":0,"elapsedMs":',
+            ),
+          },
+        },
+      });
+      expect(fakeFactory.prompts).toHaveLength(2);
     } finally {
       await driver.dispose();
       await rm(workspace, { recursive: true, force: true });
@@ -421,8 +697,11 @@ describe("Codex provider app-server adapter", () => {
         "finish after missing context",
         expect.stringContaining("Use project alpha."),
       ]);
-      expect(fakeFactory.requests.filter((request) => request.method === "thread/start"))
-        .toHaveLength(1);
+      expect(
+        fakeFactory.requests.filter(
+          (request) => request.method === "thread/start",
+        ),
+      ).toHaveLength(1);
     } finally {
       await driver.dispose();
       await rm(workspace, { recursive: true, force: true });
@@ -484,11 +763,31 @@ describe("Codex provider app-server adapter", () => {
 
       expect(failed).toMatchObject({
         status: "failed",
-        failure: { code: "unknown_runtime_failure" },
+        failure: {
+          code: "unknown_runtime_failure",
+          details: {
+            phase: "turn_error_before_output",
+            turnNumber: "1",
+            outputObserved: "false",
+            outputCharCount: "0",
+            elapsedMs: expect.any(String),
+          },
+        },
       });
-      await expect(runStore.get({ runId: waiting.runId })).resolves.toMatchObject({
+      await expect(
+        runStore.get({ runId: waiting.runId }),
+      ).resolves.toMatchObject({
         status: "failed",
-        failure: { code: "unknown_runtime_failure" },
+        failure: {
+          code: "unknown_runtime_failure",
+          details: {
+            phase: "turn_error_before_output",
+            turnNumber: "1",
+            outputObserved: "false",
+            outputCharCount: "0",
+            elapsedMs: expect.any(String),
+          },
+        },
       });
 
       const retry = await driver.resumeManagedRun({

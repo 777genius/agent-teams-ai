@@ -9,9 +9,7 @@ import type {
   CodexSandboxMode,
   CodexServiceTier,
 } from "../../codex-json-execution-engine";
-import {
-  controlRequestTimeoutMs,
-} from "../domain/app-server-errors";
+import { controlRequestTimeoutMs } from "../domain/app-server-errors";
 import {
   buildGoalResumePrompt,
   goalInputRequest,
@@ -29,6 +27,7 @@ import {
   usageField,
 } from "../domain/app-server-usage";
 import type { CodexAppServerClient } from "./app-server-client";
+import { turnFailureError } from "./app-server-client";
 import {
   assertManagedRunCanResume,
   managedRunFailureFromError,
@@ -152,12 +151,27 @@ export class AppServerGoalRunner {
     let outputText = "";
     let turnUsage: AgentUsage | undefined;
     let goalUsage: AgentUsage | undefined;
-    for (let turnNumber = 1; turnNumber <= input.maxGoalTurns; turnNumber += 1) {
-      const turn = await this.options.client.startTurn({
-        ...input,
-        goalMode: true,
-        prompt: turnNumber === 1 ? input.firstPrompt : input.goalContinuePrompt,
-      });
+    for (
+      let turnNumber = 1;
+      turnNumber <= input.maxGoalTurns;
+      turnNumber += 1
+    ) {
+      const startedAt = Date.now();
+      const turn = await this.options.client
+        .startTurn({
+          ...input,
+          goalMode: true,
+          turnNumber,
+          prompt:
+            turnNumber === 1 ? input.firstPrompt : input.goalContinuePrompt,
+        })
+        .catch((error: unknown) => {
+          throw turnFailureError(error, {
+            phase: "turn_start_rejected",
+            turnNumber,
+            elapsedMs: Date.now() - startedAt,
+          });
+        });
       if (turn.error) throw turn.error;
       outputText = turn.outputText;
       turnUsage = mergeAgentUsage(turnUsage, turn.usage);

@@ -29,7 +29,10 @@ import {
   type CodexThreadGoal,
   type CodexThreadGoalStatus,
 } from "../domain/app-server-types";
-import { mergeAgentUsage, readUsageFromRecords } from "../domain/app-server-usage";
+import {
+  mergeAgentUsage,
+  readUsageFromRecords,
+} from "../domain/app-server-usage";
 import { safeMessage, throwIfAborted } from "../domain/app-server-errors";
 import { isCodexAppServerReconnectProgressMessage } from "../protocol/app-server-event-parser";
 import { readGoal } from "../protocol/app-server-goal-protocol";
@@ -59,6 +62,59 @@ export type AppServerTurnResult = {
   readonly completed: boolean;
   readonly error: Error | null;
 };
+
+export type AppServerTurnFailurePhase =
+  | "turn_start_rejected"
+  | "turn_error_before_output"
+  | "turn_error_after_output";
+
+export type AppServerTurnFailureDetails = {
+  readonly phase: AppServerTurnFailurePhase;
+  readonly turnNumber: number;
+  readonly outputObserved: boolean;
+  readonly outputCharCount: number;
+  readonly elapsedMs: number;
+};
+
+export class CodexAppServerTurnError extends Error {
+  readonly code = "codex_app_server_turn_error" as const;
+  readonly failureDetails: AppServerTurnFailureDetails;
+
+  constructor(input: {
+    readonly cause: unknown;
+    readonly phase: AppServerTurnFailurePhase;
+    readonly turnNumber: number | undefined;
+    readonly outputText?: string;
+    readonly elapsedMs: number;
+  }) {
+    const outputCharCount = boundedTurnMetric(input.outputText?.length ?? 0);
+    const failureDetails: AppServerTurnFailureDetails = {
+      phase: input.phase,
+      turnNumber: boundedTurnNumber(input.turnNumber),
+      outputObserved: outputCharCount > 0,
+      outputCharCount,
+      elapsedMs: boundedTurnMetric(input.elapsedMs),
+    };
+    super(
+      `codex_app_server_turn_error:${safeMessage(input.cause)}:details=${JSON.stringify(
+        failureDetails,
+      )}`,
+      { cause: input.cause },
+    );
+    this.name = "CodexAppServerTurnError";
+    this.failureDetails = failureDetails;
+  }
+
+  details(): Readonly<Record<string, string>> {
+    return {
+      phase: this.failureDetails.phase,
+      turnNumber: String(this.failureDetails.turnNumber),
+      outputObserved: String(this.failureDetails.outputObserved),
+      outputCharCount: String(this.failureDetails.outputCharCount),
+      elapsedMs: String(this.failureDetails.elapsedMs),
+    };
+  }
+}
 
 type TurnState = {
   outputText: string;
@@ -260,7 +316,9 @@ export class CodexAppServerClient {
             ? {}
             : { service_tier: input.serviceTier }),
           approval_policy:
-            this.options.commandApprovalPolicy === undefined ? "never" : "on-request",
+            this.options.commandApprovalPolicy === undefined
+              ? "never"
+              : "on-request",
           sandbox_mode: threadPolicy.sandboxMode,
           web_search: "disabled",
           features,
@@ -286,10 +344,10 @@ export class CodexAppServerClient {
               experimentalRawEvents: false,
             }
           : disableNativeEnvironments
-          ? {
-              environments: [],
-            }
-          : {}),
+            ? {
+                environments: [],
+              }
+            : {}),
       },
       input,
     );
@@ -325,7 +383,10 @@ export class CodexAppServerClient {
     const availableModels = await this.readAvailableModels(input).catch(
       () => null,
     );
-    if (availableModels === null || hasCodexModel(availableModels, input.requestedModel)) {
+    if (
+      availableModels === null ||
+      hasCodexModel(availableModels, input.requestedModel)
+    ) {
       return null;
     }
     return new CodexModelUnavailableError({
@@ -353,7 +414,8 @@ export class CodexAppServerClient {
       if (!page) return null;
       entries.push(...page.data);
       if (entries.length > 500) return null;
-      if (page.nextCursor === null) return entries.length === 0 ? null : entries;
+      if (page.nextCursor === null)
+        return entries.length === 0 ? null : entries;
       if (seenCursors.has(page.nextCursor)) return null;
       seenCursors.add(page.nextCursor);
       cursor = page.nextCursor;
@@ -368,9 +430,13 @@ export class CodexAppServerClient {
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
   }): Promise<CodexThreadGoal> {
-    const objectiveLimitError = appServerGoalObjectiveLimitError(input.objective);
+    const objectiveLimitError = appServerGoalObjectiveLimitError(
+      input.objective,
+    );
     if (objectiveLimitError) {
-      throw new Error(`codex_app_server_goal_set_failed:${objectiveLimitError}`);
+      throw new Error(
+        `codex_app_server_goal_set_failed:${objectiveLimitError}`,
+      );
     }
     const response = await this.send(
       "thread/goal/set",
@@ -425,47 +491,88 @@ export class CodexAppServerClient {
     readonly timeoutMs: number;
     readonly abortSignal: AbortSignal;
     readonly goalMode?: boolean;
+    readonly turnNumber?: number;
   }): Promise<AppServerTurnResult> {
+    const startedAt = Date.now();
     const disableTools = this.disableAllTools(input.goalMode);
-    const disableNativeEnvironments = this.disableNativeEnvironments(input.goalMode);
-    const response = await this.send(
-      "turn/start",
-      {
-        threadId: input.threadId,
-        input: [
-          {
-            type: "text",
-            text: input.prompt,
-            text_elements: [],
-          },
-        ],
-        responsesapiClientMetadata: null,
-        additionalContext: null,
-        ...(disableTools || disableNativeEnvironments ? { environments: [] } : {}),
-        cwd: null,
-        runtimeWorkspaceRoots: null,
-        approvalPolicy: this.approvalPolicyForThread(),
-        approvalsReviewer: null,
-        sandboxPolicy: this.sandboxPolicyFor(input),
-        model: input.model,
-        serviceTier: input.serviceTier ?? null,
-        effort: input.reasoningEffort,
-        summary: "none",
-        personality: null,
-        outputSchema: input.outputSchema ?? null,
-        collaborationMode: null,
-      },
-      input,
+    const disableNativeEnvironments = this.disableNativeEnvironments(
+      input.goalMode,
     );
+    let response: CodexAppServerJsonRpcResponse;
+    try {
+      response = await this.send(
+        "turn/start",
+        {
+          threadId: input.threadId,
+          input: [
+            {
+              type: "text",
+              text: input.prompt,
+              text_elements: [],
+            },
+          ],
+          responsesapiClientMetadata: null,
+          additionalContext: null,
+          ...(disableTools || disableNativeEnvironments
+            ? { environments: [] }
+            : {}),
+          cwd: null,
+          runtimeWorkspaceRoots: null,
+          approvalPolicy: this.approvalPolicyForThread(),
+          approvalsReviewer: null,
+          sandboxPolicy: this.sandboxPolicyFor(input),
+          model: input.model,
+          serviceTier: input.serviceTier ?? null,
+          effort: input.reasoningEffort,
+          summary: "none",
+          personality: null,
+          outputSchema: input.outputSchema ?? null,
+          collaborationMode: null,
+        },
+        input,
+      );
+    } catch (error) {
+      throw turnFailureError(error, {
+        phase: "turn_start_rejected",
+        turnNumber: input.turnNumber,
+        elapsedMs: Date.now() - startedAt,
+      });
+    }
     if (response.error) {
-      throw new Error(
-        `codex_app_server_turn_start_failed:${response.error.message ?? "unknown"}`,
+      throw turnFailureError(
+        new Error(
+          `codex_app_server_turn_start_failed:${response.error.message ?? "unknown"}`,
+        ),
+        {
+          phase: "turn_start_rejected",
+          turnNumber: input.turnNumber,
+          elapsedMs: Date.now() - startedAt,
+        },
       );
     }
 
     const turnId = nestedString(response.result, ["turn", "id"]);
-    if (!turnId) throw new Error("codex_app_server_turn_id_missing");
-    return this.waitForTurn(turnId, input);
+    if (!turnId) {
+      throw turnFailureError(new Error("codex_app_server_turn_id_missing"), {
+        phase: "turn_start_rejected",
+        turnNumber: input.turnNumber,
+        elapsedMs: Date.now() - startedAt,
+      });
+    }
+    const turn = await this.waitForTurn(turnId, input);
+    if (!turn.error) return turn;
+    return {
+      ...turn,
+      error: turnFailureError(turn.error, {
+        phase:
+          turn.outputText.length > 0
+            ? "turn_error_after_output"
+            : "turn_error_before_output",
+        turnNumber: input.turnNumber,
+        outputText: turn.outputText,
+        elapsedMs: Date.now() - startedAt,
+      }),
+    };
   }
 
   private send(
@@ -540,8 +647,10 @@ export class CodexAppServerClient {
   }
 
   private disableNativeEnvironments(goalMode: boolean | undefined): boolean {
-    return this.options.nativeToolSurface === "disabled" &&
-      (goalMode === true || !this.disableAllTools(goalMode));
+    return (
+      this.options.nativeToolSurface === "disabled" &&
+      (goalMode === true || !this.disableAllTools(goalMode))
+    );
   }
 
   private sandboxPolicyFor(input: {
@@ -866,7 +975,10 @@ export class CodexAppServerClient {
     return decision;
   }
 
-  private respondServerRequest(id: number, result: Record<string, unknown>): void {
+  private respondServerRequest(
+    id: number,
+    result: Record<string, unknown>,
+  ): void {
     try {
       this.child?.stdin.write(encodeJsonRpcMessage({ id, result }));
     } catch (error) {
@@ -986,4 +1098,30 @@ function createTurnState(): TurnState {
     waiters: [],
     reconnectGraceTimer: null,
   };
+}
+
+export function turnFailureError(
+  error: unknown,
+  input: {
+    readonly phase: AppServerTurnFailurePhase;
+    readonly turnNumber: number | undefined;
+    readonly outputText?: string;
+    readonly elapsedMs: number;
+  },
+): CodexAppServerTurnError {
+  if (error instanceof CodexAppServerTurnError) return error;
+  return new CodexAppServerTurnError({
+    cause: error,
+    ...input,
+  });
+}
+
+function boundedTurnNumber(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) return 1;
+  return Math.max(1, Math.min(10_000, Math.trunc(value)));
+}
+
+function boundedTurnMetric(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.trunc(value)));
 }

@@ -30,6 +30,21 @@ import type {
   WorkspaceSnapshotter,
 } from "../ports/safe-execution-ports";
 
+export type SafeExecutionControlContinuationResult<Job> =
+  | {
+      readonly job: Job;
+      readonly originalPrompt: string;
+      readonly replaceContinuationContext?: never;
+    }
+  | {
+      readonly job: Job;
+      readonly originalPrompt?: never;
+      readonly replaceContinuationContext: {
+        readonly originalPrompt: string;
+        readonly resetPreviousOutputSummary: true;
+      };
+    };
+
 export type SafeExecutionRunInput<Job, Result> = {
   readonly taskId: TaskRunId;
   readonly workspace: WorkspaceStrategy;
@@ -52,11 +67,7 @@ export type SafeExecutionRunInput<Job, Result> = {
     readonly attemptNumber: number;
     readonly previousFailureReason?: AttemptFailureReason;
     readonly previousFailureDetails?: Readonly<Record<string, string>>;
-  }) => {
-    readonly job: Job;
-    readonly originalPrompt: string;
-    readonly replaceContinuationOriginalPrompt?: boolean;
-  };
+  }) => SafeExecutionControlContinuationResult<Job>;
   readonly attemptMetadata?: (input: {
     readonly result?: Result;
     readonly error?: unknown;

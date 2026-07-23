@@ -177,7 +177,12 @@ describe("SafeExecutionRunner startup guidance", () => {
     const taskId = "task-replacement-guidance";
     const target = { jobId: taskId, workspaceId: workspacePath };
     const originalPrompt = "Original wording rejected by the provider.";
-    const run = (pool: { run(job: PromptJob): Promise<PromptResult> }) =>
+    const staleOutputSummary =
+      "Stale provider output that belongs to the rejected context.";
+    const run = (
+      pool: { run(job: PromptJob): Promise<PromptResult> },
+      maxAttempts = 1,
+    ) =>
       new SafeExecutionRunner({
         snapshotter: new DefaultWorkspaceSnapshotter(),
         workspaceAccess: new NodeSafeExecutionWorkspaceAccess(),
@@ -209,11 +214,13 @@ describe("SafeExecutionRunner startup guidance", () => {
           const prompt = controlBatch.message ?? "";
           return {
             job: { ...job, prompt, goalObjective: prompt },
-            originalPrompt: prompt,
-            replaceContinuationOriginalPrompt: true,
+            replaceContinuationContext: {
+              originalPrompt: prompt,
+              resetPreviousOutputSummary: true,
+            },
           };
         },
-        policy: { maxAttempts: 1 },
+        policy: { maxAttempts },
       });
 
     const failed = await run({
@@ -232,36 +239,74 @@ describe("SafeExecutionRunner startup guidance", () => {
       },
     });
     expect(failed.status).toBe("failed");
+    await journal.completeTask({
+      taskId,
+      result: { output: staleOutputSummary },
+      outputSummary: staleOutputSummary,
+      now: new Date("2026-07-23T00:00:00.000Z"),
+    });
+    await journal.markPartial({
+      taskId,
+      status: "failed",
+      reason: "unknown_error",
+      message: "Provider rejected the input.",
+      details: {
+        code: "unknown_runtime_failure",
+        rawCause:
+          "codex_app_server_error:This content was flagged for possible cybersecurity risk.",
+      },
+      now: new Date("2026-07-23T00:01:00.000Z"),
+    });
 
     await control.enqueueSignal({
       target,
       intent: "guidance",
       body: "Review the local application correctness invariants.",
     });
-    const completed = await run({
-      async run(job) {
-        expect(job.prompt).toContain(
-          "Review the local application correctness invariants.",
-        );
-        expect(job.prompt).not.toContain(originalPrompt);
-        expect(
-          job.prompt.split(
+    let replacementAttempts = 0;
+    const completed = await run(
+      {
+        async run(job) {
+          replacementAttempts += 1;
+          expect(job.prompt).toContain(
             "Review the local application correctness invariants.",
-          ),
-        ).toHaveLength(2);
-        expect(job.goalObjective).toContain(
-          "Review the local application correctness invariants.",
-        );
-        expect(job.goalObjective).not.toContain(originalPrompt);
-        expect(
-          job.goalObjective?.split(
+          );
+          expect(job.prompt).not.toContain(originalPrompt);
+          expect(job.prompt).not.toContain(staleOutputSummary);
+          expect(
+            job.prompt.split(
+              "Review the local application correctness invariants.",
+            ),
+          ).toHaveLength(2);
+          expect(job.goalObjective).toContain(
             "Review the local application correctness invariants.",
-          ),
-        ).toHaveLength(2);
-        return { output: "formal accept" };
+          );
+          expect(job.goalObjective).not.toContain(originalPrompt);
+          expect(job.goalObjective).not.toContain(staleOutputSummary);
+          expect(
+            job.goalObjective?.split(
+              "Review the local application correctness invariants.",
+            ),
+          ).toHaveLength(2);
+          if (replacementAttempts === 1) {
+            throw new SubscriptionWorkerError(
+              "subscription_worker_run_failed",
+              "Retry replacement context.",
+              {
+                details: {
+                  code: "unknown_runtime_failure",
+                  rawCause: "ordinary_unknown_runtime_failure",
+                },
+              },
+            );
+          }
+          return { output: "formal accept" };
+        },
       },
-    });
+      2,
+    );
     expect(completed.status).toBe("completed");
+    expect(replacementAttempts).toBe(2);
   });
 
   it("preserves ordinary failed-task guidance across a resumed retry", async () => {
@@ -306,6 +351,7 @@ describe("SafeExecutionRunner startup guidance", () => {
               );
             }
             expect(job.prompt.split(guidance)).toHaveLength(2);
+            expect(job.prompt).toContain("Preserve this prior output summary.");
             if (runs === 2) {
               throw new SubscriptionWorkerError(
                 "subscription_worker_run_failed",
@@ -332,6 +378,23 @@ describe("SafeExecutionRunner startup guidance", () => {
 
     const failed = await run(1);
     expect(failed.status).toBe("failed");
+    await journal.completeTask({
+      taskId,
+      result: { output: "Preserve this prior output summary." },
+      outputSummary: "Preserve this prior output summary.",
+      now: new Date("2026-07-23T00:02:00.000Z"),
+    });
+    await journal.markPartial({
+      taskId,
+      status: "failed",
+      reason: "unknown_error",
+      message: "Provider runtime failed.",
+      details: {
+        code: "unknown_runtime_failure",
+        rawCause: "ordinary_unknown_runtime_failure",
+      },
+      now: new Date("2026-07-23T00:03:00.000Z"),
+    });
     await control.enqueueSignal({
       target,
       intent: "guidance",

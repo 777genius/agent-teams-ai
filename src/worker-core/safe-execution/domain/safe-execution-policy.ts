@@ -1,9 +1,7 @@
 import { isSubscriptionWorkerError } from "../../errors";
 
 export type TaskEffectMode =
-  | "read_only"
-  | "workspace_patch"
-  | "external_side_effects";
+  "read_only" | "workspace_patch" | "external_side_effects";
 
 export type ContinuationMode = "packet_first" | "disabled";
 
@@ -109,8 +107,7 @@ export function normalizeSafeExecutionPolicy(input: {
     retryOnAccountUnavailable: policy.retryOnAccountUnavailable ?? true,
     retryOnReconnectRequired: policy.retryOnReconnectRequired ?? true,
     retryUnknownCleanWorkspace: policy.retryUnknownCleanWorkspace ?? true,
-    retryUnknownChangedWorkspace:
-      policy.retryUnknownChangedWorkspace ?? false,
+    retryUnknownChangedWorkspace: policy.retryUnknownChangedWorkspace ?? false,
     maxAttempts: Math.max(1, policy.maxAttempts ?? 1),
     continuationMode:
       input.continuationMode ?? policy.continuationMode ?? "packet_first",
@@ -166,15 +163,14 @@ export function shouldContinueSafeExecutionAfterFailure(input: {
               : false,
           ...(input.classification.reason !== "unknown_error"
             ? {
-                safeMessage:
-                  `Safe execution stopped after ${input.classification.reason} changed the workspace.`,
+                safeMessage: `Safe execution stopped after ${input.classification.reason} changed the workspace.`,
               }
             : input.policy.retryUnknownChangedWorkspace
-            ? {}
-            : {
-                safeMessage:
-                  "Safe execution stopped after an unknown error changed the workspace.",
-              }),
+              ? {}
+              : {
+                  safeMessage:
+                    "Safe execution stopped after an unknown error changed the workspace.",
+                }),
         };
       }
       return {
@@ -405,7 +401,9 @@ export function withFailureDetails(
   details: Readonly<Record<string, string>> | undefined,
 ): SafeExecutionFailureClassification {
   const merged = mergeFailureDetails(classification.details, details);
-  return merged === undefined ? classification : { ...classification, details: merged };
+  return merged === undefined
+    ? classification
+    : { ...classification, details: merged };
 }
 
 export function prefixFailureDetails(
@@ -423,9 +421,7 @@ export function safeExecutionDetailTail(value: string): string {
   return compact.length > 1000 ? compact.slice(-1000) : compact;
 }
 
-function isRuntimeInterruptReason(
-  value: unknown,
-): value is {
+function isRuntimeInterruptReason(value: unknown): value is {
   readonly code: "runtime_controlled_interrupt";
   readonly safeMessage: string;
   readonly signalId?: string;
@@ -459,6 +455,7 @@ function classifyWorkerFailureCode(
         reason: "quota_limited",
         safeMessage,
         retryable: true,
+        ...optionalFailureDetails(details),
       };
     case "provider_reconnect_required":
     case "needs_reconnect":
@@ -466,12 +463,14 @@ function classifyWorkerFailureCode(
         reason: "reconnect_required",
         safeMessage,
         retryable: true,
+        ...optionalFailureDetails(details),
       };
     case "provider_session_invalid":
       return {
         reason: "account_unavailable",
         safeMessage,
         retryable: true,
+        ...optionalFailureDetails(details),
       };
     case "backend_unavailable":
       return {
@@ -485,12 +484,14 @@ function classifyWorkerFailureCode(
         reason: "permission_required",
         safeMessage,
         retryable: false,
+        ...optionalFailureDetails(details),
       };
     case "task_cancelled":
       return {
         reason: "user_abort",
         safeMessage,
         retryable: false,
+        ...optionalFailureDetails(details),
       };
     case "runtime_interrupted":
       return {
@@ -511,12 +512,14 @@ function classifyWorkerFailureCode(
         reason: "task_timeout",
         safeMessage,
         retryable: true,
+        ...optionalFailureDetails(details),
       };
     case "provider_output_invalid":
       return {
         reason: "provider_output_invalid",
         safeMessage,
         retryable: true,
+        ...optionalFailureDetails(details),
       };
     case "model_unavailable":
       return {
@@ -591,7 +594,10 @@ function processFailureDetails(
       readonly stdout?: unknown;
       readonly stderr?: unknown;
     };
-    if (typeof record.exitCode === "number" && Number.isInteger(record.exitCode)) {
+    if (
+      typeof record.exitCode === "number" &&
+      Number.isInteger(record.exitCode)
+    ) {
       details.exitCode = String(record.exitCode);
     }
     if (typeof record.stderr === "string" && record.stderr.trim()) {

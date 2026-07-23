@@ -31,14 +31,16 @@ describe("safe execution policy decisions", () => {
       continuationMode: "packet_first",
     });
 
-    expect(normalizeSafeExecutionPolicy({
-      continuationMode: "disabled",
-      policy: {
-        continuationMode: "packet_first",
-        maxAttempts: 0,
-        retryUnknownChangedWorkspace: true,
-      },
-    })).toMatchObject({
+    expect(
+      normalizeSafeExecutionPolicy({
+        continuationMode: "disabled",
+        policy: {
+          continuationMode: "packet_first",
+          maxAttempts: 0,
+          retryUnknownChangedWorkspace: true,
+        },
+      }),
+    ).toMatchObject({
       continuationMode: "disabled",
       maxAttempts: 1,
       retryUnknownChangedWorkspace: true,
@@ -48,63 +50,74 @@ describe("safe execution policy decisions", () => {
   it("preserves stopped retry safe messages for policy denials", () => {
     const policy = normalizeSafeExecutionPolicy({ policy: { maxAttempts: 2 } });
 
-    expect(shouldContinueSafeExecutionAfterFailure({
-      classification: unknownFailure,
-      policy,
-      effectMode: "workspace_patch",
-      workspaceChanged: false,
-      attemptsRemaining: false,
-    })).toEqual({
+    expect(
+      shouldContinueSafeExecutionAfterFailure({
+        classification: unknownFailure,
+        policy,
+        effectMode: "workspace_patch",
+        workspaceChanged: false,
+        attemptsRemaining: false,
+      }),
+    ).toEqual({
       allowed: false,
       safeMessage: "Safe execution has no attempts remaining.",
     });
 
-    expect(shouldContinueSafeExecutionAfterFailure({
-      classification: unknownFailure,
-      policy: normalizeSafeExecutionPolicy({
-        policy: { continuationMode: "disabled", maxAttempts: 2 },
+    expect(
+      shouldContinueSafeExecutionAfterFailure({
+        classification: unknownFailure,
+        policy: normalizeSafeExecutionPolicy({
+          policy: { continuationMode: "disabled", maxAttempts: 2 },
+        }),
+        effectMode: "workspace_patch",
+        workspaceChanged: false,
+        attemptsRemaining: true,
       }),
-      effectMode: "workspace_patch",
-      workspaceChanged: false,
-      attemptsRemaining: true,
-    })).toEqual({
+    ).toEqual({
       allowed: false,
       safeMessage: "Safe execution continuation is disabled.",
     });
 
-    expect(shouldContinueSafeExecutionAfterFailure({
-      classification: unknownFailure,
-      policy,
-      effectMode: "external_side_effects",
-      workspaceChanged: false,
-      attemptsRemaining: true,
-    })).toEqual({
+    expect(
+      shouldContinueSafeExecutionAfterFailure({
+        classification: unknownFailure,
+        policy,
+        effectMode: "external_side_effects",
+        workspaceChanged: false,
+        attemptsRemaining: true,
+      }),
+    ).toEqual({
       allowed: false,
       safeMessage: "Safe execution will not retry external side effects.",
     });
 
-    expect(shouldContinueSafeExecutionAfterFailure({
-      classification: unknownFailure,
-      policy,
-      effectMode: "workspace_patch",
-      workspaceChanged: true,
-      attemptsRemaining: true,
-    })).toEqual({
+    expect(
+      shouldContinueSafeExecutionAfterFailure({
+        classification: unknownFailure,
+        policy,
+        effectMode: "workspace_patch",
+        workspaceChanged: true,
+        attemptsRemaining: true,
+      }),
+    ).toEqual({
       allowed: false,
-      safeMessage: "Safe execution stopped after an unknown error changed the workspace.",
+      safeMessage:
+        "Safe execution stopped after an unknown error changed the workspace.",
     });
 
-    expect(shouldContinueSafeExecutionAfterFailure({
-      classification: {
-        reason: "provider_output_invalid",
-        safeMessage: "Provider output invalid.",
-        retryable: true,
-      },
-      policy,
-      effectMode: "workspace_patch",
-      workspaceChanged: true,
-      attemptsRemaining: true,
-    })).toEqual({
+    expect(
+      shouldContinueSafeExecutionAfterFailure({
+        classification: {
+          reason: "provider_output_invalid",
+          safeMessage: "Provider output invalid.",
+          retryable: true,
+        },
+        policy,
+        effectMode: "workspace_patch",
+        workspaceChanged: true,
+        attemptsRemaining: true,
+      }),
+    ).toEqual({
       allowed: false,
       safeMessage:
         "Safe execution stopped after provider_output_invalid changed the workspace.",
@@ -115,10 +128,12 @@ describe("safe execution policy decisions", () => {
     expect(safeExecutionWaitingStatusForFailure("capacity_unavailable")).toBe(
       "waiting_capacity",
     );
-    expect(safeExecutionWaitingStatusForBlockedFailure({
-      reason: "capacity_unavailable",
-      workspaceChanged: true,
-    })).toBeNull();
+    expect(
+      safeExecutionWaitingStatusForBlockedFailure({
+        reason: "capacity_unavailable",
+        workspaceChanged: true,
+      }),
+    ).toBeNull();
     expect(safeExecutionFinalStatusForFailure("user_abort")).toBe("aborted");
     expect(safeExecutionFinalStatusForFailure("provider_output_invalid")).toBe(
       "failed",
@@ -126,19 +141,25 @@ describe("safe execution policy decisions", () => {
     expect(safeExecutionFinalStatusForFailure("model_unavailable")).toBe(
       "failed",
     );
-    expect(safeExecutionWaitingStatusForFailure("model_unavailable")).toBeNull();
+    expect(
+      safeExecutionWaitingStatusForFailure("model_unavailable"),
+    ).toBeNull();
     expect(safeExecutionFinalStatusForFailure("quota_limited")).toBe("partial");
   });
 
   it("delivers guidance while rotating an unavailable account", () => {
-    expect(shouldDeliverSafeExecutionControlForContinuation("unknown_error"))
-      .toBe(true);
-    expect(shouldDeliverSafeExecutionControlForContinuation("account_unavailable"))
-      .toBe(true);
-    expect(shouldDeliverSafeExecutionControlForContinuation("model_unavailable"))
-      .toBe(false);
-    expect(shouldDeliverSafeExecutionControlForContinuation("reconnect_required"))
-      .toBe(false);
+    expect(
+      shouldDeliverSafeExecutionControlForContinuation("unknown_error"),
+    ).toBe(true);
+    expect(
+      shouldDeliverSafeExecutionControlForContinuation("account_unavailable"),
+    ).toBe(true);
+    expect(
+      shouldDeliverSafeExecutionControlForContinuation("model_unavailable"),
+    ).toBe(false);
+    expect(
+      shouldDeliverSafeExecutionControlForContinuation("reconnect_required"),
+    ).toBe(false);
   });
 
   it("replaces dead-owner workspace locks and keeps live or ownerless locks", () => {
@@ -146,34 +167,42 @@ describe("safe execution policy decisions", () => {
     const beforeStale = new Date("2026-01-01T00:00:09.000Z");
     const afterStale = new Date("2026-01-01T00:00:11.000Z");
 
-    expect(shouldReplaceSafeExecutionWorkspaceLock({
-      acquiredAt,
-      now: beforeStale,
-      ownerPid: 123,
-      ownerProcessAlive: false,
-    })).toBe(true);
+    expect(
+      shouldReplaceSafeExecutionWorkspaceLock({
+        acquiredAt,
+        now: beforeStale,
+        ownerPid: 123,
+        ownerProcessAlive: false,
+      }),
+    ).toBe(true);
 
-    expect(shouldReplaceSafeExecutionWorkspaceLock({
-      acquiredAt,
-      now: afterStale,
-      ownerPid: 123,
-      ownerProcessAlive: true,
-      staleLockMs: 10_000,
-    })).toBe(false);
+    expect(
+      shouldReplaceSafeExecutionWorkspaceLock({
+        acquiredAt,
+        now: afterStale,
+        ownerPid: 123,
+        ownerProcessAlive: true,
+        staleLockMs: 10_000,
+      }),
+    ).toBe(false);
 
-    expect(shouldReplaceSafeExecutionWorkspaceLock({
-      acquiredAt,
-      now: beforeStale,
-      ownerPid: 123,
-      ownerProcessAlive: false,
-      staleLockMs: 10_000,
-    })).toBe(true);
+    expect(
+      shouldReplaceSafeExecutionWorkspaceLock({
+        acquiredAt,
+        now: beforeStale,
+        ownerPid: 123,
+        ownerProcessAlive: false,
+        staleLockMs: 10_000,
+      }),
+    ).toBe(true);
 
-    expect(shouldReplaceSafeExecutionWorkspaceLock({
-      acquiredAt,
-      now: afterStale,
-      staleLockMs: 10_000,
-    })).toBe(false);
+    expect(
+      shouldReplaceSafeExecutionWorkspaceLock({
+        acquiredAt,
+        now: afterStale,
+        staleLockMs: 10_000,
+      }),
+    ).toBe(false);
   });
 
   it("classifies backend and auth failures with stable safe messages", () => {
@@ -198,10 +227,11 @@ describe("safe execution policy decisions", () => {
       { details: { code: "provider_session_invalid" } },
     );
 
-    expect(defaultSafeExecutionErrorClassifier(authFailure)).toEqual({
+    expect(defaultSafeExecutionErrorClassifier(authFailure)).toMatchObject({
       reason: "account_unavailable",
       safeMessage: "Provider auth failed.",
       retryable: true,
+      details: { code: "provider_session_invalid" },
     });
 
     const modelFailure = new SubscriptionWorkerError(
@@ -222,4 +252,41 @@ describe("safe execution policy decisions", () => {
       details: { availableModels: "gpt-5.6-sol,gpt-5.5" },
     });
   });
+
+  it.each([
+    ["quota_limited", "quota_limited"],
+    ["needs_reconnect", "reconnect_required"],
+    ["provider_session_invalid", "account_unavailable"],
+    ["permission_required", "permission_required"],
+    ["task_cancelled", "user_abort"],
+    ["task_timeout", "task_timeout"],
+    ["provider_output_invalid", "provider_output_invalid"],
+  ] as const)(
+    "preserves typed provider details for %s journal classification",
+    (code, reason) => {
+      const failure = new SubscriptionWorkerError(
+        "subscription_worker_run_failed",
+        "Provider failed.",
+        {
+          details: {
+            reason: code,
+            phase: "turn_error_before_output",
+            turnNumber: "3",
+            outputObserved: "false",
+            outputCharCount: "0",
+          },
+        },
+      );
+
+      expect(defaultSafeExecutionErrorClassifier(failure)).toMatchObject({
+        reason,
+        details: {
+          phase: "turn_error_before_output",
+          turnNumber: "3",
+          outputObserved: "false",
+          outputCharCount: "0",
+        },
+      });
+    },
+  );
 });

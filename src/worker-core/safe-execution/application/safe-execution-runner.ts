@@ -276,6 +276,11 @@ export class SafeExecutionRunner {
           "Safe execution cannot deliver pending startup guidance without a control continuation job factory.",
         );
       }
+      const replacementContinuationContext =
+        controlledStartup?.replaceContinuationContext;
+      const controlledStartupOriginalPrompt =
+        replacementContinuationContext?.originalPrompt ??
+        controlledStartup?.originalPrompt;
       if (task.status === "completed") {
         if (!hasStartupControl) {
           return {
@@ -302,13 +307,14 @@ export class SafeExecutionRunner {
         task.lastFailureReason &&
         policy.continuationMode !== "disabled"
       ) {
-        const replaceContinuationOriginalPrompt =
-          controlledStartup?.replaceContinuationOriginalPrompt === true;
-        const continuationOriginalPrompt = replaceContinuationOriginalPrompt
-          ? controlledStartup.originalPrompt
+        if (replacementContinuationContext?.resetPreviousOutputSummary) {
+          previousOutputSummary = undefined;
+        }
+        const continuationOriginalPrompt = replacementContinuationContext
+          ? replacementContinuationContext.originalPrompt
           : input.originalPrompt;
         const continuationControlBatch =
-          replaceContinuationOriginalPrompt && startupControlBatch
+          replacementContinuationContext && startupControlBatch
             ? workerControlBatchWithoutMessage(startupControlBatch)
             : startupControlBatch;
         let snapshot: WorkspaceSnapshot;
@@ -373,10 +379,11 @@ export class SafeExecutionRunner {
         }
         job = continuationJob;
         effectiveOriginalPrompt =
-          controlledStartup?.originalPrompt ?? input.originalPrompt;
+          controlledStartupOriginalPrompt ?? input.originalPrompt;
       } else if (controlledStartup) {
         job = controlledStartup.job;
-        effectiveOriginalPrompt = controlledStartup.originalPrompt;
+        effectiveOriginalPrompt =
+          controlledStartupOriginalPrompt ?? input.originalPrompt;
       }
 
       const maxAttemptNumber =

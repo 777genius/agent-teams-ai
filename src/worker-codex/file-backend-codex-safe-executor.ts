@@ -379,10 +379,14 @@ export class FileBackendCodexSafeExecutor {
                 }
               : {}),
           },
-          originalPrompt: prompt,
           ...(replaceRejectedPrompt
-            ? { replaceContinuationOriginalPrompt: true }
-            : {}),
+            ? {
+                replaceContinuationContext: {
+                  originalPrompt: prompt,
+                  resetPreviousOutputSummary: true,
+                },
+              }
+            : { originalPrompt: prompt }),
         };
       },
       summarizeResult: (result) => result.outputText,

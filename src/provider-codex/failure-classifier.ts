@@ -1,5 +1,6 @@
 import type { ProviderFailure } from "@vioxen/subscription-runtime/core";
 import { classifyCodexRuntimeFailure } from "./codex-cli-domain";
+import { CodexAppServerTurnError } from "./app-server/application/app-server-client";
 import { isCodexModelUnavailableError } from "./app-server/domain/model-catalog";
 
 export function classifyCodexFailure(error: unknown): ProviderFailure {
@@ -25,6 +26,7 @@ export function classifyCodexFailure(error: unknown): ProviderFailure {
         reconnectRequired: false,
         safeMessage: "Codex task was cancelled.",
         causeCategory: state,
+        ...(details === undefined ? {} : { details }),
       };
     case "task_timeout":
       return {
@@ -33,6 +35,7 @@ export function classifyCodexFailure(error: unknown): ProviderFailure {
         reconnectRequired: false,
         safeMessage: "Codex task timed out.",
         causeCategory: state,
+        ...(details === undefined ? {} : { details }),
       };
     case "provider_output_invalid":
       return {
@@ -41,6 +44,7 @@ export function classifyCodexFailure(error: unknown): ProviderFailure {
         reconnectRequired: false,
         safeMessage: "Codex provider output was invalid.",
         causeCategory: state,
+        ...(details === undefined ? {} : { details }),
       };
     case "needs_reconnect":
       return {
@@ -49,6 +53,7 @@ export function classifyCodexFailure(error: unknown): ProviderFailure {
         reconnectRequired: true,
         safeMessage: "Codex session needs reconnect.",
         causeCategory: state,
+        ...(details === undefined ? {} : { details }),
       };
     case "provider_session_invalid":
       return {
@@ -57,6 +62,7 @@ export function classifyCodexFailure(error: unknown): ProviderFailure {
         reconnectRequired: true,
         safeMessage: "Codex session is invalid.",
         causeCategory: state,
+        ...(details === undefined ? {} : { details }),
       };
     case "quota_limited":
       return {
@@ -65,6 +71,7 @@ export function classifyCodexFailure(error: unknown): ProviderFailure {
         reconnectRequired: false,
         safeMessage: "Codex quota or billing limit was reached.",
         causeCategory: state,
+        ...(details === undefined ? {} : { details }),
       };
     case "backend_unavailable":
       return {
@@ -91,6 +98,7 @@ export function classifyCodexFailure(error: unknown): ProviderFailure {
         reconnectRequired: false,
         safeMessage: "Codex permission is required.",
         causeCategory: state,
+        ...(details === undefined ? {} : { details }),
       };
     default:
       return {
@@ -114,7 +122,8 @@ function codexFailureDetails(
   error: unknown,
   message: string,
 ): Readonly<Record<string, string>> | undefined {
-  const details: Record<string, string> = {};
+  const details: Record<string, string> =
+    error instanceof CodexAppServerTurnError ? { ...error.details() } : {};
   const process = processFailureLike(error);
   if (process?.exitCode !== undefined) {
     details.exitCode = String(process.exitCode);

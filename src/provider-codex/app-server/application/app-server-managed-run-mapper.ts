@@ -4,6 +4,7 @@ import type {
   ProviderFailure,
 } from "@vioxen/subscription-runtime/core";
 import { isAbortLikeError } from "../domain/app-server-errors";
+import { CodexAppServerTurnError } from "./app-server-client";
 
 export async function assertManagedRunCanResume(input: {
   readonly runStore: ManagedRunStorePort;
@@ -51,25 +52,30 @@ export async function failManagedRunForProviderOutput(input: {
   readonly runStore: ManagedRunStorePort;
 }): Promise<void> {
   if (!input.goalMode || !input.runId) return;
-  await input.runStore.fail({
-    runId: input.runId,
-    failure: {
-      code: "provider_output_invalid",
-      retryable: true,
-      reconnectRequired: false,
-      safeMessage: "Codex provider output was invalid.",
-    },
-    now: new Date(),
-  }).catch(() => undefined);
+  await input.runStore
+    .fail({
+      runId: input.runId,
+      failure: {
+        code: "provider_output_invalid",
+        retryable: true,
+        reconnectRequired: false,
+        safeMessage: "Codex provider output was invalid.",
+      },
+      now: new Date(),
+    })
+    .catch(() => undefined);
 }
 
 export function managedRunFailureFromError(error: unknown): ProviderFailure {
+  const details =
+    error instanceof CodexAppServerTurnError ? error.details() : undefined;
   if (isAbortLikeError(error)) {
     return {
       code: "task_cancelled",
       retryable: false,
       reconnectRequired: false,
       safeMessage: "Codex managed run resume was cancelled.",
+      ...(details === undefined ? {} : { details }),
     };
   }
   const message = error instanceof Error ? error.message : String(error);
@@ -79,6 +85,7 @@ export function managedRunFailureFromError(error: unknown): ProviderFailure {
       retryable: true,
       reconnectRequired: false,
       safeMessage: "Codex managed run resume timed out.",
+      ...(details === undefined ? {} : { details }),
     };
   }
   return {
@@ -86,12 +93,12 @@ export function managedRunFailureFromError(error: unknown): ProviderFailure {
     retryable: true,
     reconnectRequired: false,
     safeMessage: "Codex managed run resume failed.",
+    ...(details === undefined ? {} : { details }),
   };
 }
 
 export function isManagedRunResumeValidationError(error: unknown): boolean {
   return (
-    error instanceof Error &&
-    error.message.startsWith("codex_managed_run_")
+    error instanceof Error && error.message.startsWith("codex_managed_run_")
   );
 }
