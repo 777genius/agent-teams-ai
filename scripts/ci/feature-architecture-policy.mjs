@@ -9,7 +9,10 @@ import {
   importedNameForReference,
   objectBindingSelections,
 } from './feature-export-analysis.mjs';
-import { collectProductionSourceFiles } from './feature-source-files.mjs';
+import {
+  collectProductionSourceFiles,
+  isFeaturePublicEntrypoint,
+} from './feature-source-files.mjs';
 
 export const FEATURE_ARCHITECTURE_RULES = Object.freeze({
   crossFeaturePublicEntrypoint: 'cross-feature-public-entrypoint',
@@ -625,15 +628,6 @@ function evaluateCoreApplicationDependency(edge, sourceFilePaths) {
     FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies,
     edge,
     'core/application may depend only on domain, contracts, and its own application models, use cases, and ports'
-  );
-}
-
-function isFeaturePublicEntrypoint(filePath) {
-  const featurePath = parseFeaturePath(filePath);
-  if (!featurePath) return false;
-  return (
-    featurePath.rest === 'index.ts' ||
-    /^(?:contracts|main|preload|renderer)\/index\.(?:cts|mts|ts)$/.test(featurePath.rest)
   );
 }
 

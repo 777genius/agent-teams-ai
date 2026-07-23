@@ -19,6 +19,18 @@ function isProductionSourcePath(filePath) {
   return SOURCE_EXTENSIONS.has(path.extname(normalized));
 }
 
+export function isFeaturePublicEntrypoint(filePath) {
+  const segments = normalizePath(filePath).split('/');
+  if (segments.length < 4 || segments[0] !== 'src' || segments[1] !== 'features') return false;
+
+  const featureRelativePath = segments.slice(3).join('/');
+  const extension = path.extname(featureRelativePath);
+  if (!SOURCE_EXTENSIONS.has(extension)) return false;
+
+  const entrypointPath = featureRelativePath.slice(0, -extension.length);
+  return /^(?:(?:contracts|main|preload|renderer)\/)?index$/.test(entrypointPath);
+}
+
 export function collectProductionSourceFiles(directoryPath, repoRoot) {
   return readdirSync(directoryPath, { withFileTypes: true }).flatMap((entry) => {
     if (entry.isDirectory() && EXCLUDED_DIRECTORIES.has(entry.name)) return [];

@@ -10,8 +10,22 @@ const MUTATING_OBJECT_METHODS = new Set([
 
 function rootBindingName(expression) {
   let current = expression;
-  while (ts.isPropertyAccessExpression(current) || ts.isElementAccessExpression(current)) {
-    current = current.expression;
+  while (true) {
+    if (ts.isPropertyAccessExpression(current) || ts.isElementAccessExpression(current)) {
+      current = current.expression;
+      continue;
+    }
+    if (
+      ts.isParenthesizedExpression(current) ||
+      ts.isAsExpression(current) ||
+      ts.isTypeAssertionExpression(current) ||
+      ts.isNonNullExpression(current) ||
+      ts.isSatisfiesExpression(current)
+    ) {
+      current = current.expression;
+      continue;
+    }
+    break;
   }
   return ts.isIdentifier(current) ? current.text : null;
 }
@@ -53,6 +67,8 @@ export function objectBindingSelections(bindingName) {
 }
 
 export function importedNameForReference(reference, importedBinding) {
+  if (importedBinding.importedName !== '*') return importedBinding.importedName;
+
   const parent = reference.parent;
   if (
     (ts.isPropertyAccessExpression(parent) && parent.expression === reference) ||

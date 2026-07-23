@@ -211,6 +211,7 @@ test('detects implementation exports through transitive internal barrels', () =>
       'src/features/example/main/index.ts': `
         import { AliasInfra } from './infrastructure/AliasInfra';
         import { BodyOnly } from './infrastructure/BodyOnly';
+        import { CastInfra } from './infrastructure/CastInfra';
         import type { ImportedInfra } from './infrastructure/ImportedInfra';
         import type { PropertyName } from './infrastructure/PropertyName';
         import type { ShadowOnly } from './infrastructure/ShadowOnly';
@@ -228,6 +229,7 @@ test('detects implementation exports through transitive internal barrels', () =>
         export const LazyInfra = import('./infrastructure/LazyInfra', { with: { type: 'json' } });
         export const api = {};
         api.Store = MutatedInfra;
+        (api as { CastInfra?: unknown }).CastInfra = CastInfra;
         api.register(MethodInfra);
         Object.assign(api, {
           AssignedInfra: require('./infrastructure/AssignedInfra').AssignedInfra,
@@ -246,6 +248,8 @@ test('detects implementation exports through transitive internal barrels', () =>
         export const { SelectiveSafe: LazySafe } = await import('./mixedBarrel');
         export { RequiredSafe };
         export { ExternalInfra } from '@main/services/infrastructure/ExternalInfra';
+        import { MemberInfra } from './memberBarrel';
+        export const memberValue = MemberInfra.value;
         type HiddenInfra = import('./infrastructure/HiddenInfra').HiddenInfra;
         export interface SafeProperty { PropertyName: string }
         export interface SafeShadow<ShadowOnly> { value: ShadowOnly }
@@ -257,6 +261,7 @@ test('detects implementation exports through transitive internal barrels', () =>
       'src/features/example/main/infrastructure/AliasInfra.ts': 'export const AliasInfra = {};',
       'src/features/example/main/infrastructure/BodyOnly.ts': 'export const BodyOnly = {};',
       'src/features/example/main/infrastructure/AssignedInfra.ts': 'export class AssignedInfra {}',
+      'src/features/example/main/infrastructure/CastInfra.ts': 'export class CastInfra {}',
       'src/features/example/main/infrastructure/DirectInfra.ts': 'export interface DirectInfra {}',
       'src/features/example/main/infrastructure/HiddenInfra.ts': 'export interface HiddenInfra {}',
       'src/features/example/main/infrastructure/HiddenMutation.ts':
@@ -287,6 +292,12 @@ test('detects implementation exports through transitive internal barrels', () =>
         export * from './selectiveSafe';
         export * from './infrastructure/SelectedInfra';
       `,
+      'src/features/example/main/memberBarrel.ts': `
+        export { MemberInfra } from './infrastructure/MemberInfra';
+      `,
+      'src/features/example/main/infrastructure/MemberInfra.ts': `
+        export const MemberInfra = { value: true };
+      `,
       'src/features/example/main/selectiveSafe.ts': 'export const SelectiveSafe = true;',
       'src/features/example/main/safePublic.ts': `
         export const safe = true;
@@ -295,7 +306,7 @@ test('detects implementation exports through transitive internal barrels', () =>
       'src/features/example/renderer/adapters/Adapter.ts': `
         export class Adapter {}
       `,
-      'src/features/example/renderer/index.ts': `
+      'src/features/example/renderer/index.tsx': `
         import * as adapters from './adapters/Adapter';
         export default adapters.Adapter;
       `,
@@ -319,6 +330,12 @@ test('detects implementation exports through transitive internal barrels', () =>
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
           source: 'src/features/example/main/index.ts',
           specifier: './infrastructure/AssignedInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/index.ts',
+          specifier: './infrastructure/CastInfra',
         },
         {
           publicEntrypoint: 'src/features/example/main/index.ts',
@@ -365,6 +382,12 @@ test('detects implementation exports through transitive internal barrels', () =>
         {
           publicEntrypoint: 'src/features/example/main/index.ts',
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/memberBarrel.ts',
+          specifier: './infrastructure/MemberInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
           source: 'src/features/example/main/mixedBarrel.ts',
           specifier: './infrastructure/SelectedInfra',
         },
@@ -381,12 +404,37 @@ test('detects implementation exports through transitive internal barrels', () =>
           specifier: './infrastructure/TransitiveInfra',
         },
         {
-          publicEntrypoint: 'src/features/example/renderer/index.ts',
+          publicEntrypoint: 'src/features/example/renderer/index.tsx',
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
-          source: 'src/features/example/renderer/index.ts',
+          source: 'src/features/example/renderer/index.tsx',
           specifier: './adapters/Adapter',
         },
       ]);
+    }
+  );
+});
+
+test('recognizes JavaScript feature root entrypoints', () => {
+  withFixture(
+    {
+      'src/features/js-feature/adapters/Adapter.js': 'export class Adapter {}',
+      'src/features/js-feature/index.jsx': `export { Adapter } from './adapters/Adapter';`,
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      assert.deepEqual(
+        violations
+          .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
+          .map(toBaselineEntry),
+        [
+          {
+            publicEntrypoint: 'src/features/js-feature/index.jsx',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/js-feature/index.jsx',
+            specifier: './adapters/Adapter',
+          },
+        ]
+      );
     }
   );
 });
