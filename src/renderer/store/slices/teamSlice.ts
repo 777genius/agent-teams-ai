@@ -26,6 +26,11 @@ import {
   type TeamTaskBoardRendererSlice,
 } from '@features/team-task-board/renderer';
 import {
+  createTeamMessageFeedRendererSlice,
+  defaultTeamMessageFeedCoordinator,
+  type TeamMessageFeedRendererSlice,
+} from '@features/team-view-read-model/renderer';
+import {
   buildProviderMix,
   classifyAnalyticsError,
   elapsedMsBetweenIso,
@@ -158,10 +163,6 @@ import {
 } from '../utils/contextScopedRequestEpoch';
 import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
-import type {
-  RefreshTeamMessagesHeadResult,
-  TeamMessagesCacheEntry,
-} from '../team/teamMessagesCache';
 import type { AppState } from '../types';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
@@ -186,7 +187,6 @@ import type {
   TeamCreateRequest,
   TeamGetDataOptions,
   TeamLaunchRequest,
-  TeamMemberActivityMeta,
   TeamProvisioningProgress,
   TeamSummary,
   TeamViewSnapshot,
@@ -260,16 +260,6 @@ interface PostPaintHandle {
   ran: boolean;
 }
 const postPaintTeamEnrichmentTimers = new Map<string, PostPaintHandle>();
-const inFlightTeamMessagesHeadRequests = new Map<string, Promise<RefreshTeamMessagesHeadResult>>();
-const inFlightTeamMessagesOlderRequests = new Map<string, Promise<void>>();
-const queuedTeamMessagesHeadRefreshesAfterOlder = new Map<
-  string,
-  Promise<RefreshTeamMessagesHeadResult>
->();
-const pendingFreshTeamMessagesHeadRefreshes = new Set<string>();
-const inFlightTeamMemberActivityMetaRequests = new Map<string, Promise<void>>();
-const pendingFreshTeamMemberActivityMetaRefreshes = new Set<string>();
-const pendingTeamPendingReplyRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let latestTeamsFetchRequestId = 0;
 let inFlightGlobalTasksRefresh: Promise<void> | null = null;
 let inFlightGlobalTasksRefreshScope: ContextRequestScope | null = null;
@@ -424,16 +414,7 @@ export function __resetTeamSliceModuleStateForTests(): void {
     cancelPostPaintTeamEnrichments(teamName);
   }
   postPaintTeamEnrichmentTimers.clear();
-  inFlightTeamMessagesHeadRequests.clear();
-  inFlightTeamMessagesOlderRequests.clear();
-  queuedTeamMessagesHeadRefreshesAfterOlder.clear();
-  pendingFreshTeamMessagesHeadRefreshes.clear();
-  inFlightTeamMemberActivityMetaRequests.clear();
-  pendingFreshTeamMemberActivityMetaRefreshes.clear();
-  for (const timer of pendingTeamPendingReplyRefreshTimers.values()) {
-    clearTimeout(timer);
-  }
-  pendingTeamPendingReplyRefreshTimers.clear();
+  defaultTeamMessageFeedCoordinator.reset();
   latestTeamsFetchRequestId = 0;
   inFlightGlobalTasksRefresh = null;
   pendingFreshGlobalTasksRefresh = false;
@@ -466,12 +447,7 @@ function clearTeamScopedTransientState(teamName: string): void {
   pendingFreshTeamDataRefreshes.delete(teamName);
   queuedFullTeamDataRefreshesAfterThin.delete(teamName);
   cancelPostPaintTeamEnrichments(teamName);
-  inFlightTeamMessagesHeadRequests.delete(teamName);
-  inFlightTeamMessagesOlderRequests.delete(teamName);
-  queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
-  pendingFreshTeamMessagesHeadRefreshes.delete(teamName);
-  inFlightTeamMemberActivityMetaRequests.delete(teamName);
-  pendingFreshTeamMemberActivityMetaRefreshes.delete(teamName);
+  defaultTeamMessageFeedCoordinator.clearTeam(teamName);
   clearLastResolvedTeamDataRefreshAt(teamName);
   clearMemberSpawnStatusesIpcBackoff(teamName);
   clearTeamRefreshBurstDiagnostics(teamName);
@@ -759,6 +735,7 @@ export function __getTeamScopedTransientStateForTests(teamName: string): {
   const messageSelectorCache = getTeamMessageSelectorCacheSnapshotForTeam(teamName);
   const resolvedMemberSelectorCacheSnapshot =
     getResolvedMemberSelectorCacheSnapshotForTeam(teamName);
+  const messageFeedCoordinatorSnapshot = defaultTeamMessageFeedCoordinator.snapshot(teamName);
 
   return {
     hasResolvedMembersSelector: resolvedMemberSelectorCacheSnapshot.hasResolvedMembersSelector,
@@ -768,10 +745,10 @@ export function __getTeamScopedTransientStateForTests(teamName: string): {
     hasPendingFreshTeamDataRefresh: pendingFreshTeamDataRefreshes.has(teamName),
     hasQueuedFullTeamDataRefreshAfterThin: queuedFullTeamDataRefreshesAfterThin.has(teamName),
     hasPostPaintTeamEnrichmentTimer: postPaintTeamEnrichmentTimers.has(teamName),
-    hasQueuedHeadRefreshAfterOlder: queuedTeamMessagesHeadRefreshesAfterOlder.has(teamName),
-    hasPendingFreshMessagesHeadRefresh: pendingFreshTeamMessagesHeadRefreshes.has(teamName),
+    hasQueuedHeadRefreshAfterOlder: messageFeedCoordinatorSnapshot.hasQueuedHeadRefreshAfterOlder,
+    hasPendingFreshMessagesHeadRefresh: messageFeedCoordinatorSnapshot.hasPendingFreshHeadRefresh,
     hasPendingFreshMemberActivityMetaRefresh:
-      pendingFreshTeamMemberActivityMetaRefreshes.has(teamName),
+      messageFeedCoordinatorSnapshot.hasPendingFreshMemberActivityRefresh,
     hasLastResolvedTeamDataRefresh: hasLastResolvedTeamDataRefreshAt(teamName),
     hasCurrentLocalStateEpoch: hasTeamLocalStateEpoch(teamName),
     hasMemberSpawnStatusesIpcBackoff: hasMemberSpawnStatusesIpcBackoff(teamName),
@@ -860,15 +837,6 @@ function maybeLogMemberSpawnUiEqualSuppressed(
   logger.debug(
     `[perf] member-spawn snapshot suppressed team=${teamName} runId=${runId ?? 'none'} reason=member-spawn-ui-equal`
   );
-}
-
-function clearPendingReplyRefreshTimer(teamName: string): void {
-  const existingTimer = pendingTeamPendingReplyRefreshTimers.get(teamName);
-  if (existingTimer == null) {
-    return;
-  }
-  clearTimeout(existingTimer);
-  pendingTeamPendingReplyRefreshTimers.delete(teamName);
 }
 
 function getProviderIdsFromTeamCreateRequest(
@@ -1250,6 +1218,7 @@ function isVisibleInActiveTeamSurface(
 export interface TeamSlice
   extends
     TeamGraphLayoutSlice,
+    TeamMessageFeedRendererSlice,
     TeamProvisioningControlSlice,
     TeamProvisioningProgressSlice,
     TeamRuntimeObservationSlice,
@@ -1298,8 +1267,6 @@ export interface TeamSlice
   } | null;
   /** Team-scoped detailed cache used by multi-pane views like agent graph. */
   teamDataCacheByName: Record<string, TeamViewSnapshot>;
-  teamMessagesByName: Record<string, TeamMessagesCacheEntry>;
-  memberActivityMetaByTeam: Record<string, TeamMemberActivityMeta>;
   selectedTeamLoading: boolean;
   selectedTeamLoadNonce: number;
   selectedTeamError: string | null;
@@ -1363,15 +1330,6 @@ export interface TeamSlice
     opts?: { skipProjectAutoSelect?: boolean; allowReloadWhileProvisioning?: boolean }
   ) => Promise<void>;
   refreshTeamData: (teamName: string, opts?: RefreshTeamDataOptions) => Promise<void>;
-  refreshTeamMessagesHead: (teamName: string) => Promise<RefreshTeamMessagesHeadResult>;
-  loadOlderTeamMessages: (teamName: string) => Promise<void>;
-  refreshMemberActivityMeta: (teamName: string) => Promise<void>;
-  syncTeamPendingReplyRefresh: (
-    teamName: string,
-    sourceId: string,
-    enabled: boolean,
-    delayMs?: number
-  ) => void;
   sendTeamMessage: (teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>;
   crossTeamTargets: {
     teamName: string;
@@ -1544,8 +1502,41 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   teamsProjectNavigationIntent: null,
   teamDataCacheByName: {},
   ...createInitialTeamGraphLayoutState(),
-  teamMessagesByName: {},
-  memberActivityMetaByTeam: {},
+  ...createTeamMessageFeedRendererSlice<TeamRequestScope>({
+    actions: {
+      getActions: () => get(),
+    },
+    activityPolicy: {
+      isStale: isMemberActivityMetaStale,
+      structurallyShareMembers: structurallyShareMemberActivityFacts,
+    },
+    cachePolicy: {
+      areMessageArraysEquivalent: areInboxMessageArraysEquivalent,
+      extractRetainedOlderTail: extractRetainedCanonicalOlderTail,
+      getCanonicalHeadSlice,
+      getEntry: getTeamMessagesCacheEntry,
+      mergeMessages: mergeTeamMessages,
+      pruneOptimisticMessages,
+    },
+    coordinator: defaultTeamMessageFeedCoordinator,
+    pendingReplyPolicy: {
+      setEnabled: setPendingReplyRefreshEnabled,
+    },
+    requestScope: {
+      capture: (teamName) => captureTeamRequestScope(get, teamName),
+      isCurrent: (teamName, scope) => isTeamRequestScopeCurrent(get, teamName, scope),
+    },
+    state: {
+      getState: () => get(),
+      setState: (update) => {
+        if (typeof update === 'function') {
+          set((state) => update(state));
+          return;
+        }
+        set(update);
+      },
+    },
+  }),
   selectedTeamLoading: false,
   selectedTeamLoadNonce: 0,
   selectedTeamError: null,
@@ -2609,390 +2600,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
 
-  refreshTeamMessagesHead: async (teamName: string) => {
-    const existingRequest = inFlightTeamMessagesHeadRequests.get(teamName);
-    if (existingRequest) {
-      pendingFreshTeamMessagesHeadRefreshes.add(teamName);
-      return existingRequest;
-    }
-    const queuedAfterOlder = queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName);
-    if (queuedAfterOlder) {
-      return queuedAfterOlder;
-    }
-
-    const existingOlderRequest = inFlightTeamMessagesOlderRequests.get(teamName);
-    if (existingOlderRequest) {
-      const queuedScope = captureTeamRequestScope(get, teamName);
-      const queuedRequest: Promise<RefreshTeamMessagesHeadResult> = existingOlderRequest
-        .then(() => {
-          if (!isTeamRequestScopeCurrent(get, teamName, queuedScope)) {
-            return {
-              feedChanged: false,
-              headChanged: false,
-              feedRevision: null,
-            };
-          }
-          if (queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) === queuedRequest) {
-            queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
-          } else {
-            return {
-              feedChanged: false,
-              headChanged: false,
-              feedRevision: null,
-            };
-          }
-          return get().refreshTeamMessagesHead(teamName);
-        })
-        .finally(() => {
-          if (queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) === queuedRequest) {
-            queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
-          }
-        });
-      queuedTeamMessagesHeadRefreshesAfterOlder.set(teamName, queuedRequest);
-      return queuedRequest;
-    }
-
-    const requestRef: { current: Promise<RefreshTeamMessagesHeadResult> | null } = {
-      current: null,
-    };
-    requestRef.current = (async (): Promise<RefreshTeamMessagesHeadResult> => {
-      const requestScope = captureTeamRequestScope(get, teamName);
-      set((state) => ({
-        teamMessagesByName: {
-          ...state.teamMessagesByName,
-          [teamName]: {
-            ...getTeamMessagesCacheEntry(state, teamName),
-            loadingHead: true,
-          },
-        },
-      }));
-
-      try {
-        const page = await unwrapIpc('team:getMessagesPage', () =>
-          api.teams.getMessagesPage(teamName, { limit: 50 })
-        );
-        if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return {
-            feedChanged: false,
-            headChanged: false,
-            feedRevision: null,
-          };
-        }
-
-        const previousEntry = getTeamMessagesCacheEntry(get(), teamName);
-        const feedChanged =
-          !previousEntry.headHydrated || previousEntry.feedRevision !== page.feedRevision;
-        const previousHeadSlice = getCanonicalHeadSlice(
-          previousEntry.canonicalMessages,
-          page.messages.length
-        );
-        const headChanged = !areInboxMessageArraysEquivalent(previousHeadSlice, page.messages);
-
-        set((state) => {
-          const current = getTeamMessagesCacheEntry(state, teamName);
-          const retainedOlderTail = extractRetainedCanonicalOlderTail(
-            current.canonicalMessages,
-            page.messages
-          );
-          const preserveLoadedOlderTail =
-            Array.isArray(retainedOlderTail) && retainedOlderTail.length > 0;
-          const nextCanonical = headChanged
-            ? preserveLoadedOlderTail
-              ? mergeTeamMessages(retainedOlderTail, page.messages)
-              : page.messages
-            : current.canonicalMessages;
-          const nextOptimistic = pruneOptimisticMessages(current.optimisticMessages, nextCanonical);
-          const nextEntry: TeamMessagesCacheEntry = {
-            ...current,
-            canonicalMessages: nextCanonical,
-            optimisticMessages: nextOptimistic,
-            feedRevision: page.feedRevision,
-            nextCursor: preserveLoadedOlderTail ? current.nextCursor : page.nextCursor,
-            hasMore: preserveLoadedOlderTail ? current.hasMore : page.hasMore,
-            lastFetchedAt: Date.now(),
-            loadingHead: false,
-            headHydrated: true,
-          };
-          return {
-            teamMessagesByName: {
-              ...state.teamMessagesByName,
-              [teamName]: nextEntry,
-            },
-          };
-        });
-
-        return {
-          feedChanged,
-          headChanged,
-          feedRevision: page.feedRevision,
-        };
-      } catch (error) {
-        if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return {
-            feedChanged: false,
-            headChanged: false,
-            feedRevision: null,
-          };
-        }
-        set((state) => ({
-          teamMessagesByName: {
-            ...state.teamMessagesByName,
-            [teamName]: {
-              ...getTeamMessagesCacheEntry(state, teamName),
-              loadingHead: false,
-            },
-          },
-        }));
-        throw error;
-      } finally {
-        if (inFlightTeamMessagesHeadRequests.get(teamName) === requestRef.current) {
-          inFlightTeamMessagesHeadRequests.delete(teamName);
-          if (
-            pendingFreshTeamMessagesHeadRefreshes.delete(teamName) &&
-            isTeamRequestScopeCurrent(get, teamName, requestScope)
-          ) {
-            void get().refreshTeamMessagesHead(teamName);
-          }
-        }
-      }
-    })();
-
-    const request = requestRef.current;
-    inFlightTeamMessagesHeadRequests.set(teamName, request);
-    return request;
-  },
-
-  loadOlderTeamMessages: async (teamName: string) => {
-    const requestedScope = captureTeamRequestScope(get, teamName);
-    const existingRequest = inFlightTeamMessagesOlderRequests.get(teamName);
-    if (existingRequest) {
-      return existingRequest;
-    }
-
-    const existingHeadRequest = inFlightTeamMessagesHeadRequests.get(teamName);
-    if (existingHeadRequest) {
-      await existingHeadRequest;
-      if (!isTeamRequestScopeCurrent(get, teamName, requestedScope)) {
-        return;
-      }
-    }
-
-    let entry = getTeamMessagesCacheEntry(get(), teamName);
-    if (!entry.headHydrated) {
-      await get().refreshTeamMessagesHead(teamName);
-      if (!isTeamRequestScopeCurrent(get, teamName, requestedScope)) {
-        return;
-      }
-      entry = getTeamMessagesCacheEntry(get(), teamName);
-    }
-
-    if (!entry.headHydrated || !entry.nextCursor || entry.loadingOlder || entry.loadingHead) {
-      return;
-    }
-
-    const requestRef: { current: Promise<void> | null } = { current: null };
-    requestRef.current = (async (): Promise<void> => {
-      const requestScope = captureTeamRequestScope(get, teamName);
-      set((state) => ({
-        teamMessagesByName: {
-          ...state.teamMessagesByName,
-          [teamName]: {
-            ...getTeamMessagesCacheEntry(state, teamName),
-            loadingOlder: true,
-          },
-        },
-      }));
-
-      try {
-        const baseFeedRevision = entry.feedRevision;
-        const page = await unwrapIpc('team:getMessagesPage', () =>
-          api.teams.getMessagesPage(teamName, {
-            cursor: entry.nextCursor,
-            limit: 50,
-          })
-        );
-        if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return;
-        }
-
-        const current = getTeamMessagesCacheEntry(get(), teamName);
-        if (current.feedRevision !== baseFeedRevision) {
-          set((state) => ({
-            teamMessagesByName: {
-              ...state.teamMessagesByName,
-              [teamName]: {
-                ...getTeamMessagesCacheEntry(state, teamName),
-                loadingOlder: false,
-              },
-            },
-          }));
-          await get().refreshTeamMessagesHead(teamName);
-          return;
-        }
-
-        if (current.feedRevision && current.feedRevision !== page.feedRevision) {
-          set((state) => ({
-            teamMessagesByName: {
-              ...state.teamMessagesByName,
-              [teamName]: {
-                ...getTeamMessagesCacheEntry(state, teamName),
-                loadingOlder: false,
-              },
-            },
-          }));
-          await get().refreshTeamMessagesHead(teamName);
-          return;
-        }
-
-        set((state) => {
-          const liveEntry = getTeamMessagesCacheEntry(state, teamName);
-          const mergedCanonical = mergeTeamMessages(liveEntry.canonicalMessages, page.messages);
-          return {
-            teamMessagesByName: {
-              ...state.teamMessagesByName,
-              [teamName]: {
-                ...liveEntry,
-                canonicalMessages: mergedCanonical,
-                nextCursor: page.nextCursor,
-                hasMore: page.hasMore,
-                feedRevision: page.feedRevision,
-                loadingOlder: false,
-              },
-            },
-          };
-        });
-      } catch {
-        if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return;
-        }
-        set((state) => ({
-          teamMessagesByName: {
-            ...state.teamMessagesByName,
-            [teamName]: {
-              ...getTeamMessagesCacheEntry(state, teamName),
-              loadingOlder: false,
-            },
-          },
-        }));
-      } finally {
-        if (inFlightTeamMessagesOlderRequests.get(teamName) === requestRef.current) {
-          inFlightTeamMessagesOlderRequests.delete(teamName);
-        }
-      }
-    })();
-
-    const request = requestRef.current;
-    inFlightTeamMessagesOlderRequests.set(teamName, request);
-    return request;
-  },
-
-  refreshMemberActivityMeta: async (teamName: string) => {
-    const entry = getTeamMessagesCacheEntry(get(), teamName);
-    if (!entry.headHydrated) {
-      return;
-    }
-
-    const existingRequest = inFlightTeamMemberActivityMetaRequests.get(teamName);
-    if (existingRequest) {
-      pendingFreshTeamMemberActivityMetaRefreshes.add(teamName);
-      return existingRequest;
-    }
-
-    const requestRef: { current: Promise<void> | null } = { current: null };
-    requestRef.current = (async (): Promise<void> => {
-      const requestScope = captureTeamRequestScope(get, teamName);
-      try {
-        const meta = await unwrapIpc('team:getMemberActivityMeta', () =>
-          api.teams.getMemberActivityMeta(teamName)
-        );
-        if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return;
-        }
-
-        set((state) => {
-          const currentFeedRevision = getTeamMessagesCacheEntry(state, teamName).feedRevision;
-          if (currentFeedRevision && meta.feedRevision !== currentFeedRevision) {
-            return {};
-          }
-          const existing = state.memberActivityMetaByTeam[teamName];
-          if (existing?.feedRevision === meta.feedRevision) {
-            return {};
-          }
-          const sharedMembers = structurallyShareMemberActivityFacts(
-            existing?.members,
-            meta.members
-          );
-          const nextMeta =
-            existing?.members === sharedMembers &&
-            existing.feedRevision === meta.feedRevision &&
-            existing.computedAt === meta.computedAt
-              ? existing
-              : {
-                  ...meta,
-                  members: sharedMembers,
-                };
-          return {
-            memberActivityMetaByTeam: {
-              ...state.memberActivityMetaByTeam,
-              [teamName]: nextMeta,
-            },
-          };
-        });
-      } catch (error) {
-        if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return;
-        }
-        throw error;
-      } finally {
-        if (inFlightTeamMemberActivityMetaRequests.get(teamName) === requestRef.current) {
-          inFlightTeamMemberActivityMetaRequests.delete(teamName);
-          if (
-            pendingFreshTeamMemberActivityMetaRefreshes.delete(teamName) &&
-            isTeamRequestScopeCurrent(get, teamName, requestScope)
-          ) {
-            void get().refreshMemberActivityMeta(teamName);
-          }
-        }
-      }
-    })();
-
-    const request = requestRef.current;
-    inFlightTeamMemberActivityMetaRequests.set(teamName, request);
-    return request;
-  },
-
-  syncTeamPendingReplyRefresh: (
-    teamName: string,
-    sourceId: string,
-    enabled: boolean,
-    delayMs = 10_000
-  ) => {
-    clearPendingReplyRefreshTimer(teamName);
-    const shouldKeepRefreshActive = setPendingReplyRefreshEnabled(teamName, sourceId, enabled);
-    if (!shouldKeepRefreshActive) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      if (pendingTeamPendingReplyRefreshTimers.get(teamName) !== timer) {
-        return;
-      }
-      pendingTeamPendingReplyRefreshTimers.delete(teamName);
-      void (async () => {
-        try {
-          const headResult = await get().refreshTeamMessagesHead(teamName);
-          if (headResult.feedChanged || isMemberActivityMetaStale(get(), teamName)) {
-            await get().refreshMemberActivityMeta(teamName);
-          }
-        } catch {
-          // Best-effort delayed refresh while waiting for replies.
-        }
-      })();
-    }, delayMs);
-
-    pendingTeamPendingReplyRefreshTimers.set(teamName, timer);
-  },
-
   sendTeamMessage: async (teamName: string, request: SendMessageRequest) => {
     set({
       sendingMessage: true,
@@ -3369,7 +2976,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
     invalidateTeamLocalStateEpoch(teamName);
     clearTeamTaskBoardAnalytics(teamName);
-    clearPendingReplyRefreshTimer(teamName);
+    defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);
     clearTeamScopedTransientState(teamName);
     set((state) => {
@@ -3397,7 +3004,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   restoreTeam: async (teamName: string) => {
     await unwrapIpc('team:restoreTeam', () => api.teams.restoreTeam(teamName));
     invalidateTeamLocalStateEpoch(teamName);
-    clearPendingReplyRefreshTimer(teamName);
+    defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);
     clearTeamScopedTransientState(teamName);
     set((state) => {
@@ -3418,7 +3025,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   permanentlyDeleteTeam: async (teamName: string) => {
     await unwrapIpc('team:permanentlyDeleteTeam', () => api.teams.permanentlyDeleteTeam(teamName));
     invalidateTeamLocalStateEpoch(teamName);
-    clearPendingReplyRefreshTimer(teamName);
+    defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);
     clearTeamScopedTransientState(teamName);
     const state = get();
@@ -3453,7 +3060,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     // Ensure provisioning progress subscription is active (defensive).
     get().subscribeProvisioningProgress();
     invalidateTeamLocalStateEpoch(request.teamName);
-    clearPendingReplyRefreshTimer(request.teamName);
+    defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(request.teamName);
     clearPendingReplyRefreshWaits(request.teamName);
     clearTeamScopedTransientState(request.teamName);
 
@@ -3676,7 +3283,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     // Ensure provisioning progress subscription is active (defensive).
     get().subscribeProvisioningProgress();
     invalidateTeamLocalStateEpoch(request.teamName);
-    clearPendingReplyRefreshTimer(request.teamName);
+    defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(request.teamName);
     clearPendingReplyRefreshWaits(request.teamName);
     clearTeamScopedTransientState(request.teamName);
 
