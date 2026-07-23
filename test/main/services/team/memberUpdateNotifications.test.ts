@@ -78,6 +78,7 @@ describe('member update notifications', () => {
           role: 'Coordinator',
           providerId: 'codex',
         },
+        { name: 'captain-role', role: 'team-lead', providerId: 'codex' },
       ],
       []
     );
@@ -104,5 +105,20 @@ describe('member update notifications', () => {
     );
 
     expect(diff.updated).toEqual([]);
+  });
+
+  it('normalizes unknown legacy provider ids before comparing persisted members', () => {
+    const diff = buildReplaceMembersDiff(
+      [
+        {
+          name: 'alice',
+          providerId: 'legacy-provider' as never,
+          providerBackendId: 'codex-native',
+        },
+      ],
+      [{ name: 'alice' }]
+    );
+
+    expect(diff).toEqual({ added: [], removed: [], updated: [] });
   });
 });
