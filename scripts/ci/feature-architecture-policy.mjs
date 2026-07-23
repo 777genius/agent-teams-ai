@@ -5,7 +5,7 @@ import path from 'node:path';
 import ts from 'typescript';
 
 import {
-  commonJsExportNameForAssignment,
+  commonJsExportNamesForExpression,
   findPublicMutationOwner,
   importedNameForReference,
   objectBindingSelections,
@@ -216,9 +216,9 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
       localNames = [current.name.text];
     } else if (ts.isExpressionStatement(current)) {
-      const commonJsExportName = commonJsExportNameForAssignment(current.expression);
-      if (commonJsExportName) {
-        return { bindingSelections: null, exportedNames: [commonJsExportName], localNames: [] };
+      const commonJsExportNames = commonJsExportNamesForExpression(current.expression);
+      if (commonJsExportNames.length > 0) {
+        return { bindingSelections: null, exportedNames: commonJsExportNames, localNames: [] };
       }
       const mutationOwner = findPublicMutationOwner(current.expression, exportedLocalNames);
       if (mutationOwner) localNames = [mutationOwner];
@@ -405,14 +405,25 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
             importedName: importedNameForReference(node, importedBinding),
           });
         } else if (declaredLocalNames.has(node.text) && !owner.localNames.includes(node.text)) {
-          for (const localName of owner.localNames) {
-            const references = localReferenceNames.get(localName) ?? new Map();
-            const selectedName = selectedMemberForReference(node);
-            references.set(`${node.text}:${selectedName ?? ''}`, {
-              localName: node.text,
-              selectedName,
-            });
-            localReferenceNames.set(localName, references);
+          const selectedName = selectedMemberForReference(node);
+          if (owner.localNames.length === 0) {
+            for (const exportedName of owner.exportedNames) {
+              localExports.push({
+                exportedName,
+                importedName: selectedName,
+                line: lineForNode(sourceFile, node),
+                localName: node.text,
+              });
+            }
+          } else {
+            for (const localName of owner.localNames) {
+              const references = localReferenceNames.get(localName) ?? new Map();
+              references.set(`${node.text}:${selectedName ?? ''}`, {
+                localName: node.text,
+                selectedName,
+              });
+              localReferenceNames.set(localName, references);
+            }
           }
         }
       }

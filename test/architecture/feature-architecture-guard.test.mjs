@@ -439,8 +439,17 @@ test('recognizes JavaScript feature root entrypoints', () => {
       'src/features/commonjs-default/infrastructure/DefaultStore.cjs':
         'module.exports = class DefaultStore {};',
       'src/features/commonjs-named/main/index.js': `
+        const AliasedStore = require('./infrastructure/AliasedStore');
+        exports.AliasedStore = AliasedStore;
         exports.NamedStore = require('./infrastructure/NamedStore');
+        Object.defineProperty(exports, 'DefinedStore', {
+          value: require('./infrastructure/DefinedStore'),
+        });
       `,
+      'src/features/commonjs-named/main/infrastructure/AliasedStore.js':
+        'module.exports = class AliasedStore {};',
+      'src/features/commonjs-named/main/infrastructure/DefinedStore.js':
+        'module.exports = class DefinedStore {};',
       'src/features/commonjs-named/main/infrastructure/NamedStore.js':
         'module.exports = class NamedStore {};',
       'src/features/js-feature/adapters/Adapter.js': 'export class Adapter {}',
@@ -458,6 +467,18 @@ test('recognizes JavaScript feature root entrypoints', () => {
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
             source: 'src/features/commonjs-default/index.cjs',
             specifier: './infrastructure/DefaultStore',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-named/main/index.js',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-named/main/index.js',
+            specifier: './infrastructure/AliasedStore',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-named/main/index.js',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-named/main/index.js',
+            specifier: './infrastructure/DefinedStore',
           },
           {
             publicEntrypoint: 'src/features/commonjs-named/main/index.js',
@@ -493,6 +514,7 @@ test('preserves member selection through local aliases', () => {
       'src/features/namespace-safe/main/index.ts': `
         const barrel = await import('./mixedBarrel');
         export const Safe = barrel.Safe;
+        export const CastSafe = (barrel as any).Safe;
         export const InlineSafe = (await import('./mixedBarrel')).Safe;
       `,
       'src/features/namespace-safe/main/mixedBarrel.ts': `

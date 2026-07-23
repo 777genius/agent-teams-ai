@@ -75,7 +75,14 @@ function isModuleExports(expression) {
   );
 }
 
-export function commonJsExportNameForAssignment(expression) {
+function isCommonJsExportsObject(expression) {
+  const current = unwrapExpression(expression);
+  return (
+    (ts.isIdentifier(current) && current.text === 'exports') || isModuleExports(current)
+  );
+}
+
+function commonJsAssignmentExportName(expression) {
   if (
     !ts.isBinaryExpression(expression) ||
     expression.operatorToken.kind !== ts.SyntaxKind.EqualsToken
@@ -90,6 +97,30 @@ export function commonJsExportNameForAssignment(expression) {
   if (!access) return null;
   if (ts.isIdentifier(access.receiver) && access.receiver.text === 'exports') return access.name;
   return isModuleExports(access.receiver) ? access.name : null;
+}
+
+export function commonJsExportNamesForExpression(expression) {
+  const assignmentName = commonJsAssignmentExportName(expression);
+  if (assignmentName) return [assignmentName];
+
+  const current = unwrapExpression(expression);
+  if (!ts.isCallExpression(current)) return [];
+
+  const method = memberAccess(current.expression);
+  if (
+    !method ||
+    !ts.isIdentifier(method.receiver) ||
+    !['Object', 'Reflect'].includes(method.receiver.text) ||
+    !['assign', 'defineProperties', 'defineProperty'].includes(method.name) ||
+    !current.arguments[0] ||
+    !isCommonJsExportsObject(current.arguments[0])
+  ) {
+    return [];
+  }
+
+  if (method.name !== 'defineProperty') return ['*'];
+  const exportName = current.arguments[1];
+  return exportName && ts.isStringLiteralLike(exportName) ? [exportName.text] : ['*'];
 }
 
 export function findPublicMutationOwner(expression, exportedLocalNames) {
@@ -123,13 +154,8 @@ export function objectBindingSelections(bindingName) {
 
 export function selectedMemberForReference(reference) {
   const parent = reference.parent;
-  if (
-    (ts.isPropertyAccessExpression(parent) && parent.expression === reference) ||
-    (ts.isQualifiedName(parent) && parent.left === reference)
-  ) {
-    return parent.name?.text ?? parent.right.text;
-  }
-  return null;
+  if (ts.isQualifiedName(parent) && parent.left === reference) return parent.right.text;
+  return selectedMemberAfterTransparentWrappers(reference);
 }
 
 export function selectedMemberAfterTransparentWrappers(reference) {
