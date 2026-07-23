@@ -1709,7 +1709,9 @@ export const ChangeReviewDialog = ({
     [sortedFiles]
   );
   const watchedReviewFilePathsKeyRef = useRef(watchedReviewFilePathsKey);
-  watchedReviewFilePathsKeyRef.current = watchedReviewFilePathsKey;
+  useEffect(() => {
+    watchedReviewFilePathsKeyRef.current = watchedReviewFilePathsKey;
+  }, [watchedReviewFilePathsKey]);
   const globalDiffLoadingState = useMemo(
     () =>
       buildGlobalDiffLoadingState({
