@@ -117,7 +117,7 @@
       "connectPlan": "플랜 연결",
       "connectSuperGrok": "SuperGrok 연결",
       "connected": "연결됨",
-      "copilotDescription": "OpenCode를 통해 GitHub Copilot을 사용하세요. Agent Teams는 귀하의 계획과 호환되는 모델을 확인합니다.",
+      "copilotDescription": "OpenCode를 통해 GitHub Copilot을 사용하세요. Agent Teams는 OpenCode가 요금제에서 허용하는 모델을 선택할 수 있는지 확인합니다.",
       "copyCommand": "복사 명령",
       "chooseRegion": "지역 선택",
       "cursorConnected": "커서 계정이 연결되었습니다",

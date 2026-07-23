@@ -117,7 +117,7 @@
       "connectPlan": "Connecter le forfait",
       "connectSuperGrok": "Connectez SuperGrok",
       "connected": "Connecté",
-      "copilotDescription": "Utilisez GitHub Copilot via OpenCode. Agent Teams vérifie un modèle compatible pour votre forfait.",
+      "copilotDescription": "Utilisez GitHub Copilot via OpenCode. Agent Teams vérifie si OpenCode peut sélectionner un modèle autorisé par votre forfait.",
       "copyCommand": "Commande Copier",
       "chooseRegion": "Choisir la région",
       "cursorConnected": "Compte curseur connecté",

@@ -117,7 +117,7 @@
       "connectPlan": "प्लान कनेक्ट करें",
       "connectSuperGrok": "सुपरग्रोक कनेक्ट करें",
       "connected": "जुड़ा हुआ",
-      "copilotDescription": "OpenCode के माध्यम से GitHub Copilot का उपयोग करें। एजेंट टीम आपकी योजना के लिए एक संगत मॉडल का सत्यापन करती है।",
+      "copilotDescription": "OpenCode के माध्यम से GitHub Copilot का उपयोग करें। Agent Teams जाँचता है कि OpenCode आपकी योजना में अनुमत मॉडल चुन सकता है या नहीं।",
       "copyCommand": "आदेश कॉपी करें",
       "chooseRegion": "क्षेत्र चुनें",
       "cursorConnected": "कर्सर खाता जुड़ा",

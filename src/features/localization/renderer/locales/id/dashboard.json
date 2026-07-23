@@ -117,7 +117,7 @@
       "connectPlan": "Hubungkan paket",
       "connectSuperGrok": "Hubungkan SuperGrok",
       "connected": "Terhubung",
-      "copilotDescription": "Gunakan GitHub Copilot melalui OpenCode. Tim Agen memverifikasi model yang kompatibel untuk paket Anda.",
+      "copilotDescription": "Gunakan GitHub Copilot melalui OpenCode. Agent Teams memeriksa apakah OpenCode dapat memilih model yang diizinkan oleh paket Anda.",
       "copyCommand": "Salin perintah",
       "chooseRegion": "Pilih wilayah",
       "cursorConnected": "Akun kursor terhubung",

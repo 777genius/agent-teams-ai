@@ -117,7 +117,7 @@
       "connectPlan": "Planı bağla",
       "connectSuperGrok": "SuperGrok'u bağla",
       "connected": "Bağlandı",
-      "copilotDescription": "GitHub Copilot'ı OpenCode üzerinden kullanın. Agent Teams planınızla uyumlu bir modeli doğrular.",
+      "copilotDescription": "GitHub Copilot'ı OpenCode üzerinden kullanın. Agent Teams, OpenCode'un planınızın izin verdiği bir modeli seçip seçemediğini kontrol eder.",
       "copyCommand": "Komutu kopyala",
       "chooseRegion": "Bölge seç",
       "cursorConnected": "Cursor hesabı bağlandı",

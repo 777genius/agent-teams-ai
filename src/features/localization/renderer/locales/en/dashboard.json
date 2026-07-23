@@ -117,7 +117,7 @@
       "connectPlan": "Connect plan",
       "connectSuperGrok": "Connect SuperGrok",
       "connected": "Connected",
-      "copilotDescription": "Use GitHub Copilot through OpenCode. Agent Teams verifies a compatible explicit model for your plan.",
+      "copilotDescription": "Use GitHub Copilot through OpenCode. Agent Teams checks whether OpenCode can select a model allowed by your plan.",
       "copyCommand": "Copy command",
       "chooseRegion": "Choose region",
       "cursorConnected": "Cursor account connected",

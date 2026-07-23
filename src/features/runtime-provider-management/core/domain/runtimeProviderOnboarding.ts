@@ -115,7 +115,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     providerId: 'github-copilot',
     displayName: 'GitHub Copilot',
     description:
-      'Use GitHub Copilot through OpenCode. Compatible explicit models are verified automatically for your plan.',
+      'Use GitHub Copilot through OpenCode. Agent Teams checks whether OpenCode can select a model allowed by your plan.',
     credentialKind: 'oauth',
     credentialUrl: null,
     // GPT-4.1 retired from Copilot on 2026-06-01. Prefer the current lightweight
