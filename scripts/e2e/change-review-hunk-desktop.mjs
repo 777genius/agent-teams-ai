@@ -604,7 +604,7 @@ async function openReview() {
   await client.waitFor(
     `/\\b\\d+ (?:pending|accepted|rejected)\\b/.test(document.body?.innerText ?? '')`,
     'hunk review dialog',
-    devMcpMode ? 180_000 : 60_000
+    45_000
   );
 }
 
@@ -1536,17 +1536,30 @@ try {
   if (client) {
     const diagnostics = await client
       .evaluate(
-        `({
-        url: location.href,
-        title: document.title,
-        bodyTail: document.body?.innerText.slice(-3000) ?? '',
-        hunkToolbars: Array.from(document.querySelectorAll('[data-review-floating-toolbar="true"]'))
-          .map((toolbar) => ({
-            text: toolbar.textContent,
-            display: getComputedStyle(toolbar).display,
-            rect: toolbar.getBoundingClientRect().toJSON(),
-          })),
-      })`
+        `(() => {
+          return {
+            url: location.href,
+            title: document.title,
+            bodyTail: document.body?.innerText.slice(-3000) ?? '',
+            loadingState: (() => {
+              const content = document.querySelector('[data-review-change-set-loading]');
+              return content
+                ? {
+                    changeSet: content.getAttribute('data-review-change-set-loading'),
+                    decisions: content.getAttribute('data-review-decision-hydration'),
+                    drafts: content.getAttribute('data-review-draft-hydration'),
+                  }
+                : null;
+            })(),
+            hunkToolbars: Array.from(
+              document.querySelectorAll('[data-review-floating-toolbar="true"]')
+            ).map((toolbar) => ({
+              text: toolbar.textContent,
+              display: getComputedStyle(toolbar).display,
+              rect: toolbar.getBoundingClientRect().toJSON(),
+            })),
+          };
+        })()`
       )
       .catch((diagnosticError) => ({ diagnosticError: String(diagnosticError) }));
     process.stderr.write(`Renderer diagnostics:\n${JSON.stringify(diagnostics, null, 2)}\n`);
