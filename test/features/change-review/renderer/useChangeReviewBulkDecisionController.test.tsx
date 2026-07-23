@@ -12,9 +12,11 @@ import type {
   ChangeReviewActionHistoryController,
   ChangeReviewBulkDecisionCommandPort,
   ChangeReviewBulkDecisionController,
+  ChangeReviewBulkDecisionEditorPort,
   ChangeReviewBulkDecisionStatePort,
   ChangeReviewBulkDecisionStateSnapshot,
-  ChangeReviewBulkDecisionViewPort,
+  ChangeReviewBulkDecisionStatusPort,
+  ChangeReviewBulkDecisionWriteEvidencePort,
 } from '@features/change-review/renderer';
 import type { ApplyReviewResult, FileChangeSummary, ReviewUndoAction } from '@shared/types';
 
@@ -34,8 +36,11 @@ interface Harness {
   history: ActionHistory;
   statePort: ChangeReviewBulkDecisionStatePort;
   commandPort: ChangeReviewBulkDecisionCommandPort;
-  viewPort: ChangeReviewBulkDecisionViewPort;
+  editorPort: ChangeReviewBulkDecisionEditorPort;
+  statusPort: ChangeReviewBulkDecisionStatusPort;
+  writeEvidencePort: ChangeReviewBulkDecisionWriteEvidencePort;
   buildRejectDiskSnapshot: BuildBulkRejectDiskSnapshot;
+  instantApply: boolean;
   current: boolean;
   durable: boolean;
   blocked: boolean;
@@ -53,6 +58,39 @@ function makeFile(filePath: string, isNewFile = false): FileChangeSummary {
     linesAdded: 1,
     linesRemoved: 0,
     isNewFile,
+  };
+}
+
+function makeRenameFile(filePath: string): FileChangeSummary {
+  return {
+    ...makeFile(filePath),
+    snippets: [
+      {
+        toolUseId: 'rename',
+        filePath,
+        toolName: 'PostToolUse',
+        type: 'hook-snapshot',
+        oldString: '',
+        newString: '',
+        replaceAll: false,
+        timestamp: '2026-07-23T00:00:00.000Z',
+        isError: false,
+        ledger: {
+          eventId: 'rename-event',
+          source: 'ledger-exact',
+          confidence: 'exact',
+          originalFullContent: 'before',
+          modifiedFullContent: 'after',
+          beforeHash: null,
+          afterHash: null,
+          relation: {
+            kind: 'rename',
+            oldPath: '/repo/original.ts',
+            newPath: filePath,
+          },
+        },
+      },
+    ],
   };
 }
 
@@ -119,21 +157,37 @@ function createHarness(): Harness {
       (_filePath, fallback) => Promise.resolve(fallback)
     ),
   };
-  const viewPort: ChangeReviewBulkDecisionViewPort = {
-    scheduleEditorSync: vi.fn<ChangeReviewBulkDecisionViewPort['scheduleEditorSync']>((callback) =>
-      callback()
+  const editorPort: ChangeReviewBulkDecisionEditorPort = {
+    scheduleEditorSync: vi.fn<ChangeReviewBulkDecisionEditorPort['scheduleEditorSync']>(
+      (callback) => callback()
     ),
-    acceptAllEditorChunks: vi.fn<ChangeReviewBulkDecisionViewPort['acceptAllEditorChunks']>(),
-    rejectAllEditorChunks: vi.fn<ChangeReviewBulkDecisionViewPort['rejectAllEditorChunks']>(),
-    rollbackEditorContent: vi.fn<ChangeReviewBulkDecisionViewPort['rollbackEditorContent']>(),
-    markExpectedWrite: vi.fn<ChangeReviewBulkDecisionViewPort['markExpectedWrite']>(),
-    markCommittedPostimages: vi.fn<ChangeReviewBulkDecisionViewPort['markCommittedPostimages']>(),
-    beginFileMutation: vi.fn<ChangeReviewBulkDecisionViewPort['beginFileMutation']>(),
-    finishFileMutation: vi.fn<ChangeReviewBulkDecisionViewPort['finishFileMutation']>(),
-    markFilesApplying: vi.fn<ChangeReviewBulkDecisionViewPort['markFilesApplying']>(),
-    clearFilesApplying: vi.fn<ChangeReviewBulkDecisionViewPort['clearFilesApplying']>(),
-    incrementDiscardCounter: vi.fn<ChangeReviewBulkDecisionViewPort['incrementDiscardCounter']>(),
-    setUndoInFlight: vi.fn<ChangeReviewBulkDecisionViewPort['setUndoInFlight']>(),
+    acceptAllEditorChunks: vi.fn<ChangeReviewBulkDecisionEditorPort['acceptAllEditorChunks']>(),
+    rejectAllEditorChunks: vi.fn<ChangeReviewBulkDecisionEditorPort['rejectAllEditorChunks']>(),
+    rollbackEditorContent: vi.fn<ChangeReviewBulkDecisionEditorPort['rollbackEditorContent']>(),
+  };
+  const activeMutations = new Set<string>();
+  const statusPort: ChangeReviewBulkDecisionStatusPort = {
+    beginFileMutation: vi.fn<ChangeReviewBulkDecisionStatusPort['beginFileMutation']>(
+      (filePath) => {
+        activeMutations.add(filePath);
+        harness.inFlight = true;
+      }
+    ),
+    finishFileMutation: vi.fn<ChangeReviewBulkDecisionStatusPort['finishFileMutation']>(
+      (filePath) => {
+        activeMutations.delete(filePath);
+        harness.inFlight = activeMutations.size > 0;
+      }
+    ),
+    markFilesApplying: vi.fn<ChangeReviewBulkDecisionStatusPort['markFilesApplying']>(),
+    clearFilesApplying: vi.fn<ChangeReviewBulkDecisionStatusPort['clearFilesApplying']>(),
+    incrementDiscardCounter: vi.fn<ChangeReviewBulkDecisionStatusPort['incrementDiscardCounter']>(),
+    setUndoInFlight: vi.fn<ChangeReviewBulkDecisionStatusPort['setUndoInFlight']>(),
+  };
+  const writeEvidencePort: ChangeReviewBulkDecisionWriteEvidencePort = {
+    markExpectedWrite: vi.fn<ChangeReviewBulkDecisionWriteEvidencePort['markExpectedWrite']>(),
+    markCommittedPostimages:
+      vi.fn<ChangeReviewBulkDecisionWriteEvidencePort['markCommittedPostimages']>(),
   };
   Object.assign(harness, {
     files,
@@ -142,13 +196,16 @@ function createHarness(): Harness {
     history,
     statePort,
     commandPort,
-    viewPort,
+    editorPort,
+    statusPort,
+    writeEvidencePort,
     buildRejectDiskSnapshot: vi.fn<BuildBulkRejectDiskSnapshot>((file) => ({
       filePath: file.filePath,
       beforeContent: `before:${file.filePath}`,
       afterContent: `after:${file.filePath}`,
       file,
     })),
+    instantApply: true,
     current: true,
     durable: true,
     blocked: false,
@@ -165,14 +222,16 @@ function Probe({ harness }: { readonly harness: Harness }): React.JSX.Element {
     rejectableFiles: harness.rejectableFiles,
     canAcceptAll: true,
     changeSetEpoch: 3,
-    instantApply: true,
+    instantApply: harness.instantApply,
     teamName: 'team',
     taskId: 'task',
     memberName: undefined,
     history: harness.history,
     statePort: harness.statePort,
     commandPort: harness.commandPort,
-    viewPort: harness.viewPort,
+    editorPort: harness.editorPort,
+    statusPort: harness.statusPort,
+    writeEvidencePort: harness.writeEvidencePort,
     buildRejectDiskSnapshot: harness.buildRejectDiskSnapshot,
     persistLatestAcceptedAction: vi.fn(() => Promise.resolve(true)),
     ensureDurableScope: () => harness.durable,
@@ -194,10 +253,31 @@ function renderHarness(harness: Harness): ReturnType<typeof createRoot> {
 function waitForRejectAllToSettle(harness: Harness): Promise<void> {
   return vi.waitFor(() => {
     expect(harness.commandPort.applyReview).toHaveBeenCalledTimes(1);
-    expect(harness.viewPort.clearFilesApplying).toHaveBeenLastCalledWith(
+    expect(harness.statusPort.clearFilesApplying).toHaveBeenLastCalledWith(
       new Set(harness.rejectableFiles.map((file) => file.filePath))
     );
   });
+}
+
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+async function expectUnknownApplyCleanup(harness: Harness): Promise<void> {
+  await waitForRejectAllToSettle(harness);
+  expect(harness.state.fileDecisions).toEqual({});
+  expect(harness.editorPort.rollbackEditorContent).toHaveBeenCalledTimes(2);
+  expect(harness.history.discardLatestAction).toHaveBeenCalledTimes(1);
+  expect(harness.statusPort.finishFileMutation).toHaveBeenCalledTimes(2);
+  expect(harness.statusPort.setUndoInFlight).toHaveBeenLastCalledWith(false);
+  expect(harness.inFlight).toBe(false);
 }
 
 describe('useChangeReviewBulkDecisionController', () => {
@@ -225,7 +305,7 @@ describe('useChangeReviewBulkDecisionController', () => {
         fileDecisions: {},
       },
     });
-    expect(harness.viewPort.acceptAllEditorChunks).toHaveBeenCalledWith(new Set(['/repo/a.ts']));
+    expect(harness.editorPort.acceptAllEditorChunks).toHaveBeenCalledWith(new Set(['/repo/a.ts']));
     expect(harness.commandPort.applyReview).not.toHaveBeenCalled();
   });
 
@@ -247,7 +327,7 @@ describe('useChangeReviewBulkDecisionController', () => {
     await waitForRejectAllToSettle(harness);
 
     expect(harness.state.fileDecisions).toEqual({ '/repo/a.ts': 'rejected' });
-    expect(harness.viewPort.rollbackEditorContent).toHaveBeenCalledWith(
+    expect(harness.editorPort.rollbackEditorContent).toHaveBeenCalledWith(
       '/repo/b.ts',
       'before:/repo/b.ts'
     );
@@ -257,7 +337,7 @@ describe('useChangeReviewBulkDecisionController', () => {
       undefined,
       '/repo/b.ts'
     );
-    expect(harness.viewPort.incrementDiscardCounter).toHaveBeenCalledWith('/repo/b.ts');
+    expect(harness.statusPort.incrementDiscardCounter).toHaveBeenCalledWith('/repo/b.ts');
     expect(harness.latestAction).toMatchObject({
       kind: 'bulk',
       descriptor: { intent: 'reject-all', fileCount: 1 },
@@ -275,7 +355,7 @@ describe('useChangeReviewBulkDecisionController', () => {
 
     expect(harness.commandPort.applyReview).not.toHaveBeenCalled();
     expect(harness.state.fileDecisions).toEqual({});
-    expect(harness.viewPort.rollbackEditorContent).toHaveBeenCalledTimes(2);
+    expect(harness.editorPort.rollbackEditorContent).toHaveBeenCalledTimes(2);
     expect(harness.latestAction).toBeUndefined();
   });
 
@@ -305,7 +385,7 @@ describe('useChangeReviewBulkDecisionController', () => {
   it('fences delayed editor synchronization after the review operation scope changes', () => {
     const harness = createHarness();
     let scheduled: (() => void) | undefined;
-    vi.mocked(harness.viewPort.scheduleEditorSync).mockImplementation((callback) => {
+    vi.mocked(harness.editorPort.scheduleEditorSync).mockImplementation((callback) => {
       scheduled = callback;
     });
     renderHarness(harness);
@@ -314,6 +394,188 @@ describe('useChangeReviewBulkDecisionController', () => {
     harness.current = false;
     if (scheduled) scheduled();
 
-    expect(harness.viewPort.acceptAllEditorChunks).not.toHaveBeenCalled();
+    expect(harness.editorPort.acceptAllEditorChunks).not.toHaveBeenCalled();
+  });
+
+  it.each(['scope', 'epoch'] as const)(
+    'fences a stale %s apply completion without clearing replacement-generation state',
+    async (staleBoundary) => {
+      const harness = createHarness();
+      const apply = deferred<ApplyReviewResult | null>();
+      vi.mocked(harness.commandPort.applyReview).mockReturnValue(apply.promise);
+      renderHarness(harness);
+
+      act(() => latest!.rejectAll());
+      await vi.waitFor(() => expect(harness.commandPort.applyReview).toHaveBeenCalledTimes(1));
+      if (staleBoundary === 'scope') {
+        harness.current = false;
+      } else {
+        harness.state.changeSetEpoch += 1;
+      }
+      await act(async () => {
+        apply.resolve(successfulApply());
+        await apply.promise;
+      });
+
+      expect(harness.writeEvidencePort.markCommittedPostimages).not.toHaveBeenCalled();
+      expect(harness.history.bindCommittedAction).not.toHaveBeenCalled();
+      expect(harness.history.publishUndoHistory).not.toHaveBeenCalled();
+      expect(harness.statusPort.finishFileMutation).not.toHaveBeenCalled();
+      expect(harness.statusPort.clearFilesApplying).not.toHaveBeenCalled();
+    }
+  );
+
+  it('blocks a second Reject All while the first operation owns the file mutations', async () => {
+    const harness = createHarness();
+    const apply = deferred<ApplyReviewResult | null>();
+    vi.mocked(harness.commandPort.applyReview).mockReturnValue(apply.promise);
+    renderHarness(harness);
+
+    act(() => {
+      latest!.rejectAll();
+      latest!.rejectAll();
+    });
+
+    expect(harness.history.pushUndoAction).toHaveBeenCalledTimes(1);
+    expect(harness.commandPort.applyReview).toHaveBeenCalledTimes(1);
+    expect(harness.statusPort.beginFileMutation).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      apply.resolve(successfulApply());
+      await apply.promise;
+    });
+    await waitForRejectAllToSettle(harness);
+  });
+
+  it('fails closed and cleans up when apply returns null', async () => {
+    const harness = createHarness();
+    vi.mocked(harness.commandPort.applyReview).mockResolvedValue(null);
+    renderHarness(harness);
+
+    act(() => latest!.rejectAll());
+
+    await expectUnknownApplyCleanup(harness);
+  });
+
+  it('fails closed and cleans up when apply reports an unknown file', async () => {
+    const harness = createHarness();
+    vi.mocked(harness.commandPort.applyReview).mockResolvedValue(
+      successfulApply({
+        applied: 0,
+        errors: [{ filePath: '/repo/not-requested.ts', error: 'unknown path' }],
+      })
+    );
+    renderHarness(harness);
+
+    act(() => latest!.rejectAll());
+
+    await expectUnknownApplyCleanup(harness);
+  });
+
+  it('fails closed and cleans up when apply throws', async () => {
+    const harness = createHarness();
+    vi.mocked(harness.commandPort.applyReview).mockRejectedValue(new Error('transport failed'));
+    renderHarness(harness);
+
+    act(() => latest!.rejectAll());
+
+    await expectUnknownApplyCleanup(harness);
+  });
+
+  it('keeps pending decisions but releases transient status when instant apply is disabled', () => {
+    const harness = createHarness();
+    harness.instantApply = false;
+    renderHarness(harness);
+
+    act(() => latest!.rejectAll());
+
+    expect(harness.commandPort.applyReview).not.toHaveBeenCalled();
+    expect(harness.state.fileDecisions).toEqual({
+      '/repo/a.ts': 'rejected',
+      '/repo/b.ts': 'rejected',
+    });
+    expect(harness.editorPort.rejectAllEditorChunks).toHaveBeenCalledTimes(1);
+    expect(harness.history.discardLatestAction).not.toHaveBeenCalled();
+    expect(harness.statusPort.finishFileMutation).toHaveBeenCalledTimes(2);
+    expect(harness.statusPort.clearFilesApplying).toHaveBeenCalledTimes(1);
+    expect(harness.inFlight).toBe(false);
+  });
+
+  it('preserves rename, new-file, and deleted-file disk snapshot semantics', async () => {
+    const harness = createHarness();
+    const renamed = makeRenameFile('/repo/renamed.ts');
+    const created = makeFile('/repo/created.ts', true);
+    const deleted = makeFile('/repo/deleted.ts');
+    harness.files = [renamed, created, deleted];
+    harness.rejectableFiles = harness.files;
+    harness.state.hunkDecisions = {};
+    harness.buildRejectDiskSnapshot = vi.fn<BuildBulkRejectDiskSnapshot>((file) => ({
+      filePath: file.filePath,
+      beforeContent: `before:${file.filePath}`,
+      afterContent: file === created ? null : `after:${file.filePath}`,
+      file,
+      restoreMode: file === created ? 'create-file' : file === deleted ? 'delete-file' : undefined,
+    }));
+    vi.mocked(harness.commandPort.applyReview).mockResolvedValue(successfulApply({ applied: 3 }));
+    renderHarness(harness);
+
+    act(() => latest!.rejectAll());
+    await waitForRejectAllToSettle(harness);
+
+    expect(harness.commandPort.readCurrentDiskContent).not.toHaveBeenCalled();
+    expect(harness.latestAction).toMatchObject({
+      kind: 'bulk',
+      diskSnapshots: [
+        { filePath: renamed.filePath, restoreMode: undefined },
+        { filePath: created.filePath, restoreMode: 'create-file', afterContent: null },
+        { filePath: deleted.filePath, restoreMode: 'delete-file' },
+      ],
+    });
+    expect(harness.writeEvidencePort.markExpectedWrite).toHaveBeenNthCalledWith(
+      1,
+      renamed.filePath,
+      null
+    );
+    expect(harness.writeEvidencePort.markExpectedWrite).toHaveBeenNthCalledWith(
+      2,
+      created.filePath,
+      null
+    );
+    expect(harness.writeEvidencePort.markExpectedWrite).toHaveBeenNthCalledWith(
+      3,
+      deleted.filePath,
+      `after:${deleted.filePath}`
+    );
+    expect(harness.writeEvidencePort.markExpectedWrite).toHaveBeenCalledTimes(6);
+  });
+
+  it('fences Undo when applied content conflicts with the captured rejected content', async () => {
+    const harness = createHarness();
+    const [file] = harness.files;
+    harness.files = [file];
+    harness.rejectableFiles = [file];
+    harness.state.hunkDecisions = {};
+    harness.buildRejectDiskSnapshot = vi.fn<BuildBulkRejectDiskSnapshot>(() => ({
+      filePath: file.filePath,
+      beforeContent: 'header\nrejected\nfooter',
+      afterContent: 'header\nbase\nfooter',
+      file,
+    }));
+    vi.mocked(harness.commandPort.readCurrentDiskContent).mockResolvedValue(
+      'header\napplied\nfooter'
+    );
+    renderHarness(harness);
+
+    act(() => latest!.rejectAll());
+    await waitForRejectAllToSettle(harness);
+
+    const action = harness.latestAction;
+    if (!action || action.kind !== 'bulk') throw new Error('Expected a retained bulk action');
+    expect(action.diskSnapshots[0]).toMatchObject({
+      beforeContent: 'header\nrejected\nfooter',
+      afterContent: 'header\napplied\nfooter',
+      restoreConflict:
+        'Undo conflicts with edits that were preserved while applying the rejection.',
+    });
+    expect(harness.history.publishUndoHistory).toHaveBeenCalledTimes(1);
   });
 });

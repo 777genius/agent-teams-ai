@@ -32,13 +32,19 @@ export interface ChangeReviewBulkDecisionCommandPort {
   readCurrentDiskContent: (filePath: string, fallback: string) => Promise<string>;
 }
 
-export interface ChangeReviewBulkDecisionViewPort {
+export interface ChangeReviewBulkDecisionEditorPort {
   scheduleEditorSync: (callback: () => void) => void;
   acceptAllEditorChunks: (filePaths: ReadonlySet<string>) => void;
   rejectAllEditorChunks: (filePaths: ReadonlySet<string>) => void;
   rollbackEditorContent: (filePath: string, content: string) => void;
+}
+
+export interface ChangeReviewBulkDecisionWriteEvidencePort {
   markExpectedWrite: (filePath: string, expectedContent: string | null) => void;
   markCommittedPostimages: (postimages: readonly ReviewMutationDiskPostimage[] | undefined) => void;
+}
+
+export interface ChangeReviewBulkDecisionStatusPort {
   beginFileMutation: (filePath: string) => void;
   finishFileMutation: (filePath: string) => void;
   markFilesApplying: (filePaths: ReadonlySet<string>) => void;

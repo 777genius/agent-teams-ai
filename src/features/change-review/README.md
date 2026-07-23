@@ -7,7 +7,8 @@ main-process review IPC shell.
 - `renderer/utils` owns pure scope and operation-generation policies.
 - `renderer/hooks` owns scope/lifecycle, draft history, conflict recovery, action-history,
   decision-persistence, keyboard orchestration, bulk Accept/Reject, and durable
-  Undo/Redo/checkpoint Restore through narrow command, state, and view ports.
+  Undo/Redo/checkpoint Restore through narrow command, state, editor, status, and
+  write-evidence ports.
 - `renderer/ui` owns store-free presentation components.
 - `core/domain` owns pure review scope, rename expectation, snippet-shape, watcher-input, and
   decision-persistence policy.

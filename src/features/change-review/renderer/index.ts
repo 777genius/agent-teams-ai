@@ -59,9 +59,11 @@ export type {
 export type {
   BuildBulkRejectDiskSnapshot,
   ChangeReviewBulkDecisionCommandPort,
+  ChangeReviewBulkDecisionEditorPort,
   ChangeReviewBulkDecisionStatePort,
   ChangeReviewBulkDecisionStateSnapshot,
-  ChangeReviewBulkDecisionViewPort,
+  ChangeReviewBulkDecisionStatusPort,
+  ChangeReviewBulkDecisionWriteEvidencePort,
 } from './ports/changeReviewBulkDecisionPorts';
 export type {
   ChangeReviewConflictCommandPort,

@@ -1,21 +1,26 @@
 import { useCallback } from 'react';
 
-import { restoreReviewDecisionRecordsForFile } from '@features/review-mutations';
+import {
+  alignReviewDiskUndoSnapshotWithAppliedContent,
+  isLedgerRenameReviewFile,
+  reconcileReviewDecisionRecordsAfterApply,
+} from '@features/review-mutations';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
-import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 
 import type {
   BuildBulkRejectDiskSnapshot,
   ChangeReviewBulkDecisionCommandPort,
+  ChangeReviewBulkDecisionEditorPort,
   ChangeReviewBulkDecisionStatePort,
-  ChangeReviewBulkDecisionViewPort,
+  ChangeReviewBulkDecisionStatusPort,
+  ChangeReviewBulkDecisionWriteEvidencePort,
 } from '../ports/changeReviewBulkDecisionPorts';
 import type { ReviewOperationScopeToken } from '../utils/reviewOperationGeneration';
 import type { ChangeReviewActionHistoryController } from './useChangeReviewActionHistoryController';
 import type {
+  ApplyReviewResult,
   FileChangeSummary,
   ReviewDecisionSnapshot,
-  ReviewDiskUndoSnapshot,
   ReviewUndoAction,
 } from '@shared/types';
 
@@ -41,7 +46,9 @@ interface UseChangeReviewBulkDecisionControllerInput {
   history: ActionHistory;
   statePort: ChangeReviewBulkDecisionStatePort;
   commandPort: ChangeReviewBulkDecisionCommandPort;
-  viewPort: ChangeReviewBulkDecisionViewPort;
+  editorPort: ChangeReviewBulkDecisionEditorPort;
+  statusPort: ChangeReviewBulkDecisionStatusPort;
+  writeEvidencePort: ChangeReviewBulkDecisionWriteEvidencePort;
   buildRejectDiskSnapshot: BuildBulkRejectDiskSnapshot;
   persistLatestAcceptedAction: () => Promise<unknown>;
   ensureDurableScope: () => boolean;
@@ -54,51 +61,6 @@ interface UseChangeReviewBulkDecisionControllerInput {
 export interface ChangeReviewBulkDecisionController {
   acceptAll: () => void;
   rejectAll: () => void;
-}
-
-function isLedgerRenameReviewFile(file: FileChangeSummary | undefined): boolean {
-  return Boolean(file?.snippets.some((snippet) => snippet.ledger?.relation?.kind === 'rename'));
-}
-
-function alignDiskUndoSnapshotWithAppliedContent(
-  snapshot: ReviewDiskUndoSnapshot,
-  appliedContent: string
-): void {
-  if (snapshot.afterContent === null) return;
-  const merged = threeWayTextMerge(snapshot.afterContent, appliedContent, snapshot.beforeContent);
-  snapshot.afterContent = appliedContent;
-  if (merged.hasConflicts) {
-    snapshot.restoreConflict =
-      'Undo conflicts with edits that were preserved while applying the rejection.';
-    return;
-  }
-  snapshot.beforeContent = merged.content;
-}
-
-function reconcileDecisionRecordsAfterApply(
-  files: readonly FileChangeSummary[],
-  errorPaths: readonly string[] | null,
-  current: ReviewDecisionSnapshot,
-  snapshot: ReviewDecisionSnapshot
-): ReviewDecisionSnapshot & {
-  successful: FileChangeSummary[];
-  failed: FileChangeSummary[];
-} {
-  const normalizedErrors = new Set((errorPaths ?? []).map(normalizePathForComparison));
-  const requestedPaths = new Set(files.map((file) => normalizePathForComparison(file.filePath)));
-  const hasUnknownError =
-    errorPaths === null || [...normalizedErrors].some((filePath) => !requestedPaths.has(filePath));
-  const successful = hasUnknownError
-    ? []
-    : files.filter((file) => !normalizedErrors.has(normalizePathForComparison(file.filePath)));
-  const failed = hasUnknownError
-    ? [...files]
-    : files.filter((file) => normalizedErrors.has(normalizePathForComparison(file.filePath)));
-  const reconciled = failed.reduce(
-    (decisions, file) => restoreReviewDecisionRecordsForFile(file, decisions, snapshot),
-    current
-  );
-  return { ...reconciled, successful, failed };
 }
 
 function updateRetainedRejectAllDescriptor(
@@ -129,7 +91,9 @@ export function useChangeReviewBulkDecisionController({
   history,
   statePort,
   commandPort,
-  viewPort,
+  editorPort,
+  statusPort,
+  writeEvidencePort,
   buildRejectDiskSnapshot,
   persistLatestAcceptedAction,
   ensureDurableScope,
@@ -162,9 +126,9 @@ export function useChangeReviewBulkDecisionController({
       diskSnapshots: [],
     });
     void persistLatestAcceptedAction();
-    viewPort.scheduleEditorSync(() => {
+    editorPort.scheduleEditorSync(() => {
       if (isCurrentOperationScope(operationScope)) {
-        viewPort.acceptAllEditorChunks(acceptedFiles);
+        editorPort.acceptAllEditorChunks(acceptedFiles);
       }
     });
   }, [
@@ -178,7 +142,7 @@ export function useChangeReviewBulkDecisionController({
     isCurrentOperationScope,
     persistLatestAcceptedAction,
     statePort,
-    viewPort,
+    editorPort,
   ]);
 
   const rejectAll = useCallback((): void => {
@@ -200,7 +164,7 @@ export function useChangeReviewBulkDecisionController({
       return snapshot ? [snapshot] : [];
     });
     for (const file of requestedFiles) {
-      viewPort.beginFileMutation(file.filePath);
+      statusPort.beginFileMutation(file.filePath);
       statePort.rejectAllFile(file.filePath);
     }
     const preparedAction = history.pushUndoAction({
@@ -209,18 +173,18 @@ export function useChangeReviewBulkDecisionController({
       decisionSnapshot,
       diskSnapshots,
     });
-    viewPort.markFilesApplying(requestedPaths);
-    viewPort.scheduleEditorSync(() => {
+    statusPort.markFilesApplying(requestedPaths);
+    editorPort.scheduleEditorSync(() => {
       if (isCurrentOperationScope(operationScope)) {
-        viewPort.rejectAllEditorChunks(requestedPaths);
+        editorPort.rejectAllEditorChunks(requestedPaths);
       }
     });
 
     if (!instantApply) {
       for (const file of requestedFiles) {
-        viewPort.finishFileMutation(file.filePath);
+        statusPort.finishFileMutation(file.filePath);
       }
-      viewPort.clearFilesApplying(requestedPaths);
+      statusPort.clearFilesApplying(requestedPaths);
       return;
     }
 
@@ -230,18 +194,25 @@ export function useChangeReviewBulkDecisionController({
         if (!ensureDurableScope()) {
           statePort.restoreDecisionSnapshot(decisionSnapshot);
           for (const snapshot of diskSnapshots) {
-            viewPort.rollbackEditorContent(snapshot.filePath, snapshot.beforeContent);
+            editorPort.rollbackEditorContent(snapshot.filePath, snapshot.beforeContent);
           }
           history.discardLatestAction(preparedAction);
           return;
         }
         for (const snapshot of diskSnapshots) {
-          viewPort.markExpectedWrite(
+          writeEvidencePort.markExpectedWrite(
             snapshot.filePath,
             isLedgerRenameReviewFile(snapshot.file) ? null : snapshot.afterContent
           );
         }
-        const result = await commandPort.applyReview(teamName, taskId, memberName);
+        let result: ApplyReviewResult | null = null;
+        try {
+          result = await commandPort.applyReview(teamName, taskId, memberName);
+        } catch {
+          // Treat transport/runtime failure like an unknown apply result. The
+          // store command owns user-visible error reporting; this controller
+          // must still roll back optimistic decisions and release busy state.
+        }
         const currentState = statePort.getSnapshot();
         if (
           !isCurrentOperationScope(operationScope) ||
@@ -249,9 +220,9 @@ export function useChangeReviewBulkDecisionController({
         ) {
           return;
         }
-        viewPort.markCommittedPostimages(result?.diskPostimages);
+        writeEvidencePort.markCommittedPostimages(result?.diskPostimages);
         history.bindCommittedAction(preparedAction, result?.committedReviewAction);
-        const reconciliation = reconcileDecisionRecordsAfterApply(
+        const reconciliation = reconcileReviewDecisionRecordsAfterApply(
           requestedFiles,
           result ? result.errors.map((entry) => entry.filePath) : null,
           {
@@ -270,10 +241,10 @@ export function useChangeReviewBulkDecisionController({
             (snapshot) => snapshot.filePath === file.filePath
           )?.beforeContent;
           if (beforeContent !== undefined) {
-            viewPort.rollbackEditorContent(file.filePath, beforeContent);
+            editorPort.rollbackEditorContent(file.filePath, beforeContent);
           }
           statePort.invalidateResolvedFileContent(file.filePath);
-          viewPort.incrementDiscardCounter(file.filePath);
+          statusPort.incrementDiscardCounter(file.filePath);
           commandPort.fetchFileContent(teamName, memberName, file.filePath);
         }
 
@@ -293,7 +264,7 @@ export function useChangeReviewBulkDecisionController({
           diskSnapshots.length
         );
 
-        viewPort.setUndoInFlight(true);
+        statusPort.setUndoInFlight(true);
         await Promise.all(
           diskSnapshots.map(async (snapshot) => {
             if (
@@ -307,7 +278,7 @@ export function useChangeReviewBulkDecisionController({
               snapshot.filePath,
               snapshot.afterContent
             );
-            alignDiskUndoSnapshotWithAppliedContent(snapshot, appliedContent);
+            alignReviewDiskUndoSnapshotWithAppliedContent(snapshot, appliedContent);
           })
         );
 
@@ -325,7 +296,7 @@ export function useChangeReviewBulkDecisionController({
               normalizePathForComparison(file.filePath)
           );
           if (snapshot) {
-            viewPort.markExpectedWrite(
+            writeEvidencePort.markExpectedWrite(
               file.filePath,
               isLedgerRenameReviewFile(snapshot.file) ? null : snapshot.afterContent
             );
@@ -339,10 +310,10 @@ export function useChangeReviewBulkDecisionController({
           currentState.changeSetEpoch === changeSetEpoch
         ) {
           for (const file of requestedFiles) {
-            viewPort.finishFileMutation(file.filePath);
+            statusPort.finishFileMutation(file.filePath);
           }
-          viewPort.clearFilesApplying(requestedPaths);
-          viewPort.setUndoInFlight(false);
+          statusPort.clearFilesApplying(requestedPaths);
+          statusPort.setUndoInFlight(false);
         }
       }
     })();
@@ -353,6 +324,7 @@ export function useChangeReviewBulkDecisionController({
     captureOperationScope,
     changeSetEpoch,
     commandPort,
+    editorPort,
     ensureDurableScope,
     hasActionInFlight,
     history,
@@ -361,9 +333,10 @@ export function useChangeReviewBulkDecisionController({
     memberName,
     rejectableFiles,
     statePort,
+    statusPort,
     taskId,
     teamName,
-    viewPort,
+    writeEvidencePort,
   ]);
 
   return { acceptAll, rejectAll };
