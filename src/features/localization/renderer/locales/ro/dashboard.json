@@ -117,7 +117,7 @@
       "connectPlan": "Conectează planul",
       "connectSuperGrok": "Conectează SuperGrok",
       "connected": "Conectat",
-      "copilotDescription": "Folosește GitHub Copilot prin OpenCode. Agent Teams verifică un model compatibil cu planul tău, inclusiv Copilot Free.",
+      "copilotDescription": "Folosește GitHub Copilot prin OpenCode. Agent Teams verifică un model compatibil cu planul tău.",
       "copyCommand": "Copiază comanda",
       "chooseRegion": "Alege regiunea",
       "cursorConnected": "Contul Cursor este conectat",
