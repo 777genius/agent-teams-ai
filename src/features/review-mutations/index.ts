@@ -22,6 +22,16 @@ export {
   type ReviewHistoryLineStatsStatus,
 } from './core/domain/reviewHistoryDiskSteps';
 export {
+  assertAuthoritativelyBoundReviewAction,
+  assertExactReviewHistoryTransition,
+  findLatestRestorableDiskSnapshot,
+  isAuthoritativelyBoundReviewSnapshot,
+  isAuthoritativeReviewDeletion,
+  rebindReviewActionDescriptorPath,
+  type ReviewHistoryDecisionState,
+  type ReviewHistoryMutationPolicyContext,
+} from './core/domain/reviewHistoryMutationPolicy';
+export {
   assertReviewMutationTransition,
   getNextReviewMutationPhase,
 } from './core/domain/reviewMutationStateMachine';

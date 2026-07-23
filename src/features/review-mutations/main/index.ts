@@ -40,6 +40,16 @@ export {
   type ReviewHistoryLineStatsStatus,
 } from '../core/domain/reviewHistoryDiskSteps';
 export {
+  assertAuthoritativelyBoundReviewAction,
+  assertExactReviewHistoryTransition,
+  findLatestRestorableDiskSnapshot,
+  isAuthoritativelyBoundReviewSnapshot,
+  isAuthoritativeReviewDeletion,
+  rebindReviewActionDescriptorPath,
+  type ReviewHistoryDecisionState,
+  type ReviewHistoryMutationPolicyContext,
+} from '../core/domain/reviewHistoryMutationPolicy';
+export {
   isDecisionlessReviewRecoveryKind,
   parseReviewHistoryRestoreTarget,
 } from '../core/domain/reviewHistoryRestoreTarget';
@@ -53,6 +63,13 @@ export {
   ReviewMutationApplyResultError,
 } from './application/ReviewDecisionBatchApplication';
 export { ReviewDirectMutationDiskService } from './application/ReviewDirectMutationDiskService';
+export { ReviewHistoryMutationApplication } from './application/ReviewHistoryMutationApplication';
+export type {
+  ReviewHistoryMutationCurrentState,
+  ReviewHistoryMutationDependencies,
+  ReviewHistoryMutationFilePort,
+  ReviewHistoryMutationScopePort,
+} from './application/ReviewHistoryMutationPorts';
 export {
   MAX_REVIEW_MUTATION_STEPS,
   ReviewMutationRecoveryApplication,
@@ -82,6 +99,10 @@ export {
   createReviewDecisionBatchFeature,
   type ReviewDecisionBatchFeatureDependencies,
 } from './composition/createReviewDecisionBatchFeature';
+export {
+  createReviewHistoryMutationFeature,
+  type ReviewHistoryMutationFeatureDependencies,
+} from './composition/createReviewHistoryMutationFeature';
 export {
   createReviewMutationRecoveryFeature,
   type ReviewMutationRecoveryFeatureDependencies,
