@@ -34,9 +34,7 @@ function diagnostic(overrides: Partial<TeamLaunchDiagnosticItem> = {}): TeamLaun
   };
 }
 
-function progress(
-  overrides: Partial<TeamProvisioningProgress> = {}
-): TeamProvisioningProgress {
+function progress(overrides: Partial<TeamProvisioningProgress> = {}): TeamProvisioningProgress {
   return {
     runId: 'run-1',
     teamName: 'team',
@@ -131,9 +129,7 @@ describe('TeamProvisioningProgressState', () => {
       expect(retained.warnings).not.toBe(warnings);
       expect(retained.launchDiagnostics).toEqual([diagnostic()]);
       expect(retained.launchDiagnostics).not.toBe(launchDiagnostics);
-      expect(() => state.getProvisioningStatus('missing-run', new Map())).toThrow(
-        'Unknown runId'
-      );
+      expect(() => state.getProvisioningStatus('missing-run', new Map())).toThrow('Unknown runId');
     });
 
     it('unrefs retention timers and removes terminal runtime adapter traces when fired', () => {
@@ -144,7 +140,10 @@ describe('TeamProvisioningProgressState', () => {
         return timer;
       });
       const harness = retainedState({ setTimeout: setTimeoutPort, ttlMs: 25 });
-      harness.runtimeAdapterProgressByRunId.set('terminal-run', progress({ runId: 'terminal-run' }));
+      harness.runtimeAdapterProgressByRunId.set(
+        'terminal-run',
+        progress({ runId: 'terminal-run' })
+      );
       harness.runtimeAdapterTraceLinesByRunId.set('terminal-run', ['trace']);
       harness.runtimeAdapterTraceKeyByRunId.set('terminal-run', 'trace-key');
 
