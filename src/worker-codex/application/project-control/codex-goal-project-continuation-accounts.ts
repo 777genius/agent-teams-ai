@@ -8,12 +8,18 @@ export async function withProjectContinuationAccounts(input: {
   readonly requestedAccounts?: readonly string[];
   readonly continuation?: CodexProjectAccountContinuation;
   readonly verifiedTerminalHandoffRecovery?: boolean;
+  readonly verifiedAdmittedInputPatchPrewarmContinuation?: boolean;
+  readonly immutableManifestAccountIds?: readonly string[];
   readonly excludedAccountIds: readonly string[];
   readonly allowedAccountIds: readonly string[];
   readonly listAccountStatuses?: typeof listCodexGoalAccountStatuses;
 }): Promise<CodexGoalLaunchInput> {
   if (input.requestedAccounts === undefined) return input.launch;
-  if (!input.continuation && input.verifiedTerminalHandoffRecovery !== true) {
+  if (
+    !input.continuation &&
+    input.verifiedTerminalHandoffRecovery !== true &&
+    input.verifiedAdmittedInputPatchPrewarmContinuation !== true
+  ) {
     throw new Error(
       "project_control_continuation_accounts_account_unavailable_proof_required",
     );
@@ -39,6 +45,19 @@ export async function withProjectContinuationAccounts(input: {
   );
   if (invalidAccountId) {
     throw new Error("project_control_continuation_account_id_invalid");
+  }
+  if (input.verifiedAdmittedInputPatchPrewarmContinuation === true) {
+    const immutableManifestAccounts = new Set(
+      input.immutableManifestAccountIds ?? [],
+    );
+    const outsideManifest = input.requestedAccounts.find(
+      (accountId) => !immutableManifestAccounts.has(accountId),
+    );
+    if (outsideManifest) {
+      throw new Error(
+        `project_control_prewarm_continuation_account_outside_manifest:${outsideManifest}`,
+      );
+    }
   }
   if (
     !input.continuation &&

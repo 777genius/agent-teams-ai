@@ -310,7 +310,7 @@ describe("admitted input-patch capacity continuation", () => {
       registryRoot: registryRootDir,
       jobIdPrefixes: ["project-"],
       tmuxSessionPrefixes: ["project-"],
-      allowedAccountIds: ["account-c", "account-g"],
+      allowedAccountIds: ["account-c", "account-g", "account-i"],
       allowedBranches: ["main"],
       allowedGitRemotes: ["origin"],
       preStartAdmission: { required: true, mode: "serial-builtin" },
@@ -625,14 +625,63 @@ describe("admitted input-patch capacity continuation", () => {
         },
       })}\n`,
     );
+    const prewarmContinuationDeps: CodexGoalMcpProjectControlActionsDeps = {
+      ...continuationDeps,
+      safeExecutionJournal: new InMemoryAttemptJournal(),
+      listAccountStatuses: async (input) => {
+        expect(input).toEqual({ authRootDir: join(fixture.root, "auth") });
+        return ["account-c", "account-g", "account-i"].map((accountId) => ({
+          name: accountId,
+          authJsonPath: join(
+            fixture.root,
+            "auth",
+            accountId,
+            "auth.json",
+          ),
+          status: "ready" as const,
+          availability: "available" as const,
+          schedulerEligible: true,
+          recommendedAction: "none" as const,
+          warnings: [],
+          safeMessage: "ready",
+        }));
+      },
+    };
     await expect(
       projectControlStartStoredJobView(
-        { ...args, forceStart: true },
-        continuationDeps,
+        {
+          ...args,
+          forceStart: true,
+          continuationAccounts: ["account-c"],
+        },
+        prewarmContinuationDeps,
       ),
     ).resolves.toMatchObject({ ok: true });
     expect(startAdmissionWorkspaceModes.at(-1)).toBe(
       "admitted_input_patch_continuation",
+    );
+    expect(reservedLaunch?.config.accounts).toEqual([
+      {
+        name: "account-c",
+        authJsonPath: join(
+          fixture.root,
+          "auth",
+          "account-c",
+          "auth.json",
+        ),
+      },
+    ]);
+    await expect(
+      projectControlStartStoredJobView(
+        {
+          ...args,
+          forceStart: true,
+          continuationAccounts: ["account-i"],
+        },
+        prewarmContinuationDeps,
+      ),
+    ).rejects.toThrow(
+      "project_control_prewarm_continuation_account_outside_manifest:account-i",
     );
 
     await writeFile(

@@ -443,6 +443,12 @@ export async function projectControlStartStoredJobView(
         ...(terminalRecovery
           ? { verifiedTerminalHandoffRecovery: true }
           : {}),
+        ...(continuationDecision?.kind === "prewarm_before_attempt"
+          ? {
+              verifiedAdmittedInputPatchPrewarmContinuation: true,
+              immutableManifestAccountIds: loaded.manifest.accounts,
+            }
+          : {}),
         excludedAccountIds: continuationReservation.excludedAccountIds,
         allowedAccountIds: controller.scope.allowedAccountIds ?? [],
         ...(deps.listAccountStatuses
