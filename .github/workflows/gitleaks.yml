@@ -1,0 +1,25 @@
+# Secret-scan gate. Logic lives in vioxen/org-workflows — this is just the stub.
+#
+# On a PR it scans ONLY the commits the PR adds, so pre-existing secrets in this
+# repo's history (QUANTATECH-446) do not fail unrelated PRs. Rotations and
+# history are tracked on 446; this gate stops new leaks.
+#
+# No secrets required.
+name: Gitleaks
+
+on:
+  pull_request:
+  schedule:
+    # Weekly, off-peak. Minute staggered per repo (QUANTATECH-450 rollout) so the
+    # gated repos do not all hit the runner pool in the same minute.
+    - cron: "44 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    uses: vioxen/org-workflows/.github/workflows/gitleaks.yml@main
+    with:
+      runs-on: ${{ vars.RUNNER || 'arc-runner-set' }}
