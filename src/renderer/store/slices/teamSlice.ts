@@ -9,11 +9,12 @@ import {
 import {
   isActiveProvisioningState,
   isTerminalProvisioningState,
-  shouldIgnoreProvisioningProgressRegression,
 } from '@features/team-provisioning';
 import {
   createTeamProvisioningControlSlice,
+  createTeamProvisioningProgressSlice,
   type TeamProvisioningControlSlice,
+  type TeamProvisioningProgressSlice,
 } from '@features/team-provisioning/renderer';
 import {
   clearTeamTaskBoardAnalytics,
@@ -182,7 +183,6 @@ import type {
   TeamAgentRuntimeSnapshot,
   TeamCreateRequest,
   TeamGetDataOptions,
-  TeamLaunchDiagnosticItem,
   TeamLaunchRequest,
   TeamMemberActivityMeta,
   TeamProvisioningProgress,
@@ -786,10 +786,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function isPendingProvisioningRunId(runId: string): boolean {
-  return runId.startsWith('pending:');
-}
-
 function isUnknownProvisioningRunError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return message.includes('Unknown runId');
@@ -1250,7 +1246,11 @@ function isVisibleInActiveTeamSurface(
 }
 
 export interface TeamSlice
-  extends TeamGraphLayoutSlice, TeamProvisioningControlSlice, TeamTaskBoardRendererSlice {
+  extends
+    TeamGraphLayoutSlice,
+    TeamProvisioningControlSlice,
+    TeamProvisioningProgressSlice,
+    TeamTaskBoardRendererSlice {
   teams: TeamSummary[];
   /** O(1) lookup to avoid array scans in render-hot paths */
   teamByName: Record<string, TeamSummary>;
@@ -1426,7 +1426,6 @@ export interface TeamSlice
   permanentlyDeleteTeam: (teamName: string) => Promise<void>;
   createTeam: (request: TeamCreateRequest) => Promise<string>;
   launchTeam: (request: TeamLaunchRequest) => Promise<string>;
-  onProvisioningProgress: (progress: TeamProvisioningProgress) => void;
   pendingApprovals: ToolApprovalRequest[];
   /** Resolved permission approvals: request_id → allowed (true/false). Used for noise row icons. */
   resolvedApprovals: Map<string, boolean>;
@@ -1461,65 +1460,6 @@ export function getCurrentProvisioningProgressForTeam(
 ): TeamProvisioningProgress | null {
   const currentRunId = state.currentProvisioningRunIdByTeam[teamName];
   return currentRunId ? (state.provisioningRuns[currentRunId] ?? null) : null;
-}
-
-function stringArraysEqual(
-  a: readonly string[] | undefined,
-  b: readonly string[] | undefined
-): boolean {
-  if (a === b) return true;
-  if (!a || !b || a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
-
-function launchDiagnosticsEqual(
-  a: readonly TeamLaunchDiagnosticItem[] | undefined,
-  b: readonly TeamLaunchDiagnosticItem[] | undefined
-): boolean {
-  if (a === b) return true;
-  if (!a || !b || a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    const left = a[i];
-    const right = b[i];
-    if (
-      !left ||
-      !right ||
-      left.id !== right.id ||
-      left.memberName !== right.memberName ||
-      left.severity !== right.severity ||
-      left.code !== right.code ||
-      left.label !== right.label ||
-      left.detail !== right.detail ||
-      left.observedAt !== right.observedAt
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function provisioningProgressPayloadEqual(
-  a: TeamProvisioningProgress,
-  b: TeamProvisioningProgress
-): boolean {
-  return (
-    a.runId === b.runId &&
-    a.teamName === b.teamName &&
-    a.state === b.state &&
-    a.message === b.message &&
-    a.messageSeverity === b.messageSeverity &&
-    a.startedAt === b.startedAt &&
-    a.pid === b.pid &&
-    a.error === b.error &&
-    a.cliLogsTail === b.cliLogsTail &&
-    a.assistantOutput === b.assistantOutput &&
-    a.configReady === b.configReady &&
-    stringArraysEqual(a.warnings, b.warnings) &&
-    launchDiagnosticsEqual(a.launchDiagnostics, b.launchDiagnostics)
-  );
 }
 
 export function isTeamProvisioningActive(
@@ -1645,6 +1585,51 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         clearTeamLaunchStepTracking(runId);
       },
       clearRuntimeFreshness: clearTeamAgentRuntimeFreshnessSnapshot,
+    },
+    state: {
+      getState: () => get(),
+      setState: (update) => {
+        if (typeof update === 'function') {
+          set((state) => update(state));
+          return;
+        }
+        set(update);
+      },
+    },
+  }),
+  ...createTeamProvisioningProgressSlice({
+    analytics: {
+      noteRefreshFanout: (note) =>
+        noteTeamRefreshFanout({
+          ...note,
+          surface: 'provisioning-progress',
+        }),
+      recordStepTransition: (existingProgress, progress) =>
+        recordTeamLaunchStepTransition(
+          existingProgress,
+          progress,
+          selectTeamDataForName(get(), progress.teamName)
+        ),
+      recordTerminalProgress: (progress) =>
+        recordTeamLaunchTerminalProgress(progress, selectTeamDataForName(get(), progress.teamName)),
+    },
+    refresh: {
+      fetchMemberSpawnStatuses: (teamName) => get().fetchMemberSpawnStatuses(teamName),
+      fetchTeamAgentRuntime: (teamName) => get().fetchTeamAgentRuntime(teamName),
+      fetchTeams: () => get().fetchTeams(),
+      getSurface: (teamName) => {
+        const state = get();
+        return {
+          hasSelectedTeamData: state.selectedTeamData != null,
+          selected: state.selectedTeamName === teamName,
+          visible: isVisibleInActiveTeamSurface(state, teamName),
+        };
+      },
+      refreshTeamData: (teamName, options) => get().refreshTeamData(teamName, options),
+      selectTeam: (teamName, options) => get().selectTeam(teamName, options),
+    },
+    runtime: {
+      clearFreshness: clearTeamAgentRuntimeFreshnessSnapshot,
     },
     state: {
       getState: () => get(),
@@ -3966,257 +3951,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         recordTeamLaunchIpcFailure(launchAnalyticsContext, error);
       }
       throw error;
-    }
-  },
-
-  onProvisioningProgress: (progress: TeamProvisioningProgress) => {
-    if (get().ignoredProvisioningRunIds[progress.runId] === progress.teamName) {
-      return;
-    }
-    if (get().ignoredRuntimeRunIds[progress.runId] === progress.teamName) {
-      return;
-    }
-
-    const floor = get().provisioningStartedAtFloorByTeam[progress.teamName];
-    if (floor && progress.startedAt < floor) {
-      // Ignore late progress from a previous run (common after stop→launch).
-      return;
-    }
-
-    const currentRunId = get().currentProvisioningRunIdByTeam[progress.teamName];
-    const existingProgress = get().provisioningRuns[progress.runId];
-    const becameConfigReady =
-      progress.configReady === true && existingProgress?.configReady !== true;
-    const isDuplicateProgress =
-      existingProgress !== undefined &&
-      provisioningProgressPayloadEqual(existingProgress, progress);
-    if (isDuplicateProgress && currentRunId === progress.runId) {
-      return;
-    }
-    if (
-      existingProgress &&
-      currentRunId === progress.runId &&
-      shouldIgnoreProvisioningProgressRegression(existingProgress.state, progress.state)
-    ) {
-      return;
-    }
-    if (
-      !currentRunId ||
-      currentRunId === progress.runId ||
-      (isPendingProvisioningRunId(currentRunId) && !isPendingProvisioningRunId(progress.runId))
-    ) {
-      recordTeamLaunchStepTransition(
-        existingProgress,
-        progress,
-        selectTeamDataForName(get(), progress.teamName)
-      );
-    }
-
-    set((state) => {
-      const nextRuns: Record<string, TeamProvisioningProgress> = {
-        ...state.provisioningRuns,
-      };
-      const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
-      const previousCurrentRunId = nextCurrentRunIdByTeam[progress.teamName];
-      let isCanonicalRun = false;
-      if (!previousCurrentRunId || previousCurrentRunId === progress.runId) {
-        nextCurrentRunIdByTeam[progress.teamName] = progress.runId;
-        isCanonicalRun = true;
-      } else if (
-        isPendingProvisioningRunId(previousCurrentRunId) &&
-        !isPendingProvisioningRunId(progress.runId)
-      ) {
-        delete nextRuns[previousCurrentRunId];
-        nextCurrentRunIdByTeam[progress.teamName] = progress.runId;
-        isCanonicalRun = true;
-      }
-      if (!previousCurrentRunId) {
-        isCanonicalRun = true;
-      }
-      if (!isCanonicalRun) {
-        if (!(progress.runId in state.provisioningRuns)) {
-          return {};
-        }
-        delete nextRuns[progress.runId];
-        return { provisioningRuns: nextRuns };
-      }
-
-      nextRuns[progress.runId] = progress;
-      for (const [runId, run] of Object.entries(nextRuns)) {
-        if (runId !== progress.runId && run.teamName === progress.teamName) {
-          delete nextRuns[runId];
-        }
-      }
-
-      const nextErrors = { ...state.provisioningErrorByTeam };
-      if (progress.state === 'failed') {
-        nextErrors[progress.teamName] = progress.error ?? progress.message;
-      } else {
-        delete nextErrors[progress.teamName];
-      }
-      // Clean up provisioning snapshot on terminal failure states
-      const nextSnapshots =
-        progress.state === 'failed' || progress.state === 'cancelled'
-          ? (() => {
-              const s = { ...state.provisioningSnapshotByTeam };
-              delete s[progress.teamName];
-              return s;
-            })()
-          : state.provisioningSnapshotByTeam;
-      return {
-        provisioningRuns: nextRuns,
-        currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
-        currentRuntimeRunIdByTeam: {
-          ...state.currentRuntimeRunIdByTeam,
-          [progress.teamName]: progress.runId,
-        },
-        provisioningErrorByTeam: nextErrors,
-        provisioningSnapshotByTeam: nextSnapshots,
-      };
-    });
-
-    const isCanonicalRun =
-      get().currentProvisioningRunIdByTeam[progress.teamName] === progress.runId;
-    let hydratedVisibleTeam = false;
-
-    if (isCanonicalRun && isTerminalProvisioningState(progress.state)) {
-      recordTeamLaunchTerminalProgress(progress, selectTeamDataForName(get(), progress.teamName));
-    }
-
-    if (isCanonicalRun && becameConfigReady) {
-      const state = get();
-      if (isVisibleInActiveTeamSurface(state, progress.teamName)) {
-        const willSelectTeam =
-          state.selectedTeamName === progress.teamName && state.selectedTeamData == null;
-        noteTeamRefreshFanout({
-          teamName: progress.teamName,
-          surface: 'provisioning-progress',
-          phase: 'scheduled',
-          reason: 'provisioning:config-ready',
-          operation: willSelectTeam ? 'selectTeam' : 'refreshTeamData',
-          selected: state.selectedTeamName === progress.teamName,
-          visible: true,
-        });
-        if (state.selectedTeamName === progress.teamName && state.selectedTeamData == null) {
-          void state.selectTeam(progress.teamName, { allowReloadWhileProvisioning: true });
-        } else {
-          void state.refreshTeamData(progress.teamName, { withDedup: true });
-        }
-        hydratedVisibleTeam = true;
-      }
-    }
-
-    if (isCanonicalRun && isTerminalProvisioningState(progress.state)) {
-      set((prev) => {
-        const next = { ...prev.memberSpawnStatusesByTeam };
-        const nextSnapshots = { ...prev.memberSpawnSnapshotsByTeam };
-        const nextRuntime = { ...prev.teamAgentRuntimeByTeam };
-        const currentStatuses = next[progress.teamName];
-        if (!currentStatuses) {
-          if (progress.state !== 'ready') {
-            delete nextRuntime[progress.teamName];
-            clearTeamAgentRuntimeFreshnessSnapshot(progress.teamName);
-          }
-          return {
-            memberSpawnStatusesByTeam: next,
-            memberSpawnSnapshotsByTeam: nextSnapshots,
-            teamAgentRuntimeByTeam: nextRuntime,
-          };
-        }
-        if (progress.state === 'ready') {
-          next[progress.teamName] = currentStatuses;
-          return {
-            memberSpawnStatusesByTeam: next,
-            memberSpawnSnapshotsByTeam: nextSnapshots,
-            teamAgentRuntimeByTeam: nextRuntime,
-          };
-        }
-        const retainedStatuses = Object.fromEntries(
-          Object.entries(currentStatuses).filter(([, entry]) => entry.status === 'error')
-        );
-        if (Object.keys(retainedStatuses).length > 0) {
-          next[progress.teamName] = retainedStatuses;
-        } else {
-          delete next[progress.teamName];
-          delete nextSnapshots[progress.teamName];
-        }
-        delete nextRuntime[progress.teamName];
-        clearTeamAgentRuntimeFreshnessSnapshot(progress.teamName);
-        return {
-          memberSpawnStatusesByTeam: next,
-          memberSpawnSnapshotsByTeam: nextSnapshots,
-          teamAgentRuntimeByTeam: nextRuntime,
-        };
-      });
-    }
-
-    if (isCanonicalRun && (progress.state === 'ready' || progress.state === 'disconnected')) {
-      const terminalReason =
-        progress.state === 'ready'
-          ? 'provisioning:terminal-ready'
-          : 'provisioning:terminal-disconnected';
-      noteTeamRefreshFanout({
-        teamName: progress.teamName,
-        surface: 'provisioning-progress',
-        phase: 'scheduled',
-        reason: terminalReason,
-        operation: 'fetchTeams',
-      });
-      void get().fetchTeams();
-      const terminalRefreshState = get();
-      if (isVisibleInActiveTeamSurface(terminalRefreshState, progress.teamName)) {
-        noteTeamRefreshFanout({
-          teamName: progress.teamName,
-          surface: 'provisioning-progress',
-          phase: 'scheduled',
-          reason: terminalReason,
-          operation: 'fetchMemberSpawnStatuses',
-          visible: true,
-        });
-        void terminalRefreshState.fetchMemberSpawnStatuses(progress.teamName);
-        noteTeamRefreshFanout({
-          teamName: progress.teamName,
-          surface: 'provisioning-progress',
-          phase: 'scheduled',
-          reason: terminalReason,
-          operation: 'fetchTeamAgentRuntime',
-          visible: true,
-        });
-        void terminalRefreshState.fetchTeamAgentRuntime(progress.teamName);
-      }
-      if (hydratedVisibleTeam) {
-        noteTeamRefreshFanout({
-          teamName: progress.teamName,
-          surface: 'provisioning-progress',
-          phase: 'skipped',
-          reason: 'provisioning:already-hydrated-visible-team',
-          operation: 'refreshTeamData',
-          visible: true,
-        });
-        return;
-      }
-
-      const state = get();
-      if (!isVisibleInActiveTeamSurface(state, progress.teamName)) {
-        return;
-      }
-
-      // If the user already opened the team tab, reload team data now that
-      // config.json is guaranteed to exist.
-      noteTeamRefreshFanout({
-        teamName: progress.teamName,
-        surface: 'provisioning-progress',
-        phase: 'scheduled',
-        reason: terminalReason,
-        operation: state.selectedTeamName === progress.teamName ? 'selectTeam' : 'refreshTeamData',
-        selected: state.selectedTeamName === progress.teamName,
-        visible: true,
-      });
-      if (state.selectedTeamName === progress.teamName) {
-        void state.selectTeam(progress.teamName);
-      } else {
-        void state.refreshTeamData(progress.teamName, { withDedup: true });
-      }
     }
   },
 
