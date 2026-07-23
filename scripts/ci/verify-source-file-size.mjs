@@ -16,11 +16,15 @@ export const SOURCE_ROOTS = [
 ];
 const SOURCE_EXTENSIONS = new Set([
   '.cjs',
+  '.css',
   '.cts',
   '.js',
   '.jsx',
   '.mjs',
   '.mts',
+  '.less',
+  '.sass',
+  '.scss',
   '.ts',
   '.tsx',
   '.vue',

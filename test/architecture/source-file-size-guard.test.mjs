@@ -29,6 +29,8 @@ test('includes production source roots and excludes tests, declarations, and fix
   assert.equal(isProductionSourcePath('agent-teams-controller/src/controller.js'), true);
   assert.equal(isProductionSourcePath('mcp-server/src/index.ts'), true);
   assert.equal(isProductionSourcePath('landing/components/AppHeader.vue'), true);
+  assert.equal(isProductionSourcePath('landing/assets/styles/hero.scss'), true);
+  assert.equal(isProductionSourcePath('src/renderer/index.css'), true);
   assert.equal(isProductionSourcePath('src/main/index.test.ts'), false);
   assert.equal(isProductionSourcePath('src/main/generated.d.ts'), false);
   assert.equal(isProductionSourcePath('src/main/fixtures/example.ts'), false);
