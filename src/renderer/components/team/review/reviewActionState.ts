@@ -10,17 +10,18 @@ import {
   isReviewFileExpectedDeleted,
 } from './reviewContentPreview';
 
+import type { ReviewActionPersistenceStatus } from '@features/change-review/renderer';
 import type {
   ConflictCheckResult,
   FileChangeSummary,
   FileChangeWithContent,
   HunkDecision,
   ReviewRenameRecoveryExpectation,
-  ReviewUndoAction,
 } from '@shared/types';
 
 export type { ReviewOperationScopeToken } from '@features/change-review/renderer';
 export type { ReviewConflictCandidateSelection } from '@features/change-review/renderer';
+export type { ReviewActionPersistenceStatus } from '@features/change-review/renderer';
 export {
   createReviewOperationScopeToken,
   getReviewDecisionHydrationGuard,
@@ -67,39 +68,6 @@ export function isReviewActionLocked(state: {
   closing: boolean;
 }): boolean {
   return state.applying || state.fileApplyCount > 0 || state.undoing || state.closing;
-}
-
-export type ReviewActionPersistenceStatus = 'saved' | 'saving' | 'error';
-
-export function isReviewActionPersistenceBlocking(status: ReviewActionPersistenceStatus): boolean {
-  return status !== 'saved';
-}
-
-export function appendOrderedReviewAction<T>(
-  stack: readonly T[],
-  action: T,
-  _legacyMaxDepth?: number
-): T[] {
-  return [...stack, action];
-}
-
-export function popOrderedReviewAction<T>(
-  stack: readonly T[],
-  expected: T
-): { stack: T[]; popped: boolean } {
-  if (stack.at(-1) !== expected) return { stack: [...stack], popped: false };
-  return { stack: stack.slice(0, -1), popped: true };
-}
-
-export function replaceLatestReviewAction(
-  stack: readonly ReviewUndoAction[],
-  optimistic: ReviewUndoAction,
-  committed: ReviewUndoAction
-): { stack: ReviewUndoAction[]; replaced: boolean } {
-  if (optimistic.id !== committed.id || stack.at(-1)?.id !== optimistic.id) {
-    return { stack: [...stack], replaced: false };
-  }
-  return { stack: [...stack.slice(0, -1), committed], replaced: true };
 }
 
 /** True when a retried Undo finds that its guarded disk preimage was already restored. */
