@@ -588,8 +588,7 @@ function isForbiddenDomainProjectTarget(targetPath) {
   const targetFeature = parseFeaturePath(targetPath);
   if (targetFeature) {
     const [firstLayer, secondLayer] = targetFeature.rest.split('/');
-    if (firstLayer === 'main' || firstLayer === 'preload' || firstLayer === 'renderer') return true;
-    if (firstLayer === 'core' && secondLayer === 'application') return true;
+    return firstLayer !== 'contracts' && !(firstLayer === 'core' && secondLayer === 'domain');
   }
 
   return (
@@ -640,11 +639,6 @@ function evaluateCoreApplicationDependency(edge, sourceFilePaths) {
   );
 }
 
-function needsDependencyParsing(sourcePath, source) {
-  if (sourcePath.startsWith('src/features/')) return true;
-  return source.includes('@features/') || source.includes('features/');
-}
-
 function collectPublicApiImplementationExports(
   reexports,
   localExportNamesBySource,
@@ -676,7 +670,6 @@ function collectPublicApiImplementationExports(
 
   const violations = [];
   for (const publicEntrypoint of [...sourceFilePaths].filter(isFeaturePublicEntrypoint).sort()) {
-    const publicFeature = parseFeaturePath(publicEntrypoint)?.feature;
     const visited = new Set();
 
     const visit = (sourcePath, requestedExport = '*') => {
@@ -721,8 +714,6 @@ function collectPublicApiImplementationExports(
           continue;
         }
 
-        const targetFeature = parseFeaturePath(targetPath);
-        if (targetFeature?.feature !== publicFeature) continue;
         const targetExport =
           reexport.exportedName === '*' ? requestedExport : reexport.importedName;
         visit(targetPath, targetExport);
@@ -761,11 +752,9 @@ export function collectFeatureArchitectureViolations(repoRoot) {
   const sourceRoot = path.join(repoRoot, 'src');
   const sourceFiles = collectProductionSourceFiles(sourceRoot, repoRoot).sort();
   const sourceFilePaths = new Set(sourceFiles);
-  const moduleAnalyses = sourceFiles.flatMap((sourcePath) => {
+  const moduleAnalyses = sourceFiles.map((sourcePath) => {
     const source = readFileSync(path.join(repoRoot, sourcePath), 'utf8');
-    return needsDependencyParsing(sourcePath, source)
-      ? [collectModuleAnalysisFromSource(source, sourcePath)]
-      : [];
+    return collectModuleAnalysisFromSource(source, sourcePath);
   });
   const edges = moduleAnalyses.flatMap(({ edges: moduleEdges }) => moduleEdges);
   const localExportNamesBySource = new Map(

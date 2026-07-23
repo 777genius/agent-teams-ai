@@ -263,6 +263,11 @@
     },
     {
       "rule": "core-domain-isolation",
+      "source": "src/features/mutation-readiness/core/domain/MutationReadinessDecisions.ts",
+      "specifier": "@features/runtime-instance-context"
+    },
+    {
+      "rule": "core-domain-isolation",
       "source": "src/features/team-import/core/domain/teamImportPolicy.ts",
       "specifier": "../application/models/TeamImportFolderSnapshot"
     },
@@ -451,6 +456,18 @@
       "source": "src/features/internal-storage/main/index.ts",
       "specifier": "./adapters/output/TeamScopedLegacyJsonSource",
       "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/coordination-backup/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/coordination-events/main/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
@@ -859,6 +876,12 @@
       "source": "src/features/workspace-trust/main/index.ts",
       "specifier": "./infrastructure/workspaceTrustPreflightEnv",
       "publicEntrypoint": "src/features/workspace-trust/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/main/services/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/recent-projects/main/index.ts"
     }
   ]
 }

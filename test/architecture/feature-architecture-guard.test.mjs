@@ -127,9 +127,13 @@ test('keeps core domain free from application and runtime dependencies', () => {
         import type { Input } from '../application/model';
         import { store } from '../../main/infrastructure/store';
         import type { Id } from '@shared/contracts/hosted/identifiers';
+        import { registerRuntime } from '@features/runtime-feature';
         import { z } from 'zod';
         export type Store = import('../../main/infrastructure/typeStore').Store;
       `,
+      'src/features/runtime-feature/index.ts': `export { registerRuntime } from './main';`,
+      'src/features/runtime-feature/main/index.ts':
+        'export const registerRuntime = () => undefined;',
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
@@ -141,6 +145,7 @@ test('keeps core domain free from application and runtime dependencies', () => {
         '../../main/infrastructure/store',
         '../../main/infrastructure/typeStore',
         '../application/model',
+        '@features/runtime-feature',
         'electron',
         'fastify',
         'node:path',
@@ -248,6 +253,7 @@ test('detects implementation exports through transitive internal barrels', () =>
         export const { SelectiveSafe: LazySafe } = await import('./mixedBarrel');
         export { RequiredSafe };
         export { ExternalInfra } from '@main/services/infrastructure/ExternalInfra';
+        export { SharedInfra } from '@shared/infraBarrel';
         import { MemberInfra } from './memberBarrel';
         export const memberValue = MemberInfra.value;
         type HiddenInfra = import('./infrastructure/HiddenInfra').HiddenInfra;
@@ -311,6 +317,10 @@ test('detects implementation exports through transitive internal barrels', () =>
         export default adapters.Adapter;
       `,
       'src/main/services/infrastructure/ExternalInfra.ts': 'export class ExternalInfra {}',
+      'src/main/services/infrastructure/SharedInfra.ts': 'export class SharedInfra {}',
+      'src/shared/infraBarrel.ts': `
+        export { SharedInfra } from '@main/services/infrastructure/SharedInfra';
+      `,
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
@@ -408,6 +418,12 @@ test('detects implementation exports through transitive internal barrels', () =>
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
           source: 'src/features/example/renderer/index.tsx',
           specifier: './adapters/Adapter',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/shared/infraBarrel.ts',
+          specifier: '@main/services/infrastructure/SharedInfra',
         },
       ]);
     }
