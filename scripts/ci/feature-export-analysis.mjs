@@ -30,11 +30,36 @@ function rootBindingName(expression) {
   return ts.isIdentifier(current) ? current.text : null;
 }
 
-function bindingNames(bindingName) {
+export function bindingNames(bindingName) {
   if (ts.isIdentifier(bindingName)) return [bindingName.text];
   return bindingName.elements.flatMap((element) =>
     ts.isBindingElement(element) ? bindingNames(element.name) : []
   );
+}
+
+function assignmentLocalNames(target) {
+  const current = unwrapExpression(target);
+  if (ts.isIdentifier(current)) return [current.text];
+  if (
+    ts.isBinaryExpression(current) &&
+    current.operatorToken.kind === ts.SyntaxKind.EqualsToken
+  ) {
+    return assignmentLocalNames(current.left);
+  }
+  if (ts.isObjectLiteralExpression(current)) {
+    return current.properties.flatMap((property) => {
+      if (ts.isShorthandPropertyAssignment(property)) return [property.name.text];
+      if (ts.isPropertyAssignment(property)) return assignmentLocalNames(property.initializer);
+      if (ts.isSpreadAssignment(property)) return assignmentLocalNames(property.expression);
+      return [];
+    });
+  }
+  if (ts.isArrayLiteralExpression(current)) {
+    return current.elements.flatMap((element) =>
+      ts.isOmittedExpression(element) ? [] : assignmentLocalNames(element)
+    );
+  }
+  return [];
 }
 
 function unwrapExpression(expression) {
@@ -64,6 +89,43 @@ function memberAccess(expression) {
     return { name: current.argumentExpression.text, receiver: unwrapExpression(current.expression) };
   }
   return null;
+}
+
+function assignmentTargetSelections(expression, exportedLocalNames) {
+  const current = unwrapExpression(expression);
+  if (
+    !ts.isBinaryExpression(current) ||
+    current.operatorToken.kind !== ts.SyntaxKind.EqualsToken
+  ) {
+    return [];
+  }
+
+  const target = unwrapExpression(current.left);
+  if (ts.isObjectLiteralExpression(target)) {
+    return target.properties.flatMap((property) => {
+      let importedName = '*';
+      let localNames = [];
+      if (ts.isShorthandPropertyAssignment(property)) {
+        importedName = property.name.text;
+        localNames = [property.name.text];
+      } else if (ts.isPropertyAssignment(property)) {
+        const name = property.name;
+        if (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) importedName = name.text;
+        localNames = assignmentLocalNames(property.initializer);
+      } else if (ts.isSpreadAssignment(property)) {
+        localNames = assignmentLocalNames(property.expression);
+      }
+      localNames = localNames.filter((name) => exportedLocalNames.has(name));
+      return localNames.length > 0 ? [{ importedName, localNames }] : [];
+    });
+  }
+  if (ts.isArrayLiteralExpression(target)) {
+    const localNames = assignmentLocalNames(target).filter((name) =>
+      exportedLocalNames.has(name)
+    );
+    return localNames.length > 0 ? [{ importedName: '*', localNames }] : [];
+  }
+  return [];
 }
 
 function isModuleExports(expression) {
@@ -124,19 +186,33 @@ export function commonJsExportNamesForExpression(expression) {
 }
 
 export function findPublicMutationOwner(expression, exportedLocalNames) {
-  let target = ts.isAssignmentExpression(expression) ? expression.left : null;
-  if (ts.isCallExpression(expression) && ts.isPropertyAccessExpression(expression.expression)) {
-    const receiver = rootBindingName(expression.expression.expression);
+  const current = unwrapExpression(expression);
+  let target = ts.isAssignmentExpression(current) ? current.left : null;
+  if (ts.isCallExpression(current) && ts.isPropertyAccessExpression(current.expression)) {
+    const receiver = rootBindingName(current.expression.expression);
     if (receiver && exportedLocalNames.has(receiver)) return receiver;
     if (
       (receiver === 'Object' || receiver === 'Reflect') &&
-      MUTATING_OBJECT_METHODS.has(expression.expression.name.text)
+      MUTATING_OBJECT_METHODS.has(current.expression.name.text)
     ) {
-      [target] = expression.arguments;
+      [target] = current.arguments;
     }
   }
   const targetName = target && rootBindingName(target);
   return targetName && exportedLocalNames.has(targetName) ? targetName : null;
+}
+
+export function publicMutationBinding(expression, exportedLocalNames) {
+  const bindingSelections = assignmentTargetSelections(expression, exportedLocalNames);
+  if (bindingSelections.length > 0) {
+    return {
+      bindingSelections,
+      localNames: bindingSelections.flatMap(({ localNames }) => localNames),
+    };
+  }
+
+  const mutationOwner = findPublicMutationOwner(expression, exportedLocalNames);
+  return { bindingSelections: null, localNames: mutationOwner ? [mutationOwner] : [] };
 }
 
 export function objectBindingSelections(bindingName) {

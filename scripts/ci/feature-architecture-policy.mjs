@@ -5,10 +5,11 @@ import path from 'node:path';
 import ts from 'typescript';
 
 import {
+  bindingNames,
   commonJsExportNamesForExpression,
-  findPublicMutationOwner,
   importedNameForReference,
   objectBindingSelections,
+  publicMutationBinding,
   selectImportedName,
   selectedMemberAfterTransparentWrappers,
   selectedMemberForReference,
@@ -134,13 +135,6 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
   };
 
-  const bindingNames = (bindingName) => {
-    if (ts.isIdentifier(bindingName)) return [bindingName.text];
-    return bindingName.elements.flatMap((element) =>
-      ts.isBindingElement(element) ? bindingNames(element.name) : []
-    );
-  };
-
   const hasModifier = (node, kind) =>
     ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === kind);
 
@@ -220,8 +214,10 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       if (commonJsExportNames.length > 0) {
         return { bindingSelections: null, exportedNames: commonJsExportNames, localNames: [] };
       }
-      const mutationOwner = findPublicMutationOwner(current.expression, exportedLocalNames);
-      if (mutationOwner) localNames = [mutationOwner];
+      ({ bindingSelections, localNames } = publicMutationBinding(
+        current.expression,
+        exportedLocalNames
+      ));
     }
 
     if (ts.isExportAssignment(current)) {
@@ -727,7 +723,9 @@ function collectPublicApiImplementationExports(
         }
 
         const targetExport =
-          reexport.exportedName === '*' ? requestedExport : reexport.importedName;
+          reexport.exportedName === '*' && reexport.importedName === '*'
+            ? requestedExport
+            : reexport.importedName;
         visit(targetPath, targetExport);
       }
     };

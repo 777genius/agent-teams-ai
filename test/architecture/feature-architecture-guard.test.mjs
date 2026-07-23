@@ -452,6 +452,22 @@ test('recognizes JavaScript feature root entrypoints', () => {
         'module.exports = class DefinedStore {};',
       'src/features/commonjs-named/main/infrastructure/NamedStore.js':
         'module.exports = class NamedStore {};',
+      'src/features/commonjs-safe/index.cjs': `
+        const barrel = require('./mixedBarrel');
+        module.exports = { Safe: barrel.Safe };
+      `,
+      'src/features/commonjs-safe/mixedBarrel.js': `
+        export { Safe } from './safe';
+        export { Infra } from './infrastructure/Infra';
+      `,
+      'src/features/commonjs-safe/safe.js': 'export const Safe = true;',
+      'src/features/commonjs-safe/infrastructure/Infra.js': 'export class Infra {}',
+      'src/features/destructuring-write/main/index.js': `
+        export let Store;
+        ({ Store } = require('./infrastructure/Store'));
+      `,
+      'src/features/destructuring-write/main/infrastructure/Store.js':
+        'export class Store {}',
       'src/features/js-feature/adapters/Adapter.js': 'export class Adapter {}',
       'src/features/js-feature/index.jsx': `export { Adapter } from './adapters/Adapter';`,
     },
@@ -485,6 +501,12 @@ test('recognizes JavaScript feature root entrypoints', () => {
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
             source: 'src/features/commonjs-named/main/index.js',
             specifier: './infrastructure/NamedStore',
+          },
+          {
+            publicEntrypoint: 'src/features/destructuring-write/main/index.js',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/destructuring-write/main/index.js',
+            specifier: './infrastructure/Store',
           },
           {
             publicEntrypoint: 'src/features/js-feature/index.jsx',
