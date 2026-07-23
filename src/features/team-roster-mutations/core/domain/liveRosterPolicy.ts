@@ -24,7 +24,8 @@ export function isLeadRosterMutationMember(
   if (isLeadMember(member)) return true;
   const normalizedName = member.name.trim().toLowerCase();
   if (normalizedName === 'lead') return true;
-  return member.role?.toLowerCase().includes('lead') === true;
+  const normalizedRole = member.role?.trim().toLowerCase();
+  return normalizedRole === 'lead' || normalizedRole === 'team lead';
 }
 
 export function isOpenCodeLedRoster(members: RuntimeRosterMutationMember[]): boolean {

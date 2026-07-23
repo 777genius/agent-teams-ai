@@ -70,11 +70,31 @@ describe('member update notifications', () => {
 
   it('uses the shared lead policy when excluding roster owners from the diff', () => {
     const diff = buildReplaceMembersDiff(
-      [{ name: 'lead', role: 'Team Lead', providerId: 'codex' }],
-      [{ name: 'orchestrator', role: 'Lead coordinator', providerId: 'codex' }]
+      [
+        { name: 'lead', role: 'Coordinator', providerId: 'codex' },
+        {
+          name: 'captain',
+          agentType: 'orchestrator',
+          role: 'Coordinator',
+          providerId: 'codex',
+        },
+      ],
+      []
     );
 
     expect(diff).toEqual({ added: [], removed: [], updated: [] });
+  });
+
+  it('keeps ordinary teammates with lead-specialist roles in the diff', () => {
+    const diff = buildReplaceMembersDiff(
+      [
+        { name: 'alice', role: 'Tech Lead', providerId: 'codex' },
+        { name: 'bob', role: 'Lead builder', providerId: 'codex' },
+      ],
+      []
+    );
+
+    expect(diff.removed).toEqual(['alice', 'bob']);
   });
 
   it('normalizes semantically equivalent MCP policies before comparing members', () => {

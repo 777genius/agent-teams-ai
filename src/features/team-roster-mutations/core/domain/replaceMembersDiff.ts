@@ -14,6 +14,7 @@ import type {
 } from '@shared/types';
 
 export interface MemberDiffInput extends RosterMemberInput {
+  agentType?: string;
   removedAt?: number | string | null;
 }
 
