@@ -20,52 +20,46 @@ jobs:
     runs-on: ubuntu-24.04
     if: ${{ github.event_name == 'workflow_dispatch' || ((github.event_name != 'issue_comment' || github.event.issue.pull_request) && github.event.comment.user.type != 'Bot') }}
     env:
-      REVIEWROUTER_API_URL: 'https://api.reviewrouter.site'
-      REVIEWROUTER_ACTION_VERSION: '1603215454b4c5cf3387b40ae674a46eeb7ee96b'
-      REVIEWROUTER_OIDC_AUDIENCE: 'reviewrouter'
-      REVIEWROUTER_RUNTIME_CONFIG_MODE: 'oidc'
-      REVIEWROUTER_STATIC_CONFIG_FALLBACK: 'true'
-      REVIEWROUTER_COMMENT_TOKEN_MODE: 'app-oidc'
+      RR_RUNTIME_REF: "c804fe9b139437a961b6c65e512cacf761b70875"
+      REVIEWROUTER_API_URL: "https://api.reviewrouter.site"
+      REVIEWROUTER_OIDC_AUDIENCE: "reviewrouter"
+      REVIEWROUTER_RUNTIME_CONFIG_MODE: "oidc"
+      REVIEWROUTER_STATIC_CONFIG_FALLBACK: "true"
+      REVIEWROUTER_COMMENT_TOKEN_MODE: "app-oidc"
       CODEX_AUTH_JSON_PRESENT: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON != '' && '1' || '0' }}
-      REVIEW_ROUTER_REVIEW_WORKFLOW_FILE: 'reviewrouter-codex.yml'
+      REVIEW_ROUTER_REVIEW_WORKFLOW_FILE: "reviewrouter-codex.yml"
+      REVIEW_ROUTER_MEMORY_ENABLED: "true"
+      REVIEW_ROUTER_MEMORY_PROTOCOL_VERSION: "1"
+      REVIEW_ROUTER_MEMORY_BUNDLE_ENDPOINT: "/api/action/v1/memory"
+      REVIEW_ROUTER_MEMORY_CANDIDATE_ENDPOINT: "/api/action/v1/memory-candidates"
+      REVIEW_ROUTER_MEMORY_COMMAND_ENDPOINT: "/api/action/v1/memory-commands"
     steps:
-      - name: Fetch ReviewRouter runtime config
-        if: ${{ github.event_name != 'merge_group' && (github.event_name == 'workflow_dispatch' || github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
-            echo "ReviewRouter OIDC is unavailable. Check id-token: write permission."
-            exit 1
-          fi
-          echo "ReviewRouter runtime config will be fetched by the runtime using GitHub OIDC."
-
-      - name: Checkout ReviewRouter runtime
+      - name: Checkout ReviewRouter interaction runtime
         uses: actions/checkout@v6
         with:
           repository: 777genius/review-router
-          ref: ${{ env.REVIEWROUTER_ACTION_VERSION }}
+          ref: ${{ env.RR_RUNTIME_REF }}
           path: .reviewrouter-runtime
           persist-credentials: false
 
-      - name: Setup Node.js for ReviewRouter
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
+          node-version: "24"
 
       - name: Preflight ReviewRouter interaction
         id: preflight
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          REVIEW_ROUTER_MODE: 'interaction-preflight'
+          REVIEW_ROUTER_MODE: "interaction-preflight"
           REVIEW_ROUTER_DISCUSSION_MODE: ${{ vars.REVIEW_ROUTER_DISCUSSION_MODE || 'off' }}
         run: node .reviewrouter-runtime/dist/index.js
 
       - name: Install Codex CLI for discussion replies
         if: ${{ steps.preflight.outputs.needs_discussion == 'true' && env.CODEX_AUTH_JSON_PRESENT == '1' }}
         shell: bash
-        run: npm install -g @openai/codex@0.125.0
+        run: npm install -g @openai/codex@0.141.0
 
       - name: Restore Codex subscription auth for discussion replies
         if: ${{ steps.preflight.outputs.needs_discussion == 'true' && env.CODEX_AUTH_JSON_PRESENT == '1' }}
@@ -89,7 +83,8 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          REVIEW_ROUTER_MODE: 'interaction'
+          REVIEW_ROUTER_MODE: "interaction"
+          REVIEW_ROUTER_LEDGER_KEY: ${{ secrets.REVIEW_ROUTER_LEDGER_KEY }}
           REVIEW_ROUTER_DISCUSSION_MODE: ${{ vars.REVIEW_ROUTER_DISCUSSION_MODE || 'off' }}
           REVIEW_ROUTER_DISCUSSION_MAX_PER_PR: ${{ vars.REVIEW_ROUTER_DISCUSSION_MAX_PER_PR || '20' }}
           REVIEW_ROUTER_DISCUSSION_MAX_PER_THREAD: ${{ vars.REVIEW_ROUTER_DISCUSSION_MAX_PER_THREAD || '5' }}
