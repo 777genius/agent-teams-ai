@@ -9,6 +9,11 @@ export type {
 } from './adapters/createTeamProvisioningProgressSlice';
 export { createTeamProvisioningProgressSlice } from './adapters/createTeamProvisioningProgressSlice';
 export type {
+  TeamRuntimeObservationSlice,
+  TeamRuntimeObservationSliceDependencies,
+} from './adapters/createTeamRuntimeObservationSlice';
+export { createTeamRuntimeObservationSlice } from './adapters/createTeamRuntimeObservationSlice';
+export type {
   TeamProvisioningControlEffectsPort,
   TeamProvisioningControlStatePort,
   TeamProvisioningControlStoreState,
@@ -23,3 +28,11 @@ export type {
   TeamProvisioningRefreshFanoutNote,
   TeamProvisioningSurfaceSnapshot,
 } from './ports/TeamProvisioningProgressPorts';
+export type {
+  TeamRuntimeObservationBackoffPort,
+  TeamRuntimeObservationMemberSpawnPolicyPort,
+  TeamRuntimeObservationRequestScopePort,
+  TeamRuntimeObservationSnapshotPolicyPort,
+  TeamRuntimeObservationStatePort,
+  TeamRuntimeObservationTransportPort,
+} from './ports/TeamRuntimeObservationPorts';
