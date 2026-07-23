@@ -430,7 +430,15 @@ A feature is reference-quality when:
 - at least the main domain and application rules are tested when those layers
   exist
 - architecture is enforced by lint rules
+- every new production source file is at most 800 physical lines
 - feature has a concise standard or plan doc if it introduces a new pattern
+
+The `pnpm guard:source-file-size` gate covers production code in the app and
+workspace packages. Existing files above 800 lines are pinned to their exact
+current line count in `scripts/ci/source-file-size-legacy.json`: they may only
+shrink, and the exception must be removed once a file reaches 800 lines.
+Never add a new legacy exception or raise an existing cap. Split new
+responsibilities by domain/application/adapter/UI ownership instead.
 
 ## Recommended Test Coverage
 
