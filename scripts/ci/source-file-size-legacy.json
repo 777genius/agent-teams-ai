@@ -162,7 +162,7 @@
   "src/renderer/store/slices/editorSlice.ts": 1483,
   "src/renderer/store/slices/extensionsSlice.ts": 1420,
   "src/renderer/store/slices/tabSlice.ts": 886,
-  "src/renderer/store/slices/teamSlice.ts": 3905,
+  "src/renderer/store/slices/teamSlice.ts": 3512,
   "src/renderer/utils/contextTracker.ts": 1126,
   "src/renderer/utils/memberHelpers.ts": 1756,
   "src/renderer/utils/memberLaunchDiagnostics.ts": 983,
