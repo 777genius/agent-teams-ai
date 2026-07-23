@@ -124,7 +124,7 @@
         "installed": [
           {
             "package": "fastify",
-            "version": "5.8.5",
+            "version": "5.10.0",
             "source": "installed package metadata and pnpm lock"
           },
           {
