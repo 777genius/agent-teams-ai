@@ -1,4 +1,15 @@
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
+import {
+  REVIEW_CLEAR_DRAFT_HISTORY,
+  REVIEW_LOAD_DRAFT_HISTORY,
+  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
+  type ReviewDraftHistoryConflictCandidateSummary,
+  type ReviewDraftHistoryEntry,
+  type ReviewDraftHistorySnapshot,
+} from '@features/change-review-history/contracts';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
@@ -90,7 +101,6 @@ import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
   REVIEW_CLEAR_DECISIONS,
-  REVIEW_CLEAR_DRAFT_HISTORY,
   REVIEW_DELETE_EDITED_FILE,
   REVIEW_EXECUTE_MUTATION,
   REVIEW_FILE_CHANGE,
@@ -103,20 +113,15 @@ import {
   REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES,
   REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
   REVIEW_LOAD_DECISIONS,
-  REVIEW_LOAD_DRAFT_HISTORY,
-  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
   REVIEW_PREVIEW_REJECT,
   REVIEW_REAPPLY_REJECTED_RENAME,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
-  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
   REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
-  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
   REVIEW_RESTORE_HISTORY,
   REVIEW_RESTORE_REJECTED_RENAME,
   REVIEW_RETRY_MUTATION_RECOVERY,
   REVIEW_SAVE_DECISIONS,
-  REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
   REVIEW_SAVE_EDITED_FILE,
   REVIEW_UNWATCH_FILES,
   REVIEW_WATCH_FILES,
@@ -284,11 +289,6 @@ import {
   CONFIG_UPDATE_TRIGGER,
 } from './constants/ipcChannels';
 
-import type {
-  ReviewDraftHistoryConflictCandidateSummary,
-  ReviewDraftHistoryEntry,
-  ReviewDraftHistorySnapshot,
-} from '@features/change-review-history/contracts';
 import type {
   AddMemberRequest,
   AddTaskCommentRequest,

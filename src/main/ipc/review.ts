@@ -4,7 +4,11 @@
  * Паттерн: module-level state + guard + wrapReviewHandler (как teams.ts)
  */
 
-import { ReviewDraftHistoryStore } from '@features/change-review-history/main';
+import {
+  createReviewDraftHistoryFeature,
+  registerReviewDraftHistoryIpc,
+  removeReviewDraftHistoryIpc,
+} from '@features/change-review-history/main';
 import {
   buildForwardDiskMutationSteps,
   buildRedoDiskMutationSteps,
@@ -44,7 +48,6 @@ import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
   REVIEW_CLEAR_DECISIONS,
-  REVIEW_CLEAR_DRAFT_HISTORY,
   REVIEW_DELETE_EDITED_FILE,
   REVIEW_EXECUTE_MUTATION,
   REVIEW_FILE_CHANGE,
@@ -57,20 +60,15 @@ import {
   REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES,
   REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
   REVIEW_LOAD_DECISIONS,
-  REVIEW_LOAD_DRAFT_HISTORY,
-  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
   REVIEW_PREVIEW_REJECT,
   REVIEW_REAPPLY_REJECTED_RENAME,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
-  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
   REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
-  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
   REVIEW_RESTORE_HISTORY,
   REVIEW_RESTORE_REJECTED_RENAME,
   REVIEW_RETRY_MUTATION_RECOVERY,
   REVIEW_SAVE_DECISIONS,
-  REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
   REVIEW_SAVE_EDITED_FILE,
   REVIEW_UNWATCH_FILES,
   REVIEW_WATCH_FILES,
@@ -83,11 +81,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { isDeepStrictEqual } from 'util';
 
-import type {
-  ReviewDraftHistoryConflictCandidateSummary,
-  ReviewDraftHistoryEntry,
-  ReviewDraftHistorySnapshot,
-} from '@features/change-review-history/contracts';
+import type { ReviewDraftHistoryAuthorization } from '@features/change-review-history/main';
 import type { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import type { FileContentResolver } from '@main/services/team/FileContentResolver';
 import type { GitDiffFallback } from '@main/services/team/GitDiffFallback';
@@ -150,7 +144,6 @@ let fileContentResolver: FileContentResolver | null = null;
 let gitDiffFallback: GitDiffFallback | null = null;
 let reviewConfigReader: Pick<TeamConfigReader, 'getConfig'> = new TeamConfigReader();
 const reviewDecisionStore = new ReviewDecisionStore();
-const reviewDraftHistoryStore = new ReviewDraftHistoryStore();
 const reviewMutationJournal = new ReviewMutationJournalStore();
 const reviewMutationCoordinator = new ReviewMutationCoordinator(reviewMutationJournal);
 const reviewDecisionPersistenceQueues = new Map<string, Promise<void>>();
@@ -950,21 +943,7 @@ export function registerReviewHandlers(ipcMain: IpcMain): void {
   );
   ipcMain.handle(REVIEW_SAVE_DECISIONS, handleSaveDecisions);
   ipcMain.handle(REVIEW_CLEAR_DECISIONS, handleClearDecisions);
-  ipcMain.handle(REVIEW_LOAD_DRAFT_HISTORY, handleLoadDraftHistory);
-  ipcMain.handle(
-    REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
-    handleLoadDraftHistoryConflictCandidates
-  );
-  ipcMain.handle(
-    REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
-    handleResolveDraftHistoryConflictCandidate
-  );
-  ipcMain.handle(
-    REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
-    handleReplaceDraftHistoryConflictCandidate
-  );
-  ipcMain.handle(REVIEW_SAVE_DRAFT_HISTORY_ENTRY, handleSaveDraftHistoryEntry);
-  ipcMain.handle(REVIEW_CLEAR_DRAFT_HISTORY, handleClearDraftHistory);
+  registerReviewDraftHistoryIpc(ipcMain, reviewDraftHistoryFeature, wrapReviewHandler);
 }
 
 export function removeReviewHandlers(ipcMain: IpcMain): void {
@@ -999,12 +978,7 @@ export function removeReviewHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE);
   ipcMain.removeHandler(REVIEW_SAVE_DECISIONS);
   ipcMain.removeHandler(REVIEW_CLEAR_DECISIONS);
-  ipcMain.removeHandler(REVIEW_LOAD_DRAFT_HISTORY);
-  ipcMain.removeHandler(REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES);
-  ipcMain.removeHandler(REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE);
-  ipcMain.removeHandler(REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE);
-  ipcMain.removeHandler(REVIEW_SAVE_DRAFT_HISTORY_ENTRY);
-  ipcMain.removeHandler(REVIEW_CLEAR_DRAFT_HISTORY);
+  removeReviewDraftHistoryIpc(ipcMain);
   reviewFileWatcher.stop();
   reviewWatcherProjectRoot = null;
   reviewWatcherRequestGeneration += 1;
@@ -2321,6 +2295,31 @@ function parseReviewScopeKey(teamName: string, scopeKey: string): ReviewFileScop
   }
   throw new Error('Review decision scope cannot authorize history');
 }
+
+async function authorizeReviewDraftHistoryScope(
+  teamName: string,
+  scopeKey: string
+): Promise<ReviewDraftHistoryAuthorization> {
+  const { authorization } = await resolveReviewPathAuthorization(
+    parseReviewScopeKey(teamName, scopeKey),
+    { requireIdentity: true }
+  );
+  return {
+    isCurrentReviewedFile: (filePath) =>
+      path.isAbsolute(path.normalize(filePath)) &&
+      Boolean(authorization.reviewedFiles?.has(normalizeReviewPathForIdentity(filePath))),
+    assertCurrentReviewedFile: async (filePath) => {
+      await validateAuthorizedReviewFilePath(authorization, filePath, {
+        requireReviewedFile: true,
+      });
+    },
+  };
+}
+
+const reviewDraftHistoryFeature = createReviewDraftHistoryFeature({
+  lock: { run: withReviewDecisionPersistenceLock },
+  authorization: { authorize: authorizeReviewDraftHistoryScope },
+});
 
 function isAuthorizedReviewDecisionKey(
   canonicalFiles: ReadonlyMap<string, FileChangeSummary>,
@@ -4278,221 +4277,6 @@ async function handleClearDecisions(
         expectedRevision,
       });
       return { revision };
-    });
-  });
-}
-
-async function handleLoadDraftHistory(
-  _event: IpcMainInvokeEvent,
-  teamName: string,
-  scopeKey: string,
-  scopeToken: string
-): Promise<IpcResult<ReviewDraftHistorySnapshot | null>> {
-  return wrapReviewHandler('loadDraftHistory', async () => {
-    const persistenceScope = { scopeKey, scopeToken };
-    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
-      const { authorization } = await resolveReviewPathAuthorization(
-        parseReviewScopeKey(teamName, scopeKey),
-        { requireIdentity: true }
-      );
-      const snapshot = await reviewDraftHistoryStore.load(teamName, scopeKey, scopeToken);
-      for (const filePath of Object.keys(snapshot?.entries ?? {})) {
-        await validateAuthorizedReviewFilePath(authorization, filePath, {
-          requireReviewedFile: true,
-        });
-      }
-      return snapshot;
-    });
-  });
-}
-
-async function handleLoadDraftHistoryConflictCandidates(
-  _event: IpcMainInvokeEvent,
-  teamName: string,
-  scopeKey: string,
-  scopeToken: string
-): Promise<IpcResult<ReviewDraftHistoryConflictCandidateSummary[]>> {
-  return wrapReviewHandler('loadDraftHistoryConflictCandidates', async () => {
-    const persistenceScope = { scopeKey, scopeToken };
-    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
-      const { authorization } = await resolveReviewPathAuthorization(
-        parseReviewScopeKey(teamName, scopeKey),
-        { requireIdentity: true }
-      );
-      const candidates = await reviewDraftHistoryStore.loadConflictCandidateSummaries(
-        teamName,
-        scopeKey,
-        scopeToken
-      );
-      return Promise.all(
-        candidates.map(async (candidate) => {
-          const isCurrentReviewedFile =
-            path.isAbsolute(path.normalize(candidate.filePath)) &&
-            authorization.reviewedFiles?.has(normalizeReviewPathForIdentity(candidate.filePath));
-          if (candidate.origin === 'prior-snapshot' && !isCurrentReviewedFile) {
-            return { ...candidate, recoverability: 'file-not-in-current-review' as const };
-          }
-          await validateAuthorizedReviewFilePath(authorization, candidate.filePath, {
-            requireReviewedFile: true,
-          });
-          return candidate;
-        })
-      );
-    });
-  });
-}
-
-async function handleResolveDraftHistoryConflictCandidate(
-  _event: IpcMainInvokeEvent,
-  teamName: string,
-  scopeKey: string,
-  scopeToken: string,
-  candidateId: string,
-  resolution: ReviewConflictResolution,
-  expectedCurrentRevision: number,
-  expectedCurrentGeneration: string | null
-): Promise<IpcResult<ReviewDraftHistoryEntry | null>> {
-  return wrapReviewHandler('resolveDraftHistoryConflictCandidate', async () => {
-    const persistenceScope = { scopeKey, scopeToken };
-    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
-      const { authorization } = await resolveReviewPathAuthorization(
-        parseReviewScopeKey(teamName, scopeKey),
-        { requireIdentity: true }
-      );
-      const candidate = await reviewDraftHistoryStore.loadConflictCandidate(
-        teamName,
-        scopeKey,
-        scopeToken,
-        candidateId
-      );
-      if (resolution === 'recover-candidate') {
-        await validateAuthorizedReviewFilePath(authorization, candidate.filePath, {
-          requireReviewedFile: true,
-        });
-      }
-      return reviewDraftHistoryStore.resolveConflictCandidate(
-        teamName,
-        scopeKey,
-        scopeToken,
-        candidateId,
-        resolution,
-        expectedCurrentRevision,
-        expectedCurrentGeneration
-      );
-    });
-  });
-}
-
-async function handleReplaceDraftHistoryConflictCandidate(
-  _event: IpcMainInvokeEvent,
-  teamName: string,
-  scopeKey: string,
-  scopeToken: string,
-  expectedEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
-  replacementEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
-  expectedCurrentRevision: number,
-  expectedCurrentGeneration: string | null
-): Promise<IpcResult<ReviewDraftHistoryConflictCandidateSummary>> {
-  return wrapReviewHandler('replaceDraftHistoryConflictCandidate', async () => {
-    const persistenceScope = { scopeKey, scopeToken };
-    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
-      const { authorization } = await resolveReviewPathAuthorization(
-        parseReviewScopeKey(teamName, scopeKey),
-        { requireIdentity: true }
-      );
-      await validateAuthorizedReviewFilePath(authorization, expectedEntry.filePath, {
-        requireReviewedFile: true,
-      });
-      if (replacementEntry.filePath !== expectedEntry.filePath) {
-        throw new Error('Manual-edit recovery update changed file identity');
-      }
-      const replacement = await reviewDraftHistoryStore.replaceConflictCandidate(
-        teamName,
-        scopeKey,
-        scopeToken,
-        expectedEntry,
-        replacementEntry,
-        expectedCurrentRevision,
-        expectedCurrentGeneration
-      );
-      return {
-        id: replacement.id,
-        capturedAt: replacement.capturedAt,
-        origin: replacement.origin,
-        recoverability: 'recoverable',
-        filePath: replacement.filePath,
-        expectedRevision: replacement.expectedRevision,
-        expectedGeneration: replacement.expectedGeneration,
-        observedCurrentRevision: replacement.observedCurrentRevision,
-        observedCurrentGeneration: replacement.observedCurrentGeneration,
-        entryRevision: replacement.entry?.revision ?? null,
-      };
-    });
-  });
-}
-
-async function handleSaveDraftHistoryEntry(
-  _event: IpcMainInvokeEvent,
-  teamName: string,
-  scopeKey: string,
-  scopeToken: string,
-  entry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
-  expectedRevision: number,
-  expectedGeneration: string | null
-): Promise<IpcResult<ReviewDraftHistoryEntry>> {
-  return wrapReviewHandler('saveDraftHistoryEntry', async () => {
-    const persistenceScope = { scopeKey, scopeToken };
-    return withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
-      const { authorization } = await resolveReviewPathAuthorization(
-        parseReviewScopeKey(teamName, scopeKey),
-        { requireIdentity: true }
-      );
-      await validateAuthorizedReviewFilePath(authorization, entry.filePath, {
-        requireReviewedFile: true,
-      });
-      return reviewDraftHistoryStore.saveEntry(teamName, scopeKey, scopeToken, {
-        ...entry,
-        expectedRevision,
-        expectedGeneration,
-      });
-    });
-  });
-}
-
-async function handleClearDraftHistory(
-  _event: IpcMainInvokeEvent,
-  teamName: string,
-  scopeKey: string,
-  scopeToken: string,
-  filePath: string | null = null,
-  expectedRevision: number | null = null,
-  expectedGeneration: string | null = null
-): Promise<IpcResult<void>> {
-  return wrapReviewHandler('clearDraftHistory', async () => {
-    const persistenceScope = { scopeKey, scopeToken };
-    await withReviewDecisionPersistenceLock(teamName, persistenceScope, async () => {
-      const { authorization } = await resolveReviewPathAuthorization(
-        parseReviewScopeKey(teamName, scopeKey),
-        { requireIdentity: true }
-      );
-      if (filePath !== null) {
-        if (expectedRevision === null) {
-          throw new Error('Clearing review draft history requires an exact revision');
-        }
-        await validateAuthorizedReviewFilePath(authorization, filePath, {
-          requireReviewedFile: true,
-        });
-        await reviewDraftHistoryStore.clearEntry(
-          teamName,
-          scopeKey,
-          scopeToken,
-          filePath,
-          expectedRevision,
-          expectedGeneration
-        );
-      } else {
-        await reviewDraftHistoryStore.clearUnreadableScope(teamName, scopeKey, scopeToken);
-      }
     });
   });
 }
