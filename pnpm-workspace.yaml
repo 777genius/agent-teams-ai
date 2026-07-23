@@ -8,6 +8,7 @@ minimumReleaseAgeExclude:
   - '@esbuild/*'
   - esbuild
   - fast-uri@3.1.4
+  - find-my-way@9.7.0
   - tmp@0.2.6
 strictPeerDependencies: true
 peerDependencyRules:
