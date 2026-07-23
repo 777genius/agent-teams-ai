@@ -148,6 +148,11 @@ import {
   removeTeamMessageDeliveryIpc,
 } from '../../../src/features/team-message-delivery/main';
 import {
+  createTeamRosterMutationFeature,
+  registerTeamRosterMutationIpc,
+  removeTeamRosterMutationIpc,
+} from '../../../src/features/team-roster-mutations/main';
+import {
   createTeamTaskBoardFeature,
   registerTeamTaskBoardIpc,
   removeTeamTaskBoardIpc,
@@ -377,12 +382,21 @@ const TEAM_MESSAGE_DELIVERY_HANDLER_KEYS = [
   TEAM_GET_ATTACHMENTS,
 ] as const;
 const TEAM_MESSAGE_DELIVERY_HANDLER_KEY_SET = new Set<string>(TEAM_MESSAGE_DELIVERY_HANDLER_KEYS);
+const TEAM_ROSTER_MUTATION_HANDLER_KEYS = [
+  TEAM_ADD_MEMBER,
+  TEAM_REPLACE_MEMBERS,
+  TEAM_REMOVE_MEMBER,
+  TEAM_RESTORE_MEMBER,
+  TEAM_UPDATE_MEMBER_ROLE,
+] as const;
+const TEAM_ROSTER_MUTATION_HANDLER_KEY_SET = new Set<string>(TEAM_ROSTER_MUTATION_HANDLER_KEYS);
 const TEAM_HANDLER_KEYS = ALL_TEAM_HANDLER_KEYS.filter(
   (channel) =>
     !TEAM_TASK_BOARD_HANDLER_KEY_SET.has(channel) &&
     !TEAM_VIEW_READ_MODEL_HANDLER_KEY_SET.has(channel) &&
     !TEAM_CONFIGURATION_HANDLER_KEY_SET.has(channel) &&
-    !TEAM_MESSAGE_DELIVERY_HANDLER_KEY_SET.has(channel)
+    !TEAM_MESSAGE_DELIVERY_HANDLER_KEY_SET.has(channel) &&
+    !TEAM_ROSTER_MUTATION_HANDLER_KEY_SET.has(channel)
 );
 
 describe('ipc teams handlers', () => {
@@ -402,6 +416,7 @@ describe('ipc teams handlers', () => {
   const teamViewReadModelLogger = createLogger('IPC:teams');
   const teamConfigurationLogger = createLogger('IPC:teams');
   const teamMessageDeliveryLogger = createLogger('IPC:teams');
+  const teamRosterMutationLogger = { error: vi.fn(), warn: vi.fn() };
   let launchIoGovernor: LaunchIoGovernor;
 
   const service = {
@@ -790,6 +805,14 @@ describe('ipc teams handlers', () => {
       logger: teamMessageDeliveryLogger,
     });
     registerTeamMessageDeliveryIpc(ipcMain as never, teamMessageDeliveryFeature);
+    const teamRosterMutationFeature = createTeamRosterMutationFeature({
+      repository: service as never,
+      runtime: teamHandlerApis.runtime,
+      lifecycle: teamHandlerApis.memberLifecycle,
+      messaging: teamHandlerApis.messaging,
+      logger: teamRosterMutationLogger,
+    });
+    registerTeamRosterMutationIpc(ipcMain as never, teamRosterMutationFeature);
     const teamViewReadModelFeature = createTeamViewReadModelFeature({
       data: service as never,
       provisioningRuns: teamHandlerApis.provisioningRun,
@@ -839,6 +862,9 @@ describe('ipc teams handlers', () => {
       expect(legacyChannels.has(channel)).toBe(false);
     }
     for (const channel of TEAM_MESSAGE_DELIVERY_HANDLER_KEYS) {
+      expect(legacyChannels.has(channel)).toBe(false);
+    }
+    for (const channel of TEAM_ROSTER_MUTATION_HANDLER_KEYS) {
       expect(legacyChannels.has(channel)).toBe(false);
     }
   });
@@ -3777,6 +3803,58 @@ describe('ipc teams handlers', () => {
     });
   });
 
+  describe('roster mutation validation boundary', () => {
+    it.each([
+      {
+        operation: 'addMember',
+        channel: TEAM_ADD_MEMBER,
+        args: ['my-team', null],
+        error: 'Invalid payload',
+        mutation: service.addMember,
+      },
+      {
+        operation: 'replaceMembers',
+        channel: TEAM_REPLACE_MEMBERS,
+        args: ['my-team', { members: 'invalid' }],
+        error: 'members must be an array',
+        mutation: service.replaceMembers,
+      },
+      {
+        operation: 'removeMember',
+        channel: TEAM_REMOVE_MEMBER,
+        args: ['my-team', '../bad'],
+        error: 'member contains invalid characters',
+        mutation: service.removeMember,
+      },
+      {
+        operation: 'restoreMember',
+        channel: TEAM_RESTORE_MEMBER,
+        args: ['my-team', '../bad'],
+        error: 'member contains invalid characters',
+        mutation: service.restoreMember,
+      },
+      {
+        operation: 'updateMemberRole',
+        channel: TEAM_UPDATE_MEMBER_ROLE,
+        args: ['my-team', 'alice', { role: 'developer' }],
+        error: 'role must be a string, null, or undefined',
+        mutation: service.updateMemberRole,
+      },
+    ])(
+      'rejects invalid $operation input before acquiring the roster mutation lock',
+      async ({ channel, args, error, mutation }) => {
+        const result = (await handlers.get(channel)!({} as never, ...args)) as {
+          success: boolean;
+          error?: string;
+        };
+
+        expect(result).toEqual({ success: false, error: expect.stringContaining(error) });
+        expect(teamHandlerMocks.runLiveRosterMutation).not.toHaveBeenCalled();
+        expect(mutation).not.toHaveBeenCalled();
+      }
+    );
+  });
+
   describe('addMember', () => {
     it('runs the complete roster persistence and runtime attach transaction under the team lifecycle lock', async () => {
       const handler = handlers.get(TEAM_ADD_MEMBER)!;
@@ -3801,13 +3879,16 @@ describe('ipc teams handlers', () => {
         role: 'developer',
       })) as { success: boolean };
       expect(result.success).toBe(true);
-      expect(service.addMember).toHaveBeenCalledWith(
-        'my-team',
-        expect.objectContaining({
-          name: 'alice',
-          role: 'developer',
-        })
-      );
+      expect(service.addMember).toHaveBeenCalledWith('my-team', {
+        name: 'alice',
+        role: 'developer',
+        workflow: undefined,
+        isolation: undefined,
+        providerId: undefined,
+        model: undefined,
+        effort: undefined,
+        mcpPolicy: undefined,
+      });
     });
 
     it('attaches a live teammate through the lifecycle service', async () => {
@@ -4238,6 +4319,31 @@ describe('ipc teams handlers', () => {
       expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     });
 
+    it('keeps removeMember successful when live lead notification fails after detach', async () => {
+      teamHandlerMocks.sendMessageToTeam.mockRejectedValueOnce(new Error('notify failed'));
+      const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
+
+      const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(service.removeMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(teamHandlerMocks.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledOnce();
+      expect(service.removeMember.mock.invocationCallOrder[0]).toBeLessThan(
+        service.invalidateMessageFeed.mock.invocationCallOrder[0]
+      );
+      expect(service.invalidateMessageFeed.mock.invocationCallOrder[0]).toBeLessThan(
+        teamHandlerMocks.detachLiveRosterMember.mock.invocationCallOrder[0]
+      );
+      expect(teamHandlerMocks.detachLiveRosterMember.mock.invocationCallOrder[0]).toBeLessThan(
+        teamHandlerMocks.sendMessageToTeam.mock.invocationCallOrder[0]
+      );
+      expect(teamRosterMutationLogger.warn).toHaveBeenCalledWith(
+        'Failed to notify lead about removal of "alice" in my-team'
+      );
+      expect(mockWriteMembersMeta).not.toHaveBeenCalled();
+    });
+
     it('treats repeated removal of a persisted tombstone as a successful no-op', async () => {
       mockGetMembersMetaFile.mockImplementation(() =>
         Promise.resolve(
@@ -4401,6 +4507,9 @@ describe('ipc teams handlers', () => {
       expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice', {
         reason: 'member_updated',
       });
+      expect(mockWriteMembersMeta.mock.invocationCallOrder[0]).toBeLessThan(
+        teamHandlerMocks.attachLiveRosterMember.mock.invocationCallOrder[0]
+      );
       vi.mocked(console.error).mockClear();
     });
   });
@@ -4546,6 +4655,59 @@ describe('ipc teams handlers', () => {
       expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
       vi.mocked(console.error).mockClear();
     });
+
+    it('rolls back live restoreMember metadata when lifecycle attach fails', async () => {
+      const previousMembers = [
+        {
+          name: 'team-lead',
+          providerId: 'codex' as const,
+          role: 'Team Lead',
+          agentType: 'team-lead',
+        },
+        {
+          name: 'alice',
+          providerId: 'codex' as const,
+          role: 'Developer',
+          removedAt: 1_752_000_000_000,
+        },
+      ];
+      mockGetMembersMetaFile.mockResolvedValueOnce({
+        version: 1,
+        providerBackendId: 'codex-native',
+        members: previousMembers,
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: previousMembers.map((member) => ({
+          ...member,
+          currentTaskId: null,
+          taskCount: 0,
+        })),
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      teamHandlerMocks.attachLiveRosterMember.mockRejectedValueOnce(new Error('attach failed'));
+
+      const result = (await handlers.get(TEAM_RESTORE_MEMBER)!(
+        {} as never,
+        'my-team',
+        'alice'
+      )) as { success: boolean; error?: string };
+
+      expect(result).toMatchObject({ success: false, error: 'attach failed' });
+      expect(service.restoreMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(teamHandlerMocks.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(mockWriteMembersMeta).toHaveBeenCalledWith('my-team', previousMembers, {
+        providerBackendId: 'codex-native',
+      });
+      expect(teamHandlerMocks.detachLiveRosterMember.mock.invocationCallOrder[0]).toBeLessThan(
+        mockWriteMembersMeta.mock.invocationCallOrder[0]
+      );
+      expect(teamHandlerMocks.attachLiveRosterMember).toHaveBeenCalledTimes(1);
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
+    });
   });
 
   describe('replaceMembers', () => {
@@ -4669,6 +4831,57 @@ describe('ipc teams handlers', () => {
         reason: 'member_updated',
       });
       expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
+    });
+
+    it('keeps a completed live replaceMembers removal successful when lead notification fails', async () => {
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'codex',
+            role: 'Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      teamHandlerMocks.sendMessageToTeam.mockRejectedValueOnce(new Error('notify failed'));
+
+      const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+        members: [],
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(service.replaceMembers.mock.invocationCallOrder[0]).toBeLessThan(
+        service.invalidateMessageFeed.mock.invocationCallOrder[0]
+      );
+      expect(service.invalidateMessageFeed.mock.invocationCallOrder[0]).toBeLessThan(
+        teamHandlerMocks.detachLiveRosterMember.mock.invocationCallOrder[0]
+      );
+      expect(teamHandlerMocks.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(teamHandlerMocks.detachLiveRosterMember.mock.invocationCallOrder[0]).toBeLessThan(
+        teamHandlerMocks.sendMessageToTeam.mock.invocationCallOrder[0]
+      );
+      expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('Teammate "alice" was removed from the team')
+      );
+      expect(teamRosterMutationLogger.warn).toHaveBeenCalledWith(
+        'Failed to notify lead about member updates in my-team'
+      );
+      expect(mockWriteMembersMeta).not.toHaveBeenCalled();
     });
 
     it('blocks live replaceMembers for a running OpenCode-led team before metadata is changed', async () => {
@@ -5065,7 +5278,7 @@ describe('ipc teams handlers', () => {
         const firstRollbackAttachOrder =
           teamHandlerMocks.attachLiveRosterMember.mock.invocationCallOrder[failurePosition];
         expect(mockWriteMembersMeta.mock.invocationCallOrder[0]).toBeLessThan(
-          firstRollbackAttachOrder!
+          firstRollbackAttachOrder
         );
         vi.mocked(console.error).mockClear();
       }
@@ -5308,6 +5521,29 @@ describe('ipc teams handlers', () => {
       expect(service.updateMemberRole).toHaveBeenCalledWith('my-team', 'alice', 'developer');
     });
 
+    it('keeps updateMemberRole successful when live lead notification fails', async () => {
+      teamHandlerMocks.sendMessageToTeam.mockRejectedValueOnce(new Error('notify failed'));
+
+      const result = (await handlers.get(TEAM_UPDATE_MEMBER_ROLE)!(
+        {} as never,
+        'my-team',
+        'alice',
+        'developer'
+      )) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(service.updateMemberRole.mock.invocationCallOrder[0]).toBeLessThan(
+        service.invalidateMessageFeed.mock.invocationCallOrder[0]
+      );
+      expect(service.invalidateMessageFeed.mock.invocationCallOrder[0]).toBeLessThan(
+        teamHandlerMocks.sendMessageToTeam.mock.invocationCallOrder[0]
+      );
+      expect(teamRosterMutationLogger.warn).toHaveBeenCalledWith(
+        'Failed to notify lead about role change for "alice" in my-team'
+      );
+      expect(mockWriteMembersMeta).not.toHaveBeenCalled();
+    });
+
     it('normalizes null role to undefined', async () => {
       const handler = handlers.get(TEAM_UPDATE_MEMBER_ROLE)!;
       const result = (await handler({} as never, 'my-team', 'alice', null)) as {
@@ -5378,6 +5614,7 @@ describe('ipc teams handlers', () => {
     removeTeamHandlers(ipcMain as never);
     removeTeamConfigurationIpc(ipcMain as never);
     removeTeamMessageDeliveryIpc(ipcMain as never);
+    removeTeamRosterMutationIpc(ipcMain as never);
     removeTeamViewReadModelIpc(ipcMain as never);
     removeTeamTaskBoardIpc(ipcMain as never);
     expect(ipcMain.removeHandler).toHaveBeenCalledTimes(ALL_TEAM_HANDLER_KEYS.length);

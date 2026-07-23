@@ -20,6 +20,11 @@ vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
 }));
 
 import {
+  createTeamRosterMutationFeature,
+  registerTeamRosterMutationIpc,
+  removeTeamRosterMutationIpc,
+} from '../../../src/features/team-roster-mutations/main';
+import {
   initializeTeamHandlers,
   registerTeamHandlers,
   removeTeamHandlers,
@@ -48,6 +53,7 @@ describe('team IPC roster mutation and stop concurrency', () => {
 
   afterEach(() => {
     removeTeamHandlers(ipcMain as never);
+    removeTeamRosterMutationIpc(ipcMain as never);
     handlers.clear();
     vi.restoreAllMocks();
   });
@@ -96,6 +102,20 @@ describe('team IPC roster mutation and stop concurrency', () => {
       } as never
     );
     registerTeamHandlers(ipcMain as never);
+    registerTeamRosterMutationIpc(
+      ipcMain as never,
+      createTeamRosterMutationFeature({
+        repository: dataService as never,
+        runtime: { isTeamAlive: () => true },
+        lifecycle: {
+          runLiveRosterMutation: lifecycleService.runLiveRosterMutation.bind(lifecycleService),
+          attachLiveRosterMember: lifecycleService.attachLiveRosterMember.bind(lifecycleService),
+          detachLiveRosterMember: vi.fn(() => Promise.resolve(undefined)),
+        },
+        messaging: { sendMessageToTeam: vi.fn(() => Promise.resolve(undefined)) },
+        logger: { error: vi.fn(), warn: vi.fn() },
+      })
+    );
 
     const add = handlers.get(TEAM_ADD_MEMBER)!({} as never, 'ipc-lock-team', {
       name: 'alice',

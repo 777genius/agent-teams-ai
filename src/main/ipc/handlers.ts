@@ -34,6 +34,11 @@ import {
   removeTeamMessageDeliveryIpc,
 } from '@features/team-message-delivery/main';
 import {
+  createTeamRosterMutationFeature,
+  registerTeamRosterMutationIpc,
+  removeTeamRosterMutationIpc,
+} from '@features/team-roster-mutations/main';
+import {
   createTeamTaskBoardFeature,
   registerTeamTaskBoardIpc,
   removeTeamTaskBoardIpc,
@@ -168,6 +173,7 @@ const teamTaskBoardLogger = createLogger('IPC:teamTaskBoard');
 const teamViewReadModelLogger = createLogger('IPC:teams');
 const teamConfigurationLogger = createLogger('IPC:teams');
 const teamMessageDeliveryLogger = createLogger('IPC:teams');
+const teamRosterMutationLogger = createLogger('IPC:teams');
 
 /**
  * Initializes IPC handlers with service registry.
@@ -248,6 +254,13 @@ export function initializeIpcHandlers(
     messaging: teamHandlerApis.messaging,
     logger: teamMessageDeliveryLogger,
   });
+  const teamRosterMutationFeature = createTeamRosterMutationFeature({
+    repository: teamDataService,
+    runtime: teamHandlerApis.runtime,
+    lifecycle: teamHandlerApis.memberLifecycle,
+    messaging: teamHandlerApis.messaging,
+    logger: teamRosterMutationLogger,
+  });
 
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -326,6 +339,7 @@ export function initializeIpcHandlers(
   registerTeamHandlers(ipcMain);
   registerTeamConfigurationIpc(ipcMain, teamConfigurationFeature);
   registerTeamMessageDeliveryIpc(ipcMain, teamMessageDeliveryFeature);
+  registerTeamRosterMutationIpc(ipcMain, teamRosterMutationFeature);
   registerTeamViewReadModelIpc(ipcMain, teamViewReadModelFeature);
   registerTeamTaskBoardIpc(ipcMain, teamTaskBoardFeature);
   registerTeamApprovalsIpc(ipcMain, {
@@ -392,6 +406,7 @@ export function removeIpcHandlers(): void {
   removeTeamHandlers(ipcMain);
   removeTeamConfigurationIpc(ipcMain);
   removeTeamMessageDeliveryIpc(ipcMain);
+  removeTeamRosterMutationIpc(ipcMain);
   removeTeamViewReadModelIpc(ipcMain);
   removeTeamTaskBoardIpc(ipcMain);
   removeTeamApprovalsIpc(ipcMain);

@@ -327,20 +327,13 @@ export const TEAM_SET_PROJECT_BRANCH_TRACKING = 'team:setProjectBranchTracking';
 /** Push event: tracked project branch changed (main → renderer) */
 export const TEAM_PROJECT_BRANCH_CHANGE = 'team:projectBranchChange';
 
-/** Add a new member to an existing team */
-export const TEAM_ADD_MEMBER = 'team:addMember';
-
-/** Replace all team members (bulk edit) */
-export const TEAM_REPLACE_MEMBERS = 'team:replaceMembers';
-
-/** Soft-delete a team member */
-export const TEAM_REMOVE_MEMBER = 'team:removeMember';
-
-/** Restore a soft-deleted team member */
-export const TEAM_RESTORE_MEMBER = 'team:restoreMember';
-
-/** Update a team member's role */
-export const TEAM_UPDATE_MEMBER_ROLE = 'team:updateMemberRole';
+export {
+  TEAM_ADD_MEMBER,
+  TEAM_REMOVE_MEMBER,
+  TEAM_REPLACE_MEMBERS,
+  TEAM_RESTORE_MEMBER,
+  TEAM_UPDATE_MEMBER_ROLE,
+} from '@features/team-roster-mutations/contracts';
 
 /** Kill a registered CLI process by PID */
 export const TEAM_KILL_PROCESS = 'team:killProcess';
