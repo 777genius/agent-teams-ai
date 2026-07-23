@@ -14,6 +14,10 @@ export type { ChangeReviewConflictStateBridge } from './adapters/createChangeRev
 export { createChangeReviewConflictStateBridge } from './adapters/createChangeReviewConflictStateBridge';
 export { createChangeReviewDraftHistoryPort } from './adapters/createChangeReviewDraftHistoryPort';
 export {
+  createChangeReviewFileDecisionCommandPort,
+  createChangeReviewFileDecisionStatePort,
+} from './adapters/createChangeReviewFileDecisionPorts';
+export {
   createChangeReviewFileDraftCommandPort,
   createChangeReviewFileDraftStatePort,
 } from './adapters/createChangeReviewFileDraftPorts';
@@ -44,6 +48,8 @@ export type {
   ChangeReviewDraftHistoryDiagnostics,
 } from './hooks/useChangeReviewDraftHistoryController';
 export { useChangeReviewDraftHistoryController } from './hooks/useChangeReviewDraftHistoryController';
+export type { ChangeReviewFileDecisionController } from './hooks/useChangeReviewFileDecisionController';
+export { useChangeReviewFileDecisionController } from './hooks/useChangeReviewFileDecisionController';
 export type { ChangeReviewFileDraftController } from './hooks/useChangeReviewFileDraftController';
 export { useChangeReviewFileDraftController } from './hooks/useChangeReviewFileDraftController';
 export type { ChangeReviewKeyboardEditorContext } from './hooks/useChangeReviewHistoryKeyboardShortcuts';
@@ -82,6 +88,17 @@ export type {
   ChangeReviewDraftHistoryScope,
   ChangeReviewDraftHistoryVersion,
 } from './ports/changeReviewDraftHistoryPort';
+export type {
+  ChangeReviewFileDecisionCommandPort,
+  ChangeReviewFileDecisionEditorPort,
+  ChangeReviewFileDecisionHistoryPort,
+  ChangeReviewFileDecisionPersistenceScope,
+  ChangeReviewFileDecisionPolicy,
+  ChangeReviewFileDecisionStatePort,
+  ChangeReviewFileDecisionStateSnapshot,
+  ChangeReviewFileDecisionStatusPort,
+  ChangeReviewFileDecisionWriteEvidencePort,
+} from './ports/changeReviewFileDecisionPorts';
 export type {
   ChangeReviewFileDraftActionHistoryPort,
   ChangeReviewFileDraftCommandPort,
