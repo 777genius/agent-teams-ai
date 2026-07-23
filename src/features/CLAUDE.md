@@ -41,6 +41,8 @@ When modifying an existing feature:
 - preserve the feature's current shape unless the change introduces a real new
   boundary
 - route app shell and cross-feature imports through public entrypoints
+- run `pnpm guard:feature-architecture`; do not add or broaden legacy baseline
+  entries
 - move duplicated rules toward `core/domain` before adding another adapter copy
 - keep transport validation and normalization close to the boundary that receives
   the data

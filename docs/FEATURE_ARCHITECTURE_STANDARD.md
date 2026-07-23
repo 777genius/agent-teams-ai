@@ -291,6 +291,36 @@ directly, but production integration code should not.
 
 Push transport and store access into feature hooks or adapters.
 
+## Architecture Ratchet
+
+Run `pnpm guard:feature-architecture` for the repository-wide dependency gate.
+It scans production source and enforces:
+
+- cross-feature dependencies use only the feature root or the explicit
+  `contracts`, `main`, `preload`, or `renderer` entrypoint
+- `core/domain` stays independent from application, Node, Electron, frameworks,
+  transport, adapters, and infrastructure
+- `core/application` depends only on domain, contracts, and its own application
+  models, use cases, and ports
+- public feature entrypoints do not directly or transitively re-export adapters
+  or infrastructure
+
+Legacy violations are pinned as individual dependency edges in
+`scripts/ci/feature-architecture-baseline.json`. The identity is the rule,
+source path, module specifier, and public entrypoint when applicable; line
+numbers are deliberately excluded so unrelated edits do not create noise.
+
+The baseline is a ratchet, not a general allowlist:
+
+- an existing edge may remain unchanged while its migration is pending
+- a new violating edge fails even when it is added to a legacy file
+- removed violations require their exact baseline entries to be removed
+- CI compares the manifest with the PR base and rejects new exceptions
+- new files and new features therefore start with no architecture exceptions
+
+Use `pnpm guard:feature-architecture -- --report` only when the full legacy
+inventory is needed. The default successful output stays concise.
+
 ## Browser and Tauri Friendly Guidance
 
 The default transport direction should be:
