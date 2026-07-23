@@ -50,9 +50,12 @@ export type SafeExecutionRunInput<Job, Result> = {
     readonly originalPrompt: string;
     readonly controlBatch: WorkerControlContinuationBatch;
     readonly attemptNumber: number;
+    readonly previousFailureReason?: AttemptFailureReason;
+    readonly previousFailureDetails?: Readonly<Record<string, string>>;
   }) => {
     readonly job: Job;
     readonly originalPrompt: string;
+    readonly replaceContinuationOriginalPrompt?: boolean;
   };
   readonly attemptMetadata?: (input: {
     readonly result?: Result;

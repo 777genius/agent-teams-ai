@@ -30,6 +30,10 @@ import {
   FileBackendCodexSafeExecutor,
   FileBackendCodexWorker,
 } from "../index";
+import {
+  codexStartupControlPrompt,
+  isCodexProviderContentPolicyRejection,
+} from "../file-backend-codex-safe-executor";
 import { NodeProcessRunner } from "../node-process-runner";
 import {
   FakeAppServerFactory,
@@ -46,7 +50,181 @@ import {
   waitUntil,
 } from "./file-backend-codex-worker-test-support";
 
+const execFileAsync = promisify(execFile);
+
 describe("CommandPolicyRunner", () => {
+  it("replaces provider-rejected wording with broker guidance", () => {
+    const details = {
+      rawCause:
+        "codex_app_server_error:This content was flagged for possible cybersecurity risk.",
+    };
+    expect(isCodexProviderContentPolicyRejection(details)).toBe(true);
+    const prompt = codexStartupControlPrompt({
+      originalPrompt: "Rejected original wording.",
+      replaceRejectedPrompt: true,
+      controlBatch: {
+        target: { jobId: "review-job" },
+        deliveryAttemptId: "review-job:attempt-2",
+        signals: [],
+        signalIds: ["replacement-guidance"],
+        message: "Review local application correctness and return a verdict.",
+      },
+    });
+    expect(prompt).toContain(
+      "Review local application correctness and return a verdict.",
+    );
+    expect(prompt).not.toContain("Rejected original wording.");
+    expect(prompt).toContain("replacement task wording");
+  });
+
+  it("persists and resumes a provider-rejected task with one replacement prompt", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-policy-resume-"));
+    const workspacePath = await gitWorkspace("codex-policy-resume-workspace-");
+    const clock = {
+      now: () => new Date("2026-07-23T00:00:00.000Z"),
+      monotonicMs: () => performance.now(),
+    };
+    const jobId = "codex-policy-review-job";
+    const taskId = "codex-policy-review-task";
+    const originalPrompt = "Rejected original security-review wording.";
+    const replacementGuidance =
+      "Review the local application correctness invariants and return a verdict.";
+    const canonicalWorkspacePath = await realpath(workspacePath);
+    await writeFile(
+      join(workspacePath, "README.md"),
+      "immutable candidate patch\n",
+      "utf8",
+    );
+    await execFileAsync("git", ["add", "README.md"], { cwd: workspacePath });
+    const { stdout: admittedPatch } = await execFileAsync(
+      "git",
+      ["diff", "HEAD", "--binary"],
+      { cwd: workspacePath },
+    );
+    expect(admittedPatch).toContain("immutable candidate patch");
+    const controlInbox = new WorkerControlService({
+      store: new LocalFileWorkerControlInboxStore({ rootDir }),
+      clock,
+      idFactory: sequentialIds("codex-policy-control"),
+    });
+    const rejectedAppServer = new FakeAppServerFactory({
+      emitTopLevelErrorOnTurn:
+        "codex_app_server_error:This content was flagged for possible cybersecurity risk.",
+    });
+    const firstExecutor = new FileBackendCodexSafeExecutor({
+      stateRootDir: rootDir,
+      workspacePath,
+      controlInbox,
+      accounts: [
+        {
+          codexAuthJson: codexAuthJson("policy-review-account"),
+          worker: {
+            providerInstanceId: "codex-policy-review-account",
+            stateRootDir: rootDir,
+            codexBinaryPath: "codex",
+            encryptionKey: new Uint8Array(32).fill(73),
+            appServerProcessFactory: rejectedAppServer.create,
+            runner: new StaticRunner({
+              exitCode: 1,
+              stdout: "",
+              stderr:
+                "codex_app_server_error:This content was flagged for possible cybersecurity risk.",
+            }),
+            clock,
+          },
+        },
+      ],
+      clock,
+    });
+
+    try {
+      const failed = await firstExecutor.run({
+        jobId,
+        taskId,
+        prompt: originalPrompt,
+        controls: { editMode: "allow-edits" },
+      });
+      expect(failed.status).toBe("failed");
+      if (failed.status !== "failed") throw new Error("expected failed");
+      expect(failed.task.taskId).toBe(taskId);
+      expect(failed.task.workspacePath).toBe(canonicalWorkspacePath);
+      expect(failed.attempts).toHaveLength(1);
+      expect(rejectedAppServer.prompts).toEqual([originalPrompt]);
+
+      const { stdout: patchAfterFailure } = await execFileAsync(
+        "git",
+        ["diff", "HEAD", "--binary"],
+        { cwd: workspacePath },
+      );
+      expect(patchAfterFailure).toBe(admittedPatch);
+      await firstExecutor.dispose();
+
+      await controlInbox.enqueueSignal({
+        target: { jobId, taskId, workspaceId: workspacePath },
+        intent: "guidance",
+        body: replacementGuidance,
+      });
+
+      const resumedAppServer = new FakeAppServerFactory();
+      const resumedExecutor = new FileBackendCodexSafeExecutor({
+        stateRootDir: rootDir,
+        workspacePath,
+        controlInbox,
+        accounts: [
+          {
+            codexAuthJson: codexAuthJson("policy-review-account"),
+            worker: {
+              providerInstanceId: "codex-policy-review-account",
+              stateRootDir: rootDir,
+              codexBinaryPath: "codex",
+              encryptionKey: new Uint8Array(32).fill(73),
+              appServerProcessFactory: resumedAppServer.create,
+              runner: new StaticRunner({
+                exitCode: 0,
+                stdout: "",
+                stderr: "",
+              }),
+              clock,
+            },
+          },
+        ],
+        clock,
+      });
+      try {
+        const resumed = await resumedExecutor.run({
+          jobId,
+          taskId,
+          prompt: originalPrompt,
+          controls: { editMode: "allow-edits" },
+        });
+        expect(resumed.status).toBe("completed");
+        if (resumed.status !== "completed") {
+          throw new Error(`expected completed: ${resumed.status}`);
+        }
+        expect(resumed.task.taskId).toBe(taskId);
+        expect(resumed.task.workspacePath).toBe(canonicalWorkspacePath);
+        expect(resumed.attempts).toHaveLength(2);
+        const continuationPrompt = resumedAppServer.prompts[0] ?? "";
+        expect(continuationPrompt).not.toContain(originalPrompt);
+        expect(continuationPrompt.split(replacementGuidance)).toHaveLength(2);
+        expect(continuationPrompt).toContain(`Task id: ${taskId}`);
+
+        const { stdout: patchAfter } = await execFileAsync(
+          "git",
+          ["diff", "HEAD", "--binary"],
+          { cwd: workspacePath },
+        );
+        expect(patchAfter).toBe(admittedPatch);
+      } finally {
+        await resumedExecutor.dispose();
+      }
+    } finally {
+      await firstExecutor.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(workspacePath, { recursive: true, force: true });
+    }
+  });
+
   it("retries quota-limited Codex work on a different account", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-worker-"));
     const clock = {
@@ -87,8 +265,7 @@ describe("CommandPolicyRunner", () => {
             runner: new StaticRunner({
               exitCode: slotIndex === 0 ? 1 : 0,
               stdout: slotIndex === 0 ? "" : "OK",
-              stderr:
-                slotIndex === 0 ? "You've hit your usage limit." : "",
+              stderr: slotIndex === 0 ? "You've hit your usage limit." : "",
             }),
             capacityPolicy: {
               quotaCooldownMs: 60_000,
@@ -242,7 +419,9 @@ describe("CommandPolicyRunner", () => {
       });
 
       if (result.status !== "completed") {
-        throw new Error(`expected completed: ${result.reason}:${result.safeMessage}`);
+        throw new Error(
+          `expected completed: ${result.reason}:${result.safeMessage}`,
+        );
       }
       expect(result.replayed).toBe(false);
       expect(result.task.effectMode).toBe("workspace_patch");
@@ -263,11 +442,15 @@ describe("CommandPolicyRunner", () => {
       expect(continuationPrompt).toContain("Task id: codex-safe-switch-task");
       expect(continuationPrompt).toContain("Attempt: 2");
       expect(continuationPrompt).toContain("Provider: codex");
-      expect(continuationPrompt).toContain(`Workspace: ${canonicalWorkspacePath}`);
+      expect(continuationPrompt).toContain(
+        `Workspace: ${canonicalWorkspacePath}`,
+      );
       expect(continuationPrompt).toContain(
         "Previous attempt stopped because: quota_limited",
       );
-      expect(continuationPrompt).toContain("Original task:\nImplement the safe task.");
+      expect(continuationPrompt).toContain(
+        "Original task:\nImplement the safe task.",
+      );
       expect(continuationPrompt).toContain("Current workspace summary:");
       expect(continuationPrompt).toContain("Git workspace has");
       expect(continuationPrompt).toContain("Changed files:\n- wip.txt");
@@ -278,6 +461,11 @@ describe("CommandPolicyRunner", () => {
       expect(continuationPrompt).toContain(
         "Preserve current WIP and continue with targeted tests first.",
       );
+      expect(
+        continuationPrompt.split(
+          "Preserve current WIP and continue with targeted tests first.",
+        ),
+      ).toHaveLength(2);
       expect(
         continuationPrompt.includes(
           "Pause before continuation unless the provider explicitly supports it.",
@@ -293,8 +481,8 @@ describe("CommandPolicyRunner", () => {
         target: { jobId: "codex-safe-switch-job" },
         includeExpired: true,
       });
-      const pauseView = controlViews.find((view) =>
-        view.signal.signalId === pauseSignal.signalId
+      const pauseView = controlViews.find(
+        (view) => view.signal.signalId === pauseSignal.signalId,
       );
       expect(pauseView).toMatchObject({
         state: "pending",
@@ -430,7 +618,9 @@ describe("CommandPolicyRunner", () => {
 
       const result = await resultPromise;
       if (result.status !== "completed") {
-        throw new Error(`expected completed: ${result.reason}:${result.safeMessage}`);
+        throw new Error(
+          `expected completed: ${result.reason}:${result.safeMessage}`,
+        );
       }
       expect(result.attempts).toHaveLength(2);
       expect(result.attempts[0]?.failureReason).toBe("runtime_interrupted");
@@ -443,7 +633,9 @@ describe("CommandPolicyRunner", () => {
       expect(continuationPrompt).toContain(
         "Previous attempt stopped because: runtime_interrupted",
       );
-      expect(continuationPrompt).toContain("Runtime control inbox instructions");
+      expect(continuationPrompt).toContain(
+        "Runtime control inbox instructions",
+      );
       expect(continuationPrompt).toContain("targeted recall slice");
       expect(continuationPrompt).toContain("Changed files:\n- wip.txt");
       expect(continuationPrompt.includes("access_token")).toBe(false);
@@ -466,28 +658,28 @@ describe("CommandPolicyRunner", () => {
 
   it("skips invalid seeded Codex accounts and runs safe work on the next slot", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-invalid-seed-"));
-    const workspacePath = await gitWorkspace("codex-safe-invalid-seed-workspace-");
+    const workspacePath = await gitWorkspace(
+      "codex-safe-invalid-seed-workspace-",
+    );
     const clock = {
       now: () => new Date("2026-05-31T00:05:00.000Z"),
       monotonicMs: () => performance.now(),
     };
-    const appServers = [
-      new FakeAppServerFactory(),
-      new FakeAppServerFactory(),
-    ];
+    const appServers = [new FakeAppServerFactory(), new FakeAppServerFactory()];
     const executor = new FileBackendCodexSafeExecutor({
       stateRootDir: rootDir,
       workspacePath,
       accounts: appServers.map((appServer, index) => ({
-        codexAuthJson: index === 0
-          ? JSON.stringify({
-              auth_mode: "api-key",
-              tokens: {
-                access_token: "invalid-access-token",
-                refresh_token: "invalid-refresh-token",
-              },
-            })
-          : codexAuthJson("valid-second-account"),
+        codexAuthJson:
+          index === 0
+            ? JSON.stringify({
+                auth_mode: "api-key",
+                tokens: {
+                  access_token: "invalid-access-token",
+                  refresh_token: "invalid-refresh-token",
+                },
+              })
+            : codexAuthJson("valid-second-account"),
         worker: {
           providerInstanceId: `codex-invalid-seed-account-${index + 1}`,
           stateRootDir: rootDir,
@@ -520,8 +712,14 @@ describe("CommandPolicyRunner", () => {
 
   it("fails safe Codex work before starting accounts when the workspace is not git", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-not-git-"));
-    const workspacePath = await mkdtemp(join(tmpdir(), "codex-safe-not-git-workspace-"));
-    await writeFile(join(workspacePath, ".git"), "gitdir: /nonexistent/gitdir\n", "utf8");
+    const workspacePath = await mkdtemp(
+      join(tmpdir(), "codex-safe-not-git-workspace-"),
+    );
+    await writeFile(
+      join(workspacePath, ".git"),
+      "gitdir: /nonexistent/gitdir\n",
+      "utf8",
+    );
     const appServer = new FakeAppServerFactory();
     const executor = new FileBackendCodexSafeExecutor({
       stateRootDir: rootDir,
@@ -570,7 +768,9 @@ describe("CommandPolicyRunner", () => {
 
   it("rejects duplicate Codex account identities before starting safe work", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-duplicate-"));
-    const workspacePath = await mkdtemp(join(tmpdir(), "codex-safe-duplicate-workspace-"));
+    const workspacePath = await mkdtemp(
+      join(tmpdir(), "codex-safe-duplicate-workspace-"),
+    );
     const appServers = [new FakeAppServerFactory(), new FakeAppServerFactory()];
     const executor = new FileBackendCodexSafeExecutor({
       stateRootDir: rootDir,
@@ -610,7 +810,9 @@ describe("CommandPolicyRunner", () => {
   });
 
   it("allows duplicate Codex account identities only when explicitly enabled", async () => {
-    const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-duplicate-allowed-"));
+    const rootDir = await mkdtemp(
+      join(tmpdir(), "codex-safe-duplicate-allowed-"),
+    );
     const workspacePath = await mkdtemp(
       join(tmpdir(), "codex-safe-duplicate-allowed-workspace-"),
     );

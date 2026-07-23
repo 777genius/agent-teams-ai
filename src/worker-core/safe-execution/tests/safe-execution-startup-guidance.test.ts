@@ -72,7 +72,11 @@ describe("SafeExecutionRunner startup guidance", () => {
       },
       job: { prompt: "Original scope.", workspacePath },
       originalPrompt: "Original scope.",
-      controlContinuationJobFactory: ({ job, originalPrompt, controlBatch }) => {
+      controlContinuationJobFactory: ({
+        job,
+        originalPrompt,
+        controlBatch,
+      }) => {
         const prompt = `${originalPrompt}\n${controlBatch.message ?? ""}`;
         return { job: { ...job, prompt }, originalPrompt: prompt };
       },
@@ -109,16 +113,14 @@ describe("SafeExecutionRunner startup guidance", () => {
       journal,
       controlInbox: control,
     });
-    const run = (
-      pool: {
-        run(
-          job: PromptJob,
-          options?: {
-            readonly onProviderTaskStarted?: () => Promise<void> | void;
-          },
-        ): Promise<PromptResult>;
-      },
-    ) =>
+    const run = (pool: {
+      run(
+        job: PromptJob,
+        options?: {
+          readonly onProviderTaskStarted?: () => Promise<void> | void;
+        },
+      ): Promise<PromptResult>;
+    }) =>
       runner.run({
         taskId,
         workspace: { mode: "existing_locked" as const, path: workspacePath },
@@ -128,7 +130,11 @@ describe("SafeExecutionRunner startup guidance", () => {
         job: { prompt: "Review the patch.", workspacePath },
         originalPrompt: "Review the patch.",
         controlTarget: target,
-        controlContinuationJobFactory: ({ job, originalPrompt, controlBatch }) => {
+        controlContinuationJobFactory: ({
+          job,
+          originalPrompt,
+          controlBatch,
+        }) => {
           const prompt = `${originalPrompt}\n${controlBatch.message ?? ""}`;
           return { job: { ...job, prompt }, originalPrompt: prompt };
         },
@@ -157,6 +163,170 @@ describe("SafeExecutionRunner startup guidance", () => {
     });
     expect(completed.status).toBe("completed");
     expect((await control.listSignals({ target }))[0]?.state).toBe("delivered");
+  });
+
+  it("uses broker replacement wording when guidance resumes a failed provider input", async () => {
+    const workspacePath = await gitWorkspace(
+      cleanupPaths,
+      "safe-execution-replacement-guidance-",
+    );
+    const journal = new InMemoryAttemptJournal();
+    const control = new WorkerControlService({
+      store: new InMemoryWorkerControlInboxStore(),
+    });
+    const taskId = "task-replacement-guidance";
+    const target = { jobId: taskId, workspaceId: workspacePath };
+    const originalPrompt = "Original wording rejected by the provider.";
+    const run = (pool: { run(job: PromptJob): Promise<PromptResult> }) =>
+      new SafeExecutionRunner({
+        snapshotter: new DefaultWorkspaceSnapshotter(),
+        workspaceAccess: new NodeSafeExecutionWorkspaceAccess(),
+        runtime: new NodeSafeExecutionRuntime(),
+        lockStore: new InMemoryWorkspaceLockStore(),
+        journal,
+        controlInbox: control,
+      }).run({
+        taskId,
+        workspace: { mode: "existing_locked" as const, path: workspacePath },
+        effectMode: "workspace_patch" as const,
+        provider: "codex",
+        pool,
+        job: { prompt: originalPrompt, workspacePath },
+        originalPrompt,
+        controlTarget: target,
+        controlContinuationJobFactory: ({
+          job,
+          controlBatch,
+          previousFailureDetails,
+        }) => {
+          expect(previousFailureDetails?.rawCause).toContain(
+            "content was flagged",
+          );
+          const prompt = controlBatch.message ?? "";
+          return {
+            job: { ...job, prompt },
+            originalPrompt: prompt,
+            replaceContinuationOriginalPrompt: true,
+          };
+        },
+        policy: { maxAttempts: 1 },
+      });
+
+    const failed = await run({
+      async run() {
+        throw new SubscriptionWorkerError(
+          "subscription_worker_run_failed",
+          "Provider rejected the input.",
+          {
+            details: {
+              code: "unknown_runtime_failure",
+              rawCause:
+                "codex_app_server_error:This content was flagged for possible cybersecurity risk.",
+            },
+          },
+        );
+      },
+    });
+    expect(failed.status).toBe("failed");
+
+    await control.enqueueSignal({
+      target,
+      intent: "guidance",
+      body: "Review the local application correctness invariants.",
+    });
+    const completed = await run({
+      async run(job) {
+        expect(job.prompt).toContain(
+          "Review the local application correctness invariants.",
+        );
+        expect(job.prompt).not.toContain(originalPrompt);
+        expect(
+          job.prompt.split(
+            "Review the local application correctness invariants.",
+          ),
+        ).toHaveLength(2);
+        return { output: "formal accept" };
+      },
+    });
+    expect(completed.status).toBe("completed");
+  });
+
+  it("preserves ordinary failed-task guidance across a resumed retry", async () => {
+    const workspacePath = await gitWorkspace(
+      cleanupPaths,
+      "safe-execution-ordinary-guidance-retry-",
+    );
+    const journal = new InMemoryAttemptJournal();
+    const control = new WorkerControlService({
+      store: new InMemoryWorkerControlInboxStore(),
+    });
+    const taskId = "task-ordinary-guidance-retry";
+    const target = { jobId: taskId, workspaceId: workspacePath };
+    const guidance = "Re-check the focused application invariant.";
+    let runs = 0;
+    const run = (maxAttempts: number) =>
+      new SafeExecutionRunner({
+        snapshotter: new DefaultWorkspaceSnapshotter(),
+        workspaceAccess: new NodeSafeExecutionWorkspaceAccess(),
+        runtime: new NodeSafeExecutionRuntime(),
+        lockStore: new InMemoryWorkspaceLockStore(),
+        journal,
+        controlInbox: control,
+      }).run({
+        taskId,
+        workspace: { mode: "existing_locked" as const, path: workspacePath },
+        effectMode: "workspace_patch" as const,
+        provider: "codex",
+        pool: {
+          async run(job: PromptJob): Promise<PromptResult> {
+            runs += 1;
+            if (runs === 1) {
+              throw new SubscriptionWorkerError(
+                "subscription_worker_run_failed",
+                "Provider runtime failed.",
+                {
+                  details: {
+                    code: "unknown_runtime_failure",
+                    rawCause: "ordinary_unknown_runtime_failure",
+                  },
+                },
+              );
+            }
+            expect(job.prompt.split(guidance)).toHaveLength(2);
+            if (runs === 2) {
+              throw new SubscriptionWorkerError(
+                "subscription_worker_run_failed",
+                "Quota limited.",
+                { details: { reason: "quota_limited" } },
+              );
+            }
+            return { output: "formal accept" };
+          },
+        },
+        job: { prompt: "Review the patch.", workspacePath },
+        originalPrompt: "Review the patch.",
+        controlTarget: target,
+        controlContinuationJobFactory: ({
+          job,
+          originalPrompt,
+          controlBatch,
+        }) => {
+          const prompt = `${originalPrompt}\n${controlBatch.message ?? ""}`;
+          return { job: { ...job, prompt }, originalPrompt: prompt };
+        },
+        policy: { maxAttempts },
+      });
+
+    const failed = await run(1);
+    expect(failed.status).toBe("failed");
+    await control.enqueueSignal({
+      target,
+      intent: "guidance",
+      body: guidance,
+    });
+    const completed = await run(2);
+    expect(completed.status).toBe("completed");
+    expect(runs).toBe(3);
   });
 
   it("grants a fresh retry budget when guidance resumes a completed task", async () => {
@@ -188,39 +358,45 @@ describe("SafeExecutionRunner startup guidance", () => {
                 deliveryAttemptId: input.deliveryAttemptId,
                 signals: [],
                 signalIds: ["completed-guidance"],
-                message: "Runtime control inbox instructions:\nAdd the assertion.",
+                message:
+                  "Runtime control inbox instructions:\nAdd the assertion.",
               };
         },
       },
     });
-    const run = (maxAttempts: number) => runner.run({
-      taskId: "task-completed-guidance",
-      workspace: { mode: "existing_locked" as const, path: workspacePath },
-      effectMode: "workspace_patch" as const,
-      provider: "codex",
-      pool: {
-        async run(job: PromptJob): Promise<PromptResult> {
-          runs += 1;
-          if (runs === 2) {
-            expect(job.prompt).toContain("Add the assertion.");
-            throw new SubscriptionWorkerError(
-              "subscription_worker_run_failed",
-              "Quota limited.",
-              { details: { reason: "quota_limited" } },
-            );
-          }
-          if (runs === 3) expect(job.prompt).toContain("Add the assertion.");
-          return { output: `run-${runs}` };
+    const run = (maxAttempts: number) =>
+      runner.run({
+        taskId: "task-completed-guidance",
+        workspace: { mode: "existing_locked" as const, path: workspacePath },
+        effectMode: "workspace_patch" as const,
+        provider: "codex",
+        pool: {
+          async run(job: PromptJob): Promise<PromptResult> {
+            runs += 1;
+            if (runs === 2) {
+              expect(job.prompt).toContain("Add the assertion.");
+              throw new SubscriptionWorkerError(
+                "subscription_worker_run_failed",
+                "Quota limited.",
+                { details: { reason: "quota_limited" } },
+              );
+            }
+            if (runs === 3) expect(job.prompt).toContain("Add the assertion.");
+            return { output: `run-${runs}` };
+          },
         },
-      },
-      job: { prompt: "Original task.", workspacePath },
-      originalPrompt: "Original task.",
-      controlContinuationJobFactory: ({ job, originalPrompt, controlBatch }) => {
-        const prompt = `${originalPrompt}\n${controlBatch.message ?? ""}`;
-        return { job: { ...job, prompt }, originalPrompt: prompt };
-      },
-      policy: { maxAttempts },
-    });
+        job: { prompt: "Original task.", workspacePath },
+        originalPrompt: "Original task.",
+        controlContinuationJobFactory: ({
+          job,
+          originalPrompt,
+          controlBatch,
+        }) => {
+          const prompt = `${originalPrompt}\n${controlBatch.message ?? ""}`;
+          return { job: { ...job, prompt }, originalPrompt: prompt };
+        },
+        policy: { maxAttempts },
+      });
 
     const initial = await run(1);
     expect(initial.status).toBe("completed");

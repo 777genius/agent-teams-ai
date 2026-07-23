@@ -104,16 +104,17 @@ export class SafeExecutionRunner {
 
     try {
       const firstAttemptNumber = (existing?.attempts.length ?? 0) + 1;
-      let task = existing?.status === "completed"
-        ? existing
-        : await this.options.journal.startTask({
-            taskId: input.taskId,
-            workspaceRunId: workspaceRunId(workspacePath),
-            workspacePath,
-            effectMode: input.effectMode,
-            provider: input.provider,
-            now: this.clock.now(),
-          });
+      let task =
+        existing?.status === "completed"
+          ? existing
+          : await this.options.journal.startTask({
+              taskId: input.taskId,
+              workspaceRunId: workspaceRunId(workspacePath),
+              workspacePath,
+              effectMode: input.effectMode,
+              provider: input.provider,
+              now: this.clock.now(),
+            });
       if (input.workspace.requireGitWorkspace) {
         try {
           await this.workspaceAccess.assertGitWorkspace({
@@ -159,7 +160,10 @@ export class SafeExecutionRunner {
         }
       }
       const policy = normalizeSafeExecutionPolicy(input);
-      if (task.status === "completed" && task.effectMode === "external_side_effects") {
+      if (
+        task.status === "completed" &&
+        task.effectMode === "external_side_effects"
+      ) {
         return {
           status: "completed",
           task,
@@ -203,11 +207,13 @@ export class SafeExecutionRunner {
       const startupControlAllowed =
         task.status === "completed" ||
         !task.lastFailureReason ||
-        shouldDeliverSafeExecutionControlForContinuation(task.lastFailureReason);
+        shouldDeliverSafeExecutionControlForContinuation(
+          task.lastFailureReason,
+        );
       const startupControlBatch =
         startupControlAllowed &&
-          this.options.controlInbox &&
-          input.controlContinuationJobFactory
+        this.options.controlInbox &&
+        input.controlContinuationJobFactory
           ? await this.options.controlInbox.consumeForContinuation({
               target: input.controlTarget ?? {
                 jobId: input.taskId,
@@ -225,10 +231,12 @@ export class SafeExecutionRunner {
         startupControlBatch.signalIds.length > 0 &&
         supportsDeferredControlDelivery(this.options.controlInbox)
       ) {
-        controlDeliveries.push(new DeferredWorkerControlDelivery({
-          source: this.options.controlInbox,
-          batch: startupControlBatch,
-        }));
+        controlDeliveries.push(
+          new DeferredWorkerControlDelivery({
+            source: this.options.controlInbox,
+            batch: startupControlBatch,
+          }),
+        );
       }
       if (
         startupControlBatch &&
@@ -241,19 +249,27 @@ export class SafeExecutionRunner {
         );
       }
       const hasStartupControl = Boolean(
-        startupControlBatch?.message && startupControlBatch.signalIds.length > 0,
+        startupControlBatch?.message &&
+        startupControlBatch.signalIds.length > 0,
       );
       let job = input.job;
       let effectiveOriginalPrompt = input.originalPrompt;
       let previousOutputSummary = task.outputSummary;
-      const controlledStartup = hasStartupControl && startupControlBatch
-        ? input.controlContinuationJobFactory?.({
-            job,
-            originalPrompt: effectiveOriginalPrompt,
-            controlBatch: startupControlBatch,
-            attemptNumber: firstAttemptNumber,
-          })
-        : undefined;
+      const controlledStartup =
+        hasStartupControl && startupControlBatch
+          ? input.controlContinuationJobFactory?.({
+              job,
+              originalPrompt: effectiveOriginalPrompt,
+              controlBatch: startupControlBatch,
+              attemptNumber: firstAttemptNumber,
+              ...(task.lastFailureReason === undefined
+                ? {}
+                : { previousFailureReason: task.lastFailureReason }),
+              ...(task.lastFailureDetails === undefined
+                ? {}
+                : { previousFailureDetails: task.lastFailureDetails }),
+            })
+          : undefined;
       if (hasStartupControl && !controlledStartup) {
         throw new SafeExecutionError(
           "safe_execution_invalid_task",
@@ -286,6 +302,15 @@ export class SafeExecutionRunner {
         task.lastFailureReason &&
         policy.continuationMode !== "disabled"
       ) {
+        const replaceContinuationOriginalPrompt =
+          controlledStartup?.replaceContinuationOriginalPrompt === true;
+        const continuationOriginalPrompt = replaceContinuationOriginalPrompt
+          ? controlledStartup.originalPrompt
+          : input.originalPrompt;
+        const continuationControlBatch =
+          replaceContinuationOriginalPrompt && startupControlBatch
+            ? workerControlBatchWithoutMessage(startupControlBatch)
+            : startupControlBatch;
         let snapshot: WorkspaceSnapshot;
         try {
           snapshot = await this.snapshotter.capture({
@@ -301,7 +326,7 @@ export class SafeExecutionRunner {
           attemptNumber: firstAttemptNumber,
           provider: input.provider,
           workspacePath,
-          originalPrompt: input.originalPrompt,
+          originalPrompt: continuationOriginalPrompt,
           previousFailureReason: task.lastFailureReason,
           snapshot,
           ...(previousOutputSummary === undefined
@@ -310,9 +335,9 @@ export class SafeExecutionRunner {
           ...(input.controlTarget === undefined
             ? {}
             : { controlTarget: input.controlTarget }),
-          ...(startupControlBatch === undefined
+          ...(continuationControlBatch === undefined
             ? {}
-            : { controlBatch: startupControlBatch }),
+            : { controlBatch: continuationControlBatch }),
           onDeferredControlDelivery: (delivery) =>
             controlDeliveries.push(delivery),
         });
@@ -382,12 +407,15 @@ export class SafeExecutionRunner {
 
         let before: WorkspaceSnapshot;
         try {
-          before = attemptNumber === firstAttemptNumber && startupBeforeSnapshot
-            ? startupBeforeSnapshot
-            : await this.snapshotter.capture({
-                workspacePath,
-                ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
-              });
+          before =
+            attemptNumber === firstAttemptNumber && startupBeforeSnapshot
+              ? startupBeforeSnapshot
+              : await this.snapshotter.capture({
+                  workspacePath,
+                  ...(input.abortSignal
+                    ? { abortSignal: input.abortSignal }
+                    : {}),
+                });
         } catch (error) {
           return this.failStartedTask({ input, error });
         }
@@ -709,7 +737,9 @@ export class SafeExecutionRunner {
         input.previousFailureReason,
       )
     ) {
-      const deferred = supportsDeferredControlDelivery(this.options.controlInbox);
+      const deferred = supportsDeferredControlDelivery(
+        this.options.controlInbox,
+      );
       controlBatch = await this.options.controlInbox.consumeForContinuation({
         target: input.controlTarget ?? {
           jobId: input.taskId,
@@ -744,6 +774,17 @@ export class SafeExecutionRunner {
   }
 }
 
+function workerControlBatchWithoutMessage(
+  batch: WorkerControlContinuationBatch,
+): WorkerControlContinuationBatch {
+  return {
+    target: batch.target,
+    deliveryAttemptId: batch.deliveryAttemptId,
+    signals: batch.signals,
+    signalIds: batch.signalIds,
+  };
+}
+
 function supportsDeferredControlDelivery(
   source: WorkerControlContinuationSource | undefined,
 ): source is WorkerControlContinuationSource & {
@@ -757,8 +798,8 @@ function supportsDeferredControlDelivery(
 } {
   return Boolean(
     source?.supportsDeferredDeliveryConfirmation === true &&
-      source.confirmContinuationDelivery &&
-      source.releaseContinuationDelivery,
+    source.confirmContinuationDelivery &&
+    source.releaseContinuationDelivery,
   );
 }
 
