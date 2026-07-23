@@ -8,6 +8,7 @@ minimumReleaseAgeExclude:
   - '@esbuild/*'
   - esbuild
   - fast-uri@3.1.4
+  - find-my-way@9.7.0
   - tmp@0.2.6
 strictPeerDependencies: true
 peerDependencyRules:
@@ -42,6 +43,7 @@ overrides:
   'esbuild': '0.28.1'
   'fast-uri': '3.1.4'
   'file-type@21': '21.3.2'
+  'find-my-way': '9.7.0'
   'flatted': '3.4.2'
   'follow-redirects': '1.16.0'
   'handlebars': '4.7.9'
