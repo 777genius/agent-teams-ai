@@ -34,6 +34,11 @@ import {
   removeTeamMessageDeliveryIpc,
 } from '@features/team-message-delivery/main';
 import {
+  createTeamProvisioningFeature,
+  registerTeamProvisioningIpc,
+  removeTeamProvisioningIpc,
+} from '@features/team-provisioning/main';
+import {
   createTeamRosterMutationFeature,
   registerTeamRosterMutationIpc,
   removeTeamRosterMutationIpc,
@@ -173,6 +178,7 @@ const teamTaskBoardLogger = createLogger('IPC:teamTaskBoard');
 const teamViewReadModelLogger = createLogger('IPC:teams');
 const teamConfigurationLogger = createLogger('IPC:teams');
 const teamMessageDeliveryLogger = createLogger('IPC:teams');
+const teamProvisioningLogger = createLogger('IPC:teams');
 const teamRosterMutationLogger = createLogger('IPC:teams');
 
 /**
@@ -261,6 +267,15 @@ export function initializeIpcHandlers(
     messaging: teamHandlerApis.messaging,
     logger: teamRosterMutationLogger,
   });
+  const teamProvisioningFeature = createTeamProvisioningFeature({
+    start: teamHandlerApis.provisioningStart,
+    status: teamHandlerApis.provisioningStatus,
+    preflight: teamHandlerApis.preflight,
+    provisioningRun: teamHandlerApis.provisioningRun,
+    repository: teamDataService,
+    launchIoGovernor,
+    logger: teamProvisioningLogger,
+  });
 
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -337,6 +352,7 @@ export function initializeIpcHandlers(
   registerSshHandlers(ipcMain);
   registerContextHandlers(ipcMain);
   registerTeamHandlers(ipcMain);
+  registerTeamProvisioningIpc(ipcMain, teamProvisioningFeature);
   registerTeamConfigurationIpc(ipcMain, teamConfigurationFeature);
   registerTeamMessageDeliveryIpc(ipcMain, teamMessageDeliveryFeature);
   registerTeamRosterMutationIpc(ipcMain, teamRosterMutationFeature);
@@ -404,6 +420,7 @@ export function removeIpcHandlers(): void {
   removeSshHandlers(ipcMain);
   removeContextHandlers(ipcMain);
   removeTeamHandlers(ipcMain);
+  removeTeamProvisioningIpc(ipcMain);
   removeTeamConfigurationIpc(ipcMain);
   removeTeamMessageDeliveryIpc(ipcMain);
   removeTeamRosterMutationIpc(ipcMain);

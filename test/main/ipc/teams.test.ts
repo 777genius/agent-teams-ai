@@ -1,5 +1,6 @@
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -148,6 +149,11 @@ import {
   removeTeamMessageDeliveryIpc,
 } from '../../../src/features/team-message-delivery/main';
 import {
+  createTeamProvisioningFeature,
+  registerTeamProvisioningIpc,
+  removeTeamProvisioningIpc,
+} from '../../../src/features/team-provisioning/main';
+import {
   createTeamRosterMutationFeature,
   registerTeamRosterMutationIpc,
   removeTeamRosterMutationIpc,
@@ -220,6 +226,7 @@ import {
   TEAM_PREPARE_PROVISIONING,
   TEAM_PROCESS_ALIVE,
   TEAM_PROCESS_SEND,
+  TEAM_PROVISIONING_PROGRESS,
   TEAM_PROVISIONING_STATUS,
   TEAM_REMOVE_MEMBER,
   TEAM_REMOVE_TASK_RELATIONSHIP,
@@ -382,6 +389,16 @@ const TEAM_MESSAGE_DELIVERY_HANDLER_KEYS = [
   TEAM_GET_ATTACHMENTS,
 ] as const;
 const TEAM_MESSAGE_DELIVERY_HANDLER_KEY_SET = new Set<string>(TEAM_MESSAGE_DELIVERY_HANDLER_KEYS);
+const TEAM_PROVISIONING_HANDLER_KEYS = [
+  TEAM_CREATE,
+  TEAM_LAUNCH,
+  TEAM_VALIDATE_CLI_ARGS,
+  TEAM_PREPARE_PROVISIONING,
+  TEAM_PROVISIONING_STATUS,
+  TEAM_LAUNCH_FAILURE_DIAGNOSTICS,
+  TEAM_CANCEL_PROVISIONING,
+] as const;
+const TEAM_PROVISIONING_HANDLER_KEY_SET = new Set<string>(TEAM_PROVISIONING_HANDLER_KEYS);
 const TEAM_ROSTER_MUTATION_HANDLER_KEYS = [
   TEAM_ADD_MEMBER,
   TEAM_REPLACE_MEMBERS,
@@ -396,6 +413,7 @@ const TEAM_HANDLER_KEYS = ALL_TEAM_HANDLER_KEYS.filter(
     !TEAM_VIEW_READ_MODEL_HANDLER_KEY_SET.has(channel) &&
     !TEAM_CONFIGURATION_HANDLER_KEY_SET.has(channel) &&
     !TEAM_MESSAGE_DELIVERY_HANDLER_KEY_SET.has(channel) &&
+    !TEAM_PROVISIONING_HANDLER_KEY_SET.has(channel) &&
     !TEAM_ROSTER_MUTATION_HANDLER_KEY_SET.has(channel)
 );
 
@@ -416,6 +434,7 @@ describe('ipc teams handlers', () => {
   const teamViewReadModelLogger = createLogger('IPC:teams');
   const teamConfigurationLogger = createLogger('IPC:teams');
   const teamMessageDeliveryLogger = createLogger('IPC:teams');
+  const teamProvisioningLogger = { error: vi.fn() };
   const teamRosterMutationLogger = { error: vi.fn(), warn: vi.fn() };
   let launchIoGovernor: LaunchIoGovernor;
 
@@ -805,6 +824,16 @@ describe('ipc teams handlers', () => {
       logger: teamMessageDeliveryLogger,
     });
     registerTeamMessageDeliveryIpc(ipcMain as never, teamMessageDeliveryFeature);
+    const teamProvisioningFeature = createTeamProvisioningFeature({
+      start: teamHandlerApis.provisioningStart,
+      status: teamHandlerApis.provisioningStatus,
+      preflight: teamHandlerApis.preflight,
+      provisioningRun: teamHandlerApis.provisioningRun,
+      repository: service as never,
+      launchIoGovernor,
+      logger: teamProvisioningLogger,
+    });
+    registerTeamProvisioningIpc(ipcMain as never, teamProvisioningFeature);
     const teamRosterMutationFeature = createTeamRosterMutationFeature({
       repository: service as never,
       runtime: teamHandlerApis.runtime,
@@ -862,6 +891,9 @@ describe('ipc teams handlers', () => {
       expect(legacyChannels.has(channel)).toBe(false);
     }
     for (const channel of TEAM_MESSAGE_DELIVERY_HANDLER_KEYS) {
+      expect(legacyChannels.has(channel)).toBe(false);
+    }
+    for (const channel of TEAM_PROVISIONING_HANDLER_KEYS) {
       expect(legacyChannels.has(channel)).toBe(false);
     }
     for (const channel of TEAM_ROSTER_MUTATION_HANDLER_KEYS) {
@@ -2130,6 +2162,270 @@ describe('ipc teams handlers', () => {
 
     expect(result.success).toBe(true);
     expect(computeTeamWatchScope()?.has(createTeam)).toBe(true);
+  });
+
+  it.each([
+    { channel: TEAM_CREATE, api: 'createTeam' as const, teamName: 'progress-create' },
+    { channel: TEAM_LAUNCH, api: 'launchTeam' as const, teamName: 'progress-launch' },
+  ])(
+    'records provisioning progress before notifying the invoking renderer for $channel',
+    async ({ channel, api, teamName }) => {
+      const calls: string[] = [];
+      const sender = { send: vi.fn() };
+      const targetWindow = {
+        isDestroyed: () => false,
+        webContents: {
+          isDestroyed: () => false,
+          send: vi.fn(() => calls.push('renderer')),
+        },
+      };
+      vi.mocked(BrowserWindow.fromWebContents).mockReturnValueOnce(targetWindow as never);
+      vi.spyOn(launchIoGovernor, 'noteProvisioningProgress').mockImplementationOnce(() => {
+        calls.push('governor');
+      });
+
+      const result = (await handlers.get(channel)!({ sender } as never, {
+        teamName,
+        members: [{ name: 'alice' }],
+        cwd: os.tmpdir(),
+      })) as { success: boolean };
+      expect(result.success).toBe(true);
+
+      const progress: TeamProvisioningProgress = {
+        runId: `${teamName}-run`,
+        teamName,
+        state: 'spawning',
+        message: 'Starting',
+        startedAt: '2026-07-23T00:00:00.000Z',
+        updatedAt: '2026-07-23T00:00:00.000Z',
+      };
+      const progressCallback = teamHandlerMocks[api].mock.calls.at(-1)?.[1] as
+        | ((value: TeamProvisioningProgress) => void)
+        | undefined;
+      expect(progressCallback).toBeTypeOf('function');
+      progressCallback!(progress);
+
+      expect(calls).toEqual(['governor', 'renderer']);
+      expect(targetWindow.webContents.send).toHaveBeenCalledWith(
+        TEAM_PROVISIONING_PROGRESS,
+        progress
+      );
+      expect(BrowserWindow.fromWebContents).toHaveBeenCalledWith(sender);
+    }
+  );
+
+  it('preserves provisioning dependency receivers across every extracted operation', async () => {
+    const calls: string[] = [];
+    const start = {
+      createTeam(
+        request: TeamCreateRequest,
+        _onProgress: (progress: TeamProvisioningProgress) => void
+      ): Promise<{ runId: string }> {
+        if (this !== start) throw new Error('start receiver lost');
+        void _onProgress;
+        calls.push(`create:${request.teamName}`);
+        return Promise.resolve({ runId: 'receiver-create' });
+      },
+      launchTeam(
+        request: TeamLaunchRequest,
+        _onProgress: (progress: TeamProvisioningProgress) => void
+      ): Promise<{ runId: string }> {
+        if (this !== start) throw new Error('start receiver lost');
+        void _onProgress;
+        calls.push(`launch:${request.teamName}`);
+        return Promise.resolve({ runId: 'receiver-launch' });
+      },
+    };
+    const status = {
+      getProvisioningStatus(runId: string) {
+        if (this !== status) throw new Error('status receiver lost');
+        calls.push(`status:${runId}`);
+        return Promise.resolve({
+          runId,
+          teamName: 'receiver-launch',
+          state: 'spawning' as const,
+          message: 'Starting',
+          startedAt: '2026-07-23T00:00:00.000Z',
+          updatedAt: '2026-07-23T00:00:00.000Z',
+        });
+      },
+    };
+    const preflight = {
+      getCliHelpOutput(): Promise<string> {
+        if (this !== preflight) throw new Error('preflight receiver lost');
+        calls.push('help');
+        return Promise.resolve('Usage\n  --max-turns <count>');
+      },
+      prepareForProvisioning(...args: Parameters<TeamIpcHandlerApis['preflight']['prepareForProvisioning']>) {
+        if (this !== preflight) throw new Error('preflight receiver lost');
+        calls.push('prepare');
+        expect(args[0]).toBe(os.tmpdir());
+        return Promise.resolve({ ready: true, message: 'ready' });
+      },
+    };
+    const provisioningRun = {
+      cancelProvisioning(runId: string): Promise<void> {
+        if (this !== provisioningRun) throw new Error('run receiver lost');
+        calls.push(`cancel:${runId}`);
+        return Promise.resolve();
+      },
+    };
+    const diagnostics = {
+      read(teamName: string, runId?: string) {
+        if (this !== diagnostics) throw new Error('diagnostics receiver lost');
+        calls.push(`diagnostics:${teamName}:${runId ?? ''}`);
+        return Promise.resolve({} as never);
+      },
+    };
+    registerTeamProvisioningIpc(
+      ipcMain as never,
+      createTeamProvisioningFeature({
+        start,
+        status,
+        preflight,
+        provisioningRun,
+        repository: service as never,
+        launchIoGovernor,
+        logger: createLogger('IPC:teams'),
+        diagnostics,
+      })
+    );
+
+    await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
+      teamName: 'receiver-create',
+      members: [{ name: 'alice' }],
+      cwd: os.tmpdir(),
+    });
+    await handlers.get(TEAM_LAUNCH)!({ sender: { send: vi.fn() } } as never, {
+      teamName: 'receiver-launch',
+      cwd: os.tmpdir(),
+    });
+    await handlers.get(TEAM_VALIDATE_CLI_ARGS)!({} as never, '--max-turns=5');
+    await handlers.get(TEAM_PREPARE_PROVISIONING)!({} as never, os.tmpdir());
+    await handlers.get(TEAM_PROVISIONING_STATUS)!({} as never, ' receiver-run ');
+    await handlers.get(TEAM_CANCEL_PROVISIONING)!({} as never, ' receiver-run ');
+    await handlers.get(TEAM_LAUNCH_FAILURE_DIAGNOSTICS)!(
+      {} as never,
+      'receiver-launch',
+      ' receiver-run '
+    );
+
+    expect(calls).toEqual([
+      'create:receiver-create',
+      'launch:receiver-launch',
+      'help',
+      'prepare',
+      'status:receiver-run',
+      'cancel:receiver-run',
+      'diagnostics:receiver-launch:receiver-run',
+    ]);
+  });
+
+  it('deduplicates unknown CLI flags and still rejects protected known flags', async () => {
+    teamHandlerMocks.getCliHelpOutput.mockResolvedValueOnce(
+      'Usage\n  --max-turns <count>\n  --model <model>'
+    );
+
+    const result = (await handlers.get(TEAM_VALIDATE_CLI_ARGS)!(
+      {} as never,
+      '--max-turns=5 --unknown 1 --model=sonnet --unknown=again'
+    )) as { success: boolean; data?: { valid: boolean; invalidFlags?: string[] } };
+
+    expect(result).toEqual({
+      success: true,
+      data: { valid: false, invalidFlags: ['--unknown', '--model'] },
+    });
+  });
+
+  it('keeps the CLI validation length boundary and avoids preflight for rejected input', async () => {
+    teamHandlerMocks.getCliHelpOutput.mockResolvedValue('Usage');
+
+    const accepted = await handlers.get(TEAM_VALIDATE_CLI_ARGS)!({} as never, ' '.repeat(2048));
+    const rejected = await handlers.get(TEAM_VALIDATE_CLI_ARGS)!({} as never, ' '.repeat(2049));
+    const wrongType = await handlers.get(TEAM_VALIDATE_CLI_ARGS)!({} as never, 42);
+
+    expect(accepted).toEqual({ success: true, data: { valid: true, invalidFlags: undefined } });
+    expect(rejected).toEqual({ success: false, error: 'rawArgs too long (max 2048)' });
+    expect(wrongType).toEqual({ success: false, error: 'rawArgs must be a string' });
+    expect(teamHandlerMocks.getCliHelpOutput).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([undefined, null, 42, '', '   '])(
+    'rejects invalid provisioning run id %j without dispatching',
+    async (runId) => {
+      const status = await handlers.get(TEAM_PROVISIONING_STATUS)!({} as never, runId);
+      const cancel = await handlers.get(TEAM_CANCEL_PROVISIONING)!({} as never, runId);
+
+      expect(status).toEqual({ success: false, error: 'runId is required' });
+      expect(cancel).toEqual({ success: false, error: 'runId is required' });
+      expect(teamHandlerMocks.getProvisioningStatus).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.cancelProvisioning).not.toHaveBeenCalled();
+    }
+  );
+
+  it('trims provisioning run ids before status and cancel dispatch', async () => {
+    const status = await handlers.get(TEAM_PROVISIONING_STATUS)!({} as never, '  run-1  ');
+    const cancel = await handlers.get(TEAM_CANCEL_PROVISIONING)!({} as never, '  run-1  ');
+
+    expect(status).toMatchObject({ success: true });
+    expect(cancel).toMatchObject({ success: true });
+    expect(teamHandlerMocks.getProvisioningStatus).toHaveBeenCalledWith('run-1');
+    expect(teamHandlerMocks.cancelProvisioning).toHaveBeenCalledWith('run-1');
+  });
+
+  it.each([
+    { channel: TEAM_CREATE, api: 'createTeam' as const, teamName: 'cache-create' },
+    { channel: TEAM_LAUNCH, api: 'launchTeam' as const, teamName: 'cache-launch' },
+  ])(
+    'invalidates roster snapshots only after successful $channel completion',
+    async ({ channel, api, teamName }) => {
+      const deferred = createDeferred<{ runId: string }>();
+      teamHandlerMocks[api].mockReturnValueOnce(deferred.promise);
+
+      const pending = handlers.get(channel)!({ sender: { send: vi.fn() } } as never, {
+        teamName,
+        members: [{ name: 'alice' }],
+        cwd: os.tmpdir(),
+      });
+      await flushMicrotasks();
+      expect(service.invalidateMessageFeed).not.toHaveBeenCalledWith(teamName);
+      expect(service.invalidateTeamRuntimeAdvisories).not.toHaveBeenCalledWith(teamName);
+      expect(mockTeamDataWorkerClient.invalidateTeamConfig).not.toHaveBeenCalledWith(teamName);
+      expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).not.toHaveBeenCalledWith(
+        teamName
+      );
+
+      deferred.resolve({ runId: `${teamName}-run` });
+      await expect(pending).resolves.toMatchObject({ success: true });
+      expect(service.invalidateMessageFeed).toHaveBeenCalledWith(teamName);
+      expect(service.invalidateTeamRuntimeAdvisories).toHaveBeenCalledWith(teamName);
+      expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith(teamName);
+      expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
+        teamName
+      );
+    }
+  );
+
+  it.each([
+    { channel: TEAM_CREATE, api: 'createTeam' as const, teamName: 'failed-cache-create' },
+    { channel: TEAM_LAUNCH, api: 'launchTeam' as const, teamName: 'failed-cache-launch' },
+  ])('does not invalidate roster snapshots after failed $channel', async ({ channel, api, teamName }) => {
+    teamHandlerMocks[api].mockRejectedValueOnce(new Error('provisioning failed'));
+
+    const result = await handlers.get(channel)!({ sender: { send: vi.fn() } } as never, {
+      teamName,
+      members: [{ name: 'alice' }],
+      cwd: os.tmpdir(),
+    });
+
+    expect(result).toEqual({ success: false, error: 'provisioning failed' });
+    expect(service.invalidateMessageFeed).not.toHaveBeenCalledWith(teamName);
+    expect(service.invalidateTeamRuntimeAdvisories).not.toHaveBeenCalledWith(teamName);
+    expect(mockTeamDataWorkerClient.invalidateTeamConfig).not.toHaveBeenCalledWith(teamName);
+    expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).not.toHaveBeenCalledWith(
+      teamName
+    );
+    vi.mocked(console.error).mockClear();
   });
 
   it('returns cached TEAM_LIST data under active launch pressure without starting another scan', async () => {
@@ -5614,6 +5910,7 @@ describe('ipc teams handlers', () => {
     removeTeamHandlers(ipcMain as never);
     removeTeamConfigurationIpc(ipcMain as never);
     removeTeamMessageDeliveryIpc(ipcMain as never);
+    removeTeamProvisioningIpc(ipcMain as never);
     removeTeamRosterMutationIpc(ipcMain as never);
     removeTeamViewReadModelIpc(ipcMain as never);
     removeTeamTaskBoardIpc(ipcMain as never);
@@ -6103,6 +6400,43 @@ describe('ipc teams handlers', () => {
             extraCliArgs: '--max-turns 5',
           },
           expect.any(Function)
+        );
+      } finally {
+        fs.rmSync(claudeRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('keeps draft launch failures classified as create operations', async () => {
+      const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-draft-launch-error-'));
+      setClaudeBasePathOverride(claudeRoot);
+      try {
+        const teamDir = path.join(claudeRoot, 'teams', 'draft-error');
+        fs.mkdirSync(teamDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(teamDir, 'team.meta.json'),
+          JSON.stringify({
+            version: 1,
+            displayName: 'Draft Error',
+            cwd: os.tmpdir(),
+            createdAt: Date.now(),
+          })
+        );
+        service.getSavedRequest.mockResolvedValueOnce({
+          teamName: 'draft-error',
+          displayName: 'Draft Error',
+          cwd: os.tmpdir(),
+          members: [{ name: 'builder' }],
+        });
+        teamHandlerMocks.createTeam.mockRejectedValueOnce(new Error('draft launch failed'));
+
+        const result = (await handlers.get(TEAM_LAUNCH)!(
+          { sender: { send: vi.fn() } } as never,
+          { teamName: 'draft-error', cwd: os.tmpdir() }
+        )) as { success: boolean; error?: string };
+
+        expect(result).toEqual({ success: false, error: 'draft launch failed' });
+        expect(teamProvisioningLogger.error).toHaveBeenCalledWith(
+          '[teams:create] draft launch failed'
         );
       } finally {
         fs.rmSync(claudeRoot, { recursive: true, force: true });
