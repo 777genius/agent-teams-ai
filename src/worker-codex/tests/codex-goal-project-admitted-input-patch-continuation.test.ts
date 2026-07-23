@@ -164,6 +164,93 @@ describe("admitted input-patch capacity continuation", () => {
     ).resolves.toBeUndefined();
   });
 
+  it("resumes a legacy unsupported-model prewarm transcript only for the unchanged admitted patch", async () => {
+    const fixture = await createBuiltinFixture();
+    const plan = fixture.plan();
+    const manifest = {
+      ...fixture.storedManifest,
+      projectPreStartAdmission: plan.descriptor,
+    };
+    const resultPath = join(fixture.root, "legacy-prewarm-result.json");
+    const changedFiles = ["src/example.ts"];
+    const rawCause = legacyUnsupportedModelPrewarmRawCause();
+    const result = {
+      schemaVersion: 1,
+      taskId: manifest.taskId,
+      status: "failed",
+      reason: "unknown_error",
+      changedFiles,
+      evidence: ["safe_execution_status:failed"],
+      blockers: ["unknown_error"],
+      nextAction: "preserve_patch",
+      details: {
+        baseCommit: "a".repeat(40),
+        rawCause,
+      },
+    };
+    const status = {
+      tmuxAlive: false,
+      workspaceDirty: true,
+      changedFiles,
+      resultExists: true,
+      resultPath,
+      resultStatus: "failed",
+      resultReason: "unknown_error",
+      recommendedAction: "inspect_dirty_failure",
+      warnings: [],
+    } as CodexGoalStatus;
+    const launch = {
+      config: { taskId: manifest.taskId },
+    } as CodexGoalLaunchInput;
+
+    await writeFile(resultPath, `${JSON.stringify(result)}\n`);
+    await expect(
+      resolveProjectPreStartContinuation({ manifest, launch, status }),
+    ).resolves.toEqual({
+      kind: "prewarm_before_attempt",
+      workspaceMode: "admitted_input_patch_continuation",
+    });
+
+    for (const rejectedRawCause of [
+      rawCause.replace("Respond with OK only.", "Review the admitted patch."),
+      rawCause.replace("invalid_request_error", "server_error"),
+      rawCause.replace("status 400", "status 503"),
+      rawCause.replace(
+        "model is not supported when using Codex with a ChatGPT account",
+        "provider request failed",
+      ),
+      "ordinary_unknown_runtime_failure",
+    ]) {
+      await writeFile(
+        resultPath,
+        `${JSON.stringify({
+          ...result,
+          details: { ...result.details, rawCause: rejectedRawCause },
+        })}\n`,
+      );
+      await expect(
+        resolveProjectPreStartContinuation({ manifest, launch, status }),
+      ).resolves.toBeUndefined();
+    }
+
+    await writeFile(resultPath, `${JSON.stringify(result)}\n`);
+    await expect(
+      resolveProjectPreStartContinuation({
+        manifest,
+        launch,
+        status: { ...status, changedFiles: ["src/drift.ts"] },
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      resolveProjectPreStartContinuation({
+        manifest,
+        launch,
+        status,
+        reviewedOutputId: "b".repeat(64),
+      }),
+    ).resolves.toBeUndefined();
+  });
+
   it("resumes the same admitted patch without reviewed output and rejects drift", async () => {
     const fixture = await createBuiltinFixture();
     const registryRootDir = join(fixture.root, "registry");
@@ -511,6 +598,27 @@ describe("admitted input-patch capacity continuation", () => {
         details: {
           rawCause:
             "codex_app_server_error:This request was rejected before the verifier could run.",
+        },
+      })}\n`,
+    );
+    await expect(
+      projectControlStartStoredJobView(
+        { ...args, forceStart: true },
+        continuationDeps,
+      ),
+    ).resolves.toMatchObject({ ok: true });
+    expect(startAdmissionWorkspaceModes.at(-1)).toBe(
+      "admitted_input_patch_continuation",
+    );
+
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...reconnectResult,
+        status: "failed",
+        details: {
+          baseCommit: contract.baseSha,
+          rawCause: legacyUnsupportedModelPrewarmRawCause(),
         },
       })}\n`,
     );
@@ -1130,6 +1238,17 @@ describe("clean pre-start capacity continuation", () => {
 function sha256(value: Uint8Array): string {
   return createHash("sha256").update(value).digest("hex");
 }
+
+function legacyUnsupportedModelPrewarmRawCause(): string {
+  return [
+    "Codex prewarm transcript:",
+    "user",
+    "Respond with OK only.",
+    '{"error":{"type":"invalid_request_error","message":"The \'gpt-5.6-sol\' model is not supported when using Codex with a ChatGPT account"}}',
+    "request failed with status 400",
+  ].join("\n");
+}
+
 async function recordUnavailableAttempt(
   journal: InMemoryAttemptJournal,
   taskId: string,

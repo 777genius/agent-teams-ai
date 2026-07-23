@@ -37,6 +37,9 @@ const PREWARM_FAILED_REASON = "prewarm_failed";
 const PREWARM_FAILED_ERROR_CODE = "subscription_worker_prewarm_failed";
 const PREWARM_BEFORE_ATTEMPT_EVIDENCE =
   "provider prewarm failed before any task attempt";
+const CODEX_PREWARM_PROMPT = "user Respond with OK only.";
+const CODEX_CHATGPT_MODEL_UNSUPPORTED =
+  "model is not supported when using Codex with a ChatGPT account";
 
 export async function resolveProjectPreStartContinuation(input: {
   readonly manifest: CodexGoalJobManifest;
@@ -63,6 +66,12 @@ export async function resolveProjectPreStartContinuation(input: {
   if (await isRecoverableAdmittedInputPatchProviderFailure(input)) {
     return {
       kind: "provider_failure",
+      workspaceMode: "admitted_input_patch_continuation",
+    };
+  }
+  if (await isRecoverableAdmittedInputPatchLegacyPrewarmFailure(input)) {
+    return {
+      kind: "prewarm_before_attempt",
       workspaceMode: "admitted_input_patch_continuation",
     };
   }
@@ -326,6 +335,62 @@ async function isRecoverableAdmittedInputPatchProviderFailure(input: {
   }
 }
 
+async function isRecoverableAdmittedInputPatchLegacyPrewarmFailure(input: {
+  readonly manifest: CodexGoalJobManifest;
+  readonly launch: CodexGoalLaunchInput;
+  readonly reviewedOutputId?: string;
+  readonly status: CodexGoalStatus;
+}): Promise<boolean> {
+  const status = input.status;
+  const progressStale =
+    status.progressHeartbeatAgeMs !== undefined &&
+    status.progressHeartbeatAgeMs > 10 * 60_000;
+  if (
+    input.reviewedOutputId ||
+    !input.manifest.projectPreStartAdmission ||
+    status.workspaceDirty !== true ||
+    status.recommendedAction !== "inspect_dirty_failure" ||
+    status.resultExists !== true ||
+    status.resultStatus !== "failed" ||
+    status.resultReason !== "unknown_error" ||
+    (status.progressResultReason !== undefined &&
+      status.progressResultReason !== "unknown_error") ||
+    !status.resultPath ||
+    projectPreStartWorkerAlive(status, progressStale)
+  ) {
+    return false;
+  }
+  try {
+    const body = await readFile(status.resultPath);
+    if (body.byteLength > MAX_RECOVERABLE_RESULT_BYTES) return false;
+    const parsed: unknown = JSON.parse(body.toString("utf8"));
+    if (
+      !isRecord(parsed) ||
+      parsed.status !== "failed" ||
+      parsed.reason !== "unknown_error" ||
+      parsed.taskId !== input.launch.config.taskId ||
+      parsed.nextAction !== "preserve_patch" ||
+      !stringArray(parsed.changedFiles) ||
+      parsed.changedFiles.length === 0 ||
+      !stringArray(parsed.evidence) ||
+      !stringArray(parsed.blockers) ||
+      parsed.blockers.length !== 1 ||
+      parsed.blockers[0] !== "unknown_error" ||
+      !samePaths(parsed.changedFiles, status.changedFiles ?? []) ||
+      !isRecord(parsed.details) ||
+      typeof parsed.details.baseCommit !== "string" ||
+      !/^[a-f0-9]{40}$/i.test(parsed.details.baseCommit)
+    ) {
+      return false;
+    }
+    return isLegacyCodexUnsupportedModelPrewarmTranscript(
+      parsed.details.rawCause,
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function isRecoverableAdmittedInputPatchPrewarmFailure(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly launch: CodexGoalLaunchInput;
@@ -381,6 +446,19 @@ async function isRecoverableAdmittedInputPatchPrewarmFailure(input: {
   } catch {
     return false;
   }
+}
+
+function isLegacyCodexUnsupportedModelPrewarmTranscript(
+  rawCause: unknown,
+): boolean {
+  if (typeof rawCause !== "string") return false;
+  const normalized = rawCause.replace(/\s+/g, " ");
+  return (
+    normalized.includes(CODEX_PREWARM_PROMPT) &&
+    normalized.includes("invalid_request_error") &&
+    /\bstatus(?:\s+code)?(?:\s*[:=])?\s*400\b/i.test(normalized) &&
+    normalized.includes(CODEX_CHATGPT_MODEL_UNSUPPORTED)
+  );
 }
 
 function projectPreStartWorkerAlive(
