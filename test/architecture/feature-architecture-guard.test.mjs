@@ -59,6 +59,7 @@ test('collects static, dynamic, CommonJS, and re-export dependency edges', () =>
       const attributed = import('./attributed', { with: { type: 'json' } });
       const legacy = require('./legacy');
       const invalidLegacy = require('./ignored', 'utf8');
+      type Queried = import('./queried').Thing;
     `,
     'src/features/example/main/index.ts'
   );
@@ -71,6 +72,7 @@ test('collects static, dynamic, CommonJS, and re-export dependency edges', () =>
       { kind: 'import', specifier: './lazy' },
       { kind: 'import', specifier: './attributed' },
       { kind: 'import', specifier: './legacy' },
+      { kind: 'import', specifier: './queried' },
     ]
   );
 });
@@ -126,6 +128,7 @@ test('keeps core domain free from application and runtime dependencies', () => {
         import { store } from '../../main/infrastructure/store';
         import type { Id } from '@shared/contracts/hosted/identifiers';
         import { z } from 'zod';
+        export type Store = import('../../main/infrastructure/typeStore').Store;
       `,
     },
     (root) => {
@@ -136,6 +139,7 @@ test('keeps core domain free from application and runtime dependencies', () => {
 
       assert.deepEqual(domainViolations.map(({ specifier }) => specifier).sort(), [
         '../../main/infrastructure/store',
+        '../../main/infrastructure/typeStore',
         '../application/model',
         'electron',
         'fastify',
@@ -208,11 +212,27 @@ test('detects implementation exports through transitive internal barrels', () =>
         import { Store } from './public';
         import { safe } from './safePublic';
         export { safe, Store };
+        export type DirectInfra = import('./infrastructure/DirectInfra').DirectInfra;
+        export { TransitiveInfra } from './publicTypes';
+        type HiddenInfra = import('./infrastructure/HiddenInfra').HiddenInfra;
+        export function safeFactory() {
+          type LocalInfra = import('./infrastructure/LocalInfra').LocalInfra;
+          return null;
+        }
       `,
+      'src/features/example/main/infrastructure/DirectInfra.ts': 'export interface DirectInfra {}',
+      'src/features/example/main/infrastructure/HiddenInfra.ts': 'export interface HiddenInfra {}',
+      'src/features/example/main/infrastructure/LocalInfra.ts': 'export interface LocalInfra {}',
       'src/features/example/main/infrastructure/Store.ts': 'export class Store {}',
+      'src/features/example/main/infrastructure/TransitiveInfra.ts':
+        'export interface TransitiveInfra {}',
       'src/features/example/main/public.ts': `
         import { Store } from './infrastructure/Store';
         export { Store };
+      `,
+      'src/features/example/main/publicTypes.ts': `
+        type InternalInfra = import('./infrastructure/TransitiveInfra').TransitiveInfra;
+        export { InternalInfra as TransitiveInfra };
       `,
       'src/features/example/main/safePublic.ts': `
         export const safe = true;
@@ -236,8 +256,20 @@ test('detects implementation exports through transitive internal barrels', () =>
         {
           publicEntrypoint: 'src/features/example/main/index.ts',
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/index.ts',
+          specifier: './infrastructure/DirectInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
           source: 'src/features/example/main/public.ts',
           specifier: './infrastructure/Store',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/publicTypes.ts',
+          specifier: './infrastructure/TransitiveInfra',
         },
         {
           publicEntrypoint: 'src/features/example/renderer/index.ts',

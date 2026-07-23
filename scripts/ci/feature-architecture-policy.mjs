@@ -90,6 +90,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const importedBindings = new Map();
   const localExports = [];
   const localExportNames = new Set();
+  const localTypeReferences = new Map();
   const reexports = [];
 
   const addEdge = (node, moduleSpecifier, kind) => {
@@ -144,6 +145,74 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
   };
 
+  const bindingNames = (bindingName) => {
+    if (ts.isIdentifier(bindingName)) return [bindingName.text];
+    return bindingName.elements.flatMap((element) =>
+      ts.isBindingElement(element) ? bindingNames(element.name) : []
+    );
+  };
+
+  const hasModifier = (node, kind) =>
+    ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === kind);
+
+  const typeReferenceOwner = (node) => {
+    let current = node;
+    while (current && current !== sourceFile) {
+      if (
+        ts.isFunctionLike(current) &&
+        current.body &&
+        node.getStart(sourceFile) >= current.body.getStart(sourceFile)
+      ) {
+        return null;
+      }
+      if (current.parent === sourceFile) break;
+      current = current.parent;
+    }
+    if (!current || current.parent !== sourceFile) return null;
+
+    let localNames = [];
+    if (ts.isVariableStatement(current)) {
+      const declaration = current.declarationList.declarations.find(
+        (candidate) => node.pos >= candidate.pos && node.end <= candidate.end
+      );
+      if (declaration) localNames = bindingNames(declaration.name);
+    } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
+      localNames = [current.name.text];
+    }
+
+    if (!hasModifier(current, ts.SyntaxKind.ExportKeyword)) {
+      return { exportedNames: [], localNames };
+    }
+    return {
+      exportedNames: hasModifier(current, ts.SyntaxKind.DefaultKeyword) ? ['default'] : localNames,
+      localNames,
+    };
+  };
+
+  const importTypeQualifierName = (qualifier) => {
+    let current = qualifier;
+    while (current && ts.isQualifiedName(current)) current = current.left;
+    return current && ts.isIdentifier(current) ? current.text : '*';
+  };
+
+  const addTypeReference = (node) => {
+    if (!ts.isLiteralTypeNode(node.argument)) return;
+    const edge = addEdge(node, node.argument.literal, 'import');
+    if (!edge) return;
+
+    const owner = typeReferenceOwner(node);
+    if (!owner) return;
+    const importedName = importTypeQualifierName(node.qualifier);
+    for (const localName of owner.localNames) {
+      const references = localTypeReferences.get(localName) ?? [];
+      references.push({ edge, importedName });
+      localTypeReferences.set(localName, references);
+    }
+    for (const exportedName of owner.exportedNames) {
+      reexports.push({ ...edge, exportedName, importedName, kind: 'export' });
+    }
+  };
+
   const visit = (node) => {
     if (ts.isImportDeclaration(node)) {
       const edge = addEdge(node, node.moduleSpecifier, 'import');
@@ -189,6 +258,8 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     ) {
       const edge = addEdge(node, node.moduleReference.expression, 'import');
       if (edge) importedBindings.set(node.name.text, { edge, importedName: '*' });
+    } else if (ts.isImportTypeNode(node)) {
+      addTypeReference(node);
     } else if (ts.isCallExpression(node) && node.arguments.length >= 1) {
       const [argument] = node.arguments;
       const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
@@ -204,27 +275,35 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   visit(sourceFile);
   for (const localExport of localExports) {
     const importedBinding = importedBindings.get(localExport.localName);
-    if (!importedBinding) {
-      localExportNames.add(localExport.exportedName);
+    if (importedBinding) {
+      reexports.push({
+        ...importedBinding.edge,
+        exportedName: localExport.exportedName,
+        importedName: localExport.importedName ?? importedBinding.importedName,
+        kind: 'export',
+        line: localExport.line,
+      });
       continue;
     }
-    reexports.push({
-      ...importedBinding.edge,
-      exportedName: localExport.exportedName,
-      importedName: localExport.importedName ?? importedBinding.importedName,
-      kind: 'export',
-      line: localExport.line,
-    });
+
+    const typeReferences = localTypeReferences.get(localExport.localName);
+    if (typeReferences) {
+      for (const { edge, importedName } of typeReferences) {
+        reexports.push({
+          ...edge,
+          exportedName: localExport.exportedName,
+          importedName,
+          kind: 'export',
+          line: localExport.line,
+        });
+      }
+      continue;
+    }
+    localExportNames.add(localExport.exportedName);
   }
 
   const collectBindingNames = (bindingName) => {
-    if (ts.isIdentifier(bindingName)) {
-      localExportNames.add(bindingName.text);
-      return;
-    }
-    for (const element of bindingName.elements) {
-      if (ts.isBindingElement(element)) collectBindingNames(element.name);
-    }
+    for (const name of bindingNames(bindingName)) localExportNames.add(name);
   };
   for (const statement of sourceFile.statements) {
     const modifiers = ts.canHaveModifiers(statement) ? ts.getModifiers(statement) : undefined;
@@ -442,18 +521,18 @@ function collectPublicApiImplementationExports(
       if (visited.has(visitKey)) return;
       visited.add(visitKey);
 
-      if (
-        requestedExport !== '*' &&
-        localExportNamesBySource.get(sourcePath)?.has(requestedExport)
-      ) {
-        return;
-      }
-
       const sourceReexports = reexportsBySource.get(sourcePath) ?? [];
       const explicitReexports =
         requestedExport === '*'
           ? sourceReexports
           : sourceReexports.filter(({ exportedName }) => exportedName === requestedExport);
+      if (
+        requestedExport !== '*' &&
+        explicitReexports.length === 0 &&
+        localExportNamesBySource.get(sourcePath)?.has(requestedExport)
+      ) {
+        return;
+      }
       const relevantReexports =
         requestedExport === '*' || explicitReexports.length > 0
           ? explicitReexports
