@@ -1,6 +1,3 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
 import { createLogger } from '@shared/utils/logger';
@@ -15,6 +12,11 @@ import {
   type TeamRosterSnapshotRecord,
   type TeamRosterStorageGateway,
 } from '../../contracts/teamRosterStorageContracts';
+
+import {
+  getInternalStorageWorkerPathCandidates,
+  resolveInternalStorageWorkerPath,
+} from './internalStorageWorkerPath';
 
 import type {
   CommentJournalEntryRecord,
@@ -106,7 +108,6 @@ type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['o
       : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
 
 const WORKER_CALL_TIMEOUT_MS = 20_000;
-const WORKER_FILENAME = 'internal-storage-worker.cjs';
 
 interface PendingEntry {
   resolve: (value: unknown) => void;
@@ -125,32 +126,6 @@ function makeId(): string {
   return `${Date.now()}-${crypto.randomUUID().slice(0, 12)}`;
 }
 
-function resolveWorkerPath(): string | null {
-  // Same candidate strategy as team-fs-worker: co-located with the bundled
-  // main output first, then the dev dist folder.
-  const baseDir =
-    typeof __dirname === 'string' && __dirname.length > 0
-      ? __dirname
-      : path.dirname(fileURLToPath(import.meta.url));
-
-  const candidates = [
-    path.join(baseDir, WORKER_FILENAME),
-    path.join(process.cwd(), 'dist-electron', 'main', WORKER_FILENAME),
-  ];
-
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) {
-        return candidate;
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  return null;
-}
-
 /**
  * Async facade over the internal-storage worker thread. Requests run one at a
  * time (SQLite access is serialized anyway); a timeout or worker crash rejects
@@ -167,7 +142,7 @@ export class InternalStorageWorkerClient
     CoordinationDurabilityStorageGateway
 {
   private worker: Worker | null = null;
-  private readonly workerPath: string | null = resolveWorkerPath();
+  private readonly workerPath: string | null = resolveInternalStorageWorkerPath();
   private pending = new Map<string, PendingEntry>();
   private queue: QueuedEntry[] = [];
   private activeCallId: string | null = null;
@@ -181,14 +156,7 @@ export class InternalStorageWorkerClient
   }
 
   getWorkerPathCandidatesForDiagnostics(): string[] {
-    const baseDir =
-      typeof __dirname === 'string' && __dirname.length > 0
-        ? __dirname
-        : path.dirname(fileURLToPath(import.meta.url));
-    return [
-      path.join(baseDir, WORKER_FILENAME),
-      path.join(process.cwd(), 'dist-electron', 'main', WORKER_FILENAME),
-    ];
+    return getInternalStorageWorkerPathCandidates();
   }
 
   async ping(): Promise<InternalStorageBackendInfo> {
