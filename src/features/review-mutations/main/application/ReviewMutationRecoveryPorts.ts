@@ -1,13 +1,17 @@
+import type { ReviewMutationSteps } from '../../core/application/ReviewMutationCoordinator';
 import type {
   PrepareReviewMutationInput,
   ReviewMutationJournalDiskStep,
   ReviewMutationJournalRecord,
 } from '../../core/application/ReviewMutationJournalTypes';
-import type { ReviewMutationSteps } from '../../core/application/ReviewMutationCoordinator';
 import type {
+  ApplyReviewDiskTransition,
+  ApplyReviewRequest,
+  ApplyReviewResult,
   ExecuteReviewMutationRequest,
   FileChangeSummary,
   FileChangeWithContent,
+  FileReviewDecision,
   ReviewDecisionPersistenceScope,
   ReviewDirectDiskMutationStep,
   ReviewFileScope,
@@ -107,6 +111,7 @@ export interface ReviewMutationJournalRepositoryPort {
   checkpoint(record: ReviewMutationJournalRecord): Promise<ReviewMutationJournalRecord>;
   markFailed(record: ReviewMutationJournalRecord, error: unknown): Promise<void>;
   unblock(record: ReviewMutationJournalRecord): Promise<ReviewMutationJournalRecord>;
+  remove(record: ReviewMutationJournalRecord): Promise<void>;
 }
 
 export interface ReviewMutationCoordinatorPort {
@@ -179,6 +184,67 @@ export interface ReviewMutationContentCachePort {
 export interface ReviewMutationLoggerPort {
   warn(message: string, error: unknown): void;
   error(message: string, error: unknown): void;
+}
+
+export interface ReviewDecisionBatchScopePort {
+  parse(value: unknown): ReviewFileScope;
+  normalizeIdentityPath(filePath: string): string;
+}
+
+export interface ReviewDecisionBatchApplierPort {
+  applyReviewDecisions(
+    request: ApplyReviewRequest,
+    fileContents: Map<string, FileChangeWithContent>,
+    hooks: {
+      initialDiskTransitions?: readonly ApplyReviewDiskTransition[];
+      checkpointDiskTransitions(transitions: readonly ApplyReviewDiskTransition[]): Promise<void>;
+    }
+  ): Promise<ApplyReviewResult>;
+  finalizeReviewDiskTransitions?(transitions: readonly ApplyReviewDiskTransition[]): Promise<void>;
+}
+
+export interface ReviewDecisionBatchPersistencePort {
+  save(
+    teamName: string,
+    scopeKey: string,
+    state: ReviewPersistedStateSnapshot & {
+      scopeToken: string;
+      expectedRevision?: number;
+      mutationId?: string;
+    }
+  ): Promise<unknown>;
+  mergeFileDecisionPatch(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    decision: FileReviewDecision & { reviewKey: string }
+  ): Promise<void>;
+}
+
+export interface ReviewDecisionBatchFileTransaction {
+  id: string;
+  kind: 'replace' | 'delete' | 'move';
+  sourcePath: string;
+  targetPath: string;
+  expectedContent: string;
+  nextContent: string | null;
+}
+
+export interface ReviewDecisionBatchFilePort {
+  readText(filePath: string): Promise<string>;
+  inspectTransaction(
+    transaction: ReviewDecisionBatchFileTransaction
+  ): Promise<'missing' | 'prepared' | 'detached' | 'published' | 'conflict'>;
+}
+
+export interface ReviewDecisionBatchDependencies {
+  scope: ReviewDecisionBatchScopePort;
+  journal: Pick<ReviewMutationJournalRepositoryPort, 'checkpoint' | 'markFailed' | 'remove'>;
+  applier: ReviewDecisionBatchApplierPort;
+  persistence: ReviewDecisionBatchPersistencePort;
+  files: ReviewDecisionBatchFilePort;
+  cache: Pick<ReviewMutationContentCachePort, 'invalidateAuthoritativeContent'>;
+  logger: ReviewMutationLoggerPort;
 }
 
 export interface ReviewDirectMutationDiskDependencies {

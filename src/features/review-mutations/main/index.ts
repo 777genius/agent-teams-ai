@@ -13,6 +13,12 @@ export type {
 } from '../core/application/ReviewMutationJournalTypes';
 export { isDurableReviewEqual } from '../core/domain/durableReviewValue';
 export {
+  assertPersistedStateIncludesDecisions,
+  composeReviewDiskTransitions,
+  mergeReviewApplyResults,
+  mergeReviewMutationDiskPostimages,
+} from '../core/domain/reviewDecisionBatch';
+export {
   buildReviewExternalReloadState,
   buildReviewHistoryRestorePlan,
   buildReviewRestoreDecisionState,
@@ -38,10 +44,14 @@ export {
   parseReviewHistoryRestoreTarget,
 } from '../core/domain/reviewHistoryRestoreTarget';
 export {
-  removeReviewMutationRecoveryIpc,
   registerReviewMutationRecoveryIpc,
+  removeReviewMutationRecoveryIpc,
   type ReviewMutationIpcHandlerWrapper,
 } from './adapters/input/ipc/registerReviewMutationRecoveryIpc';
+export {
+  ReviewDecisionBatchApplication,
+  ReviewMutationApplyResultError,
+} from './application/ReviewDecisionBatchApplication';
 export { ReviewDirectMutationDiskService } from './application/ReviewDirectMutationDiskService';
 export {
   MAX_REVIEW_MUTATION_STEPS,
@@ -50,6 +60,12 @@ export {
 export type {
   DirectReviewMutationState,
   LoadedReviewMutationDecisions,
+  ReviewDecisionBatchApplierPort,
+  ReviewDecisionBatchDependencies,
+  ReviewDecisionBatchFilePort,
+  ReviewDecisionBatchFileTransaction,
+  ReviewDecisionBatchPersistencePort,
+  ReviewDecisionBatchScopePort,
   ReviewDirectMutationDiskDependencies,
   ReviewDirectMutationDiskPort,
   ReviewMutationContentCachePort,
@@ -62,6 +78,10 @@ export type {
   ReviewMutationRecoveryDependencies,
   ReviewMutationScopePort,
 } from './application/ReviewMutationRecoveryPorts';
+export {
+  createReviewDecisionBatchFeature,
+  type ReviewDecisionBatchFeatureDependencies,
+} from './composition/createReviewDecisionBatchFeature';
 export {
   createReviewMutationRecoveryFeature,
   type ReviewMutationRecoveryFeatureDependencies,

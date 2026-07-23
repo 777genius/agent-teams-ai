@@ -19,16 +19,15 @@ import {
   buildReviewRestoreDecisionState,
   buildReviewUndoDecisionState,
   buildUndoDiskMutationSteps,
+  createReviewDecisionBatchFeature,
   createReviewMutationRecoveryFeature,
   getReviewActionDiskSnapshots,
   isDurableReviewEqual,
+  mergeReviewMutationDiskPostimages,
   registerReviewMutationRecoveryIpc,
   removeReviewMutationRecoveryIpc,
+  ReviewMutationApplyResultError,
   ReviewMutationCoordinator,
-  type ReviewMutationJournalDiskStep,
-  type ReviewMutationJournalPathPostimage,
-  type ReviewMutationJournalPathTransition,
-  type ReviewMutationJournalRecord,
 } from '@features/review-mutations/main';
 import { validateTaskId, validateTeamName } from '@main/ipc/guards';
 import { createIpcWrapper } from '@main/ipc/ipcWrapper';
@@ -87,7 +86,6 @@ import type { ReviewApplierService } from '@main/services/team/ReviewApplierServ
 import type { IpcResult } from '@shared/types/ipc';
 import type {
   AgentChangeSet,
-  ApplyReviewDiskTransition,
   ApplyReviewRequest,
   ApplyReviewResult,
   ChangeStats,
@@ -1279,7 +1277,10 @@ async function handleApplyDecisions(
         throw new Error('Durable review mutation requires an exact decision revision');
       }
       reviewDecisionStore.assertValidSnapshot(request.persistedState);
-      assertPersistedStateIncludesDecisions(request.persistedState, validatedDecisions);
+      reviewDecisionBatchFeature.assertPersistedStateIncludesDecisions(
+        request.persistedState,
+        validatedDecisions
+      );
       result = await applyDecisionsWithDurableJournal(
         scope,
         authorization,
@@ -1303,508 +1304,6 @@ async function handleApplyDecisions(
 
     return result;
   });
-}
-
-class ReviewMutationApplyResultError extends Error {
-  constructor(readonly result: ApplyReviewResult) {
-    super(result.errors[0]?.error ?? 'Review mutation could not be applied safely');
-  }
-}
-
-function assertPersistedStateIncludesDecisions(
-  state: ReviewPersistedStateSnapshot,
-  decisions: readonly FileReviewDecision[]
-): void {
-  for (const decision of decisions) {
-    const reviewKey = decision.reviewKey;
-    if (!reviewKey) throw new Error('Durable review mutation requires a stable reviewKey');
-    const actualFileDecision =
-      state.fileDecisions[reviewKey] ?? state.fileDecisions[decision.filePath] ?? 'pending';
-    if (actualFileDecision !== decision.fileDecision) {
-      throw new Error('Durable review state does not match the requested file decision');
-    }
-    for (const [index, expected] of Object.entries(decision.hunkDecisions)) {
-      const actual =
-        state.hunkDecisions[`${reviewKey}:${index}`] ??
-        state.hunkDecisions[`${decision.filePath}:${index}`] ??
-        'pending';
-      if (actual !== expected) {
-        throw new Error('Durable review state does not match the requested hunk decision');
-      }
-    }
-  }
-}
-
-async function readReviewMutationPathPostimages(fileContent: FileChangeWithContent): Promise<{
-  durable: ReviewMutationJournalPathPostimage[];
-  contents: Map<string, string | null>;
-}> {
-  const paths = new Map<string, string>();
-  for (const filePath of [fileContent.filePath, ...fileContent.snippets.map((s) => s.filePath)]) {
-    paths.set(normalizeReviewPathForIdentity(filePath), filePath);
-  }
-  const durable: ReviewMutationJournalPathPostimage[] = [];
-  const contents = new Map<string, string | null>();
-  for (const filePath of paths.values()) {
-    try {
-      const content = await fs.readFile(filePath, 'utf8');
-      contents.set(filePath, content);
-      durable.push({ filePath, sha256: createHash('sha256').update(content).digest('hex') });
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code === 'ENOENT' || code === 'ENOTDIR') {
-        contents.set(filePath, null);
-        durable.push({ filePath, sha256: null });
-      } else {
-        throw error;
-      }
-    }
-  }
-  return { durable, contents };
-}
-
-async function assertReviewMutationPathPostimages(
-  postimages: readonly ReviewMutationJournalPathPostimage[]
-): Promise<void> {
-  if (postimages.length === 0) {
-    throw new Error('Applied review mutation has no durable postimage evidence');
-  }
-  for (const postimage of postimages) {
-    let currentSha256: string | null;
-    try {
-      currentSha256 = createHash('sha256')
-        .update(await fs.readFile(postimage.filePath, 'utf8'))
-        .digest('hex');
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code === 'ENOENT' || code === 'ENOTDIR') currentSha256 = null;
-      else throw error;
-    }
-    if (currentSha256 !== postimage.sha256) {
-      throw new Error(
-        `Review mutation postimage changed after crash; refusing recovery for ${postimage.filePath}`
-      );
-    }
-  }
-}
-
-async function reconcileLatestReviewActionPostimages(
-  state: ReviewPersistedStateSnapshot,
-  postimages: ReadonlyMap<string, string | null>,
-  transitions: readonly ReviewMutationJournalPathTransition[]
-): Promise<ReviewPersistedStateSnapshot> {
-  const latest = state.reviewActionHistory.at(-1);
-  if (!latest) return state;
-  const resolvePostimage = (filePath: string): string | null | undefined => {
-    for (const [candidatePath, content] of postimages) {
-      if (
-        normalizeReviewPathForIdentity(candidatePath) === normalizeReviewPathForIdentity(filePath)
-      ) {
-        return content;
-      }
-    }
-    return undefined;
-  };
-  const resolveTransition = (filePath: string): ReviewMutationJournalPathTransition | undefined =>
-    transitions.find(
-      (transition) =>
-        normalizeReviewPathForIdentity(transition.filePath) ===
-        normalizeReviewPathForIdentity(filePath)
-    );
-  const getTransaction = (transition: ReviewMutationJournalPathTransition) => {
-    const { operation, transactionId, beforeContent, afterContent } = transition;
-    if (!operation || !transactionId || beforeContent === null) return null;
-    if (operation === 'move') {
-      if (!transition.relatedFilePath || afterContent === null) return null;
-      return {
-        id: transactionId,
-        kind: 'move' as const,
-        sourcePath: transition.filePath,
-        targetPath: transition.relatedFilePath,
-        expectedContent: beforeContent,
-        nextContent: afterContent,
-      };
-    }
-    return {
-      id: transactionId,
-      kind: operation,
-      sourcePath: transition.filePath,
-      targetPath: transition.filePath,
-      expectedContent: beforeContent,
-      nextContent: operation === 'delete' ? null : afterContent,
-    };
-  };
-  const hasPublishedTransaction = async (
-    transition: ReviewMutationJournalPathTransition | undefined
-  ): Promise<boolean> => {
-    if (!transition) return false;
-    const transaction = getTransaction(transition);
-    return transaction
-      ? (await inspectReviewFileTransaction(transaction)) === 'published'
-      : transition.operation === undefined;
-  };
-  const reconcileSnapshot = async (
-    snapshot: ReviewDiskUndoSnapshot
-  ): Promise<ReviewDiskUndoSnapshot> => {
-    if (snapshot.renameExpectation) {
-      const transition =
-        resolveTransition(snapshot.filePath) ??
-        transitions.find(
-          (candidate) =>
-            candidate.transactionId &&
-            candidate.operation &&
-            normalizeReviewPathForIdentity(candidate.relatedFilePath ?? '') ===
-              normalizeReviewPathForIdentity(snapshot.filePath)
-        );
-      if (!(await hasPublishedTransaction(transition))) {
-        return {
-          ...snapshot,
-          restoreConflict:
-            'Reject rename provenance is unavailable; refusing an unsafe Undo or Restore.',
-        };
-      }
-      return { ...snapshot, restoreConflict: undefined };
-    }
-
-    const actual = resolvePostimage(snapshot.filePath);
-    if (actual === undefined) return snapshot;
-    const transition = resolveTransition(snapshot.filePath);
-    if (!transition) {
-      return {
-        ...snapshot,
-        afterContent: actual,
-        restoreConflict: 'Reject lock preimage is unavailable; refusing an unsafe Undo or Restore.',
-      };
-    }
-    if (
-      transition.beforeContent === transition.afterContent &&
-      (snapshot.restoreMode === 'create-file' || snapshot.restoreMode === 'delete-file')
-    ) {
-      return {
-        ...snapshot,
-        afterContent: actual,
-        restoreConflict:
-          'Reject did not prove this file-presence change; refusing an unsafe Undo or Restore.',
-      };
-    }
-    if (!(await hasPublishedTransaction(transition))) {
-      return {
-        ...snapshot,
-        afterContent: actual,
-        restoreConflict:
-          'Reject filesystem transaction is not durably published; refusing an unsafe Undo or Restore.',
-      };
-    }
-
-    let beforeContent = transition.beforeContent;
-    if (actual !== transition.afterContent) {
-      if (
-        typeof actual !== 'string' ||
-        typeof transition.afterContent !== 'string' ||
-        typeof transition.beforeContent !== 'string'
-      ) {
-        return {
-          ...snapshot,
-          afterContent: actual,
-          restoreConflict:
-            'Reject postimage changed across a file-presence transition; refusing an unsafe Undo or Restore.',
-        };
-      }
-      const merged = threeWayTextMerge(transition.afterContent, actual, transition.beforeContent);
-      if (!merged.hasConflicts) {
-        beforeContent = merged.content;
-      } else {
-        return {
-          ...snapshot,
-          afterContent: actual,
-          restoreConflict:
-            'Reject preserved concurrent edits that cannot be reconstructed safely; refusing Undo or Restore.',
-        };
-      }
-    }
-    return {
-      ...snapshot,
-      beforeContent: beforeContent ?? '',
-      afterContent: actual,
-      authoritativeBeforeSha256: beforeContent === null ? null : hashReviewPreimage(beforeContent),
-      restoreConflict: undefined,
-    };
-  };
-
-  let reconciled = latest;
-  if (latest.kind === 'disk') {
-    const snapshot = await reconcileSnapshot(latest.action.snapshot);
-    if (snapshot !== latest.action.snapshot) {
-      reconciled = {
-        ...latest,
-        action: {
-          ...latest.action,
-          snapshot,
-        },
-      };
-    }
-  } else if (latest.kind === 'bulk') {
-    reconciled = {
-      ...latest,
-      diskSnapshots: await Promise.all(latest.diskSnapshots.map(reconcileSnapshot)),
-    };
-  }
-  if (reconciled === latest) return state;
-  return {
-    ...state,
-    reviewActionHistory: [...state.reviewActionHistory.slice(0, -1), reconciled],
-  };
-}
-
-function mergeReviewApplyResults(
-  current: ApplyReviewResult,
-  next: ApplyReviewResult
-): ApplyReviewResult {
-  return {
-    applied: current.applied + next.applied,
-    skipped: current.skipped + next.skipped,
-    conflicts: current.conflicts + next.conflicts,
-    errors: [...current.errors, ...next.errors],
-  };
-}
-
-function mergeReviewMutationDiskPostimages(
-  target: Map<string, ReviewMutationDiskPostimage>,
-  postimages: readonly ReviewMutationDiskPostimage[]
-): void {
-  for (const postimage of postimages) {
-    target.set(normalizeReviewPathForIdentity(postimage.filePath), postimage);
-  }
-}
-
-function composeReviewDiskTransitions(
-  existing: readonly ReviewMutationJournalPathTransition[],
-  next: readonly ApplyReviewDiskTransition[]
-): ReviewMutationJournalPathTransition[] {
-  const composed = new Map(
-    existing.map((transition) => [normalizeReviewPathForIdentity(transition.filePath), transition])
-  );
-  for (const transition of next) {
-    const key = normalizeReviewPathForIdentity(transition.filePath);
-    const previous = composed.get(key);
-    if (!previous) {
-      composed.set(key, { ...transition });
-      continue;
-    }
-    if (
-      previous.beforeContent === transition.beforeContent &&
-      previous.afterContent === transition.afterContent
-    ) {
-      composed.set(key, { ...previous, ...transition });
-      continue;
-    }
-    if (
-      transition.beforeContent === transition.afterContent &&
-      previous.afterContent === transition.beforeContent
-    ) {
-      continue;
-    }
-    if (
-      typeof previous.afterContent !== 'string' ||
-      typeof transition.beforeContent !== 'string' ||
-      typeof previous.beforeContent !== 'string'
-    ) {
-      throw new Error(
-        `Review mutation file presence changed during recovery; refusing ${transition.filePath}`
-      );
-    }
-    const merged = threeWayTextMerge(
-      previous.afterContent,
-      transition.beforeContent,
-      previous.beforeContent
-    );
-    if (merged.hasConflicts) {
-      throw new Error(
-        `Review mutation concurrent edits cannot be preserved safely; refusing ${transition.filePath}`
-      );
-    }
-    composed.set(key, {
-      ...previous,
-      ...transition,
-      filePath: transition.filePath,
-      beforeContent: merged.content,
-      afterContent: transition.afterContent,
-    });
-  }
-  return [...composed.values()];
-}
-
-async function applyJournalDecisionBatchDisk(
-  record: ReviewMutationJournalRecord,
-  onResult?: (result: ApplyReviewResult) => void,
-  onPostimages?: (postimages: readonly ReviewMutationDiskPostimage[]) => void
-): Promise<ReviewMutationJournalRecord> {
-  let current = record;
-  let aggregate: ApplyReviewResult = { applied: 0, skipped: 0, conflicts: 0, errors: [] };
-  const scope = parseReviewFileScope(current.reviewScope);
-  const initialStatuses =
-    current.decisionStatuses ?? current.decisions.map(() => 'pending' as const);
-
-  try {
-    for (const [index, status] of initialStatuses.entries()) {
-      if (status !== 'applied') continue;
-      const postimages = current.decisionPostimages?.[index];
-      if (!postimages) {
-        throw new Error('Applied review mutation is missing durable postimage evidence');
-      }
-      await assertReviewMutationPathPostimages(postimages);
-      await getApplier()
-        .finalizeReviewDiskTransitions?.(current.decisionTransitions?.[index] ?? [])
-        .catch((error) => {
-          logger.warn('Unable to finalize applied review file transaction:', error);
-        });
-    }
-  } catch (error) {
-    await reviewMutationJournal.markFailed(current, error).catch((journalError) => {
-      logger.error('Unable to preserve drifted review mutation journal:', journalError);
-    });
-    throw error;
-  }
-
-  for (let index = 0; index < current.decisions.length; index++) {
-    if (initialStatuses[index] === 'applied') continue;
-    const decision = current.decisions[index];
-    const fileContent = current.fileContents[index];
-    if (!decision || !fileContent || fileContent.filePath !== decision.filePath) {
-      throw new Error('Review mutation recovery content is unavailable');
-    }
-
-    let stepResult: ApplyReviewResult;
-    try {
-      stepResult = await getApplier().applyReviewDecisions(
-        {
-          teamName: current.teamName,
-          ...(scope.taskId ? { taskId: scope.taskId } : {}),
-          ...(scope.memberName ? { memberName: scope.memberName } : {}),
-          decisions: [decision],
-        },
-        new Map([[decision.filePath, fileContent]]),
-        {
-          initialDiskTransitions: current.decisionTransitions?.[index] ?? undefined,
-          checkpointDiskTransitions: async (transitions) => {
-            const decisionTransitions = [
-              ...(current.decisionTransitions ?? current.decisions.map(() => null)),
-            ];
-            const existing = decisionTransitions[index] ?? [];
-            decisionTransitions[index] = composeReviewDiskTransitions(existing, transitions);
-            current = await reviewMutationJournal.checkpoint({
-              ...current,
-              decisionTransitions,
-            });
-          },
-        }
-      );
-    } catch (error) {
-      await reviewMutationJournal.markFailed(current, error).catch((journalError) => {
-        logger.error('Unable to mark failed review mutation journal:', journalError);
-      });
-      throw error;
-    }
-
-    aggregate = mergeReviewApplyResults(aggregate, stepResult);
-    onResult?.(aggregate);
-    if (stepResult.errors.length > 0) {
-      const transitionEvidence = current.decisionTransitions?.[index];
-      if (
-        initialStatuses[index] === 'pending' &&
-        (!transitionEvidence || transitionEvidence.length === 0)
-      ) {
-        await reviewMutationJournal.remove(current).catch((error) => {
-          logger.error('Unable to remove cleanly-conflicted review mutation journal:', error);
-        });
-      } else {
-        await reviewMutationJournal
-          .markFailed(current, stepResult.errors[0]?.error)
-          .catch((error) => {
-            logger.error('Unable to preserve failed review mutation journal:', error);
-          });
-      }
-      throw new ReviewMutationApplyResultError(aggregate);
-    }
-
-    try {
-      const decisionStatuses = [...(current.decisionStatuses ?? initialStatuses)];
-      decisionStatuses[index] = 'applied';
-      const pathPostimages = await readReviewMutationPathPostimages(fileContent);
-      const decisionPostimages = [
-        ...(current.decisionPostimages ?? current.decisions.map(() => null)),
-      ];
-      decisionPostimages[index] = pathPostimages.durable;
-      const decisionTransitions = [
-        ...(current.decisionTransitions ?? current.decisions.map(() => null)),
-      ];
-      const mutatedPaths = new Set<string>();
-      for (const transition of decisionTransitions[index] ?? []) {
-        if (transition.beforeContent === transition.afterContent && !transition.operation) continue;
-        mutatedPaths.add(normalizeReviewPathForIdentity(transition.filePath));
-        if (transition.relatedFilePath) {
-          mutatedPaths.add(normalizeReviewPathForIdentity(transition.relatedFilePath));
-        }
-      }
-      onPostimages?.(
-        [...pathPostimages.contents]
-          .filter(([filePath]) => mutatedPaths.has(normalizeReviewPathForIdentity(filePath)))
-          .map(([filePath, content]) => ({ filePath, content }))
-      );
-      let persistedState = current.persistedState;
-      if (persistedState) {
-        persistedState = await reconcileLatestReviewActionPostimages(
-          persistedState,
-          pathPostimages.contents,
-          decisionTransitions[index] ?? []
-        );
-      }
-      current = await reviewMutationJournal.checkpoint({
-        ...current,
-        decisionStatuses,
-        decisionPostimages,
-        decisionTransitions,
-        persistedState,
-      });
-      await getApplier()
-        .finalizeReviewDiskTransitions?.(decisionTransitions[index] ?? [])
-        .catch((error) => {
-          logger.warn('Unable to finalize review file transaction:', error);
-        });
-    } catch (error) {
-      await reviewMutationJournal.markFailed(current, error).catch((journalError) => {
-        logger.error('Unable to checkpoint review mutation postimage:', journalError);
-      });
-      throw error;
-    }
-    invalidateAuthoritativeReviewContent(fileContent);
-  }
-
-  return current;
-}
-
-async function commitReviewMutationDecisions(
-  record: Awaited<ReturnType<ReviewMutationJournalStore['list']>>[number]
-): Promise<void> {
-  const { teamName, persistenceScope } = record;
-  if (record.persistedState) {
-    await reviewDecisionStore.save(teamName, persistenceScope.scopeKey, {
-      scopeToken: persistenceScope.scopeToken,
-      ...record.persistedState,
-      expectedRevision: record.expectedDecisionRevision,
-      mutationId: record.id,
-    });
-    return;
-  }
-  // Version-1 journal compatibility. Once recovered, the record is completed and removed.
-  for (const decision of record.decisions) {
-    await reviewDecisionStore.mergeFileDecisionPatch(
-      teamName,
-      persistenceScope.scopeKey,
-      persistenceScope.scopeToken,
-      decision
-    );
-  }
 }
 
 async function assertCurrentReviewDecisionRevision(
@@ -2212,6 +1711,31 @@ async function authorizeReviewDecisionHistoryScope(
   };
 }
 
+const reviewDecisionBatchFeature = createReviewDecisionBatchFeature({
+  scope: {
+    parse: parseReviewFileScope,
+    normalizeIdentityPath: normalizeReviewPathForIdentity,
+  },
+  journal: reviewMutationJournal,
+  applier: {
+    applyReviewDecisions: (...args) => getApplier().applyReviewDecisions(...args),
+    finalizeReviewDiskTransitions: (...args) =>
+      getApplier().finalizeReviewDiskTransitions?.(...args) ?? Promise.resolve(),
+  },
+  persistence: reviewDecisionStore,
+  files: {
+    readText: (filePath) => fs.readFile(filePath, 'utf8'),
+    inspectTransaction: inspectReviewFileTransaction,
+  },
+  cache: {
+    invalidateAuthoritativeContent: invalidateAuthoritativeReviewContent,
+  },
+  logger: {
+    warn: (message, error) => logger.warn(message, error),
+    error: (message, error) => logger.error(message, error),
+  },
+});
+
 const reviewMutationRecoveryFeature = createReviewMutationRecoveryFeature({
   scope: {
     parse: parseReviewFileScope,
@@ -2234,7 +1758,7 @@ const reviewMutationRecoveryFeature = createReviewMutationRecoveryFeature({
     assertCurrentRevision: assertCurrentReviewDecisionRevision,
     load: (teamName, persistenceScope) =>
       reviewDecisionStore.load(teamName, persistenceScope.scopeKey, persistenceScope.scopeToken),
-    commit: commitReviewMutationDecisions,
+    commit: (record) => reviewDecisionBatchFeature.commit(record),
     assertExactTransition: assertExactReviewHistoryTransition,
     bindAuthoritativeForwardMutation: assertAuthoritativeForwardReviewMutation,
     assertAuthoritativelyBoundAction: assertAuthoritativelyBoundReviewAction,
@@ -2259,7 +1783,7 @@ const reviewMutationRecoveryFeature = createReviewMutationRecoveryFeature({
     invalidateAuthoritativeContent: invalidateAuthoritativeReviewContent,
     invalidateFile: (filePath) => getContentResolver().invalidateFile(filePath),
   },
-  applyDecisionBatchDisk: (record) => applyJournalDecisionBatchDisk(record),
+  applyDecisionBatchDisk: (record) => reviewDecisionBatchFeature.applyDisk(record),
   logger: {
     warn: (message, error) => logger.warn(message, error),
     error: (message, error) => logger.error(message, error),
@@ -2690,14 +2214,19 @@ async function applyDecisionsWithDurableJournal(
         },
         {
           applyDisk: (record) =>
-            applyJournalDecisionBatchDisk(
+            reviewDecisionBatchFeature.applyDisk(
               record,
               (nextResult) => {
                 result = nextResult;
               },
-              (postimages) => mergeReviewMutationDiskPostimages(diskPostimages, postimages)
+              (postimages) =>
+                mergeReviewMutationDiskPostimages(
+                  diskPostimages,
+                  postimages,
+                  normalizeReviewPathForIdentity
+                )
             ),
-          commitDecisions: commitReviewMutationDecisions,
+          commitDecisions: (record) => reviewDecisionBatchFeature.commit(record),
         }
       );
       const committed = await reviewDecisionStore.load(
