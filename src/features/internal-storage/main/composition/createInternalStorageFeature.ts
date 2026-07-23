@@ -32,6 +32,7 @@ import { InternalStorageBackendSelector } from './InternalStorageBackendSelector
 
 import type { InternalStorageBackendKind } from '../../contracts/internalStorageContracts';
 import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorageContracts';
+import type { TeamRosterStorageGateway } from '../../contracts/teamRosterStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '../../core/application/ports';
 import type { CoordinationDurabilityStorageGateway } from '../infrastructure/CoordinationDurabilityStorageGateway';
 import type { ApplicationCommandLedgerStorageGateway } from '@features/application-command-ledger';
@@ -60,6 +61,10 @@ export interface InternalStorageTeamIdentityReadBackend {
   gateway: TeamIdentityReadGateway;
 }
 
+export interface InternalStorageTeamRosterBackend {
+  gateway: TeamRosterStorageGateway;
+}
+
 export interface InternalStorageCoordinationDurabilityBackend {
   gateway: CoordinationDurabilityStorageGateway;
   selector: InternalStorageBackendSelector;
@@ -82,6 +87,8 @@ export interface InternalStorageFeature {
   applicationCommandLedgerBackend: InternalStorageApplicationCommandLedgerBackend | null;
   /** Durable identity reads never degrade to directory or JSON discovery. */
   teamIdentityReadBackend: InternalStorageTeamIdentityReadBackend | null;
+  /** TeamRoster identity is SQLite-only and never falls back to name-keyed JSON. */
+  teamRosterBackend: InternalStorageTeamRosterBackend | null;
   /** Critical coordination durability never degrades to a JSON fallback. */
   coordinationDurabilityBackend: InternalStorageCoordinationDurabilityBackend | null;
   /** Forces the lazy backend decision for startup diagnostics and packaged smoke checks. */
@@ -174,6 +181,7 @@ export function createInternalStorageFeature(
     memberWorkSyncBackend: { gateway: client, selector, fallbackRequiresReplica },
     applicationCommandLedgerBackend: workerAvailable ? { gateway: client, selector } : null,
     teamIdentityReadBackend: workerAvailable ? { gateway: client } : null,
+    teamRosterBackend: workerAvailable ? { gateway: client } : null,
     coordinationDurabilityBackend: workerAvailable ? { gateway: client, selector } : null,
     probeBackend: () => selector.select('sqlite', 'json-fallback'),
     getBackendKind: () => selector.getBackendKind(),

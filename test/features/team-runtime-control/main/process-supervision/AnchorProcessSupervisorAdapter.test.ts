@@ -264,7 +264,7 @@ class FakeSpawner implements AnchorSpawnPort {
   advanceCloseMs = 0;
   advanceSpawnMs = 0;
   spawnGate: Promise<void> | undefined;
-  spawnFailure: unknown;
+  spawnFailure: Error | undefined;
   onSpawn: (() => void) | undefined;
   ownerAnchorIdentityRef = parseAnchorIdentityRef('anchor-identity-00000000001');
   readonly fakeReusedNativePid = 42_424;
@@ -497,7 +497,7 @@ describe('AnchorProcessSupervisorAdapter', () => {
     expect(store.state?.intent.processRef).toBe('process-ref-0000000000000001');
   });
 
-  it('shares one exact in-flight start outcome without allocating another process identity', async () => {
+  it('coalesces a retry after the exact durable spawn intent is in flight', async () => {
     const store = new FakeStore();
     const clock = new FakeClock();
     const identities = new FakeIdentities();
@@ -515,6 +515,8 @@ describe('AnchorProcessSupervisorAdapter', () => {
 
     expect(identities.calls).toBe(2);
     expect(spawner.calls).toBe(1);
+    expect(store.loads).toBe(1);
+    expect(store.writes).toBe(1);
     expect(store.state?.phase).toBe('spawn_intent');
 
     releaseSpawn.resolve();
@@ -524,6 +526,123 @@ describe('AnchorProcessSupervisorAdapter', () => {
     ]);
     expect(store.state?.phase).toBe('owned');
     expect(store.state?.intent.processRef).toBe('process-ref-0000000000000001');
+  });
+
+  it('coalesces equivalent in-flight starts with different caller cancellation IDs', async () => {
+    const store = new FakeStore();
+    const clock = new FakeClock();
+    const identities = new FakeIdentities();
+    const spawner = new FakeSpawner(store, clock);
+    const spawnEntered = deferred();
+    const releaseSpawn = deferred();
+    spawner.onSpawn = spawnEntered.resolve;
+    spawner.spawnGate = releaseSpawn.promise;
+    const adapter = createAdapter(store, identities, spawner, clock, undefined, 5_000);
+    const fixture = executionFixture();
+    const retry = {
+      ...fixture,
+      cancellation: {
+        cancellationId: 'retry-cancellation-000001' as RuntimeCancellationId,
+        isCancellationRequested: () => false,
+      },
+    };
+
+    const first = adapter.start(fixture);
+    await spawnEntered.promise;
+    const concurrent = adapter.start(retry);
+
+    expect(identities.calls).toBe(2);
+    expect(spawner.calls).toBe(1);
+    expect(store.loads).toBe(1);
+    expect(store.writes).toBe(1);
+    expect(store.state?.phase).toBe('spawn_intent');
+
+    releaseSpawn.resolve();
+    await expect(Promise.all([first, concurrent])).resolves.toEqual([
+      { status: 'started', processRef: 'process-ref-0000000000000001' },
+      { status: 'started', processRef: 'process-ref-0000000000000001' },
+    ]);
+    expect(store.state?.phase).toBe('owned');
+  });
+
+  it('keeps a coalesced caller cancellation local to that caller', async () => {
+    const store = new FakeStore();
+    const clock = new FakeClock();
+    const identities = new FakeIdentities();
+    const spawner = new FakeSpawner(store, clock);
+    const spawnEntered = deferred();
+    const releaseSpawn = deferred();
+    spawner.onSpawn = spawnEntered.resolve;
+    spawner.spawnGate = releaseSpawn.promise;
+    const adapter = createAdapter(store, identities, spawner, clock, undefined, 5_000);
+    const fixture = executionFixture();
+    let retryCancelled = false;
+    const retry = {
+      ...fixture,
+      cancellation: {
+        cancellationId: 'retry-cancellation-000002' as RuntimeCancellationId,
+        isCancellationRequested: () => retryCancelled,
+      },
+    };
+
+    const first = adapter.start(fixture);
+    await spawnEntered.promise;
+    const concurrent = adapter.start(retry);
+    retryCancelled = true;
+
+    await expect(concurrent).resolves.toEqual({ status: 'rejected', reason: 'cancelled' });
+    expect(spawner.calls).toBe(1);
+    expect(store.state?.phase).toBe('spawn_intent');
+
+    releaseSpawn.resolve();
+    await expect(first).resolves.toEqual({
+      status: 'started',
+      processRef: 'process-ref-0000000000000001',
+    });
+    expect(identities.calls).toBe(2);
+    expect(store.state?.phase).toBe('owned');
+  });
+
+  it('does not let a coalesced caller broaden the cancellation owner', async () => {
+    const store = new FakeStore();
+    const clock = new FakeClock();
+    const identities = new FakeIdentities();
+    const spawner = new FakeSpawner(store, clock);
+    const spawnEntered = deferred();
+    const releaseSpawn = deferred();
+    spawner.onSpawn = spawnEntered.resolve;
+    spawner.spawnGate = releaseSpawn.promise;
+    const adapter = createAdapter(store, identities, spawner, clock, undefined, 5_000);
+    let ownerCancelled = false;
+    const fixture = executionFixture();
+    const ownerRequest = {
+      ...fixture,
+      cancellation: {
+        cancellationId: 'owner-cancellation-000001' as RuntimeCancellationId,
+        isCancellationRequested: () => ownerCancelled,
+      },
+    };
+    const retry = {
+      ...fixture,
+      cancellation: {
+        cancellationId: 'retry-cancellation-000003' as RuntimeCancellationId,
+        isCancellationRequested: () => false,
+      },
+    };
+
+    const first = adapter.start(ownerRequest);
+    await spawnEntered.promise;
+    const concurrent = adapter.start(retry);
+    ownerCancelled = true;
+    releaseSpawn.resolve();
+
+    await expect(Promise.all([first, concurrent])).resolves.toEqual([
+      { status: 'rejected', reason: 'cancelled' },
+      { status: 'rejected', reason: 'cancelled' },
+    ]);
+    expect(identities.calls).toBe(2);
+    expect(spawner.calls).toBe(1);
+    expect(store.state?.phase).toBe('unclassified_residual');
   });
 
   it.each([
@@ -579,17 +698,6 @@ describe('AnchorProcessSupervisorAdapter', () => {
         status: 'started' as const,
         processRef: 'process-ref-0000000000000001',
       },
-    },
-    {
-      difference: 'cancellation',
-      change: (fixture: ReturnType<typeof executionFixture>) => ({
-        ...fixture,
-        cancellation: {
-          cancellationId: 'different-cancellation-001' as RuntimeCancellationId,
-          isCancellationRequested: () => false,
-        },
-      }),
-      firstOutcome: { status: 'rejected' as const, reason: 'unavailable' as const },
     },
   ])(
     'does not coalesce an in-flight request with a different $difference request',
@@ -678,17 +786,20 @@ describe('AnchorProcessSupervisorAdapter', () => {
     expect(store.state?.intent.processRef).toBe('process-ref-0000000000000001');
   });
 
-  it('does not treat an exact durable intent as in-flight ownership after restart', async () => {
+  it('leaves an exact in-flight durable spawn intent to its possibly-live starter after restart', async () => {
     const store = new FakeStore();
     const clock = new FakeClock();
     const firstSpawner = new FakeSpawner(store, clock);
+    const spawnEntered = deferred();
+    const releaseSpawn = deferred();
+    firstSpawner.onSpawn = spawnEntered.resolve;
+    firstSpawner.spawnGate = releaseSpawn.promise;
     const fixture = executionFixture();
-    const first = createAdapter(store, new FakeIdentities(), firstSpawner, clock);
+    const first = createAdapter(store, new FakeIdentities(), firstSpawner, clock, undefined, 5_000);
 
-    await expect(first.start(fixture)).resolves.toEqual({
-      status: 'started',
-      processRef: 'process-ref-0000000000000001',
-    });
+    const originalStart = first.start(fixture);
+    await spawnEntered.promise;
+    expect(store.state?.phase).toBe('spawn_intent');
 
     const replacementSpawner = new FakeSpawner(store, clock);
     const replacement = createAdapter(
@@ -703,7 +814,20 @@ describe('AnchorProcessSupervisorAdapter', () => {
       reason: 'not_owned',
     });
     expect(replacementSpawner.calls).toBe(0);
-    expect(store.state?.phase).toBe('unclassified_residual');
+    expect(store.loads).toBe(2);
+    expect(store.writes).toBe(1);
+    expect(store.state?.phase).toBe('spawn_intent');
+    expect(store.state?.intent.processRef).toBe('process-ref-0000000000000001');
+
+    releaseSpawn.resolve();
+    await expect(originalStart).resolves.toEqual({
+      status: 'started',
+      processRef: 'process-ref-0000000000000001',
+    });
+    expect(firstSpawner.calls).toBe(1);
+    expect(replacementSpawner.calls).toBe(0);
+    expect(store.writes).toBe(2);
+    expect(store.state?.phase).toBe('owned');
     expect(store.state?.intent.processRef).toBe('process-ref-0000000000000001');
   });
 

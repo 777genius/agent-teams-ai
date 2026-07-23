@@ -26,6 +26,7 @@ import {
 import { parseJournalReplacePayload } from './internalStorageWorkerProtocol';
 import { handleMemberWorkSyncOp, MemberWorkSyncWorkerOps } from './memberWorkSyncWorkerOps';
 import { TeamIdentityStorageOps } from './teamIdentityStorageOps';
+import { TeamRosterStorageOps } from './teamRosterStorageOps';
 
 import type {
   CommentJournalEntryRecord,
@@ -93,6 +94,7 @@ export class InternalStorageWorkerCore {
   private readonly coordinationDurabilityOps: CoordinationDurabilityWorkerOps;
   private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
   private readonly teamIdentityOps = new TeamIdentityStorageOps(() => this.open().db);
+  private readonly teamRosterOps = new TeamRosterStorageOps(() => this.open().db);
 
   constructor(private readonly options: InternalStorageWorkerCoreOptions) {
     this.coordinationDurabilityOps = new CoordinationDurabilityWorkerOps(
@@ -144,6 +146,16 @@ export class InternalStorageWorkerCore {
         return this.teamIdentityOps.getIdentity(
           (payload as Extract<InternalStorageWorkerRequest, { op: 'teamIdentity.get' }>['payload'])
             .teamId
+        );
+      case 'teamRoster.get':
+        return this.teamRosterOps.getRoster(
+          (payload as Extract<InternalStorageWorkerRequest, { op: 'teamRoster.get' }>['payload'])
+            .teamId
+        );
+      case 'teamRoster.adopt':
+        return this.teamRosterOps.adoptRoster(
+          (payload as Extract<InternalStorageWorkerRequest, { op: 'teamRoster.adopt' }>['payload'])
+            .roster
         );
       case 'close':
         this.close();
@@ -434,6 +446,7 @@ function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
     case 'storeImports.has':
     case 'teamIdentity.list':
     case 'teamIdentity.get':
+    case 'teamRoster.get':
     case 'close':
       return false;
     default:

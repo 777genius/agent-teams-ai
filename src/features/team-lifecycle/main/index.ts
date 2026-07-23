@@ -3,6 +3,11 @@ export {
   type TeamLifecycleReadUseCases,
 } from './adapters/input/TeamLifecycleReadApiAdapter';
 export {
+  createTeamRosterAdoptionFeature,
+  type TeamRosterAdoptionFeature,
+  type TeamRosterAdoptionFeatureDependencies,
+} from './composition/createTeamRosterAdoptionFeature';
+export {
   type LegacyTeamBindingPage,
   type LegacyTeamDataReadPort,
   type LegacyTeamIdentityBinding,

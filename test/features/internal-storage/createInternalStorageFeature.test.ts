@@ -163,6 +163,8 @@ describe('createInternalStorageFeature', () => {
       userDataPath: path.join(tmpDir, 'user-data'),
     });
     expect(feature.teamIdentityReadBackend).not.toBeNull();
+    expect(feature.teamRosterBackend).not.toBeNull();
+    expect(feature.teamRosterBackend?.gateway).toBeInstanceOf(InternalStorageWorkerClient);
 
     const entry: TaskStallJournalEntry = {
       epochKey: 'task-a:epoch-1',
@@ -222,6 +224,7 @@ describe('createInternalStorageFeature', () => {
     });
 
     expect(feature.teamIdentityReadBackend).toBeNull();
+    expect(feature.teamRosterBackend).toBeNull();
     expect(feature.coordinationDurabilityBackend).toBeNull();
     await expect(feature.probeBackend()).resolves.toBe('json-fallback');
     expect(feature.getBackendKind()).toBe('json-fallback');
