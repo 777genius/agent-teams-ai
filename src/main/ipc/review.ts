@@ -5,6 +5,14 @@
  */
 
 import {
+  assertHunkIndices,
+  assertNonEmptyString,
+  assertOptionalString,
+  assertSnippetShapes,
+  createReviewScopeAuthorizationFeature,
+  MAX_REVIEW_HUNK_DECISIONS_PER_FILE,
+} from '@features/change-review/main';
+import {
   createReviewDecisionHistoryFeature,
   createReviewDraftHistoryFeature,
   registerReviewDecisionHistoryIpc,
@@ -34,12 +42,7 @@ import {
   withReviewPersistenceScopeLock,
 } from '@main/services/team/ReviewPersistenceScopeLock';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
-import {
-  cleanupAtomicCreateTempLinks,
-  inspectReviewFileTransaction,
-  isOwnedReviewFileTransactionHardlink,
-} from '@main/utils/atomicWrite';
-import { isPathWithinRoot, matchesSensitivePattern } from '@main/utils/pathValidation';
+import { inspectReviewFileTransaction } from '@main/utils/atomicWrite';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import {
   REVIEW_APPLY_DECISIONS,
@@ -68,11 +71,11 @@ import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
+import type { ReviewPathAuthorization } from '@features/change-review/main';
 import type {
   ReviewDecisionAuthorization,
   ReviewDraftHistoryAuthorization,
 } from '@features/change-review-history/main';
-import type { ReviewMutationPathAuthorization } from '@features/review-mutations/main';
 import type { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import type { FileContentResolver } from '@main/services/team/FileContentResolver';
 import type { GitDiffFallback } from '@main/services/team/GitDiffFallback';
@@ -100,7 +103,6 @@ import type {
   TeamTaskChangeSummariesResponse,
   TeamTaskChangeSummaryRequest,
 } from '@shared/types/review';
-import type { TeamConfig } from '@shared/types/team';
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const wrapReviewHandler = createIpcWrapper('IPC:review');
@@ -108,8 +110,6 @@ const logger = createLogger('IPC:review');
 const TEAM_TASK_CHANGE_SUMMARY_IPC_RAW_REQUEST_LIMIT = 1_000;
 const TEAM_TASK_CHANGE_SUMMARY_IPC_UNIQUE_REQUEST_LIMIT = 201;
 const MAX_REVIEW_DECISIONS = 2_000;
-const MAX_REVIEW_SNIPPETS_PER_FILE = 10_000;
-const MAX_REVIEW_HUNK_DECISIONS_PER_FILE = 100_000;
 
 // --- Module-level state ---
 
@@ -253,498 +253,93 @@ function getContentResolver(): FileContentResolver {
   return fileContentResolver;
 }
 
-interface AuthorizedReviewRoot {
-  lexicalPath: string;
-  realPath: string;
-}
-
-type ReviewPathAuthorization = ReviewMutationPathAuthorization;
-
-function assertNonEmptyString(value: unknown, field: string): asserts value is string {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new Error(`Invalid ${field}: non-empty string required`);
-  }
-}
-
-function assertOptionalString(value: unknown, field: string): asserts value is string | undefined {
-  if (value !== undefined && typeof value !== 'string') {
-    throw new Error(`Invalid ${field}: string required`);
-  }
-}
+const reviewScopeAuthorizationFeature = createReviewScopeAuthorizationFeature({
+  validators: { validateTeamName, validateTaskId },
+  config: {
+    getConfig: (teamName) => reviewConfigReader.getConfig(teamName),
+  },
+  changes: {
+    getTaskChanges: (teamName, taskId) => getChangeExtractor().getTaskChanges(teamName, taskId),
+    getAgentChanges: (teamName, memberName) =>
+      getChangeExtractor().getAgentChanges(teamName, memberName),
+  },
+  content: {
+    getFileContent: (...args) => getContentResolver().getFileContent(...args),
+    invalidateFile: (filePath) => getContentResolver().invalidateFile(filePath),
+  },
+});
 
 function normalizeReviewIdentity(value: string | undefined): string | undefined {
-  const normalized = value?.trim();
-  return normalized ? normalized : undefined;
+  return reviewScopeAuthorizationFeature.normalizeReviewIdentity(value);
 }
 
 function parseReviewFileScope(value: unknown): ReviewFileScope {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Invalid review scope');
-  }
-  const raw = value as Record<string, unknown>;
-  const team = validateTeamName(raw.teamName);
-  if (!team.valid || !team.value) {
-    throw new Error(team.error ?? 'Invalid teamName');
-  }
-  assertOptionalString(raw.memberName, 'memberName');
-  assertOptionalString(raw.taskId, 'taskId');
-  const memberName = normalizeReviewIdentity(raw.memberName);
-  const taskId = normalizeReviewIdentity(raw.taskId);
-  if (taskId) {
-    const task = validateTaskId(taskId);
-    if (!task.valid || !task.value) {
-      throw new Error(task.error ?? 'Invalid taskId');
-    }
-  }
-  if (memberName && (memberName.length > 256 || memberName.includes('\0'))) {
-    throw new Error('Invalid memberName');
-  }
-  return {
-    teamName: team.value,
-    ...(memberName ? { memberName } : {}),
-    ...(taskId ? { taskId } : {}),
-  };
+  return reviewScopeAuthorizationFeature.parseReviewFileScope(value);
 }
 
 function parseReviewRenameRecoveryExpectation(value: unknown): ReviewRenameRecoveryExpectation {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Invalid rename recovery expectation');
-  }
-  const raw = value as Record<string, unknown>;
-  const relation = raw.relation;
-  if (!relation || typeof relation !== 'object' || Array.isArray(relation)) {
-    throw new Error('Invalid rename recovery relation');
-  }
-  const relationRaw = relation as Record<string, unknown>;
-  if (
-    typeof raw.eventId !== 'string' ||
-    !raw.eventId ||
-    raw.eventId.length > 512 ||
-    (raw.beforeHash !== null && typeof raw.beforeHash !== 'string') ||
-    (raw.afterHash !== null && typeof raw.afterHash !== 'string') ||
-    relationRaw.kind !== 'rename' ||
-    typeof relationRaw.oldPath !== 'string' ||
-    !relationRaw.oldPath ||
-    relationRaw.oldPath.length > 4096 ||
-    relationRaw.oldPath.includes('\0') ||
-    typeof relationRaw.newPath !== 'string' ||
-    !relationRaw.newPath ||
-    relationRaw.newPath.length > 4096 ||
-    relationRaw.newPath.includes('\0')
-  ) {
-    throw new Error('Invalid rename recovery expectation');
-  }
-  if (
-    (typeof raw.beforeHash === 'string' && raw.beforeHash.length > 512) ||
-    (typeof raw.afterHash === 'string' && raw.afterHash.length > 512)
-  ) {
-    throw new Error('Invalid rename recovery expectation');
-  }
-  return {
-    eventId: raw.eventId,
-    beforeHash: raw.beforeHash,
-    afterHash: raw.afterHash,
-    relation: {
-      kind: 'rename',
-      oldPath: relationRaw.oldPath,
-      newPath: relationRaw.newPath,
-    },
-  };
-}
-
-function collectConfiguredReviewRoots(config: TeamConfig): string[] {
-  const roots: string[] = [];
-  const add = (value: unknown): void => {
-    if (typeof value === 'string' && value.trim()) {
-      roots.push(value.trim());
-    }
-  };
-  add(config.projectPath);
-
-  const members = Array.isArray(config.members) ? config.members : [];
-  for (const member of members) {
-    add(member.cwd);
-  }
-  return [...new Set(roots.map((root) => path.resolve(path.normalize(root))))];
-}
-
-async function resolveAuthorizedReviewRoot(rootPath: string): Promise<AuthorizedReviewRoot | null> {
-  if (!path.isAbsolute(rootPath)) {
-    return null;
-  }
-  try {
-    const [rootStat, realPath] = await Promise.all([fs.stat(rootPath), fs.realpath(rootPath)]);
-    if (!rootStat.isDirectory()) {
-      return null;
-    }
-    return {
-      lexicalPath: path.resolve(path.normalize(rootPath)),
-      realPath: path.resolve(path.normalize(realPath)),
-    };
-  } catch {
-    return null;
-  }
+  return reviewScopeAuthorizationFeature.parseReviewRenameRecoveryExpectation(value);
 }
 
 function normalizeReviewPathForIdentity(filePath: string): string {
-  const normalized = path.resolve(path.normalize(filePath));
-  return process.platform === 'win32' ? normalized.toLocaleLowerCase() : normalized;
+  return reviewScopeAuthorizationFeature.normalizeReviewPathForIdentity(filePath);
 }
 
-function collectAuthoritativeReviewedFiles(
-  files: FileChangeSummary[]
-): Map<string, FileChangeSummary> {
-  const reviewedFiles = new Map<string, FileChangeSummary>();
-  const add = (filePath: string | null, owner: FileChangeSummary): void => {
-    if (filePath && path.isAbsolute(path.normalize(filePath))) {
-      reviewedFiles.set(normalizeReviewPathForIdentity(filePath), owner);
-    }
-  };
-
-  for (const file of files) {
-    add(file.filePath, file);
-    for (const snippet of file.snippets) {
-      add(snippet.filePath, file);
-    }
-  }
-  return reviewedFiles;
-}
-
-async function resolveReviewPathAuthorization(
+function resolveReviewPathAuthorization(
   scopeValue: unknown,
   options: { requireIdentity?: boolean } = {}
 ): Promise<{ scope: ReviewFileScope; authorization: ReviewPathAuthorization }> {
-  const scope = parseReviewFileScope(scopeValue);
-  if (options.requireIdentity && !scope.taskId && !scope.memberName) {
-    throw new Error('Review mutation requires taskId or memberName');
-  }
-  const config = await reviewConfigReader.getConfig(scope.teamName);
-  if (!config) {
-    throw new Error(`Review team config is unavailable: ${scope.teamName}`);
-  }
-
-  const roots = (
-    await Promise.all(collectConfiguredReviewRoots(config).map(resolveAuthorizedReviewRoot))
-  ).filter((root): root is AuthorizedReviewRoot => Boolean(root));
-  if (roots.length === 0) {
-    throw new Error('Review project/worktree root is unavailable');
-  }
-
-  let reviewedFiles: Map<string, FileChangeSummary> | null = null;
-  let resolutionMemberName = scope.memberName ?? '';
-  if (scope.taskId) {
-    const changeSet = await getChangeExtractor().getTaskChanges(scope.teamName, scope.taskId);
-    reviewedFiles = collectAuthoritativeReviewedFiles(changeSet.files);
-    const authoritativeMemberName = normalizeReviewIdentity(changeSet.scope?.memberName);
-    if (
-      scope.memberName &&
-      authoritativeMemberName &&
-      scope.memberName !== authoritativeMemberName
-    ) {
-      throw new Error('Review memberName does not match the authoritative task scope');
-    }
-    resolutionMemberName = authoritativeMemberName ?? '';
-  } else if (scope.memberName) {
-    const changeSet = await getChangeExtractor().getAgentChanges(scope.teamName, scope.memberName);
-    reviewedFiles = collectAuthoritativeReviewedFiles(changeSet.files);
-  }
-
-  return { scope, authorization: { roots, reviewedFiles, resolutionMemberName } };
+  return reviewScopeAuthorizationFeature.resolveReviewPathAuthorization(scopeValue, options);
 }
 
-async function resolveNearestExistingRealPath(filePath: string): Promise<string> {
-  let current = filePath;
-  for (;;) {
-    try {
-      return path.resolve(path.normalize(await fs.realpath(current)));
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== 'ENOENT' && code !== 'ENOTDIR') {
-        throw error;
-      }
-      const parent = path.dirname(current);
-      if (parent === current) {
-        throw new Error('No existing ancestor for review file path');
-      }
-      current = parent;
-    }
-  }
-}
-
-async function validateAuthorizedReviewFilePath(
+function validateAuthorizedReviewFilePath(
   authorization: ReviewPathAuthorization,
   filePathValue: unknown,
   options: { requireReviewedFile: boolean; rejectHardlinks?: boolean }
 ): Promise<string> {
-  assertNonEmptyString(filePathValue, 'filePath');
-  if (!path.isAbsolute(path.normalize(filePathValue))) {
-    throw new Error('Review file path must be absolute');
-  }
-  const normalizedPath = path.resolve(path.normalize(filePathValue));
-  if (matchesSensitivePattern(normalizedPath)) {
-    throw new Error('Access to sensitive files is not allowed');
-  }
-  if (
-    options.requireReviewedFile &&
-    !authorization.reviewedFiles?.has(normalizeReviewPathForIdentity(normalizedPath))
-  ) {
-    throw new Error('File is not part of the reviewed scope');
-  }
-
-  let targetRealPath: string;
-  let targetStat: Awaited<ReturnType<typeof fs.lstat>> | null = null;
-  let resolvedStat: Awaited<ReturnType<typeof fs.stat>> | null = null;
-  try {
-    targetStat = await fs.lstat(normalizedPath);
-    targetRealPath = path.resolve(path.normalize(await fs.realpath(normalizedPath)));
-    resolvedStat = targetStat.isSymbolicLink() ? await fs.stat(targetRealPath) : targetStat;
-    if (!resolvedStat.isFile()) {
-      throw new Error('Review target must be a regular file');
-    }
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code !== 'ENOENT' && code !== 'ENOTDIR') {
-      throw error;
-    }
-    targetRealPath = await resolveNearestExistingRealPath(path.dirname(normalizedPath));
-  }
-  if (matchesSensitivePattern(targetRealPath)) {
-    throw new Error('Access to sensitive files is not allowed');
-  }
-
-  const allowed = authorization.roots.some(
-    (root) =>
-      (isPathWithinRoot(normalizedPath, root.lexicalPath) ||
-        isPathWithinRoot(normalizedPath, root.realPath)) &&
-      isPathWithinRoot(targetRealPath, root.realPath)
+  return reviewScopeAuthorizationFeature.validateAuthorizedReviewFilePath(
+    authorization,
+    filePathValue,
+    options
   );
-  if (!allowed) {
-    throw new Error('Review file path is outside the authoritative project/worktree');
-  }
-  if (options.rejectHardlinks && targetStat && resolvedStat) {
-    if (!targetStat.isSymbolicLink() && resolvedStat.nlink > 1) {
-      await cleanupAtomicCreateTempLinks(normalizedPath);
-      targetStat = await fs.lstat(normalizedPath);
-      targetRealPath = path.resolve(path.normalize(await fs.realpath(normalizedPath)));
-      resolvedStat = targetStat.isSymbolicLink() ? await fs.stat(targetRealPath) : targetStat;
-      const stillAllowed =
-        !matchesSensitivePattern(targetRealPath) &&
-        authorization.roots.some(
-          (root) =>
-            (isPathWithinRoot(normalizedPath, root.lexicalPath) ||
-              isPathWithinRoot(normalizedPath, root.realPath)) &&
-            isPathWithinRoot(targetRealPath, root.realPath)
-        );
-      if (!stillAllowed || !resolvedStat.isFile()) {
-        throw new Error('Review file path changed during authorization');
-      }
-    }
-    const ownedReviewTransactionLink =
-      !targetStat.isSymbolicLink() &&
-      resolvedStat.nlink > 1 &&
-      (await isOwnedReviewFileTransactionHardlink(normalizedPath));
-    if (targetStat.isSymbolicLink() || (resolvedStat.nlink > 1 && !ownedReviewTransactionLink)) {
-      throw new Error('Review mutation refuses symbolic or multiply-linked files');
-    }
-  }
-  return normalizedPath;
 }
 
 function getAuthoritativeReviewedFile(
   authorization: ReviewPathAuthorization,
   filePath: string
 ): FileChangeSummary {
-  const file = authorization.reviewedFiles?.get(normalizeReviewPathForIdentity(filePath));
-  if (!file) {
-    throw new Error('File is not part of the reviewed scope');
-  }
-  return file;
+  return reviewScopeAuthorizationFeature.getAuthoritativeReviewedFile(authorization, filePath);
 }
 
-async function resolveAuthoritativeFileContent(
+function resolveAuthoritativeFileContent(
   scope: ReviewFileScope,
   authorization: ReviewPathAuthorization,
   filePath: string
 ): Promise<FileChangeWithContent> {
-  const authoritativeFile = getAuthoritativeReviewedFile(authorization, filePath);
-  assertSnippetShapes(authoritativeFile.snippets);
-  await validateSnippetPaths(authorization, authoritativeFile.snippets, {
-    requireReviewedFile: true,
-  });
-  const resolved = await getContentResolver().getFileContent(
-    scope.teamName,
-    authorization.resolutionMemberName,
-    filePath,
-    authoritativeFile.snippets
+  return reviewScopeAuthorizationFeature.resolveAuthoritativeFileContent(
+    scope,
+    authorization,
+    filePath
   );
-  return {
-    ...resolved,
-    filePath,
-    snippets: authoritativeFile.snippets,
-  };
 }
 
 function assertExpectedAuthoritativeRename(
   content: FileChangeWithContent,
   expectation: ReviewRenameRecoveryExpectation
 ): void {
-  const renameLedger = content.snippets.find(
-    (snippet) => snippet.ledger?.relation?.kind === 'rename'
-  )?.ledger;
-  const relation = renameLedger?.relation;
-  if (!renameLedger || relation?.kind !== 'rename') {
-    throw new Error('Review file is not an authoritative ledger rename');
-  }
-  if (
-    renameLedger.eventId !== expectation.eventId ||
-    (renameLedger.beforeHash ?? null) !== expectation.beforeHash ||
-    (renameLedger.afterHash ?? null) !== expectation.afterHash ||
-    relation.oldPath !== expectation.relation.oldPath ||
-    relation.newPath !== expectation.relation.newPath
-  ) {
-    throw new Error('Review changes were updated; refusing stale rename recovery');
-  }
+  reviewScopeAuthorizationFeature.assertExpectedAuthoritativeRename(content, expectation);
 }
 
 function invalidateAuthoritativeReviewContent(content: FileChangeWithContent): void {
-  const paths = new Set([content.filePath]);
-  for (const snippet of content.snippets) {
-    paths.add(snippet.filePath);
-    const relation = snippet.ledger?.relation;
-    if (relation) {
-      paths.add(relation.oldPath);
-      paths.add(relation.newPath);
-    }
-  }
-  for (const filePath of paths) {
-    getContentResolver().invalidateFile(filePath);
-  }
+  reviewScopeAuthorizationFeature.invalidateAuthoritativeReviewContent(content);
 }
 
-function assertHunkIndices(value: unknown): asserts value is number[] {
-  if (
-    !Array.isArray(value) ||
-    value.length > MAX_REVIEW_HUNK_DECISIONS_PER_FILE ||
-    value.some((index) => !Number.isSafeInteger(index) || index < 0)
-  ) {
-    throw new Error('Invalid hunkIndices');
-  }
-}
-
-function assertSnippetShapes(value: unknown): asserts value is SnippetDiff[] {
-  if (!Array.isArray(value) || value.length > MAX_REVIEW_SNIPPETS_PER_FILE) {
-    throw new Error('Invalid snippets array');
-  }
-  for (const snippet of value) {
-    if (!snippet || typeof snippet !== 'object' || Array.isArray(snippet)) {
-      throw new Error('Invalid review snippet');
-    }
-    const raw = snippet as Record<string, unknown>;
-    for (const field of [
-      'toolUseId',
-      'filePath',
-      'toolName',
-      'type',
-      'oldString',
-      'newString',
-      'timestamp',
-    ]) {
-      if (typeof raw[field] !== 'string') {
-        throw new Error(`Invalid review snippet ${field}`);
-      }
-    }
-    if (typeof raw.replaceAll !== 'boolean' || typeof raw.isError !== 'boolean') {
-      throw new Error('Invalid review snippet flags');
-    }
-    if (raw.ledger !== undefined) {
-      if (!raw.ledger || typeof raw.ledger !== 'object' || Array.isArray(raw.ledger)) {
-        throw new Error('Invalid review ledger metadata');
-      }
-      const relation = (raw.ledger as Record<string, unknown>).relation;
-      if (relation !== undefined) {
-        if (!relation || typeof relation !== 'object' || Array.isArray(relation)) {
-          throw new Error('Invalid review relation');
-        }
-        const relationRaw = relation as Record<string, unknown>;
-        if (
-          (relationRaw.kind !== 'rename' && relationRaw.kind !== 'copy') ||
-          typeof relationRaw.oldPath !== 'string' ||
-          !relationRaw.oldPath ||
-          typeof relationRaw.newPath !== 'string' ||
-          !relationRaw.newPath
-        ) {
-          throw new Error('Invalid review relation');
-        }
-      }
-    }
-  }
-}
-
-async function validateSnippetPaths(
+function validateSnippetPaths(
   authorization: ReviewPathAuthorization,
   snippets: SnippetDiff[],
   options: { requireReviewedFile?: boolean; rejectHardlinks?: boolean } = {}
 ): Promise<void> {
-  const requireReviewedFile = options.requireReviewedFile === true;
-  await Promise.all(
-    snippets.map((snippet) =>
-      validateAuthorizedReviewFilePath(authorization, snippet.filePath, {
-        requireReviewedFile,
-        rejectHardlinks: options.rejectHardlinks === true,
-      })
-    )
-  );
-
-  for (const snippet of snippets) {
-    const relation = snippet.ledger?.relation;
-    if (!relation) continue;
-    const slashFilePath = snippet.filePath.replace(/\\/g, '/');
-    const relationPaths = [relation.oldPath, relation.newPath] as const;
-    if (relationPaths.every((relationPath) => path.isAbsolute(path.normalize(relationPath)))) {
-      for (const relationPath of relationPaths) {
-        await validateAuthorizedReviewFilePath(authorization, relationPath, {
-          requireReviewedFile,
-          rejectHardlinks: options.rejectHardlinks === true,
-        });
-      }
-      continue;
-    }
-    if (relationPaths.some((relationPath) => path.isAbsolute(path.normalize(relationPath)))) {
-      throw new Error('Review relation paths must both be absolute or both be relative');
-    }
-
-    let resolvedRelationPaths: [string, string] | null = null;
-    for (const [anchorRelationPath, targetRelationPath] of [
-      [relation.oldPath, relation.newPath],
-      [relation.newPath, relation.oldPath],
-    ] as const) {
-      const slashAnchor = anchorRelationPath.replace(/\\/g, '/');
-      if (
-        slashFilePath === slashAnchor ||
-        slashFilePath.toLocaleLowerCase().endsWith(`/${slashAnchor.toLocaleLowerCase()}`)
-      ) {
-        const prefix = slashFilePath.slice(0, slashFilePath.length - slashAnchor.length);
-        const anchorPath = path.resolve(path.normalize(`${prefix}${slashAnchor}`));
-        const targetPath = path.resolve(
-          path.normalize(`${prefix}${targetRelationPath.replace(/\\/g, '/')}`)
-        );
-        resolvedRelationPaths =
-          anchorRelationPath === relation.oldPath
-            ? [anchorPath, targetPath]
-            : [targetPath, anchorPath];
-        break;
-      }
-    }
-    if (!resolvedRelationPaths) {
-      throw new Error('Review relation is not anchored to an authoritative snippet path');
-    }
-    for (const relationPath of resolvedRelationPaths) {
-      await validateAuthorizedReviewFilePath(authorization, relationPath, {
-        requireReviewedFile,
-        rejectHardlinks: options.rejectHardlinks === true,
-      });
-    }
-  }
+  return reviewScopeAuthorizationFeature.validateSnippetPaths(authorization, snippets, options);
 }
 
 function assertReviewDecisionShape(value: unknown): asserts value is FileReviewDecision {
