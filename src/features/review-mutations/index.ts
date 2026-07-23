@@ -1,4 +1,4 @@
-export type * from './contracts';
+export * from './contracts';
 export { isDurableReviewEqual } from './core/domain/durableReviewValue';
 export {
   buildReviewExternalReloadState,

@@ -16,26 +16,25 @@ import {
   buildForwardDiskMutationSteps,
   buildRedoDiskMutationSteps,
   buildReviewExternalReloadState,
-  buildReviewHistoryRestoreDiskSteps,
-  buildReviewHistoryRestorePlan,
   buildReviewRestoreDecisionState,
   buildReviewUndoDecisionState,
   buildUndoDiskMutationSteps,
+  createReviewMutationRecoveryFeature,
   getReviewActionDiskSnapshots,
   isDurableReviewEqual,
+  registerReviewMutationRecoveryIpc,
+  removeReviewMutationRecoveryIpc,
   ReviewMutationCoordinator,
+  type ReviewMutationJournalDiskStep,
+  type ReviewMutationJournalPathPostimage,
+  type ReviewMutationJournalPathTransition,
+  type ReviewMutationJournalRecord,
 } from '@features/review-mutations/main';
 import { validateTaskId, validateTeamName } from '@main/ipc/guards';
 import { createIpcWrapper } from '@main/ipc/ipcWrapper';
 import { EditorFileWatcher } from '@main/services/editor';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
-import {
-  type ReviewMutationJournalDiskStep,
-  type ReviewMutationJournalPathPostimage,
-  type ReviewMutationJournalPathTransition,
-  type ReviewMutationJournalRecord,
-  ReviewMutationJournalStore,
-} from '@main/services/team/ReviewMutationJournalStore';
+import { ReviewMutationJournalStore } from '@main/services/team/ReviewMutationJournalStore';
 import {
   withReviewPersistenceLogicalScopeLock,
   withReviewPersistenceScopeLock,
@@ -52,7 +51,6 @@ import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
   REVIEW_DELETE_EDITED_FILE,
-  REVIEW_EXECUTE_MUTATION,
   REVIEW_FILE_CHANGE,
   REVIEW_GET_AGENT_CHANGES,
   REVIEW_GET_CHANGE_STATS,
@@ -65,9 +63,7 @@ import {
   REVIEW_REAPPLY_REJECTED_RENAME,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
-  REVIEW_RESTORE_HISTORY,
   REVIEW_RESTORE_REJECTED_RENAME,
-  REVIEW_RETRY_MUTATION_RECOVERY,
   REVIEW_SAVE_EDITED_FILE,
   REVIEW_UNWATCH_FILES,
   REVIEW_WATCH_FILES,
@@ -83,6 +79,7 @@ import type {
   ReviewDecisionAuthorization,
   ReviewDraftHistoryAuthorization,
 } from '@features/change-review-history/main';
+import type { ReviewMutationPathAuthorization } from '@features/review-mutations/main';
 import type { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import type { FileContentResolver } from '@main/services/team/FileContentResolver';
 import type { GitDiffFallback } from '@main/services/team/GitDiffFallback';
@@ -96,18 +93,12 @@ import type {
   ChangeStats,
   ConflictCheckResult,
   ExecuteReviewMutationRequest,
-  ExecuteReviewMutationResult,
   FileChangeSummary,
   FileChangeWithContent,
   FileReviewDecision,
   HunkDecision,
   RejectResult,
-  RestoreReviewHistoryRequest,
-  RestoreReviewHistoryResult,
-  RetryReviewMutationRecoveryRequest,
-  RetryReviewMutationRecoveryResult,
   ReviewDecisionPersistenceScope,
-  ReviewDirectDiskMutationStep,
   ReviewDiskUndoSnapshot,
   ReviewFileScope,
   ReviewMutationDiskPostimage,
@@ -131,7 +122,6 @@ const TEAM_TASK_CHANGE_SUMMARY_IPC_UNIQUE_REQUEST_LIMIT = 201;
 const MAX_REVIEW_DECISIONS = 2_000;
 const MAX_REVIEW_SNIPPETS_PER_FILE = 10_000;
 const MAX_REVIEW_HUNK_DECISIONS_PER_FILE = 100_000;
-const MAX_REVIEW_MUTATION_STEPS = 2_000;
 
 // --- Module-level state ---
 
@@ -280,11 +270,7 @@ interface AuthorizedReviewRoot {
   realPath: string;
 }
 
-interface ReviewPathAuthorization {
-  roots: AuthorizedReviewRoot[];
-  reviewedFiles: Map<string, FileChangeSummary> | null;
-  resolutionMemberName: string;
-}
+type ReviewPathAuthorization = ReviewMutationPathAuthorization;
 
 function assertNonEmptyString(value: unknown, field: string): asserts value is string {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -918,9 +904,6 @@ export function registerReviewHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(REVIEW_REJECT_FILE, handleRejectFile);
   ipcMain.handle(REVIEW_PREVIEW_REJECT, handlePreviewReject);
   ipcMain.handle(REVIEW_APPLY_DECISIONS, handleApplyDecisions);
-  ipcMain.handle(REVIEW_EXECUTE_MUTATION, handleExecuteReviewMutation);
-  ipcMain.handle(REVIEW_RETRY_MUTATION_RECOVERY, handleRetryReviewMutationRecovery);
-  ipcMain.handle(REVIEW_RESTORE_HISTORY, handleRestoreReviewHistory);
   ipcMain.handle(REVIEW_GET_FILE_CONTENT, handleGetFileContent);
   // Editable diff
   ipcMain.handle(REVIEW_SAVE_EDITED_FILE, handleSaveEditedFile);
@@ -932,6 +915,7 @@ export function registerReviewHandlers(ipcMain: IpcMain): void {
   // Phase 4
   ipcMain.handle(REVIEW_GET_GIT_FILE_LOG, handleGetGitFileLog);
   // Decision persistence
+  registerReviewMutationRecoveryIpc(ipcMain, reviewMutationRecoveryFeature, wrapReviewHandler);
   registerReviewDecisionHistoryIpc(ipcMain, reviewDecisionHistoryFeature, wrapReviewHandler);
   registerReviewDraftHistoryIpc(ipcMain, reviewDraftHistoryFeature, wrapReviewHandler);
 }
@@ -949,9 +933,6 @@ export function removeReviewHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(REVIEW_REJECT_FILE);
   ipcMain.removeHandler(REVIEW_PREVIEW_REJECT);
   ipcMain.removeHandler(REVIEW_APPLY_DECISIONS);
-  ipcMain.removeHandler(REVIEW_EXECUTE_MUTATION);
-  ipcMain.removeHandler(REVIEW_RETRY_MUTATION_RECOVERY);
-  ipcMain.removeHandler(REVIEW_RESTORE_HISTORY);
   ipcMain.removeHandler(REVIEW_GET_FILE_CONTENT);
   // Editable diff
   ipcMain.removeHandler(REVIEW_SAVE_EDITED_FILE);
@@ -963,6 +944,7 @@ export function removeReviewHandlers(ipcMain: IpcMain): void {
   // Phase 4
   ipcMain.removeHandler(REVIEW_GET_GIT_FILE_LOG);
   // Decision persistence
+  removeReviewMutationRecoveryIpc(ipcMain);
   removeReviewDecisionHistoryIpc(ipcMain);
   removeReviewDraftHistoryIpc(ipcMain);
   reviewFileWatcher.stop();
@@ -2230,6 +2212,60 @@ async function authorizeReviewDecisionHistoryScope(
   };
 }
 
+const reviewMutationRecoveryFeature = createReviewMutationRecoveryFeature({
+  scope: {
+    parse: parseReviewFileScope,
+    resolve: resolveReviewPathAuthorization,
+    parsePersistenceScope: parseDecisionPersistenceScope,
+    validateFilePath: validateAuthorizedReviewFilePath,
+    validateSnippets: validateSnippetPaths,
+    resolveAuthoritativeContent: resolveAuthoritativeFileContent,
+    assertExpectedRename: assertExpectedAuthoritativeRename,
+    parseRenameExpectation: parseReviewRenameRecoveryExpectation,
+    assertDecisionShape: assertReviewDecisionShape,
+    assertSnippetShapes,
+    getAuthoritativeFile: getAuthoritativeReviewedFile,
+    normalizeIdentityPath: normalizeReviewPathForIdentity,
+    normalizeFilesystemPath: (filePath) => path.resolve(path.normalize(filePath)),
+  },
+  decisions: {
+    withLock: withReviewDecisionPersistenceLock,
+    assertValidSnapshot: (value) => reviewDecisionStore.assertValidSnapshot(value),
+    assertCurrentRevision: assertCurrentReviewDecisionRevision,
+    load: (teamName, persistenceScope) =>
+      reviewDecisionStore.load(teamName, persistenceScope.scopeKey, persistenceScope.scopeToken),
+    commit: commitReviewMutationDecisions,
+    assertExactTransition: assertExactReviewHistoryTransition,
+    bindAuthoritativeForwardMutation: assertAuthoritativeForwardReviewMutation,
+    assertAuthoritativelyBoundAction: assertAuthoritativelyBoundReviewAction,
+  },
+  journal: reviewMutationJournal,
+  coordinator: reviewMutationCoordinator,
+  applier: {
+    getRejectedRenamePostimages: (...args) => getApplier().getRejectedRenamePostimages(...args),
+    classifyEditedFileTransition: (...args) => getApplier().classifyEditedFileTransition(...args),
+    classifyRejectedRenameTransition: (...args) =>
+      getApplier().classifyRejectedRenameTransition(...args),
+    saveEditedFile: (...args) => getApplier().saveEditedFile(...args),
+    deleteEditedFile: (...args) => getApplier().deleteEditedFile(...args),
+    restoreRejectedRename: (...args) => getApplier().restoreRejectedRename(...args),
+    reapplyRejectedRename: (...args) => getApplier().reapplyRejectedRename(...args),
+    finalizeEditedFileTransaction: (...args) =>
+      getApplier().finalizeEditedFileTransaction?.(...args) ?? Promise.resolve(),
+    finalizeRejectedRenameTransaction: (...args) =>
+      getApplier().finalizeRejectedRenameTransaction?.(...args) ?? Promise.resolve(),
+  },
+  cache: {
+    invalidateAuthoritativeContent: invalidateAuthoritativeReviewContent,
+    invalidateFile: (filePath) => getContentResolver().invalidateFile(filePath),
+  },
+  applyDecisionBatchDisk: (record) => applyJournalDecisionBatchDisk(record),
+  logger: {
+    warn: (message, error) => logger.warn(message, error),
+    error: (message, error) => logger.error(message, error),
+  },
+});
+
 const reviewDecisionHistoryFeature = createReviewDecisionHistoryFeature({
   lock: { run: withReviewDecisionPersistenceLock },
   authorization: { authorize: authorizeReviewDecisionHistoryScope },
@@ -2237,7 +2273,8 @@ const reviewDecisionHistoryFeature = createReviewDecisionHistoryFeature({
   mutations: reviewDecisionStore,
   validation: reviewDecisionStore,
   recovery: {
-    recover: recoverReviewMutationJournal,
+    recover: (teamName, persistenceScope) =>
+      reviewMutationRecoveryFeature.recoverPending(teamName, persistenceScope),
     inspectForDiscard: async (teamName, persistenceScope) => {
       const inspection = await reviewMutationJournal.inspectForRecoveryDiscard(
         teamName,
@@ -2617,7 +2654,7 @@ async function applyDecisionsWithDurableJournal(
   return withReviewDecisionPersistenceLock(scope.teamName, persistenceScope, async () => {
     const diskPostimages = new Map<string, ReviewMutationDiskPostimage>();
     try {
-      await recoverReviewMutationJournal(scope.teamName, persistenceScope);
+      await reviewMutationRecoveryFeature.recoverPending(scope.teamName, persistenceScope);
       await assertCurrentReviewDecisionRevision(
         scope.teamName,
         persistenceScope,
@@ -2680,529 +2717,6 @@ async function applyDecisionsWithDurableJournal(
       }
       throw error;
     }
-  });
-}
-
-async function normalizeDirectReviewMutationSteps(
-  steps: readonly ReviewDirectDiskMutationStep[],
-  scope: ReviewFileScope,
-  authorization: ReviewPathAuthorization
-): Promise<ReviewMutationJournalDiskStep[]> {
-  const ids = new Set<string>();
-  const normalized: ReviewMutationJournalDiskStep[] = [];
-  for (const step of steps) {
-    if (
-      !step ||
-      typeof step.id !== 'string' ||
-      step.id.length === 0 ||
-      step.id.length > 256 ||
-      ids.has(step.id)
-    ) {
-      throw new Error('Invalid or duplicate review mutation step id');
-    }
-    ids.add(step.id);
-    const filePath = await validateAuthorizedReviewFilePath(authorization, step.filePath, {
-      requireReviewedFile: true,
-      rejectHardlinks: true,
-    });
-    if (step.type === 'write') {
-      if (
-        typeof step.content !== 'string' ||
-        (step.expectedContent !== null && typeof step.expectedContent !== 'string')
-      ) {
-        throw new Error('Invalid review write mutation');
-      }
-      normalized.push({ ...step, filePath, status: 'pending' });
-      continue;
-    }
-    if (step.type === 'delete') {
-      if (typeof step.expectedContent !== 'string') {
-        throw new Error('Invalid review delete mutation');
-      }
-      normalized.push({ ...step, filePath, status: 'pending' });
-      continue;
-    }
-    if (step.type !== 'restore-rejected-rename' && step.type !== 'reapply-rejected-rename') {
-      throw new Error('Invalid review mutation step');
-    }
-    const expectation = parseReviewRenameRecoveryExpectation(step.expectation);
-    const authoritativeContent = await resolveAuthoritativeFileContent(
-      scope,
-      authorization,
-      filePath
-    );
-    await validateSnippetPaths(authorization, authoritativeContent.snippets, {
-      requireReviewedFile: true,
-      rejectHardlinks: true,
-    });
-    assertExpectedAuthoritativeRename(authoritativeContent, expectation);
-    normalized.push({
-      ...step,
-      filePath,
-      expectation,
-      authoritativeContent,
-      status: 'pending',
-    });
-  }
-  return normalized;
-}
-
-async function buildDirectReviewMutationDiskPostimages(
-  steps: readonly ReviewMutationJournalDiskStep[]
-): Promise<ReviewMutationDiskPostimage[]> {
-  const postimages = new Map<string, ReviewMutationDiskPostimage>();
-  for (const step of steps) {
-    if (step.type === 'write') {
-      mergeReviewMutationDiskPostimages(postimages, [
-        { filePath: step.filePath, content: step.content },
-      ]);
-      continue;
-    }
-    if (step.type === 'delete') {
-      mergeReviewMutationDiskPostimages(postimages, [{ filePath: step.filePath, content: null }]);
-      continue;
-    }
-    const content = step.authoritativeContent;
-    if (!content) throw new Error('Rename recovery content is unavailable');
-    mergeReviewMutationDiskPostimages(
-      postimages,
-      await getApplier().getRejectedRenamePostimages(
-        content.originalFullContent,
-        content.modifiedFullContent,
-        content.snippets,
-        step.type === 'restore-rejected-rename' ? 'restore' : 'reapply'
-      )
-    );
-  }
-  return [...postimages.values()];
-}
-
-async function buildJournalRecoveryDiskPostimages(
-  record: ReviewMutationJournalRecord
-): Promise<ReviewMutationDiskPostimage[]> {
-  if (record.diskSteps) return buildDirectReviewMutationDiskPostimages(record.diskSteps);
-
-  const postimages = new Map<string, ReviewMutationDiskPostimage>();
-  for (const [index, content] of record.fileContents.entries()) {
-    const transitions = (record.decisionTransitions?.[index] ?? []).filter(
-      (transition) => transition.beforeContent !== transition.afterContent || transition.operation
-    );
-    const hasRename = content.snippets.some(
-      (snippet) => snippet.ledger?.relation?.kind === 'rename' && !snippet.isError
-    );
-    if (hasRename && transitions.length > 0) {
-      mergeReviewMutationDiskPostimages(
-        postimages,
-        await getApplier().getRejectedRenamePostimages(
-          content.originalFullContent,
-          content.modifiedFullContent,
-          content.snippets,
-          'reapply'
-        )
-      );
-      continue;
-    }
-    for (const transition of transitions) {
-      if (transition.operation === 'move' && transition.relatedFilePath) {
-        mergeReviewMutationDiskPostimages(postimages, [
-          { filePath: transition.filePath, content: null },
-          { filePath: transition.relatedFilePath, content: transition.afterContent },
-        ]);
-      } else {
-        mergeReviewMutationDiskPostimages(postimages, [
-          { filePath: transition.filePath, content: transition.afterContent },
-        ]);
-      }
-    }
-  }
-  return [...postimages.values()];
-}
-
-type DirectReviewMutationState = 'before' | 'after' | 'both' | 'intermediate';
-
-async function classifyDirectReviewMutationStep(
-  step: ReviewMutationJournalDiskStep
-): Promise<DirectReviewMutationState> {
-  if (step.type === 'write') {
-    return getApplier().classifyEditedFileTransition(
-      step.filePath,
-      step.expectedContent,
-      step.content
-    );
-  }
-  if (step.type === 'delete') {
-    return getApplier().classifyEditedFileTransition(step.filePath, step.expectedContent, null);
-  }
-  const content = step.authoritativeContent;
-  if (!content) throw new Error('Rename recovery content is unavailable');
-  const state = await getApplier().classifyRejectedRenameTransition(
-    step.filePath,
-    content.originalFullContent,
-    content.modifiedFullContent,
-    content.snippets
-  );
-  if (state === 'both') return 'both';
-  const beforeState = step.type === 'restore-rejected-rename' ? 'rejected' : 'accepted';
-  const afterState = step.type === 'restore-rejected-rename' ? 'accepted' : 'rejected';
-  if (state === beforeState) return 'before';
-  if (state === afterState) return 'after';
-  const recoverableIntermediate =
-    (step.type === 'restore-rejected-rename' && state === 'restoring') ||
-    (step.type === 'reapply-rejected-rename' &&
-      (state === 'reapplying' || state === 'legacy-reapplying'));
-  if (recoverableIntermediate) return 'intermediate';
-  throw new Error('Ledger rename is not in the expected durable mutation state');
-}
-
-async function assertDirectReviewMutationPreimages(
-  steps: readonly ReviewMutationJournalDiskStep[]
-): Promise<void> {
-  for (const step of steps) {
-    const state = await classifyDirectReviewMutationStep(step);
-    if (state !== 'before' && state !== 'both') {
-      throw new Error('Review mutation preflight failed; no files were changed');
-    }
-  }
-}
-
-async function finalizeDirectReviewMutationArtifacts(
-  step: ReviewMutationJournalDiskStep
-): Promise<void> {
-  if (step.type === 'write') {
-    await getApplier().finalizeEditedFileTransaction?.(
-      step.filePath,
-      step.expectedContent,
-      step.content
-    );
-    return;
-  }
-  if (step.type === 'delete') {
-    await getApplier().finalizeEditedFileTransaction?.(step.filePath, step.expectedContent, null);
-    return;
-  }
-  const content = step.authoritativeContent;
-  if (!content) return;
-  await getApplier().finalizeRejectedRenameTransaction?.(
-    step.filePath,
-    content.originalFullContent,
-    content.modifiedFullContent,
-    content.snippets,
-    step.type === 'restore-rejected-rename' ? 'restore' : 'reapply'
-  );
-}
-
-async function applyDirectReviewMutationDisk(
-  record: ReviewMutationJournalRecord
-): Promise<ReviewMutationJournalRecord> {
-  let current = record;
-  const steps = current.diskSteps;
-  if (!steps?.length) return current;
-
-  try {
-    const alreadyAtPostimage = new Set<number>();
-    for (const [index, step] of steps.entries()) {
-      const state = await classifyDirectReviewMutationStep(step);
-      if (step.status === 'applied') {
-        if (state !== 'after' && state !== 'both') {
-          throw new Error('Applied review mutation changed after crash; refusing recovery');
-        }
-      } else if (state === 'after' || state === 'both') {
-        alreadyAtPostimage.add(index);
-      }
-    }
-    if (alreadyAtPostimage.size > 0) {
-      current = await reviewMutationJournal.checkpoint({
-        ...current,
-        diskSteps: current.diskSteps!.map((step, index) =>
-          alreadyAtPostimage.has(index) ? { ...step, status: 'applied' as const } : step
-        ),
-      });
-      for (const index of alreadyAtPostimage) {
-        const appliedStep = current.diskSteps?.[index];
-        if (appliedStep) await finalizeDirectReviewMutationArtifacts(appliedStep);
-      }
-    }
-  } catch (error) {
-    await reviewMutationJournal.markFailed(current, error).catch((journalError) => {
-      logger.error('Unable to preserve drifted direct review mutation:', journalError);
-    });
-    throw error;
-  }
-
-  for (let index = 0; index < steps.length; index++) {
-    const step = current.diskSteps?.[index];
-    if (!step || step.status === 'applied') continue;
-    try {
-      if (step.type === 'write') {
-        await getApplier().saveEditedFile(step.filePath, step.content, step.expectedContent);
-      } else if (step.type === 'delete') {
-        await getApplier().deleteEditedFile(step.filePath, step.expectedContent);
-      } else {
-        const content = step.authoritativeContent;
-        if (!content) throw new Error('Rename recovery content is unavailable');
-        if (step.type === 'restore-rejected-rename') {
-          await getApplier().restoreRejectedRename(
-            step.filePath,
-            content.originalFullContent,
-            content.modifiedFullContent,
-            content.snippets
-          );
-        } else {
-          await getApplier().reapplyRejectedRename(
-            step.filePath,
-            content.originalFullContent,
-            content.snippets
-          );
-        }
-      }
-      const postState = await classifyDirectReviewMutationStep(step);
-      if (postState !== 'after' && postState !== 'both') {
-        throw new Error('Review mutation did not reach its durable postimage');
-      }
-    } catch (error) {
-      await reviewMutationJournal.markFailed(current, error).catch((journalError) => {
-        logger.error('Unable to mark failed direct review mutation:', journalError);
-      });
-      throw error;
-    }
-    const nextSteps = current.diskSteps!.map((candidate, candidateIndex) =>
-      candidateIndex === index ? { ...candidate, status: 'applied' as const } : candidate
-    );
-    current = await reviewMutationJournal.checkpoint({ ...current, diskSteps: nextSteps });
-    await finalizeDirectReviewMutationArtifacts(step);
-    if (step.authoritativeContent) {
-      invalidateAuthoritativeReviewContent(step.authoritativeContent);
-    } else {
-      getContentResolver().invalidateFile(step.filePath);
-    }
-  }
-  return current;
-}
-
-async function handleExecuteReviewMutation(
-  _event: IpcMainInvokeEvent,
-  requestValue: unknown
-): Promise<IpcResult<ExecuteReviewMutationResult>> {
-  if (!requestValue || typeof requestValue !== 'object' || Array.isArray(requestValue)) {
-    return { success: false, error: 'Invalid review mutation request' };
-  }
-  const request = requestValue as ExecuteReviewMutationRequest;
-  const allowsEmptyDiskMutation =
-    request.kind === 'undo' || request.kind === 'redo' || request.kind === 'reload-external';
-  if (
-    (request.kind !== 'restore' &&
-      request.kind !== 'rename' &&
-      request.kind !== 'undo' &&
-      request.kind !== 'redo' &&
-      request.kind !== 'reload-external') ||
-    !Array.isArray(request.diskSteps) ||
-    (!allowsEmptyDiskMutation && request.diskSteps.length === 0) ||
-    request.diskSteps.length > MAX_REVIEW_MUTATION_STEPS
-  ) {
-    return { success: false, error: 'Invalid review mutation request' };
-  }
-  return wrapReviewHandler('executeMutation', async () => {
-    const { scope, authorization } = await resolveReviewPathAuthorization(request.scope, {
-      requireIdentity: true,
-    });
-    const persistenceScope = parseDecisionPersistenceScope(request.decisionPersistenceScope, scope);
-    if (!persistenceScope) throw new Error('Review mutation requires an exact decision scope');
-    reviewDecisionStore.assertValidSnapshot(request.persistedState);
-    if (
-      !Number.isSafeInteger(request.expectedDecisionRevision) ||
-      request.expectedDecisionRevision < 0
-    ) {
-      throw new Error('Review mutation requires an exact decision revision');
-    }
-
-    return withReviewDecisionPersistenceLock(scope.teamName, persistenceScope, async () => {
-      await recoverReviewMutationJournal(scope.teamName, persistenceScope);
-      await assertCurrentReviewDecisionRevision(
-        scope.teamName,
-        persistenceScope,
-        request.expectedDecisionRevision
-      );
-      const current = await reviewDecisionStore.load(
-        scope.teamName,
-        persistenceScope.scopeKey,
-        persistenceScope.scopeToken
-      );
-      assertExactReviewHistoryTransition(request, current, authorization);
-      const persistedState = await assertAuthoritativeForwardReviewMutation(
-        request,
-        current,
-        scope,
-        authorization
-      );
-      // Recovery can change disk state and invalidate authoritative review content.
-      // Resolve this operation only after every older WAL record is complete.
-      const diskSteps = await normalizeDirectReviewMutationSteps(
-        request.diskSteps,
-        scope,
-        authorization
-      );
-      const diskPostimages = await buildDirectReviewMutationDiskPostimages(diskSteps);
-      await assertDirectReviewMutationPreimages(diskSteps);
-      await reviewMutationCoordinator.execute(
-        {
-          teamName: scope.teamName,
-          persistenceScope,
-          reviewScope: scope,
-          kind: request.kind,
-          decisions: [],
-          fileContents: [],
-          diskSteps,
-          persistedState,
-          expectedDecisionRevision: request.expectedDecisionRevision,
-        },
-        {
-          applyDisk: applyDirectReviewMutationDisk,
-          commitDecisions: commitReviewMutationDecisions,
-        }
-      );
-      const committed = await reviewDecisionStore.load(
-        scope.teamName,
-        persistenceScope.scopeKey,
-        persistenceScope.scopeToken
-      );
-      return {
-        decisionRevision: committed?.revision ?? request.expectedDecisionRevision,
-        diskPostimages,
-        ...(request.kind === 'restore' || request.kind === 'rename'
-          ? { committedReviewAction: committed?.reviewActionHistory.at(-1) }
-          : {}),
-      };
-    });
-  });
-}
-
-function parseReviewHistoryRestoreTarget(value: unknown): RestoreReviewHistoryRequest['target'] {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Invalid review history restore target');
-  }
-  const target = value as Record<string, unknown>;
-  if (target.kind === 'start') return { kind: 'start' };
-  if (
-    target.kind !== 'after-action' ||
-    (target.stack !== 'undo' && target.stack !== 'redo') ||
-    typeof target.actionId !== 'string' ||
-    target.actionId.length === 0 ||
-    target.actionId.length > 256
-  ) {
-    throw new Error('Invalid review history restore target');
-  }
-  return { kind: 'after-action', stack: target.stack, actionId: target.actionId };
-}
-
-async function handleRestoreReviewHistory(
-  _event: IpcMainInvokeEvent,
-  requestValue: unknown
-): Promise<IpcResult<RestoreReviewHistoryResult>> {
-  return wrapReviewHandler('restoreHistory', async () => {
-    if (!requestValue || typeof requestValue !== 'object' || Array.isArray(requestValue)) {
-      throw new Error('Invalid review history restore request');
-    }
-    const request = requestValue as RestoreReviewHistoryRequest;
-    const target = parseReviewHistoryRestoreTarget(request.target);
-    if (
-      !Number.isSafeInteger(request.expectedDecisionRevision) ||
-      request.expectedDecisionRevision < 0
-    ) {
-      throw new Error('Review history restore requires an exact decision revision');
-    }
-    const { scope, authorization } = await resolveReviewPathAuthorization(request.scope, {
-      requireIdentity: true,
-    });
-    const persistenceScope = parseDecisionPersistenceScope(request.decisionPersistenceScope, scope);
-    if (!persistenceScope) {
-      throw new Error('Review history restore requires an exact decision scope');
-    }
-
-    return withReviewDecisionPersistenceLock(scope.teamName, persistenceScope, async () => {
-      await recoverReviewMutationJournal(scope.teamName, persistenceScope);
-      await assertCurrentReviewDecisionRevision(
-        scope.teamName,
-        persistenceScope,
-        request.expectedDecisionRevision
-      );
-      const current = await reviewDecisionStore.load(
-        scope.teamName,
-        persistenceScope.scopeKey,
-        persistenceScope.scopeToken
-      );
-      if (!current) throw new Error('Review history is unavailable');
-      const currentState: ReviewPersistedStateSnapshot = {
-        hunkDecisions: current.hunkDecisions,
-        fileDecisions: current.fileDecisions,
-        hunkContextHashesByFile: current.hunkContextHashesByFile,
-        reviewActionHistory: current.reviewActionHistory,
-        reviewRedoHistory: current.reviewRedoHistory,
-      };
-      const plan = buildReviewHistoryRestorePlan(currentState, target, (filePath) =>
-        getAuthoritativeReviewedFile(authorization, filePath)
-      );
-      if (plan.actionCount === 0) {
-        return {
-          decisionRevision: current.revision,
-          persistedState: currentState,
-          direction: 'none' as const,
-          actionCount: 0,
-          diskPostimages: [],
-        };
-      }
-      if (plan.direction === 'none') {
-        throw new Error('Review history restore plan is inconsistent');
-      }
-      const direction = plan.direction;
-      for (const action of plan.orderedActions) assertAuthoritativelyBoundReviewAction(action);
-      reviewDecisionStore.assertValidSnapshot(plan.persistedState);
-      const plannedDiskSteps = buildReviewHistoryRestoreDiskSteps(
-        plan.orderedActions.map((action) => ({ direction, action }))
-      );
-      const diskSteps = await normalizeDirectReviewMutationSteps(
-        plannedDiskSteps,
-        scope,
-        authorization
-      );
-      const diskPostimages = await buildDirectReviewMutationDiskPostimages(diskSteps);
-      await assertDirectReviewMutationPreimages(diskSteps);
-      await reviewMutationCoordinator.execute(
-        {
-          teamName: scope.teamName,
-          persistenceScope,
-          reviewScope: scope,
-          kind: 'restore-history',
-          decisions: [],
-          fileContents: [],
-          diskSteps,
-          persistedState: plan.persistedState,
-          expectedDecisionRevision: request.expectedDecisionRevision,
-        },
-        {
-          applyDisk: applyDirectReviewMutationDisk,
-          commitDecisions: commitReviewMutationDecisions,
-        }
-      );
-      const committed = await reviewDecisionStore.load(
-        scope.teamName,
-        persistenceScope.scopeKey,
-        persistenceScope.scopeToken
-      );
-      if (!committed) throw new Error('Restored review history was not committed');
-      return {
-        decisionRevision: committed.revision,
-        persistedState: {
-          hunkDecisions: committed.hunkDecisions,
-          fileDecisions: committed.fileDecisions,
-          hunkContextHashesByFile: committed.hunkContextHashesByFile,
-          reviewActionHistory: committed.reviewActionHistory,
-          reviewRedoHistory: committed.reviewRedoHistory,
-        },
-        direction,
-        actionCount: plan.actionCount,
-        diskPostimages,
-      };
-    });
   });
 }
 
@@ -3426,288 +2940,5 @@ async function handleGetGitFileLog(
       return [];
     }
     return gitDiffFallback.getFileLog(projectPath, filePath);
-  });
-}
-
-// --- Decision Persistence Handlers ---
-
-function assertRecoverableJournalContent(
-  record: Awaited<ReturnType<ReviewMutationJournalStore['list']>>[number]
-): void {
-  if (
-    record.persistedState &&
-    (!Number.isSafeInteger(record.expectedDecisionRevision) || record.expectedDecisionRevision! < 0)
-  ) {
-    throw new Error('Review mutation recovery revision is unavailable');
-  }
-  if (record.diskSteps?.length) {
-    if (!record.persistedState) {
-      throw new Error('Review mutation recovery state is unavailable');
-    }
-    reviewDecisionStore.assertValidSnapshot(record.persistedState);
-    return;
-  }
-  if (
-    (record.kind === 'undo' ||
-      record.kind === 'redo' ||
-      record.kind === 'reload-external' ||
-      record.kind === 'restore-history') &&
-    record.decisions.length === 0 &&
-    record.fileContents.length === 0 &&
-    record.persistedState
-  ) {
-    reviewDecisionStore.assertValidSnapshot(record.persistedState);
-    return;
-  }
-  if (record.decisions.length === 0 || record.decisions.length !== record.fileContents.length) {
-    throw new Error('Invalid review mutation recovery batch');
-  }
-  for (const [index, decision] of record.decisions.entries()) {
-    const fileContent = record.fileContents[index];
-    assertReviewDecisionShape(decision);
-    assertSnippetShapes(fileContent?.snippets);
-    if (
-      !fileContent ||
-      fileContent.filePath !== decision.filePath ||
-      (fileContent.originalFullContent !== null &&
-        typeof fileContent.originalFullContent !== 'string') ||
-      (fileContent.modifiedFullContent !== null &&
-        typeof fileContent.modifiedFullContent !== 'string') ||
-      typeof fileContent.isNewFile !== 'boolean'
-    ) {
-      throw new Error('Invalid review mutation recovery content');
-    }
-  }
-}
-
-async function recoverReviewMutationJournal(
-  teamName: string,
-  persistenceScope: ReviewDecisionPersistenceScope
-): Promise<void> {
-  const records = await reviewMutationJournal.list(teamName, persistenceScope);
-  for (const record of records) {
-    if (record.blocked) {
-      throw new Error(
-        'A previous review update did not finish safely. Retry recovery or discard saved review state.'
-      );
-    }
-    assertRecoverableJournalContent(record);
-    const parsedScope = parseReviewFileScope(record.reviewScope);
-    if (!parsedScope.taskId && !parsedScope.memberName) {
-      throw new Error('Review mutation recovery requires taskId or memberName');
-    }
-    const scope = parsedScope;
-    if (scope.teamName !== teamName) {
-      throw new Error('Review mutation recovery scope mismatch');
-    }
-    parseDecisionPersistenceScope(persistenceScope, scope);
-    if (
-      !record.diskSteps?.length &&
-      record.decisions.length === 0 &&
-      (record.kind === 'undo' ||
-        record.kind === 'redo' ||
-        record.kind === 'reload-external' ||
-        record.kind === 'restore-history')
-    ) {
-      await reviewMutationCoordinator.resume(record, {
-        applyDisk: applyDirectReviewMutationDisk,
-        commitDecisions: commitReviewMutationDecisions,
-      });
-      continue;
-    }
-    if (record.diskSteps?.length) {
-      const { authorization } = await resolveReviewPathAuthorization(scope, {
-        requireIdentity: true,
-      });
-      for (const step of record.diskSteps) {
-        const filePath = await validateAuthorizedReviewFilePath(authorization, step.filePath, {
-          requireReviewedFile: false,
-          rejectHardlinks: true,
-        });
-        if (filePath !== path.resolve(path.normalize(step.filePath))) {
-          throw new Error('Review mutation recovery file mismatch');
-        }
-        if (step.authoritativeContent) {
-          await validateSnippetPaths(authorization, step.authoritativeContent.snippets, {
-            requireReviewedFile: false,
-            rejectHardlinks: true,
-          });
-        }
-      }
-      await reviewMutationCoordinator.resume(record, {
-        applyDisk: applyDirectReviewMutationDisk,
-        commitDecisions: commitReviewMutationDecisions,
-      });
-      continue;
-    }
-    await reviewMutationCoordinator.resume(record, {
-      applyDisk: async (current) => {
-        const { authorization } = await resolveReviewPathAuthorization(scope, {
-          requireIdentity: true,
-        });
-        for (const [index, savedDecision] of current.decisions.entries()) {
-          const savedContent = current.fileContents[index];
-          const filePath = await validateAuthorizedReviewFilePath(
-            authorization,
-            savedDecision.filePath,
-            { requireReviewedFile: false, rejectHardlinks: true }
-          );
-          await validateSnippetPaths(authorization, savedContent.snippets, {
-            requireReviewedFile: false,
-            rejectHardlinks: true,
-          });
-          if (filePath !== path.resolve(path.normalize(savedContent.filePath))) {
-            throw new Error('Review mutation recovery file mismatch');
-          }
-        }
-        return applyJournalDecisionBatchDisk(current);
-      },
-      commitDecisions: commitReviewMutationDecisions,
-    });
-  }
-}
-
-async function handleRetryReviewMutationRecovery(
-  _event: IpcMainInvokeEvent,
-  requestValue: unknown
-): Promise<IpcResult<RetryReviewMutationRecoveryResult>> {
-  return wrapReviewHandler('retryMutationRecovery', async () => {
-    if (!requestValue || typeof requestValue !== 'object' || Array.isArray(requestValue)) {
-      throw new Error('Invalid review mutation recovery request');
-    }
-    const request = requestValue as RetryReviewMutationRecoveryRequest;
-    const { scope, authorization } = await resolveReviewPathAuthorization(request.scope, {
-      requireIdentity: true,
-    });
-    const persistenceScope = parseDecisionPersistenceScope(request.decisionPersistenceScope, scope);
-    if (!persistenceScope) {
-      throw new Error('Review mutation recovery requires an exact decision scope');
-    }
-    const expectedRestore = request.expectedRestore;
-    if (expectedRestore) {
-      if (
-        !Number.isSafeInteger(expectedRestore.expectedDecisionRevision) ||
-        expectedRestore.expectedDecisionRevision < 0 ||
-        !Array.isArray(expectedRestore.diskSteps) ||
-        expectedRestore.diskSteps.length > MAX_REVIEW_MUTATION_STEPS
-      ) {
-        throw new Error('Invalid expected review history Restore recovery');
-      }
-      reviewDecisionStore.assertValidSnapshot(expectedRestore.persistedState);
-    }
-
-    return withReviewDecisionPersistenceLock(scope.teamName, persistenceScope, async () => {
-      const records = await reviewMutationJournal.list(scope.teamName, persistenceScope);
-      if (records.length > 1) {
-        throw new Error('Multiple review mutations require manual recovery');
-      }
-      const record = records[0];
-      const recordDiskSteps = (record?.diskSteps ?? []).map(
-        ({ status: _status, authoritativeContent: _authoritativeContent, ...step }) => step
-      );
-      const matchesExpectedRestore =
-        !record ||
-        !expectedRestore ||
-        (record.kind === 'restore-history' &&
-          record.expectedDecisionRevision === expectedRestore.expectedDecisionRevision &&
-          isDurableReviewEqual(record.persistedState, expectedRestore.persistedState) &&
-          isDurableReviewEqual(recordDiskSteps, expectedRestore.diskSteps));
-      if (!matchesExpectedRestore) {
-        const committed = await reviewDecisionStore.load(
-          scope.teamName,
-          persistenceScope.scopeKey,
-          persistenceScope.scopeToken
-        );
-        return {
-          decisionRevision: committed?.revision ?? 0,
-          recoveredMutation: false,
-          recoveredRestoreHistory: false,
-          differentMutationPending: true,
-          persistedState: committed
-            ? {
-                hunkDecisions: committed.hunkDecisions,
-                fileDecisions: committed.fileDecisions,
-                hunkContextHashesByFile: committed.hunkContextHashesByFile,
-                reviewActionHistory: committed.reviewActionHistory,
-                reviewRedoHistory: committed.reviewRedoHistory,
-              }
-            : null,
-          expectedRestoreCompleted: false,
-          diskPostimages: [],
-          retried: false,
-        };
-      }
-      let diskPostimages: ReviewMutationDiskPostimage[] = [];
-      let postimagesResolved = false;
-      if (record) {
-        try {
-          diskPostimages = await buildJournalRecoveryDiskPostimages(record);
-          postimagesResolved = true;
-        } catch (error) {
-          logger.warn('Unable to resolve interrupted review mutation postimages:', error);
-        }
-      }
-      const retried = Boolean(record?.blocked);
-      if (record?.blocked) await reviewMutationJournal.unblock(record);
-      await recoverReviewMutationJournal(scope.teamName, persistenceScope);
-      const committed = await reviewDecisionStore.load(
-        scope.teamName,
-        persistenceScope.scopeKey,
-        persistenceScope.scopeToken
-      );
-      const persistedState = committed
-        ? {
-            hunkDecisions: committed.hunkDecisions,
-            fileDecisions: committed.fileDecisions,
-            hunkContextHashesByFile: committed.hunkContextHashesByFile,
-            reviewActionHistory: committed.reviewActionHistory,
-            reviewRedoHistory: committed.reviewRedoHistory,
-          }
-        : null;
-      const expectedRestoreStateCompleted = Boolean(
-        expectedRestore &&
-        committed &&
-        committed.revision === expectedRestore.expectedDecisionRevision + 1 &&
-        persistedState &&
-        isDurableReviewEqual(persistedState, expectedRestore.persistedState) &&
-        (!record || record.kind === 'restore-history')
-      );
-      if (expectedRestoreStateCompleted && !record && expectedRestore) {
-        try {
-          const normalizedSteps = await normalizeDirectReviewMutationSteps(
-            expectedRestore.diskSteps,
-            scope,
-            authorization
-          );
-          const postimageStates = await Promise.all(
-            normalizedSteps.map((step) => classifyDirectReviewMutationStep(step))
-          );
-          if (postimageStates.some((state) => state !== 'after' && state !== 'both')) {
-            throw new Error('Completed Restore disk postimage is no longer present');
-          }
-          diskPostimages = await buildDirectReviewMutationDiskPostimages(normalizedSteps);
-          postimagesResolved = true;
-        } catch (error) {
-          logger.warn('Unable to verify completed Restore postimages:', error);
-          diskPostimages = [];
-        }
-      }
-      const expectedRestoreCompleted = Boolean(
-        expectedRestoreStateCompleted &&
-        expectedRestore &&
-        (expectedRestore.diskSteps.length === 0 || postimagesResolved)
-      );
-      return {
-        decisionRevision: committed?.revision ?? 0,
-        recoveredMutation: Boolean(record),
-        recoveredRestoreHistory: record?.kind === 'restore-history',
-        differentMutationPending: false,
-        persistedState,
-        expectedRestoreCompleted,
-        diskPostimages:
-          expectedRestoreCompleted || (Boolean(record) && postimagesResolved) ? diskPostimages : [],
-        retried,
-      };
-    });
   });
 }
