@@ -12,8 +12,8 @@ import {
 } from '@features/internal-storage/contracts';
 import { AdoptTeamRoster, type TeamRosterRepository } from '@features/team-lifecycle';
 import {
-  LegacyTeamRosterFileSource,
   type LegacyTeamRosterFileOpen,
+  LegacyTeamRosterFileSource,
 } from '@features/team-lifecycle/main/infrastructure/LegacyTeamRosterFileSource';
 import { parseMemberId, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it, vi } from 'vitest';
