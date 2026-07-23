@@ -17,11 +17,13 @@ import {
 } from '@features/team-message-delivery/renderer';
 import { isActiveProvisioningState } from '@features/team-provisioning';
 import {
+  createProductTeamLaunchAnalyticsCoordinator,
   createTeamProvisioningControlSlice,
   createTeamProvisioningLaunchSlice,
   createTeamProvisioningProgressSlice,
   createTeamRuntimeObservationSlice,
   saveTeamToolApprovalSettings,
+  type TeamLaunchAnalyticsContext,
   type TeamProvisioningControlSlice,
   type TeamProvisioningLaunchSlice,
   type TeamProvisioningProgressSlice,
@@ -54,15 +56,13 @@ import {
   type TeamMessagesCacheEntry,
   type TeamViewDataRendererSlice,
 } from '@features/team-view-read-model/renderer';
-import {
-  buildProviderMix,
-  classifyAnalyticsError,
-  elapsedMsBetweenIso,
-  elapsedMsSince,
-  recordTeamCreate,
-  recordTeamLaunchEnd,
-} from '@renderer/analytics/productAnalytics';
+import { classifyAnalyticsError } from '@renderer/analytics/productAnalytics';
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
+import {
+  getAttachmentMimeTypes,
+  getAttachmentTotalSizeBytes,
+  getTeamLifecycleAnalyticsContext,
+} from '@renderer/analytics/teamAnalyticsMetadata';
 import { api } from '@renderer/api';
 import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
 import {
@@ -181,11 +181,8 @@ import type {
   NotificationTarget,
   RetryFailedOpenCodeSecondaryLanesResult,
   TeamAgentRuntimeSnapshot,
-  TeamCreateRequest,
-  TeamLaunchRequest,
   TeamProvisioningProgress,
   TeamSummary,
-  TeamViewSnapshot,
   ToolApprovalRequest,
   ToolApprovalSettings,
 } from '@shared/types';
@@ -194,7 +191,6 @@ interface CurrentDevProductAnalytics {
   recordAttachmentAttachEnd(input: Record<string, unknown>): void;
   recordCrossTeamMessageSend(input: Record<string, unknown>): void;
   recordTeamDelete(input: Record<string, unknown>): void;
-  recordTeamLaunchStepEnd(input: Record<string, unknown>): void;
 }
 
 const currentDevProductAnalytics =
@@ -204,8 +200,6 @@ const recordAttachmentAttachEnd =
 const recordCrossTeamMessageSend =
   currentDevProductAnalytics.recordCrossTeamMessageSend ?? (() => undefined);
 const recordTeamDelete = currentDevProductAnalytics.recordTeamDelete ?? (() => undefined);
-const recordTeamLaunchStepEnd =
-  currentDevProductAnalytics.recordTeamLaunchStepEnd ?? (() => undefined);
 import type { StateCreator } from 'zustand';
 
 export { getLastResolvedTeamDataRefreshAt } from '../team/teamDataRefreshTimestamps';
@@ -241,20 +235,11 @@ const MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS = 5_000;
 const TEAM_REFRESH_BURST_WINDOW_MS = 4_000;
 const MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS = 2_000;
 const teamDirectoryRefreshCoordinator = new TeamDirectoryRefreshCoordinator<ContextRequestScope>();
-const reportedTeamLaunchEndRunIds = new Set<string>();
-const reportedTeamLaunchStepKeys = new Set<string>();
-const teamLaunchAnalyticsByRunId = new Map<string, TeamLaunchAnalyticsContext>();
-const teamLaunchStepStartedAtByKey = new Map<string, number>();
+const teamLaunchAnalyticsCoordinator = createProductTeamLaunchAnalyticsCoordinator();
 const teamAgentRuntimeFreshnessSnapshotsByTeamAndRun = new Map<
   string,
   Map<string | null, TeamAgentRuntimeSnapshot>
 >();
-
-interface TeamLaunchAnalyticsContext {
-  startedAtMs: number;
-  memberCount: number | null;
-  providerIds: (string | null)[];
-}
 
 function parseRuntimeFreshnessTimestampMs(value: string | undefined): number | null {
   if (!value) return null;
@@ -359,10 +344,7 @@ export function __resetTeamSliceModuleStateForTests(): void {
   defaultTeamViewDataCoordinator.reset();
   defaultTeamMessageFeedCoordinator.reset();
   teamDirectoryRefreshCoordinator.reset();
-  reportedTeamLaunchEndRunIds.clear();
-  reportedTeamLaunchStepKeys.clear();
-  teamLaunchStepStartedAtByKey.clear();
-  teamLaunchAnalyticsByRunId.clear();
+  teamLaunchAnalyticsCoordinator.reset();
   resetTeamTaskBoardAnalyticsForTests();
   teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.clear();
   clearAllPendingReplyRefreshWaits();
@@ -492,223 +474,6 @@ function maybeLogMemberSpawnUiEqualSuppressed(
   logger.debug(
     `[perf] member-spawn snapshot suppressed team=${teamName} runId=${runId ?? 'none'} reason=member-spawn-ui-equal`
   );
-}
-
-function getProviderIdsFromTeamCreateRequest(
-  request: Pick<TeamCreateRequest, 'providerId' | 'members'>
-): (string | null)[] {
-  return request.members.map((member) => member.providerId ?? request.providerId ?? null);
-}
-
-function getProviderIdsFromTeamData(data: TeamViewSnapshot | null | undefined): (string | null)[] {
-  if (!data) return [];
-  return data.members.map((member) => member.providerId ?? null);
-}
-
-function isMultimodelTeamRequest(
-  request: Pick<TeamCreateRequest, 'providerId' | 'members'>
-): boolean {
-  return buildProviderMix(getProviderIdsFromTeamCreateRequest(request)).hasMixedProviders;
-}
-
-function buildTeamCreateLaunchAnalyticsContext(
-  request: TeamCreateRequest,
-  startedAtMs: number
-): TeamLaunchAnalyticsContext {
-  return {
-    startedAtMs,
-    memberCount: request.members.length,
-    providerIds: getProviderIdsFromTeamCreateRequest(request),
-  };
-}
-
-function buildTeamLaunchAnalyticsContext(
-  request: TeamLaunchRequest,
-  data: TeamViewSnapshot | null,
-  startedAtMs: number
-): TeamLaunchAnalyticsContext {
-  const providerIds = getProviderIdsFromTeamData(data);
-  return {
-    startedAtMs,
-    memberCount: data?.members.length ?? null,
-    providerIds: providerIds.length > 0 ? providerIds : [request.providerId ?? null],
-  };
-}
-
-function getProgressTimestampMs(value: string | undefined): number | null {
-  const timestamp = value ? Date.parse(value) : Number.NaN;
-  return Number.isFinite(timestamp) ? timestamp : null;
-}
-
-function getLaunchStepForState(
-  state: TeamProvisioningProgress['state']
-): 'config_validation' | 'runtime_prepare' | 'member_spawn' | 'bootstrap' | 'ready_check' {
-  if (state === 'validating') return 'config_validation';
-  if (state === 'spawning') return 'runtime_prepare';
-  if (state === 'configuring' || state === 'assembling') return 'member_spawn';
-  if (state === 'finalizing') return 'bootstrap';
-  return 'ready_check';
-}
-
-function isTerminalLaunchState(state: TeamProvisioningProgress['state']): boolean {
-  return (
-    state === 'ready' || state === 'disconnected' || state === 'failed' || state === 'cancelled'
-  );
-}
-
-function recordTeamLaunchStepTransition(
-  existingProgress: TeamProvisioningProgress | undefined,
-  progress: TeamProvisioningProgress,
-  data: TeamViewSnapshot | null
-): void {
-  const step = getLaunchStepForState(progress.state);
-  const stepKey = `${progress.runId}:${step}`;
-  const progressStartedAtMs = getProgressTimestampMs(progress.startedAt) ?? Date.now();
-  if (!teamLaunchStepStartedAtByKey.has(stepKey) && !isTerminalLaunchState(progress.state)) {
-    teamLaunchStepStartedAtByKey.set(stepKey, progressStartedAtMs);
-  }
-  if (!existingProgress || existingProgress.state === progress.state) return;
-
-  const previousStep = getLaunchStepForState(existingProgress.state);
-  const previousStepKey = `${progress.runId}:${previousStep}`;
-  if (reportedTeamLaunchStepKeys.has(previousStepKey)) return;
-
-  const endedAtMs =
-    getProgressTimestampMs(progress.updatedAt) ??
-    getProgressTimestampMs(existingProgress.updatedAt) ??
-    Date.now();
-  const startedAtMs =
-    teamLaunchStepStartedAtByKey.get(previousStepKey) ??
-    getProgressTimestampMs(existingProgress.updatedAt) ??
-    getProgressTimestampMs(existingProgress.startedAt) ??
-    progressStartedAtMs;
-  const analyticsContext = teamLaunchAnalyticsByRunId.get(progress.runId) ?? null;
-  const providerIds = analyticsContext?.providerIds.length
-    ? analyticsContext.providerIds
-    : getProviderIdsFromTeamData(data);
-  const failedTransition =
-    progress.state === 'failed' ||
-    progress.state === 'cancelled' ||
-    progress.state === 'disconnected';
-
-  reportedTeamLaunchStepKeys.add(previousStepKey);
-  teamLaunchStepStartedAtByKey.delete(previousStepKey);
-  recordTeamLaunchStepEnd({
-    step: previousStep,
-    success: !failedTransition,
-    durationMs: Math.max(0, endedAtMs - startedAtMs),
-    memberCount: analyticsContext?.memberCount ?? data?.members.length ?? null,
-    providerIds,
-    errorClass: failedTransition
-      ? classifyAnalyticsError(progress.error ?? progress.message)
-      : 'none',
-    partialFailure:
-      progress.state === 'disconnected' ||
-      progress.launchDiagnostics?.some((item) => item.severity === 'error') === true,
-  });
-
-  if (!isTerminalLaunchState(progress.state)) {
-    teamLaunchStepStartedAtByKey.set(stepKey, endedAtMs);
-  }
-}
-
-function estimateBase64Bytes(base64: string | null | undefined): number | null {
-  if (typeof base64 !== 'string' || !base64) return null;
-  const normalized = base64.includes(',') ? (base64.split(',').pop() ?? '') : base64;
-  const padding = normalized.endsWith('==') ? 2 : normalized.endsWith('=') ? 1 : 0;
-  return Math.max(0, Math.floor((normalized.length * 3) / 4) - padding);
-}
-
-function getAttachmentTotalSizeBytes(
-  attachments:
-    | readonly { size?: number; data?: string; base64Data?: string; base64?: string }[]
-    | undefined
-): number | null {
-  if (!attachments?.length) return null;
-  let total = 0;
-  let hasKnownSize = false;
-  for (const attachment of attachments) {
-    const size =
-      typeof attachment.size === 'number'
-        ? attachment.size
-        : estimateBase64Bytes(attachment.data ?? attachment.base64Data ?? attachment.base64);
-    if (typeof size === 'number' && Number.isFinite(size) && size >= 0) {
-      total += size;
-      hasKnownSize = true;
-    }
-  }
-  return hasKnownSize ? total : null;
-}
-
-function getAttachmentMimeTypes(
-  attachments: readonly { mimeType?: string; type?: string }[] | undefined
-): (string | null)[] {
-  return attachments?.map((attachment) => attachment.mimeType ?? attachment.type ?? null) ?? [];
-}
-
-function getTeamLifecycleAnalyticsContext(data: TeamViewSnapshot | null): {
-  memberCount: number | null;
-  providerIds: (string | null)[];
-  runtimeActive: boolean | null;
-  hadRunningTasks: boolean | null;
-} {
-  return {
-    memberCount: data?.members.length ?? null,
-    providerIds: getProviderIdsFromTeamData(data),
-    runtimeActive: typeof data?.isAlive === 'boolean' ? data.isAlive : null,
-    hadRunningTasks: data ? data.tasks.some((task) => task.status === 'in_progress') : null,
-  };
-}
-
-function clearTeamLaunchStepTracking(runId: string): void {
-  for (const key of teamLaunchStepStartedAtByKey.keys()) {
-    if (key.startsWith(`${runId}:`)) {
-      teamLaunchStepStartedAtByKey.delete(key);
-    }
-  }
-}
-
-function recordTeamLaunchTerminalProgress(
-  progress: TeamProvisioningProgress,
-  data: TeamViewSnapshot | null
-): void {
-  if (reportedTeamLaunchEndRunIds.has(progress.runId)) return;
-  reportedTeamLaunchEndRunIds.add(progress.runId);
-  const analyticsContext = teamLaunchAnalyticsByRunId.get(progress.runId) ?? null;
-  teamLaunchAnalyticsByRunId.delete(progress.runId);
-  const success = progress.state === 'ready';
-  const partialFailure =
-    progress.state === 'disconnected' ||
-    progress.launchDiagnostics?.some((item) => item.severity === 'error') === true;
-  const fallbackProviderIds = getProviderIdsFromTeamData(data);
-
-  recordTeamLaunchEnd({
-    success,
-    durationMs: elapsedMsBetweenIso(progress.startedAt, progress.updatedAt),
-    memberCount: analyticsContext?.memberCount ?? data?.members.length ?? null,
-    providerIds: analyticsContext?.providerIds.length
-      ? analyticsContext.providerIds
-      : fallbackProviderIds,
-    failureReasonClass: success
-      ? 'none'
-      : classifyAnalyticsError(progress.error ?? progress.message),
-    partialFailure,
-  });
-  clearTeamLaunchStepTracking(progress.runId);
-}
-
-function recordTeamLaunchIpcFailure(
-  analyticsContext: TeamLaunchAnalyticsContext,
-  error: unknown
-): void {
-  recordTeamLaunchEnd({
-    success: false,
-    durationMs: elapsedMsSince(analyticsContext.startedAtMs),
-    memberCount: analyticsContext.memberCount,
-    providerIds: analyticsContext.providerIds,
-    failureReasonClass: classifyAnalyticsError(error),
-    partialFailure: false,
-  });
 }
 
 export interface GlobalTaskDetailState {
@@ -1221,10 +986,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   ...createTeamProvisioningControlSlice({
     effects: {
       applyProgress: (progress) => get().onProvisioningProgress(progress),
-      clearLaunchTracking: (runId) => {
-        teamLaunchAnalyticsByRunId.delete(runId);
-        clearTeamLaunchStepTracking(runId);
-      },
+      clearLaunchTracking: (runId) => teamLaunchAnalyticsCoordinator.clearRun(runId),
       clearRuntimeFreshness: clearTeamAgentRuntimeFreshnessSnapshot,
     },
     state: {
@@ -1239,23 +1001,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     },
   }),
   ...createTeamProvisioningLaunchSlice<TeamMessagesCacheEntry, TeamLaunchAnalyticsContext>({
-    analytics: {
-      createContext: buildTeamCreateLaunchAnalyticsContext,
-      launchContext: buildTeamLaunchAnalyticsContext,
-      recordCreateAccepted: (request, runId, context) => {
-        teamLaunchAnalyticsByRunId.set(runId, context);
-        recordTeamCreate({
-          source: 'dialog',
-          memberCount: request.members.length,
-          providerIds: getProviderIdsFromTeamCreateRequest(request),
-          multimodelEnabled: isMultimodelTeamRequest(request),
-        });
-      },
-      recordIpcFailure: recordTeamLaunchIpcFailure,
-      recordLaunchAccepted: (runId, context) => {
-        teamLaunchAnalyticsByRunId.set(runId, context);
-      },
-    },
+    analytics: teamLaunchAnalyticsCoordinator.createLaunchPort(),
     control: {
       clearMissingRun: (runId) => get().clearMissingProvisioningRun(runId),
       getStatus: (runId) => get().getProvisioningStatus(runId),
@@ -1284,21 +1030,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     },
   }),
   ...createTeamProvisioningProgressSlice({
-    analytics: {
+    analytics: teamLaunchAnalyticsCoordinator.createProgressPort({
+      getTeamData: (teamName) => selectTeamDataForName(get(), teamName),
       noteRefreshFanout: (note) =>
         noteTeamRefreshFanout({
           ...note,
           surface: 'provisioning-progress',
         }),
-      recordStepTransition: (existingProgress, progress) =>
-        recordTeamLaunchStepTransition(
-          existingProgress,
-          progress,
-          selectTeamDataForName(get(), progress.teamName)
-        ),
-      recordTerminalProgress: (progress) =>
-        recordTeamLaunchTerminalProgress(progress, selectTeamDataForName(get(), progress.teamName)),
-    },
+    }),
     refresh: {
       fetchMemberSpawnStatuses: (teamName) => get().fetchMemberSpawnStatuses(teamName),
       fetchTeamAgentRuntime: (teamName) => get().fetchTeamAgentRuntime(teamName),
