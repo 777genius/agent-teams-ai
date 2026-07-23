@@ -66,9 +66,7 @@ export function objectBindingSelections(bindingName) {
   });
 }
 
-export function importedNameForReference(reference, importedBinding) {
-  if (importedBinding.importedName !== '*') return importedBinding.importedName;
-
+export function selectedMemberForReference(reference) {
   const parent = reference.parent;
   if (
     (ts.isPropertyAccessExpression(parent) && parent.expression === reference) ||
@@ -76,5 +74,14 @@ export function importedNameForReference(reference, importedBinding) {
   ) {
     return parent.name?.text ?? parent.right.text;
   }
-  return importedBinding.importedName;
+  return null;
+}
+
+export function importedNameForReference(reference, importedBinding) {
+  if (importedBinding.importedName !== '*') return importedBinding.importedName;
+  return selectedMemberForReference(reference) ?? importedBinding.importedName;
+}
+
+export function selectImportedName(importedName, selectedName) {
+  return importedName === '*' && selectedName ? selectedName : importedName;
 }

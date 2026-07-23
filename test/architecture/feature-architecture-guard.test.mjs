@@ -439,6 +439,49 @@ test('recognizes JavaScript feature root entrypoints', () => {
   );
 });
 
+test('preserves member selection through local aliases', () => {
+  withFixture(
+    {
+      'src/features/default-alias/main/index.ts': `
+        import { Infra } from './barrel';
+        const Impl = Infra;
+        export default Impl.value;
+      `,
+      'src/features/default-alias/main/barrel.ts': `
+        export { Infra } from './infrastructure/Infra';
+      `,
+      'src/features/default-alias/main/infrastructure/Infra.ts':
+        'export const Infra = { value: true };',
+      'src/features/namespace-safe/main/index.ts': `
+        const barrel = await import('./mixedBarrel');
+        export const Safe = barrel.Safe;
+      `,
+      'src/features/namespace-safe/main/mixedBarrel.ts': `
+        export { Safe } from './safe';
+        export { Infra } from './infrastructure/Infra';
+      `,
+      'src/features/namespace-safe/main/safe.ts': 'export const Safe = true;',
+      'src/features/namespace-safe/main/infrastructure/Infra.ts': 'export class Infra {}',
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      assert.deepEqual(
+        violations
+          .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
+          .map(toBaselineEntry),
+        [
+          {
+            publicEntrypoint: 'src/features/default-alias/main/index.ts',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/default-alias/main/barrel.ts',
+            specifier: './infrastructure/Infra',
+          },
+        ]
+      );
+    }
+  );
+});
+
 test('uses stable dependency identities that ignore line movement', () => {
   const first = architectureViolation(
     FEATURE_ARCHITECTURE_RULES.coreDomainIsolation,

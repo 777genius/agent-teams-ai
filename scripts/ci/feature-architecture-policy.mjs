@@ -8,6 +8,8 @@ import {
   findPublicMutationOwner,
   importedNameForReference,
   objectBindingSelections,
+  selectImportedName,
+  selectedMemberForReference,
 } from './feature-export-analysis.mjs';
 import {
   collectProductionSourceFiles,
@@ -403,8 +405,12 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
           });
         } else if (declaredLocalNames.has(node.text) && !owner.localNames.includes(node.text)) {
           for (const localName of owner.localNames) {
-            const references = localReferenceNames.get(localName) ?? new Set();
-            references.add(node.text);
+            const references = localReferenceNames.get(localName) ?? new Map();
+            const selectedName = selectedMemberForReference(node);
+            references.set(`${node.text}:${selectedName ?? ''}`, {
+              localName: node.text,
+              selectedName,
+            });
             localReferenceNames.set(localName, references);
           }
         }
@@ -422,8 +428,11 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     const nextVisited = new Set(visited).add(localName);
     return [
       ...(localDependencyReferences.get(localName) ?? []),
-      ...[...(localReferenceNames.get(localName) ?? [])].flatMap((referenceName) =>
-        resolveLocalDependencies(referenceName, nextVisited)
+      ...[...(localReferenceNames.get(localName)?.values() ?? [])].flatMap((reference) =>
+        resolveLocalDependencies(reference.localName, nextVisited).map((dependency) => ({
+          ...dependency,
+          importedName: selectImportedName(dependency.importedName, reference.selectedName),
+        }))
       ),
     ];
   };
@@ -434,7 +443,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       reexports.push({
         ...dependency.edge,
         exportedName,
-        importedName: importedName ?? dependency.importedName,
+        importedName: selectImportedName(dependency.importedName, importedName),
         kind: 'export',
         line,
       });
