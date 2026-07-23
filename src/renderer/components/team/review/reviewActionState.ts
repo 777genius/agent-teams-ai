@@ -10,22 +10,22 @@ import {
   isReviewFileExpectedDeleted,
 } from './reviewContentPreview';
 
-import type { ReviewDraftHistoryConflictCandidateSummary } from '@features/change-review-history/contracts';
 import type {
   ConflictCheckResult,
   FileChangeSummary,
   FileChangeWithContent,
   HunkDecision,
-  ReviewDecisionConflictCandidateSummary,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
 } from '@shared/types';
 
 export type { ReviewOperationScopeToken } from '@features/change-review/renderer';
+export type { ReviewConflictCandidateSelection } from '@features/change-review/renderer';
 export {
   createReviewOperationScopeToken,
   getReviewDecisionHydrationGuard,
   isReviewOperationScopeCurrent,
+  selectLatestReviewConflictCandidate,
 } from '@features/change-review/renderer';
 
 export interface ReviewDecisionRecords {
@@ -39,23 +39,6 @@ export function shouldRequestReviewCloseForEscape(input: {
   hasOpenModalLayer: boolean;
 }): boolean {
   return input.key === 'Escape' && !input.defaultPrevented && !input.hasOpenModalLayer;
-}
-
-export type ReviewConflictCandidateSelection =
-  | { kind: 'decision'; value: ReviewDecisionConflictCandidateSummary }
-  | { kind: 'draft'; value: ReviewDraftHistoryConflictCandidateSummary };
-
-export function selectLatestReviewConflictCandidate(
-  decisions: readonly ReviewDecisionConflictCandidateSummary[],
-  drafts: readonly ReviewDraftHistoryConflictCandidateSummary[]
-): ReviewConflictCandidateSelection | null {
-  const decision = decisions[0];
-  const draft = drafts[0];
-  if (!decision) return draft ? { kind: 'draft', value: draft } : null;
-  if (!draft) return { kind: 'decision', value: decision };
-  return Date.parse(decision.capturedAt) >= Date.parse(draft.capturedAt)
-    ? { kind: 'decision', value: decision }
-    : { kind: 'draft', value: draft };
 }
 
 export function replaceReviewScopedRecord<T>(

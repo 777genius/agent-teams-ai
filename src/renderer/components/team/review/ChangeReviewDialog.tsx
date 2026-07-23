@@ -18,6 +18,11 @@ import {
   buildReviewFileLabels,
   buildReviewStats,
   buildWatchedReviewFilePathsKey,
+  ChangeReviewConflictDiscardDialog,
+  ChangeReviewConflictNotices,
+  createChangeReviewConflictCommandPort,
+  createChangeReviewConflictQueryPort,
+  createChangeReviewConflictStateBridge,
   createChangeReviewDraftHistoryPort,
   findActiveReviewFile,
   resolveReviewFileLabel as resolveReviewFileLabelFromMap,
@@ -25,6 +30,8 @@ import {
   sortChangeReviewFiles,
   TaskChangesEmptyState,
   toTaskChangeSetV2,
+  useChangeReviewConflictDiscoveryController,
+  useChangeReviewConflictInteractionController,
   useChangeReviewDraftHistoryController,
   useChangeReviewLifecycleRegistration,
   useChangeReviewOperationGeneration,
@@ -38,16 +45,6 @@ import {
 } from '@features/review-mutations';
 import { api, isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@renderer/components/ui/alert-dialog';
 import { useContinuousScrollNav } from '@renderer/hooks/useContinuousScrollNav';
 import { useDiffNavigation } from '@renderer/hooks/useDiffNavigation';
 import { useViewedFiles } from '@renderer/hooks/useViewedFiles';
@@ -63,7 +60,7 @@ import { buildSelectionInfo, SELECTION_DEBOUNCE_MS } from '@renderer/utils/codem
 import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
-import { AlertTriangle, ChevronDown, Clock, X } from 'lucide-react';
+import { ChevronDown, Clock, X } from 'lucide-react';
 
 import { ChangesLoadingAnimation } from './ChangesLoadingAnimation';
 import {
@@ -95,7 +92,6 @@ import {
   replaceReviewScopedRecord,
   resolveReviewFileIsNew,
   restoreReviewDecisionRecordsForFile,
-  selectLatestReviewConflictCandidate,
   shouldCreateFileWhenUndoingReject,
   shouldDeleteFileWhenUndoingReject,
   shouldRequestReviewCloseForEscape,
@@ -128,20 +124,13 @@ import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
 import { ViewedProgressBar } from './ViewedProgressBar';
 
-import type {
-  ReviewActionPersistenceStatus,
-  ReviewConflictCandidateSelection,
-  ReviewDecisionRecords,
-} from './reviewActionState';
+import type { ReviewActionPersistenceStatus, ReviewDecisionRecords } from './reviewActionState';
 import type { EditorView } from '@codemirror/view';
 import type { ReviewDraftHistoryHydrationState } from '@features/change-review/renderer';
-import type { ReviewDraftHistoryConflictCandidateSummary } from '@features/change-review-history/contracts';
 import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import type {
   FileChangeSummary,
   HunkDecision,
-  ReviewConflictResolution,
-  ReviewDecisionConflictCandidateSummary,
   ReviewDecisionSnapshot,
   ReviewDiskUndoAction,
   ReviewDiskUndoSnapshot,
@@ -183,7 +172,12 @@ interface ReviewPersistenceSnapshotIdentity {
 
 const REVIEW_PERSISTENCE_ERROR =
   'Latest review action is not saved. Retry from History before continuing.';
-const REVIEW_CONFLICT_LOAD_ERROR_PREFIX = 'Unable to load durable recovery copies:';
+const changeReviewConflictQueryPort = createChangeReviewConflictQueryPort(() => api.review);
+const changeReviewConflictCommandPort = createChangeReviewConflictCommandPort(() => api.review);
+const changeReviewConflictStateBridge = createChangeReviewConflictStateBridge({
+  getSnapshot: useStore.getState,
+  setApplyError: (applyError) => useStore.setState({ applyError }),
+});
 const changeReviewDraftHistoryPort = createChangeReviewDraftHistoryPort(() => api.review);
 
 function captureReviewPersistenceSnapshotIdentity(
@@ -354,17 +348,6 @@ export const ChangeReviewDialog = ({
 
   const [draftHistoryHydration, setDraftHistoryHydration] =
     useState<ReviewDraftHistoryHydrationState>({ key: null, status: 'idle' });
-  const [decisionConflictCandidates, setDecisionConflictCandidates] = useState<
-    ReviewDecisionConflictCandidateSummary[]
-  >([]);
-  const [draftHistoryConflictCandidates, setDraftHistoryConflictCandidates] = useState<
-    ReviewDraftHistoryConflictCandidateSummary[]
-  >([]);
-  const [reviewConflictRefreshPending, setReviewConflictRefreshPending] = useState(false);
-  const [reviewConflictLoadError, setReviewConflictLoadError] = useState<string | null>(null);
-  const [resolvingConflictCandidateId, setResolvingConflictCandidateId] = useState<string | null>(
-    null
-  );
   const {
     scopeKey,
     decisionScopeKey,
@@ -450,8 +433,6 @@ export const ChangeReviewDialog = ({
   // Exact disk state on which each manual draft started. Map.has() distinguishes
   // a genuinely missing file (null baseline) from an uncaptured baseline.
   const expectedDraftHistoryKeyRef = useRef<string | null>(null);
-  const reviewConflictRefreshGenerationRef = useRef(0);
-  const conflictResolutionOperationRef = useRef<object | null>(null);
 
   const hydrateDecisionsFromDisk = useCallback(
     async (
@@ -478,80 +459,6 @@ export const ChangeReviewDialog = ({
     [loadDecisionsFromDisk]
   );
 
-  const refreshReviewConflictCandidates = useCallback(async (): Promise<void> => {
-    const refreshGeneration = ++reviewConflictRefreshGenerationRef.current;
-    if (!decisionHydrationKey || !decisionScopeToken) {
-      setDecisionConflictCandidates([]);
-      setDraftHistoryConflictCandidates([]);
-      setReviewConflictRefreshPending(false);
-      setReviewConflictLoadError(null);
-      return;
-    }
-    const hydrationKey = decisionHydrationKey;
-    setReviewConflictRefreshPending(true);
-    try {
-      const [decisionCandidates, draftCandidates] = await Promise.all([
-        api.review.loadDecisionConflictCandidates(teamName, decisionScopeKey, decisionScopeToken),
-        api.review.loadDraftHistoryConflictCandidates(
-          teamName,
-          decisionScopeKey,
-          decisionScopeToken
-        ),
-      ]);
-      if (
-        expectedDraftHistoryKeyRef.current !== hydrationKey ||
-        reviewConflictRefreshGenerationRef.current !== refreshGeneration
-      ) {
-        return;
-      }
-      if (decisionCandidates.length > 0) {
-        await hydrateDecisionsFromDisk(
-          teamName,
-          decisionScopeKey,
-          decisionScopeToken,
-          hydrationKey
-        );
-        if (
-          expectedDraftHistoryKeyRef.current !== hydrationKey ||
-          reviewConflictRefreshGenerationRef.current !== refreshGeneration
-        ) {
-          return;
-        }
-      }
-      setDecisionConflictCandidates(decisionCandidates);
-      setDraftHistoryConflictCandidates(draftCandidates);
-      setReviewConflictLoadError(null);
-      useStore.setState((state) =>
-        state.applyError?.startsWith(REVIEW_CONFLICT_LOAD_ERROR_PREFIX) ? { applyError: null } : {}
-      );
-    } catch (error) {
-      if (
-        expectedDraftHistoryKeyRef.current !== hydrationKey ||
-        reviewConflictRefreshGenerationRef.current !== refreshGeneration
-      ) {
-        return;
-      }
-      const message = `${REVIEW_CONFLICT_LOAD_ERROR_PREFIX} ${String(error)}`;
-      setReviewConflictLoadError(message);
-      useStore.setState({
-        applyError: message,
-      });
-    } finally {
-      if (
-        expectedDraftHistoryKeyRef.current === hydrationKey &&
-        reviewConflictRefreshGenerationRef.current === refreshGeneration
-      ) {
-        setReviewConflictRefreshPending(false);
-      }
-    }
-  }, [
-    decisionHydrationKey,
-    decisionScopeKey,
-    decisionScopeToken,
-    hydrateDecisionsFromDisk,
-    teamName,
-  ]);
-
   // Proxy ref for useDiffNavigation (points to active file's editor)
   const activeEditorViewRef = useRef<EditorView | null>(null);
   const activeFilePathRef = useRef<string | null>(null);
@@ -576,15 +483,10 @@ export const ChangeReviewDialog = ({
   useLayoutEffect(() => {
     const activeHydrationKey = open && lifecycleAuthorized ? decisionHydrationKey : null;
     expectedDraftHistoryKeyRef.current = activeHydrationKey;
-    reviewConflictRefreshGenerationRef.current += 1;
-    conflictResolutionOperationRef.current = null;
-    setResolvingConflictCandidateId(null);
     return () => {
       if (expectedDraftHistoryKeyRef.current === activeHydrationKey) {
         expectedDraftHistoryKeyRef.current = null;
       }
-      reviewConflictRefreshGenerationRef.current += 1;
-      conflictResolutionOperationRef.current = null;
     };
   }, [decisionHydrationKey, lifecycleAuthorized, open]);
 
@@ -611,6 +513,49 @@ export const ChangeReviewDialog = ({
 
   const isExpectedDraftHistoryKey = useCallback(
     (hydrationKey: string): boolean => expectedDraftHistoryKeyRef.current === hydrationKey,
+    []
+  );
+  const conflictScope = useMemo(
+    () =>
+      decisionScopeToken
+        ? { teamName, scopeKey: decisionScopeKey, scopeToken: decisionScopeToken }
+        : null,
+    [decisionScopeKey, decisionScopeToken, teamName]
+  );
+  const hydrateConflictDecisions = useCallback(
+    async (scope: NonNullable<typeof conflictScope>, hydrationKey: string): Promise<void> => {
+      await hydrateDecisionsFromDisk(
+        scope.teamName,
+        scope.scopeKey,
+        scope.scopeToken,
+        hydrationKey
+      );
+    },
+    [hydrateDecisionsFromDisk]
+  );
+  const {
+    decisionCandidates: decisionConflictCandidates,
+    draftHistoryCandidates: draftHistoryConflictCandidates,
+    candidateCount: reviewConflictCandidateCount,
+    refreshPending: reviewConflictRefreshPending,
+    loadError: reviewConflictLoadError,
+    refresh: refreshReviewConflictCandidates,
+    reset: resetReviewConflictCandidates,
+  } = useChangeReviewConflictDiscoveryController({
+    active: open && lifecycleAuthorized,
+    hydrationKey: decisionHydrationKey,
+    scope: conflictScope,
+    isExpectedHydrationKey: isExpectedDraftHistoryKey,
+    hydrateDecisions: hydrateConflictDecisions,
+    clearReportedLoadError: changeReviewConflictStateBridge.clearReportedLoadError,
+    reportLoadError: changeReviewConflictStateBridge.reportError,
+    port: changeReviewConflictQueryPort,
+  });
+  const publishReviewActionPersistenceStatus = useCallback(
+    (status: ReviewActionPersistenceStatus): void => {
+      reviewActionPersistenceStatusRef.current = status;
+      setReviewActionPersistenceStatus(status);
+    },
     []
   );
   const commitHydratedDrafts = useCallback(
@@ -684,24 +629,47 @@ export const ChangeReviewDialog = ({
     getDiagnostics: getDraftHistoryDiagnostics,
   } = draftHistory;
 
+  const {
+    activeCandidate: activeReviewConflictCandidate,
+    activeCandidateRecoverable: activeReviewConflictRecoverable,
+    resolvingCandidateId: resolvingConflictCandidateId,
+    pendingDiscard: pendingRecoveryDiscard,
+    requestDiscard: requestRecoveryDiscard,
+    onDiscardOpenChange: handleRecoveryDiscardOpenChange,
+    confirmPendingDiscard: confirmRecoveryDiscard,
+    resolveActiveCandidate: handleResolveReviewConflictCandidate,
+  } = useChangeReviewConflictInteractionController({
+    active: open && lifecycleAuthorized,
+    hydrationKey: decisionHydrationKey,
+    scope: conflictScope,
+    decisionCandidates: decisionConflictCandidates,
+    draftHistoryCandidates: draftHistoryConflictCandidates,
+    captureOperationScope: captureReviewOperationScope,
+    isCurrentOperationScope: isCurrentReviewOperationScope,
+    isExpectedHydrationKey: isExpectedDraftHistoryKey,
+    hydrateDecisions: hydrateConflictDecisions,
+    isDecisionHydrationLoaded: changeReviewConflictStateBridge.isDecisionHydrationLoaded,
+    publishDecisionPersistenceSaved: () => publishReviewActionPersistenceStatus('saved'),
+    resolveDraftHistoryCandidate: resolveDraftHistoryConflictCandidate,
+    clearResolutionError: changeReviewConflictStateBridge.clearResolutionError,
+    reportResolutionError: changeReviewConflictStateBridge.reportError,
+    refreshCandidates: refreshReviewConflictCandidates,
+    port: changeReviewConflictCommandPort,
+  });
+
   useEffect(() => {
     if (!open || !lifecycleAuthorized || !decisionHydrationKey) {
-      setDecisionConflictCandidates([]);
-      setDraftHistoryConflictCandidates([]);
-      setReviewConflictRefreshPending(false);
-      setReviewConflictLoadError(null);
+      resetReviewConflictCandidates();
       return;
     }
     void refreshReviewConflictCandidates();
-  }, [decisionHydrationKey, lifecycleAuthorized, open, refreshReviewConflictCandidates]);
-
-  const publishReviewActionPersistenceStatus = useCallback(
-    (status: ReviewActionPersistenceStatus): void => {
-      reviewActionPersistenceStatusRef.current = status;
-      setReviewActionPersistenceStatus(status);
-    },
-    []
-  );
+  }, [
+    decisionHydrationKey,
+    lifecycleAuthorized,
+    open,
+    refreshReviewConflictCandidates,
+    resetReviewConflictCandidates,
+  ]);
 
   useEffect(() => {
     reviewActionPersistenceGenerationRef.current += 1;
@@ -988,8 +956,6 @@ export const ChangeReviewDialog = ({
     undoing,
     closing,
   });
-  const reviewConflictCandidateCount =
-    decisionConflictCandidates.length + draftHistoryConflictCandidates.length;
   const reviewActionsBusy =
     reviewMutationBusy ||
     reviewConflictRefreshPending ||
@@ -1033,133 +999,6 @@ export const ChangeReviewDialog = ({
     resolvingConflictCandidateId,
     reviewConflictCandidateCount,
   ]);
-
-  const activeReviewConflictCandidate = useMemo(
-    () =>
-      selectLatestReviewConflictCandidate(
-        decisionConflictCandidates,
-        draftHistoryConflictCandidates
-      ),
-    [decisionConflictCandidates, draftHistoryConflictCandidates]
-  );
-  const activeReviewConflictRecoverable =
-    activeReviewConflictCandidate?.value.recoverability === 'recoverable';
-  const [pendingRecoveryDiscard, setPendingRecoveryDiscard] =
-    useState<ReviewConflictCandidateSelection | null>(null);
-
-  useEffect(() => {
-    setPendingRecoveryDiscard(null);
-  }, [decisionHydrationKey]);
-
-  const handleResolveReviewConflictCandidate = useCallback(
-    async (resolution: ReviewConflictResolution, expectedCandidateId?: string): Promise<void> => {
-      if (
-        !activeReviewConflictCandidate ||
-        (resolution === 'recover-candidate' && !activeReviewConflictRecoverable) ||
-        (expectedCandidateId !== undefined &&
-          activeReviewConflictCandidate.value.id !== expectedCandidateId) ||
-        !decisionHydrationKey ||
-        !decisionScopeToken ||
-        resolvingConflictCandidateId !== null
-      ) {
-        return;
-      }
-      const selected = activeReviewConflictCandidate;
-      const resolutionHydrationKey = decisionHydrationKey;
-      const operationScope = captureReviewOperationScope();
-      if (!operationScope) return;
-      const resolutionOperation = {};
-      conflictResolutionOperationRef.current = resolutionOperation;
-      setResolvingConflictCandidateId(selected.value.id);
-      try {
-        if (selected.kind === 'decision') {
-          await api.review.resolveDecisionConflictCandidate(
-            teamName,
-            decisionScopeKey,
-            decisionScopeToken,
-            selected.value.id,
-            resolution,
-            selected.value.observedCurrentRevision
-          );
-          if (
-            !isCurrentReviewOperationScope(operationScope) ||
-            expectedDraftHistoryKeyRef.current !== resolutionHydrationKey
-          ) {
-            return;
-          }
-          await hydrateDecisionsFromDisk(
-            teamName,
-            decisionScopeKey,
-            decisionScopeToken,
-            resolutionHydrationKey
-          );
-          if (
-            !isCurrentReviewOperationScope(operationScope) ||
-            expectedDraftHistoryKeyRef.current !== resolutionHydrationKey
-          ) {
-            return;
-          }
-          const hydrated = useStore.getState();
-          if (
-            hydrated.decisionHydrationScopeKey !== resolutionHydrationKey ||
-            hydrated.decisionHydrationStatus !== 'loaded'
-          ) {
-            throw new Error('Resolved decisions could not be reloaded');
-          }
-          publishReviewActionPersistenceStatus('saved');
-        } else {
-          const resolved = await resolveDraftHistoryConflictCandidate(
-            selected.value,
-            resolution,
-            operationScope
-          );
-          if (!resolved) return;
-        }
-        if (
-          !isCurrentReviewOperationScope(operationScope) ||
-          expectedDraftHistoryKeyRef.current !== resolutionHydrationKey
-        ) {
-          return;
-        }
-        useStore.setState({ applyError: null });
-        await refreshReviewConflictCandidates();
-      } catch (error) {
-        if (
-          !isCurrentReviewOperationScope(operationScope) ||
-          expectedDraftHistoryKeyRef.current !== resolutionHydrationKey
-        ) {
-          return;
-        }
-        useStore.setState({
-          applyError: `Unable to resolve the durable recovery copy: ${String(error)}`,
-        });
-        await refreshReviewConflictCandidates();
-      } finally {
-        if (
-          isCurrentReviewOperationScope(operationScope) &&
-          conflictResolutionOperationRef.current === resolutionOperation
-        ) {
-          conflictResolutionOperationRef.current = null;
-          setResolvingConflictCandidateId(null);
-        }
-      }
-    },
-    [
-      activeReviewConflictCandidate,
-      activeReviewConflictRecoverable,
-      captureReviewOperationScope,
-      decisionHydrationKey,
-      decisionScopeKey,
-      decisionScopeToken,
-      hydrateDecisionsFromDisk,
-      isCurrentReviewOperationScope,
-      publishReviewActionPersistenceStatus,
-      refreshReviewConflictCandidates,
-      resolveDraftHistoryConflictCandidate,
-      resolvingConflictCandidateId,
-      teamName,
-    ]
-  );
 
   const hasReviewDraft = useCallback(
     (filePath: string): boolean => filePath in useStore.getState().editedContents,
@@ -4474,54 +4313,12 @@ export const ChangeReviewDialog = ({
         onOpenChange={diffNav.setShowShortcutsHelp}
       />
 
-      <AlertDialog
-        open={pendingRecoveryDiscard !== null}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen && resolvingConflictCandidateId === null) {
-            setPendingRecoveryDiscard(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard this recovery branch?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingRecoveryDiscard?.kind === 'decision'
-                ? `Captured ${new Date(pendingRecoveryDiscard.value.capturedAt).toLocaleString()} with ${pendingRecoveryDiscard.value.undoDepth} Undo and ${pendingRecoveryDiscard.value.redoDepth} Redo actions.`
-                : pendingRecoveryDiscard
-                  ? `Captured ${new Date(pendingRecoveryDiscard.value.capturedAt).toLocaleString()} for ${pendingRecoveryDiscard.value.filePath}.`
-                  : ''}{' '}
-              Your current branch stays saved. The selected recovery copy will be permanently
-              deleted and cannot be restored later.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={resolvingConflictCandidateId !== null}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={!pendingRecoveryDiscard || resolvingConflictCandidateId !== null}
-              className="bg-red-600 text-white hover:bg-red-500"
-              onClick={() => {
-                if (!pendingRecoveryDiscard) return;
-                const operationScope = captureReviewOperationScope();
-                if (!operationScope) return;
-                const candidateId = pendingRecoveryDiscard.value.id;
-                void handleResolveReviewConflictCandidate('keep-current', candidateId).finally(
-                  () => {
-                    if (!isCurrentReviewOperationScope(operationScope)) return;
-                    setPendingRecoveryDiscard((current) =>
-                      current?.value.id === candidateId ? null : current
-                    );
-                  }
-                );
-              }}
-            >
-              Discard recovery branch
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ChangeReviewConflictDiscardDialog
+        pendingDiscard={pendingRecoveryDiscard}
+        resolvingCandidateId={resolvingConflictCandidateId}
+        onOpenChange={handleRecoveryDiscardOpenChange}
+        onConfirm={confirmRecoveryDiscard}
+      />
 
       {/* Review toolbar */}
       {!changeSetLoading &&
@@ -4587,81 +4384,17 @@ export const ChangeReviewDialog = ({
         />
       )}
 
-      {reviewConflictLoadError && (
-        <div
-          role="alert"
-          className="flex items-center gap-3 border-b border-red-500/25 bg-red-500/10 px-4 py-2.5 text-xs text-red-200"
-        >
-          <AlertTriangle className="size-4 shrink-0 text-red-400" />
-          <div className="min-w-0 flex-1">
-            Recovery copies could not be verified. Review actions stay locked to prevent data loss.
-          </div>
-          <button
-            type="button"
-            onClick={() => void refreshReviewConflictCandidates()}
-            disabled={reviewConflictRefreshPending}
-            className="shrink-0 rounded border border-red-400/30 px-2.5 py-1.5 hover:bg-red-400/10 disabled:opacity-50"
-          >
-            Retry recovery check
-          </button>
-        </div>
-      )}
-
-      {activeReviewConflictCandidate && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-center gap-3 border-b border-amber-500/25 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-100"
-        >
-          <AlertTriangle className="size-4 shrink-0 text-amber-400" />
-          <div className="min-w-0 flex-1">
-            <div className="font-medium">A conflicting recovery branch is safe on disk</div>
-            <div className="mt-0.5 text-amber-100/70">
-              {activeReviewConflictCandidate.kind === 'decision'
-                ? activeReviewConflictCandidate.value.origin === 'prior-snapshot'
-                  ? `An earlier review snapshot has a saved branch with ${activeReviewConflictCandidate.value.undoDepth} Undo and ${activeReviewConflictCandidate.value.redoDepth} Redo actions. It cannot be applied to this changed diff.`
-                  : `Another window saved a different review branch. Local copy: ${activeReviewConflictCandidate.value.undoDepth} Undo and ${activeReviewConflictCandidate.value.redoDepth} Redo actions.`
-                : activeReviewConflictCandidate.value.recoverability ===
-                    'file-not-in-current-review'
-                  ? `An earlier manual-edit branch targets ${activeReviewConflictCandidate.value.filePath}, which is not part of the current review.`
-                  : activeReviewConflictCandidate.value.entryRevision === null
-                    ? `The recovery branch has no saved manual edits for ${activeReviewConflictCandidate.value.filePath}.`
-                    : `Another window saved different manual edit history for ${activeReviewConflictCandidate.value.filePath}.`}
-              {reviewConflictCandidateCount > 1
-                ? ` ${reviewConflictCandidateCount - 1} more recovery ${reviewConflictCandidateCount === 2 ? 'copy is' : 'copies are'} queued.`
-                : ''}
-              {activeReviewConflictRecoverable
-                ? ' Switching branches first preserves the current branch as another recovery copy.'
-                : ' Review actions remain locked until this incompatible copy is explicitly discarded.'}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setPendingRecoveryDiscard(activeReviewConflictCandidate)}
-            disabled={
-              resolvingConflictCandidateId !== null ||
-              reviewConflictRefreshPending ||
-              reviewConflictLoadError !== null
-            }
-            className="shrink-0 rounded border border-amber-400/30 px-2.5 py-1.5 text-amber-100 hover:bg-amber-400/10 disabled:opacity-50"
-          >
-            Discard recovery branch
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleResolveReviewConflictCandidate('recover-candidate')}
-            disabled={
-              !activeReviewConflictRecoverable ||
-              resolvingConflictCandidateId !== null ||
-              reviewConflictRefreshPending ||
-              reviewConflictLoadError !== null
-            }
-            className="shrink-0 rounded bg-amber-400 px-2.5 py-1.5 font-medium text-amber-950 hover:bg-amber-300 disabled:opacity-50"
-          >
-            Switch to recovery
-          </button>
-        </div>
-      )}
+      <ChangeReviewConflictNotices
+        loadError={reviewConflictLoadError}
+        refreshPending={reviewConflictRefreshPending}
+        activeCandidate={activeReviewConflictCandidate}
+        activeCandidateRecoverable={activeReviewConflictRecoverable}
+        candidateCount={reviewConflictCandidateCount}
+        resolvingCandidateId={resolvingConflictCandidateId}
+        onRetry={refreshReviewConflictCandidates}
+        onRequestDiscard={requestRecoveryDiscard}
+        onRecover={() => handleResolveReviewConflictCandidate('recover-candidate')}
+      />
 
       {/* Apply error */}
       {applyError && (
