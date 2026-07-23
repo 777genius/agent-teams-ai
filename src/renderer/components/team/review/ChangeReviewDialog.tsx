@@ -8,7 +8,6 @@ import React, {
   useState,
 } from 'react';
 
-import { redoDepth, undoDepth } from '@codemirror/commands';
 import { Transaction } from '@codemirror/state';
 import { registerAppCloseParticipant } from '@features/app-close-coordination/renderer';
 import {
@@ -18,21 +17,29 @@ import {
   buildReviewFileLabels,
   buildReviewStats,
   buildWatchedReviewFilePathsKey,
+  CHANGE_REVIEW_PERSISTENCE_ERROR,
   ChangeReviewConflictDiscardDialog,
   ChangeReviewConflictNotices,
+  createChangeReviewActionHistoryStorePort,
   createChangeReviewConflictCommandPort,
   createChangeReviewConflictQueryPort,
   createChangeReviewConflictStateBridge,
+  createChangeReviewDecisionPersistencePort,
   createChangeReviewDraftHistoryPort,
   findActiveReviewFile,
+  isReviewActionPersistenceBlocking,
   resolveReviewFileLabel as resolveReviewFileLabelFromMap,
   shouldShowTaskScopeBanner,
   sortChangeReviewFiles,
   TaskChangesEmptyState,
   toTaskChangeSetV2,
+  useChangeReviewActionHistoryController,
   useChangeReviewConflictDiscoveryController,
   useChangeReviewConflictInteractionController,
+  useChangeReviewDecisionAutoPersistence,
+  useChangeReviewDecisionPersistenceController,
   useChangeReviewDraftHistoryController,
+  useChangeReviewHistoryKeyboardShortcuts,
   useChangeReviewLifecycleRegistration,
   useChangeReviewOperationGeneration,
   useChangeReviewScopeIdentity,
@@ -77,18 +84,14 @@ import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { buildPathChangeLabels } from './pathChangeLabels';
 import { getReviewActionFilePath } from './reviewActionPresentation';
 import {
-  appendOrderedReviewAction,
   getReviewCloseBlockReason,
   getReviewRenameRecoveryExpectation,
   hasReviewFileRejections,
   hasUnresolvedReviewExternalChange,
   hasUnscopedLocalReviewState,
   isReviewActionLocked,
-  isReviewActionPersistenceBlocking,
   isReviewFileFullyRejected,
-  popOrderedReviewAction,
   reconcileReviewDecisionRecordsAfterApply,
-  replaceLatestReviewAction,
   replaceReviewScopedRecord,
   resolveReviewFileIsNew,
   restoreReviewDecisionRecordsForFile,
@@ -124,7 +127,7 @@ import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
 import { ViewedProgressBar } from './ViewedProgressBar';
 
-import type { ReviewActionPersistenceStatus, ReviewDecisionRecords } from './reviewActionState';
+import type { ReviewDecisionRecords } from './reviewActionState';
 import type { EditorView } from '@codemirror/view';
 import type { ReviewDraftHistoryHydrationState } from '@features/change-review/renderer';
 import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
@@ -145,11 +148,6 @@ import type { EditorSelectionAction, EditorSelectionInfo } from '@shared/types/e
 
 type RecentHunkUndoAction = Extract<ReviewUndoAction, { kind: 'hunk' }>['action'];
 type RecentDiskUndoAction = ReviewDiskUndoAction;
-type ReviewUndoActionInput =
-  | Omit<Extract<ReviewUndoAction, { kind: 'bulk' }>, 'id' | 'createdAt'>
-  | Omit<Extract<ReviewUndoAction, { kind: 'disk' }>, 'id' | 'createdAt'>
-  | Omit<Extract<ReviewUndoAction, { kind: 'hunk' }>, 'id' | 'createdAt'>;
-
 interface RecentReviewWrite {
   at: number;
   expectedContent: string | null;
@@ -160,18 +158,6 @@ interface ReviewCloseFlushResult {
   blocker?: string;
 }
 
-interface ReviewPersistenceSnapshotIdentity {
-  scopeToken: string;
-  hunkDecisions: object;
-  fileDecisions: object;
-  reviewActionHistory: object;
-  reviewRedoHistory: object;
-  fileContents: object;
-  fileChunkCounts: object;
-}
-
-const REVIEW_PERSISTENCE_ERROR =
-  'Latest review action is not saved. Retry from History before continuing.';
 const changeReviewConflictQueryPort = createChangeReviewConflictQueryPort(() => api.review);
 const changeReviewConflictCommandPort = createChangeReviewConflictCommandPort(() => api.review);
 const changeReviewConflictStateBridge = createChangeReviewConflictStateBridge({
@@ -179,56 +165,14 @@ const changeReviewConflictStateBridge = createChangeReviewConflictStateBridge({
   setApplyError: (applyError) => useStore.setState({ applyError }),
 });
 const changeReviewDraftHistoryPort = createChangeReviewDraftHistoryPort(() => api.review);
-
-function captureReviewPersistenceSnapshotIdentity(
-  scopeToken: string,
-  state: Pick<
-    ReturnType<typeof useStore.getState>,
-    | 'hunkDecisions'
-    | 'fileDecisions'
-    | 'reviewActionHistory'
-    | 'reviewRedoHistory'
-    | 'fileContents'
-    | 'fileChunkCounts'
-  >
-): ReviewPersistenceSnapshotIdentity {
-  return {
-    scopeToken,
-    hunkDecisions: state.hunkDecisions,
-    fileDecisions: state.fileDecisions,
-    reviewActionHistory: state.reviewActionHistory,
-    reviewRedoHistory: state.reviewRedoHistory,
-    fileContents: state.fileContents,
-    fileChunkCounts: state.fileChunkCounts,
-  };
-}
-
-function isSameReviewPersistenceSnapshot(
-  left: ReviewPersistenceSnapshotIdentity | null,
-  right: ReviewPersistenceSnapshotIdentity
-): boolean {
-  return (
-    left?.scopeToken === right.scopeToken &&
-    left.hunkDecisions === right.hunkDecisions &&
-    left.fileDecisions === right.fileDecisions &&
-    left.reviewActionHistory === right.reviewActionHistory &&
-    left.reviewRedoHistory === right.reviewRedoHistory &&
-    left.fileContents === right.fileContents &&
-    left.fileChunkCounts === right.fileChunkCounts
-  );
-}
-
-let reviewActionIdSequence = 0;
-
-function createReviewUndoAction(input: ReviewUndoActionInput): ReviewUndoAction {
-  reviewActionIdSequence += 1;
-  const randomId = globalThis.crypto?.randomUUID?.();
-  return {
-    ...input,
-    id: randomId ?? `${Date.now().toString(36)}-${reviewActionIdSequence.toString(36)}`,
-    createdAt: new Date().toISOString(),
-  } as ReviewUndoAction;
-}
+const changeReviewActionHistoryStorePort = createChangeReviewActionHistoryStorePort({
+  getStore: useStore.getState,
+  clearLegacyUndoStack: () => useStore.setState({ reviewUndoStack: [] }),
+});
+const changeReviewDecisionPersistencePort = createChangeReviewDecisionPersistencePort({
+  getStore: useStore.getState,
+  setApplyError: (applyError) => useStore.setState({ applyError }),
+});
 
 function alignDiskUndoSnapshotWithAppliedContent(
   snapshot: ReviewDiskUndoSnapshot,
@@ -329,16 +273,11 @@ export const ChangeReviewDialog = ({
     reviewExternalChangesByFile,
     clearReviewFileExternalChange,
     reloadReviewFileFromDisk,
-    loadDecisionsFromDisk,
-    persistDecisions,
-    flushDecisionsToDisk,
     quiesceDecisionPersistence,
     recordDecisionRevision,
     clearDecisionsFromDisk,
     resetAllReviewState,
     fileChunkCounts,
-    setReviewActionHistory,
-    setReviewRedoHistory,
     hunkContextHashesByFile,
     changeSetEpoch,
     decisionHydrationScopeKey,
@@ -372,6 +311,30 @@ export const ChangeReviewDialog = ({
     decisionHydrationStatus,
     draftHistoryHydration,
   });
+  const {
+    undoDepth: reviewUndoDepth,
+    redoDepth: reviewRedoDepth,
+    getUndoHistory: getReviewUndoHistory,
+    getRedoHistory: getReviewRedoHistory,
+    getLatestUndoAction,
+    getLatestRedoAction,
+    pushUndoAction: pushReviewUndoAction,
+    completeUndoAction: completeReviewUndoAction,
+    bindCommittedAction: bindCommittedReviewAction,
+    completeRedoAction: completeReviewRedoAction,
+    discardLatestAction: discardLatestReviewAction,
+    publishUndoHistory: publishReviewUndoHistory,
+    replaceHistories: replaceReviewActionHistories,
+    clearForFile: clearReviewActionHistoryForFile,
+  } = useChangeReviewActionHistoryController({
+    resetKey: `${teamName}\0${scopeKey}\0${changeSetEpoch}`,
+    hydrationKey: decisionHydrationKey,
+    hydrationScopeKey: decisionHydrationScopeKey,
+    hydrationStatus: decisionHydrationStatus,
+    hydratedUndoHistory: reviewActionHistory,
+    hydratedRedoHistory: reviewRedoHistory,
+    store: changeReviewActionHistoryStorePort,
+  });
 
   // Active file from scroll-spy (replaces selectedReviewFilePath for continuous scroll)
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
@@ -380,11 +343,7 @@ export const ChangeReviewDialog = ({
   const [discardCounters, setDiscardCounters] = useState<Record<string, number>>({});
   const [filesApplying, setFilesApplying] = useState<Set<string>>(() => new Set());
   const [undoing, setUndoing] = useState(false);
-  const [reviewUndoDepth, setReviewUndoDepth] = useState(0);
-  const [reviewRedoDepth, setReviewRedoDepth] = useState(0);
   const [closing, setClosing] = useState(false);
-  const [reviewActionPersistenceStatus, setReviewActionPersistenceStatus] =
-    useState<ReviewActionPersistenceStatus>('saved');
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set<string>();
     try {
@@ -409,55 +368,14 @@ export const ChangeReviewDialog = ({
   // EditorView map for all visible file editors
   const editorViewMapRef = useRef(new Map<string, EditorView>());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  // Last focused CM editor - for Cmd+Z outside editor
-  const lastFocusedEditorRef = useRef<EditorView | null>(null);
-  // Ordered, self-contained history. The ref keeps keyboard routing synchronous while the
-  // matching Zustand array is persisted atomically with decisions.
-  const reviewUndoActionsRef = useRef<ReviewUndoAction[]>([]);
-  const reviewRedoActionsRef = useRef<ReviewRedoAction[]>([]);
-  const redoHistoryBeforePreparedActionRef = useRef<{
-    actionId: string;
-    history: ReviewRedoAction[];
-  } | null>(null);
   const fileApplyInFlightRef = useRef(new Set<string>());
   const undoInFlightRef = useRef(false);
   const closingRef = useRef(false);
   const pendingApplyCleanupKeyRef = useRef<string | null>(null);
-  const pendingAutoDecisionClearKeyRef = useRef<string | null>(null);
-  const reviewActionPersistenceStatusRef = useRef<ReviewActionPersistenceStatus>('saved');
-  const reviewActionPersistenceGenerationRef = useRef(0);
-  const immediatelyPersistedReviewSnapshotRef = useRef<ReviewPersistenceSnapshotIdentity | null>(
-    null
-  );
   const recentReviewWritesRef = useRef(new Map<string, RecentReviewWrite>());
   // Exact disk state on which each manual draft started. Map.has() distinguishes
   // a genuinely missing file (null baseline) from an uncaptured baseline.
   const expectedDraftHistoryKeyRef = useRef<string | null>(null);
-
-  const hydrateDecisionsFromDisk = useCallback(
-    async (
-      scopeTeamName: string,
-      scopeKeyValue: string,
-      scopeTokenValue: string,
-      hydrationKey: string
-    ): Promise<void> => {
-      await loadDecisionsFromDisk(scopeTeamName, scopeKeyValue, scopeTokenValue);
-      if (expectedDraftHistoryKeyRef.current !== hydrationKey) return;
-      const hydrated = useStore.getState();
-      if (
-        hydrated.decisionHydrationScopeKey === hydrationKey &&
-        hydrated.decisionHydrationStatus === 'loaded'
-      ) {
-        // Hydration is already durable. Mark the exact snapshot so the generic
-        // auto-persist effect cannot turn a plain open/reload into a revision write.
-        immediatelyPersistedReviewSnapshotRef.current = captureReviewPersistenceSnapshotIdentity(
-          scopeTokenValue,
-          hydrated
-        );
-      }
-    },
-    [loadDecisionsFromDisk]
-  );
 
   // Proxy ref for useDiffNavigation (points to active file's editor)
   const activeEditorViewRef = useRef<EditorView | null>(null);
@@ -522,16 +440,35 @@ export const ChangeReviewDialog = ({
         : null,
     [decisionScopeKey, decisionScopeToken, teamName]
   );
+  const refreshReviewConflictCandidatesRef = useRef<() => Promise<void>>(async () => {});
+  const requestReviewConflictRefresh = useCallback(
+    (): Promise<void> => refreshReviewConflictCandidatesRef.current(),
+    []
+  );
+  const decisionPersistence = useChangeReviewDecisionPersistenceController({
+    hydrationKey: decisionHydrationKey,
+    scope: conflictScope,
+    hydrationReady: decisionHydrationReady,
+    isExpectedHydrationKey: isExpectedDraftHistoryKey,
+    refreshConflictCandidates: requestReviewConflictRefresh,
+    port: changeReviewDecisionPersistencePort,
+  });
+  const {
+    status: reviewActionPersistenceStatus,
+    getStatus: getReviewActionPersistenceStatus,
+    publishSaved: publishReviewActionPersistenceSaved,
+    hydrate: hydrateReviewDecisions,
+    persistLatest: persistLatestAcceptedReviewAction,
+    scheduleAutoPersistence: scheduleReviewDecisionAutoPersistence,
+    clearAfterDurableStateEmptied: clearReviewDecisionsAfterStateEmptied,
+    flushForClose: flushReviewDecisionsForClose,
+    getDiagnostics: getReviewDecisionPersistenceDiagnostics,
+  } = decisionPersistence;
   const hydrateConflictDecisions = useCallback(
     async (scope: NonNullable<typeof conflictScope>, hydrationKey: string): Promise<void> => {
-      await hydrateDecisionsFromDisk(
-        scope.teamName,
-        scope.scopeKey,
-        scope.scopeToken,
-        hydrationKey
-      );
+      await hydrateReviewDecisions(scope, hydrationKey);
     },
-    [hydrateDecisionsFromDisk]
+    [hydrateReviewDecisions]
   );
   const {
     decisionCandidates: decisionConflictCandidates,
@@ -551,13 +488,7 @@ export const ChangeReviewDialog = ({
     reportLoadError: changeReviewConflictStateBridge.reportError,
     port: changeReviewConflictQueryPort,
   });
-  const publishReviewActionPersistenceStatus = useCallback(
-    (status: ReviewActionPersistenceStatus): void => {
-      reviewActionPersistenceStatusRef.current = status;
-      setReviewActionPersistenceStatus(status);
-    },
-    []
-  );
+  refreshReviewConflictCandidatesRef.current = refreshReviewConflictCandidates;
   const commitHydratedDrafts = useCallback(
     ({
       scopeFilePaths,
@@ -649,7 +580,7 @@ export const ChangeReviewDialog = ({
     isExpectedHydrationKey: isExpectedDraftHistoryKey,
     hydrateDecisions: hydrateConflictDecisions,
     isDecisionHydrationLoaded: changeReviewConflictStateBridge.isDecisionHydrationLoaded,
-    publishDecisionPersistenceSaved: () => publishReviewActionPersistenceStatus('saved'),
+    publishDecisionPersistenceSaved: publishReviewActionPersistenceSaved,
     resolveDraftHistoryCandidate: resolveDraftHistoryConflictCandidate,
     clearResolutionError: changeReviewConflictStateBridge.clearResolutionError,
     reportResolutionError: changeReviewConflictStateBridge.reportError,
@@ -672,16 +603,10 @@ export const ChangeReviewDialog = ({
   ]);
 
   useEffect(() => {
-    reviewActionPersistenceGenerationRef.current += 1;
-    immediatelyPersistedReviewSnapshotRef.current = null;
     if (pendingApplyCleanupKeyRef.current !== decisionHydrationKey) {
       pendingApplyCleanupKeyRef.current = null;
     }
-    if (pendingAutoDecisionClearKeyRef.current !== decisionHydrationKey) {
-      pendingAutoDecisionClearKeyRef.current = null;
-    }
-    publishReviewActionPersistenceStatus('saved');
-  }, [decisionHydrationKey, publishReviewActionPersistenceStatus]);
+  }, [decisionHydrationKey]);
 
   const setFileApplying = useCallback((filePath: string, value: boolean): void => {
     setFilesApplying((previous) => {
@@ -734,115 +659,13 @@ export const ChangeReviewDialog = ({
 
   useEffect(() => {
     fileApplyInFlightRef.current.clear();
-    reviewUndoActionsRef.current = [];
-    reviewRedoActionsRef.current = [];
-    redoHistoryBeforePreparedActionRef.current = null;
-    lastFocusedEditorRef.current = null;
     recentReviewWritesRef.current.clear();
     undoInFlightRef.current = false;
     closingRef.current = false;
     setUndoing(false);
-    setReviewUndoDepth(0);
-    setReviewRedoDepth(0);
     setClosing(false);
     setFilesApplying(new Set());
   }, [changeSetEpoch, scopeKey, teamName]);
-
-  useEffect(() => {
-    if (!decisionHydrationReady) return;
-    reviewUndoActionsRef.current = reviewActionHistory;
-    reviewRedoActionsRef.current = reviewRedoHistory;
-    setReviewUndoDepth(reviewActionHistory.length);
-    setReviewRedoDepth(reviewRedoHistory.length);
-  }, [decisionHydrationReady, reviewActionHistory, reviewRedoHistory]);
-
-  const pushReviewUndoAction = useCallback(
-    (input: ReviewUndoActionInput): ReviewUndoAction => {
-      const action = createReviewUndoAction(input);
-      const previous = reviewUndoActionsRef.current;
-      const stack = appendOrderedReviewAction(previous, action);
-      reviewUndoActionsRef.current = stack;
-      setReviewActionHistory(stack);
-      redoHistoryBeforePreparedActionRef.current = {
-        actionId: action.id,
-        history: reviewRedoActionsRef.current,
-      };
-      reviewRedoActionsRef.current = [];
-      setReviewRedoHistory([]);
-      setReviewUndoDepth(stack.length);
-      return action;
-    },
-    [setReviewActionHistory, setReviewRedoHistory]
-  );
-
-  const completeReviewUndoAction = useCallback(
-    (action: ReviewUndoAction, redoAction: ReviewRedoAction): boolean => {
-      const result = popOrderedReviewAction(reviewUndoActionsRef.current, action);
-      if (!result.popped) return false;
-      reviewUndoActionsRef.current = result.stack;
-      const redoHistory = [...reviewRedoActionsRef.current, redoAction];
-      reviewRedoActionsRef.current = redoHistory;
-      redoHistoryBeforePreparedActionRef.current = null;
-      setReviewActionHistory(result.stack);
-      setReviewRedoHistory(redoHistory);
-      setReviewUndoDepth(result.stack.length);
-      setReviewRedoDepth(redoHistory.length);
-      return true;
-    },
-    [setReviewActionHistory, setReviewRedoHistory]
-  );
-
-  const bindCommittedReviewAction = useCallback(
-    (optimistic: ReviewUndoAction, committed: ReviewUndoAction | undefined): boolean => {
-      if (!committed) return false;
-      const result = replaceLatestReviewAction(reviewUndoActionsRef.current, optimistic, committed);
-      if (!result.replaced) return false;
-      reviewUndoActionsRef.current = result.stack;
-      setReviewActionHistory(result.stack);
-      return true;
-    },
-    [setReviewActionHistory]
-  );
-
-  const completeReviewRedoAction = useCallback(
-    (redoAction: ReviewRedoAction): boolean => {
-      const latest = reviewRedoActionsRef.current.at(-1);
-      if (latest?.action.id !== redoAction.action.id) return false;
-      const redoHistory = reviewRedoActionsRef.current.slice(0, -1);
-      const undoHistory = appendOrderedReviewAction(
-        reviewUndoActionsRef.current,
-        redoAction.action
-      );
-      reviewRedoActionsRef.current = redoHistory;
-      reviewUndoActionsRef.current = undoHistory;
-      redoHistoryBeforePreparedActionRef.current = null;
-      setReviewRedoHistory(redoHistory);
-      setReviewActionHistory(undoHistory);
-      setReviewRedoDepth(redoHistory.length);
-      setReviewUndoDepth(undoHistory.length);
-      return true;
-    },
-    [setReviewActionHistory, setReviewRedoHistory]
-  );
-
-  const discardLatestReviewAction = useCallback(
-    (action: ReviewUndoAction): boolean => {
-      const result = popOrderedReviewAction(reviewUndoActionsRef.current, action);
-      if (!result.popped) return false;
-      reviewUndoActionsRef.current = result.stack;
-      setReviewActionHistory(result.stack);
-      const redoBackup = redoHistoryBeforePreparedActionRef.current;
-      if (redoBackup?.actionId === action.id) {
-        reviewRedoActionsRef.current = redoBackup.history;
-        setReviewRedoHistory(redoBackup.history);
-        setReviewRedoDepth(redoBackup.history.length);
-        redoHistoryBeforePreparedActionRef.current = null;
-      }
-      setReviewUndoDepth(result.stack.length);
-      return true;
-    },
-    [setReviewActionHistory, setReviewRedoHistory]
-  );
 
   const ensureDurableReviewScope = useCallback((): boolean => {
     if (!decisionScopeToken) {
@@ -853,102 +676,6 @@ export const ChangeReviewDialog = ({
     }
     return true;
   }, [decisionScopeToken]);
-
-  const clearReviewActionHistory = useCallback((): void => {
-    reviewUndoActionsRef.current = [];
-    reviewRedoActionsRef.current = [];
-    redoHistoryBeforePreparedActionRef.current = null;
-    setReviewActionHistory([]);
-    setReviewRedoHistory([]);
-    useStore.setState({ reviewUndoStack: [] });
-    setReviewUndoDepth(0);
-    setReviewRedoDepth(0);
-  }, [setReviewActionHistory, setReviewRedoHistory]);
-
-  const clearReviewActionHistoryForFile = useCallback(
-    (filePath: string): void => {
-      const actions = reviewUndoActionsRef.current;
-      const redoActions = reviewRedoActionsRef.current;
-      if (
-        actions.some((action) => action.kind === 'bulk') ||
-        redoActions.some((entry) => entry.action.kind === 'bulk')
-      ) {
-        // Bulk decision snapshots span files and cannot be safely split after the fact.
-        clearReviewActionHistory();
-        return;
-      }
-      const normalizedPath = normalizePathForComparison(filePath);
-      const retained = actions.filter((action) => {
-        const actionPath =
-          action.kind === 'disk'
-            ? action.action.snapshot.filePath
-            : action.kind === 'hunk'
-              ? action.action.filePath
-              : null;
-        return actionPath === null || normalizePathForComparison(actionPath) !== normalizedPath;
-      });
-      reviewUndoActionsRef.current = retained;
-      // Redo entries contain full-scope post-action snapshots. Retaining even an
-      // apparently unrelated entry could replay stale decisions for this file.
-      reviewRedoActionsRef.current = [];
-      redoHistoryBeforePreparedActionRef.current = null;
-      setReviewActionHistory(retained);
-      setReviewRedoHistory([]);
-      setReviewUndoDepth(retained.length);
-      setReviewRedoDepth(0);
-    },
-    [clearReviewActionHistory, setReviewActionHistory, setReviewRedoHistory]
-  );
-
-  const persistLatestAcceptedReviewAction = useCallback(async (): Promise<boolean> => {
-    const generation = reviewActionPersistenceGenerationRef.current + 1;
-    reviewActionPersistenceGenerationRef.current = generation;
-    publishReviewActionPersistenceStatus('saving');
-
-    if (!decisionScopeToken || !decisionHydrationReady) {
-      if (reviewActionPersistenceGenerationRef.current === generation) {
-        publishReviewActionPersistenceStatus('error');
-        useStore.setState({ applyError: REVIEW_PERSISTENCE_ERROR });
-      }
-      return false;
-    }
-
-    immediatelyPersistedReviewSnapshotRef.current = captureReviewPersistenceSnapshotIdentity(
-      decisionScopeToken,
-      useStore.getState()
-    );
-
-    let saved = false;
-    try {
-      persistDecisions(teamName, decisionScopeKey, decisionScopeToken);
-      saved = await flushDecisionsToDisk(teamName, decisionScopeKey, decisionScopeToken);
-    } catch {
-      saved = false;
-    }
-
-    if (reviewActionPersistenceGenerationRef.current !== generation) return saved;
-    if (saved) {
-      publishReviewActionPersistenceStatus('saved');
-      if (useStore.getState().applyError === REVIEW_PERSISTENCE_ERROR) {
-        useStore.setState({ applyError: null });
-      }
-      return true;
-    }
-
-    publishReviewActionPersistenceStatus('error');
-    useStore.setState({ applyError: REVIEW_PERSISTENCE_ERROR });
-    void refreshReviewConflictCandidates();
-    return false;
-  }, [
-    decisionHydrationReady,
-    decisionScopeKey,
-    decisionScopeToken,
-    flushDecisionsToDisk,
-    persistDecisions,
-    publishReviewActionPersistenceStatus,
-    refreshReviewConflictCandidates,
-    teamName,
-  ]);
 
   const reviewMutationBusy = isReviewActionLocked({
     applying,
@@ -982,7 +709,7 @@ export const ChangeReviewDialog = ({
       reviewConflictLoadError !== null ||
       reviewConflictCandidateCount > 0 ||
       resolvingConflictCandidateId !== null ||
-      isReviewActionPersistenceBlocking(reviewActionPersistenceStatusRef.current) ||
+      isReviewActionPersistenceBlocking(getReviewActionPersistenceStatus()) ||
       isReviewActionLocked({
         applying: state.applying,
         fileApplyCount: fileApplyInFlightRef.current.size,
@@ -994,6 +721,7 @@ export const ChangeReviewDialog = ({
     decisionHydrationKey,
     draftHistoryHydration.key,
     draftHistoryHydration.status,
+    getReviewActionPersistenceStatus,
     reviewConflictLoadError,
     reviewConflictRefreshPending,
     resolvingConflictCandidateId,
@@ -1448,7 +1176,7 @@ export const ChangeReviewDialog = ({
             discardLatestReviewAction(preparedAction);
             return;
           }
-          const retainedAction = reviewUndoActionsRef.current.at(-1);
+          const retainedAction = getLatestUndoAction();
           if (
             retainedAction?.id === preparedAction.id &&
             retainedAction.kind === 'bulk' &&
@@ -1497,7 +1225,7 @@ export const ChangeReviewDialog = ({
               );
             }
           }
-          setReviewActionHistory([...reviewUndoActionsRef.current]);
+          publishReviewUndoHistory();
         } finally {
           if (
             isCurrentReviewOperationScope(operationScope) &&
@@ -1542,7 +1270,8 @@ export const ChangeReviewDialog = ({
     pushReviewUndoAction,
     discardLatestReviewAction,
     ensureDurableReviewScope,
-    setReviewActionHistory,
+    getLatestUndoAction,
+    publishReviewUndoHistory,
     setUndoInFlight,
   ]);
 
@@ -1564,7 +1293,7 @@ export const ChangeReviewDialog = ({
       const content = fileContents[filePath] ?? null;
       const isExpectedDeletion = isReviewFileExpectedDeleted(file);
       const normalizedFilePath = normalizePathForComparison(filePath);
-      const diskHistory = reviewUndoActionsRef.current.flatMap((action): ReviewDiskUndoAction[] =>
+      const diskHistory = getReviewUndoHistory().flatMap((action): ReviewDiskUndoAction[] =>
         action.kind === 'disk'
           ? [action.action]
           : action.kind === 'bulk'
@@ -1736,8 +1465,8 @@ export const ChangeReviewDialog = ({
               hunkDecisions: state.hunkDecisions,
               fileDecisions: state.fileDecisions,
               hunkContextHashesByFile: state.hunkContextHashesByFile,
-              reviewActionHistory: reviewUndoActionsRef.current,
-              reviewRedoHistory: reviewRedoActionsRef.current,
+              reviewActionHistory: getReviewUndoHistory(),
+              reviewRedoHistory: getReviewRedoHistory(),
             },
             expectedDecisionRevision: state.decisionRevision,
           });
@@ -1808,6 +1537,8 @@ export const ChangeReviewDialog = ({
       clearReviewFileExternalChange,
       fetchFileContent,
       fileContents,
+      getReviewRedoHistory,
+      getReviewUndoHistory,
       hasReviewActionInFlight,
       hasReviewDraft,
       isCurrentReviewOperationScope,
@@ -2039,7 +1770,7 @@ export const ChangeReviewDialog = ({
                 if (snapshot.restoreMode !== 'delete-file' && !isLedgerRenameReviewFile(file)) {
                   alignDiskUndoSnapshotWithAppliedContent(snapshot, actualAfterContent);
                 }
-                setReviewActionHistory([...reviewUndoActionsRef.current]);
+                publishReviewUndoHistory();
               }
               markRecentReviewWrite(filePath, isLedgerRenameReviewFile(file) ? null : afterContent);
             } else {
@@ -2090,7 +1821,7 @@ export const ChangeReviewDialog = ({
       pushReviewUndoAction,
       discardLatestReviewAction,
       ensureDurableReviewScope,
-      setReviewActionHistory,
+      publishReviewUndoHistory,
     ]
   );
 
@@ -2237,7 +1968,7 @@ export const ChangeReviewDialog = ({
               ) {
                 alignDiskUndoSnapshotWithAppliedContent(snapshot, actualAfterContent);
               }
-              setReviewActionHistory([...reviewUndoActionsRef.current]);
+              publishReviewUndoHistory();
               markRecentReviewWrite(filePath, snapshot.afterContent);
               return;
             }
@@ -2298,7 +2029,7 @@ export const ChangeReviewDialog = ({
       pushReviewUndoAction,
       discardLatestReviewAction,
       ensureDurableReviewScope,
-      setReviewActionHistory,
+      publishReviewUndoHistory,
     ]
   );
 
@@ -2507,8 +2238,8 @@ export const ChangeReviewDialog = ({
             hunkDecisions: state.hunkDecisions,
             fileDecisions: state.fileDecisions,
             hunkContextHashesByFile: state.hunkContextHashesByFile,
-            reviewActionHistory: reviewUndoActionsRef.current,
-            reviewRedoHistory: reviewRedoActionsRef.current,
+            reviewActionHistory: getReviewUndoHistory(),
+            reviewRedoHistory: getReviewRedoHistory(),
           });
           const committed = await api.review.executeMutation({
             scope: reviewScope,
@@ -2528,13 +2259,7 @@ export const ChangeReviewDialog = ({
           ) {
             return;
           }
-          reviewUndoActionsRef.current = next.reviewActionHistory;
-          reviewRedoActionsRef.current = next.reviewRedoHistory;
-          redoHistoryBeforePreparedActionRef.current = null;
-          setReviewActionHistory(next.reviewActionHistory);
-          setReviewRedoHistory(next.reviewRedoHistory);
-          setReviewUndoDepth(next.reviewActionHistory.length);
-          setReviewRedoDepth(next.reviewRedoHistory.length);
+          replaceReviewActionHistories(next.reviewActionHistory, next.reviewRedoHistory);
           recordDecisionRevision(
             teamName,
             decisionScopeKey,
@@ -2596,9 +2321,10 @@ export const ChangeReviewDialog = ({
       recordDecisionRevision,
       reloadReviewFileFromDisk,
       reviewScope,
+      getReviewRedoHistory,
+      getReviewUndoHistory,
+      replaceReviewActionHistories,
       setFileApplying,
-      setReviewActionHistory,
-      setReviewRedoHistory,
       teamName,
     ]
   );
@@ -2811,7 +2537,7 @@ export const ChangeReviewDialog = ({
         }
         const state = useStore.getState();
         const redoAction = createReviewRedoAction(action, state);
-        const redoHistory = [...reviewRedoActionsRef.current, redoAction];
+        const redoHistory = [...getReviewRedoHistory(), redoAction];
         const diskSnapshots = getReviewActionDiskSnapshots(action);
         const diskSteps = buildUndoDiskMutationSteps(action.id, diskSnapshots);
         const committed = await executeWithPreparedReviewWriteExpectations(
@@ -2831,7 +2557,7 @@ export const ChangeReviewDialog = ({
                 hunkDecisions,
                 fileDecisions,
                 hunkContextHashesByFile: state.hunkContextHashesByFile,
-                reviewActionHistory: reviewUndoActionsRef.current.slice(0, -1),
+                reviewActionHistory: getReviewUndoHistory().slice(0, -1),
                 reviewRedoHistory: redoHistory,
               },
               expectedTopActionId: action.id,
@@ -2866,6 +2592,8 @@ export const ChangeReviewDialog = ({
       captureReviewOperationScope,
       decisionScopeKey,
       decisionScopeToken,
+      getReviewRedoHistory,
+      getReviewUndoHistory,
       isCurrentReviewOperationScope,
       markCommittedReviewPostimages,
       markRecentReviewWrite,
@@ -2882,7 +2610,7 @@ export const ChangeReviewDialog = ({
     if (hasReviewActionInFlight() || editedCount > 0 || blockReviewMutationForExternalChange()) {
       return;
     }
-    const action = reviewUndoActionsRef.current.at(-1);
+    const action = getLatestUndoAction();
     if (!action) return;
     const state = useStore.getState();
     let hunkDecisions = { ...state.hunkDecisions };
@@ -2950,6 +2678,7 @@ export const ChangeReviewDialog = ({
     commitUndoMutation,
     completeReviewUndoAction,
     editedCount,
+    getLatestUndoAction,
     hasReviewActionInFlight,
   ]);
 
@@ -2957,7 +2686,7 @@ export const ChangeReviewDialog = ({
     if (hasReviewActionInFlight() || editedCount > 0 || blockReviewMutationForExternalChange()) {
       return;
     }
-    const redoAction = reviewRedoActionsRef.current.at(-1);
+    const redoAction = getLatestRedoAction();
     if (!redoAction || !decisionScopeToken) return;
     const operationScope = captureReviewOperationScope();
     if (!operationScope) return;
@@ -2974,8 +2703,8 @@ export const ChangeReviewDialog = ({
       }
       const state = useStore.getState();
       const action = redoAction.action;
-      const undoHistory = appendOrderedReviewAction(reviewUndoActionsRef.current, action);
-      const redoHistory = reviewRedoActionsRef.current.slice(0, -1);
+      const undoHistory = [...getReviewUndoHistory(), action];
+      const redoHistory = getReviewRedoHistory().slice(0, -1);
       const diskSnapshots = getReviewActionDiskSnapshots(action);
       const diskSteps = buildRedoDiskMutationSteps(action.id, diskSnapshots);
       const committed = await executeWithPreparedReviewWriteExpectations(
@@ -3037,6 +2766,9 @@ export const ChangeReviewDialog = ({
     decisionScopeKey,
     decisionScopeToken,
     editedCount,
+    getLatestRedoAction,
+    getReviewRedoHistory,
+    getReviewUndoHistory,
     hasReviewActionInFlight,
     isCurrentReviewOperationScope,
     markCommittedReviewPostimages,
@@ -3057,8 +2789,8 @@ export const ChangeReviewDialog = ({
           hunkDecisions: state.hunkDecisions,
           fileDecisions: state.fileDecisions,
           hunkContextHashesByFile: state.hunkContextHashesByFile,
-          reviewActionHistory: reviewUndoActionsRef.current,
-          reviewRedoHistory: reviewRedoActionsRef.current,
+          reviewActionHistory: getReviewUndoHistory(),
+          reviewRedoHistory: getReviewRedoHistory(),
         },
         target,
         (filePath) =>
@@ -3069,7 +2801,7 @@ export const ChangeReviewDialog = ({
       );
       return { state, plan };
     },
-    [activeChangeSet]
+    [activeChangeSet, getReviewRedoHistory, getReviewUndoHistory]
   );
 
   const getRestoreReviewHistoryPreview = useCallback(
@@ -3100,12 +2832,7 @@ export const ChangeReviewDialog = ({
         throw new Error('Durable review history scope is unavailable.');
       }
       recordDecisionRevision(teamName, decisionScopeKey, decisionScopeToken, decisionRevision);
-      reviewUndoActionsRef.current = restored.reviewActionHistory;
-      reviewRedoActionsRef.current = restored.reviewRedoHistory;
-      setReviewActionHistory(restored.reviewActionHistory);
-      setReviewRedoHistory(restored.reviewRedoHistory);
-      setReviewUndoDepth(restored.reviewActionHistory.length);
-      setReviewRedoDepth(restored.reviewRedoHistory.length);
+      replaceReviewActionHistories(restored.reviewActionHistory, restored.reviewRedoHistory);
       useStore.setState({
         hunkDecisions: restored.hunkDecisions,
         fileDecisions: restored.fileDecisions,
@@ -3117,8 +2844,7 @@ export const ChangeReviewDialog = ({
       decisionScopeKey,
       decisionScopeToken,
       recordDecisionRevision,
-      setReviewActionHistory,
-      setReviewRedoHistory,
+      replaceReviewActionHistories,
       teamName,
     ]
   );
@@ -3203,8 +2929,8 @@ export const ChangeReviewDialog = ({
       if (!decisionScopeToken || !decisionHydrationReady) {
         throw new Error('Durable review history is not ready yet.');
       }
-      if (reviewActionPersistenceStatusRef.current !== 'saved') {
-        throw new Error(REVIEW_PERSISTENCE_ERROR);
+      if (getReviewActionPersistenceStatus() !== 'saved') {
+        throw new Error(CHANGE_REVIEW_PERSISTENCE_ERROR);
       }
       const operationScope = captureReviewOperationScope();
       if (!operationScope) throw new Error('Durable review history scope is no longer active.');
@@ -3273,6 +2999,7 @@ export const ChangeReviewDialog = ({
       decisionScopeKey,
       decisionScopeToken,
       editedCount,
+      getReviewActionPersistenceStatus,
       hasReviewActionInFlight,
       isCurrentReviewOperationScope,
       markCommittedReviewPostimages,
@@ -3489,6 +3216,7 @@ export const ChangeReviewDialog = ({
     };
     const state = useStore.getState();
     const draftHistoryDiagnostics = getDraftHistoryDiagnostics();
+    const decisionPersistenceDiagnostics = getReviewDecisionPersistenceDiagnostics();
     const localStateRequiresScope = hasUnscopedLocalReviewState({
       editedContentCount: Object.keys(state.editedContents).length,
       hunkDecisionCount: Object.keys(state.hunkDecisions).length,
@@ -3499,8 +3227,8 @@ export const ChangeReviewDialog = ({
       draftWriteChainCount: draftHistoryDiagnostics.writeChainCount,
       draftWriteErrorCount: draftHistoryDiagnostics.writeErrorCount,
       pendingApplyCleanup: pendingApplyCleanupKeyRef.current !== null,
-      pendingDecisionClear: pendingAutoDecisionClearKeyRef.current !== null,
-      persistenceStatus: reviewActionPersistenceStatusRef.current,
+      pendingDecisionClear: decisionPersistenceDiagnostics.pendingDecisionClear,
+      persistenceStatus: decisionPersistenceDiagnostics.persistenceStatus,
     });
     if (!decisionHydrationKey && localStateRequiresScope) {
       const blocker =
@@ -3526,8 +3254,8 @@ export const ChangeReviewDialog = ({
           scopedDraftHistoryDiagnostics.writeChainCount > 0 ||
           scopedDraftHistoryDiagnostics.writeErrorCount > 0 ||
           pendingApplyCleanupKeyRef.current === decisionHydrationKey ||
-          pendingAutoDecisionClearKeyRef.current === decisionHydrationKey ||
-          reviewActionPersistenceStatusRef.current !== 'saved';
+          decisionPersistenceDiagnostics.pendingDecisionClear ||
+          decisionPersistenceDiagnostics.persistenceStatus !== 'saved';
         if (hasLocalState) {
           const blocker =
             'Saved review state could not be reconciled with local changes. Retry recovery before closing Changes.';
@@ -3602,18 +3330,7 @@ export const ChangeReviewDialog = ({
         return { ok: true };
       }
       if (decisionScopeToken) {
-        const latestState = useStore.getState();
-        const hasCurrentReviewState =
-          Object.keys(latestState.hunkDecisions).length > 0 ||
-          Object.keys(latestState.fileDecisions).length > 0 ||
-          latestState.reviewActionHistory.length > 0 ||
-          latestState.reviewRedoHistory.length > 0;
-        let flushed: boolean;
-        if (hasCurrentReviewState) {
-          flushed = await persistLatestAcceptedReviewAction();
-        } else {
-          flushed = await clearDecisionsFromDisk(teamName, decisionScopeKey, decisionScopeToken);
-        }
+        const flushed = await flushReviewDecisionsForClose();
         if (!isCurrentReviewOperationScope(operationScope)) return scopeChangedResult;
         if (!flushed) {
           const blocker = 'Unable to save review decisions. Changes remains open.';
@@ -3637,11 +3354,12 @@ export const ChangeReviewDialog = ({
     draftHistoryHydration.key,
     draftHistoryHydration.status,
     flushDraftHistoryWrites,
+    flushReviewDecisionsForClose,
     getDraftHistoryDiagnostics,
     getDraftHistoryEntry,
+    getReviewDecisionPersistenceDiagnostics,
     handleSerializedStateChanged,
     isCurrentReviewOperationScope,
-    persistLatestAcceptedReviewAction,
     teamName,
   ]);
 
@@ -3696,10 +3414,8 @@ export const ChangeReviewDialog = ({
         });
         if (!isCurrentReviewOperationScope(operationScope)) return;
         markCommittedReviewPostimages(recovered.diskPostimages);
-        await hydrateDecisionsFromDisk(
-          teamName,
-          decisionScopeKey,
-          decisionScopeToken,
+        await hydrateReviewDecisions(
+          { teamName, scopeKey: decisionScopeKey, scopeToken: decisionScopeToken },
           decisionHydrationKey
         );
         if (!isCurrentReviewOperationScope(operationScope)) return;
@@ -3723,7 +3439,7 @@ export const ChangeReviewDialog = ({
     draftHistoryHydrationFailed,
     retryDraftHistoryHydration,
     decisionHydrationKey,
-    hydrateDecisionsFromDisk,
+    hydrateReviewDecisions,
     isCurrentReviewOperationScope,
     markCommittedReviewPostimages,
     reviewMutationBusy,
@@ -3906,10 +3622,8 @@ export const ChangeReviewDialog = ({
 
   useEffect(() => {
     if (!open || !lifecycleAuthorized || !decisionScopeToken || !decisionHydrationKey) return;
-    void hydrateDecisionsFromDisk(
-      teamName,
-      decisionScopeKey,
-      decisionScopeToken,
+    void hydrateReviewDecisions(
+      { teamName, scopeKey: decisionScopeKey, scopeToken: decisionScopeToken },
       decisionHydrationKey
     );
   }, [
@@ -3917,7 +3631,7 @@ export const ChangeReviewDialog = ({
     decisionScopeKey,
     decisionScopeToken,
     lifecycleAuthorized,
-    hydrateDecisionsFromDisk,
+    hydrateReviewDecisions,
     open,
     teamName,
   ]);
@@ -3930,80 +3644,22 @@ export const ChangeReviewDialog = ({
     Object.keys(fileDecisions).length > 0 ||
     reviewActionHistory.length > 0 ||
     reviewRedoHistory.length > 0;
-  const hadDurableReviewStateRef = useRef(false);
-  useEffect(() => {
-    hadDurableReviewStateRef.current = false;
-  }, [decisionScopeToken]);
-  useEffect(() => {
-    if (!open || !lifecycleAuthorized || !decisionScopeToken) return;
-    // Never persist a decision before its instant disk mutation has completed.
-    // On failure the decision is reconciled/rolled back first; when the busy state
-    // clears this effect runs again with the authoritative post-operation state.
-    if (!decisionHydrationReady || reviewActionsBusy) return;
-    if (hasDurableReviewState) {
-      hadDurableReviewStateRef.current = true;
-      const currentSnapshot = captureReviewPersistenceSnapshotIdentity(
-        decisionScopeToken,
-        useStore.getState()
-      );
-      if (
-        isSameReviewPersistenceSnapshot(
-          immediatelyPersistedReviewSnapshotRef.current,
-          currentSnapshot
-        )
-      ) {
-        // The Accept handler already waited for this exact decision + history snapshot
-        // to reach disk. Do not schedule a redundant debounced write after its ack.
-        immediatelyPersistedReviewSnapshotRef.current = null;
-        return;
-      }
-      immediatelyPersistedReviewSnapshotRef.current = null;
-      persistDecisions(teamName, decisionScopeKey, decisionScopeToken);
-    } else if (
-      hadDurableReviewStateRef.current &&
-      pendingAutoDecisionClearKeyRef.current !== decisionHydrationKey
-    ) {
-      pendingAutoDecisionClearKeyRef.current = decisionHydrationKey;
-      void clearDecisionsFromDisk(teamName, decisionScopeKey, decisionScopeToken).then(
-        (cleared) => {
-          if (pendingAutoDecisionClearKeyRef.current === decisionHydrationKey) {
-            pendingAutoDecisionClearKeyRef.current = null;
-          }
-          if (expectedDraftHistoryKeyRef.current !== decisionHydrationKey) return;
-          if (cleared) {
-            hadDurableReviewStateRef.current = false;
-            return;
-          }
-          publishReviewActionPersistenceStatus('error');
-          useStore.setState({
-            applyError:
-              'Unable to clear saved review decisions. Retry from History or keep Changes open.',
-          });
-          void refreshReviewConflictCandidates();
-        }
-      );
-    }
-  }, [
-    open,
-    lifecycleAuthorized,
+  useChangeReviewDecisionAutoPersistence({
+    active: open && lifecycleAuthorized,
+    hydrationKey: decisionHydrationKey,
+    scope: conflictScope,
+    hydrationReady: decisionHydrationReady,
+    blocked: reviewActionsBusy,
     hasDurableReviewState,
     hunkDecisions,
     fileDecisions,
-    reviewActionHistory,
-    reviewRedoHistory,
+    undoHistory: reviewActionHistory,
+    redoHistory: reviewRedoHistory,
     fileContents,
     fileChunkCounts,
-    teamName,
-    decisionScopeKey,
-    decisionScopeToken,
-    persistDecisions,
-    clearDecisionsFromDisk,
-    decisionHydrationKey,
-    publishReviewActionPersistenceStatus,
-    refreshReviewConflictCandidates,
-    reviewActionsBusy,
-    decisionHydrationReady,
-  ]);
+    scheduleAutoPersistence: scheduleReviewDecisionAutoPersistence,
+    clearAfterDurableStateEmptied: clearReviewDecisionsAfterStateEmptied,
+  });
 
   // Scroll to initialFilePath once data is loaded
   useEffect(() => {
@@ -4054,102 +3710,41 @@ export const ChangeReviewDialog = ({
     return () => document.removeEventListener('keydown', handler);
   }, [open, requestClose]);
 
-  // Track last focused CM editor for Cmd+Z outside editor
-  useEffect(() => {
-    if (!open) return;
-
-    const handleFocusIn = (e: FocusEvent): void => {
-      const target = e.target as Element | null;
-      if (!target?.closest?.('.cm-editor')) return;
-
-      const filePath = getEditorFilePathForTarget(target);
-      if (!filePath) return;
-
-      const view = editorViewMapRef.current.get(filePath);
-      if (view) {
-        lastFocusedEditorRef.current = view;
-      }
-    };
-
-    document.addEventListener('focusin', handleFocusIn);
-    return () => {
-      document.removeEventListener('focusin', handleFocusIn);
-      lastFocusedEditorRef.current = null;
-    };
-  }, [open, getEditorFilePathForTarget]);
-
   // Review actions use one ordered stack. Manual draft edits keep CodeMirror's native history.
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent): void => {
-      if (!(e.metaKey || e.ctrlKey)) return;
-      const isRedoShortcut =
-        (e.code === 'KeyZ' && e.shiftKey) || (e.code === 'KeyY' && !e.shiftKey);
-      const isUndoShortcut = e.code === 'KeyZ' && !e.shiftKey;
-      if (!isUndoShortcut && !isRedoShortcut) return;
-
-      const tag = document.activeElement?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      const activeElement = document.activeElement;
-      const editorFilePath = getEditorFilePathForTarget(activeElement);
-      const hasDraftInFocusedEditor = editorFilePath ? hasReviewDraft(editorFilePath) : false;
-      const focusedEditor = editorFilePath
-        ? (editorViewMapRef.current.get(editorFilePath) ?? null)
-        : null;
-
-      if (isRedoShortcut) {
-        if (focusedEditor && redoDepth(focusedEditor.state) > 0) return;
-        if (hasDraftInFocusedEditor) return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (hasReviewActionInFlight() || editedCount > 0) return;
-        if (reviewRedoActionsRef.current.length > 0) void handleRedoLatestReviewAction();
-        return;
-      }
-
-      if (
-        focusedEditor &&
-        undoDepth(focusedEditor.state) > 0 &&
-        (hasDraftInFocusedEditor || reviewUndoActionsRef.current.length === 0)
-      ) {
-        return;
-      }
-      if (hasDraftInFocusedEditor) return;
-      if (hasReviewActionInFlight()) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-
-      if (reviewUndoActionsRef.current.length > 0) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (editedCount > 0) {
-          useStore.setState({
-            applyError: 'Save or discard manual edits before undoing a review action.',
-          });
-          return;
-        }
-        void handleUndoLatestReviewAction();
-        return;
-      }
-
-      // Native CodeMirror Undo would change only the visual document and desynchronize it
-      // from the durable decision timeline, so without a manual draft there is nothing to undo.
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    document.addEventListener('keydown', handler, true);
-    return () => document.removeEventListener('keydown', handler, true);
-  }, [
-    open,
-    getEditorFilePathForTarget,
+  const resolveReviewKeyboardEditorContext = useCallback(
+    (target: Element | null) => {
+      const filePath = getEditorFilePathForTarget(target);
+      return {
+        editor: filePath ? (editorViewMapRef.current.get(filePath) ?? null) : null,
+        hasDraft: filePath ? hasReviewDraft(filePath) : false,
+      };
+    },
+    [getEditorFilePathForTarget, hasReviewDraft]
+  );
+  const getReviewUndoCount = useCallback(
+    (): number => getReviewUndoHistory().length,
+    [getReviewUndoHistory]
+  );
+  const getReviewRedoCount = useCallback(
+    (): number => getReviewRedoHistory().length,
+    [getReviewRedoHistory]
+  );
+  const reportReviewUndoDraftBlock = useCallback((): void => {
+    useStore.setState({
+      applyError: 'Save or discard manual edits before undoing a review action.',
+    });
+  }, []);
+  useChangeReviewHistoryKeyboardShortcuts({
+    active: open,
     editedCount,
-    handleRedoLatestReviewAction,
-    handleUndoLatestReviewAction,
-    hasReviewActionInFlight,
-    hasReviewDraft,
-  ]);
+    resolveEditorContext: resolveReviewKeyboardEditorContext,
+    hasActionInFlight: hasReviewActionInFlight,
+    getUndoCount: getReviewUndoCount,
+    getRedoCount: getReviewRedoCount,
+    undoLatest: handleUndoLatestReviewAction,
+    redoLatest: handleRedoLatestReviewAction,
+    reportManualDraftBlock: reportReviewUndoDraftBlock,
+  });
 
   // Cmd+N IPC listener (forwarded from main process)
   useEffect(() => {

@@ -1,7 +1,12 @@
+import {
+  appendOrderedReviewAction,
+  isReviewActionPersistenceBlocking,
+  popOrderedReviewAction,
+  replaceLatestReviewAction,
+} from '@features/change-review/renderer';
 import { describe, expect, it } from 'vitest';
 
 import {
-  appendOrderedReviewAction,
   createReviewOperationScopeToken,
   getReviewCloseBlockReason,
   getReviewDecisionHydrationGuard,
@@ -10,14 +15,11 @@ import {
   hasUnresolvedReviewExternalChange,
   hasUnscopedLocalReviewState,
   isReviewActionLocked,
-  isReviewActionPersistenceBlocking,
   isReviewDiskPreimageRestored,
   isReviewFileFullyRejected,
   isReviewOperationScopeCurrent,
   partitionReviewFilesByApplyErrors,
-  popOrderedReviewAction,
   reconcileReviewDecisionRecordsAfterApply,
-  replaceLatestReviewAction,
   replaceReviewScopedRecord,
   resolveDraftBaselineAfterSave,
   resolveReviewFileIsNew,
