@@ -65,3 +65,4 @@ export {
   extractBaseModel,
   type TeamLaunchParams,
 } from './utils/teamLaunchParams';
+export { TeamRuntimeFreshnessCoordinator } from './utils/TeamRuntimeFreshnessCoordinator';

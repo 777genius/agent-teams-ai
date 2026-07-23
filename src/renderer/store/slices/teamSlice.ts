@@ -21,7 +21,6 @@ import {
   createTeamProvisioningControlSlice,
   createTeamProvisioningLaunchSlice,
   createTeamProvisioningProgressSlice,
-  createTeamRuntimeObservationSlice,
   saveTeamToolApprovalSettings,
   type TeamLaunchAnalyticsContext,
   type TeamProvisioningControlSlice,
@@ -73,14 +72,7 @@ import { normalizePath } from '@renderer/utils/pathNormalize';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { createLogger } from '@shared/utils/logger';
 
-import { areTeamAgentRuntimeSnapshotsEqual } from '../team/teamAgentRuntimeSnapshotEquality';
-import { stabilizeTeamAgentRuntimeSnapshot } from '../team/teamAgentRuntimeSnapshotStabilizer';
-import {
-  clearAllLastResolvedTeamDataRefreshes,
-  clearLastResolvedTeamDataRefreshAt,
-  hasLastResolvedTeamDataRefreshAt,
-  recordLastResolvedTeamDataRefresh,
-} from '../team/teamDataRefreshTimestamps';
+import { recordLastResolvedTeamDataRefresh } from '../team/teamDataRefreshTimestamps';
 import { selectTeamDataForName } from '../team/teamDataSelectors';
 import {
   mapReviewError,
@@ -90,42 +82,18 @@ import {
 import {
   consumeFirstGlobalTasksFetchFlag,
   processGlobalTaskNotifications,
-  resetGlobalTaskNotificationTrackerForTests,
 } from '../team/teamGlobalTaskNotifications';
 import { projectTeamSnapshotOntoGlobalTasks } from '../team/teamGlobalTaskProjection';
-import {
-  captureTeamLocalStateEpoch,
-  clearAllTeamLocalStateEpochs,
-  hasTeamLocalStateEpoch,
-  invalidateTeamLocalStateEpoch,
-  isTeamLocalStateEpochCurrent,
-} from '../team/teamLocalStateEpoch';
+import { invalidateTeamLocalStateEpoch } from '../team/teamLocalStateEpoch';
 import {
   isMemberActivityMetaStale,
   structurallyShareMemberActivityFacts,
 } from '../team/teamMemberActivityMeta';
-import { areMemberSpawnSnapshotsSemanticallyEqual } from '../team/teamMemberSpawnSnapshotEquality';
-import {
-  clearAllMemberSpawnStatusesIpcBackoffs,
-  clearMemberSpawnStatusesIpcBackoff,
-  hasMemberSpawnStatusesIpcBackoff,
-  isMemberSpawnStatusesIpcBackoffActive,
-  recordMemberSpawnStatusesIpcRetryBackoff,
-} from '../team/teamMemberSpawnStatusBackoff';
-import {
-  clearAllMemberSpawnUiEqualLastWarns,
-  clearMemberSpawnUiEqualLastWarn,
-  hasMemberSpawnUiEqualLastWarn,
-  shouldLogMemberSpawnUiEqualSuppressed,
-} from '../team/teamMemberSpawnUiEqualWarningThrottle';
 import {
   areInboxMessageArraysEquivalent,
-  clearTeamMessageSelectorCaches,
-  clearTeamMessageSelectorCachesForTeam,
   extractRetainedCanonicalOlderTail,
   getCanonicalHeadSlice,
   getTeamMessagesCacheEntry,
-  getTeamMessageSelectorCacheSnapshotForTeam,
   pruneOptimisticMessages,
   upsertOptimisticTeamMessage,
 } from '../team/teamMessagesCache';
@@ -134,22 +102,11 @@ import {
   savePersistedMessagesPanelMode,
 } from '../team/teamMessagesPanelModePersistence';
 import {
-  clearAllPendingReplyRefreshWaits,
   clearPendingReplyRefreshWaits,
   setPendingReplyRefreshEnabled,
 } from '../team/teamPendingReplyWaits';
-import {
-  clearAllTeamRefreshBurstDiagnostics,
-  clearTeamRefreshBurstDiagnostics,
-  hasTeamRefreshBurstDiagnostics,
-  noteTeamRefreshBurst,
-} from '../team/teamRefreshBurstDiagnostics';
-import {
-  clearResolvedMemberSelectorCaches,
-  clearResolvedMemberSelectorCachesForTeam,
-  getResolvedMemberSelectorCacheSnapshotForTeam,
-  shouldPreserveSelectedTeamSnapshot,
-} from '../team/teamResolvedMembers';
+import { noteTeamRefreshBurst } from '../team/teamRefreshBurstDiagnostics';
+import { shouldPreserveSelectedTeamSnapshot } from '../team/teamResolvedMembers';
 import {
   buildTeamScopedProgressTombstones,
   collectTeamScopedStateRemovals,
@@ -159,13 +116,14 @@ import {
   structurallySharePlainValue,
   structurallyShareTeamSnapshot,
 } from '../team/teamSnapshotStructuralSharing';
+import {
+  type ContextRequestScope,
+  type TeamRequestScope,
+  type TeamScopedTransientStateSnapshot,
+  TeamStateLifecycleCoordinator,
+} from '../team/TeamStateLifecycleCoordinator';
 import { parseToolApprovalSettings } from '../team/teamToolApprovalSettings';
 import { noteTeamRefreshFanout } from '../teamRefreshFanoutDiagnostics';
-import {
-  captureContextScopedRequestEpoch,
-  isContextScopedRequestEpochCurrent,
-  resetContextScopedRequestEpochForTests,
-} from '../utils/contextScopedRequestEpoch';
 import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
 import type { AppState } from '../types';
@@ -231,249 +189,31 @@ export type { TeamLaunchParams } from '@features/team-provisioning/renderer';
 
 const logger = createLogger('teamSlice');
 
-const MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS = 5_000;
 const TEAM_REFRESH_BURST_WINDOW_MS = 4_000;
-const MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS = 2_000;
 const teamDirectoryRefreshCoordinator = new TeamDirectoryRefreshCoordinator<ContextRequestScope>();
+const teamStateLifecycleCoordinator = new TeamStateLifecycleCoordinator(
+  teamDirectoryRefreshCoordinator
+);
 const teamLaunchAnalyticsCoordinator = createProductTeamLaunchAnalyticsCoordinator();
-const teamAgentRuntimeFreshnessSnapshotsByTeamAndRun = new Map<
-  string,
-  Map<string | null, TeamAgentRuntimeSnapshot>
->();
-
-function parseRuntimeFreshnessTimestampMs(value: string | undefined): number | null {
-  if (!value) return null;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function doesRuntimeFreshnessTimestampExtendVisible(
-  visibleTimestamp: string | undefined,
-  cachedTimestamp: string | undefined
-): boolean {
-  if (!visibleTimestamp) return true;
-  if (!cachedTimestamp) return false;
-
-  const visibleMs = parseRuntimeFreshnessTimestampMs(visibleTimestamp);
-  const cachedMs = parseRuntimeFreshnessTimestampMs(cachedTimestamp);
-  if (visibleMs === null || cachedMs === null) {
-    return cachedTimestamp === visibleTimestamp;
-  }
-  return cachedMs >= visibleMs;
-}
-
-function doesTeamAgentRuntimeFreshnessSnapshotExtendVisible(
-  visibleSnapshot: TeamAgentRuntimeSnapshot,
-  cachedSnapshot: TeamAgentRuntimeSnapshot
-): boolean {
-  if (!areTeamAgentRuntimeSnapshotsEqual(visibleSnapshot, cachedSnapshot)) {
-    return false;
-  }
-  if (
-    !doesRuntimeFreshnessTimestampExtendVisible(visibleSnapshot.updatedAt, cachedSnapshot.updatedAt)
-  ) {
-    return false;
-  }
-
-  for (const [memberName, visibleEntry] of Object.entries(visibleSnapshot.members)) {
-    const cachedEntry = cachedSnapshot.members[memberName];
-    if (
-      !cachedEntry ||
-      !doesRuntimeFreshnessTimestampExtendVisible(visibleEntry.updatedAt, cachedEntry.updatedAt) ||
-      !doesRuntimeFreshnessTimestampExtendVisible(
-        visibleEntry.runtimeLastSeenAt,
-        cachedEntry.runtimeLastSeenAt
-      )
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function getTeamAgentRuntimeFreshnessSnapshot(
-  teamName: string,
-  visibleSnapshot: TeamAgentRuntimeSnapshot | undefined,
-  incomingSnapshot: TeamAgentRuntimeSnapshot
-): TeamAgentRuntimeSnapshot | undefined {
-  if (
-    !visibleSnapshot ||
-    visibleSnapshot.teamName !== incomingSnapshot.teamName ||
-    visibleSnapshot.runId !== incomingSnapshot.runId
-  ) {
-    return visibleSnapshot;
-  }
-
-  const cachedSnapshot = teamAgentRuntimeFreshnessSnapshotsByTeamAndRun
-    .get(teamName)
-    ?.get(incomingSnapshot.runId);
-  // The module cache may only extend the visible snapshot's freshness, never seed a reset scope.
-  if (
-    !cachedSnapshot ||
-    cachedSnapshot.teamName !== incomingSnapshot.teamName ||
-    cachedSnapshot.runId !== incomingSnapshot.runId ||
-    !doesTeamAgentRuntimeFreshnessSnapshotExtendVisible(visibleSnapshot, cachedSnapshot)
-  ) {
-    return visibleSnapshot;
-  }
-  return cachedSnapshot;
-}
-
-function rememberTeamAgentRuntimeFreshnessSnapshot(
-  teamName: string,
-  snapshot: TeamAgentRuntimeSnapshot
-): void {
-  let snapshotsByRun = teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.get(teamName);
-  if (!snapshotsByRun) {
-    snapshotsByRun = new Map<string | null, TeamAgentRuntimeSnapshot>();
-    teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.set(teamName, snapshotsByRun);
-  }
-  snapshotsByRun.set(snapshot.runId, snapshot);
-}
-
-function clearTeamAgentRuntimeFreshnessSnapshot(teamName: string): void {
-  teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.delete(teamName);
-}
 
 export function isTeamDataRefreshPending(teamName: string): boolean {
-  return defaultTeamViewDataCoordinator.isRefreshPending(teamName);
+  return teamStateLifecycleCoordinator.isTeamDataRefreshPending(teamName);
 }
 
 export function __resetTeamSliceModuleStateForTests(): void {
-  defaultTeamViewDataCoordinator.reset();
-  defaultTeamMessageFeedCoordinator.reset();
-  teamDirectoryRefreshCoordinator.reset();
+  teamStateLifecycleCoordinator.reset();
   teamLaunchAnalyticsCoordinator.reset();
   resetTeamTaskBoardAnalyticsForTests();
-  teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.clear();
-  clearAllPendingReplyRefreshWaits();
-  clearAllLastResolvedTeamDataRefreshes();
-  clearAllTeamLocalStateEpochs();
-  resetContextScopedRequestEpochForTests();
-  clearAllMemberSpawnStatusesIpcBackoffs();
-  clearAllTeamRefreshBurstDiagnostics();
-  clearAllMemberSpawnUiEqualLastWarns();
-  clearResolvedMemberSelectorCaches();
-  clearTeamMessageSelectorCaches();
-  resetGlobalTaskNotificationTrackerForTests();
 }
 
-function clearTeamScopedSelectorCaches(teamName: string): void {
-  clearResolvedMemberSelectorCachesForTeam(teamName);
-  clearTeamMessageSelectorCachesForTeam(teamName);
-}
-
-function clearTeamScopedTransientState(teamName: string): void {
-  defaultTeamViewDataCoordinator.clearTeam(teamName);
-  defaultTeamMessageFeedCoordinator.clearTeam(teamName);
-  clearLastResolvedTeamDataRefreshAt(teamName);
-  clearMemberSpawnStatusesIpcBackoff(teamName);
-  clearTeamRefreshBurstDiagnostics(teamName);
-  clearMemberSpawnUiEqualLastWarn(teamName);
-  clearTeamAgentRuntimeFreshnessSnapshot(teamName);
-  clearTeamScopedSelectorCaches(teamName);
-}
-
-interface ContextRequestScope {
-  contextId: string;
-  contextEpoch: number;
-}
-
-interface TeamRequestScope extends ContextRequestScope {
-  teamStateEpoch: number;
-}
-
-function captureContextRequestScope(get: () => AppState): ContextRequestScope {
-  return {
-    contextId: get().activeContextId,
-    contextEpoch: captureContextScopedRequestEpoch(),
-  };
-}
-
-function isContextRequestScopeCurrent(get: () => AppState, scope: ContextRequestScope): boolean {
-  return (
-    get().activeContextId === scope.contextId &&
-    isContextScopedRequestEpochCurrent(scope.contextEpoch)
-  );
-}
-
-function captureTeamRequestScope(get: () => AppState, teamName: string): TeamRequestScope {
-  return {
-    ...captureContextRequestScope(get),
-    teamStateEpoch: captureTeamLocalStateEpoch(teamName),
-  };
-}
-
-function isTeamRequestScopeCurrent(
-  get: () => AppState,
-  teamName: string,
-  scope: TeamRequestScope
-): boolean {
-  return (
-    isContextRequestScopeCurrent(get, scope) &&
-    isTeamLocalStateEpochCurrent(teamName, scope.teamStateEpoch)
-  );
-}
-
-export function __getTeamScopedTransientStateForTests(teamName: string): {
-  hasResolvedMembersSelector: boolean;
-  resolvedMemberSelectorCount: number;
-  hasMergedMessagesSelector: boolean;
-  memberMessagesSelectorCount: number;
-  hasPendingFreshTeamDataRefresh: boolean;
-  hasQueuedFullTeamDataRefreshAfterThin: boolean;
-  hasPostPaintTeamEnrichmentTimer: boolean;
-  hasQueuedHeadRefreshAfterOlder: boolean;
-  hasPendingFreshMessagesHeadRefresh: boolean;
-  hasPendingFreshMemberActivityMetaRefresh: boolean;
-  hasLastResolvedTeamDataRefresh: boolean;
-  hasCurrentLocalStateEpoch: boolean;
-  hasMemberSpawnStatusesIpcBackoff: boolean;
-  hasTeamRefreshBurstDiagnostics: boolean;
-  hasMemberSpawnUiEqualLastWarn: boolean;
-} {
-  const messageSelectorCache = getTeamMessageSelectorCacheSnapshotForTeam(teamName);
-  const resolvedMemberSelectorCacheSnapshot =
-    getResolvedMemberSelectorCacheSnapshotForTeam(teamName);
-  const messageFeedCoordinatorSnapshot = defaultTeamMessageFeedCoordinator.snapshot(teamName);
-  const viewDataCoordinatorSnapshot = defaultTeamViewDataCoordinator.snapshot(teamName);
-
-  return {
-    hasResolvedMembersSelector: resolvedMemberSelectorCacheSnapshot.hasResolvedMembersSelector,
-    resolvedMemberSelectorCount: resolvedMemberSelectorCacheSnapshot.resolvedMemberSelectorCount,
-    hasMergedMessagesSelector: messageSelectorCache.hasMergedMessagesSelector,
-    memberMessagesSelectorCount: messageSelectorCache.memberMessagesSelectorCount,
-    hasPendingFreshTeamDataRefresh: viewDataCoordinatorSnapshot.hasPendingFreshTeamDataRefresh,
-    hasQueuedFullTeamDataRefreshAfterThin:
-      viewDataCoordinatorSnapshot.hasQueuedFullTeamDataRefreshAfterThin,
-    hasPostPaintTeamEnrichmentTimer: viewDataCoordinatorSnapshot.hasPostPaintTeamEnrichmentTimer,
-    hasQueuedHeadRefreshAfterOlder: messageFeedCoordinatorSnapshot.hasQueuedHeadRefreshAfterOlder,
-    hasPendingFreshMessagesHeadRefresh: messageFeedCoordinatorSnapshot.hasPendingFreshHeadRefresh,
-    hasPendingFreshMemberActivityMetaRefresh:
-      messageFeedCoordinatorSnapshot.hasPendingFreshMemberActivityRefresh,
-    hasLastResolvedTeamDataRefresh: hasLastResolvedTeamDataRefreshAt(teamName),
-    hasCurrentLocalStateEpoch: hasTeamLocalStateEpoch(teamName),
-    hasMemberSpawnStatusesIpcBackoff: hasMemberSpawnStatusesIpcBackoff(teamName),
-    hasTeamRefreshBurstDiagnostics: hasTeamRefreshBurstDiagnostics(teamName),
-    hasMemberSpawnUiEqualLastWarn: hasMemberSpawnUiEqualLastWarn(teamName),
-  };
+export function __getTeamScopedTransientStateForTests(
+  teamName: string
+): TeamScopedTransientStateSnapshot {
+  return teamStateLifecycleCoordinator.snapshot(teamName);
 }
 
 function nowIso(): string {
   return new Date().toISOString();
-}
-
-function maybeLogMemberSpawnUiEqualSuppressed(
-  teamName: string,
-  runId: string | null | undefined
-): void {
-  if (!shouldLogMemberSpawnUiEqualSuppressed(teamName, MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS)) {
-    return;
-  }
-  logger.debug(
-    `[perf] member-spawn snapshot suppressed team=${teamName} runId=${runId ?? 'none'} reason=member-spawn-ui-equal`
-  );
 }
 
 export interface GlobalTaskDetailState {
@@ -660,8 +400,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       normalize: normalizePath,
     },
     requestScope: {
-      capture: () => captureContextRequestScope(get),
-      isCurrent: (scope) => isContextRequestScopeCurrent(get, scope),
+      capture: () => teamStateLifecycleCoordinator.captureContextRequestScope(get),
+      isCurrent: (scope) => teamStateLifecycleCoordinator.isContextRequestScopeCurrent(get, scope),
     },
     scheduler: {
       delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
@@ -704,8 +444,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       shouldInvalidateCachedData: shouldInvalidateCachedTeamDataForError,
     },
     requestScope: {
-      capture: (teamName) => captureTeamRequestScope(get, teamName),
-      isCurrent: (teamName, scope) => isTeamRequestScopeCurrent(get, teamName, scope),
+      capture: (teamName) => teamStateLifecycleCoordinator.captureTeamRequestScope(get, teamName),
+      isCurrent: (teamName, scope) =>
+        teamStateLifecycleCoordinator.isTeamRequestScopeCurrent(get, teamName, scope),
     },
     selectionEffects: {
       autoSelectProject: (projectPath) => {
@@ -790,8 +531,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       setEnabled: setPendingReplyRefreshEnabled,
     },
     requestScope: {
-      capture: (teamName) => captureTeamRequestScope(get, teamName),
-      isCurrent: (teamName, scope) => isTeamRequestScopeCurrent(get, teamName, scope),
+      capture: (teamName) => teamStateLifecycleCoordinator.captureTeamRequestScope(get, teamName),
+      isCurrent: (teamName, scope) =>
+        teamStateLifecycleCoordinator.isTeamRequestScopeCurrent(get, teamName, scope),
     },
     state: {
       getState: () => get(),
@@ -850,8 +592,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       refreshMessageHead: (teamName) => get().refreshTeamMessagesHead(teamName),
     },
     requestScope: {
-      capture: () => captureContextRequestScope(get),
-      isCurrent: (scope) => isContextRequestScopeCurrent(get, scope),
+      capture: () => teamStateLifecycleCoordinator.captureContextRequestScope(get),
+      isCurrent: (scope) => teamStateLifecycleCoordinator.isContextRequestScopeCurrent(get, scope),
     },
     state: {
       getState: () => get(),
@@ -908,8 +650,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       refreshTeamData: (teamName) => get().refreshTeamData(teamName),
     },
     requestScope: {
-      capture: (teamName) => captureTeamRequestScope(get, teamName),
-      isCurrent: (teamName, scope) => isTeamRequestScopeCurrent(get, teamName, scope),
+      capture: (teamName) => teamStateLifecycleCoordinator.captureTeamRequestScope(get, teamName),
+      isCurrent: (teamName, scope) =>
+        teamStateLifecycleCoordinator.isTeamRequestScopeCurrent(get, teamName, scope),
     },
     state: {
       getState: () => get(),
@@ -957,7 +700,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         }
         defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(teamName);
         clearPendingReplyRefreshWaits(teamName);
-        clearTeamScopedTransientState(teamName);
+        teamStateLifecycleCoordinator.clearTeam(teamName);
       },
     }),
     clock: {
@@ -987,7 +730,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     effects: {
       applyProgress: (progress) => get().onProvisioningProgress(progress),
       clearLaunchTracking: (runId) => teamLaunchAnalyticsCoordinator.clearRun(runId),
-      clearRuntimeFreshness: clearTeamAgentRuntimeFreshnessSnapshot,
+      clearRuntimeFreshness: (teamName) =>
+        teamStateLifecycleCoordinator.clearRuntimeFreshness(teamName),
     },
     state: {
       getState: () => get(),
@@ -1015,7 +759,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         invalidateTeamLocalStateEpoch(teamName);
         defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(teamName);
         clearPendingReplyRefreshWaits(teamName);
-        clearTeamScopedTransientState(teamName);
+        teamStateLifecycleCoordinator.clearTeam(teamName);
       },
     },
     state: {
@@ -1054,7 +798,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       selectTeam: (teamName, options) => get().selectTeam(teamName, options),
     },
     runtime: {
-      clearFreshness: clearTeamAgentRuntimeFreshnessSnapshot,
+      clearFreshness: (teamName) => teamStateLifecycleCoordinator.clearRuntimeFreshness(teamName),
     },
     state: {
       getState: () => get(),
@@ -1077,30 +821,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   memberSpawnStatusesByTeam: {},
   memberSpawnSnapshotsByTeam: {},
   teamAgentRuntimeByTeam: {},
-  ...createTeamRuntimeObservationSlice<TeamRequestScope>({
-    backoff: {
-      clearMemberSpawnBackoff: clearMemberSpawnStatusesIpcBackoff,
-      isMemberSpawnBackoffActive: isMemberSpawnStatusesIpcBackoffActive,
-      recordMissingMemberSpawnHandler: (teamName) =>
-        recordMemberSpawnStatusesIpcRetryBackoff(
-          teamName,
-          MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS
-        ),
-    },
-    memberSpawnPolicy: {
-      areSnapshotsEqual: areMemberSpawnSnapshotsSemanticallyEqual,
-      recordEquivalentSnapshot: maybeLogMemberSpawnUiEqualSuppressed,
-    },
-    requestScope: {
-      capture: (teamName) => captureTeamRequestScope(get, teamName),
-      isCurrent: (teamName, scope) => isTeamRequestScopeCurrent(get, teamName, scope),
-    },
-    runtimeSnapshotPolicy: {
-      areVisibleSnapshotsEqual: areTeamAgentRuntimeSnapshotsEqual,
-      getFreshnessSnapshot: getTeamAgentRuntimeFreshnessSnapshot,
-      rememberFreshnessSnapshot: rememberTeamAgentRuntimeFreshnessSnapshot,
-      stabilizeSnapshot: stabilizeTeamAgentRuntimeSnapshot,
-    },
+  ...teamStateLifecycleCoordinator.createRuntimeObservationSlice({
+    debug: (message) => logger.debug(message),
+    getActiveContextState: () => get(),
     state: {
       getState: () => get(),
       setState: (update) => {
