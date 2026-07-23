@@ -42,6 +42,9 @@ const CODEX_CHATGPT_MODEL_UNSUPPORTED =
   "model is not supported when using Codex with a ChatGPT account";
 const SAFE_EXECUTION_ATTEMPTS_EXHAUSTED =
   "Safe execution has no attempts remaining.";
+const SAFE_EXECUTION_CONFIGURED_ATTEMPTS_EXHAUSTED =
+  "Safe execution exhausted all configured attempts.";
+const SAFE_EXECUTION_PARTIAL_EVIDENCE = "safe_execution_status:partial";
 
 export async function resolveProjectPreStartContinuation(input: {
   readonly manifest: CodexGoalJobManifest;
@@ -353,7 +356,8 @@ async function isRecoverableAdmittedInputPatchLegacyPrewarmFailure(input: {
     status.workspaceDirty !== true ||
     status.recommendedAction !== "inspect_dirty_failure" ||
     status.resultExists !== true ||
-    status.resultStatus !== "failed" ||
+    (status.resultStatus !== "failed" &&
+      status.resultStatus !== "partial") ||
     status.resultReason !== "unknown_error" ||
     (status.progressResultReason !== undefined &&
       status.progressResultReason !== "unknown_error") ||
@@ -368,14 +372,17 @@ async function isRecoverableAdmittedInputPatchLegacyPrewarmFailure(input: {
     const parsed: unknown = JSON.parse(body.toString("utf8"));
     if (
       !isRecord(parsed) ||
-      parsed.status !== "failed" ||
+      parsed.status !== status.resultStatus ||
       parsed.reason !== "unknown_error" ||
       parsed.taskId !== input.launch.config.taskId ||
       parsed.nextAction !== "preserve_patch" ||
       !stringArray(parsed.changedFiles) ||
       parsed.changedFiles.length === 0 ||
-      !stringArray(parsed.evidence) ||
-      !legacyPrewarmBlockers(parsed.blockers) ||
+      !legacyPrewarmResultShape(
+        parsed.status,
+        parsed.evidence,
+        parsed.blockers,
+      ) ||
       !samePaths(parsed.changedFiles, status.changedFiles ?? []) ||
       !isRecord(parsed.details) ||
       typeof parsed.details.baseCommit !== "string" ||
@@ -446,6 +453,23 @@ async function isRecoverableAdmittedInputPatchPrewarmFailure(input: {
   } catch {
     return false;
   }
+}
+
+function legacyPrewarmResultShape(
+  status: unknown,
+  evidence: unknown,
+  blockers: unknown,
+): boolean {
+  if (!stringArray(evidence)) return false;
+  if (status === "failed") return legacyPrewarmBlockers(blockers);
+  return (
+    status === "partial" &&
+    evidence.includes(SAFE_EXECUTION_PARTIAL_EVIDENCE) &&
+    stringArray(blockers) &&
+    blockers.length === 2 &&
+    blockers[0] === "unknown_error" &&
+    blockers[1] === SAFE_EXECUTION_CONFIGURED_ATTEMPTS_EXHAUSTED
+  );
 }
 
 function isLegacyCodexUnsupportedModelPrewarmTranscript(

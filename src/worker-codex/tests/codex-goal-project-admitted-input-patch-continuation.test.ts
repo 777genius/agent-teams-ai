@@ -214,6 +214,48 @@ describe("admitted input-patch capacity continuation", () => {
       workspaceMode: "admitted_input_patch_continuation",
     });
 
+    const partialResult = {
+      ...result,
+      status: "partial",
+      evidence: ["safe_execution_status:partial"],
+      blockers: [
+        "unknown_error",
+        "Safe execution exhausted all configured attempts.",
+      ],
+    };
+    const partialStatus = {
+      ...status,
+      resultStatus: "partial",
+    } as CodexGoalStatus;
+    await writeFile(resultPath, `${JSON.stringify(partialResult)}\n`);
+    await expect(
+      resolveProjectPreStartContinuation({
+        manifest,
+        launch,
+        status: partialStatus,
+      }),
+    ).resolves.toEqual({
+      kind: "prewarm_before_attempt",
+      workspaceMode: "admitted_input_patch_continuation",
+    });
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...partialResult,
+        details: {
+          ...partialResult.details,
+          rawCause: "ordinary_unknown_runtime_failure",
+        },
+      })}\n`,
+    );
+    await expect(
+      resolveProjectPreStartContinuation({
+        manifest,
+        launch,
+        status: partialStatus,
+      }),
+    ).resolves.toBeUndefined();
+
     for (const rejectedRawCause of [
       rawCause.replace("Respond with OK only.", "Review the admitted patch."),
       rawCause.replaceAll("invalid_request_error", "server_error"),
@@ -618,7 +660,12 @@ describe("admitted input-patch capacity continuation", () => {
       resultPath,
       `${JSON.stringify({
         ...reconnectResult,
-        status: "failed",
+        status: "partial",
+        evidence: ["safe_execution_status:partial"],
+        blockers: [
+          "unknown_error",
+          "Safe execution exhausted all configured attempts.",
+        ],
         details: {
           baseCommit: contract.baseSha,
           rawCause: legacyUnsupportedModelPrewarmRawCause(),
