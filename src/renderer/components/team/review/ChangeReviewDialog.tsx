@@ -12,6 +12,22 @@ import { redoDepth, undoDepth } from '@codemirror/commands';
 import { Transaction } from '@codemirror/state';
 import { registerAppCloseParticipant } from '@features/app-close-coordination/renderer';
 import {
+  buildChangeReviewTitle,
+  buildGlobalDiffLoadingState,
+  buildReviewChangeStats,
+  buildReviewFileLabels,
+  buildReviewStats,
+  buildWatchedReviewFilePathsKey,
+  canAcceptAllReviewFiles,
+  findActiveReviewFile,
+  getRejectablePendingReviewFiles,
+  resolveReviewFileLabel as resolveReviewFileLabelFromMap,
+  shouldShowTaskScopeBanner,
+  sortChangeReviewFiles,
+  TaskChangesEmptyState,
+  toTaskChangeSetV2,
+} from '@features/change-review/renderer';
+import {
   ReviewDraftHistoryWriteBuffer,
   serializeReviewDraftEditorState,
 } from '@features/change-review-history/renderer';
@@ -44,8 +60,6 @@ import {
   registerChangeReviewLifecycleOwner,
 } from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { buildSelectionInfo, SELECTION_DEBOUNCE_MS } from '@renderer/utils/codemirrorSelectionInfo';
-import { sortItemsAsTree } from '@renderer/utils/fileTreeBuilder';
-import { displayMemberName } from '@renderer/utils/memberHelpers';
 import {
   buildReviewDecisionScopeToken,
   reviewChangeSetMatchesScope,
@@ -56,9 +70,8 @@ import {
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
-import { classifyTaskChangeReviewability } from '@shared/utils/taskChangeReviewability';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
-import { AlertTriangle, ChevronDown, Clock, FileSearch, Info, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Clock, X } from 'lucide-react';
 
 import { ChangesLoadingAnimation } from './ChangesLoadingAnimation';
 import {
@@ -153,7 +166,6 @@ import type {
   ReviewRedoAction,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
-  TaskChangeSetV2,
 } from '@shared/types';
 import type { EditorSelectionAction, EditorSelectionInfo } from '@shared/types/editor';
 
@@ -292,69 +304,6 @@ interface ChangeReviewDialogProps {
   lifecycleTabId?: string;
   onLifecycleFocus?: () => void;
 }
-
-function isTaskChangeSetV2(cs: { teamName: string }): cs is TaskChangeSetV2 {
-  return 'scope' in cs;
-}
-
-const TaskChangesEmptyState = ({
-  changeSet,
-}: {
-  changeSet: TaskChangeSetV2 | null;
-}): React.ReactElement => {
-  const { t } = useAppTranslation('team');
-  const status = changeSet ? classifyTaskChangeReviewability(changeSet) : null;
-  const diagnosticMessages =
-    status && status.diagnostics.length > 0
-      ? status.diagnostics.map((diagnostic) => diagnostic.message)
-      : (changeSet?.warnings ?? []);
-  const uniqueMessages = [
-    ...new Set(diagnosticMessages.filter((message) => message.trim().length > 0)),
-  ];
-  const isAttention = status?.reviewability === 'attention_required';
-  const isDiagnosticOnly = status?.reviewability === 'diagnostic_only';
-  const isNoSafeDiff = isAttention || isDiagnosticOnly;
-  const hasDiagnosticContext = uniqueMessages.length > 0;
-  const Icon = isAttention ? AlertTriangle : hasDiagnosticContext ? Info : FileSearch;
-  const title = isDiagnosticOnly
-    ? t('review.empty.noSafeDiff')
-    : isAttention
-      ? t('review.continuousScroll.empty')
-      : t('review.empty.noFileChangesRecorded');
-  const description = isNoSafeDiff
-    ? isDiagnosticOnly
-      ? t('review.empty.noSafeDiffDescription')
-      : t('review.empty.noSafeDiffDiagnosticsDescription')
-    : hasDiagnosticContext
-      ? t('review.empty.noFileEventsYet')
-      : t('review.empty.noFileEvents');
-
-  return (
-    <div className="flex w-full items-center justify-center px-6">
-      <div className="max-w-xl rounded-lg border border-border bg-surface-sidebar px-5 py-4 text-center">
-        <Icon
-          className={cn('mx-auto mb-2 size-5', isAttention ? 'text-amber-300' : 'text-text-muted')}
-        />
-        <div className="text-sm font-medium text-text">{title}</div>
-        <p className="mt-1 text-xs leading-5 text-text-muted">{description}</p>
-        {uniqueMessages.length > 0 && (
-          <div
-            className={cn(
-              'mt-3 space-y-1 rounded border px-3 py-2 text-left text-xs',
-              isAttention
-                ? 'border-amber-500/20 bg-amber-500/10 text-amber-200'
-                : 'border-border bg-surface-raised text-text-muted'
-            )}
-          >
-            {uniqueMessages.map((message, index) => (
-              <div key={`${message}:${index}`}>{message}</div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 export const ChangeReviewDialog = ({
   open,
@@ -1747,56 +1696,32 @@ export const ChangeReviewDialog = ({
 
   // Sort files to match the visual order of the file tree (directories first, then alphabetical)
   const sortedFiles = useMemo(
-    () => sortItemsAsTree(activeChangeSet?.files ?? [], (f) => f.relativePath),
+    () => sortChangeReviewFiles(activeChangeSet?.files ?? []),
     [activeChangeSet]
   );
-  const reviewFileLabels = useMemo(
-    () =>
-      new Map(
-        sortedFiles.map((file) => [
-          normalizePathForComparison(file.filePath),
-          file.relativePath || file.filePath,
-        ])
-      ),
-    [sortedFiles]
-  );
+  const reviewFileLabels = useMemo(() => buildReviewFileLabels(sortedFiles), [sortedFiles]);
   const resolveReviewFileLabel = useCallback(
-    (filePath: string): string =>
-      reviewFileLabels.get(normalizePathForComparison(filePath)) ?? filePath,
+    (filePath: string): string => resolveReviewFileLabelFromMap(reviewFileLabels, filePath),
     [reviewFileLabels]
   );
   // A content-derived key avoids tearing down/recreating the main-process watcher
   // when Zustand returns a new array containing the exact same review paths.
   const watchedReviewFilePathsKey = useMemo(
-    () => sortedFiles.map((file) => file.filePath).join('\0'),
+    () => buildWatchedReviewFilePathsKey(sortedFiles),
     [sortedFiles]
   );
   const watchedReviewFilePathsKeyRef = useRef(watchedReviewFilePathsKey);
   watchedReviewFilePathsKeyRef.current = watchedReviewFilePathsKey;
-  const loadingFiles = useMemo(
-    () => sortedFiles.filter((file) => fileContentsLoading[file.filePath]),
-    [sortedFiles, fileContentsLoading]
+  const globalDiffLoadingState = useMemo(
+    () =>
+      buildGlobalDiffLoadingState({
+        files: sortedFiles,
+        activeFilePath,
+        fileContentsLoading,
+        fileContents,
+      }),
+    [activeFilePath, fileContents, fileContentsLoading, sortedFiles]
   );
-  const globalDiffLoadingState = useMemo(() => {
-    if (loadingFiles.length === 0) return null;
-
-    const preferredFile =
-      (activeFilePath
-        ? loadingFiles.find((file) => file.filePath === activeFilePath)
-        : undefined) ?? loadingFiles[0];
-    const snippetCount = loadingFiles.reduce(
-      (sum, file) => sum + file.snippets.filter((snippet) => !snippet.isError).length,
-      0
-    );
-
-    return {
-      totalFilesCount: sortedFiles.length,
-      readyFilesCount: sortedFiles.filter((file) => file.filePath in fileContents).length,
-      loadingFilesCount: loadingFiles.length,
-      snippetCount,
-      activeFileName: preferredFile?.relativePath ?? preferredFile?.filePath,
-    };
-  }, [activeFilePath, loadingFiles, sortedFiles, fileContents]);
 
   // File paths for viewed tracking
   const allFilePaths = useMemo(() => sortedFiles.map((f) => f.filePath), [sortedFiles]);
@@ -1807,39 +1732,24 @@ export const ChangeReviewDialog = ({
 
   const rejectablePendingFiles = useMemo(
     () =>
-      sortedFiles.filter((file) => {
-        const reviewKey = getFileReviewKey(file);
-        const fileDecision = fileDecisions[reviewKey] ?? fileDecisions[file.filePath] ?? 'pending';
-        if (fileDecision !== 'pending') return false;
-        if (file.filePath in editedContents) return false;
-        const count = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
-        if (
-          isReviewFileFullyRejected(file, count, {
-            hunkDecisions,
-            fileDecisions,
-          })
-        ) {
-          return false;
-        }
-        return isReviewRejectable(file, fileContents[file.filePath] ?? null);
+      getRejectablePendingReviewFiles({
+        files: sortedFiles,
+        editedContents,
+        fileChunkCounts,
+        fileContents,
+        fileDecisions,
+        hunkDecisions,
       }),
     [editedContents, fileChunkCounts, fileContents, fileDecisions, hunkDecisions, sortedFiles]
   );
   const canRejectAll = rejectablePendingFiles.length > 0;
   const canAcceptAll = useMemo(
     () =>
-      sortedFiles.length > 0 &&
-      sortedFiles.every((file) => {
-        if (!(file.filePath in fileContents) || file.filePath in editedContents) return false;
-        const content = fileContents[file.filePath] ?? null;
-        const reviewKey = getFileReviewKey(file);
-        const fileDecision = fileDecisions[reviewKey] ?? fileDecisions[file.filePath];
-        return !isReviewAcceptDisabled({
-          hasEdits: false,
-          isMissingOnDisk: isReviewFileMissingOnDisk(content),
-          isContentUnavailable: isReviewTextContentUnavailable(file, content),
-          fileDecision,
-        });
+      canAcceptAllReviewFiles({
+        files: sortedFiles,
+        editedContents,
+        fileContents,
+        fileDecisions,
       }),
     [editedContents, fileContents, fileDecisions, sortedFiles]
   );
@@ -4914,49 +4824,18 @@ export const ChangeReviewDialog = ({
   }, [open, diffNav, handleHunkRejected]);
 
   // Compute toolbar stats using actual CM chunk count (not snippet count)
-  const reviewStats = useMemo(() => {
-    if (!activeChangeSet) return { pending: 0, accepted: 0, rejected: 0 };
+  const reviewStats = useMemo(
+    () =>
+      buildReviewStats({
+        changeSet: activeChangeSet,
+        hunkDecisions,
+        fileDecisions,
+        fileChunkCounts,
+      }),
+    [activeChangeSet, hunkDecisions, fileDecisions, fileChunkCounts]
+  );
 
-    let pending = 0;
-    let accepted = 0;
-    let rejected = 0;
-
-    for (const file of activeChangeSet.files) {
-      // File-level decision takes priority (set by Accept All / Reject All)
-      const reviewKey = getFileReviewKey(file);
-      const fileDec = fileDecisions[reviewKey] ?? fileDecisions[file.filePath];
-      const count = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
-
-      if (fileDec === 'accepted') {
-        accepted += count;
-        continue;
-      }
-      if (fileDec === 'rejected') {
-        rejected += count;
-        continue;
-      }
-
-      for (let i = 0; i < count; i++) {
-        const key = buildHunkDecisionKey(reviewKey, i);
-        const decision: HunkDecision =
-          hunkDecisions[key] ?? hunkDecisions[`${file.filePath}:${i}`] ?? 'pending';
-        if (decision === 'pending') pending++;
-        else if (decision === 'accepted') accepted++;
-        else if (decision === 'rejected') rejected++;
-      }
-    }
-
-    return { pending, accepted, rejected };
-  }, [activeChangeSet, hunkDecisions, fileDecisions, fileChunkCounts]);
-
-  const changeStats = useMemo(() => {
-    if (!activeChangeSet) return { linesAdded: 0, linesRemoved: 0, filesChanged: 0 };
-    return {
-      linesAdded: activeChangeSet.totalLinesAdded,
-      linesRemoved: activeChangeSet.totalLinesRemoved,
-      filesChanged: activeChangeSet.totalFiles,
-    };
-  }, [activeChangeSet]);
+  const changeStats = useMemo(() => buildReviewChangeStats(activeChangeSet), [activeChangeSet]);
 
   const handleApply = useCallback(async () => {
     if (hasReviewActionInFlight() || blockReviewMutationForExternalChange()) return;
@@ -5017,29 +4896,20 @@ export const ChangeReviewDialog = ({
     isCurrentReviewOperationScope,
   ]);
 
-  const taskChangeSet =
-    activeChangeSet && isTaskChangeSetV2(activeChangeSet) ? activeChangeSet : null;
+  const taskChangeSet = toTaskChangeSetV2(activeChangeSet);
   const hasReviewFiles = (activeChangeSet?.files.length ?? 0) > 0;
-  const shouldShowScopeBanner =
-    mode === 'task' &&
-    !!taskChangeSet &&
-    (taskChangeSet.provenance?.sourceKind !== 'ledger' ||
-      classifyTaskChangeReviewability(taskChangeSet).reviewability === 'attention_required' ||
-      taskChangeSet.scope.confidence.tier > 1);
+  const shouldShowScopeBanner = shouldShowTaskScopeBanner({ mode, changeSet: taskChangeSet });
 
   // Active file for timeline (derived from scroll-spy)
-  const activeFile = useMemo(() => {
-    if (!activeChangeSet || !activeFilePath) return null;
-    return activeChangeSet.files.find((f) => f.filePath === activeFilePath) ?? null;
-  }, [activeChangeSet, activeFilePath]);
+  const activeFile = useMemo(
+    () => findActiveReviewFile(activeChangeSet, activeFilePath),
+    [activeChangeSet, activeFilePath]
+  );
 
-  const title = useMemo(() => {
-    if (mode === 'agent') return `Changes by ${displayMemberName(memberName ?? 'unknown')}`;
-    const task = taskId ? globalTasks.find((t) => t.id === taskId) : undefined;
-    const shortId = task?.displayId ?? taskId?.slice(0, 8) ?? '?';
-    const subject = task?.subject;
-    return subject ? `Changes for task #${shortId} - ${subject}` : `Changes for task #${shortId}`;
-  }, [mode, memberName, taskId, globalTasks]);
+  const title = useMemo(
+    () => buildChangeReviewTitle({ mode, memberName, taskId, globalTasks }),
+    [mode, memberName, taskId, globalTasks]
+  );
 
   const isMacElectron =
     isElectronMode() && window.navigator.userAgent.toLowerCase().includes('mac');

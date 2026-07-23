@@ -1,3 +1,5 @@
+export type { TaskChangesEmptyStateProps } from './ui/TaskChangesEmptyState';
+export { TaskChangesEmptyState } from './ui/TaskChangesEmptyState';
 export type {
   ChangeReviewChangeSet,
   GlobalDiffLoadingState,
