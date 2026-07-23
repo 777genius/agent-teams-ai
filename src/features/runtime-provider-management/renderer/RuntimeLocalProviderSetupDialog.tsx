@@ -42,7 +42,10 @@ import {
   Server,
 } from 'lucide-react';
 
-import { RUNTIME_LOCAL_PROVIDER_PRESETS } from '../core/domain';
+import {
+  isPrivateNetworkRuntimeLocalProviderUrl,
+  RUNTIME_LOCAL_PROVIDER_PRESETS,
+} from '../core/domain';
 
 import { LocalProviderBrandIcon } from './ui/LocalProviderBrandIcon';
 
@@ -64,7 +67,8 @@ const SERVER_START_GUIDANCE: Record<RuntimeLocalProviderPresetIdDto, string> = {
   'lm-studio': 'In LM Studio, load a model, open Developer > Local Server, and start the server.',
   'atomic-chat': 'Open Atomic Chat, load a model, and start its local API server.',
   'llama.cpp': 'Start llama-server with a model loaded. The default port for this setup is 8080.',
-  custom: 'Start an OpenAI-compatible API on this computer with a working /v1/models endpoint.',
+  custom:
+    'Start an OpenAI-compatible API on this computer or your local network with a working /v1/models endpoint.',
 };
 
 type SetupErrorScope = 'server' | 'project' | 'model' | 'setup';
@@ -350,6 +354,8 @@ export const RuntimeLocalProviderSetupDialog = ({
   const [configurationScope, setConfigurationScope] =
     useState<RuntimeLocalProviderScopeDto>('global');
   const [setAsDefault, setSetAsDefault] = useState(true);
+  const [setAsSmallModel, setSetAsSmallModel] = useState(true);
+  const [allowPrivateNetwork, setAllowPrivateNetwork] = useState(false);
   const [phase, setPhase] = useState<SetupPhase>('idle');
   const [error, setError] = useState<SetupErrorState | null>(null);
   const [savedConfiguration, setSavedConfiguration] =
@@ -385,6 +391,7 @@ export const RuntimeLocalProviderSetupDialog = ({
   const closeBlocked = phase === 'configuring' || projectPickerLoading;
   const setupLocked = busy || Boolean(savedConfiguration);
   const detectedProbes = scanProbes.filter((candidate) => candidate.state === 'available');
+  const privateNetworkUrl = isPrivateNetworkRuntimeLocalProviderUrl(baseUrl);
   const projectConfigPath = projectPath ? getProjectConfigPath(projectPath) : null;
   const expectedConfigPath =
     configurationScope === 'global' ? '~/.config/opencode/opencode.json' : projectConfigPath;
@@ -649,6 +656,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSelectedPresetId(preset.id);
     setProviderId(preset.providerId);
     setBaseUrl(preset.defaultBaseUrl);
+    setAllowPrivateNetwork(false);
     const scanned = scanProbes.find((candidate) => candidate.preset.id === preset.id) ?? null;
     setProbe(scanned?.state === 'available' ? scanned : null);
     setSelectedModelId(scanned?.models[0]?.id ?? '');
@@ -675,6 +683,7 @@ export const RuntimeLocalProviderSetupDialog = ({
         presetId: selectedPresetId,
         baseUrl,
         providerId,
+        allowPrivateNetwork,
       });
       if (dialogSessionRef.current !== sessionId) return;
       if (response.error) {
@@ -836,6 +845,8 @@ export const RuntimeLocalProviderSetupDialog = ({
         providerId,
         defaultModelId: selectedModelId,
         setAsDefault,
+        setAsSmallModel,
+        allowPrivateNetwork,
       });
       if (dialogSessionRef.current !== sessionId) return;
       if (response.error || !response.configuration) {
@@ -928,6 +939,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     if (nextPreset) selectPreset(nextPreset.id);
     setEditingProviderId(null);
     setSetAsDefault(configuredProviders.length === 0);
+    setSetAsSmallModel(true);
     showProviderView('editor');
   };
 
@@ -937,6 +949,8 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSelectedPresetId(entry.preset.id);
     setProviderId(entry.providerId);
     setBaseUrl(entry.baseUrl);
+    // A previously saved private-network address was already approved by the user.
+    setAllowPrivateNetwork(isPrivateNetworkRuntimeLocalProviderUrl(entry.baseUrl));
     setProbe({
       preset: entry.preset,
       providerId: entry.providerId,
@@ -1308,9 +1322,33 @@ export const RuntimeLocalProviderSetupDialog = ({
                           id="runtime-local-provider-url-help"
                           className="text-[11px] text-[var(--color-text-muted)]"
                         >
-                          Advanced: this is the OpenAI-compatible /v1 address. Only localhost is
-                          accepted.
+                          Advanced: this is the OpenAI-compatible /v1 address. Localhost or a
+                          private local-network address is accepted.
                         </p>
+                      ) : null}
+                      {privateNetworkUrl && !savedConfiguration ? (
+                        <div className="flex items-start gap-2 rounded-md bg-amber-300/[0.05] px-3 py-2.5 text-xs text-amber-100">
+                          <Checkbox
+                            id="runtime-local-provider-private-network"
+                            className="mt-0.5"
+                            checked={allowPrivateNetwork}
+                            disabled={setupLocked}
+                            onCheckedChange={(checked) => {
+                              setAllowPrivateNetwork(checked === true);
+                              resetProbe();
+                            }}
+                          />
+                          <Label
+                            htmlFor="runtime-local-provider-private-network"
+                            className="font-normal"
+                          >
+                            <span className="block">Allow this local network address</span>
+                            <span className="mt-0.5 block text-[11px] text-amber-100/70">
+                              This server runs on another machine on your network. Traffic is sent
+                              over your local network, unencrypted when using HTTP.
+                            </span>
+                          </Label>
+                        </div>
                       ) : null}
                     </div>
                   </div>
@@ -1551,12 +1589,36 @@ export const RuntimeLocalProviderSetupDialog = ({
                       {!savedConfiguration ? (
                         <span className="mt-0.5 block text-[11px] text-[var(--color-text-muted)]">
                           {setAsDefault
-                            ? `This replaces the current ${configurationScope === 'global' ? 'global' : 'project'} default and lightweight-task model. All other settings are preserved.`
+                            ? `This replaces the current ${configurationScope === 'global' ? 'global' : 'project'} default model. All other settings are preserved.`
                             : `This provider will be added without changing the current ${configurationScope === 'global' ? 'global' : 'project'} defaults.`}
                         </span>
                       ) : null}
                     </Label>
                   </div>
+
+                  {setAsDefault ? (
+                    <div className="flex items-start gap-2 pl-6 text-xs text-[var(--color-text-secondary)]">
+                      <Checkbox
+                        id="runtime-local-provider-small-model"
+                        className="mt-0.5"
+                        checked={setAsSmallModel}
+                        disabled={setupLocked || !selectedModelId}
+                        onCheckedChange={(checked) => setSetAsSmallModel(checked === true)}
+                      />
+                      <Label htmlFor="runtime-local-provider-small-model" className="font-normal">
+                        <span className="block text-[var(--color-text)]">
+                          Also use for lightweight background tasks
+                        </span>
+                        {!savedConfiguration ? (
+                          <span className="mt-0.5 block text-[11px] text-[var(--color-text-muted)]">
+                            {setAsSmallModel
+                              ? 'OpenCode routes summaries and other small tasks (small_model) to this model too.'
+                              : 'The current lightweight-task model (small_model) is kept unchanged.'}
+                          </span>
+                        ) : null}
+                      </Label>
+                    </div>
+                  ) : null}
 
                   {error?.scope === 'model' ? <InlineError message={error.message} /> : null}
                 </SetupStep>

@@ -76,6 +76,7 @@ export function normalizeRuntimeLocalProviderTarget(input: {
   presetId: RuntimeLocalProviderPresetIdDto;
   baseUrl?: string | null;
   providerId?: string | null;
+  allowPrivateNetwork?: boolean;
 }): NormalizedRuntimeLocalProviderTarget {
   const preset = getRuntimeLocalProviderPreset(input.presetId);
   const providerId =
@@ -106,9 +107,16 @@ export function normalizeRuntimeLocalProviderTarget(input: {
     );
   }
   if (!isLoopbackHostname(url.hostname)) {
-    throw new RuntimeLocalProviderValidationError(
-      'Local provider URL must point to localhost or a loopback address.'
-    );
+    if (!isPrivateNetworkHostname(url.hostname)) {
+      throw new RuntimeLocalProviderValidationError(
+        'Local provider URL must point to localhost or a private local-network address.'
+      );
+    }
+    if (!input.allowPrivateNetwork) {
+      throw new RuntimeLocalProviderValidationError(
+        'This address is on your local network, not this computer. Enable local network access to use it.'
+      );
+    }
   }
   if (url.search || url.hash) {
     throw new RuntimeLocalProviderValidationError(
@@ -154,14 +162,51 @@ export function buildRuntimeLocalProviderModelRoute(providerId: string, modelId:
   return `${providerId}/${modelId}`;
 }
 
+export function isPrivateNetworkRuntimeLocalProviderUrl(rawBaseUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(rawBaseUrl.trim());
+  } catch {
+    return false;
+  }
+  return !isLoopbackHostname(url.hostname) && isPrivateNetworkHostname(url.hostname);
+}
+
 function isLoopbackHostname(hostname: string): boolean {
   const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (normalized === 'localhost' || normalized.endsWith('.localhost') || normalized === '::1') {
     return true;
   }
-  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(normalized);
+  const ipv4 = parseIpv4Octets(normalized);
+  return ipv4 !== null && ipv4[0] === 127;
+}
+
+function isPrivateNetworkHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (normalized.endsWith('.local')) {
+    return true;
+  }
+  if (normalized.includes(':')) {
+    // IPv6 unique-local (fc00::/7) and link-local (fe80::/10) ranges.
+    return /^f[cd]/.test(normalized) || normalized.startsWith('fe80:');
+  }
+  const ipv4 = parseIpv4Octets(normalized);
   if (!ipv4) {
     return false;
   }
-  return ipv4.slice(1).every((part) => Number(part) <= 255) && Number(ipv4[1]) === 127;
+  return (
+    ipv4[0] === 10 ||
+    (ipv4[0] === 172 && ipv4[1] >= 16 && ipv4[1] <= 31) ||
+    (ipv4[0] === 192 && ipv4[1] === 168) ||
+    (ipv4[0] === 169 && ipv4[1] === 254)
+  );
+}
+
+function parseIpv4Octets(hostname: string): number[] | null {
+  const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
+  if (!match) {
+    return null;
+  }
+  const octets = match.slice(1).map(Number);
+  return octets.every((part) => part <= 255) ? octets : null;
 }

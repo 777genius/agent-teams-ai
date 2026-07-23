@@ -344,6 +344,111 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
     expect(probeCoordination).not.toHaveBeenCalled();
   });
 
+  it('blocks a non-Ollama provider that is reachable but serves zero models', async () => {
+    const emptyProvider: RuntimeLocalProviderListEntryDto = {
+      ...customProvider(),
+      liveModels: [],
+    };
+    const inventory = createInventory([emptyProvider]);
+    const probeCoordination = vi.fn(coordinationPassed);
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'local-lab/team-model',
+      },
+      { inventory, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'blocking',
+      code: 'local_model_not_loaded',
+      message: expect.stringContaining('reports no loaded models'),
+    });
+    expect(probeCoordination).not.toHaveBeenCalled();
+  });
+
+  it('blocks a llama.cpp server running with only 4K context', async () => {
+    const inventory = createInventory([llamaCppProvider()]);
+    const probeCoordination = vi.fn(coordinationPassed);
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      expect(url).toContain('/props');
+      return jsonResponse({ default_generation_settings: { n_ctx: 4_096 } });
+    });
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'llama.cpp/team-model',
+      },
+      { inventory, fetchImpl, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'blocking',
+      code: 'local_context_too_small',
+      effectiveContextTokens: 4_096,
+      message: expect.stringContaining('--ctx-size'),
+    });
+    expect(probeCoordination).not.toHaveBeenCalled();
+  });
+
+  it('marks a llama.cpp server with proven 32K context and coordination proof ready', async () => {
+    const inventory = createInventory([llamaCppProvider()]);
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      jsonResponse({ default_generation_settings: { n_ctx: 32_768 } })
+    );
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'llama.cpp/team-model',
+      },
+      { inventory, fetchImpl, probeCoordination: coordinationPassed }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'ready',
+      code: 'local_coordination_verified',
+      coordinationProbeStatus: 'passed',
+      effectiveContextTokens: 32_768,
+    });
+  });
+
+  it('blocks an LM Studio model that does not report tool_use capability', async () => {
+    const inventory = createInventory([lmStudioProvider()]);
+    const probeCoordination = vi.fn(coordinationPassed);
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      expect(url).toContain('/api/v0/models');
+      return jsonResponse({
+        data: [
+          {
+            id: 'team-model',
+            max_context_length: 32_768,
+            capabilities: [],
+          },
+        ],
+      });
+    });
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'lmstudio/team-model',
+      },
+      { inventory, fetchImpl, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'blocking',
+      code: 'local_tools_unsupported',
+      toolCapable: false,
+    });
+    expect(probeCoordination).not.toHaveBeenCalled();
+  });
+
   it('recognizes a configured custom local provider with an arbitrary source id', async () => {
     const inventory = createInventory([customProvider()]);
 
@@ -415,6 +520,50 @@ function ollamaProvider(baseUrl = 'http://127.0.0.1:11434/v1'): RuntimeLocalProv
     isDefault: true,
     state: 'available',
     liveModels: [{ id: 'qwen2.5:0.5b', displayName: 'qwen2.5:0.5b' }],
+    latencyMs: 1,
+    message: 'Connected',
+  };
+}
+
+function llamaCppProvider(): RuntimeLocalProviderListEntryDto {
+  return {
+    preset: {
+      id: 'llama.cpp',
+      providerId: 'llama.cpp',
+      displayName: 'llama.cpp',
+      defaultBaseUrl: 'http://127.0.0.1:8080/v1',
+      description: 'Local llama-server',
+      scannable: true,
+    },
+    providerId: 'llama.cpp',
+    baseUrl: 'http://127.0.0.1:8080/v1',
+    configuredModelIds: ['team-model'],
+    defaultModelId: 'team-model',
+    isDefault: false,
+    state: 'available',
+    liveModels: [{ id: 'team-model', displayName: 'team-model' }],
+    latencyMs: 1,
+    message: 'Connected',
+  };
+}
+
+function lmStudioProvider(): RuntimeLocalProviderListEntryDto {
+  return {
+    preset: {
+      id: 'lm-studio',
+      providerId: 'lmstudio',
+      displayName: 'LM Studio',
+      defaultBaseUrl: 'http://127.0.0.1:1234/v1',
+      description: 'Local LM Studio server',
+      scannable: true,
+    },
+    providerId: 'lmstudio',
+    baseUrl: 'http://127.0.0.1:1234/v1',
+    configuredModelIds: ['team-model'],
+    defaultModelId: 'team-model',
+    isDefault: false,
+    state: 'available',
+    liveModels: [{ id: 'team-model', displayName: 'team-model' }],
     latencyMs: 1,
     message: 'Connected',
   };
