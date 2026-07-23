@@ -133,9 +133,17 @@ export class TaskLifecycleAnalyticsTracker implements TeamTaskLifecyclePort {
   }
 
   clearTeam(teamName: string): void {
-    for (const key of this.firstOutputContextByTask.keys()) {
-      if (key.startsWith(`${teamName}:`)) {
-        this.firstOutputContextByTask.delete(key);
+    const teamKeyPrefix = `${teamName}:`;
+    const collections = [
+      this.firstOutputContextByTask,
+      this.reportedFirstOutputKeys,
+      this.reportedEndKeys,
+    ];
+    for (const collection of collections) {
+      for (const key of collection.keys()) {
+        if (key.startsWith(teamKeyPrefix)) {
+          collection.delete(key);
+        }
       }
     }
   }
