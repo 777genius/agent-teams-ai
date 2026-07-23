@@ -1,6 +1,10 @@
 import { normalizeMemberWorkSyncTeamKey } from '../../../contracts/memberWorkSyncTeamIdentity';
 
 import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from './teamIdentityStorageSchema';
+import {
+  TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS,
+  verifyTeamRosterStorageMigration,
+} from './teamRosterStorageSchema';
 
 import type DatabaseConstructor from 'better-sqlite3';
 
@@ -18,6 +22,9 @@ export const INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES = Object.freeze([
   'snapshot_retention_leases',
   'team_identity_records',
   'team_identity_storage_metadata',
+  'team_roster_members',
+  'team_roster_storage_metadata',
+  'team_rosters',
 ] as const);
 
 interface InternalStorageMigration {
@@ -463,6 +470,10 @@ const MIGRATIONS: InternalStorageMigration[] = [
         ON member_work_sync_metric_events (team_key)`,
     ],
   },
+  {
+    version: 10,
+    statements: [...TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS],
+  },
 ];
 
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
@@ -489,6 +500,7 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
       }
       if (migration.version === 8) backfillCoordinationEventJournal(db);
       if (migration.version === 9) backfillMemberWorkSyncTeamKeys(db);
+      if (migration.version === 10) verifyTeamRosterStorageMigration(db);
       db.pragma(`user_version = ${migration.version}`);
     });
     apply();

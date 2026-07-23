@@ -66,6 +66,8 @@ export type CompositeRuntimePlanErrorCode =
   | 'lane_plan_rejected'
   | 'missing_lane_binding'
   | 'missing_member_binding'
+  | 'persisted_roster_mismatch'
+  | 'persisted_roster_missing'
   | 'persisted_plan_invalid'
   | 'plan_hash_mismatch'
   | 'unsupported_topology'

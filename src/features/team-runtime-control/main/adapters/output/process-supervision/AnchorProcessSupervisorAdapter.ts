@@ -185,7 +185,9 @@ export class AnchorProcessSupervisorAdapter
       return { status: 'rejected', reason: 'not_owned' };
     }
     const existing = this.inFlightStarts.get(requestKey);
-    if (existing) return existing;
+    if (existing) {
+      return await waitForCallerCancellation(existing, request.cancellation);
+    }
 
     const inFlight = this.startExactRequest(request).finally(() => {
       if (this.inFlightStarts.get(requestKey) === inFlight) {
@@ -238,6 +240,12 @@ export class AnchorProcessSupervisorAdapter
     });
     if (created.status === 'rejected') return mapStartRejection(created.reason);
     if (created.status === 'already_created') {
+      if (created.state.phase === 'spawn_intent') {
+        // Another adapter may own a still-live start that has not committed ready evidence yet.
+        // The retry has no boot-local channel with which to verify or control it, so fail closed
+        // without reclassifying the durable intent or interfering with the original starter.
+        return { status: 'rejected' as const, reason: 'not_owned' as const };
+      }
       const existing = this.sessions.get(created.state.intent.processRef);
       if (
         created.state.phase === 'owned' &&
@@ -712,11 +720,48 @@ export class AnchorProcessSupervisorAdapter
 }
 
 function exactStartRequestKey(request: StartProcessExecutionUnitRequest): Sha256Hash {
-  // The opaque cancellation ID is its request identity; the callback reports changing state.
+  // Cancellation belongs to one caller waiting on this semantic operation. It must neither split
+  // the durable start identity nor let a retry replace the cancellation owner of an existing start.
   return computeCanonicalPolicyDigest({
     executionUnit: request.executionUnit,
     launchSpec: request.launchSpec,
-    cancellationId: request.cancellation.cancellationId,
+  });
+}
+
+async function waitForCallerCancellation(
+  inFlight: Promise<StartProcessExecutionUnitResult>,
+  cancellation: StartProcessExecutionUnitRequest['cancellation']
+): Promise<StartProcessExecutionUnitResult> {
+  if (isCancellationRequested(cancellation)) {
+    return { status: 'rejected', reason: 'cancelled' };
+  }
+
+  return await new Promise<StartProcessExecutionUnitResult>((resolve, reject) => {
+    let settled = false;
+    const settle = (callback: () => void): void => {
+      if (settled) return;
+      settled = true;
+      clearInterval(cancellationPoll);
+      callback();
+    };
+    const cancellationPoll = setInterval(() => {
+      if (isCancellationRequested(cancellation)) {
+        settle(() => resolve({ status: 'rejected', reason: 'cancelled' }));
+      }
+    }, 5);
+
+    void inFlight.then(
+      (result) =>
+        settle(() =>
+          resolve(
+            isCancellationRequested(cancellation)
+              ? { status: 'rejected', reason: 'cancelled' }
+              : result
+          )
+        ),
+      (error: unknown) =>
+        settle(() => reject(error instanceof Error ? error : new Error('in-flight-start-rejected')))
+    );
   });
 }
 

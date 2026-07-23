@@ -16,6 +16,11 @@ export {
   teamIdentityRecords,
   teamIdentityStorageMetadata,
 } from './teamIdentityStorageSchema';
+export {
+  teamRosterMembers,
+  teamRosters,
+  teamRosterStorageMetadata,
+} from './teamRosterStorageSchema';
 
 export const stallJournalEntries = sqliteTable(
   'stall_journal_entries',

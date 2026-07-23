@@ -1,3 +1,4 @@
+import { parseMemberId, parseTeamId } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
@@ -155,5 +156,50 @@ describe('InternalStorageWorkerClient', () => {
     await expect(queuedError).resolves.toBe(failure);
     expect(worker.messages.map(({ op }) => op)).toEqual(['ping']);
     consoleError.mockRestore();
+  });
+
+  it('round-trips TeamRoster operations through the typed worker protocol', async () => {
+    const { InternalStorageWorkerClient } =
+      await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
+    const client = new InternalStorageWorkerClient({ databasePath: '/tmp/internal-storage.db' });
+    const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+    const roster = {
+      schemaVersion: 1 as const,
+      teamId,
+      rosterGeneration: 1,
+      adoptionFingerprint: `sha256:${'b'.repeat(64)}`,
+      adoptedAt: '2026-07-23T10:00:00.000Z',
+      members: [
+        {
+          ordinal: 0,
+          memberId: parseMemberId(`member_${'c'.repeat(32)}`),
+          legacyMemberKey: 'builder',
+          memberRevision: 1,
+          state: 'active' as const,
+          providerId: 'codex' as const,
+          model: null,
+          role: null,
+          workflow: null,
+          isolation: null,
+        },
+      ],
+    };
+
+    const get = client.getTeamRoster(teamId);
+    const worker = hoisted.workers[0];
+    expect(worker.messages[0]).toMatchObject({
+      op: 'teamRoster.get',
+      payload: { teamId },
+    });
+    respond(worker, 0, roster);
+    await expect(get).resolves.toEqual(roster);
+
+    const adopt = client.adoptTeamRoster(roster);
+    expect(worker.messages[1]).toMatchObject({
+      op: 'teamRoster.adopt',
+      payload: { roster },
+    });
+    respond(worker, 1, { outcome: 'created', roster });
+    await expect(adopt).resolves.toEqual({ outcome: 'created', roster });
   });
 });

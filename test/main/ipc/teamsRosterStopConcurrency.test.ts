@@ -15,6 +15,7 @@ vi.mock('@main/services/team/TeamMembersMetaStore', () => ({
 vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
   getTeamDataWorkerClient: () => ({
     invalidateTeamConfig: vi.fn(),
+    invalidateTeamMessageFeed: vi.fn(),
     invalidateMemberRuntimeAdvisory: vi.fn(),
   }),
 }));

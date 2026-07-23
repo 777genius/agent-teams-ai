@@ -12,6 +12,7 @@ export type {
   InternalStorageFeature,
   InternalStorageFeatureDeps,
   InternalStorageMemberWorkSyncBackend,
+  InternalStorageTeamRosterBackend,
 } from './composition/createInternalStorageFeature';
 export {
   createInternalStorageFeature,
