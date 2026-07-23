@@ -245,10 +245,10 @@ export async function projectControlRefillWorkerView(
     expectedSourceCommit: args.expectedSourceCommit,
   });
 
-  const baseBranch = stringValue(args.baseBranch) ?? "origin/main";
-  assertSafeGitRefName(baseBranch, "baseBranch");
   const sourceRef = stringValue(args.sourceRef);
   if (sourceRef) assertSafeGitRefName(sourceRef, "sourceRef");
+  const baseBranch = stringValue(args.baseBranch) ?? sourceRef ?? "origin/main";
+  assertSafeGitRefName(baseBranch, "baseBranch");
   const expectedSourceCommit = stringValue(args.expectedSourceCommit);
   const newBranch = stringValue(args.newBranch);
   if (newBranch) assertSafeGitRefName(newBranch, "newBranch");
@@ -1062,10 +1062,10 @@ async function projectControlRefillWorkerBoundedView(
     manifest: createManifest,
   });
   if (preStartAdmission) {
-    const baseBranch = stringValue(args.baseBranch) ?? "origin/main";
-    assertSafeGitRefName(baseBranch, "baseBranch");
     const sourceRef = stringValue(args.sourceRef);
     if (sourceRef) assertSafeGitRefName(sourceRef, "sourceRef");
+    const baseBranch = stringValue(args.baseBranch) ?? sourceRef ?? "origin/main";
+    assertSafeGitRefName(baseBranch, "baseBranch");
     const expectedSourceCommit = stringValue(args.expectedSourceCommit);
     const newBranch = stringValue(args.newBranch);
     if (newBranch) assertSafeGitRefName(newBranch, "newBranch");

@@ -152,7 +152,6 @@ describe("codex goal MCP server", () => {
           jobIdPrefixes: ["infinity-context-"],
           tmuxSessionPrefixes: ["infinity-context-"],
           allowedBranches: [
-            "main",
             "HEAD",
             sourceBaseBranch,
             "test/infinity-context-*",
@@ -329,6 +328,50 @@ describe("codex goal MCP server", () => {
         worktree: { status: "noop" },
         createJob: { status: "noop" },
       });
+      const sourceRefOnlyWorkspace = join(
+        root,
+        "worktrees",
+        "infinity-context-source-ref-only-v1",
+      );
+      const sourceRefOnly = await callToolJson(
+        client,
+        "codex_goal_project_refill_worker",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          jobId: "infinity-context-source-ref-only-v1",
+          sourceWorkspacePath,
+          sourceRef: `origin/${sourceBaseBranch}`,
+          expectedSourceCommit: phaseStartSha,
+          requireCanonicalRemoteHead: true,
+          newBranch: "test/infinity-context-source-ref-only-v1",
+          workspacePath: sourceRefOnlyWorkspace,
+          promptBody: "Use the explicitly pinned canonical source ref.\n",
+          taskId: "infinity-context-source-ref-only-v1",
+          accounts: ["account-a"],
+          workerRole: "fastgate",
+          preStartAdmission: {
+            ...builtinAdmission,
+            contract: {
+              ...builtinAdmission.contract,
+              executionPolicy: {
+                ...builtinAdmission.contract.executionPolicy,
+                sandboxRoot: join(sourceRefOnlyWorkspace, "sandbox"),
+              },
+            },
+          },
+          confirmPreStartAdmission: true,
+          startWorker: false,
+          confirmRefill: true,
+        },
+      );
+      expect(sourceRefOnly).toMatchObject({
+        ok: true,
+        baseBranch: `origin/${sourceBaseBranch}`,
+      });
+      await expect(
+        gitStdout(sourceRefOnlyWorkspace, ["rev-parse", "HEAD"]),
+      ).resolves.toBe(`${phaseStartSha}\n`);
       await writeFile(join(sourceWorkspacePath, "after-phase-start.md"), "new head\n");
       await git(sourceWorkspacePath, ["add", "after-phase-start.md"]);
       await git(sourceWorkspacePath, ["commit", "-m", "test: advance source head"]);
@@ -392,6 +435,7 @@ describe("codex goal MCP server", () => {
           jobRootDir: branchMismatchJobRoot,
           authRootDir: join(root, "auth"),
           sourceWorkspacePath,
+          baseBranch: sourceBaseBranch,
           newBranch: existingBranchMismatch,
           workspacePath: branchMismatchWorkspace,
           promptBody: "mismatched existing branch must not create resources\n",
@@ -428,6 +472,7 @@ describe("codex goal MCP server", () => {
           jobRootDir: rejectedJobRoot,
           authRootDir: join(root, "auth"),
           sourceWorkspacePath,
+          baseBranch: sourceBaseBranch,
           workspacePath: rejectedWorkspace,
           promptBody: "invalid binding must not create resources\n",
           taskId: "infinity-context-invalid-v1",
@@ -455,6 +500,10 @@ describe("codex goal MCP server", () => {
         "create_job", "use_account",
         "create_worktree",
         "create_worktree",
+        "create_worktree",
+        "create_worktree",
+        "create_job",
+        "use_account",
         "create_worktree",
         "create_worktree",
         "create_worktree",
