@@ -866,10 +866,15 @@ describe("SafeExecutionRunner", () => {
       },
     );
 
-    expect(defaultSafeExecutionErrorClassifier(poolFailure)).toEqual({
+    expect(defaultSafeExecutionErrorClassifier(poolFailure)).toMatchObject({
       reason: "task_timeout",
       safeMessage: "Codex task timed out.",
       retryable: true,
+      details: {
+        code: "task_timeout",
+        workerId: "worker-a",
+        slotIndex: "0",
+      },
     });
   });
 
@@ -880,10 +885,11 @@ describe("SafeExecutionRunner", () => {
       { details: { code: "provider_output_invalid" } },
     );
 
-    expect(defaultSafeExecutionErrorClassifier(providerFailure)).toEqual({
+    expect(defaultSafeExecutionErrorClassifier(providerFailure)).toMatchObject({
       reason: "provider_output_invalid",
       safeMessage: "Codex provider output was invalid.",
       retryable: true,
+      details: { code: "provider_output_invalid" },
     });
   });
 
