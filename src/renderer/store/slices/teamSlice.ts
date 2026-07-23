@@ -13,8 +13,10 @@ import {
 import {
   createTeamProvisioningControlSlice,
   createTeamProvisioningProgressSlice,
+  createTeamRuntimeObservationSlice,
   type TeamProvisioningControlSlice,
   type TeamProvisioningProgressSlice,
+  type TeamRuntimeObservationSlice,
 } from '@features/team-provisioning/renderer';
 import {
   clearTeamTaskBoardAnalytics,
@@ -1250,6 +1252,7 @@ export interface TeamSlice
     TeamGraphLayoutSlice,
     TeamProvisioningControlSlice,
     TeamProvisioningProgressSlice,
+    TeamRuntimeObservationSlice,
     TeamTaskBoardRendererSlice {
   teams: TeamSummary[];
   /** O(1) lookup to avoid array scans in render-hot paths */
@@ -1334,8 +1337,6 @@ export interface TeamSlice
   memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
   memberSpawnSnapshotsByTeam: Record<string, MemberSpawnStatusesSnapshot>;
   teamAgentRuntimeByTeam: Record<string, TeamAgentRuntimeSnapshot>;
-  fetchMemberSpawnStatuses: (teamName: string) => Promise<void>;
-  fetchTeamAgentRuntime: (teamName: string) => Promise<void>;
   provisioningErrorByTeam: Record<string, string | null>;
   clearProvisioningError: (teamName?: string) => void;
   /** Per-team launch parameters (model, effort, extended context) — persisted in localStorage. */
@@ -1652,6 +1653,41 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   memberSpawnStatusesByTeam: {},
   memberSpawnSnapshotsByTeam: {},
   teamAgentRuntimeByTeam: {},
+  ...createTeamRuntimeObservationSlice<TeamRequestScope>({
+    backoff: {
+      clearMemberSpawnBackoff: clearMemberSpawnStatusesIpcBackoff,
+      isMemberSpawnBackoffActive: isMemberSpawnStatusesIpcBackoffActive,
+      recordMissingMemberSpawnHandler: (teamName) =>
+        recordMemberSpawnStatusesIpcRetryBackoff(
+          teamName,
+          MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS
+        ),
+    },
+    memberSpawnPolicy: {
+      areSnapshotsEqual: areMemberSpawnSnapshotsSemanticallyEqual,
+      recordEquivalentSnapshot: maybeLogMemberSpawnUiEqualSuppressed,
+    },
+    requestScope: {
+      capture: (teamName) => captureTeamRequestScope(get, teamName),
+      isCurrent: (teamName, scope) => isTeamRequestScopeCurrent(get, teamName, scope),
+    },
+    runtimeSnapshotPolicy: {
+      areVisibleSnapshotsEqual: areTeamAgentRuntimeSnapshotsEqual,
+      getFreshnessSnapshot: getTeamAgentRuntimeFreshnessSnapshot,
+      rememberFreshnessSnapshot: rememberTeamAgentRuntimeFreshnessSnapshot,
+      stabilizeSnapshot: stabilizeTeamAgentRuntimeSnapshot,
+    },
+    state: {
+      getState: () => get(),
+      setState: (update) => {
+        if (typeof update === 'function') {
+          set((state) => update(state));
+          return;
+        }
+        set(update);
+      },
+    },
+  }),
   provisioningErrorByTeam: {},
   clearProvisioningError: (teamName?: string) =>
     set((state) => {
@@ -1668,133 +1704,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       return { provisioningErrorByTeam: nextErrors };
     }),
   launchParamsByTeam: loadAllLaunchParams(),
-  fetchMemberSpawnStatuses: async (teamName: string) => {
-    if (!api.teams?.getMemberSpawnStatuses) return;
-    if (isMemberSpawnStatusesIpcBackoffActive(teamName)) {
-      return;
-    }
-    const requestScope = captureTeamRequestScope(get, teamName);
-    try {
-      const snapshot = await api.teams.getMemberSpawnStatuses(teamName);
-      if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-        return;
-      }
-      clearMemberSpawnStatusesIpcBackoff(teamName);
-      set((prev) => {
-        if (snapshot.runId != null && prev.ignoredRuntimeRunIds[snapshot.runId] === teamName) {
-          return {};
-        }
-
-        if (
-          prev.currentRuntimeRunIdByTeam[teamName] == null &&
-          prev.leadActivityByTeam[teamName] === 'offline' &&
-          snapshot.runId != null
-        ) {
-          return {};
-        }
-
-        if (
-          snapshot.runId != null &&
-          prev.currentRuntimeRunIdByTeam[teamName] != null &&
-          prev.currentRuntimeRunIdByTeam[teamName] !== snapshot.runId
-        ) {
-          return {};
-        }
-
-        const nextCurrentRuntimeRunIdByTeam =
-          snapshot.runId == null || prev.currentRuntimeRunIdByTeam[teamName] != null
-            ? prev.currentRuntimeRunIdByTeam
-            : {
-                ...prev.currentRuntimeRunIdByTeam,
-                [teamName]: snapshot.runId,
-              };
-        // Keep same-team ignored runtime tombstones intact here.
-        // Member-spawn snapshots do not carry a run start time, so clearing older
-        // ignored ids can reopen stale zombie snapshots during create/launch churn.
-        const previousSnapshot = prev.memberSpawnSnapshotsByTeam[teamName];
-        const snapshotChanged = !areMemberSpawnSnapshotsSemanticallyEqual(
-          previousSnapshot,
-          snapshot
-        );
-
-        if (!snapshotChanged) {
-          maybeLogMemberSpawnUiEqualSuppressed(teamName, snapshot.runId);
-          if (nextCurrentRuntimeRunIdByTeam === prev.currentRuntimeRunIdByTeam) {
-            return {};
-          }
-
-          return {
-            currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam,
-          };
-        }
-
-        return {
-          currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam,
-          memberSpawnStatusesByTeam: {
-            ...prev.memberSpawnStatusesByTeam,
-            [teamName]: snapshot.statuses,
-          },
-          memberSpawnSnapshotsByTeam: {
-            ...prev.memberSpawnSnapshotsByTeam,
-            [teamName]: snapshot,
-          },
-        };
-      });
-    } catch (error) {
-      if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-        return;
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      if (message.includes("No handler registered for 'team:memberSpawnStatuses'")) {
-        recordMemberSpawnStatusesIpcRetryBackoff(
-          teamName,
-          MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS
-        );
-      }
-      // ignore — spawn statuses are best-effort
-    }
-  },
-  fetchTeamAgentRuntime: async (teamName: string) => {
-    if (!api.teams?.getTeamAgentRuntime) return;
-    const requestScope = captureTeamRequestScope(get, teamName);
-    try {
-      const snapshot = await api.teams.getTeamAgentRuntime(teamName);
-      if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-        return;
-      }
-      set((prev) => {
-        if (snapshot.runId != null && prev.ignoredRuntimeRunIds[snapshot.runId] === teamName) {
-          return {};
-        }
-        if (
-          snapshot.runId != null &&
-          prev.currentRuntimeRunIdByTeam[teamName] != null &&
-          prev.currentRuntimeRunIdByTeam[teamName] !== snapshot.runId
-        ) {
-          return {};
-        }
-        const visibleSnapshot = prev.teamAgentRuntimeByTeam[teamName];
-        const previousSnapshot = getTeamAgentRuntimeFreshnessSnapshot(
-          teamName,
-          visibleSnapshot,
-          snapshot
-        );
-        const stabilizedSnapshot = stabilizeTeamAgentRuntimeSnapshot(previousSnapshot, snapshot);
-        rememberTeamAgentRuntimeFreshnessSnapshot(teamName, stabilizedSnapshot);
-        if (areTeamAgentRuntimeSnapshotsEqual(visibleSnapshot, stabilizedSnapshot)) {
-          return {};
-        }
-        return {
-          teamAgentRuntimeByTeam: {
-            ...prev.teamAgentRuntimeByTeam,
-            [teamName]: stabilizedSnapshot,
-          },
-        };
-      });
-    } catch {
-      // ignore — runtime snapshots are best-effort
-    }
-  },
   kanbanFilterQuery: null,
   globalTaskDetail: null,
   pendingMemberProfile: null,
