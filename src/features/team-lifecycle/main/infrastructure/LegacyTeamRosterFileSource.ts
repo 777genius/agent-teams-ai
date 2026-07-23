@@ -216,10 +216,12 @@ async function readVerifiedDirectoryJsonFile(
   }
 
   let result: LegacyFileReadResult | undefined;
+  let readFailed = false;
   let readError: unknown;
   try {
     result = await readBoundedJsonFile(canonicalDirectoryPath, filename, openFile, maximumBytes);
   } catch (error) {
+    readFailed = true;
     readError = error;
   }
 
@@ -228,7 +230,7 @@ async function readVerifiedDirectoryJsonFile(
   } catch {
     throw new UnsafeTeamDirectoryError();
   }
-  if (readError !== undefined) {
+  if (readFailed) {
     throw readError instanceof Error
       ? readError
       : new Error('team-roster-evidence-read-failed', { cause: readError });
@@ -246,13 +248,24 @@ async function readBoundedJsonFile(
   const targetPath = path.join(directoryPath, filename);
   let handle: fs.promises.FileHandle | null = null;
   try {
+    const entry = await fs.promises.lstat(targetPath);
+    if (
+      !entry.isFile() ||
+      entry.isSymbolicLink() ||
+      entry.nlink !== 1 ||
+      entry.size > maximumBytes
+    ) {
+      throw new Error('team-roster-evidence-file-unsafe');
+    }
     handle = await openFile(targetPath, fs.constants.O_RDONLY | NO_FOLLOW);
     const before = await handle.stat();
     if (
       !before.isFile() ||
       before.isSymbolicLink() ||
       before.nlink !== 1 ||
-      before.size > maximumBytes
+      before.size > maximumBytes ||
+      before.dev !== entry.dev ||
+      before.ino !== entry.ino
     ) {
       throw new Error('team-roster-evidence-file-unsafe');
     }
@@ -277,7 +290,13 @@ async function readBoundedJsonFile(
     const serialized = buffer.subarray(0, offset).toString('utf8');
     return { exists: true, serialized, value: JSON.parse(serialized) };
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { exists: false };
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      (error as NodeJS.ErrnoException).code === 'ENOENT'
+    ) {
+      return { exists: false };
+    }
     throw error;
   } finally {
     await handle?.close().catch(() => undefined);

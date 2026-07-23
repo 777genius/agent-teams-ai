@@ -258,6 +258,28 @@ describe('LegacyTeamRosterFileSource', () => {
     expect(replaced).toBe(true);
   });
 
+  it('rejects a roster symlink before invoking an opener without O_NOFOLLOW', async () => {
+    const actualOpen = nodeFs.promises.open.bind(nodeFs.promises);
+    const openFile = vi.fn((targetPath: nodeFs.PathLike) =>
+      actualOpen(targetPath, nodeFs.constants.O_RDONLY)
+    );
+    const { fileSource, teamDirectory } = await source(openFile);
+    const externalConfig = path.join(path.dirname(teamDirectory), 'external-config.json');
+    await fs.writeFile(
+      externalConfig,
+      JSON.stringify({ members: [{ name: 'external-builder', providerId: 'codex' }] })
+    );
+    await fs.symlink(externalConfig, path.join(teamDirectory, 'config.json'));
+    openFile.mockClear();
+
+    await expect(fileSource.readLegacyTeamRosterEvidence(teamId)).resolves.toEqual({
+      status: 'blocked',
+      reason: 'legacy_evidence_invalid',
+    });
+    expect(openFile).toHaveBeenCalledTimes(1);
+    expect(path.basename(String(openFile.mock.calls[0]?.[0]))).toBe('team.identity.json');
+  });
+
   it('blocks a directory replacement instead of rebinding the TeamId', async () => {
     const { fileSource, teamDirectory } = await source();
     await fs.rename(teamDirectory, `${teamDirectory}.replaced`);
