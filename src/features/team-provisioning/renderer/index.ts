@@ -3,6 +3,15 @@ export type {
   TeamProvisioningControlSliceDependencies,
 } from './adapters/createTeamProvisioningControlSlice';
 export { createTeamProvisioningControlSlice } from './adapters/createTeamProvisioningControlSlice';
+export {
+  createTeamProvisioningLaunchPersistence,
+  loadAllTeamLaunchParams,
+  saveTeamLaunchParams,
+  saveTeamToolApprovalSettings,
+} from './adapters/createTeamProvisioningLaunchPersistence';
+export type { TeamProvisioningLaunchSliceDependencies } from './adapters/createTeamProvisioningLaunchSlice';
+export { createTeamProvisioningLaunchSlice } from './adapters/createTeamProvisioningLaunchSlice';
+export { createTeamProvisioningLaunchTransport } from './adapters/createTeamProvisioningLaunchTransport';
 export type {
   TeamProvisioningProgressSlice,
   TeamProvisioningProgressSliceDependencies,
@@ -20,6 +29,18 @@ export type {
   TeamProvisioningControlTransportPort,
 } from './ports/TeamProvisioningControlPorts';
 export type {
+  TeamProvisioningLaunchAnalyticsPort,
+  TeamProvisioningLaunchClockPort,
+  TeamProvisioningLaunchControlPort,
+  TeamProvisioningLaunchMessageEntry,
+  TeamProvisioningLaunchPersistencePort,
+  TeamProvisioningLaunchScopePort,
+  TeamProvisioningLaunchSlice,
+  TeamProvisioningLaunchStatePort,
+  TeamProvisioningLaunchStoreState,
+  TeamProvisioningLaunchTransportPort,
+} from './ports/TeamProvisioningLaunchPorts';
+export type {
   TeamProvisioningProgressAnalyticsPort,
   TeamProvisioningProgressRefreshPort,
   TeamProvisioningProgressRuntimePort,
@@ -36,3 +57,10 @@ export type {
   TeamRuntimeObservationStatePort,
   TeamRuntimeObservationTransportPort,
 } from './ports/TeamRuntimeObservationPorts';
+export {
+  areTeamLaunchParamsEqual,
+  buildLaunchParamsFromRuntimeRequest,
+  extractBaseModel,
+  type TeamLaunchParams,
+} from './utils/teamLaunchParams';
+export { normalizePersistedTeamLaunchParams } from './utils/teamLaunchParamsPersistence';
