@@ -90,7 +90,8 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const importedBindings = new Map();
   const localExports = [];
   const localExportNames = new Set();
-  const localTypeReferences = new Map();
+  const localDependencyReferences = new Map();
+  const localReferenceNames = new Map();
   const reexports = [];
 
   const addEdge = (node, moduleSpecifier, kind) => {
@@ -155,7 +156,37 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const hasModifier = (node, kind) =>
     ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === kind);
 
-  const typeReferenceOwner = (node) => {
+  const statementBindingNames = (statement) => {
+    if (ts.isVariableStatement(statement)) {
+      return statement.declarationList.declarations.flatMap((declaration) =>
+        bindingNames(declaration.name)
+      );
+    }
+    return 'name' in statement && statement.name && ts.isIdentifier(statement.name)
+      ? [statement.name.text]
+      : [];
+  };
+
+  const declaredLocalNames = new Set();
+  const directLocalExports = [];
+  for (const statement of sourceFile.statements) {
+    const localNames = statementBindingNames(statement);
+    for (const localName of localNames) declaredLocalNames.add(localName);
+    if (!hasModifier(statement, ts.SyntaxKind.ExportKeyword)) continue;
+
+    const exportedNames = hasModifier(statement, ts.SyntaxKind.DefaultKeyword)
+      ? ['default']
+      : localNames;
+    for (const [index, localName] of localNames.entries()) {
+      directLocalExports.push({
+        exportedName: exportedNames[index] ?? exportedNames[0],
+        line: lineForNode(sourceFile, statement),
+        localName,
+      });
+    }
+  }
+
+  const publicReferenceOwner = (node) => {
     let current = node;
     while (current && current !== sourceFile) {
       if (
@@ -189,6 +220,19 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     };
   };
 
+  const addOwnerDependency = (owner, dependency) => {
+    for (const localName of owner.localNames) {
+      const references = localDependencyReferences.get(localName) ?? [];
+      references.push(dependency);
+      localDependencyReferences.set(localName, references);
+    }
+    if (owner.localNames.length === 0) {
+      for (const exportedName of owner.exportedNames) {
+        reexports.push({ ...dependency.edge, exportedName, ...dependency, kind: 'export' });
+      }
+    }
+  };
+
   const importTypeQualifierName = (qualifier) => {
     let current = qualifier;
     while (current && ts.isQualifiedName(current)) current = current.left;
@@ -200,17 +244,12 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     const edge = addEdge(node, node.argument.literal, 'import');
     if (!edge) return;
 
-    const owner = typeReferenceOwner(node);
+    const owner = publicReferenceOwner(node);
     if (!owner) return;
-    const importedName = importTypeQualifierName(node.qualifier);
-    for (const localName of owner.localNames) {
-      const references = localTypeReferences.get(localName) ?? [];
-      references.push({ edge, importedName });
-      localTypeReferences.set(localName, references);
-    }
-    for (const exportedName of owner.exportedNames) {
-      reexports.push({ ...edge, exportedName, importedName, kind: 'export' });
-    }
+    addOwnerDependency(owner, {
+      edge,
+      importedName: importTypeQualifierName(node.qualifier),
+    });
   };
 
   const visit = (node) => {
@@ -273,32 +312,120 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   };
 
   visit(sourceFile);
-  for (const localExport of localExports) {
-    const importedBinding = importedBindings.get(localExport.localName);
-    if (importedBinding) {
-      reexports.push({
-        ...importedBinding.edge,
-        exportedName: localExport.exportedName,
-        importedName: localExport.importedName ?? importedBinding.importedName,
-        kind: 'export',
-        line: localExport.line,
-      });
-      continue;
-    }
 
-    const typeReferences = localTypeReferences.get(localExport.localName);
-    if (typeReferences) {
-      for (const { edge, importedName } of typeReferences) {
-        reexports.push({
-          ...edge,
-          exportedName: localExport.exportedName,
-          importedName,
-          kind: 'export',
-          line: localExport.line,
-        });
-      }
-      continue;
+  const isIdentifierReference = (node) => {
+    const parent = node.parent;
+    if (!parent) return false;
+    if (
+      (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
+      (ts.isQualifiedName(parent) && parent.right === node)
+    ) {
+      return false;
     }
+    if (
+      'name' in parent &&
+      parent.name === node &&
+      !ts.isShorthandPropertyAssignment(parent) &&
+      !ts.isExportSpecifier(parent)
+    ) {
+      return false;
+    }
+    return !(
+      (ts.isBindingElement(parent) && parent.propertyName === node) ||
+      ts.isImportClause(parent) ||
+      ts.isImportSpecifier(parent) ||
+      ts.isNamespaceImport(parent)
+    );
+  };
+
+  const isShadowedTypeReference = (node) => {
+    let current = node.parent;
+    while (current && current !== sourceFile) {
+      if (
+        'typeParameters' in current &&
+        current.typeParameters?.some(
+          (parameter) => ts.isIdentifier(parameter.name) && parameter.name.text === node.text
+        )
+      ) {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
+  };
+
+  const importedNameForReference = (node, importedBinding) => {
+    const parent = node.parent;
+    if (
+      (ts.isPropertyAccessExpression(parent) && parent.expression === node) ||
+      (ts.isQualifiedName(parent) && parent.left === node)
+    ) {
+      return parent.name?.text ?? parent.right.text;
+    }
+    return importedBinding.importedName;
+  };
+
+  const visitBindingReference = (node) => {
+    if (
+      ts.isImportDeclaration(node) ||
+      ts.isImportEqualsDeclaration(node) ||
+      ts.isExportDeclaration(node)
+    ) {
+      return;
+    }
+    if (ts.isIdentifier(node) && isIdentifierReference(node) && !isShadowedTypeReference(node)) {
+      const owner = publicReferenceOwner(node);
+      if (owner) {
+        const importedBinding = importedBindings.get(node.text);
+        if (importedBinding) {
+          addOwnerDependency(owner, {
+            edge: importedBinding.edge,
+            importedName: importedNameForReference(node, importedBinding),
+          });
+        } else if (declaredLocalNames.has(node.text) && !owner.localNames.includes(node.text)) {
+          for (const localName of owner.localNames) {
+            const references = localReferenceNames.get(localName) ?? new Set();
+            references.add(node.text);
+            localReferenceNames.set(localName, references);
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visitBindingReference);
+  };
+
+  visitBindingReference(sourceFile);
+
+  const resolveLocalDependencies = (localName, visited = new Set()) => {
+    const importedBinding = importedBindings.get(localName);
+    if (importedBinding) return [importedBinding];
+    if (visited.has(localName)) return [];
+    const nextVisited = new Set(visited).add(localName);
+    return [
+      ...(localDependencyReferences.get(localName) ?? []),
+      ...[...(localReferenceNames.get(localName) ?? [])].flatMap((referenceName) =>
+        resolveLocalDependencies(referenceName, nextVisited)
+      ),
+    ];
+  };
+
+  const addResolvedReexports = ({ exportedName, importedName, line, localName }) => {
+    const dependencies = resolveLocalDependencies(localName);
+    for (const dependency of dependencies) {
+      reexports.push({
+        ...dependency.edge,
+        exportedName,
+        importedName: importedName ?? dependency.importedName,
+        kind: 'export',
+        line,
+      });
+    }
+    return dependencies.length > 0;
+  };
+
+  for (const directExport of directLocalExports) addResolvedReexports(directExport);
+  for (const localExport of localExports) {
+    if (addResolvedReexports(localExport)) continue;
     localExportNames.add(localExport.exportedName);
   }
 

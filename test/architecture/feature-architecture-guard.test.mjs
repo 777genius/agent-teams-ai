@@ -209,20 +209,37 @@ test('detects implementation exports through transitive internal barrels', () =>
   withFixture(
     {
       'src/features/example/main/index.ts': `
+        import { AliasInfra } from './infrastructure/AliasInfra';
+        import { BodyOnly } from './infrastructure/BodyOnly';
+        import type { ImportedInfra } from './infrastructure/ImportedInfra';
+        import type { PropertyName } from './infrastructure/PropertyName';
+        import type { ShadowOnly } from './infrastructure/ShadowOnly';
         import { Store } from './public';
         import { safe } from './safePublic';
         export { safe, Store };
+        type ChainedInfra = ImportedInfra;
+        export interface PublicShape { value: ChainedInfra }
+        export const ExportedAlias = AliasInfra;
         export type DirectInfra = import('./infrastructure/DirectInfra').DirectInfra;
         export { TransitiveInfra } from './publicTypes';
         type HiddenInfra = import('./infrastructure/HiddenInfra').HiddenInfra;
+        export interface SafeProperty { PropertyName: string }
+        export interface SafeShadow<ShadowOnly> { value: ShadowOnly }
         export function safeFactory() {
           type LocalInfra = import('./infrastructure/LocalInfra').LocalInfra;
-          return null;
+          return BodyOnly;
         }
       `,
+      'src/features/example/main/infrastructure/AliasInfra.ts': 'export const AliasInfra = {};',
+      'src/features/example/main/infrastructure/BodyOnly.ts': 'export const BodyOnly = {};',
       'src/features/example/main/infrastructure/DirectInfra.ts': 'export interface DirectInfra {}',
       'src/features/example/main/infrastructure/HiddenInfra.ts': 'export interface HiddenInfra {}',
+      'src/features/example/main/infrastructure/ImportedInfra.ts':
+        'export interface ImportedInfra {}',
       'src/features/example/main/infrastructure/LocalInfra.ts': 'export interface LocalInfra {}',
+      'src/features/example/main/infrastructure/PropertyName.ts':
+        'export interface PropertyName {}',
+      'src/features/example/main/infrastructure/ShadowOnly.ts': 'export interface ShadowOnly {}',
       'src/features/example/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/example/main/infrastructure/TransitiveInfra.ts':
         'export interface TransitiveInfra {}',
@@ -257,7 +274,19 @@ test('detects implementation exports through transitive internal barrels', () =>
           publicEntrypoint: 'src/features/example/main/index.ts',
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
           source: 'src/features/example/main/index.ts',
+          specifier: './infrastructure/AliasInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/index.ts',
           specifier: './infrastructure/DirectInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/index.ts',
+          specifier: './infrastructure/ImportedInfra',
         },
         {
           publicEntrypoint: 'src/features/example/main/index.ts',

@@ -300,6 +300,12 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/application-command-ledger/main/composition/createApplicationCommandLedgerFeature.ts",
+      "specifier": "../adapters/output/InternalStorageApplicationCommandLedgerStore",
+      "publicEntrypoint": "src/features/application-command-ledger/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/application-command-ledger/main/index.ts",
       "specifier": "./adapters/output/InternalStorageApplicationCommandLedgerStore",
       "publicEntrypoint": "src/features/application-command-ledger/main/index.ts"
@@ -360,6 +366,12 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/codex-runtime-installer/main/composition/createCodexRuntimeInstallerFeature.ts",
+      "specifier": "../infrastructure/CodexRuntimeInstallerService",
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/codex-runtime-installer/main/index.ts",
       "specifier": "./adapters/input/ipc/registerCodexRuntimeInstallerIpc",
       "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts"
@@ -372,6 +384,30 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/coordination-backup/main/composition/createCoordinationBackupFeature.ts",
+      "specifier": "../adapters/output/DurableBackupIdentityInventory",
+      "publicEntrypoint": "src/features/coordination-backup/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/coordination-backup/main/composition/createCoordinationBackupFeature.ts",
+      "specifier": "../adapters/output/SqliteBackupCoordinationFlush",
+      "publicEntrypoint": "src/features/coordination-backup/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/coordination-events/main/composition/createCoordinationEventsFeature.ts",
+      "specifier": "../adapters/output/SqliteCoordinationEventRecoveryPointParticipant",
+      "publicEntrypoint": "src/features/coordination-events/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/external-writer-coordination/main/index.ts",
       "specifier": "./infrastructure",
       "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts"
@@ -381,6 +417,24 @@
       "source": "src/features/instance-lease/main/index.ts",
       "specifier": "./adapters/output/NodeInheritedInstanceLease",
       "publicEntrypoint": "src/features/instance-lease/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/composition/BackendSelectingTaskCommentNotificationJournalStore.ts",
+      "specifier": "../infrastructure/InternalStorageJsonReplica",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/composition/BackendSelectingTaskStallJournalStore.ts",
+      "specifier": "../infrastructure/InternalStorageJsonReplica",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/composition/createInternalStorageFeature.ts",
+      "specifier": "../infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
@@ -420,14 +474,32 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts",
+      "specifier": "../infrastructure/MemberWorkSyncEventQueue",
+      "publicEntrypoint": "src/features/member-work-sync/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/member-work-sync/main/index.ts",
       "specifier": "./adapters/input/registerMemberWorkSyncIpc",
       "publicEntrypoint": "src/features/member-work-sync/main/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/renderer/hooks/useMemberWorkSyncStatus.ts",
+      "specifier": "../adapters/memberWorkSyncStatusViewModel",
+      "publicEntrypoint": "src/features/member-work-sync/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/member-work-sync/renderer/index.ts",
       "specifier": "./adapters/memberWorkSyncStatusViewModel",
+      "publicEntrypoint": "src/features/member-work-sync/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/renderer/ui/MemberWorkSyncBadge.tsx",
+      "specifier": "../adapters/memberWorkSyncStatusViewModel",
       "publicEntrypoint": "src/features/member-work-sync/renderer/index.ts"
     },
     {
@@ -453,6 +525,24 @@
       "source": "src/features/recent-projects/main/index.ts",
       "specifier": "./adapters/input/ipc/registerRecentProjectsIpc",
       "publicEntrypoint": "src/features/recent-projects/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts",
+      "specifier": "../infrastructure/AgentTeamsRuntimeProviderManagementCliClient",
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts",
+      "specifier": "../infrastructure/cli-companion/types",
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts",
+      "specifier": "../infrastructure/KiroCliCompanionService",
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
@@ -486,6 +576,12 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/team-configuration/main/composition/createTeamConfigurationFeature.ts",
+      "specifier": "../adapters/input/ipc/TeamConfigurationIpcDependencies",
+      "publicEntrypoint": "src/features/team-configuration/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/team-configuration/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamConfigurationIpc",
       "publicEntrypoint": "src/features/team-configuration/main/index.ts"
@@ -495,6 +591,12 @@
       "source": "src/features/team-import/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamImportIpc",
       "publicEntrypoint": "src/features/team-import/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/main/composition/createTeamRosterAdoptionFeature.ts",
+      "specifier": "../infrastructure/InternalStorageTeamRosterRepository",
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
@@ -510,9 +612,21 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/renderer/hooks/useTeamLifecycleList.ts",
+      "specifier": "../adapters/teamLifecycleListViewModel",
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/team-lifecycle/renderer/index.ts",
       "specifier": "./adapters/teamLifecycleListViewModel",
       "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-message-delivery/main/composition/createTeamMessageDeliveryFeature.ts",
+      "specifier": "../adapters/input/ipc/TeamMessageDeliveryIpcDependencies",
+      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
@@ -552,6 +666,12 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/main/composition/createTeamTaskBoardFeature.ts",
+      "specifier": "../adapters/input/ipc/TeamTaskBoardIpcDependencies",
+      "publicEntrypoint": "src/features/team-task-board/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/team-task-board/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamTaskBoardIpc",
       "publicEntrypoint": "src/features/team-task-board/main/index.ts"
@@ -573,6 +693,12 @@
       "source": "src/features/team-task-board/renderer/index.ts",
       "specifier": "./adapters/taskLifecycleAnalytics",
       "publicEntrypoint": "src/features/team-task-board/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/main/composition/createTeamViewReadModelFeature.ts",
+      "specifier": "../adapters/input/ipc/TeamViewReadModelIpcDependencies",
+      "publicEntrypoint": "src/features/team-view-read-model/main/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
@@ -603,6 +729,12 @@
       "source": "src/features/terminal-workspace/renderer/index.ts",
       "specifier": "./adapters/TerminalWorkspacePanelAdapter",
       "publicEntrypoint": "src/features/terminal-workspace/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/composition/runtimeSupport.ts",
+      "specifier": "../infrastructure/runtime/TmuxPlatformCommandExecutor",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
@@ -639,6 +771,12 @@
       "source": "src/features/token-usage/main/index.ts",
       "specifier": "./infrastructure/TeamTaskUsageAttributionSource",
       "publicEntrypoint": "src/features/token-usage/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/token-usage/renderer/hooks/useTokenUsageSnapshot.ts",
+      "specifier": "../adapters/tokenUsageViewModel",
+      "publicEntrypoint": "src/features/token-usage/renderer/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
