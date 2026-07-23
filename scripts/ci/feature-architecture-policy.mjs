@@ -1,8 +1,11 @@
 import { builtinModules } from 'node:module';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import ts from 'typescript';
+
+import { findPublicMutationOwner } from './feature-public-mutations.mjs';
+import { collectProductionSourceFiles } from './feature-source-files.mjs';
 
 export const FEATURE_ARCHITECTURE_RULES = Object.freeze({
   crossFeaturePublicEntrypoint: 'cross-feature-public-entrypoint',
@@ -11,11 +14,7 @@ export const FEATURE_ARCHITECTURE_RULES = Object.freeze({
   publicApiImplementationExport: 'public-api-implementation-export',
 });
 
-const SOURCE_EXTENSIONS = new Set(['.cjs', '.cts', '.js', '.jsx', '.mjs', '.mts', '.ts', '.tsx']);
 const RESOLUTION_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
-const EXCLUDED_DIRECTORIES = new Set(['__fixtures__', '__tests__', 'fixtures', 'node_modules']);
-const TEST_FILE_PATTERN = /\.(?:spec|test)\.[^.]+$/;
-const DECLARATION_FILE_PATTERN = /\.d\.(?:cts|mts|ts)$/;
 const PUBLIC_FEATURE_ENTRYPOINTS = new Set(['contracts', 'main', 'preload', 'renderer']);
 const IMPLEMENTATION_DIRECTORIES = new Set(['adapters', 'infrastructure']);
 const FRAMEWORK_AND_TRANSPORT_PACKAGES = [
@@ -50,28 +49,6 @@ function isWithin(filePath, directoryPath) {
 
 function hasDirectorySegment(filePath, directoryNames) {
   return filePath.split('/').some((segment) => directoryNames.has(segment));
-}
-
-function isProductionSourcePath(filePath) {
-  const normalized = normalizePath(filePath);
-  const segments = normalized.split('/');
-  if (!normalized.startsWith('src/')) return false;
-  if (segments.some((segment) => EXCLUDED_DIRECTORIES.has(segment))) return false;
-  if (TEST_FILE_PATTERN.test(normalized) || DECLARATION_FILE_PATTERN.test(normalized)) return false;
-  return SOURCE_EXTENSIONS.has(path.extname(normalized));
-}
-
-function collectSourceFiles(directoryPath, repoRoot) {
-  return readdirSync(directoryPath, { withFileTypes: true }).flatMap((entry) => {
-    if (entry.isDirectory() && EXCLUDED_DIRECTORIES.has(entry.name)) return [];
-
-    const entryPath = path.join(directoryPath, entry.name);
-    if (entry.isDirectory()) return collectSourceFiles(entryPath, repoRoot);
-    if (!entry.isFile()) return [];
-
-    const relativePath = normalizePath(path.relative(repoRoot, entryPath));
-    return isProductionSourcePath(relativePath) ? [relativePath] : [];
-  });
 }
 
 function lineForNode(sourceFile, node) {
@@ -169,15 +146,29 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
 
   const declaredLocalNames = new Set();
   const directLocalExports = [];
+  const exportedLocalNames = new Set();
   for (const statement of sourceFile.statements) {
     const localNames = statementBindingNames(statement);
     for (const localName of localNames) declaredLocalNames.add(localName);
+    if (
+      ts.isExportDeclaration(statement) &&
+      !statement.moduleSpecifier &&
+      statement.exportClause &&
+      ts.isNamedExports(statement.exportClause)
+    ) {
+      for (const element of statement.exportClause.elements) {
+        exportedLocalNames.add(element.propertyName?.text ?? element.name.text);
+      }
+    } else if (ts.isExportAssignment(statement) && ts.isIdentifier(statement.expression)) {
+      exportedLocalNames.add(statement.expression.text);
+    }
     if (!hasModifier(statement, ts.SyntaxKind.ExportKeyword)) continue;
 
     const exportedNames = hasModifier(statement, ts.SyntaxKind.DefaultKeyword)
       ? ['default']
       : localNames;
     for (const [index, localName] of localNames.entries()) {
+      exportedLocalNames.add(localName);
       directLocalExports.push({
         exportedName: exportedNames[index] ?? exportedNames[0],
         line: lineForNode(sourceFile, statement),
@@ -209,6 +200,9 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       if (declaration) localNames = bindingNames(declaration.name);
     } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
       localNames = [current.name.text];
+    } else if (ts.isExpressionStatement(current)) {
+      const mutationOwner = findPublicMutationOwner(current.expression, exportedLocalNames);
+      if (mutationOwner) localNames = [mutationOwner];
     }
 
     if (ts.isExportAssignment(current)) {
@@ -755,7 +749,7 @@ export function toBaselineEntry(violation) {
 
 export function collectFeatureArchitectureViolations(repoRoot) {
   const sourceRoot = path.join(repoRoot, 'src');
-  const sourceFiles = collectSourceFiles(sourceRoot, repoRoot).sort();
+  const sourceFiles = collectProductionSourceFiles(sourceRoot, repoRoot).sort();
   const sourceFilePaths = new Set(sourceFiles);
   const moduleAnalyses = sourceFiles.flatMap((sourcePath) => {
     const source = readFileSync(path.join(repoRoot, sourcePath), 'utf8');

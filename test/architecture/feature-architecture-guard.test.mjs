@@ -214,6 +214,9 @@ test('detects implementation exports through transitive internal barrels', () =>
         import type { ImportedInfra } from './infrastructure/ImportedInfra';
         import type { PropertyName } from './infrastructure/PropertyName';
         import type { ShadowOnly } from './infrastructure/ShadowOnly';
+        import { HiddenMutation } from './infrastructure/HiddenMutation';
+        import { MethodInfra } from './infrastructure/MethodInfra';
+        import { MutatedInfra } from './infrastructure/MutatedInfra';
         import { Store } from './public';
         import { safe } from './safePublic';
         export { safe, Store };
@@ -222,6 +225,14 @@ test('detects implementation exports through transitive internal barrels', () =>
         export const ExportedAlias = AliasInfra;
         export const RequiredInfra = require('./infrastructure/RequiredInfra').RequiredInfra;
         export const LazyInfra = import('./infrastructure/LazyInfra', { with: { type: 'json' } });
+        export const api = {};
+        api.Store = MutatedInfra;
+        api.register(MethodInfra);
+        Object.assign(api, {
+          AssignedInfra: require('./infrastructure/AssignedInfra').AssignedInfra,
+        });
+        const internal = {};
+        internal.HiddenMutation = HiddenMutation;
         export type DirectInfra = import('./infrastructure/DirectInfra').DirectInfra;
         export { TransitiveInfra } from './publicTypes';
         export { SelectiveSafe, SelectedInfra } from './mixedBarrel';
@@ -235,12 +246,17 @@ test('detects implementation exports through transitive internal barrels', () =>
       `,
       'src/features/example/main/infrastructure/AliasInfra.ts': 'export const AliasInfra = {};',
       'src/features/example/main/infrastructure/BodyOnly.ts': 'export const BodyOnly = {};',
+      'src/features/example/main/infrastructure/AssignedInfra.ts': 'export class AssignedInfra {}',
       'src/features/example/main/infrastructure/DirectInfra.ts': 'export interface DirectInfra {}',
       'src/features/example/main/infrastructure/HiddenInfra.ts': 'export interface HiddenInfra {}',
+      'src/features/example/main/infrastructure/HiddenMutation.ts':
+        'export class HiddenMutation {}',
       'src/features/example/main/infrastructure/ImportedInfra.ts':
         'export interface ImportedInfra {}',
       'src/features/example/main/infrastructure/LocalInfra.ts': 'export interface LocalInfra {}',
       'src/features/example/main/infrastructure/LazyInfra.ts': 'export class LazyInfra {}',
+      'src/features/example/main/infrastructure/MethodInfra.ts': 'export class MethodInfra {}',
+      'src/features/example/main/infrastructure/MutatedInfra.ts': 'export class MutatedInfra {}',
       'src/features/example/main/infrastructure/PropertyName.ts':
         'export interface PropertyName {}',
       'src/features/example/main/infrastructure/RequiredInfra.ts': 'export class RequiredInfra {}',
@@ -291,6 +307,12 @@ test('detects implementation exports through transitive internal barrels', () =>
           publicEntrypoint: 'src/features/example/main/index.ts',
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
           source: 'src/features/example/main/index.ts',
+          specifier: './infrastructure/AssignedInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/index.ts',
           specifier: './infrastructure/DirectInfra',
         },
         {
@@ -304,6 +326,18 @@ test('detects implementation exports through transitive internal barrels', () =>
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
           source: 'src/features/example/main/index.ts',
           specifier: './infrastructure/LazyInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/index.ts',
+          specifier: './infrastructure/MethodInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/index.ts',
+          specifier: './infrastructure/MutatedInfra',
         },
         {
           publicEntrypoint: 'src/features/example/main/index.ts',

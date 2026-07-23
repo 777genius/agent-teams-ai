@@ -113,6 +113,11 @@
     },
     {
       "rule": "core-application-dependencies",
+      "source": "src/features/team-provisioning/core/application/planTeamRuntimeObservationUpdate.ts",
+      "specifier": "@shared/types"
+    },
+    {
+      "rule": "core-application-dependencies",
       "source": "src/features/team-provisioning/core/application/ports/TeamProvisioningPorts.ts",
       "specifier": "@shared/types"
     },
@@ -655,6 +660,12 @@
       "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/renderer/index.ts",
       "specifier": "./adapters/createTeamProvisioningProgressSlice",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamRuntimeObservationSlice",
       "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
     },
     {
