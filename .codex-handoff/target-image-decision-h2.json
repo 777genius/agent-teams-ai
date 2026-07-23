@@ -36,7 +36,7 @@
     "path": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
     "recordType": "w6-current-commit-artifact-scan",
     "canonicalSourceCommit": "42ec333848e29e97c41699b9fed73ed199740e3f",
-    "semanticSha256": "079e04075c3f2d5bd0bd6cd9f5b7131297c6f14f18b86ff224535e9f1c543256",
+    "semanticSha256": "d91ceece21873f48f23a121cf1a9987534a6197017d350071b7c26a2e70b081c",
     "proofLevel": "targeted_current_commit_build_observed",
     "targetedBuildCompared": true
   },

@@ -1,8 +1,11 @@
+import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { once } from 'node:events';
 import * as nodeFs from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { promisify } from 'node:util';
 
 import {
   parseDirectoryFingerprint,
@@ -11,13 +14,17 @@ import {
   parseTeamIdentityChecksum,
 } from '@features/internal-storage/contracts';
 import { AdoptTeamRoster, type TeamRosterRepository } from '@features/team-lifecycle';
-import { LegacyTeamRosterFileSource } from '@features/team-lifecycle/main/infrastructure/LegacyTeamRosterFileSource';
+import {
+  type LegacyTeamRosterFileOpen,
+  LegacyTeamRosterFileSource,
+} from '@features/team-lifecycle/main/infrastructure/LegacyTeamRosterFileSource';
 import { parseMemberId, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { TeamIdentityReadGateway } from '@features/internal-storage/contracts';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+const execFileAsync = promisify(execFile);
 
 describe('LegacyTeamRosterFileSource', () => {
   let temporaryDirectory: string | null = null;
@@ -30,7 +37,7 @@ describe('LegacyTeamRosterFileSource', () => {
     }
   });
 
-  async function source(): Promise<{
+  async function source(openFile?: LegacyTeamRosterFileOpen): Promise<{
     fileSource: LegacyTeamRosterFileSource;
     teamDirectory: string;
   }> {
@@ -86,6 +93,7 @@ describe('LegacyTeamRosterFileSource', () => {
       fileSource: new LegacyTeamRosterFileSource({
         teamsRootPath: temporaryDirectory,
         teamIdentityGateway: identityGateway,
+        openFile,
       }),
       teamDirectory,
     };
@@ -230,22 +238,22 @@ describe('LegacyTeamRosterFileSource', () => {
   });
 
   it('revalidates the directory fingerprint immediately after a roster read', async () => {
-    const { fileSource, teamDirectory } = await source();
+    const actualOpen = nodeFs.promises.open.bind(nodeFs.promises);
+    let replaced = false;
+    const { fileSource, teamDirectory } = await source(async (targetPath, flags) => {
+      const handle = await actualOpen(targetPath, flags);
+      if (!replaced && path.basename(String(targetPath)) === 'config.json') {
+        replaced = true;
+        const observedTeamDirectory = path.dirname(String(targetPath));
+        await fs.rename(observedTeamDirectory, `${observedTeamDirectory}.during-read`);
+        await fs.mkdir(observedTeamDirectory);
+      }
+      return handle;
+    });
     await fs.writeFile(
       path.join(teamDirectory, 'config.json'),
       JSON.stringify({ members: [{ name: 'builder', providerId: 'codex' }] })
     );
-    const actualOpen = nodeFs.promises.open.bind(nodeFs.promises);
-    let replaced = false;
-    vi.spyOn(nodeFs.promises, 'open').mockImplementation(async (...args) => {
-      const handle = await actualOpen(...args);
-      if (!replaced && String(args[0]) === path.join(teamDirectory, 'config.json')) {
-        replaced = true;
-        await fs.rename(teamDirectory, `${teamDirectory}.during-read`);
-        await fs.mkdir(teamDirectory);
-      }
-      return handle;
-    });
 
     await expect(fileSource.readLegacyTeamRosterEvidence(teamId)).resolves.toEqual({
       status: 'blocked',
@@ -253,6 +261,84 @@ describe('LegacyTeamRosterFileSource', () => {
     });
     expect(replaced).toBe(true);
   });
+
+  it('rejects a roster symlink before invoking an opener without O_NOFOLLOW', async () => {
+    const actualOpen = nodeFs.promises.open.bind(nodeFs.promises);
+    const openFile = vi.fn((targetPath: nodeFs.PathLike) =>
+      actualOpen(targetPath, nodeFs.constants.O_RDONLY)
+    );
+    const { fileSource, teamDirectory } = await source(openFile);
+    const externalConfig = path.join(path.dirname(teamDirectory), 'external-config.json');
+    await fs.writeFile(
+      externalConfig,
+      JSON.stringify({ members: [{ name: 'external-builder', providerId: 'codex' }] })
+    );
+    await fs.symlink(externalConfig, path.join(teamDirectory, 'config.json'));
+    openFile.mockClear();
+
+    await expect(fileSource.readLegacyTeamRosterEvidence(teamId)).resolves.toEqual({
+      status: 'blocked',
+      reason: 'legacy_evidence_invalid',
+    });
+    expect(openFile).toHaveBeenCalledTimes(1);
+    expect(path.basename(String(openFile.mock.calls[0]?.[0]))).toBe('team.identity.json');
+  });
+
+  it.skipIf(process.platform === 'win32' || typeof nodeFs.constants.O_NONBLOCK !== 'number')(
+    'opens a raced FIFO non-blockingly and rejects it',
+    async () => {
+      const actualOpen = nodeFs.promises.open.bind(nodeFs.promises);
+      let configOpenDurationMs: number | null = null;
+      let configOpenFlags: number | null = null;
+      const { fileSource, teamDirectory } = await source(async (targetPath, flags) => {
+        if (path.basename(String(targetPath)) !== 'config.json') {
+          return actualOpen(targetPath, flags);
+        }
+
+        await fs.unlink(targetPath);
+        await execFileAsync('mkfifo', [String(targetPath)]);
+        const delayedWriter = spawn(
+          process.execPath,
+          [
+            '-e',
+            [
+              "const fs = require('node:fs');",
+              'setTimeout(() => {',
+              'const fd = fs.openSync(process.env.TEST_FIFO_PATH, fs.constants.O_WRONLY);',
+              'fs.closeSync(fd);',
+              '}, 1000);',
+            ].join(''),
+          ],
+          {
+            env: { ...process.env, TEST_FIFO_PATH: String(targetPath) },
+            stdio: 'ignore',
+          }
+        );
+        const writerExit = once(delayedWriter, 'exit');
+        const startedAt = Date.now();
+        const handle = await actualOpen(targetPath, flags);
+        configOpenDurationMs = Date.now() - startedAt;
+        configOpenFlags = Number(flags);
+        await writerExit;
+        return handle;
+      });
+      await fs.writeFile(
+        path.join(teamDirectory, 'config.json'),
+        JSON.stringify({ members: [{ name: 'builder', providerId: 'codex' }] })
+      );
+
+      await expect(fileSource.readLegacyTeamRosterEvidence(teamId)).resolves.toEqual({
+        status: 'blocked',
+        reason: 'legacy_evidence_invalid',
+      });
+      if (configOpenFlags === null || configOpenDurationMs === null) {
+        throw new Error('config FIFO was not opened');
+      }
+      expect(configOpenFlags & nodeFs.constants.O_NONBLOCK).toBe(nodeFs.constants.O_NONBLOCK);
+      expect(configOpenDurationMs).toBeLessThan(750);
+    },
+    10_000
+  );
 
   it('blocks a directory replacement instead of rebinding the TeamId', async () => {
     const { fileSource, teamDirectory } = await source();
