@@ -12,6 +12,7 @@ Public entrypoints:
 
 - `contracts/index.ts` - browser-safe channel constants
 - `main/index.ts` - feature composition and IPC registration
+- `renderer/index.ts` - message-feed read-model state, orchestration, and ports
 
 The use cases under `core/application` own worker preference, safe main-thread
 fallback, live-message projection for notification scanning, missing-team
