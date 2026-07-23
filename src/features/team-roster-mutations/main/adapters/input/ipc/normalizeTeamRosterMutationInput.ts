@@ -64,7 +64,7 @@ export function normalizeReplaceMembersInput(
   const input = request as { members?: unknown };
   if (!Array.isArray(input.members)) return failure('members must be an array');
 
-  const seenNames = new Set<string>();
+  const seenMemberIdentities = new Set<string>();
   const members: RosterMemberInput[] = [];
   for (const item of input.members) {
     if (!item || typeof item !== 'object') return failure('member must be object');
@@ -72,8 +72,11 @@ export function normalizeReplaceMembersInput(
     const validatedName = validateTeammateName(member.name);
     if (!validatedName.valid) return failure(validatedName.error ?? 'Invalid member name');
     const name = validatedName.value!;
-    if (seenNames.has(name)) return failure('member names must be unique');
-    seenNames.add(name);
+    const memberIdentity = name.trim().toLowerCase();
+    if (seenMemberIdentities.has(memberIdentity)) {
+      return failure('member names must be unique');
+    }
+    seenMemberIdentities.add(memberIdentity);
     if (member.role !== undefined && typeof member.role !== 'string') {
       return failure('member role must be string');
     }

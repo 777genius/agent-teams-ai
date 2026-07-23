@@ -15,5 +15,6 @@ export function invalidateTeamRosterSnapshotCaches(
   source.invalidateTeamRuntimeAdvisories(teamName);
   const workerClient = getTeamDataWorkerClient();
   workerClient.invalidateTeamConfig(teamName);
+  workerClient.invalidateTeamMessageFeed(teamName);
   workerClient.invalidateMemberRuntimeAdvisory(teamName);
 }

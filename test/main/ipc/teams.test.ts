@@ -4643,6 +4643,16 @@ describe('ipc teams handlers', () => {
         expect(mutation).not.toHaveBeenCalled();
       }
     );
+
+    it('rejects case-insensitive duplicate replaceMembers names before repository mutation', async () => {
+      const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'my-team', {
+        members: [{ name: 'Alice' }, { name: 'alice' }],
+      })) as { success: boolean; error?: string };
+
+      expect(result).toEqual({ success: false, error: 'member names must be unique' });
+      expect(teamHandlerMocks.runLiveRosterMutation).not.toHaveBeenCalled();
+      expect(service.replaceMembers).not.toHaveBeenCalled();
+    });
   });
 
   describe('addMember', () => {
@@ -5026,7 +5036,7 @@ describe('ipc teams handlers', () => {
       vi.mocked(console.error).mockClear();
     });
 
-    it('invalidates worker config cache after roster metadata mutations', async () => {
+    it('invalidates worker snapshot caches after successful roster metadata mutations', async () => {
       const addHandler = handlers.get(TEAM_ADD_MEMBER)!;
       const removeHandler = handlers.get(TEAM_REMOVE_MEMBER)!;
       const restoreMemberHandler = handlers.get(TEAM_RESTORE_MEMBER)!;
@@ -5046,22 +5056,26 @@ describe('ipc teams handlers', () => {
         })
       );
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
+      expect(mockTeamDataWorkerClient.invalidateTeamMessageFeed).toHaveBeenCalledWith('my-team');
       expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
         'my-team'
       );
 
       mockTeamDataWorkerClient.invalidateTeamConfig.mockClear();
+      mockTeamDataWorkerClient.invalidateTeamMessageFeed.mockClear();
       mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory.mockClear();
 
       result = (await removeHandler({} as never, 'my-team', 'alice')) as { success: boolean };
       expect(result.success).toBe(true);
       expect(service.removeMember).toHaveBeenCalledWith('my-team', 'alice');
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
+      expect(mockTeamDataWorkerClient.invalidateTeamMessageFeed).toHaveBeenCalledWith('my-team');
       expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
         'my-team'
       );
 
       mockTeamDataWorkerClient.invalidateTeamConfig.mockClear();
+      mockTeamDataWorkerClient.invalidateTeamMessageFeed.mockClear();
       mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory.mockClear();
 
       result = (await restoreMemberHandler({} as never, 'my-team', 'alice')) as {
@@ -5070,11 +5084,13 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(true);
       expect(service.restoreMember).toHaveBeenCalledWith('my-team', 'alice');
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
+      expect(mockTeamDataWorkerClient.invalidateTeamMessageFeed).toHaveBeenCalledWith('my-team');
       expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
         'my-team'
       );
 
       mockTeamDataWorkerClient.invalidateTeamConfig.mockClear();
+      mockTeamDataWorkerClient.invalidateTeamMessageFeed.mockClear();
       mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory.mockClear();
 
       result = (await replaceHandler({} as never, 'my-team', {
@@ -5097,11 +5113,13 @@ describe('ipc teams handlers', () => {
         ],
       });
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
+      expect(mockTeamDataWorkerClient.invalidateTeamMessageFeed).toHaveBeenCalledWith('my-team');
       expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
         'my-team'
       );
 
       mockTeamDataWorkerClient.invalidateTeamConfig.mockClear();
+      mockTeamDataWorkerClient.invalidateTeamMessageFeed.mockClear();
       mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory.mockClear();
 
       result = (await updateRoleHandler({} as never, 'my-team', 'bob', 'reviewer')) as {
@@ -5110,6 +5128,7 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(true);
       expect(service.updateMemberRole).toHaveBeenCalledWith('my-team', 'bob', 'reviewer');
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
+      expect(mockTeamDataWorkerClient.invalidateTeamMessageFeed).toHaveBeenCalledWith('my-team');
       expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
         'my-team'
       );
