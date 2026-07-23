@@ -1,40 +1,50 @@
 name: ReviewRouter Codex OAuth
 
+run-name: ${{ inputs.review_request_id != '' && format('ReviewRouter review {0}', inputs.review_request_id) || 'ReviewRouter Codex OAuth maintenance' }}
+
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
-  pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   workflow_dispatch:
+    inputs:
+      review_request_id:
+        description: Durable ReviewRouter request identity
+        required: false
+        type: string
+      pr_number:
+        description: Pull request number selected by ReviewRouter
+        required: false
+        type: string
+      review_head_sha:
+        description: Expected pull request head selected by ReviewRouter
+        required: false
+        type: string
   schedule:
-    - cron: '17 */6 * * *'
+    - cron: "17 */6 * * *"
 
 permissions: {}
 
 jobs:
   codex-review:
     name: codex-review
-    runs-on: ubuntu-24.04
-    timeout-minutes: ${{ fromJSON(vars.REVIEW_ROUTER_TIMEOUT_MINUTES || '60') }}
-    concurrency:
-      group: reviewrouter-codex-oauth-${{ github.repository_id }}-codex-rotating-1163183284
-      cancel-in-progress: false
-    if: ${{ ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'pull_request_target' && github.event.pull_request.draft == true && vars.REVIEW_ROUTER_REVIEW_DRAFTS == 'true')) && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.review_request_id != '' && inputs.pr_number != '' && inputs.review_head_sha != '' }}
     permissions:
+      contents: read
+      pull-requests: read
       id-token: write
-    steps:
-      - name: ReviewRouter Codex OAuth review
-        id: run_codex
-        uses: 777genius/review-router@main
-        with:
-          mode: codex-oauth-rotating
-          api-url: 'https://api.reviewrouter.site'
-          provider-instance-id: 'codex-rotating:1163183284'
-          workflow-schema-version: '1'
-          review-drafts: ${{ vars.REVIEW_ROUTER_REVIEW_DRAFTS == 'true' }}
-          max-changed-lines: ${{ vars.REVIEW_ROUTER_MAX_CHANGED_LINES }}
-          review-timeout-minutes: ${{ vars.REVIEW_ROUTER_TIMEOUT_MINUTES || '60' }}
-          auth-json: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON }}
+    uses: 777genius/review-router/.github/workflows/reviewrouter-reusable.yml@ceb4d251389ac5733504b61e08f6085810a0a2f0
+    with:
+      runtime_ref: "ceb4d251389ac5733504b61e08f6085810a0a2f0"
+      api_url: "https://api.reviewrouter.site"
+      runtime_config_mode: oidc
+      review_action_v2_mode: t0
+      pr_number: ${{ inputs.pr_number }}
+      review_head_sha: ${{ inputs.review_head_sha }}
+      provider_instance_id: "codex-rotating:1163183284"
+      workflow_schema_version: 1
+      review_drafts: ${{ vars.REVIEW_ROUTER_REVIEW_DRAFTS == 'true' }}
+      max_changed_lines: ${{ vars.REVIEW_ROUTER_MAX_CHANGED_LINES }}
+      review_timeout_minutes: ${{ fromJSON(vars.REVIEW_ROUTER_TIMEOUT_MINUTES || '60') }}
+    secrets:
+      CODEX_AUTH_JSON: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON }}
 
   codex-refresh:
     name: codex-refresh
@@ -43,16 +53,16 @@ jobs:
     concurrency:
       group: reviewrouter-codex-oauth-${{ github.repository_id }}-codex-rotating-1163183284
       cancel-in-progress: false
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.review_request_id == '') }}
     permissions:
       id-token: write
     steps:
       - name: ReviewRouter Codex OAuth refresh
         id: refresh_codex
-        uses: 777genius/review-router@main
+        uses: 777genius/review-router@ceb4d251389ac5733504b61e08f6085810a0a2f0
         with:
           mode: codex-oauth-refresh
-          api-url: 'https://api.reviewrouter.site'
-          provider-instance-id: 'codex-rotating:1163183284'
-          workflow-schema-version: '1'
+          api-url: "https://api.reviewrouter.site"
+          provider-instance-id: "codex-rotating:1163183284"
+          workflow-schema-version: "1"
           auth-json: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON }}
