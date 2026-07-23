@@ -3,6 +3,10 @@ export {
   createChangeReviewDecisionPersistencePort,
 } from './adapters/createChangeReviewActionHistoryPorts';
 export {
+  createChangeReviewBulkDecisionCommandPort,
+  createChangeReviewBulkDecisionStatePort,
+} from './adapters/createChangeReviewBulkDecisionPorts';
+export {
   createChangeReviewConflictCommandPort,
   createChangeReviewConflictQueryPort,
 } from './adapters/createChangeReviewConflictPorts';
@@ -15,6 +19,8 @@ export {
 } from './adapters/createChangeReviewHistoryMutationPorts';
 export type { ChangeReviewActionHistoryController } from './hooks/useChangeReviewActionHistoryController';
 export { useChangeReviewActionHistoryController } from './hooks/useChangeReviewActionHistoryController';
+export type { ChangeReviewBulkDecisionController } from './hooks/useChangeReviewBulkDecisionController';
+export { useChangeReviewBulkDecisionController } from './hooks/useChangeReviewBulkDecisionController';
 export type { ChangeReviewConflictDiscoveryController } from './hooks/useChangeReviewConflictDiscoveryController';
 export { useChangeReviewConflictDiscoveryController } from './hooks/useChangeReviewConflictDiscoveryController';
 export type { ChangeReviewConflictInteractionController } from './hooks/useChangeReviewConflictInteractionController';
@@ -50,6 +56,13 @@ export type {
   ChangeReviewDecisionPersistenceScope,
   ChangeReviewDecisionPersistenceSnapshot,
 } from './ports/changeReviewActionHistoryPorts';
+export type {
+  BuildBulkRejectDiskSnapshot,
+  ChangeReviewBulkDecisionCommandPort,
+  ChangeReviewBulkDecisionStatePort,
+  ChangeReviewBulkDecisionStateSnapshot,
+  ChangeReviewBulkDecisionViewPort,
+} from './ports/changeReviewBulkDecisionPorts';
 export type {
   ChangeReviewConflictCommandPort,
   ChangeReviewConflictQueryPort,

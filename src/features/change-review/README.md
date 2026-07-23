@@ -6,8 +6,8 @@ main-process review IPC shell.
 - `renderer/view-models` owns pure presentation projections.
 - `renderer/utils` owns pure scope and operation-generation policies.
 - `renderer/hooks` owns scope/lifecycle, draft history, conflict recovery, action-history,
-  decision-persistence, keyboard orchestration, and durable Undo/Redo/checkpoint Restore through
-  narrow command, state, and view ports.
+  decision-persistence, keyboard orchestration, bulk Accept/Reject, and durable
+  Undo/Redo/checkpoint Restore through narrow command, state, and view ports.
 - `renderer/ui` owns store-free presentation components.
 - `core/domain` owns pure review scope, rename expectation, snippet-shape, watcher-input, and
   decision-persistence policy.
@@ -16,8 +16,8 @@ main-process review IPC shell.
 - `main/infrastructure` owns Node path, filesystem, sensitive-path, hardlink, and watcher-root
   validation details.
 - The legacy dialog remains the temporary composition shell for Zustand, editor mutations,
-  forward Accept/Reject disk mutations, and outer close coordination while later slices move
-  those responsibilities behind focused hooks and use cases.
+  per-file/hunk forward mutations and outer close coordination while later slices move those
+  responsibilities behind focused hooks and use cases.
 
 Production callers import through `@features/change-review/renderer` or
 `@features/change-review/main`.
