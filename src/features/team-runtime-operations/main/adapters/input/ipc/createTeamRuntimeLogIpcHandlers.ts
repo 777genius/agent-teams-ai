@@ -44,10 +44,22 @@ function normalizeClaudeLogsQuery(query: unknown):
       error: string;
     } {
   if (query === undefined) return { valid: true, value: undefined };
-  if (!query || typeof query !== 'object') {
+  if (!query || typeof query !== 'object' || Array.isArray(query)) {
     return { valid: false, error: 'query must be an object' };
   }
   const value = query as Record<string, unknown>;
+  for (const field of ['offset', 'limit'] as const) {
+    const candidate = value[field];
+    if (
+      candidate !== undefined &&
+      (typeof candidate !== 'number' ||
+        !Number.isFinite(candidate) ||
+        !Number.isInteger(candidate) ||
+        candidate < 0)
+    ) {
+      return { valid: false, error: `${field} must be a non-negative integer` };
+    }
+  }
   return {
     valid: true,
     value: {
@@ -57,25 +69,47 @@ function normalizeClaudeLogsQuery(query: unknown):
   };
 }
 
-function normalizeTaskLogQuery(options: unknown): TeamTaskLogQuery | undefined {
-  if (!options || typeof options !== 'object') {
-    return undefined;
+function normalizeTaskLogQuery(
+  options: unknown
+): { valid: true; value: TeamTaskLogQuery | undefined } | { valid: false; error: string } {
+  if (options === undefined) return { valid: true, value: undefined };
+  if (!options || typeof options !== 'object' || Array.isArray(options)) {
+    return { valid: false, error: 'options must be an object' };
   }
   const value = options as Record<string, unknown>;
+  for (const field of ['owner', 'status', 'since'] as const) {
+    if (value[field] !== undefined && typeof value[field] !== 'string') {
+      return { valid: false, error: `${field} must be a string` };
+    }
+  }
+  if (value.intervals !== undefined && !Array.isArray(value.intervals)) {
+    return { valid: false, error: 'intervals must be an array' };
+  }
+  if (
+    Array.isArray(value.intervals) &&
+    value.intervals.some(
+      (interval) =>
+        !interval ||
+        typeof interval !== 'object' ||
+        Array.isArray(interval) ||
+        typeof (interval as Record<string, unknown>).startedAt !== 'string' ||
+        ((interval as Record<string, unknown>).completedAt !== undefined &&
+          typeof (interval as Record<string, unknown>).completedAt !== 'string')
+    )
+  ) {
+    return {
+      valid: false,
+      error: 'each interval must include startedAt and an optional completedAt string',
+    };
+  }
   return {
-    owner: typeof value.owner === 'string' ? value.owner : undefined,
-    status: typeof value.status === 'string' ? value.status : undefined,
-    since: typeof value.since === 'string' ? value.since : undefined,
-    intervals: Array.isArray(value.intervals)
-      ? value.intervals.filter(
-          (interval): interval is { startedAt: string; completedAt?: string } =>
-            Boolean(interval) &&
-            typeof interval === 'object' &&
-            typeof (interval as Record<string, unknown>).startedAt === 'string' &&
-            ((interval as Record<string, unknown>).completedAt === undefined ||
-              typeof (interval as Record<string, unknown>).completedAt === 'string')
-        )
-      : undefined,
+    valid: true,
+    value: {
+      owner: value.owner as string | undefined,
+      status: value.status as string | undefined,
+      since: value.since as string | undefined,
+      intervals: value.intervals as TeamTaskLogQuery['intervals'],
+    },
   };
 }
 
@@ -118,8 +152,12 @@ export function createTeamRuntimeLogIpcHandlers(
       if (!task.valid) {
         return { success: false, error: task.error ?? 'Invalid taskId' };
       }
+      const normalizedQuery = normalizeTaskLogQuery(options);
+      if (!normalizedQuery.valid) {
+        return { success: false, error: normalizedQuery.error };
+      }
       return executeTeamRuntimeOperation(feature.logger, 'getLogsForTask', () =>
-        feature.logs.getLogsForTask(team.value!, task.value!, normalizeTaskLogQuery(options))
+        feature.logs.getLogsForTask(team.value!, task.value!, normalizedQuery.value)
       );
     },
     getMemberStats: async (_event, teamName, memberName) => {

@@ -3717,13 +3717,11 @@ describe('ipc teams handlers', () => {
     ]);
 
     const result = await handlers.get(TEAM_GET_LOGS_FOR_TASK)!({} as never, 'my-team', 'task-1', {
-      owner: 42,
+      owner: 'alice',
       status: 'in_progress',
       since: '2026-07-22T10:00:00.000Z',
       intervals: [
         { startedAt: '2026-07-22T09:00:00.000Z' },
-        null,
-        { startedAt: '2026-07-22T09:30:00.000Z', completedAt: 42 },
         {
           startedAt: '2026-07-22T10:00:00.000Z',
           completedAt: '2026-07-22T11:00:00.000Z',
@@ -3736,7 +3734,7 @@ describe('ipc teams handlers', () => {
       data: [{ memberName: 'worker-result' }],
     });
     expect(mockTeamDataWorkerClient.findLogsForTask).toHaveBeenCalledWith('my-team', 'task-1', {
-      owner: undefined,
+      owner: 'alice',
       status: 'in_progress',
       since: '2026-07-22T10:00:00.000Z',
       intervals: [
@@ -3747,6 +3745,27 @@ describe('ipc teams handlers', () => {
         },
       ],
     });
+    expect(teamMemberLogsFinder.findLogsForTask).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [[], 'options must be an object'],
+    [{ owner: 42 }, 'owner must be a string'],
+    [{ intervals: 'invalid' }, 'intervals must be an array'],
+    [
+      { intervals: [{ startedAt: '2026-07-22T09:00:00.000Z', completedAt: 42 }] },
+      'each interval must include startedAt and an optional completedAt string',
+    ],
+  ])('rejects malformed TEAM_GET_LOGS_FOR_TASK options %#', async (options, error) => {
+    const result = await handlers.get(TEAM_GET_LOGS_FOR_TASK)!(
+      {} as never,
+      'my-team',
+      'task-1',
+      options
+    );
+
+    expect(result).toEqual({ success: false, error });
+    expect(mockTeamDataWorkerClient.findLogsForTask).not.toHaveBeenCalled();
     expect(teamMemberLogsFinder.findLogsForTask).not.toHaveBeenCalled();
   });
 
@@ -3817,6 +3836,19 @@ describe('ipc teams handlers', () => {
       offset: 2,
       limit: 1,
     });
+  });
+
+  it.each([
+    [[], 'query must be an object'],
+    [{ offset: -1 }, 'offset must be a non-negative integer'],
+    [{ offset: Number.NaN }, 'offset must be a non-negative integer'],
+    [{ limit: Number.POSITIVE_INFINITY }, 'limit must be a non-negative integer'],
+    [{ limit: 1.5 }, 'limit must be a non-negative integer'],
+  ])('rejects malformed TEAM_GET_CLAUDE_LOGS queries %#', async (query, error) => {
+    const result = await handlers.get(TEAM_GET_CLAUDE_LOGS)!({} as never, 'my-team', query);
+
+    expect(result).toEqual({ success: false, error });
+    expect(teamHandlerMocks.getClaudeLogs).not.toHaveBeenCalled();
   });
 
   it('does not rebuild legacy auto-resume from persisted rate-limit history', async () => {
