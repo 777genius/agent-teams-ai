@@ -217,6 +217,7 @@ test('detects implementation exports through transitive internal barrels', () =>
         import { HiddenMutation } from './infrastructure/HiddenMutation';
         import { MethodInfra } from './infrastructure/MethodInfra';
         import { MutatedInfra } from './infrastructure/MutatedInfra';
+        import * as mixedNamespace from './mixedBarrel';
         import { Store } from './public';
         import { safe } from './safePublic';
         export { safe, Store };
@@ -235,7 +236,16 @@ test('detects implementation exports through transitive internal barrels', () =>
         internal.HiddenMutation = HiddenMutation;
         export type DirectInfra = import('./infrastructure/DirectInfra').DirectInfra;
         export { TransitiveInfra } from './publicTypes';
-        export { SelectiveSafe, SelectedInfra } from './mixedBarrel';
+        export { SelectiveSafe } from './mixedBarrel';
+        const {
+          SelectiveSafe: DestructuredSafe,
+          SelectedInfra: DestructuredInfra,
+        } = mixedNamespace;
+        export { DestructuredSafe, DestructuredInfra };
+        const { SelectiveSafe: RequiredSafe } = require('./mixedBarrel');
+        export const { SelectiveSafe: LazySafe } = await import('./mixedBarrel');
+        export { RequiredSafe };
+        export { ExternalInfra } from '@main/services/infrastructure/ExternalInfra';
         type HiddenInfra = import('./infrastructure/HiddenInfra').HiddenInfra;
         export interface SafeProperty { PropertyName: string }
         export interface SafeShadow<ShadowOnly> { value: ShadowOnly }
@@ -289,6 +299,7 @@ test('detects implementation exports through transitive internal barrels', () =>
         import * as adapters from './adapters/Adapter';
         export default adapters.Adapter;
       `,
+      'src/main/services/infrastructure/ExternalInfra.ts': 'export class ExternalInfra {}',
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
@@ -344,6 +355,12 @@ test('detects implementation exports through transitive internal barrels', () =>
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
           source: 'src/features/example/main/index.ts',
           specifier: './infrastructure/RequiredInfra',
+        },
+        {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/index.ts',
+          specifier: '@main/services/infrastructure/ExternalInfra',
         },
         {
           publicEntrypoint: 'src/features/example/main/index.ts',

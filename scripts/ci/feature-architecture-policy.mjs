@@ -4,7 +4,11 @@ import path from 'node:path';
 
 import ts from 'typescript';
 
-import { findPublicMutationOwner } from './feature-public-mutations.mjs';
+import {
+  findPublicMutationOwner,
+  importedNameForReference,
+  objectBindingSelections,
+} from './feature-export-analysis.mjs';
 import { collectProductionSourceFiles } from './feature-source-files.mjs';
 
 export const FEATURE_ARCHITECTURE_RULES = Object.freeze({
@@ -192,12 +196,16 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
     if (!current || current.parent !== sourceFile) return null;
 
+    let bindingSelections = null;
     let localNames = [];
     if (ts.isVariableStatement(current)) {
       const declaration = current.declarationList.declarations.find(
         (candidate) => node.pos >= candidate.pos && node.end <= candidate.end
       );
-      if (declaration) localNames = bindingNames(declaration.name);
+      if (declaration) {
+        bindingSelections = objectBindingSelections(declaration.name);
+        localNames = bindingNames(declaration.name);
+      }
     } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
       localNames = [current.name.text];
     } else if (ts.isExpressionStatement(current)) {
@@ -206,22 +214,32 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
 
     if (ts.isExportAssignment(current)) {
-      return { exportedNames: ['default'], localNames: [] };
+      return { bindingSelections, exportedNames: ['default'], localNames: [] };
     }
     if (!hasModifier(current, ts.SyntaxKind.ExportKeyword)) {
-      return { exportedNames: [], localNames };
+      return { bindingSelections, exportedNames: [], localNames };
     }
     return {
+      bindingSelections,
       exportedNames: hasModifier(current, ts.SyntaxKind.DefaultKeyword) ? ['default'] : localNames,
       localNames,
     };
   };
 
   const addOwnerDependency = (owner, dependency) => {
-    for (const localName of owner.localNames) {
-      const references = localDependencyReferences.get(localName) ?? [];
-      references.push(dependency);
-      localDependencyReferences.set(localName, references);
+    const selectedDependencies =
+      dependency.importedName === '*' && owner.bindingSelections
+        ? owner.bindingSelections.flatMap(({ importedName, localNames }) =>
+            localNames.map((localName) => ({
+              dependency: { ...dependency, importedName },
+              localName,
+            }))
+          )
+        : owner.localNames.map((localName) => ({ dependency, localName }));
+    for (const selected of selectedDependencies) {
+      const references = localDependencyReferences.get(selected.localName) ?? [];
+      references.push(selected.dependency);
+      localDependencyReferences.set(selected.localName, references);
     }
     if (owner.localNames.length === 0) {
       for (const exportedName of owner.exportedNames) {
@@ -361,17 +379,6 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       current = current.parent;
     }
     return false;
-  };
-
-  const importedNameForReference = (node, importedBinding) => {
-    const parent = node.parent;
-    if (
-      (ts.isPropertyAccessExpression(parent) && parent.expression === node) ||
-      (ts.isQualifiedName(parent) && parent.left === node)
-    ) {
-      return parent.name?.text ?? parent.right.text;
-    }
-    return importedBinding.importedName;
   };
 
   const visitBindingReference = (node) => {
@@ -699,9 +706,7 @@ function collectPublicApiImplementationExports(
         const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
         if (!targetPath) continue;
 
-        const targetFeature = parseFeaturePath(targetPath);
-        if (targetFeature?.feature !== publicFeature) continue;
-        if (hasDirectorySegment(targetFeature.rest, IMPLEMENTATION_DIRECTORIES)) {
+        if (hasDirectorySegment(targetPath, IMPLEMENTATION_DIRECTORIES)) {
           violations.push(
             createViolation(
               FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
@@ -713,6 +718,8 @@ function collectPublicApiImplementationExports(
           continue;
         }
 
+        const targetFeature = parseFeaturePath(targetPath);
+        if (targetFeature?.feature !== publicFeature) continue;
         const targetExport =
           reexport.exportedName === '*' ? requestedExport : reexport.importedName;
         visit(targetPath, targetExport);
