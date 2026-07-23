@@ -14,6 +14,14 @@ const MAX_PHASE_ONE_ID_LENGTH = 128;
 const CANONICAL_ID_PAYLOAD_LENGTH = 32;
 const CANONICAL_ID_PAYLOAD_PATTERN = /^[0-9a-f]{32}$/;
 const LEGACY_MEMBER_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+const WINDOWS_RESERVED_MEMBER_FILE_STEMS = new Set([
+  'aux',
+  'con',
+  'nul',
+  'prn',
+  ...Array.from({ length: 9 }, (_, index) => `com${index + 1}`),
+  ...Array.from({ length: 9 }, (_, index) => `lpt${index + 1}`),
+]);
 
 const PHASE_ONE_ID_PATTERNS = new Map<string, RegExp>();
 function parsePhaseOneId<T extends string>(value: unknown, prefix: string): T {
@@ -58,7 +66,12 @@ export const parseWorkspaceId = (value: unknown): WorkspaceId =>
 export const parseRunId = (value: unknown): RunId => parseCanonicalId(value, 'run');
 export const parseMemberId = (value: unknown): MemberId => parseCanonicalId(value, 'member');
 export const parseLegacyMemberKey = (value: unknown): LegacyMemberKey => {
-  if (typeof value !== 'string' || !LEGACY_MEMBER_KEY_PATTERN.test(value)) {
+  if (
+    typeof value !== 'string' ||
+    !LEGACY_MEMBER_KEY_PATTERN.test(value) ||
+    value.endsWith('.') ||
+    WINDOWS_RESERVED_MEMBER_FILE_STEMS.has(value.toLowerCase().split('.')[0] ?? '')
+  ) {
     throw new TypeError('hosted-contract-legacy-member-key-invalid');
   }
   return value as LegacyMemberKey;

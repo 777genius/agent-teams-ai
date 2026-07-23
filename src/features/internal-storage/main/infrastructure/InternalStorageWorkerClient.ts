@@ -9,6 +9,12 @@ import {
   MAX_TEAM_IDENTITY_READ_RECORDS,
   parseTeamIdentityRecord,
 } from '../../contracts/teamIdentityStorageContracts';
+import {
+  parseTeamRosterSnapshotRecord,
+  type TeamRosterAdoptRecordResult,
+  type TeamRosterSnapshotRecord,
+  type TeamRosterStorageGateway,
+} from '../../contracts/teamRosterStorageContracts';
 
 import type {
   CommentJournalEntryRecord,
@@ -157,6 +163,7 @@ export class InternalStorageWorkerClient
     ApplicationCommandLedgerStorageGateway,
     DurableApplicationCommandLedgerStorageGateway,
     TeamIdentityReadGateway,
+    TeamRosterStorageGateway,
     CoordinationDurabilityStorageGateway
 {
   private worker: Worker | null = null;
@@ -246,6 +253,29 @@ export class InternalStorageWorkerClient
   async getTeamIdentity(teamId: TeamId): Promise<TeamIdentityRecord | null> {
     const value = await this.call('teamIdentity.get', { teamId });
     return value === null ? null : parseTeamIdentityRecord(value);
+  }
+
+  async getTeamRoster(teamId: TeamId): Promise<TeamRosterSnapshotRecord | null> {
+    const value = await this.call('teamRoster.get', { teamId });
+    return value === null ? null : parseTeamRosterSnapshotRecord(value);
+  }
+
+  async adoptTeamRoster(record: TeamRosterSnapshotRecord): Promise<TeamRosterAdoptRecordResult> {
+    const roster = parseTeamRosterSnapshotRecord(record);
+    const value = await this.call('teamRoster.adopt', { roster });
+    if (
+      typeof value !== 'object' ||
+      value === null ||
+      ((value as { outcome?: unknown }).outcome !== 'created' &&
+        (value as { outcome?: unknown }).outcome !== 'existing')
+    ) {
+      throw new TypeError('team-roster-storage-adopt-result-invalid');
+    }
+    const result = value as { outcome: 'created' | 'existing'; roster?: unknown };
+    return {
+      outcome: result.outcome,
+      roster: parseTeamRosterSnapshotRecord(result.roster),
+    };
   }
 
   async statusRead(

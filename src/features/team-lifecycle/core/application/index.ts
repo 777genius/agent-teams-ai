@@ -1,3 +1,4 @@
+export * from './AdoptTeamRoster';
 export {
   GetRuntimeStateProjection,
   type RuntimeStateProjectionReadPort,
@@ -11,3 +12,4 @@ export {
   ListAliveTeamProjections,
 } from './ListAliveTeamProjections';
 export { ListTeamLifecycle, type TeamLifecycleReadSource } from './ListTeamLifecycle';
+export type * from './ports/TeamRosterPorts';

@@ -2,6 +2,7 @@ import type {
   CommentJournalEntryRecord,
   StallJournalEntryRecord,
 } from '../../../contracts/internalStorageContracts';
+import type { TeamRosterSnapshotRecord } from '../../../contracts/teamRosterStorageContracts';
 import type {
   DurableApplicationCommandCommitRequest,
   DurableApplicationCommandConsumerApplyRequest,
@@ -278,6 +279,8 @@ export type InternalStorageWorkerRequest =
     }
   | { id: string; op: 'teamIdentity.list'; payload: Record<string, never> }
   | { id: string; op: 'teamIdentity.get'; payload: { teamId: TeamId } }
+  | { id: string; op: 'teamRoster.get'; payload: { teamId: TeamId } }
+  | { id: string; op: 'teamRoster.adopt'; payload: { roster: TeamRosterSnapshotRecord } }
   // Member-work-sync ops share one wire shape; the typed client methods and
   // the worker-side dispatcher (memberWorkSyncWorkerOps) own the payloads.
   | TypedApplicationCommandLedgerWorkerRequest

@@ -207,6 +207,7 @@ describe('team-runtime-control root API', () => {
     expect(Object.keys(teamRuntimeControlApi).sort()).toEqual([
       'COMPOSITE_RUNTIME_PLAN_VERSION',
       'CompositeRuntimePlanValidationError',
+      'CreateRuntimePlanFromPersistedRoster',
       'HOSTED_CHILD_ENVIRONMENT_PROVENANCE',
       'RUNTIME_EXECUTION_BACKENDS',
       'RUNTIME_TOPOLOGY_MODES',

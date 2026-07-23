@@ -41,12 +41,14 @@ export {
 export type {
   CompositeRuntimePlanErrorCode,
   CreateCompositeRuntimePlanInput,
+  CreateRuntimePlanFromPersistedRosterInput,
   ResolvedProcessExecutionUnitFact,
   ResolvedRuntimeLaneCredentialFact,
 } from './core/application/planning';
 export {
   CompositeRuntimePlanValidationError,
   createCompositeRuntimePlan,
+  CreateRuntimePlanFromPersistedRoster,
   decodeCompositeRuntimePlan,
   isCurrentCompositeRuntimePlan,
 } from './core/application/planning';
@@ -89,3 +91,8 @@ export type {
   WorkspaceExecutionGrant,
   WorkspaceExecutionGrantId,
 } from './core/application/ports';
+export type {
+  PersistedTeamRosterPlanMember,
+  PersistedTeamRosterPlanSnapshot,
+  PersistedTeamRosterPlanSource,
+} from './core/application/ports/PersistedTeamRosterPlanSource';
