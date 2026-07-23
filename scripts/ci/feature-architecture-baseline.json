@@ -188,6 +188,21 @@
     },
     {
       "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-control/core/application/runtime-ingress/ExecuteRuntimeIngress.ts",
+      "specifier": "@features/application-command-ledger"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-control/core/application/runtime-ingress/ports.ts",
+      "specifier": "@features/application-command-ledger"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-control/core/application/runtime-ingress/RuntimeIngressReplayEvidence.ts",
+      "specifier": "@features/application-command-ledger"
+    },
+    {
+      "rule": "core-application-dependencies",
       "source": "src/features/team-runtime-operations/core/application/ports/TeamRuntimeOperationPorts.ts",
       "specifier": "@shared/types"
     },
