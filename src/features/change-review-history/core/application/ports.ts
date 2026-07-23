@@ -6,18 +6,21 @@ import type {
 } from '../../contracts';
 import type { ReviewConflictResolution } from '@shared/types/review';
 
-export interface ReviewDraftHistoryPersistenceScope {
+export interface ReviewHistoryPersistenceScope {
   scopeKey: string;
   scopeToken: string;
 }
 
-export interface ReviewDraftHistoryPersistenceLockPort {
+export interface ReviewHistoryPersistenceLockPort {
   run<T>(
     teamName: string,
-    scope: ReviewDraftHistoryPersistenceScope,
+    scope: ReviewHistoryPersistenceScope,
     operation: () => Promise<T>
   ): Promise<T>;
 }
+
+export type ReviewDraftHistoryPersistenceScope = ReviewHistoryPersistenceScope;
+export type ReviewDraftHistoryPersistenceLockPort = ReviewHistoryPersistenceLockPort;
 
 export interface ReviewDraftHistoryAuthorization {
   isCurrentReviewedFile(filePath: string): boolean;

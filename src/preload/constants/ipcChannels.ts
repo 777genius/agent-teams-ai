@@ -518,26 +518,18 @@ export const REVIEW_REAPPLY_REJECTED_RENAME = 'review:reapplyRejectedRename';
 /** Get git file change log */
 export const REVIEW_GET_GIT_FILE_LOG = 'review:getGitFileLog';
 
-/** Load persisted review decisions from disk */
-export const REVIEW_LOAD_DECISIONS = 'review:loadDecisions';
-
-/** Save review decisions to disk */
-export const REVIEW_SAVE_DECISIONS = 'review:saveDecisions';
-
-/** Clear review decisions from disk */
-export const REVIEW_CLEAR_DECISIONS = 'review:clearDecisions';
-
-/** Load/resolve durable renderer branches preserved after decision CAS conflicts. */
-export const REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES = 'review:loadDecisionConflictCandidates';
-export const REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE = 'review:resolveDecisionConflictCandidate';
-
 // Compatibility re-exports. The change-review-history feature owns these channels.
 export {
+  REVIEW_CLEAR_DECISIONS,
   REVIEW_CLEAR_DRAFT_HISTORY,
+  REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+  REVIEW_LOAD_DECISIONS,
   REVIEW_LOAD_DRAFT_HISTORY,
   REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
   REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
   REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_SAVE_DECISIONS,
   REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
 } from '@features/change-review-history/contracts';
 

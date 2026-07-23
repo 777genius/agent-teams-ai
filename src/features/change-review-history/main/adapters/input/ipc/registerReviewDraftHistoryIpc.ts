@@ -8,16 +8,13 @@ import {
   REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
 } from '@features/change-review-history/contracts';
 
+import type { ReviewHistoryIpcHandlerWrapper } from './types';
 import type { ReviewDraftHistoryApplication } from '../../../../core/application/ReviewDraftHistoryApplication';
 import type { ReviewDraftHistoryEntry } from '@features/change-review-history/contracts';
-import type { IpcResult } from '@shared/types/ipc';
 import type { ReviewConflictResolution } from '@shared/types/review';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
-export type ReviewDraftHistoryIpcHandlerWrapper = <T>(
-  operationName: string,
-  operation: () => Promise<T>
-) => Promise<IpcResult<T>>;
+export type ReviewDraftHistoryIpcHandlerWrapper = ReviewHistoryIpcHandlerWrapper;
 
 export function registerReviewDraftHistoryIpc(
   ipcMain: IpcMain,

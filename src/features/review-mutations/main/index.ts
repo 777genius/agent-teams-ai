@@ -4,6 +4,7 @@ export {
   type ReviewMutationPhaseObserver,
   type ReviewMutationSteps,
 } from '../core/application/ReviewMutationCoordinator';
+export { isDurableReviewEqual } from '../core/domain/durableReviewValue';
 export {
   buildReviewExternalReloadState,
   buildReviewHistoryRestorePlan,
