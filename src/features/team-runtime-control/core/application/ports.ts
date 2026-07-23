@@ -11,7 +11,10 @@ import type {
   RuntimeResourcePolicy,
   Sha256Hash,
 } from '../../contracts';
+import type { RuntimeIngressVerb as CanonicalRuntimeIngressVerb } from '../domain/runtime-ingress';
 import type { MemberId, RunId, WorkspaceId } from '@shared/contracts/hosted';
+
+export type { RuntimeIngressVerb } from '../domain/runtime-ingress';
 
 declare const runtimeControlPortBrand: unique symbol;
 
@@ -22,7 +25,6 @@ type RuntimeControlRef<Name extends string> = string & {
 export type SupervisedProcessRef = RuntimeControlRef<'SupervisedProcessRef'>;
 export type RuntimeIngressRelayRef = RuntimeControlRef<'RuntimeIngressRelayRef'>;
 export type LaneRelayHandle = RuntimeControlRef<'LaneRelayHandle'>;
-export type RuntimeIngressVerb = RuntimeControlRef<'RuntimeIngressVerb'>;
 export type WorkspaceExecutionGrantId = RuntimeControlRef<'WorkspaceExecutionGrantId'>;
 export type ResolvedExecutableAuthorityRef = RuntimeControlRef<'ResolvedExecutableAuthorityRef'>;
 export type ResolvedWorkdirAuthorityRef = RuntimeControlRef<'ResolvedWorkdirAuthorityRef'>;
@@ -181,7 +183,7 @@ export interface OpenRuntimeIngressRelayRequest {
   readonly laneId: LaneId;
   readonly memberIds: readonly MemberId[];
   readonly credentialGeneration: number;
-  readonly allowedVerbs: readonly RuntimeIngressVerb[];
+  readonly allowedVerbs: readonly CanonicalRuntimeIngressVerb[];
 }
 
 export type OpenRuntimeIngressRelayResult =
@@ -202,7 +204,12 @@ export interface CloseRuntimeIngressRelayResult {
   readonly status: 'closed' | 'already_closed' | 'unclassified_residual';
 }
 
-/** Lane scope is fixed by the request; provider payloads cannot select another authority. */
+/**
+ * Lane scope is fixed by the request; provider payloads cannot select another authority.
+ * A concrete relay composes this lifecycle seam with the runtime-ingress durable
+ * recovery port. Opening a relay is not itself credential verification or an
+ * acknowledgement that an ingress effect was applied.
+ */
 export interface RuntimeIngressRelayPort {
   open(request: OpenRuntimeIngressRelayRequest): Promise<OpenRuntimeIngressRelayResult>;
   close(request: CloseRuntimeIngressRelayRequest): Promise<CloseRuntimeIngressRelayResult>;
