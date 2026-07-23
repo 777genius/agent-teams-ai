@@ -26630,6 +26630,12 @@ describe('TeamProvisioningService', () => {
         'OpenCode bridge reported bootstrap confirmation, but no lane runtime evidence was committed.',
       ],
     });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId,
+      runId,
+    });
     await writeCommittedOpenCodeSessionStore({
       teamName,
       laneId,
@@ -26653,6 +26659,7 @@ describe('TeamProvisioningService', () => {
         laneId,
         laneKind: 'secondary',
         laneOwnerProviderId: 'opencode',
+        runtimeRunId: runId,
         launchState: 'runtime_pending_bootstrap',
         agentToolAccepted: true,
         runtimeAlive: false,
@@ -26702,6 +26709,12 @@ describe('TeamProvisioningService', () => {
       laneId,
       state: 'active',
     });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId,
+      runId,
+    });
     await writeCommittedOpenCodeSessionStore({
       teamName,
       laneId,
@@ -26724,6 +26737,7 @@ describe('TeamProvisioningService', () => {
         laneId,
         laneKind: 'secondary',
         laneOwnerProviderId: 'opencode',
+        runtimeRunId: runId,
         launchState: 'confirmed_alive',
         agentToolAccepted: true,
         runtimeAlive: false,
@@ -26744,6 +26758,7 @@ describe('TeamProvisioningService', () => {
           laneId,
           laneKind: 'secondary',
           laneOwnerProviderId: 'opencode',
+          runtimeRunId: runId,
           launchState: 'runtime_pending_bootstrap',
           agentToolAccepted: true,
           runtimeAlive: false,
@@ -30679,6 +30694,7 @@ describe('TeamProvisioningService', () => {
               laneId: tomLaneId,
               laneKind: 'secondary',
               laneOwnerProviderId: 'opencode',
+              runtimeRunId: tomRunId,
               launchState: 'failed_to_start',
               agentToolAccepted: false,
               runtimeAlive: false,
@@ -30709,6 +30725,12 @@ describe('TeamProvisioningService', () => {
       laneId: tomLaneId,
       state: 'degraded',
       diagnostics: ['File lock timeout: opencode-runtime-receipts.json'],
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId: tomLaneId,
+      runId: tomRunId,
     });
     await writeCommittedOpenCodeSessionStore({
       teamName,
