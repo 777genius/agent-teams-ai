@@ -691,6 +691,24 @@
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamProvisioningLaunchPersistence",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamProvisioningLaunchSlice",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamProvisioningLaunchTransport",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
       "specifier": "./adapters/createTeamProvisioningProgressSlice",
       "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
     },
