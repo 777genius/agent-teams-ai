@@ -24,6 +24,11 @@ import {
   removeTeamApprovalsIpc,
 } from '@features/team-approvals/main';
 import {
+  createTeamConfigurationFeature,
+  registerTeamConfigurationIpc,
+  removeTeamConfigurationIpc,
+} from '@features/team-configuration/main';
+import {
   createTeamTaskBoardFeature,
   registerTeamTaskBoardIpc,
   removeTeamTaskBoardIpc,
@@ -156,6 +161,7 @@ const taskLogObservabilityLogger = createLogger('IPC:teams');
 const teamApprovalsLogger = createLogger('IPC:teamApprovals');
 const teamTaskBoardLogger = createLogger('IPC:teamTaskBoard');
 const teamViewReadModelLogger = createLogger('IPC:teams');
+const teamConfigurationLogger = createLogger('IPC:teams');
 
 /**
  * Initializes IPC handlers with service registry.
@@ -223,6 +229,12 @@ export function initializeIpcHandlers(
     runtime: teamHandlerApis.runtime,
     messaging: teamHandlerApis.messaging,
     logger: teamViewReadModelLogger,
+  });
+  const teamConfigurationFeature = createTeamConfigurationFeature({
+    repository: teamDataService,
+    runtime: teamHandlerApis.runtime,
+    messaging: teamHandlerApis.messaging,
+    logger: teamConfigurationLogger,
   });
 
   // Initialize domain handlers with registry
@@ -300,6 +312,7 @@ export function initializeIpcHandlers(
   registerSshHandlers(ipcMain);
   registerContextHandlers(ipcMain);
   registerTeamHandlers(ipcMain);
+  registerTeamConfigurationIpc(ipcMain, teamConfigurationFeature);
   registerTeamViewReadModelIpc(ipcMain, teamViewReadModelFeature);
   registerTeamTaskBoardIpc(ipcMain, teamTaskBoardFeature);
   registerTeamApprovalsIpc(ipcMain, {
@@ -364,6 +377,7 @@ export function removeIpcHandlers(): void {
   removeSshHandlers(ipcMain);
   removeContextHandlers(ipcMain);
   removeTeamHandlers(ipcMain);
+  removeTeamConfigurationIpc(ipcMain);
   removeTeamViewReadModelIpc(ipcMain);
   removeTeamTaskBoardIpc(ipcMain);
   removeTeamApprovalsIpc(ipcMain);

@@ -134,6 +134,11 @@ vi.mock('@main/services/team/AutoResumeService', async (importOriginal) => {
 });
 
 import {
+  createTeamConfigurationFeature,
+  registerTeamConfigurationIpc,
+  removeTeamConfigurationIpc,
+} from '../../../src/features/team-configuration/main';
+import {
   type CanonicalListTeamLifecycleResult,
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
 } from '../../../src/features/team-lifecycle';
@@ -352,10 +357,18 @@ const TEAM_VIEW_READ_MODEL_HANDLER_KEYS = [
   TEAM_GET_MEMBER_ACTIVITY_META,
 ] as const;
 const TEAM_VIEW_READ_MODEL_HANDLER_KEY_SET = new Set<string>(TEAM_VIEW_READ_MODEL_HANDLER_KEYS);
+const TEAM_CONFIGURATION_HANDLER_KEYS = [
+  TEAM_CREATE_CONFIG,
+  TEAM_UPDATE_CONFIG,
+  TEAM_GET_SAVED_REQUEST,
+  TEAM_DELETE_DRAFT,
+] as const;
+const TEAM_CONFIGURATION_HANDLER_KEY_SET = new Set<string>(TEAM_CONFIGURATION_HANDLER_KEYS);
 const TEAM_HANDLER_KEYS = ALL_TEAM_HANDLER_KEYS.filter(
   (channel) =>
     !TEAM_TASK_BOARD_HANDLER_KEY_SET.has(channel) &&
-    !TEAM_VIEW_READ_MODEL_HANDLER_KEY_SET.has(channel)
+    !TEAM_VIEW_READ_MODEL_HANDLER_KEY_SET.has(channel) &&
+    !TEAM_CONFIGURATION_HANDLER_KEY_SET.has(channel)
 );
 
 describe('ipc teams handlers', () => {
@@ -373,6 +386,7 @@ describe('ipc teams handlers', () => {
     warn: vi.fn(),
   };
   const teamViewReadModelLogger = createLogger('IPC:teams');
+  const teamConfigurationLogger = createLogger('IPC:teams');
   let launchIoGovernor: LaunchIoGovernor;
 
   const service = {
@@ -747,6 +761,13 @@ describe('ipc teams handlers', () => {
       launchIoGovernor
     );
     registerTeamHandlers(ipcMain as never);
+    const teamConfigurationFeature = createTeamConfigurationFeature({
+      repository: service as never,
+      runtime: teamHandlerApis.runtime,
+      messaging: teamHandlerApis.messaging,
+      logger: teamConfigurationLogger,
+    });
+    registerTeamConfigurationIpc(ipcMain as never, teamConfigurationFeature);
     const teamViewReadModelFeature = createTeamViewReadModelFeature({
       data: service as never,
       provisioningRuns: teamHandlerApis.provisioningRun,
@@ -790,6 +811,9 @@ describe('ipc teams handlers', () => {
       expect(legacyChannels.has(channel)).toBe(false);
     }
     for (const channel of TEAM_VIEW_READ_MODEL_HANDLER_KEYS) {
+      expect(legacyChannels.has(channel)).toBe(false);
+    }
+    for (const channel of TEAM_CONFIGURATION_HANDLER_KEYS) {
       expect(legacyChannels.has(channel)).toBe(false);
     }
   });
@@ -5327,6 +5351,7 @@ describe('ipc teams handlers', () => {
 
   it('removes all expected handlers', () => {
     removeTeamHandlers(ipcMain as never);
+    removeTeamConfigurationIpc(ipcMain as never);
     removeTeamViewReadModelIpc(ipcMain as never);
     removeTeamTaskBoardIpc(ipcMain as never);
     expect(ipcMain.removeHandler).toHaveBeenCalledTimes(ALL_TEAM_HANDLER_KEYS.length);
