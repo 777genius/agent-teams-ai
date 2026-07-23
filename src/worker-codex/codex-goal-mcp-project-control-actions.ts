@@ -419,13 +419,13 @@ export async function projectControlStartStoredJobView(
           authorizedContinuationWorkspaceMode = validatedWorkspaceMode;
         }
       }
-      const continuationReservation =
-        await codexProjectContinuationReservationInput({
+      const continuationReservation = await codexProjectContinuationReservationInput({
           status: lockedStatus,
           launch: canonicalLaunch,
-          journal:
-            deps.safeExecutionJournal ??
+          journal: deps.safeExecutionJournal ??
             localCodexProjectSafeExecutionJournal(canonicalLaunch),
+          verifiedPrewarmBeforeAttemptContinuation:
+            continuationDecision?.kind === "prewarm_before_attempt",
         });
       const continuationLaunch = await withProjectContinuationAccounts({
         launch: canonicalLaunch,

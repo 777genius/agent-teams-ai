@@ -226,6 +226,99 @@ describe("project account reservation", () => {
     ).resolves.toEqual({ excludedAccountIds: [] });
   });
 
+  it("grants one new attempt after a verified prewarm failure", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-prewarm-retry-"));
+    roots.push(root);
+    const scoped = fixture(root, "job-1");
+    const journal = new InMemoryAttemptJournal();
+    const now = new Date("2026-07-13T00:01:00.000Z");
+    await journal.startTask({
+      taskId: scoped.launch.config.taskId,
+      workspaceRunId: "workspace-run",
+      workspacePath: scoped.launch.config.workspacePath,
+      effectMode: "workspace_patch",
+      provider: "codex",
+      now,
+    });
+    await journal.appendAttempt({
+      taskId: scoped.launch.config.taskId,
+      attempt: {
+        taskId: scoped.launch.config.taskId,
+        attemptNumber: 1,
+        accountId: "account-a",
+        provider: "codex",
+        startedAt: now,
+        finishedAt: now,
+        status: "blocked",
+        failureReason: "unknown_error",
+        workspaceDirtyBefore: true,
+        workspaceDirtyAfter: true,
+        changedFiles: [],
+      },
+      now,
+    });
+    await journal.markPartial({
+      taskId: scoped.launch.config.taskId,
+      status: "partial",
+      reason: "unknown_error",
+      now,
+    });
+
+    const continuation = await codexProjectContinuationReservationInput({
+      status: {
+        recommendedAction: "inspect_dirty_failure",
+        resultReason: "unknown_error",
+        progressResultReason: "unknown_error",
+        progressAttemptCount: 1,
+        progressCurrentAccount: "account-a",
+      },
+      launch: scoped.launch,
+      journal,
+      verifiedPrewarmBeforeAttemptContinuation: true,
+    });
+    expect(continuation).toEqual({
+      excludedAccountIds: ["account-a"],
+      continuation: { previousAttemptCount: 1 },
+    });
+
+    const reserved = await reserveCodexProjectAccount({
+      ...scoped,
+      ...continuation,
+      deps: {
+        capacityStore: new InMemoryWorkerAccountCapacityStore(),
+        leaseMode: "shared",
+        now,
+      },
+    });
+    expect(reserved.accountId).toBe("account-b");
+    expect(reserved.launch.config.maxAccountCycles).toBe(2);
+
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "inspect_dirty_failure",
+          resultReason: "unknown_error",
+          progressAttemptCount: 2,
+        },
+        launch: scoped.launch,
+        journal,
+        verifiedPrewarmBeforeAttemptContinuation: true,
+      }),
+    ).rejects.toThrow("project_control_prewarm_attempt_history_mismatch");
+
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "inspect_dirty_failure",
+          resultReason: "unknown_error",
+        },
+        launch: scoped.launch,
+        journal: { readTask: async () => null },
+        verifiedPrewarmBeforeAttemptContinuation: true,
+      }),
+    ).resolves.toEqual({ excludedAccountIds: [] });
+  });
+
   it("proves quota_limited continuation from a singleton launch account", async () => {
     const root = await mkdtemp(join(tmpdir(), "project-quota-continuation-"));
     roots.push(root);

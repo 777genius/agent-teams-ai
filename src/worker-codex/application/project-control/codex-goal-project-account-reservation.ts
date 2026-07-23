@@ -253,6 +253,7 @@ export async function codexProjectContinuationReservationInput(input: {
   >;
   readonly launch: CodexGoalLaunchInput;
   readonly journal: Pick<AttemptJournal, "readTask">;
+  readonly verifiedPrewarmBeforeAttemptContinuation?: boolean;
 }): Promise<{
   readonly excludedAccountIds: readonly string[];
   readonly continuation?: CodexProjectAccountContinuation;
@@ -262,17 +263,28 @@ export async function codexProjectContinuationReservationInput(input: {
     const task = await input.journal.readTask({
       taskId: input.launch.config.taskId,
     });
-    return (
-      reconnectRuntimeContinuationAttemptHistory({
-        status: input.status,
-        taskId: input.launch.config.taskId,
-        workspacePath: input.launch.config.workspacePath,
-        launchAccountIds: input.launch.config.accounts.map(
-          (account) => account.name,
-        ),
-        task,
-      }) ?? { excludedAccountIds: [] }
-    );
+    const reconnectContinuation = reconnectRuntimeContinuationAttemptHistory({
+      status: input.status,
+      taskId: input.launch.config.taskId,
+      workspacePath: input.launch.config.workspacePath,
+      launchAccountIds: input.launch.config.accounts.map(
+        (account) => account.name,
+      ),
+      task,
+    });
+    if (reconnectContinuation) return reconnectContinuation;
+    if (!input.verifiedPrewarmBeforeAttemptContinuation) {
+      return { excludedAccountIds: [] };
+    }
+    return prewarmContinuationAttemptHistory({
+      status: input.status,
+      taskId: input.launch.config.taskId,
+      workspacePath: input.launch.config.workspacePath,
+      launchAccountIds: input.launch.config.accounts.map(
+        (account) => account.name,
+      ),
+      task,
+    });
   }
   return continuationAttemptHistory({
     status: input.status,
@@ -284,6 +296,64 @@ export async function codexProjectContinuationReservationInput(input: {
     ),
     task: await input.journal.readTask({ taskId: input.launch.config.taskId }),
   });
+}
+
+function prewarmContinuationAttemptHistory(input: {
+  readonly status: Pick<
+    CodexGoalStatus,
+    | "resultReason"
+    | "progressResultReason"
+    | "progressAttemptCount"
+    | "progressCurrentAccount"
+  >;
+  readonly taskId: string;
+  readonly workspacePath: string;
+  readonly launchAccountIds: readonly string[];
+  readonly task: SafeExecutionTaskRecord | null;
+}): {
+  readonly excludedAccountIds: readonly string[];
+  readonly continuation?: CodexProjectAccountContinuation;
+} {
+  if (!input.task || input.task.attempts.length === 0) {
+    return { excludedAccountIds: [] };
+  }
+  const lastAttempt = input.task.attempts.at(-1);
+  const failedAccountId = lastAttempt?.accountId;
+  if (
+    !lastAttempt ||
+    input.status.resultReason !== "unknown_error" ||
+    (input.status.progressResultReason !== undefined &&
+      input.status.progressResultReason !== "unknown_error") ||
+    input.task.status !== "partial" ||
+    input.task.taskId !== input.taskId ||
+    input.task.workspacePath !== input.workspacePath ||
+    input.task.provider !== "codex" ||
+    input.task.lastFailureReason !== "unknown_error" ||
+    lastAttempt.taskId !== input.taskId ||
+    lastAttempt.provider !== "codex" ||
+    lastAttempt.attemptNumber !== input.task.attempts.length ||
+    lastAttempt.status !== "blocked" ||
+    lastAttempt.failureReason !== "unknown_error" ||
+    !lastAttempt.finishedAt ||
+    lastAttempt.workspaceDirtyBefore !== true ||
+    lastAttempt.workspaceDirtyAfter !== true ||
+    !failedAccountId ||
+    !input.launchAccountIds.includes(failedAccountId)
+  ) {
+    throw new Error("project_control_prewarm_attempt_history_required");
+  }
+  if (
+    (input.status.progressAttemptCount !== undefined &&
+      input.status.progressAttemptCount !== input.task.attempts.length) ||
+    (input.status.progressCurrentAccount !== undefined &&
+      input.status.progressCurrentAccount !== failedAccountId)
+  ) {
+    throw new Error("project_control_prewarm_attempt_history_mismatch");
+  }
+  return {
+    excludedAccountIds: [failedAccountId],
+    continuation: { previousAttemptCount: input.task.attempts.length },
+  };
 }
 
 const APP_SERVER_RECONNECT_TIMEOUT_PREFIX =
