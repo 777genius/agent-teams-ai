@@ -604,7 +604,7 @@ async function openReview() {
   await client.waitFor(
     `/\\b\\d+ (?:pending|accepted|rejected)\\b/.test(document.body?.innerText ?? '')`,
     'hunk review dialog',
-    45_000
+    devMcpMode ? 180_000 : 60_000
   );
 }
 
