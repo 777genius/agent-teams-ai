@@ -186,11 +186,11 @@ describe('useChangeReviewActionHistoryController', () => {
       latest!.bindCommittedAction(optimistic, committed);
     });
     expect(latest!.getLatestUndoAction()).toBe(committed);
-    let discardedOptimistic = false;
+    let discardedCommitted = false;
     await act(async () => {
-      discardedOptimistic = latest!.discardLatestAction(optimistic);
+      discardedCommitted = latest!.discardLatestAction(committed);
     });
-    expect(discardedOptimistic).toBe(true);
+    expect(discardedCommitted).toBe(true);
     expect(store.redo).toEqual([previousRedo]);
     await act(async () => root.unmount());
   });

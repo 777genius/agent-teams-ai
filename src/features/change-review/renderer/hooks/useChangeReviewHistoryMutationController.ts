@@ -188,13 +188,17 @@ export function useChangeReviewHistoryMutationController({
       target: ReviewHistoryRestoreTarget
     ): void => {
       applyCommittedState(persistedState, decisionRevision, null);
-      if (direction === 'undo' && diskSnapshots.length > 0) refreshAfterUndo(diskSnapshots);
-      if (direction === 'redo') {
+      if (direction === 'undo') {
+        if (diskSnapshots.length > 0) {
+          refreshAfterUndo(diskSnapshots);
+        } else {
+          viewPort.incrementDiscardCounters(
+            orderedActions.flatMap((action) => getReviewActionAffectedPaths(action, files))
+          );
+        }
+      } else {
         for (const action of orderedActions) refreshAfterRedo(action);
       }
-      viewPort.incrementDiscardCounters(
-        orderedActions.flatMap((action) => getReviewActionAffectedPaths(action, files))
-      );
       if (target.kind !== 'after-action') return;
       const targetAction =
         persistedState.reviewActionHistory.find((action) => action.id === target.actionId) ??
@@ -311,7 +315,9 @@ export function useChangeReviewHistoryMutationController({
       statePort.applyDecisionState(decisionState);
       if (diskSnapshots.length > 0) refreshAfterUndo(diskSnapshots);
       if (!history.completeUndoAction(action, redoAction)) return;
-      viewPort.incrementDiscardCounters(getReviewActionAffectedPaths(action, files));
+      if (diskSnapshots.length === 0) {
+        viewPort.incrementDiscardCounters(getReviewActionAffectedPaths(action, files));
+      }
     } catch (error) {
       if (!isCurrentOperationScope(operationScope)) return;
       statePort.reportError(
