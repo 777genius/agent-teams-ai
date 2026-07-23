@@ -1,6 +1,5 @@
-export * from './contracts';
 export {
   isActiveProvisioningState,
   isTerminalProvisioningState,
   shouldIgnoreProvisioningProgressRegression,
-} from './core/domain';
+} from './provisioningProgressPolicy';

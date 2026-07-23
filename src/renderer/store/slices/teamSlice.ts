@@ -7,6 +7,15 @@ import {
   type TeamGraphLayoutSlice,
 } from '@features/agent-graph';
 import {
+  isActiveProvisioningState,
+  isTerminalProvisioningState,
+  shouldIgnoreProvisioningProgressRegression,
+} from '@features/team-provisioning';
+import {
+  createTeamProvisioningControlSlice,
+  type TeamProvisioningControlSlice,
+} from '@features/team-provisioning/renderer';
+import {
   clearTeamTaskBoardAnalytics,
   createTeamTaskBoardRendererSlice,
   recordTeamTaskBoardSnapshotTransitions,
@@ -116,11 +125,6 @@ import {
   clearPendingReplyRefreshWaits,
   setPendingReplyRefreshEnabled,
 } from '../team/teamPendingReplyWaits';
-import {
-  isActiveProvisioningState,
-  isTerminalProvisioningState,
-  shouldIgnoreProvisioningProgressRegression,
-} from '../team/teamProvisioningStateRules';
 import {
   clearAllTeamRefreshBurstDiagnostics,
   clearTeamRefreshBurstDiagnostics,
@@ -1245,7 +1249,8 @@ function isVisibleInActiveTeamSurface(
   });
 }
 
-export interface TeamSlice extends TeamGraphLayoutSlice, TeamTaskBoardRendererSlice {
+export interface TeamSlice
+  extends TeamGraphLayoutSlice, TeamProvisioningControlSlice, TeamTaskBoardRendererSlice {
   teams: TeamSummary[];
   /** O(1) lookup to avoid array scans in render-hot paths */
   teamByName: Record<string, TeamSummary>;
@@ -1336,7 +1341,6 @@ export interface TeamSlice extends TeamGraphLayoutSlice, TeamTaskBoardRendererSl
   /** Per-team launch parameters (model, effort, extended context) — persisted in localStorage. */
   launchParamsByTeam: Record<string, TeamLaunchParams>;
   kanbanFilterQuery: string | null;
-  provisioningProgressUnsubscribe: (() => void) | null;
   fetchBranches: (paths: string[]) => Promise<void>;
   fetchTeams: () => Promise<void>;
   fetchAllTasks: () => Promise<void>;
@@ -1422,12 +1426,7 @@ export interface TeamSlice extends TeamGraphLayoutSlice, TeamTaskBoardRendererSl
   permanentlyDeleteTeam: (teamName: string) => Promise<void>;
   createTeam: (request: TeamCreateRequest) => Promise<string>;
   launchTeam: (request: TeamLaunchRequest) => Promise<string>;
-  cancelProvisioning: (runId: string) => Promise<void>;
-  getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
-  clearMissingProvisioningRun: (runId: string) => void;
   onProvisioningProgress: (progress: TeamProvisioningProgress) => void;
-  subscribeProvisioningProgress: () => void;
-  unsubscribeProvisioningProgress: () => void;
   pendingApprovals: ToolApprovalRequest[];
   /** Resolved permission approvals: request_id → allowed (true/false). Used for noise row icons. */
   resolvedApprovals: Map<string, boolean>;
@@ -1638,6 +1637,26 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   currentRuntimeRunIdByTeam: {},
   ignoredProvisioningRunIds: {},
   ignoredRuntimeRunIds: {},
+  ...createTeamProvisioningControlSlice({
+    effects: {
+      applyProgress: (progress) => get().onProvisioningProgress(progress),
+      clearLaunchTracking: (runId) => {
+        teamLaunchAnalyticsByRunId.delete(runId);
+        clearTeamLaunchStepTracking(runId);
+      },
+      clearRuntimeFreshness: clearTeamAgentRuntimeFreshnessSnapshot,
+    },
+    state: {
+      getState: () => get(),
+      setState: (update) => {
+        if (typeof update === 'function') {
+          set((state) => update(state));
+          return;
+        }
+        set(update);
+      },
+    },
+  }),
   provisioningStartedAtFloorByTeam: {},
   leadActivityByTeam: {},
   leadContextByTeam: {},
@@ -1812,7 +1831,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   closeGlobalTaskDetail: () => set({ globalTaskDetail: null }),
   addingComment: false,
   addCommentError: null,
-  provisioningProgressUnsubscribe: null,
   pendingApprovals: [],
   resolvedApprovals: new Map(),
   toolApprovalSettings: loadToolApprovalSettings(),
@@ -3951,85 +3969,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
 
-  getProvisioningStatus: async (runId: string) => {
-    const progress = await unwrapIpc('team:provisioningStatus', () =>
-      api.teams.getProvisioningStatus(runId)
-    );
-    get().onProvisioningProgress(progress);
-    return progress;
-  },
-
-  clearMissingProvisioningRun: (runId: string) => {
-    teamLaunchAnalyticsByRunId.delete(runId);
-    clearTeamLaunchStepTracking(runId);
-    set((state) => {
-      const existing = state.provisioningRuns[runId];
-      if (!existing) {
-        return {};
-      }
-
-      const nextRuns = { ...state.provisioningRuns };
-      delete nextRuns[runId];
-
-      const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
-      const isCanonicalRun = nextCurrentRunIdByTeam[existing.teamName] === runId;
-      if (isCanonicalRun) {
-        delete nextCurrentRunIdByTeam[existing.teamName];
-      }
-      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
-      if (nextRuntimeRunIdByTeam[existing.teamName] === runId) {
-        delete nextRuntimeRunIdByTeam[existing.teamName];
-      }
-      const nextIgnoredRunIds = {
-        ...state.ignoredProvisioningRunIds,
-        [runId]: existing.teamName,
-      };
-      const nextIgnoredRuntimeRunIds =
-        state.currentRuntimeRunIdByTeam[existing.teamName] === runId
-          ? {
-              ...state.ignoredRuntimeRunIds,
-              [runId]: existing.teamName,
-            }
-          : state.ignoredRuntimeRunIds;
-
-      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
-      const nextSpawnSnapshots = { ...state.memberSpawnSnapshotsByTeam };
-      const nextRuntime = { ...state.teamAgentRuntimeByTeam };
-      if (isCanonicalRun) {
-        delete nextSpawnStatuses[existing.teamName];
-        delete nextSpawnSnapshots[existing.teamName];
-        delete nextRuntime[existing.teamName];
-        clearTeamAgentRuntimeFreshnessSnapshot(existing.teamName);
-      }
-      const nextActiveTools = { ...state.activeToolsByTeam };
-      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
-      const nextToolHistory = { ...state.toolHistoryByTeam };
-      if (isCanonicalRun) {
-        delete nextActiveTools[existing.teamName];
-        delete nextFinishedVisible[existing.teamName];
-        delete nextToolHistory[existing.teamName];
-      }
-
-      return {
-        provisioningRuns: nextRuns,
-        currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
-        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
-        memberSpawnStatusesByTeam: nextSpawnStatuses,
-        memberSpawnSnapshotsByTeam: nextSpawnSnapshots,
-        teamAgentRuntimeByTeam: nextRuntime,
-        activeToolsByTeam: nextActiveTools,
-        finishedVisibleByTeam: nextFinishedVisible,
-        toolHistoryByTeam: nextToolHistory,
-        ignoredProvisioningRunIds: nextIgnoredRunIds,
-        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
-      };
-    });
-  },
-
-  cancelProvisioning: async (runId: string) => {
-    await unwrapIpc('team:cancelProvisioning', () => api.teams.cancelProvisioning(runId));
-  },
-
   onProvisioningProgress: (progress: TeamProvisioningProgress) => {
     if (get().ignoredProvisioningRunIds[progress.runId] === progress.teamName) {
       return;
@@ -4281,20 +4220,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
 
-  subscribeProvisioningProgress: () => {
-    const existing = get().provisioningProgressUnsubscribe;
-    if (existing) {
-      return;
-    }
-    if (!api.teams?.onProvisioningProgress) {
-      return;
-    }
-    const unsubscribe = api.teams.onProvisioningProgress((_event, progress) => {
-      get().onProvisioningProgress(progress);
-    });
-    set({ provisioningProgressUnsubscribe: unsubscribe });
-  },
-
   updateToolApprovalSettings: async (patch, forTeam) => {
     const teamName = forTeam ?? get().selectedTeamName;
     const current = get().toolApprovalSettings;
@@ -4332,14 +4257,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       logger.error(`respondToToolApproval failed for ${teamName}/${requestId}: ${msg}`);
       // Surface the error so ToolApprovalSheet can show feedback
       throw err;
-    }
-  },
-
-  unsubscribeProvisioningProgress: () => {
-    const unsubscribe = get().provisioningProgressUnsubscribe;
-    if (unsubscribe) {
-      unsubscribe();
-      set({ provisioningProgressUnsubscribe: null });
     }
   },
 });
