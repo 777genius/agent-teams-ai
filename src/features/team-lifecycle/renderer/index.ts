@@ -1,3 +1,6 @@
+export { createTeamLifecycleMutationCleanup } from './adapters/createTeamLifecycleMutationCleanup';
+export type { TeamLifecycleMutationSliceDependencies } from './adapters/createTeamLifecycleMutationSlice';
+export { createTeamLifecycleMutationSlice } from './adapters/createTeamLifecycleMutationSlice';
 export type {
   TeamLifecycleListItemViewModel,
   TeamLifecycleListStatusTone,
@@ -10,6 +13,18 @@ export {
 } from './adapters/teamLifecycleListViewModel';
 export type { UseTeamLifecycleListResult } from './hooks/useTeamLifecycleList';
 export { useTeamLifecycleList } from './hooks/useTeamLifecycleList';
+export type {
+  TeamLifecycleMutationAnalyticsPort,
+  TeamLifecycleMutationCleanupPort,
+  TeamLifecycleMutationClockPort,
+  TeamLifecycleMutationKind,
+  TeamLifecycleMutationRefreshPort,
+  TeamLifecycleMutationSelectionState,
+  TeamLifecycleMutationSlice,
+  TeamLifecycleMutationStateCleanupDependencies,
+  TeamLifecycleMutationStatePort,
+  TeamLifecycleMutationTransportPort,
+} from './ports/TeamLifecycleMutationPorts';
 export type { HostedTeamLifecycleListProps } from './ui/HostedTeamLifecycleList';
 export { HostedTeamLifecycleList } from './ui/HostedTeamLifecycleList';
 export {
