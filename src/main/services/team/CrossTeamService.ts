@@ -7,7 +7,11 @@ import { randomUUID } from 'crypto';
 
 import { buildActionModeAgentBlock } from './actionModeInstructions';
 import { CascadeGuard } from './CascadeGuard';
-import { CrossTeamOutbox } from './CrossTeamOutbox';
+import {
+  CrossTeamOutbox,
+  type CrossTeamOutboxMessage,
+  CrossTeamRuntimeDeliveryIdempotencyConflictError,
+} from './CrossTeamOutbox';
 import { resolveCrossTeamRecipientIdentity } from './CrossTeamRecipientIdentity';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 
@@ -161,36 +165,63 @@ export class CrossTeamService {
       timestamp,
     };
 
-    const { duplicate } = await this.outbox.appendIfNotRecent(
-      fromTeam,
-      outboxMessage,
-      async () => {
-        // 4. Cascade check only for real new deliveries
-        this.cascadeGuard.check(fromTeam, toTeam, chainDepth);
-        this.cascadeGuard.record(fromTeam, toTeam);
-        this.messaging?.registerPendingCrossTeamReplyExpectation(fromTeam, toTeam, conversationId);
+    let duplicate: CrossTeamOutboxMessage | null = null;
+    try {
+      ({ duplicate } = await this.outbox.appendIfNotRecent(
+        fromTeam,
+        outboxMessage,
+        async () => {
+          // 4. Cascade check only for real new deliveries
+          this.cascadeGuard.check(fromTeam, toTeam, chainDepth);
+          this.cascadeGuard.record(fromTeam, toTeam);
+          this.messaging?.registerPendingCrossTeamReplyExpectation(
+            fromTeam,
+            toTeam,
+            conversationId
+          );
 
-        // 5. Inbox write to TARGET team (TeamInboxWriter handles file lock + in-process lock internally)
-        await this.inboxWriter.sendMessage(toTeam, {
-          member: targetMemberName,
-          text: formattedText,
-          from,
-          timestamp,
-          messageId,
-          summary: summary ?? `Cross-team message from ${fromTeam}`,
-          source: CROSS_TEAM_SOURCE,
-          conversationId,
-          replyToConversationId,
-          taskRefs,
-        });
-      },
-      undefined,
-      {
-        stableIdentity: stableDedupeIdentity,
-        callerMessageId,
-        ...(leadName ? { legacyToMember: leadName } : {}),
+          // 5. Inbox write to TARGET team (TeamInboxWriter handles file lock + in-process lock internally)
+          await this.inboxWriter.sendMessage(toTeam, {
+            member: targetMemberName,
+            text: formattedText,
+            from,
+            timestamp,
+            messageId,
+            summary: summary ?? `Cross-team message from ${fromTeam}`,
+            source: CROSS_TEAM_SOURCE,
+            conversationId,
+            replyToConversationId,
+            taskRefs,
+          });
+        },
+        undefined,
+        {
+          stableIdentity: stableDedupeIdentity,
+          callerMessageId,
+          ...(leadName ? { legacyToMember: leadName } : {}),
+        }
+      ));
+    } catch (error) {
+      if (
+        stableDedupeIdentity &&
+        error instanceof CrossTeamRuntimeDeliveryIdempotencyConflictError
+      ) {
+        if (
+          request.timestamp === undefined &&
+          this.isEquivalentRuntimeRetryIgnoringGeneratedTimestamp(
+            error.existingMessage,
+            outboxMessage
+          )
+        ) {
+          duplicate = error.existingMessage;
+        } else {
+          this.requireDurableRuntimeDeliveryReceiptForConflict(error);
+          throw error;
+        }
+      } else {
+        throw error;
       }
-    );
+    }
 
     if (duplicate) {
       const duplicateTargetMemberName = duplicate.toMember ?? targetMemberName;
@@ -293,6 +324,37 @@ export class CrossTeamService {
     }
 
     return { messageId, deliveredToInbox: true, toTeam, toMember: targetMemberName };
+  }
+
+  private requireDurableRuntimeDeliveryReceiptForConflict(
+    conflict: CrossTeamRuntimeDeliveryIdempotencyConflictError
+  ): void {
+    const existing = conflict.existingMessage;
+    if (conflict.runtimeDeliveryReceiptStatus !== 'valid') {
+      throw new Error(
+        `Cross-team runtime delivery receipt proof is missing or corrupt for idempotency conflict: ` +
+          `${existing.messageId} (${conflict.runtimeDeliveryReceiptStatus})`
+      );
+    }
+  }
+
+  private isEquivalentRuntimeRetryIgnoringGeneratedTimestamp(
+    existing: CrossTeamOutboxMessage,
+    retry: CrossTeamMessage
+  ): boolean {
+    return (
+      existing.messageId.trim() === retry.messageId.trim() &&
+      existing.fromTeam.trim() === retry.fromTeam.trim() &&
+      existing.fromMember.trim() === retry.fromMember.trim() &&
+      existing.toTeam.trim() === retry.toTeam.trim() &&
+      existing.toMember?.trim() === retry.toMember?.trim() &&
+      existing.conversationId?.trim() === retry.conversationId?.trim() &&
+      existing.replyToConversationId?.trim() === retry.replyToConversationId?.trim() &&
+      existing.text === retry.text &&
+      (existing.summary ?? '') === (retry.summary ?? '') &&
+      JSON.stringify(existing.taskRefs ?? []) === JSON.stringify(retry.taskRefs ?? []) &&
+      existing.chainDepth === retry.chainDepth
+    );
   }
 
   async listAvailableTargets(excludeTeam?: string): Promise<CrossTeamTarget[]> {

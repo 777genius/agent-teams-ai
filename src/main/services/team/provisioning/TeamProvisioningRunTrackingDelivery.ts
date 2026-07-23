@@ -142,7 +142,7 @@ export class TeamProvisioningRunTrackingDeliveryHelper<
       run &&
       (run.processKilled ||
         run.cancelRequested ||
-        isTerminalRuntimeProgressState(run.progress.state))
+        (run.progress && isTerminalRuntimeProgressState(run.progress.state)))
     ) {
       return false;
     }
@@ -173,6 +173,21 @@ export class TeamProvisioningRunTrackingDeliveryHelper<
   }
 
   canDeliverToOpenCodeRuntimeForTeam(teamName: string): boolean {
+    const trackedCandidates = Array.from(
+      new Set(
+        [
+          this.options.state.provisioningRunByTeam.get(teamName),
+          this.options.state.aliveRunByTeam.get(teamName),
+          this.options.state.runtimeAdapterRunByTeam.get(teamName)?.runId,
+        ].filter(isNonEmptyRunId)
+      )
+    );
+    if (
+      trackedCandidates.length > 0 &&
+      !trackedCandidates.some((runId) => this.canDeliverToTrackedRuntimeRun(teamName, runId))
+    ) {
+      return false;
+    }
     if (this.options.ports.isTeamAlive(teamName)) {
       return true;
     }
@@ -182,6 +197,13 @@ export class TeamProvisioningRunTrackingDeliveryHelper<
   canAttemptCommittedOpenCodeSessionRecovery(teamName: string): boolean {
     if (this.canDeliverToOpenCodeRuntimeForTeam(teamName)) {
       return true;
+    }
+    const hasTrackedCandidate =
+      this.options.state.provisioningRunByTeam.has(teamName) ||
+      this.options.state.aliveRunByTeam.has(teamName) ||
+      this.options.state.runtimeAdapterRunByTeam.has(teamName);
+    if (hasTrackedCandidate && !this.resolveDeliverableTrackedRuntimeRunId(teamName)) {
+      return false;
     }
     return !this.options.ports.hasOnlyExplicitlyStoppedPersistedTeamProcesses(teamName);
   }

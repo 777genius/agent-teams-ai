@@ -9,6 +9,12 @@ import type { TeamRuntimeLaunchInput, TeamRuntimeLaunchResult } from '../../runt
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 function createHost(): TeamProvisioningOpenCodeAggregatePrimaryLaneServiceHost {
+  const runtimeAdapterProgressByRunId = new Map<
+    string,
+    Parameters<
+      TeamProvisioningOpenCodeAggregatePrimaryLaneServiceHost['runtimeAdapterProgressState']['setRuntimeAdapterProgress']
+    >[0]
+  >();
   return {
     prepareFacade: {
       getOpenCodeRuntimeLaunchCwd: vi.fn((baseCwd) => `${baseCwd}/.opencode`),
@@ -25,6 +31,14 @@ function createHost(): TeamProvisioningOpenCodeAggregatePrimaryLaneServiceHost {
       syncOpenCodeRuntimeToolApprovals: vi.fn(),
     },
     runtimeAdapterRunByTeam: new Map(),
+    runtimeAdapterProgressByRunId,
+    runtimeAdapterProgressState: {
+      setRuntimeAdapterProgress: vi.fn((progress) => {
+        runtimeAdapterProgressByRunId.set(progress.runId, progress);
+        return progress;
+      }),
+    },
+    invalidateRuntimeSnapshotCaches: vi.fn(),
   };
 }
 
@@ -34,11 +48,13 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryLanePortsFactory', () => {
     const migrateLegacyOpenCodeRuntimeState = vi.fn(async () => ({ degraded: false }));
     const upsertOpenCodeRuntimeLaneIndexEntry = vi.fn(async () => undefined);
     const setOpenCodeRuntimeActiveRunManifest = vi.fn(async () => undefined);
+    const clearOpenCodeRuntimeLaneStorage = vi.fn(async () => true);
     const ports = createTeamProvisioningOpenCodeAggregatePrimaryLanePortsFromService(host, {
       getTeamsBasePath: () => '/teams',
       migrateLegacyOpenCodeRuntimeState,
       upsertOpenCodeRuntimeLaneIndexEntry,
       setOpenCodeRuntimeActiveRunManifest,
+      clearOpenCodeRuntimeLaneStorage,
     });
     const launchInput = {
       runId: 'run-1',
@@ -76,6 +92,21 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryLanePortsFactory', () => {
       cwd: '/workspace',
       members: {},
     });
+    expect(ports.getRuntimeAdapterRunByTeam?.('alpha')).toMatchObject({
+      runId: 'run-1',
+      providerId: 'opencode',
+    });
+    ports.publishRuntimeAdapterStopState?.({
+      runId: 'run-1',
+      teamName: 'alpha',
+      state: 'disconnected',
+      message: 'Stopping exact owner',
+    });
+    expect(host.runtimeAdapterProgressByRunId.get('run-1')).toMatchObject({
+      state: 'disconnected',
+      message: 'Stopping exact owner',
+    });
+    expect(host.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('alpha');
 
     await ports.migrateLegacyOpenCodeRuntimeState({
       teamsBasePath: '/teams',
@@ -94,6 +125,12 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryLanePortsFactory', () => {
       laneId: 'primary',
       runId: 'run-1',
     });
+    await ports.clearOpenCodeRuntimeLaneStorage({
+      teamsBasePath: '/teams',
+      teamName: 'alpha',
+      laneId: 'primary',
+      expectedRunId: 'run-1',
+    });
 
     expect(host.prepareFacade.getOpenCodeRuntimeLaunchCwd).toHaveBeenCalledWith('/workspace', []);
     expect(host.persistOpenCodeRuntimeAdapterLaunchResult).toHaveBeenCalledWith(
@@ -107,6 +144,11 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryLanePortsFactory', () => {
       runId: 'run-1',
       providerId: 'opencode',
     });
+    const exactOwner = host.runtimeAdapterRunByTeam.get('alpha');
+    expect(exactOwner && ports.deleteRuntimeAdapterRunByTeamIfOwned?.('alpha', exactOwner)).toBe(
+      true
+    );
+    expect(host.runtimeAdapterRunByTeam.has('alpha')).toBe(false);
     expect(migrateLegacyOpenCodeRuntimeState).toHaveBeenCalledWith(
       expect.objectContaining({ teamsBasePath: '/teams' })
     );
@@ -115,6 +157,9 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryLanePortsFactory', () => {
     );
     expect(setOpenCodeRuntimeActiveRunManifest).toHaveBeenCalledWith(
       expect.objectContaining({ runId: 'run-1' })
+    );
+    expect(clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedRunId: 'run-1' })
     );
   });
 });

@@ -336,7 +336,7 @@ async function stopUnretainableOpenCodePermissionRuntime<
     expectedIdentity.lane?.member.cwd?.trim() ??
     '';
   try {
-    await adapter.stop({
+    const stopResult = await adapter.stop({
       runId: expectedIdentity.runtimeRunId,
       laneId: expectedIdentity.laneId,
       teamName: expectedIdentity.teamName,
@@ -346,10 +346,22 @@ async function stopUnretainableOpenCodePermissionRuntime<
       previousLaunchState,
       force: true,
     });
+    if (!stopResult.stopped) {
+      const detail = [...stopResult.diagnostics, ...stopResult.warnings]
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .join('; ');
+      throw new Error(
+        detail
+          ? `OpenCode runtime lane did not confirm stop: ${detail}`
+          : 'OpenCode runtime lane did not confirm stop'
+      );
+    }
   } catch (error) {
     ports.logWarning(
       `[${expectedIdentity.teamName}] Failed to stop unretainable OpenCode runtime lane ${expectedIdentity.laneId}: ${getErrorMessage(error)}`
     );
+    return false;
   }
   assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
   const runtimeOwnerAfterStop = isPrimary
@@ -429,11 +441,7 @@ function captureTrackedRuntimeApprovalIdentity<TRun extends OpenCodeRuntimePermi
     laneId === 'primary'
       ? ports.getRuntimeAdapterRunByTeam?.(teamName)
       : ports.getSecondaryRuntimeRun?.(teamName, laneId);
-  if (
-    !runtimeOwner ||
-    runtimeOwner.providerId !== 'opencode' ||
-    runtimeOwner.runId !== runtimeRunId
-  ) {
+  if (runtimeOwner?.providerId !== 'opencode' || runtimeOwner.runId !== runtimeRunId) {
     throw new Error(
       `Stale runtime approval: exact runtime owner is no longer current for team "${teamName}" lane ${laneId}`
     );

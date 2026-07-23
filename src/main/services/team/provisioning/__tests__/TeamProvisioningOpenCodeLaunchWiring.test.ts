@@ -230,8 +230,10 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
         cancelRuntimeAdapterProvisioning: baseHost.cancelRuntimeAdapterProvisioning,
         recordCancelledOpenCodeRuntimeAdapterLaunch:
           baseHost.recordCancelledOpenCodeRuntimeAdapterLaunch,
-        clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned:
-          baseHost.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
+        stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: async (teamName, runId) => {
+          await baseHost.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, runId);
+          return true;
+        },
       },
       prepareFacade: {
         getOpenCodeRuntimeLaunchCwd: baseHost.getOpenCodeRuntimeLaunchCwd,

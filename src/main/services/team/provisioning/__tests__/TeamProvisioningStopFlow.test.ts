@@ -243,6 +243,34 @@ describe('team provisioning stop flow', () => {
     expect(currentRun.anthropicApiKeyHelper).not.toBeNull();
   });
 
+  it('does not report a stopped run when its exact OpenCode lane stop fails', async () => {
+    const teamName = 'team-runtime-stop-failure';
+    const currentRun = makeRun('run-runtime-stop-failure', teamName);
+    const runs = new Map([[currentRun.runId, currentRun]]);
+    const aliveRunByTeam = new Map([[teamName, currentRun.runId]]);
+    const ports = makePorts(teamName, runs, new Map(), aliveRunByTeam);
+    ports.runtimeAdapterRunByTeam.set(teamName, {
+      runId: currentRun.runId,
+      providerId: 'opencode',
+    });
+    vi.mocked(ports.stopOpenCodeRuntimeAdapterTeam).mockRejectedValue(
+      new Error('runtime lane still running')
+    );
+
+    await expect(stopTeamFlow(teamName, ports)).rejects.toThrow('runtime lane still running');
+
+    expect(ports.updateProgress).not.toHaveBeenCalled();
+    expect(currentRun.onProgress).not.toHaveBeenCalled();
+    expect(ports.logger.info).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).not.toHaveBeenCalled();
+    expect(runs.get(currentRun.runId)).toBe(currentRun);
+    expect(ports.runtimeAdapterRunByTeam.get(teamName)).toEqual({
+      runId: currentRun.runId,
+      providerId: 'opencode',
+    });
+  });
+
   it('retains the stopped run when helper cleanup fails and releases it on retry', async () => {
     const teamName = 'team-helper-cleanup-retry';
     const currentRun = makeRun('run-helper-cleanup-retry', teamName);

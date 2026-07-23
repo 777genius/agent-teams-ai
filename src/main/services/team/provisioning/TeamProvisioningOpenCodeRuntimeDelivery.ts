@@ -20,6 +20,7 @@ import {
   RuntimeDeliveryDestinationRegistry,
   RuntimeDeliveryReconciler,
   RuntimeDeliveryService,
+  RuntimeDeliveryStaleIdentityError,
   type RuntimeDeliveryTeamChangeEvent,
 } from '../opencode/delivery/RuntimeDeliveryService';
 import {
@@ -27,6 +28,7 @@ import {
   type OpenCodeRuntimeLaneIndexEntry,
   readOpenCodeRuntimeLaneIndex,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { RuntimeStaleEvidenceError } from '../opencode/store/RuntimeRunTombstoneStore';
 import { type TeamInboxReader } from '../TeamInboxReader';
 import { type TeamInboxWriter } from '../TeamInboxWriter';
 import { type TeamSentMessagesStore } from '../TeamSentMessagesStore';
@@ -38,6 +40,7 @@ import {
 } from './TeamProvisioningInboxRelayPolicy';
 import {
   assertOpenCodeRuntimeEvidenceAccepted,
+  assertOpenCodeRuntimeMemberSessionAccepted,
   createOpenCodeRuntimeCheckinPorts,
   type OpenCodeRuntimeCheckinPortCallbacks,
   type OpenCodeRuntimeCheckinPorts,
@@ -71,6 +74,7 @@ export interface OpenCodeRuntimeDeliveryStorePaths {
 
 export interface OpenCodeRuntimeDeliveryServicePorts extends OpenCodeRuntimeDeliveryStorePaths {
   resolveCurrentOpenCodeRuntimeRunId(teamName: string, laneId: string): Promise<string | null>;
+  readLaunchState?(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
   readConfigForStrictDecision?(teamName: string): Promise<TeamConfig | null>;
   readMetaMembers?(teamName: string): Promise<readonly TeamMember[]>;
   createOpenCodeRuntimeDeliveryPorts(): RuntimeDeliveryDestinationPort[];
@@ -284,6 +288,7 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<
       teamsBasePath: ports.getTeamsBasePath(),
       resolveCurrentOpenCodeRuntimeRunId: (candidateTeamName, candidateLaneId) =>
         ports.resolveCurrentOpenCodeRuntimeRunId(candidateTeamName, candidateLaneId),
+      readLaunchState: (candidateTeamName) => ports.readLaunchState(candidateTeamName),
       readConfigForStrictDecision: (candidateTeamName) =>
         ports.readConfigForStrictDecision(candidateTeamName),
       readMetaMembers: (candidateTeamName) => ports.readMetaMembers(candidateTeamName),
@@ -436,7 +441,7 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<
         readMetaMembers: (candidateTeamName) => ports.readMetaMembers(candidateTeamName),
         readLaunchState: (candidateTeamName) =>
           ports.readLaunchStateForDeliveryRecovery(candidateTeamName),
-        nowIso: ports.nowIso,
+        nowIso: () => ports.nowIso(),
         logger: ports.logger,
       }),
   };
@@ -447,8 +452,15 @@ export function createOpenCodeRuntimeDeliveryService(
   laneId: string,
   ports: OpenCodeRuntimeDeliveryServicePorts
 ): RuntimeDeliveryService {
-  const readConfigForStrictDecision = ports.readConfigForStrictDecision;
-  const readMetaMembers = ports.readMetaMembers;
+  const readConfigForStrictDecision = ports.readConfigForStrictDecision
+    ? (candidateTeamName: string) => ports.readConfigForStrictDecision!(candidateTeamName)
+    : undefined;
+  const readMetaMembers = ports.readMetaMembers
+    ? (candidateTeamName: string) => ports.readMetaMembers!(candidateTeamName)
+    : undefined;
+  const readLaunchState = ports.readLaunchState
+    ? (candidateTeamName: string) => ports.readLaunchState!(candidateTeamName)
+    : undefined;
   const journal = createRuntimeDeliveryJournalStore({
     filePath: getOpenCodeLaneScopedRuntimeFilePath({
       teamsBasePath: ports.teamsBasePath,
@@ -484,6 +496,34 @@ export function createOpenCodeRuntimeDeliveryService(
                   throw new Error('Cross-team member metadata reader is unavailable');
                 })
             ),
+        }
+      : undefined,
+    readLaunchState && readConfigForStrictDecision && readMetaMembers
+      ? {
+          assertCurrent: async (envelope) => {
+            try {
+              await assertOpenCodeRuntimeMemberSessionAccepted(
+                {
+                  teamName: envelope.teamName,
+                  runId: envelope.runId,
+                  laneId,
+                  memberName: envelope.fromMemberName,
+                  runtimeSessionId: envelope.runtimeSessionId,
+                  evidenceKind: 'delivery_call',
+                },
+                {
+                  readLaunchState,
+                  readConfigForStrictDecision,
+                  readMetaMembers,
+                }
+              );
+            } catch (error) {
+              if (error instanceof RuntimeStaleEvidenceError) {
+                throw new RuntimeDeliveryStaleIdentityError(error.message);
+              }
+              throw error;
+            }
+          },
         }
       : undefined
   );

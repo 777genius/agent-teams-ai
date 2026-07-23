@@ -171,10 +171,10 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   run.cancelRequested = true;
   const stopCurrentTeamProcess = ports.killTeamProcessAndWait(run.child);
   const stopCurrentRuntimeLanes = stopRuntimeLanesForRun(run.runId);
+  await awaitAllOwnedProcessStops([stopCurrentTeamProcess, stopCurrentRuntimeLanes]);
   const progress = ports.updateProgress(run, 'disconnected', 'Team stopped by user');
   run.onProgress(progress);
   ports.logger.info(`[${teamName}] Process stopped (SIGKILL)`);
-  await awaitAllOwnedProcessStops([stopCurrentTeamProcess, stopCurrentRuntimeLanes]);
   await (ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
     cleanupRunOwnedAnthropicApiKeyHelper(run));
   // Secondary lane cleanup revalidates immutable run ownership after async

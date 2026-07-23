@@ -12,9 +12,12 @@ import {
   resolveRuntimeDeliveryDestination,
 } from '../../opencode/delivery/RuntimeDeliveryJournal';
 import {
+  clearOpenCodeRuntimeLaneStorage,
   getOpenCodeLaneScopedRuntimeFilePath,
+  getOpenCodeRuntimeRunTombstonesPath,
   writeOpenCodeRuntimeLaneIndex,
 } from '../../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { createRuntimeRunTombstoneStore } from '../../opencode/store/RuntimeRunTombstoneStore';
 import {
   canonicalizeRuntimeDeliveryJournalRecordIdentities,
   createOpenCodeRuntimeDeliveryPorts,
@@ -37,6 +40,69 @@ import type { OpenCodeRuntimeCheckinRun } from '../TeamProvisioningOpenCodeRunti
 import type { InboxMessage, PersistedTeamLaunchSnapshot, SendMessageRequest } from '@shared/types';
 
 describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
+  it('preserves cross-run idempotency and anti-rejoin state when lane storage is cleared', async () => {
+    const teamsBasePath = await mkdtemp(join(tmpdir(), 'runtime-delivery-lane-cleanup-'));
+    const sentMessages: InboxMessage[] = [];
+    let currentRunId = 'run-1';
+    const tombstones = createRuntimeRunTombstoneStore({
+      filePath: getOpenCodeRuntimeRunTombstonesPath(teamsBasePath, 'Team', 'primary'),
+    });
+    const createDelivery = () =>
+      createOpenCodeRuntimeDeliveryService('Team', 'primary', {
+        teamsBasePath,
+        resolveCurrentOpenCodeRuntimeRunId: async () => currentRunId,
+        createOpenCodeRuntimeDeliveryPorts: () =>
+          createOpenCodeRuntimeDeliveryPorts({
+            sentMessagesStore: {
+              appendMessage: vi.fn(async (_teamName, message) => {
+                sentMessages.push(message);
+              }),
+              readMessages: vi.fn(async () => sentMessages),
+            },
+            inboxReader: { getMessagesFor: vi.fn(async () => []) },
+            inboxWriter: { sendMessage: vi.fn() },
+            getCrossTeamSender: () => null,
+          }),
+        emitTeamChange: vi.fn(),
+        logger: { warn: vi.fn() },
+      });
+
+    try {
+      await tombstones.add({
+        teamName: 'Team',
+        runId: 'retired-run',
+        reason: 'run_replaced',
+      });
+      await expect(createDelivery().deliver(createDeliveryEnvelope())).resolves.toMatchObject({
+        ok: true,
+        delivered: true,
+      });
+
+      await clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath,
+        teamName: 'Team',
+        laneId: 'primary',
+      });
+      currentRunId = 'run-2';
+
+      await expect(
+        createDelivery().deliver(
+          createDeliveryEnvelope({ runId: 'run-2', runtimeSessionId: 'session-2' })
+        )
+      ).resolves.toMatchObject({
+        ok: true,
+        delivered: false,
+        reason: 'duplicate',
+      });
+      expect(sentMessages).toHaveLength(1);
+      await expect(
+        tombstones.find({ teamName: 'Team', runId: 'retired-run' })
+      ).resolves.toMatchObject({ reason: 'run_replaced' });
+    } finally {
+      await rm(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
   it('canonicalizes remote lead aliases before payload hashing and journal begin', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'runtime-delivery-aliases-'));
     const sentMessages: InboxMessage[] = [];
@@ -807,6 +873,79 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
 
       expect(scheduleOpenCodePromptDeliveryWatchdog).not.toHaveBeenCalled();
     });
+
+    it('rejects wrong-member and superseded sender sessions before journal or destination writes', async () => {
+      const teamsBasePath = await mkdtemp(join(tmpdir(), 'runtime-delivery-sender-session-'));
+      const appendMessage = vi.fn(async () => undefined);
+      const launchSnapshot = snapshotWithMembers({
+        Builder: {
+          name: 'Builder',
+          providerId: 'opencode',
+          laneId: 'primary',
+          laneOwnerProviderId: 'opencode',
+          runtimeRunId: 'run-1',
+          runtimeSessionId: 'session-builder-current',
+        },
+        Reviewer: {
+          name: 'Reviewer',
+          providerId: 'opencode',
+          laneId: 'primary',
+          laneOwnerProviderId: 'opencode',
+          runtimeRunId: 'run-1',
+          runtimeSessionId: 'session-reviewer-current',
+        },
+      }) as unknown as PersistedTeamLaunchSnapshot;
+      const boundary = createBoundary({
+        getTeamsBasePath: () => teamsBasePath,
+        readConfigForStrictDecision: async () => ({
+          name: 'Team',
+          members: [
+            { name: 'Builder', providerId: 'opencode' },
+            { name: 'Reviewer', providerId: 'opencode' },
+          ],
+        }),
+        readLaunchState: async () => launchSnapshot,
+        sentMessagesStore: {
+          appendMessage,
+          readMessages: vi.fn(async () => []),
+        },
+      });
+
+      try {
+        await expect(
+          boundary.deliverOpenCodeRuntimeMessage(
+            createDeliveryEnvelope({
+              idempotencyKey: 'wrong-member-session',
+              fromMemberName: 'Reviewer',
+              runtimeSessionId: 'session-builder-current',
+              to: 'user',
+            })
+          )
+        ).rejects.toThrow('OpenCode runtime delivery rejected: stale_runtime_identity');
+        await expect(
+          boundary.deliverOpenCodeRuntimeMessage(
+            createDeliveryEnvelope({
+              idempotencyKey: 'superseded-session',
+              runtimeSessionId: 'session-builder-superseded',
+              to: 'user',
+            })
+          )
+        ).rejects.toThrow('OpenCode runtime delivery rejected: stale_runtime_identity');
+
+        const journal = createRuntimeDeliveryJournalStore({
+          filePath: getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath,
+            teamName: 'Team',
+            laneId: 'primary',
+            fileName: 'opencode-delivery-journal.json',
+          }),
+        });
+        await expect(journal.list()).resolves.toEqual([]);
+        expect(appendMessage).not.toHaveBeenCalled();
+      } finally {
+        await rm(teamsBasePath, { recursive: true, force: true });
+      }
+    });
   });
 
   describe('getOpenCodeRuntimeDeliveryStatus', () => {
@@ -1417,6 +1556,9 @@ function createBoundary(
     readLaunchStateForDeliveryRecovery: async () => null,
     nowIso: () => '2026-01-01T00:00:00.000Z',
     ...overrides,
+    mutateLaunchState:
+      overrides.mutateLaunchState ?? (async (_teamName, mutation) => mutation(null)),
+    withTeamLock: overrides.withTeamLock ?? (async (_teamName, operation) => operation()),
   };
 
   return createTeamProvisioningOpenCodeRuntimeDeliveryBoundary(ports);

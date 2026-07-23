@@ -13,6 +13,7 @@ import type {
   TeamRuntimeLaunchResult,
   TeamRuntimeMemberSpec,
   TeamRuntimePermissionAnswerInput,
+  TeamRuntimeStopInput,
 } from '../../runtime/TeamRuntimeAdapter';
 import type { MixedSecondaryRuntimeLaneState } from '../TeamProvisioningSecondaryRuntimeRuns';
 import type { PersistedTeamLaunchSnapshot, TeamChangeEvent } from '@shared/types';
@@ -154,7 +155,14 @@ function makeAdapter(
     prepare: vi.fn(),
     launch: vi.fn(),
     reconcile: vi.fn(),
-    stop: vi.fn(),
+    stop: vi.fn(async (input: TeamRuntimeStopInput) => ({
+      runId: input.runId,
+      teamName: input.teamName,
+      stopped: true,
+      members: {},
+      warnings: [],
+      diagnostics: [],
+    })),
     ...(answerRuntimePermission ? { answerRuntimePermission } : {}),
   } as unknown as TeamLaunchRuntimeAdapter;
 }
@@ -453,7 +461,7 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
     );
   });
 
-  it('uses the exact primary owner cwd, clears the last alive run, and reconciles after cleanup stop fails', async () => {
+  it('uses the exact primary owner cwd and retains ownership after cleanup stop fails', async () => {
     const committedResult = makeResult({
       launchPhase: 'finished',
       teamLaunchState: 'partial_failure',
@@ -497,21 +505,18 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
     expect(ports.logWarnings).toEqual([
       '[team-a] Failed to stop unretainable OpenCode runtime lane primary: cleanup bridge failed',
     ]);
-    expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
-    expect(ports.degradedLanes).toEqual([
-      {
-        teamName: 'team-a',
-        laneId: 'primary',
-        diagnostics: ['Runtime rejected the request'],
-      },
-    ]);
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')).toMatchObject({
+      runId: 'run-a',
+      cwd: '/exact-owner-cwd',
+    });
+    expect(ports.degradedLanes).toEqual([]);
     expect(ports.syncOpenCodeRuntimeToolApprovals).toHaveBeenCalled();
-    expect(ports.aliveRunByTeam.has('team-a')).toBe(false);
-    expect(ports.deleteAliveRunIdIfNoRuntime).toHaveBeenCalledWith('team-a', 'run-a');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-a');
+    expect(ports.deleteAliveRunIdIfNoRuntime).not.toHaveBeenCalled();
     expect(ports.emitTeamChange).toHaveBeenCalled();
   });
 
-  it('continues post-owner cleanup when both adapter stop and degraded-index persistence fail', async () => {
+  it('does not attempt post-stop owner cleanup when adapter stop fails', async () => {
     const committedResult = makeResult({
       launchPhase: 'finished',
       teamLaunchState: 'partial_failure',
@@ -543,16 +548,18 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
       answerOpenCodeRuntimeToolApproval(makeEntry(), false, ports)
     ).resolves.toBeUndefined();
 
-    expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
-    expect(ports.aliveRunByTeam.has('team-a')).toBe(false);
+    expect(
+      (ports.runtimeAdapterRunByTeam.get('team-a') as { runId?: string } | undefined)?.runId
+    ).toBe('run-a');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-a');
     expect(ports.syncOpenCodeRuntimeToolApprovals).toHaveBeenCalled();
     expect(ports.emitTeamChange).toHaveBeenCalledWith(
       expect.objectContaining({ detail: 'permission-denied' })
     );
     expect(ports.logWarnings).toEqual([
       '[team-a] Failed to stop unretainable OpenCode runtime lane primary: cleanup bridge failed',
-      '[team-a] Failed to mark OpenCode runtime lane primary degraded after cleanup: degraded index failed',
     ]);
+    expect(ports.markOpenCodeRuntimeLaneDegraded).not.toHaveBeenCalled();
   });
 
   it('sets the primary runtime adapter run, alive run id, syncs approvals, and emits allowed', async () => {

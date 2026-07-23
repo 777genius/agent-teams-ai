@@ -67,6 +67,17 @@ export interface RuntimeDeliveryRunStateReader {
   getCurrentRunId(teamName: string): Promise<string | null>;
 }
 
+export interface RuntimeDeliverySenderIdentityReader {
+  assertCurrent(envelope: RuntimeDeliveryEnvelope): Promise<void>;
+}
+
+export class RuntimeDeliveryStaleIdentityError extends Error {
+  constructor(message = 'Runtime delivery sender identity is stale') {
+    super(message);
+    this.name = 'RuntimeDeliveryStaleIdentityError';
+  }
+}
+
 export interface RuntimeDeliveryRecipientCanonicalizer {
   canonicalize(envelope: RuntimeDeliveryEnvelope): Promise<RuntimeDeliveryEnvelope>;
 }
@@ -109,7 +120,7 @@ export type RuntimeDeliveryAck =
   | {
       ok: false;
       delivered: false;
-      reason: 'stale_run' | 'idempotency_conflict';
+      reason: 'stale_run' | 'stale_runtime_identity' | 'idempotency_conflict';
       idempotencyKey: string;
     };
 
@@ -148,7 +159,8 @@ export class RuntimeDeliveryService {
     private readonly diagnostics: RuntimeDeliveryDiagnosticsSink,
     private readonly teamChangeEmitter: RuntimeDeliveryTeamChangeEmitter,
     private readonly clock: () => Date = () => new Date(),
-    private readonly recipientCanonicalizer?: RuntimeDeliveryRecipientCanonicalizer
+    private readonly recipientCanonicalizer?: RuntimeDeliveryRecipientCanonicalizer,
+    private readonly senderIdentity?: RuntimeDeliverySenderIdentityReader
   ) {}
 
   async deliver(raw: unknown): Promise<RuntimeDeliveryAck> {
@@ -170,6 +182,10 @@ export class RuntimeDeliveryService {
           await this.recipientCanonicalizer.canonicalize(requestedEnvelope)
         )
       : requestedEnvelope;
+    const staleIdentity = await this.rejectIfRuntimeIdentityIsStale(envelope);
+    if (staleIdentity) {
+      return staleIdentity;
+    }
 
     const preCanonicalDestination = resolveRuntimeDeliveryDestination(requestedEnvelope);
     const requestedDestination = resolveRuntimeDeliveryDestination(envelope);
@@ -207,6 +223,12 @@ export class RuntimeDeliveryService {
     });
     if (staleRunAfterJournal) {
       return staleRunAfterJournal;
+    }
+    const staleIdentityAfterJournal = await this.rejectIfRuntimeIdentityIsStale(envelope, {
+      markJournalRecordTerminal: journalCanBeMarkedTerminal,
+    });
+    if (staleIdentityAfterJournal) {
+      return staleIdentityAfterJournal;
     }
 
     if (begin.state === 'payload_conflict') {
@@ -261,6 +283,13 @@ export class RuntimeDeliveryService {
         const preExisting = await candidatePort.verify(verificationInput);
         if (!preExisting.found || !preExisting.location) {
           continue;
+        }
+        const staleIdentityBeforeRecoveryCommit = await this.rejectIfRuntimeIdentityIsStale(
+          envelope,
+          { markJournalRecordTerminal: true }
+        );
+        if (staleIdentityBeforeRecoveryCommit) {
+          return staleIdentityBeforeRecoveryCommit;
         }
         try {
           const verifiedLocation = preExisting.location;
@@ -341,6 +370,13 @@ export class RuntimeDeliveryService {
       };
       const preExisting = await candidatePort.verify(verificationInput);
       if (preExisting.found && preExisting.location) {
+        const staleIdentityBeforeRecoveryCommit = await this.rejectIfRuntimeIdentityIsStale(
+          envelope,
+          { markJournalRecordTerminal: true }
+        );
+        if (staleIdentityBeforeRecoveryCommit) {
+          return staleIdentityBeforeRecoveryCommit;
+        }
         const verifiedLocation = preExisting.location;
         try {
           await markRuntimeDeliveryCommittedWithBoundProof({
@@ -381,6 +417,12 @@ export class RuntimeDeliveryService {
     if (staleRunBeforeWrite) {
       return staleRunBeforeWrite;
     }
+    const staleIdentityBeforeWrite = await this.rejectIfRuntimeIdentityIsStale(envelope, {
+      markJournalRecordTerminal: true,
+    });
+    if (staleIdentityBeforeWrite) {
+      return staleIdentityBeforeWrite;
+    }
 
     try {
       const location = await port.write({ envelope, destinationMessageId });
@@ -420,11 +462,49 @@ export class RuntimeDeliveryService {
         location: committedLocation,
       };
     } catch (error) {
+      if (isRuntimeDeliveryIdempotencyConflictError(error)) {
+        await this.journal.markFailed({
+          idempotencyKey: envelope.idempotencyKey,
+          runId: envelope.runId,
+          teamName: envelope.teamName,
+          status: 'failed_terminal',
+          error: 'idempotency_conflict',
+          updatedAt: this.clock().toISOString(),
+        });
+        await this.diagnostics.append({
+          type: 'runtime_delivery_conflict',
+          providerId: 'opencode',
+          teamName: envelope.teamName,
+          runId: envelope.runId,
+          severity: 'error',
+          message: 'Runtime delivery destination rejected divergent idempotency reuse',
+          data: {
+            idempotencyKey: envelope.idempotencyKey,
+            destination,
+            error: stringifyError(error),
+          },
+          createdAt: this.clock().toISOString(),
+        });
+        return {
+          ok: false,
+          delivered: false,
+          reason: 'idempotency_conflict',
+          idempotencyKey: envelope.idempotencyKey,
+        };
+      }
+
       const staleRunAfterDeliveryFailure = await this.rejectIfRunIsStale(envelope, {
         markJournalRecordTerminal: true,
       });
       if (staleRunAfterDeliveryFailure) {
         return staleRunAfterDeliveryFailure;
+      }
+      const staleIdentityAfterDeliveryFailure = await this.rejectIfRuntimeIdentityIsStale(
+        envelope,
+        { markJournalRecordTerminal: true }
+      );
+      if (staleIdentityAfterDeliveryFailure) {
+        return staleIdentityAfterDeliveryFailure;
       }
 
       if (!(error instanceof RuntimeDeliveryJournalCommitRevalidationError)) {
@@ -479,6 +559,41 @@ export class RuntimeDeliveryService {
       ok: false,
       delivered: false,
       reason: 'stale_run',
+      idempotencyKey: envelope.idempotencyKey,
+    };
+  }
+
+  private async rejectIfRuntimeIdentityIsStale(
+    envelope: RuntimeDeliveryEnvelope,
+    options: { markJournalRecordTerminal?: boolean } = {}
+  ): Promise<RuntimeDeliveryAck | null> {
+    if (!this.senderIdentity) {
+      return null;
+    }
+    try {
+      await this.senderIdentity.assertCurrent(envelope);
+      return null;
+    } catch (error) {
+      if (!(error instanceof RuntimeDeliveryStaleIdentityError)) {
+        throw error;
+      }
+    }
+
+    if (options.markJournalRecordTerminal) {
+      await this.journal.markFailed({
+        idempotencyKey: envelope.idempotencyKey,
+        runId: envelope.runId,
+        teamName: envelope.teamName,
+        status: 'failed_terminal',
+        error: 'stale_runtime_identity',
+        updatedAt: this.clock().toISOString(),
+      });
+    }
+
+    return {
+      ok: false,
+      delivered: false,
+      reason: 'stale_runtime_identity',
       idempotencyKey: envelope.idempotencyKey,
     };
   }
@@ -875,4 +990,12 @@ function hasSameRuntimeDeliveryLocationScope(
 
 function stringifyError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isRuntimeDeliveryIdempotencyConflictError(
+  error: unknown
+): error is Error & { code: 'idempotency_conflict' } {
+  return (
+    error instanceof Error && (error as Error & { code?: unknown }).code === 'idempotency_conflict'
+  );
 }

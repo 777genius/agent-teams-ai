@@ -11,6 +11,7 @@ import {
   createOpenCodeRuntimeCheckinPorts,
   type OpenCodeRuntimeCheckinPorts,
   type OpenCodeRuntimeCheckinRun,
+  recordOpenCodeRuntimeHeartbeat,
   resolveOpenCodeRuntimeBootstrapCheckinIdempotency,
   updateOpenCodeRuntimeMemberLiveness,
 } from '../TeamProvisioningOpenCodeRuntimeCheckin';
@@ -32,6 +33,14 @@ const TEST_RESULTS_ROOT = join(process.cwd(), 'test-results');
 function createSafeTempDir(prefix: string): string {
   mkdirSync(TEST_RESULTS_ROOT, { recursive: true });
   return mkdtempSync(join(TEST_RESULTS_ROOT, prefix));
+}
+
+function createDeferred(): { promise: Promise<void>; resolve(): void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((innerResolve) => {
+    resolve = innerResolve;
+  });
+  return { promise, resolve };
 }
 
 function createRun(): TestRun {
@@ -66,12 +75,14 @@ function createRun(): TestRun {
 function createPorts(
   overrides: Partial<OpenCodeRuntimeCheckinPorts<TestRun>> = {}
 ): OpenCodeRuntimeCheckinPorts<TestRun> {
-  return {
+  const ports: OpenCodeRuntimeCheckinPorts<TestRun> = {
     teamsBasePath: TEST_TEAMS_BASE_PATH,
     resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'secondary:opencode:alice'),
     resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'run-1'),
     readLaunchState: vi.fn(async () => null),
     writeLaunchState: vi.fn(async () => undefined),
+    mutateLaunchState: vi.fn(async (_teamName, mutation) => mutation(null)),
+    withTeamLock: vi.fn(async (_teamName, operation) => operation()),
     readConfigForStrictDecision: vi.fn(async () => null),
     readMetaMembers: vi.fn(async () => []),
     readPersistedRuntimeMembers: vi.fn(() => []),
@@ -92,8 +103,16 @@ function createPorts(
     upsertOpenCodeTaskRecord: vi.fn(async () => 'created' as const),
     syncMemberTaskActivityForRuntimeTransition: vi.fn(),
     syncMemberLaunchGraceCheck: vi.fn(),
-    ...overrides,
   };
+  const merged = { ...ports, ...overrides };
+  if (!overrides.mutateLaunchState) {
+    merged.mutateLaunchState = vi.fn(async (teamName, mutation) => {
+      const next = await mutation(await merged.readLaunchState(teamName));
+      await merged.writeLaunchState(teamName, next);
+      return next;
+    });
+  }
+  return merged;
 }
 
 describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
@@ -210,6 +229,195 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
           }
         )
       ).rejects.toMatchObject({ reason: 'run_mismatch' });
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects removed, wrong-member, and superseded heartbeat session evidence before mutation', async () => {
+    const teamsBasePath = createSafeTempDir('opencode-runtime-heartbeat-identity-');
+    const snapshot = createPersistedLaunchSnapshot({
+      teamName: 'Team',
+      expectedMembers: ['Alice', 'Bob', 'Removed'],
+      launchPhase: 'active',
+      members: {
+        Alice: {
+          name: 'Alice',
+          providerId: 'opencode',
+          laneId: 'primary',
+          laneOwnerProviderId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          runtimeRunId: 'run-1',
+          runtimeSessionId: 'session-alice-current',
+          lastEvaluatedAt: observedAt,
+        },
+        Bob: {
+          name: 'Bob',
+          providerId: 'opencode',
+          laneId: 'primary',
+          laneOwnerProviderId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          runtimeRunId: 'run-1',
+          runtimeSessionId: 'session-bob-current',
+          lastEvaluatedAt: observedAt,
+        },
+        Removed: {
+          name: 'Removed',
+          providerId: 'opencode',
+          laneId: 'primary',
+          laneOwnerProviderId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          runtimeRunId: 'run-1',
+          runtimeSessionId: 'session-removed',
+          lastEvaluatedAt: observedAt,
+        },
+      },
+      updatedAt: observedAt,
+    });
+    const writeLaunchState = vi.fn(async () => undefined);
+    const persistTrackedRunLaunchState = vi.fn(async () => undefined);
+    const ports = createPorts({
+      teamsBasePath,
+      resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'primary'),
+      readLaunchState: vi.fn(async () => snapshot),
+      readConfigForStrictDecision: vi.fn(
+        async () =>
+          ({
+            name: 'Team',
+            members: [
+              { name: 'Alice', providerId: 'opencode' },
+              { name: 'Bob', providerId: 'opencode' },
+              { name: 'Removed', providerId: 'opencode', removedAt: Date.parse(observedAt) },
+            ],
+          }) as TeamConfig
+      ),
+      writeLaunchState,
+      persistTrackedRunLaunchState,
+    });
+
+    try {
+      await expect(
+        recordOpenCodeRuntimeHeartbeat(
+          {
+            teamName: 'Team',
+            runId: 'run-1',
+            memberName: 'Removed',
+            runtimeSessionId: 'session-removed',
+            observedAt,
+          },
+          ports
+        )
+      ).rejects.toThrow('member has been removed');
+      await expect(
+        recordOpenCodeRuntimeHeartbeat(
+          {
+            teamName: 'Team',
+            runId: 'run-1',
+            memberName: 'Bob',
+            runtimeSessionId: 'session-alice-current',
+            observedAt,
+          },
+          ports
+        )
+      ).rejects.toThrow('member runtime session does not match');
+      await expect(
+        recordOpenCodeRuntimeHeartbeat(
+          {
+            teamName: 'Team',
+            runId: 'run-1',
+            memberName: 'Alice',
+            runtimeSessionId: 'session-alice-superseded',
+            observedAt,
+          },
+          ports
+        )
+      ).rejects.toThrow('member runtime session does not match');
+
+      expect(writeLaunchState).not.toHaveBeenCalled();
+      expect(persistTrackedRunLaunchState).not.toHaveBeenCalled();
+      expect(ports.invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
+      expect(ports.emitMemberSpawnChange).not.toHaveBeenCalled();
+      expect(ports.emitRuntimeMemberSpawnChange).not.toHaveBeenCalled();
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('revalidates heartbeat identity against the snapshot owned by the serialized mutation', async () => {
+    const teamsBasePath = createSafeTempDir('opencode-runtime-heartbeat-race-');
+    const mutationEntered = createDeferred();
+    const releaseMutation = createDeferred();
+    const supersededSnapshot = createPersistedLaunchSnapshot({
+      teamName: 'Team',
+      expectedMembers: ['Alice'],
+      launchPhase: 'active',
+      members: {
+        Alice: {
+          name: 'Alice',
+          providerId: 'opencode',
+          laneId: 'primary',
+          laneOwnerProviderId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          runtimeRunId: 'run-1',
+          runtimeSessionId: 'session-new-owner',
+          lastEvaluatedAt: observedAt,
+        },
+      },
+      updatedAt: observedAt,
+    });
+    const writeLaunchState = vi.fn(async () => undefined);
+    const ports = createPorts({
+      teamsBasePath,
+      resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'primary'),
+      readConfigForStrictDecision: vi.fn(
+        async () =>
+          ({
+            name: 'Team',
+            members: [{ name: 'Alice', providerId: 'opencode' }],
+          }) as TeamConfig
+      ),
+      writeLaunchState,
+      mutateLaunchState: vi.fn(async (_teamName, mutation) => {
+        mutationEntered.resolve();
+        await releaseMutation.promise;
+        return await mutation(supersededSnapshot);
+      }),
+    });
+
+    try {
+      const heartbeat = recordOpenCodeRuntimeHeartbeat(
+        {
+          teamName: 'Team',
+          runId: 'run-1',
+          memberName: 'Alice',
+          runtimeSessionId: 'session-old-owner',
+          observedAt,
+        },
+        ports
+      );
+      await mutationEntered.promise;
+      releaseMutation.resolve();
+
+      await expect(heartbeat).rejects.toThrow('member runtime session does not match');
+      expect(writeLaunchState).not.toHaveBeenCalled();
+      expect(ports.emitMemberSpawnChange).not.toHaveBeenCalled();
+      expect(ports.emitRuntimeMemberSpawnChange).not.toHaveBeenCalled();
     } finally {
       rmSync(teamsBasePath, { recursive: true, force: true });
     }
