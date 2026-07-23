@@ -181,7 +181,10 @@ describe("admitted input-patch capacity continuation", () => {
       reason: "unknown_error",
       changedFiles,
       evidence: ["safe_execution_status:failed"],
-      blockers: ["unknown_error"],
+      blockers: [
+        "unknown_error",
+        "Safe execution has no attempts remaining.",
+      ],
       nextAction: "preserve_patch",
       details: {
         baseCommit: "a".repeat(40),
@@ -213,9 +216,9 @@ describe("admitted input-patch capacity continuation", () => {
 
     for (const rejectedRawCause of [
       rawCause.replace("Respond with OK only.", "Review the admitted patch."),
-      rawCause.replace("invalid_request_error", "server_error"),
-      rawCause.replace("status 400", "status 503"),
-      rawCause.replace(
+      rawCause.replaceAll("invalid_request_error", "server_error"),
+      rawCause.replaceAll('"status":400', '"status":503'),
+      rawCause.replaceAll(
         "model is not supported when using Codex with a ChatGPT account",
         "provider request failed",
       ),
@@ -1244,8 +1247,8 @@ function legacyUnsupportedModelPrewarmRawCause(): string {
     "Codex prewarm transcript:",
     "user",
     "Respond with OK only.",
-    '{"error":{"type":"invalid_request_error","message":"The \'gpt-5.6-sol\' model is not supported when using Codex with a ChatGPT account"}}',
-    "request failed with status 400",
+    'ERROR: {"type":"error","status":400,"error":{"type":"invalid_request_error","message":"The \'gpt-5.6-sol\' model is not supported when using Codex with a ChatGPT account."}}',
+    'ERROR: {"type":"error","status":400,"error":{"type":"invalid_request_error","message":"The \'gpt-5.6-sol\' model is not supported when using Codex with a ChatGPT account."}}',
   ].join("\n");
 }
 

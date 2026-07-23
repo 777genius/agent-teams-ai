@@ -40,6 +40,8 @@ const PREWARM_BEFORE_ATTEMPT_EVIDENCE =
 const CODEX_PREWARM_PROMPT = "user Respond with OK only.";
 const CODEX_CHATGPT_MODEL_UNSUPPORTED =
   "model is not supported when using Codex with a ChatGPT account";
+const SAFE_EXECUTION_ATTEMPTS_EXHAUSTED =
+  "Safe execution has no attempts remaining.";
 
 export async function resolveProjectPreStartContinuation(input: {
   readonly manifest: CodexGoalJobManifest;
@@ -373,9 +375,7 @@ async function isRecoverableAdmittedInputPatchLegacyPrewarmFailure(input: {
       !stringArray(parsed.changedFiles) ||
       parsed.changedFiles.length === 0 ||
       !stringArray(parsed.evidence) ||
-      !stringArray(parsed.blockers) ||
-      parsed.blockers.length !== 1 ||
-      parsed.blockers[0] !== "unknown_error" ||
+      !legacyPrewarmBlockers(parsed.blockers) ||
       !samePaths(parsed.changedFiles, status.changedFiles ?? []) ||
       !isRecord(parsed.details) ||
       typeof parsed.details.baseCommit !== "string" ||
@@ -456,8 +456,19 @@ function isLegacyCodexUnsupportedModelPrewarmTranscript(
   return (
     normalized.includes(CODEX_PREWARM_PROMPT) &&
     normalized.includes("invalid_request_error") &&
-    /\bstatus(?:\s+code)?(?:\s*[:=])?\s*400\b/i.test(normalized) &&
+    (/\bstatus(?:\s+code)?(?:\s*[:=])?\s*400\b/i.test(normalized) ||
+      /"status"\s*:\s*400\b/i.test(normalized)) &&
     normalized.includes(CODEX_CHATGPT_MODEL_UNSUPPORTED)
+  );
+}
+
+function legacyPrewarmBlockers(blockers: unknown): boolean {
+  return (
+    stringArray(blockers) &&
+    (blockers.length === 1 ||
+      (blockers.length === 2 &&
+        blockers[1] === SAFE_EXECUTION_ATTEMPTS_EXHAUSTED)) &&
+    blockers[0] === "unknown_error"
   );
 }
 
