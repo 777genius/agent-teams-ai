@@ -12,6 +12,7 @@ import type {
   ChangeReviewDraftHistoryPort,
   ReviewOperationScopeToken,
 } from '@features/change-review/renderer';
+import type { ReviewDraftHistoryHydrationState } from '@features/change-review/renderer';
 import type {
   ReviewDraftHistoryEntry,
   ReviewDraftHistorySnapshot,
@@ -19,7 +20,6 @@ import type {
 } from '@features/change-review-history/contracts';
 import type { ReviewChangeSetLike } from '@renderer/utils/reviewDecisionScope';
 import type { ReviewFileScope } from '@shared/types';
-import type { ReviewDraftHistoryHydrationState } from '@features/change-review/renderer';
 
 interface Deferred<T> {
   promise: Promise<T>;
