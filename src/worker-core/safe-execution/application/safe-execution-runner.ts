@@ -343,7 +343,7 @@ export class SafeExecutionRunner {
         });
         const continuationJob = continuationJobFor({
           factory: input.continuationJobFactory,
-          job,
+          job: controlledStartup?.job ?? job,
           continuationPacket: packet,
           attemptNumber: firstAttemptNumber,
         });

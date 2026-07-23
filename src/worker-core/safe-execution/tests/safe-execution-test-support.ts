@@ -21,6 +21,7 @@ export const execFileAsync = promisify(execFile);
 export type PromptJob = {
   readonly prompt: string;
   readonly workspacePath: string;
+  readonly goalObjective?: string;
 };
 
 export type PromptResult = {

@@ -191,7 +191,11 @@ describe("SafeExecutionRunner startup guidance", () => {
         effectMode: "workspace_patch" as const,
         provider: "codex",
         pool,
-        job: { prompt: originalPrompt, workspacePath },
+        job: {
+          prompt: originalPrompt,
+          workspacePath,
+          goalObjective: originalPrompt,
+        },
         originalPrompt,
         controlTarget: target,
         controlContinuationJobFactory: ({
@@ -204,7 +208,7 @@ describe("SafeExecutionRunner startup guidance", () => {
           );
           const prompt = controlBatch.message ?? "";
           return {
-            job: { ...job, prompt },
+            job: { ...job, prompt, goalObjective: prompt },
             originalPrompt: prompt,
             replaceContinuationOriginalPrompt: true,
           };
@@ -242,6 +246,15 @@ describe("SafeExecutionRunner startup guidance", () => {
         expect(job.prompt).not.toContain(originalPrompt);
         expect(
           job.prompt.split(
+            "Review the local application correctness invariants.",
+          ),
+        ).toHaveLength(2);
+        expect(job.goalObjective).toContain(
+          "Review the local application correctness invariants.",
+        );
+        expect(job.goalObjective).not.toContain(originalPrompt);
+        expect(
+          job.goalObjective?.split(
             "Review the local application correctness invariants.",
           ),
         ).toHaveLength(2);

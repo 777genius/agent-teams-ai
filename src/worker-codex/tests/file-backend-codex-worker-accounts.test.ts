@@ -87,8 +87,11 @@ describe("CommandPolicyRunner", () => {
     const jobId = "codex-policy-review-job";
     const taskId = "codex-policy-review-task";
     const originalPrompt = "Rejected original security-review wording.";
-    const replacementGuidance =
-      "Review the local application correctness invariants and return a verdict.";
+    const replacementGuidance = [
+      "Review the local application correctness invariants and return a verdict.",
+      "Preserve this complete broker-delivered context:",
+      "x".repeat(4_100),
+    ].join("\n");
     const canonicalWorkspacePath = await realpath(workspacePath);
     await writeFile(
       join(workspacePath, "README.md"),
@@ -122,6 +125,7 @@ describe("CommandPolicyRunner", () => {
             providerInstanceId: "codex-policy-review-account",
             stateRootDir: rootDir,
             codexBinaryPath: "codex",
+            executionEngine: "app-server-goal",
             encryptionKey: new Uint8Array(32).fill(73),
             appServerProcessFactory: rejectedAppServer.create,
             runner: new StaticRunner({
@@ -142,6 +146,7 @@ describe("CommandPolicyRunner", () => {
         jobId,
         taskId,
         prompt: originalPrompt,
+        metadata: { codexGoalObjective: originalPrompt },
         controls: { editMode: "allow-edits" },
       });
       expect(failed.status).toBe("failed");
@@ -150,6 +155,7 @@ describe("CommandPolicyRunner", () => {
       expect(failed.task.workspacePath).toBe(canonicalWorkspacePath);
       expect(failed.attempts).toHaveLength(1);
       expect(rejectedAppServer.prompts).toEqual([originalPrompt]);
+      expect(rejectedAppServer.goalObjectives).toEqual([originalPrompt]);
 
       const { stdout: patchAfterFailure } = await execFileAsync(
         "git",
@@ -177,6 +183,7 @@ describe("CommandPolicyRunner", () => {
               providerInstanceId: "codex-policy-review-account",
               stateRootDir: rootDir,
               codexBinaryPath: "codex",
+              executionEngine: "app-server-goal",
               encryptionKey: new Uint8Array(32).fill(73),
               appServerProcessFactory: resumedAppServer.create,
               runner: new StaticRunner({
@@ -195,6 +202,7 @@ describe("CommandPolicyRunner", () => {
           jobId,
           taskId,
           prompt: originalPrompt,
+          metadata: { codexGoalObjective: originalPrompt },
           controls: { editMode: "allow-edits" },
         });
         expect(resumed.status).toBe("completed");
@@ -208,6 +216,14 @@ describe("CommandPolicyRunner", () => {
         expect(continuationPrompt).not.toContain(originalPrompt);
         expect(continuationPrompt.split(replacementGuidance)).toHaveLength(2);
         expect(continuationPrompt).toContain(`Task id: ${taskId}`);
+        const continuationGoalObjective =
+          resumedAppServer.goalObjectives[0] ?? "";
+        expect(continuationGoalObjective).not.toContain(originalPrompt);
+        expect(continuationGoalObjective).not.toContain(replacementGuidance);
+        expect(continuationGoalObjective.length).toBeLessThanOrEqual(4_000);
+        expect(continuationGoalObjective).toBe(
+          "Continue the same authorized task using broker-delivered replacement wording.",
+        );
 
         const { stdout: patchAfter } = await execFileAsync(
           "git",

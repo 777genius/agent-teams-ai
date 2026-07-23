@@ -49,6 +49,9 @@ import {
 import { CodexAccountCapacityRechecker } from "./application/codex-account-capacity-rechecker";
 import { CodexAccountCapacityAliasStore } from "./application/codex-account-capacity-alias-store";
 
+const REPLACEMENT_GOAL_OBJECTIVE =
+  "Continue the same authorized task using broker-delivered replacement wording.";
+
 export type FileBackendCodexSafeExecutorAccount = {
   readonly worker: Omit<
     FileBackendCodexWorkerOptions,
@@ -367,6 +370,14 @@ export class FileBackendCodexSafeExecutor {
             ...currentJob,
             runId: `${taskId}:attempt-${attemptNumber}`,
             prompt,
+            ...(replaceRejectedPrompt
+              ? {
+                  metadata: {
+                    ...currentJob.metadata,
+                    codexGoalObjective: REPLACEMENT_GOAL_OBJECTIVE,
+                  },
+                }
+              : {}),
           },
           originalPrompt: prompt,
           ...(replaceRejectedPrompt
