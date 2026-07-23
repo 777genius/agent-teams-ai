@@ -232,6 +232,7 @@ test('detects implementation exports through transitive internal barrels', () =>
         export const ExportedAlias = AliasInfra;
         export const RequiredInfra = require('./infrastructure/RequiredInfra').RequiredInfra;
         export const LazyInfra = import('./infrastructure/LazyInfra', { with: { type: 'json' } });
+        export const ChainedInfra = import('./thenBarrel').then((module) => module.Infra);
         export const api = {};
         api.Store = MutatedInfra;
         (api as { CastInfra?: unknown }).CastInfra = CastInfra;
@@ -309,6 +310,11 @@ test('detects implementation exports through transitive internal barrels', () =>
         export const safe = true;
         export * from './infrastructure/Store';
       `,
+      'src/features/example/main/thenBarrel.ts': `
+        export { Infra } from './infrastructure/ThenInfra';
+        export { SelectiveSafe } from './selectiveSafe';
+      `,
+      'src/features/example/main/infrastructure/ThenInfra.ts': 'export class Infra {}',
       'src/features/example/renderer/adapters/Adapter.ts': `
         export class Adapter {}
       `,
@@ -414,6 +420,12 @@ test('detects implementation exports through transitive internal barrels', () =>
           specifier: './infrastructure/TransitiveInfra',
         },
         {
+          publicEntrypoint: 'src/features/example/main/index.ts',
+          rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+          source: 'src/features/example/main/thenBarrel.ts',
+          specifier: './infrastructure/ThenInfra',
+        },
+        {
           publicEntrypoint: 'src/features/example/renderer/index.tsx',
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
           source: 'src/features/example/renderer/index.tsx',
@@ -438,6 +450,17 @@ test('recognizes JavaScript feature root entrypoints', () => {
       `,
       'src/features/commonjs-default/infrastructure/DefaultStore.cjs':
         'module.exports = class DefaultStore {};',
+      'src/features/commonjs-getter/main/index.cjs': `
+        const StoreModule = require('./infrastructure/Store');
+        Object.defineProperty(exports, 'Store', {
+          enumerable: true,
+          get: function () {
+            return StoreModule.Store;
+          },
+        });
+      `,
+      'src/features/commonjs-getter/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
       'src/features/commonjs-named/main/index.js': `
         const AliasedStore = require('./infrastructure/AliasedStore');
         exports.AliasedStore = AliasedStore;
@@ -483,6 +506,12 @@ test('recognizes JavaScript feature root entrypoints', () => {
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
             source: 'src/features/commonjs-default/index.cjs',
             specifier: './infrastructure/DefaultStore',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-getter/main/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-getter/main/index.cjs',
+            specifier: './infrastructure/Store',
           },
           {
             publicEntrypoint: 'src/features/commonjs-named/main/index.js',

@@ -6,13 +6,15 @@ import ts from 'typescript';
 
 import {
   bindingNames,
-  commonJsExportNamesForExpression,
+  commonJsExportNamesForReference,
+  hasModifier,
+  importedNameForCall,
   importedNameForReference,
   objectBindingSelections,
   publicMutationBinding,
   selectImportedName,
-  selectedMemberAfterTransparentWrappers,
   selectedMemberForReference,
+  statementBindingNames,
 } from './feature-export-analysis.mjs';
 import {
   collectProductionSourceFiles,
@@ -135,20 +137,6 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
   };
 
-  const hasModifier = (node, kind) =>
-    ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === kind);
-
-  const statementBindingNames = (statement) => {
-    if (ts.isVariableStatement(statement)) {
-      return statement.declarationList.declarations.flatMap((declaration) =>
-        bindingNames(declaration.name)
-      );
-    }
-    return 'name' in statement && statement.name && ts.isIdentifier(statement.name)
-      ? [statement.name.text]
-      : [];
-  };
-
   const declaredLocalNames = new Set();
   const directLocalExports = [];
   const exportedLocalNames = new Set();
@@ -184,18 +172,20 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
 
   const publicReferenceOwner = (node) => {
     let current = node;
+    let insideFunctionBody = false;
     while (current && current !== sourceFile) {
       if (
         ts.isFunctionLike(current) &&
         current.body &&
         node.getStart(sourceFile) >= current.body.getStart(sourceFile)
       ) {
-        return null;
+        insideFunctionBody = true;
       }
       if (current.parent === sourceFile) break;
       current = current.parent;
     }
     if (!current || current.parent !== sourceFile) return null;
+    if (insideFunctionBody && !ts.isExpressionStatement(current)) return null;
 
     let bindingSelections = null;
     let localNames = [];
@@ -210,10 +200,15 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
       localNames = [current.name.text];
     } else if (ts.isExpressionStatement(current)) {
-      const commonJsExportNames = commonJsExportNamesForExpression(current.expression);
+      const commonJsExportNames = commonJsExportNamesForReference(
+        current.expression,
+        node,
+        insideFunctionBody
+      );
       if (commonJsExportNames.length > 0) {
         return { bindingSelections: null, exportedNames: commonJsExportNames, localNames: [] };
       }
+      if (insideFunctionBody) return null;
       ({ bindingSelections, localNames } = publicMutationBinding(
         current.expression,
         exportedLocalNames
@@ -332,7 +327,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         const edge = addEdge(node, argument, 'import');
         const owner = publicReferenceOwner(node);
         if (edge && owner) {
-          const importedName = selectedMemberAfterTransparentWrappers(node) ?? '*';
+          const importedName = importedNameForCall(node, isDynamicImport);
           addOwnerDependency(owner, { edge, importedName });
         }
       }

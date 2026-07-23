@@ -37,6 +37,23 @@ export function bindingNames(bindingName) {
   );
 }
 
+export function hasModifier(node, kind) {
+  return (
+    ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === kind)
+  );
+}
+
+export function statementBindingNames(statement) {
+  if (ts.isVariableStatement(statement)) {
+    return statement.declarationList.declarations.flatMap((declaration) =>
+      bindingNames(declaration.name)
+    );
+  }
+  return 'name' in statement && statement.name && ts.isIdentifier(statement.name)
+    ? [statement.name.text]
+    : [];
+}
+
 function assignmentLocalNames(target) {
   const current = unwrapExpression(target);
   if (ts.isIdentifier(current)) return [current.text];
@@ -185,6 +202,30 @@ export function commonJsExportNamesForExpression(expression) {
   return exportName && ts.isStringLiteralLike(exportName) ? [exportName.text] : ['*'];
 }
 
+export function commonJsExportNamesForReference(expression, reference, insideFunctionBody) {
+  const exportNames = commonJsExportNamesForExpression(expression);
+  if (!insideFunctionBody || exportNames.length === 0) return exportNames;
+
+  const current = unwrapExpression(expression);
+  if (!ts.isCallExpression(current)) return [];
+  const method = memberAccess(current.expression);
+  const descriptor = current.arguments[2] && unwrapExpression(current.arguments[2]);
+  if (method?.name !== 'defineProperty' || !descriptor || !ts.isObjectLiteralExpression(descriptor)) {
+    return [];
+  }
+
+  const containsReference = (node) => reference.pos >= node.pos && reference.end <= node.end;
+  const isGetter = descriptor.properties.some((property) => {
+    const name = property.name;
+    const isGetProperty =
+      name && (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) && name.text === 'get';
+    if (!isGetProperty) return false;
+    if (ts.isPropertyAssignment(property)) return containsReference(property.initializer);
+    return ts.isMethodDeclaration(property) && containsReference(property);
+  });
+  return isGetter ? exportNames : [];
+}
+
 export function findPublicMutationOwner(expression, exportedLocalNames) {
   const current = unwrapExpression(expression);
   let target = ts.isAssignmentExpression(current) ? current.left : null;
@@ -234,7 +275,7 @@ export function selectedMemberForReference(reference) {
   return selectedMemberAfterTransparentWrappers(reference);
 }
 
-export function selectedMemberAfterTransparentWrappers(reference) {
+function transparentReferenceNode(reference) {
   let current = reference;
   while (current.parent) {
     const parent = current.parent;
@@ -252,9 +293,61 @@ export function selectedMemberAfterTransparentWrappers(reference) {
     }
     break;
   }
+  return current;
+}
 
+export function selectedMemberAfterTransparentWrappers(reference) {
+  const current = transparentReferenceNode(reference);
   const access = memberAccess(current.parent ?? current);
   return access?.receiver === unwrapExpression(current) ? access.name : null;
+}
+
+function selectedThenCallbackMember(callback) {
+  if (!callback || (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback))) {
+    return null;
+  }
+  const [parameter] = callback.parameters;
+  if (!parameter) return null;
+
+  const returnedExpression = ts.isBlock(callback.body)
+    ? callback.body.statements.find(ts.isReturnStatement)?.expression
+    : callback.body;
+  if (!returnedExpression) return null;
+
+  const returned = unwrapExpression(returnedExpression);
+  if (ts.isIdentifier(parameter.name)) {
+    const access = memberAccess(returned);
+    return access &&
+      ts.isIdentifier(access.receiver) &&
+      access.receiver.text === parameter.name.text
+      ? access.name
+      : null;
+  }
+  if (!ts.isIdentifier(returned)) return null;
+  return (
+    objectBindingSelections(parameter.name)?.find(({ localNames }) =>
+      localNames.includes(returned.text)
+    )?.importedName ?? null
+  );
+}
+
+export function importedNameForCall(reference, isDynamicImport) {
+  const selectedName = selectedMemberAfterTransparentWrappers(reference);
+  if (!isDynamicImport || selectedName !== 'then') return selectedName ?? '*';
+
+  const current = transparentReferenceNode(reference);
+  const thenAccess = current.parent;
+  const thenCall = thenAccess?.parent;
+  if (
+    !thenAccess ||
+    !ts.isPropertyAccessExpression(thenAccess) ||
+    !thenCall ||
+    !ts.isCallExpression(thenCall) ||
+    thenCall.expression !== thenAccess
+  ) {
+    return '*';
+  }
+  return selectedThenCallbackMember(thenCall.arguments[0]) ?? '*';
 }
 
 export function importedNameForReference(reference, importedBinding) {
