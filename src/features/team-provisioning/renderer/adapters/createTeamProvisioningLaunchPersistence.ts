@@ -1,3 +1,5 @@
+import { normalizePersistedTeamLaunchParams } from '../utils/teamLaunchParamsPersistence';
+
 import type { TeamProvisioningLaunchPersistencePort } from '../ports/TeamProvisioningLaunchPorts';
 import type { TeamLaunchParams } from '../utils/teamLaunchParams';
 import type { ToolApprovalSettings } from '@shared/types';
@@ -16,8 +18,9 @@ export function loadAllTeamLaunchParams(): Record<string, TeamLaunchParams> {
         const raw = localStorage.getItem(key);
         if (!raw) continue;
         const teamName = key.slice(LAUNCH_PARAMS_PREFIX.length);
-        const parsed = JSON.parse(raw) as TeamLaunchParams;
-        if (parsed && typeof parsed === 'object') {
+        if (!teamName) continue;
+        const parsed = normalizePersistedTeamLaunchParams(JSON.parse(raw));
+        if (parsed) {
           result[teamName] = parsed;
         }
       } catch {

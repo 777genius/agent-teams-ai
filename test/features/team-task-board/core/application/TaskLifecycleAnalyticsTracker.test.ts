@@ -213,4 +213,39 @@ describe('TaskLifecycleAnalyticsTracker', () => {
 
     expect(reporter.recordTaskFirstOutput).not.toHaveBeenCalled();
   });
+
+  it('allows a recreated team to report reused task ids after clearing analytics state', () => {
+    const task = createTask();
+    const completed = createTask({ status: 'completed' });
+    const withOutput = createTask({
+      comments: [
+        {
+          id: 'comment-1',
+          author: 'alice',
+          text: 'output',
+          createdAt: '2026-07-23T10:00:06.000Z',
+          type: 'regular',
+        },
+      ],
+    });
+
+    const recordLifecycle = (): void => {
+      tracker.recordCreatedTask(
+        'team-a',
+        task,
+        { subject: 'Task', owner: 'alice' },
+        createSnapshot(task),
+        1_000
+      );
+      tracker.recordSnapshotTransitions('team-a', createSnapshot(task), createSnapshot(withOutput));
+      tracker.recordSnapshotTransitions('team-a', createSnapshot(task), createSnapshot(completed));
+    };
+
+    recordLifecycle();
+    tracker.clearTeam('team-a');
+    recordLifecycle();
+
+    expect(reporter.recordTaskFirstOutput).toHaveBeenCalledTimes(2);
+    expect(reporter.recordTaskEnd).toHaveBeenCalledTimes(2);
+  });
 });
