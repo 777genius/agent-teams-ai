@@ -329,6 +329,152 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
     });
   });
 
+  it('recovers a fenced SQLite purge crash without resurrecting stale JSON or replica state', async () => {
+    const { databasePath, teamsBasePath } = await setup();
+    const gateway = openGateway(databasePath);
+    const paths = new MemberWorkSyncStorePaths(teamsBasePath);
+    const staleStatus: MemberWorkSyncStatus = {
+      teamName: TEAM,
+      memberName: 'bob',
+      state: 'needs_sync',
+      agenda: {
+        teamName: TEAM,
+        memberName: 'bob',
+        generatedAt: T0,
+        fingerprint: 'stale-before-sqlite-purge',
+        items: [],
+        diagnostics: [],
+      },
+      evaluatedAt: T0,
+      diagnostics: [],
+    };
+    const store = createMwsStore({
+      kind: 'sqlite',
+      gateway,
+      teamsBasePath,
+      fallbackRequiresReplica: false,
+    });
+    await store.write(staleStatus);
+
+    const jsonStore = new JsonMemberWorkSyncStore(paths);
+    await jsonStore.write(staleStatus);
+    const replicaPath = paths.getSqliteFallbackReplicaPath(TEAM);
+    expect(JSON.parse(await readFile(replicaPath, 'utf8'))).toMatchObject({
+      state: 'clean',
+      snapshot: {
+        statuses: [
+          expect.objectContaining({
+            agenda: expect.objectContaining({ fingerprint: 'stale-before-sqlite-purge' }),
+          }),
+        ],
+      },
+    });
+    await expect(jsonStore.readSnapshotForImport(TEAM)).resolves.toMatchObject({
+      statuses: [
+        expect.objectContaining({
+          agenda: expect.objectContaining({ fingerprint: 'stale-before-sqlite-purge' }),
+        }),
+      ],
+    });
+
+    const pendingPurgePath = paths.getPendingPrimaryPurgePath(TEAM);
+    const realImportTeam = gateway.importTeam.bind(gateway);
+    const realRecordStoreImport = gateway.recordStoreImport.bind(gateway);
+    let observedFenceBeforeEmptyCommit = false;
+    let recordedImportCount: number | null = null;
+    const importTeam = vi
+      .spyOn(gateway, 'importTeam')
+      .mockImplementation(async (teamName, snapshot) => {
+        if (
+          snapshot.statuses.length === 0 &&
+          snapshot.reportIntents.length === 0 &&
+          snapshot.outboxItems.length === 0 &&
+          snapshot.metricEvents.length === 0
+        ) {
+          await expect(readFile(pendingPurgePath, 'utf8')).resolves.toContain(
+            '"activeJsonStateCleared": true'
+          );
+          observedFenceBeforeEmptyCommit = true;
+        }
+        await realImportTeam(teamName, snapshot);
+      });
+    const recordStoreImport = vi
+      .spyOn(gateway, 'recordStoreImport')
+      .mockImplementation(async (storeId, teamName, entryCount) => {
+        if (storeId === MEMBER_WORK_SYNC_STORE_ID && teamName === TEAM) {
+          recordedImportCount = entryCount;
+        }
+        await realRecordStoreImport(storeId, teamName, entryCount);
+      });
+    const writeClean = vi
+      .spyOn(InternalStorageJsonReplica.prototype, 'writeClean')
+      .mockRejectedValueOnce(new Error('simulated crash before empty clean replica publication'));
+    try {
+      await expect(store.purgeTeam(TEAM)).rejects.toThrow(
+        'simulated crash before empty clean replica publication'
+      );
+    } finally {
+      writeClean.mockRestore();
+      importTeam.mockRestore();
+      recordStoreImport.mockRestore();
+    }
+
+    expect(observedFenceBeforeEmptyCommit).toBe(true);
+    expect(recordedImportCount).toBe(0);
+    expect(await gateway.listTeamSnapshot(TEAM)).toEqual({
+      statuses: [],
+      reportIntents: [],
+      outboxItems: [],
+      metricEvents: [],
+    });
+    await expect(gateway.hasStoreImport(MEMBER_WORK_SYNC_STORE_ID, TEAM)).resolves.toBe(true);
+    await expect(jsonStore.readSnapshotForImport(TEAM)).resolves.toBeNull();
+    expect(JSON.parse(await readFile(replicaPath, 'utf8'))).toMatchObject({
+      state: 'clean',
+      snapshot: {
+        statuses: [
+          expect.objectContaining({
+            agenda: expect.objectContaining({ fingerprint: 'stale-before-sqlite-purge' }),
+          }),
+        ],
+      },
+    });
+    await expect(readFile(pendingPurgePath, 'utf8')).resolves.toContain(
+      '"activeJsonStateCleared": true'
+    );
+
+    await gateway.close();
+    const restartedGateway = openGateway(databasePath);
+    const restartedStore = createMwsStore({
+      kind: 'sqlite',
+      gateway: restartedGateway,
+      teamsBasePath,
+      fallbackRequiresReplica: false,
+    });
+
+    await expect(restartedStore.read({ teamName: TEAM, memberName: 'bob' })).resolves.toBeNull();
+    expect(await restartedGateway.listTeamSnapshot(TEAM)).toEqual({
+      statuses: [],
+      reportIntents: [],
+      outboxItems: [],
+      metricEvents: [],
+    });
+    await expect(restartedGateway.hasStoreImport(MEMBER_WORK_SYNC_STORE_ID, TEAM)).resolves.toBe(
+      true
+    );
+    await expect(jsonStore.readSnapshotForImport(TEAM)).resolves.toBeNull();
+    expect(JSON.parse(await readFile(replicaPath, 'utf8'))).toMatchObject({
+      state: 'clean',
+      snapshot: {
+        statuses: [],
+        reportIntents: [],
+        outboxItems: [],
+        metricEvents: [],
+      },
+    });
+    await expect(readFile(pendingPurgePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('retries every owned directory sync after a crash leaves active files absent', async () => {
     const { teamsBasePath } = await setup();
     const paths = new MemberWorkSyncStorePaths(teamsBasePath);

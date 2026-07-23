@@ -108,10 +108,8 @@ export class BackendSelectingMemberWorkSyncStore
     const backend = await this.selector.select<'sqlite' | 'json'>('sqlite', 'json');
     await this.replicaMutex.run(teamName, async () => {
       if (backend === 'sqlite') {
-        const snapshot = emptySnapshot();
-        await this.options!.gateway.importTeam(teamName, snapshotToRecords(teamName, snapshot));
-        await this.replica?.writeClean(teamName, snapshot);
-        await this.removePendingPrimaryPurge(teamName);
+        await this.writePendingPrimaryPurge(teamName, false);
+        await this.applyPendingPrimaryPurge(teamName);
       } else {
         await this.jsonStore.purgeActiveState(teamName, {
           establishPendingPrimaryPurge: () => this.writePendingPrimaryPurge(teamName, false),
