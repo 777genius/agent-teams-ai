@@ -1,4 +1,5 @@
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -141,6 +142,11 @@ import {
   registerTeamTaskBoardIpc,
   removeTeamTaskBoardIpc,
 } from '../../../src/features/team-task-board/main';
+import {
+  createTeamViewReadModelFeature,
+  registerTeamViewReadModelIpc,
+  removeTeamViewReadModelIpc,
+} from '../../../src/features/team-view-read-model/main';
 import { createUnavailableTeamLifecycleReadHost } from '../../../src/main/composition/hosted/teamLifecycleReadComposition';
 import {
   handleListTeamLifecycle,
@@ -340,8 +346,16 @@ const TEAM_TASK_BOARD_HANDLER_KEYS = [
 ] as const;
 
 const TEAM_TASK_BOARD_HANDLER_KEY_SET = new Set<string>(TEAM_TASK_BOARD_HANDLER_KEYS);
+const TEAM_VIEW_READ_MODEL_HANDLER_KEYS = [
+  TEAM_GET_DATA,
+  TEAM_GET_MESSAGES_PAGE,
+  TEAM_GET_MEMBER_ACTIVITY_META,
+] as const;
+const TEAM_VIEW_READ_MODEL_HANDLER_KEY_SET = new Set<string>(TEAM_VIEW_READ_MODEL_HANDLER_KEYS);
 const TEAM_HANDLER_KEYS = ALL_TEAM_HANDLER_KEYS.filter(
-  (channel) => !TEAM_TASK_BOARD_HANDLER_KEY_SET.has(channel)
+  (channel) =>
+    !TEAM_TASK_BOARD_HANDLER_KEY_SET.has(channel) &&
+    !TEAM_VIEW_READ_MODEL_HANDLER_KEY_SET.has(channel)
 );
 
 describe('ipc teams handlers', () => {
@@ -358,6 +372,7 @@ describe('ipc teams handlers', () => {
     error: vi.fn(),
     warn: vi.fn(),
   };
+  const teamViewReadModelLogger = createLogger('IPC:teams');
   let launchIoGovernor: LaunchIoGovernor;
 
   const service = {
@@ -732,6 +747,15 @@ describe('ipc teams handlers', () => {
       launchIoGovernor
     );
     registerTeamHandlers(ipcMain as never);
+    const teamViewReadModelFeature = createTeamViewReadModelFeature({
+      data: service as never,
+      provisioningRuns: teamHandlerApis.provisioningRun,
+      taskActivity: teamHandlerApis.taskActivity,
+      runtime: teamHandlerApis.runtime,
+      messaging: teamHandlerApis.messaging,
+      logger: teamViewReadModelLogger,
+    });
+    registerTeamViewReadModelIpc(ipcMain as never, teamViewReadModelFeature);
     const teamTaskBoardFeature = createTeamTaskBoardFeature({
       taskBoardApi: service as never,
       runtimeApi: teamHandlerApis.runtime,
@@ -754,7 +778,7 @@ describe('ipc teams handlers', () => {
     expect(new Set(handlers.keys())).toEqual(new Set(ALL_TEAM_HANDLER_KEYS));
   });
 
-  it('keeps extracted task-board channels out of the legacy teams registrar', () => {
+  it('keeps extracted feature channels out of the legacy teams registrar', () => {
     const legacyChannels = new Set<string>();
     registerTeamHandlers({
       handle: (channel: string) => legacyChannels.add(channel),
@@ -763,6 +787,9 @@ describe('ipc teams handlers', () => {
 
     expect(legacyChannels).toEqual(new Set(TEAM_HANDLER_KEYS));
     for (const channel of TEAM_TASK_BOARD_HANDLER_KEYS) {
+      expect(legacyChannels.has(channel)).toBe(false);
+    }
+    for (const channel of TEAM_VIEW_READ_MODEL_HANDLER_KEYS) {
       expect(legacyChannels.has(channel)).toBe(false);
     }
   });
@@ -2236,6 +2263,21 @@ describe('ipc teams handlers', () => {
     expect(service.getTeamData).not.toHaveBeenCalled();
   });
 
+  it('falls back TEAM_GET_DATA to main after a nonfatal worker failure', async () => {
+    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+    mockTeamDataWorkerClient.getTeamData.mockRejectedValueOnce(new Error('temporary read failure'));
+
+    const result = (await handlers.get(TEAM_GET_DATA)!({} as never, 'my-team')) as {
+      success: boolean;
+      data?: { teamName: string };
+    };
+
+    expect(result.success).toBe(true);
+    expect(result.data?.teamName).toBe('my-team');
+    expect(service.getTeamData).toHaveBeenCalledWith('my-team');
+    vi.mocked(console.warn).mockClear();
+  });
+
   it('forwards thin TEAM_GET_DATA options to the worker without changing full request shape', async () => {
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
     mockTeamDataWorkerClient.getTeamData.mockResolvedValueOnce({
@@ -2832,6 +2874,25 @@ describe('ipc teams handlers', () => {
     expect(service.getMessagesPage).not.toHaveBeenCalled();
   });
 
+  it('falls back TEAM_GET_MESSAGES_PAGE to main after a nonfatal worker failure', async () => {
+    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+    mockTeamDataWorkerClient.getMessagesPage.mockRejectedValueOnce(
+      new Error('temporary page failure')
+    );
+
+    const result = (await handlers.get(TEAM_GET_MESSAGES_PAGE)!({} as never, 'my-team', {
+      limit: 50,
+    })) as { success: boolean; data?: { feedRevision: string } };
+
+    expect(result.success).toBe(true);
+    expect(result.data?.feedRevision).toBe('rev-1');
+    expect(service.getMessagesPage).toHaveBeenCalledWith('my-team', {
+      cursor: undefined,
+      limit: 50,
+    });
+    vi.mocked(console.warn).mockClear();
+  });
+
   it('uses the team-data worker for TEAM_GET_MEMBER_ACTIVITY_META when available', async () => {
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
     mockTeamDataWorkerClient.getMemberActivityMeta.mockResolvedValueOnce({
@@ -2895,6 +2956,23 @@ describe('ipc teams handlers', () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
     expect(service.getMemberActivityMeta).not.toHaveBeenCalled();
+  });
+
+  it('falls back TEAM_GET_MEMBER_ACTIVITY_META to main after a nonfatal worker failure', async () => {
+    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+    mockTeamDataWorkerClient.getMemberActivityMeta.mockRejectedValueOnce(
+      new Error('temporary activity failure')
+    );
+
+    const result = (await handlers.get(TEAM_GET_MEMBER_ACTIVITY_META)!({} as never, 'my-team')) as {
+      success: boolean;
+      data?: { feedRevision: string };
+    };
+
+    expect(result.success).toBe(true);
+    expect(result.data?.feedRevision).toBe('rev-1');
+    expect(service.getMemberActivityMeta).toHaveBeenCalledWith('my-team');
+    vi.mocked(console.warn).mockClear();
   });
 
   it('does not fall back TEAM_GET_LOGS_FOR_TASK to main after worker OOM', async () => {
@@ -5249,6 +5327,7 @@ describe('ipc teams handlers', () => {
 
   it('removes all expected handlers', () => {
     removeTeamHandlers(ipcMain as never);
+    removeTeamViewReadModelIpc(ipcMain as never);
     removeTeamTaskBoardIpc(ipcMain as never);
     expect(ipcMain.removeHandler).toHaveBeenCalledTimes(ALL_TEAM_HANDLER_KEYS.length);
     expect(new Set(ipcMain.removeHandler.mock.calls.map(([channel]) => channel))).toEqual(

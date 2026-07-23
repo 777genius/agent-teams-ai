@@ -18,6 +18,7 @@ import { getAppIconPath } from '@main/utils/appIcon';
 import { getAppDataPath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
+import { withTimeoutValue } from '@main/utils/withTimeoutValue';
 import {
   TEAM_ADD_MEMBER,
   TEAM_ALIVE_LIST,
@@ -31,12 +32,9 @@ import {
   TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_ATTACHMENTS,
   TEAM_GET_CLAUDE_LOGS,
-  TEAM_GET_DATA,
   TEAM_GET_LOGS_FOR_TASK,
-  TEAM_GET_MEMBER_ACTIVITY_META,
   TEAM_GET_MEMBER_LOGS,
   TEAM_GET_MEMBER_STATS,
-  TEAM_GET_MESSAGES_PAGE,
   TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
   TEAM_GET_PROJECT_BRANCH,
   TEAM_GET_SAVED_REQUEST,
@@ -97,7 +95,7 @@ import {
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import crypto from 'crypto';
-import { app, BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
+import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -116,10 +114,6 @@ import {
   buildReplaceMembersDiff,
   buildReplaceMembersSummaryMessage,
 } from '../services/team/memberUpdateNotifications';
-import {
-  mergeLiveLeadProcessMessages,
-  mergeLiveLeadProcessMessagesPage,
-} from '../services/team/mergeLiveLeadProcessMessages';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
@@ -129,7 +123,6 @@ import { TeamMetaStore } from '../services/team/TeamMetaStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
-import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
 import { validateTaskRefs } from './validation/taskRefs';
 import {
   validateFromField,
@@ -159,7 +152,6 @@ import type {
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
   TeamRuntimeApi,
-  TeamTaskActivityRepairApi,
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
@@ -170,14 +162,12 @@ import type {
   AttachmentMeta,
   AttachmentPayload,
   EffortLevel,
-  InboxMessage,
   IpcResult,
   LeadActivitySnapshot,
   LeadContextUsageSnapshot,
   MemberFullStats,
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
-  MessagesPage,
   OpenCodeRuntimeDeliveryStatus,
   RetryFailedOpenCodeSecondaryLanesResult,
   SendMessageRequest,
@@ -191,11 +181,9 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamFastMode,
-  TeamGetDataOptions,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
   TeamLaunchResponse,
-  TeamMemberActivityMeta,
   TeamMessageNotificationData,
   TeamProviderBackendId,
   TeamProviderId,
@@ -205,7 +193,6 @@ import type {
   TeamProvisioningProgress,
   TeamSummary,
   TeamUpdateConfigRequest,
-  TeamViewSnapshot,
   TeamWorktreeGitStatus,
 } from '@shared/types';
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
@@ -217,7 +204,6 @@ const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_MS = 6_000;
 const OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS = 1_000;
 const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON =
   'opencode_runtime_delivery_ui_timeout_pending';
-const MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD = 200;
 
 type OpenCodeMemberInboxRelayResult = TeamOpenCodeMemberInboxRelayResult;
 type OpenCodeMemberInboxDelivery = NonNullable<OpenCodeMemberInboxRelayResult['lastDelivery']>;
@@ -239,65 +225,6 @@ function resolveVisibleDirectReplyProtocol(input: {
 
   return 'send_message';
 }
-const TEAM_DATA_DRAFT_CLASSIFICATION_ACCESS_TIMEOUT_MS = 250;
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value == null || typeof value !== 'object') {
-    return false;
-  }
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-}
-
-function validateTeamGetDataOptions(
-  value: unknown
-): { valid: true; value: TeamGetDataOptions | undefined } | { valid: false; error: string } {
-  if (value === undefined) {
-    return { valid: true, value: undefined };
-  }
-  if (!isPlainObject(value)) {
-    return { valid: false, error: 'options must be an object' };
-  }
-
-  const allowed = new Set(['includeMemberBranches']);
-  for (const key of Object.keys(value)) {
-    if (!allowed.has(key)) {
-      return { valid: false, error: `Unknown getData option: ${key}` };
-    }
-  }
-
-  const includeMemberBranches = value.includeMemberBranches;
-  if (includeMemberBranches !== undefined && typeof includeMemberBranches !== 'boolean') {
-    return { valid: false, error: 'includeMemberBranches must be a boolean' };
-  }
-
-  return {
-    valid: true,
-    value: includeMemberBranches === false ? { includeMemberBranches: false } : undefined,
-  };
-}
-
-async function withTimeoutValue<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  timeoutValue: T
-): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((resolve) => {
-        timer = setTimeout(() => resolve(timeoutValue), timeoutMs);
-        timer.unref?.();
-      }),
-    ]);
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  }
-}
-
 async function waitForOpenCodeRuntimeRelayForUi(input: {
   messaging: TeamMessagingApi;
   teamName: string;
@@ -500,16 +427,6 @@ function buildOpenCodeRuntimeDeliveryUiTimeoutRelayResult(
   };
 }
 
-function noteHeavyTeamDataWorkerFallback(operation: string): void {
-  if (!app.isPackaged) {
-    return;
-  }
-
-  logger.error(
-    `[${operation}] team-data-worker unavailable in packaged runtime; falling back to main-thread execution for heavy message/activity path`
-  );
-}
-
 function getWorkerErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -520,79 +437,6 @@ function getFatalTeamDataWorkerFailureMessage(error: unknown): string | null {
   }
   const message = getWorkerErrorMessage(error);
   return `TEAM_DATA_WORKER_FAILED: ${message}`;
-}
-
-function throwIfFatalTeamDataWorkerFailure(_operation: string, error: unknown): void {
-  const message = getFatalTeamDataWorkerFailureMessage(error);
-  if (message) {
-    throw new Error(message);
-  }
-}
-
-function compareInboxMessagesNewestFirst(left: InboxMessage, right: InboxMessage): number {
-  const leftTime = Date.parse(left.timestamp);
-  const rightTime = Date.parse(right.timestamp);
-  if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
-    return rightTime - leftTime;
-  }
-  const leftId = typeof left.messageId === 'string' ? left.messageId : '';
-  const rightId = typeof right.messageId === 'string' ? right.messageId : '';
-  return leftId.localeCompare(rightId);
-}
-
-function capLiveOverlayMessages(liveMessages: readonly InboxMessage[]): InboxMessage[] {
-  if (liveMessages.length <= MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD) {
-    return [...liveMessages];
-  }
-  return [...liveMessages]
-    .sort(compareInboxMessagesNewestFirst)
-    .slice(0, MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD);
-}
-
-async function getNewestMessagesPageWithLiveOverlay(input: {
-  teamName: string;
-  limit: number;
-  liveMessages: InboxMessage[];
-  includeUndefinedCursorInFallback?: boolean;
-}): Promise<MessagesPage> {
-  const { teamName, limit } = input;
-  const liveMessages = capLiveOverlayMessages(input.liveMessages);
-  const liveReserve = liveMessages.length ? Math.max(liveMessages.length, 100) : 0;
-  const durableLimit = limit + liveReserve + 1;
-  const worker = getTeamDataWorkerClient();
-  const options = input.includeUndefinedCursorInFallback
-    ? { cursor: undefined, limit: durableLimit }
-    : { limit: durableLimit };
-  let durablePage: MessagesPage;
-  if (worker.isAvailable()) {
-    try {
-      durablePage = await worker.getMessagesPage(teamName, options);
-      return mergeLiveLeadProcessMessagesPage({
-        durableMessages: durablePage.messages,
-        liveMessages,
-        limit,
-        feedRevision: durablePage.feedRevision,
-        durableHasMoreAfterWindow: durablePage.hasMore,
-      });
-    } catch (workerErr) {
-      throwIfFatalTeamDataWorkerFailure('teams:getMessagesPage.liveOverlay', workerErr);
-      logger.warn(
-        `[teams:getMessagesPage] worker failed for live overlay, falling back: ${getWorkerErrorMessage(
-          workerErr
-        )}`
-      );
-    }
-  }
-
-  noteHeavyTeamDataWorkerFallback('teams:getMessagesPage.liveOverlay');
-  durablePage = await getTeamDataService().getMessagesPage(teamName, options);
-  return mergeLiveLeadProcessMessagesPage({
-    durableMessages: durablePage.messages,
-    liveMessages,
-    limit,
-    feedRevision: durablePage.feedRevision,
-    durableHasMoreAfterWindow: durablePage.hasMore,
-  });
 }
 
 function invalidateTeamRosterSnapshotCaches(teamName: string): void {
@@ -702,7 +546,6 @@ let teamProvisioningStartApi: TeamProvisioningStartApi | null = null;
 let teamProvisioningStatusApi: TeamProvisioningStatusApi | null = null;
 let teamProvisioningPreflightApi: TeamProvisioningPreflightApi | null = null;
 let teamProvisioningRunApi: TeamProvisioningRunApi | null = null;
-let teamTaskActivityRepairApi: TeamTaskActivityRepairApi | null = null;
 let teamRuntimeApi: TeamRuntimeApi | null = null;
 let teamMemberLifecycleApi: TeamMemberLifecycleApi | null = null;
 let teamDiagnosticsApi: TeamDiagnosticsApi | null = null;
@@ -794,7 +637,6 @@ export function initializeTeamHandlers(
   teamProvisioningStatusApi = teamHandlerApis.provisioningStatus;
   teamProvisioningPreflightApi = teamHandlerApis.preflight;
   teamProvisioningRunApi = teamHandlerApis.provisioningRun;
-  teamTaskActivityRepairApi = teamHandlerApis.taskActivity;
   teamRuntimeApi = teamHandlerApis.runtime;
   teamMemberLifecycleApi = teamHandlerApis.memberLifecycle;
   teamDiagnosticsApi = teamHandlerApis.diagnostics;
@@ -811,7 +653,6 @@ export function initializeTeamHandlers(
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_LIST, handleListTeams);
-  ipcMain.handle(TEAM_GET_DATA, handleGetData);
   ipcMain.handle(TEAM_SET_PROJECT_BRANCH_TRACKING, handleSetProjectBranchTracking);
   ipcMain.handle(TEAM_SET_TASK_LOG_STREAM_TRACKING, handleSetTaskLogStreamTracking);
   ipcMain.handle(TEAM_SET_TOOL_ACTIVITY_TRACKING, handleSetToolActivityTracking);
@@ -827,8 +668,6 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_CANCEL_PROVISIONING, handleCancelProvisioning);
   ipcMain.handle(TEAM_SEND_MESSAGE, handleSendMessage);
   ipcMain.handle(TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS, handleGetOpenCodeRuntimeDeliveryStatus);
-  ipcMain.handle(TEAM_GET_MESSAGES_PAGE, handleGetMessagesPage);
-  ipcMain.handle(TEAM_GET_MEMBER_ACTIVITY_META, handleGetMemberActivityMeta);
   ipcMain.handle(TEAM_DELETE_TEAM, handleDeleteTeam);
   ipcMain.handle(TEAM_RESTORE, handleRestoreTeam);
   ipcMain.handle(TEAM_PERMANENTLY_DELETE, handlePermanentlyDeleteTeam);
@@ -871,7 +710,6 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
 
 export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_LIST);
-  ipcMain.removeHandler(TEAM_GET_DATA);
   ipcMain.removeHandler(TEAM_SET_PROJECT_BRANCH_TRACKING);
   ipcMain.removeHandler(TEAM_SET_TASK_LOG_STREAM_TRACKING);
   ipcMain.removeHandler(TEAM_SET_TOOL_ACTIVITY_TRACKING);
@@ -887,8 +725,6 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_CANCEL_PROVISIONING);
   ipcMain.removeHandler(TEAM_SEND_MESSAGE);
   ipcMain.removeHandler(TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS);
-  ipcMain.removeHandler(TEAM_GET_MESSAGES_PAGE);
-  ipcMain.removeHandler(TEAM_GET_MEMBER_ACTIVITY_META);
   ipcMain.removeHandler(TEAM_DELETE_TEAM);
   ipcMain.removeHandler(TEAM_RESTORE);
   ipcMain.removeHandler(TEAM_PERMANENTLY_DELETE);
@@ -958,13 +794,6 @@ function getTeamProvisioningRunApi(): TeamProvisioningRunApi {
     throw new Error('Team provisioning run handlers are not initialized');
   }
   return teamProvisioningRunApi;
-}
-
-function getTeamTaskActivityRepairApi(): TeamTaskActivityRepairApi {
-  if (!teamTaskActivityRepairApi) {
-    throw new Error('Team task activity repair handlers are not initialized');
-  }
-  return teamTaskActivityRepairApi;
 }
 
 function getTeamRuntimeApi(): TeamRuntimeApi {
@@ -1129,200 +958,6 @@ async function handleListTeams(
     }
     setCurrentMainOp(null);
   }
-}
-
-async function handleGetData(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  rawOptions?: unknown
-): Promise<IpcResult<TeamViewSnapshot>> {
-  const validated = validateTeamName(teamName);
-  if (!validated.valid) {
-    return { success: false, error: validated.error ?? 'Invalid teamName' };
-  }
-  const optionsResult = validateTeamGetDataOptions(rawOptions);
-  if (!optionsResult.valid) {
-    return { success: false, error: optionsResult.error };
-  }
-  const tn = validated.value!;
-  // The UI is fetching this team, so keep its team-root/task artifacts watched
-  // (idle teams the UI never opens are not watched, to scale with team count).
-  markTeamEngaged(tn);
-  const getDataOptions = optionsResult.value;
-  const startedAt = Date.now();
-  let data: TeamViewSnapshot;
-  let dataSource: 'worker' | 'main-fallback' | 'main-unavailable' = 'main-unavailable';
-  let workerAvailable = false;
-  const readFromMain = (): Promise<TeamViewSnapshot> =>
-    getDataOptions === undefined
-      ? getTeamDataService().getTeamData(tn)
-      : getTeamDataService().getTeamData(tn, getDataOptions);
-  setCurrentMainOp('team:getData');
-  try {
-    // Prefer worker thread to keep main event loop responsive
-    const worker = getTeamDataWorkerClient();
-    workerAvailable = worker.isAvailable();
-    const missingState = await classifyMissingTeamData(tn);
-    if (missingState === 'provisioning') {
-      return { success: false, error: 'TEAM_PROVISIONING' };
-    }
-    if (missingState === 'draft') {
-      return { success: false, error: 'TEAM_DRAFT' };
-    }
-
-    await getTeamTaskActivityRepairApi().repairStaleTaskActivityIntervalsBeforeSnapshot(tn);
-
-    if (workerAvailable) {
-      try {
-        data =
-          getDataOptions === undefined
-            ? await worker.getTeamData(tn)
-            : await worker.getTeamData(tn, getDataOptions);
-        dataSource = 'worker';
-      } catch (workerErr) {
-        throwIfFatalTeamDataWorkerFailure('teams:getData', workerErr);
-        logger.warn(
-          `[teams:getData] worker failed, falling back: ${getWorkerErrorMessage(workerErr)}`
-        );
-        noteHeavyTeamDataWorkerFallback('teams:getData');
-        data = await readFromMain();
-        dataSource = 'main-fallback';
-      }
-    } else {
-      noteHeavyTeamDataWorkerFallback('teams:getData');
-      data = await readFromMain();
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (
-      message === `Team not found: ${tn}` &&
-      getTeamProvisioningRunApi().hasProvisioningRun(tn) === true
-    ) {
-      return { success: false, error: 'TEAM_PROVISIONING' };
-    }
-    // Draft team: team.meta.json exists but config.json doesn't (provisioning failed before TeamCreate)
-    if (message === `Team not found: ${tn}`) {
-      const meta = await withTimeoutValue(
-        teamMetaStore.getMeta(tn).catch(() => null),
-        TEAM_DATA_DRAFT_CLASSIFICATION_ACCESS_TIMEOUT_MS,
-        null
-      );
-      if (meta) {
-        return { success: false, error: 'TEAM_DRAFT' };
-      }
-    }
-    logger.error(`[teams:getData] ${message}`);
-    return { success: false, error: message };
-  } finally {
-    setCurrentMainOp(null);
-  }
-  const getDataMs = Date.now() - startedAt;
-
-  if (getDataMs >= 1500) {
-    const branchMode = getDataOptions?.includeMemberBranches === false ? 'skipped' : 'full';
-    logger.warn(
-      `[teams:getData] slow team=${tn} ms=${getDataMs} source=${dataSource} workerAvailable=${workerAvailable} branchMode=${branchMode}`
-    );
-  }
-  const teamDataService = getTeamDataService();
-  if (data.processes.some((process) => !process.stoppedAt)) {
-    teamDataService.trackProcessHealthForTeam?.(tn);
-  } else {
-    teamDataService.untrackProcessHealthForTeam?.(tn);
-  }
-  const messaging = getTeamMessagingApi();
-  const isAlive = getTeamRuntimeApi().isTeamAlive(tn);
-  const currentLeadSessionId = messaging.getCurrentLeadSessionId(tn);
-
-  const displayName = data.config.name || tn;
-  const projectPath = data.config.projectPath;
-  const live = messaging.getLiveLeadProcessMessages(tn);
-  const durableMessages = Array.isArray((data as { messages?: unknown }).messages)
-    ? ((data as { messages?: typeof live }).messages ?? [])
-    : [];
-
-  if (live.length === 0) {
-    if (durableMessages.length > 0) {
-      teamMessageNotificationScanner.checkRateLimitMessages(durableMessages, {
-        teamName: tn,
-        teamDisplayName: displayName,
-        projectPath,
-        teamIsAlive: isAlive,
-        currentLeadSessionId,
-      });
-      teamMessageNotificationScanner.checkApiErrorMessages(durableMessages, {
-        teamName: tn,
-        teamDisplayName: displayName,
-        projectPath,
-      });
-    } else {
-      teamMessageNotificationScanner.scan(live, {
-        teamName: tn,
-        teamDisplayName: displayName,
-        projectPath,
-      });
-    }
-    return { success: true, data: { ...data, isAlive } };
-  }
-
-  let merged = mergeLiveLeadProcessMessages(durableMessages, live);
-  if (durableMessages.length >= 50) {
-    try {
-      const newestPage = await getNewestMessagesPageWithLiveOverlay({
-        teamName: tn,
-        limit: 50,
-        liveMessages: live,
-      });
-      merged = newestPage.messages;
-    } catch (error) {
-      logger.warn(
-        `[teams:getData] failed to rebuild newest merged messages for ${tn}: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-  }
-
-  teamMessageNotificationScanner.checkRateLimitMessages(merged, {
-    teamName: tn,
-    teamDisplayName: displayName,
-    projectPath,
-    teamIsAlive: isAlive,
-    currentLeadSessionId,
-  });
-  teamMessageNotificationScanner.checkApiErrorMessages(merged, {
-    teamName: tn,
-    teamDisplayName: displayName,
-    projectPath,
-  });
-  return { success: true, data: { ...data, isAlive } };
-}
-
-async function classifyMissingTeamData(teamName: string): Promise<'provisioning' | 'draft' | null> {
-  const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-  const configExists = await withTimeoutValue(
-    fs.promises
-      .access(configPath, fs.constants.F_OK)
-      .then(() => true)
-      .catch((error: unknown) => {
-        const code = typeof error === 'object' && error ? (error as { code?: unknown }).code : null;
-        return code === 'ENOENT' ? false : null;
-      }),
-    TEAM_DATA_DRAFT_CLASSIFICATION_ACCESS_TIMEOUT_MS,
-    null
-  );
-  if (configExists !== false) {
-    return null;
-  }
-  if (getTeamProvisioningRunApi().hasProvisioningRun(teamName) === true) {
-    return 'provisioning';
-  }
-  const meta = await withTimeoutValue(
-    teamMetaStore.getMeta(teamName).catch(() => null),
-    TEAM_DATA_DRAFT_CLASSIFICATION_ACCESS_TIMEOUT_MS,
-    null
-  );
-  return meta ? 'draft' : null;
 }
 
 async function handleSetProjectBranchTracking(
@@ -2839,109 +2474,6 @@ function buildMessageDeliveryText(
   }
 
   return [...hiddenBlocks, baseText].join('\n\n');
-}
-
-async function handleGetMessagesPage(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  options: unknown
-): Promise<IpcResult<MessagesPage>> {
-  const vTeam = validateTeamName(teamName);
-  if (!vTeam.valid) {
-    return { success: false, error: vTeam.error ?? 'Invalid teamName' };
-  }
-  const opts = (options && typeof options === 'object' ? options : {}) as {
-    cursor?: string | null;
-    limit?: number;
-  };
-  const limit = Math.min(Math.max(1, opts.limit ?? 50), 200);
-  const cursor =
-    typeof opts.cursor === 'string' ? opts.cursor : opts.cursor === null ? null : undefined;
-
-  return wrapTeamHandler('getMessagesPage', async () => {
-    let page: MessagesPage;
-    const teamName = vTeam.value!;
-    const scanNotifications = (messagesPage: MessagesPage): void => {
-      const notificationContextPromise: Promise<{ displayName: string; projectPath?: string }> =
-        getTeamDataService()
-          .getTeamNotificationContext(teamName)
-          .catch(() => ({ displayName: teamName }));
-      void notificationContextPromise
-        .then((notificationContext) => {
-          teamMessageNotificationScanner.scan(messagesPage.messages, {
-            teamName,
-            teamDisplayName: notificationContext.displayName,
-            projectPath: notificationContext.projectPath,
-          });
-        })
-        .catch((error: unknown) => {
-          logger.debug(
-            `[teams:getMessagesPage] notification scan skipped team=${teamName}: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        });
-    };
-    const liveMessages =
-      cursor == null ? getTeamMessagingApi().getLiveLeadProcessMessages(teamName) : [];
-
-    if (liveMessages.length > 0) {
-      page = await getNewestMessagesPageWithLiveOverlay({
-        teamName,
-        limit,
-        liveMessages,
-        includeUndefinedCursorInFallback: true,
-      });
-      scanNotifications(page);
-      return page;
-    }
-
-    const worker = getTeamDataWorkerClient();
-    if (worker.isAvailable()) {
-      try {
-        page = await worker.getMessagesPage(teamName, { cursor, limit });
-        scanNotifications(page);
-        return page;
-      } catch (workerErr) {
-        throwIfFatalTeamDataWorkerFailure('teams:getMessagesPage', workerErr);
-        logger.warn(
-          `[teams:getMessagesPage] worker failed, falling back: ${getWorkerErrorMessage(workerErr)}`
-        );
-      }
-    }
-    noteHeavyTeamDataWorkerFallback('teams:getMessagesPage');
-    page = await getTeamDataService().getMessagesPage(teamName, { cursor, limit });
-    scanNotifications(page);
-    return page;
-  });
-}
-
-async function handleGetMemberActivityMeta(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown
-): Promise<IpcResult<TeamMemberActivityMeta>> {
-  const vTeam = validateTeamName(teamName);
-  if (!vTeam.valid) {
-    return { success: false, error: vTeam.error ?? 'Invalid teamName' };
-  }
-
-  return wrapTeamHandler('getMemberActivityMeta', async () => {
-    const worker = getTeamDataWorkerClient();
-    if (worker.isAvailable()) {
-      try {
-        return await worker.getMemberActivityMeta(vTeam.value!);
-      } catch (workerErr) {
-        throwIfFatalTeamDataWorkerFailure('teams:getMemberActivityMeta', workerErr);
-        logger.warn(
-          `[teams:getMemberActivityMeta] worker failed, falling back: ${getWorkerErrorMessage(
-            workerErr
-          )}`
-        );
-      }
-    }
-    noteHeavyTeamDataWorkerFallback('teams:getMemberActivityMeta');
-    return getTeamDataService().getMemberActivityMeta(vTeam.value!);
-  });
 }
 
 async function handleSendMessage(

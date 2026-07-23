@@ -226,8 +226,11 @@ export const APP_RELAUNCH = 'app:relaunch';
 /** List all teams */
 export const TEAM_LIST = 'team:list';
 
-/** Get detailed team data */
-export const TEAM_GET_DATA = 'team:getData';
+export {
+  TEAM_GET_DATA,
+  TEAM_GET_MEMBER_ACTIVITY_META,
+  TEAM_GET_MESSAGES_PAGE,
+} from '@features/team-view-read-model/contracts';
 
 /** Enable or disable live teammate tool activity tracking for a visible team tab */
 export const TEAM_SET_TOOL_ACTIVITY_TRACKING = 'team:setToolActivityTracking';
@@ -243,12 +246,6 @@ export const TEAM_SEND_MESSAGE = 'team:sendMessage';
 
 /** Read latest OpenCode runtime delivery status for a sent inbox message */
 export const TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS = 'team:getOpenCodeRuntimeDeliveryStatus';
-
-/** Paginated messages for timeline/messages panel */
-export const TEAM_GET_MESSAGES_PAGE = 'team:getMessagesPage';
-
-/** Lightweight message-derived member activity facts */
-export const TEAM_GET_MEMBER_ACTIVITY_META = 'team:getMemberActivityMeta';
 
 /** Team change events (main -> renderer) */
 export const TEAM_CHANGE = 'team:change';
