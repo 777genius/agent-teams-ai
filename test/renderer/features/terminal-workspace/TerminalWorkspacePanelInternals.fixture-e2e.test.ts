@@ -1,14 +1,16 @@
+import { normalizeTerminalCommandRunEventDetail } from '@features/terminal-workspace/renderer/adapters/terminalCommandRunEvents';
 import {
   closeSupersededTerminalCommandRuns,
-  formatTerminalPromptLabel,
-  formatWorkingDirectory,
   inferTerminalCommandCompletion,
   inferTerminalCommandOutputStatus,
-  normalizeTerminalCommandRunEventDetail,
-  resolveTerminalLocalAutocompleteSuggestion,
   settleTerminalCommandRuns,
   type TerminalCommandRunPresentation,
   upsertTerminalCommandRun,
+} from '@features/terminal-workspace/renderer/model/terminalCommandRuns';
+import {
+  formatTerminalPromptLabel,
+  formatWorkingDirectory,
+  resolveTerminalLocalAutocompleteSuggestion,
 } from '@features/terminal-workspace/renderer/ui/TerminalWorkspacePanel';
 import { describe, expect, it } from 'vitest';
 
