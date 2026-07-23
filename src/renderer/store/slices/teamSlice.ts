@@ -40,10 +40,16 @@ import {
   type TeamTaskBoardRendererSlice,
 } from '@features/team-task-board/renderer';
 import {
+  buildGlobalTaskProjectionNotification,
+  createTeamDirectoryRendererSlice,
+  createTeamDirectoryTransport,
   createTeamMessageFeedRendererSlice,
   createTeamViewDataRendererSlice,
   defaultTeamMessageFeedCoordinator,
   defaultTeamViewDataCoordinator,
+  type GlobalTaskProjectionNotification,
+  TeamDirectoryRefreshCoordinator,
+  type TeamDirectoryRendererSlice,
   type TeamMessageFeedRendererSlice,
   type TeamMessagesCacheEntry,
   type TeamViewDataRendererSlice,
@@ -64,7 +70,7 @@ import {
   isOpenCodeRuntimeDeliveryHardUxFailure,
 } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import { normalizePath } from '@renderer/utils/pathNormalize';
-import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
+import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { createLogger } from '@shared/utils/logger';
 
 import { areTeamAgentRuntimeSnapshotsEqual } from '../team/teamAgentRuntimeSnapshotEquality';
@@ -168,7 +174,6 @@ import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest
 import type {
   ActiveToolCall,
   AddMemberRequest,
-  GlobalTask,
   LeadActivityState,
   LeadContextUsage,
   MemberSpawnStatusEntry,
@@ -232,15 +237,10 @@ export type { TeamLaunchParams } from '@features/team-provisioning/renderer';
 
 const logger = createLogger('teamSlice');
 
-const TEAM_FETCH_TIMEOUT_MS = 30_000;
 const MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS = 5_000;
 const TEAM_REFRESH_BURST_WINDOW_MS = 4_000;
 const MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS = 2_000;
-const GLOBAL_TASKS_FOLLOW_UP_REFRESH_DELAY_MS = 1_500;
-let latestTeamsFetchRequestId = 0;
-let inFlightGlobalTasksRefresh: Promise<void> | null = null;
-let inFlightGlobalTasksRefreshScope: ContextRequestScope | null = null;
-let pendingFreshGlobalTasksRefresh = false;
+const teamDirectoryRefreshCoordinator = new TeamDirectoryRefreshCoordinator<ContextRequestScope>();
 const reportedTeamLaunchEndRunIds = new Set<string>();
 const reportedTeamLaunchStepKeys = new Set<string>();
 const teamLaunchAnalyticsByRunId = new Map<string, TeamLaunchAnalyticsContext>();
@@ -249,8 +249,6 @@ const teamAgentRuntimeFreshnessSnapshotsByTeamAndRun = new Map<
   string,
   Map<string | null, TeamAgentRuntimeSnapshot>
 >();
-
-type GlobalTaskNotificationParams = Parameters<typeof processGlobalTaskNotifications>[0];
 
 interface TeamLaunchAnalyticsContext {
   startedAtMs: number;
@@ -360,9 +358,7 @@ export function isTeamDataRefreshPending(teamName: string): boolean {
 export function __resetTeamSliceModuleStateForTests(): void {
   defaultTeamViewDataCoordinator.reset();
   defaultTeamMessageFeedCoordinator.reset();
-  latestTeamsFetchRequestId = 0;
-  inFlightGlobalTasksRefresh = null;
-  pendingFreshGlobalTasksRefresh = false;
+  teamDirectoryRefreshCoordinator.reset();
   reportedTeamLaunchEndRunIds.clear();
   reportedTeamLaunchStepKeys.clear();
   teamLaunchStepStartedAtByKey.clear();
@@ -438,45 +434,6 @@ function isTeamRequestScopeCurrent(
   );
 }
 
-function buildTeamSummaryIndexes(teams: readonly TeamSummary[]): {
-  teamByName: Record<string, TeamSummary>;
-  teamBySessionId: Record<string, TeamSummary>;
-} {
-  const teamByName: Record<string, TeamSummary> = {};
-  const teamBySessionId: Record<string, TeamSummary> = {};
-  for (const team of teams) {
-    teamByName[team.teamName] = team;
-    if (team.leadSessionId) {
-      teamBySessionId[team.leadSessionId] = team;
-    }
-    if (Array.isArray(team.sessionHistory)) {
-      for (const sid of team.sessionHistory) {
-        if (typeof sid === 'string' && sid) {
-          teamBySessionId[sid] = team;
-        }
-      }
-    }
-  }
-  return { teamByName, teamBySessionId };
-}
-
-function removeProvisioningSnapshotsForTeams(
-  snapshots: Record<string, TeamSummary>,
-  teams: readonly TeamSummary[]
-): Record<string, TeamSummary> {
-  let nextSnapshots = snapshots;
-  for (const team of teams) {
-    if (!Object.prototype.hasOwnProperty.call(nextSnapshots, team.teamName)) {
-      continue;
-    }
-    if (nextSnapshots === snapshots) {
-      nextSnapshots = { ...snapshots };
-    }
-    delete nextSnapshots[team.teamName];
-  }
-  return nextSnapshots;
-}
-
 export function __getTeamScopedTransientStateForTests(teamName: string): {
   hasResolvedMembersSelector: boolean;
   resolvedMemberSelectorCount: number;
@@ -523,22 +480,6 @@ export function __getTeamScopedTransientStateForTests(teamName: string): {
 
 function nowIso(): string {
   return new Date().toISOString();
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<T>((_resolve, reject) => {
-    timer = setTimeout(() => {
-      reject(new Error(`Timeout after ${ms}ms: ${label}`));
-    }, ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => {
-    if (timer) clearTimeout(timer);
-  });
 }
 
 function maybeLogMemberSpawnUiEqualSuppressed(
@@ -770,23 +711,6 @@ function recordTeamLaunchIpcFailure(
   });
 }
 
-function buildGlobalTaskProjectionNotification(
-  state: Pick<AppState, 'appConfig' | 'globalTasks' | 'globalTasksInitialized' | 'teamByName'>,
-  nextGlobalTasks: GlobalTask[]
-): GlobalTaskNotificationParams | null {
-  if (!state.globalTasksInitialized || nextGlobalTasks === state.globalTasks) {
-    return null;
-  }
-
-  return {
-    oldTasks: state.globalTasks,
-    newTasks: nextGlobalTasks,
-    appConfig: state.appConfig,
-    teamByName: state.teamByName,
-    isInitialFetch: false,
-  };
-}
-
 export interface GlobalTaskDetailState {
   teamName: string;
   taskId: string;
@@ -834,22 +758,10 @@ export interface TeamSlice
     TeamProvisioningLaunchSlice,
     TeamProvisioningProgressSlice,
     TeamRuntimeObservationSlice,
+    TeamDirectoryRendererSlice,
     TeamTaskArtifactsRendererSlice,
     TeamTaskBoardRendererSlice,
     TeamViewDataRendererSlice {
-  teams: TeamSummary[];
-  /** O(1) lookup to avoid array scans in render-hot paths */
-  teamByName: Record<string, TeamSummary>;
-  /** O(1) lookup: sessionId -> owning team (lead + history) */
-  teamBySessionId: Record<string, TeamSummary>;
-  /** Centralized git branch cache: normalizedPath → branch name | null */
-  branchByPath: Record<string, string | null>;
-  teamsLoading: boolean;
-  teamsError: string | null;
-  globalTasks: GlobalTask[];
-  globalTasksLoading: boolean;
-  globalTasksInitialized: boolean;
-  globalTasksError: string | null;
   globalTaskDetail: GlobalTaskDetailState | null;
   openGlobalTaskDetail: (teamName: string, taskId: string, commentId?: string) => void;
   closeGlobalTaskDetail: () => void;
@@ -904,9 +816,6 @@ export interface TeamSlice
   provisioningErrorByTeam: Record<string, string | null>;
   clearProvisioningError: (teamName?: string) => void;
   kanbanFilterQuery: string | null;
-  fetchBranches: (paths: string[]) => Promise<void>;
-  fetchTeams: () => Promise<void>;
-  fetchAllTasks: () => Promise<void>;
   openTeamsTab: (projectPath?: string) => void;
   openTeamTab: (teamName: string, projectPath?: string, taskId?: string) => void;
   clearKanbanFilter: () => void;
@@ -976,17 +885,38 @@ function loadToolApprovalSettings(): ToolApprovalSettings {
 }
 
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
-  teams: [],
-  teamByName: {},
-  teamBySessionId: {},
-  branchByPath: {},
-  teamsLoading: false,
-  teamsError: null,
-  globalTasks: [],
-  globalTasksLoading: false,
-  globalTasksInitialized: false,
-  globalTasksError: null,
-  ...createTeamViewDataRendererSlice<TeamRequestScope, GlobalTaskNotificationParams>({
+  ...createTeamDirectoryRendererSlice<AppState, ContextRequestScope>({
+    coordinator: teamDirectoryRefreshCoordinator,
+    notifications: {
+      consumeInitialFetch: consumeFirstGlobalTasksFetchFlag,
+      process: processGlobalTaskNotifications,
+    },
+    paths: {
+      normalize: normalizePath,
+    },
+    requestScope: {
+      capture: () => captureContextRequestScope(get),
+      isCurrent: (scope) => isContextRequestScopeCurrent(get, scope),
+    },
+    scheduler: {
+      delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    },
+    state: {
+      getState: () => get(),
+      setState: (update) => {
+        if (typeof update === 'function') {
+          set((state) => update(state));
+          return;
+        }
+        set(update);
+      },
+    },
+    structuralSharing: {
+      share: (previous, next) => structurallySharePlainValue(previous, next),
+    },
+    transport: createTeamDirectoryTransport(),
+  }),
+  ...createTeamViewDataRendererSlice<TeamRequestScope, GlobalTaskProjectionNotification>({
     actions: {
       getActions: () => get(),
     },
@@ -1491,199 +1421,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
   setMessagesPanelWidth: (width: number) => set({ messagesPanelWidth: width }),
   setSidebarLogsHeight: (height: number) => set({ sidebarLogsHeight: height }),
-
-  fetchBranches: async (paths: string[]) => {
-    const entries = await Promise.all(
-      paths.map(async (p) => {
-        try {
-          const branch = await api.teams.getProjectBranch(p);
-          return [normalizePath(p), branch] as const;
-        } catch {
-          return [normalizePath(p), null] as const;
-        }
-      })
-    );
-    const results: Record<string, string | null> = Object.fromEntries(entries);
-    if (Object.keys(results).length > 0) {
-      set((state) => {
-        let changed = false;
-        for (const [key, value] of Object.entries(results)) {
-          if (state.branchByPath[key] !== value) {
-            changed = true;
-            break;
-          }
-        }
-        if (!changed) {
-          return {};
-        }
-        return { branchByPath: { ...state.branchByPath, ...results } };
-      });
-    }
-  },
-
-  fetchTeams: async () => {
-    // Guard: prevent concurrent fetches (component mount + centralized init chain).
-    // Only effective during initial load (when teamsLoading is set to true below).
-    // Refreshes are already serialized by the throttle timer in onTeamChange.
-    if (get().teamsLoading) return;
-    const requestScope = captureContextRequestScope(get);
-    const requestId = ++latestTeamsFetchRequestId;
-    // Only show loading spinner on initial load — avoids flickering when refreshing
-    const isInitialLoad = get().teams.length === 0;
-    if (isInitialLoad) {
-      set({ teamsLoading: true, teamsError: null });
-    }
-    try {
-      const teams = await withTimeout(
-        unwrapIpc('team:list', () => api.teams.list()),
-        TEAM_FETCH_TIMEOUT_MS,
-        'fetchTeams'
-      );
-      if (
-        !isContextRequestScopeCurrent(get, requestScope) ||
-        latestTeamsFetchRequestId !== requestId
-      ) {
-        return;
-      }
-      // Atomic update: set teams AND clean up provisioning snapshots in one call
-      // to prevent any render cycle with duplicate cards.
-      set((state) => {
-        const nextTeams = structurallySharePlainValue(state.teams, teams);
-        const indexes = buildTeamSummaryIndexes(nextTeams);
-        const nextTeamByName = structurallySharePlainValue(state.teamByName, indexes.teamByName);
-        const nextTeamBySessionId = structurallySharePlainValue(
-          state.teamBySessionId,
-          indexes.teamBySessionId
-        );
-        const nextSnapshots = removeProvisioningSnapshotsForTeams(
-          state.provisioningSnapshotByTeam,
-          nextTeams
-        );
-
-        if (
-          nextTeams === state.teams &&
-          nextTeamByName === state.teamByName &&
-          nextTeamBySessionId === state.teamBySessionId &&
-          nextSnapshots === state.provisioningSnapshotByTeam &&
-          state.teamsLoading === false &&
-          state.teamsError === null
-        ) {
-          return {};
-        }
-
-        return {
-          teams: nextTeams,
-          teamByName: nextTeamByName,
-          teamBySessionId: nextTeamBySessionId,
-          teamsLoading: false,
-          teamsError: null,
-          provisioningSnapshotByTeam: nextSnapshots,
-        };
-      });
-    } catch (error) {
-      if (
-        !isContextRequestScopeCurrent(get, requestScope) ||
-        latestTeamsFetchRequestId !== requestId
-      ) {
-        return;
-      }
-      // On refresh failure, keep existing teams visible
-      set({
-        teamsLoading: false,
-        teamsError: isInitialLoad
-          ? error instanceof IpcError
-            ? error.message
-            : error instanceof Error
-              ? error.message
-              : 'Failed to fetch teams'
-          : null,
-      });
-    }
-  },
-
-  fetchAllTasks: async () => {
-    if (inFlightGlobalTasksRefresh) {
-      const inFlightScope = inFlightGlobalTasksRefreshScope;
-      if (
-        get().globalTasksInitialized ||
-        (inFlightScope && !isContextRequestScopeCurrent(get, inFlightScope))
-      ) {
-        pendingFreshGlobalTasksRefresh = true;
-      }
-      await inFlightGlobalTasksRefresh;
-      return;
-    }
-
-    const runRefresh = async (): Promise<void> => {
-      do {
-        const isFollowUpRefresh = pendingFreshGlobalTasksRefresh;
-        if (isFollowUpRefresh) {
-          await sleep(GLOBAL_TASKS_FOLLOW_UP_REFRESH_DELAY_MS);
-        }
-        pendingFreshGlobalTasksRefresh = false;
-
-        // Show skeleton only on the very first fetch — not on subsequent refreshes
-        // even when the task list is empty (avoids flickering skeleton on every watcher event).
-        const isInitialLoad = !get().globalTasksInitialized;
-        if (isInitialLoad) {
-          set({ globalTasksLoading: true, globalTasksError: null });
-        }
-        const requestScope = captureContextRequestScope(get);
-        inFlightGlobalTasksRefreshScope = requestScope;
-        const oldTasks = get().globalTasks;
-        try {
-          const tasks = await withTimeout(
-            unwrapIpc('team:getAllTasks', () => api.teams.getAllTasks()),
-            TEAM_FETCH_TIMEOUT_MS,
-            'fetchAllTasks'
-          );
-          if (!isContextRequestScopeCurrent(get, requestScope)) {
-            continue;
-          }
-          const notificationState = get();
-          const wasFirst = consumeFirstGlobalTasksFetchFlag();
-          processGlobalTaskNotifications({
-            oldTasks,
-            newTasks: tasks,
-            appConfig: notificationState.appConfig,
-            teamByName: notificationState.teamByName,
-            isInitialFetch: wasFirst,
-          });
-
-          set((state) => ({
-            globalTasks: structurallySharePlainValue(state.globalTasks, tasks),
-            globalTasksLoading: false,
-            globalTasksInitialized: true,
-            globalTasksError: null,
-          }));
-        } catch (error) {
-          if (!isContextRequestScopeCurrent(get, requestScope)) {
-            continue;
-          }
-          set({
-            globalTasksLoading: false,
-            globalTasksInitialized: true,
-            globalTasksError: isInitialLoad
-              ? error instanceof IpcError
-                ? error.message
-                : error instanceof Error
-                  ? error.message
-                  : 'Failed to fetch tasks'
-              : null,
-          });
-        }
-      } while (pendingFreshGlobalTasksRefresh);
-    };
-
-    const request = runRefresh().finally(() => {
-      if (inFlightGlobalTasksRefresh === request) {
-        inFlightGlobalTasksRefresh = null;
-        inFlightGlobalTasksRefreshScope = null;
-      }
-    });
-    inFlightGlobalTasksRefresh = request;
-    await request;
-  },
 
   openTeamsTab: (projectPath?: string) => {
     const state = get();
