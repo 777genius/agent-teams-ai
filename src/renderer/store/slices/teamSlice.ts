@@ -7,12 +7,17 @@ import {
   type TeamGraphLayoutSlice,
 } from '@features/agent-graph';
 import {
+  clearTeamTaskBoardAnalytics,
+  createTeamTaskBoardRendererSlice,
+  recordTeamTaskBoardSnapshotTransitions,
+  resetTeamTaskBoardAnalyticsForTests,
+  type TeamTaskBoardRendererSlice,
+} from '@features/team-task-board/renderer';
+import {
   buildProviderMix,
   classifyAnalyticsError,
   elapsedMsBetweenIso,
   elapsedMsSince,
-  recordTaskCreate,
-  recordTaskEnd,
   recordTeamCreate,
   recordTeamLaunchEnd,
 } from '@renderer/analytics/productAnalytics';
@@ -27,14 +32,11 @@ import { normalizePath } from '@renderer/utils/pathNormalize';
 import {
   buildTaskChangePresenceKey,
   buildTaskChangeRequestOptions,
-  canDisplayTaskChangesForOptions,
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
-import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
-import { calculateTaskImplementationDuration } from '@shared/utils/taskWorkDuration';
 
 import { areTeamAgentRuntimeSnapshotsEqual } from '../team/teamAgentRuntimeSnapshotEquality';
 import { stabilizeTeamAgentRuntimeSnapshot } from '../team/teamAgentRuntimeSnapshotStabilizer';
@@ -160,11 +162,9 @@ import type {
   ActiveToolCall,
   AddMemberRequest,
   AddTaskCommentRequest,
-  CreateTaskRequest,
   CrossTeamSendRequest,
   GlobalTask,
   InboxMessage,
-  KanbanColumnId,
   LeadActivityState,
   LeadContextUsage,
   MemberSpawnStatusEntry,
@@ -183,18 +183,14 @@ import type {
   TeamMemberActivityMeta,
   TeamProvisioningProgress,
   TeamSummary,
-  TeamTask,
-  TeamTaskStatus,
   TeamViewSnapshot,
   ToolApprovalRequest,
   ToolApprovalSettings,
-  UpdateKanbanPatch,
 } from '@shared/types';
 
 interface CurrentDevProductAnalytics {
   recordAttachmentAttachEnd(input: Record<string, unknown>): void;
   recordCrossTeamMessageSend(input: Record<string, unknown>): void;
-  recordTaskFirstOutput(input: Record<string, unknown>): void;
   recordTeamDelete(input: Record<string, unknown>): void;
   recordTeamLaunchStepEnd(input: Record<string, unknown>): void;
 }
@@ -205,7 +201,6 @@ const recordAttachmentAttachEnd =
   currentDevProductAnalytics.recordAttachmentAttachEnd ?? (() => undefined);
 const recordCrossTeamMessageSend =
   currentDevProductAnalytics.recordCrossTeamMessageSend ?? (() => undefined);
-const recordTaskFirstOutput = currentDevProductAnalytics.recordTaskFirstOutput ?? (() => undefined);
 const recordTeamDelete = currentDevProductAnalytics.recordTeamDelete ?? (() => undefined);
 const recordTeamLaunchStepEnd =
   currentDevProductAnalytics.recordTeamLaunchStepEnd ?? (() => undefined);
@@ -273,13 +268,10 @@ let latestTeamsFetchRequestId = 0;
 let inFlightGlobalTasksRefresh: Promise<void> | null = null;
 let inFlightGlobalTasksRefreshScope: ContextRequestScope | null = null;
 let pendingFreshGlobalTasksRefresh = false;
-const reportedTaskEndKeys = new Set<string>();
-const reportedTaskFirstOutputKeys = new Set<string>();
 const reportedTeamLaunchEndRunIds = new Set<string>();
 const reportedTeamLaunchStepKeys = new Set<string>();
 const teamLaunchAnalyticsByRunId = new Map<string, TeamLaunchAnalyticsContext>();
 const teamLaunchStepStartedAtByKey = new Map<string, number>();
-const taskFirstOutputAnalyticsByKey = new Map<string, TaskFirstOutputAnalyticsContext>();
 const teamAgentRuntimeFreshnessSnapshotsByTeamAndRun = new Map<
   string,
   Map<string | null, TeamAgentRuntimeSnapshot>
@@ -291,15 +283,6 @@ interface TeamLaunchAnalyticsContext {
   startedAtMs: number;
   memberCount: number | null;
   providerIds: (string | null)[];
-}
-
-interface TaskFirstOutputAnalyticsContext {
-  startedAtMs: number;
-  targetType: 'member' | 'team';
-  provider: string | null;
-  teamSize: number | null;
-  hasAttachments: boolean;
-  hasTaskRefs: boolean;
 }
 
 interface RefreshTeamDataOptions {
@@ -448,13 +431,11 @@ export function __resetTeamSliceModuleStateForTests(): void {
   latestTeamsFetchRequestId = 0;
   inFlightGlobalTasksRefresh = null;
   pendingFreshGlobalTasksRefresh = false;
-  reportedTaskEndKeys.clear();
-  reportedTaskFirstOutputKeys.clear();
   reportedTeamLaunchEndRunIds.clear();
   reportedTeamLaunchStepKeys.clear();
   teamLaunchStepStartedAtByKey.clear();
   teamLaunchAnalyticsByRunId.clear();
-  taskFirstOutputAnalyticsByKey.clear();
+  resetTeamTaskBoardAnalyticsForTests();
   teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.clear();
   clearAllPendingReplyRefreshWaits();
   clearAllLastResolvedTeamDataRefreshes();
@@ -888,43 +869,6 @@ function clearPendingReplyRefreshTimer(teamName: string): void {
   pendingTeamPendingReplyRefreshTimers.delete(teamName);
 }
 
-async function refreshTaskChangePresenceForUpdatedTask(
-  getState: () => AppState,
-  teamName: string,
-  taskId: string
-): Promise<void> {
-  const state = getState();
-  if (state.selectedTeamName !== teamName || !state.selectedTeamData) {
-    return;
-  }
-
-  const task = state.selectedTeamData.tasks.find((candidate) => candidate.id === taskId);
-  if (!task) {
-    return;
-  }
-
-  const options = buildTaskChangeRequestOptions(task);
-  if (!canDisplayTaskChangesForOptions(options)) {
-    return;
-  }
-
-  if (
-    typeof state.invalidateTaskChangePresence !== 'function' ||
-    typeof state.checkTaskHasChanges !== 'function'
-  ) {
-    return;
-  }
-
-  const cacheKey = buildTaskChangePresenceKey(teamName, taskId, options);
-  state.invalidateTaskChangePresence([cacheKey]);
-
-  try {
-    await state.checkTaskHasChanges(teamName, taskId, options);
-  } catch {
-    // Best-effort refresh after explicit task transition.
-  }
-}
-
 function getProviderIdsFromTeamCreateRequest(
   request: Pick<TeamCreateRequest, 'providerId' | 'members'>
 ): (string | null)[] {
@@ -964,99 +908,6 @@ function buildTeamLaunchAnalyticsContext(
     memberCount: data?.members.length ?? null,
     providerIds: providerIds.length > 0 ? providerIds : [request.providerId ?? null],
   };
-}
-
-function hasCreateTaskRefs(request: CreateTaskRequest): boolean {
-  return (
-    (request.descriptionTaskRefs?.length ?? 0) > 0 ||
-    (request.promptTaskRefs?.length ?? 0) > 0 ||
-    (request.blockedBy?.length ?? 0) > 0 ||
-    (request.related?.length ?? 0) > 0
-  );
-}
-
-function getTaskAnalyticsKey(teamName: string, taskId: string): string {
-  return `${teamName}:${taskId}`;
-}
-
-function getTaskProviderId(data: TeamViewSnapshot, task: TeamTask): string | null {
-  if (!task.owner) return null;
-  return data.members.find((member) => member.name === task.owner)?.providerId ?? null;
-}
-
-function getProviderIdForMember(data: TeamViewSnapshot | null, memberName?: string): string | null {
-  if (!data || !memberName) return null;
-  return data.members.find((member) => member.name === memberName)?.providerId ?? null;
-}
-
-function getKnownChangedFilesCount(task: TeamTask): number | null {
-  if ('changePresence' in task && task.changePresence === 'no_changes') {
-    return 0;
-  }
-  return null;
-}
-
-function isTaskReviewRequired(task: TeamTask): boolean {
-  return (
-    task.reviewState === 'review' ||
-    task.reviewState === 'needsFix' ||
-    ('changePresence' in task &&
-      (task.changePresence === 'has_changes' || task.changePresence === 'needs_attention'))
-  );
-}
-
-function isTeammateTaskComment(comment: TaskComment): boolean {
-  const author = comment.author.trim();
-  if (!author) return false;
-  if (author.toLowerCase() === 'user') return false;
-  return !isLeadMember({ name: author });
-}
-
-function recordTaskFirstOutputTransitions(teamName: string, nextData: TeamViewSnapshot): void {
-  for (const task of nextData.tasks) {
-    const eventKey = getTaskAnalyticsKey(teamName, task.id);
-    const context = taskFirstOutputAnalyticsByKey.get(eventKey);
-    if (!context || reportedTaskFirstOutputKeys.has(eventKey)) continue;
-    if (!task.comments?.some(isTeammateTaskComment)) continue;
-
-    reportedTaskFirstOutputKeys.add(eventKey);
-    taskFirstOutputAnalyticsByKey.delete(eventKey);
-    recordTaskFirstOutput({
-      targetType: context.targetType,
-      durationMs: elapsedMsSince(context.startedAtMs),
-      provider: context.provider ?? getTaskProviderId(nextData, task),
-      teamSize: context.teamSize,
-      hasAttachments: context.hasAttachments,
-      hasTaskRefs: context.hasTaskRefs,
-    });
-  }
-}
-
-function recordTaskEndTransitions(
-  teamName: string,
-  previousData: TeamViewSnapshot | null,
-  nextData: TeamViewSnapshot
-): void {
-  if (!previousData) return;
-  const previousTaskById = new Map(previousData.tasks.map((task) => [task.id, task]));
-  for (const task of nextData.tasks) {
-    if (task.status !== 'completed') continue;
-    const previousTask = previousTaskById.get(task.id);
-    if (!previousTask || previousTask.status === 'completed') continue;
-    const eventKey = `${teamName}:${task.id}:completed`;
-    if (reportedTaskEndKeys.has(eventKey)) continue;
-    reportedTaskEndKeys.add(eventKey);
-
-    const duration = calculateTaskImplementationDuration(task);
-    recordTaskEnd({
-      result: 'completed',
-      durationMs: duration.elapsedMs > 0 ? duration.elapsedMs : null,
-      provider: getTaskProviderId(nextData, task),
-      changedFilesCount: getKnownChangedFilesCount(task),
-      reviewRequired: isTaskReviewRequired(task),
-      errorClass: 'none',
-    });
-  }
 }
 
 function getProgressTimestampMs(value: string | undefined): number | null {
@@ -1188,14 +1039,6 @@ function clearTeamLaunchStepTracking(runId: string): void {
   for (const key of teamLaunchStepStartedAtByKey.keys()) {
     if (key.startsWith(`${runId}:`)) {
       teamLaunchStepStartedAtByKey.delete(key);
-    }
-  }
-}
-
-function clearTaskFirstOutputTrackingForTeam(teamName: string): void {
-  for (const key of taskFirstOutputAnalyticsByKey.keys()) {
-    if (key.startsWith(`${teamName}:`)) {
-      taskFirstOutputAnalyticsByKey.delete(key);
     }
   }
 }
@@ -1402,7 +1245,7 @@ function isVisibleInActiveTeamSurface(
   });
 }
 
-export interface TeamSlice extends TeamGraphLayoutSlice {
+export interface TeamSlice extends TeamGraphLayoutSlice, TeamTaskBoardRendererSlice {
   teams: TeamSummary[];
   /** O(1) lookup to avoid array scans in render-hot paths */
   teamByName: Record<string, TeamSummary>;
@@ -1462,7 +1305,6 @@ export interface TeamSlice extends TeamGraphLayoutSlice {
     teamName: string,
     input: string | { messageId: string; statusMessageId?: string | null }
   ) => Promise<void>;
-  reviewActionError: string | null;
   provisioningRuns: Record<string, TeamProvisioningProgress>;
   /** Synthetic TeamSummary snapshots for teams currently being provisioned (before config.json exists). */
   provisioningSnapshotByTeam: Record<string, TeamSummary>;
@@ -1538,23 +1380,6 @@ export interface TeamSlice extends TeamGraphLayoutSlice {
   crossTeamTargetsLoading: boolean;
   fetchCrossTeamTargets: () => Promise<boolean>;
   sendCrossTeamMessage: (request: CrossTeamSendRequest) => Promise<void>;
-  requestReview: (teamName: string, taskId: string) => Promise<void>;
-  updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
-  updateKanbanColumnOrder: (
-    teamName: string,
-    columnId: KanbanColumnId,
-    orderedTaskIds: string[]
-  ) => Promise<void>;
-  createTeamTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
-  startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
-  startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
-  updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
-  updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;
-  updateTaskFields: (
-    teamName: string,
-    taskId: string,
-    fields: { subject?: string; description?: string }
-  ) => Promise<void>;
   addingComment: boolean;
   addCommentError: string | null;
   addTaskComment: (
@@ -1575,23 +1400,6 @@ export interface TeamSlice extends TeamGraphLayoutSlice {
   retryFailedOpenCodeSecondaryLanes: (
     teamName: string
   ) => Promise<RetryFailedOpenCodeSecondaryLanesResult>;
-  addTaskRelationship: (
-    teamName: string,
-    taskId: string,
-    targetId: string,
-    type: 'blockedBy' | 'blocks' | 'related'
-  ) => Promise<void>;
-  removeTaskRelationship: (
-    teamName: string,
-    taskId: string,
-    targetId: string,
-    type: 'blockedBy' | 'blocks' | 'related'
-  ) => Promise<void>;
-  setTaskNeedsClarification: (
-    teamName: string,
-    taskId: string,
-    value: 'lead' | 'user' | null
-  ) => Promise<void>;
   saveTaskAttachment: (
     teamName: string,
     taskId: string,
@@ -1609,11 +1417,6 @@ export interface TeamSlice extends TeamGraphLayoutSlice {
     attachmentId: string,
     mimeType: string
   ) => Promise<string | null>;
-  deletedTasks: TeamTask[];
-  deletedTasksLoading: boolean;
-  softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
-  restoreTask: (teamName: string, taskId: string) => Promise<void>;
-  fetchDeletedTasks: (teamName: string) => Promise<void>;
   deleteTeam: (teamName: string) => Promise<void>;
   restoreTeam: (teamName: string) => Promise<void>;
   permanentlyDeleteTeam: (teamName: string) => Promise<void>;
@@ -1813,7 +1616,22 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   lastSendMessageResult: null,
   crossTeamTargets: [],
   crossTeamTargetsLoading: false,
-  reviewActionError: null,
+  ...createTeamTaskBoardRendererSlice({
+    getState: () => {
+      const state = get();
+      return {
+        checkTaskHasChanges: state.checkTaskHasChanges,
+        fetchAllTasks: state.fetchAllTasks,
+        getTeamData: (teamName) => selectTeamDataForName(state, teamName),
+        invalidateTaskChangePresence: state.invalidateTaskChangePresence,
+        refreshTeamData: state.refreshTeamData,
+        selectedTeamData: state.selectedTeamData,
+        selectedTeamName: state.selectedTeamName,
+      };
+    },
+    mapReviewError,
+    setState: (state) => set(state),
+  }),
   provisioningRuns: {},
   provisioningSnapshotByTeam: {},
   currentProvisioningRunIdByTeam: {},
@@ -1995,8 +1813,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   addingComment: false,
   addCommentError: null,
   provisioningProgressUnsubscribe: null,
-  deletedTasks: [],
-  deletedTasksLoading: false,
   pendingApprovals: [],
   resolvedApprovals: new Map(),
   toolApprovalSettings: loadToolApprovalSettings(),
@@ -2794,8 +2610,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           ...selectedState,
         };
       });
-      recordTaskEndTransitions(teamName, previousData, nextTeamData);
-      recordTaskFirstOutputTransitions(teamName, nextTeamData);
+      recordTeamTaskBoardSnapshotTransitions(teamName, previousData, nextTeamData);
       if (projectedGlobalTaskNotifications) {
         processGlobalTaskNotifications(projectedGlobalTaskNotifications);
       }
@@ -3266,30 +3081,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     pendingTeamPendingReplyRefreshTimers.set(teamName, timer);
   },
 
-  updateKanban: async (teamName: string, taskId: string, patch: UpdateKanbanPatch) => {
-    try {
-      set({ reviewActionError: null });
-      await unwrapIpc('team:updateKanban', () => api.teams.updateKanban(teamName, taskId, patch));
-      await get().refreshTeamData(teamName);
-    } catch (error) {
-      set({
-        reviewActionError: mapReviewError(error),
-      });
-      throw error;
-    }
-  },
-
-  updateKanbanColumnOrder: async (
-    teamName: string,
-    columnId: KanbanColumnId,
-    orderedTaskIds: string[]
-  ) => {
-    await unwrapIpc('team:updateKanbanColumnOrder', () =>
-      api.teams.updateKanbanColumnOrder(teamName, columnId, orderedTaskIds)
-    );
-    await get().refreshTeamData(teamName);
-  },
-
   sendTeamMessage: async (teamName: string, request: SendMessageRequest) => {
     set({
       sendingMessage: true,
@@ -3501,109 +3292,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
 
-  requestReview: async (teamName: string, taskId: string) => {
-    try {
-      set({ reviewActionError: null });
-      await unwrapIpc('team:requestReview', () => api.teams.requestReview(teamName, taskId));
-      await get().refreshTeamData(teamName);
-      void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
-    } catch (error) {
-      set({
-        reviewActionError: mapReviewError(error),
-      });
-      throw error;
-    }
-  },
-
-  createTeamTask: async (teamName: string, request: CreateTaskRequest) => {
-    const taskStartedAtMs = Date.now();
-    const task = await unwrapIpc('team:createTask', () => api.teams.createTask(teamName, request));
-    const teamData = selectTeamDataForName(get(), teamName);
-    const hasTaskRefs = hasCreateTaskRefs(request);
-    recordTaskCreate({
-      source: 'dialog',
-      targetType: request.owner ? 'member' : 'team',
-      hasAttachments: false,
-      hasTaskRefs,
-      promptLength: request.prompt?.length ?? 0,
-      teamSize: teamData?.members.length ?? null,
-    });
-    taskFirstOutputAnalyticsByKey.set(getTaskAnalyticsKey(teamName, task.id), {
-      startedAtMs: taskStartedAtMs,
-      targetType: request.owner ? 'member' : 'team',
-      provider: getProviderIdForMember(teamData, request.owner),
-      teamSize: teamData?.members.length ?? null,
-      hasAttachments: false,
-      hasTaskRefs,
-    });
-    await get().refreshTeamData(teamName);
-    return task;
-  },
-
-  startTask: async (teamName: string, taskId: string) => {
-    const result = await unwrapIpc('team:startTask', () => api.teams.startTask(teamName, taskId));
-    await get().refreshTeamData(teamName);
-    void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
-    return result;
-  },
-
-  startTaskByUser: async (teamName: string, taskId: string) => {
-    const result = await unwrapIpc('team:startTaskByUser', () =>
-      api.teams.startTaskByUser(teamName, taskId)
-    );
-    await get().refreshTeamData(teamName);
-    void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
-    return result;
-  },
-
-  updateTaskStatus: async (teamName: string, taskId: string, status: TeamTaskStatus) => {
-    await unwrapIpc('team:updateTaskStatus', () =>
-      api.teams.updateTaskStatus(teamName, taskId, status)
-    );
-    await get().refreshTeamData(teamName);
-    void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
-  },
-
-  updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
-    await unwrapIpc('team:updateTaskOwner', () =>
-      api.teams.updateTaskOwner(teamName, taskId, owner)
-    );
-    await get().refreshTeamData(teamName);
-  },
-
-  updateTaskFields: async (
-    teamName: string,
-    taskId: string,
-    fields: { subject?: string; description?: string }
-  ) => {
-    await unwrapIpc('team:updateTaskFields', () =>
-      api.teams.updateTaskFields(teamName, taskId, fields)
-    );
-    await get().refreshTeamData(teamName);
-  },
-
-  addTaskRelationship: async (teamName, taskId, targetId, type) => {
-    await unwrapIpc('team:addTaskRelationship', () =>
-      api.teams.addTaskRelationship(teamName, taskId, targetId, type)
-    );
-    await get().refreshTeamData(teamName);
-  },
-
-  removeTaskRelationship: async (teamName, taskId, targetId, type) => {
-    await unwrapIpc('team:removeTaskRelationship', () =>
-      api.teams.removeTaskRelationship(teamName, taskId, targetId, type)
-    );
-    await get().refreshTeamData(teamName);
-  },
-
-  setTaskNeedsClarification: async (teamName, taskId, value) => {
-    await unwrapIpc('team:setTaskClarification', () =>
-      api.teams.setTaskClarification(teamName, taskId, value)
-    );
-    await get().refreshTeamData(teamName);
-    await get().fetchAllTasks();
-  },
-
   saveTaskAttachment: async (teamName, taskId, file) => {
     const id = crypto.randomUUID();
     try {
@@ -3746,31 +3434,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     await get().refreshTeamData(teamName);
   },
 
-  softDeleteTask: async (teamName: string, taskId: string) => {
-    await unwrapIpc('team:softDeleteTask', () => api.teams.softDeleteTask(teamName, taskId));
-    await get().refreshTeamData(teamName);
-    await get().fetchDeletedTasks(teamName);
-  },
-
-  restoreTask: async (teamName: string, taskId: string) => {
-    await unwrapIpc('team:restoreTask', () => api.teams.restoreTask(teamName, taskId));
-    await get().refreshTeamData(teamName);
-    await get().fetchDeletedTasks(teamName);
-  },
-
-  fetchDeletedTasks: async (teamName: string) => {
-    set({ deletedTasksLoading: true });
-    try {
-      const tasks = await unwrapIpc('team:getDeletedTasks', () =>
-        api.teams.getDeletedTasks(teamName)
-      );
-      set({ deletedTasks: tasks, deletedTasksLoading: false });
-    } catch (error) {
-      logger.error('Failed to fetch deleted tasks:', error);
-      set({ deletedTasks: [], deletedTasksLoading: false });
-    }
-  },
-
   deleteTeam: async (teamName: string) => {
     const analyticsContext = getTeamLifecycleAnalyticsContext(
       selectTeamDataForName(get(), teamName)
@@ -3793,7 +3456,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       throw error;
     }
     invalidateTeamLocalStateEpoch(teamName);
-    clearTaskFirstOutputTrackingForTeam(teamName);
+    clearTeamTaskBoardAnalytics(teamName);
     clearPendingReplyRefreshTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);
     clearTeamScopedTransientState(teamName);
