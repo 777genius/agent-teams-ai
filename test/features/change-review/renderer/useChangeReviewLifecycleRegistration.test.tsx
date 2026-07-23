@@ -21,6 +21,13 @@ interface LifecycleProbeProps {
   registerAppCloseParticipant: RegisterChangeReviewAppCloseParticipant;
 }
 
+async function flushReact(action: () => void): Promise<void> {
+  await act(async () => {
+    action();
+    await Promise.resolve();
+  });
+}
+
 function LifecycleProbe({
   open,
   hostId = 'host-a',
@@ -30,7 +37,7 @@ function LifecycleProbe({
   flushForAppClose,
   registerOwner,
   registerAppCloseParticipant,
-}: LifecycleProbeProps): React.JSX.Element {
+}: Readonly<LifecycleProbeProps>): React.JSX.Element {
   const [authorized, setAuthorized] = useState(false);
   useChangeReviewLifecycleRegistration({
     open,
@@ -73,11 +80,11 @@ describe('useChangeReviewLifecycleRegistration', () => {
         return unregisterAppClose;
       }
     );
-    const requestClose = vi.fn(async () => true);
+    const requestClose = vi.fn(() => Promise.resolve(true));
     const closeRejectedDialog = vi.fn();
-    const flushForAppClose = vi.fn<AppCloseParticipant>(async () => ({ ok: true }));
+    const flushForAppClose = vi.fn<AppCloseParticipant>(() => Promise.resolve({ ok: true }));
 
-    await act(async () => {
+    await flushReact(() => {
       root.render(
         <LifecycleProbe
           open
@@ -113,7 +120,7 @@ describe('useChangeReviewLifecycleRegistration', () => {
     expect(flushForAppClose).toHaveBeenCalledOnce();
     expect(closeRejectedDialog).not.toHaveBeenCalled();
 
-    await act(async () => root.unmount());
+    await flushReact(() => root.unmount());
     expect(unregisterOwner).toHaveBeenCalledOnce();
     expect(unregisterAppClose).toHaveBeenCalledOnce();
   });
@@ -131,13 +138,13 @@ describe('useChangeReviewLifecycleRegistration', () => {
     const registerAppCloseParticipant = vi.fn<RegisterChangeReviewAppCloseParticipant>();
     const closeRejectedDialog = vi.fn();
 
-    await act(async () => {
+    await flushReact(() => {
       root.render(
         <LifecycleProbe
           open
-          requestClose={async () => true}
+          requestClose={() => Promise.resolve(true)}
           closeRejectedDialog={closeRejectedDialog}
-          flushForAppClose={async () => ({ ok: true })}
+          flushForAppClose={() => Promise.resolve({ ok: true })}
           registerOwner={registerOwner}
           registerAppCloseParticipant={registerAppCloseParticipant}
         />
@@ -148,7 +155,7 @@ describe('useChangeReviewLifecycleRegistration', () => {
     expect(closeRejectedDialog).toHaveBeenCalledOnce();
     expect(registerAppCloseParticipant).not.toHaveBeenCalled();
 
-    await act(async () => root.unmount());
+    await flushReact(() => root.unmount());
     expect(unregisterOwner).toHaveBeenCalledOnce();
   });
 
@@ -168,17 +175,17 @@ describe('useChangeReviewLifecycleRegistration', () => {
     );
     const sharedProps = {
       open: true,
-      requestClose: async () => true,
+      requestClose: () => Promise.resolve(true),
       closeRejectedDialog: vi.fn(),
-      flushForAppClose: async () => ({ ok: true }),
+      flushForAppClose: () => Promise.resolve({ ok: true }),
       registerOwner,
       registerAppCloseParticipant,
     };
 
-    await act(async () => {
+    await flushReact(() => {
       root.render(<LifecycleProbe {...sharedProps} hostId="host-a" sessionId="session-a" />);
     });
-    await act(async () => {
+    await flushReact(() => {
       root.render(<LifecycleProbe {...sharedProps} hostId="host-b" sessionId="session-b" />);
     });
 
@@ -189,7 +196,7 @@ describe('useChangeReviewLifecycleRegistration', () => {
     );
     expect(host.firstElementChild?.getAttribute('data-authorized')).toBe('true');
 
-    await act(async () => root.unmount());
+    await flushReact(() => root.unmount());
     expect(secondUnregister).toHaveBeenCalledOnce();
   });
 });

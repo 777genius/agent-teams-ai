@@ -21,9 +21,16 @@ interface ProbeValue {
   ) => operationScope is ReviewOperationScopeToken;
 }
 
+async function flushReact(action: () => void): Promise<void> {
+  await act(async () => {
+    action();
+    await Promise.resolve();
+  });
+}
+
 let latest: ProbeValue | null = null;
 
-function OperationProbe(props: ProbeProps): React.JSX.Element {
+function OperationProbe(props: Readonly<ProbeProps>): React.JSX.Element {
   latest = useChangeReviewOperationGeneration(props);
   return <div />;
 }
@@ -42,7 +49,7 @@ describe('useChangeReviewOperationGeneration', () => {
     const root = createRoot(host);
     const resetGenerationState = vi.fn();
 
-    await act(async () => {
+    await flushReact(() => {
       root.render(
         <OperationProbe
           active={false}
@@ -55,7 +62,7 @@ describe('useChangeReviewOperationGeneration', () => {
     });
     expect(latest!.captureReviewOperationScope()).toBeNull();
 
-    await act(async () => {
+    await flushReact(() => {
       root.render(
         <OperationProbe
           active
@@ -69,7 +76,7 @@ describe('useChangeReviewOperationGeneration', () => {
     expect(latest!.captureReviewOperationScope()).toMatchObject({ hydrationKey: 'scope-a' });
     expect(resetGenerationState).toHaveBeenCalledTimes(2);
 
-    await act(async () => root.unmount());
+    await flushReact(() => root.unmount());
   });
 
   it('invalidates stale work across A -> B -> A and same-scope epoch changes', async () => {
@@ -79,7 +86,7 @@ describe('useChangeReviewOperationGeneration', () => {
     const root = createRoot(host);
     const resetGenerationState = vi.fn();
     const renderProbe = async (decisionHydrationKey: string, changeSetEpoch: number) => {
-      await act(async () => {
+      await flushReact(() => {
         root.render(
           <OperationProbe
             active
@@ -105,7 +112,7 @@ describe('useChangeReviewOperationGeneration', () => {
     expect(new Set([firstA, scopeB, reopenedA, refreshedA]).size).toBe(4);
     expect(resetGenerationState).toHaveBeenCalledTimes(4);
 
-    await act(async () => root.unmount());
+    await flushReact(() => root.unmount());
     expect(latest!.captureReviewOperationScope()).toBeNull();
     expect(latest!.isCurrentReviewOperationScope(refreshedA)).toBe(false);
   });
