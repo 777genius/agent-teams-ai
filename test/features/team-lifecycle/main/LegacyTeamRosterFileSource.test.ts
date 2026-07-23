@@ -11,7 +11,10 @@ import {
   parseTeamIdentityChecksum,
 } from '@features/internal-storage/contracts';
 import { AdoptTeamRoster, type TeamRosterRepository } from '@features/team-lifecycle';
-import { LegacyTeamRosterFileSource } from '@features/team-lifecycle/main/infrastructure/LegacyTeamRosterFileSource';
+import {
+  LegacyTeamRosterFileSource,
+  type LegacyTeamRosterFileOpen,
+} from '@features/team-lifecycle/main/infrastructure/LegacyTeamRosterFileSource';
 import { parseMemberId, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -30,7 +33,7 @@ describe('LegacyTeamRosterFileSource', () => {
     }
   });
 
-  async function source(): Promise<{
+  async function source(openFile?: LegacyTeamRosterFileOpen): Promise<{
     fileSource: LegacyTeamRosterFileSource;
     teamDirectory: string;
   }> {
@@ -86,6 +89,7 @@ describe('LegacyTeamRosterFileSource', () => {
       fileSource: new LegacyTeamRosterFileSource({
         teamsRootPath: temporaryDirectory,
         teamIdentityGateway: identityGateway,
+        openFile,
       }),
       teamDirectory,
     };
@@ -230,22 +234,22 @@ describe('LegacyTeamRosterFileSource', () => {
   });
 
   it('revalidates the directory fingerprint immediately after a roster read', async () => {
-    const { fileSource, teamDirectory } = await source();
+    const actualOpen = nodeFs.promises.open.bind(nodeFs.promises);
+    let replaced = false;
+    const { fileSource, teamDirectory } = await source(async (targetPath, flags) => {
+      const handle = await actualOpen(targetPath, flags);
+      if (!replaced && path.basename(String(targetPath)) === 'config.json') {
+        replaced = true;
+        const observedTeamDirectory = path.dirname(String(targetPath));
+        await fs.rename(observedTeamDirectory, `${observedTeamDirectory}.during-read`);
+        await fs.mkdir(observedTeamDirectory);
+      }
+      return handle;
+    });
     await fs.writeFile(
       path.join(teamDirectory, 'config.json'),
       JSON.stringify({ members: [{ name: 'builder', providerId: 'codex' }] })
     );
-    const actualOpen = nodeFs.promises.open.bind(nodeFs.promises);
-    let replaced = false;
-    vi.spyOn(nodeFs.promises, 'open').mockImplementation(async (...args) => {
-      const handle = await actualOpen(...args);
-      if (!replaced && String(args[0]) === path.join(teamDirectory, 'config.json')) {
-        replaced = true;
-        await fs.rename(teamDirectory, `${teamDirectory}.during-read`);
-        await fs.mkdir(teamDirectory);
-      }
-      return handle;
-    });
 
     await expect(fileSource.readLegacyTeamRosterEvidence(teamId)).resolves.toEqual({
       status: 'blocked',
