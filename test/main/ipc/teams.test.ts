@@ -143,6 +143,11 @@ import {
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
 } from '../../../src/features/team-lifecycle';
 import {
+  createTeamMessageDeliveryFeature,
+  registerTeamMessageDeliveryIpc,
+  removeTeamMessageDeliveryIpc,
+} from '../../../src/features/team-message-delivery/main';
+import {
   createTeamTaskBoardFeature,
   registerTeamTaskBoardIpc,
   removeTeamTaskBoardIpc,
@@ -364,11 +369,20 @@ const TEAM_CONFIGURATION_HANDLER_KEYS = [
   TEAM_DELETE_DRAFT,
 ] as const;
 const TEAM_CONFIGURATION_HANDLER_KEY_SET = new Set<string>(TEAM_CONFIGURATION_HANDLER_KEYS);
+const TEAM_MESSAGE_DELIVERY_HANDLER_KEYS = [
+  TEAM_SEND_MESSAGE,
+  TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
+  TEAM_PROCESS_SEND,
+  TEAM_PROCESS_ALIVE,
+  TEAM_GET_ATTACHMENTS,
+] as const;
+const TEAM_MESSAGE_DELIVERY_HANDLER_KEY_SET = new Set<string>(TEAM_MESSAGE_DELIVERY_HANDLER_KEYS);
 const TEAM_HANDLER_KEYS = ALL_TEAM_HANDLER_KEYS.filter(
   (channel) =>
     !TEAM_TASK_BOARD_HANDLER_KEY_SET.has(channel) &&
     !TEAM_VIEW_READ_MODEL_HANDLER_KEY_SET.has(channel) &&
-    !TEAM_CONFIGURATION_HANDLER_KEY_SET.has(channel)
+    !TEAM_CONFIGURATION_HANDLER_KEY_SET.has(channel) &&
+    !TEAM_MESSAGE_DELIVERY_HANDLER_KEY_SET.has(channel)
 );
 
 describe('ipc teams handlers', () => {
@@ -387,6 +401,7 @@ describe('ipc teams handlers', () => {
   };
   const teamViewReadModelLogger = createLogger('IPC:teams');
   const teamConfigurationLogger = createLogger('IPC:teams');
+  const teamMessageDeliveryLogger = createLogger('IPC:teams');
   let launchIoGovernor: LaunchIoGovernor;
 
   const service = {
@@ -768,6 +783,13 @@ describe('ipc teams handlers', () => {
       logger: teamConfigurationLogger,
     });
     registerTeamConfigurationIpc(ipcMain as never, teamConfigurationFeature);
+    const teamMessageDeliveryFeature = createTeamMessageDeliveryFeature({
+      repository: service as never,
+      runtime: teamHandlerApis.runtime,
+      messaging: teamHandlerApis.messaging,
+      logger: teamMessageDeliveryLogger,
+    });
+    registerTeamMessageDeliveryIpc(ipcMain as never, teamMessageDeliveryFeature);
     const teamViewReadModelFeature = createTeamViewReadModelFeature({
       data: service as never,
       provisioningRuns: teamHandlerApis.provisioningRun,
@@ -814,6 +836,9 @@ describe('ipc teams handlers', () => {
       expect(legacyChannels.has(channel)).toBe(false);
     }
     for (const channel of TEAM_CONFIGURATION_HANDLER_KEYS) {
+      expect(legacyChannels.has(channel)).toBe(false);
+    }
+    for (const channel of TEAM_MESSAGE_DELIVERY_HANDLER_KEYS) {
       expect(legacyChannels.has(channel)).toBe(false);
     }
   });
@@ -5352,6 +5377,7 @@ describe('ipc teams handlers', () => {
   it('removes all expected handlers', () => {
     removeTeamHandlers(ipcMain as never);
     removeTeamConfigurationIpc(ipcMain as never);
+    removeTeamMessageDeliveryIpc(ipcMain as never);
     removeTeamViewReadModelIpc(ipcMain as never);
     removeTeamTaskBoardIpc(ipcMain as never);
     expect(ipcMain.removeHandler).toHaveBeenCalledTimes(ALL_TEAM_HANDLER_KEYS.length);

@@ -1,8 +1,4 @@
 import {
-  estimateAgentAttachmentSerializedPayloadBytes,
-  MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES,
-} from '@features/agent-attachments/contracts';
-import {
   isProvisioningTeamName,
   parseOptionalLaunchProviderBackendId,
   parseOptionalMemberEffort,
@@ -28,7 +24,6 @@ import { getAppIconPath } from '@main/utils/appIcon';
 import { getAppDataPath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
-import { withTimeoutValue } from '@main/utils/withTimeoutValue';
 import {
   TEAM_ADD_MEMBER,
   TEAM_ALIVE_LIST,
@@ -38,12 +33,10 @@ import {
   TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
   TEAM_GET_AGENT_RUNTIME,
-  TEAM_GET_ATTACHMENTS,
   TEAM_GET_CLAUDE_LOGS,
   TEAM_GET_LOGS_FOR_TASK,
   TEAM_GET_MEMBER_LOGS,
   TEAM_GET_MEMBER_STATS,
-  TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
   TEAM_GET_PROJECT_BRANCH,
   TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_WORKTREE_GIT_STATUS,
@@ -57,8 +50,6 @@ import {
   TEAM_MEMBER_SPAWN_STATUSES,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
-  TEAM_PROCESS_ALIVE,
-  TEAM_PROCESS_SEND,
   TEAM_PROVISIONING_PROGRESS,
   TEAM_PROVISIONING_STATUS,
   TEAM_REMOVE_MEMBER,
@@ -68,7 +59,6 @@ import {
   TEAM_RESTORE_MEMBER,
   TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
   TEAM_SAVE_TASK_ATTACHMENT,
-  TEAM_SEND_MESSAGE,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
   TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
@@ -79,24 +69,17 @@ import {
   TEAM_VALIDATE_CLI_ARGS,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
-import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { createSafeAppError } from '@shared/contracts/hosted';
 import {
   extractFlagsFromHelp,
   extractUserFlags,
   PROTECTED_CLI_FLAGS,
 } from '@shared/utils/cliArgsParser';
-import { getErrorMessage } from '@shared/utils/errorHandling';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-import {
-  buildStandaloneSlashCommandMeta,
-  parseStandaloneSlashCommand,
-} from '@shared/utils/slashCommands';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
-import crypto from 'crypto';
 import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -105,10 +88,6 @@ import { ConfigManager } from '../services/infrastructure/ConfigManager';
 import { NotificationManager } from '../services/infrastructure/NotificationManager';
 import { gitIdentityResolver } from '../services/parsing/GitIdentityResolver';
 import {
-  buildActionModeAgentBlock,
-  isAgentActionMode,
-} from '../services/team/actionModeInstructions';
-import {
   cloneLaunchIoGovernorPayload,
   type LaunchIoGovernor,
 } from '../services/team/LaunchIoGovernor';
@@ -116,8 +95,6 @@ import {
   buildReplaceMembersDiff,
   buildReplaceMembersSummaryMessage,
 } from '../services/team/memberUpdateNotifications';
-import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
-import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
 import { readTeamLaunchFailureDiagnosticsBundle } from '../services/team/TeamLaunchFailureArtifactPack';
 import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
@@ -125,9 +102,7 @@ import { TeamMetaStore } from '../services/team/TeamMetaStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
-import { validateTaskRefs } from './validation/taskRefs';
 import {
-  validateFromField,
   validateMemberName,
   validateTaskId,
   validateTeammateName,
@@ -148,7 +123,6 @@ import type {
   TeamIpcHandlerApis,
   TeamMemberLifecycleApi,
   TeamMessagingApi,
-  TeamOpenCodeMemberInboxRelayResult,
   TeamProvisioningPreflightApi,
   TeamProvisioningRunApi,
   TeamProvisioningStartApi,
@@ -159,10 +133,6 @@ import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
 import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
 import type {
-  AgentActionMode,
-  AttachmentFileData,
-  AttachmentMeta,
-  AttachmentPayload,
   EffortLevel,
   IpcResult,
   LeadActivitySnapshot,
@@ -170,10 +140,7 @@ import type {
   MemberFullStats,
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
-  OpenCodeRuntimeDeliveryStatus,
   RetryFailedOpenCodeSecondaryLanesResult,
-  SendMessageRequest,
-  SendMessageResult,
   TaskAttachmentMeta,
   TeamAgentRuntimeSnapshot,
   TeamClaudeLogsQuery,
@@ -197,235 +164,6 @@ import type {
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 
 const logger = createLogger('IPC:teams');
-// Runtime relay continues in the background after this race; keep sendMessage IPC off the
-// 25s OpenCode turn-settled guard while still giving prompt acceptance/reconcile time.
-const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_MS = 6_000;
-const OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS = 1_000;
-const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON =
-  'opencode_runtime_delivery_ui_timeout_pending';
-
-type OpenCodeMemberInboxRelayResult = TeamOpenCodeMemberInboxRelayResult;
-type OpenCodeMemberInboxDelivery = NonNullable<OpenCodeMemberInboxRelayResult['lastDelivery']>;
-
-type VisibleDirectReplyProtocol = 'send_message' | 'agent_teams_message_send';
-
-function resolveVisibleDirectReplyProtocol(input: {
-  providerId?: TeamProviderId;
-  isLeadRecipient: boolean;
-  replyRecipient: string;
-}): VisibleDirectReplyProtocol {
-  if (
-    !input.isLeadRecipient &&
-    input.replyRecipient.trim().toLowerCase() === 'user' &&
-    input.providerId === 'codex'
-  ) {
-    return 'agent_teams_message_send';
-  }
-
-  return 'send_message';
-}
-async function waitForOpenCodeRuntimeRelayForUi(input: {
-  messaging: TeamMessagingApi;
-  teamName: string;
-  memberName: string;
-  messageId: string;
-  relayPromise: Promise<OpenCodeMemberInboxRelayResult>;
-  timeoutMs?: number;
-}): Promise<OpenCodeMemberInboxRelayResult> {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let timedOut = false;
-
-  void input.relayPromise.then(
-    (relay) => {
-      if (!timedOut) return;
-      const delivery = relay.lastDelivery;
-      if (delivery && !delivery.delivered && delivery.reason !== 'recipient_is_not_opencode') {
-        logger.warn(
-          `OpenCode runtime delivery after sendMessage completed after UI timeout for teammate "${input.memberName}" with failure: ${
-            delivery.reason ?? 'unknown error'
-          }`
-        );
-      }
-    },
-    (error: unknown) => {
-      if (!timedOut) return;
-      logger.warn(
-        `OpenCode runtime delivery after sendMessage rejected after UI timeout for teammate "${input.memberName}": ${getErrorMessage(error)}`
-      );
-    }
-  );
-
-  try {
-    const outcome = await Promise.race<
-      { kind: 'relay'; relay: OpenCodeMemberInboxRelayResult } | { kind: 'timeout' }
-    >([
-      input.relayPromise.then((relay) => ({ kind: 'relay' as const, relay })),
-      new Promise<{ kind: 'timeout' }>((resolve) => {
-        timer = setTimeout(() => {
-          timedOut = true;
-          resolve({ kind: 'timeout' });
-        }, input.timeoutMs ?? OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_MS);
-        timer.unref?.();
-      }),
-    ]);
-
-    if (outcome.kind === 'relay') {
-      return await enrichBareOpenCodeRuntimeRelayResultForUi({
-        ...input,
-        relay: outcome.relay,
-      });
-    }
-
-    try {
-      const status = await withTimeoutValue(
-        input.messaging.getOpenCodeRuntimeDeliveryStatus(input.teamName, input.messageId),
-        OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS,
-        null
-      );
-      if (status) {
-        return openCodeRuntimeDeliveryStatusToRelayResult(status);
-      }
-    } catch (error) {
-      const reason = getErrorMessage(error);
-      logger.warn(
-        `OpenCode runtime delivery status after UI timeout failed for teammate "${input.memberName}": ${reason}`
-      );
-      return buildOpenCodeRuntimeDeliveryUiTimeoutRelayResult([
-        `${OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON}: status lookup failed: ${reason}`,
-      ]);
-    }
-
-    return buildOpenCodeRuntimeDeliveryUiTimeoutRelayResult();
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  }
-}
-
-async function enrichBareOpenCodeRuntimeRelayResultForUi(input: {
-  messaging: TeamMessagingApi;
-  teamName: string;
-  memberName: string;
-  messageId: string;
-  relay: OpenCodeMemberInboxRelayResult;
-}): Promise<OpenCodeMemberInboxRelayResult> {
-  if (!shouldLookupOpenCodeRuntimeDeliveryStatusAfterRelay(input.relay)) {
-    return input.relay;
-  }
-
-  try {
-    const status = await withTimeoutValue(
-      input.messaging.getOpenCodeRuntimeDeliveryStatus(input.teamName, input.messageId),
-      OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS,
-      null
-    );
-    return status ? openCodeRuntimeDeliveryStatusToRelayResult(status) : input.relay;
-  } catch (error) {
-    logger.warn(
-      `OpenCode runtime delivery status enrichment failed for teammate "${input.memberName}": ${getErrorMessage(error)}`
-    );
-    return input.relay;
-  }
-}
-
-function shouldLookupOpenCodeRuntimeDeliveryStatusAfterRelay(
-  relay: OpenCodeMemberInboxRelayResult
-): boolean {
-  const delivery = relay.lastDelivery;
-  if (!delivery?.delivered) {
-    return false;
-  }
-  return (
-    typeof delivery.accepted !== 'boolean' &&
-    typeof delivery.responsePending !== 'boolean' &&
-    !delivery.responseState &&
-    !delivery.ledgerStatus &&
-    !delivery.ledgerRecordId &&
-    !delivery.laneId &&
-    !delivery.userVisibleImpact
-  );
-}
-
-function openCodeRuntimeDeliveryStatusToRelayResult(
-  status: OpenCodeRuntimeDeliveryStatus
-): OpenCodeMemberInboxRelayResult {
-  const lastDelivery: OpenCodeMemberInboxDelivery = {
-    delivered: status.delivered,
-    ...(typeof status.accepted === 'boolean' ? { accepted: status.accepted } : {}),
-    ...(typeof status.responsePending === 'boolean'
-      ? { responsePending: status.responsePending }
-      : {}),
-    ...(typeof status.acceptanceUnknown === 'boolean'
-      ? { acceptanceUnknown: status.acceptanceUnknown }
-      : {}),
-    ...(status.responseState ? { responseState: status.responseState } : {}),
-    ...(status.ledgerStatus ? { ledgerStatus: status.ledgerStatus } : {}),
-    ...(status.visibleReplyMessageId
-      ? { visibleReplyMessageId: status.visibleReplyMessageId }
-      : {}),
-    ...(status.visibleReplyCorrelation
-      ? { visibleReplyCorrelation: status.visibleReplyCorrelation }
-      : {}),
-    ...(status.ledgerRecordId ? { ledgerRecordId: status.ledgerRecordId } : {}),
-    ...(status.laneId ? { laneId: status.laneId } : {}),
-    ...(status.queuedBehindMessageId
-      ? { queuedBehindMessageId: status.queuedBehindMessageId }
-      : {}),
-    ...(status.reason ? { reason: status.reason } : {}),
-    ...(status.diagnostics ? { diagnostics: status.diagnostics } : {}),
-    ...(shouldPreserveOpenCodeRuntimeDeliveryStatusImpact(status)
-      ? { userVisibleImpact: status.userVisibleImpact }
-      : {}),
-  };
-  return {
-    relayed: 0,
-    attempted: 1,
-    delivered: status.delivered && status.responsePending !== true ? 1 : 0,
-    failed: status.delivered ? 0 : 1,
-    lastDelivery,
-    diagnostics: status.diagnostics,
-  };
-}
-
-function shouldPreserveOpenCodeRuntimeDeliveryStatusImpact(
-  status: OpenCodeRuntimeDeliveryStatus
-): boolean {
-  if (!status.userVisibleImpact) {
-    return false;
-  }
-  if (
-    status.userVisibleImpact.state === 'none' &&
-    (status.responsePending === true ||
-      status.acceptanceUnknown === true ||
-      Boolean(status.queuedBehindMessageId))
-  ) {
-    return false;
-  }
-  return true;
-}
-
-function buildOpenCodeRuntimeDeliveryUiTimeoutRelayResult(
-  extraDiagnostics: string[] = []
-): OpenCodeMemberInboxRelayResult {
-  const diagnostics = [OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON, ...extraDiagnostics];
-  return {
-    relayed: 0,
-    attempted: 1,
-    delivered: 0,
-    failed: 1,
-    lastDelivery: {
-      delivered: true,
-      accepted: false,
-      responsePending: true,
-      acceptanceUnknown: true,
-      responseState: 'not_observed',
-      reason: OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON,
-      diagnostics,
-    },
-  };
-}
-
 function getWorkerErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -448,98 +186,6 @@ function invalidateTeamRosterSnapshotCaches(teamName: string): void {
   workerClient.invalidateMemberRuntimeAdvisory(teamName);
 }
 
-async function getDurableLeadTeammateRoster(
-  teamName: string,
-  leadName: string
-): Promise<{ name: string; role?: string }[]> {
-  const normalize = (name: string | undefined | null): string => name?.trim().toLowerCase() ?? '';
-  const leadLower = normalize(leadName);
-  const reserved = new Set(['team-lead', 'user', leadLower].filter((value) => value.length > 0));
-
-  try {
-    const members = await new TeamMembersMetaStore().getMembers(teamName);
-    const teammates = members
-      .filter((member) => !member.removedAt)
-      .filter((member) => {
-        const lower = normalize(member.name);
-        return lower.length > 0 && !reserved.has(lower);
-      })
-      .map((member) => ({
-        name: member.name.trim(),
-        role:
-          typeof member.role === 'string' && member.role.trim().length > 0
-            ? member.role.trim()
-            : undefined,
-      }));
-    if (teammates.length > 0) return teammates;
-  } catch (error) {
-    logger.debug(
-      `[teams:sendMessage] Failed to read members.meta roster for "${teamName}": ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-  }
-
-  try {
-    const data = await getTeamDataService().getTeamData(teamName);
-    return data.members
-      .filter((member) => !member.removedAt)
-      .filter((member) => {
-        const lower = normalize(member.name);
-        return lower.length > 0 && !reserved.has(lower);
-      })
-      .map((member) => ({
-        name: member.name.trim(),
-        role:
-          typeof member.role === 'string' && member.role.trim().length > 0
-            ? member.role.trim()
-            : undefined,
-      }));
-  } catch (error) {
-    logger.debug(
-      `[teams:sendMessage] Failed to read fallback team roster for "${teamName}": ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-    return [];
-  }
-}
-
-function buildLeadRosterContextBlock(
-  teamName: string,
-  leadName: string,
-  teammates: { name: string; role?: string }[]
-): string | null {
-  if (teammates.length === 0) return null;
-
-  const summary = teammates
-    .map((member) => (member.role ? `${member.name} (${member.role})` : member.name))
-    .join(', ');
-
-  return [
-    `Current durable team context:`,
-    `- Team name: ${teamName}`,
-    `- You are the live team lead "${leadName}"`,
-    `- Persistent teammates currently configured: ${summary}`,
-    `- This team is NOT in solo mode`,
-    `- If the user asks who is on the team, answer from this durable roster unless newer durable state explicitly says otherwise.`,
-  ].join('\n');
-}
-
-function buildLeadDirectDelegateAckBlock(actionMode?: AgentActionMode): string | null {
-  if (actionMode !== 'delegate') return null;
-
-  return wrapAgentBlock(
-    [
-      'DELEGATE MODE USER ACK CONTRACT:',
-      'Before any task creation, delegation, or other tool use, begin your next assistant response with one short human-readable acknowledgement to the user.',
-      'That acknowledgement must be visible plain text, not only an agent-only block.',
-      'Make the acknowledgement at least 40 characters so it is preserved in the Messages panel.',
-      'After that visible acknowledgement, continue with delegation/orchestration in the same turn.',
-    ].join('\n')
-  );
-}
-
 let teamDataService: TeamDataService | null = null;
 let teamProvisioningStartApi: TeamProvisioningStartApi | null = null;
 let teamProvisioningStatusApi: TeamProvisioningStatusApi | null = null;
@@ -558,20 +204,9 @@ let teamLogSourceTracker: TeamLogSourceTracker | null = null;
 let branchStatusService: BranchStatusService | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 
-const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
 const teamMetaStore = new TeamMetaStore();
 const worktreeGitService = new TeamWorktreeGitService();
-
-const ALLOWED_ATTACHMENT_TYPES = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-  'application/pdf',
-  'text/plain',
-]);
-const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB per file
 
 function isValidStoredAttachmentMimeType(value: unknown): value is string {
   if (typeof value !== 'string') return false;
@@ -588,9 +223,6 @@ function isValidStoredAttachmentMimeType(value: unknown): value is string {
  * @see https://blog.bloomca.me/2025/02/22/electron-mac-notifications.html
  */
 const activeTeamNotifications = new Set<Notification>();
-const MAX_ATTACHMENTS = 5;
-const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20MB total
-
 let teamLifecycleReadHost: TeamLifecycleReadHost | null = null;
 
 export function initializeTeamLifecycleReadHandler(host: TeamLifecycleReadHost): void {
@@ -665,13 +297,9 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_PROVISIONING_STATUS, handleProvisioningStatus);
   ipcMain.handle(TEAM_LAUNCH_FAILURE_DIAGNOSTICS, handleLaunchFailureDiagnostics);
   ipcMain.handle(TEAM_CANCEL_PROVISIONING, handleCancelProvisioning);
-  ipcMain.handle(TEAM_SEND_MESSAGE, handleSendMessage);
-  ipcMain.handle(TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS, handleGetOpenCodeRuntimeDeliveryStatus);
   ipcMain.handle(TEAM_DELETE_TEAM, handleDeleteTeam);
   ipcMain.handle(TEAM_RESTORE, handleRestoreTeam);
   ipcMain.handle(TEAM_PERMANENTLY_DELETE, handlePermanentlyDeleteTeam);
-  ipcMain.handle(TEAM_PROCESS_SEND, handleProcessSend);
-  ipcMain.handle(TEAM_PROCESS_ALIVE, handleProcessAlive);
   ipcMain.handle(TEAM_ALIVE_LIST, handleAliveList);
   ipcMain.handle(TEAM_STOP, handleStopTeam);
   ipcMain.handle(TEAM_GET_MEMBER_LOGS, handleGetMemberLogs);
@@ -683,7 +311,6 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_RESTORE_MEMBER, handleRestoreMember);
   ipcMain.handle(TEAM_UPDATE_MEMBER_ROLE, handleUpdateMemberRole);
   ipcMain.handle(TEAM_GET_PROJECT_BRANCH, handleGetProjectBranch);
-  ipcMain.handle(TEAM_GET_ATTACHMENTS, handleGetAttachments);
   ipcMain.handle(TEAM_KILL_PROCESS, handleKillProcess);
   ipcMain.handle(TEAM_LEAD_ACTIVITY, handleLeadActivity);
   ipcMain.handle(TEAM_LEAD_CONTEXT, handleLeadContext);
@@ -718,13 +345,9 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_PROVISIONING_STATUS);
   ipcMain.removeHandler(TEAM_LAUNCH_FAILURE_DIAGNOSTICS);
   ipcMain.removeHandler(TEAM_CANCEL_PROVISIONING);
-  ipcMain.removeHandler(TEAM_SEND_MESSAGE);
-  ipcMain.removeHandler(TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS);
   ipcMain.removeHandler(TEAM_DELETE_TEAM);
   ipcMain.removeHandler(TEAM_RESTORE);
   ipcMain.removeHandler(TEAM_PERMANENTLY_DELETE);
-  ipcMain.removeHandler(TEAM_PROCESS_SEND);
-  ipcMain.removeHandler(TEAM_PROCESS_ALIVE);
   ipcMain.removeHandler(TEAM_ALIVE_LIST);
   ipcMain.removeHandler(TEAM_STOP);
   ipcMain.removeHandler(TEAM_GET_MEMBER_LOGS);
@@ -736,7 +359,6 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_RESTORE_MEMBER);
   ipcMain.removeHandler(TEAM_UPDATE_MEMBER_ROLE);
   ipcMain.removeHandler(TEAM_GET_PROJECT_BRANCH);
-  ipcMain.removeHandler(TEAM_GET_ATTACHMENTS);
   ipcMain.removeHandler(TEAM_KILL_PROCESS);
   ipcMain.removeHandler(TEAM_LEAD_ACTIVITY);
   ipcMain.removeHandler(TEAM_LEAD_CONTEXT);
@@ -2076,638 +1698,6 @@ async function handleCancelProvisioning(
   }
   return wrapTeamHandler('cancelProvisioning', () =>
     getTeamProvisioningRunApi().cancelProvisioning(runId.trim())
-  );
-}
-
-async function handleGetAttachments(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  messageId: unknown
-): Promise<IpcResult<AttachmentFileData[]>> {
-  const vTeam = validateTeamName(teamName);
-  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
-  if (typeof messageId !== 'string' || messageId.trim().length === 0) {
-    return { success: false, error: 'messageId must be a non-empty string' };
-  }
-  const safeMessageId = messageId.trim();
-  if (safeMessageId.includes('/') || safeMessageId.includes('\\') || safeMessageId.includes('..')) {
-    return { success: false, error: 'Invalid messageId' };
-  }
-  return wrapTeamHandler('getAttachments', () =>
-    attachmentStore.getAttachments(vTeam.value!, safeMessageId)
-  );
-}
-
-function validateAttachments(
-  attachments: unknown
-): { valid: true; value: AttachmentPayload[] } | { valid: false; error: string } {
-  if (!Array.isArray(attachments)) {
-    return { valid: false, error: 'attachments must be an array' };
-  }
-  if (attachments.length > MAX_ATTACHMENTS) {
-    return { valid: false, error: `Maximum ${MAX_ATTACHMENTS} attachments allowed` };
-  }
-  let totalSize = 0;
-  const result: AttachmentPayload[] = [];
-  for (const att of attachments) {
-    if (!att || typeof att !== 'object') {
-      return { valid: false, error: 'Invalid attachment entry' };
-    }
-    const a = att as Partial<AttachmentPayload>;
-    if (typeof a.id !== 'string' || typeof a.filename !== 'string') {
-      return { valid: false, error: 'Attachment must have id and filename' };
-    }
-    if (typeof a.data !== 'string' || typeof a.mimeType !== 'string') {
-      return { valid: false, error: 'Attachment must have data and mimeType' };
-    }
-    if (typeof a.size !== 'number' || a.size <= 0) {
-      return { valid: false, error: 'Attachment must have a positive size' };
-    }
-    if (!ALLOWED_ATTACHMENT_TYPES.has(a.mimeType)) {
-      return { valid: false, error: `Unsupported attachment type: ${a.mimeType}` };
-    }
-    if (a.size > MAX_ATTACHMENT_SIZE) {
-      return { valid: false, error: `Attachment "${a.filename}" exceeds 10MB limit` };
-    }
-    // Sanity check: base64 data should be roughly 4/3 of the reported binary size
-    const estimatedBinarySize = Math.ceil(a.data.length * 0.75);
-    if (estimatedBinarySize > MAX_ATTACHMENT_SIZE * 1.1) {
-      return { valid: false, error: `Attachment "${a.filename}" data exceeds size limit` };
-    }
-    totalSize += Math.max(a.size, estimatedBinarySize);
-    result.push({
-      id: a.id,
-      filename: a.filename,
-      data: a.data,
-      mimeType: a.mimeType,
-      size: a.size,
-    });
-  }
-  if (totalSize > MAX_TOTAL_ATTACHMENT_SIZE) {
-    return { valid: false, error: 'Total attachment size exceeds 20MB limit' };
-  }
-  return { valid: true, value: result };
-}
-
-function formatAttachmentBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function validateAttachmentSerializedPayload(input: {
-  text: string;
-  attachments: AttachmentPayload[];
-}): { valid: true } | { valid: false; error: string } {
-  const estimatedBytes = estimateAgentAttachmentSerializedPayloadBytes(input);
-  if (estimatedBytes <= MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES) {
-    return { valid: true };
-  }
-  return {
-    valid: false,
-    error: `Attachment payload is too large after optimization: ${formatAttachmentBytes(
-      estimatedBytes
-    )} serialized. Limit is ${formatAttachmentBytes(
-      MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES
-    )}. Remove an image or use a smaller screenshot.`,
-  };
-}
-
-function formatAttachmentDeliveryFailure(error: unknown, teamStillAlive: boolean): string {
-  if (!teamStillAlive) {
-    return 'Failed to deliver message with attachments: team process became unavailable';
-  }
-  const message = getErrorMessage(error);
-  if (message.startsWith('Failed to deliver message with attachments:')) {
-    return message;
-  }
-  return `Failed to deliver message with attachments: ${message}`;
-}
-
-function buildMessageDeliveryText(
-  baseText: string,
-  opts: {
-    actionMode?: AgentActionMode;
-    isLeadRecipient: boolean;
-    memberName?: string;
-    messageId?: string;
-    protocol?: VisibleDirectReplyProtocol;
-    replyRecipient?: string;
-    teamName?: string;
-  }
-): string {
-  const hiddenBlocks: string[] = [];
-  const actionModeBlock = buildActionModeAgentBlock(opts.actionMode);
-  if (actionModeBlock) {
-    hiddenBlocks.push(actionModeBlock);
-  }
-  if (!opts.isLeadRecipient) {
-    const rawReplyRecipient =
-      typeof opts.replyRecipient === 'string' && opts.replyRecipient.trim().length > 0
-        ? opts.replyRecipient.trim()
-        : 'user';
-    const isUserReplyRecipient = rawReplyRecipient.toLowerCase() === 'user';
-    const replyRecipient = isUserReplyRecipient ? 'user' : rawReplyRecipient;
-    const senderDescriptor = isUserReplyRecipient ? 'the human user' : `"${replyRecipient}"`;
-    const protocol = opts.protocol ?? 'send_message';
-    const canUseAgentTeamsMessageSend =
-      protocol === 'agent_teams_message_send' &&
-      isUserReplyRecipient &&
-      typeof opts.teamName === 'string' &&
-      opts.teamName.trim().length > 0 &&
-      typeof opts.memberName === 'string' &&
-      opts.memberName.trim().length > 0 &&
-      typeof opts.messageId === 'string' &&
-      opts.messageId.trim().length > 0;
-    const replyInstructionLines = canUseAgentTeamsMessageSend
-      ? [
-          'CRITICAL: Reply using the Agent Teams MCP message_send tool, not SendMessage.',
-          'Use tool agent-teams_message_send or mcp__agent-teams__message_send, whichever exposed name is available.',
-          `CRITICAL: The tool input must include teamName="${opts.teamName!.trim()}", to="user", from="${opts.memberName!.trim()}", text, summary, source="runtime_delivery", and relayOfMessageId="${opts.messageId!.trim()}".`,
-          'Do NOT answer only with normal assistant text when the Agent Teams message_send tool is available because that will not appear in the UI message thread.',
-        ]
-      : [
-          'CRITICAL: Reply using the SendMessage tool, not plain assistant text.',
-          `CRITICAL: The destination must be exactly to="${replyRecipient}".`,
-          'CRITICAL: The SendMessage tool input must use the exact field names `to`, `summary`, and `message`.',
-          'Do NOT answer only with normal assistant text because that will not appear in the UI message thread.',
-        ];
-    hiddenBlocks.push(
-      wrapAgentBlock(
-        [
-          `You received a direct message from ${senderDescriptor} via the UI.`,
-          ...replyInstructionLines,
-          `Please reply back to recipient "${replyRecipient}" with a short, human-readable answer.`,
-          'If you cannot respond now, reply with a brief status (e.g. "Busy, will reply later").',
-          ...(canUseAgentTeamsMessageSend
-            ? [
-                'If neither Agent Teams MCP message_send tool name is available before any visible-message tool attempt, write exactly the concise reply text as normal assistant text so the runtime can relay it.',
-              ]
-            : []),
-          ...(isUserReplyRecipient
-            ? [
-                'CRITICAL: If the user asks you to check with the lead or another teammate before you can fully answer, FIRST send a short acknowledgement to "user" so the human sees you started (for example: "Принял, сейчас уточню и вернусь с ответом.").',
-                'Only after that first acknowledgement may you message the lead or another teammate.',
-                'After you get the needed information, send the final answer back to "user".',
-                'Do NOT stay silent while you go ask someone else.',
-              ]
-            : []),
-        ].join('\n')
-      )
-    );
-  }
-
-  if (hiddenBlocks.length === 0) {
-    return baseText;
-  }
-
-  return [...hiddenBlocks, baseText].join('\n\n');
-}
-
-async function handleSendMessage(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  request: unknown
-): Promise<IpcResult<SendMessageResult>> {
-  const validatedTeamName = validateTeamName(teamName);
-  if (!validatedTeamName.valid) {
-    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
-  }
-
-  if (!request || typeof request !== 'object') {
-    return { success: false, error: 'Invalid send message request' };
-  }
-
-  const payload = request as Partial<SendMessageRequest>;
-  const validatedMember = validateMemberName(payload.member);
-  if (!validatedMember.valid) {
-    return { success: false, error: validatedMember.error ?? 'Invalid member' };
-  }
-  if (typeof payload.text !== 'string' || payload.text.trim().length === 0) {
-    return { success: false, error: 'text must be non-empty string' };
-  }
-  if (payload.summary !== undefined && typeof payload.summary !== 'string') {
-    return { success: false, error: 'summary must be string' };
-  }
-  if (payload.from !== undefined) {
-    const validatedFrom = validateFromField(payload.from);
-    if (!validatedFrom.valid) {
-      return { success: false, error: validatedFrom.error ?? 'Invalid from' };
-    }
-  }
-  if (payload.actionMode !== undefined && !isAgentActionMode(payload.actionMode)) {
-    return { success: false, error: 'actionMode must be one of: do, ask, delegate' };
-  }
-  const validatedTaskRefs = validateTaskRefs(payload.taskRefs);
-  if (!validatedTaskRefs.valid) {
-    return { success: false, error: validatedTaskRefs.error };
-  }
-
-  let validatedAttachments: AttachmentPayload[] | undefined;
-  if (
-    payload.attachments !== undefined &&
-    Array.isArray(payload.attachments) &&
-    payload.attachments.length > 0
-  ) {
-    const attResult = validateAttachments(payload.attachments);
-    if (!attResult.valid) {
-      return { success: false, error: attResult.error };
-    }
-    validatedAttachments = attResult.value;
-    const serializedResult = validateAttachmentSerializedPayload({
-      text: payload.text,
-      attachments: validatedAttachments,
-    });
-    if (!serializedResult.valid) {
-      return { success: false, error: serializedResult.error };
-    }
-  }
-
-  const tn = validatedTeamName.value!;
-  const memberName = validatedMember.value!;
-  let prevalidatedLeadName: string | null | undefined;
-  let prevalidatedIsLeadRecipient: boolean | undefined;
-  if (payload.actionMode === 'delegate') {
-    try {
-      prevalidatedLeadName = await getTeamDataService().getLeadMemberName(tn);
-    } catch (error) {
-      return wrapTeamHandler('sendMessage', async () => {
-        throw error;
-      });
-    }
-    prevalidatedIsLeadRecipient =
-      prevalidatedLeadName !== null && memberName === prevalidatedLeadName;
-    if (!prevalidatedIsLeadRecipient) {
-      return {
-        success: false,
-        error: 'Delegate mode is only supported when messaging the team lead',
-      };
-    }
-  }
-
-  return wrapTeamHandler('sendMessage', async () => {
-    const messaging = getTeamMessagingApi();
-    const runtime = getTeamRuntimeApi();
-    const isAlive = runtime.isTeamAlive(tn);
-
-    const leadName =
-      prevalidatedLeadName !== undefined
-        ? prevalidatedLeadName
-        : await getTeamDataService().getLeadMemberName(tn);
-    const isLeadRecipient =
-      prevalidatedIsLeadRecipient !== undefined
-        ? prevalidatedIsLeadRecipient
-        : leadName !== null && memberName === leadName;
-    const actionMode = payload.actionMode;
-
-    const recipientProviderId = await messaging.resolveRuntimeRecipientProviderId(tn, memberName);
-    const isOpenCodeRecipient = recipientProviderId === 'opencode';
-
-    // Attachments are routed through explicit provider transports only.
-    // Native Claude/Codex teammates still read inbox files directly, so storing
-    // attachment metadata there would look successful while silently dropping
-    // the image at runtime. Keep those paths fail-closed until they have a
-    // real runtime attachment transport.
-    if (validatedAttachments?.length) {
-      const supportedLiveLead = isLeadRecipient && isAlive;
-      const supportedLiveOpenCodeRecipient = !isLeadRecipient && isOpenCodeRecipient && isAlive;
-      if (!supportedLiveLead && !supportedLiveOpenCodeRecipient) {
-        throw new Error(
-          isOpenCodeRecipient
-            ? 'Attachments for OpenCode teammates require the team to be online'
-            : 'Attachments are supported for the online team lead and online OpenCode teammates only'
-        );
-      }
-    }
-
-    // Smart routing: lead + alive → stdin direct, else → inbox
-    if (isLeadRecipient && isAlive && !isOpenCodeRecipient) {
-      const resolvedLeadName = leadName ?? memberName;
-      const teammateRoster = await getDurableLeadTeammateRoster(tn, resolvedLeadName);
-      const rosterContextBlock = buildLeadRosterContextBlock(tn, resolvedLeadName, teammateRoster);
-      const delegateAckBlock = buildLeadDirectDelegateAckBlock(actionMode);
-      // Pre-generate stable messageId so both stdin and persistence use the same identity.
-      // This allows the lead to call task_create_from_message with the exact messageId.
-      const preGeneratedMessageId = crypto.randomUUID();
-      // Separate try blocks: stdin delivery vs persistence
-      // If stdin succeeds but persistence fails, do NOT fallback to inbox (would duplicate)
-      const standaloneSlashCommand = !validatedAttachments?.length
-        ? parseStandaloneSlashCommand(payload.text!)
-        : null;
-      const slashCommandMeta = standaloneSlashCommand
-        ? buildStandaloneSlashCommandMeta(standaloneSlashCommand.raw)
-        : null;
-      const rawSlashCommandText = standaloneSlashCommand?.raw;
-      const stdinTextForLead = rawSlashCommandText
-        ? rawSlashCommandText
-        : [
-            `You received a direct message from the user.`,
-            `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
-            ...(rosterContextBlock ? [rosterContextBlock] : []),
-            ...(delegateAckBlock ? [delegateAckBlock] : []),
-            wrapAgentBlock(
-              [
-                `MessageId: ${preGeneratedMessageId}`,
-                `When creating a task from this user message, prefer task_create_from_message with messageId="${preGeneratedMessageId}" for reliable provenance. Only use this exact messageId — never guess or fabricate one.`,
-              ].join('\n')
-            ),
-            ``,
-            `Message from user:`,
-            buildMessageDeliveryText(payload.text!, {
-              actionMode,
-              isLeadRecipient: true,
-            }),
-          ].join('\n');
-      const persistTextForLead = rawSlashCommandText ?? payload.text!;
-
-      let stdinSent = false;
-      try {
-        await messaging.sendMessageToTeam(
-          tn,
-          stdinTextForLead,
-          rawSlashCommandText ? undefined : validatedAttachments
-        );
-        stdinSent = true;
-      } catch (stdinError: unknown) {
-        // If attachments were requested, fail rather than silently dropping them.
-        // Only report offline when liveness confirms the process is unavailable.
-        if (validatedAttachments?.length) {
-          throw new Error(formatAttachmentDeliveryFailure(stdinError, runtime.isTeamAlive(tn)));
-        }
-        const errMsg = stdinError instanceof Error ? stdinError.message : 'unknown error';
-        logger.warn(`stdin fallback for ${tn}: ${errMsg}`);
-        // Fallback to inbox path below
-      }
-
-      if (stdinSent) {
-        // Save attachment files to disk FIRST to get file paths for metadata
-        let attachmentFilePaths: Map<string, string> | undefined;
-        if (validatedAttachments?.length) {
-          try {
-            attachmentFilePaths = await attachmentStore.saveAttachments(
-              tn,
-              preGeneratedMessageId,
-              validatedAttachments
-            );
-          } catch (e) {
-            logger.warn(`Failed to save attachments: ${e}`);
-          }
-        }
-
-        const attachmentMeta: AttachmentMeta[] | undefined = validatedAttachments?.map((a) => {
-          const fp = attachmentFilePaths?.get(a.id);
-          return {
-            id: a.id,
-            filename: a.filename,
-            mimeType: a.mimeType,
-            size: a.size,
-            ...(fp ? { filePath: fp } : {}),
-          };
-        });
-
-        // Persistence is best-effort — stdin already delivered the message
-        let result: SendMessageResult;
-        try {
-          result = await getTeamDataService().sendDirectToLead(
-            tn,
-            resolvedLeadName,
-            persistTextForLead,
-            payload.summary,
-            attachmentMeta,
-            validatedTaskRefs.value,
-            preGeneratedMessageId
-          );
-        } catch (persistError) {
-          logger.warn(`Persistence failed after stdin delivery for ${tn}: ${String(persistError)}`);
-          result = { deliveredToInbox: false, messageId: preGeneratedMessageId };
-        }
-
-        // Attachment files already saved above (before metadata construction)
-
-        messaging.pushLiveLeadProcessMessage(tn, {
-          from: 'user',
-          to: resolvedLeadName,
-          text: persistTextForLead,
-          timestamp: new Date().toISOString(),
-          read: true,
-          summary: payload.summary,
-          messageId: result.messageId,
-          source: 'user_sent',
-          attachments: attachmentMeta,
-          taskRefs: validatedTaskRefs.value,
-          ...(slashCommandMeta
-            ? {
-                messageKind: 'slash_command' as const,
-                slashCommand: slashCommandMeta,
-              }
-            : {}),
-        });
-
-        return result;
-      }
-    }
-
-    // Inbox path: offline lead or regular members.
-    const baseText = payload.text!.trim();
-    const replyRecipient =
-      typeof payload.from === 'string' && payload.from.trim().length > 0
-        ? payload.from.trim()
-        : 'user';
-    const storedFrom = replyRecipient.toLowerCase() === 'user' ? 'user' : replyRecipient;
-    const directReplyProtocol = resolveVisibleDirectReplyProtocol({
-      isLeadRecipient,
-      replyRecipient,
-      ...(recipientProviderId ? { providerId: recipientProviderId } : {}),
-    });
-    const inboxMessageId =
-      directReplyProtocol === 'agent_teams_message_send' || validatedAttachments?.length
-        ? crypto.randomUUID()
-        : undefined;
-    const memberDeliveryText = buildMessageDeliveryText(baseText, {
-      actionMode,
-      isLeadRecipient,
-      memberName,
-      protocol: directReplyProtocol,
-      replyRecipient,
-      teamName: tn,
-      ...(inboxMessageId ? { messageId: inboxMessageId } : {}),
-    });
-    const inboxText = isOpenCodeRecipient ? baseText : memberDeliveryText;
-    if (validatedAttachments?.length && inboxMessageId) {
-      try {
-        await attachmentStore.saveAttachments(tn, inboxMessageId, validatedAttachments);
-      } catch (error) {
-        throw new Error(`Failed to save message attachments: ${getErrorMessage(error)}`);
-      }
-    }
-
-    const messageRequest: SendMessageRequest = {
-      member: memberName,
-      text: inboxText,
-      summary: payload.summary,
-      from: storedFrom,
-      actionMode,
-      source: 'user_sent',
-      taskRefs: validatedTaskRefs.value,
-      ...(inboxMessageId ? { messageId: inboxMessageId } : {}),
-      ...(validatedAttachments?.length ? { attachments: validatedAttachments } : {}),
-    };
-    const teamDataService = getTeamDataService();
-    const result = isOpenCodeRecipient
-      ? await teamDataService.sendRuntimeRecipientMessage(tn, messageRequest)
-      : await teamDataService.sendMessage(tn, messageRequest);
-
-    // Teammate inbox relay DISABLED (2026-03-23).
-    // Codex/Claude teammates read their own inbox files directly via fs.watch.
-    // Relaying through the lead (relayMemberInboxMessages) caused multiple bugs:
-    //   1. Lead responded to user instead of forwarding to the teammate
-    //   2. Duplicate messages (relay loop: markInboxMessagesRead → FileWatcher → relay again)
-    //   3. Fragile LLM-dependent prompt chain for routing
-    // The message is already persisted in inboxes/{member}.json above.
-    // Teammate responses go to inboxes/user.json and are read by TeamInboxReader.
-    // Lead relay (relayLeadInboxMessages) is still needed because lead reads stdin only, not inbox.
-    // OpenCode secondary lanes do not watch these inbox files, so they need runtime bridge delivery.
-    //
-    // if (!isLeadRecipient && isAlive) {
-    //   try {
-    //     await provisioning.relayMemberInboxMessages(tn, memberName);
-    //   } catch (e: unknown) {
-    //     logger.warn(`Relay after sendMessage failed for teammate "${memberName}": ${String(e)}`);
-    //   }
-    // }
-    if (isOpenCodeRecipient) {
-      try {
-        const relay = await waitForOpenCodeRuntimeRelayForUi({
-          messaging,
-          teamName: tn,
-          memberName,
-          messageId: result.messageId,
-          relayPromise: messaging.relayOpenCodeMemberInboxMessages(tn, memberName, {
-            onlyMessageId: result.messageId,
-            source: 'ui-send',
-            deliveryMetadata: {
-              replyRecipient,
-              actionMode,
-              taskRefs: validatedTaskRefs.value,
-            },
-          }),
-        });
-        const delivery = relay.lastDelivery ?? {
-          delivered: relay.relayed > 0,
-          reason: relay.relayed > 0 ? undefined : 'opencode_message_delivery_not_attempted',
-          diagnostics: undefined,
-        };
-        result.runtimeDelivery = {
-          providerId: 'opencode',
-          attempted: true,
-          delivered: delivery.delivered,
-          accepted: delivery.accepted,
-          responsePending: delivery.responsePending,
-          acceptanceUnknown: delivery.acceptanceUnknown,
-          responseState: delivery.responseState,
-          ledgerStatus: delivery.ledgerStatus,
-          visibleReplyMessageId: delivery.visibleReplyMessageId,
-          visibleReplyCorrelation: delivery.visibleReplyCorrelation,
-          ledgerRecordId: delivery.ledgerRecordId,
-          laneId: delivery.laneId,
-          queuedBehindMessageId: delivery.queuedBehindMessageId,
-          reason: delivery.reason,
-          diagnostics: delivery.diagnostics,
-          userVisibleImpact:
-            delivery.userVisibleImpact ?? buildOpenCodeRuntimeDeliveryUserVisibleImpact(delivery),
-        };
-        if (
-          !delivery.delivered &&
-          delivery.reason !== 'recipient_is_not_opencode' &&
-          delivery.reason !== 'opencode_runtime_delivery_ui_timeout_pending'
-        ) {
-          logger.warn(
-            `OpenCode runtime delivery after sendMessage failed for teammate "${memberName}": ${
-              delivery.reason ?? 'unknown error'
-            }`
-          );
-        }
-      } catch (e: unknown) {
-        const reason = e instanceof Error ? e.message : String(e);
-        result.runtimeDelivery = {
-          providerId: 'opencode',
-          attempted: true,
-          delivered: false,
-          reason,
-          diagnostics: [reason],
-          userVisibleImpact: buildOpenCodeRuntimeDeliveryUserVisibleImpact({
-            delivered: false,
-            reason,
-            diagnostics: [reason],
-          }),
-        };
-        logger.warn(
-          `OpenCode runtime delivery after sendMessage crashed for teammate "${memberName}": ${reason}`
-        );
-      }
-    }
-
-    // Best-effort relay for lead via inbox
-    if (isLeadRecipient && isAlive) {
-      void messaging
-        .relayLeadInboxMessages(tn)
-        .catch((e: unknown) =>
-          logger.warn(`Relay after sendMessage failed for ${tn}: ${String(e)}`)
-        );
-    }
-
-    return result;
-  });
-}
-
-async function handleGetOpenCodeRuntimeDeliveryStatus(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  messageId: unknown
-): Promise<IpcResult<OpenCodeRuntimeDeliveryStatus | null>> {
-  const validatedTeamName = validateTeamName(teamName);
-  if (!validatedTeamName.valid) {
-    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
-  }
-  if (typeof messageId !== 'string' || messageId.trim().length === 0) {
-    return { success: false, error: 'messageId must be a non-empty string' };
-  }
-  const safeMessageId = messageId.trim();
-  if (safeMessageId.includes('/') || safeMessageId.includes('\\') || safeMessageId.includes('..')) {
-    return { success: false, error: 'Invalid messageId' };
-  }
-  return wrapTeamHandler('getOpenCodeRuntimeDeliveryStatus', async () =>
-    getTeamMessagingApi().getOpenCodeRuntimeDeliveryStatus(validatedTeamName.value!, safeMessageId)
-  );
-}
-
-async function handleProcessSend(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  message: unknown
-): Promise<IpcResult<void>> {
-  const validatedTeamName = validateTeamName(teamName);
-  if (!validatedTeamName.valid) {
-    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
-  }
-  if (typeof message !== 'string' || message.trim().length === 0) {
-    return { success: false, error: 'message must be a non-empty string' };
-  }
-  return wrapTeamHandler('processSend', () =>
-    getTeamMessagingApi().sendMessageToTeam(validatedTeamName.value!, message)
-  );
-}
-
-async function handleProcessAlive(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown
-): Promise<IpcResult<boolean>> {
-  const validatedTeamName = validateTeamName(teamName);
-  if (!validatedTeamName.valid) {
-    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
-  }
-  return wrapTeamHandler('processAlive', async () =>
-    getTeamRuntimeApi().isTeamAlive(validatedTeamName.value!)
   );
 }
 

@@ -233,6 +233,13 @@ export {
   TEAM_UPDATE_CONFIG,
 } from '@features/team-configuration/contracts';
 export {
+  TEAM_GET_ATTACHMENTS,
+  TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
+  TEAM_PROCESS_ALIVE,
+  TEAM_PROCESS_SEND,
+  TEAM_SEND_MESSAGE,
+} from '@features/team-message-delivery/contracts';
+export {
   TEAM_GET_DATA,
   TEAM_GET_MEMBER_ACTIVITY_META,
   TEAM_GET_MESSAGES_PAGE,
@@ -246,12 +253,6 @@ export const TEAM_SET_TASK_LOG_STREAM_TRACKING = 'team:setTaskLogStreamTracking'
 
 /** Get buffered Claude CLI logs (paged, newest-first) */
 export const TEAM_GET_CLAUDE_LOGS = 'team:getClaudeLogs';
-
-/** Send inbox message to team member */
-export const TEAM_SEND_MESSAGE = 'team:sendMessage';
-
-/** Read latest OpenCode runtime delivery status for a sent inbox message */
-export const TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS = 'team:getOpenCodeRuntimeDeliveryStatus';
 
 /** Team change events (main -> renderer) */
 export const TEAM_CHANGE = 'team:change';
@@ -285,12 +286,6 @@ export const TEAM_CANCEL_PROVISIONING = 'team:cancelProvisioning';
 
 /** Team provisioning progress events (main -> renderer) */
 export const TEAM_PROVISIONING_PROGRESS = 'team:provisioningProgress';
-
-/** Send message to team's live CLI process via stream-json stdin */
-export const TEAM_PROCESS_SEND = 'team:processSend';
-
-/** Check if team has a live CLI process */
-export const TEAM_PROCESS_ALIVE = 'team:processAlive';
 
 /** Soft-delete a team (sets deletedAt in config) */
 export const TEAM_DELETE_TEAM = 'team:deleteTeam';
@@ -346,9 +341,6 @@ export const TEAM_RESTORE_MEMBER = 'team:restoreMember';
 
 /** Update a team member's role */
 export const TEAM_UPDATE_MEMBER_ROLE = 'team:updateMemberRole';
-
-/** Get attachment data for a message */
-export const TEAM_GET_ATTACHMENTS = 'team:getAttachments';
 
 /** Kill a registered CLI process by PID */
 export const TEAM_KILL_PROCESS = 'team:killProcess';
