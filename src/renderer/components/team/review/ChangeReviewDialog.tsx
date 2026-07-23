@@ -24,6 +24,9 @@ import {
   sortChangeReviewFiles,
   TaskChangesEmptyState,
   toTaskChangeSetV2,
+  useChangeReviewLifecycleRegistration,
+  useChangeReviewOperationGeneration,
+  useChangeReviewScopeIdentity,
 } from '@features/change-review/renderer';
 import {
   ReviewDraftHistoryWriteBuffer,
@@ -58,15 +61,7 @@ import {
   registerChangeReviewLifecycleOwner,
 } from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { buildSelectionInfo, SELECTION_DEBOUNCE_MS } from '@renderer/utils/codemirrorSelectionInfo';
-import {
-  buildReviewDecisionScopeToken,
-  reviewChangeSetMatchesScope,
-} from '@renderer/utils/reviewDecisionScope';
 import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
-import {
-  buildTaskChangeSignature,
-  type TaskChangeRequestOptions,
-} from '@renderer/utils/taskChangeRequest';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 import { AlertTriangle, ChevronDown, Clock, X } from 'lucide-react';
@@ -87,9 +82,7 @@ import { buildPathChangeLabels } from './pathChangeLabels';
 import { getReviewActionFilePath } from './reviewActionPresentation';
 import {
   appendOrderedReviewAction,
-  createReviewOperationScopeToken,
   getReviewCloseBlockReason,
-  getReviewDecisionHydrationGuard,
   getReviewRenameRecoveryExpectation,
   hasReviewFileRejections,
   hasUnresolvedReviewExternalChange,
@@ -97,7 +90,6 @@ import {
   isReviewActionLocked,
   isReviewActionPersistenceBlocking,
   isReviewFileFullyRejected,
-  isReviewOperationScopeCurrent,
   popOrderedReviewAction,
   reconcileReviewDecisionRecordsAfterApply,
   replaceLatestReviewAction,
@@ -141,14 +133,15 @@ import type {
   ReviewActionPersistenceStatus,
   ReviewConflictCandidateSelection,
   ReviewDecisionRecords,
-  ReviewOperationScopeToken,
 } from './reviewActionState';
 import type { EditorView } from '@codemirror/view';
+import type { ReviewDraftHistoryHydrationState } from '@features/change-review/renderer';
 import type {
   ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,
   ReviewSerializedEditorState,
 } from '@features/change-review-history/contracts';
+import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import type {
   FileChangeSummary,
   HunkDecision,
@@ -157,7 +150,6 @@ import type {
   ReviewDecisionSnapshot,
   ReviewDiskUndoAction,
   ReviewDiskUndoSnapshot,
-  ReviewFileScope,
   ReviewHistoryRestoreTarget,
   ReviewMutationDiskPostimage,
   ReviewPersistedStateSnapshot,
@@ -177,11 +169,6 @@ type ReviewUndoActionInput =
 interface RecentReviewWrite {
   at: number;
   expectedContent: string | null;
-}
-
-interface DraftHistoryHydrationState {
-  key: string | null;
-  status: 'idle' | 'loading' | 'loaded' | 'error';
 }
 
 interface PendingDraftHistoryWrite {
@@ -382,37 +369,11 @@ export const ChangeReviewDialog = ({
     globalTasks,
   } = useStore();
 
-  // Build scope keys (pure values - safe to compute before hooks that depend on them)
-  const scopeKey = mode === 'task' ? `task:${taskId ?? ''}` : `agent:${memberName ?? ''}`;
-  // Filesystem-safe: use `-` instead of `:` for decision persistence key
-  const decisionScopeKey = mode === 'task' ? `task-${taskId ?? ''}` : `agent-${memberName ?? ''}`;
-  const decisionScopeToken = useMemo(() => {
-    if (
-      !reviewChangeSetMatchesScope(activeChangeSet, {
-        teamName,
-        taskId: mode === 'task' ? taskId : undefined,
-        memberName: mode === 'agent' ? memberName : undefined,
-      })
-    ) {
-      return null;
-    }
-
-    return buildReviewDecisionScopeToken({
-      mode,
-      taskId,
-      memberName,
-      requestSignature:
-        mode === 'task' ? buildTaskChangeSignature(taskChangeRequestOptions ?? {}) : undefined,
-      changeSet: activeChangeSet,
-    });
-  }, [activeChangeSet, memberName, mode, taskChangeRequestOptions, taskId, teamName]);
   const [draftHistoryEntries, setDraftHistoryEntries] = useState<
     Record<string, ReviewDraftHistoryEntry>
   >({});
-  const [draftHistoryHydration, setDraftHistoryHydration] = useState<DraftHistoryHydrationState>({
-    key: null,
-    status: 'idle',
-  });
+  const [draftHistoryHydration, setDraftHistoryHydration] =
+    useState<ReviewDraftHistoryHydrationState>({ key: null, status: 'idle' });
   const [draftHistoryRetryNonce, setDraftHistoryRetryNonce] = useState(0);
   const [draftConflictPromotionNonce, setDraftConflictPromotionNonce] = useState(0);
   const [decisionConflictCandidates, setDecisionConflictCandidates] = useState<
@@ -426,30 +387,30 @@ export const ChangeReviewDialog = ({
   const [resolvingConflictCandidateId, setResolvingConflictCandidateId] = useState<string | null>(
     null
   );
-  const decisionHydrationKey = decisionScopeToken
-    ? `${teamName}:${decisionScopeKey}:${decisionScopeToken}`
-    : null;
-  const decisionHydrationGuard = getReviewDecisionHydrationGuard({
-    expectedScopeKey: decisionHydrationKey,
-    hydratedScopeKey: decisionHydrationScopeKey,
-    status: decisionHydrationStatus,
+  const {
+    scopeKey,
+    decisionScopeKey,
+    decisionScopeToken,
+    decisionHydrationKey,
+    decisionHydrationReady,
+    decisionHydrationFailed,
+    decisionHydrationPending,
+    draftHistoryHydrationReady,
+    draftHistoryHydrationPending,
+    draftHistoryHydrationFailed,
+    reviewScope,
+    collapseStorageKey,
+  } = useChangeReviewScopeIdentity({
+    teamName,
+    mode,
+    memberName,
+    taskId,
+    taskChangeRequestOptions,
+    activeChangeSet,
+    decisionHydrationScopeKey,
+    decisionHydrationStatus,
+    draftHistoryHydration,
   });
-  const decisionHydrationReady = decisionHydrationGuard === 'ready';
-  const decisionHydrationFailed = decisionHydrationGuard === 'error';
-  const decisionHydrationPending = decisionHydrationGuard === 'pending';
-  const draftHistoryHydrationReady =
-    decisionHydrationKey === null ||
-    (draftHistoryHydration.key === decisionHydrationKey &&
-      draftHistoryHydration.status === 'loaded');
-  const draftHistoryHydrationPending =
-    decisionHydrationKey !== null &&
-    (draftHistoryHydration.key !== decisionHydrationKey ||
-      draftHistoryHydration.status === 'idle' ||
-      draftHistoryHydration.status === 'loading');
-  const draftHistoryHydrationFailed =
-    decisionHydrationKey !== null &&
-    draftHistoryHydration.key === decisionHydrationKey &&
-    draftHistoryHydration.status === 'error';
 
   // Active file from scroll-spy (replaces selectedReviewFilePath for continuous scroll)
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
@@ -463,14 +424,6 @@ export const ChangeReviewDialog = ({
   const [closing, setClosing] = useState(false);
   const [reviewActionPersistenceStatus, setReviewActionPersistenceStatus] =
     useState<ReviewActionPersistenceStatus>('saved');
-  const reviewScope = useMemo<ReviewFileScope>(
-    () => ({ teamName, taskId, memberName }),
-    [memberName, taskId, teamName]
-  );
-  const collapseStorageKey = useMemo(
-    () => `review:collapsed:${teamName}:${decisionScopeKey}`,
-    [teamName, decisionScopeKey]
-  );
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set<string>();
     try {
@@ -528,7 +481,6 @@ export const ChangeReviewDialog = ({
   const draftHistoryWriteErrorsRef = useRef(new Map<string, unknown>());
   const draftHistoryPersistedVersionsRef = useRef(new Map<string, DraftHistoryVersion>());
   const expectedDraftHistoryKeyRef = useRef<string | null>(null);
-  const reviewOperationScopeRef = useRef<ReviewOperationScopeToken | null>(null);
   const reviewConflictRefreshGenerationRef = useRef(0);
   const conflictResolutionOperationRef = useRef<object | null>(null);
   const suppressedDraftHistoryFilesRef = useRef(new Set<string>());
@@ -668,13 +620,7 @@ export const ChangeReviewDialog = ({
     };
   }, [decisionHydrationKey, lifecycleAuthorized, open]);
 
-  useLayoutEffect(() => {
-    const activeScopeKey =
-      open && lifecycleAuthorized
-        ? (decisionHydrationKey ?? `unscoped:${teamName}:${scopeKey}`)
-        : null;
-    const operationScope = activeScopeKey ? createReviewOperationScopeToken(activeScopeKey) : null;
-    reviewOperationScopeRef.current = operationScope;
+  const resetReviewOperationGenerationState = useCallback((): void => {
     // Busy state belongs to one operation generation. Never carry it into a
     // reopened or re-hydrated scope, but preserve recent-write evidence so late
     // filesystem events from our own committed mutation remain suppressible.
@@ -685,24 +631,16 @@ export const ChangeReviewDialog = ({
     setFilesApplying(new Set());
     setUndoing(false);
     setClosing(false);
-    return () => {
-      if (reviewOperationScopeRef.current === operationScope) {
-        reviewOperationScopeRef.current = null;
-      }
-    };
-  }, [changeSetEpoch, decisionHydrationKey, lifecycleAuthorized, open, scopeKey, teamName]);
-
-  const captureReviewOperationScope = useCallback((): ReviewOperationScopeToken | null => {
-    return reviewOperationScopeRef.current;
   }, []);
 
-  const isCurrentReviewOperationScope = useCallback(
-    (
-      operationScope: ReviewOperationScopeToken | null
-    ): operationScope is ReviewOperationScopeToken =>
-      isReviewOperationScopeCurrent(reviewOperationScopeRef.current, operationScope),
-    []
-  );
+  const { captureReviewOperationScope, isCurrentReviewOperationScope } =
+    useChangeReviewOperationGeneration({
+      active: open && lifecycleAuthorized,
+      decisionHydrationKey,
+      fallbackScopeKey: `unscoped:${teamName}:${scopeKey}`,
+      changeSetEpoch,
+      resetGenerationState: resetReviewOperationGenerationState,
+    });
 
   useEffect(() => {
     if (!open || !lifecycleAuthorized || !decisionHydrationKey) {
@@ -4297,46 +4235,22 @@ export const ChangeReviewDialog = ({
     await requestLifecycleClose();
   }, [requestLifecycleClose]);
 
-  useLayoutEffect(() => {
-    if (!open) {
-      setLifecycleAuthorized(false);
-      return;
-    }
-    const registration = registerChangeReviewLifecycleOwner({
-      hostId: resolvedLifecycleHostId,
-      sessionId: reviewLifecycleSessionId,
-      tabId: lifecycleTabId,
-      requestClose: requestLifecycleClose,
-      focus: onLifecycleFocus,
-    });
-    setLifecycleAuthorized(registration.accepted);
-    if (!registration.accepted) onOpenChange(false);
-    return () => {
-      registration.unregister();
-      setLifecycleAuthorized(false);
-    };
-  }, [
-    lifecycleTabId,
-    onLifecycleFocus,
-    onOpenChange,
+  const closeRejectedDialog = useCallback((): void => onOpenChange(false), [onOpenChange]);
+  useChangeReviewLifecycleRegistration({
     open,
-    requestLifecycleClose,
-    resolvedLifecycleHostId,
-    reviewLifecycleSessionId,
-  ]);
-
-  useEffect(() => {
-    if (!open || !lifecycleAuthorized) return;
-    const participantId = `changes:${teamName}:${decisionHydrationKey ?? scopeKey}`;
-    return registerAppCloseParticipant(participantId, async () => flushReviewStateForClose());
-  }, [
-    decisionHydrationKey,
-    flushReviewStateForClose,
-    lifecycleAuthorized,
-    open,
-    scopeKey,
-    teamName,
-  ]);
+    authorized: lifecycleAuthorized,
+    hostId: resolvedLifecycleHostId,
+    sessionId: reviewLifecycleSessionId,
+    tabId: lifecycleTabId,
+    focus: onLifecycleFocus,
+    requestClose: requestLifecycleClose,
+    closeRejectedDialog,
+    setAuthorized: setLifecycleAuthorized,
+    appCloseParticipantId: `changes:${teamName}:${decisionHydrationKey ?? scopeKey}`,
+    flushForAppClose: flushReviewStateForClose,
+    registerOwner: registerChangeReviewLifecycleOwner,
+    registerAppCloseParticipant,
+  });
 
   const handleRetrySavedReviewState = useCallback(async (): Promise<void> => {
     if (!decisionScopeToken || !decisionHydrationKey || reviewMutationBusy) return;

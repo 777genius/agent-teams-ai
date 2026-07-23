@@ -21,29 +21,16 @@ import type {
   ReviewUndoAction,
 } from '@shared/types';
 
+export type { ReviewOperationScopeToken } from '@features/change-review/renderer';
+export {
+  createReviewOperationScopeToken,
+  getReviewDecisionHydrationGuard,
+  isReviewOperationScopeCurrent,
+} from '@features/change-review/renderer';
+
 export interface ReviewDecisionRecords {
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
-}
-
-export interface ReviewOperationScopeToken {
-  readonly hydrationKey: string;
-  readonly generation: symbol;
-}
-
-/**
- * Object identity intentionally distinguishes closing and reopening the same
- * durable scope. A string key alone is vulnerable to an A -> B -> A race.
- */
-export function createReviewOperationScopeToken(hydrationKey: string): ReviewOperationScopeToken {
-  return Object.freeze({ hydrationKey, generation: Symbol(hydrationKey) });
-}
-
-export function isReviewOperationScopeCurrent(
-  current: ReviewOperationScopeToken | null,
-  operation: ReviewOperationScopeToken | null
-): operation is ReviewOperationScopeToken {
-  return current !== null && current === operation;
 }
 
 export function shouldRequestReviewCloseForEscape(input: {
@@ -177,18 +164,6 @@ export function hasUnscopedLocalReviewState(input: {
     input.pendingDecisionClear ||
     input.persistenceStatus !== 'saved'
   );
-}
-
-export function getReviewDecisionHydrationGuard(input: {
-  expectedScopeKey: string | null;
-  hydratedScopeKey: string | null;
-  status: 'idle' | 'loading' | 'loaded' | 'error';
-}): 'not-required' | 'pending' | 'ready' | 'error' {
-  if (input.expectedScopeKey === null) return 'not-required';
-  if (input.hydratedScopeKey !== input.expectedScopeKey) return 'pending';
-  if (input.status === 'loaded') return 'ready';
-  if (input.status === 'error') return 'error';
-  return 'pending';
 }
 
 /** A draft that survives an async Save must rebase onto the bytes that Save published. */
