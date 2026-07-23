@@ -1,9 +1,9 @@
-import type { SecondaryRuntimeStopFence } from './TeamProvisioningOpenCodeRuntimeStopFlow';
 import {
   type AnthropicApiKeyHelperRunOwner,
   cleanupRunOwnedAnthropicApiKeyHelper,
 } from './TeamProvisioningAnthropicApiKeyHelperLease';
 
+import type { SecondaryRuntimeStopFence } from './TeamProvisioningOpenCodeRuntimeStopFlow';
 import type { TeamProvisioningProgress } from '@shared/types';
 
 interface StopLogger {
