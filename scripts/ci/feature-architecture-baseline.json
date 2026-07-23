@@ -753,6 +753,24 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/renderer/index.ts",
+      "specifier": "./adapters/createTeamMessageFeedRendererSlice",
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/renderer/index.ts",
+      "specifier": "./adapters/createTeamViewDataRendererSlice",
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/renderer/index.ts",
+      "specifier": "./adapters/createTeamViewDataTransport",
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/terminal-workspace/main/index.ts",
       "specifier": "./adapters/input/registerTerminalWorkspaceIpc",
       "publicEntrypoint": "src/features/terminal-workspace/main/index.ts"
