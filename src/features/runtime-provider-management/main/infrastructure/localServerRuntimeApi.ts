@@ -32,12 +32,15 @@ export function buildLocalServerModelMetadataRequest(
           };
         },
       };
-    case 'llama.cpp':
+    case 'llama.cpp': {
+      const propsUrl = new URL(buildOllamaNativeUrl(baseUrl, '/props'));
+      propsUrl.searchParams.set('model', modelId);
       return {
-        url: buildOllamaNativeUrl(baseUrl, '/props'),
+        url: propsUrl.toString(),
         method: 'GET',
         parse: parseLlamaCppPropsMetadata,
       };
+    }
     case 'lm-studio':
       return {
         url: buildOllamaNativeUrl(baseUrl, '/api/v0/models'),

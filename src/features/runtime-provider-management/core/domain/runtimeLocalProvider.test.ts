@@ -79,6 +79,8 @@ describe('runtimeLocalProvider', () => {
       'http://172.16.0.2:8080/v1',
       'http://mini.local:1234/v1',
       'http://[fd12:3456::1]:8080/v1',
+      'http://[fe90::1]:8080/v1',
+      'http://[febf::1]:8080/v1',
     ]) {
       expect(
         normalizeRuntimeLocalProviderTarget({

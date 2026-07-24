@@ -188,7 +188,7 @@ function isPrivateNetworkHostname(hostname: string): boolean {
   }
   if (normalized.includes(':')) {
     // IPv6 unique-local (fc00::/7) and link-local (fe80::/10) ranges.
-    return /^f[cd]/.test(normalized) || normalized.startsWith('fe80:');
+    return /^f[cd]/.test(normalized) || /^fe[89ab]/.test(normalized);
   }
   const ipv4 = parseIpv4Octets(normalized);
   if (!ipv4) {

@@ -45,8 +45,9 @@ describe('localServerRuntimeApi', () => {
 
   it('builds native metadata requests only for presets with known endpoints', () => {
     expect(
-      buildLocalServerModelMetadataRequest('llama.cpp', 'http://127.0.0.1:8080/v1', 'm')?.url
-    ).toBe('http://127.0.0.1:8080/props');
+      buildLocalServerModelMetadataRequest('llama.cpp', 'http://127.0.0.1:8080/v1', 'org/model:Q4')
+        ?.url
+    ).toBe('http://127.0.0.1:8080/props?model=org%2Fmodel%3AQ4');
     expect(
       buildLocalServerModelMetadataRequest('lm-studio', 'http://127.0.0.1:1234/v1', 'm')?.url
     ).toBe('http://127.0.0.1:1234/api/v0/models');

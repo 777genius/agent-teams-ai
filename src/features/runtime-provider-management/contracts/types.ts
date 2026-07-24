@@ -647,7 +647,11 @@ export interface RuntimeLocalProviderListEntryDto {
   baseUrl: string;
   configuredModelIds: readonly string[];
   defaultModelId: string | null;
+  /** Selected lightweight-task model when small_model points at this provider. */
+  smallModelId?: string | null;
   isDefault: boolean;
+  /** True only when Agent Teams owns an approval for this exact private-network config target. */
+  privateNetworkApproved?: boolean;
   state: RuntimeLocalProviderProbeStateDto;
   liveModels: readonly RuntimeLocalProviderModelDto[];
   latencyMs: number | null;
@@ -702,6 +706,7 @@ export interface RuntimeLocalProviderConfigurationDto {
   configPath: string;
   scope: RuntimeLocalProviderScopeDto;
   setAsDefault: boolean;
+  setAsSmallModel?: boolean;
 }
 
 export interface RuntimeLocalProviderConfigureResponse {
