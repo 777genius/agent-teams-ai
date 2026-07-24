@@ -495,6 +495,10 @@ export function useTerminalMuxTabLifecycle({
 
     void (async () => {
       try {
+        await Promise.resolve();
+        if (!isBackgroundOperationCurrent(token)) {
+          return;
+        }
         await token.commands.dispatchMuxCommand(token.activeSessionId, {
           kind: 'focus_tab',
           tab_id: activeVisibleTabId,
@@ -550,6 +554,10 @@ export function useTerminalMuxTabLifecycle({
 
     void (async () => {
       try {
+        await Promise.resolve();
+        if (!isBackgroundOperationCurrent(token)) {
+          return;
+        }
         await token.commands.dispatchMuxCommand(token.activeSessionId, {
           kind: 'new_tab',
           title: PREWARMED_TERMINAL_TAB_TITLE,

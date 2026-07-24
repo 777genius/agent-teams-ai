@@ -359,6 +359,48 @@ describe('useTerminalMuxTabLifecycle', () => {
     window.removeEventListener('unhandledrejection', unhandledRejection);
   });
 
+  it('starts background prewarm only once when StrictMode replays mount effects', async () => {
+    const dispatchedKinds: string[] = [];
+    const commands = createResolvedCommands({
+      onDispatch: (_sessionId, command) => dispatchedKinds.push(command.kind),
+    });
+
+    await renderStrict({
+      canCreateTab: true,
+      commands,
+      orderedVisibleTabs: [TAB_ONE],
+      tabsCount: 1,
+      visibleTabs: [TAB_ONE],
+    });
+    await flushInAct();
+
+    expect(dispatchedKinds).toEqual(['new_tab', 'focus_tab']);
+    expect(commands.attachSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('starts background restore only once when StrictMode replays mount effects', async () => {
+    const commands = createResolvedCommands();
+    const prewarmedTab = createTab('tab-prewarmed', PREWARMED_TERMINAL_TAB_TITLE);
+
+    await renderStrict({
+      activeTabId: prewarmedTab.tab_id,
+      activeVisibleTabId: TAB_ONE.tab_id,
+      commands,
+      orderedVisibleTabs: [TAB_ONE],
+      prewarmedTab,
+      tabsCount: 2,
+      visibleTabs: [TAB_ONE],
+    });
+    await flushInAct();
+
+    expect(commands.dispatchMuxCommand).toHaveBeenCalledTimes(1);
+    expect(commands.dispatchMuxCommand).toHaveBeenCalledWith('session-a', {
+      kind: 'focus_tab',
+      tab_id: TAB_ONE.tab_id,
+    });
+    expect(commands.attachSession).toHaveBeenCalledOnce();
+  });
+
   it('invalidates old work when the narrow commands port is replaced', async () => {
     const deferredOldPort = createDeferred<void>();
     const pendingChanges = vi.fn();
@@ -467,6 +509,18 @@ describe('useTerminalMuxTabLifecycle', () => {
         <React.Suspense fallback={null}>
           <Harness {...options} />
         </React.Suspense>
+      );
+      await flushMicrotasks();
+    });
+  }
+
+  async function renderStrict(overrides: Partial<LifecycleOptions> = {}): Promise<void> {
+    options = { ...options, ...overrides };
+    await act(async () => {
+      root.render(
+        <React.StrictMode>
+          <Harness {...options} />
+        </React.StrictMode>
       );
       await flushMicrotasks();
     });
