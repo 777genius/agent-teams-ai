@@ -44,6 +44,7 @@ describe('useChangeReviewScopeIdentity', () => {
       await Promise.resolve();
     });
     const initialScope = latestProjection?.reviewScope;
+    expect(initialScope).toBeDefined();
 
     await act(async () => {
       root.render(<Probe draftHistoryHydration={{ key: 'hydration-a', status: 'loading' }} />);
