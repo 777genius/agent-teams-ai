@@ -1388,7 +1388,9 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     persistenceGate.resolve();
     await expect(launching).resolves.toEqual({ runId: 'run-open-code' });
 
-    expect(clearPersistedLaunchState).toHaveBeenNthCalledWith(1, 'open-code-team');
+    expect(clearPersistedLaunchState).toHaveBeenNthCalledWith(1, 'open-code-team', {
+      expectedRunId: 'run-open-code',
+    });
     expect(clearPersistedLaunchState).toHaveBeenNthCalledWith(2, 'open-code-team', {
       expectedRunId: 'run-open-code',
     });
@@ -1405,11 +1407,61 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
         previousLaunchState,
       })
     );
-    expect(calls.indexOf('clearPersistedLaunchState:run-open-code')).toBeGreaterThan(
+    expect(calls.lastIndexOf('clearPersistedLaunchState:run-open-code')).toBeGreaterThan(
       calls.indexOf('stopExactPrimary')
     );
     expect(calls).not.toContain('clearLaneStorage:primary');
     expect(calls).toContain('cleanupRun');
+    expect(calls).not.toContain('setAliveRun');
+  });
+
+  it('fences the initial persisted-state clear so a superseded run preserves successor state', async () => {
+    const alice = member('alice');
+    const calls: string[] = [];
+    const initialClearStarted = deferred();
+    const initialClearGate = deferred();
+    let provisioningOwner = 'run-open-code';
+    let persistedState = 'previous-state';
+    const clearPersistedLaunchState = vi.fn<
+      OpenCodeWorktreeRootAggregateLaunchPorts['clearPersistedLaunchState']
+    >(async (_teamName, options) => {
+      calls.push(`clearPersistedLaunchState:${options?.expectedRunId}`);
+      initialClearStarted.resolve();
+      if (options?.expectedRunId === undefined) {
+        await initialClearGate.promise;
+      }
+      if (options?.expectedRunId === undefined || options.expectedRunId === provisioningOwner) {
+        persistedState = 'cleared';
+      }
+    });
+
+    const launching = runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {} as TeamLaunchRuntimeAdapter,
+        request: request([alice]),
+        members: [alice],
+        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [] }),
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        getProvisioningRun: () => provisioningOwner,
+        clearPersistedLaunchState,
+      }
+    );
+    await initialClearStarted.promise;
+
+    provisioningOwner = 'successor-run';
+    persistedState = 'successor-state';
+    initialClearGate.resolve();
+    await expect(launching).resolves.toEqual({ runId: 'run-open-code' });
+
+    expect(clearPersistedLaunchState).toHaveBeenNthCalledWith(1, 'open-code-team', {
+      expectedRunId: 'run-open-code',
+    });
+    expect(persistedState).toBe('successor-state');
+    expect(calls).not.toContain('launchPrimary');
     expect(calls).not.toContain('setAliveRun');
   });
 });

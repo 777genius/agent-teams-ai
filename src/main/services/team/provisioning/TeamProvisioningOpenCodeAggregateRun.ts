@@ -813,7 +813,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     return { runId };
   };
 
-  await ports.clearPersistedLaunchState(teamName);
+  await ports.clearPersistedLaunchState(teamName, { expectedRunId: runId });
   if (aggregateLaunchNoLongerCurrent()) {
     return await finishCancelledAggregateLaunch();
   }
