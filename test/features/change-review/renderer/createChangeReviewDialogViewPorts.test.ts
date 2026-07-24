@@ -22,9 +22,10 @@ function createHarness() {
   let undoing = false;
   let closing = false;
   const editorState = EditorState.create({ doc: 'draft', extensions: [history()] });
+  const editorDom = { isConnected: true };
   const editorView = {
     state: editorState,
-    dom: { isConnected: true },
+    dom: editorDom,
     dispatch: vi.fn(),
   } as unknown as EditorView;
   const file: FileChangeSummary = {
@@ -94,6 +95,7 @@ function createHarness() {
 
   return {
     file,
+    editorDom,
     editorView,
     editorActions,
     subscribeToRejectCurrentHunk,
@@ -215,5 +217,18 @@ describe('createChangeReviewDialogViewPorts', () => {
     });
     expect(harness.editorActions.ignoreNextDocChange).toHaveBeenCalledWith(harness.editorView);
     expect(harness.editorView.dispatch).toHaveBeenCalledOnce();
+  });
+
+  it('ignores keyboard editor work after the editor DOM disconnects', () => {
+    const harness = createHarness();
+    harness.editorDom.isConnected = false;
+
+    expect(harness.ports.keyboardInteraction.rejectCurrentChunk(harness.file.filePath)).toBeNull();
+    harness.ports.keyboardInteraction.rollbackContent(harness.file.filePath, 'draft');
+
+    expect(harness.editorActions.computeChunkIndexAtPosition).not.toHaveBeenCalled();
+    expect(harness.editorActions.rejectChunk).not.toHaveBeenCalled();
+    expect(harness.editorActions.ignoreNextDocChange).not.toHaveBeenCalled();
+    expect(harness.editorView.dispatch).not.toHaveBeenCalled();
   });
 });

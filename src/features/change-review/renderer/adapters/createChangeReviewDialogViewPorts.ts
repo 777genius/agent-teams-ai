@@ -289,7 +289,7 @@ export function createChangeReviewDialogViewPorts({
       subscribeRejectCurrentHunk: subscribeToRejectCurrentHunk,
       rejectCurrentChunk: (filePath) => {
         const view = editorViewMapRef.current.get(filePath);
-        if (!view) return null;
+        if (!view?.dom.isConnected) return null;
         const cursorPosition = view.state.selection.main.head;
         const hunkIndex = editorActions.computeChunkIndexAtPosition(view.state, cursorPosition);
         const beforeContent = view.state.doc.toString();
@@ -300,15 +300,7 @@ export function createChangeReviewDialogViewPorts({
           afterContent: view.state.doc.toString(),
         };
       },
-      rollbackContent: (filePath, content) => {
-        const view = editorViewMapRef.current.get(filePath);
-        if (!view) return;
-        editorActions.ignoreNextDocChange(view);
-        view.dispatch({
-          changes: { from: 0, to: view.state.doc.length, insert: content },
-          annotations: Transaction.addToHistory.of(false),
-        });
-      },
+      rollbackContent: rollbackEditorContent,
     },
     hunkDecision: {
       editor: {
