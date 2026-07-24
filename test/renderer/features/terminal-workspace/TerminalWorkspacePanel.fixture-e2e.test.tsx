@@ -1518,6 +1518,30 @@ describe('terminal workspace panel fixture-e2e', () => {
     await renderPanel();
 
     const screen = getRequiredElement('mock-terminal-screen');
+    const unrelatedTarget = document.createElement('span');
+    unrelatedTarget.textContent = 'ordinary terminal output';
+    screen.appendChild(unrelatedTarget);
+    const unrelatedContextMenu = new MouseEvent('contextmenu', {
+      bubbles: true,
+      cancelable: true,
+      clientX: 80,
+      clientY: 90,
+    });
+    const stopPropagation = vi.spyOn(unrelatedContextMenu, 'stopPropagation');
+    const documentContextMenuListener = vi.fn();
+    document.addEventListener('contextmenu', documentContextMenuListener);
+    await act(async () => {
+      unrelatedTarget.dispatchEvent(unrelatedContextMenu);
+      await flushMicrotasks();
+    });
+    expect(unrelatedContextMenu.defaultPrevented).toBe(false);
+    expect(stopPropagation).not.toHaveBeenCalled();
+    expect(documentContextMenuListener).toHaveBeenCalledOnce();
+    expect(
+      document.querySelector('[data-testid="agent-team-terminal-command-context-menu"]')
+    ).toBeNull();
+    document.removeEventListener('contextmenu', documentContextMenuListener);
+
     const historyEntry = document.createElement('section');
     historyEntry.className = 'history-entry';
     historyEntry.setAttribute('part', 'history-entry');
@@ -1547,6 +1571,9 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(menu.textContent).toContain('Copy');
     expect(menu.textContent).toContain('Copy command');
     expect(menu.textContent).toContain('Copy output');
+    expect(document.activeElement).toBe(
+      getRequiredElement('agent-team-terminal-command-context-copy')
+    );
 
     await act(async () => {
       getRequiredElement('agent-team-terminal-command-context-copy-output').dispatchEvent(
