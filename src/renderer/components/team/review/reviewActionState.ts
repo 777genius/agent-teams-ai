@@ -1,4 +1,6 @@
 import {
+  partitionReviewFilesByApplyErrors,
+  reconcileReviewDecisionRecordsAfterApply,
   restoreReviewDecisionRecordsForFile,
   restoreReviewDecisionRecordsForFiles,
 } from '@features/review-mutations';
@@ -59,7 +61,12 @@ export function replaceReviewScopedRecord<T>(
   return { ...next, ...recovered };
 }
 
-export { restoreReviewDecisionRecordsForFile, restoreReviewDecisionRecordsForFiles };
+export {
+  partitionReviewFilesByApplyErrors,
+  reconcileReviewDecisionRecordsAfterApply,
+  restoreReviewDecisionRecordsForFile,
+  restoreReviewDecisionRecordsForFiles,
+};
 
 export function isReviewActionLocked(state: {
   applying: boolean;
@@ -192,45 +199,6 @@ export function hasUnresolvedReviewExternalChange(
   return Object.keys(changes).some(
     (candidatePath) => normalizePathForComparison(candidatePath) === normalizedFilePath
   );
-}
-
-export function partitionReviewFilesByApplyErrors(
-  files: readonly FileChangeSummary[],
-  errorPaths: readonly string[] | null
-): { successful: FileChangeSummary[]; failed: FileChangeSummary[] } {
-  if (errorPaths === null) return { successful: [], failed: [...files] };
-  const normalizedErrors = new Set(errorPaths.map(normalizePathForComparison));
-  const requestedPaths = new Set(files.map((file) => normalizePathForComparison(file.filePath)));
-  const hasUnknownError = [...normalizedErrors].some((filePath) => !requestedPaths.has(filePath));
-  if (hasUnknownError) {
-    return { successful: [], failed: [...files] };
-  }
-  return {
-    successful: files.filter(
-      (file) => !normalizedErrors.has(normalizePathForComparison(file.filePath))
-    ),
-    failed: files.filter((file) => normalizedErrors.has(normalizePathForComparison(file.filePath))),
-  };
-}
-
-export function reconcileReviewDecisionRecordsAfterApply(
-  files: readonly FileChangeSummary[],
-  errorPaths: readonly string[] | null,
-  current: ReviewDecisionRecords,
-  snapshot: ReviewDecisionRecords
-): ReviewDecisionRecords & {
-  successful: FileChangeSummary[];
-  failed: FileChangeSummary[];
-} {
-  const partition = partitionReviewFilesByApplyErrors(files, errorPaths);
-  let reconciled: ReviewDecisionRecords = {
-    hunkDecisions: { ...current.hunkDecisions },
-    fileDecisions: { ...current.fileDecisions },
-  };
-  for (const file of partition.failed) {
-    reconciled = restoreReviewDecisionRecordsForFile(file, reconciled, snapshot);
-  }
-  return { ...partition, ...reconciled };
 }
 
 export function getReviewRenameRecoveryExpectation(

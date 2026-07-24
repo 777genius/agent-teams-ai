@@ -20,6 +20,8 @@ import {
   ChangeReviewConflictDiscardDialog,
   ChangeReviewConflictNotices,
   createChangeReviewActionHistoryStorePort,
+  createChangeReviewBulkDecisionCommandPort,
+  createChangeReviewBulkDecisionStatePort,
   createChangeReviewConflictCommandPort,
   createChangeReviewConflictQueryPort,
   createChangeReviewConflictStateBridge,
@@ -35,6 +37,7 @@ import {
   TaskChangesEmptyState,
   toTaskChangeSetV2,
   useChangeReviewActionHistoryController,
+  useChangeReviewBulkDecisionController,
   useChangeReviewConflictDiscoveryController,
   useChangeReviewConflictInteractionController,
   useChangeReviewDecisionAutoPersistence,
@@ -49,8 +52,10 @@ import {
 import { serializeReviewDraftEditorState } from '@features/change-review-history/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
+  alignReviewDiskUndoSnapshotWithAppliedContent,
   buildReviewExternalReloadState,
   buildReviewRestoreDecisionState,
+  isLedgerRenameReviewFile,
 } from '@features/review-mutations';
 import { api, isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
@@ -93,7 +98,6 @@ import {
   hasUnscopedLocalReviewState,
   isReviewActionLocked,
   isReviewFileFullyRejected,
-  reconcileReviewDecisionRecordsAfterApply,
   replaceReviewScopedRecord,
   resolveReviewFileIsNew,
   restoreReviewDecisionRecordsForFile,
@@ -123,6 +127,9 @@ import { ViewedProgressBar } from './ViewedProgressBar';
 import type { ReviewDecisionRecords } from './reviewActionState';
 import type { EditorView } from '@codemirror/view';
 import type {
+  ChangeReviewBulkDecisionEditorPort,
+  ChangeReviewBulkDecisionStatusPort,
+  ChangeReviewBulkDecisionWriteEvidencePort,
   ChangeReviewHistoryMutationViewPort,
   ReviewDraftHistoryHydrationState,
 } from '@features/change-review/renderer';
@@ -167,6 +174,11 @@ const changeReviewDecisionPersistencePort = createChangeReviewDecisionPersistenc
   getStore: useStore.getState,
   setApplyError: (applyError) => useStore.setState({ applyError }),
 });
+const changeReviewBulkDecisionStatePort = createChangeReviewBulkDecisionStatePort({
+  getStore: useStore.getState,
+  restoreDecisionSnapshot: ({ hunkDecisions, fileDecisions }) =>
+    useStore.setState({ hunkDecisions, fileDecisions }),
+});
 const changeReviewHistoryMutationCommandPort = createChangeReviewHistoryMutationCommandPort(
   () => api.review
 );
@@ -194,25 +206,6 @@ const changeReviewHistoryMutationStatePort = createChangeReviewHistoryMutationSt
   invalidateResolvedFileContent: (filePath) =>
     useStore.getState().invalidateResolvedFileContent(filePath),
 });
-
-function alignDiskUndoSnapshotWithAppliedContent(
-  snapshot: ReviewDiskUndoSnapshot,
-  appliedContent: string
-): void {
-  if (snapshot.afterContent === null) return;
-  const merged = threeWayTextMerge(snapshot.afterContent, appliedContent, snapshot.beforeContent);
-  snapshot.afterContent = appliedContent;
-  if (merged.hasConflicts) {
-    snapshot.restoreConflict =
-      'Undo conflicts with edits that were preserved while applying the rejection.';
-    return;
-  }
-  snapshot.beforeContent = merged.content;
-}
-
-function isLedgerRenameReviewFile(file: FileChangeSummary | undefined): boolean {
-  return Boolean(file?.snippets.some((snippet) => snippet.ledger?.relation?.kind === 'rename'));
-}
 
 const REVIEW_LOCAL_WRITE_COOLDOWN_MS = 2000;
 
@@ -1012,82 +1005,14 @@ export const ChangeReviewDialog = ({
     [handleTreeFileClick, sortedFiles]
   );
 
-  // Accept/Reject all across all files
-  const handleAcceptAll = useCallback(() => {
-    if (
-      !activeChangeSet ||
-      !canAcceptAll ||
-      hasReviewActionInFlight() ||
-      blockReviewMutationForExternalChange()
-    ) {
-      return;
-    }
-    const operationScope = captureReviewOperationScope();
-    if (!operationScope) return;
-    const reviewState = useStore.getState();
-    const currentDrafts = reviewState.editedContents;
-    const decisionSnapshot: ReviewDecisionSnapshot = {
-      hunkDecisions: { ...reviewState.hunkDecisions },
-      fileDecisions: { ...reviewState.fileDecisions },
-    };
-    const acceptedFiles = new Set<string>();
-    for (const file of activeChangeSet.files) {
-      if (file.filePath in currentDrafts) continue;
-      if (acceptAllFile(file.filePath)) acceptedFiles.add(file.filePath);
-    }
-    if (acceptedFiles.size === 0) return;
-    pushReviewUndoAction({
-      kind: 'bulk',
-      descriptor: { intent: 'accept-all', fileCount: acceptedFiles.size },
-      decisionSnapshot,
-      diskSnapshots: [],
-    });
-    void persistLatestAcceptedReviewAction();
-    requestAnimationFrame(() => {
-      if (!isCurrentReviewOperationScope(operationScope)) return;
-      for (const [filePath, view] of editorViewMapRef.current.entries()) {
-        if (!acceptedFiles.has(filePath)) continue;
-        acceptAllChunks(view);
-      }
-    });
-  }, [
-    acceptAllFile,
-    activeChangeSet,
-    blockReviewMutationForExternalChange,
-    canAcceptAll,
-    captureReviewOperationScope,
-    hasReviewActionInFlight,
-    isCurrentReviewOperationScope,
-    persistLatestAcceptedReviewAction,
-    pushReviewUndoAction,
-  ]);
-
-  const handleRejectAll = useCallback(() => {
-    if (!activeChangeSet || hasReviewActionInFlight() || blockReviewMutationForExternalChange()) {
-      return;
-    }
-    const operationScope = captureReviewOperationScope();
-    if (!operationScope) return;
-    const currentDrafts = useStore.getState().editedContents;
-    const requestedFiles = rejectablePendingFiles.filter(
-      (file) => !(file.filePath in currentDrafts)
-    );
-    const rejectableFilePaths = new Set(requestedFiles.map((file) => file.filePath));
-    if (rejectableFilePaths.size === 0) return;
-    const reviewState = useStore.getState();
-    const decisionSnapshot = {
-      hunkDecisions: { ...reviewState.hunkDecisions },
-      fileDecisions: { ...reviewState.fileDecisions },
-    };
-    const diskUndoSnapshots: ReviewDiskUndoSnapshot[] = [];
-    for (const file of requestedFiles) {
+  const buildBulkRejectDiskSnapshot = useCallback(
+    (
+      file: FileChangeSummary,
+      decisionSnapshot: ReviewDecisionSnapshot
+    ): ReviewDiskUndoSnapshot | null => {
       const content = fileContents[file.filePath] ?? null;
       const isNewFile = resolveReviewFileIsNew(file, content);
-      const hunkCount = getFileHunkCount(
-        file.filePath,
-        file.snippets.length,
-        reviewState.fileChunkCounts
-      );
+      const hunkCount = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
       const shouldDeleteOnUndo = shouldDeleteFileWhenUndoingReject(
         file,
         hunkCount,
@@ -1097,207 +1022,112 @@ export const ChangeReviewDialog = ({
         editorViewMapRef.current.get(file.filePath)?.state.doc.toString() ??
         getResolvedReviewModifiedContent(file, content);
       const afterContent = isNewFile ? null : (content?.originalFullContent ?? null);
-      if (beforeContent != null && (afterContent != null || isNewFile)) {
-        diskUndoSnapshots.push({
-          filePath: file.filePath,
-          beforeContent,
-          afterContent,
-          file,
-          restoreMode: isNewFile ? 'create-file' : shouldDeleteOnUndo ? 'delete-file' : undefined,
-          renameExpectation: getReviewRenameRecoveryExpectation(file) ?? undefined,
-          fileIndex: isNewFile
-            ? activeChangeSet.files.findIndex((candidate) => candidate.filePath === file.filePath)
-            : undefined,
-        });
-      }
-      fileApplyInFlightRef.current.add(file.filePath);
-      rejectAllFile(file.filePath);
-    }
-    const preparedAction = pushReviewUndoAction({
-      kind: 'bulk',
-      descriptor: { intent: 'reject-all', fileCount: requestedFiles.length },
-      decisionSnapshot,
-      diskSnapshots: diskUndoSnapshots,
-    });
-    setFilesApplying(new Set(rejectableFilePaths));
-    requestAnimationFrame(() => {
-      if (!isCurrentReviewOperationScope(operationScope)) return;
-      for (const [filePath, view] of editorViewMapRef.current.entries()) {
-        if (!rejectableFilePaths.has(filePath)) continue;
-        rejectAllChunks(view);
-      }
-    });
-    if (REVIEW_INSTANT_APPLY) {
-      // In instant-apply mode we don't show an "Apply" button, so bulk reject must
-      // be applied immediately to match Cursor-like UX (including deleting new files).
-      void (async () => {
-        try {
-          if (!isCurrentReviewOperationScope(operationScope)) return;
-          if (!ensureDurableReviewScope()) {
-            useStore.setState({
-              hunkDecisions: decisionSnapshot.hunkDecisions,
-              fileDecisions: decisionSnapshot.fileDecisions,
-            });
-            for (const snapshot of diskUndoSnapshots) {
-              rollbackEditorContent(snapshot.filePath, snapshot.beforeContent);
-            }
-            discardLatestReviewAction(preparedAction);
-            return;
+      if (beforeContent == null || (afterContent == null && !isNewFile)) return null;
+      return {
+        filePath: file.filePath,
+        beforeContent,
+        afterContent,
+        file,
+        restoreMode: isNewFile ? 'create-file' : shouldDeleteOnUndo ? 'delete-file' : undefined,
+        renameExpectation: getReviewRenameRecoveryExpectation(file) ?? undefined,
+        fileIndex: isNewFile
+          ? activeChangeSet?.files.findIndex((candidate) => candidate.filePath === file.filePath)
+          : undefined,
+      };
+    },
+    [activeChangeSet, fileChunkCounts, fileContents]
+  );
+  const bulkDecisionCommandPort = useMemo(
+    () =>
+      createChangeReviewBulkDecisionCommandPort({
+        getStore: useStore.getState,
+        readCurrentDiskContent: readCurrentReviewDiskContent,
+      }),
+    [readCurrentReviewDiskContent]
+  );
+  const bulkDecisionViewPorts = useMemo<{
+    editor: ChangeReviewBulkDecisionEditorPort;
+    status: ChangeReviewBulkDecisionStatusPort;
+    writeEvidence: ChangeReviewBulkDecisionWriteEvidencePort;
+  }>(
+    () => ({
+      editor: {
+        scheduleEditorSync: (callback) => requestAnimationFrame(callback),
+        acceptAllEditorChunks: (filePaths) => {
+          for (const [filePath, view] of editorViewMapRef.current.entries()) {
+            if (filePaths.has(filePath)) acceptAllChunks(view);
           }
-          for (const snapshot of diskUndoSnapshots) {
-            markRecentReviewWrite(
-              snapshot.filePath,
-              isLedgerRenameReviewFile(snapshot.file) ? null : snapshot.afterContent
-            );
+        },
+        rejectAllEditorChunks: (filePaths) => {
+          for (const [filePath, view] of editorViewMapRef.current.entries()) {
+            if (filePaths.has(filePath)) rejectAllChunks(view);
           }
-          const result = await applyReview(teamName, taskId, memberName);
-          if (
-            !isCurrentReviewOperationScope(operationScope) ||
-            useStore.getState().changeSetEpoch !== changeSetEpoch
-          ) {
-            return;
-          }
-          markCommittedReviewPostimages(result?.diskPostimages);
-          bindCommittedReviewAction(preparedAction, result?.committedReviewAction);
-          const currentDecisionState = useStore.getState();
-          const reconciliation = reconcileReviewDecisionRecordsAfterApply(
-            requestedFiles,
-            result ? result.errors.map((entry) => entry.filePath) : null,
-            currentDecisionState,
-            decisionSnapshot
-          );
-          useStore.setState({
-            hunkDecisions: reconciliation.hunkDecisions,
-            fileDecisions: reconciliation.fileDecisions,
+        },
+        rollbackEditorContent,
+      },
+      writeEvidence: {
+        markExpectedWrite: markRecentReviewWrite,
+        markCommittedPostimages: markCommittedReviewPostimages,
+      },
+      status: {
+        beginFileMutation: (filePath) => fileApplyInFlightRef.current.add(filePath),
+        finishFileMutation: (filePath) => fileApplyInFlightRef.current.delete(filePath),
+        markFilesApplying: (filePaths) => {
+          setFilesApplying((previous) => {
+            const next = new Set(previous);
+            for (const filePath of filePaths) next.add(filePath);
+            return next;
           });
-          const failedPaths = new Set(
-            reconciliation.failed.map((file) => normalizePathForComparison(file.filePath))
-          );
-          const successfulFiles = reconciliation.successful;
-
-          for (const file of requestedFiles) {
-            if (!failedPaths.has(normalizePathForComparison(file.filePath))) continue;
-            const beforeContent = diskUndoSnapshots.find(
-              (snapshot) => snapshot.filePath === file.filePath
-            )?.beforeContent;
-            if (beforeContent !== undefined) rollbackEditorContent(file.filePath, beforeContent);
-            useStore.getState().invalidateResolvedFileContent(file.filePath);
-            setDiscardCounters((previous) => ({
-              ...previous,
-              [file.filePath]: (previous[file.filePath] ?? 0) + 1,
-            }));
-            void fetchFileContent(teamName, memberName, file.filePath);
-          }
-
-          for (let index = diskUndoSnapshots.length - 1; index >= 0; index--) {
-            if (failedPaths.has(normalizePathForComparison(diskUndoSnapshots[index].filePath))) {
-              diskUndoSnapshots.splice(index, 1);
-            }
-          }
-
-          if (successfulFiles.length === 0) {
-            discardLatestReviewAction(preparedAction);
-            return;
-          }
-          const retainedAction = getLatestUndoAction();
-          if (
-            retainedAction?.id === preparedAction.id &&
-            retainedAction.kind === 'bulk' &&
-            retainedAction.descriptor?.intent === 'reject-all'
-          ) {
-            retainedAction.descriptor = {
-              intent: 'reject-all',
-              fileCount: diskUndoSnapshots.length,
-            };
-          }
-
-          setUndoInFlight(true);
-          await Promise.all(
-            diskUndoSnapshots.map(async (snapshot) => {
-              if (
-                snapshot.afterContent === null ||
-                snapshot.restoreMode === 'delete-file' ||
-                isLedgerRenameReviewFile(snapshot.file)
-              ) {
-                return;
-              }
-              const appliedContent = await readCurrentReviewDiskContent(
-                snapshot.filePath,
-                snapshot.afterContent
-              );
-              alignDiskUndoSnapshotWithAppliedContent(snapshot, appliedContent);
-            })
-          );
-
-          if (
-            !isCurrentReviewOperationScope(operationScope) ||
-            useStore.getState().changeSetEpoch !== changeSetEpoch
-          ) {
-            return;
-          }
-          for (const file of successfulFiles) {
-            const snapshot = diskUndoSnapshots.find(
-              (candidate) =>
-                normalizePathForComparison(candidate.filePath) ===
-                normalizePathForComparison(file.filePath)
-            );
-            if (snapshot) {
-              markRecentReviewWrite(
-                file.filePath,
-                isLedgerRenameReviewFile(snapshot.file) ? null : snapshot.afterContent
-              );
-            }
-          }
-          publishReviewUndoHistory();
-        } finally {
-          if (
-            isCurrentReviewOperationScope(operationScope) &&
-            useStore.getState().changeSetEpoch === changeSetEpoch
-          ) {
-            for (const file of requestedFiles) {
-              fileApplyInFlightRef.current.delete(file.filePath);
-            }
-            setFilesApplying((previous) => {
-              const next = new Set(previous);
-              for (const file of requestedFiles) next.delete(file.filePath);
-              return next;
-            });
-            setUndoInFlight(false);
-          }
-        }
-      })();
-    } else {
-      for (const file of requestedFiles) fileApplyInFlightRef.current.delete(file.filePath);
-      setFilesApplying(new Set());
-    }
-  }, [
-    activeChangeSet,
-    bindCommittedReviewAction,
-    blockReviewMutationForExternalChange,
-    captureReviewOperationScope,
-    rejectablePendingFiles,
-    rejectAllFile,
-    applyReview,
-    teamName,
-    taskId,
-    memberName,
-    fileContents,
-    changeSetEpoch,
-    readCurrentReviewDiskContent,
-    fetchFileContent,
-    hasReviewActionInFlight,
-    isCurrentReviewOperationScope,
-    markCommittedReviewPostimages,
-    markRecentReviewWrite,
-    rollbackEditorContent,
-    pushReviewUndoAction,
-    discardLatestReviewAction,
-    ensureDurableReviewScope,
-    getLatestUndoAction,
-    publishReviewUndoHistory,
-    setUndoInFlight,
-  ]);
-
+        },
+        clearFilesApplying: (filePaths) => {
+          setFilesApplying((previous) => {
+            const next = new Set(previous);
+            for (const filePath of filePaths) next.delete(filePath);
+            return next;
+          });
+        },
+        incrementDiscardCounter: (filePath) => {
+          setDiscardCounters((previous) => ({
+            ...previous,
+            [filePath]: (previous[filePath] ?? 0) + 1,
+          }));
+        },
+        setUndoInFlight,
+      },
+    }),
+    [markCommittedReviewPostimages, markRecentReviewWrite, rollbackEditorContent, setUndoInFlight]
+  );
+  const { acceptAll: handleAcceptAll, rejectAll: handleRejectAll } =
+    useChangeReviewBulkDecisionController({
+      active: activeChangeSet !== null,
+      files: activeChangeSet?.files ?? [],
+      rejectableFiles: rejectablePendingFiles,
+      canAcceptAll,
+      changeSetEpoch,
+      instantApply: REVIEW_INSTANT_APPLY,
+      teamName,
+      taskId,
+      memberName,
+      history: {
+        pushUndoAction: pushReviewUndoAction,
+        bindCommittedAction: bindCommittedReviewAction,
+        discardLatestAction: discardLatestReviewAction,
+        getLatestUndoAction,
+        publishUndoHistory: publishReviewUndoHistory,
+      },
+      statePort: changeReviewBulkDecisionStatePort,
+      commandPort: bulkDecisionCommandPort,
+      editorPort: bulkDecisionViewPorts.editor,
+      statusPort: bulkDecisionViewPorts.status,
+      writeEvidencePort: bulkDecisionViewPorts.writeEvidence,
+      buildRejectDiskSnapshot: buildBulkRejectDiskSnapshot,
+      persistLatestAcceptedAction: persistLatestAcceptedReviewAction,
+      ensureDurableScope: ensureDurableReviewScope,
+      hasActionInFlight: hasReviewActionInFlight,
+      blockForExternalChange: blockReviewMutationForExternalChange,
+      captureOperationScope: captureReviewOperationScope,
+      isCurrentOperationScope: isCurrentReviewOperationScope,
+    });
   // File-level accept/reject (Cursor-style)
   const handleRestoreRejectedFileAsAccepted = useCallback(
     async (filePath: string): Promise<void> => {
@@ -1791,7 +1621,7 @@ export const ChangeReviewDialog = ({
                   return;
                 }
                 if (snapshot.restoreMode !== 'delete-file' && !isLedgerRenameReviewFile(file)) {
-                  alignDiskUndoSnapshotWithAppliedContent(snapshot, actualAfterContent);
+                  alignReviewDiskUndoSnapshotWithAppliedContent(snapshot, actualAfterContent);
                 }
                 publishReviewUndoHistory();
               }
@@ -1989,7 +1819,7 @@ export const ChangeReviewDialog = ({
                 snapshot.restoreMode !== 'delete-file' &&
                 !isLedgerRenameReviewFile(snapshot.file)
               ) {
-                alignDiskUndoSnapshotWithAppliedContent(snapshot, actualAfterContent);
+                alignReviewDiskUndoSnapshotWithAppliedContent(snapshot, actualAfterContent);
               }
               publishReviewUndoHistory();
               markRecentReviewWrite(filePath, snapshot.afterContent);
