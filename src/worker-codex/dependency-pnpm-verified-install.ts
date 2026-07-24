@@ -9,6 +9,7 @@ import {
   createStagedPnpmNativeGeneration,
   findVerifiedPnpmNativeGeneration,
   publishStagedPnpmNativeGeneration,
+  removePnpmStoreProjectRegistryLinks,
   removeStagedPnpmNativeGeneration,
   resolvePnpmNativeGenerationIdentity,
   type StagedPnpmNativeGeneration,
@@ -206,6 +207,9 @@ export async function runPnpmInstallWithVerifiedSideEffectsCache(input: {
     }
     return result;
   } finally {
+    if (existing) {
+      await removePnpmStoreProjectRegistryLinks(existing.storePath);
+    }
     if (staged) {
       await removeStagedPnpmNativeGeneration(staged);
     }

@@ -48,6 +48,13 @@ describe("pnpm verified side-effects cache", () => {
               : "999",
             true,
           );
+          const storePath = argumentAfter(args, "--store-dir");
+          if (!storePath) throw new Error("test store path missing");
+          await materializePnpmProjectRegistryLink(
+            storePath,
+            options.cwd,
+            options.cwd === firstWorkspace ? "a".repeat(32) : "b".repeat(32),
+          );
         }
         if (command === "pnpm" && args[0] === "rebuild") {
           await materializeAddon(options.cwd, process.versions.modules, true);
@@ -61,6 +68,19 @@ describe("pnpm verified side-effects cache", () => {
         confirmInstall: true,
         runCommand,
       });
+      const [publishedKey] = await publishedGenerationKeys(cacheRoot);
+      if (!publishedKey) throw new Error("published generation missing");
+      const publishedStorePath = join(
+        cacheRoot,
+        "pnpm-native-generations",
+        publishedKey,
+        "store",
+      );
+      await materializePnpmProjectRegistryLink(
+        publishedStorePath,
+        firstWorkspace,
+        "c".repeat(32),
+      );
       const second = await runDependencyBootstrap({
         workspacePath: secondWorkspace,
         cacheRoot,
@@ -101,7 +121,10 @@ describe("pnpm verified side-effects cache", () => {
       expect(JSON.parse(nodeVerification?.[3] ?? "[]")).toHaveLength(1);
 
       const keys = await publishedGenerationKeys(cacheRoot);
-      expect(keys).toHaveLength(1);
+      expect(keys).toEqual([publishedKey]);
+      expect(
+        await readdir(join(publishedStorePath, "v11", "projects")),
+      ).toEqual([]);
       const manifest = JSON.parse(
         await readFile(
           join(
@@ -212,6 +235,41 @@ describe("pnpm verified side-effects cache", () => {
       expect(result.status).toBe("install_failed");
       expect(result.warnings).toContain(
         "dependency_install_failed:dependency_pnpm_native_generation_store_symlink",
+      );
+      expect(await publishedGenerationKeys(cacheRoot)).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects non-symlink entries in the mutable pnpm project registry", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnpm-native-registry-file-"));
+    const cacheRoot = join(root, "cache");
+    const workspace = join(root, "workspace");
+    try {
+      await writeFixture(workspace);
+      const result = await runDependencyBootstrap({
+        workspacePath: workspace,
+        cacheRoot,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async (command, args, options) => {
+          if (command === "pnpm" && args[0] === "fetch") {
+            const storePath = argumentAfter(args, "--store-dir");
+            if (!storePath) throw new Error("test store path missing");
+            const registryPath = join(storePath, "v11", "projects");
+            await mkdir(registryPath, { recursive: true });
+            await writeFile(join(registryPath, "not-a-link"), "unsafe");
+          }
+          if (command === "pnpm" && args[0] === "install") {
+            await materializeAddon(options.cwd, process.versions.modules);
+          }
+        },
+      });
+
+      expect(result.status).toBe("install_failed");
+      expect(result.warnings).toContain(
+        "dependency_install_failed:dependency_pnpm_native_generation_project_registry_entry_invalid",
       );
       expect(await publishedGenerationKeys(cacheRoot)).toEqual([]);
     } finally {
@@ -670,6 +728,24 @@ async function materializePrebuildPackage(
     await mkdir(join(addonPath, ".."), { recursive: true });
     await writeFile(addonPath, `node_register_module_v${abi ?? "unavailable"}`);
   }
+}
+
+async function materializePnpmProjectRegistryLink(
+  storePath: string,
+  workspacePath: string,
+  name: string,
+): Promise<void> {
+  const registryPath = join(storePath, "v11", "projects");
+  await mkdir(registryPath, { recursive: true });
+  await symlink(workspacePath, join(registryPath, name));
+}
+
+function argumentAfter(
+  args: readonly string[],
+  name: string,
+): string | undefined {
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : undefined;
 }
 
 async function publishedGenerationKeys(

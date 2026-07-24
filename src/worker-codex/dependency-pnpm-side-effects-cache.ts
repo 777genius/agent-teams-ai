@@ -12,6 +12,7 @@ import {
   realpath,
   rename,
   rm,
+  unlink,
   writeFile,
 } from "node:fs/promises";
 import { arch, platform, release } from "node:os";
@@ -177,6 +178,7 @@ export async function findVerifiedPnpmNativeGeneration(
       throw new Error("dependency_pnpm_native_generation_store_invalid");
     }
     await assertContainedRealPath(generationPath, storePath);
+    await removePnpmStoreProjectRegistryLinks(storePath);
     const actualIntegrity = await inspectStoreIntegrity(storePath);
     if (!sameStoreIntegrity(actualIntegrity, manifest.storeIntegrity)) {
       throw new Error("dependency_pnpm_native_generation_integrity_mismatch");
@@ -219,6 +221,7 @@ export async function publishStagedPnpmNativeGeneration(input: {
   if (input.staged.key !== expectedKey) {
     throw new Error("dependency_pnpm_native_generation_staging_key_mismatch");
   }
+  await removePnpmStoreProjectRegistryLinks(input.staged.storePath);
   await inspectStoreIntegrity(input.staged.storePath);
   await sealStoreReadOnly(input.staged.storePath);
   const sealedIntegrity = await inspectStoreIntegrity(input.staged.storePath);
@@ -271,6 +274,51 @@ export async function removeStagedPnpmNativeGeneration(
 ): Promise<void> {
   await makeTreeOwnerWritable(staged.stagingPath);
   await rm(staged.stagingPath, { recursive: true, force: true });
+}
+
+export async function removePnpmStoreProjectRegistryLinks(
+  storePath: string,
+): Promise<number> {
+  const storeStat = await lstat(storePath);
+  if (storeStat.isSymbolicLink() || !storeStat.isDirectory()) {
+    throw new Error("dependency_pnpm_native_generation_store_invalid");
+  }
+  let removed = 0;
+  for (const versionEntry of await readdir(storePath, {
+    withFileTypes: true,
+  })) {
+    if (!versionEntry.isDirectory() || !/^v\d+$/.test(versionEntry.name)) {
+      continue;
+    }
+    const registryPath = join(storePath, versionEntry.name, "projects");
+    let registryStat;
+    try {
+      registryStat = await lstat(registryPath);
+    } catch (error) {
+      if (isMissingError(error)) continue;
+      throw error;
+    }
+    if (registryStat.isSymbolicLink() || !registryStat.isDirectory()) {
+      throw new Error(
+        "dependency_pnpm_native_generation_project_registry_invalid",
+      );
+    }
+    await assertContainedRealPath(storePath, registryPath);
+    for (const entry of await readdir(registryPath, {
+      withFileTypes: true,
+    })) {
+      const entryPath = join(registryPath, entry.name);
+      const entryStat = await lstat(entryPath);
+      if (!entryStat.isSymbolicLink()) {
+        throw new Error(
+          "dependency_pnpm_native_generation_project_registry_entry_invalid",
+        );
+      }
+      await unlink(entryPath);
+      removed += 1;
+    }
+  }
+  return removed;
 }
 
 function generationPathFor(cacheRoot: string, key: string): string {
