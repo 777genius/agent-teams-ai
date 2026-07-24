@@ -154,6 +154,28 @@ describe('TeamLaunchAnalyticsCoordinator', () => {
     );
   });
 
+  it('closes a shared analytics step when provisioning reaches a terminal state', () => {
+    const { coordinator, recorder } = createHarness();
+    const verifying = progress('verifying', {
+      updatedAt: '2026-07-24T10:00:05.000Z',
+    });
+    const ready = progress('ready', {
+      updatedAt: '2026-07-24T10:00:08.000Z',
+    });
+
+    coordinator.recordStepTransition(undefined, verifying, snapshot());
+    coordinator.recordStepTransition(verifying, ready, snapshot());
+
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledTimes(1);
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        step: 'ready_check',
+        durationMs: 8_000,
+        success: true,
+      })
+    );
+  });
+
   it('keeps concurrent run contexts isolated when progress arrives out of order', () => {
     const { coordinator, recorder } = createHarness();
     const launchPort = coordinator.createLaunchPort();
@@ -266,13 +288,15 @@ describe('TeamLaunchAnalyticsCoordinator', () => {
 
     coordinator.recordStepTransition(undefined, validating, snapshot());
     coordinator.recordStepTransition(validating, spawning, snapshot());
-    coordinator.recordTerminalProgress(ready, snapshot());
     coordinator.clearRun('run-1');
     coordinator.recordStepTransition(undefined, validating, snapshot());
     coordinator.recordStepTransition(validating, spawning, snapshot());
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledTimes(2);
+
+    coordinator.recordTerminalProgress(ready, snapshot());
+    coordinator.clearRun('run-1');
     coordinator.recordTerminalProgress(ready, snapshot());
 
-    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledTimes(2);
     expect(recorder.recordLaunchEnd).toHaveBeenCalledTimes(2);
   });
 });

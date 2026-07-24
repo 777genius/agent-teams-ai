@@ -90,7 +90,7 @@ export class TeamLaunchAnalyticsCoordinator {
     if (!existingProgress || existingProgress.state === progress.state) return;
 
     const previousStep = getTeamLaunchAnalyticsStep(existingProgress.state);
-    if (previousStep === step) return;
+    if (previousStep === step && !isTerminalProvisioningState(progress.state)) return;
 
     const previousStepKey = `${progress.runId}:${previousStep}`;
     if (this.reportedStepKeys.has(previousStepKey)) return;
