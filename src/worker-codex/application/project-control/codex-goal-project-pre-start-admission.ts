@@ -495,11 +495,23 @@ async function controlledRuntimeInputPatchBindingValid(input: {
     freshSha === snapshot.sha256 &&
     snapshot.changedPaths.length > 0 &&
     samePaths(fresh.changedPaths, snapshot.changedPaths);
-  if (
-    input.verifiedInputPatch !== undefined &&
-    verifiedInputPatchBindingValid(input.binding, input.verifiedInputPatch)
-  ) {
-    return handoffBindingValid;
+  if (input.verifiedInputPatch !== undefined) {
+    const admittedInputPatchStageIntact =
+      input.binding.workspaceStatus !== "" &&
+      input.binding.workspaceStagedPatchSha256 ===
+        input.verifiedInputPatch.stagedPatchSha256;
+    if (!admittedInputPatchStageIntact || !handoffBindingValid) return false;
+    if (launch.reviewKind === "review") {
+      return samePaths(
+        snapshot.changedPaths,
+        input.binding.workspaceStagedPaths,
+      );
+    }
+    return snapshot.changedPaths.every(
+      (path) =>
+        input.binding.workspaceStagedPaths.includes(path) ||
+        workerLaunchOwnsChangedPath(launch, path),
+    );
   }
   if (launch.reviewKind === "review") return false;
   return (

@@ -1083,6 +1083,124 @@ describe("clean-first producer runtime interruption continuation", () => {
       workspaceMode: "admitted_input_patch_continuation",
     });
   });
+
+  it("continues an immutable input patch plus owned producer edits and rejects unowned drift", async () => {
+    const fixture = await createBuiltinFixture();
+    await mkdir(join(fixture.workspacePath, "src"), { recursive: true });
+    await writeFile(
+      join(fixture.workspacePath, "src", "input.ts"),
+      "export const input = 1;\n",
+    );
+    execFileSync("git", ["add", "src/input.ts"], {
+      cwd: fixture.workspacePath,
+    });
+    const inputPatchSha256 = sha256(
+      execFileSync("git", ["diff", "--cached", "--binary", "--no-ext-diff"], {
+        cwd: fixture.workspacePath,
+      }),
+    );
+    const contract = withWorkKey({
+      ...fixture.contract,
+      reviewKind: "implementation",
+      inputPatchHash: inputPatchSha256,
+      ownedPaths: ["src/owned.ts"],
+    });
+    const state = {
+      ...fixture.state,
+      records: fixture.state.records.map((record) => ({
+        ...record,
+        ...Object.fromEntries(
+          (
+            [
+              "workKey",
+              "baseSha",
+              "phaseStartSha",
+              "inputPatchHash",
+              "reviewKind",
+            ] as const
+          ).map((field) => [field, contract[field]]),
+        ),
+      })),
+    };
+    const plan = planProjectPreStartAdmission({
+      value: { mode: "serial-builtin", contract, state },
+      confirmed: true,
+      scope: fixture.scope,
+      manifest: fixture.manifest,
+    });
+    if (!plan) throw new Error("expected admission plan");
+    const manifest: CodexGoalJobManifest = {
+      ...fixture.storedManifest,
+      projectPreStartAdmission: plan.descriptor,
+    };
+    await prepareProjectPreStartAdmission({
+      plan,
+      manifest,
+      scope: fixture.scope,
+      verifiedInputPatchArtifactSha256: inputPatchSha256,
+      verifiedInputPatchStagedSha256: inputPatchSha256,
+    });
+    await authorizeProjectPreStartAdmissionLaunch({
+      manifest,
+      scope: fixture.scope,
+    });
+    const resultPath = join(
+      manifest.jobRootDir,
+      `${manifest.taskId}.latest-result.json`,
+    );
+    const writeInterruptedResult = async () => {
+      const handoff = await materializeCodexGoalHandoffArtifacts({
+        workerJobId: manifest.jobId,
+        taskId: manifest.taskId,
+        workspacePath: manifest.workspacePath,
+        jobRootDir: manifest.jobRootDir,
+      });
+      if (!handoff) throw new Error("expected interrupted handoff");
+      await writeFile(
+        resultPath,
+        `${JSON.stringify({
+          schemaVersion: 1,
+          taskId: manifest.taskId,
+          status: "partial",
+          reason: "runtime_interrupted",
+          updatedAt: new Date().toISOString(),
+          changedFiles: handoff.changedPaths,
+          evidence: ["safe_execution_status:partial"],
+          blockers: ["runtime_interrupted"],
+          nextAction: "preserve_patch",
+          artifacts: handoff.artifacts,
+        })}\n`,
+      );
+    };
+
+    await writeFile(
+      join(manifest.workspacePath, "src", "owned.ts"),
+      "export const owned = 1;\n",
+    );
+    await writeInterruptedResult();
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest,
+        scope: fixture.scope,
+        workspaceMode: "admitted_input_patch_runtime_continuation",
+      }),
+    ).resolves.toBeUndefined();
+
+    await writeFile(
+      join(manifest.workspacePath, "src", "unowned.ts"),
+      "export const unowned = 1;\n",
+    );
+    await writeInterruptedResult();
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest,
+        scope: fixture.scope,
+        workspaceMode: "admitted_input_patch_runtime_continuation",
+      }),
+    ).rejects.toThrow(
+      "project_control_pre_start_launch_binding_mismatch:input_patch_binding",
+    );
+  });
 });
 
 describe("clean pre-start capacity continuation", () => {
