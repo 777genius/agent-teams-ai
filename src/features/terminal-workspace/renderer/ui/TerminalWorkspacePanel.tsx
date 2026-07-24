@@ -78,6 +78,12 @@ import {
 
 import { normalizeTerminalCommandRunEventDetail } from '../adapters/terminalCommandRunEvents';
 import {
+  createTerminalLocalAutocompleteCandidates,
+  isTerminalLocalAutocompleteDraftEligible,
+  resolveTerminalLocalAutocompleteSuggestion,
+} from '../model/terminalCommandAutocomplete';
+import { normalizeStoredTerminalCommandHistoryEntry } from '../model/terminalCommandHistory';
+import {
   capTerminalCommandRuns,
   closeSupersededTerminalCommandRuns,
   createTerminalCommandScreenLines,
@@ -87,6 +93,10 @@ import {
   type TerminalCommandScreenLine,
   upsertTerminalCommandRun,
 } from '../model/terminalCommandRuns';
+import {
+  formatTerminalPromptLabel,
+  formatWorkingDirectory,
+} from '../model/terminalPathPresentation';
 import { isRecord } from '../utils/valueGuards';
 
 import type {
@@ -112,9 +122,6 @@ export interface TerminalWorkspacePanelProps {
 }
 
 const TERMINAL_LOCAL_AUTOCOMPLETE_THROTTLE_MS = 75;
-const TERMINAL_LOCAL_AUTOCOMPLETE_MIN_DRAFT_LENGTH = 2;
-const TERMINAL_LOCAL_AUTOCOMPLETE_MAX_DRAFT_LENGTH = 160;
-const TERMINAL_LOCAL_AUTOCOMPLETE_DANGEROUS_MIN_PREFIX_LENGTH = 8;
 const PREWARMED_TERMINAL_TAB_TITLE = '__tp_prewarmed_shell__';
 const TERMINAL_TAB_PREFERENCES_VERSION = 1;
 const TERMINAL_PLATFORM_GITHUB_URL = 'https://github.com/777genius/terminal-platform';
@@ -204,24 +211,6 @@ interface TerminalCommandContextMenuState {
   outputText: string;
   x: number;
   y: number;
-}
-
-export interface TerminalLocalAutocompleteCandidate {
-  command: string;
-  cwd?: string | null;
-  paneId?: string | null;
-  sessionId?: string | null;
-  startedAtMs?: number | null;
-  status?: TerminalCommandRunPresentation['status'] | null;
-}
-
-export interface TerminalLocalAutocompleteOptions {
-  candidates: readonly TerminalLocalAutocompleteCandidate[];
-  cwd?: string | null;
-  dismissedDraft?: string | null;
-  draft: string;
-  paneId?: string | null;
-  sessionId?: string | null;
 }
 
 const TERMINAL_TAB_COLOR_OPTIONS = [
@@ -3162,125 +3151,6 @@ function readStoredCommandHistory(teamName: string): string[] | null {
   }
 }
 
-function normalizeStoredTerminalCommandHistoryEntry(value: string): string | null {
-  const entry = stripStoredShellPromptPrefix(value.trim()).trim();
-  return entry.length > 0 ? entry : null;
-}
-
-function stripStoredShellPromptPrefix(value: string): string {
-  const command = findStoredShellPromptCommand(value);
-  if (command !== null) {
-    return command;
-  }
-
-  return isStoredShellPromptOnly(value) ? '' : value;
-}
-
-function findStoredShellPromptCommand(value: string): string | null {
-  for (let index = value.length - 1; index >= 0; index -= 1) {
-    const marker = value[index] ?? '';
-    if (!isShellPromptMarker(marker)) continue;
-
-    const command = value.slice(index + 1);
-    if (!command.startsWith(' ') || command.trim().length === 0) continue;
-
-    const prefix = value.slice(0, index).trimEnd();
-    if (looksLikeStoredShellPromptPrefix(prefix)) {
-      return command.trimStart();
-    }
-  }
-
-  return null;
-}
-
-function isStoredShellPromptOnly(value: string): boolean {
-  const trimmed = value.trimEnd();
-  const marker = trimmed.at(-1) ?? '';
-  if (!isShellPromptMarker(marker)) {
-    return false;
-  }
-
-  return looksLikeStoredShellPromptPrefix(trimmed.slice(0, -1).trimEnd());
-}
-
-function looksLikeStoredShellPromptPrefix(value: string): boolean {
-  let remaining = value.trim();
-  let hasEnvironmentPrefix = false;
-
-  while (remaining.startsWith('(')) {
-    const closeIndex = remaining.indexOf(')');
-    if (closeIndex < 2 || closeIndex > 48) {
-      return false;
-    }
-
-    hasEnvironmentPrefix = true;
-    remaining = remaining.slice(closeIndex + 1).trimStart();
-  }
-
-  if (!remaining || remaining.length > 260) {
-    return false;
-  }
-
-  const firstToken = firstWhitespaceSeparatedToken(remaining);
-  const locationToken = lastWhitespaceSeparatedToken(remaining);
-  const hasUserHostPrefix = firstToken.includes('@') && firstToken !== locationToken;
-
-  return (
-    isPathLikePromptToken(locationToken) ||
-    ((hasEnvironmentPrefix || hasUserHostPrefix) && isSafePromptToken(locationToken))
-  );
-}
-
-function firstWhitespaceSeparatedToken(value: string): string {
-  const trimmed = value.trim();
-  const spaceIndex = trimmed.indexOf(' ');
-  const tabIndex = trimmed.indexOf('\t');
-  const index =
-    spaceIndex === -1 ? tabIndex : tabIndex === -1 ? spaceIndex : Math.min(spaceIndex, tabIndex);
-  return index === -1 ? trimmed : trimmed.slice(0, index);
-}
-
-function lastWhitespaceSeparatedToken(value: string): string {
-  const trimmed = value.trim();
-  const spaceIndex = trimmed.lastIndexOf(' ');
-  const tabIndex = trimmed.lastIndexOf('\t');
-  const index = Math.max(spaceIndex, tabIndex);
-  return index === -1 ? trimmed : trimmed.slice(index + 1);
-}
-
-function isPathLikePromptToken(value: string): boolean {
-  return (
-    value === '~' ||
-    value.startsWith('~/') ||
-    value.startsWith('/') ||
-    value.startsWith('./') ||
-    value.startsWith('../') ||
-    isWindowsDrivePath(value)
-  );
-}
-
-function isWindowsDrivePath(value: string): boolean {
-  const driveLetter = value.charCodeAt(0);
-  const isLetter =
-    (driveLetter >= 65 && driveLetter <= 90) || (driveLetter >= 97 && driveLetter <= 122);
-  return isLetter && value[1] === ':' && value.length > 2;
-}
-
-function isSafePromptToken(value: string): boolean {
-  if (value.length === 0 || value.length > 181) {
-    return false;
-  }
-
-  return Array.from(value).every((char) => {
-    const code = char.charCodeAt(0);
-    return code > 32 && char !== '%' && char !== '$' && char !== '#';
-  });
-}
-
-function isShellPromptMarker(value: string): boolean {
-  return value === '%' || value === '$' || value === '#';
-}
-
 function persistValue(key: string, value: string): void {
   try {
     window.localStorage.setItem(key, value);
@@ -3663,235 +3533,6 @@ function collectPaneIds(node: TerminalMuxPaneTreeNode): string[] {
   }
 
   return [...collectPaneIds(node.first), ...collectPaneIds(node.second)];
-}
-
-export function formatWorkingDirectory(path?: string | null, fallback = ''): string {
-  const normalizedPath = trimTrailingSlashes(path?.trim() || '');
-  if (!normalizedPath) {
-    return fallback;
-  }
-
-  return compactUserHome(normalizedPath);
-}
-
-export function formatTerminalPromptLabel(path?: string | null, localShellLabel = ''): string {
-  const workingDirectory = formatWorkingDirectory(path, '');
-  return workingDirectory || localShellLabel;
-}
-
-function trimTrailingSlashes(value: string): string {
-  let end = value.length;
-  while (end > 1 && value[end - 1] === '/') {
-    end -= 1;
-  }
-  return value.slice(0, end);
-}
-
-function compactUserHome(path: string): string {
-  const usersPrefix = '/Users/';
-  if (!path.startsWith(usersPrefix)) {
-    return path;
-  }
-
-  const rest = path.slice(usersPrefix.length);
-  const nextSlashIndex = rest.indexOf('/');
-  if (nextSlashIndex === -1) {
-    return '~';
-  }
-
-  return `~${rest.slice(nextSlashIndex)}`;
-}
-
-function createTerminalLocalAutocompleteCandidates({
-  commandHistory,
-  commandRuns,
-  cwd,
-}: {
-  commandHistory: readonly string[];
-  commandRuns: readonly TerminalCommandRunPresentation[];
-  cwd?: string | null;
-}): TerminalLocalAutocompleteCandidate[] {
-  const historyCandidates = commandHistory.map((command, index) => ({
-    command,
-    cwd,
-    startedAtMs: index,
-    status: 'unknown' as const,
-  }));
-  const runCandidates = commandRuns.map((run) => ({
-    command: run.command,
-    cwd,
-    paneId: run.paneId,
-    sessionId: run.sessionId,
-    startedAtMs: run.startedAtMs,
-    status: run.status,
-  }));
-
-  return [...historyCandidates, ...runCandidates];
-}
-
-export function resolveTerminalLocalAutocompleteSuggestion(
-  options: TerminalLocalAutocompleteOptions
-): string | null {
-  if (
-    !isTerminalLocalAutocompleteDraftEligible(options.draft) ||
-    options.dismissedDraft === options.draft
-  ) {
-    return null;
-  }
-
-  const scopedCwd = normalizeOptionalPath(options.cwd);
-  const statsByCommand = new Map<
-    string,
-    {
-      command: string;
-      frequency: number;
-      lastUsedAtMs: number;
-      sameCwd: boolean;
-      samePane: boolean;
-      sameSession: boolean;
-      statusScore: number;
-    }
-  >();
-
-  options.candidates.forEach((candidate, index) => {
-    const command = normalizeAutocompleteCommand(candidate.command);
-    if (
-      !command ||
-      command === options.draft ||
-      !command.startsWith(options.draft) ||
-      command.length > 320 ||
-      command.includes('\n') ||
-      command.includes('\r') ||
-      !canSuggestTerminalAutocompleteCommand(options.draft, command)
-    ) {
-      return;
-    }
-
-    const existing = statsByCommand.get(command);
-    const startedAtMs =
-      typeof candidate.startedAtMs === 'number' && Number.isFinite(candidate.startedAtMs)
-        ? candidate.startedAtMs
-        : index;
-    const sameCwd = Boolean(scopedCwd && normalizeOptionalPath(candidate.cwd) === scopedCwd);
-    const samePane = Boolean(options.paneId && candidate.paneId === options.paneId);
-    const sameSession = Boolean(options.sessionId && candidate.sessionId === options.sessionId);
-    const statusScore = scoreTerminalAutocompleteStatus(candidate.status ?? null);
-
-    if (!existing) {
-      statsByCommand.set(command, {
-        command,
-        frequency: 1,
-        lastUsedAtMs: startedAtMs,
-        sameCwd,
-        samePane,
-        sameSession,
-        statusScore,
-      });
-      return;
-    }
-
-    existing.frequency += 1;
-    existing.lastUsedAtMs = Math.max(existing.lastUsedAtMs, startedAtMs);
-    existing.sameCwd ||= sameCwd;
-    existing.samePane ||= samePane;
-    existing.sameSession ||= sameSession;
-    existing.statusScore = Math.max(existing.statusScore, statusScore);
-  });
-
-  const ranked = Array.from(statsByCommand.values()).sort((left, right) => {
-    const scoreDelta =
-      scoreTerminalLocalAutocompleteCandidate(right) -
-      scoreTerminalLocalAutocompleteCandidate(left);
-    if (scoreDelta !== 0) return scoreDelta;
-
-    const recencyDelta = right.lastUsedAtMs - left.lastUsedAtMs;
-    if (recencyDelta !== 0) return recencyDelta;
-
-    const lengthDelta = left.command.length - right.command.length;
-    if (lengthDelta !== 0) return lengthDelta;
-
-    return left.command.localeCompare(right.command);
-  });
-
-  return ranked[0]?.command ?? null;
-}
-
-function isTerminalLocalAutocompleteDraftEligible(draft: string): boolean {
-  return (
-    draft.length >= TERMINAL_LOCAL_AUTOCOMPLETE_MIN_DRAFT_LENGTH &&
-    draft.length <= TERMINAL_LOCAL_AUTOCOMPLETE_MAX_DRAFT_LENGTH &&
-    draft.trimStart() === draft &&
-    draft.trim().length >= TERMINAL_LOCAL_AUTOCOMPLETE_MIN_DRAFT_LENGTH &&
-    !draft.includes('\n') &&
-    !draft.includes('\r')
-  );
-}
-
-function normalizeAutocompleteCommand(command: string): string {
-  return command.trim();
-}
-
-function canSuggestTerminalAutocompleteCommand(draft: string, command: string): boolean {
-  if (!isDangerousTerminalCommand(command)) {
-    return true;
-  }
-
-  return draft.trim().length >= TERMINAL_LOCAL_AUTOCOMPLETE_DANGEROUS_MIN_PREFIX_LENGTH;
-}
-
-function isDangerousTerminalCommand(command: string): boolean {
-  const normalized = command.trim().replace(/\s+/g, ' ').toLowerCase();
-  return (
-    normalized === 'rm' ||
-    normalized.startsWith('rm ') ||
-    normalized === 'sudo' ||
-    normalized.startsWith('sudo ') ||
-    normalized.startsWith('chmod -r ') ||
-    normalized.startsWith('chmod -r') ||
-    normalized.startsWith('git reset --hard')
-  );
-}
-
-function scoreTerminalAutocompleteStatus(
-  status: TerminalCommandRunPresentation['status'] | null
-): number {
-  switch (status) {
-    case 'succeeded':
-      return 140;
-    case 'running':
-      return 30;
-    case 'unknown':
-      return 20;
-    case 'failed':
-      return -160;
-    default:
-      return 0;
-  }
-}
-
-function scoreTerminalLocalAutocompleteCandidate(candidate: {
-  command: string;
-  frequency: number;
-  lastUsedAtMs: number;
-  sameCwd: boolean;
-  samePane: boolean;
-  sameSession: boolean;
-  statusScore: number;
-}): number {
-  return (
-    1000 +
-    candidate.statusScore +
-    (candidate.samePane ? 220 : 0) +
-    (candidate.sameSession ? 90 : 0) +
-    (candidate.sameCwd ? 120 : 0) +
-    Math.min(160, candidate.frequency * 28) +
-    Math.min(220, Math.max(0, candidate.lastUsedAtMs) / 1000)
-  );
-}
-
-function normalizeOptionalPath(path: string | null | undefined): string | null {
-  const trimmed = trimTrailingSlashes(path?.trim() || '');
-  return trimmed ? trimmed : null;
 }
 
 function formatThemeLabel(t: TeamTFunction, displayName: string, themeId: string): string {
