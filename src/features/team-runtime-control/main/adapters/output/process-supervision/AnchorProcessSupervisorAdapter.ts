@@ -50,6 +50,7 @@ import {
   mapAnchorDrainProof,
   mapAnchorReadyProof,
 } from './AnchorProtocolFrames';
+import { exactStartRequestKey, waitForCallerCancellation } from './startRequestCoordination';
 
 import type { ProcessExecutionUnit, Sha256Hash } from '../../../../contracts/runtimePlan';
 import type {
@@ -717,52 +718,6 @@ export class AnchorProcessSupervisorAdapter
       // The original typed failure is returned; store-unavailable is never treated as cleanup proof.
     }
   }
-}
-
-function exactStartRequestKey(request: StartProcessExecutionUnitRequest): Sha256Hash {
-  // Cancellation belongs to one caller waiting on this semantic operation. It must neither split
-  // the durable start identity nor let a retry replace the cancellation owner of an existing start.
-  return computeCanonicalPolicyDigest({
-    executionUnit: request.executionUnit,
-    launchSpec: request.launchSpec,
-  });
-}
-
-async function waitForCallerCancellation(
-  inFlight: Promise<StartProcessExecutionUnitResult>,
-  cancellation: StartProcessExecutionUnitRequest['cancellation']
-): Promise<StartProcessExecutionUnitResult> {
-  if (isCancellationRequested(cancellation)) {
-    return { status: 'rejected', reason: 'cancelled' };
-  }
-
-  return await new Promise<StartProcessExecutionUnitResult>((resolve, reject) => {
-    let settled = false;
-    const settle = (callback: () => void): void => {
-      if (settled) return;
-      settled = true;
-      clearInterval(cancellationPoll);
-      callback();
-    };
-    const cancellationPoll = setInterval(() => {
-      if (isCancellationRequested(cancellation)) {
-        settle(() => resolve({ status: 'rejected', reason: 'cancelled' }));
-      }
-    }, 5);
-
-    void inFlight.then(
-      (result) =>
-        settle(() =>
-          resolve(
-            isCancellationRequested(cancellation)
-              ? { status: 'rejected', reason: 'cancelled' }
-              : result
-          )
-        ),
-      (error: unknown) =>
-        settle(() => reject(error instanceof Error ? error : new Error('in-flight-start-rejected')))
-    );
-  });
 }
 
 function isExactLaunchSpec(

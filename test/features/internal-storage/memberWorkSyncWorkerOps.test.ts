@@ -1,4 +1,7 @@
-import { runInternalStorageMigrations } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
+import {
+  INTERNAL_STORAGE_SCHEMA_VERSION,
+  runInternalStorageMigrations,
+} from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { MemberWorkSyncWorkerOps } from '@features/internal-storage/main/infrastructure/worker/memberWorkSyncWorkerOps';
 import Database from 'better-sqlite3-node';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
@@ -467,7 +470,9 @@ describe('member-work-sync v9 migration', () => {
 
       runInternalStorageMigrations(database);
 
-      expect(database.pragma('user_version', { simple: true })).toBe(9);
+      expect(database.pragma('user_version', { simple: true })).toBe(
+        INTERNAL_STORAGE_SCHEMA_VERSION
+      );
       for (const tableName of MEMBER_WORK_SYNC_TABLES) {
         const columns = database.pragma(`table_info(${tableName})`) as Array<{
           name: string;
