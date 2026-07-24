@@ -64,10 +64,13 @@ import {
   X,
 } from 'lucide-react';
 
+import { readStoredTerminalCommandHistory } from '../adapters/terminalCommandHistoryStorage';
 import {
   persistTerminalTabPreferences,
   readStoredTerminalTabPreferences,
 } from '../adapters/terminalTabPreferencesStorage';
+import { useTerminalCommandAutocomplete } from '../hooks/useTerminalCommandAutocomplete';
+import { useTerminalCommandHistoryPersistence } from '../hooks/useTerminalCommandHistoryPersistence';
 import { useTerminalCommandRuns } from '../hooks/useTerminalCommandRuns';
 import { useTerminalTabReorderMotion } from '../hooks/useTerminalTabReorderMotion';
 import {
@@ -77,12 +80,6 @@ import {
   type TerminalAppearanceSettings,
   type TerminalBackgroundImageFit,
 } from '../model/terminalAppearanceSettings';
-import {
-  createTerminalLocalAutocompleteCandidates,
-  isTerminalLocalAutocompleteDraftEligible,
-  resolveTerminalLocalAutocompleteSuggestion,
-} from '../model/terminalCommandAutocomplete';
-import { normalizeStoredTerminalCommandHistoryEntry } from '../model/terminalCommandHistory';
 import {
   createTerminalCommandScreenLines,
   TERMINAL_COMMAND_HISTORY_LIMIT,
@@ -113,7 +110,6 @@ import {
   type TerminalTabPreferences,
   type TerminalWorkspaceSnapshot,
 } from '../model/terminalTabPreferences';
-import { isRecord } from '../utils/valueGuards';
 
 import {
   type TerminalWorkspaceSettingsActionId,
@@ -142,7 +138,6 @@ export interface TerminalWorkspacePanelProps {
   stopTeamRuntime: (teamName: string) => Promise<void>;
 }
 
-const TERMINAL_LOCAL_AUTOCOMPLETE_THROTTLE_MS = 75;
 const TERMINAL_PLATFORM_GITHUB_URL = 'https://github.com/777genius/terminal-platform';
 type TerminalMuxCommand = Parameters<WorkspaceKernel['commands']['dispatchMuxCommand']>[1];
 type TerminalScreenElementHandle = ComponentRef<typeof TerminalScreen> & {
@@ -246,7 +241,7 @@ const TerminalWorkspacePanelTeamScope = ({
       initialThemeId: readStoredValue(storageKey(teamName, 'theme')),
       initialTerminalFontScale: readStoredValue(storageKey(teamName, 'font-scale')),
       initialTerminalLineWrap: readStoredBoolean(storageKey(teamName, 'line-wrap')),
-      initialCommandHistoryEntries: readStoredCommandHistory(teamName),
+      initialCommandHistoryEntries: readStoredTerminalCommandHistory(teamName),
       commandHistoryLimit: TERMINAL_COMMAND_HISTORY_LIMIT,
     });
 
@@ -421,18 +416,6 @@ const TerminalWorkspaceKernelView = ({
   const [terminalContentPending, setTerminalContentPending] = useState(false);
   const [commandContextMenu, setCommandContextMenu] =
     useState<TerminalCommandContextMenuState | null>(null);
-  const [commandDraft, setCommandDraft] = useState('');
-  const [autocompleteSuggestion, setAutocompleteSuggestion] = useState<string | null>(null);
-  const [dismissedAutocompleteDraft, setDismissedAutocompleteDraft] = useState<string | null>(null);
-  const commandHistoryPersistenceRef = useRef<{
-    hasPersistedSnapshot: boolean;
-    hasRestoredHistory: boolean | null;
-    teamName: string;
-  }>({
-    hasPersistedSnapshot: false,
-    hasRestoredHistory: null,
-    teamName,
-  });
   const [appearanceSettings, setAppearanceSettings] = useState<TerminalAppearanceSettings>(() =>
     readStoredTerminalAppearanceSettings(teamName)
   );
@@ -512,30 +495,23 @@ const TerminalWorkspaceKernelView = ({
     window.requestAnimationFrame(scroll);
     window.setTimeout(scroll, 80);
   }, []);
-  const handleCommandRunStarted = useCallback((): void => {
-    setCommandDraft('');
-    setAutocompleteSuggestion(null);
-    setDismissedAutocompleteDraft(null);
-  }, []);
   const { activeCommandRuns, commandRuns } = useTerminalCommandRuns({
     activePaneId: activeCommandPaneId,
     activeSessionId: activeCommandSessionId,
     eventSource: commandDockElement,
-    onCommandStarted: handleCommandRunStarted,
     onCommandSubmitted: scrollTerminalToLatest,
     screenLines: activeScreenCommandLines,
     screenSequence: activeScreen?.sequence,
     teamName,
   });
-  const autocompleteCandidates = useMemo(
-    () =>
-      createTerminalLocalAutocompleteCandidates({
-        commandHistory: snapshot.commandHistory.entries,
-        commandRuns,
-        cwd: projectPath,
-      }),
-    [commandRuns, projectPath, snapshot.commandHistory.entries]
-  );
+  const { autocompleteSuggestion } = useTerminalCommandAutocomplete({
+    commandHistory: snapshot.commandHistory.entries,
+    commandRuns,
+    cwd: projectPath,
+    eventSource: commandDockElement,
+    paneId: activeCommandPaneId,
+    sessionId: activeCommandSessionId,
+  });
 
   const terminalScreenRef = useCallback((element: TerminalScreenElementHandle | null): void => {
     terminalScreenElementRef.current = element;
@@ -603,86 +579,6 @@ const TerminalWorkspaceKernelView = ({
   }, [commandContextMenu]);
 
   useEffect(() => {
-    if (!commandDockElement) {
-      return undefined;
-    }
-
-    const handleDraftChange = (event: Event): void => {
-      const detail = (event as CustomEvent<unknown>).detail;
-      const value = isRecord(detail) && typeof detail.value === 'string' ? detail.value : '';
-      setCommandDraft(value);
-      setDismissedAutocompleteDraft((current) => (current === value ? current : null));
-    };
-    const handleAutocompleteAccept = (event: Event): void => {
-      const detail = (event as CustomEvent<unknown>).detail;
-      const value = isRecord(detail) && typeof detail.value === 'string' ? detail.value : '';
-      setCommandDraft(value);
-      setDismissedAutocompleteDraft(null);
-      setAutocompleteSuggestion(null);
-    };
-    const handleAutocompleteDismiss = (event: Event): void => {
-      const detail = (event as CustomEvent<unknown>).detail;
-      const draft = isRecord(detail) && typeof detail.draft === 'string' ? detail.draft : '';
-      setDismissedAutocompleteDraft(draft);
-      setAutocompleteSuggestion(null);
-    };
-
-    commandDockElement.addEventListener('tp-terminal-command-draft-change', handleDraftChange);
-    commandDockElement.addEventListener(
-      'tp-terminal-command-autocomplete-accept',
-      handleAutocompleteAccept
-    );
-    commandDockElement.addEventListener(
-      'tp-terminal-command-autocomplete-dismiss',
-      handleAutocompleteDismiss
-    );
-
-    return () => {
-      commandDockElement.removeEventListener('tp-terminal-command-draft-change', handleDraftChange);
-      commandDockElement.removeEventListener(
-        'tp-terminal-command-autocomplete-accept',
-        handleAutocompleteAccept
-      );
-      commandDockElement.removeEventListener(
-        'tp-terminal-command-autocomplete-dismiss',
-        handleAutocompleteDismiss
-      );
-    };
-  }, [commandDockElement]);
-
-  useEffect(() => {
-    if (
-      !isTerminalLocalAutocompleteDraftEligible(commandDraft) ||
-      dismissedAutocompleteDraft === commandDraft
-    ) {
-      setAutocompleteSuggestion(null);
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => {
-      setAutocompleteSuggestion(
-        resolveTerminalLocalAutocompleteSuggestion({
-          candidates: autocompleteCandidates,
-          cwd: projectPath,
-          dismissedDraft: dismissedAutocompleteDraft,
-          draft: commandDraft,
-          paneId: activeCommandPaneId,
-          sessionId: activeCommandSessionId,
-        })
-      );
-    }, TERMINAL_LOCAL_AUTOCOMPLETE_THROTTLE_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [
-    activeCommandPaneId,
-    activeCommandSessionId,
-    autocompleteCandidates,
-    commandDraft,
-    dismissedAutocompleteDraft,
-    projectPath,
-  ]);
-
-  useEffect(() => {
     setAppearanceSettings(readStoredTerminalAppearanceSettings(teamName));
   }, [teamName]);
 
@@ -704,32 +600,10 @@ const TerminalWorkspaceKernelView = ({
     persistValue(storageKey(teamName, 'line-wrap'), String(terminalDisplay.lineWrap));
   }, [teamName, terminalDisplay.fontScale, terminalDisplay.lineWrap]);
 
-  useEffect(() => {
-    const persistence = commandHistoryPersistenceRef.current;
-    if (persistence.teamName !== teamName) {
-      persistence.teamName = teamName;
-      persistence.hasRestoredHistory = null;
-      persistence.hasPersistedSnapshot = false;
-    }
-
-    if (persistence.hasRestoredHistory === null) {
-      persistence.hasRestoredHistory = (readStoredCommandHistory(teamName)?.length ?? 0) > 0;
-    }
-
-    if (
-      snapshot.commandHistory.entries.length === 0 &&
-      persistence.hasRestoredHistory &&
-      !persistence.hasPersistedSnapshot
-    ) {
-      return;
-    }
-
-    persistCommandHistory(teamName, snapshot.commandHistory.entries);
-    persistence.hasPersistedSnapshot = true;
-    if (snapshot.commandHistory.entries.length > 0) {
-      persistence.hasRestoredHistory = false;
-    }
-  }, [snapshot.commandHistory.entries, teamName]);
+  useTerminalCommandHistoryPersistence({
+    entries: snapshot.commandHistory.entries,
+    teamName,
+  });
 
   useEffect(() => {
     const targetSessionId =
@@ -2316,23 +2190,6 @@ function readStoredTerminalAppearanceSettings(teamName: string): TerminalAppeara
   }
 }
 
-function readStoredCommandHistory(teamName: string): string[] | null {
-  const raw = readStoredValue(storageKey(teamName, 'command-history'));
-  if (!raw) return null;
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    return parsed
-      .filter((entry): entry is string => typeof entry === 'string')
-      .map((entry) => normalizeStoredTerminalCommandHistoryEntry(entry))
-      .filter((entry): entry is string => Boolean(entry))
-      .slice(-TERMINAL_COMMAND_HISTORY_LIMIT);
-  } catch {
-    return null;
-  }
-}
-
 function persistValue(key: string, value: string): void {
   try {
     window.localStorage.setItem(key, value);
@@ -2398,17 +2255,6 @@ function getTerminalBackgroundRepeat(fit: TerminalBackgroundImageFit): string {
 
 function getTerminalBackgroundPosition(fit: TerminalBackgroundImageFit): string {
   return fit === 'tile' ? 'top left' : 'center';
-}
-
-function persistCommandHistory(teamName: string, entries: readonly string[]): void {
-  try {
-    window.localStorage.setItem(
-      storageKey(teamName, 'command-history'),
-      JSON.stringify(entries.slice(-TERMINAL_COMMAND_HISTORY_LIMIT))
-    );
-  } catch {
-    // Best-effort command history persistence.
-  }
 }
 
 function shouldIgnoreTerminalTabDragTarget(target: HTMLElement): boolean {
