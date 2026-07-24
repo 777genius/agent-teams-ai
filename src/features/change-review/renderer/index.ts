@@ -16,6 +16,11 @@ export {
   createChangeReviewDialogLifecycleCommandPort,
   createChangeReviewDialogLifecycleStatePort,
 } from './adapters/createChangeReviewDialogLifecyclePorts';
+export type {
+  ChangeReviewDialogViewPorts,
+  ChangeReviewRecentWrite,
+} from './adapters/createChangeReviewDialogViewPorts';
+export { createChangeReviewDialogViewPorts } from './adapters/createChangeReviewDialogViewPorts';
 export { createChangeReviewDraftHistoryPort } from './adapters/createChangeReviewDraftHistoryPort';
 export {
   createChangeReviewFileDecisionCommandPort,
@@ -29,6 +34,10 @@ export {
   createChangeReviewHistoryMutationCommandPort,
   createChangeReviewHistoryMutationStatePort,
 } from './adapters/createChangeReviewHistoryMutationPorts';
+export {
+  createChangeReviewHunkDecisionCommandPort,
+  createChangeReviewHunkDecisionStatePort,
+} from './adapters/createChangeReviewHunkDecisionPorts';
 export type { ChangeReviewActionHistoryController } from './hooks/useChangeReviewActionHistoryController';
 export { useChangeReviewActionHistoryController } from './hooks/useChangeReviewActionHistoryController';
 export type { ChangeReviewBulkDecisionController } from './hooks/useChangeReviewBulkDecisionController';
@@ -65,6 +74,8 @@ export type {
   ChangeReviewHistoryRestorePreview,
 } from './hooks/useChangeReviewHistoryMutationController';
 export { useChangeReviewHistoryMutationController } from './hooks/useChangeReviewHistoryMutationController';
+export type { ChangeReviewHunkDecisionController } from './hooks/useChangeReviewHunkDecisionController';
+export { useChangeReviewHunkDecisionController } from './hooks/useChangeReviewHunkDecisionController';
 export { useChangeReviewLifecycleRegistration } from './hooks/useChangeReviewLifecycleRegistration';
 export { useChangeReviewOperationGeneration } from './hooks/useChangeReviewOperationGeneration';
 export { useChangeReviewScopeIdentity } from './hooks/useChangeReviewScopeIdentity';
@@ -140,6 +151,18 @@ export type {
   ChangeReviewHistoryStateSnapshot,
 } from './ports/changeReviewHistoryMutationPorts';
 export type {
+  CaptureChangeReviewHunkOperationScope,
+  ChangeReviewHunkDecisionApplyOutcome,
+  ChangeReviewHunkDecisionCommandPort,
+  ChangeReviewHunkDecisionEditorPort,
+  ChangeReviewHunkDecisionHistoryPort,
+  ChangeReviewHunkDecisionPolicy,
+  ChangeReviewHunkDecisionStatePort,
+  ChangeReviewHunkDecisionStateSnapshot,
+  ChangeReviewHunkDecisionStatusPort,
+  ChangeReviewHunkDecisionWriteEvidencePort,
+} from './ports/changeReviewHunkDecisionPorts';
+export type {
   RegisterChangeReviewAppCloseParticipant,
   RegisterChangeReviewLifecycleOwner,
 } from './ports/changeReviewLifecyclePorts';
@@ -202,6 +225,7 @@ export {
   buildChangeReviewScopeProjection,
   getReviewDecisionHydrationGuard,
 } from './utils/changeReviewScope';
+export { markChangeReviewMutationDiskPostimages } from './utils/changeReviewWriteEvidence';
 export type { ReviewOperationScopeToken } from './utils/reviewOperationGeneration';
 export {
   createReviewOperationScopeToken,

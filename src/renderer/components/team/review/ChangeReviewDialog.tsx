@@ -28,6 +28,7 @@ import {
   createChangeReviewDecisionPersistencePort,
   createChangeReviewDialogLifecycleCommandPort,
   createChangeReviewDialogLifecycleStatePort,
+  createChangeReviewDialogViewPorts,
   createChangeReviewDraftHistoryPort,
   createChangeReviewFileDecisionCommandPort,
   createChangeReviewFileDecisionStatePort,
@@ -35,6 +36,8 @@ import {
   createChangeReviewFileDraftStatePort,
   createChangeReviewHistoryMutationCommandPort,
   createChangeReviewHistoryMutationStatePort,
+  createChangeReviewHunkDecisionCommandPort,
+  createChangeReviewHunkDecisionStatePort,
   findActiveReviewFile,
   isReviewActionPersistenceBlocking,
   resolveReviewFileLabel as resolveReviewFileLabelFromMap,
@@ -53,16 +56,12 @@ import {
   useChangeReviewFileDraftController,
   useChangeReviewHistoryKeyboardShortcuts,
   useChangeReviewHistoryMutationController,
+  useChangeReviewHunkDecisionController,
   useChangeReviewOperationGeneration,
   useChangeReviewScopeIdentity,
 } from '@features/change-review/renderer';
-import { serializeReviewDraftEditorState } from '@features/change-review-history/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import {
-  alignReviewDiskUndoSnapshotWithAppliedContent,
-  buildReviewRestoreDecisionState,
-  isLedgerRenameReviewFile,
-} from '@features/review-mutations';
+import { buildReviewRestoreDecisionState } from '@features/review-mutations';
 import { api, isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
 import { useContinuousScrollNav } from '@renderer/hooks/useContinuousScrollNav';
@@ -117,7 +116,6 @@ import {
 } from './reviewContentPreview';
 import { resolveReviewFilePath } from './reviewFilePathResolution';
 import { ReviewFileTree } from './ReviewFileTree';
-import { markReviewMutationDiskPostimages } from './reviewHistoryTimeline';
 import { ReviewToolbar } from './ReviewToolbar';
 import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
@@ -125,20 +123,9 @@ import { ViewedProgressBar } from './ViewedProgressBar';
 
 import type { EditorView } from '@codemirror/view';
 import type {
-  ChangeReviewBulkDecisionEditorPort,
-  ChangeReviewBulkDecisionStatusPort,
-  ChangeReviewBulkDecisionWriteEvidencePort,
-  ChangeReviewDialogLifecycleEditorPort,
-  ChangeReviewDialogLifecycleSessionPort,
-  ChangeReviewDialogLifecycleStatusPort,
-  ChangeReviewDialogLifecycleWriteEvidencePort,
-  ChangeReviewFileDecisionEditorPort,
   ChangeReviewFileDecisionPolicy,
-  ChangeReviewFileDecisionStatusPort,
-  ChangeReviewFileDecisionWriteEvidencePort,
-  ChangeReviewFileDraftStatusPort,
-  ChangeReviewFileDraftWriteEvidencePort,
-  ChangeReviewHistoryMutationViewPort,
+  ChangeReviewHunkDecisionPolicy,
+  ChangeReviewRecentWrite,
   ReviewDraftHistoryHydrationState,
 } from '@features/change-review/renderer';
 import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
@@ -146,17 +133,10 @@ import type {
   FileChangeSummary,
   ReviewDecisionSnapshot,
   ReviewDiskUndoSnapshot,
-  ReviewMutationDiskPostimage,
   ReviewRedoAction,
   ReviewUndoAction,
 } from '@shared/types';
 import type { EditorSelectionAction, EditorSelectionInfo } from '@shared/types/editor';
-
-type RecentHunkUndoAction = Extract<ReviewUndoAction, { kind: 'hunk' }>['action'];
-interface RecentReviewWrite {
-  at: number;
-  expectedContent: string | null;
-}
 
 const changeReviewConflictQueryPort = createChangeReviewConflictQueryPort(() => api.review);
 const changeReviewConflictCommandPort = createChangeReviewConflictCommandPort(() => api.review);
@@ -221,6 +201,17 @@ const changeReviewFileDecisionPolicy: ChangeReviewFileDecisionPolicy = {
   isFileFullyRejected: isReviewFileFullyRejected,
   shouldDeleteWhenUndoingReject: shouldDeleteFileWhenUndoingReject,
   hasUnresolvedExternalChange: hasUnresolvedReviewExternalChange,
+  getRenameRecoveryExpectation: getReviewRenameRecoveryExpectation,
+};
+const changeReviewHunkDecisionStatePort = createChangeReviewHunkDecisionStatePort(
+  useStore.getState
+);
+const changeReviewHunkDecisionPolicy: ChangeReviewHunkDecisionPolicy = {
+  getHunkCount: (file, state) =>
+    getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts),
+  resolveFileIsNew: resolveReviewFileIsNew,
+  shouldDeleteWhenUndoingReject: shouldDeleteFileWhenUndoingReject,
+  shouldCreateWhenUndoingReject: shouldCreateFileWhenUndoingReject,
   getRenameRecoveryExpectation: getReviewRenameRecoveryExpectation,
 };
 const changeReviewDialogLifecycleStatePort = createChangeReviewDialogLifecycleStatePort({
@@ -321,11 +312,8 @@ export const ChangeReviewDialog = ({
     collapseUnchanged,
     applying,
     applyError,
-    setHunkDecision,
-    clearHunkDecisionByOriginalIndex,
     setCollapseUnchanged,
     fetchFileContent,
-    applySingleFileDecision,
     addReviewFile,
     editedContents,
     reviewExternalChangesByFile,
@@ -424,7 +412,7 @@ export const ChangeReviewDialog = ({
   const undoInFlightRef = useRef(false);
   const closingRef = useRef(false);
   const pendingApplyCleanupKeyRef = useRef<string | null>(null);
-  const recentReviewWritesRef = useRef(new Map<string, RecentReviewWrite>());
+  const recentReviewWritesRef = useRef(new Map<string, ChangeReviewRecentWrite>());
   // Exact disk state on which each manual draft started. Map.has() distinguishes
   // a genuinely missing file (null baseline) from an uncaptured baseline.
   const expectedDraftHistoryKeyRef = useRef<string | null>(null);
@@ -432,23 +420,6 @@ export const ChangeReviewDialog = ({
   // Proxy ref for useDiffNavigation (points to active file's editor)
   const activeEditorViewRef = useRef<EditorView | null>(null);
   const activeFilePathRef = useRef<string | null>(null);
-
-  const markRecentReviewWrite = useCallback(
-    (filePath: string, expectedContent: string | null): void => {
-      recentReviewWritesRef.current.set(normalizePathForComparison(filePath), {
-        at: Date.now(),
-        expectedContent,
-      });
-    },
-    []
-  );
-
-  const markCommittedReviewPostimages = useCallback(
-    (postimages: readonly ReviewMutationDiskPostimage[] | undefined): void => {
-      markReviewMutationDiskPostimages(postimages, markRecentReviewWrite);
-    },
-    [markRecentReviewWrite]
-  );
 
   useLayoutEffect(() => {
     const activeHydrationKey = open && lifecycleAuthorized ? decisionHydrationKey : null;
@@ -655,20 +626,6 @@ export const ChangeReviewDialog = ({
     }
   }, [decisionHydrationKey]);
 
-  const setFileApplying = useCallback((filePath: string, value: boolean): void => {
-    setFilesApplying((previous) => {
-      const next = new Set(previous);
-      if (value) next.add(filePath);
-      else next.delete(filePath);
-      return next;
-    });
-  }, []);
-
-  const setUndoInFlight = useCallback((value: boolean): void => {
-    undoInFlightRef.current = value;
-    setUndoing(value);
-  }, []);
-
   const readCurrentReviewDiskContent = useCallback(
     async (filePath: string, fallback: string): Promise<string> => {
       try {
@@ -779,16 +736,6 @@ export const ChangeReviewDialog = ({
     (filePath: string): boolean => filePath in useStore.getState().editedContents,
     []
   );
-
-  const rollbackEditorContent = useCallback((filePath: string, content: string): void => {
-    const view = editorViewMapRef.current.get(filePath);
-    if (!view?.dom.isConnected) return;
-    ignoreNextReviewDocChange(view);
-    view.dispatch({
-      changes: { from: 0, to: view.state.doc.length, insert: content },
-      annotations: Transaction.addToHistory.of(false),
-    });
-  }, []);
 
   // One-shot scroll-to-file ref (for initialFilePath)
   const initialScrollDoneKeyRef = useRef<string | null>(null);
@@ -1021,6 +968,35 @@ export const ChangeReviewDialog = ({
     [handleTreeFileClick, sortedFiles]
   );
 
+  const dialogViewPorts = useMemo(
+    () =>
+      // eslint-disable-next-line react-hooks/refs -- Factory only captures refs for later callbacks.
+      createChangeReviewDialogViewPorts({
+        editorViewMapRef,
+        editorActions: {
+          acceptAllChunks,
+          ignoreNextDocChange: ignoreNextReviewDocChange,
+          rejectAllChunks,
+          rejectChunk,
+        },
+        fileApplyInFlightRef,
+        undoInFlightRef,
+        closingRef,
+        pendingApplyCleanupKeyRef,
+        expectedDraftHistoryKeyRef,
+        recentReviewWritesRef,
+        setFilesApplying,
+        setDiscardCounters,
+        setUndoing,
+        setClosing,
+        handleSerializedStateChanged,
+        addReviewFile,
+        fetchFileContent,
+        navigateToHistoryAction: handleHistoryActionNavigation,
+      }),
+    [addReviewFile, fetchFileContent, handleHistoryActionNavigation, handleSerializedStateChanged]
+  );
+
   const buildBulkRejectDiskSnapshot = useCallback(
     (
       file: FileChangeSummary,
@@ -1061,58 +1037,6 @@ export const ChangeReviewDialog = ({
       }),
     [readCurrentReviewDiskContent]
   );
-  const bulkDecisionViewPorts = useMemo<{
-    editor: ChangeReviewBulkDecisionEditorPort;
-    status: ChangeReviewBulkDecisionStatusPort;
-    writeEvidence: ChangeReviewBulkDecisionWriteEvidencePort;
-  }>(
-    () => ({
-      editor: {
-        scheduleEditorSync: (callback) => requestAnimationFrame(callback),
-        acceptAllEditorChunks: (filePaths) => {
-          for (const [filePath, view] of editorViewMapRef.current.entries()) {
-            if (filePaths.has(filePath)) acceptAllChunks(view);
-          }
-        },
-        rejectAllEditorChunks: (filePaths) => {
-          for (const [filePath, view] of editorViewMapRef.current.entries()) {
-            if (filePaths.has(filePath)) rejectAllChunks(view);
-          }
-        },
-        rollbackEditorContent,
-      },
-      writeEvidence: {
-        markExpectedWrite: markRecentReviewWrite,
-        markCommittedPostimages: markCommittedReviewPostimages,
-      },
-      status: {
-        beginFileMutation: (filePath) => fileApplyInFlightRef.current.add(filePath),
-        finishFileMutation: (filePath) => fileApplyInFlightRef.current.delete(filePath),
-        markFilesApplying: (filePaths) => {
-          setFilesApplying((previous) => {
-            const next = new Set(previous);
-            for (const filePath of filePaths) next.add(filePath);
-            return next;
-          });
-        },
-        clearFilesApplying: (filePaths) => {
-          setFilesApplying((previous) => {
-            const next = new Set(previous);
-            for (const filePath of filePaths) next.delete(filePath);
-            return next;
-          });
-        },
-        incrementDiscardCounter: (filePath) => {
-          setDiscardCounters((previous) => ({
-            ...previous,
-            [filePath]: (previous[filePath] ?? 0) + 1,
-          }));
-        },
-        setUndoInFlight,
-      },
-    }),
-    [markCommittedReviewPostimages, markRecentReviewWrite, rollbackEditorContent, setUndoInFlight]
-  );
   const { acceptAll: handleAcceptAll, rejectAll: handleRejectAll } =
     useChangeReviewBulkDecisionController({
       active: activeChangeSet !== null,
@@ -1133,9 +1057,9 @@ export const ChangeReviewDialog = ({
       },
       statePort: changeReviewBulkDecisionStatePort,
       commandPort: bulkDecisionCommandPort,
-      editorPort: bulkDecisionViewPorts.editor,
-      statusPort: bulkDecisionViewPorts.status,
-      writeEvidencePort: bulkDecisionViewPorts.writeEvidence,
+      editorPort: dialogViewPorts.bulkDecision.editor,
+      statusPort: dialogViewPorts.bulkDecision.status,
+      writeEvidencePort: dialogViewPorts.bulkDecision.writeEvidence,
       buildRejectDiskSnapshot: buildBulkRejectDiskSnapshot,
       persistLatestAcceptedAction: persistLatestAcceptedReviewAction,
       ensureDurableScope: ensureDurableReviewScope,
@@ -1152,49 +1076,6 @@ export const ChangeReviewDialog = ({
         readCurrentDiskContent: readCurrentReviewDiskContent,
       }),
     [readCurrentReviewDiskContent]
-  );
-  const fileDecisionViewPorts = useMemo<{
-    editor: ChangeReviewFileDecisionEditorPort;
-    status: ChangeReviewFileDecisionStatusPort;
-    writeEvidence: ChangeReviewFileDecisionWriteEvidencePort;
-  }>(
-    () => ({
-      editor: {
-        getCurrentContent: (filePath) =>
-          editorViewMapRef.current.get(filePath)?.state.doc.toString() ?? null,
-        scheduleEditorSync: (callback) => requestAnimationFrame(callback),
-        acceptAllEditorChunks: (filePath) => {
-          const view = editorViewMapRef.current.get(filePath);
-          if (view) acceptAllChunks(view);
-        },
-        rejectAllEditorChunks: (filePath) => {
-          const view = editorViewMapRef.current.get(filePath);
-          if (view) rejectAllChunks(view);
-        },
-        rollbackEditorContent,
-      },
-      status: {
-        beginFileMutation: (filePath) => {
-          fileApplyInFlightRef.current.add(filePath);
-          setFileApplying(filePath, true);
-        },
-        finishFileMutation: (filePath) => {
-          fileApplyInFlightRef.current.delete(filePath);
-          setFileApplying(filePath, false);
-        },
-        incrementDiscardCounter: (filePath) => {
-          setDiscardCounters((previous) => ({
-            ...previous,
-            [filePath]: (previous[filePath] ?? 0) + 1,
-          }));
-        },
-      },
-      writeEvidence: {
-        markExpectedWrite: markRecentReviewWrite,
-        markCommittedPostimages: markCommittedReviewPostimages,
-      },
-    }),
-    [markCommittedReviewPostimages, markRecentReviewWrite, rollbackEditorContent, setFileApplying]
   );
   const { acceptFile: handleAcceptFile, rejectFile: handleRejectFile } =
     useChangeReviewFileDecisionController({
@@ -1219,9 +1100,9 @@ export const ChangeReviewDialog = ({
       },
       statePort: changeReviewFileDecisionStatePort,
       commandPort: fileDecisionCommandPort,
-      editorPort: fileDecisionViewPorts.editor,
-      statusPort: fileDecisionViewPorts.status,
-      writeEvidencePort: fileDecisionViewPorts.writeEvidence,
+      editorPort: dialogViewPorts.fileDecision.editor,
+      statusPort: dialogViewPorts.fileDecision.status,
+      writeEvidencePort: dialogViewPorts.fileDecision.writeEvidence,
       policy: changeReviewFileDecisionPolicy,
       persistLatestAcceptedAction: persistLatestAcceptedReviewAction,
       ensureDurableScope: ensureDurableReviewScope,
@@ -1233,212 +1114,52 @@ export const ChangeReviewDialog = ({
     });
 
   // Per-file callbacks for ContinuousScrollView
-  const handleHunkAccepted = useCallback(
-    (filePath: string, hunkIndex: number) => {
-      if (
-        hasReviewDraft(filePath) ||
-        hasReviewActionInFlight() ||
-        blockReviewMutationForExternalChange(filePath)
-      ) {
-        // Older navigation adapters ignored the callback's `false` result and still
-        // mutated CodeMirror. Restore the guarded document after that synchronous call.
-        const view = editorViewMapRef.current.get(filePath);
-        const guardedContent = view?.state.doc.toString();
-        if (view && guardedContent !== undefined) {
-          queueMicrotask(() => {
-            if (view.dom.isConnected && view.state.doc.toString() !== guardedContent) {
-              rollbackEditorContent(filePath, guardedContent);
-            }
-          });
-        }
-        return false;
-      }
-      const originalIndex = setHunkDecision(filePath, hunkIndex, 'accepted');
-      const undoAction: RecentHunkUndoAction = { filePath, originalIndex };
-      pushReviewUndoAction({
-        kind: 'hunk',
-        descriptor: { intent: 'accept-hunk', filePath, hunkIndex: originalIndex },
-        action: undoAction,
-      });
-      void persistLatestAcceptedReviewAction();
-      return true;
-    },
+  const hunkDecisionCommandPort = useMemo(
+    () =>
+      createChangeReviewHunkDecisionCommandPort({
+        getStore: useStore.getState,
+        readCurrentDiskContent: readCurrentReviewDiskContent,
+      }),
+    [readCurrentReviewDiskContent]
+  );
+  const hunkDecisionHistoryPort = useMemo(
+    () => ({
+      pushUndoAction: pushReviewUndoAction,
+      bindCommittedAction: bindCommittedReviewAction,
+      discardLatestAction: discardLatestReviewAction,
+      publishUndoHistory: publishReviewUndoHistory,
+    }),
     [
-      hasReviewActionInFlight,
-      hasReviewDraft,
-      blockReviewMutationForExternalChange,
-      persistLatestAcceptedReviewAction,
+      bindCommittedReviewAction,
+      discardLatestReviewAction,
+      publishReviewUndoHistory,
       pushReviewUndoAction,
-      rollbackEditorContent,
-      setHunkDecision,
     ]
   );
-
-  const handleHunkRejected = useCallback(
-    (filePath: string, hunkIndex: number, beforeContent?: string, afterContent?: string) => {
-      if (
-        hasReviewDraft(filePath) ||
-        hasReviewActionInFlight() ||
-        blockReviewMutationForExternalChange(filePath)
-      ) {
-        return false;
-      }
-      if (beforeContent === undefined || afterContent === undefined) {
-        // Backward-compatible path for older navigation adapters that supplied only
-        // file/index. Perform the CodeMirror mutation here so disk Undo gets exact bytes.
-        const view = editorViewMapRef.current.get(filePath);
-        if (!view?.dom.isConnected) return false;
-        beforeContent = view.state.doc.toString();
-        if (!rejectChunk(view)) return false;
-        afterContent = view.state.doc.toString();
-      }
-      const operationEpoch = changeSetEpoch;
-      const operationScope = captureReviewOperationScope();
-      if (!operationScope) {
-        const view = editorViewMapRef.current.get(filePath);
-        if (view?.dom.isConnected) rollbackEditorContent(filePath, beforeContent);
-        return false;
-      }
-      fileApplyInFlightRef.current.add(filePath);
-      setFileApplying(filePath, true);
-      const decisionState = useStore.getState();
-      const file = activeChangeSet?.files.find((candidate) => candidate.filePath === filePath);
-      const hunkCount = file
-        ? getFileHunkCount(file.filePath, file.snippets.length, decisionState.fileChunkCounts)
-        : 0;
-      const shouldDeleteOnUndo = shouldDeleteFileWhenUndoingReject(file, hunkCount, decisionState);
-      const originalIndex = setHunkDecision(filePath, hunkIndex, 'rejected');
-      const isNewFileFullyRejected = shouldCreateFileWhenUndoingReject(
-        file,
-        Boolean(file && resolveReviewFileIsNew(file, fileContents[filePath])),
-        hunkCount,
-        useStore.getState()
-      );
-      const hunkUndoAction: RecentHunkUndoAction = { filePath, originalIndex };
-      if (REVIEW_INSTANT_APPLY) {
-        const snapshot: ReviewDiskUndoSnapshot = {
-          filePath,
-          beforeContent,
-          afterContent: isNewFileFullyRejected ? null : afterContent,
-          file,
-          restoreMode: isNewFileFullyRejected
-            ? 'create-file'
-            : shouldDeleteOnUndo
-              ? 'delete-file'
-              : undefined,
-          renameExpectation: getReviewRenameRecoveryExpectation(file) ?? undefined,
-        };
-        const preparedAction = pushReviewUndoAction({
-          kind: 'disk',
-          descriptor: { intent: 'reject-hunk', filePath, hunkIndex: originalIndex },
-          action: { snapshot, originalIndex },
-        });
-        markRecentReviewWrite(filePath, isNewFileFullyRejected ? null : afterContent);
-        void (async () => {
-          try {
-            if (!ensureDurableReviewScope()) {
-              rollbackEditorContent(filePath, beforeContent);
-              clearHunkDecisionByOriginalIndex(filePath, originalIndex);
-              discardLatestReviewAction(preparedAction);
-              return;
-            }
-            const result = await applySingleFileDecision(teamName, filePath, taskId, memberName);
-            if (
-              !isCurrentReviewOperationScope(operationScope) ||
-              useStore.getState().changeSetEpoch !== operationEpoch
-            ) {
-              return;
-            }
-            markCommittedReviewPostimages(result?.diskPostimages);
-            bindCommittedReviewAction(preparedAction, result?.committedReviewAction);
-            const hasErrorForFile =
-              !result ||
-              result.errors.some(
-                (error) =>
-                  normalizePathForComparison(error.filePath) ===
-                  normalizePathForComparison(filePath)
-              );
-            if (result && !hasErrorForFile) {
-              const actualAfterContent = isNewFileFullyRejected
-                ? null
-                : await readCurrentReviewDiskContent(filePath, afterContent);
-              if (
-                !isCurrentReviewOperationScope(operationScope) ||
-                useStore.getState().changeSetEpoch !== operationEpoch
-              ) {
-                return;
-              }
-              if (
-                actualAfterContent !== null &&
-                snapshot.restoreMode !== 'delete-file' &&
-                !isLedgerRenameReviewFile(snapshot.file)
-              ) {
-                alignReviewDiskUndoSnapshotWithAppliedContent(snapshot, actualAfterContent);
-              }
-              publishReviewUndoHistory();
-              markRecentReviewWrite(filePath, snapshot.afterContent);
-              return;
-            }
-
-            const view = editorViewMapRef.current.get(filePath);
-            if (view?.dom.isConnected) rollbackEditorContent(filePath, beforeContent);
-            clearHunkDecisionByOriginalIndex(filePath, originalIndex);
-            discardLatestReviewAction(preparedAction);
-            useStore.getState().invalidateResolvedFileContent(filePath);
-            setDiscardCounters((previous) => ({
-              ...previous,
-              [filePath]: (previous[filePath] ?? 0) + 1,
-            }));
-            void fetchFileContent(teamName, memberName, filePath);
-          } finally {
-            if (
-              isCurrentReviewOperationScope(operationScope) &&
-              useStore.getState().changeSetEpoch === operationEpoch
-            ) {
-              fileApplyInFlightRef.current.delete(filePath);
-              setFileApplying(filePath, false);
-            }
-          }
-        })();
-      } else {
-        fileApplyInFlightRef.current.delete(filePath);
-        setFileApplying(filePath, false);
-        pushReviewUndoAction({
-          kind: 'hunk',
-          descriptor: { intent: 'reject-hunk', filePath, hunkIndex: originalIndex },
-          action: hunkUndoAction,
-        });
-      }
-      return true;
-    },
-    [
-      hasReviewActionInFlight,
-      hasReviewDraft,
+  const { acceptHunk: handleHunkAccepted, rejectHunk: handleHunkRejected } =
+    useChangeReviewHunkDecisionController({
+      files: activeChangeSet?.files ?? [],
+      fileContents,
       changeSetEpoch,
-      setHunkDecision,
-      clearHunkDecisionByOriginalIndex,
-      applySingleFileDecision,
-      bindCommittedReviewAction,
+      instantApply: REVIEW_INSTANT_APPLY,
       teamName,
       taskId,
-      markCommittedReviewPostimages,
       memberName,
-      markRecentReviewWrite,
-      fetchFileContent,
-      setFileApplying,
-      readCurrentReviewDiskContent,
-      rollbackEditorContent,
-      activeChangeSet,
-      blockReviewMutationForExternalChange,
-      captureReviewOperationScope,
-      fileContents,
-      isCurrentReviewOperationScope,
-      pushReviewUndoAction,
-      discardLatestReviewAction,
-      ensureDurableReviewScope,
-      publishReviewUndoHistory,
-    ]
-  );
+      statePort: changeReviewHunkDecisionStatePort,
+      commandPort: hunkDecisionCommandPort,
+      editorPort: dialogViewPorts.hunkDecision.editor,
+      statusPort: dialogViewPorts.hunkDecision.status,
+      historyPort: hunkDecisionHistoryPort,
+      writeEvidencePort: dialogViewPorts.hunkDecision.writeEvidence,
+      policy: changeReviewHunkDecisionPolicy,
+      persistLatestAcceptedAction: persistLatestAcceptedReviewAction,
+      ensureDurableScope: ensureDurableReviewScope,
+      hasDraft: hasReviewDraft,
+      hasActionInFlight: hasReviewActionInFlight,
+      blockForExternalChange: blockReviewMutationForExternalChange,
+      captureOperationScope: captureReviewOperationScope,
+      isCurrentOperationScope: isCurrentReviewOperationScope,
+    });
 
   const fileDraftPersistenceScope = useMemo(
     () =>
@@ -1489,33 +1210,6 @@ export const ChangeReviewDialog = ({
       unsuppressDraftHistoryFile,
     ]
   );
-  const fileDraftViewPorts = useMemo<{
-    status: ChangeReviewFileDraftStatusPort;
-    writeEvidence: ChangeReviewFileDraftWriteEvidencePort;
-  }>(
-    () => ({
-      status: {
-        beginFileMutation: (filePath) => {
-          fileApplyInFlightRef.current.add(filePath);
-          setFileApplying(filePath, true);
-        },
-        finishFileMutation: (filePath) => {
-          fileApplyInFlightRef.current.delete(filePath);
-          setFileApplying(filePath, false);
-        },
-        incrementDiscardCounter: (filePath) => {
-          setDiscardCounters((previous) => ({
-            ...previous,
-            [filePath]: (previous[filePath] ?? 0) + 1,
-          }));
-        },
-      },
-      writeEvidence: {
-        markExpectedWrite: markRecentReviewWrite,
-      },
-    }),
-    [markRecentReviewWrite, setFileApplying]
-  );
   const {
     contentChanged: handleContentChanged,
     saveFile: handleSaveFile,
@@ -1534,8 +1228,8 @@ export const ChangeReviewDialog = ({
     draftHistory: fileDraftHistory,
     statePort: changeReviewFileDraftStatePort,
     commandPort: changeReviewFileDraftCommandPort,
-    statusPort: fileDraftViewPorts.status,
-    writeEvidencePort: fileDraftViewPorts.writeEvidence,
+    statusPort: dialogViewPorts.fileDraft.status,
+    writeEvidencePort: dialogViewPorts.fileDraft.writeEvidence,
     hasActionInFlight: hasReviewActionInFlight,
     captureOperationScope: captureReviewOperationScope,
     isCurrentOperationScope: isCurrentReviewOperationScope,
@@ -1589,48 +1283,6 @@ export const ChangeReviewDialog = ({
       replaceReviewActionHistories,
     ]
   );
-  const reviewHistoryMutationViewPort = useMemo<ChangeReviewHistoryMutationViewPort>(
-    () => ({
-      addMissingFile: (file, index, content) =>
-        addReviewFile(file, {
-          index,
-          content: {
-            ...file,
-            originalFullContent: '',
-            modifiedFullContent: content,
-            isNewFile: true,
-            contentSource: 'disk-current',
-          },
-        }),
-      fetchFileContent: (targetTeamName, targetMemberName, filePath) => {
-        void fetchFileContent(targetTeamName, targetMemberName, filePath);
-      },
-      incrementDiscardCounters: (filePaths) => {
-        setDiscardCounters((previous) => {
-          const next = { ...previous };
-          for (const filePath of filePaths) {
-            next[filePath] = (next[filePath] ?? 0) + 1;
-          }
-          return next;
-        });
-      },
-      navigateToAction: handleHistoryActionNavigation,
-      markExpectedWrite: markRecentReviewWrite,
-      clearExpectedWrite: (filePath) => {
-        recentReviewWritesRef.current.delete(normalizePathForComparison(filePath));
-      },
-      markCommittedPostimages: markCommittedReviewPostimages,
-      setMutationInFlight: setUndoInFlight,
-    }),
-    [
-      addReviewFile,
-      fetchFileContent,
-      handleHistoryActionNavigation,
-      markCommittedReviewPostimages,
-      markRecentReviewWrite,
-      setUndoInFlight,
-    ]
-  );
   const isReviewFileMutationInFlight = useCallback(
     (filePath: string): boolean => fileApplyInFlightRef.current.has(filePath),
     []
@@ -1651,7 +1303,7 @@ export const ChangeReviewDialog = ({
     history: reviewHistoryActions,
     commandPort: changeReviewHistoryMutationCommandPort,
     statePort: changeReviewHistoryMutationStatePort,
-    viewPort: reviewHistoryMutationViewPort,
+    viewPort: dialogViewPorts.historyMutation,
     captureOperationScope: captureReviewOperationScope,
     isCurrentOperationScope: isCurrentReviewOperationScope,
     hasActionInFlight: hasReviewActionInFlight,
@@ -1668,53 +1320,6 @@ export const ChangeReviewDialog = ({
         hydrateDecisions: hydrateReviewDecisions,
       }),
     [hydrateReviewDecisions]
-  );
-  const dialogLifecycleViewPorts = useMemo<{
-    editor: ChangeReviewDialogLifecycleEditorPort;
-    session: ChangeReviewDialogLifecycleSessionPort;
-    status: ChangeReviewDialogLifecycleStatusPort;
-    writeEvidence: ChangeReviewDialogLifecycleWriteEvidencePort;
-  }>(
-    () => ({
-      editor: {
-        captureDraftSnapshots: (shouldCapture) => {
-          for (const [filePath, view] of editorViewMapRef.current.entries()) {
-            if (shouldCapture(filePath)) {
-              handleSerializedStateChanged(filePath, serializeReviewDraftEditorState(view.state));
-            }
-          }
-        },
-      },
-      session: {
-        getPendingApplyCleanupKey: () => pendingApplyCleanupKeyRef.current,
-        setPendingApplyCleanupKey: (key) => {
-          pendingApplyCleanupKeyRef.current = key;
-        },
-        isExpectedHydrationKey: (hydrationKey) =>
-          expectedDraftHistoryKeyRef.current === hydrationKey,
-      },
-      status: {
-        getActionLockState: (applyingState) => ({
-          applying: applyingState,
-          fileApplyCount: fileApplyInFlightRef.current.size,
-          undoing: undoInFlightRef.current,
-          closing: closingRef.current,
-        }),
-        beginClosing: () => {
-          closingRef.current = true;
-          setClosing(true);
-        },
-        finishClosing: () => {
-          closingRef.current = false;
-          setClosing(false);
-        },
-        setRecoveryInFlight: setUndoInFlight,
-      },
-      writeEvidence: {
-        markCommittedPostimages: markCommittedReviewPostimages,
-      },
-    }),
-    [handleSerializedStateChanged, markCommittedReviewPostimages, setUndoInFlight]
   );
   const {
     requestClose,
@@ -1748,10 +1353,10 @@ export const ChangeReviewDialog = ({
     onOpenChange,
     statePort: changeReviewDialogLifecycleStatePort,
     commandPort: dialogLifecycleCommandPort,
-    editorPort: dialogLifecycleViewPorts.editor,
-    statusPort: dialogLifecycleViewPorts.status,
-    sessionPort: dialogLifecycleViewPorts.session,
-    writeEvidencePort: dialogLifecycleViewPorts.writeEvidence,
+    editorPort: dialogViewPorts.lifecycle.editor,
+    statusPort: dialogViewPorts.lifecycle.status,
+    sessionPort: dialogViewPorts.lifecycle.session,
+    writeEvidencePort: dialogViewPorts.lifecycle.writeEvidence,
     decisionPersistence,
     draftHistory,
     hasActionInFlight: hasReviewActionInFlight,
