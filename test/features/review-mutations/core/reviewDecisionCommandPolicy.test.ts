@@ -60,7 +60,7 @@ function createAction(id = 'action-1'): Extract<ReviewUndoAction, { kind: 'disk'
   };
 }
 
-function createState(action = createAction()): ReviewPersistedStateSnapshot {
+function createState(action: ReviewUndoAction = createAction()): ReviewPersistedStateSnapshot {
   return {
     hunkDecisions: {},
     fileDecisions: { [REVIEW_KEY]: 'rejected' },
@@ -80,6 +80,31 @@ describe('review decision command policy', () => {
     expect(() => assertCurrentReviewDecisionRevision(current, 4)).not.toThrow();
     expect(() =>
       assertExactApplyReviewHistoryTransition(createState(), current, [decision], context)
+    ).not.toThrow();
+  });
+
+  it('accepts a single-file Reject All transition represented by a bulk action', () => {
+    const action: Extract<ReviewUndoAction, { kind: 'bulk' }> = {
+      id: 'single-file-reject-all',
+      createdAt: '2026-07-24T00:00:00.000Z',
+      kind: 'bulk',
+      descriptor: { intent: 'reject-all', fileCount: 1 },
+      decisionSnapshot: {
+        hunkDecisions: current.hunkDecisions,
+        fileDecisions: current.fileDecisions,
+      },
+      diskSnapshots: [
+        {
+          filePath: FILE_PATH,
+          beforeContent: 'after\n',
+          afterContent: 'before\n',
+          file,
+        },
+      ],
+    };
+
+    expect(() =>
+      assertExactApplyReviewHistoryTransition(createState(action), current, [decision], context)
     ).not.toThrow();
   });
 
