@@ -266,6 +266,48 @@ describe('useTerminalCommandRuns', () => {
     });
   });
 
+  it('does not persist runs from the previous team during a direct team switch', async () => {
+    const firstTeamName = 'terminal-command-runs-team-a';
+    const secondTeamName = 'terminal-command-runs-team-b';
+    const firstTeamKey = storageKey(firstTeamName);
+    const secondTeamKey = storageKey(secondTeamName);
+    const firstTeamRun = createEventDetail({
+      clientEventId: 'team-a-run',
+      command: 'echo team-a',
+      status: 'succeeded',
+    });
+    const secondTeamRun = createEventDetail({
+      clientEventId: 'team-b-run',
+      command: 'echo team-b',
+      status: 'succeeded',
+    });
+    window.localStorage.setItem(firstTeamKey, JSON.stringify([firstTeamRun]));
+    window.localStorage.setItem(secondTeamKey, JSON.stringify([secondTeamRun]));
+    const setItem = vi.spyOn(window.localStorage, 'setItem');
+    const firstTeamProps = createProps({ teamName: firstTeamName });
+
+    await renderHarness(firstTeamProps);
+    expect(requireResult().commandRuns).toEqual([firstTeamRun]);
+    setItem.mockClear();
+
+    await renderHarness({ ...firstTeamProps, teamName: secondTeamName });
+
+    expect(requireResult().commandRuns).toEqual([secondTeamRun]);
+    const secondTeamWrites = setItem.mock.calls
+      .filter(([key]) => key === secondTeamKey)
+      .map(([, value]) => JSON.parse(String(value)) as TerminalCommandRunPresentation[]);
+    expect(secondTeamWrites).not.toHaveLength(0);
+    expect(
+      secondTeamWrites.every(
+        (runs) => runs.length === 1 && runs[0]?.clientEventId === secondTeamRun.clientEventId
+      )
+    ).toBe(true);
+    expect(JSON.parse(window.localStorage.getItem(firstTeamKey) ?? 'null')).toEqual([firstTeamRun]);
+    expect(JSON.parse(window.localStorage.getItem(secondTeamKey) ?? 'null')).toEqual([
+      secondTeamRun,
+    ]);
+  });
+
   function createProps(overrides: Partial<HarnessProps> = {}): HarnessProps {
     return {
       activePaneId: 'pane-1',
@@ -368,4 +410,8 @@ function createRenderGate(): RenderGate {
       resolvePromise?.();
     },
   };
+}
+
+function storageKey(teamName: string): string {
+  return `agent-teams:terminal-workspace:${teamName}:command-runs`;
 }

@@ -52,6 +52,7 @@ export function useTerminalCommandRuns({
   const [commandRuns, setCommandRuns] = useState<TerminalCommandRunPresentation[]>(() =>
     readStoredTerminalCommandRuns(teamName)
   );
+  const [hydratedTeamName, setHydratedTeamName] = useState(teamName);
   const latestContextRef = useRef<TerminalCommandRunContext>({
     onCommandStarted,
     onCommandSubmitted,
@@ -173,11 +174,16 @@ export function useTerminalCommandRuns({
 
   useEffect(() => {
     setCommandRuns(readStoredTerminalCommandRuns(teamName));
+    setHydratedTeamName(teamName);
   }, [teamName]);
 
   useEffect(() => {
+    if (hydratedTeamName !== teamName) {
+      return;
+    }
+
     persistTerminalCommandRuns(teamName, commandRuns);
-  }, [commandRuns, teamName]);
+  }, [commandRuns, hydratedTeamName, teamName]);
 
   return {
     activeCommandRuns,
