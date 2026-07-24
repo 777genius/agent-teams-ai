@@ -180,9 +180,9 @@ function buildDimensionStates(
       dimension,
       buildDimensionState(dimension, checks),
     ])
-  ) as unknown as {
-    [TDimension in HostedReadinessDimension]: HostedReadinessDimensionState;
-  } & { terminal: typeof HOSTED_TERMINAL_READINESS };
+  ) as unknown as Record<HostedReadinessDimension, HostedReadinessDimensionState> & {
+    terminal: typeof HOSTED_TERMINAL_READINESS;
+  };
   states.terminal = HOSTED_TERMINAL_READINESS;
   return Object.freeze(states);
 }
@@ -194,9 +194,9 @@ function buildUnavailableStates(reason: string): HostedReadinessDimensionStates 
       dimension,
       Object.freeze({ dimension, status: 'not_ready' as const, reasons }),
     ])
-  ) as unknown as {
-    [TDimension in HostedReadinessDimension]: HostedReadinessDimensionState;
-  } & { terminal: typeof HOSTED_TERMINAL_READINESS };
+  ) as unknown as Record<HostedReadinessDimension, HostedReadinessDimensionState> & {
+    terminal: typeof HOSTED_TERMINAL_READINESS;
+  };
   states.terminal = HOSTED_TERMINAL_READINESS;
   return Object.freeze(states);
 }
