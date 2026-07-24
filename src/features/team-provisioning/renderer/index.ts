@@ -66,3 +66,4 @@ export {
   type TeamLaunchParams,
 } from './utils/teamLaunchParams';
 export { TeamRuntimeFreshnessCoordinator } from './utils/TeamRuntimeFreshnessCoordinator';
+export { normalizePersistedTeamLaunchParams } from './utils/teamLaunchParamsPersistence';

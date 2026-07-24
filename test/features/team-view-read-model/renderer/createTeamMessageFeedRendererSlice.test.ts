@@ -213,6 +213,31 @@ describe('createTeamMessageFeedRendererSlice', () => {
     expect(onlyTeamMessageEntry(harness.getState())?.loadingOlder).toBe(false);
   });
 
+  it('contains a failed best-effort head reload after an older feed revision mismatch', async () => {
+    const harness = createHarness({
+      memberActivityMetaByTeam: {},
+      teamMessagesByName: {
+        [TEAM_NAME]: cacheEntry({
+          canonicalMessages: [message('head')],
+          feedRevision: 'r1',
+          headHydrated: true,
+          hasMore: true,
+          nextCursor: 'cursor-1',
+        }),
+      },
+    });
+    harness.transport.getMessagesPage
+      .mockResolvedValueOnce(page('r2', [message('older')]))
+      .mockRejectedValueOnce(new Error('transient head refresh failure'));
+
+    await expect(harness.slice.loadOlderTeamMessages(TEAM_NAME)).resolves.toBeUndefined();
+
+    expect(harness.transport.getMessagesPage).toHaveBeenCalledTimes(2);
+    expect(onlyTeamMessageEntry(harness.getState())?.feedRevision).toBe('r1');
+    expect(onlyTeamMessageEntry(harness.getState())?.loadingOlder).toBe(false);
+    expect(onlyTeamMessageEntry(harness.getState())?.loadingHead).toBe(false);
+  });
+
   it('does not apply stale member activity metadata or schedule a stale follow-up', async () => {
     const pending = deferred<TeamMemberActivityMeta>();
     const harness = createHarness({

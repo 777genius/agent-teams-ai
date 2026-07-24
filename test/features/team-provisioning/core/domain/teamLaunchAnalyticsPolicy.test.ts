@@ -9,7 +9,7 @@ import {
 
 import type { TeamCreateRequest, TeamLaunchRequest, TeamViewSnapshot } from '@shared/types';
 
-function snapshot(providerIds: Array<'anthropic' | 'codex'>): TeamViewSnapshot {
+function snapshot(providerIds: ('anthropic' | 'codex')[]): TeamViewSnapshot {
   return {
     teamName: 'sandbox-team',
     config: { name: 'Sandbox Team' },
@@ -29,7 +29,7 @@ describe('teamLaunchAnalyticsPolicy', () => {
   it('inherits the create provider only for members without an override', () => {
     const request = {
       teamName: 'sandbox-team',
-      cwd: '/tmp/sandbox-project',
+      cwd: '/sandbox/project',
       providerId: 'codex',
       members: [{ name: 'alice' }, { name: 'bob', providerId: 'anthropic' }],
     } satisfies TeamCreateRequest;
@@ -44,7 +44,7 @@ describe('teamLaunchAnalyticsPolicy', () => {
   it('prefers snapshot providers and falls back to the launch provider without team data', () => {
     const request = {
       teamName: 'sandbox-team',
-      cwd: '/tmp/sandbox-project',
+      cwd: '/sandbox/project',
       providerId: 'codex',
     } satisfies TeamLaunchRequest;
 

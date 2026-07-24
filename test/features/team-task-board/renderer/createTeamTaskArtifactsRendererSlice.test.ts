@@ -95,7 +95,7 @@ function createHarness(input?: {
     getTaskChangePresence: vi.fn(),
     saveTaskAttachment: vi.fn(),
   };
-  const refreshTeamData = vi.fn(async () => undefined);
+  const refreshTeamData = vi.fn(() => Promise.resolve());
   const recordAttachment = vi.fn();
   const classifyError = vi.fn(() => 'transport');
   const slice = createTeamTaskArtifactsRendererSlice<HarnessState, RequestScope>({
@@ -210,12 +210,14 @@ describe('createTeamTaskArtifactsRendererSlice', () => {
   it('preserves attachment save ordering and records failures without refreshing', async () => {
     const events: string[] = [];
     const harness = createHarness();
-    vi.mocked(harness.transport.saveTaskAttachment).mockImplementation(async () => {
+    vi.mocked(harness.transport.saveTaskAttachment).mockImplementation(() => {
       events.push('transport');
+      return Promise.resolve();
     });
     harness.recordAttachment.mockImplementation(() => events.push('analytics'));
-    harness.refreshTeamData.mockImplementation(async () => {
+    harness.refreshTeamData.mockImplementation(() => {
       events.push('refresh');
+      return Promise.resolve();
     });
     const file = {
       name: 'evidence.pdf',

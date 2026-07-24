@@ -28,7 +28,7 @@ function progress(
   };
 }
 
-function snapshot(providerIds: Array<'anthropic' | 'codex'> = ['anthropic']): TeamViewSnapshot {
+function snapshot(providerIds: ('anthropic' | 'codex')[] = ['anthropic']): TeamViewSnapshot {
   return {
     teamName: 'sandbox-team',
     config: { name: 'Sandbox Team' },
@@ -77,7 +77,7 @@ describe('TeamLaunchAnalyticsCoordinator', () => {
     const launchPort = coordinator.createLaunchPort();
     const request = {
       teamName: 'sandbox-team',
-      cwd: '/tmp/sandbox-project',
+      cwd: '/sandbox/project',
       providerId: 'codex',
       members: [{ name: 'alice' }, { name: 'bob', providerId: 'anthropic' }],
     } satisfies TeamCreateRequest;
@@ -129,12 +129,81 @@ describe('TeamLaunchAnalyticsCoordinator', () => {
     expect(recorder.recordLaunchEnd).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps a shared analytics step open across provisioning state changes', () => {
+    const { coordinator, recorder } = createHarness();
+    const configuring = progress('configuring', {
+      updatedAt: '2026-07-24T10:00:02.000Z',
+    });
+    const assembling = progress('assembling', {
+      updatedAt: '2026-07-24T10:00:04.000Z',
+    });
+    const finalizing = progress('finalizing', {
+      updatedAt: '2026-07-24T10:00:07.000Z',
+    });
+
+    coordinator.recordStepTransition(undefined, configuring, snapshot());
+    coordinator.recordStepTransition(configuring, assembling, snapshot());
+    coordinator.recordStepTransition(assembling, finalizing, snapshot());
+
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledTimes(1);
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        step: 'member_spawn',
+        durationMs: 7_000,
+      })
+    );
+  });
+
+  it('closes a shared analytics step when provisioning reaches a terminal state', () => {
+    const { coordinator, recorder } = createHarness();
+    const verifying = progress('verifying', {
+      updatedAt: '2026-07-24T10:00:05.000Z',
+    });
+    const ready = progress('ready', {
+      updatedAt: '2026-07-24T10:00:08.000Z',
+    });
+
+    coordinator.recordStepTransition(undefined, verifying, snapshot());
+    coordinator.recordStepTransition(verifying, ready, snapshot());
+
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledTimes(1);
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        step: 'ready_check',
+        durationMs: 8_000,
+        success: true,
+      })
+    );
+  });
+
+  it('keeps terminal step dedupe when a completed run later disconnects', () => {
+    const { coordinator, recorder } = createHarness();
+    const verifying = progress('verifying', {
+      updatedAt: '2026-07-24T10:00:05.000Z',
+    });
+    const ready = progress('ready', {
+      updatedAt: '2026-07-24T10:00:08.000Z',
+    });
+    const disconnected = progress('disconnected', {
+      updatedAt: '2026-07-24T10:00:09.000Z',
+    });
+
+    coordinator.recordStepTransition(undefined, verifying, snapshot());
+    coordinator.recordStepTransition(verifying, ready, snapshot());
+    coordinator.recordTerminalProgress(ready, snapshot());
+    coordinator.recordStepTransition(ready, disconnected, snapshot());
+    coordinator.recordTerminalProgress(disconnected, snapshot());
+
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledTimes(1);
+    expect(recorder.recordLaunchEnd).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps concurrent run contexts isolated when progress arrives out of order', () => {
     const { coordinator, recorder } = createHarness();
     const launchPort = coordinator.createLaunchPort();
     const codexRequest = {
       teamName: 'sandbox-team',
-      cwd: '/tmp/sandbox-project',
+      cwd: '/sandbox/project',
       providerId: 'codex',
     } satisfies TeamLaunchRequest;
     const anthropicRequest = {
@@ -224,6 +293,30 @@ describe('TeamLaunchAnalyticsCoordinator', () => {
 
     coordinator.recordTerminalProgress(ready, snapshot());
     coordinator.reset();
+    coordinator.recordTerminalProgress(ready, snapshot());
+
+    expect(recorder.recordLaunchEnd).toHaveBeenCalledTimes(2);
+  });
+
+  it('clearRun releases step and terminal dedupe state for a reused run id', () => {
+    const { coordinator, recorder } = createHarness();
+    const validating = progress('validating', {
+      updatedAt: '2026-07-24T10:00:00.000Z',
+    });
+    const spawning = progress('spawning', {
+      updatedAt: '2026-07-24T10:00:02.000Z',
+    });
+    const ready = progress('ready');
+
+    coordinator.recordStepTransition(undefined, validating, snapshot());
+    coordinator.recordStepTransition(validating, spawning, snapshot());
+    coordinator.clearRun('run-1');
+    coordinator.recordStepTransition(undefined, validating, snapshot());
+    coordinator.recordStepTransition(validating, spawning, snapshot());
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledTimes(2);
+
+    coordinator.recordTerminalProgress(ready, snapshot());
+    coordinator.clearRun('run-1');
     coordinator.recordTerminalProgress(ready, snapshot());
 
     expect(recorder.recordLaunchEnd).toHaveBeenCalledTimes(2);

@@ -21,7 +21,12 @@
   "source": {
     "standaloneInput": "src/main/standalone.ts",
     "rendererOutput": "out/renderer",
-    "externalPackages": ["fastify", "@fastify/cors", "@fastify/static", "agent-teams-controller"],
+    "externalPackages": [
+      "fastify",
+      "@fastify/cors",
+      "@fastify/static",
+      "agent-teams-controller"
+    ],
     "nativeCatchAllEmptyStub": true,
     "broadElectronStub": true,
     "standaloneServiceStubs": true,
@@ -47,7 +52,7 @@
     ],
     "cookiePlugin": null,
     "versions": {
-      "fastify": "^5.8.5",
+      "fastify": "^5.10.0",
       "fastifyCors": "^11.2.0",
       "betterSqlite3": "^12.11.1",
       "electron": "^40.10.0",
@@ -60,29 +65,34 @@
     "observed": true,
     "files": [
       {
-        "path": "dist-standalone/assets/HttpServer-Bqe22d9M.cjs",
-        "bytes": 360996,
-        "sha256": "bc72691427933478a7c5d571c9996ef51e1371ab3679ae6b4b38d0d19a33ddbc"
+        "path": "dist-standalone/assets/ConfigManager-DHkwAl8D.cjs",
+        "bytes": 48442,
+        "sha256": "560bb25e3a8c7d9b88c3da441ae500eff207a330a2b52c64e6c2fdf852f3faa2"
       },
       {
-        "path": "dist-standalone/assets/NotificationManager-B8_AtzLu.cjs",
-        "bytes": 270694,
-        "sha256": "88f99fc01f244cc2f8b06271c57918967142968140d9316985337011bed5105b"
+        "path": "dist-standalone/assets/HttpServer-CRJGIxSZ.cjs",
+        "bytes": 407640,
+        "sha256": "6de16eef37d46039d65a9fa260f3f2fca30e9dcfb0349ef0901640971e7c7d8e"
       },
       {
-        "path": "dist-standalone/assets/ProjectPathResolver-BI-xT66r.cjs",
-        "bytes": 246320,
-        "sha256": "23e747f08c84f1f98b0805371f26d5c64800addf5b6fdf0a48b686723d5a957a"
+        "path": "dist-standalone/assets/NotificationManager-B1U7QO9P.cjs",
+        "bytes": 269952,
+        "sha256": "ad97807e110dd1935d39249f04b534613702b332585673d77811d371985fb068"
       },
       {
-        "path": "dist-standalone/assets/ServiceContext--qE6X1hf.cjs",
-        "bytes": 332256,
-        "sha256": "1d7d7c485d872c43cfad44ec8906db84dd613fb7b85e9a51b5ca9881d59fcef0"
+        "path": "dist-standalone/assets/ProjectPathResolver-10BtGyp0.cjs",
+        "bytes": 218264,
+        "sha256": "6ad72b3e11740bb56c6a68bd7f7677518fc08271d0664bcff4f4abe2e8ea0472"
       },
       {
-        "path": "dist-standalone/assets/index-DiQK2OQV.cjs",
-        "bytes": 5189932,
-        "sha256": "7bee39b2dd444e31819a941276127ce7c25646cba3491005d7d4b3b30ed2a92d"
+        "path": "dist-standalone/assets/ServiceContext-BmtuUHZP.cjs",
+        "bytes": 317760,
+        "sha256": "9d70a1f9bbe3d327b194607af33cb8b877def58c7244139530686ca214d9612f"
+      },
+      {
+        "path": "dist-standalone/assets/index-Ul6_FcQ-.cjs",
+        "bytes": 5848126,
+        "sha256": "9cfa190054f89ab711e7cd1dbcfb44fba213dc8ade219974af797464b281346f"
       },
       {
         "path": "dist-standalone/assets/tokenizer-BIjeYPC0.cjs",
@@ -91,8 +101,8 @@
       },
       {
         "path": "dist-standalone/index.cjs",
-        "bytes": 97537,
-        "sha256": "cd55734bd8996c23b638b20f8652130fae0f0f0b1f11fef7065280cceb7afd65"
+        "bytes": 303347,
+        "sha256": "bfd6d14eb1b2c08c2e6201aba4a1a8a0d17085e0e3ac6827d1b23bfd8b8f8a4b"
       }
     ],
     "internalStorageWorkerPresent": false,
