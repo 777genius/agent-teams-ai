@@ -446,21 +446,28 @@ describe('CoordinationEventHandoff', () => {
   });
 
   it('cancels a deadline-bound external scan while retaining exclusive lease ownership', async () => {
-    const journal = new MemoryJournal();
-    const retentionLeases = new MemoryRetentionLeases(journal);
-    const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases,
-      snapshotLeaseTtlMs: 25,
-    });
-    const ownershipAtCancellation: boolean[] = [];
-    let delivered = false;
+    vi.useFakeTimers();
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(10_000);
+    try {
+      const journal = new MemoryJournal();
+      const retentionLeases = new MemoryRetentionLeases(journal);
+      const handoff = new CoordinationEventHandoff({
+        journal,
+        retentionLeases,
+        snapshotLeaseTtlMs: 25,
+      });
+      const ownershipAtCancellation: boolean[] = [];
+      let delivered = false;
+      let markReadStarted!: () => void;
+      const readStarted = new Promise<void>((resolve) => {
+        markReadStarted = resolve;
+      });
 
-    await expect(
-      handoff.captureExternalSnapshot({
+      const capture = handoff.captureExternalSnapshot({
         request: REQUEST,
         source: {
           async readStableSnapshot(_request, context) {
+            markReadStarted();
             return new Promise<ExternalCoordinationSnapshotRead<{ revision: number }>>(
               (resolve) => {
                 context.signal.addEventListener(
@@ -485,12 +492,20 @@ describe('CoordinationEventHandoff', () => {
         async deliver() {
           delivered = true;
         },
-      })
-    ).rejects.toMatchObject({ code: 'snapshot_retry' });
+      });
+      const rejection = expect(capture).rejects.toMatchObject({ code: 'snapshot_retry' });
 
-    expect(ownershipAtCancellation).toEqual([true]);
-    expect(delivered).toBe(false);
-    expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
+      await readStarted;
+      await vi.advanceTimersByTimeAsync(25);
+      await rejection;
+
+      expect(ownershipAtCancellation).toEqual([true]);
+      expect(delivered).toBe(false);
+      expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
+    } finally {
+      nowSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
   it('bounds ignored lease acquisition and releases a lease that arrives after timeout', async () => {
