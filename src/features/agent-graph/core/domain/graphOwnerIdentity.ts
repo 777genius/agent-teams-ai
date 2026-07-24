@@ -5,7 +5,12 @@ export function getGraphStableOwnerId(member: StableTeamOwnerLike): string {
 }
 
 export function buildGraphMemberNodeId(teamName: string, stableOwnerId: string): string {
-  return `member:${teamName}:${stableOwnerId}`;
+  const normalizedTeamName = teamName.trim();
+  const normalizedOwnerId = stableOwnerId.trim();
+  if (!normalizedTeamName || !normalizedOwnerId) {
+    throw new Error('Graph member node identity requires a team and owner');
+  }
+  return `member:${normalizedTeamName}:${normalizedOwnerId}`;
 }
 
 export function buildGraphMemberNodeIdForMember(
