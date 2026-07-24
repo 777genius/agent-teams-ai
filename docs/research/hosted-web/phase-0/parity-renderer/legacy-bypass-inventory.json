@@ -14,7 +14,7 @@
   "rawArtifact": {
     "format": "deterministically sorted compact JSON",
     "recordCount": 667,
-    "sha256": "sha256:65fd80910bc184445405b9e62c795127fa741e3eb496497466a8137a9fdc4e9d",
+    "sha256": "sha256:3194c38b50009eb22b36dba1a0544a483038e63cf7205b78de33cf592bca7b7f",
     "externalPath": "legacy-bypass-raw.json",
     "pathScope": "artifact-pack-relative",
     "reproductionCommand": "W1_RAW_EVIDENCE_ROOT=<artifact-pack-dir> node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
