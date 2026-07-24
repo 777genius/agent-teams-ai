@@ -129,6 +129,15 @@ export function createTeamCollaborationDataSlice(
 ): TeamCollaborationDataSlice {
   const get = (): AppState => dependencies.state.getState();
   const set = dependencies.state.setState;
+  const setSliceState = (
+    update: Partial<AppState> | ((state: AppState) => Partial<AppState>)
+  ): void => {
+    if (typeof update === 'function') {
+      set((state) => update(state));
+      return;
+    }
+    set(update);
+  };
 
   return {
     ...createTeamDirectoryRendererSlice<AppState, ContextRequestScope>({
@@ -149,13 +158,7 @@ export function createTeamCollaborationDataSlice(
       },
       state: {
         getState: get,
-        setState: (update) => {
-          if (typeof update === 'function') {
-            set((state) => update(state));
-            return;
-          }
-          set(update);
-        },
+        setState: setSliceState,
       },
       structuralSharing: {
         share: (previous, next) => structurallySharePlainValue(previous, next),
@@ -238,13 +241,7 @@ export function createTeamCollaborationDataSlice(
       },
       state: {
         getState: get,
-        setState: (update) => {
-          if (typeof update === 'function') {
-            set((state) => update(state));
-            return;
-          }
-          set(update);
-        },
+        setState: setSliceState,
       },
       tasks: {
         collectInvalidation: collectTaskChangeInvalidation,
@@ -276,13 +273,7 @@ export function createTeamCollaborationDataSlice(
       },
       state: {
         getState: get,
-        setState: (update) => {
-          if (typeof update === 'function') {
-            set((state) => update(state));
-            return;
-          }
-          set(update);
-        },
+        setState: setSliceState,
       },
     }),
     ...createTeamMessageDeliveryRendererSlice<AppState, ContextRequestScope>({
@@ -338,13 +329,7 @@ export function createTeamCollaborationDataSlice(
       },
       state: {
         getState: get,
-        setState: (update) => {
-          if (typeof update === 'function') {
-            set((state) => update(state));
-            return;
-          }
-          set(update);
-        },
+        setState: setSliceState,
       },
       transport: {
         getRuntimeDeliveryStatus: (teamName, messageId) =>
@@ -397,13 +382,7 @@ export function createTeamCollaborationDataSlice(
       state: {
         getState: get,
         selectTeamData: (state, teamName) => selectTeamDataForName(state, teamName),
-        setState: (update) => {
-          if (typeof update === 'function') {
-            set((state) => update(state));
-            return;
-          }
-          set(update);
-        },
+        setState: setSliceState,
       },
       transport: createTeamTaskArtifactsTransport(),
     }),
