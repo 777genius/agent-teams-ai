@@ -16,6 +16,10 @@ vi.mock('@features/localization/renderer', () => ({
   }),
 }));
 
+vi.mock('@renderer/utils/platformKeys', () => ({
+  shortcutLabel: (_mac: string, other: string) => other,
+}));
+
 const MENU = Object.freeze({
   blockText: 'echo context\noutput',
   commandText: 'echo context',
@@ -38,7 +42,10 @@ describe('TerminalCommandContextMenu', () => {
           blockText: [MENU.commandText, outputText].filter(Boolean).join('\n'),
           outputText,
         }}
-        onCopy={onCopy}
+        onCopy={async (text) => {
+          setOpen(false);
+          return onCopy(text);
+        }}
         onOpenChange={setOpen}
       />
     ) : (
@@ -65,6 +72,9 @@ describe('TerminalCommandContextMenu', () => {
   afterEach(async () => {
     await act(async () => {
       root.unmount();
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 0);
+      });
     });
     host.remove();
     document.body.innerHTML = '';
@@ -92,6 +102,7 @@ describe('TerminalCommandContextMenu', () => {
   });
 
   it('skips disabled items and dismisses on Escape', async () => {
+    const previousFocus = appendFocusTarget();
     await renderHarness('');
     const copy = getRequiredButton('agent-team-terminal-command-context-copy');
     const copyCommand = getRequiredButton('agent-team-terminal-command-context-copy-command');
@@ -101,23 +112,57 @@ describe('TerminalCommandContextMenu', () => {
     await pressKey(copy, 'End');
     expect(document.activeElement).toBe(copyCommand);
     await pressKey(copyCommand, 'Escape');
+    await flushDismissalAutoFocus();
     expect(
       document.querySelector('[data-testid="agent-team-terminal-command-context-menu"]')
     ).toBeNull();
     expect(document.querySelector('[data-testid="closed-menu"]')).not.toBeNull();
+    expect(document.activeElement).toBe(previousFocus);
   });
 
-  it('dismisses when the user interacts outside the collision-aware popover', async () => {
+  it('restores the previous focus target after choosing a copy action', async () => {
+    const previousFocus = appendFocusTarget();
     await renderHarness();
 
     await act(async () => {
-      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+      getRequiredButton('agent-team-terminal-command-context-copy-command').click();
+      await Promise.resolve();
+    });
+    await flushDismissalAutoFocus();
+
+    expect(onCopy).toHaveBeenCalledWith(MENU.commandText);
+    expect(document.activeElement).toBe(previousFocus);
+  });
+
+  it('keeps pointer focus when the user dismisses outside the collision-aware popover', async () => {
+    appendFocusTarget();
+    const outsideTarget = appendFocusTarget();
+    await renderHarness();
+
+    await act(async () => {
+      outsideTarget.focus();
+      outsideTarget.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
       await Promise.resolve();
     });
 
     expect(
       document.querySelector('[data-testid="agent-team-terminal-command-context-menu"]')
     ).toBeNull();
+    expect(document.activeElement).toBe(outsideTarget);
+  });
+
+  it('renders platform-aware shortcut labels', async () => {
+    await renderHarness();
+
+    expect(getRequiredButton('agent-team-terminal-command-context-copy').textContent).toContain(
+      'Ctrl+C'
+    );
+    expect(
+      getRequiredButton('agent-team-terminal-command-context-copy-command').textContent
+    ).toContain('Shift+Ctrl+C');
+    expect(
+      getRequiredButton('agent-team-terminal-command-context-copy-output').textContent
+    ).toContain('Alt+Shift+Ctrl+C');
   });
 
   async function renderHarness(outputText?: string): Promise<void> {
@@ -137,9 +182,24 @@ function getRequiredButton(testId: string): HTMLButtonElement {
   return button;
 }
 
+function appendFocusTarget(): HTMLInputElement {
+  const input = document.createElement('input');
+  document.body.appendChild(input);
+  input.focus();
+  return input;
+}
+
 async function pressKey(element: HTMLElement, key: string): Promise<void> {
   await act(async () => {
     element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key }));
     await Promise.resolve();
+  });
+}
+
+async function flushDismissalAutoFocus(): Promise<void> {
+  await act(async () => {
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 0);
+    });
   });
 }

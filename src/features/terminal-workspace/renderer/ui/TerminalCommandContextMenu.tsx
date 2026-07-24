@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Popover, PopoverAnchor, PopoverContent } from '@renderer/components/ui/popover';
+import { shortcutLabel } from '@renderer/utils/platformKeys';
 
 import type { TerminalCommandContextMenuSnapshot } from '../adapters/terminalCommandContextMenu';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
@@ -19,6 +20,11 @@ export const TerminalCommandContextMenu = ({
 }: TerminalCommandContextMenuProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const restoreFocusTargetRef = useRef(
+    document.activeElement instanceof HTMLElement ? document.activeElement : null
+  );
+  const didRestoreFocusRef = useRef(false);
+  const shouldRestoreFocusRef = useRef(true);
   const virtualAnchorRef = useMemo(
     () => ({
       current: {
@@ -27,6 +33,25 @@ export const TerminalCommandContextMenu = ({
     }),
     [menu.x, menu.y]
   );
+
+  const restoreFocus = (): void => {
+    if (
+      didRestoreFocusRef.current ||
+      !shouldRestoreFocusRef.current ||
+      !restoreFocusTargetRef.current?.isConnected
+    ) {
+      return;
+    }
+
+    didRestoreFocusRef.current = true;
+    restoreFocusTargetRef.current.focus();
+  };
+
+  const copyMenuText = (text: string): Promise<boolean> => {
+    const result = onCopy(text);
+    restoreFocus();
+    return result;
+  };
 
   const focusMenuItem = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     const items = itemRefs.current.filter(
@@ -57,7 +82,16 @@ export const TerminalCommandContextMenu = ({
   };
 
   return (
-    <Popover open modal={false} onOpenChange={onOpenChange}>
+    <Popover
+      open
+      modal={false}
+      onOpenChange={(open) => {
+        if (!open) {
+          restoreFocus();
+        }
+        onOpenChange(open);
+      }}
+    >
       <PopoverAnchor virtualRef={virtualAnchorRef} />
       <PopoverContent
         role="menu"
@@ -70,12 +104,18 @@ export const TerminalCommandContextMenu = ({
         sticky="always"
         className="z-[10000] max-h-none w-auto min-w-56 overflow-visible border-white/10 bg-[#181a1f] p-1 text-[13px] text-slate-100 shadow-[0_18px_44px_rgba(0,0,0,0.46)]"
         data-testid="agent-team-terminal-command-context-menu"
-        onCloseAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          restoreFocus();
+        }}
         onContextMenu={(event) => event.preventDefault()}
         onKeyDown={focusMenuItem}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           itemRefs.current[0]?.focus();
+        }}
+        onPointerDownOutside={() => {
+          shouldRestoreFocusRef.current = false;
         }}
       >
         <TerminalCommandContextMenuItem
@@ -83,20 +123,20 @@ export const TerminalCommandContextMenu = ({
             itemRefs.current[0] = element;
           }}
           label={t('terminalWorkspace.copy')}
-          shortcut="⌘C"
+          shortcut={shortcutLabel('⌘C', 'Ctrl+C')}
           testId="agent-team-terminal-command-context-copy"
           text={menu.blockText}
-          onCopy={onCopy}
+          onCopy={copyMenuText}
         />
         <TerminalCommandContextMenuItem
           ref={(element) => {
             itemRefs.current[1] = element;
           }}
           label={t('terminalWorkspace.copyCommand')}
-          shortcut="⇧⌘C"
+          shortcut={shortcutLabel('⇧⌘C', 'Shift+Ctrl+C')}
           testId="agent-team-terminal-command-context-copy-command"
           text={menu.commandText}
-          onCopy={onCopy}
+          onCopy={copyMenuText}
         />
         <TerminalCommandContextMenuItem
           ref={(element) => {
@@ -104,10 +144,10 @@ export const TerminalCommandContextMenu = ({
           }}
           disabled={!menu.outputText}
           label={t('terminalWorkspace.copyOutput')}
-          shortcut="⌥⇧⌘C"
+          shortcut={shortcutLabel('⌥⇧⌘C', 'Alt+Shift+Ctrl+C')}
           testId="agent-team-terminal-command-context-copy-output"
           text={menu.outputText}
-          onCopy={onCopy}
+          onCopy={copyMenuText}
         />
       </PopoverContent>
     </Popover>
