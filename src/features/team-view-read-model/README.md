@@ -14,11 +14,13 @@ Public entrypoints:
 - `main/index.ts` - feature composition and IPC registration
 - `renderer/index.ts` - message-feed and team-view-data state, orchestration, and ports
 
-The renderer composition keeps `selectTeam` and `refreshTeamData` policy independent from
-Zustand and IPC. Narrow ports provide snapshot projection, request-scope checks, navigation
-effects, and task invalidation, while the transport adapter owns `team:getData` and review-cache
-IPC. `TeamViewDataCoordinator` owns thin/full request dedupe, queued refreshes, and at-most-once
-post-paint scheduling.
+The renderer composition keeps `selectTeam`, `refreshTeamData`, team-directory refreshes, and
+global-task refreshes independent from Zustand and IPC. Narrow ports provide snapshot projection,
+request-scope checks, navigation effects, notifications, branch normalization, and task
+invalidation. Transport adapters own `team:getData`, `team:list`, `team:getAllTasks`, branch reads,
+and review-cache IPC. `TeamViewDataCoordinator` owns thin/full request dedupe and post-paint
+scheduling; `TeamDirectoryRefreshCoordinator` owns list request ordering and coalesced global-task
+refresh state.
 
 The use cases under `core/application` own worker preference, safe main-thread
 fallback, live-message projection for notification scanning, missing-team
