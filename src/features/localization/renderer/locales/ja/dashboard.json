@@ -117,7 +117,7 @@
       "connectPlan": "プランを接続",
       "connectSuperGrok": "スーパーグロックを接続する",
       "connected": "接続済み",
-      "copilotDescription": "OpenCode を通じて GitHub Copilot を使用します。エージェント チームは、Copilot Free を含む、プランに互換性のあるモデルを確認します。",
+      "copilotDescription": "OpenCode を通じて GitHub Copilot を使用します。Agent Teams は、プランで許可されたモデルを OpenCode が選択できるか確認します。",
       "copyCommand": "コピーコマンド",
       "chooseRegion": "地域を選択してください",
       "cursorConnected": "カーソルアカウントが接続されました",

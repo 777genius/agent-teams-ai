@@ -55,6 +55,9 @@ describe('source file size policy', () => {
     expect(policyModule.isProductionSourcePath('landing/components/Hero.vue')).toBe(true);
     expect(policyModule.isProductionSourcePath('src/types/handwritten.d.ts')).toBe(true);
     expect(policyModule.isProductionSourcePath('src/main/service.test.ts')).toBe(false);
+    expect(policyModule.isProductionSourcePath('src/main/service.spec.d.ts')).toBe(false);
+    expect(policyModule.isProductionSourcePath('src/main/service.safe-e2e.ts')).toBe(false);
+    expect(policyModule.isProductionSourcePath('src/main/service.integration.test.ts')).toBe(false);
     expect(policyModule.isProductionSourcePath('src/main/__tests__/service.ts')).toBe(false);
     expect(policyModule.isProductionSourcePath('src/main/fixtures/service.ts')).toBe(false);
     expect(

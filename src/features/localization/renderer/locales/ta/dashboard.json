@@ -117,7 +117,7 @@
       "connectPlan": "திட்டத்தை இணைக்கவும்",
       "connectSuperGrok": "SuperGrok-ஐ இணைக்கவும்",
       "connected": "இணைக்கப்பட்டது",
-      "copilotDescription": "OpenCode வழியாக GitHub Copilot-ஐப் பயன்படுத்தவும். Copilot Free உட்பட உங்கள் திட்டத்திற்கு ஏற்ற மாதிரியை Agent Teams சரிபார்க்கிறது.",
+      "copilotDescription": "OpenCode வழியாக GitHub Copilot-ஐப் பயன்படுத்தவும். உங்கள் திட்டம் அனுமதிக்கும் மாதிரியை OpenCode தேர்ந்தெடுக்க முடியுமா என்பதை Agent Teams சரிபார்க்கிறது.",
       "copyCommand": "கட்டளையை நகலெடுக்கவும்",
       "chooseRegion": "பகுதியைத் தேர்ந்தெடுக்கவும்",
       "cursorConnected": "Cursor கணக்கு இணைக்கப்பட்டது",
