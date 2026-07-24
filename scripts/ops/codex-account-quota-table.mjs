@@ -81,6 +81,7 @@ async function readSlot(input) {
   const label = input.labels[input.slot] ?? {};
   const letter = slotLetter(input.slot);
   const fallbackEmail = label.email ?? label.displayName ?? "-";
+  const resetCount = formatResetCount(label.resetCount);
   const account = {
     provider: input.observability.AgentProvider.Codex,
     slotId: input.slot,
@@ -113,6 +114,7 @@ async function readSlot(input) {
     return {
       email: read.auth.identity?.email ?? fallbackEmail,
       letter,
+      resetCount,
       authStatus: read.auth.status,
       status: decision.availability,
       available: decision.schedulerEligible,
@@ -132,6 +134,7 @@ async function readSlot(input) {
     return {
       email: fallbackEmail,
       letter,
+      resetCount,
       authStatus: relogin ? "relogin_required" : "unknown",
       status: relogin ? "relogin_required" : "unknown",
       available: false,
@@ -166,13 +169,14 @@ function numeric(value) {
 
 function markdownTable(rows) {
   const lines = [
-    "| Почта | Буква | Статус | 5h free | Reset 5h Kyiv | 7d free | Reset 7d Kyiv | Доступен |",
-    "|---|---:|---|---:|---|---:|---|---:|",
+    "| Почта | Буква | Resets | Статус | 5h free | Reset 5h Kyiv | 7d free | Reset 7d Kyiv | Доступен |",
+    "|---|---:|---:|---|---:|---|---:|---|---:|",
   ];
   for (const row of rows) {
     const cells = [
       row.email,
       row.letter,
+      row.resetCount,
       row.status,
       formatFreeBar(row.fiveHourFreeNumber),
       row.fiveHourReset,
@@ -188,14 +192,21 @@ function markdownTable(rows) {
 function weeklyFreeSummary(rows) {
   const known = rows.filter((row) => typeof row.sevenDayFreeNumber === "number");
   const totalFree = known.reduce((sum, row) => sum + row.sevenDayFreeNumber, 0);
-  const totalCapacity = rows.length * 100;
-  const totalPercent = totalCapacity > 0 ? (totalFree / totalCapacity) * 100 : null;
+  const knownCapacity = known.length * 100;
+  const knownPercent = knownCapacity > 0 ? (totalFree / knownCapacity) * 100 : null;
   const equivalents = totalFree / 100;
-  const capacity = rows.length;
-  return [
-    `7d free total: ${formatFreeBar(totalPercent)}`,
-    `(${formatPercent(totalFree)} / ${formatPercent(totalCapacity)}, ${formatNumber(equivalents)} of ${capacity} account-equivalents, known ${known.length}/${rows.length})`,
-  ].join(" ");
+  const lines = [
+    `Known 7d free: ${formatFreeBar(knownPercent)} (${formatPercent(totalFree)} / ${formatPercent(knownCapacity)}, ${formatNumber(equivalents)} of ${known.length} measured accounts)`,
+  ];
+  if (known.length < rows.length) {
+    const poolCapacity = rows.length * 100;
+    const lowerBoundPercent =
+      poolCapacity > 0 ? (totalFree / poolCapacity) * 100 : null;
+    lines.push(
+      `Pool lower bound: ${formatFreeBar(lowerBoundPercent)} (${known.length}/${rows.length} accounts measured; unknown/relogin accounts are not counted as real 0%)`,
+    );
+  }
+  return lines.join("\n");
 }
 
 function formatCell(value, available) {
@@ -325,6 +336,17 @@ function freePercent(window) {
 
 function formatFree(value) {
   return typeof value === "number" ? `${value}%` : "-";
+}
+
+function formatResetCount(value) {
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
+    return String(value);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (/^\d+$/.test(trimmed)) return String(Number(trimmed));
+  }
+  return "-";
 }
 
 function formatFreeBar(value) {
