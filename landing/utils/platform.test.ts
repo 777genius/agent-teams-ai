@@ -76,6 +76,13 @@ describe("landing platform detection", () => {
     })).toBe("unknown");
   });
 
+  it("does not classify ChromeOS client hints as a desktop download", () => {
+    expect(detectPlatform({
+      userAgent: "Mozilla/5.0",
+      userAgentData: { platform: "Chrome OS" },
+    })).toBe("unknown");
+  });
+
   it("maps high-entropy architecture hints without trusting the macOS UA Intel token", async () => {
     await expect(detectMacArchFromClientHints({
       getHighEntropyValues: async () => ({ architecture: "arm", bitness: "64" }),
