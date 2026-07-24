@@ -24,8 +24,9 @@ main-process review IPC shell.
   decision-persistence coordination behind narrow ports.
 - `main/infrastructure` owns Node path, filesystem, sensitive-path, hardlink, and watcher-root
   validation details.
-- The legacy app-shell composition module binds feature ports and policies to Zustand, the
-  renderer API, and remaining review utilities. The dialog keeps per-instance controller
+- The legacy app-shell composition modules bind feature ports and policies to Zustand, the
+  renderer API, and remaining review utilities. A focused decision-action hook owns
+  per-instance bulk/file/hunk Accept/Reject wiring. The dialog keeps draft/history/lifecycle
   composition, CodeMirror action injection, and the main diff/content rendering while later
   slices move those responsibilities behind focused hooks and use cases.
 
