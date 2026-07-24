@@ -27,11 +27,15 @@ describe('review editable mutation policy', () => {
     expect(parseSaveEditedFileInput(filePath, content, expected)).toBeNull();
   });
 
-  it('preserves delete file-path validation for the authorization layer', () => {
-    expect(parseDeleteEditedFileInput({ renderer: 'value' }, 'before\n')).toEqual({
-      filePath: { renderer: 'value' },
+  it('accepts exact delete inputs', () => {
+    expect(parseDeleteEditedFileInput('/review-root/file.ts', 'before\n')).toEqual({
+      filePath: '/review-root/file.ts',
       expectedCurrentContent: 'before\n',
     });
+  });
+
+  it('rejects a non-string delete path before authorization', () => {
+    expect(parseDeleteEditedFileInput({ renderer: 'value' }, 'before\n')).toBeNull();
   });
 
   it.each([null, undefined, false, 42])(

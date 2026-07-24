@@ -5,7 +5,7 @@ export interface SaveEditedFileInput {
 }
 
 export interface DeleteEditedFileInput {
-  filePath: unknown;
+  filePath: string;
   expectedCurrentContent: string;
 }
 
@@ -28,5 +28,7 @@ export function parseDeleteEditedFileInput(
   filePath: unknown,
   expectedCurrentContent: unknown
 ): DeleteEditedFileInput | null {
-  return typeof expectedCurrentContent === 'string' ? { filePath, expectedCurrentContent } : null;
+  return typeof filePath === 'string' && typeof expectedCurrentContent === 'string'
+    ? { filePath, expectedCurrentContent }
+    : null;
 }
