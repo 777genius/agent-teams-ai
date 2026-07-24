@@ -77,7 +77,7 @@ import {
   type TerminalMuxCommands,
   useTerminalMuxTabLifecycle,
 } from '../hooks/useTerminalMuxTabLifecycle';
-import { useTerminalTabReorderMotion } from '../hooks/useTerminalTabReorderMotion';
+import { useTerminalTabPointerReorder } from '../hooks/useTerminalTabPointerReorder';
 import {
   DEFAULT_TERMINAL_APPEARANCE_SETTINGS,
   normalizeTerminalAppearanceSettings,
@@ -104,10 +104,7 @@ import {
   reorderTerminalTabsById,
   resolveTerminalTabColor,
   TERMINAL_TAB_COLOR_OPTIONS,
-  type TerminalMuxTab,
   type TerminalTabColorId,
-  type TerminalTabDropIndicator,
-  type TerminalTabPointerDrag,
   type TerminalTabPreferences,
   type TerminalWorkspaceSnapshot,
 } from '../model/terminalTabPreferences';
@@ -122,6 +119,7 @@ import type {
   TerminalWorkspaceBootstrap,
   TerminalWorkspaceBootstrapRequest,
 } from '../../contracts';
+import type { TerminalTabReorderIntent } from '../utils/terminalTabPointerReorder';
 
 export interface TerminalWorkspacePanelProps {
   teamName: string;
@@ -854,13 +852,6 @@ const TerminalMuxTabs = ({
   const [tabPreferences, setTabPreferences] = useState<TerminalTabPreferences>(() =>
     readStoredTerminalTabPreferences(teamName)
   );
-  const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
-  const [dropIndicator, setDropIndicator] = useState<TerminalTabDropIndicator | null>(null);
-  const [tabPointerDrag, setTabPointerDrag] = useState<TerminalTabPointerDrag | null>(null);
-  const suppressNextTabClickRef = useRef(false);
-  const tabListElementRef = useRef<HTMLDivElement | null>(null);
-  const tabElementRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const tabPointerDragRef = useRef<TerminalTabPointerDrag | null>(null);
   const topology = snapshot.attachedSession?.topology ?? null;
   const controls = resolveTerminalTopologyControlState(snapshot);
   const tabs = topology?.tabs ?? [];
@@ -870,7 +861,10 @@ const TerminalMuxTabs = ({
     () => orderTerminalTabsByPreference(visibleTabs, tabPreferences.order),
     [tabPreferences.order, visibleTabs]
   );
-  const orderedVisibleTabIdsKey = orderedVisibleTabs.map((tab) => tab.tab_id).join('\u001f');
+  const orderedVisibleTabIds = useMemo(
+    () => orderedVisibleTabs.map((tab) => tab.tab_id),
+    [orderedVisibleTabs]
+  );
   const prewarmedTab = tabs.find(isPrewarmedTerminalTab) ?? null;
   const activeSessionId = controls.activeSessionId;
   const activeTabId =
@@ -914,16 +908,6 @@ const TerminalMuxTabs = ({
     onSettingsOpenChange,
     onTabContentPendingChange,
   });
-  const { captureTabRectsBeforeReorder, clearCapturedTabRects } = useTerminalTabReorderMotion({
-    draggingTabId,
-    orderedTabIdsKey: orderedVisibleTabIdsKey,
-    tabElementRefs,
-  });
-
-  const setTabPointerDragState = useCallback((nextDrag: TerminalTabPointerDrag | null): void => {
-    tabPointerDragRef.current = nextDrag;
-    setTabPointerDrag(nextDrag);
-  }, []);
 
   const updateTabPreferences = useCallback(
     (updater: (current: TerminalTabPreferences) => TerminalTabPreferences): void => {
@@ -939,14 +923,50 @@ const TerminalMuxTabs = ({
     [teamName]
   );
 
-  const registerTabElement = useCallback((tabId: string, element: HTMLDivElement | null): void => {
-    if (element) {
-      tabElementRefs.current.set(tabId, element);
-      return;
-    }
+  const reorderTabs = useCallback(
+    ({ placementMode, sourceTabId, targetTabId }: TerminalTabReorderIntent): void => {
+      updateTabPreferences((current) => {
+        const nextOrder = reorderTerminalTabsById(
+          current.order,
+          visibleTabs,
+          sourceTabId,
+          targetTabId,
+          placementMode
+        );
+        if (areStringArraysEqual(current.order, nextOrder)) {
+          return current;
+        }
+        return {
+          ...current,
+          order: nextOrder,
+        };
+      });
+    },
+    [updateTabPreferences, visibleTabs]
+  );
 
-    tabElementRefs.current.delete(tabId);
-  }, []);
+  const {
+    draggingTabId,
+    dropIndicator,
+    endTabPointerDrag,
+    getTabDragOffsetX,
+    handleTabClick,
+    handleTabLostPointerCapture,
+    handleTabPointerDown,
+    handleTabPointerMove,
+    handleTabPointerUp,
+    registerTabElement,
+    tabListElementRef,
+  } = useTerminalTabPointerReorder({
+    activeTabId,
+    canFocusTab: controls.canFocusTab,
+    disabled: busy,
+    editingTabId,
+    orderedTabIds: orderedVisibleTabIds,
+    scopeKey: `${teamName}\u001f${activeSessionId ?? ''}`,
+    onRequestFocus: focusTab,
+    onRequestReorder: reorderTabs,
+  });
 
   useEffect(() => {
     setTabPreferences(readStoredTerminalTabPreferences(teamName));
@@ -968,231 +988,6 @@ const TerminalMuxTabs = ({
         [tabId]: colorId,
       },
     }));
-  };
-
-  const reorderTabs = (
-    sourceTabId: string,
-    targetTabId: string,
-    placementMode: 'before' | 'after'
-  ): void => {
-    if (sourceTabId === targetTabId) {
-      return;
-    }
-
-    captureTabRectsBeforeReorder();
-    updateTabPreferences((current) => {
-      const nextOrder = reorderTerminalTabsById(
-        current.order,
-        visibleTabs,
-        sourceTabId,
-        targetTabId,
-        placementMode
-      );
-      if (areStringArraysEqual(current.order, nextOrder)) {
-        return current;
-      }
-      return {
-        ...current,
-        order: nextOrder,
-      };
-    });
-  };
-
-  const getTabReorderTarget = useCallback(
-    (sourceTabId: string, clientX: number): TerminalTabDropIndicator | null => {
-      const candidates = orderedVisibleTabs
-        .filter((tab) => tab.tab_id !== sourceTabId)
-        .map((tab) => {
-          const element = tabElementRefs.current.get(tab.tab_id);
-          const rect = element?.getBoundingClientRect();
-          return rect
-            ? {
-                centerX: rect.left + rect.width / 2,
-                left: rect.left,
-                tabId: tab.tab_id,
-              }
-            : null;
-        })
-        .filter(
-          (
-            candidate
-          ): candidate is {
-            centerX: number;
-            left: number;
-            tabId: string;
-          } => candidate !== null
-        )
-        .sort((left, right) => left.left - right.left);
-
-      if (candidates.length === 0) {
-        return null;
-      }
-
-      const beforeCandidate = candidates.find((candidate) => clientX < candidate.centerX);
-      if (beforeCandidate) {
-        return { placementMode: 'before', tabId: beforeCandidate.tabId };
-      }
-
-      return { placementMode: 'after', tabId: candidates[candidates.length - 1].tabId };
-    },
-    [orderedVisibleTabs]
-  );
-
-  const endTabPointerDrag = useCallback(
-    (event?: React.PointerEvent<HTMLDivElement>): void => {
-      const activeDrag = tabPointerDragRef.current;
-      if (event && activeDrag?.pointerId !== event.pointerId) {
-        return;
-      }
-
-      if (event && activeDrag?.active) {
-        event.preventDefault();
-      }
-
-      if (event) {
-        try {
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        } catch {
-          // Pointer capture can already be released by the browser.
-        }
-      }
-
-      setTabPointerDragState(null);
-      setDraggingTabId(null);
-      setDropIndicator(null);
-      clearCapturedTabRects();
-      window.setTimeout(() => {
-        suppressNextTabClickRef.current = false;
-      }, 0);
-    },
-    [clearCapturedTabRects, setTabPointerDragState]
-  );
-
-  const handleTabPointerDown = (
-    event: React.PointerEvent<HTMLDivElement>,
-    tab: TerminalMuxTab
-  ): void => {
-    const target = event.target;
-    if (
-      event.button !== 0 ||
-      !event.isPrimary ||
-      editingTabId === tab.tab_id ||
-      busy ||
-      (target instanceof HTMLElement && shouldIgnoreTerminalTabDragTarget(target))
-    ) {
-      return;
-    }
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    setTabPointerDragState({
-      active: false,
-      grabOffsetX: event.clientX - rect.left,
-      offsetX: 0,
-      pointerId: event.pointerId,
-      startClientX: event.clientX,
-      startClientY: event.clientY,
-      tabId: tab.tab_id,
-    });
-    setDropIndicator(null);
-
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    } catch {
-      // Some test environments do not implement pointer capture.
-    }
-  };
-
-  const handleTabPointerMove = (event: React.PointerEvent<HTMLDivElement>): void => {
-    const activeDrag = tabPointerDragRef.current;
-    if (!activeDrag || activeDrag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    const deltaX = event.clientX - activeDrag.startClientX;
-    const deltaY = event.clientY - activeDrag.startClientY;
-    const shouldStartDrag =
-      activeDrag.active || (Math.abs(deltaX) >= 4 && Math.abs(deltaX) >= Math.abs(deltaY));
-    if (!shouldStartDrag) {
-      return;
-    }
-
-    event.preventDefault();
-    suppressNextTabClickRef.current = true;
-    setDraggingTabId(activeDrag.tabId);
-
-    const element = tabElementRefs.current.get(activeDrag.tabId);
-    const rect = element?.getBoundingClientRect();
-    if (!rect) {
-      return;
-    }
-
-    const baseLeft = rect.left - activeDrag.offsetX;
-    const tabListRect = tabListElementRef.current?.getBoundingClientRect();
-    const unclampedLeft = event.clientX - activeDrag.grabOffsetX;
-    const clampedLeft = tabListRect
-      ? Math.min(
-          Math.max(unclampedLeft, tabListRect.left),
-          Math.max(tabListRect.left, tabListRect.right - rect.width)
-        )
-      : unclampedLeft;
-    const nextDrag = {
-      ...activeDrag,
-      active: true,
-      offsetX: clampedLeft - baseLeft,
-    };
-
-    setTabPointerDragState(nextDrag);
-
-    const reorderTarget = getTabReorderTarget(activeDrag.tabId, event.clientX);
-    if (!reorderTarget) {
-      setDropIndicator(null);
-      return;
-    }
-
-    const nextOrder = reorderTerminalTabsById(
-      tabPreferences.order,
-      visibleTabs,
-      activeDrag.tabId,
-      reorderTarget.tabId,
-      reorderTarget.placementMode
-    );
-    if (
-      areStringArraysEqual(
-        orderedVisibleTabs.map((tab) => tab.tab_id),
-        nextOrder
-      )
-    ) {
-      setDropIndicator(null);
-      return;
-    }
-
-    setDropIndicator((current) =>
-      current?.tabId === reorderTarget.tabId &&
-      current.placementMode === reorderTarget.placementMode
-        ? current
-        : reorderTarget
-    );
-    reorderTabs(activeDrag.tabId, reorderTarget.tabId, reorderTarget.placementMode);
-  };
-
-  const handleTabPointerUp = (
-    event: React.PointerEvent<HTMLDivElement>,
-    tab: TerminalMuxTab
-  ): void => {
-    const activeDrag = tabPointerDragRef.current;
-    const shouldFocusTab =
-      activeDrag?.pointerId === event.pointerId &&
-      activeDrag.tabId === tab.tab_id &&
-      controls.canFocusTab &&
-      tab.tab_id !== activeTabId &&
-      !busy;
-
-    if (shouldFocusTab) {
-      suppressNextTabClickRef.current = true;
-      void focusTab(tab.tab_id);
-    }
-
-    endTabPointerDrag(event);
   };
 
   return (
@@ -1255,8 +1050,7 @@ const TerminalMuxTabs = ({
                         '--tp-tab-border-bottom': active ? 'transparent' : color.border,
                       } as React.CSSProperties)
                     : undefined;
-                const dragOffsetX =
-                  tabPointerDrag?.tabId === tab.tab_id ? tabPointerDrag.offsetX : 0;
+                const dragOffsetX = getTabDragOffsetX(tab.tab_id);
                 const tabStyle =
                   dragOffsetX !== 0
                     ? ({
@@ -1290,10 +1084,11 @@ const TerminalMuxTabs = ({
                             : undefined
                         }
                         data-terminal-tab-id={tab.tab_id}
+                        onLostPointerCapture={handleTabLostPointerCapture}
                         onPointerCancel={endTabPointerDrag}
-                        onPointerDown={(event) => handleTabPointerDown(event, tab)}
+                        onPointerDown={(event) => handleTabPointerDown(event, tab.tab_id)}
                         onPointerMove={handleTabPointerMove}
-                        onPointerUp={(event) => handleTabPointerUp(event, tab)}
+                        onPointerUp={(event) => handleTabPointerUp(event, tab.tab_id)}
                         style={tabStyle}
                       >
                         {dropIndicator?.tabId === tab.tab_id && draggingTabId !== tab.tab_id ? (
@@ -1337,14 +1132,7 @@ const TerminalMuxTabs = ({
                               data-testid="agent-team-terminal-mux-tab"
                               disabled={busy}
                               role="tab"
-                              onClick={(event) => {
-                                if (suppressNextTabClickRef.current) {
-                                  event.preventDefault();
-                                  event.stopPropagation();
-                                  return;
-                                }
-                                void focusTab(tab.tab_id);
-                              }}
+                              onClick={(event) => handleTabClick(event, tab.tab_id)}
                               onDoubleClick={(event) => {
                                 event.preventDefault();
                                 startRenameTab(tab, label);
@@ -1773,10 +1561,6 @@ function getTerminalBackgroundRepeat(fit: TerminalBackgroundImageFit): string {
 
 function getTerminalBackgroundPosition(fit: TerminalBackgroundImageFit): string {
   return fit === 'tile' ? 'top left' : 'center';
-}
-
-function shouldIgnoreTerminalTabDragTarget(target: HTMLElement): boolean {
-  return Boolean(target.closest('[data-terminal-tab-drag-ignore="true"],input,textarea,select,a'));
 }
 
 function formatThemeLabel(t: TeamTFunction, displayName: string, themeId: string): string {
