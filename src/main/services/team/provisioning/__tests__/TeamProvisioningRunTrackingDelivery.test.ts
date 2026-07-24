@@ -166,4 +166,31 @@ describe('TeamProvisioningRunTrackingDeliveryHelper', () => {
     ports.hasOnlyExplicitlyStoppedPersistedTeamProcesses.mockReturnValueOnce(false);
     expect(helper.canAttemptCommittedOpenCodeSessionRecovery('team')).toBe(true);
   });
+
+  it('does not let persisted process evidence bypass a tracked pending-stop state', () => {
+    const { helper, ports, state } = createHarness();
+    state.runtimeAdapterRunByTeam.set('team', { runId: 'pending-stop-run' });
+    state.runtimeAdapterProgressByRunId.set('pending-stop-run', progress('disconnected'));
+    ports.isTeamAlive.mockReturnValue(true);
+    ports.hasAlivePersistedTeamProcess.mockReturnValue(true);
+
+    expect(helper.canDeliverToTrackedRuntimeRun('team', 'pending-stop-run')).toBe(false);
+    expect(helper.resolveDeliverableTrackedRuntimeRunId('team')).toBeNull();
+    expect(helper.canDeliverToOpenCodeRuntimeForTeam('team')).toBe(false);
+    expect(helper.canAttemptCommittedOpenCodeSessionRecovery('team')).toBe(false);
+    expect(ports.isTeamAlive).not.toHaveBeenCalled();
+    expect(ports.hasAlivePersistedTeamProcess).not.toHaveBeenCalled();
+  });
+
+  it('allows a newer deliverable owner to supersede old terminal progress', () => {
+    const { helper, ports, state } = createHarness();
+    state.provisioningRunByTeam.set('team', 'old-stopping-run');
+    state.aliveRunByTeam.set('team', 'new-owner-run');
+    state.runtimeAdapterProgressByRunId.set('old-stopping-run', progress('disconnected'));
+    state.runs.set('new-owner-run', run('ready'));
+    ports.isTeamAlive.mockReturnValue(true);
+
+    expect(helper.resolveDeliverableTrackedRuntimeRunId('team')).toBe('new-owner-run');
+    expect(helper.canDeliverToOpenCodeRuntimeForTeam('team')).toBe(true);
+  });
 });

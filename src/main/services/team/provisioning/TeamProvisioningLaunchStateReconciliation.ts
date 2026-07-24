@@ -349,6 +349,9 @@ export async function classifyOpenCodeSecondaryEvidenceOverlay(
   if (params.laneEntry?.state === 'stopped') {
     return { kind: 'blocked', diagnostics: ['opencode_overlay_lane_stopped'] };
   }
+  if (!params.laneEntry) {
+    return { kind: 'blocked', diagnostics: ['opencode_overlay_lane_missing'] };
+  }
   if (hasRealOpenCodeLaunchDiagnostic(params.current)) {
     return { kind: 'blocked', diagnostics: ['opencode_overlay_real_failure_preserved'] };
   }
@@ -378,6 +381,12 @@ export async function classifyOpenCodeSecondaryEvidenceOverlay(
   const activeRunId = normalizeOverlayRunId(params.activeRunId);
   const currentSessionId = params.current.runtimeSessionId?.trim() ?? '';
   const previousSessionId = params.previous?.runtimeSessionId?.trim() ?? '';
+  if (!activeRunId) {
+    return {
+      kind: 'conflict',
+      diagnostics: ['opencode_overlay_active_run_missing'],
+    };
+  }
   const canUsePreviousSessionId =
     previousSessionId.length > 0 &&
     (!currentRunId || !previousRunId || currentRunId === previousRunId);
@@ -408,7 +417,7 @@ export async function classifyOpenCodeSecondaryEvidenceOverlay(
       ],
     };
   }
-  if (activeRunId && selectedRunId !== activeRunId) {
+  if (selectedRunId !== activeRunId) {
     return {
       kind: 'conflict',
       diagnostics: [
@@ -416,6 +425,14 @@ export async function classifyOpenCodeSecondaryEvidenceOverlay(
           ? 'opencode_overlay_session_run_mismatch'
           : 'opencode_overlay_session_run_missing',
       ],
+    };
+  }
+  const selectedEstablishesSuccessorRun =
+    previousRunId.length > 0 && selectedRunId.length > 0 && selectedRunId !== previousRunId;
+  if (!currentRunId && !currentSessionId && !selectedEstablishesSuccessorRun) {
+    return {
+      kind: 'conflict',
+      diagnostics: ['opencode_overlay_current_run_unbound'],
     };
   }
 

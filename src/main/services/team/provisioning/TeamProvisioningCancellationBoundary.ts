@@ -17,6 +17,7 @@ import {
   recordCancelledOpenCodeRuntimeAdapterLaunch as recordCancelledOpenCodeRuntimeAdapterLaunchHelper,
   type RuntimeAdapterCancellationPorts,
   type RuntimeAdapterRunEntry,
+  stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
 } from './TeamProvisioningRuntimeAdapterCancellation';
 import { createTeamProvisioningRuntimeAdapterCancellationPorts } from './TeamProvisioningRuntimeAdapterCancellationPortsFactory';
 
@@ -87,6 +88,10 @@ export interface TeamProvisioningCancellationBoundary {
     runtimeProgress: TeamProvisioningProgress
   ): Promise<void>;
   clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName: string, runId: string): Promise<void>;
+  stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(
+    teamName: string,
+    runId: string
+  ): Promise<boolean>;
   recordCancelledOpenCodeRuntimeAdapterLaunch(
     teamName: string,
     sourceWarning: string | undefined,
@@ -194,23 +199,28 @@ export function createTeamProvisioningCancellationBoundaryPortsFromService<
 export function createTeamProvisioningCancellationBoundary<
   TRun extends TeamProvisioningCancellationRun,
 >(ports: TeamProvisioningCancellationBoundaryPorts<TRun>): TeamProvisioningCancellationBoundary {
-  const createRuntimeAdapterCancellationPorts = (): RuntimeAdapterCancellationPorts =>
-    createTeamProvisioningRuntimeAdapterCancellationPorts({
+  const createRuntimeAdapterCancellationPorts = (): RuntimeAdapterCancellationPorts => ({
+    ...createTeamProvisioningRuntimeAdapterCancellationPorts({
       cancelledRuntimeAdapterRunIds: ports.cancelledRuntimeAdapterRunIds,
       runtimeAdapterRunByTeam: ports.runtimeAdapterRunByTeam,
       provisioningRunByTeam: ports.provisioningRunByTeam,
       aliveRunByTeam: ports.aliveRunByTeam,
-      nowIso: ports.nowIso,
-      clearOpenCodeRuntimeToolApprovals: ports.clearOpenCodeRuntimeToolApprovals,
-      deleteAliveRunId: ports.deleteAliveRunId,
-      invalidateRuntimeSnapshotCaches: ports.invalidateRuntimeSnapshotCaches,
-      setRuntimeAdapterProgress: ports.setRuntimeAdapterProgress,
-      emitTeamChange: ports.emitTeamChange,
-      readLaunchState: ports.readLaunchState,
-      getOpenCodeRuntimeAdapter: ports.getOpenCodeRuntimeAdapter,
-      readPersistedTeamProjectPath: ports.readPersistedTeamProjectPath,
-      logWarning: ports.logWarning,
-    });
+      nowIso: () => ports.nowIso(),
+      clearOpenCodeRuntimeToolApprovals: (teamName, options) =>
+        ports.clearOpenCodeRuntimeToolApprovals(teamName, options),
+      deleteAliveRunId: (teamName) => ports.deleteAliveRunId(teamName),
+      invalidateRuntimeSnapshotCaches: (teamName) =>
+        ports.invalidateRuntimeSnapshotCaches(teamName),
+      setRuntimeAdapterProgress: (progress, onProgress) =>
+        ports.setRuntimeAdapterProgress(progress, onProgress),
+      emitTeamChange: (event) => ports.emitTeamChange(event),
+      readLaunchState: (teamName) => ports.readLaunchState(teamName),
+      getOpenCodeRuntimeAdapter: () => ports.getOpenCodeRuntimeAdapter(),
+      readPersistedTeamProjectPath: (teamName) => ports.readPersistedTeamProjectPath(teamName),
+      logWarning: (message) => ports.logWarning(message),
+    }),
+    runtimeAdapterProgressByRunId: ports.runtimeAdapterProgressByRunId,
+  });
 
   const cancelRuntimeAdapterProvisioning = async (
     runId: string,
@@ -233,6 +243,16 @@ export function createTeamProvisioningCancellationBoundary<
       ports: createRuntimeAdapterCancellationPorts(),
     });
   };
+
+  const stopAndClearOpenCodeRuntimeAdapterPrimaryLane = async (
+    teamName: string,
+    runId: string
+  ): Promise<boolean> =>
+    await stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({
+      teamName,
+      runId,
+      ports: createRuntimeAdapterCancellationPorts(),
+    });
 
   const recordCancelledOpenCodeRuntimeAdapterLaunch = (
     teamName: string,
@@ -319,7 +339,13 @@ export function createTeamProvisioningCancellationBoundary<
         });
       }
       try {
-        const progress = ports.updateProgress(run, 'cancelled', 'Provisioning cancelled by user');
+        const progress = failedStop
+          ? ports.updateProgress(
+              run,
+              'failed',
+              'Provisioning cancellation could not stop all runtime lanes'
+            )
+          : ports.updateProgress(run, 'cancelled', 'Provisioning cancelled by user');
         run.onProgress(progress);
       } finally {
         if (!failedStop && !helperCleanupError) {
@@ -342,6 +368,8 @@ export function createTeamProvisioningCancellationBoundary<
 
     cancelRuntimeAdapterProvisioning,
     clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
+    stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned:
+      stopAndClearOpenCodeRuntimeAdapterPrimaryLane,
     recordCancelledOpenCodeRuntimeAdapterLaunch,
   };
 }

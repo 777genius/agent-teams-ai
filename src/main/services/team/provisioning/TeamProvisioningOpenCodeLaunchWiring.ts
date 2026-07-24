@@ -56,7 +56,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
   runtimeAdapterProgressByRunId: Map<string, TeamProvisioningProgress>;
   cancelledRuntimeAdapterRunIds: Set<string>;
   runs: Map<string, Run>;
-  secondaryRuntimeRunByTeam: ReadonlyMap<string, ReadonlyMap<string, SecondaryRuntimeRunEntry>>;
+  secondaryRuntimeRunByTeam: Map<string, Map<string, SecondaryRuntimeRunEntry>>;
   runtimeAdapterProgressState: {
     setRuntimeAdapterProgress(
       progress: TeamProvisioningProgress,
@@ -160,8 +160,12 @@ export interface TeamProvisioningOpenCodeLaunchWiringServiceHost<Run> {
     | 'isCancellableRuntimeAdapterProgress'
     | 'cancelRuntimeAdapterProvisioning'
     | 'recordCancelledOpenCodeRuntimeAdapterLaunch'
-    | 'clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned'
-  >;
+  > & {
+    stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(
+      teamName: string,
+      runId: string
+    ): Promise<boolean>;
+  };
   prepareFacade: {
     getOpenCodeRuntimeLaunchCwd: TeamProvisioningOpenCodeLaunchWiringHost<Run>['getOpenCodeRuntimeLaunchCwd'];
   };
@@ -250,8 +254,12 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
       service.deleteSecondaryRuntimeRun(teamName, laneId),
     getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
       service.prepareFacade.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
-    clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: (teamName, runId) =>
-      service.cancellationBoundary.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, runId),
+    clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: async (teamName, runId) => {
+      await service.cancellationBoundary.stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(
+        teamName,
+        runId
+      );
+    },
     persistOpenCodeRuntimeAdapterLaunchResult: (result, launchInput) =>
       service.persistOpenCodeRuntimeAdapterLaunchResult(result, launchInput),
     syncOpenCodeRuntimeToolApprovals: (syncInput) =>
@@ -329,6 +337,9 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           setAliveRunId: (teamName, runId) => {
             host.runTracking.setAliveRunId(teamName, runId);
           },
+          setRuntimeAdapterRun: (teamName, runtimeRun) => {
+            host.runtimeAdapterRunByTeam.set(teamName, runtimeRun);
+          },
           deleteAliveRunId: (teamName) => {
             host.runTracking.deleteAliveRunId(teamName);
           },
@@ -345,6 +356,13 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
             host.cancelledRuntimeAdapterRunIds.delete(runId),
           getTeamsBasePath,
           clearOpenCodeRuntimeLaneStorage,
+          setSecondaryRuntimeRun: (runtimeRun) => {
+            const lanes =
+              host.secondaryRuntimeRunByTeam.get(runtimeRun.teamName) ??
+              new Map<string, SecondaryRuntimeRunEntry>();
+            lanes.set(runtimeRun.laneId, runtimeRun);
+            host.secondaryRuntimeRunByTeam.set(runtimeRun.teamName, lanes);
+          },
           deleteSecondaryRuntimeRun: (teamName, laneId) =>
             host.deleteSecondaryRuntimeRun(teamName, laneId),
         }

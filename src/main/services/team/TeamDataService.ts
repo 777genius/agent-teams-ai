@@ -2,6 +2,10 @@ import { NodeApplicationCommandHasher } from '@features/application-command-ledg
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
+import {
+  type DurablePathRemovalProofHooks,
+  removePathWithIdentityFenceAsync,
+} from '@main/utils/atomicWrite';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
@@ -1430,15 +1434,56 @@ export class TeamDataService {
     this.invalidateNotificationContext(teamName);
   }
 
-  async permanentlyDeleteTeam(teamName: string): Promise<void> {
-    const teamsDir = path.join(getTeamsBasePath(), teamName);
-    await fs.promises.rm(teamsDir, PERMANENT_DELETE_RM_OPTIONS);
-    TeamConfigReader.invalidateTeam(teamName);
-    this.invalidateNotificationContext(teamName);
+  async permanentlyDeleteTeam(
+    teamName: string,
+    isTeamDataCurrent: (detachedPath?: string) => Promise<boolean> = async () => true,
+    isTaskDataCurrent: (detachedPath?: string) => Promise<boolean> = async () => true,
+    options: {
+      skipTeamData?: boolean;
+      skipTaskData?: boolean;
+      teamDataProofHooks?: DurablePathRemovalProofHooks;
+      taskDataProofHooks?: DurablePathRemovalProofHooks;
+    } = {}
+  ): Promise<boolean> {
+    const teamsBasePath = getTeamsBasePath();
+    const teamsDir = path.join(teamsBasePath, teamName);
+    if (!options.skipTeamData) {
+      const teamRemoval = await removePathWithIdentityFenceAsync(teamsDir, {
+        ...PERMANENT_DELETE_RM_OPTIONS,
+        durability: 'strict',
+        reservePublicDirectory: true,
+        validateDetached: (detachedPath) => isTeamDataCurrent(detachedPath),
+        ...(options.teamDataProofHooks ? { proofHooks: options.teamDataProofHooks } : {}),
+      });
+      const teamRemovalCompleted = options.teamDataProofHooks
+        ? teamRemoval === 'deleted'
+        : teamRemoval !== 'changed';
+      if (!teamRemovalCompleted) {
+        return false;
+      }
+      TeamConfigReader.invalidateTeam(teamName);
+      this.invalidateNotificationContext(teamName);
+    }
 
-    const tasksDir = path.join(getTasksBasePath(), teamName);
-    await fs.promises.rm(tasksDir, PERMANENT_DELETE_RM_OPTIONS);
-    TeamTaskReader.invalidateAllTasksCache();
+    const tasksBasePath = getTasksBasePath();
+    const tasksDir = path.join(tasksBasePath, teamName);
+    if (!options.skipTaskData) {
+      const taskRemoval = await removePathWithIdentityFenceAsync(tasksDir, {
+        ...PERMANENT_DELETE_RM_OPTIONS,
+        durability: 'strict',
+        reservePublicDirectory: true,
+        validateDetached: (detachedPath) => isTaskDataCurrent(detachedPath),
+        ...(options.taskDataProofHooks ? { proofHooks: options.taskDataProofHooks } : {}),
+      });
+      const taskRemovalCompleted = options.taskDataProofHooks
+        ? taskRemoval === 'deleted'
+        : taskRemoval !== 'changed';
+      if (!taskRemovalCompleted) {
+        return false;
+      }
+      TeamTaskReader.invalidateAllTasksCache();
+    }
+    return true;
   }
 
   async getTeamData(teamName: string, options?: TeamGetDataOptions): Promise<TeamViewSnapshot> {
@@ -2302,6 +2347,15 @@ export class TeamDataService {
               throw error;
             }
           },
+          findByIdempotencyKey: (idempotencyKey) =>
+            ([...taskBoard.listTasks(), ...taskBoard.listDeletedTasks()] as TeamTask[]).filter(
+              (task) =>
+                (
+                  task as TeamTask & {
+                    creationCommand?: { idempotencyKey?: unknown };
+                  }
+                ).creationCommand?.idempotencyKey === idempotencyKey
+            ),
           create: async (input) => {
             const projectPath = await this.readTaskCreateProjectPath(teamName);
             return taskBoard.createTask({

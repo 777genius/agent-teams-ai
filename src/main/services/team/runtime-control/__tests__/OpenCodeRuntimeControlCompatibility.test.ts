@@ -12,7 +12,7 @@ import { createOpenCodeRuntimeControlApi, createOpenCodeRuntimeControlRouter } f
 
 import type { OpenCodeRuntimeCheckinRun } from '../../provisioning/TeamProvisioningOpenCodeRuntimeCheckin';
 import type { OpenCodeRuntimeControlAck } from '../index';
-import type { InboxMessage } from '@shared/types';
+import type { InboxMessage, PersistedTeamLaunchSnapshot } from '@shared/types';
 
 const OBSERVED_AT = '2026-01-01T00:00:00.000Z';
 
@@ -178,7 +178,22 @@ function createBoundaryPorts(
     getTeamsBasePath: () => tmpdir(),
     resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'lane-1'),
     resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'run-1'),
-    readLaunchState: vi.fn(async () => null),
+    readLaunchState: vi.fn(
+      async () =>
+        ({
+          teamName: 'Team',
+          members: {
+            Builder: {
+              memberName: 'Builder',
+              providerId: 'opencode',
+              laneOwnerProviderId: 'opencode',
+              laneId: 'lane-1',
+              runtimeRunId: 'run-1',
+              runtimeSessionId: 'session-1',
+            },
+          },
+        }) as unknown as PersistedTeamLaunchSnapshot
+    ),
     writeLaunchState: vi.fn(async () => undefined),
     readConfigForStrictDecision: vi.fn((teamName) =>
       Promise.resolve({
@@ -232,5 +247,8 @@ function createBoundaryPorts(
     readLaunchStateForDeliveryRecovery: vi.fn(async () => null),
     nowIso: () => OBSERVED_AT,
     ...overrides,
+    mutateLaunchState:
+      overrides.mutateLaunchState ?? (async (_teamName, mutation) => mutation(null)),
+    withTeamLock: overrides.withTeamLock ?? (async (_teamName, operation) => operation()),
   };
 }

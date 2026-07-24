@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, rmdir, stat } from 'node:fs/promises';
 
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createLogger } from '@shared/utils/logger';
@@ -17,7 +17,7 @@ import {
 
 import type { RuntimeStoreManifestEvidence } from '../bridge/OpenCodeBridgeCommandContract';
 import type { RuntimeStoreManifestReader } from '../bridge/OpenCodeStateChangingBridgeCommandService';
-import type { RuntimeStoreManifestEntryState } from './RuntimeStoreManifest';
+import type { RuntimeStoreManifest, RuntimeStoreManifestEntryState } from './RuntimeStoreManifest';
 import type {
   OpenCodeAppManagedBootstrapCandidate,
   OpenCodeBootstrapEvidenceSource,
@@ -35,6 +35,15 @@ const OPENCODE_TEAM_RUNTIME_LANES_DIR = 'lanes';
 const OPENCODE_TEAM_RUNTIME_LANES_INDEX_FILE = 'lanes.json';
 const OPENCODE_RUNTIME_MANIFEST_FILE = 'manifest.json';
 const OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE = 'opencode-run-tombstones.json';
+const OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE = 'opencode-delivery-journal.json';
+const OPENCODE_RUNTIME_LANE_DURABLE_FILES = new Set([
+  OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE,
+  OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE,
+]);
+const OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS = new Set([
+  ...OPENCODE_RUNTIME_LANE_DURABLE_FILES,
+  ...Array.from(OPENCODE_RUNTIME_LANE_DURABLE_FILES, (fileName) => `${fileName}.lock`),
+]);
 const OPENCODE_ACTIVE_EMPTY_LANE_STALE_MS = 150_000;
 const OPENCODE_LANE_INDEX_LOCK_OPTIONS = {
   acquireTimeoutMs: 30_000,
@@ -228,7 +237,7 @@ async function readRuntimeStoreManifestEvidenceData(
   manifestPath: string,
   teamName: string,
   clock: () => Date
-) {
+): Promise<RuntimeStoreManifest> {
   let raw: string;
   try {
     raw = await readFile(manifestPath, 'utf8');
@@ -526,7 +535,9 @@ export async function inspectOpenCodeRuntimeLaneStorage(params: {
     };
   }
 
-  const fileNames = (await readdir(laneDir).catch(() => [] as string[])).sort();
+  const fileNames = (await readdir(laneDir).catch(() => [] as string[])).sort((left, right) =>
+    left.localeCompare(right)
+  );
   const manifestPath = getOpenCodeRuntimeManifestPath(
     params.teamsBasePath,
     params.teamName,
@@ -569,6 +580,20 @@ export interface OpenCodeRuntimeLaneLaunchGenerationPreparation {
 }
 
 export async function prepareOpenCodeRuntimeLaneForLaunchGeneration(params: {
+  teamsBasePath: string;
+  teamName: string;
+  laneId: string;
+  runId: string;
+  reason: string;
+  forceReset?: boolean;
+  clock?: () => Date;
+}): Promise<OpenCodeRuntimeLaneLaunchGenerationPreparation> {
+  return withOpenCodeRuntimeLaneLifecycleLock(params, () =>
+    prepareOpenCodeRuntimeLaneForLaunchGenerationUnlocked(params)
+  );
+}
+
+async function prepareOpenCodeRuntimeLaneForLaunchGenerationUnlocked(params: {
   teamsBasePath: string;
   teamName: string;
   laneId: string;
@@ -647,7 +672,7 @@ export async function prepareOpenCodeRuntimeLaneForLaunchGeneration(params: {
   }
 
   if (shouldReset) {
-    await clearOpenCodeRuntimeLaneStorage({
+    await clearOpenCodeRuntimeLaneStorageUnlocked({
       teamsBasePath: params.teamsBasePath,
       teamName: params.teamName,
       laneId: params.laneId,
@@ -661,7 +686,7 @@ export async function prepareOpenCodeRuntimeLaneForLaunchGeneration(params: {
     state: 'active',
     diagnostics: diagnostics.length ? diagnostics : undefined,
   });
-  await setOpenCodeRuntimeActiveRunManifest({
+  await setOpenCodeRuntimeActiveRunManifestUnlocked({
     teamsBasePath: params.teamsBasePath,
     teamName: params.teamName,
     laneId: params.laneId,
@@ -830,6 +855,18 @@ export async function setOpenCodeRuntimeActiveRunManifest(params: {
   runId: string | null;
   clock?: () => Date;
 }): Promise<void> {
+  await withOpenCodeRuntimeLaneLifecycleLock(params, () =>
+    setOpenCodeRuntimeActiveRunManifestUnlocked(params)
+  );
+}
+
+async function setOpenCodeRuntimeActiveRunManifestUnlocked(params: {
+  teamsBasePath: string;
+  teamName: string;
+  laneId?: string | null;
+  runId: string | null;
+  clock?: () => Date;
+}): Promise<void> {
   const manifestPath = getOpenCodeRuntimeManifestPath(
     params.teamsBasePath,
     params.teamName,
@@ -920,12 +957,80 @@ export async function clearOpenCodeRuntimeLaneStorage(params: {
   teamsBasePath: string;
   teamName: string;
   laneId: string;
-}): Promise<void> {
-  await rm(
-    getOpenCodeTeamRuntimeLaneDirectory(params.teamsBasePath, params.teamName, params.laneId),
-    { recursive: true, force: true }
+  expectedRunId?: string;
+}): Promise<boolean> {
+  return withOpenCodeRuntimeLaneLifecycleLock(params, () =>
+    clearOpenCodeRuntimeLaneStorageUnlocked(params)
   );
+}
+
+async function clearOpenCodeRuntimeLaneStorageUnlocked(params: {
+  teamsBasePath: string;
+  teamName: string;
+  laneId: string;
+  expectedRunId?: string;
+}): Promise<boolean> {
+  const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(
+    params.teamsBasePath,
+    params.teamName,
+    params.laneId
+  );
+  const deliveryJournalPath = path.join(laneDirectory, OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE);
+  const runTombstonesPath = path.join(laneDirectory, OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE);
+  if (params.expectedRunId) {
+    const manifest = await readRuntimeStoreManifestEvidenceData(
+      getOpenCodeRuntimeManifestPath(params.teamsBasePath, params.teamName, params.laneId),
+      params.teamName,
+      () => new Date()
+    ).catch(() => null);
+    if (manifest?.activeRunId !== params.expectedRunId) {
+      return false;
+    }
+  }
+  const laneDirectoryExists = await stat(laneDirectory).then(
+    () => true,
+    (error: unknown) => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return false;
+      }
+      throw error;
+    }
+  );
+  if (laneDirectoryExists) {
+    // The journal owns logical idempotency/recovery across runs, while tombstones enforce
+    // anti-rejoin. Serialize against both durable stores and reset only per-run evidence.
+    await withFileLock(deliveryJournalPath, () =>
+      withFileLock(runTombstonesPath, async () => {
+        const entries = await readdir(laneDirectory);
+        await Promise.all(
+          entries
+            .filter((entry) => !OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry))
+            .map((entry) => rm(path.join(laneDirectory, entry), { recursive: true, force: true }))
+        );
+      })
+    );
+    await rmdir(laneDirectory).catch((error: unknown) => {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== 'ENOENT' && code !== 'ENOTEMPTY' && code !== 'EEXIST') {
+        throw error;
+      }
+    });
+  }
   await removeOpenCodeRuntimeLaneIndexEntry(params);
+  return true;
+}
+
+function withOpenCodeRuntimeLaneLifecycleLock<T>(
+  params: { teamsBasePath: string; teamName: string; laneId?: string | null },
+  operation: () => Promise<T>
+): Promise<T> {
+  const laneId = params.laneId?.trim() || 'primary';
+  const lockTargetPath = path.join(
+    getOpenCodeTeamRuntimeDirectory(params.teamsBasePath, params.teamName),
+    OPENCODE_TEAM_RUNTIME_LANES_DIR,
+    `.${encodeURIComponent(laneId)}.lifecycle`
+  );
+  return withFileLock(lockTargetPath, operation, OPENCODE_LANE_INDEX_LOCK_OPTIONS);
 }
 
 export async function recoverStaleOpenCodeRuntimeLaneIndexEntry(params: {

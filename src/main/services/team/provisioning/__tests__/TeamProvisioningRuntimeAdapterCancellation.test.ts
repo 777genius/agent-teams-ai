@@ -8,7 +8,9 @@ import {
   ownsOpenCodeRuntimeAdapterPrimaryLane,
   recordCancelledOpenCodeRuntimeAdapterLaunch,
   type RuntimeAdapterCancellationPorts,
+  stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
 } from '../TeamProvisioningRuntimeAdapterCancellation';
+import { TeamProvisioningRunTrackingDeliveryHelper } from '../TeamProvisioningRunTrackingDelivery';
 
 import type { TeamLaunchRuntimeAdapter } from '../../runtime';
 import type {
@@ -99,10 +101,12 @@ function makePorts(
     ],
   ]);
   const provisioningRunByTeam = new Map([['team-a', 'run-1']]);
+  const runtimeAdapterProgressByRunId = new Map([['run-1', progress()]]);
 
   return {
     cancelledRuntimeAdapterRunIds: new Set<string>(),
     runtimeAdapterRunByTeam,
+    runtimeAdapterProgressByRunId,
     provisioningRunByTeam,
     aliveRunByTeam,
     teamsBasePath: '/teams',
@@ -119,6 +123,7 @@ function makePorts(
     }),
     setRuntimeAdapterProgress: vi.fn((nextProgress, onProgress) => {
       events.push('set-progress');
+      runtimeAdapterProgressByRunId.set(nextProgress.runId, nextProgress);
       progressUpdates.push(nextProgress);
       onProgress?.(nextProgress);
       if (onProgress) {
@@ -160,6 +165,7 @@ function makePorts(
       input.clearLane ??
       vi.fn(async () => {
         events.push('clear-lane');
+        return true;
       }),
     logWarning: vi.fn((message) => {
       warnings.push(message);
@@ -186,7 +192,7 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
     expect(isCancellableRuntimeAdapterProgress({ state: 'ready' })).toBe(false);
   });
 
-  it('cancels runtime adapter provisioning with the original side-effect order', async () => {
+  it('clears exact runtime ownership only after cancellation stop is confirmed', async () => {
     const ports = makePorts();
 
     await cancelRuntimeAdapterProvisioning({
@@ -204,6 +210,13 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
         runId: 'run-1',
         teamName: 'team-a',
         state: 'cancelled',
+        message: 'Provisioning cancellation requested; stopping OpenCode runtime',
+        updatedAt: '2026-01-01T00:00:03.000Z',
+      },
+      {
+        runId: 'run-1',
+        teamName: 'team-a',
+        state: 'cancelled',
         message: 'Provisioning cancelled by user',
         updatedAt: '2026-01-01T00:00:03.000Z',
       },
@@ -217,15 +230,17 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
       },
     ]);
     expect(ports.events).toEqual([
+      'set-progress',
+      'invalidate',
+      'read-launch-state',
+      'get-adapter',
+      'adapter-stop:/runtime-cwd',
       'clear-approvals',
+      'clear-lane',
       'delete-alive',
       'invalidate',
       'set-progress',
       'emit-change',
-      'read-launch-state',
-      'get-adapter',
-      'adapter-stop:/runtime-cwd',
-      'clear-lane',
     ]);
   });
 
@@ -261,7 +276,7 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
     expect(ports.events).toEqual([]);
   });
 
-  it('logs stop failures and still clears primary lane storage', async () => {
+  it('logs stop failures and retains primary ownership and storage', async () => {
     const ports = makePorts({
       adapter: adapter(
         vi.fn(async () => {
@@ -270,22 +285,278 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
       ),
     });
 
-    await cancelRuntimeAdapterProvisioning({
-      runId: 'run-1',
-      runtimeProgress: progress(),
-      ports,
-    });
+    await expect(
+      cancelRuntimeAdapterProvisioning({
+        runId: 'run-1',
+        runtimeProgress: progress(),
+        ports,
+      })
+    ).rejects.toThrow('did not confirm stop during cancellation');
 
     expect(ports.warnings).toEqual([
       '[team-a] Failed to stop OpenCode runtime adapter launch during cancel: stop failed',
     ]);
-    expect(ports.events.at(-1)).toBe('clear-lane');
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-1');
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.events).not.toContain('clear-lane');
+    expect(ports.events).not.toContain('clear-approvals');
+    expect(ports.events).not.toContain('delete-alive');
+    expect(ports.progressUpdates.at(-1)).toMatchObject({
+      state: 'failed',
+      message: 'Provisioning cancellation could not stop the OpenCode runtime',
+    });
+  });
+
+  it('retains primary ownership and storage when cancellation stop is not confirmed', async () => {
+    const ports = makePorts({
+      adapter: adapter(
+        vi.fn(async (stopInput) => ({
+          runId: stopInput.runId,
+          teamName: stopInput.teamName,
+          stopped: false,
+          members: {},
+          warnings: ['runtime still active'],
+          diagnostics: [],
+        }))
+      ),
+    });
+
+    await expect(
+      cancelRuntimeAdapterProvisioning({
+        runId: 'run-1',
+        runtimeProgress: progress(),
+        ports,
+      })
+    ).rejects.toThrow('did not confirm stop during cancellation');
+
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-1');
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.events).not.toContain('clear-lane');
+    expect(ports.warnings).toEqual([
+      '[team-a] Failed to stop OpenCode runtime adapter launch during cancel: OpenCode runtime adapter launch did not confirm stop: runtime still active',
+    ]);
+  });
+
+  it('publishes a truthful non-deliverable cancellation state while primary stop is pending', async () => {
+    const stopStarted = createDeferred<void>();
+    const stopRelease = createDeferred<void>();
+    const ports = makePorts({
+      adapter: adapter(
+        vi.fn(async (stopInput) => {
+          stopStarted.resolve();
+          await stopRelease.promise;
+          return {
+            runId: stopInput.runId,
+            teamName: stopInput.teamName,
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+          };
+        })
+      ),
+    });
+
+    const cancelling = cancelRuntimeAdapterProvisioning({
+      runId: 'run-1',
+      runtimeProgress: progress(),
+      ports,
+    });
+    await stopStarted.promise;
+
+    expect(ports.progressUpdates).toHaveLength(1);
+    expect(ports.progressUpdates[0]).toMatchObject({
+      runId: 'run-1',
+      teamName: 'team-a',
+      state: 'cancelled',
+      message: 'Provisioning cancellation requested; stopping OpenCode runtime',
+    });
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-1');
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.events).not.toContain('clear-lane');
+    expect(ports.events).not.toContain('delete-alive');
+
+    stopRelease.resolve();
+    await cancelling;
+  });
+
+  it('publishes exact late-launch ownership and a non-deliverable fence before adapter stop', async () => {
+    const stopStarted = createDeferred<void>();
+    const stopRelease = createDeferred<void>();
+    const ports = makePorts({
+      adapter: adapter(
+        vi.fn(async (stopInput) => {
+          stopStarted.resolve();
+          await stopRelease.promise;
+          return {
+            runId: stopInput.runId,
+            teamName: stopInput.teamName,
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+          };
+        })
+      ),
+    });
+    ports.runtimeAdapterRunByTeam.delete('team-a');
+    ports.provisioningRunByTeam.delete('team-a');
+    ports.aliveRunByTeam.delete('team-a');
+    const helper = new TeamProvisioningRunTrackingDeliveryHelper({
+      state: {
+        provisioningRunByTeam: ports.provisioningRunByTeam,
+        aliveRunByTeam: ports.aliveRunByTeam,
+        runs: new Map(),
+        runtimeAdapterProgressByRunId: ports.runtimeAdapterProgressByRunId!,
+        runtimeAdapterRunByTeam: ports.runtimeAdapterRunByTeam,
+        getRetainedProvisioningProgressMap: () => new Map(),
+      },
+      ports: {
+        notifyTeamWatchScopeChanged: vi.fn(),
+        isTeamAlive: vi.fn(() => true),
+        hasAlivePersistedTeamProcess: vi.fn(() => true),
+        hasOnlyExplicitlyStoppedPersistedTeamProcesses: vi.fn(() => false),
+        logDebug: vi.fn(),
+      },
+      liveRuntimeSnapshotCacheTtlMs: 1,
+      persistedRuntimeSnapshotCacheTtlMs: 2,
+    });
+
+    const stopping = stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({
+      teamName: 'team-a',
+      runId: 'run-1',
+      ports,
+    });
+    await stopStarted.promise;
+
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')).toEqual({
+      runId: 'run-1',
+      providerId: 'opencode',
+      cwd: '/persisted-cwd',
+    });
+    expect(ports.runtimeAdapterProgressByRunId?.get('run-1')).toMatchObject({
+      state: 'disconnected',
+      message: 'Stopping cancelled OpenCode runtime launch',
+    });
+    expect(helper.canDeliverToTrackedRuntimeRun('team-a', 'run-1')).toBe(false);
+    expect(helper.resolveDeliverableTrackedRuntimeRunId('team-a')).toBeNull();
+    expect(helper.canDeliverToOpenCodeRuntimeForTeam('team-a')).toBe(false);
+
+    stopRelease.resolve();
+    await expect(stopping).resolves.toBe(true);
+    expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
+  });
+
+  it('rolls failed late cancelled-launch stop state back to the exact prior state', async () => {
+    const ports = makePorts({
+      adapter: adapter(
+        vi.fn(async (stopInput) => ({
+          runId: stopInput.runId,
+          teamName: stopInput.teamName,
+          stopped: false,
+          members: {},
+          warnings: ['late runtime still active'],
+          diagnostics: [],
+        }))
+      ),
+    });
+    ports.runtimeAdapterRunByTeam.delete('team-a');
+    ports.provisioningRunByTeam.delete('team-a');
+    ports.aliveRunByTeam.delete('team-a');
+    const previousProgress = ports.runtimeAdapterProgressByRunId?.get('run-1');
+
+    await expect(
+      stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({
+        teamName: 'team-a',
+        runId: 'run-1',
+        ports,
+      })
+    ).resolves.toBe(false);
+
+    expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
+    expect(ports.runtimeAdapterProgressByRunId?.get('run-1')).toBe(previousProgress);
+    expect(ports.events).not.toContain('clear-lane');
+    expect(ports.events).not.toContain('clear-approvals');
+    expect(ports.warnings).toEqual([
+      '[team-a] Failed to stop OpenCode runtime adapter launch before primary lane cleanup: OpenCode runtime adapter launch did not confirm stop: late runtime still active',
+    ]);
+  });
+
+  it('does not roll a newer late-launch owner back after stop failure', async () => {
+    const stopStarted = createDeferred<void>();
+    const stopRelease = createDeferred<void>();
+    const ports = makePorts({
+      adapter: adapter(
+        vi.fn(async (stopInput) => {
+          stopStarted.resolve();
+          await stopRelease.promise;
+          return {
+            runId: stopInput.runId,
+            teamName: stopInput.teamName,
+            stopped: false,
+            members: {},
+            warnings: ['old runtime still active'],
+            diagnostics: [],
+          };
+        })
+      ),
+    });
+    ports.runtimeAdapterRunByTeam.delete('team-a');
+    ports.provisioningRunByTeam.delete('team-a');
+    ports.aliveRunByTeam.delete('team-a');
+
+    const stopping = stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({
+      teamName: 'team-a',
+      runId: 'run-1',
+      ports,
+    });
+    await stopStarted.promise;
+
+    const newerOwner = {
+      runId: 'run-new',
+      providerId: 'opencode' as const,
+      cwd: '/new-runtime-cwd',
+    };
+    ports.runtimeAdapterRunByTeam.set('team-a', newerOwner);
+    ports.provisioningRunByTeam.set('team-a', 'run-new');
+    ports.aliveRunByTeam.set('team-a', 'run-new');
+    stopRelease.resolve();
+    await expect(stopping).resolves.toBe(false);
+
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')).toBe(newerOwner);
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-new');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-new');
+  });
+
+  it('retains ownership when primary lane storage cleanup fails after confirmed stop', async () => {
+    const storageError = new Error('storage cleanup failed');
+    const ports = makePorts({
+      clearLane: vi.fn(async () => {
+        throw storageError;
+      }),
+    });
+
+    await expect(
+      clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({
+        teamName: 'team-a',
+        runId: 'run-1',
+        ports,
+      })
+    ).rejects.toBe(storageError);
+
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-1');
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.events).not.toContain('delete-alive');
   });
 
   it('does not clear a newer primary owner installed while adapter stop is awaiting', async () => {
     const stopStarted = createDeferred<void>();
     const stopRelease = createDeferred<void>();
-    const clearLane = vi.fn(async () => undefined);
+    const clearLane = vi.fn(async () => true);
     const ports = makePorts({
       adapter: adapter(
         vi.fn(async (stopInput) => {
@@ -324,7 +595,7 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
     expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-new');
     expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-new');
     expect(ports.aliveRunByTeam.get('team-a')).toBe('run-new');
-    expect(ports.events.filter((event) => event === 'delete-alive')).toHaveLength(1);
+    expect(ports.events.filter((event) => event === 'delete-alive')).toHaveLength(0);
   });
 
   it('detects primary lane ownership only when every installed owner is exact', () => {
@@ -359,7 +630,7 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
         currentRuntimeRun: undefined,
         runId: 'run-1',
       })
-    ).toBe(true);
+    ).toBe(false);
     expect(
       ownsOpenCodeRuntimeAdapterPrimaryLane({
         currentProvisioningRunId: 'other-run',
@@ -388,6 +659,7 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
         });
         ports.provisioningRunByTeam.set('team-a', 'new-run');
         ports.aliveRunByTeam.set('team-a', 'new-run');
+        return true;
       }),
     });
 
@@ -451,9 +723,9 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
     });
 
     expect(response).toEqual({ runId: 'cancelled-run' });
-    expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
-    expect(ports.provisioningRunByTeam.has('team-a')).toBe(false);
-    expect(ports.aliveRunByTeam.has('team-a')).toBe(false);
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-1');
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-1');
     expect(ports.progressUpdates).toEqual([
       {
         runId: 'cancelled-run',
@@ -466,6 +738,6 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
       },
     ]);
     expect(onProgress).toHaveBeenCalledWith(ports.progressUpdates[0]);
-    expect(ports.events).toEqual(['delete-alive', 'invalidate', 'set-progress', 'emit-change']);
+    expect(ports.events).toEqual(['set-progress', 'emit-change']);
   });
 });

@@ -1397,6 +1397,11 @@ describe('MemberWorkSync use cases', () => {
           return insertResult;
         },
       };
+      const trackedSettlingWork: {
+        teamName: string;
+        work: Promise<unknown>;
+        settled: boolean;
+      }[] = [];
 
       const dispatch = new MemberWorkSyncNudgeDispatcher({
         ...deps,
@@ -1406,6 +1411,19 @@ describe('MemberWorkSync use cases', () => {
         claimedBy: 'test-dispatcher',
         itemTimeoutMs: 5,
         teamTimeoutMs: 100,
+        trackSettlingWork: (teamName, work) => {
+          const tracked = { teamName, work, settled: false };
+          trackedSettlingWork.push(tracked);
+          void work.then(
+            () => {
+              tracked.settled = true;
+            },
+            () => {
+              tracked.settled = true;
+            }
+          );
+          return work;
+        },
       });
       await insertStarted;
       await vi.advanceTimersByTimeAsync(5);
@@ -1419,10 +1437,14 @@ describe('MemberWorkSync use cases', () => {
         status: 'failed_retryable',
         lastError: 'nudge dispatch item timed out after 5ms',
       });
+      expect(trackedSettlingWork).not.toHaveLength(0);
+      expect(trackedSettlingWork.every(({ teamName }) => teamName === 'team-a')).toBe(true);
+      expect(trackedSettlingWork.some(({ settled }) => !settled)).toBe(true);
 
       resolveInsert({ inserted: true, messageId: firstItem!.id });
       await Promise.resolve();
       await vi.advanceTimersByTimeAsync(100);
+      await Promise.allSettled(trackedSettlingWork.map(({ work }) => work));
 
       expect(
         outbox.items.get(`member-work-sync:team-a:bob:${status.agenda.fingerprint}`)
@@ -1430,6 +1452,7 @@ describe('MemberWorkSync use cases', () => {
         status: 'failed_retryable',
         lastError: 'nudge dispatch item timed out after 5ms',
       });
+      expect(trackedSettlingWork.every(({ settled }) => settled)).toBe(true);
     } finally {
       vi.useRealTimers();
     }

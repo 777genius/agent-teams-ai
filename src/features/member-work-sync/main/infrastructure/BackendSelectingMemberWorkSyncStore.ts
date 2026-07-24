@@ -1,9 +1,14 @@
+import { mkdir, readFile, rm } from 'node:fs/promises';
+import { dirname } from 'node:path';
+
+import { MEMBER_WORK_SYNC_STORE_ID } from '@features/internal-storage/contracts/internalStorageContracts';
 import {
   type InternalStorageBackendSelector,
   InternalStorageJsonReplica,
   KeyedMutex,
   type MemberWorkSyncStorageGateway,
 } from '@features/internal-storage/main';
+import { atomicWriteAsync, syncDirectoryDurably } from '@main/utils/atomicWrite';
 
 import {
   isMemberWorkSyncStoreSnapshot,
@@ -12,6 +17,7 @@ import {
 } from './JsonMemberWorkSyncStore';
 import { mergeMemberWorkSyncSnapshots } from './memberWorkSyncSnapshotMerge';
 import {
+  areSnapshotRecordSetsEquivalent,
   normalizeMemberWorkSyncStoreSnapshotTeamIdentity,
   recordsToSnapshot,
   snapshotToRecords,
@@ -44,6 +50,20 @@ import type { SqliteMemberWorkSyncStore } from './SqliteMemberWorkSyncStore';
 type FullStore = Required<MemberWorkSyncStatusStorePort> &
   Required<MemberWorkSyncReportStorePort> &
   Required<MemberWorkSyncOutboxStorePort>;
+
+interface PendingPrimaryPurgeMarker {
+  activeJsonStateCleared: boolean;
+}
+
+function emptySnapshot(): MemberWorkSyncStoreSnapshot {
+  return {
+    statuses: [],
+    reportIntents: [],
+    outboxItems: [],
+    metricEvents: [],
+    filesToArchive: [],
+  };
+}
 
 export interface BackendSelectingMemberWorkSyncStoreOptions {
   gateway: MemberWorkSyncStorageGateway;
@@ -85,16 +105,17 @@ export class BackendSelectingMemberWorkSyncStore
 
   async purgeTeam(teamName: string): Promise<void> {
     if (!this.options) return;
+    const backend = await this.selector.select<'sqlite' | 'json'>('sqlite', 'json');
     await this.replicaMutex.run(teamName, async () => {
-      const emptySnapshot: MemberWorkSyncStoreSnapshot = {
-        statuses: [],
-        reportIntents: [],
-        outboxItems: [],
-        metricEvents: [],
-        filesToArchive: [],
-      };
-      await this.options!.gateway.importTeam(teamName, snapshotToRecords(teamName, emptySnapshot));
-      await this.replica?.writeClean(teamName, emptySnapshot);
+      if (backend === 'sqlite') {
+        await this.writePendingPrimaryPurge(teamName, false);
+        await this.applyPendingPrimaryPurge(teamName);
+      } else {
+        await this.jsonStore.purgeActiveState(teamName, {
+          establishPendingPrimaryPurge: () => this.writePendingPrimaryPurge(teamName, false),
+          confirmActiveStateCleared: () => this.writePendingPrimaryPurge(teamName, true),
+        });
+      }
       this.sqlitePreparedTeams.delete(teamName);
       this.jsonHydratedTeams.delete(teamName);
     });
@@ -114,21 +135,26 @@ export class BackendSelectingMemberWorkSyncStore
     }
     return this.replicaMutex.run(teamName, async () => {
       if (backend === 'json') {
+        const hasPendingPrimaryPurge = await this.completePendingJsonStatePurge(teamName);
         if (!this.jsonHydratedTeams.has(teamName)) {
-          const snapshot = await this.replica!.readClean(
-            teamName,
-            this.options!.fallbackRequiresReplica
-          );
-          if (snapshot) {
-            await this.jsonStore.restoreReplicaSnapshot(
+          if (!hasPendingPrimaryPurge) {
+            const snapshot = await this.replica!.readClean(
               teamName,
-              normalizeMemberWorkSyncStoreSnapshotTeamIdentity(teamName, snapshot)
+              this.options!.fallbackRequiresReplica
             );
+            if (snapshot) {
+              await this.jsonStore.restoreReplicaSnapshot(
+                teamName,
+                normalizeMemberWorkSyncStoreSnapshotTeamIdentity(teamName, snapshot)
+              );
+            }
           }
           this.jsonHydratedTeams.add(teamName);
         }
         return jsonAction(this.jsonStore as FullStore);
       }
+
+      await this.applyPendingPrimaryPurge(teamName);
 
       const publishReplica = mutation || !this.sqlitePreparedTeams.has(teamName);
       if (!this.sqlitePreparedTeams.has(teamName)) {
@@ -167,6 +193,96 @@ export class BackendSelectingMemberWorkSyncStore
       }
       return result;
     });
+  }
+
+  private async applyPendingPrimaryPurge(teamName: string): Promise<void> {
+    if (!(await this.completePendingJsonStatePurge(teamName))) return;
+    const active = await this.jsonStore.readSnapshotForImport(teamName);
+    const snapshot = normalizeMemberWorkSyncStoreSnapshotTeamIdentity(
+      teamName,
+      active ? { ...active, filesToArchive: [] } : emptySnapshot()
+    );
+    const expected = snapshotToRecords(teamName, snapshot);
+    await this.options!.gateway.importTeam(teamName, expected);
+    const roundTrip = await this.options!.gateway.listTeamSnapshot(teamName);
+    if (!areSnapshotRecordSetsEquivalent(roundTrip, expected)) {
+      throw new Error(
+        `member-work-sync pending primary purge verification failed for "${teamName}"`
+      );
+    }
+    await this.options!.gateway.recordStoreImport(
+      MEMBER_WORK_SYNC_STORE_ID,
+      teamName,
+      expected.statuses.length + expected.reportIntents.length + expected.outboxItems.length
+    );
+    await this.replica!.writeClean(teamName, recordsToSnapshot(teamName, roundTrip));
+    await this.removePendingPrimaryPurge(teamName);
+    this.sqlitePreparedTeams.delete(teamName);
+    this.jsonHydratedTeams.delete(teamName);
+  }
+
+  private async completePendingJsonStatePurge(teamName: string): Promise<boolean> {
+    const marker = await this.readPendingPrimaryPurge(teamName);
+    if (!marker) return false;
+    if (!marker.activeJsonStateCleared) {
+      await this.jsonStore.purgeActiveState(teamName, {
+        establishPendingPrimaryPurge: () => Promise.resolve(),
+        confirmActiveStateCleared: () => this.writePendingPrimaryPurge(teamName, true),
+      });
+    }
+    return true;
+  }
+
+  private async writePendingPrimaryPurge(
+    teamName: string,
+    activeJsonStateCleared: boolean
+  ): Promise<void> {
+    const markerPath = this.options!.paths.getPendingPrimaryPurgePath(teamName);
+    const markerDirectory = dirname(markerPath);
+    const firstCreatedDirectory = await mkdir(markerDirectory, { recursive: true });
+    if (firstCreatedDirectory) {
+      await syncDirectoryDurably(dirname(firstCreatedDirectory));
+    }
+    await atomicWriteAsync(
+      markerPath,
+      `${JSON.stringify(
+        { schemaVersion: 1, teamName: teamName.trim(), activeJsonStateCleared },
+        null,
+        2
+      )}\n`,
+      { durability: 'strict', syncDirectory: true }
+    );
+  }
+
+  private async readPendingPrimaryPurge(
+    teamName: string
+  ): Promise<PendingPrimaryPurgeMarker | null> {
+    let raw: string;
+    try {
+      raw = await readFile(this.options!.paths.getPendingPrimaryPurgePath(teamName), 'utf8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      return {
+        activeJsonStateCleared:
+          parsed.schemaVersion === 1 && parsed.activeJsonStateCleared === true,
+      };
+    } catch {
+      // A malformed or legacy marker still fences the primary. Re-clearing the
+      // exact owned live paths is safe and avoids resurrecting pre-purge state.
+      return { activeJsonStateCleared: false };
+    }
+  }
+
+  private async removePendingPrimaryPurge(teamName: string): Promise<void> {
+    if (!(await this.readPendingPrimaryPurge(teamName))) return;
+    const markerPath = this.options!.paths.getPendingPrimaryPurgePath(teamName);
+    await rm(markerPath, { force: true });
+    await syncDirectoryDurably(dirname(markerPath));
   }
 
   async read(input: {

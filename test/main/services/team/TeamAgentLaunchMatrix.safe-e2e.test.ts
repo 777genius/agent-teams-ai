@@ -77,6 +77,11 @@ import {
   TeamProvisioningService,
 } from '../../../../src/main/services/team/TeamProvisioningService';
 import {
+  cancelRuntimeAdapterProvisioning,
+  stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
+  type RuntimeAdapterCancellationPorts,
+} from '../../../../src/main/services/team/provisioning/TeamProvisioningRuntimeAdapterCancellation';
+import {
   encodePath,
   extractBaseDir,
   getProjectsBasePath,
@@ -3173,8 +3178,15 @@ describe(
       );
       await waitForCondition(() => adapter.launchInputs.length === 2);
       expect(svc.getAliveTeams().sort()).toEqual([relaunchTeamName, stoppingTeamName].sort());
+      await expect(
+        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), stoppingTeamName)
+      ).resolves.toMatchObject({
+        lanes: {
+          primary: { state: 'active' },
+        },
+      });
 
-      svc.stopTeam(stoppingTeamName);
+      const stoppingPromise = svc.stopTeam(stoppingTeamName);
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs[0]).toMatchObject({
         runId: stopping.runId,
@@ -3205,58 +3217,134 @@ describe(
       expect(adapter.launchInputs).toHaveLength(2);
 
       adapter.releaseStops();
-      const relaunchSecond = await relaunchSecondPromise;
+      const [relaunchSecond] = await Promise.all([relaunchSecondPromise, stoppingPromise]);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       expect(relaunchSecond.runId).not.toBe(relaunchFirst.runId);
       expect(svc.isTeamAlive(stoppingTeamName)).toBe(false);
       expect(svc.isTeamAlive(relaunchTeamName)).toBe(true);
+      await expect(
+        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), stoppingTeamName)
+      ).resolves.toMatchObject({
+        lanes: {},
+      });
     });
 
-    it('dedupes duplicate manual OpenCode stops while the runtime stop is still pending', async () => {
-      const teamName = 'pure-opencode-duplicate-stop-slow-stop-safe-e2e';
-      const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
-      svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
-
-      const createPromise = svc.createTeam(
-        {
+    it('isolates rejected stale-run cancellation from deduped replacement cancellation', async () => {
+      const teamName = 'pure-opencode-cross-run-stop-failure-safe-e2e';
+      const oldRunId = 'run-old';
+      const replacementRunId = 'run-new';
+      const adapter = new RejectingThenBlockingStopOpenCodeRuntimeAdapter('run-old stop rejected');
+      const runtimeAdapterRunByTeam = new Map([
+        [
           teamName,
-          cwd: projectPath,
-          providerId: 'opencode',
-          model: 'opencode/big-pickle',
-          skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          {
+            runId: oldRunId,
+            providerId: 'opencode' as const,
+            cwd: projectPath,
+          },
+        ],
+      ]);
+      const provisioningRunByTeam = new Map([[teamName, oldRunId]]);
+      const aliveRunByTeam = new Map([[teamName, oldRunId]]);
+      const runtimeAdapterProgressByRunId = new Map<string, TeamProvisioningProgress>();
+      const warnings: string[] = [];
+      const ports: RuntimeAdapterCancellationPorts = {
+        cancelledRuntimeAdapterRunIds: new Set(),
+        runtimeAdapterRunByTeam,
+        runtimeAdapterProgressByRunId,
+        provisioningRunByTeam,
+        aliveRunByTeam,
+        teamsBasePath: getTeamsBasePath(),
+        nowIso: () => '2026-05-08T10:00:00.000Z',
+        clearOpenCodeRuntimeToolApprovals: () => undefined,
+        deleteAliveRunId: (ownerTeamName) => {
+          aliveRunByTeam.delete(ownerTeamName);
         },
-        () => undefined
-      );
-      await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
-      const runId = adapter.pendingLaunchInputs[0]?.runId;
-      expect(runId).toBeTruthy();
-      adapter.releaseLaunches();
-      await expect(createPromise).resolves.toEqual({ runId });
-      await waitForCondition(() => adapter.launchInputs.length === 1);
-
-      svc.stopTeam(teamName);
-      svc.stopTeam(teamName);
-
-      await waitForCondition(() => adapter.stopInputs.length === 1);
-      expect(adapter.stopInputs[0]).toMatchObject({
+        invalidateRuntimeSnapshotCaches: () => undefined,
+        setRuntimeAdapterProgress: (progress, onProgress) => {
+          runtimeAdapterProgressByRunId.set(progress.runId, progress);
+          onProgress?.(progress);
+          return progress;
+        },
+        emitTeamChange: () => undefined,
+        readLaunchState: async () => null,
+        getOpenCodeRuntimeAdapter: () => adapter,
+        readPersistedTeamProjectPath: () => projectPath,
+        clearOpenCodeRuntimeLaneStorage: async () => true,
+        logWarning: (message) => {
+          warnings.push(message);
+        },
+      };
+      const cancellationProgress = (runId: string): TeamProvisioningProgress => ({
         runId,
         teamName,
-        laneId: 'primary',
-        reason: 'user_requested',
+        state: 'spawning',
+        message: `Launching ${runId}`,
+        startedAt: '2026-05-08T09:59:00.000Z',
+        updatedAt: '2026-05-08T09:59:30.000Z',
       });
-      expect(svc.getAliveTeams()).toEqual([]);
+
+      const oldStopping = stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({
+        teamName,
+        runId: oldRunId,
+        ports,
+      });
+      await waitForCondition(() => adapter.stopInputs.length === 1);
+
+      const replacementOwner = {
+        runId: replacementRunId,
+        providerId: 'opencode' as const,
+        cwd: projectPath,
+      };
+      runtimeAdapterRunByTeam.set(teamName, replacementOwner);
+      provisioningRunByTeam.set(teamName, replacementRunId);
+      aliveRunByTeam.set(teamName, replacementRunId);
+      const replacementProgress = cancellationProgress(replacementRunId);
+      const replacementCancellation = cancelRuntimeAdapterProvisioning({
+        runId: replacementRunId,
+        runtimeProgress: replacementProgress,
+        ports,
+      });
+      const duplicateReplacementCancellation = cancelRuntimeAdapterProvisioning({
+        runId: replacementRunId,
+        runtimeProgress: replacementProgress,
+        ports,
+      });
+
       await Promise.resolve();
       expect(adapter.stopInputs).toHaveLength(1);
+      adapter.rejectOldStop();
+      await waitForCondition(() => adapter.stopInputs.length === 2);
+      const oldOutcome = await oldStopping;
 
-      adapter.releaseStops();
-      await waitForCondition(() => {
-        const status = (svc as any).runtimeAdapterProgressByRunId.get(runId);
-        return status?.state === 'disconnected' && status.message === 'OpenCode team stopped';
+      expect(oldOutcome).toBe(false);
+      expect(adapter.stopInputs.map((input) => input.runId)).toEqual([oldRunId, replacementRunId]);
+      expect(runtimeAdapterRunByTeam.get(teamName)).toBe(replacementOwner);
+      expect(provisioningRunByTeam.get(teamName)).toBe(replacementRunId);
+      expect(aliveRunByTeam.get(teamName)).toBe(replacementRunId);
+      expect(warnings).toEqual([
+        `[${teamName}] Failed to stop OpenCode runtime adapter launch before primary lane cleanup: run-old stop rejected`,
+      ]);
+
+      adapter.releaseReplacementStop();
+      const replacementOutcomes = await Promise.allSettled([
+        replacementCancellation,
+        duplicateReplacementCancellation,
+      ]);
+
+      expect(replacementOutcomes).toEqual([
+        { status: 'fulfilled', value: undefined },
+        { status: 'fulfilled', value: undefined },
+      ]);
+      expect(adapter.stopInputs).toHaveLength(2);
+      expect(runtimeAdapterRunByTeam.has(teamName)).toBe(false);
+      expect(provisioningRunByTeam.has(teamName)).toBe(false);
+      expect(aliveRunByTeam.has(teamName)).toBe(false);
+      expect(runtimeAdapterProgressByRunId.has(oldRunId)).toBe(false);
+      expect(runtimeAdapterProgressByRunId.get(replacementRunId)).toMatchObject({
+        state: 'cancelled',
+        message: 'Provisioning cancelled by user',
       });
-      expect(adapter.stopInputs).toHaveLength(1);
-      expect(svc.isTeamAlive(teamName)).toBe(false);
     });
 
     it('does not resurrect a same-team OpenCode relaunch after stopAllTeams during slow replacement stop', async () => {
@@ -3302,9 +3390,9 @@ describe(
       });
       expect(adapter.launchInputs).toHaveLength(1);
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
       adapter.releaseStops();
-      const relaunch = await relaunchPromise;
+      const [relaunch] = await Promise.all([relaunchPromise, stopAllPromise]);
 
       expect(relaunch.runId).toBeTruthy();
       expect(relaunch.runId).not.toBe(firstRunId);
@@ -3358,9 +3446,10 @@ describe(
         () => undefined
       );
       await waitForCondition(() => adapter.stopInputs.length === 1);
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
       adapter.releaseStops();
       const cancelledRelaunch = await cancelledRelaunchPromise;
+      await stopAllPromise;
 
       expect(adapter.launchInputs).toHaveLength(1);
       await expect(svc.getProvisioningStatus(cancelledRelaunch.runId)).resolves.toMatchObject({
@@ -3590,7 +3679,7 @@ describe(
         runId,
         teamName,
         state: 'cancelled',
-        message: 'Provisioning cancelled by user',
+        message: 'Provisioning cancellation requested; stopping OpenCode runtime',
       });
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
@@ -3881,7 +3970,7 @@ describe(
       const runId = adapter.pendingLaunchInputs[0]?.runId;
       expect(runId).toBeTruthy();
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs[0]).toMatchObject({
@@ -3903,6 +3992,7 @@ describe(
       adapter.releaseLaunches();
       await expect(createPromise).resolves.toEqual({ runId });
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopAllPromise;
 
       expect(svc.isTeamAlive(teamName)).toBe(false);
       expect(svc.getAliveTeams()).not.toContain(teamName);
@@ -3937,7 +4027,7 @@ describe(
       const cancelledRunId = adapter.pendingLaunchInputs[0]?.runId;
       expect(cancelledRunId).toBeTruthy();
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs[0]).toMatchObject({
@@ -3957,6 +4047,7 @@ describe(
       adapter.releaseLaunches();
       await expect(createPromise).resolves.toEqual({ runId: cancelledRunId });
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopAllPromise;
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       const freshLaunch = await svc.launchTeam(
@@ -4009,7 +4100,7 @@ describe(
       const runId = adapter.pendingLaunchInputs[0]?.runId;
       expect(runId).toBeTruthy();
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs[0]).toMatchObject({
@@ -4024,7 +4115,7 @@ describe(
         runId,
         teamName,
         state: 'cancelled',
-        message: 'Provisioning cancelled by user',
+        message: 'Provisioning cancellation requested; stopping OpenCode runtime',
       });
       expect(svc.getAliveTeams()).not.toContain(teamName);
 
@@ -4039,6 +4130,7 @@ describe(
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       adapter.releaseStops();
+      await stopAllPromise;
       await waitForCondition(() => adapter.stopInputs.length === 1);
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -4086,7 +4178,7 @@ describe(
       expect(firstRunId).toBeTruthy();
       expect(secondRunId).toBeTruthy();
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 2);
       expect(adapter.stopInputs.map((input) => input.teamName).sort()).toEqual([
@@ -4138,6 +4230,7 @@ describe(
       expect(svc.getAliveTeams()).toEqual([]);
 
       adapter.releaseStops();
+      await stopAllPromise;
       await waitForCondition(() => adapter.stopInputs.length === 2);
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), firstTeamName)
@@ -4380,6 +4473,13 @@ describe(
       });
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+      const quiescenceState = svc as unknown as {
+        aliveRunByTeam: Map<string, string>;
+        provisioningRunByTeam: Map<string, string>;
+        secondaryRuntimeRunByTeam: Map<string, Map<string, unknown>>;
+        stoppingSecondaryRuntimeTeams: Set<string>;
+        teamOpLocks: Map<string, Promise<unknown>>;
+      };
       stubLiveOpenCodeRuntimeProcessesForTest(svc, teamName, ['bob', 'tom']);
       const cancelledRun = createMixedLiveRun({ teamName, projectPath });
       cancelledRun.child = { kill: () => undefined };
@@ -4388,7 +4488,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs.map((input) => input.laneId).sort()).toEqual([
@@ -4398,6 +4498,13 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopAllPromise;
+      expect(svc.getAliveTeams()).toEqual([]);
+      expect(quiescenceState.aliveRunByTeam.has(teamName)).toBe(false);
+      expect(quiescenceState.provisioningRunByTeam.has(teamName)).toBe(false);
+      expect(quiescenceState.secondaryRuntimeRunByTeam.has(teamName)).toBe(false);
+      expect(quiescenceState.stoppingSecondaryRuntimeTeams.has(teamName)).toBe(false);
+      expect(quiescenceState.teamOpLocks.has(teamName)).toBe(false);
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
       ).resolves.toMatchObject({
@@ -4450,6 +4557,19 @@ describe(
             laneKind: 'secondary',
           },
         },
+      });
+
+      await svc.stopAllTeams();
+      expect(svc.getAliveTeams()).toEqual([]);
+      expect(quiescenceState.aliveRunByTeam.has(teamName)).toBe(false);
+      expect(quiescenceState.provisioningRunByTeam.has(teamName)).toBe(false);
+      expect(quiescenceState.secondaryRuntimeRunByTeam.has(teamName)).toBe(false);
+      expect(quiescenceState.stoppingSecondaryRuntimeTeams.has(teamName)).toBe(false);
+      expect(quiescenceState.teamOpLocks.has(teamName)).toBe(false);
+      await expect(
+        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+      ).resolves.toMatchObject({
+        lanes: {},
       });
     }, 120_000);
 
@@ -14425,7 +14545,7 @@ describe(
         };
       }) as typeof adapter.stop;
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => adapter.stopInputs.length === 1);
       try {
         await expect(
@@ -14434,14 +14554,23 @@ describe(
             text: 'must not reach pure opencode while stop is in flight',
             messageId: 'msg-pure-opencode-stop-in-flight',
           })
-        ).resolves.toEqual({
+        ).resolves.toMatchObject({
           delivered: false,
-          reason: 'opencode_runtime_not_active',
+          accepted: false,
+          responsePending: false,
+          responseState: 'not_observed',
+          ledgerStatus: 'retry_scheduled',
+          laneId: 'primary',
+          reason: 'opencode_primary_runtime_not_deliverable',
+          diagnostics: ['opencode_primary_runtime_not_deliverable'],
         });
         expect(adapter.messageInputs).toEqual([]);
       } finally {
         releaseStop();
-        await waitForCondition(() => !svc.isTeamAlive(teamName));
+        await stopPromise;
+        expect((await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).lanes).toEqual(
+          {}
+        );
       }
     });
 
@@ -21984,6 +22113,46 @@ class BlockingStopOpenCodeRuntimeAdapter extends BlockingOpenCodeRuntimeAdapter 
 
   releaseStops(): void {
     this.releaseStopGate?.();
+  }
+}
+
+class RejectingThenBlockingStopOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter {
+  private rejectOldStopGate: (() => void) | null = null;
+  private readonly oldStopGate = new Promise<void>((resolve) => {
+    this.rejectOldStopGate = resolve;
+  });
+  private releaseReplacementStopGate: (() => void) | null = null;
+  private readonly replacementStopGate = new Promise<void>((resolve) => {
+    this.releaseReplacementStopGate = resolve;
+  });
+
+  constructor(private readonly oldStopErrorMessage: string) {
+    super();
+  }
+
+  override async stop(input: TeamRuntimeStopInput): Promise<TeamRuntimeStopResult> {
+    this.stopInputs.push(input);
+    if (this.stopInputs.length === 1) {
+      await this.oldStopGate;
+      throw new Error(this.oldStopErrorMessage);
+    }
+    await this.replacementStopGate;
+    return {
+      runId: input.runId,
+      teamName: input.teamName,
+      stopped: true,
+      members: {},
+      warnings: [],
+      diagnostics: ['fake exact replacement stop'],
+    };
+  }
+
+  rejectOldStop(): void {
+    this.rejectOldStopGate?.();
+  }
+
+  releaseReplacementStop(): void {
+    this.releaseReplacementStopGate?.();
   }
 }
 

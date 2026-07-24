@@ -1,5 +1,5 @@
 import { TeamMemberStoragePaths } from '@main/services/team/TeamMemberStoragePaths';
-import { join } from 'path';
+import { dirname, join } from 'path';
 
 export class MemberWorkSyncStorePaths {
   private readonly memberStorage: TeamMemberStoragePaths;
@@ -18,6 +18,14 @@ export class MemberWorkSyncStorePaths {
 
   getSqliteFallbackReplicaPath(teamName: string): string {
     return join(this.getTeamDir(teamName), 'sqlite-fallback-replica.json');
+  }
+
+  getPendingPrimaryPurgePath(teamName: string): string {
+    return join(
+      dirname(this.teamsBasePath),
+      '.member-work-sync-deletions',
+      `${this.memberStorage.getMemberKey(teamName)}.json`
+    );
   }
 
   getStatusPath(teamName: string): string {

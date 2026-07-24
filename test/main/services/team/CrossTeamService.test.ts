@@ -454,6 +454,174 @@ describe('CrossTeamService', () => {
       expect(provisioning.relayLeadInboxMessages).not.toHaveBeenCalled();
     });
 
+    it.each([
+      ['missing', undefined],
+      ['corrupt', 'not-an-iso-timestamp'],
+    ])(
+      'rejects a typed payload conflict when its durable runtime receipt is %s',
+      async (_receiptKind, runtimeDeliveryAcceptedAt) => {
+        provisioning.relayInboxFileToLiveRecipient.mockImplementation((_team, _member, options) =>
+          Promise.resolve({
+            kind: 'native_lead',
+            relayed: 1,
+            recentlyDeliveredMessageId: options?.onlyMessageId,
+          })
+        );
+        const request = makeRequest({
+          requireRuntimeDelivery: true,
+          messageId: 'runtime-conflict-receipt-1',
+          conversationId: 'runtime-conflict-conversation-1',
+          timestamp: '2026-07-23T00:00:00.000Z',
+          text: 'Original accepted payload',
+        });
+        await service.send(request);
+
+        const outboxPath = path.join(
+          MOCK_TEAMS_BASE_PATH,
+          'teams',
+          'team-a',
+          'sent-cross-team.json'
+        );
+        const rows = readFixtureArray(outboxPath) as Record<string, unknown>[];
+        if (runtimeDeliveryAcceptedAt === undefined) {
+          delete rows[0]?.runtimeDeliveryAcceptedAt;
+        } else if (rows[0]) {
+          rows[0].runtimeDeliveryAcceptedAt = runtimeDeliveryAcceptedAt;
+        }
+        fs.writeFileSync(outboxPath, JSON.stringify(rows, null, 2));
+
+        const error: unknown = await service
+          .send({ ...request, text: 'Divergent retry payload' })
+          .catch((candidate: unknown) => candidate);
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toContain(
+          'runtime delivery receipt proof is missing or corrupt'
+        );
+        expect(error).not.toMatchObject({ code: 'idempotency_conflict' });
+      }
+    );
+
+    it('classifies a divergent stable retry only after validating its durable runtime receipt', async () => {
+      provisioning.relayInboxFileToLiveRecipient.mockImplementation((_team, _member, options) =>
+        Promise.resolve({
+          kind: 'native_lead',
+          relayed: 1,
+          recentlyDeliveredMessageId: options?.onlyMessageId,
+        })
+      );
+      const request = makeRequest({
+        requireRuntimeDelivery: true,
+        messageId: 'runtime-conflict-receipt-valid-1',
+        conversationId: 'runtime-conflict-conversation-valid-1',
+        timestamp: '2026-07-23T00:00:00.000Z',
+        text: 'Original accepted payload',
+      });
+      await service.send(request);
+
+      await expect(
+        service.send({ ...request, text: 'Divergent retry payload' })
+      ).rejects.toMatchObject({
+        code: 'idempotency_conflict',
+      });
+    });
+
+    it('does not reuse an older row receipt when the exact conflicting outbox row has no receipt', async () => {
+      provisioning.relayInboxFileToLiveRecipient.mockImplementation((_team, _member, options) =>
+        Promise.resolve({
+          kind: 'native_lead',
+          relayed: 1,
+          recentlyDeliveredMessageId: options?.onlyMessageId,
+        })
+      );
+      const request = makeRequest({
+        requireRuntimeDelivery: true,
+        messageId: 'runtime-conflict-exact-row-1',
+        conversationId: 'runtime-conflict-exact-row-conversation-1',
+        timestamp: '2026-07-23T00:00:00.000Z',
+        text: 'Original accepted payload',
+      });
+      await service.send(request);
+
+      const outboxPath = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-a', 'sent-cross-team.json');
+      const rows = readFixtureArray(outboxPath) as Record<string, unknown>[];
+      rows.push({ ...rows[0] });
+      delete rows[1]?.runtimeDeliveryAcceptedAt;
+      fs.writeFileSync(outboxPath, JSON.stringify(rows, null, 2));
+
+      const error: unknown = await service
+        .send({ ...request, text: 'Divergent retry payload' })
+        .catch((candidate: unknown) => candidate);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain('(missing)');
+      expect(error).not.toMatchObject({ code: 'idempotency_conflict' });
+    });
+
+    it('rejects a receipt timestamp that causally predates its exact outbox row', async () => {
+      provisioning.relayInboxFileToLiveRecipient.mockImplementation((_team, _member, options) =>
+        Promise.resolve({
+          kind: 'native_lead',
+          relayed: 1,
+          recentlyDeliveredMessageId: options?.onlyMessageId,
+        })
+      );
+      const request = makeRequest({
+        requireRuntimeDelivery: true,
+        messageId: 'runtime-conflict-stale-receipt-1',
+        conversationId: 'runtime-conflict-stale-receipt-conversation-1',
+        timestamp: '2026-07-23T00:00:00.000Z',
+        text: 'Original accepted payload',
+      });
+      await service.send(request);
+
+      const outboxPath = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-a', 'sent-cross-team.json');
+      const rows = readFixtureArray(outboxPath) as Record<string, unknown>[];
+      if (rows[0]) {
+        rows[0].runtimeDeliveryAcceptedAt = '2020-01-01T00:00:00.000Z';
+      }
+      fs.writeFileSync(outboxPath, JSON.stringify(rows, null, 2));
+
+      const error: unknown = await service
+        .send({ ...request, text: 'Divergent retry payload' })
+        .catch((candidate: unknown) => candidate);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain('(causally_stale)');
+      expect(error).not.toMatchObject({ code: 'idempotency_conflict' });
+    });
+
+    it('rejects superseded receipt evidence without accepting divergent identity history', async () => {
+      provisioning.relayInboxFileToLiveRecipient.mockImplementation((_team, _member, options) =>
+        Promise.resolve({
+          kind: 'native_lead',
+          relayed: 1,
+          recentlyDeliveredMessageId: options?.onlyMessageId,
+        })
+      );
+      const original = makeRequest({
+        requireRuntimeDelivery: true,
+        messageId: 'runtime-conflict-superseded-receipt-1',
+        conversationId: 'runtime-conflict-superseded-receipt-conversation-1',
+        timestamp: '2026-07-23T00:00:00.000Z',
+        text: 'Original accepted payload',
+      });
+      await service.send(original);
+
+      const outboxPath = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-a', 'sent-cross-team.json');
+      const rows = readFixtureArray(outboxPath) as Record<string, unknown>[];
+      rows.push({
+        ...rows[0],
+        text: 'Newest retry payload',
+        runtimeDeliveryAcceptedAt: '2026-07-23T00:00:02.000Z',
+      });
+      fs.writeFileSync(outboxPath, JSON.stringify(rows, null, 2));
+
+      const error: unknown = await service
+        .send({ ...original, text: 'Newest retry payload' })
+        .catch((candidate: unknown) => candidate);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain('(superseded)');
+      expect(error).not.toMatchObject({ code: 'idempotency_conflict' });
+    });
+
     it('rejects runtime-required delivery when live relay does not prove delivery', async () => {
       provisioning.relayInboxFileToLiveRecipient.mockResolvedValue({
         kind: 'native_lead',

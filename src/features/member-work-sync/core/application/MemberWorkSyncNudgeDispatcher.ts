@@ -45,6 +45,7 @@ export interface MemberWorkSyncNudgeDispatchOptions {
   teamTimeoutMs?: number;
   claimTimeoutMs?: number;
   signal?: AbortSignal;
+  trackSettlingWork?<T>(teamName: string, work: Promise<T>): Promise<T>;
 }
 
 function emptySummary(): MemberWorkSyncNudgeDispatchSummary {
@@ -249,7 +250,11 @@ export class MemberWorkSyncNudgeDispatcher {
       cancelled: false,
       ...(options.signal ? { signal: options.signal } : {}),
     };
-    const work = this.dispatchTeam(teamName, options, nowIso, timeouts, run);
+    const work = this.trackSettlingWork(
+      teamName,
+      options,
+      this.dispatchTeam(teamName, options, nowIso, timeouts, run)
+    );
     void work.catch(() => undefined);
 
     try {
@@ -297,7 +302,13 @@ export class MemberWorkSyncNudgeDispatcher {
       if (isDispatchRunCancelled(run)) {
         break;
       }
-      const result = await this.dispatchItemWithTimeout(item, nowIso, timeouts.itemTimeoutMs, run);
+      const result = await this.dispatchItemWithTimeout(
+        item,
+        nowIso,
+        timeouts.itemTimeoutMs,
+        run,
+        options
+      );
       summary[result] += 1;
     }
     return summary;
@@ -316,12 +327,16 @@ export class MemberWorkSyncNudgeDispatcher {
     }
 
     let timeout: ReturnType<typeof setTimeout> | null = null;
-    const work = outbox.claimDue({
+    const work = this.trackSettlingWork(
       teamName,
-      claimedBy: options.claimedBy,
-      nowIso,
-      limit: options.limit ?? 10,
-    });
+      options,
+      outbox.claimDue({
+        teamName,
+        claimedBy: options.claimedBy,
+        nowIso,
+        limit: options.limit ?? 10,
+      })
+    );
     void work.catch(() => undefined);
 
     try {
@@ -357,11 +372,16 @@ export class MemberWorkSyncNudgeDispatcher {
     item: MemberWorkSyncOutboxItem,
     nowIso: string,
     timeoutMs: number,
-    run: MemberWorkSyncNudgeDispatchRun
+    run: MemberWorkSyncNudgeDispatchRun,
+    options: MemberWorkSyncNudgeDispatchOptions
   ): Promise<keyof Omit<MemberWorkSyncNudgeDispatchSummary, 'claimed'>> {
     let timeout: ReturnType<typeof setTimeout> | null = null;
     const itemRun: MemberWorkSyncNudgeDispatchRun = { cancelled: false, parent: run };
-    const work = this.dispatchItem(item, nowIso, itemRun);
+    const work = this.trackSettlingWork(
+      item.teamName,
+      options,
+      this.dispatchItem(item, nowIso, itemRun)
+    );
     void work.catch(() => undefined);
 
     try {
@@ -385,11 +405,12 @@ export class MemberWorkSyncNudgeDispatcher {
         nowIso,
         `nudge dispatch item timed out after ${timeoutMs}ms`,
         timeoutMs,
-        run
+        run,
+        options
       );
       return 'retryable';
     } catch (error) {
-      await this.tryMarkDispatchItemRetryable(item, nowIso, String(error), timeoutMs, run);
+      await this.tryMarkDispatchItemRetryable(item, nowIso, String(error), timeoutMs, run, options);
       return 'retryable';
     } finally {
       itemRun.cancelled = true;
@@ -404,14 +425,19 @@ export class MemberWorkSyncNudgeDispatcher {
     nowIso: string,
     error: string,
     timeoutMs: number,
-    run?: MemberWorkSyncNudgeDispatchRun
+    run: MemberWorkSyncNudgeDispatchRun | undefined,
+    options: MemberWorkSyncNudgeDispatchOptions
   ): Promise<void> {
     if (isDispatchRunCancelled(run)) {
       return;
     }
     let timeout: ReturnType<typeof setTimeout> | null = null;
     const markTimeoutMs = Math.min(Math.max(1, timeoutMs), 5_000);
-    const work = this.markDispatchItemRetryable(item, nowIso, error, run);
+    const work = this.trackSettlingWork(
+      item.teamName,
+      options,
+      this.markDispatchItemRetryable(item, nowIso, error, run)
+    );
     void work.catch(() => undefined);
 
     try {
@@ -467,6 +493,14 @@ export class MemberWorkSyncNudgeDispatcher {
       return;
     }
     await this.appendDispatchAudit(item, 'nudge_retryable', error);
+  }
+
+  private trackSettlingWork<T>(
+    teamName: string,
+    options: MemberWorkSyncNudgeDispatchOptions,
+    work: Promise<T>
+  ): Promise<T> {
+    return options.trackSettlingWork?.(teamName, work) ?? work;
   }
 
   private async dispatchItem(
