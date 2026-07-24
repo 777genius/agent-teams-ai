@@ -11,6 +11,10 @@ import {
   createTeamLifecycleMutationSlice,
   type TeamLifecycleMutationSlice,
 } from '@features/team-lifecycle/renderer';
+import {
+  createTeamMessageDeliveryRendererSlice,
+  type TeamMessageDeliveryRendererSlice,
+} from '@features/team-message-delivery/renderer';
 import { isActiveProvisioningState } from '@features/team-provisioning';
 import {
   createTeamProvisioningControlSlice,
@@ -160,22 +164,17 @@ import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
 import type { AppState } from '../types';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
-import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type {
   ActiveToolCall,
   AddMemberRequest,
   AddTaskCommentRequest,
-  CrossTeamSendRequest,
   GlobalTask,
-  InboxMessage,
   LeadActivityState,
   LeadContextUsage,
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
   NotificationTarget,
   RetryFailedOpenCodeSecondaryLanesResult,
-  SendMessageRequest,
-  SendMessageResult,
   TaskChangePresenceState,
   TaskComment,
   TeamAgentRuntimeSnapshot,
@@ -906,6 +905,7 @@ export interface TeamSlice
   extends
     TeamGraphLayoutSlice,
     TeamLifecycleMutationSlice,
+    TeamMessageDeliveryRendererSlice,
     TeamMessageFeedRendererSlice,
     TeamProvisioningControlSlice,
     TeamProvisioningLaunchSlice,
@@ -953,16 +953,6 @@ export interface TeamSlice
     projectId: string;
     projectPath: string;
   } | null;
-  sendingMessage: boolean;
-  sendMessageError: string | null;
-  sendMessageWarning: string | null;
-  sendMessageDebugDetails: OpenCodeRuntimeDeliveryDebugDetails | null;
-  lastSendMessageResult: SendMessageResult | null;
-  clearSendMessageRuntimeDiagnostics: (messageId?: string | null) => void;
-  refreshSendMessageRuntimeDeliveryStatus: (
-    teamName: string,
-    input: string | { messageId: string; statusMessageId?: string | null }
-  ) => Promise<void>;
   provisioningRuns: Record<string, TeamProvisioningProgress>;
   /** Synthetic TeamSummary snapshots for teams currently being provisioned (before config.json exists). */
   provisioningSnapshotByTeam: Record<string, TeamSummary>;
@@ -1006,19 +996,6 @@ export interface TeamSlice
     presencesByTaskId: Record<string, TaskChangePresenceState>
   ) => void;
   refreshTeamChangePresence: (teamName: string) => Promise<void>;
-  sendTeamMessage: (teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>;
-  crossTeamTargets: {
-    teamName: string;
-    displayName: string;
-    description?: string;
-    color?: string;
-    leadName?: string;
-    leadColor?: string;
-    isOnline?: boolean;
-  }[];
-  crossTeamTargetsLoading: boolean;
-  fetchCrossTeamTargets: () => Promise<boolean>;
-  sendCrossTeamMessage: (request: CrossTeamSendRequest) => Promise<void>;
   addingComment: boolean;
   addCommentError: string | null;
   addTaskComment: (
@@ -1242,13 +1219,74 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       },
     },
   }),
-  sendingMessage: false,
-  sendMessageError: null,
-  sendMessageWarning: null,
-  sendMessageDebugDetails: null,
-  lastSendMessageResult: null,
-  crossTeamTargets: [],
-  crossTeamTargetsLoading: false,
+  ...createTeamMessageDeliveryRendererSlice<AppState, ContextRequestScope>({
+    analytics: {
+      classifyError: classifyAnalyticsError,
+      recordAttachment: ({ attachments, success, errorClass }) =>
+        recordAttachmentAttachEnd({
+          source: 'message',
+          success,
+          fileCount: attachments.length,
+          totalSizeBytes: getAttachmentTotalSizeBytes(attachments),
+          mimeTypes: getAttachmentMimeTypes(attachments),
+          errorClass,
+        }),
+      recordCrossTeamMessage: (input) => recordCrossTeamMessageSend({ ...input }),
+    },
+    clock: {
+      nowIso,
+    },
+    crossTeamTransport: {
+      listTargets: () => api.crossTeam.listTargets(),
+      send: (request) => api.crossTeam.send(request),
+    },
+    diagnostics: {
+      build: buildOpenCodeRuntimeDeliveryDiagnostics,
+      isHardFailure: isOpenCodeRuntimeDeliveryHardUxFailure,
+    },
+    errors: {
+      mapSendError: mapSendMessageError,
+    },
+    log: {
+      recordCrossTeamTargetsFailure: (error) => logger.error('fetchCrossTeamTargets failed', error),
+    },
+    optimisticMessages: {
+      project: (state, teamName, message) => ({
+        teamMessagesByName: {
+          ...state.teamMessagesByName,
+          [teamName]: upsertOptimisticTeamMessage(
+            getTeamMessagesCacheEntry(state, teamName),
+            message
+          ),
+        },
+      }),
+    },
+    refresh: {
+      refreshMessageHead: (teamName) => get().refreshTeamMessagesHead(teamName),
+    },
+    requestScope: {
+      capture: () => captureContextRequestScope(get),
+      isCurrent: (scope) => isContextRequestScopeCurrent(get, scope),
+    },
+    state: {
+      getState: () => get(),
+      setState: (update) => {
+        if (typeof update === 'function') {
+          set((state) => update(state));
+          return;
+        }
+        set(update);
+      },
+    },
+    transport: {
+      getRuntimeDeliveryStatus: (teamName, messageId) =>
+        unwrapIpc('team:getOpenCodeRuntimeDeliveryStatus', () =>
+          api.teams.getOpenCodeRuntimeDeliveryStatus(teamName, messageId)
+        ),
+      send: (teamName, request) =>
+        unwrapIpc('team:sendMessage', () => api.teams.sendMessage(teamName, request)),
+    },
+  }),
   ...createTeamTaskBoardRendererSlice({
     getState: () => {
       const state = get();
@@ -1922,217 +1960,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       });
     } catch {
       // best-effort lightweight refresh; keep current UI state on failure
-    }
-  },
-
-  sendTeamMessage: async (teamName: string, request: SendMessageRequest) => {
-    set({
-      sendingMessage: true,
-      sendMessageError: null,
-      sendMessageWarning: null,
-      sendMessageDebugDetails: null,
-      lastSendMessageResult: null,
-    });
-    try {
-      const result = await unwrapIpc('team:sendMessage', () =>
-        api.teams.sendMessage(teamName, request)
-      );
-      const runtimeDeliveryFailed = isOpenCodeRuntimeDeliveryHardUxFailure(result.runtimeDelivery);
-      const runtimeDeliveryDiagnostics = buildOpenCodeRuntimeDeliveryDiagnostics(result);
-      if (request.attachments?.length) {
-        recordAttachmentAttachEnd({
-          source: 'message',
-          success: !runtimeDeliveryFailed,
-          fileCount: request.attachments.length,
-          totalSizeBytes: getAttachmentTotalSizeBytes(request.attachments),
-          mimeTypes: getAttachmentMimeTypes(request.attachments),
-          errorClass: runtimeDeliveryFailed ? 'runtime_missing' : 'none',
-        });
-      }
-      const optimisticMessage: InboxMessage = {
-        from: request.from ?? 'user',
-        to: request.to ?? request.member,
-        text: request.text,
-        timestamp: request.timestamp ?? nowIso(),
-        read: result.deliveredViaStdin === true,
-        taskRefs: request.taskRefs?.length ? request.taskRefs : undefined,
-        actionMode: request.actionMode,
-        summary: request.summary,
-        color: request.color,
-        messageId: result.messageId,
-        relayOfMessageId: request.relayOfMessageId,
-        source: request.source ?? 'user_sent',
-        attachments: request.attachments?.length ? request.attachments : undefined,
-        leadSessionId: request.leadSessionId,
-        conversationId: request.conversationId,
-        replyToConversationId: request.replyToConversationId,
-        toolSummary: request.toolSummary,
-        toolCalls: request.toolCalls,
-        messageKind: request.messageKind,
-        slashCommand: request.slashCommand,
-        commandOutput: request.commandOutput,
-      };
-      set((state) => ({
-        sendingMessage: false,
-        sendMessageError: null,
-        sendMessageWarning: runtimeDeliveryDiagnostics.warning,
-        sendMessageDebugDetails: runtimeDeliveryDiagnostics.debugDetails,
-        lastSendMessageResult: runtimeDeliveryFailed ? null : result,
-        teamMessagesByName: {
-          ...state.teamMessagesByName,
-          [teamName]: upsertOptimisticTeamMessage(
-            getTeamMessagesCacheEntry(state, teamName),
-            optimisticMessage
-          ),
-        },
-      }));
-      await get().refreshTeamMessagesHead(teamName);
-      return result;
-    } catch (error) {
-      if (request.attachments?.length) {
-        recordAttachmentAttachEnd({
-          source: 'message',
-          success: false,
-          fileCount: request.attachments.length,
-          totalSizeBytes: getAttachmentTotalSizeBytes(request.attachments),
-          mimeTypes: getAttachmentMimeTypes(request.attachments),
-          errorClass: classifyAnalyticsError(error),
-        });
-      }
-      set({
-        sendingMessage: false,
-        lastSendMessageResult: null,
-        sendMessageWarning: null,
-        sendMessageDebugDetails: null,
-        sendMessageError: mapSendMessageError(error),
-      });
-      throw error;
-    }
-  },
-
-  clearSendMessageRuntimeDiagnostics: (messageId?: string | null) => {
-    set((state) => {
-      if (messageId && state.sendMessageDebugDetails?.messageId !== messageId) {
-        return {};
-      }
-      if (!state.sendMessageWarning && !state.sendMessageDebugDetails) {
-        return {};
-      }
-      return {
-        sendMessageWarning: null,
-        sendMessageDebugDetails: null,
-      };
-    });
-  },
-
-  refreshSendMessageRuntimeDeliveryStatus: async (teamName, input) => {
-    const normalizedMessageId = typeof input === 'string' ? input.trim() : input.messageId.trim();
-    const statusMessageId =
-      typeof input === 'string'
-        ? normalizedMessageId
-        : input.statusMessageId?.trim() || normalizedMessageId;
-    if (!normalizedMessageId) return;
-    if (get().sendMessageDebugDetails?.messageId !== normalizedMessageId) return;
-    let status = await unwrapIpc('team:getOpenCodeRuntimeDeliveryStatus', () =>
-      api.teams.getOpenCodeRuntimeDeliveryStatus(teamName, statusMessageId)
-    );
-    if (!status) return;
-    if (statusMessageId !== normalizedMessageId) {
-      const blockerUserVisibleState = status.userVisibleImpact?.state;
-      const blockerStillChecking =
-        blockerUserVisibleState !== undefined
-          ? blockerUserVisibleState === 'checking'
-          : status.responsePending === true;
-      if (!blockerStillChecking) {
-        const ownStatus = await unwrapIpc('team:getOpenCodeRuntimeDeliveryStatus', () =>
-          api.teams.getOpenCodeRuntimeDeliveryStatus(teamName, normalizedMessageId)
-        );
-        if (!ownStatus) return;
-        status = ownStatus;
-      }
-    }
-    const diagnostics = buildOpenCodeRuntimeDeliveryDiagnostics({
-      deliveredToInbox: true,
-      messageId: normalizedMessageId,
-      runtimeDelivery: status,
-    });
-    set((state) => {
-      if (state.sendMessageDebugDetails?.messageId !== normalizedMessageId) {
-        return {};
-      }
-      return {
-        sendMessageWarning: diagnostics.warning,
-        sendMessageDebugDetails: diagnostics.debugDetails,
-      };
-    });
-  },
-
-  fetchCrossTeamTargets: async () => {
-    const requestScope = captureContextRequestScope(get);
-    set({ crossTeamTargetsLoading: true });
-    try {
-      const targets = await api.crossTeam.listTargets();
-      if (!isContextRequestScopeCurrent(get, requestScope)) {
-        return false;
-      }
-      set({ crossTeamTargets: targets, crossTeamTargetsLoading: false });
-      return true;
-    } catch (error) {
-      if (!isContextRequestScopeCurrent(get, requestScope)) {
-        return false;
-      }
-      logger.error('fetchCrossTeamTargets failed', error);
-      set({ crossTeamTargets: [], crossTeamTargetsLoading: false });
-      return false;
-    }
-  },
-
-  sendCrossTeamMessage: async (request: CrossTeamSendRequest) => {
-    set({
-      sendingMessage: true,
-      sendMessageError: null,
-      sendMessageWarning: null,
-      sendMessageDebugDetails: null,
-      lastSendMessageResult: null,
-    });
-    try {
-      const result = await api.crossTeam.send(request);
-      recordCrossTeamMessageSend({
-        source: request.fromMember === 'user' ? 'user' : 'runtime',
-        success: true,
-        hasReplyTo: Boolean(request.replyToConversationId),
-        conversationDepth: request.chainDepth ?? null,
-        hasTaskRefs: (request.taskRefs?.length ?? 0) > 0,
-        errorClass: 'none',
-      });
-      set({
-        sendingMessage: false,
-        sendMessageError: null,
-        sendMessageWarning: null,
-        sendMessageDebugDetails: null,
-        lastSendMessageResult: {
-          messageId: result.messageId,
-          deliveredToInbox: result.deliveredToInbox,
-          deduplicated: result.deduplicated,
-        },
-      });
-      await get().refreshTeamMessagesHead(request.fromTeam);
-    } catch (error) {
-      recordCrossTeamMessageSend({
-        source: request.fromMember === 'user' ? 'user' : 'runtime',
-        success: false,
-        hasReplyTo: Boolean(request.replyToConversationId),
-        conversationDepth: request.chainDepth ?? null,
-        hasTaskRefs: (request.taskRefs?.length ?? 0) > 0,
-        errorClass: classifyAnalyticsError(error),
-      });
-      set({
-        sendingMessage: false,
-        lastSendMessageResult: null,
-        sendMessageWarning: null,
-        sendMessageDebugDetails: null,
-        sendMessageError: mapSendMessageError(error),
-      });
     }
   },
 
