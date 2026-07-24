@@ -33,6 +33,8 @@ export interface OpenCodeRuntimeToolApprovalSyncInput {
 }
 
 export interface OpenCodeRuntimePermissionAnswerRun {
+  cancelRequested?: boolean;
+  processKilled?: boolean;
   mixedSecondaryLanes?: MixedSecondaryRuntimeLaneState[];
 }
 
@@ -373,23 +375,6 @@ async function stopUnretainableOpenCodePermissionRuntime<
     );
   }
 
-  if (isPrimary) {
-    if (ports.deleteRuntimeAdapterRunIfOwned) {
-      ports.deleteRuntimeAdapterRunIfOwned(
-        expectedIdentity.teamName,
-        expectedIdentity.runtimeRunId
-      );
-    } else {
-      ports.deleteRuntimeAdapterRunByTeam(expectedIdentity.teamName);
-    }
-  } else {
-    ports.deleteSecondaryRuntimeRunIfOwned?.(
-      expectedIdentity.teamName,
-      expectedIdentity.laneId,
-      expectedIdentity.runtimeRunId
-    );
-  }
-
   const diagnostics = Array.from(
     new Set(
       [
@@ -411,6 +396,23 @@ async function stopUnretainableOpenCodePermissionRuntime<
   } catch (error) {
     ports.logWarning(
       `[${expectedIdentity.teamName}] Failed to mark OpenCode runtime lane ${expectedIdentity.laneId} degraded after cleanup: ${getErrorMessage(error)}`
+    );
+  }
+  assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
+  if (isPrimary) {
+    if (ports.deleteRuntimeAdapterRunIfOwned) {
+      ports.deleteRuntimeAdapterRunIfOwned(
+        expectedIdentity.teamName,
+        expectedIdentity.runtimeRunId
+      );
+    } else {
+      ports.deleteRuntimeAdapterRunByTeam(expectedIdentity.teamName);
+    }
+  } else {
+    ports.deleteSecondaryRuntimeRunIfOwned?.(
+      expectedIdentity.teamName,
+      expectedIdentity.laneId,
+      expectedIdentity.runtimeRunId
     );
   }
   assertTrackedRuntimeApprovalRunIdentity(expectedIdentity, ports);
@@ -459,6 +461,7 @@ function captureTrackedRuntimeApprovalIdentity<TRun extends OpenCodeRuntimePermi
     throw new Error(`Run not found for team "${teamName}"`);
   }
   const run = ports.getRun(trackedRunId);
+  assertRuntimeApprovalRunNotStopping(teamName, run);
   if (laneId === 'primary') {
     if (trackedRunId !== runtimeRunId) {
       throw new Error(
@@ -553,6 +556,7 @@ function assertTrackedRuntimeApprovalRunIdentity<TRun extends OpenCodeRuntimePer
       `Stale runtime approval: tracked run identity changed for team "${expectedIdentity.teamName}"`
     );
   }
+  assertRuntimeApprovalRunNotStopping(expectedIdentity.teamName, run);
   if (!expectedIdentity.lane) {
     return;
   }
@@ -568,6 +572,15 @@ function assertTrackedRuntimeApprovalRunIdentity<TRun extends OpenCodeRuntimePer
     throw new Error(
       `Stale runtime approval: secondary lane runId mismatch for team "${expectedIdentity.teamName}" lane ${lane.laneId} (expected ${expectedIdentity.runtimeRunId}, got ${lane.runId ?? 'none'})`
     );
+  }
+}
+
+function assertRuntimeApprovalRunNotStopping(
+  teamName: string,
+  run: OpenCodeRuntimePermissionAnswerRun | undefined
+): void {
+  if (run?.cancelRequested || run?.processKilled) {
+    throw new Error(`Stale runtime approval: tracked run is stopping for team "${teamName}"`);
   }
 }
 

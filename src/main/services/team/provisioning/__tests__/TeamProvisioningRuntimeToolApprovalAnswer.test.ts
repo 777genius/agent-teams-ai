@@ -461,6 +461,51 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
     );
   });
 
+  it('keeps the stopped primary owner reserved until its degraded state is persisted', async () => {
+    const committedResult = makeResult({
+      launchPhase: 'finished',
+      teamLaunchState: 'partial_failure',
+      members: {
+        Worker: {
+          memberName: 'Worker',
+          providerId: 'opencode',
+          launchState: 'failed_to_start',
+          agentToolAccepted: false,
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          diagnostics: ['Runtime rejected the request'],
+        },
+      },
+      diagnostics: ['Runtime rejected the request'],
+    });
+    let signalDegradedWriteStarted!: () => void;
+    const degradedWriteStarted = new Promise<void>((resolve) => {
+      signalDegradedWriteStarted = resolve;
+    });
+    let resolveDegradedWrite!: () => void;
+    const degradedWrite = new Promise<void>((resolve) => {
+      resolveDegradedWrite = resolve;
+    });
+    const ports = makePorts({ committedResult });
+    vi.mocked(ports.markOpenCodeRuntimeLaneDegraded!).mockImplementation(async () => {
+      signalDegradedWriteStarted();
+      await degradedWrite;
+    });
+
+    const answer = answerOpenCodeRuntimeToolApproval(makeEntry(), false, ports);
+    await degradedWriteStarted;
+
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')).toMatchObject({
+      runId: 'run-a',
+      providerId: 'opencode',
+    });
+
+    resolveDegradedWrite();
+    await answer;
+    expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
+  });
+
   it('uses the exact primary owner cwd and retains ownership after cleanup stop fails', async () => {
     const committedResult = makeResult({
       launchPhase: 'finished',
@@ -597,6 +642,42 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
       runId: 'run-a',
       detail: 'permission-denied',
     });
+  });
+
+  it('does not send an answer after stop marks the tracked run cancelled while launch state is read', async () => {
+    const run: TestRun = {
+      runId: 'run-a',
+      teamName: 'team-a',
+      cancelRequested: false,
+      processKilled: false,
+    };
+    let signalReadStarted!: () => void;
+    const readStarted = new Promise<void>((resolve) => {
+      signalReadStarted = resolve;
+    });
+    let resolveRead!: (state: PersistedTeamLaunchSnapshot | null) => void;
+    const readResult = new Promise<PersistedTeamLaunchSnapshot | null>((resolve) => {
+      resolveRead = resolve;
+    });
+    const ports = makePorts({ run });
+    vi.mocked(ports.readLaunchState).mockImplementation(async () => {
+      signalReadStarted();
+      return readResult;
+    });
+
+    const answer = answerOpenCodeRuntimeToolApproval(makeEntry(), true, ports);
+    await readStarted;
+    run.cancelRequested = true;
+    run.processKilled = true;
+    resolveRead(previousLaunchState);
+
+    await expect(answer).rejects.toThrow(
+      'Stale runtime approval: tracked run is stopping for team "team-a"'
+    );
+    expect(ports.buildOpenCodeRuntimePermissionAnswerInput).not.toHaveBeenCalled();
+    expect(ports.getOpenCodeRuntimeAdapter()?.answerRuntimePermission).not.toHaveBeenCalled();
+    expect(ports.persistOpenCodeRuntimeAdapterLaunchResult).not.toHaveBeenCalled();
+    expect(ports.emitTeamChange).not.toHaveBeenCalled();
   });
 
   it('does not send a primary answer after the tracked run changes while launch state is read', async () => {
