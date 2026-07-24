@@ -11,7 +11,6 @@ import {
   TaskChangesEmptyState,
   toTaskChangeSetV2,
 } from '@features/change-review/renderer';
-import { isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
 import { buildSelectionAction } from '@renderer/utils/buildSelectionAction';
 import { X } from 'lucide-react';
@@ -89,6 +88,7 @@ interface ChangeReviewDialogViewProps {
   reviewActionHistory: ReviewUndoAction[];
   reviewRedoHistory: ReviewRedoAction[];
   reviewActionPersistenceStatus: ReviewActionPersistenceStatus;
+  isMacElectron: boolean;
   hydration: ChangeReviewDialogHydrationViewState;
   canAcceptAll: boolean;
   canRejectAll: boolean;
@@ -137,6 +137,7 @@ export const ChangeReviewDialogView = ({
   reviewActionHistory,
   reviewRedoHistory,
   reviewActionPersistenceStatus,
+  isMacElectron,
   hydration,
   canAcceptAll,
   canRejectAll,
@@ -182,9 +183,6 @@ export const ChangeReviewDialogView = ({
     () => buildChangeReviewTitle({ mode, memberName, taskId, globalTasks }),
     [globalTasks, memberName, mode, taskId]
   );
-  const isMacElectron =
-    isElectronMode() && window.navigator.userAgent.toLowerCase().includes('mac');
-
   if (!open) return null;
 
   const {

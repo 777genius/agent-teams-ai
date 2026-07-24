@@ -17,7 +17,7 @@ import {
   createChangeReviewHunkDecisionStatePort,
 } from '@features/change-review/renderer';
 import { buildReviewRestoreDecisionState } from '@features/review-mutations';
-import { api } from '@renderer/api';
+import { api, isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { getFileReviewKey } from '@renderer/utils/reviewKey';
 
@@ -51,6 +51,12 @@ import type {
   ChangeReviewHunkDecisionPolicy,
   ChangeReviewOperationStatePort,
 } from '@features/change-review/renderer';
+
+export const changeReviewDialogEnvironment = {
+  isElectron: (): boolean => isElectronMode(),
+  isMacElectron: (): boolean =>
+    isElectronMode() && window.navigator.userAgent.toLowerCase().includes('mac'),
+};
 
 export const changeReviewConflictQueryPort = createChangeReviewConflictQueryPort(() => api.review);
 export const changeReviewConflictCommandPort = createChangeReviewConflictCommandPort(

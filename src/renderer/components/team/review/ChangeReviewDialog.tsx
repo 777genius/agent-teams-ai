@@ -28,7 +28,7 @@ import {
   useChangeReviewOperationState,
   useChangeReviewScopeIdentity,
 } from '@features/change-review/renderer';
-import { api, isElectronMode } from '@renderer/api';
+import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { getFileHunkCount, REVIEW_INSTANT_APPLY } from '@renderer/store/slices/changeReviewSlice';
 import {
@@ -42,6 +42,7 @@ import {
   changeReviewConflictQueryPort,
   changeReviewConflictStateBridge,
   changeReviewDecisionPersistencePort,
+  changeReviewDialogEnvironment,
   changeReviewDialogLifecycleStatePort,
   changeReviewDialogViewStatePolicy,
   changeReviewDraftHistoryPort,
@@ -464,7 +465,7 @@ export const ChangeReviewDialog = ({
   const editedCount = Object.keys(editedContents).length;
   const externalChangeController = useChangeReviewExternalChangeController({
     open,
-    enabled: isElectronMode(),
+    enabled: changeReviewDialogEnvironment.isElectron(),
     projectPath,
     watchedFilePathsKey: watchedReviewFilePathsKey,
     reviewScope,
@@ -761,6 +762,7 @@ export const ChangeReviewDialog = ({
       reviewActionHistory={reviewActionHistory}
       reviewRedoHistory={reviewRedoHistory}
       reviewActionPersistenceStatus={reviewActionPersistenceStatus}
+      isMacElectron={changeReviewDialogEnvironment.isMacElectron()}
       hydration={{
         decisionKey: decisionHydrationKey,
         decisionReady: decisionHydrationReady,
