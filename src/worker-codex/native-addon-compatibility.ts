@@ -1,11 +1,5 @@
 import { constants } from "node:fs";
-import {
-  lstat,
-  open,
-  readdir,
-  realpath,
-  stat,
-} from "node:fs/promises";
+import { lstat, open, readdir, realpath, stat } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { discoverNativeAddonFilesNative } from "./dependency-native-traversal";
 
@@ -28,9 +22,20 @@ export type NativeAddonCompatibilityResult = {
   readonly incompatiblePackageNames: readonly string[];
 };
 
+export type NativeAddonRuntimeTarget = {
+  readonly platform: string;
+  readonly arch: string;
+  readonly abi: string;
+};
+
 export async function inspectNativeAddonCompatibility(
   workspacePath: string,
   expectedAbi = process.versions.modules,
+  runtimeTarget: NativeAddonRuntimeTarget = {
+    platform: process.platform,
+    arch: process.arch,
+    abi: expectedAbi ?? "",
+  },
 ): Promise<NativeAddonCompatibilityResult> {
   const deadline = Date.now() + MAX_NATIVE_ADDON_INSPECTION_MS;
   if (!expectedAbi) {
@@ -78,6 +83,9 @@ export async function inspectNativeAddonCompatibility(
   const incompatiblePackageNames = new Set<string>();
   for (const addon of materializedAddons) {
     assertInspectionDeadline(deadline);
+    if (!isRuntimeCompatibleNativeAddonPath(addon.path, runtimeTarget)) {
+      continue;
+    }
     const versions = await classicNodeModuleVersions(addon.path, addon.size);
     if (
       versions.length > 0 &&
@@ -101,6 +109,87 @@ export async function inspectNativeAddonCompatibility(
     incompatibleAddonCount,
     incompatiblePackageNames: [...incompatiblePackageNames].sort(),
   };
+}
+
+export function isRuntimeCompatibleNativeAddonPath(
+  addonPath: string,
+  runtime: NativeAddonRuntimeTarget,
+): boolean {
+  const segments = addonPath.replaceAll("\\", "/").split("/");
+  const prebuildsIndex = segments.lastIndexOf("prebuilds");
+  if (prebuildsIndex >= 0) {
+    return nativeTargetLabelMatches(
+      segments[prebuildsIndex + 1] ?? "",
+      runtime,
+    );
+  }
+  const binIndex = segments.lastIndexOf("bin");
+  if (binIndex >= 0) {
+    return nativeTargetLabelMatches(segments[binIndex + 1] ?? "", runtime);
+  }
+  for (const segment of segments) {
+    const nodeBinding = /^node-v(\d+)-(.+)$/.exec(segment);
+    if (nodeBinding) {
+      return (
+        nodeBinding[1] === runtime.abi &&
+        nativeTargetLabelMatches(nodeBinding[2] ?? "", runtime)
+      );
+    }
+    const napiBinding = /^napi-v\d+-(.+)$/.exec(segment);
+    if (napiBinding) {
+      return nativeTargetLabelMatches(napiBinding[1] ?? "", runtime);
+    }
+  }
+  return true;
+}
+
+function nativeTargetLabelMatches(
+  targetLabel: string,
+  runtime: NativeAddonRuntimeTarget,
+): boolean {
+  const normalized = targetLabel
+    .toLowerCase()
+    .replaceAll("x86_64", "x64")
+    .replaceAll("aarch64", "arm64")
+    .replaceAll("amd64", "x64")
+    .replaceAll("armv7l", "arm");
+  const tokens = normalized.split(/[-_+]/);
+  const platformAliases: Readonly<Record<string, readonly string[]>> = {
+    darwin: ["darwin", "macos"],
+    linux: ["linux"],
+    win32: ["win32", "windows"],
+  };
+  const archAliases: Readonly<Record<string, readonly string[]>> = {
+    arm: ["arm", "armv7"],
+    arm64: ["arm64"],
+    ia32: ["ia32", "x86"],
+    ppc64: ["ppc64", "ppc64le"],
+    x64: ["x64"],
+  };
+  const expectedPlatforms = platformAliases[runtime.platform] ?? [
+    runtime.platform,
+  ];
+  const expectedArchitectures = archAliases[runtime.arch] ?? [runtime.arch];
+  const declaredPlatforms = new Set(
+    Object.values(platformAliases)
+      .flat()
+      .filter((candidate) => tokens.includes(candidate)),
+  );
+  const declaredArchitectures = new Set(
+    Object.values(archAliases)
+      .flat()
+      .filter((candidate) => tokens.includes(candidate)),
+  );
+  const trailingAbi = tokens.at(-1);
+  const declaredAbi =
+    trailingAbi && /^\d{2,4}$/.test(trailingAbi) ? trailingAbi : undefined;
+  return (
+    (declaredPlatforms.size === 0 ||
+      expectedPlatforms.some((candidate) => tokens.includes(candidate))) &&
+    (declaredArchitectures.size === 0 ||
+      expectedArchitectures.some((candidate) => tokens.includes(candidate))) &&
+    (declaredAbi === undefined || declaredAbi === runtime.abi)
+  );
 }
 
 async function resolveNativeAddonPackageName(

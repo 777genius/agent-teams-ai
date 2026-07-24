@@ -87,22 +87,21 @@ export async function resolvePnpmNativeGenerationIdentity(input: {
     libcIdentity,
     toolchainIdentity,
     buildPolicyFingerprint,
-  ] =
-    await Promise.all([
-      resolveTargetNodeIdentity(input.nodeExecutablePath),
-      resolveEffectivePnpmVersion(input),
-      resolveLibcIdentity(),
-      resolveToolchainIdentity(),
-      resolvePnpmBuildPolicyFingerprint(input.workspacePath),
-    ]);
+  ] = await Promise.all([
+    resolveTargetNodeIdentity(input.nodeExecutablePath),
+    resolveEffectivePnpmVersion(input),
+    resolveLibcIdentity(),
+    resolveToolchainIdentity(),
+    resolvePnpmBuildPolicyFingerprint(input.workspacePath),
+  ]);
   return {
     schemaVersion: PNPM_NATIVE_GENERATION_SCHEMA_VERSION,
     dependencyFingerprint: input.dependencyFingerprint,
     buildPolicyFingerprint,
     nodeVersion: node.version,
     nodeModulesAbi: node.modulesAbi,
-    platform: platform(),
-    arch: arch(),
+    platform: node.platform,
+    arch: node.arch,
     pnpmVersion,
     libcIdentity,
     toolchainIdentity,
@@ -159,9 +158,9 @@ export async function findVerifiedPnpmNativeGeneration(
       throw new Error("dependency_pnpm_native_generation_manifest_invalid");
     }
     const manifest = parseManifest(
-      (
-        await readRegularFileNoFollow(manifestPath, manifestStat.size)
-      ).toString("utf8"),
+      (await readRegularFileNoFollow(manifestPath, manifestStat.size)).toString(
+        "utf8",
+      ),
     );
     if (
       manifest.key !== key ||
@@ -290,7 +289,10 @@ async function ensureGenerationRoot(cacheRoot: string): Promise<string> {
   return generationRoot;
 }
 
-async function assertSafeDirectory(path: string, parent: string): Promise<void> {
+async function assertSafeDirectory(
+  path: string,
+  parent: string,
+): Promise<void> {
   const pathStat = await lstat(path);
   if (pathStat.isSymbolicLink() || !pathStat.isDirectory()) {
     throw new Error("dependency_pnpm_native_cache_path_invalid");
@@ -512,19 +514,29 @@ function isGenerationValidationError(error: unknown): boolean {
 
 async function resolveTargetNodeIdentity(
   nodeExecutablePath = process.execPath,
-): Promise<{ readonly version: string; readonly modulesAbi: string }> {
+): Promise<{
+  readonly version: string;
+  readonly modulesAbi: string;
+  readonly platform: string;
+  readonly arch: string;
+}> {
   if (nodeExecutablePath === process.execPath) {
     const modulesAbi = process.versions.modules;
     if (!modulesAbi) {
       throw new Error("dependency_native_addon_abi_unavailable");
     }
-    return { version: process.versions.node, modulesAbi };
+    return {
+      version: process.versions.node,
+      modulesAbi,
+      platform: process.platform,
+      arch: process.arch,
+    };
   }
   const { stdout } = await execFileAsync(
     nodeExecutablePath,
     [
       "-e",
-      "process.stdout.write(JSON.stringify({version:process.versions.node,modulesAbi:process.versions.modules}))",
+      "process.stdout.write(JSON.stringify({version:process.versions.node,modulesAbi:process.versions.modules,platform:process.platform,arch:process.arch}))",
     ],
     { timeout: 5_000, maxBuffer: MAX_VERSION_OUTPUT_BYTES },
   );
@@ -538,12 +550,21 @@ async function resolveTargetNodeIdentity(
     !isRecord(parsed) ||
     typeof parsed.version !== "string" ||
     typeof parsed.modulesAbi !== "string" ||
+    typeof parsed.platform !== "string" ||
+    typeof parsed.arch !== "string" ||
     parsed.version.length === 0 ||
-    parsed.modulesAbi.length === 0
+    parsed.modulesAbi.length === 0 ||
+    parsed.platform.length === 0 ||
+    parsed.arch.length === 0
   ) {
     throw new Error("dependency_target_node_identity_invalid");
   }
-  return { version: parsed.version, modulesAbi: parsed.modulesAbi };
+  return {
+    version: parsed.version,
+    modulesAbi: parsed.modulesAbi,
+    platform: parsed.platform,
+    arch: parsed.arch,
+  };
 }
 
 async function resolveEffectivePnpmVersion(input: {
@@ -611,10 +632,7 @@ async function resolvePnpmBuildPolicyFingerprint(
       if (entryStat.size > MAX_BUILD_POLICY_FILE_BYTES) {
         throw new Error("dependency_pnpm_build_policy_file_size_limit");
       }
-      const contents = await readRegularFileNoFollow(
-        entryPath,
-        entryStat.size,
-      );
+      const contents = await readRegularFileNoFollow(entryPath, entryStat.size);
       const relativePath = relative(workspaceRoot, entryPath)
         .split(sep)
         .join("/");
@@ -647,10 +665,9 @@ function isPnpmBuildPolicyFile(path: string): boolean {
 function exactDeclaredPnpmVersion(
   packageManagerVersionSpec: string | undefined,
 ): string | undefined {
-  const match =
-    /^pnpm@(\d+\.\d+\.\d+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?)$/.exec(
-      packageManagerVersionSpec ?? "",
-    );
+  const match = /^pnpm@(\d+\.\d+\.\d+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?)$/.exec(
+    packageManagerVersionSpec ?? "",
+  );
   return match?.[1];
 }
 
@@ -675,8 +692,7 @@ async function resolveLibcIdentity(): Promise<string> {
 }
 
 let cachedToolchainIdentity:
-  | { readonly cacheKey: string; readonly value: Promise<string> }
-  | undefined;
+  { readonly cacheKey: string; readonly value: Promise<string> } | undefined;
 
 function resolveToolchainIdentity(): Promise<string> {
   const cacheKey = [

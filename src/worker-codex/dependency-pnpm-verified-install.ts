@@ -2,6 +2,7 @@ import { sanitizeNodeDependencyEnvironment } from "./dependency-environment-safe
 import { withDependencyBootstrapWorkspaceTransaction } from "./dependency-bootstrap-workspace-transaction";
 import {
   inspectNativeAddonCompatibility,
+  isRuntimeCompatibleNativeAddonPath,
   resolveNativeAddonHeaderRoot,
 } from "./native-addon-compatibility";
 import {
@@ -122,6 +123,11 @@ export async function runPnpmInstallWithVerifiedSideEffectsCache(input: {
         let compatibility = await inspectNativeAddonCompatibility(
           input.workspacePath,
           identity.nodeModulesAbi,
+          {
+            platform: identity.platform,
+            arch: identity.arch,
+            abi: identity.nodeModulesAbi,
+          },
         );
         if (
           existing &&
@@ -154,6 +160,11 @@ export async function runPnpmInstallWithVerifiedSideEffectsCache(input: {
           compatibility = await inspectNativeAddonCompatibility(
             input.workspacePath,
             identity.nodeModulesAbi,
+            {
+              platform: identity.platform,
+              arch: identity.arch,
+              abi: identity.nodeModulesAbi,
+            },
           );
           if (compatibility.incompatibleAddonCount > 0) {
             throw new Error(
@@ -165,6 +176,9 @@ export async function runPnpmInstallWithVerifiedSideEffectsCache(input: {
         await verifyNativeAddonsUnderTargetNode({
           addonPaths: compatibility.inspectedAddonPaths,
           nodeExecutablePath: input.nodeExecutablePath ?? process.execPath,
+          runtimePlatform: identity.platform,
+          runtimeArch: identity.arch,
+          runtimeAbi: identity.nodeModulesAbi,
           workspacePath: input.workspacePath,
           runCommand: input.runCommand,
         });
@@ -201,6 +215,9 @@ export async function runPnpmInstallWithVerifiedSideEffectsCache(input: {
 async function verifyNativeAddonsUnderTargetNode(input: {
   readonly addonPaths: readonly string[];
   readonly nodeExecutablePath: string;
+  readonly runtimePlatform: string;
+  readonly runtimeArch: string;
+  readonly runtimeAbi: string;
   readonly workspacePath: string;
   readonly runCommand: DependencyCommandRunner;
 }): Promise<void> {
@@ -217,6 +234,15 @@ async function verifyNativeAddonsUnderTargetNode(input: {
     batchBytes = 2;
   };
   for (const addonPath of input.addonPaths) {
+    if (
+      !isRuntimeCompatibleNativeAddonPath(addonPath, {
+        platform: input.runtimePlatform,
+        arch: input.runtimeArch,
+        abi: input.runtimeAbi,
+      })
+    ) {
+      continue;
+    }
     const encodedBytes = Buffer.byteLength(JSON.stringify(addonPath), "utf8");
     if (
       batch.length > 0 &&

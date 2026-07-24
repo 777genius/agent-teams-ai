@@ -1,4 +1,5 @@
 import {
+  chmod,
   mkdir,
   mkdtemp,
   readFile,
@@ -15,7 +16,10 @@ import {
   pnpmNativeGenerationKey,
   type PnpmNativeGenerationIdentity,
 } from "../dependency-pnpm-side-effects-cache";
-import { inspectNativeAddonCompatibility } from "../native-addon-compatibility";
+import {
+  inspectNativeAddonCompatibility,
+  isRuntimeCompatibleNativeAddonPath,
+} from "../native-addon-compatibility";
 
 describe("pnpm verified side-effects cache", () => {
   it("reuses one verified generation without a second native rebuild", async () => {
@@ -265,10 +269,7 @@ describe("pnpm verified side-effects cache", () => {
         }),
       ]);
 
-      expect([first.status, second.status]).toEqual([
-        "installed",
-        "installed",
-      ]);
+      expect([first.status, second.status]).toEqual(["installed", "installed"]);
       expect(fetchCount).toBe(1);
       expect(rebuildCount).toBe(1);
       expect(await publishedGenerationKeys(cacheRoot)).toHaveLength(1);
@@ -363,8 +364,13 @@ describe("pnpm verified side-effects cache", () => {
       );
       for (const relativePath of [
         ["build", "Release", "build.node"],
-        ["prebuilds", "linux-x64", "prebuild.node"],
-        ["lib", "binding", "node-v137-linux-x64", "binding.node"],
+        ["prebuilds", `${process.platform}-${process.arch}`, "prebuild.node"],
+        [
+          "lib",
+          "binding",
+          `node-v${process.versions.modules}-${process.platform}-${process.arch}`,
+          "binding.node",
+        ],
       ]) {
         const addonPath = join(packageRoot, ...relativePath);
         await mkdir(join(addonPath, ".."), { recursive: true });
@@ -381,6 +387,184 @@ describe("pnpm verified side-effects cache", () => {
           expect.stringContaining("binding.node"),
         ]),
       );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("probes only runtime-compatible prebuilds while accounting for foreign artifacts", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnpm-native-prebuild-target-"));
+    const cacheRoot = join(root, "cache");
+    const workspace = join(root, "workspace");
+    const activeTarget = `${process.platform}-${process.arch}`;
+    const unqualifiedTarget = "napi-v3";
+    const foreignTargets = ["darwin-arm64", "linux-x64", "win32-x64"].filter(
+      (target) => target !== activeTarget,
+    );
+    let verifiedAddonPaths: readonly string[] = [];
+    let rebuildCount = 0;
+    try {
+      await writeFixture(workspace);
+      const result = await runDependencyBootstrap({
+        workspacePath: workspace,
+        cacheRoot,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async (command, args, options) => {
+          if (command === "pnpm" && args[0] === "install") {
+            await materializePrebuildPackage(options.cwd, [
+              activeTarget,
+              unqualifiedTarget,
+              ...foreignTargets,
+            ]);
+            for (const foreignTarget of foreignTargets) {
+              await writeFile(
+                prebuildAddonPath(options.cwd, foreignTarget),
+                "node_register_module_v999",
+              );
+            }
+          }
+          if (command === "pnpm" && args[0] === "rebuild") {
+            rebuildCount += 1;
+          }
+          if (command === process.execPath && args[0] === "-e") {
+            verifiedAddonPaths = JSON.parse(args[2] ?? "[]") as string[];
+          }
+        },
+      });
+
+      expect(result.status, result.warnings.join("\n")).toBe("installed");
+      expect(rebuildCount).toBe(0);
+      expect(result.nativeAddonCount).toBe(2 + foreignTargets.length);
+      expect(verifiedAddonPaths).toHaveLength(2);
+      expect(verifiedAddonPaths.join("\n")).toContain(
+        `/prebuilds/${activeTarget}/`,
+      );
+      expect(verifiedAddonPaths.join("\n")).toContain(
+        `/prebuilds/${unqualifiedTarget}/`,
+      );
+      for (const foreignTarget of foreignTargets) {
+        expect(verifiedAddonPaths.join("\n")).not.toContain(
+          `/prebuilds/${foreignTarget}/`,
+        );
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still rejects an ABI mismatch in the active prebuild through full bootstrap", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnpm-native-active-mismatch-"));
+    const cacheRoot = join(root, "cache");
+    const workspace = join(root, "workspace");
+    const activeTarget = `${process.platform}-${process.arch}`;
+    try {
+      await writeFixture(workspace);
+      const result = await runDependencyBootstrap({
+        workspacePath: workspace,
+        cacheRoot,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async (command, args, options) => {
+          if (command === "pnpm" && args[0] === "install") {
+            await materializePrebuildPackage(
+              options.cwd,
+              [activeTarget],
+              "999",
+            );
+          }
+        },
+      });
+
+      expect(result.status).toBe("install_failed");
+      expect(result.warnings).toContain(
+        `dependency_install_failed:dependency_native_addon_abi_mismatch:${process.versions.modules}`,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("classifies node-pty bin targets and x86_64 aliases without hiding unknown layouts", () => {
+    const runtime = { platform: "linux", arch: "x64", abi: "143" };
+    expect(
+      isRuntimeCompatibleNativeAddonPath(
+        "/node-pty/bin/linux-x64-143/node-pty.node",
+        runtime,
+      ),
+    ).toBe(true);
+    expect(
+      isRuntimeCompatibleNativeAddonPath(
+        "/node-pty/bin/linux-x86_64-143/node-pty.node",
+        runtime,
+      ),
+    ).toBe(true);
+    expect(
+      isRuntimeCompatibleNativeAddonPath(
+        "/node-pty/bin/darwin-x64-143/node-pty.node",
+        runtime,
+      ),
+    ).toBe(false);
+    expect(
+      isRuntimeCompatibleNativeAddonPath(
+        "/node-pty/bin/linux-arm64-143/node-pty.node",
+        runtime,
+      ),
+    ).toBe(false);
+    expect(
+      isRuntimeCompatibleNativeAddonPath(
+        "/node-pty/bin/linux-x64-137/node-pty.node",
+        runtime,
+      ),
+    ).toBe(false);
+    expect(
+      isRuntimeCompatibleNativeAddonPath(
+        "/native-addon/prebuilds/custom-layout/addon.node",
+        runtime,
+      ),
+    ).toBe(true);
+  });
+
+  it("uses the target Node platform and architecture for native probes", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pnpm-native-target-node-"));
+    const cacheRoot = join(root, "cache");
+    const workspace = join(root, "workspace");
+    const targetNode = join(root, "target-node");
+    let verifiedAddonPaths: readonly string[] = [];
+    try {
+      await writeFixture(workspace);
+      await writeFile(
+        targetNode,
+        [
+          "#!/bin/sh",
+          'printf \'%s\' \'{"version":"24.16.0","modulesAbi":"143","platform":"linux","arch":"arm64"}\'',
+          "",
+        ].join("\n"),
+      );
+      await chmod(targetNode, 0o755);
+      const result = await runDependencyBootstrap({
+        workspacePath: workspace,
+        cacheRoot,
+        mode: "install",
+        confirmInstall: true,
+        nodeExecutablePath: targetNode,
+        runCommand: async (command, args, options) => {
+          if (command === "pnpm" && args[0] === "install") {
+            await materializePrebuildPackage(
+              options.cwd,
+              ["linux-arm64", `${process.platform}-${process.arch}`],
+              "143",
+            );
+          }
+          if (command === targetNode && args[0] === "-e") {
+            verifiedAddonPaths = JSON.parse(args[2] ?? "[]") as string[];
+          }
+        },
+      });
+
+      expect(result.status, result.warnings.join("\n")).toBe("installed");
+      expect(verifiedAddonPaths).toHaveLength(1);
+      expect(verifiedAddonPaths[0]).toContain("/prebuilds/linux-arm64/");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -413,12 +597,7 @@ async function materializeAddon(
     "node_modules",
     "native-addon",
   );
-  const addonPath = join(
-    packageRoot,
-    "build",
-    "Release",
-    "native-addon.node",
-  );
+  const addonPath = join(packageRoot, "build", "Release", "native-addon.node");
   await Promise.all([
     mkdir(join(workspacePath, "node_modules", ".bin"), { recursive: true }),
     mkdir(join(addonPath, ".."), { recursive: true }),
@@ -430,6 +609,39 @@ async function materializeAddon(
     ),
     writeFile(addonPath, `node_register_module_v${abi ?? "unavailable"}`),
   ]);
+}
+
+async function materializePrebuildPackage(
+  workspacePath: string,
+  targets: readonly string[],
+  abi = process.versions.modules,
+): Promise<void> {
+  const packageRoot = join(
+    workspacePath,
+    "node_modules",
+    ".pnpm",
+    "native-addon@1.0.0",
+    "node_modules",
+    "native-addon",
+  );
+  await Promise.all([
+    mkdir(join(workspacePath, "node_modules", ".bin"), { recursive: true }),
+    mkdir(packageRoot, { recursive: true }),
+  ]);
+  await writeFile(
+    join(packageRoot, "package.json"),
+    JSON.stringify({ name: "native-addon", version: "1.0.0" }),
+  );
+  for (const target of targets) {
+    const addonPath = join(
+      packageRoot,
+      "prebuilds",
+      target,
+      "native-addon.node",
+    );
+    await mkdir(join(addonPath, ".."), { recursive: true });
+    await writeFile(addonPath, `node_register_module_v${abi ?? "unavailable"}`);
+  }
 }
 
 async function publishedGenerationKeys(
@@ -444,8 +656,20 @@ async function publishedGenerationKeys(
 async function stagingGenerationKeys(
   cacheRoot: string,
 ): Promise<readonly string[]> {
-  return directoryNames(
-    join(cacheRoot, "pnpm-native-generations", ".staging"),
+  return directoryNames(join(cacheRoot, "pnpm-native-generations", ".staging"));
+}
+
+function prebuildAddonPath(workspacePath: string, target: string): string {
+  return join(
+    workspacePath,
+    "node_modules",
+    ".pnpm",
+    "native-addon@1.0.0",
+    "node_modules",
+    "native-addon",
+    "prebuilds",
+    target,
+    "native-addon.node",
   );
 }
 
