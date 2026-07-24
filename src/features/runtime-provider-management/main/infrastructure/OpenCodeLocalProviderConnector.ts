@@ -29,6 +29,8 @@ import {
 } from './localServerRuntimeApi';
 import { buildOllamaNativeUrl, parseOllamaShowMetadata } from './ollamaRuntimeApi';
 import {
+  buildLocalProviderConfigureError,
+  buildLocalProviderProbeError,
   createModelRecord,
   hasDuplicateObjectProperties,
   isPathInside,
@@ -326,7 +328,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     input: RuntimeLocalProviderProbeInput
   ): Promise<RuntimeLocalProviderProbeResponse> {
     if (input?.runtimeId !== 'opencode') {
-      return this.probeError(
+      return buildLocalProviderProbeError(
         'invalid-input',
         'Only the OpenCode runtime supports local providers.'
       );
@@ -339,7 +341,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         probe: await this.probeTarget(target, PROBE_TIMEOUT_MS),
       };
     } catch (error) {
-      return this.probeError(
+      return buildLocalProviderProbeError(
         'invalid-input',
         error instanceof RuntimeLocalProviderValidationError
           ? error.message
@@ -355,7 +357,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       input?.runtimeId !== 'opencode' ||
       (input.scope !== 'global' && input.scope !== 'project')
     ) {
-      return this.configureError(
+      return buildLocalProviderConfigureError(
         'invalid-input',
         'The local provider configuration scope is invalid.'
       );
@@ -370,6 +372,12 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         throw new LocalProviderOperationError(
           'invalid-input',
           'Default model selection is invalid.'
+        );
+      }
+      if (input.setAsSmallModel !== undefined && typeof input.setAsSmallModel !== 'boolean') {
+        throw new LocalProviderOperationError(
+          'invalid-input',
+          'Lightweight-task model selection is invalid.'
         );
       }
 
@@ -400,11 +408,18 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         selectedModelConfig,
       });
       if (isPrivateNetworkRuntimeLocalProviderUrl(target.baseUrl)) {
-        await this.privateNetworkApprovalStore.approve({
-          configPath,
-          providerId: target.providerId,
-          baseUrl: target.baseUrl,
-        });
+        try {
+          await this.privateNetworkApprovalStore.approve({
+            configPath,
+            providerId: target.providerId,
+            baseUrl: target.baseUrl,
+          });
+        } catch {
+          throw new LocalProviderOperationError(
+            'approval-write-failed',
+            'The OpenCode config was updated, but Agent Teams could not save private network approval. Retry to approve this address.'
+          );
+        }
       }
       return {
         schemaVersion: 1,
@@ -423,12 +438,12 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       };
     } catch (error) {
       if (error instanceof RuntimeLocalProviderValidationError) {
-        return this.configureError('invalid-input', error.message);
+        return buildLocalProviderConfigureError('invalid-input', error.message);
       }
       if (error instanceof LocalProviderOperationError) {
-        return this.configureError(error.code, error.message, error.recoverable);
+        return buildLocalProviderConfigureError(error.code, error.message, error.recoverable);
       }
-      return this.configureError('write-failed', 'Could not update the OpenCode config.');
+      return buildLocalProviderConfigureError('write-failed', 'Could not update OpenCode config.');
     }
   }
 
@@ -987,21 +1002,6 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     message: string
   ): RuntimeLocalProviderScanResponse {
     return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable: true } };
-  }
-
-  private probeError(
-    code: RuntimeLocalProviderErrorCodeDto,
-    message: string
-  ): RuntimeLocalProviderProbeResponse {
-    return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable: true } };
-  }
-
-  private configureError(
-    code: RuntimeLocalProviderErrorCodeDto,
-    message: string,
-    recoverable = true
-  ): RuntimeLocalProviderConfigureResponse {
-    return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable } };
   }
 }
 

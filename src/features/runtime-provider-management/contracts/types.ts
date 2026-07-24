@@ -611,6 +611,7 @@ export type RuntimeLocalProviderErrorCodeDto =
   | 'project-required'
   | 'config-conflict'
   | 'config-invalid'
+  | 'approval-write-failed'
   | 'write-failed';
 
 export interface RuntimeLocalProviderErrorDto {

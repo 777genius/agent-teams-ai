@@ -4,7 +4,12 @@ import { applyEdits, type FormattingOptions, modify, type Node as JsoncNode } fr
 
 import { normalizeRuntimeLocalProviderModelId } from '../../core/domain';
 
-import type { RuntimeLocalProviderModelDto } from '../../contracts';
+import type {
+  RuntimeLocalProviderConfigureResponse,
+  RuntimeLocalProviderErrorCodeDto,
+  RuntimeLocalProviderModelDto,
+  RuntimeLocalProviderProbeResponse,
+} from '../../contracts';
 
 const MAX_MODELS = 500;
 const JSON_FORMATTING: FormattingOptions = {
@@ -22,6 +27,21 @@ export interface LocalModelConfigMetadata {
     readonly context: number;
     readonly output: number;
   };
+}
+
+export function buildLocalProviderProbeError(
+  code: RuntimeLocalProviderErrorCodeDto,
+  message: string
+): RuntimeLocalProviderProbeResponse {
+  return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable: true } };
+}
+
+export function buildLocalProviderConfigureError(
+  code: RuntimeLocalProviderErrorCodeDto,
+  message: string,
+  recoverable = true
+): RuntimeLocalProviderConfigureResponse {
+  return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable } };
 }
 
 export function readOpenAiModels(raw: string): RuntimeLocalProviderModelDto[] {
