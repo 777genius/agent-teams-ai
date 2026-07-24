@@ -17,7 +17,6 @@ interface UseTerminalCommandRunsOptions {
   activePaneId: string | null;
   activeSessionId: string | null;
   eventSource: EventTarget | null;
-  onCommandStarted: () => void;
   onCommandSubmitted: () => void;
   screenLines: readonly TerminalCommandScreenLine[];
   screenSequence: unknown;
@@ -30,7 +29,6 @@ interface UseTerminalCommandRunsResult {
 }
 
 interface TerminalCommandRunContext {
-  onCommandStarted: () => void;
   onCommandSubmitted: () => void;
   paneId: string | null;
   screenLines: readonly TerminalCommandScreenLine[];
@@ -43,7 +41,6 @@ export function useTerminalCommandRuns({
   activePaneId,
   activeSessionId,
   eventSource,
-  onCommandStarted,
   onCommandSubmitted,
   screenLines,
   screenSequence,
@@ -54,7 +51,6 @@ export function useTerminalCommandRuns({
   );
   const [hydratedTeamName, setHydratedTeamName] = useState(teamName);
   const latestContextRef = useRef<TerminalCommandRunContext>({
-    onCommandStarted,
     onCommandSubmitted,
     paneId: activePaneId,
     screenLines,
@@ -62,13 +58,12 @@ export function useTerminalCommandRuns({
   });
   useCommitPhaseLayoutEffect(() => {
     latestContextRef.current = {
-      onCommandStarted,
       onCommandSubmitted,
       paneId: activePaneId,
       screenLines,
       sessionId: activeSessionId,
     };
-  }, [activePaneId, activeSessionId, onCommandStarted, onCommandSubmitted, screenLines]);
+  }, [activePaneId, activeSessionId, onCommandSubmitted, screenLines]);
 
   const activeCommandRuns = useMemo(
     () =>
@@ -102,7 +97,6 @@ export function useTerminalCommandRuns({
       }
 
       const context = latestContextRef.current;
-      context.onCommandStarted();
       setCommandRuns((current) =>
         upsertTerminalCommandRun(
           closeSupersededTerminalCommandRuns(current, detail, context.screenLines, Date.now()),

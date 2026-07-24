@@ -13,7 +13,6 @@ interface HarnessProps {
   activePaneId: string | null;
   activeSessionId: string | null;
   eventSource: EventTarget | null;
-  onCommandStarted: () => void;
   onCommandSubmitted: () => void;
   renderGate?: RenderGate;
   screenLines: readonly TerminalCommandScreenLine[];
@@ -66,15 +65,13 @@ describe('useTerminalCommandRuns', () => {
     vi.useFakeTimers();
     vi.setSystemTime(2_000);
     const eventSource = new EventTarget();
-    const onCommandStarted = vi.fn();
     const onCommandSubmitted = vi.fn();
-    const props = createProps({ eventSource, onCommandStarted, onCommandSubmitted });
+    const props = createProps({ eventSource, onCommandSubmitted });
     const detail = createEventDetail({ startedAtMs: 1_750 });
 
     await renderHarness(props);
     await dispatchCommandEvent(eventSource, 'tp-terminal-command-started', detail);
 
-    expect(onCommandStarted).toHaveBeenCalledOnce();
     expect(requireResult().commandRuns).toEqual([
       expect.objectContaining({
         clientEventId: detail.clientEventId,
@@ -103,8 +100,7 @@ describe('useTerminalCommandRuns', () => {
     const secondAdd = vi.spyOn(secondSource, 'addEventListener');
     const secondRemove = vi.spyOn(secondSource, 'removeEventListener');
     const clearInterval = vi.spyOn(window, 'clearInterval');
-    const onCommandStarted = vi.fn();
-    const props = createProps({ eventSource: firstSource, onCommandStarted });
+    const props = createProps({ eventSource: firstSource });
 
     await renderHarness(props);
     expect(firstAdd).toHaveBeenCalledTimes(4);
@@ -115,7 +111,6 @@ describe('useTerminalCommandRuns', () => {
     expect(secondAdd).toHaveBeenCalledTimes(4);
 
     await dispatchCommandEvent(firstSource, 'tp-terminal-command-started', createEventDetail());
-    expect(onCommandStarted).not.toHaveBeenCalled();
     expect(requireResult().commandRuns).toEqual([]);
 
     await dispatchCommandEvent(
@@ -123,7 +118,6 @@ describe('useTerminalCommandRuns', () => {
       'tp-terminal-command-started',
       createEventDetail({ clientEventId: 'active-source-run' })
     );
-    expect(onCommandStarted).toHaveBeenCalledOnce();
     expect(requireResult().commandRuns).toHaveLength(1);
 
     await unmountHarness();
@@ -138,7 +132,6 @@ describe('useTerminalCommandRuns', () => {
       )
     );
     vi.advanceTimersByTime(1_800);
-    expect(onCommandStarted).toHaveBeenCalledOnce();
     expect(requireResult().commandRuns).toHaveLength(1);
   });
 
@@ -204,11 +197,11 @@ describe('useTerminalCommandRuns', () => {
     const eventSource = new EventTarget();
     const addEventListener = vi.spyOn(eventSource, 'addEventListener');
     const removeEventListener = vi.spyOn(eventSource, 'removeEventListener');
-    const committedStarted = vi.fn();
-    const pendingStarted = vi.fn();
+    const committedSubmitted = vi.fn();
+    const pendingSubmitted = vi.fn();
     const committedProps = createProps({
       eventSource,
-      onCommandStarted: committedStarted,
+      onCommandSubmitted: committedSubmitted,
       screenLines: ['shell % true', 'completed', 'shell %'],
     });
 
@@ -224,7 +217,7 @@ describe('useTerminalCommandRuns', () => {
       React.startTransition(() => {
         renderHarnessTree({
           ...committedProps,
-          onCommandStarted: pendingStarted,
+          onCommandSubmitted: pendingSubmitted,
           renderGate,
           screenLines: ['shell % true'],
           screenSequence: 2,
@@ -239,8 +232,9 @@ describe('useTerminalCommandRuns', () => {
       'tp-terminal-command-started',
       createEventDetail({ clientEventId: 'second-run', command: 'true', startedAtMs: 2_000 })
     );
-    expect(committedStarted).toHaveBeenCalledTimes(2);
-    expect(pendingStarted).not.toHaveBeenCalled();
+    await dispatchCommandEvent(eventSource, 'tp-terminal-paste-submitted');
+    expect(committedSubmitted).toHaveBeenCalledOnce();
+    expect(pendingSubmitted).not.toHaveBeenCalled();
     expect(requireResult().commandRuns[0]).toMatchObject({
       clientEventId: 'first-run',
       status: 'succeeded',
@@ -258,8 +252,9 @@ describe('useTerminalCommandRuns', () => {
       'tp-terminal-command-started',
       createEventDetail({ clientEventId: 'third-run', command: 'true', startedAtMs: 2_100 })
     );
-    expect(committedStarted).toHaveBeenCalledTimes(2);
-    expect(pendingStarted).toHaveBeenCalledOnce();
+    await dispatchCommandEvent(eventSource, 'tp-terminal-paste-submitted');
+    expect(committedSubmitted).toHaveBeenCalledOnce();
+    expect(pendingSubmitted).toHaveBeenCalledOnce();
     expect(requireResult().commandRuns[1]).toMatchObject({
       clientEventId: 'second-run',
       status: 'unknown',
@@ -313,7 +308,6 @@ describe('useTerminalCommandRuns', () => {
       activePaneId: 'pane-1',
       activeSessionId: 'session-1',
       eventSource: new EventTarget(),
-      onCommandStarted: vi.fn(),
       onCommandSubmitted: vi.fn(),
       screenLines: [],
       screenSequence: 1,

@@ -747,6 +747,51 @@ describe('terminal workspace panel fixture-e2e', () => {
     }
   });
 
+  it('does not autocomplete commands from another pane or session', async () => {
+    vi.useFakeTimers();
+    nextSnapshot = createWorkspaceSnapshot({
+      commandHistoryEntries: [],
+    });
+    window.localStorage.setItem(
+      storageKey('command-runs'),
+      JSON.stringify([
+        {
+          clientEventId: 'other-session-run',
+          command: 'pnpm test --filter other-session',
+          paneId: 'pane-other',
+          sessionId: 'session-other',
+          startedAtMs: 1_000,
+          status: 'succeeded',
+        },
+      ])
+    );
+
+    try {
+      await renderPanel();
+
+      await act(async () => {
+        getRequiredElement('mock-terminal-command-dock').dispatchEvent(
+          new CustomEvent('tp-terminal-command-draft-change', {
+            bubbles: true,
+            detail: {
+              value: 'pnpm t',
+            },
+          })
+        );
+        await flushMicrotasks();
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(80);
+        await flushMicrotasks();
+      });
+
+      expect(panelFixture.commandDockProps.at(-1)?.autocompleteSuggestion).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('shows cwd, git branch, prompt label, and powered-by GitHub link in the command area', async () => {
     await renderPanel();
 
