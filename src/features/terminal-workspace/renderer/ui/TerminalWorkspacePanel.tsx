@@ -266,16 +266,17 @@ const TerminalButtonTooltip = ({
   children: React.ReactElement;
   label: string;
   side?: 'top' | 'right' | 'bottom' | 'left';
-}>): React.JSX.Element => {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side={side}>{label}</TooltipContent>
-    </Tooltip>
-  );
-};
+}>): React.JSX.Element => (
+  <Tooltip>
+    <TooltipTrigger asChild>{children}</TooltipTrigger>
+    <TooltipContent side={side}>{label}</TooltipContent>
+  </Tooltip>
+);
 
-export const TerminalWorkspacePanel = ({
+export const TerminalWorkspacePanel = (props: TerminalWorkspacePanelProps): React.JSX.Element => (
+  <TerminalWorkspacePanelTeamScope key={props.teamName} {...props} />
+);
+const TerminalWorkspacePanelTeamScope = ({
   teamName,
   teamDisplayName,
   projectPath,
@@ -363,7 +364,6 @@ export const TerminalWorkspacePanel = ({
   };
 
   const isSheetSurface = surface === 'sheet';
-
   return (
     <div
       className={cn(
