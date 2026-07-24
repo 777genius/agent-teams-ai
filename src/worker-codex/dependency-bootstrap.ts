@@ -35,7 +35,11 @@ export type DependencyBootstrapMode = "off" | "preflight" | "install";
 export type DependencyEcosystem = "node" | "python";
 
 export type DependencyPackageManagerName =
-  "pnpm" | "npm" | "yarn" | "bun" | "uv";
+  | "pnpm"
+  | "npm"
+  | "yarn"
+  | "bun"
+  | "uv";
 type NodeDependencyPackageManagerName = Exclude<
   DependencyPackageManagerName,
   "uv"
@@ -359,6 +363,7 @@ async function runPackageManagerInstall(input: {
         const repairCommand = nativeAddonRepairCommand(
           input.packageManager,
           input.cacheRoot,
+          compatibility.incompatiblePackageNames,
         );
         if (!repairCommand) {
           throw new Error("dependency_native_addon_repair_unsupported");
@@ -413,21 +418,23 @@ function packageManagerCommandMayBuildNativeAddons(
 function nativeAddonRepairCommand(
   packageManager: DependencyPackageManager,
   cacheRoot: string | undefined,
+  incompatiblePackageNames: readonly string[],
 ): readonly string[] | undefined {
   switch (packageManager.name) {
     case "pnpm":
       return [
         "pnpm",
         "rebuild",
-        "--recursive",
         "--config.side-effects-cache=false",
         ...(cacheRoot ? ["--store-dir", nodeAbiPnpmStorePath(cacheRoot)] : []),
+        ...incompatiblePackageNames,
       ];
     case "npm":
       return [
         "npm",
         "rebuild",
         ...(cacheRoot ? ["--cache", join(cacheRoot, "npm-cache")] : []),
+        ...incompatiblePackageNames,
       ];
     case "yarn":
       return ["yarn", "install", "--force", "--frozen-lockfile"];

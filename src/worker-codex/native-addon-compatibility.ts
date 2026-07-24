@@ -1,19 +1,31 @@
-import { readdir, readFile, realpath, stat } from "node:fs/promises";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { constants } from "node:fs";
+import {
+  lstat,
+  open,
+  readdir,
+  readFile,
+  realpath,
+  stat,
+} from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { discoverNativeAddonFilesNative } from "./dependency-native-traversal";
 
 const MAX_DEPENDENCY_ENTRIES_SCAN = 300_000;
 const MAX_NATIVE_ADDONS_SCAN = 4_096;
 const MAX_NATIVE_ADDON_BYTES = 64 * 1024 * 1024;
 const MAX_NATIVE_ADDON_AGGREGATE_BYTES = 128 * 1024 * 1024;
+const MAX_NATIVE_ADDON_PACKAGE_JSON_BYTES = 1024 * 1024;
 const MAX_NATIVE_ADDON_INSPECTION_MS = 30_000;
 const MAX_DIRECTORY_SCAN_CONCURRENCY = 16;
 const CLASSIC_NODE_MODULE_SYMBOL = /node_register_module_v(\d+)/g;
+const PACKAGE_NAME_PATTERN =
+  /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/;
 
 export type NativeAddonCompatibilityResult = {
   readonly expectedAbi: string;
   readonly inspectedAddonCount: number;
   readonly incompatibleAddonCount: number;
+  readonly incompatiblePackageNames: readonly string[];
 };
 
 export async function inspectNativeAddonCompatibility(
@@ -25,6 +37,7 @@ export async function inspectNativeAddonCompatibility(
     throw new Error("dependency_native_addon_abi_unavailable");
   }
   const nodeModulesPath = join(workspacePath, "node_modules");
+  const nodeModulesRealPath = await realpath(nodeModulesPath);
   const nativeAddonPaths =
     (await discoverNativeAddonFilesNative({
       dependencyRoot: nodeModulesPath,
@@ -56,6 +69,7 @@ export async function inspectNativeAddonCompatibility(
   }
 
   let incompatibleAddonCount = 0;
+  const incompatiblePackageNames = new Set<string>();
   for (const addon of materializedAddons) {
     assertInspectionDeadline(deadline);
     const versions = await classicNodeModuleVersions(addon.path, addon.size);
@@ -64,13 +78,137 @@ export async function inspectNativeAddonCompatibility(
       versions.some((version) => version !== expectedAbi)
     ) {
       incompatibleAddonCount += 1;
+      incompatiblePackageNames.add(
+        await resolveNativeAddonPackageName(
+          addon.path,
+          nodeModulesPath,
+          nodeModulesRealPath,
+          deadline,
+        ),
+      );
     }
   }
   return {
     expectedAbi,
     inspectedAddonCount: materializedAddons.length,
     incompatibleAddonCount,
+    incompatiblePackageNames: [...incompatiblePackageNames].sort(),
   };
+}
+
+async function resolveNativeAddonPackageName(
+  addonPath: string,
+  nodeModulesPath: string,
+  nodeModulesRealPath: string,
+  deadline: number,
+): Promise<string> {
+  let cursor = dirname(addonPath);
+  while (
+    cursor !== nodeModulesPath &&
+    isWithinDependencyRoot(cursor, nodeModulesPath)
+  ) {
+    assertInspectionDeadline(deadline);
+    try {
+      const packageJson = JSON.parse(
+        await readBoundedPackageJson(
+          join(cursor, "package.json"),
+          cursor,
+          nodeModulesRealPath,
+        ),
+      ) as { readonly name?: unknown };
+      if (
+        typeof packageJson.name !== "string" ||
+        packageJson.name.length > 214 ||
+        !PACKAGE_NAME_PATTERN.test(packageJson.name)
+      ) {
+        throw new Error("dependency_native_addon_package_name_invalid");
+      }
+      return packageJson.name;
+    } catch (error) {
+      if (!isMissingPathError(error)) throw error;
+    }
+    const parent = dirname(cursor);
+    if (parent === cursor) break;
+    cursor = parent;
+  }
+  throw new Error("dependency_native_addon_package_unresolved");
+}
+
+async function readBoundedPackageJson(
+  packageJsonPath: string,
+  packageRoot: string,
+  dependencyRootRealPath: string,
+): Promise<string> {
+  const packageJsonStat = await lstat(packageJsonPath);
+  if (packageJsonStat.isSymbolicLink() || !packageJsonStat.isFile()) {
+    throw new Error("dependency_native_addon_package_json_type_invalid");
+  }
+  const [packageJsonRealPath, packageRootRealPath] = await Promise.all([
+    realpath(packageJsonPath),
+    realpath(packageRoot),
+  ]);
+  if (
+    dirname(packageJsonRealPath) !== packageRootRealPath ||
+    !isWithinDependencyRoot(packageJsonRealPath, dependencyRootRealPath)
+  ) {
+    throw new Error("dependency_native_addon_package_json_outside_dependency");
+  }
+  const handle = await open(
+    packageJsonPath,
+    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+  );
+  try {
+    const openedStat = await handle.stat();
+    if (
+      !openedStat.isFile() ||
+      openedStat.dev !== packageJsonStat.dev ||
+      openedStat.ino !== packageJsonStat.ino
+    ) {
+      throw new Error("dependency_native_addon_package_json_changed");
+    }
+    if (openedStat.size > MAX_NATIVE_ADDON_PACKAGE_JSON_BYTES) {
+      throw new Error("dependency_native_addon_package_json_size_exceeded");
+    }
+    const contents = Buffer.alloc(openedStat.size + 1);
+    let bytesRead = 0;
+    while (bytesRead < contents.byteLength) {
+      const read = await handle.read(
+        contents,
+        bytesRead,
+        contents.byteLength - bytesRead,
+        bytesRead,
+      );
+      if (read.bytesRead === 0) break;
+      bytesRead += read.bytesRead;
+    }
+    if (bytesRead !== openedStat.size) {
+      throw new Error("dependency_native_addon_package_json_changed");
+    }
+    return contents.subarray(0, bytesRead).toString("utf8");
+  } finally {
+    await handle.close();
+  }
+}
+
+function isWithinDependencyRoot(
+  candidatePath: string,
+  dependencyRoot: string,
+): boolean {
+  const relativePath = relative(dependencyRoot, candidatePath);
+  return (
+    relativePath === "" ||
+    (relativePath !== ".." &&
+      !relativePath.startsWith(`..${sep}`) &&
+      !isAbsolute(relativePath))
+  );
+}
+
+function isMissingPathError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    (error as NodeJS.ErrnoException).code === "ENOENT"
+  );
 }
 
 async function discoverNativeAddonFilesJavascript(
