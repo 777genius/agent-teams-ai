@@ -10,7 +10,7 @@
     "ReviewAPI": 34,
     "CrossTeamAPI": 3
   },
-  "historicalCountDifference": "ReviewAPI +9 since the phase-start AST: current 86/29/3 versus historical 86/20/3",
+  "historicalCountDifference": "ReviewAPI +14 since the phase-start AST: current 86/34/3 versus historical 86/20/3",
   "members": [
     {
       "stableId": "P0.W1.API.TeamsAPI.list",
@@ -1809,7 +1809,11 @@
       "sourceMember": "executeMutation",
       "legacySignature": "executeMutation: (request: ExecuteReviewMutationRequest) => Promise<ExecuteReviewMutationResult>;",
       "sourceSignatureHash": "sha256:2c9bc1b401269033f830b4e71564836fdbf2b416bdd7e505646c7e1ca04ca45c",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDecisionPorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDraftPorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewHistoryMutationPorts.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -1827,7 +1831,10 @@
       "sourceMember": "retryMutationRecovery",
       "legacySignature": "retryMutationRecovery: (request: RetryReviewMutationRecoveryRequest) => Promise<RetryReviewMutationRecoveryResult>;",
       "sourceSignatureHash": "sha256:c4145fe4a3ac29382d8fde44b70507e9c96f7cd93b7e3901490bd035504e082e",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDialogLifecyclePorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewHistoryMutationPorts.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -1845,7 +1852,9 @@
       "sourceMember": "restoreHistory",
       "legacySignature": "restoreHistory: (request: RestoreReviewHistoryRequest) => Promise<RestoreReviewHistoryResult>;",
       "sourceSignatureHash": "sha256:c18ae82e0476fcfe3177258989510c108d1173f50291b032c383045e72a1eb10",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewHistoryMutationPorts.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -1863,7 +1872,13 @@
       "sourceMember": "checkConflict",
       "legacySignature": "checkConflict: (scope: ReviewFileScope, filePath: string, expectedModified: string) => Promise<ConflictCheckResult>;",
       "sourceSignatureHash": "sha256:30fbf403bc90071dcf528cb50c73a9ecdace09c65ffba9d964005473a067f60b",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDecisionPorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDraftPorts.ts",
+        "src/renderer/components/team/review/ChangeReviewDialog.tsx"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2007,7 +2022,9 @@
       "sourceMember": "watchFiles",
       "legacySignature": "watchFiles: (projectPath: string, filePaths: string[]) => Promise<void>;",
       "sourceSignatureHash": "sha256:145f58a08654db239da6e77af49645c1f230584511b3e275a5e6da4f7a2777cb",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2025,7 +2042,9 @@
       "sourceMember": "unwatchFiles",
       "legacySignature": "unwatchFiles: () => Promise<void>;",
       "sourceSignatureHash": "sha256:eda8bc65fe2d15e1bb7b24173678b5bdfc8e5dd84123f4a9cb2e1f86d8167f5b",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2043,7 +2062,9 @@
       "sourceMember": "onExternalFileChange",
       "legacySignature": "onExternalFileChange: (callback: (event: EditorFileChangeEvent) => void) => () => void;",
       "sourceSignatureHash": "sha256:7a6850a8167b90818ebd6b565a65edb56d41373d49c1ca1e5310065f774bb0bb",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2115,7 +2136,9 @@
       "sourceMember": "loadDecisionConflictCandidates",
       "legacySignature": "loadDecisionConflictCandidates: (teamName: string, scopeKey: string, scopeToken: string) => Promise<ReviewDecisionConflictCandidateSummary[]>;",
       "sourceSignatureHash": "sha256:487c7b74b8def41e642a9796c0bc9c271c07ec742abce59547ae0fcf63ee59fb",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewConflictPorts.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2133,7 +2156,9 @@
       "sourceMember": "resolveDecisionConflictCandidate",
       "legacySignature": "resolveDecisionConflictCandidate: (teamName: string, scopeKey: string, scopeToken: string, candidateId: string, resolution: ReviewConflictResolution, expectedCurrentRevision: number) => Promise<{ revision: number; }>;",
       "sourceSignatureHash": "sha256:22485faf53bdcca33f4cf19bd2dd7691db4c0c68e1072b9d34fd50ee25a29e77",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewConflictPorts.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2151,7 +2176,9 @@
       "sourceMember": "loadDraftHistory",
       "legacySignature": "loadDraftHistory: (teamName: string, scopeKey: string, scopeToken: string) => Promise<ReviewDraftHistorySnapshot | null>;",
       "sourceSignatureHash": "sha256:1db8053abb2608392cc092faed24b49ed027c0cfaa460f91497678d8dc17abab",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2169,7 +2196,9 @@
       "sourceMember": "saveDraftHistoryEntry",
       "legacySignature": "saveDraftHistoryEntry: (teamName: string, scopeKey: string, scopeToken: string, entry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>, expectedRevision: number, expectedGeneration: string | null) => Promise<ReviewDraftHistoryEntry>;",
       "sourceSignatureHash": "sha256:5533291b443626b87f68f5a4dba237e5189ce784c0531cc21e4b8fadab3c84c0",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2187,7 +2216,9 @@
       "sourceMember": "clearDraftHistory",
       "legacySignature": "clearDraftHistory: (teamName: string, scopeKey: string, scopeToken: string, filePath?: string, expectedRevision?: number, expectedGeneration?: string | null) => Promise<void>;",
       "sourceSignatureHash": "sha256:af609ad313105105ada4771728fc5bf267d354117b874514baf510875807b31f",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2205,7 +2236,9 @@
       "sourceMember": "loadDraftHistoryConflictCandidates",
       "legacySignature": "loadDraftHistoryConflictCandidates: (teamName: string, scopeKey: string, scopeToken: string) => Promise<ReviewDraftHistoryConflictCandidateSummary[]>;",
       "sourceSignatureHash": "sha256:51dba683a1f73607227a6b9354b319f5dfec2c76870b5a5889913be9b5211a3f",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewConflictPorts.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2223,7 +2256,9 @@
       "sourceMember": "resolveDraftHistoryConflictCandidate",
       "legacySignature": "resolveDraftHistoryConflictCandidate: (teamName: string, scopeKey: string, scopeToken: string, candidateId: string, resolution: ReviewConflictResolution, expectedCurrentRevision: number, expectedCurrentGeneration: string | null) => Promise<ReviewDraftHistoryEntry | null>;",
       "sourceSignatureHash": "sha256:e8f5bd39436667d1fe32017b0a5e1750f4501206427345b82de025f6c7721d33",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2241,7 +2276,9 @@
       "sourceMember": "replaceDraftHistoryConflictCandidate",
       "legacySignature": "replaceDraftHistoryConflictCandidate: (teamName: string, scopeKey: string, scopeToken: string, expectedEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>, replacementEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>, expectedCurrentRevision: number, expectedCurrentGeneration: string | null) => Promise<ReviewDraftHistoryConflictCandidateSummary>;",
       "sourceSignatureHash": "sha256:fc7c025aff2e1ee4f838e0aae9212d624d3547b78a6a0dae89f8bd0ce9d45219",
-      "rendererCallers": [],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",

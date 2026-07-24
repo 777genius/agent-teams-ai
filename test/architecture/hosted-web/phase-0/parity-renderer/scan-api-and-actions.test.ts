@@ -12,6 +12,7 @@ import {
   LEGACY_CHILD_API_ACTION_IDS,
   scanApiInterfaces,
   scanControls,
+  scanRendererApiCallers,
   type SemanticRow,
   validateApiDispositions,
   validateChildControlCatalog,
@@ -485,6 +486,22 @@ describe('Phase 0 W1 semantic scanner', () => {
     expect(
       findDynamicDispatch('// @hosted-web-dynamic-action team.lifecycle.stop\napi.teams[name]()')
     ).toEqual([]);
+  });
+
+  it('finds direct clients and capability accessors without fabricating another surface', () => {
+    expect(
+      scanRendererApiCallers(`
+        api.review.loadDecisions();
+        window.electronAPI.teams.list();
+        getReviewApi().loadDecisionConflictCandidates();
+        getReviewApi().resolveDraftHistoryConflictCandidate();
+      `)
+    ).toEqual([
+      { surface: 'TeamsAPI', member: 'list' },
+      { surface: 'ReviewAPI', member: 'loadDecisions' },
+      { surface: 'ReviewAPI', member: 'loadDecisionConflictCandidates' },
+      { surface: 'ReviewAPI', member: 'resolveDraftHistoryConflictCandidate' },
+    ]);
   });
 
   it('rejects missing and duplicate API member dispositions', () => {

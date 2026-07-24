@@ -11065,11 +11065,47 @@
       "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"]
     },
     {
+      "actionId": "team.review.execute-mutation",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "executeMutation",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDecisionPorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDraftPorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewHistoryMutationPorts.ts"
+      ]
+    },
+    {
+      "actionId": "team.review.retry-mutation-recovery",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "retryMutationRecovery",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDialogLifecyclePorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewHistoryMutationPorts.ts"
+      ]
+    },
+    {
+      "actionId": "team.review.restore-history",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "restoreHistory",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewHistoryMutationPorts.ts"
+      ]
+    },
+    {
       "actionId": "team.review.check-conflict",
       "owner": "team-review",
       "source": "ReviewAPI",
       "sourceMember": "checkConflict",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"]
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDecisionPorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDraftPorts.ts",
+        "src/renderer/components/team/review/ChangeReviewDialog.tsx"
+      ]
     },
     {
       "actionId": "team.review.save-edited-file",
@@ -11077,6 +11113,33 @@
       "source": "ReviewAPI",
       "sourceMember": "saveEditedFile",
       "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"]
+    },
+    {
+      "actionId": "team.review.watch-files",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "watchFiles",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts"
+      ]
+    },
+    {
+      "actionId": "team.review.unwatch-files",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "unwatchFiles",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts"
+      ]
+    },
+    {
+      "actionId": "team.review.on-external-file-change",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "onExternalFileChange",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts"
+      ]
     },
     {
       "actionId": "team.review.load-decisions",
@@ -11098,6 +11161,78 @@
       "source": "ReviewAPI",
       "sourceMember": "clearDecisions",
       "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"]
+    },
+    {
+      "actionId": "team.review.load-decision-conflict-candidates",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "loadDecisionConflictCandidates",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewConflictPorts.ts"
+      ]
+    },
+    {
+      "actionId": "team.review.resolve-decision-conflict-candidate",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "resolveDecisionConflictCandidate",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewConflictPorts.ts"
+      ]
+    },
+    {
+      "actionId": "team.review.load-draft-history",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "loadDraftHistory",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ]
+    },
+    {
+      "actionId": "team.review.save-draft-history-entry",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "saveDraftHistoryEntry",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ]
+    },
+    {
+      "actionId": "team.review.clear-draft-history",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "clearDraftHistory",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ]
+    },
+    {
+      "actionId": "team.review.load-draft-history-conflict-candidates",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "loadDraftHistoryConflictCandidates",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewConflictPorts.ts"
+      ]
+    },
+    {
+      "actionId": "team.review.resolve-draft-history-conflict-candidate",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "resolveDraftHistoryConflictCandidate",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ]
+    },
+    {
+      "actionId": "team.review.replace-draft-history-conflict-candidate",
+      "owner": "team-review",
+      "source": "ReviewAPI",
+      "sourceMember": "replaceDraftHistoryConflictCandidate",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ]
     },
     {
       "actionId": "team.message.cross-team.send",
