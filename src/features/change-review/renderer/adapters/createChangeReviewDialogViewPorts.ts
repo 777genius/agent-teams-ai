@@ -10,6 +10,11 @@ import type {
   ChangeReviewBulkDecisionWriteEvidencePort,
 } from '../ports/changeReviewBulkDecisionPorts';
 import type {
+  ChangeReviewDialogEditorActions,
+  ChangeReviewDialogKeyboardInteractionPort,
+  ChangeReviewRecentWrite,
+} from '../ports/changeReviewDialogInteractionPorts';
+import type {
   ChangeReviewDialogLifecycleEditorPort,
   ChangeReviewDialogLifecycleSessionPort,
   ChangeReviewDialogLifecycleStatusPort,
@@ -40,11 +45,6 @@ import type {
 } from '@shared/types';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 
-export interface ChangeReviewRecentWrite {
-  at: number;
-  expectedContent: string | null;
-}
-
 interface FileMutationStatusDependencies {
   fileApplyInFlightRef: MutableRefObject<Set<string>>;
   setFilesApplying: Dispatch<SetStateAction<Set<string>>>;
@@ -63,12 +63,8 @@ interface LifecycleStatusDependencies {
 interface CreateChangeReviewDialogViewPortsInput
   extends FileMutationStatusDependencies, LifecycleStatusDependencies {
   editorViewMapRef: MutableRefObject<Map<string, EditorView>>;
-  editorActions: {
-    acceptAllChunks: (view: EditorView) => boolean;
-    ignoreNextDocChange: (view: EditorView) => void;
-    rejectAllChunks: (view: EditorView) => boolean;
-    rejectChunk: (view: EditorView) => boolean;
-  };
+  editorActions: ChangeReviewDialogEditorActions;
+  subscribeToRejectCurrentHunk: (callback: () => void) => (() => void) | undefined;
   recentReviewWritesRef: MutableRefObject<Map<string, ChangeReviewRecentWrite>>;
   handleSerializedStateChanged: (
     filePath: string,
@@ -102,6 +98,7 @@ export interface ChangeReviewDialogViewPorts {
     writeEvidence: ChangeReviewFileDraftWriteEvidencePort;
   };
   historyMutation: ChangeReviewHistoryMutationViewPort;
+  keyboardInteraction: ChangeReviewDialogKeyboardInteractionPort;
   hunkDecision: {
     editor: ChangeReviewHunkDecisionEditorPort;
     status: ChangeReviewHunkDecisionStatusPort;
@@ -118,6 +115,7 @@ export interface ChangeReviewDialogViewPorts {
 export function createChangeReviewDialogViewPorts({
   editorViewMapRef,
   editorActions,
+  subscribeToRejectCurrentHunk,
   fileApplyInFlightRef,
   undoInFlightRef,
   closingRef,
@@ -286,6 +284,31 @@ export function createChangeReviewDialogViewPorts({
       clearExpectedWrite,
       markCommittedPostimages,
       setMutationInFlight: setUndoInFlight,
+    },
+    keyboardInteraction: {
+      subscribeRejectCurrentHunk: subscribeToRejectCurrentHunk,
+      rejectCurrentChunk: (filePath) => {
+        const view = editorViewMapRef.current.get(filePath);
+        if (!view) return null;
+        const cursorPosition = view.state.selection.main.head;
+        const hunkIndex = editorActions.computeChunkIndexAtPosition(view.state, cursorPosition);
+        const beforeContent = view.state.doc.toString();
+        if (!editorActions.rejectChunk(view)) return null;
+        return {
+          hunkIndex,
+          beforeContent,
+          afterContent: view.state.doc.toString(),
+        };
+      },
+      rollbackContent: (filePath, content) => {
+        const view = editorViewMapRef.current.get(filePath);
+        if (!view) return;
+        editorActions.ignoreNextDocChange(view);
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: content },
+          annotations: Transaction.addToHistory.of(false),
+        });
+      },
     },
     hunkDecision: {
       editor: {
