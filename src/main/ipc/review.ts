@@ -107,7 +107,6 @@ import type {
   RetryReviewMutationRecoveryRequest,
   RetryReviewMutationRecoveryResult,
   ReviewDecisionPersistenceScope,
-  ReviewDecisionSnapshot,
   ReviewDirectDiskMutationStep,
   ReviewDiskUndoSnapshot,
   ReviewFileScope,

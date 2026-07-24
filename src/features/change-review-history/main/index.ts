@@ -1,4 +1,12 @@
 export type {
+  ReviewDraftHistoryAuthorization,
+  ReviewDraftHistoryAuthorizationPort,
+  ReviewDraftHistoryPersistenceLockPort,
+  ReviewDraftHistoryPersistenceScope,
+  ReviewHistoryPersistenceLockPort,
+  ReviewHistoryPersistenceScope,
+} from '../core/application/ports';
+export type {
   LoadedReviewDecisionState,
   ReviewDecisionAuthorization,
   ReviewDecisionAuthorizationPort,
@@ -10,14 +18,6 @@ export type {
   ReviewDecisionValidationPort,
   SaveReviewDecisionStateInput,
 } from '../core/application/ReviewDecisionHistoryPorts';
-export type {
-  ReviewDraftHistoryAuthorization,
-  ReviewDraftHistoryAuthorizationPort,
-  ReviewDraftHistoryPersistenceLockPort,
-  ReviewDraftHistoryPersistenceScope,
-  ReviewHistoryPersistenceLockPort,
-  ReviewHistoryPersistenceScope,
-} from '../core/application/ports';
 export {
   registerReviewDecisionHistoryIpc,
   removeReviewDecisionHistoryIpc,

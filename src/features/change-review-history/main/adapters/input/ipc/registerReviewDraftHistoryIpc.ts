@@ -8,8 +8,8 @@ import {
   REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
 } from '@features/change-review-history/contracts';
 
-import type { ReviewHistoryIpcHandlerWrapper } from './types';
 import type { ReviewDraftHistoryApplication } from '../../../../core/application/ReviewDraftHistoryApplication';
+import type { ReviewHistoryIpcHandlerWrapper } from './types';
 import type { ReviewDraftHistoryEntry } from '@features/change-review-history/contracts';
 import type { ReviewConflictResolution } from '@shared/types/review';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';

@@ -7,8 +7,8 @@ import {
   REVIEW_SAVE_DECISIONS,
 } from '@features/change-review-history/contracts';
 
-import type { ReviewHistoryIpcHandlerWrapper } from './types';
 import type { ReviewDecisionHistoryApplication } from '../../../../core/application/ReviewDecisionHistoryApplication';
+import type { ReviewHistoryIpcHandlerWrapper } from './types';
 import type {
   HunkDecision,
   ReviewConflictResolution,

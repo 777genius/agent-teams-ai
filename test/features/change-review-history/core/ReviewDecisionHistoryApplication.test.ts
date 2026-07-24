@@ -1,12 +1,12 @@
 import { ReviewDecisionHistoryApplication } from '@features/change-review-history/core/application/ReviewDecisionHistoryApplication';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { ReviewHistoryPersistenceScope } from '@features/change-review-history/core/application/ports';
 import type {
   LoadedReviewDecisionState,
   ReviewDecisionAuthorization,
   ReviewDecisionHistoryDependencies,
 } from '@features/change-review-history/core/application/ReviewDecisionHistoryPorts';
-import type { ReviewHistoryPersistenceScope } from '@features/change-review-history/core/application/ports';
 import type {
   FileChangeSummary,
   ReviewDecisionConflictCandidate,

@@ -1,3 +1,4 @@
+import type { ReviewHistoryPersistenceLockPort, ReviewHistoryPersistenceScope } from './ports';
 import type {
   FileChangeSummary,
   HunkDecision,
@@ -8,8 +9,6 @@ import type {
   ReviewRedoAction,
   ReviewUndoAction,
 } from '@shared/types/review';
-
-import type { ReviewHistoryPersistenceLockPort, ReviewHistoryPersistenceScope } from './ports';
 
 export interface LoadedReviewDecisionState extends ReviewPersistedStateSnapshot {
   revision: number;
