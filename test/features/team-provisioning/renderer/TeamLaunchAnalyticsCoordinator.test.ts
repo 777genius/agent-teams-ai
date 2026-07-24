@@ -28,7 +28,7 @@ function progress(
   };
 }
 
-function snapshot(providerIds: Array<'anthropic' | 'codex'> = ['anthropic']): TeamViewSnapshot {
+function snapshot(providerIds: ('anthropic' | 'codex')[] = ['anthropic']): TeamViewSnapshot {
   return {
     teamName: 'sandbox-team',
     config: { name: 'Sandbox Team' },
@@ -77,7 +77,7 @@ describe('TeamLaunchAnalyticsCoordinator', () => {
     const launchPort = coordinator.createLaunchPort();
     const request = {
       teamName: 'sandbox-team',
-      cwd: '/tmp/sandbox-project',
+      cwd: '/sandbox/project',
       providerId: 'codex',
       members: [{ name: 'alice' }, { name: 'bob', providerId: 'anthropic' }],
     } satisfies TeamCreateRequest;
@@ -134,7 +134,7 @@ describe('TeamLaunchAnalyticsCoordinator', () => {
     const launchPort = coordinator.createLaunchPort();
     const codexRequest = {
       teamName: 'sandbox-team',
-      cwd: '/tmp/sandbox-project',
+      cwd: '/sandbox/project',
       providerId: 'codex',
     } satisfies TeamLaunchRequest;
     const anthropicRequest = {

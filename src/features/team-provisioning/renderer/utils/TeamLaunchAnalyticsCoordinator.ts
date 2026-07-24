@@ -50,7 +50,7 @@ export class TeamLaunchAnalyticsCoordinator {
     dependencies: TeamLaunchProgressAnalyticsDependencies
   ): TeamProvisioningProgressAnalyticsPort {
     return {
-      noteRefreshFanout: dependencies.noteRefreshFanout,
+      noteRefreshFanout: (note) => dependencies.noteRefreshFanout(note),
       recordStepTransition: (existingProgress, progress) =>
         this.recordStepTransition(
           existingProgress,
