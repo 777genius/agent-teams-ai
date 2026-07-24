@@ -573,6 +573,79 @@ describe("admitted input-patch capacity continuation", () => {
     const reconnectFailureDetails = {
       rawCause: "codex_app_server_reconnect_timeout:Reconnecting... 2/5",
     };
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...reconnectResult,
+        details: reconnectFailureDetails,
+      })}\n`,
+    );
+    const providerFailureContinuation = await projectControlStartStoredJobView(
+      {
+        ...args,
+        forceStart: true,
+        continuationAccounts: ["account-g"],
+      },
+      {
+        ...continuationDeps,
+        listAccountStatuses: async () =>
+          ["account-c", "account-g", "account-i"].map((accountId) => ({
+            name: accountId,
+            authJsonPath: join(
+              fixture.root,
+              "auth",
+              accountId,
+              "auth.json",
+            ),
+            status: "ready" as const,
+            availability: "available" as const,
+            schedulerEligible: true,
+            recommendedAction: "none" as const,
+            warnings: [],
+            safeMessage: "ready",
+          })),
+      },
+    );
+    expect(providerFailureContinuation).toMatchObject({
+      ok: true,
+      jobId: manifest.jobId,
+    });
+    expect(startAdmissionWorkspaceModes.at(-1)).toBe(
+      "admitted_input_patch_continuation",
+    );
+    expect(reservedLaunch?.config.workspacePath).toBe(
+      await realpath(workspacePath),
+    );
+    expect(reservedLaunch?.config.accounts).toEqual([
+      {
+        name: "account-g",
+        authJsonPath: join(
+          fixture.root,
+          "auth",
+          "account-g",
+          "auth.json",
+        ),
+      },
+    ]);
+    expect(
+      sha256(
+        execFileSync("git", ["diff", "--cached", "--binary", "--no-ext-diff"], {
+          cwd: workspacePath,
+        }),
+      ),
+    ).toBe(patchSha256);
+    await expect(
+      readCodexGoalJob({
+        registryRootDir,
+        jobId: manifest.jobId,
+      }),
+    ).resolves.toMatchObject({
+      jobId: manifest.jobId,
+      taskId: manifest.taskId,
+      workspacePath,
+      accounts: ["account-c", "account-g"],
+    });
+
     await journal.appendAttempt({
       taskId: manifest.taskId,
       attempt: {

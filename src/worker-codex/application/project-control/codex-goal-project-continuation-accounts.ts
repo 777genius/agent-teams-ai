@@ -8,7 +8,7 @@ export async function withProjectContinuationAccounts(input: {
   readonly requestedAccounts?: readonly string[];
   readonly continuation?: CodexProjectAccountContinuation;
   readonly verifiedTerminalHandoffRecovery?: boolean;
-  readonly verifiedAdmittedInputPatchPrewarmContinuation?: boolean;
+  readonly verifiedAdmittedInputPatchContinuation?: boolean;
   readonly immutableManifestAccountIds?: readonly string[];
   readonly excludedAccountIds: readonly string[];
   readonly allowedAccountIds: readonly string[];
@@ -18,7 +18,7 @@ export async function withProjectContinuationAccounts(input: {
   if (
     !input.continuation &&
     input.verifiedTerminalHandoffRecovery !== true &&
-    input.verifiedAdmittedInputPatchPrewarmContinuation !== true
+    input.verifiedAdmittedInputPatchContinuation !== true
   ) {
     throw new Error(
       "project_control_continuation_accounts_account_unavailable_proof_required",
@@ -46,7 +46,10 @@ export async function withProjectContinuationAccounts(input: {
   if (invalidAccountId) {
     throw new Error("project_control_continuation_account_id_invalid");
   }
-  if (input.verifiedAdmittedInputPatchPrewarmContinuation === true) {
+  if (
+    !input.continuation &&
+    input.verifiedAdmittedInputPatchContinuation === true
+  ) {
     const immutableManifestAccounts = new Set(
       input.immutableManifestAccountIds ?? [],
     );

@@ -443,9 +443,10 @@ export async function projectControlStartStoredJobView(
         ...(terminalRecovery
           ? { verifiedTerminalHandoffRecovery: true }
           : {}),
-        ...(continuationDecision?.kind === "prewarm_before_attempt"
+        ...(continuationDecision?.workspaceMode ===
+          "admitted_input_patch_continuation"
           ? {
-              verifiedAdmittedInputPatchPrewarmContinuation: true,
+              verifiedAdmittedInputPatchContinuation: true,
               immutableManifestAccountIds: loaded.manifest.accounts,
             }
           : {}),

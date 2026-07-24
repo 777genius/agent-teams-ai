@@ -64,6 +64,41 @@ describe("project continuation accounts", () => {
     );
   });
 
+  it("allows a manifest-bound account after the admitted input patch continuation is verified", async () => {
+    const launch = launchFixture();
+    const continued = await withProjectContinuationAccounts({
+      launch,
+      requestedAccounts: ["account-c"],
+      verifiedAdmittedInputPatchContinuation: true,
+      immutableManifestAccountIds: ["account-c", "account-e"],
+      excludedAccountIds: [],
+      allowedAccountIds: ["account-c", "account-e"],
+      listAccountStatuses: async () => [
+        readyAccount("account-c"),
+        readyAccount("account-e"),
+      ],
+    });
+
+    expect(continued.config.accounts).toEqual([
+      {
+        name: "account-c",
+        authJsonPath: "/auth/account-c/auth.json",
+      },
+    ]);
+    await expect(
+      withProjectContinuationAccounts({
+        launch,
+        requestedAccounts: ["account-i"],
+        verifiedAdmittedInputPatchContinuation: true,
+        immutableManifestAccountIds: ["account-c", "account-e"],
+        excludedAccountIds: [],
+        allowedAccountIds: ["account-c", "account-e", "account-i"],
+      }),
+    ).rejects.toThrow(
+      "project_control_prewarm_continuation_account_outside_manifest:account-i",
+    );
+  });
+
   it("allows a scoped ready account for an already verified terminal handoff recovery", async () => {
     const launch = launchFixture();
     const continued = await withProjectContinuationAccounts({
