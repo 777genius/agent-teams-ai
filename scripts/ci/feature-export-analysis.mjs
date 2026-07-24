@@ -186,6 +186,15 @@ export function commonJsExportNamesForExpression(expression) {
   if (!ts.isCallExpression(current)) return [];
 
   const method = memberAccess(current.expression);
+  const callee = unwrapExpression(current.expression);
+  const helperName = ts.isIdentifier(callee) ? callee.text : method?.name;
+  if (
+    (helperName === '__exportStar' || helperName === '_exportStar') &&
+    current.arguments[1] &&
+    isCommonJsExportsObject(current.arguments[1])
+  ) {
+    return ['*'];
+  }
   if (
     !method ||
     !ts.isIdentifier(method.receiver) ||

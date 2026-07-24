@@ -450,6 +450,11 @@ test('recognizes JavaScript feature root entrypoints', () => {
       `,
       'src/features/commonjs-default/infrastructure/DefaultStore.cjs':
         'module.exports = class DefaultStore {};',
+      'src/features/commonjs-export-star/index.cjs': `
+        __exportStar(require('./infrastructure/Store'), exports);
+      `,
+      'src/features/commonjs-export-star/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
       'src/features/commonjs-getter/main/index.cjs': `
         const StoreModule = require('./infrastructure/Store');
         Object.defineProperty(exports, 'Store', {
@@ -506,6 +511,12 @@ test('recognizes JavaScript feature root entrypoints', () => {
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
             source: 'src/features/commonjs-default/index.cjs',
             specifier: './infrastructure/DefaultStore',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-export-star/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-export-star/index.cjs',
+            specifier: './infrastructure/Store',
           },
           {
             publicEntrypoint: 'src/features/commonjs-getter/main/index.cjs',
