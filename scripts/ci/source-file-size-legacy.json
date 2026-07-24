@@ -54,7 +54,6 @@
   "src/main/index.ts": 3908,
   "src/main/ipc/config.ts": 1230,
   "src/main/ipc/configValidation.ts": 1050,
-  "src/main/ipc/review.ts": 991,
   "src/main/services/discovery/ProjectScanner.ts": 2111,
   "src/main/services/infrastructure/CliInstallerService.ts": 1690,
   "src/main/services/infrastructure/ConfigManager.ts": 1503,

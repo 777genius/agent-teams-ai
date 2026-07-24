@@ -6,11 +6,11 @@
 
 import {
   assertHunkIndices,
-  assertNonEmptyString,
   assertSnippetShapes,
+  createReviewDecisionPersistenceFeature,
+  createReviewFileWatchFeature,
   createReviewQueryFeature,
   createReviewScopeAuthorizationFeature,
-  MAX_REVIEW_HUNK_DECISIONS_PER_FILE,
   sanitizeTaskChangeOptions,
   sanitizeTeamTaskChangeSummaryRequests,
 } from '@features/change-review/main';
@@ -37,21 +37,15 @@ import {
 } from '@features/review-mutations/main';
 import { validateTaskId, validateTeamName } from '@main/ipc/guards';
 import { createIpcWrapper } from '@main/ipc/ipcWrapper';
-import { EditorFileWatcher } from '@main/services/editor';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
 import { ReviewMutationJournalStore } from '@main/services/team/ReviewMutationJournalStore';
-import {
-  withReviewPersistenceLogicalScopeLock,
-  withReviewPersistenceScopeLock,
-} from '@main/services/team/ReviewPersistenceScopeLock';
+import * as reviewPersistenceLocks from '@main/services/team/ReviewPersistenceScopeLock';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { inspectReviewFileTransaction } from '@main/utils/atomicWrite';
-import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
   REVIEW_DELETE_EDITED_FILE,
-  REVIEW_FILE_CHANGE,
   REVIEW_GET_AGENT_CHANGES,
   REVIEW_GET_CHANGE_STATS,
   REVIEW_GET_FILE_CONTENT,
@@ -73,11 +67,7 @@ import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-import type { ReviewPathAuthorization } from '@features/change-review/main';
-import type {
-  ReviewDecisionAuthorization,
-  ReviewDraftHistoryAuthorization,
-} from '@features/change-review-history/main';
+import type { ReviewFileWatcherPort, ReviewPathAuthorization } from '@features/change-review/main';
 import type { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import type { FileContentResolver } from '@main/services/team/FileContentResolver';
 import type { GitDiffFallback } from '@main/services/team/GitDiffFallback';
@@ -91,9 +81,7 @@ import type {
   ConflictCheckResult,
   FileChangeSummary,
   FileChangeWithContent,
-  FileReviewDecision,
   RejectResult,
-  ReviewDecisionPersistenceScope,
   ReviewFileScope,
   ReviewRenameRecoveryExpectation,
   SnippetDiff,
@@ -116,50 +104,8 @@ let reviewConfigReader: Pick<TeamConfigReader, 'getConfig'> = new TeamConfigRead
 const reviewDecisionStore = new ReviewDecisionStore();
 const reviewMutationJournal = new ReviewMutationJournalStore();
 const reviewMutationCoordinator = new ReviewMutationCoordinator(reviewMutationJournal);
-const reviewDecisionPersistenceQueues = new Map<string, Promise<void>>();
-// Review is backed by a point-in-time diff. Unlike the editor watcher, ignoring
-// the first few seconds can silently miss an external write and make Undo unsafe.
-export type ReviewFileWatcher = Pick<
-  EditorFileWatcher,
-  'isWatching' | 'setWatchedFiles' | 'start' | 'stop'
->;
-const defaultReviewFileWatcher = new EditorFileWatcher({ ignoreStartupChanges: false });
-let reviewFileWatcher: ReviewFileWatcher = defaultReviewFileWatcher;
-let reviewWatcherProjectRoot: string | null = null;
-let reviewWatcherRequestGeneration = 0;
-let reviewMainWindowRef: BrowserWindow | null = null;
-let reviewProjectPathValidator: (projectPath: string) => Promise<string> =
-  validateReviewProjectPath;
-
-async function withReviewDecisionPersistenceLock<T>(
-  teamName: string,
-  persistenceScope: ReviewDecisionPersistenceScope,
-  operation: () => Promise<T>
-): Promise<T> {
-  const key = `${teamName}:${persistenceScope.scopeKey}`;
-  const previous = reviewDecisionPersistenceQueues.get(key) ?? Promise.resolve();
-  let release = (): void => undefined;
-  const current = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const queueTail = previous.then(
-    () => current,
-    () => current
-  );
-  reviewDecisionPersistenceQueues.set(key, queueTail);
-
-  await previous.catch(() => undefined);
-  try {
-    return await withReviewPersistenceLogicalScopeLock(teamName, persistenceScope.scopeKey, () =>
-      withReviewPersistenceScopeLock(teamName, persistenceScope, operation)
-    );
-  } finally {
-    release();
-    if (reviewDecisionPersistenceQueues.get(key) === queueTail) {
-      reviewDecisionPersistenceQueues.delete(key);
-    }
-  }
-}
+export type ReviewFileWatcher = ReviewFileWatcherPort;
+const reviewFileWatchFeature = createReviewFileWatchFeature();
 
 function getChangeExtractor(): ChangeExtractorService {
   if (!changeExtractor) throw new Error('Review handlers not initialized');
@@ -261,107 +207,22 @@ function validateSnippetPaths(
   return reviewScopeAuthorizationFeature.validateSnippetPaths(authorization, snippets, options);
 }
 
-function assertReviewDecisionShape(value: unknown): asserts value is FileReviewDecision {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Invalid review decision');
-  }
-  const raw = value as Record<string, unknown>;
-  assertNonEmptyString(raw.filePath, 'decision.filePath');
-  if (
-    raw.reviewKey !== undefined &&
-    (typeof raw.reviewKey !== 'string' ||
-      raw.reviewKey.length === 0 ||
-      raw.reviewKey.length > 32_768 ||
-      raw.reviewKey.includes('\0'))
-  ) {
-    throw new Error('Invalid decision.reviewKey');
-  }
-  if (!['accepted', 'rejected', 'pending'].includes(String(raw.fileDecision))) {
-    throw new Error('Invalid fileDecision');
-  }
-  if (
-    !raw.hunkDecisions ||
-    typeof raw.hunkDecisions !== 'object' ||
-    Array.isArray(raw.hunkDecisions) ||
-    Object.keys(raw.hunkDecisions).length > MAX_REVIEW_HUNK_DECISIONS_PER_FILE
-  ) {
-    throw new Error('Invalid hunkDecisions');
-  }
-  for (const [index, decision] of Object.entries(raw.hunkDecisions)) {
-    const numericIndex = Number(index);
-    if (
-      !/^\d+$/.test(index) ||
-      !Number.isSafeInteger(numericIndex) ||
-      numericIndex >= MAX_REVIEW_HUNK_DECISIONS_PER_FILE ||
-      !['accepted', 'rejected', 'pending'].includes(String(decision))
-    ) {
-      throw new Error('Invalid hunk decision');
-    }
-  }
-  if (raw.hunkContextHashes !== undefined) {
-    if (
-      !raw.hunkContextHashes ||
-      typeof raw.hunkContextHashes !== 'object' ||
-      Array.isArray(raw.hunkContextHashes) ||
-      Object.keys(raw.hunkContextHashes).length > MAX_REVIEW_HUNK_DECISIONS_PER_FILE
-    ) {
-      throw new Error('Invalid hunkContextHashes');
-    }
-    for (const [index, hash] of Object.entries(raw.hunkContextHashes)) {
-      const numericIndex = Number(index);
-      if (
-        !/^\d+$/.test(index) ||
-        !Number.isSafeInteger(numericIndex) ||
-        numericIndex >= MAX_REVIEW_HUNK_DECISIONS_PER_FILE ||
-        typeof hash !== 'string' ||
-        hash.length === 0 ||
-        hash.length > 256
-      ) {
-        throw new Error('Invalid hunk context hash');
-      }
-    }
-  }
-  if (
-    raw.contentSnapshotToken !== undefined &&
-    (typeof raw.contentSnapshotToken !== 'string' || raw.contentSnapshotToken.length > 200)
-  ) {
-    throw new Error('Invalid contentSnapshotToken');
-  }
-  if (raw.snippets !== undefined) assertSnippetShapes(raw.snippets);
-  for (const field of ['originalFullContent', 'modifiedFullContent']) {
-    if (raw[field] !== undefined && raw[field] !== null && typeof raw[field] !== 'string') {
-      throw new Error(`Invalid ${field}`);
-    }
-  }
-  if (raw.isNewFile !== undefined && typeof raw.isNewFile !== 'boolean') {
-    throw new Error('Invalid isNewFile');
-  }
-}
-
-function parseDecisionPersistenceScope(
-  value: unknown,
-  scope: ReviewFileScope
-): ReviewDecisionPersistenceScope | null {
-  if (value === undefined) return null;
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Invalid decision persistence scope');
-  }
-  const raw = value as Record<string, unknown>;
-  assertNonEmptyString(raw.scopeKey, 'decisionPersistenceScope.scopeKey');
-  assertNonEmptyString(raw.scopeToken, 'decisionPersistenceScope.scopeToken');
-  if (raw.scopeToken.length > 32 * 1024 * 1024 || raw.scopeToken.includes('\0')) {
-    throw new Error('Invalid decision persistence scope token');
-  }
-  const expectedScopeKey = scope.taskId
-    ? `task-${scope.taskId}`
-    : scope.memberName
-      ? `agent-${scope.memberName}`
-      : null;
-  if (!expectedScopeKey || raw.scopeKey !== expectedScopeKey) {
-    throw new Error('Decision persistence scope does not match the authoritative review');
-  }
-  return { scopeKey: raw.scopeKey, scopeToken: raw.scopeToken };
-}
+const reviewDecisionPersistenceFeature = createReviewDecisionPersistenceFeature({
+  scope: {
+    parse: parseReviewFileScope,
+    resolve: resolveReviewPathAuthorization,
+    normalizeIdentityPath: normalizeReviewPathForIdentity,
+    validateFilePath: validateAuthorizedReviewFilePath,
+    getAuthoritativeFile: getAuthoritativeReviewedFile,
+  },
+  paths: {
+    isAbsoluteNormalized: (filePath) => path.isAbsolute(path.normalize(filePath)),
+  },
+  locks: {
+    withLogicalScopeLock: reviewPersistenceLocks.withReviewPersistenceLogicalScopeLock,
+    withPersistenceScopeLock: reviewPersistenceLocks.withReviewPersistenceScopeLock,
+  },
+});
 
 // --- Forward-compatible config object ---
 
@@ -378,19 +239,16 @@ export interface ReviewHandlerDeps {
 export function initializeReviewHandlers(deps: ReviewHandlerDeps): void {
   // Handler reinitialization supersedes validation still pending from the
   // previous registration, even when both registrations reuse one watcher.
-  reviewWatcherRequestGeneration += 1;
+  reviewFileWatchFeature.supersedePendingRequests();
   changeExtractor = deps.extractor;
   if (deps.applier) reviewApplier = deps.applier;
   if (deps.contentResolver) fileContentResolver = deps.contentResolver;
   if (deps.gitFallback) gitDiffFallback = deps.gitFallback;
   reviewConfigReader = deps.configReader ?? new TeamConfigReader();
-  const nextFileWatcher = deps.fileWatcher ?? defaultReviewFileWatcher;
-  if (reviewFileWatcher !== nextFileWatcher) {
-    reviewFileWatcher.stop();
-    reviewWatcherProjectRoot = null;
-    reviewFileWatcher = nextFileWatcher;
-  }
-  reviewProjectPathValidator = deps.projectPathValidator ?? validateReviewProjectPath;
+  reviewFileWatchFeature.configure({
+    fileWatcher: deps.fileWatcher,
+    projectPathValidator: deps.projectPathValidator,
+  });
 }
 
 export function registerReviewHandlers(ipcMain: IpcMain): void {
@@ -449,13 +307,11 @@ export function removeReviewHandlers(ipcMain: IpcMain): void {
   removeReviewMutationRecoveryIpc(ipcMain);
   removeReviewDecisionHistoryIpc(ipcMain);
   removeReviewDraftHistoryIpc(ipcMain);
-  reviewFileWatcher.stop();
-  reviewWatcherProjectRoot = null;
-  reviewWatcherRequestGeneration += 1;
+  reviewFileWatchFeature.dispose();
 }
 
 export function setReviewMainWindow(win: BrowserWindow | null): void {
-  reviewMainWindowRef = win;
+  reviewFileWatchFeature.setMainWindow(win);
 }
 
 // --- Phase 1 Handlers ---
@@ -582,51 +438,6 @@ async function handleApplyDecisions(
   );
 }
 
-function parseReviewScopeKey(teamName: string, scopeKey: string): ReviewFileScope {
-  if (scopeKey.startsWith('task-')) {
-    return parseReviewFileScope({ teamName, taskId: scopeKey.slice('task-'.length) });
-  }
-  if (scopeKey.startsWith('agent-')) {
-    return parseReviewFileScope({ teamName, memberName: scopeKey.slice('agent-'.length) });
-  }
-  throw new Error('Review decision scope cannot authorize history');
-}
-
-async function authorizeReviewDraftHistoryScope(
-  teamName: string,
-  scopeKey: string
-): Promise<ReviewDraftHistoryAuthorization> {
-  const { authorization } = await resolveReviewPathAuthorization(
-    parseReviewScopeKey(teamName, scopeKey),
-    { requireIdentity: true }
-  );
-  return {
-    isCurrentReviewedFile: (filePath) =>
-      path.isAbsolute(path.normalize(filePath)) &&
-      Boolean(authorization.reviewedFiles?.has(normalizeReviewPathForIdentity(filePath))),
-    assertCurrentReviewedFile: async (filePath) => {
-      await validateAuthorizedReviewFilePath(authorization, filePath, {
-        requireReviewedFile: true,
-      });
-    },
-  };
-}
-
-async function authorizeReviewDecisionHistoryScope(
-  teamName: string,
-  scopeKey: string
-): Promise<ReviewDecisionAuthorization> {
-  const { authorization } = await resolveReviewPathAuthorization(
-    parseReviewScopeKey(teamName, scopeKey),
-    { requireIdentity: true }
-  );
-  return {
-    files: authorization.reviewedFiles ? [...authorization.reviewedFiles.values()] : null,
-    normalizePath: normalizeReviewPathForIdentity,
-    resolveFile: (filePath) => getAuthoritativeReviewedFile(authorization, filePath),
-  };
-}
-
 const reviewDecisionBatchFeature = createReviewDecisionBatchFeature({
   scope: {
     parse: parseReviewFileScope,
@@ -683,20 +494,22 @@ const reviewMutationRecoveryFeature = createReviewMutationRecoveryFeature({
   scope: {
     parse: parseReviewFileScope,
     resolve: resolveReviewPathAuthorization,
-    parsePersistenceScope: parseDecisionPersistenceScope,
+    parsePersistenceScope: (value, scope) =>
+      reviewDecisionPersistenceFeature.parsePersistenceScope(value, scope),
     validateFilePath: validateAuthorizedReviewFilePath,
     validateSnippets: validateSnippetPaths,
     resolveAuthoritativeContent: resolveAuthoritativeFileContent,
     assertExpectedRename: assertExpectedAuthoritativeRename,
     parseRenameExpectation: parseReviewRenameRecoveryExpectation,
-    assertDecisionShape: assertReviewDecisionShape,
+    assertDecisionShape: (value) => reviewDecisionPersistenceFeature.assertDecisionShape(value),
     assertSnippetShapes,
     getAuthoritativeFile: getAuthoritativeReviewedFile,
     normalizeIdentityPath: normalizeReviewPathForIdentity,
     normalizeFilesystemPath: (filePath) => path.resolve(path.normalize(filePath)),
   },
   decisions: {
-    withLock: withReviewDecisionPersistenceLock,
+    withLock: (teamName, persistenceScope, operation) =>
+      reviewDecisionPersistenceFeature.withLock(teamName, persistenceScope, operation),
     assertValidSnapshot: (value) => reviewDecisionStore.assertValidSnapshot(value),
     assertCurrentRevision: async (teamName, persistenceScope, expectedRevision) => {
       const current = await reviewDecisionStore.load(
@@ -751,10 +564,11 @@ const reviewMutationRecoveryFeature = createReviewMutationRecoveryFeature({
 const reviewDecisionCommandFeature = createReviewDecisionCommandFeature({
   scope: {
     resolve: resolveReviewPathAuthorization,
-    parsePersistenceScope: parseDecisionPersistenceScope,
+    parsePersistenceScope: (value, scope) =>
+      reviewDecisionPersistenceFeature.parsePersistenceScope(value, scope),
     validateFilePath: validateAuthorizedReviewFilePath,
     validateSnippets: validateSnippetPaths,
-    assertDecisionShape: assertReviewDecisionShape,
+    assertDecisionShape: (value) => reviewDecisionPersistenceFeature.assertDecisionShape(value),
     assertSnippetShapes,
     getAuthoritativeFile: getAuthoritativeReviewedFile,
     resolveAuthoritativeContent: resolveAuthoritativeFileContent,
@@ -768,7 +582,8 @@ const reviewDecisionCommandFeature = createReviewDecisionCommandFeature({
     applyReviewDecisions: (...args) => getApplier().applyReviewDecisions(...args),
   },
   persistence: {
-    withLock: withReviewDecisionPersistenceLock,
+    withLock: (teamName, persistenceScope, operation) =>
+      reviewDecisionPersistenceFeature.withLock(teamName, persistenceScope, operation),
     assertValidSnapshot: (value) => reviewDecisionStore.assertValidSnapshot(value),
     load: (teamName, persistenceScope) =>
       reviewDecisionStore.load(teamName, persistenceScope.scopeKey, persistenceScope.scopeToken),
@@ -829,8 +644,14 @@ const reviewQueryFeature = createReviewQueryFeature({
 });
 
 const reviewDecisionHistoryFeature = createReviewDecisionHistoryFeature({
-  lock: { run: withReviewDecisionPersistenceLock },
-  authorization: { authorize: authorizeReviewDecisionHistoryScope },
+  lock: {
+    run: (teamName, persistenceScope, operation) =>
+      reviewDecisionPersistenceFeature.withLock(teamName, persistenceScope, operation),
+  },
+  authorization: {
+    authorize: (teamName, scopeKey) =>
+      reviewDecisionPersistenceFeature.authorizeDecisionHistoryScope(teamName, scopeKey),
+  },
   queries: reviewDecisionStore,
   mutations: reviewDecisionStore,
   validation: reviewDecisionStore,
@@ -858,8 +679,14 @@ const reviewDecisionHistoryFeature = createReviewDecisionHistoryFeature({
 });
 
 const reviewDraftHistoryFeature = createReviewDraftHistoryFeature({
-  lock: { run: withReviewDecisionPersistenceLock },
-  authorization: { authorize: authorizeReviewDraftHistoryScope },
+  lock: {
+    run: (teamName, persistenceScope, operation) =>
+      reviewDecisionPersistenceFeature.withLock(teamName, persistenceScope, operation),
+  },
+  authorization: {
+    authorize: (teamName, scopeKey) =>
+      reviewDecisionPersistenceFeature.authorizeDraftHistoryScope(teamName, scopeKey),
+  },
 });
 
 async function handleGetFileContent(
@@ -934,51 +761,16 @@ async function handleWatchReviewFiles(
   projectPath: string,
   filePaths: string[]
 ): Promise<IpcResult<void>> {
-  const requestGeneration = ++reviewWatcherRequestGeneration;
-  return wrapReviewHandler('watchFiles', async () => {
-    const normalizedProjectPath = await reviewProjectPathValidator(projectPath);
-    if (requestGeneration !== reviewWatcherRequestGeneration) return;
-    const shouldRestart =
-      reviewWatcherProjectRoot !== normalizedProjectPath || !reviewFileWatcher.isWatching();
-
-    if (shouldRestart) {
-      reviewFileWatcher.stop();
-      reviewWatcherProjectRoot = normalizedProjectPath;
-      reviewFileWatcher.start(normalizedProjectPath, (event) => {
-        safeSendToRenderer(reviewMainWindowRef, REVIEW_FILE_CHANGE, event);
-      });
-    }
-
-    reviewFileWatcher.setWatchedFiles(Array.isArray(filePaths) ? filePaths : []);
-  });
+  const operation = reviewFileWatchFeature.prepareWatch(projectPath, filePaths);
+  return wrapReviewHandler('watchFiles', operation);
 }
 
 async function handleUnwatchReviewFiles(): Promise<IpcResult<void>> {
-  reviewWatcherRequestGeneration += 1;
-  return wrapReviewHandler('unwatchFiles', async () => {
-    reviewFileWatcher.stop();
-    reviewWatcherProjectRoot = null;
-  });
+  const operation = reviewFileWatchFeature.prepareUnwatch();
+  return wrapReviewHandler('unwatchFiles', operation);
 }
 
 // --- Phase 4 Handlers ---
-
-async function validateReviewProjectPath(projectPath: string): Promise<string> {
-  if (!projectPath || typeof projectPath !== 'string') {
-    throw new Error('Invalid project path');
-  }
-
-  if (!path.isAbsolute(projectPath)) {
-    throw new Error('Project path must be absolute');
-  }
-
-  const normalized = path.resolve(path.normalize(projectPath));
-  const stat = await fs.stat(normalized);
-  if (!stat.isDirectory()) {
-    throw new Error('Project path is not a directory');
-  }
-  return normalized;
-}
 
 async function handleGetGitFileLog(
   _event: IpcMainInvokeEvent,
