@@ -8,6 +8,7 @@ import type { ApplyReviewResult } from '@shared/types';
 import type { ReviewAPI } from '@shared/types/api';
 
 interface ChangeReviewDialogLifecycleStore extends ChangeReviewDialogLifecycleStateSnapshot {
+  applyError: string | null;
   resetAllReviewState(): void;
   clearChangeReviewCache(): void;
   fetchAgentChanges(teamName: string, memberName: string): Promise<void>;
@@ -88,9 +89,17 @@ export function createChangeReviewDialogLifecycleCommandPort({
       getStore().clearDecisionsFromDisk(teamName, scopeKey, scopeToken, forceDiscard),
     applyReview: async (teamName, taskId, memberName) => {
       const result = await getStore().applyReview(teamName, taskId, memberName);
-      return result?.errors.length === 0
-        ? { status: 'applied', result }
-        : { status: 'failed', result };
+      if (result?.errors.length === 0) {
+        return { status: 'applied', result };
+      }
+      return {
+        status: 'failed',
+        result,
+        errorMessage:
+          result?.errors.map((entry) => entry.error).join('\n') ||
+          getStore().applyError ||
+          'Unable to apply this review. Changes remains open; retry Apply.',
+      };
     },
     retryMutationRecovery: (request) => getReviewApi().retryMutationRecovery(request),
   };

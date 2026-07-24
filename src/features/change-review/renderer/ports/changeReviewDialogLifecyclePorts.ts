@@ -27,7 +27,7 @@ export type ChangeReviewDialogLifecycleAutoClearResult = 'cleared' | 'failed' | 
 
 export type ChangeReviewDialogLifecycleApplyOutcome =
   | { status: 'applied'; result: ApplyReviewResult }
-  | { status: 'failed'; result: ApplyReviewResult | null };
+  | { status: 'failed'; result: ApplyReviewResult | null; errorMessage: string };
 
 export interface ChangeReviewDialogLifecycleDecisionPersistencePort {
   scheduleAutoPersistence: (scope: ChangeReviewDialogLifecyclePersistenceScope) => void;

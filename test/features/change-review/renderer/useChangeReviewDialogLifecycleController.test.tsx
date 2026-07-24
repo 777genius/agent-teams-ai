@@ -511,6 +511,7 @@ describe('useChangeReviewDialogLifecycleController', () => {
           errors: [{ filePath: '/repo/a.ts', error: 'changed' }],
           diskPostimages: [{ filePath: '/repo/a.ts', content: 'partial' }],
         }),
+        errorMessage: 'changed',
       });
     });
     const root = await renderHarness(harness);
@@ -523,13 +524,14 @@ describe('useChangeReviewDialogLifecycleController', () => {
     act(() => root.unmount());
   });
 
-  it('reports a deterministic fallback when Apply fails without a result', async () => {
+  it('reports the operation-owned error when Apply fails without a result', async () => {
     const harness = createHarness();
     vi.mocked(harness.commandPort.applyReview).mockImplementation(() => {
       harness.events.push('apply-review');
       return Promise.resolve({
         status: 'failed',
         result: null,
+        errorMessage: 'Review scope changed. Reload Changes before applying.',
       });
     });
     const root = await renderHarness(harness);
@@ -539,7 +541,7 @@ describe('useChangeReviewDialogLifecycleController', () => {
     expect(harness.events).toEqual([
       'apply-review',
       'mark-postimages',
-      'error:Unable to apply this review. Changes remains open; retry Apply.',
+      'error:Review scope changed. Reload Changes before applying.',
     ]);
     expect(harness.sessionPort.setPendingApplyCleanupKey).not.toHaveBeenCalled();
     expect(harness.commandPort.clearDecisions).not.toHaveBeenCalled();

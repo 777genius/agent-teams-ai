@@ -450,10 +450,7 @@ export function useChangeReviewDialogLifecycleController({
       if (!isCurrentOperationScope(operationScope)) return;
       writeEvidencePort.markCommittedPostimages(outcome.result?.diskPostimages);
       if (outcome.status === 'failed') {
-        statePort.reportError(
-          outcome.result?.errors[0]?.error ??
-            'Unable to apply this review. Changes remains open; retry Apply.'
-        );
+        statePort.reportError(outcome.errorMessage);
         return;
       }
       if (!sessionPort.isExpectedHydrationKey(decisionHydrationKey)) return;

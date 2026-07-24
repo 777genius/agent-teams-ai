@@ -16,6 +16,7 @@ function createStore() {
     decisionHydrationScopeKey: 'hydration-a',
     decisionHydrationStatus: 'loaded' as const,
     applying: false,
+    applyError: null as string | null,
     resetAllReviewState: vi.fn(),
     clearChangeReviewCache: vi.fn(),
     fetchAgentChanges: vi.fn().mockResolvedValue(undefined),
@@ -115,20 +116,43 @@ describe('change-review dialog lifecycle ports', () => {
       hydrateDecisions: vi.fn(),
     });
 
-    store.applyReview.mockResolvedValueOnce(null).mockResolvedValueOnce({
-      applied: 0,
-      skipped: 1,
-      conflicts: 1,
-      errors: [{ filePath: '/repo/a.ts', error: 'changed' }],
-    });
+    store.applyError = 'Review scope changed. Reload Changes before applying.';
+    store.applyReview
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        applied: 0,
+        skipped: 1,
+        conflicts: 1,
+        errors: [
+          { filePath: '/repo/a.ts', error: 'changed' },
+          { filePath: '/repo/b.ts', error: 'also changed' },
+        ],
+      })
+      .mockResolvedValueOnce(null);
 
     await expect(port.applyReview('team', 'task', undefined)).resolves.toEqual({
       status: 'failed',
       result: null,
+      errorMessage: 'Review scope changed. Reload Changes before applying.',
     });
-    await expect(port.applyReview('team', 'task', undefined)).resolves.toMatchObject({
+    await expect(port.applyReview('team', 'task', undefined)).resolves.toEqual({
       status: 'failed',
-      result: { conflicts: 1 },
+      result: {
+        applied: 0,
+        skipped: 1,
+        conflicts: 1,
+        errors: [
+          { filePath: '/repo/a.ts', error: 'changed' },
+          { filePath: '/repo/b.ts', error: 'also changed' },
+        ],
+      },
+      errorMessage: 'changed\nalso changed',
+    });
+    store.applyError = null;
+    await expect(port.applyReview('team', 'task', undefined)).resolves.toEqual({
+      status: 'failed',
+      result: null,
+      errorMessage: 'Unable to apply this review. Changes remains open; retry Apply.',
     });
   });
 });
