@@ -45,8 +45,11 @@ import { resolveReviewFilePath } from './reviewFilePathResolution';
 
 import type {
   ChangeReviewDialogViewStatePolicy,
+  ChangeReviewExternalChangePolicy,
+  ChangeReviewExternalChangeStatePort,
   ChangeReviewFileDecisionPolicy,
   ChangeReviewHunkDecisionPolicy,
+  ChangeReviewOperationStatePort,
 } from '@features/change-review/renderer';
 
 export const changeReviewConflictQueryPort = createChangeReviewConflictQueryPort(() => api.review);
@@ -61,6 +64,34 @@ export const changeReviewDraftHistoryPort = createChangeReviewDraftHistoryPort((
 export const changeReviewExternalFileWatcherPort = createChangeReviewExternalFileWatcherPort(
   () => api.review
 );
+export const changeReviewOperationStatePort: ChangeReviewOperationStatePort = {
+  getSnapshot: () => {
+    const state = useStore.getState();
+    return {
+      applying: state.applying,
+      decisionHydrationScopeKey: state.decisionHydrationScopeKey,
+      decisionHydrationStatus: state.decisionHydrationStatus,
+    };
+  },
+  reportError: (message) => useStore.setState({ applyError: message }),
+};
+export const changeReviewExternalChangeStatePort: ChangeReviewExternalChangeStatePort = {
+  getSnapshot: () => {
+    const state = useStore.getState();
+    return {
+      activeChangeSet: state.activeChangeSet,
+      editedContents: state.editedContents,
+      reviewExternalChangesByFile: state.reviewExternalChangesByFile,
+    };
+  },
+  restoreDraft: (filePath, content) => useStore.getState().updateEditedContent(filePath, content),
+  markExternalChange: (filePath, changeType) =>
+    useStore.getState().markReviewFileExternallyChanged(filePath, changeType),
+  reportError: (message) => useStore.setState({ applyError: message }),
+};
+export const changeReviewExternalChangePolicy: ChangeReviewExternalChangePolicy = {
+  hasUnresolvedExternalChange: hasUnresolvedReviewExternalChange,
+};
 export const changeReviewActionHistoryStorePort = createChangeReviewActionHistoryStorePort({
   getStore: useStore.getState,
   clearLegacyUndoStack: () => useStore.setState({ reviewUndoStack: [] }),

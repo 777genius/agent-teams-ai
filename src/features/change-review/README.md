@@ -11,9 +11,10 @@ main-process review IPC shell.
   decision-persistence, keyboard orchestration, bulk Accept/Reject, manual file draft
   save/reload/discard flows, file-level and hunk-level Accept/Reject/Restore, and durable
   Undo/Redo/checkpoint Restore. It also owns dialog view state, selection/collapse/viewed
-  presentation interactions, diff/history keyboard navigation, external-file watcher
-  suppression, dialog open/fetch/hydration, close/app-close flushing, saved-state
-  recovery/discard, Apply cleanup, and Escape orchestration through narrow ports.
+  presentation interactions, diff/history keyboard navigation, operation-state latches,
+  mutation guards, external-change processing and watcher suppression, dialog
+  open/fetch/hydration, close/app-close flushing, saved-state recovery/discard, Apply cleanup,
+  and Escape orchestration through narrow ports.
 - `renderer/ui` owns store-free presentation components, including the review navigation
   sidebar, file tree, and active-file edit timeline. Decision state reaches that subtree
   through explicit props rather than direct Zustand access.
