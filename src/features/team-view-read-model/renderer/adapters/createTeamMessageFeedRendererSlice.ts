@@ -283,7 +283,11 @@ export function createTeamMessageFeedRendererSlice<TScope>(
         !coordinator.getQueuedHeadRequest(teamName) &&
         dependencies.requestScope.isCurrent(teamName, requestScope)
       ) {
-        await dependencies.actions.getActions().refreshTeamMessagesHead(teamName);
+        try {
+          await dependencies.actions.getActions().refreshTeamMessagesHead(teamName);
+        } catch {
+          // Revision recovery is best-effort; load-older historically contains refresh failures.
+        }
       }
     })();
 

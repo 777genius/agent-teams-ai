@@ -34,6 +34,11 @@ interface LegacyFileReadResult {
   readonly value?: unknown;
 }
 
+export type LegacyTeamRosterFileOpen = (
+  targetPath: fs.PathLike,
+  flags: string | number
+) => Promise<fs.promises.FileHandle>;
+
 class UnsafeTeamDirectoryError extends Error {
   constructor() {
     super('team-roster-directory-capability-changed');
@@ -44,6 +49,7 @@ class UnsafeTeamDirectoryError extends Error {
 export interface LegacyTeamRosterFileSourceDependencies {
   readonly teamsRootPath: string;
   readonly teamIdentityGateway: TeamIdentityReadGateway;
+  readonly openFile?: LegacyTeamRosterFileOpen;
 }
 
 export class LegacyTeamRosterFileSource implements LegacyTeamRosterEvidenceSource {
@@ -53,6 +59,7 @@ export class LegacyTeamRosterFileSource implements LegacyTeamRosterEvidenceSourc
     teamIdValue: TeamId
   ): Promise<LegacyTeamRosterEvidenceReadResult> {
     const teamId = parseTeamId(teamIdValue);
+    const openFile = this.dependencies.openFile ?? openNodeFile;
     let identity;
     try {
       identity = await this.dependencies.teamIdentityGateway.getTeamIdentity(teamId);
@@ -79,6 +86,7 @@ export class LegacyTeamRosterFileSource implements LegacyTeamRosterEvidenceSourc
         directoryPath,
         TEAM_IDENTITY_FILE_NAME,
         identity.directoryFingerprint,
+        openFile,
         MAX_TEAM_IDENTITY_FILE_BYTES
       );
       assertCanonicalIdentityFile(identityFile, identity);
@@ -95,12 +103,14 @@ export class LegacyTeamRosterFileSource implements LegacyTeamRosterEvidenceSourc
       config = await readVerifiedDirectoryJsonFile(
         directoryPath,
         'config.json',
-        identity.directoryFingerprint
+        identity.directoryFingerprint,
+        openFile
       );
       membersMeta = await readVerifiedDirectoryJsonFile(
         directoryPath,
         'members.meta.json',
-        identity.directoryFingerprint
+        identity.directoryFingerprint,
+        openFile
       );
     } catch (error) {
       if (error instanceof UnsafeTeamDirectoryError) {
@@ -196,6 +206,7 @@ async function readVerifiedDirectoryJsonFile(
   canonicalDirectoryPath: string,
   filename: string,
   expectedDirectoryFingerprint: string,
+  openFile: LegacyTeamRosterFileOpen,
   maximumBytes = MAX_LEGACY_ROSTER_FILE_BYTES
 ): Promise<LegacyFileReadResult> {
   try {
@@ -205,10 +216,12 @@ async function readVerifiedDirectoryJsonFile(
   }
 
   let result: LegacyFileReadResult | undefined;
+  let readFailed = false;
   let readError: unknown;
   try {
-    result = await readBoundedJsonFile(canonicalDirectoryPath, filename, maximumBytes);
+    result = await readBoundedJsonFile(canonicalDirectoryPath, filename, openFile, maximumBytes);
   } catch (error) {
+    readFailed = true;
     readError = error;
   }
 
@@ -217,7 +230,11 @@ async function readVerifiedDirectoryJsonFile(
   } catch {
     throw new UnsafeTeamDirectoryError();
   }
-  if (readError !== undefined) throw readError;
+  if (readFailed) {
+    throw readError instanceof Error
+      ? readError
+      : new Error('team-roster-evidence-read-failed', { cause: readError });
+  }
   if (result === undefined) throw new Error('team-roster-evidence-read-missing');
   return result;
 }
@@ -225,18 +242,30 @@ async function readVerifiedDirectoryJsonFile(
 async function readBoundedJsonFile(
   directoryPath: string,
   filename: string,
+  openFile: LegacyTeamRosterFileOpen,
   maximumBytes = MAX_LEGACY_ROSTER_FILE_BYTES
 ): Promise<LegacyFileReadResult> {
   const targetPath = path.join(directoryPath, filename);
   let handle: fs.promises.FileHandle | null = null;
   try {
-    handle = await fs.promises.open(targetPath, fs.constants.O_RDONLY | NO_FOLLOW);
+    const entry = await fs.promises.lstat(targetPath);
+    if (
+      !entry.isFile() ||
+      entry.isSymbolicLink() ||
+      entry.nlink !== 1 ||
+      entry.size > maximumBytes
+    ) {
+      throw new Error('team-roster-evidence-file-unsafe');
+    }
+    handle = await openFile(targetPath, safeReadOpenFlags());
     const before = await handle.stat();
     if (
       !before.isFile() ||
       before.isSymbolicLink() ||
       before.nlink !== 1 ||
-      before.size > maximumBytes
+      before.size > maximumBytes ||
+      before.dev !== entry.dev ||
+      before.ino !== entry.ino
     ) {
       throw new Error('team-roster-evidence-file-unsafe');
     }
@@ -261,12 +290,32 @@ async function readBoundedJsonFile(
     const serialized = buffer.subarray(0, offset).toString('utf8');
     return { exists: true, serialized, value: JSON.parse(serialized) };
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { exists: false };
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      (error as NodeJS.ErrnoException).code === 'ENOENT'
+    ) {
+      return { exists: false };
+    }
     throw error;
   } finally {
     await handle?.close().catch(() => undefined);
   }
 }
+
+function safeReadOpenFlags(): number {
+  const nonBlockingFlag: unknown = fs.constants.O_NONBLOCK;
+  if (typeof nonBlockingFlag === 'number') {
+    return fs.constants.O_RDONLY | NO_FOLLOW | nonBlockingFlag;
+  }
+  if (process.platform === 'win32') {
+    return fs.constants.O_RDONLY | NO_FOLLOW;
+  }
+  throw new Error('team-roster-nonblocking-open-unavailable');
+}
+
+const openNodeFile: LegacyTeamRosterFileOpen = (targetPath, flags) =>
+  fs.promises.open(targetPath, flags);
 
 function assertCanonicalIdentityFile(
   file: LegacyFileReadResult,
