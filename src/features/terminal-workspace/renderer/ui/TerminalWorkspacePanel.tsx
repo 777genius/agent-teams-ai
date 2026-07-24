@@ -3,7 +3,6 @@ import {
   type CSSProperties,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -67,6 +66,11 @@ import {
 
 import { normalizeTerminalCommandRunEventDetail } from '../adapters/terminalCommandRunEvents';
 import {
+  persistTerminalTabPreferences,
+  readStoredTerminalTabPreferences,
+} from '../adapters/terminalTabPreferencesStorage';
+import { useTerminalTabReorderMotion } from '../hooks/useTerminalTabReorderMotion';
+import {
   DEFAULT_TERMINAL_APPEARANCE_SETTINGS,
   normalizeTerminalAppearanceSettings,
   resolveTerminalBackgroundImageUrl,
@@ -93,6 +97,28 @@ import {
   formatTerminalPromptLabel,
   formatWorkingDirectory,
 } from '../model/terminalPathPresentation';
+import {
+  areStringArraysEqual,
+  areTerminalTabPreferencesEqual,
+  formatMuxTabTitle,
+  formatNextMuxTabTitle,
+  getTerminalTabColorLabelKey,
+  hasTerminalTabHistory,
+  isPrewarmedTerminalTab,
+  normalizeTerminalTabPreferences,
+  orderTerminalTabsByPreference,
+  PREWARMED_TERMINAL_TAB_TITLE,
+  reorderTerminalTabsById,
+  resolveTerminalTabColor,
+  resolveVisibleTabToFocusAfterClose,
+  TERMINAL_TAB_COLOR_OPTIONS,
+  type TerminalMuxTab,
+  type TerminalTabColorId,
+  type TerminalTabDropIndicator,
+  type TerminalTabPointerDrag,
+  type TerminalTabPreferences,
+  type TerminalWorkspaceSnapshot,
+} from '../model/terminalTabPreferences';
 import { isRecord } from '../utils/valueGuards';
 
 import {
@@ -123,10 +149,7 @@ export interface TerminalWorkspacePanelProps {
 }
 
 const TERMINAL_LOCAL_AUTOCOMPLETE_THROTTLE_MS = 75;
-const PREWARMED_TERMINAL_TAB_TITLE = '__tp_prewarmed_shell__';
-const TERMINAL_TAB_PREFERENCES_VERSION = 1;
 const TERMINAL_PLATFORM_GITHUB_URL = 'https://github.com/777genius/terminal-platform';
-type TerminalWorkspaceSnapshot = ReturnType<WorkspaceKernel['getSnapshot']>;
 type TerminalMuxCommand = Parameters<WorkspaceKernel['commands']['dispatchMuxCommand']>[1];
 type TerminalScreenElementHandle = ComponentRef<typeof TerminalScreen> & {
   followOutput?: boolean;
@@ -135,41 +158,6 @@ type TerminalScreenElementHandle = ComponentRef<typeof TerminalScreen> & {
 };
 type TerminalCommandDockElementHandle = ComponentRef<typeof TerminalCommandDock>;
 type TeamTFunction = ReturnType<typeof useAppTranslation>['t'];
-type TerminalMuxTab = NonNullable<
-  TerminalWorkspaceSnapshot['attachedSession']
->['topology']['tabs'][number];
-type TerminalMuxPaneTreeNode = TerminalMuxTab['root'];
-type TerminalTabColorId = (typeof TERMINAL_TAB_COLOR_OPTIONS)[number]['id'];
-
-interface TerminalTabColorOption {
-  id: string;
-  accent: string;
-  border: string;
-  background: string;
-  hoverBackground: string;
-}
-
-interface TerminalTabPreferences {
-  version: number;
-  order: string[];
-  colors: Record<string, TerminalTabColorId>;
-}
-
-interface TerminalTabDropIndicator {
-  placementMode: 'before' | 'after';
-  tabId: string;
-}
-
-interface TerminalTabPointerDrag {
-  active: boolean;
-  grabOffsetX: number;
-  offsetX: number;
-  pointerId: number;
-  startClientX: number;
-  startClientY: number;
-  tabId: string;
-}
-
 interface TerminalCommandContextMenuState {
   blockText: string;
   commandText: string;
@@ -177,86 +165,6 @@ interface TerminalCommandContextMenuState {
   x: number;
   y: number;
 }
-
-const TERMINAL_TAB_COLOR_OPTIONS = [
-  {
-    id: 'slate',
-    accent: '#94a3b8',
-    border: 'rgba(148, 163, 184, 0.56)',
-    background: 'rgba(148, 163, 184, 0.14)',
-    hoverBackground: 'rgba(148, 163, 184, 0.18)',
-  },
-  {
-    id: 'sky',
-    accent: '#38bdf8',
-    border: 'rgba(56, 189, 248, 0.58)',
-    background: 'rgba(56, 189, 248, 0.15)',
-    hoverBackground: 'rgba(56, 189, 248, 0.2)',
-  },
-  {
-    id: 'blue',
-    accent: '#60a5fa',
-    border: 'rgba(96, 165, 250, 0.58)',
-    background: 'rgba(96, 165, 250, 0.15)',
-    hoverBackground: 'rgba(96, 165, 250, 0.2)',
-  },
-  {
-    id: 'cyan',
-    accent: '#22d3ee',
-    border: 'rgba(34, 211, 238, 0.58)',
-    background: 'rgba(34, 211, 238, 0.14)',
-    hoverBackground: 'rgba(34, 211, 238, 0.19)',
-  },
-  {
-    id: 'teal',
-    accent: '#2dd4bf',
-    border: 'rgba(45, 212, 191, 0.56)',
-    background: 'rgba(45, 212, 191, 0.14)',
-    hoverBackground: 'rgba(45, 212, 191, 0.19)',
-  },
-  {
-    id: 'emerald',
-    accent: '#34d399',
-    border: 'rgba(52, 211, 153, 0.56)',
-    background: 'rgba(52, 211, 153, 0.14)',
-    hoverBackground: 'rgba(52, 211, 153, 0.19)',
-  },
-  {
-    id: 'lime',
-    accent: '#a3e635',
-    border: 'rgba(163, 230, 53, 0.52)',
-    background: 'rgba(163, 230, 53, 0.12)',
-    hoverBackground: 'rgba(163, 230, 53, 0.17)',
-  },
-  {
-    id: 'amber',
-    accent: '#fbbf24',
-    border: 'rgba(251, 191, 36, 0.54)',
-    background: 'rgba(251, 191, 36, 0.13)',
-    hoverBackground: 'rgba(251, 191, 36, 0.18)',
-  },
-  {
-    id: 'orange',
-    accent: '#fb923c',
-    border: 'rgba(251, 146, 60, 0.54)',
-    background: 'rgba(251, 146, 60, 0.13)',
-    hoverBackground: 'rgba(251, 146, 60, 0.18)',
-  },
-  {
-    id: 'rose',
-    accent: '#fb7185',
-    border: 'rgba(251, 113, 133, 0.56)',
-    background: 'rgba(251, 113, 133, 0.14)',
-    hoverBackground: 'rgba(251, 113, 133, 0.19)',
-  },
-  {
-    id: 'violet',
-    accent: '#a78bfa',
-    border: 'rgba(167, 139, 250, 0.56)',
-    background: 'rgba(167, 139, 250, 0.14)',
-    hoverBackground: 'rgba(167, 139, 250, 0.19)',
-  },
-] as const satisfies readonly TerminalTabColorOption[];
 
 const TerminalButtonTooltip = ({
   children,
@@ -1367,7 +1275,6 @@ const TerminalMuxTabs = ({
   const tabListElementRef = useRef<HTMLDivElement | null>(null);
   const tabElementRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const tabPointerDragRef = useRef<TerminalTabPointerDrag | null>(null);
-  const tabRectsBeforeReorderRef = useRef<Map<string, DOMRect> | null>(null);
   const topology = snapshot.attachedSession?.topology ?? null;
   const controls = resolveTerminalTopologyControlState(snapshot);
   const tabs = topology?.tabs ?? [];
@@ -1389,6 +1296,11 @@ const TerminalMuxTabs = ({
   const busy = pendingAction !== null;
   const headerPlacement = placement === 'sheet-header';
   const canCloseVisibleTabs = controls.canCloseTab && visibleTabs.length > 1;
+  const { captureTabRectsBeforeReorder, clearCapturedTabRects } = useTerminalTabReorderMotion({
+    draggingTabId,
+    orderedTabIdsKey: orderedVisibleTabIdsKey,
+    tabElementRefs,
+  });
 
   const setTabPointerDragState = useCallback((nextDrag: TerminalTabPointerDrag | null): void => {
     tabPointerDragRef.current = nextDrag;
@@ -1417,66 +1329,6 @@ const TerminalMuxTabs = ({
 
     tabElementRefs.current.delete(tabId);
   }, []);
-
-  const prefersReducedMotion = useCallback(
-    () =>
-      typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
-    []
-  );
-
-  const captureTabRectsBeforeReorder = useCallback((): void => {
-    if (prefersReducedMotion()) {
-      tabRectsBeforeReorderRef.current = null;
-      return;
-    }
-
-    const rects = new Map<string, DOMRect>();
-    tabElementRefs.current.forEach((element, tabId) => {
-      rects.set(tabId, element.getBoundingClientRect());
-    });
-    tabRectsBeforeReorderRef.current = rects.size > 1 ? rects : null;
-  }, [prefersReducedMotion]);
-
-  useLayoutEffect(() => {
-    const previousRects = tabRectsBeforeReorderRef.current;
-    if (!previousRects || prefersReducedMotion()) {
-      tabRectsBeforeReorderRef.current = null;
-      return;
-    }
-
-    tabRectsBeforeReorderRef.current = null;
-    tabElementRefs.current.forEach((element, tabId) => {
-      if (tabId === draggingTabId) {
-        return;
-      }
-
-      const previousRect = previousRects.get(tabId);
-      if (!previousRect) {
-        return;
-      }
-
-      const nextRect = element.getBoundingClientRect();
-      const deltaX = previousRect.left - nextRect.left;
-      const deltaY = previousRect.top - nextRect.top;
-      if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) {
-        return;
-      }
-
-      if (typeof element.animate !== 'function') {
-        return;
-      }
-
-      element.getAnimations?.().forEach((animation) => animation.cancel());
-      element.animate(
-        [{ transform: `translate(${deltaX}px, ${deltaY}px)` }, { transform: 'translate(0, 0)' }],
-        {
-          duration: 180,
-          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-        }
-      );
-    });
-  }, [draggingTabId, orderedVisibleTabIdsKey, prefersReducedMotion]);
 
   const runMuxCommands = async (
     actionId: string,
@@ -1745,12 +1597,12 @@ const TerminalMuxTabs = ({
       setTabPointerDragState(null);
       setDraggingTabId(null);
       setDropIndicator(null);
-      tabRectsBeforeReorderRef.current = null;
+      clearCapturedTabRects();
       window.setTimeout(() => {
         suppressNextTabClickRef.current = false;
       }, 0);
     },
-    [setTabPointerDragState]
+    [clearCapturedTabRects, setTabPointerDragState]
   );
 
   const handleTabPointerDown = (
@@ -2189,7 +2041,7 @@ const TerminalMuxTabs = ({
                                 style={{ backgroundColor: option.accent }}
                               />
                               <span className="min-w-0 flex-1">
-                                {formatTerminalTabColorLabel(t, option.id)}
+                                {t(getTerminalTabColorLabelKey(option.id))}
                               </span>
                               {color.id === option.id ? <Check size={13} /> : null}
                             </ContextMenuItem>
@@ -2610,42 +2462,6 @@ function readStoredTerminalAppearanceSettings(teamName: string): TerminalAppeara
   }
 }
 
-function readStoredTerminalTabPreferences(teamName: string): TerminalTabPreferences {
-  const raw = readStoredValue(storageKey(teamName, 'tab-preferences'));
-  if (!raw) return createDefaultTerminalTabPreferences();
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') {
-      return createDefaultTerminalTabPreferences();
-    }
-
-    const source = parsed as {
-      order?: unknown;
-      colors?: unknown;
-    };
-    const order = Array.isArray(source.order)
-      ? source.order.filter((item): item is string => typeof item === 'string')
-      : [];
-    const colors: Record<string, TerminalTabColorId> = {};
-    if (source.colors && typeof source.colors === 'object') {
-      for (const [tabId, colorId] of Object.entries(source.colors)) {
-        if (typeof tabId === 'string' && isTerminalTabColorId(colorId)) {
-          colors[tabId] = colorId;
-        }
-      }
-    }
-
-    return {
-      version: TERMINAL_TAB_PREFERENCES_VERSION,
-      order,
-      colors,
-    };
-  } catch {
-    return createDefaultTerminalTabPreferences();
-  }
-}
-
 function readStoredCommandHistory(teamName: string): string[] | null {
   const raw = readStoredValue(storageKey(teamName, 'command-history'));
   if (!raw) return null;
@@ -2728,20 +2544,6 @@ function getTerminalBackgroundRepeat(fit: TerminalBackgroundImageFit): string {
 
 function getTerminalBackgroundPosition(fit: TerminalBackgroundImageFit): string {
   return fit === 'tile' ? 'top left' : 'center';
-}
-
-function persistTerminalTabPreferences(
-  teamName: string,
-  preferences: TerminalTabPreferences
-): void {
-  try {
-    window.localStorage.setItem(
-      storageKey(teamName, 'tab-preferences'),
-      JSON.stringify(preferences)
-    );
-  } catch {
-    // Best-effort tab UI preference persistence.
-  }
 }
 
 function persistCommandHistory(teamName: string, entries: readonly string[]): void {
@@ -2837,187 +2639,8 @@ function persistTerminalCommandRuns(
   }
 }
 
-function formatMuxTabTitle(tab: TerminalMuxTab, index: number): string {
-  return tab.title?.trim() || `Tab ${index + 1}`;
-}
-
-function formatNewMuxTabTitle(tabNumber: number): string {
-  return `Tab ${tabNumber}`;
-}
-
-function formatNextMuxTabTitle(tabs: readonly TerminalMuxTab[]): string {
-  const usedTitles = new Set(
-    tabs.map((tab) => tab.title?.trim()).filter((title): title is string => Boolean(title))
-  );
-  let nextNumber = Math.max(tabs.length + 1, 1);
-
-  for (const title of usedTitles) {
-    const match = /^Tab\s+(\d+)$/i.exec(title);
-    if (!match) continue;
-    nextNumber = Math.max(nextNumber, Number(match[1]) + 1);
-  }
-
-  let nextTitle = formatNewMuxTabTitle(nextNumber);
-  while (usedTitles.has(nextTitle)) {
-    nextNumber += 1;
-    nextTitle = formatNewMuxTabTitle(nextNumber);
-  }
-
-  return nextTitle;
-}
-
-function createDefaultTerminalTabPreferences(): TerminalTabPreferences {
-  return {
-    version: TERMINAL_TAB_PREFERENCES_VERSION,
-    order: [],
-    colors: {},
-  };
-}
-
-function normalizeTerminalTabPreferences(
-  preferences: TerminalTabPreferences,
-  tabs: readonly TerminalMuxTab[]
-): TerminalTabPreferences {
-  const normalizedOrder = orderTerminalTabsByPreference(tabs, preferences.order).map(
-    (tab) => tab.tab_id
-  );
-  const visibleTabIds = new Set(normalizedOrder);
-  const colors: Record<string, TerminalTabColorId> = {};
-
-  for (const [tabId, colorId] of Object.entries(preferences.colors)) {
-    if (visibleTabIds.has(tabId) && isTerminalTabColorId(colorId)) {
-      colors[tabId] = colorId;
-    }
-  }
-
-  return {
-    version: TERMINAL_TAB_PREFERENCES_VERSION,
-    order: normalizedOrder,
-    colors,
-  };
-}
-
-function orderTerminalTabsByPreference(
-  tabs: readonly TerminalMuxTab[],
-  order: readonly string[]
-): TerminalMuxTab[] {
-  const remainingTabsById = new Map(tabs.map((tab) => [tab.tab_id, tab]));
-  const orderedTabs: TerminalMuxTab[] = [];
-
-  for (const tabId of order) {
-    const tab = remainingTabsById.get(tabId);
-    if (!tab) continue;
-    orderedTabs.push(tab);
-    remainingTabsById.delete(tabId);
-  }
-
-  return [...orderedTabs, ...tabs.filter((tab) => remainingTabsById.has(tab.tab_id))];
-}
-
-function resolveVisibleTabToFocusAfterClose(
-  orderedTabs: readonly TerminalMuxTab[],
-  closingTabId: string
-): string | null {
-  const closingIndex = orderedTabs.findIndex((tab) => tab.tab_id === closingTabId);
-  if (closingIndex < 0) {
-    return null;
-  }
-
-  return orderedTabs[closingIndex - 1]?.tab_id ?? orderedTabs[closingIndex + 1]?.tab_id ?? null;
-}
-
-function reorderTerminalTabsById(
-  currentOrder: readonly string[],
-  tabs: readonly TerminalMuxTab[],
-  sourceTabId: string,
-  targetTabId: string,
-  placementMode: 'before' | 'after'
-): string[] {
-  const order = orderTerminalTabsByPreference(tabs, currentOrder).map((tab) => tab.tab_id);
-  if (!order.includes(sourceTabId) || !order.includes(targetTabId)) {
-    return order;
-  }
-
-  const withoutSource = order.filter((tabId) => tabId !== sourceTabId);
-  const targetIndex = withoutSource.indexOf(targetTabId);
-  if (targetIndex === -1) {
-    return order;
-  }
-
-  withoutSource.splice(placementMode === 'after' ? targetIndex + 1 : targetIndex, 0, sourceTabId);
-  return withoutSource;
-}
-
 function shouldIgnoreTerminalTabDragTarget(target: HTMLElement): boolean {
   return Boolean(target.closest('[data-terminal-tab-drag-ignore="true"],input,textarea,select,a'));
-}
-
-function resolveTerminalTabColor(colorId: TerminalTabColorId | undefined): TerminalTabColorOption {
-  return (
-    TERMINAL_TAB_COLOR_OPTIONS.find((option) => option.id === colorId) ??
-    TERMINAL_TAB_COLOR_OPTIONS.find((option) => option.id === 'sky') ??
-    TERMINAL_TAB_COLOR_OPTIONS[0]
-  );
-}
-
-function isTerminalTabColorId(value: unknown): value is TerminalTabColorId {
-  return (
-    typeof value === 'string' && TERMINAL_TAB_COLOR_OPTIONS.some((option) => option.id === value)
-  );
-}
-
-function areTerminalTabPreferencesEqual(
-  left: TerminalTabPreferences,
-  right: TerminalTabPreferences
-): boolean {
-  if (left.version !== right.version || !areStringArraysEqual(left.order, right.order)) {
-    return false;
-  }
-
-  const leftColors = Object.entries(left.colors);
-  const rightColors = Object.entries(right.colors);
-  if (leftColors.length !== rightColors.length) {
-    return false;
-  }
-
-  return leftColors.every(([tabId, colorId]) => right.colors[tabId] === colorId);
-}
-
-function areStringArraysEqual(left: readonly string[], right: readonly string[]): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
-function isPrewarmedTerminalTab(tab: TerminalMuxTab): boolean {
-  return tab.title?.trim() === PREWARMED_TERMINAL_TAB_TITLE;
-}
-
-function hasTerminalTabHistory(snapshot: TerminalWorkspaceSnapshot, tab: TerminalMuxTab): boolean {
-  const paneIds = collectPaneIds(tab.root);
-  const focusedScreen = snapshot.attachedSession?.focused_screen ?? null;
-
-  for (const paneId of paneIds) {
-    const historicalLines = snapshot.historicalPanes?.[paneId]?.lines ?? [];
-    if (historicalLines.some((line) => line.trim().length > 0)) {
-      return true;
-    }
-
-    if (
-      focusedScreen?.pane_id === paneId &&
-      focusedScreen.surface.lines.some((line) => line.text.trim().length > 0)
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function collectPaneIds(node: TerminalMuxPaneTreeNode): string[] {
-  if (node.kind === 'leaf') {
-    return [node.pane_id];
-  }
-
-  return [...collectPaneIds(node.first), ...collectPaneIds(node.second)];
 }
 
 function formatThemeLabel(t: TeamTFunction, displayName: string, themeId: string): string {
@@ -3030,33 +2653,6 @@ function formatFontScaleLabel(t: TeamTFunction, fontScale: string): string {
   if (fontScale === 'compact') return t('terminalWorkspace.fontScaleCompact');
   if (fontScale === 'large') return t('terminalWorkspace.fontScaleLarge');
   return t('terminalWorkspace.fontScaleDefault');
-}
-
-function formatTerminalTabColorLabel(t: TeamTFunction, colorId: TerminalTabColorId): string {
-  switch (colorId) {
-    case 'slate':
-      return t('terminalWorkspace.tabColorSlate');
-    case 'sky':
-      return t('terminalWorkspace.tabColorSky');
-    case 'blue':
-      return t('terminalWorkspace.tabColorBlue');
-    case 'cyan':
-      return t('terminalWorkspace.tabColorCyan');
-    case 'teal':
-      return t('terminalWorkspace.tabColorTeal');
-    case 'emerald':
-      return t('terminalWorkspace.tabColorEmerald');
-    case 'lime':
-      return t('terminalWorkspace.tabColorLime');
-    case 'amber':
-      return t('terminalWorkspace.tabColorAmber');
-    case 'orange':
-      return t('terminalWorkspace.tabColorOrange');
-    case 'rose':
-      return t('terminalWorkspace.tabColorRose');
-    case 'violet':
-      return t('terminalWorkspace.tabColorViolet');
-  }
 }
 
 function getErrorMessage(reason: unknown): string {
