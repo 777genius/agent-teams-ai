@@ -69,6 +69,7 @@ import { normalizeTerminalCommandRunEventDetail } from '../adapters/terminalComm
 import {
   DEFAULT_TERMINAL_APPEARANCE_SETTINGS,
   normalizeTerminalAppearanceSettings,
+  resolveTerminalBackgroundImageUrl,
   type TerminalAppearanceSettings,
   type TerminalBackgroundImageFit,
 } from '../model/terminalAppearanceSettings';
@@ -2686,9 +2687,8 @@ function persistTerminalAppearanceSettings(
 
 function createTerminalAppearanceStyle(settings: TerminalAppearanceSettings): CSSProperties {
   const normalizedSettings = normalizeTerminalAppearanceSettings(settings);
-  const imageUrl = normalizedSettings.backgroundImageUrl.trim();
+  const imageUrl = resolveTerminalBackgroundImageUrl(normalizedSettings.backgroundImageUrl);
   const hasImage = normalizedSettings.backgroundMode === 'image' && imageUrl.length > 0;
-
   return {
     '--agent-terminal-font-size': `${normalizedSettings.fontSizePx}px`,
     '--agent-terminal-panel-opacity': String(normalizedSettings.opacityPercent / 100),

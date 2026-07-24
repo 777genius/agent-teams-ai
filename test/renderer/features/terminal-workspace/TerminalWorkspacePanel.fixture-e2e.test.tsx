@@ -1724,8 +1724,16 @@ describe('terminal workspace panel fixture-e2e', () => {
     await updateInputValue('#terminal-settings-blur', '22');
 
     const consoleElement = document.querySelector<HTMLElement>('.agent-team-terminal-console');
+    expect(consoleElement?.style.getPropertyValue('--agent-terminal-background-image')).toContain(
+      'https://example.test/background.jpg'
+    );
     expect(consoleElement?.style.getPropertyValue('--agent-terminal-background-image-blur')).toBe(
       '22px'
+    );
+
+    await updateInputValue('#terminal-settings-background-image', 'file:///etc/passwd');
+    expect(consoleElement?.style.getPropertyValue('--agent-terminal-background-image')).toBe(
+      'none'
     );
   });
 

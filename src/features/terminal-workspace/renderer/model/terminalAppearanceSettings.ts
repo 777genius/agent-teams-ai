@@ -73,6 +73,23 @@ export function normalizeTerminalAppearanceColor(value: string): string {
     : DEFAULT_TERMINAL_APPEARANCE_SETTINGS.backgroundColor;
 }
 
+export function resolveTerminalBackgroundImageUrl(value: string): string {
+  const trimmedValue = value.trim().slice(0, TERMINAL_BACKGROUND_IMAGE_URL_MAX_LENGTH);
+  if (!trimmedValue) {
+    return '';
+  }
+
+  try {
+    const url = new URL(trimmedValue);
+    if (url.protocol !== 'https:' || url.username || url.password) {
+      return '';
+    }
+    return url.href;
+  } catch {
+    return '';
+  }
+}
+
 export function isTerminalBackgroundMode(value: unknown): value is TerminalBackgroundMode {
   return TERMINAL_BACKGROUND_MODE_OPTIONS.some((option) => option.id === value);
 }

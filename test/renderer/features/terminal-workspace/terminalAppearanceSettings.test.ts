@@ -5,6 +5,7 @@ import {
   isTerminalBackgroundMode,
   normalizeTerminalAppearanceColor,
   normalizeTerminalAppearanceSettings,
+  resolveTerminalBackgroundImageUrl,
   TERMINAL_FONT_SIZE_RANGE,
 } from '@features/terminal-workspace/renderer/model/terminalAppearanceSettings';
 import { describe, expect, it } from 'vitest';
@@ -28,6 +29,19 @@ describe('terminal appearance settings', () => {
     expect(isTerminalBackgroundMode('video')).toBe(false);
     expect(isTerminalBackgroundImageFit('tile')).toBe(true);
     expect(isTerminalBackgroundImageFit('zoom')).toBe(false);
+  });
+
+  it('allows only credential-free HTTPS background image URLs', () => {
+    expect(resolveTerminalBackgroundImageUrl(' https://example.test/background image.jpg ')).toBe(
+      'https://example.test/background%20image.jpg'
+    );
+    expect(resolveTerminalBackgroundImageUrl('http://example.test/background.jpg')).toBe('');
+    expect(resolveTerminalBackgroundImageUrl('file:///Users/example/background.jpg')).toBe('');
+    expect(resolveTerminalBackgroundImageUrl('data:image/png;base64,AAAA')).toBe('');
+    expect(resolveTerminalBackgroundImageUrl('https://user:secret@example.test/image.jpg')).toBe(
+      ''
+    );
+    expect(resolveTerminalBackgroundImageUrl('not a url')).toBe('');
   });
 
   it('normalizes persisted settings with canonical defaults and limits', () => {
