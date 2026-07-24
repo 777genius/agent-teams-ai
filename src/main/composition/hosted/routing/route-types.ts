@@ -1,3 +1,5 @@
+import type { HostedReadinessDimension } from '../application/HostedReadinessDimensions';
+
 export const ROUTE_CATALOG_DRIFT_DIAGNOSTIC = 'route-catalog-drift';
 export const CAPABILITY_DESCRIPTOR_DRIFT_DIAGNOSTIC = 'capability-descriptor-drift';
 export const TEST_CAPABILITY_PRODUCTION_MOUNT_DIAGNOSTIC = 'test-capability-production-mount';
@@ -28,7 +30,7 @@ export interface RouteDescriptor {
   readonly owner: string;
   readonly trustKind: RouteTrustKind;
   readonly authPolicyId: string;
-  readonly readinessId: string;
+  readonly readiness: readonly HostedReadinessDimension[];
   readonly requestSchemaId: string;
   readonly responseSchemaId: string;
   readonly handlerId: string;

@@ -7,7 +7,7 @@ export const validRoute = Object.freeze({
   owner: 'team-lifecycle',
   trustKind: 'browser',
   authPolicyId: 'browser.session.read',
-  readinessId: 'hosted.ready',
+  readiness: Object.freeze(['serve', 'auth', 'read']),
   requestSchemaId: 'team-lifecycle.list.request.v1',
   responseSchemaId: 'team-lifecycle.list.response.v1',
   handlerId: 'team-lifecycle.list.handler.v1',
