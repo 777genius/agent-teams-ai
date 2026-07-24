@@ -1,6 +1,6 @@
 import { getReviewDiskMutationExpectedContent } from '@features/change-review/renderer';
 
-import type { ReviewDiskUndoSnapshot, ReviewMutationDiskPostimage } from '@shared/types';
+import type { ReviewDiskUndoSnapshot } from '@shared/types';
 
 export type { ReviewHistoryRecoveryDisposition } from '@features/change-review/renderer';
 export {
@@ -8,17 +8,8 @@ export {
   classifyReviewHistoryRecovery,
   createReviewRedoAction,
   getReviewDiskMutationExpectedContent,
+  markChangeReviewMutationDiskPostimages as markReviewMutationDiskPostimages,
 } from '@features/change-review/renderer';
-
-export function markReviewMutationDiskPostimages(
-  postimages: readonly ReviewMutationDiskPostimage[] | undefined,
-  markExpectedWrite: (filePath: string, expectedContent: string | null) => void
-): void {
-  for (const postimage of postimages ?? []) {
-    markExpectedWrite(postimage.filePath, postimage.content);
-  }
-}
-
 export {
   buildForwardDiskMutationSteps,
   buildRedoDiskMutationSteps,
