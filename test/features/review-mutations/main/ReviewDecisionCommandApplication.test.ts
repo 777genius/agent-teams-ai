@@ -320,7 +320,7 @@ describe('ReviewDecisionCommandApplication', () => {
     const committed = { ...persistedState, revision: 8 };
     const harness = createHarness({
       persistenceScope: PERSISTENCE_SCOPE,
-      loadStates: [current, current, committed],
+      loadStates: [current, committed],
     });
     const displayed = harness.application.registerDisplayedReviewSnapshot(
       SCOPE.teamName,
@@ -344,7 +344,6 @@ describe('ReviewDecisionCommandApplication', () => {
       'validate-decisions',
       'lock',
       'recover',
-      'load-3',
       'load-2',
       'bind-history',
       'coordinate',
@@ -385,7 +384,7 @@ describe('ReviewDecisionCommandApplication', () => {
     };
     const harness = createHarness({
       persistenceScope: PERSISTENCE_SCOPE,
-      loadStates: [current, current],
+      loadStates: [current],
     });
     const displayed = harness.application.registerDisplayedReviewSnapshot(
       SCOPE.teamName,

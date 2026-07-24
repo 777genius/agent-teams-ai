@@ -9,9 +9,12 @@ main-process review IPC shell.
   decision-persistence, keyboard orchestration, and durable Undo/Redo/checkpoint Restore through
   narrow command, state, and view ports.
 - `renderer/ui` owns store-free presentation components.
-- `core/domain` owns pure review scope, rename expectation, and snippet-shape policy.
-- `main/application` owns authoritative scope and path authorization behind narrow ports.
-- `main/infrastructure` owns Node path, filesystem, sensitive-path, and hardlink details.
+- `core/domain` owns pure review scope, rename expectation, snippet-shape, watcher-input, and
+  decision-persistence policy.
+- `main/application` owns authoritative scope/path authorization, review watcher lifecycle, and
+  decision-persistence coordination behind narrow ports.
+- `main/infrastructure` owns Node path, filesystem, sensitive-path, hardlink, and watcher-root
+  validation details.
 - The legacy dialog remains the temporary composition shell for Zustand, editor mutations,
   forward Accept/Reject disk mutations, and outer close coordination while later slices move
   those responsibilities behind focused hooks and use cases.

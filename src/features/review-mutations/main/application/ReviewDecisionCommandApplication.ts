@@ -326,12 +326,8 @@ export class ReviewDecisionCommandApplication {
       const diskPostimages = new Map<string, ReviewMutationDiskPostimage>();
       try {
         await this.dependencies.recovery.recoverPending(scope.teamName, persistenceScope);
-        const revisionSnapshot = await this.dependencies.persistence.load(
-          scope.teamName,
-          persistenceScope
-        );
-        assertCurrentReviewDecisionRevision(revisionSnapshot, expectedDecisionRevision);
         const current = await this.dependencies.persistence.load(scope.teamName, persistenceScope);
+        assertCurrentReviewDecisionRevision(current, expectedDecisionRevision);
         assertExactApplyReviewHistoryTransition(persistedState, current, decisions, {
           resolveFile: (filePath) =>
             this.dependencies.scope.getAuthoritativeFile(authorization, filePath),
