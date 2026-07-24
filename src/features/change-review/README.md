@@ -26,9 +26,9 @@ main-process review IPC shell.
   validation details.
 - The legacy app-shell composition modules bind feature ports and policies to Zustand, the
   renderer API, and remaining review utilities. A focused decision-action hook owns
-  per-instance bulk/file/hunk Accept/Reject wiring. The dialog keeps draft/history/lifecycle
-  composition, CodeMirror action injection, and the main diff/content rendering while later
-  slices move those responsibilities behind focused hooks and use cases.
+  per-instance bulk/file/hunk Accept/Reject wiring. A store-free dialog view owns presentation
+  projections and rendering, while the app-shell dialog keeps draft/history/lifecycle
+  composition and CodeMirror action injection.
 
 Production callers import through `@features/change-review/renderer` or
 `@features/change-review/main`.

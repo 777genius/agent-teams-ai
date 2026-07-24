@@ -11,17 +11,8 @@ import React, {
 import { registerAppCloseParticipant } from '@features/app-close-coordination/renderer';
 import {
   browserChangeReviewCollapsedFilesStorage,
-  buildChangeReviewTitle,
-  buildReviewChangeStats,
-  buildReviewStats,
-  ChangeReviewConflictDiscardDialog,
-  ChangeReviewConflictNotices,
-  ChangeReviewSidebar,
   createChangeReviewDialogLifecycleCommandPort,
   createChangeReviewDialogViewPorts,
-  shouldShowTaskScopeBanner,
-  TaskChangesEmptyState,
-  toTaskChangeSetV2,
   useChangeReviewActionHistoryController,
   useChangeReviewConflictDiscoveryController,
   useChangeReviewConflictInteractionController,
@@ -38,16 +29,12 @@ import {
   useChangeReviewScopeIdentity,
 } from '@features/change-review/renderer';
 import { api, isElectronMode } from '@renderer/api';
-import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
 import { useStore } from '@renderer/store';
 import { getFileHunkCount, REVIEW_INSTANT_APPLY } from '@renderer/store/slices/changeReviewSlice';
-import { buildSelectionAction } from '@renderer/utils/buildSelectionAction';
 import {
   buildChangeReviewLifecycleSessionId,
   registerChangeReviewLifecycleOwner,
 } from '@renderer/utils/changeReviewLifecycleCoordinator';
-import { getFileReviewKey } from '@renderer/utils/reviewKey';
-import { X } from 'lucide-react';
 
 import {
   changeReviewActionHistoryStorePort,
@@ -67,7 +54,7 @@ import {
   changeReviewHistoryMutationStatePort,
   changeReviewOperationStatePort,
 } from './changeReviewDialogComposition';
-import { ChangesLoadingAnimation } from './ChangesLoadingAnimation';
+import { ChangeReviewDialogView } from './ChangeReviewDialogView';
 import {
   acceptAllChunks,
   computeChunkIndexAtPos,
@@ -75,26 +62,13 @@ import {
   rejectAllChunks,
   rejectChunk,
 } from './CodeMirrorDiffUtils';
-import { ContinuousScrollView } from './ContinuousScrollView';
-import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
-import { buildPathChangeLabels } from './pathChangeLabels';
-import {
-  hasUnresolvedReviewExternalChange,
-  isReviewFileFullyRejected,
-  replaceReviewScopedRecord,
-} from './reviewActionState';
+import { hasUnresolvedReviewExternalChange, replaceReviewScopedRecord } from './reviewActionState';
 import {
   getResolvedReviewModifiedContent,
-  isReviewAcceptDisabled,
   isReviewFileMissingOnDisk,
-  isReviewRejectable,
-  isReviewTextContentUnavailable,
 } from './reviewContentPreview';
-import { ReviewToolbar } from './ReviewToolbar';
-import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
-import { ScopeWarningBanner } from './ScopeWarningBanner';
+import { useChangeReviewActionAvailability } from './useChangeReviewActionAvailability';
 import { useChangeReviewDecisionActions } from './useChangeReviewDecisionActions';
-import { ViewedProgressBar } from './ViewedProgressBar';
 
 import type { ReviewDraftHistoryHydrationState } from '@features/change-review/renderer';
 import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
@@ -208,8 +182,6 @@ export const ChangeReviewDialog = ({
     store: changeReviewActionHistoryStorePort,
   });
   const {
-    undoDepth: reviewUndoDepth,
-    redoDepth: reviewRedoDepth,
     getUndoHistory: getReviewUndoHistory,
     getRedoHistory: getReviewRedoHistory,
     getLatestUndoAction,
@@ -232,8 +204,7 @@ export const ChangeReviewDialog = ({
     resetKey: `${teamName}\0${scopeKey}\0${changeSetEpoch}`,
     port: changeReviewOperationStatePort,
   });
-  const { filesApplying, captureReviewOperationScope, isCurrentReviewOperationScope } =
-    operationState;
+  const { captureReviewOperationScope, isCurrentReviewOperationScope } = operationState;
 
   useLayoutEffect(() => {
     const activeHydrationKey = open && lifecycleAuthorized ? decisionHydrationKey : null;
@@ -274,7 +245,6 @@ export const ChangeReviewDialog = ({
     getStatus: getReviewActionPersistenceStatus,
     publishSaved: publishReviewActionPersistenceSaved,
     hydrate: hydrateReviewDecisions,
-    persistLatest: persistLatestAcceptedReviewAction,
   } = decisionPersistence;
   const hydrateConflictDecisions = useCallback(
     async (scope: NonNullable<typeof conflictScope>, hydrationKey: string): Promise<void> => {
@@ -282,15 +252,7 @@ export const ChangeReviewDialog = ({
     },
     [hydrateReviewDecisions]
   );
-  const {
-    decisionCandidates: decisionConflictCandidates,
-    draftHistoryCandidates: draftHistoryConflictCandidates,
-    candidateCount: reviewConflictCandidateCount,
-    refreshPending: reviewConflictRefreshPending,
-    loadError: reviewConflictLoadError,
-    refresh: refreshReviewConflictCandidates,
-    reset: resetReviewConflictCandidates,
-  } = useChangeReviewConflictDiscoveryController({
+  const conflictDiscovery = useChangeReviewConflictDiscoveryController({
     active: open && lifecycleAuthorized,
     hydrationKey: decisionHydrationKey,
     scope: conflictScope,
@@ -300,6 +262,15 @@ export const ChangeReviewDialog = ({
     reportLoadError: changeReviewConflictStateBridge.reportError,
     port: changeReviewConflictQueryPort,
   });
+  const {
+    decisionCandidates: decisionConflictCandidates,
+    draftHistoryCandidates: draftHistoryConflictCandidates,
+    candidateCount: reviewConflictCandidateCount,
+    refreshPending: reviewConflictRefreshPending,
+    loadError: reviewConflictLoadError,
+    refresh: refreshReviewConflictCandidates,
+    reset: resetReviewConflictCandidates,
+  } = conflictDiscovery;
   useLayoutEffect(() => {
     refreshReviewConflictCandidatesRef.current = refreshReviewConflictCandidates;
   }, [refreshReviewConflictCandidates]);
@@ -356,7 +327,6 @@ export const ChangeReviewDialog = ({
     port: changeReviewDraftHistoryPort,
   });
   const {
-    entries: draftHistoryEntries,
     getEntry: getDraftHistoryEntry,
     hasBaseline: hasDraftHistoryBaseline,
     getBaseline: getDraftHistoryBaseline,
@@ -365,22 +335,11 @@ export const ChangeReviewDialog = ({
     unsuppressFile: unsuppressDraftHistoryFile,
     publishCheckpoint: publishDraftHistoryCheckpoint,
     handleSerializedStateChanged,
-    handleSerializedStateRestoreError,
     flushWrites: flushDraftHistoryWrites,
     clearFile: clearDraftHistoryForFile,
     resolveConflictCandidate: resolveDraftHistoryConflictCandidate,
   } = draftHistory;
-
-  const {
-    activeCandidate: activeReviewConflictCandidate,
-    activeCandidateRecoverable: activeReviewConflictRecoverable,
-    resolvingCandidateId: resolvingConflictCandidateId,
-    pendingDiscard: pendingRecoveryDiscard,
-    requestDiscard: requestRecoveryDiscard,
-    onDiscardOpenChange: handleRecoveryDiscardOpenChange,
-    confirmPendingDiscard: confirmRecoveryDiscard,
-    resolveActiveCandidate: handleResolveReviewConflictCandidate,
-  } = useChangeReviewConflictInteractionController({
+  const conflictInteraction = useChangeReviewConflictInteractionController({
     active: open && lifecycleAuthorized,
     hydrationKey: decisionHydrationKey,
     scope: conflictScope,
@@ -398,6 +357,8 @@ export const ChangeReviewDialog = ({
     refreshCandidates: refreshReviewConflictCandidates,
     port: changeReviewConflictCommandPort,
   });
+
+  const { resolvingCandidateId: resolvingConflictCandidateId } = conflictInteraction;
 
   useEffect(() => {
     if (!open || !lifecycleAuthorized || !decisionHydrationKey) {
@@ -448,8 +409,7 @@ export const ChangeReviewDialog = ({
     getPersistenceStatus: getReviewActionPersistenceStatus,
     port: changeReviewOperationStatePort,
   });
-  const { reviewMutationBusy, reviewActionsBusy, reviewCloseBusy, hasReviewActionInFlight } =
-    mutationGuards;
+  const { reviewMutationBusy, reviewActionsBusy, hasReviewActionInFlight } = mutationGuards;
 
   const hasReviewDraft = useCallback(
     (filePath: string): boolean => filePath in useStore.getState().editedContents,
@@ -464,40 +424,7 @@ export const ChangeReviewDialog = ({
   const reportReviewInteractionError = useCallback((message: string): void => {
     useStore.setState({ applyError: message });
   }, []);
-  const {
-    activeFile,
-    activeFilePath,
-    activeFilePathRef,
-    activeEditorViewRef,
-    autoViewed,
-    clearSelection,
-    collapsedFiles,
-    containerRect,
-    diffContentRef,
-    editorViewMapRef,
-    getEditorFilePathForTarget,
-    globalDiffLoadingState,
-    handleFullyViewed,
-    handleHistoryActionNavigation,
-    handleSelectionChange,
-    handleTreeFileClick,
-    handleVisibleFileChange,
-    isProgrammaticScroll,
-    resolveReviewFileLabel,
-    scrollContainerRef,
-    scrollToFile,
-    selectionInfo,
-    setAutoViewed,
-    setTimelineOpen,
-    sortedFiles,
-    timelineOpen,
-    toggleCollapsedFile,
-    viewedCount,
-    viewedProgress,
-    viewedSet,
-    viewedTotalCount,
-    watchedReviewFilePathsKey,
-  } = useChangeReviewDialogViewState({
+  const dialogViewState = useChangeReviewDialogViewState({
     open,
     hasData,
     teamName,
@@ -511,47 +438,29 @@ export const ChangeReviewDialog = ({
     policy: changeReviewDialogViewStatePolicy,
     reportError: reportReviewInteractionError,
   });
-  const pathChangeLabels = useMemo(() => {
-    return buildPathChangeLabels(activeChangeSet?.files ?? [], fileContents);
-  }, [activeChangeSet, fileContents]);
-  const rejectablePendingFiles = useMemo(
-    () =>
-      sortedFiles.filter((file) => {
-        const reviewKey = getFileReviewKey(file);
-        const fileDecision = fileDecisions[reviewKey] ?? fileDecisions[file.filePath] ?? 'pending';
-        if (fileDecision !== 'pending') return false;
-        if (file.filePath in editedContents) return false;
-        const count = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
-        if (
-          isReviewFileFullyRejected(file, count, {
-            hunkDecisions,
-            fileDecisions,
-          })
-        ) {
-          return false;
-        }
-        return isReviewRejectable(file, fileContents[file.filePath] ?? null);
-      }),
-    [editedContents, fileChunkCounts, fileContents, fileDecisions, hunkDecisions, sortedFiles]
-  );
-  const canRejectAll = rejectablePendingFiles.length > 0;
-  const canAcceptAll = useMemo(
-    () =>
-      sortedFiles.length > 0 &&
-      sortedFiles.every((file) => {
-        if (!(file.filePath in fileContents) || file.filePath in editedContents) return false;
-        const content = fileContents[file.filePath] ?? null;
-        const reviewKey = getFileReviewKey(file);
-        const fileDecision = fileDecisions[reviewKey] ?? fileDecisions[file.filePath];
-        return !isReviewAcceptDisabled({
-          hasEdits: false,
-          isMissingOnDisk: isReviewFileMissingOnDisk(content),
-          isContentUnavailable: isReviewTextContentUnavailable(file, content),
-          fileDecision,
-        });
-      }),
-    [editedContents, fileContents, fileDecisions, sortedFiles]
-  );
+  const {
+    activeFilePath,
+    activeFilePathRef,
+    activeEditorViewRef,
+    editorViewMapRef,
+    getEditorFilePathForTarget,
+    handleHistoryActionNavigation,
+    scrollToFile,
+    sortedFiles,
+    watchedReviewFilePathsKey,
+  } = dialogViewState;
+  const {
+    rejectableFiles: rejectablePendingFiles,
+    canAcceptAll,
+    canRejectAll,
+  } = useChangeReviewActionAvailability({
+    files: sortedFiles,
+    fileContents,
+    editedContents,
+    hunkDecisions,
+    fileDecisions,
+    fileChunkCounts,
+  });
   const editedCount = Object.keys(editedContents).length;
   const externalChangeController = useChangeReviewExternalChangeController({
     open,
@@ -567,8 +476,7 @@ export const ChangeReviewDialog = ({
     policy: changeReviewExternalChangePolicy,
     watcherPort: changeReviewExternalFileWatcherPort,
   });
-  const { reviewMutationBlockedByExternalChange, blockReviewMutationForExternalChange } =
-    externalChangeController;
+  const { blockReviewMutationForExternalChange } = externalChangeController;
   const dialogViewPorts = useMemo(
     () =>
       // eslint-disable-next-line react-hooks/refs -- Factory only captures refs for later callbacks.
@@ -599,14 +507,7 @@ export const ChangeReviewDialog = ({
       operationState.viewPortBindings,
     ]
   );
-  const {
-    acceptAll: handleAcceptAll,
-    rejectAll: handleRejectAll,
-    acceptFile: handleAcceptFile,
-    rejectFile: handleRejectFile,
-    acceptHunk: handleHunkAccepted,
-    rejectHunk: handleHunkRejected,
-  } = useChangeReviewDecisionActions({
+  const decisionActions = useChangeReviewDecisionActions({
     activeChangeSet,
     fileContents,
     fileChunkCounts,
@@ -629,6 +530,7 @@ export const ChangeReviewDialog = ({
     externalChange: externalChangeController,
     viewPorts: dialogViewPorts,
   });
+  const { acceptHunk: handleHunkAccepted, rejectHunk: handleHunkRejected } = decisionActions;
 
   const fileDraftPersistenceScope = useMemo(
     () =>
@@ -679,14 +581,7 @@ export const ChangeReviewDialog = ({
       unsuppressDraftHistoryFile,
     ]
   );
-  const {
-    contentChanged: handleContentChanged,
-    saveFile: handleSaveFile,
-    restoreMissingFile: handleRestoreMissingFile,
-    reloadFromDisk: handleReloadFromDisk,
-    keepDraft: handleKeepDraft,
-    discardFile: handleDiscardFile,
-  } = useChangeReviewFileDraftController({
+  const fileDraftActions = useChangeReviewFileDraftController({
     files: activeChangeSet?.files ?? [],
     fileContents,
     teamName,
@@ -706,6 +601,7 @@ export const ChangeReviewDialog = ({
     isFileMissingOnDisk: isReviewFileMissingOnDisk,
     hasUnresolvedExternalChange: hasUnresolvedReviewExternalChange,
   });
+  const { saveFile: handleSaveFile } = fileDraftActions;
 
   const reviewHistoryMutationScope = useMemo(
     () =>
@@ -743,13 +639,7 @@ export const ChangeReviewDialog = ({
       replaceReviewActionHistories,
     ]
   );
-  const {
-    undoLatest: handleUndoLatestReviewAction,
-    redoLatest: handleRedoLatestReviewAction,
-    getRestorePreview: getRestoreReviewHistoryPreview,
-    restoreHistory: handleRestoreReviewHistory,
-    recoverFailedHistory: handleRecoverFailedReviewHistory,
-  } = useChangeReviewHistoryMutationController({
+  const historyMutation = useChangeReviewHistoryMutationController({
     teamName,
     memberName,
     files: activeChangeSet?.files ?? [],
@@ -767,6 +657,8 @@ export const ChangeReviewDialog = ({
     blockForExternalChange: blockReviewMutationForExternalChange,
     getPersistenceStatus: getReviewActionPersistenceStatus,
   });
+  const { undoLatest: handleUndoLatestReviewAction, redoLatest: handleRedoLatestReviewAction } =
+    historyMutation;
 
   const dialogLifecycleCommandPort = useMemo(
     () =>
@@ -777,12 +669,7 @@ export const ChangeReviewDialog = ({
       }),
     [hydrateReviewDecisions]
   );
-  const {
-    requestClose,
-    retrySavedReviewState: handleRetrySavedReviewState,
-    discardSavedDecisionState: handleDiscardSavedDecisionState,
-    apply: handleApply,
-  } = useChangeReviewDialogLifecycleController({
+  const dialogLifecycle = useChangeReviewDialogLifecycleController({
     open,
     authorized: lifecycleAuthorized,
     setAuthorized: setLifecycleAuthorized,
@@ -822,8 +709,9 @@ export const ChangeReviewDialog = ({
     registerOwner: registerChangeReviewLifecycleOwner,
     registerAppCloseParticipant,
   });
+  const { requestClose } = dialogLifecycle;
 
-  const { diffNav, reviewHunkOrder } = useChangeReviewDialogKeyboardInteractions({
+  const keyboardInteractions = useChangeReviewDialogKeyboardInteractions({
     open,
     activeFilePath,
     activeFilePathRef,
@@ -848,286 +736,61 @@ export const ChangeReviewDialog = ({
     reportError: reportReviewInteractionError,
     keyboardPort: dialogViewPorts.keyboardInteraction,
   });
-  // Compute toolbar stats using actual CM chunk count (not snippet count)
-  const reviewStats = useMemo(
-    () =>
-      buildReviewStats({
-        changeSet: activeChangeSet,
-        hunkDecisions,
-        fileDecisions,
-        fileChunkCounts,
-      }),
-    [activeChangeSet, hunkDecisions, fileDecisions, fileChunkCounts]
-  );
-  const changeStats = useMemo(() => buildReviewChangeStats(activeChangeSet), [activeChangeSet]);
-  const taskChangeSet = toTaskChangeSetV2(activeChangeSet);
-  const hasReviewFiles = (activeChangeSet?.files.length ?? 0) > 0;
-  const shouldShowScopeBanner = shouldShowTaskScopeBanner({ mode, changeSet: taskChangeSet });
-
-  const title = useMemo(
-    () => buildChangeReviewTitle({ mode, memberName, taskId, globalTasks }),
-    [mode, memberName, taskId, globalTasks]
-  );
-
-  const isMacElectron =
-    isElectronMode() && window.navigator.userAgent.toLowerCase().includes('mac');
-
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-surface">
-      {/* Header */}
-      <div
-        className="flex items-center justify-between border-b border-border bg-surface-sidebar px-4 py-3"
-        style={
-          {
-            paddingLeft: isMacElectron
-              ? 'var(--macos-traffic-light-padding-left, 72px)'
-              : undefined,
-            WebkitAppRegion: isMacElectron ? 'drag' : undefined,
-          } as React.CSSProperties
-        }
-      >
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-medium text-text">{title}</h2>
-          {activeChangeSet && (
-            <ViewedProgressBar
-              viewed={viewedCount}
-              total={viewedTotalCount}
-              progress={viewedProgress}
-            />
-          )}
-        </div>
-        <button
-          type="button"
-          aria-label="Close Changes"
-          onClick={() => void requestClose()}
-          disabled={reviewCloseBusy || decisionHydrationPending || draftHistoryHydrationPending}
-          className="rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-
-      {/* Keyboard shortcuts help */}
-      <KeyboardShortcutsHelp
-        open={diffNav.showShortcutsHelp}
-        onOpenChange={diffNav.setShowShortcutsHelp}
-      />
-
-      <ChangeReviewConflictDiscardDialog
-        pendingDiscard={pendingRecoveryDiscard}
-        resolvingCandidateId={resolvingConflictCandidateId}
-        onOpenChange={handleRecoveryDiscardOpenChange}
-        onConfirm={confirmRecoveryDiscard}
-      />
-
-      {/* Review toolbar */}
-      {!changeSetLoading &&
-        !changeSetError &&
-        decisionHydrationReady &&
-        draftHistoryHydrationReady &&
-        activeChangeSet &&
-        hasReviewFiles && (
-          <ReviewToolbar
-            stats={reviewStats}
-            changeStats={changeStats}
-            collapseUnchanged={collapseUnchanged}
-            applying={reviewActionsBusy}
-            autoViewed={autoViewed}
-            onAutoViewedChange={setAutoViewed}
-            onAcceptAll={handleAcceptAll}
-            onRejectAll={handleRejectAll}
-            onApply={handleApply}
-            onCollapseUnchangedChange={setCollapseUnchanged}
-            canAcceptAll={canAcceptAll}
-            canRejectAll={canRejectAll}
-            instantApply={REVIEW_INSTANT_APPLY}
-            editedCount={editedCount}
-            canUndo={reviewUndoDepth > 0}
-            onUndo={() => void handleUndoLatestReviewAction()}
-            canRedo={reviewRedoDepth > 0}
-            onRedo={() => void handleRedoLatestReviewAction()}
-            mutationBlocked={reviewMutationBlockedByExternalChange}
-            undoHistory={reviewActionHistory}
-            redoHistory={reviewRedoHistory}
-            resolveFileLabel={resolveReviewFileLabel}
-            historyPersistenceStatus={reviewMutationBusy ? 'saving' : reviewActionPersistenceStatus}
-            onRetryHistoryPersistence={() => void persistLatestAcceptedReviewAction()}
-            onNavigateToHistoryAction={handleHistoryActionNavigation}
-            onRestoreHistory={handleRestoreReviewHistory}
-            onRecoverFailedRestore={handleRecoverFailedReviewHistory}
-            getRestoreHistoryPreview={getRestoreReviewHistoryPreview}
-            restoreHistoryDisabled={
-              reviewActionsBusy ||
-              editedCount > 0 ||
-              reviewMutationBlockedByExternalChange ||
-              reviewActionPersistenceStatus !== 'saved'
-            }
-            undoDisabledReason={
-              editedCount > 0
-                ? 'Save or discard manual edits before undoing a review action.'
-                : undefined
-            }
-            redoDisabledReason={
-              editedCount > 0
-                ? 'Save or discard manual edits before redoing a review action.'
-                : undefined
-            }
-          />
-        )}
-
-      {/* Scope info / warnings + confidence badge */}
-      {shouldShowScopeBanner && taskChangeSet && (
-        <ScopeWarningBanner
-          warnings={taskChangeSet.warnings}
-          confidence={taskChangeSet.scope.confidence}
-          sourceKind={taskChangeSet.provenance?.sourceKind}
-        />
-      )}
-
-      <ChangeReviewConflictNotices
-        loadError={reviewConflictLoadError}
-        refreshPending={reviewConflictRefreshPending}
-        activeCandidate={activeReviewConflictCandidate}
-        activeCandidateRecoverable={activeReviewConflictRecoverable}
-        candidateCount={reviewConflictCandidateCount}
-        resolvingCandidateId={resolvingConflictCandidateId}
-        onRetry={refreshReviewConflictCandidates}
-        onRequestDiscard={requestRecoveryDiscard}
-        onRecover={() => handleResolveReviewConflictCandidate('recover-candidate')}
-      />
-
-      {/* Apply error */}
-      {applyError && (
-        <div
-          role="alert"
-          className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-xs text-red-400"
-        >
-          {applyError}
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {(changeSetLoading || decisionHydrationPending || draftHistoryHydrationPending) && (
-          <ChangesLoadingAnimation />
-        )}
-
-        {changeSetError && (
-          <div className="flex w-full items-center justify-center text-sm text-red-400">
-            {changeSetError}
-          </div>
-        )}
-
-        {!changeSetLoading &&
-          !changeSetError &&
-          decisionHydrationReady &&
-          draftHistoryHydrationReady &&
-          activeChangeSet &&
-          hasReviewFiles && (
-            <>
-              {/* File tree */}
-              <ChangeReviewSidebar
-                files={activeChangeSet.files}
-                pathChangeLabels={pathChangeLabels}
-                decisionState={{ hunkDecisions, fileDecisions, fileChunkCounts }}
-                activeFilePath={activeFilePath}
-                viewedSet={viewedSet}
-                onSelectFile={handleTreeFileClick}
-                timeline={activeFile?.timeline ?? null}
-                timelineOpen={timelineOpen}
-                onToggleTimeline={() => setTimelineOpen(!timelineOpen)}
-                onTimelineEventClick={(idx) => diffNav.goToHunk(idx)}
-                activeSnippetIndex={diffNav.currentHunkIndex}
-              />
-
-              {/* Continuous scroll diff content with selection menu */}
-              <div
-                ref={diffContentRef}
-                className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
-              >
-                <ContinuousScrollView
-                  files={sortedFiles}
-                  fileContents={fileContents}
-                  fileContentsLoading={fileContentsLoading}
-                  globalDiffLoadingState={globalDiffLoadingState}
-                  reviewExternalChangesByFile={reviewExternalChangesByFile}
-                  viewedSet={viewedSet}
-                  editedContents={editedContents}
-                  draftHistoryEntries={draftHistoryEntries}
-                  hunkDecisions={hunkDecisions}
-                  fileDecisions={fileDecisions}
-                  hunkContextHashesByFile={hunkContextHashesByFile}
-                  collapseUnchanged={collapseUnchanged}
-                  applying={reviewActionsBusy}
-                  filesApplying={filesApplying}
-                  autoViewed={autoViewed}
-                  discardCounters={discardCounters}
-                  onHunkAccepted={handleHunkAccepted}
-                  onHunkRejected={handleHunkRejected}
-                  onFullyViewed={handleFullyViewed}
-                  onContentChanged={handleContentChanged}
-                  onSerializedStateChanged={handleSerializedStateChanged}
-                  onSerializedStateRestoreError={handleSerializedStateRestoreError}
-                  onDiscard={handleDiscardFile}
-                  onSave={handleSaveFile}
-                  onReloadFromDisk={handleReloadFromDisk}
-                  onKeepDraft={handleKeepDraft}
-                  onAcceptFile={handleAcceptFile}
-                  onRejectFile={handleRejectFile}
-                  onRestoreMissingFile={handleRestoreMissingFile}
-                  pathChangeLabels={pathChangeLabels}
-                  collapsedFiles={collapsedFiles}
-                  onToggleCollapse={toggleCollapsedFile}
-                  onVisibleFileChange={handleVisibleFileChange}
-                  scrollContainerRef={scrollContainerRef}
-                  editorViewMapRef={editorViewMapRef}
-                  isProgrammaticScroll={isProgrammaticScroll}
-                  teamName={teamName}
-                  memberName={memberName}
-                  fetchFileContent={fetchFileContent}
-                  onSelectionChange={onEditorAction ? handleSelectionChange : undefined}
-                  globalHunkOffsets={reviewHunkOrder.offsets}
-                  totalReviewHunks={reviewHunkOrder.total}
-                />
-                {selectionInfo && onEditorAction && (
-                  <EditorSelectionMenu
-                    info={selectionInfo}
-                    containerRect={containerRect}
-                    onSendMessage={() => {
-                      onEditorAction(buildSelectionAction('sendMessage', selectionInfo));
-                      clearSelection();
-                    }}
-                    onCreateTask={() => {
-                      onEditorAction(buildSelectionAction('createTask', selectionInfo));
-                      clearSelection();
-                    }}
-                  />
-                )}
-              </div>
-            </>
-          )}
-
-        {!changeSetLoading &&
-          !changeSetError &&
-          decisionHydrationReady &&
-          draftHistoryHydrationReady &&
-          activeChangeSet &&
-          !hasReviewFiles && <TaskChangesEmptyState changeSet={taskChangeSet} />}
-
-        {(decisionHydrationFailed || draftHistoryHydrationFailed) && (
-          <SavedReviewStateRecoveryGate
-            key={decisionHydrationKey ?? 'unscoped'}
-            decisionStateUnreadable={decisionHydrationFailed}
-            draftHistoryUnreadable={draftHistoryHydrationFailed}
-            busy={reviewMutationBusy}
-            onRetry={() => void handleRetrySavedReviewState()}
-            onDiscard={handleDiscardSavedDecisionState}
-          />
-        )}
-      </div>
-    </div>
+    <ChangeReviewDialogView
+      open={open}
+      teamName={teamName}
+      mode={mode}
+      memberName={memberName}
+      taskId={taskId}
+      globalTasks={globalTasks}
+      activeChangeSet={activeChangeSet}
+      changeSetLoading={changeSetLoading}
+      changeSetError={changeSetError}
+      fileContents={fileContents}
+      fileContentsLoading={fileContentsLoading}
+      hunkDecisions={hunkDecisions}
+      fileDecisions={fileDecisions}
+      fileChunkCounts={fileChunkCounts}
+      hunkContextHashesByFile={hunkContextHashesByFile}
+      editedContents={editedContents}
+      reviewExternalChangesByFile={reviewExternalChangesByFile}
+      collapseUnchanged={collapseUnchanged}
+      setCollapseUnchanged={setCollapseUnchanged}
+      applyError={applyError}
+      reviewActionHistory={reviewActionHistory}
+      reviewRedoHistory={reviewRedoHistory}
+      reviewActionPersistenceStatus={reviewActionPersistenceStatus}
+      hydration={{
+        decisionKey: decisionHydrationKey,
+        decisionReady: decisionHydrationReady,
+        decisionPending: decisionHydrationPending,
+        decisionFailed: decisionHydrationFailed,
+        draftReady: draftHistoryHydrationReady,
+        draftPending: draftHistoryHydrationPending,
+        draftFailed: draftHistoryHydrationFailed,
+      }}
+      canAcceptAll={canAcceptAll}
+      canRejectAll={canRejectAll}
+      instantApply={REVIEW_INSTANT_APPLY}
+      editedCount={editedCount}
+      discardCounters={discardCounters}
+      fetchFileContent={fetchFileContent}
+      onEditorAction={onEditorAction}
+      actionHistory={actionHistory}
+      conflictDiscovery={conflictDiscovery}
+      conflictInteraction={conflictInteraction}
+      decisionPersistence={decisionPersistence}
+      decisionActions={decisionActions}
+      dialogLifecycle={dialogLifecycle}
+      dialogViewState={dialogViewState}
+      draftHistory={draftHistory}
+      externalChange={externalChangeController}
+      fileDraftActions={fileDraftActions}
+      historyMutation={historyMutation}
+      keyboard={keyboardInteractions}
+      mutationGuards={mutationGuards}
+      operation={operationState}
+    />
   );
 };
