@@ -11,10 +11,6 @@ import {
   createTeamLifecycleMutationSlice,
   type TeamLifecycleMutationSlice,
 } from '@features/team-lifecycle/renderer';
-import {
-  createTeamMessageDeliveryRendererSlice,
-  type TeamMessageDeliveryRendererSlice,
-} from '@features/team-message-delivery/renderer';
 import { isActiveProvisioningState } from '@features/team-provisioning';
 import {
   createProductTeamLaunchAnalyticsCoordinator,
@@ -30,25 +26,12 @@ import {
 } from '@features/team-provisioning/renderer';
 import {
   clearTeamTaskBoardAnalytics,
-  collectTaskChangeInvalidation,
-  createTeamTaskArtifactsRendererSlice,
-  createTeamTaskArtifactsTransport,
-  createTeamTaskBoardRendererSlice,
-  preserveKnownTaskChangePresence,
-  recordTeamTaskBoardSnapshotTransitions,
   resetTeamTaskBoardAnalyticsForTests,
   type TeamTaskArtifactsRendererSlice,
   type TeamTaskBoardRendererSlice,
 } from '@features/team-task-board/renderer';
 import {
-  buildGlobalTaskProjectionNotification,
-  createTeamDirectoryRendererSlice,
-  createTeamDirectoryTransport,
-  createTeamMessageFeedRendererSlice,
-  createTeamViewDataRendererSlice,
   defaultTeamMessageFeedCoordinator,
-  defaultTeamViewDataCoordinator,
-  type GlobalTaskProjectionNotification,
   TeamDirectoryRefreshCoordinator,
   type TeamDirectoryRendererSlice,
   type TeamMessageFeedRendererSlice,
@@ -57,76 +40,35 @@ import {
 } from '@features/team-view-read-model/renderer';
 import { classifyAnalyticsError } from '@renderer/analytics/productAnalytics';
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
-import {
-  getAttachmentMimeTypes,
-  getAttachmentTotalSizeBytes,
-  getTeamLifecycleAnalyticsContext,
-} from '@renderer/analytics/teamAnalyticsMetadata';
+import { getTeamLifecycleAnalyticsContext } from '@renderer/analytics/teamAnalyticsMetadata';
 import { api } from '@renderer/api';
-import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
-import {
-  buildOpenCodeRuntimeDeliveryDiagnostics,
-  isOpenCodeRuntimeDeliveryHardUxFailure,
-} from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { createLogger } from '@shared/utils/logger';
 
-import { recordLastResolvedTeamDataRefresh } from '../team/teamDataRefreshTimestamps';
+import { createTeamCollaborationDataSlice } from '../team/createTeamCollaborationDataSlice';
 import { selectTeamDataForName } from '../team/teamDataSelectors';
-import {
-  mapReviewError,
-  mapSendMessageError,
-  shouldInvalidateCachedTeamDataForError,
-} from '../team/teamErrorPolicies';
-import {
-  consumeFirstGlobalTasksFetchFlag,
-  processGlobalTaskNotifications,
-} from '../team/teamGlobalTaskNotifications';
-import { projectTeamSnapshotOntoGlobalTasks } from '../team/teamGlobalTaskProjection';
 import { invalidateTeamLocalStateEpoch } from '../team/teamLocalStateEpoch';
-import {
-  isMemberActivityMetaStale,
-  structurallyShareMemberActivityFacts,
-} from '../team/teamMemberActivityMeta';
-import {
-  areInboxMessageArraysEquivalent,
-  extractRetainedCanonicalOlderTail,
-  getCanonicalHeadSlice,
-  getTeamMessagesCacheEntry,
-  pruneOptimisticMessages,
-  upsertOptimisticTeamMessage,
-} from '../team/teamMessagesCache';
 import {
   loadPersistedMessagesPanelMode,
   savePersistedMessagesPanelMode,
 } from '../team/teamMessagesPanelModePersistence';
-import {
-  clearPendingReplyRefreshWaits,
-  setPendingReplyRefreshEnabled,
-} from '../team/teamPendingReplyWaits';
-import { noteTeamRefreshBurst } from '../team/teamRefreshBurstDiagnostics';
-import { shouldPreserveSelectedTeamSnapshot } from '../team/teamResolvedMembers';
+import { clearPendingReplyRefreshWaits } from '../team/teamPendingReplyWaits';
 import {
   buildTeamScopedProgressTombstones,
   collectTeamScopedStateRemovals,
   collectTeamScopedVisibleLoadingResets,
 } from '../team/teamScopedStateCleanup';
 import {
-  structurallySharePlainValue,
-  structurallyShareTeamSnapshot,
-} from '../team/teamSnapshotStructuralSharing';
-import {
   type ContextRequestScope,
-  type TeamRequestScope,
   type TeamScopedTransientStateSnapshot,
   TeamStateLifecycleCoordinator,
 } from '../team/TeamStateLifecycleCoordinator';
 import { parseToolApprovalSettings } from '../team/teamToolApprovalSettings';
 import { noteTeamRefreshFanout } from '../teamRefreshFanoutDiagnostics';
-import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
 import type { AppState } from '../types';
+import type { TeamMessageDeliveryRendererSlice } from '@features/team-message-delivery/renderer';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import type {
@@ -189,7 +131,6 @@ export type { TeamLaunchParams } from '@features/team-provisioning/renderer';
 
 const logger = createLogger('teamSlice');
 
-const TEAM_REFRESH_BURST_WINDOW_MS = 4_000;
 const teamDirectoryRefreshCoordinator = new TeamDirectoryRefreshCoordinator<ContextRequestScope>();
 const teamStateLifecycleCoordinator = new TeamStateLifecycleCoordinator(
   teamDirectoryRefreshCoordinator
@@ -390,283 +331,40 @@ function loadToolApprovalSettings(): ToolApprovalSettings {
 }
 
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
-  ...createTeamDirectoryRendererSlice<AppState, ContextRequestScope>({
-    coordinator: teamDirectoryRefreshCoordinator,
-    notifications: {
-      consumeInitialFetch: consumeFirstGlobalTasksFetchFlag,
-      process: processGlobalTaskNotifications,
+  ...createTeamCollaborationDataSlice({
+    analytics: {
+      recordAttachmentEnd: recordAttachmentAttachEnd,
+      recordCrossTeamMessageSend,
     },
-    paths: {
-      normalize: normalizePath,
+    clock: { nowIso },
+    directoryCoordinator: teamDirectoryRefreshCoordinator,
+    lifecycle: {
+      isProvisioningActive: (teamName) => isTeamProvisioningActive(get(), teamName),
     },
-    requestScope: {
-      capture: () => teamStateLifecycleCoordinator.captureContextRequestScope(get),
-      isCurrent: (scope) => teamStateLifecycleCoordinator.isContextRequestScopeCurrent(get, scope),
-    },
-    scheduler: {
-      delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-    },
-    state: {
-      getState: () => get(),
-      setState: (update) => {
-        if (typeof update === 'function') {
-          set((state) => update(state));
-          return;
-        }
-        set(update);
-      },
-    },
-    structuralSharing: {
-      share: (previous, next) => structurallySharePlainValue(previous, next),
-    },
-    transport: createTeamDirectoryTransport(),
-  }),
-  ...createTeamViewDataRendererSlice<TeamRequestScope, GlobalTaskProjectionNotification>({
-    actions: {
-      getActions: () => get(),
-    },
-    coordinator: defaultTeamViewDataCoordinator,
-    diagnostics: {
+    log: {
       debug: (message) => logger.debug(message),
-      noteRefreshBurst: (teamName) => noteTeamRefreshBurst(teamName, TEAM_REFRESH_BURST_WINDOW_MS),
+      error: (message, error) => logger.error(message, error),
       warn: (message) => logger.warn(message),
     },
-    globalTasks: {
-      buildNotification: buildGlobalTaskProjectionNotification,
-      notify: processGlobalTaskNotifications,
-      project: projectTeamSnapshotOntoGlobalTasks,
-    },
-    lifecycle: {
-      isMemberActivityMetaStale: (teamName) => isMemberActivityMetaStale(get(), teamName),
-      isProvisioningActive: (teamName) => isTeamProvisioningActive(get(), teamName),
-      recordLastResolvedRefresh: recordLastResolvedTeamDataRefresh,
-      recordTaskBoardTransitions: recordTeamTaskBoardSnapshotTransitions,
-      shouldInvalidateCachedData: shouldInvalidateCachedTeamDataForError,
-    },
     requestScope: {
-      capture: (teamName) => teamStateLifecycleCoordinator.captureTeamRequestScope(get, teamName),
-      isCurrent: (teamName, scope) =>
+      captureContext: () => teamStateLifecycleCoordinator.captureContextRequestScope(get),
+      captureTeam: (teamName) =>
+        teamStateLifecycleCoordinator.captureTeamRequestScope(get, teamName),
+      isContextCurrent: (scope) =>
+        teamStateLifecycleCoordinator.isContextRequestScopeCurrent(get, scope),
+      isTeamCurrent: (teamName, scope) =>
         teamStateLifecycleCoordinator.isTeamRequestScopeCurrent(get, teamName, scope),
     },
-    selectionEffects: {
-      autoSelectProject: (projectPath) => {
-        const state = get();
-        const normalizedTeamPath = normalizePath(projectPath);
-        const matchingProject = state.projects.find(
-          (project) => normalizePath(project.path) === normalizedTeamPath
-        );
-        if (matchingProject && state.selectedProjectId !== matchingProject.id) {
-          state.selectProject(matchingProject.id);
-          return;
-        }
-        if (matchingProject) return;
-
-        for (const repository of state.repositoryGroups) {
-          const matchingWorktree = repository.worktrees.find(
-            (worktree) => normalizePath(worktree.path) === normalizedTeamPath
-          );
-          if (!matchingWorktree) continue;
-          if (state.selectedWorktreeId !== matchingWorktree.id) {
-            set(getWorktreeNavigationState(repository.id, matchingWorktree.id));
-            void get().fetchSessionsInitial(matchingWorktree.id);
-          }
-          break;
-        }
-      },
+    settings: {
       loadToolApprovalSettings: loadToolApprovalSettingsForTeam,
-      syncTabLabels: (teamName, displayName) => {
-        const relatedTabs = get()
-          .getAllPaneTabs()
-          .filter(
-            (tab) => (tab.type === 'team' || tab.type === 'graph') && tab.teamName === teamName
-          );
-        for (const tab of relatedTabs) {
-          const nextLabel = tab.type === 'graph' ? `${displayName} Graph` : displayName;
-          if (tab.label !== nextLabel) {
-            get().updateTabLabel(tab.id, nextLabel);
-          }
-        }
-      },
-    },
-    snapshots: {
-      getForTeam: selectTeamDataForName,
-      preserveKnownTaskChangePresence,
-      shouldPreserveSelectedSnapshot: shouldPreserveSelectedTeamSnapshot,
-      structurallyShare: structurallyShareTeamSnapshot,
     },
     state: {
-      getState: () => get(),
-      setState: (update) => {
-        if (typeof update === 'function') {
-          set((state) => update(state));
-          return;
-        }
-        set(update);
-      },
-    },
-    tasks: {
-      collectInvalidation: collectTaskChangeInvalidation,
+      getState: get,
+      setState: set,
     },
   }),
   teamsProjectNavigationIntent: null,
   ...createInitialTeamGraphLayoutState(),
-  ...createTeamMessageFeedRendererSlice<TeamRequestScope>({
-    actions: {
-      getActions: () => get(),
-    },
-    activityPolicy: {
-      isStale: isMemberActivityMetaStale,
-      structurallyShareMembers: structurallyShareMemberActivityFacts,
-    },
-    cachePolicy: {
-      areMessageArraysEquivalent: areInboxMessageArraysEquivalent,
-      extractRetainedOlderTail: extractRetainedCanonicalOlderTail,
-      getCanonicalHeadSlice,
-      getEntry: getTeamMessagesCacheEntry,
-      mergeMessages: mergeTeamMessages,
-      pruneOptimisticMessages,
-    },
-    coordinator: defaultTeamMessageFeedCoordinator,
-    pendingReplyPolicy: {
-      setEnabled: setPendingReplyRefreshEnabled,
-    },
-    requestScope: {
-      capture: (teamName) => teamStateLifecycleCoordinator.captureTeamRequestScope(get, teamName),
-      isCurrent: (teamName, scope) =>
-        teamStateLifecycleCoordinator.isTeamRequestScopeCurrent(get, teamName, scope),
-    },
-    state: {
-      getState: () => get(),
-      setState: (update) => {
-        if (typeof update === 'function') {
-          set((state) => update(state));
-          return;
-        }
-        set(update);
-      },
-    },
-  }),
-  ...createTeamMessageDeliveryRendererSlice<AppState, ContextRequestScope>({
-    analytics: {
-      classifyError: classifyAnalyticsError,
-      recordAttachment: ({ attachments, success, errorClass }) =>
-        recordAttachmentAttachEnd({
-          source: 'message',
-          success,
-          fileCount: attachments.length,
-          totalSizeBytes: getAttachmentTotalSizeBytes(attachments),
-          mimeTypes: getAttachmentMimeTypes(attachments),
-          errorClass,
-        }),
-      recordCrossTeamMessage: (input) => recordCrossTeamMessageSend({ ...input }),
-    },
-    clock: {
-      nowIso,
-    },
-    crossTeamTransport: {
-      listTargets: () => api.crossTeam.listTargets(),
-      send: (request) => api.crossTeam.send(request),
-    },
-    diagnostics: {
-      build: buildOpenCodeRuntimeDeliveryDiagnostics,
-      isHardFailure: isOpenCodeRuntimeDeliveryHardUxFailure,
-    },
-    errors: {
-      mapSendError: mapSendMessageError,
-    },
-    log: {
-      recordCrossTeamTargetsFailure: (error) => logger.error('fetchCrossTeamTargets failed', error),
-    },
-    optimisticMessages: {
-      project: (state, teamName, message) => ({
-        teamMessagesByName: {
-          ...state.teamMessagesByName,
-          [teamName]: upsertOptimisticTeamMessage(
-            getTeamMessagesCacheEntry(state, teamName),
-            message
-          ),
-        },
-      }),
-    },
-    refresh: {
-      refreshMessageHead: (teamName) => get().refreshTeamMessagesHead(teamName),
-    },
-    requestScope: {
-      capture: () => teamStateLifecycleCoordinator.captureContextRequestScope(get),
-      isCurrent: (scope) => teamStateLifecycleCoordinator.isContextRequestScopeCurrent(get, scope),
-    },
-    state: {
-      getState: () => get(),
-      setState: (update) => {
-        if (typeof update === 'function') {
-          set((state) => update(state));
-          return;
-        }
-        set(update);
-      },
-    },
-    transport: {
-      getRuntimeDeliveryStatus: (teamName, messageId) =>
-        unwrapIpc('team:getOpenCodeRuntimeDeliveryStatus', () =>
-          api.teams.getOpenCodeRuntimeDeliveryStatus(teamName, messageId)
-        ),
-      send: (teamName, request) =>
-        unwrapIpc('team:sendMessage', () => api.teams.sendMessage(teamName, request)),
-    },
-  }),
-  ...createTeamTaskBoardRendererSlice({
-    getState: () => {
-      const state = get();
-      return {
-        checkTaskHasChanges: state.checkTaskHasChanges,
-        fetchAllTasks: state.fetchAllTasks,
-        getTeamData: (teamName) => selectTeamDataForName(state, teamName),
-        invalidateTaskChangePresence: state.invalidateTaskChangePresence,
-        refreshTeamData: state.refreshTeamData,
-        selectedTeamData: state.selectedTeamData,
-        selectedTeamName: state.selectedTeamName,
-      };
-    },
-    mapReviewError,
-    setState: (state) => set(state),
-  }),
-  ...createTeamTaskArtifactsRendererSlice<AppState, TeamRequestScope>({
-    analytics: {
-      classifyError: classifyAnalyticsError,
-      recordAttachment: ({ attachments, source, success, errorClass }) =>
-        recordAttachmentAttachEnd({
-          source,
-          success,
-          fileCount: attachments.length,
-          totalSizeBytes: getAttachmentTotalSizeBytes(attachments),
-          mimeTypes: getAttachmentMimeTypes(attachments),
-          errorClass,
-        }),
-    },
-    ids: {
-      randomUUID: () => crypto.randomUUID(),
-    },
-    refresh: {
-      refreshTeamData: (teamName) => get().refreshTeamData(teamName),
-    },
-    requestScope: {
-      capture: (teamName) => teamStateLifecycleCoordinator.captureTeamRequestScope(get, teamName),
-      isCurrent: (teamName, scope) =>
-        teamStateLifecycleCoordinator.isTeamRequestScopeCurrent(get, teamName, scope),
-    },
-    state: {
-      getState: () => get(),
-      selectTeamData: (state, teamName) => selectTeamDataForName(state, teamName),
-      setState: (update) => {
-        if (typeof update === 'function') {
-          set((state) => update(state));
-          return;
-        }
-        set(update);
-      },
-    },
-    transport: createTeamTaskArtifactsTransport(),
-  }),
   ...createTeamLifecycleMutationSlice<
     AppState,
     ReturnType<typeof getTeamLifecycleAnalyticsContext>
