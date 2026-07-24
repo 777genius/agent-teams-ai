@@ -176,6 +176,28 @@ describe('TeamLaunchAnalyticsCoordinator', () => {
     );
   });
 
+  it('keeps terminal step dedupe when a completed run later disconnects', () => {
+    const { coordinator, recorder } = createHarness();
+    const verifying = progress('verifying', {
+      updatedAt: '2026-07-24T10:00:05.000Z',
+    });
+    const ready = progress('ready', {
+      updatedAt: '2026-07-24T10:00:08.000Z',
+    });
+    const disconnected = progress('disconnected', {
+      updatedAt: '2026-07-24T10:00:09.000Z',
+    });
+
+    coordinator.recordStepTransition(undefined, verifying, snapshot());
+    coordinator.recordStepTransition(verifying, ready, snapshot());
+    coordinator.recordTerminalProgress(ready, snapshot());
+    coordinator.recordStepTransition(ready, disconnected, snapshot());
+    coordinator.recordTerminalProgress(disconnected, snapshot());
+
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledTimes(1);
+    expect(recorder.recordLaunchEnd).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps concurrent run contexts isolated when progress arrives out of order', () => {
     const { coordinator, recorder } = createHarness();
     const launchPort = coordinator.createLaunchPort();

@@ -160,7 +160,7 @@ export class TeamLaunchAnalyticsCoordinator {
         : this.dependencies.metrics.classifyError(progress.error ?? progress.message),
       partialFailure,
     });
-    this.clearStepTracking(progress.runId);
+    this.clearStepStartedAt(progress.runId);
   }
 
   private recordCreateAccepted(
@@ -194,14 +194,18 @@ export class TeamLaunchAnalyticsCoordinator {
   }
 
   private clearStepTracking(runId: string): void {
-    for (const key of this.stepStartedAtByKey.keys()) {
-      if (key.startsWith(`${runId}:`)) {
-        this.stepStartedAtByKey.delete(key);
-      }
-    }
+    this.clearStepStartedAt(runId);
     for (const key of this.reportedStepKeys) {
       if (key.startsWith(`${runId}:`)) {
         this.reportedStepKeys.delete(key);
+      }
+    }
+  }
+
+  private clearStepStartedAt(runId: string): void {
+    for (const key of this.stepStartedAtByKey.keys()) {
+      if (key.startsWith(`${runId}:`)) {
+        this.stepStartedAtByKey.delete(key);
       }
     }
   }
