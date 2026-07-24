@@ -1620,8 +1620,11 @@ describe('changeReviewSlice task changes', () => {
       fileContentVersionByPath: {},
     });
 
-    await store.getState().saveEditedFile('/repo/new.ts', AGENT_REVIEW_SCOPE, 'draft-before-save');
+    const result = await store
+      .getState()
+      .saveEditedFile('/repo/new.ts', AGENT_REVIEW_SCOPE, 'draft-before-save');
 
+    expect(result).toEqual({ ok: true });
     expect(hoisted.saveEditedFile).toHaveBeenCalledWith(
       AGENT_REVIEW_SCOPE,
       '/repo/new.ts',
@@ -1635,6 +1638,28 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContents['/repo/new.ts']?.modifiedFullContent).toBe(
       'saved-content'
     );
+  });
+
+  it('returns a Save-owned failure result without consuming the edited draft', async () => {
+    const store = createSliceStore();
+    hoisted.saveEditedFile.mockRejectedValueOnce(new Error('conflict on disk'));
+    store.setState({
+      activeChangeSet: makeAgentChangeSet('/repo/file.ts'),
+      editedContents: { '/repo/file.ts': 'manual' },
+      changeSetEpoch: 1,
+      fileContentVersionByPath: {},
+    });
+
+    const result = await store
+      .getState()
+      .saveEditedFile('/repo/file.ts', AGENT_REVIEW_SCOPE, 'agent-change');
+
+    expect(result).toEqual({
+      ok: false,
+      error: 'File has been modified since agent changes.',
+    });
+    expect(store.getState().applyError).toBe('File has been modified since agent changes.');
+    expect(store.getState().editedContents).toEqual({ '/repo/file.ts': 'manual' });
   });
 
   it('saves edited content through canonical Windows ledger paths and clears aliases', async () => {

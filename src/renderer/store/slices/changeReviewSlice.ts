@@ -177,6 +177,13 @@ export interface ReviewExternalChange {
   type: 'change' | 'add' | 'unlink';
 }
 
+export type SaveEditedReviewFileResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly error: string;
+    };
+
 /**
  * When true, rejected hunks are immediately applied to disk (no need for "Apply All Changes").
  * When false, decisions are batched and applied manually via "Apply All Changes" button.
@@ -446,7 +453,7 @@ export interface ChangeReviewSlice {
     filePath: string,
     scope: ReviewFileScope,
     expectedCurrentContent: string | null
-  ) => Promise<void>;
+  ) => Promise<SaveEditedReviewFileResult>;
 
   // Task change availability
   checkTaskHasChanges: (
@@ -2133,8 +2140,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       const content = hasRequestedDraft
         ? state.editedContents[filePath]
         : state.editedContents[canonicalFilePath];
-      if (!hasRequestedDraft && !hasCanonicalDraft) return;
-      if (content === undefined) return;
+      if (!hasRequestedDraft && !hasCanonicalDraft)
+        return { ok: false, error: 'The edited draft is no longer available.' };
       set((s) => ({
         fileContentsLoading: {
           ...s.fileContentsLoading,
@@ -2178,20 +2185,13 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           const nextEdited = { ...s.editedContents };
           const currentDraft = s.editedContents[filePath] ?? s.editedContents[canonicalFilePath];
           const draftStillMatchesSavedContent = currentDraft === content;
-          if (draftStillMatchesSavedContent) {
-            for (const alias of aliases) delete nextEdited[alias];
-          }
-
+          if (draftStillMatchesSavedContent) for (const alias of aliases) delete nextEdited[alias];
           const nextFileChunkCounts = { ...s.fileChunkCounts };
           for (const alias of aliases) delete nextFileChunkCounts[alias];
-
           const nextHunkContextHashesByFile = { ...s.hunkContextHashesByFile };
           const reviewKey = getReviewKeyForFilePath(s.activeChangeSet?.files, canonicalFilePath);
           delete nextHunkContextHashesByFile[reviewKey];
           for (const alias of aliases) delete nextHunkContextHashesByFile[alias];
-
-          // A manual Save finalizes the user's current file version. Previously stored
-          // decisions refer to the pre-edit diff and cannot be replayed or undone safely.
           const decisionPrefixes = new Set([reviewKey, ...aliases].map((key) => `${key}:`));
           const nextHunkDecisions = { ...s.hunkDecisions };
           for (const key of Object.keys(nextHunkDecisions)) {
@@ -2202,13 +2202,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           const nextFileDecisions = { ...s.fileDecisions };
           delete nextFileDecisions[reviewKey];
           for (const alias of aliases) delete nextFileDecisions[alias];
-
           const nextReviewExternalChangesByFile = { ...s.reviewExternalChangesByFile };
           for (const alias of aliases) delete nextReviewExternalChangesByFile[alias];
 
-          // Update cached content in-place to avoid skeleton flash.
-          // Replace modifiedFullContent with saved version so CodeMirror
-          // reflects the new baseline without a full re-fetch cycle.
           const nextContents = { ...s.fileContents };
           const existing = nextContents[canonicalFilePath] ?? nextContents[filePath];
           for (const alias of aliases) {
@@ -2233,14 +2229,17 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
             applying: false,
           };
         });
+        return { ok: true };
       } catch (error) {
+        const errorMessage = mapReviewError(error);
         const latest = get();
         if (
           latest.changeSetEpoch === changeSetEpoch &&
           getReviewChangeSetIdentityToken(latest.activeChangeSet) === scopeFingerprint
         ) {
-          set({ applying: false, applyError: mapReviewError(error) });
+          set({ applying: false, applyError: errorMessage });
         }
+        return { ok: false, error: errorMessage };
       }
     },
 
