@@ -17,27 +17,11 @@ import {
   ChangeReviewConflictDiscardDialog,
   ChangeReviewConflictNotices,
   ChangeReviewSidebar,
-  createChangeReviewActionHistoryStorePort,
   createChangeReviewBulkDecisionCommandPort,
-  createChangeReviewBulkDecisionStatePort,
-  createChangeReviewConflictCommandPort,
-  createChangeReviewConflictQueryPort,
-  createChangeReviewConflictStateBridge,
-  createChangeReviewDecisionPersistencePort,
   createChangeReviewDialogLifecycleCommandPort,
-  createChangeReviewDialogLifecycleStatePort,
   createChangeReviewDialogViewPorts,
-  createChangeReviewDraftHistoryPort,
-  createChangeReviewExternalFileWatcherPort,
   createChangeReviewFileDecisionCommandPort,
-  createChangeReviewFileDecisionStatePort,
-  createChangeReviewFileDraftCommandPort,
-  createChangeReviewFileDraftStatePort,
-  createChangeReviewHistoryMutationCommandPort,
-  createChangeReviewHistoryMutationStatePort,
   createChangeReviewHunkDecisionCommandPort,
-  createChangeReviewHunkDecisionStatePort,
-  isReviewActionPersistenceBlocking,
   shouldShowTaskScopeBanner,
   TaskChangesEmptyState,
   toTaskChangeSetV2,
@@ -50,15 +34,15 @@ import {
   useChangeReviewDialogLifecycleController,
   useChangeReviewDialogViewState,
   useChangeReviewDraftHistoryController,
-  useChangeReviewExternalFileWatcher,
+  useChangeReviewExternalChangeController,
   useChangeReviewFileDecisionController,
   useChangeReviewFileDraftController,
   useChangeReviewHistoryMutationController,
   useChangeReviewHunkDecisionController,
-  useChangeReviewOperationGeneration,
+  useChangeReviewMutationGuards,
+  useChangeReviewOperationState,
   useChangeReviewScopeIdentity,
 } from '@features/change-review/renderer';
-import { buildReviewRestoreDecisionState } from '@features/review-mutations';
 import { api, isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
 import { useStore } from '@renderer/store';
@@ -69,9 +53,31 @@ import {
   registerChangeReviewLifecycleOwner,
 } from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { getFileReviewKey } from '@renderer/utils/reviewKey';
-import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { X } from 'lucide-react';
 
+import {
+  changeReviewActionHistoryStorePort,
+  changeReviewBulkDecisionStatePort,
+  changeReviewConflictCommandPort,
+  changeReviewConflictQueryPort,
+  changeReviewConflictStateBridge,
+  changeReviewDecisionPersistencePort,
+  changeReviewDialogLifecycleStatePort,
+  changeReviewDialogViewStatePolicy,
+  changeReviewDraftHistoryPort,
+  changeReviewExternalChangePolicy,
+  changeReviewExternalChangeStatePort,
+  changeReviewExternalFileWatcherPort,
+  changeReviewFileDecisionPolicy,
+  changeReviewFileDecisionStatePort,
+  changeReviewFileDraftCommandPort,
+  changeReviewFileDraftStatePort,
+  changeReviewHistoryMutationCommandPort,
+  changeReviewHistoryMutationStatePort,
+  changeReviewHunkDecisionPolicy,
+  changeReviewHunkDecisionStatePort,
+  changeReviewOperationStatePort,
+} from './changeReviewDialogComposition';
 import { ChangesLoadingAnimation } from './ChangesLoadingAnimation';
 import {
   acceptAllChunks,
@@ -81,46 +87,31 @@ import {
   rejectChunk,
 } from './CodeMirrorDiffUtils';
 import { ContinuousScrollView } from './ContinuousScrollView';
-import { buildInitialReviewFileScrollKey } from './initialReviewFileScroll';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { buildPathChangeLabels } from './pathChangeLabels';
-import { getReviewActionFilePath } from './reviewActionPresentation';
 import {
   getReviewRenameRecoveryExpectation,
-  hasReviewFileRejections,
   hasUnresolvedReviewExternalChange,
-  isReviewActionLocked,
   isReviewFileFullyRejected,
   replaceReviewScopedRecord,
   resolveReviewFileIsNew,
-  restoreReviewDecisionRecordsForFile,
-  shouldCreateFileWhenUndoingReject,
   shouldDeleteFileWhenUndoingReject,
 } from './reviewActionState';
 import {
   getResolvedReviewModifiedContent,
   isReviewAcceptDisabled,
-  isReviewFileExpectedDeleted,
   isReviewFileMissingOnDisk,
   isReviewRejectable,
   isReviewTextContentUnavailable,
 } from './reviewContentPreview';
-import { resolveReviewFilePath } from './reviewFilePathResolution';
 import { ReviewToolbar } from './ReviewToolbar';
 import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
 import { ViewedProgressBar } from './ViewedProgressBar';
 
-import type {
-  ChangeReviewDialogViewStatePolicy,
-  ChangeReviewFileDecisionPolicy,
-  ChangeReviewHunkDecisionPolicy,
-  ChangeReviewRecentWrite,
-  ReviewDraftHistoryHydrationState,
-} from '@features/change-review/renderer';
+import type { ReviewDraftHistoryHydrationState } from '@features/change-review/renderer';
 import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import type {
-  EditorFileChangeEvent,
   FileChangeSummary,
   ReviewDecisionSnapshot,
   ReviewDiskUndoSnapshot,
@@ -128,127 +119,6 @@ import type {
   ReviewUndoAction,
 } from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
-
-const changeReviewConflictQueryPort = createChangeReviewConflictQueryPort(() => api.review);
-const changeReviewConflictCommandPort = createChangeReviewConflictCommandPort(() => api.review);
-const changeReviewConflictStateBridge = createChangeReviewConflictStateBridge({
-  getSnapshot: useStore.getState,
-  setApplyError: (applyError) => useStore.setState({ applyError }),
-});
-const changeReviewDraftHistoryPort = createChangeReviewDraftHistoryPort(() => api.review);
-const changeReviewExternalFileWatcherPort = createChangeReviewExternalFileWatcherPort(
-  () => api.review
-);
-const changeReviewActionHistoryStorePort = createChangeReviewActionHistoryStorePort({
-  getStore: useStore.getState,
-  clearLegacyUndoStack: () => useStore.setState({ reviewUndoStack: [] }),
-});
-const changeReviewDecisionPersistencePort = createChangeReviewDecisionPersistencePort({
-  getStore: useStore.getState,
-  setApplyError: (applyError) => useStore.setState({ applyError }),
-});
-const changeReviewBulkDecisionStatePort = createChangeReviewBulkDecisionStatePort({
-  getStore: useStore.getState,
-  restoreDecisionSnapshot: ({ hunkDecisions, fileDecisions }) =>
-    useStore.setState({ hunkDecisions, fileDecisions }),
-});
-const changeReviewFileDraftStatePort = createChangeReviewFileDraftStatePort({
-  getStore: useStore.getState,
-  applyReloadedReviewState: (state) =>
-    useStore.setState({
-      hunkDecisions: state.hunkDecisions,
-      fileDecisions: state.fileDecisions,
-      hunkContextHashesByFile: state.hunkContextHashesByFile ?? {},
-      applyError: null,
-    }),
-  reportError: (applyError) => useStore.setState({ applyError }),
-});
-const changeReviewFileDraftCommandPort = createChangeReviewFileDraftCommandPort({
-  getStore: useStore.getState,
-  getReviewApi: () => api.review,
-});
-const changeReviewFileDecisionStatePort = createChangeReviewFileDecisionStatePort({
-  getStore: useStore.getState,
-  applyRestoredDecisionState: (file) =>
-    useStore.setState((state) => buildReviewRestoreDecisionState(file, state)),
-  restoreFileDecisions: (file, snapshot) =>
-    useStore.setState((state) => restoreReviewDecisionRecordsForFile(file, state, snapshot)),
-  reportError: (applyError) => useStore.setState({ applyError }),
-});
-const changeReviewFileDecisionPolicy: ChangeReviewFileDecisionPolicy = {
-  getHunkCount: (file, state) =>
-    getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts),
-  getFileDecision: (file, state) =>
-    state.fileDecisions[getFileReviewKey(file)] ?? state.fileDecisions[file.filePath],
-  resolveModifiedContent: getResolvedReviewModifiedContent,
-  resolveFileIsNew: resolveReviewFileIsNew,
-  isExpectedDeletion: isReviewFileExpectedDeleted,
-  isAcceptDisabled: (_file, content, fileDecision) =>
-    isReviewAcceptDisabled({
-      hasEdits: false,
-      isMissingOnDisk: isReviewFileMissingOnDisk(content),
-      isContentUnavailable: isReviewTextContentUnavailable(_file, content),
-      fileDecision,
-    }),
-  isRejectable: isReviewRejectable,
-  hasFileRejections: hasReviewFileRejections,
-  isFileFullyRejected: isReviewFileFullyRejected,
-  shouldDeleteWhenUndoingReject: shouldDeleteFileWhenUndoingReject,
-  hasUnresolvedExternalChange: hasUnresolvedReviewExternalChange,
-  getRenameRecoveryExpectation: getReviewRenameRecoveryExpectation,
-};
-const changeReviewHunkDecisionStatePort = createChangeReviewHunkDecisionStatePort(
-  useStore.getState
-);
-const changeReviewHunkDecisionPolicy: ChangeReviewHunkDecisionPolicy = {
-  getHunkCount: (file, state) =>
-    getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts),
-  resolveFileIsNew: resolveReviewFileIsNew,
-  shouldDeleteWhenUndoingReject: shouldDeleteFileWhenUndoingReject,
-  shouldCreateWhenUndoingReject: shouldCreateFileWhenUndoingReject,
-  getRenameRecoveryExpectation: getReviewRenameRecoveryExpectation,
-};
-const changeReviewDialogViewStatePolicy: ChangeReviewDialogViewStatePolicy = {
-  buildInitialScrollKey: buildInitialReviewFileScrollKey,
-  getHistoryActionFilePath: getReviewActionFilePath,
-  resolveFilePath: resolveReviewFilePath,
-};
-const changeReviewDialogLifecycleStatePort = createChangeReviewDialogLifecycleStatePort({
-  getStore: useStore.getState,
-  reportError: (applyError) => useStore.setState({ applyError }),
-  completeSavedStateDiscard: (markDecisionHydrationLoaded) =>
-    useStore.setState({
-      ...(markDecisionHydrationLoaded ? { decisionHydrationStatus: 'loaded' as const } : {}),
-      applyError: null,
-    }),
-});
-const changeReviewHistoryMutationCommandPort = createChangeReviewHistoryMutationCommandPort(
-  () => api.review
-);
-const changeReviewHistoryMutationStatePort = createChangeReviewHistoryMutationStatePort({
-  getSnapshot: () => useStore.getState(),
-  quiesceDecisionPersistence: ({ teamName, scopeKey, scopeToken }) =>
-    useStore.getState().quiesceDecisionPersistence(teamName, scopeKey, scopeToken),
-  recordDecisionRevision: ({ teamName, scopeKey, scopeToken }, revision) =>
-    useStore.getState().recordDecisionRevision(teamName, scopeKey, scopeToken, revision),
-  applyDecisionState: ({ hunkDecisions, fileDecisions, hunkContextHashesByFile }) =>
-    useStore.setState({
-      hunkDecisions,
-      fileDecisions,
-      ...(hunkContextHashesByFile ? { hunkContextHashesByFile } : {}),
-    }),
-  applyPersistedState: (state, applyError) =>
-    useStore.setState({
-      hunkDecisions: state.hunkDecisions,
-      fileDecisions: state.fileDecisions,
-      hunkContextHashesByFile: state.hunkContextHashesByFile ?? {},
-      applyError,
-    }),
-  reportError: (applyError) => useStore.setState({ applyError }),
-  clearExternalChange: (filePath) => useStore.getState().clearReviewFileExternalChange(filePath),
-  invalidateResolvedFileContent: (filePath) =>
-    useStore.getState().invalidateResolvedFileContent(filePath),
-});
 
 interface ChangeReviewDialogProps {
   open: boolean;
@@ -373,17 +243,19 @@ export const ChangeReviewDialog = ({
   });
 
   const [discardCounters, setDiscardCounters] = useState<Record<string, number>>({});
-  const [filesApplying, setFilesApplying] = useState<Set<string>>(() => new Set());
-  const [undoing, setUndoing] = useState(false);
-  const [closing, setClosing] = useState(false);
-  const fileApplyInFlightRef = useRef(new Set<string>());
-  const undoInFlightRef = useRef(false);
-  const closingRef = useRef(false);
-  const pendingApplyCleanupKeyRef = useRef<string | null>(null);
-  const recentReviewWritesRef = useRef(new Map<string, ChangeReviewRecentWrite>());
   // Exact disk state on which each manual draft started. Map.has() distinguishes
   // a genuinely missing file (null baseline) from an uncaptured baseline.
   const expectedDraftHistoryKeyRef = useRef<string | null>(null);
+  const operationState = useChangeReviewOperationState({
+    active: open && lifecycleAuthorized,
+    decisionHydrationKey,
+    fallbackScopeKey: `unscoped:${teamName}:${scopeKey}`,
+    changeSetEpoch,
+    resetKey: `${teamName}\0${scopeKey}\0${changeSetEpoch}`,
+    port: changeReviewOperationStatePort,
+  });
+  const { filesApplying, captureReviewOperationScope, isCurrentReviewOperationScope } =
+    operationState;
 
   useLayoutEffect(() => {
     const activeHydrationKey = open && lifecycleAuthorized ? decisionHydrationKey : null;
@@ -394,27 +266,6 @@ export const ChangeReviewDialog = ({
       }
     };
   }, [decisionHydrationKey, lifecycleAuthorized, open]);
-
-  const resetReviewOperationGenerationState = useCallback((): void => {
-    // Busy state belongs to one operation generation. Never carry it into a
-    // reopened or re-hydrated scope, but preserve recent-write evidence so late
-    // filesystem events from our own committed mutation remain suppressible.
-    fileApplyInFlightRef.current.clear();
-    undoInFlightRef.current = false;
-    closingRef.current = false;
-    setFilesApplying(new Set());
-    setUndoing(false);
-    setClosing(false);
-  }, []);
-
-  const { captureReviewOperationScope, isCurrentReviewOperationScope } =
-    useChangeReviewOperationGeneration({
-      active: open && lifecycleAuthorized,
-      decisionHydrationKey,
-      fallbackScopeKey: `unscoped:${teamName}:${scopeKey}`,
-      changeSetEpoch,
-      resetGenerationState: resetReviewOperationGenerationState,
-    });
 
   const isExpectedDraftHistoryKey = useCallback(
     (hydrationKey: string): boolean => expectedDraftHistoryKeyRef.current === hydrationKey,
@@ -584,12 +435,6 @@ export const ChangeReviewDialog = ({
     resetReviewConflictCandidates,
   ]);
 
-  useEffect(() => {
-    if (pendingApplyCleanupKeyRef.current !== decisionHydrationKey) {
-      pendingApplyCleanupKeyRef.current = null;
-    }
-  }, [decisionHydrationKey]);
-
   const readCurrentReviewDiskContent = useCallback(
     async (filePath: string, fallback: string): Promise<string> => {
       try {
@@ -607,76 +452,30 @@ export const ChangeReviewDialog = ({
     [memberName, taskId, teamName]
   );
 
-  useEffect(() => {
-    fileApplyInFlightRef.current.clear();
-    recentReviewWritesRef.current.clear();
-    undoInFlightRef.current = false;
-    closingRef.current = false;
-    setUndoing(false);
-    setClosing(false);
-    setFilesApplying(new Set());
-  }, [changeSetEpoch, scopeKey, teamName]);
-
-  const ensureDurableReviewScope = useCallback((): boolean => {
-    if (!decisionScopeToken) {
-      useStore.setState({
-        applyError: 'Durable review scope is unavailable; refusing an unsafe disk mutation.',
-      });
-      return false;
-    }
-    return true;
-  }, [decisionScopeToken]);
-
-  const reviewMutationBusy = isReviewActionLocked({
+  const {
+    reviewMutationBusy,
+    reviewActionsBusy,
+    reviewCloseBusy,
+    hasReviewActionInFlight,
+    ensureDurableReviewScope,
+  } = useChangeReviewMutationGuards({
     applying,
-    fileApplyCount: filesApplying.size,
-    undoing,
-    closing,
-  });
-  const reviewActionsBusy =
-    reviewMutationBusy ||
-    reviewConflictRefreshPending ||
-    reviewConflictLoadError !== null ||
-    reviewConflictCandidateCount > 0 ||
-    resolvingConflictCandidateId !== null ||
-    isReviewActionPersistenceBlocking(reviewActionPersistenceStatus) ||
-    (decisionHydrationKey !== null && (!decisionHydrationReady || !draftHistoryHydrationReady));
-  // Candidate discovery and persistence drains are safe to finish in the close flush.
-  // Only an active mutation or conflict resolution must keep the close control locked.
-  const reviewCloseBusy = reviewMutationBusy || resolvingConflictCandidateId !== null;
-
-  const hasReviewActionInFlight = useCallback(() => {
-    const state = useStore.getState();
-    const hydrationReady =
-      decisionHydrationKey === null ||
-      (state.decisionHydrationScopeKey === decisionHydrationKey &&
-        state.decisionHydrationStatus === 'loaded' &&
-        draftHistoryHydration.key === decisionHydrationKey &&
-        draftHistoryHydration.status === 'loaded');
-    return (
-      !hydrationReady ||
-      reviewConflictRefreshPending ||
-      reviewConflictLoadError !== null ||
-      reviewConflictCandidateCount > 0 ||
-      resolvingConflictCandidateId !== null ||
-      isReviewActionPersistenceBlocking(getReviewActionPersistenceStatus()) ||
-      isReviewActionLocked({
-        applying: state.applying,
-        fileApplyCount: fileApplyInFlightRef.current.size,
-        undoing: undoInFlightRef.current,
-        closing: closingRef.current,
-      })
-    );
-  }, [
+    operation: operationState,
+    decisionScopeToken,
     decisionHydrationKey,
-    draftHistoryHydration.key,
-    draftHistoryHydration.status,
-    getReviewActionPersistenceStatus,
-    reviewConflictLoadError,
-    reviewConflictRefreshPending,
-    resolvingConflictCandidateId,
-    reviewConflictCandidateCount,
-  ]);
+    decisionHydrationReady,
+    draftHistoryHydration,
+    draftHistoryHydrationReady,
+    conflict: {
+      refreshPending: reviewConflictRefreshPending,
+      loadError: reviewConflictLoadError,
+      candidateCount: reviewConflictCandidateCount,
+      resolvingCandidateId: resolvingConflictCandidateId,
+    },
+    persistenceStatus: reviewActionPersistenceStatus,
+    getPersistenceStatus: getReviewActionPersistenceStatus,
+    port: changeReviewOperationStatePort,
+  });
 
   const hasReviewDraft = useCallback(
     (filePath: string): boolean => filePath in useStore.getState().editedContents,
@@ -780,59 +579,21 @@ export const ChangeReviewDialog = ({
     [editedContents, fileContents, fileDecisions, sortedFiles]
   );
   const editedCount = Object.keys(editedContents).length;
-  const reviewMutationBlockedByExternalChange = Object.keys(reviewExternalChangesByFile).length > 0;
-  const blockReviewMutationForExternalChange = useCallback((filePath?: string): boolean => {
-    const externalChanges = useStore.getState().reviewExternalChangesByFile;
-    const blocked = filePath
-      ? hasUnresolvedReviewExternalChange(filePath, externalChanges)
-      : Object.keys(externalChanges).length > 0;
-    if (blocked) {
-      useStore.setState({
-        applyError: 'Reload files changed outside Changes before continuing review actions.',
-      });
-    }
-    return blocked;
-  }, []);
-  const processReviewExternalFileChange = useCallback(
-    (event: EditorFileChangeEvent): void => {
-      const normalizedPath = normalizePathForComparison(event.path);
-      const state = useStore.getState();
-      const active = state.activeChangeSet;
-      if (!active) return;
-      const file = active.files.find(
-        (entry) => normalizePathForComparison(entry.filePath) === normalizedPath
-      );
-      if (!file) return;
-      const durableDraftHistory = getDraftHistoryEntry(file.filePath);
-      if (!(file.filePath in state.editedContents) && durableDraftHistory) {
-        state.updateEditedContent(file.filePath, durableDraftHistory.editorState.doc);
-      }
-      const changeType =
-        event.type === 'create' ? 'add' : event.type === 'delete' ? 'unlink' : 'change';
-      state.markReviewFileExternallyChanged(file.filePath, changeType);
-      reportReviewInteractionError(
-        'A reviewed file changed outside Changes. Reload it from disk before continuing review actions.'
-      );
-    },
-    [getDraftHistoryEntry, reportReviewInteractionError]
-  );
-  const isReviewMutationInFlightForPath = useCallback((normalizedPath: string): boolean => {
-    const pathBusy = [...fileApplyInFlightRef.current].some(
-      (filePath) => normalizePathForComparison(filePath) === normalizedPath
-    );
-    return pathBusy || undoInFlightRef.current || useStore.getState().applying;
-  }, []);
-  useChangeReviewExternalFileWatcher({
-    open,
-    enabled: isElectronMode(),
-    projectPath,
-    watchedFilePathsKey: watchedReviewFilePathsKey,
-    reviewScope,
-    recentWritesRef: recentReviewWritesRef,
-    isMutationInFlight: isReviewMutationInFlightForPath,
-    processExternalChange: processReviewExternalFileChange,
-    port: changeReviewExternalFileWatcherPort,
-  });
+  const { reviewMutationBlockedByExternalChange, blockReviewMutationForExternalChange } =
+    useChangeReviewExternalChangeController({
+      open,
+      enabled: isElectronMode(),
+      projectPath,
+      watchedFilePathsKey: watchedReviewFilePathsKey,
+      reviewScope,
+      externalChangesByFile: reviewExternalChangesByFile,
+      recentWritesRef: operationState.viewPortBindings.recentReviewWritesRef,
+      isMutationInFlight: operationState.isPathMutationInFlight,
+      getDraftHistoryEntry,
+      statePort: changeReviewExternalChangeStatePort,
+      policy: changeReviewExternalChangePolicy,
+      watcherPort: changeReviewExternalFileWatcherPort,
+    });
   const dialogViewPorts = useMemo(
     () =>
       // eslint-disable-next-line react-hooks/refs -- Factory only captures refs for later callbacks.
@@ -846,16 +607,9 @@ export const ChangeReviewDialog = ({
           rejectChunk,
         },
         subscribeToRejectCurrentHunk: (callback) => window.electronAPI?.review.onCmdN?.(callback),
-        fileApplyInFlightRef,
-        undoInFlightRef,
-        closingRef,
-        pendingApplyCleanupKeyRef,
+        ...operationState.viewPortBindings,
         expectedDraftHistoryKeyRef,
-        recentReviewWritesRef,
-        setFilesApplying,
         setDiscardCounters,
-        setUndoing,
-        setClosing,
         handleSerializedStateChanged,
         addReviewFile,
         fetchFileContent,
@@ -867,6 +621,7 @@ export const ChangeReviewDialog = ({
       fetchFileContent,
       handleHistoryActionNavigation,
       handleSerializedStateChanged,
+      operationState.viewPortBindings,
     ]
   );
   const buildBulkRejectDiskSnapshot = useCallback(
@@ -1146,10 +901,6 @@ export const ChangeReviewDialog = ({
       replaceReviewActionHistories,
     ]
   );
-  const isReviewFileMutationInFlight = useCallback(
-    (filePath: string): boolean => fileApplyInFlightRef.current.has(filePath),
-    []
-  );
   const {
     undoLatest: handleUndoLatestReviewAction,
     redoLatest: handleRedoLatestReviewAction,
@@ -1170,7 +921,7 @@ export const ChangeReviewDialog = ({
     captureOperationScope: captureReviewOperationScope,
     isCurrentOperationScope: isCurrentReviewOperationScope,
     hasActionInFlight: hasReviewActionInFlight,
-    isFileMutationInFlight: isReviewFileMutationInFlight,
+    isFileMutationInFlight: operationState.isFileMutationInFlight,
     blockForExternalChange: blockReviewMutationForExternalChange,
     getPersistenceStatus: getReviewActionPersistenceStatus,
   });

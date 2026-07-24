@@ -11,9 +11,10 @@ main-process review IPC shell.
   decision-persistence, keyboard orchestration, bulk Accept/Reject, manual file draft
   save/reload/discard flows, file-level and hunk-level Accept/Reject/Restore, and durable
   Undo/Redo/checkpoint Restore. It also owns dialog view state, selection/collapse/viewed
-  presentation interactions, diff/history keyboard navigation, external-file watcher
-  suppression, dialog open/fetch/hydration, close/app-close flushing, saved-state
-  recovery/discard, Apply cleanup, and Escape orchestration through narrow ports.
+  presentation interactions, diff/history keyboard navigation, operation-state latches,
+  mutation guards, external-change processing and watcher suppression, dialog
+  open/fetch/hydration, close/app-close flushing, saved-state recovery/discard, Apply cleanup,
+  and Escape orchestration through narrow ports.
 - `renderer/ui` owns store-free presentation components, including the review navigation
   sidebar, file tree, and active-file edit timeline. Decision state reaches that subtree
   through explicit props rather than direct Zustand access.
@@ -23,9 +24,10 @@ main-process review IPC shell.
   decision-persistence coordination behind narrow ports.
 - `main/infrastructure` owns Node path, filesystem, sensitive-path, hardlink, and watcher-root
   validation details.
-- The legacy dialog remains the temporary composition shell for Zustand subscription,
-  controller/adapter composition, CodeMirror action injection, and the main diff/content
-  rendering while later slices move those responsibilities behind focused hooks and use cases.
+- The legacy app-shell composition module binds feature ports and policies to Zustand, the
+  renderer API, and remaining review utilities. The dialog keeps per-instance controller
+  composition, CodeMirror action injection, and the main diff/content rendering while later
+  slices move those responsibilities behind focused hooks and use cases.
 
 Production callers import through `@features/change-review/renderer` or
 `@features/change-review/main`.

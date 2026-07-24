@@ -71,6 +71,8 @@ export type {
   ChangeReviewDraftHistoryDiagnostics,
 } from './hooks/useChangeReviewDraftHistoryController';
 export { useChangeReviewDraftHistoryController } from './hooks/useChangeReviewDraftHistoryController';
+export type { ChangeReviewExternalChangeController } from './hooks/useChangeReviewExternalChangeController';
+export { useChangeReviewExternalChangeController } from './hooks/useChangeReviewExternalChangeController';
 export { useChangeReviewExternalFileWatcher } from './hooks/useChangeReviewExternalFileWatcher';
 export type { ChangeReviewFileDecisionController } from './hooks/useChangeReviewFileDecisionController';
 export { useChangeReviewFileDecisionController } from './hooks/useChangeReviewFileDecisionController';
@@ -86,7 +88,14 @@ export { useChangeReviewHistoryMutationController } from './hooks/useChangeRevie
 export type { ChangeReviewHunkDecisionController } from './hooks/useChangeReviewHunkDecisionController';
 export { useChangeReviewHunkDecisionController } from './hooks/useChangeReviewHunkDecisionController';
 export { useChangeReviewLifecycleRegistration } from './hooks/useChangeReviewLifecycleRegistration';
+export type { ChangeReviewMutationGuards } from './hooks/useChangeReviewMutationGuards';
+export { useChangeReviewMutationGuards } from './hooks/useChangeReviewMutationGuards';
 export { useChangeReviewOperationGeneration } from './hooks/useChangeReviewOperationGeneration';
+export type {
+  ChangeReviewOperationState,
+  ChangeReviewOperationViewPortBindings,
+} from './hooks/useChangeReviewOperationState';
+export { useChangeReviewOperationState } from './hooks/useChangeReviewOperationState';
 export { useChangeReviewScopeIdentity } from './hooks/useChangeReviewScopeIdentity';
 export type {
   ChangeReviewActionHistoryStorePort,
@@ -182,6 +191,14 @@ export type {
   RegisterChangeReviewAppCloseParticipant,
   RegisterChangeReviewLifecycleOwner,
 } from './ports/changeReviewLifecyclePorts';
+export type {
+  ChangeReviewExternalChangePolicy,
+  ChangeReviewExternalChangeStatePort,
+  ChangeReviewExternalChangeStateSnapshot,
+  ChangeReviewExternalChangeType,
+  ChangeReviewOperationStatePort,
+  ChangeReviewOperationStateSnapshot,
+} from './ports/changeReviewMutationSafetyPorts';
 export {
   ChangeReviewConflictDiscardDialog,
   ChangeReviewConflictNotices,
