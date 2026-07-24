@@ -1,8 +1,13 @@
+import {
+  MemberWorkSyncTeamOperationGate,
+  MemberWorkSyncTeamQuiescedError,
+} from '@features/member-work-sync/core/application/MemberWorkSyncTeamOperationGate';
 import { buildMemberWorkSyncOutboxEnsureInput } from '@features/member-work-sync/core/domain';
 import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   createMemberWorkSyncFeature,
 } from '@features/member-work-sync/main';
+import { MemberWorkSyncTeamChangeRouter } from '@features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter';
 import { TeamInboxMemberWorkSyncNudgeSink } from '@features/member-work-sync/main/adapters/output/TeamInboxMemberWorkSyncNudgeSink';
 import { BackendSelectingMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore';
 import { HmacMemberWorkSyncReportTokenAdapter } from '@features/member-work-sync/main/infrastructure/HmacMemberWorkSyncReportTokenAdapter';
@@ -11,6 +16,7 @@ import { MemberWorkSyncEventQueue } from '@features/member-work-sync/main/infras
 import { MemberWorkSyncNudgeDispatchScheduler } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncNudgeDispatchScheduler';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import { NodeHashAdapter } from '@features/member-work-sync/main/infrastructure/NodeHashAdapter';
+import { QuiescingMemberWorkSyncAuditJournal } from '@features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal';
 import { RuntimeTurnSettledDrainScheduler } from '@features/member-work-sync/main/infrastructure/RuntimeTurnSettledDrainScheduler';
 import { RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV } from '@features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
@@ -21,12 +27,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const tempRoots: string[] = [];
 
-function createDeferred(): { promise: Promise<void>; resolve(): void } {
+function createDeferred(): {
+  promise: Promise<void>;
+  resolve(): void;
+  reject(error: unknown): void;
+} {
   let resolve!: () => void;
-  const promise = new Promise<void>((resolvePromise) => {
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<void>((resolvePromise, rejectPromise) => {
     resolve = resolvePromise;
+    reject = rejectPromise;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 function makeTempRoot(): string {
@@ -67,6 +79,134 @@ it('resumes a deleted same-name team only after config is materialized again', a
     feature.noteTeamChange({ type: 'config', teamName, detail: 'config.json' });
     await vi.waitFor(() => expect(resumeTeam).toHaveBeenCalledWith(teamName));
   } finally {
+    await feature.dispose();
+    resumeTeam.mockRestore();
+  }
+});
+
+it('creates a deleted tombstone when durable recovery completes without local preparation', async () => {
+  const teamsBasePath = path.join(makeTempRoot(), 'teams');
+  const teamName = 'recovered-team';
+  const configAccessDeferred = createDeferred();
+  const configAccess = vi.fn(() => configAccessDeferred.promise);
+  const operationResumeTeam = vi.spyOn(MemberWorkSyncTeamOperationGate.prototype, 'resumeTeam');
+  const auditResumeTeam = vi.spyOn(QuiescingMemberWorkSyncAuditJournal.prototype, 'resumeTeam');
+  const routerNoteTeamChange = vi.spyOn(MemberWorkSyncTeamChangeRouter.prototype, 'noteTeamChange');
+  const routerResumeTeam = vi.spyOn(MemberWorkSyncTeamChangeRouter.prototype, 'resumeTeam');
+  const enqueueStartupScan = vi.spyOn(
+    MemberWorkSyncTeamChangeRouter.prototype,
+    'enqueueStartupScan'
+  );
+  const feature = createMemberWorkSyncFeature({
+    teamsBasePath,
+    configFileAccess: configAccess,
+    configReader: { getConfig: vi.fn(async () => null) } as never,
+    taskReader: { getTasks: vi.fn(async () => []) } as never,
+    kanbanManager: { getState: vi.fn(async () => null) } as never,
+    membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+    listLifecycleActiveTeamNames: async () => [],
+  });
+
+  try {
+    feature.completeTeamDeletion(teamName);
+    feature.noteTeamChange({ type: 'config', teamName, detail: 'config.json' });
+    feature.noteTeamChange({ type: 'config', teamName, detail: 'config.json' });
+    await Promise.resolve();
+
+    expect(configAccess).toHaveBeenCalledOnce();
+    expect(configAccess).toHaveBeenCalledWith(path.join(teamsBasePath, teamName, 'config.json'));
+    expect(routerNoteTeamChange).not.toHaveBeenCalled();
+    expect(operationResumeTeam).not.toHaveBeenCalled();
+    expect(auditResumeTeam).not.toHaveBeenCalled();
+    expect(routerResumeTeam).not.toHaveBeenCalled();
+    expect(enqueueStartupScan).not.toHaveBeenCalled();
+
+    configAccessDeferred.resolve();
+    await vi.waitFor(() => expect(enqueueStartupScan).toHaveBeenCalledOnce());
+
+    expect(operationResumeTeam).toHaveBeenCalledOnce();
+    expect(operationResumeTeam).toHaveBeenCalledWith(teamName);
+    expect(auditResumeTeam).toHaveBeenCalledOnce();
+    expect(auditResumeTeam).toHaveBeenCalledWith(teamName);
+    expect(routerResumeTeam).toHaveBeenCalledOnce();
+    expect(routerResumeTeam).toHaveBeenCalledWith(teamName);
+    expect(enqueueStartupScan).toHaveBeenCalledWith([teamName]);
+
+    feature.resumeTeam(teamName);
+    expect(operationResumeTeam).toHaveBeenCalledOnce();
+    expect(auditResumeTeam).toHaveBeenCalledOnce();
+    expect(routerResumeTeam).toHaveBeenCalledOnce();
+    expect(enqueueStartupScan).toHaveBeenCalledOnce();
+
+    feature.noteTeamChange({ type: 'config', teamName, detail: 'config.json' });
+    await Promise.resolve();
+    expect(configAccess).toHaveBeenCalledOnce();
+    expect(routerNoteTeamChange).toHaveBeenCalledOnce();
+    expect(operationResumeTeam).toHaveBeenCalledOnce();
+    expect(auditResumeTeam).toHaveBeenCalledOnce();
+    expect(routerResumeTeam).toHaveBeenCalledOnce();
+    expect(enqueueStartupScan).toHaveBeenCalledOnce();
+  } finally {
+    configAccessDeferred.resolve();
+    await feature.dispose();
+    enqueueStartupScan.mockRestore();
+    routerResumeTeam.mockRestore();
+    routerNoteTeamChange.mockRestore();
+    auditResumeTeam.mockRestore();
+    operationResumeTeam.mockRestore();
+  }
+});
+
+it('ignores stale config access from an older deleted generation', async () => {
+  const teamsBasePath = path.join(makeTempRoot(), 'teams');
+  const staleConfigAccess = createDeferred();
+  const configAccess = vi.fn(() => staleConfigAccess.promise);
+  const resumeTeam = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'resumeTeam');
+  const feature = createMemberWorkSyncFeature({
+    teamsBasePath,
+    configFileAccess: configAccess,
+    configReader: { getConfig: vi.fn(async () => null) } as never,
+    taskReader: { getTasks: vi.fn(async () => []) } as never,
+    kanbanManager: { getState: vi.fn(async () => null) } as never,
+    membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+    listLifecycleActiveTeamNames: async () => [],
+  });
+
+  try {
+    await feature.prepareTeamDeletion(' Team-A ');
+    feature.completeTeamDeletion('team-a');
+    feature.noteTeamChange({ type: 'config', teamName: 'TEAM-A', detail: 'config.json' });
+    expect(configAccess).toHaveBeenCalledOnce();
+    expect(configAccess).toHaveBeenCalledWith(path.join(teamsBasePath, 'TEAM-A', 'config.json'));
+
+    await feature.prepareTeamDeletion(' TEAM-A ');
+    feature.completeTeamDeletion('Team-A');
+
+    staleConfigAccess.resolve();
+    await staleConfigAccess.promise;
+    await Promise.resolve();
+
+    expect(resumeTeam).not.toHaveBeenCalled();
+    await expect(
+      feature.scheduleProofMissingRecovery({
+        teamName: 'team-a',
+        memberName: '',
+        originalMessageId: '',
+      })
+    ).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+
+    feature.resumeTeam(' Team-A ');
+    expect(resumeTeam).toHaveBeenCalledOnce();
+    expect(resumeTeam).toHaveBeenCalledWith('Team-A');
+    await expect(
+      feature.scheduleProofMissingRecovery({
+        teamName: 'TEAM-A',
+        memberName: '',
+        originalMessageId: '',
+      })
+    ).resolves.toEqual({ scheduled: false, reason: 'invalid' });
+  } finally {
+    staleConfigAccess.resolve();
     await feature.dispose();
     resumeTeam.mockRestore();
   }
@@ -950,6 +1090,212 @@ describe('createMemberWorkSyncFeature composition', () => {
       ).resolves.toContain(outboxInput!.id);
     } finally {
       await feature.dispose();
+    }
+  });
+
+  it('keeps alias admission fenced until a destructive purge settles after resume', async () => {
+    const teamsBasePath = path.join(makeTempRoot(), 'teams');
+    const purgeStarted = createDeferred();
+    const releasePurge = createDeferred();
+    const purgeTeam = vi
+      .spyOn(BackendSelectingMemberWorkSyncStore.prototype, 'purgeTeam')
+      .mockImplementation(async () => {
+        purgeStarted.resolve();
+        await releasePurge.promise;
+      });
+    const queueResumeTeam = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'resumeTeam');
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
+      taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
+      kanbanManager: { getState: vi.fn(() => Promise.resolve(null)) } as never,
+      membersMetaStore: { getMembers: vi.fn(() => Promise.resolve([])) } as never,
+      internalStorageBackend: {
+        selector: {
+          select: vi.fn((_sqlite: unknown, json: unknown) => Promise.resolve(json)),
+          getBackendInfo: vi.fn(() => null),
+        },
+        gateway: {},
+      } as never,
+    });
+    let deletion: Promise<void> | null = null;
+
+    try {
+      deletion = feature.prepareTeamDeletion(' Team-A ');
+      await purgeStarted.promise;
+      const aliasDeletion = feature.prepareTeamDeletion('team-a');
+      expect(aliasDeletion).toBe(deletion);
+
+      feature.resumeTeam('TEAM-A');
+      feature.completeTeamDeletion(' team-a ');
+
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'team-a',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'team-b',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).resolves.toEqual({ scheduled: false, reason: 'invalid' });
+      expect(queueResumeTeam).not.toHaveBeenCalled();
+
+      releasePurge.resolve();
+      await Promise.all([deletion, aliasDeletion]);
+      expect(purgeTeam).toHaveBeenCalledOnce();
+      expect(purgeTeam).toHaveBeenCalledWith(' Team-A ');
+      expect(queueResumeTeam).toHaveBeenCalledOnce();
+      expect(queueResumeTeam).toHaveBeenCalledWith('Team-A');
+
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: ' team-a ',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).resolves.toEqual({ scheduled: false, reason: 'invalid' });
+
+      feature.completeTeamDeletion(' team-a ');
+      await fs.promises.mkdir(path.join(teamsBasePath, 'team-a'), { recursive: true });
+      await fs.promises.writeFile(path.join(teamsBasePath, 'team-a', 'config.json'), '{}');
+      feature.noteTeamChange({ type: 'config', teamName: 'team-a', detail: 'config.json' });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(queueResumeTeam).toHaveBeenCalledOnce();
+    } finally {
+      releasePurge.resolve();
+      await deletion?.catch(() => undefined);
+      await feature.dispose();
+      queueResumeTeam.mockRestore();
+      purgeTeam.mockRestore();
+    }
+  });
+
+  it('deduplicates lifecycle resume after a pending alias is released by purge retry', async () => {
+    const teamsBasePath = path.join(makeTempRoot(), 'teams');
+    const purgeFailure = new Error('deterministic purge failure');
+    const purgeStarted = createDeferred();
+    const releaseFailedPurge = createDeferred();
+    const retryPurgeStarted = createDeferred();
+    const releaseRetryPurge = createDeferred();
+    const purgeTeam = vi
+      .spyOn(BackendSelectingMemberWorkSyncStore.prototype, 'purgeTeam')
+      .mockImplementationOnce(async () => {
+        purgeStarted.resolve();
+        await releaseFailedPurge.promise;
+      })
+      .mockImplementationOnce(async () => {
+        retryPurgeStarted.resolve();
+        await releaseRetryPurge.promise;
+      });
+    const queueResumeTeam = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'resumeTeam');
+    const operationResumeTeam = vi.spyOn(MemberWorkSyncTeamOperationGate.prototype, 'resumeTeam');
+    const auditResumeTeam = vi.spyOn(QuiescingMemberWorkSyncAuditJournal.prototype, 'resumeTeam');
+    const routerResumeTeam = vi.spyOn(MemberWorkSyncTeamChangeRouter.prototype, 'resumeTeam');
+    const enqueueStartupScan = vi.spyOn(
+      MemberWorkSyncTeamChangeRouter.prototype,
+      'enqueueStartupScan'
+    );
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
+      taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
+      kanbanManager: { getState: vi.fn(() => Promise.resolve(null)) } as never,
+      membersMetaStore: { getMembers: vi.fn(() => Promise.resolve([])) } as never,
+      internalStorageBackend: {
+        selector: {
+          select: vi.fn((_sqlite: unknown, json: unknown) => Promise.resolve(json)),
+          getBackendInfo: vi.fn(() => null),
+        },
+        gateway: {},
+      } as never,
+    });
+    let deletion: Promise<void> | null = null;
+    let retry: Promise<void> | null = null;
+
+    try {
+      deletion = feature.prepareTeamDeletion(' Team-A ');
+      await purgeStarted.promise;
+      const aliasDeletion = feature.prepareTeamDeletion('team-a');
+      expect(aliasDeletion).toBe(deletion);
+      feature.resumeTeam('TEAM-A');
+
+      releaseFailedPurge.reject(purgeFailure);
+      await expect(deletion).rejects.toBe(purgeFailure);
+      await expect(aliasDeletion).rejects.toBe(purgeFailure);
+      expect(queueResumeTeam).not.toHaveBeenCalled();
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'TEAM-A',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'team-b',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).resolves.toEqual({ scheduled: false, reason: 'invalid' });
+
+      retry = feature.prepareTeamDeletion(' team-a ');
+      await retryPurgeStarted.promise;
+      expect(queueResumeTeam).not.toHaveBeenCalled();
+
+      releaseRetryPurge.resolve();
+      await expect(retry).resolves.toBeUndefined();
+      expect(purgeTeam).toHaveBeenCalledTimes(2);
+      expect(purgeTeam).toHaveBeenNthCalledWith(1, ' Team-A ');
+      expect(purgeTeam).toHaveBeenNthCalledWith(2, ' team-a ');
+      expect(queueResumeTeam).toHaveBeenCalledOnce();
+      expect(queueResumeTeam).toHaveBeenCalledWith('Team-A');
+      expect(operationResumeTeam).toHaveBeenCalledOnce();
+      expect(operationResumeTeam).toHaveBeenCalledWith(' Team-A ');
+      expect(auditResumeTeam).toHaveBeenCalledOnce();
+      expect(auditResumeTeam).toHaveBeenCalledWith(' Team-A ');
+      expect(routerResumeTeam).toHaveBeenCalledOnce();
+      expect(routerResumeTeam).toHaveBeenCalledWith(' Team-A ');
+      expect(enqueueStartupScan).toHaveBeenCalledOnce();
+      expect(enqueueStartupScan).toHaveBeenCalledWith(['TEAM-A']);
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: ' team-a ',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).resolves.toEqual({ scheduled: false, reason: 'invalid' });
+
+      feature.completeTeamDeletion(' Team-A ');
+      feature.resumeTeam('team-a');
+      expect(queueResumeTeam).toHaveBeenCalledOnce();
+      expect(operationResumeTeam).toHaveBeenCalledOnce();
+      expect(auditResumeTeam).toHaveBeenCalledOnce();
+      expect(routerResumeTeam).toHaveBeenCalledOnce();
+      expect(enqueueStartupScan).toHaveBeenCalledOnce();
+
+      feature.noteTeamChange({
+        type: 'inbox',
+        teamName: 'Team-A',
+        detail: 'inboxes/alice.json',
+      });
+      expect(feature.getQueueDiagnostics()).toMatchObject({ queued: 1 });
+    } finally {
+      releaseFailedPurge.resolve();
+      releaseRetryPurge.resolve();
+      await deletion?.catch(() => undefined);
+      await retry?.catch(() => undefined);
+      await feature.dispose();
+      enqueueStartupScan.mockRestore();
+      routerResumeTeam.mockRestore();
+      auditResumeTeam.mockRestore();
+      operationResumeTeam.mockRestore();
+      queueResumeTeam.mockRestore();
+      purgeTeam.mockRestore();
     }
   });
 
