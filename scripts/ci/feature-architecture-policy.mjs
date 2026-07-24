@@ -6,13 +6,10 @@ import ts from 'typescript';
 
 import {
   bindingNames,
-  commonJsExportNamesForReference,
+  findPublicReferenceOwner,
   hasModifier,
   importedNameForCall,
   importedNameForReference,
-  isDescriptorGetterReference,
-  objectBindingSelections,
-  publicMutationBinding,
   selectImportedName,
   selectedMemberForReference,
   statementBindingNames,
@@ -171,80 +168,23 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
   }
 
-  const publicReferenceOwner = (node) => {
-    let current = node;
-    let insideFunctionBody = false;
-    while (current && current !== sourceFile) {
-      if (
-        ts.isFunctionLike(current) &&
-        current.body &&
-        node.getStart(sourceFile) >= current.body.getStart(sourceFile)
-      ) {
-        insideFunctionBody = true;
-      }
-      if (current.parent === sourceFile) break;
-      current = current.parent;
-    }
-    if (!current || current.parent !== sourceFile) return null;
-    if (
-      insideFunctionBody &&
-      !ts.isExpressionStatement(current) &&
-      !isDescriptorGetterReference(node, current)
-    ) {
-      return null;
-    }
-
-    let bindingSelections = null;
-    let localNames = [];
-    if (ts.isVariableStatement(current)) {
-      const declaration = current.declarationList.declarations.find(
-        (candidate) => node.pos >= candidate.pos && node.end <= candidate.end
-      );
-      if (declaration) {
-        bindingSelections = objectBindingSelections(declaration.name);
-        localNames = bindingNames(declaration.name);
-      }
-    } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
-      localNames = [current.name.text];
-    } else if (ts.isExpressionStatement(current)) {
-      const commonJsExportNames = commonJsExportNamesForReference(
-        current.expression,
-        node,
-        insideFunctionBody
-      );
-      if (commonJsExportNames.length > 0) {
-        return { bindingSelections: null, exportedNames: commonJsExportNames, localNames: [] };
-      }
-      if (insideFunctionBody && !isDescriptorGetterReference(node, current)) return null;
-      ({ bindingSelections, localNames } = publicMutationBinding(
-        current.expression,
-        exportedLocalNames
-      ));
-    }
-
-    if (ts.isExportAssignment(current)) {
-      return { bindingSelections, exportedNames: ['default'], localNames: [] };
-    }
-    if (!hasModifier(current, ts.SyntaxKind.ExportKeyword)) {
-      return { bindingSelections, exportedNames: [], localNames };
-    }
-    return {
-      bindingSelections,
-      exportedNames: hasModifier(current, ts.SyntaxKind.DefaultKeyword) ? ['default'] : localNames,
-      localNames,
-    };
-  };
+  const publicReferenceOwner = (node) =>
+    findPublicReferenceOwner(node, sourceFile, exportedLocalNames);
 
   const addOwnerDependency = (owner, dependency) => {
+    const localDependency =
+      owner.localMember === undefined
+        ? dependency
+        : { ...dependency, localMember: owner.localMember };
     const selectedDependencies =
-      dependency.importedName === '*' && owner.bindingSelections
+      localDependency.importedName === '*' && owner.bindingSelections
         ? owner.bindingSelections.flatMap(({ importedName, localNames }) =>
             localNames.map((localName) => ({
-              dependency: { ...dependency, importedName },
+              dependency: { ...localDependency, importedName },
               localName,
             }))
           )
-        : owner.localNames.map((localName) => ({ dependency, localName }));
+        : owner.localNames.map((localName) => ({ dependency: localDependency, localName }));
     for (const selected of selectedDependencies) {
       const references = localDependencyReferences.get(selected.localName) ?? [];
       references.push(selected.dependency);
@@ -416,7 +356,8 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
           } else {
             for (const localName of owner.localNames) {
               const references = localReferenceNames.get(localName) ?? new Map();
-              references.set(`${node.text}:${selectedName ?? ''}`, {
+              references.set(`${node.text}:${selectedName ?? ''}:${owner.localMember ?? ''}`, {
+                localMember: owner.localMember,
                 localName: node.text,
                 selectedName,
               });
@@ -431,29 +372,54 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
 
   visitBindingReference(sourceFile);
 
-  const resolveLocalDependencies = (localName, visited = new Set()) => {
+  const selectLocalDependencies = (dependencies, selectedName) => {
+    if (!selectedName) return dependencies;
+    return dependencies.flatMap((dependency) => {
+      if (
+        dependency.localMember &&
+        dependency.localMember !== '*' &&
+        dependency.localMember !== selectedName
+      ) {
+        return [];
+      }
+      return [
+        {
+          ...dependency,
+          importedName: dependency.localMember
+            ? dependency.importedName
+            : selectImportedName(dependency.importedName, selectedName),
+          localMember: undefined,
+        },
+      ];
+    });
+  };
+
+  const resolveLocalDependencies = (localName, visited = new Set(), selectedName) => {
     const importedBinding = importedBindings.get(localName);
-    if (importedBinding) return [importedBinding];
+    if (importedBinding) return selectLocalDependencies([importedBinding], selectedName);
     if (visited.has(localName)) return [];
     const nextVisited = new Set(visited).add(localName);
-    return [
+    const dependencies = [
       ...(localDependencyReferences.get(localName) ?? []),
       ...[...(localReferenceNames.get(localName)?.values() ?? [])].flatMap((reference) =>
-        resolveLocalDependencies(reference.localName, nextVisited).map((dependency) => ({
-          ...dependency,
-          importedName: selectImportedName(dependency.importedName, reference.selectedName),
-        }))
+        resolveLocalDependencies(reference.localName, nextVisited, reference.selectedName).map(
+          (dependency) => ({
+            ...dependency,
+            localMember: reference.localMember ?? dependency.localMember,
+          })
+        )
       ),
     ];
+    return selectLocalDependencies(dependencies, selectedName);
   };
 
   const addResolvedReexports = ({ exportedName, importedName, line, localName }) => {
-    const dependencies = resolveLocalDependencies(localName);
+    const dependencies = resolveLocalDependencies(localName, new Set(), importedName);
     for (const dependency of dependencies) {
       reexports.push({
         ...dependency.edge,
         exportedName,
-        importedName: selectImportedName(dependency.importedName, importedName),
+        importedName: dependency.importedName,
         kind: 'export',
         line,
       });

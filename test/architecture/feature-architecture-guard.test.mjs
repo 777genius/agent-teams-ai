@@ -479,6 +479,21 @@ test('recognizes JavaScript feature root entrypoints', () => {
         'module.exports = class Repository {};',
       'src/features/commonjs-descriptor-alias/main/infrastructure/Store.cjs':
         'exports.Store = class Store {};',
+      'src/features/commonjs-descriptor-selection/main/index.cjs': `
+        const barrel = require('./mixedBarrel');
+        const descriptors = {
+          Safe: { get: () => barrel.Safe },
+          Infra: { get: () => barrel.Infra },
+        };
+        Object.defineProperty(exports, 'Safe', descriptors.Safe);
+      `,
+      'src/features/commonjs-descriptor-selection/main/mixedBarrel.js': `
+        export { Safe } from './safe';
+        export { Infra } from './infrastructure/Infra';
+      `,
+      'src/features/commonjs-descriptor-selection/main/safe.js': 'export const Safe = true;',
+      'src/features/commonjs-descriptor-selection/main/infrastructure/Infra.js':
+        'export class Infra {}',
       'src/features/commonjs-default/index.cjs': `
         module.exports = require('./infrastructure/DefaultStore');
       `,
@@ -514,6 +529,16 @@ test('recognizes JavaScript feature root entrypoints', () => {
         'module.exports = class DefinedStore {};',
       'src/features/commonjs-named/main/infrastructure/NamedStore.js':
         'module.exports = class NamedStore {};',
+      'src/features/commonjs-object-getter/main/index.cjs': `
+        const StoreModule = require('./infrastructure/Store');
+        module.exports = {
+          get Store() {
+            return StoreModule.Store;
+          },
+        };
+      `,
+      'src/features/commonjs-object-getter/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
       'src/features/commonjs-safe/index.cjs': `
         const barrel = require('./mixedBarrel');
         module.exports = { Safe: barrel.Safe };
@@ -547,6 +572,16 @@ test('recognizes JavaScript feature root entrypoints', () => {
       'src/features/exported-object-getter/main/infrastructure/Repository.js':
         'export class Repository {}',
       'src/features/exported-object-getter/main/infrastructure/Store.js': 'export class Store {}',
+      'src/features/exported-object-literal-getter/main/index.js': `
+        import { Store } from './infrastructure/Store';
+        export const api = {
+          get Store() {
+            return Store;
+          },
+        };
+      `,
+      'src/features/exported-object-literal-getter/main/infrastructure/Store.js':
+        'export class Store {}',
       'src/features/js-feature/adapters/Adapter.js': 'export class Adapter {}',
       'src/features/js-feature/index.jsx': `export { Adapter } from './adapters/Adapter';`,
     },
@@ -612,6 +647,12 @@ test('recognizes JavaScript feature root entrypoints', () => {
             specifier: './infrastructure/NamedStore',
           },
           {
+            publicEntrypoint: 'src/features/commonjs-object-getter/main/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-object-getter/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+          {
             publicEntrypoint: 'src/features/destructuring-write/main/index.js',
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
             source: 'src/features/destructuring-write/main/index.js',
@@ -627,6 +668,12 @@ test('recognizes JavaScript feature root entrypoints', () => {
             publicEntrypoint: 'src/features/exported-object-getter/main/index.js',
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
             source: 'src/features/exported-object-getter/main/index.js',
+            specifier: './infrastructure/Store',
+          },
+          {
+            publicEntrypoint: 'src/features/exported-object-literal-getter/main/index.js',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/exported-object-literal-getter/main/index.js',
             specifier: './infrastructure/Store',
           },
           {
