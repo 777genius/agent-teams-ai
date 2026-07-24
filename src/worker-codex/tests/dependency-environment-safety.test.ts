@@ -74,6 +74,10 @@ vi.mock("node:fs/promises", async (importOriginal) => {
   };
 });
 
+vi.mock("../dependency-native-traversal", () => ({
+  discoverDependencyLinksNative: async () => null,
+}));
+
 import {
   inspectNodeDependencyEnvironment,
   sanitizeNodeDependencyEnvironment,
@@ -90,6 +94,18 @@ afterEach(async () => {
 });
 
 describe("node dependency environment safety", () => {
+  it("falls back to the bounded JavaScript traversal when native discovery is unavailable", async () => {
+    const workspacePath = await createWorkspace();
+    await mkdir(join(workspacePath, "node_modules"));
+
+    await expect(
+      inspectNodeDependencyEnvironment({ workspacePath }),
+    ).resolves.toEqual({
+      dependencyRoots: ["node_modules"],
+      unsafeDependencyRoots: [],
+    });
+  });
+
   it("caches a shared lexical target while preserving safe in-workspace links", async () => {
     const workspacePath = await createWorkspace();
     const dependencyRoot = join(workspacePath, "node_modules");

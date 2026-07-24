@@ -1,5 +1,6 @@
 import { lstat, readdir, readlink, realpath, rm } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import { discoverDependencyLinksNative } from "./dependency-native-traversal.js";
 
 const MAX_PACKAGE_ROOTS_SCAN = 10_000;
 const MAX_DEPENDENCY_ENTRIES_SCAN = 250_000;
@@ -145,6 +146,25 @@ async function dependencyRootIsUnsafe(
 }
 
 async function dependencyTreeContainsEscapingLink(
+  dependencyRoot: string,
+  linkTargetResolver: DependencyLinkTargetResolver,
+): Promise<boolean> {
+  const nativeLinkPaths = await discoverDependencyLinksNative({
+    dependencyRoot,
+    limits: {
+      maxDependencyEntries: MAX_DEPENDENCY_ENTRIES_SCAN,
+    },
+  });
+  if (nativeLinkPaths !== null) {
+    return linkTargetResolver.containsUnsafeLink(nativeLinkPaths);
+  }
+  return dependencyTreeContainsEscapingLinkJavascript(
+    dependencyRoot,
+    linkTargetResolver,
+  );
+}
+
+async function dependencyTreeContainsEscapingLinkJavascript(
   dependencyRoot: string,
   linkTargetResolver: DependencyLinkTargetResolver,
 ): Promise<boolean> {
