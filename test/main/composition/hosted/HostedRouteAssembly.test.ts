@@ -20,7 +20,7 @@ function route(
     owner,
     trustKind: 'browser',
     authPolicyId: 'hosted.auth',
-    readinessId: 'hosted.ready',
+    readiness: Object.freeze(['serve', 'read'] as const),
     requestSchemaId: 'hosted.request',
     responseSchemaId: 'hosted.response',
     handlerId: 'hosted.handler',

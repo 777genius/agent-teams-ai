@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { adjacentValidRoute, duplicateRoute, validRoute } from './fixtures/duplicate-route';
 import { missingHandlerReference } from './fixtures/missing-reference';
 
-describe('P1.1B RouteCatalog', () => {
+describe('RouteCatalog', () => {
   it('collects unique immutable descriptors in a frozen assertion catalog', () => {
     const catalog = createRouteCatalog([validRoute, adjacentValidRoute]);
 
@@ -45,7 +45,6 @@ describe('P1.1B RouteCatalog', () => {
   it.each([
     'owner',
     'authPolicyId',
-    'readinessId',
     'requestSchemaId',
     'responseSchemaId',
     'handlerId',
@@ -54,6 +53,39 @@ describe('P1.1B RouteCatalog', () => {
   ] as const)('requires a stable %s reference', (field) => {
     const invalid = Object.freeze({ ...validRoute, [field]: '' }) as RouteDescriptor;
     expect(() => createRouteCatalog([invalid])).toThrowError(ROUTE_CATALOG_DRIFT_DIAGNOSTIC);
+  });
+
+  it('requires frozen, known, unique readiness requirements and excludes terminal', () => {
+    const mutableRequirements = Object.freeze({
+      ...validRoute,
+      readiness: ['serve', 'read'],
+    }) as RouteDescriptor;
+    const duplicateRequirement = Object.freeze({
+      ...validRoute,
+      readiness: Object.freeze(['read', 'read']),
+    }) as RouteDescriptor;
+    const unknownRequirement = Object.freeze({
+      ...validRoute,
+      readiness: Object.freeze(['serve', 'provider-bootstrap']),
+    }) as unknown as RouteDescriptor;
+    const terminalRequirement = Object.freeze({
+      ...validRoute,
+      readiness: Object.freeze(['terminal']),
+    }) as unknown as RouteDescriptor;
+    const sparseRequirement = Object.freeze({
+      ...validRoute,
+      readiness: Object.freeze(Array(1)),
+    }) as unknown as RouteDescriptor;
+
+    for (const route of [
+      mutableRequirements,
+      duplicateRequirement,
+      unknownRequirement,
+      terminalRequirement,
+      sparseRequirement,
+    ]) {
+      expect(() => createRouteCatalog([route])).toThrowError(ROUTE_CATALOG_DRIFT_DIAGNOSTIC);
+    }
   });
 
   it('rejects mutable or structurally widened descriptors', () => {
