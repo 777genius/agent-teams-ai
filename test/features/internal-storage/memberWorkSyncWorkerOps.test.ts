@@ -593,8 +593,29 @@ function createV8MemberWorkSyncSchema(database: InstanceType<typeof Database>): 
       event_json TEXT NOT NULL,
       PRIMARY KEY (team_name, id)
     );
+    CREATE TABLE coordination_backup_runs (
+      backup_run_id TEXT PRIMARY KEY,
+      deployment_id TEXT NOT NULL,
+      state TEXT NOT NULL,
+      revision INTEGER NOT NULL CHECK (revision > 0),
+      fence_completion_status TEXT,
+      record_json TEXT NOT NULL CHECK (json_valid(record_json)),
+      requested_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
     CREATE TABLE coordination_backup_writer_fences (
-      status TEXT NOT NULL
+      deployment_id TEXT PRIMARY KEY,
+      generation INTEGER NOT NULL CHECK (generation > 0),
+      admitted_run_id TEXT NOT NULL,
+      lease_id TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL CHECK (status IN ('active', 'released', 'operator_required')),
+      disposition TEXT CHECK (disposition IN ('committed', 'aborted', 'operator_required')),
+      acquired_at TEXT NOT NULL,
+      completed_at TEXT,
+      FOREIGN KEY (admitted_run_id) REFERENCES coordination_backup_runs(backup_run_id)
+        ON DELETE RESTRICT ON UPDATE RESTRICT,
+      CHECK ((status = 'active' AND disposition IS NULL AND completed_at IS NULL)
+        OR (status <> 'active' AND disposition IS NOT NULL AND completed_at IS NOT NULL))
     );
   `);
 }
