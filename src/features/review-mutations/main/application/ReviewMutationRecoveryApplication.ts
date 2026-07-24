@@ -1,11 +1,12 @@
-import type { ReviewMutationJournalRecord } from '../../core/application/ReviewMutationJournalTypes';
+import { isDurableReviewEqual } from '../../core/domain/durableReviewValue';
+import { buildReviewHistoryRestorePlan } from '../../core/domain/reviewHistoryDecisions';
+import { buildReviewHistoryRestoreDiskSteps } from '../../core/domain/reviewHistoryDiskSteps';
 import {
   isDecisionlessReviewRecoveryKind,
   parseReviewHistoryRestoreTarget,
 } from '../../core/domain/reviewHistoryRestoreTarget';
-import { buildReviewHistoryRestorePlan } from '../../core/domain/reviewHistoryDecisions';
-import { buildReviewHistoryRestoreDiskSteps } from '../../core/domain/reviewHistoryDiskSteps';
-import { isDurableReviewEqual } from '../../core/domain/durableReviewValue';
+
+import type { ReviewMutationJournalRecord } from '../../core/application/ReviewMutationJournalTypes';
 import type {
   LoadedReviewMutationDecisions,
   ReviewMutationPathAuthorization,
@@ -259,8 +260,7 @@ export class ReviewMutationRecoveryApplication {
       const persistedState = committed ? this.toPersistedState(committed) : null;
       const expectedRestoreStateCompleted = Boolean(
         expectedRestore &&
-        committed &&
-        committed.revision === expectedRestore.expectedDecisionRevision + 1 &&
+        committed?.revision === expectedRestore.expectedDecisionRevision + 1 &&
         persistedState &&
         isDurableReviewEqual(persistedState, expectedRestore.persistedState) &&
         (!record || record.kind === 'restore-history')
@@ -432,8 +432,7 @@ export class ReviewMutationRecoveryApplication {
       this.dependencies.scope.assertDecisionShape(decision);
       this.dependencies.scope.assertSnippetShapes(fileContent?.snippets);
       if (
-        !fileContent ||
-        fileContent.filePath !== decision.filePath ||
+        fileContent?.filePath !== decision.filePath ||
         (fileContent.originalFullContent !== null &&
           typeof fileContent.originalFullContent !== 'string') ||
         (fileContent.modifiedFullContent !== null &&

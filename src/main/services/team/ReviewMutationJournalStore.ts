@@ -14,11 +14,11 @@ import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import type { ReviewMutationPhase } from '@features/review-mutations/contracts';
 import type {
   PrepareReviewMutationInput,
   ReviewMutationJournalRecord,
 } from '@features/review-mutations/main';
-import type { ReviewMutationPhase } from '@features/review-mutations/contracts';
 import type {
   FileChangeWithContent,
   FileReviewDecision,
