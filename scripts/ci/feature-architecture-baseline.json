@@ -781,7 +781,25 @@
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/createTeamTaskArtifactsRendererSlice",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/createTeamTaskArtifactsTransport",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
       "specifier": "./adapters/createTeamTaskBoardRendererSlice",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/taskChangePresenceProjectionPolicy",
       "publicEntrypoint": "src/features/team-task-board/renderer/index.ts"
     },
     {
