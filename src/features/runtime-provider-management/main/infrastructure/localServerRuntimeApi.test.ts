@@ -20,16 +20,29 @@ describe('localServerRuntimeApi', () => {
     });
   });
 
-  it('prefers loaded context over max context for LM Studio models', () => {
+  it('reads effective context and tool support from an LM Studio v1 loaded instance', () => {
     const raw = JSON.stringify({
-      data: [
+      models: [
         {
-          id: 'qwen3-8b',
+          key: 'qwen/qwen3-8b',
           max_context_length: 131_072,
-          loaded_context_length: 8_192,
-          capabilities: ['tool_use'],
+          loaded_instances: [
+            {
+              id: 'qwen3-8b',
+              config: {
+                context_length: 8_192,
+              },
+            },
+          ],
+          capabilities: {
+            trained_for_tool_use: true,
+          },
         },
-        { id: 'other-model', max_context_length: 4_096 },
+        {
+          key: 'other-model',
+          max_context_length: 4_096,
+          loaded_instances: [],
+        },
       ],
     });
     expect(parseLmStudioModelMetadata(raw, 'qwen3-8b')).toEqual({
@@ -38,9 +51,29 @@ describe('localServerRuntimeApi', () => {
     });
     expect(parseLmStudioModelMetadata(raw, 'other-model')).toEqual({
       toolCapable: null,
-      contextTokens: 4_096,
+      contextTokens: null,
     });
     expect(parseLmStudioModelMetadata(raw, 'missing')).toBeNull();
+  });
+
+  it('does not mistake an LM Studio v0 maximum context for the effective runtime context', () => {
+    expect(
+      parseLmStudioModelMetadata(
+        JSON.stringify({
+          data: [
+            {
+              id: 'qwen3-8b',
+              state: 'loaded',
+              max_context_length: 131_072,
+            },
+          ],
+        }),
+        'qwen3-8b'
+      )
+    ).toEqual({
+      toolCapable: null,
+      contextTokens: null,
+    });
   });
 
   it('builds native metadata requests only for presets with known endpoints', () => {
@@ -50,7 +83,7 @@ describe('localServerRuntimeApi', () => {
     ).toBe('http://127.0.0.1:8080/props?model=org%2Fmodel%3AQ4');
     expect(
       buildLocalServerModelMetadataRequest('lm-studio', 'http://127.0.0.1:1234/v1', 'm')?.url
-    ).toBe('http://127.0.0.1:1234/api/v0/models');
+    ).toBe('http://127.0.0.1:1234/api/v1/models');
     expect(
       buildLocalServerModelMetadataRequest('ollama', 'http://127.0.0.1:11434/v1', 'm')?.url
     ).toBe('http://127.0.0.1:11434/api/show');

@@ -832,7 +832,7 @@ export const RuntimeLocalProviderSetupDialog = ({
           smallModelId: assignedSmallModel
             ? configuration.defaultModelId
             : (previousEntry?.smallModelId ?? null),
-          isDefault: setAsDefault,
+          isDefault: setAsDefault || previousEntry?.isDefault === true,
           privateNetworkApproved: !privateNetworkUrl || allowPrivateNetwork,
           state: probe?.state ?? 'available',
           liveModels: probe?.models ?? [],
@@ -1214,7 +1214,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                       <Label htmlFor="runtime-local-provider-preset">Server app</Label>
                       <Select
                         value={selectedPresetId}
-                        disabled={setupLocked}
+                        disabled={setupLocked || editingProviderId !== null}
                         onValueChange={(value) =>
                           selectPreset(value as RuntimeLocalProviderPresetIdDto)
                         }
@@ -1320,7 +1320,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                       <Input
                         id="runtime-local-provider-id"
                         value={providerId}
-                        disabled={setupLocked}
+                        disabled={setupLocked || editingProviderId !== null}
                         placeholder="local"
                         autoCapitalize="none"
                         autoCorrect="off"

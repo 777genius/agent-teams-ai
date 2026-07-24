@@ -29,6 +29,7 @@ export interface LocalModelConfigMetadata {
   };
 }
 
+/** Creates a recoverable local-provider probe error response. */
 export function buildLocalProviderProbeError(
   code: RuntimeLocalProviderErrorCodeDto,
   message: string
@@ -36,6 +37,7 @@ export function buildLocalProviderProbeError(
   return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable: true } };
 }
 
+/** Creates a local-provider configuration error response. */
 export function buildLocalProviderConfigureError(
   code: RuntimeLocalProviderErrorCodeDto,
   message: string,
@@ -44,6 +46,7 @@ export function buildLocalProviderConfigureError(
   return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable } };
 }
 
+/** Parses and de-duplicates a bounded OpenAI-compatible model list. */
 export function readOpenAiModels(raw: string): RuntimeLocalProviderModelDto[] {
   let parsed: unknown;
   try {
@@ -66,10 +69,12 @@ export function readOpenAiModels(raw: string): RuntimeLocalProviderModelDto[] {
   return [...models.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
 
+/** Reads a JSONC string node without coercing other scalar types. */
 export function readStringNode(node: JsoncNode | undefined): string | null {
   return node?.type === 'string' && typeof node.value === 'string' ? node.value : null;
 }
 
+/** Returns the key and value nodes from a JSONC object. */
 export function readObjectEntries(node: JsoncNode): Array<{ key: string; value: JsoncNode }> {
   if (node.type !== 'object') return [];
   return (node.children ?? []).flatMap((property) => {
@@ -81,6 +86,7 @@ export function readObjectEntries(node: JsoncNode): Array<{ key: string; value: 
   });
 }
 
+/** Reads a response body while cancelling streams that exceed the byte limit. */
 export async function readResponseTextWithLimit(
   response: Response,
   maxBytes: number
@@ -109,6 +115,7 @@ export async function readResponseTextWithLimit(
   }
 }
 
+/** Applies a formatting-preserving JSONC value update. */
 export function setJsoncValue(
   raw: string,
   pathSegments: (string | number)[],
@@ -117,6 +124,7 @@ export function setJsoncValue(
   return applyEdits(raw, modify(raw, pathSegments, value, { formattingOptions: JSON_FORMATTING }));
 }
 
+/** Builds the OpenCode model map, enriching the selected model when metadata is known. */
 export function createModelRecord(
   modelIds: readonly string[],
   selectedModelId?: string,
@@ -129,6 +137,7 @@ export function createModelRecord(
   return models;
 }
 
+/** Detects ambiguous duplicate keys anywhere in a JSONC tree. */
 export function hasDuplicateObjectProperties(node: JsoncNode): boolean {
   if (node.type === 'array') {
     return node.children?.some(hasDuplicateObjectProperties) ?? false;
@@ -148,6 +157,7 @@ export function hasDuplicateObjectProperties(node: JsoncNode): boolean {
   return false;
 }
 
+/** Checks whether a resolved target remains inside the resolved root path. */
 export function isPathInside(rootPath: string, targetPath: string): boolean {
   const relativePath = path.relative(rootPath, targetPath);
   return (

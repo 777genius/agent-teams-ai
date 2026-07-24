@@ -59,6 +59,7 @@ interface OpenCodeLocalModelRuntimeInspectorDependencies {
   }) => Promise<OpenCodeLocalModelCoordinationProbeResult>;
 }
 
+/** Inspects a configured local route and returns Agent Teams launch-readiness evidence. */
 export async function inspectOpenCodeLocalModelRuntimeReadiness(
   input: {
     readonly projectPath: string;

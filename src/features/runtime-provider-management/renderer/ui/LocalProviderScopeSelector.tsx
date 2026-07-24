@@ -9,6 +9,7 @@ interface LocalProviderScopeSelectorProps {
   readonly onChange: (scope: RuntimeLocalProviderScopeDto) => void;
 }
 
+/** Selects whether a local provider is written to global or project OpenCode config. */
 export const LocalProviderScopeSelector = ({
   value,
   disabled = false,

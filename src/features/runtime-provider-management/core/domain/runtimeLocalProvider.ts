@@ -49,6 +49,7 @@ export const RUNTIME_LOCAL_PROVIDER_PRESETS: readonly RuntimeLocalProviderPreset
   },
 ];
 
+/** Raised when local-provider identity or endpoint input violates the supported safety policy. */
 export class RuntimeLocalProviderValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -62,6 +63,7 @@ export interface NormalizedRuntimeLocalProviderTarget {
   readonly baseUrl: string;
 }
 
+/** Resolves a supported local-server preset or rejects unknown preset ids. */
 export function getRuntimeLocalProviderPreset(
   presetId: RuntimeLocalProviderPresetIdDto
 ): RuntimeLocalProviderPresetDto {
@@ -72,6 +74,7 @@ export function getRuntimeLocalProviderPreset(
   return preset;
 }
 
+/** Validates and canonicalizes a local provider id and OpenAI-compatible base URL. */
 export function normalizeRuntimeLocalProviderTarget(input: {
   presetId: RuntimeLocalProviderPresetIdDto;
   baseUrl?: string | null;
@@ -133,6 +136,7 @@ export function normalizeRuntimeLocalProviderTarget(input: {
   };
 }
 
+/** Returns a trimmed, control-character-free model id that is safe for config keys. */
 export function normalizeRuntimeLocalProviderModelId(value: unknown): string | null {
   if (typeof value !== 'string') {
     return null;
@@ -158,10 +162,12 @@ function containsControlCharacter(value: string): boolean {
   return false;
 }
 
+/** Builds the provider-qualified model route consumed by OpenCode. */
 export function buildRuntimeLocalProviderModelRoute(providerId: string, modelId: string): string {
   return `${providerId}/${modelId}`;
 }
 
+/** Reports whether a valid URL targets an approved private or link-local network range. */
 export function isPrivateNetworkRuntimeLocalProviderUrl(rawBaseUrl: string): boolean {
   let url: URL;
   try {

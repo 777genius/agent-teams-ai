@@ -523,6 +523,9 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     expect(host.querySelector<HTMLInputElement>('#runtime-local-provider-url')?.value).toBe(
       'http://127.0.0.1:1234/v1'
     );
+    expect(host.querySelector<HTMLButtonElement>('#runtime-local-provider-preset')?.disabled).toBe(
+      true
+    );
     expect(
       host.querySelector('#runtime-local-provider-project-default')?.getAttribute('data-state')
     ).toBe('unchecked');

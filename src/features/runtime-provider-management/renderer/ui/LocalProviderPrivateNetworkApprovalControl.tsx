@@ -9,6 +9,7 @@ interface LocalProviderPrivateNetworkApprovalControlProps {
   readonly onChange: (checked: boolean) => void;
 }
 
+/** Requests explicit consent before contacting a private-network server address. */
 export const LocalProviderPrivateNetworkApprovalControl = ({
   checked,
   disabled,

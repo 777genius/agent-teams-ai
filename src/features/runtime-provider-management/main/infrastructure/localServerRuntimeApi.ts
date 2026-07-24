@@ -12,6 +12,7 @@ export interface LocalServerModelMetadataRequest {
   readonly parse: (raw: string) => LocalServerModelMetadata | null;
 }
 
+/** Builds the supported native metadata request for a local-server preset. */
 export function buildLocalServerModelMetadataRequest(
   presetId: string,
   baseUrl: string,
@@ -43,7 +44,7 @@ export function buildLocalServerModelMetadataRequest(
     }
     case 'lm-studio':
       return {
-        url: buildOllamaNativeUrl(baseUrl, '/api/v0/models'),
+        url: buildOllamaNativeUrl(baseUrl, '/api/v1/models'),
         method: 'GET',
         parse: (raw) => parseLmStudioModelMetadata(raw, modelId),
       };
@@ -68,31 +69,59 @@ export function parseLlamaCppPropsMetadata(raw: string): LocalServerModelMetadat
 }
 
 /**
- * LM Studio exposes `GET /api/v0/models` at the server root with per-model
- * `max_context_length`, `loaded_context_length` (when loaded), and on newer
- * versions a `capabilities` array (e.g. `["tool_use"]`).
+ * LM Studio exposes `GET /api/v1/models` with each loaded instance's effective
+ * context length and the model's tool-use capability. Legacy v0 responses are
+ * accepted without treating the model's maximum context as its runtime context.
  */
 export function parseLmStudioModelMetadata(
   raw: string,
   requestedModelId: string
 ): LocalServerModelMetadata | null {
   const root = parseRecord(raw);
-  if (!root || !Array.isArray(root.data)) return null;
+  if (!root) return null;
 
+  if (Array.isArray(root.models)) {
+    for (const value of root.models) {
+      const model = asRecord(value);
+      if (!model) continue;
+      const loadedInstances = Array.isArray(model.loaded_instances)
+        ? model.loaded_instances.map(asRecord).filter((entry) => entry !== null)
+        : [];
+      const requestedInstance = loadedInstances.find(
+        (instance) => instance.id === requestedModelId
+      );
+      const modelMatches =
+        model.key === requestedModelId ||
+        (Array.isArray(model.variants) && model.variants.includes(requestedModelId));
+      if (!requestedInstance && !modelMatches) continue;
+
+      const effectiveInstance =
+        requestedInstance ?? (loadedInstances.length === 1 ? loadedInstances[0] : null);
+      const instanceConfig = asRecord(effectiveInstance?.config);
+      const capabilities = asRecord(model.capabilities);
+      const trainedForToolUse = capabilities?.trained_for_tool_use;
+      return {
+        toolCapable: typeof trainedForToolUse === 'boolean' ? trainedForToolUse : null,
+        contextTokens: isPositiveSafeInteger(instanceConfig?.context_length)
+          ? instanceConfig.context_length
+          : null,
+      };
+    }
+    return null;
+  }
+
+  if (!Array.isArray(root.data)) return null;
   for (const value of root.data) {
     const model = asRecord(value);
-    if (!model || model.id !== requestedModelId) continue;
+    if (model?.id !== requestedModelId) continue;
     const capabilities = Array.isArray(model.capabilities)
       ? model.capabilities.filter((entry): entry is string => typeof entry === 'string')
       : null;
-    const contextTokens = isPositiveSafeInteger(model.loaded_context_length)
-      ? model.loaded_context_length
-      : isPositiveSafeInteger(model.max_context_length)
-        ? model.max_context_length
-        : null;
     return {
       toolCapable: capabilities ? capabilities.includes('tool_use') : null,
-      contextTokens,
+      contextTokens: isPositiveSafeInteger(model.loaded_context_length)
+        ? model.loaded_context_length
+        : null,
     };
   }
   return null;

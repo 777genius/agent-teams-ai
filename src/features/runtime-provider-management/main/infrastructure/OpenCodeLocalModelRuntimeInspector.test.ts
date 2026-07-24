@@ -421,13 +421,19 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
     const probeCoordination = vi.fn(coordinationPassed);
     const fetchImpl = vi.fn<typeof fetch>(async (input) => {
       const url = String(input);
-      expect(url).toContain('/api/v0/models');
+      expect(url).toContain('/api/v1/models');
       return jsonResponse({
-        data: [
+        models: [
           {
-            id: 'team-model',
+            key: 'lmstudio-community/team-model',
             max_context_length: 32_768,
-            capabilities: [],
+            loaded_instances: [
+              {
+                id: 'team-model',
+                config: { context_length: 32_768 },
+              },
+            ],
+            capabilities: { trained_for_tool_use: false },
           },
         ],
       });

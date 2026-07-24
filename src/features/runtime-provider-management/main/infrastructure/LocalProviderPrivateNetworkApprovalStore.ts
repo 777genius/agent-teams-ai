@@ -23,10 +23,12 @@ interface PersistedApprovalStore {
   readonly approvals: readonly LocalProviderPrivateNetworkApproval[];
 }
 
+/** Returns the app-owned persistence path for private-network provider approvals. */
 export function getLocalProviderPrivateNetworkApprovalStorePath(): string {
   return path.join(getAppDataPath(), 'runtime-provider-management', APPROVAL_STORE_FILENAME);
 }
 
+/** Persists exact config, provider, and URL approval tuples in a private JSON file. */
 export class JsonLocalProviderPrivateNetworkApprovalStore implements LocalProviderPrivateNetworkApprovalStore {
   private writeChain: Promise<unknown> = Promise.resolve();
 

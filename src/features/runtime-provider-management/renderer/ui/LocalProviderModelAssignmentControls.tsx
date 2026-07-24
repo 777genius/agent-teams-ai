@@ -14,6 +14,7 @@ interface LocalProviderModelAssignmentControlsProps {
   readonly onSetAsSmallModelChange: (checked: boolean) => void;
 }
 
+/** Renders independent default-model and lightweight-task assignment controls. */
 export const LocalProviderModelAssignmentControls = ({
   scope,
   setAsDefault,
