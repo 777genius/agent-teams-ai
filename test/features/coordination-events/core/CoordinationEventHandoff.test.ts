@@ -132,6 +132,7 @@ class MemoryRetentionLeases implements SnapshotRetentionLeaseCoordinator {
   expireDuringDeliveryMicrotask = false;
   expiryAttempted = false;
   overrideWatermark: EventJournalWatermark | null = null;
+  runError: unknown;
 
   constructor(private readonly journal: MemoryJournal) {}
 
@@ -174,6 +175,9 @@ class MemoryRetentionLeases implements SnapshotRetentionLeaseCoordinator {
         active: true,
         watermark: this.overrideWatermark ?? (await this.journal.getWatermark()),
       });
+    } catch (error) {
+      this.runError = error;
+      throw error;
     } finally {
       this.deliveryOwned = false;
     }
@@ -507,6 +511,7 @@ describe('CoordinationEventHandoff', () => {
 
         expect(ownershipAtCancellation).toEqual([true]);
         expect(delivered).toBe(false);
+        expect(retentionLeases.runError).toMatchObject({ code: 'snapshot_retry' });
         expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
       } finally {
         nowSpy.mockRestore();
