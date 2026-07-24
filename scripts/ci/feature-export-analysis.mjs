@@ -149,9 +149,29 @@ function isModuleExports(expression) {
   );
 }
 
+function commonJsExportPath(expression) {
+  let current = unwrapExpression(expression);
+  if ((ts.isIdentifier(current) && current.text === 'exports') || isModuleExports(current)) {
+    return [];
+  }
+
+  const path = [];
+  while (true) {
+    const access =
+      memberAccess(current) ??
+      (ts.isElementAccessExpression(current)
+        ? { name: '*', receiver: unwrapExpression(current.expression) }
+        : null);
+    if (!access) return null;
+    path.unshift(access.name);
+    current = access.receiver;
+    if (ts.isIdentifier(current) && current.text === 'exports') return path;
+    if (isModuleExports(current)) return path;
+  }
+}
+
 function isCommonJsExportsObject(expression) {
-  const current = unwrapExpression(expression);
-  return (ts.isIdentifier(current) && current.text === 'exports') || isModuleExports(current);
+  return commonJsExportPath(expression) !== null;
 }
 
 function commonJsAssignmentExportName(expression) {
@@ -163,12 +183,8 @@ function commonJsAssignmentExportName(expression) {
   }
 
   const target = unwrapExpression(expression.left);
-  if (isModuleExports(target)) return '*';
-
-  const access = memberAccess(target);
-  if (!access) return null;
-  if (ts.isIdentifier(access.receiver) && access.receiver.text === 'exports') return access.name;
-  return isModuleExports(access.receiver) ? access.name : null;
+  const exportPath = commonJsExportPath(target);
+  return exportPath === null ? null : (exportPath[0] ?? '*');
 }
 
 function commonJsCreateBindingSelection(expression, reference) {
@@ -190,8 +206,14 @@ function commonJsCreateBindingSelection(expression, reference) {
 
   const importedName = current.arguments[2];
   const exportedName = current.arguments[3] ?? importedName;
+  const targetPath = commonJsExportPath(current.arguments[0]);
   return {
-    exportedName: exportedName && ts.isStringLiteralLike(exportedName) ? exportedName.text : '*',
+    exportedName:
+      targetPath && targetPath.length > 0
+        ? targetPath[0]
+        : exportedName && ts.isStringLiteralLike(exportedName)
+          ? exportedName.text
+          : '*',
     importedName: importedName && ts.isStringLiteralLike(importedName) ? importedName.text : '*',
   };
 }
@@ -211,22 +233,23 @@ export function commonJsExportNamesForExpression(expression) {
     current.arguments[1] &&
     isCommonJsExportsObject(current.arguments[1])
   ) {
-    return ['*'];
+    return [commonJsExportPath(current.arguments[1])?.[0] ?? '*'];
   }
   const createBinding = commonJsCreateBindingSelection(current);
   if (createBinding) return [createBinding.exportedName];
+  const targetPath = current.arguments[0] ? commonJsExportPath(current.arguments[0]) : null;
   if (
     !method ||
     !ts.isIdentifier(method.receiver) ||
     !['Object', 'Reflect'].includes(method.receiver.text) ||
-    !['assign', 'defineProperties', 'defineProperty'].includes(method.name) ||
-    !current.arguments[0] ||
-    !isCommonJsExportsObject(current.arguments[0])
+    !MUTATING_OBJECT_METHODS.has(method.name) ||
+    targetPath === null
   ) {
     return [];
   }
 
-  if (method.name !== 'defineProperty') return ['*'];
+  if (targetPath.length > 0) return [targetPath[0]];
+  if (method.name !== 'defineProperty' && method.name !== 'set') return ['*'];
   const exportName = current.arguments[1];
   return exportName && ts.isStringLiteralLike(exportName) ? [exportName.text] : ['*'];
 }

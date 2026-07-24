@@ -553,6 +553,42 @@ test('recognizes JavaScript feature root entrypoints', () => {
         'module.exports = class DefinedStore {};',
       'src/features/commonjs-named/main/infrastructure/NamedStore.js':
         'module.exports = class NamedStore {};',
+      'src/features/commonjs-nested/main/index.cjs': `
+        const publicName = 'DynamicStore';
+        exports.api = {};
+        exports.api.Store = require('./infrastructure/Store');
+        exports.api[publicName] = require('./infrastructure/DynamicStore');
+        Object.defineProperty(module.exports.api, 'Repository', {
+          get: () => require('./infrastructure/Repository'),
+        });
+        Reflect.set(
+          exports.api,
+          'Service',
+          require('./infrastructure/Service')
+        );
+      `,
+      'src/features/commonjs-nested/main/infrastructure/DynamicStore.cjs':
+        'module.exports = class DynamicStore {};',
+      'src/features/commonjs-nested/main/infrastructure/Repository.cjs':
+        'module.exports = class Repository {};',
+      'src/features/commonjs-nested/main/infrastructure/Service.cjs':
+        'module.exports = class Service {};',
+      'src/features/commonjs-nested/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-nested-safe/main/index.cjs': `
+        const barrel = require('./mixedBarrel');
+        exports.api = {};
+        Object.assign(exports.api, { Safe: barrel.Safe });
+        Object.defineProperty(exports.api, 'AlsoSafe', {
+          get: () => barrel.Safe,
+        });
+      `,
+      'src/features/commonjs-nested-safe/main/mixedBarrel.js': `
+        export { Safe } from './safe';
+        export { Infra } from './infrastructure/Infra';
+      `,
+      'src/features/commonjs-nested-safe/main/safe.js': 'export const Safe = true;',
+      'src/features/commonjs-nested-safe/main/infrastructure/Infra.js': 'export class Infra {}',
       'src/features/commonjs-object-getter/main/index.cjs': `
         const StoreModule = require('./infrastructure/Store');
         module.exports = {
@@ -681,6 +717,30 @@ test('recognizes JavaScript feature root entrypoints', () => {
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
             source: 'src/features/commonjs-named/main/index.js',
             specifier: './infrastructure/NamedStore',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-nested/main/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-nested/main/index.cjs',
+            specifier: './infrastructure/DynamicStore',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-nested/main/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-nested/main/index.cjs',
+            specifier: './infrastructure/Repository',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-nested/main/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-nested/main/index.cjs',
+            specifier: './infrastructure/Service',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-nested/main/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-nested/main/index.cjs',
+            specifier: './infrastructure/Store',
           },
           {
             publicEntrypoint: 'src/features/commonjs-object-getter/main/index.cjs',
