@@ -769,7 +769,12 @@
     },
     {
       "path": "src/renderer/components/team/review/ChangeReviewDialog.tsx",
-      "sha256": "sha256:0ae78a4c337d15e3ca0b516a009d2e00cc0dd0139eb6b3dcc74ec7769ed847d3",
+      "sha256": "sha256:9a8f53cf152e14ea640920a4696da2bdc495efaa55e62cf6ddf732a3d80861ef",
+      "interactionSiteCount": 0
+    },
+    {
+      "path": "src/renderer/components/team/review/ChangeReviewDialogView.tsx",
+      "sha256": "sha256:dfe403d4fad23ddfe9b430c0fbaa9d23c9800a24b41df24f9b4b41bc43e161e2",
       "interactionSiteCount": 3
     },
     {
@@ -8931,8 +8936,8 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/review/ChangeReviewDialog.tsx",
-          "sourceHash": "sha256:f6d69166a52782ee",
+          "file": "src/renderer/components/team/review/ChangeReviewDialogView.tsx",
+          "sourceHash": "sha256:6d9df3d79cb041c0",
           "siteCount": 1
         }
       ]
@@ -11570,13 +11575,13 @@
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/review/ChangeReviewDialog.tsx",
+          "file": "src/renderer/components/team/review/ChangeReviewDialogView.tsx",
           "sourceHash": "sha256:05d3c7a7e9f2fd8d",
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/review/ChangeReviewDialog.tsx",
-          "sourceHash": "sha256:5bb8b46c2ff68352",
+          "file": "src/renderer/components/team/review/ChangeReviewDialogView.tsx",
+          "sourceHash": "sha256:2548d11dc28b46ea",
           "siteCount": 1
         },
         {

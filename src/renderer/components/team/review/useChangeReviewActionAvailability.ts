@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { getFileHunkCount } from '@renderer/store/slices/changeReviewSlice';
+import { resolveChangeReviewFileHunkCount } from '@features/change-review';
 import { getFileReviewKey } from '@renderer/utils/reviewKey';
 
 import { isReviewFileFullyRejected } from './reviewActionState';
@@ -42,7 +42,11 @@ export function useChangeReviewActionAvailability({
         const reviewKey = getFileReviewKey(file);
         const fileDecision = fileDecisions[reviewKey] ?? fileDecisions[file.filePath] ?? 'pending';
         if (fileDecision !== 'pending' || file.filePath in editedContents) return false;
-        const count = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
+        const count = resolveChangeReviewFileHunkCount(
+          file.filePath,
+          file.snippets.length,
+          fileChunkCounts
+        );
         if (isReviewFileFullyRejected(file, count, { hunkDecisions, fileDecisions })) return false;
         return isReviewRejectable(file, fileContents[file.filePath] ?? null);
       }),

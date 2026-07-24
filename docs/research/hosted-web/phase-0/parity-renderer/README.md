@@ -13,7 +13,7 @@ The checked-in evidence is intentionally compact:
 - `renderer-child-control-catalog.json` is the reviewed, omission-sensitive catalog for the complete
   relative/renderer and change-review feature-alias import closure rooted at `TeamListView`,
   `TeamDetailView`, the globally mounted approval sheet and task-detail dialog, and the provider
-  management panel. Its 180 declared
+  management panel. Its 181 declared
   source files must exactly equal the recursively discovered closure; 700 stable source keys cover
   every non-root child control occurrence. The scanner also proves the `App` and `TabbedLayout` mount
   chains for the two global roots.

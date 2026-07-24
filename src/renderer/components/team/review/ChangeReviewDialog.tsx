@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 
 import { registerAppCloseParticipant } from '@features/app-close-coordination/renderer';
+import { resolveChangeReviewFileHunkCount } from '@features/change-review';
 import {
   browserChangeReviewCollapsedFilesStorage,
   createChangeReviewDialogLifecycleCommandPort,
@@ -30,7 +31,7 @@ import {
 } from '@features/change-review/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
-import { getFileHunkCount, REVIEW_INSTANT_APPLY } from '@renderer/store/slices/changeReviewSlice';
+import { REVIEW_INSTANT_APPLY } from '@renderer/store/slices/changeReviewSlice';
 import {
   buildChangeReviewLifecycleSessionId,
   registerChangeReviewLifecycleOwner,
@@ -729,7 +730,7 @@ export const ChangeReviewDialog = ({
     hasDraft: hasReviewDraft,
     hasActionInFlight: hasReviewActionInFlight,
     getEditorFilePathForTarget,
-    getHunkCountForFile: getFileHunkCount,
+    getHunkCountForFile: resolveChangeReviewFileHunkCount,
     getUndoHistory: getReviewUndoHistory,
     getRedoHistory: getReviewRedoHistory,
     undoLatest: handleUndoLatestReviewAction,
