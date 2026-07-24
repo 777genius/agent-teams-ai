@@ -186,6 +186,8 @@ export {
   ChangeReviewConflictDiscardDialog,
   ChangeReviewConflictNotices,
 } from './ui/ChangeReviewConflictNotices';
+export type { ChangeReviewSidebarProps } from './ui/ChangeReviewSidebar';
+export { ChangeReviewSidebar } from './ui/ChangeReviewSidebar';
 export type { TaskChangesEmptyStateProps } from './ui/TaskChangesEmptyState';
 export { TaskChangesEmptyState } from './ui/TaskChangesEmptyState';
 export type {

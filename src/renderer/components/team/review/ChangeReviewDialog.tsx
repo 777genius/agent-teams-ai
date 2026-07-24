@@ -16,6 +16,7 @@ import {
   buildReviewStats,
   ChangeReviewConflictDiscardDialog,
   ChangeReviewConflictNotices,
+  ChangeReviewSidebar,
   createChangeReviewActionHistoryStorePort,
   createChangeReviewBulkDecisionCommandPort,
   createChangeReviewBulkDecisionStatePort,
@@ -57,11 +58,9 @@ import {
   useChangeReviewOperationGeneration,
   useChangeReviewScopeIdentity,
 } from '@features/change-review/renderer';
-import { useAppTranslation } from '@features/localization/renderer';
 import { buildReviewRestoreDecisionState } from '@features/review-mutations';
 import { api, isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
-import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { getFileHunkCount, REVIEW_INSTANT_APPLY } from '@renderer/store/slices/changeReviewSlice';
 import { buildSelectionAction } from '@renderer/utils/buildSelectionAction';
@@ -71,7 +70,7 @@ import {
 } from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { getFileReviewKey } from '@renderer/utils/reviewKey';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
-import { ChevronDown, Clock, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 import { ChangesLoadingAnimation } from './ChangesLoadingAnimation';
 import {
@@ -82,7 +81,6 @@ import {
   rejectChunk,
 } from './CodeMirrorDiffUtils';
 import { ContinuousScrollView } from './ContinuousScrollView';
-import { FileEditTimeline } from './FileEditTimeline';
 import { buildInitialReviewFileScrollKey } from './initialReviewFileScroll';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { buildPathChangeLabels } from './pathChangeLabels';
@@ -108,7 +106,6 @@ import {
   isReviewTextContentUnavailable,
 } from './reviewContentPreview';
 import { resolveReviewFilePath } from './reviewFilePathResolution';
-import { ReviewFileTree } from './ReviewFileTree';
 import { ReviewToolbar } from './ReviewToolbar';
 import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
@@ -284,7 +281,6 @@ export const ChangeReviewDialog = ({
   lifecycleTabId,
   onLifecycleFocus,
 }: ChangeReviewDialogProps): React.ReactElement | null => {
-  const { t } = useAppTranslation('team');
   const generatedLifecycleHostId = useId();
   const resolvedLifecycleHostId = lifecycleHostId ?? generatedLifecycleHostId;
   const reviewLifecycleSessionId = useMemo(
@@ -714,7 +710,6 @@ export const ChangeReviewDialog = ({
     handleTreeFileClick,
     handleVisibleFileChange,
     isProgrammaticScroll,
-    markViewed,
     resolveReviewFileLabel,
     scrollContainerRef,
     scrollToFile,
@@ -724,7 +719,6 @@ export const ChangeReviewDialog = ({
     sortedFiles,
     timelineOpen,
     toggleCollapsedFile,
-    unmarkViewed,
     viewedCount,
     viewedProgress,
     viewedSet,
@@ -1442,49 +1436,19 @@ export const ChangeReviewDialog = ({
           hasReviewFiles && (
             <>
               {/* File tree */}
-              <div className="w-64 shrink-0 overflow-y-auto border-r border-border bg-surface-sidebar">
-                <ReviewFileTree
-                  files={activeChangeSet.files}
-                  fileContents={fileContents}
-                  pathChangeLabels={pathChangeLabels}
-                  selectedFilePath={null}
-                  onSelectFile={handleTreeFileClick}
-                  viewedSet={viewedSet}
-                  onMarkViewed={markViewed}
-                  onUnmarkViewed={unmarkViewed}
-                  activeFilePath={activeFilePath ?? undefined}
-                />
-
-                {/* Edit Timeline for active file */}
-                {activeFile?.timeline && activeFile.timeline.events.length > 0 && (
-                  <div className="border-t border-border">
-                    <button
-                      onClick={() => setTimelineOpen(!timelineOpen)}
-                      className="flex w-full items-center gap-1.5 px-3 py-2 text-xs text-text-secondary hover:text-text"
-                    >
-                      <Clock className="size-3.5" />
-                      <span>
-                        {t('review.timeline.titleWithCount', {
-                          count: activeFile.timeline.events.length,
-                        })}
-                      </span>
-                      <ChevronDown
-                        className={cn(
-                          'ml-auto size-3 transition-transform',
-                          timelineOpen && 'rotate-180'
-                        )}
-                      />
-                    </button>
-                    {timelineOpen && (
-                      <FileEditTimeline
-                        timeline={activeFile.timeline}
-                        onEventClick={(idx) => diffNav.goToHunk(idx)}
-                        activeSnippetIndex={diffNav.currentHunkIndex}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
+              <ChangeReviewSidebar
+                files={activeChangeSet.files}
+                pathChangeLabels={pathChangeLabels}
+                decisionState={{ hunkDecisions, fileDecisions, fileChunkCounts }}
+                activeFilePath={activeFilePath}
+                viewedSet={viewedSet}
+                onSelectFile={handleTreeFileClick}
+                timeline={activeFile?.timeline ?? null}
+                timelineOpen={timelineOpen}
+                onToggleTimeline={() => setTimelineOpen(!timelineOpen)}
+                onTimelineEventClick={(idx) => diffNav.goToHunk(idx)}
+                activeSnippetIndex={diffNav.currentHunkIndex}
+              />
 
               {/* Continuous scroll diff content with selection menu */}
               <div

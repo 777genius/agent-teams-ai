@@ -24,7 +24,6 @@ import type { EditorSelectionInfo } from '@shared/types/editor';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 
 type ContinuousScrollNavigation = ReturnType<typeof useContinuousScrollNav>;
-type ViewedFiles = ReturnType<typeof useViewedFiles>;
 
 export interface ChangeReviewDialogViewStatePolicy {
   buildInitialScrollKey: (
@@ -72,7 +71,6 @@ export interface ChangeReviewDialogViewState {
   handleTreeFileClick: (filePath: string) => void;
   handleVisibleFileChange: (filePath: string) => void;
   isProgrammaticScroll: ContinuousScrollNavigation['isProgrammaticScroll'];
-  markViewed: ViewedFiles['markViewed'];
   resolveReviewFileLabel: (filePath: string) => string;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   scrollToFile: ContinuousScrollNavigation['scrollToFile'];
@@ -82,7 +80,6 @@ export interface ChangeReviewDialogViewState {
   sortedFiles: FileChangeSummary[];
   timelineOpen: boolean;
   toggleCollapsedFile: (filePath: string) => void;
-  unmarkViewed: ViewedFiles['unmarkViewed'];
   viewedCount: number;
   viewedProgress: number;
   viewedSet: Set<string>;
@@ -340,8 +337,6 @@ export function useChangeReviewDialogViewState({
     viewedProgress: viewed.progress,
     viewedSet: viewed.viewedSet,
     viewedTotalCount: viewed.totalCount,
-    markViewed: viewed.markViewed,
-    unmarkViewed: viewed.unmarkViewed,
     watchedReviewFilePathsKey: watchedFilePathsKey,
     getEditorFilePathForTarget,
     selectionInfo,

@@ -2,6 +2,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
 
 import type { FileEditTimeline as FileEditTimelineType } from '@shared/types/review';
+import type { JSX } from 'react';
 
 interface FileEditTimelineProps {
   timeline: FileEditTimelineType;
@@ -13,7 +14,7 @@ export const FileEditTimeline = ({
   timeline,
   onEventClick,
   activeSnippetIndex,
-}: FileEditTimelineProps) => {
+}: FileEditTimelineProps): JSX.Element => {
   const { t } = useAppTranslation('team');
 
   if (timeline.events.length === 0) {

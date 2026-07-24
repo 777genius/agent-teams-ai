@@ -14,7 +14,9 @@ main-process review IPC shell.
   presentation interactions, diff/history keyboard navigation, external-file watcher
   suppression, dialog open/fetch/hydration, close/app-close flushing, saved-state
   recovery/discard, Apply cleanup, and Escape orchestration through narrow ports.
-- `renderer/ui` owns store-free presentation components.
+- `renderer/ui` owns store-free presentation components, including the review navigation
+  sidebar, file tree, and active-file edit timeline. Decision state reaches that subtree
+  through explicit props rather than direct Zustand access.
 - `core/domain` owns pure review scope, rename expectation, snippet-shape, watcher-input, and
   decision-persistence policy.
 - `main/application` owns authoritative scope/path authorization, review watcher lifecycle, and
@@ -22,8 +24,8 @@ main-process review IPC shell.
 - `main/infrastructure` owns Node path, filesystem, sensitive-path, hardlink, and watcher-root
   validation details.
 - The legacy dialog remains the temporary composition shell for Zustand subscription,
-  controller/adapter composition, CodeMirror action injection, and JSX rendering while
-  later slices move those responsibilities behind focused hooks and use cases.
+  controller/adapter composition, CodeMirror action injection, and the main diff/content
+  rendering while later slices move those responsibilities behind focused hooks and use cases.
 
 Production callers import through `@features/change-review/renderer` or
 `@features/change-review/main`.
