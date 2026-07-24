@@ -93,7 +93,9 @@ describe("pnpm verified side-effects cache", () => {
       expect(nodeVerification?.slice(0, 3)).toEqual([
         process.execPath,
         "-e",
-        expect.stringContaining("process.dlopen"),
+        expect.stringContaining(
+          "const module={exports:{},filename:path,paths:[]};process.dlopen(module,path)",
+        ),
       ]);
       expect(JSON.parse(nodeVerification?.[3] ?? "[]")).toHaveLength(1);
 

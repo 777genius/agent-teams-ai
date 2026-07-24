@@ -16,7 +16,7 @@ import {
 
 const NATIVE_ADDON_VERIFICATION_BATCH_BYTES = 48 * 1024;
 const NATIVE_ADDON_VERIFICATION_SCRIPT =
-  "const paths=JSON.parse(process.argv[1]);for(const path of paths){process.dlopen({exports:{}},path)}";
+  "const paths=JSON.parse(process.argv[1]);for(const path of paths){const module={exports:{},filename:path,paths:[]};process.dlopen(module,path)}";
 
 type DependencyCommandRunner = (
   command: string,
