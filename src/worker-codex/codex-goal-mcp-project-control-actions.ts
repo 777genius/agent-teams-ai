@@ -477,6 +477,11 @@ export async function projectControlStartStoredJobView(
             localCodexProjectSafeExecutionJournal(canonicalLaunch),
           verifiedPrewarmBeforeAttemptContinuation:
             continuationDecision?.kind === "prewarm_before_attempt",
+          verifiedAdmittedInputPatchContinuation:
+            continuationDecision?.workspaceMode ===
+              "admitted_input_patch_continuation" ||
+            authorizedContinuationWorkspaceMode ===
+              "admitted_input_patch_continuation",
         });
       const continuationLaunch = await withProjectContinuationAccounts({
         launch: canonicalLaunch,

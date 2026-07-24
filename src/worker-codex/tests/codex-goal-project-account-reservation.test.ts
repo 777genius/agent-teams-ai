@@ -422,6 +422,126 @@ describe("project account reservation", () => {
     }
   });
 
+  it("continues a broker-admitted legacy history without inventing missing account identities", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-legacy-continuation-"));
+    roots.push(root);
+    const scoped = fixture(root, "job-1");
+    const journal = new InMemoryAttemptJournal();
+    const now = new Date("2026-07-25T00:00:00.000Z");
+    await journal.startTask({
+      taskId: scoped.launch.config.taskId,
+      workspaceRunId: "workspace-run",
+      workspacePath: scoped.launch.config.workspacePath,
+      effectMode: "workspace_patch",
+      provider: "codex",
+      now,
+    });
+    for (let attemptNumber = 1; attemptNumber <= 3; attemptNumber += 1) {
+      await journal.appendAttempt({
+        taskId: scoped.launch.config.taskId,
+        attempt: {
+          taskId: scoped.launch.config.taskId,
+          attemptNumber,
+          provider: "codex",
+          startedAt: now,
+          finishedAt: now,
+          status: "blocked",
+          failureReason:
+            attemptNumber === 3 ? "quota_limited" : "runtime_interrupted",
+          workspaceDirtyBefore: true,
+          workspaceDirtyAfter: true,
+          changedFiles: [],
+        },
+        now,
+      });
+    }
+    await journal.markPartial({
+      taskId: scoped.launch.config.taskId,
+      status: "waiting_capacity",
+      reason: "quota_limited",
+      now,
+    });
+    const status = {
+      recommendedAction: "continue_after_capacity" as const,
+      resultReason: "quota_limited",
+      progressResultReason: "quota_limited",
+      progressAttemptCount: 3,
+    };
+
+    await expect(
+      codexProjectContinuationReservationInput({
+        status,
+        launch: scoped.launch,
+        journal,
+        verifiedAdmittedInputPatchContinuation: true,
+      }),
+    ).resolves.toEqual({
+      excludedAccountIds: [],
+      continuation: { previousAttemptCount: 3 },
+    });
+    await expect(
+      codexProjectContinuationReservationInput({
+        status,
+        launch: scoped.launch,
+        journal,
+      }),
+    ).rejects.toThrow("project_control_continuation_attempt_history_required");
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: status.recommendedAction,
+          resultReason: status.resultReason,
+          progressResultReason: status.progressResultReason,
+        },
+        launch: scoped.launch,
+        journal,
+        verifiedAdmittedInputPatchContinuation: true,
+      }),
+    ).rejects.toThrow("project_control_continuation_attempt_history_required");
+
+    const recorded = await journal.readTask({
+      taskId: scoped.launch.config.taskId,
+    });
+    if (!recorded) throw new Error("expected legacy task");
+    for (const forged of [
+      {
+        ...recorded,
+        attempts: recorded.attempts.map((attempt, index) =>
+          index === 0 ? { ...attempt, accountId: "account-a" } : attempt,
+        ),
+      },
+      {
+        ...recorded,
+        attempts: recorded.attempts.map((attempt, index) =>
+          index === 1 ? { ...attempt, attemptNumber: 7 } : attempt,
+        ),
+      },
+      {
+        ...recorded,
+        attempts: recorded.attempts.map((attempt, index) =>
+          index === 1 ? { ...attempt, provider: "other-provider" } : attempt,
+        ),
+      },
+      {
+        ...recorded,
+        attempts: recorded.attempts.map((attempt, index) =>
+          index === 1 ? { ...attempt, status: "completed" } : attempt,
+        ),
+      },
+    ] satisfies readonly SafeExecutionTaskRecord[]) {
+      await expect(
+        codexProjectContinuationReservationInput({
+          status,
+          launch: scoped.launch,
+          journal: { readTask: async () => forged },
+          verifiedAdmittedInputPatchContinuation: true,
+        }),
+      ).rejects.toThrow(
+        "project_control_continuation_attempt_history_required",
+      );
+    }
+  });
+
   it("releases an excluded exclusive reservation before selecting another account", async () => {
     const root = await mkdtemp(join(tmpdir(), "project-account-reselected-"));
     roots.push(root);

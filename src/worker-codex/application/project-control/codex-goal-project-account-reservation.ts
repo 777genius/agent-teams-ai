@@ -254,6 +254,7 @@ export async function codexProjectContinuationReservationInput(input: {
   readonly launch: CodexGoalLaunchInput;
   readonly journal: Pick<AttemptJournal, "readTask">;
   readonly verifiedPrewarmBeforeAttemptContinuation?: boolean;
+  readonly verifiedAdmittedInputPatchContinuation?: boolean;
 }): Promise<{
   readonly excludedAccountIds: readonly string[];
   readonly continuation?: CodexProjectAccountContinuation;
@@ -295,6 +296,8 @@ export async function codexProjectContinuationReservationInput(input: {
       (account) => account.name,
     ),
     task: await input.journal.readTask({ taskId: input.launch.config.taskId }),
+    verifiedAdmittedInputPatchContinuation:
+      input.verifiedAdmittedInputPatchContinuation === true,
   });
 }
 
@@ -405,6 +408,7 @@ function continuationAttemptHistory(input: {
   readonly workspacePath: string;
   readonly launchAccountIds: readonly string[];
   readonly task: SafeExecutionTaskRecord | null;
+  readonly verifiedAdmittedInputPatchContinuation: boolean;
 }): {
   readonly excludedAccountIds: readonly string[];
   readonly continuation: CodexProjectAccountContinuation;
@@ -431,7 +435,26 @@ function continuationAttemptHistory(input: {
     (input.launchAccountIds.length === 1
       ? input.launchAccountIds[0]
       : undefined);
-  if (!failedAccountId && input.failureReason !== "capacity_unavailable") {
+  const legacyUnattributedAdmittedHistory =
+    failedAccountId === undefined &&
+    input.verifiedAdmittedInputPatchContinuation &&
+    input.failureReason !== "capacity_unavailable" &&
+    input.status.progressAttemptCount === input.task.attempts.length &&
+    input.status.progressCurrentAccount === undefined &&
+    input.task.attempts.every(
+      (attempt, index) =>
+        attempt.taskId === input.taskId &&
+        attempt.provider === "codex" &&
+        attempt.attemptNumber === index + 1 &&
+        attempt.finishedAt !== undefined &&
+        attempt.status === "blocked" &&
+        attempt.accountId === undefined,
+    );
+  if (
+    !failedAccountId &&
+    input.failureReason !== "capacity_unavailable" &&
+    !legacyUnattributedAdmittedHistory
+  ) {
     throw new Error("project_control_continuation_attempt_history_required");
   }
   if (
