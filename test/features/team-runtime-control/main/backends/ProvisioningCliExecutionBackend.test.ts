@@ -12,6 +12,8 @@ import {
 import {
   type CancellableLaneExecutionRequest,
   type LaneExecutionLaunchOutcome,
+  type LaneExecutionMutationAuthority,
+  type LaneExecutionMutationAuthorityRequest,
   type LaneExecutionObserveOutcome,
   type LaneExecutionPreflightDecision,
   type LaneExecutionProviderCapability,
@@ -117,7 +119,50 @@ function cancellation(cancelled = false): RuntimeCancellation {
   };
 }
 
+const PASSTHROUGH_MUTATION_AUTHORITY: LaneExecutionMutationAuthority = {
+  execute: (_request, effect) => effect(),
+};
+
+class ReplayOnceMutationAuthority implements LaneExecutionMutationAuthority {
+  callbackCalls = 0;
+  executeCalls = 0;
+  readonly requestJsons: string[] = [];
+  private requestJson: string | null = null;
+  private result: unknown;
+
+  async execute<TResult>(
+    request: LaneExecutionMutationAuthorityRequest,
+    effect: () => Promise<TResult>
+  ): Promise<TResult> {
+    const requestJson = JSON.stringify(request);
+    this.executeCalls += 1;
+    this.requestJsons.push(requestJson);
+    if (this.requestJson !== null) {
+      if (requestJson !== this.requestJson) throw new TypeError('test-mutation-tuple-mismatch');
+      return this.result as TResult;
+    }
+    this.requestJson = requestJson;
+    this.callbackCalls += 1;
+    this.result = await effect();
+    return this.result as TResult;
+  }
+}
+
+function mutationBinding(operationId = 'operation:provisioning-test', fence = 1) {
+  return {
+    operationId,
+    effectLease: {
+      token: `provisioning-test-token-${fence}`,
+      fence,
+      ownerId: 'provisioning-test-owner',
+      claimedAtIso: '2026-07-24T13:59:00.000Z',
+      expiresAtIso: '2026-07-24T14:01:00.000Z',
+    },
+  } as const;
+}
+
 class FakeProvisioningPorts implements ProvisioningCliDeterministicExecutionPorts {
+  capabilitiesUnavailable = false;
   capabilityRevision = 7;
   capabilityBackend: RuntimeExecutionBackendKind = 'provisioning_cli';
   supported = true;
@@ -139,6 +184,9 @@ class FakeProvisioningPorts implements ProvisioningCliDeterministicExecutionPort
     request: LaneExecutionRequest
   ): Promise<readonly LaneExecutionProviderCapability[]> {
     this.calls.push('readCapabilities');
+    if (this.capabilitiesUnavailable) {
+      return Promise.reject(new Error('capabilities-unavailable'));
+    }
     return Promise.resolve(
       request.scope.requiredProviderIds.map((providerId) => ({
         backend: this.capabilityBackend,
@@ -183,7 +231,7 @@ describe('ProvisioningCliExecutionBackend', () => {
     'validates and preflights the accepted %s lane without re-planning it',
     async (providerId) => {
       const ports = new FakeProvisioningPorts();
-      const backend = new ProvisioningCliExecutionBackend(ports);
+      const backend = new ProvisioningCliExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
       const scope = createScope(providerId);
 
       expect(backend.validatePlan(scope)).toEqual({ status: 'accepted' });
@@ -205,7 +253,7 @@ describe('ProvisioningCliExecutionBackend', () => {
 
   it('delegates launch, observe, stop, and recover to the injected deterministic flow', async () => {
     const ports = new FakeProvisioningPorts();
-    const backend = new ProvisioningCliExecutionBackend(ports);
+    const backend = new ProvisioningCliExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
     const scope = createScope('anthropic');
     const activeCancellation = cancellation();
     const preflight = await backend.preflight({ scope, cancellation: activeCancellation });
@@ -213,16 +261,30 @@ describe('ProvisioningCliExecutionBackend', () => {
     const executionRef = parseLaneExecutionRef('provisioning-run-1');
 
     await expect(
-      backend.launch({ scope, cancellation: activeCancellation, readiness: preflight.readiness })
+      backend.launch({
+        scope,
+        cancellation: activeCancellation,
+        readiness: preflight.readiness,
+        ...mutationBinding('operation:launch', 1),
+      })
     ).resolves.toEqual({ status: 'launched', executionRef });
     await expect(backend.observe({ scope, executionRef })).resolves.toEqual({ status: 'ready' });
     await expect(
-      backend.stop({ scope, executionRef, mode: 'graceful', cancellation: activeCancellation })
+      backend.stop({
+        scope,
+        executionRef,
+        mode: 'graceful',
+        cancellation: activeCancellation,
+        ...mutationBinding('operation:stop', 2),
+      })
     ).resolves.toEqual({ status: 'stopped' });
-    await expect(backend.recover({ scope, cancellation: activeCancellation })).resolves.toEqual({
-      status: 'recovered',
-      executionRef,
-    });
+    await expect(
+      backend.recover({
+        scope,
+        cancellation: activeCancellation,
+        ...mutationBinding('operation:recover', 3),
+      })
+    ).resolves.toEqual({ status: 'recovered', executionRef });
     expect(ports.calls).toEqual([
       'readCapabilities',
       'preflight',
@@ -237,12 +299,41 @@ describe('ProvisioningCliExecutionBackend', () => {
     ]);
   });
 
+  it('enters mutation authority before fresh capability, readiness, cancellation, or provider work', async () => {
+    const ports = new FakeProvisioningPorts();
+    const authority = new ReplayOnceMutationAuthority();
+    const backend = new ProvisioningCliExecutionBackend(ports, authority);
+    const scope = createScope('anthropic');
+    const preflight = await backend.preflight({ scope, cancellation: cancellation() });
+    if (preflight.status !== 'ready') throw new Error('expected ready fake preflight');
+    const request = {
+      scope,
+      cancellation: cancellation(),
+      readiness: preflight.readiness,
+      ...mutationBinding('operation:capability-drift-replay', 1),
+    };
+
+    await expect(backend.launch(request)).resolves.toEqual(ports.launchOutcome);
+    const callsAfterCompletion = [...ports.calls];
+    ports.capabilityRevision += 1;
+    ports.capabilitiesUnavailable = true;
+
+    await expect(backend.launch({ ...request, cancellation: cancellation(true) })).resolves.toEqual(
+      ports.launchOutcome
+    );
+    expect(authority.executeCalls).toBe(2);
+    expect(authority.callbackCalls).toBe(1);
+    expect(authority.requestJsons[1]).toBe(authority.requestJsons[0]);
+    expect(ports.calls).toEqual(callsAfterCompletion);
+    expect(ports.calls.filter((call) => call === 'launch')).toHaveLength(1);
+  });
+
   it('contains provider lifecycle outcomes without flattening their state', async () => {
     const ports = new FakeProvisioningPorts();
     ports.observeOutcome = { status: 'exited', outcome: 'failure' };
     ports.stopOutcome = { status: 'operator_required' };
     ports.recoverOutcome = { status: 'not_started' };
-    const backend = new ProvisioningCliExecutionBackend(ports);
+    const backend = new ProvisioningCliExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
     const scope = createScope('codex');
     const executionRef = parseLaneExecutionRef('provisioning-run-2');
 
@@ -251,17 +342,27 @@ describe('ProvisioningCliExecutionBackend', () => {
       outcome: 'failure',
     });
     await expect(
-      backend.stop({ scope, executionRef, mode: 'immediate', cancellation: cancellation() })
+      backend.stop({
+        scope,
+        executionRef,
+        mode: 'immediate',
+        cancellation: cancellation(),
+        ...mutationBinding('operation:stop-outcome', 1),
+      })
     ).resolves.toEqual({ status: 'operator_required' });
-    await expect(backend.recover({ scope, cancellation: cancellation() })).resolves.toEqual({
-      status: 'not_started',
-    });
+    await expect(
+      backend.recover({
+        scope,
+        cancellation: cancellation(),
+        ...mutationBinding('operation:recover-outcome', 2),
+      })
+    ).resolves.toEqual({ status: 'not_started' });
   });
 
   it('preserves an explicit unavailable outcome when the capability snapshot is ready', async () => {
     const ports = new FakeProvisioningPorts();
     ports.preflightOutcome = { status: 'rejected', reason: 'unavailable' };
-    const backend = new ProvisioningCliExecutionBackend(ports);
+    const backend = new ProvisioningCliExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
 
     await expect(
       backend.preflight({ scope: createScope('anthropic'), cancellation: cancellation() })
@@ -270,7 +371,7 @@ describe('ProvisioningCliExecutionBackend', () => {
 
   it('fails closed on unsupported plans, capability identity, readiness, and stale receipts', async () => {
     const ports = new FakeProvisioningPorts();
-    const backend = new ProvisioningCliExecutionBackend(ports);
+    const backend = new ProvisioningCliExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
     const openCodeScope = createScope('opencode');
     expect(backend.validatePlan(openCodeScope)).toEqual({
       status: 'rejected',
@@ -312,7 +413,12 @@ describe('ProvisioningCliExecutionBackend', () => {
     if (preflight.status !== 'ready') throw new Error('expected ready fake preflight');
     ports.capabilityRevision += 1;
     await expect(
-      backend.launch({ scope, cancellation: cancellation(), readiness: preflight.readiness })
+      backend.launch({
+        scope,
+        cancellation: cancellation(),
+        readiness: preflight.readiness,
+        ...mutationBinding('operation:stale-readiness', 1),
+      })
     ).resolves.toEqual({ status: 'rejected', reason: 'readiness_mismatch' });
     expect(ports.calls.at(-1)).toBe('readCapabilities');
     expect(ports.calls).not.toContain('launch');
@@ -320,16 +426,38 @@ describe('ProvisioningCliExecutionBackend', () => {
 
   it('short-circuits cancelled operations before any compatibility effect', async () => {
     const ports = new FakeProvisioningPorts();
-    const backend = new ProvisioningCliExecutionBackend(ports);
+    const backend = new ProvisioningCliExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
     const scope = createScope('anthropic');
 
     await expect(backend.preflight({ scope, cancellation: cancellation(true) })).resolves.toEqual({
       status: 'rejected',
       reason: 'cancelled',
     });
-    await expect(backend.recover({ scope, cancellation: cancellation(true) })).resolves.toEqual({
-      status: 'cancelled',
-    });
+    await expect(
+      backend.recover({
+        scope,
+        cancellation: cancellation(true),
+        ...mutationBinding('operation:cancelled', 1),
+      })
+    ).resolves.toEqual({ status: 'cancelled' });
     expect(ports.calls).toEqual([]);
+  });
+
+  it('fails closed when mutation authority is missing', async () => {
+    const ports = new FakeProvisioningPorts();
+    const backend = new ProvisioningCliExecutionBackend(ports, null);
+    const scope = createScope('anthropic');
+    const executionRef = parseLaneExecutionRef('provisioning-run-3');
+
+    await expect(
+      backend.stop({
+        scope,
+        executionRef,
+        mode: 'graceful',
+        cancellation: cancellation(),
+        ...mutationBinding('operation:missing-authority', 1),
+      })
+    ).resolves.toEqual({ status: 'operator_required' });
+    expect(ports.calls).not.toContain('stop');
   });
 });

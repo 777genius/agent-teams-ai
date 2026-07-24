@@ -24,7 +24,8 @@ export type ExecutionBackendRegistryConfigurationErrorCode =
   | 'duplicate_backend'
   | 'duplicate_provider'
   | 'invalid_backend'
-  | 'invalid_provider_set';
+  | 'invalid_provider_set'
+  | 'unsupported_mutation_binding';
 
 export class ExecutionBackendRegistryConfigurationError extends TypeError {
   readonly code: ExecutionBackendRegistryConfigurationErrorCode;
@@ -66,6 +67,9 @@ export class ExecutionBackendRegistry {
     const providerOwners = new Map<TeamProviderId, RuntimeExecutionBackendKind>();
 
     for (const backend of backends) {
+      if (backend.mutationBinding !== 'operation_id_and_lease_fence') {
+        throw new ExecutionBackendRegistryConfigurationError('unsupported_mutation_binding');
+      }
       if (!(RUNTIME_EXECUTION_BACKENDS as readonly unknown[]).includes(backend.backend)) {
         throw new ExecutionBackendRegistryConfigurationError('invalid_backend');
       }

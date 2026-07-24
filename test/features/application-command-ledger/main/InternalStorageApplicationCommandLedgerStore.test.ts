@@ -8,6 +8,7 @@ import {
   ApplicationCommandConflictReason,
   ApplicationCommandFailureKind,
   type ApplicationCommandLedgerBeginRequest,
+  type ApplicationCommandLedgerBeginResult,
   ApplicationCommandLedgerStatus,
   type ApplicationCommandLedgerStorageGateway,
   COMMAND_IDEMPOTENCY_SCOPE,
@@ -82,6 +83,195 @@ describe('InternalStorageApplicationCommandLedgerStore', () => {
     }
     expect(replay.record.resultJson).toBe('{"ok":true}');
     expect(replay.record.status).toBe(ApplicationCommandLedgerStatus.Completed);
+  });
+
+  it('durably replays an identical completed mutation after restart and lease expiry', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mutation-fence-restart-'));
+    const databasePath = path.join(tmpDir, 'storage', 'app.db');
+    const firstCore = openCore(databasePath);
+    const firstStore = new InternalStorageApplicationCommandLedgerStore(
+      new InProcessGateway(firstCore)
+    );
+    const request = makeMutationBeginRequest();
+
+    await expect(firstStore.begin(request)).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Started,
+    });
+    await firstStore.markCompleted({
+      namespace: request.namespace,
+      scopeKey: request.scopeKey,
+      commandId: request.commandId,
+      attemptCount: 1,
+      resultHash: 'hash:mutation-result',
+      resultJson: '{"status":"stopped"}',
+      completedAtIso: '2026-07-24T14:00:10.000Z',
+    });
+    closeCore(firstCore);
+
+    const secondCore = openCore(databasePath);
+    const secondStore = new InternalStorageApplicationCommandLedgerStore(
+      new InProcessGateway(secondCore)
+    );
+    const replay = await secondStore.begin({
+      ...request,
+      nowIso: '2026-07-24T16:00:00.000Z',
+    });
+
+    expect(replay).toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.DuplicateCompleted,
+      record: {
+        resultJson: '{"status":"stopped"}',
+        status: ApplicationCommandLedgerStatus.Completed,
+      },
+    });
+  });
+
+  it('rejects expired, stale, rebound, changed, and unsettled mutation claims', async () => {
+    const store = await makeStore();
+
+    const expired = makeMutationBeginRequest({
+      scopeKey: 'expired',
+      commandId: 'expired-operation',
+      idempotencyKey: 'expired-operation',
+      mutationFence: makeMutationFence({
+        operationId: 'expired-operation',
+        claimedAtIso: '2026-07-24T13:00:00.000Z',
+        expiresAtIso: '2026-07-24T13:30:00.000Z',
+      }),
+    });
+    await expect(store.begin(expired)).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.MutationFenceExpired,
+    });
+
+    const settled = makeMutationBeginRequest();
+    await store.begin(settled);
+    await store.markCompleted({
+      namespace: settled.namespace,
+      scopeKey: settled.scopeKey,
+      commandId: settled.commandId,
+      attemptCount: 1,
+      resultHash: 'hash:settled',
+      resultJson: '{"status":"stopped"}',
+      completedAtIso: '2026-07-24T14:00:10.000Z',
+    });
+
+    for (const leaseFence of [9, 10]) {
+      const operationId = `stale-operation-${leaseFence}`;
+      await expect(
+        store.begin(
+          makeMutationBeginRequest({
+            commandId: operationId,
+            idempotencyKey: operationId,
+            mutationFence: makeMutationFence({
+              operationId,
+              leaseToken: `stale-token-${leaseFence}`,
+              leaseFence,
+            }),
+          })
+        )
+      ).resolves.toMatchObject({
+        outcome: ApplicationCommandBeginOutcome.Conflict,
+        reason: ApplicationCommandConflictReason.MutationFenceStale,
+      });
+    }
+
+    await expect(
+      store.begin({
+        ...settled,
+        mutationFence: makeMutationFence({
+          operationId: settled.commandId,
+          leaseToken: 'replacement-token',
+          leaseFence: 11,
+        }),
+      })
+    ).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.MutationOperationRebound,
+    });
+    await expect(
+      store.begin({
+        ...settled,
+        payloadHash: 'hash:changed-payload',
+      })
+    ).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.PayloadHashMismatch,
+    });
+    const { mutationFence: _omittedFence, ...withoutMutationFence } = settled;
+    await expect(store.begin(withoutMutationFence)).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.MutationOperationRebound,
+    });
+
+    const tokenReboundOperation = 'token-rebound-operation';
+    await expect(
+      store.begin(
+        makeMutationBeginRequest({
+          commandId: tokenReboundOperation,
+          idempotencyKey: tokenReboundOperation,
+          mutationFence: makeMutationFence({
+            operationId: tokenReboundOperation,
+            leaseToken: settled.mutationFence!.leaseToken,
+            leaseFence: 11,
+          }),
+        })
+      )
+    ).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.MutationTokenRebound,
+    });
+
+    const active = makeMutationBeginRequest({
+      scopeKey: 'active-scope',
+      commandId: 'active-operation',
+      idempotencyKey: 'active-operation',
+      mutationFence: makeMutationFence({
+        operationId: 'active-operation',
+        leaseToken: 'active-token',
+      }),
+    });
+    await store.begin(active);
+    await expect(
+      store.begin(
+        makeMutationBeginRequest({
+          scopeKey: active.scopeKey,
+          commandId: 'active-successor',
+          idempotencyKey: 'active-successor',
+          mutationFence: makeMutationFence({
+            operationId: 'active-successor',
+            leaseToken: 'active-successor-token',
+            leaseFence: 11,
+          }),
+        })
+      )
+    ).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.MutationSuccessorBlocked,
+    });
+  });
+
+  it('serializes identical mutation claims across independent SQLite workers', async () => {
+    const { first, second } = await makeConcurrentDurableStores();
+    const request = makeMutationBeginRequest({
+      scopeKey: 'concurrent-scope',
+      commandId: 'concurrent-operation',
+      idempotencyKey: 'concurrent-operation',
+      mutationFence: makeMutationFence({
+        operationId: 'concurrent-operation',
+        leaseToken: 'concurrent-token',
+      }),
+    });
+
+    const outcomes = await Promise.all([first.begin(request), second.begin(request)]);
+
+    expect(outcomes.map(({ outcome }) => outcome).sort()).toEqual([
+      ApplicationCommandBeginOutcome.AlreadyStarted,
+      ApplicationCommandBeginOutcome.Started,
+    ]);
+    await expect(
+      first.listByScope({ namespace: request.namespace, scopeKey: request.scopeKey })
+    ).resolves.toHaveLength(1);
   });
 
   it('replays idempotency key reuse by a different command id when payload matches', async () => {
@@ -1196,6 +1386,20 @@ describe('InternalStorageApplicationCommandLedgerStore', () => {
       createCommandDescriptorRegistry(DURABLE_DESCRIPTORS)
     );
   }
+
+  function openCore(databasePath: string): InternalStorageWorkerCore {
+    const core = new InternalStorageWorkerCore({
+      databasePath,
+      createDatabase: (file) => new Database(file),
+    });
+    cores.push(core);
+    return core;
+  }
+
+  function closeCore(core: InternalStorageWorkerCore): void {
+    core.close();
+    cores.splice(cores.indexOf(core), 1);
+  }
 });
 
 function internalStorageTestWorkerSource(): string {
@@ -1291,6 +1495,43 @@ function makeBeginRequest(
     metadataJson: null,
     nowIso: '2026-07-09T10:00:00.000Z',
     startedStaleAfterMs: 60_000,
+    ...overrides,
+  };
+}
+
+function makeMutationBeginRequest(
+  overrides: Partial<ApplicationCommandLedgerBeginRequest<string>> = {}
+): ApplicationCommandLedgerBeginRequest<string> {
+  return {
+    namespace: 'lane-execution-mutation',
+    scopeKey: 'team-a:run-a:1',
+    commandId: 'mutation-operation',
+    idempotencyKey: 'mutation-operation',
+    operation: 'lane-execution.stop',
+    payloadHash: 'hash:mutation-payload',
+    metadataJson: null,
+    nowIso: '2026-07-24T14:00:00.000Z',
+    startedStaleAfterMs: 60_000,
+    mutationFence: makeMutationFence(),
+    ...overrides,
+  };
+}
+
+function makeMutationFence(
+  overrides: Partial<
+    NonNullable<ApplicationCommandLedgerBeginRequest<string>['mutationFence']>
+  > = {}
+): NonNullable<ApplicationCommandLedgerBeginRequest<string>['mutationFence']> {
+  return {
+    laneId: 'primary',
+    backend: 'provisioning_cli',
+    effectKind: 'stop',
+    operationId: 'mutation-operation',
+    leaseToken: 'mutation-token',
+    leaseOwnerId: 'mutation-owner',
+    leaseFence: 10,
+    claimedAtIso: '2026-07-24T13:59:00.000Z',
+    expiresAtIso: '2026-07-24T14:01:00.000Z',
     ...overrides,
   };
 }
@@ -1520,8 +1761,19 @@ function makeDurableGateway(
         request
       ) as Promise<DurableApplicationCommandConsumerProjectionRecord | null>,
   };
+  const application = workerCall
+    ? {
+        applicationCommandLedgerBegin: (
+          request: ApplicationCommandLedgerBeginRequest<string>
+        ): Promise<ApplicationCommandLedgerBeginResult<string>> =>
+          call('appCommandLedger.begin', request) as Promise<
+            ApplicationCommandLedgerBeginResult<string>
+          >,
+      }
+    : {};
   return Object.assign(
     new InProcessGateway(core),
+    application,
     durable
   ) as ApplicationCommandLedgerStorageGateway & DurableApplicationCommandLedgerStorageGateway;
 }
