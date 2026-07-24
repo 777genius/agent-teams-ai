@@ -10,6 +10,7 @@ import {
   hasModifier,
   importedNameForCall,
   importedNameForReference,
+  isDescriptorGetterReference,
   objectBindingSelections,
   publicMutationBinding,
   selectImportedName,
@@ -185,7 +186,13 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       current = current.parent;
     }
     if (!current || current.parent !== sourceFile) return null;
-    if (insideFunctionBody && !ts.isExpressionStatement(current)) return null;
+    if (
+      insideFunctionBody &&
+      !ts.isExpressionStatement(current) &&
+      !isDescriptorGetterReference(node, current)
+    ) {
+      return null;
+    }
 
     let bindingSelections = null;
     let localNames = [];
@@ -208,7 +215,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       if (commonJsExportNames.length > 0) {
         return { bindingSelections: null, exportedNames: commonJsExportNames, localNames: [] };
       }
-      if (insideFunctionBody) return null;
+      if (insideFunctionBody && !isDescriptorGetterReference(node, current)) return null;
       ({ bindingSelections, localNames } = publicMutationBinding(
         current.expression,
         exportedLocalNames

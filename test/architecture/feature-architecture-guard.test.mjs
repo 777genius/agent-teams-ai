@@ -458,6 +458,27 @@ test('recognizes JavaScript feature root entrypoints', () => {
       `,
       'src/features/commonjs-define-properties/main/infrastructure/Store.cjs':
         'exports.Store = class Store {};',
+      'src/features/commonjs-descriptor-alias/main/index.cjs': `
+        const StoreModule = require('./infrastructure/Store');
+        const descriptors = {
+          Store: {
+            get() {
+              return StoreModule.Store;
+            },
+          },
+        };
+        Object.defineProperties(exports, descriptors);
+
+        const Repository = require('./infrastructure/Repository');
+        const repositoryDescriptor = {
+          get: () => Repository,
+        };
+        Object.defineProperty(exports, 'Repository', repositoryDescriptor);
+      `,
+      'src/features/commonjs-descriptor-alias/main/infrastructure/Repository.cjs':
+        'module.exports = class Repository {};',
+      'src/features/commonjs-descriptor-alias/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
       'src/features/commonjs-default/index.cjs': `
         module.exports = require('./infrastructure/DefaultStore');
       `,
@@ -507,8 +528,25 @@ test('recognizes JavaScript feature root entrypoints', () => {
         export let Store;
         ({ Store } = require('./infrastructure/Store'));
       `,
-      'src/features/destructuring-write/main/infrastructure/Store.js':
-        'export class Store {}',
+      'src/features/destructuring-write/main/infrastructure/Store.js': 'export class Store {}',
+      'src/features/exported-object-getter/main/index.js': `
+        import { Repository } from './infrastructure/Repository';
+        import { Store } from './infrastructure/Store';
+        export const api = {};
+        Object.defineProperty(api, 'Store', {
+          get() {
+            return Store;
+          },
+        });
+        Object.defineProperties(api, {
+          Repository: {
+            get: () => Repository,
+          },
+        });
+      `,
+      'src/features/exported-object-getter/main/infrastructure/Repository.js':
+        'export class Repository {}',
+      'src/features/exported-object-getter/main/infrastructure/Store.js': 'export class Store {}',
       'src/features/js-feature/adapters/Adapter.js': 'export class Adapter {}',
       'src/features/js-feature/index.jsx': `export { Adapter } from './adapters/Adapter';`,
     },
@@ -529,6 +567,18 @@ test('recognizes JavaScript feature root entrypoints', () => {
             publicEntrypoint: 'src/features/commonjs-define-properties/main/index.cjs',
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
             source: 'src/features/commonjs-define-properties/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-descriptor-alias/main/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-descriptor-alias/main/index.cjs',
+            specifier: './infrastructure/Repository',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-descriptor-alias/main/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-descriptor-alias/main/index.cjs',
             specifier: './infrastructure/Store',
           },
           {
@@ -565,6 +615,18 @@ test('recognizes JavaScript feature root entrypoints', () => {
             publicEntrypoint: 'src/features/destructuring-write/main/index.js',
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
             source: 'src/features/destructuring-write/main/index.js',
+            specifier: './infrastructure/Store',
+          },
+          {
+            publicEntrypoint: 'src/features/exported-object-getter/main/index.js',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/exported-object-getter/main/index.js',
+            specifier: './infrastructure/Repository',
+          },
+          {
+            publicEntrypoint: 'src/features/exported-object-getter/main/index.js',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/exported-object-getter/main/index.js',
             specifier: './infrastructure/Store',
           },
           {

@@ -57,10 +57,7 @@ export function statementBindingNames(statement) {
 function assignmentLocalNames(target) {
   const current = unwrapExpression(target);
   if (ts.isIdentifier(current)) return [current.text];
-  if (
-    ts.isBinaryExpression(current) &&
-    current.operatorToken.kind === ts.SyntaxKind.EqualsToken
-  ) {
+  if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
     return assignmentLocalNames(current.left);
   }
   if (ts.isObjectLiteralExpression(current)) {
@@ -103,17 +100,17 @@ function memberAccess(expression) {
     current.argumentExpression &&
     ts.isStringLiteralLike(current.argumentExpression)
   ) {
-    return { name: current.argumentExpression.text, receiver: unwrapExpression(current.expression) };
+    return {
+      name: current.argumentExpression.text,
+      receiver: unwrapExpression(current.expression),
+    };
   }
   return null;
 }
 
 function assignmentTargetSelections(expression, exportedLocalNames) {
   const current = unwrapExpression(expression);
-  if (
-    !ts.isBinaryExpression(current) ||
-    current.operatorToken.kind !== ts.SyntaxKind.EqualsToken
-  ) {
+  if (!ts.isBinaryExpression(current) || current.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
     return [];
   }
 
@@ -137,9 +134,7 @@ function assignmentTargetSelections(expression, exportedLocalNames) {
     });
   }
   if (ts.isArrayLiteralExpression(target)) {
-    const localNames = assignmentLocalNames(target).filter((name) =>
-      exportedLocalNames.has(name)
-    );
+    const localNames = assignmentLocalNames(target).filter((name) => exportedLocalNames.has(name));
     return localNames.length > 0 ? [{ importedName: '*', localNames }] : [];
   }
   return [];
@@ -156,9 +151,7 @@ function isModuleExports(expression) {
 
 function isCommonJsExportsObject(expression) {
   const current = unwrapExpression(expression);
-  return (
-    (ts.isIdentifier(current) && current.text === 'exports') || isModuleExports(current)
-  );
+  return (ts.isIdentifier(current) && current.text === 'exports') || isModuleExports(current);
 }
 
 function commonJsAssignmentExportName(expression) {
@@ -211,6 +204,66 @@ export function commonJsExportNamesForExpression(expression) {
   return exportName && ts.isStringLiteralLike(exportName) ? [exportName.text] : ['*'];
 }
 
+function containsReference(node, reference) {
+  return reference.pos >= node.pos && reference.end <= node.end;
+}
+
+function descriptorGetterContainsReference(descriptorExpression, reference) {
+  const descriptor = descriptorExpression && unwrapExpression(descriptorExpression);
+  if (!descriptor || !ts.isObjectLiteralExpression(descriptor)) return false;
+  return descriptor.properties.some((property) => {
+    const name = property.name;
+    const isGetProperty =
+      name && (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) && name.text === 'get';
+    if (!isGetProperty) return false;
+    if (ts.isPropertyAssignment(property)) {
+      return containsReference(property.initializer, reference);
+    }
+    return ts.isMethodDeclaration(property) && containsReference(property, reference);
+  });
+}
+
+function descriptorMapGetterContainsReference(descriptorsExpression, reference) {
+  const descriptors = descriptorsExpression && unwrapExpression(descriptorsExpression);
+  if (!descriptors || !ts.isObjectLiteralExpression(descriptors)) return false;
+  return descriptors.properties.some(
+    (property) =>
+      ts.isPropertyAssignment(property) &&
+      descriptorGetterContainsReference(property.initializer, reference)
+  );
+}
+
+export function isDescriptorGetterReference(reference, boundary) {
+  if (ts.isVariableStatement(boundary)) {
+    return boundary.declarationList.declarations.some(
+      (declaration) =>
+        declaration.initializer &&
+        containsReference(declaration.initializer, reference) &&
+        (descriptorGetterContainsReference(declaration.initializer, reference) ||
+          descriptorMapGetterContainsReference(declaration.initializer, reference))
+    );
+  }
+  if (!ts.isExpressionStatement(boundary)) return false;
+
+  const expression = unwrapExpression(boundary.expression);
+  if (!ts.isCallExpression(expression)) return false;
+  const method = memberAccess(expression.expression);
+  if (
+    !method ||
+    !ts.isIdentifier(method.receiver) ||
+    !['Object', 'Reflect'].includes(method.receiver.text)
+  ) {
+    return false;
+  }
+  if (method.name === 'defineProperty') {
+    return descriptorGetterContainsReference(expression.arguments[2], reference);
+  }
+  return (
+    method.name === 'defineProperties' &&
+    descriptorMapGetterContainsReference(expression.arguments[1], reference)
+  );
+}
+
 export function commonJsExportNamesForReference(expression, reference, insideFunctionBody) {
   const exportNames = commonJsExportNamesForExpression(expression);
   if (!insideFunctionBody || exportNames.length === 0) return exportNames;
@@ -218,29 +271,19 @@ export function commonJsExportNamesForReference(expression, reference, insideFun
   const current = unwrapExpression(expression);
   if (!ts.isCallExpression(current)) return [];
   const method = memberAccess(current.expression);
-  const containsReference = (node) => reference.pos >= node.pos && reference.end <= node.end;
-  const getterContainsReference = (descriptorExpression) => {
-    const descriptor = descriptorExpression && unwrapExpression(descriptorExpression);
-    if (!descriptor || !ts.isObjectLiteralExpression(descriptor)) return false;
-    return descriptor.properties.some((property) => {
-      const name = property.name;
-      const isGetProperty =
-        name && (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) && name.text === 'get';
-      if (!isGetProperty) return false;
-      if (ts.isPropertyAssignment(property)) return containsReference(property.initializer);
-      return ts.isMethodDeclaration(property) && containsReference(property);
-    });
-  };
 
   if (method?.name === 'defineProperty') {
-    return getterContainsReference(current.arguments[2]) ? exportNames : [];
+    return descriptorGetterContainsReference(current.arguments[2], reference) ? exportNames : [];
   }
   if (method?.name !== 'defineProperties') return [];
 
   const descriptors = current.arguments[1] && unwrapExpression(current.arguments[1]);
   if (!descriptors || !ts.isObjectLiteralExpression(descriptors)) return [];
   return descriptors.properties.flatMap((property) => {
-    if (!ts.isPropertyAssignment(property) || !getterContainsReference(property.initializer)) {
+    if (
+      !ts.isPropertyAssignment(property) ||
+      !descriptorGetterContainsReference(property.initializer, reference)
+    ) {
       return [];
     }
     const name = property.name;
