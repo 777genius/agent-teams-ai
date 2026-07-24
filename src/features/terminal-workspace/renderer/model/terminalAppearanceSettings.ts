@@ -1,3 +1,5 @@
+import { isRecord } from '../utils/valueGuards';
+
 const TERMINAL_APPEARANCE_SETTINGS_VERSION = 1;
 const TERMINAL_BACKGROUND_IMAGE_URL_MAX_LENGTH = 2048;
 
@@ -132,8 +134,4 @@ function clampFiniteNumber(
     return fallback;
   }
   return Math.min(Math.max(Math.round(numberValue), range.min), range.max);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
