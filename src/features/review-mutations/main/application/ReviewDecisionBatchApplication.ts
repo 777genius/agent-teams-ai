@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 
+import { ReviewMutationApplyResultError } from '../../core/application/ReviewMutationApplyResultError';
 import {
   assertPersistedStateIncludesDecisions,
   composeReviewDiskTransitions,
@@ -25,12 +26,6 @@ import type {
   ReviewMutationDiskPostimage,
   ReviewPersistedStateSnapshot,
 } from '@shared/types/review';
-
-export class ReviewMutationApplyResultError extends Error {
-  constructor(readonly result: ApplyReviewResult) {
-    super(result.errors[0]?.error ?? 'Review mutation could not be applied safely');
-  }
-}
 
 export class ReviewDecisionBatchApplication {
   constructor(private readonly dependencies: ReviewDecisionBatchDependencies) {}

@@ -1,6 +1,12 @@
 export * from './contracts';
 export { isDurableReviewEqual } from './core/domain/durableReviewValue';
 export {
+  assertCurrentReviewDecisionRevision,
+  assertExactApplyReviewHistoryTransition,
+  type ReviewDecisionCommandCurrentState,
+  type ReviewDecisionCommandPolicyContext,
+} from './core/domain/reviewDecisionCommandPolicy';
+export {
   buildReviewExternalReloadState,
   buildReviewHistoryRestorePlan,
   buildReviewRestoreDecisionState,
