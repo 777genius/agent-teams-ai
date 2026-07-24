@@ -17,26 +17,11 @@ import {
   ChangeReviewConflictDiscardDialog,
   ChangeReviewConflictNotices,
   ChangeReviewSidebar,
-  createChangeReviewActionHistoryStorePort,
   createChangeReviewBulkDecisionCommandPort,
-  createChangeReviewBulkDecisionStatePort,
-  createChangeReviewConflictCommandPort,
-  createChangeReviewConflictQueryPort,
-  createChangeReviewConflictStateBridge,
-  createChangeReviewDecisionPersistencePort,
   createChangeReviewDialogLifecycleCommandPort,
-  createChangeReviewDialogLifecycleStatePort,
   createChangeReviewDialogViewPorts,
-  createChangeReviewDraftHistoryPort,
-  createChangeReviewExternalFileWatcherPort,
   createChangeReviewFileDecisionCommandPort,
-  createChangeReviewFileDecisionStatePort,
-  createChangeReviewFileDraftCommandPort,
-  createChangeReviewFileDraftStatePort,
-  createChangeReviewHistoryMutationCommandPort,
-  createChangeReviewHistoryMutationStatePort,
   createChangeReviewHunkDecisionCommandPort,
-  createChangeReviewHunkDecisionStatePort,
   isReviewActionPersistenceBlocking,
   shouldShowTaskScopeBanner,
   TaskChangesEmptyState,
@@ -58,7 +43,6 @@ import {
   useChangeReviewOperationGeneration,
   useChangeReviewScopeIdentity,
 } from '@features/change-review/renderer';
-import { buildReviewRestoreDecisionState } from '@features/review-mutations';
 import { api, isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
 import { useStore } from '@renderer/store';
@@ -72,6 +56,26 @@ import { getFileReviewKey } from '@renderer/utils/reviewKey';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { X } from 'lucide-react';
 
+import {
+  changeReviewActionHistoryStorePort,
+  changeReviewBulkDecisionStatePort,
+  changeReviewConflictCommandPort,
+  changeReviewConflictQueryPort,
+  changeReviewConflictStateBridge,
+  changeReviewDecisionPersistencePort,
+  changeReviewDialogLifecycleStatePort,
+  changeReviewDialogViewStatePolicy,
+  changeReviewDraftHistoryPort,
+  changeReviewExternalFileWatcherPort,
+  changeReviewFileDecisionPolicy,
+  changeReviewFileDecisionStatePort,
+  changeReviewFileDraftCommandPort,
+  changeReviewFileDraftStatePort,
+  changeReviewHistoryMutationCommandPort,
+  changeReviewHistoryMutationStatePort,
+  changeReviewHunkDecisionPolicy,
+  changeReviewHunkDecisionStatePort,
+} from './changeReviewDialogComposition';
 import { ChangesLoadingAnimation } from './ChangesLoadingAnimation';
 import {
   acceptAllChunks,
@@ -81,40 +85,30 @@ import {
   rejectChunk,
 } from './CodeMirrorDiffUtils';
 import { ContinuousScrollView } from './ContinuousScrollView';
-import { buildInitialReviewFileScrollKey } from './initialReviewFileScroll';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { buildPathChangeLabels } from './pathChangeLabels';
-import { getReviewActionFilePath } from './reviewActionPresentation';
 import {
   getReviewRenameRecoveryExpectation,
-  hasReviewFileRejections,
   hasUnresolvedReviewExternalChange,
   isReviewActionLocked,
   isReviewFileFullyRejected,
   replaceReviewScopedRecord,
   resolveReviewFileIsNew,
-  restoreReviewDecisionRecordsForFile,
-  shouldCreateFileWhenUndoingReject,
   shouldDeleteFileWhenUndoingReject,
 } from './reviewActionState';
 import {
   getResolvedReviewModifiedContent,
   isReviewAcceptDisabled,
-  isReviewFileExpectedDeleted,
   isReviewFileMissingOnDisk,
   isReviewRejectable,
   isReviewTextContentUnavailable,
 } from './reviewContentPreview';
-import { resolveReviewFilePath } from './reviewFilePathResolution';
 import { ReviewToolbar } from './ReviewToolbar';
 import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
 import { ViewedProgressBar } from './ViewedProgressBar';
 
 import type {
-  ChangeReviewDialogViewStatePolicy,
-  ChangeReviewFileDecisionPolicy,
-  ChangeReviewHunkDecisionPolicy,
   ChangeReviewRecentWrite,
   ReviewDraftHistoryHydrationState,
 } from '@features/change-review/renderer';
@@ -128,127 +122,6 @@ import type {
   ReviewUndoAction,
 } from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
-
-const changeReviewConflictQueryPort = createChangeReviewConflictQueryPort(() => api.review);
-const changeReviewConflictCommandPort = createChangeReviewConflictCommandPort(() => api.review);
-const changeReviewConflictStateBridge = createChangeReviewConflictStateBridge({
-  getSnapshot: useStore.getState,
-  setApplyError: (applyError) => useStore.setState({ applyError }),
-});
-const changeReviewDraftHistoryPort = createChangeReviewDraftHistoryPort(() => api.review);
-const changeReviewExternalFileWatcherPort = createChangeReviewExternalFileWatcherPort(
-  () => api.review
-);
-const changeReviewActionHistoryStorePort = createChangeReviewActionHistoryStorePort({
-  getStore: useStore.getState,
-  clearLegacyUndoStack: () => useStore.setState({ reviewUndoStack: [] }),
-});
-const changeReviewDecisionPersistencePort = createChangeReviewDecisionPersistencePort({
-  getStore: useStore.getState,
-  setApplyError: (applyError) => useStore.setState({ applyError }),
-});
-const changeReviewBulkDecisionStatePort = createChangeReviewBulkDecisionStatePort({
-  getStore: useStore.getState,
-  restoreDecisionSnapshot: ({ hunkDecisions, fileDecisions }) =>
-    useStore.setState({ hunkDecisions, fileDecisions }),
-});
-const changeReviewFileDraftStatePort = createChangeReviewFileDraftStatePort({
-  getStore: useStore.getState,
-  applyReloadedReviewState: (state) =>
-    useStore.setState({
-      hunkDecisions: state.hunkDecisions,
-      fileDecisions: state.fileDecisions,
-      hunkContextHashesByFile: state.hunkContextHashesByFile ?? {},
-      applyError: null,
-    }),
-  reportError: (applyError) => useStore.setState({ applyError }),
-});
-const changeReviewFileDraftCommandPort = createChangeReviewFileDraftCommandPort({
-  getStore: useStore.getState,
-  getReviewApi: () => api.review,
-});
-const changeReviewFileDecisionStatePort = createChangeReviewFileDecisionStatePort({
-  getStore: useStore.getState,
-  applyRestoredDecisionState: (file) =>
-    useStore.setState((state) => buildReviewRestoreDecisionState(file, state)),
-  restoreFileDecisions: (file, snapshot) =>
-    useStore.setState((state) => restoreReviewDecisionRecordsForFile(file, state, snapshot)),
-  reportError: (applyError) => useStore.setState({ applyError }),
-});
-const changeReviewFileDecisionPolicy: ChangeReviewFileDecisionPolicy = {
-  getHunkCount: (file, state) =>
-    getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts),
-  getFileDecision: (file, state) =>
-    state.fileDecisions[getFileReviewKey(file)] ?? state.fileDecisions[file.filePath],
-  resolveModifiedContent: getResolvedReviewModifiedContent,
-  resolveFileIsNew: resolveReviewFileIsNew,
-  isExpectedDeletion: isReviewFileExpectedDeleted,
-  isAcceptDisabled: (_file, content, fileDecision) =>
-    isReviewAcceptDisabled({
-      hasEdits: false,
-      isMissingOnDisk: isReviewFileMissingOnDisk(content),
-      isContentUnavailable: isReviewTextContentUnavailable(_file, content),
-      fileDecision,
-    }),
-  isRejectable: isReviewRejectable,
-  hasFileRejections: hasReviewFileRejections,
-  isFileFullyRejected: isReviewFileFullyRejected,
-  shouldDeleteWhenUndoingReject: shouldDeleteFileWhenUndoingReject,
-  hasUnresolvedExternalChange: hasUnresolvedReviewExternalChange,
-  getRenameRecoveryExpectation: getReviewRenameRecoveryExpectation,
-};
-const changeReviewHunkDecisionStatePort = createChangeReviewHunkDecisionStatePort(
-  useStore.getState
-);
-const changeReviewHunkDecisionPolicy: ChangeReviewHunkDecisionPolicy = {
-  getHunkCount: (file, state) =>
-    getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts),
-  resolveFileIsNew: resolveReviewFileIsNew,
-  shouldDeleteWhenUndoingReject: shouldDeleteFileWhenUndoingReject,
-  shouldCreateWhenUndoingReject: shouldCreateFileWhenUndoingReject,
-  getRenameRecoveryExpectation: getReviewRenameRecoveryExpectation,
-};
-const changeReviewDialogViewStatePolicy: ChangeReviewDialogViewStatePolicy = {
-  buildInitialScrollKey: buildInitialReviewFileScrollKey,
-  getHistoryActionFilePath: getReviewActionFilePath,
-  resolveFilePath: resolveReviewFilePath,
-};
-const changeReviewDialogLifecycleStatePort = createChangeReviewDialogLifecycleStatePort({
-  getStore: useStore.getState,
-  reportError: (applyError) => useStore.setState({ applyError }),
-  completeSavedStateDiscard: (markDecisionHydrationLoaded) =>
-    useStore.setState({
-      ...(markDecisionHydrationLoaded ? { decisionHydrationStatus: 'loaded' as const } : {}),
-      applyError: null,
-    }),
-});
-const changeReviewHistoryMutationCommandPort = createChangeReviewHistoryMutationCommandPort(
-  () => api.review
-);
-const changeReviewHistoryMutationStatePort = createChangeReviewHistoryMutationStatePort({
-  getSnapshot: () => useStore.getState(),
-  quiesceDecisionPersistence: ({ teamName, scopeKey, scopeToken }) =>
-    useStore.getState().quiesceDecisionPersistence(teamName, scopeKey, scopeToken),
-  recordDecisionRevision: ({ teamName, scopeKey, scopeToken }, revision) =>
-    useStore.getState().recordDecisionRevision(teamName, scopeKey, scopeToken, revision),
-  applyDecisionState: ({ hunkDecisions, fileDecisions, hunkContextHashesByFile }) =>
-    useStore.setState({
-      hunkDecisions,
-      fileDecisions,
-      ...(hunkContextHashesByFile ? { hunkContextHashesByFile } : {}),
-    }),
-  applyPersistedState: (state, applyError) =>
-    useStore.setState({
-      hunkDecisions: state.hunkDecisions,
-      fileDecisions: state.fileDecisions,
-      hunkContextHashesByFile: state.hunkContextHashesByFile ?? {},
-      applyError,
-    }),
-  reportError: (applyError) => useStore.setState({ applyError }),
-  clearExternalChange: (filePath) => useStore.getState().clearReviewFileExternalChange(filePath),
-  invalidateResolvedFileContent: (filePath) =>
-    useStore.getState().invalidateResolvedFileContent(filePath),
-});
 
 interface ChangeReviewDialogProps {
   open: boolean;

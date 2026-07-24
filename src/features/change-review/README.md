@@ -23,9 +23,10 @@ main-process review IPC shell.
   decision-persistence coordination behind narrow ports.
 - `main/infrastructure` owns Node path, filesystem, sensitive-path, hardlink, and watcher-root
   validation details.
-- The legacy dialog remains the temporary composition shell for Zustand subscription,
-  controller/adapter composition, CodeMirror action injection, and the main diff/content
-  rendering while later slices move those responsibilities behind focused hooks and use cases.
+- The legacy app-shell composition module binds feature ports and policies to Zustand, the
+  renderer API, and remaining review utilities. The dialog keeps per-instance controller
+  composition, CodeMirror action injection, and the main diff/content rendering while later
+  slices move those responsibilities behind focused hooks and use cases.
 
 Production callers import through `@features/change-review/renderer` or
 `@features/change-review/main`.
