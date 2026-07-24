@@ -150,7 +150,7 @@
   "src/renderer/components/team/members/MemberLogsTab.tsx": 985,
   "src/renderer/components/team/messages/MessageComposer.tsx": 1344,
   "src/renderer/components/team/messages/MessagesPanel.tsx": 1722,
-  "src/renderer/components/team/review/ChangeReviewDialog.tsx": 2684,
+  "src/renderer/components/team/review/ChangeReviewDialog.tsx": 2321,
   "src/renderer/components/team/review/CodeMirrorDiffView.tsx": 975,
   "src/renderer/components/team/useTeamChangesSummaries.ts": 826,
   "src/renderer/components/ui/MentionableTextarea.tsx": 1433,

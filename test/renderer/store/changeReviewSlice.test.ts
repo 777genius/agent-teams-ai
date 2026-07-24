@@ -2440,6 +2440,25 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().applying).toBe(false);
   });
 
+  it('returns an operation-owned success result when Apply only approves pending changes', async () => {
+    const store = createSliceStore();
+    store.setState({
+      activeChangeSet: makeAgentChangeSet(),
+      hunkDecisions: { '/repo/file.ts:0': 'accepted' },
+      fileChunkCounts: { '/repo/file.ts': 1 },
+      changeSetEpoch: 1,
+    });
+
+    await expect(store.getState().applyReview('team-a')).resolves.toEqual({
+      applied: 0,
+      skipped: 0,
+      conflicts: 0,
+      errors: [],
+    });
+    expect(hoisted.applyDecisions).not.toHaveBeenCalled();
+    expect(store.getState().applyError).toBeNull();
+  });
+
   it('refuses to apply a stale change set owned by another team', async () => {
     const store = createSliceStore();
     store.setState({
