@@ -235,7 +235,7 @@ describe('runtime provider onboarding domain', () => {
     expect(selectRecommendedRuntimeProviderModel(plan, models)?.modelId).toBe('xai/grok-4.5');
   });
 
-  it('prefers the current Copilot Free compatible model over retired and premium routes', () => {
+  it('prefers the current lightweight Copilot model over retired and premium routes', () => {
     const plan = getRuntimeProviderOnboardingPlan('github-copilot');
     const models = [
       model('github-copilot/claude-sonnet-4.5'),

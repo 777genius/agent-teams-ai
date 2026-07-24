@@ -1055,7 +1055,7 @@ export default interface Resources {
         connectSuperGrok: 'Connect SuperGrok';
         connected: 'Connected';
         continue: 'Continue';
-        copilotDescription: 'Use GitHub Copilot through OpenCode. Agent Teams verifies a compatible model for your plan, including Copilot Free.';
+        copilotDescription: 'Use GitHub Copilot through OpenCode. Agent Teams verifies a compatible explicit model for your plan.';
         copyCommand: 'Copy command';
         cursorConnected: 'Cursor account connected';
         cursorDescription: 'Use your Cursor subscription through the managed OpenCode Cursor plugin.';

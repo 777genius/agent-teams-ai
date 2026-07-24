@@ -117,7 +117,7 @@
       "connectPlan": "连接套餐",
       "connectSuperGrok": "连接 SuperGrok",
       "connected": "已连接",
-      "copilotDescription": "通过 OpenCode 使用 GitHub Copilot。Agent Teams 会验证与您套餐兼容的模型，包括 Copilot Free。",
+      "copilotDescription": "通过 OpenCode 使用 GitHub Copilot。Agent Teams 会检查 OpenCode 能否选择您的套餐所允许的模型。",
       "copyCommand": "复制命令",
       "chooseRegion": "选择区域",
       "cursorConnected": "Cursor 账号已连接",

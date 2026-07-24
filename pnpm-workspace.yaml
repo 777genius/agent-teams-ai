@@ -8,6 +8,7 @@ minimumReleaseAgeExclude:
   - '@esbuild/*'
   - esbuild
   - fast-uri@3.1.4
+  - find-my-way@9.7.0
   - tmp@0.2.6
 strictPeerDependencies: true
 peerDependencyRules:
@@ -44,6 +45,7 @@ overrides:
   'file-type@21': '21.3.2'
   'flatted': '3.4.2'
   'follow-redirects': '1.16.0'
+  'find-my-way': '9.7.0'
   'handlebars': '4.7.9'
   'hono': '4.12.30'
   'ip-address': '10.1.1'
@@ -65,7 +67,7 @@ overrides:
   'path-to-regexp': '8.4.0'
   'picomatch@2': '2.3.2'
   'picomatch@4': '4.0.4'
-  'postcss': '8.5.10'
+  'postcss': '8.5.20'
   'qs': '6.15.2'
   'rollup': '4.59.0'
   'serialize-javascript': '7.0.5'

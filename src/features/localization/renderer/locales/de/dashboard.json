@@ -117,7 +117,7 @@
       "connectPlan": "Tarif verbinden",
       "connectSuperGrok": "Verbinden Sie SuperGrok",
       "connected": "Verbunden",
-      "copilotDescription": "Verwenden Sie GitHub Copilot über OpenCode. Agent Teams überprüft ein kompatibles Modell für Ihren Plan, einschließlich Copilot Free.",
+      "copilotDescription": "Verwenden Sie GitHub Copilot über OpenCode. Agent Teams prüft, ob OpenCode ein in Ihrem Tarif verfügbares Modell auswählen kann.",
       "copyCommand": "Befehl kopieren",
       "chooseRegion": "Wählen Sie eine Region",
       "cursorConnected": "Cursor-Konto verbunden",
