@@ -16,7 +16,10 @@ export interface TeamProvisioningRetainedProgressStateOptions {
 }
 
 export class TeamProvisioningRetainedProgressState {
-  private readonly retainedProvisioningProgressByRunId = new Map<string, TeamProvisioningProgress>();
+  private readonly retainedProvisioningProgressByRunId = new Map<
+    string,
+    TeamProvisioningProgress
+  >();
   private readonly retainedProvisioningProgressTimersByRunId = new Map<
     string,
     ReturnType<typeof setTimeout>
@@ -24,10 +27,10 @@ export class TeamProvisioningRetainedProgressState {
 
   constructor(private readonly options: TeamProvisioningRetainedProgressStateOptions) {}
 
-  getProvisioningStatus(
+  findProvisioningStatus<TRun extends RetainedProvisioningProgressRunLike>(
     runId: string,
-    runs: ReadonlyMap<string, RetainedProvisioningProgressRunLike>
-  ): TeamProvisioningProgress {
+    runs: ReadonlyMap<string, TRun>
+  ): TeamProvisioningProgress | undefined {
     const run = runs.get(runId);
     if (run) {
       return run.progress;
@@ -40,7 +43,7 @@ export class TeamProvisioningRetainedProgressState {
     if (retainedProgress) {
       return retainedProgress;
     }
-    throw new Error('Unknown runId');
+    return undefined;
   }
 
   getRetainedProvisioningProgressMap(): Map<string, TeamProvisioningProgress> {

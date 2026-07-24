@@ -12,22 +12,25 @@ UI for managing AI teammate teams inside Agent Teams (Electron), including Claud
 
 ## Documentation
 
-| File | Contents |
-| ---- | -------- |
-| [research-inbox.md](./research-inbox.md) | Inbox file format, race conditions, atomic writes, message delivery |
-| [research-tasks.md](./research-tasks.md) | Task file format, .lock, .highwatermark, concurrent access |
-| [research-messaging.md](./research-messaging.md) | Comparison of inbox, SDK, and CLI approaches, and why inbox was chosen |
-| [kanban-design.md](./kanban-design.md) | Kanban flow, columns, review mechanism, kanban-state.json |
-| [implementation.md](./implementation.md) | Technical plan: files, steps, verification |
-| [openclaw-agent-teams-integration.md](./openclaw-agent-teams-integration.md) | How to connect OpenClaw or another outside AI through Agent Teams MCP and REST control API |
-| [research-worktrees.md](./research-worktrees.md) | Git worktrees + teams, launching Claude processes from the UI (Phase 2) |
-| [task-queue-derived-agenda-plan.md](./task-queue-derived-agenda-plan.md) | Detailed rollout plan for queue/inventory split, derived actionOwner, and phased agenda/delta sync |
-| [debugging-agent-teams.md](./debugging-agent-teams.md) | Runtime debugging runbook, including `CLAUDE_TEAM_TEAMMATE_MODE=tmux` for pane-backed teammate debug |
-| [adaptive-task-graphs-research-note.md](./adaptive-task-graphs-research-note.md) | Research note on LATTE/AgentConductor: dynamic task graphs, frontier scheduling, selective verify, release stragglers |
+| File                                                                                   | Contents                                                                                                              |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| [research-inbox.md](./research-inbox.md)                                               | Inbox file format, race conditions, atomic writes, message delivery                                                   |
+| [research-tasks.md](./research-tasks.md)                                               | Task file format, .lock, .highwatermark, concurrent access                                                            |
+| [research-messaging.md](./research-messaging.md)                                       | Comparison of inbox, SDK, and CLI approaches, and why inbox was chosen                                                |
+| [kanban-design.md](./kanban-design.md)                                                 | Kanban flow, columns, review mechanism, kanban-state.json                                                             |
+| [implementation.md](./implementation.md)                                               | Technical plan: files, steps, verification                                                                            |
+| [openclaw-agent-teams-integration.md](./openclaw-agent-teams-integration.md)           | How to connect OpenClaw or another outside AI through Agent Teams MCP and REST control API                            |
+| [research-worktrees.md](./research-worktrees.md)                                       | Git worktrees + teams, launching Claude processes from the UI (Phase 2)                                               |
+| [task-queue-derived-agenda-plan.md](./task-queue-derived-agenda-plan.md)               | Detailed rollout plan for queue/inventory split, derived actionOwner, and phased agenda/delta sync                    |
+| [debugging-agent-teams.md](./debugging-agent-teams.md)                                 | Runtime debugging runbook, including `CLAUDE_TEAM_TEAMMATE_MODE=tmux` for pane-backed teammate debug                  |
+| [team-provisioning-target-architecture.md](./team-provisioning-target-architecture.md) | Normative target architecture and strangler migration rules for Team Provisioning                                     |
+| [adaptive-task-graphs-research-note.md](./adaptive-task-graphs-research-note.md)       | Research note on LATTE/AgentConductor: dynamic task graphs, frontier scheduling, selective verify, release stragglers |
 
 ## Key Decisions
 
 Warning: `docs/iterations/*` contains historical planning notes. These files are useful for context, but they are not the source of truth for current product behavior. The current review-flow contract is documented here and in [kanban-design.md](./kanban-design.md).
+
+Warning: Team Provisioning implementation plans and research notes are point-in-time context and do not override [team-provisioning-target-architecture.md](./team-provisioning-target-architecture.md). Older instructions to add orchestration directly to `TeamProvisioningService` must be implemented as thin-facade delegation to composed use cases.
 
 Warning: `agent-attachments-*.md` files (architecture plan + phase 1-5 plans) are historical design documents for feature attachments. The actual implementation in `src/features/agent-attachments/` may differ from that architecture. For current behavior, see the code in `src/features/agent-attachments/core/domain/` and the tests.
 

@@ -7,9 +7,9 @@ import { Plus } from 'lucide-react';
 import {
   buildOrganizationGraphData,
   getOrganizationNodeIdFromGraphRef,
-} from '../adapters/organizationGraphData';
-import { buildOrganizationGraphFocusState } from '../adapters/organizationGraphFocus';
-import { getOrganizationIdForNodeId } from '../adapters/organizationMapViewModel';
+} from '../adapters/organizationGraphAdapter';
+import { buildOrganizationGraphFocusState } from '../view-models/organizationGraphFocus';
+import { getOrganizationIdForNodeId } from '../view-models/organizationMapViewModel';
 
 import { OrgGraphFocusHud } from './OrgGraphFocusHud';
 import { OrgGraphToolbar } from './OrgGraphToolbar';
@@ -17,8 +17,8 @@ import { OrgMapLegendHud } from './OrgMapLegendHud';
 import { OrgOverviewHud } from './OrgOverviewHud';
 
 import type { OrganizationPlacementSelection } from '../../contracts';
-import type { OrganizationGraphFocusMode } from '../adapters/organizationGraphFocus';
-import type { OrganizationMapViewModel } from '../adapters/organizationMapViewModel';
+import type { OrganizationGraphFocusMode } from '../view-models/organizationGraphFocus';
+import type { OrganizationMapViewModel } from '../view-models/organizationMapViewModel';
 import type {
   GraphControlRenderProps,
   GraphDomainRef,

@@ -7,7 +7,7 @@ import {
   type TokenUsageDashboardViewModel,
   type TokenUsageDashboardViewModelOptions,
   toTokenUsageDashboardViewModel,
-} from '../adapters/tokenUsageViewModel';
+} from '../view-models/tokenUsageViewModel';
 
 import type { TokenUsageAnalyticsSnapshotDto, TokenUsageSnapshotRequest } from '../../contracts';
 

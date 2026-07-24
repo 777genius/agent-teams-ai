@@ -19,7 +19,7 @@ class TestCompatibilityFacade extends TeamProvisioningCompatibilityFacade {
 }
 
 describe('TeamProvisioningCompatibilityFacade', () => {
-  it('delegates retained provisioning status through the compatibility facade', async () => {
+  it('delegates provisioning status through the composed feature', async () => {
     const runs = new Map();
     const progress = {
       runId: 'run-retained-progress',
@@ -31,16 +31,18 @@ describe('TeamProvisioningCompatibilityFacade', () => {
       error: 'bootstrap failed',
       warnings: ['retry is safe'],
     };
-    const getProvisioningStatus = vi.fn(() => progress);
+    const getProvisioningStatus = vi.fn(() => Promise.resolve(progress));
     const facade = new TestCompatibilityFacade({
-      retainedProvisioningProgressState: {
+      provisioningStatus: {
         getProvisioningStatus,
+      },
+      retainedProvisioningProgressState: {
         retainProvisioningProgress: vi.fn(),
       },
       runs,
     } as unknown as TeamProvisioningCompatibilityDelegation<TeamProvisioningCompatibilityDelegationRun>);
 
     await expect(facade.getProvisioningStatus('run-retained-progress')).resolves.toBe(progress);
-    expect(getProvisioningStatus).toHaveBeenCalledWith('run-retained-progress', runs);
+    expect(getProvisioningStatus).toHaveBeenCalledWith('run-retained-progress');
   });
 });

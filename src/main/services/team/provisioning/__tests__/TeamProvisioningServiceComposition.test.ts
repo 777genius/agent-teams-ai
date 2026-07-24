@@ -68,6 +68,22 @@ describe('TeamProvisioningServiceComposition', () => {
     }
   });
 
+  it('routes provisioning status through the composed feature without starting a runtime', async () => {
+    const service = new TeamProvisioningService();
+    const snapshot = {
+      runId: 'status-run',
+      teamName: 'status-team',
+      state: 'spawning' as const,
+      message: 'Starting',
+      startedAt: '2026-07-22T10:00:00.000Z',
+      updatedAt: '2026-07-22T10:00:01.000Z',
+    };
+    const runs = Reflect.get(service, 'runs') as Map<string, { progress: typeof snapshot }>;
+    runs.set(snapshot.runId, { progress: snapshot });
+
+    await expect(service.getProvisioningStatus(snapshot.runId)).resolves.toBe(snapshot);
+  });
+
   it('keeps composition wiring behind narrow host adapters without a whole-service unknown cast', () => {
     const compositionSource = readFileSync(COMPOSITION_SOURCE_PATH, 'utf8');
 

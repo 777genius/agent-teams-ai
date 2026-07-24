@@ -60,6 +60,10 @@ export interface TeamProvisioningCreateLaunchOrchestrationServiceHost {
       previousLaunchSnapshot: PersistedTeamLaunchSnapshot | null
     ): void;
   };
+  initializeToolApprovalSettingsForLaunch(
+    teamName: string,
+    skipPermissions: boolean | undefined
+  ): void;
   stopAllTeamsGeneration: number;
   provisioningRunByTeam: Map<string, string>;
   shouldRouteOpenCodeToRuntimeAdapter(request: {
@@ -122,6 +126,7 @@ export async function createTeamInnerWithService(
     request.teamName
   );
   if (existingProvisioningRunId) {
+    service.initializeToolApprovalSettingsForLaunch(request.teamName, request.skipPermissions);
     return {
       runId: existingProvisioningRunId,
       launchStatus: 'already_launching',
@@ -139,6 +144,7 @@ export async function createTeamInnerWithService(
     previousLaunchSnapshot
   );
   assertAppDeterministicBootstrapEnabled();
+  service.initializeToolApprovalSettingsForLaunch(request.teamName, request.skipPermissions);
   if (service.shouldRouteOpenCodeToRuntimeAdapter(request)) {
     return service.createOpenCodeTeamThroughRuntimeAdapter(request, onProgress);
   }
@@ -201,6 +207,7 @@ export async function launchTeamInnerWithService(
     request.teamName
   );
   if (existingProvisioningRunId) {
+    service.initializeToolApprovalSettingsForLaunch(request.teamName, request.skipPermissions);
     return {
       runId: existingProvisioningRunId,
       launchStatus: 'already_launching',
@@ -209,6 +216,7 @@ export async function launchTeamInnerWithService(
   }
   const stopAllGenerationAtStart = service.stopAllTeamsGeneration;
   assertAppDeterministicBootstrapEnabled();
+  service.initializeToolApprovalSettingsForLaunch(request.teamName, request.skipPermissions);
   if (service.shouldRouteOpenCodeToRuntimeAdapter(request)) {
     return service.launchOpenCodeTeamThroughRuntimeAdapter(request, onProgress);
   }

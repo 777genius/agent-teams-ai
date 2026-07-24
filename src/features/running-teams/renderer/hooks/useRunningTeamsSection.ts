@@ -12,13 +12,13 @@ import { resolveTeamStatus } from '@renderer/utils/teamListStatus';
 import { useShallow } from 'zustand/react/shallow';
 
 import { buildRunningTeamsDashboard } from '../../core/domain/policies/buildRunningTeamsDashboard';
-import { adaptRunningTeamsSection } from '../adapters/RunningTeamsSectionAdapter';
+import { buildRunningTeamsSectionViewModel } from '../view-models/runningTeamsSectionViewModel';
 
 import type {
   RunningTeamCandidate,
   RunningTeamsCandidateStatus,
 } from '../../core/domain/policies/buildRunningTeamsDashboard';
-import type { RunningTeamRowModel } from '../adapters/RunningTeamsSectionAdapter';
+import type { RunningTeamRowModel } from '../view-models/runningTeamsSectionViewModel';
 import type { LeadActivityState, TeamProvisioningProgress, TeamSummary } from '@shared/types';
 
 interface RunningTeamsSectionState {
@@ -174,7 +174,7 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
       ),
     });
 
-    return adaptRunningTeamsSection(runningTeams, {
+    return buildRunningTeamsSectionViewModel(runningTeams, {
       status: {
         active: t('runningTeams.status.active'),
         provisioning: t('runningTeams.status.provisioning'),

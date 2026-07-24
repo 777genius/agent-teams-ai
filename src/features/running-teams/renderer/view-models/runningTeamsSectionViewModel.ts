@@ -53,7 +53,7 @@ function getProjectLabel(projectPath: string | undefined, text: RunningTeamsSect
   return getBaseName(projectPath) || projectPath;
 }
 
-export function adaptRunningTeamsSection(
+export function buildRunningTeamsSectionViewModel(
   teams: RunningTeamDashboardEntry[],
   text: RunningTeamsSectionText = DEFAULT_TEXT
 ): RunningTeamRowModel[] {
