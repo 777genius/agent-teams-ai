@@ -18,6 +18,8 @@ import {
   X as XIcon,
 } from 'lucide-react';
 
+import { resolveChangeReviewFileHunkCount } from '../../core/domain/reviewHunkCountPolicy';
+
 import type { TreeNode } from '@renderer/utils/fileTreeBuilder';
 import type { HunkDecision } from '@shared/types';
 import type { FileChangeSummary } from '@shared/types/review';
@@ -46,14 +48,6 @@ interface ReviewFileTreeProps {
 
 type FileStatus = 'pending' | 'accepted' | 'rejected' | 'mixed';
 
-function getFileHunkCount(
-  filePath: string,
-  snippetsLength: number,
-  fileChunkCounts: Readonly<Record<string, number>>
-): number {
-  return fileChunkCounts[filePath] ?? snippetsLength;
-}
-
 function getFileStatus(
   file: FileChangeSummary,
   hunkDecisions: Record<string, HunkDecision>,
@@ -66,7 +60,11 @@ function getFileStatus(
   if (fileDec === 'accepted') return 'accepted';
   if (fileDec === 'rejected') return 'rejected';
 
-  const count = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
+  const count = resolveChangeReviewFileHunkCount(
+    file.filePath,
+    file.snippets.length,
+    fileChunkCounts
+  );
   if (count === 0) return 'pending';
 
   const decisions: HunkDecision[] = [];
@@ -323,7 +321,11 @@ export const ReviewFileTree = ({
       if (fileDecisions[reviewKey] === 'rejected' || fileDecisions[f.filePath] === 'rejected') {
         return true;
       }
-      const count = getFileHunkCount(f.filePath, f.snippets.length, fileChunkCounts);
+      const count = resolveChangeReviewFileHunkCount(
+        f.filePath,
+        f.snippets.length,
+        fileChunkCounts
+      );
       for (let i = 0; i < count; i++) {
         if (
           hunkDecisions[buildHunkDecisionKey(reviewKey, i)] === 'rejected' ||

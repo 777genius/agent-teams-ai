@@ -1,3 +1,4 @@
+import { resolveChangeReviewFileHunkCount as getFileHunkCount } from '@features/change-review';
 import {
   classifyAnalyticsError,
   elapsedMsSince,
@@ -498,14 +499,7 @@ function mapCurrentToOriginalIndex(
   return currentIdx;
 }
 
-/** Get the hunk count for a file: prefer actual CM chunk count, fallback to snippet count */
-export function getFileHunkCount(
-  filePath: string,
-  snippetsLength: number,
-  fileChunkCounts: Record<string, number>
-): number {
-  return fileChunkCounts[filePath] ?? snippetsLength;
-}
+export { getFileHunkCount };
 
 function getMaxDecisionIndexForFile(
   reviewKey: string,
