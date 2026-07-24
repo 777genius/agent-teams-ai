@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   discoverDependencyLinksNative,
   discoverDependencyLinksWithNativeFind,
+  discoverNativeAddonFilesWithNativeFind,
   NATIVE_DEPENDENCY_TRAVERSAL_POLICY,
 } from "../dependency-native-traversal";
 import { inspectNodeDependencyEnvironment } from "../dependency-environment-safety";
@@ -40,9 +41,7 @@ describe("native dependency traversal policy", () => {
     });
     expect(Object.isFrozen(NATIVE_DEPENDENCY_TRAVERSAL_POLICY)).toBe(true);
     expect(
-      Object.isFrozen(
-        NATIVE_DEPENDENCY_TRAVERSAL_POLICY.executableCandidates,
-      ),
+      Object.isFrozen(NATIVE_DEPENDENCY_TRAVERSAL_POLICY.executableCandidates),
     ).toBe(true);
   });
 });
@@ -100,6 +99,39 @@ process.stdout.write(Buffer.from([120, 0]));
     ).resolves.toEqual([
       join(dependencyRoot, "safe path"),
       join(dependencyRoot, "line\nbreak"),
+    ]);
+  });
+
+  it("discovers native addon files with exact bounded GNU find arguments", async () => {
+    const root = await createRoot("subscription-runtime-native-addon-argv-");
+    const dependencyRoot = join(root, "node modules");
+    await mkdir(dependencyRoot, { recursive: true });
+    const executablePath = await createExecutable(
+      root,
+      `
+const root = process.argv[3];
+const slash = String.fromCharCode(92);
+const expected = [
+  "-P", root, "-mindepth", "1", "(", "-type", "f", "-name", "*.node",
+  "-printf", "n%p" + slash + "0", ")", "-o",
+  "-printf", "x" + slash + "0",
+];
+if (JSON.stringify(process.argv.slice(2)) !== JSON.stringify(expected)) {
+  process.exit(91);
+}
+process.stdout.write(Buffer.from("n" + root + "/build/Release/addon.node"));
+process.stdout.write(Buffer.from([0, 120, 0]));
+`,
+    );
+
+    await expect(
+      discoverNativeAddonFilesWithNativeFind({
+        dependencyRoot,
+        executablePath,
+        limits: DEFAULT_LIMITS,
+      }),
+    ).resolves.toEqual([
+      join(dependencyRoot, "build", "Release", "addon.node"),
     ]);
   });
 
@@ -230,11 +262,7 @@ describe.runIf(platform() === "linux")(
       const root = await createRoot("subscription-runtime-native-linux-");
       const workspacePath = join(root, "workspace path\nline");
       const dependencyRoot = join(workspacePath, "node_modules");
-      const safeTarget = join(
-        dependencyRoot,
-        ".pnpm",
-        "safe target\nline",
-      );
+      const safeTarget = join(dependencyRoot, ".pnpm", "safe target\nline");
       const outsidePath = join(root, "outside");
       await Promise.all([
         mkdir(safeTarget, { recursive: true }),
@@ -277,10 +305,7 @@ async function createRoot(prefix: string): Promise<string> {
   return root;
 }
 
-async function createExecutable(
-  root: string,
-  body: string,
-): Promise<string> {
+async function createExecutable(root: string, body: string): Promise<string> {
   executableSequence += 1;
   const executablePath = join(root, `fake-find-${executableSequence}.mjs`);
   await writeFile(executablePath, `#!${process.execPath}\n${body}\n`);

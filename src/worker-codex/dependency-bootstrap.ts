@@ -17,9 +17,11 @@ import {
   inspectNodeDependencyEnvironment,
   sanitizeNodeDependencyEnvironment,
 } from "./dependency-environment-safety";
+import { withDependencyBootstrapWorkspaceTransaction } from "./dependency-bootstrap-workspace-transaction";
 import {
-  withDependencyBootstrapWorkspaceTransaction,
-} from "./dependency-bootstrap-workspace-transaction";
+  inspectNativeAddonCompatibility,
+  resolveNativeAddonHeaderRoot,
+} from "./native-addon-compatibility";
 
 export {
   defaultDependencyCacheRoot,
@@ -72,6 +74,9 @@ export type DependencyPreflightResult = {
   readonly cacheLockPath?: string;
   readonly cacheLockWaitMs?: number;
   readonly staleCacheLockRecovered?: boolean;
+  readonly nativeAddonAbi?: string;
+  readonly nativeAddonCount?: number;
+  readonly nativeAddonRepairAttempted?: boolean;
   readonly unsafeDependencyPaths?: readonly string[];
   readonly sanitizedDependencyPaths?: readonly string[];
   readonly status:
@@ -95,8 +100,13 @@ export type DependencyBootstrapInput = {
   readonly runCommand?: (
     command: string,
     args: readonly string[],
-    options: { readonly cwd: string; readonly timeoutMs: number },
+    options: {
+      readonly cwd: string;
+      readonly timeoutMs: number;
+      readonly env?: Readonly<Record<string, string>>;
+    },
   ) => Promise<void>;
+  readonly nodeExecutablePath?: string;
 };
 
 export async function runDependencyBootstrap(
@@ -145,6 +155,9 @@ async function runDependencyBootstrapUnlocked(
         : {}),
       ...(cacheRoot ? { cacheRoot } : {}),
       ...(input.runCommand ? { runCommand: input.runCommand } : {}),
+      ...(input.nodeExecutablePath
+        ? { nodeExecutablePath: input.nodeExecutablePath }
+        : {}),
     });
     const installed = await inspectDependencyBootstrap(
       input.workspacePath,
@@ -171,6 +184,22 @@ async function runDependencyBootstrapUnlocked(
           : {}),
         ...(install.staleLockRecovered
           ? { staleCacheLockRecovered: true }
+          : {}),
+        ...(install.nativeAddonAbi
+          ? { nativeAddonAbi: install.nativeAddonAbi }
+          : {}),
+        ...(install.nativeAddonCount !== undefined
+          ? { nativeAddonCount: install.nativeAddonCount }
+          : {}),
+        ...(install.nativeAddonRepairAttempted
+          ? {
+              nativeAddonRepairAttempted: true,
+              warnings: [
+                ...installed.warnings,
+                ...placementWarnings,
+                "dependency_native_addon_cache_repaired",
+              ],
+            }
           : {}),
       },
       cacheRoot,
@@ -264,8 +293,12 @@ async function runPackageManagerInstall(input: {
   readonly fingerprint?: string;
   readonly cacheRoot?: string;
   readonly runCommand?: DependencyBootstrapInput["runCommand"];
+  readonly nodeExecutablePath?: string;
 }): Promise<{
   readonly sanitizedDependencyPaths: readonly string[];
+  readonly nativeAddonAbi?: string;
+  readonly nativeAddonCount?: number;
+  readonly nativeAddonRepairAttempted?: boolean;
   readonly lockPath?: string;
   readonly waitMs?: number;
   readonly staleLockRecovered?: boolean;
@@ -278,7 +311,12 @@ async function runPackageManagerInstall(input: {
   if (input.cacheRoot) {
     await mkdir(input.cacheRoot, { recursive: true, mode: 0o700 });
   }
-  const install = async (): Promise<readonly string[]> =>
+  const install = async (): Promise<{
+    readonly sanitizedDependencyPaths: readonly string[];
+    readonly nativeAddonAbi?: string;
+    readonly nativeAddonCount?: number;
+    readonly nativeAddonRepairAttempted?: boolean;
+  }> =>
     withDependencyBootstrapWorkspaceTransaction({
       workspacePath: input.workspacePath,
       action: async () => {
@@ -288,17 +326,66 @@ async function runPackageManagerInstall(input: {
             : await sanitizeNodeDependencyEnvironment({
                 workspacePath: input.workspacePath,
               });
+        const headerRoot =
+          input.packageManager.name === "uv"
+            ? undefined
+            : await resolveNativeAddonHeaderRoot(input.nodeExecutablePath);
         for (const command of commands) {
           await runCommand(command[0] ?? "", command.slice(1), {
             cwd: input.workspacePath,
             timeoutMs: 120_000,
+            ...(headerRoot &&
+            packageManagerCommandMayBuildNativeAddons(
+              input.packageManager,
+              command,
+            )
+              ? { env: { npm_config_nodedir: headerRoot } }
+              : {}),
           });
         }
-        return sanitized.removedPaths;
+        if (input.packageManager.name === "uv") {
+          return { sanitizedDependencyPaths: sanitized.removedPaths };
+        }
+        const compatibility = await inspectNativeAddonCompatibility(
+          input.workspacePath,
+        );
+        if (compatibility.incompatibleAddonCount === 0) {
+          return {
+            sanitizedDependencyPaths: sanitized.removedPaths,
+            nativeAddonAbi: compatibility.expectedAbi,
+            nativeAddonCount: compatibility.inspectedAddonCount,
+          };
+        }
+        const repairCommand = nativeAddonRepairCommand(
+          input.packageManager,
+          input.cacheRoot,
+        );
+        if (!repairCommand) {
+          throw new Error("dependency_native_addon_repair_unsupported");
+        }
+        await runCommand(repairCommand[0] ?? "", repairCommand.slice(1), {
+          cwd: input.workspacePath,
+          timeoutMs: 120_000,
+          ...(headerRoot ? { env: { npm_config_nodedir: headerRoot } } : {}),
+        });
+        const repaired = await inspectNativeAddonCompatibility(
+          input.workspacePath,
+        );
+        if (repaired.incompatibleAddonCount > 0) {
+          throw new Error(
+            `dependency_native_addon_abi_mismatch:${repaired.expectedAbi}`,
+          );
+        }
+        return {
+          sanitizedDependencyPaths: sanitized.removedPaths,
+          nativeAddonAbi: repaired.expectedAbi,
+          nativeAddonCount: repaired.inspectedAddonCount,
+          nativeAddonRepairAttempted: true,
+        };
       },
     });
   if (!input.cacheRoot || !input.fingerprint) {
-    return { sanitizedDependencyPaths: await install() };
+    return await install();
   }
   const locked = await withDependencyBootstrapLock(
     {
@@ -308,11 +395,47 @@ async function runPackageManagerInstall(input: {
     install,
   );
   return {
-    sanitizedDependencyPaths: locked.value,
+    ...locked.value,
     lockPath: locked.lockPath,
     waitMs: locked.waitMs,
     staleLockRecovered: locked.staleLockRecovered,
   };
+}
+
+function packageManagerCommandMayBuildNativeAddons(
+  packageManager: DependencyPackageManager,
+  command: readonly string[],
+): boolean {
+  if (packageManager.name === "uv") return false;
+  return packageManager.name !== "pnpm" || command[1] !== "fetch";
+}
+
+function nativeAddonRepairCommand(
+  packageManager: DependencyPackageManager,
+  cacheRoot: string | undefined,
+): readonly string[] | undefined {
+  switch (packageManager.name) {
+    case "pnpm":
+      return [
+        "pnpm",
+        "rebuild",
+        "--recursive",
+        "--config.side-effects-cache=false",
+        ...(cacheRoot ? ["--store-dir", nodeAbiPnpmStorePath(cacheRoot)] : []),
+      ];
+    case "npm":
+      return [
+        "npm",
+        "rebuild",
+        ...(cacheRoot ? ["--cache", join(cacheRoot, "npm-cache")] : []),
+      ];
+    case "yarn":
+      return ["yarn", "install", "--force", "--frozen-lockfile"];
+    case "bun":
+      return ["bun", "install", "--force", "--frozen-lockfile"];
+    case "uv":
+      return undefined;
+  }
 }
 
 function attachInstallCommand(
@@ -339,7 +462,7 @@ function packageManagerInstallCommands(
   switch (packageManager.name) {
     case "pnpm": {
       const storeArgs = cacheRoot
-        ? ["--store-dir", join(cacheRoot, "pnpm-store")]
+        ? ["--store-dir", nodeAbiPnpmStorePath(cacheRoot)]
         : [];
       return [
         ["pnpm", "fetch", "--frozen-lockfile", ...storeArgs],
@@ -387,10 +510,20 @@ function packageManagerInstallCommands(
   }
 }
 
+function nodeAbiPnpmStorePath(cacheRoot: string): string {
+  const abi = process.versions.modules;
+  if (!abi) throw new Error("dependency_native_addon_abi_unavailable");
+  return join(cacheRoot, "pnpm-store", `${platform()}-${arch()}-abi-${abi}`);
+}
+
 async function defaultRunCommand(
   command: string,
   args: readonly string[],
-  options: { readonly cwd: string; readonly timeoutMs: number },
+  options: {
+    readonly cwd: string;
+    readonly timeoutMs: number;
+    readonly env?: Readonly<Record<string, string>>;
+  },
 ): Promise<void> {
   await execFileAsync(command, [...args], {
     cwd: options.cwd,
@@ -398,6 +531,7 @@ async function defaultRunCommand(
     env: {
       ...process.env,
       CI: process.env.CI ?? "1",
+      ...options.env,
     },
   });
 }

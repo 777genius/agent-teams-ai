@@ -6,6 +6,7 @@ import {
   realpath,
   rm,
   symlink,
+  truncate,
   writeFile,
 } from "node:fs/promises";
 import { execFile } from "node:child_process";
@@ -19,6 +20,7 @@ import {
   inspectDependencyBootstrap,
   runDependencyBootstrap,
 } from "../dependency-bootstrap";
+import { inspectNativeAddonCompatibility } from "../native-addon-compatibility";
 import { assertProjectControlDependencyBootstrapReady } from "../codex-goal-mcp-project-scope";
 
 const execFileAsync = promisify(execFile);
@@ -67,6 +69,8 @@ describe("dependency bootstrap", () => {
     const jobRoot = join(root, "job");
     const workspace = join(root, "workspace");
     const cacheRoot = join(root, "cache");
+    const nodeRoot = join(root, "node-runtime");
+    const nodeExecutablePath = join(nodeRoot, "bin", "node");
     try {
       await mkdir(workspace, { recursive: true });
       await writeFile(
@@ -130,8 +134,266 @@ describe("dependency bootstrap", () => {
     }
   });
 
+  it("repairs a cached native addon compiled for the wrong Node ABI", async () => {
+    const root = await mkTestWorkspace(
+      "subscription-runtime-deps-native-abi-repair-",
+    );
+    const cacheRoot = join(root, "cache");
+    const nodeRoot = join(root, "node-runtime");
+    const nodeExecutablePath = join(nodeRoot, "bin", "node");
+    const addonPath = join(
+      root,
+      "node_modules",
+      ".pnpm",
+      "native-addon@1.0.0",
+      "node_modules",
+      "native-addon",
+      "build",
+      "Release",
+      "native-addon.node",
+    );
+    const commands: string[][] = [];
+    let installEnvironment: Readonly<Record<string, string>> | undefined;
+    let repairEnvironment: Readonly<Record<string, string>> | undefined;
+    try {
+      await Promise.all([
+        mkdir(join(nodeRoot, "bin"), { recursive: true }),
+        mkdir(join(nodeRoot, "include", "node"), { recursive: true }),
+      ]);
+      await Promise.all([
+        writeFile(
+          join(root, "package.json"),
+          JSON.stringify({ packageManager: "pnpm@10.33.4" }),
+        ),
+        writeFile(join(root, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n"),
+        writeFile(join(nodeRoot, "include", "node", "node.h"), "fixture"),
+      ]);
+
+      const result = await runDependencyBootstrap({
+        workspacePath: root,
+        cacheRoot,
+        nodeExecutablePath,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async (command, args, options) => {
+          commands.push([command, ...args]);
+          if (command === "pnpm" && args[0] === "install") {
+            installEnvironment = options.env;
+            await mkdir(join(root, "node_modules", ".bin"), {
+              recursive: true,
+            });
+            await mkdir(join(addonPath, ".."), { recursive: true });
+            await writeFile(addonPath, "node_register_module_v999");
+          }
+          if (command === "pnpm" && args[0] === "rebuild") {
+            repairEnvironment = options.env;
+            await writeFile(
+              addonPath,
+              `node_register_module_v${process.versions.modules}`,
+            );
+          }
+        },
+      });
+
+      expect(result).toMatchObject({
+        status: "installed",
+        nativeAddonAbi: process.versions.modules,
+        nativeAddonCount: 1,
+        nativeAddonRepairAttempted: true,
+        warnings: expect.arrayContaining([
+          "dependency_native_addon_cache_repaired",
+        ]),
+      });
+      expect(
+        commands.filter(
+          ([command, subcommand]) =>
+            command === "pnpm" && subcommand === "rebuild",
+        ),
+      ).toHaveLength(1);
+      expect(commands.at(-1)).toEqual([
+        "pnpm",
+        "rebuild",
+        "--recursive",
+        "--config.side-effects-cache=false",
+        "--store-dir",
+        join(
+          cacheRoot,
+          "pnpm-store",
+          `${process.platform}-${process.arch}-abi-${process.versions.modules}`,
+        ),
+      ]);
+      expect(repairEnvironment).toEqual({
+        npm_config_nodedir: nodeRoot,
+      });
+      expect(installEnvironment).toEqual({
+        npm_config_nodedir: nodeRoot,
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not rebuild a native addon compatible with the current Node ABI", async () => {
+    const root = await mkTestWorkspace(
+      "subscription-runtime-deps-native-abi-hit-",
+    );
+    const addonPath = join(
+      root,
+      "node_modules",
+      ".pnpm",
+      "native-addon@1.0.0",
+      "node_modules",
+      "native-addon",
+      "build",
+      "Release",
+      "native-addon.node",
+    );
+    const nodeRoot = join(root, "node-runtime");
+    const nodeExecutablePath = join(nodeRoot, "bin", "node");
+    const commands: string[][] = [];
+    const installEnvironments: (
+      Readonly<Record<string, string>> | undefined
+    )[] = [];
+    try {
+      await Promise.all([
+        mkdir(join(nodeRoot, "bin"), { recursive: true }),
+        mkdir(join(nodeRoot, "include", "node"), { recursive: true }),
+      ]);
+      await Promise.all([
+        writeFile(
+          join(root, "package.json"),
+          JSON.stringify({ packageManager: "pnpm@10.33.4" }),
+        ),
+        writeFile(join(root, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n"),
+        writeFile(join(nodeRoot, "include", "node", "node.h"), "fixture"),
+      ]);
+
+      const result = await runDependencyBootstrap({
+        workspacePath: root,
+        cacheRoot: join(root, "cache"),
+        nodeExecutablePath,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async (command, args, options) => {
+          commands.push([command, ...args]);
+          installEnvironments.push(options.env);
+          if (command === "pnpm" && args[0] === "install") {
+            await mkdir(join(root, "node_modules", ".bin"), {
+              recursive: true,
+            });
+            await mkdir(join(addonPath, ".."), { recursive: true });
+            await writeFile(
+              addonPath,
+              `node_register_module_v${process.versions.modules}`,
+            );
+          }
+        },
+      });
+
+      expect(result).toMatchObject({
+        status: "installed",
+        nativeAddonAbi: process.versions.modules,
+        nativeAddonCount: 1,
+      });
+      expect(result.nativeAddonRepairAttempted).toBeUndefined();
+      expect(
+        commands.some(
+          ([command, subcommand]) =>
+            command === "pnpm" && subcommand === "rebuild",
+        ),
+      ).toBe(false);
+      expect(installEnvironments).toEqual([
+        undefined,
+        { npm_config_nodedir: nodeRoot },
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed before reading an excessive aggregate of native addon bytes", async () => {
+    const root = await mkTestWorkspace(
+      "subscription-runtime-deps-native-abi-aggregate-",
+    );
+    try {
+      const addonDirectory = join(
+        root,
+        "node_modules",
+        ".pnpm",
+        "native-addon@1.0.0",
+        "node_modules",
+        "native-addon",
+        "build",
+        "Release",
+      );
+      await mkdir(addonDirectory, { recursive: true });
+      for (const name of ["one.node", "two.node", "three.node"]) {
+        const addonPath = join(addonDirectory, name);
+        await writeFile(addonPath, "");
+        await truncate(addonPath, 64 * 1024 * 1024);
+      }
+
+      await expect(inspectNativeAddonCompatibility(root)).rejects.toThrow(
+        "dependency_native_addon_aggregate_size_limit_exceeded",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed when rebuilding does not repair the native addon ABI", async () => {
+    const root = await mkTestWorkspace(
+      "subscription-runtime-deps-native-abi-fail-closed-",
+    );
+    const addonPath = join(
+      root,
+      "node_modules",
+      ".pnpm",
+      "native-addon@1.0.0",
+      "node_modules",
+      "native-addon",
+      "build",
+      "Release",
+      "native-addon.node",
+    );
+    try {
+      await Promise.all([
+        writeFile(
+          join(root, "package.json"),
+          JSON.stringify({ packageManager: "pnpm@10.33.4" }),
+        ),
+        writeFile(join(root, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n"),
+      ]);
+
+      const result = await runDependencyBootstrap({
+        workspacePath: root,
+        cacheRoot: join(root, "cache"),
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async (command, args) => {
+          if (command === "pnpm" && args[0] === "install") {
+            await mkdir(join(root, "node_modules", ".bin"), {
+              recursive: true,
+            });
+            await mkdir(join(addonPath, ".."), { recursive: true });
+            await writeFile(addonPath, "node_register_module_v999");
+          }
+        },
+      });
+
+      expect(result.status).toBe("install_failed");
+      expect(result.warnings).toContain(
+        `dependency_install_failed:dependency_native_addon_abi_mismatch:${process.versions.modules}`,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("binds install execution to the canonical workspace when an alias is retargeted", async () => {
-    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-deps-retarget-"));
+    const root = await mkdtemp(
+      join(tmpdir(), "subscription-runtime-deps-retarget-"),
+    );
     const workspace = join(root, "inside");
     const alias = join(root, "workspace-alias");
     const outside = join(root, "outside");
@@ -166,8 +428,12 @@ describe("dependency bootstrap", () => {
       });
 
       expect(result.status).toBe("installed");
-      await expect(access(join(outside, "node_modules"))).resolves.toBeUndefined();
-      await expect(access(join(workspace, "node_modules"))).resolves.toBeUndefined();
+      await expect(
+        access(join(outside, "node_modules")),
+      ).resolves.toBeUndefined();
+      await expect(
+        access(join(workspace, "node_modules")),
+      ).resolves.toBeUndefined();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -320,18 +586,28 @@ describe("dependency bootstrap", () => {
           dirty: true,
         }),
       );
-      const [statusBefore, stagedBefore, packageJsonBefore] = await Promise.all([
-        git(root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]),
-        git(root, ["diff", "--cached", "--binary", "HEAD", "--"]),
-        readFile(packageJsonPath),
-      ]);
+      const [statusBefore, stagedBefore, packageJsonBefore] = await Promise.all(
+        [
+          git(root, [
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=all",
+          ]),
+          git(root, ["diff", "--cached", "--binary", "HEAD", "--"]),
+          readFile(packageJsonPath),
+        ],
+      );
 
       const result = await runDependencyBootstrap({
         workspacePath: root,
         mode: "install",
         confirmInstall: true,
         runCommand: async () => {
-          await writeFile(workspaceManifestPath, "packages:\n  - generated/*\n");
+          await writeFile(
+            workspaceManifestPath,
+            "packages:\n  - generated/*\n",
+          );
           throw new Error("simulated_install_failure");
         },
       });
@@ -343,7 +619,9 @@ describe("dependency bootstrap", () => {
       await expect(readFile(workspaceManifestPath, "utf8")).resolves.toBe(
         "packages:\n  - packages/*\n",
       );
-      await expect(readFile(packageJsonPath)).resolves.toEqual(packageJsonBefore);
+      await expect(readFile(packageJsonPath)).resolves.toEqual(
+        packageJsonBefore,
+      );
       await expect(
         git(root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]),
       ).resolves.toEqual(statusBefore);

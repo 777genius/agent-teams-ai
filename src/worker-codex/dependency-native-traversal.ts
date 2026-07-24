@@ -38,6 +38,69 @@ export async function discoverDependencyLinksNative(input: {
   });
 }
 
+export async function discoverNativeAddonFilesNative(input: {
+  readonly dependencyRoot: string;
+  readonly limits: NativeDependencyTraversalLimits;
+}): Promise<readonly string[] | null> {
+  const executablePath = await resolveNativeFindExecutable();
+  if (!executablePath) return null;
+  return discoverNativeAddonFilesWithNativeFind({
+    ...input,
+    executablePath,
+  });
+}
+
+export async function discoverNativeAddonFilesWithNativeFind(input: {
+  readonly dependencyRoot: string;
+  readonly limits: NativeDependencyTraversalLimits;
+  readonly executablePath: string;
+  readonly runtimePolicy?: NativeDependencyTraversalRuntimePolicy;
+}): Promise<readonly string[] | null> {
+  const dependencyRoot = resolve(input.dependencyRoot);
+  const addonFiles: string[] = [];
+  const result = await runNativeFind({
+    executablePath: input.executablePath,
+    rootPath: dependencyRoot,
+    args: [
+      "-P",
+      dependencyRoot,
+      "-mindepth",
+      "1",
+      "(",
+      "-type",
+      "f",
+      "-name",
+      "*.node",
+      "-printf",
+      "n%p\\0",
+      ")",
+      "-o",
+      "-printf",
+      "x\\0",
+    ],
+    maxRecords: input.limits.maxDependencyEntries,
+    maxOutputBytes:
+      input.runtimePolicy?.maxOutputBytes ??
+      NATIVE_DEPENDENCY_TRAVERSAL_POLICY.maxOutputBytes,
+    timeoutMs:
+      input.runtimePolicy?.scanTimeoutMs ??
+      NATIVE_DEPENDENCY_TRAVERSAL_POLICY.scanTimeoutMs,
+    limitError: "dependency_environment_tree_scan_limit_exceeded",
+    onRecord: (bytes) => {
+      if (bytes.byteLength === 1 && bytes[0] === 0x78) return;
+      if (bytes.byteLength <= 1 || bytes[0] !== 0x6e) {
+        throw new Error("dependency_environment_native_scan_invalid");
+      }
+      const path = bytes.subarray(1).toString("utf8");
+      if (!path) throw new Error("dependency_environment_native_scan_invalid");
+      assertPathWithin(dependencyRoot, path);
+      addonFiles.push(path);
+    },
+  });
+  if (result === null) return null;
+  return addonFiles;
+}
+
 export async function discoverDependencyLinksWithNativeFind(input: {
   readonly dependencyRoot: string;
   readonly limits: NativeDependencyTraversalLimits;
@@ -242,9 +305,7 @@ async function runNativeFind(input: {
           throw new Error(input.limitError);
         }
         const bytes =
-          pending.byteLength === 0
-            ? chunk
-            : Buffer.concat([pending, chunk]);
+          pending.byteLength === 0 ? chunk : Buffer.concat([pending, chunk]);
         let start = 0;
         for (;;) {
           const separator = bytes.indexOf(0, start);
