@@ -1,3 +1,4 @@
+export { ReviewMutationApplyResultError } from '../core/application/ReviewMutationApplyResultError';
 export {
   ReviewMutationCoordinator,
   type ReviewMutationJournalPort,
@@ -18,6 +19,12 @@ export {
   mergeReviewApplyResults,
   mergeReviewMutationDiskPostimages,
 } from '../core/domain/reviewDecisionBatch';
+export {
+  assertCurrentReviewDecisionRevision,
+  assertExactApplyReviewHistoryTransition,
+  type ReviewDecisionCommandCurrentState,
+  type ReviewDecisionCommandPolicyContext,
+} from '../core/domain/reviewDecisionCommandPolicy';
 export {
   buildReviewExternalReloadState,
   buildReviewHistoryRestorePlan,
@@ -58,10 +65,21 @@ export {
   removeReviewMutationRecoveryIpc,
   type ReviewMutationIpcHandlerWrapper,
 } from './adapters/input/ipc/registerReviewMutationRecoveryIpc';
-export {
-  ReviewDecisionBatchApplication,
-  ReviewMutationApplyResultError,
-} from './application/ReviewDecisionBatchApplication';
+export { ReviewDecisionBatchApplication } from './application/ReviewDecisionBatchApplication';
+export { ReviewDecisionCommandApplication } from './application/ReviewDecisionCommandApplication';
+export type {
+  ReviewDecisionCommandApplierPort,
+  ReviewDecisionCommandBatchPort,
+  ReviewDecisionCommandCachePort,
+  ReviewDecisionCommandCoordinatorPort,
+  ReviewDecisionCommandDependencies,
+  ReviewDecisionCommandHistoryPort,
+  ReviewDecisionCommandLoggerPort,
+  ReviewDecisionCommandPersistencePort,
+  ReviewDecisionCommandRecoveryPort,
+  ReviewDecisionCommandScopePort,
+  ReviewDecisionCommandSnapshotIdentityPort,
+} from './application/ReviewDecisionCommandPorts';
 export { ReviewDirectMutationDiskService } from './application/ReviewDirectMutationDiskService';
 export { ReviewHistoryMutationApplication } from './application/ReviewHistoryMutationApplication';
 export type {
@@ -99,6 +117,10 @@ export {
   createReviewDecisionBatchFeature,
   type ReviewDecisionBatchFeatureDependencies,
 } from './composition/createReviewDecisionBatchFeature';
+export {
+  createReviewDecisionCommandFeature,
+  type ReviewDecisionCommandFeatureDependencies,
+} from './composition/createReviewDecisionCommandFeature';
 export {
   createReviewHistoryMutationFeature,
   type ReviewHistoryMutationFeatureDependencies,
