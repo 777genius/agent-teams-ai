@@ -4038,6 +4038,79 @@ describe('review IPC path confinement', () => {
     await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
   });
 
+  it('accepts a durable Reject All bulk action for a single reviewed file', async () => {
+    const contentSnapshotToken = await getDisplayedSnapshotToken(projectFile);
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:single-file-reject-all',
+    };
+    const file = {
+      filePath: projectFile,
+      relativePath: 'src/project.ts',
+      snippets: [],
+      linesAdded: 1,
+      linesRemoved: 1,
+      isNewFile: false,
+    };
+    const action = {
+      id: 'single-file-reject-all',
+      createdAt: '2026-07-23T12:00:00.000Z',
+      kind: 'bulk' as const,
+      descriptor: { intent: 'reject-all' as const, fileCount: 1 },
+      decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
+      diskSnapshots: [
+        {
+          filePath: projectFile,
+          beforeContent: 'project\n',
+          afterContent: 'before\n',
+          file,
+        },
+      ],
+    };
+    applier.applyReviewDecisions.mockImplementationOnce(async (_request, _contents, hooks) => {
+      await hooks?.checkpointDiskTransitions([
+        { filePath: projectFile, beforeContent: 'project\n', afterContent: 'project\n' },
+      ]);
+      return { applied: 1, skipped: 0, conflicts: 0, errors: [] };
+    });
+
+    const result = await ipcMain.invoke(REVIEW_APPLY_DECISIONS, {
+      teamName: 'safe-team',
+      memberName: 'worker',
+      decisionPersistenceScope: persistenceScope,
+      expectedDecisionRevision: 0,
+      persistedState: {
+        hunkDecisions: {},
+        fileDecisions: { [projectFile]: 'rejected' },
+        hunkContextHashesByFile: {},
+        reviewActionHistory: [action],
+        reviewRedoHistory: [],
+      },
+      decisions: [
+        {
+          filePath: projectFile,
+          reviewKey: projectFile,
+          fileDecision: 'rejected',
+          hunkDecisions: {},
+          contentSnapshotToken,
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        applied: 1,
+        errors: [],
+        committedReviewAction: {
+          id: action.id,
+          kind: 'bulk',
+          descriptor: action.descriptor,
+        },
+      },
+    });
+  });
+
   it('removes a clean conflict journal so the next Changes load is not blocked', async () => {
     const contentSnapshotToken = await getDisplayedSnapshotToken(projectFile);
     const persistenceScope = {

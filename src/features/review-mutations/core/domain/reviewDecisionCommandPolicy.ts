@@ -71,7 +71,7 @@ export function assertExactApplyReviewHistoryTransition(
   ) {
     throw new Error('Durable Reject history does not match the requested files');
   }
-  if ((decisions.length === 1) !== (action.kind === 'disk')) {
+  if (action.kind === 'disk' && decisions.length !== 1) {
     throw new Error('Durable Reject history action kind does not match the decision batch');
   }
   if (action.descriptor) {
