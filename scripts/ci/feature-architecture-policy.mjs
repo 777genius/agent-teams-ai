@@ -191,8 +191,18 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       localDependencyReferences.set(selected.localName, references);
     }
     if (owner.localNames.length === 0) {
+      const directDependency = {
+        ...localDependency,
+        importedName: selectImportedName(localDependency.importedName, owner.localMember),
+        localMember: undefined,
+      };
       for (const exportedName of owner.exportedNames) {
-        reexports.push({ ...dependency.edge, exportedName, ...dependency, kind: 'export' });
+        reexports.push({
+          ...directDependency.edge,
+          exportedName,
+          ...directDependency,
+          kind: 'export',
+        });
       }
     }
   };
@@ -343,7 +353,9 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
             importedName: importedNameForReference(node, importedBinding),
           });
         } else if (declaredLocalNames.has(node.text) && !owner.localNames.includes(node.text)) {
-          const selectedName = selectedMemberForReference(node);
+          const selectedName =
+            selectedMemberForReference(node) ??
+            (owner.localMember && owner.localMember !== '*' ? owner.localMember : null);
           if (owner.localNames.length === 0) {
             for (const exportedName of owner.exportedNames) {
               localExports.push({

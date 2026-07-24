@@ -171,6 +171,31 @@ function commonJsAssignmentExportName(expression) {
   return isModuleExports(access.receiver) ? access.name : null;
 }
 
+function commonJsCreateBindingSelection(expression, reference) {
+  const current = unwrapExpression(expression);
+  if (!ts.isCallExpression(current)) return null;
+
+  const method = memberAccess(current.expression);
+  const callee = unwrapExpression(current.expression);
+  const helperName = ts.isIdentifier(callee) ? callee.text : method?.name;
+  if (
+    helperName !== '__createBinding' ||
+    !current.arguments[0] ||
+    !isCommonJsExportsObject(current.arguments[0]) ||
+    !current.arguments[1] ||
+    (reference && !containsReference(current.arguments[1], reference))
+  ) {
+    return null;
+  }
+
+  const importedName = current.arguments[2];
+  const exportedName = current.arguments[3] ?? importedName;
+  return {
+    exportedName: exportedName && ts.isStringLiteralLike(exportedName) ? exportedName.text : '*',
+    importedName: importedName && ts.isStringLiteralLike(importedName) ? importedName.text : '*',
+  };
+}
+
 export function commonJsExportNamesForExpression(expression) {
   const assignmentName = commonJsAssignmentExportName(expression);
   if (assignmentName) return [assignmentName];
@@ -188,6 +213,8 @@ export function commonJsExportNamesForExpression(expression) {
   ) {
     return ['*'];
   }
+  const createBinding = commonJsCreateBindingSelection(current);
+  if (createBinding) return [createBinding.exportedName];
   if (
     !method ||
     !ts.isIdentifier(method.receiver) ||
@@ -315,6 +342,9 @@ export function getterSelectionForReference(reference, boundary) {
 }
 
 export function commonJsExportNamesForReference(expression, reference, insideFunctionBody) {
+  const createBinding = commonJsCreateBindingSelection(expression);
+  if (createBinding && !commonJsCreateBindingSelection(expression, reference)) return [];
+
   const exportNames = commonJsExportNamesForExpression(expression);
   if (!insideFunctionBody || exportNames.length === 0) return exportNames;
 
@@ -360,7 +390,12 @@ export function findPublicReferenceOwner(node, sourceFile, exportedLocalNames) {
       insideFunctionBody
     );
     if (commonJsExportNames.length > 0) {
-      return { bindingSelections: null, exportedNames: commonJsExportNames, localNames: [] };
+      return {
+        bindingSelections: null,
+        exportedNames: commonJsExportNames,
+        localMember: commonJsCreateBindingSelection(current.expression, node)?.importedName,
+        localNames: [],
+      };
     }
     ({ bindingSelections, localNames } = publicMutationBinding(
       current.expression,

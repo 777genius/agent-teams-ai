@@ -445,6 +445,30 @@ test('detects implementation exports through transitive internal barrels', () =>
 test('recognizes JavaScript feature root entrypoints', () => {
   withFixture(
     {
+      'src/features/commonjs-create-binding/main/index.cjs': `
+        __createBinding(exports, require('./infrastructure/Store'), 'Store');
+        tslib.__createBinding(
+          module.exports,
+          require('./infrastructure/Repository'),
+          'Repository',
+          'PublicRepository'
+        );
+      `,
+      'src/features/commonjs-create-binding/main/infrastructure/Repository.cjs':
+        'exports.Repository = class Repository {};',
+      'src/features/commonjs-create-binding/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
+      'src/features/commonjs-create-binding-safe/main/index.cjs': `
+        const barrel = require('./mixedBarrel');
+        __createBinding(exports, barrel, 'Safe');
+      `,
+      'src/features/commonjs-create-binding-safe/main/mixedBarrel.js': `
+        export { Safe } from './safe';
+        export { Infra } from './infrastructure/Infra';
+      `,
+      'src/features/commonjs-create-binding-safe/main/safe.js': 'export const Safe = true;',
+      'src/features/commonjs-create-binding-safe/main/infrastructure/Infra.js':
+        'export class Infra {}',
       'src/features/commonjs-define-properties/main/index.cjs': `
         const StoreModule = require('./infrastructure/Store');
         Object.defineProperties(exports, {
@@ -592,6 +616,18 @@ test('recognizes JavaScript feature root entrypoints', () => {
           .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
           .map(toBaselineEntry),
         [
+          {
+            publicEntrypoint: 'src/features/commonjs-create-binding/main/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-create-binding/main/index.cjs',
+            specifier: './infrastructure/Repository',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-create-binding/main/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-create-binding/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
           {
             publicEntrypoint: 'src/features/commonjs-default/index.cjs',
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
