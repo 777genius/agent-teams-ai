@@ -4,8 +4,6 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
-import { useStore } from '@renderer/store';
-import { getFileHunkCount } from '@renderer/store/slices/changeReviewSlice';
 import { buildTree, sortTreeNodes } from '@renderer/utils/fileTreeBuilder';
 import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
 import {
@@ -20,24 +18,31 @@ import {
   X as XIcon,
 } from 'lucide-react';
 
+import { resolveChangeReviewFileHunkCount } from '../../core/domain/reviewHunkCountPolicy';
+
 import type { TreeNode } from '@renderer/utils/fileTreeBuilder';
 import type { HunkDecision } from '@shared/types';
-import type { FileChangeWithContent } from '@shared/types';
 import type { FileChangeSummary } from '@shared/types/review';
+
+export interface ChangeReviewFileTreeDecisionState {
+  hunkDecisions: Record<string, HunkDecision>;
+  fileDecisions: Record<string, HunkDecision>;
+  fileChunkCounts: Record<string, number>;
+}
+
+export type ChangeReviewPathChangeLabels = Record<
+  string,
+  | { kind: 'deleted' }
+  | { kind: 'copied' | 'moved' | 'renamed'; direction: 'from' | 'to'; otherPath: string }
+>;
 
 interface ReviewFileTreeProps {
   files: FileChangeSummary[];
-  fileContents?: Record<string, FileChangeWithContent>;
-  pathChangeLabels?: Record<
-    string,
-    | { kind: 'deleted' }
-    | { kind: 'copied' | 'moved' | 'renamed'; direction: 'from' | 'to'; otherPath: string }
-  >;
+  decisionState: ChangeReviewFileTreeDecisionState;
+  pathChangeLabels?: ChangeReviewPathChangeLabels;
   selectedFilePath: string | null;
   onSelectFile: (filePath: string) => void;
   viewedSet?: Set<string>;
-  onMarkViewed?: (filePath: string) => void;
-  onUnmarkViewed?: (filePath: string) => void;
   activeFilePath?: string;
 }
 
@@ -55,7 +60,11 @@ function getFileStatus(
   if (fileDec === 'accepted') return 'accepted';
   if (fileDec === 'rejected') return 'rejected';
 
-  const count = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
+  const count = resolveChangeReviewFileHunkCount(
+    file.filePath,
+    file.snippets.length,
+    fileChunkCounts
+  );
   if (count === 0) return 'pending';
 
   const decisions: HunkDecision[] = [];
@@ -277,6 +286,7 @@ function getAncestorFolderPaths(tree: TreeNode<FileChangeSummary>[], filePath: s
 
 export const ReviewFileTree = ({
   files,
+  decisionState: { hunkDecisions, fileDecisions, fileChunkCounts },
   pathChangeLabels,
   selectedFilePath,
   onSelectFile,
@@ -284,9 +294,6 @@ export const ReviewFileTree = ({
   activeFilePath,
 }: ReviewFileTreeProps): JSX.Element => {
   const { t } = useAppTranslation('team');
-  const hunkDecisions = useStore((state) => state.hunkDecisions);
-  const fileDecisions = useStore((state) => state.fileDecisions);
-  const fileChunkCounts = useStore((state) => state.fileChunkCounts);
   const [query, setQuery] = useState('');
   const [filterUnresolved, setFilterUnresolved] = useState(false);
   const [filterRejected, setFilterRejected] = useState(false);
@@ -314,7 +321,11 @@ export const ReviewFileTree = ({
       if (fileDecisions[reviewKey] === 'rejected' || fileDecisions[f.filePath] === 'rejected') {
         return true;
       }
-      const count = getFileHunkCount(f.filePath, f.snippets.length, fileChunkCounts);
+      const count = resolveChangeReviewFileHunkCount(
+        f.filePath,
+        f.snippets.length,
+        fileChunkCounts
+      );
       for (let i = 0; i < count; i++) {
         if (
           hunkDecisions[buildHunkDecisionKey(reviewKey, i)] === 'rejected' ||

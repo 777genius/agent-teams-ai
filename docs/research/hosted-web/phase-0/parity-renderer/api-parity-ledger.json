@@ -7,10 +7,10 @@
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
   "counts": {
     "TeamsAPI": 86,
-    "ReviewAPI": 29,
+    "ReviewAPI": 34,
     "CrossTeamAPI": 3
   },
-  "historicalCountDifference": "ReviewAPI +9 since the phase-start AST: current 86/29/3 versus historical 86/20/3",
+  "historicalCountDifference": "ReviewAPI +14 since the phase-start AST: current 86/34/3 versus historical 86/20/3",
   "members": [
     {
       "stableId": "P0.W1.API.TeamsAPI.list",
@@ -18,7 +18,9 @@
       "sourceMember": "list",
       "legacySignature": "list: () => Promise<TeamSummary[]>;",
       "sourceSignatureHash": "sha256:197a6d482f868175ee5b05eaa6b020e34c85392c4b5aab7e6ff298446b4b1b1b",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-view-read-model/renderer/adapters/createTeamDirectoryTransport.ts"
+      ],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -37,8 +39,8 @@
       "legacySignature": "getData: (teamName: string, options?: TeamGetDataOptions) => Promise<TeamViewSnapshot>;",
       "sourceSignatureHash": "sha256:560f1214f397a0b0ef7e65c62e9865a5a79a2f2c164739b4c4e44a804aa5e6cc",
       "rendererCallers": [
-        "src/renderer/components/team/TeamListView.tsx",
-        "src/renderer/store/slices/teamSlice.ts"
+        "src/features/team-view-read-model/renderer/adapters/createTeamViewDataTransport.ts",
+        "src/renderer/components/team/TeamListView.tsx"
       ],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
@@ -133,6 +135,7 @@
       "legacySignature": "prepareProvisioning: (cwd?: string, providerId?: TeamLaunchRequest['providerId'], providerIds?: TeamLaunchRequest['providerId'][], selectedModels?: string[], limitContext?: boolean, modelVerificationMode?: TeamProvisioningModelVerificationMode, selectedModelChecks?: TeamProvisioningModelCheckRequest[]) => Promise<TeamProvisioningPrepareResult>;",
       "sourceSignatureHash": "sha256:3c6ec55173f7e4333a90e3655e12eb20ba050d9618c4b9ea79fe0a99528cf999",
       "rendererCallers": [
+        "src/features/runtime-provider-management/renderer/RuntimeLocalProviderSetupDialog.tsx",
         "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
         "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx"
       ],
@@ -153,7 +156,9 @@
       "sourceMember": "createTeam",
       "legacySignature": "createTeam: (request: TeamCreateRequest) => Promise<TeamCreateResponse>;",
       "sourceSignatureHash": "sha256:60e205f2d42f3051dbe5b7c55f16b2b79893e6d75163ba6e9542c94d89b6261f",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-provisioning/renderer/adapters/createTeamProvisioningLaunchTransport.ts"
+      ],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -171,7 +176,9 @@
       "sourceMember": "getProvisioningStatus",
       "legacySignature": "getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;",
       "sourceSignatureHash": "sha256:02060efebcc16f296da415f7a8dafa8da03e99d9fb5e92db1e88ce4d529493f2",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-provisioning/renderer/adapters/createTeamProvisioningControlTransport.ts"
+      ],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -207,7 +214,9 @@
       "sourceMember": "cancelProvisioning",
       "legacySignature": "cancelProvisioning: (runId: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:bb1702df9457f93956a0e4b78634e62e9084764f5f2c108ff9f9cb2968b8c86c",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-provisioning/renderer/adapters/createTeamProvisioningControlTransport.ts"
+      ],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -264,7 +273,9 @@
       "sourceMember": "launchTeam",
       "legacySignature": "launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;",
       "sourceSignatureHash": "sha256:2b43671dd020abe85989c48efa41fe172595c8b25150b397dbc8b09f335ff68c",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-provisioning/renderer/adapters/createTeamProvisioningLaunchTransport.ts"
+      ],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -398,7 +409,7 @@
       "sourceMember": "getMemberSpawnStatuses",
       "legacySignature": "getMemberSpawnStatuses: (teamName: string) => Promise<MemberSpawnStatusesSnapshot>;",
       "sourceSignatureHash": "sha256:e7c8aba54fd2089320a245bd6a0fae9c54475a0559c0f3d5e03f545a3853dae9",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -509,7 +520,9 @@
       "sourceMember": "getProjectBranch",
       "legacySignature": "getProjectBranch: (projectPath: string) => Promise<string | null>;",
       "sourceSignatureHash": "sha256:775efe0ae331a88b808ecc468089a7b39b829799b340d834287f2e18da260819",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-view-read-model/renderer/adapters/createTeamDirectoryTransport.ts"
+      ],
       "owningFeature": "workspace-registry",
       "disposition": "decomposed",
       "securityClass": "workspace-authorization",
@@ -563,7 +576,9 @@
       "sourceMember": "getTaskChangePresence",
       "legacySignature": "getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;",
       "sourceSignatureHash": "sha256:858c59addc9b58fff0336ecb124649d27afc7c0209d70126df7ed5f8047a00dd",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskArtifactsTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -599,7 +614,9 @@
       "sourceMember": "createTask",
       "legacySignature": "createTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;",
       "sourceSignatureHash": "sha256:de010025eaa10aeae3ee1bb67e98b66f9c704477e0db5f03ea4c97cf5575e9fc",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -635,7 +652,9 @@
       "sourceMember": "requestReview",
       "legacySignature": "requestReview: (teamName: string, taskId: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:f80a971e3f7aa5a6ef284e15280e6fa62b3b2ed5110a062a09004c5c0c9d8f8b",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -653,7 +672,9 @@
       "sourceMember": "updateKanban",
       "legacySignature": "updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;",
       "sourceSignatureHash": "sha256:d7493e6df6d61ab332266f5fa9ac35fd0cced9a49d77f2f93ea4c9e19dd47cf5",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -671,7 +692,9 @@
       "sourceMember": "updateKanbanColumnOrder",
       "legacySignature": "updateKanbanColumnOrder: (teamName: string, columnId: KanbanColumnId, orderedTaskIds: string[]) => Promise<void>;",
       "sourceSignatureHash": "sha256:e00a04bb858ab3b7694fff117b495d2febe9226cf9ba5dfe5f574c53a4a5cf6b",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -689,7 +712,9 @@
       "sourceMember": "updateTaskStatus",
       "legacySignature": "updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;",
       "sourceSignatureHash": "sha256:77ac2c6b39bd7d5c50f7f44c315e8750bcf48c22a93768d660f82cab5d5be6f4",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -707,7 +732,9 @@
       "sourceMember": "updateTaskOwner",
       "legacySignature": "updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;",
       "sourceSignatureHash": "sha256:0b5787cf04cd3e42063b6e06c25d2564db1a36433e79dca1c5c99f1558d7dfef",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -725,7 +752,9 @@
       "sourceMember": "updateTaskFields",
       "legacySignature": "updateTaskFields: (teamName: string, taskId: string, fields: { subject?: string; description?: string; }) => Promise<void>;",
       "sourceSignatureHash": "sha256:b048f696224491e1d07c275142c5a882eedbcb190c6d09595af157d1c2d5f0d2",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -743,7 +772,9 @@
       "sourceMember": "startTask",
       "legacySignature": "startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean; }>;",
       "sourceSignatureHash": "sha256:32639d78c33054b134ee23ce2e793250d18fa071207cbb4d1b9475bb8c190c5e",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -761,7 +792,9 @@
       "sourceMember": "startTaskByUser",
       "legacySignature": "startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean; }>;",
       "sourceSignatureHash": "sha256:9c9902e65355146ddf2f8689d4b714996f103ce4d6d08c746c508e33ffd64e34",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -779,7 +812,9 @@
       "sourceMember": "getAllTasks",
       "legacySignature": "getAllTasks: () => Promise<GlobalTask[]>;",
       "sourceSignatureHash": "sha256:a3c182e90ebd8187d0df0267d0cae28c4dcbe95630f8a8c37c73f8e32890344a",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-view-read-model/renderer/adapters/createTeamDirectoryTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -797,7 +832,9 @@
       "sourceMember": "addTaskComment",
       "legacySignature": "addTaskComment: (teamName: string, taskId: string, request: AddTaskCommentRequest) => Promise<TaskComment>;",
       "sourceSignatureHash": "sha256:265f0c37ef64a3eeef611a0419e8773e2d64367fbf07467091ef88c564f07473",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskArtifactsTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -815,7 +852,9 @@
       "sourceMember": "setTaskClarification",
       "legacySignature": "setTaskClarification: (teamName: string, taskId: string, value: 'lead' | 'user' | null) => Promise<void>;",
       "sourceSignatureHash": "sha256:4ea788fcf20d8658c6f590fb08c942daf7c1e2a4693029d2ef5f5da36ad0263b",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -833,7 +872,9 @@
       "sourceMember": "softDeleteTask",
       "legacySignature": "softDeleteTask: (teamName: string, taskId: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:fa8aa7d8a3989754460572f2b5b3bcd7ffb4d9c267991cf253fffb6b99c53dea",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -851,7 +892,9 @@
       "sourceMember": "restoreTask",
       "legacySignature": "restoreTask: (teamName: string, taskId: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:53ebd72882501bb9c0857f14addffc79732d3c301fafecce26fde52313f22fbc",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -869,7 +912,9 @@
       "sourceMember": "getDeletedTasks",
       "legacySignature": "getDeletedTasks: (teamName: string) => Promise<TeamTask[]>;",
       "sourceSignatureHash": "sha256:ac2d570c540d9f7959d5889757e028fdb7d2e1d2677f4cd84bd57d4c81fab54f",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -887,7 +932,9 @@
       "sourceMember": "addTaskRelationship",
       "legacySignature": "addTaskRelationship: (teamName: string, taskId: string, targetId: string, type: 'blockedBy' | 'blocks' | 'related') => Promise<void>;",
       "sourceSignatureHash": "sha256:2b7c43bef9c0bc42952dbb5f745809dce319709a40b491b2dadbe5f9f4f6b7b9",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -905,7 +952,9 @@
       "sourceMember": "removeTaskRelationship",
       "legacySignature": "removeTaskRelationship: (teamName: string, taskId: string, targetId: string, type: 'blockedBy' | 'blocks' | 'related') => Promise<void>;",
       "sourceSignatureHash": "sha256:8f5ce7a86285405b3068a46bd074054808b4ae837d1f7d082fde89bb57e00ece",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
       "owningFeature": "team-task-board",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -946,7 +995,7 @@
       "sourceSignatureHash": "sha256:0acc38208962cd7f676984ec9c314dfdc3d698f937853b797609245e927207c4",
       "rendererCallers": [
         "src/renderer/components/team/TeamDetailView.tsx",
-        "src/renderer/store/slices/teamSlice.ts"
+        "src/renderer/store/team/createTeamCollaborationDataSlice.ts"
       ],
       "owningFeature": "team-messaging",
       "disposition": "decomposed",
@@ -965,7 +1014,7 @@
       "sourceMember": "getOpenCodeRuntimeDeliveryStatus",
       "legacySignature": "getOpenCodeRuntimeDeliveryStatus: (teamName: string, messageId: string) => Promise<OpenCodeRuntimeDeliveryStatus | null>;",
       "sourceSignatureHash": "sha256:5de5ca6827bc448762a72b598d259ac369a7f85fa8d804c3c1af22263d8e3805",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": ["src/renderer/store/team/createTeamCollaborationDataSlice.ts"],
       "owningFeature": "team-messaging",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -983,7 +1032,9 @@
       "sourceMember": "getMessagesPage",
       "legacySignature": "getMessagesPage: (teamName: string, options?: { cursor?: string | null; limit?: number; }) => Promise<MessagesPage>;",
       "sourceSignatureHash": "sha256:507d113d41e23153db26a475fc1cacdec2fc09038df861e44e6ecd8d1554be44",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-view-read-model/renderer/adapters/createTeamMessageFeedTransport.ts"
+      ],
       "owningFeature": "team-messaging",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -1080,7 +1131,9 @@
       "sourceMember": "getMemberActivityMeta",
       "legacySignature": "getMemberActivityMeta: (teamName: string) => Promise<TeamMemberActivityMeta>;",
       "sourceSignatureHash": "sha256:cf6a316403c772df7b5fee26970d5ccad9b75fce3067a4cec529cf80f36dcaa8",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-view-read-model/renderer/adapters/createTeamMessageFeedTransport.ts"
+      ],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1359,7 +1412,7 @@
       "sourceMember": "getTeamAgentRuntime",
       "legacySignature": "getTeamAgentRuntime: (teamName: string) => Promise<TeamAgentRuntimeSnapshot>;",
       "sourceSignatureHash": "sha256:7edfc120d2cf6a6071867fff1621c0c0904e80a3fca65953326c98557ad0ae56",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1413,7 +1466,9 @@
       "sourceMember": "saveTaskAttachment",
       "legacySignature": "saveTaskAttachment: (teamName: string, taskId: string, attachmentId: string, filename: string, mimeType: string, base64Data: string) => Promise<TaskAttachmentMeta>;",
       "sourceSignatureHash": "sha256:c34e0689f3de941e79461da031eef31830e70c10d8504830213ab381373ddb57",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskArtifactsTransport.ts"
+      ],
       "owningFeature": "agent-attachments",
       "disposition": "decomposed",
       "securityClass": "bounded-content",
@@ -1431,7 +1486,9 @@
       "sourceMember": "getTaskAttachment",
       "legacySignature": "getTaskAttachment: (teamName: string, taskId: string, attachmentId: string, mimeType: string) => Promise<string | null>;",
       "sourceSignatureHash": "sha256:8ce5eaa8e85927b19caab30dc64f60e5f44935f8339d214d6e31dd9bcb5af65a",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskArtifactsTransport.ts"
+      ],
       "owningFeature": "agent-attachments",
       "disposition": "decomposed",
       "securityClass": "bounded-content",
@@ -1449,7 +1506,9 @@
       "sourceMember": "deleteTaskAttachment",
       "legacySignature": "deleteTaskAttachment: (teamName: string, taskId: string, attachmentId: string, mimeType: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:9c92fcd967776054bc1c7e973304cf6e6350d3de2dc6e215a90316944b2391ef",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskArtifactsTransport.ts"
+      ],
       "owningFeature": "agent-attachments",
       "disposition": "decomposed",
       "securityClass": "bounded-content",
@@ -1599,7 +1658,9 @@
       "sourceMember": "onProvisioningProgress",
       "legacySignature": "onProvisioningProgress: (callback: (event: unknown, data: TeamProvisioningProgress) => void) => () => void;",
       "sourceSignatureHash": "sha256:7a223a2b873b9b82dbb61dc78e9782eecb8af95ab36fe5b064b76e3ced6a44f5",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-provisioning/renderer/adapters/createTeamProvisioningControlTransport.ts"
+      ],
       "owningFeature": "team-console",
       "disposition": "direct",
       "securityClass": "renderer-local",
@@ -1674,7 +1735,9 @@
       "sourceMember": "invalidateTaskChangeSummaries",
       "legacySignature": "invalidateTaskChangeSummaries: (teamName: string, taskIds: string[]) => Promise<void>;",
       "sourceSignatureHash": "sha256:58594b444b247d9a16a2b133ec16915eb8b019651422561f70d77ae743247325",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": [
+        "src/features/team-view-read-model/renderer/adapters/createTeamViewDataTransport.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -1746,7 +1809,11 @@
       "sourceMember": "executeMutation",
       "legacySignature": "executeMutation: (request: ExecuteReviewMutationRequest) => Promise<ExecuteReviewMutationResult>;",
       "sourceSignatureHash": "sha256:2c9bc1b401269033f830b4e71564836fdbf2b416bdd7e505646c7e1ca04ca45c",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDecisionPorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDraftPorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewHistoryMutationPorts.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -1764,7 +1831,10 @@
       "sourceMember": "retryMutationRecovery",
       "legacySignature": "retryMutationRecovery: (request: RetryReviewMutationRecoveryRequest) => Promise<RetryReviewMutationRecoveryResult>;",
       "sourceSignatureHash": "sha256:c4145fe4a3ac29382d8fde44b70507e9c96f7cd93b7e3901490bd035504e082e",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDialogLifecyclePorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewHistoryMutationPorts.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -1782,7 +1852,9 @@
       "sourceMember": "restoreHistory",
       "legacySignature": "restoreHistory: (request: RestoreReviewHistoryRequest) => Promise<RestoreReviewHistoryResult>;",
       "sourceSignatureHash": "sha256:c18ae82e0476fcfe3177258989510c108d1173f50291b032c383045e72a1eb10",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewHistoryMutationPorts.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -1800,7 +1872,13 @@
       "sourceMember": "checkConflict",
       "legacySignature": "checkConflict: (scope: ReviewFileScope, filePath: string, expectedModified: string) => Promise<ConflictCheckResult>;",
       "sourceSignatureHash": "sha256:30fbf403bc90071dcf528cb50c73a9ecdace09c65ffba9d964005473a067f60b",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDecisionPorts.ts",
+        "src/features/change-review/renderer/adapters/createChangeReviewFileDraftPorts.ts",
+        "src/renderer/components/team/review/ChangeReviewDialog.tsx"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -1944,7 +2022,9 @@
       "sourceMember": "watchFiles",
       "legacySignature": "watchFiles: (projectPath: string, filePaths: string[]) => Promise<void>;",
       "sourceSignatureHash": "sha256:145f58a08654db239da6e77af49645c1f230584511b3e275a5e6da4f7a2777cb",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -1962,7 +2042,9 @@
       "sourceMember": "unwatchFiles",
       "legacySignature": "unwatchFiles: () => Promise<void>;",
       "sourceSignatureHash": "sha256:eda8bc65fe2d15e1bb7b24173678b5bdfc8e5dd84123f4a9cb2e1f86d8167f5b",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -1980,7 +2062,9 @@
       "sourceMember": "onExternalFileChange",
       "legacySignature": "onExternalFileChange: (callback: (event: EditorFileChangeEvent) => void) => () => void;",
       "sourceSignatureHash": "sha256:7a6850a8167b90818ebd6b565a65edb56d41373d49c1ca1e5310065f774bb0bb",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/changeReviewDialogInteractionAdapters.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2014,8 +2098,8 @@
       "stableId": "P0.W1.API.ReviewAPI.saveDecisions",
       "source": "ReviewAPI",
       "sourceMember": "saveDecisions",
-      "legacySignature": "saveDecisions: (teamName: string, scopeKey: string, scopeToken: string, hunkDecisions: Record<string, HunkDecision>, fileDecisions: Record<string, HunkDecision>, hunkContextHashesByFile?: Record<string, Record<number, string>>, reviewActionHistory?: ReviewUndoAction[], expectedRevision?: number, reviewRedoHistory?: ReviewRedoAction[]) => Promise<{ revision: number; }>;",
-      "sourceSignatureHash": "sha256:7ed4262031338e9ab497683f1c9dca24c412e098d2d90832d473b53b69be93ff",
+      "legacySignature": "saveDecisions: (teamName: string, scopeKey: string, scopeToken: string, hunkDecisions: Record<string, HunkDecision>, fileDecisions: Record<string, HunkDecision>, hunkContextHashesByFile?: Record<string, Record<number, string>>, reviewActionHistory?: ReviewUndoAction[], expectedRevision?: number, reviewRedoHistory?: ReviewRedoAction[]) => Promise<SaveReviewDecisionsResult>;",
+      "sourceSignatureHash": "sha256:dc8031eb68120cf43e03ac98e2c5c74d111ceab9b81a908bfbe194ad69ef214b",
       "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
       "owningFeature": "team-review",
       "disposition": "decomposed",
@@ -2047,12 +2131,54 @@
       "targetWorkPackage": "WP-9-REVIEW"
     },
     {
+      "stableId": "P0.W1.API.ReviewAPI.loadDecisionConflictCandidates",
+      "source": "ReviewAPI",
+      "sourceMember": "loadDecisionConflictCandidates",
+      "legacySignature": "loadDecisionConflictCandidates: (teamName: string, scopeKey: string, scopeToken: string) => Promise<ReviewDecisionConflictCandidateSummary[]>;",
+      "sourceSignatureHash": "sha256:487c7b74b8def41e642a9796c0bc9c271c07ec742abce59547ae0fcf63ee59fb",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewConflictPorts.ts"
+      ],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.load-decision-conflict-candidates",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.resolveDecisionConflictCandidate",
+      "source": "ReviewAPI",
+      "sourceMember": "resolveDecisionConflictCandidate",
+      "legacySignature": "resolveDecisionConflictCandidate: (teamName: string, scopeKey: string, scopeToken: string, candidateId: string, resolution: ReviewConflictResolution, expectedCurrentRevision: number) => Promise<{ revision: number; }>;",
+      "sourceSignatureHash": "sha256:22485faf53bdcca33f4cf19bd2dd7691db4c0c68e1072b9d34fd50ee25a29e77",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewConflictPorts.ts"
+      ],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.resolve-decision-conflict-candidate",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
       "stableId": "P0.W1.API.ReviewAPI.loadDraftHistory",
       "source": "ReviewAPI",
       "sourceMember": "loadDraftHistory",
       "legacySignature": "loadDraftHistory: (teamName: string, scopeKey: string, scopeToken: string) => Promise<ReviewDraftHistorySnapshot | null>;",
       "sourceSignatureHash": "sha256:1db8053abb2608392cc092faed24b49ed027c0cfaa460f91497678d8dc17abab",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2070,7 +2196,9 @@
       "sourceMember": "saveDraftHistoryEntry",
       "legacySignature": "saveDraftHistoryEntry: (teamName: string, scopeKey: string, scopeToken: string, entry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>, expectedRevision: number, expectedGeneration: string | null) => Promise<ReviewDraftHistoryEntry>;",
       "sourceSignatureHash": "sha256:5533291b443626b87f68f5a4dba237e5189ce784c0531cc21e4b8fadab3c84c0",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2088,7 +2216,9 @@
       "sourceMember": "clearDraftHistory",
       "legacySignature": "clearDraftHistory: (teamName: string, scopeKey: string, scopeToken: string, filePath?: string, expectedRevision?: number, expectedGeneration?: string | null) => Promise<void>;",
       "sourceSignatureHash": "sha256:af609ad313105105ada4771728fc5bf267d354117b874514baf510875807b31f",
-      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ],
       "owningFeature": "team-review",
       "disposition": "decomposed",
       "securityClass": "review-change-set",
@@ -2098,6 +2228,66 @@
         "revision/idempotency/event obligation"
       ],
       "actionId": "team.review.clear-draft-history",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.loadDraftHistoryConflictCandidates",
+      "source": "ReviewAPI",
+      "sourceMember": "loadDraftHistoryConflictCandidates",
+      "legacySignature": "loadDraftHistoryConflictCandidates: (teamName: string, scopeKey: string, scopeToken: string) => Promise<ReviewDraftHistoryConflictCandidateSummary[]>;",
+      "sourceSignatureHash": "sha256:51dba683a1f73607227a6b9354b319f5dfec2c76870b5a5889913be9b5211a3f",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewConflictPorts.ts"
+      ],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.load-draft-history-conflict-candidates",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.resolveDraftHistoryConflictCandidate",
+      "source": "ReviewAPI",
+      "sourceMember": "resolveDraftHistoryConflictCandidate",
+      "legacySignature": "resolveDraftHistoryConflictCandidate: (teamName: string, scopeKey: string, scopeToken: string, candidateId: string, resolution: ReviewConflictResolution, expectedCurrentRevision: number, expectedCurrentGeneration: string | null) => Promise<ReviewDraftHistoryEntry | null>;",
+      "sourceSignatureHash": "sha256:e8f5bd39436667d1fe32017b0a5e1750f4501206427345b82de025f6c7721d33",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.resolve-draft-history-conflict-candidate",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.replaceDraftHistoryConflictCandidate",
+      "source": "ReviewAPI",
+      "sourceMember": "replaceDraftHistoryConflictCandidate",
+      "legacySignature": "replaceDraftHistoryConflictCandidate: (teamName: string, scopeKey: string, scopeToken: string, expectedEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>, replacementEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>, expectedCurrentRevision: number, expectedCurrentGeneration: string | null) => Promise<ReviewDraftHistoryConflictCandidateSummary>;",
+      "sourceSignatureHash": "sha256:fc7c025aff2e1ee4f838e0aae9212d624d3547b78a6a0dae89f8bd0ce9d45219",
+      "rendererCallers": [
+        "src/features/change-review/renderer/adapters/createChangeReviewDraftHistoryPort.ts"
+      ],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.replace-draft-history-conflict-candidate",
       "targetWorkPackage": "WP-9-REVIEW"
     },
     {
@@ -2142,7 +2332,7 @@
       "sourceMember": "send",
       "legacySignature": "send: (request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>;",
       "sourceSignatureHash": "sha256:1e1a96bb77e65ae5ff7c671f18cab1a912285823d300f32ba355e69156966e55",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": ["src/renderer/store/team/createTeamCollaborationDataSlice.ts"],
       "owningFeature": "team-messaging",
       "disposition": "decomposed",
       "securityClass": "cross-team-resource",
@@ -2160,7 +2350,7 @@
       "sourceMember": "listTargets",
       "legacySignature": "listTargets: (excludeTeam?: string) => Promise<{ teamName: string; displayName: string; description?: string; color?: string; leadName?: string; leadColor?: string; isOnline?: boolean; }[]>;",
       "sourceSignatureHash": "sha256:0a984b7fdfe6efb69668eaddfbc7b17f2d1ada4ce2f939c4f061019845863617",
-      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "rendererCallers": ["src/renderer/store/team/createTeamCollaborationDataSlice.ts"],
       "owningFeature": "team-messaging",
       "disposition": "decomposed",
       "securityClass": "cross-team-resource",

@@ -22,9 +22,10 @@ function createHarness() {
   let undoing = false;
   let closing = false;
   const editorState = EditorState.create({ doc: 'draft', extensions: [history()] });
+  const editorDom = { isConnected: true };
   const editorView = {
     state: editorState,
-    dom: { isConnected: true },
+    dom: editorDom,
     dispatch: vi.fn(),
   } as unknown as EditorView;
   const file: FileChangeSummary = {
@@ -37,10 +38,12 @@ function createHarness() {
   };
   const editorActions = {
     acceptAllChunks: vi.fn(() => true),
+    computeChunkIndexAtPosition: vi.fn(() => 3),
     ignoreNextDocChange: vi.fn(),
     rejectAllChunks: vi.fn(() => true),
     rejectChunk: vi.fn(() => true),
   };
+  const subscribeToRejectCurrentHunk = vi.fn(() => vi.fn());
   const addReviewFile = vi.fn();
   const fetchFileContent = vi.fn().mockResolvedValue(undefined);
   const navigateToHistoryAction = vi.fn();
@@ -59,6 +62,7 @@ function createHarness() {
   const ports = createChangeReviewDialogViewPorts({
     ...refs,
     editorActions,
+    subscribeToRejectCurrentHunk,
     setFilesApplying: createStateSetter(
       () => filesApplying,
       (value) => {
@@ -91,8 +95,10 @@ function createHarness() {
 
   return {
     file,
+    editorDom,
     editorView,
     editorActions,
+    subscribeToRejectCurrentHunk,
     refs,
     ports,
     addReviewFile,
@@ -187,5 +193,42 @@ describe('createChangeReviewDialogViewPorts', () => {
       undoing: true,
       closing: true,
     });
+  });
+
+  it('adapts the keyboard shortcut to current-editor chunk operations', () => {
+    const harness = createHarness();
+    const listener = vi.fn();
+
+    const unsubscribe = harness.ports.keyboardInteraction.subscribeRejectCurrentHunk(listener);
+    const rejected = harness.ports.keyboardInteraction.rejectCurrentChunk(harness.file.filePath);
+    harness.ports.keyboardInteraction.rollbackContent(harness.file.filePath, 'draft');
+
+    expect(harness.subscribeToRejectCurrentHunk).toHaveBeenCalledWith(listener);
+    expect(unsubscribe).toEqual(expect.any(Function));
+    expect(harness.editorActions.computeChunkIndexAtPosition).toHaveBeenCalledWith(
+      harness.editorView.state,
+      0
+    );
+    expect(harness.editorActions.rejectChunk).toHaveBeenCalledWith(harness.editorView);
+    expect(rejected).toEqual({
+      hunkIndex: 3,
+      beforeContent: 'draft',
+      afterContent: 'draft',
+    });
+    expect(harness.editorActions.ignoreNextDocChange).toHaveBeenCalledWith(harness.editorView);
+    expect(harness.editorView.dispatch).toHaveBeenCalledOnce();
+  });
+
+  it('ignores keyboard editor work after the editor DOM disconnects', () => {
+    const harness = createHarness();
+    harness.editorDom.isConnected = false;
+
+    expect(harness.ports.keyboardInteraction.rejectCurrentChunk(harness.file.filePath)).toBeNull();
+    harness.ports.keyboardInteraction.rollbackContent(harness.file.filePath, 'draft');
+
+    expect(harness.editorActions.computeChunkIndexAtPosition).not.toHaveBeenCalled();
+    expect(harness.editorActions.rejectChunk).not.toHaveBeenCalled();
+    expect(harness.editorActions.ignoreNextDocChange).not.toHaveBeenCalled();
+    expect(harness.editorView.dispatch).not.toHaveBeenCalled();
   });
 });

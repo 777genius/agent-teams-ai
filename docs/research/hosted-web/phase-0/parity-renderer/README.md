@@ -11,12 +11,13 @@ The checked-in evidence is intentionally compact:
   one explicit owner, disposition, security class, semantic evidence obligation, action ID, and work
   package. Renderer caller paths omit source line numbers.
 - `renderer-child-control-catalog.json` is the reviewed, omission-sensitive catalog for the complete
-  relative/renderer-alias import closure rooted at `TeamListView`, `TeamDetailView`, the globally
-  mounted approval sheet and task-detail dialog, and the provider management panel. Its 171 declared
-  source files must exactly equal the recursively discovered closure; 666 stable source keys cover
+  relative/renderer and change-review feature-alias import closure rooted at `TeamListView`,
+  `TeamDetailView`, the globally mounted approval sheet and task-detail dialog, and the provider
+  management panel. Its 180 declared
+  source files must exactly equal the recursively discovered closure; 700 stable source keys cover
   every non-root child control occurrence. The scanner also proves the `App` and `TabbedLayout` mount
   chains for the two global roots.
-- `renderer-action-inventory.json` maps all 817 scanner-visible sites in that closure to 491 semantic
+- `renderer-action-inventory.json` maps all 865 scanner-visible sites in that closure to 511 semantic
   actions or six deliberate absence classes. Multiple AST sites for keyboard/click parity or a Select
   trigger/item/change widget may map to one action. Interaction discovery covers the complete React
   event families (including capture variants) and every `on*` callback on directly imported external
@@ -53,5 +54,5 @@ input, multi-part Select, semantic missing/duplicate mappings, and root/child li
 The generator follows both relative imports and the team/provider renderer aliases used by production
 components. A file outside the closure is not silently ignored: it is emitted in `excludedSourceFiles`
 and its exclusion is regenerated from the current import graph. The direct renderer API caller scan is
-repository-wide, so all IPC semantics remain tied to the 109-member parity ledger even when a control
+repository-wide, so all IPC semantics remain tied to the 123-member parity ledger even when a control
 delegates through a child callback.

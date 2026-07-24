@@ -8,17 +8,15 @@ import React, {
   useState,
 } from 'react';
 
-import { Transaction } from '@codemirror/state';
 import { registerAppCloseParticipant } from '@features/app-close-coordination/renderer';
 import {
+  browserChangeReviewCollapsedFilesStorage,
   buildChangeReviewTitle,
-  buildGlobalDiffLoadingState,
   buildReviewChangeStats,
-  buildReviewFileLabels,
   buildReviewStats,
-  buildWatchedReviewFilePathsKey,
   ChangeReviewConflictDiscardDialog,
   ChangeReviewConflictNotices,
+  ChangeReviewSidebar,
   createChangeReviewActionHistoryStorePort,
   createChangeReviewBulkDecisionCommandPort,
   createChangeReviewBulkDecisionStatePort,
@@ -30,6 +28,7 @@ import {
   createChangeReviewDialogLifecycleStatePort,
   createChangeReviewDialogViewPorts,
   createChangeReviewDraftHistoryPort,
+  createChangeReviewExternalFileWatcherPort,
   createChangeReviewFileDecisionCommandPort,
   createChangeReviewFileDecisionStatePort,
   createChangeReviewFileDraftCommandPort,
@@ -38,11 +37,8 @@ import {
   createChangeReviewHistoryMutationStatePort,
   createChangeReviewHunkDecisionCommandPort,
   createChangeReviewHunkDecisionStatePort,
-  findActiveReviewFile,
   isReviewActionPersistenceBlocking,
-  resolveReviewFileLabel as resolveReviewFileLabelFromMap,
   shouldShowTaskScopeBanner,
-  sortChangeReviewFiles,
   TaskChangesEmptyState,
   toTaskChangeSetV2,
   useChangeReviewActionHistoryController,
@@ -50,24 +46,21 @@ import {
   useChangeReviewConflictDiscoveryController,
   useChangeReviewConflictInteractionController,
   useChangeReviewDecisionPersistenceController,
+  useChangeReviewDialogKeyboardInteractions,
   useChangeReviewDialogLifecycleController,
+  useChangeReviewDialogViewState,
   useChangeReviewDraftHistoryController,
+  useChangeReviewExternalFileWatcher,
   useChangeReviewFileDecisionController,
   useChangeReviewFileDraftController,
-  useChangeReviewHistoryKeyboardShortcuts,
   useChangeReviewHistoryMutationController,
   useChangeReviewHunkDecisionController,
   useChangeReviewOperationGeneration,
   useChangeReviewScopeIdentity,
 } from '@features/change-review/renderer';
-import { useAppTranslation } from '@features/localization/renderer';
 import { buildReviewRestoreDecisionState } from '@features/review-mutations';
 import { api, isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
-import { useContinuousScrollNav } from '@renderer/hooks/useContinuousScrollNav';
-import { useDiffNavigation } from '@renderer/hooks/useDiffNavigation';
-import { useViewedFiles } from '@renderer/hooks/useViewedFiles';
-import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { getFileHunkCount, REVIEW_INSTANT_APPLY } from '@renderer/store/slices/changeReviewSlice';
 import { buildSelectionAction } from '@renderer/utils/buildSelectionAction';
@@ -75,10 +68,9 @@ import {
   buildChangeReviewLifecycleSessionId,
   registerChangeReviewLifecycleOwner,
 } from '@renderer/utils/changeReviewLifecycleCoordinator';
-import { buildSelectionInfo, SELECTION_DEBOUNCE_MS } from '@renderer/utils/codemirrorSelectionInfo';
 import { getFileReviewKey } from '@renderer/utils/reviewKey';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
-import { ChevronDown, Clock, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 import { ChangesLoadingAnimation } from './ChangesLoadingAnimation';
 import {
@@ -89,7 +81,6 @@ import {
   rejectChunk,
 } from './CodeMirrorDiffUtils';
 import { ContinuousScrollView } from './ContinuousScrollView';
-import { FileEditTimeline } from './FileEditTimeline';
 import { buildInitialReviewFileScrollKey } from './initialReviewFileScroll';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { buildPathChangeLabels } from './pathChangeLabels';
@@ -115,14 +106,13 @@ import {
   isReviewTextContentUnavailable,
 } from './reviewContentPreview';
 import { resolveReviewFilePath } from './reviewFilePathResolution';
-import { ReviewFileTree } from './ReviewFileTree';
 import { ReviewToolbar } from './ReviewToolbar';
 import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
 import { ViewedProgressBar } from './ViewedProgressBar';
 
-import type { EditorView } from '@codemirror/view';
 import type {
+  ChangeReviewDialogViewStatePolicy,
   ChangeReviewFileDecisionPolicy,
   ChangeReviewHunkDecisionPolicy,
   ChangeReviewRecentWrite,
@@ -130,13 +120,14 @@ import type {
 } from '@features/change-review/renderer';
 import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import type {
+  EditorFileChangeEvent,
   FileChangeSummary,
   ReviewDecisionSnapshot,
   ReviewDiskUndoSnapshot,
   ReviewRedoAction,
   ReviewUndoAction,
 } from '@shared/types';
-import type { EditorSelectionAction, EditorSelectionInfo } from '@shared/types/editor';
+import type { EditorSelectionAction } from '@shared/types/editor';
 
 const changeReviewConflictQueryPort = createChangeReviewConflictQueryPort(() => api.review);
 const changeReviewConflictCommandPort = createChangeReviewConflictCommandPort(() => api.review);
@@ -145,6 +136,9 @@ const changeReviewConflictStateBridge = createChangeReviewConflictStateBridge({
   setApplyError: (applyError) => useStore.setState({ applyError }),
 });
 const changeReviewDraftHistoryPort = createChangeReviewDraftHistoryPort(() => api.review);
+const changeReviewExternalFileWatcherPort = createChangeReviewExternalFileWatcherPort(
+  () => api.review
+);
 const changeReviewActionHistoryStorePort = createChangeReviewActionHistoryStorePort({
   getStore: useStore.getState,
   clearLegacyUndoStack: () => useStore.setState({ reviewUndoStack: [] }),
@@ -214,6 +208,11 @@ const changeReviewHunkDecisionPolicy: ChangeReviewHunkDecisionPolicy = {
   shouldCreateWhenUndoingReject: shouldCreateFileWhenUndoingReject,
   getRenameRecoveryExpectation: getReviewRenameRecoveryExpectation,
 };
+const changeReviewDialogViewStatePolicy: ChangeReviewDialogViewStatePolicy = {
+  buildInitialScrollKey: buildInitialReviewFileScrollKey,
+  getHistoryActionFilePath: getReviewActionFilePath,
+  resolveFilePath: resolveReviewFilePath,
+};
 const changeReviewDialogLifecycleStatePort = createChangeReviewDialogLifecycleStatePort({
   getStore: useStore.getState,
   reportError: (applyError) => useStore.setState({ applyError }),
@@ -251,8 +250,6 @@ const changeReviewHistoryMutationStatePort = createChangeReviewHistoryMutationSt
     useStore.getState().invalidateResolvedFileContent(filePath),
 });
 
-const REVIEW_LOCAL_WRITE_COOLDOWN_MS = 2000;
-
 interface ChangeReviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -284,7 +281,6 @@ export const ChangeReviewDialog = ({
   lifecycleTabId,
   onLifecycleFocus,
 }: ChangeReviewDialogProps): React.ReactElement | null => {
-  const { t } = useAppTranslation('team');
   const generatedLifecycleHostId = useId();
   const resolvedLifecycleHostId = lifecycleHostId ?? generatedLifecycleHostId;
   const reviewLifecycleSessionId = useMemo(
@@ -376,38 +372,10 @@ export const ChangeReviewDialog = ({
     store: changeReviewActionHistoryStorePort,
   });
 
-  // Active file from scroll-spy (replaces selectedReviewFilePath for continuous scroll)
-  const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
-  const [autoViewed, setAutoViewed] = useState(true);
-  const [timelineOpen, setTimelineOpen] = useState(false);
   const [discardCounters, setDiscardCounters] = useState<Record<string, number>>({});
   const [filesApplying, setFilesApplying] = useState<Set<string>>(() => new Set());
   const [undoing, setUndoing] = useState(false);
   const [closing, setClosing] = useState(false);
-  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set<string>();
-    try {
-      const raw = window.localStorage.getItem(collapseStorageKey);
-      const parsed = raw ? (JSON.parse(raw) as unknown) : null;
-      if (Array.isArray(parsed)) {
-        return new Set(parsed.filter((v): v is string => typeof v === 'string'));
-      }
-    } catch {
-      // ignore
-    }
-    return new Set<string>();
-  });
-
-  // Selection menu state
-  const [selectionInfo, setSelectionInfo] = useState<EditorSelectionInfo | null>(null);
-  const [containerRect, setContainerRect] = useState<DOMRect>(new DOMRect());
-  const diffContentRef = useRef<HTMLDivElement>(null);
-  const selectionTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const activeSelectionFileRef = useRef<string | null>(null);
-
-  // EditorView map for all visible file editors
-  const editorViewMapRef = useRef(new Map<string, EditorView>());
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileApplyInFlightRef = useRef(new Set<string>());
   const undoInFlightRef = useRef(false);
   const closingRef = useRef(false);
@@ -416,10 +384,6 @@ export const ChangeReviewDialog = ({
   // Exact disk state on which each manual draft started. Map.has() distinguishes
   // a genuinely missing file (null baseline) from an uncaptured baseline.
   const expectedDraftHistoryKeyRef = useRef<string | null>(null);
-
-  // Proxy ref for useDiffNavigation (points to active file's editor)
-  const activeEditorViewRef = useRef<EditorView | null>(null);
-  const activeFilePathRef = useRef<string | null>(null);
 
   useLayoutEffect(() => {
     const activeHydrationKey = open && lifecycleAuthorized ? decisionHydrationKey : null;
@@ -643,24 +607,6 @@ export const ChangeReviewDialog = ({
     [memberName, taskId, teamName]
   );
 
-  const getEditorFilePathForTarget = useCallback((target: Element | null): string | null => {
-    if (!target) return null;
-    for (const [filePath, view] of editorViewMapRef.current.entries()) {
-      if (view.dom.contains(target)) {
-        return filePath;
-      }
-    }
-    return null;
-  }, []);
-
-  // Keep refs in sync with activeFilePath
-  useEffect(() => {
-    activeFilePathRef.current = activeFilePath;
-    activeEditorViewRef.current = activeFilePath
-      ? (editorViewMapRef.current.get(activeFilePath) ?? null)
-      : null;
-  }, [activeFilePath]);
-
   useEffect(() => {
     fileApplyInFlightRef.current.clear();
     recentReviewWritesRef.current.clear();
@@ -736,53 +682,65 @@ export const ChangeReviewDialog = ({
     (filePath: string): boolean => filePath in useStore.getState().editedContents,
     []
   );
-
-  // One-shot scroll-to-file ref (for initialFilePath)
-  const initialScrollDoneKeyRef = useRef<string | null>(null);
-
-  // Continuous scroll navigation
-  const { scrollToFile, isProgrammaticScroll } = useContinuousScrollNav({
+  const hasData =
+    lifecycleAuthorized &&
+    !changeSetLoading &&
+    !changeSetError &&
+    !!activeChangeSet &&
+    (decisionHydrationKey === null || (decisionHydrationReady && draftHistoryHydrationReady));
+  const reportReviewInteractionError = useCallback((message: string): void => {
+    useStore.setState({ applyError: message });
+  }, []);
+  const {
+    activeFile,
+    activeFilePath,
+    activeFilePathRef,
+    activeEditorViewRef,
+    autoViewed,
+    clearSelection,
+    collapsedFiles,
+    containerRect,
+    diffContentRef,
+    editorViewMapRef,
+    getEditorFilePathForTarget,
+    globalDiffLoadingState,
+    handleFullyViewed,
+    handleHistoryActionNavigation,
+    handleSelectionChange,
+    handleTreeFileClick,
+    handleVisibleFileChange,
+    isProgrammaticScroll,
+    resolveReviewFileLabel,
     scrollContainerRef,
+    scrollToFile,
+    selectionInfo,
+    setAutoViewed,
+    setTimelineOpen,
+    sortedFiles,
+    timelineOpen,
+    toggleCollapsedFile,
+    viewedCount,
+    viewedProgress,
+    viewedSet,
+    viewedTotalCount,
+    watchedReviewFilePathsKey,
+  } = useChangeReviewDialogViewState({
+    open,
+    hasData,
+    teamName,
+    scopeKey,
+    collapseStorageKey,
+    initialFilePath,
+    activeChangeSet,
+    fileContents,
+    fileContentsLoading,
+    storage: browserChangeReviewCollapsedFilesStorage,
+    policy: changeReviewDialogViewStatePolicy,
+    reportError: reportReviewInteractionError,
   });
-
-  // Sort files to match the visual order of the file tree (directories first, then alphabetical)
-  const sortedFiles = useMemo(
-    () => sortChangeReviewFiles(activeChangeSet?.files ?? []),
-    [activeChangeSet]
-  );
-  const reviewFileLabels = useMemo(() => buildReviewFileLabels(sortedFiles), [sortedFiles]);
-  const resolveReviewFileLabel = useCallback(
-    (filePath: string): string => resolveReviewFileLabelFromMap(reviewFileLabels, filePath),
-    [reviewFileLabels]
-  );
-  // A content-derived key avoids tearing down/recreating the main-process watcher
-  // when Zustand returns a new array containing the exact same review paths.
-  const watchedReviewFilePathsKey = useMemo(
-    () => buildWatchedReviewFilePathsKey(sortedFiles),
-    [sortedFiles]
-  );
-  const watchedReviewFilePathsKeyRef = useRef(watchedReviewFilePathsKey);
-  useEffect(() => {
-    watchedReviewFilePathsKeyRef.current = watchedReviewFilePathsKey;
-  }, [watchedReviewFilePathsKey]);
-  const globalDiffLoadingState = useMemo(
-    () =>
-      buildGlobalDiffLoadingState({
-        files: sortedFiles,
-        activeFilePath,
-        fileContentsLoading,
-        fileContents,
-      }),
-    [activeFilePath, fileContents, fileContentsLoading, sortedFiles]
-  );
-
-  // File paths for viewed tracking
-  const allFilePaths = useMemo(() => sortedFiles.map((f) => f.filePath), [sortedFiles]);
-
   const pathChangeLabels = useMemo(() => {
     return buildPathChangeLabels(activeChangeSet?.files ?? [], fileContents);
   }, [activeChangeSet, fileContents]);
-
   const rejectablePendingFiles = useMemo(
     () =>
       sortedFiles.filter((file) => {
@@ -821,17 +779,6 @@ export const ChangeReviewDialog = ({
       }),
     [editedContents, fileContents, fileDecisions, sortedFiles]
   );
-
-  const {
-    viewedSet,
-    isViewed,
-    markViewed,
-    unmarkViewed,
-    viewedCount,
-    totalCount: viewedTotalCount,
-    progress: viewedProgress,
-  } = useViewedFiles(teamName, scopeKey, allFilePaths);
-
   const editedCount = Object.keys(editedContents).length;
   const reviewMutationBlockedByExternalChange = Object.keys(reviewExternalChangesByFile).length > 0;
   const blockReviewMutationForExternalChange = useCallback((filePath?: string): boolean => {
@@ -846,128 +793,46 @@ export const ChangeReviewDialog = ({
     }
     return blocked;
   }, []);
-
-  // Scroll-spy handler
-  const handleVisibleFileChange = useCallback((filePath: string) => {
-    setActiveFilePath(filePath);
-  }, []);
-
-  useEffect(() => {
-    if (!open || !projectPath || !isElectronMode()) return;
-    let disposed = false;
-
-    const unsubscribe = api.review.onExternalFileChange((event) => {
+  const processReviewExternalFileChange = useCallback(
+    (event: EditorFileChangeEvent): void => {
       const normalizedPath = normalizePathForComparison(event.path);
-      const processExternalChange = (): void => {
-        if (disposed) return;
-        const state = useStore.getState();
-        const active = state.activeChangeSet;
-        if (!active) return;
-        const file = active.files.find(
-          (entry) => normalizePathForComparison(entry.filePath) === normalizedPath
-        );
-        if (!file) return;
-        const changeType =
-          event.type === 'create' ? 'add' : event.type === 'delete' ? 'unlink' : 'change';
-        const durableDraftHistory = getDraftHistoryEntry(file.filePath);
-        if (file.filePath in state.editedContents || durableDraftHistory) {
-          if (!(file.filePath in state.editedContents) && durableDraftHistory) {
-            state.updateEditedContent(file.filePath, durableDraftHistory.editorState.doc);
-          }
-          state.markReviewFileExternallyChanged(file.filePath, changeType);
-        } else {
-          state.markReviewFileExternallyChanged(file.filePath, changeType);
-        }
-        useStore.setState({
-          applyError:
-            'A reviewed file changed outside Changes. Reload it from disk before continuing review actions.',
-        });
-      };
-
-      const recentWrite = recentReviewWritesRef.current.get(normalizedPath);
-      if (recentWrite && Date.now() - recentWrite.at < REVIEW_LOCAL_WRITE_COOLDOWN_MS) {
-        const verifyExpectedWrite = async (): Promise<void> => {
-          if (disposed) return;
-          const pathBusy = [...fileApplyInFlightRef.current].some(
-            (filePath) => normalizePathForComparison(filePath) === normalizedPath
-          );
-          if (pathBusy || undoInFlightRef.current || useStore.getState().applying) {
-            // A slow fsync, antivirus hook, or network volume can legitimately take
-            // longer than the old 2.5s cap. Verify only after our mutation settles.
-            window.setTimeout(() => void verifyExpectedWrite(), 25);
-            return;
-          }
-          const latest = recentReviewWritesRef.current.get(normalizedPath);
-          if (!latest) return;
-          try {
-            const result = await api.review.checkConflict(
-              reviewScope,
-              event.path,
-              latest.expectedContent ?? ''
-            );
-            const matchesExpected =
-              latest.expectedContent === null
-                ? result.hasConflict && result.conflictContent === null
-                : !result.hasConflict;
-            if (matchesExpected) return;
-          } catch {
-            // A failed verification is not evidence that this was our own event.
-          }
-          recentReviewWritesRef.current.delete(normalizedPath);
-          processExternalChange();
-        };
-        void verifyExpectedWrite();
-        return;
-      }
-      processExternalChange();
-    });
-
-    const initialWatchedFilePaths = watchedReviewFilePathsKeyRef.current
-      ? watchedReviewFilePathsKeyRef.current.split('\0')
-      : [];
-    void api.review.watchFiles(projectPath, initialWatchedFilePaths);
-
-    return () => {
-      disposed = true;
-      unsubscribe();
-      void api.review.unwatchFiles();
-    };
-  }, [getDraftHistoryEntry, open, projectPath, reviewScope]);
-
-  useEffect(() => {
-    if (!open || !projectPath || !isElectronMode()) return;
-    const watchedFilePaths = watchedReviewFilePathsKey ? watchedReviewFilePathsKey.split('\0') : [];
-    void api.review.watchFiles(projectPath, watchedFilePaths);
-  }, [open, projectPath, watchedReviewFilePathsKey]);
-
-  // Tree click → scroll to file
-  const handleTreeFileClick = useCallback(
-    (filePath: string) => {
-      scrollToFile(filePath);
-      setActiveFilePath(filePath);
-    },
-    [scrollToFile]
-  );
-
-  const handleHistoryActionNavigation = useCallback(
-    (action: ReviewUndoAction) => {
-      const actionFilePath = getReviewActionFilePath(action);
-      if (!actionFilePath) return;
-      const targetFile = sortedFiles.find(
-        (file) =>
-          normalizePathForComparison(file.filePath) === normalizePathForComparison(actionFilePath)
+      const state = useStore.getState();
+      const active = state.activeChangeSet;
+      if (!active) return;
+      const file = active.files.find(
+        (entry) => normalizePathForComparison(entry.filePath) === normalizedPath
       );
-      if (!targetFile) {
-        useStore.setState({
-          applyError: 'The file from this review action is no longer in the current change set.',
-        });
-        return;
+      if (!file) return;
+      const durableDraftHistory = getDraftHistoryEntry(file.filePath);
+      if (!(file.filePath in state.editedContents) && durableDraftHistory) {
+        state.updateEditedContent(file.filePath, durableDraftHistory.editorState.doc);
       }
-      handleTreeFileClick(targetFile.filePath);
+      const changeType =
+        event.type === 'create' ? 'add' : event.type === 'delete' ? 'unlink' : 'change';
+      state.markReviewFileExternallyChanged(file.filePath, changeType);
+      reportReviewInteractionError(
+        'A reviewed file changed outside Changes. Reload it from disk before continuing review actions.'
+      );
     },
-    [handleTreeFileClick, sortedFiles]
+    [getDraftHistoryEntry, reportReviewInteractionError]
   );
-
+  const isReviewMutationInFlightForPath = useCallback((normalizedPath: string): boolean => {
+    const pathBusy = [...fileApplyInFlightRef.current].some(
+      (filePath) => normalizePathForComparison(filePath) === normalizedPath
+    );
+    return pathBusy || undoInFlightRef.current || useStore.getState().applying;
+  }, []);
+  useChangeReviewExternalFileWatcher({
+    open,
+    enabled: isElectronMode(),
+    projectPath,
+    watchedFilePathsKey: watchedReviewFilePathsKey,
+    reviewScope,
+    recentWritesRef: recentReviewWritesRef,
+    isMutationInFlight: isReviewMutationInFlightForPath,
+    processExternalChange: processReviewExternalFileChange,
+    port: changeReviewExternalFileWatcherPort,
+  });
   const dialogViewPorts = useMemo(
     () =>
       // eslint-disable-next-line react-hooks/refs -- Factory only captures refs for later callbacks.
@@ -975,10 +840,12 @@ export const ChangeReviewDialog = ({
         editorViewMapRef,
         editorActions: {
           acceptAllChunks,
+          computeChunkIndexAtPosition: computeChunkIndexAtPos,
           ignoreNextDocChange: ignoreNextReviewDocChange,
           rejectAllChunks,
           rejectChunk,
         },
+        subscribeToRejectCurrentHunk: (callback) => window.electronAPI?.review.onCmdN?.(callback),
         fileApplyInFlightRef,
         undoInFlightRef,
         closingRef,
@@ -994,9 +861,14 @@ export const ChangeReviewDialog = ({
         fetchFileContent,
         navigateToHistoryAction: handleHistoryActionNavigation,
       }),
-    [addReviewFile, fetchFileContent, handleHistoryActionNavigation, handleSerializedStateChanged]
+    [
+      addReviewFile,
+      editorViewMapRef,
+      fetchFileContent,
+      handleHistoryActionNavigation,
+      handleSerializedStateChanged,
+    ]
   );
-
   const buildBulkRejectDiskSnapshot = useCallback(
     (
       file: FileChangeSummary,
@@ -1027,7 +899,7 @@ export const ChangeReviewDialog = ({
           : undefined,
       };
     },
-    [activeChangeSet, fileChunkCounts, fileContents]
+    [activeChangeSet, editorViewMapRef, fileChunkCounts, fileContents]
   );
   const bulkDecisionCommandPort = useMemo(
     () =>
@@ -1238,15 +1110,6 @@ export const ChangeReviewDialog = ({
     hasUnresolvedExternalChange: hasUnresolvedReviewExternalChange,
   });
 
-  const handleFullyViewed = useCallback(
-    (filePath: string) => {
-      if (autoViewed && !isViewed(filePath)) {
-        markViewed(filePath);
-      }
-    },
-    [autoViewed, isViewed, markViewed]
-  );
-
   const reviewHistoryMutationScope = useMemo(
     () =>
       decisionScopeToken
@@ -1367,242 +1230,31 @@ export const ChangeReviewDialog = ({
     registerAppCloseParticipant,
   });
 
-  // Selection change handler (debounced for non-empty, immediate for clear)
-  const handleSelectionChange = useCallback((info: EditorSelectionInfo | null) => {
-    if (!info) {
-      if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
-      setSelectionInfo(null);
-      return;
-    }
-    activeSelectionFileRef.current = info.filePath;
-    if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
-    selectionTimerRef.current = setTimeout(() => {
-      setSelectionInfo(info);
-    }, SELECTION_DEBOUNCE_MS);
-  }, []);
-
-  // Scroll repositioning - re-query coords when parent scrolls (rAF-throttled)
-  const hasData =
-    lifecycleAuthorized &&
-    !changeSetLoading &&
-    !changeSetError &&
-    !!activeChangeSet &&
-    (decisionHydrationKey === null || (decisionHydrationReady && draftHistoryHydrationReady));
-  useEffect(() => {
-    if (!hasData) return;
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    let rafId = 0;
-    const onScroll = (): void => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const fp = activeSelectionFileRef.current;
-        if (!fp) return;
-        const view = editorViewMapRef.current.get(fp);
-        if (!view) return;
-        const sel = view.state.selection.main;
-        if (sel.empty) {
-          setSelectionInfo(null);
-          return;
-        }
-        const info = buildSelectionInfo(view, sel);
-        if (info) {
-          setSelectionInfo({ ...info, filePath: fp });
-        } else {
-          setSelectionInfo(null);
-        }
-      });
-    };
-
-    container.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      cancelAnimationFrame(rafId);
-      container.removeEventListener('scroll', onScroll);
-    };
-  }, [hasData]);
-
-  // Track container rect for menu positioning
-  useEffect(() => {
-    const el = diffContentRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(() => {
-      setContainerRect(el.getBoundingClientRect());
-    });
-    observer.observe(el);
-    setContainerRect(el.getBoundingClientRect());
-    return () => observer.disconnect();
-  }, [hasData]);
-
-  // Save active file (for Cmd+S keyboard shortcut)
-  const handleSaveActiveFile = useCallback(() => {
-    if (!activeFilePath || hasReviewActionInFlight()) return;
-    void handleSaveFile(activeFilePath);
-  }, [activeFilePath, handleSaveFile, hasReviewActionInFlight]);
-
-  // Continuous navigation options for cross-file hunk navigation
-  const continuousOptions = useMemo(
-    () => ({
-      editorViewMapRef,
-      activeFilePath,
-      scrollToFile,
-      enabled: true,
-    }),
-    [activeFilePath, scrollToFile]
-  );
-
-  const diffNav = useDiffNavigation(
-    sortedFiles,
-    activeFilePath,
-    scrollToFile,
-    activeEditorViewRef,
+  const { diffNav, reviewHunkOrder } = useChangeReviewDialogKeyboardInteractions({
     open,
-    handleHunkAccepted,
-    handleHunkRejected,
-    () => void requestClose(),
-    handleSaveActiveFile,
-    continuousOptions,
-    (filePath, fallbackSnippetsLength) =>
-      getFileHunkCount(filePath, fallbackSnippetsLength, fileChunkCounts)
-  );
-
-  const reviewHunkOrder = useMemo(() => {
-    const offsets: Record<string, number> = {};
-    let total = 0;
-    for (const file of sortedFiles) {
-      offsets[file.filePath] = total;
-      total += getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
-    }
-    return { offsets, total };
-  }, [sortedFiles, fileChunkCounts]);
-
-  const toggleCollapsedFile = useCallback((filePath: string) => {
-    setCollapsedFiles((prev) => {
-      const next = new Set(prev);
-      if (next.has(filePath)) next.delete(filePath);
-      else next.add(filePath);
-      return next;
-    });
-  }, []);
-
-  // Persist collapsed state (best-effort)
-  useEffect(() => {
-    if (!open) return;
-    if (typeof window === 'undefined') return;
-    const id = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(collapseStorageKey, JSON.stringify([...collapsedFiles]));
-      } catch {
-        // ignore
-      }
-    }, 200);
-    return () => window.clearTimeout(id);
-  }, [open, collapseStorageKey, collapsedFiles]);
-
-  // Prune collapsed entries to only current files to avoid stale growth
-  useEffect(() => {
-    if (!activeChangeSet) return;
-    const allowed = new Set(activeChangeSet.files.map((f) => f.filePath));
-    setCollapsedFiles((prev) => {
-      const next = new Set<string>();
-      for (const fp of prev) {
-        if (allowed.has(fp)) next.add(fp);
-      }
-      return next.size === prev.size ? prev : next;
-    });
-  }, [activeChangeSet]);
-
-  // Scroll to initialFilePath once data is loaded
-  useEffect(() => {
-    const scrollKey = buildInitialReviewFileScrollKey(activeChangeSet, initialFilePath);
-    if (!activeChangeSet || !initialFilePath || !scrollKey) return;
-    if (initialScrollDoneKeyRef.current === scrollKey) return;
-    const targetFilePath = resolveReviewFilePath(activeChangeSet.files, initialFilePath);
-    if (!targetFilePath) return;
-    initialScrollDoneKeyRef.current = scrollKey;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => scrollToFile(targetFilePath));
-    });
-  }, [activeChangeSet, initialFilePath, scrollToFile]);
-
-  // Clear selection state on close
-  useEffect(() => {
-    if (!open) {
-      setSelectionInfo(null);
-    }
-  }, [open]);
-
-  // Cleanup refs/timers on close
-  useEffect(() => {
-    if (!open) {
-      activeSelectionFileRef.current = null;
-      if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
-    }
-  }, [open]);
-
-  // Review actions use one ordered stack. Manual draft edits keep CodeMirror's native history.
-  const resolveReviewKeyboardEditorContext = useCallback(
-    (target: Element | null) => {
-      const filePath = getEditorFilePathForTarget(target);
-      return {
-        editor: filePath ? (editorViewMapRef.current.get(filePath) ?? null) : null,
-        hasDraft: filePath ? hasReviewDraft(filePath) : false,
-      };
-    },
-    [getEditorFilePathForTarget, hasReviewDraft]
-  );
-  const getReviewUndoCount = useCallback(
-    (): number => getReviewUndoHistory().length,
-    [getReviewUndoHistory]
-  );
-  const getReviewRedoCount = useCallback(
-    (): number => getReviewRedoHistory().length,
-    [getReviewRedoHistory]
-  );
-  const reportReviewUndoDraftBlock = useCallback((): void => {
-    useStore.setState({
-      applyError: 'Save or discard manual edits before undoing a review action.',
-    });
-  }, []);
-  useChangeReviewHistoryKeyboardShortcuts({
-    active: open,
+    activeFilePath,
+    activeFilePathRef,
+    activeEditorViewRef,
+    editorViewMapRef,
+    sortedFiles,
+    fileChunkCounts,
     editedCount,
-    resolveEditorContext: resolveReviewKeyboardEditorContext,
+    scrollToFile,
+    saveFile: handleSaveFile,
+    requestClose,
+    acceptHunk: handleHunkAccepted,
+    rejectHunk: handleHunkRejected,
+    hasDraft: hasReviewDraft,
     hasActionInFlight: hasReviewActionInFlight,
-    getUndoCount: getReviewUndoCount,
-    getRedoCount: getReviewRedoCount,
+    getEditorFilePathForTarget,
+    getHunkCountForFile: getFileHunkCount,
+    getUndoHistory: getReviewUndoHistory,
+    getRedoHistory: getReviewRedoHistory,
     undoLatest: handleUndoLatestReviewAction,
     redoLatest: handleRedoLatestReviewAction,
-    reportManualDraftBlock: reportReviewUndoDraftBlock,
+    reportError: reportReviewInteractionError,
+    keyboardPort: dialogViewPorts.keyboardInteraction,
   });
-
-  // Cmd+N IPC listener (forwarded from main process)
-  useEffect(() => {
-    if (!open) return;
-    const cleanup = window.electronAPI?.review.onCmdN?.(() => {
-      const fp = activeFilePathRef.current;
-      if (!fp) return;
-      const view = editorViewMapRef.current.get(fp);
-      if (!view) return;
-
-      const cursorPos = view.state.selection.main.head;
-      const idx = computeChunkIndexAtPos(view.state, cursorPos);
-      const beforeContent = view.state.doc.toString();
-      if (!rejectChunk(view)) return;
-      const afterContent = view.state.doc.toString();
-      if (handleHunkRejected(fp, idx, beforeContent, afterContent) === false) {
-        ignoreNextReviewDocChange(view);
-        view.dispatch({
-          changes: { from: 0, to: view.state.doc.length, insert: beforeContent },
-          annotations: Transaction.addToHistory.of(false),
-        });
-        return;
-      }
-      requestAnimationFrame(() => diffNav.goToNextHunk());
-    });
-    return cleanup ?? undefined;
-  }, [open, diffNav, handleHunkRejected]);
-
   // Compute toolbar stats using actual CM chunk count (not snippet count)
   const reviewStats = useMemo(
     () =>
@@ -1614,18 +1266,10 @@ export const ChangeReviewDialog = ({
       }),
     [activeChangeSet, hunkDecisions, fileDecisions, fileChunkCounts]
   );
-
   const changeStats = useMemo(() => buildReviewChangeStats(activeChangeSet), [activeChangeSet]);
-
   const taskChangeSet = toTaskChangeSetV2(activeChangeSet);
   const hasReviewFiles = (activeChangeSet?.files.length ?? 0) > 0;
   const shouldShowScopeBanner = shouldShowTaskScopeBanner({ mode, changeSet: taskChangeSet });
-
-  // Active file for timeline (derived from scroll-spy)
-  const activeFile = useMemo(
-    () => findActiveReviewFile(activeChangeSet, activeFilePath),
-    [activeChangeSet, activeFilePath]
-  );
 
   const title = useMemo(
     () => buildChangeReviewTitle({ mode, memberName, taskId, globalTasks }),
@@ -1792,49 +1436,19 @@ export const ChangeReviewDialog = ({
           hasReviewFiles && (
             <>
               {/* File tree */}
-              <div className="w-64 shrink-0 overflow-y-auto border-r border-border bg-surface-sidebar">
-                <ReviewFileTree
-                  files={activeChangeSet.files}
-                  fileContents={fileContents}
-                  pathChangeLabels={pathChangeLabels}
-                  selectedFilePath={null}
-                  onSelectFile={handleTreeFileClick}
-                  viewedSet={viewedSet}
-                  onMarkViewed={markViewed}
-                  onUnmarkViewed={unmarkViewed}
-                  activeFilePath={activeFilePath ?? undefined}
-                />
-
-                {/* Edit Timeline for active file */}
-                {activeFile?.timeline && activeFile.timeline.events.length > 0 && (
-                  <div className="border-t border-border">
-                    <button
-                      onClick={() => setTimelineOpen(!timelineOpen)}
-                      className="flex w-full items-center gap-1.5 px-3 py-2 text-xs text-text-secondary hover:text-text"
-                    >
-                      <Clock className="size-3.5" />
-                      <span>
-                        {t('review.timeline.titleWithCount', {
-                          count: activeFile.timeline.events.length,
-                        })}
-                      </span>
-                      <ChevronDown
-                        className={cn(
-                          'ml-auto size-3 transition-transform',
-                          timelineOpen && 'rotate-180'
-                        )}
-                      />
-                    </button>
-                    {timelineOpen && (
-                      <FileEditTimeline
-                        timeline={activeFile.timeline}
-                        onEventClick={(idx) => diffNav.goToHunk(idx)}
-                        activeSnippetIndex={diffNav.currentHunkIndex}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
+              <ChangeReviewSidebar
+                files={activeChangeSet.files}
+                pathChangeLabels={pathChangeLabels}
+                decisionState={{ hunkDecisions, fileDecisions, fileChunkCounts }}
+                activeFilePath={activeFilePath}
+                viewedSet={viewedSet}
+                onSelectFile={handleTreeFileClick}
+                timeline={activeFile?.timeline ?? null}
+                timelineOpen={timelineOpen}
+                onToggleTimeline={() => setTimelineOpen(!timelineOpen)}
+                onTimelineEventClick={(idx) => diffNav.goToHunk(idx)}
+                activeSnippetIndex={diffNav.currentHunkIndex}
+              />
 
               {/* Continuous scroll diff content with selection menu */}
               <div
@@ -1891,11 +1505,11 @@ export const ChangeReviewDialog = ({
                     containerRect={containerRect}
                     onSendMessage={() => {
                       onEditorAction(buildSelectionAction('sendMessage', selectionInfo));
-                      setSelectionInfo(null);
+                      clearSelection();
                     }}
                     onCreateTask={() => {
                       onEditorAction(buildSelectionAction('createTask', selectionInfo));
-                      setSelectionInfo(null);
+                      clearSelection();
                     }}
                   />
                 )}

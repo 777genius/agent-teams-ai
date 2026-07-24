@@ -4,6 +4,8 @@ import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKe
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { classifyTaskChangeReviewability } from '@shared/utils/taskChangeReviewability';
 
+import { resolveChangeReviewFileHunkCount } from '../../core/domain/reviewHunkCountPolicy';
+
 import type {
   AgentChangeSet,
   FileChangeSummary,
@@ -118,7 +120,11 @@ export function buildReviewStats(input: {
   for (const file of input.changeSet.files) {
     const reviewKey = getFileReviewKey(file);
     const fileDecision = input.fileDecisions[reviewKey] ?? input.fileDecisions[file.filePath];
-    const count = input.fileChunkCounts[file.filePath] ?? file.snippets.length;
+    const count = resolveChangeReviewFileHunkCount(
+      file.filePath,
+      file.snippets.length,
+      input.fileChunkCounts
+    );
 
     if (fileDecision === 'accepted' || fileDecision === 'rejected') {
       stats[fileDecision] += count;

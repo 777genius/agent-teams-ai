@@ -1,4 +1,8 @@
 export {
+  browserChangeReviewCollapsedFilesStorage,
+  createChangeReviewExternalFileWatcherPort,
+} from './adapters/changeReviewDialogInteractionAdapters';
+export {
   createChangeReviewActionHistoryStorePort,
   createChangeReviewDecisionPersistencePort,
 } from './adapters/createChangeReviewActionHistoryPorts';
@@ -16,10 +20,7 @@ export {
   createChangeReviewDialogLifecycleCommandPort,
   createChangeReviewDialogLifecycleStatePort,
 } from './adapters/createChangeReviewDialogLifecyclePorts';
-export type {
-  ChangeReviewDialogViewPorts,
-  ChangeReviewRecentWrite,
-} from './adapters/createChangeReviewDialogViewPorts';
+export type { ChangeReviewDialogViewPorts } from './adapters/createChangeReviewDialogViewPorts';
 export { createChangeReviewDialogViewPorts } from './adapters/createChangeReviewDialogViewPorts';
 export { createChangeReviewDraftHistoryPort } from './adapters/createChangeReviewDraftHistoryPort';
 export {
@@ -56,13 +57,21 @@ export {
   CHANGE_REVIEW_PERSISTENCE_ERROR,
   useChangeReviewDecisionPersistenceController,
 } from './hooks/useChangeReviewDecisionPersistenceController';
+export type { ChangeReviewDialogKeyboardInteractions } from './hooks/useChangeReviewDialogKeyboardInteractions';
+export { useChangeReviewDialogKeyboardInteractions } from './hooks/useChangeReviewDialogKeyboardInteractions';
 export type { ChangeReviewDialogLifecycleController } from './hooks/useChangeReviewDialogLifecycleController';
 export { useChangeReviewDialogLifecycleController } from './hooks/useChangeReviewDialogLifecycleController';
+export type {
+  ChangeReviewDialogViewState,
+  ChangeReviewDialogViewStatePolicy,
+} from './hooks/useChangeReviewDialogViewState';
+export { useChangeReviewDialogViewState } from './hooks/useChangeReviewDialogViewState';
 export type {
   ChangeReviewDraftHistoryController,
   ChangeReviewDraftHistoryDiagnostics,
 } from './hooks/useChangeReviewDraftHistoryController';
 export { useChangeReviewDraftHistoryController } from './hooks/useChangeReviewDraftHistoryController';
+export { useChangeReviewExternalFileWatcher } from './hooks/useChangeReviewExternalFileWatcher';
 export type { ChangeReviewFileDecisionController } from './hooks/useChangeReviewFileDecisionController';
 export { useChangeReviewFileDecisionController } from './hooks/useChangeReviewFileDecisionController';
 export type { ChangeReviewFileDraftController } from './hooks/useChangeReviewFileDraftController';
@@ -99,6 +108,13 @@ export type {
   ChangeReviewConflictQueryPort,
   ChangeReviewConflictScope,
 } from './ports/changeReviewConflictPorts';
+export type {
+  ChangeReviewCollapsedFilesStoragePort,
+  ChangeReviewDialogEditorActions,
+  ChangeReviewDialogKeyboardInteractionPort,
+  ChangeReviewExternalFileWatcherPort,
+  ChangeReviewRecentWrite,
+} from './ports/changeReviewDialogInteractionPorts';
 export type {
   ChangeReviewDialogLifecycleApplyOutcome,
   ChangeReviewDialogLifecycleAutoClearResult,
@@ -170,6 +186,8 @@ export {
   ChangeReviewConflictDiscardDialog,
   ChangeReviewConflictNotices,
 } from './ui/ChangeReviewConflictNotices';
+export type { ChangeReviewSidebarProps } from './ui/ChangeReviewSidebar';
+export { ChangeReviewSidebar } from './ui/ChangeReviewSidebar';
 export type { TaskChangesEmptyStateProps } from './ui/TaskChangesEmptyState';
 export { TaskChangesEmptyState } from './ui/TaskChangesEmptyState';
 export type {
