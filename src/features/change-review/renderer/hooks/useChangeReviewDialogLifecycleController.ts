@@ -449,7 +449,13 @@ export function useChangeReviewDialogLifecycleController({
       const outcome = await commandPort.applyReview(teamName, taskId, memberName);
       if (!isCurrentOperationScope(operationScope)) return;
       writeEvidencePort.markCommittedPostimages(outcome.result?.diskPostimages);
-      if (outcome.status === 'failed') return;
+      if (outcome.status === 'failed') {
+        statePort.reportError(
+          outcome.result?.errors[0]?.error ??
+            'Unable to apply this review. Changes remains open; retry Apply.'
+        );
+        return;
+      }
       if (!sessionPort.isExpectedHydrationKey(decisionHydrationKey)) return;
       sessionPort.setPendingApplyCleanupKey(decisionHydrationKey);
     }

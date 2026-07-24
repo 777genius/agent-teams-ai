@@ -517,7 +517,30 @@ describe('useChangeReviewDialogLifecycleController', () => {
 
     await act(async () => latest!.apply());
 
-    expect(harness.events).toEqual(['apply-review', 'mark-postimages']);
+    expect(harness.events).toEqual(['apply-review', 'mark-postimages', 'error:changed']);
+    expect(harness.sessionPort.setPendingApplyCleanupKey).not.toHaveBeenCalled();
+    expect(harness.commandPort.clearDecisions).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('reports a deterministic fallback when Apply fails without a result', async () => {
+    const harness = createHarness();
+    vi.mocked(harness.commandPort.applyReview).mockImplementation(() => {
+      harness.events.push('apply-review');
+      return Promise.resolve({
+        status: 'failed',
+        result: null,
+      });
+    });
+    const root = await renderHarness(harness);
+
+    await act(async () => latest!.apply());
+
+    expect(harness.events).toEqual([
+      'apply-review',
+      'mark-postimages',
+      'error:Unable to apply this review. Changes remains open; retry Apply.',
+    ]);
     expect(harness.sessionPort.setPendingApplyCleanupKey).not.toHaveBeenCalled();
     expect(harness.commandPort.clearDecisions).not.toHaveBeenCalled();
     act(() => root.unmount());

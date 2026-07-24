@@ -62,6 +62,33 @@ export function getReviewCloseBlockReason(input: {
   return null;
 }
 
+interface LocalReviewStateInput {
+  editedContentCount: number;
+  hunkDecisionCount: number;
+  fileDecisionCount: number;
+  undoHistoryCount: number;
+  redoHistoryCount: number;
+  draftDiagnostics: ChangeReviewDraftWriteDiagnostics;
+  pendingApplyCleanup: boolean;
+  decisionDiagnostics: ChangeReviewDecisionWriteDiagnostics;
+}
+
+function hasLocalReviewState(input: LocalReviewStateInput): boolean {
+  return (
+    input.editedContentCount > 0 ||
+    input.hunkDecisionCount > 0 ||
+    input.fileDecisionCount > 0 ||
+    input.undoHistoryCount > 0 ||
+    input.redoHistoryCount > 0 ||
+    input.draftDiagnostics.pendingWriteCount > 0 ||
+    input.draftDiagnostics.writeChainCount > 0 ||
+    input.draftDiagnostics.writeErrorCount > 0 ||
+    input.pendingApplyCleanup ||
+    input.decisionDiagnostics.pendingDecisionClear ||
+    input.decisionDiagnostics.persistenceStatus !== 'saved'
+  );
+}
+
 export function hasUnscopedLocalReviewState(input: {
   editedContentCount: number;
   hunkDecisionCount: number;
@@ -75,35 +102,36 @@ export function hasUnscopedLocalReviewState(input: {
   pendingDecisionClear: boolean;
   persistenceStatus: ReviewActionPersistenceStatus;
 }): boolean {
-  return (
-    input.editedContentCount > 0 ||
-    input.hunkDecisionCount > 0 ||
-    input.fileDecisionCount > 0 ||
-    input.undoHistoryCount > 0 ||
-    input.redoHistoryCount > 0 ||
-    input.pendingDraftWriteCount > 0 ||
-    input.draftWriteChainCount > 0 ||
-    input.draftWriteErrorCount > 0 ||
-    input.pendingApplyCleanup ||
-    input.pendingDecisionClear ||
-    input.persistenceStatus !== 'saved'
-  );
+  return hasLocalReviewState({
+    editedContentCount: input.editedContentCount,
+    hunkDecisionCount: input.hunkDecisionCount,
+    fileDecisionCount: input.fileDecisionCount,
+    undoHistoryCount: input.undoHistoryCount,
+    redoHistoryCount: input.redoHistoryCount,
+    draftDiagnostics: {
+      pendingWriteCount: input.pendingDraftWriteCount,
+      writeChainCount: input.draftWriteChainCount,
+      writeErrorCount: input.draftWriteErrorCount,
+    },
+    pendingApplyCleanup: input.pendingApplyCleanup,
+    decisionDiagnostics: {
+      pendingDecisionClear: input.pendingDecisionClear,
+      persistenceStatus: input.persistenceStatus,
+    },
+  });
 }
 
 function hasLocalReviewBranch(input: ChangeReviewCloseReadinessInput): boolean {
-  return (
-    input.editedContentCount > 0 ||
-    input.hunkDecisionCount > 0 ||
-    input.fileDecisionCount > 0 ||
-    input.undoHistoryCount > 0 ||
-    input.redoHistoryCount > 0 ||
-    input.scopedDraftDiagnostics.pendingWriteCount > 0 ||
-    input.scopedDraftDiagnostics.writeChainCount > 0 ||
-    input.scopedDraftDiagnostics.writeErrorCount > 0 ||
-    input.pendingApplyCleanupKey === input.hydrationKey ||
-    input.decisionDiagnostics.pendingDecisionClear ||
-    input.decisionDiagnostics.persistenceStatus !== 'saved'
-  );
+  return hasLocalReviewState({
+    editedContentCount: input.editedContentCount,
+    hunkDecisionCount: input.hunkDecisionCount,
+    fileDecisionCount: input.fileDecisionCount,
+    undoHistoryCount: input.undoHistoryCount,
+    redoHistoryCount: input.redoHistoryCount,
+    draftDiagnostics: input.scopedDraftDiagnostics,
+    pendingApplyCleanup: input.pendingApplyCleanupKey === input.hydrationKey,
+    decisionDiagnostics: input.decisionDiagnostics,
+  });
 }
 
 export function evaluateChangeReviewCloseReadiness(
