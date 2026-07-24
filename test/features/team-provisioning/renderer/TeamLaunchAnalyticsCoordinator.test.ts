@@ -129,6 +129,31 @@ describe('TeamLaunchAnalyticsCoordinator', () => {
     expect(recorder.recordLaunchEnd).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps a shared analytics step open across provisioning state changes', () => {
+    const { coordinator, recorder } = createHarness();
+    const configuring = progress('configuring', {
+      updatedAt: '2026-07-24T10:00:02.000Z',
+    });
+    const assembling = progress('assembling', {
+      updatedAt: '2026-07-24T10:00:04.000Z',
+    });
+    const finalizing = progress('finalizing', {
+      updatedAt: '2026-07-24T10:00:07.000Z',
+    });
+
+    coordinator.recordStepTransition(undefined, configuring, snapshot());
+    coordinator.recordStepTransition(configuring, assembling, snapshot());
+    coordinator.recordStepTransition(assembling, finalizing, snapshot());
+
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledTimes(1);
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        step: 'member_spawn',
+        durationMs: 7_000,
+      })
+    );
+  });
+
   it('keeps concurrent run contexts isolated when progress arrives out of order', () => {
     const { coordinator, recorder } = createHarness();
     const launchPort = coordinator.createLaunchPort();
@@ -226,6 +251,28 @@ describe('TeamLaunchAnalyticsCoordinator', () => {
     coordinator.reset();
     coordinator.recordTerminalProgress(ready, snapshot());
 
+    expect(recorder.recordLaunchEnd).toHaveBeenCalledTimes(2);
+  });
+
+  it('clearRun releases step and terminal dedupe state for a reused run id', () => {
+    const { coordinator, recorder } = createHarness();
+    const validating = progress('validating', {
+      updatedAt: '2026-07-24T10:00:00.000Z',
+    });
+    const spawning = progress('spawning', {
+      updatedAt: '2026-07-24T10:00:02.000Z',
+    });
+    const ready = progress('ready');
+
+    coordinator.recordStepTransition(undefined, validating, snapshot());
+    coordinator.recordStepTransition(validating, spawning, snapshot());
+    coordinator.recordTerminalProgress(ready, snapshot());
+    coordinator.clearRun('run-1');
+    coordinator.recordStepTransition(undefined, validating, snapshot());
+    coordinator.recordStepTransition(validating, spawning, snapshot());
+    coordinator.recordTerminalProgress(ready, snapshot());
+
+    expect(recorder.recordLaunchStepEnd).toHaveBeenCalledTimes(2);
     expect(recorder.recordLaunchEnd).toHaveBeenCalledTimes(2);
   });
 });

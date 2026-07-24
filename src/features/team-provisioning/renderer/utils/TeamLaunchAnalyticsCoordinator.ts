@@ -65,6 +65,7 @@ export class TeamLaunchAnalyticsCoordinator {
   clearRun(runId: string): void {
     this.analyticsByRunId.delete(runId);
     this.clearStepTracking(runId);
+    this.reportedEndRunIds.delete(runId);
   }
 
   reset(): void {
@@ -89,6 +90,8 @@ export class TeamLaunchAnalyticsCoordinator {
     if (!existingProgress || existingProgress.state === progress.state) return;
 
     const previousStep = getTeamLaunchAnalyticsStep(existingProgress.state);
+    if (previousStep === step) return;
+
     const previousStepKey = `${progress.runId}:${previousStep}`;
     if (this.reportedStepKeys.has(previousStepKey)) return;
 
@@ -194,6 +197,11 @@ export class TeamLaunchAnalyticsCoordinator {
     for (const key of this.stepStartedAtByKey.keys()) {
       if (key.startsWith(`${runId}:`)) {
         this.stepStartedAtByKey.delete(key);
+      }
+    }
+    for (const key of this.reportedStepKeys) {
+      if (key.startsWith(`${runId}:`)) {
+        this.reportedStepKeys.delete(key);
       }
     }
   }
