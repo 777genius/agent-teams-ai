@@ -127,6 +127,14 @@ export function useChangeReviewDraftHistoryController({
   const writeErrorsRef = useRef(new Map<string, unknown>());
   const persistedVersionsRef = useRef(new Map<string, DraftHistoryVersion>());
   const suppressedFilesRef = useRef(new Set<string>());
+  const stableReviewScope = useMemo(
+    () => ({
+      teamName: reviewScope.teamName,
+      taskId: reviewScope.taskId,
+      memberName: reviewScope.memberName,
+    }),
+    [reviewScope.memberName, reviewScope.taskId, reviewScope.teamName]
+  );
   const persistenceScope = useMemo(
     () =>
       decisionScopeToken
@@ -253,7 +261,7 @@ export function useChangeReviewDraftHistoryController({
           if (file?.filePath !== entry.filePath) continue;
           const baselineKey = normalizePathForComparison(file.filePath);
           const conflict = await port.checkConflict({
-            reviewScope,
+            reviewScope: stableReviewScope,
             filePath: file.filePath,
             expectedModified: entry.diskBaseline ?? '',
           });
@@ -310,7 +318,7 @@ export function useChangeReviewDraftHistoryController({
     replaceEntries,
     reportError,
     retryNonce,
-    reviewScope,
+    stableReviewScope,
     setHydration,
   ]);
 
