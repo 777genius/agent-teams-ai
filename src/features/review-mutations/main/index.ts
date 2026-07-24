@@ -26,6 +26,12 @@ export {
   type ReviewDecisionCommandPolicyContext,
 } from '../core/domain/reviewDecisionCommandPolicy';
 export {
+  type DeleteEditedFileInput,
+  parseDeleteEditedFileInput,
+  parseSaveEditedFileInput,
+  type SaveEditedFileInput,
+} from '../core/domain/reviewEditableMutationPolicy';
+export {
   buildReviewExternalReloadState,
   buildReviewHistoryRestorePlan,
   buildReviewRestoreDecisionState,
@@ -81,6 +87,13 @@ export type {
   ReviewDecisionCommandSnapshotIdentityPort,
 } from './application/ReviewDecisionCommandPorts';
 export { ReviewDirectMutationDiskService } from './application/ReviewDirectMutationDiskService';
+export { ReviewEditableMutationApplication } from './application/ReviewEditableMutationApplication';
+export type {
+  ReviewEditableMutationApplierPort,
+  ReviewEditableMutationContentPort,
+  ReviewEditableMutationDependencies,
+  ReviewEditableMutationScopePort,
+} from './application/ReviewEditableMutationPorts';
 export { ReviewHistoryMutationApplication } from './application/ReviewHistoryMutationApplication';
 export type {
   ReviewHistoryMutationCurrentState,
@@ -121,6 +134,10 @@ export {
   createReviewDecisionCommandFeature,
   type ReviewDecisionCommandFeatureDependencies,
 } from './composition/createReviewDecisionCommandFeature';
+export {
+  createReviewEditableMutationFeature,
+  type ReviewEditableMutationFeatureDependencies,
+} from './composition/createReviewEditableMutationFeature';
 export {
   createReviewHistoryMutationFeature,
   type ReviewHistoryMutationFeatureDependencies,

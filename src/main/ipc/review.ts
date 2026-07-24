@@ -26,8 +26,11 @@ import {
   assertCurrentReviewDecisionRevision,
   createReviewDecisionBatchFeature,
   createReviewDecisionCommandFeature,
+  createReviewEditableMutationFeature,
   createReviewHistoryMutationFeature,
   createReviewMutationRecoveryFeature,
+  parseDeleteEditedFileInput,
+  parseSaveEditedFileInput,
   registerReviewMutationRecoveryIpc,
   removeReviewMutationRecoveryIpc,
   ReviewMutationCoordinator,
@@ -663,6 +666,19 @@ const reviewHistoryMutationFeature = createReviewHistoryMutationFeature({
   },
 });
 
+const reviewEditableMutationFeature = createReviewEditableMutationFeature({
+  scope: reviewScopeAuthorizationFeature,
+  applier: {
+    saveEditedFile: (...args) => getApplier().saveEditedFile(...args),
+    deleteEditedFile: (...args) => getApplier().deleteEditedFile(...args),
+    restoreRejectedRename: (...args) => getApplier().restoreRejectedRename(...args),
+    reapplyRejectedRename: (...args) => getApplier().reapplyRejectedRename(...args),
+  },
+  content: {
+    invalidateFile: (filePath) => getContentResolver().invalidateFile(filePath),
+  },
+});
+
 const reviewMutationRecoveryFeature = createReviewMutationRecoveryFeature({
   scope: {
     parse: parseReviewFileScope,
@@ -867,26 +883,13 @@ async function handleSaveEditedFile(
   content: unknown,
   expectedCurrentContent: string | null | undefined
 ): Promise<IpcResult<{ success: boolean }>> {
-  if (
-    typeof filePathValue !== 'string' ||
-    typeof content !== 'string' ||
-    (expectedCurrentContent !== null && typeof expectedCurrentContent !== 'string')
-  ) {
+  const input = parseSaveEditedFileInput(filePathValue, content, expectedCurrentContent);
+  if (!input) {
     return { success: false, error: 'Invalid parameters' };
   }
-  return wrapReviewHandler('saveEditedFile', async () => {
-    const { authorization } = await resolveReviewPathAuthorization(scopeValue, {
-      requireIdentity: true,
-    });
-    const filePath = await validateAuthorizedReviewFilePath(authorization, filePathValue, {
-      requireReviewedFile: true,
-      rejectHardlinks: true,
-    });
-    const result = await getApplier().saveEditedFile(filePath, content, expectedCurrentContent);
-    // Invalidate cached content so next fetch reads the saved version from disk
-    getContentResolver().invalidateFile(filePath);
-    return result;
-  });
+  return wrapReviewHandler('saveEditedFile', () =>
+    reviewEditableMutationFeature.saveEditedFile(scopeValue, input)
+  );
 }
 
 async function handleDeleteEditedFile(
@@ -895,21 +898,13 @@ async function handleDeleteEditedFile(
   filePathValue: unknown,
   expectedCurrentContent: unknown
 ): Promise<IpcResult<{ success: boolean }>> {
-  if (typeof expectedCurrentContent !== 'string') {
+  const input = parseDeleteEditedFileInput(filePathValue, expectedCurrentContent);
+  if (!input) {
     return { success: false, error: 'Invalid parameters' };
   }
-  return wrapReviewHandler('deleteEditedFile', async () => {
-    const { authorization } = await resolveReviewPathAuthorization(scopeValue, {
-      requireIdentity: true,
-    });
-    const filePath = await validateAuthorizedReviewFilePath(authorization, filePathValue, {
-      requireReviewedFile: true,
-      rejectHardlinks: true,
-    });
-    const result = await getApplier().deleteEditedFile(filePath, expectedCurrentContent);
-    getContentResolver().invalidateFile(filePath);
-    return result;
-  });
+  return wrapReviewHandler('deleteEditedFile', () =>
+    reviewEditableMutationFeature.deleteEditedFile(scopeValue, input)
+  );
 }
 
 async function handleRestoreRejectedRename(
@@ -918,37 +913,9 @@ async function handleRestoreRejectedRename(
   filePathValue: unknown,
   expectationValue: unknown
 ): Promise<IpcResult<{ success: boolean }>> {
-  return wrapReviewHandler('restoreRejectedRename', async () => {
-    const expectation = parseReviewRenameRecoveryExpectation(expectationValue);
-    const { scope, authorization } = await resolveReviewPathAuthorization(scopeValue, {
-      requireIdentity: true,
-    });
-    const filePath = await validateAuthorizedReviewFilePath(authorization, filePathValue, {
-      requireReviewedFile: true,
-      rejectHardlinks: true,
-    });
-    const authoritativeContent = await resolveAuthoritativeFileContent(
-      scope,
-      authorization,
-      filePath
-    );
-    await validateSnippetPaths(authorization, authoritativeContent.snippets, {
-      requireReviewedFile: true,
-      rejectHardlinks: true,
-    });
-    assertExpectedAuthoritativeRename(authoritativeContent, expectation);
-
-    try {
-      return await getApplier().restoreRejectedRename(
-        filePath,
-        authoritativeContent.originalFullContent,
-        authoritativeContent.modifiedFullContent,
-        authoritativeContent.snippets
-      );
-    } finally {
-      invalidateAuthoritativeReviewContent(authoritativeContent);
-    }
-  });
+  return wrapReviewHandler('restoreRejectedRename', () =>
+    reviewEditableMutationFeature.restoreRejectedRename(scopeValue, filePathValue, expectationValue)
+  );
 }
 
 async function handleReapplyRejectedRename(
@@ -957,36 +924,9 @@ async function handleReapplyRejectedRename(
   filePathValue: unknown,
   expectationValue: unknown
 ): Promise<IpcResult<{ success: boolean }>> {
-  return wrapReviewHandler('reapplyRejectedRename', async () => {
-    const expectation = parseReviewRenameRecoveryExpectation(expectationValue);
-    const { scope, authorization } = await resolveReviewPathAuthorization(scopeValue, {
-      requireIdentity: true,
-    });
-    const filePath = await validateAuthorizedReviewFilePath(authorization, filePathValue, {
-      requireReviewedFile: true,
-      rejectHardlinks: true,
-    });
-    const authoritativeContent = await resolveAuthoritativeFileContent(
-      scope,
-      authorization,
-      filePath
-    );
-    await validateSnippetPaths(authorization, authoritativeContent.snippets, {
-      requireReviewedFile: true,
-      rejectHardlinks: true,
-    });
-    assertExpectedAuthoritativeRename(authoritativeContent, expectation);
-
-    try {
-      return await getApplier().reapplyRejectedRename(
-        filePath,
-        authoritativeContent.originalFullContent,
-        authoritativeContent.snippets
-      );
-    } finally {
-      invalidateAuthoritativeReviewContent(authoritativeContent);
-    }
-  });
+  return wrapReviewHandler('reapplyRejectedRename', () =>
+    reviewEditableMutationFeature.reapplyRejectedRename(scopeValue, filePathValue, expectationValue)
+  );
 }
 
 async function handleWatchReviewFiles(
