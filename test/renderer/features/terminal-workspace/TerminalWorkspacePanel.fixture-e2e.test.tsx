@@ -399,6 +399,222 @@ describe('terminal workspace panel fixture-e2e', () => {
     );
   });
 
+  it('replaces the full stateful team scope before rendering another team on the same root', async () => {
+    const otherTeamName = 'terminal-fixture-team-b';
+    const teamAAppearance = {
+      version: 1,
+      fontSizePx: 16,
+      opacityPercent: 71,
+      backgroundMode: 'solid',
+      backgroundColor: '#112233',
+      backgroundImageUrl: '',
+      backgroundImageFit: 'cover',
+      backdropBlurPx: 8,
+      dimBackgroundImage: false,
+    };
+    const teamBAppearance = {
+      version: 1,
+      fontSizePx: 19,
+      opacityPercent: 82,
+      backgroundMode: 'image',
+      backgroundColor: '#445566',
+      backgroundImageUrl: 'https://example.test/team-b.jpg',
+      backgroundImageFit: 'contain',
+      backdropBlurPx: 12,
+      dimBackgroundImage: true,
+    };
+    const teamACommandRuns = [
+      {
+        clientEventId: 'team-a-command',
+        command: 'printf TEAM_A',
+        paneId: 'pane-1',
+        sessionId: 'session-1',
+        startedAtMs: 10,
+        status: 'succeeded',
+      },
+    ];
+    const teamBCommandRuns = [
+      {
+        clientEventId: 'team-b-command',
+        command: 'printf TEAM_B',
+        paneId: 'pane-1',
+        sessionId: 'session-1',
+        startedAtMs: 20,
+        status: 'failed',
+      },
+    ];
+    const teamAHistory = ['printf TEAM_A'];
+    const teamBHistory = ['printf TEAM_B'];
+    const teamATabPreferences = JSON.stringify({
+      colors: { 'tab-1': 'sky' },
+      order: ['tab-1'],
+      version: 1,
+    });
+    const teamBTabPreferences = JSON.stringify({
+      colors: { 'tab-1': 'violet' },
+      order: ['tab-1'],
+      version: 1,
+    });
+    const trackedStorageKeys = [
+      'appearance-settings',
+      'command-history',
+      'command-runs',
+      'font-scale',
+      'line-wrap',
+      'tab-preferences',
+      'theme',
+    ] as const;
+    const readTrackedTeamStorage = (teamName: string): Record<string, string | null> =>
+      Object.fromEntries(
+        trackedStorageKeys.map((key) => [
+          storageKeyForTeam(teamName, key),
+          window.localStorage.getItem(storageKeyForTeam(teamName, key)),
+        ])
+      );
+
+    window.localStorage.setItem(
+      storageKeyForTeam(TEAM_NAME, 'appearance-settings'),
+      JSON.stringify(teamAAppearance)
+    );
+    window.localStorage.setItem(
+      storageKeyForTeam(TEAM_NAME, 'command-history'),
+      JSON.stringify(teamAHistory)
+    );
+    window.localStorage.setItem(
+      storageKeyForTeam(TEAM_NAME, 'command-runs'),
+      JSON.stringify(teamACommandRuns)
+    );
+    window.localStorage.setItem(storageKeyForTeam(TEAM_NAME, 'font-scale'), 'large');
+    window.localStorage.setItem(storageKeyForTeam(TEAM_NAME, 'line-wrap'), 'true');
+    window.localStorage.setItem(
+      storageKeyForTeam(TEAM_NAME, 'tab-preferences'),
+      teamATabPreferences
+    );
+    window.localStorage.setItem(storageKeyForTeam(TEAM_NAME, 'theme'), 'terminal-platform-light');
+
+    window.localStorage.setItem(
+      storageKeyForTeam(otherTeamName, 'appearance-settings'),
+      JSON.stringify(teamBAppearance)
+    );
+    window.localStorage.setItem(
+      storageKeyForTeam(otherTeamName, 'command-history'),
+      JSON.stringify(teamBHistory)
+    );
+    window.localStorage.setItem(
+      storageKeyForTeam(otherTeamName, 'command-runs'),
+      JSON.stringify(teamBCommandRuns)
+    );
+    window.localStorage.setItem(storageKeyForTeam(otherTeamName, 'font-scale'), 'compact');
+    window.localStorage.setItem(storageKeyForTeam(otherTeamName, 'line-wrap'), 'false');
+    window.localStorage.setItem(
+      storageKeyForTeam(otherTeamName, 'tab-preferences'),
+      teamBTabPreferences
+    );
+    window.localStorage.setItem(
+      storageKeyForTeam(otherTeamName, 'theme'),
+      'terminal-platform-default'
+    );
+
+    getBootstrap
+      .mockResolvedValueOnce({
+        ...createBootstrap(),
+        controlPlaneUrl: 'ws://fixture-control-team-a',
+        sessionStreamUrl: 'ws://fixture-stream-team-a',
+      })
+      .mockResolvedValue({
+        ...createBootstrap(),
+        controlPlaneUrl: 'ws://fixture-control-team-b',
+        sessionStreamUrl: 'ws://fixture-stream-team-b',
+        teamName: otherTeamName,
+      });
+    nextSnapshot = createWorkspaceSnapshot({
+      commandHistoryEntries: teamAHistory,
+      fontScale: 'large',
+      lineWrap: true,
+      themeId: 'terminal-platform-light',
+    });
+
+    await renderPanel({ settingsOpen: true });
+    const teamAKernel = currentKernel();
+    const expectedTeamAStorage = readTrackedTeamStorage(TEAM_NAME);
+    const expectedTeamBStorage = readTrackedTeamStorage(otherTeamName);
+    const storageWriteSpy = vi.spyOn(window.localStorage, 'setItem');
+
+    try {
+      nextSnapshot = createWorkspaceSnapshot({
+        commandHistoryEntries: teamBHistory,
+        fontScale: 'compact',
+        lineWrap: false,
+        themeId: 'terminal-platform-default',
+      });
+      await renderPanel({
+        settingsOpen: true,
+        teamDisplayName: 'Terminal Fixture B',
+        teamName: otherTeamName,
+      });
+
+      const teamBKernel = currentKernel();
+      expect(panelFixture.kernels).toHaveLength(2);
+      expect(teamAKernel.dispose).toHaveBeenCalledOnce();
+      expect(teamBKernel.dispose).not.toHaveBeenCalled();
+      expect(getBootstrap).toHaveBeenNthCalledWith(2, {
+        projectPath: PROJECT_PATH,
+        teamDisplayName: 'Terminal Fixture B',
+        teamName: otherTeamName,
+      });
+      expect(panelFixture.createWorkspaceWebSocketTransport).toHaveBeenLastCalledWith({
+        controlUrl: 'ws://fixture-control-team-b',
+        streamUrl: 'ws://fixture-stream-team-b',
+      });
+      expect(panelFixture.createWorkspaceKernel).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          initialCommandHistoryEntries: teamBHistory,
+          initialTerminalFontScale: 'compact',
+          initialTerminalLineWrap: false,
+          initialThemeId: 'terminal-platform-default',
+        })
+      );
+
+      const expectedTeamBValues = new Map(Object.entries(expectedTeamBStorage));
+      const teamAWrites = storageWriteSpy.mock.calls.filter(([key]) =>
+        String(key).startsWith(`agent-teams:terminal-workspace:${TEAM_NAME}:`)
+      );
+      const teamBWrites = storageWriteSpy.mock.calls.filter(([key]) =>
+        String(key).startsWith(`agent-teams:terminal-workspace:${otherTeamName}:`)
+      );
+      expect(teamAWrites).toEqual([]);
+      expect(teamBWrites.length).toBeGreaterThan(0);
+      for (const [key, value] of teamBWrites) {
+        if (expectedTeamBValues.has(String(key))) {
+          expect(String(value)).toBe(expectedTeamBValues.get(String(key)));
+        }
+      }
+      expect(readTrackedTeamStorage(TEAM_NAME)).toEqual(expectedTeamAStorage);
+      expect(readTrackedTeamStorage(otherTeamName)).toEqual(expectedTeamBStorage);
+      expect(window.localStorage.getItem(storageKeyForTeam(TEAM_NAME, 'tab-preferences'))).toBe(
+        teamATabPreferences
+      );
+      expect(window.localStorage.getItem(storageKeyForTeam(otherTeamName, 'tab-preferences'))).toBe(
+        teamBTabPreferences
+      );
+
+      await clickTextButton('Reconnect');
+      expect(teamAKernel.commands.bootstrap).not.toHaveBeenCalled();
+      expect(teamBKernel.commands.bootstrap).toHaveBeenCalledOnce();
+
+      await clickTextButton('Stop');
+      expect(stopTeamRuntime).toHaveBeenCalledWith(otherTeamName);
+      expect(stopTeamRuntime).not.toHaveBeenCalledWith(TEAM_NAME);
+      expect(getBootstrap).toHaveBeenLastCalledWith({
+        projectPath: PROJECT_PATH,
+        teamDisplayName: 'Terminal Fixture B',
+        teamName: otherTeamName,
+      });
+    } finally {
+      storageWriteSpy.mockRestore();
+    }
+  });
+
   it('ignores corrupt terminal storage without blocking workspace bootstrap', async () => {
     window.localStorage.setItem(storageKey('command-history'), '{not-json');
     window.localStorage.setItem(storageKey('tab-preferences'), '{not-json');
@@ -1801,8 +2017,12 @@ describe('terminal workspace panel fixture-e2e', () => {
 
   async function renderPanel({
     settingsOpen = false,
+    teamDisplayName = 'Terminal Fixture',
+    teamName = TEAM_NAME,
   }: {
     settingsOpen?: boolean;
+    teamDisplayName?: string;
+    teamName?: string;
   } = {}): Promise<void> {
     await act(async () => {
       root.render(
@@ -1818,8 +2038,8 @@ describe('terminal workspace panel fixture-e2e', () => {
             settingsOpen,
             stopTeamRuntime,
             surface: 'sheet',
-            teamDisplayName: 'Terminal Fixture',
-            teamName: TEAM_NAME,
+            teamDisplayName,
+            teamName,
           })
         )
       );
@@ -2060,7 +2280,11 @@ function createTab(tabId: string, title: string, paneId: string): MockTab {
 }
 
 function storageKey(key: string): string {
-  return `agent-teams:terminal-workspace:${TEAM_NAME}:${key}`;
+  return storageKeyForTeam(TEAM_NAME, key);
+}
+
+function storageKeyForTeam(teamName: string, key: string): string {
+  return `agent-teams:terminal-workspace:${teamName}:${key}`;
 }
 
 function currentKernel(): MockKernel {
