@@ -50,25 +50,29 @@ function createHarness() {
   let state = initialState();
   let contextEpoch = 1;
 
-  const send = vi.fn(
-    async (_teamName: string, _request: SendMessageRequest): Promise<SendMessageResult> => ({
-      deliveredToInbox: true,
-      messageId: 'message-1',
-    })
+  const send = vi.fn<(teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>>(
+    () =>
+      Promise.resolve({
+        deliveredToInbox: true,
+        messageId: 'message-1',
+      })
   );
   const getRuntimeDeliveryStatus = vi.fn(
-    async (): Promise<OpenCodeRuntimeDeliveryStatus | null> => null
+    (): Promise<OpenCodeRuntimeDeliveryStatus | null> => Promise.resolve(null)
   );
-  const listTargets = vi.fn(async () => [{ teamName: 'peer', displayName: 'Peer' }]);
-  const sendCrossTeam = vi.fn(async () => ({
-    messageId: 'cross-message-1',
-    deliveredToInbox: true,
-  }));
+  const listTargets = vi.fn(() => Promise.resolve([{ teamName: 'peer', displayName: 'Peer' }]));
+  const sendCrossTeam = vi.fn(() =>
+    Promise.resolve({
+      messageId: 'cross-message-1',
+      deliveredToInbox: true,
+    })
+  );
   const recordAttachment = vi.fn(() => trace.push('analytics:attachment'));
   const recordCrossTeamMessage = vi.fn(() => trace.push('analytics:cross-team'));
   const recordCrossTeamTargetsFailure = vi.fn();
-  const refreshMessageHead = vi.fn(async (teamName: string) => {
+  const refreshMessageHead = vi.fn((teamName: string) => {
     trace.push(`refresh:${teamName}`);
+    return Promise.resolve();
   });
 
   const dependencies: TeamMessageDeliveryRendererSliceDependencies<TestState, number> = {
@@ -191,11 +195,12 @@ describe('createTeamMessageDeliveryRendererSlice', () => {
       deliveredViaStdin: true,
       messageId: 'message-live',
     };
-    harness.send.mockImplementationOnce(async () => result);
-    harness.refreshMessageHead.mockImplementationOnce(async (teamName) => {
+    harness.send.mockImplementationOnce(() => Promise.resolve(result));
+    harness.refreshMessageHead.mockImplementationOnce((teamName) => {
       expect(harness.getState().lastSendMessageResult).toBe(result);
       expect(harness.getState().sendingMessage).toBe(false);
       harness.trace.push(`refresh:${teamName}`);
+      return Promise.resolve();
     });
 
     await expect(
@@ -425,13 +430,14 @@ describe('createTeamMessageDeliveryRendererSlice', () => {
 
   it('records and refreshes a successful cross-team send after publishing result state', async () => {
     const harness = createHarness();
-    harness.refreshMessageHead.mockImplementationOnce(async (teamName) => {
+    harness.refreshMessageHead.mockImplementationOnce((teamName) => {
       expect(harness.getState().lastSendMessageResult).toEqual({
         messageId: 'cross-message-1',
         deliveredToInbox: true,
         deduplicated: undefined,
       });
       harness.trace.push(`refresh:${teamName}`);
+      return Promise.resolve();
     });
 
     await harness.slice.sendCrossTeamMessage(crossTeamRequest);

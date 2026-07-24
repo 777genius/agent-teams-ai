@@ -331,6 +331,51 @@ describe('createTeamProvisioningLaunchSlice', () => {
     expect(harness.analytics.recordIpcFailure).toHaveBeenCalledWith({ source: 'launch' }, failure);
   });
 
+  it('does not overwrite newer launch params when an older launch response arrives late', async () => {
+    const older = createDeferred<{ runId: string }>();
+    const newer = createDeferred<{ runId: string }>();
+    const launch = vi
+      .fn()
+      .mockImplementationOnce(() => older.promise)
+      .mockImplementationOnce(() => newer.promise);
+    const harness = createHarness(createState(), { launch });
+
+    const olderLaunch = harness.slice.launchTeam({
+      teamName: 'sandbox-team',
+      cwd: '/Users/test/sandbox-project',
+      providerId: 'anthropic',
+      model: 'opus',
+    });
+    const newerLaunch = harness.slice.launchTeam({
+      teamName: 'sandbox-team',
+      cwd: '/Users/test/sandbox-project',
+      providerId: 'codex',
+      model: 'gpt-5.6',
+      effort: 'high',
+    });
+
+    newer.resolve({ runId: 'run-newer' });
+    await expect(newerLaunch).resolves.toBe('run-newer');
+    const newerParams = harness.getState().launchParamsByTeam['sandbox-team'];
+    expect(newerParams).toEqual(
+      expect.objectContaining({
+        providerId: 'codex',
+        model: 'gpt-5.6',
+        effort: 'high',
+      })
+    );
+
+    older.resolve({ runId: 'run-older' });
+    await expect(olderLaunch).resolves.toBe('run-older');
+
+    expect(harness.getState().launchParamsByTeam['sandbox-team']).toBe(newerParams);
+    expect(harness.getState().currentProvisioningRunIdByTeam['sandbox-team']).toBe('run-newer');
+    expect(harness.getState().currentRuntimeRunIdByTeam['sandbox-team']).toBe('run-newer');
+    expect(harness.getState().ignoredProvisioningRunIds['run-older']).toBe('sandbox-team');
+    expect(harness.persistence.saveLaunchParams).toHaveBeenCalledTimes(1);
+    expect(harness.persistence.saveLaunchParams).toHaveBeenCalledWith('sandbox-team', newerParams);
+  });
+
   it('clears an accepted orphan when best-effort polling reports an unknown run', async () => {
     const getStatus = vi.fn().mockRejectedValue(new Error('Unknown runId: run-orphan'));
     const harness = createHarness(
