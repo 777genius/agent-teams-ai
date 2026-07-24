@@ -6,6 +6,11 @@ import {
   isTeamGraphSlotPersistenceDisabled,
   type TeamGraphLayoutSlice,
 } from '@features/agent-graph';
+import {
+  createTeamLifecycleMutationCleanup,
+  createTeamLifecycleMutationSlice,
+  type TeamLifecycleMutationSlice,
+} from '@features/team-lifecycle/renderer';
 import { isActiveProvisioningState } from '@features/team-provisioning';
 import {
   createTeamProvisioningControlSlice,
@@ -900,6 +905,7 @@ function isVisibleInActiveTeamSurface(
 export interface TeamSlice
   extends
     TeamGraphLayoutSlice,
+    TeamLifecycleMutationSlice,
     TeamMessageFeedRendererSlice,
     TeamProvisioningControlSlice,
     TeamProvisioningLaunchSlice,
@@ -1050,9 +1056,6 @@ export interface TeamSlice
     attachmentId: string,
     mimeType: string
   ) => Promise<string | null>;
-  deleteTeam: (teamName: string) => Promise<void>;
-  restoreTeam: (teamName: string) => Promise<void>;
-  permanentlyDeleteTeam: (teamName: string) => Promise<void>;
   pendingApprovals: ToolApprovalRequest[];
   /** Resolved permission approvals: request_id → allowed (true/false). Used for noise row icons. */
   resolvedApprovals: Map<string, boolean>;
@@ -1261,6 +1264,59 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     },
     mapReviewError,
     setState: (state) => set(state),
+  }),
+  ...createTeamLifecycleMutationSlice<
+    AppState,
+    ReturnType<typeof getTeamLifecycleAnalyticsContext>
+  >({
+    analytics: {
+      captureSoftDelete: (teamName) =>
+        getTeamLifecycleAnalyticsContext(selectTeamDataForName(get(), teamName)),
+      recordSoftDeleteFailure: (context, error) =>
+        recordTeamDelete({
+          source: 'store',
+          success: false,
+          ...context,
+          errorClass: classifyAnalyticsError(error),
+        }),
+      recordSoftDeleteSuccess: (context) =>
+        recordTeamDelete({
+          source: 'store',
+          success: true,
+          ...context,
+          errorClass: 'none',
+        }),
+    },
+    cleanup: createTeamLifecycleMutationCleanup<AppState>({
+      buildProgressTombstones: (state, teamName, floor) =>
+        buildTeamScopedProgressTombstones(state, teamName, floor),
+      collectStateRemovals: (state, teamName) => collectTeamScopedStateRemovals(state, teamName),
+      resetScope: (teamName, mutation) => {
+        invalidateTeamLocalStateEpoch(teamName);
+        if (mutation === 'soft-delete') {
+          clearTeamTaskBoardAnalytics(teamName);
+        }
+        defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(teamName);
+        clearPendingReplyRefreshWaits(teamName);
+        clearTeamScopedTransientState(teamName);
+      },
+    }),
+    clock: {
+      nowIso,
+    },
+    refresh: {
+      fetchAllTasks: () => get().fetchAllTasks(),
+      fetchTeams: () => get().fetchTeams(),
+    },
+    state: {
+      setState: (update) => set((state) => update(state)),
+    },
+    transport: {
+      permanentlyDelete: (teamName) =>
+        unwrapIpc('team:permanentlyDeleteTeam', () => api.teams.permanentlyDeleteTeam(teamName)),
+      restore: (teamName) => unwrapIpc('team:restoreTeam', () => api.teams.restoreTeam(teamName)),
+      softDelete: (teamName) => unwrapIpc('team:deleteTeam', () => api.teams.deleteTeam(teamName)),
+    },
   }),
   provisioningRuns: {},
   provisioningSnapshotByTeam: {},
@@ -2220,104 +2276,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       api.teams.updateMemberRole(teamName, memberName, role)
     );
     await get().refreshTeamData(teamName);
-  },
-
-  deleteTeam: async (teamName: string) => {
-    const analyticsContext = getTeamLifecycleAnalyticsContext(
-      selectTeamDataForName(get(), teamName)
-    );
-    try {
-      await unwrapIpc('team:deleteTeam', () => api.teams.deleteTeam(teamName));
-      recordTeamDelete({
-        source: 'store',
-        success: true,
-        ...analyticsContext,
-        errorClass: 'none',
-      });
-    } catch (error) {
-      recordTeamDelete({
-        source: 'store',
-        success: false,
-        ...analyticsContext,
-        errorClass: classifyAnalyticsError(error),
-      });
-      throw error;
-    }
-    invalidateTeamLocalStateEpoch(teamName);
-    clearTeamTaskBoardAnalytics(teamName);
-    defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(teamName);
-    clearPendingReplyRefreshWaits(teamName);
-    clearTeamScopedTransientState(teamName);
-    set((state) => {
-      const clearedState = collectTeamScopedStateRemovals(state, teamName);
-      const tombstones = buildTeamScopedProgressTombstones(state, teamName, nowIso());
-      if (state.selectedTeamName === teamName) {
-        return {
-          selectedTeamName: null,
-          selectedTeamData: null,
-          selectedTeamLoading: false,
-          selectedTeamError: null,
-          ...clearedState,
-          ...tombstones,
-        };
-      }
-      return {
-        ...clearedState,
-        ...tombstones,
-      };
-    });
-    await get().fetchTeams();
-    await get().fetchAllTasks();
-  },
-
-  restoreTeam: async (teamName: string) => {
-    await unwrapIpc('team:restoreTeam', () => api.teams.restoreTeam(teamName));
-    invalidateTeamLocalStateEpoch(teamName);
-    defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(teamName);
-    clearPendingReplyRefreshWaits(teamName);
-    clearTeamScopedTransientState(teamName);
-    set((state) => {
-      const clearedState = collectTeamScopedStateRemovals(state, teamName);
-      const tombstones = buildTeamScopedProgressTombstones(state, teamName, nowIso());
-      if (Object.keys(clearedState).length === 0) {
-        return tombstones;
-      }
-      return {
-        ...clearedState,
-        ...tombstones,
-      };
-    });
-    await get().fetchTeams();
-    await get().fetchAllTasks();
-  },
-
-  permanentlyDeleteTeam: async (teamName: string) => {
-    await unwrapIpc('team:permanentlyDeleteTeam', () => api.teams.permanentlyDeleteTeam(teamName));
-    invalidateTeamLocalStateEpoch(teamName);
-    defaultTeamMessageFeedCoordinator.clearPendingReplyTimer(teamName);
-    clearPendingReplyRefreshWaits(teamName);
-    clearTeamScopedTransientState(teamName);
-    const state = get();
-    const clearedState = collectTeamScopedStateRemovals(state, teamName);
-    const tombstones = buildTeamScopedProgressTombstones(state, teamName, nowIso());
-    if (state.selectedTeamName === teamName) {
-      set({
-        selectedTeamName: null,
-        selectedTeamData: null,
-        selectedTeamError: null,
-        ...clearedState,
-        ...tombstones,
-      });
-    } else if (Object.keys(clearedState).length > 0) {
-      set({
-        ...clearedState,
-        ...tombstones,
-      });
-    } else {
-      set(tombstones);
-    }
-    await get().fetchTeams();
-    await get().fetchAllTasks();
   },
 
   updateToolApprovalSettings: async (patch, forTeam) => {
