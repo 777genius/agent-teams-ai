@@ -29,6 +29,7 @@ export const CONTROL_ROOTS = [
 ] as const;
 const CONTROL_SCOPE_PREFIXES = [
   'src/renderer/components/team/',
+  'src/features/change-review/renderer/',
   'src/features/runtime-provider-management/renderer/',
 ] as const;
 // Complete React interaction families plus the Radix value/open callbacks used by mounted controls.
@@ -423,9 +424,14 @@ const apiGroups: Array<{
       'loadDecisions',
       'saveDecisions',
       'clearDecisions',
+      'loadDecisionConflictCandidates',
+      'resolveDecisionConflictCandidate',
       'loadDraftHistory',
       'saveDraftHistoryEntry',
       'clearDraftHistory',
+      'loadDraftHistoryConflictCandidates',
+      'resolveDraftHistoryConflictCandidate',
+      'replaceDraftHistoryConflictCandidate',
     ],
   },
   {
@@ -1037,7 +1043,13 @@ function importedModuleSpecifiers(sourceText: string, file: string): string[] {
   );
   const specifiers = new Set<string>();
   const visit = (node: ts.Node): void => {
-    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+    const followsChangeReviewPublicExport =
+      file.startsWith('src/features/change-review/renderer/') && ts.isExportDeclaration(node);
+    if (
+      (ts.isImportDeclaration(node) || followsChangeReviewPublicExport) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
       specifiers.add(node.moduleSpecifier.text);
     }
     if (
@@ -1062,11 +1074,13 @@ function resolveImportedModule(
   const base = (
     specifier.startsWith('@renderer/components/team/')
       ? `src/renderer/components/team/${specifier.slice('@renderer/components/team/'.length)}`
-      : specifier.startsWith('@features/runtime-provider-management/')
-        ? `src/features/runtime-provider-management/${specifier.slice('@features/runtime-provider-management/'.length)}`
-        : specifier.startsWith('.')
-          ? join(dirname(from), specifier)
-          : ''
+      : specifier.startsWith('@features/change-review/')
+        ? `src/features/change-review/${specifier.slice('@features/change-review/'.length)}`
+        : specifier.startsWith('@features/runtime-provider-management/')
+          ? `src/features/runtime-provider-management/${specifier.slice('@features/runtime-provider-management/'.length)}`
+          : specifier.startsWith('.')
+            ? join(dirname(from), specifier)
+            : ''
   ).replaceAll('\\', '/');
   if (!base) return undefined;
   const candidates = [
@@ -1791,8 +1805,7 @@ export function generateEvidence(
         'No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.',
       interactionSiteCount: scanControls(readRepoSource(file)!, file).length,
     })),
-    transitiveActionCoverage:
-      'The checked-in child-control catalog exactly matches the recursively discovered team/provider renderer closure. Every scanner-visible site maps once to a reviewed semantic action or deliberate absence; direct renderer IPC callers remain bound to the 118-member parity ledger. Every other production team TSX file is listed as excluded and rechecked as unreachable from these roots.',
+    transitiveActionCoverage: `The checked-in child-control catalog exactly matches the recursively discovered team/change-review/provider renderer closure. Every scanner-visible site maps once to a reviewed semantic action or deliberate absence; direct renderer IPC callers remain bound to the ${apiRows.length}-member parity ledger. Every other production team TSX file is listed as excluded and rechecked as unreachable from these roots.`,
     actions,
     apiActionBindings,
     legacyChildApiActionBindings,

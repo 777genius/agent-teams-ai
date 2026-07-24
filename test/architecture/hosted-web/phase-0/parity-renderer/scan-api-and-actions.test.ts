@@ -225,6 +225,10 @@ describe('Phase 0 W1 semantic scanner', () => {
         : undefined;
     };
     const discovered = discoverControlClosure(CONTROL_ROOTS, readSource);
+    expect(discovered).toContain('src/features/change-review/renderer/ui/ChangeReviewSidebar.tsx');
+    expect(discovered).toContain(
+      'src/features/change-review/renderer/ui/ChangeReviewConflictNotices.tsx'
+    );
     const catalog = JSON.parse(
       readFileSync(
         join(
