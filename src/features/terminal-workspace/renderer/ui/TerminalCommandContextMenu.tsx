@@ -20,9 +20,7 @@ export const TerminalCommandContextMenu = ({
 }: TerminalCommandContextMenuProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const restoreFocusTargetRef = useRef(
-    document.activeElement instanceof HTMLElement ? document.activeElement : null
-  );
+  const restoreFocusTargetRef = useRef(resolveDeepActiveElement());
   const didRestoreFocusRef = useRef(false);
   const shouldRestoreFocusRef = useRef(true);
   const virtualAnchorRef = useMemo(
@@ -197,4 +195,16 @@ function createVirtualAnchorRect(x: number, y: number): DOMRect {
     x,
     y,
   };
+}
+
+function resolveDeepActiveElement(): HTMLElement | null {
+  let activeElement: Element | null = document.activeElement;
+  while (activeElement instanceof HTMLElement) {
+    const shadowActiveElement = activeElement.shadowRoot?.activeElement;
+    if (!(shadowActiveElement instanceof HTMLElement)) {
+      return activeElement;
+    }
+    activeElement = shadowActiveElement;
+  }
+  return null;
 }

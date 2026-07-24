@@ -135,9 +135,9 @@ describe('TerminalCommandContextMenu', () => {
   });
 
   it('keeps pointer focus when the user dismisses outside the collision-aware popover', async () => {
-    appendFocusTarget();
-    const outsideTarget = appendFocusTarget();
+    const previousFocus = appendFocusTarget();
     await renderHarness();
+    const outsideTarget = appendFocusTarget();
 
     await act(async () => {
       outsideTarget.focus();
@@ -149,6 +149,21 @@ describe('TerminalCommandContextMenu', () => {
       document.querySelector('[data-testid="agent-team-terminal-command-context-menu"]')
     ).toBeNull();
     expect(document.activeElement).toBe(outsideTarget);
+    expect(document.activeElement).not.toBe(previousFocus);
+  });
+
+  it('restores the deepest focused control inside a terminal command dock shadow tree', async () => {
+    const { commandInput, composerShadowRoot, dock } = appendShadowFocusTarget();
+    await renderHarness();
+
+    await act(async () => {
+      getRequiredButton('agent-team-terminal-command-context-copy-command').click();
+      await Promise.resolve();
+    });
+    await flushDismissalAutoFocus();
+
+    expect(document.activeElement).toBe(dock);
+    expect(composerShadowRoot.activeElement).toBe(commandInput);
   });
 
   it('renders platform-aware shortcut labels', async () => {
@@ -187,6 +202,23 @@ function appendFocusTarget(): HTMLInputElement {
   document.body.appendChild(input);
   input.focus();
   return input;
+}
+
+function appendShadowFocusTarget(): {
+  commandInput: HTMLTextAreaElement;
+  composerShadowRoot: ShadowRoot;
+  dock: HTMLElement;
+} {
+  const dock = document.createElement('tp-terminal-command-dock');
+  const dockShadowRoot = dock.attachShadow({ mode: 'open' });
+  const composer = document.createElement('tp-terminal-command-composer');
+  const composerShadowRoot = composer.attachShadow({ mode: 'open' });
+  const commandInput = document.createElement('textarea');
+  composerShadowRoot.appendChild(commandInput);
+  dockShadowRoot.appendChild(composer);
+  document.body.appendChild(dock);
+  commandInput.focus();
+  return { commandInput, composerShadowRoot, dock };
 }
 
 async function pressKey(element: HTMLElement, key: string): Promise<void> {
