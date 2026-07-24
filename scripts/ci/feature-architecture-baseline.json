@@ -823,6 +823,18 @@
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-view-read-model/renderer/index.ts",
+      "specifier": "./adapters/createTeamDirectoryRendererSlice",
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/renderer/index.ts",
+      "specifier": "./adapters/createTeamDirectoryTransport",
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/renderer/index.ts",
       "specifier": "./adapters/createTeamMessageFeedRendererSlice",
       "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts"
     },
