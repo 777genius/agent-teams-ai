@@ -30,6 +30,7 @@ import {
 } from '@features/application-command-ledger/core/domain';
 import { and, asc, eq, gt, isNull, lt } from 'drizzle-orm';
 
+import { ApplicationCommandMutationFenceOps } from './applicationCommandMutationFenceOps';
 import {
   appendCommandOutboxEventToJournal,
   assertCoordinationMutationAdmissionOpen,
@@ -252,10 +253,16 @@ export function handleApplicationCommandLedgerOp(
 }
 
 export class ApplicationCommandLedgerWorkerOps {
+  private readonly mutationFenceOps: ApplicationCommandMutationFenceOps;
+
   constructor(
     private readonly getOrm: () => BetterSQLite3Database,
     private readonly getDb: () => SqliteDatabase
-  ) {}
+  ) {
+    this.mutationFenceOps = new ApplicationCommandMutationFenceOps(getDb, (input) =>
+      this.readByCommandId(input)
+    );
+  }
 
   durableClaim<TCommandKind extends string>(
     input: DurableApplicationCommandPersistClaimRequest<TCommandKind> & {
@@ -1030,40 +1037,46 @@ export class ApplicationCommandLedgerWorkerOps {
 
   begin(input: AppCommandBeginRequest): AppCommandBeginResult {
     assertValidBeginTiming(input);
+    this.ensureMutationFenceSchema();
     const orm = this.getOrm();
-    return orm.transaction((): AppCommandBeginResult => {
-      const currentByCommand = this.readByCommandId(input);
-      if (currentByCommand) {
-        return this.beginExistingCommand(currentByCommand, input);
-      }
+    return orm.transaction(
+      (): AppCommandBeginResult => {
+        const currentByCommand = this.readByCommandId(input);
+        if (currentByCommand) {
+          return this.beginExistingCommand(currentByCommand, input, true);
+        }
 
-      const currentByIdempotencyKey = this.readByIdempotencyKey(input);
-      if (currentByIdempotencyKey) {
-        return this.beginExistingIdempotencyKey(currentByIdempotencyKey, input);
-      }
+        const currentByIdempotencyKey = this.readByIdempotencyKey(input);
+        if (currentByIdempotencyKey) {
+          return this.beginExistingCommand(currentByIdempotencyKey, input, false);
+        }
 
-      const created: AppCommandRecord = {
-        namespace: input.namespace,
-        scopeKey: input.scopeKey,
-        commandId: input.commandId,
-        idempotencyKey: input.idempotencyKey,
-        operation: input.operation,
-        payloadHash: input.payloadHash,
-        status: ApplicationCommandLedgerStatus.Started,
-        failureKind: null,
-        retryable: false,
-        attemptCount: 1,
-        resultHash: null,
-        resultJson: null,
-        metadataJson: input.metadataJson,
-        startedAt: input.nowIso,
-        updatedAt: input.nowIso,
-        completedAt: null,
-        lastError: null,
-      };
-      orm.insert(applicationCommandLedger).values(created).run();
-      return { outcome: ApplicationCommandBeginOutcome.Started, record: created };
-    });
+        const fenceConflict = this.claimMutationFence(input, null);
+        if (fenceConflict) return fenceConflict;
+        const created: AppCommandRecord = {
+          namespace: input.namespace,
+          scopeKey: input.scopeKey,
+          commandId: input.commandId,
+          idempotencyKey: input.idempotencyKey,
+          operation: input.operation,
+          payloadHash: input.payloadHash,
+          status: ApplicationCommandLedgerStatus.Started,
+          failureKind: null,
+          retryable: false,
+          attemptCount: 1,
+          resultHash: null,
+          resultJson: null,
+          metadataJson: input.metadataJson,
+          startedAt: input.nowIso,
+          updatedAt: input.nowIso,
+          completedAt: null,
+          lastError: null,
+        };
+        orm.insert(applicationCommandLedger).values(created).run();
+        return { outcome: ApplicationCommandBeginOutcome.Started, record: created };
+      },
+      { behavior: 'immediate' }
+    );
   }
 
   markCompleted(input: ApplicationCommandLedgerCompleteRequest): void {
@@ -1361,40 +1374,28 @@ export class ApplicationCommandLedgerWorkerOps {
     return attribution;
   }
 
-  private beginExistingCommand(
-    current: AppCommandRecord,
-    input: AppCommandBeginRequest
-  ): AppCommandBeginResult {
-    const conflict =
-      current.idempotencyKey !== input.idempotencyKey
-        ? ApplicationCommandConflictReason.CommandIdReused
-        : this.findSemanticConflict(current, input);
-    if (conflict) {
-      return {
-        outcome: ApplicationCommandBeginOutcome.Conflict,
-        reason: conflict,
-        existing: current,
-        requested: input,
-      };
-    }
-
-    return this.beginExistingMatchingCommand(current, input);
+  private ensureMutationFenceSchema(): void {
+    this.mutationFenceOps.ensureSchema();
+  }
+  private claimMutationFence(
+    input: AppCommandBeginRequest,
+    current: AppCommandRecord | null
+  ): AppCommandBeginResult | null {
+    return this.mutationFenceOps.claim(input, current);
   }
 
-  private beginExistingIdempotencyKey(
+  private beginExistingCommand(
     current: AppCommandRecord,
-    input: AppCommandBeginRequest
+    input: AppCommandBeginRequest,
+    matchedCommandId: boolean
   ): AppCommandBeginResult {
-    const conflict = this.findSemanticConflict(current, input);
-    if (conflict) {
-      return {
-        outcome: ApplicationCommandBeginOutcome.Conflict,
-        reason: conflict,
-        existing: current,
-        requested: input,
-      };
-    }
-
+    const conflict =
+      matchedCommandId && current.idempotencyKey !== input.idempotencyKey
+        ? ApplicationCommandConflictReason.CommandIdReused
+        : this.findSemanticConflict(current, input);
+    if (conflict) return mutationConflict(conflict, current, input);
+    const fenceConflict = this.claimMutationFence(input, current);
+    if (fenceConflict) return fenceConflict;
     return this.beginExistingMatchingCommand(current, input);
   }
 
@@ -1514,33 +1515,32 @@ export class ApplicationCommandLedgerWorkerOps {
   }
 
   private replaceRow(row: AppCommandRecord): void {
+    const { namespace, scopeKey, commandId, ...values } = row;
     this.getOrm()
       .update(applicationCommandLedger)
-      .set({
-        idempotencyKey: row.idempotencyKey,
-        operation: row.operation,
-        payloadHash: row.payloadHash,
-        status: row.status,
-        failureKind: row.failureKind,
-        retryable: row.retryable,
-        attemptCount: row.attemptCount,
-        resultHash: row.resultHash,
-        resultJson: row.resultJson,
-        metadataJson: row.metadataJson,
-        startedAt: row.startedAt,
-        updatedAt: row.updatedAt,
-        completedAt: row.completedAt,
-        lastError: row.lastError,
-      })
+      .set(values)
       .where(
         and(
-          eq(applicationCommandLedger.namespace, row.namespace),
-          eq(applicationCommandLedger.scopeKey, row.scopeKey),
-          eq(applicationCommandLedger.commandId, row.commandId)
+          eq(applicationCommandLedger.namespace, namespace),
+          eq(applicationCommandLedger.scopeKey, scopeKey),
+          eq(applicationCommandLedger.commandId, commandId)
         )
       )
       .run();
   }
+}
+
+function mutationConflict(
+  reason: ApplicationCommandConflictReason,
+  existing: AppCommandRecord | null,
+  requested: AppCommandBeginRequest
+): AppCommandBeginResult {
+  return {
+    outcome: ApplicationCommandBeginOutcome.Conflict,
+    reason,
+    existing,
+    requested,
+  };
 }
 
 function validateDurableClaim<TCommandKind extends string>(

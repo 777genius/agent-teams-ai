@@ -1,3 +1,4 @@
+import { hasValidLaneExecutionMutationBinding } from '../../../../core/application/backends';
 import {
   ExecutionBackendCapabilityPolicy,
   OPENCODE_EXECUTION_PROVIDER_IDS,
@@ -7,6 +8,7 @@ import type {
   CancellableLaneExecutionRequest,
   LaneExecutionBackend,
   LaneExecutionLaunchOutcome,
+  LaneExecutionMutationAuthority,
   LaneExecutionObserveOutcome,
   LaneExecutionOperationRejectionReason,
   LaneExecutionPlanValidationOutcome,
@@ -19,9 +21,14 @@ import type {
   LaneExecutionStopOutcome,
   LaunchLaneExecutionRequest,
   ObserveLaneExecutionRequest,
+  RecoverLaneExecutionRequest,
   StopLaneExecutionRequest,
 } from '../../../../core/application/backends';
 import type { TeamProviderId } from '@shared/types';
+
+type UnfencedLaunchRequest = Omit<LaunchLaneExecutionRequest, 'operationId' | 'effectLease'>;
+type UnfencedStopRequest = Omit<StopLaneExecutionRequest, 'operationId' | 'effectLease'>;
+type UnfencedRecoverRequest = Omit<RecoverLaneExecutionRequest, 'operationId' | 'effectLease'>;
 
 /** Structural subset implemented by the target-base TeamRuntimeAdapterRegistry. */
 export interface TeamRuntimeAdapterRegistryCompatiblePort<TAdapter> {
@@ -52,7 +59,7 @@ export interface OpenCodeExecutionCompatibilityPorts<
   stop(adapter: TAdapter, request: StopLaneExecutionRequest): Promise<LaneExecutionStopOutcome>;
   recover(
     adapter: TAdapter,
-    request: CancellableLaneExecutionRequest
+    request: RecoverLaneExecutionRequest
   ): Promise<LaneExecutionRecoverOutcome>;
 }
 
@@ -61,9 +68,11 @@ export class OpenCodeExecutionBackend<
 > implements LaneExecutionBackend {
   readonly backend = 'opencode' as const;
   readonly supportedProviderIds = OPENCODE_EXECUTION_PROVIDER_IDS;
+  readonly mutationBinding = 'operation_id_and_lease_fence' as const;
 
   constructor(
     private readonly ports: OpenCodeExecutionCompatibilityPorts<TAdapter>,
+    private readonly mutationAuthority: LaneExecutionMutationAuthority | null,
     private readonly capabilityPolicy = new ExecutionBackendCapabilityPolicy()
   ) {}
 
@@ -94,26 +103,47 @@ export class OpenCodeExecutionBackend<
     }
   }
 
-  async launch(request: LaunchLaneExecutionRequest): Promise<LaneExecutionLaunchOutcome> {
+  async launch(
+    request: LaunchLaneExecutionRequest | UnfencedLaunchRequest
+  ): Promise<LaneExecutionLaunchOutcome> {
+    if (!hasValidLaneExecutionMutationBinding(request)) {
+      return { status: 'rejected', reason: 'not_owned' };
+    }
     const rejected = this.rejectInvalidRequest(request.scope);
     if (rejected) return rejected;
-    if (isCancelled(request)) return { status: 'rejected', reason: 'cancelled' };
-    const resolved = this.resolveAdapter();
-    if (resolved.status === 'rejected') return resolved;
-    const capabilities = await this.readCapabilities(resolved.adapter, request.scope, true);
-    if (capabilities.status === 'rejected') return capabilities;
-    const receipt = this.capabilityPolicy.validateReadinessReceipt(
-      request.scope,
-      this.backend,
-      capabilities.capabilities,
-      request.readiness
-    );
-    if (receipt.status === 'rejected') return receipt;
-    if (isCancelled(request)) return { status: 'rejected', reason: 'cancelled' };
+    if (!this.mutationAuthority) return { status: 'operator_required' };
     try {
-      return this.capabilityPolicy.containLaunchOutcome(
-        await this.ports.launch(resolved.adapter, request),
-        capabilities.capabilities
+      return await this.mutationAuthority.execute(
+        {
+          backend: this.backend,
+          effectKind: 'launch',
+          operationId: request.operationId,
+          effectLease: request.effectLease,
+          payload: {
+            effectKind: 'launch',
+            scope: request.scope,
+            readiness: request.readiness,
+          },
+        },
+        async () => {
+          if (isCancelled(request)) return { status: 'rejected', reason: 'cancelled' };
+          const resolved = this.resolveAdapter();
+          if (resolved.status === 'rejected') return resolved;
+          const capabilities = await this.readCapabilities(resolved.adapter, request.scope, true);
+          if (capabilities.status === 'rejected') return capabilities;
+          const receipt = this.capabilityPolicy.validateReadinessReceipt(
+            request.scope,
+            this.backend,
+            capabilities.capabilities,
+            request.readiness
+          );
+          if (receipt.status === 'rejected') return receipt;
+          if (isCancelled(request)) return { status: 'rejected', reason: 'cancelled' };
+          return this.capabilityPolicy.containLaunchOutcome(
+            await this.ports.launch(resolved.adapter, request),
+            capabilities.capabilities
+          );
+        }
       );
     } catch {
       return { status: 'operator_required' };
@@ -137,37 +167,79 @@ export class OpenCodeExecutionBackend<
     }
   }
 
-  async stop(request: StopLaneExecutionRequest): Promise<LaneExecutionStopOutcome> {
+  async stop(
+    request: StopLaneExecutionRequest | UnfencedStopRequest
+  ): Promise<LaneExecutionStopOutcome> {
+    if (!hasValidLaneExecutionMutationBinding(request)) {
+      return { status: 'rejected', reason: 'not_owned' };
+    }
     const rejected = this.rejectInvalidRequest(request.scope);
     if (rejected) return rejected;
-    if (isCancelled(request)) return { status: 'cancelled' };
-    const resolved = this.resolveAdapter();
-    if (resolved.status === 'rejected') return resolved;
-    const capabilities = await this.readCapabilities(resolved.adapter, request.scope, false);
-    if (capabilities.status === 'rejected') return capabilities;
+    if (!this.mutationAuthority) return { status: 'operator_required' };
     try {
-      return this.capabilityPolicy.containStopOutcome(
-        await this.ports.stop(resolved.adapter, request),
-        capabilities.capabilities
+      return await this.mutationAuthority.execute(
+        {
+          backend: this.backend,
+          effectKind: 'stop',
+          operationId: request.operationId,
+          effectLease: request.effectLease,
+          payload: {
+            effectKind: 'stop',
+            scope: request.scope,
+            executionRef: request.executionRef,
+            mode: request.mode,
+          },
+        },
+        async () => {
+          if (isCancelled(request)) return { status: 'cancelled' };
+          const resolved = this.resolveAdapter();
+          if (resolved.status === 'rejected') return resolved;
+          const capabilities = await this.readCapabilities(resolved.adapter, request.scope, false);
+          if (capabilities.status === 'rejected') return capabilities;
+          return this.capabilityPolicy.containStopOutcome(
+            await this.ports.stop(resolved.adapter, request),
+            capabilities.capabilities
+          );
+        }
       );
     } catch {
       return { status: 'operator_required' };
     }
   }
 
-  async recover(request: CancellableLaneExecutionRequest): Promise<LaneExecutionRecoverOutcome> {
+  async recover(
+    request: RecoverLaneExecutionRequest | UnfencedRecoverRequest
+  ): Promise<LaneExecutionRecoverOutcome> {
+    if (!hasValidLaneExecutionMutationBinding(request)) {
+      return { status: 'rejected', reason: 'not_owned' };
+    }
     const rejected = this.rejectInvalidRequest(request.scope);
     if (rejected) return rejected;
-    if (isCancelled(request)) return { status: 'cancelled' };
-    const resolved = this.resolveAdapter();
-    if (resolved.status === 'rejected') return resolved;
-    const capabilities = await this.readCapabilities(resolved.adapter, request.scope, true);
-    if (capabilities.status === 'rejected') return capabilities;
-    if (isCancelled(request)) return { status: 'cancelled' };
+    if (!this.mutationAuthority) return { status: 'operator_required' };
     try {
-      return this.capabilityPolicy.containRecoverOutcome(
-        await this.ports.recover(resolved.adapter, request),
-        capabilities.capabilities
+      return await this.mutationAuthority.execute(
+        {
+          backend: this.backend,
+          effectKind: 'recover',
+          operationId: request.operationId,
+          effectLease: request.effectLease,
+          payload: {
+            effectKind: 'recover',
+            scope: request.scope,
+          },
+        },
+        async () => {
+          if (isCancelled(request)) return { status: 'cancelled' };
+          const resolved = this.resolveAdapter();
+          if (resolved.status === 'rejected') return resolved;
+          const capabilities = await this.readCapabilities(resolved.adapter, request.scope, true);
+          if (capabilities.status === 'rejected') return capabilities;
+          if (isCancelled(request)) return { status: 'cancelled' };
+          return this.capabilityPolicy.containRecoverOutcome(
+            await this.ports.recover(resolved.adapter, request),
+            capabilities.capabilities
+          );
+        }
       );
     } catch {
       return { status: 'operator_required' };

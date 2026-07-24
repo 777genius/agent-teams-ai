@@ -12,6 +12,8 @@ import {
 import {
   type CancellableLaneExecutionRequest,
   type LaneExecutionLaunchOutcome,
+  type LaneExecutionMutationAuthority,
+  type LaneExecutionMutationAuthorityRequest,
   type LaneExecutionObserveOutcome,
   type LaneExecutionPreflightDecision,
   type LaneExecutionProviderCapability,
@@ -123,6 +125,48 @@ function cancellation(cancelled = false): RuntimeCancellation {
   };
 }
 
+const PASSTHROUGH_MUTATION_AUTHORITY: LaneExecutionMutationAuthority = {
+  execute: (_request, effect) => effect(),
+};
+
+class ReplayOnceMutationAuthority implements LaneExecutionMutationAuthority {
+  callbackCalls = 0;
+  executeCalls = 0;
+  readonly requestJsons: string[] = [];
+  private requestJson: string | null = null;
+  private result: unknown;
+
+  async execute<TResult>(
+    request: LaneExecutionMutationAuthorityRequest,
+    effect: () => Promise<TResult>
+  ): Promise<TResult> {
+    const requestJson = JSON.stringify(request);
+    this.executeCalls += 1;
+    this.requestJsons.push(requestJson);
+    if (this.requestJson !== null) {
+      if (requestJson !== this.requestJson) throw new TypeError('test-mutation-tuple-mismatch');
+      return this.result as TResult;
+    }
+    this.requestJson = requestJson;
+    this.callbackCalls += 1;
+    this.result = await effect();
+    return this.result as TResult;
+  }
+}
+
+function mutationBinding(operationId = 'operation:opencode-test', fence = 1) {
+  return {
+    operationId,
+    effectLease: {
+      token: `opencode-test-token-${fence}`,
+      fence,
+      ownerId: 'opencode-test-owner',
+      claimedAtIso: '2026-07-24T13:59:00.000Z',
+      expiresAtIso: '2026-07-24T14:01:00.000Z',
+    },
+  } as const;
+}
+
 class FakeAdapterRegistry implements TeamRuntimeAdapterRegistryCompatiblePort<FakeRuntimeAdapter> {
   available = true;
   adapter: FakeRuntimeAdapter = { providerId: 'opencode', adapterId: 'adapter-1' };
@@ -219,7 +263,7 @@ class FakeOpenCodePorts implements OpenCodeExecutionCompatibilityPorts<FakeRunti
 describe('OpenCodeExecutionBackend', () => {
   it('uses the injected registry-compatible adapter for the full lane lifecycle', async () => {
     const ports = new FakeOpenCodePorts();
-    const backend = new OpenCodeExecutionBackend(ports);
+    const backend = new OpenCodeExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
     const scope = createScope();
     const activeCancellation = cancellation();
     const preflight = await backend.preflight({ scope, cancellation: activeCancellation });
@@ -233,16 +277,30 @@ describe('OpenCodeExecutionBackend', () => {
       providerRevisions: [{ providerId: 'opencode', capabilityRevision: 11 }],
     });
     await expect(
-      backend.launch({ scope, cancellation: activeCancellation, readiness: preflight.readiness })
+      backend.launch({
+        scope,
+        cancellation: activeCancellation,
+        readiness: preflight.readiness,
+        ...mutationBinding('operation:launch', 1),
+      })
     ).resolves.toEqual({ status: 'launched', executionRef });
     await expect(backend.observe({ scope, executionRef })).resolves.toEqual({ status: 'starting' });
     await expect(
-      backend.stop({ scope, executionRef, mode: 'graceful', cancellation: activeCancellation })
+      backend.stop({
+        scope,
+        executionRef,
+        mode: 'graceful',
+        cancellation: activeCancellation,
+        ...mutationBinding('operation:stop', 2),
+      })
     ).resolves.toEqual({ status: 'stopped' });
-    await expect(backend.recover({ scope, cancellation: activeCancellation })).resolves.toEqual({
-      status: 'recovered',
-      executionRef,
-    });
+    await expect(
+      backend.recover({
+        scope,
+        cancellation: activeCancellation,
+        ...mutationBinding('operation:recover', 3),
+      })
+    ).resolves.toEqual({ status: 'recovered', executionRef });
 
     expect(ports.calls.map(({ operation }) => operation)).toEqual([
       'readCapabilities',
@@ -262,28 +320,70 @@ describe('OpenCodeExecutionBackend', () => {
     );
   });
 
+  it('enters mutation authority before fresh adapter, capability, readiness, cancellation, or provider work', async () => {
+    const ports = new FakeOpenCodePorts();
+    const authority = new ReplayOnceMutationAuthority();
+    const backend = new OpenCodeExecutionBackend(ports, authority);
+    const scope = createScope();
+    const preflight = await backend.preflight({ scope, cancellation: cancellation() });
+    if (preflight.status !== 'ready') throw new Error('expected ready fake preflight');
+    const request = {
+      scope,
+      cancellation: cancellation(),
+      readiness: preflight.readiness,
+      ...mutationBinding('operation:adapter-drift-replay', 1),
+    };
+
+    await expect(backend.launch(request)).resolves.toEqual(ports.launchOutcome);
+    const adapterCallsAfterCompletion = [...ports.registry.calls];
+    const portCallsAfterCompletion = [...ports.calls];
+    ports.registry.available = false;
+    ports.capabilityRevision += 1;
+    ports.readiness = 'not_ready';
+
+    await expect(backend.launch({ ...request, cancellation: cancellation(true) })).resolves.toEqual(
+      ports.launchOutcome
+    );
+    expect(authority.executeCalls).toBe(2);
+    expect(authority.callbackCalls).toBe(1);
+    expect(authority.requestJsons[1]).toBe(authority.requestJsons[0]);
+    expect(ports.registry.calls).toEqual(adapterCallsAfterCompletion);
+    expect(ports.calls).toEqual(portCallsAfterCompletion);
+    expect(ports.calls.filter(({ operation }) => operation === 'launch')).toHaveLength(1);
+  });
+
   it('preserves observe, stop, and recovery outcome distinctions', async () => {
     const ports = new FakeOpenCodePorts();
     ports.observeOutcome = { status: 'degraded' };
     ports.stopOutcome = { status: 'already_stopped' };
     ports.recoverOutcome = { status: 'operator_required' };
-    const backend = new OpenCodeExecutionBackend(ports);
+    const backend = new OpenCodeExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
     const scope = createScope();
     const executionRef = parseLaneExecutionRef('opencode-run-2');
 
     await expect(backend.observe({ scope, executionRef })).resolves.toEqual({ status: 'degraded' });
     await expect(
-      backend.stop({ scope, executionRef, mode: 'immediate', cancellation: cancellation() })
+      backend.stop({
+        scope,
+        executionRef,
+        mode: 'immediate',
+        cancellation: cancellation(),
+        ...mutationBinding('operation:stop-outcome', 1),
+      })
     ).resolves.toEqual({ status: 'already_stopped' });
-    await expect(backend.recover({ scope, cancellation: cancellation() })).resolves.toEqual({
-      status: 'operator_required',
-    });
+    await expect(
+      backend.recover({
+        scope,
+        cancellation: cancellation(),
+        ...mutationBinding('operation:recover-outcome', 2),
+      })
+    ).resolves.toEqual({ status: 'operator_required' });
   });
 
   it('preserves an explicit unavailable outcome when the capability snapshot is ready', async () => {
     const ports = new FakeOpenCodePorts();
     ports.preflightOutcome = { status: 'rejected', reason: 'unavailable' };
-    const backend = new OpenCodeExecutionBackend(ports);
+    const backend = new OpenCodeExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
 
     await expect(
       backend.preflight({ scope: createScope(), cancellation: cancellation() })
@@ -292,7 +392,7 @@ describe('OpenCodeExecutionBackend', () => {
 
   it('fails closed when the registry is absent or returns the wrong provider adapter', async () => {
     const ports = new FakeOpenCodePorts();
-    const backend = new OpenCodeExecutionBackend(ports);
+    const backend = new OpenCodeExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
     const scope = createScope();
 
     ports.registry.available = false;
@@ -314,7 +414,7 @@ describe('OpenCodeExecutionBackend', () => {
 
   it('rejects a provisioning lane and stale readiness without invoking launch', async () => {
     const ports = new FakeOpenCodePorts();
-    const backend = new OpenCodeExecutionBackend(ports);
+    const backend = new OpenCodeExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
     const provisioningScope = createScope('anthropic');
 
     expect(backend.validatePlan(provisioningScope)).toEqual({
@@ -331,7 +431,12 @@ describe('OpenCodeExecutionBackend', () => {
     if (preflight.status !== 'ready') throw new Error('expected ready fake preflight');
     ports.capabilityRevision += 1;
     await expect(
-      backend.launch({ scope, cancellation: cancellation(), readiness: preflight.readiness })
+      backend.launch({
+        scope,
+        cancellation: cancellation(),
+        readiness: preflight.readiness,
+        ...mutationBinding('operation:stale-readiness', 1),
+      })
     ).resolves.toEqual({ status: 'rejected', reason: 'readiness_mismatch' });
     expect(ports.calls.map(({ operation }) => operation)).not.toContain('launch');
   });
@@ -340,7 +445,7 @@ describe('OpenCodeExecutionBackend', () => {
     const ports = new FakeOpenCodePorts();
     ports.readiness = 'not_ready';
     ports.observeOutcome = { status: 'ready' };
-    const backend = new OpenCodeExecutionBackend(ports);
+    const backend = new OpenCodeExecutionBackend(ports, PASSTHROUGH_MUTATION_AUTHORITY);
     const scope = createScope();
     const executionRef = parseLaneExecutionRef('opencode-run-3');
 
@@ -352,5 +457,23 @@ describe('OpenCodeExecutionBackend', () => {
       status: 'rejected',
       reason: 'readiness_mismatch',
     });
+  });
+
+  it('fails closed when mutation authority is missing', async () => {
+    const ports = new FakeOpenCodePorts();
+    const backend = new OpenCodeExecutionBackend(ports, null);
+    const scope = createScope();
+    const executionRef = parseLaneExecutionRef('opencode-run-4');
+
+    await expect(
+      backend.stop({
+        scope,
+        executionRef,
+        mode: 'graceful',
+        cancellation: cancellation(),
+        ...mutationBinding('operation:missing-authority', 1),
+      })
+    ).resolves.toEqual({ status: 'operator_required' });
+    expect(ports.calls.map(({ operation }) => operation)).not.toContain('stop');
   });
 });
