@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TmuxInstallerBannerAdapter } from '../TmuxInstallerBannerAdapter';
+import { TmuxInstallerBannerViewModelBuilder } from '../TmuxInstallerBannerViewModelBuilder';
 
 import type { TmuxInstallerSnapshot, TmuxStatus } from '@features/tmux-installer/contracts';
 
@@ -50,11 +50,11 @@ const idleSnapshot: TmuxInstallerSnapshot = {
   updatedAt: new Date().toISOString(),
 };
 
-describe('TmuxInstallerBannerAdapter', () => {
+describe('TmuxInstallerBannerViewModelBuilder', () => {
   it('builds an install-ready view model for unavailable tmux', () => {
-    const adapter = TmuxInstallerBannerAdapter.create();
+    const viewModelBuilder = TmuxInstallerBannerViewModelBuilder.create();
 
-    const result = adapter.adapt({
+    const result = viewModelBuilder.build({
       status: baseStatus,
       snapshot: idleSnapshot,
       loading: false,
@@ -80,9 +80,9 @@ describe('TmuxInstallerBannerAdapter', () => {
   });
 
   it('prioritizes renderer errors and disables the install button while installing', () => {
-    const adapter = TmuxInstallerBannerAdapter.create();
+    const viewModelBuilder = TmuxInstallerBannerViewModelBuilder.create();
 
-    const result = adapter.adapt({
+    const result = viewModelBuilder.build({
       status: baseStatus,
       snapshot: {
         ...idleSnapshot,
@@ -113,9 +113,9 @@ describe('TmuxInstallerBannerAdapter', () => {
   });
 
   it('keeps the banner visible while loading if installer progress is already active', () => {
-    const adapter = TmuxInstallerBannerAdapter.create();
+    const viewModelBuilder = TmuxInstallerBannerViewModelBuilder.create();
 
-    const result = adapter.adapt({
+    const result = viewModelBuilder.build({
       status: null,
       snapshot: {
         ...idleSnapshot,
@@ -133,9 +133,9 @@ describe('TmuxInstallerBannerAdapter', () => {
   });
 
   it('exposes a manual guide url when auto install is unavailable', () => {
-    const adapter = TmuxInstallerBannerAdapter.create();
+    const viewModelBuilder = TmuxInstallerBannerViewModelBuilder.create();
 
-    const result = adapter.adapt({
+    const result = viewModelBuilder.build({
       status: {
         ...baseStatus,
         platform: 'win32',
@@ -176,9 +176,9 @@ describe('TmuxInstallerBannerAdapter', () => {
   });
 
   it('hides the banner when tmux is already installed', () => {
-    const adapter = TmuxInstallerBannerAdapter.create();
+    const viewModelBuilder = TmuxInstallerBannerViewModelBuilder.create();
 
-    const result = adapter.adapt({
+    const result = viewModelBuilder.build({
       status: {
         ...baseStatus,
         platform: 'win32',
@@ -205,9 +205,9 @@ describe('TmuxInstallerBannerAdapter', () => {
   });
 
   it('hides a completed installer banner once tmux is available', () => {
-    const adapter = TmuxInstallerBannerAdapter.create();
+    const viewModelBuilder = TmuxInstallerBannerViewModelBuilder.create();
 
-    const result = adapter.adapt({
+    const result = viewModelBuilder.build({
       status: {
         ...baseStatus,
         effective: {
@@ -234,9 +234,9 @@ describe('TmuxInstallerBannerAdapter', () => {
   });
 
   it('exposes installer input metadata for interactive privilege flows', () => {
-    const adapter = TmuxInstallerBannerAdapter.create();
+    const viewModelBuilder = TmuxInstallerBannerViewModelBuilder.create();
 
-    const result = adapter.adapt({
+    const result = viewModelBuilder.build({
       status: baseStatus,
       snapshot: {
         ...idleSnapshot,
@@ -257,9 +257,9 @@ describe('TmuxInstallerBannerAdapter', () => {
   });
 
   it('uses Windows-specific install labels for the WSL wizard states', () => {
-    const adapter = TmuxInstallerBannerAdapter.create();
+    const viewModelBuilder = TmuxInstallerBannerViewModelBuilder.create();
 
-    const installWslResult = adapter.adapt({
+    const installWslResult = viewModelBuilder.build({
       status: {
         ...baseStatus,
         platform: 'win32',
@@ -286,7 +286,7 @@ describe('TmuxInstallerBannerAdapter', () => {
       error: null,
       detailsOpen: false,
     });
-    const installUbuntuResult = adapter.adapt({
+    const installUbuntuResult = viewModelBuilder.build({
       status: {
         ...baseStatus,
         platform: 'win32',
@@ -321,9 +321,9 @@ describe('TmuxInstallerBannerAdapter', () => {
   });
 
   it('uses a specific Windows external-step message as the title', () => {
-    const adapter = TmuxInstallerBannerAdapter.create();
+    const viewModelBuilder = TmuxInstallerBannerViewModelBuilder.create();
 
-    const result = adapter.adapt({
+    const result = viewModelBuilder.build({
       status: {
         ...baseStatus,
         platform: 'win32',
@@ -353,9 +353,9 @@ describe('TmuxInstallerBannerAdapter', () => {
   });
 
   it('shows a restart state when external-step details already require a reboot', () => {
-    const adapter = TmuxInstallerBannerAdapter.create();
+    const viewModelBuilder = TmuxInstallerBannerViewModelBuilder.create();
 
-    const result = adapter.adapt({
+    const result = viewModelBuilder.build({
       status: {
         ...baseStatus,
         platform: 'win32',

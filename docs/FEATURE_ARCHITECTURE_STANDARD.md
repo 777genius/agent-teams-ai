@@ -12,6 +12,30 @@ This document defines the default architecture for medium and large features in 
 - keep renderer code closer to browser and Tauri portability
 - enforce architecture with tooling, not only with code review comments
 
+## Architecture Model
+
+This standard uses a **feature-first, process-aware Hexagonal Architecture with
+DDD domain modeling**. It is not a one-to-one directory translation of the
+classic DDD layers.
+
+The structure combines three explicit concerns:
+
+- `core/domain` and `core/application` express business and use-case ownership
+- `main`, `preload`, and `renderer` express Electron process boundaries
+- ports and adapters express the dependency direction between the application
+  core and external transports, providers, storage, and runtime services
+
+These concerns are complementary, but their names must not be used
+interchangeably. In particular, a renderer projection that only reshapes data
+for UI rendering is a view model, not a Hexagonal Architecture adapter.
+
+Dependency direction is inward:
+
+`adapters -> application -> domain`
+
+Outer process layers may depend on `contracts` and `core`; `core` must not
+depend on Electron process layers or concrete adapters.
+
 ## Canonical Template
 
 ```text
@@ -84,7 +108,8 @@ Not allowed:
 
 ### `core/domain/`
 
-Pure business rules and invariants.
+Pure domain models, business rules, and invariants. This is the DDD modeling
+layer inside the feature.
 
 Examples:
 
@@ -101,7 +126,8 @@ Not allowed:
 
 ### `core/application/`
 
-Use cases and ports.
+Use cases and the ports they own. A port describes an application conversation
+or required capability; concrete runtime implementations stay outside `core/`.
 
 Examples:
 
@@ -139,6 +165,7 @@ Responsibilities:
 
 - translate transport input into use case calls
 - keep transport concerns out of use cases
+- depend inward on the application surface, never the reverse
 
 ### `main/application/`
 
@@ -171,6 +198,8 @@ Responsibilities:
 
 - translate between external data and core models
 - stay thin around infrastructure helpers
+- implement application-owned ports when the implementation represents an
+  external conversation such as a provider source, presenter, or repository
 
 ### `main/infrastructure/`
 
@@ -187,6 +216,15 @@ Examples:
 Responsibilities:
 
 - know about runtime, process, OS, or protocol details
+- provide low-level technical mechanisms used by adapters and composition
+- avoid owning domain policy or transport registration
+
+Use `main/adapters/output` when a component is named by an application
+conversation and translates between an application port and an external
+system. Use `main/infrastructure` when a component is named by its technical
+mechanism and exposes a lower-level runtime primitive. A small technical port
+implementation may be wired directly from infrastructure when no translation
+layer would add meaning.
 
 ### `preload/`
 
@@ -211,17 +249,21 @@ Recommended structure:
 ```text
 renderer/
   index.ts
-  adapters/
   hooks/
   ui/
   utils/
+  view-models/
+  adapters/ # optional, only for actual external boundaries
 ```
 
 Responsibilities:
 
 - `ui/` renders
 - `hooks/` orchestrate interaction and transport usage
-- `adapters/` transform DTOs into view models
+- `view-models/` transform DTOs or application data into presentation models
+- `adapters/` integrate genuine browser, storage, API, framework, external
+  package, or legacy UI boundaries; do not use this name for ordinary
+  DTO-to-view-model mapping
 - `utils/` contain small pure renderer helpers
 
 ### UI primitives
@@ -289,7 +331,8 @@ directly, but production integration code should not.
 - `@main/*`
 - Electron APIs
 
-Push transport and store access into feature hooks or adapters.
+Push transport and store access into feature hooks or genuine boundary
+adapters. Keep presentation-only projection in `renderer/view-models/`.
 
 ## Browser and Tauri Friendly Guidance
 
@@ -371,6 +414,25 @@ If the feature still owns meaningful pure semantics or projection rules, keep
 Example:
 
 - `src/features/agent-graph` keeps `core/domain` and `renderer`, but does not add fake `main/` or `preload/` folders because the transport boundary lives elsewhere.
+
+## Legacy Migration And Composition
+
+When migrating a legacy service, keep its stable public facade while moving one
+observable vertical slice at a time into the canonical feature layers.
+
+- prefer explicit composition over inheritance
+- use inheritance only for genuine substitutable subtypes, never to aggregate
+  dependencies or share mutable service state
+- do not pass the legacy service as a generic host to new use cases
+- define small ports owned by the consuming application use case
+- give mutable state one explicit repository, registry, coordinator, or gate
+- delegate from the legacy facade until callers can use the new public entrypoint
+- remove migrated compatibility wiring in the same slice when safe
+- do not create empty feature scaffolding before a real use case needs it
+
+For the production-critical Team Provisioning migration, follow the concrete
+target and strangler protocol in
+[`team-provisioning-target-architecture.md`](team-management/team-provisioning-target-architecture.md).
 
 ## Current Feature Shape Examples
 

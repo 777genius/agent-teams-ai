@@ -1,5 +1,5 @@
 import type { OrganizationNodeDto, OrganizationRelationDto } from '../../contracts';
-import type { OrganizationMapViewModel } from './organizationMapViewModel';
+import type { OrganizationMapViewModel } from '../view-models/organizationMapViewModel';
 import type {
   GraphDataPort,
   GraphDomainRef,

@@ -1802,6 +1802,7 @@
     "supports_max_reasoning_effort": true
   },
   "azure_ai/claude-fable-5": {
+    "supports_mid_conversation_system": true,
     "input_cost_per_token": 0.00001,
     "output_cost_per_token": 0.00005,
     "litellm_provider": "azure_ai",
@@ -1832,6 +1833,7 @@
     "supports_max_reasoning_effort": true
   },
   "azure_ai/claude-opus-4-8": {
+    "supports_mid_conversation_system": true,
     "supports_adaptive_thinking": true,
     "input_cost_per_token": 0.000005,
     "output_cost_per_token": 0.000025,
@@ -1904,6 +1906,7 @@
     "supports_vision": true
   },
   "azure_ai/claude-sonnet-5": {
+    "supports_mid_conversation_system": true,
     "cache_creation_input_token_cost": 0.0000025,
     "cache_creation_input_token_cost_above_1hr": 0.000004,
     "cache_read_input_token_cost": 2e-7,
@@ -5635,6 +5638,7 @@
     "prompt_cache_min_tokens": 2048
   },
   "vertex_ai/claude-fable-5": {
+    "supports_mid_conversation_system": true,
     "cache_creation_input_token_cost": 0.0000125,
     "cache_creation_input_token_cost_above_1hr": 0.00002,
     "cache_read_input_token_cost": 0.000001,
@@ -5665,6 +5669,7 @@
     "supports_max_reasoning_effort": true
   },
   "vertex_ai/claude-fable-5@default": {
+    "supports_mid_conversation_system": true,
     "cache_creation_input_token_cost": 0.0000125,
     "cache_creation_input_token_cost_above_1hr": 0.00002,
     "cache_read_input_token_cost": 0.000001,
@@ -5695,6 +5700,7 @@
     "supports_max_reasoning_effort": true
   },
   "vertex_ai/claude-opus-4-8": {
+    "supports_mid_conversation_system": true,
     "supports_adaptive_thinking": true,
     "cache_creation_input_token_cost": 0.00000625,
     "cache_creation_input_token_cost_above_1hr": 0.00001,
@@ -5726,6 +5732,7 @@
     "prompt_cache_min_tokens": 1024
   },
   "vertex_ai/claude-opus-4-8@default": {
+    "supports_mid_conversation_system": true,
     "supports_adaptive_thinking": true,
     "cache_creation_input_token_cost": 0.00000625,
     "cache_creation_input_token_cost_above_1hr": 0.00001,
@@ -5785,6 +5792,7 @@
     "prompt_cache_min_tokens": 1024
   },
   "vertex_ai/claude-sonnet-5": {
+    "supports_mid_conversation_system": true,
     "cache_creation_input_token_cost": 0.0000025,
     "cache_creation_input_token_cost_above_1hr": 0.000004,
     "cache_read_input_token_cost": 2e-7,
@@ -5964,6 +5972,7 @@
     "prompt_cache_min_tokens": 1024
   },
   "vertex_ai/claude-sonnet-5@default": {
+    "supports_mid_conversation_system": true,
     "cache_creation_input_token_cost": 0.0000025,
     "cache_creation_input_token_cost_above_1hr": 0.000004,
     "cache_read_input_token_cost": 2e-7,

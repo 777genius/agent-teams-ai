@@ -2675,6 +2675,45 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     );
   });
 
+  it('passes the complete LLM Gateway key through stdin without masking it', async () => {
+    const { child, stdinWrite } = createSpawnProcess({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      provider: {
+        providerId: 'llmgateway',
+        displayName: 'LLM Gateway',
+        state: 'connected',
+        ownership: ['managed'],
+        recommended: false,
+        modelCount: 1,
+        defaultModelId: null,
+        authMethods: ['api'],
+        actions: [],
+        detail: null,
+      },
+    });
+    spawnCliMock.mockReturnValue(child);
+    const apiKey = 'llmgtwy_live_full-key-with-preview-like-suffix';
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const response = await client.connectProvider({
+      runtimeId: 'opencode',
+      providerId: 'llmgateway',
+      method: 'api',
+      apiKey,
+      metadata: {},
+    });
+
+    expect(response.provider?.providerId).toBe('llmgateway');
+    expect(stdinWrite).toHaveBeenCalledWith(
+      JSON.stringify({
+        method: 'api',
+        apiKey,
+        metadata: {},
+      })
+    );
+  });
+
   it('opens a validated generic OAuth authorization URL and keeps it out of renderer progress', async () => {
     const processEvents = new EventEmitter();
     const stdinEvents = new EventEmitter();

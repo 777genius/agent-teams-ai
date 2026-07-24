@@ -130,14 +130,21 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
   };
   protected readonly pendingTimeouts = new Map<string, NodeJS.Timeout>();
   protected readonly helpOutputCache = { output: null as string | null, cachedAtMs: 0 };
-  protected readonly toolApprovalFacade = {
+  readonly toolApprovalFacadeMock = {
     answerRuntimeToolApproval: vi.fn(),
     dismissApprovalNotification: vi.fn(),
+    getMemberToolApprovalBusyStatus: vi.fn(() => ({
+      busy: true,
+      reason: 'pending_tool_approval',
+      retryAfterIso: '2026-01-01T00:01:00.000Z',
+    })),
+    initializeToolApprovalSettingsForLaunch: vi.fn(),
     respondToToolApproval: vi.fn(),
     setMainWindow: vi.fn(),
     setToolApprovalEventEmitter: vi.fn(),
     updateToolApprovalSettings: vi.fn(),
-  } as never;
+  };
+  protected readonly toolApprovalFacade = this.toolApprovalFacadeMock as never;
   protected readonly liveLeadMessagePortsBoundary = {
     getCurrentLeadSessionId: vi.fn(() => null),
     getLiveLeadProcessMessages: vi.fn(() => []),
@@ -280,6 +287,34 @@ describe('TeamProvisioningDiagnosticsPreflightCompatibilityFacade', () => {
     expect(facade.prepareFacadeMock.prepareForProvisioning).toHaveBeenCalledWith('/repo', {
       forceFresh: true,
     });
+  });
+
+  it('delegates launch approval policy initialization to the composed facade', () => {
+    const facade = new TestDiagnosticsPreflightCompatibilityFacade();
+
+    facade.initializeToolApprovalSettingsForLaunch('alpha', true);
+
+    expect(
+      facade.toolApprovalFacadeMock.initializeToolApprovalSettingsForLaunch
+    ).toHaveBeenCalledWith('alpha', true);
+  });
+
+  it('delegates member approval busy checks to the composed facade', async () => {
+    const facade = new TestDiagnosticsPreflightCompatibilityFacade();
+    const input = {
+      teamName: 'alpha',
+      memberName: 'Worker',
+      nowIso: '2026-01-01T00:00:00.000Z',
+    };
+
+    await expect(facade.getMemberToolApprovalBusyStatus(input)).resolves.toEqual({
+      busy: true,
+      reason: 'pending_tool_approval',
+      retryAfterIso: '2026-01-01T00:01:00.000Z',
+    });
+    expect(facade.toolApprovalFacadeMock.getMemberToolApprovalBusyStatus).toHaveBeenCalledWith(
+      input
+    );
   });
 
   it('keeps prepare and runtime lane preflight wrappers outside the service facade', async () => {

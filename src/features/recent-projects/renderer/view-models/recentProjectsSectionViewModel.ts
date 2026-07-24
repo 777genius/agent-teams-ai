@@ -34,7 +34,7 @@ export interface RecentProjectCardModel {
   };
 }
 
-interface RecentProjectsSectionAdapterInput {
+interface RecentProjectsSectionViewModelInput {
   projects: DashboardRecentProject[];
   taskCountsByProject: Map<string, TaskStatusCounts>;
   activeTeamsByProject: Map<string, TeamSummary[]>;
@@ -127,12 +127,12 @@ function buildPathSummary(
   };
 }
 
-export function adaptRecentProjectsSection({
+export function buildRecentProjectsSectionViewModel({
   projects,
   taskCountsByProject,
   activeTeamsByProject,
   tasksLoading,
-}: RecentProjectsSectionAdapterInput): RecentProjectCardModel[] {
+}: RecentProjectsSectionViewModelInput): RecentProjectCardModel[] {
   return projects.map((project) => ({
     id: project.id,
     project,

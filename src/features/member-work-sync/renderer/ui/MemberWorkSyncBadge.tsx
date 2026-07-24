@@ -4,7 +4,7 @@ import { cn } from '@renderer/lib/utils';
 import {
   type MemberWorkSyncStatusViewModel,
   toMemberWorkSyncStatusViewModel,
-} from '../adapters/memberWorkSyncStatusViewModel';
+} from '../view-models/memberWorkSyncStatusViewModel';
 
 import type { MemberWorkSyncStatus } from '../../contracts';
 import type React from 'react';

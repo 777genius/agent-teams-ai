@@ -42,7 +42,7 @@ export interface TmuxInstallerBannerViewModel {
   detailsOpen: boolean;
 }
 
-interface AdaptInput {
+interface TmuxInstallerBannerViewModelInput {
   status: TmuxStatus | null;
   snapshot: TmuxInstallerSnapshot;
   loading: boolean;
@@ -52,12 +52,12 @@ interface AdaptInput {
 
 const RESTART_REQUIRED_PATTERNS = ['restart', 'reboot', 'перезагруз', 'требуется перезагрузка'];
 
-export class TmuxInstallerBannerAdapter {
-  static create(): TmuxInstallerBannerAdapter {
-    return new TmuxInstallerBannerAdapter();
+export class TmuxInstallerBannerViewModelBuilder {
+  static create(): TmuxInstallerBannerViewModelBuilder {
+    return new TmuxInstallerBannerViewModelBuilder();
   }
 
-  adapt(input: AdaptInput): TmuxInstallerBannerViewModel {
+  build(input: TmuxInstallerBannerViewModelInput): TmuxInstallerBannerViewModel {
     const status = input.status;
     const snapshot = input.snapshot;
     const displayPhase = this.#resolveDisplayPhase(snapshot, status);

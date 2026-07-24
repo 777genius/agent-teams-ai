@@ -1393,7 +1393,7 @@ describe(
           cwd: projectPath,
           providerId: 'opencode',
           model: 'xai/grok-4.5',
-          skipPermissions: true,
+          skipPermissions: false,
           members: [
             {
               name: 'tom',
@@ -3951,7 +3951,7 @@ describe(
 
     it('stopAllTeams cancels an in-flight pure OpenCode runtime adapter launch without late success resurrecting it', async () => {
       const teamName = 'pure-opencode-stop-all-inflight-runtime-safe-e2e';
-      const adapter = new BlockingOpenCodeRuntimeAdapter();
+      const adapter = new BlockingStopOpenCodeRuntimeAdapter();
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
@@ -3985,14 +3985,21 @@ describe(
         runId,
         teamName,
         state: 'cancelled',
-        message: 'Provisioning cancelled by user',
+        message: 'Provisioning cancellation requested; stopping OpenCode runtime',
       });
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       adapter.releaseLaunches();
       await expect(createPromise).resolves.toEqual({ runId });
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      adapter.releaseStops();
       await stopAllPromise;
+      await expect(svc.getProvisioningStatus(runId!)).resolves.toMatchObject({
+        runId,
+        teamName,
+        state: 'cancelled',
+        message: 'Provisioning cancelled by user',
+      });
 
       expect(svc.isTeamAlive(teamName)).toBe(false);
       expect(svc.getAliveTeams()).not.toContain(teamName);
@@ -13485,7 +13492,7 @@ describe(
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
-          skipPermissions: true,
+          skipPermissions: false,
           members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
         },
         () => undefined
@@ -13797,7 +13804,7 @@ describe(
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
-          skipPermissions: true,
+          skipPermissions: false,
           members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
         },
         () => undefined
@@ -13890,7 +13897,7 @@ describe(
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
-          skipPermissions: true,
+          skipPermissions: false,
           members: [
             { name: 'alice', role: 'Developer', providerId: 'opencode' },
             { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
@@ -13964,7 +13971,7 @@ describe(
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
-          skipPermissions: true,
+          skipPermissions: false,
           members: [
             { name: 'alice', role: 'Developer', providerId: 'opencode' },
             { name: 'bob', role: 'Reviewer', providerId: 'opencode' },

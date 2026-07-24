@@ -320,6 +320,7 @@ export function createMemberWorkSyncFeature(deps: {
   listLifecycleActiveTeamNames?: () => Promise<string[]>;
   queueQuietWindowMs?: number;
   runtimeTurnSettledTargetResolver?: RuntimeTurnSettledTargetResolverPort;
+  priorityBusySignals?: MemberWorkSyncBusySignalPort[];
   extraBusySignals?: MemberWorkSyncBusySignalPort[];
   proofMissingRecoveryGuard?: MemberWorkSyncProofMissingRecoveryGuardPort;
   nudgeDeliveryWake?: MemberWorkSyncNudgeDeliveryWakePort;
@@ -403,11 +404,7 @@ export function createMemberWorkSyncFeature(deps: {
   const reportToken = new HmacMemberWorkSyncReportTokenAdapter(storePaths);
   const watchdogCooldown = new TeamTaskStallJournalWorkSyncCooldown(deps.teamsBasePath);
   const toolActivityBusySignal = new MemberWorkSyncToolActivityBusySignal();
-  const busySignals = [toolActivityBusySignal, ...(deps.extraBusySignals ?? [])];
-  const busySignal =
-    busySignals.length === 1
-      ? toolActivityBusySignal
-      : new CompositeMemberWorkSyncBusySignal(busySignals, deps.logger);
+  const busySignal = CompositeMemberWorkSyncBusySignal.compose(toolActivityBusySignal, deps);
   const inboxNudge = new TeamInboxMemberWorkSyncNudgeSink(
     undefined,
     undefined,

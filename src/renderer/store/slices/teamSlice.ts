@@ -147,7 +147,18 @@ import {
   structurallySharePlainValue,
   structurallyShareTeamSnapshot,
 } from '../team/teamSnapshotStructuralSharing';
-import { parseToolApprovalSettings } from '../team/teamToolApprovalSettings';
+import {
+  loadAllToolApprovalSettingsByTeam,
+  loadLegacyToolApprovalSettings,
+  loadToolApprovalSettingsForTeam,
+  projectToolApprovalSettings,
+  saveToolApprovalSettingsForTeam,
+} from '../team/teamToolApprovalSettings';
+import {
+  persistAndScheduleToolApprovalSettingsSync,
+  resetToolApprovalSettingsSync,
+  scheduleToolApprovalSettingsSync,
+} from '../team/teamToolApprovalSettingsSync';
 import { noteTeamRefreshFanout } from '../teamRefreshFanoutDiagnostics';
 import {
   captureContextScopedRequestEpoch,
@@ -438,6 +449,7 @@ export function isTeamDataRefreshPending(teamName: string): boolean {
 }
 
 export function __resetTeamSliceModuleStateForTests(): void {
+  resetToolApprovalSettingsSync();
   inFlightTeamDataRequests.clear();
   inFlightRefreshTeamDataCalls.clear();
   pendingFreshTeamDataRefreshes.clear();
@@ -1674,6 +1686,9 @@ export interface TeamSlice {
   pendingApprovals: ToolApprovalRequest[];
   /** Resolved permission approvals: request_id → allowed (true/false). Used for noise row icons. */
   resolvedApprovals: Map<string, boolean>;
+  /** Authoritative renderer cache used by background/cross-team approval prompts. */
+  toolApprovalSettingsByTeam: Record<string, ToolApprovalSettings>;
+  /** Projection for the currently selected team (legacy component compatibility). */
   toolApprovalSettings: ToolApprovalSettings;
   updateToolApprovalSettings: (
     patch: Partial<ToolApprovalSettings>,
@@ -1810,25 +1825,6 @@ function saveLaunchParams(teamName: string, params: TeamLaunchParams): void {
   } catch {
     // ignore — best-effort persist
   }
-}
-
-const TOOL_APPROVAL_PREFIX = 'team:toolApprovalSettings:';
-
-function loadToolApprovalSettingsForTeam(teamName: string): ToolApprovalSettings {
-  return parseToolApprovalSettings(localStorage.getItem(TOOL_APPROVAL_PREFIX + teamName));
-}
-
-function saveToolApprovalSettingsForTeam(teamName: string, settings: ToolApprovalSettings): void {
-  try {
-    localStorage.setItem(TOOL_APPROVAL_PREFIX + teamName, JSON.stringify(settings));
-  } catch {
-    // best-effort
-  }
-}
-
-/** Load global settings (legacy fallback for first load / no team selected). */
-function loadToolApprovalSettings(): ToolApprovalSettings {
-  return parseToolApprovalSettings(localStorage.getItem('team:toolApprovalSettings'));
 }
 
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
@@ -2049,7 +2045,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   deletedTasksLoading: false,
   pendingApprovals: [],
   resolvedApprovals: new Map(),
-  toolApprovalSettings: loadToolApprovalSettings(),
+  toolApprovalSettingsByTeam: loadAllToolApprovalSettingsByTeam(),
+  toolApprovalSettings: loadLegacyToolApprovalSettings(),
 
   // Messages panel UI state
   messagesPanelMode: loadPersistedMessagesPanelMode(),
@@ -2853,21 +2850,23 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
     const requestNonce = get().selectedTeamLoadNonce + 1;
     const previousData = selectTeamDataForName(get(), teamName);
+    const selectedSettings = loadToolApprovalSettingsForTeam(teamName);
 
     cancelPostPaintTeamEnrichments(teamName);
 
     // Repoint selection synchronously to the new team's cached snapshot when available.
     // Never keep the previous team's snapshot attached to a newly selected team.
-    set({
+    set((state) => ({
+      ...projectToolApprovalSettings(state, teamName, selectedSettings, true),
       selectedTeamName: teamName,
       selectedTeamData: previousData,
       selectedTeamLoading: true,
       selectedTeamLoadNonce: requestNonce,
       selectedTeamError: null,
       reviewActionError: null,
-      // Load per-team tool approval settings
-      toolApprovalSettings: loadToolApprovalSettingsForTeam(teamName),
-    });
+    }));
+
+    scheduleToolApprovalSettingsSync(teamName, selectedSettings);
 
     try {
       const data = await fetchTeamDataDeduped(teamName, {
@@ -4423,7 +4422,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         ? DEFAULT_TOOL_APPROVAL_SETTINGS
         : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
     saveToolApprovalSettingsForTeam(request.teamName, initialSettings);
-    set({ toolApprovalSettings: initialSettings });
+    set((state) => projectToolApprovalSettings(state, request.teamName, initialSettings));
     let responseRunId: string | null = null;
     try {
       if (typeof api.teams.createTeam !== 'function') {
@@ -4631,7 +4630,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           ? DEFAULT_TOOL_APPROVAL_SETTINGS
           : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
       saveToolApprovalSettingsForTeam(request.teamName, launchSettings);
-      set({ toolApprovalSettings: launchSettings });
+      set((state) => projectToolApprovalSettings(state, request.teamName, launchSettings));
     }
     let responseRunId: string | null = null;
     try {
@@ -5066,20 +5065,18 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   updateToolApprovalSettings: async (patch, forTeam) => {
     const teamName = forTeam ?? get().selectedTeamName;
-    const current = get().toolApprovalSettings;
+    const stateBeforeUpdate = get();
+    const current = teamName
+      ? (stateBeforeUpdate.toolApprovalSettingsByTeam[teamName] ??
+        loadToolApprovalSettingsForTeam(teamName))
+      : stateBeforeUpdate.toolApprovalSettings;
     const merged = { ...current, ...patch };
-    set({ toolApprovalSettings: merged });
-    // Save per-team if a team is selected, otherwise global fallback
-    if (teamName) {
-      saveToolApprovalSettingsForTeam(teamName, merged);
-    } else {
-      localStorage.setItem('team:toolApprovalSettings', JSON.stringify(merged));
-    }
-    try {
-      await api.teams.updateToolApprovalSettings(teamName ?? '__global__', merged);
-    } catch (err) {
-      logger.warn('Failed to sync tool approval settings to main:', err);
-    }
+    set((state) =>
+      teamName
+        ? projectToolApprovalSettings(state, teamName, merged)
+        : { toolApprovalSettings: merged }
+    );
+    persistAndScheduleToolApprovalSettingsSync(teamName, merged);
   },
 
   respondToToolApproval: async (teamName, runId, requestId, allow, message) => {

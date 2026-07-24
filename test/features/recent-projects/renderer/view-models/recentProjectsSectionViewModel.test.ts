@@ -1,11 +1,10 @@
+import { buildRecentProjectsSectionViewModel } from '@features/recent-projects/renderer/view-models/recentProjectsSectionViewModel';
 import { describe, expect, it } from 'vitest';
-
-import { adaptRecentProjectsSection } from '@features/recent-projects/renderer/adapters/RecentProjectsSectionAdapter';
 
 import type { DashboardRecentProject } from '@features/recent-projects/contracts';
 import type { TeamSummary } from '@shared/types';
 
-describe('adaptRecentProjectsSection', () => {
+describe('buildRecentProjectsSectionViewModel', () => {
   it('sorts providers, aggregates decorations, and builds a path summary for merged cards', () => {
     const project: DashboardRecentProject = {
       id: 'repo:alpha',
@@ -34,7 +33,7 @@ describe('adaptRecentProjectsSection', () => {
       lastActivity: null,
     };
 
-    const cards = adaptRecentProjectsSection({
+    const cards = buildRecentProjectsSectionViewModel({
       projects: [project],
       taskCountsByProject: new Map([
         ['/users/test/alpha', { pending: 1, inProgress: 2, completed: 3 }],

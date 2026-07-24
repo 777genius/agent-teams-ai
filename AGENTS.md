@@ -9,6 +9,7 @@ Start here:
 - Hard guardrails: [AGENT_CRITICAL_GUARDRAILS.md](AGENT_CRITICAL_GUARDRAILS.md)
 - Release process and runtime packaging: [docs/RELEASE.md](docs/RELEASE.md)
 - Canonical feature architecture standard: [docs/FEATURE_ARCHITECTURE_STANDARD.md](docs/FEATURE_ARCHITECTURE_STANDARD.md)
+- Team Provisioning target architecture and migration rules: [docs/team-management/team-provisioning-target-architecture.md](docs/team-management/team-provisioning-target-architecture.md)
 - Agent team launch/runtime debugging runbook: [docs/team-management/debugging-agent-teams.md](docs/team-management/debugging-agent-teams.md)
 
 GitHub repository disambiguation:
@@ -60,6 +61,7 @@ For new features:
 - For launch failures, first inspect the newest artifact pack under `~/.claude/teams/<team>/launch-failure-artifacts/latest.json`, then open its `manifest.json`. The manifest includes `classification`, `bootstrapTransportBreadcrumb`, launch diagnostics, member spawn statuses, and redacted copies/tails of launch-state, bootstrap-state, bootstrap-journal, CLI logs, progress trace, and runtime adapter trace.
 - When running live smoke tests, keep cleanup narrow: stop only the smoke-owned team/run and launch-owned process teammates. Do not kill shared OpenCode hosts, unrelated tmux panes, or user teams while trying to clean stale smoke artifacts.
 - Verify new medium and large features follow `docs/FEATURE_ARCHITECTURE_STANDARD.md`, especially cross-process boundaries and public feature entrypoints.
+- For Team Provisioning changes, enforce `docs/team-management/team-provisioning-target-architecture.md`: no new facade-inheritance layers, whole-service host casts, or implicit protected dependency slots.
 - Check that Electron main, preload, renderer, and shared code keep their responsibilities separate and use the documented path aliases.
 - Check that interactive UI controls use reusable Radix UI headless primitives from `src/renderer/components/ui` instead of one-off native or hand-rolled controls when a shared primitive exists.
 - Flag user-facing native HTML `title` tooltips. Use the shared Radix Tooltip primitive so help text is themed, keyboard-aware, portaled, and collision-safe.
@@ -69,5 +71,8 @@ For new features:
 - Confirm user-visible workflows have focused tests or a clear verification path when they touch parsing, persistence, IPC, Git, provider auth, or review flows.
 - Prefer `pnpm` commands for verification and avoid recommending `pnpm lint:fix` unless the PR explicitly intends broad formatting changes.
 
-Do not treat this file as a second source of truth.
-Keep architecture rules centralized in [docs/FEATURE_ARCHITECTURE_STANDARD.md](docs/FEATURE_ARCHITECTURE_STANDARD.md).
+Do not treat this file as a second source of truth. Keep general architecture
+rules centralized in
+[docs/FEATURE_ARCHITECTURE_STANDARD.md](docs/FEATURE_ARCHITECTURE_STANDARD.md),
+with provisioning-specific rules in
+[docs/team-management/team-provisioning-target-architecture.md](docs/team-management/team-provisioning-target-architecture.md).
