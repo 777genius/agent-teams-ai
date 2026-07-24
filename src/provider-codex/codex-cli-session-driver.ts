@@ -36,6 +36,9 @@ import {
 } from "./capabilities";
 import { classifyCodexFailure } from "./failure-classifier";
 import { codexProviderEgressConfigToml } from "./codex-provider-egress-policy";
+import {
+  codexShellEnvironmentPolicyConfigToml,
+} from "./codex-shell-environment-policy";
 
 export type CodexCliSessionDriverOptions = {
   readonly codexBinaryPath?: string;
@@ -286,9 +289,7 @@ async function writeCodexHomeSnapshot(input: {
     'trace_exporter = "none"',
     "log_user_prompt = false",
     "",
-    "[shell_environment_policy]",
-    'inherit = "none"',
-    'include_only = ["PATH", "HOME", "CI", "CODEX_HOME"]',
+    codexShellEnvironmentPolicyConfigToml(),
     "",
     codexProviderEgressConfigToml(),
   ].join("\n");

@@ -20,6 +20,9 @@ import {
   codexProviderEgressEnv,
 } from "./codex-provider-egress-policy";
 import {
+  codexShellEnvironmentPolicyConfigToml,
+} from "./codex-shell-environment-policy";
+import {
   codexAgentCapabilities,
   codexAgentId,
   codexProviderId,
@@ -166,9 +169,7 @@ async function writeCodexHomeSnapshot(input: {
     'trace_exporter = "none"',
     "log_user_prompt = false",
     "",
-    "[shell_environment_policy]",
-    'inherit = "none"',
-    'include_only = ["PATH", "HOME", "CI", "CODEX_HOME"]',
+    codexShellEnvironmentPolicyConfigToml(),
     "",
     codexProviderEgressConfigToml(),
   ].join("\n");

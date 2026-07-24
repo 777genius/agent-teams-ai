@@ -4,6 +4,7 @@ export * from "./codex-cli-domain";
 export * from "./codex-cli-agent-driver";
 export * from "./codex-execution-profile";
 export * from "./codex-provider-egress-policy";
+export * from "./codex-shell-environment-policy";
 export * from "./codex-json-agent-driver";
 export * from "./codex-app-server-execution-engine";
 export * from "./app-server/domain/model-catalog";

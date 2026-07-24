@@ -42,7 +42,13 @@ describe("buildCodexControlledAgentProfile", () => {
     expect(profile.configToml).toContain("[otel]");
     expect(profile.configToml).toContain('exporter = "none"');
     expect(profile.configToml).toContain("[shell_environment_policy]");
-    expect(profile.configToml).toContain('inherit = "none"');
+    expect(profile.configToml).toContain('inherit = "all"');
+    expect(profile.configToml).toContain(
+      'include_only = ["PATH", "HOME", "CI", "CODEX_HOME"]',
+    );
+    expect(profile.configToml).not.toContain("GITHUB_TOKEN");
+    expect(profile.configToml).not.toContain("AWS_SECRET_ACCESS_KEY");
+    expect(profile.configToml).not.toContain("OPENAI_API_KEY");
     expect(profile.configToml).not.toContain("danger-full-access");
     expect(profile.enforcement).toMatchObject({
       providerKind: RunEventProviderKind.Codex,

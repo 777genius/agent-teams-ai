@@ -7,6 +7,7 @@ import {
 import {
   codexProviderEgressConfigToml,
   codexProviderEgressEnv,
+  codexShellEnvironmentPolicyConfigToml,
 } from "@vioxen/subscription-runtime/provider-codex";
 
 export type CodexControlledAgentProfileInput = {
@@ -104,9 +105,7 @@ function codexConfigToml(input: {
     'default_tools_approval_mode = "approve"',
     ...(input.mcpCwd ? [`cwd = ${tomlString(input.mcpCwd)}`] : []),
     "",
-    "[shell_environment_policy]",
-    'inherit = "none"',
-    'include_only = ["PATH", "HOME", "CI", "CODEX_HOME"]',
+    codexShellEnvironmentPolicyConfigToml(),
     "",
     "[permissions.controlled_project_controller.filesystem]",
     '":minimal" = "read"',
