@@ -661,6 +661,18 @@
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-lifecycle/renderer/index.ts",
+      "specifier": "./adapters/createTeamLifecycleMutationCleanup",
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/renderer/index.ts",
+      "specifier": "./adapters/createTeamLifecycleMutationSlice",
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/renderer/index.ts",
       "specifier": "./adapters/teamLifecycleListViewModel",
       "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts"
     },
