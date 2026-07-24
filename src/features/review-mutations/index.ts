@@ -1,4 +1,4 @@
-export type * from './contracts';
+export * from './contracts';
 export { isDurableReviewEqual } from './core/domain/durableReviewValue';
 export {
   buildReviewExternalReloadState,
@@ -21,6 +21,16 @@ export {
   type ReviewHistoryDiskTransitionKind,
   type ReviewHistoryLineStatsStatus,
 } from './core/domain/reviewHistoryDiskSteps';
+export {
+  assertAuthoritativelyBoundReviewAction,
+  assertExactReviewHistoryTransition,
+  findLatestRestorableDiskSnapshot,
+  isAuthoritativelyBoundReviewSnapshot,
+  isAuthoritativeReviewDeletion,
+  rebindReviewActionDescriptorPath,
+  type ReviewHistoryDecisionState,
+  type ReviewHistoryMutationPolicyContext,
+} from './core/domain/reviewHistoryMutationPolicy';
 export {
   assertReviewMutationTransition,
   getNextReviewMutationPhase,

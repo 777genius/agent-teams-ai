@@ -490,11 +490,6 @@ export const REVIEW_PREVIEW_REJECT = 'review:previewReject';
 /** Применить batch решений review */
 export const REVIEW_APPLY_DECISIONS = 'review:applyDecisions';
 
-/** Execute Restore/Rename/Undo through the durable review mutation state machine. */
-export const REVIEW_EXECUTE_MUTATION = 'review:executeMutation';
-export const REVIEW_RETRY_MUTATION_RECOVERY = 'review:retryMutationRecovery';
-export const REVIEW_RESTORE_HISTORY = 'review:restoreHistory';
-
 /** Получить полное содержимое файла для diff view */
 export const REVIEW_GET_FILE_CONTENT = 'review:getFileContent';
 
@@ -532,6 +527,13 @@ export {
   REVIEW_SAVE_DECISIONS,
   REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
 } from '@features/change-review-history/contracts';
+
+// Compatibility re-exports. The review-mutations feature owns these channels.
+export {
+  REVIEW_EXECUTE_MUTATION,
+  REVIEW_RESTORE_HISTORY,
+  REVIEW_RETRY_MUTATION_RECOVERY,
+} from '@features/review-mutations/contracts';
 
 // =============================================================================
 // Editor Channels
