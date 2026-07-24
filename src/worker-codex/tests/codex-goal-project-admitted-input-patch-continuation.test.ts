@@ -181,10 +181,7 @@ describe("admitted input-patch capacity continuation", () => {
       reason: "unknown_error",
       changedFiles,
       evidence: ["safe_execution_status:failed"],
-      blockers: [
-        "unknown_error",
-        "Safe execution has no attempts remaining.",
-      ],
+      blockers: ["unknown_error", "Safe execution has no attempts remaining."],
       nextAction: "preserve_patch",
       details: {
         baseCommit: "a".repeat(40),
@@ -447,7 +444,143 @@ describe("admitted input-patch capacity continuation", () => {
       verifiedInputPatchArtifactSha256: patchSha256,
       verifiedInputPatchStagedSha256: patchSha256,
     });
+    const prelaunchController = {
+      schemaVersion: 1,
+      jobId: "project-controller-prelaunch",
+      createdAt: "2026-07-14T00:00:00.000Z",
+      updatedAt: "2026-07-14T00:00:00.000Z",
+      jobRootDir: join(fixture.root, "jobs", "project-controller-prelaunch"),
+      workspacePath: canonicalWorkspacePath,
+      promptPath: join(
+        fixture.root,
+        "jobs",
+        "project-controller-prelaunch",
+        "prompt.md",
+      ),
+      taskId: "project-controller-prelaunch",
+      accounts: ["account-a"],
+      accessBoundary: AccessBoundary.ProjectScopedControl,
+      projectAccessScope: scope,
+    } as CodexGoalJobManifest;
+    let prelaunchBootstrapCalls = 0;
+    const prelaunchArgs = {
+      registryRootDir,
+      controllerJobId: prelaunchController.jobId,
+      jobId: manifest.jobId,
+      confirmStart: true,
+      forceStart: true,
+      dependencyBootstrap: "install",
+      confirmDependencyBootstrap: true,
+    } as const;
+    const prelaunchDeps: CodexGoalMcpProjectControlActionsDeps = {
+      loadProjectControlController: async () => ({
+        registryRootDir,
+        controller: prelaunchController,
+        scope,
+      }),
+      loadJobLaunch: async () => {
+        throw new Error("unexpected_load_job_launch");
+      },
+      codexProjectControlBroker: () => {
+        throw new Error("unexpected_broker_start");
+      },
+      dependencyBootstrap: async () => {
+        prelaunchBootstrapCalls += 1;
+        throw new Error("reached_prelaunch_dependency_bootstrap");
+      },
+    };
+    await expect(
+      projectControlStartStoredJobView(prelaunchArgs, prelaunchDeps),
+    ).rejects.toThrow("reached_prelaunch_dependency_bootstrap");
+    expect(prelaunchBootstrapCalls).toBe(1);
+
+    await writeFile(
+      join(workspacePath, "src", "unowned-prelaunch-drift.ts"),
+      "export const drift = true;\n",
+    );
+    await expect(
+      projectControlStartStoredJobView(prelaunchArgs, prelaunchDeps),
+    ).rejects.toThrow(
+      "project_control_pre_start_launch_binding_mismatch:input_patch_binding",
+    );
+    expect(prelaunchBootstrapCalls).toBe(1);
+    await rm(join(workspacePath, "src", "unowned-prelaunch-drift.ts"));
+
+    const bootstrapDriftPath = join(
+      workspacePath,
+      "src",
+      "bootstrap-induced-drift.ts",
+    );
+    await expect(
+      projectControlStartStoredJobView(prelaunchArgs, {
+        ...prelaunchDeps,
+        dependencyBootstrap: async () => {
+          await writeFile(
+            bootstrapDriftPath,
+            "export const bootstrapDrift = true;\n",
+          );
+          return {
+            mode: "install",
+            workspacePath,
+            nodeModulesPath: join(workspacePath, "node_modules"),
+            nodeModulesExists: true,
+            binaryChecks: [],
+            fingerprintInputs: [],
+            status: "installed",
+            warnings: [],
+          };
+        },
+      }),
+    ).rejects.toThrow("project_control_pre_start_workspace_dirty");
+    await rm(bootstrapDriftPath);
+
+    let firstLaunchBrokerCalls = 0;
+    let firstLaunchWorkspaceMode: string | undefined;
+    const firstLaunch = await projectControlStartStoredJobView(prelaunchArgs, {
+      ...prelaunchDeps,
+      dependencyBootstrap: async () => ({
+        mode: "install",
+        workspacePath,
+        nodeModulesPath: join(workspacePath, "node_modules"),
+        nodeModulesExists: true,
+        binaryChecks: [],
+        fingerprintInputs: [],
+        status: "installed",
+        warnings: [],
+      }),
+      codexProjectControlBroker: (input) => {
+        firstLaunchWorkspaceMode = input.startAdmissionWorkspaceMode;
+        expect(input.startManifest).toMatchObject({
+          jobId: manifest.jobId,
+          workspacePath,
+        });
+        return {
+          startWorker: async () => {
+            firstLaunchBrokerCalls += 1;
+            return { status: "started" };
+          },
+        } as unknown as ProjectControlBroker;
+      },
+    });
+    expect(firstLaunch).toMatchObject({
+      ok: true,
+      jobId: manifest.jobId,
+      taskId: manifest.taskId,
+    });
+    expect(firstLaunchBrokerCalls).toBe(1);
+    expect(firstLaunchWorkspaceMode).toBe("admitted_input_patch");
+    await expect(
+      readFile(manifest.projectPreStartAdmission!.receiptPath, "utf8"),
+    ).resolves.toContain('"status": "validated_not_launched"');
+
     await authorizeProjectPreStartAdmissionLaunch({ manifest, scope });
+    await expect(
+      projectControlStartStoredJobView(prelaunchArgs, prelaunchDeps),
+    ).rejects.toThrow(
+      "project_control_pre_start_launch_binding_mismatch:receipt_status",
+    );
+    expect(prelaunchBootstrapCalls).toBe(1);
+
     const resultPath = join(
       manifest.jobRootDir,
       `${manifest.taskId}.latest-result.json`,
@@ -591,12 +724,7 @@ describe("admitted input-patch capacity continuation", () => {
         listAccountStatuses: async () =>
           ["account-c", "account-g", "account-i"].map((accountId) => ({
             name: accountId,
-            authJsonPath: join(
-              fixture.root,
-              "auth",
-              accountId,
-              "auth.json",
-            ),
+            authJsonPath: join(fixture.root, "auth", accountId, "auth.json"),
             status: "ready" as const,
             availability: "available" as const,
             schedulerEligible: true,
@@ -619,12 +747,7 @@ describe("admitted input-patch capacity continuation", () => {
     expect(reservedLaunch?.config.accounts).toEqual([
       {
         name: "account-g",
-        authJsonPath: join(
-          fixture.root,
-          "auth",
-          "account-g",
-          "auth.json",
-        ),
+        authJsonPath: join(fixture.root, "auth", "account-g", "auth.json"),
       },
     ]);
     expect(
@@ -752,12 +875,7 @@ describe("admitted input-patch capacity continuation", () => {
         expect(input).toEqual({ authRootDir: join(fixture.root, "auth") });
         return ["account-c", "account-g", "account-i"].map((accountId) => ({
           name: accountId,
-          authJsonPath: join(
-            fixture.root,
-            "auth",
-            accountId,
-            "auth.json",
-          ),
+          authJsonPath: join(fixture.root, "auth", accountId, "auth.json"),
           status: "ready" as const,
           availability: "available" as const,
           schedulerEligible: true,
@@ -783,12 +901,7 @@ describe("admitted input-patch capacity continuation", () => {
     expect(reservedLaunch?.config.accounts).toEqual([
       {
         name: "account-c",
-        authJsonPath: join(
-          fixture.root,
-          "auth",
-          "account-c",
-          "auth.json",
-        ),
+        authJsonPath: join(fixture.root, "auth", "account-c", "auth.json"),
       },
     ]);
     await expect(

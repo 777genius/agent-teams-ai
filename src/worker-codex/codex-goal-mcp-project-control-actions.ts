@@ -11,6 +11,7 @@ import {
   collectCodexGoalStatus,
   listCodexGoalAccountStatuses,
   type CodexGoalLaunchInput,
+  type CodexGoalStatus,
 } from "./codex-goal-ops";
 import { codexGoalProgressPath } from "./codex-goal-runner";
 import { runDependencyBootstrap } from "./dependency-bootstrap";
@@ -22,9 +23,7 @@ import {
   projectControlAuditPath,
 } from "./codex-goal-mcp-project-broker";
 import { createOrReuseProjectWorktree } from "./application/project-control/codex-goal-project-refill";
-import {
-  assertProjectPreStartAdmissionLaunchBinding,
-} from "./application/project-control/codex-goal-project-pre-start-admission";
+import { assertProjectPreStartAdmissionLaunchBinding } from "./application/project-control/codex-goal-project-pre-start-admission";
 import { validateProjectRefillPreStartAdmissionLocked } from "./application/project-control/codex-goal-project-refill-admission";
 import {
   terminalHandoffDependencyRecoveryRequested,
@@ -206,13 +205,30 @@ export async function projectControlStartStoredJobView(
       confirmDependencyBootstrap:
         booleanValue(args.confirmDependencyBootstrap) === true,
     });
+  const admittedInputPatchFirstLaunch =
+    continuationDecision === undefined &&
+    admittedInputPatchFirstLaunchRequested({
+      manifest: loaded.manifest,
+      status,
+      ...(reviewedOutputId ? { reviewedOutputId } : {}),
+      forceStart: args.forceStart === true,
+      ...(typeof args.dependencyBootstrap === "string"
+        ? { dependencyBootstrap: args.dependencyBootstrap }
+        : {}),
+      confirmDependencyBootstrap:
+        booleanValue(args.confirmDependencyBootstrap) === true,
+    });
   if (workspaceDirty && continuationDecision === undefined) {
     if (!args.forceStart) {
       throw new Error(
         "project_control_reviewed_dirty_continuation_force_required",
       );
     }
-    if (!reviewedOutputId && !terminalHandoffDependencyRecovery) {
+    if (
+      !reviewedOutputId &&
+      !terminalHandoffDependencyRecovery &&
+      !admittedInputPatchFirstLaunch
+    ) {
       throw new Error(
         "project_control_reviewed_dirty_continuation_output_required",
       );
@@ -268,6 +284,21 @@ export async function projectControlStartStoredJobView(
       ) {
         throw new Error(
           "project_control_terminal_handoff_recovery_status_changed",
+        );
+      }
+      if (
+        admittedInputPatchFirstLaunch &&
+        (lockedContinuationDecision !== undefined ||
+          !admittedInputPatchFirstLaunchRequested({
+            manifest: loaded.manifest,
+            status: lockedStatus,
+            forceStart: args.forceStart === true,
+            dependencyBootstrap: "install",
+            confirmDependencyBootstrap: true,
+          }))
+      ) {
+        throw new Error(
+          "project_control_admitted_input_patch_first_launch_status_changed",
         );
       }
       if (
@@ -340,6 +371,12 @@ export async function projectControlStartStoredJobView(
           scope: controller.scope,
           workspaceMode: continuationDecision.workspaceMode,
         });
+      } else if (admittedInputPatchFirstLaunch) {
+        await assertProjectPreStartAdmissionLaunchBinding({
+          manifest: loaded.manifest,
+          scope: controller.scope,
+          workspaceMode: "admitted_input_patch",
+        });
       }
       const capacitySupervisorReap =
         await reapProjectPreStartCapacitySupervisor({
@@ -398,6 +435,18 @@ export async function projectControlStartStoredJobView(
           scope: controller.scope,
           workspaceMode: "terminal_handoff_dependency_recovery",
         });
+      } else if (admittedInputPatchFirstLaunch) {
+        const validatedWorkspaceMode =
+          await validateProjectRefillPreStartAdmissionLocked({
+            manifest: loaded.manifest,
+            scope: controller.scope,
+            admittedInputPatch: true,
+          });
+        if (validatedWorkspaceMode !== "admitted_input_patch") {
+          throw new Error(
+            "project_control_admitted_input_patch_first_launch_binding_changed",
+          );
+        }
       } else if (continuationDecision || cleanExplicitContinuation) {
         await assertProjectPreStartAdmissionLaunchBinding({
           manifest: loaded.manifest,
@@ -419,10 +468,12 @@ export async function projectControlStartStoredJobView(
           authorizedContinuationWorkspaceMode = validatedWorkspaceMode;
         }
       }
-      const continuationReservation = await codexProjectContinuationReservationInput({
+      const continuationReservation =
+        await codexProjectContinuationReservationInput({
           status: lockedStatus,
           launch: canonicalLaunch,
-          journal: deps.safeExecutionJournal ??
+          journal:
+            deps.safeExecutionJournal ??
             localCodexProjectSafeExecutionJournal(canonicalLaunch),
           verifiedPrewarmBeforeAttemptContinuation:
             continuationDecision?.kind === "prewarm_before_attempt",
@@ -440,11 +491,9 @@ export async function projectControlStartStoredJobView(
         ...(continuationReservation.continuation
           ? { continuation: continuationReservation.continuation }
           : {}),
-        ...(terminalRecovery
-          ? { verifiedTerminalHandoffRecovery: true }
-          : {}),
+        ...(terminalRecovery ? { verifiedTerminalHandoffRecovery: true } : {}),
         ...(continuationDecision?.workspaceMode ===
-          "admitted_input_patch_continuation"
+        "admitted_input_patch_continuation"
           ? {
               verifiedAdmittedInputPatchContinuation: true,
               immutableManifestAccountIds: loaded.manifest.accounts,
@@ -466,10 +515,12 @@ export async function projectControlStartStoredJobView(
         ? ("reviewed_dirty_continuation" as const)
         : terminalRecovery
           ? ("terminal_handoff_dependency_recovery" as const)
-          : (continuationDecision?.workspaceMode ??
-            (cleanExplicitContinuation
-              ? ("clean_explicit_continuation" as const)
-              : authorizedContinuationWorkspaceMode));
+          : admittedInputPatchFirstLaunch
+            ? ("admitted_input_patch" as const)
+            : (continuationDecision?.workspaceMode ??
+              (cleanExplicitContinuation
+                ? ("clean_explicit_continuation" as const)
+                : authorizedContinuationWorkspaceMode));
       let result;
       try {
         const broker = deps.codexProjectControlBroker({
@@ -484,8 +535,10 @@ export async function projectControlStartStoredJobView(
           startWorkspaceLease: workspace,
           startSkipDoctor: booleanValue(args.skipDoctor) ?? false,
           ...(reviewedContinuation ? { reviewedContinuation } : {}),
-          rejectedUncapturedTerminalHandoffRecovery: terminalRecovery?.reviewDisposition === "rejected_uncaptured"
-            ? { patchSha256: terminalRecovery.patchSha256 } : undefined,
+          rejectedUncapturedTerminalHandoffRecovery:
+            terminalRecovery?.reviewDisposition === "rejected_uncaptured"
+              ? { patchSha256: terminalRecovery.patchSha256 }
+              : undefined,
         });
         result = await broker.startWorker({
           jobId: loaded.manifest.jobId,
@@ -540,6 +593,34 @@ export async function projectControlStartStoredJobView(
     },
   });
 }
+
+function admittedInputPatchFirstLaunchRequested(input: {
+  readonly manifest: CodexGoalJobManifest;
+  readonly status: CodexGoalStatus;
+  readonly reviewedOutputId?: string;
+  readonly forceStart: boolean;
+  readonly dependencyBootstrap?: string;
+  readonly confirmDependencyBootstrap: boolean;
+}): boolean {
+  const status = input.status;
+  const noWorkerProcess =
+    status.tmuxAlive !== true &&
+    status.progressProcessAlive !== true &&
+    status.appServerProcessAlive !== true &&
+    status.workloadProcessAlive !== true;
+  return (
+    input.manifest.projectPreStartAdmission !== undefined &&
+    !input.reviewedOutputId &&
+    input.forceStart &&
+    input.dependencyBootstrap === "install" &&
+    input.confirmDependencyBootstrap &&
+    status.workspaceDirty === true &&
+    status.resultExists === false &&
+    (status.changedFiles?.length ?? 0) > 0 &&
+    noWorkerProcess
+  );
+}
+
 export async function projectControlCreateWorktreeView(
   args: ProjectControlMcpArgs,
   deps: CodexGoalMcpProjectControlActionsDeps,
