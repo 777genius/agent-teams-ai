@@ -34,6 +34,11 @@ export const projectScopedControllerToolGrants: readonly ControlledAgentToolGran
     "write",
   ),
   grant(
+    ControlledAgentToolName.ProjectCleanupWorktrees,
+    ControlledAgentToolGroup.WorkerLifecycle,
+    "write",
+  ),
+  grant(
     ControlledAgentToolName.ProjectCreateJob,
     ControlledAgentToolGroup.WorkerLifecycle,
     "write",

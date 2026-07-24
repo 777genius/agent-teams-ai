@@ -74,3 +74,36 @@ export async function withValidatedProjectWorkspaceLock<T>(input: {
     await input.locks.release(lock);
   }
 }
+
+export async function withProjectWorkspaceLockIfPresent<T>(input: {
+  readonly locks: WorkspaceLockPort;
+  readonly scope: ProjectAccessScope;
+  readonly requestedWorkspacePath: string;
+  readonly owner: string;
+  readonly effect: () => Promise<T>;
+}): Promise<T> {
+  let expectedCanonicalWorkspacePath: string;
+  try {
+    expectedCanonicalWorkspacePath =
+      await projectControlCanonicalWorkspacePath(
+        input.requestedWorkspacePath,
+        input.scope,
+      );
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "project_control_workspace_missing"
+    ) {
+      return input.effect();
+    }
+    throw error;
+  }
+  return withValidatedProjectWorkspaceLock({
+    locks: input.locks,
+    scope: input.scope,
+    requestedWorkspacePath: input.requestedWorkspacePath,
+    expectedCanonicalWorkspacePath,
+    owner: input.owner,
+    effect: input.effect,
+  });
+}

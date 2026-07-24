@@ -103,6 +103,7 @@ import {
 import { projectControlChildManifestInput } from "./application/project-control/codex-goal-project-child-manifest";
 import {
   projectControlWorkspaceLocks,
+  withProjectWorkspaceLockIfPresent,
   withValidatedProjectWorkspaceLock,
 } from "./codex-goal-project-workspace-lock";
 import {
@@ -1135,12 +1136,20 @@ async function projectControlRefillWorkerBoundedView(
   const operationsRootDir = projectControlOperationsRoot(
     controller.controller.jobRootDir,
   );
-  const creation = await createOrReuseProjectControlOperation({
-    operationsRootDir,
-    controllerJobId: controller.controller.jobId,
-    toolName: operationToolName,
-    args: operationArgs,
-    targetJobId: createManifest.jobId,
+  const creation = await withProjectWorkspaceLockIfPresent({
+    locks: projectControlWorkspaceLocks(controller.registryRootDir),
+    scope: controller.scope,
+    requestedWorkspacePath: createManifest.workspacePath,
+    owner:
+      `project-operation-create:${controller.controller.jobId}:${createManifest.jobId}`,
+    effect: async () =>
+      await createOrReuseProjectControlOperation({
+        operationsRootDir,
+        controllerJobId: controller.controller.jobId,
+        toolName: operationToolName,
+        args: operationArgs,
+        targetJobId: createManifest.jobId,
+      }),
   });
   if (!creation.created) {
     const existing = creation.operation;

@@ -17,12 +17,16 @@ import {
 import {
   registerCodexGoalProjectIntegrationTools,
 } from "./codex-goal-mcp-project-integration-tool-registration";
+import {
+  registerCodexGoalProjectRetentionTool,
+} from "./codex-goal-mcp-project-retention-tool-registration";
 
 export function registerCodexGoalProjectControlTools(server: McpServer): void {
   registerCodexGoalProjectControlJobTools(server);
   registerCodexGoalProjectControlAdminTools(server);
   registerCodexGoalProjectControllerTools(server);
   registerCodexGoalProjectControlActionTools(server);
+  registerCodexGoalProjectRetentionTool(server);
   registerCodexGoalProjectIntegrationTools(server);
   registerCodexGoalProjectControlReviewTools(server);
 }
