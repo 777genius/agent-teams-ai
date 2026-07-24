@@ -152,6 +152,10 @@ type RuntimeAgentTeamsController = Omit<
   taskBoard?: AgentTeamsController['taskBoard'];
 };
 
+type TaskBoardWithCreationReconciliation = AgentTeamsController['taskBoard'] & {
+  reconcileTaskCreation(input: Record<string, unknown>): unknown;
+};
+
 interface TeamNotificationContext {
   displayName: string;
   projectPath?: string;
@@ -170,6 +174,14 @@ interface InFlightTeamNotificationContext {
 
 function isControllerTaskNotFoundError(error: unknown, taskId: string): boolean {
   return error instanceof Error && error.message === `Task not found: ${taskId}`;
+}
+
+function hasTaskCreationReconciliation(
+  taskBoard: AgentTeamsController['taskBoard']
+): taskBoard is TaskBoardWithCreationReconciliation {
+  return (
+    typeof (taskBoard as { reconcileTaskCreation?: unknown }).reconcileTaskCreation === 'function'
+  );
 }
 
 function compareInboxMessagesNewestFirst(left: InboxMessage, right: InboxMessage): number {
@@ -651,7 +663,10 @@ export class TeamDataService {
     } as AgentTeamsController['taskBoard'];
   }
 
-  private async readTeamLaneMutationContext(teamName: string): Promise<{
+  private async readTeamLaneMutationContext(
+    teamName: string,
+    rosterSnapshot?: readonly TeamMember[]
+  ): Promise<{
     leadProviderId: TeamProviderId | undefined;
     activeMembers: ReturnType<typeof toProvisioningMemberShape>;
     currentMixed: boolean;
@@ -659,7 +674,9 @@ export class TeamDataService {
     const [teamMeta, activeMembersRaw, bootstrapSnapshot, persistedLaunchSnapshot] =
       await Promise.all([
         this.teamMetaStore.getMeta(teamName).catch(() => null),
-        this.membersMetaStore.getMembers(teamName).catch(() => []),
+        rosterSnapshot
+          ? Promise.resolve(rosterSnapshot)
+          : this.membersMetaStore.getMembers(teamName).catch(() => []),
         readBootstrapLaunchSnapshot(teamName).catch(() => null),
         this.launchStateStore.read(teamName).catch(() => null),
       ]);
@@ -685,9 +702,10 @@ export class TeamDataService {
 
   private async assertRosterMutationAllowed(
     teamName: string,
-    nextMembers: ReturnType<typeof toProvisioningMemberShape>
+    nextMembers: ReturnType<typeof toProvisioningMemberShape>,
+    rosterSnapshot?: readonly TeamMember[]
   ): Promise<void> {
-    const context = await this.readTeamLaneMutationContext(teamName);
+    const context = await this.readTeamLaneMutationContext(teamName, rosterSnapshot);
     const nextPlan = fromProvisioningMembers(context.leadProviderId, nextMembers);
     if (!nextPlan.ok) {
       throw new Error(nextPlan.message);
@@ -1953,86 +1971,97 @@ export class TeamDataService {
     teamName: string,
     memberName: string
   ): Promise<{ members: TeamMember[]; member: TeamMember }> {
-    let members = await this.membersMetaStore.getMembers(teamName);
-    const config = await this.configReader.getConfig(teamName);
-    const inboxNames = await this.inboxReader.listInboxNames(teamName);
-    const knownNames = new Set(members.map((member) => member.name.trim().toLowerCase()));
-    const migratedMembers: TeamMember[] = [];
-    const joinedAt = Date.now();
-
-    for (const configMember of config?.members ?? []) {
-      const name = typeof configMember?.name === 'string' ? configMember.name.trim() : '';
-      const normalizedName = name.toLowerCase();
-      if (
-        !name ||
-        normalizedName === 'user' ||
-        isLeadMember(configMember) ||
-        knownNames.has(normalizedName)
-      ) {
-        continue;
-      }
-      const providerId = normalizeOptionalTeamProviderId(configMember.providerId);
-      migratedMembers.push({
-        name,
-        role: configMember.role,
-        workflow: configMember.workflow,
-        isolation: configMember.isolation === 'worktree' ? ('worktree' as const) : undefined,
-        providerId,
-        providerBackendId: migrateProviderBackendId(providerId, configMember.providerBackendId),
-        model: configMember.model,
-        effort: isTeamEffortLevel(configMember.effort) ? configMember.effort : undefined,
-        fastMode: configMember.fastMode,
-        mcpPolicy: normalizeTeamMemberMcpPolicy(configMember.mcpPolicy),
-        agentType: configMember.agentType ?? 'general-purpose',
-        color: configMember.color,
-        joinedAt: configMember.joinedAt ?? joinedAt,
-        agentId: configMember.agentId,
-        cwd: configMember.cwd,
-      });
-      knownNames.add(normalizedName);
-    }
-
-    const rosterNames = [
-      ...members.map((member) => member.name),
-      ...migratedMembers.map((member) => member.name),
-      ...inboxNames.map((name) => name.trim()).filter(Boolean),
-    ];
-    const keepAutoSuffix = createCliAutoSuffixNameGuard(rosterNames);
-    const keepProvisioner = createCliProvisionerNameGuard(rosterNames);
-    const explicitNames = new Set(knownNames);
-    for (const inboxName of inboxNames) {
-      const name = inboxName.trim();
-      const normalizedName = name.toLowerCase();
-      if (
-        !name ||
-        normalizedName === 'user' ||
-        isLeadMember({ name, agentType: undefined }) ||
-        knownNames.has(normalizedName) ||
-        !isMaterializableInboxMemberName(name, explicitNames) ||
-        !keepAutoSuffix(name) ||
-        !keepProvisioner(name)
-      ) {
-        continue;
-      }
-      migratedMembers.push({ name, agentType: 'general-purpose', joinedAt });
-      knownNames.add(normalizedName);
-    }
-
-    if (migratedMembers.length > 0) {
-      const nextMembers = applyDistinctRosterColors([...members, ...migratedMembers]);
-      await this.membersMetaStore.writeMembers(teamName, nextMembers);
-      members = nextMembers;
-    }
-
+    const members = await this.membersMetaStore.getMembers(teamName);
     const normalizedMemberName = memberName.trim().toLowerCase();
-    const member = members.find(
+    const existingMember = members.find(
       (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
     );
-    if (!member) {
-      throw new Error(`Member "${memberName}" not found`);
+    if (existingMember) {
+      return { members, member: existingMember };
     }
 
-    return { members, member };
+    const config = await this.configReader.getConfig(teamName);
+    const inboxNames = await this.inboxReader.listInboxNames(teamName);
+    const joinedAt = Date.now();
+    let updatedMembers: TeamMember[] = [];
+    let updatedMember: TeamMember | undefined;
+
+    await this.membersMetaStore.updateMembers(teamName, (currentMembers) => {
+      const knownNames = new Set(currentMembers.map((member) => member.name.trim().toLowerCase()));
+      const migratedMembers: TeamMember[] = [];
+
+      for (const configMember of config?.members ?? []) {
+        const name = typeof configMember?.name === 'string' ? configMember.name.trim() : '';
+        const normalizedName = name.toLowerCase();
+        if (
+          !name ||
+          normalizedName === 'user' ||
+          isLeadMember(configMember) ||
+          knownNames.has(normalizedName)
+        ) {
+          continue;
+        }
+        const providerId = normalizeOptionalTeamProviderId(configMember.providerId);
+        migratedMembers.push({
+          name,
+          role: configMember.role,
+          workflow: configMember.workflow,
+          isolation: configMember.isolation === 'worktree' ? ('worktree' as const) : undefined,
+          providerId,
+          providerBackendId: migrateProviderBackendId(providerId, configMember.providerBackendId),
+          model: configMember.model,
+          effort: isTeamEffortLevel(configMember.effort) ? configMember.effort : undefined,
+          fastMode: configMember.fastMode,
+          mcpPolicy: normalizeTeamMemberMcpPolicy(configMember.mcpPolicy),
+          agentType: configMember.agentType ?? 'general-purpose',
+          color: configMember.color,
+          joinedAt: configMember.joinedAt ?? joinedAt,
+          agentId: configMember.agentId,
+          cwd: configMember.cwd,
+        });
+        knownNames.add(normalizedName);
+      }
+
+      const rosterNames = [
+        ...currentMembers.map((member) => member.name),
+        ...migratedMembers.map((member) => member.name),
+        ...inboxNames.map((name) => name.trim()).filter(Boolean),
+      ];
+      const keepAutoSuffix = createCliAutoSuffixNameGuard(rosterNames);
+      const keepProvisioner = createCliProvisionerNameGuard(rosterNames);
+      const explicitNames = new Set(knownNames);
+      for (const inboxName of inboxNames) {
+        const name = inboxName.trim();
+        const normalizedName = name.toLowerCase();
+        if (
+          !name ||
+          normalizedName === 'user' ||
+          isLeadMember({ name, agentType: undefined }) ||
+          knownNames.has(normalizedName) ||
+          !isMaterializableInboxMemberName(name, explicitNames) ||
+          !keepAutoSuffix(name) ||
+          !keepProvisioner(name)
+        ) {
+          continue;
+        }
+        migratedMembers.push({ name, agentType: 'general-purpose', joinedAt });
+        knownNames.add(normalizedName);
+      }
+
+      updatedMembers =
+        migratedMembers.length > 0
+          ? applyDistinctRosterColors([...currentMembers, ...migratedMembers])
+          : [...currentMembers];
+      updatedMember = updatedMembers.find(
+        (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
+      );
+      if (!updatedMember) {
+        throw new Error(`Member "${memberName}" not found`);
+      }
+      return updatedMembers;
+    });
+
+    return { members: updatedMembers, member: updatedMember! };
   }
 
   async addMember(teamName: string, request: AddMemberRequest): Promise<void> {
@@ -2052,16 +2081,6 @@ export class TeamDataService {
       throw new Error(
         `Member name "${name}" is not allowed (reserved for runtime-managed numeric suffixes). Use "${suffixInfo.base}" instead.`
       );
-    }
-
-    const members = await this.membersMetaStore.getMembers(teamName);
-    const existing = members.find((m) => m.name.toLowerCase() === name.toLowerCase());
-
-    if (existing) {
-      if (existing.removedAt) {
-        throw new Error(`Name "${name}" was previously used by a removed member`);
-      }
-      throw new Error(`Member "${name}" already exists`);
     }
 
     const memberProviderId = normalizeOptionalTeamProviderId(request.providerId);
@@ -2085,12 +2104,24 @@ export class TeamDataService {
       joinedAt: Date.now(),
     };
 
-    await this.assertRosterMutationAllowed(
-      teamName,
-      toProvisioningMemberShape([...members, newMember])
-    );
-    const nextMembers = applyDistinctRosterColors([...members, newMember]);
-    await this.membersMetaStore.writeMembers(teamName, nextMembers);
+    await this.membersMetaStore.updateMembers(teamName, async (currentMembers) => {
+      const current = currentMembers.find(
+        (member) => member.name.trim().toLowerCase() === name.toLowerCase()
+      );
+      if (current?.removedAt) {
+        throw new Error(`Name "${name}" was previously used by a removed member`);
+      }
+      if (current) {
+        throw new Error(`Member "${name}" already exists`);
+      }
+      const nextMembers = applyDistinctRosterColors([...currentMembers, newMember]);
+      await this.assertRosterMutationAllowed(
+        teamName,
+        toProvisioningMemberShape(nextMembers),
+        currentMembers
+      );
+      return nextMembers;
+    });
   }
 
   async updateMemberRole(
@@ -2098,156 +2129,200 @@ export class TeamDataService {
     memberName: string,
     newRole: string | undefined
   ): Promise<{ oldRole: string | undefined; changed: boolean }> {
-    const { members, member } = await this.ensureMemberInMeta(teamName, memberName);
-    if (member.removedAt) throw new Error(`Member "${memberName}" is removed`);
-    if (isLeadMember(member)) throw new Error('Cannot change team lead role');
-
-    const oldRole = member.role;
+    await this.ensureMemberInMeta(teamName, memberName);
+    const normalizedMemberName = memberName.trim().toLowerCase();
     const normalized = typeof newRole === 'string' && newRole.trim() ? newRole.trim() : undefined;
-    if (oldRole === normalized) return { oldRole, changed: false };
+    let oldRole: string | undefined;
+    let changed = false;
 
-    member.role = normalized;
-    await this.membersMetaStore.writeMembers(teamName, members);
-    return { oldRole, changed: true };
+    await this.membersMetaStore.updateMembers(teamName, (members) => {
+      const member = members.find(
+        (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
+      );
+      if (!member) throw new Error(`Member "${memberName}" not found`);
+      if (member.removedAt) throw new Error(`Member "${memberName}" is removed`);
+      if (isLeadMember(member)) throw new Error('Cannot change team lead role');
+
+      oldRole = member.role;
+      changed = oldRole !== normalized;
+      return changed
+        ? members.map((candidate) =>
+            candidate === member ? { ...candidate, role: normalized } : candidate
+          )
+        : [...members];
+    });
+    return { oldRole, changed };
   }
 
   async replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void> {
-    const existing = await this.membersMetaStore.getMembers(teamName);
-    const existingLead = existing.find(isLeadMember) ?? null;
-    const existingByName = new Map(existing.map((m) => [m.name.toLowerCase(), m]));
     const joinedAt = Date.now();
-    const nextByName = new Set<string>();
+    const buildNextMembers = (currentMembers: readonly TeamMember[]): TeamMember[] => {
+      const existingLead = currentMembers.find(isLeadMember) ?? null;
+      const existingByName = new Map(
+        currentMembers.map((member) => [member.name.toLowerCase(), member])
+      );
+      const nextByName = new Set<string>();
+      const nextActive = applyDistinctRosterColors(
+        request.members.map((member) => {
+          const name = member.name.trim();
+          if (!name) throw new Error('Member name cannot be empty');
+          const formatError = validateTeamMemberNameFormat(name);
+          if (formatError) {
+            throw new Error(`Member name "${name}" is invalid: ${formatError}`);
+          }
+          if (name.toLowerCase() === 'user') {
+            throw new Error('Member name "user" is reserved');
+          }
+          if (name.toLowerCase() === 'team-lead') {
+            throw new Error('Member name "team-lead" is reserved');
+          }
+          if (nextByName.has(name.toLowerCase())) {
+            throw new Error(`Member "${name}" already exists`);
+          }
+          const suffixInfo = parseNumericSuffixName(name);
+          if (suffixInfo && suffixInfo.suffix >= 2) {
+            throw new Error(
+              `Member name "${name}" is not allowed (reserved for runtime-managed numeric suffixes). Use "${suffixInfo.base}" instead.`
+            );
+          }
+          nextByName.add(name.toLowerCase());
+          const prev = existingByName.get(name.toLowerCase());
+          const isSameActiveMember = Boolean(prev && prev.removedAt == null);
+          const providerId = normalizeOptionalTeamProviderId(member.providerId);
+          const providerBackendId = providerId
+            ? migrateProviderBackendId(providerId, member.providerBackendId)
+            : member.providerBackendId;
+          return {
+            name,
+            role: member.role?.trim() || undefined,
+            workflow: member.workflow?.trim() || undefined,
+            isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
+            providerId,
+            providerBackendId,
+            model: member.model?.trim() || undefined,
+            effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
+            fastMode:
+              member.fastMode === 'inherit' || member.fastMode === 'on' || member.fastMode === 'off'
+                ? member.fastMode
+                : undefined,
+            mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
+            agentType: prev?.agentType ?? 'general-purpose',
+            agentId: isSameActiveMember ? prev?.agentId : undefined,
+            color: prev?.color,
+            joinedAt: prev?.joinedAt ?? joinedAt,
+            removedAt: undefined,
+          };
+        })
+      );
 
-    const nextActive = applyDistinctRosterColors(
-      request.members.map((member) => {
-        const name = member.name.trim();
-        if (!name) throw new Error('Member name cannot be empty');
-        const formatError = validateTeamMemberNameFormat(name);
-        if (formatError) {
-          throw new Error(`Member name "${name}" is invalid: ${formatError}`);
-        }
-        if (name.toLowerCase() === 'user') {
-          throw new Error('Member name "user" is reserved');
-        }
-        if (name.toLowerCase() === 'team-lead') {
-          throw new Error('Member name "team-lead" is reserved');
-        }
-        if (nextByName.has(name.toLowerCase())) {
-          throw new Error(`Member "${name}" already exists`);
-        }
-        const suffixInfo = parseNumericSuffixName(name);
-        if (suffixInfo && suffixInfo.suffix >= 2) {
-          throw new Error(
-            `Member name "${name}" is not allowed (reserved for runtime-managed numeric suffixes). Use "${suffixInfo.base}" instead.`
-          );
-        }
-        nextByName.add(name.toLowerCase());
-        const prev = existingByName.get(name.toLowerCase());
-        const isSameActiveMember = Boolean(prev && prev.removedAt == null);
-        const providerId = normalizeOptionalTeamProviderId(member.providerId);
-        const providerBackendId = providerId
-          ? migrateProviderBackendId(providerId, member.providerBackendId)
-          : member.providerBackendId;
-        return {
-          name,
-          role: member.role?.trim() || undefined,
-          workflow: member.workflow?.trim() || undefined,
-          isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
-          providerId,
-          providerBackendId,
-          model: member.model?.trim() || undefined,
-          effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
-          fastMode:
-            member.fastMode === 'inherit' || member.fastMode === 'on' || member.fastMode === 'off'
-              ? member.fastMode
-              : undefined,
-          mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
-          agentType: prev?.agentType ?? 'general-purpose',
-          agentId: isSameActiveMember ? prev?.agentId : undefined,
-          color: prev?.color,
-          joinedAt: prev?.joinedAt ?? joinedAt,
-          removedAt: undefined,
-        };
-      })
-    );
-    await this.assertRosterMutationAllowed(teamName, toProvisioningMemberShape(nextActive));
-
-    // Preserve/mark removed members so stale inbox files don't resurrect them in the UI.
-    const nextRemoved: TeamMember[] = [];
-    for (const prev of existing) {
-      if (isLeadMember(prev)) continue;
-      const prevName = prev.name.trim();
-      if (!prevName) continue;
-      const key = prevName.toLowerCase();
-      if (nextByName.has(key)) continue;
-      nextRemoved.push({
-        ...prev,
-        removedAt: prev.removedAt ?? joinedAt,
-      });
-    }
-
-    const out: TeamMember[] = [...nextActive, ...nextRemoved];
-    if (existingLead) {
-      const leadKey = existingLead.name.trim().toLowerCase();
-      if (!out.some((m) => m.name.trim().toLowerCase() === leadKey)) {
-        out.unshift({ ...existingLead, removedAt: undefined });
+      // Preserve/mark removed members so stale inbox files don't resurrect them in the UI.
+      const nextRemoved: TeamMember[] = [];
+      for (const prev of currentMembers) {
+        if (isLeadMember(prev)) continue;
+        const prevName = prev.name.trim();
+        if (!prevName) continue;
+        const key = prevName.toLowerCase();
+        if (nextByName.has(key)) continue;
+        nextRemoved.push({
+          ...prev,
+          removedAt: prev.removedAt ?? joinedAt,
+        });
       }
-    }
-    await this.membersMetaStore.writeMembers(teamName, out);
+
+      const out: TeamMember[] = [...nextActive, ...nextRemoved];
+      if (existingLead) {
+        const leadKey = existingLead.name.trim().toLowerCase();
+        if (!out.some((member) => member.name.trim().toLowerCase() === leadKey)) {
+          out.unshift({ ...existingLead, removedAt: undefined });
+        }
+      }
+      return out;
+    };
+
+    await this.membersMetaStore.updateMembers(teamName, async (currentMembers) => {
+      const nextMembers = buildNextMembers(currentMembers);
+      await this.assertRosterMutationAllowed(
+        teamName,
+        toProvisioningMemberShape(nextMembers),
+        currentMembers
+      );
+      return nextMembers;
+    });
   }
 
   async removeMember(teamName: string, memberName: string): Promise<void> {
-    const { members, member } = await this.ensureMemberInMeta(teamName, memberName);
-
-    // Removal is intentionally idempotent. The tombstone is already the durable
-    // success state, so retries after an IPC timeout or service restart are safe.
-    if (member.removedAt) return;
-    if (isLeadMember(member)) {
-      throw new Error('Cannot remove team lead');
-    }
-
-    await this.assertRosterMutationAllowed(
-      teamName,
-      toProvisioningMemberShape(
-        members.filter(
-          (candidate) => candidate.name.trim().toLowerCase() !== memberName.trim().toLowerCase()
-        )
-      )
-    );
-    member.removedAt = Date.now();
-    await this.membersMetaStore.writeMembers(teamName, members);
+    await this.ensureMemberInMeta(teamName, memberName);
+    const normalizedName = memberName.trim().toLowerCase();
+    const removedAt = Date.now();
+    await this.membersMetaStore.updateMembers(teamName, async (currentMembers) => {
+      const current = currentMembers.find(
+        (candidate) => candidate.name.trim().toLowerCase() === normalizedName
+      );
+      if (!current) {
+        throw new Error(`Member "${memberName}" not found`);
+      }
+      // Removal is intentionally idempotent. The tombstone is already the durable
+      // success state, so retries after an IPC timeout or service restart are safe.
+      if (current.removedAt) {
+        return [...currentMembers];
+      }
+      if (isLeadMember(current)) {
+        throw new Error('Cannot remove team lead');
+      }
+      const nextMembers = currentMembers.map((candidate) =>
+        candidate === current ? { ...candidate, removedAt } : candidate
+      );
+      await this.assertRosterMutationAllowed(
+        teamName,
+        toProvisioningMemberShape(nextMembers),
+        currentMembers
+      );
+      return nextMembers;
+    });
   }
 
   async restoreMember(teamName: string, memberName: string): Promise<TeamMember> {
     const normalizedName = memberName.trim().toLowerCase();
-    const members = await this.membersMetaStore.getMembers(teamName);
-    const memberIndex = members.findIndex(
-      (candidate) => candidate.name.trim().toLowerCase() === normalizedName
-    );
-    const member = memberIndex >= 0 ? members[memberIndex] : undefined;
+    let persistedMember: TeamMember | undefined;
+    await this.membersMetaStore.updateMembers(teamName, async (currentMembers) => {
+      const currentIndex = currentMembers.findIndex(
+        (candidate) => candidate.name.trim().toLowerCase() === normalizedName
+      );
+      const current = currentIndex >= 0 ? currentMembers[currentIndex] : undefined;
+      if (!current) {
+        throw new Error(`Member "${memberName}" not found`);
+      }
+      if (current.removedAt == null) {
+        throw new Error(`Member "${memberName}" is not removed`);
+      }
+      if (isLeadMember(current)) {
+        throw new Error('Cannot restore team lead');
+      }
 
-    if (!member) {
-      throw new Error(`Member "${memberName}" not found`);
+      const restoredCurrent: TeamMember = {
+        ...current,
+        agentId: undefined,
+        removedAt: undefined,
+      };
+      const updatedMembers = applyDistinctRosterColors(
+        currentMembers.map((candidate, index) =>
+          index === currentIndex ? restoredCurrent : candidate
+        )
+      );
+      persistedMember = updatedMembers.find(
+        (candidate) => candidate.name.trim().toLowerCase() === normalizedName
+      );
+      await this.assertRosterMutationAllowed(
+        teamName,
+        toProvisioningMemberShape(updatedMembers),
+        currentMembers
+      );
+      return updatedMembers;
+    });
+    if (!persistedMember) {
+      throw new Error(`Member "${memberName}" not found after restore`);
     }
-    if (member.removedAt == null) {
-      throw new Error(`Member "${memberName}" is not removed`);
-    }
-    if (isLeadMember(member)) {
-      throw new Error('Cannot restore team lead');
-    }
-
-    const restoredMember: TeamMember = {
-      ...member,
-      agentId: undefined,
-      removedAt: undefined,
-    };
-    const nextMembers = applyDistinctRosterColors(
-      members.map((candidate, index) => (index === memberIndex ? restoredMember : candidate))
-    );
-
-    await this.assertRosterMutationAllowed(teamName, toProvisioningMemberShape(nextMembers));
-    await this.membersMetaStore.writeMembers(teamName, nextMembers);
-    return nextMembers[memberIndex] ?? restoredMember;
+    return persistedMember;
   }
 
   async createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask> {
@@ -2281,10 +2356,7 @@ export class TeamDataService {
     let task: TeamTask;
     let createdInAttempt = true;
     if (request.command) {
-      if (
-        typeof taskBoard.getTask !== 'function' ||
-        typeof taskBoard.reconcileTaskCreation !== 'function'
-      ) {
+      if (!this.taskBoardCommandFacade || typeof taskBoard.getTask !== 'function') {
         throw new Error('Durable task-board commands are unavailable');
       }
       const commandResult = await this.taskBoardCommandFacade.createTask({
@@ -2309,7 +2381,12 @@ export class TeamDataService {
               ...(projectPath ? { projectPath } : {}),
             }) as TeamTask;
           },
-          reconcile: (input) => taskBoard.reconcileTaskCreation(input) as TeamTask,
+          ...(hasTaskCreationReconciliation(taskBoard)
+            ? {
+                reconcile: (input: Record<string, unknown>) =>
+                  taskBoard.reconcileTaskCreation(input) as TeamTask,
+              }
+            : {}),
         },
       });
       task = commandResult.task;

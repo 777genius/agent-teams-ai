@@ -1,0 +1,2194 @@
+{
+  "schemaId": "p0-w1-api-parity-ledger",
+  "evidenceId": "P0.W1.API_PARITY_LEDGER",
+  "schemaVersion": 2,
+  "packetRevision": "phase-00-r2",
+  "pinnedBaseSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "counts": {
+    "TeamsAPI": 86,
+    "ReviewAPI": 29,
+    "CrossTeamAPI": 3
+  },
+  "historicalCountDifference": "ReviewAPI +9 since the phase-start AST: current 86/29/3 versus historical 86/20/3",
+  "members": [
+    {
+      "stableId": "P0.W1.API.TeamsAPI.list",
+      "source": "TeamsAPI",
+      "sourceMember": "list",
+      "legacySignature": "list: () => Promise<TeamSummary[]>;",
+      "sourceSignatureHash": "sha256:197a6d482f868175ee5b05eaa6b020e34c85392c4b5aab7e6ff298446b4b1b1b",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.list",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getData",
+      "source": "TeamsAPI",
+      "sourceMember": "getData",
+      "legacySignature": "getData: (teamName: string, options?: TeamGetDataOptions) => Promise<TeamViewSnapshot>;",
+      "sourceSignatureHash": "sha256:560f1214f397a0b0ef7e65c62e9865a5a79a2f2c164739b4c4e44a804aa5e6cc",
+      "rendererCallers": [
+        "src/renderer/components/team/TeamListView.tsx",
+        "src/renderer/store/slices/teamSlice.ts"
+      ],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.get-data",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.deleteTeam",
+      "source": "TeamsAPI",
+      "sourceMember": "deleteTeam",
+      "legacySignature": "deleteTeam: (teamName: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:37bfd9599d287139544c086097b365668dd501e857e73e8599135cf523f2bcd4",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.delete-team",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.restoreTeam",
+      "source": "TeamsAPI",
+      "sourceMember": "restoreTeam",
+      "legacySignature": "restoreTeam: (teamName: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:33bc7f7d0b01df7b1840240d3a3ca0a9081c9ea9a40a581d2bdd3c4524d83052",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.restore-team",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.permanentlyDeleteTeam",
+      "source": "TeamsAPI",
+      "sourceMember": "permanentlyDeleteTeam",
+      "legacySignature": "permanentlyDeleteTeam: (teamName: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:415e50c33235af8605b33cfe5e8f24b0021f40ebc10585ca9d7b44e5ca577362",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.permanently-delete-team",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.deleteDraft",
+      "source": "TeamsAPI",
+      "sourceMember": "deleteDraft",
+      "legacySignature": "deleteDraft: (teamName: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:1d2066c4c8fae7f0947b75c7e284f364e7da5e84952c0d20bd9a4fce93db995e",
+      "rendererCallers": [
+        "src/renderer/components/team/TeamDetailView.tsx",
+        "src/renderer/components/team/TeamListView.tsx"
+      ],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.delete-draft",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.prepareProvisioning",
+      "source": "TeamsAPI",
+      "sourceMember": "prepareProvisioning",
+      "legacySignature": "prepareProvisioning: (cwd?: string, providerId?: TeamLaunchRequest['providerId'], providerIds?: TeamLaunchRequest['providerId'][], selectedModels?: string[], limitContext?: boolean, modelVerificationMode?: TeamProvisioningModelVerificationMode, selectedModelChecks?: TeamProvisioningModelCheckRequest[]) => Promise<TeamProvisioningPrepareResult>;",
+      "sourceSignatureHash": "sha256:3c6ec55173f7e4333a90e3655e12eb20ba050d9618c4b9ea79fe0a99528cf999",
+      "rendererCallers": [
+        "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
+        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx"
+      ],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.prepare-provisioning",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.createTeam",
+      "source": "TeamsAPI",
+      "sourceMember": "createTeam",
+      "legacySignature": "createTeam: (request: TeamCreateRequest) => Promise<TeamCreateResponse>;",
+      "sourceSignatureHash": "sha256:60e205f2d42f3051dbe5b7c55f16b2b79893e6d75163ba6e9542c94d89b6261f",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.create-team",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getProvisioningStatus",
+      "source": "TeamsAPI",
+      "sourceMember": "getProvisioningStatus",
+      "legacySignature": "getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;",
+      "sourceSignatureHash": "sha256:02060efebcc16f296da415f7a8dafa8da03e99d9fb5e92db1e88ce4d529493f2",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.get-provisioning-status",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getLaunchFailureDiagnostics",
+      "source": "TeamsAPI",
+      "sourceMember": "getLaunchFailureDiagnostics",
+      "legacySignature": "getLaunchFailureDiagnostics: (teamName: string, runId?: string) => Promise<TeamLaunchFailureDiagnosticsBundle>;",
+      "sourceSignatureHash": "sha256:6df9e83e5e2862b9acbe4925950d189d69f8e65959026689894b47bd717f3f85",
+      "rendererCallers": ["src/renderer/components/team/ProvisioningProgressBlock.tsx"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.get-launch-failure-diagnostics",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.cancelProvisioning",
+      "source": "TeamsAPI",
+      "sourceMember": "cancelProvisioning",
+      "legacySignature": "cancelProvisioning: (runId: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:bb1702df9457f93956a0e4b78634e62e9084764f5f2c108ff9f9cb2968b8c86c",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.cancel-provisioning",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.stop",
+      "source": "TeamsAPI",
+      "sourceMember": "stop",
+      "legacySignature": "stop: (teamName: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:a791df4bdaeff3ef08915d5beda2efb03d5df34b5639949818a3ed0e9727c689",
+      "rendererCallers": [
+        "src/renderer/components/team/TeamDetailView.tsx",
+        "src/renderer/components/team/TeamListView.tsx"
+      ],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.stop",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.createConfig",
+      "source": "TeamsAPI",
+      "sourceMember": "createConfig",
+      "legacySignature": "createConfig: (request: TeamCreateConfigRequest) => Promise<void>;",
+      "sourceSignatureHash": "sha256:2e22d2fe303b09fe6d8b2961e0fb00d27b9faccf1287a2dc01e7fa6e1f30df91",
+      "rendererCallers": ["src/renderer/components/team/dialogs/CreateTeamDialog.tsx"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.create-config",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.launchTeam",
+      "source": "TeamsAPI",
+      "sourceMember": "launchTeam",
+      "legacySignature": "launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;",
+      "sourceSignatureHash": "sha256:2b43671dd020abe85989c48efa41fe172595c8b25150b397dbc8b09f335ff68c",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.launch-team",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.updateConfig",
+      "source": "TeamsAPI",
+      "sourceMember": "updateConfig",
+      "legacySignature": "updateConfig: (teamName: string, updates: TeamUpdateConfigRequest) => Promise<TeamConfig>;",
+      "sourceSignatureHash": "sha256:8a8065e43e3783d42c31be29d5c513955308ded3bac78e7d7cdbd2d84c485672",
+      "rendererCallers": ["src/renderer/components/team/dialogs/EditTeamDialog.tsx"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.update-config",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.addMember",
+      "source": "TeamsAPI",
+      "sourceMember": "addMember",
+      "legacySignature": "addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;",
+      "sourceSignatureHash": "sha256:214452e08e9bfdcd5f85b73ebf0567202f210b10a40d87baaa72e2896ac8ec80",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.add-member",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.replaceMembers",
+      "source": "TeamsAPI",
+      "sourceMember": "replaceMembers",
+      "legacySignature": "replaceMembers: (teamName: string, request: ReplaceMembersRequest) => Promise<void>;",
+      "sourceSignatureHash": "sha256:1b9f8bd097da2d3d8e7c9bb261331a4d31ddfe515bddd742843bdecc64048e80",
+      "rendererCallers": [
+        "src/renderer/components/team/TeamDetailView.tsx",
+        "src/renderer/components/team/TeamListView.tsx",
+        "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
+        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx"
+      ],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.replace-members",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.removeMember",
+      "source": "TeamsAPI",
+      "sourceMember": "removeMember",
+      "legacySignature": "removeMember: (teamName: string, memberName: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:7d640478c265e3d7c7407b2ef628bacac60087fc98bbc0e89d3d3272480c5e0f",
+      "rendererCallers": [
+        "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
+        "src/renderer/store/slices/teamSlice.ts"
+      ],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.remove-member",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.restoreMember",
+      "source": "TeamsAPI",
+      "sourceMember": "restoreMember",
+      "legacySignature": "restoreMember: (teamName: string, memberName: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:696acc681f5e6135af3dadca517d7ed37c834e65f47e13d83825bdcce35bdcd5",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.restore-member",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.updateMemberRole",
+      "source": "TeamsAPI",
+      "sourceMember": "updateMemberRole",
+      "legacySignature": "updateMemberRole: (teamName: string, memberName: string, role: string | undefined) => Promise<void>;",
+      "sourceSignatureHash": "sha256:10b06ebae4c9d33b513dfec41030fb3acadcdb55a31fd3d53cfe30b9f4421ff5",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.update-member-role",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getMemberSpawnStatuses",
+      "source": "TeamsAPI",
+      "sourceMember": "getMemberSpawnStatuses",
+      "legacySignature": "getMemberSpawnStatuses: (teamName: string) => Promise<MemberSpawnStatusesSnapshot>;",
+      "sourceSignatureHash": "sha256:e7c8aba54fd2089320a245bd6a0fae9c54475a0559c0f3d5e03f545a3853dae9",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.get-member-spawn-statuses",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.restartMember",
+      "source": "TeamsAPI",
+      "sourceMember": "restartMember",
+      "legacySignature": "restartMember: (teamName: string, memberName: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:c160272ed94ac6ee0009376af58c0f946d91f9e624246bc9ed45d5fe22df8de8",
+      "rendererCallers": [
+        "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
+        "src/renderer/store/slices/teamSlice.ts"
+      ],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.restart-member",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.skipMemberForLaunch",
+      "source": "TeamsAPI",
+      "sourceMember": "skipMemberForLaunch",
+      "legacySignature": "skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:7ce3099a50dcb94d67ceafbad1b9cb959e3d13da3fc515693d9cffecf047b26a",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-lifecycle",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.lifecycle.skip-member-for-launch",
+      "targetWorkPackage": "WP-7-TEAM-LIFECYCLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getWorktreeGitStatus",
+      "source": "TeamsAPI",
+      "sourceMember": "getWorktreeGitStatus",
+      "legacySignature": "getWorktreeGitStatus: (projectPath: string) => Promise<TeamWorktreeGitStatus>;",
+      "sourceSignatureHash": "sha256:b21ed55fb4422b8723f5d8f6ad4bca3cffff171480cd2319d5bdacf6039ebb43",
+      "rendererCallers": ["src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx"],
+      "owningFeature": "workspace-registry",
+      "disposition": "decomposed",
+      "securityClass": "workspace-authorization",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "workspace.registry.get-worktree-git-status",
+      "targetWorkPackage": "WP-3-WORKSPACE-REGISTRY"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.initializeGitRepository",
+      "source": "TeamsAPI",
+      "sourceMember": "initializeGitRepository",
+      "legacySignature": "initializeGitRepository: (projectPath: string) => Promise<TeamWorktreeGitStatus>;",
+      "sourceSignatureHash": "sha256:2c2947a9ca831ecc4a3a16e115680a4052d0477c05dca4902c4d383f24fa759c",
+      "rendererCallers": ["src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx"],
+      "owningFeature": "workspace-registry",
+      "disposition": "decomposed",
+      "securityClass": "workspace-authorization",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "workspace.registry.initialize-git-repository",
+      "targetWorkPackage": "WP-3-WORKSPACE-REGISTRY"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.createInitialGitCommit",
+      "source": "TeamsAPI",
+      "sourceMember": "createInitialGitCommit",
+      "legacySignature": "createInitialGitCommit: (projectPath: string) => Promise<TeamWorktreeGitStatus>;",
+      "sourceSignatureHash": "sha256:896c2d2d5c8dfece0b920a8b4c5aa38b158051401f5e872621550c68bf888e7d",
+      "rendererCallers": ["src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx"],
+      "owningFeature": "workspace-registry",
+      "disposition": "decomposed",
+      "securityClass": "workspace-authorization",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "workspace.registry.create-initial-git-commit",
+      "targetWorkPackage": "WP-3-WORKSPACE-REGISTRY"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getProjectBranch",
+      "source": "TeamsAPI",
+      "sourceMember": "getProjectBranch",
+      "legacySignature": "getProjectBranch: (projectPath: string) => Promise<string | null>;",
+      "sourceSignatureHash": "sha256:775efe0ae331a88b808ecc468089a7b39b829799b340d834287f2e18da260819",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "workspace-registry",
+      "disposition": "decomposed",
+      "securityClass": "workspace-authorization",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "workspace.registry.get-project-branch",
+      "targetWorkPackage": "WP-3-WORKSPACE-REGISTRY"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.setProjectBranchTracking",
+      "source": "TeamsAPI",
+      "sourceMember": "setProjectBranchTracking",
+      "legacySignature": "setProjectBranchTracking: (projectPath: string, enabled: boolean) => Promise<void>;",
+      "sourceSignatureHash": "sha256:41fdc0c01e59319f4740d7ad854c7a20b80bb77760f5153717ee87d139d720fc",
+      "rendererCallers": [],
+      "owningFeature": "workspace-registry",
+      "disposition": "decomposed",
+      "securityClass": "workspace-authorization",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "workspace.registry.set-project-branch-tracking",
+      "targetWorkPackage": "WP-3-WORKSPACE-REGISTRY"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.onProjectBranchChange",
+      "source": "TeamsAPI",
+      "sourceMember": "onProjectBranchChange",
+      "legacySignature": "onProjectBranchChange: (callback: (event: unknown, data: ProjectBranchChangeEvent) => void) => () => void;",
+      "sourceSignatureHash": "sha256:7c1530305799697e44c0da6c6e59a53767415a58908a2d783d8a267f0a95b4b3",
+      "rendererCallers": ["src/renderer/store/index.ts"],
+      "owningFeature": "workspace-registry",
+      "disposition": "decomposed",
+      "securityClass": "workspace-authorization",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "workspace.registry.on-project-branch-change",
+      "targetWorkPackage": "WP-3-WORKSPACE-REGISTRY"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getTaskChangePresence",
+      "source": "TeamsAPI",
+      "sourceMember": "getTaskChangePresence",
+      "legacySignature": "getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;",
+      "sourceSignatureHash": "sha256:858c59addc9b58fff0336ecb124649d27afc7c0209d70126df7ed5f8047a00dd",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.get-task-change-presence",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.setChangePresenceTracking",
+      "source": "TeamsAPI",
+      "sourceMember": "setChangePresenceTracking",
+      "legacySignature": "setChangePresenceTracking: (teamName: string, enabled: boolean) => Promise<void>;",
+      "sourceSignatureHash": "sha256:e64795b2f5451732f48c836454524f4595214d69514406a7eeb9c08527171719",
+      "rendererCallers": ["src/renderer/store/index.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.set-change-presence-tracking",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.createTask",
+      "source": "TeamsAPI",
+      "sourceMember": "createTask",
+      "legacySignature": "createTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;",
+      "sourceSignatureHash": "sha256:de010025eaa10aeae3ee1bb67e98b66f9c704477e0db5f03ea4c97cf5575e9fc",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.create-task",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getTask",
+      "source": "TeamsAPI",
+      "sourceMember": "getTask",
+      "legacySignature": "getTask: (teamName: string, taskId: string) => Promise<TeamTaskWithKanban | null>;",
+      "sourceSignatureHash": "sha256:33d7e015ff76a9bbacbad8d5618a57ff79a914e3d7b4d2fa8961ae9be2957588",
+      "rendererCallers": [],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.get-task",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.requestReview",
+      "source": "TeamsAPI",
+      "sourceMember": "requestReview",
+      "legacySignature": "requestReview: (teamName: string, taskId: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:f80a971e3f7aa5a6ef284e15280e6fa62b3b2ed5110a062a09004c5c0c9d8f8b",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.request-review",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.updateKanban",
+      "source": "TeamsAPI",
+      "sourceMember": "updateKanban",
+      "legacySignature": "updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;",
+      "sourceSignatureHash": "sha256:d7493e6df6d61ab332266f5fa9ac35fd0cced9a49d77f2f93ea4c9e19dd47cf5",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.update-kanban",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.updateKanbanColumnOrder",
+      "source": "TeamsAPI",
+      "sourceMember": "updateKanbanColumnOrder",
+      "legacySignature": "updateKanbanColumnOrder: (teamName: string, columnId: KanbanColumnId, orderedTaskIds: string[]) => Promise<void>;",
+      "sourceSignatureHash": "sha256:e00a04bb858ab3b7694fff117b495d2febe9226cf9ba5dfe5f574c53a4a5cf6b",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.update-kanban-column-order",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.updateTaskStatus",
+      "source": "TeamsAPI",
+      "sourceMember": "updateTaskStatus",
+      "legacySignature": "updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;",
+      "sourceSignatureHash": "sha256:77ac2c6b39bd7d5c50f7f44c315e8750bcf48c22a93768d660f82cab5d5be6f4",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.update-task-status",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.updateTaskOwner",
+      "source": "TeamsAPI",
+      "sourceMember": "updateTaskOwner",
+      "legacySignature": "updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;",
+      "sourceSignatureHash": "sha256:0b5787cf04cd3e42063b6e06c25d2564db1a36433e79dca1c5c99f1558d7dfef",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.update-task-owner",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.updateTaskFields",
+      "source": "TeamsAPI",
+      "sourceMember": "updateTaskFields",
+      "legacySignature": "updateTaskFields: (teamName: string, taskId: string, fields: { subject?: string; description?: string; }) => Promise<void>;",
+      "sourceSignatureHash": "sha256:b048f696224491e1d07c275142c5a882eedbcb190c6d09595af157d1c2d5f0d2",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.update-task-fields",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.startTask",
+      "source": "TeamsAPI",
+      "sourceMember": "startTask",
+      "legacySignature": "startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean; }>;",
+      "sourceSignatureHash": "sha256:32639d78c33054b134ee23ce2e793250d18fa071207cbb4d1b9475bb8c190c5e",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.start-task",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.startTaskByUser",
+      "source": "TeamsAPI",
+      "sourceMember": "startTaskByUser",
+      "legacySignature": "startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean; }>;",
+      "sourceSignatureHash": "sha256:9c9902e65355146ddf2f8689d4b714996f103ce4d6d08c746c508e33ffd64e34",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.start-task-by-user",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getAllTasks",
+      "source": "TeamsAPI",
+      "sourceMember": "getAllTasks",
+      "legacySignature": "getAllTasks: () => Promise<GlobalTask[]>;",
+      "sourceSignatureHash": "sha256:a3c182e90ebd8187d0df0267d0cae28c4dcbe95630f8a8c37c73f8e32890344a",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.get-all-tasks",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.addTaskComment",
+      "source": "TeamsAPI",
+      "sourceMember": "addTaskComment",
+      "legacySignature": "addTaskComment: (teamName: string, taskId: string, request: AddTaskCommentRequest) => Promise<TaskComment>;",
+      "sourceSignatureHash": "sha256:265f0c37ef64a3eeef611a0419e8773e2d64367fbf07467091ef88c564f07473",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.add-task-comment",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.setTaskClarification",
+      "source": "TeamsAPI",
+      "sourceMember": "setTaskClarification",
+      "legacySignature": "setTaskClarification: (teamName: string, taskId: string, value: 'lead' | 'user' | null) => Promise<void>;",
+      "sourceSignatureHash": "sha256:4ea788fcf20d8658c6f590fb08c942daf7c1e2a4693029d2ef5f5da36ad0263b",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.set-task-clarification",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.softDeleteTask",
+      "source": "TeamsAPI",
+      "sourceMember": "softDeleteTask",
+      "legacySignature": "softDeleteTask: (teamName: string, taskId: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:fa8aa7d8a3989754460572f2b5b3bcd7ffb4d9c267991cf253fffb6b99c53dea",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.soft-delete-task",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.restoreTask",
+      "source": "TeamsAPI",
+      "sourceMember": "restoreTask",
+      "legacySignature": "restoreTask: (teamName: string, taskId: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:53ebd72882501bb9c0857f14addffc79732d3c301fafecce26fde52313f22fbc",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.restore-task",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getDeletedTasks",
+      "source": "TeamsAPI",
+      "sourceMember": "getDeletedTasks",
+      "legacySignature": "getDeletedTasks: (teamName: string) => Promise<TeamTask[]>;",
+      "sourceSignatureHash": "sha256:ac2d570c540d9f7959d5889757e028fdb7d2e1d2677f4cd84bd57d4c81fab54f",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.get-deleted-tasks",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.addTaskRelationship",
+      "source": "TeamsAPI",
+      "sourceMember": "addTaskRelationship",
+      "legacySignature": "addTaskRelationship: (teamName: string, taskId: string, targetId: string, type: 'blockedBy' | 'blocks' | 'related') => Promise<void>;",
+      "sourceSignatureHash": "sha256:2b7c43bef9c0bc42952dbb5f745809dce319709a40b491b2dadbe5f9f4f6b7b9",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.add-task-relationship",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.removeTaskRelationship",
+      "source": "TeamsAPI",
+      "sourceMember": "removeTaskRelationship",
+      "legacySignature": "removeTaskRelationship: (teamName: string, taskId: string, targetId: string, type: 'blockedBy' | 'blocks' | 'related') => Promise<void>;",
+      "sourceSignatureHash": "sha256:8f5ce7a86285405b3068a46bd074054808b4ae837d1f7d082fde89bb57e00ece",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.remove-task-relationship",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getSavedRequest",
+      "source": "TeamsAPI",
+      "sourceMember": "getSavedRequest",
+      "legacySignature": "getSavedRequest: (teamName: string) => Promise<TeamCreateRequest | null>;",
+      "sourceSignatureHash": "sha256:102b654062e8f4a764ef4cd15b663ee1688c240072dc23c5c48bf83b691a35fc",
+      "rendererCallers": [
+        "src/renderer/components/team/TeamListView.tsx",
+        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx"
+      ],
+      "owningFeature": "team-messaging",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.message.get-saved-request",
+      "targetWorkPackage": "WP-8-MESSAGING"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.sendMessage",
+      "source": "TeamsAPI",
+      "sourceMember": "sendMessage",
+      "legacySignature": "sendMessage: (teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>;",
+      "sourceSignatureHash": "sha256:0acc38208962cd7f676984ec9c314dfdc3d698f937853b797609245e927207c4",
+      "rendererCallers": [
+        "src/renderer/components/team/TeamDetailView.tsx",
+        "src/renderer/store/slices/teamSlice.ts"
+      ],
+      "owningFeature": "team-messaging",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.message.send-message",
+      "targetWorkPackage": "WP-8-MESSAGING"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getOpenCodeRuntimeDeliveryStatus",
+      "source": "TeamsAPI",
+      "sourceMember": "getOpenCodeRuntimeDeliveryStatus",
+      "legacySignature": "getOpenCodeRuntimeDeliveryStatus: (teamName: string, messageId: string) => Promise<OpenCodeRuntimeDeliveryStatus | null>;",
+      "sourceSignatureHash": "sha256:5de5ca6827bc448762a72b598d259ac369a7f85fa8d804c3c1af22263d8e3805",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-messaging",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.message.get-open-code-runtime-delivery-status",
+      "targetWorkPackage": "WP-8-MESSAGING"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getMessagesPage",
+      "source": "TeamsAPI",
+      "sourceMember": "getMessagesPage",
+      "legacySignature": "getMessagesPage: (teamName: string, options?: { cursor?: string | null; limit?: number; }) => Promise<MessagesPage>;",
+      "sourceSignatureHash": "sha256:507d113d41e23153db26a475fc1cacdec2fc09038df861e44e6ecd8d1554be44",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-messaging",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.message.get-messages-page",
+      "targetWorkPackage": "WP-8-MESSAGING"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.processSend",
+      "source": "TeamsAPI",
+      "sourceMember": "processSend",
+      "legacySignature": "processSend: (teamName: string, message: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:e406f4da7997eb7c81652925e4aa460687374fb686b18c1daa959c8faa17d374",
+      "rendererCallers": [
+        "src/features/agent-graph/renderer/hooks/useGraphCreateTaskDialog.tsx",
+        "src/features/agent-graph/renderer/hooks/useGraphTaskActions.tsx",
+        "src/renderer/components/team/TeamDetailView.tsx"
+      ],
+      "owningFeature": "team-messaging",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.message.process-send",
+      "targetWorkPackage": "WP-8-MESSAGING"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.setToolActivityTracking",
+      "source": "TeamsAPI",
+      "sourceMember": "setToolActivityTracking",
+      "legacySignature": "setToolActivityTracking: (teamName: string, enabled: boolean) => Promise<void>;",
+      "sourceSignatureHash": "sha256:0cd1e362a6ecb37f98add43d43d429e8a7be6e459a0315fc51ce7e0b6c706a4d",
+      "rendererCallers": ["src/renderer/store/index.ts"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.set-tool-activity-tracking",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.setTaskLogStreamTracking",
+      "source": "TeamsAPI",
+      "sourceMember": "setTaskLogStreamTracking",
+      "legacySignature": "setTaskLogStreamTracking: (teamName: string, enabled: boolean) => Promise<void>;",
+      "sourceSignatureHash": "sha256:2767b767c5a57be6f001fe9c069664fcd29288eb8820c1741a87fb5ce9e5c4b3",
+      "rendererCallers": [
+        "src/renderer/components/team/taskLogs/TaskLogsPanel.tsx",
+        "src/renderer/store/index.ts"
+      ],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.set-task-log-stream-tracking",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getClaudeLogs",
+      "source": "TeamsAPI",
+      "sourceMember": "getClaudeLogs",
+      "legacySignature": "getClaudeLogs: (teamName: string, query?: TeamClaudeLogsQuery) => Promise<TeamClaudeLogsResponse>;",
+      "sourceSignatureHash": "sha256:deb98bd89a38b022c43da428f08af19e1e00de60fbb136cc38521ed1ec7aff41",
+      "rendererCallers": ["src/renderer/components/team/useClaudeLogsController.ts"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-claude-logs",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getMemberActivityMeta",
+      "source": "TeamsAPI",
+      "sourceMember": "getMemberActivityMeta",
+      "legacySignature": "getMemberActivityMeta: (teamName: string) => Promise<TeamMemberActivityMeta>;",
+      "sourceSignatureHash": "sha256:cf6a316403c772df7b5fee26970d5ccad9b75fce3067a4cec529cf80f36dcaa8",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-member-activity-meta",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.processAlive",
+      "source": "TeamsAPI",
+      "sourceMember": "processAlive",
+      "legacySignature": "processAlive: (teamName: string) => Promise<boolean>;",
+      "sourceSignatureHash": "sha256:f8c68284be508f2f2e4af70052d34565f2847c0c368b0173706c366d6a174900",
+      "rendererCallers": [],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.process-alive",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.aliveList",
+      "source": "TeamsAPI",
+      "sourceMember": "aliveList",
+      "legacySignature": "aliveList: () => Promise<string[]>;",
+      "sourceSignatureHash": "sha256:4c670dfc5985eb5e77628bd42916c83117da1f07198390253e4d3bc2aa252c01",
+      "rendererCallers": [
+        "src/renderer/components/sidebar/GlobalTaskList.tsx",
+        "src/renderer/components/team/TeamDetailView.tsx",
+        "src/renderer/components/team/TeamListView.tsx",
+        "src/renderer/components/team/messages/MessageComposer.tsx",
+        "src/renderer/hooks/useTeamSuggestions.ts"
+      ],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.alive-list",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getMemberLogs",
+      "source": "TeamsAPI",
+      "sourceMember": "getMemberLogs",
+      "legacySignature": "getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;",
+      "sourceSignatureHash": "sha256:2687c2e90d7508c4ca677fd480992352b527f199a41d67dc98b0093d342e5bc2",
+      "rendererCallers": ["src/renderer/components/team/members/MemberLogsTab.tsx"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-member-logs",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getLogsForTask",
+      "source": "TeamsAPI",
+      "sourceMember": "getLogsForTask",
+      "legacySignature": "getLogsForTask: (teamName: string, taskId: string, options?: { owner?: string; status?: string; intervals?: { startedAt: string; completedAt?: string; }[]; since?: string; }) => Promise<MemberLogSummary[]>;",
+      "sourceSignatureHash": "sha256:ee03990c1a0f089d1f6be1c496b0e6be833c2aa3dfae0ec120c3825edde157e4",
+      "rendererCallers": ["src/renderer/components/team/members/MemberLogsTab.tsx"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-logs-for-task",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getTaskActivity",
+      "source": "TeamsAPI",
+      "sourceMember": "getTaskActivity",
+      "legacySignature": "getTaskActivity: (teamName: string, taskId: string) => Promise<BoardTaskActivityEntry[]>;",
+      "sourceSignatureHash": "sha256:aa49880b4e7690b17736248868c9c265488a5dc19b6e2a608ce59d9b89f61810",
+      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskActivitySection.tsx"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-task-activity",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getTaskActivityDetail",
+      "source": "TeamsAPI",
+      "sourceMember": "getTaskActivityDetail",
+      "legacySignature": "getTaskActivityDetail: (teamName: string, taskId: string, activityId: string) => Promise<BoardTaskActivityDetailResult>;",
+      "sourceSignatureHash": "sha256:2d2b8b84760344f696fa482b249759b1fee4c5da88616f7ea51c2184c604ba45",
+      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskActivitySection.tsx"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-task-activity-detail",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getTaskLogStreamSummary",
+      "source": "TeamsAPI",
+      "sourceMember": "getTaskLogStreamSummary",
+      "legacySignature": "getTaskLogStreamSummary: (teamName: string, taskId: string) => Promise<BoardTaskLogStreamSummary>;",
+      "sourceSignatureHash": "sha256:b915ad90b3252c3449866d2b6469dbe30f7781945d293f4df6c2d8f66f187d9a",
+      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskLogsPanel.tsx"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-task-log-stream-summary",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getTaskLogStream",
+      "source": "TeamsAPI",
+      "sourceMember": "getTaskLogStream",
+      "legacySignature": "getTaskLogStream: (teamName: string, taskId: string) => Promise<BoardTaskLogStreamResponse>;",
+      "sourceSignatureHash": "sha256:640634d0b1ec490eb19d3b0dc155c08d106dc3d5143a445088ddd04d177e228b",
+      "rendererCallers": ["src/renderer/components/team/taskLogs/TaskLogStreamSection.tsx"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-task-log-stream",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getTaskExactLogSummaries",
+      "source": "TeamsAPI",
+      "sourceMember": "getTaskExactLogSummaries",
+      "legacySignature": "getTaskExactLogSummaries: (teamName: string, taskId: string) => Promise<BoardTaskExactLogSummariesResponse>;",
+      "sourceSignatureHash": "sha256:7c06e5ad8d56341ad385039a5ad15b07eed22fb73c4679a51ec07b0d172b46e4",
+      "rendererCallers": ["src/renderer/components/team/taskLogs/ExactTaskLogsSection.tsx"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-task-exact-log-summaries",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getTaskExactLogDetail",
+      "source": "TeamsAPI",
+      "sourceMember": "getTaskExactLogDetail",
+      "legacySignature": "getTaskExactLogDetail: (teamName: string, taskId: string, exactLogId: string, expectedSourceGeneration: string) => Promise<BoardTaskExactLogDetailResult>;",
+      "sourceSignatureHash": "sha256:a674904b4668d3d574d63ece7e44eae2c90b3a493765a76da2335c915e559efb",
+      "rendererCallers": ["src/renderer/components/team/taskLogs/ExactTaskLogsSection.tsx"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-task-exact-log-detail",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getMemberStats",
+      "source": "TeamsAPI",
+      "sourceMember": "getMemberStats",
+      "legacySignature": "getMemberStats: (teamName: string, memberName: string) => Promise<MemberFullStats>;",
+      "sourceSignatureHash": "sha256:b3dac9f3b3f64ebb175992db59a1495fac4ea7b7fd657e8c0134fefb54cab63c",
+      "rendererCallers": [
+        "src/renderer/components/team/members/MemberStatsTab.tsx",
+        "src/renderer/hooks/useMemberStats.ts"
+      ],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-member-stats",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.killProcess",
+      "source": "TeamsAPI",
+      "sourceMember": "killProcess",
+      "legacySignature": "killProcess: (teamName: string, pid: number) => Promise<void>;",
+      "sourceSignatureHash": "sha256:b600b0ddfc744cec2c74734719d120fd432b0f89dd6e68582b4b5f737f107c79",
+      "rendererCallers": ["src/renderer/components/team/ProcessesSection.tsx"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.kill-process",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getLeadActivity",
+      "source": "TeamsAPI",
+      "sourceMember": "getLeadActivity",
+      "legacySignature": "getLeadActivity: (teamName: string) => Promise<LeadActivitySnapshot>;",
+      "sourceSignatureHash": "sha256:7f6ad0ae8c60b5533852d336564df434919d638afc913c95213543eb86c6477c",
+      "rendererCallers": [],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-lead-activity",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getLeadContext",
+      "source": "TeamsAPI",
+      "sourceMember": "getLeadContext",
+      "legacySignature": "getLeadContext: (teamName: string) => Promise<LeadContextUsageSnapshot>;",
+      "sourceSignatureHash": "sha256:198a8c8e3d809b82af819a9e2082bfada79fb00e08feee56678af5ca60b53857",
+      "rendererCallers": [],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-lead-context",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getTeamAgentRuntime",
+      "source": "TeamsAPI",
+      "sourceMember": "getTeamAgentRuntime",
+      "legacySignature": "getTeamAgentRuntime: (teamName: string) => Promise<TeamAgentRuntimeSnapshot>;",
+      "sourceSignatureHash": "sha256:7edfc120d2cf6a6071867fff1621c0c0904e80a3fca65953326c98557ad0ae56",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.get-team-agent-runtime",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.retryFailedOpenCodeSecondaryLanes",
+      "source": "TeamsAPI",
+      "sourceMember": "retryFailedOpenCodeSecondaryLanes",
+      "legacySignature": "retryFailedOpenCodeSecondaryLanes: (teamName: string) => Promise<RetryFailedOpenCodeSecondaryLanesResult>;",
+      "sourceSignatureHash": "sha256:aa7737c7a6288bd4fad8a97bf2d3b02bf13153265409ac9ec57fa6a5305bedfe",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.retry-failed-open-code-secondary-lanes",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getAttachments",
+      "source": "TeamsAPI",
+      "sourceMember": "getAttachments",
+      "legacySignature": "getAttachments: (teamName: string, messageId: string) => Promise<AttachmentFileData[]>;",
+      "sourceSignatureHash": "sha256:1dc6b0fdeadf3475d283334f30b6b9940cc461a30a0217a5559dd8d37197576d",
+      "rendererCallers": [],
+      "owningFeature": "agent-attachments",
+      "disposition": "decomposed",
+      "securityClass": "bounded-content",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "agent.attachment.get-attachments",
+      "targetWorkPackage": "WP-9-ATTACHMENTS"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.saveTaskAttachment",
+      "source": "TeamsAPI",
+      "sourceMember": "saveTaskAttachment",
+      "legacySignature": "saveTaskAttachment: (teamName: string, taskId: string, attachmentId: string, filename: string, mimeType: string, base64Data: string) => Promise<TaskAttachmentMeta>;",
+      "sourceSignatureHash": "sha256:c34e0689f3de941e79461da031eef31830e70c10d8504830213ab381373ddb57",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "agent-attachments",
+      "disposition": "decomposed",
+      "securityClass": "bounded-content",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "agent.attachment.save-task-attachment",
+      "targetWorkPackage": "WP-9-ATTACHMENTS"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.getTaskAttachment",
+      "source": "TeamsAPI",
+      "sourceMember": "getTaskAttachment",
+      "legacySignature": "getTaskAttachment: (teamName: string, taskId: string, attachmentId: string, mimeType: string) => Promise<string | null>;",
+      "sourceSignatureHash": "sha256:8ce5eaa8e85927b19caab30dc64f60e5f44935f8339d214d6e31dd9bcb5af65a",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "agent-attachments",
+      "disposition": "decomposed",
+      "securityClass": "bounded-content",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "agent.attachment.get-task-attachment",
+      "targetWorkPackage": "WP-9-ATTACHMENTS"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.deleteTaskAttachment",
+      "source": "TeamsAPI",
+      "sourceMember": "deleteTaskAttachment",
+      "legacySignature": "deleteTaskAttachment: (teamName: string, taskId: string, attachmentId: string, mimeType: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:9c92fcd967776054bc1c7e973304cf6e6350d3de2dc6e215a90316944b2391ef",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "agent-attachments",
+      "disposition": "decomposed",
+      "securityClass": "bounded-content",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "agent.attachment.delete-task-attachment",
+      "targetWorkPackage": "WP-9-ATTACHMENTS"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.respondToToolApproval",
+      "source": "TeamsAPI",
+      "sourceMember": "respondToToolApproval",
+      "legacySignature": "respondToToolApproval: (teamName: string, runId: string, requestId: string, allow: boolean, message?: string) => Promise<void>;",
+      "sourceSignatureHash": "sha256:764b59f77ba8501f530013702dfd6f2f6347ba7f3d9d931e46d940cb641f1467",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-approvals",
+      "disposition": "decomposed",
+      "securityClass": "approval-policy",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.approval.respond-to-tool-approval",
+      "targetWorkPackage": "WP-9-APPROVALS"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.validateCliArgs",
+      "source": "TeamsAPI",
+      "sourceMember": "validateCliArgs",
+      "legacySignature": "validateCliArgs: (rawArgs: string) => Promise<CliArgsValidationResult>;",
+      "sourceSignatureHash": "sha256:d16fc957be949353db7ab539010b41b70ad1fc23ea0d984b39bc95f8a5436b2b",
+      "rendererCallers": ["src/renderer/components/team/dialogs/AdvancedCliSection.tsx"],
+      "owningFeature": "team-approvals",
+      "disposition": "decomposed",
+      "securityClass": "approval-policy",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.approval.validate-cli-args",
+      "targetWorkPackage": "WP-9-APPROVALS"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.onToolApprovalEvent",
+      "source": "TeamsAPI",
+      "sourceMember": "onToolApprovalEvent",
+      "legacySignature": "onToolApprovalEvent: (callback: (event: unknown, data: ToolApprovalEvent) => void) => () => void;",
+      "sourceSignatureHash": "sha256:eaac3709430199043de9a2b05a935ff0edf1942b2f7a75acafd1620d565db1eb",
+      "rendererCallers": ["src/renderer/store/index.ts"],
+      "owningFeature": "team-approvals",
+      "disposition": "decomposed",
+      "securityClass": "approval-policy",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.approval.on-tool-approval-event",
+      "targetWorkPackage": "WP-9-APPROVALS"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.updateToolApprovalSettings",
+      "source": "TeamsAPI",
+      "sourceMember": "updateToolApprovalSettings",
+      "legacySignature": "updateToolApprovalSettings: (teamName: string, settings: ToolApprovalSettings) => Promise<void>;",
+      "sourceSignatureHash": "sha256:70665ae43eeb85e3b4d6d27ba2bf4f57d2870f353c324c2531d32676feb7bedb",
+      "rendererCallers": ["src/renderer/store/index.ts", "src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-approvals",
+      "disposition": "decomposed",
+      "securityClass": "approval-policy",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.approval.update-tool-approval-settings",
+      "targetWorkPackage": "WP-9-APPROVALS"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.readFileForToolApproval",
+      "source": "TeamsAPI",
+      "sourceMember": "readFileForToolApproval",
+      "legacySignature": "readFileForToolApproval: (filePath: string) => Promise<ToolApprovalFileContent>;",
+      "sourceSignatureHash": "sha256:f77e32970b0883a04875f8e987e6077f9f5adbc569f04328deac52b62941ce13",
+      "rendererCallers": ["src/renderer/hooks/useToolApprovalDiff.ts"],
+      "owningFeature": "team-approvals",
+      "disposition": "decomposed",
+      "securityClass": "approval-policy",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.approval.read-file-for-tool-approval",
+      "targetWorkPackage": "WP-9-APPROVALS"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.showMessageNotification",
+      "source": "TeamsAPI",
+      "sourceMember": "showMessageNotification",
+      "legacySignature": "showMessageNotification: (data: TeamMessageNotificationData) => Promise<void>;",
+      "sourceSignatureHash": "sha256:0186618de3b3efae1473d60b2fbce9c89548f94ead0ff4f6642bfa1e9185c9aa",
+      "rendererCallers": [],
+      "owningFeature": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.console.show-message-notification",
+      "targetWorkPackage": "WP-7-TEAM-CONSOLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.onTeamChange",
+      "source": "TeamsAPI",
+      "sourceMember": "onTeamChange",
+      "legacySignature": "onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void) => () => void;",
+      "sourceSignatureHash": "sha256:60c7faa8746e3d3323394b141b898385bf0aa539a65b07d42e9e85efb80a89de",
+      "rendererCallers": [
+        "src/features/agent-graph/renderer/hooks/useGraphMemberLogPreviews.ts",
+        "src/features/member-log-stream/renderer/hooks/useMemberLogStream.ts",
+        "src/renderer/components/team/taskLogs/TaskLogStreamSection.tsx",
+        "src/renderer/components/team/taskLogs/TaskLogsPanel.tsx",
+        "src/renderer/store/index.ts"
+      ],
+      "owningFeature": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.console.on-team-change",
+      "targetWorkPackage": "WP-7-TEAM-CONSOLE"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.onProvisioningProgress",
+      "source": "TeamsAPI",
+      "sourceMember": "onProvisioningProgress",
+      "legacySignature": "onProvisioningProgress: (callback: (event: unknown, data: TeamProvisioningProgress) => void) => () => void;",
+      "sourceSignatureHash": "sha256:7a223a2b873b9b82dbb61dc78e9782eecb8af95ab36fe5b064b76e3ced6a44f5",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.console.on-provisioning-progress",
+      "targetWorkPackage": "WP-7-TEAM-CONSOLE"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.getAgentChanges",
+      "source": "ReviewAPI",
+      "sourceMember": "getAgentChanges",
+      "legacySignature": "getAgentChanges: (teamName: string, memberName: string) => Promise<AgentChangeSet>;",
+      "sourceSignatureHash": "sha256:e87d4fa7ef29ed1c97612def49e5666d6b7482da3cdf6f7d2e00b56927e19fad",
+      "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.get-agent-changes",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.getTaskChanges",
+      "source": "ReviewAPI",
+      "sourceMember": "getTaskChanges",
+      "legacySignature": "getTaskChanges: (teamName: string, taskId: string, options?: TaskChangeRequestOptions) => Promise<TaskChangeSetV2>;",
+      "sourceSignatureHash": "sha256:01f2a9b0781628b287c3882b6aae8a6c8e2cc656d7877b022dedf0a936e6188f",
+      "rendererCallers": [
+        "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+        "src/renderer/store/slices/changeReviewSlice.ts"
+      ],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.get-task-changes",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.getTeamTaskChangeSummaries",
+      "source": "ReviewAPI",
+      "sourceMember": "getTeamTaskChangeSummaries",
+      "legacySignature": "getTeamTaskChangeSummaries: (teamName: string, requests: TeamTaskChangeSummaryRequest[]) => Promise<TeamTaskChangeSummariesResponse>;",
+      "sourceSignatureHash": "sha256:d0b8a2735672117faf807ca8f482df02a7b9ec05a45b2ef7f884ddbe2b425c11",
+      "rendererCallers": ["src/renderer/components/team/useTeamChangesSummaries.ts"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.get-team-task-change-summaries",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.invalidateTaskChangeSummaries",
+      "source": "ReviewAPI",
+      "sourceMember": "invalidateTaskChangeSummaries",
+      "legacySignature": "invalidateTaskChangeSummaries: (teamName: string, taskIds: string[]) => Promise<void>;",
+      "sourceSignatureHash": "sha256:58594b444b247d9a16a2b133ec16915eb8b019651422561f70d77ae743247325",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.invalidate-task-change-summaries",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.getChangeStats",
+      "source": "ReviewAPI",
+      "sourceMember": "getChangeStats",
+      "legacySignature": "getChangeStats: (teamName: string, memberName: string) => Promise<ChangeStats>;",
+      "sourceSignatureHash": "sha256:ad47ddeb9ca6b0a4ca5d2624e3e7b922b4b9251d96dd9a14c8e4382b438feb5f",
+      "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.get-change-stats",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.getFileContent",
+      "source": "ReviewAPI",
+      "sourceMember": "getFileContent",
+      "legacySignature": "getFileContent: (teamName: string, memberName: string | undefined, filePath: string, snippets?: SnippetDiff[]) => Promise<FileChangeWithContent>;",
+      "sourceSignatureHash": "sha256:5e6c3970f084c2ab3ef28c1923d4ee515718a04a0678f887dfe3c16ea44125b6",
+      "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.get-file-content",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.applyDecisions",
+      "source": "ReviewAPI",
+      "sourceMember": "applyDecisions",
+      "legacySignature": "applyDecisions: (request: ApplyReviewRequest) => Promise<ApplyReviewResult>;",
+      "sourceSignatureHash": "sha256:d644df5c763f03d62aea6515b8e95ddd607f2fb80eb7581520b8e8f4573446ba",
+      "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.apply-decisions",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.executeMutation",
+      "source": "ReviewAPI",
+      "sourceMember": "executeMutation",
+      "legacySignature": "executeMutation: (request: ExecuteReviewMutationRequest) => Promise<ExecuteReviewMutationResult>;",
+      "sourceSignatureHash": "sha256:2c9bc1b401269033f830b4e71564836fdbf2b416bdd7e505646c7e1ca04ca45c",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.execute-mutation",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.retryMutationRecovery",
+      "source": "ReviewAPI",
+      "sourceMember": "retryMutationRecovery",
+      "legacySignature": "retryMutationRecovery: (request: RetryReviewMutationRecoveryRequest) => Promise<RetryReviewMutationRecoveryResult>;",
+      "sourceSignatureHash": "sha256:c4145fe4a3ac29382d8fde44b70507e9c96f7cd93b7e3901490bd035504e082e",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.retry-mutation-recovery",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.restoreHistory",
+      "source": "ReviewAPI",
+      "sourceMember": "restoreHistory",
+      "legacySignature": "restoreHistory: (request: RestoreReviewHistoryRequest) => Promise<RestoreReviewHistoryResult>;",
+      "sourceSignatureHash": "sha256:c18ae82e0476fcfe3177258989510c108d1173f50291b032c383045e72a1eb10",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.restore-history",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.checkConflict",
+      "source": "ReviewAPI",
+      "sourceMember": "checkConflict",
+      "legacySignature": "checkConflict: (scope: ReviewFileScope, filePath: string, expectedModified: string) => Promise<ConflictCheckResult>;",
+      "sourceSignatureHash": "sha256:30fbf403bc90071dcf528cb50c73a9ecdace09c65ffba9d964005473a067f60b",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.check-conflict",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.rejectHunks",
+      "source": "ReviewAPI",
+      "sourceMember": "rejectHunks",
+      "legacySignature": "rejectHunks: (scope: ReviewFileScope, filePath: string, hunkIndices: number[]) => Promise<RejectResult>;",
+      "sourceSignatureHash": "sha256:4b728f7955495f31375c868956649f108d7f09fec70fb727693a68f52d597ac1",
+      "rendererCallers": [],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.reject-hunks",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.rejectFile",
+      "source": "ReviewAPI",
+      "sourceMember": "rejectFile",
+      "legacySignature": "rejectFile: (scope: ReviewFileScope, filePath: string) => Promise<RejectResult>;",
+      "sourceSignatureHash": "sha256:9551694f09775b0da45d681ea4babc754de84c7cc363f780a41f43253fc46022",
+      "rendererCallers": [],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.reject-file",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.previewReject",
+      "source": "ReviewAPI",
+      "sourceMember": "previewReject",
+      "legacySignature": "previewReject: (filePath: string, original: string, modified: string, hunkIndices: number[], snippets: SnippetDiff[]) => Promise<{ preview: string; hasConflicts: boolean; }>;",
+      "sourceSignatureHash": "sha256:b9b8b990261426de61748fa7d1746270073eb0888a50ef798f44e22a24a45dd8",
+      "rendererCallers": [],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.preview-reject",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.saveEditedFile",
+      "source": "ReviewAPI",
+      "sourceMember": "saveEditedFile",
+      "legacySignature": "saveEditedFile: (scope: ReviewFileScope, filePath: string, content: string, expectedCurrentContent: string | null) => Promise<{ success: boolean; }>;",
+      "sourceSignatureHash": "sha256:a1b57037833b89da5b0f5008e0b20c0e269dc613c523b9224235b25784b29655",
+      "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.save-edited-file",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.deleteEditedFile",
+      "source": "ReviewAPI",
+      "sourceMember": "deleteEditedFile",
+      "legacySignature": "deleteEditedFile: (scope: ReviewFileScope, filePath: string, expectedCurrentContent: string) => Promise<{ success: boolean; }>;",
+      "sourceSignatureHash": "sha256:f6a7bb25103609050cfbaf16962113ca9dead02d22c6e2eccdad315b5b652150",
+      "rendererCallers": [],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.delete-edited-file",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.restoreRejectedRename",
+      "source": "ReviewAPI",
+      "sourceMember": "restoreRejectedRename",
+      "legacySignature": "restoreRejectedRename: (scope: ReviewFileScope, filePath: string, expectation: ReviewRenameRecoveryExpectation) => Promise<{ success: boolean; }>;",
+      "sourceSignatureHash": "sha256:bddbcd802e876d4b5a2dd6e784d1769021931c999cc7579d393ceb50b5533e8f",
+      "rendererCallers": [],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.restore-rejected-rename",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.reapplyRejectedRename",
+      "source": "ReviewAPI",
+      "sourceMember": "reapplyRejectedRename",
+      "legacySignature": "reapplyRejectedRename: (scope: ReviewFileScope, filePath: string, expectation: ReviewRenameRecoveryExpectation) => Promise<{ success: boolean; }>;",
+      "sourceSignatureHash": "sha256:ee5c9578b7b3c9eeacdd23572f27fa1b29facdd4bfd3bbc9d0951b152a8a8806",
+      "rendererCallers": [],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.reapply-rejected-rename",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.watchFiles",
+      "source": "ReviewAPI",
+      "sourceMember": "watchFiles",
+      "legacySignature": "watchFiles: (projectPath: string, filePaths: string[]) => Promise<void>;",
+      "sourceSignatureHash": "sha256:145f58a08654db239da6e77af49645c1f230584511b3e275a5e6da4f7a2777cb",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.watch-files",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.unwatchFiles",
+      "source": "ReviewAPI",
+      "sourceMember": "unwatchFiles",
+      "legacySignature": "unwatchFiles: () => Promise<void>;",
+      "sourceSignatureHash": "sha256:eda8bc65fe2d15e1bb7b24173678b5bdfc8e5dd84123f4a9cb2e1f86d8167f5b",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.unwatch-files",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.onExternalFileChange",
+      "source": "ReviewAPI",
+      "sourceMember": "onExternalFileChange",
+      "legacySignature": "onExternalFileChange: (callback: (event: EditorFileChangeEvent) => void) => () => void;",
+      "sourceSignatureHash": "sha256:7a6850a8167b90818ebd6b565a65edb56d41373d49c1ca1e5310065f774bb0bb",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.on-external-file-change",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.loadDecisions",
+      "source": "ReviewAPI",
+      "sourceMember": "loadDecisions",
+      "legacySignature": "loadDecisions: (teamName: string, scopeKey: string, scopeToken?: string) => Promise<{ hunkDecisions: Record<string, HunkDecision>; fileDecisions: Record<string, HunkDecision>; hunkContextHashesByFile?: Record<string, Record<number, string>>; reviewActionHistory: ReviewUndoAction[]; reviewRedoHistory: ReviewRedoAction[]; revision: number; } | null>;",
+      "sourceSignatureHash": "sha256:6ab13b98b0479ffd09a31b50d9c5e8cda9eb75d409c40c8298f2dbc769e455b1",
+      "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.load-decisions",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.saveDecisions",
+      "source": "ReviewAPI",
+      "sourceMember": "saveDecisions",
+      "legacySignature": "saveDecisions: (teamName: string, scopeKey: string, scopeToken: string, hunkDecisions: Record<string, HunkDecision>, fileDecisions: Record<string, HunkDecision>, hunkContextHashesByFile?: Record<string, Record<number, string>>, reviewActionHistory?: ReviewUndoAction[], expectedRevision?: number, reviewRedoHistory?: ReviewRedoAction[]) => Promise<{ revision: number; }>;",
+      "sourceSignatureHash": "sha256:7ed4262031338e9ab497683f1c9dca24c412e098d2d90832d473b53b69be93ff",
+      "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.save-decisions",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.clearDecisions",
+      "source": "ReviewAPI",
+      "sourceMember": "clearDecisions",
+      "legacySignature": "clearDecisions: (teamName: string, scopeKey: string, scopeToken?: string, expectedRevision?: number) => Promise<{ revision: number; }>;",
+      "sourceSignatureHash": "sha256:fbbb25abafcae84386d6b51bb49167c699b3e5a4a92c3c377103bb3415b5a625",
+      "rendererCallers": ["src/renderer/store/slices/changeReviewSlice.ts"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.clear-decisions",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.loadDraftHistory",
+      "source": "ReviewAPI",
+      "sourceMember": "loadDraftHistory",
+      "legacySignature": "loadDraftHistory: (teamName: string, scopeKey: string, scopeToken: string) => Promise<ReviewDraftHistorySnapshot | null>;",
+      "sourceSignatureHash": "sha256:1db8053abb2608392cc092faed24b49ed027c0cfaa460f91497678d8dc17abab",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.load-draft-history",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.saveDraftHistoryEntry",
+      "source": "ReviewAPI",
+      "sourceMember": "saveDraftHistoryEntry",
+      "legacySignature": "saveDraftHistoryEntry: (teamName: string, scopeKey: string, scopeToken: string, entry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>, expectedRevision: number, expectedGeneration: string | null) => Promise<ReviewDraftHistoryEntry>;",
+      "sourceSignatureHash": "sha256:5533291b443626b87f68f5a4dba237e5189ce784c0531cc21e4b8fadab3c84c0",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.save-draft-history-entry",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.clearDraftHistory",
+      "source": "ReviewAPI",
+      "sourceMember": "clearDraftHistory",
+      "legacySignature": "clearDraftHistory: (teamName: string, scopeKey: string, scopeToken: string, filePath?: string, expectedRevision?: number, expectedGeneration?: string | null) => Promise<void>;",
+      "sourceSignatureHash": "sha256:af609ad313105105ada4771728fc5bf267d354117b874514baf510875807b31f",
+      "rendererCallers": ["src/renderer/components/team/review/ChangeReviewDialog.tsx"],
+      "owningFeature": "team-review",
+      "disposition": "decomposed",
+      "securityClass": "review-change-set",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.clear-draft-history",
+      "targetWorkPackage": "WP-9-REVIEW"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.onCmdN",
+      "source": "ReviewAPI",
+      "sourceMember": "onCmdN",
+      "legacySignature": "onCmdN?: (callback: () => void) => (() => void) | undefined;",
+      "sourceSignatureHash": "sha256:c5c6a285bba1b0f85cdf316bf4991e4dda2a5d0c3fcffb99a9deed58b6bf06ed",
+      "rendererCallers": [],
+      "owningFeature": "team-review",
+      "disposition": "desktop-only",
+      "securityClass": "desktop-shell",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.on-cmd-n",
+      "targetWorkPackage": "DEFERRED-DESKTOP-ONLY"
+    },
+    {
+      "stableId": "P0.W1.API.ReviewAPI.getGitFileLog",
+      "source": "ReviewAPI",
+      "sourceMember": "getGitFileLog",
+      "legacySignature": "getGitFileLog: (projectPath: string, filePath: string) => Promise<{ hash: string; timestamp: string; message: string; }[]>;",
+      "sourceSignatureHash": "sha256:1fb572924942c52ad42e07e91f0d61b105c3faa0dc08cad15188288dbd431e9e",
+      "rendererCallers": [],
+      "owningFeature": "team-review",
+      "disposition": "desktop-only",
+      "securityClass": "desktop-shell",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.review.get-git-file-log",
+      "targetWorkPackage": "DEFERRED-DESKTOP-ONLY"
+    },
+    {
+      "stableId": "P0.W1.API.CrossTeamAPI.send",
+      "source": "CrossTeamAPI",
+      "sourceMember": "send",
+      "legacySignature": "send: (request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>;",
+      "sourceSignatureHash": "sha256:1e1a96bb77e65ae5ff7c671f18cab1a912285823d300f32ba355e69156966e55",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-messaging",
+      "disposition": "decomposed",
+      "securityClass": "cross-team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.message.cross-team.send",
+      "targetWorkPackage": "WP-8-MESSAGING"
+    },
+    {
+      "stableId": "P0.W1.API.CrossTeamAPI.listTargets",
+      "source": "CrossTeamAPI",
+      "sourceMember": "listTargets",
+      "legacySignature": "listTargets: (excludeTeam?: string) => Promise<{ teamName: string; displayName: string; description?: string; color?: string; leadName?: string; leadColor?: string; isOnline?: boolean; }[]>;",
+      "sourceSignatureHash": "sha256:0a984b7fdfe6efb69668eaddfbc7b17f2d1ada4ce2f939c4f061019845863617",
+      "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"],
+      "owningFeature": "team-messaging",
+      "disposition": "decomposed",
+      "securityClass": "cross-team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.message.cross-team.list-targets",
+      "targetWorkPackage": "WP-8-MESSAGING"
+    },
+    {
+      "stableId": "P0.W1.API.CrossTeamAPI.getOutbox",
+      "source": "CrossTeamAPI",
+      "sourceMember": "getOutbox",
+      "legacySignature": "getOutbox: (teamName: string) => Promise<CrossTeamMessage[]>;",
+      "sourceSignatureHash": "sha256:25a849660cb588763067ce6e5ec44cd76cc55e27fb4cca7e69efac5e7b131c16",
+      "rendererCallers": [],
+      "owningFeature": "team-messaging",
+      "disposition": "decomposed",
+      "securityClass": "cross-team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.message.cross-team.get-outbox",
+      "targetWorkPackage": "WP-8-MESSAGING"
+    }
+  ]
+}

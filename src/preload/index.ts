@@ -1,4 +1,20 @@
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
+import {
+  REVIEW_CLEAR_DECISIONS,
+  REVIEW_CLEAR_DRAFT_HISTORY,
+  REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+  REVIEW_LOAD_DECISIONS,
+  REVIEW_LOAD_DRAFT_HISTORY,
+  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_SAVE_DECISIONS,
+  REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
+  type ReviewDraftHistoryConflictCandidateSummary,
+  type ReviewDraftHistoryEntry,
+  type ReviewDraftHistorySnapshot,
+} from '@features/change-review-history/contracts';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
@@ -7,10 +23,19 @@ import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
+import {
+  type CanonicalListTeamLifecycleResult,
+  type ListTeamLifecycleRequest,
+  parseCanonicalListTeamLifecycleResult,
+  parseListTeamLifecycleRequest,
+  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+  type TeamLifecycleReadFailure,
+} from '@features/team-lifecycle/contracts';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
+import { createSafeAppError } from '@shared/contracts/hosted';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 import {
@@ -80,8 +105,6 @@ import {
   RENDERER_LOG,
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
-  REVIEW_CLEAR_DECISIONS,
-  REVIEW_CLEAR_DRAFT_HISTORY,
   REVIEW_DELETE_EDITED_FILE,
   REVIEW_EXECUTE_MUTATION,
   REVIEW_FILE_CHANGE,
@@ -92,22 +115,13 @@ import {
   REVIEW_GET_TASK_CHANGES,
   REVIEW_GET_TEAM_TASK_CHANGE_SUMMARIES,
   REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES,
-  REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
-  REVIEW_LOAD_DECISIONS,
-  REVIEW_LOAD_DRAFT_HISTORY,
-  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
   REVIEW_PREVIEW_REJECT,
   REVIEW_REAPPLY_REJECTED_RENAME,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
-  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
-  REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
-  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
   REVIEW_RESTORE_HISTORY,
   REVIEW_RESTORE_REJECTED_RENAME,
   REVIEW_RETRY_MUTATION_RECOVERY,
-  REVIEW_SAVE_DECISIONS,
-  REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
   REVIEW_SAVE_EDITED_FILE,
   REVIEW_UNWATCH_FILES,
   REVIEW_WATCH_FILES,
@@ -275,11 +289,6 @@ import {
   CONFIG_UPDATE_TRIGGER,
 } from './constants/ipcChannels';
 
-import type {
-  ReviewDraftHistoryConflictCandidateSummary,
-  ReviewDraftHistoryEntry,
-  ReviewDraftHistorySnapshot,
-} from '@features/change-review-history/contracts';
 import type {
   AddMemberRequest,
   AddTaskCommentRequest,
@@ -509,6 +518,41 @@ async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Prom
   return result.data as T;
 }
 
+function teamLifecycleReadFailure(
+  error: TeamLifecycleReadFailure['error']
+): TeamLifecycleReadFailure {
+  return Object.freeze({
+    schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+    kind: 'failure',
+    error,
+    retryable: error.code === 'unavailable',
+  });
+}
+
+async function invokeListTeamLifecycle(
+  requestValue: ListTeamLifecycleRequest
+): Promise<CanonicalListTeamLifecycleResult> {
+  const request = parseListTeamLifecycleRequest(requestValue);
+  if (!request.ok) {
+    return teamLifecycleReadFailure(request.error as TeamLifecycleReadFailure['error']);
+  }
+
+  try {
+    const response = await invokeIpcWithResult<unknown>(TEAM_LIST, request.value);
+    const parsed = parseCanonicalListTeamLifecycleResult(response);
+    return parsed.ok
+      ? parsed.value
+      : teamLifecycleReadFailure(parsed.error as TeamLifecycleReadFailure['error']);
+  } catch {
+    return teamLifecycleReadFailure(
+      createSafeAppError({
+        code: 'unavailable',
+        reason: 'transport_unavailable',
+      }) as TeamLifecycleReadFailure['error']
+    );
+  }
+}
+
 function formatConsoleArg(arg: unknown): string {
   if (typeof arg === 'string') return arg;
   if (arg instanceof Error) return arg.stack ?? arg.message;
@@ -598,6 +642,7 @@ const electronAPI: ElectronAPI = {
   organizations: createOrganizationsBridge(ipcRenderer),
   terminalWorkspace: createTerminalWorkspaceBridge(ipcRenderer),
   tokenUsage: createTokenUsageBridge(ipcRenderer),
+  listTeamLifecycle: invokeListTeamLifecycle,
   telemetry: {
     getSentryContext: () => ipcRenderer.invoke(TELEMETRY_GET_SENTRY_CONTEXT),
     getSentryStatus: () => ipcRenderer.invoke(TELEMETRY_GET_SENTRY_STATUS),

@@ -537,6 +537,34 @@ describe('teamSlice actions', () => {
     vi.useRealTimers();
   });
 
+  it('preserves the collaboration data-plane state and action surface', () => {
+    const state = createSliceStore().getState();
+
+    expect(state).toMatchObject({
+      teams: [],
+      selectedTeamData: null,
+      teamMessagesByName: {},
+      sendingMessage: false,
+      deletedTasks: [],
+      addingComment: false,
+    });
+    expect([
+      state.fetchTeams,
+      state.selectTeam,
+      state.refreshTeamMessagesHead,
+      state.sendTeamMessage,
+      state.createTeamTask,
+      state.addTaskComment,
+    ]).toEqual([
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
+    ]);
+  });
+
   it('keeps an explicit project intent when opening Teams and clears it for generic navigation', () => {
     const store = createSliceStore();
     store.setState({ selectedProjectId: 'worktree-alpha' });
@@ -1200,6 +1228,14 @@ describe('teamSlice actions', () => {
 
   it('commits owner slot drops in the current session while persistence is disabled', () => {
     const store = createSliceStore();
+    store.setState({
+      slotAssignmentsByTeam: {
+        'my-team': {
+          'agent-alice': { ringIndex: 0, sectorIndex: 1 },
+          'agent-bob': { ringIndex: 0, sectorIndex: 2 },
+        },
+      },
+    });
 
     store
       .getState()

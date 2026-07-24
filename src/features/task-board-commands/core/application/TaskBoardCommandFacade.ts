@@ -16,7 +16,7 @@ type JsonObject = Record<string, ApplicationCommandJsonValue>;
 export interface TaskBoardCreateTaskDestination {
   findById(taskId: string): TeamTask | null;
   create(input: Record<string, unknown>): TeamTask | Promise<TeamTask>;
-  reconcile(input: Record<string, unknown>): TeamTask | null | Promise<TeamTask | null>;
+  reconcile?(input: Record<string, unknown>): TeamTask | null | Promise<TeamTask | null>;
 }
 
 export interface TaskBoardCreateTaskCommand {
@@ -78,7 +78,7 @@ export class TaskBoardCommandFacade {
           }
           let reconciled: TeamTask;
           try {
-            reconciled = await reconcileDestination(command.destination, record, payload);
+            reconciled = await reconcileDestination(command.destination, record, payload, existing);
           } catch (error) {
             if (error instanceof TaskBoardCreateDestinationConflictError) {
               return {
@@ -97,7 +97,12 @@ export class TaskBoardCommandFacade {
       async (record) => {
         const existing = command.destination.findById(record.commandId);
         if (existing) {
-          const reconciled = await reconcileDestination(command.destination, record, payload);
+          const reconciled = await reconcileDestination(
+            command.destination,
+            record,
+            payload,
+            existing
+          );
           return makeStoredResult(reconciled, false);
         }
 
@@ -115,7 +120,12 @@ export class TaskBoardCommandFacade {
           }
           if (recovered) {
             try {
-              const reconciled = await reconcileDestination(command.destination, record, payload);
+              const reconciled = await reconcileDestination(
+                command.destination,
+                record,
+                payload,
+                recovered
+              );
               return makeStoredResult(reconciled, true);
             } catch (reconciliationError) {
               if (reconciliationError instanceof TaskBoardCreateDestinationConflictError) {
@@ -238,21 +248,36 @@ async function reconcileDestination(
     commandId: string;
     payloadHash: string;
   },
-  payload: JsonObject
+  payload: JsonObject,
+  knownTask?: TeamTask
 ): Promise<TeamTask> {
   let task: TeamTask | null;
-  try {
-    task = await destination.reconcile(makeDestinationInput(record, payload));
-  } catch (error) {
-    if (isDestinationConflictError(error)) {
-      throw new TaskBoardCreateDestinationConflictError(error);
+  if (destination.reconcile) {
+    try {
+      task = await destination.reconcile(makeDestinationInput(record, payload));
+    } catch (error) {
+      const destinationConflict =
+        error instanceof TaskBoardCreateDestinationConflictError
+          ? error
+          : isDestinationConflictError(error)
+            ? new TaskBoardCreateDestinationConflictError(error)
+            : null;
+      if (!destinationConflict) {
+        throw error;
+      }
+      if (knownTask) {
+        assertMatchingTask(knownTask, record, payload);
+        return knownTask;
+      }
+      throw destinationConflict;
     }
-    throw error;
+  } else {
+    task = knownTask ?? destination.findById(record.commandId);
   }
   if (!task) {
     throw new Error(`Task disappeared during command reconciliation: ${record.commandId}`);
   }
-  assertMatchingTask(task, record);
+  assertMatchingTask(task, record, payload);
   return task;
 }
 
@@ -287,34 +312,17 @@ function assertMatchingTask(
     operation: string;
     commandId: string;
     payloadHash: string;
-  }
+  },
+  payload: JsonObject
 ): void {
-  const creationCommand = (
-    task as TeamTask & {
-      creationCommand?: {
-        namespace?: unknown;
-        scopeKey?: unknown;
-        operation?: unknown;
-        commandId?: unknown;
-        payloadHash?: unknown;
-      };
-    }
-  ).creationCommand;
   if (task.id !== expected.commandId) {
     throw new TaskBoardCreateDestinationConflictError(
       new Error(`Task command destination id conflict: ${task.id}`)
     );
   }
-  if (
-    !creationCommand ||
-    creationCommand.namespace !== expected.namespace ||
-    creationCommand.scopeKey !== expected.scopeKey ||
-    creationCommand.operation !== expected.operation ||
-    creationCommand.commandId !== expected.commandId ||
-    creationCommand.payloadHash !== expected.payloadHash
-  ) {
+  if (typeof payload.subject !== 'string' || task.subject !== payload.subject.trim()) {
     throw new TaskBoardCreateDestinationConflictError(
-      new Error(`Task command destination provenance conflict: ${task.id}`)
+      new Error(`Task command destination payload conflict: ${task.id}`)
     );
   }
 }

@@ -25,6 +25,7 @@ import {
 } from './bootstrapUserDataMigration';
 import './sentryBootstrap';
 
+import { TEAM_TOOL_APPROVAL_EVENT } from '@features/team-approvals/contracts';
 import type {
   AppCloseReadinessResult,
   AppCloseReason,
@@ -114,6 +115,10 @@ import {
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
 import { createWorkspaceTrustCoordinator } from '@features/workspace-trust/main';
+import {
+  createUnavailableTeamLifecycleReadHost,
+  type TeamLifecycleReadHost,
+} from '@main/composition/hosted/teamLifecycleReadComposition';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
@@ -174,7 +179,6 @@ import {
   SSH_STATUS,
   TEAM_CHANGE,
   TEAM_PROJECT_BRANCH_CHANGE,
-  TEAM_TOOL_APPROVAL_EVENT,
   WINDOW_FULLSCREEN_CHANGED,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
 } from '@preload/constants/ipcChannels';
@@ -191,12 +195,13 @@ import { createLogger } from '@shared/utils/logger';
 import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMessages';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { createHash } from 'crypto';
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, type MessageBoxOptions, shell } from 'electron';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
+import { initializeTeamLifecycleReadHandler } from './ipc/teams';
 import { registerRendererLogHandlers } from './ipc/rendererLogs';
 import { setReviewMainWindow } from './ipc/review';
 import { setTmuxMainWindow } from './ipc/tmux';
@@ -1134,6 +1139,7 @@ let httpServer: HttpServer;
 let schedulerService: SchedulerService;
 let teamTaskStallMonitor: TeamTaskStallMonitor | null = null;
 let internalStorageFeature: InternalStorageFeature | null = null;
+let teamLifecycleReadHost: TeamLifecycleReadHost | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
 let teamBackupService: TeamBackupService | null = null;
 let branchStatusService: BranchStatusService | null = null;
@@ -1348,14 +1354,68 @@ async function requestAllWindowsCloseReadiness(
   );
 }
 
+interface DesktopWindowCloseDecision {
+  readonly platform: NodeJS.Platform;
+  readonly remainingWindowCount: number;
+  readonly hasActiveTeamRuntimes: boolean;
+  readonly showDockIcon: boolean;
+}
+
+interface DesktopWindowCloseLifecycleActions {
+  isWindowUsable: () => boolean;
+  shouldQuitAfterClose: () => boolean;
+  requestAppQuit: () => Promise<boolean>;
+  requestWindowCloseReadiness: () => Promise<boolean>;
+  authorizeWindowClose: () => void;
+  closeWindow: () => void;
+}
+
+/** Determines whether closing this window crosses the application's last-window quit boundary. */
+export function shouldQuitAfterDesktopWindowClose(decision: DesktopWindowCloseDecision): boolean {
+  if (decision.remainingWindowCount > 0) return false;
+  return decision.hasActiveTeamRuntimes || decision.platform !== 'darwin' || !decision.showDockIcon;
+}
+
+/**
+ * Keeps the last usable window intact until the guarded app-quit lifecycle has flushed config.
+ * Ordinary non-last (and dock-retained macOS) closes continue through renderer readiness.
+ */
+export async function runDesktopWindowCloseLifecycle(
+  actions: DesktopWindowCloseLifecycleActions
+): Promise<boolean> {
+  if (!actions.isWindowUsable()) return false;
+  if (actions.shouldQuitAfterClose()) {
+    return actions.requestAppQuit();
+  }
+  if (!(await actions.requestWindowCloseReadiness()) || !actions.isWindowUsable()) return false;
+  actions.authorizeWindowClose();
+  actions.closeWindow();
+  return true;
+}
+
 async function requestGuardedWindowClose(window: BrowserWindow): Promise<void> {
   if (windowCloseReadinessInFlight.has(window) || window.isDestroyed()) return;
   windowCloseReadinessInFlight.add(window);
   try {
-    if (!(await requestWindowCloseReadiness(window, 'window-close', 'Close Anyway'))) return;
-    if (window.isDestroyed()) return;
-    authorizedWindowCloses.add(window);
-    window.close();
+    await runDesktopWindowCloseLifecycle({
+      isWindowUsable: () => !window.isDestroyed(),
+      shouldQuitAfterClose: () => {
+        const remainingWindowCount = BrowserWindow.getAllWindows().filter(
+          (candidate) => candidate !== window && !candidate.isDestroyed()
+        ).length;
+        return shouldQuitAfterDesktopWindowClose({
+          platform: process.platform,
+          remainingWindowCount,
+          hasActiveTeamRuntimes: hasActiveTeamRuntimesForWindowClose(),
+          showDockIcon: configManager.getConfig().general.showDockIcon,
+        });
+      },
+      requestAppQuit: () => requestGuardedAppQuit('app-quit'),
+      requestWindowCloseReadiness: () =>
+        requestWindowCloseReadiness(window, 'window-close', 'Close Anyway'),
+      authorizeWindowClose: () => authorizedWindowCloses.add(window),
+      closeWindow: () => window.close(),
+    });
   } catch (error) {
     logger.error(
       `Window close readiness failed: ${error instanceof Error ? error.message : String(error)}`
@@ -1363,6 +1423,114 @@ async function requestGuardedWindowClose(window: BrowserWindow): Promise<void> {
   } finally {
     windowCloseReadinessInFlight.delete(window);
   }
+}
+
+type DesktopQuitReason = 'app-quit' | 'relaunch';
+
+interface DesktopQuitLifecycleActions {
+  flushConfig: () => Promise<void>;
+  shutdownServices: () => Promise<void>;
+  reportShutdownFailure: (error: unknown) => void | Promise<void>;
+  prepareToQuit: () => void;
+  markShutdownComplete: () => void;
+  relaunch: () => void;
+  quit: () => void;
+}
+
+interface DesktopUpdateInstallLifecycleActions {
+  flushConfig: () => Promise<void>;
+  shutdownServices: () => Promise<void>;
+  reportShutdownFailure: (error: unknown) => void | Promise<void>;
+  markShutdownComplete: () => void;
+}
+
+/**
+ * Crosses the irreversible desktop quit boundary only after the final service
+ * drain succeeds. A failed drain is reported and leaves Electron running; in
+ * particular, it must not call app.quit(), which would re-enter before-quit.
+ */
+export async function runDesktopQuitLifecycle(
+  reason: DesktopQuitReason,
+  actions: DesktopQuitLifecycleActions
+): Promise<boolean> {
+  try {
+    await actions.flushConfig();
+    await actions.shutdownServices();
+  } catch (error) {
+    await actions.reportShutdownFailure(error);
+    return false;
+  }
+
+  actions.prepareToQuit();
+  actions.markShutdownComplete();
+  if (reason === 'relaunch') actions.relaunch();
+  actions.quit();
+  return true;
+}
+
+/**
+ * Keeps the updater's before-install hook rejected when the final service
+ * drain fails, so electron-updater cannot continue to quitAndInstall().
+ */
+export async function runDesktopUpdateInstallLifecycle(
+  actions: DesktopUpdateInstallLifecycleActions
+): Promise<void> {
+  try {
+    await actions.flushConfig();
+    await actions.shutdownServices();
+  } catch (error) {
+    await actions.reportShutdownFailure(error);
+    throw error;
+  }
+
+  actions.markShutdownComplete();
+}
+
+export async function reportDesktopShutdownFailure(
+  reason: DesktopQuitReason | 'update-install',
+  error: unknown
+): Promise<void> {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const actionLabel =
+    reason === 'relaunch' ? 'relaunch' : reason === 'update-install' ? 'update install' : 'quit';
+  logger.error(
+    reason === 'update-install'
+      ? `Shutdown before update install failed: ${errorMessage}`
+      : `Shutdown failed: ${errorMessage}`
+  );
+
+  const window = BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed());
+  try {
+    const options: MessageBoxOptions = {
+      type: 'error',
+      title: 'Changes could not finish shutting down',
+      message: `The ${actionLabel} was canceled because app data could not be saved.`,
+      detail: errorMessage,
+      buttons: ['OK'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    };
+    if (window) {
+      window.show();
+      window.focus();
+      await dialog.showMessageBox(window, options);
+    } else {
+      await dialog.showMessageBox(options);
+    }
+  } catch (dialogError) {
+    logger.error(
+      `Failed to show shutdown error: ${
+        dialogError instanceof Error ? dialogError.message : String(dialogError)
+      }`
+    );
+  }
+}
+
+async function shutdownServicesAndDrainPersistentLog(): Promise<void> {
+  await shutdownServices();
+  persistentAppLog?.dispose();
+  await persistentAppLog?.flush();
 }
 
 async function requestGuardedAppQuit(reason: 'app-quit' | 'relaunch'): Promise<boolean> {
@@ -1381,21 +1549,22 @@ async function requestGuardedAppQuit(reason: 'app-quit' | 'relaunch'): Promise<b
       );
       if (!ready) return false;
 
-      if (reason === 'relaunch') app.relaunch();
-      notificationManager?.closeActiveNativeNotifications('app-before-quit');
-      for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) window.hide();
-      }
-      try {
-        await shutdownServices();
-      } catch (error) {
-        logger.error(`Shutdown failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-      persistentAppLog?.dispose();
-      await persistentAppLog?.flush();
-      shutdownComplete = true;
-      app.quit();
-      return true;
+      return runDesktopQuitLifecycle(reason, {
+        flushConfig: () => configManager.flush(),
+        shutdownServices: shutdownServicesAndDrainPersistentLog,
+        reportShutdownFailure: (error) => reportDesktopShutdownFailure(reason, error),
+        prepareToQuit: () => {
+          notificationManager?.closeActiveNativeNotifications('app-before-quit');
+          for (const window of BrowserWindow.getAllWindows()) {
+            if (!window.isDestroyed()) window.hide();
+          }
+        },
+        markShutdownComplete: () => {
+          shutdownComplete = true;
+        },
+        relaunch: () => app.relaunch(),
+        quit: () => app.quit(),
+      });
     } catch (error) {
       logger.error(
         `App ${reason} readiness failed: ${error instanceof Error ? error.message : String(error)}`
@@ -2037,17 +2206,14 @@ async function initializeServices(): Promise<void> {
     if (!(await requestAllWindowsCloseReadiness('update-install', 'Install Anyway'))) {
       throw new Error('Update install canceled because Changes is not ready to close.');
     }
-    try {
-      await shutdownServices();
-    } catch (error) {
-      logger.error(
-        `Shutdown before update install failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    } finally {
-      shutdownComplete = true;
-    }
+    await runDesktopUpdateInstallLifecycle({
+      flushConfig: () => configManager.flush(),
+      shutdownServices: shutdownServicesAndDrainPersistentLog,
+      reportShutdownFailure: (error) => reportDesktopShutdownFailure('update-install', error),
+      markShutdownComplete: () => {
+        shutdownComplete = true;
+      },
+    });
   });
   cliInstallerService = new CliInstallerService();
   openCodeRuntimeInstallerService = new OpenCodeRuntimeInstallerService();
@@ -2124,6 +2290,10 @@ async function initializeServices(): Promise<void> {
   const teamMessagingApi = teamIpcHandlerApis.messaging;
   const teamProvisioningRunApi = teamIpcHandlerApis.provisioningRun;
   const teamRuntimeApi = teamIpcHandlerApis.runtime;
+  // The desktop shell does not yet own a unique admitted WorkspaceMountBinding paired with its
+  // RuntimeInstanceContext. Never infer that authority from localProjectsDir or global services.
+  teamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
+  initializeTeamLifecycleReadHandler(teamLifecycleReadHost);
   teamProvisioningService.setWorkspaceTrustCoordinator(
     createWorkspaceTrustCoordinator({
       claudeConfigDir: () => getClaudeBasePath(),
@@ -3060,6 +3230,7 @@ async function startHttpServer(
         sshConnectionManager,
         teamDataApi: bindTeamHttpDataApi(teamDataService),
         teamApis: teamHttpHandlerApis,
+        teamLifecycleReadHost: teamLifecycleReadHost ?? undefined,
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456
@@ -3707,11 +3878,14 @@ void app.whenReady().then(async () => {
  * All windows closed handler.
  */
 app.on('window-all-closed', () => {
+  if (shutdownComplete || appQuitFlow) return;
   const hasActiveTeamRuntimes = hasActiveTeamRuntimesForWindowClose();
-  const shouldQuitWhenAllWindowsClosed =
-    hasActiveTeamRuntimes ||
-    process.platform !== 'darwin' ||
-    !configManager.getConfig().general.showDockIcon;
+  const shouldQuitWhenAllWindowsClosed = shouldQuitAfterDesktopWindowClose({
+    platform: process.platform,
+    remainingWindowCount: 0,
+    hasActiveTeamRuntimes,
+    showDockIcon: configManager.getConfig().general.showDockIcon,
+  });
 
   if (shouldQuitWhenAllWindowsClosed) {
     if (hasActiveTeamRuntimes) {

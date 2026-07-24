@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 2,
+  "phaseId": "phase-00",
+  "laneId": "w5",
+  "taskId": "phase-00-freeze-fix-w5-format-f4",
+  "status": "ready_for_controller_commit",
+  "canonicalBaseSha": "6cf53a3d71e1bd34ff71f99968b705a0e1aa939c",
+  "approvedProducerTaskId": "phase-00-freeze-fix-w5-owner-d1",
+  "approvedReview": {
+    "reviewId": "phase-00-freeze-review-fix-w5-owner-e1",
+    "decision": "APPROVE",
+    "findings": ["F35-C1-001", "P0.C1.OWNER.001"]
+  },
+  "scope": {
+    "mode": "approved_w5_owner_gate_recreation_plus_integration_formatting",
+    "semanticWidening": false,
+    "terminalImplementation": false,
+    "w1FilesEdited": false,
+    "otherLaneFilesEdited": false
+  },
+  "ownerGate": {
+    "authorityArtifact": "docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json",
+    "authorityEvidenceId": "P0.W1.API_PARITY_LEDGER",
+    "comparedRequiredW1W5Members": 49,
+    "missingW1Rows": 0,
+    "ownerMismatches": 0,
+    "primaryOwnerCorrections": {
+      "git.initialize_repository": "workspace-registry",
+      "git.create_initial_commit": "workspace-registry",
+      "member.restart": "team-lifecycle",
+      "member.skip_for_launch": "team-lifecycle"
+    },
+    "runtimeSecondaryEffectOwnersPreserved": ["member.restart", "member.skip_for_launch"]
+  },
+  "formattingIntegration": {
+    "generatorChange": "Emit the three changed generated JSON artifacts in Prettier-stable form so generation freshness and formatting checks hold simultaneously.",
+    "formattedGeneratedArtifacts": [
+      "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
+      "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
+      "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json"
+    ],
+    "approvedD1JsonSemanticsPreserved": true
+  },
+  "changedPaths": [
+    ".codex-handoff/phase-00-freeze-fix-w5-format-f4.json",
+    "docs/research/hosted-web/phase-0/recovery-events/README.md",
+    "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
+    "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
+    "docs/research/hosted-web/phase-0/recovery-events/evidence.schema.json",
+    "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json",
+    "docs/research/hosted-web/phase-0/recovery-events/mutation-census.schema.json",
+    "docs/research/hosted-web/phase-0/recovery-events/mutation-surface-manifest.json",
+    "scripts/hosted-web/phase-0/recovery-events/generate-evidence.mjs",
+    "scripts/hosted-web/phase-0/recovery-events/model.mjs",
+    "scripts/hosted-web/phase-0/recovery-events/mutation-census.mjs",
+    "test/architecture/hosted-web/phase-0/recovery-events/recovery-events.test.mjs"
+  ],
+  "checks": [
+    {
+      "command": "node scripts/hosted-web/phase-0/recovery-events/generate-evidence.mjs --check",
+      "exitCode": 0,
+      "result": "verified 9 W5 evidence files"
+    },
+    {
+      "command": "node test/architecture/hosted-web/phase-0/recovery-events/recovery-events.test.mjs",
+      "exitCode": 0,
+      "result": "8 tests passed"
+    },
+    {
+      "command": "pnpm lint:fast:files -- <four changed W5 MJS files>",
+      "exitCode": 0,
+      "result": "targeted fast lint passed"
+    },
+    {
+      "command": "pnpm exec prettier --check <all changed files>",
+      "exitCode": 0,
+      "result": "all changed files use Prettier code style"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "result": "workspace diff is whitespace-clean"
+    }
+  ],
+  "commit": {
+    "created": false,
+    "reason": "The isolated linked-worktree worker policy reserves add, commit, and push for Project Integration."
+  },
+  "blockers": [],
+  "risks": [
+    "This lane supplies Phase 0 evidence and gates only; it does not implement the hosted command coordinator, secondary-effect ports, or terminal behavior.",
+    "The drift gate intentionally reads the checked-in W1 ledger without changing it; future W1 owner changes require explicit W5 reconciliation."
+  ],
+  "nextAction": "Project Integration should inspect the intact diff, commit it, and rerun the controller-level cross-lane and freeze sequence."
+}

@@ -1,0 +1,391 @@
+{
+  "$schema": "./canonical-index.schema.json",
+  "schemaVersion": 1,
+  "indexType": "evidence",
+  "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
+  "phaseId": "phase-00",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "currentIntegrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+  "freezeCandidate": {
+    "baseCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+    "status": "accepted-frozen",
+    "integrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e"
+  },
+  "generatedAt": "2026-07-12T10:28:17Z",
+  "evidence": [
+    {
+      "evidenceId": "P0.W1.API_PARITY_LEDGER",
+      "laneId": "w1",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json",
+      "sha256": "a11f469d9c981c3e05be57fed7a6303772349a79297a0f1887db97d54e84c0a3",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "89c1358925033d480bcfe3bdfee6c899df556431"
+    },
+    {
+      "evidenceId": "P0.W1.RENDERER_ACTIONS",
+      "laneId": "w1",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
+      "sha256": "9ff8164fb83dd235b69aef81168d03ed5c6dd84f5ffd25fab25bacd594d175b4",
+      "proofLevel": "fixture_characterized",
+      "byteState": "integrated",
+      "integratedAtCommit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W1.LATER_BYTES"
+    },
+    {
+      "evidenceId": "P0.W1.RENDERER_CHILD_CONTROLS",
+      "laneId": "w1",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/renderer-child-control-catalog.json",
+      "sha256": "833200abb1218a8b8596c65614f1f8d407ed55f2a030139178b1d57196ed5a7e",
+      "proofLevel": "fixture_characterized",
+      "byteState": "integrated",
+      "integratedAtCommit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W1.LATER_BYTES"
+    },
+    {
+      "evidenceId": "P0.W1.LEGACY_BYPASSES",
+      "laneId": "w1",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
+      "sha256": "674859e100839256f86869b8a72ddf65153001f399d7ba08ba135fdf22b2d0d5",
+      "proofLevel": "source_observed",
+      "byteState": "integrated",
+      "integratedAtCommit": "a6bd7a39aebb4d822f57707c96c5e071b2aecb2b",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W1.LATER_BYTES"
+    },
+    {
+      "evidenceId": "P0.W1.SELECTION_INVARIANTS",
+      "laneId": "w1",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/selection-reconciliation-invariants.md",
+      "sha256": "b9f9a3b24720fbac112a1b97e40725ecf484e18c15f1d7b6596d2446b4f4eefe",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "89c1358925033d480bcfe3bdfee6c899df556431"
+    },
+    {
+      "evidenceId": "P0.W1.SCANNER",
+      "laneId": "w1",
+      "path": "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
+      "sha256": "a91bcbdcf383bb06c07517d12ca4c0985591f66057e0a60bd7388c156dc7ad8b",
+      "proofLevel": "fixture_characterized",
+      "byteState": "integrated",
+      "integratedAtCommit": "a6bd7a39aebb4d822f57707c96c5e071b2aecb2b",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W1.LATER_BYTES"
+    },
+    {
+      "evidenceId": "P0.W1.ESTIMATE",
+      "laneId": "w1",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/estimate-input.json",
+      "sha256": "af3fe8edc17ac5f3ca77533a949625b5b97c61c3ebab111726f72ebdc9adf669",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "89c1358925033d480bcfe3bdfee6c899df556431"
+    },
+    {
+      "evidenceId": "P0.W2.EXECUTION_TOPOLOGY",
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json",
+      "sha256": "40650b7ec3549a30419932fa43330b1484468c393ddef0555438f9f308c97e3a",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e"
+    },
+    {
+      "evidenceId": "P0.W2.RUNTIME_INGRESS_INVENTORY",
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/runtime-ingress-inventory.json",
+      "sha256": "531ae8746d48e527c4e1a857e8b6077c5c9d58cf1ca0ca6523cd629a98c0e807",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e"
+    },
+    {
+      "evidenceId": "P0.W2.ENVIRONMENT_PROVENANCE",
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+      "sha256": "302cc6081598a182df58478f6d50288228e037db5f14c33df72c512fcc5b3d81",
+      "proofLevel": "source_observed_per_key_with_executed_routing_semantics_target_unverified",
+      "byteState": "integrated",
+      "integratedAtCommit": "6d54e7c60d29812de5b96e471761486fbbc0842c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W2.LATER_BYTES"
+    },
+    {
+      "evidenceId": "P0.W2.CREDENTIAL_EXPOSURE_MATRIX",
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+      "sha256": "5f039a47a65ced6556f5c096e4135d18aeea3377db1f21fb347025c1af5b36e1",
+      "proofLevel": "source_observed_per_key_target_unverified",
+      "byteState": "integrated",
+      "integratedAtCommit": "6d54e7c60d29812de5b96e471761486fbbc0842c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W2.LATER_BYTES"
+    },
+    {
+      "evidenceId": "P0.W2.RUNTIME_SCANNER",
+      "laneId": "w2",
+      "path": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+      "sha256": "92a28a82c279467f844a48743c3c87ef4bea89c991bb3d0e06424052a3738f7c",
+      "proofLevel": "executable_fixture_characterized",
+      "byteState": "integrated",
+      "integratedAtCommit": "6d54e7c60d29812de5b96e471761486fbbc0842c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W2.LATER_BYTES"
+    },
+    {
+      "evidenceId": "P0.W2.ESTIMATE",
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/estimate-input.json",
+      "sha256": "6316c642472506f51638673aa3ede535dc358264c77b4cff43ca83364d879625",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e"
+    },
+    {
+      "evidenceId": "P0.W3.STATE_FAMILY_CATALOG",
+      "laneId": "w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/state-family-catalog.json",
+      "sha256": "f987dfb942445d3ac9ebfeb1a4f931291b7b834af45e5979d45518d59975e90a",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "7f23e7b628b09e8fbed71c914af5e665f14dab25"
+    },
+    {
+      "evidenceId": "P0.W3.WRITER_COORDINATION",
+      "laneId": "w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/writer-coordination.json",
+      "sha256": "7c7c572e068b04c9b84886d2a7c47aa3e04ba714311b2f8c98b0fe066c7d52ef",
+      "proofLevel": "fixture_characterized",
+      "integratedAtCommit": "7f23e7b628b09e8fbed71c914af5e665f14dab25"
+    },
+    {
+      "evidenceId": "P0.W3.SCHEMA_UNKNOWN_FIELDS",
+      "laneId": "w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/schema-unknown-fields.json",
+      "sha256": "aec02d87f8657ec91d51f252d0dcf652dc04cae2ae047cebef6e3455820906e3",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "7f23e7b628b09e8fbed71c914af5e665f14dab25"
+    },
+    {
+      "evidenceId": "P0.W3.BACKUP_BEHAVIOR",
+      "laneId": "w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/backup-behavior.json",
+      "sha256": "a9cff35be387062de2ce908a98aa0613cf460bd43cb5e1b3eeeb7d1c704f0623",
+      "proofLevel": "fixture_characterized",
+      "integratedAtCommit": "7f23e7b628b09e8fbed71c914af5e665f14dab25"
+    },
+    {
+      "evidenceId": "P0.W3.SQLITE_ONLINE_BACKUP_SPIKE",
+      "laneId": "w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-results.json",
+      "sha256": "7b9e2a03da2f972239b36b248319d36d420917596f03d20467dbabc8dc0ee4f5",
+      "proofLevel": "fixture_characterized",
+      "integratedAtCommit": "7f23e7b628b09e8fbed71c914af5e665f14dab25"
+    },
+    {
+      "evidenceId": "P0.W3.ESTIMATE",
+      "laneId": "w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/estimate-input.json",
+      "sha256": "e115aa10ab1ad3842e8b44db03a07541cae9b6abdbeb1207ba3f01bd6d5ff7ae",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "7f23e7b628b09e8fbed71c914af5e665f14dab25"
+    },
+    {
+      "evidenceId": "P0.W4.TARGET_HOST_ENVELOPE",
+      "laneId": "w4",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/target-host-envelope.md",
+      "sha256": "83fede2fb9ce5e663963af951f7bac0fb24ee636024ac767108a7045114a9eec",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+    },
+    {
+      "evidenceId": "P0.W4.INSTANCE_LEASE_SPIKE",
+      "laneId": "w4",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/instance-lease-spike.md",
+      "sha256": "5d6f766eade0133481e673ba692828ce5ab02da9067542869a70d37b90cf984f",
+      "proofLevel": "fixture_characterized",
+      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+    },
+    {
+      "evidenceId": "P0.W4.WORKSPACE_GUARD_SPIKE",
+      "laneId": "w4",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/workspace-guard-spike.md",
+      "sha256": "55c7e21f8b33e8ea8b01c9286dc7ed153066d1ae4071a02d65b1c53544307dc1",
+      "proofLevel": "fixture_characterized",
+      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+    },
+    {
+      "evidenceId": "P0.W4.PROCESS_ANCHOR_SPIKE",
+      "laneId": "w4",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/process-anchor-spike.md",
+      "sha256": "5c09310193e18a1e972903c8604c977634b72ede6b87c11807e7b8c86fa6e42e",
+      "proofLevel": "fixture_characterized",
+      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+    },
+    {
+      "evidenceId": "P0.W4.NATIVE_ARTIFACT_PROPOSAL",
+      "laneId": "w4",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/native-artifact-proposal.md",
+      "sha256": "629e3c2db97be5555cb9ad1a45d8e5d9713ef8c807be52ecf1f1bd44e1ea1f83",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+    },
+    {
+      "evidenceId": "P0.W4.ESTIMATE",
+      "laneId": "w4",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/estimate-input.json",
+      "sha256": "a1b527c3f9ecd1863223eed43bc6e0a3ea720af9138114b9924d0e8acf062f7c",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+    },
+    {
+      "evidenceId": "P0.W5.EVENT_CURSOR_INVENTORY",
+      "laneId": "w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/event-cursor-inventory.json",
+      "sha256": "2e296692f0415c3b82f3ce15cf1683bbd0aee846d2b571a5dff31bff406ddc15",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8"
+    },
+    {
+      "evidenceId": "P0.W5.SNAPSHOT_HANDOFF_SCHEDULER",
+      "laneId": "w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/snapshot-handoff-scheduler.json",
+      "sha256": "f19fcbefb7fe673156f07e3bf5c680b0d10bc4664466bd529b9c65e3ec7639f1",
+      "proofLevel": "fixture_characterized",
+      "integratedAtCommit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8"
+    },
+    {
+      "evidenceId": "P0.W5.COMMAND_CATALOG",
+      "laneId": "w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
+      "sha256": "a40fd876f0a9ffc63e5932985c969ab867411716a48718586abf1552a35780ff",
+      "proofLevel": "source_observed_plus_executable_omission_proof",
+      "byteState": "integrated",
+      "integratedAtCommit": "5d723407f287767c0f30f3d708459fb943256eaf",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W5.LATER_BYTES"
+    },
+    {
+      "evidenceId": "P0.W5.EFFECT_RECOVERY_MATRIX",
+      "laneId": "w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
+      "sha256": "c7166ca1ac43f72591fd1c56221dd3f2b6ffe8bebdbdca2b9fb89288874a79bc",
+      "proofLevel": "fresh_process_fixture_characterized",
+      "byteState": "integrated",
+      "integratedAtCommit": "5d723407f287767c0f30f3d708459fb943256eaf",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W5.LATER_BYTES"
+    },
+    {
+      "evidenceId": "P0.W5.FINGERPRINT_GOLDENS",
+      "laneId": "w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/fingerprint-goldens.json",
+      "sha256": "819206353712839fd915c124d4108dc1c462f5f531b6f18ecf63e473125eaa1c",
+      "proofLevel": "immutable_oracle_fixture_characterized",
+      "integratedAtCommit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8"
+    },
+    {
+      "evidenceId": "P0.W5.ESTIMATE",
+      "laneId": "w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/estimate-input.json",
+      "sha256": "03f41142c1845f913bd0dfbd59499cfb6390454c36f4fec596432e7faf714341",
+      "proofLevel": "source_observed",
+      "integratedAtCommit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8"
+    },
+    {
+      "evidenceId": "P0.W5.SUPPORTING.MUTATION_CENSUS",
+      "laneId": "w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json",
+      "sha256": "5db5e282d358d4fad77b812cdec59c96bbe395ff04e6433ea9497d18126c0f98",
+      "proofLevel": "source_observed_plus_executable_omission_proof",
+      "byteState": "integrated",
+      "integratedAtCommit": "5d723407f287767c0f30f3d708459fb943256eaf",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W5.LATER_BYTES"
+    },
+    {
+      "evidenceId": "P0.W5.SUPPORTING.MUTATION_SURFACE_MANIFEST",
+      "laneId": "w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/mutation-surface-manifest.json",
+      "sha256": "8922576490c0a9496a105923502008bc0d5c361af47282fbe5834e07b40d8130",
+      "proofLevel": "review_input",
+      "byteState": "integrated",
+      "integratedAtCommit": "5d723407f287767c0f30f3d708459fb943256eaf",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W5.LATER_BYTES"
+    },
+    {
+      "evidenceId": "P0.W6.AUTH_TRANSITIONS",
+      "laneId": "w6",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "sha256": "082f9deced2bf21b5b15c14f9f8f786198e61eceb52b9007605949f45ebb503a",
+      "proofLevel": "fixture_characterized",
+      "byteState": "integrated",
+      "integratedAtCommit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
+    },
+    {
+      "evidenceId": "P0.W6.PROXY_ORIGIN_THREAT_MATRIX",
+      "laneId": "w6",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "sha256": "082f9deced2bf21b5b15c14f9f8f786198e61eceb52b9007605949f45ebb503a",
+      "proofLevel": "fixture_characterized",
+      "byteState": "integrated",
+      "integratedAtCommit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
+    },
+    {
+      "evidenceId": "P0.W6.COOKIE_VERSION_EVIDENCE",
+      "laneId": "w6",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "sha256": "082f9deced2bf21b5b15c14f9f8f786198e61eceb52b9007605949f45ebb503a",
+      "proofLevel": "source_observed",
+      "byteState": "integrated",
+      "integratedAtCommit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
+    },
+    {
+      "evidenceId": "P0.W6.ARTIFACT_INVENTORY",
+      "laneId": "w6",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+      "sha256": "3cf85823fc79522f36520911991a134ee7557cbd715e839137a61e610a54d22f",
+      "proofLevel": "source_observed",
+      "byteState": "integrated",
+      "integratedAtCommit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
+    },
+    {
+      "evidenceId": "P0.W6.ABI_STUB_REPORT",
+      "laneId": "w6",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "sha256": "082f9deced2bf21b5b15c14f9f8f786198e61eceb52b9007605949f45ebb503a",
+      "proofLevel": "fixture_characterized",
+      "byteState": "integrated",
+      "integratedAtCommit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
+    },
+    {
+      "evidenceId": "P0.W6.TERMINAL_ABSENCE_REPORT",
+      "laneId": "w6",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "sha256": "082f9deced2bf21b5b15c14f9f8f786198e61eceb52b9007605949f45ebb503a",
+      "proofLevel": "source_observed",
+      "byteState": "integrated",
+      "integratedAtCommit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
+    },
+    {
+      "evidenceId": "P0.W6.ESTIMATE",
+      "laneId": "w6",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json",
+      "sha256": "1309dd32d3ebf57447dc181b802fa5e625f1b7bb069fc040c08fef74513750b8",
+      "proofLevel": "source_observed",
+      "byteState": "integrated",
+      "integratedAtCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
+    }
+  ]
+}

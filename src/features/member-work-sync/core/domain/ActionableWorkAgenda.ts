@@ -268,7 +268,7 @@ export function buildActionableWorkAgenda(
             reviewState: workflowColumn,
             reviewCycleId: reviewCycle.reviewCycleId,
             reviewObligation: reviewCycle.obligation,
-            canBypassPhase2: reviewCycle.canBypassPhase2,
+            canBypassDeliveryReadiness: reviewCycle.canBypassDeliveryReadiness,
             ...(reviewCycle.reviewRequestEventId
               ? { reviewRequestEventId: reviewCycle.reviewRequestEventId }
               : {}),

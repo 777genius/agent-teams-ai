@@ -2745,14 +2745,27 @@ export const TeamDetailView = memo(function TeamDetailView({
     })();
   }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId]);
 
-  const handleCreateTask = async (request: CreateTaskRequest): Promise<void> => {
-    const { owner, prompt, startImmediately, subject } = request;
+  // Command identity (idempotency) is resolved by CreateTaskDialog via resolveCreateTaskCommand;
+  // this handler must not mint its own.
+  const handleCreateTask = async (taskRequest: CreateTaskRequest): Promise<void> => {
+    const {
+      owner: taskOwner,
+      prompt: taskPrompt,
+      startImmediately: taskStartImmediately,
+      subject,
+    } = taskRequest;
     setCreatingTask(true);
     try {
-      await createTeamTask(teamName, request);
+      await createTeamTask(teamName, taskRequest);
 
-      if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
-        const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
+      if (
+        taskPrompt &&
+        taskOwner &&
+        data?.isAlive &&
+        !isTeamProvisioning &&
+        taskStartImmediately !== false
+      ) {
+        const msg = `New task assigned to ${taskOwner}: "${subject}". Instructions:\n${taskPrompt}`;
         try {
           await api.teams.processSend(teamName, msg);
         } catch {

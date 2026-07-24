@@ -6,7 +6,7 @@ import {
 
 import {
   appendMemberWorkSyncAudit,
-  buildMemberWorkSyncPhase2ReadinessAuditFields,
+  buildMemberWorkSyncDeliveryReadinessAuditFields,
 } from './MemberWorkSyncAudit';
 import {
   decideMemberWorkSyncNudgeActivation,
@@ -14,9 +14,9 @@ import {
 } from './MemberWorkSyncNudgeActivationPolicy';
 
 import type {
+  MemberWorkSyncDeliveryReadinessAssessment,
   MemberWorkSyncOutboxEnsureInput,
   MemberWorkSyncOutboxItem,
-  MemberWorkSyncPhase2ReadinessAssessment,
   MemberWorkSyncStatus,
 } from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
@@ -215,7 +215,7 @@ export interface MemberWorkSyncNudgeOutboxPlanResult {
     | 'metrics_unavailable'
     | 'status_not_nudgeable'
     | 'blocking_metrics'
-    | 'phase2_not_ready'
+    | 'delivery_not_ready'
     | 'review_pickup_delivery_unavailable'
     | 'review_pickup_already_delivered_still_stuck'
     | 'review_pickup_delivery_failed_still_stuck'
@@ -526,8 +526,8 @@ export class MemberWorkSyncNudgeOutboxPlanner {
           ? 'blocking_metrics'
           : activation.reason === 'status_not_nudgeable'
             ? 'status_not_nudgeable'
-            : 'phase2_not_ready';
-      await this.appendPlanAudit(status, { planned: false, code }, metrics.phase2Readiness);
+            : 'delivery_not_ready';
+      await this.appendPlanAudit(status, { planned: false, code }, metrics.deliveryReadiness);
       return { planned: false, code };
     }
 
@@ -825,7 +825,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
   private async appendPlanAudit(
     status: MemberWorkSyncStatus,
     result: MemberWorkSyncNudgeOutboxPlanResult,
-    phase2Readiness?: MemberWorkSyncPhase2ReadinessAssessment
+    deliveryReadiness?: MemberWorkSyncDeliveryReadinessAssessment
   ): Promise<void> {
     await appendMemberWorkSyncAudit(this.deps, {
       teamName: status.teamName,
@@ -837,7 +837,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
       actionableCount: status.agenda.items.length,
       reason: result.code,
       ...(status.providerId ? { providerId: status.providerId } : {}),
-      ...buildMemberWorkSyncPhase2ReadinessAuditFields(phase2Readiness),
+      ...buildMemberWorkSyncDeliveryReadinessAuditFields(deliveryReadiness),
       taskRefs: status.agenda.items.map((item) => ({
         taskId: item.taskId,
         displayId: item.displayId,

@@ -1,0 +1,1118 @@
+{
+  "schemaVersion": 1,
+  "artifactId": "P0.W5.SUPPORTING.MUTATION_SURFACE_MANIFEST",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "remediationBaseSha": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+  "derivation": "reviewed disposition manifest maintained independently from the command generator; exhaustive interface members are verified bidirectionally by TypeScript AST extraction",
+  "sourceScopes": [
+    {
+      "sourceFile": "src/shared/types/api.ts",
+      "interfaces": ["TeamsAPI", "CrossTeamAPI", "ReviewAPI"]
+    },
+    {
+      "sourceFile": "src/main/services/team/runtime-control/application/OpenCodeRuntimeControlApi.ts",
+      "interfaces": ["OpenCodeRuntimeControlApi"]
+    }
+  ],
+  "deferredScopes": [
+    {
+      "scope": "ScheduleAPI mutations",
+      "reason": "explicitly deferred outside hosted v1 recovery command catalog"
+    },
+    {
+      "scope": "terminal input/tab/split commands",
+      "reason": "explicitly deferred to terminal boundary work"
+    }
+  ],
+  "rows": [
+    {
+      "id": "TeamsAPI.list",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "list",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getData",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getData",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getTaskChangePresence",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getTaskChangePresence",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.setChangePresenceTracking",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "setChangePresenceTracking",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.setToolActivityTracking",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "setToolActivityTracking",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.setTaskLogStreamTracking",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "setTaskLogStreamTracking",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getClaudeLogs",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getClaudeLogs",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.deleteTeam",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "deleteTeam",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "team.soft_delete"
+    },
+    {
+      "id": "TeamsAPI.restoreTeam",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "restoreTeam",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "team.restore"
+    },
+    {
+      "id": "TeamsAPI.permanentlyDeleteTeam",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "permanentlyDeleteTeam",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "team.permanent_delete"
+    },
+    {
+      "id": "TeamsAPI.getSavedRequest",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getSavedRequest",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.deleteDraft",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "deleteDraft",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "team.draft_delete"
+    },
+    {
+      "id": "TeamsAPI.prepareProvisioning",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "prepareProvisioning",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getWorktreeGitStatus",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getWorktreeGitStatus",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.initializeGitRepository",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "initializeGitRepository",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "workspace-registry",
+      "commandKind": "git.initialize_repository"
+    },
+    {
+      "id": "TeamsAPI.createInitialGitCommit",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "createInitialGitCommit",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "workspace-registry",
+      "commandKind": "git.create_initial_commit"
+    },
+    {
+      "id": "TeamsAPI.createTeam",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "createTeam",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "team.create_draft"
+    },
+    {
+      "id": "TeamsAPI.getProvisioningStatus",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getProvisioningStatus",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getLaunchFailureDiagnostics",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getLaunchFailureDiagnostics",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.cancelProvisioning",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "cancelProvisioning",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "team.cancel_provisioning"
+    },
+    {
+      "id": "TeamsAPI.sendMessage",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "sendMessage",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-messaging",
+      "commandKind": "message.send"
+    },
+    {
+      "id": "TeamsAPI.getOpenCodeRuntimeDeliveryStatus",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getOpenCodeRuntimeDeliveryStatus",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getMessagesPage",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getMessagesPage",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getMemberActivityMeta",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getMemberActivityMeta",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.createTask",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "createTask",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.create"
+    },
+    {
+      "id": "TeamsAPI.getTask",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getTask",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.requestReview",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "requestReview",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.request_review"
+    },
+    {
+      "id": "TeamsAPI.updateKanban",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "updateKanban",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.update_kanban"
+    },
+    {
+      "id": "TeamsAPI.updateKanbanColumnOrder",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "updateKanbanColumnOrder",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "kanban.reorder_column"
+    },
+    {
+      "id": "TeamsAPI.updateTaskStatus",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "updateTaskStatus",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.update_status"
+    },
+    {
+      "id": "TeamsAPI.updateTaskOwner",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "updateTaskOwner",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.update_owner"
+    },
+    {
+      "id": "TeamsAPI.updateTaskFields",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "updateTaskFields",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.update_fields"
+    },
+    {
+      "id": "TeamsAPI.startTask",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "startTask",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.start"
+    },
+    {
+      "id": "TeamsAPI.startTaskByUser",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "startTaskByUser",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.start"
+    },
+    {
+      "id": "TeamsAPI.processSend",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "processSend",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-messaging",
+      "commandKind": "message.send"
+    },
+    {
+      "id": "TeamsAPI.processAlive",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "processAlive",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.aliveList",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "aliveList",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.stop",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "stop",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "team.stop"
+    },
+    {
+      "id": "TeamsAPI.createConfig",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "createConfig",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "team.create_draft"
+    },
+    {
+      "id": "TeamsAPI.getMemberLogs",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getMemberLogs",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getLogsForTask",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getLogsForTask",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getTaskActivity",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getTaskActivity",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getTaskActivityDetail",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getTaskActivityDetail",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getTaskLogStreamSummary",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getTaskLogStreamSummary",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getTaskLogStream",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getTaskLogStream",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getTaskExactLogSummaries",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getTaskExactLogSummaries",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getTaskExactLogDetail",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getTaskExactLogDetail",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getMemberStats",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getMemberStats",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.launchTeam",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "launchTeam",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "team.launch"
+    },
+    {
+      "id": "TeamsAPI.getAllTasks",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getAllTasks",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.updateConfig",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "updateConfig",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "team.config_update"
+    },
+    {
+      "id": "TeamsAPI.addMember",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "addMember",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "member.add"
+    },
+    {
+      "id": "TeamsAPI.replaceMembers",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "replaceMembers",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "member.replace_roster"
+    },
+    {
+      "id": "TeamsAPI.removeMember",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "removeMember",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "member.remove"
+    },
+    {
+      "id": "TeamsAPI.restoreMember",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "restoreMember",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "member.restore"
+    },
+    {
+      "id": "TeamsAPI.updateMemberRole",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "updateMemberRole",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "member.update_role"
+    },
+    {
+      "id": "TeamsAPI.addTaskComment",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "addTaskComment",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.add_comment"
+    },
+    {
+      "id": "TeamsAPI.setTaskClarification",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "setTaskClarification",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.set_clarification"
+    },
+    {
+      "id": "TeamsAPI.getProjectBranch",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getProjectBranch",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.setProjectBranchTracking",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "setProjectBranchTracking",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getAttachments",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getAttachments",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.killProcess",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "killProcess",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-runtime-control",
+      "commandKind": "process.kill"
+    },
+    {
+      "id": "TeamsAPI.getLeadActivity",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getLeadActivity",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getLeadContext",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getLeadContext",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getMemberSpawnStatuses",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getMemberSpawnStatuses",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.getTeamAgentRuntime",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getTeamAgentRuntime",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.retryFailedOpenCodeSecondaryLanes",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "retryFailedOpenCodeSecondaryLanes",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-runtime-control",
+      "commandKind": "member.retry_failed_lanes"
+    },
+    {
+      "id": "TeamsAPI.restartMember",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "restartMember",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "member.restart"
+    },
+    {
+      "id": "TeamsAPI.skipMemberForLaunch",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "skipMemberForLaunch",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-lifecycle",
+      "commandKind": "member.skip_for_launch"
+    },
+    {
+      "id": "TeamsAPI.softDeleteTask",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "softDeleteTask",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.soft_delete"
+    },
+    {
+      "id": "TeamsAPI.restoreTask",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "restoreTask",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.restore"
+    },
+    {
+      "id": "TeamsAPI.getDeletedTasks",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getDeletedTasks",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.showMessageNotification",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "showMessageNotification",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.addTaskRelationship",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "addTaskRelationship",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.relationship_add"
+    },
+    {
+      "id": "TeamsAPI.removeTaskRelationship",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "removeTaskRelationship",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-task-board",
+      "commandKind": "task.relationship_remove"
+    },
+    {
+      "id": "TeamsAPI.saveTaskAttachment",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "saveTaskAttachment",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "agent-attachments",
+      "commandKind": "task.attachment_save"
+    },
+    {
+      "id": "TeamsAPI.getTaskAttachment",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getTaskAttachment",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.deleteTaskAttachment",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "deleteTaskAttachment",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "agent-attachments",
+      "commandKind": "task.attachment_delete"
+    },
+    {
+      "id": "TeamsAPI.onProjectBranchChange",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "onProjectBranchChange",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.onTeamChange",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "onTeamChange",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.onProvisioningProgress",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "onProvisioningProgress",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.respondToToolApproval",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "respondToToolApproval",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-approvals",
+      "commandKind": "approval.decide"
+    },
+    {
+      "id": "TeamsAPI.validateCliArgs",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "validateCliArgs",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.onToolApprovalEvent",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "onToolApprovalEvent",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.updateToolApprovalSettings",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "updateToolApprovalSettings",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-approvals",
+      "commandKind": "approval.policy_update"
+    },
+    {
+      "id": "TeamsAPI.readFileForToolApproval",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "readFileForToolApproval",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "CrossTeamAPI.send",
+      "interfaceName": "CrossTeamAPI",
+      "sourceMethod": "send",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-messaging",
+      "commandKind": "cross_team_message.send"
+    },
+    {
+      "id": "CrossTeamAPI.listTargets",
+      "interfaceName": "CrossTeamAPI",
+      "sourceMethod": "listTargets",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-messaging"
+    },
+    {
+      "id": "CrossTeamAPI.getOutbox",
+      "interfaceName": "CrossTeamAPI",
+      "sourceMethod": "getOutbox",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-messaging"
+    },
+    {
+      "id": "ReviewAPI.getAgentChanges",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "getAgentChanges",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.getTaskChanges",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "getTaskChanges",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.getTeamTaskChangeSummaries",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "getTeamTaskChangeSummaries",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.invalidateTaskChangeSummaries",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "invalidateTaskChangeSummaries",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.getChangeStats",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "getChangeStats",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.getFileContent",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "getFileContent",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.applyDecisions",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "applyDecisions",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-review",
+      "commandKind": "review.apply_decisions"
+    },
+    {
+      "id": "ReviewAPI.executeMutation",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "executeMutation",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.retryMutationRecovery",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "retryMutationRecovery",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.restoreHistory",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "restoreHistory",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.checkConflict",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "checkConflict",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.rejectHunks",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "rejectHunks",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-review",
+      "commandKind": "review.reject_hunks"
+    },
+    {
+      "id": "ReviewAPI.rejectFile",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "rejectFile",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-review",
+      "commandKind": "review.reject_file"
+    },
+    {
+      "id": "ReviewAPI.previewReject",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "previewReject",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.saveEditedFile",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "saveEditedFile",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-review",
+      "commandKind": "review.save_edited_file"
+    },
+    {
+      "id": "ReviewAPI.deleteEditedFile",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "deleteEditedFile",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.restoreRejectedRename",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "restoreRejectedRename",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.reapplyRejectedRename",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "reapplyRejectedRename",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.watchFiles",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "watchFiles",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.unwatchFiles",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "unwatchFiles",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.onExternalFileChange",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "onExternalFileChange",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.loadDecisions",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "loadDecisions",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.saveDecisions",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "saveDecisions",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-review",
+      "commandKind": "review.save_decisions"
+    },
+    {
+      "id": "ReviewAPI.clearDecisions",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "clearDecisions",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-review",
+      "commandKind": "review.clear_decisions"
+    },
+    {
+      "id": "ReviewAPI.loadDecisionConflictCandidates",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "loadDecisionConflictCandidates",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.resolveDecisionConflictCandidate",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "resolveDecisionConflictCandidate",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.loadDraftHistory",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "loadDraftHistory",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.saveDraftHistoryEntry",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "saveDraftHistoryEntry",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.clearDraftHistory",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "clearDraftHistory",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.loadDraftHistoryConflictCandidates",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "loadDraftHistoryConflictCandidates",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.resolveDraftHistoryConflictCandidate",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "resolveDraftHistoryConflictCandidate",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.replaceDraftHistoryConflictCandidate",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "replaceDraftHistoryConflictCandidate",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "deferred",
+      "owner": "team-review",
+      "reason": "hosted HTTP explicitly rejects this mutation and no admitted command descriptor exists"
+    },
+    {
+      "id": "ReviewAPI.onCmdN",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "onCmdN",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "ephemeral",
+      "owner": "team-review"
+    },
+    {
+      "id": "ReviewAPI.getGitFileLog",
+      "interfaceName": "ReviewAPI",
+      "sourceMethod": "getGitFileLog",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-review"
+    },
+    {
+      "id": "OpenCodeRuntimeControlApi.recordOpenCodeRuntimeBootstrapCheckin",
+      "interfaceName": "OpenCodeRuntimeControlApi",
+      "sourceMethod": "recordOpenCodeRuntimeBootstrapCheckin",
+      "sourceFile": "src/main/services/team/runtime-control/application/OpenCodeRuntimeControlApi.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-runtime-control",
+      "commandKind": "runtime.bootstrap_checkin"
+    },
+    {
+      "id": "OpenCodeRuntimeControlApi.deliverOpenCodeRuntimeMessage",
+      "interfaceName": "OpenCodeRuntimeControlApi",
+      "sourceMethod": "deliverOpenCodeRuntimeMessage",
+      "sourceFile": "src/main/services/team/runtime-control/application/OpenCodeRuntimeControlApi.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-runtime-control",
+      "commandKind": "runtime.deliver_message"
+    },
+    {
+      "id": "OpenCodeRuntimeControlApi.recordOpenCodeRuntimeTaskEvent",
+      "interfaceName": "OpenCodeRuntimeControlApi",
+      "sourceMethod": "recordOpenCodeRuntimeTaskEvent",
+      "sourceFile": "src/main/services/team/runtime-control/application/OpenCodeRuntimeControlApi.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-runtime-control",
+      "commandKind": "runtime.task_event"
+    },
+    {
+      "id": "OpenCodeRuntimeControlApi.recordOpenCodeRuntimeHeartbeat",
+      "interfaceName": "OpenCodeRuntimeControlApi",
+      "sourceMethod": "recordOpenCodeRuntimeHeartbeat",
+      "sourceFile": "src/main/services/team/runtime-control/application/OpenCodeRuntimeControlApi.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-runtime-control",
+      "commandKind": "runtime.heartbeat"
+    },
+    {
+      "id": "OpenCodeRuntimeControlApi.answerOpenCodeRuntimePermission",
+      "interfaceName": "OpenCodeRuntimeControlApi",
+      "sourceMethod": "answerOpenCodeRuntimePermission",
+      "sourceFile": "src/main/services/team/runtime-control/application/OpenCodeRuntimeControlApi.ts",
+      "disposition": "deferred",
+      "owner": "team-approvals",
+      "reason": "legacy wrong-direction callback; target is runtime.permission-request ingress plus operator-owned permission.decision outbound"
+    }
+  ]
+}

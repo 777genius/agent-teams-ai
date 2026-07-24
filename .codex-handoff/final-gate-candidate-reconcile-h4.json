@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "taskId": "agent-teams-hosted-web-refactor-final-gate-candidate-reconcile-h4",
+  "workKey": "phase0/final-gate/3bc0dfa7/6be51a/candidate-reconcile/r3",
+  "supersedes": "agent-teams-hosted-web-refactor-final-gate-remediation-h3",
+  "baseSha": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+  "status": "passed",
+  "result": {
+    "diagnosticBaselineClassification": "inherited_source_observed",
+    "diagnosticBaselineCount": 7,
+    "diagnosticDistribution": {
+      "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts": 5,
+      "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts": 1,
+      "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts": 1
+    },
+    "targetedGatePassed": true,
+    "workspaceMilestonePassed": true,
+    "workspaceTypecheckMilestoneInvocationCount": 1,
+    "workspaceTypecheckMilestoneRetryCount": 0,
+    "workspaceStagesExecuted": ["root", "mcp-source", "mcp-tests"],
+    "newDiagnostics": 0,
+    "effectiveDiagnostics": 0
+  },
+  "milestoneEvidence": {
+    "command": "PHASE0_TYPECHECK_TIMEOUT_MS=300000 bash scripts/hosted-web/phase-0/final-gate/run-normalized-typecheck.sh milestone",
+    "attemptCount": 1,
+    "durationMs": 218250,
+    "wallSeconds": 219,
+    "timeoutMsPerStage": 300000,
+    "normalizedReportSha256": "53769bbc62166f27840a74b5495ea14d20fad588dcd456638b952530ad1a97d5",
+    "normalizedReportPath": "docs/research/hosted-web/phase-0/final-gate/milestone-typecheck-report.json",
+    "stages": [
+      {
+        "id": "root",
+        "durationMs": 207899,
+        "rawExitCode": 2,
+        "processDisposition": "exited",
+        "signal": null,
+        "compilerOutputBytes": 1815,
+        "compilerOutputSha256": "46821e45d10298369490fd11ddc4046f16e38a15b0cf4e1c0532e36de26c43aa",
+        "rawCapturePath": "docs/research/hosted-web/phase-0/final-gate/milestone-typecheck.raw.txt"
+      },
+      {
+        "id": "mcp-source",
+        "durationMs": 4362,
+        "rawExitCode": 0,
+        "processDisposition": "exited",
+        "signal": null,
+        "compilerOutputBytes": 0,
+        "compilerOutputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "rawCapturePath": "docs/research/hosted-web/phase-0/final-gate/milestone-typecheck-mcp-source.raw.txt"
+      },
+      {
+        "id": "mcp-tests",
+        "durationMs": 5989,
+        "rawExitCode": 0,
+        "processDisposition": "exited",
+        "signal": null,
+        "compilerOutputBytes": 0,
+        "compilerOutputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "rawCapturePath": "docs/research/hosted-web/phase-0/final-gate/milestone-typecheck-mcp-tests.raw.txt"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "candidate-source-reconciliation",
+      "status": "passed",
+      "result": "fresh candidate reproduction preserved the exact seven-diagnostic normalization"
+    },
+    {
+      "id": "production-runner-dispositions",
+      "status": "passed",
+      "result": "shell-level timeout, signal, and runner-error fixtures all failed closed"
+    },
+    {
+      "id": "workspace-normalized-typecheck",
+      "status": "passed",
+      "result": "the single authorized milestone completed root and both MCP stages with precise exited dispositions"
+    },
+    {
+      "id": "lint-format-shell-json-scope-secret-path-patch",
+      "status": "passed",
+      "result": "all final hygiene and ownership checks passed"
+    }
+  ],
+  "normalizationSafety": {
+    "exactFields": ["file", "line", "column", "code", "complete message"],
+    "repositoryRootCanonicalized": true,
+    "knownDiagnosticConsumedAtMostOnce": true,
+    "removedKnownDiagnosticAcceptedAndReported": true,
+    "newMovedChangedOrDuplicatedDiagnosticFails": true,
+    "compilerCrashSignalTimeoutRunnerErrorUnparsedOutputOrUnsupportedExitFails": true,
+    "abnormalTerminationDispositions": ["timeout", "signal", "runner-error"]
+  },
+  "scopeAttestation": {
+    "phase1Implementation": false,
+    "onlyAuthorizedPathsUsed": true,
+    "realUserProjectsUsed": false,
+    "hostSpecificPathsCommitted": false
+  },
+  "requestedCommitMessage": "fix(hosted-web): regenerate final gate for candidate",
+  "integrationAction": "project controller must apply and commit this worktree diff",
+  "blockers": []
+}

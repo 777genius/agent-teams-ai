@@ -1,0 +1,157 @@
+{
+  "$schema": "./canonical-index.schema.json",
+  "schemaVersion": 1,
+  "indexType": "decision",
+  "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
+  "phaseId": "phase-00",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "currentIntegrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+  "freezeCandidate": {
+    "baseCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+    "status": "accepted-frozen",
+    "integrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e"
+  },
+  "generatedAt": "2026-07-12T10:28:17Z",
+  "decisions": [
+    {
+      "decisionId": "P0.C1.IDENTITY.001",
+      "status": "resolved",
+      "decision": "The controller-owned lane identity index is the sole current identity authority for W1-W6. All lanes share phaseStartSha a32f509e6d9bd31ba2135940e336729bf90c3d93. The accepted and frozen Phase 0 candidate is f4fa24aac9615a4ce10632965a2244a2e11a273e.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.C1.STALE.001",
+      "status": "resolved",
+      "decision": "Historical producer, review, audit, ledger and baseline records remain immutable evidence but no longer supply current lane identity, disposition, decision, integration status, or readiness blockers.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.PHASE_START",
+      "status": "accepted",
+      "decision": "a32f509e6d9bd31ba2135940e336729bf90c3d93 is the one true Phase 0 phaseStartSha. A lane source base, remediation base, review base, predecessor, or eventual freeze commit is never a substitute.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json",
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.W1.ADOPTION",
+      "status": "accepted",
+      "decision": "Adopt W1 v9 at 89c1358925033d480bcfe3bdfee6c899df556431 as the original bundle.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.W1.LATER_BYTES",
+      "status": "narrowed",
+      "decision": "Narrowly adopt the later W1 renderer census and scanner semantics integrated at 0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3. The legacy-bypass artifact remains source-observed; a6bd7a39aebb4d822f57707c96c5e071b2aecb2b integrates its pack-relative raw-output locator and matching scanner bytes without increasing proof level.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/hash-reconciliation.md"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.W2.ADOPTION",
+      "status": "accepted",
+      "decision": "Adopt the approved W2 targeted A1 evidence bundle at 0bf8f2d105def1fa34dd8dedfb8d345d720dc35e while superseding its incorrect phaseStartSha claim.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.W2.LATER_BYTES",
+      "status": "narrowed",
+      "decision": "Narrowly adopt the omission-sensitive W2 environment census integrated at 6d54e7c60d29812de5b96e471761486fbbc0842c. It remains source-observed and does not prove target-image provider behavior or credential canaries.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/hash-reconciliation.md"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.W3_W5.ADOPTION",
+      "status": "narrowed",
+      "decision": "Adopt W3 and W5 evidence as a compatible evidence-only pair; retain all recorded later-phase and final-topology limitations.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json",
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.W5.LATER_BYTES",
+      "status": "narrowed",
+      "decision": "Narrowly adopt the W5 command-ownership and formatting-stable evidence corrections integrated at 5d723407f287767c0f30f3d708459fb943256eaf. They remain Phase 0 evidence and do not implement or authorize hosted recovery.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/hash-reconciliation.md"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.W4_W6.ADOPTION",
+      "status": "narrowed",
+      "decision": "Adopt W4/W6 as characterization only, including W6 artifact authority at c958c872fa22edf9b2d6a0741d7781b00957903c and fail-closed target-image narrowing at 3bc0dfa7c00261785c0c752270cb302a9294e751. Exact-image/profile construction, provider canaries, production composition, and terminal-negative admission remain later implementation risks; they do not require more Phase 0 research.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json",
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.HISTORICAL_PRESERVATION",
+      "status": "accepted",
+      "decision": "No historical file is rewritten. Supersession changes only which controller-owned record is authoritative for current state and interpretation. Historical rejection and hold conclusions cannot become current blockers without a new current decision.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.PHASE0_FREEZE",
+      "status": "accepted",
+      "decision": "Phase 0 is accepted and frozen at f4fa24aac9615a4ce10632965a2244a2e11a273e. The target-image decision at 3bc0dfa7, final gate at 63ff349e, orchestration authority at 1587615c, navigation at f32be6a6, and estimate reconciliation at f4fa24aa resolve the former transition blockers. Remaining limitations are implementation risks owned by later phases.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/acceptance-and-completion.md",
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.PHASE1_AUTHORITY",
+      "status": "narrowed",
+      "decision": "Phase 1 authorization is limited to the serial P1.S0 bootstrap. P1.S1 and every later subphase remain blocked and proposal-only until S0 is integrated and the compact router is explicitly advanced. No product source implementation is authorized by this freeze.",
+      "authorityPaths": [
+        "docs/hosted-web-phases/phase-01/README.md",
+        "docs/hosted-web-phases/phase-01/controller-packet.md",
+        "docs/hosted-web-phases/phase-01/execution-dag.md"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.ORCHESTRATION_AUTHORITY",
+      "status": "accepted",
+      "decision": "Commit 1587615c751c3cb12b5078ab4b7264b6e9fd42ad is the accepted orchestration and evidence-supersession authority inherited by the frozen candidate.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.NAVIGATION_AUTHORITY",
+      "status": "accepted",
+      "decision": "Commit f32be6a6fcb2da7a47ef3553476430ef8052e19a is the accepted bounded navigation contract inherited by the frozen candidate and updated here to route only P1.S0.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json",
+        "docs/hosted-web-phases/EXECUTION_INDEX.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.ESTIMATE_AUTHORITY",
+      "status": "accepted",
+      "decision": "Commit f4fa24aac9615a4ce10632965a2244a2e11a273e is the accepted estimate authority: 38,300-62,100 gross non-terminal v1 changed lines, with the upper endpoint and controller allocations retained as implementation planning risks.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json",
+        "docs/research/hosted-web/phase-0/estimate-reconciliation/estimate-ledger.json"
+      ]
+    }
+  ]
+}

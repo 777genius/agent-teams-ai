@@ -1116,6 +1116,82 @@ describe('review IPC path confinement', () => {
     ).resolves.toEqual({ success: true, data: null });
   });
 
+  it('serializes decision and draft-history writes through the shared logical-scope lock', async () => {
+    let releaseAuthorization!: (
+      value: Awaited<ReturnType<typeof extractor.getAgentChanges>>
+    ) => void;
+    const blockedAuthorization = new Promise<Awaited<ReturnType<typeof extractor.getAgentChanges>>>(
+      (resolve) => {
+        releaseAuthorization = resolve;
+      }
+    );
+    const authoritativeChanges = {
+      files: [
+        {
+          filePath: projectFile,
+          relativePath: 'src/project.ts',
+          snippets: [],
+          linesAdded: 1,
+          linesRemoved: 1,
+          isNewFile: false,
+        },
+      ],
+    };
+    extractor.getAgentChanges
+      .mockImplementationOnce(() => blockedAuthorization)
+      .mockResolvedValue(authoritativeChanges);
+    const scopeToken = 'agent:worker:content:shared-draft-lock';
+    const decisionWrite = ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeToken,
+      { [`${projectFile}:0`]: 'accepted' },
+      {},
+      null,
+      [
+        {
+          id: 'shared-lock-action',
+          createdAt: '2026-07-23T10:00:00.000Z',
+          kind: 'hunk',
+          action: { filePath: projectFile, originalIndex: 0 },
+        },
+      ],
+      0
+    );
+    await vi.waitFor(() => expect(extractor.getAgentChanges).toHaveBeenCalledTimes(1));
+
+    const draftWrite = ipcMain.invoke(
+      REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
+      'safe-team',
+      'agent-worker',
+      scopeToken,
+      {
+        filePath: projectFile,
+        codec: 'codemirror-history-v1',
+        revision: 1,
+        diskBaseline: 'project\n',
+        editorState: {
+          doc: 'project edited\n',
+          history: { done: [], undone: [] },
+        },
+      },
+      0,
+      null
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(extractor.getAgentChanges).toHaveBeenCalledTimes(1);
+
+    releaseAuthorization(authoritativeChanges);
+    await expect(decisionWrite).resolves.toEqual({ success: true, data: { revision: 1 } });
+    await expect(draftWrite).resolves.toMatchObject({
+      success: true,
+      data: { filePath: projectFile, revision: 1 },
+    });
+    expect(extractor.getAgentChanges).toHaveBeenCalledTimes(2);
+  });
+
   it('refuses destructive recovery after another window replaces unreadable state', async () => {
     const scopeKey = 'agent-worker';
     const scopeToken = 'agent:worker:content:recovery-race';

@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "phase-00-w2-fake-runtime-matrix-r1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "evidenceId",
+    "phaseStartSha",
+    "authoredBy",
+    "validatedBy",
+    "claimStatus",
+    "records",
+    "proofContract"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "./schemas/fake-runtime-fixture-matrix.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "evidenceId": {
+      "const": "P0.W2.RUNTIME_SCANNER"
+    },
+    "phaseStartSha": {
+      "const": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+    },
+    "authoredBy": {
+      "const": "phase-00-remediation-w2-final-r1-source-review"
+    },
+    "validatedBy": {
+      "const": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts"
+    },
+    "claimStatus": {
+      "const": "source_observed_not_target_verified"
+    },
+    "records": {
+      "type": "array",
+      "minItems": 13,
+      "maxItems": 13,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "case",
+          "currentFixturePath",
+          "positiveFixturePath",
+          "negativeFixturePath",
+          "positiveProof",
+          "negativeControl",
+          "proofLevel",
+          "remainingTargetHostGap",
+          "executableProof"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "case": {
+            "enum": [
+              "homogeneous_anthropic",
+              "homogeneous_codex",
+              "homogeneous_gemini",
+              "homogeneous_opencode",
+              "mixed_provider_team",
+              "missing_runtime",
+              "missing_auth",
+              "unsupported_backend",
+              "malformed_capability_response",
+              "process_timeout",
+              "partial_launch",
+              "restart_adoption",
+              "opencode_secondary_lane_recovery"
+            ]
+          },
+          "currentFixturePath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "positiveFixturePath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "negativeFixturePath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "positiveProof": {
+            "type": "string",
+            "minLength": 1
+          },
+          "negativeControl": {
+            "type": "string",
+            "minLength": 1
+          },
+          "proofLevel": {
+            "enum": ["fixture_characterized", "source_observed", "explicit_gap"]
+          },
+          "remainingTargetHostGap": {
+            "type": "string",
+            "minLength": 1
+          },
+          "executableProof": {
+            "type": "object",
+            "required": [
+              "runner",
+              "seam",
+              "testFile",
+              "positiveTestId",
+              "failingNegativeTestId",
+              "positiveObservable",
+              "failingNegativeObservable",
+              "authority"
+            ],
+            "properties": {
+              "runner": {
+                "const": "vitest_canonical_runtime_seams_v1"
+              },
+              "seam": {
+                "enum": [
+                  "planner",
+                  "preflight",
+                  "adapter",
+                  "capability_response_parser",
+                  "recovery"
+                ]
+              },
+              "testFile": {
+                "const": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts"
+              },
+              "positiveTestId": {
+                "type": "string",
+                "pattern": "^w2\\.fake-runtime\\.[a-z0-9_]+\\.positive$"
+              },
+              "failingNegativeTestId": {
+                "type": "string",
+                "pattern": "^w2\\.fake-runtime\\.[a-z0-9_]+\\.failing-negative$"
+              },
+              "positiveObservable": {
+                "type": "string",
+                "minLength": 1
+              },
+              "failingNegativeObservable": {
+                "type": "string",
+                "minLength": 1
+              },
+              "authority": {
+                "type": "object",
+                "required": ["path", "token"],
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "token": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "proofContract": {
+      "type": "object",
+      "required": ["runner", "execution", "independence", "targetVerification"],
+      "properties": {
+        "runner": {
+          "const": "vitest_canonical_runtime_seams_v1"
+        },
+        "execution": {
+          "type": "string",
+          "minLength": 1
+        },
+        "independence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targetVerification": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -21,6 +21,7 @@ import {
 import {
   type LaunchStateWriteOptions,
   type LaunchStateWriteResult,
+  type PendingOpenCodePrimaryCleanup,
 } from './TeamProvisioningLaunchStateStoreBoundary';
 import { type TeamProvisioningLiveLaunchSnapshotBoundary } from './TeamProvisioningLiveLaunchSnapshotBoundaryFactory';
 import { MEMBER_LAUNCH_GRACE_MS } from './TeamProvisioningMemberSpawnStatusPolicy';
@@ -109,6 +110,9 @@ export interface TeamProvisioningLaunchStateCompatibilityBoundary<
     options?: LaunchStateWriteOptions
   ): Promise<LaunchStateWriteResult>;
   isLaunchStateNoopRefreshDue(snapshot: PersistedTeamLaunchSnapshot): boolean;
+  readPendingOpenCodePrimaryCleanups(teamId: string): Promise<PendingOpenCodePrimaryCleanup[]>;
+  appendPendingOpenCodePrimaryCleanup(cleanup: PendingOpenCodePrimaryCleanup): Promise<void>;
+  consumePendingOpenCodePrimaryCleanup(cleanup: PendingOpenCodePrimaryCleanup): Promise<boolean>;
   enqueueLaunchStateStoreOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   getMemberLaunchSummary(run: TRun): PersistedTeamLaunchSummary;
   buildAggregatePendingLaunchMessage(
@@ -182,6 +186,9 @@ export interface TeamProvisioningLaunchStateCompatibilityServiceHost<
     | 'writeLaunchStateSnapshot'
     | 'writeLaunchStateSnapshotNow'
     | 'isLaunchStateNoopRefreshDue'
+    | 'readPendingOpenCodePrimaryCleanups'
+    | 'appendPendingOpenCodePrimaryCleanup'
+    | 'consumePendingOpenCodePrimaryCleanup'
     | 'enqueueLaunchStateStoreOperation'
     | 'persistLaunchStateSnapshot'
     | 'persistLaunchStateSnapshotNow'
@@ -313,6 +320,18 @@ export function createTeamProvisioningLaunchStateCompatibilityBoundaryFromServic
 
     isLaunchStateNoopRefreshDue(snapshot) {
       return service.persistenceReconcileFacade.isLaunchStateNoopRefreshDue(snapshot);
+    },
+
+    readPendingOpenCodePrimaryCleanups(teamId) {
+      return service.persistenceReconcileFacade.readPendingOpenCodePrimaryCleanups(teamId);
+    },
+
+    appendPendingOpenCodePrimaryCleanup(cleanup) {
+      return service.persistenceReconcileFacade.appendPendingOpenCodePrimaryCleanup(cleanup);
+    },
+
+    consumePendingOpenCodePrimaryCleanup(cleanup) {
+      return service.persistenceReconcileFacade.consumePendingOpenCodePrimaryCleanup(cleanup);
     },
 
     enqueueLaunchStateStoreOperation(teamName, operation) {
@@ -545,6 +564,24 @@ export abstract class TeamProvisioningLaunchStateCompatibilityFacade<
 
   protected isLaunchStateNoopRefreshDue(snapshot: PersistedTeamLaunchSnapshot): boolean {
     return this.launchStateCompatibilityBoundary.isLaunchStateNoopRefreshDue(snapshot);
+  }
+
+  protected readPendingOpenCodePrimaryCleanups(
+    teamId: string
+  ): Promise<PendingOpenCodePrimaryCleanup[]> {
+    return this.launchStateCompatibilityBoundary.readPendingOpenCodePrimaryCleanups(teamId);
+  }
+
+  protected appendPendingOpenCodePrimaryCleanup(
+    cleanup: PendingOpenCodePrimaryCleanup
+  ): Promise<void> {
+    return this.launchStateCompatibilityBoundary.appendPendingOpenCodePrimaryCleanup(cleanup);
+  }
+
+  protected consumePendingOpenCodePrimaryCleanup(
+    cleanup: PendingOpenCodePrimaryCleanup
+  ): Promise<boolean> {
+    return this.launchStateCompatibilityBoundary.consumePendingOpenCodePrimaryCleanup(cleanup);
   }
 
   protected enqueueLaunchStateStoreOperation<T>(

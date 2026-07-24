@@ -172,11 +172,5 @@ export class RuntimeControlService {
 function buildLaneWriteFenceKey(
   command: RuntimeDeliverMessageCommand | RuntimePermissionAnswerCommand
 ): string {
-  return JSON.stringify([
-    command.kind,
-    command.providerId,
-    command.teamName,
-    command.laneId,
-    command.runId,
-  ]);
+  return JSON.stringify([command.providerId, command.teamName, command.laneId, command.runId]);
 }

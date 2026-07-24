@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 const ADVERSARIAL_ARGS = [
   'TOKEN={"k":"x&echo INJECTED|rem ","pct":"%PATH%","bang":"!PATH!"}',
   '',
+  // eslint-disable-next-line sonarjs/publicly-writable-directories -- Synthetic argv value; the echo fixture never uses it as a filesystem path.
   'C:\\temp\\',
 ];
 
@@ -109,7 +110,12 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
   it('preserves safe argv through batch parameter modifiers', async () => {
     const fixture = createWindowsArgvFixture();
     const launcherPath = path.join(fixture.root, 'parameter launcher.cmd');
-    const safeArgs = ['safe value', '', 'C:\\temp\\'];
+    const safeArgs = [
+      'safe value',
+      '',
+      // eslint-disable-next-line sonarjs/publicly-writable-directories -- Synthetic argv value; the echo fixture never uses it as a filesystem path.
+      'C:\\temp\\',
+    ];
     writeFileSync(
       launcherPath,
       '@echo off\r\n"%~dp0Node Runtime.exe" "%~dp0echo-args.cjs" "%~1" "%~2" "%~3"\r\n',

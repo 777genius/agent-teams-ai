@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 2,
+  "phaseId": "phase-00",
+  "reviewId": "w3-w5-remediation-reciprocal-v2",
+  "packetRevision": "phase-00-r2",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "reviewBaseSha": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+  "status": "adopt_w3_remediate_w5",
+  "evidencePath": "docs/research/hosted-web/phase-0/reciprocal-reviews/w3-w5.md",
+  "producerReviews": [
+    {
+      "laneId": "w3",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w3-v1",
+      "producerWorktree": "phase-00-remediation-w3-v1",
+      "registryState": "done",
+      "actualDirtyPathCount": 16,
+      "decision": "adopt",
+      "findingResolution": {
+        "RW35-001": "resolved",
+        "RW35-006": "resolved"
+      },
+      "approvedFiles": [
+        ".codex-handoff/phase-00-w3.json",
+        "docs/research/hosted-web/phase-0/state-writers/backup-behavior.json",
+        "docs/research/hosted-web/phase-0/state-writers/estimate-input.json",
+        "docs/research/hosted-web/phase-0/state-writers/evidence.schema.json",
+        "docs/research/hosted-web/phase-0/state-writers/index.md",
+        "docs/research/hosted-web/phase-0/state-writers/schema-unknown-fields.json",
+        "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-results.json",
+        "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.md",
+        "docs/research/hosted-web/phase-0/state-writers/state-family-catalog.json",
+        "docs/research/hosted-web/phase-0/state-writers/writer-coordination.json",
+        "scripts/hosted-web/phase-0/state-writers/external-writer-negative-fixture.mjs",
+        "scripts/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.mjs",
+        "scripts/hosted-web/phase-0/state-writers/verify-evidence.mjs",
+        "test/architecture/hosted-web/phase-0/state-writers/fixtures/invalid-state-family-catalog.json",
+        "test/architecture/hosted-web/phase-0/state-writers/state-writers.test.mjs",
+        "test/architecture/hosted-web/phase-0/state-writers/team-backup-service-faults.test.mjs"
+      ],
+      "heldFiles": [],
+      "requiredCorrection": null
+    },
+    {
+      "laneId": "w5",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w5-v1",
+      "producerWorktree": "phase-00-remediation-w5-v1",
+      "registryState": "missing_latest_result_stale_running_progress_dead_pid",
+      "actualDirtyPathCount": 17,
+      "decision": "remediate",
+      "findingResolution": {
+        "RW35-002": "partial_snapshot_resolved_effect_recovery_open",
+        "RW35-003": "resolved_semantically",
+        "RW35-004": "resolved",
+        "RW35-005": "partial_descriptor_separation_present_census_completeness_open",
+        "RW35-006": "open"
+      },
+      "approvedFiles": [
+        "docs/research/hosted-web/phase-0/recovery-events/event-cursor-inventory.json",
+        "docs/research/hosted-web/phase-0/recovery-events/snapshot-handoff-scheduler.json",
+        "docs/research/hosted-web/phase-0/recovery-events/fingerprint-goldens.json",
+        "docs/research/hosted-web/phase-0/recovery-events/estimate-input.json"
+      ],
+      "heldFiles": [
+        ".codex-handoff/phase-00-w5.json",
+        "docs/research/hosted-web/phase-0/recovery-events/README.md",
+        "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
+        "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
+        "docs/research/hosted-web/phase-0/recovery-events/evidence.schema.json",
+        "docs/research/hosted-web/phase-0/recovery-events/index.json",
+        "docs/research/hosted-web/phase-0/recovery-events/index.schema.json",
+        "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json",
+        "docs/research/hosted-web/phase-0/recovery-events/mutation-census.schema.json",
+        "scripts/hosted-web/phase-0/recovery-events/generate-evidence.mjs",
+        "scripts/hosted-web/phase-0/recovery-events/model.mjs",
+        "test/architecture/hosted-web/phase-0/recovery-events/fixtures/invalid-command-catalog.json",
+        "test/architecture/hosted-web/phase-0/recovery-events/recovery-events.test.mjs"
+      ],
+      "requiredCorrection": "Make effect recovery terminate and reload through a fresh runner with exact boundary-state assertions; provide an independently complete mutation/member disposition census plus omitted-row and omitted-descriptor negative fixtures; regenerate the 17-path handoff/result; fix the two whitespace errors."
+    }
+  ],
+  "findings": [
+    {
+      "id": "R35-R2-001",
+      "laneId": "w5",
+      "severity": "high",
+      "path": "scripts/hosted-web/phase-0/recovery-events/model.mjs",
+      "line": 362,
+      "affectedPriorFindings": ["RW35-002"],
+      "summary": "Effect recovery snapshots and labels a crash but invokes recover inside the same closure and then continues the pre-crash execution path; tests do not assert exact fresh-run state/effect counts at every boundary."
+    },
+    {
+      "id": "R35-R2-002",
+      "laneId": "w5",
+      "severity": "high",
+      "path": "scripts/hosted-web/phase-0/recovery-events/generate-evidence.mjs",
+      "line": 93,
+      "affectedPriorFindings": ["RW35-005"],
+      "summary": "A generator-local census now catches descriptor deletion while its row remains, but no independent source extraction/full disposition matrix or omitted-row/descriptor negative fixture can detect a missing census obligation."
+    },
+    {
+      "id": "R35-R2-003",
+      "laneId": "w5",
+      "severity": "medium",
+      "path": ".codex-handoff/phase-00-w5.json",
+      "line": 6,
+      "affectedPriorFindings": ["RW35-006"],
+      "summary": "No latest result exists; progress is stale running with a dead PID; the old handoff lists 15 of 17 current files and contains no remediation resolutions or valid untracked-file check."
+    },
+    {
+      "id": "R35-R2-004",
+      "laneId": "w5",
+      "severity": "low",
+      "path": ".codex-handoff/phase-00-w5.json",
+      "line": 109,
+      "secondaryPath": "test/architecture/hosted-web/phase-0/recovery-events/fixtures/invalid-command-catalog.json",
+      "secondaryLine": 20,
+      "affectedPriorFindings": ["RW35-006"],
+      "summary": "No-index diff checking reports a new blank line at EOF in two W5 files."
+    }
+  ],
+  "changedFileCensus": {
+    "w3": {
+      "count": 16,
+      "allUntracked": true,
+      "statusEqualsProducerResultList": true,
+      "outOfScopePaths": []
+    },
+    "w5": {
+      "count": 17,
+      "allUntracked": true,
+      "handoffListedCount": 15,
+      "handoffOmissions": [
+        "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json",
+        "docs/research/hosted-web/phase-0/recovery-events/mutation-census.schema.json"
+      ],
+      "outOfScopePaths": []
+    }
+  },
+  "semanticOverlap": [
+    {
+      "topic": "writer_truth_controls_recovery",
+      "status": "reconciled_fail_closed",
+      "w3Evidence": "Current task/config/native-inbox and selected runtime writers remain uncoordinated, quiescent-only, or incompletely observed.",
+      "w5Evidence": "All 103 individual effects set automaticRecoveryAdmitted=false; task/messaging operation-ID candidates are currently non_reconcilable/operator_required."
+    },
+    {
+      "topic": "future_sqlite_transaction_seam",
+      "status": "fixture_characterized_not_target_verified",
+      "w3Evidence": "Current-host Online Backup and single-worker shape do not prove final ABI, production async wire, keyring preservation, or deployment quiescence.",
+      "w5Evidence": "transactional_local effects remain operator_required_until_transaction_exists."
+    },
+    {
+      "topic": "estimate",
+      "status": "deduplicate",
+      "w3Evidence": "4500-7250 changed lines",
+      "w5Evidence": "4500-7500 changed lines",
+      "controllerAction": "Count shared command/event/storage/backup/keyring work once under EST-RECOVERY-STATE."
+    },
+    {
+      "topic": "final_topology",
+      "status": "outside_remediation_proof",
+      "controllerAction": "Keep production worker wiring, final ABI, drain, recovery publication, and credential/keyring preservation as W6/controller gates."
+    }
+  ],
+  "registryEvidence": [
+    {
+      "laneId": "w3",
+      "kind": "job",
+      "sha256": "bd707941a3e7642e622ce766146b618d1425aa30b369677620b67c076054ef11"
+    },
+    {
+      "laneId": "w3",
+      "kind": "latest_result",
+      "state": "done",
+      "sha256": "22174cfea16eb4d8d9a5bb18c39ebb46ef29e201cd299ccd16632275f03b3824"
+    },
+    {
+      "laneId": "w5",
+      "kind": "job",
+      "sha256": "af9c3140521615089fefd1b40fd921efa87eb54053e84b9a746ebfbac4eabe56"
+    },
+    {
+      "laneId": "w5",
+      "kind": "progress",
+      "state": "stale_running_dead_pid_no_latest_result",
+      "sha256": "ce004b8ba50ce2cbeb0e9e3457f7df633ccee884847a7b9bec1918b6d474ce2e"
+    }
+  ],
+  "checks": [
+    {
+      "laneId": "w3",
+      "command": "node --import tsx team-backup-service-faults.test.mjs; sqlite spike; external-writer fixture; evidence verifier; state-writers architecture test",
+      "exitCode": 0,
+      "result": "7 production-service tests/12 cases; WAL active; 2000 rows; integrity ok; lostExternalUpdate=true; evidence verified"
+    },
+    {
+      "laneId": "w5",
+      "command": "node generate-evidence.mjs --check; node recovery-events.test.mjs",
+      "exitCode": 0,
+      "result": "9 evidence/supporting files verified; 7 tests passed; findings identify coverage limitations"
+    },
+    {
+      "laneId": "w3-w5",
+      "command": "targeted ESLint fast configuration with --no-cache over all owned MJS files",
+      "exitCode": 0
+    },
+    {
+      "laneId": "w3",
+      "command": "git diff --no-index --check /dev/null over each of 16 dirty files",
+      "exitCode": 0
+    },
+    {
+      "laneId": "w5",
+      "command": "git diff --no-index --check /dev/null over each of 17 dirty files",
+      "exitCode": 1,
+      "result": "two new blank-line-at-EOF findings"
+    },
+    {
+      "laneId": "w3-w5",
+      "command": "bounded private-key/provider-token/Bearer/absolute-home scan over every dirty file",
+      "exitCode": 0
+    }
+  ],
+  "scopeAudit": {
+    "producerEditsByReviewer": false,
+    "reviewChangedPaths": [
+      ".codex-handoff/phase-00-review-w3-w5.json",
+      "docs/research/hosted-web/phase-0/reciprocal-reviews/w3-w5.md"
+    ],
+    "broadOrFinalGateRun": false,
+    "phase1Implemented": false,
+    "terminalImplemented": false,
+    "integrationPerformed": false,
+    "committed": false,
+    "pushed": false
+  },
+  "blockers": [],
+  "nextAction": "Adopt all 16 W3 files; return W5 for R35-R2-001 through R35-R2-004; optionally adopt only the four explicitly approved W5 evidence records if controller policy permits partial evidence from a remediating lane; then repeat focused reciprocal review."
+}

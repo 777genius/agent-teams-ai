@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "canonicalHead": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+  "status": "updated_base_source_classified_and_targeted_verified",
+  "priorBaseline": {
+    "baseSha": "42ec333848e29e97c41699b9fed73ed199740e3f",
+    "reviewDecision": "REJECT",
+    "usableFinding": "Historical only; no report or runtime result from this superseded base is current evidence for the candidate."
+  },
+  "baselineSourceClassification": {
+    "classification": "inherited_source_observed",
+    "classificationBasis": "All three diagnostic-bearing source blobs are byte-identical between the superseded base and integration candidate, and a fresh targeted compiler run at the candidate reproduced the exact seven tuples.",
+    "sourceBlobs": [
+      {
+        "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+        "priorBlob": "f876c667faef5870b59fd1ab896151b223e30441",
+        "updatedBaseBlob": "f876c667faef5870b59fd1ab896151b223e30441",
+        "diagnosticCount": 5
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+        "priorBlob": "91cf2560b416e14c0f8a7d60d92a6a3ccf83ce12",
+        "updatedBaseBlob": "91cf2560b416e14c0f8a7d60d92a6a3ccf83ce12",
+        "diagnosticCount": 1
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+        "priorBlob": "cacd88f7d9b3e34b583a99be96f7a7587f2fb0d2",
+        "updatedBaseBlob": "cacd88f7d9b3e34b583a99be96f7a7587f2fb0d2",
+        "diagnosticCount": 1
+      }
+    ]
+  },
+  "unchangedRootTypecheckInputs": [
+    {
+      "path": "tsconfig.json",
+      "priorBlob": "2a0d056bbb0795556bb9009bc736d7402c028ecf",
+      "updatedBaseBlob": "2a0d056bbb0795556bb9009bc736d7402c028ecf"
+    },
+    {
+      "path": "package.json",
+      "priorBlob": "2917eb28b1bf05d50109fb605b392b7396f93782",
+      "updatedBaseBlob": "2917eb28b1bf05d50109fb605b392b7396f93782"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "priorBlob": "3c72d1fa1a24bc8771424781bf0802e8f9ae3229",
+      "updatedBaseBlob": "3c72d1fa1a24bc8771424781bf0802e8f9ae3229"
+    }
+  ],
+  "freshTargetedObservation": {
+    "command": "bash scripts/hosted-web/phase-0/final-gate/run-normalized-typecheck.sh targeted",
+    "durationMs": 8799,
+    "rawExitCode": 2,
+    "compilerOutputBytes": 1815,
+    "compilerOutputSha256": "46821e45d10298369490fd11ddc4046f16e38a15b0cf4e1c0532e36de26c43aa",
+    "observedDiagnosticCount": 7,
+    "normalizedInheritedCount": 7,
+    "resolvedInheritedCount": 0,
+    "unexpectedDiagnosticCount": 0,
+    "effectiveDiagnosticCount": 0
+  },
+  "scopeBoundary": {
+    "targetedProof": "The exact inherited diagnostic set is source-observed at the updated base.",
+    "notClaimed": "The targeted run does not cover the updated base's complete TypeScript workspace and is not a substitute for the one three-stage workspace milestone invocation."
+  }
+}

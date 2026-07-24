@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "taskId": "agent-teams-hosted-web-refactor-phase-00-audit-cross-lane-v2",
+  "auditId": "P0.AUDIT.CROSS_LANE.V2",
+  "packetRevision": "phase-00-r2",
+  "auditHeadSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "remediationBaseSha": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+  "status": "characterized_w3_pair_accepted_no_integration_performed",
+  "artifacts": [
+    {
+      "id": "P0.AUDIT.CROSS_LANE.V2.MANIFEST",
+      "path": "docs/research/hosted-web/phase-0/audits/cross-lane-v2/approved-files-conflict-risk-manifest.json"
+    },
+    {
+      "id": "P0.AUDIT.CROSS_LANE.V2.REPORT",
+      "path": "docs/research/hosted-web/phase-0/audits/cross-lane-v2/README.md"
+    }
+  ],
+  "disposition": {
+    "immediatelyAdoptableFiles": 0,
+    "pairAcceptedBundleFiles": 16,
+    "selectiveEvidenceApprovedFiles": 20,
+    "evidenceApprovedButHeldFiles": 36,
+    "laneResults": {
+      "w1": "reject_remediation_as_a_set",
+      "w2": "partial_evidence_approval_hold_lane",
+      "w3": "pair_accepted_all_16_controller_policy_eligible",
+      "w4": "reject_incomplete_remediation",
+      "w5": "reject_remediation_as_a_set",
+      "w6": "reject_remediation_as_a_set"
+    }
+  },
+  "remediationPairReviews": [
+    {
+      "pair": "w1-w2",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-review-w1-w2-v3",
+      "status": "completed_remediate_both",
+      "approvedFiles": 9
+    },
+    {
+      "pair": "w3-w5",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-review-w3-w5-v2",
+      "status": "completed_adopt_w3_remediate_w5",
+      "approvedFiles": 20
+    },
+    {
+      "pair": "w4-w6",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-review-w4-w6-v2",
+      "status": "completed_remediate_both",
+      "approvedFiles": 7
+    }
+  ],
+  "criticalConflicts": [
+    "P0.V2.CONFLICT.W4_W6.DRAIN_SCHEMA",
+    "P0.V2.CONFLICT.W4_W6.ARTIFACT_CONTRACT",
+    "P0.V2.CONFLICT.W1_W2_W5.ACTION_OWNERSHIP"
+  ],
+  "checks": [
+    {
+      "scope": "w1",
+      "result": "failed exhaustive coverage: 649 additional team-component interaction sites outside claimed composition set"
+    },
+    {
+      "scope": "w2",
+      "exitCode": 0,
+      "result": "scanner passed locally; corrected review found eight classified-key omissions and three missing provider proofs"
+    },
+    {
+      "scope": "w3",
+      "exitCode": 0,
+      "result": "7 TeamBackupService tests, evidence verifier and state-writers test passed"
+    },
+    {
+      "scope": "w4",
+      "exitCode": 0,
+      "result": "current-host probe passed as characterization; corrected review found stale W4 Vitest failure and reusable PGID risk"
+    },
+    {
+      "scope": "w5",
+      "exitCode": 0,
+      "result": "evidence freshness and 7 tests passed at scope; fresh recovery-machine, ownership/direction, census, handoff and whitespace findings remain"
+    },
+    {
+      "scope": "w6",
+      "exitCode": 0,
+      "result": "revocation restart and local verifier passed; W4/W6 contracts incompatible and corrected-review targeted lint fails"
+    },
+    {
+      "scope": "audit_artifacts",
+      "exitCode": 0,
+      "result": "JSON parsed; 36 approved producer hashes, prior-audit hashes and corrected pair-report hashes verified; unique orders/paths and manifest counts asserted; Prettier and no-index whitespace checks passed"
+    }
+  ],
+  "producerPreservation": {
+    "allProducerWorktreesPreserved": true,
+    "allReviewWorktreesPreserved": true,
+    "dirtyOutputsInspectedDirectly": true
+  },
+  "scopeExclusions": {
+    "integrationPerformed": false,
+    "pushPerformed": false,
+    "broadOrFinalGateRun": false,
+    "phase1Implemented": false,
+    "terminalImplemented": false,
+    "realProjectOrProviderUsed": false
+  },
+  "nextAction": "controller_may_offer_exact_16_file_w3_bundle_to_policy_lifecycle; resume_other_incomplete_producers_in_place, resolve_cross_lane_contracts, then repeat_exact_hash_pair_reviews"
+}

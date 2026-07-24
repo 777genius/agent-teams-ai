@@ -1,0 +1,406 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-teams.local/schemas/phase-00-w5-evidence.schema.json",
+  "title": "Phase 0 W5 evidence",
+  "type": "object",
+  "required": ["schemaVersion", "evidenceId"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "evidenceId": {
+      "enum": [
+        "P0.W5.EVENT_CURSOR_INVENTORY",
+        "P0.W5.SNAPSHOT_HANDOFF_SCHEDULER",
+        "P0.W5.COMMAND_CATALOG",
+        "P0.W5.EFFECT_RECOVERY_MATRIX",
+        "P0.W5.FINGERPRINT_GOLDENS",
+        "P0.W5.ESTIMATE"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "evidenceId": { "const": "P0.W5.EVENT_CURSOR_INVENTORY" } } },
+      "then": {
+        "required": ["observedAtSha", "surfaces", "requiredTargetContract", "conclusion"],
+        "properties": {
+          "observedAtSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+          "surfaces": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "source",
+                "producer",
+                "consumer",
+                "cursor",
+                "durability",
+                "replay",
+                "scope",
+                "finding"
+              ]
+            }
+          },
+          "requiredTargetContract": {
+            "type": "object",
+            "required": ["cursor", "snapshot", "delivery", "reducer", "externalFiles"]
+          },
+          "conclusion": { "type": "string" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "evidenceId": { "const": "P0.W5.SNAPSHOT_HANDOFF_SCHEDULER" } } },
+      "then": {
+        "required": [
+          "model",
+          "exploredScheduleCount",
+          "pauses",
+          "schedules",
+          "negativeControls",
+          "conclusion"
+        ],
+        "properties": {
+          "exploredScheduleCount": { "type": "integer", "minimum": 1 },
+          "pauses": { "type": "array", "minItems": 12 },
+          "schedules": {
+            "type": "array",
+            "minItems": 288,
+            "items": {
+              "type": "object",
+              "required": [
+                "algorithm",
+                "mutationPause",
+                "crashPause",
+                "restartCount",
+                "durableBeforeCrash",
+                "durableAfterRestart",
+                "converged",
+                "gap",
+                "duplicates",
+                "finalRevision",
+                "authoritativeRevision",
+                "mutationCommitTransitions",
+                "trace"
+              ],
+              "properties": {
+                "restartCount": { "const": 1 },
+                "converged": { "const": true },
+                "gap": { "const": false },
+                "mutationCommitTransitions": { "type": "array", "minItems": 2, "maxItems": 2 }
+              }
+            }
+          },
+          "negativeControls": { "type": "array", "minItems": 2 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "evidenceId": { "const": "P0.W5.COMMAND_CATALOG" } } },
+      "then": {
+        "required": ["scope", "descriptorDefaults", "coverage", "commands"],
+        "properties": {
+          "coverage": {
+            "type": "object",
+            "required": [
+              "censusArtifact",
+              "censusDerivation",
+              "dispositionManifest",
+              "requiredMutationMethods",
+              "observedSurfaceCount",
+              "observedMethodCount",
+              "dispositionCounts",
+              "sourceFiles",
+              "sourceToManifestComplete",
+              "manifestToSourceComplete",
+              "exactlyOnceMapped",
+              "noCatalogMethodOutsideRequiredDisposition",
+              "ownerAgreement",
+              "crossLaneOwnership"
+            ],
+            "properties": {
+              "censusArtifact": { "const": "mutation-census.json" },
+              "sourceToManifestComplete": { "const": true },
+              "manifestToSourceComplete": { "const": true },
+              "exactlyOnceMapped": { "const": true },
+              "noCatalogMethodOutsideRequiredDisposition": { "const": true },
+              "ownerAgreement": { "const": true },
+              "crossLaneOwnership": {
+                "type": "object",
+                "required": [
+                  "authorityArtifact",
+                  "authorityEvidenceId",
+                  "comparedRequiredW1W5Members",
+                  "missingW1Rows",
+                  "ownerMismatches",
+                  "ownerAgreement"
+                ],
+                "properties": {
+                  "authorityArtifact": {
+                    "const": "docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json"
+                  },
+                  "authorityEvidenceId": { "const": "P0.W1.API_PARITY_LEDGER" },
+                  "comparedRequiredW1W5Members": { "type": "integer", "minimum": 1 },
+                  "missingW1Rows": { "const": 0 },
+                  "ownerMismatches": { "const": 0 },
+                  "ownerAgreement": { "const": true }
+                }
+              }
+            }
+          },
+          "commands": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "commandKind",
+                "featureOwner",
+                "sourceMethods",
+                "inputSchemaVersion",
+                "fingerprintVersion",
+                "idempotencyScope",
+                "retentionClass",
+                "normalizedIntentFields",
+                "fingerprintRecordFields",
+                "effects"
+              ],
+              "properties": {
+                "effects": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "effectOwner",
+                      "effectRole",
+                      "effectId",
+                      "recoveryClass",
+                      "candidateRecoveryClass",
+                      "proofRequired",
+                      "currentEvidence",
+                      "ambiguousOutcome",
+                      "automaticRecoveryAdmitted",
+                      "currentRecoveryDisposition",
+                      "writerAuthority",
+                      "writerEvidenceRef"
+                    ],
+                    "properties": {
+                      "effectRole": { "enum": ["coordinator_effect", "secondary_effect"] }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "evidenceId": { "const": "P0.W5.EFFECT_RECOVERY_MATRIX" } } },
+      "then": {
+        "required": [
+          "stateMachine",
+          "retryRule",
+          "proofScope",
+          "ownershipAssertions",
+          "faultScheduler",
+          "effects"
+        ],
+        "properties": {
+          "ownershipAssertions": {
+            "type": "object",
+            "required": [
+              "everyEffectHasOwner",
+              "everyCoordinatorOwnedByCommandFeature",
+              "everyEffectHasWriterEvidence",
+              "unprovedEffectsFailClosed"
+            ],
+            "properties": {
+              "everyEffectHasOwner": { "const": true },
+              "everyCoordinatorOwnedByCommandFeature": { "const": true },
+              "everyEffectHasWriterEvidence": { "const": true },
+              "unprovedEffectsFailClosed": { "const": true }
+            }
+          },
+          "faultScheduler": {
+            "type": "object",
+            "required": [
+              "exploredScheduleCount",
+              "pauses",
+              "schedules",
+              "negativeControls",
+              "invariant",
+              "assertions"
+            ],
+            "properties": {
+              "assertions": {
+                "type": "object",
+                "required": [
+                  "realAttemptExitAtEveryBoundary",
+                  "freshRecoveryProcessEverySchedule",
+                  "exactPostRestartStateAndCounts"
+                ],
+                "properties": {
+                  "realAttemptExitAtEveryBoundary": { "const": true },
+                  "freshRecoveryProcessEverySchedule": { "const": true },
+                  "exactPostRestartStateAndCounts": { "const": true }
+                }
+              },
+              "schedules": {
+                "type": "array",
+                "minItems": 52,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "recoveryClass",
+                    "crashPause",
+                    "outcome",
+                    "restartCount",
+                    "attemptExitCode",
+                    "recoveryExitCode",
+                    "processCount",
+                    "freshProcess",
+                    "durableBeforeCrash",
+                    "durableAfterRecovery",
+                    "externalCallAttempts",
+                    "externalEffects",
+                    "compensationAttempts",
+                    "compensationEffects",
+                    "publicationAttempts",
+                    "duplicateEffect",
+                    "committedWithoutEvidence",
+                    "trace"
+                  ],
+                  "properties": {
+                    "restartCount": { "const": 1 },
+                    "attemptExitCode": { "const": 86 },
+                    "recoveryExitCode": { "const": 0 },
+                    "processCount": { "const": 2 },
+                    "freshProcess": { "const": true },
+                    "duplicateEffect": { "const": false },
+                    "committedWithoutEvidence": { "const": false }
+                  }
+                }
+              },
+              "negativeControls": { "type": "array", "minItems": 4 }
+            }
+          },
+          "effects": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "commandKind",
+                "effectOwner",
+                "effectRole",
+                "effectId",
+                "recoveryClass",
+                "candidateRecoveryClass",
+                "proofRequired",
+                "currentEvidence",
+                "ambiguousOutcome",
+                "automaticRecoveryAdmitted",
+                "currentRecoveryDisposition",
+                "writerAuthority",
+                "writerEvidenceRef"
+              ],
+              "properties": {
+                "effectRole": { "enum": ["coordinator_effect", "secondary_effect"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "evidenceId": { "const": "P0.W5.FINGERPRINT_GOLDENS" } } },
+      "then": {
+        "required": [
+          "encoder",
+          "algorithm",
+          "storedMaterial",
+          "immutableOracle",
+          "immutableOracleVectorCount",
+          "cases",
+          "assertions"
+        ],
+        "properties": {
+          "cases": {
+            "type": "array",
+            "minItems": 10,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "descriptorId",
+                "schemaVersion",
+                "fingerprintVersion",
+                "keyVersion",
+                "intent",
+                "digest"
+              ],
+              "properties": { "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+            }
+          },
+          "assertions": {
+            "type": "object",
+            "required": [
+              "fieldOrderEqual",
+              "changedIntentDiffers",
+              "omittedDefaultEqualsMaterialized",
+              "schemaVersionDiffers",
+              "keyVersionDiffers",
+              "fingerprintVersionDiffers",
+              "retainedFingerprintV1StillComputable",
+              "retainedSameIntentOutcome",
+              "changedIntentReuseOutcome",
+              "immutableOracleMatch"
+            ],
+            "properties": {
+              "fieldOrderEqual": { "const": true },
+              "changedIntentDiffers": { "const": true },
+              "omittedDefaultEqualsMaterialized": { "const": true },
+              "schemaVersionDiffers": { "const": true },
+              "keyVersionDiffers": { "const": true },
+              "fingerprintVersionDiffers": { "const": true },
+              "immutableOracleMatch": { "const": true },
+              "retainedFingerprintV1StillComputable": { "const": true },
+              "retainedSameIntentOutcome": { "const": "same_intent" },
+              "changedIntentReuseOutcome": { "const": "idempotency_mismatch" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "evidenceId": { "const": "P0.W5.ESTIMATE" } } },
+      "then": {
+        "required": [
+          "bucketId",
+          "packages",
+          "productionLines",
+          "testLines",
+          "deletedLines",
+          "excludedGeneratedVendorLines",
+          "overlap",
+          "confidence",
+          "assumptions",
+          "evidenceRefs",
+          "totalChangedLines",
+          "reestimateTriggers"
+        ],
+        "properties": {
+          "bucketId": { "const": "EST-RECOVERY-STATE" },
+          "excludedGeneratedVendorLines": { "const": true },
+          "packages": { "type": "array", "minItems": 1 },
+          "overlap": { "type": "array", "minItems": 1 },
+          "assumptions": { "type": "array", "minItems": 1 },
+          "evidenceRefs": { "type": "array", "minItems": 5 }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,766 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "nodeId": "P1.F",
+  "laneId": "p1-f-freeze",
+  "packetRevision": "phase-01-p1-f-freeze-r3",
+  "routerRevision": "phase-01-p1-f-environment-router-r3",
+  "status": "verified",
+  "disposition": "ACCEPT",
+  "terminalState": "HOLD",
+  "evidence": [
+    {
+      "id": "P1.F.FREEZE",
+      "path": "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P1.F.PHASE_EXIT",
+      "path": "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "evidenceIds": ["P1.F.FREEZE", "P1.F.PHASE_EXIT"],
+  "changedPaths": [
+    ".codex-handoff/phase-01-p1-f.json",
+    "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md"
+  ],
+  "changedPathCount": 2,
+  "integrationPathCount": 2,
+  "findingCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "findings": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "reviewer": {
+    "role": "fresh-independent-phase-1-milestone-freeze-reviewer",
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "xhigh",
+    "serviceTier": "default",
+    "fastMode": false,
+    "independentOfRouterAuthorAndReviewer": true,
+    "independentOfAllP1IActors": true,
+    "independentOfAllEarlierPhase1ProducersAndReviewers": true,
+    "subagentsOrAdditionalReviewersUsed": 0
+  },
+  "authority": {
+    "postRouterIntegrationAuthoritySha": "f13b7f886ccd2379674506eeecf5fb077495601e",
+    "expectedSourceCommit": "f13b7f886ccd2379674506eeecf5fb077495601e",
+    "baseSha": "f13b7f886ccd2379674506eeecf5fb077495601e",
+    "canonicalSha": "f13b7f886ccd2379674506eeecf5fb077495601e",
+    "planBundleCommit": "f13b7f886ccd2379674506eeecf5fb077495601e",
+    "phaseStartSha": "f13b7f886ccd2379674506eeecf5fb077495601e",
+    "headSha": "f13b7f886ccd2379674506eeecf5fb077495601e",
+    "routerAuthoringBaseSha": "69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5",
+    "acceptedTrueMergeSha": "20706bd067ce5ccbf13697700411904faa2a00c8",
+    "acceptedP1IIntegrationSha": "134f64f0c5c7bbbab0552eddf08df1508118f4bb",
+    "canonicalMergeSecondParentSha": "6bf43f140878f8b79f7ee17349bd21b177df901d",
+    "localHeadEquality": true,
+    "routerBaseAncestor": true,
+    "initialWorktreeClean": true,
+    "remoteAttestation": {
+      "schemaVersion": 1,
+      "kind": "root-broker-remote-attestation",
+      "sha256": "d547dd6ba6419ba0559ce5ed8c337681f436af48f2a8c3dd182ebb3372df5016",
+      "command": "git ls-remote origin refs/heads/refactor/hosted-web-feature-boundaries",
+      "exitCode": 0,
+      "exactOutput": "f13b7f886ccd2379674506eeecf5fb077495601e\trefs/heads/refactor/hosted-web-feature-boundaries",
+      "remote": "origin",
+      "ref": "refs/heads/refactor/hosted-web-feature-boundaries",
+      "observedSha": "f13b7f886ccd2379674506eeecf5fb077495601e",
+      "localHeadSha": "f13b7f886ccd2379674506eeecf5fb077495601e",
+      "brokerReturnedSha": "f13b7f886ccd2379674506eeecf5fb077495601e",
+      "observedAt": "2026-07-16T06:03:04Z",
+      "rootActorProvenance": "root hosted-web throughput watchdog",
+      "brokerCaptureProvenance": "read-only SSH diagnostic via codex-workers-eu-01",
+      "worktreeStatusBytes": 0,
+      "contentHashRecomputed": true,
+      "schemaAndAuthorityBindingValid": true,
+      "freshAtAdmission": true
+    }
+  },
+  "mergeProof": {
+    "p1iIntegrationRange": "134f64f0c5c7bbbab0552eddf08df1508118f4bb^..134f64f0c5c7bbbab0552eddf08df1508118f4bb",
+    "exactP1IIntegrationPaths": [
+      ".codex-handoff/phase-01-p1-i.json",
+      "docs/research/hosted-web/phase-1/decision-register.json",
+      "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
+      "docs/research/hosted-web/phase-1/evidence-index.json",
+      "docs/research/hosted-web/phase-1/integration-report.json"
+    ],
+    "acceptedTrueMergeParentCount": 2,
+    "acceptedTrueMergeParents": [
+      "134f64f0c5c7bbbab0552eddf08df1508118f4bb",
+      "6bf43f140878f8b79f7ee17349bd21b177df901d"
+    ],
+    "firstParentEqualsAcceptedP1IIntegrationSha": true,
+    "bothParentsAreAncestors": true,
+    "notSquashOneParentOctopusOrReversed": true,
+    "secondParentDiffRole": "accumulated-current-base-history-never-exact-p1i-proof",
+    "secondParentDiffPathCount": 327,
+    "secondParentDiffPathListSha256": "33464213cc50bc3d53dd33b340ac64c417cbde320c98f85acb47c2145ce0cd3b",
+    "routerDiffPathCount": 7,
+    "routerDiffPaths": [
+      "docs/hosted-web-phases/EXECUTION_INDEX.json",
+      "docs/hosted-web-phases/README.md",
+      "docs/hosted-web-phases/START_HERE.md",
+      "docs/hosted-web-phases/phase-01/README.md",
+      "docs/hosted-web-phases/phase-01/controller-packet.md",
+      "docs/hosted-web-phases/phase-01/execution-dag.md",
+      "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md"
+    ],
+    "routerDiffMatchesExclusiveOwnership": true,
+    "p1iOrProductPathInRouterDiff": false
+  },
+  "phase1FreezeManifest": {
+    "pathCount": 74,
+    "distinctPathCount": 74,
+    "regularFileCount": 74,
+    "utf8PathCount": 74,
+    "symlinkPathCount": 0,
+    "nulBytePathCount": 0,
+    "orderedPathArraySha256": "0e8e2b82125eb3b8e559f9fa439e8942e0eea89d75da4cccc35d75099e868223",
+    "orderedContentManifestSha256": "3eb215b1ded06d8cb43c267c51272f88b41eb34e2bed3046dc277f6081020d8f",
+    "first69PathAndHashMatches": 69,
+    "lastFivePathAndHashMatches": 5,
+    "contentHashes": [
+      {
+        "path": "docs/research/hosted-web/phase-1/bootstrap/phase-start.json",
+        "sha256": "69b5424c27c61cddb013c32618117adbc8a5298a8bf0501ea784cd75a3326f40"
+      },
+      {
+        "path": "docs/research/hosted-web/phase-1/bootstrap/packet-revision.json",
+        "sha256": "47044ef4dfc18fc245eaf8051e7fa29a9e82c2d7f9057ac55304f633827faa1f"
+      },
+      {
+        "path": "docs/research/hosted-web/phase-1/bootstrap/ownership-manifest.json",
+        "sha256": "5ae7d32c2ca7c0e1d1c6f62ed47bc1d4fd960ea22f68bacfd9b2c5a1748d8ac0"
+      },
+      {
+        "path": "docs/research/hosted-web/phase-1/bootstrap/baseline-fingerprints.json",
+        "sha256": "03e166cc87c1ca1ae1a8ed41cc7de76e2af02685951661267706f536f8fb5319"
+      },
+      {
+        "path": "docs/research/hosted-web/phase-1/bootstrap/estimate-allocation.json",
+        "sha256": "35208784d336fb276a89be44a90a8e1de1ff6e5d3aa14587a01ebae05568605a"
+      },
+      {
+        "path": "docs/research/hosted-web/phase-1/bootstrap/bootstrap-report.md",
+        "sha256": "31b179e9e50ac0bfa2bbb9b64aefcbdec26cff132655628ecab70122ff8f14f4"
+      },
+      {
+        "path": ".codex-handoff/phase-01-p1-1a.json",
+        "sha256": "b8c3d99eed6b09a66ad7b2dff79f2b916af570b3674cae82971b048b70671a0d"
+      },
+      {
+        "path": "src/shared/contracts/hosted/app-error.ts",
+        "sha256": "838c76670512e4178b9b7507e3ce34356a39e2f57a9761fd92583ccd78253820"
+      },
+      {
+        "path": "src/shared/contracts/hosted/identifiers.ts",
+        "sha256": "87ddee58f597734adaaac645d1c3b9fb2ebcf05c2f0fd1ba39a1fe49b98d05ea"
+      },
+      {
+        "path": "src/shared/contracts/hosted/index.ts",
+        "sha256": "4a8e23dfa61dd6c3aeaea811846d7154ca6217a8d93be931a5f1478691659857"
+      },
+      {
+        "path": "src/shared/contracts/hosted/query-context.ts",
+        "sha256": "431bf6d87b54da2f7fbe2181a3a9e64bdfbc1d8c9c5a32a7973f72d4a9360277"
+      },
+      {
+        "path": "src/shared/contracts/hosted/revision.ts",
+        "sha256": "3ae55b8d8ae9e92789313cd6c611ffbdaee4554a195e989de8d2e51bd6f958e6"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/contracts/app-error.test.ts",
+        "sha256": "52ee29acbca32a864b600ef3c833785fc11af382e515ec941fe0437ab3ccdf83"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json",
+        "sha256": "f5799f7437434d51346647f8e1c7525f79d154b7e84d1b2e27124de1d6c1169f"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
+        "sha256": "b48ecb344888c0c85d3d35c33ec5bffe94922405a61323bf49f4515e658fc29f"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+        "sha256": "6441c8d6075ef568f4cf67355edb2aedf867bf073e3ce340c59127b715da046c"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/contracts/query-context.test.ts",
+        "sha256": "1dcf7503abf545ebb7f77c508698b8cf13f55dec7ac84191cdf64c9c6529b1ab"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
+        "sha256": "608fd717e7eece76c6ea0f3fcc37af26d6047ff94da7e60a34eb4c5deb061e42"
+      },
+      {
+        "path": ".codex-handoff/phase-01-p1-s1-schema-version-remediation.json",
+        "sha256": "13670cdbe3dc796e856d3fb7106f594397382fff132db2faa4fd53b24deaa788"
+      },
+      {
+        "path": ".codex-handoff/phase-01-p1-1b.json",
+        "sha256": "d439023efd35695dcd338810841158ab4be4863ab5782ebbfbbe3ba4e45c3824"
+      },
+      {
+        "path": "src/main/composition/hosted/routing/RouteCatalog.ts",
+        "sha256": "2b304771137dbe3b8047158771fdda2d8592d91c0687f4caa8bb88457d86e3fe"
+      },
+      {
+        "path": "src/main/composition/hosted/routing/index.ts",
+        "sha256": "188ef3cbf87a96956ca03779bd74ddc7c46f21217172f057a8a3b0a5df75aa6a"
+      },
+      {
+        "path": "src/main/composition/hosted/routing/route-types.ts",
+        "sha256": "53a8c83e6d42b9ee9d8a6b7a4a64b93ff1fe853b42d396c16dca6ef87dc0d878"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts",
+        "sha256": "86713d834e4e3474fb13386ab05617aec6600f8c4eba353e7761bfb576579ab6"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts",
+        "sha256": "d0d7a2728ac4478130fad0aadebdc5f6534f7ff83cc88d49ab0732e056afefa1"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts",
+        "sha256": "3311c2781f3bdde1235b64163d34d3d19da7961d28109482a6c1a2ee7797a40e"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/routes/fixtures/missing-reference.ts",
+        "sha256": "fde1f2b3737bb9fd8d3dbad44be2964249814374f1ef2a9b63a66af39279ffe5"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts",
+        "sha256": "1c6eac046aa441e90b3a7818800ee7ef23c8925695deb8975dc75b6e035e7011"
+      },
+      {
+        "path": ".codex-handoff/phase-01-p1-1c.json",
+        "sha256": "573db0ffff7b45edcce834d34da23e5f8f24aa6dab96dc06b7b0641eb9d991a2"
+      },
+      {
+        "path": "scripts/hosted-web/phase-1/check-feature-dependencies.ts",
+        "sha256": "55da0d4482be98b42b3593aecb33a829ddd20107f3c89001ee1fe7d1860a74bb"
+      },
+      {
+        "path": "scripts/hosted-web/phase-1/check-parity-references.ts",
+        "sha256": "b29a2152c9e0cf106d7e575ad0d8e8e2ffe877f11e0899d95b21d75d0105bec0"
+      },
+      {
+        "path": "scripts/hosted-web/phase-1/check-renderer-boundaries.ts",
+        "sha256": "d4960be8879a90d7e1b2634c39bcdb064fb6dbcb4587bd8f8fc1c5e2456404a3"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts",
+        "sha256": "b71bed9df2f99612d0f1aa14ae690eab9976539f0b1c8d5690c7c6bf9c9752a1"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/conformance/semantic-harness.ts",
+        "sha256": "92dff015dccca5f0f9d2b743d701f88c496a99b71e5baf0221b27d4e574435dc"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts",
+        "sha256": "345d9946c526e776ef93dbce9dfabfda2a1c38f413b7a2a1f72180b4a29b186a"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/fixtures/core-side-effect.ts",
+        "sha256": "5ecc201ede7104e77e9fba7689ef92f0ef71bda4ab7cf855b72640bed5bc90c9"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/fixtures/filesystem-adapter.ts",
+        "sha256": "de5695f3bd825b2fa169434a0423f6488fbe3d8aa01969acad5b0f83cde3f329"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/fixtures/forbidden-core-import.ts",
+        "sha256": "6276cc61248bc20db71bf928ac0cae142374507db2d218205aa37f7ff0f659e6"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/fixtures/hosted-electron-api.ts",
+        "sha256": "0ca26159a5ea6a2dc4d57190322743c3d83f93de5d1c75ec412aec85080ba419"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/fixtures/legacy-god-dto.ts",
+        "sha256": "754c40dea9b2683aebd9d6e22b147d4f16194642f2b040aa22f3778309e5b271"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/fixtures/path-secret-leak.ts",
+        "sha256": "6aa2a176173a436f1c8a180cd7d4f01799b5089701d1e6c29151bd7244afc117"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/fixtures/production-adapter-mount.ts",
+        "sha256": "28f7817de7251ef9e6d11a7d6def5625a0efa256ad6b4d81c1d2ae70f62f4b62"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/fixtures/ratchet-regression.ts",
+        "sha256": "5afcde69d1ad33c6ecf1a7031e4e5a7d5b8e5870253092b20b86f8abced7edbc"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+        "sha256": "5e85a09294bef3c28278f04ea1e4896dacbd14fe438cd0a40b99781570f212c1"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts",
+        "sha256": "1eabeaae77ba5a6b59d2e6376263726c2b27e5f55e01faed021ef25c3e144e59"
+      },
+      {
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json",
+        "sha256": "1fc62ffb444c8ebb1f3b7d4ad35303d7c501539ab8cac4e220b88972bc6e46d5"
+      },
+      {
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json",
+        "sha256": "98a99c4f03af0a407b979b3f606bdfe2d55ba2c544e330c95e51312106fcec07"
+      },
+      {
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json",
+        "sha256": "2c8378bcd7e928e9ab2fb77f46cdda897e6c350bf130bf376123de961458d2b7"
+      },
+      {
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/empty.json",
+        "sha256": "95f032d6a434a4cd4bbda3d701beb4a99a1657f8ad4e4ed5e3d3ddeb70aacb8e"
+      },
+      {
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/not-found-inapplicable.json",
+        "sha256": "f6f582303ffae9919abc2e7b30f794de609808fa69b76101e8d89bc879c9baef"
+      },
+      {
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/partial.json",
+        "sha256": "4aec77f80650895ec7e81dc900c00b17b0fc1c38e44c81a347e40f035c88f3db"
+      },
+      {
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/provisioning-inapplicable.json",
+        "sha256": "272ac470b7b843018a94d700f40336b4536d6f373839cc9fa12261c27d2083d8"
+      },
+      {
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json",
+        "sha256": "f4534d45b0523ec16d713be97e94c698804092e153de242e093500eaa422255a"
+      },
+      {
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json",
+        "sha256": "40e57bfb5af87ff6a1dd019f2ffb8058f09c5e54c88546e971f97a5316425d4b"
+      },
+      {
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json",
+        "sha256": "e37e636ca979fec6e8cb5372da01e9953674d7b30c772be2c707dc0bc5463247"
+      },
+      {
+        "path": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json",
+        "sha256": "beaabfd29b6a7447403b3054a1e7a08247410e21f65be4563f543144bc3d9ea4"
+      },
+      {
+        "path": "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+        "sha256": "3a891699856bd9035aee86e6fc6776a7bb3ada2103609ec073e9958566187e71"
+      },
+      {
+        "path": ".codex-handoff/phase-01-p1-1d.json",
+        "sha256": "023444ae516dc2f0c6d37c0c57a21c6203cfa8f80f775dbe44b90ed7eb758ce7"
+      },
+      {
+        "path": "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
+        "sha256": "9407de573f0fdcabf4cf77fd5faf4b2fa229e4cff7d34b25096d6f69cd2a3df8"
+      },
+      {
+        "path": "src/features/team-lifecycle/contracts/index.ts",
+        "sha256": "6ce70ee187f8b8da58e2d1722b5de13efade6da536f5186cb2aaf5f5ed232bf3"
+      },
+      {
+        "path": "src/features/team-lifecycle/core/application/ListTeamLifecycle.ts",
+        "sha256": "1e6e72911615af3207e04f48f9abf16c57f262abf1ffdcd33e72e66662b9c435"
+      },
+      {
+        "path": "src/features/team-lifecycle/core/application/index.ts",
+        "sha256": "ed348a14f02aa070ae6437aef5c0b4932fd7bfa2f2cd43004b86d8c2da255bdd"
+      },
+      {
+        "path": "src/features/team-lifecycle/index.ts",
+        "sha256": "beff7b458a9b9eafe247c35f1a449f083696376cb83e2abda3e73d917212b03c"
+      },
+      {
+        "path": "test/features/team-lifecycle/core/ListTeamLifecycle.test.ts",
+        "sha256": "d17fa39e0dce56c6f80a2f98d36ec368168f7c29df84238ca4811b128b06fa66"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
+        "sha256": "1e16e6a0fdd8bb559ae5c6d5d3973b6ca9d85ada51e18d52c8620354994b36a5"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts",
+        "sha256": "2f7d971aa6743f3980f60c1693fe97513cdb5d07831ebc91a8739153c58ffe29"
+      },
+      {
+        "path": ".codex-handoff/phase-01-p1-r2.json",
+        "sha256": "bbf61b20dad577af7536f78f108116531acd17925ca9a17140c4d9fadb7d038c"
+      },
+      {
+        "path": "docs/research/hosted-web/phase-1/reviews/list-semantics.md",
+        "sha256": "de4b1e4fc0f633a40703e6af106bcdfcd2ab3a7d524b28f19df376a4052cdc70"
+      },
+      {
+        "path": ".codex-handoff/phase-01-p1-i-lint-remediation.json",
+        "sha256": "df8d0a64711941e23d59e96d90518dc0b8660eb8242c50a118a1b42edf259182"
+      },
+      {
+        "path": ".codex-handoff/phase-01-p1-i.json",
+        "sha256": "be6ca8a01fba06871b9246ae2baaf230e7b95222bb0da3eec8548016c5639903"
+      },
+      {
+        "path": "docs/research/hosted-web/phase-1/decision-register.json",
+        "sha256": "1d275a95a189d7840a6d75591d90c138b0ec5399747db41794697de0cde32ba9"
+      },
+      {
+        "path": "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
+        "sha256": "941c58195b9955b9807b896aedf7f46ea1a4ed455dc6713241ffefb074405328"
+      },
+      {
+        "path": "docs/research/hosted-web/phase-1/evidence-index.json",
+        "sha256": "07a17cb6674916f65713e337f15deeb3f5405d36fbcccbbcdada3b5895724590"
+      },
+      {
+        "path": "docs/research/hosted-web/phase-1/integration-report.json",
+        "sha256": "a64cc23427dd049e0ede0ce217a7401a5ec6f6df51ec6cb9b5ca3ef5458f4e8f"
+      }
+    ],
+    "frozenP1IOutputHashes": {
+      ".codex-handoff/phase-01-p1-i.json": "be6ca8a01fba06871b9246ae2baaf230e7b95222bb0da3eec8548016c5639903",
+      "docs/research/hosted-web/phase-1/decision-register.json": "1d275a95a189d7840a6d75591d90c138b0ec5399747db41794697de0cde32ba9",
+      "docs/research/hosted-web/phase-1/estimate-reconciliation.json": "941c58195b9955b9807b896aedf7f46ea1a4ed455dc6713241ffefb074405328",
+      "docs/research/hosted-web/phase-1/evidence-index.json": "07a17cb6674916f65713e337f15deeb3f5405d36fbcccbbcdada3b5895724590",
+      "docs/research/hosted-web/phase-1/integration-report.json": "a64cc23427dd049e0ede0ce217a7401a5ec6f6df51ec6cb9b5ca3ef5458f4e8f"
+    },
+    "frozenP1IBytesIdenticalAtIntegrationMergeAndHead": true
+  },
+  "evidenceLifecycle": {
+    "requiredPhase1EvidenceIds": [
+      "P1.S0.BASELINE",
+      "P1.S0.BOOTSTRAP",
+      "P1.1A.KERNEL",
+      "P1.1A.VERSION",
+      "P1.1B.ROUTES",
+      "P1.1B.CAPABILITIES",
+      "P1.1C.CONFORMANCE",
+      "P1.1C.RATCHETS",
+      "P1.R1.ARCH_REVIEW",
+      "P1.1D.TEAM_LIFECYCLE_READ_CONTRACT",
+      "P1.1D.TEAM_LIFECYCLE_READ_USE_CASE",
+      "P1.1D.TEAM_LIFECYCLE_SEMANTIC_PROOF",
+      "P1.R2.SEMANTIC_REVIEW",
+      "P1.NEG.RATCHET_REGRESSION"
+    ],
+    "additionalFrozenCatalogIds": ["P1.I.LINT.REMEDIATION", "P1.I.INTEGRATION", "P1.I.ROLLBACK"],
+    "catalogRowCount": 17,
+    "distinctCatalogRowCount": 17,
+    "unknownEvidenceIdCount": 0,
+    "allContentHashesCurrent": true,
+    "lifecycleRulesValid": true,
+    "frozenPendingFieldsMutated": false,
+    "p1fEvidenceIdsAddedToFrozenIndex": false
+  },
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/features/team-lifecycle test/architecture/hosted-web/phase-1",
+      "exitCode": 0,
+      "durationMs": 3863.25,
+      "toolVersion": "vitest 3.2.6; node v24.16.0; pnpm 10.33.4",
+      "testFiles": {
+        "passed": 13,
+        "total": 13
+      },
+      "tests": {
+        "passed": 60,
+        "total": 60
+      }
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+      "exitCode": 0,
+      "durationMs": 2166.98,
+      "toolVersion": "vitest 3.2.6; node v24.16.0; pnpm 10.33.4",
+      "testFiles": {
+        "passed": 1,
+        "total": 1
+      },
+      "tests": {
+        "passed": 3,
+        "total": 3
+      }
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/final-gate/normalize-typescript-diagnostics.mjs --mode milestone",
+      "exitCode": 1,
+      "durationMs": 115090.64,
+      "toolVersion": "node v24.16.0; TypeScript 7.0.2",
+      "processDisposition": "exited-after-child-spawn-failure",
+      "runnerErrorCode": "EPERM",
+      "runnerErrorMessage": "spawnSync /usr/local/bin/node EPERM",
+      "validLocalReport": false,
+      "evidenceSource": "root-attested-normalizer-after-recorded-sandbox-eperm"
+    },
+    {
+      "command": "pnpm lint",
+      "exitCode": 0,
+      "durationMs": 610110.28,
+      "toolVersion": "ESLint 9.39.4; node v24.16.0; pnpm 10.33.4",
+      "errorCount": 0,
+      "warningCount": 3043
+    },
+    {
+      "command": "pnpm exec prettier --check \u0024{freeze_paths[@]}",
+      "exitCode": 0,
+      "durationMs": 3594.92,
+      "toolVersion": "Prettier 3.8.1; pnpm 10.33.4",
+      "matchedPathCount": 74
+    },
+    {
+      "command": "pnpm exec prettier --check .codex-handoff/phase-01-p1-f.json docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md",
+      "exitCode": 0,
+      "durationMs": 1271.38,
+      "toolVersion": "Prettier 3.8.1; pnpm 10.33.4",
+      "matchedPathCount": 2,
+      "completedAfterFinalBytes": true
+    }
+  ],
+  "normalizerEvidence": {
+    "boundedRootSubstitutionRuleApplied": true,
+    "localAttempt": {
+      "command": "node scripts/hosted-web/phase-0/final-gate/normalize-typescript-diagnostics.mjs --mode milestone",
+      "attemptedAt": "2026-07-16T06:14:02.176133358Z",
+      "completedAt": "2026-07-16T06:15:57.266775779Z",
+      "processExitCode": 1,
+      "processDisposition": "exited-after-child-spawn-failure",
+      "errorCode": "EPERM",
+      "errorMessage": "spawnSync /usr/local/bin/node EPERM",
+      "validLocalReport": false
+    },
+    "rootAttestedRecord": {
+      "source": "fresh immutable root admission input",
+      "exactCommandAttested": true,
+      "normalizerProcessDisposition": "exited",
+      "normalizerExitCode": 0,
+      "authoritySha": "f13b7f886ccd2379674506eeecf5fb077495601e",
+      "cleanWorktree": true,
+      "reportSha256": "2f0e7547b98f88117e606807750995667dcf8561b65da6c66477c25283ddcc25",
+      "reportHashRecomputed": true,
+      "compilerRawExitCode": 2,
+      "durationMs": 110692.24,
+      "passed": true,
+      "observedDiagnosticCount": 7,
+      "normalizedInheritedCount": 7,
+      "resolvedInheritedCount": 0,
+      "effectiveDiagnosticCount": 0,
+      "unexpectedDiagnosticCount": 0,
+      "unparsedOutputLineCount": 0,
+      "exactDiagnosticSetMatched": true,
+      "rootExecutionTimestampsAndProvenanceInspected": true,
+      "captureHashesInspected": true
+    },
+    "genericRootSubstitutionUsed": false,
+    "networkEnabled": false,
+    "otherLocalChecksSubstituted": false
+  },
+  "rollback": {
+    "bootstrapSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
+    "acceptedPayloadSha": "20706bd067ce5ccbf13697700411904faa2a00c8",
+    "payloadPathCount": 54,
+    "distinctPayloadPathCount": 54,
+    "bootstrapAbsentPathCount": 54,
+    "pathManifestSha256": "d67e76fa0b63f51260bc6c3bdd59568a9115a730709f2508231df46da5ca880e",
+    "patchSha256": "bd0b8cce323c72e9104b620a899add44919c13f913d5fbbe169b6445d79ffb50",
+    "patchGenerationExitCode": 0,
+    "forwardApplyCheckExitCode": 0,
+    "forwardApplyExitCode": 0,
+    "forwardByteEqualPathCount": 54,
+    "reverseApplyCheckExitCode": 0,
+    "reverseApplyExitCode": 0,
+    "reverseAbsentPathCount": 54,
+    "scratchOnly": true,
+    "workspaceApply": false,
+    "cleanupExitCode": 0
+  },
+  "gateSummary": {
+    "required": 14,
+    "passed": 14,
+    "failed": 0,
+    "gates": [
+      {
+        "id": "P1.GATE.PROVENANCE",
+        "status": "passed",
+        "currentProof": "f13b7f8 authority, fresh remote attestation, exact ancestry and manifests"
+      },
+      {
+        "id": "P1.GATE.PREDECESSORS",
+        "status": "passed",
+        "currentProof": "accepted P1.I provenance, exact five integration range, true merge and frozen bytes"
+      },
+      {
+        "id": "P1.GATE.SCOPE",
+        "status": "passed",
+        "currentProof": "exact-two P1.F output scope with no staged, tracked, P1.I, product or test change"
+      },
+      {
+        "id": "P1.GATE.TESTS",
+        "status": "passed",
+        "currentProof": "current 13/13 files and 60/60 tests"
+      },
+      {
+        "id": "P1.GATE.TYPECHECK",
+        "status": "passed",
+        "currentProof": "recorded local EPERM and eligible root-attested exact 7/0/0 normalizer result"
+      },
+      {
+        "id": "P1.GATE.LINT",
+        "status": "passed",
+        "currentProof": "current full lint exit 0 with zero errors"
+      },
+      {
+        "id": "P1.GATE.FORMAT",
+        "status": "passed",
+        "currentProof": "current exact-74 and exact-two pinned Prettier checks"
+      },
+      {
+        "id": "P1.GATE.NEGATIVES",
+        "status": "passed",
+        "currentProof": "current 60-test architecture suite and exact frozen negative inventory"
+      },
+      {
+        "id": "P1.GATE.RATCHET",
+        "status": "passed",
+        "currentProof": "current focused 1/1 file and 3/3 tests"
+      },
+      {
+        "id": "P1.GATE.SECURITY",
+        "status": "passed",
+        "currentProof": "exact-76 classified scans, UTF-8, NUL, symlink, MIME and placeholder checks"
+      },
+      {
+        "id": "P1.GATE.ROLLBACK",
+        "status": "passed",
+        "currentProof": "current exact-54 scratch-only forward equality and reverse absence"
+      },
+      {
+        "id": "P1.GATE.ESTIMATE",
+        "status": "passed",
+        "currentProof": "69-input census and unique five-output P1.I actual/variance arithmetic revalidated"
+      },
+      {
+        "id": "P1.GATE.DECISIONS",
+        "status": "passed",
+        "currentProof": "13 distinct decision rows and 14 ordered gate decisions revalidated"
+      },
+      {
+        "id": "P1.GATE.EVIDENCE_FREEZE",
+        "status": "passed",
+        "currentProof": "74 current hashes, 17-row lifecycle, packet hashes and final self-review"
+      }
+    ]
+  },
+  "validation": {
+    "candidatePathCount": 76,
+    "candidateDistinctPathCount": 76,
+    "jsonPathCount": 31,
+    "jsonParsePassed": true,
+    "duplicateKeyDetection": "parser-does-not-expose-duplicate-keys; required schemas validated structurally",
+    "p1iSchemaValidatedPathCount": 5,
+    "p1fSchemaValidatedPathCount": 2,
+    "markdownPathCount": 4,
+    "markdownLinksResolved": true,
+    "historicalP1ILaneSha256": "3f81d6e65f9848b6b3db593dda6eb87e5eeb7276af9e76d2fe79ba3fc6f094fe",
+    "controllerPacketSha256": "a39fe79dfc483018b6f798d781dadb70139cd27089eb72524b351eaf898118bd",
+    "lanePacketSha256": "9a8d4e6572a58ca557b0e2d630f4af9f556732daf82c51be27f2c212f0afe748",
+    "packetHashesMatchExecutionIndex": true,
+    "gitDiffCheckExitCode": 0,
+    "stagedPathCount": 0,
+    "trackedChangedPathCount": 0,
+    "untrackedPaths": [
+      ".codex-handoff/phase-01-p1-f.json",
+      "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md"
+    ],
+    "statusPathCount": 2,
+    "onlyDeclaredWriterPathsChanged": true,
+    "productOrTestPathChanged": false,
+    "p1iPathChanged": false,
+    "regularTextPathCount": 76,
+    "binaryPathCount": 0,
+    "symlinkPathCount": 0,
+    "nulBytePathCount": 0,
+    "validUtf8PathCount": 76,
+    "outputHashes": {
+      ".codex-handoff/phase-01-p1-f.json": null,
+      "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md": null
+    },
+    "selfHashPolicy": "raw output hashes are recomputed after final bytes and broker-captured; self-referential raw hashes are not embedded"
+  },
+  "classifiedScans": {
+    "candidatePathCount": 76,
+    "secretCredential": {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' \u0024{candidate_paths[@]}",
+      "exitCode": 0,
+      "observedMatchLineCount": 29,
+      "allMatchesClassified": true,
+      "classification": "scanner command/control language, governance uses of authorization, and synthetic fixture assertions only; no credential, secret, cookie, bearer, or auth payload"
+    },
+    "provider": {
+      "command": "rg -n -i '(provider|anthropic|claude|openai|opencode|gpt-[0-9])' \u0024{candidate_paths[@]}",
+      "exitCode": 0,
+      "observedMatchLineCount": 54,
+      "allMatchesClassified": true,
+      "classification": "reviewer profile, inherited diagnostic paths, scanner/control text, synthetic provider-status negative controls, and prohibited or unverified boundary language only; no provider or auth payload"
+    },
+    "privatePath": {
+      "command": "rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' \u0024{candidate_paths[@]}",
+      "exitCode": 0,
+      "observedMatchLineCount": 16,
+      "allMatchesClassified": true,
+      "classification": "scanner command/control language and explicit real-project prohibitions only; no private, home, temporary, task-temporary, or real-project path value"
+    },
+    "placeholderAndRawBody": {
+      "command": "rg -n -i '(TODO|TBD|FIXME|XXX|<[^>]+>|raw[_ -]?(command|runtime)[_ -]?body|auth[_ -]?payload|provider[_ -]?payload)' \u0024{candidate_paths[@]}",
+      "exitCode": 0,
+      "observedMatchLineCount": 99,
+      "allMatchesClassified": true,
+      "classification": "TypeScript generic/comparison syntax, immutable historical command metavariables, a zero-valued todo baseline field, scanner/control text, and explicit payload/raw-body prohibitions only; no unresolved placeholder or raw sensitive body"
+    }
+  },
+  "selfReview": {
+    "independenceConfirmed": true,
+    "exactAuthorityConfirmed": true,
+    "remoteAttestationCompletelyInspected": true,
+    "normalizerAttestationConditionallyInspected": true,
+    "boundedNormalizerRuleConfirmed": true,
+    "everySandboxCompatibleCheckIndependentlyExecuted": true,
+    "all74FrozenBytesConfirmed": true,
+    "allEvidenceAndGatesConfirmed": true,
+    "allCheckCountsConfirmed": true,
+    "rollbackAndCurrentBaseConfirmed": true,
+    "scanClassificationsConfirmed": true,
+    "exactTwoOwnershipConfirmed": true,
+    "noP1IProductOrTestChangeConfirmed": true,
+    "unsupportedClaimsAbsent": true,
+    "findingCountsConfirmed": true,
+    "completeOutputReread": true,
+    "completeDiffReread": true
+  },
+  "phaseExit": {
+    "phase1ExitAccepted": true,
+    "phase2Blocked": true,
+    "p1fEvidenceIntegrated": false,
+    "p1fEvidencePushed": false,
+    "phase2AuthorityClaimed": false,
+    "successorLaunchClaimed": false
+  },
+  "unverifiedClaims": [
+    "broker integration or push of the two P1.F outputs",
+    "new clean remote equality after P1.F evidence integration",
+    "Phase 2 router authority",
+    "Phase 2 product or worker behavior",
+    "production hosted transport, auth, runtime, filesystem, preload or renderer behavior"
+  ],
+  "blockers": [],
+  "generatedAt": "2026-07-16T06:33:02Z",
+  "nextAction": "broker-integrate-freeze-evidence"
+}

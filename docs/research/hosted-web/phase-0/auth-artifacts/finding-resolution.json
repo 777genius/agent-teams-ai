@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "recordType": "w6-finding-resolution",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "owner": "w6",
+  "reviewFindings": [
+    {
+      "id": "R46-01",
+      "status": "resolved",
+      "assertions": ["AUTH.RESTART.REVOCATION", "AUTH.COOKIE.TRANSITIONS"],
+      "evidenceId": "P0.W6.AUTH_TRANSITIONS"
+    },
+    {
+      "id": "R46-02",
+      "status": "resolved_exact_dto_contract_characterization_only",
+      "assertions": ["AUTH.DRAIN.TYPED", "AUTH.DRAIN.STALE", "AUTH.DRAIN.UNCLASSIFIED"],
+      "evidenceId": "P0.W6.AUTH_TRANSITIONS",
+      "dependencyOwner": "w4"
+    },
+    {
+      "id": "R46-06",
+      "status": "resolved_single_controller_authority_current_standalone_rejected",
+      "assertions": [
+        "ARTIFACT.CONTRACT.W4_ROWS",
+        "ARTIFACT.CONTRACT.FAIL_CLOSED",
+        "ARTIFACT.CONTRACT.OMISSION_NEGATIVES"
+      ],
+      "evidenceId": "P0.W6.ARTIFACT_INVENTORY",
+      "dependencyOwner": "w4"
+    },
+    {
+      "id": "R46-07",
+      "status": "resolved",
+      "assertions": ["ABI.NODE.SQLITE.REOPEN", "ABI.ELECTRON.LOOKUP"],
+      "evidenceId": "P0.W6.ABI_STUB_REPORT"
+    },
+    {
+      "id": "R46-08",
+      "status": "resolved",
+      "assertions": ["SELF_REVIEW.UNTRACKED.NO_INDEX"],
+      "evidenceId": "W6_HANDOFF"
+    },
+    {
+      "id": "P0-FREEZE-W46-C1-001",
+      "status": "resolved_exact_current_commit_authority_with_historical_split",
+      "assertions": [
+        "ARTIFACT.CURRENT_COMMIT.AUTHORITY",
+        "ARTIFACT.HISTORICAL.PROVENANCE.SPLIT",
+        "ARTIFACT.TARGETED_BUILD.EXACT_COMPARE"
+      ],
+      "evidenceId": "P0.W6.ARTIFACT_INVENTORY"
+    },
+    {
+      "id": "P0.C1.W6.001",
+      "status": "resolved_evolution_assumption_and_proof_levels_aligned",
+      "assertions": [
+        "ARTIFACT.EVOLUTION.UNPROVED",
+        "ARTIFACT.PROOF_LEVEL.CURRENT_BUILD",
+        "TERMINAL.EXCLUSION.NOT_ACHIEVED"
+      ],
+      "evidenceId": "P0.W6.ARTIFACT_INVENTORY"
+    },
+    {
+      "id": "P0.C1.DRAIN.001.W6.CONSUME",
+      "status": "resolved_direct_controller_envelope_consumption",
+      "assertions": [
+        "AUTH.DRAIN.CONTROLLER_ENVELOPE",
+        "AUTH.DRAIN.SCHEMA_HASH_PINNED",
+        "AUTH.DRAIN.NO_W6_AUTHORITY_WRAPPER"
+      ],
+      "evidenceId": "P0.W6.AUTH_TRANSITIONS",
+      "dependencyOwner": "phase-00-controller"
+    },
+    {
+      "id": "P0-FREEZE-W6-E1-001",
+      "status": "resolved_all_authority_projections_fail_closed",
+      "assertions": [
+        "ARTIFACT.EVOLUTION.AUTHORITY",
+        "ARTIFACT.ESTIMATE.PROJECTION",
+        "ARTIFACT.INVENTORY.PROOF_LEVEL",
+        "TERMINAL.RULE.PROOF_LEVEL",
+        "ARTIFACT.PROJECTION.NEGATIVES"
+      ],
+      "evidenceId": "P0.W6.ARTIFACT_INVENTORY"
+    }
+  ],
+  "requirements": [
+    { "id": "P0.REQ.W6.001", "status": "resolved", "evidenceId": "P0.W6.AUTH_TRANSITIONS" },
+    { "id": "P0.REQ.W6.002", "status": "resolved", "evidenceId": "P0.W6.AUTH_TRANSITIONS" },
+    {
+      "id": "P0.REQ.W6.003",
+      "status": "fixture_resolved_final_https_target_pending",
+      "evidenceId": "P0.W6.PROXY_ORIGIN_THREAT_MATRIX"
+    },
+    {
+      "id": "P0.REQ.W6.004",
+      "status": "fixture_resolved_durable_storage_target_pending",
+      "evidenceId": "P0.W6.AUTH_TRANSITIONS"
+    },
+    {
+      "id": "P0.REQ.W6.005",
+      "status": "controller_contract_projection_only_no_production_composition",
+      "evidenceId": "P0.W6.ARTIFACT_INVENTORY"
+    },
+    {
+      "id": "P0.REQ.W6.006",
+      "status": "terminal_absence_rule_current_standalone_rejected_not_achieved",
+      "evidenceId": "P0.W6.TERMINAL_ABSENCE_REPORT"
+    },
+    {
+      "id": "P0.REQ.W6.007",
+      "status": "fail_closed_no_dependency_adoption",
+      "evidenceId": "P0.W6.COOKIE_VERSION_EVIDENCE"
+    },
+    {
+      "id": "P0.REQ.W6.008",
+      "status": "resolved_input_pending_controller_acceptance",
+      "evidenceId": "P0.W6.ESTIMATE"
+    }
+  ],
+  "ownership": {
+    "w6": [
+      "auth transition contract characterization",
+      "PUBLIC_ORIGIN/proxy negative-policy characterization",
+      "exact current-commit standalone artifact rejection",
+      "historical rejected-candidate provenance separation",
+      "terminal-absence rule evaluation"
+    ],
+    "w2": ["machine runtime ingress credentials and provider ingress"],
+    "w4": [
+      "current-host native spike characterization",
+      "typed process-drain DTO definition",
+      "read-only controller artifact projection"
+    ],
+    "controller": [
+      "single artifact schema/path/hash authority",
+      "estimate acceptance",
+      "repeat reciprocal review"
+    ]
+  }
+}

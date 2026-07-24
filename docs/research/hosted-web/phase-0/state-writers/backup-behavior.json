@@ -1,0 +1,133 @@
+{
+  "$schema": "./evidence.schema.json",
+  "schemaVersion": 1,
+  "evidenceId": "P0.W3.BACKUP_BEHAVIOR",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "currentService": {
+    "classification": "legacy_unverified safety copy",
+    "enumeration": "nine team root files, flat inbox/review directories, recursive .opencode-runtime and members trees, app attachment trees, and flat task JSON",
+    "asyncPath": "process-local team promise mutex; validates/enumerates then copies files independently; per-file errors may log and continue",
+    "shutdownPath": "separate synchronous enumeration/copy implementation with broader error swallowing",
+    "identityMutation": "best-effort _backupIdentityId patch into CLI-owned config.json; identity can rotate on resurrection",
+    "publication": "manifest and thin registry are independent atomic file replacements; there is no immutable stage or commit marker",
+    "restore": "config-validity gate, identityId heuristic, per-file validity/mtime partial restore, and automatic full restore after missing/corrupt config",
+    "prune": "removes per-file stale copies and old team directories without an ADR-32 committed-run invariant",
+    "coordinationFailure": "does not fence provider/CLI writers and does not include SQLite Online Backup API",
+    "sourceRefs": ["src/main/services/team/TeamBackupService.ts"]
+  },
+  "fixture": {
+    "kind": "marker-owned production-service fault characterization",
+    "path": "test/architecture/hosted-web/phase-0/state-writers/team-backup-service-faults.test.mjs",
+    "command": "node --import tsx test/architecture/hosted-web/phase-0/state-writers/team-backup-service-faults.test.mjs",
+    "sourceUnderTest": "src/main/services/team/TeamBackupService.ts",
+    "markerPrefix": "agent-teams-w3-team-backup-",
+    "userStateAccessed": false,
+    "result": { "tests": 7, "cases": 12, "passed": 7, "failed": 0 }
+  },
+  "faultMatrix": [
+    {
+      "caseId": "TB-01",
+      "fault": "missing required config name followed by a valid config",
+      "observedResult": "invalid config blocks backup; valid config yields matching async/sync enumeration and mutates _backupIdentityId to the manifest identity",
+      "asserted": true,
+      "recoveryPointSafe": false
+    },
+    {
+      "caseId": "TB-02",
+      "fault": "async enumeration reports an error and one injected source disappears before copy",
+      "observedResult": "stale-file prune is suppressed, the failed file is absent, other changed files copy, and manifest/registry publication continues",
+      "asserted": true,
+      "recoveryPointSafe": false
+    },
+    {
+      "caseId": "TB-03",
+      "fault": "stale backup file after an error-free enumeration",
+      "observedResult": "the stale file is removed before the independently published manifest/registry sequence",
+      "asserted": true,
+      "recoveryPointSafe": false
+    },
+    {
+      "caseId": "TB-04",
+      "fault": "async manifest atomic publication throws after file copies",
+      "observedResult": "backupTeam rejects; copied config remains while manifest and registry entry are absent",
+      "asserted": true,
+      "recoveryPointSafe": false
+    },
+    {
+      "caseId": "TB-05",
+      "fault": "async registry atomic publication throws after manifest publication",
+      "observedResult": "backupTeam rejects; manifest exists while on-disk registry is absent and the in-memory registry is ahead",
+      "asserted": true,
+      "recoveryPointSafe": false
+    },
+    {
+      "caseId": "TB-06",
+      "fault": "shutdown enumeration includes one missing file beside a valid changed file",
+      "observedResult": "sync copy swallows the missing-file error, copies the valid file, and still publishes manifest/registry",
+      "asserted": true,
+      "recoveryPointSafe": false
+    },
+    {
+      "caseId": "TB-07",
+      "fault": "shutdown manifest publication throws",
+      "observedResult": "the per-team shutdown wrapper swallows the failure and the outer shutdown path still saves the thin registry",
+      "asserted": true,
+      "recoveryPointSafe": false
+    },
+    {
+      "caseId": "TB-08",
+      "fault": "on-disk registry contains corrupt JSON",
+      "observedResult": "initialize rebuilds the active in-memory registry from independently readable per-team manifests",
+      "asserted": true,
+      "recoveryPointSafe": false
+    },
+    {
+      "caseId": "TB-09",
+      "fault": "source config and team directory are missing while a valid backup manifest/config exists",
+      "observedResult": "initialize performs a full restore and activates copied config and team metadata",
+      "asserted": true,
+      "recoveryPointSafe": false
+    },
+    {
+      "caseId": "TB-10",
+      "fault": "source config is corrupt with both newer and older non-config source files",
+      "observedResult": "full restore replaces config, preserves a newer source file by mtime, and overwrites an older source file",
+      "asserted": true,
+      "recoveryPointSafe": false
+    },
+    {
+      "caseId": "TB-11",
+      "fault": "identity-matching valid config with one valid, one corrupt, and one missing JSON participant",
+      "observedResult": "partial restore preserves valid JSON and restores corrupt/missing JSON independently",
+      "asserted": true,
+      "recoveryPointSafe": false
+    },
+    {
+      "caseId": "TB-12",
+      "fault": "one retention-expired and one recent deleted-team backup",
+      "observedResult": "prune deletes the expired directory/registry entry, retains the recent entry, and publishes registry independently",
+      "asserted": true,
+      "recoveryPointSafe": false
+    }
+  ],
+  "requiredProducts": [
+    {
+      "kind": "coordination_backup",
+      "promise": "consistent app-owned SQLite snapshot plus explicitly named identity/coordination participants only",
+      "writerRequirement": "fence/flush app participants; unrelated provider writers may remain active",
+      "restoreEligibility": "migration/repair-specific only"
+    },
+    {
+      "kind": "deployment_recovery_point",
+      "promise": "quiesced verified publication across all catalogued non-ephemeral state",
+      "writerRequirement": "stop/refuse uncoordinated writers, close observation watermarks, freeze generations",
+      "restoreEligibility": "only committed v2 input for replace_deployment"
+    }
+  ],
+  "proofLevel": "fixture_characterized",
+  "limitations": [
+    "The fixture characterizes existing TeamBackupService behavior; it does not make the independent file copies a coordinated recovery point.",
+    "Provider replacement between stat/read/copy remains covered by the separate external-writer negative fixture, not by an unsafe real provider launch.",
+    "Final-image SQLite ABI, async worker wire operation, deployment quiescence, and immutable recovery-point publication remain W6/controller gates outside this remediation lane."
+  ]
+}

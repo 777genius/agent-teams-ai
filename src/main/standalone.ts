@@ -16,9 +16,25 @@
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
 
+import { isAbsolute, resolve } from 'node:path';
+
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
+import { createQueryContext } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 
+import {
+  readTeamLifecycleReadBootstrapEnvironment,
+  TeamLifecycleReadBootstrapSource,
+} from './composition/hosted/teamLifecycleReadBootstrapSource';
+import {
+  createMountBindingScopedTeamLifecycleReadPorts,
+  createTeamLifecycleReadComposition,
+  createTeamLifecycleReadHost,
+  createUnavailableTeamLifecycleReadHost,
+  type TeamLifecycleReadAuthority,
+  type TeamLifecycleReadHost,
+} from './composition/hosted/teamLifecycleReadComposition';
+import { createTeamLifecycleReadOnlyIdentitySource } from './composition/hosted/teamLifecycleReadOnlyIdentitySource';
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
   getProjectsBasePath,
@@ -88,6 +104,100 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
+let configManager: { flush(): Promise<void> } | null = null;
+let shutdownPromise: Promise<void> | null = null;
+
+export interface StandaloneShutdownActions {
+  stopHttpServer: () => Promise<void>;
+  disposeLocalContext: () => void;
+  flushConfig: () => Promise<void>;
+  logInfo: (message: string) => void;
+  logError: (message: string, error: unknown) => void;
+  setExitCode: (code: number) => void;
+  exit: (code: number) => void;
+}
+
+export async function runStandaloneShutdownLifecycle(
+  actions: StandaloneShutdownActions
+): Promise<void> {
+  actions.logInfo('Shutting down...');
+  let exitCode = 0;
+  const recordFailure = (label: string, error: unknown): void => {
+    exitCode = 1;
+    actions.setExitCode(1);
+    actions.logError(`${label}:`, error);
+  };
+
+  try {
+    await actions.stopHttpServer();
+  } catch (error) {
+    recordFailure('HTTP server shutdown failed', error);
+  }
+
+  try {
+    actions.disposeLocalContext();
+  } catch (error) {
+    recordFailure('Local context shutdown failed', error);
+  }
+
+  try {
+    await actions.flushConfig();
+  } catch (error) {
+    recordFailure('ConfigManager flush failed during shutdown', error);
+  }
+
+  if (exitCode === 0) {
+    actions.logInfo('Shutdown complete');
+  }
+  actions.exit(exitCode);
+}
+
+type StandaloneShutdownSignal = 'SIGINT' | 'SIGTERM';
+
+export function registerStandaloneShutdownSignalHandlers(input: {
+  platform: NodeJS.Platform;
+  onSignal: (signal: StandaloneShutdownSignal, listener: () => void) => void;
+  shutdown: () => Promise<void>;
+}): void {
+  const requestShutdown = (): void => {
+    void input.shutdown();
+  };
+  input.onSignal('SIGINT', requestShutdown);
+  if (input.platform !== 'win32') {
+    input.onSignal('SIGTERM', requestShutdown);
+  }
+}
+
+function admitHostedReadRoot(reference: string): string {
+  if (
+    !isAbsolute(reference) ||
+    resolve(reference) !== reference ||
+    reference === resolve(reference, '/')
+  ) {
+    throw new TypeError('team-lifecycle-read-runtime-root-invalid');
+  }
+  return reference;
+}
+
+const teamLifecycleReadNowMs = (): number => Date.now();
+
+function createTeamLifecycleReadQueryContext(
+  authority: TeamLifecycleReadAuthority,
+  requestSignal: AbortSignal
+) {
+  return createQueryContext({
+    actorId: authority.actorId,
+    sessionId: 'session_team-lifecycle-read-standalone',
+    deploymentId: authority.deploymentId,
+    bootId: authority.bootId,
+    requestId: `request_team-lifecycle-read-standalone-${++teamLifecycleReadRequestSequence}`,
+    authorizedScope: authority.authorizedScope,
+    deadlineAtMs: teamLifecycleReadNowMs() + 10_000,
+    signal: requestSignal,
+  });
+}
+
+let teamLifecycleReadRequestSequence = 0;
 
 // =============================================================================
 // Lifecycle
@@ -96,11 +206,64 @@ let httpServer: HttpServer;
 async function start(): Promise<void> {
   logger.info('Starting standalone server...');
 
-  // Apply Claude root override if set
-  if (CLAUDE_ROOT) {
+  const serializedHostedBootstrap = readTeamLifecycleReadBootstrapEnvironment(process.env);
+  const hostedMode = serializedHostedBootstrap !== undefined;
+  let teamLifecycleReadHost: TeamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
+
+  if (hostedMode) {
+    // Hosted admission is complete before any ServiceContext/FileWatcher or HTTP service exists.
+    // An invalid launcher envelope aborts startup; unavailable identity storage leaves only the
+    // canonical read facet unavailable and never falls back to ambient discovery.
+    const bootstrap = await new TeamLifecycleReadBootstrapSource({
+      input: {
+        readSerializedBootstrap: () => serializedHostedBootstrap,
+      },
+      nowMs: teamLifecycleReadNowMs,
+    }).load();
+    const claudeRoot = admitHostedReadRoot(bootstrap.runtimeInstance.claudeRoot.reference);
+    const appDataRoot = admitHostedReadRoot(bootstrap.runtimeInstance.appDataRoot.reference);
+    setClaudeBasePathOverride(claudeRoot);
+
+    const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
+    if (teamIdentityGateway) {
+      try {
+        const readPorts = createMountBindingScopedTeamLifecycleReadPorts({
+          authority: bootstrap.authority,
+          mountBinding: bootstrap.mountBinding,
+          runtimeInstance: bootstrap.runtimeInstance,
+          teamIdentities: teamIdentityGateway,
+          nowMs: teamLifecycleReadNowMs,
+        });
+        await readPorts.teamIdentities.listTeamIdentities();
+        const composition = createTeamLifecycleReadComposition({
+          authority: bootstrap.authority,
+          ...readPorts,
+          nowMs: teamLifecycleReadNowMs,
+        });
+        teamLifecycleReadHost = createTeamLifecycleReadHost(
+          composition,
+          createTeamLifecycleReadQueryContext
+        );
+      } catch {
+        logger.warn(
+          'Hosted team lifecycle identity admission unavailable; canonical reads remain disabled.'
+        );
+      }
+    } else {
+      logger.warn(
+        'Hosted team lifecycle identity storage unavailable; canonical reads remain disabled.'
+      );
+    }
+  } else if (CLAUDE_ROOT) {
     setClaudeBasePathOverride(CLAUDE_ROOT);
     logger.info(`Using CLAUDE_ROOT: ${CLAUDE_ROOT}`);
   }
+
+  // ConfigManager is intentionally obtained only after hosted/non-hosted root admission.
+  // The dynamic module export is the same singleton used by the desktop composition.
+  const { configManager: admittedConfigManager } =
+    await import('./services/infrastructure/ConfigManager');
+  configManager = admittedConfigManager;
 
   // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
   const [{ HttpServer }, { NotificationManager }, { ServiceContext }] = await Promise.all([
@@ -123,7 +286,8 @@ async function start(): Promise<void> {
     projectsDir,
     todosDir,
   });
-  localContext.start();
+  if (hostedMode) localContext.startCacheOnly();
+  else localContext.start();
 
   // Initialize notification manager
   notificationManager = NotificationManager.getInstance();
@@ -136,7 +300,6 @@ async function start(): Promise<void> {
     getLocalContext: () => localContext,
     logger: createLogger('Feature:RecentProjects'),
   });
-
   // Wire file watcher events to SSE broadcast
   localContext.fileWatcher.on('file-change', (event: unknown) => {
     httpServer.broadcast('file-change', event);
@@ -166,6 +329,7 @@ async function start(): Promise<void> {
     recentProjectsFeature,
     updaterService: updaterServiceStub,
     sshConnectionManager: sshConnectionManagerStub,
+    teamLifecycleReadHost,
   };
 
   // No-op mode switch handler (no SSH in standalone)
@@ -178,40 +342,57 @@ async function start(): Promise<void> {
 }
 
 async function shutdown(): Promise<void> {
-  logger.info('Shutting down...');
+  if (shutdownPromise) return shutdownPromise;
 
-  if (httpServer?.isRunning()) {
-    await httpServer.stop();
-  }
+  shutdownPromise = runStandaloneShutdownLifecycle({
+    stopHttpServer: async () => {
+      if (httpServer?.isRunning()) {
+        await httpServer.stop();
+      }
+    },
+    disposeLocalContext: () => {
+      if (localContext) {
+        localContext.dispose();
+      }
+    },
+    flushConfig: async () => {
+      // Keep ConfigManager as the final persistence drain before process exit.
+      await configManager?.flush();
+    },
+    logInfo: (message) => logger.info(message),
+    logError: (message, error) => logger.error(message, error),
+    setExitCode: (code) => {
+      process.exitCode = code;
+    },
+    exit: (code) => process.exit(code),
+  });
 
-  if (localContext) {
-    localContext.dispose();
-  }
-
-  logger.info('Shutdown complete');
-  process.exit(0);
+  return shutdownPromise;
 }
 
 // =============================================================================
 // Signal Handlers
 // =============================================================================
 
-// SIGINT works on all platforms (Ctrl+C), but SIGTERM does not exist on Windows.
-process.on('SIGINT', () => void shutdown());
-if (process.platform !== 'win32') {
-  process.on('SIGTERM', () => void shutdown());
+if (!process.env.VITEST) {
+  // SIGINT works on all platforms (Ctrl+C), but SIGTERM does not exist on Windows.
+  registerStandaloneShutdownSignalHandlers({
+    platform: process.platform,
+    onSignal: (signal, listener) => process.on(signal, listener),
+    shutdown,
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    logger.error('Unhandled promise rejection:', reason);
+  });
+
+  process.on('uncaughtException', (error) => {
+    logger.error('Uncaught exception:', error);
+  });
+
+  // =============================================================================
+  // Start
+  // =============================================================================
+
+  void start();
 }
-
-process.on('unhandledRejection', (reason) => {
-  logger.error('Unhandled promise rejection:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught exception:', error);
-});
-
-// =============================================================================
-// Start
-// =============================================================================
-
-void start();

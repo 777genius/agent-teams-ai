@@ -226,47 +226,30 @@ export const APP_RELAUNCH = 'app:relaunch';
 /** List all teams */
 export const TEAM_LIST = 'team:list';
 
-/** Get detailed team data */
-export const TEAM_GET_DATA = 'team:getData';
-
-/** Get one full task by id */
-export const TEAM_GET_TASK = 'team:getTask';
-
-/** Get lightweight task change presence map for the currently viewed team */
-export const TEAM_GET_TASK_CHANGE_PRESENCE = 'team:getTaskChangePresence';
-
-/** Enable or disable task change presence tracking for a visible team tab */
-export const TEAM_SET_CHANGE_PRESENCE_TRACKING = 'team:setChangePresenceTracking';
+export {
+  TEAM_CREATE_CONFIG,
+  TEAM_DELETE_DRAFT,
+  TEAM_GET_SAVED_REQUEST,
+  TEAM_UPDATE_CONFIG,
+} from '@features/team-configuration/contracts';
+export {
+  TEAM_GET_ATTACHMENTS,
+  TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
+  TEAM_PROCESS_ALIVE,
+  TEAM_PROCESS_SEND,
+  TEAM_SEND_MESSAGE,
+} from '@features/team-message-delivery/contracts';
+export {
+  TEAM_GET_DATA,
+  TEAM_GET_MEMBER_ACTIVITY_META,
+  TEAM_GET_MESSAGES_PAGE,
+} from '@features/team-view-read-model/contracts';
 
 /** Enable or disable live teammate tool activity tracking for a visible team tab */
 export const TEAM_SET_TOOL_ACTIVITY_TRACKING = 'team:setToolActivityTracking';
 
 /** Enable or disable task log stream invalidation tracking for an open task log panel */
 export const TEAM_SET_TASK_LOG_STREAM_TRACKING = 'team:setTaskLogStreamTracking';
-
-/** Get buffered Claude CLI logs (paged, newest-first) */
-export const TEAM_GET_CLAUDE_LOGS = 'team:getClaudeLogs';
-
-/** Update team kanban state */
-export const TEAM_UPDATE_KANBAN = 'team:updateKanban';
-
-/** Update kanban column task order (drag-and-drop within column) */
-export const TEAM_UPDATE_KANBAN_COLUMN_ORDER = 'team:updateKanbanColumnOrder';
-
-/** Send inbox message to team member */
-export const TEAM_SEND_MESSAGE = 'team:sendMessage';
-
-/** Read latest OpenCode runtime delivery status for a sent inbox message */
-export const TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS = 'team:getOpenCodeRuntimeDeliveryStatus';
-
-/** Paginated messages for timeline/messages panel */
-export const TEAM_GET_MESSAGES_PAGE = 'team:getMessagesPage';
-
-/** Lightweight message-derived member activity facts */
-export const TEAM_GET_MEMBER_ACTIVITY_META = 'team:getMemberActivityMeta';
-
-/** Request review for task */
-export const TEAM_REQUEST_REVIEW = 'team:requestReview';
 
 /** Team change events (main -> renderer) */
 export const TEAM_CHANGE = 'team:change';
@@ -301,24 +284,6 @@ export const TEAM_CANCEL_PROVISIONING = 'team:cancelProvisioning';
 /** Team provisioning progress events (main -> renderer) */
 export const TEAM_PROVISIONING_PROGRESS = 'team:provisioningProgress';
 
-/** Send message to team's live CLI process via stream-json stdin */
-export const TEAM_PROCESS_SEND = 'team:processSend';
-
-/** Check if team has a live CLI process */
-export const TEAM_PROCESS_ALIVE = 'team:processAlive';
-
-/** Create a task in team's task directory */
-export const TEAM_CREATE_TASK = 'team:createTask';
-
-/** Update task status directly (pending/in_progress/completed) */
-export const TEAM_UPDATE_TASK_STATUS = 'team:updateTaskStatus';
-
-/** Update task owner (reassign) */
-export const TEAM_UPDATE_TASK_OWNER = 'team:updateTaskOwner';
-
-/** Update task fields (subject, description) */
-export const TEAM_UPDATE_TASK_FIELDS = 'team:updateTaskFields';
-
 /** Soft-delete a team (sets deletedAt in config) */
 export const TEAM_DELETE_TEAM = 'team:deleteTeam';
 
@@ -328,57 +293,30 @@ export const TEAM_RESTORE = 'team:restoreTeam';
 /** Permanently delete a team and its associated task directory */
 export const TEAM_PERMANENTLY_DELETE = 'team:permanentlyDeleteTeam';
 
-/** Restore a soft-deleted task (removes deletedAt, sets status back to pending) */
-export const TEAM_RESTORE_TASK = 'team:restoreTask';
-
-/** Get list of teams with live CLI processes */
-export const TEAM_ALIVE_LIST = 'team:aliveList';
-export const TEAM_STOP = 'team:stop';
-
-/** Create team config without provisioning CLI */
-export const TEAM_CREATE_CONFIG = 'team:createConfig';
-
-/** Get member subagent logs */
-export const TEAM_GET_MEMBER_LOGS = 'team:getMemberLogs';
-
-/** Get session logs that reference a task */
-export const TEAM_GET_LOGS_FOR_TASK = 'team:getLogsForTask';
-
-/** Get explicit board-task activity derived from transcript metadata */
-export const TEAM_GET_TASK_ACTIVITY = 'team:getTaskActivity';
-
-/** Get focused inline detail for one task-activity entry */
-export const TEAM_GET_TASK_ACTIVITY_DETAIL = 'team:getTaskActivityDetail';
-
-/** Get one task-scoped log stream derived from explicit board-task activity */
-export const TEAM_GET_TASK_LOG_STREAM = 'team:getTaskLogStream';
-
-/** Get lightweight task log stream summary for header badges/live counters */
-export const TEAM_GET_TASK_LOG_STREAM_SUMMARY = 'team:getTaskLogStreamSummary';
-
-/** Get exact task-log summaries derived from explicit board-task activity records */
-export const TEAM_GET_TASK_EXACT_LOG_SUMMARIES = 'team:getTaskExactLogSummaries';
-
-/** Get one exact task-log detail bundle for renderer reuse */
-export const TEAM_GET_TASK_EXACT_LOG_DETAIL = 'team:getTaskExactLogDetail';
-
-/** Update team config (name, description) */
-export const TEAM_UPDATE_CONFIG = 'team:updateConfig';
-
-/** Get aggregated member stats */
-export const TEAM_GET_MEMBER_STATS = 'team:getMemberStats';
-
-/** Start a pending task (transition to in_progress + notify agent) */
-export const TEAM_START_TASK = 'team:startTask';
-
-/** Start a pending task from UI — always notifies owner (including lead in solo teams) */
-export const TEAM_START_TASK_BY_USER = 'team:startTaskByUser';
-
-/** Get all tasks across all teams */
-export const TEAM_GET_ALL_TASKS = 'team:getAllTasks';
-
-/** Add a comment to a task */
-export const TEAM_ADD_TASK_COMMENT = 'team:addTaskComment';
+export {
+  TEAM_GET_TASK_ACTIVITY,
+  TEAM_GET_TASK_ACTIVITY_DETAIL,
+  TEAM_GET_TASK_EXACT_LOG_DETAIL,
+  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
+  TEAM_GET_TASK_LOG_STREAM,
+  TEAM_GET_TASK_LOG_STREAM_SUMMARY,
+} from '@features/task-log-observability/contracts';
+export {
+  TEAM_ALIVE_LIST,
+  TEAM_GET_AGENT_RUNTIME,
+  TEAM_GET_CLAUDE_LOGS,
+  TEAM_GET_LOGS_FOR_TASK,
+  TEAM_GET_MEMBER_LOGS,
+  TEAM_GET_MEMBER_STATS,
+  TEAM_KILL_PROCESS,
+  TEAM_LEAD_ACTIVITY,
+  TEAM_LEAD_CONTEXT,
+  TEAM_MEMBER_SPAWN_STATUSES,
+  TEAM_RESTART_MEMBER,
+  TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
+  TEAM_SKIP_MEMBER_FOR_LAUNCH,
+  TEAM_STOP,
+} from '@features/team-runtime-operations/contracts';
 
 /** Get current git branch for a project path (live read from .git/HEAD) */
 export const TEAM_GET_PROJECT_BRANCH = 'team:getProjectBranch';
@@ -389,65 +327,16 @@ export const TEAM_SET_PROJECT_BRANCH_TRACKING = 'team:setProjectBranchTracking';
 /** Push event: tracked project branch changed (main → renderer) */
 export const TEAM_PROJECT_BRANCH_CHANGE = 'team:projectBranchChange';
 
-/** Add a new member to an existing team */
-export const TEAM_ADD_MEMBER = 'team:addMember';
-
-/** Replace all team members (bulk edit) */
-export const TEAM_REPLACE_MEMBERS = 'team:replaceMembers';
-
-/** Soft-delete a team member */
-export const TEAM_REMOVE_MEMBER = 'team:removeMember';
-
-/** Restore a soft-deleted team member */
-export const TEAM_RESTORE_MEMBER = 'team:restoreMember';
-
-/** Update a team member's role */
-export const TEAM_UPDATE_MEMBER_ROLE = 'team:updateMemberRole';
-
-/** Get attachment data for a message */
-export const TEAM_GET_ATTACHMENTS = 'team:getAttachments';
-
-/** Kill a registered CLI process by PID */
-export const TEAM_KILL_PROCESS = 'team:killProcess';
-
-/** Get lead process activity state (active/idle/offline) */
-export const TEAM_LEAD_ACTIVITY = 'team:leadActivity';
-
-/** Get lead process context window usage */
-export const TEAM_LEAD_CONTEXT = 'team:leadContext';
-
-/** Get per-member spawn statuses for a team */
-export const TEAM_MEMBER_SPAWN_STATUSES = 'team:memberSpawnStatuses';
-
-/** Get live per-agent runtime stats for a team */
-export const TEAM_GET_AGENT_RUNTIME = 'team:getAgentRuntime';
-
-/** Restart a specific teammate runtime */
-export const TEAM_RESTART_MEMBER = 'team:restartMember';
-
-/** Retry failed OpenCode-owned secondary runtime lanes */
-export const TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES = 'team:retryFailedOpenCodeSecondaryLanes';
-
-/** Skip a failed teammate for the current launch */
-export const TEAM_SKIP_MEMBER_FOR_LAUNCH = 'team:skipMemberForLaunch';
-
-/** Soft-delete a task (set status to 'deleted' with deletedAt timestamp) */
-export const TEAM_SOFT_DELETE_TASK = 'team:softDeleteTask';
-
-/** Get all soft-deleted tasks for a team */
-export const TEAM_GET_DELETED_TASKS = 'team:getDeletedTasks';
-
-/** Set needsClarification flag on a task */
-export const TEAM_SET_TASK_CLARIFICATION = 'team:setTaskClarification';
+export {
+  TEAM_ADD_MEMBER,
+  TEAM_REMOVE_MEMBER,
+  TEAM_REPLACE_MEMBERS,
+  TEAM_RESTORE_MEMBER,
+  TEAM_UPDATE_MEMBER_ROLE,
+} from '@features/team-roster-mutations/contracts';
 
 /** Show native OS notification for a team message */
 export const TEAM_SHOW_MESSAGE_NOTIFICATION = 'team:showMessageNotification';
-
-/** Add a relationship (blockedBy/blocks/related) between two tasks */
-export const TEAM_ADD_TASK_RELATIONSHIP = 'team:addTaskRelationship';
-
-/** Remove a relationship (blockedBy/blocks/related) between two tasks */
-export const TEAM_REMOVE_TASK_RELATIONSHIP = 'team:removeTaskRelationship';
 
 /** Save an image attachment to a task */
 export const TEAM_SAVE_TASK_ATTACHMENT = 'team:saveTaskAttachment';
@@ -458,23 +347,37 @@ export const TEAM_GET_TASK_ATTACHMENT = 'team:getTaskAttachment';
 /** Delete an attachment from a task */
 export const TEAM_DELETE_TASK_ATTACHMENT = 'team:deleteTaskAttachment';
 
-/** Push event: tool approval request or dismissal (main → renderer) */
-export const TEAM_TOOL_APPROVAL_EVENT = 'team:toolApprovalEvent';
-
-/** Invoke: respond to a tool approval request (renderer → main) */
-export const TEAM_TOOL_APPROVAL_RESPOND = 'team:toolApprovalRespond';
+export {
+  TEAM_TOOL_APPROVAL_EVENT,
+  TEAM_TOOL_APPROVAL_READ_FILE,
+  TEAM_TOOL_APPROVAL_RESPOND,
+  TEAM_TOOL_APPROVAL_SETTINGS,
+} from '@features/team-approvals/contracts';
+export {
+  TEAM_ADD_TASK_COMMENT,
+  TEAM_ADD_TASK_RELATIONSHIP,
+  TEAM_CREATE_TASK,
+  TEAM_GET_ALL_TASKS,
+  TEAM_GET_DELETED_TASKS,
+  TEAM_GET_TASK,
+  TEAM_GET_TASK_CHANGE_PRESENCE,
+  TEAM_REMOVE_TASK_RELATIONSHIP,
+  TEAM_REQUEST_REVIEW,
+  TEAM_RESTORE_TASK,
+  TEAM_SET_CHANGE_PRESENCE_TRACKING,
+  TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SOFT_DELETE_TASK,
+  TEAM_START_TASK,
+  TEAM_START_TASK_BY_USER,
+  TEAM_UPDATE_KANBAN,
+  TEAM_UPDATE_KANBAN_COLUMN_ORDER,
+  TEAM_UPDATE_TASK_FIELDS,
+  TEAM_UPDATE_TASK_OWNER,
+  TEAM_UPDATE_TASK_STATUS,
+} from '@features/team-task-board/contracts';
 
 /** Validate custom CLI args against `claude --help` output */
 export const TEAM_VALIDATE_CLI_ARGS = 'team:validateCliArgs';
-
-/** Invoke: update tool approval settings (renderer → main) */
-export const TEAM_TOOL_APPROVAL_SETTINGS = 'team:toolApprovalSettings';
-
-/** Invoke: read file content for tool approval diff preview (renderer → main) */
-export const TEAM_TOOL_APPROVAL_READ_FILE = 'team:toolApprovalReadFile';
-
-export const TEAM_GET_SAVED_REQUEST = 'team:getSavedRequest';
-export const TEAM_DELETE_DRAFT = 'team:deleteDraft';
 
 // =============================================================================
 // Cross-Team Communication Channels
@@ -587,11 +490,6 @@ export const REVIEW_PREVIEW_REJECT = 'review:previewReject';
 /** Применить batch решений review */
 export const REVIEW_APPLY_DECISIONS = 'review:applyDecisions';
 
-/** Execute Restore/Rename/Undo through the durable review mutation state machine. */
-export const REVIEW_EXECUTE_MUTATION = 'review:executeMutation';
-export const REVIEW_RETRY_MUTATION_RECOVERY = 'review:retryMutationRecovery';
-export const REVIEW_RESTORE_HISTORY = 'review:restoreHistory';
-
 /** Получить полное содержимое файла для diff view */
 export const REVIEW_GET_FILE_CONTENT = 'review:getFileContent';
 
@@ -615,35 +513,27 @@ export const REVIEW_REAPPLY_REJECTED_RENAME = 'review:reapplyRejectedRename';
 /** Get git file change log */
 export const REVIEW_GET_GIT_FILE_LOG = 'review:getGitFileLog';
 
-/** Load persisted review decisions from disk */
-export const REVIEW_LOAD_DECISIONS = 'review:loadDecisions';
+// Compatibility re-exports. The change-review-history feature owns these channels.
+export {
+  REVIEW_CLEAR_DECISIONS,
+  REVIEW_CLEAR_DRAFT_HISTORY,
+  REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+  REVIEW_LOAD_DECISIONS,
+  REVIEW_LOAD_DRAFT_HISTORY,
+  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_SAVE_DECISIONS,
+  REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
+} from '@features/change-review-history/contracts';
 
-/** Save review decisions to disk */
-export const REVIEW_SAVE_DECISIONS = 'review:saveDecisions';
-
-/** Clear review decisions from disk */
-export const REVIEW_CLEAR_DECISIONS = 'review:clearDecisions';
-
-/** Load/resolve durable renderer branches preserved after decision CAS conflicts. */
-export const REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES = 'review:loadDecisionConflictCandidates';
-export const REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE = 'review:resolveDecisionConflictCandidate';
-
-/** Load the exact-scope durable CodeMirror manual-edit history. */
-export const REVIEW_LOAD_DRAFT_HISTORY = 'review:loadDraftHistory';
-
-/** Atomically publish one file's latest durable editor-history checkpoint. */
-export const REVIEW_SAVE_DRAFT_HISTORY_ENTRY = 'review:saveDraftHistoryEntry';
-
-/** Remove one file (or the whole exact scope) from durable editor history. */
-export const REVIEW_CLEAR_DRAFT_HISTORY = 'review:clearDraftHistory';
-
-/** Load/resolve durable manual-editor branches preserved after draft CAS conflicts. */
-export const REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES =
-  'review:loadDraftHistoryConflictCandidates';
-export const REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE =
-  'review:resolveDraftHistoryConflictCandidate';
-export const REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE =
-  'review:replaceDraftHistoryConflictCandidate';
+// Compatibility re-exports. The review-mutations feature owns these channels.
+export {
+  REVIEW_EXECUTE_MUTATION,
+  REVIEW_RESTORE_HISTORY,
+  REVIEW_RETRY_MUTATION_RECOVERY,
+} from '@features/review-mutations/contracts';
 
 // =============================================================================
 // Editor Channels

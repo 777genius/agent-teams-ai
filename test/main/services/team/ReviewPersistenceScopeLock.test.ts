@@ -3,12 +3,61 @@ import { DatabaseSync } from 'node:sqlite';
 import { spawn } from 'child_process';
 import { createHash } from 'crypto';
 import { once } from 'events';
-import { mkdtemp, rm } from 'fs/promises';
+import { mkdtemp, readFile, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 let teamsBasePath: string;
+
+interface WorkerResult {
+  code: number | null;
+  stderr: string;
+}
+
+const workerPath = path.resolve('test/fixtures/reviewPersistenceScopeLockWorker.ts');
+const AMBIENT_PROVIDER_POISON = 'review-lock-ambient-provider-poison';
+
+function runWorker(
+  mode: 'run' | 'environment-probe',
+  root: string,
+  logPath: string,
+  counterPath: string,
+  workerId: string,
+  delayMs: number,
+  env: NodeJS.ProcessEnv = {}
+): Promise<WorkerResult> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      process.execPath,
+      ['--import', 'tsx', workerPath, mode, root, logPath, counterPath, workerId, String(delayMs)],
+      {
+        cwd: process.cwd(),
+        env: { NODE_ENV: 'test', ...env },
+        stdio: ['ignore', 'ignore', 'pipe'],
+      }
+    );
+    let stderr = '';
+    child.stderr.on('data', (chunk) => {
+      stderr += String(chunk);
+    });
+    child.once('error', reject);
+    child.once('close', (code) => resolve({ code, stderr }));
+  });
+}
+
+async function waitForLog(logPath: string, expected: string): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    try {
+      if ((await readFile(logPath, 'utf8')).includes(expected)) return;
+    } catch {
+      // The first worker has not entered the lock yet.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error(`Timed out waiting for ${expected}`);
+}
 
 vi.mock('@main/utils/pathDecoder', () => ({
   getTeamsBasePath: () => teamsBasePath,
@@ -69,12 +118,12 @@ describe('ReviewPersistenceScopeLock', () => {
     const scope = { scopeKey: 'task-task-1', scopeToken: 'task:task-1:error' };
 
     await expect(
-      withReviewPersistenceScopeLock('demo', scope, async () => {
-        throw new Error('operation failed');
-      })
+      withReviewPersistenceScopeLock('demo', scope, () =>
+        Promise.reject(new Error('operation failed'))
+      )
     ).rejects.toThrow('operation failed');
     await expect(
-      withReviewPersistenceScopeLock('demo', scope, async () => 'recovered')
+      withReviewPersistenceScopeLock('demo', scope, () => Promise.resolve('recovered'))
     ).resolves.toBe('recovered');
   });
 
@@ -89,10 +138,44 @@ describe('ReviewPersistenceScopeLock', () => {
           scopeKey: 'task-task-1',
           scopeToken: 'scope',
         },
-        async () => undefined
+        () => Promise.resolve()
       )
     ).rejects.toThrow('Invalid review persistence lock team name');
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'gives the process-start probe only its exact host locale environment',
+    async () => {
+      const logPath = path.join(teamsBasePath, 'environment-probe.log');
+      const counterPath = path.join(teamsBasePath, 'environment-probe-counter.txt');
+      const first = runWorker('run', teamsBasePath, logPath, counterPath, 'first', 350);
+      await waitForLog(logPath, 'first:enter');
+
+      const second = runWorker(
+        'environment-probe',
+        teamsBasePath,
+        logPath,
+        counterPath,
+        'provider-probe',
+        0,
+        {
+          NODE_DEBUG: 'child_process',
+          CODEX_API_KEY: AMBIENT_PROVIDER_POISON,
+          CLAUDE_CODE_USE_OPENAI: '1',
+          LC_ALL: 'hostile-locale',
+        }
+      );
+      const [firstResult, secondResult] = await Promise.all([first, second]);
+
+      expect(firstResult.code).toBe(0);
+      expect(secondResult.code).toBe(0);
+      expect(secondResult.stderr).toContain("env: { LC_ALL: 'C' }");
+      expect(secondResult.stderr).toContain("envPairs: [ 'LC_ALL=C' ]");
+      expect(secondResult.stderr).not.toContain(AMBIENT_PROVIDER_POISON);
+      expect(secondResult.stderr).not.toContain('CLAUDE_CODE_USE_OPENAI');
+      expect(secondResult.stderr).not.toContain('hostile-locale');
+    }
+  );
 
   it('reclaims a crash-left lease when its PID has been reused by another process', async () => {
     const { withReviewPersistenceScopeLock } =
@@ -101,7 +184,7 @@ describe('ReviewPersistenceScopeLock', () => {
     await withReviewPersistenceScopeLock(
       'demo',
       { scopeKey: 'task-bootstrap', scopeToken: 'bootstrap' },
-      async () => undefined
+      () => Promise.resolve()
     );
 
     const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1_000)'], {
@@ -132,7 +215,7 @@ describe('ReviewPersistenceScopeLock', () => {
       database.close();
 
       await expect(
-        withReviewPersistenceScopeLock('demo', scope, async () => 'recovered', {
+        withReviewPersistenceScopeLock('demo', scope, () => Promise.resolve('recovered'), {
           acquireTimeoutMs: 500,
           retryIntervalMs: 10,
         })

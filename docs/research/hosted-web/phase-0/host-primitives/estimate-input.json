@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "P0.W4.ESTIMATE",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "canonicalBaseSha": "f7d98790eb868714e536f77bd796072ea706911a",
+  "packetRevision": "phase-00-r3",
+  "status": "characterized",
+  "canonicalBucketId": "EST-LIFECYCLE-RUNTIME",
+  "ownerContribution": "W4 current-host characterization and read-only projections only",
+  "admittedR3Lines": {
+    "production": 0,
+    "test": 0,
+    "deleted": 0
+  },
+  "historicalR2Range": {
+    "lowNetLines": 11600,
+    "highNetLines": 20370,
+    "disposition": "not admitted; retained only as historical controller input"
+  },
+  "w2Reconciliation": {
+    "sharedCanonicalBucket": "EST-LIFECYCLE-RUNTIME",
+    "overlapRule": "W4 contributes no admitted r3 production scope; never add the historical r2 range to W2 or the baseline."
+  },
+  "excludedCapabilities": [
+    "hosted mutation/runtime readiness",
+    "workspace effects",
+    "provider launch",
+    "production native artifacts",
+    "final-image composition"
+  ],
+  "uncertainty": [
+    "Any later executable scope requires a separately reviewed packet and a new estimate."
+  ]
+}

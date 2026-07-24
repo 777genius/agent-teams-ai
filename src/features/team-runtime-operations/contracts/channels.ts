@@ -1,0 +1,14 @@
+export const TEAM_ALIVE_LIST = 'team:aliveList';
+export const TEAM_GET_AGENT_RUNTIME = 'team:getAgentRuntime';
+export const TEAM_GET_CLAUDE_LOGS = 'team:getClaudeLogs';
+export const TEAM_GET_LOGS_FOR_TASK = 'team:getLogsForTask';
+export const TEAM_GET_MEMBER_LOGS = 'team:getMemberLogs';
+export const TEAM_GET_MEMBER_STATS = 'team:getMemberStats';
+export const TEAM_KILL_PROCESS = 'team:killProcess';
+export const TEAM_LEAD_ACTIVITY = 'team:leadActivity';
+export const TEAM_LEAD_CONTEXT = 'team:leadContext';
+export const TEAM_MEMBER_SPAWN_STATUSES = 'team:memberSpawnStatuses';
+export const TEAM_RESTART_MEMBER = 'team:restartMember';
+export const TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES = 'team:retryFailedOpenCodeSecondaryLanes';
+export const TEAM_SKIP_MEMBER_FOR_LAUNCH = 'team:skipMemberForLaunch';
+export const TEAM_STOP = 'team:stop';

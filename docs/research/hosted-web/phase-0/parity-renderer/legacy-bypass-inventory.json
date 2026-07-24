@@ -1,0 +1,23 @@
+{
+  "schemaId": "p0-w1-legacy-bypass-inventory",
+  "evidenceId": "P0.W1.LEGACY_BYPASSES",
+  "schemaVersion": 2,
+  "packetRevision": "phase-00-r2",
+  "pinnedBaseSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "summary": {
+    "direct-electron-global": 3,
+    "global-mega-client-call": 172,
+    "structural-capability-check": 78,
+    "fabricated-browser-success": 410
+  },
+  "rawArtifact": {
+    "format": "deterministically sorted compact JSON",
+    "recordCount": 663,
+    "sha256": "sha256:10e7597e6bfd5e1e488d748d5ff19c37eff71acb9ff4f7303c3f3eac35816b32",
+    "externalPath": "legacy-bypass-raw.json",
+    "pathScope": "artifact-pack-relative",
+    "reproductionCommand": "W1_RAW_EVIDENCE_ROOT=<artifact-pack-dir> node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
+  },
+  "requiredDisposition": "Supported hosted actions use a real feature facet; unavailable and desktop-only controls are absent before mount. No optional-method check or fabricated success is capability proof."
+}

@@ -24,6 +24,7 @@ import type {
   KanbanState,
   ResolvedTeamMember,
   TeamConfig,
+  TeamMember,
   TeamProcess,
   TeamTask,
   TeamTaskWithKanban,
@@ -1063,13 +1064,75 @@ function createDurableTaskStartNotificationHarness(options: {
   return { service, sendMessage, commandFacadeCreateTask };
 }
 
+function createMembersMetaStoreMock(
+  initialMembers: TeamMember[],
+  writeMembers: (
+    teamName: string,
+    members: TeamMember[],
+    options?: { providerBackendId?: string }
+  ) => Promise<unknown> = vi.fn(async () => undefined)
+) {
+  let members = initialMembers;
+  const getMembers = vi.fn(async () => members);
+  const updateMembers = vi.fn(
+    async (
+      teamName: string,
+      update: (currentMembers: readonly TeamMember[]) => TeamMember[] | Promise<TeamMember[]>,
+      options?: { providerBackendId?: string }
+    ) => {
+      members = await update(members);
+      if (options === undefined) {
+        await writeMembers(teamName, members);
+      } else {
+        await writeMembers(teamName, members, options);
+      }
+    }
+  );
+  return { getMembers, writeMembers, updateMembers } as never;
+}
+
+function createRosterMutationService(
+  membersMetaStore: unknown,
+  options: { running?: boolean; teamName?: string; leadProviderId?: TeamMember['providerId'] } = {}
+): TeamDataService {
+  const teamName = options.teamName ?? 'runtime-team';
+  return new TeamDataService(
+    { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+    { getTasks: vi.fn(async () => []) } as never,
+    { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+    {} as never,
+    {} as never,
+    { resolveMembers: vi.fn(() => []) } as never,
+    { getState: vi.fn(async () => ({ teamName, reviewers: [], tasks: {} })) } as never,
+    {} as never,
+    membersMetaStore as never,
+    { readMessages: vi.fn(async () => []) } as never,
+    (() =>
+      ({
+        processes: {
+          listProcesses: vi.fn(async () =>
+            options.running
+              ? [
+                  {
+                    id: 'run-1',
+                    label: teamName,
+                    pid: 123,
+                    registeredAt: new Date().toISOString(),
+                  },
+                ]
+              : []
+          ),
+        },
+      }) as never) as never,
+    {} as never,
+    { getMeta: vi.fn(async () => ({ providerId: options.leadProviderId ?? 'codex' })) } as never
+  );
+}
+
 describe('TeamDataService', () => {
   it('rejects duplicate member names in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1100,10 +1163,7 @@ describe('TeamDataService', () => {
 
   it('rejects invalid or reserved member names in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1137,8 +1197,8 @@ describe('TeamDataService', () => {
 
   it('preserves agentId for existing members during replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Developer',
@@ -1149,9 +1209,9 @@ describe('TeamDataService', () => {
           agentId: 'alice@runtime-team',
           joinedAt: 1710000000000,
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1197,10 +1257,7 @@ describe('TeamDataService', () => {
 
   it('persists teammate worktree isolation in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1239,10 +1296,7 @@ describe('TeamDataService', () => {
 
   it('persists member-level provider backend and fast mode during replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1292,10 +1346,7 @@ describe('TeamDataService', () => {
 
   it('persists member-level provider backend and fast mode during addMember', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1337,10 +1388,7 @@ describe('TeamDataService', () => {
 
   it('allows multiple OpenCode teammates in replaceMembers drafts before they are persisted', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
-      writeMembers,
-    } as never;
+    const membersMetaStore = createMembersMetaStoreMock([], writeMembers);
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1374,8 +1422,8 @@ describe('TeamDataService', () => {
 
   it('blocks live addMember on a running mixed team', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Reviewer',
@@ -1383,9 +1431,9 @@ describe('TeamDataService', () => {
           model: 'minimax-m2.5-free',
           agentType: 'general-purpose',
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1434,8 +1482,8 @@ describe('TeamDataService', () => {
 
   it('blocks live replaceMembers on a running mixed team', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Reviewer',
@@ -1443,9 +1491,9 @@ describe('TeamDataService', () => {
           model: 'minimax-m2.5-free',
           agentType: 'general-purpose',
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1488,10 +1536,59 @@ describe('TeamDataService', () => {
     expect(writeMembers).not.toHaveBeenCalled();
   });
 
+  it('validates an add against the locked roster after a concurrent policy-sensitive change', async () => {
+    const staleProjectedMembers: TeamMember[] = [
+      {
+        name: 'primary-reviewer',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      },
+    ];
+    const lockedMembers: TeamMember[] = [
+      ...staleProjectedMembers,
+      {
+        name: 'concurrent-side-lane',
+        providerId: 'opencode',
+        model: 'minimax-m2.5-free',
+      },
+    ];
+    const writeMembers = vi.fn(async (_teamName: string, _members: readonly TeamMember[]) =>
+      undefined
+    );
+    const getMembers = vi.fn(async () => staleProjectedMembers);
+    const updateMembers = vi.fn(
+      async (
+        teamName: string,
+        update: (members: readonly TeamMember[]) => TeamMember[] | Promise<TeamMember[]>
+      ) => {
+        const nextMembers = await update(lockedMembers);
+        await writeMembers(teamName, nextMembers);
+      }
+    );
+    const service = createRosterMutationService(
+      { getMembers, updateMembers, writeMembers },
+      { running: true, teamName: 'mixed-team', leadProviderId: 'codex' }
+    );
+
+    await expect(
+      service.addMember('mixed-team', {
+        name: 'new-primary',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      })
+    ).rejects.toThrow(
+      'Live roster mutation on a running mixed team is not supported in V1. Stop the team, edit the roster, then relaunch.'
+    );
+
+    expect(updateMembers).toHaveBeenCalledTimes(1);
+    expect(getMembers).not.toHaveBeenCalled();
+    expect(writeMembers).not.toHaveBeenCalled();
+  });
+
   it('allows live removeMember for an OpenCode-owned member on a running mixed team', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Reviewer',
@@ -1499,9 +1596,9 @@ describe('TeamDataService', () => {
           model: 'minimax-m2.5-free',
           agentType: 'general-purpose',
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1540,8 +1637,8 @@ describe('TeamDataService', () => {
 
   it('does not carry over agentId from a previously removed member with the same name', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Developer',
@@ -1553,9 +1650,9 @@ describe('TeamDataService', () => {
           joinedAt: 1710000000000,
           removedAt: 1715000000000,
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1602,8 +1699,8 @@ describe('TeamDataService', () => {
 
   it('restores a removed member without reusing the stale runtime agent id', async () => {
     const writeMembers = vi.fn(async () => {});
-    const membersMetaStore = {
-      getMembers: vi.fn(async () => [
+    const membersMetaStore = createMembersMetaStoreMock(
+      [
         {
           name: 'alice',
           role: 'Developer',
@@ -1622,9 +1719,9 @@ describe('TeamDataService', () => {
           agentType: 'general-purpose',
           joinedAt: 1710000100000,
         },
-      ]),
-      writeMembers,
-    } as never;
+      ],
+      writeMembers
+    );
 
     const service = new TeamDataService(
       { getConfig: vi.fn(), listTeams: vi.fn() } as never,
@@ -1659,6 +1756,142 @@ describe('TeamDataService', () => {
         }),
       ])
     );
+  });
+
+  it('adds a member through atomic update without overwriting an unrelated tombstone', async () => {
+    const removedAt = Date.parse('2026-07-19T10:00:00.000Z');
+    let persistedMembers: TeamMember[] = [];
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [{ name: 'alice', role: 'Builder' }]),
+      updateMembers: vi.fn(
+        async (
+          _teamName: string,
+          update: (members: readonly TeamMember[]) => TeamMember[] | Promise<TeamMember[]>
+        ) => {
+          persistedMembers = await update([
+            { name: 'alice', role: 'Builder' },
+            { name: 'charlie', role: 'Removed reviewer', removedAt },
+          ]);
+        }
+      ),
+      writeMembers: vi.fn(),
+    };
+    const service = createRosterMutationService(membersMetaStore);
+
+    await service.addMember('runtime-team', { name: 'bob', role: 'Reviewer' });
+
+    expect(persistedMembers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'bob', role: 'Reviewer' }),
+        expect.objectContaining({ name: 'charlie', removedAt }),
+      ])
+    );
+    expect(membersMetaStore.writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('edits a member role through atomic update without overwriting an unrelated tombstone', async () => {
+    const removedAt = Date.parse('2026-07-19T10:30:00.000Z');
+    let persistedMembers: TeamMember[] = [];
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [{ name: 'alice', role: 'Builder' }]),
+      updateMembers: vi.fn(
+        async (
+          _teamName: string,
+          update: (members: readonly TeamMember[]) => TeamMember[] | Promise<TeamMember[]>
+        ) => {
+          persistedMembers = await update([
+            { name: 'alice', role: 'Builder' },
+            { name: 'charlie', role: 'Removed reviewer', removedAt },
+          ]);
+        }
+      ),
+      writeMembers: vi.fn(),
+    };
+    const service = createRosterMutationService(membersMetaStore);
+
+    await expect(service.updateMemberRole('runtime-team', 'alice', 'Lead builder')).resolves.toEqual(
+      {
+        oldRole: 'Builder',
+        changed: true,
+      }
+    );
+
+    expect(persistedMembers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'alice', role: 'Lead builder' }),
+        expect.objectContaining({ name: 'charlie', removedAt }),
+      ])
+    );
+    expect(membersMetaStore.writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('restores from the locked current roster and preserves a concurrent unrelated tombstone', async () => {
+    const aliceRemovedAt = Date.parse('2026-07-19T11:00:00.000Z');
+    const charlieRemovedAt = Date.parse('2026-07-19T11:05:00.000Z');
+    let persistedMembers: TeamMember[] = [];
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [
+        {
+          name: 'alice',
+          role: 'Builder',
+          agentId: 'alice@old-runtime-team',
+          removedAt: aliceRemovedAt,
+        },
+      ]),
+      updateMembers: vi.fn(
+        async (
+          _teamName: string,
+          update: (members: readonly TeamMember[]) => TeamMember[] | Promise<TeamMember[]>
+        ) => {
+          persistedMembers = await update([
+            {
+              name: 'alice',
+              role: 'Builder',
+              agentId: 'alice@old-runtime-team',
+              removedAt: aliceRemovedAt,
+            },
+            { name: 'charlie', role: 'Removed reviewer', removedAt: charlieRemovedAt },
+          ]);
+        }
+      ),
+      writeMembers: vi.fn(),
+    };
+    const service = createRosterMutationService(membersMetaStore);
+
+    await expect(service.restoreMember('runtime-team', 'alice')).resolves.toMatchObject({
+      name: 'alice',
+      role: 'Builder',
+      agentId: undefined,
+      removedAt: undefined,
+    });
+    expect(persistedMembers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'alice', agentId: undefined, removedAt: undefined }),
+        expect.objectContaining({ name: 'charlie', removedAt: charlieRemovedAt }),
+      ])
+    );
+    expect(membersMetaStore.writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('propagates atomic roster update failures without reporting an add or edit as successful', async () => {
+    const updateMembers = vi.fn(async () => {
+      throw new Error('members metadata disk full');
+    });
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [{ name: 'alice', role: 'Builder' }]),
+      updateMembers,
+      writeMembers: vi.fn(),
+    };
+    const service = createRosterMutationService(membersMetaStore);
+
+    await expect(
+      service.addMember('runtime-team', { name: 'bob', role: 'Reviewer' })
+    ).rejects.toThrow('members metadata disk full');
+    await expect(
+      service.updateMemberRole('runtime-team', 'alice', 'Lead builder')
+    ).rejects.toThrow('members metadata disk full');
+    expect(updateMembers).toHaveBeenCalledTimes(2);
+    expect(membersMetaStore.writeMembers).not.toHaveBeenCalled();
   });
 
   it('keeps getTeamData read-only and skips kanban garbage-collect', async () => {
@@ -1947,7 +2180,7 @@ describe('TeamDataService', () => {
       status: 'pending' as const,
     };
     const commandFacade = {
-      createTask: vi.fn(async () => ({
+      createTask: vi.fn(async (_command: unknown) => ({
         task: durableTask,
         outcome: 'executed',
         createdInAttempt: true,
@@ -2001,16 +2234,25 @@ describe('TeamDataService', () => {
     expect(directCreate).not.toHaveBeenCalled();
 
     supportsReconciliation = false;
+    const fallbackCommand = {
+      commandId: '22222222-2222-4222-8222-222222222222',
+      idempotencyKey: 'create-task-intent-2',
+    };
     await expect(
       service.createTask('my-team', {
-        subject: 'Mixed controller must fail before create',
-        command: {
-          commandId: '22222222-2222-4222-8222-222222222222',
-          idempotencyKey: 'create-task-intent-2',
-        },
+        subject: 'Durable fallback task',
+        command: fallbackCommand,
       })
-    ).rejects.toThrow('Durable task-board commands are unavailable');
-    expect(commandFacade.createTask).toHaveBeenCalledTimes(1);
+    ).resolves.toEqual(durableTask);
+    expect(commandFacade.createTask).toHaveBeenCalledTimes(2);
+    expect(commandFacade.createTask.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        identity: fallbackCommand,
+        destination: expect.not.objectContaining({
+          reconcile: expect.anything(),
+        }),
+      })
+    );
     expect(directCreate).not.toHaveBeenCalled();
   });
 
@@ -2426,7 +2668,7 @@ describe('TeamDataService', () => {
     expect(sendMessage).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps derived projectPath outside the durable command payload', async () => {
+  it('keeps derived projectPath outside the normalized durable command payload', async () => {
     const directCreate = vi.fn((input: Record<string, unknown>) => ({
       ...input,
       status: 'pending' as const,
@@ -2489,7 +2731,7 @@ describe('TeamDataService', () => {
       blockedBy: ['task-b', 'task-a', 'task-b'],
       related: ['task-d', 'task-c', 'task-d'],
       command: {
-        commandId: '33333333-3333-4333-8333-333333333333',
+        commandId: '44444444-4444-4444-8444-444444444444',
         idempotencyKey: 'stable-intent',
       },
     });

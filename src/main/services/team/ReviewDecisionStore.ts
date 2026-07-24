@@ -165,6 +165,7 @@ export interface LoadedReviewDecisions {
 interface InternalLoadedReviewDecisions extends LoadedReviewDecisions {
   lastMutationId?: string;
   storageVersion: number;
+  storedDocument?: Record<string, unknown>;
 }
 
 class InvalidReviewDecisionDataError extends Error {}
@@ -177,6 +178,269 @@ function shouldQuarantineDecisionConflictCandidate(error: unknown): boolean {
     error.message === 'Unsafe or oversized review decision conflict candidate' ||
     error.message === 'Review decision conflict candidate changed while being read'
   );
+}
+
+type JsonRecord = Record<string, unknown>;
+
+const REVIEW_DOCUMENT_KNOWN_FIELDS = [
+  'version',
+  'scopeKey',
+  'scopeToken',
+  'hunkDecisions',
+  'fileDecisions',
+  'hunkContextHashesByFile',
+  'reviewActionHistory',
+  'reviewRedoHistory',
+  'textBlobs',
+  'fileSummaryBlobs',
+  'revision',
+  'lastMutationId',
+  'updatedAt',
+] as const;
+const REVIEW_ACTION_KNOWN_FIELDS = [
+  'id',
+  'createdAt',
+  'kind',
+  'descriptor',
+  'action',
+  'decisionSnapshot',
+  'diskSnapshots',
+] as const;
+const REVIEW_DESCRIPTOR_KNOWN_FIELDS = ['intent', 'filePath', 'hunkIndex', 'fileCount'] as const;
+const REVIEW_NESTED_ACTION_KNOWN_FIELDS = [
+  'filePath',
+  'originalIndex',
+  'snapshot',
+  'file',
+  'fileRef',
+  'decisionSnapshot',
+] as const;
+const REVIEW_SNAPSHOT_KNOWN_FIELDS = [
+  'filePath',
+  'beforeContent',
+  'afterContent',
+  'beforeBlob',
+  'afterBlob',
+  'authoritativeBeforeSha256',
+  'file',
+  'fileRef',
+  'fileIndex',
+  'restoreConflict',
+  'restoreMode',
+  'renameExpectation',
+] as const;
+const REVIEW_RENAME_EXPECTATION_KNOWN_FIELDS = [
+  'eventId',
+  'beforeHash',
+  'afterHash',
+  'relation',
+] as const;
+const REVIEW_RELATION_KNOWN_FIELDS = ['kind', 'oldPath', 'newPath'] as const;
+const REVIEW_DECISION_SNAPSHOT_KNOWN_FIELDS = ['hunkDecisions', 'fileDecisions'] as const;
+const REVIEW_REDO_KNOWN_FIELDS = ['action', 'decisionSnapshot', 'hunkContextHashesByFile'] as const;
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function hasOwnField(record: JsonRecord, field: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, field);
+}
+
+function replaceKnownFields(
+  existing: JsonRecord | null,
+  replacement: JsonRecord,
+  knownFields: readonly string[]
+): JsonRecord {
+  const merged = { ...(existing ?? {}) };
+  for (const field of knownFields) {
+    delete merged[field];
+  }
+  return Object.assign(merged, replacement);
+}
+
+function mergeDecisionSnapshot(existing: unknown, replacement: unknown): unknown {
+  if (!isJsonRecord(replacement)) return replacement;
+  return replaceKnownFields(
+    isJsonRecord(existing) ? existing : null,
+    replacement,
+    REVIEW_DECISION_SNAPSHOT_KNOWN_FIELDS
+  );
+}
+
+function mergeStoredSnapshot(existing: unknown, replacement: unknown): unknown {
+  if (!isJsonRecord(replacement)) return replacement;
+  const merged = replaceKnownFields(
+    isJsonRecord(existing) ? existing : null,
+    replacement,
+    REVIEW_SNAPSHOT_KNOWN_FIELDS
+  );
+  if (isJsonRecord(replacement.renameExpectation)) {
+    const existingRenameExpectation =
+      isJsonRecord(existing) && isJsonRecord(existing.renameExpectation)
+        ? existing.renameExpectation
+        : null;
+    const mergedRenameExpectation = replaceKnownFields(
+      existingRenameExpectation,
+      replacement.renameExpectation,
+      REVIEW_RENAME_EXPECTATION_KNOWN_FIELDS
+    );
+    if (isJsonRecord(replacement.renameExpectation.relation)) {
+      mergedRenameExpectation.relation = replaceKnownFields(
+        isJsonRecord(existingRenameExpectation?.relation)
+          ? existingRenameExpectation.relation
+          : null,
+        replacement.renameExpectation.relation,
+        REVIEW_RELATION_KNOWN_FIELDS
+      );
+    }
+    merged.renameExpectation = mergedRenameExpectation;
+  }
+  return merged;
+}
+
+function snapshotFilePath(value: unknown): string | null {
+  return isJsonRecord(value) && typeof value.filePath === 'string' ? value.filePath : null;
+}
+
+function mergeStoredSnapshots(existing: unknown, replacement: unknown[]): unknown[] {
+  const existingByFilePath = new Map<string, unknown>();
+  if (Array.isArray(existing)) {
+    for (const snapshot of existing) {
+      const filePath = snapshotFilePath(snapshot);
+      if (filePath) existingByFilePath.set(filePath, snapshot);
+    }
+  }
+  return replacement.map((snapshot) =>
+    mergeStoredSnapshot(existingByFilePath.get(snapshotFilePath(snapshot) ?? ''), snapshot)
+  );
+}
+
+function mergeStoredAction(existing: unknown, replacement: unknown): unknown {
+  if (!isJsonRecord(replacement)) return replacement;
+  const existingRecord = isJsonRecord(existing) ? existing : null;
+  const merged = replaceKnownFields(existingRecord, replacement, REVIEW_ACTION_KNOWN_FIELDS);
+  if (isJsonRecord(replacement.descriptor)) {
+    merged.descriptor = replaceKnownFields(
+      isJsonRecord(existingRecord?.descriptor) ? existingRecord.descriptor : null,
+      replacement.descriptor,
+      REVIEW_DESCRIPTOR_KNOWN_FIELDS
+    );
+  }
+  if (isJsonRecord(replacement.action)) {
+    const existingAction = isJsonRecord(existingRecord?.action) ? existingRecord.action : null;
+    const mergedAction = replaceKnownFields(
+      existingAction,
+      replacement.action,
+      REVIEW_NESTED_ACTION_KNOWN_FIELDS
+    );
+    if (replacement.action.snapshot !== undefined) {
+      mergedAction.snapshot = mergeStoredSnapshot(
+        existingAction?.snapshot,
+        replacement.action.snapshot
+      );
+    }
+    if (replacement.action.decisionSnapshot !== undefined) {
+      mergedAction.decisionSnapshot = mergeDecisionSnapshot(
+        existingAction?.decisionSnapshot,
+        replacement.action.decisionSnapshot
+      );
+    }
+    merged.action = mergedAction;
+  }
+  if (replacement.decisionSnapshot !== undefined) {
+    merged.decisionSnapshot = mergeDecisionSnapshot(
+      existingRecord?.decisionSnapshot,
+      replacement.decisionSnapshot
+    );
+  }
+  if (Array.isArray(replacement.diskSnapshots)) {
+    merged.diskSnapshots = mergeStoredSnapshots(
+      existingRecord?.diskSnapshots,
+      replacement.diskSnapshots
+    );
+  }
+  return merged;
+}
+
+function actionId(value: unknown): string | null {
+  return isJsonRecord(value) && typeof value.id === 'string' ? value.id : null;
+}
+
+function buildPriorActionIndex(existing: JsonRecord | undefined): Map<string, unknown> {
+  const priorActionsById = new Map<string, unknown>();
+  if (Array.isArray(existing?.reviewActionHistory)) {
+    for (const action of existing.reviewActionHistory) {
+      const id = actionId(action);
+      if (id) priorActionsById.set(id, action);
+    }
+  }
+  if (Array.isArray(existing?.reviewRedoHistory)) {
+    for (const entry of existing.reviewRedoHistory) {
+      const action = isJsonRecord(entry) ? entry.action : undefined;
+      const id = actionId(action);
+      if (id) priorActionsById.set(id, action);
+    }
+  }
+  return priorActionsById;
+}
+
+function mergeActionHistory(
+  priorActionsById: ReadonlyMap<string, unknown>,
+  replacement: unknown
+): unknown {
+  if (!Array.isArray(replacement)) return replacement;
+  return replacement.map((action) =>
+    mergeStoredAction(priorActionsById.get(actionId(action) ?? ''), action)
+  );
+}
+
+function mergeRedoHistory(
+  existing: unknown,
+  priorActionsById: ReadonlyMap<string, unknown>,
+  replacement: unknown
+): unknown {
+  if (!Array.isArray(replacement)) return replacement;
+  const existingById = new Map<string, JsonRecord>();
+  if (Array.isArray(existing)) {
+    for (const entry of existing) {
+      if (!isJsonRecord(entry)) continue;
+      const id = actionId(entry.action);
+      if (id) existingById.set(id, entry);
+    }
+  }
+  return replacement.map((entry) => {
+    if (!isJsonRecord(entry)) return entry;
+    const id = actionId(entry.action);
+    const existingEntry = id ? (existingById.get(id) ?? null) : null;
+    const merged = replaceKnownFields(existingEntry, entry, REVIEW_REDO_KNOWN_FIELDS);
+    merged.action = mergeStoredAction(id ? priorActionsById.get(id) : undefined, entry.action);
+    if (entry.decisionSnapshot !== undefined) {
+      merged.decisionSnapshot = mergeDecisionSnapshot(
+        existingEntry?.decisionSnapshot,
+        entry.decisionSnapshot
+      );
+    }
+    return merged;
+  });
+}
+
+function mergeReviewDocument(
+  existing: JsonRecord | undefined,
+  replacement: JsonRecord
+): JsonRecord {
+  const merged = replaceKnownFields(existing ?? null, replacement, REVIEW_DOCUMENT_KNOWN_FIELDS);
+  const priorActionsById = buildPriorActionIndex(existing);
+  merged.reviewActionHistory = mergeActionHistory(
+    priorActionsById,
+    replacement.reviewActionHistory
+  );
+  merged.reviewRedoHistory = mergeRedoHistory(
+    existing?.reviewRedoHistory,
+    priorActionsById,
+    replacement.reviewRedoHistory
+  );
+  return merged;
 }
 
 export class ReviewDecisionStore {
@@ -429,7 +693,7 @@ export class ReviewDecisionStore {
     const decodeSnapshot = (value: unknown): ReviewDiskUndoSnapshot | null => {
       decodedSnapshotCount++;
       if (decodedSnapshotCount > MAX_STORED_DECISION_ENTRIES) return null;
-      if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+      if (!this.isStoredDiskUndoSnapshotV6(value)) return null;
       const candidate = value as Partial<StoredReviewDiskUndoSnapshotV6>;
       if (
         typeof candidate.beforeBlob !== 'string' ||
@@ -453,7 +717,7 @@ export class ReviewDecisionStore {
       } as ReviewDiskUndoSnapshot;
     };
     const decodeAction = (value: unknown): ReviewUndoAction | null => {
-      if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+      if (!this.isStoredReviewActionV6(value)) return null;
       const candidate = value as Partial<StoredReviewUndoActionV6>;
       if (candidate.kind === 'hunk') return candidate as ReviewUndoAction;
       if (candidate.kind === 'bulk') {
@@ -765,6 +1029,87 @@ export class ReviewDecisionStore {
     });
   }
 
+  private isStoredReviewActionV6(value: unknown): boolean {
+    if (!isJsonRecord(value)) return false;
+    if (value.kind === 'hunk') {
+      return (
+        !hasOwnField(value, 'decisionSnapshot') &&
+        !hasOwnField(value, 'diskSnapshots') &&
+        isJsonRecord(value.action) &&
+        !hasOwnField(value.action, 'snapshot') &&
+        !hasOwnField(value.action, 'file') &&
+        !hasOwnField(value.action, 'fileRef') &&
+        !hasOwnField(value.action, 'decisionSnapshot')
+      );
+    }
+    if (value.kind === 'disk') {
+      if (
+        hasOwnField(value, 'decisionSnapshot') ||
+        hasOwnField(value, 'diskSnapshots') ||
+        !isJsonRecord(value.action) ||
+        hasOwnField(value.action, 'filePath') ||
+        hasOwnField(value.action, 'file')
+      ) {
+        return false;
+      }
+      return (
+        this.isStoredDiskUndoSnapshotV6(value.action.snapshot) &&
+        (value.action.originalIndex === undefined ||
+          (Number.isSafeInteger(value.action.originalIndex) &&
+            Number(value.action.originalIndex) >= 0)) &&
+        (value.action.fileRef === undefined || typeof value.action.fileRef === 'string') &&
+        (value.action.decisionSnapshot === undefined ||
+          this.isDecisionSnapshot(value.action.decisionSnapshot))
+      );
+    }
+    if (value.kind === 'bulk') {
+      return (
+        !hasOwnField(value, 'action') &&
+        this.isDecisionSnapshot(value.decisionSnapshot) &&
+        Array.isArray(value.diskSnapshots) &&
+        value.diskSnapshots.every((snapshot) => this.isStoredDiskUndoSnapshotV6(snapshot))
+      );
+    }
+    return false;
+  }
+
+  private isStoredDiskUndoSnapshotV6(value: unknown): boolean {
+    if (
+      !isJsonRecord(value) ||
+      hasOwnField(value, 'beforeContent') ||
+      hasOwnField(value, 'afterContent') ||
+      hasOwnField(value, 'file')
+    ) {
+      return false;
+    }
+    return (
+      typeof value.filePath === 'string' &&
+      value.filePath.length > 0 &&
+      value.filePath.length <= MAX_STORED_KEY_LENGTH &&
+      !value.filePath.includes('\0') &&
+      typeof value.beforeBlob === 'string' &&
+      (typeof value.afterBlob === 'string' || value.afterBlob === null) &&
+      (value.authoritativeBeforeSha256 === undefined ||
+        value.authoritativeBeforeSha256 === null ||
+        (typeof value.authoritativeBeforeSha256 === 'string' &&
+          /^[a-f0-9]{64}$/.test(value.authoritativeBeforeSha256))) &&
+      (value.fileRef === undefined || typeof value.fileRef === 'string') &&
+      (value.fileIndex === undefined ||
+        (Number.isSafeInteger(value.fileIndex) && Number(value.fileIndex) >= 0)) &&
+      (value.restoreConflict === undefined ||
+        (typeof value.restoreConflict === 'string' &&
+          value.restoreConflict.length <= MAX_STORED_KEY_LENGTH)) &&
+      (value.restoreMode === undefined ||
+        value.restoreMode === 'content' ||
+        value.restoreMode === 'create-file' ||
+        value.restoreMode === 'delete-file' ||
+        value.restoreMode === 'restore-rejected-rename' ||
+        value.restoreMode === 'reapply-rejected-rename') &&
+      (value.renameExpectation === undefined ||
+        this.isReviewRenameExpectation(value.renameExpectation))
+    );
+  }
+
   private parseStoredData(
     parsed: unknown
   ):
@@ -799,7 +1144,12 @@ export class ReviewDecisionStore {
       typeof data.scopeKey === 'string' &&
       typeof data.scopeToken === 'string';
 
-    if (data.version !== undefined && !isExactScope) {
+    if (
+      (data.version !== undefined && !isExactScope) ||
+      typeof data.updatedAt !== 'string' ||
+      data.updatedAt.length === 0 ||
+      data.updatedAt.length > 128
+    ) {
       return null;
     }
 
@@ -868,7 +1218,7 @@ export class ReviewDecisionStore {
     const ids = new Set<string>();
     let diskSnapshotCount = 0;
     return value.every((action) => {
-      if (!action || typeof action !== 'object' || Array.isArray(action)) return false;
+      if (!isJsonRecord(action)) return false;
       const candidate = action as Partial<ReviewUndoAction>;
       if (
         typeof candidate.id !== 'string' ||
@@ -885,6 +1235,8 @@ export class ReviewDecisionStore {
       ids.add(candidate.id);
       if (candidate.kind === 'hunk') {
         return (
+          !hasOwnField(action, 'decisionSnapshot') &&
+          !hasOwnField(action, 'diskSnapshots') &&
           this.isHunkUndoAction(candidate.action) &&
           this.isReviewActionDescriptorConsistent(candidate as ReviewUndoAction)
         );
@@ -892,6 +1244,8 @@ export class ReviewDecisionStore {
       if (candidate.kind === 'disk') {
         diskSnapshotCount++;
         return (
+          !hasOwnField(action, 'decisionSnapshot') &&
+          !hasOwnField(action, 'diskSnapshots') &&
           diskSnapshotCount <= MAX_STORED_DECISION_ENTRIES &&
           this.isDiskUndoAction(candidate.action) &&
           this.isReviewActionDescriptorConsistent(candidate as ReviewUndoAction)
@@ -901,6 +1255,7 @@ export class ReviewDecisionStore {
         if (!Array.isArray(candidate.diskSnapshots)) return false;
         diskSnapshotCount += candidate.diskSnapshots.length;
         return (
+          !hasOwnField(action, 'action') &&
           diskSnapshotCount <= MAX_STORED_DECISION_ENTRIES &&
           this.isDecisionSnapshot(candidate.decisionSnapshot) &&
           candidate.diskSnapshots.every((snapshot) => this.isDiskUndoSnapshot(snapshot)) &&
@@ -1048,19 +1403,30 @@ export class ReviewDecisionStore {
   }
 
   private isHunkUndoAction(value: unknown): boolean {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    if (
+      !isJsonRecord(value) ||
+      hasOwnField(value, 'snapshot') ||
+      hasOwnField(value, 'file') ||
+      hasOwnField(value, 'fileRef') ||
+      hasOwnField(value, 'decisionSnapshot')
+    ) {
+      return false;
+    }
     const candidate = value as { filePath?: unknown; originalIndex?: unknown };
     return (
       typeof candidate.filePath === 'string' &&
       candidate.filePath.length > 0 &&
       candidate.filePath.length <= MAX_STORED_KEY_LENGTH &&
+      !candidate.filePath.includes('\0') &&
       Number.isSafeInteger(candidate.originalIndex) &&
       (candidate.originalIndex as number) >= 0
     );
   }
 
   private isDiskUndoAction(value: unknown): boolean {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    if (!isJsonRecord(value) || hasOwnField(value, 'filePath') || hasOwnField(value, 'fileRef')) {
+      return false;
+    }
     const candidate = value as {
       snapshot?: unknown;
       originalIndex?: unknown;
@@ -1079,7 +1445,14 @@ export class ReviewDecisionStore {
   }
 
   private isDiskUndoSnapshot(value: unknown): boolean {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    if (
+      !isJsonRecord(value) ||
+      hasOwnField(value, 'beforeBlob') ||
+      hasOwnField(value, 'afterBlob') ||
+      hasOwnField(value, 'fileRef')
+    ) {
+      return false;
+    }
     const candidate = value as {
       filePath?: unknown;
       beforeContent?: unknown;
@@ -1102,6 +1475,7 @@ export class ReviewDecisionStore {
       typeof candidate.filePath === 'string' &&
       candidate.filePath.length > 0 &&
       candidate.filePath.length <= MAX_STORED_KEY_LENGTH &&
+      !candidate.filePath.includes('\0') &&
       typeof candidate.beforeContent === 'string' &&
       (typeof candidate.afterContent === 'string' || candidate.afterContent === null) &&
       (candidate.authoritativeBeforeSha256 === undefined ||
@@ -1116,14 +1490,33 @@ export class ReviewDecisionStore {
           candidate.restoreConflict.length <= MAX_STORED_KEY_LENGTH)) &&
       (candidate.restoreMode === undefined || restoreModes.has(candidate.restoreMode as string)) &&
       (candidate.renameExpectation === undefined ||
-        (!!candidate.renameExpectation &&
-          typeof candidate.renameExpectation === 'object' &&
-          !Array.isArray(candidate.renameExpectation)))
+        this.isReviewRenameExpectation(candidate.renameExpectation))
+    );
+  }
+
+  private isReviewRenameExpectation(value: unknown): boolean {
+    if (!isJsonRecord(value)) return false;
+    const isHash = (hash: unknown): boolean =>
+      hash === null || (typeof hash === 'string' && /^[a-f0-9]{64}$/.test(hash));
+    return (
+      typeof value.eventId === 'string' &&
+      value.eventId.length > 0 &&
+      value.eventId.length <= MAX_STORED_KEY_LENGTH &&
+      isHash(value.beforeHash) &&
+      isHash(value.afterHash) &&
+      isJsonRecord(value.relation) &&
+      (value.relation.kind === 'rename' || value.relation.kind === 'copy') &&
+      typeof value.relation.oldPath === 'string' &&
+      value.relation.oldPath.length > 0 &&
+      value.relation.oldPath.length <= MAX_STORED_KEY_LENGTH &&
+      typeof value.relation.newPath === 'string' &&
+      value.relation.newPath.length > 0 &&
+      value.relation.newPath.length <= MAX_STORED_KEY_LENGTH
     );
   }
 
   private isFileSummary(value: unknown): boolean {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    if (!isJsonRecord(value)) return false;
     const candidate = value as {
       filePath?: unknown;
       relativePath?: unknown;
@@ -1131,6 +1524,10 @@ export class ReviewDecisionStore {
       linesAdded?: unknown;
       linesRemoved?: unknown;
       isNewFile?: unknown;
+      changeKey?: unknown;
+      diffStatKnown?: unknown;
+      ledgerSummary?: unknown;
+      timeline?: unknown;
     };
     return (
       typeof candidate.filePath === 'string' &&
@@ -1138,9 +1535,185 @@ export class ReviewDecisionStore {
       candidate.filePath.length <= MAX_STORED_KEY_LENGTH &&
       typeof candidate.relativePath === 'string' &&
       Array.isArray(candidate.snippets) &&
+      candidate.snippets.length <= MAX_STORED_DECISION_ENTRIES &&
+      candidate.snippets.every((snippet) => this.isSnippetDiff(snippet)) &&
       Number.isFinite(candidate.linesAdded) &&
       Number.isFinite(candidate.linesRemoved) &&
-      typeof candidate.isNewFile === 'boolean'
+      typeof candidate.isNewFile === 'boolean' &&
+      (candidate.changeKey === undefined || typeof candidate.changeKey === 'string') &&
+      (candidate.diffStatKnown === undefined || typeof candidate.diffStatKnown === 'boolean') &&
+      (candidate.ledgerSummary === undefined ||
+        this.isFileSummaryLedger(candidate.ledgerSummary)) &&
+      (candidate.timeline === undefined || this.isFileEditTimeline(candidate.timeline))
+    );
+  }
+
+  private isSnippetDiff(value: unknown): boolean {
+    if (!isJsonRecord(value)) return false;
+    return (
+      typeof value.toolUseId === 'string' &&
+      typeof value.filePath === 'string' &&
+      (value.toolName === 'Edit' ||
+        value.toolName === 'Write' ||
+        value.toolName === 'MultiEdit' ||
+        value.toolName === 'NotebookEdit' ||
+        value.toolName === 'Bash' ||
+        value.toolName === 'PowerShell' ||
+        value.toolName === 'PostToolUse') &&
+      (value.type === 'edit' ||
+        value.type === 'write-new' ||
+        value.type === 'write-update' ||
+        value.type === 'multi-edit' ||
+        value.type === 'notebook-edit' ||
+        value.type === 'shell-snapshot' ||
+        value.type === 'hook-snapshot') &&
+      typeof value.oldString === 'string' &&
+      typeof value.newString === 'string' &&
+      typeof value.replaceAll === 'boolean' &&
+      typeof value.timestamp === 'string' &&
+      typeof value.isError === 'boolean' &&
+      (value.contextHash === undefined || typeof value.contextHash === 'string') &&
+      (value.ledger === undefined || this.isSnippetLedger(value.ledger))
+    );
+  }
+
+  private isSnippetLedger(value: unknown): boolean {
+    if (!isJsonRecord(value)) return false;
+    return (
+      typeof value.eventId === 'string' &&
+      (value.source === 'ledger-exact' || value.source === 'ledger-snapshot') &&
+      (value.confidence === 'exact' ||
+        value.confidence === 'high' ||
+        value.confidence === 'medium' ||
+        value.confidence === 'low' ||
+        value.confidence === 'ambiguous') &&
+      (value.originalFullContent === null || typeof value.originalFullContent === 'string') &&
+      (value.modifiedFullContent === null || typeof value.modifiedFullContent === 'string') &&
+      (value.beforeHash === null || typeof value.beforeHash === 'string') &&
+      (value.afterHash === null || typeof value.afterHash === 'string') &&
+      (value.operation === undefined ||
+        value.operation === 'create' ||
+        value.operation === 'modify' ||
+        value.operation === 'delete') &&
+      (value.beforeState === undefined || this.isLedgerContentState(value.beforeState)) &&
+      (value.afterState === undefined || this.isLedgerContentState(value.afterState)) &&
+      (value.relation === undefined || this.isLedgerChangeRelation(value.relation)) &&
+      (value.executionSeq === undefined || Number.isFinite(value.executionSeq)) &&
+      (value.linesAdded === undefined || Number.isFinite(value.linesAdded)) &&
+      (value.linesRemoved === undefined || Number.isFinite(value.linesRemoved)) &&
+      (value.textAvailability === undefined ||
+        value.textAvailability === 'patch-text' ||
+        value.textAvailability === 'full-text' ||
+        value.textAvailability === 'unavailable') &&
+      (value.worktreePath === undefined || typeof value.worktreePath === 'string') &&
+      (value.worktreeBranch === undefined || typeof value.worktreeBranch === 'string') &&
+      (value.baseWorkspaceRoot === undefined || typeof value.baseWorkspaceRoot === 'string') &&
+      (value.dirtyLeaderWarning === undefined || typeof value.dirtyLeaderWarning === 'string')
+    );
+  }
+
+  private isLedgerContentState(value: unknown): boolean {
+    if (!isJsonRecord(value)) return false;
+    return (
+      (value.exists === undefined || typeof value.exists === 'boolean') &&
+      (value.sha256 === undefined || typeof value.sha256 === 'string') &&
+      (value.sizeBytes === undefined || Number.isFinite(value.sizeBytes)) &&
+      (value.contentKind === undefined ||
+        value.contentKind === 'text' ||
+        value.contentKind === 'binary' ||
+        value.contentKind === 'unknown') &&
+      (value.blobRef === undefined || typeof value.blobRef === 'string') &&
+      (value.unavailableCode === undefined ||
+        value.unavailableCode === 'binary' ||
+        value.unavailableCode === 'too-large' ||
+        value.unavailableCode === 'read-error' ||
+        value.unavailableCode === 'not-captured' ||
+        value.unavailableCode === 'blob-missing') &&
+      (value.unavailableReason === undefined || typeof value.unavailableReason === 'string')
+    );
+  }
+
+  private isLedgerChangeRelation(value: unknown): boolean {
+    return (
+      isJsonRecord(value) &&
+      (value.kind === 'rename' || value.kind === 'copy') &&
+      typeof value.oldPath === 'string' &&
+      typeof value.newPath === 'string'
+    );
+  }
+
+  private isFileSummaryLedger(value: unknown): boolean {
+    if (!isJsonRecord(value)) return false;
+    return (
+      (value.latestOperation === undefined ||
+        value.latestOperation === 'create' ||
+        value.latestOperation === 'modify' ||
+        value.latestOperation === 'delete') &&
+      (value.createdInTask === undefined || typeof value.createdInTask === 'boolean') &&
+      (value.deletedInTask === undefined || typeof value.deletedInTask === 'boolean') &&
+      (value.contentAvailability === undefined ||
+        value.contentAvailability === 'full-text' ||
+        value.contentAvailability === 'hash-only' ||
+        value.contentAvailability === 'metadata-only') &&
+      (value.reviewability === undefined ||
+        value.reviewability === 'full-text' ||
+        value.reviewability === 'partial-text' ||
+        value.reviewability === 'metadata-only') &&
+      (value.relation === undefined || this.isLedgerChangeRelation(value.relation)) &&
+      (value.beforeState === undefined || this.isLedgerContentState(value.beforeState)) &&
+      (value.afterState === undefined || this.isLedgerContentState(value.afterState)) &&
+      (value.primaryActorKey === undefined || typeof value.primaryActorKey === 'string') &&
+      this.isOptionalStringArray(value.agentIds) &&
+      this.isOptionalStringArray(value.memberNames) &&
+      (value.executionSeqRange === undefined ||
+        this.isExecutionSeqRange(value.executionSeqRange)) &&
+      (value.worktreePath === undefined || typeof value.worktreePath === 'string') &&
+      (value.worktreeBranch === undefined || typeof value.worktreeBranch === 'string') &&
+      (value.baseWorkspaceRoot === undefined || typeof value.baseWorkspaceRoot === 'string') &&
+      (value.dirtyLeaderWarning === undefined || typeof value.dirtyLeaderWarning === 'string')
+    );
+  }
+
+  private isOptionalStringArray(value: unknown): boolean {
+    return (
+      value === undefined ||
+      (Array.isArray(value) &&
+        value.length <= MAX_STORED_DECISION_ENTRIES &&
+        value.every((entry) => typeof entry === 'string'))
+    );
+  }
+
+  private isExecutionSeqRange(value: unknown): boolean {
+    return isJsonRecord(value) && Number.isFinite(value.start) && Number.isFinite(value.end);
+  }
+
+  private isFileEditTimeline(value: unknown): boolean {
+    return (
+      isJsonRecord(value) &&
+      typeof value.filePath === 'string' &&
+      Array.isArray(value.events) &&
+      value.events.length <= MAX_STORED_DECISION_ENTRIES &&
+      value.events.every((event) => this.isFileEditEvent(event)) &&
+      Number.isFinite(value.durationMs)
+    );
+  }
+
+  private isFileEditEvent(value: unknown): boolean {
+    if (!isJsonRecord(value)) return false;
+    return (
+      typeof value.toolUseId === 'string' &&
+      (value.toolName === 'Edit' ||
+        value.toolName === 'Write' ||
+        value.toolName === 'MultiEdit' ||
+        value.toolName === 'NotebookEdit' ||
+        value.toolName === 'Bash' ||
+        value.toolName === 'PowerShell' ||
+        value.toolName === 'PostToolUse') &&
+      typeof value.timestamp === 'string' &&
+      typeof value.summary === 'string' &&
+      Number.isFinite(value.linesAdded) &&
+      Number.isFinite(value.linesRemoved) &&
+      Number.isFinite(value.snippetIndex)
     );
   }
 
@@ -1245,7 +1818,8 @@ export class ReviewDecisionStore {
   private async loadFromPath(
     filePath: string,
     scopeToken?: string,
-    expectedScopeKey?: string
+    expectedScopeKey?: string,
+    exactScopePath = false
   ): Promise<InternalLoadedReviewDecisions | null> {
     if (
       !(await assertConstrainedPersistenceDirectory(getTeamsBasePath(), path.dirname(filePath)))
@@ -1318,7 +1892,13 @@ export class ReviewDecisionStore {
     ) {
       throw new InvalidReviewDecisionDataError(`Mismatched review decision scope at ${filePath}`);
     }
-    return this.extractDecisions(data, scopeToken);
+    const decisions = this.extractDecisions(data, scopeToken);
+    if (exactScopePath && !decisions) {
+      throw new InvalidReviewDecisionDataError(
+        `Mismatched review decision scope token at ${filePath}`
+      );
+    }
+    return decisions && isJsonRecord(parsed) ? { ...decisions, storedDocument: parsed } : decisions;
   }
 
   private async getPendingMutationScopeHashes(
@@ -1427,7 +2007,8 @@ export class ReviewDecisionStore {
       const exact = await this.loadFromPath(
         this.getV2FilePath(teamName, scopeKey, scopeToken),
         scopeToken,
-        scopeKey
+        scopeKey,
+        true
       );
       if (exact) {
         return exact;
@@ -1447,6 +2028,7 @@ export class ReviewDecisionStore {
     const {
       lastMutationId: _lastMutationId,
       storageVersion: _storageVersion,
+      storedDocument: _storedDocument,
       ...publicSnapshot
     } = loaded;
     return publicSnapshot;
@@ -1776,7 +2358,11 @@ export class ReviewDecisionStore {
         updatedAt: new Date().toISOString(),
       };
       const filePath = this.getV2FilePath(teamName, scopeKey, data.scopeToken);
-      const serialized = JSON.stringify(payload, null, 2);
+      const serialized = JSON.stringify(
+        mergeReviewDocument(current?.storedDocument, payload as unknown as JsonRecord),
+        null,
+        2
+      );
       if (Buffer.byteLength(serialized, 'utf8') > MAX_STORED_DECISIONS_BYTES) {
         throw new Error(
           'Review Undo/Redo history exceeds the 128 MiB durable storage limit. Start a new review scope or reduce retained history before retrying.'

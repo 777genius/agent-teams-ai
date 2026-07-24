@@ -352,6 +352,10 @@ export class RuntimeDeliveryJournalStore {
           return [
             {
               ...(entry === current ? canonicalCurrent : entry),
+              logicalPayloadHash:
+                entry === current
+                  ? canonicalCurrent.logicalPayloadHash
+                  : (entry.logicalPayloadHash ?? canonicalCurrent.logicalPayloadHash),
               committedLocation: canonicalInput.location,
               status: 'committed' as const,
               updatedAt: canonicalInput.committedAt,

@@ -1,0 +1,189 @@
+{
+  "$schema": "./evidence.schema.json",
+  "schemaVersion": 1,
+  "evidenceId": "P0.W3.WRITER_COORDINATION",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "classes": ["app-exclusive", "cooperative", "provider-mediated", "quiescent-only", "unavailable"],
+  "operations": [
+    {
+      "id": "config.create-or-edit",
+      "familyId": "cli-team-config",
+      "provider": "claude-compatible/*",
+      "possibleActiveWriters": ["hosted controller", "Claude CLI/runtime", "legacy desktop paths"],
+      "adr29Class": "uncoordinated_external",
+      "coordinationClass": "quiescent-only",
+      "activeWriterEvidence": "all ADR-22 units drained plus ADR-24 watermark/rescan closed",
+      "currentProof": "no shared lock or provider acknowledgement found",
+      "hostedDisposition": "refuse direct active-run mutation; re-read after quiescence",
+      "sourceRefs": [
+        "src/main/services/team/TeamDataService.ts",
+        "src/main/services/team/provisioning"
+      ]
+    },
+    {
+      "id": "task.create-update-delete-relate",
+      "familyId": "cli-tasks",
+      "provider": "claude-compatible/*",
+      "possibleActiveWriters": ["TeamTaskWriter", "Claude task tools", "MCP team tools"],
+      "adr29Class": "uncoordinated_external",
+      "coordinationClass": "quiescent-only",
+      "activeWriterEvidence": "provider process/agent may be alive for the team",
+      "currentProof": "withTaskLock is in-process only; two-file relationships are independent",
+      "hostedDisposition": "active direct browser mutation unavailable until a real provider-mediated/cooperative protocol is proven",
+      "sourceRefs": ["src/main/services/team/TeamTaskWriter.ts"]
+    },
+    {
+      "id": "inbox.append-native",
+      "familyId": "cli-inboxes",
+      "provider": "claude-native/uncharacterized-version",
+      "possibleActiveWriters": ["TeamInboxWriter", "native teammate/CLI tools"],
+      "adr29Class": "uncoordinated_external",
+      "coordinationClass": "quiescent-only",
+      "activeWriterEvidence": "native teammate/process ownership unit is live",
+      "currentProof": "app lock file exists, but native adoption is unproven",
+      "hostedDisposition": "do not claim active-run lossless direct append",
+      "sourceRefs": [
+        "src/main/services/team/TeamInboxWriter.ts",
+        "src/main/services/team/fileLock.ts"
+      ]
+    },
+    {
+      "id": "inbox.deliver-opencode",
+      "familyId": "cli-inboxes",
+      "provider": "opencode/target-base-adapter",
+      "possibleActiveWriters": ["hosted controller inbox writer", "OpenCode runtime bridge"],
+      "adr29Class": "cooperative_external",
+      "coordinationClass": "provider-mediated",
+      "activeWriterEvidence": "runtime manifest plus bridge command ledger and observed delivery/reply evidence",
+      "currentProof": "adapter has persisted delivery ledgers, but exact reply writer path is unresolved",
+      "hostedDisposition": "accepted/running/observed states only; never equate transport delivery with semantic success",
+      "sourceRefs": [
+        "src/main/services/team/opencode/delivery/RuntimeDeliveryService.ts",
+        "src/main/services/team/opencode/delivery/RuntimeDeliveryJournal.ts"
+      ]
+    },
+    {
+      "id": "kanban.update-order",
+      "familyId": "kanban-projection",
+      "provider": "app",
+      "possibleActiveWriters": ["concurrent renderer/cleanup calls"],
+      "adr29Class": "app_exclusive",
+      "coordinationClass": "app-exclusive",
+      "activeWriterEvidence": "single ADR-16 controller lease and per-team coordinator",
+      "currentProof": "current code lacks coordinator/expectedRevision",
+      "hostedDisposition": "unavailable until lease plus coordinator; then expectedRevision mutation",
+      "sourceRefs": ["src/main/services/team/TeamKanbanManager.ts"]
+    },
+    {
+      "id": "review-decision.save-clear",
+      "familyId": "review-decisions",
+      "provider": "app",
+      "possibleActiveWriters": ["ReviewDecisionStore"],
+      "adr29Class": "app_exclusive",
+      "coordinationClass": "app-exclusive",
+      "activeWriterEvidence": "single ADR-16 controller lease",
+      "currentProof": "one app store, but current desktop has no hosted lease",
+      "hostedDisposition": "admit after lease and expected revision are implemented",
+      "sourceRefs": ["src/main/services/team/ReviewDecisionStore.ts"]
+    },
+    {
+      "id": "review.apply-workspace",
+      "familyId": "review-decisions",
+      "provider": "workspace/git/external-editor",
+      "possibleActiveWriters": ["ReviewApplierService", "Git", "editor", "provider process"],
+      "adr29Class": "uncoordinated_external",
+      "coordinationClass": "unavailable",
+      "activeWriterEvidence": "workspace guard and Git preconditions are outside this lane",
+      "currentProof": "hash checks detect some conflicts but writes are raw workspace effects",
+      "hostedDisposition": "no Phase 0 hosted mutation; require W4/W5/Git protocol",
+      "sourceRefs": ["src/main/services/team/ReviewApplierService.ts"]
+    },
+    {
+      "id": "launch-state.publish",
+      "familyId": "launch-state",
+      "provider": "app/provisioning",
+      "possibleActiveWriters": [
+        "TeamLaunchStateStore",
+        "provisioning boundary",
+        "legacy direct callers"
+      ],
+      "adr29Class": "app_exclusive",
+      "coordinationClass": "app-exclusive",
+      "activeWriterEvidence": "ADR-16 controller lease plus one durable run-generation coordinator",
+      "currentProof": "only process-local boundary and restart-volatile writtenRunId guard",
+      "hostedDisposition": "unavailable until durable coordinator; summary remains derived",
+      "sourceRefs": [
+        "src/main/services/team/TeamLaunchStateStore.ts",
+        "src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts"
+      ]
+    },
+    {
+      "id": "runtime-evidence.write",
+      "familyId": "bootstrap-and-runtime-evidence",
+      "provider": "opencode/target-base-adapter",
+      "possibleActiveWriters": ["controller stores", "OpenCode managed host"],
+      "adr29Class": "cooperative_external",
+      "coordinationClass": "cooperative",
+      "activeWriterEvidence": "versioned RuntimeStoreManifest entry plus provider run/lane identity",
+      "currentProof": "VersionedJsonStore/manifest contracts exist for selected stores only",
+      "hostedDisposition": "admit only per characterized manifest entry; unknown entries default unavailable",
+      "sourceRefs": [
+        "src/main/services/team/opencode/store/RuntimeStoreManifest.ts",
+        "src/main/services/team/opencode/store/VersionedJsonStore.ts"
+      ]
+    },
+    {
+      "id": "sqlite.mutate",
+      "familyId": "internal-storage-sqlite",
+      "provider": "app",
+      "possibleActiveWriters": ["internal-storage worker"],
+      "adr29Class": "app_exclusive",
+      "coordinationClass": "app-exclusive",
+      "activeWriterEvidence": "single awaited worker request queue under controller lease",
+      "currentProof": "current worker serializes requests; hosted lease belongs to W4",
+      "hostedDisposition": "admit after compatibility preflight and lease",
+      "sourceRefs": [
+        "src/features/internal-storage/main/infrastructure/InternalStorageWorkerClient.ts",
+        "src/features/internal-storage/main/infrastructure/worker/internalStorageWorkerEntry.ts"
+      ]
+    },
+    {
+      "id": "backup.coordination",
+      "familyId": "internal-storage-sqlite",
+      "provider": "app",
+      "possibleActiveWriters": ["internal-storage worker"],
+      "adr29Class": "app_exclusive",
+      "coordinationClass": "cooperative",
+      "activeWriterEvidence": "awaited worker op and SQLite Online Backup API progress/deadline",
+      "currentProof": "Phase 0 standalone spike proves driver primitive; production async worker op is intentionally not implemented",
+      "hostedDisposition": "Phase 1 implementation candidate",
+      "sourceRefs": ["scripts/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.mjs"]
+    },
+    {
+      "id": "backup.deployment-recovery-point",
+      "familyId": "legacy-team-backups",
+      "provider": "all",
+      "possibleActiveWriters": ["controller", "provider/CLI writers", "legacy backup service"],
+      "adr29Class": "uncoordinated_external",
+      "coordinationClass": "quiescent-only",
+      "activeWriterEvidence": "deployment mutation fence, drained ownership units, closed watcher watermarks and frozen participant generations",
+      "currentProof": "TeamBackupService has only a process-local mutex and independent copies",
+      "hostedDisposition": "current backup unavailable as recovery point; new ADR-32 workflow required",
+      "sourceRefs": ["src/main/services/team/TeamBackupService.ts"]
+    }
+  ],
+  "unresolvedWriterIdentities": [
+    "Claude CLI/provider versions and exact config.json mutation verbs",
+    "Claude task-tool writer implementation and lock behavior",
+    "native teammate inbox lock-file adoption",
+    "OpenCode reply-to-user inbox writer path and acknowledgement boundary",
+    "provider ownership/flush guarantees for members/** and transcript artifacts",
+    "legacy config/launch paths that bypass the intended coordinator"
+  ],
+  "negativeFixture": {
+    "command": "node scripts/hosted-web/phase-0/state-writers/external-writer-negative-fixture.mjs",
+    "expected": "lostExternalUpdate=true",
+    "meaning": "an in-process promise lock cannot prevent a child process from replacing the file between read and rename"
+  },
+  "proofLevel": "source-characterized-plus-executable-negative-control"
+}

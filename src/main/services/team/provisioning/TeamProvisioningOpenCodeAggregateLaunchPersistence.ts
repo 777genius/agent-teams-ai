@@ -12,8 +12,8 @@ import {
 } from './TeamProvisioningOpenCodeBootstrapEvidence';
 import {
   appendDiagnosticOnce,
-  hasRetainableOpenCodeRuntimeMember,
   promoteCommittedOpenCodeAppManagedBootstrapEvidence,
+  shouldRetainOpenCodeRuntimeLaunch,
   summarizeRuntimeLaunchResultMembers,
   toOpenCodePersistedLaunchMember,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
@@ -65,6 +65,7 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
     teamsBasePath: string;
     teamName: string;
     laneId: string;
+    runId?: string;
     state: 'active' | 'degraded';
     diagnostics?: string[];
   }): Promise<void>;
@@ -103,6 +104,12 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
   logWarning?(message: string): void;
 }
 
+export class OpenCodeAggregateRuntimeStopError extends AggregateError {
+  constructor(errors: readonly unknown[]) {
+    super([...errors], 'OpenCode aggregate launch failed and runtime cleanup was not confirmed');
+  }
+}
+
 function collectOpenCodeAggregateRuntimeMemberEvidence(
   primaryMembers: TeamRuntimeLaunchResult['members'],
   secondaryLanes: readonly MixedSecondaryRuntimeLaneState[]
@@ -136,6 +143,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
     assertStillCurrentAfterPersistence?: () => void;
+    onUntrackedPrimaryStopConfirmed?: () => void;
   },
   ports: LaunchOpenCodeAggregatePrimaryLanePorts
 ): Promise<TeamRuntimeLaunchResult | null> {
@@ -158,6 +166,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
     teamsBasePath: ports.getTeamsBasePath(),
     teamName,
     laneId: 'primary',
+    runId,
     state: migration.degraded ? 'degraded' : 'active',
     diagnostics: migration.diagnostics,
   });
@@ -197,8 +206,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
     launchInput
   );
   params.assertStillCurrentAfterPersistence?.();
-  const retainPrimaryRuntime =
-    result.teamLaunchState !== 'partial_failure' || hasRetainableOpenCodeRuntimeMember(result);
+  const retainPrimaryRuntime = shouldRetainOpenCodeRuntimeLaunch(result);
   if (retainPrimaryRuntime) {
     const primaryMembers = result.members;
     const secondaryLanes = params.run.mixedSecondaryLanes ?? [];
@@ -218,26 +226,46 @@ export async function launchOpenCodeAggregatePrimaryLane(
   if (result.teamLaunchState === 'partial_failure') {
     if (!retainPrimaryRuntime) {
       try {
-        await params.adapter.stop({
+        const stopResult = await params.adapter.stop({
           ...launchInput,
           reason: 'cleanup',
           force: true,
         });
+        if (!stopResult.stopped) {
+          throw new Error(
+            [...stopResult.diagnostics, ...stopResult.warnings].filter(Boolean).join('\n') ||
+              'OpenCode unretainable primary lane stop was not confirmed'
+          );
+        }
       } catch (error) {
+        // A rejected or unconfirmed stop means the adapter process may still be
+        // live even though its launch evidence was not retainable. Publish its
+        // exact ownership before rejecting so stopTeam/recovery can retry the
+        // same generation.
+        ports.setRuntimeAdapterRunByTeam(teamName, {
+          runId,
+          providerId: 'opencode',
+          cwd: launchCwd,
+          members: result.members,
+        });
         ports.logWarning?.(
           `[${teamName}] Failed to stop unretainable OpenCode primary lane: ${getErrorMessage(error)}`
         );
+        throw new OpenCodeAggregateRuntimeStopError([error]);
       }
+      params.onUntrackedPrimaryStopConfirmed?.();
     }
     await ports.upsertOpenCodeRuntimeLaneIndexEntry({
       teamsBasePath: ports.getTeamsBasePath(),
       teamName,
       laneId: 'primary',
+      runId,
       state: 'degraded',
       diagnostics: Array.from(
         new Set([...(migration.diagnostics ?? []), ...result.diagnostics].filter(Boolean))
       ),
     });
+    params.assertStillCurrentAfterPersistence?.();
   }
   const snapshotStatuses = snapshotToMemberSpawnStatuses(snapshot);
   for (const member of expectedMembers) {

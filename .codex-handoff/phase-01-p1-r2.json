@@ -1,0 +1,297 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "laneId": "p1-r2",
+  "packetRevision": "phase-01-p1-r2-review-r1",
+  "baseSha": "f6794b607609c57dc92def696d05946c9c96856a",
+  "canonicalSha": "f6794b607609c57dc92def696d05946c9c96856a",
+  "planBundleCommit": "f6794b607609c57dc92def696d05946c9c96856a",
+  "phaseStartSha": "f6794b607609c57dc92def696d05946c9c96856a",
+  "headSha": "f6794b607609c57dc92def696d05946c9c96856a",
+  "reviewedProductSnapshotSha": "666042037a9c91df572b1d8274bf6024f8d00f40",
+  "status": "verified",
+  "reviewer": {
+    "identity": "codex-thread:019f64ac-241c-7ee3-8ec8-7ba99c7360fa",
+    "job": "agent-teams-hosted-web-refactor-p1-r2-formal-review-v17-r3",
+    "worktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/p1-r2-formal-review-v17-r3",
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "xhigh",
+    "serviceTier": "default",
+    "fastMode": false,
+    "freshIndependentReviewerCount": 1,
+    "independentOf": {
+      "p1R2RouterAuthor": true,
+      "allP11aAndP11dProducersRemediationWorkersAndReviewers": true,
+      "allPr252ConflictResolutionProducersAndReviewers": true,
+      "allPriorPhase1FormalReviewers": true
+    },
+    "proof": "root/controller admission allocated a fresh r3 reviewer identity, isolated job, and isolated worktree under the required profile; no duplicate reviewer was admitted"
+  },
+  "authority": {
+    "packetBaseSha": "48d79e2b13e258fc82ad55723875f15d6e162872",
+    "packetBaseRole": "router-authoring-provenance-only",
+    "postIntegrationAuthoritySha": "f6794b607609c57dc92def696d05946c9c96856a",
+    "expectedSourceCommit": "f6794b607609c57dc92def696d05946c9c96856a",
+    "brokerReturnedAndPushedCommitSha": "f6794b607609c57dc92def696d05946c9c96856a",
+    "rootImmutableAuthorityAttestation": {
+      "remoteName": "origin",
+      "remoteRef": "refs/heads/refactor/hosted-web-feature-boundaries",
+      "command": "git ls-remote origin refs/heads/refactor/hosted-web-feature-boundaries",
+      "exitCode": 0,
+      "exactOutput": "f6794b607609c57dc92def696d05946c9c96856a\\trefs/heads/refactor/hosted-web-feature-boundaries",
+      "remoteEquality": true,
+      "canonicalWorktreeInitiallyClean": true,
+      "expectedSourceCommitUsedForAdmission": "f6794b607609c57dc92def696d05946c9c96856a"
+    },
+    "localAuthorityEquality": true,
+    "allHandoffAuthorityFieldsEqual": true,
+    "orderedSnapshotParents": [
+      "c3135d40c6e70e4b2ddc905dc815407397197634",
+      "3b48f9391b4bff1d82bc85ef01a2d5e0e5b50e95"
+    ]
+  },
+  "evidence": [
+    {
+      "id": "P1.R2.SEMANTIC_REVIEW",
+      "path": "docs/research/hosted-web/phase-1/reviews/list-semantics.md",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-01-p1-r2.json",
+    "docs/research/hosted-web/phase-1/reviews/list-semantics.md"
+  ],
+  "scopeProof": {
+    "p11aPathCount": 12,
+    "p11dPathCount": 9,
+    "semanticCorpusPathCount": 11,
+    "totalInputPathCount": 32,
+    "distinctInputPathCount": 32,
+    "snapshotToHeadByteDiffExitCode": 0,
+    "worktreeInputDiffExitCode": 0,
+    "initialOutputPathsAbsent": true,
+    "initialCanonicalStatusClean": true,
+    "finalTrackedDiffEmpty": true,
+    "finalStagedPathCount": 0,
+    "finalUntrackedPaths": [
+      ".codex-handoff/phase-01-p1-r2.json",
+      "docs/research/hosted-web/phase-1/reviews/list-semantics.md"
+    ],
+    "onlyAuthorizedOutputPaths": true
+  },
+  "kernelProof": {
+    "productFileCount": 5,
+    "primitiveFamilyCount": 5,
+    "sourceLineCount": 159,
+    "sourceByteCount": 7242,
+    "acceptedP11aGrossOwnedLines": 299,
+    "unchangedFromReviewedProductSnapshot": true,
+    "sixthPrimitiveFamilyPresent": false
+  },
+  "checks": [
+    {
+      "command": "test -n \"$postIntegrationAuthoritySha\"",
+      "exitCode": 0
+    },
+    {
+      "command": "test \"$expectedSourceCommit\" = \"$postIntegrationAuthoritySha\"",
+      "exitCode": 0
+    },
+    {
+      "command": "test \"$(git rev-parse HEAD)\" = \"$postIntegrationAuthoritySha\"",
+      "exitCode": 0
+    },
+    {
+      "command": "git rev-list --parents -n 1 666042037a9c91df572b1d8274bf6024f8d00f40",
+      "exitCode": 0,
+      "observed": "666042037a9c91df572b1d8274bf6024f8d00f40 c3135d40c6e70e4b2ddc905dc815407397197634 3b48f9391b4bff1d82bc85ef01a2d5e0e5b50e95"
+    },
+    {
+      "command": "node exact reviewCanonicalInputs manifest assertion from p1-r2-review.md",
+      "exitCode": 0,
+      "observed": "32 disjoint paths"
+    },
+    {
+      "command": "git diff --exit-code 666042037a9c91df572b1d8274bf6024f8d00f40 HEAD -- \"${review_input_paths[@]}\"",
+      "exitCode": 0,
+      "observedPathCount": 32
+    },
+    {
+      "command": "git diff --exit-code HEAD -- \"${review_input_paths[@]}\"",
+      "exitCode": 0,
+      "observedPathCount": 32
+    },
+    {
+      "command": "sha256sum docs/hosted-web-phases/phase-01/controller-packet.md docs/hosted-web-phases/phase-01/lanes/p1-r2-review.md",
+      "exitCode": 0,
+      "observed": {
+        "controllerPacket": "9b4b27f5029df8e21214fe6d4a372cbfc3e6d6c6f6506351954243026c33291d",
+        "lanePacket": "8b089ab8337467da201be884fc8f52bfff6d6377f63722f6f8d1aa6d5f6778c3"
+      }
+    },
+    {
+      "command": "wc -l -c src/shared/contracts/hosted/app-error.ts src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts src/shared/contracts/hosted/query-context.ts src/shared/contracts/hosted/revision.ts",
+      "exitCode": 0,
+      "observed": "159 lines, 7242 bytes"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts test/features/team-lifecycle",
+      "exitCode": 0,
+      "testFiles": {
+        "passed": 5,
+        "total": 5
+      },
+      "tests": {
+        "passed": 14,
+        "total": 14
+      },
+      "vitestVersion": "3.2.6"
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 1,
+      "classification": {
+        "inherited": 7,
+        "owned": 0,
+        "unexpected": 0,
+        "matchesFrozenBaseline": true
+      },
+      "diagnostics": [
+        "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts:25:8 TS7016",
+        "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts:66:31 TS7031",
+        "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts:117:68 TS18046",
+        "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts:413:48 TS7031",
+        "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts:733:10 TS7031",
+        "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts:12:8 TS7016",
+        "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts:162:44 TS2352"
+      ]
+    },
+    {
+      "command": "pnpm exec prettier --check .codex-handoff/phase-01-p1-1a.json src/shared/contracts/hosted/app-error.ts src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts src/shared/contracts/hosted/query-context.ts src/shared/contracts/hosted/revision.ts test/architecture/hosted-web/phase-1/contracts/app-error.test.ts test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-1/contracts/query-context.test.ts test/architecture/hosted-web/phase-1/contracts/revision.test.ts .codex-handoff/phase-01-p1-1d.json src/features/team-lifecycle/contracts/team-lifecycle-read.ts src/features/team-lifecycle/contracts/index.ts src/features/team-lifecycle/core/application/ListTeamLifecycle.ts src/features/team-lifecycle/core/application/index.ts src/features/team-lifecycle/index.ts test/features/team-lifecycle/core/ListTeamLifecycle.test.ts test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/empty.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/not-found-inapplicable.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/partial.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/provisioning-inapplicable.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json .codex-handoff/phase-01-p1-r2.json docs/research/hosted-web/phase-1/reviews/list-semantics.md",
+      "exitCode": 0,
+      "observedFileCount": 34
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --cached --quiet",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --exit-code",
+      "exitCode": 0
+    },
+    {
+      "command": "git status --short",
+      "exitCode": 0,
+      "observed": [
+        "?? .codex-handoff/phase-01-p1-r2.json",
+        "?? docs/research/hosted-web/phase-1/reviews/list-semantics.md"
+      ]
+    },
+    {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer)' \"${review_scan_paths[@]}\"",
+      "exitCode": 0,
+      "observedMatchLineCount": 2,
+      "classification": "the two lexical matches are the required scan-command text recorded in the two reviewer outputs; no credential or secret value"
+    },
+    {
+      "command": "rg -n -i '(provider|anthropic|claude|openai|opencode|gpt-[0-9])' \"${review_scan_paths[@]}\"",
+      "exitCode": 0,
+      "observedMatchLineCount": 17,
+      "classification": "required model/profile metadata, process provenance and unverified-boundary labels, synthetic negative-control terms, and scan-command text only; no provider payload or raw provider value"
+    },
+    {
+      "command": "rg -n '(/Users/|/home/|/root/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' \"${review_scan_paths[@]}\"",
+      "exitCode": 0,
+      "observedMatchLineCount": 2,
+      "classification": "the two lexical matches are the required scan-command text recorded in the two reviewer outputs; no private user path or user-project path value"
+    }
+  ],
+  "semanticReview": [
+    {
+      "requirement": 1,
+      "result": "pass",
+      "finding": "strict top-level and nested own string/symbol request keys; shared actor, session, deployment, boot, request, scope, deadline, and cancellation validation; no ambient auth lookup"
+    },
+    {
+      "requirement": 2,
+      "result": "pass",
+      "finding": "injected value-only source is invoked once for a valid request and zero times for an invalid request; no adapter, transport, runtime, provider, mount, or filesystem dependency"
+    },
+    {
+      "requirement": 3,
+      "result": "pass",
+      "finding": "same-version success, failure, and inapplicable responses validate known fields and produce fresh frozen known-field-only projections while discarding additive own string/symbol fields"
+    },
+    {
+      "requirement": 4,
+      "result": "pass",
+      "finding": "items length captured once and bounded at 1000; sparse and duplicate IDs rejected; dense indices read once into a fresh plain array without input-owned map, iterator, constructor, or species dispatch"
+    },
+    {
+      "requirement": 5,
+      "result": "pass",
+      "finding": "all ten manifest scenarios retain outcome, order, revision/cursor, safe-field, retryability, and empty/error semantics; deliberate mismatch rejects with phase1-semantic-outcome-drift"
+    },
+    {
+      "requirement": 6,
+      "result": "pass",
+      "finding": "safe errors remain in the accepted bounded application surface; unsupported/malformed/thrown/invalid-source cases fail closed without raw details"
+    },
+    {
+      "requirement": 7,
+      "result": "pass",
+      "finding": "revision and cursor tokens remain opaque and kind-separated; no parse/increment/sort/display/cache use or page-one fallback; production adapter integrity remains unverified"
+    },
+    {
+      "requirement": 8,
+      "result": "pass",
+      "finding": "public entrypoints expose only the narrow contract and use case, with no legacy aggregate, universal envelope, route/capability, provider, path, production identity, or implementation-file export"
+    },
+    {
+      "requirement": 9,
+      "result": "pass",
+      "finding": "shared kernel remains five files/families at 159 lines and 7242 bytes; accepted P1.1A handoff remains 299 gross owned lines; no sixth family or unproved export"
+    },
+    {
+      "requirement": 10,
+      "result": "pass",
+      "finding": "P1.NEG.SCHEMA_VERSION retains phase1-schema-version-invalid-or-unsupported with passing same-version neighbors; no production-completeness claim"
+    }
+  ],
+  "disposition": "ACCEPT",
+  "findings": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "findingCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "resultFileSha256": "de4b1e4fc0f633a40703e6af106bcdfcd2ab3a7d524b28f19df376a4052cdc70",
+  "unverifiedClaims": [
+    "production authorization",
+    "production cursor integrity, scope, and snapshot binding",
+    "IPC/HTTP transport parity",
+    "production adapters and filesystem/runtime integration",
+    "preload or renderer behavior",
+    "production mount",
+    "full Phase 1 completion",
+    "Phase 2+ behavior"
+  ],
+  "blockedSuccessors": [
+    "P1.I",
+    "P1.F",
+    "Phase 2+",
+    "product workers",
+    "integration",
+    "successor controllers"
+  ],
+  "nextAction": "controller-hold",
+  "terminalState": "HOLD"
+}

@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "oracle": "reviewed immutable expected encoding and HMAC vectors, intentionally outside generator outputs",
+  "vectors": [
+    {
+      "id": "send-v1-field-order-a",
+      "keyVersion": "fixture-v1",
+      "key": "phase-0-w5-public-fixture-key-v1",
+      "descriptorId": "message.send",
+      "schemaVersion": 1,
+      "fingerprintVersion": "hmac-sha256-ld-v1",
+      "intent": {
+        "teamId": "team_01",
+        "messageId": "msg_01",
+        "contentDigest": "sha256:aaaa",
+        "attachmentDigests": []
+      },
+      "expectedEncoding": "o:4:17:s:12:descriptorId17:s:12:message.send23:s:18:fingerprintVersion22:s:17:hmac-sha256-ld-v110:s:6:intent131:o:4:22:s:17:attachmentDigests4:a:0:18:s:13:contentDigest16:s:11:sha256:aaaa13:s:9:messageId10:s:6:msg_0110:s:6:teamId11:s:7:team_0118:s:13:schemaVersion5:i:1:1",
+      "expectedDigest": "bff87d62cce4e461ba8d928177491b3c27f8c2b8c340f8d59976d56414c0013f"
+    },
+    {
+      "id": "send-v1-field-order-b",
+      "keyVersion": "fixture-v1",
+      "key": "phase-0-w5-public-fixture-key-v1",
+      "descriptorId": "message.send",
+      "schemaVersion": 1,
+      "fingerprintVersion": "hmac-sha256-ld-v1",
+      "intent": {
+        "attachmentDigests": [],
+        "contentDigest": "sha256:aaaa",
+        "messageId": "msg_01",
+        "teamId": "team_01"
+      },
+      "expectedEncoding": "o:4:17:s:12:descriptorId17:s:12:message.send23:s:18:fingerprintVersion22:s:17:hmac-sha256-ld-v110:s:6:intent131:o:4:22:s:17:attachmentDigests4:a:0:18:s:13:contentDigest16:s:11:sha256:aaaa13:s:9:messageId10:s:6:msg_0110:s:6:teamId11:s:7:team_0118:s:13:schemaVersion5:i:1:1",
+      "expectedDigest": "bff87d62cce4e461ba8d928177491b3c27f8c2b8c340f8d59976d56414c0013f"
+    },
+    {
+      "id": "send-v1-changed-intent",
+      "keyVersion": "fixture-v1",
+      "key": "phase-0-w5-public-fixture-key-v1",
+      "descriptorId": "message.send",
+      "schemaVersion": 1,
+      "fingerprintVersion": "hmac-sha256-ld-v1",
+      "intent": {
+        "teamId": "team_01",
+        "messageId": "msg_01",
+        "contentDigest": "sha256:bbbb",
+        "attachmentDigests": []
+      },
+      "expectedEncoding": "o:4:17:s:12:descriptorId17:s:12:message.send23:s:18:fingerprintVersion22:s:17:hmac-sha256-ld-v110:s:6:intent131:o:4:22:s:17:attachmentDigests4:a:0:18:s:13:contentDigest16:s:11:sha256:bbbb13:s:9:messageId10:s:6:msg_0110:s:6:teamId11:s:7:team_0118:s:13:schemaVersion5:i:1:1",
+      "expectedDigest": "c3977e7de11c66e0cbf865b37dbbe7357b1d497e346fd9c15688b6a171fb0968"
+    },
+    {
+      "id": "send-v1-ordered-attachment-array",
+      "keyVersion": "fixture-v1",
+      "key": "phase-0-w5-public-fixture-key-v1",
+      "descriptorId": "message.send",
+      "schemaVersion": 1,
+      "fingerprintVersion": "hmac-sha256-ld-v1",
+      "intent": {
+        "teamId": "team_01",
+        "messageId": "msg_02",
+        "contentDigest": "sha256:eeee",
+        "attachmentDigests": ["sha256:one", "sha256:two"]
+      },
+      "expectedEncoding": "o:4:17:s:12:descriptorId17:s:12:message.send23:s:18:fingerprintVersion22:s:17:hmac-sha256-ld-v110:s:6:intent168:o:4:22:s:17:attachmentDigests40:a:2:15:s:10:sha256:one15:s:10:sha256:two18:s:13:contentDigest16:s:11:sha256:eeee13:s:9:messageId10:s:6:msg_0210:s:6:teamId11:s:7:team_0118:s:13:schemaVersion5:i:1:1",
+      "expectedDigest": "edd21cbcaa722321e22ae344b0d0a0e01efcb1a1917fec2e0240fabe7fd3f475"
+    },
+    {
+      "id": "unicode-and-integer-bounds-v1",
+      "keyVersion": "fixture-v1",
+      "key": "phase-0-w5-public-fixture-key-v1",
+      "descriptorId": "task.create",
+      "schemaVersion": 1,
+      "fingerprintVersion": "hmac-sha256-ld-v1",
+      "intent": {
+        "teamId": "team_雪",
+        "taskId": "task_é",
+        "expectedTeamRevision": 9007199254740991,
+        "taskIntentDigest": "sha256:cccc"
+      },
+      "expectedEncoding": "o:4:17:s:12:descriptorId16:s:11:task.create23:s:18:fingerprintVersion22:s:17:hmac-sha256-ld-v110:s:6:intent154:o:4:25:s:20:expectedTeamRevision21:i:16:900719925474099110:s:6:taskId11:s:7:task_é21:s:16:taskIntentDigest16:s:11:sha256:cccc10:s:6:teamId12:s:8:team_雪18:s:13:schemaVersion5:i:1:1",
+      "expectedDigest": "422545eaf369b65409bd0d34627f8c6aed5e4c78e0ccef045de721c782aa2a99"
+    },
+    {
+      "id": "launch-default-materialized-v1",
+      "keyVersion": "fixture-v1",
+      "key": "phase-0-w5-public-fixture-key-v1",
+      "descriptorId": "team.launch",
+      "schemaVersion": 1,
+      "fingerprintVersion": "hmac-sha256-ld-v1",
+      "intent": {
+        "teamId": "team_01",
+        "providerPlanDigest": "sha256:dddd",
+        "effort": "medium",
+        "fast": false
+      },
+      "expectedEncoding": "o:4:17:s:12:descriptorId16:s:11:team.launch23:s:18:fingerprintVersion22:s:17:hmac-sha256-ld-v110:s:6:intent119:o:4:10:s:6:effort10:s:6:medium8:s:4:fast5:b:1:023:s:18:providerPlanDigest16:s:11:sha256:dddd10:s:6:teamId11:s:7:team_0118:s:13:schemaVersion5:i:1:1",
+      "expectedDigest": "6e576d1a287ce4a9cd230ad9501d64c676ea4fd86f9fe034b0eff4821b7bbf2b"
+    },
+    {
+      "id": "launch-default-omitted-v1",
+      "keyVersion": "fixture-v1",
+      "key": "phase-0-w5-public-fixture-key-v1",
+      "descriptorId": "team.launch",
+      "schemaVersion": 1,
+      "fingerprintVersion": "hmac-sha256-ld-v1",
+      "intent": {
+        "teamId": "team_01",
+        "providerPlanDigest": "sha256:dddd",
+        "effort": "medium",
+        "fast": false
+      },
+      "expectedEncoding": "o:4:17:s:12:descriptorId16:s:11:team.launch23:s:18:fingerprintVersion22:s:17:hmac-sha256-ld-v110:s:6:intent119:o:4:10:s:6:effort10:s:6:medium8:s:4:fast5:b:1:023:s:18:providerPlanDigest16:s:11:sha256:dddd10:s:6:teamId11:s:7:team_0118:s:13:schemaVersion5:i:1:1",
+      "expectedDigest": "6e576d1a287ce4a9cd230ad9501d64c676ea4fd86f9fe034b0eff4821b7bbf2b"
+    },
+    {
+      "id": "launch-schema-v2-retained-key-v1",
+      "keyVersion": "fixture-v1",
+      "key": "phase-0-w5-public-fixture-key-v1",
+      "descriptorId": "team.launch",
+      "schemaVersion": 2,
+      "fingerprintVersion": "hmac-sha256-ld-v1",
+      "intent": {
+        "teamId": "team_01",
+        "providerPlanDigest": "sha256:dddd",
+        "effort": "medium",
+        "fast": false,
+        "topologyVersion": 2
+      },
+      "expectedEncoding": "o:4:17:s:12:descriptorId16:s:11:team.launch23:s:18:fingerprintVersion22:s:17:hmac-sha256-ld-v110:s:6:intent149:o:5:10:s:6:effort10:s:6:medium8:s:4:fast5:b:1:023:s:18:providerPlanDigest16:s:11:sha256:dddd10:s:6:teamId11:s:7:team_0120:s:15:topologyVersion5:i:1:218:s:13:schemaVersion5:i:1:2",
+      "expectedDigest": "cee5c0e28ac50517e1a01b50f33343b761c063c595b7faddaf715fce96d32cbe"
+    },
+    {
+      "id": "launch-key-rotation-v2",
+      "keyVersion": "fixture-v2",
+      "key": "phase-0-w5-public-fixture-key-v2",
+      "descriptorId": "team.launch",
+      "schemaVersion": 2,
+      "fingerprintVersion": "hmac-sha256-ld-v1",
+      "intent": {
+        "teamId": "team_01",
+        "providerPlanDigest": "sha256:dddd",
+        "effort": "medium",
+        "fast": false,
+        "topologyVersion": 2
+      },
+      "expectedEncoding": "o:4:17:s:12:descriptorId16:s:11:team.launch23:s:18:fingerprintVersion22:s:17:hmac-sha256-ld-v110:s:6:intent149:o:5:10:s:6:effort10:s:6:medium8:s:4:fast5:b:1:023:s:18:providerPlanDigest16:s:11:sha256:dddd10:s:6:teamId11:s:7:team_0120:s:15:topologyVersion5:i:1:218:s:13:schemaVersion5:i:1:2",
+      "expectedDigest": "2463ce97368473ed48e3803657b8e4bc451e2ef3b600fe26373489a0b0411225"
+    },
+    {
+      "id": "launch-fingerprint-version-v2-retained-key-v1",
+      "keyVersion": "fixture-v1",
+      "key": "phase-0-w5-public-fixture-key-v1",
+      "descriptorId": "team.launch",
+      "schemaVersion": 2,
+      "fingerprintVersion": "hmac-sha256-ld-v2",
+      "intent": {
+        "teamId": "team_01",
+        "providerPlanDigest": "sha256:dddd",
+        "effort": "medium",
+        "fast": false,
+        "topologyVersion": 2
+      },
+      "expectedEncoding": "o:4:17:s:12:descriptorId16:s:11:team.launch23:s:18:fingerprintVersion22:s:17:hmac-sha256-ld-v210:s:6:intent149:o:5:10:s:6:effort10:s:6:medium8:s:4:fast5:b:1:023:s:18:providerPlanDigest16:s:11:sha256:dddd10:s:6:teamId11:s:7:team_0120:s:15:topologyVersion5:i:1:218:s:13:schemaVersion5:i:1:2",
+      "expectedDigest": "33008b554a9fc846d19f411d4367baca668d91eec7daa9fe7ab7721a55f972d7"
+    }
+  ]
+}

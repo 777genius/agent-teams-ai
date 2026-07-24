@@ -9,16 +9,31 @@ import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import type { AttachmentPayload } from '@shared/types';
 
 /**
- * Deterministic artifact-dir key for a codex-lead attachment delivery. Derived
- * from the run and the composed attachment identities (each attachment.id is a
- * stable uuid assigned once at compose time), so a runtime RETRY of the same
- * send resolves to the SAME on-disk artifact dir instead of leaking a fresh
- * `Date.now()` dir on every attempt. Distinct composes carry distinct
- * attachment ids and therefore still get distinct dirs.
+ * Deterministic artifact-dir key for one ordered Codex attachment payload.
+ * Stable attachment ids preserve compose identity while metadata and decoded
+ * bytes prevent unrelated payloads with positional fallback ids from colliding.
  */
-function buildCodexLeadAttachmentMessageId(runId: string, attachments: AttachmentPayload[]): string {
-  const identity = attachments.map((attachment) => attachment.id).join(',');
-  const digest = createHash('sha256').update(`${runId}\n${identity}`).digest('hex').slice(0, 16);
+function buildCodexLeadAttachmentMessageId(
+  runId: string,
+  attachments: AttachmentPayload[]
+): string {
+  const hash = createHash('sha256');
+  const updateLengthFramed = (value: string | Buffer): void => {
+    const bytes = typeof value === 'string' ? Buffer.from(value, 'utf8') : value;
+    hash.update(`${bytes.byteLength}:`);
+    hash.update(bytes);
+  };
+  updateLengthFramed(runId);
+  updateLengthFramed(String(attachments.length));
+  attachments.forEach((attachment, index) => {
+    const bytes = Buffer.from(attachment.data, 'base64');
+    updateLengthFramed(String(index));
+    updateLengthFramed(attachment.id.trim());
+    updateLengthFramed(attachment.filename.trim());
+    updateLengthFramed(attachment.mimeType.trim().toLowerCase());
+    updateLengthFramed(bytes);
+  });
+  const digest = hash.digest('hex');
   return `lead_${runId}_${digest}`;
 }
 

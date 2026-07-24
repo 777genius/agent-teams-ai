@@ -1,11 +1,10 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   extractFlagsFromHelp,
   extractUserFlags,
   parseCliArgs,
   PROTECTED_CLI_FLAGS,
 } from '@shared/utils/cliArgsParser';
+import { describe, expect, it } from 'vitest';
 
 describe('parseCliArgs', () => {
   it('returns empty array for undefined', () => {
@@ -116,10 +115,7 @@ This is a non-interactive tool for automated workflows.
 
 describe('extractUserFlags', () => {
   it('extracts flags from mixed input', () => {
-    expect(extractUserFlags('--verbose --max-turns 5 foo')).toEqual([
-      '--verbose',
-      '--max-turns',
-    ]);
+    expect(extractUserFlags('--verbose --max-turns 5 foo')).toEqual(['--verbose', '--max-turns']);
   });
 
   it('extracts short flags', () => {

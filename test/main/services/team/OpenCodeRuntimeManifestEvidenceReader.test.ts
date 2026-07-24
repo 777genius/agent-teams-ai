@@ -1,17 +1,17 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  OpenCodeRuntimeManifestEvidenceReader,
-  getOpenCodeRuntimeManifestPath,
+  clearOpenCodeRuntimeLaneStorage,
   getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeRuntimeLaneIndexPath,
+  getOpenCodeRuntimeManifestPath,
   getOpenCodeTeamRuntimeDirectory,
   inspectOpenCodeRuntimeLaneStorage,
   migrateLegacyOpenCodeRuntimeState,
+  OpenCodeRuntimeManifestEvidenceReader,
   prepareOpenCodeRuntimeLaneForLaunchGeneration,
   readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
@@ -20,11 +20,11 @@ import {
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
+  createDefaultRuntimeStoreManifest,
   createRuntimeStoreManifestStore,
   createRuntimeStoreReceiptStore,
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
   RuntimeStoreBatchWriter,
-  createDefaultRuntimeStoreManifest,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
 
 describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
@@ -215,9 +215,9 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
       )
     ).resolves.toBe('{"transactionId":"tx-1"}\n');
 
-    await expect(fs.readFile(getOpenCodeRuntimeLaneIndexPath(tempDir, teamName), 'utf8')).resolves.toContain(
-      `"${laneId}"`
-    );
+    await expect(
+      fs.readFile(getOpenCodeRuntimeLaneIndexPath(tempDir, teamName), 'utf8')
+    ).resolves.toContain(`"${laneId}"`);
     await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
       lanes: {
         [laneId]: {
@@ -300,10 +300,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
 
     await fs.mkdir(runtimeDir, { recursive: true });
     await fs.writeFile(
-      path.join(
-        runtimeDir,
-        'manifest.json'
-      ),
+      path.join(runtimeDir, 'manifest.json'),
       JSON.stringify({
         schemaVersion: 1,
         updatedAt: '2026-04-22T10:00:00.000Z',
@@ -546,7 +543,14 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
       await fs.mkdir(runtimeDir, { recursive: true });
       await fs.writeFile(
         filePath,
-        ['{', '  "version": 1,', '  "updatedAt": "2026-04-22T10:00:00.000Z",', '  "lanes": {}', '}', '}'].join('\n'),
+        [
+          '{',
+          '  "version": 1,',
+          '  "updatedAt": "2026-04-22T10:00:00.000Z",',
+          '  "lanes": {}',
+          '}',
+          '}',
+        ].join('\n'),
         'utf8'
       );
 
@@ -595,6 +599,317 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
         'secondary:opencode:tom': { state: 'active' },
       },
     });
+  });
+
+  it('preserves a lane runId across later state-only index upserts', async () => {
+    const teamName = 'team-lane-owner';
+    const laneId = 'secondary:opencode:owner';
+
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-owner',
+      state: 'active',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      state: 'stopped',
+      diagnostics: ['stop requested'],
+    });
+
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {
+        [laneId]: {
+          laneId,
+          runId: 'run-owner',
+          state: 'stopped',
+        },
+      },
+    });
+  });
+
+  it('fails closed when either durable owner differs before clearing known-run storage', async () => {
+    const teamName = 'team-cas-owner';
+    const laneId = 'secondary:opencode:cas';
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'replacement.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-old',
+      state: 'active',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-new',
+      clock: () => now,
+    });
+    await fs.writeFile(markerPath, 'replacement', 'utf8');
+
+    await expect(
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-old',
+      })
+    ).resolves.toBe('owner_changed');
+    await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('replacement');
+
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-new',
+      state: 'active',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-old',
+      clock: () => now,
+    });
+
+    await expect(
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-old',
+      })
+    ).resolves.toBe('owner_changed');
+    await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('replacement');
+  });
+
+  it('uses a matching manifest owner to clear a legacy lane index entry without runId', async () => {
+    const teamName = 'team-cas-legacy-index';
+    const laneId = 'secondary:opencode:legacy-index';
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'legacy.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      state: 'stopped',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-legacy',
+      clock: () => now,
+    });
+    await fs.writeFile(markerPath, 'legacy', 'utf8');
+
+    await expect(
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-legacy',
+      })
+    ).resolves.toBe('cleared');
+
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {},
+    });
+    await expect(fs.stat(path.dirname(markerPath))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('preserves a legacy lane index entry when its manifest owner mismatches or is absent', async () => {
+    const teamName = 'team-cas-legacy-owner-unknown';
+    const laneId = 'secondary:opencode:legacy-owner-unknown';
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'unknown-owner.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      state: 'stopped',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-replacement',
+      clock: () => now,
+    });
+    await fs.writeFile(markerPath, 'unknown-owner', 'utf8');
+
+    const clear = () =>
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-legacy',
+      });
+    await expect(clear()).resolves.toBe('owner_changed');
+    await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('unknown-owner');
+
+    await fs.rm(getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId));
+    await expect(clear()).resolves.toBe('owner_changed');
+
+    await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('unknown-owner');
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {
+        [laneId]: {
+          runId: undefined,
+          state: 'stopped',
+        },
+      },
+    });
+  });
+
+  it('resumes manifest-first partial cleanup for a matching durable lane owner', async () => {
+    const teamName = 'team-cas-partial-cleanup';
+    const laneId = 'secondary:opencode:partial-cleanup';
+    const manifestPath = getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId);
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'remaining.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-partial',
+      state: 'stopped',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-partial',
+      clock: () => now,
+    });
+    await fs.writeFile(markerPath, 'remaining', 'utf8');
+    await fs.rm(manifestPath);
+
+    const clear = () =>
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-partial',
+      });
+    await expect(clear()).resolves.toBe('cleared');
+    await expect(clear()).resolves.toBe('cleared');
+
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {},
+    });
+    await expect(fs.stat(path.dirname(manifestPath))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('preserves replacement storage when the index owner changes after manifest-first deletion', async () => {
+    const teamName = 'team-cas-replacement-race';
+    const laneId = 'secondary:opencode:replacement-race';
+    const manifestPath = getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId);
+    const markerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      fileName: 'replacement.marker',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-old',
+      state: 'stopped',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-old',
+      clock: () => now,
+    });
+    await fs.rm(manifestPath);
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-replacement',
+      state: 'active',
+    });
+    await fs.writeFile(markerPath, 'replacement', 'utf8');
+
+    await expect(
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-old',
+      })
+    ).resolves.toBe('owner_changed');
+
+    await expect(fs.readFile(markerPath, 'utf8')).resolves.toBe('replacement');
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {
+        [laneId]: {
+          runId: 'run-replacement',
+          state: 'active',
+        },
+      },
+    });
+  });
+
+  it('clears a matching durable owner atomically and is idempotent for that owner', async () => {
+    const teamName = 'team-cas-idempotent';
+    const laneId = 'secondary:opencode:idempotent';
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-same',
+      state: 'active',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-same',
+      clock: () => now,
+    });
+
+    const clear = () =>
+      clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId,
+        expectedRunId: 'run-same',
+      });
+    await expect(clear()).resolves.toBe('cleared');
+    await expect(clear()).resolves.toBe('cleared');
+
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {},
+    });
+    await expect(
+      fs.stat(path.dirname(getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId)))
+    ).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('persists lane-scoped activeRunId for runtime evidence after app restart', async () => {
@@ -784,6 +1099,7 @@ describe('prepareOpenCodeRuntimeLaneForLaunchGeneration', () => {
       lanes: {
         [laneId]: {
           laneId,
+          runId: 'run-new',
           state: 'active',
         },
       },

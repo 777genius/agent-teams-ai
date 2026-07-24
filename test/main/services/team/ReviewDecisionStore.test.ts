@@ -9,6 +9,7 @@ import {
   rm,
   stat,
   symlink,
+  truncate,
   utimes,
   writeFile,
 } from 'fs/promises';
@@ -1354,6 +1355,431 @@ describe('ReviewDecisionStore', () => {
       reviewRedoHistory: [],
       revision: 0,
     });
+  });
+
+  it('preserves unknown root and nested fields without resurrecting removed review entities', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:round-trip:src:one';
+    const filePath = exactScopeFilePath('demo', 'task-123', scopeToken);
+    const retainedAction = {
+      id: 'retained-action',
+      createdAt: '2026-07-20T00:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: '/repo/retained.ts', originalIndex: 0 },
+    };
+    const removedAction = {
+      id: 'removed-action',
+      createdAt: '2026-07-20T00:01:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: '/repo/removed.ts', originalIndex: 1 },
+    };
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { 'retained:0': 'accepted', 'removed:0': 'rejected' },
+      fileDecisions: { removed: 'rejected' },
+      reviewActionHistory: [retainedAction, removedAction],
+    });
+
+    const seeded = JSON.parse(await readFile(filePath, 'utf8')) as Record<string, unknown> & {
+      reviewActionHistory: Array<Record<string, unknown> & { action: Record<string, unknown> }>;
+    };
+    seeded.futureRoot = { retained: true };
+    seeded.reviewActionHistory[0].futureAction = { retained: true };
+    seeded.reviewActionHistory[0].action.futureNested = { retained: true };
+    await writeFile(filePath, JSON.stringify(seeded, null, 2), 'utf8');
+
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { 'retained:0': 'rejected' },
+      fileDecisions: {},
+      reviewActionHistory: [retainedAction],
+      expectedRevision: 1,
+    });
+
+    const persisted = JSON.parse(await readFile(filePath, 'utf8')) as Record<string, unknown> & {
+      hunkDecisions: Record<string, unknown>;
+      fileDecisions: Record<string, unknown>;
+      reviewActionHistory: Array<Record<string, unknown> & { action: Record<string, unknown> }>;
+    };
+    expect(persisted.futureRoot).toEqual({ retained: true });
+    expect(persisted.hunkDecisions).toEqual({ 'retained:0': 'rejected' });
+    expect(persisted.fileDecisions).toEqual({});
+    expect(persisted.reviewActionHistory).toHaveLength(1);
+    expect(persisted.reviewActionHistory[0]).toMatchObject({
+      id: 'retained-action',
+      futureAction: { retained: true },
+      action: {
+        filePath: '/repo/retained.ts',
+        originalIndex: 0,
+        futureNested: { retained: true },
+      },
+    });
+  });
+
+  it('preserves unknown action fields when the same action moves across undo and redo history', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:cross-history:src:one';
+    const filePath = exactScopeFilePath('demo', 'task-123', scopeToken);
+    const action = {
+      id: 'cross-history-action',
+      createdAt: '2026-07-20T00:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: '/repo/cross-history.ts', originalIndex: 0 },
+    };
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [action],
+    });
+
+    const seeded = JSON.parse(await readFile(filePath, 'utf8')) as {
+      reviewActionHistory: Array<Record<string, unknown> & { action: Record<string, unknown> }>;
+    };
+    seeded.reviewActionHistory[0].futureAction = { retained: 'outer' };
+    seeded.reviewActionHistory[0].action.futureNested = { retained: 'nested' };
+    await writeFile(filePath, JSON.stringify(seeded, null, 2), 'utf8');
+
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { 'cross-history:0': 'accepted' },
+      fileDecisions: {},
+      reviewActionHistory: [],
+      reviewRedoHistory: [
+        {
+          action,
+          decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
+        },
+      ],
+      expectedRevision: 1,
+    });
+
+    const redone = JSON.parse(await readFile(filePath, 'utf8')) as {
+      reviewRedoHistory: Array<{
+        action: Record<string, unknown> & { action: Record<string, unknown> };
+      }>;
+    };
+    expect(redone.reviewRedoHistory[0].action).toMatchObject({
+      futureAction: { retained: 'outer' },
+      action: { futureNested: { retained: 'nested' } },
+    });
+
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [action],
+      reviewRedoHistory: [],
+      expectedRevision: 2,
+    });
+
+    const undoneAgain = JSON.parse(await readFile(filePath, 'utf8')) as {
+      reviewActionHistory: Array<Record<string, unknown> & { action: Record<string, unknown> }>;
+    };
+    expect(undoneAgain.reviewActionHistory[0]).toMatchObject({
+      futureAction: { retained: 'outer' },
+      action: { futureNested: { retained: 'nested' } },
+    });
+  });
+
+  it('preserves unknown fields at every disk-action level across undo and redo movement', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:deep-cross-history:src:one';
+    const filePath = exactScopeFilePath('demo', 'task-123', scopeToken);
+    const reviewedFilePath = '/repo/renamed.ts';
+    const action = {
+      id: 'deep-cross-history-action',
+      createdAt: '2026-07-20T00:00:00.000Z',
+      kind: 'disk' as const,
+      descriptor: { intent: 'restore-rename' as const, filePath: reviewedFilePath },
+      action: {
+        snapshot: {
+          filePath: reviewedFilePath,
+          beforeContent: 'before\n',
+          afterContent: 'after\n',
+          restoreMode: 'restore-rejected-rename' as const,
+          renameExpectation: {
+            eventId: 'rename-event',
+            beforeHash: null,
+            afterHash: null,
+            relation: {
+              kind: 'rename' as const,
+              oldPath: '/repo/original.ts',
+              newPath: reviewedFilePath,
+            },
+          },
+        },
+        decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
+      },
+    };
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [action],
+    });
+
+    const seeded = JSON.parse(await readFile(filePath, 'utf8')) as {
+      reviewActionHistory: Array<
+        Record<string, unknown> & {
+          descriptor: Record<string, unknown>;
+          action: Record<string, unknown> & {
+            decisionSnapshot: Record<string, unknown>;
+            snapshot: Record<string, unknown> & {
+              renameExpectation: Record<string, unknown> & {
+                relation: Record<string, unknown>;
+              };
+            };
+          };
+        }
+      >;
+    };
+    const storedAction = seeded.reviewActionHistory[0];
+    storedAction.futureAction = { retained: 'action' };
+    storedAction.descriptor.futureDescriptor = { retained: 'descriptor' };
+    storedAction.action.futureNestedAction = { retained: 'nested-action' };
+    storedAction.action.decisionSnapshot.futureDecisionSnapshot = {
+      retained: 'decision-snapshot',
+    };
+    storedAction.action.snapshot.futureSnapshot = { retained: 'snapshot' };
+    storedAction.action.snapshot.renameExpectation.futureRenameExpectation = {
+      retained: 'rename-expectation',
+    };
+    storedAction.action.snapshot.renameExpectation.relation.futureRelation = {
+      retained: 'relation',
+    };
+    await writeFile(filePath, JSON.stringify(seeded, null, 2), 'utf8');
+
+    const deepUnknownExpectation = {
+      futureAction: { retained: 'action' },
+      descriptor: { futureDescriptor: { retained: 'descriptor' } },
+      action: {
+        futureNestedAction: { retained: 'nested-action' },
+        decisionSnapshot: {
+          futureDecisionSnapshot: { retained: 'decision-snapshot' },
+        },
+        snapshot: {
+          futureSnapshot: { retained: 'snapshot' },
+          renameExpectation: {
+            futureRenameExpectation: { retained: 'rename-expectation' },
+            relation: { futureRelation: { retained: 'relation' } },
+          },
+        },
+      },
+    };
+
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [],
+      reviewRedoHistory: [
+        {
+          action,
+          decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
+        },
+      ],
+      expectedRevision: 1,
+    });
+    const redone = JSON.parse(await readFile(filePath, 'utf8')) as {
+      reviewRedoHistory: Array<{ action: Record<string, unknown> }>;
+    };
+    expect(redone.reviewRedoHistory[0].action).toMatchObject(deepUnknownExpectation);
+
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [action],
+      reviewRedoHistory: [],
+      expectedRevision: 2,
+    });
+    const undoneAgain = JSON.parse(await readFile(filePath, 'utf8')) as {
+      reviewActionHistory: Array<Record<string, unknown>>;
+    };
+    expect(undoneAgain.reviewActionHistory[0]).toMatchObject(deepUnknownExpectation);
+  });
+
+  it('fails closed on a hash-valid file summary containing a malformed snippet', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:malformed-file-summary:src:one';
+    const filePath = exactScopeFilePath('demo', 'task-123', scopeToken);
+    const file = {
+      filePath: '/repo/file.ts',
+      relativePath: 'file.ts',
+      snippets: [],
+      linesAdded: 1,
+      linesRemoved: 0,
+      isNewFile: false,
+    };
+    const action = {
+      id: 'malformed-file-summary-action',
+      createdAt: '2026-07-20T00:00:00.000Z',
+      kind: 'disk' as const,
+      action: {
+        snapshot: {
+          filePath: file.filePath,
+          beforeContent: 'before\n',
+          afterContent: 'after\n',
+        },
+        file,
+      },
+    };
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [action],
+    });
+
+    const malformed = JSON.parse(await readFile(filePath, 'utf8')) as {
+      fileSummaryBlobs: Record<string, Record<string, unknown>>;
+      reviewActionHistory: Array<{ action: { fileRef: string } }>;
+    };
+    const [oldRef] = Object.keys(malformed.fileSummaryBlobs);
+    const summary = malformed.fileSummaryBlobs[oldRef];
+    summary.snippets = [42];
+    const replacementRef = createHash('sha256')
+      .update('file-summary')
+      .update('\0')
+      .update(JSON.stringify(summary))
+      .digest('hex');
+    delete malformed.fileSummaryBlobs[oldRef];
+    malformed.fileSummaryBlobs[replacementRef] = summary;
+    malformed.reviewActionHistory[0].action.fileRef = replacementRef;
+    const raw = JSON.stringify(malformed, null, 2);
+    await writeFile(filePath, raw, 'utf8');
+    const before = await stat(filePath);
+
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken,
+        hunkDecisions: {},
+        fileDecisions: {},
+        reviewActionHistory: [action],
+        expectedRevision: 1,
+      })
+    ).rejects.toBeTruthy();
+    await expect(readFile(filePath, 'utf8')).resolves.toBe(raw);
+    const after = await stat(filePath);
+    expect({ dev: after.dev, ino: after.ino, size: after.size, mtimeMs: after.mtimeMs }).toEqual({
+      dev: before.dev,
+      ino: before.ino,
+      size: before.size,
+      mtimeMs: before.mtimeMs,
+    });
+  });
+
+  it('fails closed on malformed known v6 fields without rewriting the review file', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:malformed-known:src:one';
+    const filePath = exactScopeFilePath('demo', 'task-123', scopeToken);
+    const action = {
+      id: 'malformed-known-action',
+      createdAt: '2026-07-20T00:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: '/repo/file.ts', originalIndex: 0 },
+    };
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [action],
+    });
+    const valid = await readFile(filePath, 'utf8');
+
+    for (const mutate of [
+      (document: Record<string, unknown>) => {
+        document.updatedAt = 42;
+      },
+      (document: Record<string, unknown>) => {
+        const history = document.reviewActionHistory as Array<{
+          action: Record<string, unknown>;
+        }>;
+        history[0].action.snapshot = { beforeBlob: false };
+      },
+    ]) {
+      const malformed = JSON.parse(valid) as Record<string, unknown>;
+      mutate(malformed);
+      const raw = JSON.stringify(malformed, null, 2);
+      await writeFile(filePath, raw, 'utf8');
+
+      await expect(
+        store.save('demo', 'task-123', {
+          scopeToken,
+          hunkDecisions: {},
+          fileDecisions: {},
+          reviewActionHistory: [action],
+          expectedRevision: 1,
+        })
+      ).rejects.toBeTruthy();
+      await expect(readFile(filePath, 'utf8')).resolves.toBe(raw);
+    }
+  });
+
+  it.each([
+    [
+      'future version',
+      JSON.stringify({
+        version: 7,
+        scopeKey: 'task-123',
+        scopeToken: 'task:123:req:closed:src:one',
+        hunkDecisions: {},
+        fileDecisions: {},
+      }),
+    ],
+    ['malformed JSON', '{not-json'],
+    [
+      'mismatched scope token',
+      JSON.stringify({
+        version: 2,
+        scopeKey: 'task-123',
+        scopeToken: 'task:123:req:other:src:one',
+        hunkDecisions: {},
+        fileDecisions: {},
+      }),
+    ],
+  ])('fails closed on %s and leaves review bytes unchanged', async (_label, raw) => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:closed:src:one';
+    const filePath = exactScopeFilePath('demo', 'task-123', scopeToken);
+    await mkdir(path.dirname(filePath), { recursive: true });
+    await writeFile(filePath, raw, 'utf8');
+
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken,
+        hunkDecisions: {},
+        fileDecisions: {},
+      })
+    ).rejects.toBeTruthy();
+    await expect(readFile(filePath, 'utf8')).resolves.toBe(raw);
+  });
+
+  it('does not write when the existing review file is oversized', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:oversized:src:one';
+    const filePath = exactScopeFilePath('demo', 'task-123', scopeToken);
+    await mkdir(path.dirname(filePath), { recursive: true });
+    await writeFile(filePath, '', 'utf8');
+    await truncate(filePath, 128 * 1024 * 1024 + 1);
+    const before = await stat(filePath);
+
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken,
+        hunkDecisions: {},
+        fileDecisions: {},
+      })
+    ).rejects.toBeTruthy();
+    expect((await stat(filePath)).size).toBe(before.size);
   });
 
   it('rejects malformed or duplicate review action identities before writing', async () => {

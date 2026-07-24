@@ -409,6 +409,18 @@ export class MemberWorkSyncEventQueue {
       .sort((left, right) => left[1].runAt - right[1].runAt);
 
     for (const [key, item] of due) {
+      if (this.quiescedTeams.has(item.teamName)) {
+        this.items.delete(key);
+        this.counters.dropped += 1;
+        this.appendAudit({
+          teamName: item.teamName,
+          memberName: item.memberName,
+          event: 'queue_dropped',
+          source: 'event_queue',
+          reason: 'team_quiesced',
+        });
+        continue;
+      }
       if (this.activeKeys.size >= this.concurrency) {
         break;
       }
@@ -436,6 +448,23 @@ export class MemberWorkSyncEventQueue {
 
     let failed = false;
     let failure: unknown = null;
+    let resolveTeamCompletion!: () => void;
+    const teamCompletion = new Promise<void>((resolve) => {
+      resolveTeamCompletion = resolve;
+    });
+    this.addTrackedPromise(this.inFlightByTeam, item.teamName, teamCompletion);
+    void teamCompletion.finally(() => {
+      this.removeTrackedPromise(this.inFlightByTeam, item.teamName, teamCompletion);
+    });
+
+    const finishTrackedItem = (): void => {
+      try {
+        this.finishItem(key, item, running, failed);
+      } finally {
+        resolveTeamCompletion();
+      }
+    };
+
     const promise = this.executeItem(key, item, running)
       .catch((error: unknown) => {
         failed = true;
@@ -449,21 +478,19 @@ export class MemberWorkSyncEventQueue {
       })
       .finally(() => {
         this.inFlight.delete(promise);
-        this.removeTrackedPromise(this.inFlightByTeam, item.teamName, promise);
         const settlePromise = getReconcileTimeoutSettlePromise(failure);
         if (settlePromise) {
           this.activeKeys.delete(key);
           this.pump();
           void settlePromise.finally(() => {
-            this.finishItem(key, item, running, failed);
+            finishTrackedItem();
           });
           return;
         }
-        this.finishItem(key, item, running, failed);
+        finishTrackedItem();
       });
 
     this.inFlight.add(promise);
-    this.addTrackedPromise(this.inFlightByTeam, item.teamName, promise);
   }
 
   private finishItem(key: string, item: QueueItem, running: RunningItem, failed: boolean): void {
@@ -472,9 +499,10 @@ export class MemberWorkSyncEventQueue {
     }
     this.activeKeys.delete(key);
     this.running.delete(key);
-    if (running.rerunRequested && !this.stopped && !this.quiescedTeams.has(item.teamName)) {
+    const canAdmitFollowUp = !this.stopped && !this.quiescedTeams.has(item.teamName);
+    if (running.rerunRequested && canAdmitFollowUp) {
       this.enqueueFollowUp(item, running);
-    } else if (failed && !this.stopped) {
+    } else if (failed && canAdmitFollowUp) {
       this.enqueueRetryAfterFailure(key, item, running);
     }
     this.pump();

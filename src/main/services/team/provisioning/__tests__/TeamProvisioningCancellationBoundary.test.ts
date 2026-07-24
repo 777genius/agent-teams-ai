@@ -626,15 +626,133 @@ describe('TeamProvisioningCancellationBoundary', () => {
     );
   });
 
-  it('awaits remaining stops but retains run ownership when an owned stop fails', async () => {
-    const primaryStop = createDeferred<void>();
-    const secondaryStops = createDeferred<void>();
+  it('retains cancellation evidence after a secondary stop failure', async () => {
+    const secondaryStopFailure = new Error('secondary stop failed');
     const events: string[] = [];
     const run = makeRun({
       onProgress: vi.fn(() => {
         events.push('cancelled progress');
       }),
     });
+    const ports = makePorts({
+      run,
+      trackedRunId: run.runId,
+      hasSecondaryRuntimeRuns: true,
+    });
+    ports.stopOpenCodeRuntimeAdapterTeam.mockImplementation(async () => {
+      events.push('primary stopped');
+    });
+    ports.stopMixedSecondaryRuntimeLanes.mockImplementation(async () => {
+      events.push('secondary stop failed');
+      throw secondaryStopFailure;
+    });
+    const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+    await expect(boundary.cancelProvisioning(run.runId)).rejects.toBe(secondaryStopFailure);
+
+    expect(events).toEqual(['primary stopped', 'secondary stop failed', 'cancelled progress']);
+    expect(ports.updateProgress).toHaveBeenCalledOnce();
+    expect(run.onProgress).toHaveBeenCalledOnce();
+    expect(run.onProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: run.runId,
+        state: 'cancelled',
+        message: 'Provisioning cancelled by user',
+      })
+    );
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.runs.get(run.runId)).toBe(run);
+
+    await expect(boundary.cancelProvisioning(run.runId)).rejects.toThrow(
+      'Provisioning cannot be cancelled in current state'
+    );
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledOnce();
+    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledOnce();
+  });
+
+  it('awaits remaining stops and retains failed evidence after cancellation rejects', async () => {
+    const primaryStopFailure = new Error('primary stop failed');
+    const secondaryStopFailure = new Error('lane-a stop failed');
+    const primaryStop = createDeferred<void>();
+    const remainingSecondaryStop = createDeferred<void>();
+    const events: string[] = [];
+    const run = makeRun({
+      onProgress: vi.fn(() => {
+        events.push('cancelled progress');
+      }),
+    });
+    const secondaryRuns = new Map<string, SecondaryRuntimeRunEntry>([
+      [
+        'lane-a',
+        {
+          runId: 'lane-run-a',
+          providerId: 'opencode',
+          laneId: 'lane-a',
+          memberName: 'A',
+          cwd: '/lane-a',
+        },
+      ],
+      [
+        'lane-b',
+        {
+          runId: 'lane-run-b',
+          providerId: 'opencode',
+          laneId: 'lane-b',
+          memberName: 'B',
+          cwd: '/lane-b',
+        },
+      ],
+    ]);
+    const stoppingSecondaryRuntimeTeams = new Set<string>();
+    const stopInputs: Array<{ laneId: string; runId: string }> = [];
+    const adapter = makeAdapter(
+      vi.fn(async (input) => {
+        stopInputs.push({ laneId: input.laneId, runId: input.runId });
+        if (input.laneId === 'lane-a') {
+          throw secondaryStopFailure;
+        }
+        if (input.laneId === 'lane-b') {
+          events.push('remaining secondary stop started');
+          await remainingSecondaryStop.promise;
+          events.push('remaining secondary stopped');
+        }
+        return {
+          runId: input.runId,
+          teamName: input.teamName,
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+        };
+      })
+    );
+    const secondaryStopPorts: OpenCodeRuntimeStopFlowPorts = {
+      teamsBasePath: '/teams',
+      getSecondaryRuntimeRuns: () => [...secondaryRuns.values()],
+      stoppingSecondaryRuntimeTeams,
+      getOpenCodeRuntimeAdapter: () => adapter,
+      readLaunchState: async () => null,
+      writeLaunchStateSnapshot: async (_teamName, snapshot) => snapshot,
+      readPersistedTeamProjectPath: () => '/repo',
+      clearOpenCodeRuntimeLaneStorage: async () => undefined,
+      deleteSecondaryRuntimeRun: (_teamName, laneId) => {
+        secondaryRuns.delete(laneId);
+      },
+      clearSecondaryRuntimeRuns: () => {
+        secondaryRuns.clear();
+      },
+      runtimeAdapterRunByTeam: new Map(),
+      runtimeAdapterProgressByRunId: new Map(),
+      setRuntimeAdapterProgress: (nextProgress) => nextProgress,
+      clearOpenCodeRuntimeToolApprovals: vi.fn(),
+      getAliveRunId: () => null,
+      deleteAliveRunId: vi.fn(),
+      provisioningRunByTeam: new Map(),
+      invalidateRuntimeSnapshotCaches: vi.fn(),
+      emitTeamChange: vi.fn(),
+      logger: { warn: vi.fn() },
+      nowIso: () => '2026-01-01T00:00:02.000Z',
+    };
     const ports = makePorts({
       run,
       trackedRunId: run.runId,
@@ -648,13 +766,9 @@ describe('TeamProvisioningCancellationBoundary', () => {
         throw error;
       }
     });
-    ports.stopMixedSecondaryRuntimeLanes.mockImplementation(async () => {
-      await secondaryStops.promise;
-      events.push('secondaries stopped');
-    });
-    ports.cleanupRun.mockImplementation(() => {
-      events.push('cleanup');
-    });
+    ports.stopMixedSecondaryRuntimeLanes.mockImplementation((teamName: string) =>
+      stopMixedSecondaryRuntimeLanes(teamName, secondaryStopPorts)
+    );
     const cleanupRunOwnedAnthropicApiKeyHelper = vi.fn(async () => undefined);
     ports.cleanupRunOwnedAnthropicApiKeyHelper = cleanupRunOwnedAnthropicApiKeyHelper;
     const boundary = createTeamProvisioningCancellationBoundary(ports);
@@ -671,31 +785,55 @@ describe('TeamProvisioningCancellationBoundary', () => {
       }
     );
 
-    primaryStop.reject(new Error('primary stop failed'));
-    await Promise.resolve();
-    await Promise.resolve();
+    primaryStop.reject(primaryStopFailure);
+    await vi.waitFor(() => {
+      expect(stopInputs).toEqual([
+        { laneId: 'lane-a', runId: 'lane-run-a' },
+        { laneId: 'lane-b', runId: 'lane-run-b' },
+      ]);
+    });
 
-    expect(events).toEqual(['primary stop failed']);
     expect(cancellationSettled).toBe(false);
     expect(ports.updateProgress).not.toHaveBeenCalled();
+    expect(run.onProgress).not.toHaveBeenCalled();
     expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.runs.get(run.runId)).toBe(run);
+    expect([...secondaryRuns.keys()]).toEqual(['lane-a', 'lane-b']);
 
-    secondaryStops.resolve();
+    remainingSecondaryStop.resolve();
     const result = await cancellation;
 
-    expect(result).toMatchObject({
-      status: 'rejected',
-      error: expect.objectContaining({ message: 'primary stop failed' }),
-    });
+    expect(result.status).toBe('rejected');
+    expect(result.status === 'rejected' ? result.error : undefined).toBe(primaryStopFailure);
     expect(events).toEqual([
       'primary stop failed',
-      'secondaries stopped',
+      'remaining secondary stop started',
+      'remaining secondary stopped',
       'cancelled progress',
       'cancellation rejected',
     ]);
+    expect(ports.updateProgress).toHaveBeenCalledOnce();
+    expect(run.onProgress).toHaveBeenCalledOnce();
+    expect(run.onProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: run.runId,
+        state: 'cancelled',
+        message: 'Provisioning cancelled by user',
+      })
+    );
     expect(ports.cleanupRun).not.toHaveBeenCalled();
     expect(ports.runs.get(run.runId)).toBe(run);
+    expect([...secondaryRuns.keys()]).toEqual(['lane-a']);
+    expect(stoppingSecondaryRuntimeTeams.has(run.teamName)).toBe(false);
     expect(cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
+
+    await expect(boundary.cancelProvisioning(run.runId)).rejects.toThrow(
+      'Provisioning cannot be cancelled in current state'
+    );
+    expect(stopInputs).toEqual([
+      { laneId: 'lane-a', runId: 'lane-run-a' },
+      { laneId: 'lane-b', runId: 'lane-run-b' },
+    ]);
   });
 
   it.each(['ready', 'disconnected', 'failed', 'cancelled'] as const)(

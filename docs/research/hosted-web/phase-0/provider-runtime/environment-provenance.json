@@ -1,0 +1,2467 @@
+{
+  "$schema": "./schemas/environment-provenance.schema.json",
+  "schemaVersion": 1,
+  "evidenceId": "P0.W2.ENVIRONMENT_PROVENANCE",
+  "phaseStartSha": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+  "authoredBy": "phase-00-w2-targeted-a1-source-review",
+  "validatedBy": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+  "claimStatus": "source_observed_not_target_verified",
+  "records": [
+    {
+      "id": "ambient-inheritance",
+      "keys": ["process.env.*", "interactiveShellEnv.*"],
+      "provenance": "app process and best-effort login shell merged wholesale before policy overlays",
+      "providers": ["anthropic", "codex", "gemini", "opencode"],
+      "classification": "forbidden",
+      "currentBehavior": "inherited; this makes the current exposure set open-ended",
+      "targetRule": "replace with an explicit per-execution-unit allowlist; an unclassified key fails plan creation",
+      "source": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+      "sourceToken": "...processEnv",
+      "discoveryDisposition": "open_ended_wildcard"
+    },
+    {
+      "id": "portable-process-basics",
+      "keys": [
+        "PATH",
+        "HOME",
+        "USERPROFILE",
+        "USER",
+        "USERNAME",
+        "LOGNAME",
+        "TERM",
+        "COLUMNS",
+        "LINES",
+        "SHELL",
+        "COMSPEC",
+        "ComSpec",
+        "XDG_CONFIG_HOME",
+        "XDG_STATE_HOME",
+        "NODE_ENV",
+        "LANG"
+      ],
+      "provenance": "shell/app process with normalized home, identity, terminal and development-mode defaults",
+      "providers": ["anthropic", "codex", "gemini", "opencode"],
+      "classification": "required",
+      "targetRule": "resolve and snapshot non-secret values in ProcessExecutionUnit environment policy",
+      "source": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+      "sourceToken": "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "provider-custom-config",
+      "keys": ["CLAUDE_CONFIG_DIR"],
+      "provenance": "custom Claude configuration selected before provider-aware child construction",
+      "providers": ["anthropic", "codex", "gemini"],
+      "classification": "optional",
+      "targetRule": "preserve only when the configured Claude base differs from the auto-detected default",
+      "source": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+      "sourceToken": "resolvedClaudeBasePath !== autoDetectedClaudeBasePath",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "provider-routing-pins",
+      "keys": ["CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST", "CLAUDE_CODE_ENTRY_PROVIDER"],
+      "provenance": "host-emitted positive provider and backend selection pins",
+      "providers": ["anthropic", "codex", "gemini"],
+      "classification": "required",
+      "targetRule": "emit both pins for every selected primary provider after removing inherited routing keys",
+      "source": "src/main/services/runtime/providerRuntimeEnv.ts",
+      "sourceToken": "env.CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST = '1'",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "provider-routing-legacy-removals",
+      "keys": ["CLAUDE_CODE_USE_OPENAI", "CLAUDE_CODE_USE_GEMINI"],
+      "provenance": "inherited legacy provider-routing flags removed before every primary provider spawn",
+      "providers": ["anthropic", "codex", "gemini"],
+      "classification": "forbidden",
+      "targetRule": "remove before spawn and never re-emit; CLAUDE_CODE_ENTRY_PROVIDER is the positive provider pin",
+      "source": "src/main/services/runtime/providerRuntimeEnv.ts",
+      "sourceToken": "for (const key of PROVIDER_ROUTING_ENV_KEYS)",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "anthropic-bedrock-routing",
+      "keys": ["CLAUDE_CODE_USE_BEDROCK"],
+      "provenance": "inherited Anthropic backend selection normalized to one positive Bedrock flag",
+      "providers": ["anthropic", "codex", "gemini"],
+      "classification": "optional",
+      "targetRule": "re-emit only for an Anthropic Bedrock backend; remove for all other Anthropic backends and providers",
+      "source": "src/main/services/runtime/providerRuntimeEnv.ts",
+      "sourceToken": "backend === 'bedrock'",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "anthropic-vertex-routing",
+      "keys": ["CLAUDE_CODE_USE_VERTEX"],
+      "provenance": "inherited Anthropic backend selection normalized to one positive Vertex flag",
+      "providers": ["anthropic", "codex", "gemini"],
+      "classification": "optional",
+      "targetRule": "re-emit only for an Anthropic Vertex backend; remove for all other Anthropic backends and providers",
+      "source": "src/main/services/runtime/providerRuntimeEnv.ts",
+      "sourceToken": "backend === 'vertex'",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "anthropic-foundry-routing",
+      "keys": ["CLAUDE_CODE_USE_FOUNDRY"],
+      "provenance": "inherited Anthropic backend selection normalized to one positive Foundry flag",
+      "providers": ["anthropic", "codex", "gemini"],
+      "classification": "optional",
+      "targetRule": "re-emit only for an Anthropic Foundry backend; remove for all other Anthropic backends and providers",
+      "source": "src/main/services/runtime/providerRuntimeEnv.ts",
+      "sourceToken": "backend === 'foundry'",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "configured-provider-backends",
+      "keys": ["CLAUDE_CODE_CODEX_BACKEND", "CLAUDE_CODE_GEMINI_BACKEND"],
+      "provenance": "configured backend identifiers emitted before provider-specific overrides",
+      "providers": ["anthropic", "codex", "gemini"],
+      "classification": "required",
+      "targetRule": "emit the configured Codex and Gemini backend identifiers, then override the selected provider when explicitly requested",
+      "source": "src/main/services/runtime/buildRuntimeBaseEnv.ts",
+      "sourceToken": "applyConfiguredRuntimeBackendsEnv",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "team-bootstrap-control",
+      "keys": [
+        "CLAUDECODE",
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
+        "CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP",
+        "CLAUDE_TEAM_FORCE_PROCESS_TEAMMATES",
+        "CLAUDE_TEAM_RUNTIME_SETTINGS_PATH",
+        "CLAUDE_TEAM_CONTROL_URL",
+        "CLAUDE_CODE_NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_PATH",
+        "CLAUDE_CODE_TEAMMATE_RUNTIME",
+        "CLAUDE_CODE_TEAMMATE_RUNTIME_EVENTS_PATH",
+        "CLAUDE_CODE_BOOTSTRAP_PROOF_TOKEN"
+      ],
+      "provenance": "app-owned deterministic provisioning setup",
+      "providers": ["anthropic", "codex", "gemini"],
+      "classification": "required",
+      "targetRule": "runtime settings path must be owned/read-only; control URL is location only and conveys no authority",
+      "source": "src/main/services/team/provisioning/TeamProvisioningLaunchDeterministicSpawnFlow.ts",
+      "sourceToken": "CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "anthropic-auth",
+      "keys": [
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_AUTH_TOKEN",
+        "ANTHROPIC_BASE_URL",
+        "ANTHROPIC_CUSTOM_HEADERS",
+        "ANTHROPIC_AWS_WORKSPACE_ID",
+        "CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR",
+        "CLAUDE_CODE_OAUTH_TOKEN",
+        "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
+        "ANTHROPIC_AWS_API_KEY",
+        "AWS_PROFILE",
+        "AWS_REGION",
+        "AWS_DEFAULT_REGION",
+        "AWS_CONFIG_FILE",
+        "AWS_SHARED_CREDENTIALS_FILE",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_SESSION_TOKEN"
+      ],
+      "provenance": "explicit environment, approved stored connection, Claude credential storage, or compatible endpoint settings",
+      "providers": ["anthropic"],
+      "classification": "optional",
+      "targetRule": "minimum one selected auth mode; competing values cleared; represent exposure by SecretRef class, never value",
+      "source": "src/main/services/runtime/anthropicTeamApiKeyHelper.ts",
+      "sourceToken": "ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "anthropic-helper-metadata",
+      "keys": [
+        "CLAUDE_TEAM_ANTHROPIC_AUTH_MODE",
+        "CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH",
+        "CLAUDE_TEAM_DISABLE_ANTHROPIC_API_KEY_HELPER"
+      ],
+      "provenance": "app-owned per-team/run helper material",
+      "providers": ["anthropic"],
+      "classification": "optional",
+      "targetRule": "path metadata only; helper/key files remain 0700/0600 and must not cross execution units",
+      "source": "src/main/services/runtime/anthropicTeamApiKeyHelper.ts",
+      "sourceToken": "CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_ENV",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "codex-auth-and-runtime",
+      "keys": [
+        "OPENAI_API_KEY",
+        "CODEX_API_KEY",
+        "CODEX_CLI_PATH",
+        "CODEX_HOME",
+        "CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD"
+      ],
+      "provenance": "Codex account snapshot, approved stored key, explicit env, app-managed binary, and connection configuration",
+      "providers": ["codex"],
+      "classification": "optional",
+      "targetRule": "key or account artifacts only when selected; binary/home metadata may be required by resolved backend",
+      "source": "src/main/services/runtime/ProviderConnectionService.ts",
+      "sourceToken": "CODEX_NATIVE_API_KEY_ENV_VAR",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "gemini-auth-and-project",
+      "keys": [
+        "GEMINI_API_KEY",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_PROJECT_ID",
+        "GCLOUD_PROJECT",
+        "GEMINI_API_VERSION",
+        "GEMINI_BASE_URL",
+        "GOOGLE_APPLICATION_CREDENTIALS"
+      ],
+      "provenance": "approved stored key/explicit env or Google ADC plus project metadata",
+      "providers": ["gemini"],
+      "classification": "optional",
+      "targetRule": "API key or compatible ADC/project pair according to immutable backend selection",
+      "source": "src/main/services/runtime/geminiRuntimeAuth.ts",
+      "sourceToken": "GOOGLE_CLOUD_PROJECT_ID",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "opencode-emitted-required",
+      "keys": [
+        "CLAUDE_TEAM_APP_INSTANCE_ID",
+        "AGENT_TEAMS_MCP_CLAUDE_DIR",
+        "OPENCODE_CONFIG_CONTENT"
+      ],
+      "provenance": "app-derived OpenCode child metadata and managed configuration",
+      "classification": "required",
+      "targetRule": "derive in the host and emit only to the managed OpenCode execution unit",
+      "source": "src/main/index.ts",
+      "sourceToken": "CLAUDE_TEAM_APP_INSTANCE_ID",
+      "providers": ["opencode"],
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "opencode-selected-child-input",
+      "keys": ["CLAUDE_MULTIMODEL_DATA_HOME"],
+      "provenance": "optional managed OpenCode data-home marker selected by the runtime host",
+      "classification": "optional",
+      "targetRule": "admit only as a selected OpenCode child input; do not treat presence as host authority",
+      "source": "src/main/services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup.ts",
+      "sourceToken": "CLAUDE_MULTIMODEL_DATA_HOME=",
+      "providers": ["opencode"],
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "opencode-emitted-optional",
+      "keys": ["OPENCODE_DISABLE_AUTOUPDATE"],
+      "provenance": "host policy derives an optional OpenCode-native child key",
+      "classification": "optional",
+      "targetRule": "emit OPENCODE_DISABLE_AUTOUPDATE unless explicit host policy permits updates; never emit the allow-policy key",
+      "source": "src/main/services/runtime/openCodeAutoUpdatePolicy.ts",
+      "sourceToken": "OPENCODE_DISABLE_AUTOUPDATE_ENV",
+      "providers": ["opencode"],
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "opencode-host-policy",
+      "keys": [
+        "CLAUDE_TEAM_OPENCODE_ALLOW_AUTOUPDATE",
+        "CLAUDE_TEAM_OPENCODE_MCP_HTTP",
+        "CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH",
+        "CLAUDE_CLI_PATH",
+        "CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT",
+        "CLAUDE_TEAM_TEAMMATE_MODE"
+      ],
+      "provenance": "desktop host policy and binary-selection inputs consumed before child environment construction",
+      "classification": "forbidden",
+      "targetRule": "consume on the host only; do not expose these policy/override keys to the managed OpenCode child",
+      "source": "src/main/services/runtime/openCodeAutoUpdatePolicy.ts",
+      "sourceToken": "CLAUDE_TEAM_OPENCODE_ALLOW_AUTOUPDATE_ENV",
+      "providers": ["opencode"],
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "opencode-binary-dual",
+      "keys": ["CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH", "OPENCODE_BIN_PATH"],
+      "provenance": "host-selected binary paths copied to the managed OpenCode bridge for compatibility",
+      "classification": "optional",
+      "targetRule": "validate on the host, then emit only the selected paths to the OpenCode bridge child",
+      "source": "src/main/services/runtime/openCodeRuntimeBinaryEnv.ts",
+      "sourceToken": "OPENCODE_RUNTIME_BINARY_PATH_ENV",
+      "providers": ["opencode"],
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "mcp-launch",
+      "keys": [
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH",
+        "AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH",
+        "AGENT_TEAMS_MCP_HTTP_ENDPOINT",
+        "AGENT_TEAMS_MCP_HTTP_HOST",
+        "AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE",
+        "AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH",
+        "AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID",
+        "AGENT_TEAMS_MCP_HTTP_PORT",
+        "AGENT_TEAMS_MCP_TRANSPORT"
+      ],
+      "provenance": "app-resolved MCP launch spec or app-owned local HTTP MCP server",
+      "providers": ["opencode"],
+      "classification": "optional",
+      "targetRule": "allowlisted launch metadata only; MCP env JSON must not contain provider or runtime-ingress credentials",
+      "source": "src/main/index.ts",
+      "sourceToken": "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "runtime-spool-and-identity",
+      "keys": ["AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT", "AGENT_TEAMS_IDENTITY_STORE_PATH"],
+      "provenance": "app-owned member-work-sync spool and installation identity store",
+      "providers": ["codex", "opencode"],
+      "classification": "optional",
+      "targetRule": "registered roots only; identity is correlation metadata, never authorization",
+      "source": "src/features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment.ts",
+      "sourceToken": "AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "windows-writable-cache",
+      "keys": [
+        "AGENT_STUDIO_RUNNER_CACHE_ROOT",
+        "STUDIO_AGENT_CACHE_ROOT",
+        "LOCALAPPDATA",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "npm_config_cache",
+        "NPM_CONFIG_CACHE",
+        "GRADLE_USER_HOME",
+        "ANDROID_USER_HOME",
+        "ANDROID_SDK_HOME",
+        "npm_config_script_shell",
+        "AGENT_STUDIO_NPM_CMD",
+        "AGENT_STUDIO_NPX_CMD",
+        "GRADLE_OPTS",
+        "JAVA_TOOL_OPTIONS"
+      ],
+      "provenance": "app-derived and write-probed runner cache paths on Windows",
+      "providers": ["anthropic", "codex", "gemini", "opencode"],
+      "classification": "optional",
+      "targetRule": "absent on Linux; if Windows is later supported, paths must be execution-unit owned",
+      "source": "src/main/services/runtime/agentChildProcessPreflight.ts",
+      "sourceToken": "AGENT_STUDIO_NPX_CMD",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "desktop-bootstrap-guard-inputs",
+      "keys": [
+        "CLAUDE_APP_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP",
+        "CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP"
+      ],
+      "provenance": "desktop app process kill switches read before deterministic bootstrap",
+      "providers": ["anthropic", "codex", "gemini", "opencode"],
+      "classification": "forbidden",
+      "currentBehavior": "read from the app environment but not intentionally forwarded as child policy",
+      "targetRule": "host configuration may gate readiness; these desktop compatibility flags are absent from provider children",
+      "source": "src/main/services/team/provisioning/TeamProvisioningEnvGuards.ts",
+      "sourceToken": "CLAUDE_APP_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "electron-mode",
+      "keys": ["ELECTRON_RUN_AS_NODE"],
+      "provenance": "ambient Electron host environment",
+      "providers": ["anthropic", "codex", "gemini", "opencode"],
+      "classification": "forbidden",
+      "currentBehavior": "explicitly deleted before provider/bridge execution",
+      "targetRule": "must remain absent",
+      "source": "src/main/services/runtime/providerAwareCliEnv.ts",
+      "sourceToken": "removeGlobalElectronRunAsNodeEnv",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "canonical-ingress-secret",
+      "keys": ["runtime-ingress bearer in any environment key"],
+      "provenance": "target lane relay one-use inherited pipe only",
+      "providers": ["anthropic", "codex", "gemini", "opencode"],
+      "classification": "forbidden",
+      "targetRule": "provider/agent environment, argv, settings, MCP config and run files never receive the bearer",
+      "source": "docs/hosted-web-e2e-completion-plan.md",
+      "sourceToken": "provider/agent process receives",
+      "discoveryDisposition": "target_only_prohibition"
+    },
+    {
+      "id": "host-runtime-discovery-inputs",
+      "keys": ["NVM_HOME", "NVM_SYMLINK"],
+      "provenance": "Windows host environment used only to discover an installed native OpenCode executable",
+      "providers": ["opencode"],
+      "classification": "forbidden",
+      "currentBehavior": "read by the desktop host during OpenCode runtime discovery",
+      "targetRule": "consume only during host runtime discovery and keep absent from the managed OpenCode child",
+      "source": "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts",
+      "sourceToken": "NVM_SYMLINK",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "portable-platform-and-network-inputs",
+      "keys": [
+        "APPDATA",
+        "CURL_CA_BUNDLE",
+        "EDITOR",
+        "HOMEDRIVE",
+        "HOMEPATH",
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+        "NODE_EXTRA_CA_CERTS",
+        "NO_PROXY",
+        "PATHEXT",
+        "ProgramFiles",
+        "REQUESTS_CA_BUNDLE",
+        "SSH_AUTH_SOCK",
+        "SSL_CERT_FILE",
+        "SystemRoot",
+        "VISUAL",
+        "WINDIR"
+      ],
+      "provenance": "host platform, proxy, CA and interactive-shell environment reads in production main-process runtime paths",
+      "providers": ["anthropic", "codex", "gemini", "opencode"],
+      "classification": "optional",
+      "targetRule": "admit only values explicitly required by the resolved backend; paths and proxy/CA inputs are snapshotted and policy-reviewed",
+      "source": "src/main/index.ts",
+      "sourceToken": "process.env",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "host-only-and-injection-inputs",
+      "keys": [
+        "AGENT_TEAMS_DISABLE_GPU",
+        "AGENT_TEAMS_ELECTRON_CLAUDE_ROOT",
+        "AGENT_TEAMS_ELECTRON_USER_DATA_DIR",
+        "AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP",
+        "AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP",
+        "AGENT_TEAMS_PACKAGED_SMOKE",
+        "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS",
+        "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND",
+        "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON",
+        "AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS",
+        "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS",
+        "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_COMMAND",
+        "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON",
+        "BUILD_ID",
+        "CLAUDE_CONTEXT_DISABLE_CACHE",
+        "CLAUDE_DEVTOOLS_STRICT_SESSION_FILTER",
+        "CLAUDE_HOOK_JUDGE_MODE",
+        "CLAUDE_ROOT",
+        "CLAUDE_SKIP_ANALYTICS",
+        "CLAUDE_TEAM_BOARD_TASK_ACTIVITY_READ_ENABLED",
+        "CLAUDE_TEAM_BOARD_TASK_EXACT_LOGS_READ_ENABLED",
+        "CLAUDE_TEAM_CLI_FLAVOR",
+        "CLAUDE_TEAM_CODEX_NATIVE_TRACE_FALLBACK_ENABLED",
+        "CLAUDE_TEAM_DISABLE_MCP_ORPHAN_CLEANUP",
+        "CLAUDE_TEAM_ENABLE_PERSISTED_TASK_CHANGE_CACHE",
+        "CLAUDE_TEAM_ENABLE_TASK_CHANGE_WORKER",
+        "CLAUDE_TEAM_EVENT_LOOP_LAG_MONITOR_ENABLED",
+        "CLAUDE_TEAM_OPENCODE_PROMPT_DELIVERY_WATCHDOG",
+        "CLAUDE_TEAM_OPENCODE_TASK_CHANGE_DIAG",
+        "CLAUDE_TEAM_OPENCODE_TASK_STALL_REMEDIATION_ENABLED",
+        "CLAUDE_TEAM_OPENCODE_WEAK_START_STALL_THRESHOLD_MS",
+        "CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS",
+        "CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED",
+        "CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS",
+        "CLAUDE_TEAM_TASK_STALL_ALERTS_ENABLED",
+        "CLAUDE_TEAM_TASK_STALL_ALERT_COOLDOWN_MS",
+        "CLAUDE_TEAM_TASK_STALL_MONITOR_ENABLED",
+        "CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS",
+        "CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS",
+        "CLAUDE_TEAM_TRANSCRIPT_AFFINITY_INDEX",
+        "CORS_ORIGIN",
+        "ELECTRON_RENDERER_URL",
+        "ELECTRON_VITE_DEV_SERVER_URL",
+        "GIT_SHA",
+        "HOST",
+        "NODE_BINARY",
+        "NODE_OPTIONS",
+        "PORT",
+        "RENDERER_PATH",
+        "SENTRY_DSN",
+        "UV_THREADPOOL_SIZE",
+        "VITEST",
+        "VITE_BUILD_ID",
+        "VITE_DEV_SERVER_URL",
+        "VITE_GIT_SHA"
+      ],
+      "provenance": "desktop/controller configuration, diagnostics, feature gates and injection-sensitive runtime controls read by production main-process code",
+      "providers": ["anthropic", "codex", "gemini", "opencode"],
+      "classification": "forbidden",
+      "currentBehavior": "ambient inheritance can currently expose these values to descendants",
+      "targetRule": "host-only inputs and loader/runtime injection controls are absent from every provider execution unit",
+      "source": "src/main/index.ts",
+      "sourceToken": "process.env",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "workspace-trust-exact-prohibition",
+      "keys": ["CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER"],
+      "provenance": "workspace-trust Claude PTY preflight sanitizer removes the inherited helper-mode control before provider-child execution",
+      "providers": ["anthropic"],
+      "classification": "forbidden",
+      "currentBehavior": "explicitly removed from the workspace-trust preflight child environment",
+      "targetRule": "the helper-mode host control remains absent from every workspace-trust Claude provider child",
+      "source": "src/features/workspace-trust/main/infrastructure/workspaceTrustPreflightEnv.ts",
+      "sourceToken": "CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER",
+      "discoveryDisposition": "source_discovered"
+    },
+    {
+      "id": "workspace-trust-prefix-prohibitions",
+      "keys": [
+        "AGENT_TEAMS_RUNTIME_TURN_SETTLED_*",
+        "AGENT_TEAMS_MCP_*",
+        "CLAUDE_TEAM_BOOTSTRAP_*"
+      ],
+      "provenance": "workspace-trust Claude PTY preflight sanitizer removes every inherited key in the runtime-settled, MCP, and team-bootstrap namespaces",
+      "providers": ["anthropic"],
+      "classification": "forbidden",
+      "currentBehavior": "all matching keys are explicitly removed from the workspace-trust preflight child environment",
+      "targetRule": "the three host-control namespaces remain absent from every workspace-trust Claude provider child",
+      "source": "src/features/workspace-trust/main/infrastructure/workspaceTrustPreflightEnv.ts",
+      "sourceToken": "STRIP_ENV_PREFIXES",
+      "discoveryDisposition": "source_discovered"
+    }
+  ],
+  "sourceDiscovery": {
+    "strategy": "repository_production_source_census",
+    "roots": [
+      "src/main",
+      "src/features/codex-account",
+      "src/features/member-work-sync",
+      "src/features/workspace-trust/main/infrastructure/workspaceTrustPreflightEnv.ts"
+    ],
+    "excludedSegments": ["/__tests__/", "/renderer/"],
+    "extensions": [".ts", ".tsx"],
+    "extractionVersion": 3
+  },
+  "keyEvidence": {
+    "fields": ["key", "groupId", "policyProfileId", "probePathId"],
+    "probePaths": [
+      {
+        "id": "sp-01",
+        "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts"
+      },
+      {
+        "id": "sp-02",
+        "path": "src/main/services/infrastructure/CliInstallerService.ts"
+      },
+      {
+        "id": "sp-03",
+        "path": "src/main/services/runtime/agentChildProcessPreflight.ts"
+      },
+      {
+        "id": "sp-04",
+        "path": "src/main/services/infrastructure/SshConnectionManager.ts"
+      },
+      {
+        "id": "sp-05",
+        "path": "src/main/ipc/config.ts"
+      },
+      {
+        "id": "sp-06",
+        "path": "src/main/services/team/ClaudeDoctorProbe.ts"
+      },
+      {
+        "id": "sp-07",
+        "path": "src/main/services/infrastructure/PtyTerminalService.ts"
+      },
+      {
+        "id": "sp-08",
+        "path": "src/main/index.ts"
+      },
+      {
+        "id": "sp-09",
+        "path": "src/main/services/team/provisioning/TeamProvisioningAgentLanguage.ts"
+      },
+      {
+        "id": "sp-10",
+        "path": "src/main/services/runtime/geminiRuntimeAuth.ts"
+      },
+      {
+        "id": "sp-11",
+        "path": "src/main/services/runtime/providerRuntimeEnv.ts"
+      },
+      {
+        "id": "sp-12",
+        "path": "src/main/services/runtime/buildRuntimeBaseEnv.ts"
+      },
+      {
+        "id": "sp-13",
+        "path": "src/main/services/schedule/ScheduledTaskExecutor.ts"
+      },
+      {
+        "id": "sp-14",
+        "path": "src/main/services/team/provisioning/TeamProvisioningDirectRestart.ts"
+      },
+      {
+        "id": "sp-15",
+        "path": "src/main/services/team/provisioning/TeamProvisioningCreateDeterministicSpawnFlow.ts"
+      },
+      {
+        "id": "sp-16",
+        "path": "src/main/services/team/provisioning/TeamProvisioningRuntimeDiagnostics.ts"
+      },
+      {
+        "id": "sp-17",
+        "path": "src/main/services/team/TeamMcpConfigBuilder.ts"
+      },
+      {
+        "id": "sp-18",
+        "path": "src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts"
+      },
+      {
+        "id": "sp-19",
+        "path": "src/main/services/runtime/ProviderConnectionService.ts"
+      },
+      {
+        "id": "sp-20",
+        "path": "src/main/services/runtime/ClaudeMultimodelBridgeService.ts"
+      },
+      {
+        "id": "sp-21",
+        "path": "src/main/services/runtime/anthropicTeamApiKeyHelper.ts"
+      },
+      {
+        "id": "sp-22",
+        "path": "src/main/services/infrastructure/codexAppServer/CodexBinaryResolver.ts"
+      },
+      {
+        "id": "sp-23",
+        "path": "src/main/services/runtime/openCodeRuntimeBinaryEnv.ts"
+      },
+      {
+        "id": "sp-24",
+        "path": "src/main/services/runtime/openCodeAutoUpdatePolicy.ts"
+      },
+      {
+        "id": "sp-25",
+        "path": "src/main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv.ts"
+      },
+      {
+        "id": "sp-26",
+        "path": "src/main/services/team/ClaudeBinaryResolver.ts"
+      },
+      {
+        "id": "sp-27",
+        "path": "src/main/services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup.ts"
+      },
+      {
+        "id": "sp-28",
+        "path": "src/main/services/team/AgentTeamsMcpHttpServer.ts"
+      },
+      {
+        "id": "sp-29",
+        "path": "src/main/services/team/runtimeTeammateMode.ts"
+      },
+      {
+        "id": "sp-30",
+        "path": "src/features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment.ts"
+      },
+      {
+        "id": "sp-31",
+        "path": "src/main/services/identity/AgentTeamsIdentityStore.ts"
+      },
+      {
+        "id": "sp-32",
+        "path": "src/main/services/team/provisioning/TeamProvisioningEnvGuards.ts"
+      },
+      {
+        "id": "sp-33",
+        "path": "docs/hosted-web-e2e-completion-plan.md"
+      },
+      {
+        "id": "sp-35",
+        "path": "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts"
+      },
+      {
+        "id": "sp-36",
+        "path": "src/main/utils/pathDecoder.ts"
+      },
+      {
+        "id": "sp-37",
+        "path": "src/main/utils/electronDevPathOverrides.ts"
+      },
+      {
+        "id": "sp-38",
+        "path": "src/main/services/infrastructure/ServiceContext.ts"
+      },
+      {
+        "id": "sp-39",
+        "path": "src/main/services/discovery/WorktreeGrouper.ts"
+      },
+      {
+        "id": "sp-40",
+        "path": "src/main/utils/childProcess.ts"
+      },
+      {
+        "id": "sp-41",
+        "path": "src/main/standalone.ts"
+      },
+      {
+        "id": "sp-42",
+        "path": "src/main/services/team/taskLogs/activity/featureGates.ts"
+      },
+      {
+        "id": "sp-43",
+        "path": "src/main/services/team/taskLogs/exact/featureGates.ts"
+      },
+      {
+        "id": "sp-44",
+        "path": "src/main/services/team/cliFlavor.ts"
+      },
+      {
+        "id": "sp-45",
+        "path": "src/main/services/team/ChangeExtractorService.ts"
+      },
+      {
+        "id": "sp-46",
+        "path": "src/main/services/team/TaskChangeWorkerClient.ts"
+      },
+      {
+        "id": "sp-47",
+        "path": "src/main/services/infrastructure/EventLoopLagMonitor.ts"
+      },
+      {
+        "id": "sp-48",
+        "path": "src/main/services/team/opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler.ts"
+      },
+      {
+        "id": "sp-49",
+        "path": "src/main/utils/openCodeTaskChangeDiagLog.ts"
+      },
+      {
+        "id": "sp-50",
+        "path": "src/main/services/team/stallMonitor/featureGates.ts"
+      },
+      {
+        "id": "sp-51",
+        "path": "src/main/ipc/cliInstaller.ts"
+      },
+      {
+        "id": "sp-52",
+        "path": "src/main/services/team/TeamRuntimeTelemetry.ts"
+      },
+      {
+        "id": "sp-53",
+        "path": "src/main/services/team/TeamTranscriptProjectResolver.ts"
+      },
+      {
+        "id": "sp-54",
+        "path": "src/main/services/infrastructure/HttpServer.ts"
+      },
+      {
+        "id": "sp-55",
+        "path": "src/main/sentry.ts"
+      },
+      {
+        "id": "sp-56",
+        "path": "src/main/services/team/TeamFsWorkerClient.ts"
+      },
+      {
+        "id": "sp-57",
+        "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts"
+      },
+      {
+        "id": "sp-58",
+        "path": "src/features/workspace-trust/main/infrastructure/workspaceTrustPreflightEnv.ts"
+      },
+      {
+        "id": "sp-59",
+        "path": "src/main/composition/hosted/teamLifecycleReadBootstrapSource.ts"
+      }
+    ],
+    "rows": [
+      ["process.env.*", "ambient-inheritance", "kp-01", "sp-01"],
+      ["interactiveShellEnv.*", "ambient-inheritance", "kp-01", "sp-01"],
+      ["PATH", "portable-process-basics", "kp-02", "sp-02"],
+      ["HOME", "portable-process-basics", "kp-02", "sp-03"],
+      ["USERPROFILE", "portable-process-basics", "kp-03", "sp-04"],
+      ["USER", "portable-process-basics", "kp-04", "sp-01"],
+      ["USERNAME", "portable-process-basics", "kp-03", "sp-05"],
+      ["LOGNAME", "portable-process-basics", "kp-04", "sp-01"],
+      ["TERM", "portable-process-basics", "kp-02", "sp-01"],
+      ["COLUMNS", "portable-process-basics", "kp-02", "sp-06"],
+      ["LINES", "portable-process-basics", "kp-02", "sp-06"],
+      ["SHELL", "portable-process-basics", "kp-04", "sp-07"],
+      ["COMSPEC", "portable-process-basics", "kp-03", "sp-07"],
+      ["ComSpec", "portable-process-basics", "kp-03", "sp-03"],
+      ["XDG_CONFIG_HOME", "portable-process-basics", "kp-02", "sp-01"],
+      ["XDG_STATE_HOME", "portable-process-basics", "kp-02", "sp-01"],
+      ["NODE_ENV", "portable-process-basics", "kp-02", "sp-08"],
+      ["LANG", "portable-process-basics", "kp-02", "sp-09"],
+      ["CLAUDE_CONFIG_DIR", "provider-custom-config", "kp-30", "sp-57"],
+      ["CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST", "provider-routing-pins", "kp-31", "sp-11"],
+      ["CLAUDE_CODE_ENTRY_PROVIDER", "provider-routing-pins", "kp-31", "sp-11"],
+      ["CLAUDE_CODE_USE_OPENAI", "provider-routing-legacy-removals", "kp-32", "sp-11"],
+      ["CLAUDE_CODE_USE_BEDROCK", "anthropic-bedrock-routing", "kp-33", "sp-11"],
+      ["CLAUDE_CODE_USE_VERTEX", "anthropic-vertex-routing", "kp-34", "sp-11"],
+      ["CLAUDE_CODE_USE_FOUNDRY", "anthropic-foundry-routing", "kp-35", "sp-11"],
+      ["CLAUDE_CODE_USE_GEMINI", "provider-routing-legacy-removals", "kp-32", "sp-11"],
+      ["CLAUDE_CODE_CODEX_BACKEND", "configured-provider-backends", "kp-36", "sp-12"],
+      ["CLAUDE_CODE_GEMINI_BACKEND", "configured-provider-backends", "kp-36", "sp-12"],
+      ["CLAUDECODE", "team-bootstrap-control", "kp-06", "sp-13"],
+      ["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", "team-bootstrap-control", "kp-06", "sp-14"],
+      ["CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP", "team-bootstrap-control", "kp-06", "sp-15"],
+      ["CLAUDE_TEAM_FORCE_PROCESS_TEAMMATES", "team-bootstrap-control", "kp-06", "sp-16"],
+      ["CLAUDE_TEAM_RUNTIME_SETTINGS_PATH", "team-bootstrap-control", "kp-06", "sp-14"],
+      ["CLAUDE_TEAM_CONTROL_URL", "team-bootstrap-control", "kp-06", "sp-17"],
+      [
+        "CLAUDE_CODE_NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_PATH",
+        "team-bootstrap-control",
+        "kp-06",
+        "sp-18"
+      ],
+      ["CLAUDE_CODE_TEAMMATE_RUNTIME", "team-bootstrap-control", "kp-06", "sp-18"],
+      ["CLAUDE_CODE_TEAMMATE_RUNTIME_EVENTS_PATH", "team-bootstrap-control", "kp-06", "sp-18"],
+      ["CLAUDE_CODE_BOOTSTRAP_PROOF_TOKEN", "team-bootstrap-control", "kp-07", "sp-18"],
+      ["ANTHROPIC_API_KEY", "anthropic-auth", "kp-08", "sp-19"],
+      ["ANTHROPIC_AUTH_TOKEN", "anthropic-auth", "kp-08", "sp-20"],
+      ["ANTHROPIC_BASE_URL", "anthropic-auth", "kp-09", "sp-19"],
+      ["ANTHROPIC_AWS_WORKSPACE_ID", "anthropic-auth", "kp-09", "sp-11"],
+      ["ANTHROPIC_CUSTOM_HEADERS", "anthropic-auth", "kp-08", "sp-11"],
+      ["CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR", "anthropic-auth", "kp-08", "sp-21"],
+      ["CLAUDE_CODE_OAUTH_TOKEN", "anthropic-auth", "kp-08", "sp-21"],
+      ["CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR", "anthropic-auth", "kp-08", "sp-21"],
+      ["ANTHROPIC_AWS_API_KEY", "anthropic-auth", "kp-08", "sp-14"],
+      ["AWS_PROFILE", "anthropic-auth", "kp-09", "sp-57"],
+      ["AWS_REGION", "anthropic-auth", "kp-09", "sp-57"],
+      ["AWS_DEFAULT_REGION", "anthropic-auth", "kp-09", "sp-57"],
+      ["AWS_CONFIG_FILE", "anthropic-auth", "kp-08", "sp-57"],
+      ["AWS_SHARED_CREDENTIALS_FILE", "anthropic-auth", "kp-08", "sp-57"],
+      ["AWS_ACCESS_KEY_ID", "anthropic-auth", "kp-08", "sp-57"],
+      ["AWS_SECRET_ACCESS_KEY", "anthropic-auth", "kp-08", "sp-57"],
+      ["AWS_SESSION_TOKEN", "anthropic-auth", "kp-08", "sp-57"],
+      ["CLAUDE_TEAM_ANTHROPIC_AUTH_MODE", "anthropic-helper-metadata", "kp-10", "sp-21"],
+      [
+        "CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH",
+        "anthropic-helper-metadata",
+        "kp-11",
+        "sp-21"
+      ],
+      [
+        "CLAUDE_TEAM_DISABLE_ANTHROPIC_API_KEY_HELPER",
+        "anthropic-helper-metadata",
+        "kp-11",
+        "sp-21"
+      ],
+      ["OPENAI_API_KEY", "codex-auth-and-runtime", "kp-12", "sp-19"],
+      ["CODEX_API_KEY", "codex-auth-and-runtime", "kp-12", "sp-19"],
+      ["CODEX_CLI_PATH", "codex-auth-and-runtime", "kp-13", "sp-22"],
+      ["CODEX_HOME", "codex-auth-and-runtime", "kp-13", "sp-19"],
+      ["CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD", "codex-auth-and-runtime", "kp-13", "sp-19"],
+      ["GEMINI_API_KEY", "gemini-auth-and-project", "kp-14", "sp-19"],
+      ["GOOGLE_CLOUD_PROJECT", "gemini-auth-and-project", "kp-15", "sp-10"],
+      ["GOOGLE_CLOUD_PROJECT_ID", "gemini-auth-and-project", "kp-15", "sp-10"],
+      ["GCLOUD_PROJECT", "gemini-auth-and-project", "kp-15", "sp-10"],
+      ["GEMINI_API_VERSION", "gemini-auth-and-project", "kp-15", "sp-14"],
+      ["GEMINI_BASE_URL", "gemini-auth-and-project", "kp-15", "sp-14"],
+      ["GOOGLE_APPLICATION_CREDENTIALS", "gemini-auth-and-project", "kp-14", "sp-14"],
+      ["CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH", "opencode-binary-dual", "kp-29", "sp-23"],
+      ["OPENCODE_BIN_PATH", "opencode-binary-dual", "kp-29", "sp-23"],
+      ["OPENCODE_DISABLE_AUTOUPDATE", "opencode-emitted-optional", "kp-27", "sp-12"],
+      ["CLAUDE_TEAM_OPENCODE_ALLOW_AUTOUPDATE", "opencode-host-policy", "kp-28", "sp-24"],
+      ["CLAUDE_TEAM_OPENCODE_MCP_HTTP", "opencode-host-policy", "kp-28", "sp-25"],
+      ["CLAUDE_TEAM_APP_INSTANCE_ID", "opencode-emitted-required", "kp-16", "sp-08"],
+      ["AGENT_TEAMS_MCP_CLAUDE_DIR", "opencode-emitted-required", "kp-16", "sp-08"],
+      ["CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH", "opencode-host-policy", "kp-28", "sp-26"],
+      ["CLAUDE_CLI_PATH", "opencode-host-policy", "kp-28", "sp-26"],
+      ["CLAUDE_MULTIMODEL_DATA_HOME", "opencode-selected-child-input", "kp-17", "sp-27"],
+      ["CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT", "opencode-host-policy", "kp-28", "sp-28"],
+      ["CLAUDE_TEAM_TEAMMATE_MODE", "opencode-host-policy", "kp-28", "sp-29"],
+      ["OPENCODE_CONFIG_CONTENT", "opencode-emitted-required", "kp-16", "sp-27"],
+      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND", "mcp-launch", "kp-17", "sp-08"],
+      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY", "mcp-launch", "kp-17", "sp-08"],
+      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON", "mcp-launch", "kp-17", "sp-08"],
+      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON", "mcp-launch", "kp-17", "sp-08"],
+      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL", "mcp-launch", "kp-17", "sp-08"],
+      ["CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH", "mcp-launch", "kp-17", "sp-08"],
+      ["AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH", "mcp-launch", "kp-17", "sp-28"],
+      ["AGENT_TEAMS_MCP_HTTP_ENDPOINT", "mcp-launch", "kp-17", "sp-28"],
+      ["AGENT_TEAMS_MCP_HTTP_HOST", "mcp-launch", "kp-17", "sp-28"],
+      ["AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE", "mcp-launch", "kp-17", "sp-28"],
+      ["AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH", "mcp-launch", "kp-17", "sp-28"],
+      ["AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID", "mcp-launch", "kp-17", "sp-28"],
+      ["AGENT_TEAMS_MCP_HTTP_PORT", "mcp-launch", "kp-17", "sp-28"],
+      ["AGENT_TEAMS_MCP_TRANSPORT", "mcp-launch", "kp-17", "sp-28"],
+      [
+        "AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT",
+        "runtime-spool-and-identity",
+        "kp-18",
+        "sp-30"
+      ],
+      ["AGENT_TEAMS_IDENTITY_STORE_PATH", "runtime-spool-and-identity", "kp-18", "sp-31"],
+      ["AGENT_STUDIO_RUNNER_CACHE_ROOT", "windows-writable-cache", "kp-19", "sp-03"],
+      ["STUDIO_AGENT_CACHE_ROOT", "windows-writable-cache", "kp-19", "sp-03"],
+      ["LOCALAPPDATA", "windows-writable-cache", "kp-19", "sp-03"],
+      ["TEMP", "windows-writable-cache", "kp-19", "sp-03"],
+      ["TMP", "windows-writable-cache", "kp-19", "sp-03"],
+      ["TMPDIR", "windows-writable-cache", "kp-19", "sp-03"],
+      ["npm_config_cache", "windows-writable-cache", "kp-19", "sp-03"],
+      ["NPM_CONFIG_CACHE", "windows-writable-cache", "kp-19", "sp-03"],
+      ["GRADLE_USER_HOME", "windows-writable-cache", "kp-19", "sp-03"],
+      ["ANDROID_USER_HOME", "windows-writable-cache", "kp-19", "sp-03"],
+      ["ANDROID_SDK_HOME", "windows-writable-cache", "kp-19", "sp-03"],
+      ["npm_config_script_shell", "windows-writable-cache", "kp-19", "sp-03"],
+      ["AGENT_STUDIO_NPM_CMD", "windows-writable-cache", "kp-19", "sp-03"],
+      ["AGENT_STUDIO_NPX_CMD", "windows-writable-cache", "kp-19", "sp-03"],
+      ["GRADLE_OPTS", "windows-writable-cache", "kp-19", "sp-03"],
+      ["JAVA_TOOL_OPTIONS", "windows-writable-cache", "kp-19", "sp-03"],
+      [
+        "CLAUDE_APP_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP",
+        "desktop-bootstrap-guard-inputs",
+        "kp-20",
+        "sp-32"
+      ],
+      [
+        "CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP",
+        "desktop-bootstrap-guard-inputs",
+        "kp-20",
+        "sp-32"
+      ],
+      ["ELECTRON_RUN_AS_NODE", "electron-mode", "kp-21", "sp-08"],
+      [
+        "runtime-ingress bearer in any environment key",
+        "canonical-ingress-secret",
+        "kp-22",
+        "sp-33"
+      ],
+      ["NVM_HOME", "host-runtime-discovery-inputs", "kp-39", "sp-35"],
+      ["NVM_SYMLINK", "host-runtime-discovery-inputs", "kp-39", "sp-35"],
+      ["APPDATA", "portable-platform-and-network-inputs", "kp-19", "sp-35"],
+      ["CURL_CA_BUNDLE", "portable-platform-and-network-inputs", "kp-24", "sp-14"],
+      ["EDITOR", "portable-platform-and-network-inputs", "kp-24", "sp-05"],
+      ["HOMEDRIVE", "portable-platform-and-network-inputs", "kp-19", "sp-36"],
+      ["HOMEPATH", "portable-platform-and-network-inputs", "kp-19", "sp-36"],
+      ["HTTPS_PROXY", "portable-platform-and-network-inputs", "kp-24", "sp-14"],
+      ["HTTP_PROXY", "portable-platform-and-network-inputs", "kp-24", "sp-14"],
+      ["NODE_EXTRA_CA_CERTS", "portable-platform-and-network-inputs", "kp-24", "sp-14"],
+      ["NO_PROXY", "portable-platform-and-network-inputs", "kp-24", "sp-14"],
+      ["PATHEXT", "portable-platform-and-network-inputs", "kp-19", "sp-22"],
+      ["ProgramFiles", "portable-platform-and-network-inputs", "kp-19", "sp-26"],
+      ["REQUESTS_CA_BUNDLE", "portable-platform-and-network-inputs", "kp-24", "sp-14"],
+      ["SSH_AUTH_SOCK", "portable-platform-and-network-inputs", "kp-25", "sp-04"],
+      ["SSL_CERT_FILE", "portable-platform-and-network-inputs", "kp-24", "sp-14"],
+      ["SystemRoot", "portable-platform-and-network-inputs", "kp-19", "sp-05"],
+      ["VISUAL", "portable-platform-and-network-inputs", "kp-24", "sp-05"],
+      ["WINDIR", "portable-platform-and-network-inputs", "kp-19", "sp-05"],
+      ["AGENT_TEAMS_DISABLE_GPU", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      ["AGENT_TEAMS_ELECTRON_CLAUDE_ROOT", "host-only-and-injection-inputs", "kp-26", "sp-37"],
+      ["AGENT_TEAMS_ELECTRON_USER_DATA_DIR", "host-only-and-injection-inputs", "kp-26", "sp-37"],
+      [
+        "AGENT_TEAMS_HOSTED_PHASE2_READ_BOOTSTRAP",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-59"
+      ],
+      [
+        "AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-59"
+      ],
+      ["AGENT_TEAMS_PACKAGED_SMOKE", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      ["AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      [
+        "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-08"
+      ],
+      ["AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      [
+        "AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-08"
+      ],
+      ["AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      [
+        "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_COMMAND",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-08"
+      ],
+      ["AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      ["BUILD_ID", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      ["CLAUDE_CONTEXT_DISABLE_CACHE", "host-only-and-injection-inputs", "kp-26", "sp-38"],
+      ["CLAUDE_DEVTOOLS_STRICT_SESSION_FILTER", "host-only-and-injection-inputs", "kp-26", "sp-39"],
+      ["CLAUDE_HOOK_JUDGE_MODE", "host-only-and-injection-inputs", "kp-26", "sp-40"],
+      ["CLAUDE_ROOT", "host-only-and-injection-inputs", "kp-26", "sp-41"],
+      ["CLAUDE_SKIP_ANALYTICS", "host-only-and-injection-inputs", "kp-26", "sp-02"],
+      [
+        "CLAUDE_TEAM_BOARD_TASK_ACTIVITY_READ_ENABLED",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-42"
+      ],
+      [
+        "CLAUDE_TEAM_BOARD_TASK_EXACT_LOGS_READ_ENABLED",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-43"
+      ],
+      ["CLAUDE_TEAM_CLI_FLAVOR", "host-only-and-injection-inputs", "kp-26", "sp-44"],
+      [
+        "CLAUDE_TEAM_CODEX_NATIVE_TRACE_FALLBACK_ENABLED",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-43"
+      ],
+      [
+        "CLAUDE_TEAM_DISABLE_MCP_ORPHAN_CLEANUP",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-28"
+      ],
+      [
+        "CLAUDE_TEAM_ENABLE_PERSISTED_TASK_CHANGE_CACHE",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-45"
+      ],
+      ["CLAUDE_TEAM_ENABLE_TASK_CHANGE_WORKER", "host-only-and-injection-inputs", "kp-26", "sp-46"],
+      [
+        "CLAUDE_TEAM_EVENT_LOOP_LAG_MONITOR_ENABLED",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-47"
+      ],
+      [
+        "CLAUDE_TEAM_OPENCODE_PROMPT_DELIVERY_WATCHDOG",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-48"
+      ],
+      ["CLAUDE_TEAM_OPENCODE_TASK_CHANGE_DIAG", "host-only-and-injection-inputs", "kp-26", "sp-49"],
+      [
+        "CLAUDE_TEAM_OPENCODE_TASK_STALL_REMEDIATION_ENABLED",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-50"
+      ],
+      [
+        "CLAUDE_TEAM_OPENCODE_WEAK_START_STALL_THRESHOLD_MS",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-50"
+      ],
+      ["CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS", "host-only-and-injection-inputs", "kp-26", "sp-51"],
+      ["CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED", "host-only-and-injection-inputs", "kp-26", "sp-52"],
+      [
+        "CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-50"
+      ],
+      ["CLAUDE_TEAM_TASK_STALL_ALERTS_ENABLED", "host-only-and-injection-inputs", "kp-26", "sp-50"],
+      [
+        "CLAUDE_TEAM_TASK_STALL_ALERT_COOLDOWN_MS",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-50"
+      ],
+      [
+        "CLAUDE_TEAM_TASK_STALL_MONITOR_ENABLED",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-50"
+      ],
+      [
+        "CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-50"
+      ],
+      [
+        "CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS",
+        "host-only-and-injection-inputs",
+        "kp-26",
+        "sp-50"
+      ],
+      ["CLAUDE_TEAM_TRANSCRIPT_AFFINITY_INDEX", "host-only-and-injection-inputs", "kp-26", "sp-53"],
+      ["CORS_ORIGIN", "host-only-and-injection-inputs", "kp-26", "sp-54"],
+      ["ELECTRON_RENDERER_URL", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      ["ELECTRON_VITE_DEV_SERVER_URL", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      ["GIT_SHA", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      ["HOST", "host-only-and-injection-inputs", "kp-26", "sp-41"],
+      ["NODE_BINARY", "host-only-and-injection-inputs", "kp-26", "sp-17"],
+      ["NODE_OPTIONS", "host-only-and-injection-inputs", "kp-26", "sp-17"],
+      ["PORT", "host-only-and-injection-inputs", "kp-26", "sp-41"],
+      ["RENDERER_PATH", "host-only-and-injection-inputs", "kp-26", "sp-54"],
+      ["SENTRY_DSN", "host-only-and-injection-inputs", "kp-26", "sp-55"],
+      ["UV_THREADPOOL_SIZE", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      ["VITEST", "host-only-and-injection-inputs", "kp-26", "sp-56"],
+      ["VITE_BUILD_ID", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      ["VITE_DEV_SERVER_URL", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      ["VITE_GIT_SHA", "host-only-and-injection-inputs", "kp-26", "sp-08"],
+      [
+        "CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER",
+        "workspace-trust-exact-prohibition",
+        "kp-37",
+        "sp-58"
+      ],
+      [
+        "AGENT_TEAMS_RUNTIME_TURN_SETTLED_*",
+        "workspace-trust-prefix-prohibitions",
+        "kp-38",
+        "sp-58"
+      ],
+      ["AGENT_TEAMS_MCP_*", "workspace-trust-prefix-prohibitions", "kp-38", "sp-58"],
+      ["CLAUDE_TEAM_BOOTSTRAP_*", "workspace-trust-prefix-prohibitions", "kp-38", "sp-58"]
+    ]
+  },
+  "perKeyModel": {
+    "strategy": "normalized_one_row_per_exact_key_or_explicit_wildcard",
+    "executionUnitModelVersion": "adr-18-adr-30-r3-source-executed-routing-semantics",
+    "targetVerification": "target-unverified: final-image child visibility, disjoint credential sets, and runtime relay injection remain unproved",
+    "resolution": "Each non-routing key resolves through an independent source-authority fixture. Provider-routing keys resolve through executable production environment branches across seven provider/backend scenarios, including emission, conditional preservation, and removal behavior."
+  },
+  "keyPolicyProfiles": [
+    {
+      "id": "kp-01",
+      "sourceClass": "ambient_open_ended_inheritance",
+      "owner": "host_environment_policy",
+      "executionUnitIds": ["unit-primary-provisioning", "unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-ambient-unbounded"],
+      "secretClass": "ambient_unknown_may_contain_secret",
+      "childVisibility": "currently_possible_target_forbidden",
+      "redactionRule": "never_record inherited values; classify names before target admission",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "ambient_inheritance"
+    },
+    {
+      "id": "kp-02",
+      "sourceClass": "production_source_census",
+      "owner": "process_execution_unit_policy",
+      "executionUnitIds": ["unit-primary-provisioning", "unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-03",
+      "sourceClass": "production_source_census",
+      "owner": "process_execution_unit_policy",
+      "executionUnitIds": ["unit-primary-provisioning", "unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "windows_only",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-04",
+      "sourceClass": "production_source_census",
+      "owner": "process_execution_unit_policy",
+      "executionUnitIds": ["unit-primary-provisioning", "unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "posix_primary",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-06",
+      "sourceClass": "production_source_census",
+      "owner": "team_provisioning_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-07",
+      "sourceClass": "production_source_census",
+      "owner": "team_provisioning_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-provider-secret-material"],
+      "secretClass": "provider_credential_or_reference",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "never_record_value; record key name, class and SecretRef only",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-08",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-provider-secret-material"],
+      "secretClass": "provider_credential_or_reference",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "never_record_value; record key name, class and SecretRef only",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-09",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-10",
+      "sourceClass": "production_source_census",
+      "owner": "process_execution_unit_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-11",
+      "sourceClass": "production_source_census",
+      "owner": "process_execution_unit_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-provider-secret-material"],
+      "secretClass": "provider_credential_or_reference",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "never_record_value; record key name, class and SecretRef only",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-12",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-provider-secret-material"],
+      "secretClass": "provider_credential_or_reference",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "never_record_value; record key name, class and SecretRef only",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-13",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-14",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-provider-secret-material"],
+      "secretClass": "provider_credential_or_reference",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "never_record_value; record key name, class and SecretRef only",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-15",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-16",
+      "sourceClass": "production_source_census",
+      "owner": "opencode_runtime_adapter",
+      "executionUnitIds": ["unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "emitted_child_key"
+    },
+    {
+      "id": "kp-17",
+      "sourceClass": "production_source_census",
+      "owner": "opencode_runtime_adapter",
+      "executionUnitIds": ["unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-18",
+      "sourceClass": "production_source_census",
+      "owner": "process_execution_unit_policy",
+      "executionUnitIds": ["unit-primary-provisioning", "unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-19",
+      "sourceClass": "production_source_census",
+      "owner": "process_execution_unit_policy",
+      "executionUnitIds": ["unit-primary-provisioning", "unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "windows_only",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-20",
+      "sourceClass": "production_source_census",
+      "owner": "team_provisioning_policy",
+      "executionUnitIds": ["unit-primary-provisioning", "unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-host-only-denied"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "currently_possible_target_forbidden",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "host_policy_input"
+    },
+    {
+      "id": "kp-21",
+      "sourceClass": "production_source_census",
+      "owner": "desktop_host_policy",
+      "executionUnitIds": ["unit-primary-provisioning", "unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-host-only-denied"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "absent_current_and_target",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "host_policy_input"
+    },
+    {
+      "id": "kp-22",
+      "sourceClass": "target_contract_prohibition",
+      "owner": "controller_lane_relay",
+      "executionUnitIds": ["unit-runtime-relay-target"],
+      "providerBindings": [],
+      "credentialExposureSetIds": ["ces-target-ingress-relay-secret"],
+      "secretClass": "runtime_ingress_bearer",
+      "childVisibility": "target_relay_only_provider_forbidden",
+      "redactionRule": "never_record_value; record key name, class and SecretRef only",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "target_platform_independent",
+      "semanticRole": "target_relay_secret",
+      "providerlessProhibition": {
+        "scope": "all_provider_execution_units",
+        "targetDisposition": "forbidden",
+        "reason": "Runtime-ingress relay bearers are controller-to-runtime relay authority and are prohibited from every provider child environment."
+      }
+    },
+    {
+      "id": "kp-24",
+      "sourceClass": "production_source_census",
+      "owner": "process_execution_unit_policy",
+      "executionUnitIds": ["unit-primary-provisioning", "unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-25",
+      "sourceClass": "production_source_census",
+      "owner": "process_execution_unit_policy",
+      "executionUnitIds": ["unit-primary-provisioning", "unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "posix_primary",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "id": "kp-26",
+      "sourceClass": "production_source_census",
+      "owner": "desktop_host_policy",
+      "executionUnitIds": ["unit-primary-provisioning", "unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        },
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-host-only-denied"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "currently_possible_target_forbidden",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "host_policy_input"
+    },
+    {
+      "id": "kp-27",
+      "sourceClass": "production_source_census",
+      "owner": "opencode_runtime_adapter",
+      "executionUnitIds": ["unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "emitted_child_key"
+    },
+    {
+      "id": "kp-28",
+      "sourceClass": "production_source_census",
+      "owner": "desktop_host_policy",
+      "executionUnitIds": ["unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-host-only-denied"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "currently_possible_target_forbidden",
+      "redactionRule": "record key name and policy outcome only; never copy host policy input into child environment",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "host_policy_input"
+    },
+    {
+      "id": "kp-29",
+      "sourceClass": "production_source_census",
+      "owner": "opencode_runtime_adapter",
+      "executionUnitIds": ["unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "provider_child_visible_when_selected",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "host_policy_input_and_emitted_child_key"
+    },
+    {
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "id": "kp-30",
+      "sourceClass": "production_source_census",
+      "owner": "team_provisioning_policy",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional",
+          "runtimeBackend": "anthropic_default",
+          "emissionDisposition": "preserved_when_custom_configuration"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional",
+          "runtimeBackend": "anthropic_bedrock",
+          "emissionDisposition": "preserved_when_custom_configuration"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional",
+          "runtimeBackend": "anthropic_vertex",
+          "emissionDisposition": "preserved_when_custom_configuration"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional",
+          "runtimeBackend": "anthropic_foundry",
+          "emissionDisposition": "preserved_when_custom_configuration"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional",
+          "runtimeBackend": "anthropic_claude_platform_aws",
+          "emissionDisposition": "preserved_when_custom_configuration"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional",
+          "runtimeBackend": "codex_configured",
+          "emissionDisposition": "preserved_when_custom_configuration"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional",
+          "runtimeBackend": "gemini_configured",
+          "emissionDisposition": "preserved_when_custom_configuration"
+        }
+      ],
+      "childVisibility": "provider_child_visible_when_selected",
+      "semanticRole": "selected_child_input"
+    },
+    {
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "id": "kp-31",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "anthropic_default",
+          "emissionDisposition": "emitted_always"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "anthropic_bedrock",
+          "emissionDisposition": "emitted_always"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "anthropic_vertex",
+          "emissionDisposition": "emitted_always"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "anthropic_foundry",
+          "emissionDisposition": "emitted_always"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "anthropic_claude_platform_aws",
+          "emissionDisposition": "emitted_always"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "codex_configured",
+          "emissionDisposition": "emitted_always"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "gemini_configured",
+          "emissionDisposition": "emitted_always"
+        }
+      ],
+      "childVisibility": "provider_child_visible_when_selected",
+      "semanticRole": "emitted_child_key"
+    },
+    {
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "id": "kp-32",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_default",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_bedrock",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_vertex",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_foundry",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_claude_platform_aws",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "codex_configured",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "gemini_configured",
+          "emissionDisposition": "removed_before_spawn"
+        }
+      ],
+      "childVisibility": "absent_current_and_target",
+      "semanticRole": "removed_child_key"
+    },
+    {
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "id": "kp-33",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_default",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional",
+          "runtimeBackend": "anthropic_bedrock",
+          "emissionDisposition": "emitted_when_backend_selected"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_vertex",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_foundry",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_claude_platform_aws",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "codex_configured",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "gemini_configured",
+          "emissionDisposition": "removed_before_spawn"
+        }
+      ],
+      "childVisibility": "provider_child_visible_when_selected",
+      "semanticRole": "host_policy_input_and_emitted_child_key"
+    },
+    {
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "id": "kp-34",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_default",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_bedrock",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional",
+          "runtimeBackend": "anthropic_vertex",
+          "emissionDisposition": "emitted_when_backend_selected"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_foundry",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_claude_platform_aws",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "codex_configured",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "gemini_configured",
+          "emissionDisposition": "removed_before_spawn"
+        }
+      ],
+      "childVisibility": "provider_child_visible_when_selected",
+      "semanticRole": "host_policy_input_and_emitted_child_key"
+    },
+    {
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "id": "kp-35",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_default",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_bedrock",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_vertex",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "optional",
+          "runtimeBackend": "anthropic_foundry",
+          "emissionDisposition": "emitted_when_backend_selected"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "anthropic_claude_platform_aws",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "codex_configured",
+          "emissionDisposition": "removed_before_spawn"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden",
+          "runtimeBackend": "gemini_configured",
+          "emissionDisposition": "removed_before_spawn"
+        }
+      ],
+      "childVisibility": "provider_child_visible_when_selected",
+      "semanticRole": "host_policy_input_and_emitted_child_key"
+    },
+    {
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "credentialExposureSetIds": ["ces-runtime-metadata"],
+      "secretClass": "non_secret_configuration",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "id": "kp-36",
+      "sourceClass": "production_source_census",
+      "owner": "provider_runtime_policy",
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "anthropic_default",
+          "emissionDisposition": "emitted_configured_backend"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "anthropic_bedrock",
+          "emissionDisposition": "emitted_configured_backend"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "anthropic_vertex",
+          "emissionDisposition": "emitted_configured_backend"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "anthropic_foundry",
+          "emissionDisposition": "emitted_configured_backend"
+        },
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "anthropic_claude_platform_aws",
+          "emissionDisposition": "emitted_configured_backend"
+        },
+        {
+          "providerId": "codex",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "codex_configured",
+          "emissionDisposition": "emitted_configured_backend"
+        },
+        {
+          "providerId": "gemini",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "required",
+          "runtimeBackend": "gemini_configured",
+          "emissionDisposition": "emitted_configured_backend"
+        }
+      ],
+      "childVisibility": "provider_child_visible_when_selected",
+      "semanticRole": "emitted_child_key"
+    },
+    {
+      "id": "kp-37",
+      "sourceClass": "production_source_census",
+      "owner": "team_provisioning_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-host-only-denied"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "absent_current_and_target",
+      "redactionRule": "record the exact prohibited key name only; never record inherited values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "removed_child_key"
+    },
+    {
+      "id": "kp-38",
+      "sourceClass": "production_source_census",
+      "owner": "team_provisioning_policy",
+      "executionUnitIds": ["unit-primary-provisioning"],
+      "providerBindings": [
+        {
+          "providerId": "anthropic",
+          "backendFamily": "provisioning_cli_primary",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-host-only-denied"],
+      "secretClass": "ambient_unknown_may_contain_secret",
+      "childVisibility": "absent_current_and_target",
+      "redactionRule": "record prohibited namespace prefixes only; never enumerate or record matching inherited values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "cross_platform_or_provider_conditional",
+      "semanticRole": "removed_child_key"
+    },
+    {
+      "id": "kp-39",
+      "sourceClass": "production_source_census",
+      "owner": "desktop_host_policy",
+      "executionUnitIds": ["unit-opencode-bridge"],
+      "providerBindings": [
+        {
+          "providerId": "opencode",
+          "backendFamily": "opencode_runtime_adapter",
+          "versionScope": "canonical-base-c72fd2018-source-observed",
+          "targetDisposition": "forbidden"
+        }
+      ],
+      "credentialExposureSetIds": ["ces-host-only-denied"],
+      "secretClass": "non_secret_configuration",
+      "childVisibility": "currently_possible_target_forbidden",
+      "redactionRule": "record key name and policy class only; redact values",
+      "claimStatus": "source_observed_not_target_verified",
+      "platformScope": "windows_only",
+      "semanticRole": "host_policy_input"
+    }
+  ]
+}

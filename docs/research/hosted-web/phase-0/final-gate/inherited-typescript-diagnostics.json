@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "baseSha": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+  "compiler": "typescript",
+  "sourceClassification": {
+    "classification": "inherited_source_observed",
+    "priorObservedBaseSha": "42ec333848e29e97c41699b9fed73ed199740e3f",
+    "observedAtBaseSha": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+    "observationMethod": "fresh targeted TypeScript compilation of the integration candidate",
+    "sourceBlobContinuity": [
+      {
+        "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+        "priorBlob": "f876c667faef5870b59fd1ab896151b223e30441",
+        "updatedBaseBlob": "f876c667faef5870b59fd1ab896151b223e30441"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+        "priorBlob": "91cf2560b416e14c0f8a7d60d92a6a3ccf83ce12",
+        "updatedBaseBlob": "91cf2560b416e14c0f8a7d60d92a6a3ccf83ce12"
+      },
+      {
+        "path": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+        "priorBlob": "cacd88f7d9b3e34b583a99be96f7a7587f2fb0d2",
+        "updatedBaseBlob": "cacd88f7d9b3e34b583a99be96f7a7587f2fb0d2"
+      }
+    ]
+  },
+  "diagnostics": [
+    {
+      "file": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "line": 25,
+      "column": 8,
+      "code": 7016,
+      "message": "Could not find a declaration file for module '../../../../../scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs'. '<repo>/scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs' implicitly has an 'any' type."
+    },
+    {
+      "file": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "line": 66,
+      "column": 31,
+      "code": 7031,
+      "message": "Binding element 'code' implicitly has an 'any' type."
+    },
+    {
+      "file": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "line": 117,
+      "column": 68,
+      "code": 18046,
+      "message": "'session' is of type 'unknown'."
+    },
+    {
+      "file": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "line": 413,
+      "column": 48,
+      "code": 7031,
+      "message": "Binding element 'operation' implicitly has an 'any' type."
+    },
+    {
+      "file": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "line": 733,
+      "column": 10,
+      "code": 7031,
+      "message": "Binding element 'artifactId' implicitly has an 'any' type."
+    },
+    {
+      "file": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+      "line": 12,
+      "column": 8,
+      "code": 7016,
+      "message": "Could not find a declaration file for module '../../../../../scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs'. '<repo>/scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs' implicitly has an 'any' type."
+    },
+    {
+      "file": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+      "line": 162,
+      "column": 44,
+      "code": 2352,
+      "message": "Conversion of type '{ providerBackends: { codex: \"fixture-codex\"; gemini: \"fixture-gemini\"; }; }' to type 'RuntimeConfig' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.\n  The types of 'providerBackends.gemini' are incompatible between these types.\n    Type '\"fixture-gemini\"' is not comparable to type '\"auto\" | \"api\" | \"cli-sdk\"'."
+    }
+  ]
+}

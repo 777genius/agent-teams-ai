@@ -11,6 +11,14 @@ Start here:
 - Canonical feature architecture standard: [docs/FEATURE_ARCHITECTURE_STANDARD.md](docs/FEATURE_ARCHITECTURE_STANDARD.md)
 - Agent team launch/runtime debugging runbook: [docs/team-management/debugging-agent-teams.md](docs/team-management/debugging-agent-teams.md)
 
+## Hosted Web
+
+For hosted-web work, begin at [START_HERE.md](docs/hosted-web-phases/START_HERE.md) and follow the
+phase that [EXECUTION_INDEX.json](docs/hosted-web-phases/EXECUTION_INDEX.json) marks as current.
+The monolithic plans ([hosted-web-e2e-completion-plan.md](docs/hosted-web-e2e-completion-plan.md),
+[hosted-web-phase-0-execution-packet.md](docs/hosted-web-phase-0-execution-packet.md)) are reference
+material; the execution index is the single source of truth for phase status.
+
 GitHub repository disambiguation:
 
 - For this workspace, the canonical GitHub repository is `777genius/agent-teams-ai`.

@@ -1,0 +1,105 @@
+{
+  "$schema": "./evidence.schema.json",
+  "schemaVersion": 1,
+  "evidenceId": "P0.W3.SCHEMA_UNKNOWN_FIELDS",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "policies": [
+    {
+      "familyId": "cli-team-config",
+      "currentBehavior": "mixed full-document rewrites and object patching",
+      "requiredBehavior": "preserve unknown keys by patching the bounded parsed raw object",
+      "futureVersionDisposition": "read-only diagnostic unless a compatibility manifest admits read/write",
+      "proofLevel": "source-characterized",
+      "sourceRefs": [
+        "src/main/services/team/TeamDataService.ts",
+        "src/main/services/team/TeamConfigReader.ts"
+      ]
+    },
+    {
+      "familyId": "team-metadata",
+      "currentBehavior": "normalizes known fields and rewrites complete documents",
+      "requiredBehavior": "explicit version, migrate-known or refuse; never silently discard future identity/member fields",
+      "futureVersionDisposition": "mutation blocked",
+      "proofLevel": "source-characterized",
+      "sourceRefs": [
+        "src/main/services/team/TeamMembersMetaStore.ts",
+        "src/main/services/team/provisioning/TeamProvisioningConfigMaintenance.ts"
+      ]
+    },
+    {
+      "familyId": "cli-tasks",
+      "currentBehavior": "many updates spread parsed raw task, while creation/full relationship writes serialize the resulting object",
+      "requiredBehavior": "preserve unknown keys in every existing-record mutation; property/fixture proof per provider version",
+      "futureVersionDisposition": "active direct mutation unavailable until characterized",
+      "proofLevel": "source-characterized",
+      "sourceRefs": ["src/main/services/team/TeamTaskWriter.ts"]
+    },
+    {
+      "familyId": "cli-inboxes",
+      "currentBehavior": "read-modify-write retains entries as parsed objects, but normalization/dedupe can alter selected entries",
+      "requiredBehavior": "retain unknown entry fields and unrecognized entries; corrupt or future container schema must not be replaced as empty",
+      "futureVersionDisposition": "read-only/blocked, not empty-array overwrite",
+      "proofLevel": "source-characterized",
+      "sourceRefs": [
+        "src/main/services/team/TeamInboxWriter.ts",
+        "src/main/services/team/TeamInboxReader.ts"
+      ]
+    },
+    {
+      "familyId": "kanban-projection",
+      "currentBehavior": "sanitizer selects known fields and rewrite drops unknowns",
+      "requiredBehavior": "version and migrate or declare rebuildable derived data; never call it forward-compatible",
+      "futureVersionDisposition": "rebuild only when its authority is proven derived, otherwise mutation blocked",
+      "proofLevel": "source-characterized",
+      "sourceRefs": ["src/main/services/team/TeamKanbanManager.ts"]
+    },
+    {
+      "familyId": "review-decisions",
+      "currentBehavior": "store-owned serialization with v2 scope naming but no artifact-wide compatibility manifest",
+      "requiredBehavior": "schema/version plus safe clear/migration behavior",
+      "futureVersionDisposition": "mutation blocked; workspace effects always remain separately preconditioned",
+      "proofLevel": "source-characterized",
+      "sourceRefs": ["src/main/services/team/ReviewDecisionStore.ts"]
+    },
+    {
+      "familyId": "launch-state",
+      "currentBehavior": "normalization returns known projection and drops unknowns; summary is regenerated",
+      "requiredBehavior": "version provider evidence; preserve or refuse future evidence before changing lifecycle",
+      "futureVersionDisposition": "launch/mutation blocked while diagnostic read may remain",
+      "proofLevel": "source-characterized",
+      "sourceRefs": ["src/main/services/team/TeamLaunchStateStore.ts"]
+    },
+    {
+      "familyId": "bootstrap-and-runtime-evidence",
+      "currentBehavior": "VersionedJsonStore validates/quarantines selected stores; other files have local parsers",
+      "requiredBehavior": "each manifest entry declares schema and recovery policy",
+      "futureVersionDisposition": "unknown store/manifest versions cannot authorize runtime state",
+      "proofLevel": "partly test-proven",
+      "sourceRefs": [
+        "src/main/services/team/opencode/store/VersionedJsonStore.ts",
+        "test/main/services/team/VersionedJsonStore.test.ts"
+      ]
+    },
+    {
+      "familyId": "internal-storage-sqlite",
+      "currentBehavior": "user_version greater than current returns the database and known operations may still write known tables",
+      "requiredBehavior": "ADR-23 preflight closes mutation when write range excludes discovered version",
+      "futureVersionDisposition": "read-only diagnostics only where reader range permits",
+      "proofLevel": "source-characterized-negative-gap",
+      "sourceRefs": [
+        "src/features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore.ts",
+        "src/features/internal-storage/main/infrastructure/worker/internalStorageMigrations.ts"
+      ]
+    },
+    {
+      "familyId": "legacy-team-backups",
+      "currentBehavior": "manifest/registry v1 parsing is permissive and copied payloads have family-specific behavior",
+      "requiredBehavior": "retain only as legacy_unverified; never infer compatibility from parse success/mtime",
+      "futureVersionDisposition": "salvage diagnostic only",
+      "proofLevel": "source-characterized",
+      "sourceRefs": ["src/main/services/team/TeamBackupService.ts"]
+    }
+  ],
+  "negativeFinding": "InternalStorageWorkerCore intentionally opens a future user_version and returns it without migration, but it does not yet prevent known-table mutations. ADR-23 therefore remains open for Phase 1.",
+  "proofLevel": "source-characterized"
+}

@@ -2,6 +2,7 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
+import { HostedTeamLifecycleList } from '@features/team-lifecycle/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
@@ -516,7 +517,7 @@ const ActiveTeamCard = ({
   );
 };
 
-export const TeamListView = memo(function TeamListView(): React.JSX.Element {
+const DesktopTeamListView = memo(function DesktopTeamListView(): React.JSX.Element {
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
@@ -1565,4 +1566,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       </div>
     </TooltipProvider>
   );
+});
+
+export const TeamListView = memo(function TeamListView(): React.JSX.Element {
+  return isElectronMode() ? <DesktopTeamListView /> : <HostedTeamLifecycleList transport={api} />;
 });

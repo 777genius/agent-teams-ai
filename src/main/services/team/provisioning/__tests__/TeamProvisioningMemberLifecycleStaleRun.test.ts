@@ -1220,7 +1220,7 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     vi.mocked(console.warn).mockClear();
   });
 
-  it('does not persist pure OpenCode restart messages or relaunch after adapter generation replacement before persistence', async () => {
+  it('cancels a pure OpenCode restart without side effects when an active replacement runtime takes over', async () => {
     const member: TeamCreateRequest['members'][number] = {
       name: 'Worker',
       role: 'Developer',
@@ -1276,9 +1276,10 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     );
 
     await expect(controller.restartMember('team-a', 'Worker')).rejects.toThrow(
-      'Team "team-a" is not currently running'
+      'Restart for teammate "Worker" was cancelled because the OpenCode runtime for team "team-a" changed during restart'
     );
 
+    expect(runtimeAdapterRunByTeam.get('team-a')).toMatchObject({ runId: 'adapter-run-2' });
     expect(sentMessages).toEqual([]);
     expect(adapterLaunches).toEqual([]);
     expect(launchSnapshots).toEqual([]);

@@ -16,6 +16,15 @@ export interface CrossTeamDedupeOptions {
   legacyToMember?: string;
 }
 
+export class CrossTeamIdempotencyConflictError extends Error {
+  readonly code = 'CROSS_TEAM_IDEMPOTENCY_CONFLICT';
+
+  constructor(readonly existingMessageId: string) {
+    super('Cross-team idempotency key was reused with a different normalized payload');
+    this.name = 'CrossTeamIdempotencyConflictError';
+  }
+}
+
 export interface CrossTeamOutboxMessage extends CrossTeamMessage {
   /** Durable proof that exact runtime handoff was accepted for this outbox row. */
   runtimeDeliveryAcceptedAt?: string;
@@ -205,17 +214,6 @@ function buildCrossTeamDedupeKey(message: CrossTeamMessage, legacyToMember?: str
   ].join('||');
 }
 
-function hasSameRoute(
-  left: CrossTeamMessage,
-  right: CrossTeamMessage,
-  legacyToMember?: string
-): boolean {
-  return (
-    buildCrossTeamRouteKey(left, legacyToMember).join('||') ===
-    buildCrossTeamRouteKey(right).join('||')
-  );
-}
-
 function hasMatchingStableIdentity(
   left: CrossTeamMessage,
   right: CrossTeamMessage,
@@ -245,26 +243,31 @@ function hasMatchingStableIdentity(
   );
 }
 
-function isDuplicateCrossTeamMessage(
-  entry: CrossTeamMessage,
-  message: CrossTeamMessage,
-  dedupeKey: string,
-  options: CrossTeamDedupeOptions
-): boolean {
-  if (options.stableIdentity && hasSameRoute(entry, message, options.legacyToMember)) {
-    return hasMatchingStableIdentity(entry, message, options.callerMessageId);
-  }
-
-  return buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey;
-}
-
-function findRecentDuplicate(
+function findDedupeMatch(
   list: unknown[],
   message: CrossTeamMessage,
   windowMs: number,
   options: CrossTeamDedupeOptions
-): CrossTeamOutboxMessage | null {
+): {
+  duplicate: CrossTeamOutboxMessage | null;
+  conflict: CrossTeamOutboxMessage | null;
+} {
   const dedupeKey = buildCrossTeamDedupeKey(message);
+
+  if (options.stableIdentity) {
+    for (let i = list.length - 1; i >= 0; i -= 1) {
+      const entry = normalizePersistedMessage(list[i]);
+      if (!entry || !hasMatchingStableIdentity(entry, message, options.callerMessageId)) {
+        continue;
+      }
+      if (buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey) {
+        return { duplicate: entry, conflict: null };
+      }
+      return { duplicate: null, conflict: entry };
+    }
+    return { duplicate: null, conflict: null };
+  }
+
   const cutoff = Date.now() - windowMs;
 
   for (let i = list.length - 1; i >= 0; i -= 1) {
@@ -274,12 +277,12 @@ function findRecentDuplicate(
     if (!options.stableIdentity && (!Number.isFinite(ts) || ts < cutoff)) {
       continue;
     }
-    if (isDuplicateCrossTeamMessage(entry, message, dedupeKey, options)) {
-      return entry;
+    if (buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey) {
+      return { duplicate: entry, conflict: null };
     }
   }
 
-  return null;
+  return { duplicate: null, conflict: null };
 }
 
 export class CrossTeamOutbox {
@@ -319,7 +322,11 @@ export class CrossTeamOutbox {
 
     await withFileLock(outboxPath, async () => {
       const list = await this.readUnlocked(outboxPath);
-      duplicate = findRecentDuplicate(list, message, windowMs, options);
+      const match = findDedupeMatch(list, message, windowMs, options);
+      if (match.conflict) {
+        throw new CrossTeamIdempotencyConflictError(match.conflict.messageId);
+      }
+      duplicate = match.duplicate;
       if (duplicate) return;
 
       await onBeforeAppend();

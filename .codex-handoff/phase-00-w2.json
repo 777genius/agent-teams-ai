@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 3,
+  "projectId": "agent-teams-hosted-web-refactor",
+  "jobId": "agent-teams-hosted-web-refactor-phase-00-w2-targeted-fix-a1",
+  "phaseId": "phase-00",
+  "laneId": "w2",
+  "scope": "phase-00-w2-provider-runtime-evidence-only",
+  "packetRevision": "phase-00-r2",
+  "remediationIdentity": "w2-targeted-a1",
+  "baseSha": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+  "phaseStartSha": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+  "worktreeBaseSha": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+  "sourceWorktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w2-targeted-fix-a1",
+  "capturedAt": "2026-07-12T01:12:56Z",
+  "status": "ready_for_independent_review",
+  "baselineRecreation": {
+    "sourceWorktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w2-final-r1",
+    "sourceHeadSha": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+    "targetHeadSha": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+    "pathCount": 22,
+    "exactPathSetMatched": true,
+    "preCorrectionContentHashesMatched": true,
+    "postCorrectionDiffAudit": {
+      "targetedChangedPathCount": 10,
+      "byteIdenticalCarryForwardPathCount": 12,
+      "targetedChangedPaths": [
+        ".codex-handoff/phase-00-w2.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/README.md",
+        "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/fake-runtime-fixture-matrix.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/schemas/environment-provenance.schema.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/schemas/fake-runtime-fixture-matrix.schema.json",
+        "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+        "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+        "test/architecture/hosted-web/phase-0/provider-runtime/fixtures/environment-semantics.json",
+        "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts"
+      ]
+    }
+  },
+  "evidence": [
+    {
+      "id": "P0.W2.EXECUTION_TOPOLOGY",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W2.RUNTIME_INGRESS_INVENTORY",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/runtime-ingress-inventory.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W2.ENVIRONMENT_PROVENANCE",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+      "proofLevel": "source_observed_per_key_with_executed_routing_semantics_target_unverified"
+    },
+    {
+      "id": "P0.W2.CREDENTIAL_EXPOSURE_MATRIX",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+      "proofLevel": "source_observed_per_key_target_unverified"
+    },
+    {
+      "id": "P0.W2.RUNTIME_SCANNER",
+      "path": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+      "proofLevel": "executable_fixture_characterized"
+    },
+    {
+      "id": "P0.W2.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/estimate-input.json",
+      "proofLevel": "source_observed"
+    }
+  ],
+  "substantivePathCount": 21,
+  "changedPathCount": 22,
+  "changedPaths": [
+    ".codex-handoff/phase-00-w2.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/README.md",
+    "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/estimate-input.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/fake-runtime-fixture-matrix.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/runtime-ingress-inventory.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/schemas/credential-exposure-matrix.schema.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/schemas/environment-provenance.schema.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/schemas/estimate-input.schema.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/schemas/execution-topology.schema.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/schemas/fake-runtime-fixture-matrix.schema.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/schemas/runtime-ingress-inventory.schema.json",
+    "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+    "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+    "test/architecture/hosted-web/phase-0/provider-runtime/fixtures/environment-semantics.json",
+    "test/architecture/hosted-web/phase-0/provider-runtime/fixtures/provider-mode-ingress-negative.json",
+    "test/architecture/hosted-web/phase-0/provider-runtime/fixtures/provider-mode-ingress-positive.json",
+    "test/architecture/hosted-web/phase-0/provider-runtime/fixtures/surfaces-negative.json",
+    "test/architecture/hosted-web/phase-0/provider-runtime/fixtures/surfaces-positive.json",
+    "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts"
+  ],
+  "scopeAudit": {
+    "allowedWritablePaths": [
+      "docs/research/hosted-web/phase-0/provider-runtime/**",
+      "scripts/hosted-web/phase-0/provider-runtime/**",
+      "test/architecture/hosted-web/phase-0/provider-runtime/**",
+      ".codex-handoff/phase-00-w2.json"
+    ],
+    "outsideScopeChangedPaths": [],
+    "productionSourceChanged": false,
+    "terminalImplementationChanged": false,
+    "integrationPerformed": false,
+    "commitPerformed": false,
+    "pushPerformed": false,
+    "phase1WorkPerformed": false,
+    "broadCiPerformed": false,
+    "realProviderOrProjectWorkPerformed": false
+  },
+  "findingResolutions": [
+    {
+      "id": "P0-W2-FINAL-R5-001",
+      "status": "resolved",
+      "evidence": "The ten routing keys no longer share kp-05. Seven profiles distinguish custom-config preservation, always-emitted positive pins, always-removed legacy flags, each mutually conditional Anthropic backend flag, and configured backend emissions across seven provider/backend scenarios. The authored environment fixture delegates these keys to w2.environment.provider-routing.source-seam, which executes TeamProvisioningEnvBuilder, applyConfiguredRuntimeBackendsEnv and applyProviderRuntimeEnv before comparing ledger semantics."
+    },
+    {
+      "id": "P0-W2-FINAL-R5-002",
+      "status": "resolved",
+      "evidence": "Provider-assigned profiles must have providerBindings minItems 1. The relay-bearer prohibition is the only empty-binding profile and carries an explicit all_provider_execution_units providerlessProhibition constrained by oneOf. Both an empty assigned binding and a missing providerless declaration fail the scanner and Draft-2020-12 validation."
+    },
+    {
+      "id": "P0-W2-FINAL-R5-003",
+      "status": "resolved",
+      "evidence": "The malformed_capability_response pair now calls detectOpenCodeApiCapabilities. The positive sends truncated OpenAPI JSON and proves parse diagnostics plus requiredForTeamLaunch.ready=false; the valid control sends all required routes and proves ready=true with source=openapi_doc."
+    }
+  ],
+  "requirementStatus": [
+    {
+      "id": "P0.REQ.W2.003",
+      "status": "satisfied_source_observed_target_unverified",
+      "evidence": "All 181 exact keys/wildcards remain covered; routing semantics are derived from executed canonical branches and remaining keys use the independent source-authority fixture."
+    },
+    {
+      "id": "P0.REQ.W2.006",
+      "status": "satisfied_at_executable_fixture_characterized_level_target_unverified",
+      "evidence": "All 13 rows have positive/failing-negative proofs; malformed capability parsing now reaches the real response parser with malformed and valid responses."
+    },
+    {
+      "id": "P0.REQ.W2.007",
+      "status": "satisfied",
+      "evidence": "Six strict schemas validate, provider assignment cannot omit bindings, and providerless prohibitions require an explicit target-contract declaration."
+    }
+  ],
+  "checks": [
+    {
+      "command": "pre-correction SHA-256 comparison of source final-r1 untracked paths to recreated target paths",
+      "exitCode": 0,
+      "result": "All exact 22 path contents matched before targeted edits."
+    },
+    {
+      "command": "node --experimental-strip-types scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+      "exitCode": 0,
+      "result": "Focused scanner passed and executed all 26 named fake-runtime proofs."
+    },
+    {
+      "command": "pnpm exec vitest run <exact two W2 test files> --reporter=verbose",
+      "exitCode": 0,
+      "result": "2 files and 40 tests passed: 14 scanner tests plus 26 fake-runtime seam proofs."
+    },
+    {
+      "command": "python3 Draft202012Validator.check_schema plus six instance validations and two binding mutations",
+      "exitCode": 0,
+      "result": "Six schemas and instances validate; empty assigned binding and implicit providerless prohibition mutations are rejected."
+    },
+    {
+      "command": "pnpm lint:fast:files -- <exact three W2 TypeScript paths>",
+      "exitCode": 0,
+      "result": "Focused fast lint passed."
+    },
+    {
+      "command": "pnpm exec prettier --check <exact 22 W2 paths>",
+      "exitCode": 0,
+      "result": "All exact paths use Prettier style."
+    },
+    {
+      "command": "git diff --check plus git diff --no-index --check /dev/null for each exact untracked path",
+      "exitCode": 0,
+      "result": "No whitespace errors across the exact bundle."
+    },
+    {
+      "command": "git ls-files --others --exclude-standard compared with changedPaths",
+      "exitCode": 0,
+      "result": "Exact 22-path set matched with no missing or extra path."
+    },
+    {
+      "command": "bounded secret-shaped and prohibited real-project scan over exact 22 paths",
+      "exitCode": 0,
+      "result": "No sensitive value, private payload, or prohibited real-project path matched."
+    }
+  ],
+  "dependencyProvenance": {
+    "dependencyBinariesPresent": true,
+    "scannerRuntime": "/usr/local/bin/node",
+    "testLintFormatDependencyTree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w2-targeted-fix-a1/node_modules",
+    "executionCwd": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w2-targeted-fix-a1"
+  },
+  "unverifiedClaims": [
+    "Target-unverified: /api/hosted/v1, /api/runtime/v1, ADR-30 relay, and lane credentials do not exist at the canonical base.",
+    "Target-unverified: provider final-image conformance and credential isolation were not run; deterministic W2 fixtures do not claim provider execution.",
+    "Target-unverified: externally owned process adoption, rotated credentials, final-image recovery, and secondary-lane recovery remain target implementation/probe work."
+  ],
+  "blockers": [],
+  "excludedVerification": [
+    "integration",
+    "commit",
+    "push",
+    "Phase 1",
+    "broad CI",
+    "typecheck",
+    "build",
+    "desktop/runtime smoke",
+    "terminal tests",
+    "real provider execution",
+    "real project access"
+  ],
+  "nextAction": "controller_independent_rereview_exact_22_path_w2_targeted_a1_bundle_for_P0-W2-FINAL-R5-001_through_003"
+}

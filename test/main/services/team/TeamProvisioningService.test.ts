@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Legacy white-box service harnesses intentionally exercise private runtime state through structural mocks. */
 import {
   buildWorkspaceTrustPathCandidates,
   type WorkspaceTrustWorkspace,
@@ -1248,12 +1249,6 @@ describe('TeamProvisioningService', () => {
   });
 
   afterEach(() => {
-    for (const [, command] of vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls) {
-      const scriptPath = parseDirectTmuxRestartLauncherPath(command);
-      if (scriptPath) {
-        fs.rmSync(path.dirname(scriptPath), { recursive: true, force: true });
-      }
-    }
     restoreRuntimeTelemetryPlatformAfterTest();
     restoreRuntimePidusageTelemetryEnv();
     clearAutoResumeService();
@@ -6663,6 +6658,14 @@ describe('TeamProvisioningService', () => {
         },
       ];
       run.allEffectiveMembers = [...run.effectiveMembers];
+      run.progress = {
+        runId: run.runId,
+        teamName,
+        state: 'ready',
+        message: 'OpenCode team is running',
+        startedAt: '2026-05-02T10:00:00.000Z',
+        updatedAt: '2026-05-02T10:00:05.000Z',
+      };
 
       const isolationHarness = svc as unknown as OpenCodeIsolationHarness;
       isolationHarness.runtimeAdapterRunByTeam.set(teamName, {
@@ -6788,7 +6791,14 @@ describe('TeamProvisioningService', () => {
             preflightLocalModels: adapterPreflight,
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(),
+            stop: vi.fn(async (input: { runId: string; teamName: string }) => ({
+              runId: input.runId,
+              teamName: input.teamName,
+              stopped: true,
+              members: {},
+              warnings: [],
+              diagnostics: [],
+            })),
           } as any,
         ])
       );
@@ -15886,9 +15896,28 @@ describe('TeamProvisioningService', () => {
       ).resolves.toContain('delivery-1');
     });
 
-    it('removes lane index entries when mixed secondary lanes are stopped without an OpenCode adapter', async () => {
+    it('removes lane index entries after the OpenCode adapter confirms mixed secondary lane stops', async () => {
       const svc = new TeamProvisioningService();
       const teamName = 'mixed-team';
+      const adapterStop = vi.fn(async (input: { runId: string }) => ({
+        runId: input.runId,
+        teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: adapterStop,
+          } as any,
+        ])
+      );
 
       (svc as any).setSecondaryRuntimeRun({
         teamName,
@@ -15911,13 +15940,27 @@ describe('TeamProvisioningService', () => {
         teamsBasePath: tempTeamsBase,
         teamName,
         laneId: 'secondary:opencode:bob',
+        runId: 'opencode-run-1',
         state: 'active',
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'secondary:opencode:bob',
+        runId: 'opencode-run-1',
       });
       await upsertOpenCodeRuntimeLaneIndexEntry({
         teamsBasePath: tempTeamsBase,
         teamName,
         laneId: 'secondary:opencode:tom',
+        runId: 'opencode-run-2',
         state: 'active',
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'secondary:opencode:tom',
+        runId: 'opencode-run-2',
       });
       await fsPromises.mkdir(
         path.dirname(
@@ -15947,6 +15990,7 @@ describe('TeamProvisioningService', () => {
 
       await (svc as any).stopMixedSecondaryRuntimeLanes(teamName);
 
+      expect(adapterStop).toHaveBeenCalledTimes(2);
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
         lanes: {},
       });
@@ -15966,6 +16010,25 @@ describe('TeamProvisioningService', () => {
 
     it('clears provider-local lane storage when a single mixed secondary lane is stopped during controlled reattach', async () => {
       const svc = new TeamProvisioningService();
+      const adapterStop = vi.fn(async (input: { runId: string }) => ({
+        runId: input.runId,
+        teamName: 'mixed-team',
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: adapterStop,
+          } as any,
+        ])
+      );
       const run = createMemberSpawnRun({
         teamName: 'mixed-team',
         expectedMembers: ['alice'],
@@ -15990,11 +16053,27 @@ describe('TeamProvisioningService', () => {
         diagnostics: [],
       };
 
+      (svc as any).setSecondaryRuntimeRun({
+        teamName: run.teamName,
+        runId: lane.runId,
+        providerId: lane.providerId,
+        laneId: lane.laneId,
+        memberName: lane.member.name,
+        cwd: run.request.cwd,
+      });
+
       await upsertOpenCodeRuntimeLaneIndexEntry({
         teamsBasePath: tempTeamsBase,
         teamName: run.teamName,
         laneId: lane.laneId,
+        runId: lane.runId,
         state: 'active',
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempTeamsBase,
+        teamName: run.teamName,
+        laneId: lane.laneId,
+        runId: lane.runId,
       });
       await fsPromises.mkdir(
         path.dirname(
@@ -16020,6 +16099,14 @@ describe('TeamProvisioningService', () => {
 
       await (svc as any).stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch');
 
+      expect(adapterStop).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: 'opencode-run-1',
+          laneId: lane.laneId,
+          teamName: run.teamName,
+          reason: 'relaunch',
+        })
+      );
       await expect(
         readOpenCodeRuntimeLaneIndex(tempTeamsBase, run.teamName)
       ).resolves.toMatchObject({
@@ -16041,7 +16128,7 @@ describe('TeamProvisioningService', () => {
       expect(lane.state).toBe('finished');
     });
 
-    it('removes the primary lane index entry when a pure OpenCode team is stopped without an adapter', async () => {
+    it('preserves primary runtime evidence when no OpenCode adapter can confirm the stop', async () => {
       const svc = new TeamProvisioningService();
       const teamName = 'opencode-team';
 
@@ -16084,10 +16171,14 @@ describe('TeamProvisioningService', () => {
         'utf8'
       );
 
-      await (svc as any).stopOpenCodeRuntimeAdapterTeam(teamName, 'opencode-run-1');
+      await expect(
+        (svc as any).stopOpenCodeRuntimeAdapterTeam(teamName, 'opencode-run-1')
+      ).rejects.toThrow('OpenCode runtime adapter is unavailable; stop was not confirmed');
 
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
-        lanes: {},
+        lanes: {
+          primary: expect.objectContaining({ state: 'active' }),
+        },
       });
       await expect(
         fsPromises.stat(
@@ -16100,10 +16191,21 @@ describe('TeamProvisioningService', () => {
             })
           )
         )
-      ).rejects.toThrow();
-      expect((svc as any).runtimeAdapterRunByTeam.has(teamName)).toBe(false);
-      expect((svc as any).aliveRunByTeam.has(teamName)).toBe(false);
-      expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(false);
+      ).resolves.toBeTruthy();
+      expect((svc as any).runtimeAdapterRunByTeam.has(teamName)).toBe(true);
+      expect((svc as any).aliveRunByTeam.has(teamName)).toBe(true);
+      expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(true);
+      expect((svc as any).stoppingPrimaryRuntimeTeams.has(teamName)).toBe(true);
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'alice',
+          text: 'must remain blocked after an unconfirmed stop',
+          messageId: 'msg-unconfirmed-primary-stop',
+        })
+      ).resolves.toEqual({
+        delivered: false,
+        reason: 'opencode_runtime_not_active',
+      });
     });
 
     it('clears primary lane storage when OpenCode runtime adapter launch fails', async () => {
@@ -16400,6 +16502,7 @@ describe('TeamProvisioningService', () => {
       const restartPromise = expect(svc.restartMember('tmux-team', 'forge')).rejects.toThrow(
         'Restart for teammate "forge" is still waiting for the previous tmux pane to exit (%2).'
       );
+      await vi.waitFor(() => expect(listTmuxPanePidsForCurrentPlatform).toHaveBeenCalled());
       await vi.advanceTimersByTimeAsync(1_500);
       await restartPromise;
 
@@ -16469,6 +16572,7 @@ describe('TeamProvisioningService', () => {
       const restartPromise = expect(svc.restartMember('tmux-team', 'forge')).rejects.toThrow(
         'Restart for teammate "forge" is still waiting for the previous tmux pane to exit (%2).'
       );
+      await vi.waitFor(() => expect(listTmuxPanePidsForCurrentPlatform).toHaveBeenCalled());
       await vi.advanceTimersByTimeAsync(1_500);
       await restartPromise;
 
@@ -18002,7 +18106,7 @@ describe('TeamProvisioningService', () => {
         selectedModelKind: 'explicit',
         resolvedLaunchModel: 'gpt-5.4',
         catalogId: 'gpt-5.4',
-        catalogSource: 'test',
+        catalogSource: 'app-server',
         catalogFetchedAt: '2026-04-23T00:00:00.000Z',
         selectedEffort: 'medium',
         resolvedEffort: 'medium',
@@ -18421,7 +18525,7 @@ describe('TeamProvisioningService', () => {
         selectedModelKind: 'explicit',
         resolvedLaunchModel: 'sonnet',
         catalogId: 'sonnet',
-        catalogSource: 'test',
+        catalogSource: 'anthropic-models-api',
         catalogFetchedAt: '2026-05-17T00:00:00.000Z',
         selectedEffort: 'low',
         resolvedEffort: 'low',
@@ -18783,7 +18887,14 @@ describe('TeamProvisioningService', () => {
           diagnostics: [rootCause],
         };
       });
-      const adapterStop = vi.fn(async () => undefined);
+      const adapterStop = vi.fn(async (input: { runId: string; teamName: string }) => ({
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
       const { svc } = createSafeLaunchService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
@@ -18882,7 +18993,14 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(async () => undefined),
+            stop: vi.fn(async (input: TeamRuntimeStopInput) => ({
+              runId: input.runId,
+              teamName: input.teamName,
+              stopped: true,
+              members: {},
+              warnings: [],
+              diagnostics: [],
+            })),
           } as unknown as TeamLaunchRuntimeAdapter,
         ])
       );
@@ -18943,7 +19061,14 @@ describe('TeamProvisioningService', () => {
       allowConsoleLogs();
       const teamName = 'safe-opencode-partial-member-launch';
       let aliceLaunchAttempts = 0;
-      const adapterStop = vi.fn(async () => undefined);
+      const adapterStop = vi.fn(async (input: { runId: string; teamName: string }) => ({
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
         const expectedMembers = input.expectedMembers as Array<{ name: string }>;
         const laneId = String(input.laneId);
@@ -19199,7 +19324,14 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(),
+            stop: vi.fn(async (input: TeamRuntimeStopInput) => ({
+              runId: input.runId,
+              teamName: input.teamName,
+              stopped: true,
+              members: {},
+              warnings: [],
+              diagnostics: [],
+            })),
           } as unknown as TeamLaunchRuntimeAdapter,
         ])
       );
@@ -19270,7 +19402,14 @@ describe('TeamProvisioningService', () => {
       allowConsoleLogs();
       const teamName = 'safe-opencode-cancel-primary-race';
       const primaryResult = createDeferred<Record<string, unknown>>();
-      const adapterStop = vi.fn(async () => {});
+      const adapterStop = vi.fn(async (input: { runId: string; teamName: string }) => ({
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
         if (input.laneId !== 'primary') {
           throw new Error('secondary lane must not launch after aggregate cancellation');
@@ -19414,7 +19553,14 @@ describe('TeamProvisioningService', () => {
         warnings: [],
         diagnostics: ["You've hit your Cursor usage limit."],
       }));
-      const adapterStop = vi.fn(async () => undefined);
+      const adapterStop = vi.fn(async (input: { runId: string; teamName: string }) => ({
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
@@ -19543,7 +19689,14 @@ describe('TeamProvisioningService', () => {
         warnings: [],
         diagnostics: ["You've hit your Cursor usage limit."],
       }));
-      const adapterStop = vi.fn(async () => undefined);
+      const adapterStop = vi.fn(async (input: { runId: string; teamName: string }) => ({
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
@@ -19685,7 +19838,14 @@ describe('TeamProvisioningService', () => {
           diagnostics: [],
         };
       });
-      const adapterStop = vi.fn(async () => {});
+      const adapterStop = vi.fn(async (input: Record<string, unknown>) => ({
+        runId: String(input.runId),
+        teamName: String(input.teamName),
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
 
       const { svc, membersMetaStore } = createSafeLaunchService();
       svc.setRuntimeAdapterRegistry(
@@ -19932,6 +20092,14 @@ describe('TeamProvisioningService', () => {
       });
 
       const { svc } = createSafeLaunchService();
+      const adapterStop = vi.fn(async (input: Record<string, unknown>) => ({
+        runId: String(input.runId),
+        teamName: String(input.teamName),
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
           {
@@ -19939,7 +20107,7 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(),
+            stop: adapterStop,
           } as any,
         ])
       );
@@ -20312,6 +20480,14 @@ describe('TeamProvisioningService', () => {
       const { svc, membersMetaStore } = createSafeLaunchService({
         memberWorktreeManager: worktreeManager,
       });
+      const adapterStop = vi.fn(async (input: Record<string, unknown>) => ({
+        runId: String(input.runId),
+        teamName: String(input.teamName),
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
           {
@@ -20319,7 +20495,7 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(),
+            stop: adapterStop,
           } as any,
         ])
       );
@@ -20502,19 +20678,6 @@ describe('TeamProvisioningService', () => {
       );
       expect(adapterLaunch).toHaveBeenCalledWith(
         expect.objectContaining({
-          laneId: 'secondary:opencode:tom',
-          cwd: tempClaudeRoot,
-          expectedMembers: [
-            expect.objectContaining({
-              name: 'tom',
-              providerId: 'opencode',
-              cwd: tempClaudeRoot,
-            }),
-          ],
-        })
-      );
-      expect(adapterLaunch).toHaveBeenCalledWith(
-        expect.objectContaining({
           laneId: 'secondary:opencode:bob',
           cwd: bobWorktree,
           expectedMembers: [
@@ -20523,6 +20686,19 @@ describe('TeamProvisioningService', () => {
               providerId: 'opencode',
               isolation: 'worktree',
               cwd: bobWorktree,
+            }),
+          ],
+        })
+      );
+      expect(adapterLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          laneId: 'secondary:opencode:tom',
+          cwd: tempClaudeRoot,
+          expectedMembers: [
+            expect.objectContaining({
+              name: 'tom',
+              providerId: 'opencode',
+              cwd: tempClaudeRoot,
             }),
           ],
         })
@@ -21764,7 +21940,7 @@ describe('TeamProvisioningService', () => {
         run.provisioningComplete = true;
       });
 
-    const { runId } = await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {});
+    await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {});
 
     child.stdout.emit(
       'data',
@@ -21898,7 +22074,7 @@ describe('TeamProvisioningService', () => {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: 'gpt-5.5',
       catalogId: 'gpt-5.5',
-      catalogSource: 'test',
+      catalogSource: 'app-server',
       catalogFetchedAt: '2026-05-07T00:00:00.000Z',
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
@@ -21991,7 +22167,7 @@ describe('TeamProvisioningService', () => {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: 'gpt-5.5',
       catalogId: 'gpt-5.5',
-      catalogSource: 'test',
+      catalogSource: 'app-server',
       catalogFetchedAt: '2026-05-07T00:00:00.000Z',
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
@@ -22082,7 +22258,7 @@ describe('TeamProvisioningService', () => {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: 'gpt-5.5',
       catalogId: 'gpt-5.5',
-      catalogSource: 'test',
+      catalogSource: 'app-server',
       catalogFetchedAt: '2026-05-07T00:00:00.000Z',
       selectedEffort: 'medium',
       resolvedEffort: 'medium',

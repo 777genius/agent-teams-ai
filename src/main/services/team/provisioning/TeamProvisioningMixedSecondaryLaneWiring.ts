@@ -86,6 +86,7 @@ type LaunchQueueServicePortKey =
 
 type StopServicePortKey =
   | 'getOpenCodeRuntimeAdapter'
+  | 'getSecondaryRuntimeRuns'
   | 'readLaunchState'
   | 'deleteSecondaryRuntimeRun';
 
@@ -146,6 +147,7 @@ export interface TeamProvisioningMixedSecondaryLaneWiringServiceHost<
   runtimeLaneCoordinator: {
     buildAggregateLaunchSnapshot: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['buildAggregateLaunchSnapshot'];
   };
+  getSecondaryRuntimeRuns: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['getSecondaryRuntimeRuns'];
   deleteSecondaryRuntimeRun: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['deleteSecondaryRuntimeRun'];
   publishMixedSecondaryLaneStatusChange: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['publishMixedSecondaryLaneStatusChange'];
   setSecondaryRuntimeRun: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['setSecondaryRuntimeRun'];
@@ -233,6 +235,7 @@ export function createSingleMixedSecondaryRuntimeLaneStopPorts<
 ): SingleMixedSecondaryRuntimeLaneStopPorts {
   return {
     teamsBasePath: getTeamsBasePath(),
+    getSecondaryRuntimeRuns: (teamName) => deps.service.getSecondaryRuntimeRuns(teamName),
     getOpenCodeRuntimeAdapter: () => deps.service.getOpenCodeRuntimeAdapter(),
     readLaunchState: (teamName) => deps.service.readLaunchState(teamName),
     upsertOpenCodeRuntimeLaneIndexEntry,
@@ -313,6 +316,7 @@ export function createTeamProvisioningMixedSecondaryLaneWiringDepsFromService<
       deleteSecondaryRuntimeRun: (teamName, laneId) =>
         service.deleteSecondaryRuntimeRun(teamName, laneId),
       getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
+      getSecondaryRuntimeRuns: (teamName) => service.getSecondaryRuntimeRuns(teamName),
       publishMixedSecondaryLaneStatusChange: (run, lane) =>
         service.publishMixedSecondaryLaneStatusChange(run, lane),
       readLaunchState: (teamName) => service.launchStateStore.read(teamName),

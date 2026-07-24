@@ -199,20 +199,25 @@ describe('RuntimeDeliveryService stale run guard', () => {
     expect(journal.markFailed).not.toHaveBeenCalled();
   });
 
-  it('does not publish retryable failure diagnostics when a destination failure races with a stale run', async () => {
+  it('preserves stale-run precedence when a destination idempotency conflict races with a stale run', async () => {
     const location: RuntimeDeliveryLocation = {
-      kind: 'member_inbox',
-      teamName: 'Team',
-      memberName: 'Reviewer',
+      kind: 'cross_team_outbox',
+      fromTeamName: 'Team',
+      toTeamName: 'OtherTeam',
+      toMemberName: 'Reviewer',
       messageId: 'message-1',
     };
     const { runState } = createRunState(['run-1', 'run-1', 'run-1', 'run-2']);
     const journal = createJournal();
-    const destination = createDestinationPort('member_inbox', location);
+    const destination = createDestinationPort('cross_team_outbox', location);
     const diagnostics: RuntimeDeliveryDiagnosticsSink = {
       append: vi.fn(async () => {}),
     };
-    destination.write.mockRejectedValueOnce(new Error('destination unavailable'));
+    destination.write.mockRejectedValueOnce(
+      Object.assign(new Error('cross-team payload differs'), {
+        code: 'CROSS_TEAM_IDEMPOTENCY_CONFLICT',
+      })
+    );
     const service = createService({
       runState,
       journal: journal.store,
@@ -220,7 +225,9 @@ describe('RuntimeDeliveryService stale run guard', () => {
       diagnostics,
     });
 
-    const ack = await service.deliver(envelope({ to: { memberName: 'Reviewer' } }));
+    const ack = await service.deliver(
+      envelope({ to: { teamName: 'OtherTeam', memberName: 'Reviewer' } })
+    );
 
     expect(ack).toEqual({
       ok: false,
@@ -244,6 +251,78 @@ describe('RuntimeDeliveryService stale run guard', () => {
     );
     expect(diagnostics.append).not.toHaveBeenCalled();
   });
+
+  it.each([
+    {
+      field: 'code',
+      error: Object.assign(new Error('cross-team payload differs'), {
+        code: 'CROSS_TEAM_IDEMPOTENCY_CONFLICT',
+      }),
+    },
+    {
+      field: 'name',
+      error: Object.assign(new Error('cross-team payload differs'), {
+        name: 'CROSS_TEAM_IDEMPOTENCY_CONFLICT',
+      }),
+    },
+    {
+      field: 'message',
+      error: new Error('CROSS_TEAM_IDEMPOTENCY_CONFLICT'),
+    },
+  ])(
+    'classifies a destination conflict reported by error $field as terminal',
+    async ({ error }) => {
+      const location: RuntimeDeliveryLocation = {
+        kind: 'cross_team_outbox',
+        fromTeamName: 'Team',
+        toTeamName: 'OtherTeam',
+        toMemberName: 'Reviewer',
+        messageId: 'message-1',
+      };
+      const { runState } = createRunState(['run-1']);
+      const journal = createJournal();
+      const destination = createDestinationPort('cross_team_outbox', location);
+      const diagnostics: RuntimeDeliveryDiagnosticsSink = {
+        append: vi.fn(async () => {}),
+      };
+      destination.write.mockRejectedValueOnce(error);
+      const service = createService({
+        runState,
+        journal: journal.store,
+        port: destination.port,
+        diagnostics,
+      });
+
+      await expect(
+        service.deliver(envelope({ to: { teamName: 'OtherTeam', memberName: 'Reviewer' } }))
+      ).resolves.toEqual({
+        ok: false,
+        delivered: false,
+        reason: 'idempotency_conflict',
+        idempotencyKey: 'runtime-key-1',
+      });
+
+      expect(journal.markCommitted).not.toHaveBeenCalled();
+      expect(journal.markFailed).toHaveBeenCalledOnce();
+      expect(journal.markFailed).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'failed_terminal',
+          error: 'CROSS_TEAM_IDEMPOTENCY_CONFLICT',
+        })
+      );
+      expect(diagnostics.append).toHaveBeenCalledOnce();
+      expect(diagnostics.append).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'runtime_delivery_conflict',
+          severity: 'error',
+          data: expect.objectContaining({
+            idempotencyKey: 'runtime-key-1',
+            destination: expect.objectContaining({ kind: 'cross_team_outbox' }),
+          }),
+        })
+      );
+    }
+  );
 
   it('preserves retryable failure semantics while the run remains current', async () => {
     const location: RuntimeDeliveryLocation = {

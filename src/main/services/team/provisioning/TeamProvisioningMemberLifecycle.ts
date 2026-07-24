@@ -1949,6 +1949,17 @@ export class TeamProvisioningMemberLifecycleController {
       teamName,
       runtimeRun
     );
+    const assertPureOpenCodeRestartStillCurrent = (): void => {
+      const currentRuntimeRun = this.runtimeAdapterRunByTeam.get(teamName);
+      if (currentRuntimeRun !== runtimeRun) {
+        throw new Error(
+          currentRuntimeRun
+            ? `Restart for teammate "${memberName}" was cancelled because the OpenCode runtime for team "${teamName}" changed during restart`
+            : `Restart for teammate "${memberName}" was cancelled because team "${teamName}" is no longer running`
+        );
+      }
+      assertRuntimeAdapterRunStillCurrent();
+    };
 
     const adapter = this.getOpenCodeRuntimeAdapter();
     if (!adapter) {
@@ -2042,7 +2053,7 @@ export class TeamProvisioningMemberLifecycleController {
       leadProviderId: 'opencode',
       members: activeMembers.map((member) => this.buildConfiguredProvisioningMember(member)),
     });
-    assertRuntimeAdapterRunStillCurrent();
+    assertPureOpenCodeRestartStillCurrent();
     const targetRuntimeMember = effectiveMembers.find((member) =>
       matchesExactTeamMemberName(member.name, targetMember.name)
     );
@@ -2056,7 +2067,7 @@ export class TeamProvisioningMemberLifecycleController {
         modelRoute: member.model?.trim() ?? '',
       })),
     });
-    assertRuntimeAdapterRunStillCurrent();
+    assertPureOpenCodeRestartStillCurrent();
     if (localModelPreflight && !localModelPreflight.ok) {
       throw new Error(
         localModelPreflight.diagnostics[0] ??
@@ -2069,7 +2080,7 @@ export class TeamProvisioningMemberLifecycleController {
       );
     }
 
-    assertRuntimeAdapterRunStillCurrent();
+    assertPureOpenCodeRestartStillCurrent();
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.persistOpenCodeMemberRestartSystemMessage({
       teamName,
@@ -2078,10 +2089,10 @@ export class TeamProvisioningMemberLifecycleController {
       displayName: config.description?.trim() || config.name,
       member: targetRuntimeMember,
       reason: 'manual_restart',
-      assertStillCurrent: assertRuntimeAdapterRunStillCurrent,
+      assertStillCurrent: assertPureOpenCodeRestartStillCurrent,
     });
 
-    assertRuntimeAdapterRunStillCurrent();
+    assertPureOpenCodeRestartStillCurrent();
     await this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: {
         teamName,

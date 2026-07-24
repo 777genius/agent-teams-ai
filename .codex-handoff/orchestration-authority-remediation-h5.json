@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "workKey": "phase0/orchestration-authority/63ff349e/5e8eafac6d535af776b9f016bfd3488676785bdb2e6131c1ad1bcbe8a9ba21ec/remediation/r2",
+  "phaseId": "phase-00",
+  "laneId": "cross-cutting-support",
+  "packetRevision": "phase-00-r2",
+  "status": "authority_remediation_ready_for_independent_review",
+  "authority": "phase_0_supporting_evidence_only",
+  "producerBaseSha": "63ff349e14e44a83d363ccbcdd756af935555aa9",
+  "canonicalProvenanceSha": "42ec333848e29e97c41699b9fed73ed199740e3f",
+  "phaseStartSha": "63ff349e14e44a83d363ccbcdd756af935555aa9",
+  "inputPatchSha256": "5e8eafac6d535af776b9f016bfd3488676785bdb2e6131c1ad1bcbe8a9ba21ec",
+  "supersedes": {
+    "producer": "agent-teams-hosted-web-refactor-orchestration-reconciliation-h4-f1",
+    "review": "agent-teams-hosted-web-refactor-orchestration-candidate-review-h4-r1",
+    "reviewDisposition": "REJECTED",
+    "blockingFinding": "A superseded authority could point to a raw/not-required or rejected/rejected successor without schema or semantic rejection."
+  },
+  "currentBaseProof": {
+    "expectedHead": "63ff349e14e44a83d363ccbcdd756af935555aa9",
+    "observedHeadBeforeMutation": "63ff349e14e44a83d363ccbcdd756af935555aa9",
+    "branch": "fix/hosted-web-orchestration-authority-h5",
+    "phase1PlanAncestor": "ae53850741796f1b49809320689b84704402661b",
+    "finalGateAncestor": "63ff349e14e44a83d363ccbcdd756af935555aa9"
+  },
+  "requirements": [
+    {
+      "id": "authoritative_successor_schema",
+      "result": "pass",
+      "evidence": "Draft 2020-12 requires every row with a non-empty supersedes list to be canonical with approved or approved-with-conditions disposition."
+    },
+    {
+      "id": "authoritative_successor_semantics",
+      "result": "pass",
+      "evidence": "Whole-catalog validation rejects both a non-authoritative reverse-link owner and a superseded row whose reciprocal successor lacks canonical accepted authority."
+    },
+    {
+      "id": "authority_laundering_regressions",
+      "result": "pass",
+      "evidence": "Focused schema and semantic negatives cover raw/not-required, rejected/rejected and generated/approved successor targets; approved-with-conditions canonical authority remains accepted."
+    },
+    {
+      "id": "bounded_supersession_integrity",
+      "result": "pass",
+      "evidence": "Existing reciprocal, missing-target and finite-entry traversal checks remain intact, with an explicit deterministic two-row cycle regression."
+    },
+    {
+      "id": "preserved_orchestration_contracts",
+      "result": "pass",
+      "evidence": "Focused worker-start and orchestration-state tests preserve prompt-in-jobRoot, deterministic workKey and candidate identity, exact-path, capacity, refill and supersession rules."
+    },
+    {
+      "id": "phase_authority",
+      "result": "pass",
+      "evidence": "Only Phase 0 supporting evidence is introduced; Phase 1 implementation and freeze/final-gate paths are unchanged."
+    }
+  ],
+  "evidence": [
+    {
+      "id": "P0.SUPPORT.ORCHESTRATION.START_HERE",
+      "path": "docs/hosted-web-phases/START_HERE.md",
+      "sha256": "db59465ac97f0c835c5f55ebb8170fcbf15951d0dec7a3ad36b33d1d5804b8dd"
+    },
+    {
+      "id": "P0.SUPPORT.EVIDENCE.LIFECYCLE",
+      "path": "docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md",
+      "sha256": "278815270952fe19fffbd053d49fc948f0c9d4db4c0f12330bf6e462d6fb97b6"
+    },
+    {
+      "id": "P0.SUPPORT.ORCHESTRATION.GUARDS",
+      "path": "docs/hosted-web-phases/ORCHESTRATION_GUARDS.md",
+      "sha256": "9f7427d90617572e47b25d7f3a18f450309e1432c76bcf42e3443fa6c752af1c"
+    },
+    {
+      "id": "P0.SUPPORT.EVIDENCE.CATALOG_SCHEMA",
+      "path": "docs/hosted-web-phases/evidence-catalog.schema.json",
+      "sha256": "5250378d766960b7215e9b99aff78612350f3fe437a86b6d6fb81ebc258eb3ea"
+    },
+    {
+      "id": "P0.SUPPORT.ORCHESTRATION.WORKER_START_SCHEMA",
+      "path": "docs/hosted-web-phases/worker-start-contract.schema.json",
+      "sha256": "12934ed700b9dbdc04e512bc6223a8eb290166b6a01c167a56ad8419d6dd6c70"
+    },
+    {
+      "id": "P0.SUPPORT.ORCHESTRATION.CONTRACT_LIB",
+      "path": "scripts/hosted-web/orchestration/contract-lib.mjs",
+      "sha256": "da1e4a1d81784bc3134a851c7c7f5a5662def9296dcff884952259d091d77edb"
+    },
+    {
+      "id": "P0.SUPPORT.EVIDENCE.CATALOG_VALIDATOR",
+      "path": "scripts/hosted-web/orchestration/evidence-catalog.mjs",
+      "sha256": "96bc6907bc8afd82eb269ddfe8024251340fc39855cd3c7ce013716935fa3ab8"
+    },
+    {
+      "id": "P0.SUPPORT.ORCHESTRATION.WORK_REGISTRY",
+      "path": "scripts/hosted-web/orchestration/orchestration-state.mjs",
+      "sha256": "05c11e0493a412014c0499714cbcbe9c041021d97c1f35585b8e5465f6d1cd03"
+    },
+    {
+      "id": "P0.SUPPORT.ORCHESTRATION.COMBINED_ADMISSION",
+      "path": "scripts/hosted-web/orchestration/validate-worker-admission.mjs",
+      "sha256": "967596f48b69cc79bc333157ff717039196b796add539d992425676d69ab21fd"
+    },
+    {
+      "id": "P0.SUPPORT.EVIDENCE.CATALOG_REGRESSIONS",
+      "path": "test/architecture/hosted-web/orchestration/evidence-catalog.test.mjs",
+      "sha256": "af414cb715c120e5c556011a5d54591c43a8608900d1936e22bda64f4c425ba6"
+    },
+    {
+      "id": "P0.SUPPORT.ORCHESTRATION.SCHEMA_REGRESSIONS",
+      "path": "test/architecture/hosted-web/orchestration/schema-contracts.test.mjs",
+      "sha256": "ec621259892c51a35f9944ccacbb0befabb739a6d6d138884624a787cf617a86"
+    },
+    {
+      "id": "P0.SUPPORT.ORCHESTRATION.SCHEMA_DRIFT_CASES",
+      "path": "test/architecture/hosted-web/orchestration/fixtures/schema-drift-cases.json",
+      "sha256": "ab3ffa42fa7818fa5af8ee6fd1a03655fa1b66607ca0ffe527c34ad49d243eee"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/orchestration-authority-remediation-h5.json",
+    "docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md",
+    "docs/hosted-web-phases/evidence-catalog.schema.json",
+    "docs/hosted-web-phases/ORCHESTRATION_GUARDS.md",
+    "docs/hosted-web-phases/README.md",
+    "docs/hosted-web-phases/START_HERE.md",
+    "docs/hosted-web-phases/worker-start-contract.schema.json",
+    "docs/research/hosted-web/README.md",
+    "scripts/hosted-web/orchestration/contract-lib.mjs",
+    "scripts/hosted-web/orchestration/evidence-catalog.mjs",
+    "scripts/hosted-web/orchestration/generate-evidence-catalog.mjs",
+    "scripts/hosted-web/orchestration/orchestration-state.mjs",
+    "scripts/hosted-web/orchestration/README.md",
+    "scripts/hosted-web/orchestration/validate-evidence-catalog.mjs",
+    "scripts/hosted-web/orchestration/validate-orchestration-state.mjs",
+    "scripts/hosted-web/orchestration/validate-worker-admission.mjs",
+    "scripts/hosted-web/orchestration/validate-worker-start.mjs",
+    "scripts/hosted-web/README.md",
+    "test/architecture/hosted-web/orchestration/evidence-catalog.test.mjs",
+    "test/architecture/hosted-web/orchestration/fixtures/catalog-current.txt",
+    "test/architecture/hosted-web/orchestration/fixtures/catalog-old.txt",
+    "test/architecture/hosted-web/orchestration/fixtures/catalog-source.json",
+    "test/architecture/hosted-web/orchestration/fixtures/input-fixture.json",
+    "test/architecture/hosted-web/orchestration/fixtures/required-doc.md",
+    "test/architecture/hosted-web/orchestration/fixtures/required-script.mjs",
+    "test/architecture/hosted-web/orchestration/fixtures/schema-drift-cases.json",
+    "test/architecture/hosted-web/orchestration/fixtures/valid-worker-start.template.json",
+    "test/architecture/hosted-web/orchestration/fixtures/worker-prompt.md",
+    "test/architecture/hosted-web/orchestration/orchestration-state.test.mjs",
+    "test/architecture/hosted-web/orchestration/schema-contracts.test.mjs",
+    "test/architecture/hosted-web/orchestration/worker-start-contract.test.mjs"
+  ],
+  "checks": [
+    {
+      "command": "for file in test/architecture/hosted-web/orchestration/*.test.mjs; do node $file || exit $?; done",
+      "exitCode": 0,
+      "result": "32 focused tests passed across four files"
+    },
+    {
+      "command": "generate-evidence-catalog.mjs then validate-evidence-catalog.mjs against catalog-source.json",
+      "exitCode": 0,
+      "result": "deterministic fixture catalog generated and validated"
+    },
+    {
+      "command": "pnpm lint:fast:files -- <owned orchestration scripts and tests>",
+      "exitCode": 0,
+      "result": "pass"
+    },
+    {
+      "command": "pnpm exec prettier --check <all exact owned content paths> --ignore-unknown",
+      "exitCode": 0,
+      "result": "pass"
+    },
+    {
+      "command": "git diff --check plus no-index checks for untracked paths",
+      "exitCode": 0,
+      "result": "pass"
+    },
+    {
+      "command": "bounded secret and private-path scan over exact changed paths",
+      "exitCode": 0,
+      "result": "no findings"
+    }
+  ],
+  "scope": {
+    "supportingEvidenceOnly": true,
+    "phase1ImplementationChanged": false,
+    "estimateChanged": false,
+    "freezeChanged": false,
+    "finalGateChanged": false,
+    "realProjectsUsed": false,
+    "commitCreated": false,
+    "pushPerformed": false
+  },
+  "unverifiedClaims": [
+    "Durable multi-host admission, uniqueness, compare-and-swap refill, and launch-after-commit enforcement remain a separate shared-runtime hardening requirement."
+  ],
+  "blockers": [],
+  "nextAction": "independent_review_then_controller_policy_integration"
+}

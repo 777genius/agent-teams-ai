@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "nodeId": "P1.I.FORMAT.REMEDIATION",
+  "laneId": "p1-i-format-remediation",
+  "packetRevision": "phase-01-p1-i-integration-r3",
+  "routerRevision": "phase-01-p1-i-format-remediation-router-r1",
+  "evidenceId": "P1.I.FORMAT.REMEDIATION",
+  "baseSha": "d5e311ea24d2a4af96f1ac8deb02ef3c8c8a07ca",
+  "canonicalSha": "d5e311ea24d2a4af96f1ac8deb02ef3c8c8a07ca",
+  "planBundleCommit": "d5e311ea24d2a4af96f1ac8deb02ef3c8c8a07ca",
+  "phaseStartSha": "d5e311ea24d2a4af96f1ac8deb02ef3c8c8a07ca",
+  "headSha": "d5e311ea24d2a4af96f1ac8deb02ef3c8c8a07ca",
+  "status": "verified",
+  "changedPathCount": 2,
+  "semanticTokenChangeCount": 0,
+  "producerProfile": {
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "xhigh",
+    "serviceTier": "default",
+    "fastMode": false
+  },
+  "evidence": [
+    {
+      "id": "P1.I.FORMAT.REMEDIATION",
+      "path": ".codex-handoff/phase-01-p1-i-format-remediation.json",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "changedPaths": [
+    "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+    ".codex-handoff/phase-01-p1-i-format-remediation.json"
+  ],
+  "immutableRejectedAttempt": {
+    "job": "agent-teams-hosted-web-refactor-p1-i-integration-v17-r1",
+    "status": "BLOCKED",
+    "terminalState": "HOLD",
+    "patchSha256": "d94f8dfa6548427e007402e8771c469c8e661cd64de3a8728dec042a509aebbe",
+    "manifestSha256": "1b88a6e8e53199f0b1905d4f4c194525bcb86db185f0e4748acf60f69bb78f94",
+    "auditedRejectionLedgerPresent": true,
+    "requiredGateCount": 14,
+    "passedGateCount": 13,
+    "failingGateId": "P1.GATE.FORMAT",
+    "failingScopePathCount": 74,
+    "soleUnformattedPath": "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+    "provenanceRole": "never-integrate-provenance-only",
+    "rejectedBytesReadAppliedCopiedOrMaterialized": false,
+    "blockedOutputPathCount": 5,
+    "blockedOutputsIntegratedOrReused": false
+  },
+  "markdownFormatProof": {
+    "path": "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+    "writerCommand": "pnpm exec prettier --write docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+    "writerCommandExitCode": 0,
+    "canonicalRawByteLength": 29700,
+    "canonicalRawSha256": "80d21ded01b4c040f5a571069aa71a72315e9e727bf33453b8ef5f0adc72aaf5",
+    "expectedFormattedByteLength": 33124,
+    "expectedFormattedSha256": "3a891699856bd9035aee86e6fc6776a7bb3ada2103609ec073e9958566187e71",
+    "formattedOutputByteLength": 33124,
+    "formattedOutputSha256": "3a891699856bd9035aee86e6fc6776a7bb3ada2103609ec073e9958566187e71",
+    "finalMarkdownByteLength": 33124,
+    "finalMarkdownSha256": "3a891699856bd9035aee86e6fc6776a7bb3ada2103609ec073e9958566187e71",
+    "secondEvaluationSha256": "3a891699856bd9035aee86e6fc6776a7bb3ada2103609ec073e9958566187e71",
+    "postWriteEqualsPrecomputedFormatterOutput": true,
+    "secondEvaluationByteIdentical": true,
+    "idempotent": true,
+    "nonHandoffPathSha256": {
+      "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md": "3a891699856bd9035aee86e6fc6776a7bb3ada2103609ec073e9958566187e71"
+    }
+  },
+  "prettierProvenance": {
+    "version": "3.8.1",
+    "moduleEntry": "node_modules/.pnpm/prettier@3.8.1/node_modules/prettier/index.mjs",
+    "packageManifestPath": "node_modules/prettier/package.json",
+    "packageManifestSha256": "b73c6d16f392858c9bad2b4b4d2357c96773676d5769c5e6b700a32be7609f2e",
+    "configResolutionFilepath": "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+    "configFile": ".prettierrc.json",
+    "configFileSha256": "189e9124cb5a8f057681a510daf74d6c2c5ea67f351524949263bb1bb532dcae",
+    "editorConfigResolutionEnabled": true,
+    "resolvedConfig": {
+      "semi": true,
+      "singleQuote": true,
+      "tabWidth": 2,
+      "trailingComma": "es5",
+      "printWidth": 100,
+      "bracketSpacing": true,
+      "arrowParens": "always",
+      "endOfLine": "lf",
+      "jsxSingleQuote": false,
+      "bracketSameLine": false,
+      "plugins": ["prettier-plugin-tailwindcss"],
+      "proseWrap": "preserve"
+    },
+    "resolvedConfigSha256": "5b12bc7b92ca14e5c4a0f3ec15857bce0b23b6a4d5054c005a1cb6c9b131fd8e"
+  },
+  "semanticEquivalenceProof": {
+    "algorithm": "phase1-markdown-semantic-token-v1",
+    "algorithmSteps": [
+      "normalize CRLF and CR line endings to LF",
+      "retain fences and fenced-code content lines byte-for-byte",
+      "canonicalize only table-delimiter hyphen runs to three hyphens while retaining alignment colons and pipe structure",
+      "retain inline-code spans and HTML comment tokens byte-for-byte",
+      "emit all remaining ordered non-whitespace punctuation and text tokens unchanged",
+      "SHA-256 hash the UTF-8 JSON encoding of each ordered token array"
+    ],
+    "remainingTokenBoundary": "each non-whitespace Unicode code point; protected fenced lines, inline-code spans, and HTML comments are single ordered tokens",
+    "fencedCodeTokenEncoding": "UTF-8 JSON array of ordered opening, content, and closing lines",
+    "inlineCodeTokenEncoding": "UTF-8 JSON array of ordered exact backtick-span tokens",
+    "tableAlignmentEncoding": "UTF-8 JSON array of ordered rows of leadingColon/trailingColon boolean cell records",
+    "semanticTokens": {
+      "beforeSha256": "82c22568b54829aaebd59e49c167197513e91900a50f5145e306f04c568a20e4",
+      "afterSha256": "82c22568b54829aaebd59e49c167197513e91900a50f5145e306f04c568a20e4",
+      "beforeCount": 8628,
+      "afterCount": 8628,
+      "equal": true
+    },
+    "fencedCodeTokens": {
+      "beforeSha256": "e14962fd06a3d97f4bc0a0c0d1d06fcf5d1255abe3f39646e932d8ec9d510322",
+      "afterSha256": "e14962fd06a3d97f4bc0a0c0d1d06fcf5d1255abe3f39646e932d8ec9d510322",
+      "beforeCount": 29,
+      "afterCount": 29,
+      "equal": true
+    },
+    "inlineCodeTokens": {
+      "beforeSha256": "fd1b05c3fffe90a200893e93ebe826445f3daa0c70359e39e433deb9eeb00ec3",
+      "afterSha256": "fd1b05c3fffe90a200893e93ebe826445f3daa0c70359e39e433deb9eeb00ec3",
+      "beforeCount": 118,
+      "afterCount": 118,
+      "equal": true
+    },
+    "tableAlignmentColons": {
+      "beforeSha256": "94d115ca0105764001fc3b904d75fbaddc9915dc6e5d1e399540759b4ac395b6",
+      "afterSha256": "94d115ca0105764001fc3b904d75fbaddc9915dc6e5d1e399540759b4ac395b6",
+      "beforeDelimiterRowCount": 3,
+      "afterDelimiterRowCount": 3,
+      "equal": true
+    },
+    "semanticTokenChangeCount": 0,
+    "contentOrMeaningChanged": false
+  },
+  "checks": [
+    {
+      "command": "pnpm exec prettier --check docs/research/hosted-web/phase-1/reviews/routes-ratchets.md .codex-handoff/phase-01-p1-i-format-remediation.json",
+      "exitCode": 0,
+      "matchedPathCount": 2
+    },
+    {
+      "command": "node -e JSON.parse handoff validation and recompute recorded formatter/hash/token invariants",
+      "exitCode": 0
+    },
+    {
+      "command": "git rev-parse HEAD",
+      "exitCode": 0,
+      "observed": "d5e311ea24d2a4af96f1ac8deb02ef3c8c8a07ca"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --cached --quiet",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --name-only d5e311ea24d2a4af96f1ac8deb02ef3c8c8a07ca -- docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+      "exitCode": 0,
+      "observed": ["docs/research/hosted-web/phase-1/reviews/routes-ratchets.md"]
+    },
+    {
+      "command": "git ls-files --others --exclude-standard",
+      "exitCode": 0,
+      "observed": [".codex-handoff/phase-01-p1-i-format-remediation.json"]
+    },
+    {
+      "command": "git status --short",
+      "exitCode": 0,
+      "observedPathCount": 2
+    },
+    {
+      "command": "git diff -- docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+      "exitCode": 0,
+      "result": "complete Markdown diff reread and every hunk classified as exact pinned-Prettier output"
+    }
+  ],
+  "classifiedScans": {
+    "secretCredentialScan": {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' docs/research/hosted-web/phase-1/reviews/routes-ratchets.md .codex-handoff/phase-01-p1-i-format-remediation.json",
+      "exitCode": 0,
+      "observedMatchLineCount": 3,
+      "classification": "three matches: two immutable canonical control/classification lines and this handoff's recorded scan expression; no payload value"
+    },
+    "providerTermScan": {
+      "command": "rg -n -i '(provider|anthropic|claude|openai|opencode|gpt-[0-9])' docs/research/hosted-web/phase-1/reviews/routes-ratchets.md .codex-handoff/phase-01-p1-i-format-remediation.json",
+      "exitCode": 0,
+      "observedMatchLineCount": 6,
+      "classification": "six matches: required model/profile metadata, one inherited diagnostic path, immutable canonical scan/classification control text, and this handoff's scan key/expression; no payload value"
+    },
+    "privatePathScan": {
+      "command": "rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' docs/research/hosted-web/phase-1/reviews/routes-ratchets.md .codex-handoff/phase-01-p1-i-format-remediation.json",
+      "exitCode": 0,
+      "observedMatchLineCount": 3,
+      "classification": "three matches: immutable canonical no-access/no-location claims and this handoff's recorded scan expression; no unsafe location value"
+    },
+    "mimeScan": {
+      "command": "file --mime-type docs/research/hosted-web/phase-1/reviews/routes-ratchets.md .codex-handoff/phase-01-p1-i-format-remediation.json",
+      "exitCode": 0,
+      "textFileCount": 2,
+      "binaryFileCount": 0,
+      "classifications": [
+        {
+          "path": "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+          "mimeType": "text/plain",
+          "classification": "text"
+        },
+        {
+          "path": ".codex-handoff/phase-01-p1-i-format-remediation.json",
+          "mimeType": "application/json",
+          "classification": "text"
+        }
+      ]
+    },
+    "utf8NulScan": {
+      "command": "node exact-two-path fatal UTF-8 decode and NUL-byte assertion",
+      "exitCode": 0,
+      "validUtf8PathCount": 2,
+      "nulBytePathCount": 0
+    }
+  },
+  "scopeProof": {
+    "authorityHeadMatchedBeforeAndAfterWrite": true,
+    "trackedDiffPaths": ["docs/research/hosted-web/phase-1/reviews/routes-ratchets.md"],
+    "untrackedPaths": [".codex-handoff/phase-01-p1-i-format-remediation.json"],
+    "stagedPathCount": 0,
+    "statusPathCount": 2,
+    "onlyDeclaredWriterPathsChanged": true,
+    "markdownWasOnlyCliWriterTarget": true,
+    "productOrTestPathChanged": false,
+    "thirdPathChanged": false
+  },
+  "selfReview": {
+    "canonicalRawHashCapturedBeforeWrite": true,
+    "expectedFormatterOutputComputedBeforeWrite": true,
+    "formatterDerivationRecomputed": true,
+    "completeMarkdownDiffReread": true,
+    "semanticTokenProofReread": true,
+    "fencedCodeProofReread": true,
+    "inlineCodeProofReread": true,
+    "tableAlignmentProofReread": true,
+    "allNonSelfHashesRecomputed": true,
+    "writerScopeVerified": true,
+    "completeHandoffReread": true,
+    "allScanMatchesClassified": true,
+    "rejectedAttemptQuarantineVerified": true,
+    "scopeExpansion": false,
+    "unsupportedClaims": false
+  },
+  "unverifiedClaims": [
+    "independent acceptance",
+    "integration",
+    "P1.I completion",
+    "successor authority"
+  ],
+  "independentAcceptanceClaimed": false,
+  "integrationClaimed": false,
+  "p1iCompletionClaimed": false,
+  "successorAuthorityClaimed": false,
+  "failures": [],
+  "blockers": [],
+  "nextAction": "independent-verification",
+  "terminalState": "HOLD"
+}

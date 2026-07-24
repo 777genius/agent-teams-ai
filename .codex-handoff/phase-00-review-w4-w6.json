@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "laneId": "review-w4-w6",
+  "reviewId": "review-w4-w6",
+  "packetRevision": "phase-00-r2",
+  "baseSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "status": "characterized",
+  "reviewDisposition": "reject",
+  "evidence": [
+    {
+      "id": "P0.R46.RECIPROCAL_REVIEW",
+      "path": "docs/research/hosted-web/phase-0/reciprocal-review-w4-w6.md",
+      "proofLevel": "source_observed"
+    }
+  ],
+  "producerDispositions": [
+    {
+      "laneId": "w4",
+      "handoff": "../phase-00-w4-lease-guard-process-v1/.codex-handoff/phase-00-w4.json",
+      "disposition": "reject",
+      "requiredFindings": ["R46-03", "R46-04", "R46-05", "R46-08"]
+    },
+    {
+      "laneId": "w6",
+      "handoff": "../phase-00-w6-auth-proxy-artifacts-v1/.codex-handoff/phase-00-w6.json",
+      "disposition": "reject",
+      "requiredFindings": ["R46-01", "R46-02", "R46-06", "R46-07", "R46-08"]
+    }
+  ],
+  "pairDisposition": {
+    "pair": ["w4", "w6"],
+    "disposition": "reject",
+    "reason": "Auth reset is not bound to W4 typed drain evidence, and W6 does not define or scan the required W4 final-image artifacts and topology."
+  },
+  "findings": [
+    {
+      "id": "R46-01",
+      "severity": "critical",
+      "owner": "w6",
+      "path": "scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs",
+      "line": 71,
+      "affectedEvidence": ["P0.W6.AUTH_TRANSITIONS"],
+      "affectedAdrs": ["ADR-7"],
+      "summary": "Restart restores mutation admission after logout, device-family revocation, and replay-family revocation."
+    },
+    {
+      "id": "R46-02",
+      "severity": "high",
+      "owner": "w6",
+      "path": "scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs",
+      "line": 128,
+      "affectedEvidence": ["P0.W6.AUTH_TRANSITIONS", "P0.W4.PROCESS_ANCHOR_SPIKE"],
+      "affectedAdrs": ["ADR-7", "ADR-31"],
+      "summary": "Host reset trusts runtimeCount=0 rather than a generation-bound W4 drained outcome."
+    },
+    {
+      "id": "R46-03",
+      "severity": "high",
+      "owner": "w4",
+      "path": "scripts/hosted-web/phase-0/host-primitives/process-anchor/process_anchor_spike.c",
+      "line": 204,
+      "affectedEvidence": ["P0.W4.PROCESS_ANCHOR_SPIKE"],
+      "affectedAdrs": ["ADR-31"],
+      "summary": "Descendants are signaled via reusable numeric PIDs after /proc inspection."
+    },
+    {
+      "id": "R46-04",
+      "severity": "high",
+      "owner": "w4",
+      "path": "scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+      "line": 571,
+      "affectedEvidence": [
+        "P0.W4.INSTANCE_LEASE_SPIKE",
+        "P0.W4.WORKSPACE_GUARD_SPIKE",
+        "P0.W4.PROCESS_ANCHOR_SPIKE"
+      ],
+      "affectedAdrs": ["ADR-16", "ADR-28", "ADR-31"],
+      "summary": "Cleanup success and zero residuals are hard-coded and emitted before ignored cleanup."
+    },
+    {
+      "id": "R46-05",
+      "severity": "medium",
+      "owner": "w4",
+      "path": "scripts/hosted-web/phase-0/host-primitives/workspace-guard/workspace_guard_spike.c",
+      "line": 150,
+      "affectedEvidence": ["P0.W4.WORKSPACE_GUARD_SPIKE", "P0.W4.PROCESS_ANCHOR_SPIKE"],
+      "affectedAdrs": ["ADR-28", "ADR-31"],
+      "summary": "Close-all loops stop at FD 1023 and do not prove high control descriptors are absent."
+    },
+    {
+      "id": "R46-06",
+      "severity": "high",
+      "owner": "w6",
+      "path": "scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs",
+      "line": 239,
+      "affectedEvidence": [
+        "P0.W6.ARTIFACT_INVENTORY",
+        "P0.W6.ABI_STUB_REPORT",
+        "P0.W4.TARGET_HOST_ENVELOPE",
+        "P0.W4.NATIVE_ARTIFACT_PROPOSAL"
+      ],
+      "affectedAdrs": ["ADR-16", "ADR-17", "ADR-28", "ADR-31"],
+      "summary": "The artifact scanner has no required rows or probes for the three W4 native artifacts and final topology."
+    },
+    {
+      "id": "R46-07",
+      "severity": "medium",
+      "owner": "w6",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "line": 177,
+      "affectedEvidence": ["P0.W6.ABI_STUB_REPORT"],
+      "affectedAdrs": ["ADR-17"],
+      "summary": "Recorded ABI and SQLite smoke facts have no owned reproducible command or assertion."
+    },
+    {
+      "id": "R46-08",
+      "severity": "low",
+      "owner": "w4,w6",
+      "path": ".codex-handoff/phase-00-w4.json",
+      "line": 76,
+      "affectedEvidence": [],
+      "affectedAdrs": [],
+      "summary": "Producer git diff --check commands inspected none of the all-untracked lane output."
+    }
+  ],
+  "audit": {
+    "w4ChangedPaths": 15,
+    "w4ChangedLines": 1916,
+    "w4ScopeClean": true,
+    "w6ChangedPaths": 9,
+    "w6ChangedLines": 1431,
+    "w6ScopeClean": true,
+    "secretScanFindings": 0,
+    "realProjectPathsFound": 0,
+    "phase1ChangesFound": 0,
+    "broadCiRun": false,
+    "producerWorktreesModified": false
+  },
+  "checks": [
+    {
+      "command": "PATH=/usr/local/bin:/usr/bin:/bin /usr/bin/python3 scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+      "worktree": "phase-00-w4-lease-guard-process-v1",
+      "exitCode": 0
+    },
+    {
+      "command": "vitest run W4 owned tests using the writable review-worktree config",
+      "worktree": "phase-00-w4-lease-guard-process-v1",
+      "exitCode": 0,
+      "result": "2 files, 3 tests passed"
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs",
+      "worktree": "phase-00-w4-lease-guard-process-v1",
+      "exitCode": 0
+    },
+    {
+      "command": "eslint --config eslint.fast.config.js --no-cache <W4 JS/TS files>",
+      "worktree": "phase-00-w4-lease-guard-process-v1",
+      "exitCode": 0
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+      "worktree": "phase-00-w6-auth-proxy-artifacts-v1",
+      "exitCode": 0
+    },
+    {
+      "command": "vitest run W6 owned test using the writable review-worktree config",
+      "worktree": "phase-00-w6-auth-proxy-artifacts-v1",
+      "exitCode": 0,
+      "result": "1 file, 17 tests passed"
+    },
+    {
+      "command": "eslint --config eslint.fast.config.js --no-cache <W6 JS/TS files>",
+      "worktree": "phase-00-w6-auth-proxy-artifacts-v1",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --no-index --check /dev/null <each untracked producer file>",
+      "worktree": "both producer worktrees",
+      "exitCode": 0,
+      "result": "zero whitespace errors"
+    },
+    {
+      "command": "reviewer auth restart reproducer after logout, forget-device, and replay-family revocation",
+      "worktree": "phase-00-w6-auth-proxy-artifacts-v1",
+      "exitCode": 0,
+      "expectedFailure": true,
+      "result": "mutationAdmission became true in all three revoked cases"
+    },
+    {
+      "command": "reviewer secret/private-path scan over every W4/W6 owned file",
+      "worktree": "both producer worktrees",
+      "exitCode": 0,
+      "result": "no findings"
+    }
+  ],
+  "adrRecommendations": [
+    {
+      "adr": "ADR-7",
+      "outcome": "reopened",
+      "reason": "The W6 restart model restores revoked authority and reset is not fenced by typed W4 drain evidence."
+    },
+    {
+      "adr": "ADR-16",
+      "outcome": "narrowed",
+      "reason": "Current-host lease characterization is useful, but the required final two-container/manual-contender topology is unavailable."
+    },
+    {
+      "adr": "ADR-28",
+      "outcome": "narrowed",
+      "reason": "Current-host descriptor-bound races pass, but high-FD closure and final-image seccomp/mount behavior remain unproved."
+    },
+    {
+      "adr": "ADR-31",
+      "outcome": "reopened",
+      "reason": "The W4 spike signals discovered descendants through reusable numeric PIDs and has no PID-reuse negative proof."
+    },
+    {
+      "adr": "ADR-17",
+      "outcome": "blocked",
+      "reason": "The current artifact fails worker, fake-stub, terminal-absence and W4 native-artifact manifest requirements."
+    }
+  ],
+  "estimateBuckets": [],
+  "unverifiedClaims": [
+    "All W4 final-image, non-root, init, seccomp and two-container/manual-contender assumptions remain unverified.",
+    "W6 auth/proxy schedules have not run through the final HTTPS edge/container or real SQLite/keyring/browser topology.",
+    "No final hosted artifact exists against which W4 native manifests/probes or W6 terminal/worker/native absence can be target-verified."
+  ],
+  "blockers": [
+    {
+      "class": "missing_evidence",
+      "affectedFindings": ["R46-01", "R46-02", "R46-03", "R46-04", "R46-06"],
+      "controllerAction": "Return findings to W4/W6 owners, rerun targeted review after correction, then admit the exact final-shape image for target probes."
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-00-review-w4-w6.json",
+    "docs/research/hosted-web/phase-0/reciprocal-review-w4-w6.md"
+  ],
+  "nextAction": "producer_correction_then_repeat_reciprocal_review"
+}

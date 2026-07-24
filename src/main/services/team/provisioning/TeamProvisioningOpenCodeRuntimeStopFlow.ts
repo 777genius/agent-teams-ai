@@ -1,7 +1,5 @@
 import { createPersistedLaunchSnapshot } from '../TeamLaunchStateEvaluator';
 
-import { ownsOpenCodeRuntimeAdapterPrimaryLane } from './TeamProvisioningRuntimeAdapterCancellation';
-
 import type {
   TeamLaunchRuntimeAdapter,
   TeamRuntimeMemberLaunchEvidence,
@@ -45,6 +43,7 @@ export interface OpenCodeRuntimeStopFlowPorts {
     teamsBasePath: string;
     teamName: string;
     laneId: string;
+    expectedRunId?: string;
   }): Promise<unknown>;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   clearSecondaryRuntimeRuns(teamName: string): void;
@@ -71,6 +70,7 @@ export interface SingleMixedSecondaryRuntimeLaneStopRun {
 
 export interface SingleMixedSecondaryRuntimeLaneStopPorts {
   teamsBasePath: string;
+  getSecondaryRuntimeRuns(teamName: string): SecondaryRuntimeRunEntry[];
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
   readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
   upsertOpenCodeRuntimeLaneIndexEntry(input: {
@@ -84,9 +84,59 @@ export interface SingleMixedSecondaryRuntimeLaneStopPorts {
     teamsBasePath: string;
     teamName: string;
     laneId: string;
+    expectedRunId?: string;
   }): Promise<unknown>;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   logger: StopLogger;
+}
+
+export interface SecondaryRuntimeStopOwner {
+  readonly laneId: string;
+  readonly runId: string;
+}
+
+export type SecondaryRuntimeStopFence = readonly SecondaryRuntimeStopOwner[];
+
+export function createSecondaryRuntimeStopFence(
+  secondaryRuns: readonly Pick<SecondaryRuntimeRunEntry, 'laneId' | 'runId'>[]
+): SecondaryRuntimeStopFence {
+  return Object.freeze(
+    secondaryRuns.map(({ laneId, runId }) =>
+      Object.freeze({
+        laneId,
+        runId,
+      })
+    )
+  );
+}
+
+function isSecondaryRuntimeRunCurrent(
+  teamName: string,
+  expectedRun: Pick<SecondaryRuntimeRunEntry, 'laneId' | 'runId'>,
+  ports: Pick<OpenCodeRuntimeStopFlowPorts, 'getSecondaryRuntimeRuns'>
+): boolean {
+  return ports
+    .getSecondaryRuntimeRuns(teamName)
+    .some((run) => run.laneId === expectedRun.laneId && run.runId === expectedRun.runId);
+}
+
+function isPrimaryRuntimeRunCurrent(
+  teamName: string,
+  runId: string,
+  ports: Pick<
+    OpenCodeRuntimeStopFlowPorts,
+    'getAliveRunId' | 'provisioningRunByTeam' | 'runtimeAdapterRunByTeam'
+  >,
+  runtimeRunDeletedByStop = false
+): boolean {
+  const runtimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
+  const provisioningRunId = ports.provisioningRunByTeam.get(teamName);
+  const aliveRunId = ports.getAliveRunId(teamName);
+  return (
+    (runtimeRunDeletedByStop ? runtimeRun === undefined : runtimeRun?.runId === runId) &&
+    (provisioningRunId === undefined || provisioningRunId === runId) &&
+    (aliveRunId === null || aliveRunId === runId)
+  );
 }
 
 export async function stopSingleMixedSecondaryRuntimeLane(
@@ -95,8 +145,50 @@ export async function stopSingleMixedSecondaryRuntimeLane(
   reason: TeamRuntimeStopInput['reason'],
   ports: SingleMixedSecondaryRuntimeLaneStopPorts
 ): Promise<void> {
+  const stoppedRunId = lane.runId;
+  if (!stoppedRunId) {
+    return;
+  }
+  const stoppedRun = { laneId: lane.laneId, runId: stoppedRunId };
+  const isStoppedRunCurrent = () => isSecondaryRuntimeRunCurrent(run.teamName, stoppedRun, ports);
   const adapter = ports.getOpenCodeRuntimeAdapter();
   const previousLaunchState = await ports.readLaunchState(run.teamName);
+  if (!isStoppedRunCurrent()) {
+    return;
+  }
+  try {
+    if (!adapter && stoppedRunId) {
+      throw new Error('OpenCode runtime adapter is unavailable; lane stop was not confirmed');
+    }
+    if (adapter && stoppedRunId) {
+      const result = await adapter.stop({
+        runId: stoppedRunId,
+        laneId: lane.laneId,
+        teamName: run.teamName,
+        cwd: lane.member.cwd?.trim() || run.request.cwd,
+        providerId: 'opencode',
+        reason,
+        previousLaunchState,
+        force: true,
+      });
+      if (!result.stopped) {
+        throw new Error(
+          result.diagnostics.join('\n') || `OpenCode lane ${lane.laneId} stop was not confirmed`
+        );
+      }
+      if (!isStoppedRunCurrent()) {
+        return;
+      }
+    }
+  } catch (error) {
+    ports.logger.warn(
+      `[${run.teamName}] Failed to stop mixed OpenCode lane ${lane.laneId}: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    throw error;
+  }
+
   await ports
     .upsertOpenCodeRuntimeLaneIndexEntry({
       teamsBasePath: ports.teamsBasePath,
@@ -106,51 +198,42 @@ export async function stopSingleMixedSecondaryRuntimeLane(
       diagnostics: [`OpenCode lane stop requested: ${reason}`],
     })
     .catch(() => undefined);
-
-  try {
-    if (adapter && lane.runId) {
-      await adapter.stop({
-        runId: lane.runId,
-        laneId: lane.laneId,
-        teamName: run.teamName,
-        cwd: lane.member.cwd?.trim() || run.request.cwd,
-        providerId: 'opencode',
-        reason,
-        previousLaunchState,
-        force: true,
-      });
-    }
-  } catch (error) {
-    ports.logger.warn(
-      `[${run.teamName}] Failed to stop mixed OpenCode lane ${lane.laneId}: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-  } finally {
-    await ports
-      .clearOpenCodeRuntimeLaneStorage({
-        teamsBasePath: ports.teamsBasePath,
-        teamName: run.teamName,
-        laneId: lane.laneId,
-      })
-      .catch(() => undefined);
-    ports.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
-    lane.runId = null;
-    lane.state = 'finished';
-    lane.result = null;
-    lane.warnings = [];
-    lane.diagnostics = [];
+  if (!isStoppedRunCurrent()) {
+    return;
   }
+  const clearResult = await ports.clearOpenCodeRuntimeLaneStorage({
+    teamsBasePath: ports.teamsBasePath,
+    teamName: run.teamName,
+    laneId: lane.laneId,
+    expectedRunId: stoppedRunId,
+  });
+  if (clearResult === 'owner_changed' || !isStoppedRunCurrent()) {
+    return;
+  }
+  ports.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
+  lane.runId = null;
+  lane.state = 'finished';
+  lane.result = null;
+  lane.warnings = [];
+  lane.diagnostics = [];
 }
 
 export async function stopMixedSecondaryRuntimeLanes(
   teamName: string,
-  ports: OpenCodeRuntimeStopFlowPorts
+  ports: OpenCodeRuntimeStopFlowPorts,
+  ownershipFence?: SecondaryRuntimeStopFence
 ): Promise<void> {
+  const ownedRunIdByLaneId = ownershipFence
+    ? new Map(ownershipFence.map(({ laneId, runId }) => [laneId, runId] as const))
+    : null;
   // The store returns live lane objects. Snapshot every stop target before the
   // first await so a same-lane relaunch cannot retarget this cleanup in place.
   const secondaryRuns = ports
     .getSecondaryRuntimeRuns(teamName)
+    .filter(
+      (secondaryRun) =>
+        !ownedRunIdByLaneId || ownedRunIdByLaneId.get(secondaryRun.laneId) === secondaryRun.runId
+    )
     .map((secondaryRun) => ({ ...secondaryRun }));
   if (secondaryRuns.length === 0) {
     return;
@@ -160,23 +243,17 @@ export async function stopMixedSecondaryRuntimeLanes(
     const adapter = ports.getOpenCodeRuntimeAdapter();
     const previousLaunchState = await ports.readLaunchState(teamName);
     if (!adapter) {
-      for (const secondaryRun of secondaryRuns) {
-        if (!isCurrentSecondaryRuntimeRun(teamName, secondaryRun, ports)) {
+      throw new Error(
+        `[${teamName}] OpenCode runtime adapter is unavailable; secondary lane stops were not confirmed`
+      );
+    }
+    const failures: unknown[] = [];
+    for (const secondaryRun of secondaryRuns) {
+      try {
+        if (!isSecondaryRuntimeRunCurrent(teamName, secondaryRun, ports)) {
           continue;
         }
-        await clearSecondaryRuntimeLaneStorage(teamName, secondaryRun.laneId, ports);
-        if (isCurrentSecondaryRuntimeRun(teamName, secondaryRun, ports)) {
-          ports.deleteSecondaryRuntimeRun(teamName, secondaryRun.laneId);
-        }
-      }
-      return;
-    }
-    for (const secondaryRun of secondaryRuns) {
-      if (isCurrentSecondaryRuntimeRun(teamName, secondaryRun, ports)) {
-        await clearSecondaryRuntimeLaneStorage(teamName, secondaryRun.laneId, ports);
-      }
-      try {
-        await adapter.stop({
+        const result = await adapter.stop({
           runId: secondaryRun.runId,
           laneId: secondaryRun.laneId,
           teamName,
@@ -186,23 +263,57 @@ export async function stopMixedSecondaryRuntimeLanes(
           previousLaunchState,
           force: true,
         });
+        if (!result.stopped) {
+          throw new Error(
+            result.diagnostics.join('\n') ||
+              `OpenCode secondary lane ${secondaryRun.laneId} stop was not confirmed`
+          );
+        }
       } catch (error) {
         ports.logger.warn(
           `[${teamName}] Failed to stop mixed OpenCode secondary lane ${secondaryRun.laneId}: ${
             error instanceof Error ? error.message : String(error)
           }`
         );
-      } finally {
-        // adapter.stop is an ownership handoff point. A relaunch may replace
-        // the same lane object while it is awaited, so both storage and map
-        // cleanup must be fenced by the immutable target runId.
-        if (isCurrentSecondaryRuntimeRun(teamName, secondaryRun, ports)) {
-          await clearSecondaryRuntimeLaneStorage(teamName, secondaryRun.laneId, ports);
-          if (isCurrentSecondaryRuntimeRun(teamName, secondaryRun, ports)) {
-            ports.deleteSecondaryRuntimeRun(teamName, secondaryRun.laneId);
-          }
-        }
+        failures.push(error);
+        continue;
       }
+
+      if (!isSecondaryRuntimeRunCurrent(teamName, secondaryRun, ports)) {
+        continue;
+      }
+
+      try {
+        const clearResult = await ports.clearOpenCodeRuntimeLaneStorage({
+          teamsBasePath: ports.teamsBasePath,
+          teamName,
+          laneId: secondaryRun.laneId,
+          expectedRunId: secondaryRun.runId,
+        });
+        if (clearResult === 'owner_changed') {
+          continue;
+        }
+        if (!isSecondaryRuntimeRunCurrent(teamName, secondaryRun, ports)) {
+          continue;
+        }
+        ports.deleteSecondaryRuntimeRun(teamName, secondaryRun.laneId);
+      } catch (error) {
+        ports.logger.warn(
+          `[${teamName}] Failed to clean stopped OpenCode secondary lane ${secondaryRun.laneId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        failures.push(error);
+      }
+    }
+    if (failures.length > 0) {
+      throw new AggregateError(
+        failures,
+        `[${teamName}] Failed to stop all OpenCode secondary lanes`
+      );
+    }
+    if (ports.getSecondaryRuntimeRuns(teamName).length === 0) {
+      ports.clearSecondaryRuntimeRuns(teamName);
     }
   } finally {
     ports.stoppingSecondaryRuntimeTeams.delete(teamName);
@@ -215,26 +326,12 @@ export async function stopOpenCodeRuntimeAdapterTeam(
   ports: OpenCodeRuntimeStopFlowPorts
 ): Promise<void> {
   const adapter = ports.getOpenCodeRuntimeAdapter();
-  const currentRuntimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
-  const runtimeRun = currentRuntimeRun?.runId === runId ? currentRuntimeRun : undefined;
   const previousLaunchState = await ports.readLaunchState(teamName);
-  if (!adapter) {
-    if (ownsPrimaryRuntimeLane(teamName, runId, ports)) {
-      await clearPrimaryRuntimeLaneStorage(teamName, ports);
-    }
-    // Gate the no-adapter cleanup on exact ownership too: this also runs after an
-    // await (clearOpenCodeRuntimeLaneStorage), so a newer run registered in the
-    // meantime must not have its tracking wiped by teamName.
-    if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
-      ports.runtimeAdapterRunByTeam.delete(teamName);
-    }
-    if (ports.getAliveRunId(teamName) === runId) {
-      ports.deleteAliveRunId(teamName);
-    }
-    if (ports.provisioningRunByTeam.get(teamName) === runId) {
-      ports.provisioningRunByTeam.delete(teamName);
-    }
-    ports.invalidateRuntimeSnapshotCaches(teamName);
+  const runtimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
+  let runtimeRunDeletedByStop = false;
+  const isStoppedRunCurrent = (): boolean =>
+    isPrimaryRuntimeRunCurrent(teamName, runId, ports, runtimeRunDeletedByStop);
+  if (!isStoppedRunCurrent()) {
     return;
   }
   const startedAt = ports.nowIso();
@@ -247,57 +344,8 @@ export async function stopOpenCodeRuntimeAdapterTeam(
     startedAt: previousProgress?.startedAt ?? startedAt,
     updatedAt: startedAt,
   });
-  ports.clearOpenCodeRuntimeToolApprovals(teamName, {
-    runId,
-    laneId: 'primary',
-    emitDismiss: true,
-  });
-  if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
-    ports.runtimeAdapterRunByTeam.delete(teamName);
-  }
-  if (ports.getAliveRunId(teamName) === runId) {
-    ports.deleteAliveRunId(teamName);
-  }
-  if (ports.provisioningRunByTeam.get(teamName) === runId) {
-    ports.provisioningRunByTeam.delete(teamName);
-  }
-  ports.invalidateRuntimeSnapshotCaches(teamName);
-  try {
-    if (ownsPrimaryRuntimeLane(teamName, runId, ports)) {
-      await clearPrimaryRuntimeLaneStorage(teamName, ports);
-    }
-    const result = await adapter.stop({
-      runId,
-      laneId: 'primary',
-      teamName,
-      cwd: runtimeRun?.cwd ?? ports.readPersistedTeamProjectPath(teamName) ?? undefined,
-      providerId: 'opencode',
-      reason: 'user_requested',
-      previousLaunchState,
-      force: true,
-    });
-    await ports.writeLaunchStateSnapshot(
-      teamName,
-      createPersistedLaunchSnapshot({
-        teamName,
-        expectedMembers: previousLaunchState?.expectedMembers ?? [],
-        leadSessionId: previousLaunchState?.leadSessionId,
-        launchPhase: 'reconciled',
-        members: previousLaunchState?.members ?? {},
-      })
-    );
-    ports.setRuntimeAdapterProgress({
-      runId,
-      teamName,
-      state: result.stopped ? 'disconnected' : 'failed',
-      message: result.stopped ? 'OpenCode team stopped' : 'OpenCode team stop failed',
-      messageSeverity: result.stopped ? undefined : 'error',
-      startedAt: previousProgress?.startedAt ?? startedAt,
-      updatedAt: ports.nowIso(),
-      cliLogsTail: result.diagnostics.join('\n') || undefined,
-      warnings: result.warnings.length > 0 ? result.warnings : undefined,
-    });
-  } catch (error) {
+
+  const recordFailure = (error: unknown): void => {
     const message = error instanceof Error ? error.message : String(error);
     ports.setRuntimeAdapterProgress({
       runId,
@@ -310,88 +358,119 @@ export async function stopOpenCodeRuntimeAdapterTeam(
       error: message,
       cliLogsTail: message,
     });
-  } finally {
-    // Every await above permits a lockless relaunch. Revalidate all primary
-    // ownership maps before the final shared-storage clear; any newer owner is
-    // authoritative and its lane artifacts must survive this old stop.
-    if (ownsPrimaryRuntimeLane(teamName, runId, ports)) {
-      await clearPrimaryRuntimeLaneStorage(teamName, ports);
-    }
-    // Only wipe tracking if THIS run still owns it. This runs AFTER the long
-    // `await adapter.stop`, during which a concurrent (lockless) stop/relaunch
-    // can register a NEWER run for the team; deleting by teamName unconditionally
-    // would orphan that newer run's tracking (its OpenCode sessions stay alive
-    // while the UI shows not-launched -> ghost-alive, and the next launch
-    // double-spawns).
-    if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
-      ports.runtimeAdapterRunByTeam.delete(teamName);
-    }
-    if (ports.getAliveRunId(teamName) === runId) {
-      ports.deleteAliveRunId(teamName);
-    }
-    if (ports.provisioningRunByTeam.get(teamName) === runId) {
-      ports.provisioningRunByTeam.delete(teamName);
-    }
-    ports.emitTeamChange({
-      type: 'process',
-      teamName,
-      runId,
-      detail: 'stopped',
-    });
+  };
+
+  if (!adapter) {
+    const error = new Error('OpenCode runtime adapter is unavailable; stop was not confirmed');
+    recordFailure(error);
+    throw error;
   }
-}
 
-function isCurrentSecondaryRuntimeRun(
-  teamName: string,
-  targetRun: Pick<SecondaryRuntimeRunEntry, 'laneId' | 'runId'>,
-  ports: Pick<OpenCodeRuntimeStopFlowPorts, 'getSecondaryRuntimeRuns'>
-): boolean {
-  return ports
-    .getSecondaryRuntimeRuns(teamName)
-    .some(
-      (currentRun) => currentRun.laneId === targetRun.laneId && currentRun.runId === targetRun.runId
-    );
-}
-
-async function clearSecondaryRuntimeLaneStorage(
-  teamName: string,
-  laneId: string,
-  ports: Pick<OpenCodeRuntimeStopFlowPorts, 'clearOpenCodeRuntimeLaneStorage' | 'teamsBasePath'>
-): Promise<void> {
-  await ports
-    .clearOpenCodeRuntimeLaneStorage({
-      teamsBasePath: ports.teamsBasePath,
+  let result: Awaited<ReturnType<TeamLaunchRuntimeAdapter['stop']>>;
+  try {
+    result = await adapter.stop({
+      runId,
+      laneId: 'primary',
       teamName,
-      laneId,
-    })
-    .catch(() => undefined);
-}
-
-function ownsPrimaryRuntimeLane(
-  teamName: string,
-  runId: string,
-  ports: Pick<
-    OpenCodeRuntimeStopFlowPorts,
-    'getAliveRunId' | 'provisioningRunByTeam' | 'runtimeAdapterRunByTeam'
-  >
-): boolean {
-  return ownsOpenCodeRuntimeAdapterPrimaryLane({
-    currentProvisioningRunId: ports.provisioningRunByTeam.get(teamName),
-    currentAliveRunId: ports.getAliveRunId(teamName) ?? undefined,
-    currentRuntimeRun: ports.runtimeAdapterRunByTeam.get(teamName),
-    runId,
-  });
-}
-
-async function clearPrimaryRuntimeLaneStorage(
-  teamName: string,
-  ports: Pick<OpenCodeRuntimeStopFlowPorts, 'clearOpenCodeRuntimeLaneStorage' | 'teamsBasePath'>
-): Promise<void> {
-  await ports
-    .clearOpenCodeRuntimeLaneStorage({
+      cwd: runtimeRun?.cwd ?? ports.readPersistedTeamProjectPath(teamName) ?? undefined,
+      providerId: 'opencode',
+      reason: 'user_requested',
+      previousLaunchState,
+      force: true,
+    });
+    if (!result.stopped) {
+      throw new Error(
+        result.diagnostics.join('\n') || 'OpenCode runtime adapter stop was not confirmed'
+      );
+    }
+    if (!isStoppedRunCurrent()) {
+      return;
+    }
+    await ports.writeLaunchStateSnapshot(
+      teamName,
+      createPersistedLaunchSnapshot({
+        teamName,
+        expectedMembers: previousLaunchState?.expectedMembers ?? [],
+        leadSessionId: previousLaunchState?.leadSessionId,
+        launchPhase: 'reconciled',
+        members: previousLaunchState?.members ?? {},
+      })
+    );
+    if (!isStoppedRunCurrent()) {
+      return;
+    }
+    const clearResult = await ports.clearOpenCodeRuntimeLaneStorage({
       teamsBasePath: ports.teamsBasePath,
       teamName,
       laneId: 'primary',
-    })
-    .catch(() => undefined);
+      expectedRunId: runId,
+    });
+    if (clearResult === 'owner_changed') {
+      return;
+    }
+    if (!isStoppedRunCurrent()) {
+      return;
+    }
+  } catch (error) {
+    recordFailure(error);
+    throw error;
+  }
+
+  if (!isStoppedRunCurrent()) {
+    return;
+  }
+  ports.clearOpenCodeRuntimeToolApprovals(teamName, {
+    runId,
+    laneId: 'primary',
+    emitDismiss: true,
+  });
+
+  if (!isStoppedRunCurrent()) {
+    return;
+  }
+  ports.runtimeAdapterRunByTeam.delete(teamName);
+  runtimeRunDeletedByStop = true;
+
+  if (!isStoppedRunCurrent()) {
+    return;
+  }
+  if (ports.provisioningRunByTeam.get(teamName) === runId) {
+    ports.provisioningRunByTeam.delete(teamName);
+  }
+
+  if (!isStoppedRunCurrent()) {
+    return;
+  }
+  if (ports.getAliveRunId(teamName) === runId) {
+    ports.deleteAliveRunId(teamName);
+  }
+
+  if (!isStoppedRunCurrent()) {
+    return;
+  }
+  ports.invalidateRuntimeSnapshotCaches(teamName);
+
+  if (!isStoppedRunCurrent()) {
+    return;
+  }
+  ports.setRuntimeAdapterProgress({
+    runId,
+    teamName,
+    state: 'disconnected',
+    message: 'OpenCode team stopped',
+    startedAt: previousProgress?.startedAt ?? startedAt,
+    updatedAt: ports.nowIso(),
+    cliLogsTail: result.diagnostics.join('\n') || undefined,
+    warnings: result.warnings.length > 0 ? result.warnings : undefined,
+  });
+
+  if (!isStoppedRunCurrent()) {
+    return;
+  }
+  ports.emitTeamChange({
+    type: 'process',
+    teamName,
+    runId,
+    detail: 'stopped',
+  });
 }

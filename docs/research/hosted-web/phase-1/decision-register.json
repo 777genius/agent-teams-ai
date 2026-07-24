@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "nodeId": "P1.I.INTEGRATION",
+  "laneId": "p1-i",
+  "packetRevision": "phase-01-p1-i-integration-r3",
+  "routerRevision": "phase-01-p1-i-format-remediation-router-r1",
+  "baseSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "canonicalSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "planBundleCommit": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "phaseStartSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "headSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "terminalState": "HOLD",
+  "status": "verified",
+  "evidenceIds": ["P1.I.INTEGRATION", "P1.I.ROLLBACK"],
+  "decisions": [
+    {
+      "id": "P1.D.AUTHORITY",
+      "disposition": "accepted",
+      "decision": "Bind this producer and every authority field to clean pushed commit 5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f."
+    },
+    {
+      "id": "P1.D.INPUT_MANIFEST",
+      "disposition": "accepted",
+      "decision": "Consume exactly the ordered 68-path phase1CanonicalInputs manifest followed by the accepted lint-remediation handoff as ordinal 69."
+    },
+    {
+      "id": "P1.D.FORMAT_PROVENANCE",
+      "disposition": "accepted-narrowing",
+      "decision": "Retain the accepted format-remediation handoff as integration provenance only; exclude it from the P1.I input count and exact 74-path gate."
+    },
+    {
+      "id": "P1.D.REJECTED_ATTEMPT",
+      "disposition": "quarantined-never-integrate",
+      "decision": "The terminal r1 patch and all five blocked outputs remain provenance only and were not materialized, copied, compared for adoption, repaired, or reused."
+    },
+    {
+      "id": "P1.D.PREDECESSORS",
+      "disposition": "accepted",
+      "decision": "Freeze accepted P1.R1, accepted P1.R2, accepted lint remediation, and accepted format remediation as immutable predecessors."
+    },
+    {
+      "id": "P1.D.TYPECHECK",
+      "disposition": "accepted-inherited-baseline",
+      "decision": "Retain exactly seven inherited Phase 0 diagnostics; owned and unexpected counts are zero."
+    },
+    {
+      "id": "P1.D.LINT",
+      "disposition": "accepted",
+      "decision": "Full lint exits zero with zero errors; warning-only repository debt is not widened by the five JSON outputs."
+    },
+    {
+      "id": "P1.D.TEST_ROOT_ESCAPE",
+      "disposition": "deferred-to-phase-2",
+      "decision": "Keep the root-escape control deferred only while P1.NEG.NO_FILESYSTEM_ADAPTER_PHASE1 passes; any Phase 1 filesystem surface reopens the gate."
+    },
+    {
+      "id": "P1.D.PRODUCTION_REACHABILITY",
+      "disposition": "not-claimed",
+      "decision": "Phase 1 proves an unregistered read-only specimen, not production IPC, HTTP, preload, renderer, filesystem, runtime, provider, or auth behavior."
+    },
+    {
+      "id": "P1.D.ROLLBACK",
+      "disposition": "accepted-candidate",
+      "decision": "The exact 54 payload paths round-trip only in scratch: forward bytes equal authority and reverse state has all 54 paths absent."
+    },
+    {
+      "id": "P1.D.ESTIMATE",
+      "disposition": "variance-recorded-pending-independent-review",
+      "decision": "Record actual five-output evidence size without dropping evidence or claiming hidden product scope."
+    },
+    {
+      "id": "P1.D.EVIDENCE_FREEZE",
+      "disposition": "generated-pending-independent-review",
+      "decision": "Freeze this five-output candidate with all 14 producer gates passed; independent acceptance and integration are not claimed."
+    },
+    {
+      "id": "P1.D.SUCCESSORS",
+      "disposition": "blocked",
+      "decision": "P1.F, Phase 2+, unrelated work, integration, lifecycle action, and successor-controller authority remain blocked."
+    }
+  ],
+  "gateDecisions": [
+    {
+      "id": "P1.GATE.PROVENANCE",
+      "status": "passed",
+      "evidence": "authority equality, 69-input manifest hash, and provenance-only format handoff exclusion"
+    },
+    {
+      "id": "P1.GATE.PREDECESSORS",
+      "status": "passed",
+      "evidence": "accepted P1.R1, P1.R2, lint-remediation, and format-remediation authority present"
+    },
+    {
+      "id": "P1.GATE.SCOPE",
+      "status": "passed",
+      "evidence": "exact five untracked outputs, zero tracked/staged paths"
+    },
+    {
+      "id": "P1.GATE.TESTS",
+      "status": "passed",
+      "evidence": "13/13 files and 60/60 tests"
+    },
+    {
+      "id": "P1.GATE.TYPECHECK",
+      "status": "passed",
+      "evidence": "seven inherited, zero owned, zero unexpected diagnostics"
+    },
+    {
+      "id": "P1.GATE.LINT",
+      "status": "passed",
+      "evidence": "full lint exit 0 with zero errors"
+    },
+    {
+      "id": "P1.GATE.FORMAT",
+      "status": "passed",
+      "evidence": "exact 74-path pinned Prettier exit 0"
+    },
+    {
+      "id": "P1.GATE.NEGATIVES",
+      "status": "passed",
+      "evidence": "complete named negative inventory proved or explicitly deferred behind the passing no-filesystem gate"
+    },
+    {
+      "id": "P1.GATE.RATCHET",
+      "status": "passed",
+      "evidence": "focused 1/1 file and 3/3 tests"
+    },
+    {
+      "id": "P1.GATE.SECURITY",
+      "status": "passed",
+      "evidence": "exact 74-path classified scans plus UTF-8, NUL, and MIME proof"
+    },
+    {
+      "id": "P1.GATE.ROLLBACK",
+      "status": "passed",
+      "evidence": "exact 54-path scratch forward equality and reverse absence"
+    },
+    {
+      "id": "P1.GATE.ESTIMATE",
+      "status": "passed",
+      "evidence": "unique P1.I output allocation and variance reconciliation"
+    },
+    {
+      "id": "P1.GATE.DECISIONS",
+      "status": "passed",
+      "evidence": "complete freeze-candidate decision register"
+    },
+    {
+      "id": "P1.GATE.EVIDENCE_FREEZE",
+      "status": "passed",
+      "evidence": "input hashes, evidence lifecycle rows, owned output hashes, and self-review"
+    }
+  ],
+  "unverifiedClaims": [
+    "independent P1.I acceptance",
+    "integration of these five outputs",
+    "production transport or runtime behavior",
+    "P1.F authorization",
+    "Phase 2+ behavior"
+  ],
+  "blockedSuccessors": ["P1.F", "Phase 2+", "unrelated product work", "successor controllers"],
+  "nextAction": "independent-verification"
+}

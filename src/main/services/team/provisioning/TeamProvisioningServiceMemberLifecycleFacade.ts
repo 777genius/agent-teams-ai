@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 
 import { cleanupAnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropicTeamApiKeyHelper';
 import { boundLaunchDiagnostics } from '../progressPayload';
+import { TeamMembersMetaStore } from '../TeamMembersMetaStore';
 
 import { createStaleAnthropicTeamApiKeyHelperCleanupRetryOwner } from './TeamProvisioningAnthropicApiKeyHelperCleanup';
 import {
@@ -74,14 +75,12 @@ import { createNodeStopPrimaryOwnedRosterRuntimeUseCase } from './TeamProvisioni
 import { type TeamProvisioningVerificationProbePorts } from './TeamProvisioningVerificationProbePortsFactory';
 import { createTeamProvisioningWorkspaceTrustPreSpawnBoundary } from './TeamProvisioningWorkspaceTrustPreSpawnBoundary';
 
-import type { TeamMembersMetaStore } from '../TeamMembersMetaStore';
 import type { TeamProvisioningOutputRecoveryFacade } from './TeamProvisioningOutputRecoveryFacade';
 import type { TeamProvisioningPrepareFacade } from './TeamProvisioningPrepareFacade';
 import type { TeamProvisioningToolApprovalFacade } from './TeamProvisioningToolApprovalFacade';
 import type { TeamProvisioningTransientRunState } from './TeamProvisioningTransientRunState';
 import type {
   InboxMessage,
-  RetryFailedOpenCodeSecondaryLanesResult,
   TeamChangeEvent,
   TeamCreateRequest,
   TeamLaunchRequest,
@@ -91,15 +90,6 @@ import type {
 } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
-
-export interface OpenCodeAggregatePrimaryRestartLease {
-  teamName: string;
-  runId: string;
-  memberName: string;
-  completion: Promise<void>;
-  precedingLifecycleOperations: Promise<void>[];
-  cancelRequested: boolean;
-}
 
 function mergeProvisioningMembersWithRemovalTombstones(
   activeMembers: readonly TeamMember[],
@@ -117,32 +107,56 @@ function mergeProvisioningMembersWithRemovalTombstones(
 
 function preserveProvisioningRemovalTombstones(store: TeamMembersMetaStore): TeamMembersMetaStore {
   const getMeta = (store as Partial<TeamMembersMetaStore>).getMeta;
+  const getMembers = (store as Partial<TeamMembersMetaStore>).getMembers;
+  const rawUpdateMembers = (store as Partial<TeamMembersMetaStore>).updateMembers;
   const rawWriteMembers = (store as Partial<TeamMembersMetaStore>).writeMembers;
-  if (typeof getMeta !== 'function' || typeof rawWriteMembers !== 'function') {
+  if (typeof rawWriteMembers !== 'function') {
     return store;
   }
   const writeMembers = rawWriteMembers.bind(store);
+  const updateMembers =
+    typeof rawUpdateMembers === 'function'
+      ? rawUpdateMembers.bind(store)
+      : !(store instanceof TeamMembersMetaStore)
+        ? async (
+            teamName: string,
+            update: Parameters<TeamMembersMetaStore['updateMembers']>[1],
+            options?: { providerBackendId?: string }
+          ): Promise<void> => {
+            // Legacy unit harnesses use structural test doubles that predate updateMembers.
+            // Production TeamMembersMetaStore instances always use the atomic branch above.
+            const existingMembers =
+              typeof getMembers === 'function'
+                ? await getMembers.call(store, teamName)
+                : ((await getMeta?.call(store, teamName))?.members ?? []);
+            await writeMembers(teamName, await update(existingMembers), options);
+          }
+        : null;
+  if (!updateMembers) {
+    return store;
+  }
 
   return new Proxy(store, {
     get(target, property) {
+      if (property === 'updateMembers') {
+        return updateMembers;
+      }
       if (property === 'writeMembers') {
         return async (
           teamName: string,
           members: TeamMember[],
           options?: { providerBackendId?: string }
         ): Promise<void> => {
-          const existingMeta = await getMeta.call(target, teamName);
-          await writeMembers(
+          await updateMembers(
             teamName,
-            mergeProvisioningMembersWithRemovalTombstones(members, existingMeta?.members ?? []),
+            (existingMembers) =>
+              mergeProvisioningMembersWithRemovalTombstones(members, existingMembers),
             options
           );
         };
       }
       const value = Reflect.get(target, property, target) as unknown;
-      return typeof value === 'function'
-        ? (...args: unknown[]): unknown => Reflect.apply(value, target, args) as unknown
-        : value;
+      return typeof value === 'function' ? value.bind(target) : value;
     },
   });
 }
@@ -179,37 +193,23 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
       baseClaudeDir: getClaudeBasePath(),
       logger,
     });
-  protected readonly openCodeAggregatePrimaryRestartByTeam = new Map<
-    string,
-    OpenCodeAggregatePrimaryRestartLease
-  >();
-  protected readonly openCodeRuntimeAdapterStopInFlightByTeam = new Map<
-    string,
-    { teamName: string; runId: string; promise: Promise<void> }
-  >();
   protected override getOpenCodeAggregatePrimaryRestartTeamNamesForShutdown(): Iterable<string> {
     return Array.from(
       this.openCodeAggregatePrimaryRestartByTeam.values(),
       (restart) => restart.teamName
     );
   }
+
   protected override getOpenCodeRuntimeAdapterStopInFlightTeamNamesForShutdown(): Iterable<string> {
     return Array.from(
       this.openCodeRuntimeAdapterStopInFlightByTeam.values(),
       (stop) => stop.teamName
     );
   }
-  protected readonly memberLifecycleCompletionByKey = new Map<
-    string,
-    { teamKey: string; token: symbol; completion: Promise<void> }
-  >();
+
   private readonly preparedOpenCodeRuntimeLaunchMembersByTeam = new Map<
     string,
     TeamCreateRequest['members']
-  >();
-  protected readonly failedOpenCodeSecondaryRetryInFlightByTeam = new Map<
-    string,
-    Promise<RetryFailedOpenCodeSecondaryLanesResult>
   >();
   private readonly memberLifecycleOperations = new Map<string, MemberLifecycleOperation>();
   private readonly baseMemberLifecycleOperationRunner =

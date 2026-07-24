@@ -1,0 +1,9 @@
+test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts(25,8): error TS7016: Could not find a declaration file for module '../../../../../scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs'. '<repo>/scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs' implicitly has an 'any' type.
+test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts(66,31): error TS7031: Binding element 'code' implicitly has an 'any' type.
+test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts(117,68): error TS18046: 'session' is of type 'unknown'.
+test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts(413,48): error TS7031: Binding element 'operation' implicitly has an 'any' type.
+test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts(733,10): error TS7031: Binding element 'artifactId' implicitly has an 'any' type.
+test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts(12,8): error TS7016: Could not find a declaration file for module '../../../../../scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs'. '<repo>/scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs' implicitly has an 'any' type.
+test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts(162,44): error TS2352: Conversion of type '{ providerBackends: { codex: "fixture-codex"; gemini: "fixture-gemini"; }; }' to type 'RuntimeConfig' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  The types of 'providerBackends.gemini' are incompatible between these types.
+    Type '"fixture-gemini"' is not comparable to type '"auto" | "api" | "cli-sdk"'.

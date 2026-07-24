@@ -2,7 +2,7 @@ import { decideMemberWorkSyncStatus } from '../domain';
 
 import {
   appendMemberWorkSyncAudit,
-  buildMemberWorkSyncPhase2ReadinessAuditFields,
+  buildMemberWorkSyncDeliveryReadinessAuditFields,
   reasonToAuditEvent,
 } from './MemberWorkSyncAudit';
 import { decideMemberWorkSyncNudgeActivation } from './MemberWorkSyncNudgeActivationPolicy';
@@ -15,8 +15,8 @@ import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeAct
 
 import type {
   MemberWorkSyncAgenda,
+  MemberWorkSyncDeliveryReadinessAssessment,
   MemberWorkSyncOutboxItem,
-  MemberWorkSyncPhase2ReadinessAssessment,
   MemberWorkSyncStatus,
 } from '../../contracts';
 import type { MemberWorkSyncAuditEventName, MemberWorkSyncUseCaseDeps } from './ports';
@@ -153,7 +153,7 @@ function getAgendaReviewPickupRequestEventIds(agenda: MemberWorkSyncAgenda): str
           (item) =>
             item.kind === 'review' &&
             item.evidence.reviewObligation === 'review_pickup_required' &&
-            item.evidence.canBypassPhase2 === true &&
+            item.evidence.canBypassDeliveryReadiness === true &&
             (item.evidence.reviewDiagnostics?.length ?? 0) === 0
         )
         .map((item) => item.evidence.reviewRequestEventId)
@@ -505,7 +505,7 @@ export class MemberWorkSyncNudgeDispatcher {
           item,
           reasonToAuditEvent(revalidation.reason),
           revalidation.reason,
-          revalidation.phase2Readiness
+          revalidation.deliveryReadiness
         );
         return 'retryable';
       }
@@ -767,7 +767,7 @@ export class MemberWorkSyncNudgeDispatcher {
     item: MemberWorkSyncOutboxItem,
     event: MemberWorkSyncAuditEventName,
     reason: string,
-    phase2Readiness?: MemberWorkSyncPhase2ReadinessAssessment
+    deliveryReadiness?: MemberWorkSyncDeliveryReadinessAssessment
   ): Promise<void> {
     await appendMemberWorkSyncAudit(this.deps, {
       teamName: item.teamName,
@@ -776,7 +776,7 @@ export class MemberWorkSyncNudgeDispatcher {
       source: 'nudge_dispatcher',
       agendaFingerprint: item.agendaFingerprint,
       reason,
-      ...buildMemberWorkSyncPhase2ReadinessAuditFields(phase2Readiness),
+      ...buildMemberWorkSyncDeliveryReadinessAuditFields(deliveryReadiness),
       taskRefs: item.payload.taskRefs,
       messagePreview: item.payload.text,
     });
@@ -792,7 +792,7 @@ export class MemberWorkSyncNudgeDispatcher {
         reason: string;
         retryable: boolean;
         nextAttemptAt?: string;
-        phase2Readiness?: MemberWorkSyncPhase2ReadinessAssessment;
+        deliveryReadiness?: MemberWorkSyncDeliveryReadinessAssessment;
       }
   > {
     const runtimeActivity = await resolveMemberWorkSyncRuntimeActivity(this.deps, {
@@ -891,12 +891,12 @@ export class MemberWorkSyncNudgeDispatcher {
           ? 'blocking_metrics'
           : activation.reason === 'status_not_nudgeable'
             ? 'status_not_nudgeable'
-            : 'phase2_not_ready';
+            : 'delivery_not_ready';
       return {
         ok: false,
         reason,
         retryable: true,
-        phase2Readiness: metrics.phase2Readiness,
+        deliveryReadiness: metrics.deliveryReadiness,
       };
     }
 
