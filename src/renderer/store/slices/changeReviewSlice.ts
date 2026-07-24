@@ -1641,7 +1641,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
             });
           }
           set({ applying: false });
-          return null;
+          return { applied: 0, skipped: 0, conflicts: 0, errors: [] };
         }
 
         const decisionPersistenceScope = buildApplyDecisionPersistenceScope(

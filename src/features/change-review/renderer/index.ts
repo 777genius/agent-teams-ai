@@ -12,6 +12,10 @@ export {
 } from './adapters/createChangeReviewConflictPorts';
 export type { ChangeReviewConflictStateBridge } from './adapters/createChangeReviewConflictStateBridge';
 export { createChangeReviewConflictStateBridge } from './adapters/createChangeReviewConflictStateBridge';
+export {
+  createChangeReviewDialogLifecycleCommandPort,
+  createChangeReviewDialogLifecycleStatePort,
+} from './adapters/createChangeReviewDialogLifecyclePorts';
 export { createChangeReviewDraftHistoryPort } from './adapters/createChangeReviewDraftHistoryPort';
 export {
   createChangeReviewFileDecisionCommandPort,
@@ -43,6 +47,8 @@ export {
   CHANGE_REVIEW_PERSISTENCE_ERROR,
   useChangeReviewDecisionPersistenceController,
 } from './hooks/useChangeReviewDecisionPersistenceController';
+export type { ChangeReviewDialogLifecycleController } from './hooks/useChangeReviewDialogLifecycleController';
+export { useChangeReviewDialogLifecycleController } from './hooks/useChangeReviewDialogLifecycleController';
 export type {
   ChangeReviewDraftHistoryController,
   ChangeReviewDraftHistoryDiagnostics,
@@ -82,6 +88,20 @@ export type {
   ChangeReviewConflictQueryPort,
   ChangeReviewConflictScope,
 } from './ports/changeReviewConflictPorts';
+export type {
+  ChangeReviewDialogLifecycleApplyOutcome,
+  ChangeReviewDialogLifecycleAutoClearResult,
+  ChangeReviewDialogLifecycleCommandPort,
+  ChangeReviewDialogLifecycleDecisionPersistencePort,
+  ChangeReviewDialogLifecycleDraftHistoryPort,
+  ChangeReviewDialogLifecycleEditorPort,
+  ChangeReviewDialogLifecyclePersistenceScope,
+  ChangeReviewDialogLifecycleSessionPort,
+  ChangeReviewDialogLifecycleStatePort,
+  ChangeReviewDialogLifecycleStateSnapshot,
+  ChangeReviewDialogLifecycleStatusPort,
+  ChangeReviewDialogLifecycleWriteEvidencePort,
+} from './ports/changeReviewDialogLifecyclePorts';
 export type {
   ChangeReviewDraftHistoryEntryInput,
   ChangeReviewDraftHistoryPort,
@@ -148,6 +168,20 @@ export {
   describeReviewConflictDiscard,
   selectLatestReviewConflictCandidate,
 } from './utils/changeReviewConflicts';
+export type {
+  ChangeReviewActionLockState,
+  ChangeReviewCloseReadiness,
+  ChangeReviewCloseReadinessInput,
+  ChangeReviewDecisionWriteDiagnostics,
+  ChangeReviewDraftWriteDiagnostics,
+} from './utils/changeReviewDialogLifecycle';
+export {
+  evaluateChangeReviewCloseReadiness,
+  getReviewCloseBlockReason,
+  hasUnscopedLocalReviewState,
+  isReviewActionLocked,
+  shouldRequestReviewCloseForEscape,
+} from './utils/changeReviewDialogLifecycle';
 export type { ReviewHistoryRecoveryDisposition } from './utils/changeReviewHistoryMutation';
 export {
   areReviewPersistedStatesEqual,
