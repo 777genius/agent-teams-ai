@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-clear-text-protocols -- plain-HTTP local URLs are the safe test subject */
 import { promises as fs } from 'node:fs';
 import * as http from 'node:http';
 import * as os from 'node:os';
@@ -672,3 +673,5 @@ function closeServer(server: http.Server): Promise<void> {
     server.close((error) => (error ? reject(error) : resolve()));
   });
 }
+
+/* eslint-enable sonarjs/no-clear-text-protocols -- re-enable after the safe local HTTP fixtures */

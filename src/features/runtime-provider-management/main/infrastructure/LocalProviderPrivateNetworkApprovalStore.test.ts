@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-clear-text-protocols -- plain-HTTP LAN URLs are the approval subject */
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -52,10 +53,12 @@ describe('JsonLocalProviderPrivateNetworkApprovalStore', () => {
 
     expect(
       await store.isApproved({
-        configPath: '/tmp/project/opencode.json',
+        configPath: path.join(tempDir, 'project', 'opencode.json'),
         providerId: 'home-server',
         baseUrl: 'http://192.168.1.20:8080/v1',
       })
     ).toBe(false);
   });
 });
+
+/* eslint-enable sonarjs/no-clear-text-protocols -- re-enable after the LAN approval fixtures */

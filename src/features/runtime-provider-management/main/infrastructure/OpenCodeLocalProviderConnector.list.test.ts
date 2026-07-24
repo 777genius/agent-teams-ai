@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-clear-text-protocols -- plain-HTTP local URLs are the connector subject */
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -245,3 +246,5 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
     ]);
   });
 });
+
+/* eslint-enable sonarjs/no-clear-text-protocols -- re-enable after the local connector fixtures */
