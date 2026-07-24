@@ -27,9 +27,9 @@ export interface HostedTerminalReadinessState {
 
 export type HostedReadinessState = HostedReadinessDimensionState | HostedTerminalReadinessState;
 
-export type HostedReadinessDimensionStates = Readonly<{
-  [TDimension in HostedReadinessDimension]: HostedReadinessDimensionState;
-}> &
+export type HostedReadinessDimensionStates = Readonly<
+  Record<HostedReadinessDimension, HostedReadinessDimensionState>
+> &
   Readonly<{
     terminal: HostedTerminalReadinessState;
   }>;
