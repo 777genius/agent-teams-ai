@@ -64,6 +64,7 @@ const hoisted = vi.hoisted(() => ({
   skipMemberForLaunch: vi.fn(),
   requestReview: vi.fn(),
   updateKanban: vi.fn(),
+  updateToolApprovalSettings: vi.fn(),
   invalidateTaskChangeSummaries: vi.fn(),
   onProvisioningProgress: vi.fn(() => () => undefined),
   capturePostHogEvent: vi.fn(),
@@ -106,6 +107,7 @@ vi.mock('@renderer/api', () => ({
       skipMemberForLaunch: hoisted.skipMemberForLaunch,
       requestReview: hoisted.requestReview,
       updateKanban: hoisted.updateKanban,
+      updateToolApprovalSettings: hoisted.updateToolApprovalSettings,
       onProvisioningProgress: hoisted.onProvisioningProgress,
     },
     review: {
@@ -495,6 +497,7 @@ describe('teamSlice actions', () => {
     });
     hoisted.requestReview.mockResolvedValue(undefined);
     hoisted.updateKanban.mockResolvedValue(undefined);
+    hoisted.updateToolApprovalSettings.mockResolvedValue(undefined);
     hoisted.createTeam.mockResolvedValue({ runId: 'run-1' });
     hoisted.launchTeam.mockResolvedValue({ runId: 'run-1' });
     hoisted.invalidateTaskChangeSummaries.mockResolvedValue(undefined);
@@ -526,7 +529,11 @@ describe('teamSlice actions', () => {
     window.localStorage.removeItem('team:messagesPanelMode');
     for (let i = window.localStorage.length - 1; i >= 0; i--) {
       const key = window.localStorage.key(i);
-      if (key?.startsWith('team:launchParams:')) {
+      if (
+        key?.startsWith('team:launchParams:') ||
+        key?.startsWith('team:toolApprovalSettings:') ||
+        key === 'team:toolApprovalSettings'
+      ) {
         window.localStorage.removeItem(key);
       }
     }
@@ -5942,6 +5949,151 @@ describe('teamSlice actions', () => {
       await store.getState().refreshTeamChangePresence('my-team');
 
       expect(store.getState().selectedTeamData?.tasks[0]?.changePresence).toBe('has_changes');
+    });
+  });
+
+  describe('per-team tool approval settings', () => {
+    it('loads the selected team settings and synchronizes them to main', async () => {
+      const savedSettings = {
+        autoAllowAll: true,
+        autoAllowFileEdits: false,
+        autoAllowSafeBash: true,
+        timeoutAction: 'wait' as const,
+        timeoutSeconds: 30,
+      };
+      window.localStorage.setItem(
+        'team:toolApprovalSettings:my-team',
+        JSON.stringify(savedSettings)
+      );
+      const store = createSliceStore();
+
+      await store.getState().selectTeam('my-team');
+
+      expect(store.getState().toolApprovalSettings).toEqual(savedSettings);
+      expect(store.getState().toolApprovalSettingsByTeam['my-team']).toEqual(savedSettings);
+      expect(hoisted.updateToolApprovalSettings).toHaveBeenCalledWith('my-team', savedSettings);
+    });
+
+    it('merges a background team update with that team settings without changing the selected team', async () => {
+      const selectedSettings = {
+        autoAllowAll: false,
+        autoAllowFileEdits: true,
+        autoAllowSafeBash: false,
+        timeoutAction: 'deny' as const,
+        timeoutSeconds: 45,
+      };
+      const backgroundSettings = {
+        autoAllowAll: false,
+        autoAllowFileEdits: false,
+        autoAllowSafeBash: true,
+        timeoutAction: 'wait' as const,
+        timeoutSeconds: 30,
+      };
+      window.localStorage.setItem(
+        'team:toolApprovalSettings:beta-team',
+        JSON.stringify(backgroundSettings)
+      );
+      const store = createSliceStore();
+      store.setState({
+        selectedTeamName: 'alpha-team',
+        toolApprovalSettings: selectedSettings,
+        toolApprovalSettingsByTeam: { 'alpha-team': selectedSettings },
+      });
+
+      await store.getState().updateToolApprovalSettings({ autoAllowAll: true }, 'beta-team');
+
+      expect(store.getState().toolApprovalSettings).toEqual(selectedSettings);
+      expect(store.getState().toolApprovalSettingsByTeam['beta-team']).toEqual({
+        ...backgroundSettings,
+        autoAllowAll: true,
+      });
+      expect(hoisted.updateToolApprovalSettings).toHaveBeenCalledWith('beta-team', {
+        ...backgroundSettings,
+        autoAllowAll: true,
+      });
+    });
+
+    it('keeps the latest desired policy and retries until main acknowledges it', async () => {
+      vi.useFakeTimers();
+      try {
+        const previousSettings = {
+          autoAllowAll: false,
+          autoAllowFileEdits: false,
+          autoAllowSafeBash: true,
+          timeoutAction: 'wait' as const,
+          timeoutSeconds: 30,
+        };
+        const store = createSliceStore();
+        store.setState({
+          selectedTeamName: 'retry-failure-team',
+          toolApprovalSettings: previousSettings,
+          toolApprovalSettingsByTeam: { 'retry-failure-team': previousSettings },
+        });
+        hoisted.updateToolApprovalSettings
+          .mockRejectedValueOnce(new Error('main unavailable 1'))
+          .mockRejectedValueOnce(new Error('main unavailable 2'))
+          .mockRejectedValueOnce(new Error('main unavailable 3'))
+          .mockRejectedValueOnce(new Error('main unavailable 4'))
+          .mockResolvedValueOnce(undefined);
+
+        await store
+          .getState()
+          .updateToolApprovalSettings({ autoAllowAll: true }, 'retry-failure-team');
+        await vi.runAllTimersAsync();
+
+        const expectedSettings = { ...previousSettings, autoAllowAll: true };
+        expect(hoisted.updateToolApprovalSettings).toHaveBeenCalledTimes(5);
+        expect(hoisted.updateToolApprovalSettings).toHaveBeenLastCalledWith(
+          'retry-failure-team',
+          expectedSettings
+        );
+        expect(store.getState().toolApprovalSettings).toEqual(expectedSettings);
+        expect(store.getState().toolApprovalSettingsByTeam['retry-failure-team']).toEqual(
+          expectedSettings
+        );
+        expect(
+          JSON.parse(
+            window.localStorage.getItem('team:toolApprovalSettings:retry-failure-team') ?? '{}'
+          )
+        ).toEqual(expectedSettings);
+        expect(vi.mocked(console.warn).mock.calls.at(-1)?.join(' ')).toContain(
+          'Tool approval settings sync retry'
+        );
+        vi.mocked(console.warn).mockClear();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('stages launch settings for the target team without replacing another selected team projection', async () => {
+      const selectedSettings = {
+        autoAllowAll: false,
+        autoAllowFileEdits: true,
+        autoAllowSafeBash: false,
+        timeoutAction: 'wait' as const,
+        timeoutSeconds: 30,
+      };
+      const store = createSliceStore();
+      store.setState({
+        selectedTeamName: 'alpha-team',
+        toolApprovalSettings: selectedSettings,
+        toolApprovalSettingsByTeam: { 'alpha-team': selectedSettings },
+      });
+
+      await store.getState().launchTeam({
+        teamName: 'beta-team',
+        cwd: '/tmp/project',
+        skipPermissions: true,
+      });
+
+      expect(store.getState().toolApprovalSettings).toEqual(selectedSettings);
+      expect(store.getState().toolApprovalSettingsByTeam['beta-team']).toEqual({
+        autoAllowAll: true,
+        autoAllowFileEdits: false,
+        autoAllowSafeBash: false,
+        timeoutAction: 'wait',
+        timeoutSeconds: 30,
+      });
     });
   });
 

@@ -55,6 +55,7 @@ import {
 } from './slices/teamSlice';
 import { createUISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
+import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
 import {
   decideProcessFanoutDryRun,
   decideProcessFanoutMode,
@@ -2325,14 +2326,10 @@ export function initializeNotificationListeners(): () => void {
     if (typeof cleanup === 'function') {
       cleanupFns.push(cleanup);
     }
-
-    // Sync saved tool approval settings to main process on startup
-    const savedSettings = useStore.getState().toolApprovalSettings;
-    const activeTeam = useStore.getState().selectedTeamName ?? '__global__';
-    api.teams.updateToolApprovalSettings?.(activeTeam, savedSettings).catch(() => {
-      // Silently ignore — settings will use defaults until next update
-    });
   }
+
+  // Rehydrate every persisted team policy; latest desired state retries until main acks it.
+  scheduleAllToolApprovalSettingsSync(useStore.getState().toolApprovalSettingsByTeam);
 
   // Listen for editor file change events (chokidar watcher → renderer)
   if (api.editor?.onEditorChange) {

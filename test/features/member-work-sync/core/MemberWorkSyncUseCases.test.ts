@@ -2351,6 +2351,91 @@ describe('MemberWorkSync use cases', () => {
     expect(inbox.inserted).toHaveLength(3);
   });
 
+  it('does not accumulate still-stuck recovery buckets while tool approval is pending', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    let pendingApproval = false;
+    const { auditEvents, clock, deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+      inboxNudge: inbox,
+      busySignal: {
+        isBusy: async () =>
+          pendingApproval
+            ? {
+                busy: true,
+                reason: 'pending_tool_approval',
+                retryAfterIso: '2026-04-29T01:11:00.000Z',
+              }
+            : { busy: false },
+      },
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const reconciler = new MemberWorkSyncReconciler(deps);
+    const dispatcher = new MemberWorkSyncNudgeDispatcher(deps);
+
+    const firstStatus = await reconciler.execute(
+      { teamName: 'team-a', memberName: 'bob' },
+      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    );
+    await dispatcher.dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+    expect(
+      outbox.items.get(`member-work-sync:team-a:bob:${firstStatus.agenda.fingerprint}`)
+    ).toMatchObject({ status: 'delivered' });
+
+    pendingApproval = true;
+    for (const iso of [
+      '2026-04-29T00:10:00.000Z',
+      '2026-04-29T00:40:00.000Z',
+      '2026-04-29T01:10:00.000Z',
+    ]) {
+      clock.set(iso);
+      store.metricsGeneratedAt = iso;
+      await reconciler.execute(
+        { teamName: 'team-a', memberName: 'bob' },
+        { reconciledBy: 'queue', triggerReasons: ['manual_refresh'] }
+      );
+    }
+
+    expect(
+      [...outbox.items.values()].filter((item) =>
+        item.payload.workSyncIntentKey?.startsWith('agenda-sync-still-stuck:')
+      )
+    ).toEqual([]);
+    expect(auditEvents).toContainEqual(
+      expect.objectContaining({
+        event: 'nudge_skipped',
+        reason: 'member_busy',
+        memberName: 'bob',
+      })
+    );
+
+    pendingApproval = false;
+    clock.set('2026-04-29T01:11:00.000Z');
+    store.metricsGeneratedAt = '2026-04-29T01:11:00.000Z';
+    await reconciler.execute(
+      { teamName: 'team-a', memberName: 'bob' },
+      { reconciledBy: 'queue', triggerReasons: ['manual_refresh'] }
+    );
+
+    const recoveryItems = [...outbox.items.values()].filter((item) =>
+      item.payload.workSyncIntentKey?.startsWith('agenda-sync-still-stuck:')
+    );
+    expect(recoveryItems).toHaveLength(1);
+    expect(recoveryItems[0]).toMatchObject({ status: 'pending' });
+
+    await dispatcher.dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+
+    expect(recoveryItems[0]?.id).toBe(inbox.inserted[1]?.messageId);
+    expect(inbox.inserted).toHaveLength(2);
+  });
+
   it('creates a delivered-still-stuck recovery after an accepted still_working lease expires', async () => {
     const outbox = new InMemoryOutboxStore();
     const inbox = new InMemoryInboxNudge();

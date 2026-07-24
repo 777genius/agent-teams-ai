@@ -127,6 +127,9 @@ export class TeamProvisioningToolApprovalTimeouts<
 
   reEvaluate(runs: Iterable<TRun>): void {
     for (const run of runs) {
+      if (!(run.pendingApprovals instanceof Map)) {
+        continue;
+      }
       const settings = this.ports.getSettings(run.teamName);
       const toRemove: string[] = [];
       for (const [requestId, approval] of run.pendingApprovals) {

@@ -5,6 +5,7 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
+import { resolveToolApprovalSettingsForTeam } from '@renderer/store/team/teamToolApprovalSettings';
 import { shortenDisplayPath } from '@renderer/utils/pathDisplay';
 import { highlightLines } from '@renderer/utils/syntaxHighlighter';
 import { AlertTriangle, FileText, MessageCircleQuestion, Search, Terminal } from 'lucide-react';
@@ -465,7 +466,7 @@ export const ToolApprovalSheet: React.FC = () => {
         <ToolApprovalSettingsContent expanded={settingsExpanded} teamName={current.teamName} />
 
         {/* Timeout progress bar */}
-        <TimeoutProgress receivedAt={current.receivedAt} />
+        <TimeoutProgress receivedAt={current.receivedAt} teamName={current.teamName} />
       </div>
     </>
   );
@@ -622,9 +623,23 @@ const ToolInputPreview = ({
 // Timeout progress bar sub-component
 // ---------------------------------------------------------------------------
 
-const TimeoutProgress = ({ receivedAt }: { receivedAt: string }): React.JSX.Element | null => {
+const TimeoutProgress = ({
+  receivedAt,
+  teamName,
+}: {
+  receivedAt: string;
+  teamName: string;
+}): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
-  const settings = useStore(useShallow((s) => s.toolApprovalSettings));
+  const settings = useStore(
+    useShallow((s) =>
+      resolveToolApprovalSettingsForTeam(
+        s.toolApprovalSettingsByTeam,
+        s.toolApprovalSettings,
+        teamName
+      )
+    )
+  );
   const elapsed = useElapsed(receivedAt);
 
   if (settings.timeoutAction === 'wait') return null;

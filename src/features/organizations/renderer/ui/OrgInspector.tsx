@@ -5,8 +5,8 @@ import { Button } from '@renderer/components/ui/button';
 import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 import { Activity, ChevronDown, ChevronRight, ExternalLink, Network, Users, X } from 'lucide-react';
 
-import { getNodeDisplayLabel } from '../adapters/organizationMapViewModel';
 import { useOrganizationInspectorTasks } from '../hooks/useOrganizationInspectorTasks';
+import { getNodeDisplayLabel } from '../view-models/organizationMapViewModel';
 
 import type { OrganizationAgentTaskDto, OrganizationNodeDto } from '../../contracts';
 import type { KanbanColumnId, TeamTaskWithKanban } from '@shared/types';

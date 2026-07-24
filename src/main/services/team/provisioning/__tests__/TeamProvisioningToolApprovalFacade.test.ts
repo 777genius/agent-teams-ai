@@ -134,6 +134,27 @@ describe('TeamProvisioningToolApprovalFacade', () => {
     });
   });
 
+  it.each([
+    { skipPermissions: undefined, autoAllowAll: true },
+    { skipPermissions: true, autoAllowAll: true },
+    { skipPermissions: false, autoAllowAll: false },
+  ])(
+    'initializes launch approval settings from skipPermissions=$skipPermissions',
+    ({ skipPermissions, autoAllowAll }) => {
+      const { facade } = createHarness();
+
+      facade.initializeToolApprovalSettingsForLaunch('alpha', skipPermissions);
+
+      expect(facade.getToolApprovalSettings('alpha')).toEqual({
+        autoAllowAll,
+        autoAllowFileEdits: false,
+        autoAllowSafeBash: false,
+        timeoutAction: 'wait',
+        timeoutSeconds: 30,
+      });
+    }
+  );
+
   it('responds to lead tool approvals and dismisses the tracked notification', async () => {
     const { facade, run } = createHarness();
 
@@ -221,6 +242,45 @@ describe('TeamProvisioningToolApprovalFacade', () => {
     expect(run.pendingApprovals.has('req-worker')).toBe(false);
   });
 
+  it('reports native teammate approvals as a member-scoped busy signal', () => {
+    const { facade, run } = createHarness();
+
+    facade.handleTeammatePermissionRequest(
+      run,
+      permissionRequest('req-worker-busy'),
+      '2026-01-01T00:00:00.000Z'
+    );
+
+    expect(
+      facade.getMemberToolApprovalBusyStatus({
+        teamName: 'alpha',
+        memberName: ' worker ',
+        nowIso: '2026-01-01T00:00:00.000Z',
+      })
+    ).toEqual({
+      busy: true,
+      reason: 'pending_tool_approval',
+      retryAfterIso: '2026-01-01T00:01:00.000Z',
+    });
+    expect(
+      facade.getMemberToolApprovalBusyStatus({
+        teamName: 'alpha',
+        memberName: 'Other',
+        nowIso: '2026-01-01T00:00:00.000Z',
+      })
+    ).toEqual({ busy: false });
+
+    run.pendingApprovals.clear();
+
+    expect(
+      facade.getMemberToolApprovalBusyStatus({
+        teamName: 'alpha',
+        memberName: 'Worker',
+        nowIso: '2026-01-01T00:00:00.000Z',
+      })
+    ).toEqual({ busy: false });
+  });
+
   it('syncs and clears OpenCode runtime approvals', () => {
     const { facade, events } = createHarness();
 
@@ -244,6 +304,30 @@ describe('TeamProvisioningToolApprovalFacade', () => {
 
     expect(events).toContainEqual({ dismissed: true, teamName: 'alpha', runId: 'run-1' });
     expect(notificationAt(0).closeCalls).toBe(1);
+  });
+
+  it('reports runtime approvals as a member-scoped busy signal', () => {
+    const { facade } = createHarness();
+
+    facade.syncOpenCodeRuntimeToolApprovals(syncInputWithPendingApproval('provider-busy'));
+
+    expect(
+      facade.getMemberToolApprovalBusyStatus({
+        teamName: 'alpha',
+        memberName: 'worker',
+        nowIso: '2026-01-01T00:00:00.000Z',
+      })
+    ).toMatchObject({ busy: true, reason: 'pending_tool_approval' });
+
+    facade.clearOpenCodeRuntimeToolApprovals('alpha');
+
+    expect(
+      facade.getMemberToolApprovalBusyStatus({
+        teamName: 'alpha',
+        memberName: 'Worker',
+        nowIso: '2026-01-01T00:00:00.000Z',
+      })
+    ).toEqual({ busy: false });
   });
 
   it('answers OpenCode runtime approvals through respondToToolApproval', async () => {

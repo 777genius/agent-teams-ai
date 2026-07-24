@@ -1388,7 +1388,7 @@ describe(
           cwd: projectPath,
           providerId: 'opencode',
           model: 'xai/grok-4.5',
-          skipPermissions: true,
+          skipPermissions: false,
           members: [
             {
               name: 'tom',
@@ -13365,7 +13365,7 @@ describe(
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
-          skipPermissions: true,
+          skipPermissions: false,
           members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
         },
         () => undefined
@@ -13677,7 +13677,7 @@ describe(
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
-          skipPermissions: true,
+          skipPermissions: false,
           members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
         },
         () => undefined
@@ -13770,7 +13770,7 @@ describe(
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
-          skipPermissions: true,
+          skipPermissions: false,
           members: [
             { name: 'alice', role: 'Developer', providerId: 'opencode' },
             { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
@@ -13844,7 +13844,7 @@ describe(
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
-          skipPermissions: true,
+          skipPermissions: false,
           members: [
             { name: 'alice', role: 'Developer', providerId: 'opencode' },
             { name: 'bob', role: 'Reviewer', providerId: 'opencode' },

@@ -5,7 +5,7 @@ import { api } from '@renderer/api';
 import {
   type MemberWorkSyncStatusViewModel,
   toMemberWorkSyncStatusViewModel,
-} from '../adapters/memberWorkSyncStatusViewModel';
+} from '../view-models/memberWorkSyncStatusViewModel';
 
 import type { MemberWorkSyncStatus } from '../../contracts';
 

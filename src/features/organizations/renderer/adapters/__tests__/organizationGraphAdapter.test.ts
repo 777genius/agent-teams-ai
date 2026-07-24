@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildOrganizationMapViewModel,
+  getOrganizationIdForNodeId,
+} from '../../view-models/organizationMapViewModel';
+import {
   buildOrganizationGraphData,
   getOrganizationGraphRenderProfile,
   getOrganizationNodeIdFromGraphRef,
-} from '../organizationGraphData';
-import {
-  buildOrganizationMapViewModel,
-  getOrganizationIdForNodeId,
-} from '../organizationMapViewModel';
+} from '../organizationGraphAdapter';
 
 import type {
   OrganizationMapPayload,

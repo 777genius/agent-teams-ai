@@ -1,8 +1,8 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { buildOrganizationMapViewModel } from '@features/organizations/renderer/adapters/organizationMapViewModel';
 import { OrgOverviewHud } from '@features/organizations/renderer/ui/OrgOverviewHud';
+import { buildOrganizationMapViewModel } from '@features/organizations/renderer/view-models/organizationMapViewModel';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OrganizationMapPayload } from '@features/organizations/contracts';

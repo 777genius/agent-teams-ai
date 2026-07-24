@@ -1,6 +1,6 @@
 import { useAppTranslation } from '@features/localization/renderer';
 
-import { toMemberWorkSyncStatusViewModel } from '../adapters/memberWorkSyncStatusViewModel';
+import { toMemberWorkSyncStatusViewModel } from '../view-models/memberWorkSyncStatusViewModel';
 
 import { MemberWorkSyncBadge } from './MemberWorkSyncBadge';
 

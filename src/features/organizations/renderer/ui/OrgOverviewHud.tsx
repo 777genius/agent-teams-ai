@@ -9,7 +9,7 @@ import {
 } from '@renderer/components/ui/tooltip';
 import { ChevronRight, Users } from 'lucide-react';
 
-import type { OrganizationMapViewModel } from '../adapters/organizationMapViewModel';
+import type { OrganizationMapViewModel } from '../view-models/organizationMapViewModel';
 interface OrgOverviewHudProps {
   viewModel: OrganizationMapViewModel;
   onSelectNode: (nodeId: string, reveal?: boolean) => void;

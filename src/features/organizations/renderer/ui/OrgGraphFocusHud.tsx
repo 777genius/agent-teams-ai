@@ -7,11 +7,11 @@ import { ChevronDown, ChevronRight, Focus, Network, Route, Search, Users, X } fr
 import {
   getOrganizationNodePath,
   searchOrganizationNodes,
-} from '../adapters/organizationGraphFocus';
-import { getNodeDisplayLabel } from '../adapters/organizationMapViewModel';
+} from '../view-models/organizationGraphFocus';
+import { getNodeDisplayLabel } from '../view-models/organizationMapViewModel';
 
-import type { OrganizationGraphFocusMode } from '../adapters/organizationGraphFocus';
-import type { OrganizationMapViewModel } from '../adapters/organizationMapViewModel';
+import type { OrganizationGraphFocusMode } from '../view-models/organizationGraphFocus';
+import type { OrganizationMapViewModel } from '../view-models/organizationMapViewModel';
 
 interface OrgGraphFocusHudProps {
   viewModel: OrganizationMapViewModel;

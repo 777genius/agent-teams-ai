@@ -3,10 +3,8 @@ import { TeamProvisioningAppShellFacade } from './TeamProvisioningAppShellFacade
 import type { TeamProvisioningCancellationBoundary } from './TeamProvisioningCancellationBoundary';
 import type { TeamProvisioningConfigFacade } from './TeamProvisioningConfigFacade';
 import type { TeamProvisioningConfigTaskActivityBoundary } from './TeamProvisioningConfigTaskActivityBoundary';
-import type {
-  RetainedProvisioningProgressRunLike,
-  TeamProvisioningRetainedProgressState,
-} from './TeamProvisioningProgressState';
+import type { RetainedProvisioningProgressRunLike } from './TeamProvisioningProgressState';
+import type { TeamProvisioningRetainedProgressState } from './TeamProvisioningProgressState';
 import type { TeamProvisioningProviderRuntimeCompatibility } from './TeamProvisioningProviderRuntimeFacade';
 import type { TeamProvisioningRuntimeSnapshotFacade } from './TeamProvisioningRuntimeSnapshotFacade';
 import type {
@@ -14,6 +12,7 @@ import type {
   TeamProvisioningSendMessageToRunRun,
 } from './TeamProvisioningSendMessageToRunBoundaryFactory';
 import type { TeamProvisioningTaskActivityRepairBoundaryRun } from './TeamProvisioningTaskActivityRepairBoundary';
+import type { TeamProvisioningStatusApi } from '@features/team-provisioning/contracts';
 import type { TeamProvisioningProgress } from '@shared/types';
 
 export type TeamProvisioningCompatibilityDelegationRun = TeamProvisioningSendMessageToRunRun &
@@ -44,9 +43,10 @@ export interface TeamProvisioningCompatibilityDelegation<
     | 'writeLaunchFailureArtifactPackBestEffort'
     | 'repairStaleTaskActivityIntervalsBeforeSnapshot'
   >;
+  provisioningStatus: TeamProvisioningStatusApi;
   retainedProvisioningProgressState: Pick<
     TeamProvisioningRetainedProgressState,
-    'getProvisioningStatus' | 'retainProvisioningProgress'
+    'retainProvisioningProgress'
   >;
   cancellationBoundary: Pick<TeamProvisioningCancellationBoundary, 'cancelProvisioning'>;
   runtimeSnapshotFacade: Pick<
@@ -189,10 +189,7 @@ export abstract class TeamProvisioningCompatibilityFacade<
   }
 
   async getProvisioningStatus(runId: string): Promise<TeamProvisioningProgress> {
-    return this.compatibilityDelegation.retainedProvisioningProgressState.getProvisioningStatus(
-      runId,
-      this.compatibilityDelegation.runs
-    );
+    return this.compatibilityDelegation.provisioningStatus.getProvisioningStatus(runId);
   }
 
   protected retainProvisioningProgress(runId: string, progress: TeamProvisioningProgress): void {
