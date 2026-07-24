@@ -16,8 +16,11 @@ import { Check, Image, Loader2, Palette, RefreshCw, Square, Terminal, X } from '
 import {
   clampTerminalAppearanceNumberInput,
   normalizeTerminalAppearanceColor,
+  TERMINAL_BACKDROP_BLUR_RANGE,
   TERMINAL_BACKGROUND_IMAGE_FIT_OPTIONS,
   TERMINAL_BACKGROUND_MODE_OPTIONS,
+  TERMINAL_FONT_SIZE_RANGE,
+  TERMINAL_OPACITY_RANGE,
   type TerminalAppearanceSettings,
   type TerminalBackgroundImageFit,
   type TerminalBackgroundMode,
@@ -162,8 +165,8 @@ export const TerminalWorkspaceSettingsView = ({
                   id="terminal-settings-font-size"
                   type="number"
                   inputMode="numeric"
-                  min={11}
-                  max={24}
+                  min={TERMINAL_FONT_SIZE_RANGE.min}
+                  max={TERMINAL_FONT_SIZE_RANGE.max}
                   step={1}
                   className="border-white/10 bg-white/[0.035] text-right"
                   value={appearanceSettings.fontSizePx}
@@ -171,8 +174,7 @@ export const TerminalWorkspaceSettingsView = ({
                     onAppearanceSettingsChange({
                       fontSizePx: clampTerminalAppearanceNumberInput(
                         event.currentTarget.value,
-                        11,
-                        24
+                        TERMINAL_FONT_SIZE_RANGE
                       ),
                     })
                   }
@@ -200,8 +202,8 @@ export const TerminalWorkspaceSettingsView = ({
                   <input
                     id="terminal-settings-opacity-range"
                     type="range"
-                    min={35}
-                    max={100}
+                    min={TERMINAL_OPACITY_RANGE.min}
+                    max={TERMINAL_OPACITY_RANGE.max}
                     step={1}
                     className="h-9 w-full accent-sky-300"
                     aria-label={t('terminalWorkspace.settingsOpacityAria')}
@@ -210,8 +212,7 @@ export const TerminalWorkspaceSettingsView = ({
                       onAppearanceSettingsChange({
                         opacityPercent: clampTerminalAppearanceNumberInput(
                           event.currentTarget.value,
-                          35,
-                          100
+                          TERMINAL_OPACITY_RANGE
                         ),
                       })
                     }
@@ -221,8 +222,8 @@ export const TerminalWorkspaceSettingsView = ({
                   id="terminal-settings-opacity"
                   type="number"
                   inputMode="numeric"
-                  min={35}
-                  max={100}
+                  min={TERMINAL_OPACITY_RANGE.min}
+                  max={TERMINAL_OPACITY_RANGE.max}
                   step={1}
                   className="border-white/10 bg-white/[0.035] text-right"
                   value={appearanceSettings.opacityPercent}
@@ -230,8 +231,7 @@ export const TerminalWorkspaceSettingsView = ({
                     onAppearanceSettingsChange({
                       opacityPercent: clampTerminalAppearanceNumberInput(
                         event.currentTarget.value,
-                        35,
-                        100
+                        TERMINAL_OPACITY_RANGE
                       ),
                     })
                   }
@@ -299,8 +299,8 @@ export const TerminalWorkspaceSettingsView = ({
                     id="terminal-settings-backdrop-blur"
                     type="number"
                     inputMode="numeric"
-                    min={0}
-                    max={40}
+                    min={TERMINAL_BACKDROP_BLUR_RANGE.min}
+                    max={TERMINAL_BACKDROP_BLUR_RANGE.max}
                     step={1}
                     className="max-w-24 border-white/10 bg-white/[0.035] text-right"
                     value={appearanceSettings.backdropBlurPx}
@@ -308,8 +308,7 @@ export const TerminalWorkspaceSettingsView = ({
                       onAppearanceSettingsChange({
                         backdropBlurPx: clampTerminalAppearanceNumberInput(
                           event.currentTarget.value,
-                          0,
-                          40
+                          TERMINAL_BACKDROP_BLUR_RANGE
                         ),
                       })
                     }
@@ -380,8 +379,8 @@ export const TerminalWorkspaceSettingsView = ({
                         id="terminal-settings-blur"
                         type="number"
                         inputMode="numeric"
-                        min={0}
-                        max={40}
+                        min={TERMINAL_BACKDROP_BLUR_RANGE.min}
+                        max={TERMINAL_BACKDROP_BLUR_RANGE.max}
                         step={1}
                         className="border-white/10 bg-white/[0.035] text-right"
                         value={appearanceSettings.backdropBlurPx}
@@ -389,8 +388,7 @@ export const TerminalWorkspaceSettingsView = ({
                           onAppearanceSettingsChange({
                             backdropBlurPx: clampTerminalAppearanceNumberInput(
                               event.currentTarget.value,
-                              0,
-                              40
+                              TERMINAL_BACKDROP_BLUR_RANGE
                             ),
                           })
                         }

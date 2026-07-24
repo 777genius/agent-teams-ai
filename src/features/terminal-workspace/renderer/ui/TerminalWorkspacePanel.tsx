@@ -68,9 +68,7 @@ import {
 import { normalizeTerminalCommandRunEventDetail } from '../adapters/terminalCommandRunEvents';
 import {
   DEFAULT_TERMINAL_APPEARANCE_SETTINGS,
-  isTerminalBackgroundImageFit,
-  isTerminalBackgroundMode,
-  normalizeTerminalAppearanceColor,
+  normalizeTerminalAppearanceSettings,
   type TerminalAppearanceSettings,
   type TerminalBackgroundImageFit,
 } from '../model/terminalAppearanceSettings';
@@ -2611,50 +2609,6 @@ function readStoredTerminalAppearanceSettings(teamName: string): TerminalAppeara
   }
 }
 
-function normalizeTerminalAppearanceSettings(value: unknown): TerminalAppearanceSettings {
-  if (!isRecord(value)) {
-    return DEFAULT_TERMINAL_APPEARANCE_SETTINGS;
-  }
-
-  return {
-    version: DEFAULT_TERMINAL_APPEARANCE_SETTINGS.version,
-    fontSizePx: clampFiniteNumber(
-      value.fontSizePx,
-      11,
-      24,
-      DEFAULT_TERMINAL_APPEARANCE_SETTINGS.fontSizePx
-    ),
-    opacityPercent: clampFiniteNumber(
-      value.opacityPercent,
-      35,
-      100,
-      DEFAULT_TERMINAL_APPEARANCE_SETTINGS.opacityPercent
-    ),
-    backgroundMode: isTerminalBackgroundMode(value.backgroundMode)
-      ? value.backgroundMode
-      : DEFAULT_TERMINAL_APPEARANCE_SETTINGS.backgroundMode,
-    backgroundColor:
-      typeof value.backgroundColor === 'string'
-        ? normalizeTerminalAppearanceColor(value.backgroundColor)
-        : DEFAULT_TERMINAL_APPEARANCE_SETTINGS.backgroundColor,
-    backgroundImageUrl:
-      typeof value.backgroundImageUrl === 'string' ? value.backgroundImageUrl.slice(0, 2048) : '',
-    backgroundImageFit: isTerminalBackgroundImageFit(value.backgroundImageFit)
-      ? value.backgroundImageFit
-      : DEFAULT_TERMINAL_APPEARANCE_SETTINGS.backgroundImageFit,
-    backdropBlurPx: clampFiniteNumber(
-      value.backdropBlurPx,
-      0,
-      40,
-      DEFAULT_TERMINAL_APPEARANCE_SETTINGS.backdropBlurPx
-    ),
-    dimBackgroundImage:
-      typeof value.dimBackgroundImage === 'boolean'
-        ? value.dimBackgroundImage
-        : DEFAULT_TERMINAL_APPEARANCE_SETTINGS.dimBackgroundImage,
-  };
-}
-
 function readStoredTerminalTabPreferences(teamName: string): TerminalTabPreferences {
   const raw = readStoredValue(storageKey(teamName, 'tab-preferences'));
   if (!raw) return createDefaultTerminalTabPreferences();
@@ -2756,14 +2710,6 @@ function createTerminalAppearanceStyle(settings: TerminalAppearanceSettings): CS
     '--agent-terminal-image-dim-opacity':
       hasImage && normalizedSettings.dimBackgroundImage ? '0.42' : '0',
   } as CSSProperties;
-}
-
-function clampFiniteNumber(value: unknown, min: number, max: number, fallback: number): number {
-  const numberValue = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(numberValue)) {
-    return fallback;
-  }
-  return Math.min(Math.max(Math.round(numberValue), min), max);
 }
 
 function createCssUrl(value: string): string {
