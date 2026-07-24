@@ -690,6 +690,12 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/team-message-delivery/renderer/index.ts",
+      "specifier": "./adapters/createTeamMessageDeliveryRendererSlice",
+      "publicEntrypoint": "src/features/team-message-delivery/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamProvisioningIpc",
       "publicEntrypoint": "src/features/team-provisioning/main/index.ts"
