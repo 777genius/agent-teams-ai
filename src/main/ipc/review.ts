@@ -7,10 +7,12 @@
 import {
   assertHunkIndices,
   assertNonEmptyString,
-  assertOptionalString,
   assertSnippetShapes,
+  createReviewQueryFeature,
   createReviewScopeAuthorizationFeature,
   MAX_REVIEW_HUNK_DECISIONS_PER_FILE,
+  sanitizeTaskChangeOptions,
+  sanitizeTeamTaskChangeSummaryRequests,
 } from '@features/change-review/main';
 import {
   createReviewDecisionHistoryFeature,
@@ -92,17 +94,13 @@ import type {
   ReviewFileScope,
   ReviewRenameRecoveryExpectation,
   SnippetDiff,
-  TaskChangeRequestOptions,
   TaskChangeSetV2,
   TeamTaskChangeSummariesResponse,
-  TeamTaskChangeSummaryRequest,
 } from '@shared/types/review';
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const wrapReviewHandler = createIpcWrapper('IPC:review');
 const logger = createLogger('IPC:review');
-const TEAM_TASK_CHANGE_SUMMARY_IPC_RAW_REQUEST_LIMIT = 1_000;
-const TEAM_TASK_CHANGE_SUMMARY_IPC_UNIQUE_REQUEST_LIMIT = 201;
 const MAX_REVIEW_DECISIONS = 2_000;
 
 // --- Module-level state ---
@@ -160,20 +158,6 @@ async function withReviewDecisionPersistenceLock<T>(
   }
 }
 
-function registerDisplayedReviewSnapshot(
-  teamName: string,
-  filePath: string,
-  snippets: SnippetDiff[],
-  content: FileChangeWithContent
-): FileChangeWithContent {
-  return reviewDecisionCommandFeature.registerDisplayedReviewSnapshot(
-    teamName,
-    filePath,
-    snippets,
-    content
-  );
-}
-
 function getChangeExtractor(): ChangeExtractorService {
   if (!changeExtractor) throw new Error('Review handlers not initialized');
   return changeExtractor;
@@ -204,10 +188,6 @@ const reviewScopeAuthorizationFeature = createReviewScopeAuthorizationFeature({
     invalidateFile: (filePath) => getContentResolver().invalidateFile(filePath),
   },
 });
-
-function normalizeReviewIdentity(value: string | undefined): string | undefined {
-  return reviewScopeAuthorizationFeature.normalizeReviewIdentity(value);
-}
 
 function parseReviewFileScope(value: unknown): ReviewFileScope {
   return reviewScopeAuthorizationFeature.parseReviewFileScope(value);
@@ -483,71 +463,8 @@ async function handleGetAgentChanges(
   memberName: string
 ): Promise<IpcResult<AgentChangeSet>> {
   return wrapReviewHandler('getAgentChanges', () =>
-    getChangeExtractor().getAgentChanges(teamName, memberName)
+    reviewQueryFeature.getAgentChanges(teamName, memberName)
   );
-}
-
-function sanitizeTaskChangeOptions(options?: unknown): TaskChangeRequestOptions | undefined {
-  if (!options || typeof options !== 'object') {
-    return undefined;
-  }
-
-  const raw = options as Record<string, unknown>;
-  return {
-    owner: typeof raw.owner === 'string' ? raw.owner : undefined,
-    status: typeof raw.status === 'string' ? raw.status : undefined,
-    since: typeof raw.since === 'string' ? raw.since : undefined,
-    intervals: Array.isArray(raw.intervals)
-      ? (raw.intervals.filter(
-          (i): i is { startedAt: string; completedAt?: string } =>
-            Boolean(i) &&
-            typeof i === 'object' &&
-            typeof (i as Record<string, unknown>).startedAt === 'string' &&
-            ((i as Record<string, unknown>).completedAt === undefined ||
-              typeof (i as Record<string, unknown>).completedAt === 'string')
-        ) as { startedAt: string; completedAt?: string }[])
-      : undefined,
-    stateBucket:
-      raw.stateBucket === 'approved' ||
-      raw.stateBucket === 'review' ||
-      raw.stateBucket === 'completed' ||
-      raw.stateBucket === 'active'
-        ? raw.stateBucket
-        : undefined,
-    summaryOnly: raw.summaryOnly === true,
-    forceFresh: raw.forceFresh === true,
-  };
-}
-
-function sanitizeTeamTaskChangeSummaryRequests(requests: unknown): TeamTaskChangeSummaryRequest[] {
-  if (!Array.isArray(requests)) {
-    return [];
-  }
-
-  const sanitizedRequests: TeamTaskChangeSummaryRequest[] = [];
-  const seenTaskIds = new Set<string>();
-  for (const request of requests.slice(0, TEAM_TASK_CHANGE_SUMMARY_IPC_RAW_REQUEST_LIMIT)) {
-    if (sanitizedRequests.length >= TEAM_TASK_CHANGE_SUMMARY_IPC_UNIQUE_REQUEST_LIMIT) {
-      break;
-    }
-    if (!request || typeof request !== 'object') {
-      continue;
-    }
-    const raw = request as Record<string, unknown>;
-    if (typeof raw.taskId !== 'string') {
-      continue;
-    }
-    const taskId = raw.taskId.trim();
-    if (!taskId || seenTaskIds.has(taskId)) {
-      continue;
-    }
-    seenTaskIds.add(taskId);
-    sanitizedRequests.push({
-      taskId,
-      options: sanitizeTaskChangeOptions(raw.options),
-    });
-  }
-  return sanitizedRequests;
 }
 
 async function handleGetTaskChanges(
@@ -559,7 +476,7 @@ async function handleGetTaskChanges(
   const opts = sanitizeTaskChangeOptions(options);
 
   return wrapReviewHandler('getTaskChanges', () =>
-    getChangeExtractor().getTaskChanges(teamName, taskId, opts)
+    reviewQueryFeature.getTaskChanges(teamName, taskId, opts)
   );
 }
 
@@ -571,7 +488,7 @@ async function handleGetTeamTaskChangeSummaries(
   const sanitizedRequests = sanitizeTeamTaskChangeSummaryRequests(requests);
 
   return wrapReviewHandler('getTeamTaskChangeSummaries', () =>
-    getChangeExtractor().getTeamTaskChangeSummaries(teamName, sanitizedRequests)
+    reviewQueryFeature.getTeamTaskChangeSummaries(teamName, sanitizedRequests)
   );
 }
 
@@ -580,12 +497,9 @@ async function handleInvalidateTaskChangeSummaries(
   teamName: string,
   taskIds: string[]
 ): Promise<IpcResult<void>> {
-  return wrapReviewHandler('invalidateTaskChangeSummaries', async () => {
-    await getChangeExtractor().invalidateTaskChangeSummaries(
-      teamName,
-      Array.isArray(taskIds) ? taskIds.filter((taskId) => typeof taskId === 'string') : []
-    );
-  });
+  return wrapReviewHandler('invalidateTaskChangeSummaries', () =>
+    reviewQueryFeature.invalidateTaskChangeSummaries(teamName, taskIds)
+  );
 }
 
 async function handleGetChangeStats(
@@ -594,7 +508,7 @@ async function handleGetChangeStats(
   memberName: string
 ): Promise<IpcResult<ChangeStats>> {
   return wrapReviewHandler('getChangeStats', () =>
-    getChangeExtractor().getChangeStats(teamName, memberName)
+    reviewQueryFeature.getChangeStats(teamName, memberName)
   );
 }
 
@@ -869,6 +783,35 @@ const reviewDecisionCommandFeature = createReviewDecisionCommandFeature({
   },
 });
 
+const reviewQueryFeature = createReviewQueryFeature({
+  changes: {
+    getAgentChanges: (...args) => getChangeExtractor().getAgentChanges(...args),
+    getTaskChanges: (...args) => getChangeExtractor().getTaskChanges(...args),
+    getTeamTaskChangeSummaries: (...args) =>
+      getChangeExtractor().getTeamTaskChangeSummaries(...args),
+    invalidateTaskChangeSummaries: (...args) =>
+      getChangeExtractor().invalidateTaskChangeSummaries(...args),
+    getChangeStats: (...args) => getChangeExtractor().getChangeStats(...args),
+  },
+  scope: {
+    normalizeIdentity: (value) => reviewScopeAuthorizationFeature.normalizeReviewIdentity(value),
+    resolve: (value) => resolveReviewPathAuthorization(value),
+    validateFilePath: (authorization, filePath, options) =>
+      validateAuthorizedReviewFilePath(authorization, filePath, options),
+    validateSnippets: (authorization, snippets) => validateSnippetPaths(authorization, snippets),
+  },
+  content: {
+    getFileContent: (...args) => getContentResolver().getFileContent(...args),
+  },
+  snapshots: {
+    register: (...args) => reviewDecisionCommandFeature.registerDisplayedReviewSnapshot(...args),
+  },
+  gitHistory: {
+    getFileLog: (projectPath, filePath) =>
+      gitDiffFallback ? gitDiffFallback.getFileLog(projectPath, filePath) : Promise.resolve([]),
+  },
+});
+
 const reviewDecisionHistoryFeature = createReviewDecisionHistoryFeature({
   lock: { run: withReviewDecisionPersistenceLock },
   authorization: { authorize: authorizeReviewDecisionHistoryScope },
@@ -910,25 +853,9 @@ async function handleGetFileContent(
   filePathValue: unknown,
   snippetsValue: unknown = []
 ): Promise<IpcResult<FileChangeWithContent>> {
-  return wrapReviewHandler('getFileContent', async () => {
-    assertOptionalString(memberNameValue, 'memberName');
-    assertSnippetShapes(snippetsValue);
-    const { scope, authorization } = await resolveReviewPathAuthorization({
-      teamName: teamNameValue,
-      memberName: normalizeReviewIdentity(memberNameValue),
-    });
-    const filePath = await validateAuthorizedReviewFilePath(authorization, filePathValue, {
-      requireReviewedFile: false,
-    });
-    await validateSnippetPaths(authorization, snippetsValue);
-    const content = await getContentResolver().getFileContent(
-      scope.teamName,
-      scope.memberName ?? '',
-      filePath,
-      snippetsValue
-    );
-    return registerDisplayedReviewSnapshot(scope.teamName, filePath, snippetsValue, content);
-  });
+  return wrapReviewHandler('getFileContent', () =>
+    reviewQueryFeature.getFileContent(teamNameValue, memberNameValue, filePathValue, snippetsValue)
+  );
 }
 
 // --- Editable diff Handlers ---
@@ -1118,10 +1045,7 @@ async function handleGetGitFileLog(
   projectPath: string,
   filePath: string
 ): Promise<IpcResult<{ hash: string; timestamp: string; message: string }[]>> {
-  return wrapReviewHandler('getGitFileLog', async () => {
-    if (!gitDiffFallback) {
-      return [];
-    }
-    return gitDiffFallback.getFileLog(projectPath, filePath);
-  });
+  return wrapReviewHandler('getGitFileLog', () =>
+    reviewQueryFeature.getGitFileLog(projectPath, filePath)
+  );
 }
