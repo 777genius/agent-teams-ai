@@ -22,6 +22,7 @@ import {
   inspectNativeAddonCompatibility,
   resolveNativeAddonHeaderRoot,
 } from "./native-addon-compatibility";
+import { runPnpmInstallWithVerifiedSideEffectsCache } from "./dependency-pnpm-verified-install";
 
 export {
   defaultDependencyCacheRoot,
@@ -315,7 +316,7 @@ async function runPackageManagerInstall(input: {
   if (input.cacheRoot) {
     await mkdir(input.cacheRoot, { recursive: true, mode: 0o700 });
   }
-  const install = async (): Promise<{
+  const installNormally = async (): Promise<{
     readonly sanitizedDependencyPaths: readonly string[];
     readonly nativeAddonAbi?: string;
     readonly nativeAddonCount?: number;
@@ -389,6 +390,28 @@ async function runPackageManagerInstall(input: {
         };
       },
     });
+  const install =
+    input.packageManager.name === "pnpm" &&
+    input.cacheRoot &&
+    input.fingerprint
+      ? async () =>
+          runPnpmInstallWithVerifiedSideEffectsCache({
+            workspacePath: input.workspacePath,
+            ...(input.packageManager.versionSpec
+              ? {
+                  packageManagerVersionSpec:
+                    input.packageManager.versionSpec,
+                }
+              : {}),
+            dependencyFingerprint: input.fingerprint ?? "",
+            cacheRoot: input.cacheRoot ?? "",
+            runCommand,
+            ...(input.runCommand ? { commandIsInjected: true } : {}),
+            ...(input.nodeExecutablePath
+              ? { nodeExecutablePath: input.nodeExecutablePath }
+              : {}),
+          })
+      : installNormally;
   if (!input.cacheRoot || !input.fingerprint) {
     return await install();
   }

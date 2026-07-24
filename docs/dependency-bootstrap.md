@@ -22,6 +22,15 @@ Bun reuse downloads but still materialize a larger project-local environment.
 Migrating a project from npm to pnpm is a project-owned lockfile decision, not a
 runtime rewrite.
 
+For pnpm projects, native build side effects are published as verified,
+content-addressed store generations. A generation is bound to the dependency
+fingerprint, full Node version and modules ABI, platform, architecture,
+effective pnpm version, libc, and local build toolchain. Cold builds use a
+hidden staging store and publish it atomically only after every materialized
+native addon loads under the selected Node runtime. Warm installs consume the
+published side effects read-only. The runtime never shares a `node_modules`
+tree or caches a standalone `.node` file.
+
 Docker image builds should use BuildKit cache mounts or Dagger cache volumes.
 Those caches solve build pipelines and do not replace interactive worktree
 environments.

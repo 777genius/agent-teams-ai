@@ -3,7 +3,6 @@ import {
   lstat,
   open,
   readdir,
-  readFile,
   realpath,
   stat,
 } from "node:fs/promises";
@@ -24,15 +23,16 @@ const PACKAGE_NAME_PATTERN =
 export type NativeAddonCompatibilityResult = {
   readonly expectedAbi: string;
   readonly inspectedAddonCount: number;
+  readonly inspectedAddonPaths: readonly string[];
   readonly incompatibleAddonCount: number;
   readonly incompatiblePackageNames: readonly string[];
 };
 
 export async function inspectNativeAddonCompatibility(
   workspacePath: string,
+  expectedAbi = process.versions.modules,
 ): Promise<NativeAddonCompatibilityResult> {
   const deadline = Date.now() + MAX_NATIVE_ADDON_INSPECTION_MS;
-  const expectedAbi = process.versions.modules;
   if (!expectedAbi) {
     throw new Error("dependency_native_addon_abi_unavailable");
   }
@@ -55,9 +55,15 @@ export async function inspectNativeAddonCompatibility(
   let aggregateBytes = 0;
   for (const addonPath of nativeAddonPaths) {
     assertInspectionDeadline(deadline);
-    const workspaceRelativePath = relative(workspacePath, addonPath);
-    if (!isMaterializedNodeGypArtifact(workspaceRelativePath)) continue;
-    const addonStat = await stat(addonPath);
+    const addonLstat = await lstat(addonPath);
+    if (addonLstat.isSymbolicLink() || !addonLstat.isFile()) {
+      throw new Error("dependency_native_addon_binary_type_invalid");
+    }
+    const addonRealPath = await realpath(addonPath);
+    if (!isWithinDependencyRoot(addonRealPath, nodeModulesRealPath)) {
+      throw new Error("dependency_native_addon_binary_outside_dependency");
+    }
+    const addonStat = await stat(addonRealPath);
     if (addonStat.size > MAX_NATIVE_ADDON_BYTES) {
       throw new Error("dependency_native_addon_binary_size_limit_exceeded");
     }
@@ -65,7 +71,7 @@ export async function inspectNativeAddonCompatibility(
     if (aggregateBytes > MAX_NATIVE_ADDON_AGGREGATE_BYTES) {
       throw new Error("dependency_native_addon_aggregate_size_limit_exceeded");
     }
-    materializedAddons.push({ path: addonPath, size: addonStat.size });
+    materializedAddons.push({ path: addonRealPath, size: addonStat.size });
   }
 
   let incompatibleAddonCount = 0;
@@ -81,7 +87,7 @@ export async function inspectNativeAddonCompatibility(
       incompatiblePackageNames.add(
         await resolveNativeAddonPackageName(
           addon.path,
-          nodeModulesPath,
+          nodeModulesRealPath,
           nodeModulesRealPath,
           deadline,
         ),
@@ -91,6 +97,7 @@ export async function inspectNativeAddonCompatibility(
   return {
     expectedAbi,
     inspectedAddonCount: materializedAddons.length,
+    inspectedAddonPaths: materializedAddons.map((addon) => addon.path),
     incompatibleAddonCount,
     incompatiblePackageNames: [...incompatiblePackageNames].sort(),
   };
@@ -250,29 +257,52 @@ async function discoverNativeAddonFilesJavascript(
   return nativeAddonPaths;
 }
 
-function isMaterializedNodeGypArtifact(workspaceRelativePath: string): boolean {
-  const normalized = workspaceRelativePath.split(sep).join("/");
-  return (
-    /\/build\/(?:Release|Debug)\/[^/]+\.node$/.test(normalized) ||
-    /\/(?:node-v|node_abi-)\d+\/[^/]+\.node$/.test(normalized)
-  );
-}
-
 async function classicNodeModuleVersions(
   addonPath: string,
   expectedSize: number,
 ): Promise<readonly string[]> {
-  const contents = await readFile(addonPath);
-  if (
-    contents.byteLength > MAX_NATIVE_ADDON_BYTES ||
-    contents.byteLength !== expectedSize
-  ) {
-    throw new Error("dependency_native_addon_binary_size_limit_exceeded");
-  }
-  return Array.from(
-    contents.toString("latin1").matchAll(CLASSIC_NODE_MODULE_SYMBOL),
-    (match) => String(match[1]),
+  const handle = await open(
+    addonPath,
+    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
   );
+  try {
+    const openedStat = await handle.stat();
+    if (
+      !openedStat.isFile() ||
+      openedStat.size > MAX_NATIVE_ADDON_BYTES ||
+      openedStat.size !== expectedSize
+    ) {
+      throw new Error("dependency_native_addon_binary_size_limit_exceeded");
+    }
+    const contents = Buffer.alloc(openedStat.size);
+    let bytesRead = 0;
+    while (bytesRead < contents.byteLength) {
+      const read = await handle.read(
+        contents,
+        bytesRead,
+        contents.byteLength - bytesRead,
+        bytesRead,
+      );
+      if (read.bytesRead === 0) break;
+      bytesRead += read.bytesRead;
+    }
+    const finalStat = await handle.stat();
+    if (
+      bytesRead !== openedStat.size ||
+      finalStat.dev !== openedStat.dev ||
+      finalStat.ino !== openedStat.ino ||
+      finalStat.size !== openedStat.size ||
+      finalStat.mtimeMs !== openedStat.mtimeMs
+    ) {
+      throw new Error("dependency_native_addon_binary_changed");
+    }
+    return Array.from(
+      contents.toString("latin1").matchAll(CLASSIC_NODE_MODULE_SYMBOL),
+      (match) => String(match[1]),
+    );
+  } finally {
+    await handle.close();
+  }
 }
 
 export async function resolveNativeAddonHeaderRoot(

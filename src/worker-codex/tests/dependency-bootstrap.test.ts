@@ -161,6 +161,7 @@ describe("dependency bootstrap", () => {
         mkdir(join(nodeRoot, "include", "node"), { recursive: true }),
       ]);
       await Promise.all([
+        symlink(process.execPath, nodeExecutablePath),
         writeFile(
           join(root, "package.json"),
           JSON.stringify({ packageManager: "pnpm@10.33.4" }),
@@ -214,15 +215,18 @@ describe("dependency bootstrap", () => {
             command === "pnpm" && subcommand === "rebuild",
         ),
       ).toHaveLength(1);
-      expect(commands.at(-1)).toEqual([
+      expect(
+        commands.find(
+          ([command, subcommand]) =>
+            command === "pnpm" && subcommand === "rebuild",
+        ),
+      ).toEqual([
         "pnpm",
         "rebuild",
-        "--config.side-effects-cache=false",
+        "--config.side-effects-cache=true",
         "--store-dir",
-        join(
-          cacheRoot,
-          "pnpm-store",
-          `${process.platform}-${process.arch}-abi-${process.versions.modules}`,
+        expect.stringContaining(
+          join(cacheRoot, "pnpm-native-generations", ".staging"),
         ),
         "native-addon",
       ]);
@@ -265,6 +269,7 @@ describe("dependency bootstrap", () => {
         mkdir(join(nodeRoot, "include", "node"), { recursive: true }),
       ]);
       await Promise.all([
+        symlink(process.execPath, nodeExecutablePath),
         writeFile(
           join(root, "package.json"),
           JSON.stringify({ packageManager: "pnpm@10.33.4" }),
@@ -314,6 +319,7 @@ describe("dependency bootstrap", () => {
       expect(installEnvironments).toEqual([
         undefined,
         { npm_config_nodedir: nodeRoot },
+        undefined,
       ]);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -402,13 +408,15 @@ describe("dependency bootstrap", () => {
         [
           "pnpm",
           "rebuild",
-          "--config.side-effects-cache=false",
+          "--config.side-effects-cache=true",
           "--store-dir",
-          join(
-            root,
-            "cache",
-            "pnpm-store",
-            `${process.platform}-${process.arch}-abi-${process.versions.modules}`,
+          expect.stringContaining(
+            join(
+              root,
+              "cache",
+              "pnpm-native-generations",
+              ".staging",
+            ),
           ),
           "addon-one",
           "addon-two",
