@@ -495,7 +495,7 @@ const TerminalWorkspaceKernelView = ({
     window.requestAnimationFrame(scroll);
     window.setTimeout(scroll, 80);
   }, []);
-  const { activeCommandRuns, commandRuns } = useTerminalCommandRuns({
+  const { activeCommandRuns } = useTerminalCommandRuns({
     activePaneId: activeCommandPaneId,
     activeSessionId: activeCommandSessionId,
     eventSource: commandDockElement,
@@ -506,7 +506,7 @@ const TerminalWorkspaceKernelView = ({
   });
   const { autocompleteSuggestion } = useTerminalCommandAutocomplete({
     commandHistory: snapshot.commandHistory.entries,
-    commandRuns,
+    commandRuns: activeCommandRuns,
     cwd: projectPath,
     eventSource: commandDockElement,
     paneId: activeCommandPaneId,
