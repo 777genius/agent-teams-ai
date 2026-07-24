@@ -77,6 +77,19 @@ export interface CancellableLaneExecutionRequest extends LaneExecutionRequest {
   readonly cancellation: RuntimeCancellation;
 }
 
+export interface LaneExecutionEffectLease {
+  readonly token: string;
+  readonly fence: number;
+  readonly ownerId: string;
+  readonly claimedAtIso: string;
+  readonly expiresAtIso: string;
+}
+
+export interface MutatingLaneExecutionRequest extends CancellableLaneExecutionRequest {
+  readonly operationId: string;
+  readonly effectLease: LaneExecutionEffectLease;
+}
+
 export type LaneExecutionPreflightDecision =
   | { readonly status: 'ready' }
   | {
@@ -94,7 +107,7 @@ export type LaneExecutionPreflightOutcome =
       readonly reason: LaneExecutionOperationRejectionReason;
     };
 
-export interface LaunchLaneExecutionRequest extends CancellableLaneExecutionRequest {
+export interface LaunchLaneExecutionRequest extends MutatingLaneExecutionRequest {
   readonly readiness: LaneExecutionReadinessReceipt;
 }
 
@@ -122,10 +135,12 @@ export type LaneExecutionObserveOutcome =
       readonly reason: LaneExecutionOperationRejectionReason;
     };
 
-export interface StopLaneExecutionRequest extends CancellableLaneExecutionRequest {
+export interface StopLaneExecutionRequest extends MutatingLaneExecutionRequest {
   readonly executionRef: LaneExecutionRef;
   readonly mode: 'graceful' | 'immediate';
 }
+
+export type RecoverLaneExecutionRequest = MutatingLaneExecutionRequest;
 
 export type LaneExecutionStopOutcome =
   | { readonly status: 'stopped' | 'already_stopped' | 'cancelled' }
@@ -151,13 +166,14 @@ export type LaneExecutionRecoverOutcome =
 export interface LaneExecutionBackend {
   readonly backend: RuntimeExecutionBackendKind;
   readonly supportedProviderIds: readonly TeamProviderId[];
+  readonly mutationBinding: 'operation_id_and_lease_fence';
 
   validatePlan(scope: LaneExecutionScope): LaneExecutionPlanValidationOutcome;
   preflight(request: CancellableLaneExecutionRequest): Promise<LaneExecutionPreflightOutcome>;
   launch(request: LaunchLaneExecutionRequest): Promise<LaneExecutionLaunchOutcome>;
   observe(request: ObserveLaneExecutionRequest): Promise<LaneExecutionObserveOutcome>;
   stop(request: StopLaneExecutionRequest): Promise<LaneExecutionStopOutcome>;
-  recover(request: CancellableLaneExecutionRequest): Promise<LaneExecutionRecoverOutcome>;
+  recover(request: RecoverLaneExecutionRequest): Promise<LaneExecutionRecoverOutcome>;
 }
 
 const LANE_EXECUTION_REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
@@ -173,4 +189,48 @@ export function isLaneExecutionOperationRejectionReason(
   value: unknown
 ): value is LaneExecutionOperationRejectionReason {
   return (LANE_EXECUTION_OPERATION_REJECTION_REASONS as readonly unknown[]).includes(value);
+}
+
+export function hasValidLaneExecutionMutationBinding(
+  request: unknown
+): request is MutatingLaneExecutionRequest {
+  if (!isRecord(request)) return false;
+  const lease = request.effectLease;
+  if (
+    !isBoundedIdentifier(request.operationId, 512) ||
+    !isRecord(lease) ||
+    !isBoundedIdentifier(lease.token, 512) ||
+    !isBoundedIdentifier(lease.ownerId, 512) ||
+    !isPositiveSafeInteger(lease.fence) ||
+    !isCanonicalTimestamp(lease.claimedAtIso) ||
+    !isCanonicalTimestamp(lease.expiresAtIso)
+  ) {
+    return false;
+  }
+  return Date.parse(lease.expiresAtIso) > Date.parse(lease.claimedAtIso);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isPositiveSafeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 1;
+}
+
+function isBoundedIdentifier(value: unknown, maximumLength: number): value is string {
+  if (typeof value !== 'string' || value.length < 1 || value.length > maximumLength) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    const codePoint = value.charCodeAt(index);
+    if (codePoint <= 31 || codePoint === 127) return false;
+  }
+  return true;
+}
+
+function isCanonicalTimestamp(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    Number.isFinite(Date.parse(value)) &&
+    new Date(value).toISOString() === value
+  );
 }

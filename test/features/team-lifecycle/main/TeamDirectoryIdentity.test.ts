@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await -- Async fake implements persistence port contracts. */
 import { randomUUID } from 'node:crypto';
 import * as nodeFs from 'node:fs';
 import * as fs from 'node:fs/promises';
@@ -184,7 +185,7 @@ class MemoryIdentityPersistence
 
   async getAuthority(request: { readonly teamId: TeamId; readonly legacyTeamKey: LegacyTeamKey }) {
     const intent = this.intents.get(request.legacyTeamKey);
-    if (!intent || intent.teamId !== request.teamId) {
+    if (intent?.teamId !== request.teamId) {
       return { status: 'blocked' as const, reason: 'identity_mismatch' as const };
     }
     if (this.tombstonedKeys.has(request.legacyTeamKey)) {

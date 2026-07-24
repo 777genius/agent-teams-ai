@@ -3,6 +3,11 @@ export {
   type TeamLifecycleReadUseCases,
 } from './adapters/input/TeamLifecycleReadApiAdapter';
 export {
+  createTeamLifecycleCommandFeature,
+  type TeamLifecycleCommandFeature,
+  type TeamLifecycleCommandFeatureDependencies,
+} from './composition/createTeamLifecycleCommandFeature';
+export {
   createTeamRosterAdoptionFeature,
   type TeamRosterAdoptionFeature,
   type TeamRosterAdoptionFeatureDependencies,

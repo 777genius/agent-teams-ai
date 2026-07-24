@@ -1,4 +1,10 @@
 import {
+  createLifecycleRun,
+  type LifecycleExecutionBackendRegistryPort,
+  LifecycleLaneCoordinator,
+  type LifecycleLaneExecutionScope,
+} from '@features/team-lifecycle';
+import {
   createCompositeRuntimePlan,
   type LaneId,
   parseExecutionUnitId,
@@ -26,7 +32,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { TeamProviderId } from '@shared/types';
 
 function hash(character: string): Sha256Hash {
-  return `sha256:${character.repeat(64)}` as Sha256Hash;
+  return `sha256:${character.repeat(64)}`;
 }
 
 function createMixedPlan() {
@@ -120,6 +126,7 @@ function fakeBackend(
   return {
     backend,
     supportedProviderIds,
+    mutationBinding: 'operation_id_and_lease_fence',
     validatePlan: vi.fn(() =>
       accepted
         ? ({ status: 'accepted' as const } as const)
@@ -138,6 +145,84 @@ function fakeBackend(
 }
 
 describe('ExecutionBackendRegistry', () => {
+  it('adapts decoded real-registry scopes to exact stored lifecycle identities', async () => {
+    const primaryLaneId = parseLaneId('primary');
+    const provisioning = {
+      ...fakeBackend('provisioning_cli', ['anthropic', 'codex', 'gemini']),
+      preflight: vi.fn(({ scope }: { readonly scope: LifecycleLaneExecutionScope }) =>
+        Promise.resolve({
+          status: 'ready' as const,
+          readiness: {
+            backend: scope.executionUnit.backendBinding.backend,
+            bindingId: scope.executionUnit.backendBinding.bindingId,
+            laneId: scope.lane.laneId,
+            planHash: scope.plan.planHash,
+            bindingRevision: scope.executionUnit.backendBinding.bindingRevision,
+            providerRevisions: scope.requiredProviderIds.map((providerId) => ({
+              providerId,
+              capabilityRevision: 1,
+            })),
+          },
+        })
+      ),
+    } satisfies LaneExecutionBackend;
+    const registry = new ExecutionBackendRegistry([
+      provisioning,
+      fakeBackend('opencode', ['opencode']),
+    ]);
+    const plan = createMixedPlan();
+    const run = createLifecycleRun(plan, '2026-01-01T00:00:00.000Z');
+    const cancellation = {
+      cancellationId: 'registry-lifecycle-integration',
+      isCancellationRequested: () => false,
+    };
+
+    const accepted = await new LifecycleLaneCoordinator(registry).preflight(
+      run,
+      primaryLaneId,
+      cancellation
+    );
+
+    expect(accepted.status).toBe('ready');
+    if (accepted.status !== 'ready') throw new TypeError('expected lifecycle preflight readiness');
+    expect(accepted.scope.plan).toBe(plan);
+    expect(accepted.scope.lane).toBe(plan.lanes[0]);
+    expect(accepted.scope.executionUnit).toBe(plan.executionUnits[0]);
+    expect(accepted.scope.requiredProviderIds).toEqual(['anthropic', 'codex']);
+
+    const mismatches: readonly ((
+      scope: LifecycleLaneExecutionScope
+    ) => LifecycleLaneExecutionScope)[] = [
+      (scope) => ({ ...scope, plan: { ...scope.plan, rosterGeneration: 2 } }),
+      (scope) => ({ ...scope, lane: { ...scope.lane, ordinal: 1 } }),
+      (scope) => ({
+        ...scope,
+        executionUnit: {
+          ...scope.executionUnit,
+          backendBinding: {
+            ...scope.executionUnit.backendBinding,
+            bindingRevision: 2,
+          },
+        },
+      }),
+      (scope) => ({ ...scope, requiredProviderIds: [...scope.requiredProviderIds, 'gemini'] }),
+    ];
+    for (const mismatch of mismatches) {
+      const mismatchedRegistry: LifecycleExecutionBackendRegistryPort = {
+        resolve(planValue, laneId) {
+          const resolved = registry.resolve(planValue, laneId);
+          return resolved.status === 'resolved'
+            ? { ...resolved, scope: mismatch(resolved.scope) }
+            : resolved;
+        },
+      };
+      await expect(
+        new LifecycleLaneCoordinator(mismatchedRegistry).preflight(run, primaryLaneId, cancellation)
+      ).resolves.toEqual({ status: 'rejected', reason: 'backend_scope_mismatch' });
+    }
+    expect(provisioning.preflight).toHaveBeenCalledOnce();
+  });
+
   it('resolves each immutable planner lane to exactly one backend', () => {
     const provisioning = fakeBackend('provisioning_cli', ['anthropic', 'codex', 'gemini']);
     const openCode = fakeBackend('opencode', ['opencode']);
@@ -196,20 +281,31 @@ describe('ExecutionBackendRegistry', () => {
     );
   });
 
+  it('fails closed when a backend cannot attest operation identity and lease fencing', () => {
+    const unfenced = {
+      ...fakeBackend('provisioning_cli', ['anthropic']),
+      mutationBinding: undefined,
+    } as unknown as LaneExecutionBackend;
+
+    expect(() => new ExecutionBackendRegistry([unfenced])).toThrow(
+      expect.objectContaining<Partial<ExecutionBackendRegistryConfigurationError>>({
+        code: 'unsupported_mutation_binding',
+      })
+    );
+  });
+
   it('fails closed for missing ownership, missing lanes, stale plans, and backend rejection', () => {
     const plan = createMixedPlan();
     const provisioning = fakeBackend('provisioning_cli', ['anthropic', 'codex', 'gemini']);
     const openCode = fakeBackend('opencode', ['opencode']);
 
     expect(
-      new ExecutionBackendRegistry([provisioning]).resolve(plan, plan.orderedLaneIds[1]!)
+      new ExecutionBackendRegistry([provisioning]).resolve(plan, plan.orderedLaneIds[1])
     ).toEqual({ status: 'rejected', reason: 'backend_not_registered' });
-    expect(new ExecutionBackendRegistry([openCode]).resolve(plan, plan.orderedLaneIds[0]!)).toEqual(
-      {
-        status: 'rejected',
-        reason: 'backend_not_registered',
-      }
-    );
+    expect(new ExecutionBackendRegistry([openCode]).resolve(plan, plan.orderedLaneIds[0])).toEqual({
+      status: 'rejected',
+      reason: 'backend_not_registered',
+    });
     expect(
       new ExecutionBackendRegistry([provisioning, openCode]).resolve(
         plan,
@@ -220,14 +316,14 @@ describe('ExecutionBackendRegistry', () => {
     const stalePlan = { ...plan, generation: plan.generation + 1 };
     expect(
       new ExecutionBackendRegistry([provisioning, openCode]).resolve(
-        stalePlan as typeof plan,
-        plan.orderedLaneIds[0]!
+        stalePlan,
+        plan.orderedLaneIds[0]
       )
     ).toEqual({ status: 'rejected', reason: 'invalid_plan' });
 
     const rejecting = fakeBackend('provisioning_cli', ['anthropic', 'codex', 'gemini'], false);
     expect(
-      new ExecutionBackendRegistry([rejecting, openCode]).resolve(plan, plan.orderedLaneIds[0]!)
+      new ExecutionBackendRegistry([rejecting, openCode]).resolve(plan, plan.orderedLaneIds[0])
     ).toMatchObject({ status: 'rejected', reason: 'backend_rejected' });
   });
 });
