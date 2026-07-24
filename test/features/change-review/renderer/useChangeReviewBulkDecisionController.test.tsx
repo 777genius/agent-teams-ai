@@ -508,13 +508,21 @@ describe('useChangeReviewBulkDecisionController', () => {
     harness.files = [renamed, created, deleted];
     harness.rejectableFiles = harness.files;
     harness.state.hunkDecisions = {};
-    harness.buildRejectDiskSnapshot = vi.fn<BuildBulkRejectDiskSnapshot>((file) => ({
-      filePath: file.filePath,
-      beforeContent: `before:${file.filePath}`,
-      afterContent: file === created ? null : `after:${file.filePath}`,
-      file,
-      restoreMode: file === created ? 'create-file' : file === deleted ? 'delete-file' : undefined,
-    }));
+    harness.buildRejectDiskSnapshot = vi.fn<BuildBulkRejectDiskSnapshot>((file) => {
+      let restoreMode: 'create-file' | 'delete-file' | undefined;
+      if (file === created) {
+        restoreMode = 'create-file';
+      } else if (file === deleted) {
+        restoreMode = 'delete-file';
+      }
+      return {
+        filePath: file.filePath,
+        beforeContent: `before:${file.filePath}`,
+        afterContent: file === created ? null : `after:${file.filePath}`,
+        file,
+        restoreMode,
+      };
+    });
     vi.mocked(harness.commandPort.applyReview).mockResolvedValue(successfulApply({ applied: 3 }));
     renderHarness(harness);
 
