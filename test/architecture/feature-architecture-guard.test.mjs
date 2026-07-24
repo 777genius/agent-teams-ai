@@ -445,6 +445,19 @@ test('detects implementation exports through transitive internal barrels', () =>
 test('recognizes JavaScript feature root entrypoints', () => {
   withFixture(
     {
+      'src/features/commonjs-define-properties/main/index.cjs': `
+        const StoreModule = require('./infrastructure/Store');
+        Object.defineProperties(exports, {
+          Store: {
+            enumerable: true,
+            get() {
+              return StoreModule.Store;
+            },
+          },
+        });
+      `,
+      'src/features/commonjs-define-properties/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
       'src/features/commonjs-default/index.cjs': `
         module.exports = require('./infrastructure/DefaultStore');
       `,
@@ -511,6 +524,12 @@ test('recognizes JavaScript feature root entrypoints', () => {
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
             source: 'src/features/commonjs-default/index.cjs',
             specifier: './infrastructure/DefaultStore',
+          },
+          {
+            publicEntrypoint: 'src/features/commonjs-define-properties/main/index.cjs',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/commonjs-define-properties/main/index.cjs',
+            specifier: './infrastructure/Store',
           },
           {
             publicEntrypoint: 'src/features/commonjs-export-star/index.cjs',

@@ -218,21 +218,34 @@ export function commonJsExportNamesForReference(expression, reference, insideFun
   const current = unwrapExpression(expression);
   if (!ts.isCallExpression(current)) return [];
   const method = memberAccess(current.expression);
-  const descriptor = current.arguments[2] && unwrapExpression(current.arguments[2]);
-  if (method?.name !== 'defineProperty' || !descriptor || !ts.isObjectLiteralExpression(descriptor)) {
-    return [];
-  }
-
   const containsReference = (node) => reference.pos >= node.pos && reference.end <= node.end;
-  const isGetter = descriptor.properties.some((property) => {
+  const getterContainsReference = (descriptorExpression) => {
+    const descriptor = descriptorExpression && unwrapExpression(descriptorExpression);
+    if (!descriptor || !ts.isObjectLiteralExpression(descriptor)) return false;
+    return descriptor.properties.some((property) => {
+      const name = property.name;
+      const isGetProperty =
+        name && (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) && name.text === 'get';
+      if (!isGetProperty) return false;
+      if (ts.isPropertyAssignment(property)) return containsReference(property.initializer);
+      return ts.isMethodDeclaration(property) && containsReference(property);
+    });
+  };
+
+  if (method?.name === 'defineProperty') {
+    return getterContainsReference(current.arguments[2]) ? exportNames : [];
+  }
+  if (method?.name !== 'defineProperties') return [];
+
+  const descriptors = current.arguments[1] && unwrapExpression(current.arguments[1]);
+  if (!descriptors || !ts.isObjectLiteralExpression(descriptors)) return [];
+  return descriptors.properties.flatMap((property) => {
+    if (!ts.isPropertyAssignment(property) || !getterContainsReference(property.initializer)) {
+      return [];
+    }
     const name = property.name;
-    const isGetProperty =
-      name && (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) && name.text === 'get';
-    if (!isGetProperty) return false;
-    if (ts.isPropertyAssignment(property)) return containsReference(property.initializer);
-    return ts.isMethodDeclaration(property) && containsReference(property);
+    return ts.isIdentifier(name) || ts.isStringLiteralLike(name) ? [name.text] : ['*'];
   });
-  return isGetter ? exportNames : [];
 }
 
 export function findPublicMutationOwner(expression, exportedLocalNames) {
