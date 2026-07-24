@@ -4,34 +4,18 @@ import { buildReviewExternalReloadState } from '@features/review-mutations';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 
 import type {
+  ChangeReviewFileDraftActionHistoryPort,
   ChangeReviewFileDraftCommandPort,
+  ChangeReviewFileDraftHistoryPort,
   ChangeReviewFileDraftPersistenceScope,
   ChangeReviewFileDraftStatePort,
   ChangeReviewFileDraftStatusPort,
   ChangeReviewFileDraftWriteEvidencePort,
 } from '../ports/changeReviewFileDraftPorts';
 import type { ReviewOperationScopeToken } from '../utils/reviewOperationGeneration';
-import type { ChangeReviewActionHistoryController } from './useChangeReviewActionHistoryController';
-import type { ChangeReviewDraftHistoryController } from './useChangeReviewDraftHistoryController';
 import type { FileChangeSummary, FileChangeWithContent, ReviewFileScope } from '@shared/types';
 
-type ActionHistory = Pick<
-  ChangeReviewActionHistoryController,
-  'clearForFile' | 'getUndoHistory' | 'getRedoHistory' | 'replaceHistories'
->;
-
-type DraftHistory = Pick<
-  ChangeReviewDraftHistoryController,
-  | 'getEntry'
-  | 'hasBaseline'
-  | 'getBaseline'
-  | 'setBaseline'
-  | 'deleteBaseline'
-  | 'unsuppressFile'
-  | 'publishCheckpoint'
-  | 'flushWrites'
-  | 'clearFile'
->;
+const KEEP_DRAFT_MAX_ATTEMPTS = 3;
 
 interface UseChangeReviewFileDraftControllerInput {
   files: readonly FileChangeSummary[];
@@ -40,8 +24,8 @@ interface UseChangeReviewFileDraftControllerInput {
   memberName: string | undefined;
   reviewScope: ReviewFileScope;
   persistenceScope: ChangeReviewFileDraftPersistenceScope | null;
-  actionHistory: ActionHistory;
-  draftHistory: DraftHistory;
+  actionHistory: ChangeReviewFileDraftActionHistoryPort;
+  draftHistory: ChangeReviewFileDraftHistoryPort;
   statePort: ChangeReviewFileDraftStatePort;
   commandPort: ChangeReviewFileDraftCommandPort;
   statusPort: ChangeReviewFileDraftStatusPort;
@@ -54,7 +38,11 @@ interface UseChangeReviewFileDraftControllerInput {
     content: FileChangeWithContent | null
   ) => string | null;
   isFileMissingOnDisk: (content: FileChangeWithContent | null) => boolean;
-  hasUnresolvedExternalChange: (filePath: string, changes: Record<string, unknown>) => boolean;
+  hasUnresolvedExternalChange: (filePath: string, changes: Record<string, object>) => boolean;
+}
+
+function toErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }
 
 export interface ChangeReviewFileDraftController {
@@ -143,10 +131,22 @@ export function useChangeReviewFileDraftController({
       const operationScope = captureOperationScope();
       if (!operationScope) return;
       writeEvidencePort.markExpectedWrite(filePath, contentToSave);
-      await commandPort.saveEditedFile(filePath, reviewScope, expectedCurrentContent);
-      if (!isCurrentOperationScope(operationScope)) return;
-      const state = statePort.getSnapshot();
-      if (state.changeSetEpoch === operationEpoch && !state.applyError) {
+      try {
+        const result = await commandPort.saveEditedFile(
+          filePath,
+          reviewScope,
+          expectedCurrentContent
+        );
+        if (
+          !isCurrentOperationScope(operationScope) ||
+          statePort.getSnapshot().changeSetEpoch !== operationEpoch
+        ) {
+          return;
+        }
+        if (!result.ok) {
+          statePort.reportError(result.error);
+          return;
+        }
         draftHistory.setBaseline(baselineKey, contentToSave);
         const serializedState = draftHistory.getEntry(filePath)?.editorState;
         if (serializedState) {
@@ -161,6 +161,13 @@ export function useChangeReviewFileDraftController({
         }
         actionHistory.clearForFile(filePath);
         writeEvidencePort.markExpectedWrite(filePath, contentToSave);
+      } catch (error) {
+        if (
+          isCurrentOperationScope(operationScope) &&
+          statePort.getSnapshot().changeSetEpoch === operationEpoch
+        ) {
+          statePort.reportError(toErrorMessage(error, 'Unable to save the edited file.'));
+        }
       }
     },
     [
@@ -189,10 +196,18 @@ export function useChangeReviewFileDraftController({
       statePort.updateEditedContent(filePath, content);
       void Promise.resolve().then(async () => {
         if (!isCurrentOperationScope(operationScope)) return;
-        await commandPort.saveEditedFile(filePath, reviewScope, null);
-        if (!isCurrentOperationScope(operationScope)) return;
-        const state = statePort.getSnapshot();
-        if (state.changeSetEpoch === operationEpoch && !state.applyError) {
+        try {
+          const result = await commandPort.saveEditedFile(filePath, reviewScope, null);
+          if (
+            !isCurrentOperationScope(operationScope) ||
+            statePort.getSnapshot().changeSetEpoch !== operationEpoch
+          ) {
+            return;
+          }
+          if (!result.ok) {
+            statePort.reportError(result.error);
+            return;
+          }
           draftHistory.setBaseline(baselineKey, content);
           const serializedState = draftHistory.getEntry(filePath)?.editorState;
           if (serializedState) {
@@ -207,6 +222,13 @@ export function useChangeReviewFileDraftController({
           }
           actionHistory.clearForFile(filePath);
           writeEvidencePort.markExpectedWrite(filePath, content);
+        } catch (error) {
+          if (
+            isCurrentOperationScope(operationScope) &&
+            statePort.getSnapshot().changeSetEpoch === operationEpoch
+          ) {
+            statePort.reportError(toErrorMessage(error, 'Unable to restore the missing file.'));
+          }
         }
       });
     },
@@ -326,40 +348,61 @@ export function useChangeReviewFileDraftController({
         );
         return;
       }
-      const expected = draftHistory.getBaseline(baselineKey) ?? '';
+      let expected = draftHistory.getBaseline(baselineKey) ?? '';
       const operationEpoch = statePort.getSnapshot().changeSetEpoch;
       const operationScope = captureOperationScope();
       if (!operationScope) return;
       statusPort.beginFileMutation(filePath);
       void (async () => {
         try {
-          const current = await commandPort.checkConflict(reviewScope, filePath, expected);
-          if (
-            !isCurrentOperationScope(operationScope) ||
-            statePort.getSnapshot().changeSetEpoch !== operationEpoch
-          ) {
+          for (let attempt = 0; attempt < KEEP_DRAFT_MAX_ATTEMPTS; attempt += 1) {
+            const observedChange = statePort.readExternalChange(filePath);
+            if (observedChange === undefined) return;
+            const current = await commandPort.checkConflict(reviewScope, filePath, expected);
+            if (
+              !isCurrentOperationScope(operationScope) ||
+              statePort.getSnapshot().changeSetEpoch !== operationEpoch
+            ) {
+              return;
+            }
+            const nextBaseline =
+              current.hasConflict && current.conflictContent === null
+                ? null
+                : current.currentContent;
+            if (statePort.readExternalChange(filePath) !== observedChange) {
+              expected = nextBaseline ?? '';
+              continue;
+            }
+            const serializedState = draftHistory.getEntry(filePath)?.editorState;
+            if (serializedState) {
+              draftHistory.publishCheckpoint(filePath, serializedState, nextBaseline);
+              const flushed = await draftHistory.flushWrites();
+              if (
+                !isCurrentOperationScope(operationScope) ||
+                statePort.getSnapshot().changeSetEpoch !== operationEpoch
+              ) {
+                return;
+              }
+              if (!flushed) {
+                throw new Error('Unable to persist the rebased manual edit history');
+              }
+            }
+            if (!statePort.clearExternalChange(filePath, observedChange)) {
+              expected = nextBaseline ?? '';
+              continue;
+            }
+            draftHistory.setBaseline(baselineKey, nextBaseline);
             return;
           }
-          const nextBaseline =
-            current.hasConflict && current.conflictContent === null ? null : current.currentContent;
-          draftHistory.setBaseline(baselineKey, nextBaseline);
-          const serializedState = draftHistory.getEntry(filePath)?.editorState;
-          if (serializedState) {
-            draftHistory.publishCheckpoint(filePath, serializedState, nextBaseline);
-            const flushed = await draftHistory.flushWrites();
-            if (!isCurrentOperationScope(operationScope)) return;
-            if (!flushed) {
-              throw new Error('Unable to persist the rebased manual edit history');
-            }
-          }
-          statePort.clearExternalChange(filePath);
-          statePort.reportError(null);
+          throw new Error(
+            'The file kept changing while the draft was rebased. Retry Keep my draft.'
+          );
         } catch (error) {
           if (
             isCurrentOperationScope(operationScope) &&
             statePort.getSnapshot().changeSetEpoch === operationEpoch
           ) {
-            statePort.reportError(String(error));
+            statePort.reportError(toErrorMessage(error, 'Unable to keep the manual file draft.'));
           }
         } finally {
           if (
@@ -407,9 +450,15 @@ export function useChangeReviewFileDraftController({
           draftHistory.deleteBaseline(filePath);
           statePort.discardFileEdits(filePath);
           statusPort.incrementDiscardCounter(filePath);
-        } catch {
-          // The draft-history controller already reports durable cleanup failures.
-          // Keep the editor and native Undo history intact so Discard remains retryable.
+        } catch (error) {
+          if (
+            isCurrentOperationScope(operationScope) &&
+            statePort.getSnapshot().changeSetEpoch === operationEpoch
+          ) {
+            statePort.reportError(
+              toErrorMessage(error, 'Unable to discard the saved manual edit history.')
+            );
+          }
         } finally {
           if (
             isCurrentOperationScope(operationScope) &&

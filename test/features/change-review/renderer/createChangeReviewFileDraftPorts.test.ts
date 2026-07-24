@@ -4,6 +4,7 @@ import {
 } from '@features/change-review/renderer';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { ChangeReviewFileDraftCommandPort } from '@features/change-review/renderer';
 import type { ExecuteReviewMutationRequest, ReviewPersistedStateSnapshot } from '@shared/types';
 
 function createStore() {
@@ -16,12 +17,14 @@ function createStore() {
     hunkContextHashesByFile: {},
     decisionRevision: 4,
     changeSetEpoch: 2,
-    applyError: null,
+    applyError: null as string | null,
     updateEditedContent: vi.fn(),
     discardFileEdits: vi.fn(),
     clearReviewFileExternalChange: vi.fn(),
     reloadReviewFileFromDisk: vi.fn(),
-    saveEditedFile: vi.fn().mockResolvedValue(undefined),
+    saveEditedFile: vi
+      .fn<ChangeReviewFileDraftCommandPort['saveEditedFile']>()
+      .mockResolvedValue({ ok: true }),
     quiesceDecisionPersistence: vi.fn().mockResolvedValue(true),
     recordDecisionRevision: vi.fn(),
     fetchFileContent: vi.fn().mockResolvedValue(undefined),
@@ -52,9 +55,12 @@ describe('change-review file draft ports', () => {
       decisionRevision: 4,
       changeSetEpoch: 2,
     });
+    const observedChange = port.readExternalChange('/repo/a.ts');
+    if (!observedChange) throw new Error('Expected the fixture external-change event.');
     port.updateEditedContent('/repo/a.ts', 'next');
     port.discardFileEdits('/repo/a.ts');
-    port.clearExternalChange('/repo/a.ts');
+    expect(port.clearExternalChange('/repo/a.ts', { type: 'change' })).toBe(false);
+    expect(port.clearExternalChange('/repo/a.ts', observedChange)).toBe(true);
     port.reloadFileFromDisk('/repo/a.ts');
     port.applyReloadedReviewState(persistedState);
     port.reportError('failed');
@@ -65,6 +71,21 @@ describe('change-review file draft ports', () => {
     expect(store.reloadReviewFileFromDisk).toHaveBeenCalledWith('/repo/a.ts');
     expect(applyReloadedReviewState).toHaveBeenCalledWith(persistedState);
     expect(reportError).toHaveBeenCalledWith('failed');
+  });
+
+  it('does not clear a watcher event that replaced the observed event', () => {
+    const store = createStore();
+    const port = createChangeReviewFileDraftStatePort({
+      getStore: () => store,
+      applyReloadedReviewState: vi.fn(),
+      reportError: vi.fn(),
+    });
+    const observedChange = port.readExternalChange('/repo/a.ts');
+    if (!observedChange) throw new Error('Expected the fixture external-change event.');
+    store.reviewExternalChangesByFile['/repo/a.ts'] = { type: 'change' };
+
+    expect(port.clearExternalChange('/repo/a.ts', observedChange)).toBe(false);
+    expect(store.clearReviewFileExternalChange).not.toHaveBeenCalled();
   });
 
   it('maps Reload to the exact WAL mutation without leaking renderer-only scope fields', async () => {
@@ -88,6 +109,9 @@ describe('change-review file draft ports', () => {
       getReviewApi: () => ({ executeMutation, checkConflict }),
     });
 
+    await expect(
+      port.saveEditedFile('/repo/a.ts', { teamName: 'team', taskId: 'task' }, 'disk-before')
+    ).resolves.toEqual({ ok: true });
     await port.commitExternalReload({
       reviewScope: { teamName: 'team', taskId: 'task' },
       persistenceScope: { teamName: 'team', scopeKey: 'task-task', scopeToken: 'token' },
@@ -116,5 +140,35 @@ describe('change-review file draft ports', () => {
     });
     expect(store.quiesceDecisionPersistence).toHaveBeenCalledWith('team', 'task-task', 'token');
     expect(store.recordDecisionRevision).toHaveBeenCalledWith('team', 'task-task', 'token', 5);
+    expect(store.saveEditedFile).toHaveBeenCalledWith(
+      '/repo/a.ts',
+      { teamName: 'team', taskId: 'task' },
+      'disk-before'
+    );
+  });
+
+  it('forwards the operation-owned Save result independently from the global UI error', async () => {
+    const store = createStore();
+    store.applyError = 'unrelated background error';
+    const port = createChangeReviewFileDraftCommandPort({
+      getStore: () => store,
+      getReviewApi: () => ({
+        executeMutation: vi.fn(),
+        checkConflict: vi.fn(),
+      }),
+    });
+
+    await expect(
+      port.saveEditedFile('/repo/a.ts', { teamName: 'team', taskId: 'task' }, 'disk')
+    ).resolves.toEqual({ ok: true });
+
+    store.applyError = null;
+    store.saveEditedFile.mockResolvedValueOnce({
+      ok: false,
+      error: 'disk changed again',
+    });
+    await expect(
+      port.saveEditedFile('/repo/a.ts', { teamName: 'team', taskId: 'task' }, 'disk')
+    ).resolves.toEqual({ ok: false, error: 'disk changed again' });
   });
 });

@@ -9,10 +9,10 @@ import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
-  ChangeReviewActionHistoryController,
-  ChangeReviewDraftHistoryController,
+  ChangeReviewFileDraftActionHistoryPort,
   ChangeReviewFileDraftCommandPort,
   ChangeReviewFileDraftController,
+  ChangeReviewFileDraftHistoryPort,
   ChangeReviewFileDraftStatePort,
   ChangeReviewFileDraftStateSnapshot,
   ChangeReviewFileDraftStatusPort,
@@ -26,26 +26,10 @@ import type {
   ReviewUndoAction,
 } from '@shared/types';
 
-type ActionHistory = Pick<
-  ChangeReviewActionHistoryController,
-  'clearForFile' | 'getUndoHistory' | 'getRedoHistory' | 'replaceHistories'
->;
-type DraftHistory = Pick<
-  ChangeReviewDraftHistoryController,
-  | 'getEntry'
-  | 'hasBaseline'
-  | 'getBaseline'
-  | 'setBaseline'
-  | 'deleteBaseline'
-  | 'unsuppressFile'
-  | 'publishCheckpoint'
-  | 'flushWrites'
-  | 'clearFile'
->;
-
 interface Deferred<T> {
   promise: Promise<T>;
   resolve: (value: T) => void;
+  reject: (reason: unknown) => void;
 }
 
 interface Harness {
@@ -56,8 +40,8 @@ interface Harness {
   entries: Record<string, ReviewDraftHistoryEntry>;
   undoHistory: ReviewUndoAction[];
   redoHistory: ReviewRedoAction[];
-  actionHistory: ActionHistory;
-  draftHistory: DraftHistory;
+  actionHistory: ChangeReviewFileDraftActionHistoryPort;
+  draftHistory: ChangeReviewFileDraftHistoryPort;
   statePort: ChangeReviewFileDraftStatePort;
   commandPort: ChangeReviewFileDraftCommandPort;
   statusPort: ChangeReviewFileDraftStatusPort;
@@ -70,10 +54,12 @@ let latest: ChangeReviewFileDraftController | null = null;
 
 function deferred<T>(): Deferred<T> {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((resolvePromise) => {
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
     resolve = resolvePromise;
+    reject = rejectPromise;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 function makeFile(filePath = '/repo/a.ts'): FileChangeSummary {
@@ -129,13 +115,15 @@ function createHarness(): Harness {
     hunkContextHashesByFile: { '/repo/a.ts': { 0: 'hash' } },
     decisionRevision: 7,
     changeSetEpoch: 3,
-    applyError: null,
   };
   const harness = {} as Harness;
   const baselines = new Map<string, string | null>();
   const entries: Record<string, ReviewDraftHistoryEntry> = {};
   const statePort: ChangeReviewFileDraftStatePort = {
     getSnapshot: vi.fn<ChangeReviewFileDraftStatePort['getSnapshot']>(() => state),
+    readExternalChange: vi.fn<ChangeReviewFileDraftStatePort['readExternalChange']>(
+      (filePath) => state.reviewExternalChangesByFile[filePath]
+    ),
     updateEditedContent: vi.fn<ChangeReviewFileDraftStatePort['updateEditedContent']>(
       (filePath, content) => {
         state.editedContents[filePath] = content;
@@ -145,8 +133,10 @@ function createHarness(): Harness {
       delete state.editedContents[filePath];
     }),
     clearExternalChange: vi.fn<ChangeReviewFileDraftStatePort['clearExternalChange']>(
-      (filePath) => {
+      (filePath, observedChange) => {
+        if (state.reviewExternalChangesByFile[filePath] !== observedChange) return false;
         delete state.reviewExternalChangesByFile[filePath];
+        return true;
       }
     ),
     reloadFileFromDisk: vi.fn<ChangeReviewFileDraftStatePort['reloadFileFromDisk']>((filePath) => {
@@ -158,17 +148,14 @@ function createHarness(): Harness {
         state.hunkDecisions = { ...next.hunkDecisions };
         state.fileDecisions = { ...next.fileDecisions };
         state.hunkContextHashesByFile = { ...(next.hunkContextHashesByFile ?? {}) };
-        state.applyError = null;
       }
     ),
-    reportError: vi.fn<ChangeReviewFileDraftStatePort['reportError']>((message) => {
-      state.applyError = message;
-    }),
+    reportError: vi.fn<ChangeReviewFileDraftStatePort['reportError']>(),
   };
   const commandPort: ChangeReviewFileDraftCommandPort = {
     saveEditedFile: vi
       .fn<ChangeReviewFileDraftCommandPort['saveEditedFile']>()
-      .mockResolvedValue(undefined),
+      .mockResolvedValue({ ok: true }),
     checkConflict: vi.fn<ChangeReviewFileDraftCommandPort['checkConflict']>().mockResolvedValue({
       hasConflict: false,
       conflictContent: null,
@@ -194,8 +181,8 @@ function createHarness(): Harness {
   const writeEvidencePort: ChangeReviewFileDraftWriteEvidencePort = {
     markExpectedWrite: vi.fn<ChangeReviewFileDraftWriteEvidencePort['markExpectedWrite']>(),
   };
-  const actionHistory: ActionHistory = {
-    clearForFile: vi.fn<ActionHistory['clearForFile']>((filePath) => {
+  const actionHistory: ChangeReviewFileDraftActionHistoryPort = {
+    clearForFile: vi.fn<ChangeReviewFileDraftActionHistoryPort['clearForFile']>((filePath) => {
       harness.undoHistory = harness.undoHistory.filter((action) => {
         if (action.kind === 'bulk') return true;
         const actionPath =
@@ -204,33 +191,39 @@ function createHarness(): Harness {
       });
       harness.redoHistory = [];
     }),
-    getUndoHistory: vi.fn<ActionHistory['getUndoHistory']>(() => harness.undoHistory),
-    getRedoHistory: vi.fn<ActionHistory['getRedoHistory']>(() => harness.redoHistory),
-    replaceHistories: vi.fn<ActionHistory['replaceHistories']>((undoHistory, redoHistory) => {
-      harness.undoHistory = undoHistory;
-      harness.redoHistory = redoHistory;
-    }),
+    getUndoHistory: vi.fn<ChangeReviewFileDraftActionHistoryPort['getUndoHistory']>(
+      () => harness.undoHistory
+    ),
+    getRedoHistory: vi.fn<ChangeReviewFileDraftActionHistoryPort['getRedoHistory']>(
+      () => harness.redoHistory
+    ),
+    replaceHistories: vi.fn<ChangeReviewFileDraftActionHistoryPort['replaceHistories']>(
+      (undoHistory, redoHistory) => {
+        harness.undoHistory = undoHistory;
+        harness.redoHistory = redoHistory;
+      }
+    ),
   };
-  const draftHistory: DraftHistory = {
-    getEntry: vi.fn<DraftHistory['getEntry']>(
+  const draftHistory: ChangeReviewFileDraftHistoryPort = {
+    getEntry: vi.fn<ChangeReviewFileDraftHistoryPort['getEntry']>(
       (filePath) => entries[normalizePathForComparison(filePath)]
     ),
-    hasBaseline: vi.fn<DraftHistory['hasBaseline']>((filePath) =>
+    hasBaseline: vi.fn<ChangeReviewFileDraftHistoryPort['hasBaseline']>((filePath) =>
       baselines.has(normalizePathForComparison(filePath))
     ),
-    getBaseline: vi.fn<DraftHistory['getBaseline']>((filePath) =>
+    getBaseline: vi.fn<ChangeReviewFileDraftHistoryPort['getBaseline']>((filePath) =>
       baselines.get(normalizePathForComparison(filePath))
     ),
-    setBaseline: vi.fn<DraftHistory['setBaseline']>((filePath, baseline) => {
+    setBaseline: vi.fn<ChangeReviewFileDraftHistoryPort['setBaseline']>((filePath, baseline) => {
       baselines.set(normalizePathForComparison(filePath), baseline);
     }),
-    deleteBaseline: vi.fn<DraftHistory['deleteBaseline']>((filePath) => {
+    deleteBaseline: vi.fn<ChangeReviewFileDraftHistoryPort['deleteBaseline']>((filePath) => {
       baselines.delete(normalizePathForComparison(filePath));
     }),
-    unsuppressFile: vi.fn<DraftHistory['unsuppressFile']>(),
-    publishCheckpoint: vi.fn<DraftHistory['publishCheckpoint']>(),
-    flushWrites: vi.fn<DraftHistory['flushWrites']>().mockResolvedValue(true),
-    clearFile: vi.fn<DraftHistory['clearFile']>().mockResolvedValue(undefined),
+    unsuppressFile: vi.fn<ChangeReviewFileDraftHistoryPort['unsuppressFile']>(),
+    publishCheckpoint: vi.fn<ChangeReviewFileDraftHistoryPort['publishCheckpoint']>(),
+    flushWrites: vi.fn<ChangeReviewFileDraftHistoryPort['flushWrites']>().mockResolvedValue(true),
+    clearFile: vi.fn<ChangeReviewFileDraftHistoryPort['clearFile']>().mockResolvedValue(undefined),
   };
   Object.assign(harness, {
     files: [file],
@@ -333,7 +326,7 @@ describe('useChangeReviewFileDraftController', () => {
 
   it('ignores a late Save completion from a stale operation generation', async () => {
     const harness = createHarness();
-    const save = deferred<void>();
+    const save = deferred<{ ok: true }>();
     harness.state.editedContents['/repo/a.ts'] = 'manual';
     harness.baselines.set('/repo/a.ts', 'agent');
     vi.mocked(harness.commandPort.saveEditedFile).mockReturnValue(save.promise);
@@ -344,12 +337,62 @@ describe('useChangeReviewFileDraftController', () => {
       saving = latest!.saveFile('/repo/a.ts');
     });
     harness.current = false;
-    save.resolve(undefined);
+    save.resolve({ ok: true });
     await act(async () => saving);
 
     expect(harness.actionHistory.clearForFile).not.toHaveBeenCalled();
     expect(harness.draftHistory.publishCheckpoint).not.toHaveBeenCalled();
     expect(harness.writeEvidencePort.markExpectedWrite).toHaveBeenCalledOnce();
+  });
+
+  it('reports an explicit Save failure without committing draft history', async () => {
+    const harness = createHarness();
+    harness.state.editedContents['/repo/a.ts'] = 'manual';
+    harness.baselines.set('/repo/a.ts', 'agent');
+    vi.mocked(harness.commandPort.saveEditedFile).mockResolvedValue({
+      ok: false,
+      error: 'disk changed again',
+    });
+    renderHarness(harness);
+
+    await act(async () => latest!.saveFile('/repo/a.ts'));
+
+    expect(harness.statePort.reportError).toHaveBeenCalledWith('disk changed again');
+    expect(harness.actionHistory.clearForFile).not.toHaveBeenCalled();
+    expect(harness.draftHistory.publishCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it('reports a rejected Save without committing draft history', async () => {
+    const harness = createHarness();
+    harness.state.editedContents['/repo/a.ts'] = 'manual';
+    harness.baselines.set('/repo/a.ts', 'agent');
+    vi.mocked(harness.commandPort.saveEditedFile).mockRejectedValue(
+      new Error('save transport failed')
+    );
+    renderHarness(harness);
+
+    await act(async () => latest!.saveFile('/repo/a.ts'));
+
+    expect(harness.statePort.reportError).toHaveBeenCalledWith('save transport failed');
+    expect(harness.actionHistory.clearForFile).not.toHaveBeenCalled();
+    expect(harness.draftHistory.publishCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it('reports a rejected Restore and keeps the draft retryable', async () => {
+    const harness = createHarness();
+    vi.mocked(harness.commandPort.saveEditedFile).mockRejectedValue(
+      new Error('restore transport failed')
+    );
+    renderHarness(harness);
+
+    act(() => latest!.restoreMissingFile('/repo/a.ts', 'manual'));
+    await vi.waitFor(() =>
+      expect(harness.statePort.reportError).toHaveBeenCalledWith('restore transport failed')
+    );
+
+    expect(harness.state.editedContents['/repo/a.ts']).toBe('manual');
+    expect(harness.baselines.get('/repo/a.ts')).toBeNull();
+    expect(harness.actionHistory.clearForFile).not.toHaveBeenCalled();
   });
 
   it('commits Reload before clearing recoverable draft history and retains unrelated actions', async () => {
@@ -411,6 +454,27 @@ describe('useChangeReviewFileDraftController', () => {
     expect(harness.statusPort.finishFileMutation).not.toHaveBeenCalled();
   });
 
+  it('keeps the edited draft recoverable when Reload history cleanup rejects', async () => {
+    const harness = createHarness();
+    harness.state.editedContents['/repo/a.ts'] = 'manual';
+    harness.baselines.set('/repo/a.ts', 'agent');
+    harness.entries['/repo/a.ts'] = makeEntry('/repo/a.ts', 'manual');
+    harness.state.reviewExternalChangesByFile['/repo/a.ts'] = { type: 'change' };
+    vi.mocked(harness.draftHistory.clearFile).mockRejectedValue(new Error('reload cleanup failed'));
+    renderHarness(harness);
+
+    act(() => latest!.reloadFromDisk('/repo/a.ts'));
+    await vi.waitFor(() =>
+      expect(harness.statePort.reportError).toHaveBeenCalledWith('reload cleanup failed')
+    );
+
+    expect(harness.state.editedContents['/repo/a.ts']).toBe('manual');
+    expect(harness.entries['/repo/a.ts']).toBeDefined();
+    expect(harness.statePort.reloadFileFromDisk).not.toHaveBeenCalled();
+    expect(harness.commandPort.fetchFileContent).not.toHaveBeenCalled();
+    expect(harness.statusPort.finishFileMutation).toHaveBeenCalledWith('/repo/a.ts');
+  });
+
   it('rebases Keep draft onto a missing disk file and preserves its durable editor branch', async () => {
     const harness = createHarness();
     harness.baselines.set('/repo/a.ts', 'agent');
@@ -425,7 +489,10 @@ describe('useChangeReviewFileDraftController', () => {
 
     act(() => latest!.keepDraft('/repo/a.ts'));
     await vi.waitFor(() =>
-      expect(harness.statePort.clearExternalChange).toHaveBeenCalledWith('/repo/a.ts')
+      expect(harness.statePort.clearExternalChange).toHaveBeenCalledWith(
+        '/repo/a.ts',
+        expect.objectContaining({ type: 'unlink' })
+      )
     );
 
     expect(harness.baselines.get('/repo/a.ts')).toBeNull();
@@ -434,7 +501,110 @@ describe('useChangeReviewFileDraftController', () => {
       expect.objectContaining({ doc: 'manual' }),
       null
     );
-    expect(harness.statePort.reportError).toHaveBeenLastCalledWith(null);
+    expect(harness.statePort.reportError).not.toHaveBeenCalled();
+    expect(harness.statusPort.finishFileMutation).toHaveBeenCalledWith('/repo/a.ts');
+  });
+
+  it('rechecks Keep draft when a newer watcher event arrives during durable flush', async () => {
+    const harness = createHarness();
+    const firstFlush = deferred<boolean>();
+    const firstEvent = { type: 'change' };
+    const secondEvent = { type: 'change' };
+    harness.baselines.set('/repo/a.ts', 'agent');
+    harness.entries['/repo/a.ts'] = makeEntry('/repo/a.ts', 'manual');
+    harness.state.reviewExternalChangesByFile['/repo/a.ts'] = firstEvent;
+    vi.mocked(harness.commandPort.checkConflict)
+      .mockResolvedValueOnce({
+        hasConflict: true,
+        conflictContent: 'disk-first',
+        currentContent: 'disk-first',
+      })
+      .mockResolvedValueOnce({
+        hasConflict: true,
+        conflictContent: 'disk-second',
+        currentContent: 'disk-second',
+      });
+    vi.mocked(harness.draftHistory.flushWrites)
+      .mockReturnValueOnce(firstFlush.promise)
+      .mockResolvedValue(true);
+    renderHarness(harness);
+
+    act(() => latest!.keepDraft('/repo/a.ts'));
+    await vi.waitFor(() => expect(harness.draftHistory.flushWrites).toHaveBeenCalledOnce());
+    harness.state.reviewExternalChangesByFile['/repo/a.ts'] = secondEvent;
+    firstFlush.resolve(true);
+
+    await vi.waitFor(() =>
+      expect(harness.statePort.clearExternalChange).toHaveBeenLastCalledWith(
+        '/repo/a.ts',
+        secondEvent
+      )
+    );
+    expect(harness.commandPort.checkConflict).toHaveBeenCalledTimes(2);
+    expect(harness.draftHistory.flushWrites).toHaveBeenCalledTimes(2);
+    expect(harness.baselines.get('/repo/a.ts')).toBe('disk-second');
+    expect(harness.state.reviewExternalChangesByFile).toEqual({});
+  });
+
+  it('bounds Keep draft retries and leaves a noisy watcher event unresolved', async () => {
+    const harness = createHarness();
+    harness.baselines.set('/repo/a.ts', 'agent');
+    harness.entries['/repo/a.ts'] = makeEntry('/repo/a.ts', 'manual');
+    harness.state.reviewExternalChangesByFile['/repo/a.ts'] = { type: 'change' };
+    vi.mocked(harness.commandPort.checkConflict).mockImplementation(() => {
+      harness.state.reviewExternalChangesByFile['/repo/a.ts'] = { type: 'change' };
+      return Promise.resolve({
+        hasConflict: true,
+        conflictContent: 'newer-disk',
+        currentContent: 'newer-disk',
+      });
+    });
+    renderHarness(harness);
+
+    act(() => latest!.keepDraft('/repo/a.ts'));
+    await vi.waitFor(() =>
+      expect(harness.statePort.reportError).toHaveBeenCalledWith(
+        'The file kept changing while the draft was rebased. Retry Keep my draft.'
+      )
+    );
+
+    expect(harness.commandPort.checkConflict).toHaveBeenCalledTimes(3);
+    expect(harness.statePort.clearExternalChange).not.toHaveBeenCalled();
+    expect(harness.state.reviewExternalChangesByFile['/repo/a.ts']).toBeDefined();
+    expect(harness.statusPort.finishFileMutation).toHaveBeenCalledWith('/repo/a.ts');
+  });
+
+  it('does not clear an unrelated UI error after Keep draft succeeds', async () => {
+    const harness = createHarness();
+    harness.baselines.set('/repo/a.ts', 'agent');
+    harness.state.reviewExternalChangesByFile['/repo/a.ts'] = { type: 'change' };
+    harness.statePort.reportError('unrelated background error');
+    vi.mocked(harness.statePort.reportError).mockClear();
+    renderHarness(harness);
+
+    act(() => latest!.keepDraft('/repo/a.ts'));
+    await vi.waitFor(() => expect(harness.statePort.clearExternalChange).toHaveBeenCalledOnce());
+
+    expect(harness.statePort.reportError).not.toHaveBeenCalled();
+  });
+
+  it('retains edited content and reports a durable cleanup failure on Discard', async () => {
+    const harness = createHarness();
+    harness.state.editedContents['/repo/a.ts'] = 'manual';
+    harness.baselines.set('/repo/a.ts', 'agent');
+    harness.entries['/repo/a.ts'] = makeEntry('/repo/a.ts', 'manual');
+    vi.mocked(harness.draftHistory.clearFile).mockRejectedValue(new Error('draft cleanup failed'));
+    renderHarness(harness);
+
+    act(() => latest!.discardFile('/repo/a.ts'));
+    await vi.waitFor(() =>
+      expect(harness.statePort.reportError).toHaveBeenCalledWith('draft cleanup failed')
+    );
+
+    expect(harness.state.editedContents['/repo/a.ts']).toBe('manual');
+    expect(harness.entries['/repo/a.ts']).toBeDefined();
+    expect(harness.draftHistory.deleteBaseline).not.toHaveBeenCalled();
+    expect(harness.statePort.discardFileEdits).not.toHaveBeenCalled();
     expect(harness.statusPort.finishFileMutation).toHaveBeenCalledWith('/repo/a.ts');
   });
 });

@@ -1,14 +1,12 @@
+import { normalizePathForComparison } from '@shared/utils/platformPath';
+
 import type {
   ChangeReviewFileDraftCommandPort,
   ChangeReviewFileDraftStatePort,
   ChangeReviewFileDraftStateSnapshot,
   CommitChangeReviewExternalReloadInput,
 } from '../ports/changeReviewFileDraftPorts';
-import type {
-  ExecuteReviewMutationRequest,
-  ReviewFileScope,
-  ReviewPersistedStateSnapshot,
-} from '@shared/types';
+import type { ExecuteReviewMutationRequest, ReviewPersistedStateSnapshot } from '@shared/types';
 import type { ReviewAPI } from '@shared/types/api';
 
 interface ChangeReviewFileDraftStore {
@@ -22,16 +20,11 @@ interface ChangeReviewFileDraftStore {
   hunkContextHashesByFile: ChangeReviewFileDraftStateSnapshot['hunkContextHashesByFile'];
   decisionRevision: number;
   changeSetEpoch: number;
-  applyError: string | null;
   updateEditedContent(filePath: string, content: string): void;
   discardFileEdits(filePath: string): void;
   clearReviewFileExternalChange(filePath: string): void;
   reloadReviewFileFromDisk(filePath: string): void;
-  saveEditedFile(
-    filePath: string,
-    scope: ReviewFileScope,
-    expectedCurrentContent: string | null
-  ): Promise<void>;
+  saveEditedFile: ChangeReviewFileDraftCommandPort['saveEditedFile'];
   quiesceDecisionPersistence(
     teamName: string,
     scopeKey: string,
@@ -56,6 +49,17 @@ interface CreateChangeReviewFileDraftStatePortInput {
   reportError: (message: string | null) => void;
 }
 
+function findExternalChange(
+  changes: Record<string, object>,
+  filePath: string
+): { filePath: string; value: object } | undefined {
+  const normalizedPath = normalizePathForComparison(filePath);
+  const entry = Object.entries(changes).find(
+    ([candidate]) => normalizePathForComparison(candidate) === normalizedPath
+  );
+  return entry ? { filePath: entry[0], value: entry[1] } : undefined;
+}
+
 export function createChangeReviewFileDraftStatePort({
   getStore,
   applyReloadedReviewState,
@@ -73,12 +77,19 @@ export function createChangeReviewFileDraftStatePort({
         hunkContextHashesByFile: state.hunkContextHashesByFile,
         decisionRevision: state.decisionRevision,
         changeSetEpoch: state.changeSetEpoch,
-        applyError: state.applyError,
       };
     },
+    readExternalChange: (filePath) =>
+      findExternalChange(getStore().reviewExternalChangesByFile, filePath)?.value,
     updateEditedContent: (filePath, content) => getStore().updateEditedContent(filePath, content),
     discardFileEdits: (filePath) => getStore().discardFileEdits(filePath),
-    clearExternalChange: (filePath) => getStore().clearReviewFileExternalChange(filePath),
+    clearExternalChange: (filePath, observedChange) => {
+      const store = getStore();
+      const current = findExternalChange(store.reviewExternalChangesByFile, filePath);
+      if (current?.value !== observedChange) return false;
+      store.clearReviewFileExternalChange(current.filePath);
+      return true;
+    },
     reloadFileFromDisk: (filePath) => getStore().reloadReviewFileFromDisk(filePath),
     applyReloadedReviewState,
     reportError,

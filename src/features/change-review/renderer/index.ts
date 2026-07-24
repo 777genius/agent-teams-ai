@@ -83,12 +83,15 @@ export type {
   ChangeReviewDraftHistoryVersion,
 } from './ports/changeReviewDraftHistoryPort';
 export type {
+  ChangeReviewFileDraftActionHistoryPort,
   ChangeReviewFileDraftCommandPort,
+  ChangeReviewFileDraftHistoryPort,
   ChangeReviewFileDraftPersistenceScope,
   ChangeReviewFileDraftStatePort,
   ChangeReviewFileDraftStateSnapshot,
   ChangeReviewFileDraftStatusPort,
   ChangeReviewFileDraftWriteEvidencePort,
+  ChangeReviewSaveEditedFileResult,
   CommitChangeReviewExternalReloadInput,
 } from './ports/changeReviewFileDraftPorts';
 export type {
