@@ -593,5 +593,8 @@ function createV8MemberWorkSyncSchema(database: InstanceType<typeof Database>): 
       event_json TEXT NOT NULL,
       PRIMARY KEY (team_name, id)
     );
+    CREATE TABLE coordination_backup_writer_fences (
+      status TEXT NOT NULL
+    );
   `);
 }
