@@ -1,3 +1,4 @@
+import { resolveChangeReviewFileHunkCount } from '@features/change-review';
 import {
   createChangeReviewActionHistoryStorePort,
   createChangeReviewBulkDecisionStatePort,
@@ -18,7 +19,6 @@ import {
 import { buildReviewRestoreDecisionState } from '@features/review-mutations';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
-import { getFileHunkCount } from '@renderer/store/slices/changeReviewSlice';
 import { getFileReviewKey } from '@renderer/utils/reviewKey';
 
 import { buildInitialReviewFileScrollKey } from './initialReviewFileScroll';
@@ -130,7 +130,7 @@ export const changeReviewFileDecisionStatePort = createChangeReviewFileDecisionS
 });
 export const changeReviewFileDecisionPolicy: ChangeReviewFileDecisionPolicy = {
   getHunkCount: (file, state) =>
-    getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts),
+    resolveChangeReviewFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts),
   getFileDecision: (file, state) =>
     state.fileDecisions[getFileReviewKey(file)] ?? state.fileDecisions[file.filePath],
   resolveModifiedContent: getResolvedReviewModifiedContent,
@@ -155,7 +155,7 @@ export const changeReviewHunkDecisionStatePort = createChangeReviewHunkDecisionS
 );
 export const changeReviewHunkDecisionPolicy: ChangeReviewHunkDecisionPolicy = {
   getHunkCount: (file, state) =>
-    getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts),
+    resolveChangeReviewFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts),
   resolveFileIsNew: resolveReviewFileIsNew,
   shouldDeleteWhenUndoingReject: shouldDeleteFileWhenUndoingReject,
   shouldCreateWhenUndoingReject: shouldCreateFileWhenUndoingReject,
