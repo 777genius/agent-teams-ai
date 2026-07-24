@@ -1,5 +1,6 @@
 import { normalizeMemberWorkSyncTeamKey } from '../../../contracts/memberWorkSyncTeamIdentity';
 
+import { PROCESS_OWNERSHIP_STORAGE_MIGRATION_STATEMENTS } from './processOwnershipStorageOps';
 import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from './teamIdentityStorageSchema';
 import {
   TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS,
@@ -19,7 +20,6 @@ interface InternalStorageMigration {
   version: number;
   statements: string[];
 }
-
 /**
  * Versioned via PRAGMA user_version. Released versions are append-only: new
  * schema changes get a new version entry and existing entries are never edited.
@@ -462,15 +462,13 @@ const MIGRATIONS: InternalStorageMigration[] = [
     version: 10,
     statements: [...TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS],
   },
+  { version: 11, statements: [...PROCESS_OWNERSHIP_STORAGE_MIGRATION_STATEMENTS] },
 ];
-
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
-
 export function readSchemaVersion(db: SqliteDatabase): number {
   const value = db.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : 0;
 }
-
 export function runInternalStorageMigrations(db: SqliteDatabase): void {
   const current = readSchemaVersion(db);
   for (const migration of MIGRATIONS) {
@@ -478,6 +476,7 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
       continue;
     }
     const apply = db.transaction(() => {
+      if (migration.version === 11) assertNoActiveBackupFenceForOwnershipMigration(db);
       if (migration.version === 7) ensureHistoricalV6DurabilityTables(db);
       if (migration.version === 8) {
         ensureHistoricalV6DurabilityTables(db);
@@ -497,14 +496,18 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
     db.transaction(() => ensureMemberWorkSyncTeamKeyIndexes(db))();
   }
 }
-
+function assertNoActiveBackupFenceForOwnershipMigration(db: SqliteDatabase): void {
+  const activeFence = db
+    .prepare("SELECT 1 FROM coordination_backup_writer_fences WHERE status = 'active' LIMIT 1")
+    .get();
+  if (activeFence) throw new Error('internal-storage-v11-migration-backup-fenced');
+}
 const MEMBER_WORK_SYNC_TEAM_KEY_TABLES = [
   'member_work_sync_status',
   'member_work_sync_report_intents',
   'member_work_sync_outbox',
   'member_work_sync_metric_events',
 ] as const;
-
 /** Runs inside the v9 migration transaction and deliberately uses the shared JS contract. */
 function backfillMemberWorkSyncTeamKeys(db: SqliteDatabase): void {
   for (const tableName of MEMBER_WORK_SYNC_TEAM_KEY_TABLES) {
@@ -518,7 +521,6 @@ function backfillMemberWorkSyncTeamKeys(db: SqliteDatabase): void {
     }
   }
 }
-
 function ensureMemberWorkSyncTeamKeyIndexes(db: SqliteDatabase): void {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_mws_status_team_key
     ON member_work_sync_status (team_key)`);
@@ -529,7 +531,6 @@ function ensureMemberWorkSyncTeamKeyIndexes(db: SqliteDatabase): void {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_mws_metric_events_team_key
     ON member_work_sync_metric_events (team_key)`);
 }
-
 function ensureHistoricalV6DurabilityTables(db: SqliteDatabase): void {
   const migration = MIGRATIONS.find((candidate) => candidate.version === 6);
   if (!migration) throw new Error('internal-storage-v6-migration-missing');
@@ -632,7 +633,6 @@ function ensureHistoricalV6DurabilityTables(db: SqliteDatabase): void {
        )`
   );
 }
-
 function ensureCommandCoordinationAttribution(db: SqliteDatabase): void {
   const columns = db.pragma('table_info(durable_application_commands)') as {
     readonly name: string;

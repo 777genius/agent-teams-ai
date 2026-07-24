@@ -35,6 +35,7 @@ import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorag
 import type { TeamRosterStorageGateway } from '../../contracts/teamRosterStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '../../core/application/ports';
 import type { CoordinationDurabilityStorageGateway } from '../infrastructure/CoordinationDurabilityStorageGateway';
+import type { ProcessOwnershipStorageGateway } from '../infrastructure/ProcessOwnershipStorageGateway';
 import type { ApplicationCommandLedgerStorageGateway } from '@features/application-command-ledger';
 import type { TaskStallJournalStore } from '@main/services/team/stallMonitor/TaskStallJournalStore';
 import type { TaskCommentNotificationJournalStore } from '@main/services/team/TaskCommentNotificationJournalStore';
@@ -70,6 +71,10 @@ export interface InternalStorageCoordinationDurabilityBackend {
   selector: InternalStorageBackendSelector;
 }
 
+export interface InternalStorageProcessOwnershipBackend {
+  gateway: ProcessOwnershipStorageGateway;
+}
+
 export interface InternalStorageFeature {
   taskStallJournalStore: TaskStallJournalStore;
   taskCommentNotificationJournalStore: TaskCommentNotificationJournalStore;
@@ -91,6 +96,8 @@ export interface InternalStorageFeature {
   teamRosterBackend: InternalStorageTeamRosterBackend | null;
   /** Critical coordination durability never degrades to a JSON fallback. */
   coordinationDurabilityBackend: InternalStorageCoordinationDurabilityBackend | null;
+  /** Process ownership is SQLite-only; unavailable storage closes runtime-control admission. */
+  processOwnershipBackend: InternalStorageProcessOwnershipBackend | null;
   /** Forces the lazy backend decision for startup diagnostics and packaged smoke checks. */
   probeBackend(): Promise<InternalStorageBackendKind>;
   getBackendKind(): InternalStorageBackendKind;
@@ -183,6 +190,7 @@ export function createInternalStorageFeature(
     teamIdentityReadBackend: workerAvailable ? { gateway: client } : null,
     teamRosterBackend: workerAvailable ? { gateway: client } : null,
     coordinationDurabilityBackend: workerAvailable ? { gateway: client, selector } : null,
+    processOwnershipBackend: workerAvailable ? { gateway: client } : null,
     probeBackend: () => selector.select('sqlite', 'json-fallback'),
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),

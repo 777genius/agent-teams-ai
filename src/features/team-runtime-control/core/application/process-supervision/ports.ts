@@ -14,6 +14,7 @@ import type {
   ProcessDrainProof,
   ProcessOwnershipRecord,
   ProcessOwnershipState,
+  UnclassifiedProcessOwnershipState,
 } from '../../domain/process-supervision';
 import type { RuntimeCancellation } from '../ports';
 
@@ -95,6 +96,23 @@ export interface ProcessOwnershipStorePort {
   compareAndSwap(
     request: ProcessOwnershipCompareAndSwapRequest
   ): Promise<ProcessOwnershipCompareAndSwapResult>;
+}
+
+export type ProcessResidualEvidenceReadResult =
+  | {
+      readonly status: 'available';
+      readonly residuals: readonly UnclassifiedProcessOwnershipState[];
+    }
+  | { readonly status: 'unavailable' };
+
+/**
+ * Read-only projection for security/readiness consumers. It exposes typed fail-closed evidence but
+ * deliberately has no clear, acknowledge, delete, or mutation operation.
+ */
+export interface ProcessResidualEvidencePort {
+  readResidualEvidence(
+    context: ProcessOwnershipStoreContext
+  ): Promise<ProcessResidualEvidenceReadResult>;
 }
 
 export interface ProcessIdentityFactoryPort {
@@ -222,7 +240,8 @@ export async function runBoundedProcessSupervisionEffect<T>(
           settle(() => resolve(value));
         }
       },
-      (error: unknown) => settle(() => reject(error))
+      (error: unknown) =>
+        settle(() => reject(error instanceof Error ? error : new Error(String(error))))
     );
   });
 }

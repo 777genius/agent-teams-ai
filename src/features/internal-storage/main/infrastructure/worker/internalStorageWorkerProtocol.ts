@@ -4,6 +4,14 @@ import type {
 } from '../../../contracts/internalStorageContracts';
 import type { TeamRosterSnapshotRecord } from '../../../contracts/teamRosterStorageContracts';
 import type {
+  ProcessOwnershipStorageCompareAndSwapRequest,
+  ProcessOwnershipStorageCompareAndSwapResult,
+  ProcessOwnershipStorageLoadResult,
+  ProcessOwnershipStorageScope,
+  StoredProcessOwnershipPhase,
+  StoredProcessOwnershipState,
+} from '../ProcessOwnershipStorageGateway';
+import type {
   DurableApplicationCommandCommitRequest,
   DurableApplicationCommandConsumerApplyRequest,
   DurableApplicationCommandConsumerProjectionRequest,
@@ -251,6 +259,24 @@ type TypedCoordinationDurabilityWorkerRequest = {
   };
 }[keyof CoordinationDurabilityWorkerPayloadByOp];
 
+export interface ProcessOwnershipWorkerPayloadByOp {
+  'processOwnership.loadByScope': { readonly scope: ProcessOwnershipStorageScope };
+  'processOwnership.loadByProcessRef': { readonly processRef: string };
+  'processOwnership.list': Record<string, never>;
+  'processOwnership.compareAndSwap': {
+    readonly request: ProcessOwnershipStorageCompareAndSwapRequest;
+    readonly admission: { readonly deadlineAtMs: number };
+  };
+}
+
+type TypedProcessOwnershipWorkerRequest = {
+  [TOp in keyof ProcessOwnershipWorkerPayloadByOp]: {
+    id: string;
+    op: TOp;
+    payload: ProcessOwnershipWorkerPayloadByOp[TOp];
+  };
+}[keyof ProcessOwnershipWorkerPayloadByOp];
+
 export type InternalStorageWorkerRequest =
   | { id: string; op: 'ping'; payload: Record<string, never> }
   | { id: string; op: 'stallJournal.load'; payload: { teamName: string } }
@@ -285,6 +311,7 @@ export type InternalStorageWorkerRequest =
   // the worker-side dispatcher (memberWorkSyncWorkerOps) own the payloads.
   | TypedApplicationCommandLedgerWorkerRequest
   | TypedCoordinationDurabilityWorkerRequest
+  | TypedProcessOwnershipWorkerRequest
   | UntypedApplicationCommandLedgerWorkerRequest
   | { id: string; op: `mws.${string}`; payload: unknown }
   | { id: string; op: 'close'; payload: Record<string, never> };
@@ -335,3 +362,323 @@ export function parseJournalReplacePayload<TOp extends keyof JournalReplacePaylo
 export type InternalStorageWorkerResponse =
   | { id: string; ok: true; result: unknown }
   | { id: string; ok: false; error: string };
+
+const PROCESS_OWNERSHIP_WORKER_OPS = new Set<InternalStorageWorkerOp>([
+  'processOwnership.loadByScope',
+  'processOwnership.loadByProcessRef',
+  'processOwnership.list',
+  'processOwnership.compareAndSwap',
+]);
+const PROCESS_OWNERSHIP_PHASES = new Set<StoredProcessOwnershipPhase>([
+  'spawn_intent',
+  'owned',
+  'stopping',
+  'drained',
+  'unclassified_residual',
+]);
+const PROCESS_OWNERSHIP_SHA_256 = /^sha256:[a-f0-9]{64}$/;
+const PROCESS_OWNERSHIP_OPAQUE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
+const PROCESS_OWNERSHIP_REF = /^[A-Za-z0-9][A-Za-z0-9._:-]{15,255}$/;
+const PROCESS_OWNERSHIP_MAX_STATE_BYTES = 64 * 1_024;
+const PROCESS_OWNERSHIP_MAX_RECORDS = 10_000;
+
+export function isProcessOwnershipWorkerOp(
+  op: InternalStorageWorkerOp
+): op is keyof ProcessOwnershipWorkerPayloadByOp {
+  return PROCESS_OWNERSHIP_WORKER_OPS.has(op);
+}
+
+export function parseInternalStorageWorkerResponse(value: unknown): InternalStorageWorkerResponse {
+  const record = exactWorkerRecord(value, 'response');
+  if (typeof record.id !== 'string' || record.id.length === 0) {
+    throw new TypeError('internal-storage-worker-response-id-invalid');
+  }
+  if (record.ok === true) {
+    exactWorkerFields(record, ['id', 'ok', 'result'], 'response');
+    return { id: record.id, ok: true, result: record.result };
+  }
+  if (record.ok === false && typeof record.error === 'string') {
+    exactWorkerFields(record, ['id', 'ok', 'error'], 'response');
+    return { id: record.id, ok: false, error: record.error };
+  }
+  throw new TypeError('internal-storage-worker-response-shape-invalid');
+}
+
+export function parseInternalStorageWorkerResponseForPending(
+  value: unknown,
+  getOp: (id: string) => InternalStorageWorkerOp | undefined
+): InternalStorageWorkerResponse {
+  const response = parseInternalStorageWorkerResponse(value);
+  const op = getOp(response.id);
+  return response.ok && op !== undefined && isProcessOwnershipWorkerOp(op)
+    ? { ...response, result: parseProcessOwnershipWorkerResult(op, response.result) }
+    : response;
+}
+
+export function parseProcessOwnershipWorkerPayload<
+  TOp extends keyof ProcessOwnershipWorkerPayloadByOp,
+>(op: TOp, value: unknown): ProcessOwnershipWorkerPayloadByOp[TOp] {
+  let parsed: ProcessOwnershipWorkerPayloadByOp[keyof ProcessOwnershipWorkerPayloadByOp];
+  if (op === 'processOwnership.loadByScope') {
+    const record = exactWorkerFields(value, ['scope'], 'ownership-load-scope');
+    parsed = { scope: parseWorkerOwnershipScope(record.scope) };
+  } else if (op === 'processOwnership.loadByProcessRef') {
+    const record = exactWorkerFields(value, ['processRef'], 'ownership-load-ref');
+    parsed = { processRef: parseWorkerProcessRef(record.processRef) };
+  } else if (op === 'processOwnership.list') {
+    exactWorkerFields(value, [], 'ownership-list');
+    parsed = {};
+  } else {
+    const record = exactWorkerFields(value, ['request', 'admission'], 'ownership-cas');
+    const admission = exactWorkerFields(record.admission, ['deadlineAtMs'], 'ownership-admission');
+    const deadlineAtMs = parseWorkerPositiveInteger(
+      admission.deadlineAtMs,
+      'ownership-admission-deadline'
+    );
+    parsed = {
+      request: parseWorkerCompareAndSwapRequest(record.request),
+      admission: { deadlineAtMs },
+    };
+  }
+  return parsed as ProcessOwnershipWorkerPayloadByOp[TOp];
+}
+
+interface ProcessOwnershipWorkerResultByOp {
+  'processOwnership.loadByScope': ProcessOwnershipStorageLoadResult;
+  'processOwnership.loadByProcessRef': ProcessOwnershipStorageLoadResult;
+  'processOwnership.list': readonly StoredProcessOwnershipState[];
+  'processOwnership.compareAndSwap': ProcessOwnershipStorageCompareAndSwapResult;
+}
+
+export function parseProcessOwnershipWorkerResult<
+  TOp extends keyof ProcessOwnershipWorkerResultByOp,
+>(op: TOp, value: unknown): ProcessOwnershipWorkerResultByOp[TOp] {
+  let parsed: ProcessOwnershipWorkerResultByOp[keyof ProcessOwnershipWorkerResultByOp];
+  if (op === 'processOwnership.list') {
+    if (
+      !Array.isArray(value) ||
+      value.length > PROCESS_OWNERSHIP_MAX_RECORDS ||
+      Reflect.ownKeys(value).length !== value.length + 1
+    ) {
+      throw new TypeError('internal-storage-worker-ownership-list-result-invalid');
+    }
+    parsed = Object.freeze(value.map(parseWorkerStoredOwnershipState));
+  } else {
+    const record = exactWorkerRecord(value, 'ownership-result');
+    if (record.status === 'missing') {
+      exactWorkerFields(record, ['status'], 'ownership-load-result');
+      parsed = { status: 'missing' };
+    } else if (record.status === 'conflict') {
+      exactWorkerFields(record, ['status'], 'ownership-cas-result');
+      parsed = { status: 'conflict' };
+    } else if (record.status === 'found') {
+      exactWorkerFields(record, ['status', 'record'], 'ownership-load-result');
+      parsed = { status: 'found', record: parseWorkerStoredOwnershipState(record.record) };
+    } else if (record.status === 'applied') {
+      exactWorkerFields(record, ['status', 'record'], 'ownership-cas-result');
+      parsed = { status: 'applied', record: parseWorkerStoredOwnershipState(record.record) };
+    } else {
+      throw new TypeError('internal-storage-worker-ownership-result-invalid');
+    }
+    if (
+      (op === 'processOwnership.compareAndSwap') !==
+      (parsed.status === 'applied' || parsed.status === 'conflict')
+    ) {
+      throw new TypeError('internal-storage-worker-ownership-result-op-invalid');
+    }
+  }
+  return parsed as ProcessOwnershipWorkerResultByOp[TOp];
+}
+
+function parseWorkerCompareAndSwapRequest(
+  value: unknown
+): ProcessOwnershipStorageCompareAndSwapRequest {
+  const record = exactWorkerFields(
+    value,
+    ['scope', 'expectedRevision', 'expectedCurrent', 'next'],
+    'ownership-cas-request'
+  );
+  const scope = parseWorkerOwnershipScope(record.scope);
+  const expectedRevision =
+    record.expectedRevision === null
+      ? null
+      : parseWorkerPositiveInteger(record.expectedRevision, 'ownership-expected-revision');
+  const expectedCurrent =
+    record.expectedCurrent === null
+      ? null
+      : parseWorkerStoredOwnershipState(record.expectedCurrent);
+  const next = parseWorkerStoredOwnershipState(record.next);
+  if (
+    !workerOwnershipScopesEqual(scope, next.scope) ||
+    (expectedRevision === null) !== (expectedCurrent === null) ||
+    (expectedCurrent !== null &&
+      (expectedCurrent.revision !== expectedRevision ||
+        expectedCurrent.processRef !== next.processRef ||
+        !workerOwnershipScopesEqual(expectedCurrent.scope, scope))) ||
+    next.revision !== (expectedRevision ?? 0) + 1
+  ) {
+    throw new TypeError('internal-storage-worker-ownership-cas-binding-invalid');
+  }
+  return { scope, expectedRevision, expectedCurrent, next };
+}
+
+function parseWorkerStoredOwnershipState(value: unknown): StoredProcessOwnershipState {
+  const record = exactWorkerFields(
+    value,
+    ['scope', 'processRef', 'codecVersion', 'stateVersion', 'revision', 'phase', 'stateJson'],
+    'ownership-record'
+  );
+  if (
+    record.codecVersion !== 1 ||
+    record.stateVersion !== 1 ||
+    !PROCESS_OWNERSHIP_PHASES.has(record.phase as StoredProcessOwnershipPhase)
+  ) {
+    throw new TypeError('internal-storage-worker-ownership-record-version-invalid');
+  }
+  const stateJson = parseWorkerCanonicalStateJson(record.stateJson);
+  const envelope = JSON.parse(stateJson) as {
+    codecVersion: number;
+    state: Record<string, unknown>;
+  };
+  const revision = parseWorkerPositiveInteger(record.revision, 'ownership-revision');
+  if (
+    envelope.codecVersion !== record.codecVersion ||
+    envelope.state.stateVersion !== record.stateVersion ||
+    envelope.state.revision !== revision ||
+    envelope.state.phase !== record.phase
+  ) {
+    throw new TypeError('internal-storage-worker-ownership-record-metadata-invalid');
+  }
+  return {
+    scope: parseWorkerOwnershipScope(record.scope),
+    processRef: parseWorkerProcessRef(record.processRef),
+    codecVersion: 1,
+    stateVersion: 1,
+    revision,
+    phase: record.phase as StoredProcessOwnershipPhase,
+    stateJson,
+  };
+}
+
+function parseWorkerCanonicalStateJson(value: unknown): string {
+  if (
+    typeof value !== 'string' ||
+    Buffer.byteLength(value, 'utf8') > PROCESS_OWNERSHIP_MAX_STATE_BYTES
+  ) {
+    throw new TypeError('internal-storage-worker-ownership-state-json-invalid');
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new TypeError('internal-storage-worker-ownership-state-json-invalid');
+  }
+  const envelope = exactWorkerFields(parsed, ['codecVersion', 'state'], 'ownership-envelope');
+  exactWorkerRecord(envelope.state, 'ownership-state');
+  if (canonicalWorkerJson(parsed) !== value) {
+    throw new TypeError('internal-storage-worker-ownership-state-json-noncanonical');
+  }
+  return value;
+}
+
+function parseWorkerOwnershipScope(value: unknown): ProcessOwnershipStorageScope {
+  const record = exactWorkerFields(
+    value,
+    ['teamId', 'runId', 'planGeneration', 'planHash', 'executionUnitId'],
+    'ownership-scope'
+  );
+  if (typeof record.planHash !== 'string' || !PROCESS_OWNERSHIP_SHA_256.test(record.planHash)) {
+    throw new TypeError('internal-storage-worker-ownership-plan-hash-invalid');
+  }
+  return {
+    teamId: parseWorkerOpaque(record.teamId, 'team-id'),
+    runId: parseWorkerOpaque(record.runId, 'run-id'),
+    planGeneration: parseWorkerPositiveInteger(record.planGeneration, 'ownership-plan-generation'),
+    planHash: record.planHash,
+    executionUnitId: parseWorkerOpaque(record.executionUnitId, 'execution-unit-id'),
+  };
+}
+
+function parseWorkerProcessRef(value: unknown): string {
+  if (typeof value !== 'string' || !PROCESS_OWNERSHIP_REF.test(value)) {
+    throw new TypeError('internal-storage-worker-ownership-process-ref-invalid');
+  }
+  return value;
+}
+
+function parseWorkerOpaque(value: unknown, reason: string): string {
+  if (typeof value !== 'string' || !PROCESS_OWNERSHIP_OPAQUE.test(value)) {
+    throw new TypeError(`internal-storage-worker-ownership-${reason}-invalid`);
+  }
+  return value;
+}
+
+function parseWorkerPositiveInteger(value: unknown, reason: string): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) {
+    throw new TypeError(`internal-storage-worker-${reason}-invalid`);
+  }
+  return value;
+}
+
+function workerOwnershipScopesEqual(
+  left: ProcessOwnershipStorageScope,
+  right: ProcessOwnershipStorageScope
+): boolean {
+  return (
+    left.teamId === right.teamId &&
+    left.runId === right.runId &&
+    left.planGeneration === right.planGeneration &&
+    left.planHash === right.planHash &&
+    left.executionUnitId === right.executionUnitId
+  );
+}
+
+function exactWorkerFields(
+  value: unknown,
+  fields: readonly string[],
+  reason: string
+): Record<string, unknown> {
+  const record = exactWorkerRecord(value, reason);
+  const actual = Object.keys(record).sort();
+  const expected = [...fields].sort();
+  if (
+    actual.length !== expected.length ||
+    actual.some((field, index) => field !== expected[index])
+  ) {
+    throw new TypeError(`internal-storage-worker-${reason}-fields-invalid`);
+  }
+  return record;
+}
+
+function exactWorkerRecord(value: unknown, reason: string): Record<string, unknown> {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    Array.isArray(value) ||
+    Object.getPrototypeOf(value) !== Object.prototype ||
+    Reflect.ownKeys(value).some((key) => typeof key !== 'string')
+  ) {
+    throw new TypeError(`internal-storage-worker-${reason}-invalid`);
+  }
+  const descriptors = Object.values(Object.getOwnPropertyDescriptors(value));
+  if (descriptors.some((descriptor) => !descriptor.enumerable || !('value' in descriptor))) {
+    throw new TypeError(`internal-storage-worker-${reason}-descriptor-invalid`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function canonicalWorkerJson(value: unknown): string {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') {
+    return JSON.stringify(value);
+  }
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value)) throw new TypeError('internal-storage-worker-number-invalid');
+    return String(value);
+  }
+  if (Array.isArray(value)) return `[${value.map(canonicalWorkerJson).join(',')}]`;
+  const record = exactWorkerRecord(value, 'canonical-value');
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${canonicalWorkerJson(record[key])}`)
+    .join(',')}}`;
+}
