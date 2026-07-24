@@ -116,6 +116,9 @@ export function isRuntimeCompatibleNativeAddonPath(
   runtime: NativeAddonRuntimeTarget,
 ): boolean {
   const segments = addonPath.replaceAll("\\", "/").split("/");
+  if (segments.includes("obj.target")) {
+    return false;
+  }
   const prebuildsIndex = segments.lastIndexOf("prebuilds");
   if (prebuildsIndex >= 0) {
     return nativeTargetLabelMatches(

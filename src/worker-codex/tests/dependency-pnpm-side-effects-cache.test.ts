@@ -46,10 +46,11 @@ describe("pnpm verified side-effects cache", () => {
             args.includes("--config.side-effects-cache-readonly=true")
               ? process.versions.modules
               : "999",
+            true,
           );
         }
         if (command === "pnpm" && args[0] === "rebuild") {
-          await materializeAddon(options.cwd, process.versions.modules);
+          await materializeAddon(options.cwd, process.versions.modules, true);
         }
       };
 
@@ -117,7 +118,7 @@ describe("pnpm verified side-effects cache", () => {
         key: keys[0],
         verification: {
           expectedAbi: process.versions.modules,
-          inspectedAddonCount: 1,
+          inspectedAddonCount: 2,
         },
       });
     } finally {
@@ -525,6 +526,12 @@ describe("pnpm verified side-effects cache", () => {
         runtime,
       ),
     ).toBe(true);
+    expect(
+      isRuntimeCompatibleNativeAddonPath(
+        "/native-addon/build/Release/obj.target/addon.node",
+        runtime,
+      ),
+    ).toBe(false);
   });
 
   it("uses the target Node platform and architecture for native probes", async () => {
@@ -590,6 +597,7 @@ async function writeFixture(workspacePath: string): Promise<void> {
 async function materializeAddon(
   workspacePath: string,
   abi: string | undefined,
+  includeObjTarget = false,
 ): Promise<void> {
   const packageRoot = join(
     workspacePath,
@@ -600,9 +608,19 @@ async function materializeAddon(
     "native-addon",
   );
   const addonPath = join(packageRoot, "build", "Release", "native-addon.node");
+  const objTargetPath = join(
+    packageRoot,
+    "build",
+    "Release",
+    "obj.target",
+    "native-addon.node",
+  );
   await Promise.all([
     mkdir(join(workspacePath, "node_modules", ".bin"), { recursive: true }),
     mkdir(join(addonPath, ".."), { recursive: true }),
+    ...(includeObjTarget
+      ? [mkdir(join(objTargetPath, ".."), { recursive: true })]
+      : []),
   ]);
   await Promise.all([
     writeFile(
@@ -610,6 +628,14 @@ async function materializeAddon(
       JSON.stringify({ name: "native-addon", version: "1.0.0" }),
     ),
     writeFile(addonPath, `node_register_module_v${abi ?? "unavailable"}`),
+    ...(includeObjTarget
+      ? [
+          writeFile(
+            objTargetPath,
+            `node_register_module_v${abi ?? "unavailable"}`,
+          ),
+        ]
+      : []),
   ]);
 }
 
