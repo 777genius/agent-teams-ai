@@ -64,11 +64,11 @@ import {
   X,
 } from 'lucide-react';
 
-import { normalizeTerminalCommandRunEventDetail } from '../adapters/terminalCommandRunEvents';
 import {
   persistTerminalTabPreferences,
   readStoredTerminalTabPreferences,
 } from '../adapters/terminalTabPreferencesStorage';
+import { useTerminalCommandRuns } from '../hooks/useTerminalCommandRuns';
 import { useTerminalTabReorderMotion } from '../hooks/useTerminalTabReorderMotion';
 import {
   DEFAULT_TERMINAL_APPEARANCE_SETTINGS,
@@ -84,14 +84,8 @@ import {
 } from '../model/terminalCommandAutocomplete';
 import { normalizeStoredTerminalCommandHistoryEntry } from '../model/terminalCommandHistory';
 import {
-  capTerminalCommandRuns,
-  closeSupersededTerminalCommandRuns,
   createTerminalCommandScreenLines,
-  settleScopedTerminalCommandRuns,
   TERMINAL_COMMAND_HISTORY_LIMIT,
-  type TerminalCommandRunPresentation,
-  type TerminalCommandScreenLine,
-  upsertTerminalCommandRun,
 } from '../model/terminalCommandRuns';
 import {
   formatTerminalPromptLabel,
@@ -427,14 +421,6 @@ const TerminalWorkspaceKernelView = ({
   const [terminalContentPending, setTerminalContentPending] = useState(false);
   const [commandContextMenu, setCommandContextMenu] =
     useState<TerminalCommandContextMenuState | null>(null);
-  const [commandRuns, setCommandRuns] = useState<TerminalCommandRunPresentation[]>(() =>
-    readStoredTerminalCommandRuns(teamName)
-  );
-  const commandRunSettlementContextRef = useRef<{
-    paneId: string | null;
-    screenLines: readonly TerminalCommandScreenLine[];
-    sessionId: string | null;
-  }>({ paneId: null, screenLines: [], sessionId: null });
   const [commandDraft, setCommandDraft] = useState('');
   const [autocompleteSuggestion, setAutocompleteSuggestion] = useState<string | null>(null);
   const [dismissedAutocompleteDraft, setDismissedAutocompleteDraft] = useState<string | null>(null);
@@ -483,27 +469,6 @@ const TerminalWorkspaceKernelView = ({
   const activeCommandSessionId =
     snapshot.selection.activeSessionId ?? snapshot.catalog.sessions[0]?.session_id ?? null;
   const activeCommandPaneId = activeScreen?.pane_id ?? null;
-  commandRunSettlementContextRef.current = {
-    paneId: activeCommandPaneId,
-    screenLines: activeScreenCommandLines,
-    sessionId: activeCommandSessionId,
-  };
-  const activeCommandRuns = useMemo(
-    () =>
-      commandRuns.filter(
-        (run) => run.sessionId === activeCommandSessionId && run.paneId === activeCommandPaneId
-      ),
-    [activeCommandPaneId, activeCommandSessionId, commandRuns]
-  );
-  const autocompleteCandidates = useMemo(
-    () =>
-      createTerminalLocalAutocompleteCandidates({
-        commandHistory: snapshot.commandHistory.entries,
-        commandRuns,
-        cwd: projectPath,
-      }),
-    [commandRuns, projectPath, snapshot.commandHistory.entries]
-  );
   const terminalAppearanceStyle = useMemo(
     () =>
       ({
@@ -547,6 +512,30 @@ const TerminalWorkspaceKernelView = ({
     window.requestAnimationFrame(scroll);
     window.setTimeout(scroll, 80);
   }, []);
+  const handleCommandRunStarted = useCallback((): void => {
+    setCommandDraft('');
+    setAutocompleteSuggestion(null);
+    setDismissedAutocompleteDraft(null);
+  }, []);
+  const { activeCommandRuns, commandRuns } = useTerminalCommandRuns({
+    activePaneId: activeCommandPaneId,
+    activeSessionId: activeCommandSessionId,
+    eventSource: commandDockElement,
+    onCommandStarted: handleCommandRunStarted,
+    onCommandSubmitted: scrollTerminalToLatest,
+    screenLines: activeScreenCommandLines,
+    screenSequence: activeScreen?.sequence,
+    teamName,
+  });
+  const autocompleteCandidates = useMemo(
+    () =>
+      createTerminalLocalAutocompleteCandidates({
+        commandHistory: snapshot.commandHistory.entries,
+        commandRuns,
+        cwd: projectPath,
+      }),
+    [commandRuns, projectPath, snapshot.commandHistory.entries]
+  );
 
   const terminalScreenRef = useCallback((element: TerminalScreenElementHandle | null): void => {
     terminalScreenElementRef.current = element;
@@ -612,80 +601,6 @@ const TerminalWorkspaceKernelView = ({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [commandContextMenu]);
-
-  useEffect(() => {
-    if (!commandDockElement) {
-      return undefined;
-    }
-
-    const handleCommandSubmitted = (event: Event): void => {
-      const detail = normalizeTerminalCommandRunEventDetail(event);
-      if (detail) {
-        setCommandRuns((current) =>
-          upsertTerminalCommandRun(
-            closeSupersededTerminalCommandRuns(
-              current,
-              detail,
-              activeScreenCommandLines,
-              Date.now()
-            ),
-            detail,
-            'running'
-          )
-        );
-      }
-      scrollTerminalToLatest();
-    };
-    const handleCommandStarted = (event: Event): void => {
-      const detail = normalizeTerminalCommandRunEventDetail(event);
-      if (!detail) {
-        return;
-      }
-
-      setCommandDraft('');
-      setAutocompleteSuggestion(null);
-      setDismissedAutocompleteDraft(null);
-      setCommandRuns((current) =>
-        upsertTerminalCommandRun(
-          closeSupersededTerminalCommandRuns(current, detail, activeScreenCommandLines, Date.now()),
-          detail,
-          'running'
-        )
-      );
-    };
-    const handleCommandFailed = (event: Event): void => {
-      const detail = normalizeTerminalCommandRunEventDetail(event);
-      if (!detail) {
-        return;
-      }
-
-      setCommandRuns((current) =>
-        upsertTerminalCommandRun(
-          current,
-          {
-            ...detail,
-            durationMs: Math.max(0, Date.now() - detail.startedAtMs),
-          },
-          'failed'
-        )
-      );
-    };
-
-    commandDockElement.addEventListener('tp-terminal-command-started', handleCommandStarted);
-    commandDockElement.addEventListener('tp-terminal-command-submitted', handleCommandSubmitted);
-    commandDockElement.addEventListener('tp-terminal-command-failed', handleCommandFailed);
-    commandDockElement.addEventListener('tp-terminal-paste-submitted', handleCommandSubmitted);
-
-    return () => {
-      commandDockElement.removeEventListener('tp-terminal-command-started', handleCommandStarted);
-      commandDockElement.removeEventListener(
-        'tp-terminal-command-submitted',
-        handleCommandSubmitted
-      );
-      commandDockElement.removeEventListener('tp-terminal-command-failed', handleCommandFailed);
-      commandDockElement.removeEventListener('tp-terminal-paste-submitted', handleCommandSubmitted);
-    };
-  }, [activeScreenCommandLines, commandDockElement, scrollTerminalToLatest]);
 
   useEffect(() => {
     if (!commandDockElement) {
@@ -766,67 +681,6 @@ const TerminalWorkspaceKernelView = ({
     dismissedAutocompleteDraft,
     projectPath,
   ]);
-
-  useEffect(() => {
-    const screenLines = activeScreenCommandLines;
-    if (screenLines.length === 0) {
-      return;
-    }
-
-    setCommandRuns((current) =>
-      settleScopedTerminalCommandRuns(
-        current,
-        activeCommandSessionId,
-        activeCommandPaneId,
-        screenLines,
-        Date.now(),
-        false
-      )
-    );
-  }, [
-    activeCommandPaneId,
-    activeCommandSessionId,
-    activeScreen?.sequence,
-    activeScreenCommandLines,
-  ]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      const context = commandRunSettlementContextRef.current;
-      if (!context.sessionId || !context.paneId || context.screenLines.length === 0) {
-        return;
-      }
-
-      setCommandRuns((current) => {
-        const hasPendingScopedRun = current.some(
-          (run) =>
-            run.sessionId === context.sessionId &&
-            run.paneId === context.paneId &&
-            (run.status === 'running' || run.status === 'unknown')
-        );
-        return hasPendingScopedRun
-          ? settleScopedTerminalCommandRuns(
-              current,
-              context.sessionId,
-              context.paneId,
-              context.screenLines,
-              Date.now(),
-              true
-            )
-          : current;
-      });
-    }, 900);
-
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    setCommandRuns(readStoredTerminalCommandRuns(teamName));
-  }, [teamName]);
-
-  useEffect(() => {
-    persistTerminalCommandRuns(teamName, commandRuns);
-  }, [commandRuns, teamName]);
 
   useEffect(() => {
     setAppearanceSettings(readStoredTerminalAppearanceSettings(teamName));
@@ -2554,88 +2408,6 @@ function persistCommandHistory(teamName: string, entries: readonly string[]): vo
     );
   } catch {
     // Best-effort command history persistence.
-  }
-}
-
-function readStoredTerminalCommandRuns(teamName: string): TerminalCommandRunPresentation[] {
-  const raw = readStoredValue(storageKey(teamName, 'command-runs'));
-  if (!raw) return [];
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return capTerminalCommandRuns(
-      parsed
-        .map((entry) => normalizeStoredTerminalCommandRun(entry))
-        .filter((entry): entry is TerminalCommandRunPresentation => entry !== null)
-    );
-  } catch {
-    return [];
-  }
-}
-
-function normalizeStoredTerminalCommandRun(value: unknown): TerminalCommandRunPresentation | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const clientEventId =
-    typeof value.clientEventId === 'string' && value.clientEventId.trim()
-      ? value.clientEventId.trim()
-      : null;
-  const command = typeof value.command === 'string' ? value.command.trim() : '';
-  const paneId = typeof value.paneId === 'string' && value.paneId.trim() ? value.paneId : null;
-  const sessionId =
-    typeof value.sessionId === 'string' && value.sessionId.trim() ? value.sessionId : null;
-  const startedAtMs =
-    typeof value.startedAtMs === 'number' && Number.isFinite(value.startedAtMs)
-      ? value.startedAtMs
-      : 0;
-  const storedStatus = isTerminalCommandRunPresentationStatus(value.status)
-    ? value.status
-    : 'unknown';
-  const status = storedStatus === 'running' ? 'unknown' : storedStatus;
-
-  if (!clientEventId || !command || !paneId || !sessionId) {
-    return null;
-  }
-
-  const run: TerminalCommandRunPresentation = {
-    clientEventId,
-    command,
-    paneId,
-    sessionId,
-    startedAtMs,
-    status,
-  };
-
-  if (typeof value.durationMs === 'number' && Number.isFinite(value.durationMs)) {
-    run.durationMs = Math.max(0, value.durationMs);
-  }
-  if (typeof value.exitCode === 'number' && Number.isFinite(value.exitCode)) {
-    run.exitCode = Math.trunc(value.exitCode);
-  }
-
-  return run;
-}
-
-function isTerminalCommandRunPresentationStatus(
-  value: unknown
-): value is TerminalCommandRunPresentation['status'] {
-  return value === 'failed' || value === 'running' || value === 'succeeded' || value === 'unknown';
-}
-
-function persistTerminalCommandRuns(
-  teamName: string,
-  runs: readonly TerminalCommandRunPresentation[]
-): void {
-  try {
-    window.localStorage.setItem(
-      storageKey(teamName, 'command-runs'),
-      JSON.stringify(capTerminalCommandRuns(runs))
-    );
-  } catch {
-    // Best-effort command presentation persistence.
   }
 }
 
