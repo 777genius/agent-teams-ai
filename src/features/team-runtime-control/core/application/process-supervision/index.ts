@@ -15,6 +15,8 @@ export type {
   ProcessOwnershipLoadResult,
   ProcessOwnershipStoreContext,
   ProcessOwnershipStorePort,
+  ProcessResidualEvidencePort,
+  ProcessResidualEvidenceReadResult,
   ProcessSupervisionDeadline,
   StopOwnedProcessEffectResult,
 } from './ports';

@@ -23,8 +23,15 @@ import {
   stallJournalEntries,
   storeImports,
 } from './internalStorageSchema';
-import { parseJournalReplacePayload } from './internalStorageWorkerProtocol';
+import {
+  parseJournalReplacePayload,
+  parseProcessOwnershipWorkerPayload,
+} from './internalStorageWorkerProtocol';
 import { handleMemberWorkSyncOp, MemberWorkSyncWorkerOps } from './memberWorkSyncWorkerOps';
+import {
+  ProcessOwnershipStorageOps,
+  recordProcessOwnershipCorruptionMarker,
+} from './processOwnershipStorageOps';
 import { TeamIdentityStorageOps } from './teamIdentityStorageOps';
 import { TeamRosterStorageOps } from './teamRosterStorageOps';
 
@@ -93,6 +100,10 @@ export class InternalStorageWorkerCore {
   );
   private readonly coordinationDurabilityOps: CoordinationDurabilityWorkerOps;
   private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
+  private readonly processOwnershipOps = new ProcessOwnershipStorageOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime()
+  );
   private readonly teamIdentityOps = new TeamIdentityStorageOps(() => this.open().db);
   private readonly teamRosterOps = new TeamRosterStorageOps(() => this.open().db);
 
@@ -107,6 +118,12 @@ export class InternalStorageWorkerCore {
   handle(op: InternalStorageWorkerOp, payload: InternalStorageWorkerRequest['payload']): unknown {
     if (op === 'stallJournal.replace' || op === 'commentJournal.replace') {
       parseJournalReplacePayload(op, payload);
+    }
+    if (op === 'processOwnership.compareAndSwap') {
+      const typed = parseProcessOwnershipWorkerPayload(op, payload);
+      if ((this.options.now?.() ?? new Date()).getTime() >= typed.admission.deadlineAtMs) {
+        throw new Error('process-ownership-storage-deadline-expired');
+      }
     }
     this.assertMutationAdmission(op, payload);
     switch (op) {
@@ -157,6 +174,21 @@ export class InternalStorageWorkerCore {
           (payload as Extract<InternalStorageWorkerRequest, { op: 'teamRoster.adopt' }>['payload'])
             .roster
         );
+      case 'processOwnership.loadByScope': {
+        const typed = parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.loadByScope(typed.scope);
+      }
+      case 'processOwnership.loadByProcessRef': {
+        const typed = parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.loadByProcessRef(typed.processRef);
+      }
+      case 'processOwnership.list':
+        parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.list();
+      case 'processOwnership.compareAndSwap': {
+        const typed = parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.compareAndSwap(typed.request, typed.admission.deadlineAtMs);
+      }
       case 'close':
         this.close();
         return null;
@@ -342,6 +374,10 @@ export class InternalStorageWorkerCore {
       integrity = 'recovered';
       try {
         db = this.openOnce();
+        recordProcessOwnershipCorruptionMarker(
+          db,
+          (this.options.now?.() ?? new Date()).toISOString()
+        );
       } catch (retryError) {
         const retryMessage = retryError instanceof Error ? retryError.message : String(retryError);
         const initialMessage =
@@ -447,6 +483,9 @@ function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
     case 'teamIdentity.list':
     case 'teamIdentity.get':
     case 'teamRoster.get':
+    case 'processOwnership.loadByScope':
+    case 'processOwnership.loadByProcessRef':
+    case 'processOwnership.list':
     case 'close':
       return false;
     default:

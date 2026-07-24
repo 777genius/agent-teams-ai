@@ -12,3 +12,10 @@ export {
   mapAnchorDrainProof,
   mapAnchorReadyProof,
 } from './AnchorProtocolFrames';
+export { InternalStorageProcessOwnershipStore } from './InternalStorageProcessOwnershipStore';
+export {
+  decodeProcessOwnershipState,
+  encodeProcessOwnershipState,
+  PROCESS_OWNERSHIP_STATE_CODEC_VERSION,
+  ProcessOwnershipStateCodecError,
+} from './processOwnershipStateCodec';
