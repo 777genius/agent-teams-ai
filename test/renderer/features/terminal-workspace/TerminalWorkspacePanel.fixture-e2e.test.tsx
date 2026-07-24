@@ -269,6 +269,7 @@ describe('terminal workspace panel fixture-e2e', () => {
   let root: Root;
   let getBootstrap: ReturnType<typeof vi.fn<() => Promise<TerminalWorkspaceBootstrap>>>;
   let stopTeamRuntime: ReturnType<typeof vi.fn<() => Promise<void>>>;
+  let onSettingsOpenChange: ReturnType<typeof vi.fn<(open: boolean) => void>>;
   let openExternal: ReturnType<typeof vi.fn<(url: string) => Promise<void>>>;
   let nextSnapshot: MockWorkspaceSnapshot;
   let kernelCounter = 0;
@@ -304,6 +305,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     nextSnapshot = createWorkspaceSnapshot();
     getBootstrap = vi.fn().mockResolvedValue(createBootstrap());
     stopTeamRuntime = vi.fn().mockResolvedValue(undefined);
+    onSettingsOpenChange = vi.fn();
     openExternal = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
@@ -1661,6 +1663,8 @@ describe('terminal workspace panel fixture-e2e', () => {
 
     await updateInputValue('#terminal-settings-font-size', '18');
     await updateInputValue('#terminal-settings-opacity', '63');
+    await selectRadixOption('Terminal theme', 'Light');
+    await selectRadixOption('Terminal font preset', 'Large');
     await clickCheckboxLabel('Wrap long command output');
     await clickTextButton('Reconnect');
     await clickTextButton('Sessions');
@@ -1678,9 +1682,22 @@ describe('terminal workspace panel fixture-e2e', () => {
       })
     );
     expect(kernel.commands.setTerminalLineWrap).toHaveBeenCalledWith(true);
+    expect(kernel.commands.setTheme).toHaveBeenCalledWith('terminal-platform-light');
+    expect(kernel.commands.setTerminalFontScale).toHaveBeenCalledWith('large');
     expect(kernel.commands.bootstrap).toHaveBeenCalled();
     expect(kernel.commands.refreshSessions).toHaveBeenCalled();
     expect(stopTeamRuntime).toHaveBeenCalledWith(TEAM_NAME);
+
+    await clickTextButton('Reset appearance');
+    expect(consoleElement?.style.getPropertyValue('--agent-terminal-font-size')).toBe('15px');
+    expect(consoleElement?.style.getPropertyValue('--agent-terminal-panel-opacity')).toBe('0.74');
+
+    await clickButton('Close terminal settings');
+    expect(onSettingsOpenChange).toHaveBeenCalledWith(false);
+
+    const bootstrapCallsBeforeReload = getBootstrap.mock.calls.length;
+    await clickTextButton('Reload');
+    expect(getBootstrap).toHaveBeenCalledTimes(bootstrapCallsBeforeReload + 1);
   });
 
   it('shows image-only background controls and applies image blur when image mode is selected', async () => {
@@ -1707,8 +1724,16 @@ describe('terminal workspace panel fixture-e2e', () => {
     await updateInputValue('#terminal-settings-blur', '22');
 
     const consoleElement = document.querySelector<HTMLElement>('.agent-team-terminal-console');
+    expect(consoleElement?.style.getPropertyValue('--agent-terminal-background-image')).toContain(
+      'https://example.test/background.jpg'
+    );
     expect(consoleElement?.style.getPropertyValue('--agent-terminal-background-image-blur')).toBe(
       '22px'
+    );
+
+    await updateInputValue('#terminal-settings-background-image', 'file:///etc/passwd');
+    expect(consoleElement?.style.getPropertyValue('--agent-terminal-background-image')).toBe(
+      'none'
     );
   });
 
@@ -1788,6 +1813,7 @@ describe('terminal workspace panel fixture-e2e', () => {
             getBootstrap,
             gitBranch: 'main',
             isTeamAlive: true,
+            onSettingsOpenChange,
             projectPath: PROJECT_PATH,
             settingsOpen,
             stopTeamRuntime,
@@ -2192,6 +2218,46 @@ async function updateInputValue(selector: string, value: string): Promise<void> 
     )?.set;
     valueSetter?.call(input, value);
     input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+    await flushMicrotasks();
+  });
+}
+
+async function selectRadixOption(triggerLabel: string, optionText: string): Promise<void> {
+  const trigger = document.querySelector<HTMLButtonElement>(
+    `button[role="combobox"][aria-label="${triggerLabel}"]`
+  );
+  if (!trigger) {
+    throw new Error(`Missing select trigger: ${triggerLabel}`);
+  }
+
+  await act(async () => {
+    trigger.focus();
+    trigger.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'ArrowDown',
+      })
+    );
+    await flushMicrotasks();
+  });
+
+  const option = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(
+    (candidate) => candidate.textContent?.includes(optionText)
+  );
+  if (!option) {
+    throw new Error(`Missing select option: ${optionText}`);
+  }
+
+  await act(async () => {
+    option.dispatchEvent(
+      new MouseEvent('pointerup', {
+        bubbles: true,
+        button: 0,
+        cancelable: true,
+      })
+    );
+    option.click();
     await flushMicrotasks();
   });
 }
