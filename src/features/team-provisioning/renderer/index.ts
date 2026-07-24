@@ -65,4 +65,5 @@ export {
   extractBaseModel,
   type TeamLaunchParams,
 } from './utils/teamLaunchParams';
+export { normalizePersistedTeamLaunchParams } from './utils/teamLaunchParamsPersistence';
 export { TeamRuntimeFreshnessCoordinator } from './utils/TeamRuntimeFreshnessCoordinator';

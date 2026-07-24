@@ -245,15 +245,30 @@ export function createTeamProvisioningLaunchSlice<
       responseRunId = response.runId;
       params.onAccepted(request, response.runId, params.analyticsContext);
 
-      persistence.saveLaunchParams(request.teamName, optimisticLaunchParams);
-      dependencies.state.setState((state) => ({
-        launchParamsByTeam: {
-          ...state.launchParamsByTeam,
-          [request.teamName]: optimisticLaunchParams,
-        },
-      }));
+      if (
+        areTeamLaunchParamsEqual(
+          dependencies.state.getState().launchParamsByTeam[request.teamName],
+          optimisticLaunchParams
+        )
+      ) {
+        persistence.saveLaunchParams(request.teamName, optimisticLaunchParams);
+      }
       dependencies.state.setState((state) => {
         const provisioningRuns = { ...state.provisioningRuns };
+        const currentRunId = state.currentProvisioningRunIdByTeam[request.teamName];
+        const ownsCurrentRun = currentRunId === pendingRunId || currentRunId === response.runId;
+        if (!ownsCurrentRun) {
+          delete provisioningRuns[pendingRunId];
+          delete provisioningRuns[response.runId];
+          return {
+            provisioningRuns,
+            ignoredProvisioningRunIds: {
+              ...state.ignoredProvisioningRunIds,
+              [response.runId]: request.teamName,
+            },
+          };
+        }
+
         const pendingRun = provisioningRuns[pendingRunId];
         const realProgressAlreadyExists = response.runId in provisioningRuns;
         if (pendingRun) {

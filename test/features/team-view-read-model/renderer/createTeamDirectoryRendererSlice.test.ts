@@ -82,7 +82,7 @@ function createHarness(input?: {
     listTeams: vi.fn(),
   };
   const processNotifications = vi.fn();
-  const delay = vi.fn(async () => undefined);
+  const delay = vi.fn(() => Promise.resolve());
   const slice = createTeamDirectoryRendererSlice<TeamDirectoryRendererState, RequestScope>({
     coordinator,
     notifications: {
