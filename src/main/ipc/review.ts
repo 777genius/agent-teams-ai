@@ -21,15 +21,13 @@ import {
   removeReviewDraftHistoryIpc,
 } from '@features/change-review-history/main';
 import {
+  assertCurrentReviewDecisionRevision,
   createReviewDecisionBatchFeature,
+  createReviewDecisionCommandFeature,
   createReviewHistoryMutationFeature,
   createReviewMutationRecoveryFeature,
-  getReviewActionDiskSnapshots,
-  isDurableReviewEqual,
-  mergeReviewMutationDiskPostimages,
   registerReviewMutationRecoveryIpc,
   removeReviewMutationRecoveryIpc,
-  ReviewMutationApplyResultError,
   ReviewMutationCoordinator,
 } from '@features/review-mutations/main';
 import { validateTaskId, validateTeamName } from '@main/ipc/guards';
@@ -67,7 +65,6 @@ import {
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
-import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -90,12 +87,9 @@ import type {
   FileChangeSummary,
   FileChangeWithContent,
   FileReviewDecision,
-  HunkDecision,
   RejectResult,
   ReviewDecisionPersistenceScope,
   ReviewFileScope,
-  ReviewMutationDiskPostimage,
-  ReviewPersistedStateSnapshot,
   ReviewRenameRecoveryExpectation,
   SnippetDiff,
   TaskChangeRequestOptions,
@@ -166,76 +160,18 @@ async function withReviewDecisionPersistenceLock<T>(
   }
 }
 
-interface DisplayedReviewSnapshot {
-  teamName: string;
-  filePath: string;
-  snippetFingerprint: string;
-  content: FileChangeWithContent;
-  expiresAt: number;
-}
-
-const displayedReviewSnapshots = new Map<string, DisplayedReviewSnapshot>();
-const REVIEW_SNAPSHOT_TTL_MS = 60 * 60 * 1000;
-const MAX_DISPLAYED_REVIEW_SNAPSHOTS = 2_000;
-
-function fingerprintReviewSnippets(snippets: SnippetDiff[]): string {
-  return createHash('sha256').update(JSON.stringify(snippets)).digest('hex');
-}
-
 function registerDisplayedReviewSnapshot(
   teamName: string,
   filePath: string,
   snippets: SnippetDiff[],
   content: FileChangeWithContent
 ): FileChangeWithContent {
-  const now = Date.now();
-  for (const [token, snapshot] of displayedReviewSnapshots) {
-    if (snapshot.expiresAt <= now) displayedReviewSnapshots.delete(token);
-  }
-  while (displayedReviewSnapshots.size >= MAX_DISPLAYED_REVIEW_SNAPSHOTS) {
-    const oldestToken = displayedReviewSnapshots.keys().next().value;
-    if (!oldestToken) break;
-    displayedReviewSnapshots.delete(oldestToken);
-  }
-
-  const token = randomUUID();
-  const snapshotContent = { ...content, reviewSnapshotToken: token };
-  displayedReviewSnapshots.set(token, {
+  return reviewDecisionCommandFeature.registerDisplayedReviewSnapshot(
     teamName,
-    filePath: normalizeReviewPathForIdentity(filePath),
-    snippetFingerprint: fingerprintReviewSnippets(snippets),
-    content: snapshotContent,
-    expiresAt: now + REVIEW_SNAPSHOT_TTL_MS,
-  });
-  return snapshotContent;
-}
-
-function resolveDisplayedReviewSnapshot(
-  token: string | undefined,
-  teamName: string,
-  filePath: string,
-  authoritativeSnippets: SnippetDiff[]
-): FileChangeWithContent {
-  if (!token) {
-    throw new Error('Displayed review snapshot is unavailable; reload Changes before rejecting.');
-  }
-  const snapshot = displayedReviewSnapshots.get(token);
-  if (
-    !snapshot ||
-    snapshot.expiresAt <= Date.now() ||
-    snapshot.teamName !== teamName ||
-    snapshot.filePath !== normalizeReviewPathForIdentity(filePath) ||
-    snapshot.snippetFingerprint !== fingerprintReviewSnippets(authoritativeSnippets)
-  ) {
-    displayedReviewSnapshots.delete(token);
-    throw new Error('Displayed review snapshot is stale; reload Changes before rejecting.');
-  }
-  snapshot.expiresAt = Date.now() + REVIEW_SNAPSHOT_TTL_MS;
-  return {
-    ...snapshot.content,
     filePath,
-    snippets: authoritativeSnippets,
-  };
+    snippets,
+    content
+  );
 }
 
 function getChangeExtractor(): ChangeExtractorService {
@@ -670,18 +606,11 @@ async function handleCheckConflict(
   filePathValue: unknown,
   expectedModified: unknown
 ): Promise<IpcResult<ConflictCheckResult>> {
-  return wrapReviewHandler('checkConflict', async () => {
+  return wrapReviewHandler('checkConflict', () => {
     if (typeof expectedModified !== 'string') {
       throw new Error('Invalid expectedModified');
     }
-    const { authorization } = await resolveReviewPathAuthorization(scopeValue, {
-      requireIdentity: true,
-    });
-    const filePath = await validateAuthorizedReviewFilePath(authorization, filePathValue, {
-      requireReviewedFile: true,
-      rejectHardlinks: true,
-    });
-    return getApplier().checkConflict(filePath, expectedModified);
+    return reviewDecisionCommandFeature.checkConflict(scopeValue, filePathValue, expectedModified);
   });
 }
 
@@ -691,34 +620,9 @@ async function handleRejectHunks(
   filePathValue: unknown,
   hunkIndices: unknown
 ): Promise<IpcResult<RejectResult>> {
-  return wrapReviewHandler('rejectHunks', async () => {
+  return wrapReviewHandler('rejectHunks', () => {
     assertHunkIndices(hunkIndices);
-    const { scope, authorization } = await resolveReviewPathAuthorization(scopeValue, {
-      requireIdentity: true,
-    });
-    const filePath = await validateAuthorizedReviewFilePath(authorization, filePathValue, {
-      requireReviewedFile: true,
-      rejectHardlinks: true,
-    });
-    const authoritativeContent = await resolveAuthoritativeFileContent(
-      scope,
-      authorization,
-      filePath
-    );
-    if (
-      authoritativeContent.originalFullContent === null ||
-      authoritativeContent.modifiedFullContent === null
-    ) {
-      throw new Error('Authoritative review contents are unavailable');
-    }
-    return getApplier().rejectHunks(
-      scope.teamName,
-      filePath,
-      authoritativeContent.originalFullContent,
-      authoritativeContent.modifiedFullContent,
-      hunkIndices,
-      authoritativeContent.snippets
-    );
+    return reviewDecisionCommandFeature.rejectHunks(scopeValue, filePathValue, hunkIndices);
   });
 }
 
@@ -727,32 +631,9 @@ async function handleRejectFile(
   scopeValue: unknown,
   filePathValue: unknown
 ): Promise<IpcResult<RejectResult>> {
-  return wrapReviewHandler('rejectFile', async () => {
-    const { scope, authorization } = await resolveReviewPathAuthorization(scopeValue, {
-      requireIdentity: true,
-    });
-    const filePath = await validateAuthorizedReviewFilePath(authorization, filePathValue, {
-      requireReviewedFile: true,
-      rejectHardlinks: true,
-    });
-    const authoritativeContent = await resolveAuthoritativeFileContent(
-      scope,
-      authorization,
-      filePath
-    );
-    if (
-      authoritativeContent.originalFullContent === null ||
-      authoritativeContent.modifiedFullContent === null
-    ) {
-      throw new Error('Authoritative review contents are unavailable');
-    }
-    return getApplier().rejectFile(
-      scope.teamName,
-      filePath,
-      authoritativeContent.originalFullContent,
-      authoritativeContent.modifiedFullContent
-    );
-  });
+  return wrapReviewHandler('rejectFile', () =>
+    reviewDecisionCommandFeature.rejectFile(scopeValue, filePathValue)
+  );
 }
 
 async function handlePreviewReject(
@@ -764,7 +645,7 @@ async function handlePreviewReject(
   snippets: SnippetDiff[]
 ): Promise<IpcResult<{ preview: string; hasConflicts: boolean }>> {
   return wrapReviewHandler('previewReject', () =>
-    getApplier().previewReject(filePath, original, modified, hunkIndices, snippets)
+    reviewDecisionCommandFeature.previewReject(filePath, original, modified, hunkIndices, snippets)
   );
 }
 
@@ -779,276 +660,9 @@ async function handleApplyDecisions(
   if (!Array.isArray(request.decisions) || request.decisions.length > MAX_REVIEW_DECISIONS) {
     return { success: false, error: 'Invalid request: decisions array required' };
   }
-  return wrapReviewHandler('applyDecisions', async () => {
-    const { scope, authorization } = await resolveReviewPathAuthorization(request, {
-      requireIdentity: true,
-    });
-    const persistenceScope = parseDecisionPersistenceScope(request.decisionPersistenceScope, scope);
-    const validatedDecisions: FileReviewDecision[] = [];
-    const fileContents = new Map<string, FileChangeWithContent>();
-    const decisionPaths = new Set<string>();
-    const decisionReviewKeys = new Set<string>();
-    for (const decision of request.decisions) {
-      assertReviewDecisionShape(decision);
-      const filePath = await validateAuthorizedReviewFilePath(authorization, decision.filePath, {
-        requireReviewedFile: true,
-        rejectHardlinks: true,
-      });
-      const authoritativeFile = getAuthoritativeReviewedFile(authorization, filePath);
-      const authoritativeReviewKey = authoritativeFile.changeKey ?? authoritativeFile.filePath;
-      const normalizedDecisionPath = normalizeReviewPathForIdentity(filePath);
-      if (
-        decisionPaths.has(normalizedDecisionPath) ||
-        decisionReviewKeys.has(authoritativeReviewKey)
-      ) {
-        throw new Error('Duplicate reviewed file in Apply decisions');
-      }
-      decisionPaths.add(normalizedDecisionPath);
-      decisionReviewKeys.add(authoritativeReviewKey);
-      if (persistenceScope && decision.reviewKey !== authoritativeReviewKey) {
-        throw new Error('Durable reviewKey does not match the authoritative review identity');
-      }
-      assertSnippetShapes(authoritativeFile.snippets);
-      await validateSnippetPaths(authorization, authoritativeFile.snippets, {
-        requireReviewedFile: true,
-        rejectHardlinks: true,
-      });
-      const hasLedgerSnapshot = authoritativeFile.snippets.some(
-        (snippet) => !!snippet.ledger && !snippet.isError
-      );
-      fileContents.set(
-        filePath,
-        hasLedgerSnapshot
-          ? await resolveAuthoritativeFileContent(scope, authorization, filePath)
-          : resolveDisplayedReviewSnapshot(
-              decision.contentSnapshotToken,
-              scope.teamName,
-              filePath,
-              authoritativeFile.snippets
-            )
-      );
-      validatedDecisions.push({
-        filePath,
-        ...(decision.reviewKey ? { reviewKey: decision.reviewKey } : {}),
-        fileDecision: decision.fileDecision,
-        hunkDecisions: decision.hunkDecisions,
-        ...(decision.hunkContextHashes ? { hunkContextHashes: decision.hunkContextHashes } : {}),
-      });
-    }
-    const validatedRequest: ApplyReviewRequest = {
-      teamName: scope.teamName,
-      ...(scope.taskId ? { taskId: scope.taskId } : {}),
-      ...(authorization.resolutionMemberName
-        ? { memberName: authorization.resolutionMemberName }
-        : {}),
-      ...(persistenceScope ? { decisionPersistenceScope: persistenceScope } : {}),
-      decisions: validatedDecisions,
-    };
-
-    let result: ApplyReviewResult;
-    if (!persistenceScope) {
-      result = await getApplier().applyReviewDecisions(validatedRequest, fileContents);
-    } else {
-      if (validatedDecisions.some((decision) => !decision.reviewKey)) {
-        throw new Error('Durable review mutation requires a stable reviewKey');
-      }
-      if (!request.persistedState) {
-        throw new Error('Durable review mutation requires an exact post-operation state');
-      }
-      if (
-        !Number.isSafeInteger(request.expectedDecisionRevision) ||
-        request.expectedDecisionRevision! < 0
-      ) {
-        throw new Error('Durable review mutation requires an exact decision revision');
-      }
-      reviewDecisionStore.assertValidSnapshot(request.persistedState);
-      reviewDecisionBatchFeature.assertPersistedStateIncludesDecisions(
-        request.persistedState,
-        validatedDecisions
-      );
-      result = await applyDecisionsWithDurableJournal(
-        scope,
-        authorization,
-        persistenceScope,
-        validatedDecisions as (FileReviewDecision & { reviewKey: string })[],
-        fileContents,
-        request.persistedState,
-        request.expectedDecisionRevision!
-      );
-    }
-
-    // Invalidate resolved file content cache after applying decisions so subsequent
-    // diff operations read the latest disk state (avoids "stuck" decisions in instant-apply flows).
-    try {
-      for (const d of validatedRequest.decisions) {
-        getContentResolver().invalidateFile(d.filePath);
-      }
-    } catch (error) {
-      logger.debug('applyDecisions cache invalidation failed:', error);
-    }
-
-    return result;
-  });
-}
-
-async function assertCurrentReviewDecisionRevision(
-  teamName: string,
-  persistenceScope: ReviewDecisionPersistenceScope,
-  expectedRevision: number
-): Promise<void> {
-  const current = await reviewDecisionStore.load(
-    teamName,
-    persistenceScope.scopeKey,
-    persistenceScope.scopeToken
+  return wrapReviewHandler('applyDecisions', () =>
+    reviewDecisionCommandFeature.applyDecisions(request)
   );
-  if ((current?.revision ?? 0) !== expectedRevision) {
-    throw new Error('Review decisions changed; refusing stale state overwrite');
-  }
-}
-
-function assertExactApplyReviewHistoryTransition(
-  state: ReviewPersistedStateSnapshot,
-  current: Awaited<ReturnType<ReviewDecisionStore['load']>>,
-  decisions: readonly (FileReviewDecision & { reviewKey: string })[],
-  authorization: ReviewPathAuthorization
-): void {
-  const previousActions = current?.reviewActionHistory ?? [];
-  const nextActions = state.reviewActionHistory ?? [];
-  const action = nextActions.at(-1);
-  const currentRedo = current?.reviewRedoHistory ?? [];
-  const knownIds = new Set([
-    ...previousActions.map((entry) => entry.id),
-    ...currentRedo.map((entry) => entry.action.id),
-  ]);
-  if (
-    !action ||
-    action.kind === 'hunk' ||
-    knownIds.has(action.id) ||
-    nextActions.length !== previousActions.length + 1 ||
-    !isDurableReviewEqual(nextActions.slice(0, -1), previousActions) ||
-    (state.reviewRedoHistory?.length ?? 0) !== 0
-  ) {
-    throw new Error('Durable Reject requires exactly one new disk history action');
-  }
-
-  const filesByPath = new Map(
-    decisions.map((decision) => {
-      const file = getAuthoritativeReviewedFile(authorization, decision.filePath);
-      const canonicalKey = file.changeKey ?? file.filePath;
-      if (decision.reviewKey !== canonicalKey) {
-        throw new Error('Durable reviewKey does not match the authoritative review identity');
-      }
-      return [normalizeReviewPathForIdentity(file.filePath), file] as const;
-    })
-  );
-  const actionPaths = getReviewActionDiskSnapshots(action).map((snapshot) =>
-    normalizeReviewPathForIdentity(snapshot.filePath)
-  );
-  if (
-    actionPaths.length !== filesByPath.size ||
-    new Set(actionPaths).size !== actionPaths.length ||
-    actionPaths.some((filePath) => !filesByPath.has(filePath))
-  ) {
-    throw new Error('Durable Reject history does not match the requested files');
-  }
-  if ((decisions.length === 1) !== (action.kind === 'disk')) {
-    throw new Error('Durable Reject history action kind does not match the decision batch');
-  }
-  if (action.descriptor) {
-    const descriptor = action.descriptor;
-    let descriptorMatches = false;
-    if (action.kind === 'bulk') {
-      descriptorMatches =
-        descriptor.intent === 'reject-all' && descriptor.fileCount === filesByPath.size;
-    } else if (action.action.originalIndex !== undefined) {
-      descriptorMatches =
-        descriptor.intent === 'reject-hunk' &&
-        descriptor.hunkIndex === action.action.originalIndex &&
-        normalizeReviewPathForIdentity(descriptor.filePath) ===
-          normalizeReviewPathForIdentity(action.action.snapshot.filePath);
-    } else {
-      descriptorMatches =
-        descriptor.intent === 'reject-file' &&
-        normalizeReviewPathForIdentity(descriptor.filePath) ===
-          normalizeReviewPathForIdentity(action.action.snapshot.filePath);
-    }
-    if (!descriptorMatches) {
-      throw new Error('Durable Reject history descriptor does not match the decision transition');
-    }
-  }
-
-  const currentDecisions = {
-    hunkDecisions: current?.hunkDecisions ?? {},
-    fileDecisions: current?.fileDecisions ?? {},
-  };
-  const allowedFileKeys = new Set(decisions.map((decision) => decision.reviewKey));
-  const allowedHunkKeys = new Set<string>();
-  for (const decision of decisions) {
-    for (const index of Object.keys(decision.hunkDecisions)) {
-      allowedHunkKeys.add(`${decision.reviewKey}:${index}`);
-    }
-  }
-  const changedKeys = (
-    previous: Record<string, HunkDecision>,
-    next: Record<string, HunkDecision>,
-    allowed: ReadonlySet<string>
-  ): string[] => {
-    const changed = [...new Set([...Object.keys(previous), ...Object.keys(next)])].filter(
-      (key) => previous[key] !== next[key]
-    );
-    if (changed.some((key) => !allowed.has(key))) {
-      throw new Error('Durable Reject state changes decisions outside the requested files');
-    }
-    return changed;
-  };
-  const changedHunks = changedKeys(
-    currentDecisions.hunkDecisions,
-    state.hunkDecisions,
-    allowedHunkKeys
-  );
-  const changedFiles = changedKeys(
-    currentDecisions.fileDecisions,
-    state.fileDecisions,
-    allowedFileKeys
-  );
-  if (changedHunks.length + changedFiles.length === 0) {
-    throw new Error('Durable Reject history has no matching decision transition');
-  }
-
-  if (action.kind === 'bulk') {
-    if (
-      !isDurableReviewEqual(action.decisionSnapshot, currentDecisions) ||
-      decisions.some((decision) => decision.fileDecision !== 'rejected')
-    ) {
-      throw new Error('Durable bulk Reject history has invalid decision metadata');
-    }
-    return;
-  }
-
-  const decision = decisions[0];
-  if (!decision) throw new Error('Durable Reject decision is unavailable');
-  const originalIndex = action.action.originalIndex;
-  if (originalIndex !== undefined) {
-    const decisionKey = `${decision.reviewKey}:${originalIndex}`;
-    if (
-      changedHunks.length !== 1 ||
-      changedHunks[0] !== decisionKey ||
-      changedFiles.length !== 0 ||
-      decision.fileDecision !== 'pending' ||
-      decision.hunkDecisions[originalIndex] !== 'rejected' ||
-      state.hunkDecisions[decisionKey] !== 'rejected'
-    ) {
-      throw new Error('Durable hunk Reject history index does not match the decision transition');
-    }
-    return;
-  }
-
-  if (
-    decision.fileDecision !== 'rejected' ||
-    !isDurableReviewEqual(action.action.decisionSnapshot, currentDecisions)
-  ) {
-    throw new Error('Durable file Reject history has invalid decision metadata');
-  }
 }
 
 function parseReviewScopeKey(teamName: string, scopeKey: string): ReviewFileScope {
@@ -1154,7 +768,14 @@ const reviewMutationRecoveryFeature = createReviewMutationRecoveryFeature({
   decisions: {
     withLock: withReviewDecisionPersistenceLock,
     assertValidSnapshot: (value) => reviewDecisionStore.assertValidSnapshot(value),
-    assertCurrentRevision: assertCurrentReviewDecisionRevision,
+    assertCurrentRevision: async (teamName, persistenceScope, expectedRevision) => {
+      const current = await reviewDecisionStore.load(
+        teamName,
+        persistenceScope.scopeKey,
+        persistenceScope.scopeToken
+      );
+      assertCurrentReviewDecisionRevision(current, expectedRevision);
+    },
     load: (teamName, persistenceScope) =>
       reviewDecisionStore.load(teamName, persistenceScope.scopeKey, persistenceScope.scopeToken),
     commit: (record) => reviewDecisionBatchFeature.commit(record),
@@ -1197,6 +818,57 @@ const reviewMutationRecoveryFeature = createReviewMutationRecoveryFeature({
   },
 });
 
+const reviewDecisionCommandFeature = createReviewDecisionCommandFeature({
+  scope: {
+    resolve: resolveReviewPathAuthorization,
+    parsePersistenceScope: parseDecisionPersistenceScope,
+    validateFilePath: validateAuthorizedReviewFilePath,
+    validateSnippets: validateSnippetPaths,
+    assertDecisionShape: assertReviewDecisionShape,
+    assertSnippetShapes,
+    getAuthoritativeFile: getAuthoritativeReviewedFile,
+    resolveAuthoritativeContent: resolveAuthoritativeFileContent,
+    normalizeIdentityPath: normalizeReviewPathForIdentity,
+  },
+  applier: {
+    checkConflict: (...args) => getApplier().checkConflict(...args),
+    rejectHunks: (...args) => getApplier().rejectHunks(...args),
+    rejectFile: (...args) => getApplier().rejectFile(...args),
+    previewReject: (...args) => getApplier().previewReject(...args),
+    applyReviewDecisions: (...args) => getApplier().applyReviewDecisions(...args),
+  },
+  persistence: {
+    withLock: withReviewDecisionPersistenceLock,
+    assertValidSnapshot: (value) => reviewDecisionStore.assertValidSnapshot(value),
+    load: (teamName, persistenceScope) =>
+      reviewDecisionStore.load(teamName, persistenceScope.scopeKey, persistenceScope.scopeToken),
+  },
+  batch: {
+    assertPersistedStateIncludesDecisions: (state, decisions) =>
+      reviewDecisionBatchFeature.assertPersistedStateIncludesDecisions(state, decisions),
+    applyDisk: (record, onResult, onPostimages) =>
+      reviewDecisionBatchFeature.applyDisk(record, onResult, onPostimages),
+    commit: (record) => reviewDecisionBatchFeature.commit(record),
+  },
+  history: {
+    bindNewHistorySnapshots: (state, current, scope, authorization) =>
+      reviewHistoryMutationFeature.bindNewHistorySnapshots(state, current, scope, authorization),
+  },
+  recovery: {
+    recoverPending: (teamName, persistenceScope) =>
+      reviewMutationRecoveryFeature.recoverPending(teamName, persistenceScope),
+  },
+  coordinator: {
+    execute: (input, steps) => reviewMutationCoordinator.execute(input, steps),
+  },
+  cache: {
+    invalidateFile: (filePath) => getContentResolver().invalidateFile(filePath),
+  },
+  logger: {
+    debug: (message, error) => logger.debug(message, error),
+  },
+});
+
 const reviewDecisionHistoryFeature = createReviewDecisionHistoryFeature({
   lock: { run: withReviewDecisionPersistenceLock },
   authorization: { authorize: authorizeReviewDecisionHistoryScope },
@@ -1230,89 +902,6 @@ const reviewDraftHistoryFeature = createReviewDraftHistoryFeature({
   lock: { run: withReviewDecisionPersistenceLock },
   authorization: { authorize: authorizeReviewDraftHistoryScope },
 });
-
-async function applyDecisionsWithDurableJournal(
-  scope: ReviewFileScope,
-  authorization: ReviewPathAuthorization,
-  persistenceScope: ReviewDecisionPersistenceScope,
-  decisions: (FileReviewDecision & { reviewKey: string })[],
-  fileContents: Map<string, FileChangeWithContent>,
-  persistedState: ReviewPersistedStateSnapshot,
-  expectedDecisionRevision: number
-): Promise<ApplyReviewResult> {
-  return withReviewDecisionPersistenceLock(scope.teamName, persistenceScope, async () => {
-    const diskPostimages = new Map<string, ReviewMutationDiskPostimage>();
-    try {
-      await reviewMutationRecoveryFeature.recoverPending(scope.teamName, persistenceScope);
-      await assertCurrentReviewDecisionRevision(
-        scope.teamName,
-        persistenceScope,
-        expectedDecisionRevision
-      );
-      const current = await reviewDecisionStore.load(
-        scope.teamName,
-        persistenceScope.scopeKey,
-        persistenceScope.scopeToken
-      );
-      assertExactApplyReviewHistoryTransition(persistedState, current, decisions, authorization);
-      const boundPersistedState = await reviewHistoryMutationFeature.bindNewHistorySnapshots(
-        persistedState,
-        current,
-        scope,
-        authorization
-      );
-      let result: ApplyReviewResult | null = null;
-      await reviewMutationCoordinator.execute(
-        {
-          teamName: scope.teamName,
-          persistenceScope,
-          reviewScope: scope,
-          kind: decisions.length > 1 ? 'bulk' : 'reject',
-          decisions,
-          fileContents: decisions.map((decision) => {
-            const content = fileContents.get(decision.filePath);
-            if (!content) throw new Error('Review mutation content is unavailable');
-            return content;
-          }),
-          persistedState: boundPersistedState,
-          expectedDecisionRevision,
-        },
-        {
-          applyDisk: (record) =>
-            reviewDecisionBatchFeature.applyDisk(
-              record,
-              (nextResult) => {
-                result = nextResult;
-              },
-              (postimages) =>
-                mergeReviewMutationDiskPostimages(
-                  diskPostimages,
-                  postimages,
-                  normalizeReviewPathForIdentity
-                )
-            ),
-          commitDecisions: (record) => reviewDecisionBatchFeature.commit(record),
-        }
-      );
-      const committed = await reviewDecisionStore.load(
-        scope.teamName,
-        persistenceScope.scopeKey,
-        persistenceScope.scopeToken
-      );
-      return {
-        ...(result ?? { applied: 0, skipped: 0, conflicts: 0, errors: [] }),
-        decisionRevision: committed?.revision ?? expectedDecisionRevision,
-        committedReviewAction: committed?.reviewActionHistory.at(-1),
-        diskPostimages: [...diskPostimages.values()],
-      };
-    } catch (error) {
-      if (error instanceof ReviewMutationApplyResultError) {
-        return { ...error.result, diskPostimages: [...diskPostimages.values()] };
-      }
-      throw error;
-    }
-  });
-}
 
 async function handleGetFileContent(
   _event: IpcMainInvokeEvent,
