@@ -51,6 +51,43 @@ describe("project continuation accounts", () => {
     expect(statusInputs).toEqual([{ authRootDir: "/auth" }]);
   });
 
+  it("keeps a timeout continuation account inside the immutable manifest", async () => {
+    const launch = launchFixture();
+    const continued = await withProjectContinuationAccounts({
+      launch,
+      requestedAccounts: ["account-e"],
+      continuation: { previousAttemptCount: 2 },
+      requestedAccountScope: "immutable_manifest",
+      immutableManifestAccountIds: ["account-e"],
+      excludedAccountIds: [],
+      allowedAccountIds: ["account-c", "account-e"],
+      listAccountStatuses: async () => [
+        readyAccount("account-c"),
+        readyAccount("account-e"),
+      ],
+    });
+
+    expect(continued.config.accounts).toEqual([
+      {
+        name: "account-e",
+        authJsonPath: "/auth/account-e/auth.json",
+      },
+    ]);
+    await expect(
+      withProjectContinuationAccounts({
+        launch,
+        requestedAccounts: ["account-c"],
+        continuation: { previousAttemptCount: 2 },
+        requestedAccountScope: "immutable_manifest",
+        immutableManifestAccountIds: ["account-e"],
+        excludedAccountIds: [],
+        allowedAccountIds: ["account-c", "account-e"],
+      }),
+    ).rejects.toThrow(
+      "project_control_timeout_continuation_account_outside_manifest:account-c",
+    );
+  });
+
   it("rejects fallback accounts outside an exact capacity continuation", async () => {
     await expect(
       withProjectContinuationAccounts({

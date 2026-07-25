@@ -426,6 +426,12 @@ export async function projectControlStartStoredJobView(
             localCodexProjectSafeExecutionJournal(canonicalLaunch),
           verifiedPrewarmBeforeAttemptContinuation:
             continuationDecision?.kind === "prewarm_before_attempt",
+          ...(continuationDecision?.kind === "terminal_timeout"
+            ? {
+                verifiedRuntimeContinuationFailureReason:
+                  "task_timeout" as const,
+              }
+            : {}),
         });
       const continuationLaunch = await withProjectContinuationAccounts({
         launch: canonicalLaunch,
@@ -447,6 +453,12 @@ export async function projectControlStartStoredJobView(
           "admitted_input_patch_continuation"
           ? {
               verifiedAdmittedInputPatchContinuation: true,
+              immutableManifestAccountIds: loaded.manifest.accounts,
+            }
+          : {}),
+        ...(continuationDecision?.kind === "terminal_timeout"
+          ? {
+              requestedAccountScope: "immutable_manifest" as const,
               immutableManifestAccountIds: loaded.manifest.accounts,
             }
           : {}),

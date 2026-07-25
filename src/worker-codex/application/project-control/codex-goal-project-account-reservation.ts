@@ -255,6 +255,7 @@ export async function codexProjectContinuationReservationInput(input: {
   readonly launch: CodexGoalLaunchInput;
   readonly journal: Pick<AttemptJournal, "readTask">;
   readonly verifiedPrewarmBeforeAttemptContinuation?: boolean;
+  readonly verifiedRuntimeContinuationFailureReason?: "task_timeout";
 }): Promise<{
   readonly excludedAccountIds: readonly string[];
   readonly continuation?: CodexProjectAccountContinuation;
@@ -264,6 +265,19 @@ export async function codexProjectContinuationReservationInput(input: {
     const task = await input.journal.readTask({
       taskId: input.launch.config.taskId,
     });
+    const timeoutContinuation =
+      input.verifiedRuntimeContinuationFailureReason === "task_timeout"
+        ? terminalTimeoutContinuationAttemptHistory({
+            status: input.status,
+            taskId: input.launch.config.taskId,
+            workspacePath: input.launch.config.workspacePath,
+            launchAccountIds: input.launch.config.accounts.map(
+              (account) => account.name,
+            ),
+            task,
+          })
+        : undefined;
+    if (timeoutContinuation) return timeoutContinuation;
     const reconnectContinuation = reconnectRuntimeContinuationAttemptHistory({
       status: input.status,
       taskId: input.launch.config.taskId,
@@ -297,6 +311,74 @@ export async function codexProjectContinuationReservationInput(input: {
     ),
     task: await input.journal.readTask({ taskId: input.launch.config.taskId }),
   });
+}
+
+function terminalTimeoutContinuationAttemptHistory(input: {
+  readonly status: Pick<
+    CodexGoalStatus,
+    | "recommendedAction"
+    | "resultReason"
+    | "progressResultReason"
+    | "progressAttemptCount"
+    | "progressCurrentAccount"
+  >;
+  readonly taskId: string;
+  readonly workspacePath: string;
+  readonly launchAccountIds: readonly string[];
+  readonly task: SafeExecutionTaskRecord | null;
+}):
+  | {
+      readonly excludedAccountIds: readonly string[];
+      readonly continuation: CodexProjectAccountContinuation;
+    }
+  | undefined {
+  if (
+    input.status.recommendedAction !== "continue_after_timeout" ||
+    input.status.resultReason !== "task_timeout"
+  ) {
+    return undefined;
+  }
+  if (
+    input.status.progressResultReason !== undefined &&
+    input.status.progressResultReason !== "task_timeout"
+  ) {
+    throw new Error("project_control_timeout_attempt_history_mismatch");
+  }
+  const lastAttempt = input.task?.attempts.at(-1);
+  if (
+    !input.task ||
+    !lastAttempt ||
+    input.task.status !== "partial" ||
+    input.task.taskId !== input.taskId ||
+    input.task.workspacePath !== input.workspacePath ||
+    input.task.provider !== "codex" ||
+    input.task.lastFailureReason !== "task_timeout" ||
+    lastAttempt.taskId !== input.taskId ||
+    lastAttempt.provider !== "codex" ||
+    lastAttempt.attemptNumber !== input.task.attempts.length ||
+    lastAttempt.status !== "blocked" ||
+    lastAttempt.failureReason !== "task_timeout" ||
+    !lastAttempt.finishedAt
+  ) {
+    throw new Error("project_control_timeout_attempt_history_required");
+  }
+  const failedAccountId =
+    lastAttempt.accountId ??
+    (input.launchAccountIds.length === 1
+      ? input.launchAccountIds[0]
+      : undefined);
+  if (
+    (input.status.progressAttemptCount !== undefined &&
+      input.status.progressAttemptCount !== input.task.attempts.length) ||
+    (input.status.progressCurrentAccount !== undefined &&
+      input.status.progressCurrentAccount !== failedAccountId)
+  ) {
+    throw new Error("project_control_timeout_attempt_history_mismatch");
+  }
+  return {
+    excludedAccountIds: [],
+    continuation: { previousAttemptCount: input.task.attempts.length },
+  };
 }
 
 function prewarmContinuationAttemptHistory(input: {

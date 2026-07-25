@@ -226,6 +226,112 @@ describe("project account reservation", () => {
     ).resolves.toEqual({ excludedAccountIds: [] });
   });
 
+  it("grants exactly one new attempt after an evidenced task timeout", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-task-timeout-"));
+    roots.push(root);
+    const scoped = fixture(root, "job-1");
+    const journal = new InMemoryAttemptJournal();
+    const now = new Date("2026-07-13T00:01:00.000Z");
+    await journal.startTask({
+      taskId: scoped.launch.config.taskId,
+      workspaceRunId: "workspace-run",
+      workspacePath: scoped.launch.config.workspacePath,
+      effectMode: "workspace_patch",
+      provider: "codex",
+      now,
+    });
+    for (const attemptNumber of [1, 2]) {
+      await journal.appendAttempt({
+        taskId: scoped.launch.config.taskId,
+        attempt: {
+          taskId: scoped.launch.config.taskId,
+          attemptNumber,
+          accountId: "account-a",
+          provider: "codex",
+          startedAt: now,
+          finishedAt: now,
+          status: "blocked",
+          failureReason: "task_timeout",
+          workspaceDirtyBefore: true,
+          workspaceDirtyAfter: true,
+          changedFiles: ["src/example.ts"],
+        },
+        now,
+      });
+    }
+    await journal.markPartial({
+      taskId: scoped.launch.config.taskId,
+      status: "partial",
+      reason: "task_timeout",
+      now,
+    });
+
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "continue_after_timeout",
+          resultReason: "task_timeout",
+          progressResultReason: "task_timeout",
+          progressAttemptCount: 2,
+          progressCurrentAccount: "account-a",
+        },
+        launch: scoped.launch,
+        journal,
+      }),
+    ).resolves.toEqual({ excludedAccountIds: [] });
+
+    const continuation = await codexProjectContinuationReservationInput({
+      status: {
+        recommendedAction: "continue_after_timeout",
+        resultReason: "task_timeout",
+        progressResultReason: "task_timeout",
+        progressAttemptCount: 2,
+        progressCurrentAccount: "account-a",
+      },
+      launch: scoped.launch,
+      journal,
+      verifiedRuntimeContinuationFailureReason: "task_timeout",
+    });
+    expect(continuation).toEqual({
+      excludedAccountIds: [],
+      continuation: { previousAttemptCount: 2 },
+    });
+    const reserved = await reserveCodexProjectAccount({
+      ...scoped,
+      ...continuation,
+      deps: {
+        capacityStore: new InMemoryWorkerAccountCapacityStore(),
+        leaseMode: "shared",
+        now,
+      },
+    });
+    expect(reserved.launch.config.maxAccountCycles).toBe(3);
+
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "continue_after_timeout",
+          resultReason: "task_timeout",
+          progressAttemptCount: 1,
+        },
+        launch: scoped.launch,
+        journal,
+        verifiedRuntimeContinuationFailureReason: "task_timeout",
+      }),
+    ).rejects.toThrow("project_control_timeout_attempt_history_mismatch");
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "continue_after_timeout",
+          resultReason: "task_timeout",
+        },
+        launch: scoped.launch,
+        journal: { readTask: async () => null },
+        verifiedRuntimeContinuationFailureReason: "task_timeout",
+      }),
+    ).rejects.toThrow("project_control_timeout_attempt_history_required");
+  });
+
   it("grants one new attempt after a verified prewarm failure", async () => {
     const root = await mkdtemp(join(tmpdir(), "project-prewarm-retry-"));
     roots.push(root);

@@ -9,6 +9,7 @@ export async function withProjectContinuationAccounts(input: {
   readonly continuation?: CodexProjectAccountContinuation;
   readonly verifiedTerminalHandoffRecovery?: boolean;
   readonly verifiedAdmittedInputPatchContinuation?: boolean;
+  readonly requestedAccountScope?: "immutable_manifest";
   readonly immutableManifestAccountIds?: readonly string[];
   readonly excludedAccountIds: readonly string[];
   readonly allowedAccountIds: readonly string[];
@@ -45,6 +46,19 @@ export async function withProjectContinuationAccounts(input: {
   );
   if (invalidAccountId) {
     throw new Error("project_control_continuation_account_id_invalid");
+  }
+  if (input.requestedAccountScope === "immutable_manifest") {
+    const immutableManifestAccounts = new Set(
+      input.immutableManifestAccountIds ?? [],
+    );
+    const outsideManifest = input.requestedAccounts.find(
+      (accountId) => !immutableManifestAccounts.has(accountId),
+    );
+    if (outsideManifest) {
+      throw new Error(
+        `project_control_timeout_continuation_account_outside_manifest:${outsideManifest}`,
+      );
+    }
   }
   if (
     !input.continuation &&
