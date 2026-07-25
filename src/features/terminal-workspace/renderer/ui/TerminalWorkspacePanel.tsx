@@ -11,64 +11,54 @@ import { createPortal } from 'react-dom';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
-import { terminalPlatformThemeManifests } from '@terminal-platform/design-tokens';
 import { createWorkspaceWebSocketTransport } from '@terminal-platform/workspace-adapter-websocket';
-import {
-  createWorkspaceKernel,
-  terminalPlatformTerminalFontScales,
-  type WorkspaceKernel,
-} from '@terminal-platform/workspace-core';
+import { createWorkspaceKernel, type WorkspaceKernel } from '@terminal-platform/workspace-core';
 import {
   TerminalCommandDock,
   TerminalScreen,
   TerminalWorkspace,
   useWorkspaceSnapshot,
 } from '@terminal-platform/workspace-react';
-import {
-  AlertTriangle,
-  Folder,
-  GitBranch,
-  Github,
-  Loader2,
-  RefreshCw,
-  Square,
-  Terminal,
-} from 'lucide-react';
+import { AlertTriangle, Loader2, RefreshCw, Square, Terminal } from 'lucide-react';
 
 import { readStoredTerminalCommandHistory } from '../adapters/terminalCommandHistoryStorage';
+import { openTerminalPlatformRepository } from '../adapters/terminalWorkspaceExternalNavigation';
+import {
+  persistTerminalAppearanceSettings,
+  persistTerminalPreference,
+  readStoredTerminalAppearanceSettings,
+  readStoredTerminalBooleanPreference,
+  readStoredTerminalPreference,
+} from '../adapters/terminalWorkspacePreferencesStorage';
 import { useTerminalCommandAutocomplete } from '../hooks/useTerminalCommandAutocomplete';
 import { useTerminalCommandContextMenu } from '../hooks/useTerminalCommandContextMenu';
 import { useTerminalCommandHistoryPersistence } from '../hooks/useTerminalCommandHistoryPersistence';
 import { useTerminalCommandRuns } from '../hooks/useTerminalCommandRuns';
 import {
-  DEFAULT_TERMINAL_APPEARANCE_SETTINGS,
   normalizeTerminalAppearanceSettings,
-  resolveTerminalBackgroundImageUrl,
   type TerminalAppearanceSettings,
-  type TerminalBackgroundImageFit,
 } from '../model/terminalAppearanceSettings';
 import {
   createTerminalCommandScreenLines,
   TERMINAL_COMMAND_HISTORY_LIMIT,
 } from '../model/terminalCommandRuns';
-import {
-  formatTerminalPromptLabel,
-  formatWorkingDirectory,
-} from '../model/terminalPathPresentation';
+import { formatTerminalPromptLabel } from '../model/terminalPathPresentation';
+import { createTerminalAppearanceStyle } from '../view-models/terminalAppearanceStyle';
 
 import { TerminalButtonTooltip } from './TerminalButtonTooltip';
 import { TerminalCommandContextMenu } from './TerminalCommandContextMenu';
 import { TerminalMuxTabs } from './TerminalMuxTabs';
+import { TerminalWorkingDirectoryBar } from './TerminalWorkingDirectoryBar';
+import { TerminalTabContentSkeleton, TerminalWorkspaceStatus } from './TerminalWorkspaceFeedback';
 import {
-  type TerminalWorkspaceSettingsActionId,
-  TerminalWorkspaceSettingsView,
-} from './TerminalWorkspaceSettingsView';
+  type TerminalWorkspaceSettingsOperations,
+  TerminalWorkspaceSettingsPage,
+} from './TerminalWorkspaceSettingsPage';
 
 import type {
   TerminalWorkspaceBootstrap,
   TerminalWorkspaceBootstrapRequest,
 } from '../../contracts';
-import type { TerminalWorkspaceSnapshot } from '../model/terminalTabPreferences';
 
 export interface TerminalWorkspacePanelProps {
   teamName: string;
@@ -87,14 +77,12 @@ export interface TerminalWorkspacePanelProps {
   stopTeamRuntime: (teamName: string) => Promise<void>;
 }
 
-const TERMINAL_PLATFORM_GITHUB_URL = 'https://github.com/777genius/terminal-platform';
 type TerminalScreenElementHandle = ComponentRef<typeof TerminalScreen> & {
   followOutput?: boolean;
   requestUpdate?: () => void;
   scrollToLatestOutput?: () => void;
 };
 type TerminalCommandDockElementHandle = ComponentRef<typeof TerminalCommandDock>;
-type TeamTFunction = ReturnType<typeof useAppTranslation>['t'];
 
 export const TerminalWorkspacePanel = (props: TerminalWorkspacePanelProps): React.JSX.Element => (
   <TerminalWorkspacePanelTeamScope key={props.teamName} {...props} />
@@ -164,9 +152,9 @@ const TerminalWorkspacePanelTeamScope = ({
         controlUrl: bootstrap.controlPlaneUrl,
         streamUrl: bootstrap.sessionStreamUrl,
       }),
-      initialThemeId: readStoredValue(storageKey(teamName, 'theme')),
-      initialTerminalFontScale: readStoredValue(storageKey(teamName, 'font-scale')),
-      initialTerminalLineWrap: readStoredBoolean(storageKey(teamName, 'line-wrap')),
+      initialThemeId: readStoredTerminalPreference(teamName, 'theme'),
+      initialTerminalFontScale: readStoredTerminalPreference(teamName, 'font-scale'),
+      initialTerminalLineWrap: readStoredTerminalBooleanPreference(teamName, 'line-wrap'),
       initialCommandHistoryEntries: readStoredTerminalCommandHistory(teamName),
       commandHistoryLimit: TERMINAL_COMMAND_HISTORY_LIMIT,
     });
@@ -392,6 +380,17 @@ const TerminalWorkspaceKernelView = ({
     },
     []
   );
+  const settingsOperations = useMemo<TerminalWorkspaceSettingsOperations>(
+    () => ({
+      reconnect: () => kernel.commands.bootstrap(),
+      refreshSessions: () => kernel.commands.refreshSessions(),
+      stopRuntime: () => onStopRuntime(),
+      setFontScale: (fontScale) => kernel.commands.setTerminalFontScale(fontScale),
+      setLineWrap: (lineWrap) => kernel.commands.setTerminalLineWrap(lineWrap),
+      setTheme: (themeId) => kernel.commands.setTheme(themeId),
+    }),
+    [kernel.commands, onStopRuntime]
+  );
 
   const scrollTerminalToLatest = useCallback((): void => {
     const scroll = (): void => {
@@ -475,12 +474,12 @@ const TerminalWorkspaceKernelView = ({
   }, [kernel]);
 
   useEffect(() => {
-    persistValue(storageKey(teamName, 'theme'), snapshot.theme.themeId);
+    persistTerminalPreference(teamName, 'theme', snapshot.theme.themeId);
   }, [snapshot.theme.themeId, teamName]);
 
   useEffect(() => {
-    persistValue(storageKey(teamName, 'font-scale'), terminalDisplay.fontScale);
-    persistValue(storageKey(teamName, 'line-wrap'), String(terminalDisplay.lineWrap));
+    persistTerminalPreference(teamName, 'font-scale', terminalDisplay.fontScale);
+    persistTerminalPreference(teamName, 'line-wrap', String(terminalDisplay.lineWrap));
   }, [teamName, terminalDisplay.fontScale, terminalDisplay.lineWrap]);
 
   useTerminalCommandHistoryPersistence({
@@ -676,12 +675,15 @@ const TerminalWorkspaceKernelView = ({
       {settingsOpen ? (
         <TerminalWorkspaceSettingsPage
           appearanceSettings={appearanceSettings}
-          kernel={kernel}
+          display={{
+            fontScale: terminalDisplay.fontScale,
+            lineWrap: terminalDisplay.lineWrap,
+            themeId: snapshot.theme.themeId,
+          }}
+          operations={settingsOperations}
           onAppearanceSettingsChange={updateAppearanceSettings}
           onClose={() => onSettingsOpenChange?.(false)}
           onReload={onReload}
-          onStopRuntime={onStopRuntime}
-          snapshot={snapshot}
         />
       ) : (
         <TerminalWorkspace
@@ -714,7 +716,11 @@ const TerminalWorkspaceKernelView = ({
             {showTerminalContentSkeleton ? <TerminalTabContentSkeleton /> : null}
           </div>
           <div slot="command-dock" className="grid min-w-0 shrink-0 grid-rows-[auto_auto]">
-            <TerminalWorkingDirectoryBar projectPath={projectPath} gitBranch={gitBranch} />
+            <TerminalWorkingDirectoryBar
+              projectPath={projectPath}
+              gitBranch={gitBranch}
+              onOpenTerminalPlatformRepository={openTerminalPlatformRepository}
+            />
             <TerminalCommandDock
               ref={setCommandDockElement}
               autoFocusInput
@@ -742,287 +748,3 @@ const TerminalWorkspaceKernelView = ({
     </div>
   );
 };
-
-const TerminalTabContentSkeleton = (): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-
-  return (
-    <div
-      className="pointer-events-none absolute inset-0 z-20 border-t border-white/10 bg-[#080c14] px-6 py-5 backdrop-blur-xl"
-      data-testid="agent-team-terminal-content-skeleton"
-      aria-label={t('terminalWorkspace.loadingTerminalTab')}
-    >
-      <div className="flex h-full flex-col justify-end gap-6">
-        {[0, 1, 2].map((sectionIndex) => (
-          <div key={sectionIndex} className="space-y-3 border-t border-white/[0.06] pt-4">
-            <div className="h-3 w-2/3 max-w-[34rem] animate-pulse rounded bg-white/10" />
-            <div className="h-4 w-1/2 max-w-[24rem] animate-pulse rounded bg-white/[0.15]" />
-            <div className="h-3 w-1/3 max-w-[18rem] animate-pulse rounded bg-white/[0.08]" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const TerminalWorkingDirectoryBar = ({
-  projectPath,
-  gitBranch,
-}: {
-  projectPath?: string | null;
-  gitBranch?: string | null;
-}): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-  const label = formatWorkingDirectory(projectPath, t('terminalWorkspace.shellDefaultDirectory'));
-  const openTerminalPlatformRepository = useCallback((): void => {
-    if (window.electronAPI?.openExternal) {
-      void window.electronAPI.openExternal(TERMINAL_PLATFORM_GITHUB_URL);
-      return;
-    }
-
-    window.open(TERMINAL_PLATFORM_GITHUB_URL, '_blank', 'noopener,noreferrer');
-  }, []);
-
-  return (
-    <div
-      className="flex min-h-6 min-w-0 items-center justify-between gap-3 bg-transparent px-3 text-[11px] text-slate-400"
-      data-testid="agent-team-terminal-working-directory"
-      title={projectPath || t('terminalWorkspace.shellDefaultDirectory')}
-    >
-      <div className="flex min-w-0 items-center gap-1">
-        <Folder size={12} className="shrink-0 text-slate-500" />
-        <span className="sr-only">{t('terminalWorkspace.currentWorkingDirectory')}</span>
-        <span className="min-w-0 truncate font-mono text-slate-300">{label}</span>
-        {gitBranch ? (
-          <span
-            className="inline-flex max-w-[14rem] shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/[0.035] px-1.5 py-0.5 font-mono text-[10px] text-slate-300"
-            title={t('terminalWorkspace.gitBranchTitle', { branch: gitBranch })}
-          >
-            <GitBranch size={11} className="shrink-0 text-slate-500" />
-            <span className="min-w-0 truncate">{gitBranch}</span>
-          </span>
-        ) : null}
-      </div>
-      <button
-        type="button"
-        className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.025] px-2 py-0.5 text-[10px] font-medium text-slate-400 transition-colors hover:border-sky-300/30 hover:bg-sky-300/10 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-300/60"
-        aria-label={t('terminalWorkspace.openTerminalPlatformRepository')}
-        title={t('terminalWorkspace.openTerminalPlatformRepository')}
-        onClick={openTerminalPlatformRepository}
-      >
-        <span>{t('terminalWorkspace.poweredByTerminalPlatform')}</span>
-        <Github size={11} className="shrink-0" />
-      </button>
-    </div>
-  );
-};
-
-const TerminalWorkspaceSettingsPage = ({
-  appearanceSettings,
-  kernel,
-  onAppearanceSettingsChange,
-  onClose,
-  onReload,
-  onStopRuntime,
-  snapshot,
-}: {
-  appearanceSettings: TerminalAppearanceSettings;
-  kernel: WorkspaceKernel;
-  onAppearanceSettingsChange: (updates: Partial<TerminalAppearanceSettings>) => void;
-  onClose: () => void;
-  onReload: () => void;
-  onStopRuntime: () => Promise<void>;
-  snapshot: TerminalWorkspaceSnapshot;
-}): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-  const [pendingAction, setPendingAction] = useState<TerminalWorkspaceSettingsActionId | null>(
-    null
-  );
-  const display = snapshot.terminalDisplay;
-
-  const runAction = async (
-    actionId: TerminalWorkspaceSettingsActionId,
-    action: () => Promise<void> | void
-  ): Promise<void> => {
-    setPendingAction(actionId);
-    try {
-      await action();
-    } catch {
-      // Kernel diagnostics already surface command failures in the terminal workspace.
-    } finally {
-      setPendingAction(null);
-    }
-  };
-
-  return (
-    <TerminalWorkspaceSettingsView
-      appearanceSettings={appearanceSettings}
-      display={{
-        fontScale: display.fontScale,
-        lineWrap: display.lineWrap,
-        themeId: snapshot.theme.themeId,
-      }}
-      fontScaleOptions={terminalPlatformTerminalFontScales.map((fontScale) => ({
-        id: fontScale,
-        label: formatFontScaleLabel(t, fontScale),
-      }))}
-      onAppearanceSettingsChange={onAppearanceSettingsChange}
-      onClose={onClose}
-      onFontScaleChange={(fontScale) => kernel.commands.setTerminalFontScale(fontScale)}
-      onLineWrapChange={(lineWrap) => kernel.commands.setTerminalLineWrap(lineWrap)}
-      onReconnect={() => void runAction('bootstrap', () => kernel.commands.bootstrap())}
-      onRefreshSessions={() =>
-        void runAction('refresh-sessions', () => kernel.commands.refreshSessions())
-      }
-      onReload={onReload}
-      onResetAppearance={() => onAppearanceSettingsChange(DEFAULT_TERMINAL_APPEARANCE_SETTINGS)}
-      onStopRuntime={() => void runAction('stop-runtime', onStopRuntime)}
-      onThemeChange={(themeId) => kernel.commands.setTheme(themeId)}
-      pendingAction={pendingAction}
-      themeOptions={terminalPlatformThemeManifests.map((theme) => ({
-        id: theme.id,
-        label: formatThemeLabel(t, theme.displayName, theme.id),
-      }))}
-    />
-  );
-};
-const TerminalWorkspaceStatus = ({
-  icon,
-  title,
-  detail,
-  tone = 'neutral',
-}: {
-  icon: React.ReactNode;
-  title: string;
-  detail: string;
-  tone?: 'neutral' | 'danger';
-}): React.JSX.Element => {
-  return (
-    <div
-      className={cn(
-        'flex min-h-[30rem] items-center justify-center rounded border border-dashed p-6 text-center',
-        tone === 'danger'
-          ? 'border-red-500/30 bg-red-500/5 text-red-300'
-          : 'border-white/10 bg-white/[0.03] text-text-secondary'
-      )}
-    >
-      <div className="max-w-lg">
-        <div className="border-current/20 mx-auto mb-3 flex size-9 items-center justify-center rounded-md border bg-black/20">
-          {icon}
-        </div>
-        <p className="text-sm font-medium text-current">{title}</p>
-        <p className="mt-1 text-xs leading-5 text-text-muted">{detail}</p>
-      </div>
-    </div>
-  );
-};
-
-function storageKey(teamName: string, key: string): string {
-  return `agent-teams:terminal-workspace:${teamName}:${key}`;
-}
-
-function readStoredValue(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function readStoredBoolean(key: string): boolean | null {
-  const value = readStoredValue(key);
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return null;
-}
-
-function readStoredTerminalAppearanceSettings(teamName: string): TerminalAppearanceSettings {
-  const raw = readStoredValue(storageKey(teamName, 'appearance-settings'));
-  if (!raw) return DEFAULT_TERMINAL_APPEARANCE_SETTINGS;
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return normalizeTerminalAppearanceSettings(parsed);
-  } catch {
-    return DEFAULT_TERMINAL_APPEARANCE_SETTINGS;
-  }
-}
-
-function persistValue(key: string, value: string): void {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // Best-effort UI preference persistence.
-  }
-}
-
-function persistTerminalAppearanceSettings(
-  teamName: string,
-  settings: TerminalAppearanceSettings
-): void {
-  try {
-    window.localStorage.setItem(
-      storageKey(teamName, 'appearance-settings'),
-      JSON.stringify(normalizeTerminalAppearanceSettings(settings))
-    );
-  } catch {
-    // Best-effort appearance preference persistence.
-  }
-}
-
-function createTerminalAppearanceStyle(settings: TerminalAppearanceSettings): CSSProperties {
-  const normalizedSettings = normalizeTerminalAppearanceSettings(settings);
-  const imageUrl = resolveTerminalBackgroundImageUrl(normalizedSettings.backgroundImageUrl);
-  const hasImage = normalizedSettings.backgroundMode === 'image' && imageUrl.length > 0;
-  return {
-    '--agent-terminal-font-size': `${normalizedSettings.fontSizePx}px`,
-    '--agent-terminal-panel-opacity': String(normalizedSettings.opacityPercent / 100),
-    '--agent-terminal-background-color': normalizedSettings.backgroundColor,
-    '--agent-terminal-background-image': hasImage ? createCssUrl(imageUrl) : 'none',
-    '--agent-terminal-background-position': getTerminalBackgroundPosition(
-      normalizedSettings.backgroundImageFit
-    ),
-    '--agent-terminal-background-repeat': getTerminalBackgroundRepeat(
-      normalizedSettings.backgroundImageFit
-    ),
-    '--agent-terminal-background-size': getTerminalBackgroundSize(
-      normalizedSettings.backgroundImageFit
-    ),
-    '--agent-terminal-backdrop-blur': `${normalizedSettings.backdropBlurPx}px`,
-    '--agent-terminal-background-image-blur': hasImage
-      ? `${normalizedSettings.backdropBlurPx}px`
-      : '0px',
-    '--agent-terminal-image-dim-opacity':
-      hasImage && normalizedSettings.dimBackgroundImage ? '0.42' : '0',
-  } as CSSProperties;
-}
-
-function createCssUrl(value: string): string {
-  return `url("${value.replace(/["\\\n\r]/gu, '')}")`;
-}
-
-function getTerminalBackgroundSize(fit: TerminalBackgroundImageFit): string {
-  if (fit === 'stretch') return '100% 100%';
-  if (fit === 'tile' || fit === 'center') return 'auto';
-  return fit;
-}
-
-function getTerminalBackgroundRepeat(fit: TerminalBackgroundImageFit): string {
-  return fit === 'tile' ? 'repeat' : 'no-repeat';
-}
-
-function getTerminalBackgroundPosition(fit: TerminalBackgroundImageFit): string {
-  return fit === 'tile' ? 'top left' : 'center';
-}
-
-function formatThemeLabel(t: TeamTFunction, displayName: string, themeId: string): string {
-  if (themeId === 'terminal-platform-default') return t('terminalWorkspace.themeDark');
-  if (themeId === 'terminal-platform-light') return t('terminalWorkspace.themeLight');
-  return displayName.replace(/^Terminal Platform\s*/i, '').trim() || displayName;
-}
-
-function formatFontScaleLabel(t: TeamTFunction, fontScale: string): string {
-  if (fontScale === 'compact') return t('terminalWorkspace.fontScaleCompact');
-  if (fontScale === 'large') return t('terminalWorkspace.fontScaleLarge');
-  return t('terminalWorkspace.fontScaleDefault');
-}
