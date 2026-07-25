@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { KeyedMutex } from '@features/internal-storage/main';
 import {
   estimateTaskAttachmentDecodedBytes,
@@ -31,6 +33,7 @@ export interface TaskAttachmentFileIdentity {
 }
 
 export interface SavedTaskAttachmentReceipt {
+  readonly filePath: string;
   readonly metadata: TaskAttachmentMeta;
   readonly identity: TaskAttachmentFileIdentity;
   readonly teamName: string;
@@ -68,10 +71,17 @@ export class TeamTaskAttachmentStore {
     return path.join(getAppDataPath(), 'task-attachments', teamName, taskId);
   }
 
-  /** Returns the file path for a stored attachment (new format). */
-  private getStoredFilePath(teamName: string, taskId: string, attachmentId: string): string {
+  private getAttachmentMutationKey(teamName: string, taskId: string, attachmentId: string): string {
     this.assertSafePathSegment('attachmentId', attachmentId);
     return path.join(this.getTaskDir(teamName, taskId), `${attachmentId}--attachment`);
+  }
+
+  /** Returns a generation-unique path so stale rollback receipts can never address a later save. */
+  private getStoredFilePath(teamName: string, taskId: string, attachmentId: string): string {
+    return path.join(
+      this.getTaskDir(teamName, taskId),
+      `${attachmentId}--${randomUUID()}.attachment`
+    );
   }
 
   private async findAttachmentFilePath(
@@ -162,8 +172,8 @@ export class TeamTaskAttachmentStore {
       );
     }
 
-    const filePath = this.getStoredFilePath(teamName, taskId, attachmentId);
-    return attachmentMutationMutex.run(filePath, async () => {
+    const mutationKey = this.getAttachmentMutationKey(teamName, taskId, attachmentId);
+    return attachmentMutationMutex.run(mutationKey, async () => {
       const existingPath = await this.findAttachmentFilePath(teamName, taskId, attachmentId);
       if (existingPath) {
         const collision = new Error(
@@ -173,6 +183,7 @@ export class TeamTaskAttachmentStore {
         throw collision;
       }
 
+      const filePath = this.getStoredFilePath(teamName, taskId, attachmentId);
       const identity = await this.atomicCreator.createFileAtomically(filePath, buffer);
       const metadata: TaskAttachmentMeta = {
         id: attachmentId,
@@ -184,13 +195,25 @@ export class TeamTaskAttachmentStore {
       };
 
       logger.debug(`[${teamName}] Saved task attachment ${attachmentId} for task #${taskId}`);
-      return { metadata, identity, teamName, taskId };
+      return { filePath, metadata, identity, teamName, taskId };
     });
   }
 
   async rollbackAttachment(receipt: SavedTaskAttachmentReceipt): Promise<void> {
-    const filePath = this.getStoredFilePath(receipt.teamName, receipt.taskId, receipt.metadata.id);
-    await attachmentMutationMutex.run(filePath, async () => {
+    const mutationKey = this.getAttachmentMutationKey(
+      receipt.teamName,
+      receipt.taskId,
+      receipt.metadata.id
+    );
+    const taskDirectory = this.getTaskDir(receipt.teamName, receipt.taskId);
+    const filePath = path.resolve(receipt.filePath);
+    if (
+      path.dirname(filePath) !== path.resolve(taskDirectory) ||
+      !path.basename(filePath).startsWith(`${receipt.metadata.id}--`)
+    ) {
+      throw new Error('Invalid task attachment rollback receipt');
+    }
+    await attachmentMutationMutex.run(mutationKey, async () => {
       let stats: fs.Stats;
       try {
         stats = await fs.promises.lstat(filePath);
@@ -253,7 +276,7 @@ export class TeamTaskAttachmentStore {
     attachmentId: string,
     mimeType: AttachmentMediaType
   ): Promise<void> {
-    const lockKey = this.getStoredFilePath(teamName, taskId, attachmentId);
+    const lockKey = this.getAttachmentMutationKey(teamName, taskId, attachmentId);
     await attachmentMutationMutex.run(lockKey, async () => {
       const filePath = await this.findAttachmentFilePath(teamName, taskId, attachmentId, mimeType);
       if (!filePath) return;

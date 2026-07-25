@@ -1,6 +1,6 @@
-import { link, mkdir, mkdtemp, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,7 +22,9 @@ vi.mock('@main/utils/pathDecoder', () => ({
 }));
 
 const ATTACHMENT_ID = '11111111-1111-4111-8111-111111111111';
-const ATTACHMENT_FILE = `${ATTACHMENT_ID}--attachment`;
+const ATTACHMENT_FILE_PATTERN = new RegExp(
+  `^${ATTACHMENT_ID}--[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.attachment$`
+);
 const LEGACY_ATTACHMENT_FILE = `${ATTACHMENT_ID}--proof.png`;
 
 function createAtomicCreator(): TaskAttachmentAtomicCreatorPort {
@@ -83,17 +85,16 @@ describe('TeamTaskAttachmentStore', () => {
       'dGVzdA=='
     );
 
-    expect(atomicCreator.createFileAtomically).toHaveBeenCalledWith(
-      `/workspace/app-data/task-attachments/my-team/task-1/${ATTACHMENT_FILE}`,
-      Buffer.from('test')
-    );
+    const [filePath, bytes] = vi.mocked(atomicCreator.createFileAtomically).mock.calls[0] ?? [];
+    expect(basename(String(filePath))).toMatch(ATTACHMENT_FILE_PATTERN);
+    expect(bytes).toEqual(Buffer.from('test'));
     expect(metadata).toEqual(
       expect.objectContaining({
         id: ATTACHMENT_ID,
         filename: 'proof.png',
         mimeType: 'image/png',
         size: 4,
-        filePath: `/workspace/app-data/task-attachments/my-team/task-1/${ATTACHMENT_FILE}`,
+        filePath,
       })
     );
   });
@@ -174,15 +175,19 @@ describe('TeamTaskAttachmentStore', () => {
       status: 'rejected',
       reason: expect.objectContaining({ code: 'EEXIST' }),
     });
-    expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+    const attachmentFiles = await readdir(taskDirectory);
+    expect(attachmentFiles).toHaveLength(1);
+    const attachmentFile = attachmentFiles[0];
+    if (!attachmentFile) throw new Error('Expected one stored attachment');
+    expect(attachmentFile).toMatch(ATTACHMENT_FILE_PATTERN);
     expect(['one', 'two']).toContain(
-      (await readFile(join(taskDirectory, ATTACHMENT_FILE))).toString()
+      (await readFile(join(taskDirectory, attachmentFile))).toString()
     );
   });
 
   it('does not roll back a pre-existing attachment when its ID collides', async () => {
     const { store, taskDirectory } = await createRealStore();
-    await store.saveAttachment(
+    const oldAttachment = await store.saveAttachment(
       'my-team',
       'task-1',
       ATTACHMENT_ID,
@@ -213,31 +218,33 @@ describe('TeamTaskAttachmentStore', () => {
     ).rejects.toMatchObject({ code: 'EEXIST' });
 
     expect(addTaskComment).not.toHaveBeenCalled();
-    expect(await readFile(join(taskDirectory, ATTACHMENT_FILE))).toEqual(Buffer.from('old bytes'));
-    expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+    const oldPath = oldAttachment.filePath;
+    if (typeof oldPath !== 'string') throw new Error('Expected stored attachment path');
+    expect(await readFile(oldPath)).toEqual(Buffer.from('old bytes'));
+    expect(await readdir(taskDirectory)).toEqual([basename(oldPath)]);
   });
 
-  it('preserves a replacement file when comment rollback no longer owns the saved inode', async () => {
+  it('preserves a later generation when stale comment rollback runs after delete and recreate', async () => {
     const { store, taskDirectory } = await createRealStore();
     const attachmentWriter = new TeamTaskCommentAttachmentWriter(store);
     const failure = new Error('comment write failed');
-    const addTaskComment = vi.fn(
-      async (
-        _teamName: string,
-        _taskId: string,
-        _text: string,
-        attachments?: TaskAttachmentMeta[]
-      ) => {
-        const metadata = attachments?.[0];
-        if (!metadata || typeof metadata.filePath !== 'string') {
-          throw new Error('Expected saved attachment metadata');
-        }
-        await link(metadata.filePath, join(taskDirectory, 'original-backup'));
-        await unlink(metadata.filePath);
-        await writeFile(metadata.filePath, Buffer.from('replacement bytes'));
-        throw failure;
-      }
-    );
+    let originalPath: string | null = null;
+    let replacementPath: string | null = null;
+    const addTaskComment = vi.fn(async (...args: unknown[]) => {
+      const attachments = args[3] as TaskAttachmentMeta[] | undefined;
+      originalPath = attachments?.[0]?.filePath ?? null;
+      await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+      const replacement = await store.saveAttachment(
+        'my-team',
+        'task-1',
+        ATTACHMENT_ID,
+        'replacement.png',
+        'image/png',
+        'cmVwbGFjZW1lbnQgYnl0ZXM='
+      );
+      replacementPath = replacement.filePath ?? null;
+      throw failure;
+    });
     const useCase = new AddTaskCommentUseCase({
       comments: { addTaskComment },
       attachments: attachmentWriter,
@@ -258,13 +265,17 @@ describe('TeamTaskAttachmentStore', () => {
       })
     ).rejects.toBe(failure);
 
-    expect(await readFile(join(taskDirectory, ATTACHMENT_FILE))).toEqual(
-      Buffer.from('replacement bytes')
-    );
+    await expect(
+      store.getAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png')
+    ).resolves.toBe('cmVwbGFjZW1lbnQgYnl0ZXM=');
+    expect(originalPath).not.toBeNull();
+    expect(replacementPath).not.toBe(originalPath);
+    const [attachmentFile] = await readdir(taskDirectory);
+    expect(attachmentFile).toMatch(ATTACHMENT_FILE_PATTERN);
   });
 
-  it('removes the exact saved inode when comment persistence fails', async () => {
-    const { store, taskDirectory } = await createRealStore();
+  it('removes the exact saved generation when comment persistence fails', async () => {
+    const { store } = await createRealStore();
     const failure = new Error('comment write failed');
     const useCase = new AddTaskCommentUseCase({
       comments: {
@@ -290,8 +301,8 @@ describe('TeamTaskAttachmentStore', () => {
       })
     ).rejects.toBe(failure);
 
-    await expect(readFile(join(taskDirectory, ATTACHMENT_FILE))).rejects.toMatchObject({
-      code: 'ENOENT',
-    });
+    await expect(
+      store.getAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png')
+    ).resolves.toBeNull();
   });
 });
