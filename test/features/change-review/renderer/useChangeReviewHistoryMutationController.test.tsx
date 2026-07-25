@@ -365,9 +365,9 @@ describe('useChangeReviewHistoryMutationController', () => {
     ]);
   });
 
-  it('remounts only the accepted file when Restore also undoes disk-backed actions', async () => {
-    const acceptedFile = fileBulkAction('file-1', '/repo/accepted.ts');
-    const disk = diskAction('disk-1', '/repo/disk.ts');
+  it('remounts only the canonical accepted-file path during mixed Restore', async () => {
+    const acceptedFile = fileBulkAction('file-1', 'c:/repo/accepted.ts');
+    const disk = diskAction('disk-1', 'C:\\Repo\\Accepted.ts');
     const harness = createHarness({ undo: [acceptedFile, disk] });
     vi.mocked(harness.commandPort.restoreHistory).mockResolvedValue({
       decisionRevision: 5,
@@ -378,16 +378,8 @@ describe('useChangeReviewHistoryMutationController', () => {
     });
     harness.files = [
       {
-        filePath: '/repo/accepted.ts',
+        filePath: 'c:/repo/accepted.ts',
         relativePath: 'accepted.ts',
-        snippets: [],
-        linesAdded: 1,
-        linesRemoved: 0,
-        isNewFile: false,
-      },
-      {
-        filePath: '/repo/disk.ts',
-        relativePath: 'disk.ts',
         snippets: [],
         linesAdded: 1,
         linesRemoved: 0,
@@ -408,8 +400,7 @@ describe('useChangeReviewHistoryMutationController', () => {
 
     expect(harness.viewPort.incrementDiscardCounters).toHaveBeenCalledOnce();
     expect(harness.viewPort.incrementDiscardCounters).toHaveBeenCalledWith([
-      '/repo/disk.ts',
-      '/repo/accepted.ts',
+      'c:/repo/accepted.ts',
     ]);
   });
 

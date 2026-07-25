@@ -112,7 +112,10 @@ export function getReviewActionsAffectedPaths(
       const normalizedPath = normalizePathForComparison(filePath);
       if (seenPaths.has(normalizedPath)) continue;
       seenPaths.add(normalizedPath);
-      affectedPaths.push(filePath);
+      const currentFile = files.find(
+        (file) => normalizePathForComparison(file.filePath) === normalizedPath
+      );
+      affectedPaths.push(currentFile?.filePath ?? filePath);
     }
   }
   return affectedPaths;
