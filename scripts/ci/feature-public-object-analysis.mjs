@@ -114,6 +114,51 @@ function descriptorIsEnumerable(descriptor) {
   );
 }
 
+function resolveDescriptorMapEntries(
+  expression,
+  bindingModel,
+  beforePosition,
+  visited = new Set()
+) {
+  return resolveObjectLiterals(expression, bindingModel, beforePosition).flatMap(
+    (descriptorMap) => {
+      const mapKey = `${descriptorMap.pos}:${descriptorMap.end}`;
+      if (visited.has(mapKey)) return [];
+      const entries = new Map();
+      const nextVisited = new Set(visited).add(mapKey);
+      for (const property of descriptorMap.properties) {
+        if (ts.isSpreadAssignment(property)) {
+          for (const entry of resolveDescriptorMapEntries(
+            property.expression,
+            bindingModel,
+            beforePosition,
+            nextVisited
+          )) {
+            entries.set(entry.name, {
+              ...entry,
+              references: [property.expression, ...entry.references],
+            });
+          }
+        } else if (
+          ts.isPropertyAssignment(property) ||
+          ts.isShorthandPropertyAssignment(property)
+        ) {
+          entries.set(propertyNameText(property.name), {
+            expression: ts.isPropertyAssignment(property)
+              ? property.initializer
+              : property.name,
+            name: propertyNameText(property.name),
+            references: [
+              ts.isPropertyAssignment(property) ? property.initializer : property.name,
+            ],
+          });
+        }
+      }
+      return [...entries.values()];
+    }
+  );
+}
+
 export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
   const writes = new Map();
   const addWrite = ({
@@ -121,8 +166,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
     enumerable = true,
     path,
     position,
-    referenceEnd = end,
-    referenceStart = position,
+    referenceNodes,
     sourceKey,
   }) => {
     if (!sourceKey || path.length === 0) return;
@@ -132,8 +176,10 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
       enumerable,
       path,
       position,
-      referenceEnd,
-      referenceStart,
+      referenceRanges: (referenceNodes ?? []).map((node) => ({
+        end: node.end,
+        start: node.getStart(sourceFile),
+      })),
     });
     writes.set(sourceKey, rootWrites);
   };
@@ -142,7 +188,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
     node,
     suffix = [],
     enumerable = true,
-    referenceNode = node
+    referenceNodes = [node]
   ) => {
     const target = accessPath(targetExpression);
     if (!target) return;
@@ -151,40 +197,28 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
       enumerable,
       path: [...target.path, ...suffix],
       position: node.getStart(sourceFile),
-      referenceEnd: referenceNode.end,
-      referenceStart: referenceNode.getStart(sourceFile),
+      referenceNodes,
       sourceKey: bindingModel.bindingAt(target.root, node.getStart(sourceFile)),
     });
   };
   const addDescriptorMapWrites = (targetExpression, mapExpression, node) => {
-    for (const descriptorMap of resolveObjectLiterals(
+    for (const entry of resolveDescriptorMapEntries(
       mapExpression,
       bindingModel,
       node.getStart(sourceFile)
     )) {
-      for (const property of descriptorMap.properties) {
-        if (
-          !ts.isPropertyAssignment(property) &&
-          !ts.isShorthandPropertyAssignment(property)
-        ) {
-          continue;
-        }
-        const descriptorExpression = ts.isPropertyAssignment(property)
-          ? property.initializer
-          : property.name;
-        for (const descriptor of resolveObjectLiterals(
-          descriptorExpression,
-          bindingModel,
-          node.getStart(sourceFile)
-        )) {
-          addTargetWrite(
-            targetExpression,
-            node,
-            [propertyNameText(property.name)],
-            descriptorIsEnumerable(descriptor),
-            descriptor
-          );
-        }
+      for (const descriptor of resolveObjectLiterals(
+        entry.expression,
+        bindingModel,
+        node.getStart(sourceFile)
+      )) {
+        addTargetWrite(
+          targetExpression,
+          node,
+          [entry.name],
+          descriptorIsEnumerable(descriptor),
+          [...entry.references, descriptor]
+        );
       }
     }
   };
@@ -234,7 +268,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
           node,
           [propertyName],
           descriptorIsEnumerable(descriptor),
-          descriptor
+          [node.arguments[2], descriptor].filter(Boolean)
         );
       }
     } else if (
@@ -258,28 +292,24 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
       method.name === 'create' &&
       initializer.arguments[1]
     ) {
-      for (const descriptorMap of resolveObjectLiterals(
+      for (const entry of resolveDescriptorMapEntries(
         initializer.arguments[1],
         bindingModel,
         initializer.getStart(sourceFile)
       )) {
-        for (const property of descriptorMap.properties) {
-          if (!ts.isPropertyAssignment(property)) continue;
-          for (const descriptor of resolveObjectLiterals(
-            property.initializer,
-            bindingModel,
-            initializer.getStart(sourceFile)
-          )) {
-            addWrite({
-              end: initializer.end,
-              enumerable: descriptorIsEnumerable(descriptor),
-              path: [propertyNameText(property.name)],
-              position: initializer.getStart(sourceFile),
-              referenceEnd: descriptor.end,
-              referenceStart: descriptor.getStart(sourceFile),
-              sourceKey,
-            });
-          }
+        for (const descriptor of resolveObjectLiterals(
+          entry.expression,
+          bindingModel,
+          initializer.getStart(sourceFile)
+        )) {
+          addWrite({
+            end: initializer.end,
+            enumerable: descriptorIsEnumerable(descriptor),
+            path: [entry.name],
+            position: initializer.getStart(sourceFile),
+            referenceNodes: [...entry.references, descriptor],
+            sourceKey,
+          });
         }
       }
     }

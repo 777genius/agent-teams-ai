@@ -984,6 +984,54 @@ test('traces top-level getter aliases only when public descriptors expose them',
       `,
       'src/features/getter-spread-define-properties/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/getter-spread-define-properties-map/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const descriptors = {
+          Store: { value: Store, enumerable: true },
+        };
+        const hidden = {};
+        Object.defineProperties(hidden, { ...descriptors });
+        export const api = { ...hidden };
+      `,
+      'src/features/getter-spread-define-properties-map/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-spread-define-properties-getter-map/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const descriptor = { get: () => Store, enumerable: true };
+        const descriptors = { Store: descriptor };
+        const hidden = {};
+        Object.defineProperties(hidden, { ...descriptors });
+        export const api = { ...hidden };
+      `,
+      'src/features/getter-spread-define-properties-getter-map/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-spread-define-properties-map-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const descriptors = {
+          Store: { value: Store, enumerable: true },
+        };
+        const hidden = {};
+        Object.defineProperties(hidden, {
+          ...descriptors,
+          Store: { value: undefined, enumerable: true },
+        });
+        export const api = { ...hidden };
+      `,
+      'src/features/getter-spread-define-properties-map-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-spread-define-properties-getter-map-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const descriptor = { get: () => Store, enumerable: true };
+        const descriptors = { Store: descriptor };
+        const hidden = {};
+        Object.defineProperties(hidden, {
+          ...descriptors,
+          Store: { value: undefined, enumerable: true },
+        });
+        export const api = { ...hidden };
+      `,
+      'src/features/getter-spread-define-properties-getter-map-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/getter-spread-descriptor-alias-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const descriptor = { get: () => Store, enumerable: false };
@@ -1402,6 +1450,8 @@ test('traces top-level getter aliases only when public descriptors expose them',
         './infrastructure/Store',
         './infrastructure/Store',
         './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
       ]);
       assert.ok(
         implementationViolations.some(
@@ -1419,6 +1469,8 @@ test('traces top-level getter aliases only when public descriptors expose them',
         'src/features/getter-object-assign-copy/main/index.ts',
         'src/features/getter-set-prototype-of/main/index.ts',
         'src/features/getter-spread-define-properties/main/index.ts',
+        'src/features/getter-spread-define-properties-getter-map/main/index.ts',
+        'src/features/getter-spread-define-properties-map/main/index.ts',
         'src/features/getter-spread-descriptor-alias/main/index.ts',
       ]) {
         assert.ok(
@@ -1433,6 +1485,8 @@ test('traces top-level getter aliases only when public descriptors expose them',
         'src/features/getter-object-assign-overwritten-safe/main/index.ts',
         'src/features/getter-set-prototype-stale-safe/main/index.ts',
         'src/features/getter-spread-descriptor-alias-safe/main/index.ts',
+        'src/features/getter-spread-define-properties-getter-map-safe/main/index.ts',
+        'src/features/getter-spread-define-properties-map-safe/main/index.ts',
         'src/features/getter-spread-nonenumerable-safe/main/index.ts',
         'src/features/getter-spread-sibling-safe/main/index.ts',
       ]) {

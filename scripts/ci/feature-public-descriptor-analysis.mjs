@@ -79,6 +79,51 @@ function resolveDescriptorObjects(expression, assignments, beforePosition, visit
   );
 }
 
+function resolveDescriptorMapEntries(
+  expression,
+  assignments,
+  beforePosition,
+  visited = new Set()
+) {
+  return resolveDescriptorObjects(expression, assignments, beforePosition).flatMap(
+    (descriptorMap) => {
+      const mapKey = `${descriptorMap.pos}:${descriptorMap.end}`;
+      if (visited.has(mapKey)) return [];
+      const entries = new Map();
+      const nextVisited = new Set(visited).add(mapKey);
+      for (const property of descriptorMap.properties) {
+        if (ts.isSpreadAssignment(property)) {
+          for (const entry of resolveDescriptorMapEntries(
+            property.expression,
+            assignments,
+            beforePosition,
+            nextVisited
+          )) {
+            entries.set(entry.name, {
+              ...entry,
+              references: [property.expression, ...entry.references],
+            });
+          }
+        } else if (
+          ts.isPropertyAssignment(property) ||
+          ts.isShorthandPropertyAssignment(property)
+        ) {
+          entries.set(propertyNameText(property.name), {
+            expression: ts.isPropertyAssignment(property)
+              ? property.initializer
+              : property.name,
+            name: propertyNameText(property.name),
+            references: [
+              ts.isPropertyAssignment(property) ? property.initializer : property.name,
+            ],
+          });
+        }
+      }
+      return [...entries.values()];
+    }
+  );
+}
+
 function collectDescriptorGetterProperties(descriptor, getterProperties) {
   for (const property of descriptor.properties) {
     if (
@@ -117,20 +162,17 @@ export function collectConsumedDescriptorGetterProperties(sourceFile, publicTarg
         method.receiver.text === 'Object' &&
         method.name === 'create'
       ) {
-        for (const descriptorMap of resolveDescriptorObjects(
+        for (const entry of resolveDescriptorMapEntries(
           node.arguments[1],
           assignments,
           node.getStart(sourceFile)
         )) {
-          for (const property of descriptorMap.properties) {
-            if (!ts.isPropertyAssignment(property)) continue;
-            for (const descriptor of resolveDescriptorObjects(
-              property.initializer,
-              assignments,
-              node.getStart(sourceFile)
-            )) {
-              collectDescriptorGetterProperties(descriptor, getterProperties);
-            }
+          for (const descriptor of resolveDescriptorObjects(
+            entry.expression,
+            assignments,
+            node.getStart(sourceFile)
+          )) {
+            collectDescriptorGetterProperties(descriptor, getterProperties);
           }
         }
       }
@@ -138,38 +180,58 @@ export function collectConsumedDescriptorGetterProperties(sourceFile, publicTarg
         method &&
         ts.isIdentifier(method.receiver) &&
         ['Object', 'Reflect'].includes(method.receiver.text);
-      if (
-        isDescriptorApi &&
-        isPublicTarget(node.arguments[0], publicTargets, node.getStart(sourceFile))
-      ) {
-        if (method.name === 'defineProperty') {
-          const descriptorExpression = node.arguments[2] && unwrapExpression(node.arguments[2]);
-          const beforeCount = getterProperties.size;
-          for (const descriptor of resolveDescriptorObjects(
-            node.arguments[2],
-            assignments,
-            node.getStart(sourceFile)
-          )) {
-            collectDescriptorGetterProperties(descriptor, getterProperties);
+      if (isDescriptorApi && method.name === 'defineProperty') {
+        const descriptorExpression = node.arguments[2] && unwrapExpression(node.arguments[2]);
+        for (const descriptor of resolveDescriptorObjects(
+          node.arguments[2],
+          assignments,
+          node.getStart(sourceFile)
+        )) {
+          const references = [descriptorExpression, descriptor].filter(Boolean);
+          if (
+            !references.some((reference) =>
+              isPublicTarget(
+                node.arguments[0],
+                publicTargets,
+                reference.getStart(sourceFile)
+              )
+            )
+          ) {
+            continue;
           }
+          const beforeCount = getterProperties.size;
+          collectDescriptorGetterProperties(descriptor, getterProperties);
           if (descriptorExpression && getterProperties.size > beforeCount) {
             getterProperties.add(descriptorExpression);
           }
-        } else if (method.name === 'defineProperties') {
-          for (const descriptorMap of resolveDescriptorObjects(
-            node.arguments[1],
+        }
+      } else if (isDescriptorApi && method.name === 'defineProperties') {
+        for (const entry of resolveDescriptorMapEntries(
+          node.arguments[1],
+          assignments,
+          node.getStart(sourceFile)
+        )) {
+          for (const descriptor of resolveDescriptorObjects(
+            entry.expression,
             assignments,
             node.getStart(sourceFile)
           )) {
-            for (const property of descriptorMap.properties) {
-              if (!ts.isPropertyAssignment(property)) continue;
-              for (const descriptor of resolveDescriptorObjects(
-                property.initializer,
-                assignments,
-                node.getStart(sourceFile)
-              )) {
-                collectDescriptorGetterProperties(descriptor, getterProperties);
-              }
+            const references = [...entry.references, descriptor];
+            if (
+              !references.some((reference) =>
+                isPublicTarget(
+                  node.arguments[0],
+                  publicTargets,
+                  reference.getStart(sourceFile)
+                )
+              )
+            ) {
+              continue;
+            }
+            const beforeCount = getterProperties.size;
+            collectDescriptorGetterProperties(descriptor, getterProperties);
+            if (getterProperties.size > beforeCount) {
+              for (const reference of references) getterProperties.add(reference);
             }
           }
         }

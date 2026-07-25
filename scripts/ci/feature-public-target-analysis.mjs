@@ -537,17 +537,20 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     finalRootPosition,
     exportsActiveAt
   );
+  const writeContainsPosition = (write, position) =>
+    write.referenceRanges?.length
+      ? write.referenceRanges.some(
+          (range) => range.start <= position && position <= range.end
+        )
+      : write.position <= position && position <= write.end;
   const relationMatchesAt = (relation, position) => {
     const source = bindingModel.versions.get(relation.sourceKey);
     if (!source || bindingModel.bindingAt(source.name, position) !== relation.sourceKey) {
       return false;
     }
     const sourceWrites = propertyWrites.get(relation.sourceKey) ?? [];
-    const currentWrite = sourceWrites.find(
-      (write) =>
-        ((write.referenceStart ?? write.position) <= position &&
-          position <= (write.referenceEnd ?? write.end)) ||
-        (write.position <= position && position <= write.end)
+    const currentWrite = sourceWrites.find((write) =>
+      writeContainsPosition(write, position)
     );
     if (
       !currentWrite ||
@@ -590,11 +593,8 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         continue;
       }
       const sourceWrites = propertyWrites.get(relation.sourceKey) ?? [];
-      const currentWrite = sourceWrites.find(
-        (write) =>
-          ((write.referenceStart ?? write.position) <= position &&
-            position <= (write.referenceEnd ?? write.end)) ||
-          (write.position <= position && position <= write.end)
+      const currentWrite = sourceWrites.find((write) =>
+        writeContainsPosition(write, position)
       );
       const insideSourceInitializer =
         source.initializer.getStart(sourceFile) <= position && position <= source.initializer.end;
