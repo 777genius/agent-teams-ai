@@ -1,0 +1,9 @@
+export type WorkspaceRole = "owner" | "member";
+
+export function canDeleteWorkspace(role: WorkspaceRole): boolean {
+  if (role === "owner") {
+    return false;
+  }
+
+  return true;
+}
