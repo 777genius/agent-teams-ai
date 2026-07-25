@@ -265,7 +265,11 @@ function commonJsTargetPath(expression, commonJsTargetAliases = new Set()) {
     path.unshift(access.name);
     current = access.receiver;
   }
-  return ts.isIdentifier(current) && commonJsTargetAliases.has(current.text) ? path : null;
+  if (!ts.isIdentifier(current)) return null;
+  const isPublicPath =
+    commonJsTargetAliases.hasPath?.(current.text, path) ||
+    commonJsTargetAliases.has(current.text);
+  return isPublicPath ? path : null;
 }
 
 export function isCommonJsExportsObject(expression) {

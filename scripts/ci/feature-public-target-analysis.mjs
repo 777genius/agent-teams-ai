@@ -10,7 +10,12 @@ import {
 } from './feature-export-analysis.mjs';
 import {
   collectFinalCommonJsPropertyWrites,
+  commonJsRootKind,
   commonJsReferenceIsPublic,
+  commonJsRootWrapperSources,
+  createExportsState,
+  lastCommonJsRootReplacement,
+  memberRelationIsAttachedAt,
   pathWasOverwrittenAfter,
 } from './feature-public-commonjs-analysis.mjs';
 import {
@@ -265,17 +270,6 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
   return { edges, memberRelations };
 }
 
-function commonJsRootKind(expression) {
-  const current = unwrapExpression(expression);
-  if (ts.isIdentifier(current) && current.text === 'exports') return 'exports';
-  const access = memberAccess(current);
-  return access?.name === 'exports' &&
-    ts.isIdentifier(access.receiver) &&
-    access.receiver.text === 'module'
-    ? 'module'
-    : null;
-}
-
 function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
   const visitStatement = (statement) => {
     if (ts.isExpressionStatement(statement)) {
@@ -315,46 +309,6 @@ function collectCommonJsRootAssignments(sourceFile) {
   return assignments;
 }
 
-function assignmentLinksExports(kind, expression) {
-  const current = unwrapExpression(expression);
-  const opposite = kind === 'module' ? 'exports' : 'module';
-  if (commonJsRootKind(current) === opposite) return true;
-  if (
-    kind === 'exports' &&
-    isCommonJsExportsObject(current) &&
-    rootBindingName(current) === 'module'
-  ) {
-    return true;
-  }
-  return (
-    ts.isBinaryExpression(current) &&
-    current.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-    commonJsRootKind(current.left) === opposite
-  );
-}
-
-function createExportsState(rootAssignments) {
-  return (position) => {
-    let active = true;
-    for (const assignment of rootAssignments) {
-      if (assignment.position >= position) break;
-      active = assignmentLinksExports(assignment.kind, assignment.expression);
-    }
-    return active;
-  };
-}
-
-function lastCommonJsRootReplacement(rootAssignments, exportsActiveAt) {
-  return (
-    [...rootAssignments].reverse().find((assignment) => {
-      if (assignment.kind !== 'module') return false;
-      const value = unwrapExpression(assignment.expression);
-      if (commonJsRootKind(value) === 'module') return false;
-      return !(commonJsRootKind(value) === 'exports' && exportsActiveAt(assignment.position));
-    }) ?? null
-  );
-}
-
 function collectCommonJsSeeds(sourceFile, bindingModel, rootAssignments, exportsActiveAt) {
   const seeds = new Set();
   const lastModuleReset = lastCommonJsRootReplacement(rootAssignments, exportsActiveAt);
@@ -378,6 +332,13 @@ function collectCommonJsSeeds(sourceFile, bindingModel, rootAssignments, exports
       if (key) seeds.add(key);
     }
     for (const key of collectContainedStableBindings(value, bindingModel)) seeds.add(key);
+    for (const source of commonJsRootWrapperSources(
+      value,
+      bindingModel,
+      lastModuleReset.position
+    )) {
+      if (source.path.length === 0) seeds.add(source.sourceKey);
+    }
   }
 
   const visit = (node) => {
@@ -427,7 +388,11 @@ function collectCommonJsCopyRelations(
       if (sourceKey) {
         relations.push({
           copyPosition,
-          overwrittenPaths: staticOverwrittenPaths(sources.slice(index + 1)),
+          overwrittenPaths: staticOverwrittenPaths(
+            sources.slice(index + 1),
+            bindingModel,
+            copyPosition
+          ),
           path: source.path,
           sourceKey,
           targetPath,
@@ -577,8 +542,18 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
   const identityOwners = propagateIdentityOwners(stableExportOwners, identityEdges);
   const rootAssignments = collectCommonJsRootAssignments(sourceFile);
   const exportsActiveAt = createExportsState(rootAssignments);
-  const finalRootPosition =
-    lastCommonJsRootReplacement(rootAssignments, exportsActiveAt)?.position ?? -1;
+  const finalRootReplacement = lastCommonJsRootReplacement(
+    rootAssignments,
+    exportsActiveAt
+  );
+  const finalRootPosition = finalRootReplacement?.position ?? -1;
+  const commonJsRootWrapperRelations = finalRootReplacement
+    ? commonJsRootWrapperSources(
+        finalRootReplacement.expression,
+        bindingModel,
+        finalRootReplacement.position
+      ).filter(({ path }) => path.length > 0)
+    : [];
   const commonJsTargetAliases = propagateIdentitySet(
     collectCommonJsSeeds(sourceFile, bindingModel, rootAssignments, exportsActiveAt),
     identityEdges
@@ -603,7 +578,8 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     (rootBindingName(target) !== 'exports' || exportsActiveAt(position));
   const finalCommonJsPropertyWrites = collectFinalCommonJsPropertyWrites(
     sourceFile,
-    commonJsTargetIsActive
+    commonJsTargetIsActive,
+    bindingModel
   );
   const writeContainsPosition = (write, position) =>
     write.referenceRanges?.length
@@ -722,7 +698,8 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
       commonJsReferenceIsPublic(
         expression,
         reference,
-        finalCommonJsPropertyWrites
+        finalCommonJsPropertyWrites,
+        bindingModel
       ),
     has: (name) => {
       const key = bindingModel.bindingAt(name, position);
@@ -732,6 +709,22 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
               (relation) => relation.sourceKey === key && relationMatchesAt(relation, position)
             )
         : false;
+    },
+    hasPath: (name, path) => {
+      const key = bindingModel.bindingAt(name, position);
+      if (!key) return false;
+      if (commonJsTargetAliases.has(key)) return true;
+      return commonJsRootWrapperRelations.some(
+        (relation) =>
+          relation.sourceKey === key &&
+          relation.path.every((segment, index) => segment === path[index]) &&
+          memberRelationIsAttachedAt(
+            propertyWrites,
+            relation,
+            finalRootPosition,
+            position
+          )
+      );
     },
   });
   const constructorExports = [];

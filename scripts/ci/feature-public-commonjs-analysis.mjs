@@ -2,17 +2,71 @@ import ts from 'typescript';
 
 import {
   commonJsExportPath,
+  isCommonJsExportsObject,
   memberAccess,
   propertyNameText,
+  rootBindingName,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
 import {
+  accessPath,
+  staticDescriptorMapPaths,
   staticOverwrittenPaths,
-  staticOverwrittenPropertyPaths,
 } from './feature-public-object-analysis.mjs';
 
 function containsReference(node, reference) {
   return node.pos <= reference.pos && reference.end <= node.end;
+}
+
+export function commonJsRootKind(expression) {
+  const current = unwrapExpression(expression);
+  if (ts.isIdentifier(current) && current.text === 'exports') return 'exports';
+  const access = memberAccess(current);
+  return access?.name === 'exports' &&
+    ts.isIdentifier(access.receiver) &&
+    access.receiver.text === 'module'
+    ? 'module'
+    : null;
+}
+
+function assignmentLinksExports(kind, expression) {
+  const current = unwrapExpression(expression);
+  const opposite = kind === 'module' ? 'exports' : 'module';
+  if (commonJsRootKind(current) === opposite) return true;
+  if (
+    kind === 'exports' &&
+    isCommonJsExportsObject(current) &&
+    rootBindingName(current) === 'module'
+  ) {
+    return true;
+  }
+  return (
+    ts.isBinaryExpression(current) &&
+    current.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+    commonJsRootKind(current.left) === opposite
+  );
+}
+
+export function createExportsState(rootAssignments) {
+  return (position) => {
+    let active = true;
+    for (const assignment of rootAssignments) {
+      if (assignment.position >= position) break;
+      active = assignmentLinksExports(assignment.kind, assignment.expression);
+    }
+    return active;
+  };
+}
+
+export function lastCommonJsRootReplacement(rootAssignments, exportsActiveAt) {
+  return (
+    [...rootAssignments].reverse().find((assignment) => {
+      if (assignment.kind !== 'module') return false;
+      const value = unwrapExpression(assignment.expression);
+      if (commonJsRootKind(value) === 'module') return false;
+      return !(commonJsRootKind(value) === 'exports' && exportsActiveAt(assignment.position));
+    }) ?? null
+  );
 }
 
 function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
@@ -80,7 +134,64 @@ export function pathWasOverwrittenAfter(writes, path, position) {
   );
 }
 
-export function collectFinalCommonJsPropertyWrites(sourceFile, targetIsActive) {
+export function memberRelationIsAttachedAt(
+  writes,
+  relation,
+  capturedAt,
+  position
+) {
+  return !(writes.get(relation.sourceKey) ?? []).some(
+    (write) =>
+      write.position > capturedAt &&
+      write.position < position &&
+      write.path.length <= relation.path.length &&
+      write.path.every((segment, index) => segment === relation.path[index])
+  );
+}
+
+export function commonJsRootWrapperSources(
+  expression,
+  bindingModel,
+  beforePosition
+) {
+  const collect = (value) => {
+    const current = unwrapExpression(value);
+    const source = accessPath(current);
+    if (source) {
+      const sourceKey = bindingModel.bindingAt(source.root, beforePosition);
+      return sourceKey ? [{ path: source.path, sourceKey }] : [];
+    }
+    if (!ts.isCallExpression(current)) return [];
+    const method = memberAccess(current.expression);
+    if (
+      !method ||
+      !ts.isIdentifier(method.receiver) ||
+      method.receiver.text !== 'Object'
+    ) {
+      return [];
+    }
+    if (['create', 'freeze', 'preventExtensions', 'seal'].includes(method.name)) {
+      return current.arguments[0] ? collect(current.arguments[0]) : [];
+    }
+    return method.name === 'setPrototypeOf'
+      ? [...current.arguments].slice(0, 2).flatMap(collect)
+      : [];
+  };
+  return [
+    ...new Map(
+      collect(expression).map((source) => [
+        `${source.sourceKey}:${source.path.join('.')}`,
+        source,
+      ])
+    ).values(),
+  ];
+}
+
+export function collectFinalCommonJsPropertyWrites(
+  sourceFile,
+  targetIsActive,
+  bindingModel
+) {
   const writes = [];
   const addPaths = (target, paths, position) => {
     const targetPath = commonJsExportPath(target);
@@ -113,7 +224,11 @@ export function collectFinalCommonJsPropertyWrites(sourceFile, targetIsActive) {
     if (method.name === 'assign') {
       addPaths(
         node.arguments[0],
-        staticOverwrittenPaths([...node.arguments].slice(1)),
+        staticOverwrittenPaths(
+          [...node.arguments].slice(1),
+          bindingModel,
+          position
+        ),
         node.end
       );
     } else if (
@@ -123,33 +238,47 @@ export function collectFinalCommonJsPropertyWrites(sourceFile, targetIsActive) {
     ) {
       addPaths(node.arguments[0], [[unwrapExpression(node.arguments[1]).text]], node.end);
     } else if (method.name === 'defineProperties' && node.arguments[1]) {
-      const descriptors = unwrapExpression(node.arguments[1]);
-      if (ts.isObjectLiteralExpression(descriptors)) {
-        addPaths(
-          node.arguments[0],
-          staticOverwrittenPropertyPaths([...descriptors.properties]),
-          node.end
-        );
-      }
+      addPaths(
+        node.arguments[0],
+        staticDescriptorMapPaths(
+          node.arguments[1],
+          bindingModel,
+          position
+        ),
+        node.end
+      );
     }
   });
   return writes;
 }
 
-function objectAssignReferencePath(sources, reference, targetPath) {
+function objectAssignReferencePath(
+  sources,
+  reference,
+  targetPath,
+  bindingModel,
+  beforePosition
+) {
   const sourceIndex = sources.findIndex((source) => containsReference(source, reference));
   if (sourceIndex < 0) return null;
   const valuePath = literalPropertyPath(sources[sourceIndex], reference);
   if (
     valuePath === null ||
-    pathIsOverwritten(valuePath, staticOverwrittenPaths(sources.slice(sourceIndex + 1)))
+    pathIsOverwritten(
+      valuePath,
+      staticOverwrittenPaths(
+        sources.slice(sourceIndex + 1),
+        bindingModel,
+        beforePosition
+      )
+    )
   ) {
     return valuePath === null ? null : false;
   }
   return [...targetPath, ...valuePath];
 }
 
-function assignedReferencePath(expression, reference) {
+function assignedReferencePath(expression, reference, bindingModel) {
   const current = unwrapExpression(expression);
   if (
     ts.isBinaryExpression(current) &&
@@ -169,7 +298,9 @@ function assignedReferencePath(expression, reference) {
         return objectAssignReferencePath(
           [...value.arguments],
           reference,
-          targetPath
+          targetPath,
+          bindingModel,
+          current.getStart()
         );
       }
     }
@@ -189,7 +320,13 @@ function assignedReferencePath(expression, reference) {
   }
   if (method.name === 'assign') {
     const sources = [...current.arguments].slice(1);
-    return objectAssignReferencePath(sources, reference, targetPath);
+    return objectAssignReferencePath(
+      sources,
+      reference,
+      targetPath,
+      bindingModel,
+      current.getStart()
+    );
   }
   if (
     ['defineProperty', 'set'].includes(method.name) &&
@@ -208,9 +345,14 @@ function assignedReferencePath(expression, reference) {
 export function commonJsReferenceIsPublic(
   expression,
   reference,
-  finalPropertyWrites
+  finalPropertyWrites,
+  bindingModel
 ) {
-  const publicPath = assignedReferencePath(expression, reference);
+  const publicPath = assignedReferencePath(
+    expression,
+    reference,
+    bindingModel
+  );
   if (publicPath === false) return false;
   return (
     publicPath === null ||

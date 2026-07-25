@@ -317,24 +317,46 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
   return writes;
 }
 
-export function staticOverwrittenPaths(expressions) {
+export function staticOverwrittenPaths(
+  expressions,
+  bindingModel,
+  beforePosition = Number.POSITIVE_INFINITY
+) {
   const paths = [];
   for (const expression of expressions) {
     const current = unwrapExpression(expression);
-    if (!ts.isObjectLiteralExpression(current)) continue;
-    for (const property of current.properties) {
-      if (
-        ts.isPropertyAssignment(property) ||
-        ts.isShorthandPropertyAssignment(property) ||
-        ts.isMethodDeclaration(property) ||
-        ts.isGetAccessorDeclaration(property) ||
-        ts.isSetAccessorDeclaration(property)
-      ) {
-        paths.push([propertyNameText(property.name)]);
+    const objects = bindingModel
+      ? resolveObjectLiterals(current, bindingModel, beforePosition)
+      : ts.isObjectLiteralExpression(current)
+        ? [current]
+        : [];
+    for (const object of objects) {
+      for (const property of object.properties) {
+        if (
+          ts.isPropertyAssignment(property) ||
+          ts.isShorthandPropertyAssignment(property) ||
+          ts.isMethodDeclaration(property) ||
+          ts.isGetAccessorDeclaration(property) ||
+          ts.isSetAccessorDeclaration(property)
+        ) {
+          paths.push([propertyNameText(property.name)]);
+        }
       }
     }
   }
   return paths;
+}
+
+export function staticDescriptorMapPaths(
+  expression,
+  bindingModel,
+  beforePosition
+) {
+  return resolveDescriptorMapEntries(
+    expression,
+    bindingModel,
+    beforePosition
+  ).map(({ name }) => [name]);
 }
 
 export function staticOverwrittenPropertyPaths(properties) {
@@ -357,7 +379,11 @@ function addCopySources(relations, ownerKey, callOrLiteral, sources, bindingMode
     if (!sourceKey) continue;
     relations.push({
       copyPosition: callOrLiteral.end,
-      overwrittenPaths: staticOverwrittenPaths(sources.slice(index + 1)),
+      overwrittenPaths: staticOverwrittenPaths(
+        sources.slice(index + 1),
+        bindingModel,
+        callOrLiteral.getStart()
+      ),
       ownerKey,
       path: source.path,
       sourceKey,

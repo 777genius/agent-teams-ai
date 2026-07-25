@@ -1526,6 +1526,54 @@ test('tracks CommonJS object copies with last-write semantics', () => {
       `,
       'src/features/commonjs-root-object-assign/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
+      'src/features/commonjs-root-freeze/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        module.exports = Object.freeze(hidden);
+      `,
+      'src/features/commonjs-root-freeze/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-root-freeze-member/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const container = { api: {} };
+        container.api.Store = Store;
+        module.exports = Object.freeze(container.api);
+      `,
+      'src/features/commonjs-root-freeze-member/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-root-prevent-extensions/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        module.exports = Object.preventExtensions(hidden);
+      `,
+      'src/features/commonjs-root-prevent-extensions/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-root-seal/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        module.exports = Object.seal(hidden);
+      `,
+      'src/features/commonjs-root-seal/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-root-create/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const proto = {};
+        module.exports = Object.create(proto);
+        proto.Store = Store;
+      `,
+      'src/features/commonjs-root-create/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-root-set-prototype/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const proto = {};
+        module.exports = Object.setPrototypeOf({}, proto);
+        proto.Store = Store;
+      `,
+      'src/features/commonjs-root-set-prototype/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
       'src/features/commonjs-spread-overwrite-safe/main/index.cjs': `
         const Store = require('./infrastructure/Store');
         const hidden = {};
@@ -1539,6 +1587,22 @@ test('tracks CommonJS object copies with last-write semantics', () => {
         Object.assign(exports, { Store }, { Store: undefined });
       `,
       'src/features/commonjs-assign-inline-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-assign-alias-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const safe = { Store: undefined };
+        Object.assign(exports, { Store }, safe);
+      `,
+      'src/features/commonjs-assign-alias-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-assign-copy-alias-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        const safe = { Store: undefined };
+        hidden.Store = Store;
+        Object.assign(exports, hidden, safe);
+      `,
+      'src/features/commonjs-assign-copy-alias-overwrite-safe/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
       'src/features/commonjs-assign-late-overwrite-safe/main/index.cjs': `
         const Store = require('./infrastructure/Store');
@@ -1588,6 +1652,17 @@ test('tracks CommonJS object copies with last-write semantics', () => {
       `,
       'src/features/commonjs-define-property-overwrite-safe/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
+      'src/features/commonjs-define-properties-alias-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const baseDescriptors = {
+          Store: { value: undefined },
+        };
+        const descriptors = { ...baseDescriptors };
+        exports.Store = Store;
+        Object.defineProperties(exports, descriptors);
+      `,
+      'src/features/commonjs-define-properties-alias-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
       'src/features/commonjs-root-object-assign-overwrite-safe/main/index.cjs': `
         const Store = require('./infrastructure/Store');
         const hidden = {};
@@ -1595,6 +1670,15 @@ test('tracks CommonJS object copies with last-write semantics', () => {
         module.exports = Object.assign({}, hidden, { Store: undefined });
       `,
       'src/features/commonjs-root-object-assign-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-root-freeze-member-detached-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const container = { api: {} };
+        module.exports = Object.freeze(container.api);
+        container.api = {};
+        container.api.Store = Store;
+      `,
+      'src/features/commonjs-root-freeze-member-detached-safe/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
     },
     (root) => {
@@ -1615,7 +1699,31 @@ test('tracks CommonJS object copies with last-write semantics', () => {
             specifier: './infrastructure/Store',
           },
           {
+            source: 'src/features/commonjs-root-create/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+          {
+            source: 'src/features/commonjs-root-freeze-member/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+          {
+            source: 'src/features/commonjs-root-freeze/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+          {
             source: 'src/features/commonjs-root-object-assign/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+          {
+            source: 'src/features/commonjs-root-prevent-extensions/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+          {
+            source: 'src/features/commonjs-root-seal/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+          {
+            source: 'src/features/commonjs-root-set-prototype/main/index.cjs',
             specifier: './infrastructure/Store',
           },
         ]
