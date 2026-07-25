@@ -61,7 +61,7 @@ export const TerminalWorkspaceSettingsPage = ({
     } catch {
       // Kernel diagnostics already surface command failures in the terminal workspace.
     } finally {
-      setPendingAction(null);
+      setPendingAction((current) => (current === actionId ? null : current));
     }
   };
 

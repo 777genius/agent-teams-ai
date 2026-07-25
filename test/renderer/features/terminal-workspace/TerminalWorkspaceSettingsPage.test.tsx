@@ -134,6 +134,36 @@ describe('TerminalWorkspaceSettingsPage', () => {
     expect(currentViewProps().pendingAction).toBeNull();
   });
 
+  it('keeps the newer pending action when an earlier operation settles', async () => {
+    const reconnect = createDeferred<void>();
+    const stopRuntime = createDeferred<void>();
+    operations.reconnect.mockReturnValueOnce(reconnect.promise);
+    operations.stopRuntime.mockReturnValueOnce(stopRuntime.promise);
+    await renderPage();
+
+    act(() => {
+      currentViewProps().onReconnect();
+    });
+    expect(currentViewProps().pendingAction).toBe('bootstrap');
+
+    act(() => {
+      currentViewProps().onStopRuntime();
+    });
+    expect(currentViewProps().pendingAction).toBe('stop-runtime');
+
+    reconnect.resolve(undefined);
+    await act(async () => {
+      await flushMicrotasks();
+    });
+    expect(currentViewProps().pendingAction).toBe('stop-runtime');
+
+    stopRuntime.resolve(undefined);
+    await act(async () => {
+      await flushMicrotasks();
+    });
+    expect(currentViewProps().pendingAction).toBeNull();
+  });
+
   async function renderPage(): Promise<void> {
     await act(async () => {
       root.render(
