@@ -317,7 +317,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
   return writes;
 }
 
-function staticOverwrittenPaths(expressions) {
+export function staticOverwrittenPaths(expressions) {
   const paths = [];
   for (const expression of expressions) {
     const current = unwrapExpression(expression);
@@ -337,7 +337,7 @@ function staticOverwrittenPaths(expressions) {
   return paths;
 }
 
-function staticOverwrittenPropertyPaths(properties) {
+export function staticOverwrittenPropertyPaths(properties) {
   return properties.flatMap((property) =>
     ts.isPropertyAssignment(property) ||
     ts.isShorthandPropertyAssignment(property) ||

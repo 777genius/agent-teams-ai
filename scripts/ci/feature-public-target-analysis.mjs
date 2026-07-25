@@ -12,6 +12,8 @@ import {
   collectCopyRelations,
   collectPrototypeRelations,
   collectTopLevelPropertyWrites,
+  staticOverwrittenPaths,
+  staticOverwrittenPropertyPaths,
 } from './feature-public-object-analysis.mjs';
 
 const IDENTITY_WRAPPERS = new Set([
@@ -398,36 +400,70 @@ function collectCommonJsSeeds(sourceFile, bindingModel, rootAssignments, exports
   return seeds;
 }
 
-function collectCommonJsSpreadRelations(
+function collectCommonJsCopyRelations(
   sourceFile,
   bindingModel,
   finalRootPosition,
   exportsActiveAt
 ) {
   const relations = [];
+  const targetIsActive = (target, position) =>
+    position >= finalRootPosition &&
+    isCommonJsExportsObject(target) &&
+    (rootBindingName(target) !== 'exports' || exportsActiveAt(position));
+  const addSources = (sources, copyPosition) => {
+    for (const [index, expression] of sources.entries()) {
+      const source = accessPath(expression);
+      const sourceKey =
+        source && bindingModel.bindingAt(source.root, expression.getStart(sourceFile));
+      if (sourceKey) {
+        relations.push({
+          copyPosition,
+          overwrittenPaths: staticOverwrittenPaths(sources.slice(index + 1)),
+          path: source.path,
+          sourceKey,
+        });
+      }
+    }
+  };
   const visit = (node) => {
     if (ts.isFunctionLike(node) || ts.isClassLike(node)) return;
+    const position = node.getStart(sourceFile);
     if (
       ts.isBinaryExpression(node) &&
       node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      node.getStart(sourceFile) >= finalRootPosition &&
-      isCommonJsExportsObject(node.left) &&
-      (rootBindingName(node.left) !== 'exports' || exportsActiveAt(node.getStart(sourceFile)))
+      targetIsActive(node.left, position)
     ) {
       const value = unwrapExpression(node.right);
       if (ts.isObjectLiteralExpression(value)) {
-        for (const property of value.properties) {
+        const properties = [...value.properties];
+        for (const [index, property] of properties.entries()) {
           if (!ts.isSpreadAssignment(property)) continue;
           const source = accessPath(property.expression);
           const sourceKey = source && bindingModel.bindingAt(source.root, property.getStart());
           if (sourceKey) {
             relations.push({
-              copyPosition: property.getStart(),
+              copyPosition: value.end,
+              overwrittenPaths: staticOverwrittenPropertyPaths(
+                properties.slice(index + 1)
+              ),
               path: source.path,
               sourceKey,
             });
           }
         }
+      }
+    } else if (ts.isCallExpression(node)) {
+      const method = memberAccess(node.expression);
+      if (
+        method &&
+        ts.isIdentifier(method.receiver) &&
+        method.receiver.text === 'Object' &&
+        method.name === 'assign' &&
+        node.arguments[0] &&
+        targetIsActive(node.arguments[0], position)
+      ) {
+        addSources([...node.arguments].slice(1), node.end);
       }
     }
     ts.forEachChild(node, visit);
@@ -531,7 +567,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     const owner = identityOwners.get(relation.ownerKey);
     return owner ? [{ ...relation, owner }] : [];
   });
-  const commonJsSpreadRelations = collectCommonJsSpreadRelations(
+  const commonJsCopyRelations = collectCommonJsCopyRelations(
     sourceFile,
     bindingModel,
     finalRootPosition,
@@ -645,7 +681,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
       const key = bindingModel.bindingAt(name, position);
       return key
         ? commonJsTargetAliases.has(key) ||
-            commonJsSpreadRelations.some(
+            commonJsCopyRelations.some(
               (relation) => relation.sourceKey === key && relationMatchesAt(relation, position)
             )
         : false;

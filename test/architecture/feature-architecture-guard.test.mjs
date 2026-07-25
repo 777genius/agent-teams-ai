@@ -1499,6 +1499,57 @@ test('traces top-level getter aliases only when public descriptors expose them',
   );
 });
 
+test('tracks CommonJS object copies with last-write semantics', () => {
+  withFixture(
+    {
+      'src/features/commonjs-assign-exports/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        Object.assign(exports, hidden);
+      `,
+      'src/features/commonjs-assign-exports/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-assign-module/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        Object.assign(module.exports, hidden);
+      `,
+      'src/features/commonjs-assign-module/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-spread-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        module.exports = { ...hidden, Store: undefined };
+      `,
+      'src/features/commonjs-spread-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const implementationViolations = violations.filter(
+        ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
+      );
+
+      assert.deepEqual(
+        implementationViolations.map(({ source, specifier }) => ({ source, specifier })),
+        [
+          {
+            source: 'src/features/commonjs-assign-exports/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+          {
+            source: 'src/features/commonjs-assign-module/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+        ]
+      );
+    }
+  );
+});
+
 test('preserves string-literal member selection for indexed import types', () => {
   withFixture(
     {
