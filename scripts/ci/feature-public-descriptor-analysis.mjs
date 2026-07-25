@@ -143,12 +143,17 @@ export function collectConsumedDescriptorGetterProperties(sourceFile, publicTarg
         isPublicTarget(node.arguments[0], publicTargets, node.getStart(sourceFile))
       ) {
         if (method.name === 'defineProperty') {
+          const descriptorExpression = node.arguments[2] && unwrapExpression(node.arguments[2]);
+          const beforeCount = getterProperties.size;
           for (const descriptor of resolveDescriptorObjects(
             node.arguments[2],
             assignments,
             node.getStart(sourceFile)
           )) {
             collectDescriptorGetterProperties(descriptor, getterProperties);
+          }
+          if (descriptorExpression && getterProperties.size > beforeCount) {
+            getterProperties.add(descriptorExpression);
           }
         } else if (method.name === 'defineProperties') {
           for (const descriptorMap of resolveDescriptorObjects(
@@ -183,6 +188,7 @@ export function isConsumedDescriptorGetterReference(
 ) {
   let current = node;
   while (current.parent && current.parent !== sourceFile) {
+    if (consumedDescriptorGetterProperties.has(current)) return true;
     const parent = current.parent;
     if (
       (ts.isPropertyAssignment(parent) || ts.isShorthandPropertyAssignment(parent)) &&

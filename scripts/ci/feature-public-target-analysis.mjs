@@ -7,8 +7,20 @@ import {
   rootBindingName,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
+import {
+  accessPath,
+  collectCopyRelations,
+  collectPrototypeRelations,
+  collectTopLevelPropertyWrites,
+} from './feature-public-object-analysis.mjs';
 
-const IDENTITY_WRAPPERS = new Set(['freeze', 'preventExtensions', 'seal']);
+const IDENTITY_WRAPPERS = new Set([
+  'assign',
+  'freeze',
+  'preventExtensions',
+  'seal',
+  'setPrototypeOf',
+]);
 
 function bindingNames(bindingName) {
   if (ts.isIdentifier(bindingName)) return [bindingName.text];
@@ -171,95 +183,6 @@ function directAliasSource(expression, bindingModel) {
   if (!argument || !ts.isIdentifier(argument)) return null;
   const key = bindingModel.bindingAt(argument.text, argument.getStart());
   return key ? { key, path: [], symmetric: true } : null;
-}
-
-function accessPath(expression) {
-  let current = unwrapExpression(expression);
-  const path = [];
-  while (true) {
-    const access = memberAccess(current);
-    if (!access) break;
-    path.unshift(access.name);
-    current = access.receiver;
-  }
-  return ts.isIdentifier(current) ? { path, root: current.text } : null;
-}
-
-function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
-  const writes = new Map();
-  const addWrite = (targetExpression, node, enumerable = true) => {
-    const target = accessPath(targetExpression);
-    if (!target || target.path.length === 0) return;
-    const sourceKey = bindingModel.bindingAt(target.root, node.getStart(sourceFile));
-    if (!sourceKey) return;
-    const rootWrites = writes.get(sourceKey) ?? [];
-    rootWrites.push({
-      end: node.end,
-      enumerable,
-      path: target.path,
-      position: node.getStart(sourceFile),
-    });
-    writes.set(sourceKey, rootWrites);
-  };
-  const visitExpression = (node) => {
-    if (ts.isFunctionLike(node) || ts.isClassLike(node)) return;
-    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-      addWrite(node.left, node);
-    } else if (ts.isCallExpression(node)) {
-      const method = memberAccess(node.expression);
-      if (
-        method &&
-        ts.isIdentifier(method.receiver) &&
-        method.receiver.text === 'Object' &&
-        method.name === 'defineProperty' &&
-        node.arguments[0] &&
-        node.arguments[1] &&
-        ts.isStringLiteralLike(node.arguments[1])
-      ) {
-        const target = accessPath(node.arguments[0]);
-        if (target) {
-          const descriptor = node.arguments[2] && unwrapExpression(node.arguments[2]);
-          const enumerable =
-            descriptor && ts.isObjectLiteralExpression(descriptor)
-              ? descriptor.properties.some(
-                  (property) =>
-                    ts.isPropertyAssignment(property) &&
-                    propertyNameText(property.name) === 'enumerable' &&
-                    property.initializer.kind === ts.SyntaxKind.TrueKeyword
-                )
-              : false;
-          const sourceKey = bindingModel.bindingAt(target.root, node.getStart(sourceFile));
-          if (sourceKey) {
-            const rootWrites = writes.get(sourceKey) ?? [];
-            rootWrites.push({
-              end: node.end,
-              enumerable,
-              path: [...target.path, node.arguments[1].text],
-              position: node.getStart(sourceFile),
-            });
-            writes.set(sourceKey, rootWrites);
-          }
-        }
-      }
-    }
-    ts.forEachChild(node, visitExpression);
-  };
-  const visitStatement = (statement) => {
-    if (ts.isExpressionStatement(statement)) {
-      visitExpression(statement.expression);
-    } else if (ts.isBlock(statement)) {
-      for (const child of statement.statements) visitStatement(child);
-    } else if (
-      ts.isIfStatement(statement) &&
-      statement.expression.kind === ts.SyntaxKind.TrueKeyword
-    ) {
-      visitStatement(statement.thenStatement);
-    }
-  };
-  for (const statement of sourceFile.statements) {
-    visitStatement(statement);
-  }
-  return writes;
 }
 
 function pathWasOverwritten(writes, source, path, afterPosition) {
@@ -513,34 +436,6 @@ function collectCommonJsSpreadRelations(
   return relations;
 }
 
-function collectSpreadRelations(bindingModel) {
-  const relations = [];
-  for (const [ownerKey, binding] of bindingModel.versions) {
-    const visit = (expression) => {
-      const current = unwrapExpression(expression);
-      if (!ts.isObjectLiteralExpression(current)) return;
-      for (const property of current.properties) {
-        if (ts.isSpreadAssignment(property)) {
-          const source = accessPath(property.expression);
-          const sourceKey = source && bindingModel.bindingAt(source.root, property.getStart());
-          if (sourceKey) {
-            relations.push({
-              copyPosition: property.getStart(),
-              ownerKey,
-              path: source.path,
-              sourceKey,
-            });
-          }
-        } else if (ts.isPropertyAssignment(property)) {
-          visit(property.initializer);
-        }
-      }
-    };
-    visit(binding.initializer);
-  }
-  return relations;
-}
-
 function propagateIdentityOwners(initialOwners, edges) {
   const owners = new Map(initialOwners);
   const queue = [...owners.keys()];
@@ -615,6 +510,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     bindingModel,
     propertyWrites
   );
+  memberRelations.push(...collectPrototypeRelations(sourceFile, bindingModel));
   const stableExportOwners = [...exportedLocalNames]
     .map((name) => [bindingModel.bindingAt(name, Number.POSITIVE_INFINITY), name])
     .filter(([key]) => key !== null);
@@ -631,7 +527,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     const owner = identityOwners.get(relation.ownerKey);
     return owner ? [{ ...relation, owner }] : [];
   });
-  const spreadRelations = collectSpreadRelations(bindingModel).flatMap((relation) => {
+  const copyRelations = collectCopyRelations(sourceFile, bindingModel).flatMap((relation) => {
     const owner = identityOwners.get(relation.ownerKey);
     return owner ? [{ ...relation, owner }] : [];
   });
@@ -648,7 +544,10 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     }
     const sourceWrites = propertyWrites.get(relation.sourceKey) ?? [];
     const currentWrite = sourceWrites.find(
-      (write) => write.position <= position && position <= write.end
+      (write) =>
+        ((write.referenceStart ?? write.position) <= position &&
+          position <= (write.referenceEnd ?? write.end)) ||
+        (write.position <= position && position <= write.end)
     );
     if (
       !currentWrite ||
@@ -663,7 +562,17 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         write.path.length === currentWrite.path.length &&
         write.path.every((segment, index) => segment === currentWrite.path[index])
     );
-    return position < relation.copyPosition && currentWrite.enumerable && !wasOverwrittenBeforeCopy;
+    const overwrittenByTarget = relation.overwrittenPaths?.some((overwrittenPath) =>
+      overwrittenPath.every(
+        (segment, index) => currentWrite.path[relation.path.length + index] === segment
+      )
+    );
+    return (
+      position < relation.copyPosition &&
+      currentWrite.enumerable &&
+      !wasOverwrittenBeforeCopy &&
+      !overwrittenByTarget
+    );
   };
   const localOwnersAt = (position) => {
     const owners = new Map();
@@ -675,14 +584,17 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     for (const name of exportedLocalNames) {
       if (!owners.has(name)) owners.set(name, name);
     }
-    for (const relation of [...publicMemberRelations, ...spreadRelations]) {
+    for (const relation of [...publicMemberRelations, ...copyRelations]) {
       const source = bindingModel.versions.get(relation.sourceKey);
       if (!source || bindingModel.bindingAt(source.name, position) !== relation.sourceKey) {
         continue;
       }
       const sourceWrites = propertyWrites.get(relation.sourceKey) ?? [];
       const currentWrite = sourceWrites.find(
-        (write) => write.position <= position && position <= write.end
+        (write) =>
+          ((write.referenceStart ?? write.position) <= position &&
+            position <= (write.referenceEnd ?? write.end)) ||
+          (write.position <= position && position <= write.end)
       );
       const insideSourceInitializer =
         source.initializer.getStart(sourceFile) <= position && position <= source.initializer.end;
@@ -705,11 +617,20 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
             write.path.length === currentWrite.path.length &&
             write.path.every((segment, index) => segment === currentWrite.path[index])
         );
+      const overwrittenByTarget =
+        currentWrite &&
+        relation.overwrittenPaths?.some((overwrittenPath) =>
+          overwrittenPath.every(
+            (segment, index) =>
+              currentWrite.path[relation.path.length + index] === segment
+          )
+        );
       if (
         position < relation.copyPosition &&
         pathMatches &&
         (insideSourceInitializer || currentWrite?.enumerable) &&
         !wasOverwrittenBeforeCopy &&
+        !overwrittenByTarget &&
         !owners.has(source.name)
       ) {
         owners.set(source.name, relation.owner);
@@ -731,11 +652,11 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     },
   });
   const constructorExports = [];
-  const spreadConstructorOwners = new Map(
-    spreadRelations.map(({ owner, sourceKey }) => [sourceKey, owner])
+  const copyConstructorOwners = new Map(
+    copyRelations.map(({ owner, sourceKey }) => [sourceKey, owner])
   );
   for (const [key, binding] of bindingModel.versions) {
-    const owner = identityOwners.get(key) ?? spreadConstructorOwners.get(key);
+    const owner = identityOwners.get(key) ?? copyConstructorOwners.get(key);
     if (!owner) continue;
     for (const className of constructedClassNames(binding.initializer)) {
       constructorExports.push({ exportedName: owner, localName: className });

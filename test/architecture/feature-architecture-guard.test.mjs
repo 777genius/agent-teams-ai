@@ -949,6 +949,69 @@ test('traces top-level getter aliases only when public descriptors expose them',
       `,
       'src/features/getter-spread-before-copy/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/getter-object-assign-copy/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        hidden.Store = Store;
+        export const api = Object.assign({}, hidden);
+      `,
+      'src/features/getter-object-assign-copy/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-object-assign-overwritten-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        hidden.Store = Store;
+        export const api = Object.assign({}, hidden, { Store: undefined });
+      `,
+      'src/features/getter-object-assign-overwritten-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-spread-descriptor-alias/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const descriptor = { get: () => Store, enumerable: true };
+        const hidden = {};
+        Object.defineProperty(hidden, 'Store', descriptor);
+        export const api = { ...hidden };
+      `,
+      'src/features/getter-spread-descriptor-alias/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-spread-define-properties/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        Object.defineProperties(hidden, {
+          Store: { value: Store, enumerable: true },
+        });
+        export const api = { ...hidden };
+      `,
+      'src/features/getter-spread-define-properties/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-spread-descriptor-alias-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const descriptor = { get: () => Store, enumerable: false };
+        const hidden = {};
+        Object.defineProperty(hidden, 'Store', descriptor);
+        export const api = { ...hidden };
+      `,
+      'src/features/getter-spread-descriptor-alias-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-set-prototype-of/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const proto = {};
+        export const api = {};
+        Object.setPrototypeOf(api, proto);
+        proto.Store = Store;
+      `,
+      'src/features/getter-set-prototype-of/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-set-prototype-stale-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const proto = {};
+        export let api = {};
+        Object.setPrototypeOf(api, proto);
+        api = {};
+        proto.Store = Store;
+      `,
+      'src/features/getter-set-prototype-stale-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/getter-spread-overwritten-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const hidden = {};
@@ -1335,6 +1398,10 @@ test('traces top-level getter aliases only when public descriptors expose them',
         './infrastructure/Store',
         './infrastructure/Store',
         './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
       ]);
       assert.ok(
         implementationViolations.some(
@@ -1349,9 +1416,23 @@ test('traces top-level getter aliases only when public descriptors expose them',
         )
       );
       for (const source of [
+        'src/features/getter-object-assign-copy/main/index.ts',
+        'src/features/getter-set-prototype-of/main/index.ts',
+        'src/features/getter-spread-define-properties/main/index.ts',
+        'src/features/getter-spread-descriptor-alias/main/index.ts',
+      ]) {
+        assert.ok(
+          implementationViolations.some((violation) => violation.source === source),
+          `${source} must expose its implementation reference`
+        );
+      }
+      for (const source of [
         'src/features/getter-commonjs-final-reset-safe/main/index.cjs',
         'src/features/getter-commonjs-module-final-reset-safe/main/index.cjs',
         'src/features/getter-constructor-internal-safe/main/index.ts',
+        'src/features/getter-object-assign-overwritten-safe/main/index.ts',
+        'src/features/getter-set-prototype-stale-safe/main/index.ts',
+        'src/features/getter-spread-descriptor-alias-safe/main/index.ts',
         'src/features/getter-spread-nonenumerable-safe/main/index.ts',
         'src/features/getter-spread-sibling-safe/main/index.ts',
       ]) {
