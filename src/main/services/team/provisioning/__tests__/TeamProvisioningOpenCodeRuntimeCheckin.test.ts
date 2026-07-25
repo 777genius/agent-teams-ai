@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { RuntimeStaleEvidenceError } from '../../opencode/store/RuntimeRunTombstoneStore';
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
+import { createDefaultOpenCodeRuntimeBootstrapEvidencePorts } from '../TeamProvisioningOpenCodeBootstrapEvidence';
 import {
   applyOpenCodeRuntimeBootstrapCheckinToTrackedRun,
   assertOpenCodeRuntimeEvidenceAccepted,
@@ -11,6 +12,7 @@ import {
   createOpenCodeRuntimeCheckinPorts,
   type OpenCodeRuntimeCheckinPorts,
   type OpenCodeRuntimeCheckinRun,
+  recordOpenCodeRuntimeBootstrapCheckin,
   recordOpenCodeRuntimeHeartbeat,
   resolveOpenCodeRuntimeBootstrapCheckinIdempotency,
   updateOpenCodeRuntimeMemberLiveness,
@@ -419,6 +421,92 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
       expect(ports.emitMemberSpawnChange).not.toHaveBeenCalled();
       expect(ports.emitRuntimeMemberSpawnChange).not.toHaveBeenCalled();
     } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('does not let a stale bootstrap session overwrite a superseding launch snapshot', async () => {
+    const teamsBasePath = createSafeTempDir('opencode-runtime-bootstrap-race-');
+    const mutationEntered = createDeferred();
+    const releaseMutation = createDeferred();
+    const snapshot = (runtimeSessionId: string): PersistedTeamLaunchSnapshot =>
+      createPersistedLaunchSnapshot({
+        teamName: 'Team',
+        expectedMembers: ['Alice'],
+        launchPhase: 'active',
+        members: {
+          Alice: {
+            name: 'Alice',
+            providerId: 'opencode',
+            laneId: 'primary',
+            laneOwnerProviderId: 'opencode',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            runtimeRunId: 'run-1',
+            runtimeSessionId,
+            lastEvaluatedAt: observedAt,
+          },
+        },
+        updatedAt: observedAt,
+      });
+    const oldSnapshot = snapshot('session-old-owner');
+    const supersedingSnapshot = snapshot('session-new-owner');
+    const writeLaunchState = vi.fn(async () => undefined);
+    const withTeamLock = vi.fn();
+    const mutateLaunchState: OpenCodeRuntimeCheckinPorts<TestRun>['mutateLaunchState'] = async (
+      _teamName,
+      mutation
+    ) => {
+      mutationEntered.resolve();
+      await releaseMutation.promise;
+      return await mutation(supersedingSnapshot);
+    };
+    const ports = createPorts({
+      teamsBasePath,
+      resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'primary'),
+      readLaunchState: vi.fn(async () => oldSnapshot),
+      readConfigForStrictDecision: vi.fn(
+        async () =>
+          ({
+            name: 'Team',
+            members: [{ name: 'Alice', providerId: 'opencode' }],
+          }) as TeamConfig
+      ),
+      writeLaunchState,
+      withTeamLock: async (teamName, operation) => {
+        withTeamLock(teamName);
+        return await operation();
+      },
+      mutateLaunchState,
+      createOpenCodeRuntimeBootstrapEvidencePorts: vi.fn(() =>
+        createDefaultOpenCodeRuntimeBootstrapEvidencePorts({ teamsBasePath })
+      ),
+    });
+
+    try {
+      const checkin = recordOpenCodeRuntimeBootstrapCheckin(
+        {
+          teamName: 'Team',
+          runId: 'run-1',
+          memberName: 'Alice',
+          runtimeSessionId: 'session-old-owner',
+          observedAt,
+        },
+        ports
+      );
+      await mutationEntered.promise;
+      releaseMutation.resolve();
+
+      await expect(checkin).rejects.toThrow('member runtime session does not match');
+      expect(withTeamLock).toHaveBeenCalledWith('Team');
+      expect(writeLaunchState).not.toHaveBeenCalled();
+      expect(ports.emitMemberSpawnChange).not.toHaveBeenCalled();
+      expect(ports.emitRuntimeMemberSpawnChange).not.toHaveBeenCalled();
+    } finally {
+      releaseMutation.resolve();
       rmSync(teamsBasePath, { recursive: true, force: true });
     }
   });

@@ -15758,6 +15758,7 @@ describe('TeamProvisioningService', () => {
         'secondary:opencode:bob',
         {
           teamsBasePath: tempTeamsBase,
+          withTeamLock: async (_teamName, operation) => operation(),
           resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'opencode-run-1'),
           createOpenCodeRuntimeDeliveryPorts: () => [
             {

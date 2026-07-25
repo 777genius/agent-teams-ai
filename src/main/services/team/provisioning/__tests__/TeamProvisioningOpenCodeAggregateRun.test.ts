@@ -364,6 +364,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       },
       {
         getStopAllTeamsGeneration: () => stopAllGeneration,
+        getStopTeamGeneration: () => 0,
         getRuntimeAdapterRun: () => ({ runId: 'old-run', providerId: 'opencode' }),
         stopOpenCodeRuntimeAdapterTeam: async () => {
           calls.push('stopPreviousRuntimeRun');
@@ -395,6 +396,43 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       'cancelPreviousPendingRun',
       'recordCancelledLaunch',
     ]);
+  });
+
+  it('observes a per-team stop requested during the final pre-ownership read', async () => {
+    const alice = member('alice');
+    const calls: string[] = [];
+    const readStarted = deferred();
+    const readRelease = deferred();
+    let stopTeamGeneration = 0;
+
+    const launch = runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {} as TeamLaunchRuntimeAdapter,
+        request: request([alice]),
+        members: [alice],
+        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [] }),
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        getStopTeamGeneration: () => stopTeamGeneration,
+        readLaunchState: async () => {
+          calls.push('readLaunchState');
+          readStarted.resolve();
+          await readRelease.promise;
+          return null;
+        },
+      }
+    );
+    await readStarted.promise;
+    stopTeamGeneration += 1;
+    readRelease.resolve();
+
+    await expect(launch).resolves.toEqual({ runId: 'cancelled-run' });
+    expect(calls).toContain('recordCancelledLaunch');
+    expect(calls).not.toContain('setProvisioningRun');
+    expect(calls).not.toContain('launchPrimary');
   });
 
   it('coordinates successful aggregate launch side effects without runtime smoke work', async () => {
@@ -1474,6 +1512,7 @@ function baseAggregatePorts(calls: string[]): OpenCodeWorktreeRootAggregateLaunc
     nowMs: () => 1_000,
     nowIso: () => '2026-01-01T00:00:00.000Z',
     getStopAllTeamsGeneration: () => 0,
+    getStopTeamGeneration: () => 0,
     getRuntimeAdapterRun: () => undefined,
     stopOpenCodeRuntimeAdapterTeam: async () => {
       calls.push('stopPreviousRuntimeRun');

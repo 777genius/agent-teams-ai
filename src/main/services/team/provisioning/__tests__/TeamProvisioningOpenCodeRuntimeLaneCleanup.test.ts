@@ -271,6 +271,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
           teamName: 'team',
           teamsBasePath,
           ports: {
+            withTeamLock: async (_teamName, operation) => operation(),
             canDeliverToOpenCodeRuntimeForTeam: () => false,
             getOpenCodeRuntimeAdapter: () =>
               ({
@@ -359,6 +360,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
         teamName: 'team',
         teamsBasePath,
         ports: {
+          withTeamLock: async (_teamName, operation) => operation(),
           canDeliverToOpenCodeRuntimeForTeam: () => false,
           getOpenCodeRuntimeAdapter: () =>
             ({
@@ -407,6 +409,90 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
       );
     } finally {
       resolveStop();
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('does not inspect or stop a relaunched run after waiting for the team lock', async () => {
+    const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-relaunch-'));
+    let canDeliver = false;
+    let releaseLock!: () => void;
+    let signalLockRequested!: () => void;
+    const lockRequested = new Promise<void>((resolve) => {
+      signalLockRequested = resolve;
+    });
+    const lockRelease = new Promise<void>((resolve) => {
+      releaseLock = resolve;
+    });
+    const stop = vi.fn();
+    const deleteSecondaryRuntimeRun = vi.fn();
+    const clearPrimaryRuntimeRun = vi.fn();
+
+    try {
+      await writeOpenCodeRuntimeLaneIndex(teamsBasePath, 'team', {
+        version: 1,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        lanes: {
+          primary: {
+            laneId: 'primary',
+            state: 'active',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        },
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName: 'team',
+        laneId: 'primary',
+        runId: 'run-old',
+      });
+      const cleanup = stopOpenCodeRuntimeLanesForStoppedTeam({
+        teamName: 'team',
+        teamsBasePath,
+        ports: {
+          withTeamLock: async (_teamName, operation) => {
+            signalLockRequested();
+            await lockRelease;
+            return await operation();
+          },
+          canDeliverToOpenCodeRuntimeForTeam: () => canDeliver,
+          getOpenCodeRuntimeAdapter: () =>
+            ({ providerId: 'opencode', stop }) as unknown as ReturnType<
+              Parameters<
+                typeof stopOpenCodeRuntimeLanesForStoppedTeam
+              >[0]['ports']['getOpenCodeRuntimeAdapter']
+            >,
+          readPreviousLaunchState: async () => null,
+          readConfigForObservation: async () => null,
+          readMembersMeta: async () => [],
+          readPersistedTeamProjectPath: () => null,
+          tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+          deleteSecondaryRuntimeRun,
+          clearPrimaryRuntimeRun,
+          markStoppedTeamOpenCodeRuntimeLanesCleaned: vi.fn(),
+          logWarning: vi.fn(),
+        },
+      });
+      await lockRequested;
+      canDeliver = true;
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName: 'team',
+        laneId: 'primary',
+        runId: 'run-new',
+      });
+      releaseLock();
+
+      await expect(cleanup).resolves.toBe(0);
+      expect(stop).not.toHaveBeenCalled();
+      expect(deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+      expect(clearPrimaryRuntimeRun).not.toHaveBeenCalled();
+      expect(
+        (await new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath }).read('team', 'primary'))
+          .activeRunId
+      ).toBe('run-new');
+    } finally {
+      releaseLock();
       rmSync(teamsBasePath, { recursive: true, force: true });
     }
   });

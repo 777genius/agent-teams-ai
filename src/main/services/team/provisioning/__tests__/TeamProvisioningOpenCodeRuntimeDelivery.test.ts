@@ -50,6 +50,7 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
     const createDelivery = () =>
       createOpenCodeRuntimeDeliveryService('Team', 'primary', {
         teamsBasePath,
+        withTeamLock: async (_teamName, operation) => operation(),
         resolveCurrentOpenCodeRuntimeRunId: async () => currentRunId,
         createOpenCodeRuntimeDeliveryPorts: () =>
           createOpenCodeRuntimeDeliveryPorts({
@@ -131,6 +132,7 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
     });
     const delivery = createOpenCodeRuntimeDeliveryService('Team', 'primary', {
       teamsBasePath: directory,
+      withTeamLock: async (_teamName, operation) => operation(),
       resolveCurrentOpenCodeRuntimeRunId: async () => 'run-1',
       readConfigForStrictDecision: async (teamName) =>
         teamName === 'Team'
@@ -221,6 +223,7 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
     });
     const delivery = createOpenCodeRuntimeDeliveryService('Team', 'primary', {
       teamsBasePath: directory,
+      withTeamLock: async (_teamName, operation) => operation(),
       resolveCurrentOpenCodeRuntimeRunId: async () => 'run-1',
       readConfigForStrictDecision: async (teamName) => ({
         name: teamName,
@@ -283,6 +286,7 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
     }));
     const delivery = createOpenCodeRuntimeDeliveryService('Team', 'primary', {
       teamsBasePath: directory,
+      withTeamLock: async (_teamName, operation) => operation(),
       resolveCurrentOpenCodeRuntimeRunId: async () => 'run-1',
       readConfigForStrictDecision: async (teamName) => ({
         name: teamName,
@@ -343,6 +347,7 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
     }));
     const delivery = createOpenCodeRuntimeDeliveryService('Team', 'primary', {
       teamsBasePath: directory,
+      withTeamLock: async (_teamName, operation) => operation(),
       resolveCurrentOpenCodeRuntimeRunId: async () => 'run-1',
       readConfigForStrictDecision: async (teamName) => ({
         name: teamName,
@@ -408,6 +413,7 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
     const directory = await mkdtemp(join(tmpdir(), 'runtime-delivery-removed-sender-'));
     const delivery = createOpenCodeRuntimeDeliveryService('Team', 'primary', {
       teamsBasePath: directory,
+      withTeamLock: async (_teamName, operation) => operation(),
       resolveCurrentOpenCodeRuntimeRunId: async () => 'run-1',
       readConfigForStrictDecision: async () => ({
         name: 'Team',
@@ -462,6 +468,7 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
     const crossTeamSender: OpenCodeRuntimeDeliveryCrossTeamSender = vi.fn();
     const delivery = createOpenCodeRuntimeDeliveryService('Team', 'primary', {
       teamsBasePath: directory,
+      withTeamLock: async (_teamName, operation) => operation(),
       resolveCurrentOpenCodeRuntimeRunId: async () => 'run-1',
       readConfigForStrictDecision: async (teamName) => ({
         name: teamName,

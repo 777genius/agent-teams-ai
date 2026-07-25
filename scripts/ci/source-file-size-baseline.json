@@ -65,7 +65,7 @@
     "src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy.ts": 890,
     "src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts": 2679,
     "src/main/services/team/provisioning/TeamProvisioningOpenCodeMemberInboxRelay.ts": 1155,
-    "src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDelivery.ts": 1011,
+    "src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDelivery.ts": 1009,
     "src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy.ts": 964,
     "src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimePermissions.ts": 967,
     "src/main/services/team/provisioning/TeamProvisioningPrepareCoordinator.ts": 972,

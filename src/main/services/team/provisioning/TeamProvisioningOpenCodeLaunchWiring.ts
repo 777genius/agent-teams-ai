@@ -69,6 +69,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
   };
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
   getStopAllTeamsGeneration(): number;
+  getStopTeamGeneration(teamName: string): number;
   stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
   hasSecondaryRuntimeRuns(teamName: string): boolean;
   stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
@@ -149,6 +150,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringServiceHost<Run> {
   runtimeAdapterProgressState: TeamProvisioningOpenCodeLaunchWiringHost<Run>['runtimeAdapterProgressState'];
   runTracking: TeamProvisioningOpenCodeLaunchWiringHost<Run>['runTracking'];
   stopAllTeamsGeneration: number;
+  getStopTeamGeneration(teamName: string): number;
   appShellBoundary: {
     getOpenCodeRuntimeAdapter: TeamProvisioningOpenCodeLaunchWiringHost<Run>['getOpenCodeRuntimeAdapter'];
   };
@@ -214,6 +216,7 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
     runTracking: service.runTracking,
     getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
     getStopAllTeamsGeneration: () => service.stopAllTeamsGeneration,
+    getStopTeamGeneration: (teamName) => service.getStopTeamGeneration(teamName),
     stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>
       service.stopOpenCodeRuntimeAdapterTeam(teamName, runId),
     hasSecondaryRuntimeRuns: (teamName) => service.hasSecondaryRuntimeRuns(teamName),
@@ -282,6 +285,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           nowMs: () => Date.now(),
           nowIso,
           getStopAllTeamsGeneration: () => host.getStopAllTeamsGeneration(),
+          getStopTeamGeneration: (teamName) => host.getStopTeamGeneration(teamName),
           getRuntimeAdapterRun: (teamName) => host.runtimeAdapterRunByTeam.get(teamName),
           stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>
             host.stopOpenCodeRuntimeAdapterTeam(teamName, runId),

@@ -81,59 +81,105 @@ export async function recordOpenCodeRuntimeBootstrapCheckin<Run extends OpenCode
   const memberName = requireRuntimeString(payload.memberName, 'memberName');
   const runtimeSessionId = requireRuntimeString(payload.runtimeSessionId, 'runtimeSessionId');
   const observedAt = normalizeRuntimeIso(payload.observedAt);
-  const laneId = await ports.resolveOpenCodeRuntimeLaneId({ teamName, runId, memberName });
+  return await ports.withTeamLock(teamName, async () => {
+    const laneId = await ports.resolveOpenCodeRuntimeLaneId({ teamName, runId, memberName });
 
-  await assertOpenCodeRuntimeEvidenceAccepted(
-    {
-      teamName,
-      runId,
-      laneId,
-      evidenceKind: 'bootstrap_checkin',
-    },
-    ports
-  );
-  const idempotent = await resolveOpenCodeRuntimeBootstrapCheckinIdempotency(
-    {
-      teamName,
-      runId,
-      memberName,
-      runtimeSessionId,
-    },
-    ports
-  );
-  const bootstrapEvidencePorts = ports.createOpenCodeRuntimeBootstrapEvidencePorts();
-  await assertOpenCodeRuntimeMemberCheckinAllowed(
-    {
-      teamName,
-      memberName,
-      previousMember: idempotent.previousMember,
-    },
-    ports
-  );
-  if (idempotent.state === 'duplicate') {
-    const committed = await hasCommittedOpenCodeRuntimeBootstrapSessionEvidence(
+    await assertOpenCodeRuntimeEvidenceAccepted(
       {
         teamName,
         runId,
         laneId,
+        evidenceKind: 'bootstrap_checkin',
+      },
+      ports
+    );
+    const idempotent = await resolveOpenCodeRuntimeBootstrapCheckinIdempotency(
+      {
+        teamName,
+        runId,
         memberName,
         runtimeSessionId,
       },
-      bootstrapEvidencePorts
+      ports
     );
-    if (!committed) {
-      await commitOpenCodeRuntimeBootstrapSessionEvidence(
+    const bootstrapEvidencePorts = ports.createOpenCodeRuntimeBootstrapEvidencePorts();
+    await assertOpenCodeRuntimeMemberCheckinAllowed(
+      {
+        teamName,
+        memberName,
+        previousMember: idempotent.previousMember,
+      },
+      ports
+    );
+    if (idempotent.state === 'duplicate') {
+      const committed = await hasCommittedOpenCodeRuntimeBootstrapSessionEvidence(
         {
           teamName,
           runId,
           laneId,
           memberName,
           runtimeSessionId,
-          observedAt,
         },
         bootstrapEvidencePorts
       );
+      if (!committed) {
+        await commitOpenCodeRuntimeBootstrapSessionEvidence(
+          {
+            teamName,
+            runId,
+            laneId,
+            memberName,
+            runtimeSessionId,
+            observedAt,
+          },
+          bootstrapEvidencePorts
+        );
+      }
+      await updateOpenCodeRuntimeMemberLiveness(
+        {
+          teamName,
+          runId,
+          memberName,
+          runtimeSessionId,
+          observedAt,
+          diagnostics: payload.diagnostics,
+          metadata: parseRuntimeToolMetadata(payload.metadata),
+          reason: 'OpenCode runtime bootstrap check-in accepted',
+          requiredIdentity: { laneId, evidenceKind: 'bootstrap_checkin' },
+        },
+        ports
+      );
+      return {
+        ok: true,
+        providerId: 'opencode',
+        teamName,
+        runId,
+        state: 'accepted',
+        memberName,
+        runtimeSessionId,
+        diagnostics: ['opencode_bootstrap_checkin_duplicate_accepted'],
+        observedAt,
+      };
     }
+    if (idempotent.state === 'conflict') {
+      throw new RuntimeStaleEvidenceError(
+        `opencode_bootstrap_checkin_session_conflict: existing runtime session ${idempotent.existingRuntimeSessionId}, received ${runtimeSessionId} for ${memberName}`,
+        'run_mismatch',
+        'bootstrap_checkin',
+        runId
+      );
+    }
+    await commitOpenCodeRuntimeBootstrapSessionEvidence(
+      {
+        teamName,
+        runId,
+        laneId,
+        memberName,
+        runtimeSessionId,
+        observedAt,
+      },
+      bootstrapEvidencePorts
+    );
     await updateOpenCodeRuntimeMemberLiveness(
       {
         teamName,
@@ -144,9 +190,11 @@ export async function recordOpenCodeRuntimeBootstrapCheckin<Run extends OpenCode
         diagnostics: payload.diagnostics,
         metadata: parseRuntimeToolMetadata(payload.metadata),
         reason: 'OpenCode runtime bootstrap check-in accepted',
+        requiredIdentity: { laneId, evidenceKind: 'bootstrap_checkin' },
       },
       ports
     );
+
     return {
       ok: true,
       providerId: 'opencode',
@@ -155,54 +203,10 @@ export async function recordOpenCodeRuntimeBootstrapCheckin<Run extends OpenCode
       state: 'accepted',
       memberName,
       runtimeSessionId,
-      diagnostics: ['opencode_bootstrap_checkin_duplicate_accepted'],
+      diagnostics: [],
       observedAt,
     };
-  }
-  if (idempotent.state === 'conflict') {
-    throw new RuntimeStaleEvidenceError(
-      `opencode_bootstrap_checkin_session_conflict: existing runtime session ${idempotent.existingRuntimeSessionId}, received ${runtimeSessionId} for ${memberName}`,
-      'run_mismatch',
-      'bootstrap_checkin',
-      runId
-    );
-  }
-  await commitOpenCodeRuntimeBootstrapSessionEvidence(
-    {
-      teamName,
-      runId,
-      laneId,
-      memberName,
-      runtimeSessionId,
-      observedAt,
-    },
-    bootstrapEvidencePorts
-  );
-  await updateOpenCodeRuntimeMemberLiveness(
-    {
-      teamName,
-      runId,
-      memberName,
-      runtimeSessionId,
-      observedAt,
-      diagnostics: payload.diagnostics,
-      metadata: parseRuntimeToolMetadata(payload.metadata),
-      reason: 'OpenCode runtime bootstrap check-in accepted',
-    },
-    ports
-  );
-
-  return {
-    ok: true,
-    providerId: 'opencode',
-    teamName,
-    runId,
-    state: 'accepted',
-    memberName,
-    runtimeSessionId,
-    diagnostics: [],
-    observedAt,
-  };
+  });
 }
 
 export async function recordOpenCodeRuntimeTaskEvent<Run extends OpenCodeRuntimeCheckinRun>(

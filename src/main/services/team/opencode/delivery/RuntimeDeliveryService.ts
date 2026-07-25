@@ -22,7 +22,6 @@ import {
 } from './RuntimeDeliveryJournal';
 
 import type { RuntimeDeliveryJournalStore } from './RuntimeDeliveryJournal';
-
 export type { RuntimeDeliveryRecoveryEvidence } from './RuntimeDeliveryIdentityComparison';
 
 export interface RuntimeDeliveryVerifyResult {
@@ -31,15 +30,12 @@ export interface RuntimeDeliveryVerifyResult {
   diagnostics: string[];
   recoveryEvidence?: RuntimeDeliveryRecoveryEvidence;
 }
-
 export interface RuntimeDeliveryDestinationPort {
   readonly kind: RuntimeDeliveryDestinationRef['kind'];
-
   write(input: {
     envelope: RuntimeDeliveryEnvelope;
     destinationMessageId: string;
   }): Promise<RuntimeDeliveryLocation>;
-
   verify(input: {
     destination: RuntimeDeliveryDestinationRef;
     destinationMessageId: string;
@@ -50,27 +46,26 @@ export interface RuntimeDeliveryDestinationPort {
     };
     includeRecoveryEvidence?: boolean;
   }): Promise<RuntimeDeliveryVerifyResult>;
-
   buildChangeEvent(input: {
     teamName: string;
     location: RuntimeDeliveryLocation;
   }): RuntimeDeliveryTeamChangeEvent | null;
 }
-
 export interface RuntimeDeliveryTeamChangeEvent {
   type: string;
   teamName: string;
   data?: Record<string, unknown>;
 }
-
 export interface RuntimeDeliveryRunStateReader {
   getCurrentRunId(teamName: string): Promise<string | null>;
 }
-
 export interface RuntimeDeliverySenderIdentityReader {
   assertCurrent(envelope: RuntimeDeliveryEnvelope): Promise<void>;
 }
 
+export interface RuntimeDeliveryIrreversibleWriteLease {
+  runExclusive<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+}
 export class RuntimeDeliveryStaleIdentityError extends Error {
   constructor(message = 'Runtime delivery sender identity is stale') {
     super(message);
@@ -81,7 +76,6 @@ export class RuntimeDeliveryStaleIdentityError extends Error {
 export interface RuntimeDeliveryRecipientCanonicalizer {
   canonicalize(envelope: RuntimeDeliveryEnvelope): Promise<RuntimeDeliveryEnvelope>;
 }
-
 export interface RuntimeDeliveryJournalRecordCanonicalizer {
   canonicalize(record: RuntimeDeliveryJournalRecord): Promise<RuntimeDeliveryJournalRecord>;
 }
@@ -89,7 +83,6 @@ export interface RuntimeDeliveryJournalRecordCanonicalizer {
 export interface RuntimeDeliveryDiagnosticsSink {
   append(event: RuntimeDeliveryDiagnosticEvent): Promise<void>;
 }
-
 export interface RuntimeDeliveryDiagnosticEvent {
   type:
     | 'runtime_delivery_conflict'
@@ -108,7 +101,6 @@ export interface RuntimeDeliveryDiagnosticEvent {
 export interface RuntimeDeliveryTeamChangeEmitter {
   emit(event: RuntimeDeliveryTeamChangeEvent): void;
 }
-
 export type RuntimeDeliveryAck =
   | {
       ok: true;
@@ -132,7 +124,6 @@ export class RuntimeDeliveryDestinationRegistry {
     RuntimeDeliveryDestinationRef['kind'],
     RuntimeDeliveryDestinationPort
   >();
-
   constructor(ports: RuntimeDeliveryDestinationPort[]) {
     for (const port of ports) {
       if (this.ports.has(port.kind)) {
@@ -141,7 +132,6 @@ export class RuntimeDeliveryDestinationRegistry {
       this.ports.set(port.kind, port);
     }
   }
-
   get(kind: RuntimeDeliveryDestinationRef['kind']): RuntimeDeliveryDestinationPort {
     const port = this.ports.get(kind);
     if (!port) {
@@ -160,7 +150,8 @@ export class RuntimeDeliveryService {
     private readonly teamChangeEmitter: RuntimeDeliveryTeamChangeEmitter,
     private readonly clock: () => Date = () => new Date(),
     private readonly recipientCanonicalizer?: RuntimeDeliveryRecipientCanonicalizer,
-    private readonly senderIdentity?: RuntimeDeliverySenderIdentityReader
+    private readonly senderIdentity?: RuntimeDeliverySenderIdentityReader,
+    private readonly irreversibleWriteLease?: RuntimeDeliveryIrreversibleWriteLease
   ) {}
 
   async deliver(raw: unknown): Promise<RuntimeDeliveryAck> {
@@ -411,73 +402,124 @@ export class RuntimeDeliveryService {
       }
     }
 
-    const staleRunBeforeWrite = await this.rejectIfRunIsStale(envelope, {
-      markJournalRecordTerminal: true,
-    });
-    if (staleRunBeforeWrite) {
-      return staleRunBeforeWrite;
-    }
-    const staleIdentityBeforeWrite = await this.rejectIfRuntimeIdentityIsStale(envelope, {
-      markJournalRecordTerminal: true,
-    });
-    if (staleIdentityBeforeWrite) {
-      return staleIdentityBeforeWrite;
-    }
-
-    try {
-      const location = await port.write({ envelope, destinationMessageId });
-      const verified = await port.verify({ destination, destinationMessageId, location });
-      if (!verified.found) {
-        throw new Error(
-          `Delivery destination write was not verifiable for ${destinationMessageId}`
-        );
+    const writeWhileIdentityCurrent = async (): Promise<RuntimeDeliveryAck> => {
+      const staleRunBeforeWrite = await this.rejectIfRunIsStale(envelope, {
+        markJournalRecordTerminal: true,
+      });
+      if (staleRunBeforeWrite) {
+        return staleRunBeforeWrite;
+      }
+      const staleIdentityBeforeWrite = await this.rejectIfRuntimeIdentityIsStale(envelope, {
+        markJournalRecordTerminal: true,
+      });
+      if (staleIdentityBeforeWrite) {
+        return staleIdentityBeforeWrite;
       }
 
-      const committedLocation = verified.location ?? location;
-      const verificationInput = { destination, destinationMessageId, location: committedLocation };
-      await markRuntimeDeliveryCommittedWithBoundProof({
-        journal: this.journal,
-        port,
-        verificationInput,
-        isValidProof: (candidateProof) =>
-          candidateProof.found &&
-          candidateProof.location !== null &&
-          hasSameRuntimeDeliveryLocationIdentity(committedLocation, candidateProof.location),
-        commit: {
-          idempotencyKey: envelope.idempotencyKey,
-          runId: envelope.runId,
-          teamName: envelope.teamName,
+      try {
+        const location = await port.write({ envelope, destinationMessageId });
+        const verified = await port.verify({ destination, destinationMessageId, location });
+        if (!verified.found) {
+          throw new Error(
+            `Delivery destination write was not verifiable for ${destinationMessageId}`
+          );
+        }
+
+        const committedLocation = verified.location ?? location;
+        const verificationInput = {
+          destination,
+          destinationMessageId,
           location: committedLocation,
-          committedAt: this.clock().toISOString(),
-        },
-      });
-
-      await this.emitChangeEventBestEffort(port, envelope, committedLocation);
-
-      return {
-        ok: true,
-        delivered: true,
-        reason: null,
-        idempotencyKey: envelope.idempotencyKey,
-        location: committedLocation,
-      };
-    } catch (error) {
-      if (isRuntimeDeliveryIdempotencyConflictError(error)) {
-        await this.journal.markFailed({
-          idempotencyKey: envelope.idempotencyKey,
-          runId: envelope.runId,
-          teamName: envelope.teamName,
-          status: 'failed_terminal',
-          error: 'idempotency_conflict',
-          updatedAt: this.clock().toISOString(),
+        };
+        await markRuntimeDeliveryCommittedWithBoundProof({
+          journal: this.journal,
+          port,
+          verificationInput,
+          isValidProof: (candidateProof) =>
+            candidateProof.found &&
+            candidateProof.location !== null &&
+            hasSameRuntimeDeliveryLocationIdentity(committedLocation, candidateProof.location),
+          commit: {
+            idempotencyKey: envelope.idempotencyKey,
+            runId: envelope.runId,
+            teamName: envelope.teamName,
+            location: committedLocation,
+            committedAt: this.clock().toISOString(),
+          },
         });
+
+        await this.emitChangeEventBestEffort(port, envelope, committedLocation);
+
+        return {
+          ok: true,
+          delivered: true,
+          reason: null,
+          idempotencyKey: envelope.idempotencyKey,
+          location: committedLocation,
+        };
+      } catch (error) {
+        if (isRuntimeDeliveryIdempotencyConflictError(error)) {
+          await this.journal.markFailed({
+            idempotencyKey: envelope.idempotencyKey,
+            runId: envelope.runId,
+            teamName: envelope.teamName,
+            status: 'failed_terminal',
+            error: 'idempotency_conflict',
+            updatedAt: this.clock().toISOString(),
+          });
+          await this.diagnostics.append({
+            type: 'runtime_delivery_conflict',
+            providerId: 'opencode',
+            teamName: envelope.teamName,
+            runId: envelope.runId,
+            severity: 'error',
+            message: 'Runtime delivery destination rejected divergent idempotency reuse',
+            data: {
+              idempotencyKey: envelope.idempotencyKey,
+              destination,
+              error: stringifyError(error),
+            },
+            createdAt: this.clock().toISOString(),
+          });
+          return {
+            ok: false,
+            delivered: false,
+            reason: 'idempotency_conflict',
+            idempotencyKey: envelope.idempotencyKey,
+          };
+        }
+
+        const staleRunAfterDeliveryFailure = await this.rejectIfRunIsStale(envelope, {
+          markJournalRecordTerminal: true,
+        });
+        if (staleRunAfterDeliveryFailure) {
+          return staleRunAfterDeliveryFailure;
+        }
+        const staleIdentityAfterDeliveryFailure = await this.rejectIfRuntimeIdentityIsStale(
+          envelope,
+          { markJournalRecordTerminal: true }
+        );
+        if (staleIdentityAfterDeliveryFailure) {
+          return staleIdentityAfterDeliveryFailure;
+        }
+
+        if (!(error instanceof RuntimeDeliveryJournalCommitRevalidationError)) {
+          await this.journal.markFailed({
+            idempotencyKey: envelope.idempotencyKey,
+            runId: envelope.runId,
+            teamName: envelope.teamName,
+            status: 'failed_retryable',
+            error: stringifyError(error),
+            updatedAt: this.clock().toISOString(),
+          });
+        }
         await this.diagnostics.append({
-          type: 'runtime_delivery_conflict',
+          type: 'runtime_delivery_failed',
           providerId: 'opencode',
           teamName: envelope.teamName,
           runId: envelope.runId,
-          severity: 'error',
-          message: 'Runtime delivery destination rejected divergent idempotency reuse',
+          severity: 'warning',
+          message: 'Runtime delivery failed and remains retryable',
           data: {
             idempotencyKey: envelope.idempotencyKey,
             destination,
@@ -485,54 +527,12 @@ export class RuntimeDeliveryService {
           },
           createdAt: this.clock().toISOString(),
         });
-        return {
-          ok: false,
-          delivered: false,
-          reason: 'idempotency_conflict',
-          idempotencyKey: envelope.idempotencyKey,
-        };
+        throw error;
       }
-
-      const staleRunAfterDeliveryFailure = await this.rejectIfRunIsStale(envelope, {
-        markJournalRecordTerminal: true,
-      });
-      if (staleRunAfterDeliveryFailure) {
-        return staleRunAfterDeliveryFailure;
-      }
-      const staleIdentityAfterDeliveryFailure = await this.rejectIfRuntimeIdentityIsStale(
-        envelope,
-        { markJournalRecordTerminal: true }
-      );
-      if (staleIdentityAfterDeliveryFailure) {
-        return staleIdentityAfterDeliveryFailure;
-      }
-
-      if (!(error instanceof RuntimeDeliveryJournalCommitRevalidationError)) {
-        await this.journal.markFailed({
-          idempotencyKey: envelope.idempotencyKey,
-          runId: envelope.runId,
-          teamName: envelope.teamName,
-          status: 'failed_retryable',
-          error: stringifyError(error),
-          updatedAt: this.clock().toISOString(),
-        });
-      }
-      await this.diagnostics.append({
-        type: 'runtime_delivery_failed',
-        providerId: 'opencode',
-        teamName: envelope.teamName,
-        runId: envelope.runId,
-        severity: 'warning',
-        message: 'Runtime delivery failed and remains retryable',
-        data: {
-          idempotencyKey: envelope.idempotencyKey,
-          destination,
-          error: stringifyError(error),
-        },
-        createdAt: this.clock().toISOString(),
-      });
-      throw error;
-    }
+    };
+    return this.irreversibleWriteLease
+      ? await this.irreversibleWriteLease.runExclusive(envelope.teamName, writeWhileIdentityCurrent)
+      : await writeWhileIdentityCurrent();
   }
 
   private async rejectIfRunIsStale(

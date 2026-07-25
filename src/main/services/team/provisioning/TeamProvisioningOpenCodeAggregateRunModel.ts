@@ -149,6 +149,7 @@ export interface OpenCodeAggregateRuntimeRunEntry {
 
 export interface OpenCodeWorktreeRootAggregateLaunchPreflightPorts {
   getStopAllTeamsGeneration(): number;
+  getStopTeamGeneration(teamName: string): number;
   getRuntimeAdapterRun(teamName: string): OpenCodeAggregateRuntimeRunEntry | undefined;
   stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
   hasSecondaryRuntimeRuns(teamName: string): boolean;

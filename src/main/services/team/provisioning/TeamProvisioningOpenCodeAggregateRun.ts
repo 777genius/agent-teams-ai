@@ -39,8 +39,10 @@ export async function prepareOpenCodeWorktreeRootAggregateLaunchPreflight(
   ports: OpenCodeWorktreeRootAggregateLaunchPreflightPorts
 ): Promise<TeamLaunchResponse | null> {
   const stopAllGenerationAtStart = ports.getStopAllTeamsGeneration();
+  const stopTeamGenerationAtStart = ports.getStopTeamGeneration(input.teamName);
   const recordCancellationIfRequested = (): TeamLaunchResponse | null =>
-    ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart
+    ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart ||
+    ports.getStopTeamGeneration(input.teamName) !== stopTeamGenerationAtStart
       ? ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
           input.teamName,
           input.sourceWarning,
@@ -421,6 +423,10 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
 ): Promise<TeamLaunchResponse> {
   const teamName = input.request.teamName;
   const stopAllGenerationAtStart = ports.getStopAllTeamsGeneration();
+  const stopTeamGenerationAtStart = ports.getStopTeamGeneration(teamName);
+  const stopRequested = (): boolean =>
+    ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart ||
+    ports.getStopTeamGeneration(teamName) !== stopTeamGenerationAtStart;
 
   // Resolve every lane before any stop, map update, persisted-state clear, or
   // adapter launch. In particular, worktree-shape validation must not discover
@@ -446,7 +452,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   if (preflightCancellation) {
     return preflightCancellation;
   }
-  if (ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart) {
+  if (stopRequested()) {
     return ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
       teamName,
       input.sourceWarning,
@@ -457,7 +463,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   // This is intentionally the last read-only await before this launch claims
   // team ownership and begins destructive launch-state mutation.
   const previousLaunchState = await ports.readLaunchState(teamName);
-  if (ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart) {
+  if (stopRequested()) {
     return ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
       teamName,
       input.sourceWarning,
@@ -501,7 +507,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       cancellationConsumed ||
       run.cancelRequested ||
       run.processKilled ||
-      ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart ||
+      stopRequested() ||
       ports.getProvisioningRun(teamName) !== runId ||
       ports.getRun(runId) !== run ||
       conflictingRuntimeOwner

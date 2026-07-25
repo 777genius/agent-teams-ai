@@ -17,6 +17,7 @@ import type { TeamLaunchRuntimeAdapter } from '../runtime';
 import type { PersistedTeamLaunchSnapshot, TeamConfig, TeamMember } from '@shared/types';
 
 export interface TeamProvisioningOpenCodeStoppedLaneCleanupPorts {
+  withTeamLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   canDeliverToOpenCodeRuntimeForTeam(teamName: string): boolean;
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
   readPreviousLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
@@ -122,6 +123,7 @@ function createStopPorts(
   helpers: TeamProvisioningOpenCodeStoppedLaneCleanupBoundaryHelpers
 ): StopOpenCodeRuntimeLanesForStoppedTeamPorts {
   return {
+    withTeamLock: (teamName, operation) => ports.withTeamLock(teamName, operation),
     canDeliverToOpenCodeRuntimeForTeam: (teamName) =>
       ports.canDeliverToOpenCodeRuntimeForTeam(teamName),
     getOpenCodeRuntimeAdapter: () => ports.getOpenCodeRuntimeAdapter(),

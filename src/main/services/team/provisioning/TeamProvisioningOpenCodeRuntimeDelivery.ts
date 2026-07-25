@@ -82,8 +82,8 @@ import type {
 } from '@shared/types';
 
 type RuntimeDeliveryLogger = Pick<Console, 'warn'>;
-
 export interface OpenCodeRuntimeDeliveryServicePorts extends OpenCodeRuntimeDeliveryStorePaths {
+  withTeamLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   resolveCurrentOpenCodeRuntimeRunId(teamName: string, laneId: string): Promise<string | null>;
   readLaunchState?(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
   readConfigForStrictDecision?(teamName: string): Promise<TeamConfig | null>;
@@ -92,7 +92,6 @@ export interface OpenCodeRuntimeDeliveryServicePorts extends OpenCodeRuntimeDeli
   emitTeamChange(event: RuntimeDeliveryTeamChangeEvent): void;
   logger: RuntimeDeliveryLogger;
 }
-
 export type OpenCodeDeliveryIdentityResolution =
   | {
       ok: true;
@@ -103,7 +102,6 @@ export type OpenCodeDeliveryIdentityResolution =
       ok: false;
       reason: 'recipient_is_not_opencode' | 'recipient_removed' | 'opencode_recipient_unavailable';
     };
-
 export interface OpenCodeActivePromptDeliveryRecordPorts extends OpenCodeRuntimeDeliveryStorePaths {
   resolveOpenCodeMemberDeliveryIdentity(
     teamName: string,
@@ -119,7 +117,6 @@ export interface OpenCodeActivePromptDeliveryRecordPorts extends OpenCodeRuntime
     laneId: string
   ): OpenCodePromptDeliveryLedgerStore;
 }
-
 export interface OpenCodeMemberDeliveryBusyStatus {
   busy: boolean;
   reason?: string;
@@ -127,7 +124,6 @@ export interface OpenCodeMemberDeliveryBusyStatus {
   activeMessageId?: string;
   activeMessageKind?: string | null;
 }
-
 export interface OpenCodeMemberDeliveryBusyStatusPorts extends OpenCodeRuntimeDeliveryStorePaths {
   isOpenCodeRuntimeRecipient(teamName: string, memberName: string): Promise<boolean>;
   inboxReader: Pick<TeamInboxReader, 'getMessagesFor'>;
@@ -166,14 +162,12 @@ export interface OpenCodeMemberDeliveryBusyStatusPorts extends OpenCodeRuntimeDe
     laneId: string
   ): OpenCodePromptDeliveryLedgerStore;
 }
-
 export interface OpenCodeRuntimeDeliveryPortsDependencies {
   sentMessagesStore: Pick<TeamSentMessagesStore, 'appendMessage' | 'readMessages'>;
   inboxReader: Pick<TeamInboxReader, 'getMessagesFor'>;
   inboxWriter: Pick<TeamInboxWriter, 'sendMessage'>;
   getCrossTeamSender: () => OpenCodeRuntimeDeliveryCrossTeamSender | null;
 }
-
 export interface OpenCodeRuntimeDeliveryJournalRecoveryPorts extends OpenCodeRuntimeDeliveryStorePaths {
   createOpenCodeRuntimeDeliveryPorts(): RuntimeDeliveryDestinationPort[];
   readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null>;
@@ -182,7 +176,6 @@ export interface OpenCodeRuntimeDeliveryJournalRecoveryPorts extends OpenCodeRun
   nowIso(): string;
   logger: RuntimeDeliveryLogger;
 }
-
 export type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts<
   Run extends OpenCodeRuntimeCheckinRun,
 > = Omit<OpenCodeRuntimeCheckinPortCallbacks<Run>, 'teamsBasePath'> &
@@ -228,7 +221,6 @@ export type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts<
     ): Promise<PersistedTeamLaunchSnapshot | null>;
     nowIso(): string;
   };
-
 export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<
   Run extends OpenCodeRuntimeCheckinRun,
 >(
@@ -282,6 +274,8 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<
   const createDeliveryService = (teamName: string, laneId: string): RuntimeDeliveryService =>
     createOpenCodeRuntimeDeliveryService(teamName, laneId, {
       teamsBasePath: ports.getTeamsBasePath(),
+      withTeamLock: (candidateTeamName, operation) =>
+        ports.withTeamLock(candidateTeamName, operation),
       resolveCurrentOpenCodeRuntimeRunId: (candidateTeamName, candidateLaneId) =>
         ports.resolveCurrentOpenCodeRuntimeRunId(candidateTeamName, candidateLaneId),
       readLaunchState: (candidateTeamName) => ports.readLaunchState(candidateTeamName),
@@ -521,7 +515,11 @@ export function createOpenCodeRuntimeDeliveryService(
             }
           },
         }
-      : undefined
+      : undefined,
+    {
+      runExclusive: (candidateTeamName, operation) =>
+        ports.withTeamLock(candidateTeamName, operation),
+    }
   );
 }
 
