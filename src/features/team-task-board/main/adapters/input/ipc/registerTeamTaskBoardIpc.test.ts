@@ -400,7 +400,7 @@ describe('registerTeamTaskBoardIpc', () => {
         mimeType: 'image/png',
         size: 4,
         addedAt: '2026-07-22T00:00:00.000Z',
-        filePath: '/tmp/attachment-1',
+        filePath: '/workspace/attachments/attachment-1',
       })
       .mockRejectedValueOnce(new Error('second save failed'));
 
