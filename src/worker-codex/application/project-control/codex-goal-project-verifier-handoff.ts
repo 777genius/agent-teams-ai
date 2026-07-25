@@ -12,6 +12,8 @@ import { readRuntimeResultBrief } from "../codex-goal-runtime-result";
 const execFileAsync = promisify(execFile);
 const maxManifestBytes = 1024 * 1024;
 const maxPatchBytes = 16 * 1024 * 1024;
+const appServerReconnectTimeoutPrefix =
+  "codex_app_server_reconnect_timeout:";
 const runtimePreservedContinuationReasons = new Set([
   "runtime_interrupted",
   "quota_limited",
@@ -277,12 +279,21 @@ async function currentResultHandoff(input: {
     result.status === "partial" &&
     result.lastFailureReason === "runtime_interrupted" &&
     result.handoffArtifactError === undefined;
+  const verifiablePreservedReconnectFailure =
+    input.allowProviderOutputInvalid &&
+    result.status === "failed" &&
+    result.lastFailureReason === "unknown_error" &&
+    result.lastFailureRawCause?.startsWith(
+      appServerReconnectTimeoutPrefix,
+    ) === true &&
+    result.handoffArtifactError === undefined;
   if (
     result.strict !== true ||
     (!completed &&
       !verifiableProviderOutputFailure &&
       !runtimePreservedContinuation &&
-      !verifiableRuntimeInterruption) ||
+      !verifiableRuntimeInterruption &&
+      !verifiablePreservedReconnectFailure) ||
     !result.manifestPath ||
     !result.manifestSha256 ||
     !/^[0-9a-f]{64}$/i.test(result.manifestSha256)

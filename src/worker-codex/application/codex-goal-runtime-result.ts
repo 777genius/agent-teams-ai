@@ -8,6 +8,7 @@ export async function readRuntimeResultBrief(path: string): Promise<{
   readonly changedFiles?: readonly string[];
   readonly currentAccount?: string;
   readonly lastFailureReason?: string;
+  readonly lastFailureRawCause?: string;
   readonly updatedAt?: string;
   readonly strict?: boolean;
   readonly baseCommit?: string;
@@ -49,6 +50,10 @@ export async function readRuntimeResultBrief(path: string): Promise<{
         : {}),
       ...(typeof parsed.reason === "string"
         ? { lastFailureReason: parsed.reason }
+        : {}),
+      ...(isRecord(parsed.details) &&
+      typeof parsed.details.rawCause === "string"
+        ? { lastFailureRawCause: parsed.details.rawCause }
         : {}),
       ...(typeof parsed.updatedAt === "string"
         ? { updatedAt: parsed.updatedAt }

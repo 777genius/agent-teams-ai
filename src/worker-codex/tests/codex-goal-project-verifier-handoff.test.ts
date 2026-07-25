@@ -182,6 +182,72 @@ describe("project verifier handoff", () => {
     );
   });
 
+  it("allows only a verifier to inspect a preserved app-server reconnect failure", async () => {
+    const root = await temporaryRoot("verifier-reconnect-failure-");
+    const workspacePath = join(root, "producer");
+    const jobRootDir = join(root, "jobs", "producer-1");
+    await initRepository(workspacePath);
+    await mkdir(jobRootDir, { recursive: true });
+    await writeFile(join(workspacePath, "feature.txt"), "reconnect output\n");
+    const materialized = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: "producer-1",
+      taskId: "task-1",
+      workspacePath,
+      jobRootDir,
+    });
+    if (!materialized) throw new Error("expected producer handoff");
+    const resultPath = join(jobRootDir, "task-1.latest-result.json");
+    const result = {
+      status: "failed",
+      reason: "unknown_error",
+      changedFiles: materialized.changedPaths,
+      evidence: ["immutable_handoff_captured"],
+      blockers: ["unknown_error"],
+      nextAction: "preserve_patch",
+      artifacts: materialized.artifacts,
+      details: {
+        baseCommit: materialized.baseCommit,
+        rawCause:
+          "codex_app_server_reconnect_timeout:Reconnecting... 5/5",
+      },
+    };
+    await writeFile(resultPath, `${JSON.stringify(result)}\n`);
+    const producer = manifest({ workspacePath, jobRootDir });
+
+    await expect(readVerifiedProducerHandoff({ producer })).rejects.toThrow(
+      "project_control_verifier_handoff_result_invalid",
+    );
+    await expect(
+      readVerifiableProducerHandoff({ producer }),
+    ).resolves.toMatchObject({
+      producerJobId: "producer-1",
+      baseCommit: materialized.baseCommit,
+      changedPaths: ["feature.txt"],
+      patchSha256: materialized.manifest.artifacts.patch.sha256,
+    });
+
+    for (const invalid of [
+      { status: "partial" },
+      { details: { ...result.details, rawCause: "ordinary_unknown_error" } },
+      {
+        details: {
+          ...result.details,
+          rawCause: "codex_app_server_error:provider unavailable",
+        },
+      },
+      { details: { baseCommit: materialized.baseCommit } },
+      { artifacts: [] },
+    ]) {
+      await writeFile(
+        resultPath,
+        `${JSON.stringify({ ...result, ...invalid })}\n`,
+      );
+      await expect(
+        readVerifiableProducerHandoff({ producer }),
+      ).rejects.toThrow("project_control_verifier_handoff_result_invalid");
+    }
+  });
+
   it("keeps continuation fingerprints out of verifier handoff paths", async () => {
     const root = await temporaryRoot("verifier-secret-continuation-");
     const workspacePath = join(root, "producer");
