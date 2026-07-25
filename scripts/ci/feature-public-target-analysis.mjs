@@ -23,6 +23,7 @@ import {
   collectCopyRelations,
   collectPrototypeRelations,
   collectTopLevelPropertyWrites,
+  copiedPropertyPath,
   latestPropertyWriteBefore,
   materializeCopyRelationWrites,
   propertyPathWasOverwrittenAfter,
@@ -629,10 +630,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         (segment, index) => currentWrite.path[relation.path.length + index] === segment
       )
     );
-    const copiedPath = [
-      ...(relation.targetPath ?? []),
-      ...currentWrite.path.slice(relation.path.length),
-    ];
+    const copiedPath = copiedPropertyPath(relation, currentWrite.path);
     return (
       position < relation.copyPosition &&
       currentWrite.enumerable &&
@@ -703,7 +701,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         currentWrite &&
         propertyPathWasOverwrittenAfter(
           propertyWrites, relation.ownerKey,
-          currentWrite.path.slice(relation.path.length), relation.copyPosition
+          copiedPropertyPath(relation, currentWrite.path), relation.copyPosition
         );
       if (
         position < relation.copyPosition &&

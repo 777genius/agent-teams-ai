@@ -1033,6 +1033,25 @@ test('traces top-level getter aliases only when public descriptors expose them',
       `,
       'src/features/getter-copy-target-overwrite-safe/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/getter-copy-nested-target-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        hidden.Store = Store;
+        export const api = { nested: {} };
+        Object.assign(api.nested, hidden);
+        api.nested.Store = undefined;
+      `,
+      'src/features/getter-copy-nested-target-overwrite-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-copy-nested-initializer-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        hidden.Store = Store;
+        export const api = { nested: { ...hidden } };
+        api.nested.Store = undefined;
+      `,
+      'src/features/getter-copy-nested-initializer-overwrite-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/getter-spread-descriptor-alias/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const descriptor = { get: () => Store, enumerable: true };
@@ -1554,6 +1573,8 @@ test('traces top-level getter aliases only when public descriptors expose them',
         'src/features/getter-constructor-internal-safe/main/index.ts',
         'src/features/getter-copy-after-publication-safe/main/index.ts',
         'src/features/getter-copy-descriptor-overwrite-safe/main/index.ts',
+        'src/features/getter-copy-nested-initializer-overwrite-safe/main/index.ts',
+        'src/features/getter-copy-nested-target-overwrite-safe/main/index.ts',
         'src/features/getter-copy-overwrite-before-publication-safe/main/index.ts',
         'src/features/getter-copy-parent-overwrite-safe/main/index.ts',
         'src/features/getter-copy-source-order-safe/main/index.ts',

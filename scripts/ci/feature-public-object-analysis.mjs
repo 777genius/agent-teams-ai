@@ -456,7 +456,21 @@ export function staticOverwrittenPropertyPaths(
   );
 }
 
-function addCopySources(relations, ownerKey, callOrLiteral, sources, bindingModel) {
+export function copiedPropertyPath(relation, sourcePath) {
+  return [
+    ...(relation.targetPath ?? []),
+    ...sourcePath.slice(relation.path.length),
+  ];
+}
+
+function addCopySources(
+  relations,
+  ownerKey,
+  targetPath,
+  callOrLiteral,
+  sources,
+  bindingModel
+) {
   for (const [index, sourceExpression] of sources.entries()) {
     const source = accessPath(sourceExpression);
     const sourceKey =
@@ -472,13 +486,14 @@ function addCopySources(relations, ownerKey, callOrLiteral, sources, bindingMode
       ownerKey,
       path: source.path,
       sourceKey,
+      targetPath,
     });
   }
 }
 
 export function collectCopyRelations(sourceFile, bindingModel) {
   const relations = [];
-  const collectFromInitializer = (expression, ownerKey) => {
+  const collectFromInitializer = (expression, ownerKey, targetPath = []) => {
     const current = unwrapExpression(expression);
     if (ts.isObjectLiteralExpression(current)) {
       const properties = [...current.properties];
@@ -498,10 +513,14 @@ export function collectCopyRelations(sourceFile, bindingModel) {
               ownerKey,
               path: source.path,
               sourceKey,
+              targetPath,
             });
           }
         } else if (ts.isPropertyAssignment(property)) {
-          collectFromInitializer(property.initializer, ownerKey);
+          collectFromInitializer(property.initializer, ownerKey, [
+            ...targetPath,
+            propertyNameText(property.name),
+          ]);
         }
       }
       return;
@@ -517,6 +536,7 @@ export function collectCopyRelations(sourceFile, bindingModel) {
       addCopySources(
         relations,
         ownerKey,
+        targetPath,
         current,
         [...current.arguments].slice(1),
         bindingModel
@@ -544,6 +564,7 @@ export function collectCopyRelations(sourceFile, bindingModel) {
       addCopySources(
         relations,
         ownerKey,
+        target.path,
         node,
         [...node.arguments].slice(1),
         bindingModel
@@ -591,11 +612,11 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
         ) {
           continue;
         }
-        const copiedPath = sourceWrite.path.slice(relation.path.length);
+        const sourceRelativePath = sourceWrite.path.slice(relation.path.length);
         if (
           relation.overwrittenPaths.some((overwrittenPath) =>
             overwrittenPath.every(
-              (segment, index) => copiedPath[index] === segment
+              (segment, index) => sourceRelativePath[index] === segment
             )
           )
         ) {
@@ -615,7 +636,7 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
               relation.sourceKey,
             ]),
           ],
-          path: copiedPath,
+          path: copiedPropertyPath(relation, sourceWrite.path),
         };
         const key = writeKey(relation.ownerKey, copiedWrite);
         if (known.has(key)) continue;
