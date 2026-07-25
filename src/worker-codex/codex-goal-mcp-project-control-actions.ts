@@ -507,7 +507,9 @@ export async function projectControlStartStoredJobView(
             ? { tmuxSession: reservedLaunch.tmuxSession }
             : {}),
           accounts: [accountReservation.accountId],
-          ...(reviewedContinuation || terminalRecovery
+          ...(reviewedContinuation ||
+          terminalRecovery ||
+          continuationDecision?.kind === "terminal_timeout"
             ? { workerRole: ProjectAdmissionWorkerRole.Adoption }
             : {}),
           ...(loaded.manifest.tags ? { tags: loaded.manifest.tags } : {}),

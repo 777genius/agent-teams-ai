@@ -9,6 +9,7 @@ import {
   InMemoryAttemptJournal,
   NetworkAccessMode,
   type ProjectControlBroker,
+  type ProjectControlStartWorkerInput,
   type ProjectAccessScope,
 } from "@vioxen/subscription-runtime/worker-core";
 
@@ -552,6 +553,7 @@ describe("admitted input-patch capacity continuation", () => {
 
     let reservedLaunch: CodexGoalLaunchInput | undefined;
     const startAdmissionWorkspaceModes: Array<string | undefined> = [];
+    const startAdmissionWorkerRoles: Array<string | undefined> = [];
     const continuationDeps: CodexGoalMcpProjectControlActionsDeps = {
       ...deps,
       safeExecutionJournal: journal,
@@ -569,7 +571,10 @@ describe("admitted input-patch capacity continuation", () => {
         reservedLaunch = input.startLaunch;
         startAdmissionWorkspaceModes.push(input.startAdmissionWorkspaceMode);
         return {
-          startWorker: async () => ({ status: "started" }),
+          startWorker: async (input: ProjectControlStartWorkerInput) => {
+            startAdmissionWorkerRoles.push(input.workerRole);
+            return { status: "started" };
+          },
         } as unknown as ProjectControlBroker;
       },
     };
@@ -976,6 +981,59 @@ describe("admitted input-patch capacity continuation", () => {
       interruptedResultPath,
       `${JSON.stringify(interruptedResult)}\n`,
     );
+
+    const timeoutAttemptAt = new Date("2026-07-14T00:02:00.000Z");
+    await journal.appendAttempt({
+      taskId: manifest.taskId,
+      attempt: {
+        taskId: manifest.taskId,
+        attemptNumber: 3,
+        accountId: "account-g",
+        provider: "codex",
+        startedAt: timeoutAttemptAt,
+        finishedAt: timeoutAttemptAt,
+        status: "blocked",
+        failureReason: "task_timeout",
+        failureDetails: { elapsedMs: "5400000" },
+        workspaceDirtyBefore: true,
+        workspaceDirtyAfter: true,
+        changedFiles: [],
+      },
+      now: timeoutAttemptAt,
+    });
+    await journal.markPartial({
+      taskId: manifest.taskId,
+      status: "partial",
+      reason: "task_timeout",
+      details: { elapsedMs: "5400000" },
+      now: timeoutAttemptAt,
+    });
+    const timeoutResult = {
+      ...interruptedResult,
+      reason: "task_timeout",
+      blockers: ["task_timeout"],
+      details: {
+        elapsedMs: 5_400_000,
+        baseCommit: interruptedHandoff.continuationFingerprint.baseCommit,
+        handoffArtifactError: interruptedHandoff.errorCode,
+        continuationWorkspaceFingerprintSchema:
+          interruptedHandoff.continuationFingerprint.schema,
+        continuationWorkspaceFingerprintSha256:
+          interruptedHandoff.continuationFingerprint.sha256,
+      },
+    };
+    await writeFile(resultPath, `${JSON.stringify(timeoutResult)}\n`);
+    await expect(
+      projectControlStartStoredJobView(
+        { ...args, forceStart: true },
+        continuationDeps,
+      ),
+    ).resolves.toMatchObject({ ok: true });
+    expect(startAdmissionWorkspaceModes.at(-1)).toBe(
+      "admitted_input_patch_runtime_continuation",
+    );
+    expect(startAdmissionWorkerRoles.at(-1)).toBe("adoption");
+    expect(reservedLaunch?.config.maxAccountCycles).toBe(4);
 
     await writeFile(
       join(workspacePath, "src", "example.ts"),
