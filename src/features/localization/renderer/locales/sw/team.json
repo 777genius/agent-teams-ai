@@ -2600,7 +2600,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab may contain terminal output or running processes. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "Kichupo hiki kinaweza kuwa na matokeo ya terminali au michakato inayoendelea. Kukifunga kutaondoa kichupo na matokeo yake yanayoonekana kwenye nafasi hii ya kazi.",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

@@ -2600,7 +2600,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab may contain terminal output or running processes. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "このタブには、ターミナル出力や実行中のプロセスが含まれている可能性があります。閉じると、このワークスペースからタブと表示中の出力が削除されます。",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

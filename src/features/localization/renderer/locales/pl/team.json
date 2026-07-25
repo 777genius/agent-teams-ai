@@ -2600,7 +2600,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab may contain terminal output or running processes. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "Ta karta może zawierać dane wyjściowe terminala lub uruchomione procesy. Jej zamknięcie usunie kartę i widoczne dane wyjściowe z tego obszaru roboczego.",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

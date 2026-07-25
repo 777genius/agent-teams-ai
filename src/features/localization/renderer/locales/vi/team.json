@@ -2600,7 +2600,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab may contain terminal output or running processes. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "Tab này có thể chứa đầu ra của terminal hoặc các tiến trình đang chạy. Việc đóng tab sẽ xóa tab và phần đầu ra đang hiển thị khỏi không gian làm việc này.",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

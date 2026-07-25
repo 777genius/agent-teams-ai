@@ -40,6 +40,7 @@ describe('useTerminalMuxTabsController close focus', () => {
         {nextControls.viewModel.tabItems.map(({ id, label }) => (
           <div data-terminal-tab-id={id} key={id}>
             <button
+              aria-disabled={nextControls.busy}
               data-testid={`tab-${id}`}
               ref={(element) => nextControls.registerTabButtonElement(id, element)}
               type="button"
@@ -104,6 +105,31 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE], TAB_ONE));
 
     expect(document.activeElement).toBe(requiredElement('tab-tab-1'));
+  });
+
+  it('restores focus before an in-flight attach settles', async () => {
+    const attach = createDeferred<void>();
+    commands.attachSession = vi.fn(() => attach.promise) as never;
+    await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO));
+    requiredElement('close-tab-2').focus();
+
+    let closeAction!: Promise<void>;
+    await act(async () => {
+      closeAction = requiredControls().requestCloseTab(TAB_TWO);
+      await flushMicrotasks();
+    });
+    expect(requiredControls().busy).toBe(true);
+
+    await render(createSnapshot([TAB_ONE], TAB_ONE));
+
+    const remainingTab = requiredElement('tab-tab-1');
+    expect(remainingTab.getAttribute('aria-disabled')).toBe('true');
+    expect(document.activeElement).toBe(remainingTab);
+
+    await act(async () => {
+      attach.resolve();
+      await closeAction;
+    });
   });
 
   it('does not steal focus when the user moves to another control during close', async () => {

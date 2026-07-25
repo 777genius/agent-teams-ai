@@ -2600,7 +2600,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab may contain terminal output or running processes. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "இந்தத் தாவலில் முனைய வெளியீடு அல்லது இயங்கிக்கொண்டிருக்கும் செயல்முறைகள் இருக்கலாம். இதை மூடினால், இந்தப் பணியிடத்திலிருந்து தாவலும் அதன் காணக்கூடிய வெளியீடும் அகற்றப்படும்.",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

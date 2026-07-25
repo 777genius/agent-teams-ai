@@ -239,9 +239,9 @@ export const TerminalMuxTabsView = ({
                               type="button"
                               className="inline-flex min-w-0 items-center gap-1.5 px-2 pr-7 text-left"
                               aria-selected={active}
+                              aria-disabled={busy}
                               data-testid="agent-team-terminal-mux-tab"
                               data-terminal-tab-button-id={id}
-                              disabled={busy}
                               role="tab"
                               tabIndex={active ? 0 : -1}
                               onClick={(event) => handleTabClick(event, id)}

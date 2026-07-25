@@ -2600,7 +2600,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab may contain terminal output or running processes. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "এই ট্যাবে টার্মিনাল আউটপুট বা চলমান প্রসেস থাকতে পারে। এটি বন্ধ করলে এই ওয়ার্কস্পেস থেকে ট্যাবটি ও এর দৃশ্যমান আউটপুট সরিয়ে দেওয়া হবে।",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

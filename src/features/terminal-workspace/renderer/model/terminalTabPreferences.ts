@@ -361,9 +361,11 @@ export function resolveTerminalTabContentState(
   const historicalPane = snapshot.historicalPanes?.[paneId];
   const attachedSessionId = snapshot.attachedSession?.session?.session_id ?? null;
   const historyIsComplete =
-    historicalPane?.sessionId === attachedSessionId &&
+    historicalPane !== undefined &&
+    attachedSessionId !== null &&
+    historicalPane.sessionId === attachedSessionId &&
     historicalPane.paneId === paneId &&
-    historicalPane?.fromEventSeq === 1n &&
+    historicalPane.fromEventSeq === 1n &&
     historicalPane.nextEventSeq === null &&
     !historicalPane.hasGaps &&
     !historicalPane.hasMoreSegments;
