@@ -784,6 +784,86 @@ test('recognizes JavaScript feature root entrypoints', () => {
   );
 });
 
+test('traces top-level getter aliases only when public descriptors expose them', () => {
+  withFixture(
+    {
+      'src/features/getter-alias/main/index.cjs': `
+        const HiddenModule = require('./infrastructure/Hidden');
+        const RepositoryModule = require('./infrastructure/Repository');
+        const StoreModule = require('./infrastructure/Store');
+
+        const getHidden = () => HiddenModule.Hidden;
+        const getStore = () => StoreModule.Store;
+        function getRepository() {
+          return RepositoryModule.Repository;
+        }
+
+        Object.defineProperty(exports, 'Store', { get: getStore });
+        Object.defineProperties(exports, {
+          Repository: { get: getRepository },
+        });
+        void getHidden;
+      `,
+      'src/features/getter-alias/main/infrastructure/Hidden.cjs':
+        'exports.Hidden = class Hidden {};',
+      'src/features/getter-alias/main/infrastructure/Repository.cjs':
+        'exports.Repository = class Repository {};',
+      'src/features/getter-alias/main/infrastructure/Store.cjs': 'exports.Store = class Store {};',
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      assert.deepEqual(
+        violations
+          .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
+          .map(({ specifier }) => specifier)
+          .sort(),
+        ['./infrastructure/Repository', './infrastructure/Store']
+      );
+    }
+  );
+});
+
+test('preserves string-literal member selection for indexed import types', () => {
+  withFixture(
+    {
+      'src/features/indexed-infra/main/index.ts': `
+        export type Infra = import('./mixedBarrel')['Infra'];
+      `,
+      'src/features/indexed-infra/main/mixedBarrel.ts': `
+        export { Infra } from './infrastructure/Infra';
+        export { Safe } from './safe';
+      `,
+      'src/features/indexed-infra/main/infrastructure/Infra.ts': 'export interface Infra {}',
+      'src/features/indexed-infra/main/safe.ts': 'export interface Safe {}',
+      'src/features/indexed-safe/main/index.ts': `
+        export type Safe = import('./mixedBarrel')['Safe'];
+      `,
+      'src/features/indexed-safe/main/mixedBarrel.ts': `
+        export { Infra } from './infrastructure/Infra';
+        export { Safe } from './safe';
+      `,
+      'src/features/indexed-safe/main/infrastructure/Infra.ts': 'export interface Infra {}',
+      'src/features/indexed-safe/main/safe.ts': 'export interface Safe {}',
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      assert.deepEqual(
+        violations
+          .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
+          .map(toBaselineEntry),
+        [
+          {
+            publicEntrypoint: 'src/features/indexed-infra/main/index.ts',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/indexed-infra/main/mixedBarrel.ts',
+            specifier: './infrastructure/Infra',
+          },
+        ]
+      );
+    }
+  );
+});
+
 test('preserves member selection through local aliases', () => {
   withFixture(
     {

@@ -330,24 +330,6 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/features/application-command-ledger/main/composition/createApplicationCommandLedgerFeature.ts",
-      "specifier": "../adapters/output/InternalStorageApplicationCommandLedgerStore",
-      "publicEntrypoint": "src/features/application-command-ledger/main/index.ts"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/application-command-ledger/main/index.ts",
-      "specifier": "./adapters/output/InternalStorageApplicationCommandLedgerStore",
-      "publicEntrypoint": "src/features/application-command-ledger/main/index.ts"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/application-command-ledger/main/index.ts",
-      "specifier": "./adapters/output/NodeApplicationCommandHasher",
-      "publicEntrypoint": "src/features/application-command-ledger/main/index.ts"
-    },
-    {
-      "rule": "public-api-implementation-export",
       "source": "src/features/change-review-history/main/index.ts",
       "specifier": "./infrastructure/ReviewDraftHistoryStore",
       "publicEntrypoint": "src/features/change-review-history/main/index.ts"

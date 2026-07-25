@@ -351,8 +351,18 @@ export function getterSelectionForReference(reference, boundary) {
       }
       const descriptorMember = descriptorMapGetterMember(declaration.initializer, reference);
       if (descriptorMember !== null) return { localMember: descriptorMember };
+      const initializer = unwrapExpression(declaration.initializer);
+      if (
+        !hasModifier(boundary, ts.SyntaxKind.ExportKeyword) &&
+        (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer))
+      ) {
+        return { localMember: undefined };
+      }
     }
     return null;
+  }
+  if (ts.isFunctionDeclaration(boundary) && !hasModifier(boundary, ts.SyntaxKind.ExportKeyword)) {
+    return { localMember: undefined };
   }
   if (ts.isExpressionStatement(boundary)) {
     return expressionGetterSelection(boundary.expression, reference);

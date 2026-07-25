@@ -207,10 +207,27 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
   };
 
-  const importTypeQualifierName = (qualifier) => {
-    let current = qualifier;
+  const importTypeSelectedName = (node) => {
+    let current = node.qualifier;
     while (current && ts.isQualifiedName(current)) current = current.left;
-    return current && ts.isIdentifier(current) ? current.text : '*';
+    if (current && ts.isIdentifier(current)) return current.text;
+
+    let selectedType = node;
+    while (
+      selectedType.parent &&
+      ts.isParenthesizedTypeNode(selectedType.parent) &&
+      selectedType.parent.type === selectedType
+    ) {
+      selectedType = selectedType.parent;
+    }
+    const parent = selectedType.parent;
+    if (!parent || !ts.isIndexedAccessTypeNode(parent) || parent.objectType !== selectedType) {
+      return '*';
+    }
+    const indexType = parent.indexType;
+    return ts.isLiteralTypeNode(indexType) && ts.isStringLiteralLike(indexType.literal)
+      ? indexType.literal.text
+      : '*';
   };
 
   const addTypeReference = (node) => {
@@ -222,7 +239,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     if (!owner) return;
     addOwnerDependency(owner, {
       edge,
-      importedName: importTypeQualifierName(node.qualifier),
+      importedName: importTypeSelectedName(node),
     });
   };
 

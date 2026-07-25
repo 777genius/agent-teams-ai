@@ -37,7 +37,7 @@ import {
   HMAC_SHA256_LD_V1,
 } from '@features/application-command-ledger';
 import { createCommandDescriptorRegistry } from '@features/application-command-ledger/core/domain';
-import { InternalStorageApplicationCommandLedgerStore } from '@features/application-command-ledger/main';
+import { InternalStorageApplicationCommandLedgerStore } from '@features/application-command-ledger/main/adapters/output/InternalStorageApplicationCommandLedgerStore';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';

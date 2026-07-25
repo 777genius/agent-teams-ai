@@ -8,8 +8,8 @@ import {
   ApplicationCommandRunOutcome,
 } from '@features/application-command-ledger/contracts';
 import {
+  createApplicationCommandHasher,
   createApplicationCommandLedgerFeature,
-  NodeApplicationCommandHasher,
 } from '@features/application-command-ledger/main';
 import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
@@ -71,7 +71,7 @@ describe('task-board commands E2E', () => {
       Promise.reject(new Error('native module ABI mismatch'))
     );
     const runner = { run: vi.fn() };
-    const hasher = new NodeApplicationCommandHasher();
+    const hasher = createApplicationCommandHasher();
     const facade = new TaskBoardCommandFacade(runner as never, {
       isDurableStorageAvailable: () => selector.select(true, false),
       hashPayload: (payload) => hasher.hashJson(payload),
@@ -502,7 +502,7 @@ function makeCreationCommand(
     scopeKey: TEAM_NAME,
     operation: CREATE_TASK_OPERATION,
     commandId: identity.commandId,
-    payloadHash: new NodeApplicationCommandHasher().hashJson(payload),
+    payloadHash: createApplicationCommandHasher().hashJson(payload),
   };
 }
 
@@ -518,7 +518,7 @@ async function seedStaleStarted(
     scopeKey: TEAM_NAME,
     ...identity,
     operation: CREATE_TASK_OPERATION,
-    payloadHash: new NodeApplicationCommandHasher().hashJson(payload),
+    payloadHash: createApplicationCommandHasher().hashJson(payload),
     metadataJson: null,
     nowIso: '2020-01-01T00:00:00.000Z',
     startedStaleAfterMs: 60_000,

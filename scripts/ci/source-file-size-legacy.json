@@ -51,7 +51,7 @@
   "src/features/token-usage/renderer/adapters/tokenUsageViewModel.ts": 1481,
   "src/features/token-usage/renderer/ui/TokenUsageDashboard.tsx": 2170,
   "src/main/composition/hosted/teamLifecycleReadComposition.ts": 1552,
-  "src/main/index.ts": 3908,
+  "src/main/index.ts": 3904,
   "src/main/ipc/config.ts": 1230,
   "src/main/ipc/configValidation.ts": 1050,
   "src/main/ipc/review.ts": 4498,

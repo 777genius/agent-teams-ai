@@ -5,15 +5,23 @@ import { NodeApplicationCommandHasher } from '../adapters/output/NodeApplication
 
 import type { CommandDescriptor } from '../../contracts';
 import type {
+  ApplicationCommandHasher,
   ApplicationCommandLedgerStorageGateway,
+  ApplicationCommandLedgerStore,
   DurableApplicationCommandLedgerStorageGateway,
+  DurableApplicationCommandLedgerStore,
 } from '../../core/application';
 import type { CommandDescriptorRegistry } from '../../core/domain';
 
 export interface ApplicationCommandLedgerFeature {
   descriptorRegistry?: CommandDescriptorRegistry | null;
-  ledgerStore: InternalStorageApplicationCommandLedgerStore;
+  hasher: ApplicationCommandHasher;
+  ledgerStore: ApplicationCommandLedgerStore & DurableApplicationCommandLedgerStore;
   runner: ApplicationCommandRunner;
+}
+
+export function createApplicationCommandHasher(): ApplicationCommandHasher {
+  return new NodeApplicationCommandHasher();
 }
 
 export function createApplicationCommandLedgerFeature(input: {
@@ -32,12 +40,14 @@ export function createApplicationCommandLedgerFeature(input: {
     input.storageGateway,
     descriptorRegistry
   );
+  const hasher = createApplicationCommandHasher();
   return {
     descriptorRegistry,
+    hasher,
     ledgerStore,
     runner: new ApplicationCommandRunner({
       ledger: ledgerStore,
-      hasher: new NodeApplicationCommandHasher(),
+      hasher,
     }),
   };
 }

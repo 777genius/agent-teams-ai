@@ -1,4 +1,4 @@
-import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
+import { createApplicationCommandHasher } from '@features/application-command-ledger/main';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
@@ -127,7 +127,7 @@ const PERMANENT_DELETE_RM_OPTIONS = {
 } as const;
 
 function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
-  const hasher = new NodeApplicationCommandHasher();
+  const hasher = createApplicationCommandHasher();
   return new TaskBoardCommandFacade(null, {
     hashPayload: (payload) => hasher.hashJson(payload),
   });
