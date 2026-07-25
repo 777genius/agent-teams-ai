@@ -1222,6 +1222,35 @@ test('traces top-level getter aliases only when public descriptors expose them',
           static bootstrap() {}
         }
       `,
+      'src/features/getter-constructor-private-assignment-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          #store;
+          private cached;
+          protected fallback;
+          constructor() {
+            this.#store = Store;
+            this.cached = Store;
+            this.fallback = Store;
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/getter-constructor-private-assignment-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-constructor-nested-return-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          refresh() {
+            [1].map(() => {
+              return Store;
+            });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/getter-constructor-nested-return-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/getter-destructured-esm-target/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const root = { api: {} };
@@ -1571,6 +1600,8 @@ test('traces top-level getter aliases only when public descriptors expose them',
         'src/features/getter-commonjs-final-reset-safe/main/index.cjs',
         'src/features/getter-commonjs-module-final-reset-safe/main/index.cjs',
         'src/features/getter-constructor-internal-safe/main/index.ts',
+        'src/features/getter-constructor-nested-return-safe/main/index.ts',
+        'src/features/getter-constructor-private-assignment-safe/main/index.ts',
         'src/features/getter-copy-after-publication-safe/main/index.ts',
         'src/features/getter-copy-descriptor-overwrite-safe/main/index.ts',
         'src/features/getter-copy-nested-initializer-overwrite-safe/main/index.ts',

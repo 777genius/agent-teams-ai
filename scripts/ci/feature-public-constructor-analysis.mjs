@@ -13,6 +13,29 @@ function isPublicInstanceMember(node) {
   );
 }
 
+function isPublicInstanceAssignment(targetExpression, boundary) {
+  if (
+    ts.isPropertyAccessExpression(targetExpression) &&
+    ts.isPrivateIdentifier(targetExpression.name)
+  ) {
+    return null;
+  }
+  const target = memberAccess(targetExpression);
+  if (!target || target.receiver.kind !== ts.SyntaxKind.ThisKeyword) return null;
+  if (
+    ts.isClassLike(boundary) &&
+    boundary.members.some(
+      (member) =>
+        member.name &&
+        propertyNameText(member.name) === target.name &&
+        !isPublicInstanceMember(member)
+    )
+  ) {
+    return null;
+  }
+  return target.name;
+}
+
 export function publicConstructorSelection(reference, boundary) {
   let current = reference;
   let returned = false;
@@ -24,9 +47,9 @@ export function publicConstructorSelection(reference, boundary) {
       ts.isAssignmentOperator(parent.operatorToken.kind) &&
       parent.right === current
     ) {
-      const target = memberAccess(parent.left);
-      if (target && target.receiver.kind === ts.SyntaxKind.ThisKeyword) {
-        return { getterOnly: false, localMember: target.name };
+      const localMember = isPublicInstanceAssignment(parent.left, boundary);
+      if (localMember !== null) {
+        return { getterOnly: false, localMember };
       }
     }
     if (
@@ -38,6 +61,7 @@ export function publicConstructorSelection(reference, boundary) {
     ) {
       return { getterOnly: false, localMember: propertyNameText(parent.name) };
     }
+    if (ts.isFunctionLike(parent)) returned = false;
     current = parent;
   }
   return null;
