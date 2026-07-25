@@ -1,11 +1,10 @@
-import path from 'node:path';
-
+import { ReadToolApprovalFilePreview } from '../../core/application/use-cases/ReadToolApprovalFilePreview';
 import { NodeToolApprovalFileReader } from '../infrastructure/NodeToolApprovalFileReader';
 
 import type {
   TeamApprovalsCommandPort,
   ToolApprovalFileReaderPort,
-  ToolApprovalPreviewAccessPort,
+  ToolApprovalPreviewReaderPort,
 } from '../../core/application/ports/TeamApprovalsPorts';
 import type { ToolApprovalSettings } from '@shared/types';
 
@@ -23,13 +22,15 @@ export interface TeamToolApprovalCompatibilityApi {
 
 export interface TeamApprovalsFeature {
   commands: TeamApprovalsCommandPort;
-  fileReader: ToolApprovalFileReaderPort;
-  previewAccess: ToolApprovalPreviewAccessPort;
+  previewReader: ToolApprovalPreviewReaderPort;
 }
 
 export function createTeamApprovalsFeature(dependencies: {
   toolApprovalApi: TeamToolApprovalCompatibilityApi;
+  fileReader?: ToolApprovalFileReaderPort;
 }): TeamApprovalsFeature {
+  const fileReader = dependencies.fileReader ?? new NodeToolApprovalFileReader();
+
   return {
     commands: {
       respond: ({ teamName, runId, requestId, allow, message }) =>
@@ -43,16 +44,12 @@ export function createTeamApprovalsFeature(dependencies: {
       updateSettings: ({ teamName, settings }) =>
         dependencies.toolApprovalApi.updateToolApprovalSettings(teamName, settings),
     },
-    fileReader: new NodeToolApprovalFileReader(),
-    previewAccess: {
-      canRead: ({ teamName, runId, requestId, filePath }) => {
-        const approvedPath = dependencies.toolApprovalApi.getPendingToolApprovalFilePath(
-          teamName,
-          runId,
-          requestId
-        );
-        return approvedPath !== null && path.resolve(approvedPath) === path.resolve(filePath);
+    previewReader: new ReadToolApprovalFilePreview({
+      pendingApprovals: {
+        getFilePath: (teamName, runId, requestId) =>
+          dependencies.toolApprovalApi.getPendingToolApprovalFilePath(teamName, runId, requestId),
       },
-    },
+      files: fileReader,
+    }),
   };
 }

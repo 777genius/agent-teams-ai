@@ -106,7 +106,7 @@ describe('TeamProvisioningToolApprovalFacade', () => {
   });
 
   it('exposes a preview path only for the exact active file-edit approval', () => {
-    const { facade, run } = createHarness();
+    const { deps, facade, run } = createHarness();
     run.pendingApprovals.set(
       'req-preview',
       approvalRequest({
@@ -122,6 +122,10 @@ describe('TeamProvisioningToolApprovalFacade', () => {
     expect(facade.getPendingToolApprovalFilePath('other-team', 'run-1', 'req-preview')).toBeNull();
     expect(facade.getPendingToolApprovalFilePath('alpha', 'stale-run', 'req-preview')).toBeNull();
     expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'missing')).toBeNull();
+
+    vi.mocked(deps.getTrackedRunId).mockReturnValue('run-2');
+    expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'req-preview')).toBeNull();
+    vi.mocked(deps.getTrackedRunId).mockReturnValue('run-1');
 
     run.pendingApprovals.set(
       'req-preview',

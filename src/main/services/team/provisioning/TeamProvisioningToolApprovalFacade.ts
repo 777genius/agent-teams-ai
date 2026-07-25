@@ -45,6 +45,15 @@ export interface TeamProvisioningToolApprovalSyncInput extends OpenCodeRuntimeTo
   memberNames?: readonly string[];
 }
 
+function getApprovalPreviewFilePath(approval: ToolApprovalRequest | undefined): string | null {
+  if (!approval || (approval.toolName !== 'Write' && approval.toolName !== 'Edit')) {
+    return null;
+  }
+
+  const filePath = approval.toolInput.file_path;
+  return typeof filePath === 'string' && filePath.trim().length > 0 ? filePath : null;
+}
+
 export interface TeamProvisioningToolApprovalFacadeNotificationDeps {
   getNotificationSettings?: () => ToolApprovalNotificationSettingsSnapshot;
   getNotificationConstructor?: () => TeamProvisioningToolApprovalNotificationConstructor | null;
@@ -392,22 +401,30 @@ export class TeamProvisioningToolApprovalFacade<
     requestId: string
   ): string | null {
     const runtimeApproval = this.runtimeToolApprovalCoordinator.get(teamName, requestId)?.approval;
-    const run = this.deps.getRun(runId);
-    const runApproval =
-      run?.teamName === teamName ? run.pendingApprovals.get(requestId) : undefined;
-    const approval =
-      runtimeApproval?.runId === runId
-        ? runtimeApproval
-        : runApproval?.runId === runId && runApproval.teamName === teamName
-          ? runApproval
-          : undefined;
+    if (
+      runtimeApproval?.runId === runId &&
+      runtimeApproval.teamName === teamName &&
+      runtimeApproval.requestId === requestId
+    ) {
+      return getApprovalPreviewFilePath(runtimeApproval);
+    }
 
-    if (!approval || (approval.toolName !== 'Write' && approval.toolName !== 'Edit')) {
+    if (this.deps.getTrackedRunId(teamName) !== runId) {
       return null;
     }
 
-    const filePath = approval.toolInput.file_path;
-    return typeof filePath === 'string' && filePath.trim().length > 0 ? filePath : null;
+    const run = this.deps.getRun(runId);
+    const runApproval =
+      run?.teamName === teamName ? run.pendingApprovals.get(requestId) : undefined;
+    if (
+      runApproval?.runId !== runId ||
+      runApproval.teamName !== teamName ||
+      runApproval.requestId !== requestId
+    ) {
+      return null;
+    }
+
+    return getApprovalPreviewFilePath(runApproval);
   }
 
   emitToolApprovalEvent(event: ToolApprovalEvent): void {

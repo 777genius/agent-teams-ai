@@ -50,22 +50,18 @@ describe('team approvals IPC', () => {
     respond: vi.fn(async () => undefined),
     updateSettings: vi.fn(() => undefined),
   };
-  const fileReader = {
-    read: vi.fn(async () => ({
+  const previewReader = {
+    read: vi.fn<TeamApprovalsIpcDependencies['previewReader']['read']>(async () => ({
       content: 'preview',
       exists: true,
       truncated: false,
       isBinary: false,
     })),
   };
-  const previewAccess = {
-    canRead: vi.fn(() => true),
-  };
   const logger = { error: vi.fn() };
   const dependencies: TeamApprovalsIpcDependencies = {
     commands,
-    fileReader,
-    previewAccess,
+    previewReader,
     logger,
   };
 
@@ -245,7 +241,7 @@ describe('team approvals IPC', () => {
         { ...VALID_FILE_READ_REQUEST, filePath: 'relative.txt' }
       )
     ).resolves.toEqual({ success: false, error: 'filePath must be an absolute path' });
-    expect(fileReader.read).not.toHaveBeenCalled();
+    expect(previewReader.read).not.toHaveBeenCalled();
 
     await expect(
       handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, VALID_FILE_READ_REQUEST)
@@ -253,17 +249,16 @@ describe('team approvals IPC', () => {
       success: true,
       data: { content: 'preview', exists: true, truncated: false, isBinary: false },
     });
-    expect(previewAccess.canRead).toHaveBeenCalledWith({
+    expect(previewReader.read).toHaveBeenCalledWith({
       teamName: 'team-one',
       runId: 'run-1',
       requestId: 'request-1',
       filePath: APPROVAL_PREVIEW_PATH,
     });
-    expect(fileReader.read).toHaveBeenCalledWith(APPROVAL_PREVIEW_PATH);
   });
 
   it('rejects file reads that do not match the active approval', async () => {
-    previewAccess.canRead.mockReturnValueOnce(false);
+    previewReader.read.mockResolvedValueOnce(null);
 
     await expect(
       handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!(
@@ -274,11 +269,11 @@ describe('team approvals IPC', () => {
       success: false,
       error: 'File preview is not authorized for this approval request',
     });
-    expect(fileReader.read).not.toHaveBeenCalled();
+    expect(previewReader.read).toHaveBeenCalledOnce();
   });
 
   it('contains an unexpected reader rejection in the legacy success envelope', async () => {
-    fileReader.read.mockRejectedValueOnce(new Error('read failed'));
+    previewReader.read.mockRejectedValueOnce(new Error('read failed'));
 
     await expect(
       handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!(

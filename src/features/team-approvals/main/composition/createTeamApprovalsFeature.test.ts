@@ -32,7 +32,15 @@ describe('createTeamApprovalsFeature', () => {
       respondToToolApproval,
       updateToolApprovalSettings,
     };
-    const feature = createTeamApprovalsFeature({ toolApprovalApi: api });
+    const fileReader = {
+      read: vi.fn(async () => ({
+        content: 'approved',
+        exists: true,
+        truncated: false,
+        isBinary: false,
+      })),
+    };
+    const feature = createTeamApprovalsFeature({ toolApprovalApi: api, fileReader });
 
     await feature.commands.respond({
       teamName: 'team-one',
@@ -51,22 +59,23 @@ describe('createTeamApprovalsFeature', () => {
       'approved'
     );
     expect(updateToolApprovalSettings).toHaveBeenCalledWith('team-one', settings);
-    expect(
-      feature.previewAccess.canRead({
+    await expect(
+      feature.previewReader.read({
         teamName: 'team-one',
         runId: 'run-1',
         requestId: 'request-1',
         filePath: approvedPath,
       })
-    ).toBe(true);
-    expect(
-      feature.previewAccess.canRead({
+    ).resolves.toMatchObject({ content: 'approved' });
+    await expect(
+      feature.previewReader.read({
         teamName: 'team-one',
         runId: 'run-1',
         requestId: 'request-1',
         filePath: path.resolve('other.txt'),
       })
-    ).toBe(false);
+    ).resolves.toBeNull();
     expect(getPendingToolApprovalFilePath).toHaveBeenCalledWith('team-one', 'run-1', 'request-1');
+    expect(fileReader.read).toHaveBeenCalledWith(approvedPath);
   });
 });

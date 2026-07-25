@@ -98,6 +98,7 @@ describe('NodeToolApprovalFileReader', () => {
         buffer.write('hello');
         return { bytesRead: 5, buffer };
       }),
+      stat: vi.fn(async () => ({ size: 5 })),
       close,
     } as never);
 
@@ -108,6 +109,46 @@ describe('NodeToolApprovalFileReader', () => {
       isBinary: false,
     });
     expect(close).toHaveBeenCalledOnce();
+  });
+
+  it('marks a preview truncated when the open file grows after the initial stat', async () => {
+    vi.spyOn(fs, 'stat').mockResolvedValueOnce({
+      size: 5,
+      isFile: () => true,
+    } as never);
+    vi.spyOn(fs, 'open').mockResolvedValueOnce({
+      read: vi.fn(async (buffer: Buffer) => {
+        buffer.write('hello');
+        return { bytesRead: 5, buffer };
+      }),
+      stat: vi.fn(async () => ({ size: 16 })),
+      close: vi.fn(async () => undefined),
+    } as never);
+
+    await expect(reader.read('/virtual/growing.txt')).resolves.toMatchObject({
+      content: 'hello',
+      truncated: true,
+    });
+  });
+
+  it('clears stale truncation when the open file shrinks before the read', async () => {
+    vi.spyOn(fs, 'stat').mockResolvedValueOnce({
+      size: TOOL_APPROVAL_MAX_FILE_SIZE + 1,
+      isFile: () => true,
+    } as never);
+    vi.spyOn(fs, 'open').mockResolvedValueOnce({
+      read: vi.fn(async (buffer: Buffer) => {
+        buffer.write('hello');
+        return { bytesRead: 5, buffer };
+      }),
+      stat: vi.fn(async () => ({ size: 5 })),
+      close: vi.fn(async () => undefined),
+    } as never);
+
+    await expect(reader.read('/virtual/shrinking.txt')).resolves.toMatchObject({
+      content: 'hello',
+      truncated: false,
+    });
   });
 
   it('contains filesystem failures in the stable file-preview response', async () => {

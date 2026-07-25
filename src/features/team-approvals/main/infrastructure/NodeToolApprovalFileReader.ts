@@ -30,19 +30,20 @@ export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
         };
       }
 
-      const truncated = stats.size > TOOL_APPROVAL_MAX_FILE_SIZE;
-      const readSize = truncated ? TOOL_APPROVAL_MAX_FILE_SIZE : stats.size;
+      const readSize = Math.min(stats.size, TOOL_APPROVAL_MAX_FILE_SIZE);
       const file = await fs.open(filePath, 'r');
 
       try {
         const buffer = Buffer.alloc(readSize);
         const { bytesRead } = await file.read(buffer, 0, readSize, 0);
         const contentBuffer = buffer.subarray(0, bytesRead);
+        const finalStats = await file.stat();
+        const truncated = finalStats.size > bytesRead;
 
         const binaryScanSize = Math.min(contentBuffer.length, TOOL_APPROVAL_BINARY_SCAN_SIZE);
         for (let index = 0; index < binaryScanSize; index++) {
           if (contentBuffer[index] === 0) {
-            return { content: '', exists: true, truncated: false, isBinary: true };
+            return { content: '', exists: true, truncated, isBinary: true };
           }
         }
 

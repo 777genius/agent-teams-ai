@@ -43,6 +43,10 @@ const INITIAL_STATE: ToolApprovalDiffData = {
   isBinary: false,
 };
 
+interface ScopedToolApprovalDiffData extends ToolApprovalDiffData {
+  approvalIdentity: string;
+}
+
 // =============================================================================
 // Helpers
 // =============================================================================
@@ -50,6 +54,20 @@ const INITIAL_STATE: ToolApprovalDiffData = {
 function getFilePath(toolInput: Record<string, unknown>): string {
   const fp = toolInput.file_path ?? toolInput.notebook_path;
   return typeof fp === 'string' ? fp : '';
+}
+
+function toPublicDiffData(state: ScopedToolApprovalDiffData): ToolApprovalDiffData {
+  return {
+    hasDiff: state.hasDiff,
+    loading: state.loading,
+    error: state.error,
+    fileName: state.fileName,
+    oldString: state.oldString,
+    newString: state.newString,
+    isNewFile: state.isNewFile,
+    truncated: state.truncated,
+    isBinary: state.isBinary,
+  };
 }
 
 function computeEditResult(
@@ -98,17 +116,20 @@ export function useToolApprovalDiff(
   requestId: string,
   enabled: boolean
 ): ToolApprovalDiffData {
-  const [state, setState] = useState<ToolApprovalDiffData>(INITIAL_STATE);
-  const activeRef = useRef<object | null>(null);
-
   const hasDiff = DIFF_TOOLS.has(toolName);
   const filePath = getFilePath(toolInput);
+  const approvalIdentity = JSON.stringify([teamName, runId, requestId, toolName, filePath]);
+  const [state, setState] = useState<ScopedToolApprovalDiffData>(() => ({
+    ...INITIAL_STATE,
+    approvalIdentity,
+  }));
+  const activeRef = useRef<object | null>(null);
 
   useEffect(() => {
     // Reset when approval changes
-    setState(INITIAL_STATE);
+    setState({ ...INITIAL_STATE, approvalIdentity });
     activeRef.current = null;
-  }, [requestId, runId, teamName]);
+  }, [approvalIdentity]);
 
   useEffect(() => {
     if (!hasDiff || !enabled || !filePath) return;
@@ -117,6 +138,7 @@ export function useToolApprovalDiff(
     if (toolName === 'NotebookEdit') {
       const newSource = typeof toolInput.new_source === 'string' ? toolInput.new_source : '';
       setState({
+        approvalIdentity,
         hasDiff: true,
         loading: false,
         error: null,
@@ -134,7 +156,13 @@ export function useToolApprovalDiff(
     const requestToken = {};
     activeRef.current = requestToken;
 
-    setState((prev) => ({ ...prev, hasDiff: true, loading: true, error: null }));
+    setState((prev) => ({
+      ...(prev.approvalIdentity === approvalIdentity ? prev : INITIAL_STATE),
+      approvalIdentity,
+      hasDiff: true,
+      loading: true,
+      error: null,
+    }));
 
     void (async () => {
       let result: ToolApprovalFileContent;
@@ -148,7 +176,8 @@ export function useToolApprovalDiff(
       } catch (err) {
         if (activeRef.current !== requestToken) return;
         setState((prev) => ({
-          ...prev,
+          ...(prev.approvalIdentity === approvalIdentity ? prev : INITIAL_STATE),
+          approvalIdentity,
           loading: false,
           error: err instanceof Error ? err.message : String(err),
         }));
@@ -159,7 +188,8 @@ export function useToolApprovalDiff(
 
       if (result.error) {
         setState((prev) => ({
-          ...prev,
+          ...(prev.approvalIdentity === approvalIdentity ? prev : INITIAL_STATE),
+          approvalIdentity,
           loading: false,
           error: result.error ?? 'Unknown read error',
           fileName: filePath,
@@ -169,7 +199,8 @@ export function useToolApprovalDiff(
 
       if (result.isBinary) {
         setState((prev) => ({
-          ...prev,
+          ...(prev.approvalIdentity === approvalIdentity ? prev : INITIAL_STATE),
+          approvalIdentity,
           loading: false,
           isBinary: true,
           fileName: filePath,
@@ -183,6 +214,7 @@ export function useToolApprovalDiff(
       if (toolName === 'Write') {
         const newContent = typeof toolInput.content === 'string' ? toolInput.content : '';
         setState({
+          approvalIdentity,
           hasDiff: true,
           loading: false,
           error: null,
@@ -196,6 +228,7 @@ export function useToolApprovalDiff(
       } else if (toolName === 'Edit') {
         const { newString, error } = computeEditResult(currentContent, toolInput);
         setState({
+          approvalIdentity,
           hasDiff: true,
           loading: false,
           error,
@@ -213,9 +246,12 @@ export function useToolApprovalDiff(
       activeRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toolInput is fresh; approval identity and extracted path are stable dependencies
-  }, [hasDiff, enabled, filePath, requestId, runId, teamName, toolName]);
+  }, [approvalIdentity, enabled, filePath, hasDiff, requestId, runId, teamName, toolName]);
 
   if (!hasDiff) return INITIAL_STATE;
+  if (state.approvalIdentity !== approvalIdentity) {
+    return { ...INITIAL_STATE, hasDiff: true };
+  }
 
-  return { ...state, hasDiff: true };
+  return { ...toPublicDiffData(state), hasDiff: true };
 }

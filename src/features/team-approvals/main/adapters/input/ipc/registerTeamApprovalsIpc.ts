@@ -10,8 +10,7 @@ import { validateTeamName } from '@main/ipc/guards';
 
 import type {
   TeamApprovalsCommandPort,
-  ToolApprovalFileReaderPort,
-  ToolApprovalPreviewAccessPort,
+  ToolApprovalPreviewReaderPort,
 } from '../../../../core/application/ports/TeamApprovalsPorts';
 import type { IpcResult, ToolApprovalFileContent, ToolApprovalSettings } from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
@@ -22,8 +21,7 @@ export interface TeamApprovalsIpcLogger {
 
 export interface TeamApprovalsIpcDependencies {
   commands: TeamApprovalsCommandPort;
-  fileReader: ToolApprovalFileReaderPort;
-  previewAccess: ToolApprovalPreviewAccessPort;
+  previewReader: ToolApprovalPreviewReaderPort;
   logger: TeamApprovalsIpcLogger;
 }
 
@@ -154,17 +152,18 @@ export function registerTeamApprovalsIpc(
     ): Promise<IpcResult<ToolApprovalFileContent>> => {
       const validatedRequest = validateFileReadRequest(request);
       if ('success' in validatedRequest) return validatedRequest;
-      if (!dependencies.previewAccess.canRead(validatedRequest)) {
-        return {
-          success: false,
-          error: 'File preview is not authorized for this approval request',
-        };
-      }
 
       try {
+        const preview = await dependencies.previewReader.read(validatedRequest);
+        if (preview === null) {
+          return {
+            success: false,
+            error: 'File preview is not authorized for this approval request',
+          };
+        }
         return {
           success: true,
-          data: await dependencies.fileReader.read(validatedRequest.filePath),
+          data: preview,
         };
       } catch (error) {
         return {
