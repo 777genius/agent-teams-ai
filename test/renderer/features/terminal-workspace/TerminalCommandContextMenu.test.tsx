@@ -32,6 +32,7 @@ describe('TerminalCommandContextMenu', () => {
   let host: HTMLDivElement;
   let root: Root;
   let onCopy: ReturnType<typeof vi.fn<(text: string) => Promise<boolean>>>;
+  let reopenPersistentMenu: (() => void) | null;
 
   function Harness({ outputText = MENU.outputText }: { outputText?: string }): React.JSX.Element {
     const [open, setOpen] = useState(true);
@@ -53,6 +54,16 @@ describe('TerminalCommandContextMenu', () => {
     );
   }
 
+  function PersistentHarness(): React.JSX.Element {
+    const [menu, setMenu] = useState(MENU);
+    reopenPersistentMenu = () => {
+      setMenu((currentMenu) => ({ ...currentMenu }));
+    };
+    return (
+      <TerminalCommandContextMenu menu={menu} onCopy={onCopy} onOpenChange={() => undefined} />
+    );
+  }
+
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.stubGlobal(
@@ -67,6 +78,7 @@ describe('TerminalCommandContextMenu', () => {
     document.body.appendChild(host);
     root = createRoot(host);
     onCopy = vi.fn().mockResolvedValue(true);
+    reopenPersistentMenu = null;
   });
 
   afterEach(async () => {
@@ -87,6 +99,12 @@ describe('TerminalCommandContextMenu', () => {
     const copy = getRequiredButton('agent-team-terminal-command-context-copy');
     const copyCommand = getRequiredButton('agent-team-terminal-command-context-copy-command');
     const copyOutput = getRequiredButton('agent-team-terminal-command-context-copy-output');
+    const menu = getRequiredMenu();
+    expect(document.activeElement).toBe(menu);
+
+    await pressKey(menu, 'ArrowDown');
+    expect(document.activeElement).toBe(copy);
+    await pressKey(copy, 'Tab');
     expect(document.activeElement).toBe(copy);
 
     await pressKey(copy, 'ArrowUp');
@@ -104,12 +122,11 @@ describe('TerminalCommandContextMenu', () => {
   it('skips disabled items and dismisses on Escape', async () => {
     const previousFocus = appendFocusTarget();
     await renderHarness('');
-    const copy = getRequiredButton('agent-team-terminal-command-context-copy');
     const copyCommand = getRequiredButton('agent-team-terminal-command-context-copy-command');
     const copyOutput = getRequiredButton('agent-team-terminal-command-context-copy-output');
-    expect(copyOutput.disabled).toBe(true);
+    expect(copyOutput.hasAttribute('data-disabled')).toBe(true);
 
-    await pressKey(copy, 'End');
+    await pressKey(getRequiredMenu(), 'End');
     expect(document.activeElement).toBe(copyCommand);
     await pressKey(copyCommand, 'Escape');
     await flushDismissalAutoFocus();
@@ -152,6 +169,37 @@ describe('TerminalCommandContextMenu', () => {
     expect(document.activeElement).not.toBe(previousFocus);
   });
 
+  it('resets focus restoration when a dismissed mount receives a new menu snapshot', async () => {
+    appendFocusTarget();
+    await act(async () => {
+      root.render(<PersistentHarness />);
+      await Promise.resolve();
+    });
+    const outsideTarget = appendFocusTarget();
+
+    await act(async () => {
+      outsideTarget.focus();
+      outsideTarget.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+    });
+    expect(
+      document.querySelector('[data-testid="agent-team-terminal-command-context-menu"]')
+    ).toBeNull();
+
+    const nextFocusTarget = appendFocusTarget();
+    await act(async () => {
+      nextFocusTarget.focus();
+      reopenPersistentMenu?.();
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 0);
+      });
+    });
+    await pressKey(getRequiredMenu(), 'Escape');
+    await flushDismissalAutoFocus();
+
+    expect(document.activeElement).toBe(nextFocusTarget);
+  });
+
   it('restores the deepest focused control inside a terminal command dock shadow tree', async () => {
     const { commandInput, composerShadowRoot, dock } = appendShadowFocusTarget();
     await renderHarness();
@@ -189,12 +237,22 @@ describe('TerminalCommandContextMenu', () => {
   }
 });
 
-function getRequiredButton(testId: string): HTMLButtonElement {
-  const button = document.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`);
-  if (!button) {
+function getRequiredButton(testId: string): HTMLElement {
+  const item = document.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
+  if (!item) {
     throw new Error(`Missing button: ${testId}`);
   }
-  return button;
+  return item;
+}
+
+function getRequiredMenu(): HTMLElement {
+  const menu = document.querySelector<HTMLElement>(
+    '[data-testid="agent-team-terminal-command-context-menu"]'
+  );
+  if (!menu) {
+    throw new Error('Missing terminal command context menu');
+  }
+  return menu;
 }
 
 function appendFocusTarget(): HTMLInputElement {
@@ -224,7 +282,9 @@ function appendShadowFocusTarget(): {
 async function pressKey(element: HTMLElement, key: string): Promise<void> {
   await act(async () => {
     element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key }));
-    await Promise.resolve();
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 0);
+    });
   });
 }
 

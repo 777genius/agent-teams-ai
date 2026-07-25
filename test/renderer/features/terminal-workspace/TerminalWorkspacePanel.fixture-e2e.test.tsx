@@ -1571,6 +1571,19 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(menu.textContent).toContain('Copy');
     expect(menu.textContent).toContain('Copy command');
     expect(menu.textContent).toContain('Copy output');
+    expect(document.activeElement).toBe(menu);
+    await act(async () => {
+      menu.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key: 'ArrowDown',
+        })
+      );
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 0);
+      });
+    });
     expect(document.activeElement).toBe(
       getRequiredElement('agent-team-terminal-command-context-copy')
     );

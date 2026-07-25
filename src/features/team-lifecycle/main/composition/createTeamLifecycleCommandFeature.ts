@@ -30,27 +30,30 @@ import type {
 
 export interface TeamLifecycleCommandFeature {
   readonly commandDescriptors: typeof TEAM_LIFECYCLE_DURABLE_COMMAND_DESCRIPTORS;
-  prepareProvisioning(
+  readonly prepareProvisioning: (
     request: PrepareProvisioningRequest,
     context: TeamLifecycleCommandContext
-  ): Promise<PrepareProvisioningResult>;
-  launchTeam(
+  ) => Promise<PrepareProvisioningResult>;
+  readonly launchTeam: (
     request: LaunchTeamRequest,
     context: TeamLifecycleCommandContext
-  ): Promise<LaunchTeamResult>;
-  getProvisioningStatus(
+  ) => Promise<LaunchTeamResult>;
+  readonly getProvisioningStatus: (
     request: GetProvisioningStatusRequest,
     context: TeamLifecycleCommandContext
-  ): Promise<GetProvisioningStatusResult>;
-  cancelProvisioning(
+  ) => Promise<GetProvisioningStatusResult>;
+  readonly cancelProvisioning: (
     request: CancelProvisioningRequest,
     context: TeamLifecycleCommandContext
-  ): Promise<CancelProvisioningResult>;
-  stopTeam(request: StopTeamRequest, context: TeamLifecycleCommandContext): Promise<StopTeamResult>;
-  recoverTeamRun(
+  ) => Promise<CancelProvisioningResult>;
+  readonly stopTeam: (
+    request: StopTeamRequest,
+    context: TeamLifecycleCommandContext
+  ) => Promise<StopTeamResult>;
+  readonly recoverTeamRun: (
     request: RecoverTeamRunRequest,
     context: TeamLifecycleCommandContext
-  ): Promise<RecoverTeamRunResult>;
+  ) => Promise<RecoverTeamRunResult>;
 }
 
 export type TeamLifecycleCommandFeatureDependencies = TeamLifecycleCommandDependencies;
