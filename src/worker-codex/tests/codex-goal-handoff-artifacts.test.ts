@@ -16,11 +16,12 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   captureCodexGoalContinuationWorkspaceFingerprint,
+  DEFAULT_HANDOFF_ARTIFACT_LIMITS,
   materializeCodexGoalHandoffArtifacts,
 } from "../codex-goal-handoff-artifacts";
 import { tryMaterializeTerminalCodexGoalHandoff } from "../codex-goal-terminal-handoff-materialization";
 import { captureGitWorkspacePatch } from "../codex-goal-runtime-result-io";
-import { git } from "./codex-goal-mcp-test-support";
+import { git, gitStdout } from "./codex-goal-mcp-test-support";
 
 const cleanup: string[] = [];
 
@@ -202,6 +203,105 @@ describe("Codex goal handoff artifact materialization", () => {
     await expect(captureCodexGoalContinuationWorkspaceFingerprint({
       workspacePath: fixture.workspacePath,
     })).resolves.not.toMatchObject({ sha256: first?.sha256 });
+  });
+
+  it("captures continuation identity when broad full blobs exceed the handoff aggregate budget", async () => {
+    const fixture = await createFixture();
+    const broadMergeDir = join(fixture.workspacePath, "broad-merge");
+    await mkdir(broadMergeDir);
+    const secret = ["sk-", "x".repeat(24)].join("");
+    const baseContents = `${Array.from(
+      { length: 4_096 },
+      (_, line) => `stable-line-${String(line).padStart(4, "0")}`,
+    ).join("\n")}\n`;
+    expect(Buffer.byteLength(baseContents) * 282 * 2).toBeGreaterThan(
+      DEFAULT_HANDOFF_ARTIFACT_LIMITS.maxTotalFileBytes,
+    );
+    await Promise.all(
+      Array.from({ length: 282 }, async (_, index) => {
+        const name = `path-${String(index).padStart(3, "0")}.txt`;
+        await writeFile(join(broadMergeDir, name), baseContents);
+      }),
+    );
+    await git(fixture.workspacePath, ["add", "broad-merge"]);
+    await git(fixture.workspacePath, [
+      "commit",
+      "-m",
+      "broad aggregate fixture",
+    ]);
+    const broadBaseCommit = (
+      await gitStdout(fixture.workspacePath, ["rev-parse", "HEAD"])
+    ).trim();
+    await Promise.all(
+      Array.from({ length: 282 }, async (_, index) => {
+        const name = `path-${String(index).padStart(3, "0")}.txt`;
+        await writeFile(
+          join(broadMergeDir, name),
+          `${index === 0 ? secret : `changed-${index}`}\n${baseContents}`,
+        );
+      }),
+    );
+
+    const result = await tryMaterializeTerminalCodexGoalHandoff({
+      jobId: "worker-broad-secret",
+      taskId: "task-broad-secret",
+      workspacePath: fixture.workspacePath,
+      jobRootDir: fixture.jobRootDir,
+      expectedBaseCommit: broadBaseCommit,
+    });
+
+    expect(result).toMatchObject({
+      artifacts: [],
+      errorCode: "handoff_raw_secret_rejected",
+      changedPaths: expect.arrayContaining([
+        "broad-merge/path-000.txt",
+        "broad-merge/path-281.txt",
+      ]),
+      continuationFingerprint: {
+        schema: "workspace-diff-sha256-v1",
+        baseCommit: broadBaseCommit,
+        changedPaths: expect.any(Array),
+        sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+    });
+    expect(result.changedPaths).toHaveLength(282);
+    expect(result.continuationFingerprint?.changedPaths).toHaveLength(282);
+    expect(JSON.stringify(result)).not.toContain(secret);
+  });
+
+  it("keeps continuation fingerprints fail-closed on path and byte limits", async () => {
+    const sensitiveFixture = await createFixture();
+    await writeFile(join(sensitiveFixture.workspacePath, "auth.json"), "{}\n");
+    await expect(captureCodexGoalContinuationWorkspaceFingerprint({
+      workspacePath: sensitiveFixture.workspacePath,
+    })).rejects.toThrow("handoff_sensitive_path_rejected");
+
+    const symlinkFixture = await createFixture();
+    await symlink("/etc/hosts", join(symlinkFixture.workspacePath, "link.txt"));
+    await expect(captureCodexGoalContinuationWorkspaceFingerprint({
+      workspacePath: symlinkFixture.workspacePath,
+    })).rejects.toThrow("handoff_symlink_rejected");
+
+    const fileFixture = await createFixture();
+    await writeFile(join(fileFixture.workspacePath, "large.txt"), "12345");
+    await expect(captureCodexGoalContinuationWorkspaceFingerprint({
+      workspacePath: fileFixture.workspacePath,
+      limits: { maxFileBytes: 4 },
+    })).rejects.toThrow("handoff_file_byte_limit_exceeded");
+
+    const patchFixture = await createFixture();
+    await writeFile(
+      join(patchFixture.workspacePath, "bounded-patch.txt"),
+      "safe\n".repeat(256),
+    );
+    await expect(captureCodexGoalContinuationWorkspaceFingerprint({
+      workspacePath: patchFixture.workspacePath,
+      limits: {
+        maxFileBytes: 2_048,
+        maxTotalFileBytes: 128,
+        maxPatchBytes: 2_048,
+      },
+    })).rejects.toThrow("handoff_patch_byte_limit_exceeded");
   });
 
   it("enforces the remaining aggregate current-file budget before reading", async () => {
