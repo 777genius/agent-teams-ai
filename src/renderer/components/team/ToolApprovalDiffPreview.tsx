@@ -76,11 +76,7 @@ export const ToolApprovalDiffPreview: React.FC<ToolApprovalDiffPreviewProps> = (
   }, [diff.hasDiff, diff.loading, diff.isBinary, diff.error, diff.oldString, diff.newString]);
 
   // Quick stats from toolInput (available immediately, before diff loads)
-  const quickStats = useMemo(
-    () => computeQuickStats(toolName, toolInput),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- toolInput identity tied to requestId
-    [toolName, requestId]
-  );
+  const quickStats = computeQuickStats(toolName, toolInput);
 
   // Prefer accurate diffStats when available, fall back to quickStats
   const stats = diffStats ?? quickStats;
