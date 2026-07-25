@@ -132,7 +132,7 @@ function makePorts(
 }
 
 describe('team provisioning stop flow', () => {
-  it('kills tracked processes before waiting for a slow roster-aware team stop', async () => {
+  it('cancels pending adapter launches before waiting for a slow roster-aware team stop', async () => {
     let releaseInitialStop!: () => void;
     const initialStopGate = new Promise<void>((resolve) => {
       releaseInitialStop = resolve;
@@ -168,7 +168,14 @@ describe('team provisioning stop flow', () => {
     });
     await Promise.resolve();
 
-    expect(events).toEqual(['generation', 'pause', 'kill-cli', 'kill-probes', 'stop-1:start']);
+    expect(events).toEqual([
+      'generation',
+      'pause',
+      'kill-cli',
+      'kill-probes',
+      'cancel-adapter',
+      'stop-1:start',
+    ]);
 
     releaseInitialStop();
     await stopping;
@@ -177,9 +184,9 @@ describe('team provisioning stop flow', () => {
       'pause',
       'kill-cli',
       'kill-probes',
+      'cancel-adapter',
       'stop-1:start',
       'stop-1:end',
-      'cancel-adapter',
       'wait-locks',
       'cancel-adapter',
       'stop-2:start',
