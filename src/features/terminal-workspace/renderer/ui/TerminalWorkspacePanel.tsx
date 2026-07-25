@@ -70,6 +70,7 @@ import {
   readStoredTerminalTabPreferences,
 } from '../adapters/terminalTabPreferencesStorage';
 import { useTerminalCommandAutocomplete } from '../hooks/useTerminalCommandAutocomplete';
+import { useTerminalCommandContextMenu } from '../hooks/useTerminalCommandContextMenu';
 import { useTerminalCommandHistoryPersistence } from '../hooks/useTerminalCommandHistoryPersistence';
 import { useTerminalCommandRuns } from '../hooks/useTerminalCommandRuns';
 import { useTerminalTabReorderMotion } from '../hooks/useTerminalTabReorderMotion';
@@ -111,6 +112,7 @@ import {
   type TerminalWorkspaceSnapshot,
 } from '../model/terminalTabPreferences';
 
+import { TerminalCommandContextMenu } from './TerminalCommandContextMenu';
 import {
   type TerminalWorkspaceSettingsActionId,
   TerminalWorkspaceSettingsView,
@@ -147,13 +149,6 @@ type TerminalScreenElementHandle = ComponentRef<typeof TerminalScreen> & {
 };
 type TerminalCommandDockElementHandle = ComponentRef<typeof TerminalCommandDock>;
 type TeamTFunction = ReturnType<typeof useAppTranslation>['t'];
-interface TerminalCommandContextMenuState {
-  blockText: string;
-  commandText: string;
-  outputText: string;
-  x: number;
-  y: number;
-}
 
 const TerminalButtonTooltip = ({
   children,
@@ -414,8 +409,6 @@ const TerminalWorkspaceKernelView = ({
   const [commandDockElement, setCommandDockElement] =
     useState<TerminalCommandDockElementHandle | null>(null);
   const [terminalContentPending, setTerminalContentPending] = useState(false);
-  const [commandContextMenu, setCommandContextMenu] =
-    useState<TerminalCommandContextMenuState | null>(null);
   const [appearanceSettings, setAppearanceSettings] = useState<TerminalAppearanceSettings>(() =>
     readStoredTerminalAppearanceSettings(teamName)
   );
@@ -512,6 +505,19 @@ const TerminalWorkspaceKernelView = ({
     paneId: activeCommandPaneId,
     sessionId: activeCommandSessionId,
   });
+  const {
+    copyMenuText: copyCommandContextMenuText,
+    handleContextMenuCapture: handleTerminalScreenContextMenuCapture,
+    handleOpenChange: handleCommandContextMenuOpenChange,
+    menu: commandContextMenu,
+  } = useTerminalCommandContextMenu({
+    contextKey: JSON.stringify([
+      teamName,
+      activeCommandSessionId,
+      activeCommandPaneId,
+      settingsOpen,
+    ]),
+  });
 
   const terminalScreenRef = useCallback((element: TerminalScreenElementHandle | null): void => {
     terminalScreenElementRef.current = element;
@@ -523,60 +529,6 @@ const TerminalWorkspaceKernelView = ({
     element.setAttribute('hide-shell-prompt-noise', '');
     element.requestUpdate?.();
   }, []);
-
-  const closeCommandContextMenu = useCallback((): void => {
-    setCommandContextMenu(null);
-  }, []);
-
-  const copyCommandContextMenuText = useCallback(async (text: string): Promise<void> => {
-    setCommandContextMenu(null);
-    if (!text.trim()) {
-      return;
-    }
-
-    await copyTextToClipboard(text);
-  }, []);
-
-  const handleTerminalScreenContextMenuCapture = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>): void => {
-      const menu = resolveTerminalCommandContextMenuState(event.nativeEvent);
-      if (!menu) {
-        setCommandContextMenu(null);
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      setCommandContextMenu(menu);
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (!commandContextMenu) {
-      return undefined;
-    }
-
-    const close = (): void => setCommandContextMenu(null);
-    const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') {
-        return;
-      }
-
-      event.preventDefault();
-      close();
-    };
-
-    window.addEventListener('pointerdown', close);
-    window.addEventListener('resize', close);
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('pointerdown', close);
-      window.removeEventListener('resize', close);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [commandContextMenu]);
 
   useEffect(() => {
     setAppearanceSettings(readStoredTerminalAppearanceSettings(teamName));
@@ -849,16 +801,13 @@ const TerminalWorkspaceKernelView = ({
           </div>
         </TerminalWorkspace>
       )}
-      {commandContextMenu
-        ? createPortal(
-            <TerminalCommandContextMenu
-              menu={commandContextMenu}
-              onClose={closeCommandContextMenu}
-              onCopy={copyCommandContextMenuText}
-            />,
-            document.body
-          )
-        : null}
+      {commandContextMenu ? (
+        <TerminalCommandContextMenu
+          menu={commandContextMenu}
+          onCopy={copyCommandContextMenuText}
+          onOpenChange={handleCommandContextMenuOpenChange}
+        />
+      ) : null}
     </div>
   );
 };
@@ -884,88 +833,6 @@ const TerminalTabContentSkeleton = (): React.JSX.Element => {
     </div>
   );
 };
-
-const TerminalCommandContextMenu = ({
-  menu,
-  onClose,
-  onCopy,
-}: {
-  menu: TerminalCommandContextMenuState;
-  onClose: () => void;
-  onCopy: (text: string) => void | Promise<void>;
-}): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-
-  return (
-    <div
-      role="menu"
-      aria-label={t('terminalWorkspace.terminalCommandActions')}
-      tabIndex={-1}
-      className="fixed z-[10000] min-w-56 rounded-md border border-white/10 bg-[#181a1f] p-1 text-[13px] text-slate-100 shadow-[0_18px_44px_rgba(0,0,0,0.46)] outline-none"
-      data-testid="agent-team-terminal-command-context-menu"
-      style={{ left: menu.x, top: menu.y }}
-      onContextMenu={(event) => event.preventDefault()}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          onClose();
-        }
-      }}
-      onPointerDown={(event) => event.stopPropagation()}
-    >
-      <TerminalCommandContextMenuItem
-        label={t('terminalWorkspace.copy')}
-        shortcut="⌘C"
-        testId="agent-team-terminal-command-context-copy"
-        text={menu.blockText}
-        onCopy={onCopy}
-      />
-      <TerminalCommandContextMenuItem
-        label={t('terminalWorkspace.copyCommand')}
-        shortcut="⇧⌘C"
-        testId="agent-team-terminal-command-context-copy-command"
-        text={menu.commandText}
-        onCopy={onCopy}
-      />
-      <TerminalCommandContextMenuItem
-        disabled={!menu.outputText}
-        label={t('terminalWorkspace.copyOutput')}
-        shortcut="⌥⇧⌘C"
-        testId="agent-team-terminal-command-context-copy-output"
-        text={menu.outputText}
-        onCopy={onCopy}
-      />
-    </div>
-  );
-};
-
-const TerminalCommandContextMenuItem = ({
-  disabled = false,
-  label,
-  shortcut,
-  testId,
-  text,
-  onCopy,
-}: {
-  disabled?: boolean;
-  label: string;
-  shortcut: string;
-  testId: string;
-  text: string;
-  onCopy: (text: string) => void | Promise<void>;
-}): React.JSX.Element => (
-  <button
-    type="button"
-    role="menuitem"
-    className="flex w-full items-center justify-between gap-6 rounded px-3 py-2 text-left text-slate-100 outline-none transition-colors hover:bg-white/[0.07] focus:bg-white/[0.07] disabled:cursor-not-allowed disabled:text-slate-500"
-    data-testid={testId}
-    disabled={disabled}
-    onClick={() => void onCopy(text)}
-  >
-    <span>{label}</span>
-    <span className="font-mono text-[12px] text-slate-500">{shortcut}</span>
-  </button>
-);
 
 const TerminalMuxTabs = ({
   kernel,
@@ -2044,123 +1911,6 @@ const TerminalWorkspaceStatus = ({
 
 function storageKey(teamName: string, key: string): string {
   return `agent-teams:terminal-workspace:${teamName}:${key}`;
-}
-
-function resolveTerminalCommandContextMenuState(
-  event: MouseEvent
-): TerminalCommandContextMenuState | null {
-  const entry = findTerminalHistoryEntryElement(event);
-  if (!entry) {
-    return null;
-  }
-
-  const commandText = getTerminalHistoryEntryText(entry, [
-    '[part~="history-entry-command-text"]',
-    '.history-entry-command .history-entry-text',
-    '[part~="history-entry-command"]',
-    '.history-entry-command',
-  ]);
-  if (!commandText) {
-    return null;
-  }
-
-  const outputText = getTerminalHistoryEntryText(entry, [
-    '[part~="history-entry-output-text"]',
-    '.history-entry-output .history-entry-text',
-    '[part~="history-entry-output"]',
-    '.history-entry-output',
-  ]);
-  const blockText = [commandText, outputText].filter(Boolean).join('\n');
-
-  return {
-    blockText,
-    commandText,
-    outputText,
-    x: clampTerminalContextMenuCoordinate(event.clientX, window.innerWidth, 240),
-    y: clampTerminalContextMenuCoordinate(event.clientY, window.innerHeight, 132),
-  };
-}
-
-function findTerminalHistoryEntryElement(event: MouseEvent): HTMLElement | null {
-  const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
-  for (const pathItem of path) {
-    if (pathItem instanceof HTMLElement && isTerminalHistoryEntryElement(pathItem)) {
-      return pathItem;
-    }
-  }
-
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) {
-    return null;
-  }
-
-  return target.closest<HTMLElement>('.history-entry,[part~="history-entry"]');
-}
-
-function isTerminalHistoryEntryElement(element: HTMLElement): boolean {
-  return (
-    element.classList.contains('history-entry') || hasTerminalElementPart(element, 'history-entry')
-  );
-}
-
-function hasTerminalElementPart(element: HTMLElement, part: string): boolean {
-  return (
-    element
-      .getAttribute('part')
-      ?.split(/\s+/u)
-      .some((value) => value === part) === true
-  );
-}
-
-function getTerminalHistoryEntryText(entry: HTMLElement, selectors: readonly string[]): string {
-  for (const selector of selectors) {
-    const text = normalizeTerminalContextMenuText(
-      Array.from(entry.querySelectorAll<HTMLElement>(selector))
-        .map((element) => element.textContent ?? '')
-        .join('\n')
-    );
-    if (text) {
-      return text;
-    }
-  }
-
-  return '';
-}
-
-function normalizeTerminalContextMenuText(value: string): string {
-  return value
-    .replace(/\r\n/gu, '\n')
-    .replace(/[ \t]+\n/gu, '\n')
-    .trim();
-}
-
-function clampTerminalContextMenuCoordinate(value: number, max: number, size: number): number {
-  return Math.max(8, Math.min(value, Math.max(8, max - size - 8)));
-}
-
-async function copyTextToClipboard(text: string): Promise<void> {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return;
-    }
-  } catch {
-    // Fall through to the textarea fallback below.
-  }
-
-  const textArea = document.createElement('textarea');
-  textArea.value = text;
-  textArea.setAttribute('readonly', '');
-  textArea.style.position = 'fixed';
-  textArea.style.left = '-9999px';
-  textArea.style.top = '0';
-  document.body.appendChild(textArea);
-  textArea.select();
-  try {
-    document.execCommand('copy');
-  } finally {
-    textArea.remove();
-  }
 }
 
 function readStoredValue(key: string): string | null {
