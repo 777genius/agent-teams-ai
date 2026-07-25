@@ -44,8 +44,8 @@ import {
   getStallMonitorJournalPath,
   JsonTaskStallJournalStore,
 } from '@main/services/team/stallMonitor/JsonTaskStallJournalStore';
-import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import * as atomicWrite from '@main/utils/atomicWrite';
+import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import Database from 'better-sqlite3-node';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -475,6 +475,107 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
     await expect(readFile(pendingPurgePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('does not replay an incomplete purge against a same-name replacement generation', async () => {
+    const { databasePath, teamsBasePath } = await setup();
+    const oldIdentityId = '11111111-1111-4111-8111-111111111111';
+    const replacementIdentityId = '22222222-2222-4222-8222-222222222222';
+    const paths = new MemberWorkSyncStorePaths(teamsBasePath);
+    await writeFile(
+      join(paths.getTeamRootDir(TEAM), 'config.json'),
+      JSON.stringify({ name: 'Original Team', _backupIdentityId: oldIdentityId })
+    );
+    const gateway = openGateway(databasePath);
+    const store = createMwsStore({
+      kind: 'sqlite',
+      gateway,
+      teamsBasePath,
+      fallbackRequiresReplica: false,
+    });
+    const staleStatus: MemberWorkSyncStatus = {
+      teamName: TEAM,
+      memberName: 'bob',
+      state: 'needs_sync',
+      agenda: {
+        teamName: TEAM,
+        memberName: 'bob',
+        generatedAt: T0,
+        fingerprint: 'old-generation',
+        items: [],
+        diagnostics: [],
+      },
+      evaluatedAt: T0,
+      diagnostics: [],
+    };
+    await store.write(staleStatus);
+    await new JsonMemberWorkSyncStore(paths).write(staleStatus);
+
+    const purgeActiveState = vi
+      .spyOn(JsonMemberWorkSyncStore.prototype, 'purgeActiveState')
+      .mockRejectedValueOnce(new Error('simulated crash after purge marker publication'));
+    try {
+      await expect(store.purgeTeam(TEAM, oldIdentityId)).rejects.toThrow(
+        'simulated crash after purge marker publication'
+      );
+    } finally {
+      purgeActiveState.mockRestore();
+    }
+
+    const pendingPurgePath = paths.getPendingPrimaryPurgePath(TEAM);
+    expect(JSON.parse(await readFile(pendingPurgePath, 'utf8'))).toMatchObject({
+      schemaVersion: 2,
+      teamName: TEAM,
+      deletionIdentityId: oldIdentityId,
+      activeJsonStateCleared: false,
+    });
+
+    await rm(paths.getTeamRootDir(TEAM), { recursive: true, force: true });
+    await mkdir(paths.getTeamRootDir(TEAM), { recursive: true });
+    await writeFile(
+      join(paths.getTeamRootDir(TEAM), 'config.json'),
+      JSON.stringify({
+        name: 'Replacement Team',
+        _backupIdentityId: replacementIdentityId,
+      })
+    );
+    const replacementStatus: MemberWorkSyncStatus = {
+      ...staleStatus,
+      memberName: 'alice',
+      state: 'caught_up',
+      agenda: {
+        ...staleStatus.agenda,
+        memberName: 'alice',
+        generatedAt: T2,
+        fingerprint: 'replacement-generation',
+      },
+      evaluatedAt: T2,
+    };
+    const replacementJsonStore = new JsonMemberWorkSyncStore(paths);
+    await replacementJsonStore.write(replacementStatus);
+    await gateway.close();
+
+    const recoveredGateway = openGateway(databasePath);
+    const recoveredStore = createMwsStore({
+      kind: 'sqlite',
+      gateway: recoveredGateway,
+      teamsBasePath,
+      fallbackRequiresReplica: false,
+    });
+    const recoveryPurgeActiveState = vi.spyOn(
+      JsonMemberWorkSyncStore.prototype,
+      'purgeActiveState'
+    );
+    await expect(
+      recoveredStore.read({ teamName: TEAM, memberName: 'alice' })
+    ).resolves.toMatchObject({
+      state: 'caught_up',
+      agenda: { fingerprint: 'replacement-generation' },
+    });
+    await expect(recoveredStore.read({ teamName: TEAM, memberName: 'bob' })).resolves.toBeNull();
+    expect(recoveryPurgeActiveState).not.toHaveBeenCalled();
+    recoveryPurgeActiveState.mockRestore();
+    await expect(readFile(pendingPurgePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('retries every owned directory sync after a crash leaves active files absent', async () => {
     const { teamsBasePath } = await setup();
     const paths = new MemberWorkSyncStorePaths(teamsBasePath);
@@ -522,6 +623,7 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
             events.push('establish');
             return Promise.resolve();
           },
+          isPurgeGenerationCurrent: () => Promise.resolve(true),
           confirmActiveStateCleared: () => {
             events.push('confirm');
             return Promise.resolve();

@@ -173,7 +173,7 @@ describe('team attachment permanent deletion', () => {
     }
   });
 
-  it('preserves team, task, and attachment replacements published at deletion', async () => {
+  it('preserves replacements and aborts remaining cleanup when a new source generation appears', async () => {
     const teamName = 'replacement-race-team';
     const appDataPath = getAppDataPath();
     const teamDir = path.join(getTeamsBasePath(), teamName);
@@ -207,33 +207,27 @@ describe('team attachment permanent deletion', () => {
     const prepared = await backupService.beginPermanentDeletion(teamName);
     const deleting = await backupService.commitPermanentDeletionBoundary(prepared);
 
-    const replacements = new Map<string, { filePath: string; content: string }>([
-      [
-        path.resolve(teamDir),
-        {
-          filePath: replacementConfig,
-          content: JSON.stringify({ name: 'Replacement Team' }),
-        },
-      ],
-      [path.resolve(tasksDir), { filePath: replacementTask, content: '{"subject":"replacement"}' }],
-      [
-        path.resolve(messageTeamDir),
-        { filePath: replacementMessage, content: 'replacement-message' },
-      ],
-      [
-        path.resolve(taskAttachmentTeamDir),
-        { filePath: replacementTaskAttachment, content: 'replacement-task-attachment' },
-      ],
-    ]);
     const realRename = nativeFs.promises.rename.bind(nativeFs.promises);
     const renameSpy = vi
       .spyOn(nativeFs.promises, 'rename')
       .mockImplementation(async (sourcePath, destinationPath) => {
         await realRename(sourcePath, destinationPath);
-        const replacement = replacements.get(path.resolve(String(sourcePath)));
-        if (replacement) {
-          await fs.mkdir(path.dirname(replacement.filePath), { recursive: true });
-          await fs.writeFile(replacement.filePath, replacement.content);
+        if (path.resolve(String(sourcePath)) !== path.resolve(teamDir)) return;
+
+        for (const [filePath, content] of [
+          [
+            replacementConfig,
+            JSON.stringify({
+              name: 'Replacement Team',
+              _backupIdentityId: 'replacement-team-identity',
+            }),
+          ],
+          [replacementTask, '{"subject":"replacement"}'],
+          [replacementMessage, 'replacement-message'],
+          [replacementTaskAttachment, 'replacement-task-attachment'],
+        ]) {
+          await fs.mkdir(path.dirname(filePath), { recursive: true });
+          await fs.writeFile(filePath, content);
         }
       });
 
@@ -266,7 +260,7 @@ describe('team attachment permanent deletion', () => {
             isTargetCurrent('task-attachments', detachedPath)
           );
         })
-      ).resolves.toBe(true);
+      ).resolves.toBe(false);
 
       await expect(fs.readFile(replacementConfig, 'utf8')).resolves.toContain('Replacement Team');
       await expect(fs.readFile(replacementTask, 'utf8')).resolves.toContain('replacement');
@@ -280,7 +274,7 @@ describe('team attachment permanent deletion', () => {
     }
   });
 
-  it('resumes only remaining exact targets after restart and completes the tombstone last', async () => {
+  it('fences remaining attachment targets when a same-name replacement reuses their roots', async () => {
     const teamName = 'restart-cleanup-team';
     const teamDir = path.join(getTeamsBasePath(), teamName);
     const tasksDir = path.join(getTasksBasePath(), teamName);
@@ -355,6 +349,8 @@ describe('team attachment permanent deletion', () => {
     await expect(fs.stat(tasksDir)).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(fs.stat(messageDir)).resolves.toBeDefined();
     await expect(fs.stat(taskAttachmentDir)).resolves.toBeDefined();
+    const originalMessageRoot = await fs.lstat(messageDir);
+    const originalTaskAttachmentRoot = await fs.lstat(taskAttachmentDir);
 
     const recoveredService = new TeamBackupService();
     await recoveredService.initialize();
@@ -373,8 +369,14 @@ describe('team attachment permanent deletion', () => {
 
     const replacementConfig = path.join(teamDir, 'config.json');
     const replacementTask = path.join(tasksDir, 'replacement-task.json');
-    await fs.mkdir(teamDir, { recursive: true });
-    await fs.mkdir(tasksDir, { recursive: true });
+    const replacementMessage = path.join(messageDir, 'replacement-message.json');
+    const replacementTaskAttachment = path.join(taskAttachmentDir, 'replacement-attachment.txt');
+    await Promise.all([
+      fs.mkdir(teamDir, { recursive: true }),
+      fs.mkdir(tasksDir, { recursive: true }),
+      fs.mkdir(messageDir, { recursive: true }),
+      fs.mkdir(taskAttachmentDir, { recursive: true }),
+    ]);
     await fs.writeFile(
       replacementConfig,
       JSON.stringify({
@@ -382,7 +384,13 @@ describe('team attachment permanent deletion', () => {
         _backupIdentityId: 'replacement-team-identity',
       })
     );
-    await fs.writeFile(replacementTask, JSON.stringify({ subject: 'Replacement Task' }));
+    await Promise.all([
+      fs.writeFile(replacementTask, JSON.stringify({ subject: 'Replacement Task' })),
+      fs.writeFile(replacementMessage, 'replacement-message'),
+      fs.writeFile(replacementTaskAttachment, 'replacement-task-attachment'),
+    ]);
+    expect((await fs.lstat(messageDir)).ino).toBe(originalMessageRoot.ino);
+    expect((await fs.lstat(taskAttachmentDir)).ino).toBe(originalTaskAttachmentRoot.ino);
 
     await expect(
       recoveredService.withPermanentDeletionTargetFence(
@@ -398,7 +406,8 @@ describe('team attachment permanent deletion', () => {
             (detachedPath) => isTargetCurrent('message-attachments', detachedPath),
             getTargetProofHooks('message-attachments')
           );
-          expect(messageRemoved).toBe(true);
+          expect(messageRemoved).toBe(false);
+          if (!messageRemoved) return false;
           const taskAttachmentRemoved = await new TeamTaskAttachmentStore().deleteTeamAttachments(
             teamName,
             (detachedPath) => isTargetCurrent('task-attachments', detachedPath),
@@ -413,7 +422,7 @@ describe('team attachment permanent deletion', () => {
           );
         }
       )
-    ).resolves.toBe(true);
+    ).resolves.toBe(false);
 
     const cleanupCompletedIntent = JSON.parse(await fs.readFile(intentPath, 'utf8')) as {
       phase: string;
@@ -422,23 +431,18 @@ describe('team attachment permanent deletion', () => {
     };
     expect(cleanupCompletedIntent).toMatchObject({
       phase: 'deleting',
-      completedTargets: ['team-data', 'task-data', 'message-attachments', 'task-attachments'],
-      cleanupCompleted: true,
+      completedTargets: ['team-data', 'task-data'],
+      cleanupCompleted: false,
     });
     await expect(fs.readFile(replacementConfig, 'utf8')).resolves.toContain('Replacement Team');
     await expect(fs.readFile(replacementTask, 'utf8')).resolves.toContain('Replacement Task');
-    await expect(fs.stat(messageDir)).rejects.toMatchObject({ code: 'ENOENT' });
-    await expect(fs.stat(taskAttachmentDir)).rejects.toMatchObject({ code: 'ENOENT' });
-
-    await recoveredService.completePermanentDeletion(recovered);
-    const completedTombstone = JSON.parse(await fs.readFile(intentPath, 'utf8')) as {
-      phase: string;
-      cleanupCompleted: boolean;
-    };
-    expect(completedTombstone).toMatchObject({
-      phase: 'deleted',
-      cleanupCompleted: true,
-    });
+    await expect(fs.readFile(replacementMessage, 'utf8')).resolves.toBe('replacement-message');
+    await expect(fs.readFile(replacementTaskAttachment, 'utf8')).resolves.toBe(
+      'replacement-task-attachment'
+    );
+    await expect(recoveredService.completePermanentDeletion(recovered)).rejects.toThrow(
+      'Permanent deletion cleanup is incomplete'
+    );
     recoveredService.dispose();
   });
 

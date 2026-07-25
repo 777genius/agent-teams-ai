@@ -227,6 +227,16 @@ export class TeamPermanentDeletionIdentity {
     }
   }
 
+  async isPermanentDeletionSourceGenerationCurrent(
+    intent: TeamPermanentDeletionIntent
+  ): Promise<boolean> {
+    const source = await this.readPermanentDeletionSourceIdentity(intent.teamName);
+    return (
+      source.status === 'absent' ||
+      (source.status === 'identified' && source.identityId === intent.identityId)
+    );
+  }
+
   readPermanentDeletionSourceIdentitySync(teamName: string): PermanentDeletionSourceIdentity {
     try {
       const raw = fs.readFileSync(path.join(getTeamsBasePath(), teamName, 'config.json'), 'utf8');

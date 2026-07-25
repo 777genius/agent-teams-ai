@@ -13,6 +13,7 @@ interface MemberWorkSyncTeamDeletionState {
   configAccess: Promise<void> | null;
   resumeReleased: boolean;
   quiescedTeamName: string | null;
+  deletionIdentityId: string | null;
 }
 
 export interface MemberWorkSyncTeamDeletionCoordinatorPorts {
@@ -28,7 +29,7 @@ export interface MemberWorkSyncTeamDeletionCoordinatorPorts {
   quiesceRouter(teamName: string): Promise<void>;
   resumeRouter(teamName: string): void;
   enqueueStartupScan(teamNames: string[]): Promise<void>;
-  purgeTeam(teamName: string): Promise<void>;
+  purgeTeam(teamName: string, deletionIdentityId?: string): Promise<void>;
 }
 
 export class MemberWorkSyncTeamDeletionCoordinator {
@@ -36,7 +37,7 @@ export class MemberWorkSyncTeamDeletionCoordinator {
 
   constructor(private readonly ports: MemberWorkSyncTeamDeletionCoordinatorPorts) {}
 
-  prepare(teamName: string): Promise<void> {
+  prepare(teamName: string, deletionIdentityId?: string): Promise<void> {
     const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
     const currentState = this.states.get(teamKey);
     if (currentState?.preparation) {
@@ -55,6 +56,7 @@ export class MemberWorkSyncTeamDeletionCoordinator {
       configAccess: null,
       resumeReleased: false,
       quiescedTeamName,
+      deletionIdentityId: deletionIdentityId?.trim() || null,
     };
 
     let resolvePreparation!: () => void;
@@ -66,7 +68,7 @@ export class MemberWorkSyncTeamDeletionCoordinator {
     state.preparation = preparation;
     this.states.set(teamKey, state);
 
-    void this.prepareGeneration(teamName, quiescedTeamName).then(
+    void this.prepareGeneration(teamName, quiescedTeamName, state.deletionIdentityId).then(
       resolvePreparation,
       rejectPreparation
     );
@@ -99,6 +101,7 @@ export class MemberWorkSyncTeamDeletionCoordinator {
         configAccess: null,
         resumeReleased: false,
         quiescedTeamName: null,
+        deletionIdentityId: null,
       });
       return;
     }
@@ -130,7 +133,11 @@ export class MemberWorkSyncTeamDeletionCoordinator {
     return true;
   }
 
-  private async prepareGeneration(teamName: string, quiescedTeamName: string): Promise<void> {
+  private async prepareGeneration(
+    teamName: string,
+    quiescedTeamName: string,
+    deletionIdentityId: string | null
+  ): Promise<void> {
     this.ports.beginOperationGateQuiesce(quiescedTeamName);
     this.ports.cancelScheduledDispatch(quiescedTeamName);
     this.ports.beginAuditQuiesce(quiescedTeamName);
@@ -138,7 +145,11 @@ export class MemberWorkSyncTeamDeletionCoordinator {
     await this.ports.awaitOperationGateIdle(quiescedTeamName);
     await routerQuiesce;
     await this.ports.awaitAuditIdle(quiescedTeamName);
-    await this.ports.purgeTeam(teamName);
+    if (deletionIdentityId) {
+      await this.ports.purgeTeam(teamName, deletionIdentityId);
+    } else {
+      await this.ports.purgeTeam(teamName);
+    }
     await this.ports.awaitAuditIdle(quiescedTeamName);
   }
 

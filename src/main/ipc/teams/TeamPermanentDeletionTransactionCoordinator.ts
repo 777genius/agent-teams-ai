@@ -21,7 +21,7 @@ interface TeamPermanentDeletionDataPort {
 }
 
 interface TeamPermanentDeletionLifecycle {
-  prepareTeamDeletion(teamName: string): Promise<void>;
+  prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 }
@@ -116,7 +116,7 @@ export class TeamPermanentDeletionTransactionCoordinator {
     }
 
     if (!teamDataAlreadyCompleted) {
-      await this.ports.lifecycle()?.prepareTeamDeletion(intent.teamName);
+      await this.ports.lifecycle()?.prepareTeamDeletion(intent.teamName, intent.identityId);
       if (!(await backupService.isPermanentDeletionTargetCurrent(intent))) {
         this.ports.lifecycle()?.resumeTeam(intent.teamName);
         return;

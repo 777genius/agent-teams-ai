@@ -565,9 +565,9 @@ export function createMemberWorkSyncFeature(deps: {
     quiesceRouter: (teamName) => router.quiesceTeam(teamName),
     resumeRouter: (teamName) => router.resumeTeam(teamName),
     enqueueStartupScan: (teamNames) => router.enqueueStartupScan(teamNames),
-    purgeTeam: (teamName) =>
+    purgeTeam: (teamName, deletionIdentityId) =>
       store instanceof BackendSelectingMemberWorkSyncStore
-        ? store.purgeTeam(teamName)
+        ? store.purgeTeam(teamName, deletionIdentityId)
         : Promise.resolve(),
   });
   let acceptsRuntimeTurnSettledReconcile = true;
@@ -725,7 +725,6 @@ export function createMemberWorkSyncFeature(deps: {
     });
     return { scheduled: true, reason: 'scheduled', intentKey };
   };
-
   return {
     getStatus: (request) =>
       operationGate.run(request.teamName, () => readStatusWithStaleRefresh(request)),
@@ -738,7 +737,8 @@ export function createMemberWorkSyncFeature(deps: {
     report: (request) => operationGate.run(request.teamName, () => reporter.execute(request)),
     scheduleProofMissingRecovery: (request) =>
       operationGate.run(request.teamName, () => scheduleProofMissingRecovery(request)),
-    prepareTeamDeletion: (teamName) => deletionCoordinator.prepare(teamName),
+    prepareTeamDeletion: (teamName, deletionIdentityId) =>
+      deletionCoordinator.prepare(teamName, deletionIdentityId),
     completeTeamDeletion: (teamName) => deletionCoordinator.complete(teamName),
     resumeTeam: (teamName) => deletionCoordinator.resume(teamName),
     noteTeamChange: (event) => {

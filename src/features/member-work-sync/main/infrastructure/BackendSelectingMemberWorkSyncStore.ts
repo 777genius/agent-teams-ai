@@ -1,5 +1,5 @@
-import { mkdir, readFile, rm } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { lstat, mkdir, readFile, rm } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 
 import { MEMBER_WORK_SYNC_STORE_ID } from '@features/internal-storage/contracts/internalStorageContracts';
 import {
@@ -8,7 +8,12 @@ import {
   KeyedMutex,
   type MemberWorkSyncStorageGateway,
 } from '@features/internal-storage/main';
-import { atomicWriteAsync, syncDirectoryDurably } from '@main/utils/atomicWrite';
+import {
+  atomicWriteAsync,
+  type DurablePathIdentity,
+  getDurablePathIdentity,
+  syncDirectoryDurably,
+} from '@main/utils/atomicWrite';
 
 import {
   isMemberWorkSyncStoreSnapshot,
@@ -52,7 +57,12 @@ type FullStore = Required<MemberWorkSyncStatusStorePort> &
   Required<MemberWorkSyncOutboxStorePort>;
 
 interface PendingPrimaryPurgeMarker {
+  schemaVersion: 2;
+  teamName: string;
+  deletionIdentityId: string | null;
+  teamRootIdentity: DurablePathIdentity | null;
   activeJsonStateCleared: boolean;
+  recoverySafe: boolean;
 }
 
 function emptySnapshot(): MemberWorkSyncStoreSnapshot {
@@ -103,17 +113,22 @@ export class BackendSelectingMemberWorkSyncStore
       : null;
   }
 
-  async purgeTeam(teamName: string): Promise<void> {
+  async purgeTeam(teamName: string, deletionIdentityId?: string): Promise<void> {
     if (!this.options) return;
     const backend = await this.selector.select<'sqlite' | 'json'>('sqlite', 'json');
     await this.replicaMutex.run(teamName, async () => {
+      const marker = await this.getOrCreatePendingPrimaryPurge(
+        teamName,
+        deletionIdentityId?.trim() || null
+      );
       if (backend === 'sqlite') {
-        await this.writePendingPrimaryPurge(teamName, false);
+        await this.writePendingPrimaryPurge(marker, false);
         await this.applyPendingPrimaryPurge(teamName);
       } else {
         await this.jsonStore.purgeActiveState(teamName, {
-          establishPendingPrimaryPurge: () => this.writePendingPrimaryPurge(teamName, false),
-          confirmActiveStateCleared: () => this.writePendingPrimaryPurge(teamName, true),
+          establishPendingPrimaryPurge: () => this.writePendingPrimaryPurge(marker, false),
+          isPurgeGenerationCurrent: () => this.isPendingPrimaryPurgeGenerationCurrent(marker),
+          confirmActiveStateCleared: () => this.writePendingPrimaryPurge(marker, true),
         });
       }
       this.sqlitePreparedTeams.delete(teamName);
@@ -225,18 +240,58 @@ export class BackendSelectingMemberWorkSyncStore
     const marker = await this.readPendingPrimaryPurge(teamName);
     if (!marker) return false;
     if (!marker.activeJsonStateCleared) {
-      await this.jsonStore.purgeActiveState(teamName, {
-        establishPendingPrimaryPurge: () => Promise.resolve(),
-        confirmActiveStateCleared: () => this.writePendingPrimaryPurge(teamName, true),
-      });
+      if (await this.isPendingPrimaryPurgeGenerationCurrent(marker)) {
+        await this.jsonStore.purgeActiveState(teamName, {
+          establishPendingPrimaryPurge: () => Promise.resolve(),
+          isPurgeGenerationCurrent: () => this.isPendingPrimaryPurgeGenerationCurrent(marker),
+          confirmActiveStateCleared: () => this.writePendingPrimaryPurge(marker, true),
+        });
+      } else {
+        await this.removePendingPrimaryPurge(teamName);
+      }
     }
     return true;
   }
 
-  private async writePendingPrimaryPurge(
+  private async getOrCreatePendingPrimaryPurge(
     teamName: string,
+    deletionIdentityId: string | null
+  ): Promise<PendingPrimaryPurgeMarker> {
+    const existing = await this.readPendingPrimaryPurge(teamName);
+    if (existing) {
+      if (!deletionIdentityId || existing.deletionIdentityId === deletionIdentityId) {
+        return existing;
+      }
+      if (await this.isPendingPrimaryPurgeGenerationCurrent(existing)) {
+        throw new Error(
+          `member-work-sync purge already belongs to another deletion generation for "${teamName}"`
+        );
+      }
+      await this.removePendingPrimaryPurge(teamName);
+    }
+    let teamRootIdentity: DurablePathIdentity | null = null;
+    try {
+      teamRootIdentity = getDurablePathIdentity(
+        await lstat(this.options!.paths.getTeamRootDir(teamName))
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    return {
+      schemaVersion: 2,
+      teamName: teamName.trim(),
+      deletionIdentityId,
+      teamRootIdentity,
+      activeJsonStateCleared: false,
+      recoverySafe: true,
+    };
+  }
+
+  private async writePendingPrimaryPurge(
+    marker: PendingPrimaryPurgeMarker,
     activeJsonStateCleared: boolean
   ): Promise<void> {
+    const teamName = marker.teamName;
     const markerPath = this.options!.paths.getPendingPrimaryPurgePath(teamName);
     const markerDirectory = dirname(markerPath);
     const firstCreatedDirectory = await mkdir(markerDirectory, { recursive: true });
@@ -246,7 +301,13 @@ export class BackendSelectingMemberWorkSyncStore
     await atomicWriteAsync(
       markerPath,
       `${JSON.stringify(
-        { schemaVersion: 1, teamName: teamName.trim(), activeJsonStateCleared },
+        {
+          schemaVersion: marker.schemaVersion,
+          teamName,
+          deletionIdentityId: marker.deletionIdentityId,
+          teamRootIdentity: marker.teamRootIdentity,
+          activeJsonStateCleared,
+        },
         null,
         2
       )}\n`,
@@ -267,15 +328,82 @@ export class BackendSelectingMemberWorkSyncStore
 
     try {
       const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const deletionIdentityId =
+        typeof parsed.deletionIdentityId === 'string' && parsed.deletionIdentityId.trim()
+          ? parsed.deletionIdentityId.trim()
+          : null;
+      const teamRootIdentity = this.parseDurablePathIdentity(parsed.teamRootIdentity);
+      const recoverySafe =
+        parsed.schemaVersion === 2 &&
+        typeof parsed.teamName === 'string' &&
+        parsed.teamName.trim().toLowerCase() === teamName.trim().toLowerCase() &&
+        (deletionIdentityId !== null || teamRootIdentity !== null);
       return {
-        activeJsonStateCleared:
-          parsed.schemaVersion === 1 && parsed.activeJsonStateCleared === true,
+        schemaVersion: 2,
+        teamName: teamName.trim(),
+        deletionIdentityId,
+        teamRootIdentity,
+        activeJsonStateCleared: parsed.activeJsonStateCleared === true,
+        recoverySafe,
       };
     } catch {
-      // A malformed or legacy marker still fences the primary. Re-clearing the
-      // exact owned live paths is safe and avoids resurrecting pre-purge state.
-      return { activeJsonStateCleared: false };
+      return {
+        schemaVersion: 2,
+        teamName: teamName.trim(),
+        deletionIdentityId: null,
+        teamRootIdentity: null,
+        activeJsonStateCleared: false,
+        recoverySafe: false,
+      };
     }
+  }
+
+  private parseDurablePathIdentity(value: unknown): DurablePathIdentity | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const identity = value as Partial<DurablePathIdentity>;
+    return typeof identity.dev === 'number' &&
+      Number.isFinite(identity.dev) &&
+      typeof identity.ino === 'number' &&
+      Number.isFinite(identity.ino) &&
+      typeof identity.birthtimeMs === 'number' &&
+      Number.isFinite(identity.birthtimeMs)
+      ? {
+          dev: identity.dev,
+          ino: identity.ino,
+          birthtimeMs: identity.birthtimeMs,
+        }
+      : null;
+  }
+
+  private async isPendingPrimaryPurgeGenerationCurrent(
+    marker: PendingPrimaryPurgeMarker
+  ): Promise<boolean> {
+    if (!marker.recoverySafe) return false;
+    const teamRootPath = this.options!.paths.getTeamRootDir(marker.teamName);
+    let currentRootIdentity: DurablePathIdentity | null = null;
+    try {
+      currentRootIdentity = getDurablePathIdentity(await lstat(teamRootPath));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return false;
+    }
+    if (!currentRootIdentity) return marker.deletionIdentityId !== null;
+
+    if (marker.deletionIdentityId) {
+      try {
+        const parsed = JSON.parse(
+          await readFile(join(teamRootPath, 'config.json'), 'utf8')
+        ) as Record<string, unknown>;
+        return parsed._backupIdentityId === marker.deletionIdentityId;
+      } catch {
+        return false;
+      }
+    }
+    return (
+      marker.teamRootIdentity !== null &&
+      currentRootIdentity.dev === marker.teamRootIdentity.dev &&
+      currentRootIdentity.ino === marker.teamRootIdentity.ino &&
+      currentRootIdentity.birthtimeMs === marker.teamRootIdentity.birthtimeMs
+    );
   }
 
   private async removePendingPrimaryPurge(teamName: string): Promise<void> {

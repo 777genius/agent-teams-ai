@@ -7,6 +7,7 @@ export async function purgeJsonMemberWorkSyncActiveState(
   activeFilePaths: readonly string[],
   lifecycle: {
     establishPendingPrimaryPurge(): Promise<void>;
+    isPurgeGenerationCurrent(): Promise<boolean>;
     confirmActiveStateCleared(): Promise<void>;
   }
 ): Promise<void> {
@@ -14,6 +15,9 @@ export async function purgeJsonMemberWorkSyncActiveState(
 
   const directoriesToSync = new Set(activeFilePaths.map((filePath) => dirname(filePath)));
   for (const filePath of activeFilePaths) {
+    if (!(await lifecycle.isPurgeGenerationCurrent())) {
+      throw new Error('member-work-sync active-state purge generation changed');
+    }
     try {
       await access(filePath);
       await rm(filePath, { force: true });
@@ -33,5 +37,8 @@ export async function purgeJsonMemberWorkSyncActiveState(
     }
   }
 
+  if (!(await lifecycle.isPurgeGenerationCurrent())) {
+    throw new Error('member-work-sync active-state purge generation changed');
+  }
   await lifecycle.confirmActiveStateCleared();
 }

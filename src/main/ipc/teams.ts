@@ -752,7 +752,7 @@ let boardTaskLogStreamService: BoardTaskLogStreamService | null = null;
 let boardTaskExactLogsService: BoardTaskExactLogsService | null = null;
 let boardTaskExactLogDetailService: BoardTaskExactLogDetailService | null = null;
 let teamPermanentDeletionLifecycle: {
-  prepareTeamDeletion(teamName: string): Promise<void>;
+  prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 } | null = null;
@@ -807,7 +807,7 @@ export function initializeTeamHandlers(
   taskExactLogDetailService?: BoardTaskExactLogDetailService,
   ioGovernor?: LaunchIoGovernor,
   permanentDeletionLifecycle?: {
-    prepareTeamDeletion(teamName: string): Promise<void>;
+    prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
   }

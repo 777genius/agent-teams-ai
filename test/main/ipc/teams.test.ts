@@ -4210,7 +4210,10 @@ describe('ipc teams handlers', () => {
       expect(teamBackupService.commitPermanentDeletionBoundary).toHaveBeenCalledWith(
         permanentDeletionIntent
       );
-      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith('my-team');
+      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith(
+        'my-team',
+        permanentDeletionIntent.identityId
+      );
       expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith(
         'my-team',
         expect.any(Function),
@@ -4278,7 +4281,10 @@ describe('ipc teams handlers', () => {
       };
 
       expect(result.success).toBe(true);
-      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith('my-team');
+      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith(
+        'my-team',
+        permanentDeletionIntent.identityId
+      );
       expect(teamBackupService.isPermanentDeletionTargetCurrent).toHaveBeenCalledTimes(2);
       expect(service.permanentlyDeleteTeam).not.toHaveBeenCalled();
       expect(teamBackupService.completePermanentDeletion).not.toHaveBeenCalled();
@@ -4491,7 +4497,10 @@ describe('ipc teams handlers', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('task purge failed');
-      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith('my-team');
+      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith(
+        'my-team',
+        permanentDeletionIntent.identityId
+      );
       expect(teamBackupService.abortPreparedPermanentDeletion).not.toHaveBeenCalled();
       expect(teamBackupService.completePermanentDeletion).not.toHaveBeenCalled();
       expect(permanentDeletionLifecycle.completeTeamDeletion).not.toHaveBeenCalled();

@@ -1296,10 +1296,7 @@ export class JsonMemberWorkSyncStore
 
   async purgeActiveState(
     teamName: string,
-    lifecycle: {
-      establishPendingPrimaryPurge(): Promise<void>;
-      confirmActiveStateCleared(): Promise<void>;
-    }
+    lifecycle: Parameters<typeof purgeJsonMemberWorkSyncActiveState>[1]
   ): Promise<void> {
     await this.enqueue(teamName, async () => {
       const activeFilePaths = [

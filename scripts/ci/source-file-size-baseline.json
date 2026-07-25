@@ -21,7 +21,7 @@
     "src/features/member-log-stream/core/domain/policies/memberLogPreviewExtractor.ts": 2478,
     "src/features/member-work-sync/core/application/MemberWorkSyncNudgeDispatcher.ts": 985,
     "src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts": 801,
-    "src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore.ts": 2358,
+    "src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore.ts": 2355,
     "src/features/organizations/core/domain/organizationGraph.ts": 963,
     "src/features/organizations/renderer/adapters/organizationGraphAdapter.ts": 1664,
     "src/features/organizations/renderer/ui/OrganizationEditorPanel.tsx": 942,

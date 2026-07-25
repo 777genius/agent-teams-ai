@@ -626,7 +626,9 @@ export class TeamPermanentDeletionCoordinator {
       return false;
     }
 
-    if (target !== 'team-data') return true;
+    if (target !== 'team-data') {
+      return this.identity.isPermanentDeletionSourceGenerationCurrent(persisted);
+    }
     const source = await this.identity.readPermanentDeletionSourceIdentity(
       intent.teamName,
       detachedPath ?? this.identity.getPermanentDeletionTargetPath(intent.teamName, target)

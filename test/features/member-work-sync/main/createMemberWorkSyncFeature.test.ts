@@ -1095,6 +1095,7 @@ describe('createMemberWorkSyncFeature composition', () => {
 
   it('keeps alias admission fenced until a destructive purge settles after resume', async () => {
     const teamsBasePath = path.join(makeTempRoot(), 'teams');
+    const deletionIdentityId = '11111111-1111-4111-8111-111111111111';
     const purgeStarted = createDeferred();
     const releasePurge = createDeferred();
     const purgeTeam = vi
@@ -1121,7 +1122,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     let deletion: Promise<void> | null = null;
 
     try {
-      deletion = feature.prepareTeamDeletion(' Team-A ');
+      deletion = feature.prepareTeamDeletion(' Team-A ', deletionIdentityId);
       await purgeStarted.promise;
       const aliasDeletion = feature.prepareTeamDeletion('team-a');
       expect(aliasDeletion).toBe(deletion);
@@ -1148,7 +1149,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       releasePurge.resolve();
       await Promise.all([deletion, aliasDeletion]);
       expect(purgeTeam).toHaveBeenCalledOnce();
-      expect(purgeTeam).toHaveBeenCalledWith(' Team-A ');
+      expect(purgeTeam).toHaveBeenCalledWith(' Team-A ', deletionIdentityId);
       expect(queueResumeTeam).toHaveBeenCalledOnce();
       expect(queueResumeTeam).toHaveBeenCalledWith('Team-A');
 
@@ -1250,8 +1251,8 @@ describe('createMemberWorkSyncFeature composition', () => {
       releaseRetryPurge.resolve();
       await expect(retry).resolves.toBeUndefined();
       expect(purgeTeam).toHaveBeenCalledTimes(2);
-      expect(purgeTeam).toHaveBeenNthCalledWith(1, ' Team-A ');
-      expect(purgeTeam).toHaveBeenNthCalledWith(2, ' team-a ');
+      expect(purgeTeam).toHaveBeenNthCalledWith(1, ' Team-A ', undefined);
+      expect(purgeTeam).toHaveBeenNthCalledWith(2, ' team-a ', undefined);
       expect(queueResumeTeam).toHaveBeenCalledOnce();
       expect(queueResumeTeam).toHaveBeenCalledWith('Team-A');
       expect(operationResumeTeam).toHaveBeenCalledOnce();
@@ -1402,7 +1403,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       await Promise.all([scheduledTick, deletion]);
       expect(deletionSettled).toBe(true);
       expect(purgeTeam).toHaveBeenCalledOnce();
-      expect(purgeTeam).toHaveBeenCalledWith(teamName);
+      expect(purgeTeam).toHaveBeenCalledWith(teamName, undefined);
       expect(purged).toBe(true);
       expect(wakeCompletedAfterPurge).toEqual([false]);
       expect(scheduleWake).toHaveBeenCalledOnce();
