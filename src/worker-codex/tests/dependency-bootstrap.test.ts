@@ -355,6 +355,41 @@ describe("dependency bootstrap", () => {
     }
   });
 
+  it("persists a bounded redacted dependency command failure detail", async () => {
+    const root = await mkGitDependencyWorkspace(
+      "subscription-runtime-deps-command-diagnostic-",
+      "pnpm",
+    );
+    try {
+      const result = await runDependencyBootstrap({
+        workspacePath: root,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async () => {
+          throw Object.assign(new Error("Command failed"), {
+            stderr: [
+              "ERR_PNPM_FETCH_404 registry request failed",
+              "Authorization: Bearer rawBearerSecret",
+              `detail=${"x".repeat(3_000)}`,
+            ].join("\n"),
+          });
+        },
+      });
+
+      const warning = result.warnings.find((value) =>
+        value.startsWith("dependency_install_failed:"),
+      );
+      expect(warning).toContain("ERR_PNPM_FETCH_404");
+      expect(warning).toContain("Bearer [redacted]");
+      expect(warning).not.toContain("rawBearerSecret");
+      expect(warning?.length).toBeLessThanOrEqual(
+        "dependency_install_failed:".length + 2_048,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("restores pre-existing and bootstrap-created untracked files after failure", async () => {
     const root = await mkGitDependencyWorkspace(
       "subscription-runtime-deps-transaction-untracked-",

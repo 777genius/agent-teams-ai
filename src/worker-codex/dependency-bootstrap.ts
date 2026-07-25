@@ -11,6 +11,7 @@ import { arch, platform } from "node:os";
 import { basename, join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
 import { withDependencyBootstrapLock } from "./dependency-bootstrap-lock";
 import { resolveDependencyCacheRoot } from "./dependency-cache-placement";
 import {
@@ -27,6 +28,7 @@ export {
 } from "./dependency-cache-placement";
 
 const execFileAsync = promisify(execFile);
+const maxDependencyErrorDetailChars = 2_048;
 
 export type DependencyBootstrapMode = "off" | "preflight" | "install";
 
@@ -672,5 +674,35 @@ function withDependencySafety(
 }
 
 function safeErrorMessage(error: unknown): string {
+  const detail = dependencyErrorDetail(error);
+  const normalized = new DefaultRedactor()
+    .redact(detail)
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const safe = normalized || "unknown_error";
+  return safe.length <= maxDependencyErrorDetailChars
+    ? safe
+    : `${safe.slice(0, maxDependencyErrorDetailChars - 3)}...`;
+}
+
+function dependencyErrorDetail(error: unknown): string {
+  if (isRecord(error)) {
+    const stderr = stringValue(error.stderr);
+    if (stderr.trim()) return stderr;
+    const stdout = stringValue(error.stdout);
+    if (stdout.trim()) return stdout;
+  }
   return error instanceof Error ? error.message : String(error);
+}
+
+function stringValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  return value instanceof Uint8Array
+    ? new TextDecoder().decode(value)
+    : "";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
