@@ -8,7 +8,7 @@ import {
   TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH,
   TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES,
 } from '@features/team-task-board';
-import { atomicCreateAsync } from '@main/utils/atomicWrite';
+import { atomicCreateAsync, cleanupAtomicCreateTempLinks } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -25,6 +25,7 @@ export interface TaskAttachmentAtomicCreatorPort {
    * must preserve EEXIST collisions and leave no partial target on failure.
    */
   createFileAtomically(filePath: string, data: Buffer): Promise<TaskAttachmentFileIdentity>;
+  cleanupPublishedTempLinks(filePath: string): Promise<void>;
 }
 
 export interface TaskAttachmentFileIdentity {
@@ -42,6 +43,7 @@ export interface SavedTaskAttachmentReceipt {
 
 const nodeTaskAttachmentAtomicCreator: TaskAttachmentAtomicCreatorPort = {
   createFileAtomically: atomicCreateAsync,
+  cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
 };
 
 export class TeamTaskAttachmentStore {
@@ -185,6 +187,15 @@ export class TeamTaskAttachmentStore {
 
       const filePath = this.getStoredFilePath(teamName, taskId, attachmentId);
       const identity = await this.atomicCreator.createFileAtomically(filePath, buffer);
+      try {
+        await this.atomicCreator.cleanupPublishedTempLinks(filePath);
+      } catch (error) {
+        logger.warn(
+          `[${teamName}] Failed to clean published attachment temp links for task #${taskId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
       const metadata: TaskAttachmentMeta = {
         id: attachmentId,
         filename,
@@ -231,6 +242,7 @@ export class TeamTaskAttachmentStore {
         return;
       }
 
+      await this.atomicCreator.cleanupPublishedTempLinks(filePath);
       try {
         await fs.promises.unlink(filePath);
         logger.debug(
@@ -281,6 +293,7 @@ export class TeamTaskAttachmentStore {
       const filePath = await this.findAttachmentFilePath(teamName, taskId, attachmentId, mimeType);
       if (!filePath) return;
 
+      await this.atomicCreator.cleanupPublishedTempLinks(filePath);
       try {
         await fs.promises.unlink(filePath);
         logger.debug(`[${teamName}] Deleted task attachment ${attachmentId} for task #${taskId}`);

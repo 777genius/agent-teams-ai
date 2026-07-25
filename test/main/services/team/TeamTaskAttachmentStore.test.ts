@@ -11,6 +11,10 @@ import {
   type TaskAttachmentAtomicCreatorPort,
   TeamTaskAttachmentStore,
 } from '../../../../src/main/services/team/TeamTaskAttachmentStore';
+import {
+  atomicCreateAsync,
+  cleanupAtomicCreateTempLinks,
+} from '../../../../src/main/utils/atomicWrite';
 
 import type { TaskAttachmentMeta, TaskComment } from '@shared/types';
 
@@ -32,6 +36,7 @@ const LEGACY_ATTACHMENT_FILE = `${ATTACHMENT_ID}--proof.png`;
 function createAtomicCreator(): TaskAttachmentAtomicCreatorPort {
   return {
     createFileAtomically: vi.fn(async () => ({ dev: 1, ino: 2 })),
+    cleanupPublishedTempLinks: vi.fn(() => Promise.resolve()),
   };
 }
 
@@ -185,6 +190,51 @@ describe('TeamTaskAttachmentStore', () => {
     expect(['one', 'two']).toContain(
       (await readFile(join(taskDirectory, attachmentFile))).toString()
     );
+  });
+
+  it('removes a crash-left temp hardlink before deleting its published attachment', async () => {
+    const { taskDirectory } = await createRealStore();
+    const atomicCreator: TaskAttachmentAtomicCreatorPort = {
+      createFileAtomically: atomicCreateAsync,
+      cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
+    };
+    const store = new TeamTaskAttachmentStore(atomicCreator);
+    const originalUnlink = fsPromises.unlink.bind(fsPromises);
+    let tempUnlinkFailures = 0;
+    const unlink = vi.spyOn(fsPromises, 'unlink').mockImplementation(async (filePath) => {
+      if (
+        basename(String(filePath)).startsWith('.review-create.') &&
+        tempUnlinkFailures < 2
+      ) {
+        tempUnlinkFailures += 1;
+        const error = new Error('injected busy temp hardlink') as NodeJS.ErrnoException;
+        error.code = 'EBUSY';
+        throw error;
+      }
+      await originalUnlink(filePath);
+    });
+
+    try {
+      await store.saveAttachment(
+        'my-team',
+        'task-1',
+        ATTACHMENT_ID,
+        'proof.png',
+        'image/png',
+        'dGVzdA=='
+      );
+      expect(await readdir(taskDirectory)).toHaveLength(2);
+      expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toContain(
+        'Failed to clean published attachment temp links'
+      );
+      vi.mocked(console.warn).mockClear();
+
+      await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+
+      await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      unlink.mockRestore();
+    }
   });
 
   it('does not roll back a pre-existing attachment when its ID collides', async () => {
