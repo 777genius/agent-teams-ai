@@ -199,7 +199,7 @@ function createBoundaryPorts(
       Promise.resolve({
         name: teamName,
         projectPath: '/test/project',
-        members: [{ name: 'Builder' }],
+        members: [{ name: 'Builder', providerId: 'opencode' as const }],
       })
     ),
     readMetaMembers: vi.fn(async () => []),
