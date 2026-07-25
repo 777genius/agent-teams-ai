@@ -36,17 +36,18 @@ export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
 
       try {
         const buffer = Buffer.alloc(readSize);
-        await file.read(buffer, 0, readSize, 0);
+        const { bytesRead } = await file.read(buffer, 0, readSize, 0);
+        const contentBuffer = buffer.subarray(0, bytesRead);
 
-        const binaryScanSize = Math.min(readSize, TOOL_APPROVAL_BINARY_SCAN_SIZE);
+        const binaryScanSize = Math.min(contentBuffer.length, TOOL_APPROVAL_BINARY_SCAN_SIZE);
         for (let index = 0; index < binaryScanSize; index++) {
-          if (buffer[index] === 0) {
+          if (contentBuffer[index] === 0) {
             return { content: '', exists: true, truncated: false, isBinary: true };
           }
         }
 
         return {
-          content: buffer.toString('utf8'),
+          content: contentBuffer.toString('utf8'),
           exists: true,
           truncated,
           isBinary: false,

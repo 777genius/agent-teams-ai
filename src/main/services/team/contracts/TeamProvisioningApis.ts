@@ -276,6 +276,7 @@ export interface TeamCrossTeamMessagingApi {
 }
 
 export interface TeamToolApprovalApi {
+  getPendingToolApprovalFilePath(teamName: string, runId: string, requestId: string): string | null;
   respondToToolApproval(
     teamName: string,
     runId: string,
@@ -471,6 +472,7 @@ export function bindTeamCrossTeamMessagingApi(
 
 export function bindTeamToolApprovalApi(source: TeamToolApprovalApi): TeamToolApprovalApi {
   return {
+    getPendingToolApprovalFilePath: source.getPendingToolApprovalFilePath.bind(source),
     respondToToolApproval: source.respondToToolApproval.bind(source),
     updateToolApprovalSettings: source.updateToolApprovalSettings.bind(source),
   };

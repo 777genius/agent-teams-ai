@@ -116,6 +116,7 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     TeamProvisioningToolApprovalFacade<TRun>,
     | 'dismissApprovalNotification'
     | 'answerRuntimeToolApproval'
+    | 'getPendingToolApprovalFilePath'
     | 'respondToToolApproval'
     | 'setMainWindow'
     | 'setToolApprovalEventEmitter'
@@ -358,6 +359,14 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
 
   updateToolApprovalSettings(teamName: string, settings: ToolApprovalSettings): void {
     this.toolApprovalFacade.updateToolApprovalSettings(teamName, settings);
+  }
+
+  getPendingToolApprovalFilePath(
+    teamName: string,
+    runId: string,
+    requestId: string
+  ): string | null {
+    return this.toolApprovalFacade.getPendingToolApprovalFilePath(teamName, runId, requestId);
   }
 
   getLiveLeadProcessMessages(teamName: string): InboxMessage[] {

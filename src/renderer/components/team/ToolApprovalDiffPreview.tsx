@@ -12,6 +12,8 @@ import { AlertTriangle, ChevronDown, ChevronRight, FileDiff, Loader2 } from 'luc
 interface ToolApprovalDiffPreviewProps {
   toolName: string;
   toolInput: Record<string, unknown>;
+  teamName: string;
+  runId: string;
   requestId: string;
   onExpandedChange?: (expanded: boolean) => void;
 }
@@ -57,12 +59,14 @@ function computeQuickStats(
 export const ToolApprovalDiffPreview: React.FC<ToolApprovalDiffPreviewProps> = ({
   toolName,
   toolInput,
+  teamName,
+  runId,
   requestId,
   onExpandedChange,
 }) => {
   const { t } = useAppTranslation('team');
   const [expanded, setExpanded] = useState(loadExpandedPref);
-  const diff = useToolApprovalDiff(toolName, toolInput, requestId, expanded);
+  const diff = useToolApprovalDiff(toolName, toolInput, teamName, runId, requestId, expanded);
 
   // Stats from actual diff data (after IPC), using the same algorithm as DiffViewer
   const diffStats = useMemo(() => {

@@ -1,3 +1,4 @@
+import type { ToolApprovalFileReadRequest } from '@features/team-approvals/contracts';
 import type { ToolApprovalFileContent, ToolApprovalSettings } from '@shared/types';
 
 export interface RespondToToolApprovalCommand {
@@ -22,4 +23,9 @@ export interface TeamApprovalsCommandPort {
 /** Read-only filesystem capability used by the approval diff preview. */
 export interface ToolApprovalFileReaderPort {
   read(filePath: string): Promise<ToolApprovalFileContent>;
+}
+
+/** Authorizes a preview read against the exact active approval identity and file path. */
+export interface ToolApprovalPreviewAccessPort {
+  canRead(request: ToolApprovalFileReadRequest): boolean;
 }

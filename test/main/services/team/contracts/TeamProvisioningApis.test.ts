@@ -126,6 +126,7 @@ function createSource() {
     }),
     registerPendingCrossTeamReplyExpectation: vi.fn(),
     clearPendingCrossTeamReplyExpectation: vi.fn(),
+    getPendingToolApprovalFilePath: vi.fn(() => null),
     respondToToolApproval: vi.fn(() => Promise.resolve()),
     updateToolApprovalSettings: vi.fn(),
   } satisfies Parameters<typeof bindTeamIpcHandlerApis>[0] &
@@ -206,6 +207,7 @@ describe('bindTeamIpcHandlerApis', () => {
       'sendMessageToTeam',
     ]);
     expect(sortedKeys(api.toolApproval)).toEqual([
+      'getPendingToolApprovalFilePath',
       'respondToToolApproval',
       'updateToolApprovalSettings',
     ]);

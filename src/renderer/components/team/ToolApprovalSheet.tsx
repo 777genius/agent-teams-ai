@@ -346,6 +346,8 @@ export const ToolApprovalSheet: React.FC = () => {
         <ToolApprovalDiffPreview
           toolName={current.toolName}
           toolInput={current.toolInput}
+          teamName={current.teamName}
+          runId={current.runId}
           requestId={current.requestId}
           onExpandedChange={setDiffExpanded}
         />

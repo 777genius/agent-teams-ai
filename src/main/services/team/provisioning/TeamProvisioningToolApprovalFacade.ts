@@ -386,6 +386,30 @@ export class TeamProvisioningToolApprovalFacade<
     this.reEvaluatePendingApprovals();
   }
 
+  getPendingToolApprovalFilePath(
+    teamName: string,
+    runId: string,
+    requestId: string
+  ): string | null {
+    const runtimeApproval = this.runtimeToolApprovalCoordinator.get(teamName, requestId)?.approval;
+    const run = this.deps.getRun(runId);
+    const runApproval =
+      run?.teamName === teamName ? run.pendingApprovals.get(requestId) : undefined;
+    const approval =
+      runtimeApproval?.runId === runId
+        ? runtimeApproval
+        : runApproval?.runId === runId && runApproval.teamName === teamName
+          ? runApproval
+          : undefined;
+
+    if (!approval || (approval.toolName !== 'Write' && approval.toolName !== 'Edit')) {
+      return null;
+    }
+
+    const filePath = approval.toolInput.file_path;
+    return typeof filePath === 'string' && filePath.trim().length > 0 ? filePath : null;
+  }
+
   emitToolApprovalEvent(event: ToolApprovalEvent): void {
     this.toolApprovalEventEmitter?.(event);
   }

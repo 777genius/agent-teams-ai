@@ -85,17 +85,21 @@ function computeEditResult(
  *
  * @param toolName  - The tool requesting approval
  * @param toolInput - The tool's input parameters
+ * @param teamName  - Team that owns the active approval
+ * @param runId     - Run that owns the active approval
  * @param requestId - Unique approval request ID (used for cancellation)
  * @param enabled   - Only fetch when true (lazy — user expanded the diff section)
  */
 export function useToolApprovalDiff(
   toolName: string,
   toolInput: Record<string, unknown>,
+  teamName: string,
+  runId: string,
   requestId: string,
   enabled: boolean
 ): ToolApprovalDiffData {
   const [state, setState] = useState<ToolApprovalDiffData>(INITIAL_STATE);
-  const activeRef = useRef<string | null>(null);
+  const activeRef = useRef<object | null>(null);
 
   const hasDiff = DIFF_TOOLS.has(toolName);
   const filePath = getFilePath(toolInput);
@@ -104,7 +108,7 @@ export function useToolApprovalDiff(
     // Reset when approval changes
     setState(INITIAL_STATE);
     activeRef.current = null;
-  }, [requestId]);
+  }, [requestId, runId, teamName]);
 
   useEffect(() => {
     if (!hasDiff || !enabled || !filePath) return;
@@ -127,17 +131,22 @@ export function useToolApprovalDiff(
     }
 
     // Write / Edit: need to read current file from disk
-    const currentRequestId = requestId;
-    activeRef.current = currentRequestId;
+    const requestToken = {};
+    activeRef.current = requestToken;
 
     setState((prev) => ({ ...prev, hasDiff: true, loading: true, error: null }));
 
     void (async () => {
       let result: ToolApprovalFileContent;
       try {
-        result = await api.teams.readFileForToolApproval(filePath);
+        result = await api.teams.readFileForToolApproval({
+          teamName,
+          runId,
+          requestId,
+          filePath,
+        });
       } catch (err) {
-        if (activeRef.current !== currentRequestId) return;
+        if (activeRef.current !== requestToken) return;
         setState((prev) => ({
           ...prev,
           loading: false,
@@ -146,7 +155,7 @@ export function useToolApprovalDiff(
         return;
       }
 
-      if (activeRef.current !== currentRequestId) return;
+      if (activeRef.current !== requestToken) return;
 
       if (result.error) {
         setState((prev) => ({
@@ -203,8 +212,8 @@ export function useToolApprovalDiff(
     return () => {
       activeRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- toolInput is a fresh object each render, use requestId for identity
-  }, [hasDiff, enabled, filePath, requestId, toolName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- toolInput is fresh; approval identity and extracted path are stable dependencies
+  }, [hasDiff, enabled, filePath, requestId, runId, teamName, toolName]);
 
   if (!hasDiff) return INITIAL_STATE;
 

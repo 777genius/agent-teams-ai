@@ -21,6 +21,12 @@ const CHANNELS = [
 ];
 const APPROVAL_PREVIEW_PATH = path.resolve('approval preview.txt');
 const APPROVAL_FILE_PATH = path.resolve('approval.txt');
+const VALID_FILE_READ_REQUEST = {
+  teamName: 'team-one',
+  runId: 'run-1',
+  requestId: 'request-1',
+  filePath: APPROVAL_PREVIEW_PATH,
+};
 const VALID_SETTINGS: ToolApprovalSettings = {
   autoAllowAll: false,
   autoAllowFileEdits: true,
@@ -52,8 +58,16 @@ describe('team approvals IPC', () => {
       isBinary: false,
     })),
   };
+  const previewAccess = {
+    canRead: vi.fn(() => true),
+  };
   const logger = { error: vi.fn() };
-  const dependencies: TeamApprovalsIpcDependencies = { commands, fileReader, logger };
+  const dependencies: TeamApprovalsIpcDependencies = {
+    commands,
+    fileReader,
+    previewAccess,
+    logger,
+  };
 
   beforeEach(() => {
     handlers.clear();
@@ -193,31 +207,84 @@ describe('team approvals IPC', () => {
     });
   });
 
-  it('validates absolute paths and returns the reader result in a success envelope', async () => {
-    await expect(handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, '')).resolves.toEqual({
+  it('validates approval identity and absolute paths before reading', async () => {
+    await expect(handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, null)).resolves.toEqual({
+      success: false,
+      error: 'File preview request must be an object',
+    });
+    await expect(
+      handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!(
+        {},
+        { ...VALID_FILE_READ_REQUEST, teamName: '../team' }
+      )
+    ).resolves.toEqual({
+      success: false,
+      error: 'teamName contains invalid characters',
+    });
+    await expect(
+      handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, { ...VALID_FILE_READ_REQUEST, runId: '' })
+    ).resolves.toEqual({
+      success: false,
+      error: 'runId must be a non-empty string',
+    });
+    await expect(
+      handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, { ...VALID_FILE_READ_REQUEST, requestId: '' })
+    ).resolves.toEqual({
+      success: false,
+      error: 'requestId must be a non-empty string',
+    });
+    await expect(
+      handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, { ...VALID_FILE_READ_REQUEST, filePath: '' })
+    ).resolves.toEqual({
       success: false,
       error: 'filePath must be a non-empty string',
     });
-    await expect(handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, 'relative.txt')).resolves.toEqual({
-      success: false,
-      error: 'filePath must be an absolute path',
-    });
+    await expect(
+      handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!(
+        {},
+        { ...VALID_FILE_READ_REQUEST, filePath: 'relative.txt' }
+      )
+    ).resolves.toEqual({ success: false, error: 'filePath must be an absolute path' });
     expect(fileReader.read).not.toHaveBeenCalled();
 
     await expect(
-      handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, APPROVAL_PREVIEW_PATH)
+      handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, VALID_FILE_READ_REQUEST)
     ).resolves.toEqual({
       success: true,
       data: { content: 'preview', exists: true, truncated: false, isBinary: false },
     });
+    expect(previewAccess.canRead).toHaveBeenCalledWith({
+      teamName: 'team-one',
+      runId: 'run-1',
+      requestId: 'request-1',
+      filePath: APPROVAL_PREVIEW_PATH,
+    });
     expect(fileReader.read).toHaveBeenCalledWith(APPROVAL_PREVIEW_PATH);
+  });
+
+  it('rejects file reads that do not match the active approval', async () => {
+    previewAccess.canRead.mockReturnValueOnce(false);
+
+    await expect(
+      handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!(
+        {},
+        { ...VALID_FILE_READ_REQUEST, filePath: APPROVAL_FILE_PATH }
+      )
+    ).resolves.toEqual({
+      success: false,
+      error: 'File preview is not authorized for this approval request',
+    });
+    expect(fileReader.read).not.toHaveBeenCalled();
   });
 
   it('contains an unexpected reader rejection in the legacy success envelope', async () => {
     fileReader.read.mockRejectedValueOnce(new Error('read failed'));
 
     await expect(
-      handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, APPROVAL_FILE_PATH)
+      handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!(
+        {},
+        { ...VALID_FILE_READ_REQUEST, filePath: APPROVAL_FILE_PATH }
+      )
     ).resolves.toEqual({
       success: true,
       data: {

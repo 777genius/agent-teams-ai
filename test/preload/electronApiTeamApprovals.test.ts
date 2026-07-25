@@ -66,12 +66,18 @@ describe('preload team approvals wiring', () => {
     await teams.respondToToolApproval('team-one', 'run-1', 'request-1', false, 'Not allowed');
     await teams.updateToolApprovalSettings('team-one', settings);
     const toolOutputPath = path.resolve('tool-output.txt');
-    await teams.readFileForToolApproval(toolOutputPath);
+    const fileReadRequest = {
+      teamName: 'team-one',
+      runId: 'run-1',
+      requestId: 'request-1',
+      filePath: toolOutputPath,
+    };
+    await teams.readFileForToolApproval(fileReadRequest);
 
     expect(mocks.ipcRenderer.invoke.mock.calls).toEqual([
       ['team:toolApprovalRespond', 'team-one', 'run-1', 'request-1', false, 'Not allowed'],
       ['team:toolApprovalSettings', 'team-one', settings],
-      ['team:toolApprovalReadFile', toolOutputPath],
+      ['team:toolApprovalReadFile', fileReadRequest],
     ]);
   });
 

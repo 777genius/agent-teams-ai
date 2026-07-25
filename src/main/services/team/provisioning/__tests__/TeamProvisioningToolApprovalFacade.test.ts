@@ -105,6 +105,35 @@ describe('TeamProvisioningToolApprovalFacade', () => {
     expect(facade.tryClaimResponse('req-shared')).toBe(true);
   });
 
+  it('exposes a preview path only for the exact active file-edit approval', () => {
+    const { facade, run } = createHarness();
+    run.pendingApprovals.set(
+      'req-preview',
+      approvalRequest({
+        requestId: 'req-preview',
+        toolName: 'Write',
+        toolInput: { file_path: '/repo/approved.txt', content: 'next' },
+      })
+    );
+
+    expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'req-preview')).toBe(
+      '/repo/approved.txt'
+    );
+    expect(facade.getPendingToolApprovalFilePath('other-team', 'run-1', 'req-preview')).toBeNull();
+    expect(facade.getPendingToolApprovalFilePath('alpha', 'stale-run', 'req-preview')).toBeNull();
+    expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'missing')).toBeNull();
+
+    run.pendingApprovals.set(
+      'req-preview',
+      approvalRequest({
+        requestId: 'req-preview',
+        toolName: 'Bash',
+        toolInput: { file_path: '/repo/approved.txt' },
+      })
+    );
+    expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'req-preview')).toBeNull();
+  });
+
   it('re-evaluates pending lead approvals when settings are updated', () => {
     const { facade, run, events } = createHarness();
 

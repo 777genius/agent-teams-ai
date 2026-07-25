@@ -1,8 +1,9 @@
+import { promises as fs } from 'node:fs';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   NodeToolApprovalFileReader,
@@ -18,6 +19,7 @@ describe('NodeToolApprovalFileReader', () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await rm(tempDirectory, { recursive: true, force: true });
   });
 
@@ -83,6 +85,29 @@ describe('NodeToolApprovalFileReader', () => {
     const result = await reader.read(lateNullPath);
     expect(result).toMatchObject({ exists: true, truncated: false, isBinary: false });
     expect(result.content.charCodeAt(8 * 1024)).toBe(0);
+  });
+
+  it('decodes only bytes actually returned by a short read', async () => {
+    vi.spyOn(fs, 'stat').mockResolvedValueOnce({
+      size: 8,
+      isFile: () => true,
+    } as never);
+    const close = vi.fn(async () => undefined);
+    vi.spyOn(fs, 'open').mockResolvedValueOnce({
+      read: vi.fn(async (buffer: Buffer) => {
+        buffer.write('hello');
+        return { bytesRead: 5, buffer };
+      }),
+      close,
+    } as never);
+
+    await expect(reader.read('/virtual/short-read.txt')).resolves.toEqual({
+      content: 'hello',
+      exists: true,
+      truncated: false,
+      isBinary: false,
+    });
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it('contains filesystem failures in the stable file-preview response', async () => {
