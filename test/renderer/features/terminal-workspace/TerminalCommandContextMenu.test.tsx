@@ -32,6 +32,7 @@ describe('TerminalCommandContextMenu', () => {
   let host: HTMLDivElement;
   let root: Root;
   let onCopy: ReturnType<typeof vi.fn<(text: string) => Promise<boolean>>>;
+  let reopenPersistentMenu: (() => void) | null;
 
   function Harness({ outputText = MENU.outputText }: { outputText?: string }): React.JSX.Element {
     const [open, setOpen] = useState(true);
@@ -53,6 +54,16 @@ describe('TerminalCommandContextMenu', () => {
     );
   }
 
+  function PersistentHarness(): React.JSX.Element {
+    const [menu, setMenu] = useState(MENU);
+    reopenPersistentMenu = () => {
+      setMenu((currentMenu) => ({ ...currentMenu }));
+    };
+    return (
+      <TerminalCommandContextMenu menu={menu} onCopy={onCopy} onOpenChange={() => undefined} />
+    );
+  }
+
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.stubGlobal(
@@ -67,6 +78,7 @@ describe('TerminalCommandContextMenu', () => {
     document.body.appendChild(host);
     root = createRoot(host);
     onCopy = vi.fn().mockResolvedValue(true);
+    reopenPersistentMenu = null;
   });
 
   afterEach(async () => {
@@ -155,6 +167,37 @@ describe('TerminalCommandContextMenu', () => {
     ).toBeNull();
     expect(document.activeElement).toBe(outsideTarget);
     expect(document.activeElement).not.toBe(previousFocus);
+  });
+
+  it('resets focus restoration when a dismissed mount receives a new menu snapshot', async () => {
+    appendFocusTarget();
+    await act(async () => {
+      root.render(<PersistentHarness />);
+      await Promise.resolve();
+    });
+    const outsideTarget = appendFocusTarget();
+
+    await act(async () => {
+      outsideTarget.focus();
+      outsideTarget.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+    });
+    expect(
+      document.querySelector('[data-testid="agent-team-terminal-command-context-menu"]')
+    ).toBeNull();
+
+    const nextFocusTarget = appendFocusTarget();
+    await act(async () => {
+      nextFocusTarget.focus();
+      reopenPersistentMenu?.();
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 0);
+      });
+    });
+    await pressKey(getRequiredMenu(), 'Escape');
+    await flushDismissalAutoFocus();
+
+    expect(document.activeElement).toBe(nextFocusTarget);
   });
 
   it('restores the deepest focused control inside a terminal command dock shadow tree', async () => {
