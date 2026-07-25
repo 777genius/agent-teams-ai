@@ -285,6 +285,22 @@ describe("project verifier handoff", () => {
     ).rejects.toThrow(
       "project_control_runtime_interruption_snapshot_unavailable",
     );
+    const timeoutResult = {
+      ...result,
+      schemaVersion: 1,
+      taskId: "task-1",
+      reason: "task_timeout",
+      updatedAt: "2026-07-21T11:59:00.000Z",
+      blockers: ["task_timeout"],
+      nextAction: "preserve_patch",
+    };
+    await writeFile(resultPath, `${JSON.stringify(timeoutResult)}\n`);
+    await expect(
+      readControlledRuntimeInterruptionSnapshot({ producer }),
+    ).resolves.toMatchObject({
+      kind: "continuation_fingerprint",
+      sha256: fingerprint.sha256,
+    });
     const controlledResult = {
       ...result,
       schemaVersion: 1,

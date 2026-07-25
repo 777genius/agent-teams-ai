@@ -29,6 +29,10 @@ export type ProjectPreStartContinuationDecision =
       readonly kind: "controlled_runtime_interruption";
       readonly workspaceMode: "admitted_input_patch_runtime_continuation";
       readonly evidence: ControlledRuntimeInterruptionEvidence;
+    }
+  | {
+      readonly kind: "terminal_timeout";
+      readonly workspaceMode: "admitted_input_patch_runtime_continuation";
     };
 
 export function isCapacityContinuationDecision(
@@ -51,6 +55,16 @@ export function projectPreStartContinuationDecision(input: {
   if (capacityMode) {
     return { kind: "capacity", workspaceMode: capacityMode };
   }
+  if (
+    !input.reviewedOutputId &&
+    input.manifest.projectPreStartAdmission &&
+    isAdmittedInputPatchTerminalTimeout(input.status)
+  ) {
+    return {
+      kind: "terminal_timeout",
+      workspaceMode: "admitted_input_patch_runtime_continuation",
+    };
+  }
   const controlledInterruption = {
     status: input.status,
     evidence: input.controlledInterruptionEvidence,
@@ -67,4 +81,23 @@ export function projectPreStartContinuationDecision(input: {
     workspaceMode: "admitted_input_patch_runtime_continuation",
     evidence: controlledInterruption.evidence,
   };
+}
+
+function isAdmittedInputPatchTerminalTimeout(
+  status: Pick<
+    CodexGoalStatus,
+    | "workspaceDirty"
+    | "resultExists"
+    | "resultStatus"
+    | "resultReason"
+    | "recommendedAction"
+  >,
+): boolean {
+  return (
+    status.workspaceDirty === true &&
+    status.resultExists === true &&
+    status.resultStatus === "partial" &&
+    status.resultReason === "task_timeout" &&
+    status.recommendedAction === "continue_after_timeout"
+  );
 }

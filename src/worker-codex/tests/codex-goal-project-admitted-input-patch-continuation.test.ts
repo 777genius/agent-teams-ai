@@ -25,6 +25,7 @@ import {
 } from "../codex-goal-mcp-project-control-actions";
 import { isAdmittedInputPatchCapacityContinuation } from "../application/project-control/codex-goal-project-admitted-input-patch-continuation";
 import { isCleanPreStartAdmissionCapacityContinuation } from "../application/project-control/codex-goal-project-clean-capacity-continuation";
+import { projectPreStartContinuationDecision } from "../application/project-control/codex-goal-project-pre-start-continuation";
 import {
   codexGoalWorkerControlService,
   codexGoalWorkerControlTarget,
@@ -75,6 +76,43 @@ describe("admitted input-patch capacity continuation", () => {
         resultReason: "provider_failure",
       }),
     ).toBe(false);
+  });
+
+  it("recognizes a bounded dirty task timeout only for an admitted patch", () => {
+    const status = {
+      workspaceDirty: true,
+      resultExists: true,
+      resultStatus: "partial",
+      resultReason: "task_timeout",
+      recommendedAction: "continue_after_timeout",
+    } as CodexGoalStatus;
+    const manifest = {
+      projectPreStartAdmission: {},
+    } as CodexGoalJobManifest;
+
+    expect(projectPreStartContinuationDecision({ manifest, status })).toEqual({
+      kind: "terminal_timeout",
+      workspaceMode: "admitted_input_patch_runtime_continuation",
+    });
+    const {
+      projectPreStartAdmission: _admission,
+      ...manifestWithoutAdmission
+    } = manifest;
+    expect(
+      projectPreStartContinuationDecision({
+        manifest: manifestWithoutAdmission as CodexGoalJobManifest,
+        status,
+      }),
+    ).toBeUndefined();
+    expect(
+      projectPreStartContinuationDecision({
+        manifest,
+        status: {
+          ...status,
+          recommendedAction: "inspect_dirty_failure",
+        },
+      }),
+    ).toBeUndefined();
   });
 
   it("resumes only a strict prewarm-before-attempt result for the admitted patch", async () => {

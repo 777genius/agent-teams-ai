@@ -20,7 +20,7 @@ const runtimePreservedContinuationReasons = new Set([
   "account_unavailable",
   "reconnect_required",
 ]);
-const runtimeInterruptionFingerprintErrors = new Set([
+const runtimeContinuationFingerprintErrors = new Set([
   "handoff_raw_secret_rejected",
   "handoff_changed_file_limit_exceeded",
 ]);
@@ -75,8 +75,9 @@ export async function readVerifiableProducerHandoff(input: {
 
 /**
  * Reads the immutable workspace snapshot captured by the runtime when a
- * broker-owned interrupt stopped an admitted worker. This is continuation
- * evidence only; it is never completion or review approval.
+ * broker-owned interrupt or bounded task timeout stopped an admitted worker.
+ * This is continuation evidence only; it is never completion or review
+ * approval.
  */
 export async function readControlledRuntimeInterruptionHandoff(input: {
   readonly producer: CodexGoalJobManifest;
@@ -125,12 +126,15 @@ export async function readControlledRuntimeInterruptionSnapshot(input: {
       resultPath,
       taskId: input.producer.taskId,
     });
+  const controlledRuntimeInterruption =
+    result.lastFailureReason === "runtime_interrupted" &&
+    controlledInterruptionEvidence !== undefined;
+  const terminalTaskTimeout = result.lastFailureReason === "task_timeout";
   if (
-    !runtimeInterruptionFingerprintErrors.has(result.handoffArtifactError) ||
+    !runtimeContinuationFingerprintErrors.has(result.handoffArtifactError) ||
     result.strict !== true ||
     result.status !== "partial" ||
-    result.lastFailureReason !== "runtime_interrupted" ||
-    controlledInterruptionEvidence === undefined ||
+    (!controlledRuntimeInterruption && !terminalTaskTimeout) ||
     !result.baseCommit ||
     !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/i.test(result.baseCommit) ||
     !result.changedFiles?.length ||
