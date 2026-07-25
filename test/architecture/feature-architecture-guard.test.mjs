@@ -957,6 +957,14 @@ test('traces top-level getter aliases only when public descriptors expose them',
       `,
       'src/features/getter-object-assign-copy/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/getter-freeze-member/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const container = { api: {} };
+        container.api.Store = Store;
+        export const api = Object.freeze(container.api);
+      `,
+      'src/features/getter-freeze-member/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/getter-object-assign-overwritten-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const hidden = {};
@@ -1452,6 +1460,7 @@ test('traces top-level getter aliases only when public descriptors expose them',
         './infrastructure/Store',
         './infrastructure/Store',
         './infrastructure/Store',
+        './infrastructure/Store',
       ]);
       assert.ok(
         implementationViolations.some(
@@ -1467,6 +1476,7 @@ test('traces top-level getter aliases only when public descriptors expose them',
       );
       for (const source of [
         'src/features/getter-object-assign-copy/main/index.ts',
+        'src/features/getter-freeze-member/main/index.ts',
         'src/features/getter-set-prototype-of/main/index.ts',
         'src/features/getter-spread-define-properties/main/index.ts',
         'src/features/getter-spread-define-properties-getter-map/main/index.ts',
@@ -1517,6 +1527,15 @@ test('tracks CommonJS object copies with last-write semantics', () => {
         Object.assign(module.exports, hidden);
       `,
       'src/features/commonjs-assign-module/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-assign-spread-alias/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        const alias = { ...hidden };
+        Object.assign(exports, alias);
+      `,
+      'src/features/commonjs-assign-spread-alias/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
       'src/features/commonjs-root-object-assign/main/index.cjs': `
         const Store = require('./infrastructure/Store');
@@ -1594,6 +1613,16 @@ test('tracks CommonJS object copies with last-write semantics', () => {
         Object.assign(exports, { Store }, safe);
       `,
       'src/features/commonjs-assign-alias-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-assign-spread-alias-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        const safe = { Store: undefined };
+        const safeAlias = { ...safe };
+        Object.assign(exports, hidden, safeAlias);
+      `,
+      'src/features/commonjs-assign-spread-alias-overwrite-safe/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
       'src/features/commonjs-assign-copy-alias-overwrite-safe/main/index.cjs': `
         const Store = require('./infrastructure/Store');
@@ -1696,6 +1725,10 @@ test('tracks CommonJS object copies with last-write semantics', () => {
           },
           {
             source: 'src/features/commonjs-assign-module/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+          {
+            source: 'src/features/commonjs-assign-spread-alias/main/index.cjs',
             specifier: './infrastructure/Store',
           },
           {

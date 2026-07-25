@@ -323,6 +323,38 @@ export function staticOverwrittenPaths(
   beforePosition = Number.POSITIVE_INFINITY
 ) {
   const paths = [];
+  const collectProperties = (object, visited) => {
+    const objectKey = `${object.pos}:${object.end}`;
+    if (visited.has(objectKey)) return [];
+    const properties = new Map();
+    const nextVisited = new Set(visited).add(objectKey);
+    for (const property of object.properties) {
+      if (ts.isSpreadAssignment(property)) {
+        const spreadObjects = bindingModel
+          ? resolveObjectLiterals(
+              property.expression,
+              bindingModel,
+              beforePosition
+            )
+          : [];
+        for (const spreadObject of spreadObjects) {
+          for (const spreadProperty of collectProperties(spreadObject, nextVisited)) {
+            properties.set(spreadProperty, spreadProperty);
+          }
+        }
+      } else if (
+        ts.isPropertyAssignment(property) ||
+        ts.isShorthandPropertyAssignment(property) ||
+        ts.isMethodDeclaration(property) ||
+        ts.isGetAccessorDeclaration(property) ||
+        ts.isSetAccessorDeclaration(property)
+      ) {
+        const name = propertyNameText(property.name);
+        properties.set(name, name);
+      }
+    }
+    return [...properties.values()];
+  };
   for (const expression of expressions) {
     const current = unwrapExpression(expression);
     const objects = bindingModel
@@ -331,17 +363,7 @@ export function staticOverwrittenPaths(
         ? [current]
         : [];
     for (const object of objects) {
-      for (const property of object.properties) {
-        if (
-          ts.isPropertyAssignment(property) ||
-          ts.isShorthandPropertyAssignment(property) ||
-          ts.isMethodDeclaration(property) ||
-          ts.isGetAccessorDeclaration(property) ||
-          ts.isSetAccessorDeclaration(property)
-        ) {
-          paths.push([propertyNameText(property.name)]);
-        }
-      }
+      paths.push(...collectProperties(object, new Set()).map((name) => [name]));
     }
   }
   return paths;
@@ -359,15 +381,25 @@ export function staticDescriptorMapPaths(
   ).map(({ name }) => [name]);
 }
 
-export function staticOverwrittenPropertyPaths(properties) {
+export function staticOverwrittenPropertyPaths(
+  properties,
+  bindingModel,
+  beforePosition = Number.POSITIVE_INFINITY
+) {
   return properties.flatMap((property) =>
-    ts.isPropertyAssignment(property) ||
-    ts.isShorthandPropertyAssignment(property) ||
-    ts.isMethodDeclaration(property) ||
-    ts.isGetAccessorDeclaration(property) ||
-    ts.isSetAccessorDeclaration(property)
-      ? [[propertyNameText(property.name)]]
-      : []
+    ts.isSpreadAssignment(property)
+      ? staticOverwrittenPaths(
+          [property.expression],
+          bindingModel,
+          beforePosition
+        )
+      : ts.isPropertyAssignment(property) ||
+          ts.isShorthandPropertyAssignment(property) ||
+          ts.isMethodDeclaration(property) ||
+          ts.isGetAccessorDeclaration(property) ||
+          ts.isSetAccessorDeclaration(property)
+        ? [[propertyNameText(property.name)]]
+        : []
   );
 }
 
@@ -406,7 +438,9 @@ export function collectCopyRelations(sourceFile, bindingModel) {
             relations.push({
               copyPosition: current.end,
               overwrittenPaths: staticOverwrittenPropertyPaths(
-                properties.slice(index + 1)
+                properties.slice(index + 1),
+                bindingModel,
+                current.getStart(sourceFile)
               ),
               ownerKey,
               path: source.path,
@@ -464,6 +498,70 @@ export function collectCopyRelations(sourceFile, bindingModel) {
     }
   });
   return relations;
+}
+
+export function materializeCopyRelationWrites(propertyWrites, relations) {
+  const writeKey = (sourceKey, write) =>
+    JSON.stringify([
+      sourceKey,
+      write.position,
+      write.path,
+      write.originSourceKeys ?? [],
+      write.referenceRanges ?? [],
+    ]);
+  const known = new Set(
+    [...propertyWrites].flatMap(([sourceKey, writes]) =>
+      writes.map((write) => writeKey(sourceKey, write))
+    )
+  );
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const relation of relations) {
+      const ownerWrites = propertyWrites.get(relation.ownerKey) ?? [];
+      for (const sourceWrite of propertyWrites.get(relation.sourceKey) ?? []) {
+        if (
+          sourceWrite.position >= relation.copyPosition ||
+          !sourceWrite.enumerable ||
+          !relation.path.every(
+            (segment, index) => sourceWrite.path[index] === segment
+          )
+        ) {
+          continue;
+        }
+        const copiedPath = sourceWrite.path.slice(relation.path.length);
+        if (
+          relation.overwrittenPaths.some((overwrittenPath) =>
+            overwrittenPath.every(
+              (segment, index) => copiedPath[index] === segment
+            )
+          )
+        ) {
+          continue;
+        }
+        const copiedWrite = {
+          ...sourceWrite,
+          originSourceKeys: [
+            ...new Set([
+              ...(sourceWrite.originSourceKeys ?? []),
+              relation.sourceKey,
+            ]),
+          ],
+          path: copiedPath,
+        };
+        const key = writeKey(relation.ownerKey, copiedWrite);
+        if (known.has(key)) continue;
+        known.add(key);
+        ownerWrites.push(copiedWrite);
+        changed = true;
+      }
+      if (ownerWrites.length > 0) {
+        ownerWrites.sort((left, right) => left.position - right.position);
+        propertyWrites.set(relation.ownerKey, ownerWrites);
+      }
+    }
+  }
+  return propertyWrites;
 }
 
 export function collectPrototypeRelations(sourceFile, bindingModel) {

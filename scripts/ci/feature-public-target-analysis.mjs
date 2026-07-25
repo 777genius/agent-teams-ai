@@ -23,6 +23,7 @@ import {
   collectCopyRelations,
   collectPrototypeRelations,
   collectTopLevelPropertyWrites,
+  materializeCopyRelationWrites,
   staticOverwrittenPaths,
   staticOverwrittenPropertyPaths,
 } from './feature-public-object-analysis.mjs';
@@ -172,7 +173,19 @@ function collectContainedStableBindings(expression, stableBindings) {
 }
 
 function directAliasSource(expression, bindingModel) {
-  const current = unwrapExpression(expression);
+  let current = unwrapExpression(expression);
+  if (ts.isCallExpression(current)) {
+    const method = memberAccess(current.expression);
+    if (
+      method &&
+      ts.isIdentifier(method.receiver) &&
+      method.receiver.text === 'Object' &&
+      IDENTITY_WRAPPERS.has(method.name) &&
+      current.arguments[0]
+    ) {
+      current = unwrapExpression(current.arguments[0]);
+    }
+  }
   if (ts.isIdentifier(current)) {
     const key = bindingModel.bindingAt(current.text, current.getStart());
     return key ? { key, path: [], symmetric: true } : null;
@@ -182,20 +195,7 @@ function directAliasSource(expression, bindingModel) {
     const key = bindingModel.bindingAt(access.root, current.getStart());
     return key ? { key, path: access.path, symmetric: false } : null;
   }
-  if (!ts.isCallExpression(current)) return null;
-  const method = memberAccess(current.expression);
-  if (
-    !method ||
-    !ts.isIdentifier(method.receiver) ||
-    method.receiver.text !== 'Object' ||
-    !IDENTITY_WRAPPERS.has(method.name)
-  ) {
-    return null;
-  }
-  const argument = current.arguments[0] && unwrapExpression(current.arguments[0]);
-  if (!argument || !ts.isIdentifier(argument)) return null;
-  const key = bindingModel.bindingAt(argument.text, argument.getStart());
-  return key ? { key, path: [], symmetric: true } : null;
+  return null;
 }
 
 function pathWasOverwritten(writes, source, path, afterPosition) {
@@ -246,8 +246,17 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
       : directAlias;
     if (alias) {
       if (!pathWasOverwritten(propertyWrites, alias.key, alias.path, binding.position)) {
-        addIdentityEdge(edges, alias.key, key);
-        if (alias.symmetric) addIdentityEdge(edges, key, alias.key);
+        if (alias.path.length > 0) {
+          addIdentityEdge(edges, alias.key, key);
+          memberRelations.push({
+            ownerKey: key,
+            path: alias.path,
+            sourceKey: alias.key,
+          });
+        } else {
+          addIdentityEdge(edges, alias.key, key);
+          if (alias.symmetric) addIdentityEdge(edges, key, alias.key);
+        }
       }
       continue;
     }
@@ -419,7 +428,9 @@ function collectCommonJsCopyRelations(
             relations.push({
               copyPosition: value.end,
               overwrittenPaths: staticOverwrittenPropertyPaths(
-                properties.slice(index + 1)
+                properties.slice(index + 1),
+                bindingModel,
+                value.getStart(sourceFile)
               ),
               path: source.path,
               sourceKey,
@@ -531,6 +542,8 @@ function constructedClassNames(expression) {
 export function analyzePublicTargets(sourceFile, exportedLocalNames) {
   const bindingModel = collectBindingModel(sourceFile);
   const propertyWrites = collectTopLevelPropertyWrites(sourceFile, bindingModel);
+  const allCopyRelations = collectCopyRelations(sourceFile, bindingModel);
+  materializeCopyRelationWrites(propertyWrites, allCopyRelations);
   const { edges: identityEdges, memberRelations } = buildIdentityEdges(
     bindingModel,
     propertyWrites
@@ -562,7 +575,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     const owner = identityOwners.get(relation.ownerKey);
     return owner ? [{ ...relation, owner }] : [];
   });
-  const copyRelations = collectCopyRelations(sourceFile, bindingModel).flatMap((relation) => {
+  const copyRelations = allCopyRelations.flatMap((relation) => {
     const owner = identityOwners.get(relation.ownerKey);
     return owner ? [{ ...relation, owner }] : [];
   });
@@ -587,14 +600,24 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
           (range) => range.start <= position && position <= range.end
         )
       : write.position <= position && position <= write.end;
-  const relationMatchesAt = (relation, position) => {
+  const relationMatchesAt = (
+    relation,
+    position,
+    queriedSourceKey = relation.sourceKey
+  ) => {
     const source = bindingModel.versions.get(relation.sourceKey);
-    if (!source || bindingModel.bindingAt(source.name, position) !== relation.sourceKey) {
+    if (
+      !source ||
+      bindingModel.bindingAt(source.name, relation.copyPosition) !==
+        relation.sourceKey
+    ) {
       return false;
     }
     const sourceWrites = propertyWrites.get(relation.sourceKey) ?? [];
     const currentWrite = sourceWrites.find((write) =>
-      writeContainsPosition(write, position)
+      writeContainsPosition(write, position) &&
+      (queriedSourceKey === relation.sourceKey ||
+        write.originSourceKeys?.includes(queriedSourceKey))
     );
     if (
       !currentWrite ||
@@ -642,7 +665,13 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     }
     for (const relation of [...publicMemberRelations, ...copyRelations]) {
       const source = bindingModel.versions.get(relation.sourceKey);
-      if (!source || bindingModel.bindingAt(source.name, position) !== relation.sourceKey) {
+      if (
+        !source ||
+        bindingModel.bindingAt(
+          source.name,
+          relation.copyPosition ?? position
+        ) !== relation.sourceKey
+      ) {
         continue;
       }
       const sourceWrites = propertyWrites.get(relation.sourceKey) ?? [];
@@ -683,10 +712,22 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         pathMatches &&
         (insideSourceInitializer || currentWrite?.enumerable) &&
         !wasOverwrittenBeforeCopy &&
-        !overwrittenByTarget &&
-        !owners.has(source.name)
+        !overwrittenByTarget
       ) {
-        owners.set(source.name, relation.owner);
+        const visibleSources = [
+          relation.sourceKey,
+          ...(currentWrite?.originSourceKeys ?? []),
+        ];
+        for (const sourceKey of visibleSources) {
+          const visibleSource = bindingModel.versions.get(sourceKey);
+          if (
+            visibleSource &&
+            bindingModel.bindingAt(visibleSource.name, position) === sourceKey &&
+            !owners.has(visibleSource.name)
+          ) {
+            owners.set(visibleSource.name, relation.owner);
+          }
+        }
       }
     }
     return owners;
@@ -706,7 +747,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
       return key
         ? commonJsTargetAliases.has(key) ||
             commonJsCopyRelations.some(
-              (relation) => relation.sourceKey === key && relationMatchesAt(relation, position)
+              (relation) => relationMatchesAt(relation, position, key)
             )
         : false;
     },
