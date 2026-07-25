@@ -1,9 +1,14 @@
 import { TeamTaskAttachmentStore } from '@main/services/team/TeamTaskAttachmentStore';
 
-import type { TaskCommentAttachmentWriterPort } from '../../../core/application/ports/TeamTaskBoardPorts';
+import type {
+  TaskCommentAttachmentCleanupPort,
+  TaskCommentAttachmentWriterPort,
+} from '../../../core/application/ports/TeamTaskBoardPorts';
 import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
 
-export class TeamTaskCommentAttachmentWriter implements TaskCommentAttachmentWriterPort {
+export class TeamTaskCommentAttachmentWriter
+  implements TaskCommentAttachmentWriterPort, TaskCommentAttachmentCleanupPort
+{
   constructor(private readonly store: TeamTaskAttachmentStore = new TeamTaskAttachmentStore()) {}
 
   saveAttachment(
@@ -22,5 +27,14 @@ export class TeamTaskCommentAttachmentWriter implements TaskCommentAttachmentWri
       mimeType,
       base64Data
     );
+  }
+
+  deleteAttachment(
+    teamName: string,
+    taskId: string,
+    attachmentId: string,
+    mimeType: AttachmentMediaType
+  ): Promise<void> {
+    return this.store.deleteAttachment(teamName, taskId, attachmentId, mimeType);
   }
 }

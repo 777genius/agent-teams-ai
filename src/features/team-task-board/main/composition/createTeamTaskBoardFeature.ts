@@ -9,6 +9,7 @@ import { TeamTaskCommentAttachmentWriter } from '../adapters/output/TeamTaskComm
 
 import type {
   TaskChangePresencePort,
+  TaskCommentAttachmentCleanupPort,
   TaskCommentAttachmentWriterPort,
   TaskCommentWriterPort,
   TaskFieldsWriterPort,
@@ -38,7 +39,7 @@ export function createTeamTaskBoardFeature(dependencies: {
   runtimeApi: TeamRuntimeStatusPort;
   notificationApi: TeamLeadNotificationPort;
   launchIoGovernor?: LaunchIoGovernor;
-  commentAttachments?: TaskCommentAttachmentWriterPort;
+  commentAttachments?: TaskCommentAttachmentWriterPort & TaskCommentAttachmentCleanupPort;
   logger: TeamTaskBoardLoggerPort;
 }): TeamTaskBoardFeature {
   const updateTaskFields = new UpdateTaskFieldsUseCase({
@@ -47,13 +48,16 @@ export function createTeamTaskBoardFeature(dependencies: {
     notifications: dependencies.notificationApi,
     logger: dependencies.logger,
   });
+  const commentAttachments =
+    dependencies.commentAttachments ?? new TeamTaskCommentAttachmentWriter();
 
   return {
     queries: dependencies.taskBoardApi,
     commands: dependencies.taskBoardApi,
     changePresence: dependencies.taskBoardApi,
     comments: dependencies.taskBoardApi,
-    commentAttachments: dependencies.commentAttachments ?? new TeamTaskCommentAttachmentWriter(),
+    commentAttachments,
+    commentAttachmentCleanup: commentAttachments,
     globalTasks: {
       getAllTasks: (): Promise<GlobalTask[]> => {
         const loadFresh = (): Promise<GlobalTask[]> => dependencies.taskBoardApi.getAllTasks();

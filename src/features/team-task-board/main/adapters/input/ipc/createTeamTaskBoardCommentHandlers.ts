@@ -2,15 +2,99 @@ import { validateTaskId, validateTeamName } from '@main/ipc/guards';
 import { validateTaskRefs } from '@main/ipc/validation/taskRefs';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 
+import {
+  estimateTaskAttachmentDecodedBytes,
+  TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH,
+  TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES,
+} from '../../../../core/domain/taskAttachmentPayloadPolicy';
+
 import { executeTeamTaskBoardHandler } from './executeTeamTaskBoardHandler';
 import { isValidStoredAttachmentMimeType } from './teamTaskBoardValidation';
 
-import type { TaskCommentRequest } from '../../../../core/application/ports/TeamTaskBoardPorts';
+import type {
+  TaskCommentAttachmentCleanupPort,
+  TaskCommentRequest,
+  TeamTaskBoardLoggerPort,
+} from '../../../../core/application/ports/TeamTaskBoardPorts';
 import type { TeamTaskBoardIpcDependencies } from './TeamTaskBoardIpcDependencies';
-import type { IpcResult, TaskAttachmentMeta, TaskComment } from '@shared/types';
+import type {
+  AttachmentMediaType,
+  IpcResult,
+  TaskAttachmentMeta,
+  TaskComment,
+} from '@shared/types';
 import type { IpcMainInvokeEvent } from 'electron';
 
 const MAX_ATTACHMENTS = 5;
+
+interface NormalizedTaskCommentAttachment {
+  id: string;
+  filename: string;
+  mimeType: AttachmentMediaType;
+  base64Data: string;
+}
+
+function normalizeAttachment(attachment: unknown): NormalizedTaskCommentAttachment {
+  if (!attachment || typeof attachment !== 'object') {
+    throw new Error('Invalid attachment data');
+  }
+  const candidate = attachment as Record<string, unknown>;
+  if (
+    typeof candidate.id !== 'string' ||
+    typeof candidate.filename !== 'string' ||
+    !isValidStoredAttachmentMimeType(candidate.mimeType) ||
+    typeof candidate.base64Data !== 'string'
+  ) {
+    throw new Error('Invalid attachment data');
+  }
+
+  const id = candidate.id.trim();
+  const base64Data = candidate.base64Data.trim();
+  if (
+    id.length === 0 ||
+    id.includes('/') ||
+    id.includes('\\') ||
+    id.includes('..') ||
+    id.includes('\0')
+  ) {
+    throw new Error('Invalid attachment ID');
+  }
+  if (base64Data.length === 0) {
+    throw new Error('Invalid attachment data');
+  }
+  if (
+    base64Data.length > TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH ||
+    estimateTaskAttachmentDecodedBytes(base64Data) > TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES
+  ) {
+    throw new Error('Attachment payload exceeds the 20 MiB decoded size limit');
+  }
+
+  return {
+    id,
+    filename: candidate.filename,
+    mimeType: candidate.mimeType.trim(),
+    base64Data,
+  };
+}
+
+async function rollbackSavedAttachments(
+  cleanup: TaskCommentAttachmentCleanupPort,
+  logger: Pick<TeamTaskBoardLoggerPort, 'warn'>,
+  teamName: string,
+  taskId: string,
+  attachments: readonly TaskAttachmentMeta[]
+): Promise<void> {
+  for (const attachment of [...attachments].reverse()) {
+    try {
+      await cleanup.deleteAttachment(teamName, taskId, attachment.id, attachment.mimeType);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn(
+        `[teams:addTaskComment] Failed to roll back attachment ${attachment.id}: ${message}`
+      );
+    }
+  }
+}
 
 export function createTeamTaskBoardCommentHandlers(dependencies: TeamTaskBoardIpcDependencies): {
   addTaskComment(
@@ -52,46 +136,38 @@ export function createTeamTaskBoardCommentHandlers(dependencies: TeamTaskBoardIp
       }
 
       return executeTeamTaskBoardHandler(dependencies.logger, 'addTaskComment', async () => {
-        let savedAttachments: TaskAttachmentMeta[] | undefined;
-        if (rawAttachments.length > 0) {
-          savedAttachments = [];
-          for (const attachment of rawAttachments) {
-            if (!attachment || typeof attachment !== 'object') {
-              throw new Error('Invalid attachment data');
-            }
-            const candidate = attachment as unknown as Record<string, unknown>;
-            if (
-              typeof candidate.id !== 'string' ||
-              typeof candidate.filename !== 'string' ||
-              !isValidStoredAttachmentMimeType(candidate.mimeType) ||
-              typeof candidate.base64Data !== 'string' ||
-              candidate.base64Data.length === 0
-            ) {
-              throw new Error('Invalid attachment data');
-            }
-            const safeId = candidate.id.trim();
-            if (safeId.includes('/') || safeId.includes('\\') || safeId.includes('..')) {
-              throw new Error('Invalid attachment ID');
-            }
+        const attachments = rawAttachments.map(normalizeAttachment);
+        const savedAttachments: TaskAttachmentMeta[] = [];
+        try {
+          for (const attachment of attachments) {
             const metadata = await dependencies.commentAttachments.saveAttachment(
               validatedTeamName.value!,
               validatedTaskId.value!,
-              safeId,
-              candidate.filename,
-              candidate.mimeType.trim(),
-              candidate.base64Data
+              attachment.id,
+              attachment.filename,
+              attachment.mimeType,
+              attachment.base64Data
             );
             savedAttachments.push(metadata);
           }
-        }
 
-        return dependencies.comments.addTaskComment(
-          validatedTeamName.value!,
-          validatedTaskId.value!,
-          text.trim(),
-          savedAttachments,
-          validatedTaskRefs.value
-        );
+          return await dependencies.comments.addTaskComment(
+            validatedTeamName.value!,
+            validatedTaskId.value!,
+            text.trim(),
+            savedAttachments.length > 0 ? savedAttachments : undefined,
+            validatedTaskRefs.value
+          );
+        } catch (error) {
+          await rollbackSavedAttachments(
+            dependencies.commentAttachmentCleanup,
+            dependencies.logger,
+            validatedTeamName.value!,
+            validatedTaskId.value!,
+            savedAttachments
+          );
+          throw error;
+        }
       });
     },
   };

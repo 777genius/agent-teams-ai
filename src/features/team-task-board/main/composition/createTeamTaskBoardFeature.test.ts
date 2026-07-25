@@ -20,6 +20,10 @@ describe('createTeamTaskBoardFeature', () => {
       async (_key: string, loadFresh: () => Promise<(typeof task)[]>): Promise<(typeof task)[]> =>
         loadFresh()
     );
+    const commentAttachments = {
+      saveAttachment: vi.fn(),
+      deleteAttachment: vi.fn(),
+    };
     const logger = { error: vi.fn(), warn: vi.fn() };
 
     const feature = createTeamTaskBoardFeature({
@@ -27,7 +31,7 @@ describe('createTeamTaskBoardFeature', () => {
       runtimeApi: { isTeamAlive: vi.fn(() => false) },
       notificationApi: { sendMessageToTeam: vi.fn(async () => undefined) },
       launchIoGovernor: { runSummaryOperation } as never,
-      commentAttachments: { saveAttachment: vi.fn() },
+      commentAttachments,
       logger,
     });
 
@@ -36,6 +40,8 @@ describe('createTeamTaskBoardFeature', () => {
     expect(feature.commands).toBe(taskBoardApi);
     expect(feature.changePresence).toBe(taskBoardApi);
     expect(feature.comments).toBe(taskBoardApi);
+    expect(feature.commentAttachments).toBe(commentAttachments);
+    expect(feature.commentAttachmentCleanup).toBe(commentAttachments);
     expect(feature.logger).toBe(logger);
     expect(runSummaryOperation).toHaveBeenCalledWith(
       'teams:getAllTasks',

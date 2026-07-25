@@ -1,3 +1,7 @@
+import {
+  estimateTaskAttachmentDecodedBytes,
+  TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES,
+} from '@features/team-task-board';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -6,8 +10,6 @@ import * as path from 'path';
 import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskAttachmentStore');
-
-const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20 MB
 
 export class TeamTaskAttachmentStore {
   private assertSafePathSegment(label: string, value: string): void {
@@ -96,19 +98,17 @@ export class TeamTaskAttachmentStore {
   ): Promise<TaskAttachmentMeta> {
     const trimmed = base64Data.trim();
     // Avoid allocating huge Buffers for obviously too-large payloads.
-    // Base64 decoded size is roughly 3/4 of the string length minus padding.
-    const padding = trimmed.endsWith('==') ? 2 : trimmed.endsWith('=') ? 1 : 0;
-    const estimatedBytes = Math.max(0, Math.floor((trimmed.length * 3) / 4) - padding);
-    if (estimatedBytes > MAX_ATTACHMENT_SIZE) {
+    const estimatedBytes = estimateTaskAttachmentDecodedBytes(trimmed);
+    if (estimatedBytes > TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES) {
       throw new Error(
-        `Attachment too large: ${(estimatedBytes / (1024 * 1024)).toFixed(1)} MB (max ${MAX_ATTACHMENT_SIZE / (1024 * 1024)} MB)`
+        `Attachment too large: ${(estimatedBytes / (1024 * 1024)).toFixed(1)} MB (max ${TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES / (1024 * 1024)} MB)`
       );
     }
 
     const buffer = Buffer.from(trimmed, 'base64');
-    if (buffer.length > MAX_ATTACHMENT_SIZE) {
+    if (buffer.length > TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES) {
       throw new Error(
-        `Attachment too large: ${(buffer.length / (1024 * 1024)).toFixed(1)} MB (max ${MAX_ATTACHMENT_SIZE / (1024 * 1024)} MB)`
+        `Attachment too large: ${(buffer.length / (1024 * 1024)).toFixed(1)} MB (max ${TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES / (1024 * 1024)} MB)`
       );
     }
 

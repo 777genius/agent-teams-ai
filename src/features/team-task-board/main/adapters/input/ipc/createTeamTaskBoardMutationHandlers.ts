@@ -203,12 +203,21 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
           return { success: false, error: validatedOwner.error ?? 'Invalid owner' };
         }
       }
+      let blockedBy: string[] | undefined;
       if (payload.blockedBy !== undefined) {
         if (
           !Array.isArray(payload.blockedBy) ||
           payload.blockedBy.some((id) => typeof id !== 'string')
         ) {
           return { success: false, error: 'blockedBy must be an array of task ID strings' };
+        }
+        blockedBy = [];
+        for (const id of payload.blockedBy) {
+          const validated = validateTaskId(id);
+          if (!validated.valid) {
+            return { success: false, error: validated.error ?? 'Invalid blockedBy task id' };
+          }
+          blockedBy.push(validated.value!);
         }
       }
       if (payload.related !== undefined) {
@@ -247,7 +256,7 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
           subject: payload.subject!.trim(),
           description: payload.description?.trim(),
           owner: payload.owner?.trim() || undefined,
-          blockedBy: payload.blockedBy,
+          blockedBy,
           related: payload.related,
           descriptionTaskRefs: validatedDescriptionTaskRefs.value,
           prompt: payload.prompt?.trim() || undefined,
@@ -304,7 +313,20 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
       if (!Array.isArray(orderedTaskIds)) {
         return { success: false, error: 'orderedTaskIds must be an array' };
       }
-      const ids = orderedTaskIds.filter((id): id is string => typeof id === 'string');
+      const ids: string[] = [];
+      for (const id of orderedTaskIds) {
+        if (typeof id !== 'string') {
+          return { success: false, error: 'orderedTaskIds must contain only task ID strings' };
+        }
+        const validatedTaskId = validateTaskId(id);
+        if (!validatedTaskId.valid) {
+          return {
+            success: false,
+            error: validatedTaskId.error ?? 'orderedTaskIds contains an invalid task ID',
+          };
+        }
+        ids.push(validatedTaskId.value!);
+      }
       return executeTeamTaskBoardHandler(dependencies.logger, 'updateKanbanColumnOrder', () =>
         dependencies.commands.updateKanbanColumnOrder(
           validatedTeamName.value!,

@@ -3,6 +3,7 @@ import type {
   GlobalTaskQueryPort,
   MainOperationTrackerPort,
   TaskChangePresencePort,
+  TaskCommentAttachmentCleanupPort,
   TaskCommentAttachmentWriterPort,
   TaskCommentWriterPort,
   TaskFields,
@@ -22,6 +23,7 @@ export interface TeamTaskBoardIpcDependencies {
   globalTasks: GlobalTaskQueryPort;
   comments: TaskCommentWriterPort;
   commentAttachments: TaskCommentAttachmentWriterPort;
+  commentAttachmentCleanup: TaskCommentAttachmentCleanupPort;
   updateTaskFields: UpdateTaskFieldsPort;
   operationTracker: MainOperationTrackerPort;
   clock: ClockPort;

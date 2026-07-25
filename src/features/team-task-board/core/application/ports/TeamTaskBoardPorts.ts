@@ -90,6 +90,15 @@ export interface TaskCommentAttachmentWriterPort {
   ): Promise<TaskAttachmentMeta>;
 }
 
+export interface TaskCommentAttachmentCleanupPort {
+  deleteAttachment(
+    teamName: string,
+    taskId: string,
+    attachmentId: string,
+    mimeType: AttachmentMediaType
+  ): Promise<void>;
+}
+
 export interface TaskFieldsWriterPort {
   updateTaskFields(teamName: string, taskId: string, fields: TaskFields): Promise<void>;
 }
