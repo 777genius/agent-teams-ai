@@ -854,6 +854,7 @@ test('traces top-level getter aliases only when public descriptors expose them',
         interface PublicPort {}
         const createFeature = (): PublicPort => new Concrete();
         export const api = { get: createFeature };
+        Object.defineProperty({}, 'private', api);
       `,
       'src/features/getter-field-factory-safe/main/infrastructure/Concrete.ts':
         'export class Concrete {}',

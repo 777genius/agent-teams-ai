@@ -333,11 +333,11 @@ function collectDescriptorGetterProperties(descriptor, getterProperties) {
 }
 
 /**
- * Finds `get` fields that are actually consumed as property descriptors.
+ * Finds `get` fields that are actually consumed as public property descriptors.
  * An ordinary public object may legally expose a field named `get`; only
  * Object/Reflect descriptor sinks grant getter-only dependency reachability.
  */
-export function collectConsumedDescriptorGetterProperties(sourceFile) {
+export function collectConsumedDescriptorGetterProperties(sourceFile, exportedLocalNames) {
   const assignments = collectTopLevelAssignmentExpressions(sourceFile);
   const getterProperties = new Set();
   const visit = (node) => {
@@ -347,11 +347,17 @@ export function collectConsumedDescriptorGetterProperties(sourceFile) {
         method &&
         ts.isIdentifier(method.receiver) &&
         ['Object', 'Reflect'].includes(method.receiver.text);
-      if (isDescriptorApi && method.name === 'defineProperty') {
+      const target = node.arguments[0];
+      const targetRoot = target && rootBindingName(target);
+      const hasPublicTarget =
+        target &&
+        (isCommonJsExportsObject(target) ||
+          (targetRoot !== null && exportedLocalNames.has(targetRoot)));
+      if (isDescriptorApi && hasPublicTarget && method.name === 'defineProperty') {
         for (const descriptor of resolveStaticObjectLiterals(node.arguments[2], assignments)) {
           collectDescriptorGetterProperties(descriptor, getterProperties);
         }
-      } else if (isDescriptorApi && method.name === 'defineProperties') {
+      } else if (isDescriptorApi && hasPublicTarget && method.name === 'defineProperties') {
         for (const descriptorMap of resolveStaticObjectLiterals(node.arguments[1], assignments)) {
           for (const property of descriptorMap.properties) {
             if (!ts.isPropertyAssignment(property)) continue;

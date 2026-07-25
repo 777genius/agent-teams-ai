@@ -326,7 +326,10 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
 
   visit(sourceFile);
 
-  const consumedDescriptorGetterProperties = collectConsumedDescriptorGetterProperties(sourceFile);
+  const consumedDescriptorGetterProperties = collectConsumedDescriptorGetterProperties(
+    sourceFile,
+    exportedLocalNames
+  );
 
   const isIdentifierReference = (node) => {
     const parent = node.parent;
