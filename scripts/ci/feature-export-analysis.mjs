@@ -321,6 +321,104 @@ function resolveStaticObjectLiterals(expression, assignments, visited = new Set(
   });
 }
 
+function collectPublicValueExpressions(sourceFile, exportedLocalNames, assignments) {
+  const expressions = [...exportedLocalNames].flatMap((name) => assignments.get(name) ?? []);
+  const visit = (node) => {
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      isCommonJsExportsObject(unwrapExpression(node.left))
+    ) {
+      expressions.push(node.right);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return expressions;
+}
+
+function collectReachableObjectLiterals(expressions, assignments) {
+  const objects = new Set();
+  const visit = (expression, visitedBindings = new Set()) => {
+    const current = expression && unwrapExpression(expression);
+    if (!current) return;
+    if (ts.isIdentifier(current)) {
+      if (visitedBindings.has(current.text)) return;
+      const nextVisited = new Set(visitedBindings).add(current.text);
+      for (const assigned of assignments.get(current.text) ?? []) visit(assigned, nextVisited);
+      return;
+    }
+    if (ts.isObjectLiteralExpression(current)) {
+      if (objects.has(current)) return;
+      objects.add(current);
+      for (const property of current.properties) {
+        if (ts.isShorthandPropertyAssignment(property)) {
+          visit(property.name, visitedBindings);
+        } else if (ts.isPropertyAssignment(property)) {
+          visit(property.initializer, visitedBindings);
+        } else if (ts.isSpreadAssignment(property)) {
+          visit(property.expression, visitedBindings);
+        }
+      }
+      return;
+    }
+    if (ts.isArrayLiteralExpression(current)) {
+      for (const element of current.elements) {
+        if (!ts.isOmittedExpression(element)) visit(element, visitedBindings);
+      }
+      return;
+    }
+    if (ts.isConditionalExpression(current)) {
+      visit(current.whenTrue, visitedBindings);
+      visit(current.whenFalse, visitedBindings);
+      return;
+    }
+    for (const object of resolveStaticObjectLiterals(current, assignments, visitedBindings)) {
+      visit(object, visitedBindings);
+    }
+  };
+  for (const expression of expressions) visit(expression);
+  return objects;
+}
+
+function resolvesToCommonJsExports(expression, assignments, visited = new Set()) {
+  const current = expression && unwrapExpression(expression);
+  if (!current) return false;
+  if (isCommonJsExportsObject(current)) return true;
+  if (ts.isIdentifier(current)) {
+    if (visited.has(current.text)) return false;
+    const nextVisited = new Set(visited).add(current.text);
+    return (assignments.get(current.text) ?? []).some((assigned) =>
+      resolvesToCommonJsExports(assigned, assignments, nextVisited)
+    );
+  }
+  const access = memberAccess(current);
+  return access ? resolvesToCommonJsExports(access.receiver, assignments, visited) : false;
+}
+
+export function collectPublicTargetBindingNames(sourceFile, exportedLocalNames) {
+  const assignments = collectTopLevelAssignmentExpressions(sourceFile);
+  const publicObjects = collectReachableObjectLiterals(
+    collectPublicValueExpressions(sourceFile, exportedLocalNames, assignments),
+    assignments
+  );
+  const publicTargetNames = new Set(exportedLocalNames);
+  for (const [name, expressions] of assignments) {
+    if (
+      expressions.some(
+        (expression) =>
+          resolvesToCommonJsExports(expression, assignments) ||
+          resolveStaticObjectLiterals(expression, assignments).some((object) =>
+            publicObjects.has(object)
+          )
+      )
+    ) {
+      publicTargetNames.add(name);
+    }
+  }
+  return publicTargetNames;
+}
+
 function collectDescriptorGetterProperties(descriptor, getterProperties) {
   for (const property of descriptor.properties) {
     if (
@@ -339,6 +437,10 @@ function collectDescriptorGetterProperties(descriptor, getterProperties) {
  */
 export function collectConsumedDescriptorGetterProperties(sourceFile, exportedLocalNames) {
   const assignments = collectTopLevelAssignmentExpressions(sourceFile);
+  const publicObjects = collectReachableObjectLiterals(
+    collectPublicValueExpressions(sourceFile, exportedLocalNames, assignments),
+    assignments
+  );
   const getterProperties = new Set();
   const visit = (node) => {
     if (ts.isCallExpression(node)) {
@@ -352,7 +454,11 @@ export function collectConsumedDescriptorGetterProperties(sourceFile, exportedLo
       const hasPublicTarget =
         target &&
         (isCommonJsExportsObject(target) ||
-          (targetRoot !== null && exportedLocalNames.has(targetRoot)));
+          resolvesToCommonJsExports(target, assignments) ||
+          (targetRoot !== null && exportedLocalNames.has(targetRoot)) ||
+          resolveStaticObjectLiterals(target, assignments).some((object) =>
+            publicObjects.has(object)
+          ));
       if (isDescriptorApi && hasPublicTarget && method.name === 'defineProperty') {
         for (const descriptor of resolveStaticObjectLiterals(node.arguments[2], assignments)) {
           collectDescriptorGetterProperties(descriptor, getterProperties);

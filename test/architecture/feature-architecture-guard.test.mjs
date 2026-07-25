@@ -841,6 +841,32 @@ test('traces top-level getter aliases only when public descriptors expose them',
         'exports.Hidden = class Hidden {};',
       'src/features/getter-alias-extended/main/infrastructure/Store.cjs':
         'exports.Store = class Store {};',
+      'src/features/getter-alias-public-target/main/index.cjs': `
+        const StoreModule = require('./infrastructure/Store');
+        const getStore = () => StoreModule.Store;
+        const descriptor = { get: getStore };
+        const publicTarget = exports;
+        Object.defineProperty(publicTarget, 'Store', descriptor);
+      `,
+      'src/features/getter-alias-public-target/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
+      'src/features/getter-esm-public-target/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const getStore = () => Store;
+        export const api = {};
+        const publicTarget = api;
+        Object.defineProperty(publicTarget, 'Store', { get: getStore });
+      `,
+      'src/features/getter-esm-public-target/main/infrastructure/Store.ts': 'export class Store {}',
+      'src/features/getter-nested-public-target/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const getStore = () => Store;
+        const nested = {};
+        export const api = { nested };
+        Object.defineProperty(nested, 'Store', { get: getStore });
+      `,
+      'src/features/getter-nested-public-target/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/getter-factory-safe/main/index.ts': `
         import { Concrete } from './infrastructure/Concrete';
         interface PublicPort {}
@@ -870,6 +896,9 @@ test('traces top-level getter aliases only when public descriptors expose them',
           './infrastructure/Aliased',
           './infrastructure/Assigned',
           './infrastructure/Repository',
+          './infrastructure/Store',
+          './infrastructure/Store',
+          './infrastructure/Store',
           './infrastructure/Store',
           './infrastructure/Store',
         ]

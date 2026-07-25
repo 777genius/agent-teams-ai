@@ -7,6 +7,7 @@ import ts from 'typescript';
 import {
   bindingNames,
   collectConsumedDescriptorGetterProperties,
+  collectPublicTargetBindingNames,
   findPublicReferenceOwner,
   hasModifier,
   importedNameForCall,
@@ -169,8 +170,18 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
   }
 
+  const publicTargetBindingNames = collectPublicTargetBindingNames(sourceFile, exportedLocalNames);
+  for (const localName of publicTargetBindingNames) {
+    if (exportedLocalNames.has(localName)) continue;
+    directLocalExports.push({
+      exportedName: localName,
+      line: 1,
+      localName,
+    });
+  }
+
   const publicReferenceOwner = (node) =>
-    findPublicReferenceOwner(node, sourceFile, exportedLocalNames);
+    findPublicReferenceOwner(node, sourceFile, publicTargetBindingNames);
 
   const addOwnerDependency = (owner, dependency) => {
     const localDependency =
