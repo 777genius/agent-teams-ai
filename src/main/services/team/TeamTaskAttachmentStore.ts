@@ -2,6 +2,7 @@ import {
   estimateTaskAttachmentDecodedBytes,
   TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES,
 } from '@features/team-task-board';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -11,7 +12,23 @@ import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskAttachmentStore');
 
+export interface TaskAttachmentAtomicWriterPort {
+  /**
+   * Publishes bytes through a same-directory temporary file and creates the
+   * parent directory when needed. Rejections must leave no partial target.
+   */
+  writeFileAtomically(filePath: string, data: Buffer): Promise<void>;
+}
+
+const nodeTaskAttachmentAtomicWriter: TaskAttachmentAtomicWriterPort = {
+  writeFileAtomically: atomicWriteAsync,
+};
+
 export class TeamTaskAttachmentStore {
+  constructor(
+    private readonly atomicWriter: TaskAttachmentAtomicWriterPort = nodeTaskAttachmentAtomicWriter
+  ) {}
+
   private assertSafePathSegment(label: string, value: string): void {
     if (
       value.length === 0 ||
@@ -112,11 +129,8 @@ export class TeamTaskAttachmentStore {
       );
     }
 
-    const dir = this.getTaskDir(teamName, taskId);
-    await fs.promises.mkdir(dir, { recursive: true });
-
     const filePath = this.getStoredFilePath(teamName, taskId, attachmentId, filename);
-    await fs.promises.writeFile(filePath, buffer);
+    await this.atomicWriter.writeFileAtomically(filePath, buffer);
 
     const meta: TaskAttachmentMeta = {
       id: attachmentId,

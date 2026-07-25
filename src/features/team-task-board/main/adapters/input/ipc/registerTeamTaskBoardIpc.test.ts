@@ -27,7 +27,7 @@ import { TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH } from '../../../../core/domain/
 import { registerTeamTaskBoardIpc, removeTeamTaskBoardIpc } from './registerTeamTaskBoardIpc';
 
 import type { TeamTaskBoardIpcDependencies } from './TeamTaskBoardIpcDependencies';
-import type { IpcResult, TaskAttachmentMeta, TaskComment, TeamTask } from '@shared/types';
+import type { IpcResult, TaskComment, TeamTask } from '@shared/types';
 
 const CHANNELS = [
   TEAM_ADD_TASK_COMMENT,
@@ -82,8 +82,8 @@ function createDependencies(): TeamTaskBoardIpcDependencies {
     globalTasks: {
       getAllTasks: vi.fn(async () => []),
     },
-    comments: {
-      addTaskComment: vi.fn(
+    addTaskComment: {
+      execute: vi.fn(
         async () =>
           ({
             id: 'comment-1',
@@ -93,22 +93,6 @@ function createDependencies(): TeamTaskBoardIpcDependencies {
             type: 'regular',
           }) as TaskComment
       ),
-    },
-    commentAttachments: {
-      saveAttachment: vi.fn(
-        async (_teamName, _taskId, attachmentId, filename, mimeType) =>
-          ({
-            id: attachmentId,
-            filename,
-            mimeType,
-            size: 4,
-            addedAt: '2026-07-22T00:00:00.000Z',
-            filePath: `/tmp/${attachmentId}`,
-          }) as TaskAttachmentMeta
-      ),
-    },
-    commentAttachmentCleanup: {
-      deleteAttachment: vi.fn(async () => undefined),
     },
     updateTaskFields: {
       execute: vi.fn(async () => undefined),
@@ -311,7 +295,7 @@ describe('registerTeamTaskBoardIpc', () => {
     expect(dependencies.commands.updateKanbanColumnOrder).not.toHaveBeenCalled();
   });
 
-  it('persists comment attachments before writing their task comment metadata', async () => {
+  it('normalizes a comment request before invoking its application use case', async () => {
     const result = await handlers.get(TEAM_ADD_TASK_COMMENT)!({} as never, 'my-team', 'task-1', {
       text: ' Comment ',
       attachments: [
@@ -326,24 +310,18 @@ describe('registerTeamTaskBoardIpc', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(dependencies.commentAttachments.saveAttachment).toHaveBeenCalledWith(
-      'my-team',
-      'task-1',
-      'attachment-1',
-      'proof.png',
-      'image/png',
-      'dGVzdA=='
-    );
-    expect(dependencies.comments.addTaskComment).toHaveBeenCalledWith(
-      'my-team',
-      'task-1',
-      'Comment',
-      [expect.objectContaining({ id: 'attachment-1' })],
-      [{ taskId: 'task-2', displayId: '#2', teamName: 'my-team' }]
-    );
-    expect(
-      vi.mocked(dependencies.commentAttachments.saveAttachment).mock.invocationCallOrder[0]
-    ).toBeLessThan(vi.mocked(dependencies.comments.addTaskComment).mock.invocationCallOrder[0]);
+    expect(dependencies.addTaskComment.execute).toHaveBeenCalledWith('my-team', 'task-1', {
+      text: 'Comment',
+      attachments: [
+        {
+          id: 'attachment-1',
+          filename: 'proof.png',
+          mimeType: 'image/png',
+          base64Data: 'dGVzdA==',
+        },
+      ],
+      taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'my-team' }],
+    });
   });
 
   it('rejects oversized encoded attachment payloads before persistence', async () => {
@@ -363,11 +341,10 @@ describe('registerTeamTaskBoardIpc', () => {
       success: false,
       error: 'Attachment payload exceeds the 20 MiB decoded size limit',
     });
-    expect(dependencies.commentAttachments.saveAttachment).not.toHaveBeenCalled();
-    expect(dependencies.comments.addTaskComment).not.toHaveBeenCalled();
+    expect(dependencies.addTaskComment.execute).not.toHaveBeenCalled();
   });
 
-  it('validates every attachment before saving the first file', async () => {
+  it('validates every attachment before invoking the application use case', async () => {
     const result = await handlers.get(TEAM_ADD_TASK_COMMENT)!({} as never, 'my-team', 'task-1', {
       text: 'Comment',
       attachments: [
@@ -387,85 +364,7 @@ describe('registerTeamTaskBoardIpc', () => {
     });
 
     expect(result).toEqual({ success: false, error: 'Invalid attachment ID' });
-    expect(dependencies.commentAttachments.saveAttachment).not.toHaveBeenCalled();
-    expect(dependencies.commentAttachmentCleanup.deleteAttachment).not.toHaveBeenCalled();
-    expect(dependencies.comments.addTaskComment).not.toHaveBeenCalled();
-  });
-
-  it('rolls back earlier files when a later attachment save fails', async () => {
-    vi.mocked(dependencies.commentAttachments.saveAttachment)
-      .mockResolvedValueOnce({
-        id: 'attachment-1',
-        filename: 'one.png',
-        mimeType: 'image/png',
-        size: 4,
-        addedAt: '2026-07-22T00:00:00.000Z',
-        filePath: '/workspace/attachments/attachment-1',
-      })
-      .mockRejectedValueOnce(new Error('second save failed'));
-
-    const result = await handlers.get(TEAM_ADD_TASK_COMMENT)!({} as never, 'my-team', 'task-1', {
-      text: 'Comment',
-      attachments: [
-        {
-          id: 'attachment-1',
-          filename: 'one.png',
-          mimeType: 'image/png',
-          base64Data: 'b25l',
-        },
-        {
-          id: 'attachment-2',
-          filename: 'two.png',
-          mimeType: 'image/png',
-          base64Data: 'dHdv',
-        },
-      ],
-    });
-
-    expect(result).toEqual({ success: false, error: 'second save failed' });
-    expect(dependencies.commentAttachmentCleanup.deleteAttachment).toHaveBeenCalledWith(
-      'my-team',
-      'task-1',
-      'attachment-1',
-      'image/png'
-    );
-    expect(dependencies.comments.addTaskComment).not.toHaveBeenCalled();
-  });
-
-  it('best-effort rolls back every file while preserving a comment persistence error', async () => {
-    vi.mocked(dependencies.comments.addTaskComment).mockRejectedValueOnce(
-      new Error('comment write failed')
-    );
-    vi.mocked(dependencies.commentAttachmentCleanup.deleteAttachment).mockRejectedValueOnce(
-      new Error('cleanup failed')
-    );
-
-    const result = await handlers.get(TEAM_ADD_TASK_COMMENT)!({} as never, 'my-team', 'task-1', {
-      text: 'Comment',
-      attachments: [
-        {
-          id: 'attachment-1',
-          filename: 'one.png',
-          mimeType: 'image/png',
-          base64Data: 'b25l',
-        },
-        {
-          id: 'attachment-2',
-          filename: 'two.png',
-          mimeType: 'image/png',
-          base64Data: 'dHdv',
-        },
-      ],
-    });
-
-    expect(result).toEqual({ success: false, error: 'comment write failed' });
-    expect(vi.mocked(dependencies.commentAttachmentCleanup.deleteAttachment).mock.calls).toEqual([
-      ['my-team', 'task-1', 'attachment-2', 'image/png'],
-      ['my-team', 'task-1', 'attachment-1', 'image/png'],
-    ]);
-    expect(dependencies.logger.warn).toHaveBeenCalledWith(
-      '[teams:addTaskComment] Failed to roll back attachment attachment-2: cleanup failed'
-    );
+    expect(dependencies.addTaskComment.execute).not.toHaveBeenCalled();
   });
 
   it('always clears global task telemetry and preserves failure envelopes', async () => {
@@ -503,7 +402,7 @@ describe('registerTeamTaskBoardIpc', () => {
     expect(dependencies.updateTaskFields.execute).not.toHaveBeenCalled();
     expect(dependencies.changePresence.setTaskChangePresenceTracking).not.toHaveBeenCalled();
     expect(dependencies.commands.addTaskRelationship).not.toHaveBeenCalled();
-    expect(dependencies.comments.addTaskComment).not.toHaveBeenCalled();
+    expect(dependencies.addTaskComment.execute).not.toHaveBeenCalled();
   });
 
   it('preserves the exact invalid team-name envelope on every team-scoped channel', async () => {
@@ -556,9 +455,7 @@ describe('registerTeamTaskBoardIpc', () => {
     expect(dependencies.commands.removeTaskRelationship).not.toHaveBeenCalled();
     expect(dependencies.changePresence.getTaskChangePresence).not.toHaveBeenCalled();
     expect(dependencies.changePresence.setTaskChangePresenceTracking).not.toHaveBeenCalled();
-    expect(dependencies.comments.addTaskComment).not.toHaveBeenCalled();
-    expect(dependencies.commentAttachments.saveAttachment).not.toHaveBeenCalled();
-    expect(dependencies.commentAttachmentCleanup.deleteAttachment).not.toHaveBeenCalled();
+    expect(dependencies.addTaskComment.execute).not.toHaveBeenCalled();
     expect(dependencies.updateTaskFields.execute).not.toHaveBeenCalled();
   });
 });

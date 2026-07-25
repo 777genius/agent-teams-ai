@@ -11,30 +11,15 @@ import {
 import { executeTeamTaskBoardHandler } from './executeTeamTaskBoardHandler';
 import { isValidStoredAttachmentMimeType } from './teamTaskBoardValidation';
 
-import type {
-  TaskCommentAttachmentCleanupPort,
-  TaskCommentRequest,
-  TeamTaskBoardLoggerPort,
-} from '../../../../core/application/ports/TeamTaskBoardPorts';
+import type { TaskCommentRequest } from '../../../../core/application/ports/TeamTaskBoardPorts';
+import type { AddTaskCommentAttachmentInput } from '../../../../core/application/use-cases/AddTaskCommentUseCase';
 import type { TeamTaskBoardIpcDependencies } from './TeamTaskBoardIpcDependencies';
-import type {
-  AttachmentMediaType,
-  IpcResult,
-  TaskAttachmentMeta,
-  TaskComment,
-} from '@shared/types';
+import type { IpcResult, TaskComment } from '@shared/types';
 import type { IpcMainInvokeEvent } from 'electron';
 
 const MAX_ATTACHMENTS = 5;
 
-interface NormalizedTaskCommentAttachment {
-  id: string;
-  filename: string;
-  mimeType: AttachmentMediaType;
-  base64Data: string;
-}
-
-function normalizeAttachment(attachment: unknown): NormalizedTaskCommentAttachment {
+function normalizeAttachment(attachment: unknown): AddTaskCommentAttachmentInput {
   if (!attachment || typeof attachment !== 'object') {
     throw new Error('Invalid attachment data');
   }
@@ -75,25 +60,6 @@ function normalizeAttachment(attachment: unknown): NormalizedTaskCommentAttachme
     mimeType: candidate.mimeType.trim(),
     base64Data,
   };
-}
-
-async function rollbackSavedAttachments(
-  cleanup: TaskCommentAttachmentCleanupPort,
-  logger: Pick<TeamTaskBoardLoggerPort, 'warn'>,
-  teamName: string,
-  taskId: string,
-  attachments: readonly TaskAttachmentMeta[]
-): Promise<void> {
-  for (const attachment of [...attachments].reverse()) {
-    try {
-      await cleanup.deleteAttachment(teamName, taskId, attachment.id, attachment.mimeType);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.warn(
-        `[teams:addTaskComment] Failed to roll back attachment ${attachment.id}: ${message}`
-      );
-    }
-  }
 }
 
 export function createTeamTaskBoardCommentHandlers(dependencies: TeamTaskBoardIpcDependencies): {
@@ -137,37 +103,15 @@ export function createTeamTaskBoardCommentHandlers(dependencies: TeamTaskBoardIp
 
       return executeTeamTaskBoardHandler(dependencies.logger, 'addTaskComment', async () => {
         const attachments = rawAttachments.map(normalizeAttachment);
-        const savedAttachments: TaskAttachmentMeta[] = [];
-        try {
-          for (const attachment of attachments) {
-            const metadata = await dependencies.commentAttachments.saveAttachment(
-              validatedTeamName.value!,
-              validatedTaskId.value!,
-              attachment.id,
-              attachment.filename,
-              attachment.mimeType,
-              attachment.base64Data
-            );
-            savedAttachments.push(metadata);
+        return dependencies.addTaskComment.execute(
+          validatedTeamName.value!,
+          validatedTaskId.value!,
+          {
+            text: text.trim(),
+            attachments,
+            taskRefs: validatedTaskRefs.value,
           }
-
-          return await dependencies.comments.addTaskComment(
-            validatedTeamName.value!,
-            validatedTaskId.value!,
-            text.trim(),
-            savedAttachments.length > 0 ? savedAttachments : undefined,
-            validatedTaskRefs.value
-          );
-        } catch (error) {
-          await rollbackSavedAttachments(
-            dependencies.commentAttachmentCleanup,
-            dependencies.logger,
-            validatedTeamName.value!,
-            validatedTaskId.value!,
-            savedAttachments
-          );
-          throw error;
-        }
+        );
       });
     },
   };
