@@ -3,8 +3,43 @@
   "violations": [
     {
       "rule": "core-application-dependencies",
+      "source": "src/features/change-review-history/core/application/ports.ts",
+      "specifier": "@shared/types/review"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/change-review-history/core/application/ReviewDecisionHistoryApplication.ts",
+      "specifier": "@features/review-mutations"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/change-review-history/core/application/ReviewDecisionHistoryApplication.ts",
+      "specifier": "@shared/types/review"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/change-review-history/core/application/ReviewDecisionHistoryPorts.ts",
+      "specifier": "@shared/types/review"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/change-review-history/core/application/ReviewDraftHistoryApplication.ts",
+      "specifier": "@shared/types/review"
+    },
+    {
+      "rule": "core-application-dependencies",
       "source": "src/features/member-log-stream/core/application/ports/MemberLogStreamSource.ts",
       "specifier": "@shared/types"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/review-mutations/core/application/ReviewMutationApplyResultError.ts",
+      "specifier": "@shared/types/review"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/review-mutations/core/application/ReviewMutationJournalTypes.ts",
+      "specifier": "@shared/types/review"
     },
     {
       "rule": "core-application-dependencies",
@@ -49,6 +84,36 @@
     {
       "rule": "core-application-dependencies",
       "source": "src/features/team-configuration/core/application/use-cases/UpdateTeamConfigUseCase.ts",
+      "specifier": "@shared/types"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/LaunchTeam.ts",
+      "specifier": "@features/team-runtime-control"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/LifecycleLaneCoordinator.ts",
+      "specifier": "@features/team-runtime-control"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/LifecycleLaneCoordinator.ts",
+      "specifier": "@shared/types"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/ports/TeamLifecycleCommandPorts.ts",
+      "specifier": "@features/application-command-ledger"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/ports/TeamLifecycleCommandPorts.ts",
+      "specifier": "@features/team-runtime-control"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/ports/TeamLifecycleCommandPorts.ts",
       "specifier": "@shared/types"
     },
     {
@@ -278,13 +343,38 @@
     },
     {
       "rule": "core-domain-isolation",
+      "source": "src/features/change-review-history/core/domain/reviewDecisionHistoryPolicy.ts",
+      "specifier": "../application/ReviewDecisionHistoryPorts"
+    },
+    {
+      "rule": "core-domain-isolation",
+      "source": "src/features/change-review-history/core/domain/reviewDecisionHistoryPolicy.ts",
+      "specifier": "@features/review-mutations"
+    },
+    {
+      "rule": "core-domain-isolation",
       "source": "src/features/mutation-readiness/core/domain/MutationReadinessDecisions.ts",
       "specifier": "@features/runtime-instance-context"
     },
     {
       "rule": "core-domain-isolation",
+      "source": "src/features/review-mutations/core/domain/reviewDecisionBatch.ts",
+      "specifier": "../application/ReviewMutationJournalTypes"
+    },
+    {
+      "rule": "core-domain-isolation",
       "source": "src/features/team-import/core/domain/teamImportPolicy.ts",
       "specifier": "../application/models/TeamImportFolderSnapshot"
+    },
+    {
+      "rule": "core-domain-isolation",
+      "source": "src/features/team-lifecycle/core/domain/LifecycleRun.ts",
+      "specifier": "@features/team-runtime-control"
+    },
+    {
+      "rule": "core-domain-isolation",
+      "source": "src/features/team-lifecycle/core/domain/TeamLifecycle.ts",
+      "specifier": "@features/team-runtime-control"
     },
     {
       "rule": "core-domain-isolation",
@@ -331,6 +421,24 @@
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review-history/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerReviewDecisionHistoryIpc",
+      "publicEntrypoint": "src/features/change-review-history/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review-history/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerReviewDraftHistoryIpc",
+      "publicEntrypoint": "src/features/change-review-history/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review-history/main/index.ts",
+      "specifier": "./adapters/input/ipc/types",
+      "publicEntrypoint": "src/features/change-review-history/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review-history/main/index.ts",
       "specifier": "./infrastructure/ReviewDraftHistoryStore",
       "publicEntrypoint": "src/features/change-review-history/main/index.ts"
     },
@@ -343,7 +451,19 @@
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/changeReviewDialogInteractionAdapters",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewActionHistoryPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewBulkDecisionPorts",
       "publicEntrypoint": "src/features/change-review/renderer/index.ts"
     },
     {
@@ -361,13 +481,43 @@
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewDialogLifecyclePorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewDialogViewPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewDraftHistoryPort",
       "publicEntrypoint": "src/features/change-review/renderer/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewFileDecisionPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewFileDraftPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewHistoryMutationPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewHunkDecisionPorts",
       "publicEntrypoint": "src/features/change-review/renderer/index.ts"
     },
     {
@@ -450,6 +600,12 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/composition/createInternalStorageFeature.ts",
+      "specifier": "../infrastructure/ProcessOwnershipStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/index.ts",
       "specifier": "./adapters/output/TeamScopedLegacyJsonSource",
       "publicEntrypoint": "src/features/internal-storage/main/index.ts"
@@ -476,6 +632,12 @@
       "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/index.ts",
       "specifier": "./infrastructure/InternalStorageJsonReplica",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/ProcessOwnershipStorageGateway",
       "publicEntrypoint": "src/features/internal-storage/main/index.ts"
     },
     {
@@ -549,6 +711,12 @@
       "source": "src/features/recent-projects/main/index.ts",
       "specifier": "./adapters/input/ipc/registerRecentProjectsIpc",
       "publicEntrypoint": "src/features/recent-projects/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/review-mutations/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerReviewMutationRecoveryIpc",
+      "publicEntrypoint": "src/features/review-mutations/main/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
@@ -681,6 +849,12 @@
       "source": "src/features/team-provisioning/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamProvisioningIpc",
       "publicEntrypoint": "src/features/team-provisioning/main/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createProductTeamLaunchAnalyticsCoordinator",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
     },
     {
       "rule": "public-api-implementation-export",

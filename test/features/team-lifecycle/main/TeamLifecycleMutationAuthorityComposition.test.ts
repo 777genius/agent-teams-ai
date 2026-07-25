@@ -7,8 +7,7 @@ import {
   ApplicationCommandRunner,
 } from '@features/application-command-ledger';
 import {
-  InternalStorageApplicationCommandLedgerStore,
-  NodeApplicationCommandHasher,
+  createApplicationCommandLedgerFeature,
 } from '@features/application-command-ledger/main';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import {
@@ -418,11 +417,14 @@ describe('team lifecycle mutation authority composition', () => {
       createDatabase: (file) => new Database(file),
     });
     cores.push(core);
-    const ledger = new InternalStorageApplicationCommandLedgerStore(new InProcessGateway(core));
+    const ledgerFeature = createApplicationCommandLedgerFeature({
+      storageGateway: new InProcessGateway(core),
+    });
+    const ledger = ledgerFeature.ledgerStore;
     const lifecycleClock = createTestClock();
     const runner = new ApplicationCommandRunner({
       ledger,
-      hasher: new NodeApplicationCommandHasher(),
+      hasher: ledgerFeature.hasher,
       clock: () => new Date(lifecycleClock.nowIso()),
     });
     const authority = new ApplicationCommandLedgerLaneExecutionMutationAuthority(runner);
