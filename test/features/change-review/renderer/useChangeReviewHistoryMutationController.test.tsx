@@ -80,16 +80,16 @@ function Probe({ harness }: ProbeProps): React.JSX.Element {
   return <div />;
 }
 
-function hunkAction(id = 'action-1'): ReviewUndoAction {
+function hunkAction(id = 'action-1', filePath = '/repo/file.ts'): ReviewUndoAction {
   return {
     id,
     createdAt: '2026-07-23T00:00:00.000Z',
     kind: 'hunk',
-    action: { filePath: '/repo/file.ts', originalIndex: 0 },
+    action: { filePath, originalIndex: 0 },
   };
 }
 
-function diskAction(id = 'disk-1'): ReviewUndoAction {
+function diskAction(id = 'disk-1', filePath = '/repo/file.ts'): ReviewUndoAction {
   return {
     id,
     createdAt: '2026-07-23T00:00:00.000Z',
@@ -97,7 +97,7 @@ function diskAction(id = 'disk-1'): ReviewUndoAction {
     action: {
       originalIndex: 0,
       snapshot: {
-        filePath: '/repo/file.ts',
+        filePath,
         beforeContent: 'before',
         afterContent: 'after',
       },
@@ -306,6 +306,52 @@ describe('useChangeReviewHistoryMutationController', () => {
     expect(request.expectedTopRedoActionId).toBe(action.id);
     expect(request.expectedDecisionRevision).toBe(4);
     expect(harness.history.completeRedoAction).toHaveBeenCalledWith(redoAction);
+  });
+
+  it('remounts hunk-only files when Restore also undoes disk-backed actions', async () => {
+    const hunk = hunkAction('hunk-1', '/repo/hunk.ts');
+    const disk = diskAction('disk-1', '/repo/disk.ts');
+    const harness = createHarness({ undo: [hunk, disk] });
+    vi.mocked(harness.commandPort.restoreHistory).mockResolvedValue({
+      decisionRevision: 5,
+      persistedState: persistedState(),
+      direction: 'undo',
+      actionCount: 2,
+      diskPostimages: [],
+    });
+    harness.files = [
+      {
+        filePath: '/repo/hunk.ts',
+        relativePath: 'hunk.ts',
+        snippets: [],
+        linesAdded: 1,
+        linesRemoved: 0,
+        isNewFile: false,
+      },
+      {
+        filePath: '/repo/disk.ts',
+        relativePath: 'disk.ts',
+        snippets: [],
+        linesAdded: 1,
+        linesRemoved: 0,
+        isNewFile: false,
+      },
+    ];
+    await renderHarness(harness);
+
+    await act(async () => latest!.restoreHistory({ kind: 'start' }));
+
+    expect(harness.viewPort.fetchFileContent).toHaveBeenCalledTimes(1);
+    expect(harness.viewPort.fetchFileContent).toHaveBeenCalledWith(
+      'team',
+      'member',
+      '/repo/disk.ts'
+    );
+    expect(harness.viewPort.incrementDiscardCounters).toHaveBeenCalledOnce();
+    expect(harness.viewPort.incrementDiscardCounters).toHaveBeenCalledWith([
+      '/repo/disk.ts',
+      '/repo/hunk.ts',
+    ]);
   });
 
   it('retries the original Restore only after a no-journal recovery finishes its busy scope', async () => {

@@ -131,7 +131,10 @@ export function useChangeReviewHistoryMutationController({
   );
 
   const refreshAfterUndo = useCallback(
-    (snapshots: readonly ReviewDiskUndoSnapshot[]): void => {
+    (
+      snapshots: readonly ReviewDiskUndoSnapshot[],
+      affectedPaths = snapshots.map((snapshot) => snapshot.filePath)
+    ): void => {
       for (const snapshot of snapshots) {
         const restoreMode =
           snapshot.restoreMode ??
@@ -143,7 +146,7 @@ export function useChangeReviewHistoryMutationController({
         statePort.invalidateResolvedFileContent(snapshot.filePath);
         viewPort.fetchFileContent(teamName, memberName, snapshot.filePath);
       }
-      viewPort.incrementDiscardCounters(snapshots.map((snapshot) => snapshot.filePath));
+      viewPort.incrementDiscardCounters(affectedPaths);
     },
     [memberName, statePort, teamName, viewPort]
   );
@@ -189,13 +192,10 @@ export function useChangeReviewHistoryMutationController({
     ): void => {
       applyCommittedState(persistedState, decisionRevision, null);
       if (direction === 'undo') {
-        if (diskSnapshots.length > 0) {
-          refreshAfterUndo(diskSnapshots);
-        } else {
-          viewPort.incrementDiscardCounters(
-            orderedActions.flatMap((action) => getReviewActionAffectedPaths(action, files))
-          );
-        }
+        refreshAfterUndo(
+          diskSnapshots,
+          orderedActions.flatMap((action) => getReviewActionAffectedPaths(action, files))
+        );
       } else {
         for (const action of orderedActions) refreshAfterRedo(action);
       }
