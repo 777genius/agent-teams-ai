@@ -125,6 +125,7 @@ function createHost(
     },
     getOpenCodeRuntimeAdapter: () => adapter,
     getStopAllTeamsGeneration: () => 0,
+    getStopTeamGeneration: () => 0,
     stopOpenCodeRuntimeAdapterTeam: async () => {
       calls.push('stopPreviousRuntimeRun');
     },
@@ -219,6 +220,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       runtimeAdapterProgressState: baseHost.runtimeAdapterProgressState,
       runTracking: baseHost.runTracking,
       stopAllTeamsGeneration: 42,
+      getStopTeamGeneration: () => 7,
       appShellBoundary: {
         getOpenCodeRuntimeAdapter: baseHost.getOpenCodeRuntimeAdapter,
       },
@@ -230,8 +232,10 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
         cancelRuntimeAdapterProvisioning: baseHost.cancelRuntimeAdapterProvisioning,
         recordCancelledOpenCodeRuntimeAdapterLaunch:
           baseHost.recordCancelledOpenCodeRuntimeAdapterLaunch,
-        clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned:
-          baseHost.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
+        stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: async (teamName, runId) => {
+          await baseHost.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, runId);
+          return true;
+        },
       },
       prepareFacade: {
         getOpenCodeRuntimeLaunchCwd: baseHost.getOpenCodeRuntimeLaunchCwd,
@@ -261,6 +265,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
     expect(host.runtimeAdapterRunByTeam).toBe(baseHost.runtimeAdapterRunByTeam);
     expect(host.getOpenCodeRuntimeAdapter()).toBe(adapter);
     expect(host.getStopAllTeamsGeneration()).toBe(42);
+    expect(host.getStopTeamGeneration('team-a')).toBe(7);
     await host.readLaunchState('team-a');
     host.getOpenCodeRuntimeLaunchCwd('/repo', []);
     await host.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned('team-a', 'runtime-run');

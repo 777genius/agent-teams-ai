@@ -12,6 +12,7 @@ function createPorts(
   overrides: Partial<TeamProvisioningOpenCodeStoppedLaneCleanupPorts> = {}
 ): TeamProvisioningOpenCodeStoppedLaneCleanupPorts {
   return {
+    withTeamLock: vi.fn(async (_teamName, operation) => operation()),
     canDeliverToOpenCodeRuntimeForTeam: vi.fn(() => false),
     getOpenCodeRuntimeAdapter: vi.fn(() => null),
     readPreviousLaunchState: vi.fn(async () => null),
@@ -102,6 +103,7 @@ describe('TeamProvisioningOpenCodeStoppedLaneCleanupBoundary', () => {
       killProcessByPid: vi.fn(),
       tryStopPersistedOpenCodeRuntimePidForStoppedLane: vi.fn((): 'stopped' => 'stopped'),
       stopOpenCodeRuntimeLanesForStoppedTeam: vi.fn(async (input) => {
+        await input.ports.withTeamLock(input.teamName, async () => undefined);
         input.ports.tryStopPersistedOpenCodeRuntimePidForStoppedLane({
           teamName: input.teamName,
           laneId: 'primary',
@@ -139,6 +141,7 @@ describe('TeamProvisioningOpenCodeStoppedLaneCleanupBoundary', () => {
       })
     );
     expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('alpha', 'primary');
+    expect(ports.withTeamLock).toHaveBeenCalledWith('alpha', expect.any(Function));
     expect(ports.clearPrimaryRuntimeRun).toHaveBeenCalledWith('alpha');
     expect(ports.markStoppedTeamOpenCodeRuntimeLanesCleaned).toHaveBeenCalledWith('alpha');
     expect(ports.logWarning).toHaveBeenCalledWith('warn');

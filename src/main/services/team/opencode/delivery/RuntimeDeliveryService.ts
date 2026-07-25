@@ -1,4 +1,12 @@
 import {
+  assertSameRuntimeDeliveryJournalIdentity,
+  deriveCanonicalRecoveryMigration,
+  hasCanonicalRuntimeDeliveryIdentityChange,
+  hasSameCanonicalRecoveryMigration,
+  hasSameRuntimeDeliveryLocationIdentity,
+  type RuntimeDeliveryRecoveryEvidence,
+} from './RuntimeDeliveryIdentityComparison';
+import {
   buildLocationFromJournal,
   buildRuntimeDestinationMessageId,
   hashRuntimeDeliveryEnvelope,
@@ -6,7 +14,6 @@ import {
   hashRuntimeDeliveryEnvelopeLegacyTransport,
   normalizeRuntimeDeliveryEnvelope,
   resolveRuntimeDeliveryDestination,
-  type RuntimeDeliveryCanonicalRecoveryMigration,
   type RuntimeDeliveryDestinationRef,
   type RuntimeDeliveryEnvelope,
   RuntimeDeliveryJournalCommitRevalidationError,
@@ -15,6 +22,7 @@ import {
 } from './RuntimeDeliveryJournal';
 
 import type { RuntimeDeliveryJournalStore } from './RuntimeDeliveryJournal';
+export type { RuntimeDeliveryRecoveryEvidence } from './RuntimeDeliveryIdentityComparison';
 
 export interface RuntimeDeliveryVerifyResult {
   found: boolean;
@@ -22,24 +30,12 @@ export interface RuntimeDeliveryVerifyResult {
   diagnostics: string[];
   recoveryEvidence?: RuntimeDeliveryRecoveryEvidence;
 }
-
-export interface RuntimeDeliveryRecoveryEvidence {
-  fromMemberName: string;
-  runtimeSessionId: string;
-  text: string;
-  createdAt: string;
-  summary: string | null;
-  taskRefs?: RuntimeDeliveryEnvelope['taskRefs'];
-}
-
 export interface RuntimeDeliveryDestinationPort {
   readonly kind: RuntimeDeliveryDestinationRef['kind'];
-
   write(input: {
     envelope: RuntimeDeliveryEnvelope;
     destinationMessageId: string;
   }): Promise<RuntimeDeliveryLocation>;
-
   verify(input: {
     destination: RuntimeDeliveryDestinationRef;
     destinationMessageId: string;
@@ -50,27 +46,36 @@ export interface RuntimeDeliveryDestinationPort {
     };
     includeRecoveryEvidence?: boolean;
   }): Promise<RuntimeDeliveryVerifyResult>;
-
   buildChangeEvent(input: {
     teamName: string;
     location: RuntimeDeliveryLocation;
   }): RuntimeDeliveryTeamChangeEvent | null;
 }
-
 export interface RuntimeDeliveryTeamChangeEvent {
   type: string;
   teamName: string;
   data?: Record<string, unknown>;
 }
-
 export interface RuntimeDeliveryRunStateReader {
   getCurrentRunId(teamName: string): Promise<string | null>;
+}
+export interface RuntimeDeliverySenderIdentityReader {
+  assertCurrent(envelope: RuntimeDeliveryEnvelope): Promise<void>;
+}
+
+export interface RuntimeDeliveryIrreversibleWriteLease {
+  runExclusive<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+}
+export class RuntimeDeliveryStaleIdentityError extends Error {
+  constructor(message = 'Runtime delivery sender identity is stale') {
+    super(message);
+    this.name = 'RuntimeDeliveryStaleIdentityError';
+  }
 }
 
 export interface RuntimeDeliveryRecipientCanonicalizer {
   canonicalize(envelope: RuntimeDeliveryEnvelope): Promise<RuntimeDeliveryEnvelope>;
 }
-
 export interface RuntimeDeliveryJournalRecordCanonicalizer {
   canonicalize(record: RuntimeDeliveryJournalRecord): Promise<RuntimeDeliveryJournalRecord>;
 }
@@ -78,7 +83,6 @@ export interface RuntimeDeliveryJournalRecordCanonicalizer {
 export interface RuntimeDeliveryDiagnosticsSink {
   append(event: RuntimeDeliveryDiagnosticEvent): Promise<void>;
 }
-
 export interface RuntimeDeliveryDiagnosticEvent {
   type:
     | 'runtime_delivery_conflict'
@@ -97,7 +101,6 @@ export interface RuntimeDeliveryDiagnosticEvent {
 export interface RuntimeDeliveryTeamChangeEmitter {
   emit(event: RuntimeDeliveryTeamChangeEvent): void;
 }
-
 export type RuntimeDeliveryAck =
   | {
       ok: true;
@@ -109,7 +112,7 @@ export type RuntimeDeliveryAck =
   | {
       ok: false;
       delivered: false;
-      reason: 'stale_run' | 'idempotency_conflict';
+      reason: 'stale_run' | 'stale_runtime_identity' | 'idempotency_conflict';
       idempotencyKey: string;
     };
 
@@ -121,7 +124,6 @@ export class RuntimeDeliveryDestinationRegistry {
     RuntimeDeliveryDestinationRef['kind'],
     RuntimeDeliveryDestinationPort
   >();
-
   constructor(ports: RuntimeDeliveryDestinationPort[]) {
     for (const port of ports) {
       if (this.ports.has(port.kind)) {
@@ -130,7 +132,6 @@ export class RuntimeDeliveryDestinationRegistry {
       this.ports.set(port.kind, port);
     }
   }
-
   get(kind: RuntimeDeliveryDestinationRef['kind']): RuntimeDeliveryDestinationPort {
     const port = this.ports.get(kind);
     if (!port) {
@@ -148,7 +149,9 @@ export class RuntimeDeliveryService {
     private readonly diagnostics: RuntimeDeliveryDiagnosticsSink,
     private readonly teamChangeEmitter: RuntimeDeliveryTeamChangeEmitter,
     private readonly clock: () => Date = () => new Date(),
-    private readonly recipientCanonicalizer?: RuntimeDeliveryRecipientCanonicalizer
+    private readonly recipientCanonicalizer?: RuntimeDeliveryRecipientCanonicalizer,
+    private readonly senderIdentity?: RuntimeDeliverySenderIdentityReader,
+    private readonly irreversibleWriteLease?: RuntimeDeliveryIrreversibleWriteLease
   ) {}
 
   async deliver(raw: unknown): Promise<RuntimeDeliveryAck> {
@@ -170,6 +173,10 @@ export class RuntimeDeliveryService {
           await this.recipientCanonicalizer.canonicalize(requestedEnvelope)
         )
       : requestedEnvelope;
+    const staleIdentity = await this.rejectIfRuntimeIdentityIsStale(envelope);
+    if (staleIdentity) {
+      return staleIdentity;
+    }
 
     const preCanonicalDestination = resolveRuntimeDeliveryDestination(requestedEnvelope);
     const requestedDestination = resolveRuntimeDeliveryDestination(envelope);
@@ -207,6 +214,12 @@ export class RuntimeDeliveryService {
     });
     if (staleRunAfterJournal) {
       return staleRunAfterJournal;
+    }
+    const staleIdentityAfterJournal = await this.rejectIfRuntimeIdentityIsStale(envelope, {
+      markJournalRecordTerminal: journalCanBeMarkedTerminal,
+    });
+    if (staleIdentityAfterJournal) {
+      return staleIdentityAfterJournal;
     }
 
     if (begin.state === 'payload_conflict') {
@@ -261,6 +274,13 @@ export class RuntimeDeliveryService {
         const preExisting = await candidatePort.verify(verificationInput);
         if (!preExisting.found || !preExisting.location) {
           continue;
+        }
+        const staleIdentityBeforeRecoveryCommit = await this.rejectIfRuntimeIdentityIsStale(
+          envelope,
+          { markJournalRecordTerminal: true }
+        );
+        if (staleIdentityBeforeRecoveryCommit) {
+          return staleIdentityBeforeRecoveryCommit;
         }
         try {
           const verifiedLocation = preExisting.location;
@@ -341,6 +361,13 @@ export class RuntimeDeliveryService {
       };
       const preExisting = await candidatePort.verify(verificationInput);
       if (preExisting.found && preExisting.location) {
+        const staleIdentityBeforeRecoveryCommit = await this.rejectIfRuntimeIdentityIsStale(
+          envelope,
+          { markJournalRecordTerminal: true }
+        );
+        if (staleIdentityBeforeRecoveryCommit) {
+          return staleIdentityBeforeRecoveryCommit;
+        }
         const verifiedLocation = preExisting.location;
         try {
           await markRuntimeDeliveryCommittedWithBoundProof({
@@ -375,84 +402,137 @@ export class RuntimeDeliveryService {
       }
     }
 
-    const staleRunBeforeWrite = await this.rejectIfRunIsStale(envelope, {
-      markJournalRecordTerminal: true,
-    });
-    if (staleRunBeforeWrite) {
-      return staleRunBeforeWrite;
-    }
-
-    try {
-      const location = await port.write({ envelope, destinationMessageId });
-      const verified = await port.verify({ destination, destinationMessageId, location });
-      if (!verified.found) {
-        throw new Error(
-          `Delivery destination write was not verifiable for ${destinationMessageId}`
-        );
-      }
-
-      const committedLocation = verified.location ?? location;
-      const verificationInput = { destination, destinationMessageId, location: committedLocation };
-      await markRuntimeDeliveryCommittedWithBoundProof({
-        journal: this.journal,
-        port,
-        verificationInput,
-        isValidProof: (candidateProof) =>
-          candidateProof.found &&
-          candidateProof.location !== null &&
-          hasSameRuntimeDeliveryLocationIdentity(committedLocation, candidateProof.location),
-        commit: {
-          idempotencyKey: envelope.idempotencyKey,
-          runId: envelope.runId,
-          teamName: envelope.teamName,
-          location: committedLocation,
-          committedAt: this.clock().toISOString(),
-        },
-      });
-
-      await this.emitChangeEventBestEffort(port, envelope, committedLocation);
-
-      return {
-        ok: true,
-        delivered: true,
-        reason: null,
-        idempotencyKey: envelope.idempotencyKey,
-        location: committedLocation,
-      };
-    } catch (error) {
-      const staleRunAfterDeliveryFailure = await this.rejectIfRunIsStale(envelope, {
+    const writeWhileIdentityCurrent = async (): Promise<RuntimeDeliveryAck> => {
+      const staleRunBeforeWrite = await this.rejectIfRunIsStale(envelope, {
         markJournalRecordTerminal: true,
       });
-      if (staleRunAfterDeliveryFailure) {
-        return staleRunAfterDeliveryFailure;
+      if (staleRunBeforeWrite) {
+        return staleRunBeforeWrite;
+      }
+      const staleIdentityBeforeWrite = await this.rejectIfRuntimeIdentityIsStale(envelope, {
+        markJournalRecordTerminal: true,
+      });
+      if (staleIdentityBeforeWrite) {
+        return staleIdentityBeforeWrite;
       }
 
-      if (!(error instanceof RuntimeDeliveryJournalCommitRevalidationError)) {
-        await this.journal.markFailed({
-          idempotencyKey: envelope.idempotencyKey,
-          runId: envelope.runId,
-          teamName: envelope.teamName,
-          status: 'failed_retryable',
-          error: stringifyError(error),
-          updatedAt: this.clock().toISOString(),
-        });
-      }
-      await this.diagnostics.append({
-        type: 'runtime_delivery_failed',
-        providerId: 'opencode',
-        teamName: envelope.teamName,
-        runId: envelope.runId,
-        severity: 'warning',
-        message: 'Runtime delivery failed and remains retryable',
-        data: {
-          idempotencyKey: envelope.idempotencyKey,
+      try {
+        const location = await port.write({ envelope, destinationMessageId });
+        const verified = await port.verify({ destination, destinationMessageId, location });
+        if (!verified.found) {
+          throw new Error(
+            `Delivery destination write was not verifiable for ${destinationMessageId}`
+          );
+        }
+
+        const committedLocation = verified.location ?? location;
+        const verificationInput = {
           destination,
-          error: stringifyError(error),
-        },
-        createdAt: this.clock().toISOString(),
-      });
-      throw error;
-    }
+          destinationMessageId,
+          location: committedLocation,
+        };
+        await markRuntimeDeliveryCommittedWithBoundProof({
+          journal: this.journal,
+          port,
+          verificationInput,
+          isValidProof: (candidateProof) =>
+            candidateProof.found &&
+            candidateProof.location !== null &&
+            hasSameRuntimeDeliveryLocationIdentity(committedLocation, candidateProof.location),
+          commit: {
+            idempotencyKey: envelope.idempotencyKey,
+            runId: envelope.runId,
+            teamName: envelope.teamName,
+            location: committedLocation,
+            committedAt: this.clock().toISOString(),
+          },
+        });
+
+        await this.emitChangeEventBestEffort(port, envelope, committedLocation);
+
+        return {
+          ok: true,
+          delivered: true,
+          reason: null,
+          idempotencyKey: envelope.idempotencyKey,
+          location: committedLocation,
+        };
+      } catch (error) {
+        if (isRuntimeDeliveryIdempotencyConflictError(error)) {
+          await this.journal.markFailed({
+            idempotencyKey: envelope.idempotencyKey,
+            runId: envelope.runId,
+            teamName: envelope.teamName,
+            status: 'failed_terminal',
+            error: 'idempotency_conflict',
+            updatedAt: this.clock().toISOString(),
+          });
+          await this.diagnostics.append({
+            type: 'runtime_delivery_conflict',
+            providerId: 'opencode',
+            teamName: envelope.teamName,
+            runId: envelope.runId,
+            severity: 'error',
+            message: 'Runtime delivery destination rejected divergent idempotency reuse',
+            data: {
+              idempotencyKey: envelope.idempotencyKey,
+              destination,
+              error: stringifyError(error),
+            },
+            createdAt: this.clock().toISOString(),
+          });
+          return {
+            ok: false,
+            delivered: false,
+            reason: 'idempotency_conflict',
+            idempotencyKey: envelope.idempotencyKey,
+          };
+        }
+
+        const staleRunAfterDeliveryFailure = await this.rejectIfRunIsStale(envelope, {
+          markJournalRecordTerminal: true,
+        });
+        if (staleRunAfterDeliveryFailure) {
+          return staleRunAfterDeliveryFailure;
+        }
+        const staleIdentityAfterDeliveryFailure = await this.rejectIfRuntimeIdentityIsStale(
+          envelope,
+          { markJournalRecordTerminal: true }
+        );
+        if (staleIdentityAfterDeliveryFailure) {
+          return staleIdentityAfterDeliveryFailure;
+        }
+
+        if (!(error instanceof RuntimeDeliveryJournalCommitRevalidationError)) {
+          await this.journal.markFailed({
+            idempotencyKey: envelope.idempotencyKey,
+            runId: envelope.runId,
+            teamName: envelope.teamName,
+            status: 'failed_retryable',
+            error: stringifyError(error),
+            updatedAt: this.clock().toISOString(),
+          });
+        }
+        await this.diagnostics.append({
+          type: 'runtime_delivery_failed',
+          providerId: 'opencode',
+          teamName: envelope.teamName,
+          runId: envelope.runId,
+          severity: 'warning',
+          message: 'Runtime delivery failed and remains retryable',
+          data: {
+            idempotencyKey: envelope.idempotencyKey,
+            destination,
+            error: stringifyError(error),
+          },
+          createdAt: this.clock().toISOString(),
+        });
+        throw error;
+      }
+    };
+    return this.irreversibleWriteLease
+      ? await this.irreversibleWriteLease.runExclusive(envelope.teamName, writeWhileIdentityCurrent)
+      : await writeWhileIdentityCurrent();
   }
 
   private async rejectIfRunIsStale(
@@ -479,6 +559,41 @@ export class RuntimeDeliveryService {
       ok: false,
       delivered: false,
       reason: 'stale_run',
+      idempotencyKey: envelope.idempotencyKey,
+    };
+  }
+
+  private async rejectIfRuntimeIdentityIsStale(
+    envelope: RuntimeDeliveryEnvelope,
+    options: { markJournalRecordTerminal?: boolean } = {}
+  ): Promise<RuntimeDeliveryAck | null> {
+    if (!this.senderIdentity) {
+      return null;
+    }
+    try {
+      await this.senderIdentity.assertCurrent(envelope);
+      return null;
+    } catch (error) {
+      if (!(error instanceof RuntimeDeliveryStaleIdentityError)) {
+        throw error;
+      }
+    }
+
+    if (options.markJournalRecordTerminal) {
+      await this.journal.markFailed({
+        idempotencyKey: envelope.idempotencyKey,
+        runId: envelope.runId,
+        teamName: envelope.teamName,
+        status: 'failed_terminal',
+        error: 'stale_runtime_identity',
+        updatedAt: this.clock().toISOString(),
+      });
+    }
+
+    return {
+      ok: false,
+      delivered: false,
+      reason: 'stale_runtime_identity',
       idempotencyKey: envelope.idempotencyKey,
     };
   }
@@ -679,200 +794,14 @@ async function markRuntimeDeliveryCommittedWithBoundProof(input: {
   throw new RuntimeDeliveryJournalCommitRevalidationError();
 }
 
-function deriveCanonicalRecoveryMigration(
-  record: RuntimeDeliveryJournalRecord,
-  canonicalRecord: RuntimeDeliveryJournalRecord,
-  evidence: RuntimeDeliveryRecoveryEvidence | undefined
-): RuntimeDeliveryCanonicalRecoveryMigration | null {
-  if (
-    !evidence ||
-    record.logicalPayloadHash === null ||
-    evidence.fromMemberName.trim().toLowerCase() !== record.fromMemberName.trim().toLowerCase() ||
-    evidence.runtimeSessionId !== record.runtimeSessionId
-  ) {
-    return null;
-  }
-
-  try {
-    const persistedEnvelope = normalizeRuntimeDeliveryEnvelope({
-      idempotencyKey: record.idempotencyKey,
-      runId: record.runId,
-      teamName: record.teamName,
-      fromMemberName: record.fromMemberName,
-      providerId: record.providerId,
-      runtimeSessionId: record.runtimeSessionId,
-      to: getRuntimeDeliveryTarget(record.destination),
-      text: evidence.text,
-      createdAt: evidence.createdAt,
-      summary: evidence.summary,
-      ...(evidence.taskRefs ? { taskRefs: evidence.taskRefs } : {}),
-    });
-    if (hashRuntimeDeliveryEnvelope(persistedEnvelope) !== record.logicalPayloadHash) {
-      return null;
-    }
-    const canonicalEnvelope = normalizeRuntimeDeliveryEnvelope({
-      ...persistedEnvelope,
-      fromMemberName: canonicalRecord.fromMemberName,
-      to: getRuntimeDeliveryTarget(canonicalRecord.destination),
-    });
-    return {
-      recoveryRecords: [record],
-      fromMemberName: canonicalEnvelope.fromMemberName,
-      payloadHash: hashRuntimeDeliveryEnvelope(canonicalEnvelope),
-      destination: canonicalRecord.destination,
-      destinationMessageId: canonicalRecord.destinationMessageId,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function hasSameCanonicalRecoveryMigration(
-  left: RuntimeDeliveryCanonicalRecoveryMigration,
-  right: RuntimeDeliveryCanonicalRecoveryMigration
-): boolean {
-  return (
-    left.payloadHash === right.payloadHash &&
-    left.fromMemberName === right.fromMemberName &&
-    hasSameRuntimeDeliveryDestinationIdentity(left.destination, right.destination) &&
-    left.destinationMessageId === right.destinationMessageId
-  );
-}
-
-// eslint-disable-next-line sonarjs/function-return-type -- destination kinds map to the target union by design
-function getRuntimeDeliveryTarget(
-  destination: RuntimeDeliveryDestinationRef
-): RuntimeDeliveryEnvelope['to'] {
-  switch (destination.kind) {
-    case 'user_sent_messages':
-      return 'user';
-    case 'member_inbox':
-      return { memberName: destination.memberName };
-    case 'cross_team_outbox':
-      return { teamName: destination.toTeamName, memberName: destination.toMemberName };
-  }
-}
-
-function hasCanonicalRuntimeDeliveryIdentityChange(
-  record: RuntimeDeliveryJournalRecord,
-  canonicalRecord: RuntimeDeliveryJournalRecord
-): boolean {
-  return (
-    record.fromMemberName !== canonicalRecord.fromMemberName ||
-    !hasSameRuntimeDeliveryDestinationIdentity(record.destination, canonicalRecord.destination)
-  );
-}
-
-function hasSameRuntimeDeliveryLocationIdentity(
-  left: RuntimeDeliveryLocation,
-  right: RuntimeDeliveryLocation
-): boolean {
-  if (left.kind !== right.kind || left.messageId !== right.messageId) {
-    return false;
-  }
-  if (left.kind === 'user_sent_messages' && right.kind === 'user_sent_messages') {
-    return left.teamName === right.teamName;
-  }
-  if (left.kind === 'member_inbox' && right.kind === 'member_inbox') {
-    return left.teamName === right.teamName && left.memberName === right.memberName;
-  }
-  return (
-    left.kind === 'cross_team_outbox' &&
-    right.kind === 'cross_team_outbox' &&
-    left.fromTeamName === right.fromTeamName &&
-    left.toTeamName === right.toTeamName &&
-    left.toMemberName === right.toMemberName
-  );
-}
-
-function hasSameRuntimeDeliveryDestinationIdentity(
-  left: RuntimeDeliveryDestinationRef,
-  right: RuntimeDeliveryDestinationRef
-): boolean {
-  if (left.kind === 'user_sent_messages' && right.kind === 'user_sent_messages') {
-    return left.teamName === right.teamName;
-  }
-  if (left.kind === 'member_inbox' && right.kind === 'member_inbox') {
-    return left.teamName === right.teamName && left.memberName === right.memberName;
-  }
-  return (
-    left.kind === 'cross_team_outbox' &&
-    right.kind === 'cross_team_outbox' &&
-    left.fromTeamName === right.fromTeamName &&
-    left.toTeamName === right.toTeamName &&
-    left.toMemberName === right.toMemberName
-  );
-}
-
-function assertSameRuntimeDeliveryJournalIdentity(
-  record: RuntimeDeliveryJournalRecord,
-  canonicalRecord: RuntimeDeliveryJournalRecord
-): void {
-  if (
-    canonicalRecord.idempotencyKey !== record.idempotencyKey ||
-    canonicalRecord.runId !== record.runId ||
-    canonicalRecord.teamName !== record.teamName ||
-    canonicalRecord.providerId !== record.providerId ||
-    canonicalRecord.runtimeSessionId !== record.runtimeSessionId ||
-    canonicalRecord.payloadHash !== record.payloadHash ||
-    canonicalRecord.logicalPayloadHash !== record.logicalPayloadHash ||
-    canonicalRecord.destinationMessageId !== record.destinationMessageId ||
-    canonicalRecord.status !== record.status ||
-    !hasSameRuntimeDeliveryDestinationScope(record.destination, canonicalRecord.destination) ||
-    !hasSameRuntimeDeliveryLocationScope(
-      record.committedLocation,
-      canonicalRecord.committedLocation
-    )
-  ) {
-    throw new Error('Runtime delivery journal canonicalizer changed immutable record identity');
-  }
-}
-
-function hasSameRuntimeDeliveryDestinationScope(
-  left: RuntimeDeliveryDestinationRef,
-  right: RuntimeDeliveryDestinationRef
-): boolean {
-  if (left.kind !== right.kind) {
-    return false;
-  }
-  if (left.kind === 'user_sent_messages' && right.kind === 'user_sent_messages') {
-    return left.teamName === right.teamName;
-  }
-  if (left.kind === 'member_inbox' && right.kind === 'member_inbox') {
-    return left.teamName === right.teamName;
-  }
-  return (
-    left.kind === 'cross_team_outbox' &&
-    right.kind === 'cross_team_outbox' &&
-    left.fromTeamName === right.fromTeamName &&
-    left.toTeamName === right.toTeamName
-  );
-}
-
-function hasSameRuntimeDeliveryLocationScope(
-  left: RuntimeDeliveryLocation | null,
-  right: RuntimeDeliveryLocation | null
-): boolean {
-  if (left === null || right === null) {
-    return left === right;
-  }
-  if (left.kind !== right.kind || left.messageId !== right.messageId) {
-    return false;
-  }
-  if (left.kind === 'user_sent_messages' && right.kind === 'user_sent_messages') {
-    return left.teamName === right.teamName;
-  }
-  if (left.kind === 'member_inbox' && right.kind === 'member_inbox') {
-    return left.teamName === right.teamName;
-  }
-  return (
-    left.kind === 'cross_team_outbox' &&
-    right.kind === 'cross_team_outbox' &&
-    left.fromTeamName === right.fromTeamName &&
-    left.toTeamName === right.toTeamName
-  );
-}
-
 function stringifyError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isRuntimeDeliveryIdempotencyConflictError(
+  error: unknown
+): error is Error & { code: 'idempotency_conflict' } {
+  return (
+    error instanceof Error && (error as Error & { code?: unknown }).code === 'idempotency_conflict'
+  );
 }

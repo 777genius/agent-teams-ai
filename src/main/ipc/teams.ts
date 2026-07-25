@@ -10,7 +10,7 @@ import {
   isTeamDataWorkerFatalError,
 } from '@main/services/team/TeamDataWorkerClient';
 import { getAppIconPath } from '@main/utils/appIcon';
-import { getAppDataPath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
 import {
@@ -149,6 +149,7 @@ import {
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
+import { capMessagesPageLiveOverlay } from '../services/team/teamInboxOrdering';
 import { readTeamLaunchFailureDiagnosticsBundle } from '../services/team/TeamLaunchFailureArtifactPack';
 import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../services/team/TeamMetaStore';
@@ -156,6 +157,7 @@ import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStor
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
+import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import {
   validateFromField,
   validateMemberName,
@@ -266,7 +268,6 @@ const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_MS = 6_000;
 const OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS = 1_000;
 const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON =
   'opencode_runtime_delivery_ui_timeout_pending';
-const MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD = 200;
 
 type OpenCodeMemberInboxRelayResult = TeamOpenCodeMemberInboxRelayResult;
 type OpenCodeMemberInboxDelivery = NonNullable<OpenCodeMemberInboxRelayResult['lastDelivery']>;
@@ -578,26 +579,6 @@ function throwIfFatalTeamDataWorkerFailure(_operation: string, error: unknown): 
   }
 }
 
-function compareInboxMessagesNewestFirst(left: InboxMessage, right: InboxMessage): number {
-  const leftTime = Date.parse(left.timestamp);
-  const rightTime = Date.parse(right.timestamp);
-  if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
-    return rightTime - leftTime;
-  }
-  const leftId = typeof left.messageId === 'string' ? left.messageId : '';
-  const rightId = typeof right.messageId === 'string' ? right.messageId : '';
-  return leftId.localeCompare(rightId);
-}
-
-function capLiveOverlayMessages(liveMessages: readonly InboxMessage[]): InboxMessage[] {
-  if (liveMessages.length <= MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD) {
-    return [...liveMessages];
-  }
-  return [...liveMessages]
-    .sort(compareInboxMessagesNewestFirst)
-    .slice(0, MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD);
-}
-
 async function getNewestMessagesPageWithLiveOverlay(input: {
   teamName: string;
   limit: number;
@@ -605,7 +586,7 @@ async function getNewestMessagesPageWithLiveOverlay(input: {
   includeUndefinedCursorInFallback?: boolean;
 }): Promise<MessagesPage> {
   const { teamName, limit } = input;
-  const liveMessages = capLiveOverlayMessages(input.liveMessages);
+  const liveMessages = capMessagesPageLiveOverlay(input.liveMessages);
   const liveReserve = liveMessages.length ? Math.max(liveMessages.length, 100) : 0;
   const durableLimit = limit + liveReserve + 1;
   const worker = getTeamDataWorkerClient();
@@ -771,10 +752,11 @@ let boardTaskLogStreamService: BoardTaskLogStreamService | null = null;
 let boardTaskExactLogsService: BoardTaskExactLogsService | null = null;
 let boardTaskExactLogDetailService: BoardTaskExactLogDetailService | null = null;
 let teamPermanentDeletionLifecycle: {
-  prepareTeamDeletion(teamName: string): Promise<void>;
+  prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 } | null = null;
+let permanentDeletionCoordinator: TeamPermanentDeletionTransactionCoordinator | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
@@ -825,7 +807,7 @@ export function initializeTeamHandlers(
   taskExactLogDetailService?: BoardTaskExactLogDetailService,
   ioGovernor?: LaunchIoGovernor,
   permanentDeletionLifecycle?: {
-    prepareTeamDeletion(teamName: string): Promise<void>;
+    prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
   }
@@ -855,6 +837,19 @@ export function initializeTeamHandlers(
   boardTaskExactLogsService = taskExactLogsService ?? null;
   boardTaskExactLogDetailService = taskExactLogDetailService ?? null;
   teamPermanentDeletionLifecycle = permanentDeletionLifecycle ?? null;
+  permanentDeletionCoordinator = new TeamPermanentDeletionTransactionCoordinator({
+    backupService: () => teamBackupService,
+    dataService: () => getTeamDataService(),
+    attachmentStore,
+    taskAttachmentStore,
+    lifecycle: () => teamPermanentDeletionLifecycle,
+    invalidateTeamConfig: (teamName) => getTeamDataWorkerClient().invalidateTeamConfig(teamName),
+    logRecoveryError: (teamName, error) =>
+      logger.error(
+        `[PermanentDeletion] ${teamName === 'startup' ? 'Startup recovery failed' : `Recovery remains pending for ${teamName}`}: ${String(error)}`
+      ),
+  });
+  permanentDeletionCoordinator.startRecovery();
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
@@ -1036,6 +1031,17 @@ function getTeamDataService(): TeamDataService {
     throw new Error('Team handlers are not initialized');
   }
   return teamDataService;
+}
+
+function getPermanentDeletionCoordinator(): TeamPermanentDeletionTransactionCoordinator {
+  if (!permanentDeletionCoordinator) {
+    throw new Error('Permanent deletion is unavailable until team handlers are initialized');
+  }
+  return permanentDeletionCoordinator;
+}
+
+export async function waitForPendingPermanentDeletionRecoveryForTests(): Promise<void> {
+  await permanentDeletionCoordinator?.waitForRecovery();
 }
 
 function getTeamProvisioningStartApi(): TeamProvisioningStartApi {
@@ -1592,26 +1598,7 @@ async function handlePermanentlyDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('permanentlyDeleteTeam', async () => {
-    const teamName = validated.value!;
-    await teamPermanentDeletionLifecycle?.prepareTeamDeletion(teamName);
-    await getTeamDataService().permanentlyDeleteTeam(teamName);
-    teamPermanentDeletionLifecycle?.completeTeamDeletion(teamName);
-    getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
-    // Clean up app-owned data (attachments, task-attachments) that lives outside ~/.claude/
-    const appData = getAppDataPath();
-    await fs.promises
-      .rm(path.join(appData, 'attachments', validated.value!), { recursive: true, force: true })
-      .catch(() => undefined);
-    await fs.promises
-      .rm(path.join(appData, 'task-attachments', validated.value!), {
-        recursive: true,
-        force: true,
-      })
-      .catch(() => undefined);
-    // Mark in backup registry AFTER successful deletion
-    if (teamBackupService) {
-      await teamBackupService.markDeletedByUser(validated.value!);
-    }
+    await getPermanentDeletionCoordinator().permanentlyDelete(validated.value!);
   });
 }
 
@@ -2331,13 +2318,14 @@ async function handleCreateTeam(
     // its initial config, tasks, inboxes, and launch state.
     markTeamEngaged(validation.value.teamName);
     try {
-      const response = await getTeamProvisioningStartApi().createTeam(
-        validation.value,
-        (progress) => {
+      const create = (): Promise<TeamCreateResponse> =>
+        getTeamProvisioningStartApi().createTeam(validation.value, (progress) => {
           launchIoGovernor?.noteProvisioningProgress(progress);
           sendProvisioningProgress(progressTargetWindow, progress);
-        }
-      );
+        });
+      const response = teamBackupService
+        ? await teamBackupService.withTeamIdentityFence(validation.value.teamName, create)
+        : await create();
       teamPermanentDeletionLifecycle?.resumeTeam(validation.value.teamName);
       invalidateTeamRosterSnapshotCaches(validation.value.teamName);
       return response;
@@ -2503,13 +2491,14 @@ async function handleLaunchTeam(
       // as a normal launch before startup files begin changing.
       markTeamEngaged(tn);
       try {
-        const response = await getTeamProvisioningStartApi().createTeam(
-          createRequest,
-          (progress) => {
+        const create = (): Promise<TeamCreateResponse> =>
+          getTeamProvisioningStartApi().createTeam(createRequest, (progress) => {
             launchIoGovernor?.noteProvisioningProgress(progress);
             sendProvisioningProgress(progressTargetWindow, progress);
-          }
-        );
+          });
+        const response = teamBackupService
+          ? await teamBackupService.withTeamIdentityFence(tn, create)
+          : await create();
         teamPermanentDeletionLifecycle?.resumeTeam(tn);
         invalidateTeamRosterSnapshotCaches(tn);
         return response;
@@ -4176,31 +4165,37 @@ async function handleCreateConfig(
   }
 
   return wrapTeamHandler('createConfig', async () => {
-    await getTeamDataService().createTeamConfig({
-      teamName,
-      displayName: payload.displayName?.trim() || undefined,
-      description: payload.description?.trim() || undefined,
-      color: typeof payload.color === 'string' ? payload.color.trim() || undefined : undefined,
-      members,
-      cwd: typeof payload.cwd === 'string' ? payload.cwd.trim() || undefined : undefined,
-      prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
-      providerId: teamProviderValidation.value,
-      providerBackendId: providerBackendValidation.value,
-      model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
-      effort: effortValidation.value,
-      fastMode: fastModeValidation.value,
-      limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
-      skipPermissions:
-        typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
-      worktree:
-        typeof payload.worktree === 'string' && payload.worktree.trim()
-          ? payload.worktree.trim()
-          : undefined,
-      extraCliArgs:
-        typeof payload.extraCliArgs === 'string' && payload.extraCliArgs.trim()
-          ? payload.extraCliArgs.trim()
-          : undefined,
-    });
+    const create = (): Promise<void> =>
+      getTeamDataService().createTeamConfig({
+        teamName,
+        displayName: payload.displayName?.trim() || undefined,
+        description: payload.description?.trim() || undefined,
+        color: typeof payload.color === 'string' ? payload.color.trim() || undefined : undefined,
+        members,
+        cwd: typeof payload.cwd === 'string' ? payload.cwd.trim() || undefined : undefined,
+        prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
+        providerId: teamProviderValidation.value,
+        providerBackendId: providerBackendValidation.value,
+        model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
+        effort: effortValidation.value,
+        fastMode: fastModeValidation.value,
+        limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
+        skipPermissions:
+          typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
+        worktree:
+          typeof payload.worktree === 'string' && payload.worktree.trim()
+            ? payload.worktree.trim()
+            : undefined,
+        extraCliArgs:
+          typeof payload.extraCliArgs === 'string' && payload.extraCliArgs.trim()
+            ? payload.extraCliArgs.trim()
+            : undefined,
+      });
+    if (teamBackupService) {
+      await teamBackupService.withTeamIdentityFence(teamName, create);
+    } else {
+      await create();
+    }
     teamPermanentDeletionLifecycle?.resumeTeam(teamName);
     getTeamDataWorkerClient().invalidateTeamConfig(teamName);
   });
@@ -5809,8 +5804,6 @@ async function handleDeleteDraft(
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    await teamPermanentDeletionLifecycle?.prepareTeamDeletion(validated.value!);
-    await getTeamDataService().permanentlyDeleteTeam(validated.value!);
-    teamPermanentDeletionLifecycle?.completeTeamDeletion(validated.value!);
+    await getPermanentDeletionCoordinator().permanentlyDelete(validated.value!, { draft: true });
   });
 }

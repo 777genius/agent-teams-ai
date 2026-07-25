@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { writeJsonFileSync } = require('./atomicFile.js');
 const { getTeamBoardLockContext } = require('./boardLock.js');
 const reviewStateHelpers = require('./reviewState.js');
+const { normalizeCreationCommand } = require('./taskCreationCommand.js');
 
 const TASK_STATUSES = new Set(['pending', 'in_progress', 'completed', 'deleted']);
 const UUID_TASK_ID_PATTERN =
@@ -144,22 +145,6 @@ function normalizeTask(rawTask, filePath) {
 
 function normalizeTaskReviewState(value) {
   return reviewStateHelpers.normalizeReviewState(value);
-}
-
-function normalizeCreationCommand(value) {
-  if (value == null) return undefined;
-  if (!value || typeof value !== 'object') {
-    throw new Error('Task creation command conflict: invalid provenance');
-  }
-  const namespace = typeof value.namespace === 'string' ? value.namespace.trim() : '';
-  const scopeKey = typeof value.scopeKey === 'string' ? value.scopeKey.trim() : '';
-  const operation = typeof value.operation === 'string' ? value.operation.trim() : '';
-  const commandId = typeof value.commandId === 'string' ? value.commandId.trim() : '';
-  const payloadHash = typeof value.payloadHash === 'string' ? value.payloadHash.trim() : '';
-  if (!namespace || !scopeKey || !operation || !commandId || !payloadHash) {
-    throw new Error('Task creation command conflict: incomplete provenance');
-  }
-  return { namespace, scopeKey, operation, commandId, payloadHash };
 }
 
 function buildTaskScanSnapshot(paths) {
@@ -772,6 +757,7 @@ function reconcileTaskCreation(paths, input = {}) {
   const existingCommand = normalizeCreationCommand(task.creationCommand);
   const blockedByIds = Array.isArray(task.blockedBy) ? task.blockedBy.map(String) : [];
   const relatedIds = Array.isArray(task.related) ? task.related.map(String) : [];
+  let shouldPersistExpectedCommand = !existingCommand;
 
   if (existingCommand) {
     if (
@@ -779,10 +765,16 @@ function reconcileTaskCreation(paths, input = {}) {
       existingCommand.scopeKey !== expectedCommand.scopeKey ||
       existingCommand.operation !== expectedCommand.operation ||
       existingCommand.commandId !== expectedCommand.commandId ||
-      existingCommand.payloadHash !== expectedCommand.payloadHash
+      existingCommand.payloadHash !== expectedCommand.payloadHash ||
+      (existingCommand.idempotencyKey !== undefined &&
+        expectedCommand.idempotencyKey !== undefined &&
+        existingCommand.idempotencyKey !== expectedCommand.idempotencyKey)
     ) {
       throw new Error(`Task creation command conflict: ${taskId}`);
     }
+    shouldPersistExpectedCommand = Boolean(
+      !existingCommand.idempotencyKey && expectedCommand.idempotencyKey
+    );
   } else if (input.allowLegacyAdoption === false) {
     throw new Error(`Task creation command conflict: ${taskId} is not owned by this command`);
   } else {
@@ -792,7 +784,7 @@ function reconcileTaskCreation(paths, input = {}) {
   ensureTaskCreationBacklinks(paths, taskId, blockedByIds, relatedIds);
 
   const reconciled = readTask(paths, taskId, { includeDeleted: true });
-  if (!existingCommand) {
+  if (shouldPersistExpectedCommand) {
     reconciled.creationCommand = expectedCommand;
     writeTask(paths, reconciled);
   }

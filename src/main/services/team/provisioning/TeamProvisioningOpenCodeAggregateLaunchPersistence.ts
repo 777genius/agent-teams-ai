@@ -74,6 +74,12 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
     laneId: string;
     runId: string;
   }): Promise<void>;
+  clearOpenCodeRuntimeLaneStorage(input: {
+    teamsBasePath: string;
+    teamName: string;
+    laneId: string;
+    expectedRunId: string;
+  }): Promise<boolean>;
   persistOpenCodeRuntimeAdapterLaunchResult(
     result: TeamRuntimeLaunchResult,
     input: TeamRuntimeLaunchInput
@@ -100,6 +106,24 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
       members: TeamRuntimeLaunchResult['members'];
     }
   ): void;
+  getRuntimeAdapterRunByTeam?(teamName: string):
+    | {
+        runId: string;
+        providerId: string;
+      }
+    | undefined;
+  deleteRuntimeAdapterRunByTeamIfOwned?(
+    teamName: string,
+    expectedOwner: Parameters<
+      LaunchOpenCodeAggregatePrimaryLanePorts['setRuntimeAdapterRunByTeam']
+    >[1]
+  ): boolean;
+  publishRuntimeAdapterStopState?(input: {
+    runId: string;
+    teamName: string;
+    state: 'disconnected' | 'failed';
+    message: string;
+  }): void;
   logWarning?(message: string): void;
 }
 
@@ -217,16 +241,95 @@ export async function launchOpenCodeAggregatePrimaryLane(
   }
   if (result.teamLaunchState === 'partial_failure') {
     if (!retainPrimaryRuntime) {
+      const exactCleanupOwner = {
+        runId,
+        providerId: 'opencode' as const,
+        cwd: launchCwd,
+        members: result.members,
+      };
+      const ownerBeforeCleanup = ports.getRuntimeAdapterRunByTeam?.(teamName);
+      if (
+        ownerBeforeCleanup &&
+        (ownerBeforeCleanup.providerId !== 'opencode' || ownerBeforeCleanup.runId !== runId)
+      ) {
+        throw new Error(
+          `OpenCode primary lane ownership changed before cleanup for team "${teamName}"`
+        );
+      }
+      ports.setRuntimeAdapterRunByTeam(teamName, exactCleanupOwner);
+      ports.publishRuntimeAdapterStopState?.({
+        runId,
+        teamName,
+        state: 'disconnected',
+        message: 'Stopping unretainable OpenCode primary lane',
+      });
       try {
-        await params.adapter.stop({
+        const stopResult = await params.adapter.stop({
           ...launchInput,
           reason: 'cleanup',
           force: true,
         });
+        if (!stopResult.stopped) {
+          const detail = [...stopResult.diagnostics, ...stopResult.warnings]
+            .map((entry) => entry.trim())
+            .filter(Boolean)
+            .join('; ');
+          throw new Error(
+            detail
+              ? `OpenCode primary lane did not confirm stop: ${detail}`
+              : 'OpenCode primary lane did not confirm stop'
+          );
+        }
+        if (
+          ports.getRuntimeAdapterRunByTeam &&
+          ports.getRuntimeAdapterRunByTeam(teamName) !== exactCleanupOwner
+        ) {
+          throw new Error(
+            `OpenCode primary lane ownership changed while cleanup was pending for team "${teamName}"`
+          );
+        }
+        const cleared = await ports.clearOpenCodeRuntimeLaneStorage({
+          teamsBasePath: ports.getTeamsBasePath(),
+          teamName,
+          laneId: 'primary',
+          expectedRunId: runId,
+        });
+        if (!cleared) {
+          throw new Error('OpenCode primary lane did not confirm exact-runtime storage cleanup');
+        }
+        ports.deleteRuntimeAdapterRunByTeamIfOwned?.(teamName, exactCleanupOwner);
       } catch (error) {
         ports.logWarning?.(
           `[${teamName}] Failed to stop unretainable OpenCode primary lane: ${getErrorMessage(error)}`
         );
+        params.assertStillCurrentAfterPersistence?.();
+        // A failed cleanup is still a live exact-runtime candidate. Publish it
+        // before any later degraded-index write can fail so retry/stop paths can
+        // target this run instead of orphaning it. Never replace a newer owner
+        // that appeared while adapter.stop was pending.
+        const currentOwner = ports.getRuntimeAdapterRunByTeam?.(teamName);
+        if (
+          currentOwner &&
+          currentOwner !== exactCleanupOwner &&
+          (currentOwner.providerId !== 'opencode' ||
+            currentOwner.runId !== runId ||
+            currentOwner !== ownerBeforeCleanup)
+        ) {
+          throw new Error(
+            `OpenCode primary lane ownership changed while failed cleanup was pending for team "${teamName}"`
+          );
+        }
+        if (!currentOwner) {
+          ports.setRuntimeAdapterRunByTeam(teamName, exactCleanupOwner);
+        }
+        if (!currentOwner || currentOwner === exactCleanupOwner) {
+          ports.publishRuntimeAdapterStopState?.({
+            runId,
+            teamName,
+            state: 'failed',
+            message: 'Unretainable OpenCode primary lane cleanup failed',
+          });
+        }
       }
     }
     await ports.upsertOpenCodeRuntimeLaneIndexEntry({

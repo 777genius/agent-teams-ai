@@ -171,10 +171,10 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   run.cancelRequested = true;
   const stopCurrentTeamProcess = ports.killTeamProcessAndWait(run.child);
   const stopCurrentRuntimeLanes = stopRuntimeLanesForRun(run.runId);
+  await awaitAllOwnedProcessStops([stopCurrentTeamProcess, stopCurrentRuntimeLanes]);
   const progress = ports.updateProgress(run, 'disconnected', 'Team stopped by user');
   run.onProgress(progress);
   ports.logger.info(`[${teamName}] Process stopped (SIGKILL)`);
-  await awaitAllOwnedProcessStops([stopCurrentTeamProcess, stopCurrentRuntimeLanes]);
   await (ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
     cleanupRunOwnedAnthropicApiKeyHelper(run));
   // Secondary lane cleanup revalidates immutable run ownership after async
@@ -192,14 +192,21 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
 
 export async function stopAllTeamsFlow(ports: TeamProvisioningStopAllPorts): Promise<void> {
   ports.incrementStopAllTeamsGeneration();
-  for (const teamName of ports.getShutdownTrackedTeamNames()) {
+  const initialTracked = ports.getShutdownTrackedTeamNames();
+  for (const teamName of initialTracked) {
     ports.pauseActiveIntervalsForTeam(teamName);
   }
   ports.killTrackedCliProcesses('SIGKILL');
   ports.killTransientProbeProcessesForShutdown();
 
-  const initialTracked = await ports.stopTrackedTeamsForShutdown('Shutdown');
-  await ports.cancelPendingRuntimeAdapterLaunchesForShutdown();
+  // Adapter launches can hold the per-team lock that stopTeam needs. Cancel
+  // them before starting roster-aware stops so shutdown can invalidate the
+  // launch and request its owned adapter stop immediately. Start both before
+  // awaiting either one so non-adapter processes are stopped without an
+  // additional microtask delay.
+  const pendingAdapterCancellation = ports.cancelPendingRuntimeAdapterLaunchesForShutdown();
+  const initialTeamStops = ports.stopTrackedTeamsForShutdown('Shutdown');
+  await Promise.all([pendingAdapterCancellation, initialTeamStops]);
 
   // A create/launch may have been inside a per-team lock before it exposed a run.
   // Wait briefly, then rescan for anything that became visible during shutdown.

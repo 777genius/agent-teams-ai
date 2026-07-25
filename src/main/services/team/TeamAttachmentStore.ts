@@ -1,3 +1,7 @@
+import {
+  type DurablePathRemovalProofHooks,
+  removePathWithIdentityFenceAsync,
+} from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -11,6 +15,12 @@ const logger = createLogger('Service:TeamAttachmentStore');
 
 const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20 MB per file
 const MAX_ATTACHMENTS_FILE_BYTES = 64 * 1024 * 1024; // 64MB legacy JSON cap
+const TEAM_ATTACHMENT_DELETE_OPTIONS = {
+  recursive: true,
+  force: true,
+  maxRetries: 5,
+  retryDelay: 50,
+} as const;
 
 /** Per-attachment metadata stored in the index file. */
 interface StoredAttachmentIndex {
@@ -51,6 +61,22 @@ export class TeamAttachmentStore {
   private getTeamDir(teamName: string): string {
     this.assertSafePathSegment('teamName', teamName);
     return path.join(getAppDataPath(), 'attachments', teamName);
+  }
+
+  async deleteTeamAttachments(
+    teamName: string,
+    isDeletionTargetCurrent: (detachedPath?: string) => Promise<boolean> = async () => true,
+    proofHooks?: DurablePathRemovalProofHooks
+  ): Promise<boolean> {
+    const teamDir = this.getTeamDir(teamName);
+    const removal = await removePathWithIdentityFenceAsync(teamDir, {
+      ...TEAM_ATTACHMENT_DELETE_OPTIONS,
+      durability: 'strict',
+      reservePublicDirectory: true,
+      validateDetached: (detachedPath) => isDeletionTargetCurrent(detachedPath),
+      ...(proofHooks ? { proofHooks } : {}),
+    });
+    return proofHooks ? removal === 'deleted' : removal !== 'changed';
   }
 
   /** Directory for a specific message's attachments (new file-based format). */

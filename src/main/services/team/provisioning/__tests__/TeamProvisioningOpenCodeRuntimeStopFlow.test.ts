@@ -3,10 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   type OpenCodeRuntimeStopFlowPorts,
   type SingleMixedSecondaryRuntimeLaneStopPorts,
+  type SingleMixedSecondaryRuntimeLaneStopRun,
   stopMixedSecondaryRuntimeLanes,
   stopOpenCodeRuntimeAdapterTeam,
   stopSingleMixedSecondaryRuntimeLane,
 } from '../TeamProvisioningOpenCodeRuntimeStopFlow';
+import { TeamProvisioningRunTrackingDeliveryHelper } from '../TeamProvisioningRunTrackingDelivery';
 
 import type { TeamLaunchRuntimeAdapter } from '../../runtime';
 import type {
@@ -90,10 +92,11 @@ function makePorts(
 ): OpenCodeRuntimeStopFlowPorts & {
   aliveRunByTeam: Map<string, string>;
   aliveDeleteRunIds: (string | null)[];
-  clearCalls: Array<{ teamName: string; laneId: string }>;
+  clearCalls: { teamName: string; laneId: string; expectedRunId?: string }[];
   emittedEvents: unknown[];
   progressUpdates: TeamProvisioningProgress[];
   writeLaunchStateSnapshot: ReturnType<typeof vi.fn>;
+  clearOpenCodeRuntimeToolApprovals: ReturnType<typeof vi.fn>;
   logger: { warn: ReturnType<typeof vi.fn> };
 } {
   const runtimeAdapterRunByTeam = new Map([
@@ -110,7 +113,7 @@ function makePorts(
   const aliveRunByTeam = new Map([['team-a', 'run-primary']]);
   const aliveDeleteRunIds: (string | null)[] = [];
   const runtimeAdapterProgressByRunId = new Map<string, TeamProvisioningProgress>();
-  const clearCalls: Array<{ teamName: string; laneId: string }> = [];
+  const clearCalls: { teamName: string; laneId: string; expectedRunId?: string }[] = [];
   const progressUpdates: TeamProvisioningProgress[] = [];
   const emittedEvents: unknown[] = [];
   const nowIsoValues = [...(input.nowIsoValues ?? [])];
@@ -139,8 +142,12 @@ function makePorts(
     writeLaunchStateSnapshot: vi.fn(async (_teamName, nextSnapshot) => nextSnapshot),
     readPersistedTeamProjectPath: vi.fn(() => '/persisted-cwd'),
     clearOpenCodeRuntimeLaneStorage: vi.fn(async (clearInput) => {
-      clearCalls.push({ teamName: clearInput.teamName, laneId: clearInput.laneId });
-      await input.clearLane?.(clearInput);
+      clearCalls.push({
+        teamName: clearInput.teamName,
+        laneId: clearInput.laneId,
+        expectedRunId: clearInput.expectedRunId,
+      });
+      return (await input.clearLane?.(clearInput)) ?? true;
     }),
     deleteSecondaryRuntimeRun: vi.fn(),
     clearSecondaryRuntimeRuns: vi.fn(),
@@ -172,9 +179,29 @@ function makePorts(
   };
 }
 
-function makeSingleLaneRun(input: Partial<TeamCreateRequest> = {}) {
+function makeSingleLaneRun(
+  input: Partial<TeamCreateRequest> = {}
+): SingleMixedSecondaryRuntimeLaneStopRun & {
+  runId: string;
+  progress: TeamProvisioningProgress;
+  processKilled: boolean;
+  cancelRequested: boolean;
+  onProgress: ReturnType<typeof vi.fn>;
+} {
   return {
+    runId: 'aggregate-run',
     teamName: 'team-a',
+    processKilled: false,
+    cancelRequested: false,
+    progress: {
+      runId: 'aggregate-run',
+      teamName: 'team-a',
+      state: 'ready',
+      message: 'OpenCode team ready',
+      startedAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:01.000Z',
+    },
+    onProgress: vi.fn(),
     request: {
       cwd: '/team-cwd',
       ...input,
@@ -215,15 +242,17 @@ function makeSingleLaneStopPorts(
   input: {
     adapter?: TeamLaunchRuntimeAdapter | null;
     previousLaunchState?: PersistedTeamLaunchSnapshot | null;
+    clearLane?: SingleMixedSecondaryRuntimeLaneStopPorts['clearOpenCodeRuntimeLaneStorage'];
   } = {}
 ): SingleMixedSecondaryRuntimeLaneStopPorts & {
-  clearCalls: Array<{ teamName: string; laneId: string }>;
+  clearCalls: { teamName: string; laneId: string; expectedRunId?: string }[];
   logger: { warn: ReturnType<typeof vi.fn> };
   upsertOpenCodeRuntimeLaneIndexEntry: ReturnType<typeof vi.fn>;
+  clearOpenCodeRuntimeLaneStorage: ReturnType<typeof vi.fn>;
   readLaunchState: ReturnType<typeof vi.fn>;
   deleteSecondaryRuntimeRun: ReturnType<typeof vi.fn>;
 } {
-  const clearCalls: Array<{ teamName: string; laneId: string }> = [];
+  const clearCalls: { teamName: string; laneId: string; expectedRunId?: string }[] = [];
   const logger = { warn: vi.fn() };
   return {
     teamsBasePath: '/teams',
@@ -234,8 +263,16 @@ function makeSingleLaneStopPorts(
     ),
     readLaunchState: vi.fn(async () => input.previousLaunchState ?? snapshot()),
     upsertOpenCodeRuntimeLaneIndexEntry: vi.fn(async () => undefined),
-    clearOpenCodeRuntimeLaneStorage: vi.fn(async ({ teamName, laneId }) => {
-      clearCalls.push({ teamName, laneId });
+    clearOpenCodeRuntimeLaneStorage: vi.fn(async ({ teamName, laneId, expectedRunId }) => {
+      clearCalls.push({ teamName, laneId, expectedRunId });
+      return (
+        (await input.clearLane?.({
+          teamsBasePath: '/teams',
+          teamName,
+          laneId,
+          expectedRunId,
+        })) ?? true
+      );
     }),
     deleteSecondaryRuntimeRun: vi.fn(),
     logger,
@@ -252,7 +289,7 @@ function expectFinalSingleLaneState(lane: MixedSecondaryRuntimeLaneState): void 
 }
 
 describe('OpenCode runtime stop flow', () => {
-  it('upserts a stopped index entry before stopping a single mixed secondary lane', async () => {
+  it('clears exact lane storage only after a single mixed secondary lane confirms stop', async () => {
     const stop = vi.fn(async (input) => ({
       runId: input.runId,
       teamName: input.teamName,
@@ -271,30 +308,32 @@ describe('OpenCode runtime stop flow', () => {
     await stopSingleMixedSecondaryRuntimeLane(makeSingleLaneRun(), lane, 'relaunch', ports);
 
     expect(ports.readLaunchState).toHaveBeenCalledWith('team-a');
-    expect(ports.upsertOpenCodeRuntimeLaneIndexEntry).toHaveBeenCalledWith({
-      teamsBasePath: '/teams',
-      teamName: 'team-a',
-      laneId: 'secondary-worker',
-      state: 'stopped',
-      diagnostics: ['OpenCode lane stop requested: relaunch'],
-    });
+    expect(ports.clearCalls).toEqual([
+      {
+        teamName: 'team-a',
+        laneId: 'secondary-worker',
+        expectedRunId: 'lane-run-existing',
+      },
+    ]);
     expect(ports.readLaunchState.mock.invocationCallOrder[0]).toBeLessThan(
-      ports.upsertOpenCodeRuntimeLaneIndexEntry.mock.invocationCallOrder[0]
+      ports.clearOpenCodeRuntimeLaneStorage.mock.invocationCallOrder[0]
     );
-    expect(ports.upsertOpenCodeRuntimeLaneIndexEntry.mock.invocationCallOrder[0]).toBeLessThan(
-      stop.mock.invocationCallOrder[0]
+    expect(stop.mock.invocationCallOrder[0]).toBeLessThan(
+      ports.clearOpenCodeRuntimeLaneStorage.mock.invocationCallOrder[0]
     );
   });
 
-  it('clears storage, deletes the secondary run, and resets a single lane when no adapter is available', async () => {
+  it('retains a single lane and storage when no adapter can confirm stop', async () => {
     const ports = makeSingleLaneStopPorts({ adapter: null });
     const lane = makeSingleLane();
 
-    await stopSingleMixedSecondaryRuntimeLane(makeSingleLaneRun(), lane, 'cleanup', ports);
+    await expect(
+      stopSingleMixedSecondaryRuntimeLane(makeSingleLaneRun(), lane, 'cleanup', ports)
+    ).rejects.toThrow('OpenCode runtime adapter is unavailable');
 
-    expect(ports.clearCalls).toEqual([{ teamName: 'team-a', laneId: 'secondary-worker' }]);
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('team-a', 'secondary-worker');
-    expectFinalSingleLaneState(lane);
+    expect(ports.clearCalls).toEqual([]);
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(lane.runId).toBe('lane-run-existing');
   });
 
   it('passes the existing lane run id and request cwd fallback to adapter stop', async () => {
@@ -336,7 +375,103 @@ describe('OpenCode runtime stop flow', () => {
     expectFinalSingleLaneState(lane);
   });
 
-  it('logs a single lane stop warning when adapter stop fails but still runs final cleanup', async () => {
+  it('preserves a same-lane replacement installed while exact storage cleanup is awaiting', async () => {
+    const clearStarted = createDeferred<void>();
+    const clearRelease = createDeferred<void>();
+    const lane = makeSingleLane();
+    const ports = makeSingleLaneStopPorts({
+      clearLane: async ({ expectedRunId }) => {
+        clearStarted.resolve();
+        await clearRelease.promise;
+        return lane.runId === expectedRunId;
+      },
+    });
+
+    const stopping = stopSingleMixedSecondaryRuntimeLane(
+      makeSingleLaneRun(),
+      lane,
+      'relaunch',
+      ports
+    );
+    await clearStarted.promise;
+    lane.runId = 'lane-run-replacement';
+    lane.state = 'launching';
+    clearRelease.resolve();
+    await stopping;
+
+    expect(ports.clearCalls).toEqual([
+      {
+        teamName: 'team-a',
+        laneId: 'secondary-worker',
+        expectedRunId: 'lane-run-existing',
+      },
+    ]);
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(lane.runId).toBe('lane-run-replacement');
+    expect(lane.state).toBe('launching');
+  });
+
+  it('publishes one team-level pending-stop fence while exact secondary ownership is awaiting stop', async () => {
+    const stopStarted = createDeferred<void>();
+    const stopRelease = createDeferred<void>();
+    const run = makeSingleLaneRun();
+    const previousProgress = run.progress;
+    const lane = makeSingleLane();
+    const ports = makeSingleLaneStopPorts({
+      adapter: makeAdapter(
+        vi.fn(async (stopInput) => {
+          stopStarted.resolve();
+          await stopRelease.promise;
+          return {
+            runId: stopInput.runId,
+            teamName: stopInput.teamName,
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+          };
+        })
+      ),
+    });
+    const helper = new TeamProvisioningRunTrackingDeliveryHelper({
+      state: {
+        provisioningRunByTeam: new Map([[run.teamName, run.runId]]),
+        aliveRunByTeam: new Map([[run.teamName, run.runId]]),
+        runs: new Map([[run.runId, run]]),
+        runtimeAdapterProgressByRunId: new Map([[run.runId, previousProgress]]),
+        runtimeAdapterRunByTeam: new Map([[run.teamName, { runId: run.runId }]]),
+        getRetainedProvisioningProgressMap: () => new Map(),
+      },
+      ports: {
+        notifyTeamWatchScopeChanged: vi.fn(),
+        isTeamAlive: vi.fn(() => true),
+        hasAlivePersistedTeamProcess: vi.fn(() => true),
+        hasOnlyExplicitlyStoppedPersistedTeamProcesses: vi.fn(() => false),
+        logDebug: vi.fn(),
+      },
+      liveRuntimeSnapshotCacheTtlMs: 1,
+      persistedRuntimeSnapshotCacheTtlMs: 2,
+    });
+
+    const stopping = stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports);
+    await stopStarted.promise;
+
+    expect(run.progress).toMatchObject({
+      state: 'disconnected',
+      message: 'Stopping OpenCode runtime lane before cleanup or relaunch',
+    });
+    expect(lane.runId).toBe('lane-run-existing');
+    expect(helper.canDeliverToTrackedRuntimeRun(run.teamName, run.runId)).toBe(false);
+    expect(helper.resolveDeliverableTrackedRuntimeRunId(run.teamName)).toBeNull();
+    expect(helper.canDeliverToOpenCodeRuntimeForTeam(run.teamName)).toBe(false);
+
+    stopRelease.resolve();
+    await stopping;
+    expect(run.progress).toBe(previousProgress);
+    expectFinalSingleLaneState(lane);
+  });
+
+  it('retains a single lane and its storage when adapter stop throws', async () => {
     const ports = makeSingleLaneStopPorts({
       adapter: makeAdapter(
         vi.fn(async () => {
@@ -345,18 +480,98 @@ describe('OpenCode runtime stop flow', () => {
       ),
     });
     const lane = makeSingleLane();
+    const run = makeSingleLaneRun();
+    const previousProgress = run.progress;
 
-    await stopSingleMixedSecondaryRuntimeLane(makeSingleLaneRun(), lane, 'cleanup', ports);
+    await expect(stopSingleMixedSecondaryRuntimeLane(run, lane, 'cleanup', ports)).rejects.toThrow(
+      'adapter stop failed'
+    );
 
     expect(ports.logger.warn).toHaveBeenCalledWith(
       '[team-a] Failed to stop mixed OpenCode lane secondary-worker: adapter stop failed'
     );
-    expect(ports.clearCalls).toEqual([{ teamName: 'team-a', laneId: 'secondary-worker' }]);
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('team-a', 'secondary-worker');
-    expectFinalSingleLaneState(lane);
+    expect(ports.upsertOpenCodeRuntimeLaneIndexEntry).not.toHaveBeenCalled();
+    expect(ports.clearCalls).toEqual([]);
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(lane).toMatchObject({
+      runId: 'lane-run-existing',
+      state: 'launching',
+      warnings: ['warning-a'],
+      diagnostics: ['diagnostic-a'],
+    });
+    expect(run.progress).toBe(previousProgress);
   });
 
-  it('clears mixed secondary lane storage and run state when no adapter is available', async () => {
+  it('retains a single lane and its storage when adapter stop is not confirmed', async () => {
+    const ports = makeSingleLaneStopPorts({
+      adapter: makeAdapter(
+        vi.fn(async (input) => ({
+          runId: input.runId,
+          teamName: input.teamName,
+          stopped: false,
+          members: {},
+          warnings: ['runtime still alive'],
+          diagnostics: [],
+        }))
+      ),
+    });
+    const lane = makeSingleLane();
+    const run = makeSingleLaneRun();
+    const previousProgress = run.progress;
+
+    await expect(stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports)).rejects.toThrow(
+      'OpenCode lane secondary-worker did not confirm stop: runtime still alive'
+    );
+
+    expect(ports.upsertOpenCodeRuntimeLaneIndexEntry).not.toHaveBeenCalled();
+    expect(ports.clearCalls).toEqual([]);
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(lane.runId).toBe('lane-run-existing');
+    expect(run.progress).toBe(previousProgress);
+  });
+
+  it('does not roll back newer aggregate progress or same-lane ownership after stop failure', async () => {
+    const stopStarted = createDeferred<void>();
+    const stopRelease = createDeferred<void>();
+    const run = makeSingleLaneRun();
+    const lane = makeSingleLane();
+    const ports = makeSingleLaneStopPorts({
+      adapter: makeAdapter(
+        vi.fn(async (stopInput) => {
+          stopStarted.resolve();
+          await stopRelease.promise;
+          return {
+            runId: stopInput.runId,
+            teamName: stopInput.teamName,
+            stopped: false,
+            members: {},
+            warnings: ['old lane still active'],
+            diagnostics: [],
+          };
+        })
+      ),
+    });
+
+    const stopping = stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports);
+    await stopStarted.promise;
+    const newerProgress = {
+      ...run.progress,
+      state: 'ready' as const,
+      message: 'New aggregate owner ready',
+      updatedAt: '2026-01-01T00:00:05.000Z',
+    };
+    run.progress = newerProgress;
+    lane.runId = 'lane-run-replacement';
+    stopRelease.resolve();
+
+    await expect(stopping).rejects.toThrow(
+      'OpenCode lane secondary-worker did not confirm stop: old lane still active'
+    );
+    expect(run.progress).toBe(newerProgress);
+    expect(lane.runId).toBe('lane-run-replacement');
+  });
+
+  it('retains mixed secondary lane storage and run state when no adapter is available', async () => {
     const ports = makePorts({
       adapter: null,
       secondaryRuns: [
@@ -375,19 +590,17 @@ describe('OpenCode runtime stop flow', () => {
       ],
     });
 
-    await stopMixedSecondaryRuntimeLanes('team-a', ports);
+    await expect(stopMixedSecondaryRuntimeLanes('team-a', ports)).rejects.toThrow(
+      'OpenCode runtime adapter is unavailable'
+    );
 
-    expect(ports.clearCalls).toEqual([
-      { teamName: 'team-a', laneId: 'lane-a' },
-      { teamName: 'team-a', laneId: 'lane-b' },
-    ]);
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('team-a', 'lane-a');
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('team-a', 'lane-b');
+    expect(ports.clearCalls).toEqual([]);
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
     expect(ports.clearSecondaryRuntimeRuns).not.toHaveBeenCalled();
     expect(ports.stoppingSecondaryRuntimeTeams.has('team-a')).toBe(false);
   });
 
-  it('stops every mixed secondary lane and deletes each run even when one stop throws', async () => {
+  it('stops every mixed secondary lane but retains a lane whose stop throws', async () => {
     const stop = vi.fn(async (input) => {
       if (input.laneId === 'lane-a') {
         throw new Error('lane stop failed');
@@ -422,7 +635,9 @@ describe('OpenCode runtime stop flow', () => {
       ],
     });
 
-    await stopMixedSecondaryRuntimeLanes('team-a', ports);
+    await expect(stopMixedSecondaryRuntimeLanes('team-a', ports)).rejects.toThrow(
+      'lane stop failed'
+    );
 
     expect(stop).toHaveBeenCalledTimes(2);
     expect(stop).toHaveBeenNthCalledWith(
@@ -446,8 +661,11 @@ describe('OpenCode runtime stop flow', () => {
         cwd: '/lane-b-cwd',
       })
     );
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('team-a', 'lane-a');
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalledWith('team-a', 'lane-a');
     expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('team-a', 'lane-b');
+    expect(ports.clearCalls).toEqual([
+      { teamName: 'team-a', laneId: 'lane-b', expectedRunId: 'run-b' },
+    ]);
     expect(ports.clearSecondaryRuntimeRuns).not.toHaveBeenCalled();
     expect(ports.logger.warn).toHaveBeenCalledWith(
       '[team-a] Failed to stop mixed OpenCode secondary lane lane-a: lane stop failed'
@@ -482,6 +700,7 @@ describe('OpenCode runtime stop flow', () => {
       secondaryRuns: [secondaryRun],
       clearLane: async ({ laneId }) => {
         laneStorageOwner.delete(laneId);
+        return true;
       },
     });
 
@@ -498,21 +717,23 @@ describe('OpenCode runtime stop flow', () => {
     expect(stop).toHaveBeenCalledWith(expect.objectContaining({ runId: 'run-old' }));
     expect(secondaryRun.runId).toBe('run-new');
     expect(laneStorageOwner.get('lane-a')).toBe('run-new');
-    expect(ports.clearCalls).toEqual([{ teamName: 'team-a', laneId: 'lane-a' }]);
+    expect(ports.clearCalls).toEqual([]);
     expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
     expect(ports.clearSecondaryRuntimeRuns).not.toHaveBeenCalled();
   });
 
-  it('clears primary lane storage and run tracking when no adapter is available', async () => {
+  it('retains primary lane storage and run tracking when no adapter is available', async () => {
     const ports = makePorts({ adapter: null });
 
-    await stopOpenCodeRuntimeAdapterTeam('team-a', 'run-primary', ports);
+    await expect(stopOpenCodeRuntimeAdapterTeam('team-a', 'run-primary', ports)).rejects.toThrow(
+      'OpenCode runtime adapter is unavailable'
+    );
 
-    expect(ports.clearCalls).toEqual([{ teamName: 'team-a', laneId: 'primary' }]);
-    expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
-    expect(ports.aliveRunByTeam.has('team-a')).toBe(false);
-    expect(ports.provisioningRunByTeam.has('team-a')).toBe(false);
-    expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('team-a');
+    expect(ports.clearCalls).toEqual([]);
+    expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(true);
+    expect(ports.aliveRunByTeam.has('team-a')).toBe(true);
+    expect(ports.provisioningRunByTeam.has('team-a')).toBe(true);
+    expect(ports.invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
   });
 
   it('writes a reconciled snapshot and disconnected progress after primary adapter success', async () => {
@@ -545,15 +766,7 @@ describe('OpenCode runtime stop flow', () => {
         force: true,
       })
     );
-    expect(ports.writeLaunchStateSnapshot).toHaveBeenCalledWith(
-      'team-a',
-      expect.objectContaining({
-        teamName: 'team-a',
-        launchPhase: 'reconciled',
-        expectedMembers: previousLaunchState.expectedMembers,
-        leadSessionId: previousLaunchState.leadSessionId,
-      })
-    );
+    expect(ports.writeLaunchStateSnapshot).not.toHaveBeenCalled();
     expect(ports.progressUpdates.at(-1)).toEqual(
       expect.objectContaining({
         runId: 'run-primary',
@@ -567,7 +780,46 @@ describe('OpenCode runtime stop flow', () => {
     );
   });
 
-  it('records failed progress with the error tail after primary adapter failure', async () => {
+  it('publishes a non-deliverable stop fence while retaining exact primary ownership', async () => {
+    const stopStarted = createDeferred<void>();
+    const stopRelease = createDeferred<void>();
+    const ports = makePorts({
+      adapter: makeAdapter(
+        vi.fn(async (input) => {
+          stopStarted.resolve();
+          await stopRelease.promise;
+          return {
+            runId: input.runId,
+            teamName: input.teamName,
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+          };
+        })
+      ),
+    });
+
+    const stopping = stopOpenCodeRuntimeAdapterTeam('team-a', 'run-primary', ports);
+    await stopStarted.promise;
+
+    expect(ports.progressUpdates).toHaveLength(1);
+    expect(ports.progressUpdates[0]).toMatchObject({
+      runId: 'run-primary',
+      teamName: 'team-a',
+      state: 'disconnected',
+      message: 'Stopping OpenCode team through runtime adapter',
+    });
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-primary');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-primary');
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-primary');
+    expect(ports.clearCalls).toEqual([]);
+
+    stopRelease.resolve();
+    await stopping;
+  });
+
+  it('records failed progress and retains primary ownership after adapter failure', async () => {
     const ports = makePorts({
       adapter: makeAdapter(
         vi.fn(async () => {
@@ -577,7 +829,9 @@ describe('OpenCode runtime stop flow', () => {
       nowIsoValues: ['2026-01-01T00:00:01.000Z', '2026-01-01T00:00:02.000Z'],
     });
 
-    await stopOpenCodeRuntimeAdapterTeam('team-a', 'run-primary', ports);
+    await expect(stopOpenCodeRuntimeAdapterTeam('team-a', 'run-primary', ports)).rejects.toThrow(
+      'adapter stop exploded'
+    );
 
     expect(ports.writeLaunchStateSnapshot).not.toHaveBeenCalled();
     expect(ports.progressUpdates.at(-1)).toEqual(
@@ -592,29 +846,38 @@ describe('OpenCode runtime stop flow', () => {
         cliLogsTail: 'adapter stop exploded',
       })
     );
+    expect(ports.clearCalls).toEqual([]);
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-primary');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-primary');
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-primary');
+    expect(ports.emittedEvents).toEqual([]);
+    expect(ports.clearOpenCodeRuntimeToolApprovals).not.toHaveBeenCalled();
   });
 
-  it('emits stopped and clears primary runtime tracking in final cleanup', async () => {
+  it('retains primary ownership and does not emit stopped when adapter returns stopped false', async () => {
     const ports = makePorts({
       adapter: makeAdapter(
-        vi.fn(async () => {
-          throw new Error('adapter stop failed');
-        })
+        vi.fn(async (input) => ({
+          runId: input.runId,
+          teamName: input.teamName,
+          stopped: false,
+          members: {},
+          warnings: [],
+          diagnostics: ['runtime still active'],
+        }))
       ),
     });
 
-    await stopOpenCodeRuntimeAdapterTeam('team-a', 'run-primary', ports);
+    await expect(stopOpenCodeRuntimeAdapterTeam('team-a', 'run-primary', ports)).rejects.toThrow(
+      'OpenCode team did not confirm stop: runtime still active'
+    );
 
-    expect(ports.clearCalls.at(-1)).toEqual({ teamName: 'team-a', laneId: 'primary' });
-    expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
-    expect(ports.aliveRunByTeam.has('team-a')).toBe(false);
-    expect(ports.provisioningRunByTeam.has('team-a')).toBe(false);
-    expect(ports.emittedEvents).toContainEqual({
-      type: 'process',
-      teamName: 'team-a',
-      runId: 'run-primary',
-      detail: 'stopped',
-    });
+    expect(ports.clearCalls).toEqual([]);
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('run-primary');
+    expect(ports.aliveRunByTeam.get('team-a')).toBe('run-primary');
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-primary');
+    expect(ports.emittedEvents).toEqual([]);
+    expect(ports.clearOpenCodeRuntimeToolApprovals).not.toHaveBeenCalled();
   });
 
   it('preserves newer primary storage and alive ownership installed during the first clear await', async () => {
@@ -632,6 +895,7 @@ describe('OpenCode runtime stop flow', () => {
           firstClearStarted.resolve();
           await firstClearRelease.promise;
         }
+        return true;
       },
     });
 
@@ -646,8 +910,10 @@ describe('OpenCode runtime stop flow', () => {
     await stopping;
 
     expect(ports.aliveRunByTeam.get('team-a')).toBe('run-new');
-    expect(ports.aliveDeleteRunIds).toEqual(['run-primary']);
+    expect(ports.aliveDeleteRunIds).toEqual([]);
     expect(primaryStorageOwner.get('primary')).toBe('run-new');
-    expect(ports.clearCalls).toEqual([{ teamName: 'team-a', laneId: 'primary' }]);
+    expect(ports.clearCalls).toEqual([
+      { teamName: 'team-a', laneId: 'primary', expectedRunId: 'run-primary' },
+    ]);
   });
 });

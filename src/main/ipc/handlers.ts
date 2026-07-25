@@ -183,7 +183,7 @@ export function initializeIpcHandlers(
   teamBackupService?: TeamBackupService,
   launchIoGovernor?: LaunchIoGovernor,
   teamPermanentDeletionLifecycle?: {
-    prepareTeamDeletion(teamName: string): Promise<void>;
+    prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
   }

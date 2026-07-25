@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, rmdir, stat } from 'node:fs/promises';
 
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createLogger } from '@shared/utils/logger';
@@ -6,6 +6,11 @@ import * as path from 'path';
 
 import { withFileLock } from '../../fileLock';
 
+import {
+  normalizeOpenCodeBootstrapSessionRecord,
+  type OpenCodeCommittedBootstrapSessionEvidence,
+  type OpenCodeCommittedBootstrapSessionRecord,
+} from './OpenCodeBootstrapSessionNormalization';
 import {
   createDefaultRuntimeStoreManifest,
   createRuntimeStoreManifestStore,
@@ -17,11 +22,12 @@ import {
 
 import type { RuntimeStoreManifestEvidence } from '../bridge/OpenCodeBridgeCommandContract';
 import type { RuntimeStoreManifestReader } from '../bridge/OpenCodeStateChangingBridgeCommandService';
-import type { RuntimeStoreManifestEntryState } from './RuntimeStoreManifest';
-import type {
-  OpenCodeAppManagedBootstrapCandidate,
-  OpenCodeBootstrapEvidenceSource,
-} from '@shared/types/team';
+import type { RuntimeStoreManifest } from './RuntimeStoreManifest';
+
+export type {
+  OpenCodeCommittedBootstrapSessionEvidence,
+  OpenCodeCommittedBootstrapSessionRecord,
+} from './OpenCodeBootstrapSessionNormalization';
 
 const logger = createLogger('OpenCodeRuntimeManifestEvidenceReader');
 
@@ -35,6 +41,15 @@ const OPENCODE_TEAM_RUNTIME_LANES_DIR = 'lanes';
 const OPENCODE_TEAM_RUNTIME_LANES_INDEX_FILE = 'lanes.json';
 const OPENCODE_RUNTIME_MANIFEST_FILE = 'manifest.json';
 const OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE = 'opencode-run-tombstones.json';
+const OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE = 'opencode-delivery-journal.json';
+const OPENCODE_RUNTIME_LANE_DURABLE_FILES = new Set([
+  OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE,
+  OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE,
+]);
+const OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS = new Set([
+  ...OPENCODE_RUNTIME_LANE_DURABLE_FILES,
+  ...Array.from(OPENCODE_RUNTIME_LANE_DURABLE_FILES, (fileName) => `${fileName}.lock`),
+]);
 const OPENCODE_ACTIVE_EMPTY_LANE_STALE_MS = 150_000;
 const OPENCODE_LANE_INDEX_LOCK_OPTIONS = {
   acquireTimeoutMs: 30_000,
@@ -60,27 +75,6 @@ export interface OpenCodeRuntimeLaneIndex {
   version: 1;
   updatedAt: string;
   lanes: Record<string, OpenCodeRuntimeLaneIndexEntry>;
-}
-
-export interface OpenCodeCommittedBootstrapSessionRecord {
-  id: string;
-  teamName: string;
-  memberName: string;
-  laneId: string;
-  runId: string | null;
-  observedAt: string | null;
-  source: OpenCodeBootstrapEvidenceSource;
-  appManagedBootstrapCandidate?: OpenCodeAppManagedBootstrapCandidate;
-  appMcpTransportHash?: string;
-  appMcpTransportEvidence?: Record<string, unknown>;
-}
-
-export interface OpenCodeCommittedBootstrapSessionEvidence {
-  state: RuntimeStoreManifestEntryState | 'invalid_store' | 'descriptor_missing';
-  committed: boolean;
-  activeRunId: string | null;
-  sessions: OpenCodeCommittedBootstrapSessionRecord[];
-  diagnostics: string[];
 }
 
 function createEmptyOpenCodeRuntimeLaneIndex(
@@ -228,7 +222,7 @@ async function readRuntimeStoreManifestEvidenceData(
   manifestPath: string,
   teamName: string,
   clock: () => Date
-) {
+): Promise<RuntimeStoreManifest> {
   let raw: string;
   try {
     raw = await readFile(manifestPath, 'utf8');
@@ -294,120 +288,6 @@ async function readOpenCodeBootstrapSessionStore(
     }
     return [normalized];
   });
-}
-
-function normalizeOpenCodeBootstrapSessionRecord(
-  value: unknown
-): OpenCodeCommittedBootstrapSessionRecord | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
-  const record = value as Record<string, unknown>;
-  const id = normalizeNonEmptyStoreString(record.id);
-  const teamName = normalizeNonEmptyStoreString(record.teamName);
-  const memberName = normalizeNonEmptyStoreString(record.memberName);
-  const laneId = normalizeNonEmptyStoreString(record.laneId);
-  const source = normalizeNonEmptyStoreString(record.source);
-  if (
-    !id ||
-    !teamName ||
-    !memberName ||
-    !laneId ||
-    (source !== 'runtime_bootstrap_checkin' && source !== 'app_managed_bootstrap')
-  ) {
-    return null;
-  }
-  const observedAt = normalizeOptionalStoreIso(record.observedAt);
-  const appManagedBootstrapCandidate =
-    source === 'app_managed_bootstrap'
-      ? normalizeAppManagedBootstrapCandidate(record.appManagedBootstrapCandidate)
-      : undefined;
-  const appMcpTransportHash = normalizeNonEmptyStoreString(record.appMcpTransportHash);
-  const appMcpTransportEvidence =
-    record.appMcpTransportEvidence &&
-    typeof record.appMcpTransportEvidence === 'object' &&
-    !Array.isArray(record.appMcpTransportEvidence)
-      ? (record.appMcpTransportEvidence as Record<string, unknown>)
-      : undefined;
-  return {
-    id,
-    teamName,
-    memberName,
-    laneId,
-    runId: normalizeNonEmptyStoreString(record.runId),
-    observedAt,
-    source,
-    ...(appManagedBootstrapCandidate ? { appManagedBootstrapCandidate } : {}),
-    ...(appMcpTransportHash ? { appMcpTransportHash } : {}),
-    ...(appMcpTransportEvidence ? { appMcpTransportEvidence } : {}),
-  };
-}
-
-function normalizeAppManagedBootstrapCandidate(
-  value: unknown
-): OpenCodeAppManagedBootstrapCandidate | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return undefined;
-  }
-  const record = value as Record<string, unknown>;
-  if (record.schemaVersion !== 1 || record.source !== 'app_managed_bootstrap') {
-    return undefined;
-  }
-  const teamName = normalizeNonEmptyStoreString(record.teamName);
-  const memberName = normalizeNonEmptyStoreString(record.memberName);
-  const runId = normalizeNonEmptyStoreString(record.runId);
-  const laneId = normalizeNonEmptyStoreString(record.laneId);
-  const runtimeSessionId = normalizeNonEmptyStoreString(record.runtimeSessionId);
-  const messageID = normalizeNonEmptyStoreString(record.messageID);
-  const contextHash = normalizeNonEmptyStoreString(record.contextHash);
-  const briefingHash = normalizeNonEmptyStoreString(record.briefingHash);
-  const injectionVerifiedAt = normalizeNonEmptyStoreString(record.injectionVerifiedAt);
-  const candidateAt = normalizeNonEmptyStoreString(record.candidateAt);
-  if (
-    !teamName ||
-    !memberName ||
-    !runId ||
-    !laneId ||
-    !runtimeSessionId ||
-    !messageID ||
-    !contextHash ||
-    !briefingHash ||
-    !injectionVerifiedAt ||
-    !candidateAt
-  ) {
-    return undefined;
-  }
-  const model = normalizeNonEmptyStoreString(record.model);
-  const agent = normalizeNonEmptyStoreString(record.agent);
-  return {
-    schemaVersion: 1,
-    source: 'app_managed_bootstrap',
-    teamName,
-    memberName,
-    runId,
-    laneId,
-    runtimeSessionId,
-    messageID,
-    contextHash,
-    briefingHash,
-    injectionVerifiedAt,
-    candidateAt,
-    ...(model ? { model } : {}),
-    ...(agent ? { agent } : {}),
-  };
-}
-
-function normalizeNonEmptyStoreString(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function normalizeOptionalStoreIso(value: unknown): string | null {
-  const text = normalizeNonEmptyStoreString(value);
-  if (!text) {
-    return null;
-  }
-  const parsed = Date.parse(text);
-  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : text;
 }
 
 async function resolveOpenCodeRuntimeManifestReadPath(
@@ -526,7 +406,9 @@ export async function inspectOpenCodeRuntimeLaneStorage(params: {
     };
   }
 
-  const fileNames = (await readdir(laneDir).catch(() => [] as string[])).sort();
+  const fileNames = (await readdir(laneDir).catch(() => [] as string[])).sort((left, right) =>
+    left.localeCompare(right)
+  );
   const manifestPath = getOpenCodeRuntimeManifestPath(
     params.teamsBasePath,
     params.teamName,
@@ -569,6 +451,20 @@ export interface OpenCodeRuntimeLaneLaunchGenerationPreparation {
 }
 
 export async function prepareOpenCodeRuntimeLaneForLaunchGeneration(params: {
+  teamsBasePath: string;
+  teamName: string;
+  laneId: string;
+  runId: string;
+  reason: string;
+  forceReset?: boolean;
+  clock?: () => Date;
+}): Promise<OpenCodeRuntimeLaneLaunchGenerationPreparation> {
+  return withOpenCodeRuntimeLaneLifecycleLock(params, () =>
+    prepareOpenCodeRuntimeLaneForLaunchGenerationUnlocked(params)
+  );
+}
+
+async function prepareOpenCodeRuntimeLaneForLaunchGenerationUnlocked(params: {
   teamsBasePath: string;
   teamName: string;
   laneId: string;
@@ -647,7 +543,7 @@ export async function prepareOpenCodeRuntimeLaneForLaunchGeneration(params: {
   }
 
   if (shouldReset) {
-    await clearOpenCodeRuntimeLaneStorage({
+    await clearOpenCodeRuntimeLaneStorageUnlocked({
       teamsBasePath: params.teamsBasePath,
       teamName: params.teamName,
       laneId: params.laneId,
@@ -661,7 +557,7 @@ export async function prepareOpenCodeRuntimeLaneForLaunchGeneration(params: {
     state: 'active',
     diagnostics: diagnostics.length ? diagnostics : undefined,
   });
-  await setOpenCodeRuntimeActiveRunManifest({
+  await setOpenCodeRuntimeActiveRunManifestUnlocked({
     teamsBasePath: params.teamsBasePath,
     teamName: params.teamName,
     laneId: params.laneId,
@@ -830,6 +726,18 @@ export async function setOpenCodeRuntimeActiveRunManifest(params: {
   runId: string | null;
   clock?: () => Date;
 }): Promise<void> {
+  await withOpenCodeRuntimeLaneLifecycleLock(params, () =>
+    setOpenCodeRuntimeActiveRunManifestUnlocked(params)
+  );
+}
+
+async function setOpenCodeRuntimeActiveRunManifestUnlocked(params: {
+  teamsBasePath: string;
+  teamName: string;
+  laneId?: string | null;
+  runId: string | null;
+  clock?: () => Date;
+}): Promise<void> {
   const manifestPath = getOpenCodeRuntimeManifestPath(
     params.teamsBasePath,
     params.teamName,
@@ -920,12 +828,80 @@ export async function clearOpenCodeRuntimeLaneStorage(params: {
   teamsBasePath: string;
   teamName: string;
   laneId: string;
-}): Promise<void> {
-  await rm(
-    getOpenCodeTeamRuntimeLaneDirectory(params.teamsBasePath, params.teamName, params.laneId),
-    { recursive: true, force: true }
+  expectedRunId?: string;
+}): Promise<boolean> {
+  return withOpenCodeRuntimeLaneLifecycleLock(params, () =>
+    clearOpenCodeRuntimeLaneStorageUnlocked(params)
   );
+}
+
+async function clearOpenCodeRuntimeLaneStorageUnlocked(params: {
+  teamsBasePath: string;
+  teamName: string;
+  laneId: string;
+  expectedRunId?: string;
+}): Promise<boolean> {
+  const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(
+    params.teamsBasePath,
+    params.teamName,
+    params.laneId
+  );
+  const deliveryJournalPath = path.join(laneDirectory, OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE);
+  const runTombstonesPath = path.join(laneDirectory, OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE);
+  if (params.expectedRunId) {
+    const manifest = await readRuntimeStoreManifestEvidenceData(
+      getOpenCodeRuntimeManifestPath(params.teamsBasePath, params.teamName, params.laneId),
+      params.teamName,
+      () => new Date()
+    ).catch(() => null);
+    if (manifest?.activeRunId !== params.expectedRunId) {
+      return false;
+    }
+  }
+  const laneDirectoryExists = await stat(laneDirectory).then(
+    () => true,
+    (error: unknown) => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return false;
+      }
+      throw error;
+    }
+  );
+  if (laneDirectoryExists) {
+    // The journal owns logical idempotency/recovery across runs, while tombstones enforce
+    // anti-rejoin. Serialize against both durable stores and reset only per-run evidence.
+    await withFileLock(deliveryJournalPath, () =>
+      withFileLock(runTombstonesPath, async () => {
+        const entries = await readdir(laneDirectory);
+        await Promise.all(
+          entries
+            .filter((entry) => !OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry))
+            .map((entry) => rm(path.join(laneDirectory, entry), { recursive: true, force: true }))
+        );
+      })
+    );
+    await rmdir(laneDirectory).catch((error: unknown) => {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== 'ENOENT' && code !== 'ENOTEMPTY' && code !== 'EEXIST') {
+        throw error;
+      }
+    });
+  }
   await removeOpenCodeRuntimeLaneIndexEntry(params);
+  return true;
+}
+
+function withOpenCodeRuntimeLaneLifecycleLock<T>(
+  params: { teamsBasePath: string; teamName: string; laneId?: string | null },
+  operation: () => Promise<T>
+): Promise<T> {
+  const laneId = params.laneId?.trim() || 'primary';
+  const lockTargetPath = path.join(
+    getOpenCodeTeamRuntimeDirectory(params.teamsBasePath, params.teamName),
+    OPENCODE_TEAM_RUNTIME_LANES_DIR,
+    `.${encodeURIComponent(laneId)}.lifecycle`
+  );
+  return withFileLock(lockTargetPath, operation, OPENCODE_LANE_INDEX_LOCK_OPTIONS);
 }
 
 export async function recoverStaleOpenCodeRuntimeLaneIndexEntry(params: {
