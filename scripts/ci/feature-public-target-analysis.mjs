@@ -26,6 +26,7 @@ import {
   collectTopLevelPropertyWrites,
   latestPropertyWriteBefore,
   materializeCopyRelationWrites,
+  propertyPathWasOverwrittenAfter,
   propertyWriteAvailableAt,
   staticOverwrittenPaths,
   staticOverwrittenPropertyPaths,
@@ -38,7 +39,6 @@ const IDENTITY_WRAPPERS = new Set([
   'seal',
   'setPrototypeOf',
 ]);
-
 function bindingNames(bindingName) {
   if (ts.isIdentifier(bindingName)) return [bindingName.text];
   return bindingName.elements.flatMap((element) =>
@@ -201,15 +201,6 @@ function directAliasSource(expression, bindingModel) {
   return null;
 }
 
-function pathWasOverwritten(writes, source, path, afterPosition) {
-  return (writes.get(source) ?? []).some(
-    (write) =>
-      propertyWriteAvailableAt(write) > afterPosition &&
-      write.path.length <= path.length &&
-      write.path.every((segment, index) => segment === path[index])
-  );
-}
-
 function addIdentityEdge(edges, source, target) {
   const targets = edges.get(source) ?? new Set();
   targets.add(target);
@@ -237,6 +228,8 @@ function objectCreatePrototype(initializer, bindingModel) {
 function buildIdentityEdges(bindingModel, propertyWrites) {
   const edges = new Map();
   const memberRelations = [];
+  const pathWasOverwritten = (source, path, position) =>
+    propertyPathWasOverwrittenAfter(propertyWrites, source, path, position);
   for (const [key, binding] of bindingModel.versions) {
     if (binding.forcedAlias?.skipIdentity) continue;
     const directAlias = directAliasSource(binding.initializer, bindingModel);
@@ -248,7 +241,7 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
         }
       : directAlias;
     if (alias) {
-      if (!pathWasOverwritten(propertyWrites, alias.key, alias.path, binding.position)) {
+      if (!pathWasOverwritten(alias.key, alias.path, binding.position)) {
         if (alias.path.length > 0) {
           addIdentityEdge(edges, alias.key, key);
           memberRelations.push({
@@ -274,7 +267,7 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
       });
     }
     for (const contained of collectContainedBindingEntries(binding.initializer, bindingModel)) {
-      if (!pathWasOverwritten(propertyWrites, key, contained.path, binding.position)) {
+      if (!pathWasOverwritten(key, contained.path, binding.position)) {
         addIdentityEdge(edges, key, contained.key);
       }
     }
@@ -711,12 +704,19 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
               currentWrite.path[relation.path.length + index] === segment
           )
         );
+      const overwrittenAfterCopy =
+        currentWrite &&
+        propertyPathWasOverwrittenAfter(
+          propertyWrites, relation.ownerKey,
+          currentWrite.path.slice(relation.path.length), relation.copyPosition
+        );
       if (
         position < relation.copyPosition &&
         pathMatches &&
         (insideSourceInitializer || currentWrite?.enumerable) &&
         !wasOverwrittenBeforeCopy &&
-        !overwrittenByTarget
+        !overwrittenByTarget &&
+        !overwrittenAfterCopy
       ) {
         const visibleSources = [
           relation.sourceKey,

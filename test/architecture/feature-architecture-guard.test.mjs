@@ -1004,6 +1004,26 @@ test('traces top-level getter aliases only when public descriptors expose them',
       `,
       'src/features/getter-copy-source-order-safe/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/getter-copy-descriptor-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        hidden.Store = Store;
+        Object.defineProperty(hidden, 'Store', { value: undefined });
+        const alias = { ...hidden };
+        export const api = { ...alias };
+      `,
+      'src/features/getter-copy-descriptor-overwrite-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-copy-target-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        hidden.Store = Store;
+        const alias = { ...hidden };
+        export const api = { ...alias };
+        api.Store = undefined;
+      `,
+      'src/features/getter-copy-target-overwrite-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/getter-spread-descriptor-alias/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const descriptor = { get: () => Store, enumerable: true };
@@ -1524,8 +1544,10 @@ test('traces top-level getter aliases only when public descriptors expose them',
         'src/features/getter-commonjs-module-final-reset-safe/main/index.cjs',
         'src/features/getter-constructor-internal-safe/main/index.ts',
         'src/features/getter-copy-after-publication-safe/main/index.ts',
+        'src/features/getter-copy-descriptor-overwrite-safe/main/index.ts',
         'src/features/getter-copy-overwrite-before-publication-safe/main/index.ts',
         'src/features/getter-copy-source-order-safe/main/index.ts',
+        'src/features/getter-copy-target-overwrite-safe/main/index.ts',
         'src/features/getter-object-assign-overwritten-safe/main/index.ts',
         'src/features/getter-set-prototype-stale-safe/main/index.ts',
         'src/features/getter-spread-descriptor-alias-safe/main/index.ts',
@@ -1697,6 +1719,16 @@ test('tracks CommonJS object copies with last-write semantics', () => {
         module.exports = { ...alias };
       `,
       'src/features/commonjs-copy-source-order-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-copy-descriptor-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        Object.defineProperty(hidden, 'Store', { value: undefined });
+        const alias = { ...hidden };
+        module.exports = { ...alias };
+      `,
+      'src/features/commonjs-copy-descriptor-overwrite-safe/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
       'src/features/commonjs-assign-late-overwrite-safe/main/index.cjs': `
         const Store = require('./infrastructure/Store');
