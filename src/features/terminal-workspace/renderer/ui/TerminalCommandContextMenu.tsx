@@ -24,11 +24,14 @@ export const TerminalCommandContextMenu = ({
 }: TerminalCommandContextMenuProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const triggerRef = useRef<HTMLSpanElement | null>(null);
-  const restoreFocusTargetRef = useRef(resolveDeepActiveElement());
+  const restoreFocusTargetRef = useRef<HTMLElement | null>(null);
   const didRestoreFocusRef = useRef(false);
   const shouldRestoreFocusRef = useRef(true);
 
   useLayoutEffect(() => {
+    restoreFocusTargetRef.current = resolveDeepActiveElement();
+    didRestoreFocusRef.current = false;
+    shouldRestoreFocusRef.current = true;
     triggerRef.current?.dispatchEvent(
       new MouseEvent('contextmenu', {
         bubbles: true,
@@ -38,7 +41,7 @@ export const TerminalCommandContextMenu = ({
         clientY: menu.y,
       })
     );
-  }, [menu.x, menu.y]);
+  }, [menu]);
 
   const restoreFocus = (): void => {
     if (
