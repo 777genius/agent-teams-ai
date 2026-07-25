@@ -809,6 +809,40 @@ test('traces top-level getter aliases only when public descriptors expose them',
       'src/features/getter-alias/main/infrastructure/Repository.cjs':
         'exports.Repository = class Repository {};',
       'src/features/getter-alias/main/infrastructure/Store.cjs': 'exports.Store = class Store {};',
+      'src/features/getter-alias-extended/main/index.cjs': `
+        const AssignedModule = require('./infrastructure/Assigned');
+        const HiddenModule = require('./infrastructure/Hidden');
+        const StoreModule = require('./infrastructure/Store');
+
+        const getters = {
+          getStore() {
+            return StoreModule.Store;
+          },
+          getHidden() {
+            return HiddenModule.Hidden;
+          },
+        };
+        let getAssigned;
+        getAssigned = () => AssignedModule.Assigned;
+
+        Object.defineProperty(exports, 'Store', { get: getters.getStore });
+        Object.defineProperty(exports, 'Assigned', { get: getAssigned });
+        void getters.getHidden;
+      `,
+      'src/features/getter-alias-extended/main/infrastructure/Assigned.cjs':
+        'exports.Assigned = class Assigned {};',
+      'src/features/getter-alias-extended/main/infrastructure/Hidden.cjs':
+        'exports.Hidden = class Hidden {};',
+      'src/features/getter-alias-extended/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
+      'src/features/getter-factory-safe/main/index.ts': `
+        import { Concrete } from './infrastructure/Concrete';
+        interface PublicPort {}
+        const createFeature = (): PublicPort => new Concrete();
+        export { createFeature };
+      `,
+      'src/features/getter-factory-safe/main/infrastructure/Concrete.ts':
+        'export class Concrete {}',
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
@@ -817,7 +851,12 @@ test('traces top-level getter aliases only when public descriptors expose them',
           .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
           .map(({ specifier }) => specifier)
           .sort(),
-        ['./infrastructure/Repository', './infrastructure/Store']
+        [
+          './infrastructure/Assigned',
+          './infrastructure/Repository',
+          './infrastructure/Store',
+          './infrastructure/Store',
+        ]
       );
     }
   );
@@ -836,14 +875,26 @@ test('preserves string-literal member selection for indexed import types', () =>
       'src/features/indexed-infra/main/infrastructure/Infra.ts': 'export interface Infra {}',
       'src/features/indexed-infra/main/safe.ts': 'export interface Safe {}',
       'src/features/indexed-safe/main/index.ts': `
-        export type Safe = import('./mixedBarrel')['Safe'];
+        export type Safe = import('./mixedBarrel')[('Safe')];
+        export type SafeUnion = import('./mixedBarrel')['Safe' | ('AlsoSafe')];
       `,
       'src/features/indexed-safe/main/mixedBarrel.ts': `
+        export { AlsoSafe } from './alsoSafe';
         export { Infra } from './infrastructure/Infra';
         export { Safe } from './safe';
       `,
+      'src/features/indexed-safe/main/alsoSafe.ts': 'export interface AlsoSafe {}',
       'src/features/indexed-safe/main/infrastructure/Infra.ts': 'export interface Infra {}',
       'src/features/indexed-safe/main/safe.ts': 'export interface Safe {}',
+      'src/features/indexed-union-infra/main/index.ts': `
+        export type Mixed = import('./mixedBarrel')[('Safe') | 'Infra'];
+      `,
+      'src/features/indexed-union-infra/main/mixedBarrel.ts': `
+        export { Infra } from './infrastructure/Infra';
+        export { Safe } from './safe';
+      `,
+      'src/features/indexed-union-infra/main/infrastructure/Infra.ts': 'export interface Infra {}',
+      'src/features/indexed-union-infra/main/safe.ts': 'export interface Safe {}',
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
@@ -856,6 +907,12 @@ test('preserves string-literal member selection for indexed import types', () =>
             publicEntrypoint: 'src/features/indexed-infra/main/index.ts',
             rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
             source: 'src/features/indexed-infra/main/mixedBarrel.ts',
+            specifier: './infrastructure/Infra',
+          },
+          {
+            publicEntrypoint: 'src/features/indexed-union-infra/main/index.ts',
+            rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+            source: 'src/features/indexed-union-infra/main/mixedBarrel.ts',
             specifier: './infrastructure/Infra',
           },
         ]

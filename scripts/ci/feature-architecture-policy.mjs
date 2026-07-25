@@ -174,8 +174,12 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const addOwnerDependency = (owner, dependency) => {
     const localDependency =
       owner.localMember === undefined
-        ? dependency
-        : { ...dependency, localMember: owner.localMember };
+        ? { ...dependency, getterOnly: owner.getterOnly ?? false }
+        : {
+            ...dependency,
+            getterOnly: owner.getterOnly ?? false,
+            localMember: owner.localMember,
+          };
     const selectedDependencies =
       localDependency.importedName === '*' && owner.bindingSelections
         ? owner.bindingSelections.flatMap(({ importedName, localNames }) =>
@@ -207,10 +211,16 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
   };
 
-  const importTypeSelectedName = (node) => {
+  const unwrapParenthesizedType = (node) => {
+    let current = node;
+    while (ts.isParenthesizedTypeNode(current)) current = current.type;
+    return current;
+  };
+
+  const importTypeSelectedNames = (node) => {
     let current = node.qualifier;
     while (current && ts.isQualifiedName(current)) current = current.left;
-    if (current && ts.isIdentifier(current)) return current.text;
+    if (current && ts.isIdentifier(current)) return [current.text];
 
     let selectedType = node;
     while (
@@ -222,12 +232,17 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
     const parent = selectedType.parent;
     if (!parent || !ts.isIndexedAccessTypeNode(parent) || parent.objectType !== selectedType) {
-      return '*';
+      return ['*'];
     }
-    const indexType = parent.indexType;
-    return ts.isLiteralTypeNode(indexType) && ts.isStringLiteralLike(indexType.literal)
-      ? indexType.literal.text
-      : '*';
+    const selected = unwrapParenthesizedType(parent.indexType);
+    const selectedTypes = ts.isUnionTypeNode(selected) ? selected.types : [selected];
+    const names = selectedTypes.map((selectedType) => {
+      const unwrapped = unwrapParenthesizedType(selectedType);
+      return ts.isLiteralTypeNode(unwrapped) && ts.isStringLiteralLike(unwrapped.literal)
+        ? unwrapped.literal.text
+        : null;
+    });
+    return names.every((name) => name !== null) ? [...new Set(names)] : ['*'];
   };
 
   const addTypeReference = (node) => {
@@ -237,10 +252,9 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
 
     const owner = publicReferenceOwner(node);
     if (!owner) return;
-    addOwnerDependency(owner, {
-      edge,
-      importedName: importTypeSelectedName(node),
-    });
+    for (const importedName of importTypeSelectedNames(node)) {
+      addOwnerDependency(owner, { edge, importedName });
+    }
   };
 
   const visit = (node) => {
@@ -352,6 +366,19 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     return false;
   };
 
+  const isDescriptorGetterReference = (node) => {
+    let current = node;
+    while (current.parent && current.parent !== sourceFile) {
+      const parent = current.parent;
+      if (ts.isPropertyAssignment(parent) && parent.initializer === current) {
+        const name = parent.name;
+        return (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) && name.text === 'get';
+      }
+      current = parent;
+    }
+    return false;
+  };
+
   const visitBindingReference = (node) => {
     if (
       ts.isImportDeclaration(node) ||
@@ -380,6 +407,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
                 importedName: selectedName,
                 line: lineForNode(sourceFile, node),
                 localName: node.text,
+                viaGetter: isDescriptorGetterReference(node),
               });
             }
           } else {
@@ -389,6 +417,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
                 localMember: owner.localMember,
                 localName: node.text,
                 selectedName,
+                viaGetter: isDescriptorGetterReference(node),
               });
               localReferenceNames.set(localName, references);
             }
@@ -401,10 +430,11 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
 
   visitBindingReference(sourceFile);
 
-  const selectLocalDependencies = (dependencies, selectedName) => {
-    if (!selectedName) return dependencies;
+  const selectLocalDependencies = (dependencies, selectedName, allowGetterOnly) => {
     return dependencies.flatMap((dependency) => {
+      if (dependency.getterOnly && !allowGetterOnly) return [];
       if (
+        selectedName &&
         dependency.localMember &&
         dependency.localMember !== '*' &&
         dependency.localMember !== selectedName
@@ -416,34 +446,45 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
           ...dependency,
           importedName: dependency.localMember
             ? dependency.importedName
-            : selectImportedName(dependency.importedName, selectedName),
+            : selectImportedName(dependency.importedName, selectedName ?? null),
+          getterOnly: false,
           localMember: undefined,
         },
       ];
     });
   };
 
-  const resolveLocalDependencies = (localName, visited = new Set(), selectedName) => {
+  const resolveLocalDependencies = (
+    localName,
+    visited = new Set(),
+    selectedName,
+    allowGetterOnly = false
+  ) => {
     const importedBinding = importedBindings.get(localName);
-    if (importedBinding) return selectLocalDependencies([importedBinding], selectedName);
+    if (importedBinding) {
+      return selectLocalDependencies([importedBinding], selectedName, allowGetterOnly);
+    }
     if (visited.has(localName)) return [];
     const nextVisited = new Set(visited).add(localName);
     const dependencies = [
       ...(localDependencyReferences.get(localName) ?? []),
       ...[...(localReferenceNames.get(localName)?.values() ?? [])].flatMap((reference) =>
-        resolveLocalDependencies(reference.localName, nextVisited, reference.selectedName).map(
-          (dependency) => ({
-            ...dependency,
-            localMember: reference.localMember ?? dependency.localMember,
-          })
-        )
+        resolveLocalDependencies(
+          reference.localName,
+          nextVisited,
+          reference.selectedName,
+          allowGetterOnly || reference.viaGetter
+        ).map((dependency) => ({
+          ...dependency,
+          localMember: reference.localMember ?? dependency.localMember,
+        }))
       ),
     ];
-    return selectLocalDependencies(dependencies, selectedName);
+    return selectLocalDependencies(dependencies, selectedName, allowGetterOnly);
   };
 
-  const addResolvedReexports = ({ exportedName, importedName, line, localName }) => {
-    const dependencies = resolveLocalDependencies(localName, new Set(), importedName);
+  const addResolvedReexports = ({ exportedName, importedName, line, localName, viaGetter }) => {
+    const dependencies = resolveLocalDependencies(localName, new Set(), importedName, viaGetter);
     for (const dependency of dependencies) {
       reexports.push({
         ...dependency.edge,

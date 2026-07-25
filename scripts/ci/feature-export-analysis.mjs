@@ -303,11 +303,31 @@ function objectGetterMember(objectExpression, reference) {
   return getter && ts.isGetAccessorDeclaration(getter) ? propertyNameText(getter.name) : null;
 }
 
+function objectCallableMember(objectExpression, reference) {
+  const object = objectExpression && unwrapExpression(objectExpression);
+  if (!object || !ts.isObjectLiteralExpression(object)) return null;
+  const member = object.properties.find((property) => {
+    if (ts.isMethodDeclaration(property)) return containsReference(property, reference);
+    if (!ts.isPropertyAssignment(property)) return false;
+    const initializer = unwrapExpression(property.initializer);
+    return (
+      (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer)) &&
+      containsReference(initializer, reference)
+    );
+  });
+  return member?.name ? propertyNameText(member.name) : null;
+}
+
 function expressionGetterSelection(expression, reference) {
   const current = unwrapExpression(expression);
   if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
     const localMember = objectGetterMember(current.right, reference);
-    return localMember === null ? null : { localMember };
+    if (localMember !== null) return { localMember };
+    const initializer = unwrapExpression(current.right);
+    return (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer)) &&
+      containsReference(initializer, reference)
+      ? { getterOnly: true, localMember: undefined }
+      : null;
   }
   if (!ts.isCallExpression(current)) return null;
 
@@ -346,6 +366,8 @@ export function getterSelectionForReference(reference, boundary) {
       }
       const objectMember = objectGetterMember(declaration.initializer, reference);
       if (objectMember !== null) return { localMember: objectMember };
+      const callableMember = objectCallableMember(declaration.initializer, reference);
+      if (callableMember !== null) return { getterOnly: true, localMember: callableMember };
       if (descriptorGetterContainsReference(declaration.initializer, reference)) {
         return { localMember: null };
       }
@@ -356,13 +378,13 @@ export function getterSelectionForReference(reference, boundary) {
         !hasModifier(boundary, ts.SyntaxKind.ExportKeyword) &&
         (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer))
       ) {
-        return { localMember: undefined };
+        return { getterOnly: true, localMember: undefined };
       }
     }
     return null;
   }
   if (ts.isFunctionDeclaration(boundary) && !hasModifier(boundary, ts.SyntaxKind.ExportKeyword)) {
-    return { localMember: undefined };
+    return { getterOnly: true, localMember: undefined };
   }
   if (ts.isExpressionStatement(boundary)) {
     return expressionGetterSelection(boundary.expression, reference);
@@ -434,12 +456,21 @@ export function findPublicReferenceOwner(node, sourceFile, exportedLocalNames) {
       current.expression,
       exportedLocalNames
     ));
+    if (
+      localNames.length === 0 &&
+      getterSelection?.getterOnly &&
+      ts.isBinaryExpression(current.expression) &&
+      current.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken
+    ) {
+      localNames = assignmentLocalNames(current.expression.left);
+    }
   }
 
   if (ts.isExportAssignment(current)) {
     return {
       bindingSelections,
       exportedNames: ['default'],
+      getterOnly: getterSelection?.getterOnly,
       localMember: getterSelection?.localMember,
       localNames: [],
     };
@@ -448,6 +479,7 @@ export function findPublicReferenceOwner(node, sourceFile, exportedLocalNames) {
     return {
       bindingSelections,
       exportedNames: [],
+      getterOnly: getterSelection?.getterOnly,
       localMember: getterSelection?.localMember,
       localNames,
     };
@@ -455,6 +487,7 @@ export function findPublicReferenceOwner(node, sourceFile, exportedLocalNames) {
   return {
     bindingSelections,
     exportedNames: hasModifier(current, ts.SyntaxKind.DefaultKeyword) ? ['default'] : localNames,
+    getterOnly: getterSelection?.getterOnly,
     localMember: getterSelection?.localMember,
     localNames,
   };
