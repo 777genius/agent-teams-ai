@@ -1,3 +1,4 @@
+import { promises as fsPromises } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -22,6 +23,7 @@ vi.mock('@main/utils/pathDecoder', () => ({
 }));
 
 const ATTACHMENT_ID = '11111111-1111-4111-8111-111111111111';
+const OTHER_ATTACHMENT_ID = '22222222-2222-4222-8222-222222222222';
 const ATTACHMENT_FILE_PATTERN = new RegExp(
   `^${ATTACHMENT_ID}--[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.attachment$`
 );
@@ -304,5 +306,39 @@ describe('TeamTaskAttachmentStore', () => {
     await expect(
       store.getAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png')
     ).resolves.toBeNull();
+  });
+
+  it('preserves a different attachment created while an empty directory cleanup begins', async () => {
+    const { store } = await createRealStore();
+    const receipt = await store.saveAttachmentWithReceipt(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'old.png',
+      'image/png',
+      'b2xk'
+    );
+    const originalRmdir = fsPromises.rmdir.bind(fsPromises);
+    const rmdir = vi.spyOn(fsPromises, 'rmdir').mockImplementationOnce(async (directory) => {
+      await store.saveAttachment(
+        'my-team',
+        'task-1',
+        OTHER_ATTACHMENT_ID,
+        'other.png',
+        'image/png',
+        'b3RoZXI='
+      );
+      await originalRmdir(directory);
+    });
+
+    try {
+      await store.rollbackAttachment(receipt);
+    } finally {
+      rmdir.mockRestore();
+    }
+
+    await expect(
+      store.getAttachment('my-team', 'task-1', OTHER_ATTACHMENT_ID, 'image/png')
+    ).resolves.toBe('b3RoZXI=');
   });
 });

@@ -297,12 +297,15 @@ export class TeamTaskAttachmentStore {
   private async cleanupEmptyTaskDirectory(teamName: string, taskId: string): Promise<void> {
     const dir = this.getTaskDir(teamName, taskId);
     try {
-      const entries = await fs.promises.readdir(dir);
-      if (entries.length === 0) {
-        await fs.promises.rm(dir, { recursive: true });
-      }
-    } catch {
-      // ignore cleanup errors
+      await fs.promises.rmdir(dir);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT' || code === 'ENOTEMPTY' || code === 'EEXIST') return;
+      logger.warn(
+        `[${teamName}] Failed to clean task attachment directory for task #${taskId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
   }
 }
