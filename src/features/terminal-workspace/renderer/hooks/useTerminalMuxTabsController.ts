@@ -24,7 +24,7 @@ import {
 
 import {
   type TerminalMuxCommands,
-  type TerminalMuxTabCloseCompletion,
+  type TerminalMuxTabCloseDispatch,
   useTerminalMuxTabLifecycle,
 } from './useTerminalMuxTabLifecycle';
 import { useTerminalTabPointerReorder } from './useTerminalTabPointerReorder';
@@ -87,7 +87,7 @@ interface PendingCloseFocusIntent {
   scopeKey: string;
 }
 
-interface PendingCloseFocusRequest extends TerminalMuxTabCloseCompletion {
+interface PendingCloseFocusRequest extends TerminalMuxTabCloseDispatch {
   scopeKey: string;
 }
 
@@ -120,20 +120,20 @@ export function useTerminalMuxTabsController({
     [placement, settingsOpen, snapshot, tabPreferences]
   );
   const focusScopeKey = `${teamName}\u001f${viewModel.activeSessionId ?? ''}`;
-  const handleTabCloseCompleted = useCallback(
-    (completion: TerminalMuxTabCloseCompletion): void => {
+  const handleTabCloseDispatched = useCallback(
+    (dispatch: TerminalMuxTabCloseDispatch): void => {
       const intent = closeFocusIntentRef.current;
       closeFocusIntentRef.current = null;
       if (
         !intent?.restoreFocus ||
-        intent.closedTabId !== completion.closedTabId ||
+        intent.closedTabId !== dispatch.closedTabId ||
         intent.scopeKey !== focusScopeKey
       ) {
         return;
       }
 
       setPendingCloseFocusRequest({
-        ...completion,
+        ...dispatch,
         scopeKey: focusScopeKey,
       });
     },
@@ -154,7 +154,7 @@ export function useTerminalMuxTabsController({
     tabsCount: viewModel.tabsCount,
     visibleTabs: viewModel.visibleTabs,
     onSettingsOpenChange,
-    onTabCloseCompleted: handleTabCloseCompleted,
+    onTabCloseDispatched: handleTabCloseDispatched,
     onTabContentPendingChange,
   });
   const {

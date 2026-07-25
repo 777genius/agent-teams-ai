@@ -2302,6 +2302,9 @@ interface MockWorkspaceSnapshot {
         lines: Array<{ text: string }>;
       };
     } | null;
+    session: {
+      session_id: string;
+    };
     session_id: string;
     topology: {
       focused_tab: string;
@@ -2462,6 +2465,9 @@ function createWorkspaceSnapshot({
             },
           }
         : null,
+      session: {
+        session_id: activeSessionId,
+      },
       session_id: activeSessionId,
       topology: {
         focused_tab: activeTab?.tab_id ?? focusedTabId,

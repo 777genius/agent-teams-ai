@@ -79,33 +79,88 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(requiredControls().pendingAction).toBeNull();
   });
 
-  it('reports a close completion only after dispatch and attach succeed', async () => {
-    const onTabCloseCompleted = vi.fn();
-    await render({ onTabCloseCompleted });
+  it('reports a close dispatch after the close command succeeds', async () => {
+    const onTabCloseDispatched = vi.fn();
+    await render({ onTabCloseDispatched });
 
     await act(async () => {
       await requiredControls().requestCloseTab(TAB_ONE);
     });
 
-    expect(onTabCloseCompleted).toHaveBeenCalledOnce();
-    expect(onTabCloseCompleted).toHaveBeenCalledWith({
+    expect(onTabCloseDispatched).toHaveBeenCalledOnce();
+    expect(onTabCloseDispatched).toHaveBeenCalledWith({
       closedTabId: TAB_ONE.tab_id,
       preferredFocusTabId: TAB_TWO.tab_id,
     });
   });
 
-  it('does not report a close completion when the mux action fails', async () => {
-    const onTabCloseCompleted = vi.fn();
+  it('keeps the close dispatch when attach fails after the tab was removed', async () => {
+    const onTabCloseDispatched = vi.fn();
     const commands = createResolvedCommands();
     commands.attachSession = vi.fn().mockRejectedValue(new Error('attach failed')) as never;
-    await render({ commands, onTabCloseCompleted });
+    await render({ commands, onTabCloseDispatched });
 
     await act(async () => {
       await requiredControls().requestCloseTab(TAB_ONE);
     });
 
-    expect(onTabCloseCompleted).not.toHaveBeenCalled();
+    expect(onTabCloseDispatched).toHaveBeenCalledOnce();
     expect(requiredControls().error).toBe('attach failed');
+  });
+
+  it('reports the close dispatch before a later attach settles', async () => {
+    const attach = createDeferred<void>();
+    const onTabCloseDispatched = vi.fn();
+    const commands = createResolvedCommands();
+    commands.attachSession = vi.fn(() => attach.promise) as never;
+    await render({ commands, onTabCloseDispatched });
+
+    let closeAction!: Promise<void>;
+    await act(async () => {
+      closeAction = requiredControls().requestCloseTab(TAB_ONE);
+      await flushMicrotasks();
+    });
+
+    expect(onTabCloseDispatched).toHaveBeenCalledOnce();
+    expect(requiredControls().pendingAction).toBe('close-tab:tab-1');
+
+    await act(async () => {
+      attach.resolve();
+      await closeAction;
+    });
+  });
+
+  it('keeps the close dispatch when the following focus command fails', async () => {
+    const onTabCloseDispatched = vi.fn();
+    const commands = createResolvedCommands();
+    commands.dispatchMuxCommand = vi.fn(async (_sessionId, command) => {
+      if (command.kind === 'focus_tab') {
+        throw new Error('focus failed');
+      }
+    }) as never;
+    await render({ commands, onTabCloseDispatched });
+
+    await act(async () => {
+      await requiredControls().requestCloseTab(TAB_ONE);
+    });
+
+    expect(onTabCloseDispatched).toHaveBeenCalledOnce();
+    expect(commands.attachSession).not.toHaveBeenCalled();
+    expect(requiredControls().error).toBe('focus failed');
+  });
+
+  it('does not report a close dispatch when the close command fails', async () => {
+    const onTabCloseDispatched = vi.fn();
+    const commands = createResolvedCommands();
+    commands.dispatchMuxCommand = vi.fn().mockRejectedValue(new Error('close failed')) as never;
+    await render({ commands, onTabCloseDispatched });
+
+    await act(async () => {
+      await requiredControls().requestCloseTab(TAB_ONE);
+    });
+
+    expect(onTabCloseDispatched).not.toHaveBeenCalled();
+    expect(requiredControls().error).toBe('close failed');
   });
 
   it('uses a synchronous foreground mutex to reject a second action in the same render', async () => {
@@ -637,6 +692,9 @@ function createSnapshotWithEmptyFocusedTab(tab: TerminalMuxTab): TerminalWorkspa
           lines: [],
         },
       },
+      session: {
+        session_id: 'session-a',
+      },
     },
     historicalPanes: {
       [paneId]: {
@@ -645,6 +703,8 @@ function createSnapshotWithEmptyFocusedTab(tab: TerminalMuxTab): TerminalWorkspa
         hasMoreSegments: false,
         lines: [],
         nextEventSeq: null,
+        paneId,
+        sessionId: 'session-a',
       },
     },
   } as unknown as TerminalWorkspaceSnapshot;

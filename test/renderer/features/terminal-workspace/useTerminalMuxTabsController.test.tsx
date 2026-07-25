@@ -93,6 +93,19 @@ describe('useTerminalMuxTabsController close focus', () => {
     expect(document.activeElement).toBe(requiredElement('tab-tab-1'));
   });
 
+  it('restores focus when attach fails after the close command succeeded', async () => {
+    commands.attachSession = vi.fn().mockRejectedValue(new Error('attach failed')) as never;
+    await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO));
+    requiredElement('close-tab-2').focus();
+
+    await act(async () => {
+      await requiredControls().requestCloseTab(TAB_TWO);
+    });
+    await render(createSnapshot([TAB_ONE], TAB_ONE));
+
+    expect(document.activeElement).toBe(requiredElement('tab-tab-1'));
+  });
+
   it('does not steal focus when the user moves to another control during close', async () => {
     const attach = createDeferred<void>();
     commands.attachSession = vi.fn(() => attach.promise) as never;
@@ -170,6 +183,9 @@ function createSnapshot(
           lines: [],
         },
       },
+      session: {
+        session_id: 'session-a',
+      },
       session_id: 'session-a',
       topology: {
         focused_tab: activeTab.tab_id,
@@ -183,6 +199,8 @@ function createSnapshot(
         hasMoreSegments: false,
         lines: [],
         nextEventSeq: null,
+        paneId: `pane-${activeTab.tab_id}`,
+        sessionId: 'session-a',
       },
     },
   } as unknown as MockWorkspaceSnapshot;

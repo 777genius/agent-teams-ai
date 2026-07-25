@@ -93,7 +93,7 @@ describe('terminal tab preferences', () => {
   });
 
   it('requires complete focused single-pane history to prove a tab is empty', () => {
-    const completeHistory = createHistoricalPane();
+    const completeHistory = createHistoricalPane({ paneId: 'pane-tab-1' });
 
     expect(
       resolveTerminalTabContentState(
@@ -114,6 +114,7 @@ describe('terminal tab preferences', () => {
             'pane-tab-1': createHistoricalPane({
               hasMoreSegments: true,
               nextEventSeq: 2n,
+              paneId: 'pane-tab-1',
             }),
           },
         }),
@@ -125,10 +126,39 @@ describe('terminal tab preferences', () => {
         createSnapshot({
           focusedPaneId: 'pane-tab-1',
           historicalPanes: {
-            'pane-tab-2': completeHistory,
+            'pane-tab-2': createHistoricalPane({ paneId: 'pane-tab-2' }),
           },
         }),
         tabs[1]
+      )
+    ).toBe('unknown');
+  });
+
+  it('rejects complete history cached for another session or pane identity', () => {
+    expect(
+      resolveTerminalTabContentState(
+        createSnapshot({
+          focusedPaneId: 'pane-tab-1',
+          historicalPanes: {
+            'pane-tab-1': createHistoricalPane({
+              paneId: 'pane-tab-1',
+              sessionId: 'session-b',
+            }),
+          },
+          sessionId: 'session-a',
+        }),
+        tabs[0]
+      )
+    ).toBe('unknown');
+    expect(
+      resolveTerminalTabContentState(
+        createSnapshot({
+          focusedPaneId: 'pane-tab-1',
+          historicalPanes: {
+            'pane-tab-1': createHistoricalPane({ paneId: 'pane-stale' }),
+          },
+        }),
+        tabs[0]
       )
     ).toBe('unknown');
   });
@@ -138,8 +168,8 @@ describe('terminal tab preferences', () => {
       focusedPaneId: 'pane-tab-1',
       focusedLines: ['live output'],
       historicalPanes: {
-        'pane-tab-1': createHistoricalPane(),
-        'pane-tab-2': createHistoricalPane(),
+        'pane-tab-1': createHistoricalPane({ paneId: 'pane-tab-1' }),
+        'pane-tab-2': createHistoricalPane({ paneId: 'pane-tab-2' }),
       },
     });
 
@@ -149,7 +179,7 @@ describe('terminal tab preferences', () => {
         createSnapshot({
           focusedPaneId: 'pane-tab-1',
           historicalPanes: {
-            'pane-tab-1': createHistoricalPane({ lines: [' '] }),
+            'pane-tab-1': createHistoricalPane({ lines: [' '], paneId: 'pane-tab-1' }),
           },
         }),
         tabs[0]
@@ -163,8 +193,8 @@ describe('terminal tab preferences', () => {
         createSnapshot({
           focusedPaneId: 'pane-tab-1',
           historicalPanes: {
-            'pane-tab-1': createHistoricalPane(),
-            'pane-tab-2': createHistoricalPane(),
+            'pane-tab-1': createHistoricalPane({ paneId: 'pane-tab-1' }),
+            'pane-tab-2': createHistoricalPane({ paneId: 'pane-tab-2' }),
           },
         }),
         createSplitTab('tab-split', tabs[0], tabs[1])
@@ -179,16 +209,20 @@ interface HistoricalPaneFixture {
   hasMoreSegments: boolean;
   lines: string[];
   nextEventSeq: bigint | null;
+  paneId: string;
+  sessionId: string;
 }
 
 function createSnapshot({
   focusedLines = [],
   focusedPaneId,
   historicalPanes = {},
+  sessionId = 'session-a',
 }: {
   focusedLines?: string[];
   focusedPaneId: string;
   historicalPanes?: Record<string, HistoricalPaneFixture>;
+  sessionId?: string;
 }): TerminalWorkspaceSnapshot {
   return {
     attachedSession: {
@@ -197,6 +231,9 @@ function createSnapshot({
         surface: {
           lines: focusedLines.map((text) => ({ spans: [], text })),
         },
+      },
+      session: {
+        session_id: sessionId,
       },
     },
     historicalPanes,
@@ -212,6 +249,8 @@ function createHistoricalPane(
     hasMoreSegments: false,
     lines: [],
     nextEventSeq: null,
+    paneId: 'pane-tab-1',
+    sessionId: 'session-a',
     ...overrides,
   };
 }
