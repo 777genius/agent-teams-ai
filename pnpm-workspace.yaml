@@ -6,6 +6,7 @@ packages:
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - '@esbuild/*'
+  - brace-expansion@5.0.8
   - esbuild
   - fast-uri@3.1.4
   - find-my-way@9.7.0
@@ -34,9 +35,9 @@ overrides:
   '@xmldom/xmldom': '0.8.13'
   'axios': '1.18.1'
   'body-parser': '2.3.0'
-  'brace-expansion@1': '1.1.16'
-  'brace-expansion@2': '2.1.2'
-  'brace-expansion@5': '5.0.7'
+  'brace-expansion@1': '5.0.8'
+  'brace-expansion@2': '5.0.8'
+  'brace-expansion@5': '5.0.8'
   'defu': '6.1.5'
   'devalue': '5.8.1'
   'dompurify': '3.4.12'
