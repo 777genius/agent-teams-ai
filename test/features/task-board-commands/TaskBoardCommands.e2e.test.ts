@@ -226,6 +226,44 @@ describe('task-board commands E2E', () => {
     expect(harness.controller.taskBoard.listTasks()).toHaveLength(0);
   });
 
+  it('preserves terminal destination conflicts during durable recovery', async () => {
+    const harness = await makeHarness();
+    const identity = makeIdentity('23232323-2323-4323-8323-232323232323');
+    const createError = new Error('destination create response was lost');
+    let recovering = false;
+    const recoveredById = { id: identity.commandId } as TeamTask;
+    const recoveredByIdempotencyKey = {
+      id: '24242424-2323-4323-8323-232323232323',
+    } as TeamTask;
+    const reconcile = vi.fn();
+    const destination: TaskBoardCreateTaskDestination = {
+      ...harness.destination,
+      findById: vi.fn(() => (recovering ? recoveredById : null)),
+      findByIdempotencyKey: vi.fn(() => (recovering ? [recoveredByIdempotencyKey] : [])),
+      create: vi.fn(() => {
+        recovering = true;
+        throw createError;
+      }),
+      reconcile,
+    };
+
+    await expect(
+      harness.facade.createTask({
+        teamName: TEAM_NAME,
+        identity,
+        payload: { subject: 'Conflicting durable recovery', createdBy: 'user' },
+        destination,
+      })
+    ).rejects.toMatchObject({
+      name: 'TaskBoardCreateDestinationConflictError',
+    });
+
+    expect(destination.create).toHaveBeenCalledOnce();
+    expect(destination.findById).toHaveBeenCalledTimes(2);
+    expect(reconcile).not.toHaveBeenCalled();
+    expect(harness.controller.taskBoard.listTasks()).toHaveLength(0);
+  });
+
   it('keeps one logical create while switching between SQLite and JSON fallback', async () => {
     const harness = await makeHarness();
     const destinationCreate = vi.spyOn(harness.destination, 'create');

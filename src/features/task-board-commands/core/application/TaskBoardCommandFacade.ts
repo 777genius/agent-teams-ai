@@ -132,6 +132,9 @@ export class TaskBoardCommandFacade {
           try {
             recovered = findExistingDestination(command.destination, record);
           } catch (reconciliationError) {
+            if (reconciliationError instanceof TaskBoardCreateDestinationConflictError) {
+              throw reconciliationError;
+            }
             throw new TaskBoardCreateOutcomeUnknownError(error, reconciliationError);
           }
           if (recovered) {
