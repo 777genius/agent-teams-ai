@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,6 +9,7 @@ import {
   ProjectAdmissionDecisionStatus,
   ProjectAdmissionWorkerRole,
   ProjectOperation,
+  ReviewDecisionStatus,
   consumedDebt,
   consumedOutputRecordFor,
   evaluateProjectAdmission,
@@ -16,6 +18,13 @@ import { createLocalProjectIntegrationMcpToolHandlers } from "../project-integra
 import type { ProjectIntegrationMcpController } from "../project-integration-mcp";
 import { readCodexGoalConsumedOutputLedgers } from "../application/project-control/codex-goal-consumed-output-ledger-io";
 import { projectIntegrationPushApprovedCommitWithConsumedLedger } from "../codex-goal-mcp-project-integration-ledger";
+import {
+  LocalReviewedWorkerOutputStore,
+  reviewedWorkerOutputFormat,
+  reviewedWorkerOutputId,
+  reviewedWorkerOutputRoot,
+  type ReviewedWorkerOutputIdentity,
+} from "../reviewed-worker-output";
 
 const execFileAsync = promisify(execFile);
 
@@ -156,6 +165,7 @@ describe("project integration safety kernel e2e", () => {
     const seedPath = join(root, "seed");
     const targetPath = join(root, "target");
     const workerPath = join(root, "worker");
+    const reviewedPath = join(root, "reviewed");
     const registryRootDir = join(root, "worker-jobs", "registry");
     const controllerRoot = join(root, "worker-jobs", "controller-v1");
     const ledgerRoot = join(root, "control", "consumed-output-ledger");
@@ -181,28 +191,91 @@ describe("project integration safety kernel e2e", () => {
     ]);
     await git(root, ["clone", remotePath, targetPath]);
     await git(root, ["clone", remotePath, workerPath]);
+    await git(root, ["clone", remotePath, reviewedPath]);
     await mkdir(controllerRoot, { recursive: true });
     await mkdir(registryRootDir, { recursive: true });
 
     await writeFile(
-      join(workerPath, "src", "feature.ts"),
+      join(reviewedPath, "src", "feature.ts"),
       "export const value = 2;\n",
     );
-    const patchPath = join(workerPath, "worker-output.patch");
-    await writeFile(
-      patchPath,
-      await gitOutput(workerPath, ["diff", "--binary"]),
-    );
+    const patch = await gitOutput(reviewedPath, ["diff", "--binary"]);
     const baseCommit = (
       await gitOutput(targetPath, ["rev-parse", "HEAD"])
     ).trim();
+    const workerJobId = "synthetic-worker-1";
+    const taskId = "task-synthetic-worker-1";
+    const now = "2026-07-12T00:00:00.000Z";
+    await mkdir(join(registryRootDir, workerJobId), { recursive: true });
+    await writeFile(
+      join(registryRootDir, workerJobId, "job.json"),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        jobId: workerJobId,
+        createdAt: now,
+        updatedAt: now,
+        jobRootDir: join(root, "worker-jobs", workerJobId),
+        workspacePath: workerPath,
+        promptPath: join(root, "worker-jobs", workerJobId, "prompt.md"),
+        taskId,
+        accounts: ["account-a"],
+      }, null, 2)}\n`,
+    );
+    const reviewDecision = {
+      reviewedBy: "synthetic-controller",
+      decision: ReviewDecisionStatus.Approved,
+      reason: "synthetic reviewed intermediate accepted",
+      approvedFiles: ["src/feature.ts"],
+      requiredChecks: [{
+        checkId: "synthetic-check",
+        command: ["node", "-e", "process.exit(0)"],
+      }],
+    };
+    const reviewedIdentity: ReviewedWorkerOutputIdentity = {
+      format: reviewedWorkerOutputFormat,
+      formatRevision: 1 as const,
+      projectId: "synthetic-project",
+      controllerJobId: "controller-v1",
+      workerJobId,
+      taskId,
+      sourceWorkspacePath: reviewedPath,
+      baseCommit,
+      patchSha256: sha256(patch),
+      changedFiles: ["src/feature.ts"],
+      reviewDecision,
+    };
+    const reviewedOutputId = reviewedWorkerOutputId(reviewedIdentity);
+    const reviewedStore = new LocalReviewedWorkerOutputStore({
+      rootDir: reviewedWorkerOutputRoot(registryRootDir),
+    });
+    await reviewedStore.create({
+      snapshot: {
+        ...reviewedIdentity,
+        reviewedOutputId,
+        patchByteLength: Buffer.byteLength(patch),
+        capturedAt: now,
+      },
+      patch,
+    });
+    const reviewMarkerContent = "synthetic reviewed output attestation\n";
+    await reviewedStore.commitReviewAttestation({
+      attestation: {
+        format: "reviewed-worker-output-review-attestation",
+        formatRevision: 1,
+        reviewedOutputId,
+        reviewMarkerPath: join(root, "synthetic.review.json"),
+        reviewMarkerSha256: sha256(reviewMarkerContent),
+        committedAt: now,
+      },
+      reviewMarkerContent,
+    });
     const controller: ProjectIntegrationMcpController = {
       registryRootDir,
       controller: { jobId: "controller-v1", jobRootDir: controllerRoot },
       scope: {
         projectId: "synthetic-project",
         registryRoot: registryRootDir,
-        workspaceRoots: [targetPath, workerPath],
+        workspaceRoots: [targetPath, workerPath, reviewedPath],
         consumedOutputLedgerRoots: [ledgerRoot],
         jobIdPrefixes: ["synthetic-"],
         commitIdentity: {
@@ -224,28 +297,13 @@ describe("project integration safety kernel e2e", () => {
     });
     const args = {
       attemptId: "synthetic-attempt-1",
-      workerJobId: "synthetic-worker-1",
-      workerWorkspacePath: workerPath,
-      workerPatchPath: patchPath,
-      workerBaseCommit: baseCommit,
-      targetCommit: baseCommit,
-      baseStatus: "current",
-      baseRevisionReasons: ["base-current"],
+      workerJobId,
+      reviewedOutputId,
       targetWorkspacePath: targetPath,
       targetBranch: "main",
       targetRemote: "origin",
-      changedFiles: ["src/feature.ts"],
-      approvedFiles: ["src/feature.ts"],
       allowedPathPrefixes: ["src"],
       requiredCheckIds: ["synthetic-check"],
-      requiredChecks: [
-        {
-          checkId: "synthetic-check",
-          command: ["node", "-e", "process.exit(0)"],
-        },
-      ],
-      reviewedBy: "synthetic-controller",
-      reviewReason: "synthetic e2e approval",
     } as const;
 
     await handlers.openAttempt({ ...args, confirmOpen: true });
@@ -284,10 +342,20 @@ describe("project integration safety kernel e2e", () => {
     });
     const record = consumedOutputRecordFor({
       ledger,
-      jobId: "synthetic-worker-1",
+      jobId: workerJobId,
       workspacePath: workerPath,
     });
     expect(record).toMatchObject({ status: "integrated", valid: true });
+    expect(consumedOutputRecordFor({
+      ledger,
+      jobId: workerJobId,
+      workspacePath: reviewedPath,
+    })).toMatchObject({
+      valid: false,
+      evidence: expect.arrayContaining([
+        expect.stringContaining("does not match dirty workspace"),
+      ]),
+    });
     const admission = evaluateProjectAdmission({
       request: {
         operation: ProjectOperation.StartWorker,
@@ -310,10 +378,20 @@ describe("project integration safety kernel e2e", () => {
       "items",
       "synthetic-worker-1--synthetic-attempt-1.json",
     );
-    expect(JSON.parse(await readFile(ledgerPath, "utf8"))).toMatchObject({
-      jobId: "synthetic-worker-1",
+    const rawLedger = JSON.parse(await readFile(ledgerPath, "utf8")) as {
+      readonly backup: {
+        readonly workspace: string;
+        readonly patchPath: string;
+      };
+    };
+    expect(rawLedger).toMatchObject({
+      jobId: workerJobId,
       status: "integrated",
+      backup: { workspace: workerPath },
     });
+    await expect(
+      readFile(rawLedger.backup.patchPath, "utf8"),
+    ).resolves.toContain("export const value = 2");
   });
 
   it("archives rejected output and safely adopts its controller-owned patch", async () => {
@@ -563,4 +641,8 @@ async function gitOutput(
   args: readonly string[],
 ): Promise<string> {
   return (await execFileAsync("git", args, { cwd })).stdout;
+}
+
+function sha256(value: string | Buffer): string {
+  return createHash("sha256").update(value).digest("hex");
 }

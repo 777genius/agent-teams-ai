@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   link,
   mkdir,
@@ -7,7 +8,7 @@ import {
   unlink,
   writeFile,
 } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { isDeepStrictEqual, promisify } from "node:util";
 import type {
   ConsumedOutputLedgerWriterPort,
@@ -29,29 +30,24 @@ export class LocalConsumedOutputLedgerWriter
     readonly ledgerRoot: string;
     readonly decision: TerminalOutputDecision;
   }): Promise<void> {
-    const ledgerPath = terminalLedgerPath(input.ledgerRoot, input.decision);
-    let existing: string;
-    try {
-      existing = await readFile(ledgerPath, "utf8");
-    } catch (error) {
-      if (isNodeErrorCode(error, "ENOENT")) return;
-      throw error;
-    }
-    if (!sameTerminalDecision(existing, input.decision)) {
-      throw new Error("consumed_output_ledger_terminal_conflict");
-    }
+    await resolveTerminalLedgerWriteTarget(input);
   }
 
   async record(input: {
     readonly ledgerRoot: string;
     readonly decision: TerminalOutputDecision;
   }): Promise<TerminalOutputDecisionReceipt> {
-    const ledgerPath = terminalLedgerPath(
-      input.ledgerRoot,
-      input.decision,
-    );
+    const target = await resolveTerminalLedgerWriteTarget(input);
+    if (target.idempotentReplay) {
+      return {
+        ledgerPath: target.ledgerPath,
+        decision: input.decision,
+        idempotentReplay: true,
+      };
+    }
+    const ledgerPath = target.ledgerPath;
     await mkdir(dirname(ledgerPath), { recursive: true });
-    const contents = `${JSON.stringify(ledgerRecord(input.decision), null, 2)}\n`;
+    const contents = `${JSON.stringify(target.record, null, 2)}\n`;
     const tmpPath = `${ledgerPath}.${process.pid}.${Date.now()}.tmp`;
     await writeFile(tmpPath, contents, { flag: "wx" });
     try {
@@ -60,8 +56,8 @@ export class LocalConsumedOutputLedgerWriter
     } catch (error) {
       if (!isNodeErrorCode(error, "EEXIST")) throw error;
       const existing = await readFile(ledgerPath, "utf8");
-      if (!sameTerminalDecision(existing, input.decision)) {
-        throw new Error("consumed_output_ledger_terminal_conflict");
+      if (!sameLedgerRecord(existing, target.record)) {
+        return await this.record(input);
       }
       return { ledgerPath, decision: input.decision, idempotentReplay: true };
     } finally {
@@ -133,6 +129,9 @@ export type LocalIntegratedOutputLedgerAdapterOptions = {
   readonly ledgerRoots: readonly string[];
   readonly archiveRoot: string;
   readonly gitBinaryPath?: string;
+  readonly resolveWorkerWorkspacePath?: (
+    workerJobId: string,
+  ) => Promise<string | undefined>;
 };
 
 export class LocalIntegratedOutputLedgerAdapter
@@ -146,18 +145,18 @@ export class LocalIntegratedOutputLedgerAdapter
     readonly commitSha: string;
   }): Promise<IntegratedOutputLedgerPreparation> {
     const ledgerRoot = this.requiredLedgerRoot();
+    const workerWorkspacePath = await this.workerWorkspacePath(input.attempt);
     const archivePath = join(
       this.options.archiveRoot,
       `${safeLedgerName(input.attempt.workerOutput.workerJobId)}-integrated-${input.commitSha.slice(0, 12)}-${safeLedgerName(input.attempt.attemptId)}`,
     );
     await mkdir(archivePath, { recursive: true });
-    const statusPath = join(archivePath, "git-status.txt");
+    const statusPath = await publishCorrectableText(
+      join(archivePath, "git-status.txt"),
+      await this.gitOutput(workerWorkspacePath, ["status", "--short"]),
+    );
     const patchPath = join(archivePath, "tracked.diff");
     const numstatPath = join(archivePath, "tracked.numstat");
-    await publishExactText(statusPath, await this.gitOutput(
-      input.attempt.workerOutput.workspacePath,
-      ["status", "--short"],
-    ));
     await publishExactBytes(patchPath, await this.gitOutputBytes(
       input.attempt.targetWorkspacePath,
       ["show", "--format=", "--binary", input.commitSha, "--", ...input.attempt.workerOutput.changedFiles],
@@ -169,14 +168,14 @@ export class LocalIntegratedOutputLedgerAdapter
     const preparation: IntegratedOutputLedgerPreparation = {
       attemptId: input.attempt.attemptId,
       workerJobId: input.attempt.workerOutput.workerJobId,
-      workerWorkspacePath: input.attempt.workerOutput.workspacePath,
+      workerWorkspacePath,
       commitSha: input.commitSha,
       archivePath,
       statusPath,
       patchPath,
       numstatPath,
     };
-    await publishExactJson(
+    await publishCorrectableJson(
       join(ledgerRoot, "preparations", `${safeLedgerName(input.attempt.attemptId)}.json`),
       preparation,
     );
@@ -217,11 +216,12 @@ export class LocalIntegratedOutputLedgerAdapter
     readonly attempt: IntegrationAttempt;
   }): Promise<RejectedOutputLedgerPreparation> {
     const ledgerRoot = this.requiredLedgerRoot();
+    const workerWorkspacePath = await this.workerWorkspacePath(input.attempt);
     const captured = await captureLocalTerminalOutputBackup({
       archiveRoot: this.options.archiveRoot,
       archiveName:
         `${input.attempt.workerOutput.workerJobId}-rejected-${input.attempt.attemptId}`,
-      workspacePath: input.attempt.workerOutput.workspacePath,
+      workspacePath: workerWorkspacePath,
       changedFiles: input.attempt.workerOutput.changedFiles,
       ...(input.attempt.workerOutput.patchPath
         ? { sourcePatchPath: input.attempt.workerOutput.patchPath }
@@ -233,7 +233,7 @@ export class LocalIntegratedOutputLedgerAdapter
     const preparation: RejectedOutputLedgerPreparation = {
       attemptId: input.attempt.attemptId,
       workerJobId: input.attempt.workerOutput.workerJobId,
-      workerWorkspacePath: input.attempt.workerOutput.workspacePath,
+      workerWorkspacePath,
       ...captured,
     };
     await publishExactJson(
@@ -301,6 +301,16 @@ export class LocalIntegratedOutputLedgerAdapter
     return this.options.ledgerRoots[0]!;
   }
 
+  private async workerWorkspacePath(
+    attempt: IntegrationAttempt,
+  ): Promise<string> {
+    return (
+      await this.options.resolveWorkerWorkspacePath?.(
+        attempt.workerOutput.workerJobId,
+      )
+    ) ?? attempt.workerOutput.workspacePath;
+  }
+
   private async gitOutput(cwd: string, args: readonly string[]): Promise<string> {
     const result = await execFileAsync(
       this.options.gitBinaryPath ?? "git",
@@ -363,16 +373,174 @@ function sameTerminalDecision(
   existingJson: string,
   decision: TerminalOutputDecision,
 ): boolean {
+  return sameLedgerRecord(existingJson, ledgerRecord(decision));
+}
+
+function sameLedgerRecord(
+  existingJson: string,
+  expected: Readonly<Record<string, unknown>>,
+): boolean {
   try {
     const existing: unknown = JSON.parse(existingJson);
-    return isDeepStrictEqual(existing, ledgerRecord(decision));
+    return isDeepStrictEqual(existing, expected);
   } catch {
     return false;
   }
 }
 
+async function resolveTerminalLedgerWriteTarget(input: {
+  readonly ledgerRoot: string;
+  readonly decision: TerminalOutputDecision;
+}): Promise<{
+  readonly ledgerPath: string;
+  readonly idempotentReplay: boolean;
+  readonly record: Readonly<Record<string, unknown>>;
+}> {
+  const ledgerPath = terminalLedgerPath(input.ledgerRoot, input.decision);
+  const record = ledgerRecord(input.decision);
+  let existing: string;
+  try {
+    existing = await readFile(ledgerPath, "utf8");
+  } catch (error) {
+    if (isNodeErrorCode(error, "ENOENT")) {
+      return { ledgerPath, idempotentReplay: false, record };
+    }
+    throw error;
+  }
+  if (sameTerminalDecision(existing, input.decision)) {
+    return { ledgerPath, idempotentReplay: true, record };
+  }
+  const correction = integratedWorkspaceCorrection({
+    ledgerPath,
+    existingJson: existing,
+    decision: input.decision,
+  });
+  if (!correction) {
+    throw new Error("consumed_output_ledger_terminal_conflict");
+  }
+  try {
+    const existingCorrection = await readFile(correction.ledgerPath, "utf8");
+    if (!sameLedgerRecord(existingCorrection, correction.record)) {
+      throw new Error("consumed_output_ledger_terminal_conflict");
+    }
+    return {
+      ledgerPath: correction.ledgerPath,
+      idempotentReplay: true,
+      record: correction.record,
+    };
+  } catch (error) {
+    if (isNodeErrorCode(error, "ENOENT")) {
+      return {
+        ledgerPath: correction.ledgerPath,
+        idempotentReplay: false,
+        record: correction.record,
+      };
+    }
+    throw error;
+  }
+}
+
+function integratedWorkspaceCorrection(input: {
+  readonly ledgerPath: string;
+  readonly existingJson: string;
+  readonly decision: TerminalOutputDecision;
+}): {
+  readonly ledgerPath: string;
+  readonly record: Readonly<Record<string, unknown>>;
+} | undefined {
+  if (input.decision.status !== "integrated") return undefined;
+  try {
+    const existing: unknown = JSON.parse(input.existingJson);
+    const expected = ledgerRecord(input.decision);
+    if (!isRecord(existing)) return undefined;
+    const existingBackup = existing.backup;
+    const expectedBackup = expected.backup;
+    if (!isRecord(existingBackup) || !isRecord(expectedBackup)) {
+      return undefined;
+    }
+    if (
+      typeof existingBackup.workspace !== "string" ||
+      typeof expectedBackup.workspace !== "string" ||
+      existingBackup.workspace === expectedBackup.workspace ||
+      typeof existingBackup.statusPath !== "string" ||
+      typeof expectedBackup.statusPath !== "string"
+    ) {
+      return undefined;
+    }
+    const expectedWithPriorWorkspaceEvidence = {
+      ...expected,
+      backup: {
+        ...expectedBackup,
+        workspace: existingBackup.workspace,
+        statusPath: existingBackup.statusPath,
+      },
+    };
+    if (!isDeepStrictEqual(existing, expectedWithPriorWorkspaceEvidence)) {
+      return undefined;
+    }
+    const correctedRecord = {
+      ...expected,
+      correctionOf: {
+        kind: "integrated_workspace_binding",
+        ledgerFile: basename(input.ledgerPath),
+        sha256: createHash("sha256")
+          .update(input.existingJson)
+          .digest("hex"),
+      },
+    };
+    const desiredHash = createHash("sha256")
+      .update(JSON.stringify(correctedRecord))
+      .digest("hex")
+      .slice(0, 16);
+    return {
+      ledgerPath: input.ledgerPath.replace(
+        /\.json$/,
+        `.workspace-correction-${desiredHash}.json`,
+      ),
+      record: correctedRecord,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 async function publishExactJson(path: string, value: unknown): Promise<void> {
   await publishExactText(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+async function publishCorrectableJson(
+  path: string,
+  value: unknown,
+): Promise<void> {
+  const contents = `${JSON.stringify(value, null, 2)}\n`;
+  await publishCorrectableText(path, contents);
+}
+
+async function publishCorrectableText(
+  path: string,
+  contents: string,
+): Promise<string> {
+  try {
+    await publishExactText(path, contents);
+    return path;
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      error.message !== "integrated_output_ledger_preparation_conflict"
+    ) {
+      throw error;
+    }
+  }
+  const contentsHash = createHash("sha256")
+    .update(contents)
+    .digest("hex")
+    .slice(0, 16);
+  const correctionPath = path.replace(
+    /(\.[^.]+)$/,
+    `.workspace-correction-${contentsHash}$1`,
+  );
+  await publishExactText(correctionPath, contents);
+  return correctionPath;
 }
 
 async function publishExactFile(path: string, sourcePath: string): Promise<void> {
@@ -466,4 +634,8 @@ function safeLedgerName(value: string): string {
 
 function isNodeErrorCode(error: unknown, code: string): boolean {
   return error instanceof Error && "code" in error && error.code === code;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

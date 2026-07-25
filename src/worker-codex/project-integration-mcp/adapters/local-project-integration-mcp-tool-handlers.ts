@@ -112,6 +112,10 @@ function localProjectIntegrationDeps(
     integratedOutputLedger: new LocalIntegratedOutputLedgerAdapter({
       ledgerRoots: controller.scope.consumedOutputLedgerRoots ?? [],
       archiveRoot,
+      resolveWorkerWorkspacePath: async (workerJobId) =>
+        (
+          await readRegisteredWorkerOwnership(controller, workerJobId)
+        )?.workspacePath,
     }),
     checks: new LocalProjectCheckRunner(),
     scanner: new SimpleSecretScanner(),

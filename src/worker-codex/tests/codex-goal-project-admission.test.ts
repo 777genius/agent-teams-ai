@@ -982,9 +982,24 @@ describe("Codex project admission snapshot", () => {
     }
   });
 
-  it("keeps shared-worktree review markers separate from terminal job ledgers", async () => {
+  it("consumes reviewer output only when its review patch matches an integrated ledger", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-shared-review-admission-"));
     const sharedWorkspace = join(root, "worktrees", "project-producer-v1");
+    const reviewerWorkspace = join(
+      root,
+      "worktrees",
+      "project-reviewer-marker-v2",
+    );
+    const mismatchedReviewerWorkspace = join(
+      root,
+      "worktrees",
+      "project-reviewer-mismatch-v2",
+    );
+    const archivedReviewerWorkspace = join(
+      root,
+      "worktrees",
+      "project-reviewer-archived-v2",
+    );
     const documentWorkspace = join(root, "worktrees", "project-document-navigation-h8");
     const ledgerRoot = join(root, "consumed-output");
     const backupRoot = join(root, "backups");
@@ -992,6 +1007,7 @@ describe("Codex project admission snapshot", () => {
     const producerPatchPath = join(backupRoot, "producer.patch");
     const reviewerStatusPath = join(backupRoot, "reviewer.status.txt");
     const reviewerPatchPath = join(backupRoot, "reviewer.patch");
+    const archivedPatchPath = join(backupRoot, "archived.patch");
     const scope: ProjectAccessScope = {
       projectId: "project",
       worktreeRoots: [join(root, "worktrees")],
@@ -1001,23 +1017,51 @@ describe("Codex project admission snapshot", () => {
 
     try {
       await mkdir(sharedWorkspace, { recursive: true });
+      await mkdir(reviewerWorkspace, { recursive: true });
+      await mkdir(mismatchedReviewerWorkspace, { recursive: true });
+      await mkdir(archivedReviewerWorkspace, { recursive: true });
       await mkdir(documentWorkspace, { recursive: true });
       await mkdir(join(ledgerRoot, "items"), { recursive: true });
       await mkdir(backupRoot, { recursive: true });
       await writeFile(producerStatusPath, " M src/example.ts\n");
-      await writeFile(producerPatchPath, "diff --git a/src/example.ts b/src/example.ts\n");
+      const producerPatch =
+        "diff --git a/src/example.ts b/src/example.ts\n";
+      const producerPatchSha256 = createHash("sha256")
+        .update(producerPatch)
+        .digest("hex");
+      await writeFile(producerPatchPath, producerPatch);
       await writeFile(reviewerStatusPath, "");
       await writeFile(reviewerPatchPath, "");
+      const archivedPatch =
+        "diff --git a/src/archived.ts b/src/archived.ts\n";
+      const archivedPatchSha256 = createHash("sha256")
+        .update(archivedPatch)
+        .digest("hex");
+      await writeFile(archivedPatchPath, archivedPatch);
       await writeFile(
         join(ledgerRoot, "items", "project-producer-v1.json"),
         `${JSON.stringify({
           jobId: "project-producer-v1",
-          status: "archived",
+          status: "integrated",
           closedAt: "2026-07-11T00:00:00.000Z",
+          commitSha: "a".repeat(40),
           backup: {
             workspace: sharedWorkspace,
             statusPath: producerStatusPath,
             patchPath: producerPatchPath,
+          },
+        })}\n`,
+      );
+      await writeFile(
+        join(ledgerRoot, "items", "project-archived-v1.json"),
+        `${JSON.stringify({
+          jobId: "project-archived-v1",
+          status: "archived",
+          closedAt: "2026-07-11T00:01:00.000Z",
+          backup: {
+            workspace: sharedWorkspace,
+            statusPath: producerStatusPath,
+            patchPath: archivedPatchPath,
           },
         })}\n`,
       );
@@ -1053,7 +1097,16 @@ describe("Codex project admission snapshot", () => {
           listJobs: async () => [
             summary("project-producer-v1", sharedWorkspace),
             summary("project-reviewer-terminal-v1", sharedWorkspace),
-            summary("project-reviewer-marker-v2", sharedWorkspace),
+            summary("project-reviewer-marker-v2", reviewerWorkspace),
+            summary("project-reviewer-hashless-v2", sharedWorkspace),
+            summary(
+              "project-reviewer-mismatch-v2",
+              mismatchedReviewerWorkspace,
+            ),
+            summary(
+              "project-reviewer-archived-v2",
+              archivedReviewerWorkspace,
+            ),
             summary("project-document-navigation-h8", documentWorkspace),
           ],
           buildOverviewItems: async (inputs) => inputs.map(({ jobId }) => ({
@@ -1061,6 +1114,12 @@ describe("Codex project admission snapshot", () => {
             jobId,
             workspacePath: jobId === "project-document-navigation-h8"
               ? documentWorkspace
+              : jobId === "project-reviewer-marker-v2"
+              ? reviewerWorkspace
+              : jobId === "project-reviewer-mismatch-v2"
+              ? mismatchedReviewerWorkspace
+              : jobId === "project-reviewer-archived-v2"
+              ? archivedReviewerWorkspace
               : sharedWorkspace,
             workspaceDirty: true,
             workerAlive: false,
@@ -1068,18 +1127,41 @@ describe("Codex project admission snapshot", () => {
             recommendedAction: "review_completed",
             tags: ["worker-role-reviewer"],
             lifecycleMarkerTypes: ["review"],
+            lifecycleMarkers: jobId === "project-reviewer-marker-v2"
+              ? [{
+                  type: "review",
+                  reviewedOutputPatchSha256: producerPatchSha256,
+                }]
+              : jobId === "project-reviewer-mismatch-v2"
+              ? [{
+                  type: "review",
+                  reviewedOutputPatchSha256: "b".repeat(64),
+                }]
+              : jobId === "project-reviewer-archived-v2"
+              ? [{
+                  type: "review",
+                  reviewedOutputPatchSha256: archivedPatchSha256,
+                }]
+              : [{ type: "review" }],
           })),
         },
       });
 
-      expect(snapshot.debt).not.toEqual(expect.arrayContaining([
+      expect(snapshot.debt).toEqual(expect.arrayContaining([
         expect.objectContaining({
           reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+          subject: sharedWorkspace,
         }),
       ]));
+      expect(snapshot.debt.filter((item) => item.severity === "blocking"))
+        .not.toEqual(expect.arrayContaining([
+          expect.objectContaining({ subject: reviewerWorkspace }),
+        ]));
       expect(snapshot.debt.filter(
         (item) => item.reason === ProjectDebtReason.UnconsumedCompletedJob,
       )).toEqual([
+        expect.objectContaining({ subject: mismatchedReviewerWorkspace }),
+        expect.objectContaining({ subject: archivedReviewerWorkspace }),
         expect.objectContaining({ subject: documentWorkspace }),
       ]);
     } finally {

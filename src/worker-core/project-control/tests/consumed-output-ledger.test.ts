@@ -10,7 +10,7 @@ import {
 } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -90,6 +90,161 @@ describe("consumed output ledger", () => {
       status: "integrated",
       commitSha: "abc1234",
     });
+  });
+
+  it("suppresses only an invalid ledger entry named by a verified correction", async () => {
+    const root = await mkdtemp(
+      join(tmpdir(), "subscription-runtime-ledger-workspace-correction-"),
+    );
+    const itemsRoot = join(root, "items");
+    const intermediateWorkspace = join(root, "reviewed-workspace");
+    const producerWorkspace = join(root, "producer-workspace");
+    const missingStatusPath = join(root, "evidence", "missing-status.txt");
+    const correctedStatusPath = join(root, "evidence", "producer-status.txt");
+    const patchPath = join(root, "evidence", "tracked.diff");
+    await mkdir(itemsRoot, { recursive: true });
+    await mkdir(intermediateWorkspace, { recursive: true });
+    await mkdir(producerWorkspace, { recursive: true });
+    await mkdir(dirname(correctedStatusPath), { recursive: true });
+    await writeFile(correctedStatusPath, "");
+    await writeFile(
+      patchPath,
+      "diff --git a/src/example.ts b/src/example.ts\n",
+    );
+    const sourcePath = join(itemsRoot, "worker-1--attempt-1.json");
+    const sourceRecord = {
+      schemaVersion: 1,
+      jobId: "worker-1",
+      attemptId: "attempt-1",
+      status: "integrated",
+      closedAt: "2026-07-12T00:00:00.000Z",
+      commitSha: "a".repeat(40),
+      archivePath: join(root, "evidence"),
+      note: "Integrated reviewed worker output.",
+      backup: {
+        workspace: intermediateWorkspace,
+        statusPath: missingStatusPath,
+        patchPath,
+      },
+    };
+    const sourceContents = `${JSON.stringify(sourceRecord, null, 2)}\n`;
+    await writeFile(sourcePath, sourceContents);
+    await writeFile(
+      join(
+        itemsRoot,
+        "worker-1--attempt-1.workspace-correction-test.json",
+      ),
+      `${JSON.stringify({
+        ...sourceRecord,
+        backup: {
+          ...sourceRecord.backup,
+          workspace: producerWorkspace,
+          statusPath: correctedStatusPath,
+        },
+        correctionOf: {
+          kind: "integrated_workspace_binding",
+          ledgerFile: "worker-1--attempt-1.json",
+          sha256: createHash("sha256").update(sourceContents).digest("hex"),
+        },
+      }, null, 2)}\n`,
+    );
+
+    const ledger = await readConsumedOutputLedgers({
+      roots: [root],
+      source: localConsumedOutputLedgerSource(),
+    });
+
+    expect(ledger.debt).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+      }),
+    ]));
+    expect(ledger.byJobId.get("worker-1")).toMatchObject({
+      valid: true,
+      workspace: producerWorkspace,
+      commitSha: "a".repeat(40),
+    });
+    await expect(readFile(sourcePath, "utf8")).resolves.toBe(sourceContents);
+
+    const badHashSourcePath = join(itemsRoot, "worker-bad-hash--attempt-1.json");
+    const badHashSourceRecord = {
+      ...sourceRecord,
+      jobId: "worker-bad-hash",
+    };
+    const badHashSourceContents =
+      `${JSON.stringify(badHashSourceRecord, null, 2)}\n`;
+    await writeFile(badHashSourcePath, badHashSourceContents);
+    const badHashCorrectionPath = join(
+      itemsRoot,
+      "worker-bad-hash--attempt-1.workspace-correction-test.json",
+    );
+    await writeFile(
+      badHashCorrectionPath,
+      `${JSON.stringify({
+        ...badHashSourceRecord,
+        backup: {
+          ...badHashSourceRecord.backup,
+          workspace: producerWorkspace,
+          statusPath: correctedStatusPath,
+        },
+        correctionOf: {
+          kind: "integrated_workspace_binding",
+          ledgerFile: basename(badHashSourcePath),
+          sha256: "b".repeat(64),
+        },
+      }, null, 2)}\n`,
+    );
+    const driftSourcePath = join(itemsRoot, "worker-drift--attempt-1.json");
+    const driftSourceRecord = { ...sourceRecord, jobId: "worker-drift" };
+    const driftSourceContents =
+      `${JSON.stringify(driftSourceRecord, null, 2)}\n`;
+    await writeFile(driftSourcePath, driftSourceContents);
+    const driftCorrectionPath = join(
+      itemsRoot,
+      "worker-drift--attempt-1.workspace-correction-test.json",
+    );
+    await writeFile(
+      driftCorrectionPath,
+      `${JSON.stringify({
+        ...driftSourceRecord,
+        note: "Semantic drift must remain blocked.",
+        backup: {
+          ...driftSourceRecord.backup,
+          workspace: producerWorkspace,
+          statusPath: correctedStatusPath,
+        },
+        correctionOf: {
+          kind: "integrated_workspace_binding",
+          ledgerFile: basename(driftSourcePath),
+          sha256: createHash("sha256")
+            .update(driftSourceContents)
+            .digest("hex"),
+        },
+      }, null, 2)}\n`,
+    );
+
+    const failClosedLedger = await readConsumedOutputLedgers({
+      roots: [root],
+      source: localConsumedOutputLedgerSource(),
+    });
+    expect(failClosedLedger.debt).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+        subject: badHashSourcePath,
+      }),
+      expect.objectContaining({
+        reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+        subject: badHashCorrectionPath,
+      }),
+      expect.objectContaining({
+        reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+        subject: driftSourcePath,
+      }),
+      expect.objectContaining({
+        reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+        subject: driftCorrectionPath,
+      }),
+    ]));
   });
 
   it("accepts terminal drain records with backup evidence", async () => {

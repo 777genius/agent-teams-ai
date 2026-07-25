@@ -669,12 +669,10 @@ async function debtFromOverviewItem(input: {
     markerTypes.includes("review") &&
     recommendedAction === "review_completed" &&
     safeStringArray(item.tags).includes("worker-role-reviewer") &&
-    workspacePath &&
-    workspaceConsumedByAnotherJob({
+    reviewedOutputConsumedByIntegratedLedger({
       ledger: input.consumedOutput,
       jobId,
-      workspacePath,
-      ...(resolvedWorkspacePath ? { resolvedWorkspacePath } : {}),
+      lifecycleMarkers: item.lifecycleMarkers,
     })
   ) {
     return withoutInactiveDirtyWorkspaceConflict(debt, item);
@@ -844,19 +842,43 @@ async function admissionWorkspacePathsMatch(
     leftRealPath === rightRealPath;
 }
 
-function workspaceConsumedByAnotherJob(input: {
+function reviewedOutputConsumedByIntegratedLedger(input: {
   readonly ledger: ConsumedOutputLedger;
   readonly jobId: string;
-  readonly workspacePath: string;
-  readonly resolvedWorkspacePath?: string;
+  readonly lifecycleMarkers: unknown;
 }): boolean {
   if (input.ledger.byJobId.has(input.jobId)) return false;
-  const workspaceRecord = input.ledger.byWorkspace.get(resolve(input.workspacePath));
-  const resolvedWorkspaceRecord = input.resolvedWorkspacePath
-    ? input.ledger.byWorkspace.get(resolve(input.resolvedWorkspacePath))
-    : undefined;
-  const record = workspaceRecord ?? resolvedWorkspaceRecord;
-  return record !== undefined && record.jobId !== input.jobId && record.valid;
+  const reviewedPatchHashes = reviewedOutputPatchHashes(
+    input.lifecycleMarkers,
+  );
+  if (reviewedPatchHashes.size === 0) return false;
+  return [...input.ledger.byJobId.values()].some((record) =>
+    record.jobId !== input.jobId &&
+    record.status === "integrated" &&
+    record.valid &&
+    record.commitSha !== undefined &&
+    record.backupPatchSha256 !== undefined &&
+    reviewedPatchHashes.has(record.backupPatchSha256.toLowerCase())
+  );
+}
+
+function reviewedOutputPatchHashes(value: unknown): ReadonlySet<string> {
+  if (!Array.isArray(value)) return new Set();
+  const hashes = new Set<string>();
+  for (const marker of value) {
+    if (
+      typeof marker !== "object" ||
+      marker === null ||
+      Array.isArray(marker)
+    ) {
+      continue;
+    }
+    const record = marker as Readonly<Record<string, unknown>>;
+    if (record.type !== "review") continue;
+    const hash = stringValue(record.reviewedOutputPatchSha256)?.toLowerCase();
+    if (hash && /^[a-f0-9]{64}$/.test(hash)) hashes.add(hash);
+  }
+  return hashes;
 }
 
 function workspaceConsumedByLaterJob(input: {

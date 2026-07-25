@@ -1,4 +1,5 @@
-import { basename, dirname, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
 import {
   ProjectDebtReason,
@@ -84,8 +85,16 @@ export async function readConsumedOutputLedgers(input: {
     severity: "blocking",
     evidence: failure.evidence,
   }));
+  const correctionValidations = await consumedOutputCorrectionValidations({
+    entries: loaded.entries,
+    source: input.source,
+  });
+  const parsedEntries: Array<{
+    readonly entry: ConsumedOutputLedgerEntry;
+    readonly record: ConsumedOutputRecord;
+  }> = [];
   for (const entry of loaded.entries) {
-    const record = await consumedOutputRecordFromJson({
+    let record = await consumedOutputRecordFromJson({
       value: entry.value,
       ledgerPath: entry.ledgerPath,
       source: input.source,
@@ -103,13 +112,40 @@ export async function readConsumedOutputLedgers(input: {
       }
       continue;
     }
+    const correctionValidation = correctionValidations.get(
+      resolve(entry.ledgerPath),
+    );
+    if (correctionValidation && !correctionValidation.valid) {
+      record = {
+        ...record,
+        valid: false,
+        evidence: [
+          ...record.evidence,
+          ...correctionValidation.evidence,
+        ],
+      };
+    }
+    parsedEntries.push({ entry, record });
+  }
+  const correctedLedgerPaths = new Set(
+    parsedEntries.flatMap(({ entry, record }) => {
+      const validation = correctionValidations.get(resolve(entry.ledgerPath));
+      return record.valid && validation?.valid &&
+          validation.correctedLedgerPath
+        ? [resolve(validation.correctedLedgerPath)]
+        : [];
+    }),
+  );
+  for (const { entry, record } of parsedEntries) {
     if (!record.valid) {
-      debt.push({
-        reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
-        subject: entry.ledgerPath,
-        severity: "blocking",
-        evidence: record.evidence,
-      });
+      if (!correctedLedgerPaths.has(resolve(entry.ledgerPath))) {
+        debt.push({
+          reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+          subject: entry.ledgerPath,
+          severity: "blocking",
+          evidence: record.evidence,
+        });
+      }
     }
     setLatestRecord(byJobId, record.jobId, record);
     if (
@@ -128,6 +164,107 @@ export async function readConsumedOutputLedgers(input: {
     }
   }
   return { byJobId, byWorkspace, debt };
+}
+
+type ConsumedOutputCorrectionValidation = {
+  readonly valid: boolean;
+  readonly correctedLedgerPath?: string;
+  readonly evidence: readonly string[];
+};
+
+async function consumedOutputCorrectionValidations(input: {
+  readonly entries: readonly ConsumedOutputLedgerEntry[];
+  readonly source: Pick<ConsumedOutputLedgerSourcePort, "pathSha256">;
+}): Promise<ReadonlyMap<string, ConsumedOutputCorrectionValidation>> {
+  const entriesByPath = new Map(
+    input.entries.map((entry) => [resolve(entry.ledgerPath), entry]),
+  );
+  const validations = new Map<string, ConsumedOutputCorrectionValidation>();
+  for (const candidate of input.entries) {
+    if (!isRecord(candidate.value) || candidate.value.correctionOf === undefined) {
+      continue;
+    }
+    const invalid = (evidence: string): void => {
+      validations.set(resolve(candidate.ledgerPath), {
+        valid: false,
+        evidence: [evidence],
+      });
+    };
+    const correction = candidate.value.correctionOf;
+    if (
+      !isRecord(correction) ||
+      correction.kind !== "integrated_workspace_binding" ||
+      typeof correction.ledgerFile !== "string" ||
+      basename(correction.ledgerFile) !== correction.ledgerFile ||
+      typeof correction.sha256 !== "string" ||
+      !/^[a-f0-9]{64}$/i.test(correction.sha256)
+    ) {
+      invalid("consumed-output correction metadata is invalid");
+      continue;
+    }
+    const correctedLedgerPath = join(
+      dirname(candidate.ledgerPath),
+      correction.ledgerFile,
+    );
+    const correctedEntry = entriesByPath.get(resolve(correctedLedgerPath));
+    if (
+      !correctedEntry ||
+      correctedEntry.value === candidate.value ||
+      (
+        await input.source.pathSha256(correctedLedgerPath)
+      )?.toLowerCase() !== correction.sha256.toLowerCase()
+    ) {
+      invalid("consumed-output correction source evidence is invalid");
+      continue;
+    }
+    if (
+      !isSafeIntegratedWorkspaceCorrection({
+        source: correctedEntry.value,
+        correction: candidate.value,
+      })
+    ) {
+      invalid("consumed-output correction changes terminal decision semantics");
+      continue;
+    }
+    validations.set(resolve(candidate.ledgerPath), {
+      valid: true,
+      correctedLedgerPath,
+      evidence: [],
+    });
+  }
+  return validations;
+}
+
+function isSafeIntegratedWorkspaceCorrection(input: {
+  readonly source: unknown;
+  readonly correction: Readonly<Record<string, unknown>>;
+}): boolean {
+  if (!isRecord(input.source) || input.source.status !== "integrated") {
+    return false;
+  }
+  if (input.correction.status !== "integrated") return false;
+  const sourceBackup = input.source.backup;
+  const correctionBackup = input.correction.backup;
+  if (!isRecord(sourceBackup) || !isRecord(correctionBackup)) return false;
+  if (
+    typeof sourceBackup.workspace !== "string" ||
+    typeof correctionBackup.workspace !== "string" ||
+    sourceBackup.workspace === correctionBackup.workspace ||
+    typeof sourceBackup.statusPath !== "string" ||
+    typeof correctionBackup.statusPath !== "string"
+  ) {
+    return false;
+  }
+  const correctionWithoutMetadata = { ...input.correction };
+  delete correctionWithoutMetadata.correctionOf;
+  return isDeepStrictEqual(correctionWithoutMetadata, {
+    ...input.source,
+    backup: {
+      ...sourceBackup,
+      workspace: correctionBackup.workspace,
+      statusPath: correctionBackup.statusPath,
+    },
+  });
 }
 
 function hasTerminalOutputIntent(value: unknown): boolean {

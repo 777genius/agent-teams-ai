@@ -1,5 +1,13 @@
 import { execFile } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -1061,6 +1069,141 @@ describe("local project integration adapters", () => {
     });
     expect(first.idempotentReplay).toBe(false);
     expect(replay.idempotentReplay).toBe(true);
+  });
+
+  it("records the registered producer workspace for rebased integration output", async () => {
+    const fixture = await createGitFixture();
+    const ledgerRoot = join(fixture.rootDir, "ledger");
+    const intermediateWorkspacePath = join(
+      fixture.rootDir,
+      "reviewed-integration-workspace",
+    );
+    const resolvedWorkerJobIds: string[] = [];
+    const adapter = new LocalIntegratedOutputLedgerAdapter({
+      ledgerRoots: [ledgerRoot],
+      archiveRoot: join(fixture.rootDir, "archives"),
+      resolveWorkerWorkspacePath: async (workerJobId) => {
+        resolvedWorkerJobIds.push(workerJobId);
+        return fixture.workspacePath;
+      },
+    });
+    const attempt = {
+      attemptId: "attempt-rebased",
+      targetWorkspacePath: fixture.workspacePath,
+      workerOutput: {
+        workerJobId: "worker-original",
+        workspacePath: intermediateWorkspacePath,
+        changedFiles: ["src/memory.ts"],
+      },
+    } as unknown as IntegrationAttempt;
+
+    const preparation = await adapter.prepare({
+      attempt,
+      commitSha: fixture.workerCommitSha,
+    });
+
+    expect(resolvedWorkerJobIds).toEqual(["worker-original"]);
+    expect(preparation.workerWorkspacePath).toBe(fixture.workspacePath);
+    await expect(readFile(preparation.statusPath, "utf8")).resolves.toBe("");
+    await expect(readFile(preparation.patchPath, "utf8"))
+      .resolves.toContain("export const value = 2");
+    const receipt = await adapter.finalize({
+      preparation,
+      pushedAt: "2026-07-12T00:00:00.000Z",
+    });
+    expect(JSON.parse(await readFile(receipt.ledgerPath, "utf8")))
+      .toMatchObject({
+        jobId: "worker-original",
+        backup: { workspace: fixture.workspacePath },
+      });
+  });
+
+  it("repairs a legacy intermediate-workspace ledger by append-only replay", async () => {
+    const fixture = await createGitFixture();
+    const ledgerRoot = join(fixture.rootDir, "ledger");
+    const archiveRoot = join(fixture.rootDir, "archives");
+    const intermediateWorkspacePath = join(
+      fixture.rootDir,
+      "reviewed-integration-workspace",
+    );
+    await git(fixture.rootDir, [
+      "clone",
+      fixture.workspacePath,
+      intermediateWorkspacePath,
+    ]);
+    const attempt = {
+      attemptId: "attempt-repair",
+      targetWorkspacePath: fixture.workspacePath,
+      workerOutput: {
+        workerJobId: "worker-original",
+        workspacePath: intermediateWorkspacePath,
+        changedFiles: ["src/memory.ts"],
+      },
+    } as unknown as IntegrationAttempt;
+    const legacyAdapter = new LocalIntegratedOutputLedgerAdapter({
+      ledgerRoots: [ledgerRoot],
+      archiveRoot,
+    });
+    const legacyPreparation = await legacyAdapter.prepare({
+      attempt,
+      commitSha: fixture.workerCommitSha,
+    });
+    const legacyReceipt = await legacyAdapter.finalize({
+      preparation: legacyPreparation,
+      pushedAt: "2026-07-12T00:00:00.000Z",
+    });
+    const legacyContents = await readFile(legacyReceipt.ledgerPath, "utf8");
+    expect(JSON.parse(legacyContents)).toMatchObject({
+      backup: { workspace: intermediateWorkspacePath },
+    });
+
+    const correctedAdapter = new LocalIntegratedOutputLedgerAdapter({
+      ledgerRoots: [ledgerRoot],
+      archiveRoot,
+      resolveWorkerWorkspacePath: async () => fixture.workspacePath,
+    });
+    const correctedPreparation = await correctedAdapter.prepare({
+      attempt,
+      commitSha: fixture.workerCommitSha,
+    });
+    await expect(correctedAdapter.preflightFinalize({
+      preparation: correctedPreparation,
+      pushedAt: "2026-07-12T00:00:00.000Z",
+    })).resolves.toBeUndefined();
+    const correctedReceipt = await correctedAdapter.finalize({
+      preparation: correctedPreparation,
+      pushedAt: "2026-07-12T00:00:00.000Z",
+    });
+
+    expect(correctedReceipt.ledgerPath).not.toBe(legacyReceipt.ledgerPath);
+    expect(correctedReceipt.ledgerPath).toContain(".workspace-correction-");
+    await expect(readFile(legacyReceipt.ledgerPath, "utf8"))
+      .resolves.toBe(legacyContents);
+    expect(JSON.parse(await readFile(correctedReceipt.ledgerPath, "utf8")))
+      .toMatchObject({
+        jobId: "worker-original",
+        attemptId: "attempt-repair",
+        status: "integrated",
+        commitSha: fixture.workerCommitSha,
+        backup: { workspace: fixture.workspacePath },
+      });
+    expect(
+      (await readdir(join(ledgerRoot, "items")))
+        .filter((name) => name.startsWith("worker-original--attempt-repair")),
+    ).toHaveLength(2);
+
+    const replayPreparation = await correctedAdapter.prepare({
+      attempt,
+      commitSha: fixture.workerCommitSha,
+    });
+    const replay = await correctedAdapter.finalize({
+      preparation: replayPreparation,
+      pushedAt: "2026-07-12T00:00:00.000Z",
+    });
+    expect(replay).toMatchObject({
+      ledgerPath: correctedReceipt.ledgerPath,
+      idempotentReplay: true,
+    });
   });
 
   it("rejects conflicting terminal decisions for the same worker", async () => {
