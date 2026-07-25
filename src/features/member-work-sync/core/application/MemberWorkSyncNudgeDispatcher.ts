@@ -7,6 +7,22 @@ import {
 } from './MemberWorkSyncAudit';
 import { decideMemberWorkSyncNudgeActivation } from './MemberWorkSyncNudgeActivationPolicy';
 import {
+  addNudgeDispatchMinutes,
+  addNudgeDispatchSummary,
+  AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX,
+  emptyNudgeDispatchSummary,
+  getPayloadReviewRequestEventIds,
+  getProofMissingRecoveryOriginalMessageId,
+  isAgendaSyncStillStuckRecoveryOutboxItem,
+  isReviewPickupOutboxItem,
+  isStatusOnlyRecoveryOutboxItem,
+  nextNudgeRetryAt,
+  preserveCurrentRuntimeStallDiagnostics,
+  reviewPickupRequestIdsStillMatch,
+  subtractNudgeDispatchMinutes,
+  unrefNudgeDispatchTimer,
+} from './MemberWorkSyncNudgeDispatchPolicy';
+import {
   applyMemberWorkSyncNudgeSuppression,
   MEMBER_WORK_SYNC_SUPPRESSION_DIAGNOSTIC,
 } from './MemberWorkSyncNudgeSuppressionPolicy';
@@ -14,7 +30,6 @@ import { finalizeMemberWorkSyncAgenda } from './MemberWorkSyncReconciler';
 import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeActivity';
 
 import type {
-  MemberWorkSyncAgenda,
   MemberWorkSyncOutboxItem,
   MemberWorkSyncPhase2ReadinessAssessment,
   MemberWorkSyncStatus,
@@ -22,12 +37,9 @@ import type {
 import type { MemberWorkSyncAuditEventName, MemberWorkSyncUseCaseDeps } from './ports';
 
 const MEMBER_WORK_SYNC_MAX_NUDGES_PER_MEMBER_PER_HOUR = 2;
-const MEMBER_WORK_SYNC_RETRY_BASE_MINUTES = 10;
-const MEMBER_WORK_SYNC_RETRY_MAX_MINUTES = 60;
 const MEMBER_WORK_SYNC_NUDGE_DISPATCH_ITEM_TIMEOUT_MS = 2 * 60_000;
 const MEMBER_WORK_SYNC_NUDGE_DISPATCH_TEAM_TIMEOUT_MS = 2 * 60_000;
 const MEMBER_WORK_SYNC_NUDGE_CLAIM_TIMEOUT_MS = 30_000;
-const AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX = 'agenda-sync-still-stuck:';
 
 export interface MemberWorkSyncNudgeDispatchSummary {
   claimed: number;
@@ -46,130 +58,6 @@ export interface MemberWorkSyncNudgeDispatchOptions {
   claimTimeoutMs?: number;
   signal?: AbortSignal;
   trackSettlingWork?<T>(teamName: string, work: Promise<T>): Promise<T>;
-}
-
-function emptySummary(): MemberWorkSyncNudgeDispatchSummary {
-  return { claimed: 0, delivered: 0, superseded: 0, retryable: 0, terminal: 0 };
-}
-
-function addSummary(
-  left: MemberWorkSyncNudgeDispatchSummary,
-  right: MemberWorkSyncNudgeDispatchSummary
-): MemberWorkSyncNudgeDispatchSummary {
-  return {
-    claimed: left.claimed + right.claimed,
-    delivered: left.delivered + right.delivered,
-    superseded: left.superseded + right.superseded,
-    retryable: left.retryable + right.retryable,
-    terminal: left.terminal + right.terminal,
-  };
-}
-
-function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
-  timer.unref?.();
-}
-
-function addMinutes(iso: string, minutes: number): string {
-  return new Date(Date.parse(iso) + minutes * 60_000).toISOString();
-}
-
-function subtractMinutes(iso: string, minutes: number): string {
-  return new Date(Date.parse(iso) - minutes * 60_000).toISOString();
-}
-
-function preserveCurrentRuntimeStallDiagnostics(input: {
-  previous: MemberWorkSyncStatus;
-  agenda: MemberWorkSyncAgenda;
-  state: MemberWorkSyncStatus['state'];
-  diagnostics: string[];
-}): string[] {
-  const diagnostics = new Set(input.diagnostics);
-  if (
-    input.state !== 'needs_sync' ||
-    input.previous.agenda.fingerprint !== input.agenda.fingerprint
-  ) {
-    return [...diagnostics];
-  }
-  for (const diagnostic of input.previous.diagnostics) {
-    if (diagnostic.startsWith('runtime_stall:')) {
-      diagnostics.add(diagnostic);
-    }
-  }
-  return [...diagnostics];
-}
-
-function stableJitterMinutes(id: string, attemptGeneration: number): number {
-  const seed = `${id}:${attemptGeneration}`;
-  let value = 0;
-  for (const char of seed) {
-    value = (value * 31 + char.charCodeAt(0)) % 997;
-  }
-  return value % 5;
-}
-
-function nextRetryAt(item: MemberWorkSyncOutboxItem, nowIso: string): string {
-  const exponentialMinutes =
-    MEMBER_WORK_SYNC_RETRY_BASE_MINUTES * 2 ** Math.max(0, item.attemptGeneration - 1);
-  const cappedMinutes = Math.min(MEMBER_WORK_SYNC_RETRY_MAX_MINUTES, exponentialMinutes);
-  return addMinutes(nowIso, cappedMinutes + stableJitterMinutes(item.id, item.attemptGeneration));
-}
-
-function isReviewPickupOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
-  return item.payload.workSyncIntent === 'review_pickup';
-}
-
-function getProofMissingRecoveryOriginalMessageId(item: MemberWorkSyncOutboxItem): string | null {
-  const prefix = 'proof-missing:';
-  const intentKey = item.payload.workSyncIntentKey?.trim();
-  if (!intentKey?.startsWith(prefix)) {
-    return null;
-  }
-
-  const originalMessageId = intentKey.slice(prefix.length).trim();
-  return originalMessageId.length > 0 ? originalMessageId : null;
-}
-
-function isStatusOnlyRecoveryOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
-  return item.payload.workSyncIntentKey?.startsWith('status-only:') === true;
-}
-
-function isAgendaSyncStillStuckRecoveryOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
-  return (
-    item.payload.workSyncIntentKey?.startsWith(AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX) ===
-    true
-  );
-}
-
-function getPayloadReviewRequestEventIds(item: MemberWorkSyncOutboxItem): string[] {
-  return [...new Set(item.payload.workSyncReviewRequestEventIds ?? [])]
-    .filter((id) => id.length > 0)
-    .sort();
-}
-
-function getAgendaReviewPickupRequestEventIds(agenda: MemberWorkSyncAgenda): string[] {
-  return [
-    ...new Set(
-      agenda.items
-        .filter(
-          (item) =>
-            item.kind === 'review' &&
-            item.evidence.reviewObligation === 'review_pickup_required' &&
-            item.evidence.canBypassPhase2 === true &&
-            (item.evidence.reviewDiagnostics?.length ?? 0) === 0
-        )
-        .map((item) => item.evidence.reviewRequestEventId)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0)
-    ),
-  ].sort();
-}
-
-function reviewPickupRequestIdsStillMatch(
-  item: MemberWorkSyncOutboxItem,
-  agenda: MemberWorkSyncAgenda
-): boolean {
-  const payloadIds = getPayloadReviewRequestEventIds(item);
-  const agendaIds = getAgendaReviewPickupRequestEventIds(agenda);
-  return payloadIds.length > 0 && payloadIds.every((id) => agendaIds.includes(id));
 }
 
 interface MemberWorkSyncNudgeDispatchRun {
@@ -198,7 +86,7 @@ export class MemberWorkSyncNudgeDispatcher {
     const outbox = this.deps.outboxStore;
     const inbox = this.deps.inboxNudge;
     if (!outbox || !inbox) {
-      return emptySummary();
+      return emptyNudgeDispatchSummary();
     }
 
     const nowIso = this.deps.clock.now().toISOString();
@@ -215,13 +103,13 @@ export class MemberWorkSyncNudgeDispatcher {
       options.claimTimeoutMs ?? MEMBER_WORK_SYNC_NUDGE_CLAIM_TIMEOUT_MS
     );
     const teamNames = [...new Set(options.teamNames.map((name) => name.trim()).filter(Boolean))];
-    let summary = emptySummary();
+    let summary = emptyNudgeDispatchSummary();
     for (const teamName of teamNames) {
       if (options.signal?.aborted) {
         break;
       }
       try {
-        summary = addSummary(
+        summary = addNudgeDispatchSummary(
           summary,
           await this.dispatchTeamWithTimeout(teamName, options, nowIso, {
             itemTimeoutMs,
@@ -265,7 +153,7 @@ export class MemberWorkSyncNudgeDispatcher {
             run.cancelled = true;
             resolve('timeout');
           }, timeouts.teamTimeoutMs);
-          unrefTimer(timeout);
+          unrefNudgeDispatchTimer(timeout);
         }),
       ]);
       if (result !== 'timeout') {
@@ -275,7 +163,7 @@ export class MemberWorkSyncNudgeDispatcher {
         teamName,
         timeoutMs: timeouts.teamTimeoutMs,
       });
-      return emptySummary();
+      return emptyNudgeDispatchSummary();
     } finally {
       run.cancelled = true;
       if (timeout) {
@@ -291,7 +179,7 @@ export class MemberWorkSyncNudgeDispatcher {
     timeouts: { itemTimeoutMs: number; claimTimeoutMs: number },
     run: MemberWorkSyncNudgeDispatchRun
   ): Promise<MemberWorkSyncNudgeDispatchSummary> {
-    const summary = emptySummary();
+    const summary = emptyNudgeDispatchSummary();
     const claimed = await this.claimDueWithTimeout(teamName, options, nowIso, timeouts, run);
     if (!claimed || isDispatchRunCancelled(run)) {
       return summary;
@@ -344,7 +232,7 @@ export class MemberWorkSyncNudgeDispatcher {
         work,
         new Promise<'timeout'>((resolve) => {
           timeout = setTimeout(() => resolve('timeout'), timeouts.claimTimeoutMs);
-          unrefTimer(timeout);
+          unrefNudgeDispatchTimer(timeout);
         }),
       ]);
       if (result !== 'timeout') {
@@ -394,7 +282,7 @@ export class MemberWorkSyncNudgeDispatcher {
             itemRun.cancelled = true;
             resolve('timeout');
           }, timeoutMs);
-          unrefTimer(timeout);
+          unrefNudgeDispatchTimer(timeout);
         }),
       ]);
       if (result !== 'timeout') {
@@ -445,7 +333,7 @@ export class MemberWorkSyncNudgeDispatcher {
         work.then(() => 'marked' as const),
         new Promise<'timeout'>((resolve) => {
           timeout = setTimeout(() => resolve('timeout'), markTimeoutMs);
-          unrefTimer(timeout);
+          unrefNudgeDispatchTimer(timeout);
         }),
       ]);
       if (result === 'timeout') {
@@ -487,7 +375,7 @@ export class MemberWorkSyncNudgeDispatcher {
       error,
       retryable: true,
       nowIso,
-      nextAttemptAt: nextRetryAt(item, nowIso),
+      nextAttemptAt: nextNudgeRetryAt(item, nowIso),
     });
     if (isDispatchRunCancelled(run)) {
       return;
@@ -530,7 +418,7 @@ export class MemberWorkSyncNudgeDispatcher {
           error: revalidation.reason,
           retryable: true,
           nowIso,
-          nextAttemptAt: revalidation.nextAttemptAt ?? nextRetryAt(item, nowIso),
+          nextAttemptAt: revalidation.nextAttemptAt ?? nextNudgeRetryAt(item, nowIso),
         });
         if (isDispatchRunCancelled(run)) {
           return 'retryable';
@@ -633,7 +521,7 @@ export class MemberWorkSyncNudgeDispatcher {
         error: String(error),
         retryable: true,
         nowIso,
-        nextAttemptAt: nextRetryAt(item, nowIso),
+        nextAttemptAt: nextNudgeRetryAt(item, nowIso),
       });
       if (isDispatchRunCancelled(run)) {
         return 'retryable';
@@ -708,7 +596,7 @@ export class MemberWorkSyncNudgeDispatcher {
         error: outcome.message,
         retryable: true,
         nowIso,
-        nextAttemptAt: outcome.retryAfterIso ?? nextRetryAt(item, nowIso),
+        nextAttemptAt: outcome.retryAfterIso ?? nextNudgeRetryAt(item, nowIso),
       });
       if (isDispatchRunCancelled(run)) {
         return 'retryable';
@@ -959,7 +847,7 @@ export class MemberWorkSyncNudgeDispatcher {
     const recentDelivered = await this.deps.outboxStore?.countRecentDelivered({
       teamName: item.teamName,
       memberName: item.memberName,
-      sinceIso: subtractMinutes(nowIso, 60),
+      sinceIso: subtractNudgeDispatchMinutes(nowIso, 60),
       ...(isAgendaSyncStillStuckRecoveryOutboxItem(item)
         ? { workSyncIntentKeyPrefix: AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX }
         : {}),
@@ -972,7 +860,7 @@ export class MemberWorkSyncNudgeDispatcher {
         ok: false,
         reason: 'member_nudge_rate_limited',
         retryable: true,
-        nextAttemptAt: addMinutes(nowIso, 60),
+        nextAttemptAt: addNudgeDispatchMinutes(nowIso, 60),
       };
     }
 

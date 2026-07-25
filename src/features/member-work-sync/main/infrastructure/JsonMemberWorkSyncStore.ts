@@ -1,15 +1,19 @@
 import { listPreSqliteArchiveGenerations } from '@features/internal-storage/main';
 import { withFileLock } from '@main/services/team/fileLock';
-import {
-  atomicWriteAsync,
-  renamePathWithRetry,
-  syncDirectoryDurably,
-} from '@main/utils/atomicWrite';
+import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createHash } from 'crypto';
-import { access, mkdir, readdir, readFile, rm } from 'fs/promises';
+import { access, mkdir, readdir, readFile } from 'fs/promises';
 import { dirname, join } from 'path';
 
 import { assessMemberWorkSyncPhase2Readiness } from '../../core/domain';
+
+import { purgeJsonMemberWorkSyncActiveState } from './JsonMemberWorkSyncActiveStatePurger';
+import {
+  mergeDomainSnapshots,
+  pickDomainOutboxItem,
+  pickDomainReportIntent,
+} from './memberWorkSyncDomainSnapshotMerge';
+import { normalizeMemberKey } from './memberWorkSyncStoreIdentity';
 
 import type {
   MemberWorkSyncMetricEvent,
@@ -36,6 +40,8 @@ import type {
   MemberWorkSyncStatusStorePort,
 } from '../../core/application';
 import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
+
+export { normalizeMemberKey } from './memberWorkSyncStoreIdentity';
 
 interface LegacyStatusFile {
   schemaVersion: 1;
@@ -253,10 +259,6 @@ export interface JsonMemberWorkSyncStoreDeps {
   auditJournal?: MemberWorkSyncAuditJournalPort;
   logger?: MemberWorkSyncLoggerPort;
   now?: () => Date;
-}
-
-export function normalizeMemberKey(memberName: unknown): string {
-  return typeof memberName === 'string' ? memberName.trim().toLowerCase() : '';
 }
 
 export function normalizeTeamKey(teamName: unknown): string {
@@ -1292,15 +1294,6 @@ export class JsonMemberWorkSyncStore
     };
   }
 
-  /**
-   * Removes only the live JSON files that this store can import. The purge is
-   * serialized with every same-team JSON write, while lifecycle callbacks let
-   * the backend durably fence the primary before deletion and record when the
-   * live-state boundary has been cleared. Immutable import archives, the
-   * SQLite fallback replica, report-token material, audit journals, member
-   * metadata, and unrelated files are intentionally outside this ownership
-   * boundary.
-   */
   async purgeActiveState(
     teamName: string,
     lifecycle: {
@@ -1309,8 +1302,6 @@ export class JsonMemberWorkSyncStore
     }
   ): Promise<void> {
     await this.enqueue(teamName, async () => {
-      await lifecycle.establishPendingPrimaryPurge();
-
       const activeFilePaths = [
         this.paths.getLegacyStatusPath(teamName),
         this.paths.getLegacyPendingReportsPath(teamName),
@@ -1326,29 +1317,7 @@ export class JsonMemberWorkSyncStore
           this.paths.getMemberOutboxPath(teamName, memberName)
         );
       }
-
-      const directoriesToSync = new Set(activeFilePaths.map((filePath) => dirname(filePath)));
-      for (const filePath of activeFilePaths) {
-        try {
-          await access(filePath);
-          await rm(filePath, { force: true });
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-            throw error;
-          }
-        }
-      }
-      for (const directory of directoriesToSync) {
-        try {
-          await syncDirectoryDurably(directory);
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-            throw error;
-          }
-        }
-      }
-
-      await lifecycle.confirmActiveStateCleared();
+      await purgeJsonMemberWorkSyncActiveState(activeFilePaths, lifecycle);
     });
   }
 
@@ -2386,97 +2355,4 @@ function groupByMember<T extends { memberName: string }>(records: readonly T[]):
     grouped.set(key, rows);
   }
   return grouped;
-}
-
-function mergeDomainSnapshots(
-  canonical: MemberWorkSyncStoreSnapshot,
-  incoming: MemberWorkSyncStoreSnapshot | null
-): MemberWorkSyncStoreSnapshot {
-  if (!incoming) return { ...canonical, filesToArchive: [] };
-  return {
-    statuses: mergeDomainRows(
-      canonical.statuses,
-      incoming.statuses,
-      (row) => normalizeMemberKey(row.memberName),
-      (left, right) => (compareReplicaIso(right.evaluatedAt, left.evaluatedAt) >= 0 ? right : left)
-    ),
-    reportIntents: mergeDomainRows(
-      canonical.reportIntents,
-      incoming.reportIntents,
-      (row) => row.id,
-      pickDomainReportIntent
-    ),
-    outboxItems: mergeDomainRows(
-      canonical.outboxItems,
-      incoming.outboxItems,
-      (row) => row.id,
-      pickDomainOutboxItem
-    ),
-    metricEvents: mergeDomainRows(
-      canonical.metricEvents,
-      incoming.metricEvents,
-      (row) => row.id,
-      (_left, right) => right
-    ),
-    filesToArchive: [],
-  };
-}
-
-function mergeDomainRows<T>(
-  canonical: readonly T[],
-  incoming: readonly T[],
-  identity: (record: T) => string,
-  pick: (canonical: T, incoming: T) => T
-): T[] {
-  const merged = new Map<string, T>();
-  for (const record of canonical) merged.set(identity(record), record);
-  for (const record of incoming) {
-    const key = identity(record);
-    const current = merged.get(key);
-    merged.set(key, current ? pick(current, record) : record);
-  }
-  return [...merged.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([, record]) => record);
-}
-
-function pickDomainReportIntent(
-  canonical: MemberWorkSyncReportIntent,
-  incoming: MemberWorkSyncReportIntent
-): MemberWorkSyncReportIntent {
-  const isProcessed = (status: MemberWorkSyncReportIntent['status']): boolean =>
-    status !== 'pending';
-  const canonicalProcessed = isProcessed(canonical.status);
-  const incomingProcessed = isProcessed(incoming.status);
-  if (canonicalProcessed !== incomingProcessed) return incomingProcessed ? incoming : canonical;
-  const leftTime = canonicalProcessed ? canonical.processedAt : canonical.recordedAt;
-  const rightTime = incomingProcessed ? incoming.processedAt : incoming.recordedAt;
-  return compareReplicaIso(rightTime, leftTime) >= 0 ? incoming : canonical;
-}
-
-function pickDomainOutboxItem(
-  canonical: MemberWorkSyncOutboxItem,
-  incoming: MemberWorkSyncOutboxItem
-): MemberWorkSyncOutboxItem {
-  const proofRank = (status: MemberWorkSyncOutboxItem['status']): number =>
-    status === 'delivered' ? 2 : status === 'failed_terminal' ? 1 : 0;
-  const canonicalProof = proofRank(canonical.status);
-  const incomingProof = proofRank(incoming.status);
-  if (canonicalProof !== incomingProof && (canonicalProof > 0 || incomingProof > 0)) {
-    return incomingProof > canonicalProof ? incoming : canonical;
-  }
-  if (canonical.attemptGeneration !== incoming.attemptGeneration) {
-    return incoming.attemptGeneration > canonical.attemptGeneration ? incoming : canonical;
-  }
-  return compareReplicaIso(incoming.updatedAt, canonical.updatedAt) >= 0 ? incoming : canonical;
-}
-
-function compareReplicaIso(left: string | undefined, right: string | undefined): number {
-  const leftMs = left ? Date.parse(left) : Number.NaN;
-  const rightMs = right ? Date.parse(right) : Number.NaN;
-  const leftValid = Number.isFinite(leftMs);
-  const rightValid = Number.isFinite(rightMs);
-  if (leftValid !== rightValid) return leftValid ? 1 : -1;
-  if (!leftValid || leftMs === rightMs) return 0;
-  return leftMs < rightMs ? -1 : 1;
 }

@@ -1,6 +1,3 @@
-import { access } from 'node:fs/promises';
-import path from 'node:path';
-
 import {
   MemberWorkSyncDiagnosticsReader,
   MemberWorkSyncMetricsReader,
@@ -14,7 +11,6 @@ import {
   MemberWorkSyncTeamOperationGate,
   MemberWorkSyncTeamQuiescedError,
   normalizeMemberWorkSyncTeamOperationKey,
-  type RuntimeTurnSettledDrainSummary,
   RuntimeTurnSettledIngestor,
   type RuntimeTurnSettledTargetResolverPort,
 } from '../../core/application';
@@ -36,10 +32,7 @@ import {
   buildPendingReportIntentId,
   JsonMemberWorkSyncStore,
 } from '../infrastructure/JsonMemberWorkSyncStore';
-import {
-  MemberWorkSyncEventQueue,
-  type MemberWorkSyncQueueDiagnostics,
-} from '../infrastructure/MemberWorkSyncEventQueue';
+import { MemberWorkSyncEventQueue } from '../infrastructure/MemberWorkSyncEventQueue';
 import { MemberWorkSyncNudgeDispatchScheduler } from '../infrastructure/MemberWorkSyncNudgeDispatchScheduler';
 import { MemberWorkSyncSqliteImporter } from '../infrastructure/MemberWorkSyncSqliteImporter';
 import { MemberWorkSyncStorePaths } from '../infrastructure/MemberWorkSyncStorePaths';
@@ -52,14 +45,27 @@ import { RuntimeTurnSettledSpoolInitializer } from '../infrastructure/RuntimeTur
 import { SqliteMemberWorkSyncStore } from '../infrastructure/SqliteMemberWorkSyncStore';
 import { SystemClockAdapter } from '../infrastructure/SystemClockAdapter';
 
-import type {
-  MemberWorkSyncMetricsRequest,
-  MemberWorkSyncReportRequest,
-  MemberWorkSyncReportResult,
-  MemberWorkSyncStatus,
-  MemberWorkSyncStatusRequest,
-  MemberWorkSyncTeamMetrics,
-} from '../../contracts';
+import {
+  buildProofMissingRecoveryIntentKey,
+  normalizeRecoveryTaskRefs,
+} from './memberWorkSyncFeatureContracts';
+import {
+  CAUGHT_UP_STATUS_MAX_AGE_MS,
+  getAcceptedWorkLeaseStaleness,
+  getReportTokenStaleness,
+  isEmptyAgendaStaleState,
+  STALE_STATUS_MAX_AGE_MS,
+} from './memberWorkSyncStatusRefreshPolicy';
+import { MemberWorkSyncTeamDeletionCoordinator } from './MemberWorkSyncTeamDeletionCoordinator';
+
+export {
+  buildMemberWorkSyncRuntimeTurnSettledEnvironment,
+  type MemberWorkSyncFeatureFacade,
+  type MemberWorkSyncProofMissingRecoveryScheduleRequest,
+  type MemberWorkSyncProofMissingRecoveryScheduleResult,
+} from './memberWorkSyncFeatureContracts';
+
+import type { MemberWorkSyncStatus, MemberWorkSyncStatusRequest } from '../../contracts';
 import type {
   MemberWorkSyncBusySignalPort,
   MemberWorkSyncLoggerPort,
@@ -69,110 +75,37 @@ import type {
   MemberWorkSyncReviewPickupEscalationPort,
   MemberWorkSyncTeamOperationAdmission,
 } from '../../core/application';
-import type { RuntimeTurnSettledProvider } from '../../core/domain';
+import type {
+  MemberWorkSyncFeatureFacade,
+  MemberWorkSyncProofMissingRecoveryScheduleRequest,
+  MemberWorkSyncProofMissingRecoveryScheduleResult,
+} from './memberWorkSyncFeatureContracts';
 import type { InternalStorageMemberWorkSyncBackend } from '@features/internal-storage/main';
 import type { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import type { TeamKanbanManager } from '@main/services/team/TeamKanbanManager';
 import type { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import type { TeamTaskReader } from '@main/services/team/TeamTaskReader';
-import type { TeamChangeEvent } from '@shared/types';
 
-const STALE_STATUS_MAX_AGE_MS = 2 * 60_000;
-const CAUGHT_UP_STATUS_MAX_AGE_MS = 5 * 60_000;
 const PROOF_MISSING_RECOVERY_RECENT_WINDOW_MS = 10 * 60_000;
 
-function uniqueMemberWorkSyncTeamNames(teamNames: string[]): string[] {
-  const seen = new Set<string>();
-  const unique: string[] = [];
-  for (const candidate of teamNames) {
-    const teamName = candidate.trim();
-    if (!teamName) {
-      continue;
-    }
-    const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
-    if (seen.has(teamKey)) {
-      continue;
-    }
-    seen.add(teamKey);
-    unique.push(teamName);
-  }
-  return unique;
-}
-
-function isAcceptedWorkLeaseStatus(status: MemberWorkSyncStatus): boolean {
-  return (
-    status.report?.accepted === true &&
-    (status.state === 'still_working' || status.state === 'blocked')
-  );
-}
-
-function getAcceptedWorkLeaseStaleness(
-  status: MemberWorkSyncStatus,
-  nowMs: number
-): 'missing' | 'expired' | null {
-  if (!isAcceptedWorkLeaseStatus(status)) {
-    return null;
-  }
-
-  const reportExpiresAtMs = Date.parse(status.report?.expiresAt ?? '');
-  if (!Number.isFinite(reportExpiresAtMs) || !Number.isFinite(nowMs)) {
-    return 'missing';
-  }
-  return reportExpiresAtMs <= nowMs ? 'expired' : null;
-}
-
-function getReportTokenStaleness(
-  status: MemberWorkSyncStatus,
-  nowMs: number
-): 'missing' | 'expired' | null {
-  if (!status.reportToken?.trim()) {
-    return 'missing';
-  }
-
-  const tokenExpiresAtMs = Date.parse(status.reportTokenExpiresAt ?? '');
-  if (!Number.isFinite(tokenExpiresAtMs) || !Number.isFinite(nowMs)) {
-    return 'missing';
-  }
-
-  return tokenExpiresAtMs <= nowMs ? 'expired' : null;
-}
-
-function isEmptyAgendaStaleState(status: MemberWorkSyncStatus): boolean {
-  return (
-    status.agenda.items.length === 0 &&
-    (status.state === 'needs_sync' ||
-      status.state === 'still_working' ||
-      status.state === 'blocked' ||
-      status.state === 'unknown')
-  );
-}
-
+// Keep runtime-settled and deletion coordination behind the same feature lifecycle boundary.
 function statusNeedsBackgroundRefresh(status: MemberWorkSyncStatus, nowMs: number): boolean {
-  if (getReportTokenStaleness(status, nowMs) !== null) {
+  if (getReportTokenStaleness(status, nowMs) !== null || isEmptyAgendaStaleState(status)) {
     return true;
   }
-
-  if (isEmptyAgendaStaleState(status)) {
-    return true;
-  }
-
   const evaluatedAtMs = Date.parse(status.evaluatedAt);
   if (!Number.isFinite(evaluatedAtMs)) {
     return true;
   }
-
   if (status.state === 'caught_up' && nowMs - evaluatedAtMs > CAUGHT_UP_STATUS_MAX_AGE_MS) {
     return true;
   }
-
   if (status.agenda.items.length === 0) {
     return false;
   }
-
   if (status.state === 'needs_sync' && nowMs - evaluatedAtMs > STALE_STATUS_MAX_AGE_MS) {
     return true;
   }
-
   return getAcceptedWorkLeaseStaleness(status, nowMs) !== null;
 }
 
@@ -206,7 +139,6 @@ function getStatusStalenessDiagnostics(status: MemberWorkSyncStatus, nowMs: numb
   } else if (leaseStaleness === 'expired') {
     diagnostics.push('accepted_report_lease_expired_refresh_enqueued');
   }
-
   return [...new Set(diagnostics)];
 }
 
@@ -216,95 +148,22 @@ function shouldRefreshStatusSynchronously(stalenessDiagnostics: string[]): boole
   );
 }
 
-export function buildMemberWorkSyncRuntimeTurnSettledEnvironment(input: {
-  teamsBasePath: string;
-  provider: RuntimeTurnSettledProvider;
-}): Promise<Record<string, string> | null> {
-  return new RuntimeTurnSettledSpoolInitializer(input.teamsBasePath).buildEnvironment({
-    provider: input.provider,
-  });
-}
-
-export interface MemberWorkSyncFeatureFacade {
-  getStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
-  refreshStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
-  getMetrics(request: MemberWorkSyncMetricsRequest): Promise<MemberWorkSyncTeamMetrics>;
-  report(request: MemberWorkSyncReportRequest): Promise<MemberWorkSyncReportResult>;
-  scheduleProofMissingRecovery(
-    request: MemberWorkSyncProofMissingRecoveryScheduleRequest
-  ): Promise<MemberWorkSyncProofMissingRecoveryScheduleResult>;
-  prepareTeamDeletion(teamName: string): Promise<void>;
-  completeTeamDeletion(teamName: string): void;
-  resumeTeam(teamName: string): void;
-  noteTeamChange(event: TeamChangeEvent): void;
-  enqueueStartupScan(teamNames: string[]): Promise<void>;
-  replayPendingReports(teamNames: string[]): Promise<MemberWorkSyncPendingReportReplaySummary>;
-  dispatchDueNudges(teamNames: string[]): Promise<MemberWorkSyncNudgeDispatchSummary>;
-  buildRuntimeTurnSettledHookSettings(input: {
-    provider: RuntimeTurnSettledProvider;
-  }): Promise<Record<string, unknown> | null>;
-  buildRuntimeTurnSettledEnvironment(input: {
-    provider: RuntimeTurnSettledProvider;
-  }): Promise<Record<string, string> | null>;
-  drainRuntimeTurnSettledEvents(): Promise<RuntimeTurnSettledDrainSummary>;
-  getQueueDiagnostics(): MemberWorkSyncQueueDiagnostics;
-  dispose(): Promise<void>;
-}
-
-export interface MemberWorkSyncProofMissingRecoveryScheduleRequest {
-  teamName: string;
-  memberName: string;
-  originalMessageId: string;
-  taskRefs?: { taskId: string; displayId?: string; teamName?: string }[];
-  reason?: string;
-}
-
-export interface MemberWorkSyncProofMissingRecoveryScheduleResult {
-  scheduled: boolean;
-  reason: 'scheduled' | 'coalesced_recent' | 'invalid';
-  intentKey?: string;
-  existingOutboxId?: string;
-}
-
-function buildProofMissingRecoveryIntentKey(originalMessageId: string): string {
-  return `proof-missing:${originalMessageId}`;
-}
-
-function normalizeRecoveryTaskRefs(
-  taskRefs: MemberWorkSyncProofMissingRecoveryScheduleRequest['taskRefs']
-): { taskId: string; displayId?: string; teamName?: string }[] {
+function uniqueMemberWorkSyncTeamNames(teamNames: string[]): string[] {
   const seen = new Set<string>();
-  const normalized: { taskId: string; displayId?: string; teamName?: string }[] = [];
-  for (const taskRef of taskRefs ?? []) {
-    const taskId = taskRef.taskId.trim();
-    if (!taskId || seen.has(taskId)) {
+  const unique: string[] = [];
+  for (const candidate of teamNames) {
+    const teamName = candidate.trim();
+    if (!teamName) {
       continue;
     }
-    seen.add(taskId);
-    normalized.push({
-      taskId,
-      ...(taskRef.displayId?.trim() ? { displayId: taskRef.displayId.trim() } : {}),
-      ...(taskRef.teamName?.trim() ? { teamName: taskRef.teamName.trim() } : {}),
-    });
+    const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
+    if (seen.has(teamKey)) {
+      continue;
+    }
+    seen.add(teamKey);
+    unique.push(teamName);
   }
-  return normalized.sort((left, right) => left.taskId.localeCompare(right.taskId));
-}
-
-/**
- * One object is one deletion generation. Async config checks may act only on
- * that exact object; retries replace it. A successful resume normally removes
- * the object, except for automatic pending-resume release, which retains one
- * acknowledgment state through any completion call until the lifecycle's next
- * explicit resume; a later preparation replaces it as a new generation.
- */
-interface MemberWorkSyncTeamDeletionState {
-  status: 'deleting' | 'deleted';
-  preparation: Promise<void> | null;
-  preparationSucceeded: boolean;
-  pendingResumeTeamName: string | null;
-  configAccess: Promise<void> | null;
-  resumeReleased: boolean;
-  quiescedTeamName: string | null;
+  return unique;
 }
 
 export function createMemberWorkSyncFeature(deps: {
@@ -338,7 +197,6 @@ export function createMemberWorkSyncFeature(deps: {
   const clock = new SystemClockAdapter();
   const hash = new NodeHashAdapter();
   const operationGate = new MemberWorkSyncTeamOperationGate();
-  const deletionStates = new Map<string, MemberWorkSyncTeamDeletionState>();
   const configReaderForReadOnlySync = {
     listTeams: () =>
       typeof deps.configReader.listTeams === 'function'
@@ -694,6 +552,24 @@ export function createMemberWorkSyncFeature(deps: {
     },
     taskImpactResolver
   );
+  const deletionCoordinator = new MemberWorkSyncTeamDeletionCoordinator({
+    teamsBasePath: deps.teamsBasePath,
+    ...(deps.configFileAccess ? { configFileAccess: deps.configFileAccess } : {}),
+    beginOperationGateQuiesce: (teamName) => operationGate.beginTeamQuiesce(teamName),
+    awaitOperationGateIdle: (teamName) => operationGate.awaitTeamIdle(teamName),
+    resumeOperationGate: (teamName) => operationGate.resumeTeam(teamName),
+    cancelScheduledDispatch: cancelScheduledTeamDispatch,
+    beginAuditQuiesce: (teamName) => auditJournal.beginTeamQuiesce(teamName),
+    awaitAuditIdle: (teamName) => auditJournal.awaitTeamIdle(teamName),
+    resumeAudit: (teamName) => auditJournal.resumeTeam(teamName),
+    quiesceRouter: (teamName) => router.quiesceTeam(teamName),
+    resumeRouter: (teamName) => router.resumeTeam(teamName),
+    enqueueStartupScan: (teamNames) => router.enqueueStartupScan(teamNames),
+    purgeTeam: (teamName) =>
+      store instanceof BackendSelectingMemberWorkSyncStore
+        ? store.purgeTeam(teamName)
+        : Promise.resolve(),
+  });
   let acceptsRuntimeTurnSettledReconcile = true;
   const runtimeTurnSettledIngestor = new RuntimeTurnSettledIngestor({
     eventStore: runtimeTurnSettledStore,
@@ -850,108 +726,6 @@ export function createMemberWorkSyncFeature(deps: {
     return { scheduled: true, reason: 'scheduled', intentKey };
   };
 
-  const resumeTeamNow = (
-    teamName: string,
-    teamKey: string,
-    deletionState: MemberWorkSyncTeamDeletionState | null,
-    requiresExplicitAck = false
-  ): void => {
-    const quiescedTeamName = deletionState?.quiescedTeamName ?? teamName;
-    if (deletionState && deletionStates.get(teamKey) === deletionState) {
-      if (requiresExplicitAck) {
-        deletionState.pendingResumeTeamName = null;
-        deletionState.configAccess = null;
-        deletionState.resumeReleased = true;
-      } else {
-        deletionStates.delete(teamKey);
-      }
-    }
-    operationGate.resumeTeam(quiescedTeamName);
-    auditJournal.resumeTeam(quiescedTeamName);
-    router.resumeTeam(quiescedTeamName);
-    void router.enqueueStartupScan([teamName.trim()]);
-  };
-  const requestTeamResume = (teamName: string, source: 'automatic' | 'explicit'): void => {
-    const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
-    const deletionState = deletionStates.get(teamKey);
-    if (deletionState?.resumeReleased) {
-      if (source === 'explicit') {
-        deletionStates.delete(teamKey);
-      }
-      return;
-    }
-    if (deletionState && !deletionState.preparationSucceeded) {
-      deletionState.pendingResumeTeamName = teamName;
-      return;
-    }
-    resumeTeamNow(teamName, teamKey, deletionState ?? null, source === 'automatic');
-  };
-  const resumeTeam = (teamName: string): void => requestTeamResume(teamName, 'explicit');
-  const prepareTeamDeletion = (teamName: string): Promise<void> => {
-    const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
-    const currentState = deletionStates.get(teamKey);
-    if (currentState?.preparation) {
-      return currentState.preparation;
-    }
-
-    const quiescedTeamName =
-      currentState && !currentState.resumeReleased
-        ? (currentState.quiescedTeamName ?? teamName)
-        : teamName;
-    const deletionState = {
-      status: 'deleting' as 'deleting' | 'deleted',
-      preparation: null as Promise<void> | null,
-      preparationSucceeded: false,
-      pendingResumeTeamName: currentState?.pendingResumeTeamName ?? null,
-      configAccess: null as Promise<void> | null,
-      resumeReleased: false,
-      quiescedTeamName,
-    };
-
-    let resolvePreparation!: () => void;
-    let rejectPreparation!: (error: unknown) => void;
-    const preparation = new Promise<void>((resolve, reject) => {
-      resolvePreparation = resolve;
-      rejectPreparation = reject;
-    });
-    deletionState.preparation = preparation;
-    deletionStates.set(teamKey, deletionState);
-
-    void (async () => {
-      operationGate.beginTeamQuiesce(quiescedTeamName);
-      cancelScheduledTeamDispatch(quiescedTeamName);
-      auditJournal.beginTeamQuiesce(quiescedTeamName);
-      const routerQuiesce = router.quiesceTeam(quiescedTeamName);
-      await operationGate.awaitTeamIdle(quiescedTeamName);
-      await routerQuiesce;
-      await auditJournal.awaitTeamIdle(quiescedTeamName);
-      if (store instanceof BackendSelectingMemberWorkSyncStore) {
-        await store.purgeTeam(teamName);
-      }
-      await auditJournal.awaitTeamIdle(quiescedTeamName);
-    })().then(resolvePreparation, rejectPreparation);
-
-    const finishPreparation = (succeeded: boolean): void => {
-      if (deletionState.preparation !== preparation) {
-        return;
-      }
-      deletionState.preparation = null;
-      if (!succeeded) {
-        return;
-      }
-      deletionState.preparationSucceeded = true;
-      const pendingResumeTeamName = deletionState.pendingResumeTeamName;
-      if (pendingResumeTeamName && deletionStates.get(teamKey) === deletionState) {
-        resumeTeamNow(pendingResumeTeamName, teamKey, deletionState, true);
-      }
-    };
-    void preparation.then(
-      () => finishPreparation(true),
-      () => finishPreparation(false)
-    );
-    return preparation;
-  };
-
   return {
     getStatus: (request) =>
       operationGate.run(request.teamName, () => readStatusWithStaleRefresh(request)),
@@ -964,86 +738,12 @@ export function createMemberWorkSyncFeature(deps: {
     report: (request) => operationGate.run(request.teamName, () => reporter.execute(request)),
     scheduleProofMissingRecovery: (request) =>
       operationGate.run(request.teamName, () => scheduleProofMissingRecovery(request)),
-    prepareTeamDeletion,
-    completeTeamDeletion: (teamName) => {
-      const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
-      const deletionState = deletionStates.get(teamKey);
-      if (!deletionState) {
-        // Durable deletion recovery may already have completed team-data cleanup
-        // before this feature is composed, so completion itself must establish
-        // the generation tombstone used to fence later config materialization.
-        deletionStates.set(teamKey, {
-          status: 'deleted',
-          preparation: null,
-          preparationSucceeded: true,
-          pendingResumeTeamName: null,
-          configAccess: null,
-          resumeReleased: false,
-          quiescedTeamName: null,
-        });
-        return;
-      }
-      if (deletionState.resumeReleased) {
-        // Automatic pending-resume release is one half of a handshake. The
-        // lifecycle's following completion does not consume that
-        // acknowledgment: its explicit resume must see the same generation
-        // marker and consume it without repeating subsystem resumes or the
-        // startup scan.
-        return;
-      }
-      if (!deletionState.pendingResumeTeamName) {
-        deletionState.status = 'deleted';
-      }
-    },
-    resumeTeam,
+    prepareTeamDeletion: (teamName) => deletionCoordinator.prepare(teamName),
+    completeTeamDeletion: (teamName) => deletionCoordinator.complete(teamName),
+    resumeTeam: (teamName) => deletionCoordinator.resume(teamName),
     noteTeamChange: (event) => {
       toolActivityBusySignal.noteTeamChange(event);
-      const teamName = event.teamName.trim();
-      const teamKey = teamName ? normalizeMemberWorkSyncTeamOperationKey(teamName) : '';
-      const deletionState = deletionStates.get(teamKey);
-      if (deletionState && !deletionState.resumeReleased) {
-        if (
-          deletionState.status === 'deleted' &&
-          event.type === 'config' &&
-          event.detail === 'config.json' &&
-          !deletionState.configAccess
-        ) {
-          let configAccess: Promise<void>;
-          try {
-            configAccess = Promise.resolve(
-              (deps.configFileAccess ?? access)(
-                path.join(deps.teamsBasePath, teamName, 'config.json')
-              )
-            );
-          } catch (error) {
-            configAccess = Promise.reject(
-              error instanceof Error ? error : new Error(String(error))
-            );
-          }
-          deletionState.configAccess = configAccess;
-          void configAccess.then(
-            () => {
-              if (
-                deletionStates.get(teamKey) === deletionState &&
-                deletionState.status === 'deleted' &&
-                deletionState.configAccess === configAccess
-              ) {
-                deletionState.configAccess = null;
-                requestTeamResume(teamName, 'automatic');
-              }
-            },
-            () => {
-              if (
-                deletionStates.get(teamKey) === deletionState &&
-                deletionState.configAccess === configAccess
-              ) {
-                deletionState.configAccess = null;
-              }
-            }
-          );
-        }
-        return;
-      }
+      if (deletionCoordinator.interceptTeamChange(event)) return;
       router.noteTeamChange(event);
     },
     enqueueStartupScan: (teamNames) => router.enqueueStartupScan(teamNames),

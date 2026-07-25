@@ -1,11 +1,9 @@
 import { resolveCrossTeamRecipientIdentity } from '../CrossTeamRecipientIdentity';
 import {
-  createOpenCodePromptDeliveryLedgerStore,
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
 } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import { buildOpenCodePromptDeliveryActiveBusyStatus } from '../opencode/delivery/OpenCodePromptDeliveryWatchdog';
-import { toOpenCodeRuntimeDeliveryStatus } from '../opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import {
   createOpenCodeRuntimeDeliveryPorts as createOpenCodeRuntimeDeliveryDestinationPorts,
   type OpenCodeRuntimeDeliveryCrossTeamSender,
@@ -34,6 +32,10 @@ import { type TeamInboxWriter } from '../TeamInboxWriter';
 import { type TeamSentMessagesStore } from '../TeamSentMessagesStore';
 
 import {
+  createOpenCodePromptDeliveryLedger,
+  getOpenCodeRuntimeDeliveryStatus,
+} from './OpenCodePromptDeliveryQueries';
+import {
   hasStableInboxMessageId,
   isCurrentProofMissingRecoveryForegroundMessage,
   isCurrentReviewPickupRequestForegroundMessage,
@@ -55,6 +57,19 @@ import {
   requireRuntimeString,
 } from './TeamProvisioningRuntimeMetadata';
 
+import type { toOpenCodeRuntimeDeliveryStatus } from '../opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
+import type { OpenCodeRuntimeDeliveryStorePaths } from './OpenCodePromptDeliveryQueries';
+
+export type {
+  OpenCodePromptDeliveryLedgerPorts,
+  OpenCodeRuntimeDeliveryStatusPorts,
+  OpenCodeRuntimeDeliveryStorePaths,
+} from './OpenCodePromptDeliveryQueries';
+export {
+  createOpenCodePromptDeliveryLedger,
+  getOpenCodeRuntimeDeliveryStatus,
+} from './OpenCodePromptDeliveryQueries';
+
 import type { OpenCodeRuntimeControlPort } from '../runtime-control';
 import type {
   InboxMessage,
@@ -68,10 +83,6 @@ import type {
 
 type RuntimeDeliveryLogger = Pick<Console, 'warn'>;
 
-export interface OpenCodeRuntimeDeliveryStorePaths {
-  teamsBasePath: string;
-}
-
 export interface OpenCodeRuntimeDeliveryServicePorts extends OpenCodeRuntimeDeliveryStorePaths {
   resolveCurrentOpenCodeRuntimeRunId(teamName: string, laneId: string): Promise<string | null>;
   readLaunchState?(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
@@ -81,8 +92,6 @@ export interface OpenCodeRuntimeDeliveryServicePorts extends OpenCodeRuntimeDeli
   emitTeamChange(event: RuntimeDeliveryTeamChangeEvent): void;
   logger: RuntimeDeliveryLogger;
 }
-
-export type OpenCodePromptDeliveryLedgerPorts = OpenCodeRuntimeDeliveryStorePaths;
 
 export type OpenCodeDeliveryIdentityResolution =
   | {
@@ -94,19 +103,6 @@ export type OpenCodeDeliveryIdentityResolution =
       ok: false;
       reason: 'recipient_is_not_opencode' | 'recipient_removed' | 'opencode_recipient_unavailable';
     };
-
-export interface OpenCodeRuntimeDeliveryStatusPorts extends OpenCodeRuntimeDeliveryStorePaths {
-  createOpenCodePromptDeliveryLedger(
-    teamName: string,
-    laneId: string
-  ): OpenCodePromptDeliveryLedgerStore;
-  decideOpenCodeRuntimeDeliveryUserFacingAdvisory(
-    record: OpenCodePromptDeliveryLedgerRecord
-  ): Promise<{
-    record: OpenCodePromptDeliveryLedgerRecord;
-    decision: Parameters<typeof toOpenCodeRuntimeDeliveryStatus>[0]['decision'];
-  }>;
-}
 
 export interface OpenCodeActivePromptDeliveryRecordPorts extends OpenCodeRuntimeDeliveryStorePaths {
   resolveOpenCodeMemberDeliveryIdentity(
@@ -735,94 +731,6 @@ function canonicalizeRuntimeDeliveryJournalLocation(
   return location.kind === 'member_inbox'
     ? { ...location, memberName: canonicalMemberName }
     : { ...location, toMemberName: canonicalMemberName };
-}
-
-export function createOpenCodePromptDeliveryLedger(
-  teamName: string,
-  laneId: string,
-  ports: OpenCodePromptDeliveryLedgerPorts
-): OpenCodePromptDeliveryLedgerStore {
-  return createOpenCodePromptDeliveryLedgerStore({
-    filePath: getOpenCodeLaneScopedRuntimeFilePath({
-      teamsBasePath: ports.teamsBasePath,
-      teamName,
-      laneId,
-      fileName: 'opencode-prompt-delivery-ledger.json',
-    }),
-  });
-}
-
-export async function getOpenCodeRuntimeDeliveryStatus(
-  teamName: string,
-  messageId: string,
-  ports: OpenCodeRuntimeDeliveryStatusPorts
-): Promise<OpenCodeRuntimeDeliveryStatus | null> {
-  const normalizedMessageId = messageId.trim();
-  if (!normalizedMessageId) {
-    return null;
-  }
-  const laneIndex = await readOpenCodeRuntimeLaneIndex(ports.teamsBasePath, teamName).catch(
-    () => null
-  );
-  const laneIds = [
-    ...new Set(
-      Object.values(laneIndex?.lanes ?? {})
-        .map((entry) => entry.laneId.trim())
-        .filter(Boolean)
-    ),
-  ];
-  let recordForStatus: OpenCodePromptDeliveryLedgerRecord | null = null;
-  for (const laneId of laneIds) {
-    const records = await ports
-      .createOpenCodePromptDeliveryLedger(teamName, laneId)
-      .list()
-      .catch(() => []);
-    for (const record of records) {
-      if (
-        record.inboxMessageId === normalizedMessageId &&
-        (!recordForStatus || isOpenCodePromptDeliveryRecordNewer(record, recordForStatus))
-      ) {
-        recordForStatus = record;
-      }
-    }
-  }
-  if (!recordForStatus) {
-    return null;
-  }
-  const { record: latestRecord, decision } =
-    await ports.decideOpenCodeRuntimeDeliveryUserFacingAdvisory(recordForStatus);
-  return toOpenCodeRuntimeDeliveryStatus({ record: latestRecord, decision });
-}
-
-function isOpenCodePromptDeliveryRecordNewer(
-  candidate: OpenCodePromptDeliveryLedgerRecord,
-  current: OpenCodePromptDeliveryLedgerRecord
-): boolean {
-  const candidateTimestamp = getOpenCodePromptDeliveryRecordEffectiveTimestamp(candidate);
-  const currentTimestamp = getOpenCodePromptDeliveryRecordEffectiveTimestamp(current);
-
-  if (candidateTimestamp === null) {
-    return false;
-  }
-  if (currentTimestamp === null) {
-    return true;
-  }
-
-  // Preserve the first record encountered when effective timestamps tie. This also keeps
-  // entirely invalid timestamp records deterministic in the lane/ledger traversal order.
-  return candidateTimestamp > currentTimestamp;
-}
-
-function getOpenCodePromptDeliveryRecordEffectiveTimestamp(
-  record: OpenCodePromptDeliveryLedgerRecord
-): number | null {
-  const updatedAt = Date.parse(record.updatedAt);
-  if (Number.isFinite(updatedAt)) {
-    return updatedAt;
-  }
-
-  const createdAt = Date.parse(record.createdAt);
-  return Number.isFinite(createdAt) ? createdAt : null;
 }
 
 export async function tryGetActiveOpenCodePromptDeliveryRecord(

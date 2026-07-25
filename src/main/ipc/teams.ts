@@ -149,6 +149,7 @@ import {
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
+import { capMessagesPageLiveOverlay } from '../services/team/teamInboxOrdering';
 import { readTeamLaunchFailureDiagnosticsBundle } from '../services/team/TeamLaunchFailureArtifactPack';
 import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../services/team/TeamMetaStore';
@@ -156,6 +157,7 @@ import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStor
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
+import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import {
   validateFromField,
   validateMemberName,
@@ -192,10 +194,7 @@ import type {
   TeamTaskActivityRepairApi,
   TeamToolApprovalApi,
 } from '../services/team/contracts/TeamProvisioningApis';
-import type {
-  TeamBackupService,
-  TeamPermanentDeletionIntent,
-} from '../services/team/TeamBackupService';
+import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
 import type {
   AddTaskCommentRequest,
@@ -269,7 +268,6 @@ const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_MS = 6_000;
 const OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS = 1_000;
 const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON =
   'opencode_runtime_delivery_ui_timeout_pending';
-const MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD = 200;
 
 type OpenCodeMemberInboxRelayResult = TeamOpenCodeMemberInboxRelayResult;
 type OpenCodeMemberInboxDelivery = NonNullable<OpenCodeMemberInboxRelayResult['lastDelivery']>;
@@ -581,26 +579,6 @@ function throwIfFatalTeamDataWorkerFailure(_operation: string, error: unknown): 
   }
 }
 
-function compareInboxMessagesNewestFirst(left: InboxMessage, right: InboxMessage): number {
-  const leftTime = Date.parse(left.timestamp);
-  const rightTime = Date.parse(right.timestamp);
-  if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
-    return rightTime - leftTime;
-  }
-  const leftId = typeof left.messageId === 'string' ? left.messageId : '';
-  const rightId = typeof right.messageId === 'string' ? right.messageId : '';
-  return leftId.localeCompare(rightId);
-}
-
-function capLiveOverlayMessages(liveMessages: readonly InboxMessage[]): InboxMessage[] {
-  if (liveMessages.length <= MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD) {
-    return [...liveMessages];
-  }
-  return [...liveMessages]
-    .sort(compareInboxMessagesNewestFirst)
-    .slice(0, MAX_LIVE_MESSAGES_OVERLAY_PAYLOAD);
-}
-
 async function getNewestMessagesPageWithLiveOverlay(input: {
   teamName: string;
   limit: number;
@@ -608,7 +586,7 @@ async function getNewestMessagesPageWithLiveOverlay(input: {
   includeUndefinedCursorInFallback?: boolean;
 }): Promise<MessagesPage> {
   const { teamName, limit } = input;
-  const liveMessages = capLiveOverlayMessages(input.liveMessages);
+  const liveMessages = capMessagesPageLiveOverlay(input.liveMessages);
   const liveReserve = liveMessages.length ? Math.max(liveMessages.length, 100) : 0;
   const durableLimit = limit + liveReserve + 1;
   const worker = getTeamDataWorkerClient();
@@ -778,8 +756,7 @@ let teamPermanentDeletionLifecycle: {
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 } | null = null;
-const permanentDeletionOperations = new Map<string, Promise<unknown>>();
-let permanentDeletionRecoveryPromise: Promise<void> = Promise.resolve();
+let permanentDeletionCoordinator: TeamPermanentDeletionTransactionCoordinator | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
@@ -860,9 +837,19 @@ export function initializeTeamHandlers(
   boardTaskExactLogsService = taskExactLogsService ?? null;
   boardTaskExactLogDetailService = taskExactLogDetailService ?? null;
   teamPermanentDeletionLifecycle = permanentDeletionLifecycle ?? null;
-  permanentDeletionRecoveryPromise = recoverPendingPermanentDeletions().catch((error: unknown) => {
-    logger.error(`[PermanentDeletion] Startup recovery failed: ${String(error)}`);
+  permanentDeletionCoordinator = new TeamPermanentDeletionTransactionCoordinator({
+    backupService: () => teamBackupService,
+    dataService: () => getTeamDataService(),
+    attachmentStore,
+    taskAttachmentStore,
+    lifecycle: () => teamPermanentDeletionLifecycle,
+    invalidateTeamConfig: (teamName) => getTeamDataWorkerClient().invalidateTeamConfig(teamName),
+    logRecoveryError: (teamName, error) =>
+      logger.error(
+        `[PermanentDeletion] ${teamName === 'startup' ? 'Startup recovery failed' : `Recovery remains pending for ${teamName}`}: ${String(error)}`
+      ),
   });
+  permanentDeletionCoordinator.startRecovery();
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
@@ -1046,162 +1033,15 @@ function getTeamDataService(): TeamDataService {
   return teamDataService;
 }
 
-function getPermanentDeletionBackupService(): TeamBackupService {
-  if (!teamBackupService) {
-    throw new Error('Permanent deletion is unavailable until durable backup state is initialized');
+function getPermanentDeletionCoordinator(): TeamPermanentDeletionTransactionCoordinator {
+  if (!permanentDeletionCoordinator) {
+    throw new Error('Permanent deletion is unavailable until team handlers are initialized');
   }
-  return teamBackupService;
-}
-
-function withPermanentDeletionOperation<T>(
-  teamName: string,
-  operation: () => Promise<T>
-): Promise<T> {
-  const previous = permanentDeletionOperations.get(teamName) ?? Promise.resolve();
-  const next = previous.then(operation, () => operation());
-  permanentDeletionOperations.set(teamName, next);
-  next.then(
-    () => {
-      if (permanentDeletionOperations.get(teamName) === next) {
-        permanentDeletionOperations.delete(teamName);
-      }
-    },
-    () => {
-      if (permanentDeletionOperations.get(teamName) === next) {
-        permanentDeletionOperations.delete(teamName);
-      }
-    }
-  );
-  return next;
-}
-
-async function runPermanentDeletionCleanup(intent: TeamPermanentDeletionIntent): Promise<void> {
-  const backupService = getPermanentDeletionBackupService();
-  intent = await backupService.reconcilePermanentDeletionProgress(intent);
-  const teamDataAlreadyCompleted = intent.completedTargets.includes('team-data');
-  if (
-    !teamDataAlreadyCompleted &&
-    !(await backupService.isPermanentDeletionTargetCurrent(intent))
-  ) {
-    teamPermanentDeletionLifecycle?.resumeTeam(intent.teamName);
-    return;
-  }
-
-  if (!teamDataAlreadyCompleted) {
-    await teamPermanentDeletionLifecycle?.prepareTeamDeletion(intent.teamName);
-    // Quiescing can await in-flight work long enough for a same-name replacement
-    // to appear. Revalidate at the last awaited boundary before path-based removal.
-    if (!(await backupService.isPermanentDeletionTargetCurrent(intent))) {
-      teamPermanentDeletionLifecycle?.resumeTeam(intent.teamName);
-      return;
-    }
-  }
-  const cleanupCompleted = await backupService.withPermanentDeletionTargetFence(
-    intent,
-    async (isTargetCurrent, getTargetProofHooks, isTargetCompleted) => {
-      if (
-        (!isTargetCompleted('team-data') || !isTargetCompleted('task-data')) &&
-        (await getTeamDataService().permanentlyDeleteTeam(
-          intent.teamName,
-          (detachedPath) => isTargetCurrent('team-data', detachedPath),
-          (detachedPath) => isTargetCurrent('task-data', detachedPath),
-          {
-            skipTeamData: isTargetCompleted('team-data'),
-            skipTaskData: isTargetCompleted('task-data'),
-            ...(!isTargetCompleted('team-data')
-              ? { teamDataProofHooks: getTargetProofHooks('team-data') }
-              : {}),
-            ...(!isTargetCompleted('task-data')
-              ? { taskDataProofHooks: getTargetProofHooks('task-data') }
-              : {}),
-          }
-        )) === false
-      ) {
-        return false;
-      }
-      getTeamDataWorkerClient().invalidateTeamConfig(intent.teamName);
-      if (
-        !isTargetCompleted('message-attachments') &&
-        !(await attachmentStore.deleteTeamAttachments(
-          intent.teamName,
-          (detachedPath) => isTargetCurrent('message-attachments', detachedPath),
-          getTargetProofHooks('message-attachments')
-        ))
-      ) {
-        return false;
-      }
-      if (
-        !isTargetCompleted('task-attachments') &&
-        !(await taskAttachmentStore.deleteTeamAttachments(
-          intent.teamName,
-          (detachedPath) => isTargetCurrent('task-attachments', detachedPath),
-          getTargetProofHooks('task-attachments')
-        ))
-      ) {
-        return false;
-      }
-      return (
-        isTargetCompleted('team-data') &&
-        isTargetCompleted('task-data') &&
-        isTargetCompleted('message-attachments') &&
-        isTargetCompleted('task-attachments')
-      );
-    }
-  );
-  if (!cleanupCompleted) {
-    teamPermanentDeletionLifecycle?.resumeTeam(intent.teamName);
-    return;
-  }
-  await backupService.completePermanentDeletion(intent);
-  if (await backupService.isPermanentDeletionTargetCurrent(intent)) {
-    teamPermanentDeletionLifecycle?.completeTeamDeletion(intent.teamName);
-  } else {
-    teamPermanentDeletionLifecycle?.resumeTeam(intent.teamName);
-  }
-}
-
-async function permanentlyDeleteTeamTransaction(
-  teamName: string,
-  options: { draft?: boolean; existingIntent?: TeamPermanentDeletionIntent } = {}
-): Promise<void> {
-  await withPermanentDeletionOperation(teamName, async () => {
-    const backupService = getPermanentDeletionBackupService();
-    let intent =
-      options.existingIntent ??
-      (await backupService.beginPermanentDeletion(teamName, { draft: options.draft }));
-    let crossedDestructiveBoundary = intent.phase === 'deleting';
-    try {
-      if (!crossedDestructiveBoundary) {
-        intent = await backupService.commitPermanentDeletionBoundary(intent);
-        crossedDestructiveBoundary = true;
-      }
-      await runPermanentDeletionCleanup(intent);
-    } catch (error) {
-      if (!crossedDestructiveBoundary) {
-        await backupService.abortPreparedPermanentDeletion(intent);
-        teamPermanentDeletionLifecycle?.resumeTeam(teamName);
-      }
-      throw error;
-    }
-  });
-}
-
-async function recoverPendingPermanentDeletions(): Promise<void> {
-  if (!teamBackupService) return;
-  const intents = await teamBackupService.listPendingPermanentDeletions();
-  for (const intent of intents) {
-    try {
-      await permanentlyDeleteTeamTransaction(intent.teamName, { existingIntent: intent });
-    } catch (error) {
-      logger.error(
-        `[PermanentDeletion] Recovery remains pending for ${intent.teamName}: ${String(error)}`
-      );
-    }
-  }
+  return permanentDeletionCoordinator;
 }
 
 export async function waitForPendingPermanentDeletionRecoveryForTests(): Promise<void> {
-  await permanentDeletionRecoveryPromise;
+  await permanentDeletionCoordinator?.waitForRecovery();
 }
 
 function getTeamProvisioningStartApi(): TeamProvisioningStartApi {
@@ -1758,7 +1598,7 @@ async function handlePermanentlyDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('permanentlyDeleteTeam', async () => {
-    await permanentlyDeleteTeamTransaction(validated.value!);
+    await getPermanentDeletionCoordinator().permanentlyDelete(validated.value!);
   });
 }
 
@@ -5964,6 +5804,6 @@ async function handleDeleteDraft(
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    await permanentlyDeleteTeamTransaction(validated.value!, { draft: true });
+    await getPermanentDeletionCoordinator().permanentlyDelete(validated.value!, { draft: true });
   });
 }
