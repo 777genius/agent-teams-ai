@@ -1,8 +1,11 @@
 import {
   estimateTaskAttachmentDecodedBytes,
+  isCanonicalTaskAttachmentBase64,
+  isCanonicalTaskAttachmentId,
+  TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH,
   TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES,
 } from '@features/team-task-board';
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { atomicCreateAsync } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -12,21 +15,23 @@ import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskAttachmentStore');
 
-export interface TaskAttachmentAtomicWriterPort {
+export interface TaskAttachmentAtomicCreatorPort {
   /**
-   * Publishes bytes through a same-directory temporary file and creates the
-   * parent directory when needed. Rejections must leave no partial target.
+   * Publishes bytes without overwriting an existing target. Implementations
+   * must preserve EEXIST collisions and leave no partial target on failure.
    */
-  writeFileAtomically(filePath: string, data: Buffer): Promise<void>;
+  createFileAtomically(filePath: string, data: Buffer): Promise<void>;
 }
 
-const nodeTaskAttachmentAtomicWriter: TaskAttachmentAtomicWriterPort = {
-  writeFileAtomically: atomicWriteAsync,
+const nodeTaskAttachmentAtomicCreator: TaskAttachmentAtomicCreatorPort = {
+  createFileAtomically: async (filePath, data) => {
+    await atomicCreateAsync(filePath, data);
+  },
 };
 
 export class TeamTaskAttachmentStore {
   constructor(
-    private readonly atomicWriter: TaskAttachmentAtomicWriterPort = nodeTaskAttachmentAtomicWriter
+    private readonly atomicCreator: TaskAttachmentAtomicCreatorPort = nodeTaskAttachmentAtomicCreator
   ) {}
 
   private assertSafePathSegment(label: string, value: string): void {
@@ -51,29 +56,10 @@ export class TeamTaskAttachmentStore {
     return path.join(getAppDataPath(), 'task-attachments', teamName, taskId);
   }
 
-  private sanitizeStoredFilename(original: string): string {
-    const raw = String(original ?? '').trim();
-    const base = raw ? (raw.split(/[\\/]/).pop() ?? raw) : '';
-    const cleaned = base
-      .replace(/\0/g, '')
-      .replace(/[\r\n\t]/g, ' ')
-      .replace(/[\\/]/g, '_')
-      .trim();
-    if (!cleaned) return 'attachment';
-    // Keep filenames bounded to avoid OS/path length issues.
-    return cleaned.length > 180 ? cleaned.slice(0, 180) : cleaned;
-  }
-
   /** Returns the file path for a stored attachment (new format). */
-  private getStoredFilePath(
-    teamName: string,
-    taskId: string,
-    attachmentId: string,
-    filename: string
-  ): string {
+  private getStoredFilePath(teamName: string, taskId: string, attachmentId: string): string {
     this.assertSafePathSegment('attachmentId', attachmentId);
-    const safeName = this.sanitizeStoredFilename(filename);
-    return path.join(this.getTaskDir(teamName, taskId), `${attachmentId}--${safeName}`);
+    return path.join(this.getTaskDir(teamName, taskId), `${attachmentId}--attachment`);
   }
 
   private async findAttachmentFilePath(
@@ -113,24 +99,49 @@ export class TeamTaskAttachmentStore {
     mimeType: AttachmentMediaType,
     base64Data: string
   ): Promise<TaskAttachmentMeta> {
-    const trimmed = base64Data.trim();
+    if (!isCanonicalTaskAttachmentId(attachmentId)) {
+      throw new Error('Attachment ID must be a canonical UUID');
+    }
+
+    const encoded = base64Data;
+    if (encoded.length > TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH) {
+      throw new Error('Attachment payload exceeds the 20 MiB decoded size limit');
+    }
+    if (!isCanonicalTaskAttachmentBase64(encoded)) {
+      throw new Error('Invalid attachment base64 data');
+    }
+
     // Avoid allocating huge Buffers for obviously too-large payloads.
-    const estimatedBytes = estimateTaskAttachmentDecodedBytes(trimmed);
+    const estimatedBytes = estimateTaskAttachmentDecodedBytes(encoded);
     if (estimatedBytes > TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES) {
       throw new Error(
         `Attachment too large: ${(estimatedBytes / (1024 * 1024)).toFixed(1)} MB (max ${TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES / (1024 * 1024)} MB)`
       );
     }
 
-    const buffer = Buffer.from(trimmed, 'base64');
-    if (buffer.length > TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES) {
+    const buffer = Buffer.from(encoded, 'base64');
+    if (
+      buffer.toString('base64') !== encoded ||
+      buffer.length > TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES
+    ) {
       throw new Error(
-        `Attachment too large: ${(buffer.length / (1024 * 1024)).toFixed(1)} MB (max ${TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES / (1024 * 1024)} MB)`
+        buffer.length > TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES
+          ? `Attachment too large: ${(buffer.length / (1024 * 1024)).toFixed(1)} MB (max ${TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES / (1024 * 1024)} MB)`
+          : 'Invalid attachment base64 data'
       );
     }
 
-    const filePath = this.getStoredFilePath(teamName, taskId, attachmentId, filename);
-    await this.atomicWriter.writeFileAtomically(filePath, buffer);
+    const existingPath = await this.findAttachmentFilePath(teamName, taskId, attachmentId);
+    if (existingPath) {
+      const collision = new Error(
+        `Task attachment already exists: ${attachmentId}`
+      ) as NodeJS.ErrnoException;
+      collision.code = 'EEXIST';
+      throw collision;
+    }
+
+    const filePath = this.getStoredFilePath(teamName, taskId, attachmentId);
+    await this.atomicCreator.createFileAtomically(filePath, buffer);
 
     const meta: TaskAttachmentMeta = {
       id: attachmentId,

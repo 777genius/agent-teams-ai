@@ -4,6 +4,8 @@ import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 
 import {
   estimateTaskAttachmentDecodedBytes,
+  isCanonicalTaskAttachmentBase64,
+  isCanonicalTaskAttachmentId,
   TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH,
   TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES,
 } from '../../../../core/domain/taskAttachmentPayloadPolicy';
@@ -34,24 +36,18 @@ function normalizeAttachment(attachment: unknown): AddTaskCommentAttachmentInput
   }
 
   const id = candidate.id.trim();
-  const base64Data = candidate.base64Data.trim();
-  if (
-    id.length === 0 ||
-    id.includes('/') ||
-    id.includes('\\') ||
-    id.includes('..') ||
-    id.includes('\0')
-  ) {
-    throw new Error('Invalid attachment ID');
-  }
-  if (base64Data.length === 0) {
-    throw new Error('Invalid attachment data');
+  const base64Data = candidate.base64Data;
+  if (!isCanonicalTaskAttachmentId(id)) {
+    throw new Error('Attachment ID must be a canonical UUID');
   }
   if (
     base64Data.length > TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH ||
     estimateTaskAttachmentDecodedBytes(base64Data) > TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES
   ) {
     throw new Error('Attachment payload exceeds the 20 MiB decoded size limit');
+  }
+  if (!isCanonicalTaskAttachmentBase64(base64Data)) {
+    throw new Error('Attachment data must be canonical base64');
   }
 
   return {
@@ -60,6 +56,14 @@ function normalizeAttachment(attachment: unknown): AddTaskCommentAttachmentInput
     mimeType: candidate.mimeType.trim(),
     base64Data,
   };
+}
+
+function normalizeAttachments(attachments: readonly unknown[]): AddTaskCommentAttachmentInput[] {
+  const normalized = attachments.map(normalizeAttachment);
+  if (new Set(normalized.map((attachment) => attachment.id)).size !== normalized.length) {
+    throw new Error('Attachment IDs must be unique');
+  }
+  return normalized;
 }
 
 export function createTeamTaskBoardCommentHandlers(dependencies: TeamTaskBoardIpcDependencies): {
@@ -102,7 +106,7 @@ export function createTeamTaskBoardCommentHandlers(dependencies: TeamTaskBoardIp
       }
 
       return executeTeamTaskBoardHandler(dependencies.logger, 'addTaskComment', async () => {
-        const attachments = rawAttachments.map(normalizeAttachment);
+        const attachments = normalizeAttachments(rawAttachments);
         return dependencies.addTaskComment.execute(
           validatedTeamName.value!,
           validatedTaskId.value!,

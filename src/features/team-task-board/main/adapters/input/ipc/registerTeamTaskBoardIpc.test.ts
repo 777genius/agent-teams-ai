@@ -22,7 +22,10 @@ import {
 } from '@features/team-task-board/contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH } from '../../../../core/domain/taskAttachmentPayloadPolicy';
+import {
+  TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH,
+  TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES,
+} from '../../../../core/domain/taskAttachmentPayloadPolicy';
 
 import { registerTeamTaskBoardIpc, removeTeamTaskBoardIpc } from './registerTeamTaskBoardIpc';
 
@@ -53,6 +56,9 @@ const CHANNELS = [
 ] as const;
 
 type RegisteredHandler = (...args: unknown[]) => Promise<IpcResult<unknown>>;
+
+const ATTACHMENT_ID_1 = '11111111-1111-4111-8111-111111111111';
+const ATTACHMENT_ID_2 = '22222222-2222-4222-8222-222222222222';
 
 function createDependencies(): TeamTaskBoardIpcDependencies {
   return {
@@ -300,7 +306,7 @@ describe('registerTeamTaskBoardIpc', () => {
       text: ' Comment ',
       attachments: [
         {
-          id: ' attachment-1 ',
+          id: ` ${ATTACHMENT_ID_1} `,
           filename: 'proof.png',
           mimeType: ' image/png ',
           base64Data: 'dGVzdA==',
@@ -314,7 +320,7 @@ describe('registerTeamTaskBoardIpc', () => {
       text: 'Comment',
       attachments: [
         {
-          id: 'attachment-1',
+          id: ATTACHMENT_ID_1,
           filename: 'proof.png',
           mimeType: 'image/png',
           base64Data: 'dGVzdA==',
@@ -329,7 +335,7 @@ describe('registerTeamTaskBoardIpc', () => {
       text: 'Comment',
       attachments: [
         {
-          id: 'attachment-1',
+          id: ATTACHMENT_ID_1,
           filename: 'proof.png',
           mimeType: 'image/png',
           base64Data: 'A'.repeat(TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH + 1),
@@ -344,18 +350,41 @@ describe('registerTeamTaskBoardIpc', () => {
     expect(dependencies.addTaskComment.execute).not.toHaveBeenCalled();
   });
 
-  it('validates every attachment before invoking the application use case', async () => {
+  it('rejects a decoded payload one byte over the limit even at the encoded length boundary', async () => {
+    const oneByteOver = Buffer.alloc(TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES + 1).toString('base64');
+    expect(oneByteOver).toHaveLength(TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH);
+
     const result = await handlers.get(TEAM_ADD_TASK_COMMENT)!({} as never, 'my-team', 'task-1', {
       text: 'Comment',
       attachments: [
         {
-          id: 'attachment-1',
+          id: ATTACHMENT_ID_1,
+          filename: 'proof.png',
+          mimeType: 'image/png',
+          base64Data: oneByteOver,
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Attachment payload exceeds the 20 MiB decoded size limit',
+    });
+    expect(dependencies.addTaskComment.execute).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate attachment IDs before invoking the application use case', async () => {
+    const result = await handlers.get(TEAM_ADD_TASK_COMMENT)!({} as never, 'my-team', 'task-1', {
+      text: 'Comment',
+      attachments: [
+        {
+          id: ATTACHMENT_ID_1,
           filename: 'one.png',
           mimeType: 'image/png',
           base64Data: 'b25l',
         },
         {
-          id: '../bad-id',
+          id: ATTACHMENT_ID_1,
           filename: 'two.png',
           mimeType: 'image/png',
           base64Data: 'dHdv',
@@ -363,7 +392,82 @@ describe('registerTeamTaskBoardIpc', () => {
       ],
     });
 
-    expect(result).toEqual({ success: false, error: 'Invalid attachment ID' });
+    expect(result).toEqual({
+      success: false,
+      error: 'Attachment IDs must be unique',
+    });
+    expect(dependencies.addTaskComment.execute).not.toHaveBeenCalled();
+  });
+
+  it.each(['attachment-1', '../bad-id'])(
+    'rejects non-canonical attachment ID %s before invoking the application use case',
+    async (attachmentId) => {
+      const result = await handlers.get(TEAM_ADD_TASK_COMMENT)!({} as never, 'my-team', 'task-1', {
+        text: 'Comment',
+        attachments: [
+          {
+            id: attachmentId,
+            filename: 'proof.png',
+            mimeType: 'image/png',
+            base64Data: 'dGVzdA==',
+          },
+        ],
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Attachment ID must be a canonical UUID',
+      });
+      expect(dependencies.addTaskComment.execute).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['!!!!', 'YQ==junk', 'AA=A', 'YR==', 'YQ== '])(
+    'rejects malformed or non-canonical base64 %s before invoking the application use case',
+    async (base64Data) => {
+      const result = await handlers.get(TEAM_ADD_TASK_COMMENT)!({} as never, 'my-team', 'task-1', {
+        text: 'Comment',
+        attachments: [
+          {
+            id: ATTACHMENT_ID_2,
+            filename: 'proof.png',
+            mimeType: 'image/png',
+            base64Data,
+          },
+        ],
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Attachment data must be canonical base64',
+      });
+      expect(dependencies.addTaskComment.execute).not.toHaveBeenCalled();
+    }
+  );
+
+  it('validates every attachment before invoking the application use case', async () => {
+    const result = await handlers.get(TEAM_ADD_TASK_COMMENT)!({} as never, 'my-team', 'task-1', {
+      text: 'Comment',
+      attachments: [
+        {
+          id: ATTACHMENT_ID_1,
+          filename: 'one.png',
+          mimeType: 'image/png',
+          base64Data: 'b25l',
+        },
+        {
+          id: 'attachment-2',
+          filename: 'two.png',
+          mimeType: 'image/png',
+          base64Data: 'dHdv',
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Attachment ID must be a canonical UUID',
+    });
     expect(dependencies.addTaskComment.execute).not.toHaveBeenCalled();
   });
 
