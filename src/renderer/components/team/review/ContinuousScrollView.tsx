@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { resolveChangeReviewFileHunkCount as getFileHunkCount } from '@features/change-review';
 import { useAppTranslation } from '@features/localization/renderer';
 import { useLazyFileContent } from '@renderer/hooks/useLazyFileContent';
 import { useVisibleFileSection } from '@renderer/hooks/useVisibleFileSection';
 import { useStore } from '@renderer/store';
-import { getFileHunkCount } from '@renderer/store/slices/changeReviewSlice';
 import { getFileReviewKey } from '@renderer/utils/reviewKey';
 
 import {

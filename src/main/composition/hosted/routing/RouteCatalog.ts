@@ -1,3 +1,5 @@
+import { isHostedReadinessDimension } from '../application/HostedReadinessDimensions';
+
 import {
   CAPABILITY_DESCRIPTOR_DRIFT_DIAGNOSTIC,
   type CapabilityCatalog,
@@ -18,7 +20,7 @@ const REQUIRED_ROUTE_KEYS = Object.freeze([
   'owner',
   'trustKind',
   'authPolicyId',
-  'readinessId',
+  'readiness',
   'requestSchemaId',
   'responseSchemaId',
   'handlerId',
@@ -53,6 +55,15 @@ function isStableReference(value: unknown): value is string {
   return typeof value === 'string' && STABLE_REFERENCE.test(value);
 }
 
+function hasValidReadinessRequirements(value: unknown): value is RouteDescriptor['readiness'] {
+  if (!Array.isArray(value) || !Object.isFrozen(value)) return false;
+  const requirements = [...value];
+  return (
+    requirements.every(isHostedReadinessDimension) &&
+    new Set(requirements).size === requirements.length
+  );
+}
+
 function assertRouteDescriptor(value: unknown): asserts value is RouteDescriptor {
   if (!isRecord(value) || !Object.isFrozen(value)) routeDrift();
   const keys = Reflect.ownKeys(value);
@@ -66,7 +77,7 @@ function assertRouteDescriptor(value: unknown): asserts value is RouteDescriptor
     !isStableReference(value.owner) ||
     !ROUTE_TRUST_KINDS.includes(value.trustKind as (typeof ROUTE_TRUST_KINDS)[number]) ||
     !isStableReference(value.authPolicyId) ||
-    !isStableReference(value.readinessId) ||
+    !hasValidReadinessRequirements(value.readiness) ||
     !isStableReference(value.requestSchemaId) ||
     !isStableReference(value.responseSchemaId) ||
     !isStableReference(value.handlerId) ||

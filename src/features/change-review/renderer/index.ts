@@ -1,20 +1,48 @@
 export {
+  browserChangeReviewCollapsedFilesStorage,
+  createChangeReviewExternalFileWatcherPort,
+} from './adapters/changeReviewDialogInteractionAdapters';
+export {
   createChangeReviewActionHistoryStorePort,
   createChangeReviewDecisionPersistencePort,
 } from './adapters/createChangeReviewActionHistoryPorts';
+export {
+  createChangeReviewBulkDecisionCommandPort,
+  createChangeReviewBulkDecisionStatePort,
+} from './adapters/createChangeReviewBulkDecisionPorts';
 export {
   createChangeReviewConflictCommandPort,
   createChangeReviewConflictQueryPort,
 } from './adapters/createChangeReviewConflictPorts';
 export type { ChangeReviewConflictStateBridge } from './adapters/createChangeReviewConflictStateBridge';
 export { createChangeReviewConflictStateBridge } from './adapters/createChangeReviewConflictStateBridge';
+export {
+  createChangeReviewDialogLifecycleCommandPort,
+  createChangeReviewDialogLifecycleStatePort,
+} from './adapters/createChangeReviewDialogLifecyclePorts';
+export type { ChangeReviewDialogViewPorts } from './adapters/createChangeReviewDialogViewPorts';
+export { createChangeReviewDialogViewPorts } from './adapters/createChangeReviewDialogViewPorts';
 export { createChangeReviewDraftHistoryPort } from './adapters/createChangeReviewDraftHistoryPort';
+export {
+  createChangeReviewFileDecisionCommandPort,
+  createChangeReviewFileDecisionStatePort,
+} from './adapters/createChangeReviewFileDecisionPorts';
+export {
+  createChangeReviewFileDraftCommandPort,
+  createChangeReviewFileDraftStatePort,
+} from './adapters/createChangeReviewFileDraftPorts';
 export {
   createChangeReviewHistoryMutationCommandPort,
   createChangeReviewHistoryMutationStatePort,
 } from './adapters/createChangeReviewHistoryMutationPorts';
+export {
+  createChangeReviewHunkDecisionCommandPort,
+  createChangeReviewHunkDecisionStatePort,
+} from './adapters/createChangeReviewHunkDecisionPorts';
 export type { ChangeReviewActionHistoryController } from './hooks/useChangeReviewActionHistoryController';
 export { useChangeReviewActionHistoryController } from './hooks/useChangeReviewActionHistoryController';
+export type { ChangeReviewBulkDecisionController } from './hooks/useChangeReviewBulkDecisionController';
+export { useChangeReviewBulkDecisionController } from './hooks/useChangeReviewBulkDecisionController';
 export type { ChangeReviewConflictDiscoveryController } from './hooks/useChangeReviewConflictDiscoveryController';
 export { useChangeReviewConflictDiscoveryController } from './hooks/useChangeReviewConflictDiscoveryController';
 export type { ChangeReviewConflictInteractionController } from './hooks/useChangeReviewConflictInteractionController';
@@ -29,11 +57,27 @@ export {
   CHANGE_REVIEW_PERSISTENCE_ERROR,
   useChangeReviewDecisionPersistenceController,
 } from './hooks/useChangeReviewDecisionPersistenceController';
+export type { ChangeReviewDialogKeyboardInteractions } from './hooks/useChangeReviewDialogKeyboardInteractions';
+export { useChangeReviewDialogKeyboardInteractions } from './hooks/useChangeReviewDialogKeyboardInteractions';
+export type { ChangeReviewDialogLifecycleController } from './hooks/useChangeReviewDialogLifecycleController';
+export { useChangeReviewDialogLifecycleController } from './hooks/useChangeReviewDialogLifecycleController';
+export type {
+  ChangeReviewDialogViewState,
+  ChangeReviewDialogViewStatePolicy,
+} from './hooks/useChangeReviewDialogViewState';
+export { useChangeReviewDialogViewState } from './hooks/useChangeReviewDialogViewState';
 export type {
   ChangeReviewDraftHistoryController,
   ChangeReviewDraftHistoryDiagnostics,
 } from './hooks/useChangeReviewDraftHistoryController';
 export { useChangeReviewDraftHistoryController } from './hooks/useChangeReviewDraftHistoryController';
+export type { ChangeReviewExternalChangeController } from './hooks/useChangeReviewExternalChangeController';
+export { useChangeReviewExternalChangeController } from './hooks/useChangeReviewExternalChangeController';
+export { useChangeReviewExternalFileWatcher } from './hooks/useChangeReviewExternalFileWatcher';
+export type { ChangeReviewFileDecisionController } from './hooks/useChangeReviewFileDecisionController';
+export { useChangeReviewFileDecisionController } from './hooks/useChangeReviewFileDecisionController';
+export type { ChangeReviewFileDraftController } from './hooks/useChangeReviewFileDraftController';
+export { useChangeReviewFileDraftController } from './hooks/useChangeReviewFileDraftController';
 export type { ChangeReviewKeyboardEditorContext } from './hooks/useChangeReviewHistoryKeyboardShortcuts';
 export { useChangeReviewHistoryKeyboardShortcuts } from './hooks/useChangeReviewHistoryKeyboardShortcuts';
 export type {
@@ -41,8 +85,17 @@ export type {
   ChangeReviewHistoryRestorePreview,
 } from './hooks/useChangeReviewHistoryMutationController';
 export { useChangeReviewHistoryMutationController } from './hooks/useChangeReviewHistoryMutationController';
+export type { ChangeReviewHunkDecisionController } from './hooks/useChangeReviewHunkDecisionController';
+export { useChangeReviewHunkDecisionController } from './hooks/useChangeReviewHunkDecisionController';
 export { useChangeReviewLifecycleRegistration } from './hooks/useChangeReviewLifecycleRegistration';
+export type { ChangeReviewMutationGuards } from './hooks/useChangeReviewMutationGuards';
+export { useChangeReviewMutationGuards } from './hooks/useChangeReviewMutationGuards';
 export { useChangeReviewOperationGeneration } from './hooks/useChangeReviewOperationGeneration';
+export type {
+  ChangeReviewOperationState,
+  ChangeReviewOperationViewPortBindings,
+} from './hooks/useChangeReviewOperationState';
+export { useChangeReviewOperationState } from './hooks/useChangeReviewOperationState';
 export { useChangeReviewScopeIdentity } from './hooks/useChangeReviewScopeIdentity';
 export type {
   ChangeReviewActionHistoryStorePort,
@@ -51,16 +104,69 @@ export type {
   ChangeReviewDecisionPersistenceSnapshot,
 } from './ports/changeReviewActionHistoryPorts';
 export type {
+  BuildBulkRejectDiskSnapshot,
+  ChangeReviewBulkDecisionCommandPort,
+  ChangeReviewBulkDecisionEditorPort,
+  ChangeReviewBulkDecisionStatePort,
+  ChangeReviewBulkDecisionStateSnapshot,
+  ChangeReviewBulkDecisionStatusPort,
+  ChangeReviewBulkDecisionWriteEvidencePort,
+} from './ports/changeReviewBulkDecisionPorts';
+export type {
   ChangeReviewConflictCommandPort,
   ChangeReviewConflictQueryPort,
   ChangeReviewConflictScope,
 } from './ports/changeReviewConflictPorts';
+export type {
+  ChangeReviewCollapsedFilesStoragePort,
+  ChangeReviewDialogEditorActions,
+  ChangeReviewDialogKeyboardInteractionPort,
+  ChangeReviewExternalFileWatcherPort,
+  ChangeReviewRecentWrite,
+} from './ports/changeReviewDialogInteractionPorts';
+export type {
+  ChangeReviewDialogLifecycleApplyOutcome,
+  ChangeReviewDialogLifecycleAutoClearResult,
+  ChangeReviewDialogLifecycleCommandPort,
+  ChangeReviewDialogLifecycleDecisionPersistencePort,
+  ChangeReviewDialogLifecycleDraftHistoryPort,
+  ChangeReviewDialogLifecycleEditorPort,
+  ChangeReviewDialogLifecyclePersistenceScope,
+  ChangeReviewDialogLifecycleSessionPort,
+  ChangeReviewDialogLifecycleStatePort,
+  ChangeReviewDialogLifecycleStateSnapshot,
+  ChangeReviewDialogLifecycleStatusPort,
+  ChangeReviewDialogLifecycleWriteEvidencePort,
+} from './ports/changeReviewDialogLifecyclePorts';
 export type {
   ChangeReviewDraftHistoryEntryInput,
   ChangeReviewDraftHistoryPort,
   ChangeReviewDraftHistoryScope,
   ChangeReviewDraftHistoryVersion,
 } from './ports/changeReviewDraftHistoryPort';
+export type {
+  ChangeReviewFileDecisionCommandPort,
+  ChangeReviewFileDecisionEditorPort,
+  ChangeReviewFileDecisionHistoryPort,
+  ChangeReviewFileDecisionPersistenceScope,
+  ChangeReviewFileDecisionPolicy,
+  ChangeReviewFileDecisionStatePort,
+  ChangeReviewFileDecisionStateSnapshot,
+  ChangeReviewFileDecisionStatusPort,
+  ChangeReviewFileDecisionWriteEvidencePort,
+} from './ports/changeReviewFileDecisionPorts';
+export type {
+  ChangeReviewFileDraftActionHistoryPort,
+  ChangeReviewFileDraftCommandPort,
+  ChangeReviewFileDraftHistoryPort,
+  ChangeReviewFileDraftPersistenceScope,
+  ChangeReviewFileDraftStatePort,
+  ChangeReviewFileDraftStateSnapshot,
+  ChangeReviewFileDraftStatusPort,
+  ChangeReviewFileDraftWriteEvidencePort,
+  ChangeReviewSaveEditedFileResult,
+  CommitChangeReviewExternalReloadInput,
+} from './ports/changeReviewFileDraftPorts';
 export type {
   ChangeReviewHistoryMutationCommandPort,
   ChangeReviewHistoryMutationScope,
@@ -70,13 +176,35 @@ export type {
   ChangeReviewHistoryStateSnapshot,
 } from './ports/changeReviewHistoryMutationPorts';
 export type {
+  CaptureChangeReviewHunkOperationScope,
+  ChangeReviewHunkDecisionApplyOutcome,
+  ChangeReviewHunkDecisionCommandPort,
+  ChangeReviewHunkDecisionEditorPort,
+  ChangeReviewHunkDecisionHistoryPort,
+  ChangeReviewHunkDecisionPolicy,
+  ChangeReviewHunkDecisionStatePort,
+  ChangeReviewHunkDecisionStateSnapshot,
+  ChangeReviewHunkDecisionStatusPort,
+  ChangeReviewHunkDecisionWriteEvidencePort,
+} from './ports/changeReviewHunkDecisionPorts';
+export type {
   RegisterChangeReviewAppCloseParticipant,
   RegisterChangeReviewLifecycleOwner,
 } from './ports/changeReviewLifecyclePorts';
+export type {
+  ChangeReviewExternalChangePolicy,
+  ChangeReviewExternalChangeStatePort,
+  ChangeReviewExternalChangeStateSnapshot,
+  ChangeReviewExternalChangeType,
+  ChangeReviewOperationStatePort,
+  ChangeReviewOperationStateSnapshot,
+} from './ports/changeReviewMutationSafetyPorts';
 export {
   ChangeReviewConflictDiscardDialog,
   ChangeReviewConflictNotices,
 } from './ui/ChangeReviewConflictNotices';
+export type { ChangeReviewSidebarProps } from './ui/ChangeReviewSidebar';
+export { ChangeReviewSidebar } from './ui/ChangeReviewSidebar';
 export type { TaskChangesEmptyStateProps } from './ui/TaskChangesEmptyState';
 export { TaskChangesEmptyState } from './ui/TaskChangesEmptyState';
 export type {
@@ -98,6 +226,20 @@ export {
   describeReviewConflictDiscard,
   selectLatestReviewConflictCandidate,
 } from './utils/changeReviewConflicts';
+export type {
+  ChangeReviewActionLockState,
+  ChangeReviewCloseReadiness,
+  ChangeReviewCloseReadinessInput,
+  ChangeReviewDecisionWriteDiagnostics,
+  ChangeReviewDraftWriteDiagnostics,
+} from './utils/changeReviewDialogLifecycle';
+export {
+  evaluateChangeReviewCloseReadiness,
+  getReviewCloseBlockReason,
+  hasUnscopedLocalReviewState,
+  isReviewActionLocked,
+  shouldRequestReviewCloseForEscape,
+} from './utils/changeReviewDialogLifecycle';
 export type { ReviewHistoryRecoveryDisposition } from './utils/changeReviewHistoryMutation';
 export {
   areReviewPersistedStatesEqual,
@@ -118,6 +260,7 @@ export {
   buildChangeReviewScopeProjection,
   getReviewDecisionHydrationGuard,
 } from './utils/changeReviewScope';
+export { markChangeReviewMutationDiskPostimages } from './utils/changeReviewWriteEvidence';
 export type { ReviewOperationScopeToken } from './utils/reviewOperationGeneration';
 export {
   createReviewOperationScopeToken,

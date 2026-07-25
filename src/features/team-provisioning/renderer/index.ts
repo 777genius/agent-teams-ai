@@ -1,3 +1,4 @@
+export { createProductTeamLaunchAnalyticsCoordinator } from './adapters/createProductTeamLaunchAnalyticsCoordinator';
 export type {
   TeamProvisioningControlSlice,
   TeamProvisioningControlSliceDependencies,
@@ -22,6 +23,7 @@ export type {
   TeamRuntimeObservationSliceDependencies,
 } from './adapters/createTeamRuntimeObservationSlice';
 export { createTeamRuntimeObservationSlice } from './adapters/createTeamRuntimeObservationSlice';
+export type { TeamLaunchAnalyticsContext } from './ports/TeamLaunchAnalyticsPorts';
 export type {
   TeamProvisioningControlEffectsPort,
   TeamProvisioningControlStatePort,
@@ -64,3 +66,4 @@ export {
   type TeamLaunchParams,
 } from './utils/teamLaunchParams';
 export { normalizePersistedTeamLaunchParams } from './utils/teamLaunchParamsPersistence';
+export { TeamRuntimeFreshnessCoordinator } from './utils/TeamRuntimeFreshnessCoordinator';

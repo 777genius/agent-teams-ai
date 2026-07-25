@@ -8,10 +8,20 @@ import ts from 'typescript';
 export const PINNED_BASE_SHA = 'cbe501ad0f1fa0e51a038e832ad35fce4120321b';
 export const PHASE_START_SHA = 'a32f509e6d9bd31ba2135940e336729bf90c3d93';
 const API_SURFACES = ['TeamsAPI', 'ReviewAPI', 'CrossTeamAPI'] as const;
+const PHASE_START_API_COUNTS = {
+  TeamsAPI: 86,
+  ReviewAPI: 20,
+  CrossTeamAPI: 3,
+} as const;
 const CLIENT_SURFACES = {
   TeamsAPI: 'teams',
   ReviewAPI: 'review',
   CrossTeamAPI: 'crossTeam',
+} as const;
+const CLIENT_ACCESSORS = {
+  TeamsAPI: 'getTeamsApi',
+  ReviewAPI: 'getReviewApi',
+  CrossTeamAPI: 'getCrossTeamApi',
 } as const;
 const REVIEWED_CONTROL_FILES = {
   list: 'src/renderer/components/team/TeamListView.tsx',
@@ -29,6 +39,7 @@ export const CONTROL_ROOTS = [
 ] as const;
 const CONTROL_SCOPE_PREFIXES = [
   'src/renderer/components/team/',
+  'src/features/change-review/renderer/',
   'src/features/runtime-provider-management/renderer/',
 ] as const;
 // Complete React interaction families plus the Radix value/open callbacks used by mounted controls.
@@ -423,9 +434,14 @@ const apiGroups: Array<{
       'loadDecisions',
       'saveDecisions',
       'clearDecisions',
+      'loadDecisionConflictCandidates',
+      'resolveDecisionConflictCandidate',
       'loadDraftHistory',
       'saveDraftHistoryEntry',
       'clearDraftHistory',
+      'loadDraftHistoryConflictCandidates',
+      'resolveDraftHistoryConflictCandidate',
+      'replaceDraftHistoryConflictCandidate',
     ],
   },
   {
@@ -1037,7 +1053,13 @@ function importedModuleSpecifiers(sourceText: string, file: string): string[] {
   );
   const specifiers = new Set<string>();
   const visit = (node: ts.Node): void => {
-    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+    const followsChangeReviewPublicExport =
+      file.startsWith('src/features/change-review/renderer/') && ts.isExportDeclaration(node);
+    if (
+      (ts.isImportDeclaration(node) || followsChangeReviewPublicExport) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
       specifiers.add(node.moduleSpecifier.text);
     }
     if (
@@ -1062,11 +1084,13 @@ function resolveImportedModule(
   const base = (
     specifier.startsWith('@renderer/components/team/')
       ? `src/renderer/components/team/${specifier.slice('@renderer/components/team/'.length)}`
-      : specifier.startsWith('@features/runtime-provider-management/')
-        ? `src/features/runtime-provider-management/${specifier.slice('@features/runtime-provider-management/'.length)}`
-        : specifier.startsWith('.')
-          ? join(dirname(from), specifier)
-          : ''
+      : specifier.startsWith('@features/change-review/')
+        ? `src/features/change-review/${specifier.slice('@features/change-review/'.length)}`
+        : specifier.startsWith('@features/runtime-provider-management/')
+          ? `src/features/runtime-provider-management/${specifier.slice('@features/runtime-provider-management/'.length)}`
+          : specifier.startsWith('.')
+            ? join(dirname(from), specifier)
+            : ''
   ).replaceAll('\\', '/');
   if (!base) return undefined;
   const candidates = [
@@ -1350,6 +1374,24 @@ function walk(root: string): string[] {
   });
 }
 
+export function scanRendererApiCallers(
+  sourceText: string
+): { surface: ApiSurface; member: string }[] {
+  const callers: { surface: ApiSurface; member: string }[] = [];
+  for (const surface of API_SURFACES) {
+    const client = CLIENT_SURFACES[surface];
+    const accessor = CLIENT_ACCESSORS[surface];
+    const expression = new RegExp(
+      `(?:(?:api|window\\.electronAPI)\\.${client}|${accessor}\\(\\))\\.([A-Za-z_$][\\w$]*)`,
+      'g'
+    );
+    for (const match of sourceText.matchAll(expression)) {
+      callers.push({ surface, member: match[1] });
+    }
+  }
+  return callers;
+}
+
 function rendererCallers(repoRoot: string): Map<string, Set<string>> {
   const result = new Map<string, Set<string>>();
   for (const absolute of [
@@ -1357,18 +1399,10 @@ function rendererCallers(repoRoot: string): Map<string, Set<string>> {
     ...walk(join(repoRoot, 'src/features')),
   ].filter((file) => /\.tsx?$/.test(file))) {
     const text = readFileSync(absolute, 'utf8');
-    for (const [surface, client] of Object.entries(CLIENT_SURFACES) as Array<
-      [ApiSurface, string]
-    >) {
-      const expression = new RegExp(
-        `(?:api|window\\.electronAPI)\\.${client}\\.([A-Za-z_$][\\w$]*)`,
-        'g'
-      );
-      for (const match of text.matchAll(expression)) {
-        const key = `${surface}.${match[1]}`;
-        if (!result.has(key)) result.set(key, new Set());
-        result.get(key)!.add(relative(repoRoot, absolute));
-      }
+    for (const { surface, member } of scanRendererApiCallers(text)) {
+      const key = `${surface}.${member}`;
+      if (!result.has(key)) result.set(key, new Set());
+      result.get(key)!.add(relative(repoRoot, absolute));
     }
     if (findDynamicDispatch(text).length)
       throw new Error(`Unannotated dynamic API dispatch: ${relative(repoRoot, absolute)}`);
@@ -1758,18 +1792,18 @@ export function generateEvidence(
     pinnedBaseSha: PINNED_BASE_SHA,
     phaseStartSha: PHASE_START_SHA,
   };
+  const apiCounts = Object.fromEntries(
+    API_SURFACES.map((surface) => [
+      surface,
+      apiRows.filter((row) => row.surface === surface).length,
+    ])
+  ) as Record<ApiSurface, number>;
   writeJson(join(outputRoot, 'api-parity-ledger.json'), {
     schemaId: 'p0-w1-api-parity-ledger',
     evidenceId: 'P0.W1.API_PARITY_LEDGER',
     ...envelope,
-    counts: Object.fromEntries(
-      API_SURFACES.map((surface) => [
-        surface,
-        apiRows.filter((row) => row.surface === surface).length,
-      ])
-    ),
-    historicalCountDifference:
-      'ReviewAPI +9 since the phase-start AST: current 86/29/3 versus historical 86/20/3',
+    counts: apiCounts,
+    historicalCountDifference: `ReviewAPI +${apiCounts.ReviewAPI - PHASE_START_API_COUNTS.ReviewAPI} since the phase-start AST: current ${API_SURFACES.map((surface) => apiCounts[surface]).join('/')} versus historical ${API_SURFACES.map((surface) => PHASE_START_API_COUNTS[surface]).join('/')}`,
     members: dispositions,
   });
   writeJson(join(outputRoot, 'renderer-action-inventory.json'), {
@@ -1791,8 +1825,7 @@ export function generateEvidence(
         'No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.',
       interactionSiteCount: scanControls(readRepoSource(file)!, file).length,
     })),
-    transitiveActionCoverage:
-      'The checked-in child-control catalog exactly matches the recursively discovered team/provider renderer closure. Every scanner-visible site maps once to a reviewed semantic action or deliberate absence; direct renderer IPC callers remain bound to the 118-member parity ledger. Every other production team TSX file is listed as excluded and rechecked as unreachable from these roots.',
+    transitiveActionCoverage: `The checked-in child-control catalog exactly matches the recursively discovered team/change-review/provider renderer closure. Every scanner-visible site maps once to a reviewed semantic action or deliberate absence; direct renderer IPC callers remain bound to the ${apiRows.length}-member parity ledger. Every other production team TSX file is listed as excluded and rechecked as unreachable from these roots.`,
     actions,
     apiActionBindings,
     legacyChildApiActionBindings,

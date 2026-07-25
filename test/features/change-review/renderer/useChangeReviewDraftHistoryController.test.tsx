@@ -140,6 +140,7 @@ interface ProbeProps {
   hydrationKey: string;
   scopeToken: string;
   changeSetEpoch: number;
+  recreateReviewScope: boolean;
   expectedHydrationKey: () => string;
   operationScope: () => ReviewOperationScopeToken;
   port: ChangeReviewDraftHistoryPort;
@@ -180,7 +181,7 @@ function DraftHistoryProbe(props: Readonly<ProbeProps>): React.JSX.Element {
     decisionScopeToken: props.scopeToken,
     decisionHydrationKey: props.hydrationKey,
     draftHistoryHydrationReady: true,
-    reviewScope,
+    reviewScope: props.recreateReviewScope ? { ...reviewScope } : reviewScope,
     draftHistoryConflictCandidates: [],
     setHydration: props.setHydration,
     isExpectedHydrationKey,
@@ -211,7 +212,8 @@ function createHarness(port = createPortHarness().port) {
   const render = async (
     hydrationKey = expectedHydrationKey,
     scopeToken = `token-${hydrationKey}`,
-    changeSetEpoch = 1
+    changeSetEpoch = 1,
+    recreateReviewScope = false
   ) => {
     await act(async () => {
       root.render(
@@ -219,6 +221,7 @@ function createHarness(port = createPortHarness().port) {
           hydrationKey={hydrationKey}
           scopeToken={scopeToken}
           changeSetEpoch={changeSetEpoch}
+          recreateReviewScope={recreateReviewScope}
           expectedHydrationKey={getExpectedHydrationKey}
           operationScope={getOperationScope}
           port={port}
@@ -309,6 +312,28 @@ describe('useChangeReviewDraftHistoryController', () => {
 
     expect(harness.commitHydratedDrafts).toHaveBeenCalledOnce();
     expect(latestController!.getEntry('/Project/Case.ts')?.editorState.doc).toBe('current draft');
+    await flushReact(() => harness.root.unmount());
+  });
+
+  it('does not restart hydration when an equivalent review scope object is recreated', async () => {
+    const { port, load } = createPortHarness();
+    const pending = deferred<ReviewDraftHistorySnapshot | null>();
+    load.mockReturnValue(pending.promise);
+    const harness = createHarness(port);
+
+    await harness.render('scope-a', 'token-a', 1, true);
+    expect(load).toHaveBeenCalledOnce();
+
+    await harness.render('scope-a', 'token-a', 1, true);
+    expect(load).toHaveBeenCalledOnce();
+
+    pending.resolve(null);
+    await settle();
+
+    expect(harness.setHydration).toHaveBeenLastCalledWith({
+      key: 'scope-a',
+      status: 'loaded',
+    });
     await flushReact(() => harness.root.unmount());
   });
 

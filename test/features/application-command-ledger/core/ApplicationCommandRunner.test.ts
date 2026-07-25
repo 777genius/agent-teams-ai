@@ -73,6 +73,28 @@ describe('ApplicationCommandRunner', () => {
     expect(executions).toBe(1);
   });
 
+  it('forwards the exact optional mutation fence into the atomic begin contract', async () => {
+    const store = new InMemoryLedgerStore();
+    const runner = new ApplicationCommandRunner({ ledger: store, hasher, clock: fixedClock() });
+    const mutationFence = {
+      laneId: 'primary',
+      backend: 'opencode',
+      effectKind: 'launch',
+      operationId: 'cmd-1',
+      leaseToken: 'lease-token-1',
+      leaseOwnerId: 'worker-1',
+      leaseFence: 1,
+      claimedAtIso: '2026-07-24T09:59:00.000Z',
+      expiresAtIso: '2026-07-24T10:01:00.000Z',
+    };
+
+    await runner.run(makeInput({ idempotencyKey: 'cmd-1', mutationFence }), () =>
+      Promise.resolve({ ok: true })
+    );
+
+    expect(store.lastBeginRequest?.mutationFence).toEqual(mutationFence);
+  });
+
   it('preserves undefined results when replaying void commands', async () => {
     const runner = new ApplicationCommandRunner({
       ledger: new InMemoryLedgerStore(),
@@ -457,6 +479,53 @@ describe('ApplicationCommandRunner', () => {
       lastError: expect.stringContaining('classifier failed'),
     });
   });
+
+  it('returns an ambiguous result while persisting it as outcome-unknown', async () => {
+    const store = new InMemoryLedgerStore();
+    const runner = new ApplicationCommandRunner({ ledger: store, hasher, clock: fixedClock() });
+    const operatorRequired = { status: 'operator_required' } as const;
+
+    await expect(
+      runner.run(
+        makeInput({
+          classifyResult: () => ({
+            outcome: 'unknown',
+            message: 'provider outcome requires operator reconciliation',
+          }),
+        }),
+        () => Promise.resolve(operatorRequired)
+      )
+    ).resolves.toMatchObject({
+      result: operatorRequired,
+      record: {
+        status: ApplicationCommandLedgerStatus.UnknownAfterTimeout,
+        failureKind: ApplicationCommandFailureKind.UnknownAfterTimeout,
+      },
+    });
+  });
+
+  it('persists outcome-unknown before propagating a result classifier exception', async () => {
+    const store = new InMemoryLedgerStore();
+    const runner = new ApplicationCommandRunner({ ledger: store, hasher, clock: fixedClock() });
+    const classifierError = new Error('malformed provider result');
+
+    await expect(
+      runner.run(
+        makeInput({
+          classifyResult: () => {
+            throw classifierError;
+          },
+        }),
+        () => Promise.resolve({ status: 'unexpected' })
+      )
+    ).rejects.toBe(classifierError);
+    await expect(
+      store.getByCommandId({ namespace: 'task-board', scopeKey: 'team-a', commandId: 'cmd-1' })
+    ).resolves.toMatchObject({
+      status: ApplicationCommandLedgerStatus.UnknownAfterTimeout,
+      lastError: expect.stringContaining('malformed provider result'),
+    });
+  });
 });
 
 function fixedClock(): () => Date {
@@ -491,6 +560,7 @@ class InMemoryLedgerStore implements ApplicationCommandLedgerStore {
   private records = new Map<string, ApplicationCommandLedgerRecord<string>>();
   markCompletedError: Error | null = null;
   markFailedError: Error | null = null;
+  lastBeginRequest: ApplicationCommandLedgerBeginRequest<string> | null = null;
 
   seed(record: ApplicationCommandLedgerRecord<string>): void {
     this.records.set(key(record), record);
@@ -499,6 +569,7 @@ class InMemoryLedgerStore implements ApplicationCommandLedgerStore {
   begin<TOperation extends string>(
     request: ApplicationCommandLedgerBeginRequest<TOperation>
   ): Promise<ApplicationCommandLedgerBeginResult<TOperation>> {
+    this.lastBeginRequest = request;
     const existing = this.records.get(key(request));
     if (existing) {
       return Promise.resolve(

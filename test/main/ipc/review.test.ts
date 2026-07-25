@@ -1116,6 +1116,82 @@ describe('review IPC path confinement', () => {
     ).resolves.toEqual({ success: true, data: null });
   });
 
+  it('serializes decision and draft-history writes through the shared logical-scope lock', async () => {
+    let releaseAuthorization!: (
+      value: Awaited<ReturnType<typeof extractor.getAgentChanges>>
+    ) => void;
+    const blockedAuthorization = new Promise<Awaited<ReturnType<typeof extractor.getAgentChanges>>>(
+      (resolve) => {
+        releaseAuthorization = resolve;
+      }
+    );
+    const authoritativeChanges = {
+      files: [
+        {
+          filePath: projectFile,
+          relativePath: 'src/project.ts',
+          snippets: [],
+          linesAdded: 1,
+          linesRemoved: 1,
+          isNewFile: false,
+        },
+      ],
+    };
+    extractor.getAgentChanges
+      .mockImplementationOnce(() => blockedAuthorization)
+      .mockResolvedValue(authoritativeChanges);
+    const scopeToken = 'agent:worker:content:shared-draft-lock';
+    const decisionWrite = ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeToken,
+      { [`${projectFile}:0`]: 'accepted' },
+      {},
+      null,
+      [
+        {
+          id: 'shared-lock-action',
+          createdAt: '2026-07-23T10:00:00.000Z',
+          kind: 'hunk',
+          action: { filePath: projectFile, originalIndex: 0 },
+        },
+      ],
+      0
+    );
+    await vi.waitFor(() => expect(extractor.getAgentChanges).toHaveBeenCalledTimes(1));
+
+    const draftWrite = ipcMain.invoke(
+      REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
+      'safe-team',
+      'agent-worker',
+      scopeToken,
+      {
+        filePath: projectFile,
+        codec: 'codemirror-history-v1',
+        revision: 1,
+        diskBaseline: 'project\n',
+        editorState: {
+          doc: 'project edited\n',
+          history: { done: [], undone: [] },
+        },
+      },
+      0,
+      null
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(extractor.getAgentChanges).toHaveBeenCalledTimes(1);
+
+    releaseAuthorization(authoritativeChanges);
+    await expect(decisionWrite).resolves.toEqual({ success: true, data: { revision: 1 } });
+    await expect(draftWrite).resolves.toMatchObject({
+      success: true,
+      data: { filePath: projectFile, revision: 1 },
+    });
+    expect(extractor.getAgentChanges).toHaveBeenCalledTimes(2);
+  });
+
   it('refuses destructive recovery after another window replaces unreadable state', async () => {
     const scopeKey = 'agent-worker';
     const scopeToken = 'agent:worker:content:recovery-race';
@@ -3960,6 +4036,79 @@ describe('review IPC path confinement', () => {
     });
     const journal = new ReviewMutationJournalStore();
     await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
+  });
+
+  it('accepts a durable Reject All bulk action for a single reviewed file', async () => {
+    const contentSnapshotToken = await getDisplayedSnapshotToken(projectFile);
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:single-file-reject-all',
+    };
+    const file = {
+      filePath: projectFile,
+      relativePath: 'src/project.ts',
+      snippets: [],
+      linesAdded: 1,
+      linesRemoved: 1,
+      isNewFile: false,
+    };
+    const action = {
+      id: 'single-file-reject-all',
+      createdAt: '2026-07-23T12:00:00.000Z',
+      kind: 'bulk' as const,
+      descriptor: { intent: 'reject-all' as const, fileCount: 1 },
+      decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
+      diskSnapshots: [
+        {
+          filePath: projectFile,
+          beforeContent: 'project\n',
+          afterContent: 'before\n',
+          file,
+        },
+      ],
+    };
+    applier.applyReviewDecisions.mockImplementationOnce(async (_request, _contents, hooks) => {
+      await hooks?.checkpointDiskTransitions([
+        { filePath: projectFile, beforeContent: 'project\n', afterContent: 'project\n' },
+      ]);
+      return { applied: 1, skipped: 0, conflicts: 0, errors: [] };
+    });
+
+    const result = await ipcMain.invoke(REVIEW_APPLY_DECISIONS, {
+      teamName: 'safe-team',
+      memberName: 'worker',
+      decisionPersistenceScope: persistenceScope,
+      expectedDecisionRevision: 0,
+      persistedState: {
+        hunkDecisions: {},
+        fileDecisions: { [projectFile]: 'rejected' },
+        hunkContextHashesByFile: {},
+        reviewActionHistory: [action],
+        reviewRedoHistory: [],
+      },
+      decisions: [
+        {
+          filePath: projectFile,
+          reviewKey: projectFile,
+          fileDecision: 'rejected',
+          hunkDecisions: {},
+          contentSnapshotToken,
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        applied: 1,
+        errors: [],
+        committedReviewAction: {
+          id: action.id,
+          kind: 'bulk',
+          descriptor: action.descriptor,
+        },
+      },
+    });
   });
 
   it('removes a clean conflict journal so the next Changes load is not blocked', async () => {

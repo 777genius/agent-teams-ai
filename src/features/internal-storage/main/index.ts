@@ -12,6 +12,7 @@ export type {
   InternalStorageFeature,
   InternalStorageFeatureDeps,
   InternalStorageMemberWorkSyncBackend,
+  InternalStorageProcessOwnershipBackend,
   InternalStorageTeamRosterBackend,
 } from './composition/createInternalStorageFeature';
 export {
@@ -34,6 +35,17 @@ export {
   InternalStorageFallbackUnsafeError,
   InternalStorageJsonReplica,
 } from './infrastructure/InternalStorageJsonReplica';
+export {
+  PROCESS_OWNERSHIP_STORAGE_CODEC_VERSION,
+  type ProcessOwnershipStorageCallContext,
+  type ProcessOwnershipStorageCompareAndSwapRequest,
+  type ProcessOwnershipStorageCompareAndSwapResult,
+  type ProcessOwnershipStorageGateway,
+  type ProcessOwnershipStorageLoadResult,
+  type ProcessOwnershipStorageScope,
+  type StoredProcessOwnershipPhase,
+  type StoredProcessOwnershipState,
+} from './infrastructure/ProcessOwnershipStorageGateway';
 export {
   INTERNAL_STORAGE_APPLICATION_ID,
   INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,

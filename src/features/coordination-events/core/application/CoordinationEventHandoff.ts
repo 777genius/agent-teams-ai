@@ -561,7 +561,7 @@ function settleSnapshotPhaseBeforeDeadline<T>(input: {
         if (settled) {
           return;
         }
-        if (Date.now() >= input.deadlineAtMs) {
+        if (input.abortController.signal.aborted || Date.now() >= input.deadlineAtMs) {
           settled = true;
           clearTimeout(deadline);
           input.abortController.abort();
@@ -576,7 +576,7 @@ function settleSnapshotPhaseBeforeDeadline<T>(input: {
         if (settled) {
           return;
         }
-        if (Date.now() >= input.deadlineAtMs) {
+        if (input.abortController.signal.aborted || Date.now() >= input.deadlineAtMs) {
           settled = true;
           clearTimeout(deadline);
           input.abortController.abort();

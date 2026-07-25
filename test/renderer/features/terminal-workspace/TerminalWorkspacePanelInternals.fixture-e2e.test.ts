@@ -1,15 +1,17 @@
+import { normalizeTerminalCommandRunEventDetail } from '@features/terminal-workspace/renderer/adapters/terminalCommandRunEvents';
+import { resolveTerminalLocalAutocompleteSuggestion } from '@features/terminal-workspace/renderer/model/terminalCommandAutocomplete';
 import {
   closeSupersededTerminalCommandRuns,
-  formatTerminalPromptLabel,
-  formatWorkingDirectory,
   inferTerminalCommandCompletion,
   inferTerminalCommandOutputStatus,
-  normalizeTerminalCommandRunEventDetail,
-  resolveTerminalLocalAutocompleteSuggestion,
   settleTerminalCommandRuns,
   type TerminalCommandRunPresentation,
   upsertTerminalCommandRun,
-} from '@features/terminal-workspace/renderer/ui/TerminalWorkspacePanel';
+} from '@features/terminal-workspace/renderer/model/terminalCommandRuns';
+import {
+  formatTerminalPromptLabel,
+  formatWorkingDirectory,
+} from '@features/terminal-workspace/renderer/model/terminalPathPresentation';
 import { describe, expect, it } from 'vitest';
 
 describe('terminal workspace panel internals fixture-e2e', () => {

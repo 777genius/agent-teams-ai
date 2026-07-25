@@ -17,9 +17,14 @@ export function useChangeReviewScopeIdentity({
   taskId,
   teamName,
 }: BuildChangeReviewScopeProjectionInput): ChangeReviewScopeProjection {
+  const reviewScope = useMemo(
+    () => ({ teamName, taskId, memberName }),
+    [memberName, taskId, teamName]
+  );
+
   return useMemo(
-    () =>
-      buildChangeReviewScopeProjection({
+    () => ({
+      ...buildChangeReviewScopeProjection({
         activeChangeSet,
         decisionHydrationScopeKey,
         decisionHydrationStatus,
@@ -30,6 +35,8 @@ export function useChangeReviewScopeIdentity({
         taskId,
         teamName,
       }),
+      reviewScope,
+    }),
     [
       activeChangeSet,
       decisionHydrationScopeKey,
@@ -37,6 +44,7 @@ export function useChangeReviewScopeIdentity({
       draftHistoryHydration,
       memberName,
       mode,
+      reviewScope,
       taskChangeRequestOptions,
       taskId,
       teamName,

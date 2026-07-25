@@ -132,6 +132,7 @@ class MemoryRetentionLeases implements SnapshotRetentionLeaseCoordinator {
   expireDuringDeliveryMicrotask = false;
   expiryAttempted = false;
   overrideWatermark: EventJournalWatermark | null = null;
+  runError: unknown;
 
   constructor(private readonly journal: MemoryJournal) {}
 
@@ -174,6 +175,9 @@ class MemoryRetentionLeases implements SnapshotRetentionLeaseCoordinator {
         active: true,
         watermark: this.overrideWatermark ?? (await this.journal.getWatermark()),
       });
+    } catch (error) {
+      this.runError = error;
+      throw error;
     } finally {
       this.deliveryOwned = false;
     }
@@ -445,53 +449,76 @@ describe('CoordinationEventHandoff', () => {
     expect(overtakenBarrierSourceReads).toBe(0);
   });
 
-  it('cancels a deadline-bound external scan while retaining exclusive lease ownership', async () => {
-    const journal = new MemoryJournal();
-    const retentionLeases = new MemoryRetentionLeases(journal);
-    const handoff = new CoordinationEventHandoff({
-      journal,
-      retentionLeases,
-      snapshotLeaseTtlMs: 25,
-    });
-    const ownershipAtCancellation: boolean[] = [];
-    let delivered = false;
+  it.each(['resolve', 'reject'] as const)(
+    'cancels a deadline-bound external scan when the source %ss from its abort listener',
+    async (abortOutcome) => {
+      vi.useFakeTimers();
+      const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(10_000);
+      try {
+        const journal = new MemoryJournal();
+        const retentionLeases = new MemoryRetentionLeases(journal);
+        const handoff = new CoordinationEventHandoff({
+          journal,
+          retentionLeases,
+          snapshotLeaseTtlMs: 25,
+        });
+        const ownershipAtCancellation: boolean[] = [];
+        let delivered = false;
+        let markReadStarted!: () => void;
+        const readStarted = new Promise<void>((resolve) => {
+          markReadStarted = resolve;
+        });
 
-    await expect(
-      handoff.captureExternalSnapshot({
-        request: REQUEST,
-        source: {
-          async readStableSnapshot(_request, context) {
-            return new Promise<ExternalCoordinationSnapshotRead<{ revision: number }>>(
-              (resolve) => {
-                context.signal.addEventListener(
-                  'abort',
-                  () => {
-                    ownershipAtCancellation.push(
-                      retentionLeases.active && retentionLeases.deliveryOwned
-                    );
-                    resolve({
-                      snapshot: { revision: 0 },
-                      revisionVector: [],
-                      sourceGenerationBefore: 'generation-1',
-                      sourceGenerationAfter: 'generation-1',
-                    });
-                  },
-                  { once: true }
-                );
-              }
-            );
+        const capture = handoff.captureExternalSnapshot({
+          request: REQUEST,
+          source: {
+            async readStableSnapshot(_request, context) {
+              markReadStarted();
+              return new Promise<ExternalCoordinationSnapshotRead<{ revision: number }>>(
+                (resolve, reject) => {
+                  context.signal.addEventListener(
+                    'abort',
+                    () => {
+                      ownershipAtCancellation.push(
+                        retentionLeases.active && retentionLeases.deliveryOwned
+                      );
+                      if (abortOutcome === 'reject') {
+                        reject(new Error('source aborted after deadline'));
+                        return;
+                      }
+                      resolve({
+                        snapshot: { revision: 0 },
+                        revisionVector: [],
+                        sourceGenerationBefore: 'generation-1',
+                        sourceGenerationAfter: 'generation-1',
+                      });
+                    },
+                    { once: true }
+                  );
+                }
+              );
+            },
           },
-        },
-        async deliver() {
-          delivered = true;
-        },
-      })
-    ).rejects.toMatchObject({ code: 'snapshot_retry' });
+          async deliver() {
+            delivered = true;
+          },
+        });
+        const rejection = expect(capture).rejects.toMatchObject({ code: 'snapshot_retry' });
 
-    expect(ownershipAtCancellation).toEqual([true]);
-    expect(delivered).toBe(false);
-    expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
-  });
+        await readStarted;
+        await vi.advanceTimersByTimeAsync(25);
+        await rejection;
+
+        expect(ownershipAtCancellation).toEqual([true]);
+        expect(delivered).toBe(false);
+        expect(retentionLeases.runError).toMatchObject({ code: 'snapshot_retry' });
+        expect(retentionLeases.operations).toEqual(['acquire', 'run', 'release']);
+      } finally {
+        nowSpy.mockRestore();
+        vi.useRealTimers();
+      }
+    }
+  );
 
   it('bounds ignored lease acquisition and releases a lease that arrives after timeout', async () => {
     const journal = new MemoryJournal();

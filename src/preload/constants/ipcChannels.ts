@@ -490,11 +490,6 @@ export const REVIEW_PREVIEW_REJECT = 'review:previewReject';
 /** Применить batch решений review */
 export const REVIEW_APPLY_DECISIONS = 'review:applyDecisions';
 
-/** Execute Restore/Rename/Undo through the durable review mutation state machine. */
-export const REVIEW_EXECUTE_MUTATION = 'review:executeMutation';
-export const REVIEW_RETRY_MUTATION_RECOVERY = 'review:retryMutationRecovery';
-export const REVIEW_RESTORE_HISTORY = 'review:restoreHistory';
-
 /** Получить полное содержимое файла для diff view */
 export const REVIEW_GET_FILE_CONTENT = 'review:getFileContent';
 
@@ -518,35 +513,27 @@ export const REVIEW_REAPPLY_REJECTED_RENAME = 'review:reapplyRejectedRename';
 /** Get git file change log */
 export const REVIEW_GET_GIT_FILE_LOG = 'review:getGitFileLog';
 
-/** Load persisted review decisions from disk */
-export const REVIEW_LOAD_DECISIONS = 'review:loadDecisions';
+// Compatibility re-exports. The change-review-history feature owns these channels.
+export {
+  REVIEW_CLEAR_DECISIONS,
+  REVIEW_CLEAR_DRAFT_HISTORY,
+  REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+  REVIEW_LOAD_DECISIONS,
+  REVIEW_LOAD_DRAFT_HISTORY,
+  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_SAVE_DECISIONS,
+  REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
+} from '@features/change-review-history/contracts';
 
-/** Save review decisions to disk */
-export const REVIEW_SAVE_DECISIONS = 'review:saveDecisions';
-
-/** Clear review decisions from disk */
-export const REVIEW_CLEAR_DECISIONS = 'review:clearDecisions';
-
-/** Load/resolve durable renderer branches preserved after decision CAS conflicts. */
-export const REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES = 'review:loadDecisionConflictCandidates';
-export const REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE = 'review:resolveDecisionConflictCandidate';
-
-/** Load the exact-scope durable CodeMirror manual-edit history. */
-export const REVIEW_LOAD_DRAFT_HISTORY = 'review:loadDraftHistory';
-
-/** Atomically publish one file's latest durable editor-history checkpoint. */
-export const REVIEW_SAVE_DRAFT_HISTORY_ENTRY = 'review:saveDraftHistoryEntry';
-
-/** Remove one file (or the whole exact scope) from durable editor history. */
-export const REVIEW_CLEAR_DRAFT_HISTORY = 'review:clearDraftHistory';
-
-/** Load/resolve durable manual-editor branches preserved after draft CAS conflicts. */
-export const REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES =
-  'review:loadDraftHistoryConflictCandidates';
-export const REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE =
-  'review:resolveDraftHistoryConflictCandidate';
-export const REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE =
-  'review:replaceDraftHistoryConflictCandidate';
+// Compatibility re-exports. The review-mutations feature owns these channels.
+export {
+  REVIEW_EXECUTE_MUTATION,
+  REVIEW_RESTORE_HISTORY,
+  REVIEW_RETRY_MUTATION_RECOVERY,
+} from '@features/review-mutations/contracts';
 
 // =============================================================================
 // Editor Channels
