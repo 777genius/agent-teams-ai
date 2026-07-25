@@ -8,6 +8,7 @@ import {
   codexGoalWorkerControlTarget,
 } from "./application/codex-goal-worker-control";
 import { assertControlledRuntimeInterruptionSignal } from "./application/project-control/codex-goal-project-controlled-runtime-interruption-continuation";
+import { isCodexAppServerRecoverableProviderFailureCause } from "./application/project-control/codex-goal-project-provider-failure";
 import { assertReadablePrompt } from "./application/project-control/codex-goal-project-refill";
 import {
   projectPreStartContinuationDecision,
@@ -30,9 +31,6 @@ import { readControlledRuntimeInterruptionEvidence } from "./codex-goal-runtime-
 import { codexGoalStatusInputFromLaunch } from "./codex-goal-mcp-status-input";
 
 const MAX_RECOVERABLE_RESULT_BYTES = 256 * 1024;
-const APP_SERVER_RECONNECT_TIMEOUT_PREFIX =
-  "codex_app_server_reconnect_timeout:";
-const APP_SERVER_PROVIDER_ERROR_PREFIX = "codex_app_server_error:";
 const PREWARM_FAILED_REASON = "prewarm_failed";
 const PREWARM_FAILED_ERROR_CODE = "subscription_worker_prewarm_failed";
 const PREWARM_BEFORE_ATTEMPT_EVIDENCE =
@@ -329,11 +327,8 @@ async function isRecoverableAdmittedInputPatchProviderFailure(input: {
     ) {
       return false;
     }
-    const rawCause = parsed.details.rawCause;
-    return (
-      typeof rawCause === "string" &&
-      (rawCause.startsWith(APP_SERVER_RECONNECT_TIMEOUT_PREFIX) ||
-        rawCause.startsWith(APP_SERVER_PROVIDER_ERROR_PREFIX))
+    return isCodexAppServerRecoverableProviderFailureCause(
+      parsed.details.rawCause,
     );
   } catch {
     return false;

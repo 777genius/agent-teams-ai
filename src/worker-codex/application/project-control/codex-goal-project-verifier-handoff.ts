@@ -8,12 +8,11 @@ import type { CodexGoalJobManifest } from "../../codex-goal-jobs";
 import { captureCodexGoalHandoffPatchFingerprint } from "../../codex-goal-handoff-artifacts";
 import { readControlledRuntimeInterruptionEvidence } from "../../codex-goal-runtime-control-evidence";
 import { readRuntimeResultBrief } from "../codex-goal-runtime-result";
+import { isCodexAppServerReconnectTimeoutCause } from "./codex-goal-project-provider-failure";
 
 const execFileAsync = promisify(execFile);
 const maxManifestBytes = 1024 * 1024;
 const maxPatchBytes = 16 * 1024 * 1024;
-const appServerReconnectTimeoutPrefix =
-  "codex_app_server_reconnect_timeout:";
 const runtimePreservedContinuationReasons = new Set([
   "runtime_interrupted",
   "quota_limited",
@@ -283,9 +282,7 @@ async function currentResultHandoff(input: {
     input.allowProviderOutputInvalid &&
     result.status === "failed" &&
     result.lastFailureReason === "unknown_error" &&
-    result.lastFailureRawCause?.startsWith(
-      appServerReconnectTimeoutPrefix,
-    ) === true &&
+    isCodexAppServerReconnectTimeoutCause(result.lastFailureRawCause) &&
     result.handoffArtifactError === undefined;
   if (
     result.strict !== true ||

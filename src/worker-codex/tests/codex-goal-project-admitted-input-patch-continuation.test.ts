@@ -571,7 +571,8 @@ describe("admitted input-patch capacity continuation", () => {
     };
     const reconnectAttemptAt = new Date("2026-07-14T00:01:00.000Z");
     const reconnectFailureDetails = {
-      rawCause: "codex_app_server_reconnect_timeout:Reconnecting... 2/5",
+      rawCause:
+        "codex_app_server_turn_error:codex_app_server_reconnect_timeout:Reconnecting... 2/5:details={\"phase\":\"turn_error_before_output\"}",
     };
     await writeFile(
       resultPath,

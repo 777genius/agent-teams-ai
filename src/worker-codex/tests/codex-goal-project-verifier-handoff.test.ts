@@ -208,7 +208,7 @@ describe("project verifier handoff", () => {
       details: {
         baseCommit: materialized.baseCommit,
         rawCause:
-          "codex_app_server_reconnect_timeout:Reconnecting... 5/5",
+          "codex_app_server_turn_error:codex_app_server_reconnect_timeout:Reconnecting... 5/5:details={\"phase\":\"turn_error_before_output\"}",
       },
     };
     await writeFile(resultPath, `${JSON.stringify(result)}\n`);

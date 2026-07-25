@@ -21,6 +21,7 @@ import {
   codexAccountCapacityRootDir,
   codexAccountCapacityStore,
 } from "../codex-account-capacity-store";
+import { isCodexAppServerReconnectTimeoutCause } from "./codex-goal-project-provider-failure";
 
 const reservationSchemaVersion = 1 as const;
 const reservationGraceMs = 10 * 60_000;
@@ -356,9 +357,6 @@ function prewarmContinuationAttemptHistory(input: {
   };
 }
 
-const APP_SERVER_RECONNECT_TIMEOUT_PREFIX =
-  "codex_app_server_reconnect_timeout:";
-
 type ProvenCapacityContinuationFailureReason =
   | "account_unavailable"
   | "capacity_unavailable"
@@ -517,10 +515,7 @@ function reconnectRuntimeContinuationAttemptHistory(input: {
 function appServerReconnectTimeout(
   details: Readonly<Record<string, string>> | undefined,
 ): boolean {
-  return (
-    typeof details?.rawCause === "string" &&
-    details.rawCause.startsWith(APP_SERVER_RECONNECT_TIMEOUT_PREFIX)
-  );
+  return isCodexAppServerReconnectTimeoutCause(details?.rawCause);
 }
 
 export type CodexProjectAccountContinuation = {
