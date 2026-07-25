@@ -306,6 +306,22 @@ describe("project verifier handoff", () => {
       kind: "continuation_fingerprint",
       sha256: fingerprint.sha256,
     });
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        ...controlledResult,
+        details: {
+          ...controlledResult.details,
+          handoffArtifactError: "handoff_changed_file_limit_exceeded",
+        },
+      })}\n`,
+    );
+    await expect(
+      readControlledRuntimeInterruptionSnapshot({ producer }),
+    ).resolves.toMatchObject({
+      kind: "continuation_fingerprint",
+      sha256: fingerprint.sha256,
+    });
     await expect(readVerifiedProducerHandoff({ producer })).rejects.toThrow(
       "project_control_verifier_handoff_result_invalid",
     );

@@ -20,6 +20,10 @@ const runtimePreservedContinuationReasons = new Set([
   "account_unavailable",
   "reconnect_required",
 ]);
+const runtimeInterruptionFingerprintErrors = new Set([
+  "handoff_raw_secret_rejected",
+  "handoff_changed_file_limit_exceeded",
+]);
 
 export type VerifiedProducerHandoff = {
   readonly producerJobId: string;
@@ -122,7 +126,7 @@ export async function readControlledRuntimeInterruptionSnapshot(input: {
       taskId: input.producer.taskId,
     });
   if (
-    result.handoffArtifactError !== "handoff_raw_secret_rejected" ||
+    !runtimeInterruptionFingerprintErrors.has(result.handoffArtifactError) ||
     result.strict !== true ||
     result.status !== "partial" ||
     result.lastFailureReason !== "runtime_interrupted" ||
