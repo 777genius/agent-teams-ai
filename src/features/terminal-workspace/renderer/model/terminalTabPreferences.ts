@@ -22,6 +22,7 @@ export type TerminalMuxTab = NonNullable<
 >['topology']['tabs'][number];
 type TerminalMuxPaneTreeNode = TerminalMuxTab['root'];
 export type TerminalTabColorId = (typeof TERMINAL_TAB_COLOR_OPTIONS)[number]['id'];
+export type TerminalTabContentState = 'empty' | 'has-content' | 'unknown';
 
 export interface TerminalTabColorOption {
   id: string;
@@ -321,28 +322,50 @@ export function isPrewarmedTerminalTab(tab: TerminalMuxTab): boolean {
   return tab.title?.trim() === PREWARMED_TERMINAL_TAB_TITLE;
 }
 
-export function hasTerminalTabHistory(
+export function normalizeTerminalUserTabTitle(title: string): string | null {
+  const normalizedTitle = title.trim();
+  return normalizedTitle && normalizedTitle !== PREWARMED_TERMINAL_TAB_TITLE
+    ? normalizedTitle
+    : null;
+}
+
+export function resolveTerminalTabContentState(
   snapshot: TerminalWorkspaceSnapshot,
   tab: TerminalMuxTab
-): boolean {
+): TerminalTabContentState {
   const paneIds = collectPaneIds(tab.root);
   const focusedScreen = snapshot.attachedSession?.focused_screen ?? null;
 
   for (const paneId of paneIds) {
-    const historicalLines = snapshot.historicalPanes?.[paneId]?.lines ?? [];
-    if (historicalLines.some((line) => line.trim().length > 0)) {
-      return true;
+    const historicalPane = snapshot.historicalPanes?.[paneId];
+    if (
+      historicalPane?.lines.some(hasVisibleTerminalText) ||
+      historicalPane?.richLines?.some(hasRichTerminalLineContent)
+    ) {
+      return 'has-content';
     }
 
     if (
       focusedScreen?.pane_id === paneId &&
-      focusedScreen.surface.lines.some((line) => line.text.trim().length > 0)
+      focusedScreen.surface.lines.some(hasRichTerminalLineContent)
     ) {
-      return true;
+      return 'has-content';
     }
   }
 
-  return false;
+  if (paneIds.length !== 1) {
+    return 'unknown';
+  }
+
+  const paneId = paneIds[0];
+  const historicalPane = snapshot.historicalPanes?.[paneId];
+  const historyIsComplete =
+    historicalPane?.fromEventSeq === 1n &&
+    historicalPane.nextEventSeq === null &&
+    !historicalPane.hasGaps &&
+    !historicalPane.hasMoreSegments;
+
+  return focusedScreen?.pane_id === paneId && historyIsComplete ? 'empty' : 'unknown';
 }
 
 function formatNewMuxTabTitle(tabNumber: number): string {
@@ -355,4 +378,22 @@ function collectPaneIds(node: TerminalMuxPaneTreeNode): string[] {
   }
 
   return [...collectPaneIds(node.first), ...collectPaneIds(node.second)];
+}
+
+function hasVisibleTerminalText(line: string): boolean {
+  return line.length > 0;
+}
+
+function hasRichTerminalLineContent(line: {
+  text: string;
+  media?: readonly unknown[];
+  semantic_marks?: readonly unknown[];
+  side_effects?: readonly unknown[];
+}): boolean {
+  return (
+    hasVisibleTerminalText(line.text) ||
+    Boolean(line.media?.length) ||
+    Boolean(line.semantic_marks?.length) ||
+    Boolean(line.side_effects?.length)
+  );
 }

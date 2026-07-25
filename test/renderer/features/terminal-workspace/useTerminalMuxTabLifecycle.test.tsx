@@ -79,6 +79,35 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(requiredControls().pendingAction).toBeNull();
   });
 
+  it('reports a close completion only after dispatch and attach succeed', async () => {
+    const onTabCloseCompleted = vi.fn();
+    await render({ onTabCloseCompleted });
+
+    await act(async () => {
+      await requiredControls().requestCloseTab(TAB_ONE);
+    });
+
+    expect(onTabCloseCompleted).toHaveBeenCalledOnce();
+    expect(onTabCloseCompleted).toHaveBeenCalledWith({
+      closedTabId: TAB_ONE.tab_id,
+      preferredFocusTabId: TAB_TWO.tab_id,
+    });
+  });
+
+  it('does not report a close completion when the mux action fails', async () => {
+    const onTabCloseCompleted = vi.fn();
+    const commands = createResolvedCommands();
+    commands.attachSession = vi.fn().mockRejectedValue(new Error('attach failed')) as never;
+    await render({ commands, onTabCloseCompleted });
+
+    await act(async () => {
+      await requiredControls().requestCloseTab(TAB_ONE);
+    });
+
+    expect(onTabCloseCompleted).not.toHaveBeenCalled();
+    expect(requiredControls().error).toBe('attach failed');
+  });
+
   it('uses a synchronous foreground mutex to reject a second action in the same render', async () => {
     const firstDispatch = createDeferred<void>();
     const commands = createResolvedCommands();
@@ -546,7 +575,7 @@ function createOptions(commands: TerminalMuxCommands): LifecycleOptions {
     commands,
     orderedVisibleTabs: VISIBLE_TABS,
     prewarmedTab: null,
-    snapshot: {} as TerminalWorkspaceSnapshot,
+    snapshot: createSnapshotWithEmptyFocusedTab(TAB_ONE),
     tabsCount: VISIBLE_TABS.length,
     visibleTabs: VISIBLE_TABS,
   };
@@ -593,6 +622,29 @@ function createSnapshotWithHistory(tab: TerminalMuxTab): TerminalWorkspaceSnapsh
       [`pane-${tab.tab_id}`]: {
         capturedAtMs: BigInt(1),
         lines: ['terminal output'],
+      },
+    },
+  } as unknown as TerminalWorkspaceSnapshot;
+}
+
+function createSnapshotWithEmptyFocusedTab(tab: TerminalMuxTab): TerminalWorkspaceSnapshot {
+  const paneId = `pane-${tab.tab_id}`;
+  return {
+    attachedSession: {
+      focused_screen: {
+        pane_id: paneId,
+        surface: {
+          lines: [],
+        },
+      },
+    },
+    historicalPanes: {
+      [paneId]: {
+        fromEventSeq: BigInt(1),
+        hasGaps: false,
+        hasMoreSegments: false,
+        lines: [],
+        nextEventSeq: null,
       },
     },
   } as unknown as TerminalWorkspaceSnapshot;

@@ -8,8 +8,9 @@ import {
   type TerminalMuxActionPlan,
 } from '../model/terminalMuxActionPlans';
 import {
-  hasTerminalTabHistory,
   PREWARMED_TERMINAL_TAB_TITLE,
+  resolveTerminalTabContentState,
+  resolveVisibleTabToFocusAfterClose,
   type TerminalMuxTab,
   type TerminalWorkspaceSnapshot,
 } from '../model/terminalTabPreferences';
@@ -20,6 +21,11 @@ export type TerminalMuxCommands = Pick<
   WorkspaceKernel['commands'],
   'attachSession' | 'dispatchMuxCommand'
 >;
+
+export interface TerminalMuxTabCloseCompletion {
+  closedTabId: string;
+  preferredFocusTabId: string | null;
+}
 
 interface UseTerminalMuxTabLifecycleOptions {
   activeSessionId: string | null;
@@ -36,6 +42,7 @@ interface UseTerminalMuxTabLifecycleOptions {
   tabsCount: number;
   visibleTabs: readonly TerminalMuxTab[];
   onSettingsOpenChange?: (open: boolean) => void;
+  onTabCloseCompleted?: (completion: TerminalMuxTabCloseCompletion) => void;
   onTabContentPendingChange?: (pending: boolean) => void;
 }
 
@@ -106,6 +113,7 @@ export function useTerminalMuxTabLifecycle({
   tabsCount,
   visibleTabs,
   onSettingsOpenChange,
+  onTabCloseCompleted,
   onTabContentPendingChange,
 }: UseTerminalMuxTabLifecycleOptions): UseTerminalMuxTabLifecycleResult {
   const mountedRef = useRef(true);
@@ -232,16 +240,17 @@ export function useTerminalMuxTabLifecycle({
   }, []);
 
   const runMuxAction = useCallback(
-    async (plan: TerminalMuxActionPlan): Promise<void> => {
+    async (plan: TerminalMuxActionPlan): Promise<boolean> => {
       if (!renderedScopeIsCurrent || foregroundOperationRef.current) {
-        return;
+        return false;
       }
 
       const token = createOperationToken(plan.actionId);
       if (!token) {
-        return;
+        return false;
       }
 
+      let completed = false;
       backgroundOperationRef.current = null;
       foregroundOperationRef.current = token;
       const tabContentPending =
@@ -265,15 +274,16 @@ export function useTerminalMuxTabLifecycle({
       try {
         for (const command of plan.commands) {
           if (!isForegroundOperationCurrent(token)) {
-            return;
+            return false;
           }
           await token.commands.dispatchMuxCommand(token.activeSessionId, command);
           if (!isForegroundOperationCurrent(token)) {
-            return;
+            return false;
           }
         }
 
         await token.commands.attachSession(token.activeSessionId);
+        completed = isForegroundOperationCurrent(token);
       } catch (reason: unknown) {
         if (isForegroundOperationCurrent(token)) {
           updateViewStateForEpoch(token.scopeEpoch, (current) => ({
@@ -293,6 +303,7 @@ export function useTerminalMuxTabLifecycle({
           }
         }
       }
+      return completed;
     },
     [
       createOperationToken,
@@ -362,11 +373,31 @@ export function useTerminalMuxTabLifecycle({
         orderedVisibleTabs,
         tab,
       });
-      if (plan) {
-        await runMuxAction(plan);
+      if (!plan) {
+        return;
+      }
+
+      const targetScopeEpoch = scopeRef.current.epoch;
+      const preferredFocusTabId = resolveVisibleTabToFocusAfterClose(
+        orderedVisibleTabs,
+        tab.tab_id
+      );
+      const completed = await runMuxAction(plan);
+      if (completed && mountedRef.current && scopeRef.current.epoch === targetScopeEpoch) {
+        onTabCloseCompleted?.({
+          closedTabId: tab.tab_id,
+          preferredFocusTabId,
+        });
       }
     },
-    [activeVisibleTabId, canCloseVisibleTabs, canFocusTab, orderedVisibleTabs, runMuxAction]
+    [
+      activeVisibleTabId,
+      canCloseVisibleTabs,
+      canFocusTab,
+      onTabCloseCompleted,
+      orderedVisibleTabs,
+      runMuxAction,
+    ]
   );
 
   const requestCloseTab = useCallback(
@@ -375,7 +406,7 @@ export function useTerminalMuxTabLifecycle({
         return;
       }
 
-      if (hasTerminalTabHistory(snapshot, tab)) {
+      if (resolveTerminalTabContentState(snapshot, tab) !== 'empty') {
         const targetScopeEpoch = scopeRef.current.epoch;
         updateViewStateForEpoch(targetScopeEpoch, (current) => ({
           ...current,

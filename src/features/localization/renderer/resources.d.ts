@@ -6152,7 +6152,7 @@ export default interface Resources {
       closeTerminalSettingsTab: 'Close terminal settings tab';
       closeTerminalSheet: 'Close terminal sheet';
       closeTerminalTab: 'Close terminal tab {{tab}}';
-      closeTerminalTabDialogDescription: 'This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.';
+      closeTerminalTabDialogDescription: 'This tab may contain terminal output or running processes. Closing it will remove the tab and its visible output from this workspace.';
       closeTerminalTabDialogTitle: 'Close terminal tab?';
       commandInterrupt: 'Ctrl+C';
       commandInterruptTitle: 'Send Ctrl+C to the focused pane';
