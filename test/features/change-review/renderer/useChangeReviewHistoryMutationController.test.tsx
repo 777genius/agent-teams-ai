@@ -105,6 +105,17 @@ function diskAction(id = 'disk-1', filePath = '/repo/file.ts'): ReviewUndoAction
   } as ReviewUndoAction;
 }
 
+function fileBulkAction(id = 'file-1', filePath = '/repo/file.ts'): ReviewUndoAction {
+  return {
+    id,
+    createdAt: '2026-07-23T00:00:00.000Z',
+    kind: 'bulk',
+    descriptor: { intent: 'accept-file', filePath },
+    decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
+    diskSnapshots: [],
+  };
+}
+
 function persistedState(
   undo: ReviewUndoAction[] = [],
   redo: ReviewRedoAction[] = []
@@ -351,6 +362,54 @@ describe('useChangeReviewHistoryMutationController', () => {
     expect(harness.viewPort.incrementDiscardCounters).toHaveBeenCalledWith([
       '/repo/disk.ts',
       '/repo/hunk.ts',
+    ]);
+  });
+
+  it('remounts only the accepted file when Restore also undoes disk-backed actions', async () => {
+    const acceptedFile = fileBulkAction('file-1', '/repo/accepted.ts');
+    const disk = diskAction('disk-1', '/repo/disk.ts');
+    const harness = createHarness({ undo: [acceptedFile, disk] });
+    vi.mocked(harness.commandPort.restoreHistory).mockResolvedValue({
+      decisionRevision: 5,
+      persistedState: persistedState(),
+      direction: 'undo',
+      actionCount: 2,
+      diskPostimages: [],
+    });
+    harness.files = [
+      {
+        filePath: '/repo/accepted.ts',
+        relativePath: 'accepted.ts',
+        snippets: [],
+        linesAdded: 1,
+        linesRemoved: 0,
+        isNewFile: false,
+      },
+      {
+        filePath: '/repo/disk.ts',
+        relativePath: 'disk.ts',
+        snippets: [],
+        linesAdded: 1,
+        linesRemoved: 0,
+        isNewFile: false,
+      },
+      {
+        filePath: '/repo/unrelated.ts',
+        relativePath: 'unrelated.ts',
+        snippets: [],
+        linesAdded: 1,
+        linesRemoved: 0,
+        isNewFile: false,
+      },
+    ];
+    await renderHarness(harness);
+
+    await act(async () => latest!.restoreHistory({ kind: 'start' }));
+
+    expect(harness.viewPort.incrementDiscardCounters).toHaveBeenCalledOnce();
+    expect(harness.viewPort.incrementDiscardCounters).toHaveBeenCalledWith([
+      '/repo/disk.ts',
+      '/repo/accepted.ts',
     ]);
   });
 

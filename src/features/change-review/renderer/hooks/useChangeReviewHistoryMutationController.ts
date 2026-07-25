@@ -14,6 +14,7 @@ import {
   classifyReviewHistoryRecovery,
   createReviewRedoAction,
   getReviewActionAffectedPaths,
+  getReviewActionsAffectedPaths,
   getReviewDiskMutationExpectedContent,
   resolveReviewFile,
 } from '../utils/changeReviewHistoryMutation';
@@ -192,10 +193,7 @@ export function useChangeReviewHistoryMutationController({
     ): void => {
       applyCommittedState(persistedState, decisionRevision, null);
       if (direction === 'undo') {
-        refreshAfterUndo(
-          diskSnapshots,
-          orderedActions.flatMap((action) => getReviewActionAffectedPaths(action, files))
-        );
+        refreshAfterUndo(diskSnapshots, getReviewActionsAffectedPaths(orderedActions, files));
       } else {
         for (const action of orderedActions) refreshAfterRedo(action);
       }

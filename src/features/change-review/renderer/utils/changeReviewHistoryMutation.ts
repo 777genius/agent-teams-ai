@@ -93,8 +93,29 @@ export function getReviewActionAffectedPaths(
   action: ReviewUndoAction,
   files: readonly FileChangeSummary[]
 ): string[] {
-  if (action.kind === 'bulk') return files.map((file) => file.filePath);
+  if (action.kind === 'bulk') {
+    return action.descriptor && 'filePath' in action.descriptor
+      ? [action.descriptor.filePath]
+      : files.map((file) => file.filePath);
+  }
   return [action.kind === 'disk' ? action.action.snapshot.filePath : action.action.filePath];
+}
+
+export function getReviewActionsAffectedPaths(
+  actions: readonly ReviewUndoAction[],
+  files: readonly FileChangeSummary[]
+): string[] {
+  const seenPaths = new Set<string>();
+  const affectedPaths: string[] = [];
+  for (const action of actions) {
+    for (const filePath of getReviewActionAffectedPaths(action, files)) {
+      const normalizedPath = normalizePathForComparison(filePath);
+      if (seenPaths.has(normalizedPath)) continue;
+      seenPaths.add(normalizedPath);
+      affectedPaths.push(filePath);
+    }
+  }
+  return affectedPaths;
 }
 
 export function resolveReviewFile(
