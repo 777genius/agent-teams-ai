@@ -225,7 +225,7 @@ function isModuleExports(expression) {
   );
 }
 
-function commonJsExportPath(expression) {
+export function commonJsExportPath(expression) {
   let current = unwrapExpression(expression);
   if ((ts.isIdentifier(current) && current.text === 'exports') || isModuleExports(current)) {
     return [];
@@ -531,6 +531,12 @@ export function commonJsExportNamesForReference(
   }
 
   const exportNames = commonJsExportNamesForExpression(expression, commonJsTargetAliases);
+  if (
+    exportNames.length > 0 &&
+    commonJsTargetAliases.isReferencePublic?.(expression, reference) === false
+  ) {
+    return [];
+  }
   if (!insideFunctionBody || exportNames.length === 0) return exportNames;
 
   const selection = expressionGetterSelection(expression, reference);

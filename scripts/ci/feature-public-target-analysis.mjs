@@ -1,12 +1,18 @@
 import ts from 'typescript';
 
 import {
+  commonJsExportPath,
   isCommonJsExportsObject,
   memberAccess,
   propertyNameText,
   rootBindingName,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
+import {
+  collectFinalCommonJsPropertyWrites,
+  commonJsReferenceIsPublic,
+  pathWasOverwrittenAfter,
+} from './feature-public-commonjs-analysis.mjs';
 import {
   accessPath,
   collectCopyRelations,
@@ -411,7 +417,9 @@ function collectCommonJsCopyRelations(
     position >= finalRootPosition &&
     isCommonJsExportsObject(target) &&
     (rootBindingName(target) !== 'exports' || exportsActiveAt(position));
-  const addSources = (sources, copyPosition) => {
+  const addSources = (target, sources, copyPosition) => {
+    const targetPath = commonJsExportPath(target);
+    if (targetPath === null) return;
     for (const [index, expression] of sources.entries()) {
       const source = accessPath(expression);
       const sourceKey =
@@ -422,6 +430,7 @@ function collectCommonJsCopyRelations(
           overwrittenPaths: staticOverwrittenPaths(sources.slice(index + 1)),
           path: source.path,
           sourceKey,
+          targetPath,
         });
       }
     }
@@ -449,8 +458,19 @@ function collectCommonJsCopyRelations(
               ),
               path: source.path,
               sourceKey,
+              targetPath: commonJsExportPath(node.left) ?? [],
             });
           }
+        }
+      } else if (ts.isCallExpression(value)) {
+        const method = memberAccess(value.expression);
+        if (
+          method &&
+          ts.isIdentifier(method.receiver) &&
+          method.receiver.text === 'Object' &&
+          method.name === 'assign'
+        ) {
+          addSources(node.left, [...value.arguments], value.end);
         }
       }
     } else if (ts.isCallExpression(node)) {
@@ -463,7 +483,11 @@ function collectCommonJsCopyRelations(
         node.arguments[0] &&
         targetIsActive(node.arguments[0], position)
       ) {
-        addSources([...node.arguments].slice(1), node.end);
+        addSources(
+          node.arguments[0],
+          [...node.arguments].slice(1),
+          node.end
+        );
       }
     }
     ts.forEachChild(node, visit);
@@ -573,6 +597,14 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     finalRootPosition,
     exportsActiveAt
   );
+  const commonJsTargetIsActive = (target, position) =>
+    position >= finalRootPosition &&
+    isCommonJsExportsObject(target) &&
+    (rootBindingName(target) !== 'exports' || exportsActiveAt(position));
+  const finalCommonJsPropertyWrites = collectFinalCommonJsPropertyWrites(
+    sourceFile,
+    commonJsTargetIsActive
+  );
   const writeContainsPosition = (write, position) =>
     write.referenceRanges?.length
       ? write.referenceRanges.some(
@@ -606,11 +638,20 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         (segment, index) => currentWrite.path[relation.path.length + index] === segment
       )
     );
+    const copiedPath = [
+      ...(relation.targetPath ?? []),
+      ...currentWrite.path.slice(relation.path.length),
+    ];
     return (
       position < relation.copyPosition &&
       currentWrite.enumerable &&
       !wasOverwrittenBeforeCopy &&
-      !overwrittenByTarget
+      !overwrittenByTarget &&
+      !pathWasOverwrittenAfter(
+        finalCommonJsPropertyWrites,
+        copiedPath,
+        relation.copyPosition
+      )
     );
   };
   const localOwnersAt = (position) => {
@@ -677,6 +718,12 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
   const commonJsTargetsAt = (position) => ({
     directExportsActive: position >= finalRootPosition && exportsActiveAt(position),
     directModuleExportsActive: position >= finalRootPosition,
+    isReferencePublic: (expression, reference) =>
+      commonJsReferenceIsPublic(
+        expression,
+        reference,
+        finalCommonJsPropertyWrites
+      ),
     has: (name) => {
       const key = bindingModel.bindingAt(name, position);
       return key

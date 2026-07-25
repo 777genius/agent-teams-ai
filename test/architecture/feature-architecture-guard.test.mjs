@@ -1518,6 +1518,14 @@ test('tracks CommonJS object copies with last-write semantics', () => {
       `,
       'src/features/commonjs-assign-module/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
+      'src/features/commonjs-root-object-assign/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        module.exports = Object.assign({}, hidden);
+      `,
+      'src/features/commonjs-root-object-assign/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
       'src/features/commonjs-spread-overwrite-safe/main/index.cjs': `
         const Store = require('./infrastructure/Store');
         const hidden = {};
@@ -1525,6 +1533,68 @@ test('tracks CommonJS object copies with last-write semantics', () => {
         module.exports = { ...hidden, Store: undefined };
       `,
       'src/features/commonjs-spread-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-assign-inline-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        Object.assign(exports, { Store }, { Store: undefined });
+      `,
+      'src/features/commonjs-assign-inline-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-assign-late-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        Object.assign(exports, hidden);
+        exports.Store = undefined;
+      `,
+      'src/features/commonjs-assign-late-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-spread-late-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        module.exports = { ...hidden };
+        module.exports.Store = undefined;
+      `,
+      'src/features/commonjs-spread-late-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-assignment-late-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        exports.Store = Store;
+        exports.Store = undefined;
+      `,
+      'src/features/commonjs-assignment-late-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-root-object-late-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        module.exports = { Store };
+        module.exports.Store = undefined;
+      `,
+      'src/features/commonjs-root-object-late-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-assign-second-call-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        Object.assign(exports, hidden);
+        Object.assign(exports, { Store: undefined });
+      `,
+      'src/features/commonjs-assign-second-call-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-define-property-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        exports.Store = Store;
+        Object.defineProperty(exports, 'Store', { value: undefined });
+      `,
+      'src/features/commonjs-define-property-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-root-object-assign-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        module.exports = Object.assign({}, hidden, { Store: undefined });
+      `,
+      'src/features/commonjs-root-object-assign-overwrite-safe/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
     },
     (root) => {
@@ -1542,6 +1612,10 @@ test('tracks CommonJS object copies with last-write semantics', () => {
           },
           {
             source: 'src/features/commonjs-assign-module/main/index.cjs',
+            specifier: './infrastructure/Store',
+          },
+          {
+            source: 'src/features/commonjs-root-object-assign/main/index.cjs',
             specifier: './infrastructure/Store',
           },
         ]
