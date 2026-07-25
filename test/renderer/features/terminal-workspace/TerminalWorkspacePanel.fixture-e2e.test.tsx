@@ -1087,6 +1087,77 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(document.body.textContent).not.toContain('__tp_prewarmed_shell__');
   });
 
+  it('uses roving tab focus and keyboard navigation for the terminal tab strip', async () => {
+    nextSnapshot = createWorkspaceSnapshot({
+      tabs: [
+        createTab('tab-1', 'Build', 'pane-build'),
+        createTab('tab-2', 'Logs', 'pane-logs'),
+        createTab('tab-3', 'Deploy', 'pane-deploy'),
+      ],
+    });
+
+    await renderPanel();
+    const kernel = currentKernel();
+    kernel.commands.dispatchMuxCommand.mockClear();
+    const buildTab = getTabButton('Build');
+    const logsTab = getTabButton('Logs');
+
+    expect(buildTab.tabIndex).toBe(0);
+    expect(logsTab.tabIndex).toBe(-1);
+
+    await act(async () => {
+      buildTab.focus();
+      buildTab.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key: 'ArrowRight',
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(document.activeElement).toBe(logsTab);
+    expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledWith('session-1', {
+      kind: 'focus_tab',
+      tab_id: 'tab-2',
+    });
+  });
+
+  it('moves keyboard focus from the open settings tab back to a terminal tab', async () => {
+    nextSnapshot = createWorkspaceSnapshot({
+      focusedTabId: 'tab-2',
+      tabs: [createTab('tab-1', 'Build', 'pane-build'), createTab('tab-2', 'Logs', 'pane-logs')],
+    });
+
+    await renderPanel({ settingsOpen: true });
+    const kernel = currentKernel();
+    kernel.commands.dispatchMuxCommand.mockClear();
+    const settingsTab = document.querySelector<HTMLButtonElement>(
+      '[data-testid="agent-team-terminal-settings-tab"] [role="tab"]'
+    );
+    if (!settingsTab) {
+      throw new Error('Missing terminal settings tab button');
+    }
+    const logsTab = getTabButton('Logs');
+
+    await act(async () => {
+      settingsTab.focus();
+      settingsTab.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key: 'ArrowLeft',
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(document.activeElement).toBe(logsTab);
+    expect(onSettingsOpenChange).toHaveBeenCalledWith(false);
+    expect(kernel.commands.dispatchMuxCommand).not.toHaveBeenCalled();
+  });
+
   it('keeps terminal tab close buttons hover-only and avoids mixed border style shorthands', async () => {
     window.localStorage.setItem(
       storageKey('tab-preferences'),
