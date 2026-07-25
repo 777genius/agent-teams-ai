@@ -18,6 +18,20 @@ export function accessPath(expression) {
   return ts.isIdentifier(current) ? { path, root: current.text } : null;
 }
 
+export function propertyWriteAvailableAt(write) {
+  return write.availableAt ?? write.position;
+}
+
+export function latestPropertyWriteBefore(writes, beforePosition, predicate) {
+  return writes
+    .filter(
+      (write) => propertyWriteAvailableAt(write) < beforePosition && predicate(write)
+    )
+    .sort(
+      (left, right) => propertyWriteAvailableAt(right) - propertyWriteAvailableAt(left)
+    )[0];
+}
+
 function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
   const visitExpression = (node) => {
     if (ts.isFunctionLike(node) || ts.isClassLike(node)) return;
@@ -504,6 +518,7 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
   const writeKey = (sourceKey, write) =>
     JSON.stringify([
       sourceKey,
+      write.availableAt,
       write.position,
       write.path,
       write.originSourceKeys ?? [],
@@ -521,7 +536,7 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
       const ownerWrites = propertyWrites.get(relation.ownerKey) ?? [];
       for (const sourceWrite of propertyWrites.get(relation.sourceKey) ?? []) {
         if (
-          sourceWrite.position >= relation.copyPosition ||
+          propertyWriteAvailableAt(sourceWrite) >= relation.copyPosition ||
           !sourceWrite.enumerable ||
           !relation.path.every(
             (segment, index) => sourceWrite.path[index] === segment
@@ -541,6 +556,8 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
         }
         const copiedWrite = {
           ...sourceWrite,
+          // References keep their original AST positions; visibility starts at the copy.
+          availableAt: relation.copyPosition,
           originSourceKeys: [
             ...new Set([
               ...(sourceWrite.originSourceKeys ?? []),
@@ -556,7 +573,10 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
         changed = true;
       }
       if (ownerWrites.length > 0) {
-        ownerWrites.sort((left, right) => left.position - right.position);
+        ownerWrites.sort(
+          (left, right) =>
+            propertyWriteAvailableAt(left) - propertyWriteAvailableAt(right)
+        );
         propertyWrites.set(relation.ownerKey, ownerWrites);
       }
     }

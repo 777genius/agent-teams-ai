@@ -973,6 +973,16 @@ test('traces top-level getter aliases only when public descriptors expose them',
       `,
       'src/features/getter-object-assign-overwritten-safe/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/getter-copy-after-publication-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        hidden.Store = Store;
+        const alias = {};
+        export const api = { ...alias };
+        Object.assign(alias, hidden);
+      `,
+      'src/features/getter-copy-after-publication-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/getter-spread-descriptor-alias/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const descriptor = { get: () => Store, enumerable: true };
@@ -1492,6 +1502,7 @@ test('traces top-level getter aliases only when public descriptors expose them',
         'src/features/getter-commonjs-final-reset-safe/main/index.cjs',
         'src/features/getter-commonjs-module-final-reset-safe/main/index.cjs',
         'src/features/getter-constructor-internal-safe/main/index.ts',
+        'src/features/getter-copy-after-publication-safe/main/index.ts',
         'src/features/getter-object-assign-overwritten-safe/main/index.ts',
         'src/features/getter-set-prototype-stale-safe/main/index.ts',
         'src/features/getter-spread-descriptor-alias-safe/main/index.ts',
@@ -1632,6 +1643,16 @@ test('tracks CommonJS object copies with last-write semantics', () => {
         Object.assign(exports, hidden, safe);
       `,
       'src/features/commonjs-assign-copy-alias-overwrite-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-copy-after-publication-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        const alias = {};
+        module.exports = { ...alias };
+        Object.assign(alias, hidden);
+      `,
+      'src/features/commonjs-copy-after-publication-safe/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
       'src/features/commonjs-assign-late-overwrite-safe/main/index.cjs': `
         const Store = require('./infrastructure/Store');

@@ -10,6 +10,7 @@ import {
 } from './feature-export-analysis.mjs';
 import {
   accessPath,
+  propertyWriteAvailableAt,
   staticDescriptorMapPaths,
   staticOverwrittenPaths,
 } from './feature-public-object-analysis.mjs';
@@ -142,8 +143,8 @@ export function memberRelationIsAttachedAt(
 ) {
   return !(writes.get(relation.sourceKey) ?? []).some(
     (write) =>
-      write.position > capturedAt &&
-      write.position < position &&
+      propertyWriteAvailableAt(write) > capturedAt &&
+      propertyWriteAvailableAt(write) < position &&
       write.path.length <= relation.path.length &&
       write.path.every((segment, index) => segment === relation.path[index])
   );

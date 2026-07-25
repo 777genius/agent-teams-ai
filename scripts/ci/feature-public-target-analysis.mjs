@@ -23,7 +23,9 @@ import {
   collectCopyRelations,
   collectPrototypeRelations,
   collectTopLevelPropertyWrites,
+  latestPropertyWriteBefore,
   materializeCopyRelationWrites,
+  propertyWriteAvailableAt,
   staticOverwrittenPaths,
   staticOverwrittenPropertyPaths,
 } from './feature-public-object-analysis.mjs';
@@ -201,7 +203,7 @@ function directAliasSource(expression, bindingModel) {
 function pathWasOverwritten(writes, source, path, afterPosition) {
   return (writes.get(source) ?? []).some(
     (write) =>
-      write.position > afterPosition &&
+      propertyWriteAvailableAt(write) > afterPosition &&
       write.path.length <= path.length &&
       write.path.every((segment, index) => segment === path[index])
   );
@@ -600,11 +602,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
           (range) => range.start <= position && position <= range.end
         )
       : write.position <= position && position <= write.end;
-  const relationMatchesAt = (
-    relation,
-    position,
-    queriedSourceKey = relation.sourceKey
-  ) => {
+  const relationMatchesAt = (relation, position, queriedSourceKey = relation.sourceKey) => {
     const source = bindingModel.versions.get(relation.sourceKey);
     if (
       !source ||
@@ -614,10 +612,13 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
       return false;
     }
     const sourceWrites = propertyWrites.get(relation.sourceKey) ?? [];
-    const currentWrite = sourceWrites.find((write) =>
-      writeContainsPosition(write, position) &&
-      (queriedSourceKey === relation.sourceKey ||
-        write.originSourceKeys?.includes(queriedSourceKey))
+    const currentWrite = latestPropertyWriteBefore(
+      sourceWrites,
+      relation.copyPosition,
+      (write) =>
+        writeContainsPosition(write, position) &&
+        (queriedSourceKey === relation.sourceKey ||
+          write.originSourceKeys?.includes(queriedSourceKey))
     );
     if (
       !currentWrite ||
@@ -627,8 +628,8 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     }
     const wasOverwrittenBeforeCopy = sourceWrites.some(
       (write) =>
-        write.position > currentWrite.position &&
-        write.position < relation.copyPosition &&
+        propertyWriteAvailableAt(write) > propertyWriteAvailableAt(currentWrite) &&
+        propertyWriteAvailableAt(write) < relation.copyPosition &&
         write.path.length === currentWrite.path.length &&
         write.path.every((segment, index) => segment === currentWrite.path[index])
     );
@@ -675,8 +676,10 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         continue;
       }
       const sourceWrites = propertyWrites.get(relation.sourceKey) ?? [];
-      const currentWrite = sourceWrites.find((write) =>
-        writeContainsPosition(write, position)
+      const currentWrite = latestPropertyWriteBefore(
+        sourceWrites,
+        relation.copyPosition ?? Number.POSITIVE_INFINITY,
+        (write) => writeContainsPosition(write, position)
       );
       const insideSourceInitializer =
         source.initializer.getStart(sourceFile) <= position && position <= source.initializer.end;
@@ -694,8 +697,8 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         currentWrite &&
         sourceWrites.some(
           (write) =>
-            write.position > currentWrite.position &&
-            write.position < relation.copyPosition &&
+            propertyWriteAvailableAt(write) > propertyWriteAvailableAt(currentWrite) &&
+            propertyWriteAvailableAt(write) < relation.copyPosition &&
             write.path.length === currentWrite.path.length &&
             write.path.every((segment, index) => segment === currentWrite.path[index])
         );
