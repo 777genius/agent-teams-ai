@@ -1,16 +1,17 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AddTaskCommentUseCase } from '../../../../src/features/team-task-board/core/application/use-cases/AddTaskCommentUseCase';
+import { TeamTaskCommentAttachmentWriter } from '../../../../src/features/team-task-board/main/adapters/output/TeamTaskCommentAttachmentWriter';
 import {
   type TaskAttachmentAtomicCreatorPort,
   TeamTaskAttachmentStore,
 } from '../../../../src/main/services/team/TeamTaskAttachmentStore';
 
-import type { TaskComment } from '@shared/types';
+import type { TaskAttachmentMeta, TaskComment } from '@shared/types';
 
 const mocks = vi.hoisted(() => ({
   getAppDataPath: vi.fn(() => '/workspace/app-data'),
@@ -26,7 +27,7 @@ const LEGACY_ATTACHMENT_FILE = `${ATTACHMENT_ID}--proof.png`;
 
 function createAtomicCreator(): TaskAttachmentAtomicCreatorPort {
   return {
-    createFileAtomically: vi.fn(async () => undefined),
+    createFileAtomically: vi.fn(async () => ({ dev: 1, ino: 2 })),
   };
 }
 
@@ -190,10 +191,10 @@ describe('TeamTaskAttachmentStore', () => {
       'b2xkIGJ5dGVz'
     );
     const addTaskComment = vi.fn(async () => createComment());
+    const attachmentWriter = new TeamTaskCommentAttachmentWriter(store);
     const useCase = new AddTaskCommentUseCase({
       comments: { addTaskComment },
-      attachments: store,
-      attachmentCleanup: store,
+      attachments: attachmentWriter,
       logger: { warn: vi.fn() },
     });
 
@@ -214,5 +215,83 @@ describe('TeamTaskAttachmentStore', () => {
     expect(addTaskComment).not.toHaveBeenCalled();
     expect(await readFile(join(taskDirectory, ATTACHMENT_FILE))).toEqual(Buffer.from('old bytes'));
     expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+  });
+
+  it('preserves a replacement file when comment rollback no longer owns the saved inode', async () => {
+    const { store, taskDirectory } = await createRealStore();
+    const attachmentWriter = new TeamTaskCommentAttachmentWriter(store);
+    const failure = new Error('comment write failed');
+    const addTaskComment = vi.fn(
+      async (
+        _teamName: string,
+        _taskId: string,
+        _text: string,
+        attachments?: TaskAttachmentMeta[]
+      ) => {
+        const metadata = attachments?.[0];
+        if (!metadata || typeof metadata.filePath !== 'string') {
+          throw new Error('Expected saved attachment metadata');
+        }
+        await link(metadata.filePath, join(taskDirectory, 'original-backup'));
+        await unlink(metadata.filePath);
+        await writeFile(metadata.filePath, Buffer.from('replacement bytes'));
+        throw failure;
+      }
+    );
+    const useCase = new AddTaskCommentUseCase({
+      comments: { addTaskComment },
+      attachments: attachmentWriter,
+      logger: { warn: vi.fn() },
+    });
+
+    await expect(
+      useCase.execute('my-team', 'task-1', {
+        text: 'Comment',
+        attachments: [
+          {
+            id: ATTACHMENT_ID,
+            filename: 'new.png',
+            mimeType: 'image/png',
+            base64Data: 'bmV3IGJ5dGVz',
+          },
+        ],
+      })
+    ).rejects.toBe(failure);
+
+    expect(await readFile(join(taskDirectory, ATTACHMENT_FILE))).toEqual(
+      Buffer.from('replacement bytes')
+    );
+  });
+
+  it('removes the exact saved inode when comment persistence fails', async () => {
+    const { store, taskDirectory } = await createRealStore();
+    const failure = new Error('comment write failed');
+    const useCase = new AddTaskCommentUseCase({
+      comments: {
+        addTaskComment: vi.fn(async () => {
+          throw failure;
+        }),
+      },
+      attachments: new TeamTaskCommentAttachmentWriter(store),
+      logger: { warn: vi.fn() },
+    });
+
+    await expect(
+      useCase.execute('my-team', 'task-1', {
+        text: 'Comment',
+        attachments: [
+          {
+            id: ATTACHMENT_ID,
+            filename: 'new.png',
+            mimeType: 'image/png',
+            base64Data: 'bmV3IGJ5dGVz',
+          },
+        ],
+      })
+    ).rejects.toBe(failure);
+
+    await expect(readFile(join(taskDirectory, ATTACHMENT_FILE))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
   });
 });

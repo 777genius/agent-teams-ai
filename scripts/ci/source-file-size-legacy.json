@@ -110,7 +110,7 @@
   "src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter.ts": 1733,
   "src/main/services/team/taskLogs/stream/BoardTaskLogStreamService.ts": 2516,
   "src/main/services/team/taskLogs/stream/OpenCodeTaskLogStreamSource.ts": 1364,
-  "src/main/utils/atomicWrite.ts": 899,
+  "src/main/utils/atomicWrite.ts": 898,
   "src/main/utils/childProcess.ts": 1047,
   "src/main/utils/jsonl.ts": 957,
   "src/main/workers/team-fs-worker.ts": 2151,

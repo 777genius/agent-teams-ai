@@ -1,3 +1,4 @@
+import { KeyedMutex } from '@features/internal-storage/main';
 import {
   estimateTaskAttachmentDecodedBytes,
   isCanonicalTaskAttachmentBase64,
@@ -14,19 +15,30 @@ import * as path from 'path';
 import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskAttachmentStore');
+const attachmentMutationMutex = new KeyedMutex();
 
 export interface TaskAttachmentAtomicCreatorPort {
   /**
    * Publishes bytes without overwriting an existing target. Implementations
    * must preserve EEXIST collisions and leave no partial target on failure.
    */
-  createFileAtomically(filePath: string, data: Buffer): Promise<void>;
+  createFileAtomically(filePath: string, data: Buffer): Promise<TaskAttachmentFileIdentity>;
+}
+
+export interface TaskAttachmentFileIdentity {
+  readonly dev: number;
+  readonly ino: number;
+}
+
+export interface SavedTaskAttachmentReceipt {
+  readonly metadata: TaskAttachmentMeta;
+  readonly identity: TaskAttachmentFileIdentity;
+  readonly teamName: string;
+  readonly taskId: string;
 }
 
 const nodeTaskAttachmentAtomicCreator: TaskAttachmentAtomicCreatorPort = {
-  createFileAtomically: async (filePath, data) => {
-    await atomicCreateAsync(filePath, data);
-  },
+  createFileAtomically: atomicCreateAsync,
 };
 
 export class TeamTaskAttachmentStore {
@@ -99,6 +111,25 @@ export class TeamTaskAttachmentStore {
     mimeType: AttachmentMediaType,
     base64Data: string
   ): Promise<TaskAttachmentMeta> {
+    const receipt = await this.saveAttachmentWithReceipt(
+      teamName,
+      taskId,
+      attachmentId,
+      filename,
+      mimeType,
+      base64Data
+    );
+    return receipt.metadata;
+  }
+
+  async saveAttachmentWithReceipt(
+    teamName: string,
+    taskId: string,
+    attachmentId: string,
+    filename: string,
+    mimeType: AttachmentMediaType,
+    base64Data: string
+  ): Promise<SavedTaskAttachmentReceipt> {
     if (!isCanonicalTaskAttachmentId(attachmentId)) {
       throw new Error('Attachment ID must be a canonical UUID');
     }
@@ -131,29 +162,63 @@ export class TeamTaskAttachmentStore {
       );
     }
 
-    const existingPath = await this.findAttachmentFilePath(teamName, taskId, attachmentId);
-    if (existingPath) {
-      const collision = new Error(
-        `Task attachment already exists: ${attachmentId}`
-      ) as NodeJS.ErrnoException;
-      collision.code = 'EEXIST';
-      throw collision;
-    }
-
     const filePath = this.getStoredFilePath(teamName, taskId, attachmentId);
-    await this.atomicCreator.createFileAtomically(filePath, buffer);
+    return attachmentMutationMutex.run(filePath, async () => {
+      const existingPath = await this.findAttachmentFilePath(teamName, taskId, attachmentId);
+      if (existingPath) {
+        const collision = new Error(
+          `Task attachment already exists: ${attachmentId}`
+        ) as NodeJS.ErrnoException;
+        collision.code = 'EEXIST';
+        throw collision;
+      }
 
-    const meta: TaskAttachmentMeta = {
-      id: attachmentId,
-      filename,
-      mimeType,
-      size: buffer.length,
-      addedAt: new Date().toISOString(),
-      filePath,
-    };
+      const identity = await this.atomicCreator.createFileAtomically(filePath, buffer);
+      const metadata: TaskAttachmentMeta = {
+        id: attachmentId,
+        filename,
+        mimeType,
+        size: buffer.length,
+        addedAt: new Date().toISOString(),
+        filePath,
+      };
 
-    logger.debug(`[${teamName}] Saved task attachment ${attachmentId} for task #${taskId}`);
-    return meta;
+      logger.debug(`[${teamName}] Saved task attachment ${attachmentId} for task #${taskId}`);
+      return { metadata, identity, teamName, taskId };
+    });
+  }
+
+  async rollbackAttachment(receipt: SavedTaskAttachmentReceipt): Promise<void> {
+    const filePath = this.getStoredFilePath(receipt.teamName, receipt.taskId, receipt.metadata.id);
+    await attachmentMutationMutex.run(filePath, async () => {
+      let stats: fs.Stats;
+      try {
+        stats = await fs.promises.lstat(filePath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+        throw error;
+      }
+      if (
+        !stats.isFile() ||
+        stats.isSymbolicLink() ||
+        receipt.identity.ino === 0 ||
+        stats.dev !== receipt.identity.dev ||
+        stats.ino !== receipt.identity.ino
+      ) {
+        return;
+      }
+
+      try {
+        await fs.promises.unlink(filePath);
+        logger.debug(
+          `[${receipt.teamName}] Rolled back task attachment ${receipt.metadata.id} for task #${receipt.taskId}`
+        );
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+
+      await this.cleanupEmptyTaskDirectory(receipt.teamName, receipt.taskId);
+    });
   }
 
   /**
@@ -188,19 +253,25 @@ export class TeamTaskAttachmentStore {
     attachmentId: string,
     mimeType: AttachmentMediaType
   ): Promise<void> {
-    const filePath = await this.findAttachmentFilePath(teamName, taskId, attachmentId, mimeType);
-    if (!filePath) return;
+    const lockKey = this.getStoredFilePath(teamName, taskId, attachmentId);
+    await attachmentMutationMutex.run(lockKey, async () => {
+      const filePath = await this.findAttachmentFilePath(teamName, taskId, attachmentId, mimeType);
+      if (!filePath) return;
 
-    try {
-      await fs.promises.unlink(filePath);
-      logger.debug(`[${teamName}] Deleted task attachment ${attachmentId} for task #${taskId}`);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error;
+      try {
+        await fs.promises.unlink(filePath);
+        logger.debug(`[${teamName}] Deleted task attachment ${attachmentId} for task #${taskId}`);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error;
+        }
       }
-    }
 
-    // Clean up empty directory
+      await this.cleanupEmptyTaskDirectory(teamName, taskId);
+    });
+  }
+
+  private async cleanupEmptyTaskDirectory(teamName: string, taskId: string): Promise<void> {
     const dir = this.getTaskDir(teamName, taskId);
     try {
       const entries = await fs.promises.readdir(dir);

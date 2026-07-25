@@ -87,16 +87,12 @@ export interface TaskCommentAttachmentWriterPort {
     filename: string,
     mimeType: AttachmentMediaType,
     base64Data: string
-  ): Promise<TaskAttachmentMeta>;
+  ): Promise<SavedTaskCommentAttachment>;
 }
 
-export interface TaskCommentAttachmentCleanupPort {
-  deleteAttachment(
-    teamName: string,
-    taskId: string,
-    attachmentId: string,
-    mimeType: AttachmentMediaType
-  ): Promise<void>;
+export interface SavedTaskCommentAttachment {
+  readonly metadata: TaskAttachmentMeta;
+  rollback(): Promise<void>;
 }
 
 export interface TaskFieldsWriterPort {

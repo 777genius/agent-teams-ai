@@ -513,6 +513,28 @@ describe('atomicCreateAsync', () => {
     expect(mockUnlink).not.toHaveBeenCalledWith(TARGET_PATH);
   });
 
+  it('reports terminal success when directory sync fails after publish', async () => {
+    const fileHandle = {
+      sync: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    } as unknown as fs.promises.FileHandle;
+    const directorySync = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('directory fsync failed after publish'));
+    const directoryHandle = {
+      sync: directorySync,
+      close: vi.fn().mockResolvedValue(undefined),
+    } as unknown as fs.promises.FileHandle;
+    mockOpen.mockResolvedValueOnce(fileHandle).mockResolvedValueOnce(directoryHandle);
+
+    await expect(atomicCreateAsync(TARGET_PATH, CONTENT)).resolves.toEqual({ dev: 1, ino: 2 });
+
+    expect(directorySync).toHaveBeenCalledTimes(2);
+    expect(mockLink).toHaveBeenCalledWith(getTmpPath(), TARGET_PATH);
+    expect(mockUnlink).not.toHaveBeenCalledWith(TARGET_PATH);
+  });
+
   it('removes only a crash-left owned temp hardlink', async () => {
     mockLstat.mockResolvedValue({
       dev: 7,

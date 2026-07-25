@@ -320,11 +320,7 @@ export async function atomicWriteAsync(
   }
 }
 
-/**
- * Publish a fully-written new file without ever overwriting a concurrently-created target.
- * A hard-link publish is atomic on the same filesystem. If the process stops between link
- * and temporary-name cleanup, the target still contains the complete synced payload.
- */
+/** Atomically publish a fully synced new file without overwriting a concurrent target. */
 export async function atomicCreateAsync(
   targetPath: string,
   data: string | Buffer,
@@ -332,7 +328,7 @@ export async function atomicCreateAsync(
 ): Promise<AtomicCreateResult> {
   const dir = path.dirname(targetPath);
   const tmpPath = path.join(dir, `.review-create.${randomUUID()}.tmp`);
-
+  let directorySync: DirectorySyncPreparation | null = null;
   try {
     await fs.promises.mkdir(dir, { recursive: true });
     if (options.mode === undefined) {
@@ -350,17 +346,20 @@ export async function atomicCreateAsync(
 
     await syncFile(tmpPath, true);
     const identity = await fs.promises.lstat(tmpPath);
+    // Probe directory fsync before publish; after link, durability uncertainty is terminal success
+    // because callers can neither roll back nor safely retry a create they believe failed.
+    directorySync = await prepareDirectorySync(dir, true);
     await fs.promises.link(tmpPath, targetPath);
     try {
       await fs.promises.unlink(tmpPath);
     } catch {
-      // The target is already a fully synced, atomically published hardlink. Report
-      // terminal success instead of deleting it or making a lost IPC response
-      // ambiguous. A later authorization pass removes this reserved sibling link.
+      // The target is already a fully synced hardlink. Keep terminal success; a later
+      // authorization pass removes this reserved sibling link.
     }
-    await syncDirectory(dir, true);
+    await finishDirectorySyncAfterPublish(directorySync);
     return { dev: identity.dev, ino: identity.ino };
   } catch (error) {
+    await closeDirectorySync(directorySync);
     await fs.promises.unlink(tmpPath).catch(() => undefined);
     throw error;
   }

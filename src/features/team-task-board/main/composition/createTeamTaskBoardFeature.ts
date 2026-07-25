@@ -10,7 +10,6 @@ import { TeamTaskCommentAttachmentWriter } from '../adapters/output/TeamTaskComm
 
 import type {
   TaskChangePresencePort,
-  TaskCommentAttachmentCleanupPort,
   TaskCommentAttachmentWriterPort,
   TaskCommentWriterPort,
   TaskFieldsWriterPort,
@@ -40,7 +39,7 @@ export function createTeamTaskBoardFeature(dependencies: {
   runtimeApi: TeamRuntimeStatusPort;
   notificationApi: TeamLeadNotificationPort;
   launchIoGovernor?: LaunchIoGovernor;
-  commentAttachments?: TaskCommentAttachmentWriterPort & TaskCommentAttachmentCleanupPort;
+  commentAttachments?: TaskCommentAttachmentWriterPort;
   logger: TeamTaskBoardLoggerPort;
 }): TeamTaskBoardFeature {
   const updateTaskFields = new UpdateTaskFieldsUseCase({
@@ -54,7 +53,6 @@ export function createTeamTaskBoardFeature(dependencies: {
   const addTaskComment = new AddTaskCommentUseCase({
     comments: dependencies.taskBoardApi,
     attachments: commentAttachments,
-    attachmentCleanup: commentAttachments,
     logger: dependencies.logger,
   });
 

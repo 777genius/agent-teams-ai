@@ -1,10 +1,10 @@
 import type {
-  TaskCommentAttachmentCleanupPort,
+  SavedTaskCommentAttachment,
   TaskCommentAttachmentWriterPort,
   TaskCommentWriterPort,
   TeamTaskBoardLoggerPort,
 } from '../ports/TeamTaskBoardPorts';
-import type { AttachmentMediaType, TaskAttachmentMeta, TaskComment, TaskRef } from '@shared/types';
+import type { AttachmentMediaType, TaskComment, TaskRef } from '@shared/types';
 
 export interface AddTaskCommentAttachmentInput {
   id: string;
@@ -28,7 +28,6 @@ export class AddTaskCommentUseCase implements AddTaskCommentPort {
     private readonly dependencies: {
       comments: TaskCommentWriterPort;
       attachments: TaskCommentAttachmentWriterPort;
-      attachmentCleanup: TaskCommentAttachmentCleanupPort;
       logger: Pick<TeamTaskBoardLoggerPort, 'warn'>;
     }
   ) {}
@@ -38,10 +37,10 @@ export class AddTaskCommentUseCase implements AddTaskCommentPort {
     taskId: string,
     input: AddTaskCommentInput
   ): Promise<TaskComment> {
-    const savedAttachments: TaskAttachmentMeta[] = [];
+    const savedAttachments: SavedTaskCommentAttachment[] = [];
     try {
       for (const attachment of input.attachments) {
-        const metadata = await this.dependencies.attachments.saveAttachment(
+        const saved = await this.dependencies.attachments.saveAttachment(
           teamName,
           taskId,
           attachment.id,
@@ -49,39 +48,34 @@ export class AddTaskCommentUseCase implements AddTaskCommentPort {
           attachment.mimeType,
           attachment.base64Data
         );
-        savedAttachments.push(metadata);
+        savedAttachments.push(saved);
       }
 
       return await this.dependencies.comments.addTaskComment(
         teamName,
         taskId,
         input.text,
-        savedAttachments.length > 0 ? savedAttachments : undefined,
+        savedAttachments.length > 0
+          ? savedAttachments.map((attachment) => attachment.metadata)
+          : undefined,
         input.taskRefs
       );
     } catch (error) {
-      await this.rollbackSavedAttachments(teamName, taskId, savedAttachments);
+      await this.rollbackSavedAttachments(savedAttachments);
       throw error;
     }
   }
 
   private async rollbackSavedAttachments(
-    teamName: string,
-    taskId: string,
-    attachments: readonly TaskAttachmentMeta[]
+    attachments: readonly SavedTaskCommentAttachment[]
   ): Promise<void> {
     for (const attachment of [...attachments].reverse()) {
       try {
-        await this.dependencies.attachmentCleanup.deleteAttachment(
-          teamName,
-          taskId,
-          attachment.id,
-          attachment.mimeType
-        );
+        await attachment.rollback();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         this.dependencies.logger.warn(
-          `[teams:addTaskComment] Failed to roll back attachment ${attachment.id}: ${message}`
+          `[teams:addTaskComment] Failed to roll back attachment ${attachment.metadata.id}: ${message}`
         );
       }
     }

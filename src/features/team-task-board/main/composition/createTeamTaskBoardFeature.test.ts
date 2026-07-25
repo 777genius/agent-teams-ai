@@ -30,7 +30,6 @@ describe('createTeamTaskBoardFeature', () => {
     );
     const commentAttachments = {
       saveAttachment: vi.fn(),
-      deleteAttachment: vi.fn(),
     };
     const logger = { error: vi.fn(), warn: vi.fn() };
 

@@ -1,25 +1,23 @@
 import { TeamTaskAttachmentStore } from '@main/services/team/TeamTaskAttachmentStore';
 
 import type {
-  TaskCommentAttachmentCleanupPort,
+  SavedTaskCommentAttachment,
   TaskCommentAttachmentWriterPort,
 } from '../../../core/application/ports/TeamTaskBoardPorts';
-import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
+import type { AttachmentMediaType } from '@shared/types';
 
-export class TeamTaskCommentAttachmentWriter
-  implements TaskCommentAttachmentWriterPort, TaskCommentAttachmentCleanupPort
-{
+export class TeamTaskCommentAttachmentWriter implements TaskCommentAttachmentWriterPort {
   constructor(private readonly store: TeamTaskAttachmentStore = new TeamTaskAttachmentStore()) {}
 
-  saveAttachment(
+  async saveAttachment(
     teamName: string,
     taskId: string,
     attachmentId: string,
     filename: string,
     mimeType: AttachmentMediaType,
     base64Data: string
-  ): Promise<TaskAttachmentMeta> {
-    return this.store.saveAttachment(
+  ): Promise<SavedTaskCommentAttachment> {
+    const receipt = await this.store.saveAttachmentWithReceipt(
       teamName,
       taskId,
       attachmentId,
@@ -27,14 +25,9 @@ export class TeamTaskCommentAttachmentWriter
       mimeType,
       base64Data
     );
-  }
-
-  deleteAttachment(
-    teamName: string,
-    taskId: string,
-    attachmentId: string,
-    mimeType: AttachmentMediaType
-  ): Promise<void> {
-    return this.store.deleteAttachment(teamName, taskId, attachmentId, mimeType);
+    return {
+      metadata: receipt.metadata,
+      rollback: () => this.store.rollbackAttachment(receipt),
+    };
   }
 }
