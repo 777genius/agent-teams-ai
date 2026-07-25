@@ -993,6 +993,15 @@ test('traces top-level getter aliases only when public descriptors expose them',
       `,
       'src/features/getter-copy-overwrite-before-publication-safe/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/getter-copy-parent-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = { api: {} };
+        hidden.api.Store = Store;
+        hidden.api = {};
+        export const api = { ...hidden.api };
+      `,
+      'src/features/getter-copy-parent-overwrite-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/getter-copy-source-order-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const safe = {};
@@ -1546,6 +1555,7 @@ test('traces top-level getter aliases only when public descriptors expose them',
         'src/features/getter-copy-after-publication-safe/main/index.ts',
         'src/features/getter-copy-descriptor-overwrite-safe/main/index.ts',
         'src/features/getter-copy-overwrite-before-publication-safe/main/index.ts',
+        'src/features/getter-copy-parent-overwrite-safe/main/index.ts',
         'src/features/getter-copy-source-order-safe/main/index.ts',
         'src/features/getter-copy-target-overwrite-safe/main/index.ts',
         'src/features/getter-object-assign-overwritten-safe/main/index.ts',
@@ -1708,6 +1718,15 @@ test('tracks CommonJS object copies with last-write semantics', () => {
         module.exports = { ...alias };
       `,
       'src/features/commonjs-copy-overwrite-before-publication-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-copy-parent-overwrite-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = { api: {} };
+        hidden.api.Store = Store;
+        hidden.api = {};
+        Object.assign(exports, hidden.api);
+      `,
+      'src/features/commonjs-copy-parent-overwrite-safe/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
       'src/features/commonjs-copy-source-order-safe/main/index.cjs': `
         const Store = require('./infrastructure/Store');

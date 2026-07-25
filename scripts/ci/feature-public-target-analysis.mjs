@@ -20,14 +20,13 @@ import {
 } from './feature-public-commonjs-analysis.mjs';
 import {
   accessPath,
-  comparePropertyWriteOrder,
   collectCopyRelations,
   collectPrototypeRelations,
   collectTopLevelPropertyWrites,
   latestPropertyWriteBefore,
   materializeCopyRelationWrites,
   propertyPathWasOverwrittenAfter,
-  propertyWriteAvailableAt,
+  propertyWriteWasOverwrittenBefore,
   staticOverwrittenPaths,
   staticOverwrittenPropertyPaths,
 } from './feature-public-object-analysis.mjs';
@@ -620,12 +619,10 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     ) {
       return false;
     }
-    const wasOverwrittenBeforeCopy = sourceWrites.some(
-      (write) =>
-        comparePropertyWriteOrder(write, currentWrite) > 0 &&
-        propertyWriteAvailableAt(write) < relation.copyPosition &&
-        write.path.length === currentWrite.path.length &&
-        write.path.every((segment, index) => segment === currentWrite.path[index])
+    const wasOverwrittenBeforeCopy = propertyWriteWasOverwrittenBefore(
+      sourceWrites,
+      currentWrite,
+      relation.copyPosition
     );
     const overwrittenByTarget = relation.overwrittenPaths?.some((overwrittenPath) =>
       overwrittenPath.every(
@@ -689,12 +686,10 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
       }
       const wasOverwrittenBeforeCopy =
         currentWrite &&
-        sourceWrites.some(
-          (write) =>
-            comparePropertyWriteOrder(write, currentWrite) > 0 &&
-            propertyWriteAvailableAt(write) < relation.copyPosition &&
-            write.path.length === currentWrite.path.length &&
-            write.path.every((segment, index) => segment === currentWrite.path[index])
+        propertyWriteWasOverwrittenBefore(
+          sourceWrites,
+          currentWrite,
+          relation.copyPosition
         );
       const overwrittenByTarget =
         currentWrite &&

@@ -43,6 +43,20 @@ export function latestPropertyWriteBefore(writes, beforePosition, predicate) {
     .sort((left, right) => comparePropertyWriteOrder(right, left))[0];
 }
 
+export function propertyWriteWasOverwrittenBefore(
+  writes,
+  sourceWrite,
+  beforePosition
+) {
+  return writes.some(
+    (write) =>
+      comparePropertyWriteOrder(write, sourceWrite) > 0 &&
+      propertyWriteAvailableAt(write) < beforePosition &&
+      write.path.length <= sourceWrite.path.length &&
+      write.path.every((segment, index) => segment === sourceWrite.path[index])
+  );
+}
+
 export function propertyPathWasOverwrittenAfter(
   writes,
   source,
@@ -562,14 +576,10 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
       const ownerWrites = propertyWrites.get(relation.ownerKey) ?? [];
       const sourceWrites = propertyWrites.get(relation.sourceKey) ?? [];
       for (const sourceWrite of sourceWrites) {
-        const overwrittenBeforeCopy = sourceWrites.some(
-          (write) =>
-            comparePropertyWriteOrder(write, sourceWrite) > 0 &&
-            propertyWriteAvailableAt(write) < relation.copyPosition &&
-            write.path.length <= sourceWrite.path.length &&
-            write.path.every(
-              (segment, index) => segment === sourceWrite.path[index]
-            )
+        const overwrittenBeforeCopy = propertyWriteWasOverwrittenBefore(
+          sourceWrites,
+          sourceWrite,
+          relation.copyPosition
         );
         if (
           propertyWriteAvailableAt(sourceWrite) >= relation.copyPosition ||
