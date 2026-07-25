@@ -13,7 +13,7 @@ import { readGitBlobBatch } from "@vioxen/subscription-runtime/worker-local";
 import { withLiteralGitPathspecs } from "./git-literal-pathspecs";
 
 const execFileAsync = promisify(execFile);
-const maximumChangedPaths = 256;
+const maximumChangedPaths = 512;
 const maximumInputChangedPaths = 1024;
 const maximumByteLimit = 64 * 1024 * 1024;
 const maximumPatchBytes = 16 * 1024 * 1024;

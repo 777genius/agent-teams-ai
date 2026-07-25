@@ -241,6 +241,26 @@ describe("Codex goal handoff artifact materialization", () => {
     })).rejects.toThrow("handoff_changed_file_limit_exceeded");
   });
 
+  it("materializes a broad merge handoff within the default file-count bound", async () => {
+    const fixture = await createFixture();
+    const broadMergeDir = join(fixture.workspacePath, "broad-merge");
+    await mkdir(broadMergeDir);
+    await Promise.all(
+      Array.from({ length: 300 }, async (_, index) => {
+        const name = `path-${String(index).padStart(3, "0")}.txt`;
+        await writeFile(join(broadMergeDir, name), `${index}\n`);
+      }),
+    );
+
+    const result = await materialize(fixture);
+
+    expect(result?.changedPaths).toHaveLength(300);
+    expect(result?.changedPaths[0]).toBe("broad-merge/path-000.txt");
+    expect(result?.changedPaths.at(-1)).toBe(
+      "broad-merge/path-299.txt",
+    );
+  });
+
   it("removes unsafe dependency links before freezing terminal output", async () => {
     const fixture = await createFixture();
     const sharedDependencies = join(fixture.root, "shared-node-modules");

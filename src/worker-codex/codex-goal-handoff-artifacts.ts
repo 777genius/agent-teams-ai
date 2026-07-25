@@ -36,7 +36,7 @@ const execFileAsync = promisify(execFile);
 const maximumHandoffByteLimit = 64 * 1024 * 1024;
 
 export const DEFAULT_HANDOFF_ARTIFACT_LIMITS = {
-  maxChangedFiles: 256,
+  maxChangedFiles: 512,
   maxFileBytes: 4 * 1024 * 1024,
   maxTotalFileBytes: 16 * 1024 * 1024,
   maxPatchBytes: 16 * 1024 * 1024,
