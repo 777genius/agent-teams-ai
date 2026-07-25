@@ -1032,7 +1032,10 @@ function createOpenCodeRuntimeDeliveryBoundaryForTest(
       Promise.resolve({
         name: teamName,
         projectPath: tempClaudeRoot,
-        members: [{ name: 'alice' }, { name: 'bob' }],
+        members: [
+          { name: 'alice', providerId: 'codex' },
+          { name: 'bob', providerId: 'opencode' },
+        ],
       }),
     readMetaMembers: async () => [],
     readPersistedRuntimeMembers: () => [],
@@ -15189,7 +15192,10 @@ describe('TeamProvisioningService', () => {
     });
 
     it('accepts duplicate OpenCode bootstrap check-ins for the same runtime session and refreshes liveness', async () => {
-      const svc = new TeamProvisioningService();
+      const svc = createServiceWithConfig({
+        teamName: 'mixed-team',
+        members: [{ name: 'bob', providerId: 'opencode' }],
+      });
       const previousSnapshot = {
         version: 2 as const,
         teamName: 'mixed-team',
@@ -15354,7 +15360,10 @@ describe('TeamProvisioningService', () => {
     });
 
     it('rejects conflicting OpenCode bootstrap check-ins for an already confirmed runtime session', async () => {
-      const svc = new TeamProvisioningService();
+      const svc = createServiceWithConfig({
+        teamName: 'mixed-team',
+        members: [{ name: 'bob', providerId: 'opencode' }],
+      });
       const previousSnapshot = {
         version: 2 as const,
         teamName: 'mixed-team',

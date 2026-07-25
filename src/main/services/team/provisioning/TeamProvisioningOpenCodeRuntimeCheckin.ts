@@ -107,7 +107,6 @@ export async function recordOpenCodeRuntimeBootstrapCheckin<Run extends OpenCode
       {
         teamName,
         memberName,
-        previousMember: idempotent.previousMember,
       },
       ports
     );
@@ -357,13 +356,19 @@ function assertOpenCodeRuntimeMemberSessionAcceptedFromState(
   if (configuredMember.removedAt != null) {
     throwRuntimeMemberSessionMismatch(input, 'member has been removed');
   }
+  if (configuredMember.providerId !== 'opencode')
+    throwRuntimeMemberSessionMismatch(input, 'member is not owned by OpenCode');
 
   const persistedMember = Object.entries(snapshot?.members ?? {}).find(([memberName]) =>
     matchesTeamMemberIdentity(memberName, configuredMember.name)
   )?.[1];
+  const isBootstrapCheckin = input.evidenceKind === 'bootstrap_checkin';
   if (!persistedMember) {
+    if (isBootstrapCheckin) return;
     throwRuntimeMemberSessionMismatch(input, 'member runtime identity is unavailable');
   }
+  const persistedRunId = persistedMember.runtimeRunId?.trim();
+  if (isBootstrapCheckin && persistedRunId !== input.runId) return;
   const persistedOwnerProviderId =
     persistedMember.laneOwnerProviderId ?? persistedMember.providerId;
   if (persistedOwnerProviderId !== 'opencode') {
@@ -374,10 +379,14 @@ function assertOpenCodeRuntimeMemberSessionAcceptedFromState(
   if (persistedLaneId !== input.laneId) {
     throwRuntimeMemberSessionMismatch(input, 'member lane does not match');
   }
-  if (persistedMember.runtimeRunId?.trim() !== input.runId) {
+  if (persistedRunId !== input.runId) {
     throwRuntimeMemberSessionMismatch(input, 'member runtime run does not match');
   }
-  if (persistedMember.runtimeSessionId?.trim() !== input.runtimeSessionId) {
+  const persistedSessionId = persistedMember.runtimeSessionId?.trim();
+  if (
+    persistedSessionId !== input.runtimeSessionId &&
+    (!isBootstrapCheckin || Boolean(persistedSessionId))
+  ) {
     throwRuntimeMemberSessionMismatch(input, 'member runtime session does not match');
   }
 }
@@ -451,35 +460,37 @@ export async function assertOpenCodeRuntimeMemberCheckinAllowed<
   input: {
     teamName: string;
     memberName: string;
-    previousMember?: PersistedTeamLaunchMemberState;
   },
   ports: Pick<OpenCodeRuntimeCheckinPorts<Run>, 'readConfigForStrictDecision' | 'readMetaMembers'>
 ): Promise<void> {
   const config = await ports.readConfigForStrictDecision(input.teamName).catch(() => null);
   const metaMembers = await ports.readMetaMembers(input.teamName).catch(() => []);
+  if (!config || config.deletedAt) {
+    throwRuntimeBootstrapCheckinRejected(input.memberName, 'team configuration is unavailable');
+  }
   const configuredMember = resolveEffectiveConfiguredMember(
-    config?.members ?? [],
+    config.members ?? [],
     metaMembers,
     input.memberName
   );
 
   if (configuredMember?.removedAt != null) {
-    throw new RuntimeStaleEvidenceError(
-      `Rejected OpenCode bootstrap check-in for removed member "${input.memberName}"`,
-      'run_mismatch',
-      'bootstrap_checkin',
-      null
-    );
+    throwRuntimeBootstrapCheckinRejected(input.memberName, 'member has been removed');
   }
 
-  if (!configuredMember && !input.previousMember) {
-    throw new RuntimeStaleEvidenceError(
-      `Rejected OpenCode bootstrap check-in for unconfigured member "${input.memberName}"`,
-      'run_mismatch',
-      'bootstrap_checkin',
-      null
-    );
-  }
+  if (!configuredMember)
+    throwRuntimeBootstrapCheckinRejected(input.memberName, 'member is not configured');
+  if (configuredMember.providerId !== 'opencode')
+    throwRuntimeBootstrapCheckinRejected(input.memberName, 'member is not owned by OpenCode');
+}
+
+function throwRuntimeBootstrapCheckinRejected(memberName: string, reason: string): never {
+  throw new RuntimeStaleEvidenceError(
+    `Rejected OpenCode bootstrap check-in for "${memberName}": ${reason}`,
+    'run_mismatch',
+    'bootstrap_checkin',
+    null
+  );
 }
 
 export async function updateOpenCodeRuntimeMemberLiveness<Run extends OpenCodeRuntimeCheckinRun>(

@@ -153,7 +153,7 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
     expect(result.previousMember?.runtimeSessionId).toBe('session-1');
   });
 
-  it('allows configured check-ins and rejects removed or unknown members without previous state', async () => {
+  it('requires current team configuration and an active configured member', async () => {
     await expect(
       assertOpenCodeRuntimeMemberCheckinAllowed(
         { teamName: 'Team', memberName: 'Alice' },
@@ -162,7 +162,7 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
             async () =>
               ({
                 name: 'Team',
-                members: [{ name: 'Alice' }],
+                members: [{ name: 'Alice', providerId: 'opencode' }],
               }) as TeamConfig
           ),
           readMetaMembers: vi.fn(async () => []),
@@ -197,6 +197,82 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
         }
       )
     ).rejects.toBeInstanceOf(RuntimeStaleEvidenceError);
+
+    await expect(
+      assertOpenCodeRuntimeMemberCheckinAllowed(
+        { teamName: 'Team', memberName: 'Alice' },
+        {
+          readConfigForStrictDecision: vi.fn(async () => null),
+          readMetaMembers: vi.fn(async () => []),
+        }
+      )
+    ).rejects.toThrow('team configuration is unavailable');
+  });
+
+  it.each([
+    {
+      caseName: 'without a previous member snapshot',
+      previous: null,
+    },
+    {
+      caseName: 'over an older-run member snapshot',
+      previous: createPersistedLaunchSnapshot({
+        teamName: 'Team',
+        expectedMembers: ['Alice'],
+        launchPhase: 'active',
+        members: {
+          Alice: {
+            name: 'Alice',
+            providerId: 'opencode',
+            laneId: 'primary',
+            laneOwnerProviderId: 'opencode',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            runtimeRunId: 'run-older',
+            runtimeSessionId: 'session-older',
+            lastEvaluatedAt: observedAt,
+          },
+        },
+        updatedAt: observedAt,
+      }),
+    },
+  ])('rejects a configured non-OpenCode member $caseName', async ({ previous }) => {
+    const teamsBasePath = createSafeTempDir('opencode-runtime-bootstrap-provider-');
+    const ports = createPorts({
+      teamsBasePath,
+      resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'primary'),
+      resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'run-current'),
+      readLaunchState: vi.fn(async () => previous),
+      readConfigForStrictDecision: vi.fn(
+        async () =>
+          ({
+            name: 'Team',
+            members: [{ name: 'Alice', providerId: 'codex' }],
+          }) as TeamConfig
+      ),
+    });
+
+    try {
+      await expect(
+        recordOpenCodeRuntimeBootstrapCheckin(
+          {
+            teamName: 'Team',
+            runId: 'run-current',
+            memberName: 'Alice',
+            runtimeSessionId: 'session-current',
+            observedAt,
+          },
+          ports
+        )
+      ).rejects.toThrow('member is not owned by OpenCode');
+      expect(ports.mutateLaunchState).not.toHaveBeenCalled();
+      expect(ports.writeLaunchState).not.toHaveBeenCalled();
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
   });
 
   it('accepts evidence only for the current runtime run', async () => {
@@ -425,7 +501,7 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
     }
   });
 
-  it('does not let a stale bootstrap session overwrite a superseding launch snapshot', async () => {
+  it('rejects a same-run conflicting bootstrap session introduced during atomic mutation', async () => {
     const teamsBasePath = createSafeTempDir('opencode-runtime-bootstrap-race-');
     const mutationEntered = createDeferred();
     const releaseMutation = createDeferred();
@@ -452,7 +528,6 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
         },
         updatedAt: observedAt,
       });
-    const oldSnapshot = snapshot('session-old-owner');
     const supersedingSnapshot = snapshot('session-new-owner');
     const writeLaunchState = vi.fn(async () => undefined);
     const withTeamLock = vi.fn();
@@ -467,7 +542,7 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
     const ports = createPorts({
       teamsBasePath,
       resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'primary'),
-      readLaunchState: vi.fn(async () => oldSnapshot),
+      readLaunchState: vi.fn(async () => null),
       readConfigForStrictDecision: vi.fn(
         async () =>
           ({
@@ -508,6 +583,86 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
     } finally {
       releaseMutation.resolve();
       rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts a first current bootstrap check-in without member state or over an older-run snapshot', async () => {
+    const olderRunSnapshot = createPersistedLaunchSnapshot({
+      teamName: 'Team',
+      expectedMembers: ['Alice'],
+      launchPhase: 'active',
+      members: {
+        Alice: {
+          name: 'Alice',
+          providerId: 'opencode',
+          laneId: 'primary',
+          laneOwnerProviderId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          runtimeRunId: 'run-older',
+          runtimeSessionId: 'session-older',
+          lastEvaluatedAt: observedAt,
+        },
+      },
+      updatedAt: observedAt,
+    });
+
+    for (const previous of [null, olderRunSnapshot]) {
+      const teamsBasePath = createSafeTempDir('opencode-runtime-bootstrap-first-checkin-');
+      const persistedSnapshots: PersistedTeamLaunchSnapshot[] = [];
+      const mutateLaunchState: OpenCodeRuntimeCheckinPorts<TestRun>['mutateLaunchState'] = async (
+        _teamName,
+        mutation
+      ) => {
+        const next = await mutation(previous);
+        persistedSnapshots.push(next);
+        return next;
+      };
+      const ports = createPorts({
+        teamsBasePath,
+        resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'primary'),
+        resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'run-current'),
+        readLaunchState: vi.fn(async () => previous),
+        readConfigForStrictDecision: vi.fn(
+          async () =>
+            ({
+              name: 'Team',
+              members: [{ name: 'Alice', providerId: 'opencode' }],
+            }) as TeamConfig
+        ),
+        mutateLaunchState,
+        createOpenCodeRuntimeBootstrapEvidencePorts: vi.fn(() =>
+          createDefaultOpenCodeRuntimeBootstrapEvidencePorts({ teamsBasePath })
+        ),
+      });
+
+      try {
+        await expect(
+          recordOpenCodeRuntimeBootstrapCheckin(
+            {
+              teamName: 'Team',
+              runId: 'run-current',
+              memberName: 'Alice',
+              runtimeSessionId: 'session-current',
+              observedAt,
+            },
+            ports
+          )
+        ).resolves.toMatchObject({
+          ok: true,
+          state: 'accepted',
+          runtimeSessionId: 'session-current',
+        });
+        expect(persistedSnapshots.at(-1)?.members.Alice).toMatchObject({
+          runtimeRunId: 'run-current',
+          runtimeSessionId: 'session-current',
+        });
+      } finally {
+        rmSync(teamsBasePath, { recursive: true, force: true });
+      }
     }
   });
 
