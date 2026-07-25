@@ -22,14 +22,25 @@ export function propertyWriteAvailableAt(write) {
   return write.availableAt ?? write.position;
 }
 
+export function comparePropertyWriteOrder(left, right) {
+  const availabilityDelta =
+    propertyWriteAvailableAt(left) - propertyWriteAvailableAt(right);
+  if (availabilityDelta !== 0) return availabilityDelta;
+  const leftOrder = left.availabilityOrder ?? [left.position];
+  const rightOrder = right.availabilityOrder ?? [right.position];
+  for (let index = 0; index < Math.max(leftOrder.length, rightOrder.length); index++) {
+    const orderDelta = (leftOrder[index] ?? -1) - (rightOrder[index] ?? -1);
+    if (orderDelta !== 0) return orderDelta;
+  }
+  return left.position - right.position;
+}
+
 export function latestPropertyWriteBefore(writes, beforePosition, predicate) {
   return writes
     .filter(
       (write) => propertyWriteAvailableAt(write) < beforePosition && predicate(write)
     )
-    .sort(
-      (left, right) => propertyWriteAvailableAt(right) - propertyWriteAvailableAt(left)
-    )[0];
+    .sort((left, right) => comparePropertyWriteOrder(right, left))[0];
 }
 
 function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
@@ -519,6 +530,7 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
     JSON.stringify([
       sourceKey,
       write.availableAt,
+      write.availabilityOrder,
       write.position,
       write.path,
       write.originSourceKeys ?? [],
@@ -532,7 +544,7 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
   let changed = true;
   while (changed) {
     changed = false;
-    for (const relation of relations) {
+    for (const [relationOrder, relation] of relations.entries()) {
       const ownerWrites = propertyWrites.get(relation.ownerKey) ?? [];
       for (const sourceWrite of propertyWrites.get(relation.sourceKey) ?? []) {
         if (
@@ -558,6 +570,10 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
           ...sourceWrite,
           // References keep their original AST positions; visibility starts at the copy.
           availableAt: relation.copyPosition,
+          availabilityOrder: [
+            relationOrder,
+            ...(sourceWrite.availabilityOrder ?? [sourceWrite.position]),
+          ],
           originSourceKeys: [
             ...new Set([
               ...(sourceWrite.originSourceKeys ?? []),
@@ -573,10 +589,7 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
         changed = true;
       }
       if (ownerWrites.length > 0) {
-        ownerWrites.sort(
-          (left, right) =>
-            propertyWriteAvailableAt(left) - propertyWriteAvailableAt(right)
-        );
+        ownerWrites.sort(comparePropertyWriteOrder);
         propertyWrites.set(relation.ownerKey, ownerWrites);
       }
     }

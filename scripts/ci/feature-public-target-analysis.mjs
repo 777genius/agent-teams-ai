@@ -20,6 +20,7 @@ import {
 } from './feature-public-commonjs-analysis.mjs';
 import {
   accessPath,
+  comparePropertyWriteOrder,
   collectCopyRelations,
   collectPrototypeRelations,
   collectTopLevelPropertyWrites,
@@ -628,7 +629,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     }
     const wasOverwrittenBeforeCopy = sourceWrites.some(
       (write) =>
-        propertyWriteAvailableAt(write) > propertyWriteAvailableAt(currentWrite) &&
+        comparePropertyWriteOrder(write, currentWrite) > 0 &&
         propertyWriteAvailableAt(write) < relation.copyPosition &&
         write.path.length === currentWrite.path.length &&
         write.path.every((segment, index) => segment === currentWrite.path[index])
@@ -697,7 +698,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         currentWrite &&
         sourceWrites.some(
           (write) =>
-            propertyWriteAvailableAt(write) > propertyWriteAvailableAt(currentWrite) &&
+            comparePropertyWriteOrder(write, currentWrite) > 0 &&
             propertyWriteAvailableAt(write) < relation.copyPosition &&
             write.path.length === currentWrite.path.length &&
             write.path.every((segment, index) => segment === currentWrite.path[index])
