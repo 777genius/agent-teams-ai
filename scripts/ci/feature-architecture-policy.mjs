@@ -6,6 +6,7 @@ import ts from 'typescript';
 
 import {
   bindingNames,
+  collectConsumedDescriptorGetterProperties,
   findPublicReferenceOwner,
   hasModifier,
   importedNameForCall,
@@ -325,6 +326,8 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
 
   visit(sourceFile);
 
+  const consumedDescriptorGetterProperties = collectConsumedDescriptorGetterProperties(sourceFile);
+
   const isIdentifierReference = (node) => {
     const parent = node.parent;
     if (!parent) return false;
@@ -370,9 +373,11 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     let current = node;
     while (current.parent && current.parent !== sourceFile) {
       const parent = current.parent;
-      if (ts.isPropertyAssignment(parent) && parent.initializer === current) {
-        const name = parent.name;
-        return (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) && name.text === 'get';
+      if (
+        (ts.isPropertyAssignment(parent) || ts.isShorthandPropertyAssignment(parent)) &&
+        consumedDescriptorGetterProperties.has(parent)
+      ) {
+        return true;
       }
       current = parent;
     }

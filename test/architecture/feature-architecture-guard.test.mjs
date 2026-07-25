@@ -788,22 +788,28 @@ test('traces top-level getter aliases only when public descriptors expose them',
   withFixture(
     {
       'src/features/getter-alias/main/index.cjs': `
+        const AliasedModule = require('./infrastructure/Aliased');
         const HiddenModule = require('./infrastructure/Hidden');
         const RepositoryModule = require('./infrastructure/Repository');
         const StoreModule = require('./infrastructure/Store');
 
+        const getAliased = () => AliasedModule.Aliased;
         const getHidden = () => HiddenModule.Hidden;
         const getStore = () => StoreModule.Store;
         function getRepository() {
           return RepositoryModule.Repository;
         }
+        const aliasedDescriptor = { get: getAliased };
 
+        Object.defineProperty(exports, 'Aliased', aliasedDescriptor);
         Object.defineProperty(exports, 'Store', { get: getStore });
         Object.defineProperties(exports, {
           Repository: { get: getRepository },
         });
         void getHidden;
       `,
+      'src/features/getter-alias/main/infrastructure/Aliased.cjs':
+        'exports.Aliased = class Aliased {};',
       'src/features/getter-alias/main/infrastructure/Hidden.cjs':
         'exports.Hidden = class Hidden {};',
       'src/features/getter-alias/main/infrastructure/Repository.cjs':
@@ -843,6 +849,14 @@ test('traces top-level getter aliases only when public descriptors expose them',
       `,
       'src/features/getter-factory-safe/main/infrastructure/Concrete.ts':
         'export class Concrete {}',
+      'src/features/getter-field-factory-safe/main/index.ts': `
+        import { Concrete } from './infrastructure/Concrete';
+        interface PublicPort {}
+        const createFeature = (): PublicPort => new Concrete();
+        export const api = { get: createFeature };
+      `,
+      'src/features/getter-field-factory-safe/main/infrastructure/Concrete.ts':
+        'export class Concrete {}',
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
@@ -852,6 +866,7 @@ test('traces top-level getter aliases only when public descriptors expose them',
           .map(({ specifier }) => specifier)
           .sort(),
         [
+          './infrastructure/Aliased',
           './infrastructure/Assigned',
           './infrastructure/Repository',
           './infrastructure/Store',

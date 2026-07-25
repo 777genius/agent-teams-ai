@@ -268,6 +268,109 @@ function propertyNameText(name) {
   return '*';
 }
 
+function collectTopLevelAssignmentExpressions(sourceFile) {
+  const assignments = new Map();
+  const addAssignment = (name, expression) => {
+    const expressions = assignments.get(name) ?? [];
+    expressions.push(expression);
+    assignments.set(name, expressions);
+  };
+  for (const statement of sourceFile.statements) {
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name) && declaration.initializer) {
+          addAssignment(declaration.name.text, declaration.initializer);
+        }
+      }
+      continue;
+    }
+    if (!ts.isExpressionStatement(statement)) continue;
+    const expression = unwrapExpression(statement.expression);
+    if (
+      ts.isBinaryExpression(expression) &&
+      expression.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      ts.isIdentifier(unwrapExpression(expression.left))
+    ) {
+      addAssignment(unwrapExpression(expression.left).text, expression.right);
+    }
+  }
+  return assignments;
+}
+
+function resolveStaticObjectLiterals(expression, assignments, visited = new Set()) {
+  const current = expression && unwrapExpression(expression);
+  if (!current) return [];
+  if (ts.isObjectLiteralExpression(current)) return [current];
+  if (ts.isIdentifier(current)) {
+    if (visited.has(current.text)) return [];
+    const nextVisited = new Set(visited).add(current.text);
+    return (assignments.get(current.text) ?? []).flatMap((assigned) =>
+      resolveStaticObjectLiterals(assigned, assignments, nextVisited)
+    );
+  }
+  const access = memberAccess(current);
+  if (!access) return [];
+  return resolveStaticObjectLiterals(access.receiver, assignments, visited).flatMap((object) => {
+    const property = object.properties.find(
+      (candidate) =>
+        ts.isPropertyAssignment(candidate) && propertyNameText(candidate.name) === access.name
+    );
+    return property && ts.isPropertyAssignment(property)
+      ? resolveStaticObjectLiterals(property.initializer, assignments, visited)
+      : [];
+  });
+}
+
+function collectDescriptorGetterProperties(descriptor, getterProperties) {
+  for (const property of descriptor.properties) {
+    if (
+      (ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property)) &&
+      propertyNameText(property.name) === 'get'
+    ) {
+      getterProperties.add(property);
+    }
+  }
+}
+
+/**
+ * Finds `get` fields that are actually consumed as property descriptors.
+ * An ordinary public object may legally expose a field named `get`; only
+ * Object/Reflect descriptor sinks grant getter-only dependency reachability.
+ */
+export function collectConsumedDescriptorGetterProperties(sourceFile) {
+  const assignments = collectTopLevelAssignmentExpressions(sourceFile);
+  const getterProperties = new Set();
+  const visit = (node) => {
+    if (ts.isCallExpression(node)) {
+      const method = memberAccess(node.expression);
+      const isDescriptorApi =
+        method &&
+        ts.isIdentifier(method.receiver) &&
+        ['Object', 'Reflect'].includes(method.receiver.text);
+      if (isDescriptorApi && method.name === 'defineProperty') {
+        for (const descriptor of resolveStaticObjectLiterals(node.arguments[2], assignments)) {
+          collectDescriptorGetterProperties(descriptor, getterProperties);
+        }
+      } else if (isDescriptorApi && method.name === 'defineProperties') {
+        for (const descriptorMap of resolveStaticObjectLiterals(node.arguments[1], assignments)) {
+          for (const property of descriptorMap.properties) {
+            if (!ts.isPropertyAssignment(property)) continue;
+            for (const descriptor of resolveStaticObjectLiterals(
+              property.initializer,
+              assignments
+            )) {
+              collectDescriptorGetterProperties(descriptor, getterProperties);
+            }
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return getterProperties;
+}
+
 function descriptorGetterContainsReference(descriptorExpression, reference) {
   const descriptor = descriptorExpression && unwrapExpression(descriptorExpression);
   if (!descriptor || !ts.isObjectLiteralExpression(descriptor)) return false;
