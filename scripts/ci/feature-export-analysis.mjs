@@ -8,7 +8,7 @@ const MUTATING_OBJECT_METHODS = new Set([
   'setPrototypeOf',
 ]);
 
-function rootBindingName(expression) {
+export function rootBindingName(expression) {
   let current = expression;
   while (true) {
     if (ts.isPropertyAccessExpression(current) || ts.isElementAccessExpression(current)) {
@@ -54,6 +54,81 @@ export function statementBindingNames(statement) {
     : [];
 }
 
+function unwrapParenthesizedType(node) {
+  let current = node;
+  while (ts.isParenthesizedTypeNode(current)) current = current.type;
+  return current;
+}
+
+export function importTypeSelectedNames(node) {
+  let current = node.qualifier;
+  while (current && ts.isQualifiedName(current)) current = current.left;
+  if (current && ts.isIdentifier(current)) return [current.text];
+
+  let selectedType = node;
+  while (
+    selectedType.parent &&
+    ts.isParenthesizedTypeNode(selectedType.parent) &&
+    selectedType.parent.type === selectedType
+  ) {
+    selectedType = selectedType.parent;
+  }
+  const parent = selectedType.parent;
+  if (!parent || !ts.isIndexedAccessTypeNode(parent) || parent.objectType !== selectedType) {
+    return ['*'];
+  }
+  const selected = unwrapParenthesizedType(parent.indexType);
+  const selectedTypes = ts.isUnionTypeNode(selected) ? selected.types : [selected];
+  const names = selectedTypes.map((selectedTypeNode) => {
+    const unwrapped = unwrapParenthesizedType(selectedTypeNode);
+    return ts.isLiteralTypeNode(unwrapped) && ts.isStringLiteralLike(unwrapped.literal)
+      ? unwrapped.literal.text
+      : null;
+  });
+  return names.every((name) => name !== null) ? [...new Set(names)] : ['*'];
+}
+
+export function isIdentifierReference(node) {
+  const parent = node.parent;
+  if (!parent) return false;
+  if (
+    (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
+    (ts.isQualifiedName(parent) && parent.right === node)
+  ) {
+    return false;
+  }
+  if (
+    'name' in parent &&
+    parent.name === node &&
+    !ts.isShorthandPropertyAssignment(parent) &&
+    !ts.isExportSpecifier(parent)
+  ) {
+    return false;
+  }
+  return !(
+    (ts.isBindingElement(parent) && parent.propertyName === node) ||
+    ts.isImportClause(parent) ||
+    ts.isImportSpecifier(parent) ||
+    ts.isNamespaceImport(parent)
+  );
+}
+
+export function isShadowedTypeReference(node, sourceFile) {
+  let current = node.parent;
+  while (current && current !== sourceFile) {
+    if (
+      'typeParameters' in current &&
+      current.typeParameters?.some(
+        (parameter) => ts.isIdentifier(parameter.name) && parameter.name.text === node.text
+      )
+    ) {
+      return true;
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
 function assignmentLocalNames(target) {
   const current = unwrapExpression(target);
   if (ts.isIdentifier(current)) return [current.text];
@@ -76,7 +151,7 @@ function assignmentLocalNames(target) {
   return [];
 }
 
-function unwrapExpression(expression) {
+export function unwrapExpression(expression) {
   let current = expression;
   while (
     ts.isParenthesizedExpression(current) ||
@@ -90,7 +165,7 @@ function unwrapExpression(expression) {
   return current;
 }
 
-function memberAccess(expression) {
+export function memberAccess(expression) {
   const current = unwrapExpression(expression);
   if (ts.isPropertyAccessExpression(current)) {
     return { name: current.name.text, receiver: unwrapExpression(current.expression) };
@@ -98,7 +173,8 @@ function memberAccess(expression) {
   if (
     ts.isElementAccessExpression(current) &&
     current.argumentExpression &&
-    ts.isStringLiteralLike(current.argumentExpression)
+    (ts.isStringLiteralLike(current.argumentExpression) ||
+      ts.isNumericLiteral(current.argumentExpression))
   ) {
     return {
       name: current.argumentExpression.text,
@@ -170,11 +246,33 @@ function commonJsExportPath(expression) {
   }
 }
 
-function isCommonJsExportsObject(expression) {
+function commonJsTargetPath(expression, commonJsTargetAliases = new Set()) {
+  const directPath = commonJsExportPath(expression);
+  if (directPath !== null) {
+    const root = rootBindingName(expression);
+    if (root === 'exports' && commonJsTargetAliases.directExportsActive === false) return null;
+    if (root === 'module' && commonJsTargetAliases.directModuleExportsActive === false) {
+      return null;
+    }
+    return directPath;
+  }
+
+  let current = unwrapExpression(expression);
+  const path = [];
+  while (true) {
+    const access = memberAccess(current);
+    if (!access) break;
+    path.unshift(access.name);
+    current = access.receiver;
+  }
+  return ts.isIdentifier(current) && commonJsTargetAliases.has(current.text) ? path : null;
+}
+
+export function isCommonJsExportsObject(expression) {
   return commonJsExportPath(expression) !== null;
 }
 
-function commonJsAssignmentExportName(expression) {
+function commonJsAssignmentExportName(expression, commonJsTargetAliases) {
   if (
     !ts.isBinaryExpression(expression) ||
     expression.operatorToken.kind !== ts.SyntaxKind.EqualsToken
@@ -183,11 +281,11 @@ function commonJsAssignmentExportName(expression) {
   }
 
   const target = unwrapExpression(expression.left);
-  const exportPath = commonJsExportPath(target);
+  const exportPath = commonJsTargetPath(target, commonJsTargetAliases);
   return exportPath === null ? null : (exportPath[0] ?? '*');
 }
 
-function commonJsCreateBindingSelection(expression, reference) {
+function commonJsCreateBindingSelection(expression, reference, commonJsTargetAliases = new Set()) {
   const current = unwrapExpression(expression);
   if (!ts.isCallExpression(current)) return null;
 
@@ -197,7 +295,7 @@ function commonJsCreateBindingSelection(expression, reference) {
   if (
     helperName !== '__createBinding' ||
     !current.arguments[0] ||
-    !isCommonJsExportsObject(current.arguments[0]) ||
+    commonJsTargetPath(current.arguments[0], commonJsTargetAliases) === null ||
     !current.arguments[1] ||
     (reference && !containsReference(current.arguments[1], reference))
   ) {
@@ -206,7 +304,7 @@ function commonJsCreateBindingSelection(expression, reference) {
 
   const importedName = current.arguments[2];
   const exportedName = current.arguments[3] ?? importedName;
-  const targetPath = commonJsExportPath(current.arguments[0]);
+  const targetPath = commonJsTargetPath(current.arguments[0], commonJsTargetAliases);
   return {
     exportedName:
       targetPath && targetPath.length > 0
@@ -218,8 +316,8 @@ function commonJsCreateBindingSelection(expression, reference) {
   };
 }
 
-export function commonJsExportNamesForExpression(expression) {
-  const assignmentName = commonJsAssignmentExportName(expression);
+export function commonJsExportNamesForExpression(expression, commonJsTargetAliases = new Set()) {
+  const assignmentName = commonJsAssignmentExportName(expression, commonJsTargetAliases);
   if (assignmentName) return [assignmentName];
 
   const current = unwrapExpression(expression);
@@ -235,9 +333,10 @@ export function commonJsExportNamesForExpression(expression) {
   ) {
     return [commonJsExportPath(current.arguments[1])?.[0] ?? '*'];
   }
-  const createBinding = commonJsCreateBindingSelection(current);
+  const createBinding = commonJsCreateBindingSelection(current, undefined, commonJsTargetAliases);
   if (createBinding) return [createBinding.exportedName];
-  const targetPath = current.arguments[0] ? commonJsExportPath(current.arguments[0]) : null;
+  const target = current.arguments[0];
+  const targetPath = target ? commonJsTargetPath(target, commonJsTargetAliases) : null;
   if (
     !method ||
     !ts.isIdentifier(method.receiver) ||
@@ -258,7 +357,7 @@ function containsReference(node, reference) {
   return reference.pos >= node.pos && reference.end <= node.end;
 }
 
-function propertyNameText(name) {
+export function propertyNameText(name) {
   if (ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
     return name.text;
   }
@@ -266,221 +365,6 @@ function propertyNameText(name) {
     return name.expression.text;
   }
   return '*';
-}
-
-function collectTopLevelAssignmentExpressions(sourceFile) {
-  const assignments = new Map();
-  const addAssignment = (name, expression) => {
-    const expressions = assignments.get(name) ?? [];
-    expressions.push(expression);
-    assignments.set(name, expressions);
-  };
-  for (const statement of sourceFile.statements) {
-    if (ts.isVariableStatement(statement)) {
-      for (const declaration of statement.declarationList.declarations) {
-        if (ts.isIdentifier(declaration.name) && declaration.initializer) {
-          addAssignment(declaration.name.text, declaration.initializer);
-        }
-      }
-      continue;
-    }
-    if (!ts.isExpressionStatement(statement)) continue;
-    const expression = unwrapExpression(statement.expression);
-    if (
-      ts.isBinaryExpression(expression) &&
-      expression.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      ts.isIdentifier(unwrapExpression(expression.left))
-    ) {
-      addAssignment(unwrapExpression(expression.left).text, expression.right);
-    }
-  }
-  return assignments;
-}
-
-function resolveStaticObjectLiterals(expression, assignments, visited = new Set()) {
-  const current = expression && unwrapExpression(expression);
-  if (!current) return [];
-  if (ts.isObjectLiteralExpression(current)) return [current];
-  if (ts.isIdentifier(current)) {
-    if (visited.has(current.text)) return [];
-    const nextVisited = new Set(visited).add(current.text);
-    return (assignments.get(current.text) ?? []).flatMap((assigned) =>
-      resolveStaticObjectLiterals(assigned, assignments, nextVisited)
-    );
-  }
-  const access = memberAccess(current);
-  if (!access) return [];
-  return resolveStaticObjectLiterals(access.receiver, assignments, visited).flatMap((object) => {
-    const property = object.properties.find(
-      (candidate) =>
-        ts.isPropertyAssignment(candidate) && propertyNameText(candidate.name) === access.name
-    );
-    return property && ts.isPropertyAssignment(property)
-      ? resolveStaticObjectLiterals(property.initializer, assignments, visited)
-      : [];
-  });
-}
-
-function collectPublicValueExpressions(sourceFile, exportedLocalNames, assignments) {
-  const expressions = [...exportedLocalNames].flatMap((name) => assignments.get(name) ?? []);
-  const visit = (node) => {
-    if (
-      ts.isBinaryExpression(node) &&
-      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      isCommonJsExportsObject(unwrapExpression(node.left))
-    ) {
-      expressions.push(node.right);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
-  return expressions;
-}
-
-function collectReachableObjectLiterals(expressions, assignments) {
-  const objects = new Set();
-  const visit = (expression, visitedBindings = new Set()) => {
-    const current = expression && unwrapExpression(expression);
-    if (!current) return;
-    if (ts.isIdentifier(current)) {
-      if (visitedBindings.has(current.text)) return;
-      const nextVisited = new Set(visitedBindings).add(current.text);
-      for (const assigned of assignments.get(current.text) ?? []) visit(assigned, nextVisited);
-      return;
-    }
-    if (ts.isObjectLiteralExpression(current)) {
-      if (objects.has(current)) return;
-      objects.add(current);
-      for (const property of current.properties) {
-        if (ts.isShorthandPropertyAssignment(property)) {
-          visit(property.name, visitedBindings);
-        } else if (ts.isPropertyAssignment(property)) {
-          visit(property.initializer, visitedBindings);
-        } else if (ts.isSpreadAssignment(property)) {
-          visit(property.expression, visitedBindings);
-        }
-      }
-      return;
-    }
-    if (ts.isArrayLiteralExpression(current)) {
-      for (const element of current.elements) {
-        if (!ts.isOmittedExpression(element)) visit(element, visitedBindings);
-      }
-      return;
-    }
-    if (ts.isConditionalExpression(current)) {
-      visit(current.whenTrue, visitedBindings);
-      visit(current.whenFalse, visitedBindings);
-      return;
-    }
-    for (const object of resolveStaticObjectLiterals(current, assignments, visitedBindings)) {
-      visit(object, visitedBindings);
-    }
-  };
-  for (const expression of expressions) visit(expression);
-  return objects;
-}
-
-function resolvesToCommonJsExports(expression, assignments, visited = new Set()) {
-  const current = expression && unwrapExpression(expression);
-  if (!current) return false;
-  if (isCommonJsExportsObject(current)) return true;
-  if (ts.isIdentifier(current)) {
-    if (visited.has(current.text)) return false;
-    const nextVisited = new Set(visited).add(current.text);
-    return (assignments.get(current.text) ?? []).some((assigned) =>
-      resolvesToCommonJsExports(assigned, assignments, nextVisited)
-    );
-  }
-  const access = memberAccess(current);
-  return access ? resolvesToCommonJsExports(access.receiver, assignments, visited) : false;
-}
-
-export function collectPublicTargetBindingNames(sourceFile, exportedLocalNames) {
-  const assignments = collectTopLevelAssignmentExpressions(sourceFile);
-  const publicObjects = collectReachableObjectLiterals(
-    collectPublicValueExpressions(sourceFile, exportedLocalNames, assignments),
-    assignments
-  );
-  const publicTargetNames = new Set(exportedLocalNames);
-  for (const [name, expressions] of assignments) {
-    if (
-      expressions.some(
-        (expression) =>
-          resolvesToCommonJsExports(expression, assignments) ||
-          resolveStaticObjectLiterals(expression, assignments).some((object) =>
-            publicObjects.has(object)
-          )
-      )
-    ) {
-      publicTargetNames.add(name);
-    }
-  }
-  return publicTargetNames;
-}
-
-function collectDescriptorGetterProperties(descriptor, getterProperties) {
-  for (const property of descriptor.properties) {
-    if (
-      (ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property)) &&
-      propertyNameText(property.name) === 'get'
-    ) {
-      getterProperties.add(property);
-    }
-  }
-}
-
-/**
- * Finds `get` fields that are actually consumed as public property descriptors.
- * An ordinary public object may legally expose a field named `get`; only
- * Object/Reflect descriptor sinks grant getter-only dependency reachability.
- */
-export function collectConsumedDescriptorGetterProperties(sourceFile, exportedLocalNames) {
-  const assignments = collectTopLevelAssignmentExpressions(sourceFile);
-  const publicObjects = collectReachableObjectLiterals(
-    collectPublicValueExpressions(sourceFile, exportedLocalNames, assignments),
-    assignments
-  );
-  const getterProperties = new Set();
-  const visit = (node) => {
-    if (ts.isCallExpression(node)) {
-      const method = memberAccess(node.expression);
-      const isDescriptorApi =
-        method &&
-        ts.isIdentifier(method.receiver) &&
-        ['Object', 'Reflect'].includes(method.receiver.text);
-      const target = node.arguments[0];
-      const targetRoot = target && rootBindingName(target);
-      const hasPublicTarget =
-        target &&
-        (isCommonJsExportsObject(target) ||
-          resolvesToCommonJsExports(target, assignments) ||
-          (targetRoot !== null && exportedLocalNames.has(targetRoot)) ||
-          resolveStaticObjectLiterals(target, assignments).some((object) =>
-            publicObjects.has(object)
-          ));
-      if (isDescriptorApi && hasPublicTarget && method.name === 'defineProperty') {
-        for (const descriptor of resolveStaticObjectLiterals(node.arguments[2], assignments)) {
-          collectDescriptorGetterProperties(descriptor, getterProperties);
-        }
-      } else if (isDescriptorApi && hasPublicTarget && method.name === 'defineProperties') {
-        for (const descriptorMap of resolveStaticObjectLiterals(node.arguments[1], assignments)) {
-          for (const property of descriptorMap.properties) {
-            if (!ts.isPropertyAssignment(property)) continue;
-            for (const descriptor of resolveStaticObjectLiterals(
-              property.initializer,
-              assignments
-            )) {
-              collectDescriptorGetterProperties(descriptor, getterProperties);
-            }
-          }
-        }
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
-  return getterProperties;
 }
 
 function descriptorGetterContainsReference(descriptorExpression, reference) {
@@ -533,6 +417,21 @@ function objectCallableMember(objectExpression, reference) {
   return member?.name ? propertyNameText(member.name) : null;
 }
 
+function objectCreateGetterMember(expression, reference) {
+  const current = unwrapExpression(expression);
+  if (!ts.isCallExpression(current)) return null;
+  const method = memberAccess(current.expression);
+  if (
+    !method ||
+    !ts.isIdentifier(method.receiver) ||
+    method.receiver.text !== 'Object' ||
+    method.name !== 'create'
+  ) {
+    return null;
+  }
+  return descriptorMapGetterMember(current.arguments[1], reference);
+}
+
 function expressionGetterSelection(expression, reference) {
   const current = unwrapExpression(expression);
   if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
@@ -583,6 +482,8 @@ export function getterSelectionForReference(reference, boundary) {
       if (objectMember !== null) return { localMember: objectMember };
       const callableMember = objectCallableMember(declaration.initializer, reference);
       if (callableMember !== null) return { getterOnly: true, localMember: callableMember };
+      const createdMember = objectCreateGetterMember(declaration.initializer, reference);
+      if (createdMember !== null) return { localMember: createdMember };
       if (descriptorGetterContainsReference(declaration.initializer, reference)) {
         return { localMember: null };
       }
@@ -611,11 +512,25 @@ export function getterSelectionForReference(reference, boundary) {
   return null;
 }
 
-export function commonJsExportNamesForReference(expression, reference, insideFunctionBody) {
-  const createBinding = commonJsCreateBindingSelection(expression);
-  if (createBinding && !commonJsCreateBindingSelection(expression, reference)) return [];
+export function commonJsExportNamesForReference(
+  expression,
+  reference,
+  insideFunctionBody,
+  commonJsTargetAliases = new Set()
+) {
+  const createBinding = commonJsCreateBindingSelection(
+    expression,
+    undefined,
+    commonJsTargetAliases
+  );
+  if (
+    createBinding &&
+    !commonJsCreateBindingSelection(expression, reference, commonJsTargetAliases)
+  ) {
+    return [];
+  }
 
-  const exportNames = commonJsExportNamesForExpression(expression);
+  const exportNames = commonJsExportNamesForExpression(expression, commonJsTargetAliases);
   if (!insideFunctionBody || exportNames.length === 0) return exportNames;
 
   const selection = expressionGetterSelection(expression, reference);
@@ -623,7 +538,14 @@ export function commonJsExportNamesForReference(expression, reference, insideFun
   return exportNames.includes('*') && selection.localMember ? [selection.localMember] : exportNames;
 }
 
-export function findPublicReferenceOwner(node, sourceFile, exportedLocalNames) {
+export function findPublicReferenceOwner(
+  node,
+  sourceFile,
+  publicTargetOwners,
+  commonJsTargetAliases = new Set(),
+  publicConstructorNames = new Set(),
+  selectPublicConstructorMember = () => null
+) {
   let current = node;
   let insideFunctionBody = false;
   while (current && current !== sourceFile) {
@@ -638,8 +560,16 @@ export function findPublicReferenceOwner(node, sourceFile, exportedLocalNames) {
     current = current.parent;
   }
   if (!current || current.parent !== sourceFile) return null;
-  const getterSelection = insideFunctionBody ? getterSelectionForReference(node, current) : null;
-  if (insideFunctionBody && !getterSelection) return null;
+  const isPublicConstructor =
+    (ts.isClassDeclaration(current) || ts.isFunctionDeclaration(current)) &&
+    current.name &&
+    publicConstructorNames.has(current.name.text);
+  const getterSelection = isPublicConstructor
+    ? selectPublicConstructorMember(node, current)
+    : insideFunctionBody
+      ? getterSelectionForReference(node, current)
+      : null;
+  if ((insideFunctionBody || isPublicConstructor) && !getterSelection) return null;
 
   let bindingSelections = null;
   let localNames = [];
@@ -650,6 +580,7 @@ export function findPublicReferenceOwner(node, sourceFile, exportedLocalNames) {
     if (declaration) {
       bindingSelections = objectBindingSelections(declaration.name);
       localNames = bindingNames(declaration.name);
+      localNames = localNames.map((localName) => publicTargetOwners.get(localName) ?? localName);
     }
   } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
     localNames = [current.name.text];
@@ -657,19 +588,21 @@ export function findPublicReferenceOwner(node, sourceFile, exportedLocalNames) {
     const commonJsExportNames = commonJsExportNamesForReference(
       current.expression,
       node,
-      insideFunctionBody
+      insideFunctionBody,
+      commonJsTargetAliases
     );
     if (commonJsExportNames.length > 0) {
       return {
         bindingSelections: null,
         exportedNames: commonJsExportNames,
-        localMember: commonJsCreateBindingSelection(current.expression, node)?.importedName,
+        localMember: commonJsCreateBindingSelection(current.expression, node, commonJsTargetAliases)
+          ?.importedName,
         localNames: [],
       };
     }
     ({ bindingSelections, localNames } = publicMutationBinding(
       current.expression,
-      exportedLocalNames
+      publicTargetOwners
     ));
     if (
       localNames.length === 0 &&
@@ -708,12 +641,14 @@ export function findPublicReferenceOwner(node, sourceFile, exportedLocalNames) {
   };
 }
 
-export function findPublicMutationOwner(expression, exportedLocalNames) {
+export function findPublicMutationOwner(expression, publicTargetOwners) {
   const current = unwrapExpression(expression);
   let target = ts.isAssignmentExpression(current) ? current.left : null;
   if (ts.isCallExpression(current) && ts.isPropertyAccessExpression(current.expression)) {
     const receiver = rootBindingName(current.expression.expression);
-    if (receiver && exportedLocalNames.has(receiver)) return receiver;
+    if (receiver && publicTargetOwners.has(receiver)) {
+      return publicTargetOwners.get(receiver);
+    }
     if (
       (receiver === 'Object' || receiver === 'Reflect') &&
       MUTATING_OBJECT_METHODS.has(current.expression.name.text)
@@ -722,11 +657,11 @@ export function findPublicMutationOwner(expression, exportedLocalNames) {
     }
   }
   const targetName = target && rootBindingName(target);
-  return targetName && exportedLocalNames.has(targetName) ? targetName : null;
+  return targetName ? (publicTargetOwners.get(targetName) ?? null) : null;
 }
 
-export function publicMutationBinding(expression, exportedLocalNames) {
-  const bindingSelections = assignmentTargetSelections(expression, exportedLocalNames);
+export function publicMutationBinding(expression, publicTargetOwners) {
+  const bindingSelections = assignmentTargetSelections(expression, publicTargetOwners);
   if (bindingSelections.length > 0) {
     return {
       bindingSelections,
@@ -734,7 +669,7 @@ export function publicMutationBinding(expression, exportedLocalNames) {
     };
   }
 
-  const mutationOwner = findPublicMutationOwner(expression, exportedLocalNames);
+  const mutationOwner = findPublicMutationOwner(expression, publicTargetOwners);
   return { bindingSelections: null, localNames: mutationOwner ? [mutationOwner] : [] };
 }
 

@@ -867,6 +867,409 @@ test('traces top-level getter aliases only when public descriptors expose them',
       `,
       'src/features/getter-nested-public-target/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/getter-reassigned-target-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const getStore = () => Store;
+        let target = {};
+        export const api = { target };
+        target = {};
+        Object.defineProperty(target, 'Store', { get: getStore });
+      `,
+      'src/features/getter-reassigned-target-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-spread-target-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const getStore = () => Store;
+        const hidden = {};
+        export const api = { ...hidden };
+        Object.defineProperty(hidden, 'Store', { get: getStore });
+      `,
+      'src/features/getter-spread-target-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-created-public-target/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const getStore = () => Store;
+        export const api = Object.create(null);
+        const target = api;
+        Object.defineProperty(target, 'Store', { get: getStore });
+      `,
+      'src/features/getter-created-public-target/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-created-nested-target/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const getStore = () => Store;
+        const nested = Object.create(null);
+        export const api = { nested };
+        Object.defineProperty(nested, 'Store', { get: getStore });
+      `,
+      'src/features/getter-created-nested-target/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-constructed-nested-target/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const getStore = () => Store;
+        class PublicTarget {}
+        const nested = new PublicTarget();
+        export const api = { nested };
+        Object.defineProperty(nested, 'Store', { get: getStore });
+      `,
+      'src/features/getter-constructed-nested-target/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-commonjs-assignment-target/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const publicTarget = exports;
+        publicTarget.Store = Store;
+      `,
+      'src/features/getter-commonjs-assignment-target/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-commonjs-create-binding-target/main/index.cjs': `
+        const publicTarget = exports;
+        __createBinding(publicTarget, require('./infrastructure/Store'), 'Store');
+      `,
+      'src/features/getter-commonjs-create-binding-target/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
+      'src/features/getter-let-export-target/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const target = {};
+        export let api = target;
+        target.Store = Store;
+      `,
+      'src/features/getter-let-export-target/main/infrastructure/Store.ts': 'export class Store {}',
+      'src/features/getter-let-nested-target/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        let target = {};
+        export const api = { target };
+        target.Store = Store;
+      `,
+      'src/features/getter-let-nested-target/main/infrastructure/Store.ts': 'export class Store {}',
+      'src/features/getter-spread-before-copy/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        hidden.Store = Store;
+        export const api = { ...hidden };
+      `,
+      'src/features/getter-spread-before-copy/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-spread-overwritten-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        hidden.Store = Store;
+        hidden.Store = undefined;
+        export const api = { ...hidden };
+      `,
+      'src/features/getter-spread-overwritten-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-object-create-descriptor/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = Object.create(null, {
+          Store: { get: () => Store },
+        });
+      `,
+      'src/features/getter-object-create-descriptor/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-object-create-prototype/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const proto = {};
+        export const api = Object.create(proto);
+        proto.Store = Store;
+      `,
+      'src/features/getter-object-create-prototype/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-commonjs-reset-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const oldApi = module.exports;
+        module.exports = {};
+        Object.defineProperty(oldApi, 'OldStore', { get: () => Store });
+        exports.Store = Store;
+        exports = {};
+        exports.OtherStore = Store;
+      `,
+      'src/features/getter-commonjs-reset-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-overwritten-public-target-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const target = {};
+        export const api = { target };
+        api.target = {};
+        Object.defineProperty(target, 'Store', { get: () => Store });
+      `,
+      'src/features/getter-overwritten-public-target-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-constructor-body/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            this.Store = Store;
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/getter-constructor-body/main/infrastructure/Store.ts': 'export class Store {}',
+      'src/features/getter-constructor-internal-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          #store = new Store();
+          constructor() {
+            Store.bootstrap();
+            const local = new Store();
+            void local;
+          }
+          refresh() {
+            Store.bootstrap();
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/getter-constructor-internal-safe/main/infrastructure/Store.ts': `
+        export class Store {
+          static bootstrap() {}
+        }
+      `,
+      'src/features/getter-destructured-esm-target/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const root = { api: {} };
+        const { api } = root;
+        api.Store = Store;
+      `,
+      'src/features/getter-destructured-esm-target/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-destructured-commonjs-target/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        exports.api = {};
+        const { api } = exports;
+        api.Store = Store;
+      `,
+      'src/features/getter-destructured-commonjs-target/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-reassigned-before-export/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        let target = {};
+        target = {};
+        export const api = { target };
+        target.Store = Store;
+      `,
+      'src/features/getter-reassigned-before-export/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-reassigned-after-publication/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        let target = {};
+        export const api = { target };
+        target.Store = Store;
+        target = {};
+      `,
+      'src/features/getter-reassigned-after-publication/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-assigned-before-export/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        let target;
+        target = {};
+        export const api = { target };
+        target.Store = Store;
+      `,
+      'src/features/getter-assigned-before-export/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-logical-assignment-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const target = {};
+        export const api = { target };
+        api.target ||= {};
+        target.Store = Store;
+      `,
+      'src/features/getter-logical-assignment-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-commonjs-member-alias/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        exports.api = {};
+        const api = exports.api;
+        api.Store = Store;
+      `,
+      'src/features/getter-commonjs-member-alias/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-commonjs-chained-left/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        exports = module.exports = {};
+        exports.Store = Store;
+      `,
+      'src/features/getter-commonjs-chained-left/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-commonjs-chained-right/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        module.exports = exports = {};
+        exports.Store = Store;
+      `,
+      'src/features/getter-commonjs-chained-right/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-commonjs-relinked/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        module.exports = exports;
+        exports.Store = Store;
+      `,
+      'src/features/getter-commonjs-relinked/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-object-create-descriptor-alias/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const descriptors = {
+          Store: { get: () => Store },
+        };
+        export const api = Object.create(null, descriptors);
+      `,
+      'src/features/getter-object-create-descriptor-alias/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-object-create-member-prototype/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const registry = { proto: {} };
+        export const api = Object.create(registry.proto);
+        registry.proto.Store = Store;
+      `,
+      'src/features/getter-object-create-member-prototype/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-define-property-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const target = {};
+        export const api = { target };
+        Object.defineProperty(api, 'target', { value: {} });
+        target.Store = Store;
+      `,
+      'src/features/getter-define-property-overwrite-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-block-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const target = {};
+        export const api = { target };
+        {
+          api.target = {};
+        }
+        target.Store = Store;
+      `,
+      'src/features/getter-block-overwrite-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-spread-nonenumerable-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        Object.defineProperty(hidden, 'Store', {
+          enumerable: false,
+          get: () => Store,
+        });
+        export const api = { ...hidden };
+      `,
+      'src/features/getter-spread-nonenumerable-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-spread-sibling-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const root = { visible: {}, hidden: {} };
+        root.hidden.Store = Store;
+        export const api = { ...root.visible };
+      `,
+      'src/features/getter-spread-sibling-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-object-create-descriptor-reference/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const descriptors = {
+          Store: { get: () => Store },
+        };
+        export const api = Object.create(null, descriptors);
+      `,
+      'src/features/getter-object-create-descriptor-reference/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-object-create-getter-reference/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const getStore = () => Store;
+        const descriptors = {
+          Store: { get: getStore },
+        };
+        export const api = Object.create(null, descriptors);
+      `,
+      'src/features/getter-object-create-getter-reference/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-commonjs-final-reset-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        exports.Store = Store;
+        module.exports = {};
+      `,
+      'src/features/getter-commonjs-final-reset-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-commonjs-module-final-reset-safe/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        module.exports.Store = Store;
+        module.exports = {};
+      `,
+      'src/features/getter-commonjs-module-final-reset-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-commonjs-spread/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const hidden = {};
+        hidden.Store = Store;
+        module.exports = { ...hidden };
+      `,
+      'src/features/getter-commonjs-spread/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-function-constructor/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        function Api() {
+          this.Store = Store;
+        }
+        export const api = new Api();
+      `,
+      'src/features/getter-function-constructor/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-nested-constructor/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            this.Store = Store;
+          }
+        }
+        export const root = { api: new Api() };
+      `,
+      'src/features/getter-nested-constructor/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-default-constructor/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            this.Store = Store;
+          }
+        }
+        export default new Api();
+      `,
+      'src/features/getter-default-constructor/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-commonjs-false-reset/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        exports.Store = Store;
+        if (false) module.exports = {};
+      `,
+      'src/features/getter-commonjs-false-reset/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-commonjs-false-exports-reset/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        if (false) exports = {};
+        exports.Store = Store;
+      `,
+      'src/features/getter-commonjs-false-exports-reset/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/getter-constructor-spread/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            this.Store = Store;
+          }
+        }
+        const instance = new Api();
+        export const api = { ...instance };
+      `,
+      'src/features/getter-constructor-spread/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-constructor-wrapper/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            this.Store = Store;
+          }
+        }
+        export const api = Object.freeze(new Api());
+      `,
+      'src/features/getter-constructor-wrapper/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/getter-factory-safe/main/index.ts': `
         import { Concrete } from './infrastructure/Concrete';
         interface PublicPort {}
@@ -887,22 +1290,76 @@ test('traces top-level getter aliases only when public descriptors expose them',
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
-      assert.deepEqual(
-        violations
-          .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
-          .map(({ specifier }) => specifier)
-          .sort(),
-        [
-          './infrastructure/Aliased',
-          './infrastructure/Assigned',
-          './infrastructure/Repository',
-          './infrastructure/Store',
-          './infrastructure/Store',
-          './infrastructure/Store',
-          './infrastructure/Store',
-          './infrastructure/Store',
-        ]
+      const implementationViolations = violations.filter(
+        ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
       );
+      assert.deepEqual(implementationViolations.map(({ specifier }) => specifier).sort(), [
+        './infrastructure/Aliased',
+        './infrastructure/Assigned',
+        './infrastructure/Repository',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+        './infrastructure/Store',
+      ]);
+      assert.ok(
+        implementationViolations.some(
+          ({ source }) =>
+            source === 'src/features/getter-object-create-descriptor-reference/main/index.ts'
+        )
+      );
+      assert.ok(
+        implementationViolations.some(
+          ({ source }) =>
+            source === 'src/features/getter-object-create-getter-reference/main/index.ts'
+        )
+      );
+      for (const source of [
+        'src/features/getter-commonjs-final-reset-safe/main/index.cjs',
+        'src/features/getter-commonjs-module-final-reset-safe/main/index.cjs',
+        'src/features/getter-constructor-internal-safe/main/index.ts',
+        'src/features/getter-spread-nonenumerable-safe/main/index.ts',
+        'src/features/getter-spread-sibling-safe/main/index.ts',
+      ]) {
+        assert.ok(
+          !implementationViolations.some((violation) => violation.source === source),
+          `${source} must remain private`
+        );
+      }
     }
   );
 });

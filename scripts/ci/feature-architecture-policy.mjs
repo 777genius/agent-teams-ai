@@ -6,16 +6,23 @@ import ts from 'typescript';
 
 import {
   bindingNames,
-  collectConsumedDescriptorGetterProperties,
-  collectPublicTargetBindingNames,
   findPublicReferenceOwner,
   hasModifier,
+  importTypeSelectedNames,
   importedNameForCall,
   importedNameForReference,
+  isIdentifierReference,
+  isShadowedTypeReference,
   selectImportedName,
   selectedMemberForReference,
   statementBindingNames,
 } from './feature-export-analysis.mjs';
+import {
+  collectConsumedDescriptorGetterProperties,
+  isConsumedDescriptorGetterReference,
+} from './feature-public-descriptor-analysis.mjs';
+import { publicConstructorSelection } from './feature-public-constructor-analysis.mjs';
+import { analyzePublicTargets } from './feature-public-target-analysis.mjs';
 import {
   collectProductionSourceFiles,
   isFeaturePublicEntrypoint,
@@ -170,18 +177,22 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
   }
 
-  const publicTargetBindingNames = collectPublicTargetBindingNames(sourceFile, exportedLocalNames);
-  for (const localName of publicTargetBindingNames) {
-    if (exportedLocalNames.has(localName)) continue;
-    directLocalExports.push({
-      exportedName: localName,
-      line: 1,
-      localName,
-    });
+  const publicTargets = analyzePublicTargets(sourceFile, exportedLocalNames);
+  for (const constructorExport of publicTargets.constructorExports) {
+    directLocalExports.push({ ...constructorExport, line: 1 });
   }
-
+  const publicConstructorNames = new Set(
+    publicTargets.constructorExports.map(({ localName }) => localName)
+  );
   const publicReferenceOwner = (node) =>
-    findPublicReferenceOwner(node, sourceFile, publicTargetBindingNames);
+    findPublicReferenceOwner(
+      node,
+      sourceFile,
+      publicTargets.localOwnersAt(node.getStart(sourceFile)),
+      publicTargets.commonJsTargetsAt(node.getStart(sourceFile)),
+      publicConstructorNames,
+      publicConstructorSelection
+    );
 
   const addOwnerDependency = (owner, dependency) => {
     const localDependency =
@@ -221,40 +232,6 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         });
       }
     }
-  };
-
-  const unwrapParenthesizedType = (node) => {
-    let current = node;
-    while (ts.isParenthesizedTypeNode(current)) current = current.type;
-    return current;
-  };
-
-  const importTypeSelectedNames = (node) => {
-    let current = node.qualifier;
-    while (current && ts.isQualifiedName(current)) current = current.left;
-    if (current && ts.isIdentifier(current)) return [current.text];
-
-    let selectedType = node;
-    while (
-      selectedType.parent &&
-      ts.isParenthesizedTypeNode(selectedType.parent) &&
-      selectedType.parent.type === selectedType
-    ) {
-      selectedType = selectedType.parent;
-    }
-    const parent = selectedType.parent;
-    if (!parent || !ts.isIndexedAccessTypeNode(parent) || parent.objectType !== selectedType) {
-      return ['*'];
-    }
-    const selected = unwrapParenthesizedType(parent.indexType);
-    const selectedTypes = ts.isUnionTypeNode(selected) ? selected.types : [selected];
-    const names = selectedTypes.map((selectedType) => {
-      const unwrapped = unwrapParenthesizedType(selectedType);
-      return ts.isLiteralTypeNode(unwrapped) && ts.isStringLiteralLike(unwrapped.literal)
-        ? unwrapped.literal.text
-        : null;
-    });
-    return names.every((name) => name !== null) ? [...new Set(names)] : ['*'];
   };
 
   const addTypeReference = (node) => {
@@ -339,64 +316,8 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
 
   const consumedDescriptorGetterProperties = collectConsumedDescriptorGetterProperties(
     sourceFile,
-    exportedLocalNames
+    publicTargets
   );
-
-  const isIdentifierReference = (node) => {
-    const parent = node.parent;
-    if (!parent) return false;
-    if (
-      (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
-      (ts.isQualifiedName(parent) && parent.right === node)
-    ) {
-      return false;
-    }
-    if (
-      'name' in parent &&
-      parent.name === node &&
-      !ts.isShorthandPropertyAssignment(parent) &&
-      !ts.isExportSpecifier(parent)
-    ) {
-      return false;
-    }
-    return !(
-      (ts.isBindingElement(parent) && parent.propertyName === node) ||
-      ts.isImportClause(parent) ||
-      ts.isImportSpecifier(parent) ||
-      ts.isNamespaceImport(parent)
-    );
-  };
-
-  const isShadowedTypeReference = (node) => {
-    let current = node.parent;
-    while (current && current !== sourceFile) {
-      if (
-        'typeParameters' in current &&
-        current.typeParameters?.some(
-          (parameter) => ts.isIdentifier(parameter.name) && parameter.name.text === node.text
-        )
-      ) {
-        return true;
-      }
-      current = current.parent;
-    }
-    return false;
-  };
-
-  const isDescriptorGetterReference = (node) => {
-    let current = node;
-    while (current.parent && current.parent !== sourceFile) {
-      const parent = current.parent;
-      if (
-        (ts.isPropertyAssignment(parent) || ts.isShorthandPropertyAssignment(parent)) &&
-        consumedDescriptorGetterProperties.has(parent)
-      ) {
-        return true;
-      }
-      current = parent;
-    }
-    return false;
-  };
 
   const visitBindingReference = (node) => {
     if (
@@ -406,7 +327,11 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     ) {
       return;
     }
-    if (ts.isIdentifier(node) && isIdentifierReference(node) && !isShadowedTypeReference(node)) {
+    if (
+      ts.isIdentifier(node) &&
+      isIdentifierReference(node) &&
+      !isShadowedTypeReference(node, sourceFile)
+    ) {
       const owner = publicReferenceOwner(node);
       if (owner) {
         const importedBinding = importedBindings.get(node.text);
@@ -426,7 +351,11 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
                 importedName: selectedName,
                 line: lineForNode(sourceFile, node),
                 localName: node.text,
-                viaGetter: isDescriptorGetterReference(node),
+                viaGetter: isConsumedDescriptorGetterReference(
+                  node,
+                  sourceFile,
+                  consumedDescriptorGetterProperties
+                ),
               });
             }
           } else {
@@ -436,7 +365,11 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
                 localMember: owner.localMember,
                 localName: node.text,
                 selectedName,
-                viaGetter: isDescriptorGetterReference(node),
+                viaGetter: isConsumedDescriptorGetterReference(
+                  node,
+                  sourceFile,
+                  consumedDescriptorGetterProperties
+                ),
               });
               localReferenceNames.set(localName, references);
             }
