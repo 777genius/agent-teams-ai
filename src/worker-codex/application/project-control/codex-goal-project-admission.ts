@@ -669,10 +669,16 @@ async function debtFromOverviewItem(input: {
     markerTypes.includes("review") &&
     recommendedAction === "review_completed" &&
     safeStringArray(item.tags).includes("worker-role-reviewer") &&
-    reviewedOutputConsumedByIntegratedLedger({
+    await reviewedOutputConsumedByIntegratedLedger({
       ledger: input.consumedOutput,
       jobId,
       lifecycleMarkers: item.lifecycleMarkers,
+      registryRootDir: input.registryRootDir,
+      scope: input.scope,
+      readJob: input.readJob,
+      ...(input.summariesByJobId.get(jobId)
+        ? { summary: input.summariesByJobId.get(jobId)! }
+        : {}),
     })
   ) {
     return withoutInactiveDirtyWorkspaceConflict(debt, item);
@@ -788,6 +794,12 @@ function strictProducerRole(tags: readonly string[]): boolean {
     roleTags[0] === `worker-role-${ProjectAdmissionWorkerRole.Producer}`;
 }
 
+function strictReviewerRole(tags: readonly string[]): boolean {
+  const roleTags = tags.filter((tag) => tag.startsWith("worker-role-"));
+  return roleTags.length === 1 &&
+    roleTags[0] === `worker-role-${ProjectAdmissionWorkerRole.Reviewer}`;
+}
+
 function withoutInactiveDirtyWorkspaceConflict(
   debt: readonly ProjectDebtItem[],
   item: JsonObject,
@@ -842,16 +854,25 @@ async function admissionWorkspacePathsMatch(
     leftRealPath === rightRealPath;
 }
 
-function reviewedOutputConsumedByIntegratedLedger(input: {
+async function reviewedOutputConsumedByIntegratedLedger(input: {
   readonly ledger: ConsumedOutputLedger;
   readonly jobId: string;
   readonly lifecycleMarkers: unknown;
-}): boolean {
+  readonly summary?: CodexGoalJobSummary;
+  readonly registryRootDir: string;
+  readonly scope: ProjectAccessScope;
+  readonly readJob: CodexProjectAdmissionDeps["readJob"];
+}): Promise<boolean> {
   if (input.ledger.byJobId.has(input.jobId)) return false;
-  const reviewedPatchHashes = reviewedOutputPatchHashes(
+  if (!hasReviewLifecycleMarker(input.lifecycleMarkers)) return false;
+  let reviewedPatchHashes = reviewedOutputPatchHashes(
     input.lifecycleMarkers,
   );
-  if (reviewedPatchHashes.size === 0) return false;
+  if (reviewedPatchHashes.size === 0) {
+    const admittedInputPatchHash = await admittedReviewInputPatchHash(input);
+    if (!admittedInputPatchHash) return false;
+    reviewedPatchHashes = new Set([admittedInputPatchHash]);
+  }
   return [...input.ledger.byJobId.values()].some((record) =>
     record.jobId !== input.jobId &&
     record.status === "integrated" &&
@@ -859,6 +880,54 @@ function reviewedOutputConsumedByIntegratedLedger(input: {
     record.commitSha !== undefined &&
     record.backupPatchSha256 !== undefined &&
     reviewedPatchHashes.has(record.backupPatchSha256.toLowerCase())
+  );
+}
+
+async function admittedReviewInputPatchHash(input: {
+  readonly summary?: CodexGoalJobSummary;
+  readonly registryRootDir: string;
+  readonly scope: ProjectAccessScope;
+  readonly readJob: CodexProjectAdmissionDeps["readJob"];
+}): Promise<string | undefined> {
+  if (
+    !input.summary ||
+    !input.readJob ||
+    !strictReviewerRole(input.summary.tags)
+  ) {
+    return undefined;
+  }
+  try {
+    const manifest = await input.readJob({
+      registryRootDir: input.registryRootDir,
+      jobId: input.summary.jobId,
+    });
+    if (
+      !strictReviewerRole(manifest.tags ?? []) ||
+      !await admissionWorkspacePathsMatch(
+        manifest.workspacePath,
+        input.summary.workspacePath,
+      )
+    ) {
+      return undefined;
+    }
+    const launch = await readLaunchAuthorizedWorkerLaunchSpec({
+      manifest,
+      scope: input.scope,
+    });
+    return launch.reviewKind === "review" && launch.inputPatchHash
+      ? launch.inputPatchHash.toLowerCase()
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function hasReviewLifecycleMarker(value: unknown): boolean {
+  return Array.isArray(value) && value.some((marker) =>
+    typeof marker === "object" &&
+    marker !== null &&
+    !Array.isArray(marker) &&
+    (marker as Readonly<Record<string, unknown>>).type === "review"
   );
 }
 

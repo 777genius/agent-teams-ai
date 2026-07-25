@@ -1169,6 +1169,139 @@ describe("Codex project admission snapshot", () => {
     }
   });
 
+  it("uses a launch-authorized review input hash when a legacy marker has no hash", async () => {
+    const root = await mkdtemp(
+      join(tmpdir(), "subscription-runtime-admitted-review-consumption-"),
+    );
+    const ledgerRoot = join(root, "consumed-output");
+    const backupRoot = join(root, "backups");
+    const producerWorkspace = join(root, "worktrees", "project-producer-v1");
+    const statusPath = join(backupRoot, "producer.status.txt");
+    const patchPath = join(backupRoot, "producer.patch");
+    const scope: ProjectAccessScope = {
+      projectId: "project",
+      worktreeRoots: [join(root, "worktrees")],
+      consumedOutputLedgerRoots: [ledgerRoot],
+      jobIdPrefixes: ["project-"],
+      preStartAdmission: { required: true, mode: "serial-builtin" },
+    };
+
+    try {
+      const exact = await createAttestedLiveProducer({
+        root,
+        jobId: "project-reviewer-exact",
+        ownedPaths: ["src/review-input.ts"],
+        scope,
+        role: ProjectAdmissionWorkerRole.Reviewer,
+        reviewKind: "review",
+        inputPatchValue: "export const reviewed = true;\n",
+      });
+      const mismatch = await createAttestedLiveProducer({
+        root,
+        jobId: "project-reviewer-mismatch",
+        ownedPaths: ["src/review-input.ts"],
+        scope,
+        role: ProjectAdmissionWorkerRole.Reviewer,
+        reviewKind: "review",
+        inputPatchValue: "export const reviewed = false;\n",
+      });
+      const missing = await createAttestedLiveProducer({
+        root,
+        jobId: "project-reviewer-missing",
+        ownedPaths: ["src/review-input.ts"],
+        scope,
+        role: ProjectAdmissionWorkerRole.Reviewer,
+        reviewKind: "review",
+      });
+      const implementation = await createAttestedLiveProducer({
+        root,
+        jobId: "project-reviewer-implementation",
+        ownedPaths: ["src/review-input.ts"],
+        scope,
+        role: ProjectAdmissionWorkerRole.Reviewer,
+        reviewKind: "implementation",
+        inputPatchValue: "export const reviewed = true;\n",
+      });
+      const unvalidated = await createAttestedLiveProducer({
+        root,
+        jobId: "project-reviewer-unvalidated",
+        ownedPaths: ["src/review-input.ts"],
+        scope,
+        role: ProjectAdmissionWorkerRole.Reviewer,
+        reviewKind: "review",
+        inputPatchValue: "export const reviewed = true;\n",
+        authorize: false,
+      });
+      if (!exact.inputPatchHash) throw new Error("expected input patch hash");
+      await mkdir(producerWorkspace, { recursive: true });
+      await mkdir(join(ledgerRoot, "items"), { recursive: true });
+      await mkdir(backupRoot, { recursive: true });
+      await writeFile(statusPath, "");
+      await writeFile(patchPath, exact.inputPatch);
+      await writeFile(
+        join(ledgerRoot, "items", "project-producer-v1.json"),
+        `${JSON.stringify({
+          jobId: "project-producer-v1",
+          status: "integrated",
+          closedAt: "2026-07-22T01:00:00.000Z",
+          commitSha: "a".repeat(40),
+          backup: {
+            workspace: producerWorkspace,
+            statusPath,
+            patchPath,
+          },
+        })}\n`,
+      );
+      const workers = [exact, mismatch, missing, implementation, unvalidated];
+      const manifests = new Map(
+        workers.map((worker) => [worker.manifest.jobId, worker.manifest]),
+      );
+      const snapshot = await buildCodexProjectAdmissionSnapshot({
+        registryRootDir: join(root, "registry"),
+        scope,
+        deps: {
+          listJobs: async () => workers.map((worker) => worker.summary),
+          readJob: async ({ jobId }) => {
+            const manifest = manifests.get(jobId);
+            if (!manifest) throw new Error("test manifest unavailable");
+            return manifest;
+          },
+          buildOverviewItems: async (inputs) => inputs.map(({ jobId }) => {
+            const manifest = manifests.get(jobId)!;
+            return {
+              ok: true,
+              jobId,
+              workspacePath: manifest.workspacePath,
+              workspaceDirty: true,
+              workerAlive: false,
+              activeWriterRisk: "dirty_workspace_without_worker",
+              resultStatus: "completed",
+              recommendedAction: "review_completed",
+              tags: ["worker-role-reviewer"],
+              lifecycleMarkerTypes: ["review"],
+              lifecycleMarkers: [{ type: "review" }],
+            };
+          }),
+        },
+      });
+
+      expect(snapshot.debt.filter((item) => item.severity === "blocking"))
+        .not.toEqual(expect.arrayContaining([
+          expect.objectContaining({ subject: exact.manifest.workspacePath }),
+        ]));
+      expect(snapshot.debt).toEqual(expect.arrayContaining(
+        [mismatch, missing, implementation, unvalidated].map((worker) =>
+          expect.objectContaining({
+            reason: ProjectDebtReason.UnconsumedCompletedJob,
+            subject: worker.manifest.workspacePath,
+          })
+        ),
+      ));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails closed when a live worker overview omits the active-writer risk kind", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-live-reviewer-admission-"));
     const workspacePath = join(root, "worktrees", "project-producer-v1");
@@ -1429,8 +1562,14 @@ async function createAttestedLiveProducer(input: {
   readonly jobId: string;
   readonly ownedPaths: readonly string[];
   readonly scope: ProjectAccessScope;
+  readonly role?: ProjectAdmissionWorkerRole;
+  readonly reviewKind?: "implementation" | "review" | "remediation";
+  readonly inputPatchValue?: string;
+  readonly authorize?: boolean;
 }): Promise<{
   readonly manifest: CodexGoalJobManifest;
+  readonly inputPatch: string;
+  readonly inputPatchHash: string | null;
   readonly summary: {
     readonly jobId: string;
     readonly tags: readonly string[];
@@ -1471,13 +1610,33 @@ async function createAttestedLiveProducer(input: {
   const head = (await execFileAsync("git", ["rev-parse", "HEAD"], {
     cwd: workspacePath,
   })).stdout.trim();
+  let inputPatch = "";
+  if (input.inputPatchValue !== undefined) {
+    await writeFile(
+      join(workspacePath, "src", "review-input.ts"),
+      input.inputPatchValue,
+    );
+    await execFileAsync("git", ["add", "src/review-input.ts"], {
+      cwd: workspacePath,
+    });
+    inputPatch = (await execFileAsync(
+      "git",
+      ["diff", "--cached", "--binary", "HEAD", "--"],
+      { cwd: workspacePath },
+    )).stdout;
+  }
+  const inputPatchHash = inputPatch
+    ? createHash("sha256").update(inputPatch).digest("hex")
+    : null;
   const createdAt = "2026-07-22T00:00:00.000Z";
   const manifestBase = {
     schemaVersion: 1 as const,
     createdAt,
     updatedAt: createdAt,
     jobId: input.jobId,
-    tags: ["worker-role-producer"],
+    tags: [
+      `worker-role-${input.role ?? ProjectAdmissionWorkerRole.Producer}`,
+    ],
     jobRootDir,
     workspacePath,
     promptPath,
@@ -1498,8 +1657,8 @@ async function createAttestedLiveProducer(input: {
         lanePacket: "docs/lane.md",
         phaseId: "phase-01",
         laneId: "live-producer",
-        inputPatchHash: null,
-        reviewKind: "implementation",
+        inputPatchHash,
+        reviewKind: input.reviewKind ?? "implementation",
         ownedPaths: input.ownedPaths,
         mandatoryDocs: ["docs/controller.md", "docs/lane.md"],
         mandatoryScripts: [],
@@ -1530,12 +1689,17 @@ async function createAttestedLiveProducer(input: {
     ...manifestBase,
     projectPreStartAdmission: plan.descriptor,
   };
-  await authorizeProjectPreStartAdmissionLaunch({
-    manifest,
-    scope: input.scope,
-  });
+  if (input.authorize !== false) {
+    await authorizeProjectPreStartAdmissionLaunch({
+      manifest,
+      scope: input.scope,
+      ...(inputPatch ? { workspaceMode: "admitted_input_patch" as const } : {}),
+    });
+  }
   return {
     manifest,
+    inputPatch,
+    inputPatchHash,
     summary: {
       jobId: manifest.jobId,
       tags: manifest.tags ?? [],
