@@ -73,6 +73,10 @@ import { useTerminalCommandAutocomplete } from '../hooks/useTerminalCommandAutoc
 import { useTerminalCommandContextMenu } from '../hooks/useTerminalCommandContextMenu';
 import { useTerminalCommandHistoryPersistence } from '../hooks/useTerminalCommandHistoryPersistence';
 import { useTerminalCommandRuns } from '../hooks/useTerminalCommandRuns';
+import {
+  type TerminalMuxCommands,
+  useTerminalMuxTabLifecycle,
+} from '../hooks/useTerminalMuxTabLifecycle';
 import { useTerminalTabReorderMotion } from '../hooks/useTerminalTabReorderMotion';
 import {
   DEFAULT_TERMINAL_APPEARANCE_SETTINGS,
@@ -93,16 +97,12 @@ import {
   areStringArraysEqual,
   areTerminalTabPreferencesEqual,
   formatMuxTabTitle,
-  formatNextMuxTabTitle,
   getTerminalTabColorLabelKey,
-  hasTerminalTabHistory,
   isPrewarmedTerminalTab,
   normalizeTerminalTabPreferences,
   orderTerminalTabsByPreference,
-  PREWARMED_TERMINAL_TAB_TITLE,
   reorderTerminalTabsById,
   resolveTerminalTabColor,
-  resolveVisibleTabToFocusAfterClose,
   TERMINAL_TAB_COLOR_OPTIONS,
   type TerminalMuxTab,
   type TerminalTabColorId,
@@ -141,7 +141,6 @@ export interface TerminalWorkspacePanelProps {
 }
 
 const TERMINAL_PLATFORM_GITHUB_URL = 'https://github.com/777genius/terminal-platform';
-type TerminalMuxCommand = Parameters<WorkspaceKernel['commands']['dispatchMuxCommand']>[1];
 type TerminalScreenElementHandle = ComponentRef<typeof TerminalScreen> & {
   followOutput?: boolean;
   requestUpdate?: () => void;
@@ -586,7 +585,7 @@ const TerminalWorkspaceKernelView = ({
 
   const tabs = (
     <TerminalMuxTabs
-      kernel={kernel}
+      commands={kernel.commands}
       settingsOpen={settingsOpen}
       snapshot={snapshot}
       teamName={teamName}
@@ -835,7 +834,7 @@ const TerminalTabContentSkeleton = (): React.JSX.Element => {
 };
 
 const TerminalMuxTabs = ({
-  kernel,
+  commands,
   settingsOpen = false,
   snapshot,
   teamName,
@@ -843,7 +842,7 @@ const TerminalMuxTabs = ({
   onTabContentPendingChange,
   placement = 'console',
 }: {
-  kernel: WorkspaceKernel;
+  commands: TerminalMuxCommands;
   settingsOpen?: boolean;
   snapshot: TerminalWorkspaceSnapshot;
   teamName: string;
@@ -852,20 +851,12 @@ const TerminalMuxTabs = ({
   placement?: 'console' | 'sheet-header';
 }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const [pendingAction, setPendingAction] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [closeCandidate, setCloseCandidate] = useState<TerminalMuxTab | null>(null);
   const [tabPreferences, setTabPreferences] = useState<TerminalTabPreferences>(() =>
     readStoredTerminalTabPreferences(teamName)
   );
-  const [editingTabId, setEditingTabId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState('');
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
   const [dropIndicator, setDropIndicator] = useState<TerminalTabDropIndicator | null>(null);
   const [tabPointerDrag, setTabPointerDrag] = useState<TerminalTabPointerDrag | null>(null);
-  const renameInputRef = useRef<HTMLInputElement | null>(null);
-  const prewarmInFlightRef = useRef<string | null>(null);
-  const prewarmFailedSessionRef = useRef<string | null>(null);
   const suppressNextTabClickRef = useRef(false);
   const tabListElementRef = useRef<HTMLDivElement | null>(null);
   const tabElementRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -881,16 +872,48 @@ const TerminalMuxTabs = ({
   );
   const orderedVisibleTabIdsKey = orderedVisibleTabs.map((tab) => tab.tab_id).join('\u001f');
   const prewarmedTab = tabs.find(isPrewarmedTerminalTab) ?? null;
-  const prewarmedTabId = prewarmedTab?.tab_id ?? null;
   const activeSessionId = controls.activeSessionId;
   const activeTabId =
     controls.activeTab?.tab_id ?? topology?.focused_tab ?? tabs[0]?.tab_id ?? null;
   const activeVisibleTabId = visibleTabs.some((tab) => tab.tab_id === activeTabId)
     ? activeTabId
     : (visibleTabs[0]?.tab_id ?? null);
-  const busy = pendingAction !== null;
   const headerPlacement = placement === 'sheet-header';
   const canCloseVisibleTabs = controls.canCloseTab && visibleTabs.length > 1;
+  const {
+    busy,
+    cancelRenameTab,
+    closeCandidate,
+    commitRenameTab,
+    confirmCloseCandidate,
+    createTab,
+    dismissCloseCandidate,
+    editingTabId,
+    editingTitle,
+    error,
+    focusTab,
+    pendingAction,
+    renameInputRef,
+    requestCloseTab,
+    setEditingTitle,
+    startRenameTab,
+  } = useTerminalMuxTabLifecycle({
+    activeSessionId,
+    activeTabId,
+    activeVisibleTabId,
+    canCloseVisibleTabs,
+    canCreateTab: controls.canCreateTab,
+    canFocusTab: controls.canFocusTab,
+    canRenameTab: controls.canRenameTab,
+    commands,
+    orderedVisibleTabs,
+    prewarmedTab,
+    snapshot,
+    tabsCount: tabs.length,
+    visibleTabs,
+    onSettingsOpenChange,
+    onTabContentPendingChange,
+  });
   const { captureTabRectsBeforeReorder, clearCapturedTabRects } = useTerminalTabReorderMotion({
     draggingTabId,
     orderedTabIdsKey: orderedVisibleTabIdsKey,
@@ -925,50 +948,9 @@ const TerminalMuxTabs = ({
     tabElementRefs.current.delete(tabId);
   }, []);
 
-  const runMuxCommands = async (
-    actionId: string,
-    commands: readonly TerminalMuxCommand[]
-  ): Promise<void> => {
-    if (busy || !activeSessionId) {
-      return;
-    }
-
-    const tabContentPending =
-      actionId.startsWith('focus-tab:') || actionId === 'activate-prewarmed-tab';
-    setPendingAction(actionId);
-    setError(null);
-    if (tabContentPending) {
-      onTabContentPendingChange?.(true);
-    }
-    try {
-      for (const command of commands) {
-        await kernel.commands.dispatchMuxCommand(activeSessionId, command);
-      }
-      await kernel.commands.attachSession(activeSessionId);
-    } catch (reason: unknown) {
-      setError(getErrorMessage(reason));
-    } finally {
-      setPendingAction(null);
-      if (tabContentPending) {
-        onTabContentPendingChange?.(false);
-      }
-    }
-  };
-
-  const runMuxCommand = async (actionId: string, command: TerminalMuxCommand): Promise<void> => {
-    await runMuxCommands(actionId, [command]);
-  };
-
   useEffect(() => {
     setTabPreferences(readStoredTerminalTabPreferences(teamName));
   }, [teamName]);
-
-  useEffect(
-    () => () => {
-      onTabContentPendingChange?.(false);
-    },
-    [onTabContentPendingChange]
-  );
 
   useEffect(() => {
     if (visibleTabs.length === 0) {
@@ -977,120 +959,6 @@ const TerminalMuxTabs = ({
 
     updateTabPreferences((current) => normalizeTerminalTabPreferences(current, visibleTabs));
   }, [updateTabPreferences, visibleTabIdsKey, visibleTabs]);
-
-  useEffect(() => {
-    if (!editingTabId) {
-      return undefined;
-    }
-
-    const frame = window.requestAnimationFrame(() => {
-      renameInputRef.current?.focus();
-      renameInputRef.current?.select();
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [editingTabId]);
-
-  const focusTab = async (tabId: string): Promise<void> => {
-    onSettingsOpenChange?.(false);
-    if (!controls.canFocusTab || tabId === activeTabId) {
-      return;
-    }
-
-    await runMuxCommand(`focus-tab:${tabId}`, { kind: 'focus_tab', tab_id: tabId });
-  };
-
-  const createTab = async (): Promise<void> => {
-    if (!controls.canCreateTab) {
-      return;
-    }
-
-    onSettingsOpenChange?.(false);
-    const nextTabTitle = formatNextMuxTabTitle(visibleTabs);
-
-    if (prewarmedTab && controls.canFocusTab && controls.canRenameTab) {
-      await runMuxCommands('activate-prewarmed-tab', [
-        {
-          kind: 'rename_tab',
-          tab_id: prewarmedTab.tab_id,
-          title: nextTabTitle,
-        },
-        { kind: 'focus_tab', tab_id: prewarmedTab.tab_id },
-      ]);
-      return;
-    }
-
-    await runMuxCommand('new-tab', {
-      kind: 'new_tab',
-      title: nextTabTitle,
-    });
-  };
-
-  const closeTab = async (tab: TerminalMuxTab): Promise<void> => {
-    if (!canCloseVisibleTabs || isPrewarmedTerminalTab(tab)) {
-      return;
-    }
-
-    const tabToFocusAfterClose =
-      controls.canFocusTab && tab.tab_id === activeVisibleTabId
-        ? resolveVisibleTabToFocusAfterClose(orderedVisibleTabs, tab.tab_id)
-        : null;
-    const commands: TerminalMuxCommand[] = [{ kind: 'close_tab', tab_id: tab.tab_id }];
-
-    if (tabToFocusAfterClose) {
-      commands.push({ kind: 'focus_tab', tab_id: tabToFocusAfterClose });
-    }
-
-    await runMuxCommands(`close-tab:${tab.tab_id}`, commands);
-  };
-
-  const requestCloseTab = async (tab: TerminalMuxTab): Promise<void> => {
-    if (!canCloseVisibleTabs || busy || isPrewarmedTerminalTab(tab)) {
-      return;
-    }
-
-    if (hasTerminalTabHistory(snapshot, tab)) {
-      setCloseCandidate(tab);
-      return;
-    }
-
-    await closeTab(tab);
-  };
-
-  const startRenameTab = (tab: TerminalMuxTab, label: string): void => {
-    if (!controls.canRenameTab || busy || isPrewarmedTerminalTab(tab)) {
-      return;
-    }
-
-    setEditingTabId(tab.tab_id);
-    setEditingTitle(tab.title?.trim() || label);
-  };
-
-  const cancelRenameTab = (): void => {
-    setEditingTabId(null);
-    setEditingTitle('');
-  };
-
-  const commitRenameTab = async (): Promise<void> => {
-    const tabId = editingTabId;
-    const title = editingTitle.trim();
-    const tab = visibleTabs.find((candidate) => candidate.tab_id === tabId);
-    if (!tabId || !tab || !title) {
-      cancelRenameTab();
-      return;
-    }
-
-    cancelRenameTab();
-    if (title === (tab.title?.trim() || '')) {
-      return;
-    }
-
-    await runMuxCommand(`rename-tab:${tab.tab_id}`, {
-      kind: 'rename_tab',
-      tab_id: tab.tab_id,
-      title,
-    });
-  };
 
   const setTabColor = (tabId: string, colorId: TerminalTabColorId): void => {
     updateTabPreferences((current) => ({
@@ -1326,98 +1194,6 @@ const TerminalMuxTabs = ({
 
     endTabPointerDrag(event);
   };
-
-  useEffect(() => {
-    if (
-      !activeSessionId ||
-      !activeVisibleTabId ||
-      !controls.canFocusTab ||
-      busy ||
-      prewarmedTabId === null ||
-      activeTabId !== prewarmedTabId
-    ) {
-      return;
-    }
-
-    const restoreKey = `${activeSessionId}:restore:${prewarmedTabId}:${activeVisibleTabId}`;
-    if (prewarmInFlightRef.current === restoreKey) {
-      return;
-    }
-
-    prewarmInFlightRef.current = restoreKey;
-    void (async () => {
-      try {
-        await kernel.commands.dispatchMuxCommand(activeSessionId, {
-          kind: 'focus_tab',
-          tab_id: activeVisibleTabId,
-        });
-        await kernel.commands.attachSession(activeSessionId);
-      } finally {
-        if (prewarmInFlightRef.current === restoreKey) {
-          prewarmInFlightRef.current = null;
-        }
-      }
-    })();
-  }, [
-    activeSessionId,
-    activeTabId,
-    activeVisibleTabId,
-    busy,
-    controls.canFocusTab,
-    kernel,
-    prewarmedTabId,
-  ]);
-
-  useEffect(() => {
-    if (
-      !activeSessionId ||
-      !activeVisibleTabId ||
-      !controls.canCreateTab ||
-      !controls.canFocusTab ||
-      busy ||
-      prewarmedTabId !== null ||
-      prewarmFailedSessionRef.current === activeSessionId
-    ) {
-      return;
-    }
-
-    const prewarmKey = `${activeSessionId}:prewarm:${activeVisibleTabId}:${tabs.length}`;
-    if (prewarmInFlightRef.current === prewarmKey) {
-      return;
-    }
-
-    prewarmInFlightRef.current = prewarmKey;
-    void (async () => {
-      try {
-        await kernel.commands.dispatchMuxCommand(activeSessionId, {
-          kind: 'new_tab',
-          title: PREWARMED_TERMINAL_TAB_TITLE,
-        });
-        await kernel.commands.attachSession(activeSessionId);
-        await kernel.commands.dispatchMuxCommand(activeSessionId, {
-          kind: 'focus_tab',
-          tab_id: activeVisibleTabId,
-        });
-        await kernel.commands.attachSession(activeSessionId);
-        prewarmFailedSessionRef.current = null;
-      } catch {
-        prewarmFailedSessionRef.current = activeSessionId;
-      } finally {
-        if (prewarmInFlightRef.current === prewarmKey) {
-          prewarmInFlightRef.current = null;
-        }
-      }
-    })();
-  }, [
-    activeSessionId,
-    activeVisibleTabId,
-    busy,
-    controls.canCreateTab,
-    controls.canFocusTab,
-    kernel,
-    prewarmedTabId,
-    tabs.length,
-  ]);
 
   return (
     <>
@@ -1724,7 +1500,7 @@ const TerminalMuxTabs = ({
         open={closeCandidate !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setCloseCandidate(null);
+            dismissCloseCandidate();
           }
         }}
       >
@@ -1739,15 +1515,7 @@ const TerminalMuxTabs = ({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('terminalWorkspace.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                const tab = closeCandidate;
-                setCloseCandidate(null);
-                if (tab) {
-                  void closeTab(tab);
-                }
-              }}
-            >
+            <AlertDialogAction onClick={() => void confirmCloseCandidate()}>
               {t('terminalWorkspace.closeTab')}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -2021,8 +1789,4 @@ function formatFontScaleLabel(t: TeamTFunction, fontScale: string): string {
   if (fontScale === 'compact') return t('terminalWorkspace.fontScaleCompact');
   if (fontScale === 'large') return t('terminalWorkspace.fontScaleLarge');
   return t('terminalWorkspace.fontScaleDefault');
-}
-
-function getErrorMessage(reason: unknown): string {
-  return reason instanceof Error ? reason.message : String(reason);
 }

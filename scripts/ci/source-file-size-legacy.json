@@ -46,7 +46,7 @@
   "src/features/team-lifecycle/contracts/team-lifecycle-read.ts": 816,
   "src/features/team-lifecycle/main/infrastructure/TeamDirectoryLifecycleAdapter.ts": 1606,
   "src/features/team-runtime-control/core/application/planning/createCompositeRuntimePlan.ts": 1195,
-  "src/features/terminal-workspace/renderer/ui/TerminalWorkspacePanel.tsx": 2028,
+  "src/features/terminal-workspace/renderer/ui/TerminalWorkspacePanel.tsx": 1792,
   "src/features/token-usage/core/domain/snapshotProjection.ts": 937,
   "src/features/token-usage/renderer/adapters/tokenUsageViewModel.ts": 1481,
   "src/features/token-usage/renderer/ui/TokenUsageDashboard.tsx": 2170,
