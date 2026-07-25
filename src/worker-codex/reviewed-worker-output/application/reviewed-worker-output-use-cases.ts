@@ -30,7 +30,7 @@ export type ReviewedWorkerOutputDeps = {
   readonly clock?: { now(): Date };
 };
 
-const maxReviewedChangedFiles = 256;
+const maxReviewedChangedFiles = 512;
 const maxReviewedInputFiles = 1024;
 
 export async function captureReviewedWorkerOutput(

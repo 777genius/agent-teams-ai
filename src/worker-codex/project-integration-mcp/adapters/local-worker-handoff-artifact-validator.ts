@@ -20,7 +20,7 @@ import type { ProjectIntegrationMcpController } from "../ports/project-integrati
 const execFileAsync = promisify(execFile);
 const maxManifestBytes = 1024 * 1024;
 const maxPatchBytes = 16 * 1024 * 1024;
-const maxChangedPaths = 256;
+const maxChangedPaths = 512;
 const maxInputChangedPaths = 1024;
 
 export type LocalRegisteredWorkerOwnership = {

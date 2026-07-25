@@ -44,7 +44,7 @@ import type {
   ReviewedWorkerOutputStorePort,
 } from "../ports/reviewed-worker-output-ports";
 
-const maxReviewedChangedFiles = 256;
+const maxReviewedChangedFiles = 512;
 const maxReviewedInputFiles = 1024;
 const maxReviewedManifestBytes = 1024 * 1024;
 const maxReviewedPatchBytes = 16 * 1024 * 1024;

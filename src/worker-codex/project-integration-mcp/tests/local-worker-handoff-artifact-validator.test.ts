@@ -359,6 +359,80 @@ describe("local worker handoff artifact validator", () => {
     });
   });
 
+  it("validates a broad handoff with 300 changed paths", async () => {
+    const root = await mkdtemp(
+      join(tmpdir(), "integration-handoff-broad-validator-"),
+    );
+    cleanup.push(root);
+    const jobsRoot = join(root, "worker-jobs");
+    const controllerRoot = join(jobsRoot, "controller-1");
+    const workerRoot = join(jobsRoot, "worker-1");
+    const workspacePath = join(root, "workspace");
+    const registryRootDir = join(jobsRoot, "registry");
+    await Promise.all([
+      mkdir(controllerRoot, { recursive: true }),
+      mkdir(workerRoot, { recursive: true }),
+      mkdir(workspacePath, { recursive: true }),
+      mkdir(registryRootDir, { recursive: true }),
+    ]);
+    await git(workspacePath, ["init"]);
+    await git(workspacePath, ["config", "user.email", "test@example.com"]);
+    await git(workspacePath, ["config", "user.name", "Test User"]);
+    await writeFile(join(workspacePath, "README.md"), "fixture\n");
+    await git(workspacePath, ["add", "README.md"]);
+    await git(workspacePath, ["commit", "-m", "fixture"]);
+    const changedPaths = Array.from(
+      { length: 300 },
+      (_, index) => `src/broad/file-${String(index).padStart(3, "0")}.ts`,
+    );
+    await mkdir(join(workspacePath, "src", "broad"), { recursive: true });
+    await Promise.all(
+      changedPaths.map((path, index) =>
+        writeFile(
+          join(workspacePath, path),
+          `export const value${index} = ${index};\n`,
+        ),
+      ),
+    );
+    const artifacts = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: "worker-1",
+      taskId: "task-broad",
+      workspacePath,
+      jobRootDir: workerRoot,
+    });
+    expect(artifacts).not.toBeNull();
+    const materialized = artifacts!;
+    const manifestSha256 = createHash("sha256")
+      .update(await readFile(materialized.manifestPath))
+      .digest("hex");
+
+    await expect(
+      validateLocalWorkerHandoffArtifact({
+        controller: {
+          registryRootDir,
+          controller: { jobId: "controller-1", jobRootDir: controllerRoot },
+          scope: {
+            projectId: "project-1",
+            registryRoot: registryRootDir,
+            workspaceRoots: [workspacePath],
+          },
+        },
+        attemptId: "attempt-broad",
+        workerJobId: "worker-1",
+        workspacePath,
+        patchPath: materialized.patchPath,
+        summaryPath: materialized.summaryPath,
+        manifestPath: materialized.manifestPath,
+        manifestSha256,
+        baseCommit: materialized.baseCommit,
+        changedPaths,
+      }),
+    ).resolves.toMatchObject({
+      baseCommit: materialized.baseCommit,
+      patchSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+  });
+
   it("rejects oversized changed-path inputs before artifact I/O", async () => {
     await expect(
       validateLocalWorkerHandoffArtifact({
@@ -375,7 +449,7 @@ describe("local worker handoff artifact validator", () => {
         workspacePath: "/not-read/workspace",
         patchPath: "/not-read/output.patch",
         changedPaths: Array.from(
-          { length: 257 },
+          { length: 513 },
           (_, index) => `src/file-${index}.ts`,
         ),
       }),

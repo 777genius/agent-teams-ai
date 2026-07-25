@@ -396,6 +396,137 @@ describe("Codex project reviewed worker output", () => {
     }
   });
 
+  it("captures a reviewed output with 300 changed files", async () => {
+    const root = await mkdtemp(
+      join(tmpdir(), "subscription-runtime-reviewed-broad-mcp-"),
+    );
+    roots.push(root);
+    const registryRootDir = join(root, "worker-jobs", "registry");
+    const ledgerRoot = join(root, "control", "consumed-output-ledger");
+    const controllerJobId = "project-controller";
+    const workerJobId = "project-broad-worker";
+    const controllerJobRoot = join(root, "worker-jobs", controllerJobId);
+    const workerJobRoot = join(root, "worker-jobs", workerJobId);
+    const workerWorkspacePath = join(root, "worktrees", workerJobId);
+    const targetWorkspacePath = join(root, "workspaces", "canonical");
+    await Promise.all([
+      mkdir(workerWorkspacePath, { recursive: true }),
+      mkdir(targetWorkspacePath, { recursive: true }),
+      mkdir(workerJobRoot, { recursive: true }),
+    ]);
+    await gitInitRepository(workerWorkspacePath);
+    await gitInitRepository(targetWorkspacePath);
+    await writeFile(join(workerWorkspacePath, "README.md"), "base\n");
+    await git(workerWorkspacePath, ["add", "README.md"]);
+    await git(workerWorkspacePath, ["commit", "-m", "test: base"]);
+    const changedFiles = Array.from(
+      { length: 300 },
+      (_, index) => `src/broad/file-${String(index).padStart(3, "0")}.ts`,
+    );
+    await mkdir(join(workerWorkspacePath, "src", "broad"), {
+      recursive: true,
+    });
+    await Promise.all(
+      changedFiles.map((path, index) =>
+        writeFile(
+          join(workerWorkspacePath, path),
+          `export const value${index} = ${index};\n`,
+        ),
+      ),
+    );
+    const patch = await captureGitWorkspacePatch({
+      workspacePath: workerWorkspacePath,
+    });
+
+    const server = createCodexGoalMcpServer();
+    const client = new Client({
+      name: "reviewed-broad-output-test",
+      version: "0.0.0",
+    });
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    try {
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: workerJobId,
+        jobRootDir: workerJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: workerWorkspacePath,
+        promptPath: join(workerJobRoot, "prompt.md"),
+        taskId: workerJobId,
+        accounts: ["account-a"],
+        tmuxSession: workerJobId,
+        codexBinaryPath: join(root, "missing-codex"),
+        networkAccess: NetworkAccessMode.Restricted,
+      });
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: controllerJobId,
+        jobRootDir: controllerJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: targetWorkspacePath,
+        promptPath: join(controllerJobRoot, "prompt.md"),
+        taskId: controllerJobId,
+        accounts: ["account-a"],
+        accessBoundary: AccessBoundary.ProjectScopedControl,
+        networkAccess: NetworkAccessMode.Restricted,
+        projectAccessScope: {
+          projectId: "project",
+          workspaceRoots: [targetWorkspacePath],
+          worktreeRoots: [join(root, "worktrees")],
+          registryRoot: registryRootDir,
+          consumedOutputLedgerRoots: [ledgerRoot],
+          jobIdPrefixes: ["project-"],
+          tmuxSessionPrefixes: ["project-"],
+          allowedAccountIds: ["account-a"],
+          allowedBranches: ["main"],
+          allowedGitRemotes: ["origin"],
+        },
+      });
+
+      const reviewed = await callToolJson(
+        client,
+        "codex_goal_project_mark_reviewed",
+        {
+          registryRootDir,
+          controllerJobId,
+          jobId: workerJobId,
+          captureReviewedOutput: true,
+          expectedPatchSha256: sha256(patch),
+          reviewDecision: "approved",
+          reviewedBy: controllerJobId,
+          reviewReason: "Broad merge output accepted.",
+          approvedFiles: changedFiles,
+          requiredChecks: [],
+          note: "ACCEPT",
+        },
+      );
+      expect(reviewed).toMatchObject({
+        ok: true,
+        mode: "project_control_mark_reviewed",
+        jobId: workerJobId,
+      });
+      const reviewedOutputId = String(reviewed.reviewedOutputId);
+      expect(reviewedOutputId).toMatch(/^[a-f0-9]{64}$/);
+      const marker = JSON.parse(
+        await readFile(
+          join(workerJobRoot, `${workerJobId}.review.json`),
+          "utf8",
+        ),
+      ) as {
+        reviewedOutput: { changedFiles: string[] };
+      };
+      expect(marker.reviewedOutput.changedFiles).toEqual(changedFiles);
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
   it("quarantines an over-limit rejected workspace without a reviewed snapshot", async () => {
     const root = await mkdtemp(
       join(tmpdir(), "subscription-runtime-rejected-uncaptured-mcp-"),
@@ -422,7 +553,7 @@ describe("Codex project reviewed worker output", () => {
     await writeFile(join(workerWorkspacePath, "tracked.txt"), "changed\n");
     await mkdir(join(workerWorkspacePath, "untracked"), { recursive: true });
     await Promise.all(
-      Array.from({ length: 256 }, (_, index) =>
+      Array.from({ length: 512 }, (_, index) =>
         writeFile(
           join(
             workerWorkspacePath,
@@ -436,7 +567,7 @@ describe("Codex project reviewed worker output", () => {
     const changedFiles = [
       "tracked.txt",
       ...Array.from(
-        { length: 256 },
+        { length: 512 },
         (_, index) => `untracked/${String(index).padStart(3, "0")}.txt`,
       ),
     ];
