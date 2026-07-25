@@ -105,6 +105,127 @@ describe('task-board commands E2E', () => {
     expect(harness.controller.taskBoard.listTasks()).toHaveLength(1);
   });
 
+  it('preserves the create failure when JSON fallback recovery lookup also fails', async () => {
+    const harness = await makeHarness();
+    const hasher = new NodeApplicationCommandHasher();
+    const facade = new TaskBoardCommandFacade(null, {
+      hashPayload: (payload) => hasher.hashJson(payload),
+    });
+    const createError = new Error('destination create timed out');
+    const recoveryError = new Error('destination recovery lookup failed');
+    let findByIdCalls = 0;
+    const destination: TaskBoardCreateTaskDestination = {
+      ...harness.destination,
+      findById: vi.fn(() => {
+        findByIdCalls += 1;
+        if (findByIdCalls === 1) {
+          return null;
+        }
+        throw recoveryError;
+      }),
+      findByIdempotencyKey: vi.fn(() => []),
+      create: vi.fn(() => {
+        throw createError;
+      }),
+    };
+
+    await expect(
+      facade.createTask({
+        teamName: TEAM_NAME,
+        identity: makeIdentity('19191919-1919-4919-8919-191919191919'),
+        payload: { subject: 'Unknown fallback lookup outcome', createdBy: 'user' },
+        destination,
+      })
+    ).rejects.toMatchObject({
+      name: 'TaskBoardCreateOutcomeUnknownError',
+      createError,
+      reconciliationError: recoveryError,
+    });
+
+    expect(destination.create).toHaveBeenCalledOnce();
+    expect(destination.findById).toHaveBeenCalledTimes(2);
+    expect(harness.controller.taskBoard.listTasks()).toHaveLength(0);
+  });
+
+  it('preserves the create failure when JSON fallback recovery reconciliation also fails', async () => {
+    const harness = await makeHarness();
+    const hasher = new NodeApplicationCommandHasher();
+    const facade = new TaskBoardCommandFacade(null, {
+      hashPayload: (payload) => hasher.hashJson(payload),
+    });
+    const createError = new Error('destination create response was lost');
+    const recoveryError = new Error('destination recovery reconciliation failed');
+    const destination: TaskBoardCreateTaskDestination = {
+      ...harness.destination,
+      create: vi.fn((input) => {
+        harness.destination.create(input);
+        throw createError;
+      }),
+      reconcile: vi.fn(() => {
+        throw recoveryError;
+      }),
+    };
+
+    await expect(
+      facade.createTask({
+        teamName: TEAM_NAME,
+        identity: makeIdentity('20202020-2020-4020-8020-202020202020'),
+        payload: { subject: 'Unknown fallback reconcile outcome', createdBy: 'user' },
+        destination,
+      })
+    ).rejects.toMatchObject({
+      name: 'TaskBoardCreateOutcomeUnknownError',
+      createError,
+      reconciliationError: recoveryError,
+    });
+
+    expect(destination.create).toHaveBeenCalledOnce();
+    expect(destination.reconcile).toHaveBeenCalledOnce();
+    expect(harness.controller.taskBoard.listTasks()).toHaveLength(1);
+  });
+
+  it('preserves terminal destination conflicts during JSON fallback recovery', async () => {
+    const harness = await makeHarness();
+    const hasher = new NodeApplicationCommandHasher();
+    const facade = new TaskBoardCommandFacade(null, {
+      hashPayload: (payload) => hasher.hashJson(payload),
+    });
+    const identity = makeIdentity('21212121-2121-4121-8121-212121212121');
+    const createError = new Error('destination create response was lost');
+    let recovering = false;
+    const recoveredById = { id: identity.commandId } as TeamTask;
+    const recoveredByIdempotencyKey = {
+      id: '22222222-2121-4121-8121-212121212121',
+    } as TeamTask;
+    const reconcile = vi.fn();
+    const destination: TaskBoardCreateTaskDestination = {
+      ...harness.destination,
+      findById: vi.fn(() => (recovering ? recoveredById : null)),
+      findByIdempotencyKey: vi.fn(() => (recovering ? [recoveredByIdempotencyKey] : [])),
+      create: vi.fn(() => {
+        recovering = true;
+        throw createError;
+      }),
+      reconcile,
+    };
+
+    await expect(
+      facade.createTask({
+        teamName: TEAM_NAME,
+        identity,
+        payload: { subject: 'Conflicting fallback recovery', createdBy: 'user' },
+        destination,
+      })
+    ).rejects.toMatchObject({
+      name: 'TaskBoardCreateDestinationConflictError',
+    });
+
+    expect(destination.create).toHaveBeenCalledOnce();
+    expect(destination.findById).toHaveBeenCalledTimes(2);
+    expect(reconcile).not.toHaveBeenCalled();
+    expect(harness.controller.taskBoard.listTasks()).toHaveLength(0);
+  });
+
   it('keeps one logical create while switching between SQLite and JSON fallback', async () => {
     const harness = await makeHarness();
     const destinationCreate = vi.spyOn(harness.destination, 'create');

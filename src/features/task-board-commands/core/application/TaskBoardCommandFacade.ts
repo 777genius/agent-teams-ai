@@ -200,16 +200,35 @@ export class TaskBoardCommandFacade {
         createdInAttempt: true,
       };
     } catch (error) {
-      const recovered = findExistingDestination(command.destination, commandRecord);
-      if (!recovered) {
-        throw error;
+      let recovered: ResolvedDestination | null;
+      try {
+        recovered = findExistingDestination(command.destination, commandRecord);
+      } catch (reconciliationError) {
+        if (reconciliationError instanceof TaskBoardCreateDestinationConflictError) {
+          throw reconciliationError;
+        }
+        throw new TaskBoardCreateOutcomeUnknownError(error, reconciliationError);
       }
-      const reconciled = await reconcileDestination(command.destination, recovered.record, payload);
-      return {
-        task: toExternalTask(reconciled),
-        outcome: ApplicationCommandRunOutcome.Executed,
-        createdInAttempt: true,
-      };
+      if (recovered) {
+        try {
+          const reconciled = await reconcileDestination(
+            command.destination,
+            recovered.record,
+            payload
+          );
+          return {
+            task: toExternalTask(reconciled),
+            outcome: ApplicationCommandRunOutcome.Executed,
+            createdInAttempt: true,
+          };
+        } catch (reconciliationError) {
+          if (reconciliationError instanceof TaskBoardCreateDestinationConflictError) {
+            throw reconciliationError;
+          }
+          throw new TaskBoardCreateOutcomeUnknownError(error, reconciliationError);
+        }
+      }
+      throw error;
     }
   }
 
