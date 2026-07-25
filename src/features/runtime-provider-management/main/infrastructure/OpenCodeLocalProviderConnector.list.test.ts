@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-clear-text-protocols -- plain-HTTP local URLs are the connector subject */
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -26,6 +27,7 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
         '{',
         '  // project-owned comment',
         '  "model": "ollama/qwen3:8b",',
+        '  "small_model": "local-lab/tiny-model",',
         '  "provider": {',
         '    "ollama": {',
         '      "npm": "@ai-sdk/openai-compatible",',
@@ -82,6 +84,8 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
     expect(response.providers?.[1]).toMatchObject({
       preset: { id: 'custom', displayName: 'Custom local server' },
       providerId: 'local-lab',
+      defaultModelId: 'tiny-model',
+      smallModelId: 'tiny-model',
       isDefault: false,
       state: 'unavailable',
       liveModels: [],
@@ -155,6 +159,51 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
     expect(requestedUrls).toEqual(['http://127.0.0.1:18080/v1/models']);
   });
 
+  it('does not probe private-network config URLs without app-owned approval', async () => {
+    const projectPath = path.join(tempDir, 'cloned-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'opencode.json'),
+      JSON.stringify({
+        provider: {
+          'home-server': {
+            npm: '@ai-sdk/openai-compatible',
+            options: { baseURL: 'http://192.168.1.20:8080/v1' },
+            models: { 'team-model': {} },
+          },
+        },
+      }),
+      'utf8'
+    );
+    const requestedUrls: string[] = [];
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl: (async (input: string | URL | Request) => {
+        requestedUrls.push(String(input));
+        return new Response(JSON.stringify({ data: [{ id: 'team-model' }] }));
+      }) as typeof fetch,
+      privateNetworkApprovalStore: {
+        isApproved: async () => false,
+        approve: async () => {},
+      },
+    });
+
+    const response = await connector.listLocalProviders({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+    });
+
+    expect(response.providers).toEqual([
+      expect.objectContaining({
+        providerId: 'home-server',
+        privateNetworkApproved: false,
+        state: 'unavailable',
+        message: expect.stringContaining('has not been approved'),
+      }),
+    ]);
+    expect(requestedUrls).toEqual([]);
+  });
+
   it('lists providers from the global config without requiring a project', async () => {
     const globalConfigDirectory = path.join(tempDir, '.config', 'opencode');
     await fs.mkdir(globalConfigDirectory, { recursive: true });
@@ -197,3 +246,5 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
     ]);
   });
 });
+
+/* eslint-enable sonarjs/no-clear-text-protocols -- re-enable after the local connector fixtures */
