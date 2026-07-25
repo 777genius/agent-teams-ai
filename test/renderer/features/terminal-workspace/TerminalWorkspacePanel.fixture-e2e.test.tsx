@@ -1124,6 +1124,40 @@ describe('terminal workspace panel fixture-e2e', () => {
     });
   });
 
+  it('moves keyboard focus from the open settings tab back to a terminal tab', async () => {
+    nextSnapshot = createWorkspaceSnapshot({
+      focusedTabId: 'tab-2',
+      tabs: [createTab('tab-1', 'Build', 'pane-build'), createTab('tab-2', 'Logs', 'pane-logs')],
+    });
+
+    await renderPanel({ settingsOpen: true });
+    const kernel = currentKernel();
+    kernel.commands.dispatchMuxCommand.mockClear();
+    const settingsTab = document.querySelector<HTMLButtonElement>(
+      '[data-testid="agent-team-terminal-settings-tab"] [role="tab"]'
+    );
+    if (!settingsTab) {
+      throw new Error('Missing terminal settings tab button');
+    }
+    const logsTab = getTabButton('Logs');
+
+    await act(async () => {
+      settingsTab.focus();
+      settingsTab.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key: 'ArrowLeft',
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(document.activeElement).toBe(logsTab);
+    expect(onSettingsOpenChange).toHaveBeenCalledWith(false);
+    expect(kernel.commands.dispatchMuxCommand).not.toHaveBeenCalled();
+  });
+
   it('keeps terminal tab close buttons hover-only and avoids mixed border style shorthands', async () => {
     window.localStorage.setItem(
       storageKey('tab-preferences'),

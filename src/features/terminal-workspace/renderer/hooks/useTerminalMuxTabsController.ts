@@ -19,6 +19,7 @@ import {
   createTerminalMuxTabsViewModel,
   resolveTerminalTabStripKeyboardIntent,
   type TerminalMuxTabsViewModel,
+  type TerminalTabStripFocusTarget,
 } from '../view-models/terminalMuxTabs';
 
 import { type TerminalMuxCommands, useTerminalMuxTabLifecycle } from './useTerminalMuxTabLifecycle';
@@ -56,6 +57,7 @@ export interface TerminalMuxTabsController {
   endTabPointerDrag: (event?: ReactPointerEvent<HTMLDivElement>) => void;
   error: string | null;
   getTabDragOffsetX: (tabId: string) => number;
+  handleSettingsTabKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => void;
   handleTabClick: (event: ReactMouseEvent<HTMLButtonElement>, tabId: string) => void;
   handleTabKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>, tabId: string) => void;
   handleTabLostPointerCapture: (event: ReactPointerEvent<HTMLDivElement>) => void;
@@ -69,6 +71,7 @@ export interface TerminalMuxTabsController {
   requestCloseTab: (tab: TerminalMuxTab) => Promise<void>;
   setEditingTitle: (title: string) => void;
   setTabColor: (tabId: string, colorId: TerminalTabColorId) => void;
+  settingsTabButtonRef: RefObject<HTMLButtonElement | null>;
   startRenameTab: (tab: TerminalMuxTab, label: string) => void;
   tabListElementRef: RefObject<HTMLDivElement | null>;
   viewModel: TerminalMuxTabsViewModel;
@@ -86,6 +89,7 @@ export function useTerminalMuxTabsController({
   const [tabPreferences, setTabPreferences] = useState<TerminalTabPreferences>(() =>
     readStoredTerminalTabPreferences(teamName)
   );
+  const settingsTabButtonRef = useRef<HTMLButtonElement | null>(null);
   const tabButtonElementsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
   const viewModel = useMemo(
     () =>
@@ -195,25 +199,56 @@ export function useTerminalMuxTabsController({
     []
   );
 
-  const handleTabKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLButtonElement>, tabId: string): void => {
+  const handleTabStripKeyDown = useCallback(
+    (
+      event: ReactKeyboardEvent<HTMLButtonElement>,
+      currentTarget: TerminalTabStripFocusTarget
+    ): void => {
       if (busy || editingTabId !== null || !viewModel.canFocusTab) {
         return;
       }
       const intent = resolveTerminalTabStripKeyboardIntent(
         event.key,
-        tabId,
-        viewModel.orderedVisibleTabIds
+        currentTarget,
+        viewModel.orderedVisibleTabIds,
+        settingsOpen
       );
       if (!intent) {
         return;
       }
 
       event.preventDefault();
-      tabButtonElementsRef.current.get(intent.targetTabId)?.focus();
-      void focusTab(intent.targetTabId);
+      if (intent.target.kind === 'settings') {
+        settingsTabButtonRef.current?.focus();
+        onSettingsOpenChange?.(true);
+        return;
+      }
+      tabButtonElementsRef.current.get(intent.target.tabId)?.focus();
+      void focusTab(intent.target.tabId);
     },
-    [busy, editingTabId, focusTab, viewModel.canFocusTab, viewModel.orderedVisibleTabIds]
+    [
+      busy,
+      editingTabId,
+      focusTab,
+      onSettingsOpenChange,
+      settingsOpen,
+      viewModel.canFocusTab,
+      viewModel.orderedVisibleTabIds,
+    ]
+  );
+
+  const handleTabKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLButtonElement>, tabId: string): void => {
+      handleTabStripKeyDown(event, { kind: 'terminal', tabId });
+    },
+    [handleTabStripKeyDown]
+  );
+
+  const handleSettingsTabKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLButtonElement>): void => {
+      handleTabStripKeyDown(event, { kind: 'settings' });
+    },
+    [handleTabStripKeyDown]
   );
 
   const setTabColor = useCallback(
@@ -244,6 +279,7 @@ export function useTerminalMuxTabsController({
     endTabPointerDrag: pointerReorder.endTabPointerDrag,
     error: lifecycle.error,
     getTabDragOffsetX: pointerReorder.getTabDragOffsetX,
+    handleSettingsTabKeyDown,
     handleTabClick: pointerReorder.handleTabClick,
     handleTabKeyDown,
     handleTabLostPointerCapture: pointerReorder.handleTabLostPointerCapture,
@@ -257,6 +293,7 @@ export function useTerminalMuxTabsController({
     requestCloseTab: lifecycle.requestCloseTab,
     setEditingTitle: lifecycle.setEditingTitle,
     setTabColor,
+    settingsTabButtonRef,
     startRenameTab: lifecycle.startRenameTab,
     tabListElementRef: pointerReorder.tabListElementRef,
     viewModel,

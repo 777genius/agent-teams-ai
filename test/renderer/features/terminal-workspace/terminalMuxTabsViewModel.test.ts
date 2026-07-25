@@ -1,13 +1,13 @@
 import {
-  createTerminalMuxTabsViewModel,
-  resolveTerminalTabStripKeyboardIntent,
-} from '@features/terminal-workspace/renderer/view-models/terminalMuxTabs';
-import {
   PREWARMED_TERMINAL_TAB_TITLE,
   type TerminalMuxTab,
   type TerminalTabPreferences,
   type TerminalWorkspaceSnapshot,
 } from '@features/terminal-workspace/renderer/model/terminalTabPreferences';
+import {
+  createTerminalMuxTabsViewModel,
+  resolveTerminalTabStripKeyboardIntent,
+} from '@features/terminal-workspace/renderer/view-models/terminalMuxTabs';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@terminal-platform/workspace-react', () => ({
@@ -90,26 +90,58 @@ describe('terminal mux tabs view model', () => {
 
 describe('terminal tab strip keyboard intent', () => {
   const tabIds = ['tab-1', 'tab-2', 'tab-3'];
+  const terminalTarget = (tabId: string) => ({ kind: 'terminal' as const, tabId });
 
   it('wraps arrow navigation and resolves Home and End', () => {
-    expect(resolveTerminalTabStripKeyboardIntent('ArrowLeft', 'tab-1', tabIds)).toEqual({
-      targetTabId: 'tab-3',
+    expect(
+      resolveTerminalTabStripKeyboardIntent('ArrowLeft', terminalTarget('tab-1'), tabIds)
+    ).toEqual({
+      target: terminalTarget('tab-3'),
     });
-    expect(resolveTerminalTabStripKeyboardIntent('ArrowRight', 'tab-3', tabIds)).toEqual({
-      targetTabId: 'tab-1',
+    expect(
+      resolveTerminalTabStripKeyboardIntent('ArrowRight', terminalTarget('tab-3'), tabIds)
+    ).toEqual({
+      target: terminalTarget('tab-1'),
     });
-    expect(resolveTerminalTabStripKeyboardIntent('Home', 'tab-2', tabIds)).toEqual({
-      targetTabId: 'tab-1',
+    expect(resolveTerminalTabStripKeyboardIntent('Home', terminalTarget('tab-2'), tabIds)).toEqual({
+      target: terminalTarget('tab-1'),
     });
-    expect(resolveTerminalTabStripKeyboardIntent('End', 'tab-1', tabIds)).toEqual({
-      targetTabId: 'tab-3',
+    expect(resolveTerminalTabStripKeyboardIntent('End', terminalTarget('tab-1'), tabIds)).toEqual({
+      target: terminalTarget('tab-3'),
+    });
+  });
+
+  it('includes the open settings tab in the same roving keyboard order', () => {
+    expect(
+      resolveTerminalTabStripKeyboardIntent('ArrowRight', terminalTarget('tab-3'), tabIds, true)
+    ).toEqual({
+      target: { kind: 'settings' },
+    });
+    expect(
+      resolveTerminalTabStripKeyboardIntent('ArrowLeft', { kind: 'settings' }, tabIds, true)
+    ).toEqual({
+      target: terminalTarget('tab-3'),
+    });
+    expect(
+      resolveTerminalTabStripKeyboardIntent('Home', { kind: 'settings' }, tabIds, true)
+    ).toEqual({
+      target: terminalTarget('tab-1'),
     });
   });
 
   it('ignores unrelated keys and tabs outside the current strip', () => {
-    expect(resolveTerminalTabStripKeyboardIntent('Enter', 'tab-1', tabIds)).toBeUndefined();
-    expect(resolveTerminalTabStripKeyboardIntent('ArrowRight', 'missing', tabIds)).toBeUndefined();
-    expect(resolveTerminalTabStripKeyboardIntent('ArrowRight', 'tab-1', [])).toBeUndefined();
+    expect(
+      resolveTerminalTabStripKeyboardIntent('Enter', terminalTarget('tab-1'), tabIds)
+    ).toBeUndefined();
+    expect(
+      resolveTerminalTabStripKeyboardIntent('ArrowRight', terminalTarget('missing'), tabIds)
+    ).toBeUndefined();
+    expect(
+      resolveTerminalTabStripKeyboardIntent('ArrowRight', terminalTarget('tab-1'), [])
+    ).toBeUndefined();
+    expect(
+      resolveTerminalTabStripKeyboardIntent('ArrowRight', { kind: 'settings' }, tabIds)
+    ).toBeUndefined();
   });
 });
 

@@ -46,9 +46,18 @@ export interface CreateTerminalMuxTabsViewModelOptions {
   snapshot: TerminalWorkspaceSnapshot;
 }
 
+export type TerminalTabStripFocusTarget =
+  | Readonly<{
+      kind: 'settings';
+    }>
+  | Readonly<{
+      kind: 'terminal';
+      tabId: string;
+    }>;
+
 export type TerminalTabStripKeyboardIntent =
   | Readonly<{
-      targetTabId: string;
+      target: TerminalTabStripFocusTarget;
     }>
   | undefined;
 
@@ -100,33 +109,53 @@ export function createTerminalMuxTabsViewModel({
 
 export function resolveTerminalTabStripKeyboardIntent(
   key: string,
-  currentTabId: string,
-  orderedTabIds: readonly string[]
+  currentTarget: TerminalTabStripFocusTarget,
+  orderedTabIds: readonly string[],
+  settingsOpen = false
 ): TerminalTabStripKeyboardIntent {
-  const currentIndex = orderedTabIds.indexOf(currentTabId);
-  if (currentIndex < 0 || orderedTabIds.length === 0) {
+  const orderedTargets: TerminalTabStripFocusTarget[] = orderedTabIds.map((tabId) => ({
+    kind: 'terminal',
+    tabId,
+  }));
+  if (settingsOpen) {
+    orderedTargets.push({ kind: 'settings' });
+  }
+  const currentIndex = orderedTargets.findIndex((target) =>
+    areTerminalTabStripTargetsEqual(target, currentTarget)
+  );
+  if (currentIndex < 0 || orderedTargets.length === 0) {
     return undefined;
   }
 
   let targetIndex: number;
   switch (key) {
     case 'ArrowLeft':
-      targetIndex = (currentIndex - 1 + orderedTabIds.length) % orderedTabIds.length;
+      targetIndex = (currentIndex - 1 + orderedTargets.length) % orderedTargets.length;
       break;
     case 'ArrowRight':
-      targetIndex = (currentIndex + 1) % orderedTabIds.length;
+      targetIndex = (currentIndex + 1) % orderedTargets.length;
       break;
     case 'Home':
       targetIndex = 0;
       break;
     case 'End':
-      targetIndex = orderedTabIds.length - 1;
+      targetIndex = orderedTargets.length - 1;
       break;
     default:
       return undefined;
   }
 
   return {
-    targetTabId: orderedTabIds[targetIndex],
+    target: orderedTargets[targetIndex],
   };
+}
+
+function areTerminalTabStripTargetsEqual(
+  left: TerminalTabStripFocusTarget,
+  right: TerminalTabStripFocusTarget
+): boolean {
+  return (
+    left.kind === right.kind &&
+    (left.kind === 'settings' || (right.kind === 'terminal' && left.tabId === right.tabId))
+  );
 }

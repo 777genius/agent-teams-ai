@@ -81,6 +81,7 @@ export const TerminalMuxTabsView = ({
     endTabPointerDrag,
     error,
     getTabDragOffsetX,
+    handleSettingsTabKeyDown,
     handleTabClick,
     handleTabKeyDown,
     handleTabLostPointerCapture,
@@ -94,6 +95,7 @@ export const TerminalMuxTabsView = ({
     requestCloseTab,
     setEditingTitle,
     setTabColor,
+    settingsTabButtonRef,
     startRenameTab,
     tabListElementRef,
     viewModel,
@@ -328,12 +330,14 @@ export const TerminalMuxTabsView = ({
                 data-testid="agent-team-terminal-settings-tab"
               >
                 <button
+                  ref={settingsTabButtonRef}
                   type="button"
                   className="inline-flex min-w-0 items-center gap-1.5 px-2 pr-7 text-left"
                   aria-selected="true"
                   role="tab"
                   tabIndex={0}
                   onClick={() => onSettingsOpenChange?.(true)}
+                  onKeyDown={handleSettingsTabKeyDown}
                 >
                   <Palette size={13} className="shrink-0 text-sky-200" />
                   <span className="min-w-0 truncate">{copy.settingsTab}</span>
