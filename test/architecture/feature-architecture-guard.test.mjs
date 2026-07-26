@@ -1627,6 +1627,164 @@ test('traces top-level getter aliases only when public descriptors expose them',
   );
 });
 
+test('tracks object mutators on constructed public instances', () => {
+  withFixture(
+    {
+      'src/features/constructor-assign/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.assign(this, { Store });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/constructor-assign/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/constructor-define-properties/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.defineProperties(this, {
+              Store: { value: Store },
+            });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/constructor-define-properties/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/constructor-define-property/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.defineProperty(this, 'Store', { value: Store });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/constructor-define-property/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/constructor-reflect-set/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Reflect.set(this, 'Store', Store);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/constructor-reflect-set/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/constructor-callback-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.assign(this, {
+              refresh: () => Store.bootstrap(),
+            });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/constructor-callback-safe/main/infrastructure/Store.ts': `
+        export class Store {
+          static bootstrap() {}
+        }
+      `,
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const implementationSources = violations
+        .filter(
+          ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
+        )
+        .map(({ source }) => source)
+        .sort();
+      assert.deepEqual(implementationSources, [
+        'src/features/constructor-assign/main/index.ts',
+        'src/features/constructor-define-properties/main/index.ts',
+        'src/features/constructor-define-property/main/index.ts',
+        'src/features/constructor-reflect-set/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('honors dynamic source ordering within one copy operation', () => {
+  withFixture(
+    {
+      'src/features/copy-source-order/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const hidden = {};
+        hidden.Store = Store;
+        const safe = {};
+        safe.Store = undefined;
+        const alias = Object.assign({}, hidden, safe);
+        export const api = { ...alias };
+      `,
+      'src/features/copy-source-order/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      assert.ok(
+        !violations.some(
+          ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
+        )
+      );
+    }
+  );
+});
+
+test('respects inherited constructor member visibility', () => {
+  withFixture(
+    {
+      'src/features/inherited-protected/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Base {
+          protected cached: unknown;
+        }
+        class Api extends Base {
+          constructor() {
+            super();
+            this.cached = Store;
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/inherited-protected/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/inherited-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Base {
+          cached: unknown;
+        }
+        class Api extends Base {
+          constructor() {
+            super();
+            this.cached = Store;
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/inherited-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const implementationSources = violations
+        .filter(
+          ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
+        )
+        .map(({ source }) => source);
+      assert.deepEqual(implementationSources, [
+        'src/features/inherited-public/main/index.ts',
+      ]);
+    }
+  );
+});
+
 test('tracks CommonJS object copies with last-write semantics', () => {
   withFixture(
     {
