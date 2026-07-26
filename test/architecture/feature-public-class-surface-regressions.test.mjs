@@ -505,6 +505,164 @@ test('ignores constructor mutator aliases that cannot expose the implementation'
   );
 });
 
+test('keeps conditional constructor alias rebinds path-conservative', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-object-assign-conditional-rebind/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(condition: boolean) {
+            let fields = { store: Store };
+            if (condition) fields = {};
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api(false);
+      `,
+      'src/features/class-object-assign-conditional-rebind/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-conditional-source/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(condition: boolean) {
+            let fields = {};
+            if (condition) fields = { store: Store };
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api(false);
+      `,
+      'src/features/class-object-assign-conditional-source/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-false-rebind/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            let fields = { store: Store };
+            if (false) fields = {};
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-false-rebind/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-true-rebind-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            let fields = { store: Store };
+            if (true) fields = {};
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-true-rebind-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-object-assign-conditional-rebind/main/index.ts',
+        'src/features/class-object-assign-conditional-source/main/index.ts',
+        'src/features/class-object-assign-false-rebind/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('recognizes only unshadowed global constructor mutators', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-object-assign-parameter-shadow-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(Object: { assign(target: object, source: object): void }) {
+            Object.assign(this, { store: Store });
+          }
+        }
+        export const api = new Api({ assign() {} });
+      `,
+      'src/features/class-object-assign-parameter-shadow-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-block-shadow-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            {
+              const Object = { assign() {} };
+              Object.assign(this, { store: Store });
+            }
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-block-shadow-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-reflect-module-shadow-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const Reflect = { set() {} };
+        class Api {
+          constructor() {
+            Reflect.set(this, 'store', Store);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-reflect-module-shadow-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-reflect-catch-shadow-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            try {
+              throw null;
+            } catch (Reflect) {
+              Reflect.set(this, 'store', Store);
+            }
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-reflect-catch-shadow-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-sibling-shadow/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            {
+              const Object = { assign() {} };
+              void Object;
+            }
+            Object.assign(this, { store: Store });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-sibling-shadow/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-type-shadow/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        type Object = { marker: true };
+        class Api {
+          constructor() {
+            Object.assign(this, { store: Store });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-type-shadow/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-object-assign-sibling-shadow/main/index.ts',
+        'src/features/class-object-assign-type-shadow/main/index.ts',
+      ]);
+    }
+  );
+});
+
 test('keeps constructed instances instance-only while preserving their public instance type', () => {
   withFeatureFixture(
     {

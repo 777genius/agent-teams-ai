@@ -1,7 +1,11 @@
 import ts from 'typescript';
 
-import { memberAccess, propertyNameText, unwrapExpression } from './feature-export-analysis.mjs';
-import { resolveObjectLiterals } from './feature-object-resolution.mjs';
+import {
+  bindingNames,
+  memberAccess,
+  propertyNameText,
+  unwrapExpression,
+} from './feature-export-analysis.mjs';
 
 function isPublicInstanceMember(node) {
   if (!node.name || ts.isPrivateIdentifier(node.name)) return false;
@@ -138,6 +142,77 @@ function containsPosition(node, position) {
   return node.pos <= position && position <= node.end;
 }
 
+function staticBooleanValue(expression) {
+  const value = unwrapExpression(expression);
+  if (value.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (value.kind === ts.SyntaxKind.FalseKeyword) return false;
+  if (ts.isPrefixUnaryExpression(value) && value.operator === ts.SyntaxKind.ExclamationToken) {
+    const operand = staticBooleanValue(value.operand);
+    return operand === null ? null : !operand;
+  }
+  return null;
+}
+
+function conditionalBranchState(condition, selectedWhenTrue) {
+  const value = staticBooleanValue(condition);
+  if (value === null) return 'conditional';
+  return value === selectedWhenTrue ? 'definite' : 'unreachable';
+}
+
+function writeExecutionState(node, boundary) {
+  let state = 'definite';
+  let current = node;
+  while (current.parent && current.parent !== boundary) {
+    const parent = current.parent;
+    let branchState = 'definite';
+    if (ts.isIfStatement(parent)) {
+      if (containsReference(parent.thenStatement, current)) {
+        branchState = conditionalBranchState(parent.expression, true);
+      } else if (parent.elseStatement && containsReference(parent.elseStatement, current)) {
+        branchState = conditionalBranchState(parent.expression, false);
+      }
+    } else if (ts.isConditionalExpression(parent)) {
+      if (containsReference(parent.whenTrue, current)) {
+        branchState = conditionalBranchState(parent.condition, true);
+      } else if (containsReference(parent.whenFalse, current)) {
+        branchState = conditionalBranchState(parent.condition, false);
+      }
+    } else if (
+      ts.isBinaryExpression(parent) &&
+      containsReference(parent.right, current) &&
+      [
+        ts.SyntaxKind.AmpersandAmpersandToken,
+        ts.SyntaxKind.BarBarToken,
+        ts.SyntaxKind.QuestionQuestionToken,
+      ].includes(parent.operatorToken.kind)
+    ) {
+      const left = staticBooleanValue(parent.left);
+      if (parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+        branchState = left === true ? 'definite' : left === false ? 'unreachable' : 'conditional';
+      } else if (parent.operatorToken.kind === ts.SyntaxKind.BarBarToken) {
+        branchState = left === false ? 'definite' : left === true ? 'unreachable' : 'conditional';
+      } else {
+        branchState = 'conditional';
+      }
+    } else if (
+      ((ts.isForStatement(parent) ||
+        ts.isForInStatement(parent) ||
+        ts.isForOfStatement(parent) ||
+        ts.isWhileStatement(parent)) &&
+        containsReference(parent.statement, current)) ||
+      ts.isCaseClause(parent) ||
+      ts.isDefaultClause(parent) ||
+      ts.isCatchClause(parent)
+    ) {
+      branchState = 'conditional';
+    }
+    if (branchState === 'unreachable') return 'unreachable';
+    if (branchState === 'conditional') state = 'conditional';
+    current = parent;
+  }
+  return state;
+}
+
 function collectLocalBindingModel(boundary) {
   const cached = localBindingModels.get(boundary);
   if (cached) return cached;
@@ -159,7 +234,15 @@ function collectLocalBindingModel(boundary) {
     declarationsByName.set(name, declarations);
     writesByDeclaration.set(
       declaration,
-      initializer ? [{ expression: initializer, position: node.getStart() }] : []
+      initializer
+        ? [
+            {
+              expression: initializer,
+              position: node.getStart(),
+              state: writeExecutionState(node, boundary),
+            },
+          ]
+        : []
     );
   };
   const visitDeclarations = (node) => {
@@ -207,6 +290,7 @@ function collectLocalBindingModel(boundary) {
           writesByDeclaration.get(declaration).push({
             expression: node.right,
             position: node.end,
+            state: writeExecutionState(node, boundary),
           });
         }
       }
@@ -216,30 +300,102 @@ function collectLocalBindingModel(boundary) {
   visitAssignments(boundary);
 
   const model = {
-    resolve(name, position) {
+    resolveAll(name, position) {
       const declaration = declarationAt(name, position);
-      if (!declaration) return null;
-      const write = [...writesByDeclaration.get(declaration)]
-        .filter((candidate) => candidate.position <= position)
-        .sort((left, right) => right.position - left.position)[0];
-      return write
-        ? {
-            beforePosition: write.position,
-            expression: write.expression,
-            key: `${declaration.key}:${write.position}`,
-          }
-        : null;
+      if (!declaration) return [];
+      const writes = writesByDeclaration
+        .get(declaration)
+        .filter((candidate) => candidate.position <= position && candidate.state !== 'unreachable')
+        .sort((left, right) => left.position - right.position);
+      const lastDefiniteIndex = writes.findLastIndex((candidate) => candidate.state === 'definite');
+      const reachingWrites = writes.filter(
+        (candidate, index) =>
+          index === lastDefiniteIndex ||
+          (index > lastDefiniteIndex && candidate.state === 'conditional')
+      );
+      return reachingWrites.map((write) => ({
+        beforePosition: write.position,
+        expression: write.expression,
+        key: `${declaration.key}:${write.position}`,
+      }));
     },
   };
   localBindingModels.set(boundary, model);
   return model;
 }
 
-function resolvedLocalObjects(expression, boundary, beforePosition) {
+function uniqueNodes(nodes) {
+  return [...new Map(nodes.map((node) => [`${node.pos}:${node.end}`, node])).values()];
+}
+
+function resolvedLocalObjects(
+  expression,
+  boundary,
+  beforePosition,
+  visited = new Set(),
+  memo = new Map()
+) {
+  const current = expression && unwrapExpression(expression);
+  if (!current) return [];
+  const memoKey = `${current.pos}:${current.end}:${beforePosition}`;
+  if (memo.has(memoKey)) return memo.get(memoKey);
+  memo.set(memoKey, []);
+
   const bindings = collectLocalBindingModel(boundary);
-  return resolveObjectLiterals(expression, beforePosition, (name, position) =>
-    bindings.resolve(name, position)
-  );
+  let resolved = [];
+  if (ts.isObjectLiteralExpression(current)) {
+    resolved = [current];
+  } else if (ts.isConditionalExpression(current)) {
+    resolved = [
+      ...resolvedLocalObjects(current.whenTrue, boundary, beforePosition, new Set(visited), memo),
+      ...resolvedLocalObjects(current.whenFalse, boundary, beforePosition, new Set(visited), memo),
+    ];
+  } else if (ts.isIdentifier(current)) {
+    for (const binding of bindings.resolveAll(current.text, beforePosition)) {
+      if (visited.has(binding.key)) continue;
+      resolved.push(
+        ...resolvedLocalObjects(
+          binding.expression,
+          boundary,
+          binding.beforePosition,
+          new Set(visited).add(binding.key),
+          memo
+        )
+      );
+    }
+  } else {
+    const access = memberAccess(current);
+    if (access) {
+      resolved = resolvedLocalObjects(
+        access.receiver,
+        boundary,
+        beforePosition,
+        visited,
+        memo
+      ).flatMap((object) => {
+        const property = object.properties.find(
+          (candidate) =>
+            (ts.isPropertyAssignment(candidate) || ts.isShorthandPropertyAssignment(candidate)) &&
+            propertyNameText(candidate.name) === access.name
+        );
+        if (property && ts.isPropertyAssignment(property)) {
+          return resolvedLocalObjects(
+            property.initializer,
+            boundary,
+            beforePosition,
+            visited,
+            memo
+          );
+        }
+        return property && ts.isShorthandPropertyAssignment(property)
+          ? resolvedLocalObjects(property.name, boundary, beforePosition, visited, memo)
+          : [];
+      });
+    }
+  }
+  const unique = uniqueNodes(resolved);
+  memo.set(memoKey, unique);
+  return unique;
 }
 
 function valueExpressionContainsReference(expression, reference) {
@@ -368,12 +524,136 @@ function callTargetsBoundaryInstance(call, boundary) {
   return owner === boundary;
 }
 
+function importBindingNames(statement) {
+  if (ts.isImportEqualsDeclaration(statement)) return [statement.name.text];
+  if (!ts.isImportDeclaration(statement) || statement.importClause?.isTypeOnly) {
+    return [];
+  }
+  const clause = statement.importClause;
+  if (!clause) return [];
+  const names = clause.name ? [clause.name.text] : [];
+  if (clause.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
+    names.push(clause.namedBindings.name.text);
+  } else if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+    names.push(
+      ...clause.namedBindings.elements
+        .filter((element) => !element.isTypeOnly)
+        .map((element) => element.name.text)
+    );
+  }
+  return names;
+}
+
+function statementRuntimeBindingNames(statement) {
+  if (ts.isVariableStatement(statement)) {
+    return statement.declarationList.declarations.flatMap((declaration) =>
+      bindingNames(declaration.name)
+    );
+  }
+  const imports = importBindingNames(statement);
+  if (imports.length > 0) return imports;
+  if (
+    (ts.isFunctionDeclaration(statement) ||
+      ts.isClassDeclaration(statement) ||
+      ts.isEnumDeclaration(statement) ||
+      ts.isModuleDeclaration(statement)) &&
+    statement.name &&
+    ts.isIdentifier(statement.name)
+  ) {
+    return [statement.name.text];
+  }
+  return [];
+}
+
+function blockDeclaresRuntimeValue(block, name) {
+  const statements = ts.isCaseBlock(block)
+    ? block.clauses.flatMap((clause) => clause.statements)
+    : block.statements;
+  return statements.some((statement) => statementRuntimeBindingNames(statement).includes(name));
+}
+
+function functionDeclaresRuntimeValue(functionLike, name) {
+  if (
+    ('name' in functionLike &&
+      functionLike.name &&
+      ts.isIdentifier(functionLike.name) &&
+      functionLike.name.text === name) ||
+    functionLike.parameters.some((parameter) => bindingNames(parameter.name).includes(name))
+  ) {
+    return true;
+  }
+  let found = false;
+  const visit = (node) => {
+    if (found || (node !== functionLike && ts.isFunctionLike(node))) return;
+    if (
+      ts.isVariableDeclarationList(node) &&
+      (node.flags & ts.NodeFlags.BlockScoped) === 0 &&
+      node.declarations.some((declaration) => bindingNames(declaration.name).includes(name))
+    ) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  if (functionLike.body) visit(functionLike.body);
+  return found;
+}
+
+function loopInitializerDeclaresRuntimeValue(node, name) {
+  const initializer =
+    ts.isForStatement(node) || ts.isForInStatement(node) || ts.isForOfStatement(node)
+      ? node.initializer
+      : null;
+  return (
+    initializer &&
+    ts.isVariableDeclarationList(initializer) &&
+    initializer.declarations.some((declaration) => bindingNames(declaration.name).includes(name))
+  );
+}
+
+function isLexicallyShadowedRuntimeValue(reference) {
+  const name = reference.text;
+  const sourceFile = reference.getSourceFile();
+  let current = reference.parent;
+  while (current && current !== sourceFile) {
+    if (
+      (ts.isBlock(current) || ts.isCaseBlock(current)) &&
+      blockDeclaresRuntimeValue(current, name)
+    ) {
+      return true;
+    }
+    if (
+      ts.isCatchClause(current) &&
+      current.variableDeclaration &&
+      bindingNames(current.variableDeclaration.name).includes(name)
+    ) {
+      return true;
+    }
+    if (ts.isFunctionLike(current) && functionDeclaresRuntimeValue(current, name)) {
+      return true;
+    }
+    if (ts.isClassExpression(current) && current.name?.text === name) {
+      return true;
+    }
+    if (loopInitializerDeclaresRuntimeValue(current, name)) return true;
+    current = current.parent;
+  }
+  return blockDeclaresRuntimeValue(sourceFile, name);
+}
+
+function isGlobalMutatorReceiver(receiver) {
+  return (
+    ts.isIdentifier(receiver) &&
+    ['Object', 'Reflect'].includes(receiver.text) &&
+    !isLexicallyShadowedRuntimeValue(receiver)
+  );
+}
+
 function publicInstanceMutatorMember(call, reference, boundary) {
   const method = memberAccess(call.expression);
   if (
     !method ||
-    !ts.isIdentifier(method.receiver) ||
-    !['Object', 'Reflect'].includes(method.receiver.text) ||
+    !isGlobalMutatorReceiver(method.receiver) ||
     call.arguments[0]?.kind !== ts.SyntaxKind.ThisKeyword ||
     !callTargetsBoundaryInstance(call, boundary)
   ) {
