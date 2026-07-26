@@ -35,9 +35,18 @@ function directObjectReferencePath(initializer, reference) {
 
 export function attachPublicReferenceQueries(
   owners,
-  { bindingModel, propertyWrites, referenceOwner, sourceFile }
+  {
+    bindingModel,
+    propertyWrites,
+    referenceOwner,
+    referenceOwnerForSelection,
+    sourceFile,
+  }
 ) {
-  owners.ownerForReference = () => referenceOwner;
+  owners.ownerForReference = (reference, selection) =>
+    selection
+      ? referenceOwnerForSelection?.(reference, selection) ?? null
+      : referenceOwner;
   owners.isReferencePublic = (reference, declaration) => {
     if (!ts.isIdentifier(declaration.name) || !declaration.initializer) return true;
     const path = directObjectReferencePath(declaration.initializer, reference);

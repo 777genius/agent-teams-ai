@@ -37,7 +37,6 @@ import {
   directlyExportedClassNames,
 } from './feature-public-identity-analysis.mjs';
 import { attachPublicReferenceQueries } from './feature-public-reference-visibility.mjs';
-
 function bindingNames(bindingName) {
   if (ts.isIdentifier(bindingName)) return [bindingName.text];
   return bindingName.elements.flatMap((element) =>
@@ -710,7 +709,24 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         }
       }
     }
-    attachPublicReferenceQueries(owners, { bindingModel, propertyWrites, referenceOwner, sourceFile });
+    attachPublicReferenceQueries(owners, {
+      bindingModel,
+      propertyWrites,
+      referenceOwner,
+      referenceOwnerForSelection: (reference, { localMember, localNames }) => {
+        if (localMember === null || localMember === undefined) return null;
+        for (const localName of localNames) {
+          const selectedOwners = localOwnersAt(reference.getStart(sourceFile), {
+            name: localName,
+            path: [localMember],
+          });
+          const owner = selectedOwners.get(localName);
+          if (owner) return owner;
+        }
+        return null;
+      },
+      sourceFile,
+    });
     return owners;
   };
   const commonJsTargetsAt = (position) => ({

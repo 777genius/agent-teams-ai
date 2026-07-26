@@ -82,7 +82,10 @@ function resolveDescriptorMapEntries(
           )) {
             entries.set(entry.name, {
               ...entry,
-              references: [property.expression, ...entry.references],
+              visibilityReferences: [
+                property.expression,
+                ...(entry.visibilityReferences ?? entry.references),
+              ],
             });
           }
         } else if (
@@ -106,7 +109,12 @@ function resolveDescriptorMapEntries(
   return current
     ? entries.map((entry) => ({
         ...entry,
-        references: [current, ...entry.references.filter((reference) => reference !== current)],
+        visibilityReferences: [
+          current,
+          ...(entry.visibilityReferences ?? entry.references).filter(
+            (reference) => reference !== current
+          ),
+        ],
       }))
     : entries;
 }
@@ -146,6 +154,13 @@ function isPublicTarget(expression, publicTargets, position, memberPath = []) {
 export function collectConsumedDescriptorGetterProperties(sourceFile, publicTargets) {
   const assignments = collectTopLevelAssignments(sourceFile);
   const getterProperties = new Set();
+  const referenceMembers = new Map();
+  const addReferenceMember = (reference, member) => {
+    if (!ts.isIdentifier(reference)) return;
+    const members = referenceMembers.get(reference) ?? new Set();
+    members.add(member);
+    referenceMembers.set(reference, members);
+  };
   const visit = (node) => {
     if (ts.isCallExpression(node)) {
       const method = memberAccess(node.expression);
@@ -213,9 +228,12 @@ export function collectConsumedDescriptorGetterProperties(sourceFile, publicTarg
             assignments,
             node.getStart(sourceFile)
           )) {
-            const references = [...entry.references, descriptor];
+            const visibilityReferences = [
+              ...(entry.visibilityReferences ?? entry.references),
+              descriptor,
+            ];
             if (
-              !references.some((reference) =>
+              !visibilityReferences.some((reference) =>
                 isPublicTarget(
                   node.arguments[0],
                   publicTargets,
@@ -229,7 +247,14 @@ export function collectConsumedDescriptorGetterProperties(sourceFile, publicTarg
             const beforeCount = getterProperties.size;
             collectDescriptorGetterProperties(descriptor, getterProperties);
             if (getterProperties.size > beforeCount) {
-              for (const reference of references) getterProperties.add(reference);
+              for (const reference of [...entry.references, descriptor]) {
+                getterProperties.add(reference);
+              }
+              for (const reference of entry.visibilityReferences ?? []) {
+                if (!entry.references.includes(reference)) {
+                  addReferenceMember(reference, entry.name);
+                }
+              }
             }
           }
         }
@@ -238,25 +263,43 @@ export function collectConsumedDescriptorGetterProperties(sourceFile, publicTarg
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
-  return getterProperties;
+  return { getterProperties, referenceMembers };
+}
+
+export function consumedDescriptorGetterMembersForReference(
+  node,
+  sourceFile,
+  consumedDescriptorGetters
+) {
+  const members = new Set();
+  let current = node;
+  while (current.parent && current.parent !== sourceFile) {
+    for (const member of consumedDescriptorGetters.referenceMembers.get(current) ?? []) {
+      members.add(member);
+    }
+    if (consumedDescriptorGetters.getterProperties.has(current)) members.add('*');
+    const parent = current.parent;
+    if (
+      (ts.isPropertyAssignment(parent) || ts.isShorthandPropertyAssignment(parent)) &&
+      consumedDescriptorGetters.getterProperties.has(parent)
+    ) {
+      members.add('*');
+    }
+    current = parent;
+  }
+  return [...members];
 }
 
 export function isConsumedDescriptorGetterReference(
   node,
   sourceFile,
-  consumedDescriptorGetterProperties
+  consumedDescriptorGetters
 ) {
-  let current = node;
-  while (current.parent && current.parent !== sourceFile) {
-    if (consumedDescriptorGetterProperties.has(current)) return true;
-    const parent = current.parent;
-    if (
-      (ts.isPropertyAssignment(parent) || ts.isShorthandPropertyAssignment(parent)) &&
-      consumedDescriptorGetterProperties.has(parent)
-    ) {
-      return true;
-    }
-    current = parent;
-  }
-  return false;
+  return (
+    consumedDescriptorGetterMembersForReference(
+      node,
+      sourceFile,
+      consumedDescriptorGetters
+    ).length > 0
+  );
 }

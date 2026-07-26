@@ -18,7 +18,7 @@ import {
 } from './feature-export-analysis.mjs';
 import {
   collectConsumedDescriptorGetterProperties,
-  isConsumedDescriptorGetterReference,
+  consumedDescriptorGetterMembersForReference,
 } from './feature-public-descriptor-analysis.mjs';
 import { isForbiddenCoreDomainPackage } from './feature-core-domain-policy.mjs';
 import {
@@ -347,33 +347,38 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
           const selectedName =
             selectedMemberForReference(node) ??
             (owner.localMember && owner.localMember !== '*' ? owner.localMember : null);
+          const consumedMembers = consumedDescriptorGetterMembersForReference(
+            node,
+            sourceFile,
+            consumedDescriptorGetterProperties
+          );
+          const selectedNames =
+            selectedName || consumedMembers.length === 0 || consumedMembers.includes('*')
+              ? [selectedName]
+              : consumedMembers;
           if (owner.localNames.length === 0) {
             for (const exportedName of owner.exportedNames) {
-              localExports.push({
-                exportedName,
-                importedName: selectedName,
-                line: lineForNode(sourceFile, node),
-                localName: node.text,
-                viaGetter: isConsumedDescriptorGetterReference(
-                  node,
-                  sourceFile,
-                  consumedDescriptorGetterProperties
-                ),
-              });
+              for (const consumedName of selectedNames) {
+                localExports.push({
+                  exportedName,
+                  importedName: consumedName,
+                  line: lineForNode(sourceFile, node),
+                  localName: node.text,
+                  viaGetter: consumedMembers.length > 0,
+                });
+              }
             }
           } else {
             for (const localName of owner.localNames) {
               const references = localReferenceNames.get(localName) ?? new Map();
-              references.set(`${node.text}:${selectedName ?? ''}:${owner.localMember ?? ''}`, {
-                localMember: owner.localMember,
-                localName: node.text,
-                selectedName,
-                viaGetter: isConsumedDescriptorGetterReference(
-                  node,
-                  sourceFile,
-                  consumedDescriptorGetterProperties
-                ),
-              });
+              for (const consumedName of selectedNames) {
+                references.set(`${node.text}:${consumedName ?? ''}:${owner.localMember ?? ''}`, {
+                  localMember: owner.localMember,
+                  localName: node.text,
+                  selectedName: consumedName,
+                  viaGetter: consumedMembers.length > 0,
+                });
+              }
               localReferenceNames.set(localName, references);
             }
           }

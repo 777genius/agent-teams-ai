@@ -456,17 +456,16 @@ export function findPublicReferenceOwner(
       bindingSelections = objectBindingSelections(declaration.name);
       localNames = bindingNames(declaration.name);
       const initializer = declaration.initializer && unwrapExpression(declaration.initializer);
-      const directOwner = localNames
-        .map((localName) => publicTargetOwners.get(localName))
-        .find(Boolean);
       const referenceOwner =
-        getterSelection?.descriptorGetter ||
-        (initializer && ts.isConditionalExpression(initializer))
-          ? publicTargetOwners.ownerForReference?.(node)
+        getterSelection?.descriptorGetter
+          ? publicTargetOwners.ownerForReference?.(node, {
+              localMember: getterSelection.localMember,
+              localNames,
+            })
+          : initializer && ts.isConditionalExpression(initializer)
+            ? publicTargetOwners.ownerForReference?.(node)
           : null;
-      descriptorGetterIsPublic = Boolean(
-        getterSelection?.descriptorGetter && (referenceOwner || directOwner)
-      );
+      descriptorGetterIsPublic = Boolean(getterSelection?.descriptorGetter && referenceOwner);
       localNames = referenceOwner
         ? [referenceOwner]
         : localNames.map((localName) => publicTargetOwners.get(localName) ?? localName);
@@ -494,9 +493,13 @@ export function findPublicReferenceOwner(
       publicTargetOwners
     ));
     if (getterSelection?.descriptorGetter) {
-      const referenceOwner = publicTargetOwners.ownerForReference?.(node);
+      const selectionLocalNames = mutationTargetLocalNames(current.expression);
+      const referenceOwner = publicTargetOwners.ownerForReference?.(node, {
+        localMember: getterSelection.localMember,
+        localNames: selectionLocalNames.length > 0 ? selectionLocalNames : localNames,
+      });
       if (referenceOwner) localNames = [referenceOwner];
-      descriptorGetterIsPublic = Boolean(referenceOwner || localNames.length > 0);
+      descriptorGetterIsPublic = Boolean(referenceOwner);
     }
     if (
       localNames.length === 0 &&
@@ -569,6 +572,23 @@ export function publicMutationBinding(expression, publicTargetOwners) {
 
   const mutationOwner = findPublicMutationOwner(expression, publicTargetOwners);
   return { bindingSelections: null, localNames: mutationOwner ? [mutationOwner] : [] };
+}
+
+function mutationTargetLocalNames(expression) {
+  const current = unwrapExpression(expression);
+  if (ts.isAssignmentExpression(current)) return assignmentLocalNames(current.left);
+  if (!ts.isCallExpression(current)) return [];
+  const method = memberAccess(current.expression);
+  if (
+    !method ||
+    !ts.isIdentifier(method.receiver) ||
+    !['Object', 'Reflect'].includes(method.receiver.text) ||
+    !MUTATING_OBJECT_METHODS.has(method.name)
+  ) {
+    return [];
+  }
+  const targetName = current.arguments[0] && rootBindingName(current.arguments[0]);
+  return targetName ? [targetName] : [];
 }
 
 export function objectBindingSelections(bindingName) {
