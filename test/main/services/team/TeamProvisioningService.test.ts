@@ -16846,14 +16846,12 @@ describe('TeamProvisioningService', () => {
       });
       await expect(
         fsPromises.stat(
-          path.dirname(
-            getOpenCodeLaneScopedRuntimeFilePath({
-              teamsBasePath: tempTeamsBase,
-              teamName,
-              laneId: 'primary',
-              fileName: 'opencode-launch-transaction.json',
-            })
-          )
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName,
+            laneId: 'primary',
+            fileName: 'opencode-launch-transaction.json',
+          })
         )
       ).rejects.toThrow();
       expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(false);
@@ -16954,14 +16952,12 @@ describe('TeamProvisioningService', () => {
       });
       await expect(
         fsPromises.stat(
-          path.dirname(
-            getOpenCodeLaneScopedRuntimeFilePath({
-              teamsBasePath: tempTeamsBase,
-              teamName,
-              laneId: 'primary',
-              fileName: 'opencode-diagnostics.json',
-            })
-          )
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName,
+            laneId: 'primary',
+            fileName: 'opencode-diagnostics.json',
+          })
         )
       ).rejects.toThrow();
     });
