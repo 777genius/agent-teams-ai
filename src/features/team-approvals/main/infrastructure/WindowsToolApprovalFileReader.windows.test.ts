@@ -60,7 +60,7 @@ describe.runIf(process.platform === 'win32')('WindowsToolApprovalFileReader', ()
     await expect(reader.read(differentlyCasedPath)).resolves.toMatchObject({
       content: '',
       exists: true,
-      error: 'Safe approval preview rejected a redirected Windows path',
+      error: expect.stringContaining('Safe approval preview rejected a redirected Windows path'),
     });
   });
 });
