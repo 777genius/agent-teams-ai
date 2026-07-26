@@ -14,6 +14,7 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+import { runProviderPrepareDiagnostics } from '../../../../src/renderer/components/team/dialogs/providerPrepareDiagnostics';
 
 import { formatProgressDump } from './memberWorkSyncLiveHarness';
 import {
@@ -88,6 +89,38 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
         inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
       },
     });
+
+    const verificationModes: Array<'compatibility' | 'deep' | undefined> = [];
+    const preflight = await runProviderPrepareDiagnostics({
+      cwd: projectPath,
+      providerId: 'opencode',
+      selectedModelIds: [LOCAL_MODEL],
+      prepareProvisioning: async (
+        cwd,
+        providerId,
+        providerIds,
+        modelIds,
+        limitContext,
+        modelVerificationMode,
+        modelChecks
+      ) => {
+        verificationModes.push(modelVerificationMode);
+        return harness!.svc.prepareForProvisioning(cwd, {
+          providerId,
+          providerIds,
+          modelIds,
+          limitContext,
+          modelVerificationMode,
+          modelChecks,
+        });
+      },
+    });
+    expect(verificationModes).toEqual(['compatibility', 'deep']);
+    expect(preflight.status, JSON.stringify(preflight, null, 2)).toBe('notes');
+    expect(preflight.modelResultsById[LOCAL_MODEL]).toMatchObject({ status: 'ready' });
+    expect(preflight.warnings).toEqual([
+      expect.stringContaining('does not expose enough runtime metadata'),
+    ]);
 
     teamName = `opencode-local-provider-app-${Date.now()}`;
     const progressEvents: TeamProvisioningProgress[] = [];

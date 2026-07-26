@@ -4192,6 +4192,8 @@ export default interface Resources {
         };
         blocked: 'Runtime environment is not available - {{action}} is blocked';
         checkingProviders: 'Checking selected providers...';
+        experimentalLocalModelOverride: 'Launch this local model experimentally';
+        experimentalLocalModelOverrideHint: 'Only the advisory coordination check is bypassed. Provider, tool, context, and real OpenCode execution checks still apply.';
         failed: 'Failed to prepare selected providers';
         preflight: 'Pre-flight check to catch errors before {{action}}';
         preparingEnvironment: 'Preparing environment...';

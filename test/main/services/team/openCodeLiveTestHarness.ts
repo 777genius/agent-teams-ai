@@ -72,6 +72,7 @@ export async function createOpenCodeLiveHarness(input: {
   const orchestratorCli =
     process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
   await assertExecutable(orchestratorCli);
+  const sourceLauncherBunDir = await assertSourceLauncherRuntimeAvailable(orchestratorCli);
 
   const svc = new TeamProvisioningService();
   const extraServices = (await input.configureServices?.(svc)) ?? {};
@@ -82,7 +83,7 @@ export async function createOpenCodeLiveHarness(input: {
   const stableBridgeEnv = createStableBridgeEnv();
   const bridgeEnv: NodeJS.ProcessEnv = {
     ...stableBridgeEnv,
-    PATH: withBunOnPath(process.env.PATH ?? ''),
+    PATH: withBunOnPath(process.env.PATH ?? '', sourceLauncherBunDir),
     AGENT_TEAMS_MCP_CLAUDE_DIR: getClaudeBasePath(),
     CLAUDE_TEAM_CONTROL_URL: controlApi.baseUrl,
     CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
@@ -449,8 +450,41 @@ async function assertExecutable(filePath: string): Promise<void> {
   await fs.access(filePath, fsConstants.X_OK);
 }
 
-function withBunOnPath(pathValue: string): string {
-  const bunDir = '/Users/belief/.bun/bin';
+async function assertSourceLauncherRuntimeAvailable(
+  orchestratorCli: string
+): Promise<string | undefined> {
+  if (path.basename(orchestratorCli) !== 'cli-source') {
+    return undefined;
+  }
+
+  const bunInstall = process.env.BUN_INSTALL?.trim();
+  const pathDirectories = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+  const candidates = [
+    ...(bunInstall ? [path.join(bunInstall, 'bin', 'bun')] : []),
+    path.join(os.userInfo().homedir, '.bun', 'bin', 'bun'),
+    ...pathDirectories.map((directory) => path.join(directory, 'bun')),
+    '/opt/homebrew/bin/bun',
+    '/usr/local/bin/bun',
+  ];
+  for (const candidate of new Set(candidates)) {
+    try {
+      await fs.access(candidate, fsConstants.X_OK);
+      return path.dirname(candidate);
+    } catch {
+      // Continue until every location understood by cli-source has been checked.
+    }
+  }
+
+  throw new Error(
+    'OpenCode live e2e requires Bun for the orchestrator cli-source launcher. ' +
+      'Install the Bun version pinned by agent_teams_orchestrator/package.json before retrying.'
+  );
+}
+
+function withBunOnPath(
+  pathValue: string,
+  bunDir = path.join(os.userInfo().homedir, '.bun', 'bin')
+): string {
   return pathValue.split(path.delimiter).includes(bunDir)
     ? pathValue
     : `${bunDir}${path.delimiter}${pathValue}`;

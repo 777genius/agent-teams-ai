@@ -1,11 +1,52 @@
 import { OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE } from '@shared/utils/openCodeWindowsAccessDenied';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { runProviderPrepareDiagnostics } from './providerPrepareDiagnostics';
 
 import type { TeamProvisioningPrepareResult } from '@shared/types';
 
 describe('runProviderPrepareDiagnostics', () => {
+  it('requires a custom OpenCode route to pass compatibility and deep verification', async () => {
+    const modelId = 'local-lab/team-model';
+    type PrepareProvisioning = Parameters<
+      typeof runProviderPrepareDiagnostics
+    >[0]['prepareProvisioning'];
+    const prepareProvisioning = vi.fn<PrepareProvisioning>(
+      async (
+        _cwd,
+        _providerId,
+        _providerIds,
+        modelIds,
+        _limitContext,
+        verificationMode
+      ): Promise<TeamProvisioningPrepareResult> => ({
+        ready: true,
+        message: '',
+        details: [
+          verificationMode === 'compatibility'
+            ? `Selected model ${modelId} is compatible. Deep verification pending.`
+            : `Selected model ${modelId} verified for launch with Agent Teams tool coordination.`,
+        ],
+      })
+    );
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/workspace/test-project',
+      providerId: 'opencode',
+      selectedModelIds: [modelId],
+      prepareProvisioning,
+    });
+
+    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
+    expect(prepareProvisioning.mock.calls.map((call) => call[5])).toEqual([
+      'compatibility',
+      'deep',
+    ]);
+    expect(prepareProvisioning.mock.calls[1]?.[3]).toEqual([modelId]);
+    expect(result.status).toBe('ready');
+    expect(result.modelResultsById[modelId]?.status).toBe('ready');
+  });
+
   it('normalizes OpenCode access-denied provider failures', async () => {
     const result = await runProviderPrepareDiagnostics({
       cwd: 'C:\\Program Files\\locked-project',
@@ -71,5 +112,53 @@ describe('runProviderPrepareDiagnostics', () => {
     expect(result.status).toBe('failed');
     expect(result.details).toEqual([OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE]);
     expect(result.modelResultsById).toEqual({});
+  });
+
+  it('surfaces an experimental override only for an explicitly overrideable model failure', async () => {
+    const modelId = 'ollama/qwen3:4b';
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/workspace/test-project',
+      providerId: 'opencode',
+      selectedModelIds: [modelId],
+      prepareProvisioning: async (
+        _cwd,
+        _providerId,
+        _providerIds,
+        _modelIds,
+        _limitContext,
+        verificationMode
+      ): Promise<TeamProvisioningPrepareResult> =>
+        verificationMode === 'compatibility'
+          ? {
+              ready: true,
+              message: 'Compatible.',
+              details: [`Selected model ${modelId} is compatible. Deep verification pending.`],
+            }
+          : {
+              ready: false,
+              message: `Selected model ${modelId} is unavailable.`,
+              details: [
+                `Selected model ${modelId} is unavailable. Agent Teams coordination was not confirmed.`,
+              ],
+              issues: [
+                {
+                  providerId: 'opencode',
+                  modelId,
+                  scope: 'model',
+                  severity: 'blocking',
+                  code: 'local_coordination_probe_failed',
+                  message: 'Agent Teams coordination was not confirmed.',
+                  experimentalOverrideAvailable: true,
+                },
+              ],
+            },
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.experimentalOverrideAvailable).toBe(true);
+    expect(result.modelResultsById[modelId]).toMatchObject({
+      status: 'failed',
+      experimentalOverrideAvailable: true,
+    });
   });
 });

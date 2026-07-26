@@ -17,6 +17,7 @@ export interface OpenCodeRuntimeAdapterRunEntry {
   runId: string;
   providerId: string;
   cwd?: string;
+  allowExperimentalLocalModels?: boolean;
   members?: TeamRuntimeLaunchResult['members'];
 }
 
@@ -25,7 +26,10 @@ export interface OpenCodeRuntimeAdapterLaunchInputParams {
   teamName: string;
   cwd: string;
   prompt: string;
-  request: Pick<TeamCreateRequest | TeamLaunchRequest, 'model' | 'effort' | 'skipPermissions'>;
+  request: Pick<
+    TeamCreateRequest | TeamLaunchRequest,
+    'model' | 'effort' | 'skipPermissions' | 'allowExperimentalLocalModels'
+  >;
   members: TeamCreateRequest['members'];
   previousLaunchState: TeamRuntimeLaunchInput['previousLaunchState'];
   getOpenCodeRuntimeLaunchCwd(baseCwd: string, members: TeamCreateRequest['members']): string;
@@ -113,6 +117,7 @@ export interface OpenCodeRuntimeAdapterLaunchPorts extends OpenCodeRuntimeAdapte
       runId: string;
       providerId: 'opencode';
       cwd: string;
+      allowExperimentalLocalModels?: boolean;
       members: TeamRuntimeLaunchResult['members'];
     }
   ): void;
@@ -153,6 +158,9 @@ export function buildOpenCodeRuntimeAdapterLaunchInput(
       model: params.request.model,
       effort: params.request.effort,
       skipPermissions: params.request.skipPermissions !== false,
+      ...(params.request.allowExperimentalLocalModels === true
+        ? { allowExperimentalLocalModels: true }
+        : {}),
       expectedMembers: params.members.map((member) => ({
         name: member.name,
         role: member.role,
@@ -361,6 +369,9 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
         runId,
         providerId: 'opencode',
         cwd: launchCwd,
+        ...(input.request.allowExperimentalLocalModels === true
+          ? { allowExperimentalLocalModels: true }
+          : {}),
         members: result.members,
       });
       ports.setAliveRunId(teamName, runId);
