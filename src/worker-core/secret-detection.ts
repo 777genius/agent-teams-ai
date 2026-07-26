@@ -35,6 +35,11 @@ const explicitFixtureLiterals = new Set([
   "fixture-fixture-literal",
   "example-fixture-literal",
   "placeholder-fixture-literal",
+  ["sk", "-input-secret-value-123456"].join(""),
+]);
+
+const explicitAuthoritativeFixtureLiterals = new Set([
+  ["sk", "-input-secret-value-123456"].join(""),
 ]);
 
 const explicitFixtureDirectoryNames = new Set([
@@ -104,7 +109,7 @@ export function detectSecretLikeContent(
 ): SecretLikeContentKind | undefined {
   const text = typeof value === "string" ? value : value.toString("utf8");
   const authoritativeMatch = authoritativeSecretPolicies.find((policy) =>
-    matchesPolicy(text, policy)
+    containsUnsafeAuthoritativeMatch(text, policy, context)
   );
   if (authoritativeMatch) return authoritativeMatch.kind;
   if (containsCompactJwt(text)) return "jwt_token";
@@ -174,8 +179,29 @@ function isExplicitFixtureContext(filePath: string | undefined): boolean {
   return /(?:^|[._-])(?:test|spec|fixture)(?:[._-]|$)/.test(fileName);
 }
 
-function matchesPolicy(text: string, policy: SecretLikeContentPolicy): boolean {
-  return matchesPattern(text, policy.pattern);
+function containsUnsafeAuthoritativeMatch(
+  text: string,
+  policy: SecretLikeContentPolicy,
+  context: SecretDetectionContext,
+): boolean {
+  const flags = policy.pattern.flags.includes("g")
+    ? policy.pattern.flags
+    : `${policy.pattern.flags}g`;
+  const pattern = new RegExp(policy.pattern.source, flags);
+  for (
+    let match = pattern.exec(text);
+    match !== null;
+    match = pattern.exec(text)
+  ) {
+    if (
+      policy.kind !== "openai_token" ||
+      !explicitAuthoritativeFixtureLiterals.has(match[0]) ||
+      !isExplicitFixtureContext(context.filePath)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function matchesPattern(text: string, pattern: RegExp): boolean {

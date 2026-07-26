@@ -74,6 +74,31 @@ describe("secure fixture secret detection", () => {
     })).toBe("env_secret_assignment");
   });
 
+  it("allows the exact historical provider fixture only in test paths", () => {
+    const fixtureToken = joined("sk", "-input-secret-value-123456");
+    const content = quotedAssignment(["api_", "key"], [fixtureToken]);
+
+    expect(detectSecretLikeContent(content, {
+      filePath: "test/provider-client.test.ts",
+    })).toBeUndefined();
+    expect(detectSecretLikeContent(content, {
+      filePath: "src/provider-client.ts",
+    })).toBe("openai_token");
+  });
+
+  it("rejects a second authoritative token beside the historical fixture", () => {
+    const fixtureToken = joined("sk", "-input-secret-value-123456");
+    const otherToken = joined("sk", "-", "z".repeat(24));
+    const content = [
+      quotedAssignment(["api_", "key"], [fixtureToken]),
+      quotedAssignment(["api_", "key"], [otherToken]),
+    ].join("\n");
+
+    expect(detectSecretLikeContent(content, {
+      filePath: "test/provider-client.test.ts",
+    })).toBe("openai_token");
+  });
+
   it("handles quoted, unquoted, diff-prefixed, cased, and CRLF fixture forms", () => {
     const value = ["fixture-", "fixture-literal"];
     const content = [
