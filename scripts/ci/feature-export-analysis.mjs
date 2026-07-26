@@ -10,7 +10,10 @@ import {
   immediateInvocation,
   topLevelExpressionBoundary,
 } from './feature-export-flow-analysis.mjs';
-import { executedIifeParameterReferences } from './feature-executed-iife-analysis.mjs';
+import {
+  executedIifeParameterReferences,
+  isPotentiallyExecutedAtTopLevel,
+} from './feature-executed-iife-analysis.mjs';
 import {
   dynamicThenCallbackMember,
   exportAssignmentValueSelection,
@@ -254,8 +257,7 @@ function commonJsTargetPath(expression, commonJsTargetAliases = new Set()) {
   }
   if (!ts.isIdentifier(current)) return null;
   const isPublicPath =
-    commonJsTargetAliases.hasPath?.(current.text, path) ||
-    commonJsTargetAliases.has(current.text);
+    commonJsTargetAliases.hasPath?.(current.text, path) || commonJsTargetAliases.has(current.text);
   return isPublicPath ? path : null;
 }
 
@@ -405,6 +407,36 @@ export function commonJsExportNamesForReference(
   return exportNames.includes('*') && selection.localMember ? [selection.localMember] : exportNames;
 }
 
+function potentialTopLevelExpressionBoundary(node, sourceFile) {
+  if (!isPotentiallyExecutedAtTopLevel(node, sourceFile)) return null;
+  let current = node;
+  while (current && current !== sourceFile) {
+    if (ts.isExpressionStatement(current)) return current;
+    current = current.parent;
+  }
+  return null;
+}
+
+function nestedPublicMutationExpression(
+  expression,
+  reference,
+  publicTargetOwners,
+  commonJsTargetAliases
+) {
+  let current = reference;
+  while (current && current !== expression) {
+    if (
+      ts.isExpression(current) &&
+      (commonJsExportNamesForExpression(current, commonJsTargetAliases).length > 0 ||
+        findPublicMutationOwner(current, publicTargetOwners))
+    ) {
+      return current;
+    }
+    current = current.parent;
+  }
+  return expression;
+}
+
 export function findPublicReferenceOwner(
   node,
   sourceFile,
@@ -428,8 +460,7 @@ export function findPublicReferenceOwner(
     );
     if (
       parameterOwner &&
-      (parameterOwner.localNames.length > 0 ||
-        parameterOwner.exportedNames.length > 0)
+      (parameterOwner.localNames.length > 0 || parameterOwner.exportedNames.length > 0)
     ) {
       return parameterOwner;
     }
@@ -450,7 +481,11 @@ export function findPublicReferenceOwner(
     current = current.parent;
   }
   if (!current || current.parent !== sourceFile) return null;
-  current = topLevelExpressionBoundary(node, sourceFile) ?? current;
+  const publicExpressionBoundary = isPotentiallyExecutedAtTopLevel(node, sourceFile)
+    ? (topLevelExpressionBoundary(node, sourceFile) ??
+      potentialTopLevelExpressionBoundary(node, sourceFile))
+    : null;
+  current = publicExpressionBoundary ?? current;
   const classReference = classifyPublicClassReference(node);
   const getterSelection = classReference
     ? classReference.selection
@@ -476,14 +511,13 @@ export function findPublicReferenceOwner(
       bindingSelections = objectBindingSelections(declaration.name);
       localNames = bindingNames(declaration.name);
       const initializer = declaration.initializer && unwrapExpression(declaration.initializer);
-      const referenceOwner =
-        getterSelection?.descriptorGetter
-          ? publicTargetOwners.ownerForReference?.(node, {
-              localMember: getterSelection.localMember,
-              localNames,
-            })
-          : initializer && ts.isConditionalExpression(initializer)
-            ? publicTargetOwners.ownerForReference?.(node)
+      const referenceOwner = getterSelection?.descriptorGetter
+        ? publicTargetOwners.ownerForReference?.(node, {
+            localMember: getterSelection.localMember,
+            localNames,
+          })
+        : initializer && ts.isConditionalExpression(initializer)
+          ? publicTargetOwners.ownerForReference?.(node)
           : null;
       descriptorGetterIsPublic = Boolean(getterSelection?.descriptorGetter && referenceOwner);
       localNames = referenceOwner
@@ -493,13 +527,16 @@ export function findPublicReferenceOwner(
   } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
     localNames = [current.name.text];
   } else if (ts.isExpressionStatement(current) || ts.isExpression(current)) {
-    const expression = ts.isExpressionStatement(current)
-      ? current.expression
-      : current;
-    if (
-      publicTargetOwners.isMutationReferencePublic?.(node, expression) ===
-      false
-    ) {
+    const boundaryExpression = ts.isExpressionStatement(current) ? current.expression : current;
+    const expression = publicExpressionBoundary
+      ? nestedPublicMutationExpression(
+          boundaryExpression,
+          node,
+          publicTargetOwners,
+          commonJsTargetAliases
+        )
+      : boundaryExpression;
+    if (publicTargetOwners.isMutationReferencePublic?.(node, expression) === false) {
       return null;
     }
     const commonJsExportNames = commonJsExportNamesForReference(
@@ -517,10 +554,7 @@ export function findPublicReferenceOwner(
         localNames: [],
       };
     }
-    ({ bindingSelections, localNames } = publicMutationBinding(
-      expression,
-      publicTargetOwners
-    ));
+    ({ bindingSelections, localNames } = publicMutationBinding(expression, publicTargetOwners));
     if (getterSelection?.descriptorGetter) {
       const selectionLocalNames = mutationTargetLocalNames(expression);
       const referenceOwner = publicTargetOwners.ownerForReference?.(node, {
@@ -574,6 +608,12 @@ export function findPublicReferenceOwner(
 export function findPublicMutationOwner(expression, publicTargetOwners) {
   const current = unwrapExpression(expression);
   let target = ts.isAssignmentExpression(current) ? current.left : null;
+  const unwrappedTarget = target && unwrapExpression(target);
+  if (unwrappedTarget && ts.isIdentifier(unwrappedTarget)) {
+    const ownersAfterAssignment =
+      publicTargetOwners.atPosition?.(current.end) ?? publicTargetOwners;
+    return ownersAfterAssignment.get(unwrappedTarget.text) ?? null;
+  }
   if (ts.isCallExpression(current) && ts.isPropertyAccessExpression(current.expression)) {
     const receiver = rootBindingName(current.expression.expression);
     if (receiver && publicTargetOwners.has(receiver)) {

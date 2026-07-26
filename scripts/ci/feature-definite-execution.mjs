@@ -16,10 +16,7 @@ function visitDefiniteExpression(node, visitor) {
     if (truthiness === false) visitDefiniteExpression(node.whenFalse, visitor);
     return;
   }
-  if (
-    ts.isCallExpression(node) &&
-    (node.questionDotToken || node.expression.questionDotToken)
-  ) {
+  if (ts.isCallExpression(node) && (node.questionDotToken || node.expression.questionDotToken)) {
     visitDefiniteExpression(node.expression, visitor);
     return;
   }
@@ -41,10 +38,8 @@ function visitDefiniteExpression(node, visitor) {
     visitDefiniteExpression(node.left, visitor);
     const truthiness = staticTruthiness(node.left);
     const rightIsDefinite =
-      (node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
-        truthiness === true) ||
-      (node.operatorToken.kind === ts.SyntaxKind.BarBarToken &&
-        truthiness === false) ||
+      (node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && truthiness === true) ||
+      (node.operatorToken.kind === ts.SyntaxKind.BarBarToken && truthiness === false) ||
       (node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken &&
         staticNullishness(node.left) === true);
     if (rightIsDefinite) visitDefiniteExpression(node.right, visitor);
@@ -77,27 +72,39 @@ function visitDefiniteStatement(statement, visitor) {
         visitDefiniteExpression(declaration.initializer, visitor);
       }
     }
-  } else if (ts.isReturnStatement(statement) && statement.expression) {
-    visitDefiniteExpression(statement.expression, visitor);
+  } else if (ts.isReturnStatement(statement) || ts.isThrowStatement(statement)) {
+    if (statement.expression) visitDefiniteExpression(statement.expression, visitor);
+    return ts.isReturnStatement(statement) ? 'return' : 'throw';
   } else if (ts.isBlock(statement)) {
     for (const child of statement.statements) {
-      visitDefiniteStatement(child, visitor);
-      if (ts.isReturnStatement(child) || ts.isThrowStatement(child)) break;
+      const termination = visitDefiniteStatement(child, visitor);
+      if (termination) return termination;
     }
   } else if (ts.isIfStatement(statement)) {
     visitDefiniteExpression(statement.expression, visitor);
     const truthiness = staticTruthiness(statement.expression);
-    if (truthiness === true) visitDefiniteStatement(statement.thenStatement, visitor);
+    if (truthiness === true) {
+      return visitDefiniteStatement(statement.thenStatement, visitor);
+    }
     if (truthiness === false && statement.elseStatement) {
-      visitDefiniteStatement(statement.elseStatement, visitor);
+      return visitDefiniteStatement(statement.elseStatement, visitor);
     }
   } else if (ts.isDoStatement(statement)) {
-    visitDefiniteStatement(statement.statement, visitor);
-    visitDefiniteExpression(statement.expression, visitor);
+    const terminates = visitDefiniteStatement(statement.statement, visitor);
+    if (!terminates) visitDefiniteExpression(statement.expression, visitor);
+    return terminates;
   } else if (ts.isTryStatement(statement)) {
-    visitDefiniteStatement(statement.tryBlock, visitor);
-    if (statement.finallyBlock) visitDefiniteStatement(statement.finallyBlock, visitor);
+    const tryTerminates = visitDefiniteStatement(statement.tryBlock, visitor);
+    const completion =
+      tryTerminates === 'throw' && statement.catchClause
+        ? visitDefiniteStatement(statement.catchClause.block, visitor)
+        : tryTerminates;
+    const finallyTerminates = statement.finallyBlock
+      ? visitDefiniteStatement(statement.finallyBlock, visitor)
+      : null;
+    return finallyTerminates ?? completion;
   }
+  return null;
 }
 
 export function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
