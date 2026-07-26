@@ -3,14 +3,20 @@ import ts from 'typescript';
 import { bindingNames, statementBindingNames } from './feature-export-analysis.mjs';
 
 function statementDeclaresValue(statement, name) {
-  if (
-    ts.isImportDeclaration(statement) ||
-    ts.isImportEqualsDeclaration(statement) ||
-    ts.isExportDeclaration(statement)
-  ) {
-    return false;
+  if (ts.isVariableStatement(statement)) {
+    return statementBindingNames(statement).includes(name);
   }
-  return statementBindingNames(statement).includes(name);
+  const runtimeDeclaration =
+    ts.isFunctionDeclaration(statement) ||
+    ts.isClassDeclaration(statement) ||
+    ts.isEnumDeclaration(statement) ||
+    ts.isModuleDeclaration(statement);
+  return (
+    runtimeDeclaration &&
+    statement.name &&
+    ts.isIdentifier(statement.name) &&
+    statement.name.text === name
+  );
 }
 
 function blockDeclaresValue(block, name) {
@@ -21,6 +27,12 @@ function blockDeclaresValue(block, name) {
 }
 
 function functionDeclaresValue(functionLike, name) {
+  if (
+    (ts.isFunctionDeclaration(functionLike) || ts.isFunctionExpression(functionLike)) &&
+    functionLike.name?.text === name
+  ) {
+    return true;
+  }
   if (functionLike.parameters.some((parameter) => bindingNames(parameter.name).includes(name))) {
     return true;
   }
@@ -59,7 +71,9 @@ function loopInitializerDeclaresValue(node, name) {
 
 function sourceFileImportsValue(sourceFile, name) {
   return sourceFile.statements.some((statement) => {
-    if (ts.isImportEqualsDeclaration(statement)) return statement.name.text === name;
+    if (ts.isImportEqualsDeclaration(statement)) {
+      return !statement.isTypeOnly && statement.name.text === name;
+    }
     if (!ts.isImportDeclaration(statement) || statement.importClause?.isTypeOnly) return false;
     const clause = statement.importClause;
     if (!clause) return false;
@@ -85,11 +99,20 @@ export function isLexicallyShadowedValueReference(reference, sourceFile) {
       if (bindingNames(current.variableDeclaration.name).includes(name)) return true;
     }
     if (ts.isFunctionLike(current) && functionDeclaresValue(current, name)) return true;
+    if (ts.isClassExpression(current) && current.name?.text === name) return true;
     if (loopInitializerDeclaresValue(current, name)) return true;
     current = current.parent;
   }
 
   return blockDeclaresValue(sourceFile, name);
+}
+
+export function isUnshadowedGlobalValueReference(reference) {
+  const sourceFile = reference.getSourceFile();
+  return (
+    !sourceFileImportsValue(sourceFile, reference.text) &&
+    !isLexicallyShadowedValueReference(reference, sourceFile)
+  );
 }
 
 export function isCommonJsRequireCall(node, sourceFile) {

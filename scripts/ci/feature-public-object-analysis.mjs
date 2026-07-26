@@ -2,6 +2,7 @@ import ts from 'typescript';
 
 import { memberAccess, propertyNameText, unwrapExpression } from './feature-export-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
+import { isUnshadowedGlobalValueReference } from './feature-lexical-binding-analysis.mjs';
 import { resolveObjectLiterals as resolveObjectLiteralBindings } from './feature-object-resolution.mjs';
 import { accessPath, bindingAliasTargets } from './feature-public-access-path.mjs';
 import {
@@ -273,7 +274,8 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identity
     if (
       !method ||
       !ts.isIdentifier(method.receiver) ||
-      !['Object', 'Reflect'].includes(method.receiver.text)
+      !['Object', 'Reflect'].includes(method.receiver.text) ||
+      !isUnshadowedGlobalValueReference(method.receiver)
     ) {
       return;
     }
@@ -374,6 +376,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identity
       method &&
       ts.isIdentifier(method.receiver) &&
       method.receiver.text === 'Object' &&
+      isUnshadowedGlobalValueReference(method.receiver) &&
       method.name === 'create' &&
       initializer.arguments[1]
     ) {
@@ -555,6 +558,7 @@ export function collectCopyRelations(sourceFile, bindingModel) {
       method &&
       ts.isIdentifier(method.receiver) &&
       method.receiver.text === 'Object' &&
+      isUnshadowedGlobalValueReference(method.receiver) &&
       method.name === 'assign'
     ) {
       addCopySources(
@@ -577,6 +581,7 @@ export function collectCopyRelations(sourceFile, bindingModel) {
       !method ||
       !ts.isIdentifier(method.receiver) ||
       method.receiver.text !== 'Object' ||
+      !isUnshadowedGlobalValueReference(method.receiver) ||
       method.name !== 'assign' ||
       !node.arguments[0]
     ) {
@@ -679,6 +684,7 @@ export function collectPrototypeRelations(sourceFile, bindingModel) {
       !method ||
       !ts.isIdentifier(method.receiver) ||
       method.receiver.text !== 'Object' ||
+      !isUnshadowedGlobalValueReference(method.receiver) ||
       method.name !== 'setPrototypeOf'
     ) {
       return;

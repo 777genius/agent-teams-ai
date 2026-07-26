@@ -40,6 +40,7 @@ import {
   constructedClassReferences,
 } from './feature-public-identity-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
+import { isUnshadowedGlobalValueReference } from './feature-lexical-binding-analysis.mjs';
 import { attachPublicReferenceQueries } from './feature-public-reference-visibility.mjs';
 import {
   collectSnapshotMemberRelations,
@@ -51,17 +52,55 @@ import {
 } from './feature-public-target-propagation.mjs';
 import { materializeIdentityAliasWrites } from './feature-public-write-alias-analysis.mjs';
 
+const MODELED_GLOBAL_METHODS = new Set([
+  ...IDENTITY_WRAPPERS,
+  'create',
+  'defineProperties',
+  'defineProperty',
+  'deleteProperty',
+  'set',
+]);
+
+function modeledGlobalReceiver(expression) {
+  const current = unwrapExpression(expression);
+  if (!ts.isCallExpression(current)) return null;
+  const method = memberAccess(current.expression);
+  return method &&
+    ts.isIdentifier(method.receiver) &&
+    ['Object', 'Reflect'].includes(method.receiver.text) &&
+    MODELED_GLOBAL_METHODS.has(method.name)
+    ? method.receiver
+    : null;
+}
+
+function isShadowedModeledGlobalCall(expression) {
+  const receiver = modeledGlobalReceiver(expression);
+  return receiver ? !isUnshadowedGlobalValueReference(receiver) : false;
+}
+
+function referenceIsInsideShadowedModeledGlobalCall(reference, boundary) {
+  let current = reference.parent;
+  while (current) {
+    if (ts.isCallExpression(current) && isShadowedModeledGlobalCall(current)) return true;
+    if (current === boundary) return false;
+    current = current.parent;
+  }
+  return false;
+}
+
 function directAliasSource(expression, bindingModel) {
   let current = unwrapExpression(expression);
   if (ts.isCallExpression(current)) {
     const method = memberAccess(current.expression);
-    if (
+    const isObjectIdentityWrapper =
       method &&
       ts.isIdentifier(method.receiver) &&
       method.receiver.text === 'Object' &&
-      IDENTITY_WRAPPERS.has(method.name) &&
-      current.arguments[0]
-    ) {
+      IDENTITY_WRAPPERS.has(method.name);
+    if (isObjectIdentityWrapper) {
+      if (!isUnshadowedGlobalValueReference(method.receiver) || !current.arguments[0]) {
+        return null;
+      }
       current = unwrapExpression(current.arguments[0]);
     }
   }
@@ -91,6 +130,7 @@ function objectCreatePrototype(initializer, bindingModel) {
     !method ||
     !ts.isIdentifier(method.receiver) ||
     method.receiver.text !== 'Object' ||
+    !isUnshadowedGlobalValueReference(method.receiver) ||
     method.name !== 'create'
   ) {
     return null;
@@ -302,6 +342,7 @@ function collectCommonJsCopyRelations(
           method &&
           ts.isIdentifier(method.receiver) &&
           method.receiver.text === 'Object' &&
+          isUnshadowedGlobalValueReference(method.receiver) &&
           method.name === 'assign'
         ) {
           addSources(node.left, [...value.arguments], value.end);
@@ -313,6 +354,7 @@ function collectCommonJsCopyRelations(
         method &&
         ts.isIdentifier(method.receiver) &&
         method.receiver.text === 'Object' &&
+        isUnshadowedGlobalValueReference(method.receiver) &&
         method.name === 'assign' &&
         node.arguments[0] &&
         targetIsActive(node.arguments[0], position)
@@ -614,6 +656,17 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames, snapshotLoc
       },
       sourceFile,
     });
+    const isReferencePublic = owners.isReferencePublic;
+    owners.isReferencePublic = (reference, declaration) =>
+      declaration.initializer &&
+      referenceIsInsideShadowedModeledGlobalCall(reference, declaration.initializer)
+        ? false
+        : isReferencePublic(reference, declaration);
+    const isMutationReferencePublic = owners.isMutationReferencePublic;
+    owners.isMutationReferencePublic = (reference, expression) =>
+      isShadowedModeledGlobalCall(expression)
+        ? false
+        : isMutationReferencePublic(reference, expression);
     owners.atPosition = localOwnersAt;
     return owners;
   };
