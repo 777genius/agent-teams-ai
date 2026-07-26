@@ -288,7 +288,9 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       code: 'local_runtime_unverified',
       message:
         `${coordination.message} ${provider.preset.displayName} does not expose enough runtime ` +
-        'metadata to prove the effective context size; use at least 16K (64K recommended).',
+        `metadata to prove the effective context size; use at least ` +
+        `${formatContextTokens(MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS)} ` +
+        `(${formatContextTokens(RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS)} recommended).`,
     };
   }
 
@@ -559,7 +561,9 @@ function buildContextTooSmallResult(input: {
     message:
       `${input.providerDisplayName ?? 'Ollama'} is running ${input.modelRoute} with ` +
       `${formatContextTokens(input.provenContextTokens)} context. Agent Teams requires at least ` +
-      `16K (64K recommended). ${buildContextTooSmallRemedy(input.presetId)}`,
+      `${formatContextTokens(MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS)} ` +
+      `(${formatContextTokens(RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS)} recommended). ` +
+      buildContextTooSmallRemedy(input.presetId),
   };
 }
 

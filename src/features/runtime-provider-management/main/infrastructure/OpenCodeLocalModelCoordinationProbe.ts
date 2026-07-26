@@ -397,7 +397,7 @@ function parseServerSentEventData(raw: string): Record<string, unknown>[] {
       const parsed = asRecord(JSON.parse(data));
       if (parsed) chunks.push(parsed);
     } catch {
-      return [];
+      continue;
     }
   }
   return chunks;

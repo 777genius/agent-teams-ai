@@ -5,52 +5,55 @@ import { probeOpenCodeLocalModelCoordination } from './OpenCodeLocalModelCoordin
 import type { RuntimeLocalProviderListEntryDto } from '../../contracts';
 
 describe('probeOpenCodeLocalModelCoordination', () => {
-  it('proves the streaming Ollama tool loop and replays reasoning for the second turn', async () => {
+  it('proves the streaming Ollama tool loop despite a malformed trailing frame', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
       const body = JSON.parse(String(init?.body)) as {
         messages: Array<Record<string, unknown>>;
       };
       if (body.messages.length === 2) {
-        return sseResponse([
-          {
-            choices: [{ delta: { role: 'assistant', reasoning_content: 'Need the queue.' } }],
-          },
-          {
-            choices: [
-              {
-                delta: {
-                  tool_calls: [
-                    {
-                      index: 0,
-                      id: 'call-1',
-                      type: 'function',
-                      function: {
-                        name: 'agent-teams_task_briefing',
-                        arguments: '{"teamName":"agent-teams-local-probe",',
+        return sseResponse(
+          [
+            {
+              choices: [{ delta: { role: 'assistant', reasoning_content: 'Need the queue.' } }],
+            },
+            {
+              choices: [
+                {
+                  delta: {
+                    tool_calls: [
+                      {
+                        index: 0,
+                        id: 'call-1',
+                        type: 'function',
+                        function: {
+                          name: 'agent-teams_task_briefing',
+                          arguments: '{"teamName":"agent-teams-local-probe",',
+                        },
                       },
-                    },
-                  ],
+                    ],
+                  },
                 },
-              },
-            ],
-          },
-          {
-            choices: [
-              {
-                delta: {
-                  tool_calls: [
-                    {
-                      index: 0,
-                      function: {
-                        arguments: '"memberName":"probe-member"}',
+              ],
+            },
+            {
+              choices: [
+                {
+                  delta: {
+                    tool_calls: [
+                      {
+                        index: 0,
+                        function: {
+                          arguments: '"memberName":"probe-member"}',
+                        },
                       },
-                    },
-                  ],
+                    ],
+                  },
                 },
-              },
-            ],
-          },
-        ]);
+              ],
+            },
+          ],
+          true
+        );
       }
       expect(body.messages[2]).toMatchObject({
         role: 'assistant',
@@ -544,9 +547,13 @@ function jsonResponse(value: unknown, status = 200): Response {
   });
 }
 
-function sseResponse(chunks: unknown[]): Response {
+function sseResponse(chunks: unknown[], malformedTail = false): Response {
   return new Response(
-    [...chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`), 'data: [DONE]\n\n'].join(''),
+    [
+      ...chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`),
+      ...(malformedTail ? ['data: {"truncated":\n\n'] : []),
+      'data: [DONE]\n\n',
+    ].join(''),
     {
       status: 200,
       headers: { 'content-type': 'text/event-stream' },
