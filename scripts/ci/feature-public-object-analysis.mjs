@@ -153,7 +153,7 @@ function resolveDescriptorMapEntries(
       return [...entries.values()];
     }
   );
-  return current
+  return current && ts.isIdentifier(current)
     ? entries.map((entry) => ({
         ...entry,
         references: [current, ...entry.references.filter((reference) => reference !== current)],
