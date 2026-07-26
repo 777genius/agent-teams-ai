@@ -31,14 +31,11 @@ import {
   staticOverwrittenPaths,
   staticOverwrittenPropertyPaths,
 } from './feature-public-object-analysis.mjs';
-
-const IDENTITY_WRAPPERS = new Set([
-  'assign',
-  'freeze',
-  'preventExtensions',
-  'seal',
-  'setPrototypeOf',
-]);
+import {
+  IDENTITY_WRAPPERS,
+  constructedClassNames,
+  directlyExportedClassNames,
+} from './feature-public-identity-analysis.mjs';
 function bindingNames(bindingName) {
   if (ts.isIdentifier(bindingName)) return [bindingName.text];
   return bindingName.elements.flatMap((element) =>
@@ -498,43 +495,6 @@ function propagateIdentitySet(initialValues, edges) {
   return values;
 }
 
-function constructedClassNames(expression) {
-  const current = unwrapExpression(expression);
-  if (ts.isNewExpression(current)) {
-    const className = rootBindingName(current.expression);
-    return className ? [className] : [];
-  }
-  if (ts.isObjectLiteralExpression(current)) {
-    return current.properties.flatMap((property) =>
-      ts.isPropertyAssignment(property) ? constructedClassNames(property.initializer) : []
-    );
-  }
-  if (ts.isArrayLiteralExpression(current)) {
-    return current.elements.flatMap((element) =>
-      ts.isOmittedExpression(element) ? [] : constructedClassNames(element)
-    );
-  }
-  if (ts.isConditionalExpression(current)) {
-    return [
-      ...constructedClassNames(current.whenTrue),
-      ...constructedClassNames(current.whenFalse),
-    ];
-  }
-  if (ts.isCallExpression(current)) {
-    const method = memberAccess(current.expression);
-    if (
-      method &&
-      ts.isIdentifier(method.receiver) &&
-      method.receiver.text === 'Object' &&
-      IDENTITY_WRAPPERS.has(method.name) &&
-      current.arguments[0]
-    ) {
-      return constructedClassNames(current.arguments[0]);
-    }
-  }
-  return [];
-}
-
 export function analyzePublicTargets(sourceFile, exportedLocalNames) {
   const bindingModel = collectBindingModel(sourceFile);
   const propertyWrites = collectTopLevelPropertyWrites(sourceFile, bindingModel);
@@ -581,13 +541,23 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     finalRootPosition,
     exportsActiveAt
   );
-  const commonJsTargetIsActive = (target, position) =>
-    position >= finalRootPosition &&
-    isCommonJsExportsObject(target) &&
-    (rootBindingName(target) !== 'exports' || exportsActiveAt(position));
+  const commonJsFinalTargetPath = (target, position) => {
+    if (position < finalRootPosition) return null;
+    const directPath = commonJsExportPath(target);
+    if (
+      directPath !== null &&
+      (rootBindingName(target) !== 'exports' || exportsActiveAt(position))
+    ) {
+      return directPath;
+    }
+    const alias = accessPath(target);
+    const aliasKey =
+      alias && bindingModel.bindingAt(alias.root, position);
+    return aliasKey && commonJsTargetAliases.has(aliasKey) ? alias.path : null;
+  };
   const finalCommonJsPropertyWrites = collectFinalCommonJsPropertyWrites(
     sourceFile,
-    commonJsTargetIsActive,
+    commonJsFinalTargetPath,
     bindingModel
   );
   const writeContainsPosition = (write, position) =>
@@ -643,7 +613,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
       )
     );
   };
-  const localOwnersAt = (position) => {
+  const localOwnersAt = (position, selectedSourcePath = null) => {
     const owners = new Map();
     for (const name of bindingModel.eventsByName.keys()) {
       const key = bindingModel.bindingAt(name, position);
@@ -668,7 +638,14 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
       const currentWrite = latestPropertyWriteBefore(
         sourceWrites,
         relation.copyPosition ?? Number.POSITIVE_INFINITY,
-        (write) => writeContainsPosition(write, position)
+        (write) =>
+          writeContainsPosition(write, position) &&
+          (!selectedSourcePath ||
+            source.name !== selectedSourcePath.name ||
+            (write.path.length === selectedSourcePath.path.length &&
+              write.path.every(
+                (segment, index) => segment === selectedSourcePath.path[index]
+              )))
       );
       const insideSourceInitializer =
         source.initializer.getStart(sourceFile) <= position && position <= source.initializer.end;
@@ -737,7 +714,8 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         expression,
         reference,
         finalCommonJsPropertyWrites,
-        bindingModel
+        bindingModel,
+        commonJsFinalTargetPath
       ),
     has: (name) => {
       const key = bindingModel.bindingAt(name, position);
@@ -788,5 +766,11 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     constructorExports,
     localOwners: localOwnersAt(Number.POSITIVE_INFINITY),
     localOwnersAt,
+    publicConstructorNames: [
+      ...new Set([
+        ...constructorExports.map(({ localName }) => localName),
+        ...directlyExportedClassNames(sourceFile, exportedLocalNames),
+      ]),
+    ],
   };
 }

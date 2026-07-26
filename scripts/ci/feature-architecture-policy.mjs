@@ -182,7 +182,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     directLocalExports.push({ ...constructorExport, line: 1 });
   }
   const publicConstructorNames = new Set(
-    publicTargets.constructorExports.map(({ localName }) => localName)
+    publicTargets.publicConstructorNames
   );
   const publicReferenceOwner = (node) =>
     findPublicReferenceOwner(

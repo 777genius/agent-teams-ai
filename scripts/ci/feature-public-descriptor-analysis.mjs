@@ -7,6 +7,8 @@ import {
   rootBindingName,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
+import { resolveObjectLiterals } from './feature-object-resolution.mjs';
+import { accessPath } from './feature-public-object-analysis.mjs';
 
 function collectTopLevelAssignments(sourceFile) {
   const assignments = new Map();
@@ -41,42 +43,20 @@ function collectTopLevelAssignments(sourceFile) {
   return assignments;
 }
 
-function resolveDescriptorObjects(expression, assignments, beforePosition, visited = new Set()) {
-  const current = expression && unwrapExpression(expression);
-  if (!current) return [];
-  if (ts.isObjectLiteralExpression(current)) return [current];
-  if (ts.isIdentifier(current)) {
-    if (visited.has(current.text)) return [];
-    const candidates = (assignments.get(current.text) ?? [])
-      .filter(({ position }) => position < beforePosition)
+function resolveDescriptorObjects(expression, assignments, beforePosition) {
+  return resolveObjectLiterals(expression, beforePosition, (name, position) => {
+    const candidates = (assignments.get(name) ?? [])
+      .filter((assignment) => assignment.position < position)
       .sort((left, right) => right.position - left.position);
     const latest = candidates[0];
     return latest
-      ? resolveDescriptorObjects(
-          latest.expression,
-          assignments,
-          beforePosition,
-          new Set(visited).add(current.text)
-        )
-      : [];
-  }
-  const access = memberAccess(current);
-  if (!access) return [];
-  return resolveDescriptorObjects(access.receiver, assignments, beforePosition, visited).flatMap(
-    (object) => {
-      const property = object.properties.find(
-        (candidate) =>
-          (ts.isPropertyAssignment(candidate) || ts.isShorthandPropertyAssignment(candidate)) &&
-          propertyNameText(candidate.name) === access.name
-      );
-      if (property && ts.isPropertyAssignment(property)) {
-        return resolveDescriptorObjects(property.initializer, assignments, beforePosition, visited);
-      }
-      return property && ts.isShorthandPropertyAssignment(property)
-        ? resolveDescriptorObjects(property.name, assignments, beforePosition, visited)
-        : [];
-    }
-  );
+      ? {
+          beforePosition: latest.position,
+          expression: latest.expression,
+          key: `${name}:${latest.position}`,
+        }
+      : null;
+  });
 }
 
 function resolveDescriptorMapEntries(
@@ -85,7 +65,8 @@ function resolveDescriptorMapEntries(
   beforePosition,
   visited = new Set()
 ) {
-  return resolveDescriptorObjects(expression, assignments, beforePosition).flatMap(
+  const current = expression && unwrapExpression(expression);
+  const entries = resolveDescriptorObjects(expression, assignments, beforePosition).flatMap(
     (descriptorMap) => {
       const mapKey = `${descriptorMap.pos}:${descriptorMap.end}`;
       if (visited.has(mapKey)) return [];
@@ -122,6 +103,12 @@ function resolveDescriptorMapEntries(
       return [...entries.values()];
     }
   );
+  return current
+    ? entries.map((entry) => ({
+        ...entry,
+        references: [current, ...entry.references.filter((reference) => reference !== current)],
+      }))
+    : entries;
 }
 
 function collectDescriptorGetterProperties(descriptor, getterProperties) {
@@ -135,7 +122,7 @@ function collectDescriptorGetterProperties(descriptor, getterProperties) {
   }
 }
 
-function isPublicTarget(expression, publicTargets, position) {
+function isPublicTarget(expression, publicTargets, position, memberPath = []) {
   const current = expression && unwrapExpression(expression);
   if (!current) return false;
   const root = rootBindingName(current);
@@ -143,9 +130,15 @@ function isPublicTarget(expression, publicTargets, position) {
     const targets = publicTargets.commonJsTargetsAt(position);
     return root === 'exports' ? targets.directExportsActive : targets.directModuleExportsActive;
   }
+  const target = accessPath(current);
   return (
-    root !== null &&
-    (publicTargets.localOwnersAt(position).has(root) ||
+    target !== null &&
+    (publicTargets
+      .localOwnersAt(position, {
+        name: target.root,
+        path: [...target.path, ...memberPath],
+      })
+      .has(target.root) ||
       publicTargets.commonJsTargetsAt(position).has(root))
   );
 }
@@ -193,7 +186,11 @@ export function collectConsumedDescriptorGetterProperties(sourceFile, publicTarg
               isPublicTarget(
                 node.arguments[0],
                 publicTargets,
-                reference.getStart(sourceFile)
+                reference.getStart(sourceFile),
+                node.arguments[1] &&
+                  ts.isStringLiteralLike(unwrapExpression(node.arguments[1]))
+                  ? [unwrapExpression(node.arguments[1]).text]
+                  : ['*']
               )
             )
           ) {
@@ -222,7 +219,8 @@ export function collectConsumedDescriptorGetterProperties(sourceFile, publicTarg
                 isPublicTarget(
                   node.arguments[0],
                   publicTargets,
-                  reference.getStart(sourceFile)
+                  reference.getStart(sourceFile),
+                  [entry.name]
                 )
               )
             ) {

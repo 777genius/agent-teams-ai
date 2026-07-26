@@ -8,10 +8,13 @@ import {
   rootBindingName,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
+import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import {
   accessPath,
   propertyWriteAvailableAt,
-  staticDescriptorMapPaths,
+  staticDescriptorIsConfigurable,
+  staticDescriptorIsWritable,
+  staticDescriptorMapProperties,
   staticOverwrittenPaths,
 } from './feature-public-object-analysis.mjs';
 
@@ -68,27 +71,6 @@ export function lastCommonJsRootReplacement(rootAssignments, exportsActiveAt) {
       return !(commonJsRootKind(value) === 'exports' && exportsActiveAt(assignment.position));
     }) ?? null
   );
-}
-
-function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
-  const visitExpression = (node) => {
-    if (ts.isFunctionLike(node) || ts.isClassLike(node)) return;
-    visitor(node);
-    ts.forEachChild(node, visitExpression);
-  };
-  const visitStatement = (statement) => {
-    if (ts.isExpressionStatement(statement)) {
-      visitExpression(statement.expression);
-    } else if (ts.isBlock(statement)) {
-      for (const child of statement.statements) visitStatement(child);
-    } else if (
-      ts.isIfStatement(statement) &&
-      statement.expression.kind === ts.SyntaxKind.TrueKeyword
-    ) {
-      visitStatement(statement.thenStatement);
-    }
-  };
-  for (const statement of sourceFile.statements) visitStatement(statement);
 }
 
 function literalPropertyPath(expression, reference) {
@@ -188,28 +170,194 @@ export function commonJsRootWrapperSources(
   ];
 }
 
+function literalAssignedProperties(expression, prefix = []) {
+  const current = unwrapExpression(expression);
+  if (ts.isObjectLiteralExpression(current)) {
+    return current.properties.flatMap((property) => {
+      if (
+        !property.name ||
+        (!ts.isPropertyAssignment(property) &&
+          !ts.isShorthandPropertyAssignment(property) &&
+          !ts.isMethodDeclaration(property) &&
+          !ts.isGetAccessorDeclaration(property) &&
+          !ts.isSetAccessorDeclaration(property))
+      ) {
+        return [];
+      }
+      const path = [...prefix, propertyNameText(property.name)];
+      return [
+        { configurable: true, path, writable: true },
+        ...(ts.isPropertyAssignment(property)
+          ? literalAssignedProperties(property.initializer, path)
+          : []),
+      ];
+    });
+  }
+  if (ts.isArrayLiteralExpression(current)) {
+    return current.elements.flatMap((element, index) => {
+      if (ts.isOmittedExpression(element) || ts.isSpreadElement(element)) return [];
+      const path = [...prefix, String(index)];
+      return [
+        { configurable: true, path, writable: true },
+        ...literalAssignedProperties(element, path),
+      ];
+    });
+  }
+  if (!ts.isCallExpression(current)) return [];
+  const method = memberAccess(current.expression);
+  if (
+    !method ||
+    !ts.isIdentifier(method.receiver) ||
+    method.receiver.text !== 'Object'
+  ) {
+    return [];
+  }
+  if (method.name === 'assign') {
+    return [...current.arguments]
+      .slice(1)
+      .flatMap((source) => literalAssignedProperties(source, prefix));
+  }
+  if (
+    ['freeze', 'preventExtensions', 'seal'].includes(method.name) &&
+    current.arguments[0]
+  ) {
+    return literalAssignedProperties(current.arguments[0], prefix).map(
+      (property) => ({
+        ...property,
+        configurable:
+          method.name === 'preventExtensions' ? property.configurable : false,
+        writable: method.name === 'freeze' ? false : property.writable,
+      })
+    );
+  }
+  return [];
+}
+
 export function collectFinalCommonJsPropertyWrites(
   sourceFile,
-  targetIsActive,
+  targetPathAt,
   bindingModel
 ) {
   const writes = [];
-  const addPaths = (target, paths, position) => {
-    const targetPath = commonJsExportPath(target);
-    if (targetPath === null || !targetIsActive(target, position)) return;
-    for (const path of paths) {
-      writes.push({ path: [...targetPath, ...path], position });
+  const propertyStates = new Map();
+  const pathKey = (path) => JSON.stringify(path);
+  const rootState = {
+    configurable: true,
+    path: [],
+    writable: true,
+  };
+  propertyStates.set(pathKey([]), rootState);
+  const replacePropertyState = (path, descriptor) => {
+    const key = pathKey(path);
+    for (const [candidateKey, state] of propertyStates) {
+      if (
+        state.path.length > path.length &&
+        path.every((segment, index) => state.path[index] === segment)
+      ) {
+        propertyStates.delete(candidateKey);
+      }
+    }
+    propertyStates.set(key, { ...descriptor, path });
+  };
+  const recordAssignment = (path, position) => {
+    const current = propertyStates.get(pathKey(path));
+    if (current?.writable === false) return;
+    if (!current) {
+      replacePropertyState(path, { configurable: true, writable: true });
+    }
+    writes.push({ path, position });
+  };
+  const recordDefinition = (path, position, descriptor) => {
+    const current = propertyStates.get(pathKey(path));
+    const requestedConfigurable =
+      descriptor.configurable ?? current?.configurable ?? false;
+    const requestedWritable =
+      descriptor.writable ?? current?.writable ?? false;
+    replacePropertyState(path, {
+      configurable:
+        current?.configurable === false ? false : requestedConfigurable,
+      writable:
+        current?.writable === false ? false : requestedWritable,
+    });
+    writes.push({ path, position });
+  };
+  const addPaths = (target, properties, position, definitions = false) => {
+    const targetPath = targetPathAt(target, position);
+    if (targetPath === null) return;
+    for (const property of properties) {
+      const path = Array.isArray(property) ? property : property.path;
+      const publicPath = [...targetPath, ...path];
+      if (definitions && !Array.isArray(property)) {
+        recordDefinition(publicPath, position, property);
+      } else {
+        recordAssignment(publicPath, position);
+      }
     }
   };
   visitDefiniteTopLevelExpressions(sourceFile, (node) => {
     const position = node.getStart(sourceFile);
+    if (ts.isDeleteExpression(node)) {
+      const targetPath = targetPathAt(node.expression, position);
+      if (targetPath !== null) {
+        const key = pathKey(targetPath);
+        if (propertyStates.get(key)?.configurable === true) {
+          writes.push({ path: targetPath, position: node.end });
+          propertyStates.delete(key);
+        }
+      }
+      return;
+    }
     if (
       ts.isBinaryExpression(node) &&
       node.operatorToken.kind === ts.SyntaxKind.EqualsToken
     ) {
-      const targetPath = commonJsExportPath(node.left);
-      if (targetPath?.length && targetIsActive(node.left, position)) {
-        writes.push({ path: targetPath, position: node.end });
+      const targetPath = targetPathAt(node.left, position);
+      if (targetPath !== null) {
+        if (targetPath.length > 0) {
+          recordAssignment(targetPath, node.end);
+        } else {
+          const rootKind = commonJsRootKind(node.left);
+          if (
+            rootKind &&
+            assignmentLinksExports(rootKind, node.right)
+          ) {
+            return;
+          }
+          propertyStates.clear();
+          propertyStates.set(pathKey([]), rootState);
+          const value = unwrapExpression(node.right);
+          const method =
+            ts.isCallExpression(value) && memberAccess(value.expression);
+          const descriptorProperties =
+            method &&
+            ts.isIdentifier(method.receiver) &&
+            method.receiver.text === 'Object' &&
+            method.name === 'create' &&
+            value.arguments[1]
+              ? staticDescriptorMapProperties(
+                  value.arguments[1],
+                  bindingModel,
+                  position
+                )
+              : [];
+          for (const property of descriptorProperties) {
+            replacePropertyState(property.path, property);
+          }
+          const assignedProperties = [
+            ...staticOverwrittenPaths([node.right], bindingModel, position).map(
+              (path) => ({ configurable: true, path, writable: true })
+            ),
+            ...literalAssignedProperties(node.right),
+          ];
+          for (const property of new Map(
+            assignedProperties.map((assignedProperty) => [
+              pathKey(assignedProperty.path),
+              assignedProperty,
+            ])
+          ).values()) {
+            replacePropertyState(property.path, property);
+          }
+        }
       }
       return;
     }
@@ -233,20 +381,44 @@ export function collectFinalCommonJsPropertyWrites(
         node.end
       );
     } else if (
-      ['defineProperty', 'set'].includes(method.name) &&
+      method.name === 'set' &&
       node.arguments[1] &&
       ts.isStringLiteralLike(unwrapExpression(node.arguments[1]))
     ) {
       addPaths(node.arguments[0], [[unwrapExpression(node.arguments[1]).text]], node.end);
+    } else if (
+      method.name === 'defineProperty' &&
+      node.arguments[1] &&
+      ts.isStringLiteralLike(unwrapExpression(node.arguments[1]))
+    ) {
+      addPaths(
+        node.arguments[0],
+        [{
+          configurable: staticDescriptorIsConfigurable(
+            node.arguments[2],
+            bindingModel,
+            position
+          ),
+          path: [unwrapExpression(node.arguments[1]).text],
+          writable: staticDescriptorIsWritable(
+            node.arguments[2],
+            bindingModel,
+            position
+          ),
+        }],
+        node.end,
+        true
+      );
     } else if (method.name === 'defineProperties' && node.arguments[1]) {
       addPaths(
         node.arguments[0],
-        staticDescriptorMapPaths(
+        staticDescriptorMapProperties(
           node.arguments[1],
           bindingModel,
           position
         ),
-        node.end
+        node.end,
+        true
       );
     }
   });
@@ -279,13 +451,18 @@ function objectAssignReferencePath(
   return [...targetPath, ...valuePath];
 }
 
-function assignedReferencePath(expression, reference, bindingModel) {
+function assignedReferencePath(
+  expression,
+  reference,
+  bindingModel,
+  targetPathAt
+) {
   const current = unwrapExpression(expression);
   if (
     ts.isBinaryExpression(current) &&
     current.operatorToken.kind === ts.SyntaxKind.EqualsToken
   ) {
-    const targetPath = commonJsExportPath(current.left);
+    const targetPath = targetPathAt(current.left, current.getStart());
     if (targetPath === null) return null;
     const value = unwrapExpression(current.right);
     if (ts.isCallExpression(value)) {
@@ -310,7 +487,7 @@ function assignedReferencePath(expression, reference, bindingModel) {
   }
   if (!ts.isCallExpression(current) || !current.arguments[0]) return null;
   const method = memberAccess(current.expression);
-  const targetPath = commonJsExportPath(current.arguments[0]);
+  const targetPath = targetPathAt(current.arguments[0], current.getStart());
   if (
     !method ||
     !ts.isIdentifier(method.receiver) ||
@@ -347,12 +524,14 @@ export function commonJsReferenceIsPublic(
   expression,
   reference,
   finalPropertyWrites,
-  bindingModel
+  bindingModel,
+  targetPathAt = (target) => commonJsExportPath(target)
 ) {
   const publicPath = assignedReferencePath(
     expression,
     reference,
-    bindingModel
+    bindingModel,
+    targetPathAt
   );
   if (publicPath === false) return false;
   return (

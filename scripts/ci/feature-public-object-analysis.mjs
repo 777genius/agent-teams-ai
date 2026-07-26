@@ -5,6 +5,8 @@ import {
   propertyNameText,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
+import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
+import { resolveObjectLiterals as resolveObjectLiteralBindings } from './feature-object-resolution.mjs';
 
 export function accessPath(expression) {
   let current = unwrapExpression(expression);
@@ -71,100 +73,40 @@ export function propertyPathWasOverwrittenAfter(
   );
 }
 
-function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
-  const visitExpression = (node) => {
-    if (ts.isFunctionLike(node) || ts.isClassLike(node)) return;
-    visitor(node);
-    ts.forEachChild(node, visitExpression);
-  };
-  const visitStatement = (statement) => {
-    if (ts.isExpressionStatement(statement)) {
-      visitExpression(statement.expression);
-    } else if (ts.isBlock(statement)) {
-      for (const child of statement.statements) visitStatement(child);
-    } else if (
-      ts.isIfStatement(statement) &&
-      statement.expression.kind === ts.SyntaxKind.TrueKeyword
-    ) {
-      visitStatement(statement.thenStatement);
-    }
-  };
-  for (const statement of sourceFile.statements) visitStatement(statement);
-}
-
 function resolveObjectLiterals(
   expression,
   bindingModel,
-  beforePosition,
-  visited = new Set()
+  beforePosition
 ) {
-  const current = expression && unwrapExpression(expression);
-  if (!current) return [];
-  if (ts.isObjectLiteralExpression(current)) return [current];
-  if (ts.isConditionalExpression(current)) {
-    return [
-      ...resolveObjectLiterals(
-        current.whenTrue,
-        bindingModel,
-        beforePosition,
-        new Set(visited)
-      ),
-      ...resolveObjectLiterals(
-        current.whenFalse,
-        bindingModel,
-        beforePosition,
-        new Set(visited)
-      ),
-    ];
-  }
-  if (ts.isIdentifier(current)) {
-    const key = bindingModel.bindingAt(current.text, beforePosition);
-    if (!key || visited.has(key)) return [];
+  return resolveObjectLiteralBindings(expression, beforePosition, (name, position) => {
+    const key = bindingModel.bindingAt(name, position);
+    if (!key) return null;
     const binding = bindingModel.versions.get(key);
     return binding
-      ? resolveObjectLiterals(
-          binding.initializer,
-          bindingModel,
-          binding.position,
-          new Set(visited).add(key)
-        )
-      : [];
-  }
-  const access = memberAccess(current);
-  if (!access) return [];
-  return resolveObjectLiterals(
-    access.receiver,
-    bindingModel,
-    beforePosition,
-    visited
-  ).flatMap((object) => {
-    const property = object.properties.find(
-      (candidate) =>
-        (ts.isPropertyAssignment(candidate) ||
-          ts.isShorthandPropertyAssignment(candidate)) &&
-        propertyNameText(candidate.name) === access.name
-    );
-    if (property && ts.isPropertyAssignment(property)) {
-      return resolveObjectLiterals(
-        property.initializer,
-        bindingModel,
-        beforePosition,
-        visited
-      );
-    }
-    return property && ts.isShorthandPropertyAssignment(property)
-      ? resolveObjectLiterals(property.name, bindingModel, beforePosition, visited)
-      : [];
+      ? {
+          beforePosition: binding.position,
+          expression: binding.initializer,
+          key,
+        }
+      : null;
   });
 }
 
-function descriptorIsEnumerable(descriptor) {
-  return descriptor.properties.some(
+function descriptorBooleanSetting(descriptor, name) {
+  const property = descriptor.properties.find(
     (property) =>
       ts.isPropertyAssignment(property) &&
-      propertyNameText(property.name) === 'enumerable' &&
-      unwrapExpression(property.initializer).kind === ts.SyntaxKind.TrueKeyword
+      propertyNameText(property.name) === name
   );
+  if (!property || !ts.isPropertyAssignment(property)) return undefined;
+  const value = unwrapExpression(property.initializer);
+  if (value.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (value.kind === ts.SyntaxKind.FalseKeyword) return false;
+  return undefined;
+}
+
+function descriptorIsEnumerable(descriptor) {
+  return descriptorBooleanSetting(descriptor, 'enumerable') === true;
 }
 
 function resolveDescriptorMapEntries(
@@ -173,7 +115,8 @@ function resolveDescriptorMapEntries(
   beforePosition,
   visited = new Set()
 ) {
-  return resolveObjectLiterals(expression, bindingModel, beforePosition).flatMap(
+  const current = expression && unwrapExpression(expression);
+  const entries = resolveObjectLiterals(expression, bindingModel, beforePosition).flatMap(
     (descriptorMap) => {
       const mapKey = `${descriptorMap.pos}:${descriptorMap.end}`;
       if (visited.has(mapKey)) return [];
@@ -210,6 +153,12 @@ function resolveDescriptorMapEntries(
       return [...entries.values()];
     }
   );
+  return current
+    ? entries.map((entry) => ({
+        ...entry,
+        references: [current, ...entry.references.filter((reference) => reference !== current)],
+      }))
+    : entries;
 }
 
 export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
@@ -432,6 +381,74 @@ export function staticDescriptorMapPaths(
     bindingModel,
     beforePosition
   ).map(({ name }) => [name]);
+}
+
+export function staticDescriptorIsConfigurable(
+  expression,
+  bindingModel,
+  beforePosition
+) {
+  const descriptors = resolveObjectLiterals(expression, bindingModel, beforePosition);
+  const settings = descriptors.map((descriptor) =>
+    descriptorBooleanSetting(descriptor, 'configurable')
+  );
+  return settings.length > 0 && settings.every((setting) => setting === settings[0])
+    ? settings[0]
+    : undefined;
+}
+
+export function staticDescriptorIsWritable(
+  expression,
+  bindingModel,
+  beforePosition
+) {
+  const descriptors = resolveObjectLiterals(expression, bindingModel, beforePosition);
+  const settings = descriptors.map((descriptor) =>
+    descriptorBooleanSetting(descriptor, 'writable')
+  );
+  return settings.length > 0 && settings.every((setting) => setting === settings[0])
+    ? settings[0]
+    : undefined;
+}
+
+export function staticDescriptorMapProperties(
+  expression,
+  bindingModel,
+  beforePosition
+) {
+  const properties = new Map();
+  for (const entry of resolveDescriptorMapEntries(
+    expression,
+    bindingModel,
+    beforePosition
+  )) {
+    const configurable = staticDescriptorIsConfigurable(
+      entry.expression,
+      bindingModel,
+      beforePosition
+    );
+    const writable = staticDescriptorIsWritable(
+      entry.expression,
+      bindingModel,
+      beforePosition
+    );
+    const previous = properties.get(entry.name);
+    const mergeSetting = (left, right) =>
+      left === right ? left : undefined;
+    properties.set(
+      entry.name,
+      previous === undefined
+        ? { configurable, writable }
+        : {
+            configurable: mergeSetting(previous.configurable, configurable),
+            writable: mergeSetting(previous.writable, writable),
+          }
+    );
+  }
+  return [...properties].map(([name, descriptor]) => ({
+    ...descriptor,
+    path: [name],
+  }));
 }
 
 export function staticOverwrittenPropertyPaths(
