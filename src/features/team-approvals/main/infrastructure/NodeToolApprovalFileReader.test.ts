@@ -1,5 +1,5 @@
 import { promises as fs, type Stats } from 'node:fs';
-import { mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -204,6 +204,50 @@ describe('NodeToolApprovalFileReader', () => {
       error: expect.any(String),
     });
   });
+
+  it('reports masked procfs traversal as an error instead of a missing target', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('linux');
+    const closeRoot = vi.fn(async () => undefined);
+    const rootHandle = { fd: 41, close: closeRoot };
+    vi.spyOn(fs, 'open').mockImplementation(async (candidate) => {
+      if (String(candidate) === path.parse(tempDirectory).root) return rootHandle as never;
+      if (String(candidate) === '/proc/self/fd/41/.') {
+        throw Object.assign(new Error('procfs unavailable'), { code: 'ENOENT' });
+      }
+      throw new Error(`Unexpected open: ${String(candidate)}`);
+    });
+
+    await expect(reader.read(path.join(tempDirectory, 'existing.txt'))).resolves.toEqual({
+      content: '',
+      exists: true,
+      truncated: false,
+      isBinary: false,
+      error: 'Safe approval preview traversal requires accessible /proc/self/fd',
+    });
+    expect(closeRoot).toHaveBeenCalledOnce();
+  });
+
+  it.runIf(process.platform === 'linux')(
+    'reads an approved file through an execute-only directory',
+    async () => {
+      const traversalDirectory = path.join(tempDirectory, 'execute-only');
+      const filePath = path.join(traversalDirectory, 'preview.txt');
+      await mkdir(traversalDirectory);
+      await writeFile(filePath, 'approved content');
+      await chmod(traversalDirectory, 0o111);
+
+      try {
+        await expect(reader.read(filePath)).resolves.toEqual({
+          content: 'approved content',
+          exists: true,
+          truncated: false,
+          isBinary: false,
+        });
+      } finally {
+        await chmod(traversalDirectory, 0o700);
+      }
+    }
+  );
 
   it('never follows a parent swapped to a symbolic link during safe open', async () => {
     const approvedDirectory = path.join(tempDirectory, 'approved');

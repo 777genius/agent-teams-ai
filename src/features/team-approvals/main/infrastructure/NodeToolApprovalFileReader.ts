@@ -10,6 +10,54 @@ export const TOOL_APPROVAL_MAX_FILE_SIZE = 2 * 1024 * 1024;
 const TOOL_APPROVAL_BINARY_SCAN_SIZE = 8 * 1024;
 /** Darwin kernel flag that rejects symlinks in every path component. */
 const DARWIN_O_NOFOLLOW_ANY = 0x20000000;
+/** Linux O_PATH opens a traversal handle without requiring directory read access. */
+const LINUX_O_PATH = 0x200000;
+const LINUX_DIRECTORY_FLAGS = LINUX_O_PATH | constants.O_DIRECTORY | constants.O_NOFOLLOW;
+const LINUX_PROC_SELF_FD = '/proc/self/fd';
+
+class LinuxDescriptorTraversalUnavailableError extends Error {
+  constructor(cause: unknown) {
+    super('Safe approval preview traversal requires accessible /proc/self/fd', { cause });
+    this.name = 'LinuxDescriptorTraversalUnavailableError';
+  }
+}
+
+function linuxDescriptorChildPath(directory: FileHandle, segment: string): string {
+  return `${path.join(LINUX_PROC_SELF_FD, String(directory.fd))}${path.sep}${segment}`;
+}
+
+async function assertLinuxDescriptorTraversalAvailable(
+  directory: FileHandle,
+  directoryFlags: number
+): Promise<void> {
+  let probe: FileHandle | null = null;
+  try {
+    probe = await fs.open(linuxDescriptorChildPath(directory, '.'), directoryFlags);
+    const [directoryStats, probeStats] = await Promise.all([directory.stat(), probe.stat()]);
+    if (directoryStats.dev !== probeStats.dev || directoryStats.ino !== probeStats.ino) {
+      throw new Error('Descriptor traversal resolved to a different directory');
+    }
+  } catch (error) {
+    throw new LinuxDescriptorTraversalUnavailableError(error);
+  } finally {
+    await probe?.close().catch(() => undefined);
+  }
+}
+
+async function openLinuxDescriptorChild(
+  directory: FileHandle,
+  segment: string,
+  flags: number
+): Promise<FileHandle> {
+  try {
+    return await fs.open(linuxDescriptorChildPath(directory, segment), flags);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      await assertLinuxDescriptorTraversalAvailable(directory, LINUX_DIRECTORY_FLAGS);
+    }
+    throw error;
+  }
+}
 
 async function openLinuxSymlinkSafePath(filePath: string): Promise<FileHandle> {
   const parsedPath = path.parse(filePath);
@@ -17,23 +65,21 @@ async function openLinuxSymlinkSafePath(filePath: string): Promise<FileHandle> {
   const fileFlags = constants.O_RDONLY | constants.O_NOFOLLOW;
   if (segments.length === 0) return fs.open(parsedPath.root, fileFlags);
 
-  const directoryFlags = fileFlags | constants.O_DIRECTORY;
-  let directory = await fs.open(parsedPath.root, directoryFlags);
+  let directory = await fs.open(parsedPath.root, LINUX_DIRECTORY_FLAGS);
   let openedFile: FileHandle | null = null;
   try {
+    await assertLinuxDescriptorTraversalAvailable(directory, LINUX_DIRECTORY_FLAGS);
     for (const segment of segments.slice(0, -1)) {
-      const nextDirectory = await fs.open(
-        path.join('/proc/self/fd', String(directory.fd), segment),
-        directoryFlags
+      const nextDirectory = await openLinuxDescriptorChild(
+        directory,
+        segment,
+        LINUX_DIRECTORY_FLAGS
       );
       const previousDirectory = directory;
       directory = nextDirectory;
       await previousDirectory.close();
     }
-    openedFile = await fs.open(
-      path.join('/proc/self/fd', String(directory.fd), segments.at(-1) ?? ''),
-      fileFlags
-    );
+    openedFile = await openLinuxDescriptorChild(directory, segments.at(-1) ?? '', fileFlags);
     await directory.close();
     return openedFile;
   } catch (error) {
