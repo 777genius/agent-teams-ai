@@ -1,4 +1,5 @@
-import { promises as fs } from 'node:fs';
+import { constants, promises as fs, type Stats } from 'node:fs';
+import path from 'node:path';
 
 import type { ToolApprovalFileReaderPort } from '../../core/application/ports/TeamApprovalsPorts';
 import type { ToolApprovalFileContent } from '@shared/types';
@@ -7,12 +8,38 @@ import type { ToolApprovalFileContent } from '@shared/types';
 export const TOOL_APPROVAL_MAX_FILE_SIZE = 2 * 1024 * 1024;
 const TOOL_APPROVAL_BINARY_SCAN_SIZE = 8 * 1024;
 
+function sameFileIdentity(
+  left: Pick<Stats, 'dev' | 'ino'>,
+  right: Pick<Stats, 'dev' | 'ino'>
+): boolean {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+async function lstatSymlinkFreePath(filePath: string): Promise<Stats> {
+  const resolvedPath = path.resolve(filePath);
+  const parsedPath = path.parse(resolvedPath);
+  const segments = resolvedPath.slice(parsedPath.root.length).split(path.sep).filter(Boolean);
+  let currentPath = parsedPath.root;
+  let currentStats = await fs.lstat(currentPath);
+
+  for (const segment of segments) {
+    currentPath = path.join(currentPath, segment);
+    currentStats = await fs.lstat(currentPath);
+    if (currentStats.isSymbolicLink()) {
+      throw new Error('Symbolic links are not allowed in approval preview paths');
+    }
+  }
+
+  return currentStats;
+}
+
 export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
   async read(filePath: string): Promise<ToolApprovalFileContent> {
     try {
-      let stats;
+      const resolvedPath = path.resolve(filePath);
+      let initialStats;
       try {
-        stats = await fs.stat(filePath);
+        initialStats = await lstatSymlinkFreePath(resolvedPath);
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
           return { content: '', exists: false, truncated: false, isBinary: false };
@@ -20,7 +47,7 @@ export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
         throw error;
       }
 
-      if (!stats.isFile()) {
+      if (!initialStats.isFile()) {
         return {
           content: '',
           exists: true,
@@ -30,14 +57,23 @@ export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
         };
       }
 
-      const readSize = Math.min(stats.size, TOOL_APPROVAL_MAX_FILE_SIZE);
-      const file = await fs.open(filePath, 'r');
+      const readSize = Math.min(initialStats.size, TOOL_APPROVAL_MAX_FILE_SIZE);
+      const file = await fs.open(resolvedPath, constants.O_RDONLY | constants.O_NOFOLLOW);
 
       try {
+        const openedStats = await file.stat();
+        if (!openedStats.isFile() || !sameFileIdentity(initialStats, openedStats)) {
+          throw new Error('Approval preview file changed before it could be opened safely');
+        }
+
         const buffer = Buffer.alloc(readSize);
         const { bytesRead } = await file.read(buffer, 0, readSize, 0);
         const contentBuffer = buffer.subarray(0, bytesRead);
         const finalStats = await file.stat();
+        const currentPathStats = await lstatSymlinkFreePath(resolvedPath);
+        if (!sameFileIdentity(openedStats, currentPathStats)) {
+          throw new Error('Approval preview file changed while it was being read');
+        }
         const truncated = finalStats.size > bytesRead;
 
         const binaryScanSize = Math.min(contentBuffer.length, TOOL_APPROVAL_BINARY_SCAN_SIZE);

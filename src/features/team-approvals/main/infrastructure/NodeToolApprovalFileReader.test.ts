@@ -1,5 +1,5 @@
-import { promises as fs } from 'node:fs';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { promises as fs, type Stats } from 'node:fs';
+import { mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -15,13 +15,33 @@ describe('NodeToolApprovalFileReader', () => {
   let tempDirectory: string;
 
   beforeEach(async () => {
-    tempDirectory = await mkdtemp(path.join(os.tmpdir(), 'team-approvals-file-reader-'));
+    tempDirectory = await realpath(
+      await mkdtemp(path.join(os.tmpdir(), 'team-approvals-file-reader-'))
+    );
   });
 
   afterEach(async () => {
     vi.restoreAllMocks();
     await rm(tempDirectory, { recursive: true, force: true });
   });
+
+  function createVirtualStats(size: number, isFile = true): Stats {
+    return {
+      dev: 7,
+      ino: isFile ? 11 : 10,
+      isFile: () => isFile,
+      isSymbolicLink: () => false,
+      size,
+    } as Stats;
+  }
+
+  function mockVirtualPath(filePath: string, size: number): void {
+    vi.spyOn(fs, 'lstat').mockImplementation(async (candidate) =>
+      path.resolve(String(candidate)) === path.resolve(filePath)
+        ? createVirtualStats(size)
+        : createVirtualStats(0, false)
+    );
+  }
 
   it('distinguishes missing paths, directories, and text files', async () => {
     const missingPath = path.join(tempDirectory, 'missing.txt');
@@ -88,17 +108,17 @@ describe('NodeToolApprovalFileReader', () => {
   });
 
   it('decodes only bytes actually returned by a short read', async () => {
-    vi.spyOn(fs, 'stat').mockResolvedValueOnce({
-      size: 8,
-      isFile: () => true,
-    } as never);
+    mockVirtualPath('/virtual/short-read.txt', 8);
     const close = vi.fn(async () => undefined);
     vi.spyOn(fs, 'open').mockResolvedValueOnce({
       read: vi.fn(async (buffer: Buffer) => {
         buffer.write('hello');
         return { bytesRead: 5, buffer };
       }),
-      stat: vi.fn(async () => ({ size: 5 })),
+      stat: vi
+        .fn()
+        .mockResolvedValueOnce(createVirtualStats(8))
+        .mockResolvedValueOnce(createVirtualStats(5)),
       close,
     } as never);
 
@@ -112,16 +132,16 @@ describe('NodeToolApprovalFileReader', () => {
   });
 
   it('marks a preview truncated when the open file grows after the initial stat', async () => {
-    vi.spyOn(fs, 'stat').mockResolvedValueOnce({
-      size: 5,
-      isFile: () => true,
-    } as never);
+    mockVirtualPath('/virtual/growing.txt', 5);
     vi.spyOn(fs, 'open').mockResolvedValueOnce({
       read: vi.fn(async (buffer: Buffer) => {
         buffer.write('hello');
         return { bytesRead: 5, buffer };
       }),
-      stat: vi.fn(async () => ({ size: 16 })),
+      stat: vi
+        .fn()
+        .mockResolvedValueOnce(createVirtualStats(5))
+        .mockResolvedValueOnce(createVirtualStats(16)),
       close: vi.fn(async () => undefined),
     } as never);
 
@@ -132,16 +152,16 @@ describe('NodeToolApprovalFileReader', () => {
   });
 
   it('clears stale truncation when the open file shrinks before the read', async () => {
-    vi.spyOn(fs, 'stat').mockResolvedValueOnce({
-      size: TOOL_APPROVAL_MAX_FILE_SIZE + 1,
-      isFile: () => true,
-    } as never);
+    mockVirtualPath('/virtual/shrinking.txt', TOOL_APPROVAL_MAX_FILE_SIZE + 1);
     vi.spyOn(fs, 'open').mockResolvedValueOnce({
       read: vi.fn(async (buffer: Buffer) => {
         buffer.write('hello');
         return { bytesRead: 5, buffer };
       }),
-      stat: vi.fn(async () => ({ size: 5 })),
+      stat: vi
+        .fn()
+        .mockResolvedValueOnce(createVirtualStats(TOOL_APPROVAL_MAX_FILE_SIZE + 1))
+        .mockResolvedValueOnce(createVirtualStats(5)),
       close: vi.fn(async () => undefined),
     } as never);
 
@@ -162,5 +182,52 @@ describe('NodeToolApprovalFileReader', () => {
       isBinary: false,
     });
     expect(result.error).toEqual(expect.any(String));
+  });
+
+  it('rejects final and parent symbolic links instead of following them', async () => {
+    const outsideDirectory = path.join(tempDirectory, 'outside');
+    await mkdir(outsideDirectory);
+    const outsideFile = path.join(outsideDirectory, 'secret.txt');
+    await writeFile(outsideFile, 'unapproved secret');
+
+    const finalLink = path.join(tempDirectory, 'final-link.txt');
+    await symlink(outsideFile, finalLink);
+    await expect(reader.read(finalLink)).resolves.toMatchObject({
+      content: '',
+      exists: true,
+      error: expect.stringContaining('Symbolic links are not allowed'),
+    });
+
+    const parentLink = path.join(tempDirectory, 'parent-link');
+    await symlink(outsideDirectory, parentLink);
+    await expect(reader.read(path.join(parentLink, 'secret.txt'))).resolves.toMatchObject({
+      content: '',
+      exists: true,
+      error: expect.stringContaining('Symbolic links are not allowed'),
+    });
+  });
+
+  it('rejects a parent swapped to a symbolic link between validation and open', async () => {
+    const approvedDirectory = path.join(tempDirectory, 'approved');
+    const parkedDirectory = path.join(tempDirectory, 'approved-parked');
+    const outsideDirectory = path.join(tempDirectory, 'outside');
+    await mkdir(approvedDirectory);
+    await mkdir(outsideDirectory);
+    const approvedFile = path.join(approvedDirectory, 'preview.txt');
+    await writeFile(approvedFile, 'approved content');
+    await writeFile(path.join(outsideDirectory, 'preview.txt'), 'unapproved secret');
+
+    const originalOpen = fs.open.bind(fs);
+    vi.spyOn(fs, 'open').mockImplementationOnce(async (filePath, flags, mode) => {
+      await rename(approvedDirectory, parkedDirectory);
+      await symlink(outsideDirectory, approvedDirectory);
+      return originalOpen(filePath, flags, mode);
+    });
+
+    const result = await reader.read(approvedFile);
+
+    expect(result.content).toBe('');
+    expect(result.error).toEqual(expect.any(String));
+    expect(result.content).not.toContain('unapproved secret');
   });
 });
