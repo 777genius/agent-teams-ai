@@ -35,12 +35,20 @@ const explicitFixtureLiterals = new Set([
   "fixture-fixture-literal",
   "example-fixture-literal",
   "placeholder-fixture-literal",
+  ["sk", "-secret-value-123456"].join(""),
   ["sk", "-input-secret-value-123456"].join(""),
 ]);
 
-const explicitAuthoritativeFixtureLiterals = new Set([
-  ["sk", "-input-secret-value-123456"].join(""),
-]);
+const explicitAuthoritativeFixtureLiterals: Readonly<
+  Partial<Record<SecretLikeContentKind, ReadonlySet<string>>>
+> = {
+  openai_token: new Set([
+    ["sk", "-input-secret-value-123456"].join(""),
+  ]),
+  bearer_token: new Set([
+    ["Bear", "er live-token-123456789"].join(""),
+  ]),
+};
 
 const explicitFixtureDirectoryNames = new Set([
   "test",
@@ -194,8 +202,7 @@ function containsUnsafeAuthoritativeMatch(
     match = pattern.exec(text)
   ) {
     if (
-      policy.kind !== "openai_token" ||
-      !explicitAuthoritativeFixtureLiterals.has(match[0]) ||
+      explicitAuthoritativeFixtureLiterals[policy.kind]?.has(match[0]) !== true ||
       !isExplicitFixtureContext(context.filePath)
     ) {
       return true;

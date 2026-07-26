@@ -86,6 +86,18 @@ describe("secure fixture secret detection", () => {
     })).toBe("openai_token");
   });
 
+  it("allows the exact historical short API fixture only in test paths", () => {
+    const fixtureToken = joined("sk", "-secret-value-123456");
+    const content = quotedAssignment(["api_", "key"], [fixtureToken]);
+
+    expect(detectSecretLikeContent(content, {
+      filePath: "test/provider-client.test.ts",
+    })).toBeUndefined();
+    expect(detectSecretLikeContent(content, {
+      filePath: "src/provider-client.ts",
+    })).toBe("quoted_secret_assignment");
+  });
+
   it("rejects a second authoritative token beside the historical fixture", () => {
     const fixtureToken = joined("sk", "-input-secret-value-123456");
     const otherToken = joined("sk", "-", "z".repeat(24));
@@ -97,6 +109,27 @@ describe("secure fixture secret detection", () => {
     expect(detectSecretLikeContent(content, {
       filePath: "test/provider-client.test.ts",
     })).toBe("openai_token");
+  });
+
+  it("allows the exact historical bearer fixture only in test paths", () => {
+    const fixtureBearer = joined("Bear", "er live-token-123456789");
+
+    expect(detectSecretLikeContent(fixtureBearer, {
+      filePath: "test/provider-client.test.ts",
+    })).toBeUndefined();
+    expect(detectSecretLikeContent(fixtureBearer, {
+      filePath: "src/provider-client.ts",
+    })).toBe("bearer_token");
+  });
+
+  it("rejects a second bearer token beside the historical fixture", () => {
+    const fixtureBearer = joined("Bear", "er live-token-123456789");
+    const otherBearer = joined("Bear", "er ", "z".repeat(24));
+
+    expect(detectSecretLikeContent(
+      `${fixtureBearer}\n${otherBearer}`,
+      { filePath: "test/provider-client.test.ts" },
+    )).toBe("bearer_token");
   });
 
   it("handles quoted, unquoted, diff-prefixed, cased, and CRLF fixture forms", () => {
