@@ -81,32 +81,54 @@ function mutationReferencePath(expression, reference, bindingModel, sourceFile) 
     if (
       !method ||
       !ts.isIdentifier(method.receiver) ||
-      method.receiver.text !== 'Object' ||
-      method.name !== 'assign' ||
+      !['Object', 'Reflect'].includes(method.receiver.text) ||
       !current.arguments[0]
     ) {
       return null;
     }
     target = accessPath(current.arguments[0]);
-    const sources = [...current.arguments].slice(1);
-    const sourceIndex = sources.findIndex((source) =>
-      containsReference(source, reference)
-    );
-    if (sourceIndex < 0) return null;
-    valuePath = literalReferencePath(sources[sourceIndex], reference);
-    if (
-      valuePath &&
-      staticOverwrittenPaths(
-        sources.slice(sourceIndex + 1),
-        bindingModel,
-        current.getStart(sourceFile)
-      ).some(
-        (path) =>
-          path.length <= valuePath.length &&
-          path.every((segment, index) => segment === valuePath[index])
+    if (method.name === 'assign') {
+      const sources = [...current.arguments].slice(1);
+      const sourceIndex = sources.findIndex((source) =>
+        containsReference(source, reference)
+      );
+      if (sourceIndex < 0) return null;
+      valuePath = literalReferencePath(sources[sourceIndex], reference);
+      if (
+        valuePath &&
+        staticOverwrittenPaths(
+          sources.slice(sourceIndex + 1),
+          bindingModel,
+          current.getStart(sourceFile)
+        ).some(
+          (path) =>
+            path.length <= valuePath.length &&
+            path.every((segment, index) => segment === valuePath[index])
+        )
+      ) {
+        return false;
+      }
+    } else if (
+      ['defineProperty', 'set'].includes(method.name) &&
+      current.arguments[1] &&
+      ts.isStringLiteralLike(unwrapExpression(current.arguments[1])) &&
+      current.arguments.some((argument, index) =>
+        index >= 2 && containsReference(argument, reference)
       )
     ) {
-      return false;
+      valuePath = [unwrapExpression(current.arguments[1]).text];
+    } else if (
+      method.name === 'defineProperties' &&
+      current.arguments[1] &&
+      containsReference(current.arguments[1], reference)
+    ) {
+      const descriptorPath = literalReferencePath(
+        current.arguments[1],
+        reference
+      );
+      valuePath = descriptorPath?.length ? [descriptorPath[0]] : null;
+    } else {
+      return null;
     }
   }
   if (!target || valuePath === null || valuePath === undefined) return null;

@@ -418,6 +418,7 @@ export function collectFinalCommonJsPropertyWrites(
       if (targetPath === null) return;
       for (const state of propertyStates.values()) {
         if (
+          state.path.length > targetPath.length &&
           targetPath.every(
             (segment, index) => state.path[index] === segment
           )

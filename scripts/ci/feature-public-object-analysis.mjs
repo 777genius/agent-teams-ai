@@ -7,18 +7,15 @@ import {
 } from './feature-export-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import { resolveObjectLiterals as resolveObjectLiteralBindings } from './feature-object-resolution.mjs';
+import { accessPath, bindingAliasTargets } from './feature-public-access-path.mjs';
+import {
+  descriptorBooleanSetting,
+  descriptorDefinesValue,
+  descriptorIsEnumerable,
+  resolveDescriptorMapEntries,
+} from './feature-public-descriptor-state.mjs';
 
-export function accessPath(expression) {
-  let current = unwrapExpression(expression);
-  const path = [];
-  while (true) {
-    const access = memberAccess(current);
-    if (!access) break;
-    path.unshift(access.name);
-    current = access.receiver;
-  }
-  return ts.isIdentifier(current) ? { path, root: current.text } : null;
-}
+export { accessPath };
 
 export function propertyWriteAvailableAt(write) {
   return write.availableAt ?? write.position;
@@ -73,11 +70,7 @@ export function propertyPathWasOverwrittenAfter(
   );
 }
 
-function resolveObjectLiterals(
-  expression,
-  bindingModel,
-  beforePosition
-) {
+function resolveObjectLiterals(expression, bindingModel, beforePosition) {
   return resolveObjectLiteralBindings(expression, beforePosition, (name, position) => {
     const key = bindingModel.bindingAt(name, position);
     if (!key) return null;
@@ -92,107 +85,72 @@ function resolveObjectLiterals(
   });
 }
 
-function descriptorBooleanSetting(descriptor, name) {
-  const property = descriptor.properties.find(
-    (property) =>
-      ts.isPropertyAssignment(property) &&
-      propertyNameText(property.name) === name
-  );
-  if (!property || !ts.isPropertyAssignment(property)) return undefined;
-  const value = unwrapExpression(property.initializer);
-  if (value.kind === ts.SyntaxKind.TrueKeyword) return true;
-  if (value.kind === ts.SyntaxKind.FalseKeyword) return false;
-  return undefined;
-}
-
-function descriptorIsEnumerable(descriptor) {
-  return descriptorBooleanSetting(descriptor, 'enumerable') === true;
-}
-
-function resolveDescriptorMapEntries(
-  expression,
-  bindingModel,
-  beforePosition,
-  visited = new Set()
-) {
-  const current = expression && unwrapExpression(expression);
-  const entries = resolveObjectLiterals(expression, bindingModel, beforePosition).flatMap(
-    (descriptorMap) => {
-      const mapKey = `${descriptorMap.pos}:${descriptorMap.end}`;
-      if (visited.has(mapKey)) return [];
-      const entries = new Map();
-      const nextVisited = new Set(visited).add(mapKey);
-      for (const property of descriptorMap.properties) {
-        if (ts.isSpreadAssignment(property)) {
-          for (const entry of resolveDescriptorMapEntries(
-            property.expression,
-            bindingModel,
-            beforePosition,
-            nextVisited
-          )) {
-            entries.set(entry.name, {
-              ...entry,
-              references: [property.expression, ...entry.references],
-            });
-          }
-        } else if (
-          ts.isPropertyAssignment(property) ||
-          ts.isShorthandPropertyAssignment(property)
-        ) {
-          entries.set(propertyNameText(property.name), {
-            expression: ts.isPropertyAssignment(property)
-              ? property.initializer
-              : property.name,
-            name: propertyNameText(property.name),
-            references: [
-              ts.isPropertyAssignment(property) ? property.initializer : property.name,
-            ],
-          });
-        }
-      }
-      return [...entries.values()];
-    }
-  );
-  return current && ts.isIdentifier(current)
-    ? entries.map((entry) => ({
-        ...entry,
-        references: [current, ...entry.references.filter((reference) => reference !== current)],
-      }))
-    : entries;
-}
-
 export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
   const writes = new Map();
   const configurablePaths = new Set();
   const nonConfigurablePaths = new Set();
+  const nonWritablePaths = new Set();
   const lockedPrefixes = [];
+  const frozenPrefixes = [];
   const pathKey = (sourceKey, path) => `${sourceKey}:${JSON.stringify(path)}`;
   const addWrite = ({
     configurable,
+    definition = false,
     end,
     enumerable = true,
     path,
     position,
     referenceNodes,
+    recordsValue = true,
     removed = false,
     sourceKey,
+    writable,
   }) => {
     if (!sourceKey || path.length === 0) return;
     const key = pathKey(sourceKey, path);
+    const propertyKnown =
+      configurablePaths.has(key) || nonConfigurablePaths.has(key);
     const locked = lockedPrefixes.some(
       ({ path: prefix, sourceKey: lockedSource }) =>
         lockedSource === sourceKey &&
+        path.length > prefix.length &&
         prefix.every((segment, index) => path[index] === segment)
     );
+    const frozen = frozenPrefixes.some(
+      ({ path: prefix, sourceKey: frozenSource }) =>
+        frozenSource === sourceKey &&
+        path.length > prefix.length &&
+        prefix.every((segment, index) => path[index] === segment)
+    );
+    if (!removed && (frozen || (!definition && nonWritablePaths.has(key)))) return;
     if (removed) {
       if (!configurablePaths.has(key) || locked) return;
       configurablePaths.delete(key);
-    } else if (configurable === false) {
-      configurablePaths.delete(key);
-      nonConfigurablePaths.add(key);
-    } else if (!nonConfigurablePaths.has(key) && !locked) {
-      configurablePaths.add(key);
+      nonWritablePaths.delete(key);
+    } else {
+      if (
+        configurable === false ||
+        (definition && configurable === undefined && !propertyKnown)
+      ) {
+        configurablePaths.delete(key);
+        nonConfigurablePaths.add(key);
+      } else if (
+        (!definition || configurable === true) &&
+        !nonConfigurablePaths.has(key) &&
+        !locked
+      ) {
+        configurablePaths.add(key);
+      }
+      if (
+        writable === false ||
+        (definition && writable === undefined && !propertyKnown)
+      ) {
+        nonWritablePaths.add(key);
+      } else if (writable === true && !nonConfigurablePaths.has(key)) {
+        nonWritablePaths.delete(key);
+      }
     }
+    if (!recordsValue) return;
     const rootWrites = writes.get(sourceKey) ?? [];
     rootWrites.push({
       end,
@@ -214,17 +172,21 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
     referenceNodes = [node],
     options = {}
   ) => {
-    const target = accessPath(targetExpression);
-    if (!target) return;
-    addWrite({
-      ...options,
-      end: node.end,
-      enumerable,
-      path: [...target.path, ...suffix],
-      position: node.getStart(sourceFile),
-      referenceNodes,
-      sourceKey: bindingModel.bindingAt(target.root, node.getStart(sourceFile)),
-    });
+    for (const target of bindingAliasTargets(
+      targetExpression,
+      node.getStart(sourceFile),
+      bindingModel
+    )) {
+      addWrite({
+        ...options,
+        end: node.end,
+        enumerable,
+        path: [...target.path, ...suffix],
+        position: node.getStart(sourceFile),
+        referenceNodes,
+        sourceKey: target.sourceKey,
+      });
+    }
   };
   const addDescriptorMapWrites = (targetExpression, mapExpression, node) => {
     for (const entry of resolveDescriptorMapEntries(
@@ -244,8 +206,13 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
           descriptorIsEnumerable(descriptor),
           [...entry.references, descriptor],
           {
-            configurable:
-              descriptorBooleanSetting(descriptor, 'configurable') === true,
+            configurable: descriptorBooleanSetting(
+              descriptor,
+              'configurable'
+            ),
+            definition: true,
+            recordsValue: descriptorDefinesValue(descriptor),
+            writable: descriptorBooleanSetting(descriptor, 'writable'),
           }
         );
       }
@@ -323,8 +290,13 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
           descriptorIsEnumerable(descriptor),
           [node.arguments[2], descriptor].filter(Boolean),
           {
-            configurable:
-              descriptorBooleanSetting(descriptor, 'configurable') === true,
+            configurable: descriptorBooleanSetting(
+              descriptor,
+              'configurable'
+            ),
+            definition: true,
+            recordsValue: descriptorDefinesValue(descriptor),
+            writable: descriptorBooleanSetting(descriptor, 'writable'),
           }
         );
       }
@@ -338,12 +310,15 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
       ['freeze', 'seal'].includes(method.name) &&
       node.arguments[0]
     ) {
-      const target = accessPath(node.arguments[0]);
-      const sourceKey =
-        target &&
-        bindingModel.bindingAt(target.root, node.getStart(sourceFile));
-      if (sourceKey) {
-        lockedPrefixes.push({ path: target.path, sourceKey });
+      for (const target of bindingAliasTargets(
+        node.arguments[0],
+        node.getStart(sourceFile),
+        bindingModel
+      )) {
+        lockedPrefixes.push(target);
+        if (method.name === 'freeze') {
+          frozenPrefixes.push(target);
+        }
       }
     } else if (
       method.name === 'deleteProperty' &&
@@ -358,6 +333,17 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
         true,
         [node],
         { removed: true }
+      );
+    } else if (
+      method.name === 'set' &&
+      node.arguments[0] &&
+      node.arguments[1] &&
+      ts.isStringLiteralLike(unwrapExpression(node.arguments[1]))
+    ) {
+      addTargetWrite(
+        node.arguments[0],
+        node,
+        [unwrapExpression(node.arguments[1]).text]
       );
     } else if (method.name === 'assign' && node.arguments[0]) {
       for (const path of staticOverwrittenPaths(
@@ -393,14 +379,18 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
           initializer.getStart(sourceFile)
         )) {
           addWrite({
-            configurable:
-              descriptorBooleanSetting(descriptor, 'configurable') === true,
+            configurable: descriptorBooleanSetting(
+              descriptor,
+              'configurable'
+            ),
+            definition: true,
             end: initializer.end,
             enumerable: descriptorIsEnumerable(descriptor),
             path: [entry.name],
             position: initializer.getStart(sourceFile),
             referenceNodes: [...entry.references, descriptor],
             sourceKey,
+            writable: descriptorBooleanSetting(descriptor, 'writable'),
           });
         }
       }

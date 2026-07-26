@@ -215,6 +215,30 @@ test('treats definite CommonJS deletes as final property removal', () => {
       `,
       'src/features/commonjs-seal-assignment-safe/main/infrastructure/Store.cjs':
         'exports.Store = class Store {};',
+      'src/features/commonjs-nested-freeze-replace-safe/main/index.cjs': `
+        const api = {
+          nested: {
+            Store: require('./infrastructure/Store'),
+          },
+        };
+        module.exports = api;
+        Object.freeze(api.nested);
+        api.nested = {};
+      `,
+      'src/features/commonjs-nested-freeze-replace-safe/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
+      'src/features/commonjs-nested-seal-delete-safe/main/index.cjs': `
+        const api = {
+          nested: {
+            Store: require('./infrastructure/Store'),
+          },
+        };
+        module.exports = api;
+        Object.seal(api.nested);
+        delete api.nested;
+      `,
+      'src/features/commonjs-nested-seal-delete-safe/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
       'src/features/commonjs-delete-positive/main/index.cjs':
         "exports.Store = require('./infrastructure/Store');",
       'src/features/commonjs-delete-positive/main/infrastructure/Store.cjs':
@@ -555,6 +579,15 @@ test('uses the final ESM binding and property state', () => {
       `,
       'src/features/esm-alias-write-safe/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/esm-alias-delete-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        const alias = api;
+        export { api };
+        delete alias.Store;
+      `,
+      'src/features/esm-alias-delete-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/esm-freeze-delete-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const api: Record<string, unknown> = { Store };
@@ -564,11 +597,92 @@ test('uses the final ESM binding and property state', () => {
       `,
       'src/features/esm-freeze-delete-public/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/esm-freeze-overwrite-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        export { api };
+        Object.freeze(api);
+        api.Store = undefined;
+      `,
+      'src/features/esm-freeze-overwrite-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-alias-freeze-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        const alias = api;
+        export { api };
+        Object.freeze(alias);
+        api.Store = undefined;
+      `,
+      'src/features/esm-alias-freeze-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-conditional-alias-freeze-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        const alias = true ? api : api;
+        export { api };
+        Object.freeze(alias);
+        delete api.Store;
+      `,
+      'src/features/esm-conditional-alias-freeze-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-nonwritable-overwrite-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        Object.defineProperty(api, 'Store', { writable: false });
+        export { api };
+        api.Store = undefined;
+      `,
+      'src/features/esm-nonwritable-overwrite-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-nonwritable-delete-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        Object.defineProperty(api, 'Store', { writable: false });
+        export { api };
+        delete api.Store;
+      `,
+      'src/features/esm-nonwritable-delete-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-reflect-set-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        const alias = api;
+        export { api };
+        Reflect.set(alias, 'Store', undefined);
+      `,
+      'src/features/esm-reflect-set-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-configurable-descriptor-delete-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = {};
+        Object.defineProperty(api, 'Store', {
+          configurable: true,
+          value: Store,
+        });
+        export { api };
+        delete api.Store;
+      `,
+      'src/features/esm-configurable-descriptor-delete-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-nested-freeze-replace-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { nested: { Store } };
+        export { api };
+        Object.freeze(api.nested);
+        api.nested = {};
+      `,
+      'src/features/esm-nested-freeze-replace-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
+        'src/features/esm-alias-freeze-public/main/index.ts',
+        'src/features/esm-conditional-alias-freeze-public/main/index.ts',
         'src/features/esm-default-snapshot/main/index.ts',
         'src/features/esm-freeze-delete-public/main/index.ts',
+        'src/features/esm-freeze-overwrite-public/main/index.ts',
+        'src/features/esm-nonwritable-overwrite-public/main/index.ts',
         'src/features/esm-object-assign-public/main/index.ts',
         'src/features/esm-rebind-conditional/main/index.ts',
         'src/features/esm-rebind-public/main/index.ts',
