@@ -86,7 +86,81 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
     expect(result?.message).toContain('task_briefing -> message_send');
   });
 
-  it('blocks a sub-3B Ollama model even when it advertises tools and 32K context', async () => {
+  it('uses the active Ollama allocation instead of rejecting a smaller Modelfile num_ctx', async () => {
+    const inventory = createInventory([ollamaProvider()]);
+    const probeCoordination = vi.fn(coordinationPassed);
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      return url.endsWith('/api/show')
+        ? jsonResponse({
+            capabilities: ['completion', 'tools'],
+            parameters: 'num_ctx 4096',
+            model_info: {
+              'general.parameter_count': 7_615_616_000,
+              'qwen2.context_length': 131_072,
+            },
+          })
+        : jsonResponse({
+            models: [{ model: 'qwen2.5:0.5b', context_length: 65_536 }],
+          });
+    });
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'ollama/qwen2.5:0.5b',
+      },
+      { inventory, fetchImpl, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'ready',
+      code: 'local_coordination_verified',
+      configuredContextTokens: 4_096,
+      effectiveContextTokens: 65_536,
+      coordinationProbeStatus: 'passed',
+    });
+    expect(probeCoordination).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('warns instead of false-blocking when low Modelfile num_ctx cannot be compared with runtime allocation', async () => {
+    const inventory = createInventory([ollamaProvider()]);
+    const probeCoordination = vi.fn(coordinationPassed);
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      return url.endsWith('/api/show')
+        ? jsonResponse({
+            capabilities: ['completion', 'tools'],
+            parameters: 'num_ctx 4096',
+            model_info: {
+              'general.parameter_count': 7_615_616_000,
+              'qwen2.context_length': 131_072,
+            },
+          })
+        : jsonResponse({ error: 'runtime inventory unavailable' }, 503);
+    });
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'ollama/qwen2.5:0.5b',
+      },
+      { inventory, fetchImpl, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      configuredContextTokens: 4_096,
+      effectiveContextTokens: null,
+      coordinationProbeStatus: 'passed',
+      message: expect.stringContaining('verify the active allocation with ollama ps'),
+    });
+    expect(probeCoordination).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats sub-3B size as advisory after empirical coordination succeeds', async () => {
     const inventory = createInventory([ollamaProvider()]);
     const probeCoordination = vi.fn(coordinationPassed);
     const fetchImpl = vi.fn<typeof fetch>(async (input) => {
@@ -114,14 +188,15 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
     );
 
     expect(result).toMatchObject({
-      severity: 'blocking',
+      severity: 'warning',
       code: 'local_model_too_small',
       parameterCount: 2_031_739_904,
       toolCapable: true,
-      effectiveContextTokens: null,
+      effectiveContextTokens: 32_768,
+      coordinationProbeStatus: 'passed',
     });
-    expect(result?.message).toContain('below 3B');
-    expect(probeCoordination).not.toHaveBeenCalled();
+    expect(result?.message).toContain('below the 3B reliability guideline');
+    expect(probeCoordination).toHaveBeenCalledTimes(1);
   });
 
   it('blocks an Ollama model that does not advertise tool support', async () => {
@@ -224,36 +299,196 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
       severity: 'blocking',
       code: 'local_coordination_probe_failed',
       coordinationProbeStatus: 'failed',
+      experimentalOverrideAvailable: true,
       message: expect.stringContaining('plain text'),
     });
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(result?.message).toContain('experimental local-model override');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
-  it('blocks a local model that passes once but fails the repeated reliability check', async () => {
+  it('never lets the coordination override bypass a proven 4K Ollama allocation', async () => {
+    const inventory = createInventory([ollamaProvider()]);
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      return url.endsWith('/api/show')
+        ? jsonResponse({
+            capabilities: ['completion', 'tools'],
+            model_info: {
+              'general.parameter_count': 7_615_616_000,
+              'qwen3.context_length': 32_768,
+            },
+          })
+        : jsonResponse({
+            models: [{ model: 'qwen3:8b', context_length: 4_096 }],
+          });
+    });
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'ollama/qwen3:8b',
+        allowExperimentalLocalModels: true,
+      },
+      {
+        inventory,
+        fetchImpl,
+        probeCoordination: vi.fn().mockResolvedValue({
+          status: 'failed',
+          message: 'The model wrote plain text instead of message_send.',
+        }),
+      }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'blocking',
+      code: 'local_context_too_small',
+      effectiveContextTokens: 4_096,
+      coordinationProbeStatus: 'failed',
+    });
+    expect(result?.experimentalOverrideAvailable).toBeUndefined();
+    expect(fetchImpl.mock.calls.map(([url]) => String(url))).toEqual([
+      'http://127.0.0.1:11434/api/show',
+      'http://127.0.0.1:11434/api/ps',
+    ]);
+  });
+
+  it('allows an explicit experimental override to defer a failed direct probe to OpenCode', async () => {
+    const inventory = createInventory([ollamaProvider()]);
+    const fetchImpl = vi.fn<typeof fetch>(async (input) =>
+      String(input).endsWith('/api/show')
+        ? jsonResponse({
+            capabilities: ['completion', 'tools'],
+            model_info: {
+              'general.parameter_count': 7_615_616_000,
+              'qwen2.context_length': 32_768,
+            },
+          })
+        : jsonResponse({
+            models: [{ model: 'qwen3:8b', context_length: 32_768 }],
+          })
+    );
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'ollama/qwen3:8b',
+        allowExperimentalLocalModels: true,
+      },
+      {
+        inventory,
+        fetchImpl,
+        probeCoordination: vi.fn().mockResolvedValue({
+          status: 'failed',
+          message: 'The model wrote plain text instead of message_send.',
+        }),
+      }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'warning',
+      code: 'local_coordination_probe_failed',
+      coordinationProbeStatus: 'failed',
+      experimentalOverrideAvailable: true,
+      message: expect.stringContaining('override is enabled'),
+    });
+    expect(result?.effectiveContextTokens).toBe(32_768);
+  });
+
+  it('retries a temporarily unavailable coordination probe before deciding', async () => {
     const inventory = createInventory([customProvider()]);
     const probeCoordination = vi
       .fn()
       .mockResolvedValueOnce({
-        status: 'passed' as const,
-        message: 'Initial coordination check passed.',
+        status: 'unavailable' as const,
+        message: 'The local server is loading.',
       })
       .mockResolvedValueOnce({
-        status: 'failed' as const,
-        message: 'The repeated check returned plain text.',
+        status: 'passed' as const,
+        message: 'Coordination check passed after loading.',
       });
+    const sleep = vi.fn(async () => undefined);
 
     const result = await inspectOpenCodeLocalModelRuntimeReadiness(
       {
         projectPath: TEST_PROJECT_PATH,
         modelRoute: 'local-lab/team-model',
       },
-      { inventory, probeCoordination }
+      { inventory, probeCoordination, sleep }
     );
 
     expect(result).toMatchObject({
-      severity: 'blocking',
-      code: 'local_coordination_probe_failed',
-      message: expect.stringContaining('Repeated coordination check 2/2 failed'),
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      coordinationProbeStatus: 'passed',
+    });
+    expect(probeCoordination).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(500);
+    expect(probeCoordination.mock.calls[0]?.[0].signal).toBe(
+      probeCoordination.mock.calls[1]?.[0].signal
+    );
+  });
+
+  it('uses one timeout budget across coordination probe attempts', async () => {
+    const inventory = createInventory([customProvider()]);
+    const probeCoordination = vi.fn(
+      async (probeInput: { readonly signal?: AbortSignal }) =>
+        new Promise<{ status: 'unavailable'; message: string }>((resolve) => {
+          const finish = () =>
+            resolve({
+              status: 'unavailable',
+              message: 'The local server did not finish the probe.',
+            });
+          if (probeInput.signal?.aborted) {
+            finish();
+            return;
+          }
+          probeInput.signal?.addEventListener('abort', finish, { once: true });
+        })
+    );
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'local-lab/team-model',
+      },
+      {
+        inventory,
+        probeCoordination,
+        coordinationProbeTimeoutMs: 5,
+        sleep: vi.fn(async () => undefined),
+      }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'warning',
+      code: 'local_coordination_probe_unavailable',
+      coordinationProbeStatus: 'unavailable',
+      message: expect.stringContaining('timed out'),
+    });
+    expect(probeCoordination).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports exhausted transient verification as a warning, not unsupported', async () => {
+    const inventory = createInventory([customProvider()]);
+    const probeCoordination = vi.fn().mockResolvedValue({
+      status: 'unavailable' as const,
+      message: 'The local server is still loading.',
+    });
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'local-lab/team-model',
+      },
+      { inventory, probeCoordination, sleep: vi.fn(async () => undefined) }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'warning',
+      code: 'local_coordination_probe_unavailable',
+      coordinationProbeStatus: 'unavailable',
+      experimentalOverrideAvailable: false,
+      message: expect.stringContaining('not proof that the model is unsupported'),
     });
     expect(probeCoordination).toHaveBeenCalledTimes(2);
   });
@@ -597,9 +832,9 @@ function customProvider(): RuntimeLocalProviderListEntryDto {
   };
 }
 
-function jsonResponse(value: unknown): Response {
+function jsonResponse(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), {
-    status: 200,
+    status,
     headers: { 'content-type': 'application/json' },
   });
 }

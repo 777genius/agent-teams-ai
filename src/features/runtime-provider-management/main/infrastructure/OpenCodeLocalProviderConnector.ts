@@ -19,6 +19,7 @@ import {
   RuntimeLocalProviderValidationError,
 } from '../../core/domain';
 
+import { readResponseTextWithLimit } from './boundedResponseBody';
 import {
   JsonLocalProviderPrivateNetworkApprovalStore,
   type LocalProviderPrivateNetworkApprovalStore,
@@ -37,7 +38,6 @@ import {
   type LocalModelConfigMetadata,
   readObjectEntries,
   readOpenAiModels,
-  readResponseTextWithLimit,
   readStringNode,
   setJsoncValue,
 } from './openCodeLocalProviderConnectorUtils';

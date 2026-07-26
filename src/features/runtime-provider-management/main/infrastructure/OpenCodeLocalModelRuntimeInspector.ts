@@ -1,6 +1,7 @@
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
+import { readResponseTextWithLimit } from './boundedResponseBody';
 import { buildLocalServerModelMetadataRequest } from './localServerRuntimeApi';
 import {
   buildOllamaNativeUrl,
@@ -17,12 +18,14 @@ import type { RuntimeLocalProviderListEntryDto } from '../../contracts';
 import type { RuntimeLocalProviderConnectorPort } from '../../core/application';
 
 export const MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS = 16_384;
-export const RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS = 32_768;
+export const RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS = 65_536;
 export const MIN_AGENT_TEAMS_LOCAL_PARAMETER_COUNT = 3_000_000_000;
 
 const INSPECTION_TIMEOUT_MS = 3_000;
 const MAX_RESPONSE_BYTES = 1_048_576;
-const REQUIRED_CONSECUTIVE_COORDINATION_PASSES = 2;
+const MAX_COORDINATION_PROBE_ATTEMPTS = 2;
+const COORDINATION_PROBE_RETRY_DELAY_MS = 500;
+const COORDINATION_PROBE_TOTAL_TIMEOUT_MS = 90_000;
 
 export interface OpenCodeLocalModelRuntimeReadiness {
   readonly providerId: string;
@@ -35,6 +38,7 @@ export interface OpenCodeLocalModelRuntimeReadiness {
   readonly effectiveContextTokens: number | null;
   readonly coordinationProbeStatus: OpenCodeLocalModelCoordinationProbeResult['status'] | null;
   readonly severity: 'ready' | 'warning' | 'blocking';
+  readonly experimentalOverrideAvailable?: boolean;
   readonly code:
     | 'local_coordination_verified'
     | 'local_coordination_probe_failed'
@@ -56,7 +60,10 @@ interface OpenCodeLocalModelRuntimeInspectorDependencies {
   readonly probeCoordination?: (input: {
     readonly provider: RuntimeLocalProviderListEntryDto;
     readonly modelId: string;
+    readonly signal?: AbortSignal;
   }) => Promise<OpenCodeLocalModelCoordinationProbeResult>;
+  readonly sleep?: (delayMs: number) => Promise<void>;
+  readonly coordinationProbeTimeoutMs?: number;
 }
 
 /** Inspects a configured local route and returns Agent Teams launch-readiness evidence. */
@@ -64,6 +71,7 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
   input: {
     readonly projectPath: string;
     readonly modelRoute: string;
+    readonly allowExperimentalLocalModels?: boolean;
   },
   dependencies: OpenCodeLocalModelRuntimeInspectorDependencies = {}
 ): Promise<OpenCodeLocalModelRuntimeReadiness | null> {
@@ -162,14 +170,27 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       probeOpenCodeLocalModelCoordination(probeInput, {
         fetchImpl,
       }));
-  const probeCoordinationReliably = () =>
-    verifyCoordinationReliability(
-      {
-        provider,
-        modelId: parsed.modelId,
-      },
-      probeCoordination
+  const probeCoordinationReliably = async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      dependencies.coordinationProbeTimeoutMs ?? COORDINATION_PROBE_TOTAL_TIMEOUT_MS
     );
+    timeout.unref?.();
+    try {
+      return await verifyCoordinationReliability(
+        {
+          provider,
+          modelId: parsed.modelId,
+          signal: controller.signal,
+        },
+        probeCoordination,
+        dependencies.sleep ?? delay
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
 
   if (provider.preset.id !== 'ollama') {
     const metadataRequest = buildLocalServerModelMetadataRequest(
@@ -232,6 +253,7 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
         toolCapable: metadata?.toolCapable ?? null,
         effectiveContextTokens: metadata?.contextTokens ?? null,
         coordination,
+        allowExperimentalLocalModels: input.allowExperimentalLocalModels === true,
       });
     }
     if (metadata?.contextTokens != null) {
@@ -266,7 +288,7 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       code: 'local_runtime_unverified',
       message:
         `${coordination.message} ${provider.preset.displayName} does not expose enough runtime ` +
-        'metadata to prove the effective context size; use at least 16K (32K recommended).',
+        'metadata to prove the effective context size; use at least 16K (64K recommended).',
     };
   }
 
@@ -283,27 +305,17 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
   const trainedContextTokens = metadata?.trainedContextTokens ?? null;
   const toolCapable = metadata?.toolCapable ?? null;
   const parameterCount = metadata?.parameterCount ?? null;
-
-  if (parameterCount !== null && parameterCount < MIN_AGENT_TEAMS_LOCAL_PARAMETER_COUNT) {
-    return {
-      providerId: parsed.sourceId,
-      modelId: parsed.modelId,
-      presetId: provider.preset.id,
-      toolCapable,
-      parameterCount,
-      trainedContextTokens,
-      configuredContextTokens,
-      effectiveContextTokens: null,
-      coordinationProbeStatus: null,
-      severity: 'blocking',
-      code: 'local_model_too_small',
-      message:
-        `Ollama reports that ${input.modelRoute} has ${formatParameterCount(parameterCount)} ` +
-        `parameters. Models below ${formatParameterCount(MIN_AGENT_TEAMS_LOCAL_PARAMETER_COUNT)} ` +
-        'are blocked for Agent Teams because lightweight models could not reliably follow task ' +
-        'and messaging tool instructions. Choose a larger tool-capable model.',
-    };
-  }
+  const parameterCountAdvisory =
+    parameterCount !== null && parameterCount < MIN_AGENT_TEAMS_LOCAL_PARAMETER_COUNT
+      ? `Ollama reports ${formatParameterCount(parameterCount)} parameters, below the ` +
+        `${formatParameterCount(MIN_AGENT_TEAMS_LOCAL_PARAMETER_COUNT)} reliability guideline.`
+      : null;
+  const configuredContextAdvisory =
+    configuredContextTokens !== null &&
+    configuredContextTokens < MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS
+      ? `The model metadata contains num_ctx=${configuredContextTokens}, but Ollama runtime ` +
+        'settings can override it; verify the active allocation with ollama ps.'
+      : null;
 
   if (toolCapable === false) {
     return {
@@ -324,9 +336,19 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
     };
   }
 
+  const coordination = await probeCoordinationReliably();
+  // The coordination request loads the model when it was not already resident. Read
+  // /api/ps after that request even when coordination failed so the experimental
+  // override can never bypass the effective-context hard floor.
+  const psRaw = await fetchJsonText(fetchImpl, buildOllamaNativeUrl(provider.baseUrl, '/api/ps'), {
+    method: 'GET',
+  });
+  const effectiveContextTokens = psRaw
+    ? parseOllamaRunningContextTokens(psRaw, parsed.modelId)
+    : null;
   if (
-    configuredContextTokens !== null &&
-    configuredContextTokens < MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS
+    effectiveContextTokens !== null &&
+    effectiveContextTokens < MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS
   ) {
     return buildContextTooSmallResult({
       providerId: parsed.sourceId,
@@ -337,13 +359,12 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       parameterCount,
       trainedContextTokens,
       configuredContextTokens,
-      effectiveContextTokens: null,
-      provenContextTokens: configuredContextTokens,
-      coordinationProbeStatus: null,
+      effectiveContextTokens,
+      provenContextTokens: effectiveContextTokens,
+      coordinationProbeStatus: coordination.status,
     });
   }
 
-  const coordination = await probeCoordinationReliably();
   if (coordination.status !== 'passed') {
     return buildCoordinationProbeFailure({
       providerId: parsed.sourceId,
@@ -353,31 +374,9 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       parameterCount,
       trainedContextTokens,
       configuredContextTokens,
-      coordination,
-    });
-  }
-
-  const psRaw = await fetchJsonText(fetchImpl, buildOllamaNativeUrl(provider.baseUrl, '/api/ps'), {
-    method: 'GET',
-  });
-  const effectiveContextTokens = psRaw
-    ? parseOllamaRunningContextTokens(psRaw, parsed.modelId)
-    : null;
-  const provenContextTokens =
-    effectiveContextTokens ?? configuredContextTokens ?? trainedContextTokens;
-  if (provenContextTokens !== null && provenContextTokens < MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS) {
-    return buildContextTooSmallResult({
-      providerId: parsed.sourceId,
-      modelId: parsed.modelId,
-      modelRoute: input.modelRoute,
-      presetId: provider.preset.id,
-      toolCapable,
-      parameterCount,
-      trainedContextTokens,
-      configuredContextTokens,
       effectiveContextTokens,
-      provenContextTokens,
-      coordinationProbeStatus: coordination.status,
+      coordination,
+      allowExperimentalLocalModels: input.allowExperimentalLocalModels === true,
     });
   }
 
@@ -396,7 +395,28 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       code: 'local_runtime_unverified',
       message:
         `${coordination.message} Ollama did not expose both effective context and tool support, ` +
-        'so runtime capacity remains unverified.',
+        `so runtime capacity remains unverified.` +
+        `${configuredContextAdvisory ? ` ${configuredContextAdvisory}` : ''}` +
+        `${parameterCountAdvisory ? ` ${parameterCountAdvisory}` : ''}`,
+    };
+  }
+
+  if (parameterCountAdvisory) {
+    return {
+      providerId: parsed.sourceId,
+      modelId: parsed.modelId,
+      presetId: provider.preset.id,
+      toolCapable,
+      parameterCount,
+      trainedContextTokens,
+      configuredContextTokens,
+      effectiveContextTokens,
+      coordinationProbeStatus: coordination.status,
+      severity: 'warning',
+      code: 'local_model_too_small',
+      message:
+        `${coordination.message} ${parameterCountAdvisory} The empirical coordination and ` +
+        'OpenCode execution probes remain authoritative.',
     };
   }
 
@@ -422,34 +442,44 @@ async function verifyCoordinationReliability(
   input: {
     readonly provider: RuntimeLocalProviderListEntryDto;
     readonly modelId: string;
+    readonly signal: AbortSignal;
   },
   probeCoordination: (input: {
     readonly provider: RuntimeLocalProviderListEntryDto;
     readonly modelId: string;
-  }) => Promise<OpenCodeLocalModelCoordinationProbeResult>
+    readonly signal?: AbortSignal;
+  }) => Promise<OpenCodeLocalModelCoordinationProbeResult>,
+  sleep: (delayMs: number) => Promise<void>
 ): Promise<OpenCodeLocalModelCoordinationProbeResult> {
-  let lastPassed: OpenCodeLocalModelCoordinationProbeResult | null = null;
-  for (let attempt = 1; attempt <= REQUIRED_CONSECUTIVE_COORDINATION_PASSES; attempt += 1) {
+  for (let attempt = 1; attempt <= MAX_COORDINATION_PROBE_ATTEMPTS; attempt += 1) {
     const result = await probeCoordination(input);
-    if (result.status !== 'passed') {
-      return attempt === 1
-        ? result
-        : {
-            ...result,
-            message:
-              `Repeated coordination check ${attempt}/${REQUIRED_CONSECUTIVE_COORDINATION_PASSES} ` +
-              `failed after an earlier pass. ${result.message}`,
-          };
+    if (result.status === 'passed' || result.status === 'failed') {
+      return result;
     }
-    lastPassed = result;
+    if (input.signal.aborted) {
+      return {
+        ...result,
+        message: `${result.message} The Agent Teams coordination probe timed out.`,
+      };
+    }
+    if (attempt < MAX_COORDINATION_PROBE_ATTEMPTS) {
+      await sleep(COORDINATION_PROBE_RETRY_DELAY_MS);
+      if (input.signal.aborted) {
+        return {
+          ...result,
+          message: `${result.message} The Agent Teams coordination probe timed out.`,
+        };
+      }
+      continue;
+    }
+    return {
+      ...result,
+      message:
+        `${result.message} Verification remained unavailable after ` +
+        `${MAX_COORDINATION_PROBE_ATTEMPTS} attempts.`,
+    };
   }
-
-  return {
-    status: 'passed',
-    message:
-      `${lastPassed?.message ?? `${input.modelId} completed the coordination probe.`} ` +
-      `Confirmed in ${REQUIRED_CONSECUTIVE_COORDINATION_PASSES} consecutive checks.`,
-  };
+  throw new Error('Coordination probe retry loop completed without a result.');
 }
 
 function buildCoordinationProbeFailure(input: {
@@ -462,7 +492,11 @@ function buildCoordinationProbeFailure(input: {
   configuredContextTokens?: number | null;
   effectiveContextTokens?: number | null;
   coordination: OpenCodeLocalModelCoordinationProbeResult;
+  allowExperimentalLocalModels: boolean;
 }): OpenCodeLocalModelRuntimeReadiness {
+  const unavailable = input.coordination.status === 'unavailable';
+  const experimentalOverride = input.coordination.status === 'failed';
+  const overrideApplied = experimentalOverride && input.allowExperimentalLocalModels;
   return {
     providerId: input.providerId,
     modelId: input.modelId,
@@ -473,13 +507,27 @@ function buildCoordinationProbeFailure(input: {
     configuredContextTokens: input.configuredContextTokens ?? null,
     effectiveContextTokens: input.effectiveContextTokens ?? null,
     coordinationProbeStatus: input.coordination.status,
-    severity: 'blocking',
-    code:
-      input.coordination.status === 'failed'
-        ? 'local_coordination_probe_failed'
-        : 'local_coordination_probe_unavailable',
-    message: input.coordination.message,
+    severity: unavailable || overrideApplied ? 'warning' : 'blocking',
+    experimentalOverrideAvailable: experimentalOverride,
+    code: experimentalOverride
+      ? 'local_coordination_probe_failed'
+      : 'local_coordination_probe_unavailable',
+    message: unavailable
+      ? `${input.coordination.message} This is a verification availability problem, not proof ` +
+        'that the model is unsupported. The real OpenCode execution probe will make the launch decision.'
+      : overrideApplied
+        ? `${input.coordination.message} Experimental local-model override is enabled; the real ` +
+          'OpenCode execution probe must still pass.'
+        : `${input.coordination.message} You can explicitly enable the experimental local-model ` +
+          'override to continue to the real OpenCode execution probe.',
   };
+}
+
+function delay(delayMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(resolve, delayMs);
+    timeout.unref?.();
+  });
 }
 
 function buildContextTooSmallResult(input: {
@@ -511,7 +559,7 @@ function buildContextTooSmallResult(input: {
     message:
       `${input.providerDisplayName ?? 'Ollama'} is running ${input.modelRoute} with ` +
       `${formatContextTokens(input.provenContextTokens)} context. Agent Teams requires at least ` +
-      `16K (32K recommended). ${buildContextTooSmallRemedy(input.presetId)}`,
+      `16K (64K recommended). ${buildContextTooSmallRemedy(input.presetId)}`,
   };
 }
 
@@ -587,10 +635,7 @@ async function fetchJsonText(
       signal: controller.signal,
     });
     if (!response.ok) return null;
-    const declaredSize = Number(response.headers.get('content-length') ?? 0);
-    if (Number.isFinite(declaredSize) && declaredSize > MAX_RESPONSE_BYTES) return null;
-    const raw = await response.text();
-    return Buffer.byteLength(raw, 'utf8') <= MAX_RESPONSE_BYTES ? raw : null;
+    return await readResponseTextWithLimit(response, MAX_RESPONSE_BYTES);
   } catch {
     return null;
   } finally {
