@@ -7,7 +7,6 @@ import {
   unwrapExpression,
 } from './feature-export-ast.mjs';
 import { topLevelExpressionBoundary } from './feature-export-flow-analysis.mjs';
-import { publicStaticClassSelection } from './feature-public-class-analysis.mjs';
 import {
   dynamicThenCallbackMember,
   exportAssignmentValueSelection,
@@ -407,8 +406,7 @@ export function findPublicReferenceOwner(
   sourceFile,
   publicTargetOwners,
   commonJsTargetAliases = new Set(),
-  publicConstructorNames = new Set(),
-  selectPublicConstructorMember = () => null
+  classifyPublicClassReference = () => undefined
 ) {
   let current = node;
   let insideFunctionBody = false;
@@ -425,19 +423,13 @@ export function findPublicReferenceOwner(
   }
   if (!current || current.parent !== sourceFile) return null;
   current = topLevelExpressionBoundary(node, sourceFile) ?? current;
-  const isPublicConstructor =
-    (ts.isClassDeclaration(current) || ts.isFunctionDeclaration(current)) &&
-    ((current.name && publicConstructorNames.has(current.name.text)) ||
-      (ts.isClassDeclaration(current) &&
-        !current.name &&
-        hasModifier(current, ts.SyntaxKind.ExportKeyword)));
-  const getterSelection = isPublicConstructor
-    ? selectPublicConstructorMember(node, current) ??
-      (!current.name ? publicStaticClassSelection(node, current) : null)
+  const classReference = classifyPublicClassReference(node);
+  const getterSelection = classReference
+    ? classReference.selection
     : insideFunctionBody
       ? getterSelectionForReference(node, current)
       : null;
-  if ((insideFunctionBody || isPublicConstructor) && !getterSelection) return null;
+  if ((insideFunctionBody || classReference) && !getterSelection) return null;
 
   let bindingSelections = null;
   let descriptorGetterIsPublic = false;

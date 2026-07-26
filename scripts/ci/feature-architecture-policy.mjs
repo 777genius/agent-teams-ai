@@ -26,7 +26,7 @@ import {
   isLexicallyShadowedValueReference,
 } from './feature-lexical-binding-analysis.mjs';
 import { resolveProjectTarget } from './feature-module-resolution.mjs';
-import { publicConstructorSelection } from './feature-public-constructor-analysis.mjs';
+import { analyzePublicClassSurfaces } from './feature-public-class-surface-analysis.mjs';
 import { collectPublicApiImplementationExports } from './feature-public-export-policy.mjs';
 import { analyzePublicTargets } from './feature-public-target-analysis.mjs';
 import { collectProductionSourceFiles } from './feature-source-files.mjs';
@@ -178,17 +178,18 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   for (const constructorExport of publicTargets.constructorExports) {
     directLocalExports.push({ ...constructorExport, line: 1 });
   }
-  const publicConstructorNames = new Set(
-    publicTargets.publicConstructorNames
-  );
+  const publicClassSurfaces = analyzePublicClassSurfaces({
+    constructorExports: publicTargets.constructorExports,
+    exportedLocalNames,
+    sourceFile,
+  });
   const publicReferenceOwner = (node) =>
     findPublicReferenceOwner(
       node,
       sourceFile,
       publicTargets.localOwnersAt(node.getStart(sourceFile)),
       publicTargets.commonJsTargetsAt(node.getStart(sourceFile)),
-      publicConstructorNames,
-      publicConstructorSelection
+      publicClassSurfaces.classifyReference
     );
 
   const addOwnerDependency = (owner, dependency) => {

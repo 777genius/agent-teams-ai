@@ -33,8 +33,7 @@ import {
 } from './feature-public-object-analysis.mjs';
 import {
   IDENTITY_WRAPPERS,
-  constructedClassNames,
-  directlyExportedClassNames,
+  constructedClassReferences,
 } from './feature-public-identity-analysis.mjs';
 import { attachPublicReferenceQueries } from './feature-public-reference-visibility.mjs';
 function bindingNames(bindingName) {
@@ -773,14 +772,14 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
   for (const [key, binding] of bindingModel.versions) {
     const owner = identityOwners.get(key) ?? copyConstructorOwners.get(key);
     if (!owner) continue;
-    for (const className of constructedClassNames(binding.initializer)) {
-      constructorExports.push({ exportedName: owner, localName: className });
+    for (const classReference of constructedClassReferences(binding.initializer)) {
+      constructorExports.push({ exportedName: owner, ...classReference });
     }
   }
   for (const statement of sourceFile.statements) {
     if (!ts.isExportAssignment(statement)) continue;
-    for (const className of constructedClassNames(statement.expression)) {
-      constructorExports.push({ exportedName: 'default', localName: className });
+    for (const classReference of constructedClassReferences(statement.expression)) {
+      constructorExports.push({ exportedName: 'default', ...classReference });
     }
   }
   return {
@@ -789,11 +788,5 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     constructorExports,
     localOwners: localOwnersAt(Number.POSITIVE_INFINITY),
     localOwnersAt,
-    publicConstructorNames: [
-      ...new Set([
-        ...constructorExports.map(({ localName }) => localName),
-        ...directlyExportedClassNames(sourceFile, exportedLocalNames),
-      ]),
-    ],
   };
 }

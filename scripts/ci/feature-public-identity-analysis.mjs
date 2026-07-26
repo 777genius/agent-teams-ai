@@ -9,26 +9,30 @@ import { IDENTITY_WRAPPERS } from './feature-identity-wrappers.mjs';
 
 export { IDENTITY_WRAPPERS };
 
-export function constructedClassNames(expression) {
+export function constructedClassReferences(expression) {
   const current = unwrapExpression(expression);
   if (ts.isNewExpression(current)) {
     const className = rootBindingName(current.expression);
-    return className ? [className] : [];
+    return className
+      ? [{ localName: className, position: current.expression.getStart() }]
+      : [];
   }
   if (ts.isObjectLiteralExpression(current)) {
     return current.properties.flatMap((property) =>
-      ts.isPropertyAssignment(property) ? constructedClassNames(property.initializer) : []
+      ts.isPropertyAssignment(property)
+        ? constructedClassReferences(property.initializer)
+        : []
     );
   }
   if (ts.isArrayLiteralExpression(current)) {
     return current.elements.flatMap((element) =>
-      ts.isOmittedExpression(element) ? [] : constructedClassNames(element)
+      ts.isOmittedExpression(element) ? [] : constructedClassReferences(element)
     );
   }
   if (ts.isConditionalExpression(current)) {
     return [
-      ...constructedClassNames(current.whenTrue),
-      ...constructedClassNames(current.whenFalse),
+      ...constructedClassReferences(current.whenTrue),
+      ...constructedClassReferences(current.whenFalse),
     ];
   }
   if (ts.isCallExpression(current)) {
@@ -40,10 +44,14 @@ export function constructedClassNames(expression) {
       IDENTITY_WRAPPERS.has(method.name) &&
       current.arguments[0]
     ) {
-      return constructedClassNames(current.arguments[0]);
+      return constructedClassReferences(current.arguments[0]);
     }
   }
   return [];
+}
+
+export function constructedClassNames(expression) {
+  return constructedClassReferences(expression).map(({ localName }) => localName);
 }
 
 export function directlyExportedClassNames(sourceFile, exportedLocalNames) {
