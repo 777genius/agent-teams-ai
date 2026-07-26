@@ -322,6 +322,189 @@ test('traces modeled object-mutator writes to constructed public instances', () 
   );
 });
 
+test('traces constructor getter descriptors and local mutator aliases', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-define-property-getter/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.defineProperty(this, 'store', { get: () => Store });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-define-property-getter/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-alias/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            const fields = { store: Store };
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-alias/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/class-object-assign-public-method/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          install() {
+            const fields = { store: Store };
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-public-method/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-define-properties-alias/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            const descriptor = { value: Store };
+            const descriptors = { store: descriptor };
+            Object.defineProperties(this, descriptors);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-define-properties-alias/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-define-properties-getter-alias/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            const descriptors = { store: { get: () => Store } };
+            Object.defineProperties(this, descriptors);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-define-properties-getter-alias/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-define-properties-alias/main/index.ts',
+        'src/features/class-define-properties-getter-alias/main/index.ts',
+        'src/features/class-define-property-getter/main/index.ts',
+        'src/features/class-object-assign-alias/main/index.ts',
+        'src/features/class-object-assign-public-method/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('ignores constructor mutator aliases that cannot expose the implementation', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-define-property-setter-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.defineProperty(this, 'store', {
+              set(value: unknown) {
+                void value;
+                void Store;
+              },
+            });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-define-property-setter-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-define-property-unreturned-getter-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.defineProperty(this, 'store', {
+              get: () => {
+                void Store;
+                return null;
+              },
+            });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-define-property-unreturned-getter-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-alias-rebound-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            let fields = { store: Store };
+            fields = {};
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-alias-rebound-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-alias-other-target-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            const fields = { store: Store };
+            Object.assign({}, fields);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-alias-other-target-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-define-properties-alias-rebound-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            let descriptors = { store: { value: Store } };
+            descriptors = {};
+            Object.defineProperties(this, descriptors);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-define-properties-alias-rebound-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-nested-this-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            const fields = { store: Store };
+            function install(this: object) {
+              Object.assign(this, fields);
+            }
+            void install;
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-nested-this-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-deferred-arrow-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            const fields = { store: Store };
+            const install = () => Object.assign(this, fields);
+            void install;
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-deferred-arrow-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), []);
+    }
+  );
+});
+
 test('keeps constructed instances instance-only while preserving their public instance type', () => {
   withFeatureFixture(
     {
