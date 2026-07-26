@@ -31,7 +31,7 @@ describe('runProviderPrepareDiagnostics', () => {
     );
 
     const result = await runProviderPrepareDiagnostics({
-      cwd: '/tmp/test-project',
+      cwd: '/workspace/test-project',
       providerId: 'opencode',
       selectedModelIds: [modelId],
       prepareProvisioning,
@@ -117,7 +117,7 @@ describe('runProviderPrepareDiagnostics', () => {
   it('surfaces an experimental override only for an explicitly overrideable model failure', async () => {
     const modelId = 'ollama/qwen3:4b';
     const result = await runProviderPrepareDiagnostics({
-      cwd: '/tmp/test-project',
+      cwd: '/workspace/test-project',
       providerId: 'opencode',
       selectedModelIds: [modelId],
       prepareProvisioning: async (

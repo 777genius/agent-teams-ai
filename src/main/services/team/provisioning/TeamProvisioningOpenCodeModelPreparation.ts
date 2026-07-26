@@ -641,7 +641,11 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
     }
 
     const requestedProviderId = extractOpenCodeCatalogProviderId(modelId);
-    if (requestedProviderId && !availableProviderIds.has(requestedProviderId)) {
+    if (
+      requestedProviderId &&
+      requestedProviderId !== 'openrouter' &&
+      !availableProviderIds.has(requestedProviderId)
+    ) {
       // A provider missing from the general OpenCode catalog is not proof that a
       // provider-scoped route is invalid. App-managed custom local providers can
       // be absent from this catalog while remaining executable. Defer the route
