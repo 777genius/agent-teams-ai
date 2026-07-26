@@ -9,6 +9,7 @@ import {
   NodeToolApprovalFileReader,
   TOOL_APPROVAL_MAX_FILE_SIZE,
 } from './NodeToolApprovalFileReader';
+import { WindowsToolApprovalFileReader } from './WindowsToolApprovalFileReader';
 
 describe('NodeToolApprovalFileReader', () => {
   const reader = new NodeToolApprovalFileReader();
@@ -205,55 +206,93 @@ describe('NodeToolApprovalFileReader', () => {
     });
   });
 
-  it('reads regular files through the identity-checked Windows fallback', async () => {
+  it('delegates Windows reads to the native handle reader', async () => {
+    const windowsReader = {
+      read: vi.fn(async () => ({
+        content: 'approved Windows content',
+        exists: true,
+        truncated: false,
+        isBinary: false,
+      })),
+    };
+    const windowsAwareReader = new NodeToolApprovalFileReader(windowsReader);
     vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
     const textPath = path.join(tempDirectory, 'windows-preview.txt');
-    await writeFile(textPath, 'approved Windows content');
 
-    await expect(reader.read(textPath)).resolves.toEqual({
+    await expect(windowsAwareReader.read(textPath)).resolves.toEqual({
       content: 'approved Windows content',
       exists: true,
       truncated: false,
       isBinary: false,
     });
+    expect(windowsReader.read).toHaveBeenCalledWith(path.resolve(textPath));
   });
 
-  it('rejects parent reparse points through the Windows fallback', async () => {
-    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
-    const outsideDirectory = path.join(tempDirectory, 'windows-outside');
-    const linkedDirectory = path.join(tempDirectory, 'windows-linked');
-    await mkdir(outsideDirectory);
-    await writeFile(path.join(outsideDirectory, 'secret.txt'), 'unapproved secret');
-    await symlink(outsideDirectory, linkedDirectory);
+  it('decodes bounded content returned by the Windows handle helper', async () => {
+    const windowsReader = new WindowsToolApprovalFileReader({
+      read: vi.fn(async () => ({
+        exists: true,
+        contentBase64: Buffer.from('approved content').toString('base64'),
+        truncated: true,
+      })),
+    });
 
-    await expect(reader.read(path.join(linkedDirectory, 'secret.txt'))).resolves.toMatchObject({
+    await expect(windowsReader.read('C:\\approved\\preview.txt')).resolves.toEqual({
+      content: 'approved content',
+      exists: true,
+      truncated: true,
+      isBinary: false,
+    });
+  });
+
+  it('contains Windows helper failures in the stable preview response', async () => {
+    const windowsReader = new WindowsToolApprovalFileReader({
+      read: vi.fn(async () => ({
+        exists: true,
+        error: 'Safe approval preview rejected a Windows reparse-point path',
+      })),
+    });
+
+    await expect(windowsReader.read('C:\\linked\\secret.txt')).resolves.toMatchObject({
       content: '',
       exists: true,
       error: expect.stringContaining('reparse-point path'),
     });
   });
 
-  it('rejects a Windows path whose opened file identity no longer matches', async () => {
-    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
-    const filePath = path.join(tempDirectory, 'windows-race.txt');
-    await writeFile(filePath, 'approved content');
-    const originalStat = fs.stat.bind(fs);
-    vi.spyOn(fs, 'lstat').mockImplementation(async (candidate, options) => {
-      const stats = await originalStat(candidate, options as never);
-      if (String(candidate) === filePath) {
-        return Object.assign(Object.create(Object.getPrototypeOf(stats)), stats, {
-          ino: Number(stats.ino) + 1,
-        }) as Stats;
-      }
-      return stats;
-    });
+  it.runIf(process.platform === 'win32')(
+    'reads regular files through the native Windows handle helper',
+    async () => {
+      const textPath = path.join(tempDirectory, 'windows-preview.txt');
+      await writeFile(textPath, 'approved Windows content');
 
-    await expect(reader.read(filePath)).resolves.toMatchObject({
-      content: '',
-      exists: true,
-      error: 'Safe approval preview path changed while it was being opened',
-    });
-  });
+      await expect(new WindowsToolApprovalFileReader().read(textPath)).resolves.toEqual({
+        content: 'approved Windows content',
+        exists: true,
+        truncated: false,
+        isBinary: false,
+      });
+    }
+  );
+
+  it.runIf(process.platform === 'win32')(
+    'rejects parent junctions through no-follow Windows handles',
+    async () => {
+      const outsideDirectory = path.join(tempDirectory, 'windows-outside');
+      const linkedDirectory = path.join(tempDirectory, 'windows-linked');
+      await mkdir(outsideDirectory);
+      await writeFile(path.join(outsideDirectory, 'secret.txt'), 'unapproved secret');
+      await symlink(outsideDirectory, linkedDirectory, 'junction');
+
+      await expect(
+        new WindowsToolApprovalFileReader().read(path.join(linkedDirectory, 'secret.txt'))
+      ).resolves.toMatchObject({
+        content: '',
+        exists: true,
+        error: expect.stringMatching(/redirected Windows path|reparse-point path/),
+      });
+    }
+  );
 
   it('reports masked procfs traversal as an error instead of a missing target', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('linux');

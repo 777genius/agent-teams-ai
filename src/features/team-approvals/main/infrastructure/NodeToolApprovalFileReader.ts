@@ -1,13 +1,17 @@
 import { constants, promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import {
+  createToolApprovalFileContent,
+  TOOL_APPROVAL_MAX_FILE_SIZE,
+} from './ToolApprovalFileContent';
+import { WindowsToolApprovalFileReader } from './WindowsToolApprovalFileReader';
+
 import type { ToolApprovalFileReaderPort } from '../../core/application/ports/TeamApprovalsPorts';
 import type { ToolApprovalFileContent } from '@shared/types';
 import type { FileHandle } from 'node:fs/promises';
 
-/** Maximum payload read for an approval diff preview (2 MiB). */
-export const TOOL_APPROVAL_MAX_FILE_SIZE = 2 * 1024 * 1024;
-const TOOL_APPROVAL_BINARY_SCAN_SIZE = 8 * 1024;
+export { TOOL_APPROVAL_MAX_FILE_SIZE } from './ToolApprovalFileContent';
 /** Darwin kernel flag that rejects symlinks in every path component. */
 const DARWIN_O_NOFOLLOW_ANY = 0x20000000;
 /** Linux O_PATH opens a traversal handle without requiring directory read access. */
@@ -89,50 +93,23 @@ async function openLinuxSymlinkSafePath(filePath: string): Promise<FileHandle> {
   }
 }
 
-async function openWindowsSymlinkSafePath(filePath: string): Promise<FileHandle> {
-  const file = await fs.open(filePath, constants.O_RDONLY);
-  try {
-    const parsedPath = path.parse(filePath);
-    const segments = filePath.slice(parsedPath.root.length).split(path.sep).filter(Boolean);
-    let currentPath = parsedPath.root;
-    let pathStats = await fs.lstat(currentPath);
-
-    for (const segment of segments) {
-      currentPath = path.join(currentPath, segment);
-      pathStats = await fs.lstat(currentPath);
-      if (pathStats.isSymbolicLink()) {
-        throw new Error(`Safe approval preview rejected a reparse-point path: ${currentPath}`);
-      }
-    }
-
-    const openedStats = await file.stat();
-    if (
-      openedStats.dev !== pathStats.dev ||
-      openedStats.ino === 0 ||
-      openedStats.ino !== pathStats.ino
-    ) {
-      throw new Error('Safe approval preview path changed while it was being opened');
-    }
-    return file;
-  } catch (error) {
-    await file.close().catch(() => undefined);
-    throw error;
-  }
-}
-
 function openSymlinkSafePath(filePath: string): Promise<FileHandle> {
   if (process.platform === 'darwin') {
     return fs.open(filePath, constants.O_RDONLY | DARWIN_O_NOFOLLOW_ANY);
   }
   if (process.platform === 'linux') return openLinuxSymlinkSafePath(filePath);
-  if (process.platform === 'win32') return openWindowsSymlinkSafePath(filePath);
   throw new Error(`Safe approval preview reads are unavailable on ${process.platform}`);
 }
 
 export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
+  constructor(
+    private readonly windowsReader: ToolApprovalFileReaderPort = new WindowsToolApprovalFileReader()
+  ) {}
+
   async read(filePath: string): Promise<ToolApprovalFileContent> {
     try {
       const resolvedPath = path.resolve(filePath);
+      if (process.platform === 'win32') return this.windowsReader.read(resolvedPath);
       let file: FileHandle;
       try {
         file = await openSymlinkSafePath(resolvedPath);
@@ -162,19 +139,7 @@ export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
         const finalStats = await file.stat();
         const truncated = finalStats.size > bytesRead;
 
-        const binaryScanSize = Math.min(contentBuffer.length, TOOL_APPROVAL_BINARY_SCAN_SIZE);
-        for (let index = 0; index < binaryScanSize; index++) {
-          if (contentBuffer[index] === 0) {
-            return { content: '', exists: true, truncated, isBinary: true };
-          }
-        }
-
-        return {
-          content: contentBuffer.toString('utf8'),
-          exists: true,
-          truncated,
-          isBinary: false,
-        };
+        return createToolApprovalFileContent(contentBuffer, truncated);
       } finally {
         await file.close();
       }
