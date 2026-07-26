@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -43,6 +43,19 @@ describe.runIf(process.platform === 'win32')('WindowsToolApprovalFileReader', ()
       content: '',
       exists: true,
       error: expect.stringMatching(/redirected Windows path|reparse-point path/),
+    });
+  });
+
+  it('rejects hard-linked files using the opened native handle', async () => {
+    const secretPath = path.join(tempDirectory, 'windows-secret.txt');
+    const approvedPath = path.join(tempDirectory, 'windows-approved.txt');
+    await writeFile(secretPath, 'sensitive Windows content');
+    await link(secretPath, approvedPath);
+
+    await expect(reader.read(approvedPath)).resolves.toMatchObject({
+      content: '',
+      exists: true,
+      error: expect.stringContaining('Hard-linked files are not allowed'),
     });
   });
 

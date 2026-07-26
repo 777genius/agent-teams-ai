@@ -66,6 +66,23 @@ namespace AgentTeams.SafePreview {
       public uint ReparseTag;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ByHandleFileInformation {
+      public uint FileAttributes;
+      public uint CreationTimeLow;
+      public uint CreationTimeHigh;
+      public uint LastAccessTimeLow;
+      public uint LastAccessTimeHigh;
+      public uint LastWriteTimeLow;
+      public uint LastWriteTimeHigh;
+      public uint VolumeSerialNumber;
+      public uint FileSizeHigh;
+      public uint FileSizeLow;
+      public uint NumberOfLinks;
+      public uint FileIndexHigh;
+      public uint FileIndexLow;
+    }
+
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern SafeFileHandle CreateFileW(
       string fileName,
@@ -83,6 +100,12 @@ namespace AgentTeams.SafePreview {
       FileInfoByHandleClass fileInformationClass,
       out FileAttributeTagInfo fileInformation,
       uint bufferSize
+    );
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetFileInformationByHandle(
+      SafeFileHandle file,
+      out ByHandleFileInformation fileInformation
     );
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -122,6 +145,11 @@ namespace AgentTeams.SafePreview {
             Content = new byte[0],
             Error = "Not a file"
           };
+        }
+        if (GetLinkCount(file) > 1) {
+          throw new InvalidOperationException(
+            "Hard-linked files are not allowed in approval preview paths"
+          );
         }
 
         string comparisonRequestedPath = NormalizeKernelPath(normalizedPath);
@@ -190,6 +218,14 @@ namespace AgentTeams.SafePreview {
         throw new Win32Exception(Marshal.GetLastWin32Error());
       }
       return info;
+    }
+
+    private static uint GetLinkCount(SafeFileHandle file) {
+      ByHandleFileInformation info;
+      if (!GetFileInformationByHandle(file, out info)) {
+        throw new Win32Exception(Marshal.GetLastWin32Error());
+      }
+      return info.NumberOfLinks;
     }
 
     private static string GetOpenedPath(SafeFileHandle file) {

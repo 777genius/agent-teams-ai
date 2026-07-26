@@ -1,7 +1,19 @@
-import { promises as fs, type Stats } from 'node:fs';
-import { chmod, mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { constants, promises as fs, type Stats } from 'node:fs';
+import {
+  chmod,
+  link,
+  mkdir,
+  mkdtemp,
+  realpath,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -205,6 +217,52 @@ describe('NodeToolApprovalFileReader', () => {
       error: expect.any(String),
     });
   });
+
+  it.runIf(process.platform !== 'win32')(
+    'rejects hard-linked files using the opened handle identity',
+    async () => {
+      const secretPath = path.join(tempDirectory, 'secret.txt');
+      const approvedPath = path.join(tempDirectory, 'approved.txt');
+      await writeFile(secretPath, 'sensitive content');
+      await link(secretPath, approvedPath);
+
+      await expect(reader.read(approvedPath)).resolves.toMatchObject({
+        content: '',
+        exists: true,
+        error: expect.stringContaining('Hard-linked files are not allowed'),
+      });
+    }
+  );
+
+  it.runIf(process.platform !== 'win32')(
+    'rejects a FIFO without waiting for a writer',
+    async () => {
+      const fifoPath = path.join(tempDirectory, 'preview.pipe');
+      await promisify(execFile)('mkfifo', [fifoPath]);
+      let fallbackWriterWasNeeded = false;
+      let fallbackWriter = Promise.resolve();
+      const fallbackTimer = setTimeout(() => {
+        fallbackWriterWasNeeded = true;
+        fallbackWriter = fs
+          .open(fifoPath, constants.O_WRONLY | constants.O_NONBLOCK)
+          .then((handle) => handle.close());
+      }, 500);
+
+      try {
+        await expect(reader.read(fifoPath)).resolves.toEqual({
+          content: '',
+          exists: true,
+          truncated: false,
+          isBinary: false,
+          error: 'Not a file',
+        });
+      } finally {
+        clearTimeout(fallbackTimer);
+        await fallbackWriter;
+      }
+      expect(fallbackWriterWasNeeded).toBe(false);
+    }
+  );
 
   it('delegates Windows reads to the native handle reader', async () => {
     const windowsReader = {

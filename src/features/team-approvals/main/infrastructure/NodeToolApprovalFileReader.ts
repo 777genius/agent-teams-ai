@@ -66,7 +66,7 @@ async function openLinuxDescriptorChild(
 async function openLinuxSymlinkSafePath(filePath: string): Promise<FileHandle> {
   const parsedPath = path.parse(filePath);
   const segments = filePath.slice(parsedPath.root.length).split(path.sep).filter(Boolean);
-  const fileFlags = constants.O_RDONLY | constants.O_NOFOLLOW;
+  const fileFlags = constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
   if (segments.length === 0) return fs.open(parsedPath.root, fileFlags);
 
   let directory = await fs.open(parsedPath.root, LINUX_DIRECTORY_FLAGS);
@@ -95,7 +95,7 @@ async function openLinuxSymlinkSafePath(filePath: string): Promise<FileHandle> {
 
 function openSymlinkSafePath(filePath: string): Promise<FileHandle> {
   if (process.platform === 'darwin') {
-    return fs.open(filePath, constants.O_RDONLY | DARWIN_O_NOFOLLOW_ANY);
+    return fs.open(filePath, constants.O_RDONLY | constants.O_NONBLOCK | DARWIN_O_NOFOLLOW_ANY);
   }
   if (process.platform === 'linux') return openLinuxSymlinkSafePath(filePath);
   throw new Error(`Safe approval preview reads are unavailable on ${process.platform}`);
@@ -130,6 +130,9 @@ export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
             isBinary: false,
             error: 'Not a file',
           };
+        }
+        if (openedStats.nlink > 1) {
+          throw new Error('Hard-linked files are not allowed in approval preview paths');
         }
 
         const readSize = Math.min(openedStats.size, TOOL_APPROVAL_MAX_FILE_SIZE);
