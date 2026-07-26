@@ -150,6 +150,16 @@ function nearestClassBoundary(reference) {
   return null;
 }
 
+function nearestFunctionDeclaration(reference) {
+  let current = reference.parent;
+  while (current) {
+    if (ts.isFunctionDeclaration(current)) return current;
+    if (ts.isClassLike(current)) return null;
+    current = current.parent;
+  }
+  return null;
+}
+
 function isPublicMember(member) {
   return (
     (!('name' in member) || !member.name || !ts.isPrivateIdentifier(member.name)) &&
@@ -244,6 +254,9 @@ export function analyzePublicClassSurfaces({
   sourceFile,
 }) {
   const eventsByName = collectClassBindingEvents(sourceFile);
+  const publicFunctionConstructorNames = new Set(
+    constructorExports.map(({ localName }) => localName)
+  );
   const surfaces = new Map();
   const candidates = new Set();
   const addSurface = (boundary, surface) => {
@@ -291,14 +304,22 @@ export function analyzePublicClassSurfaces({
   return {
     classifyReference: (reference) => {
       const boundary = nearestClassBoundary(reference);
-      if (!boundary) return undefined;
-      const surface = surfaces.get(boundary);
-      if (surface) {
-        return {
-          selection: publicClassSelection(reference, boundary, surface),
-        };
+      if (boundary) {
+        const surface = surfaces.get(boundary);
+        if (surface) {
+          return {
+            selection: publicClassSelection(reference, boundary, surface),
+          };
+        }
+        return staleBoundaries.has(boundary) ? { selection: null } : undefined;
       }
-      return staleBoundaries.has(boundary) ? { selection: null } : undefined;
+      const functionBoundary = nearestFunctionDeclaration(reference);
+      return functionBoundary?.name &&
+        publicFunctionConstructorNames.has(functionBoundary.name.text)
+        ? {
+            selection: publicConstructorSelection(reference, functionBoundary),
+          }
+        : undefined;
     },
   };
 }

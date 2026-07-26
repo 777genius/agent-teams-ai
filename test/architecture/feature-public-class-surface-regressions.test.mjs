@@ -249,3 +249,24 @@ test('uses the final class binding and remains conservative for conditional rebi
     }
   );
 });
+
+test('preserves public assignments from function constructors', () => {
+  withFeatureFixture(
+    {
+      'src/features/function-constructor/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        function Api() {
+          this.Store = Store;
+        }
+        export const api = new Api();
+      `,
+      'src/features/function-constructor/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/function-constructor/main/index.ts',
+      ]);
+    }
+  );
+});
