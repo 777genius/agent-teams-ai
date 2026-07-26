@@ -307,13 +307,13 @@ describe('useRuntimeProviderOnboarding', () => {
       result: {
         providerId: input.providerId,
         modelId: input.modelId,
-        ok: input.modelId === 'github-copilot/gpt-5-mini',
+        ok: input.modelId === 'github-copilot/claude-sonnet-4.6',
         availability:
-          input.modelId === 'github-copilot/gpt-5-mini'
+          input.modelId === 'github-copilot/claude-sonnet-4.6'
             ? ('available' as const)
             : ('unavailable' as const),
         message:
-          input.modelId === 'github-copilot/gpt-5-mini'
+          input.modelId === 'github-copilot/claude-sonnet-4.6'
             ? 'Model probe passed'
             : 'The requested model is not supported',
         diagnostics: [],
@@ -334,8 +334,9 @@ describe('useRuntimeProviderOnboarding', () => {
 
     expect(testModel.mock.calls.map(([input]) => input.modelId)).toEqual([
       'github-copilot/gpt-5-mini',
+      'github-copilot/claude-sonnet-4.6',
     ]);
-    expect(currentState?.verifiedModelId).toBe('github-copilot/gpt-5-mini');
+    expect(currentState?.verifiedModelId).toBe('github-copilot/claude-sonnet-4.6');
     expect(currentState?.stage).toBe('choose-model');
   });
 

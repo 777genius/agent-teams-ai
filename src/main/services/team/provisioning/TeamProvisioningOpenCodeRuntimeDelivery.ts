@@ -1,11 +1,9 @@
 import { resolveCrossTeamRecipientIdentity } from '../CrossTeamRecipientIdentity';
 import {
-  createOpenCodePromptDeliveryLedgerStore,
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
 } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import { buildOpenCodePromptDeliveryActiveBusyStatus } from '../opencode/delivery/OpenCodePromptDeliveryWatchdog';
-import { toOpenCodeRuntimeDeliveryStatus } from '../opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import {
   createOpenCodeRuntimeDeliveryPorts as createOpenCodeRuntimeDeliveryDestinationPorts,
   type OpenCodeRuntimeDeliveryCrossTeamSender,
@@ -20,17 +18,24 @@ import {
   RuntimeDeliveryDestinationRegistry,
   RuntimeDeliveryReconciler,
   RuntimeDeliveryService,
+  RuntimeDeliveryStaleIdentityError,
   type RuntimeDeliveryTeamChangeEvent,
 } from '../opencode/delivery/RuntimeDeliveryService';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
+  getOpenCodeRuntimeLaneLifecycleLockTargetPath,
   type OpenCodeRuntimeLaneIndexEntry,
   readOpenCodeRuntimeLaneIndex,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { RuntimeStaleEvidenceError } from '../opencode/store/RuntimeRunTombstoneStore';
 import { type TeamInboxReader } from '../TeamInboxReader';
 import { type TeamInboxWriter } from '../TeamInboxWriter';
 import { type TeamSentMessagesStore } from '../TeamSentMessagesStore';
 
+import {
+  createOpenCodePromptDeliveryLedger,
+  getOpenCodeRuntimeDeliveryStatus,
+} from './OpenCodePromptDeliveryQueries';
 import {
   hasStableInboxMessageId,
   isCurrentProofMissingRecoveryForegroundMessage,
@@ -38,6 +43,7 @@ import {
 } from './TeamProvisioningInboxRelayPolicy';
 import {
   assertOpenCodeRuntimeEvidenceAccepted,
+  assertOpenCodeRuntimeMemberSessionAccepted,
   createOpenCodeRuntimeCheckinPorts,
   type OpenCodeRuntimeCheckinPortCallbacks,
   type OpenCodeRuntimeCheckinPorts,
@@ -52,6 +58,19 @@ import {
   requireRuntimeString,
 } from './TeamProvisioningRuntimeMetadata';
 
+import type { toOpenCodeRuntimeDeliveryStatus } from '../opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
+import type { OpenCodeRuntimeDeliveryStorePaths } from './OpenCodePromptDeliveryQueries';
+
+export type {
+  OpenCodePromptDeliveryLedgerPorts,
+  OpenCodeRuntimeDeliveryStatusPorts,
+  OpenCodeRuntimeDeliveryStorePaths,
+} from './OpenCodePromptDeliveryQueries';
+export {
+  createOpenCodePromptDeliveryLedger,
+  getOpenCodeRuntimeDeliveryStatus,
+} from './OpenCodePromptDeliveryQueries';
+
 import type { OpenCodeRuntimeControlPort } from '../runtime-control';
 import type {
   InboxMessage,
@@ -64,22 +83,16 @@ import type {
 } from '@shared/types';
 
 type RuntimeDeliveryLogger = Pick<Console, 'warn'>;
-
-export interface OpenCodeRuntimeDeliveryStorePaths {
-  teamsBasePath: string;
-}
-
 export interface OpenCodeRuntimeDeliveryServicePorts extends OpenCodeRuntimeDeliveryStorePaths {
+  withTeamLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   resolveCurrentOpenCodeRuntimeRunId(teamName: string, laneId: string): Promise<string | null>;
+  readLaunchState?(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
   readConfigForStrictDecision?(teamName: string): Promise<TeamConfig | null>;
   readMetaMembers?(teamName: string): Promise<readonly TeamMember[]>;
   createOpenCodeRuntimeDeliveryPorts(): RuntimeDeliveryDestinationPort[];
   emitTeamChange(event: RuntimeDeliveryTeamChangeEvent): void;
   logger: RuntimeDeliveryLogger;
 }
-
-export type OpenCodePromptDeliveryLedgerPorts = OpenCodeRuntimeDeliveryStorePaths;
-
 export type OpenCodeDeliveryIdentityResolution =
   | {
       ok: true;
@@ -90,20 +103,6 @@ export type OpenCodeDeliveryIdentityResolution =
       ok: false;
       reason: 'recipient_is_not_opencode' | 'recipient_removed' | 'opencode_recipient_unavailable';
     };
-
-export interface OpenCodeRuntimeDeliveryStatusPorts extends OpenCodeRuntimeDeliveryStorePaths {
-  createOpenCodePromptDeliveryLedger(
-    teamName: string,
-    laneId: string
-  ): OpenCodePromptDeliveryLedgerStore;
-  decideOpenCodeRuntimeDeliveryUserFacingAdvisory(
-    record: OpenCodePromptDeliveryLedgerRecord
-  ): Promise<{
-    record: OpenCodePromptDeliveryLedgerRecord;
-    decision: Parameters<typeof toOpenCodeRuntimeDeliveryStatus>[0]['decision'];
-  }>;
-}
-
 export interface OpenCodeActivePromptDeliveryRecordPorts extends OpenCodeRuntimeDeliveryStorePaths {
   resolveOpenCodeMemberDeliveryIdentity(
     teamName: string,
@@ -119,7 +118,6 @@ export interface OpenCodeActivePromptDeliveryRecordPorts extends OpenCodeRuntime
     laneId: string
   ): OpenCodePromptDeliveryLedgerStore;
 }
-
 export interface OpenCodeMemberDeliveryBusyStatus {
   busy: boolean;
   reason?: string;
@@ -127,7 +125,6 @@ export interface OpenCodeMemberDeliveryBusyStatus {
   activeMessageId?: string;
   activeMessageKind?: string | null;
 }
-
 export interface OpenCodeMemberDeliveryBusyStatusPorts extends OpenCodeRuntimeDeliveryStorePaths {
   isOpenCodeRuntimeRecipient(teamName: string, memberName: string): Promise<boolean>;
   inboxReader: Pick<TeamInboxReader, 'getMessagesFor'>;
@@ -166,14 +163,12 @@ export interface OpenCodeMemberDeliveryBusyStatusPorts extends OpenCodeRuntimeDe
     laneId: string
   ): OpenCodePromptDeliveryLedgerStore;
 }
-
 export interface OpenCodeRuntimeDeliveryPortsDependencies {
   sentMessagesStore: Pick<TeamSentMessagesStore, 'appendMessage' | 'readMessages'>;
   inboxReader: Pick<TeamInboxReader, 'getMessagesFor'>;
   inboxWriter: Pick<TeamInboxWriter, 'sendMessage'>;
   getCrossTeamSender: () => OpenCodeRuntimeDeliveryCrossTeamSender | null;
 }
-
 export interface OpenCodeRuntimeDeliveryJournalRecoveryPorts extends OpenCodeRuntimeDeliveryStorePaths {
   createOpenCodeRuntimeDeliveryPorts(): RuntimeDeliveryDestinationPort[];
   readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null>;
@@ -182,7 +177,6 @@ export interface OpenCodeRuntimeDeliveryJournalRecoveryPorts extends OpenCodeRun
   nowIso(): string;
   logger: RuntimeDeliveryLogger;
 }
-
 export type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts<
   Run extends OpenCodeRuntimeCheckinRun,
 > = Omit<OpenCodeRuntimeCheckinPortCallbacks<Run>, 'teamsBasePath'> &
@@ -228,7 +222,6 @@ export type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts<
     ): Promise<PersistedTeamLaunchSnapshot | null>;
     nowIso(): string;
   };
-
 export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<
   Run extends OpenCodeRuntimeCheckinRun,
 >(
@@ -282,8 +275,11 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<
   const createDeliveryService = (teamName: string, laneId: string): RuntimeDeliveryService =>
     createOpenCodeRuntimeDeliveryService(teamName, laneId, {
       teamsBasePath: ports.getTeamsBasePath(),
+      withTeamLock: (candidateTeamName, operation) =>
+        ports.withTeamLock(candidateTeamName, operation),
       resolveCurrentOpenCodeRuntimeRunId: (candidateTeamName, candidateLaneId) =>
         ports.resolveCurrentOpenCodeRuntimeRunId(candidateTeamName, candidateLaneId),
+      readLaunchState: (candidateTeamName) => ports.readLaunchState(candidateTeamName),
       readConfigForStrictDecision: (candidateTeamName) =>
         ports.readConfigForStrictDecision(candidateTeamName),
       readMetaMembers: (candidateTeamName) => ports.readMetaMembers(candidateTeamName),
@@ -436,7 +432,7 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<
         readMetaMembers: (candidateTeamName) => ports.readMetaMembers(candidateTeamName),
         readLaunchState: (candidateTeamName) =>
           ports.readLaunchStateForDeliveryRecovery(candidateTeamName),
-        nowIso: ports.nowIso,
+        nowIso: () => ports.nowIso(),
         logger: ports.logger,
       }),
   };
@@ -447,16 +443,16 @@ export function createOpenCodeRuntimeDeliveryService(
   laneId: string,
   ports: OpenCodeRuntimeDeliveryServicePorts
 ): RuntimeDeliveryService {
-  const readConfigForStrictDecision = ports.readConfigForStrictDecision;
-  const readMetaMembers = ports.readMetaMembers;
-  const journal = createRuntimeDeliveryJournalStore({
-    filePath: getOpenCodeLaneScopedRuntimeFilePath({
-      teamsBasePath: ports.teamsBasePath,
-      teamName,
-      laneId,
-      fileName: 'opencode-delivery-journal.json',
-    }),
-  });
+  const readConfigForStrictDecision = ports.readConfigForStrictDecision
+    ? (candidateTeamName: string) => ports.readConfigForStrictDecision!(candidateTeamName)
+    : undefined;
+  const readMetaMembers = ports.readMetaMembers
+    ? (candidateTeamName: string) => ports.readMetaMembers!(candidateTeamName)
+    : undefined;
+  const readLaunchState = ports.readLaunchState
+    ? (candidateTeamName: string) => ports.readLaunchState!(candidateTeamName)
+    : undefined;
+  const journal = createLockedRuntimeDeliveryJournal(ports.teamsBasePath, teamName, laneId);
   return new RuntimeDeliveryService(
     {
       getCurrentRunId: async (candidateTeamName) =>
@@ -485,7 +481,39 @@ export function createOpenCodeRuntimeDeliveryService(
                 })
             ),
         }
-      : undefined
+      : undefined,
+    readLaunchState && readConfigForStrictDecision && readMetaMembers
+      ? {
+          assertCurrent: async (envelope) => {
+            try {
+              await assertOpenCodeRuntimeMemberSessionAccepted(
+                {
+                  teamName: envelope.teamName,
+                  runId: envelope.runId,
+                  laneId,
+                  memberName: envelope.fromMemberName,
+                  runtimeSessionId: envelope.runtimeSessionId,
+                  evidenceKind: 'delivery_call',
+                },
+                {
+                  readLaunchState,
+                  readConfigForStrictDecision,
+                  readMetaMembers,
+                }
+              );
+            } catch (error) {
+              if (error instanceof RuntimeStaleEvidenceError) {
+                throw new RuntimeDeliveryStaleIdentityError(error.message);
+              }
+              throw error;
+            }
+          },
+        }
+      : undefined,
+    {
+      runExclusive: (candidateTeamName, operation) =>
+        ports.withTeamLock(candidateTeamName, operation),
+    }
   );
 }
 
@@ -697,94 +725,6 @@ function canonicalizeRuntimeDeliveryJournalLocation(
     : { ...location, toMemberName: canonicalMemberName };
 }
 
-export function createOpenCodePromptDeliveryLedger(
-  teamName: string,
-  laneId: string,
-  ports: OpenCodePromptDeliveryLedgerPorts
-): OpenCodePromptDeliveryLedgerStore {
-  return createOpenCodePromptDeliveryLedgerStore({
-    filePath: getOpenCodeLaneScopedRuntimeFilePath({
-      teamsBasePath: ports.teamsBasePath,
-      teamName,
-      laneId,
-      fileName: 'opencode-prompt-delivery-ledger.json',
-    }),
-  });
-}
-
-export async function getOpenCodeRuntimeDeliveryStatus(
-  teamName: string,
-  messageId: string,
-  ports: OpenCodeRuntimeDeliveryStatusPorts
-): Promise<OpenCodeRuntimeDeliveryStatus | null> {
-  const normalizedMessageId = messageId.trim();
-  if (!normalizedMessageId) {
-    return null;
-  }
-  const laneIndex = await readOpenCodeRuntimeLaneIndex(ports.teamsBasePath, teamName).catch(
-    () => null
-  );
-  const laneIds = [
-    ...new Set(
-      Object.values(laneIndex?.lanes ?? {})
-        .map((entry) => entry.laneId.trim())
-        .filter(Boolean)
-    ),
-  ];
-  let recordForStatus: OpenCodePromptDeliveryLedgerRecord | null = null;
-  for (const laneId of laneIds) {
-    const records = await ports
-      .createOpenCodePromptDeliveryLedger(teamName, laneId)
-      .list()
-      .catch(() => []);
-    for (const record of records) {
-      if (
-        record.inboxMessageId === normalizedMessageId &&
-        (!recordForStatus || isOpenCodePromptDeliveryRecordNewer(record, recordForStatus))
-      ) {
-        recordForStatus = record;
-      }
-    }
-  }
-  if (!recordForStatus) {
-    return null;
-  }
-  const { record: latestRecord, decision } =
-    await ports.decideOpenCodeRuntimeDeliveryUserFacingAdvisory(recordForStatus);
-  return toOpenCodeRuntimeDeliveryStatus({ record: latestRecord, decision });
-}
-
-function isOpenCodePromptDeliveryRecordNewer(
-  candidate: OpenCodePromptDeliveryLedgerRecord,
-  current: OpenCodePromptDeliveryLedgerRecord
-): boolean {
-  const candidateTimestamp = getOpenCodePromptDeliveryRecordEffectiveTimestamp(candidate);
-  const currentTimestamp = getOpenCodePromptDeliveryRecordEffectiveTimestamp(current);
-
-  if (candidateTimestamp === null) {
-    return false;
-  }
-  if (currentTimestamp === null) {
-    return true;
-  }
-
-  // Preserve the first record encountered when effective timestamps tie. This also keeps
-  // entirely invalid timestamp records deterministic in the lane/ledger traversal order.
-  return candidateTimestamp > currentTimestamp;
-}
-
-function getOpenCodePromptDeliveryRecordEffectiveTimestamp(
-  record: OpenCodePromptDeliveryLedgerRecord
-): number | null {
-  const updatedAt = Date.parse(record.updatedAt);
-  if (Number.isFinite(updatedAt)) {
-    return updatedAt;
-  }
-
-  const createdAt = Date.parse(record.createdAt);
-  return Number.isFinite(createdAt) ? createdAt : null;
-}
-
 export async function tryGetActiveOpenCodePromptDeliveryRecord(
   input: { teamName: string; memberName: string },
   ports: OpenCodeActivePromptDeliveryRecordPorts
@@ -990,6 +930,26 @@ export function createOpenCodeRuntimeDeliveryPorts(
   return createOpenCodeRuntimeDeliveryDestinationPorts(deps);
 }
 
+function createLockedRuntimeDeliveryJournal(
+  teamsBasePath: string,
+  teamName: string,
+  laneId: string
+) {
+  return createRuntimeDeliveryJournalStore({
+    filePath: getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath,
+      teamName,
+      laneId,
+      fileName: 'opencode-delivery-journal.json',
+    }),
+    accessLockTargetPath: getOpenCodeRuntimeLaneLifecycleLockTargetPath(
+      teamsBasePath,
+      teamName,
+      laneId
+    ),
+  });
+}
+
 export async function recoverOpenCodeRuntimeDeliveryJournal(
   teamName: string,
   ports: OpenCodeRuntimeDeliveryJournalRecoveryPorts
@@ -1008,14 +968,7 @@ export async function recoverOpenCodeRuntimeDeliveryJournal(
     launchSnapshot,
   });
   for (const laneId of recoveryLaneIds) {
-    const journal = createRuntimeDeliveryJournalStore({
-      filePath: getOpenCodeLaneScopedRuntimeFilePath({
-        teamsBasePath: ports.teamsBasePath,
-        teamName,
-        laneId,
-        fileName: 'opencode-delivery-journal.json',
-      }),
-    });
+    const journal = createLockedRuntimeDeliveryJournal(ports.teamsBasePath, teamName, laneId);
     const reconciler = new RuntimeDeliveryReconciler(
       journal,
       new RuntimeDeliveryDestinationRegistry(ports.createOpenCodeRuntimeDeliveryPorts()),

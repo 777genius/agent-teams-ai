@@ -124,6 +124,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
         configPath: '/Users/test/.config/opencode/opencode.json',
         scope: 'global',
         setAsDefault: true,
+        setAsSmallModel: true,
       },
     });
     mocks.testModel.mockResolvedValue({
@@ -226,8 +227,9 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     expect(host.textContent).toContain('~/.config/opencode/opencode.json');
     expect(host.textContent).toContain('We will update your global OpenCode config.');
     expect(host.textContent).toContain('Local model');
+    expect(host.textContent).toContain('This replaces the current global default model.');
     expect(host.textContent).toContain(
-      'This replaces the current global default and lightweight-task model.'
+      'OpenCode routes summaries and other small tasks (small_model) to this model.'
     );
 
     const configureButton = Array.from(host.querySelectorAll('button')).find((button) =>
@@ -258,6 +260,8 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       providerId: 'ollama',
       defaultModelId: 'qwen3:8b',
       setAsDefault: true,
+      setAsSmallModel: true,
+      allowPrivateNetwork: false,
     });
     expect(mocks.listLocalProviders).toHaveBeenCalledWith({
       runtimeId: 'opencode',
@@ -519,6 +523,9 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     expect(host.querySelector<HTMLInputElement>('#runtime-local-provider-url')?.value).toBe(
       'http://127.0.0.1:1234/v1'
     );
+    expect(host.querySelector<HTMLButtonElement>('#runtime-local-provider-preset')?.disabled).toBe(
+      true
+    );
     expect(
       host.querySelector('#runtime-local-provider-project-default')?.getAttribute('data-state')
     ).toBe('unchecked');
@@ -681,7 +688,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     expect(restoredOption?.getAttribute('aria-disabled')).toBe('false');
   });
 
-  it('adds a secondary provider without changing project defaults when requested', async () => {
+  it('can assign a secondary provider only to lightweight tasks', async () => {
     mocks.configureLocalProvider.mockResolvedValueOnce({
       schemaVersion: 1,
       runtimeId: 'opencode',
@@ -694,6 +701,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
         configPath: '/tmp/sandbox/opencode.json',
         scope: 'project',
         setAsDefault: false,
+        setAsSmallModel: true,
       },
     });
     const host = document.createElement('div');
@@ -725,9 +733,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       defaultCheckbox?.click();
       await Promise.resolve();
     });
-    expect(host.textContent).toContain(
-      'This provider will be added without changing the current project defaults.'
-    );
+    expect(host.textContent).toContain('The current project default model is kept unchanged.');
 
     const saveButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('Save & verify')
@@ -747,6 +753,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
         scope: 'project',
         projectPath: '/tmp/sandbox',
         setAsDefault: false,
+        setAsSmallModel: true,
       })
     );
   });

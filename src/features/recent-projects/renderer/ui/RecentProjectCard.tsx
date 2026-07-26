@@ -8,7 +8,7 @@ import { cn } from '@renderer/lib/utils';
 import { projectColor } from '@renderer/utils/projectColor';
 import { FolderGit2, FolderOpen, FolderX, GitBranch, Terminal } from 'lucide-react';
 
-import type { RecentProjectCardModel } from '../adapters/RecentProjectsSectionAdapter';
+import type { RecentProjectCardModel } from '../view-models/recentProjectsSectionViewModel';
 
 interface RecentProjectCardProps {
   card: RecentProjectCardModel;

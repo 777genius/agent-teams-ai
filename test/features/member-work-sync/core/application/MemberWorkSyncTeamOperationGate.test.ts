@@ -65,4 +65,31 @@ describe('MemberWorkSyncTeamOperationGate', () => {
     await expect(run).rejects.toBe(failure);
     await expect(gate.awaitTeamIdle('team-a')).resolves.toBeUndefined();
   });
+
+  it('drains settling side effects which outlive an admitted operation result', async () => {
+    const gate = new MemberWorkSyncTeamOperationGate();
+    const sideEffect = createDeferred<void>();
+    let sideEffectSettled = false;
+
+    await gate.run('team-a', (admission) => {
+      admission.trackSettling(
+        sideEffect.promise.then(() => {
+          sideEffectSettled = true;
+        })
+      );
+      return Promise.resolve('operation-result');
+    });
+    gate.beginTeamQuiesce('TEAM-A');
+
+    let drained = false;
+    const drain = gate.awaitTeamIdle(' team-a ').then(() => {
+      drained = true;
+    });
+    await Promise.resolve();
+    expect(drained).toBe(false);
+
+    sideEffect.resolve();
+    await drain;
+    expect(sideEffectSettled).toBe(true);
+  });
 });

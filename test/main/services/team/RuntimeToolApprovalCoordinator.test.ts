@@ -24,7 +24,9 @@ function settings(overrides: Partial<ToolApprovalSettings> = {}): ToolApprovalSe
   };
 }
 
-function approvalEntry(overrides: Partial<RuntimeToolApprovalEntry> = {}): RuntimeToolApprovalEntry {
+function approvalEntry(
+  overrides: Partial<RuntimeToolApprovalEntry> = {}
+): RuntimeToolApprovalEntry {
   const approval = overrides.approval ?? {
     requestId: 'opencode:run-1:perm-1',
     runId: 'run-1',
@@ -96,6 +98,19 @@ describe('RuntimeToolApprovalCoordinator', () => {
     expect(coordinator.size('team-a')).toBe(1);
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ requestId: 'opencode:run-1:perm-1' });
+  });
+
+  it('queries pending runtime approvals by member identity', () => {
+    coordinator.sync({ teamName: 'team-a', runId: 'run-1', laneId: 'primary' }, [approvalEntry()]);
+
+    expect(coordinator.hasPendingApprovalForMember('team-a', ' ALICE ')).toBe(true);
+    expect(coordinator.hasPendingApprovalForMember('team-a', 'bob')).toBe(false);
+    expect(coordinator.hasPendingApprovalForMember('team-b', 'alice')).toBe(false);
+    expect(coordinator.hasPendingApprovalForMember('team-a', '   ')).toBe(false);
+
+    coordinator.sync({ teamName: 'team-a', runId: 'run-1', laneId: 'primary' }, []);
+
+    expect(coordinator.hasPendingApprovalForMember('team-a', 'alice')).toBe(false);
   });
 
   it('auto-allows matching categories without emitting a manual prompt', async () => {

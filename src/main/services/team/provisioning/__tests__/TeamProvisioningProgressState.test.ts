@@ -34,9 +34,7 @@ function diagnostic(overrides: Partial<TeamLaunchDiagnosticItem> = {}): TeamLaun
   };
 }
 
-function progress(
-  overrides: Partial<TeamProvisioningProgress> = {}
-): TeamProvisioningProgress {
+function progress(overrides: Partial<TeamProvisioningProgress> = {}): TeamProvisioningProgress {
   return {
     runId: 'run-1',
     teamName: 'team',
@@ -116,7 +114,7 @@ describe('TeamProvisioningProgressState', () => {
   });
 
   describe('TeamProvisioningRetainedProgressState', () => {
-    it('clones retained progress arrays and preserves Unknown runId behavior', () => {
+    it('clones retained progress arrays and returns undefined for an unknown run', () => {
       const { state } = retainedState();
       const launchDiagnostics = [diagnostic()];
       const warnings = ['first warning'];
@@ -126,14 +124,31 @@ describe('TeamProvisioningProgressState', () => {
       warnings.push('mutated warning');
       launchDiagnostics.push(diagnostic({ id: 'diag-2' }));
 
-      const retained = state.getProvisioningStatus('run-1', new Map());
+      const retained = state.findProvisioningStatus('run-1', new Map());
+      expect(retained).toBeDefined();
+      if (!retained) throw new Error('Expected retained progress');
       expect(retained.warnings).toEqual(['first warning']);
       expect(retained.warnings).not.toBe(warnings);
       expect(retained.launchDiagnostics).toEqual([diagnostic()]);
       expect(retained.launchDiagnostics).not.toBe(launchDiagnostics);
-      expect(() => state.getProvisioningStatus('missing-run', new Map())).toThrow(
-        'Unknown runId'
-      );
+      expect(state.findProvisioningStatus('missing-run', new Map())).toBeUndefined();
+    });
+
+    it('resolves active, runtime-adapter, and retained progress in that order', () => {
+      const harness = retainedState();
+      const retained = progress({ message: 'retained' });
+      const runtimeAdapter = progress({ message: 'runtime-adapter' });
+      const active = progress({ message: 'active' });
+      const runs = new Map([['run-1', { progress: active }]]);
+
+      harness.state.retainProvisioningProgress('run-1', retained);
+      harness.runtimeAdapterProgressByRunId.set('run-1', runtimeAdapter);
+
+      expect(harness.state.findProvisioningStatus('run-1', runs)).toBe(active);
+      runs.delete('run-1');
+      expect(harness.state.findProvisioningStatus('run-1', runs)).toBe(runtimeAdapter);
+      harness.runtimeAdapterProgressByRunId.delete('run-1');
+      expect(harness.state.findProvisioningStatus('run-1', runs)?.message).toBe('retained');
     });
 
     it('unrefs retention timers and removes terminal runtime adapter traces when fired', () => {
@@ -144,7 +159,10 @@ describe('TeamProvisioningProgressState', () => {
         return timer;
       });
       const harness = retainedState({ setTimeout: setTimeoutPort, ttlMs: 25 });
-      harness.runtimeAdapterProgressByRunId.set('terminal-run', progress({ runId: 'terminal-run' }));
+      harness.runtimeAdapterProgressByRunId.set(
+        'terminal-run',
+        progress({ runId: 'terminal-run' })
+      );
       harness.runtimeAdapterTraceLinesByRunId.set('terminal-run', ['trace']);
       harness.runtimeAdapterTraceKeyByRunId.set('terminal-run', 'trace-key');
 
@@ -162,9 +180,7 @@ describe('TeamProvisioningProgressState', () => {
       expect(harness.runtimeAdapterProgressByRunId.has('terminal-run')).toBe(false);
       expect(harness.runtimeAdapterTraceLinesByRunId.has('terminal-run')).toBe(false);
       expect(harness.runtimeAdapterTraceKeyByRunId.has('terminal-run')).toBe(false);
-      expect(() => harness.state.getProvisioningStatus('terminal-run', new Map())).toThrow(
-        'Unknown runId'
-      );
+      expect(harness.state.findProvisioningStatus('terminal-run', new Map())).toBeUndefined();
     });
 
     it('keeps a reused live runtime adapter run after retained progress expires', () => {

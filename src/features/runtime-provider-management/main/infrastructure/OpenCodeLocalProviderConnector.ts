@@ -4,10 +4,7 @@ import * as path from 'node:path';
 
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import {
-  applyEdits,
   findNodeAtLocation,
-  type FormattingOptions,
-  modify,
   type Node as JsoncNode,
   type ParseError,
   parseTree,
@@ -15,13 +12,35 @@ import {
 
 import {
   buildRuntimeLocalProviderModelRoute,
+  isPrivateNetworkRuntimeLocalProviderUrl,
   normalizeRuntimeLocalProviderModelId,
   normalizeRuntimeLocalProviderTarget,
   RUNTIME_LOCAL_PROVIDER_PRESETS,
   RuntimeLocalProviderValidationError,
 } from '../../core/domain';
 
+import {
+  JsonLocalProviderPrivateNetworkApprovalStore,
+  type LocalProviderPrivateNetworkApprovalStore,
+} from './LocalProviderPrivateNetworkApprovalStore';
+import {
+  buildLocalServerModelMetadataRequest,
+  type LocalServerModelMetadata,
+} from './localServerRuntimeApi';
 import { buildOllamaNativeUrl, parseOllamaShowMetadata } from './ollamaRuntimeApi';
+import {
+  buildLocalProviderConfigureError,
+  buildLocalProviderProbeError,
+  createModelRecord,
+  hasDuplicateObjectProperties,
+  isPathInside,
+  type LocalModelConfigMetadata,
+  readObjectEntries,
+  readOpenAiModels,
+  readResponseTextWithLimit,
+  readStringNode,
+  setJsoncValue,
+} from './openCodeLocalProviderConnectorUtils';
 
 import type {
   RuntimeLocalProviderConfigureInput,
@@ -44,7 +63,6 @@ const SCAN_TIMEOUT_MS = 1_200;
 const PROBE_TIMEOUT_MS = 5_000;
 const MODEL_METADATA_TIMEOUT_MS = 3_000;
 const DEFAULT_LOCAL_MODEL_OUTPUT_TOKENS = 4_096;
-const MAX_MODELS = 500;
 const MAX_RESPONSE_BYTES = 1_048_576;
 const PROVIDER_ID_FILTER_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const CONFIG_CANDIDATES = [
@@ -54,16 +72,12 @@ const CONFIG_CANDIDATES = [
   '.opencode/opencode.jsonc',
 ] as const;
 const GLOBAL_CONFIG_FILENAMES = ['opencode.json', 'opencode.jsonc'] as const;
-const JSON_FORMATTING: FormattingOptions = {
-  insertSpaces: true,
-  tabSize: 2,
-  eol: '\n',
-};
 
 interface OpenCodeLocalProviderConnectorOptions {
   readonly fetchImpl?: typeof fetch;
   readonly homePath?: string;
   readonly now?: () => number;
+  readonly privateNetworkApprovalStore?: LocalProviderPrivateNetworkApprovalStore;
 }
 
 interface OpenCodeConfigTarget {
@@ -81,17 +95,6 @@ interface ModelProbeOutcome {
   readonly available: boolean;
 }
 
-interface LocalModelConfigMetadata {
-  readonly tool_call?: true;
-  readonly options?: {
-    readonly reasoningEffort: 'none';
-  };
-  readonly limit?: {
-    readonly context: number;
-    readonly output: number;
-  };
-}
-
 class LocalProviderOperationError extends Error {
   constructor(
     readonly code: RuntimeLocalProviderErrorCodeDto,
@@ -107,6 +110,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
   private readonly fetchImpl: typeof fetch;
   private readonly homePath: string;
   private readonly now: () => number;
+  private readonly privateNetworkApprovalStore: LocalProviderPrivateNetworkApprovalStore;
   // Serializes config read-modify-write so concurrent configureLocalProvider
   // calls cannot clobber each other (each reads the previous write's result
   // instead of a stale snapshot). Configure is a rare user action, so a single
@@ -117,6 +121,8 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch;
     this.homePath = path.resolve(options.homePath ?? os.homedir());
     this.now = options.now ?? Date.now;
+    this.privateNetworkApprovalStore =
+      options.privateNetworkApprovalStore ?? new JsonLocalProviderPrivateNetworkApprovalStore();
   }
 
   async listLocalProviders(
@@ -154,6 +160,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         );
       }
       const configuredDefaultModel = readStringNode(findNodeAtLocation(configTree, ['model']));
+      const configuredSmallModel = readStringNode(findNodeAtLocation(configTree, ['small_model']));
       const configuredProviders = providerRootNode
         ? readObjectEntries(providerRootNode)
             .map(({ key: providerId, value: providerNode }) => {
@@ -172,6 +179,9 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
                   presetId: 'custom',
                   providerId,
                   baseUrl: rawBaseUrl,
+                  // A private-network base URL in the config was explicitly
+                  // approved when it was configured; reading must not drop it.
+                  allowPrivateNetwork: true,
                 });
               } catch {
                 return null;
@@ -191,9 +201,12 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
                   : [];
               const routePrefix = `${providerId}/`;
               const isDefault = configuredDefaultModel?.startsWith(routePrefix) ?? false;
+              const smallModelId = configuredSmallModel?.startsWith(routePrefix)
+                ? configuredSmallModel.slice(routePrefix.length) || null
+                : null;
               const configuredDefaultModelId = isDefault
                 ? configuredDefaultModel?.slice(routePrefix.length) || null
-                : (configuredModelIds[0] ?? null);
+                : (smallModelId ?? configuredModelIds[0] ?? null);
               return {
                 preset,
                 providerId: target.providerId,
@@ -201,6 +214,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
                 configuredModelIds,
                 configuredDefaultModelId,
                 isDefault,
+                smallModelId,
               };
             })
             .filter((provider): provider is NonNullable<typeof provider> => provider !== null)
@@ -210,34 +224,67 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
             )
         : [];
 
+      const approvedConfiguredProviders = await Promise.all(
+        configuredProviders.map(async (configured) => ({
+          ...configured,
+          privateNetworkApproved:
+            !isPrivateNetworkRuntimeLocalProviderUrl(configured.baseUrl) ||
+            (await this.privateNetworkApprovalStore.isApproved({
+              configPath: configTarget.configPath,
+              providerId: configured.providerId,
+              baseUrl: configured.baseUrl,
+            })),
+        }))
+      );
       const providers = await Promise.all(
-        configuredProviders.map(async (configured): Promise<RuntimeLocalProviderListEntryDto> => {
-          const probe = await this.probeTarget(
-            {
+        approvedConfiguredProviders.map(
+          async (configured): Promise<RuntimeLocalProviderListEntryDto> => {
+            if (!configured.privateNetworkApproved) {
+              return {
+                preset: configured.preset,
+                providerId: configured.providerId,
+                baseUrl: configured.baseUrl,
+                configuredModelIds: configured.configuredModelIds,
+                defaultModelId: configured.configuredDefaultModelId,
+                smallModelId: configured.smallModelId,
+                isDefault: configured.isDefault,
+                privateNetworkApproved: false,
+                state: 'unavailable',
+                liveModels: [],
+                latencyMs: null,
+                message:
+                  'Private network access has not been approved in Agent Teams. Edit this provider and approve its address before connecting.',
+              };
+            }
+            const probe = await this.probeTarget(
+              {
+                preset: configured.preset,
+                providerId: configured.providerId,
+                baseUrl: configured.baseUrl,
+              },
+              SCAN_TIMEOUT_MS
+            );
+            const liveDefaultStillAvailable = probe.models.some(
+              (model) => model.id === configured.configuredDefaultModelId
+            );
+            return {
               preset: configured.preset,
               providerId: configured.providerId,
               baseUrl: configured.baseUrl,
-            },
-            SCAN_TIMEOUT_MS
-          );
-          const liveDefaultStillAvailable = probe.models.some(
-            (model) => model.id === configured.configuredDefaultModelId
-          );
-          return {
-            preset: configured.preset,
-            providerId: configured.providerId,
-            baseUrl: configured.baseUrl,
-            configuredModelIds: configured.configuredModelIds,
-            defaultModelId: liveDefaultStillAvailable
-              ? configured.configuredDefaultModelId
-              : (configured.configuredDefaultModelId ?? probe.models[0]?.id ?? null),
-            isDefault: configured.isDefault,
-            state: probe.state,
-            liveModels: probe.models,
-            latencyMs: probe.latencyMs,
-            message: probe.message,
-          };
-        })
+              configuredModelIds: configured.configuredModelIds,
+              defaultModelId: liveDefaultStillAvailable
+                ? configured.configuredDefaultModelId
+                : (configured.configuredDefaultModelId ?? probe.models[0]?.id ?? null),
+              smallModelId: configured.smallModelId,
+              isDefault: configured.isDefault,
+              privateNetworkApproved: configured.privateNetworkApproved,
+              state: probe.state,
+              liveModels: probe.models,
+              latencyMs: probe.latencyMs,
+              message: probe.message,
+            };
+          }
+        )
       );
       providers.sort(
         (left, right) =>
@@ -281,7 +328,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     input: RuntimeLocalProviderProbeInput
   ): Promise<RuntimeLocalProviderProbeResponse> {
     if (input?.runtimeId !== 'opencode') {
-      return this.probeError(
+      return buildLocalProviderProbeError(
         'invalid-input',
         'Only the OpenCode runtime supports local providers.'
       );
@@ -294,7 +341,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         probe: await this.probeTarget(target, PROBE_TIMEOUT_MS),
       };
     } catch (error) {
-      return this.probeError(
+      return buildLocalProviderProbeError(
         'invalid-input',
         error instanceof RuntimeLocalProviderValidationError
           ? error.message
@@ -310,7 +357,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       input?.runtimeId !== 'opencode' ||
       (input.scope !== 'global' && input.scope !== 'project')
     ) {
-      return this.configureError(
+      return buildLocalProviderConfigureError(
         'invalid-input',
         'The local provider configuration scope is invalid.'
       );
@@ -327,6 +374,12 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
           'Default model selection is invalid.'
         );
       }
+      if (input.setAsSmallModel !== undefined && typeof input.setAsSmallModel !== 'boolean') {
+        throw new LocalProviderOperationError(
+          'invalid-input',
+          'Lightweight-task model selection is invalid.'
+        );
+      }
 
       const probe = await this.probeTarget(target, PROBE_TIMEOUT_MS);
       if (!probe.state || probe.state !== 'available') {
@@ -341,6 +394,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       }
 
       const selectedModelConfig = await this.fetchModelConfigMetadata(target, defaultModelId);
+      const setAsSmallModel = input.setAsSmallModel ?? input.setAsDefault;
 
       const configPath = await this.writeConfig({
         scope: input.scope,
@@ -350,8 +404,23 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         modelIds,
         defaultModelId,
         setAsDefault: input.setAsDefault,
+        setAsSmallModel,
         selectedModelConfig,
       });
+      if (isPrivateNetworkRuntimeLocalProviderUrl(target.baseUrl)) {
+        try {
+          await this.privateNetworkApprovalStore.approve({
+            configPath,
+            providerId: target.providerId,
+            baseUrl: target.baseUrl,
+          });
+        } catch {
+          throw new LocalProviderOperationError(
+            'approval-write-failed',
+            'The OpenCode config was updated, but Agent Teams could not save private network approval. Retry to approve this address.'
+          );
+        }
+      }
       return {
         schemaVersion: 1,
         runtimeId: 'opencode',
@@ -364,16 +433,17 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
           configPath,
           scope: input.scope,
           setAsDefault: input.setAsDefault,
+          setAsSmallModel,
         },
       };
     } catch (error) {
       if (error instanceof RuntimeLocalProviderValidationError) {
-        return this.configureError('invalid-input', error.message);
+        return buildLocalProviderConfigureError('invalid-input', error.message);
       }
       if (error instanceof LocalProviderOperationError) {
-        return this.configureError(error.code, error.message, error.recoverable);
+        return buildLocalProviderConfigureError(error.code, error.message, error.recoverable);
       }
-      return this.configureError('write-failed', 'Could not update the OpenCode config.');
+      return buildLocalProviderConfigureError('write-failed', 'Could not update OpenCode config.');
     }
   }
 
@@ -449,7 +519,21 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       }
       const reportedModelCount = models.length;
       if (target.preset.id === 'ollama' && models.length > 0) {
-        models = await this.filterOllamaCompletionModels(baseUrl, models, controller.signal);
+        // Give the per-model capability requests their own timeout budget: a
+        // short scan timeout that already elapsed while fetching /models would
+        // otherwise abort every /api/show call and skip capability filtering.
+        const filterController = new AbortController();
+        const filterTimeout = setTimeout(() => filterController.abort(), MODEL_METADATA_TIMEOUT_MS);
+        filterTimeout.unref?.();
+        try {
+          models = await this.filterOllamaCompletionModels(
+            baseUrl,
+            models,
+            filterController.signal
+          );
+        } finally {
+          clearTimeout(filterTimeout);
+        }
       }
       return {
         available: true,
@@ -531,46 +615,52 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     target: ReturnType<typeof normalizeRuntimeLocalProviderTarget>,
     modelId: string
   ): Promise<LocalModelConfigMetadata | null> {
-    if (target.preset.id !== 'ollama') return null;
+    const metadata = await this.fetchServerModelMetadata(target, modelId);
+    if (!metadata) return null;
+    const modelConfig: LocalModelConfigMetadata = {
+      ...(metadata.toolCapable === true ? { tool_call: true as const } : {}),
+      options: {
+        reasoningEffort: 'none',
+      },
+      ...(metadata.contextTokens
+        ? {
+            limit: {
+              context: metadata.contextTokens,
+              output: Math.min(DEFAULT_LOCAL_MODEL_OUTPUT_TOKENS, metadata.contextTokens),
+            },
+          }
+        : {}),
+    };
+    return Object.keys(modelConfig).length > 0 ? modelConfig : null;
+  }
+
+  private async fetchServerModelMetadata(
+    target: ReturnType<typeof normalizeRuntimeLocalProviderTarget>,
+    modelId: string
+  ): Promise<LocalServerModelMetadata | null> {
+    const request = buildLocalServerModelMetadataRequest(target.preset.id, target.baseUrl, modelId);
+    if (!request) return null;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), MODEL_METADATA_TIMEOUT_MS);
     timeout.unref?.();
     try {
-      const response = await this.fetchImpl(buildOllamaNativeUrl(target.baseUrl, '/api/show'), {
-        method: 'POST',
+      const response = await this.fetchImpl(request.url, {
+        method: request.method,
         headers: {
           accept: 'application/json',
-          'content-type': 'application/json',
+          ...(request.body ? { 'content-type': 'application/json' } : {}),
         },
-        body: JSON.stringify({ model: modelId }),
+        ...(request.body ? { body: request.body } : {}),
         redirect: 'error',
         signal: controller.signal,
       });
       if (!response.ok) return null;
       const raw = await readResponseTextWithLimit(response, MAX_RESPONSE_BYTES);
       if (!raw) return null;
-      const metadata = parseOllamaShowMetadata(raw);
-      if (!metadata) return null;
-      const contextTokens =
-        metadata.configuredContextTokens ?? metadata.trainedContextTokens ?? null;
-      const modelConfig: LocalModelConfigMetadata = {
-        ...(metadata.toolCapable === true ? { tool_call: true as const } : {}),
-        options: {
-          reasoningEffort: 'none',
-        },
-        ...(contextTokens
-          ? {
-              limit: {
-                context: contextTokens,
-                output: Math.min(DEFAULT_LOCAL_MODEL_OUTPUT_TOKENS, contextTokens),
-              },
-            }
-          : {}),
-      };
-      return Object.keys(modelConfig).length > 0 ? modelConfig : null;
+      return request.parse(raw);
     } catch {
-      // OpenAI-compatible servers do not have to expose Ollama's native
+      // OpenAI-compatible servers do not have to expose their native
       // metadata endpoint. Connecting the provider must still work when the
       // optional enrichment request is unavailable.
       return null;
@@ -587,6 +677,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     modelIds: readonly string[];
     defaultModelId: string;
     setAsDefault: boolean;
+    setAsSmallModel: boolean;
     selectedModelConfig: LocalModelConfigMetadata | null;
   }): Promise<string> {
     // Chain onto any in-flight write so the read-modify-write below runs after
@@ -610,6 +701,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     modelIds: readonly string[];
     defaultModelId: string;
     setAsDefault: boolean;
+    setAsSmallModel: boolean;
     selectedModelConfig?: LocalModelConfigMetadata | null;
   }): Promise<string> {
     const configTarget = await this.readConfigTarget(input.scope, input.projectPath, true);
@@ -704,7 +796,13 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         input.defaultModelId
       );
       nextRaw = setJsoncValue(nextRaw, ['model'], modelRoute);
-      nextRaw = setJsoncValue(nextRaw, ['small_model'], modelRoute);
+    }
+    if (input.setAsSmallModel) {
+      nextRaw = setJsoncValue(
+        nextRaw,
+        ['small_model'],
+        buildRuntimeLocalProviderModelRoute(input.providerId, input.defaultModelId)
+      );
     }
     await atomicWriteAsync(configPath, `${nextRaw.trimEnd()}\n`, {
       // OpenCode configs can contain provider credentials. Preserve an existing
@@ -905,45 +1003,6 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
   ): RuntimeLocalProviderScanResponse {
     return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable: true } };
   }
-
-  private probeError(
-    code: RuntimeLocalProviderErrorCodeDto,
-    message: string
-  ): RuntimeLocalProviderProbeResponse {
-    return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable: true } };
-  }
-
-  private configureError(
-    code: RuntimeLocalProviderErrorCodeDto,
-    message: string,
-    recoverable = true
-  ): RuntimeLocalProviderConfigureResponse {
-    return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable } };
-  }
-}
-
-function readOpenAiModels(raw: string): RuntimeLocalProviderModelDto[] {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error('invalid-json');
-  }
-  const data = isRecord(parsed) && Array.isArray(parsed.data) ? parsed.data : null;
-  if (!data) {
-    throw new Error('invalid-model-list');
-  }
-  const models = new Map<string, RuntimeLocalProviderModelDto>();
-  for (const entry of data.slice(0, MAX_MODELS)) {
-    const record = asRecord(entry);
-    const id = normalizeRuntimeLocalProviderModelId(record?.id);
-    if (!id || models.has(id)) {
-      continue;
-    }
-    const name = normalizeRuntimeLocalProviderModelId(record?.name);
-    models.set(id, { id, displayName: name ?? id });
-  }
-  return [...models.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function parseConfigTree(raw: string): JsoncNode {
@@ -965,108 +1024,4 @@ function parseConfigTree(raw: string): JsoncNode {
     );
   }
   return configTree;
-}
-
-function readStringNode(node: JsoncNode | undefined): string | null {
-  return node?.type === 'string' && typeof node.value === 'string' ? node.value : null;
-}
-
-function readObjectEntries(node: JsoncNode): Array<{ key: string; value: JsoncNode }> {
-  if (node.type !== 'object') return [];
-  return (node.children ?? []).flatMap((property) => {
-    const keyNode = property.children?.[0];
-    const valueNode = property.children?.[1];
-    return keyNode?.type === 'string' && typeof keyNode.value === 'string' && valueNode
-      ? [{ key: keyNode.value, value: valueNode }]
-      : [];
-  });
-}
-
-async function readResponseTextWithLimit(
-  response: Response,
-  maxBytes: number
-): Promise<string | null> {
-  const reader = response.body?.getReader();
-  if (!reader) {
-    const raw = await response.text();
-    return Buffer.byteLength(raw, 'utf8') <= maxBytes ? raw : null;
-  }
-
-  const chunks: Buffer[] = [];
-  let totalBytes = 0;
-  try {
-    while (true) {
-      const chunk = await reader.read();
-      if (chunk.done) {
-        return Buffer.concat(chunks, totalBytes).toString('utf8');
-      }
-      totalBytes += chunk.value.byteLength;
-      if (totalBytes > maxBytes) {
-        await reader.cancel();
-        return null;
-      }
-      chunks.push(Buffer.from(chunk.value));
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
-
-function setJsoncValue(raw: string, pathSegments: (string | number)[], value: unknown): string {
-  return applyEdits(raw, modify(raw, pathSegments, value, { formattingOptions: JSON_FORMATTING }));
-}
-
-function createModelRecord(
-  modelIds: readonly string[],
-  selectedModelId?: string,
-  selectedModelConfig?: LocalModelConfigMetadata | null
-): Record<string, unknown> {
-  const models = Object.create(null) as Record<string, unknown>;
-  for (const modelId of modelIds) {
-    models[modelId] = modelId === selectedModelId && selectedModelConfig ? selectedModelConfig : {};
-  }
-  return models;
-}
-
-function hasDuplicateObjectProperties(node: JsoncNode): boolean {
-  if (node.type === 'array') {
-    return node.children?.some(hasDuplicateObjectProperties) ?? false;
-  }
-  if (node.type !== 'object') {
-    return false;
-  }
-
-  const propertyNames = new Set<string>();
-  for (const property of node.children ?? []) {
-    const propertyName = property.children?.[0]?.value;
-    if (typeof propertyName === 'string') {
-      if (propertyNames.has(propertyName)) {
-        return true;
-      }
-      propertyNames.add(propertyName);
-    }
-    const propertyValue = property.children?.[1];
-    if (propertyValue && hasDuplicateObjectProperties(propertyValue)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return isRecord(value) ? value : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isPathInside(rootPath: string, targetPath: string): boolean {
-  const relativePath = path.relative(rootPath, targetPath);
-  return (
-    relativePath === '' ||
-    (!relativePath.startsWith(`..${path.sep}`) &&
-      relativePath !== '..' &&
-      !path.isAbsolute(relativePath))
-  );
 }

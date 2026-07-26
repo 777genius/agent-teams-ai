@@ -1,10 +1,10 @@
 import * as runtimeProviderManagementMain from '@features/runtime-provider-management/main';
+import { createTeamProvisioningStatusFeature } from '@features/team-provisioning/main';
 import { execCli, spawnCli } from '@main/utils/childProcess';
 import { getAutoDetectedClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
-import { type spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
 
@@ -34,10 +34,6 @@ import {
   readBootstrapLaunchSnapshot,
   readBootstrapRuntimeState,
 } from '../TeamBootstrapStateReader';
-import { TeamConfigReader } from '../TeamConfigReader';
-import { TeamInboxReader } from '../TeamInboxReader';
-import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
-import { TeamMembersMetaStore } from '../TeamMembersMetaStore';
 
 import { cleanupRunOwnedAnthropicApiKeyHelper } from './TeamProvisioningAnthropicApiKeyHelperLease';
 import { ensureCwdExists, sleep } from './TeamProvisioningAsyncUtils';
@@ -51,7 +47,6 @@ import {
   TeamProvisioningBootstrapTranscriptFacade,
   type TeamProvisioningBootstrapTranscriptFacadeServiceHost,
 } from './TeamProvisioningBootstrapTranscriptFacade';
-import { type TeamProvisioningCancellationBoundary } from './TeamProvisioningCancellationBoundary';
 import { type TeamProvisioningCleanupPorts } from './TeamProvisioningCleanup';
 import {
   createTeamProvisioningCleanupRunPorts,
@@ -124,7 +119,6 @@ import {
   TeamProvisioningOutputRecoveryFacade,
   type TeamProvisioningOutputRecoveryFacadeServiceHost,
 } from './TeamProvisioningOutputRecoveryFacade';
-import { type PersistedTeamConfigCacheEntry } from './TeamProvisioningPersistedTeamConfigAccess';
 import {
   createTeamProvisioningPersistenceReconcileFacadeFromService,
   TeamProvisioningPersistenceReconcileFacade,
@@ -177,7 +171,6 @@ import {
   type TeamProvisioningRuntimeProjectionServiceHost,
 } from './TeamProvisioningRuntimeProjectionFactory';
 import { type MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
-import { type TeamProvisioningSendMessageToRunBoundary } from './TeamProvisioningSendMessageToRunBoundaryFactory';
 import {
   createTeamProvisioningToolApprovalFacadeFromService,
   TeamProvisioningToolApprovalFacade,
@@ -196,8 +189,10 @@ import {
 } from './TeamProvisioningVerificationProbePortsFactory';
 
 import type { TeamRuntimeMemberLaunchEvidence } from '../runtime';
-import type { TeamProvisioningRetainedProgressState } from './TeamProvisioningProgressState';
+import type { TeamProvisioningServiceCompositionDeps } from './TeamProvisioningServiceCompositionDeps';
 import type { TeamProviderId } from '@shared/types';
+
+export type { TeamProvisioningServiceCompositionDeps } from './TeamProvisioningServiceCompositionDeps';
 
 const logger = createLogger('Service:TeamProvisioning');
 const { AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES } = agentTeamsControllerModule;
@@ -230,20 +225,6 @@ interface ServiceCompositionPorts {
     resolveCurrentOpenCodeRuntimeRunId: OpenCodePromptDeliveryWatchdogCoordinatorPorts['resolveCurrentRuntimeRunId'];
   };
   logOpenCodePromptDeliveryEvent: OpenCodePromptDeliveryWatchdogCoordinatorPorts['logPromptDeliveryEvent'];
-}
-
-export interface TeamProvisioningServiceCompositionDeps {
-  configReader: TeamConfigReader;
-  inboxReader: TeamInboxReader;
-  membersMetaStore: TeamMembersMetaStore;
-  launchStateStore: TeamLaunchStateStore;
-  persistedTeamConfigCache: Map<string, PersistedTeamConfigCacheEntry>;
-  retainedProvisioningProgressState: TeamProvisioningRetainedProgressState;
-  cancellationBoundary: TeamProvisioningCancellationBoundary;
-  runTracking: TeamProvisioningCompatibilityDelegation<ProvisioningRun>['runTracking'];
-  runs: ReadonlyMap<string, ProvisioningRun>;
-  sendMessageToRunBoundary: TeamProvisioningSendMessageToRunBoundary<ProvisioningRun>;
-  transientProbeProcesses: Set<ReturnType<typeof spawn>>;
 }
 
 export interface TeamProvisioningServiceComposition {
@@ -585,10 +566,15 @@ export function createTeamProvisioningServiceComposition(
     'openCodeRuntimeRecoveryFacade',
     openCodeRuntimeRecoveryFacade
   );
+  const provisioningStatus = createTeamProvisioningStatusFeature({
+    progressSource: deps.retainedProvisioningProgressState,
+    runs: deps.runs,
+  });
   const compatibilityDelegation: TeamProvisioningCompatibilityDelegation<ProvisioningRun> = {
     providerRuntimeCompatibility,
     configFacade,
     configTaskActivityBoundary,
+    provisioningStatus,
     retainedProvisioningProgressState: deps.retainedProvisioningProgressState,
     cancellationBoundary: deps.cancellationBoundary,
     runtimeSnapshotFacade: runtimeProjection.runtimeSnapshotFacade,

@@ -120,7 +120,14 @@ import {
   registerSubagentHandlers,
   removeSubagentHandlers,
 } from './subagents';
-import { initializeTeamHandlers, registerTeamHandlers, removeTeamHandlers } from './teams';
+import {
+  createIdentityFencedProvisioningStart,
+  createIdentityFencedTeamConfigurationRepository,
+  initializeTeamHandlers,
+  permanentlyDeleteDraftTeam,
+  registerTeamHandlers,
+  removeTeamHandlers,
+} from './teams';
 import { registerTelemetryHandlers, removeTelemetryHandlers } from './telemetry';
 import {
   initializeTerminalHandlers,
@@ -236,23 +243,16 @@ export function initializeIpcHandlers(
   teamBackupService?: TeamBackupService,
   launchIoGovernor?: LaunchIoGovernor,
   teamPermanentDeletionLifecycle?: {
-    prepareTeamDeletion(teamName: string): Promise<void>;
+    prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
   }
 ): void {
-  const lifecycleAwareProvisioningStart: typeof teamHandlerApis.provisioningStart = {
-    createTeam: async (request, onProgress) => {
-      const response = await teamHandlerApis.provisioningStart.createTeam(request, onProgress);
-      teamPermanentDeletionLifecycle?.resumeTeam(request.teamName);
-      return response;
-    },
-    launchTeam: async (request, onProgress) => {
-      const response = await teamHandlerApis.provisioningStart.launchTeam(request, onProgress);
-      teamPermanentDeletionLifecycle?.resumeTeam(request.teamName);
-      return response;
-    },
-  };
+  const lifecycleAwareProvisioningStart = createIdentityFencedProvisioningStart(
+    teamHandlerApis.provisioningStart,
+    teamBackupService,
+    teamPermanentDeletionLifecycle
+  );
   const teamApprovalsFeature = createTeamApprovalsFeature({
     toolApprovalApi: teamHandlerApis.toolApproval,
   });
@@ -272,26 +272,16 @@ export function initializeIpcHandlers(
     logger: teamViewReadModelLogger,
   });
   const teamConfigurationFeature = createTeamConfigurationFeature({
-    repository: teamDataService,
+    repository: createIdentityFencedTeamConfigurationRepository(
+      teamDataService,
+      teamBackupService,
+      teamPermanentDeletionLifecycle,
+      permanentlyDeleteDraftTeam
+    ),
     runtime: teamHandlerApis.runtime,
     messaging: teamHandlerApis.messaging,
     logger: teamConfigurationLogger,
   });
-  const createConfig = teamConfigurationFeature.createConfig.execute.bind(
-    teamConfigurationFeature.createConfig
-  );
-  teamConfigurationFeature.createConfig.execute = async (request) => {
-    await createConfig(request);
-    teamPermanentDeletionLifecycle?.resumeTeam(request.teamName);
-  };
-  const deleteDraft = teamConfigurationFeature.deleteDraft.execute.bind(
-    teamConfigurationFeature.deleteDraft
-  );
-  teamConfigurationFeature.deleteDraft.execute = async (teamName) => {
-    await teamPermanentDeletionLifecycle?.prepareTeamDeletion(teamName);
-    await deleteDraft(teamName);
-    teamPermanentDeletionLifecycle?.completeTeamDeletion(teamName);
-  };
   const teamMessageDeliveryFeature = createTeamMessageDeliveryFeature({
     repository: teamDataService,
     runtime: teamHandlerApis.runtime,
