@@ -5,7 +5,7 @@ import { FolderOpen, UsersRound } from 'lucide-react';
 
 import { useRunningTeamsSection } from '../hooks/useRunningTeamsSection';
 
-import type { RunningTeamRowModel } from '../adapters/RunningTeamsSectionAdapter';
+import type { RunningTeamRowModel } from '../view-models/runningTeamsSectionViewModel';
 import type React from 'react';
 
 interface RunningTeamsSectionProps {

@@ -5,7 +5,12 @@ import {
   TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH,
   TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES,
 } from '@features/team-task-board';
-import { atomicCreateAsync, cleanupAtomicCreateTempLinks } from '@main/utils/atomicWrite';
+import {
+  atomicCreateAsync,
+  cleanupAtomicCreateTempLinks,
+  type DurablePathRemovalProofHooks,
+  removePathWithIdentityFenceAsync,
+} from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { randomUUID } from 'crypto';
@@ -58,6 +63,12 @@ const nodeTaskAttachmentAtomicCreator: TaskAttachmentAtomicCreatorPort = {
   },
   cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
 };
+const TEAM_TASK_ATTACHMENT_DELETE_OPTIONS = {
+  recursive: true,
+  force: true,
+  maxRetries: 5,
+  retryDelay: 50,
+} as const;
 
 export class TeamTaskAttachmentStore {
   constructor(
@@ -85,6 +96,23 @@ export class TeamTaskAttachmentStore {
     this.assertSafePathSegment('teamName', teamName);
     this.assertSafePathSegment('taskId', taskId);
     return path.join(getAppDataPath(), 'task-attachments', teamName, taskId);
+  }
+
+  async deleteTeamAttachments(
+    teamName: string,
+    isDeletionTargetCurrent: (detachedPath?: string) => Promise<boolean> = async () => true,
+    proofHooks?: DurablePathRemovalProofHooks
+  ): Promise<boolean> {
+    this.assertSafePathSegment('teamName', teamName);
+    const attachmentsDir = path.join(getAppDataPath(), 'task-attachments');
+    const removal = await removePathWithIdentityFenceAsync(path.join(attachmentsDir, teamName), {
+      ...TEAM_TASK_ATTACHMENT_DELETE_OPTIONS,
+      durability: 'strict',
+      reservePublicDirectory: true,
+      validateDetached: (detachedPath) => isDeletionTargetCurrent(detachedPath),
+      ...(proofHooks ? { proofHooks } : {}),
+    });
+    return proofHooks ? removal === 'deleted' : removal !== 'changed';
   }
 
   private getAttachmentMutationKey(teamName: string, taskId: string, attachmentId: string): string {

@@ -1,13 +1,30 @@
-import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
+import {
+  assertIdentityStableDirectoryChildOperationsSupported,
+  durablePathExistsAsync,
+  readJsonDataEnvelopeNoFollowAsync,
+  readOptionalJsonNoFollowAsync,
+  removeDirectoryEntriesExceptAsync,
+  withIdentityStableDirectoryTreeAsync,
+  withIdentityStableIndexedDirectoryLocksAsync,
+} from '@main/utils/durablePathOperations';
 import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
 
 import { withFileLock } from '../../fileLock';
 
 import {
-  createDefaultRuntimeStoreManifest,
+  type ClearOpenCodeRuntimeLaneStorageParams,
+  type ClearOpenCodeRuntimeLaneStorageResult,
+  normalizeOpenCodeBootstrapSessionRecord,
+  type OpenCodeCommittedBootstrapSessionEvidence,
+  type OpenCodeCommittedBootstrapSessionRecord,
+  readRuntimeStoreManifestEvidenceData,
+  resolveOpenCodeRuntimeLaneClearOwnership,
+} from './OpenCodeBootstrapSessionNormalization';
+import {
   createRuntimeStoreManifestStore,
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
   OPENCODE_RUNTIME_STORE_MANIFEST_SCHEMA_VERSION,
@@ -17,11 +34,13 @@ import {
 
 import type { RuntimeStoreManifestEvidence } from '../bridge/OpenCodeBridgeCommandContract';
 import type { RuntimeStoreManifestReader } from '../bridge/OpenCodeStateChangingBridgeCommandService';
-import type { RuntimeStoreManifestEntryState } from './RuntimeStoreManifest';
-import type {
-  OpenCodeAppManagedBootstrapCandidate,
-  OpenCodeBootstrapEvidenceSource,
-} from '@shared/types/team';
+
+export type {
+  ClearOpenCodeRuntimeLaneStorageParams,
+  ClearOpenCodeRuntimeLaneStorageResult,
+  OpenCodeCommittedBootstrapSessionEvidence,
+  OpenCodeCommittedBootstrapSessionRecord,
+} from './OpenCodeBootstrapSessionNormalization';
 
 const logger = createLogger('OpenCodeRuntimeManifestEvidenceReader');
 
@@ -35,6 +54,11 @@ const OPENCODE_TEAM_RUNTIME_LANES_DIR = 'lanes';
 const OPENCODE_TEAM_RUNTIME_LANES_INDEX_FILE = 'lanes.json';
 const OPENCODE_RUNTIME_MANIFEST_FILE = 'manifest.json';
 const OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE = 'opencode-run-tombstones.json';
+const OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE = 'opencode-delivery-journal.json';
+const OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS = new Set([
+  OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE,
+  OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE,
+]);
 const OPENCODE_ACTIVE_EMPTY_LANE_STALE_MS = 150_000;
 const OPENCODE_LANE_INDEX_LOCK_OPTIONS = {
   acquireTimeoutMs: 30_000,
@@ -57,33 +81,10 @@ export interface OpenCodeRuntimeLaneIndexEntry {
   diagnostics?: string[];
 }
 
-export type ClearOpenCodeRuntimeLaneStorageResult = 'cleared' | 'owner_changed';
-
 export interface OpenCodeRuntimeLaneIndex {
   version: 1;
   updatedAt: string;
   lanes: Record<string, OpenCodeRuntimeLaneIndexEntry>;
-}
-
-export interface OpenCodeCommittedBootstrapSessionRecord {
-  id: string;
-  teamName: string;
-  memberName: string;
-  laneId: string;
-  runId: string | null;
-  observedAt: string | null;
-  source: OpenCodeBootstrapEvidenceSource;
-  appManagedBootstrapCandidate?: OpenCodeAppManagedBootstrapCandidate;
-  appMcpTransportHash?: string;
-  appMcpTransportEvidence?: Record<string, unknown>;
-}
-
-export interface OpenCodeCommittedBootstrapSessionEvidence {
-  state: RuntimeStoreManifestEntryState | 'invalid_store' | 'descriptor_missing';
-  committed: boolean;
-  activeRunId: string | null;
-  sessions: OpenCodeCommittedBootstrapSessionRecord[];
-  diagnostics: string[];
 }
 
 function createEmptyOpenCodeRuntimeLaneIndex(
@@ -170,17 +171,16 @@ async function quarantineInvalidOpenCodeRuntimeLaneIndex(
     );
   }
 }
-
 async function readOpenCodeRuntimeLaneIndexUnlocked(
   teamsBasePath: string,
-  teamName: string
+  teamName: string,
+  runtimeDirectory = getOpenCodeTeamRuntimeDirectory(teamsBasePath, teamName)
 ): Promise<OpenCodeRuntimeLaneIndex> {
-  const filePath = getOpenCodeRuntimeLaneIndexPath(teamsBasePath, teamName);
-  if (!(await fileExists(filePath))) {
+  const filePath = path.join(runtimeDirectory, OPENCODE_TEAM_RUNTIME_LANES_INDEX_FILE);
+  if (!(await durablePathExistsAsync(filePath))) {
     return createEmptyOpenCodeRuntimeLaneIndex();
   }
   const raw = await readFile(filePath, 'utf8');
-
   let parsed: Partial<OpenCodeRuntimeLaneIndex>;
   try {
     parsed = JSON.parse(raw) as Partial<OpenCodeRuntimeLaneIndex>;
@@ -188,39 +188,33 @@ async function readOpenCodeRuntimeLaneIndexUnlocked(
     await quarantineInvalidOpenCodeRuntimeLaneIndex(filePath, raw, error);
     return createEmptyOpenCodeRuntimeLaneIndex();
   }
-
   return normalizeOpenCodeRuntimeLaneIndex(parsed);
 }
-
 async function writeOpenCodeRuntimeLaneIndexUnlocked(
   teamsBasePath: string,
   teamName: string,
-  index: OpenCodeRuntimeLaneIndex
+  index: OpenCodeRuntimeLaneIndex,
+  runtimeDirectory = getOpenCodeTeamRuntimeDirectory(teamsBasePath, teamName)
 ): Promise<void> {
-  const runtimeDir = getOpenCodeTeamRuntimeDirectory(teamsBasePath, teamName);
-  await mkdir(runtimeDir, { recursive: true });
+  await mkdir(runtimeDirectory, { recursive: true });
   await atomicWriteAsync(
-    getOpenCodeRuntimeLaneIndexPath(teamsBasePath, teamName),
+    path.join(runtimeDirectory, OPENCODE_TEAM_RUNTIME_LANES_INDEX_FILE),
     `${JSON.stringify(index, null, 2)}\n`
   );
 }
-
 export class OpenCodeRuntimeManifestEvidenceReader implements RuntimeStoreManifestReader {
   private readonly teamsBasePath: string;
   private readonly clock: () => Date;
-
   constructor(options: OpenCodeRuntimeManifestEvidenceReaderOptions) {
     this.teamsBasePath = options.teamsBasePath;
     this.clock = options.clock ?? (() => new Date());
   }
-
   async read(teamName: string, laneId?: string | null): Promise<RuntimeStoreManifestEvidence> {
     const normalizedLaneId = laneId?.trim() || null;
     const manifestPath = normalizedLaneId
       ? await resolveOpenCodeRuntimeManifestReadPath(this.teamsBasePath, teamName, normalizedLaneId)
       : getOpenCodeRuntimeManifestPath(this.teamsBasePath, teamName);
     const manifest = await readRuntimeStoreManifestEvidenceData(manifestPath, teamName, this.clock);
-
     return {
       highWatermark: manifest.highWatermark,
       activeRunId: manifest.activeRunId,
@@ -228,43 +222,6 @@ export class OpenCodeRuntimeManifestEvidenceReader implements RuntimeStoreManife
     };
   }
 }
-
-async function readRuntimeStoreManifestEvidenceData(
-  manifestPath: string,
-  teamName: string,
-  clock: () => Date
-) {
-  let raw: string;
-  try {
-    raw = await readFile(manifestPath, 'utf8');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return createDefaultRuntimeStoreManifest(teamName, clock().toISOString());
-    }
-    throw error;
-  }
-
-  const parsed = JSON.parse(raw) as unknown;
-  const maybeRecord =
-    parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
-  const manifestData =
-    maybeRecord && Object.prototype.hasOwnProperty.call(maybeRecord, 'data')
-      ? maybeRecord.data
-      : parsed;
-  return validateRuntimeStoreManifest(manifestData);
-}
-
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await stat(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function readOpenCodeBootstrapSessionStore(
   filePath: string,
   expected: {
@@ -284,11 +241,9 @@ async function readOpenCodeBootstrapSessionStore(
     data && typeof data === 'object' && !Array.isArray(data)
       ? (data as Record<string, unknown>).sessions
       : null;
-
   if (!Array.isArray(sessions)) {
     return [];
   }
-
   return sessions.flatMap((session): OpenCodeCommittedBootstrapSessionRecord[] => {
     const normalized = normalizeOpenCodeBootstrapSessionRecord(session);
     if (!normalized) {
@@ -300,143 +255,24 @@ async function readOpenCodeBootstrapSessionStore(
     return [normalized];
   });
 }
-
-function normalizeOpenCodeBootstrapSessionRecord(
-  value: unknown
-): OpenCodeCommittedBootstrapSessionRecord | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
-  const record = value as Record<string, unknown>;
-  const id = normalizeNonEmptyStoreString(record.id);
-  const teamName = normalizeNonEmptyStoreString(record.teamName);
-  const memberName = normalizeNonEmptyStoreString(record.memberName);
-  const laneId = normalizeNonEmptyStoreString(record.laneId);
-  const source = normalizeNonEmptyStoreString(record.source);
-  if (
-    !id ||
-    !teamName ||
-    !memberName ||
-    !laneId ||
-    (source !== 'runtime_bootstrap_checkin' && source !== 'app_managed_bootstrap')
-  ) {
-    return null;
-  }
-  const observedAt = normalizeOptionalStoreIso(record.observedAt);
-  const appManagedBootstrapCandidate =
-    source === 'app_managed_bootstrap'
-      ? normalizeAppManagedBootstrapCandidate(record.appManagedBootstrapCandidate)
-      : undefined;
-  const appMcpTransportHash = normalizeNonEmptyStoreString(record.appMcpTransportHash);
-  const appMcpTransportEvidence =
-    record.appMcpTransportEvidence &&
-    typeof record.appMcpTransportEvidence === 'object' &&
-    !Array.isArray(record.appMcpTransportEvidence)
-      ? (record.appMcpTransportEvidence as Record<string, unknown>)
-      : undefined;
-  return {
-    id,
-    teamName,
-    memberName,
-    laneId,
-    runId: normalizeNonEmptyStoreString(record.runId),
-    observedAt,
-    source,
-    ...(appManagedBootstrapCandidate ? { appManagedBootstrapCandidate } : {}),
-    ...(appMcpTransportHash ? { appMcpTransportHash } : {}),
-    ...(appMcpTransportEvidence ? { appMcpTransportEvidence } : {}),
-  };
-}
-
-function normalizeAppManagedBootstrapCandidate(
-  value: unknown
-): OpenCodeAppManagedBootstrapCandidate | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return undefined;
-  }
-  const record = value as Record<string, unknown>;
-  if (record.schemaVersion !== 1 || record.source !== 'app_managed_bootstrap') {
-    return undefined;
-  }
-  const teamName = normalizeNonEmptyStoreString(record.teamName);
-  const memberName = normalizeNonEmptyStoreString(record.memberName);
-  const runId = normalizeNonEmptyStoreString(record.runId);
-  const laneId = normalizeNonEmptyStoreString(record.laneId);
-  const runtimeSessionId = normalizeNonEmptyStoreString(record.runtimeSessionId);
-  const messageID = normalizeNonEmptyStoreString(record.messageID);
-  const contextHash = normalizeNonEmptyStoreString(record.contextHash);
-  const briefingHash = normalizeNonEmptyStoreString(record.briefingHash);
-  const injectionVerifiedAt = normalizeNonEmptyStoreString(record.injectionVerifiedAt);
-  const candidateAt = normalizeNonEmptyStoreString(record.candidateAt);
-  if (
-    !teamName ||
-    !memberName ||
-    !runId ||
-    !laneId ||
-    !runtimeSessionId ||
-    !messageID ||
-    !contextHash ||
-    !briefingHash ||
-    !injectionVerifiedAt ||
-    !candidateAt
-  ) {
-    return undefined;
-  }
-  const model = normalizeNonEmptyStoreString(record.model);
-  const agent = normalizeNonEmptyStoreString(record.agent);
-  return {
-    schemaVersion: 1,
-    source: 'app_managed_bootstrap',
-    teamName,
-    memberName,
-    runId,
-    laneId,
-    runtimeSessionId,
-    messageID,
-    contextHash,
-    briefingHash,
-    injectionVerifiedAt,
-    candidateAt,
-    ...(model ? { model } : {}),
-    ...(agent ? { agent } : {}),
-  };
-}
-
-function normalizeNonEmptyStoreString(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function normalizeOptionalStoreIso(value: unknown): string | null {
-  const text = normalizeNonEmptyStoreString(value);
-  if (!text) {
-    return null;
-  }
-  const parsed = Date.parse(text);
-  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : text;
-}
-
 async function resolveOpenCodeRuntimeManifestReadPath(
   teamsBasePath: string,
   teamName: string,
   laneId: string
 ): Promise<string> {
   const laneManifestPath = getOpenCodeRuntimeManifestPath(teamsBasePath, teamName, laneId);
-  if (await fileExists(laneManifestPath)) {
+  if (await durablePathExistsAsync(laneManifestPath)) {
     return laneManifestPath;
   }
-
   const legacyManifestPath = getOpenCodeRuntimeManifestPath(teamsBasePath, teamName);
-  if (!(await fileExists(legacyManifestPath))) {
+  if (!(await durablePathExistsAsync(legacyManifestPath))) {
     return laneManifestPath;
   }
-
   if (!(await canFallbackToLegacyManifest(teamsBasePath, teamName, laneId))) {
     return laneManifestPath;
   }
-
   return legacyManifestPath;
 }
-
 async function canFallbackToLegacyManifest(
   teamsBasePath: string,
   teamName: string,
@@ -450,7 +286,6 @@ async function canFallbackToLegacyManifest(
   if (existingLaneDirs.length > 0) {
     return false;
   }
-
   const laneIndex = await readOpenCodeRuntimeLaneIndex(teamsBasePath, teamName).catch(() => ({
     version: 1 as const,
     updatedAt: new Date().toISOString(),
@@ -461,18 +296,15 @@ async function canFallbackToLegacyManifest(
   );
   return siblingLaneIds.length === 0;
 }
-
 export function getOpenCodeTeamRuntimeDirectory(teamsBasePath: string, teamName: string): string {
   return path.join(teamsBasePath, teamName, OPENCODE_TEAM_RUNTIME_DIR);
 }
-
 export function getOpenCodeRuntimeLaneIndexPath(teamsBasePath: string, teamName: string): string {
   return path.join(
     getOpenCodeTeamRuntimeDirectory(teamsBasePath, teamName),
     OPENCODE_TEAM_RUNTIME_LANES_INDEX_FILE
   );
 }
-
 export function getOpenCodeTeamRuntimeLaneDirectory(
   teamsBasePath: string,
   teamName: string,
@@ -484,7 +316,6 @@ export function getOpenCodeTeamRuntimeLaneDirectory(
     encodeURIComponent(laneId)
   );
 }
-
 export function getOpenCodeRuntimeManifestPath(
   teamsBasePath: string,
   teamName: string,
@@ -501,7 +332,6 @@ export function getOpenCodeRuntimeManifestPath(
     OPENCODE_RUNTIME_MANIFEST_FILE
   );
 }
-
 export async function inspectOpenCodeRuntimeLaneStorage(params: {
   teamsBasePath: string;
   teamName: string;
@@ -519,7 +349,7 @@ export async function inspectOpenCodeRuntimeLaneStorage(params: {
     params.teamName,
     params.laneId
   );
-  const laneDirectoryExists = await fileExists(laneDir);
+  const laneDirectoryExists = await durablePathExistsAsync(laneDir);
   if (!laneDirectoryExists) {
     return {
       laneDirectoryExists: false,
@@ -530,14 +360,15 @@ export async function inspectOpenCodeRuntimeLaneStorage(params: {
       fileNames: [],
     };
   }
-
-  const fileNames = (await readdir(laneDir).catch(() => [] as string[])).sort();
+  const fileNames = (await readdir(laneDir).catch(() => [] as string[])).sort((left, right) =>
+    left.localeCompare(right)
+  );
   const manifestPath = getOpenCodeRuntimeManifestPath(
     params.teamsBasePath,
     params.teamName,
     params.laneId
   );
-  const manifest = (await fileExists(manifestPath))
+  const manifest = (await durablePathExistsAsync(manifestPath))
     ? await readRuntimeStoreManifestEvidenceData(
         manifestPath,
         params.teamName,
@@ -559,7 +390,6 @@ export async function inspectOpenCodeRuntimeLaneStorage(params: {
     fileNames,
   };
 }
-
 export interface OpenCodeRuntimeLaneLaunchGenerationPreparation {
   reset: boolean;
   reason:
@@ -572,7 +402,6 @@ export interface OpenCodeRuntimeLaneLaunchGenerationPreparation {
     | 'stale_manifest_entries';
   diagnostics: string[];
 }
-
 export async function prepareOpenCodeRuntimeLaneForLaunchGeneration(params: {
   teamsBasePath: string;
   teamName: string;
@@ -582,29 +411,46 @@ export async function prepareOpenCodeRuntimeLaneForLaunchGeneration(params: {
   forceReset?: boolean;
   clock?: () => Date;
 }): Promise<OpenCodeRuntimeLaneLaunchGenerationPreparation> {
+  return withOpenCodeRuntimeLaneLifecycleLock(params, (runtimeDirectory, lanesDirectory) =>
+    prepareOpenCodeRuntimeLaneForLaunchGenerationUnlocked(params, runtimeDirectory, lanesDirectory)
+  );
+}
+async function prepareOpenCodeRuntimeLaneForLaunchGenerationUnlocked(
+  params: {
+    teamsBasePath: string;
+    teamName: string;
+    laneId: string;
+    runId: string;
+    reason: string;
+    forceReset?: boolean;
+    clock?: () => Date;
+  },
+  stableRuntimeDirectory: string,
+  stableLanesDirectory: string
+): Promise<OpenCodeRuntimeLaneLaunchGenerationPreparation> {
   const clock = params.clock ?? (() => new Date());
-  const manifestPath = getOpenCodeRuntimeManifestPath(
+  const manifestPath = path.join(
+    stableLanesDirectory,
+    encodeURIComponent(params.laneId.trim()),
+    OPENCODE_RUNTIME_MANIFEST_FILE
+  );
+  const laneIndex = await readOpenCodeRuntimeLaneIndexUnlocked(
     params.teamsBasePath,
     params.teamName,
-    params.laneId
-  );
-  const laneIndex = await readOpenCodeRuntimeLaneIndex(params.teamsBasePath, params.teamName).catch(
-    () => null
-  );
+    stableRuntimeDirectory
+  ).catch(() => null);
   const laneIndexEntry = laneIndex?.lanes[params.laneId] ?? null;
   const terminalLaneIndex =
     laneIndexEntry?.state === 'degraded' || laneIndexEntry?.state === 'stopped';
-
   let manifest: Awaited<ReturnType<typeof readRuntimeStoreManifestEvidenceData>> | null = null;
   let manifestUnreadable = false;
-  if (await fileExists(manifestPath)) {
+  if (await durablePathExistsAsync(manifestPath)) {
     try {
       manifest = await readRuntimeStoreManifestEvidenceData(manifestPath, params.teamName, clock);
     } catch {
       manifestUnreadable = true;
     }
   }
-
   const staleEntryRunIds =
     manifest?.entries
       .filter((entry) => entry.runId !== params.runId)
@@ -616,7 +462,6 @@ export async function prepareOpenCodeRuntimeLaneForLaunchGeneration(params: {
     terminalLaneIndex ||
     activeRunMismatch ||
     staleEntryRunIds.length > 0;
-
   let reason: OpenCodeRuntimeLaneLaunchGenerationPreparation['reason'];
   const diagnostics: string[] = [];
   if (params.forceReset) {
@@ -650,38 +495,46 @@ export async function prepareOpenCodeRuntimeLaneForLaunchGeneration(params: {
   } else {
     reason = 'same_generation_reused';
   }
-
   if (shouldReset) {
-    await clearOpenCodeRuntimeLaneStorage({
+    await clearLaneStorageUnlocked(
+      {
+        teamsBasePath: params.teamsBasePath,
+        teamName: params.teamName,
+        laneId: params.laneId,
+      },
+      false,
+      stableRuntimeDirectory,
+      stableLanesDirectory
+    );
+  }
+  await upsertOpenCodeRuntimeLaneIndexEntry(
+    {
       teamsBasePath: params.teamsBasePath,
       teamName: params.teamName,
       laneId: params.laneId,
-    });
-  }
-
-  await upsertOpenCodeRuntimeLaneIndexEntry({
-    teamsBasePath: params.teamsBasePath,
-    teamName: params.teamName,
-    laneId: params.laneId,
-    runId: params.runId,
-    state: 'active',
-    diagnostics: diagnostics.length ? diagnostics : undefined,
-  });
-  await setOpenCodeRuntimeActiveRunManifest({
-    teamsBasePath: params.teamsBasePath,
-    teamName: params.teamName,
-    laneId: params.laneId,
-    runId: params.runId,
-    clock,
-  });
-
+      runId: params.runId,
+      state: 'active',
+      diagnostics: diagnostics.length ? diagnostics : undefined,
+    },
+    stableRuntimeDirectory
+  );
+  await setOpenCodeRuntimeActiveRunManifestUnlocked(
+    {
+      teamsBasePath: params.teamsBasePath,
+      teamName: params.teamName,
+      laneId: params.laneId,
+      runId: params.runId,
+      clock,
+    },
+    stableRuntimeDirectory,
+    stableLanesDirectory
+  );
   return {
     reset: shouldReset,
     reason,
     diagnostics,
   };
 }
-
 export function getOpenCodeLaneScopedRuntimeFilePath(params: {
   teamsBasePath: string;
   teamName: string;
@@ -693,7 +546,6 @@ export function getOpenCodeLaneScopedRuntimeFilePath(params: {
     params.fileName
   );
 }
-
 export async function readCommittedOpenCodeBootstrapSessionEvidence(params: {
   teamsBasePath: string;
   teamName: string;
@@ -711,7 +563,6 @@ export async function readCommittedOpenCodeBootstrapSessionEvidence(params: {
       diagnostics: ['OpenCode session store descriptor is not registered.'],
     };
   }
-
   const runtimeDirectory = getOpenCodeTeamRuntimeLaneDirectory(
     params.teamsBasePath,
     params.teamName,
@@ -800,22 +651,25 @@ export async function writeOpenCodeRuntimeLaneIndex(
     OPENCODE_LANE_INDEX_LOCK_OPTIONS
   );
 }
-
-export async function upsertOpenCodeRuntimeLaneIndexEntry(params: {
-  teamsBasePath: string;
-  teamName: string;
-  laneId: string;
-  runId?: string;
-  state: OpenCodeRuntimeLaneIndexEntry['state'];
-  diagnostics?: string[];
-}): Promise<void> {
-  const filePath = getOpenCodeRuntimeLaneIndexPath(params.teamsBasePath, params.teamName);
+export async function upsertOpenCodeRuntimeLaneIndexEntry(
+  params: {
+    teamsBasePath: string;
+    teamName: string;
+    laneId: string;
+    runId?: string;
+    state: OpenCodeRuntimeLaneIndexEntry['state'];
+    diagnostics?: string[];
+  },
+  stableRuntimeDirectory = getOpenCodeTeamRuntimeDirectory(params.teamsBasePath, params.teamName)
+): Promise<void> {
+  const filePath = path.join(stableRuntimeDirectory, OPENCODE_TEAM_RUNTIME_LANES_INDEX_FILE);
   await withFileLock(
     filePath,
     async () => {
       const index = await readOpenCodeRuntimeLaneIndexUnlocked(
         params.teamsBasePath,
-        params.teamName
+        params.teamName,
+        stableRuntimeDirectory
       );
       const previousEntry = index.lanes[params.laneId];
       index.updatedAt = new Date().toISOString();
@@ -826,12 +680,16 @@ export async function upsertOpenCodeRuntimeLaneIndexEntry(params: {
         updatedAt: index.updatedAt,
         diagnostics: params.diagnostics?.length ? [...params.diagnostics] : undefined,
       };
-      await writeOpenCodeRuntimeLaneIndexUnlocked(params.teamsBasePath, params.teamName, index);
+      await writeOpenCodeRuntimeLaneIndexUnlocked(
+        params.teamsBasePath,
+        params.teamName,
+        index,
+        stableRuntimeDirectory
+      );
     },
     OPENCODE_LANE_INDEX_LOCK_OPTIONS
   );
 }
-
 export async function setOpenCodeRuntimeActiveRunManifest(params: {
   teamsBasePath: string;
   teamName: string;
@@ -839,11 +697,30 @@ export async function setOpenCodeRuntimeActiveRunManifest(params: {
   runId: string | null;
   clock?: () => Date;
 }): Promise<void> {
-  const manifestPath = getOpenCodeRuntimeManifestPath(
-    params.teamsBasePath,
-    params.teamName,
-    params.laneId
+  await withOpenCodeRuntimeLaneLifecycleLock(params, (runtimeDirectory, lanesDirectory) =>
+    setOpenCodeRuntimeActiveRunManifestUnlocked(params, runtimeDirectory, lanesDirectory)
   );
+}
+
+async function setOpenCodeRuntimeActiveRunManifestUnlocked(
+  params: {
+    teamsBasePath: string;
+    teamName: string;
+    laneId?: string | null;
+    runId: string | null;
+    clock?: () => Date;
+  },
+  stableRuntimeDirectory: string,
+  stableLanesDirectory: string
+): Promise<void> {
+  const normalizedLaneId = params.laneId?.trim();
+  const manifestPath = normalizedLaneId
+    ? path.join(
+        stableLanesDirectory,
+        encodeURIComponent(normalizedLaneId),
+        OPENCODE_RUNTIME_MANIFEST_FILE
+      )
+    : path.join(stableRuntimeDirectory, OPENCODE_RUNTIME_MANIFEST_FILE);
   await ensureRuntimeManifestEnvelope(
     manifestPath,
     params.teamName,
@@ -925,12 +802,6 @@ export async function removeOpenCodeRuntimeLaneIndexEntry(params: {
   );
 }
 
-interface ClearOpenCodeRuntimeLaneStorageParams {
-  teamsBasePath: string;
-  teamName: string;
-  laneId: string;
-}
-
 export function clearOpenCodeRuntimeLaneStorage(
   params: ClearOpenCodeRuntimeLaneStorageParams & { expectedRunId: string }
 ): Promise<ClearOpenCodeRuntimeLaneStorageResult>;
@@ -940,60 +811,94 @@ export function clearOpenCodeRuntimeLaneStorage(
 export async function clearOpenCodeRuntimeLaneStorage(
   params: ClearOpenCodeRuntimeLaneStorageParams & { expectedRunId?: string }
 ): Promise<void | ClearOpenCodeRuntimeLaneStorageResult> {
-  const filePath = getOpenCodeRuntimeLaneIndexPath(params.teamsBasePath, params.teamName);
-  return await withFileLock(
-    filePath,
-    async () => {
-      const index = await readOpenCodeRuntimeLaneIndexUnlocked(
-        params.teamsBasePath,
-        params.teamName
-      );
-      const laneEntry = index.lanes[params.laneId];
-      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(
-        params.teamsBasePath,
-        params.teamName,
-        params.laneId
-      );
-      const manifestPath = getOpenCodeRuntimeManifestPath(
-        params.teamsBasePath,
-        params.teamName,
-        params.laneId
-      );
-
-      if (params.expectedRunId !== undefined) {
-        const manifestExists = await fileExists(manifestPath);
-        if (!laneEntry && !manifestExists) {
-          return (await fileExists(laneDirectory)) ? 'owner_changed' : 'cleared';
-        }
-        if (laneEntry?.runId !== undefined && laneEntry.runId !== params.expectedRunId) {
-          return 'owner_changed';
-        }
-        if (manifestExists) {
-          const manifest = await readRuntimeStoreManifestEvidenceData(
-            manifestPath,
-            params.teamName,
-            () => new Date()
-          );
-          if (manifest?.activeRunId !== params.expectedRunId) {
-            return 'owner_changed';
-          }
-        } else if (laneEntry?.runId === undefined) {
-          return 'owner_changed';
-        }
-      }
-
-      await rm(laneDirectory, { recursive: true, force: true });
-      if (laneEntry) {
-        delete index.lanes[params.laneId];
-        index.updatedAt = new Date().toISOString();
-        await writeOpenCodeRuntimeLaneIndexUnlocked(params.teamsBasePath, params.teamName, index);
-      }
-      return 'cleared';
-    },
-    OPENCODE_LANE_INDEX_LOCK_OPTIONS
+  assertIdentityStableDirectoryChildOperationsSupported();
+  return clearLaneStorageUnlocked(params, true);
+}
+// prettier-ignore
+async function clearLaneStorageUnlocked(
+  params: ClearOpenCodeRuntimeLaneStorageParams & { expectedRunId?: string }, acquireLifecycleLock = false,
+  stableRuntimeDirectory?: string, stableLanesDirectory?: string,
+): Promise<ClearOpenCodeRuntimeLaneStorageResult> {
+  assertIdentityStableDirectoryChildOperationsSupported();
+  return withIdentityStableIndexedDirectoryLocksAsync(
+    {
+      rootDirectoryPath: stableRuntimeDirectory ?? getOpenCodeTeamRuntimeDirectory(params.teamsBasePath, params.teamName),
+      containerDirectoryName: OPENCODE_TEAM_RUNTIME_LANES_DIR,
+      targetDirectoryName: encodeURIComponent(params.laneId),
+      indexFileName: OPENCODE_TEAM_RUNTIME_LANES_INDEX_FILE,
+      lifecycleLockName: `.${encodeURIComponent(params.laneId.trim() || 'primary')}.lifecycle`,
+      acquireLifecycleLock,
+      stableContainerDirectoryPath: stableLanesDirectory },
+    (lockPath, operation) => withFileLock(lockPath, operation, OPENCODE_LANE_INDEX_LOCK_OPTIONS),
+    ({ indexPath, targetDirectoryPath }) => clearIdentityStableLaneStorage(indexPath, targetDirectoryPath, params)
   );
 }
-
+// prettier-ignore
+async function clearIdentityStableLaneStorage(
+  indexPath: string, laneDirectory: string,
+  params: ClearOpenCodeRuntimeLaneStorageParams & { expectedRunId?: string },
+): Promise<ClearOpenCodeRuntimeLaneStorageResult> {
+  const rawIndex = await readOptionalJsonNoFollowAsync(indexPath);
+  const index = rawIndex === null ? createEmptyOpenCodeRuntimeLaneIndex()
+    : normalizeOpenCodeRuntimeLaneIndex(rawIndex as Partial<OpenCodeRuntimeLaneIndex>);
+  const laneEntry = index.lanes[params.laneId];
+  let ownershipDecision: ClearOpenCodeRuntimeLaneStorageResult | null = null;
+  const cleanupResult = await removeDirectoryEntriesExceptAsync(laneDirectory, OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS, {
+      displayPath: getOpenCodeTeamRuntimeLaneDirectory(params.teamsBasePath, params.teamName, params.laneId),
+      validateDirectory: async (stableDirectory, entries) => {
+        const manifestPath = path.join(stableDirectory, OPENCODE_RUNTIME_MANIFEST_FILE);
+        const readManifest = () => readJsonDataEnvelopeNoFollowAsync(manifestPath).then(validateRuntimeStoreManifest);
+        const manifestExists = entries.some((entry) => entry.name === OPENCODE_RUNTIME_MANIFEST_FILE);
+        if (params.expectedRunId !== undefined && laneEntry === undefined && !manifestExists) {
+          ownershipDecision = entries.every((entry) => OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry.name))
+            ? null : 'owner_changed';
+          return ownershipDecision === null;
+        }
+        ownershipDecision = await resolveOpenCodeRuntimeLaneClearOwnership({
+          expectedRunId: params.expectedRunId, laneEntryExists: laneEntry !== undefined,
+          laneEntryRunId: laneEntry?.runId,
+          manifestExists, laneDirectoryExists: async () => true,
+          readManifestActiveRunId: async () => (await readManifest()).activeRunId });
+        return ownershipDecision === null;
+      },
+    });
+  if (cleanupResult === 'missing') {
+    ownershipDecision = await resolveOpenCodeRuntimeLaneClearOwnership({
+      expectedRunId: params.expectedRunId, laneEntryExists: laneEntry !== undefined,
+      laneEntryRunId: laneEntry?.runId,
+      manifestExists: false, laneDirectoryExists: async () => false,
+      readManifestActiveRunId: async () => undefined });
+  }
+  if (ownershipDecision || cleanupResult === 'validation_failed') return ownershipDecision ?? 'owner_changed';
+  if (laneEntry) {
+    delete index.lanes[params.laneId];
+    index.updatedAt = new Date().toISOString();
+    await atomicWriteAsync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+  }
+  return 'cleared';
+}
+export function getOpenCodeRuntimeLaneLifecycleLockTargetPath(
+  teamsBasePath: string,
+  teamName: string,
+  laneId?: string | null
+): string {
+  const normalizedLaneId = laneId?.trim() || 'primary';
+  return path.join(
+    getOpenCodeTeamRuntimeDirectory(teamsBasePath, teamName),
+    OPENCODE_TEAM_RUNTIME_LANES_DIR,
+    `.${encodeURIComponent(normalizedLaneId)}.lifecycle`
+  );
+}
+// prettier-ignore
+function withOpenCodeRuntimeLaneLifecycleLock<T>(
+  params: { teamsBasePath: string; teamName: string; laneId?: string | null }, operation: (stableRuntimeDirectory: string, stableLanesDirectory: string) => Promise<T>): Promise<T> {
+  assertIdentityStableDirectoryChildOperationsSupported();
+  const lockTargetPath = getOpenCodeRuntimeLaneLifecycleLockTargetPath(params.teamsBasePath, params.teamName, params.laneId);
+  return withIdentityStableDirectoryTreeAsync(
+    getOpenCodeTeamRuntimeDirectory(params.teamsBasePath, params.teamName), OPENCODE_TEAM_RUNTIME_LANES_DIR,
+    ({ rootDirectoryPath, childDirectoryPath }) => withFileLock(path.join(childDirectoryPath, path.basename(lockTargetPath)), () => operation(rootDirectoryPath, childDirectoryPath), OPENCODE_LANE_INDEX_LOCK_OPTIONS),
+    { create: true });
+}
 export async function recoverStaleOpenCodeRuntimeLaneIndexEntry(params: {
   teamsBasePath: string;
   teamName: string;
@@ -1057,7 +962,6 @@ export async function recoverStaleOpenCodeRuntimeLaneIndexEntry(params: {
     diagnostics,
   };
 }
-
 export async function migrateLegacyOpenCodeRuntimeState(params: {
   teamsBasePath: string;
   teamName: string;
@@ -1073,7 +977,7 @@ export async function migrateLegacyOpenCodeRuntimeState(params: {
   );
   const diagnostics: string[] = [];
 
-  if (!(await fileExists(runtimeDir))) {
+  if (!(await durablePathExistsAsync(runtimeDir))) {
     await upsertOpenCodeRuntimeLaneIndexEntry({
       teamsBasePath: params.teamsBasePath,
       teamName: params.teamName,
@@ -1111,7 +1015,7 @@ export async function migrateLegacyOpenCodeRuntimeState(params: {
   const legacyFiles = (
     await Promise.all(
       knownLegacyFiles.map(async (fileName) =>
-        (await fileExists(path.join(runtimeDir, fileName))) ? fileName : null
+        (await durablePathExistsAsync(path.join(runtimeDir, fileName))) ? fileName : null
       )
     )
   ).filter((fileName): fileName is string => Boolean(fileName));

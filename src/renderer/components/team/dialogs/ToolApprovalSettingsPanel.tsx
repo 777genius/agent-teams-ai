@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
+import { resolveToolApprovalSettingsForTeam } from '@renderer/store/team/teamToolApprovalSettings';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -49,7 +50,15 @@ export const ToolApprovalSettingsContent: React.FC<{
 }> = ({ expanded, teamName }) => {
   const { t } = useAppTranslation('team');
   const [localSeconds, setLocalSeconds] = useState<string>('');
-  const settings = useStore(useShallow((s) => s.toolApprovalSettings));
+  const settings = useStore(
+    useShallow((s) =>
+      resolveToolApprovalSettingsForTeam(
+        s.toolApprovalSettingsByTeam,
+        s.toolApprovalSettings,
+        teamName
+      )
+    )
+  );
   const rawUpdateSettings = useStore((s) => s.updateToolApprovalSettings);
   const updateSettings = useCallback(
     (patch: Partial<ToolApprovalSettings>) => rawUpdateSettings(patch, teamName),

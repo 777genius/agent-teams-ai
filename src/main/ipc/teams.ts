@@ -6,7 +6,6 @@ import {
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
 import { getAppIconPath } from '@main/utils/appIcon';
-import { getAppDataPath } from '@main/utils/pathDecoder';
 import { stripMarkdown } from '@main/utils/textFormatting';
 import {
   TEAM_CREATE_INITIAL_GIT_COMMIT,
@@ -32,6 +31,7 @@ import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } fr
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { TeamPermanentDeletionTransactionCoordinator } from '../../features/team-view-read-model/main/adapters/output/TeamPermanentDeletionTransactionCoordinator';
 import { ConfigManager } from '../services/infrastructure/ConfigManager';
 import { NotificationManager } from '../services/infrastructure/NotificationManager';
 import { gitIdentityResolver } from '../services/parsing/GitIdentityResolver';
@@ -39,6 +39,7 @@ import {
   cloneLaunchIoGovernorPayload,
   type LaunchIoGovernor,
 } from '../services/team/LaunchIoGovernor';
+import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
@@ -50,7 +51,10 @@ import type {
   TeamLogSourceTracker,
   TeammateToolTracker,
 } from '../services';
-import type { TeamRuntimeApi } from '../services/team/contracts/TeamProvisioningApis';
+import type {
+  TeamIpcHandlerApis,
+  TeamRuntimeApi,
+} from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
 import type {
@@ -71,11 +75,65 @@ let teamLogSourceTracker: TeamLogSourceTracker | null = null;
 let branchStatusService: BranchStatusService | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let teamPermanentDeletionLifecycle: {
-  prepareTeamDeletion(teamName: string): Promise<void>;
+  prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 } | null = null;
+let permanentDeletionCoordinator: TeamPermanentDeletionTransactionCoordinator | null = null;
 
+interface TeamIdentityLifecycle {
+  resumeTeam(teamName: string): void;
+}
+
+function withTeamIdentityFence<T>(
+  backupService: Pick<TeamBackupService, 'withTeamIdentityFence'> | undefined,
+  teamName: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  return backupService ? backupService.withTeamIdentityFence(teamName, operation) : operation();
+}
+
+export function createIdentityFencedProvisioningStart(
+  provisioningStart: TeamIpcHandlerApis['provisioningStart'],
+  backupService: Pick<TeamBackupService, 'withTeamIdentityFence'> | undefined,
+  lifecycle: TeamIdentityLifecycle | undefined
+): TeamIpcHandlerApis['provisioningStart'] {
+  return {
+    createTeam: (request, onProgress) =>
+      withTeamIdentityFence(backupService, request.teamName, async () => {
+        const response = await provisioningStart.createTeam(request, onProgress);
+        lifecycle?.resumeTeam(request.teamName);
+        return response;
+      }),
+    launchTeam: async (request, onProgress) => {
+      const response = await provisioningStart.launchTeam(request, onProgress);
+      lifecycle?.resumeTeam(request.teamName);
+      return response;
+    },
+  };
+}
+
+export function createIdentityFencedTeamConfigurationRepository(
+  repository: TeamDataService,
+  backupService: Pick<TeamBackupService, 'withTeamIdentityFence'> | undefined,
+  lifecycle: TeamIdentityLifecycle | undefined,
+  deleteDraft: (teamName: string) => Promise<void>
+) {
+  return {
+    createTeamConfig: (request: Parameters<TeamDataService['createTeamConfig']>[0]) =>
+      withTeamIdentityFence(backupService, request.teamName, async () => {
+        await repository.createTeamConfig(request);
+        lifecycle?.resumeTeam(request.teamName);
+      }),
+    getTeamDisplayName: (teamName: string) => repository.getTeamDisplayName(teamName),
+    updateConfig: (teamName: string, updates: Parameters<TeamDataService['updateConfig']>[1]) =>
+      repository.updateConfig(teamName, updates),
+    getSavedRequest: (teamName: string) => repository.getSavedRequest(teamName),
+    permanentlyDeleteTeam: deleteDraft,
+  };
+}
+
+const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
 const worktreeGitService = new TeamWorktreeGitService();
 
@@ -132,7 +190,7 @@ export function initializeTeamHandlers(
   branchTracker?: BranchStatusService,
   ioGovernor?: LaunchIoGovernor,
   permanentDeletionLifecycle?: {
-    prepareTeamDeletion(teamName: string): Promise<void>;
+    prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
   }
@@ -145,6 +203,19 @@ export function initializeTeamHandlers(
   branchStatusService = branchTracker ?? null;
   launchIoGovernor = ioGovernor ?? null;
   teamPermanentDeletionLifecycle = permanentDeletionLifecycle ?? null;
+  permanentDeletionCoordinator = new TeamPermanentDeletionTransactionCoordinator({
+    backupService: () => teamBackupService,
+    dataService: () => getTeamDataService(),
+    attachmentStore,
+    taskAttachmentStore,
+    lifecycle: () => teamPermanentDeletionLifecycle,
+    invalidateTeamConfig: (teamName) => getTeamDataWorkerClient().invalidateTeamConfig(teamName),
+    logRecoveryError: (teamName, error) =>
+      logger.error(
+        `[PermanentDeletion] ${teamName === 'startup' ? 'Startup recovery failed' : `Recovery remains pending for ${teamName}`}: ${String(error)}`
+      ),
+  });
+  permanentDeletionCoordinator.startRecovery();
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
@@ -189,6 +260,21 @@ function getTeamDataService(): TeamDataService {
     throw new Error('Team handlers are not initialized');
   }
   return teamDataService;
+}
+
+function getPermanentDeletionCoordinator(): TeamPermanentDeletionTransactionCoordinator {
+  if (!permanentDeletionCoordinator) {
+    throw new Error('Permanent deletion is unavailable until team handlers are initialized');
+  }
+  return permanentDeletionCoordinator;
+}
+
+export function permanentlyDeleteDraftTeam(teamName: string): Promise<void> {
+  return getPermanentDeletionCoordinator().permanentlyDeleteDraft(teamName);
+}
+
+export async function waitForPendingPermanentDeletionRecoveryForTests(): Promise<void> {
+  await permanentDeletionCoordinator?.waitForRecovery();
 }
 
 function getTeamRuntimeApi(): Pick<TeamRuntimeApi, 'stopTeam'> {
@@ -422,26 +508,7 @@ async function handlePermanentlyDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('permanentlyDeleteTeam', async () => {
-    const teamName = validated.value!;
-    await teamPermanentDeletionLifecycle?.prepareTeamDeletion(teamName);
-    await getTeamDataService().permanentlyDeleteTeam(teamName);
-    teamPermanentDeletionLifecycle?.completeTeamDeletion(teamName);
-    getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
-    // Clean up app-owned data (attachments, task-attachments) that lives outside ~/.claude/
-    const appData = getAppDataPath();
-    await fs.promises
-      .rm(path.join(appData, 'attachments', validated.value!), { recursive: true, force: true })
-      .catch(() => undefined);
-    await fs.promises
-      .rm(path.join(appData, 'task-attachments', validated.value!), {
-        recursive: true,
-        force: true,
-      })
-      .catch(() => undefined);
-    // Mark in backup registry AFTER successful deletion
-    if (teamBackupService) {
-      await teamBackupService.markDeletedByUser(validated.value!);
-    }
+    await getPermanentDeletionCoordinator().permanentlyDelete(validated.value!);
   });
 }
 

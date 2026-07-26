@@ -4,6 +4,24 @@ import type {
 } from '../../core/application';
 
 export class CompositeMemberWorkSyncBusySignal implements MemberWorkSyncBusySignalPort {
+  static compose(
+    primarySignal: MemberWorkSyncBusySignalPort,
+    options: {
+      priorityBusySignals?: MemberWorkSyncBusySignalPort[];
+      extraBusySignals?: MemberWorkSyncBusySignalPort[];
+      logger?: MemberWorkSyncLoggerPort;
+    }
+  ): MemberWorkSyncBusySignalPort {
+    const signals = [
+      ...(options.priorityBusySignals ?? []),
+      primarySignal,
+      ...(options.extraBusySignals ?? []),
+    ];
+    return signals.length === 1
+      ? primarySignal
+      : new CompositeMemberWorkSyncBusySignal(signals, options.logger);
+  }
+
   constructor(
     private readonly signals: MemberWorkSyncBusySignalPort[],
     private readonly logger?: MemberWorkSyncLoggerPort

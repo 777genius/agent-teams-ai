@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
-import type { TokenUsageBudgetLimits } from '../adapters/tokenUsageViewModel';
+import type { TokenUsageBudgetLimits } from '../view-models/tokenUsageViewModel';
 import type React from 'react';
 
 export interface UseTokenUsageBudgetSettingsOptions {

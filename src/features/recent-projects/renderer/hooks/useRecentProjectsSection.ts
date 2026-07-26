@@ -11,7 +11,6 @@ import {
 import { buildTaskCountsByProject } from '@renderer/utils/pathNormalize';
 import { useShallow } from 'zustand/react/shallow';
 
-import { adaptRecentProjectsSection } from '../adapters/RecentProjectsSectionAdapter';
 import { buildActiveTeamsByProject } from '../utils/activeProjectTeams';
 import {
   sortRecentProjectsByDisplayPriority,
@@ -21,10 +20,11 @@ import {
   getRecentProjectsClientSnapshot,
   loadRecentProjectsWithClientCache,
 } from '../utils/recentProjectsClientCache';
+import { buildRecentProjectsSectionViewModel } from '../view-models/recentProjectsSectionViewModel';
 
 import { useOpenRecentProject } from './useOpenRecentProject';
 
-import type { RecentProjectCardModel } from '../adapters/RecentProjectsSectionAdapter';
+import type { RecentProjectCardModel } from '../view-models/recentProjectsSectionViewModel';
 
 const INITIAL_RECENT_PROJECTS = 11;
 const LOAD_MORE_STEP = 8;
@@ -279,7 +279,7 @@ export function useRecentProjectsSection(
 
   const decoratedCards = useMemo(() => {
     void openHistoryVersion;
-    return adaptRecentProjectsSection({
+    return buildRecentProjectsSectionViewModel({
       projects: sortRecentProjectsByDisplayPriority(recentProjects),
       taskCountsByProject,
       activeTeamsByProject,

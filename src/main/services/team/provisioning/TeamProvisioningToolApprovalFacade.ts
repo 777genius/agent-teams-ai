@@ -45,6 +45,29 @@ export interface TeamProvisioningToolApprovalSyncInput extends OpenCodeRuntimeTo
   memberNames?: readonly string[];
 }
 
+export interface TeamProvisioningMemberToolApprovalBusyInput {
+  teamName: string;
+  memberName: string;
+  nowIso: string;
+}
+
+export interface TeamProvisioningMemberToolApprovalBusyStatus {
+  busy: boolean;
+  reason?: string;
+  retryAfterIso?: string;
+}
+
+const MEMBER_TOOL_APPROVAL_BUSY_RETRY_MS = 60_000;
+
+function normalizeMemberName(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function addMsToIso(value: string, durationMs: number): string {
+  const parsed = Date.parse(value);
+  return new Date((Number.isFinite(parsed) ? parsed : Date.now()) + durationMs).toISOString();
+}
+
 export interface TeamProvisioningToolApprovalFacadeNotificationDeps {
   getNotificationSettings?: () => ToolApprovalNotificationSettingsSnapshot;
   getNotificationConstructor?: () => TeamProvisioningToolApprovalNotificationConstructor | null;
@@ -381,9 +404,51 @@ export class TeamProvisioningToolApprovalFacade<
     return this.toolApprovalSettingsByTeam.get(teamName) ?? DEFAULT_TOOL_APPROVAL_SETTINGS;
   }
 
+  initializeToolApprovalSettingsForLaunch(
+    teamName: string,
+    skipPermissions: boolean | undefined
+  ): void {
+    this.updateToolApprovalSettings(
+      teamName,
+      skipPermissions === false
+        ? DEFAULT_TOOL_APPROVAL_SETTINGS
+        : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true }
+    );
+  }
+
   updateToolApprovalSettings(teamName: string, settings: ToolApprovalSettings): void {
     this.toolApprovalSettingsByTeam.set(teamName, settings);
     this.reEvaluatePendingApprovals();
+  }
+
+  getMemberToolApprovalBusyStatus(
+    input: TeamProvisioningMemberToolApprovalBusyInput
+  ): TeamProvisioningMemberToolApprovalBusyStatus {
+    const teamName = input.teamName.trim();
+    const memberName = normalizeMemberName(input.memberName);
+    if (!teamName || !memberName) {
+      return { busy: false };
+    }
+
+    const trackedRunId = this.deps.getTrackedRunId(teamName);
+    const trackedRun = trackedRunId ? this.deps.getRun(trackedRunId) : undefined;
+    const hasNativePendingApproval =
+      trackedRun?.teamName === teamName &&
+      [...trackedRun.pendingApprovals.values()].some(
+        (approval) => normalizeMemberName(approval.source) === memberName
+      );
+    const hasRuntimePendingApproval =
+      this.runtimeToolApprovalCoordinator.hasPendingApprovalForMember(teamName, memberName);
+
+    if (!hasNativePendingApproval && !hasRuntimePendingApproval) {
+      return { busy: false };
+    }
+
+    return {
+      busy: true,
+      reason: 'pending_tool_approval',
+      retryAfterIso: addMsToIso(input.nowIso, MEMBER_TOOL_APPROVAL_BUSY_RETRY_MS),
+    };
   }
 
   emitToolApprovalEvent(event: ToolApprovalEvent): void {

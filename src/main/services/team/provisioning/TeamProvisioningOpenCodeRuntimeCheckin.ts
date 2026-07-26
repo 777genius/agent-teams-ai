@@ -1,6 +1,9 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
 
-import { getOpenCodeRuntimeRunTombstonesPath } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import {
+  getOpenCodeRuntimeLaneLifecycleLockTargetPath,
+  getOpenCodeRuntimeRunTombstonesPath,
+} from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   createRuntimeRunTombstoneStore,
   type RuntimeEvidenceKind,
@@ -16,7 +19,6 @@ import {
   commitOpenCodeRuntimeBootstrapSessionEvidence,
   hasCommittedOpenCodeRuntimeBootstrapSessionEvidence,
   type OpenCodeRuntimeBootstrapCheckinIdempotencyResult,
-  type OpenCodeRuntimeBootstrapEvidencePorts,
   resolveOpenCodeRuntimeBootstrapCheckinIdempotencyFromMember,
 } from './TeamProvisioningOpenCodeBootstrapEvidence';
 import { summarizeRuntimeLaunchResultMembers } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
@@ -34,144 +36,22 @@ import {
   type RuntimeToolMetadata,
 } from './TeamProvisioningRuntimeMetadata';
 
-import type { TeamRuntimeLaunchResult, TeamRuntimeMemberLaunchEvidence } from '../runtime';
+import type { TeamRuntimeMemberLaunchEvidence } from '../runtime';
 import type { OpenCodeRuntimeControlAck } from '../runtime-control';
 import type {
-  OpenCodeTaskLogAttributionRecord,
-  OpenCodeTaskLogAttributionWriteResult,
-} from '../taskLogs/stream/OpenCodeTaskLogAttributionStore';
-import type { PersistedRuntimeMemberLike } from './TeamProvisioningRuntimeSnapshot';
+  OpenCodeRuntimeCheckinPorts,
+  OpenCodeRuntimeCheckinRun,
+} from './TeamProvisioningOpenCodeRuntimeCheckinPorts';
 import type {
   MemberSpawnStatusEntry,
   PersistedTeamLaunchMemberState,
   PersistedTeamLaunchSnapshot,
-  TeamChangeEvent,
   TeamConfig,
-  TeamCreateRequest,
   TeamMember,
 } from '@shared/types';
 
 export type { OpenCodeRuntimeControlAck } from '../runtime-control';
-
-export interface OpenCodeRuntimeCheckinLane {
-  laneId: string;
-  providerId: 'opencode';
-  member: TeamCreateRequest['members'][number];
-  runId: string | null;
-  state: 'queued' | 'launching' | 'finished';
-  result: TeamRuntimeLaunchResult | null;
-  warnings: string[];
-  diagnostics: string[];
-}
-
-export interface OpenCodeRuntimeCheckinRun {
-  runId: string;
-  teamName: string;
-  request: TeamCreateRequest;
-  effectiveMembers: TeamCreateRequest['members'];
-  processKilled: boolean;
-  cancelRequested: boolean;
-  mixedSecondaryLanes: OpenCodeRuntimeCheckinLane[];
-  memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;
-  pendingMemberRestarts?: Pick<Map<string, unknown>, 'delete' | 'has'>;
-}
-
-export interface OpenCodeRuntimeCheckinPorts<Run extends OpenCodeRuntimeCheckinRun> {
-  teamsBasePath: string;
-  resolveOpenCodeRuntimeLaneId(input: {
-    teamName: string;
-    runId: string;
-    memberName?: string;
-  }): Promise<string>;
-  resolveCurrentOpenCodeRuntimeRunId(teamName: string, laneId: string): Promise<string | null>;
-  readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
-  writeLaunchState(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void>;
-  readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null>;
-  readMetaMembers(teamName: string): Promise<TeamMember[]>;
-  readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
-  getTrackedRun(teamName: string): Run | null;
-  persistTrackedRunLaunchState(run: Run): Promise<void>;
-  invalidateRuntimeSnapshotCaches(teamName: string): void;
-  emitMemberSpawnChange(run: Run, memberName: string): void;
-  emitRuntimeMemberSpawnChange(input: {
-    teamName: string;
-    runId: string;
-    memberName: string;
-  }): void;
-  emitTaskLogChange(input: {
-    teamName: string;
-    runId: string;
-    taskId: string;
-    detail: string;
-  }): void;
-  createOpenCodeRuntimeBootstrapEvidencePorts(): OpenCodeRuntimeBootstrapEvidencePorts;
-  upsertOpenCodeTaskRecord(
-    teamName: string,
-    record: OpenCodeTaskLogAttributionRecord
-  ): Promise<OpenCodeTaskLogAttributionWriteResult>;
-  syncMemberTaskActivityForRuntimeTransition(
-    run: Run,
-    memberName: string,
-    previousStatus: MemberSpawnStatusEntry,
-    nextStatus: MemberSpawnStatusEntry,
-    observedAt: string
-  ): void;
-  syncMemberLaunchGraceCheck(
-    run: Run,
-    memberName: string,
-    nextStatus: MemberSpawnStatusEntry
-  ): void;
-}
-
-export type OpenCodeRuntimeCheckinPortCallbacks<Run extends OpenCodeRuntimeCheckinRun> = Omit<
-  OpenCodeRuntimeCheckinPorts<Run>,
-  'emitRuntimeMemberSpawnChange' | 'emitTaskLogChange'
-> & {
-  emitTeamChange(event: TeamChangeEvent): void;
-};
-
-export function createOpenCodeRuntimeCheckinPorts<Run extends OpenCodeRuntimeCheckinRun>(
-  callbacks: OpenCodeRuntimeCheckinPortCallbacks<Run>
-): OpenCodeRuntimeCheckinPorts<Run> {
-  return {
-    teamsBasePath: callbacks.teamsBasePath,
-    resolveOpenCodeRuntimeLaneId: callbacks.resolveOpenCodeRuntimeLaneId,
-    resolveCurrentOpenCodeRuntimeRunId: callbacks.resolveCurrentOpenCodeRuntimeRunId,
-    readLaunchState: callbacks.readLaunchState,
-    writeLaunchState: callbacks.writeLaunchState,
-    readConfigForStrictDecision: callbacks.readConfigForStrictDecision,
-    readMetaMembers: callbacks.readMetaMembers,
-    readPersistedRuntimeMembers: callbacks.readPersistedRuntimeMembers,
-    getTrackedRun: callbacks.getTrackedRun,
-    persistTrackedRunLaunchState: callbacks.persistTrackedRunLaunchState,
-    invalidateRuntimeSnapshotCaches: callbacks.invalidateRuntimeSnapshotCaches,
-    emitMemberSpawnChange: callbacks.emitMemberSpawnChange,
-    emitRuntimeMemberSpawnChange: (event) => {
-      callbacks.emitTeamChange({
-        type: 'member-spawn',
-        teamName: event.teamName,
-        runId: event.runId,
-        detail: event.memberName,
-      });
-    },
-    emitTaskLogChange: (event) => {
-      callbacks.emitTeamChange({
-        type: 'task-log-change',
-        teamName: event.teamName,
-        runId: event.runId,
-        taskId: event.taskId,
-        detail: event.detail,
-        taskSignalKind: 'log',
-      });
-    },
-    createOpenCodeRuntimeBootstrapEvidencePorts:
-      callbacks.createOpenCodeRuntimeBootstrapEvidencePorts,
-    upsertOpenCodeTaskRecord: callbacks.upsertOpenCodeTaskRecord,
-    syncMemberTaskActivityForRuntimeTransition:
-      callbacks.syncMemberTaskActivityForRuntimeTransition,
-    syncMemberLaunchGraceCheck: callbacks.syncMemberLaunchGraceCheck,
-  };
-}
+export * from './TeamProvisioningOpenCodeRuntimeCheckinPorts';
 
 interface OpenCodeRuntimeLivenessInput {
   teamName: string;
@@ -182,6 +62,16 @@ interface OpenCodeRuntimeLivenessInput {
   diagnostics: unknown;
   metadata?: RuntimeToolMetadata;
   reason: string;
+  requiredIdentity?: {
+    laneId: string;
+    evidenceKind: RuntimeEvidenceKind;
+  };
+}
+
+export interface OpenCodeRuntimeMemberSessionAcceptancePorts {
+  readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+  readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null>;
+  readMetaMembers(teamName: string): Promise<readonly TeamMember[]>;
 }
 
 export async function recordOpenCodeRuntimeBootstrapCheckin<Run extends OpenCodeRuntimeCheckinRun>(
@@ -194,59 +84,104 @@ export async function recordOpenCodeRuntimeBootstrapCheckin<Run extends OpenCode
   const memberName = requireRuntimeString(payload.memberName, 'memberName');
   const runtimeSessionId = requireRuntimeString(payload.runtimeSessionId, 'runtimeSessionId');
   const observedAt = normalizeRuntimeIso(payload.observedAt);
-  const laneId = await ports.resolveOpenCodeRuntimeLaneId({ teamName, runId, memberName });
+  return await ports.withTeamLock(teamName, async () => {
+    const laneId = await ports.resolveOpenCodeRuntimeLaneId({ teamName, runId, memberName });
 
-  await assertOpenCodeRuntimeEvidenceAccepted(
-    {
-      teamName,
-      runId,
-      laneId,
-      evidenceKind: 'bootstrap_checkin',
-    },
-    ports
-  );
-  const idempotent = await resolveOpenCodeRuntimeBootstrapCheckinIdempotency(
-    {
-      teamName,
-      runId,
-      memberName,
-      runtimeSessionId,
-    },
-    ports
-  );
-  const bootstrapEvidencePorts = ports.createOpenCodeRuntimeBootstrapEvidencePorts();
-  await assertOpenCodeRuntimeMemberCheckinAllowed(
-    {
-      teamName,
-      memberName,
-      previousMember: idempotent.previousMember,
-    },
-    ports
-  );
-  if (idempotent.state === 'duplicate') {
-    const committed = await hasCommittedOpenCodeRuntimeBootstrapSessionEvidence(
+    await assertOpenCodeRuntimeEvidenceAccepted(
       {
         teamName,
         runId,
         laneId,
+        evidenceKind: 'bootstrap_checkin',
+      },
+      ports
+    );
+    const idempotent = await resolveOpenCodeRuntimeBootstrapCheckinIdempotency(
+      {
+        teamName,
+        runId,
         memberName,
         runtimeSessionId,
       },
-      bootstrapEvidencePorts
+      ports
     );
-    if (!committed) {
-      await commitOpenCodeRuntimeBootstrapSessionEvidence(
+    const bootstrapEvidencePorts = ports.createOpenCodeRuntimeBootstrapEvidencePorts();
+    await assertOpenCodeRuntimeMemberCheckinAllowed(
+      {
+        teamName,
+        memberName,
+      },
+      ports
+    );
+    if (idempotent.state === 'duplicate') {
+      const committed = await hasCommittedOpenCodeRuntimeBootstrapSessionEvidence(
         {
           teamName,
           runId,
           laneId,
           memberName,
           runtimeSessionId,
-          observedAt,
         },
         bootstrapEvidencePorts
       );
+      if (!committed) {
+        await commitOpenCodeRuntimeBootstrapSessionEvidence(
+          {
+            teamName,
+            runId,
+            laneId,
+            memberName,
+            runtimeSessionId,
+            observedAt,
+          },
+          bootstrapEvidencePorts
+        );
+      }
+      await updateOpenCodeRuntimeMemberLiveness(
+        {
+          teamName,
+          runId,
+          memberName,
+          runtimeSessionId,
+          observedAt,
+          diagnostics: payload.diagnostics,
+          metadata: parseRuntimeToolMetadata(payload.metadata),
+          reason: 'OpenCode runtime bootstrap check-in accepted',
+          requiredIdentity: { laneId, evidenceKind: 'bootstrap_checkin' },
+        },
+        ports
+      );
+      return {
+        ok: true,
+        providerId: 'opencode',
+        teamName,
+        runId,
+        state: 'accepted',
+        memberName,
+        runtimeSessionId,
+        diagnostics: ['opencode_bootstrap_checkin_duplicate_accepted'],
+        observedAt,
+      };
     }
+    if (idempotent.state === 'conflict') {
+      throw new RuntimeStaleEvidenceError(
+        `opencode_bootstrap_checkin_session_conflict: existing runtime session ${idempotent.existingRuntimeSessionId}, received ${runtimeSessionId} for ${memberName}`,
+        'run_mismatch',
+        'bootstrap_checkin',
+        runId
+      );
+    }
+    await commitOpenCodeRuntimeBootstrapSessionEvidence(
+      {
+        teamName,
+        runId,
+        laneId,
+        memberName,
+        runtimeSessionId,
+        observedAt,
+      },
+      bootstrapEvidencePorts
+    );
     await updateOpenCodeRuntimeMemberLiveness(
       {
         teamName,
@@ -257,9 +192,11 @@ export async function recordOpenCodeRuntimeBootstrapCheckin<Run extends OpenCode
         diagnostics: payload.diagnostics,
         metadata: parseRuntimeToolMetadata(payload.metadata),
         reason: 'OpenCode runtime bootstrap check-in accepted',
+        requiredIdentity: { laneId, evidenceKind: 'bootstrap_checkin' },
       },
       ports
     );
+
     return {
       ok: true,
       providerId: 'opencode',
@@ -268,54 +205,10 @@ export async function recordOpenCodeRuntimeBootstrapCheckin<Run extends OpenCode
       state: 'accepted',
       memberName,
       runtimeSessionId,
-      diagnostics: ['opencode_bootstrap_checkin_duplicate_accepted'],
+      diagnostics: [],
       observedAt,
     };
-  }
-  if (idempotent.state === 'conflict') {
-    throw new RuntimeStaleEvidenceError(
-      `opencode_bootstrap_checkin_session_conflict: existing runtime session ${idempotent.existingRuntimeSessionId}, received ${runtimeSessionId} for ${memberName}`,
-      'run_mismatch',
-      'bootstrap_checkin',
-      runId
-    );
-  }
-  await commitOpenCodeRuntimeBootstrapSessionEvidence(
-    {
-      teamName,
-      runId,
-      laneId,
-      memberName,
-      runtimeSessionId,
-      observedAt,
-    },
-    bootstrapEvidencePorts
-  );
-  await updateOpenCodeRuntimeMemberLiveness(
-    {
-      teamName,
-      runId,
-      memberName,
-      runtimeSessionId,
-      observedAt,
-      diagnostics: payload.diagnostics,
-      metadata: parseRuntimeToolMetadata(payload.metadata),
-      reason: 'OpenCode runtime bootstrap check-in accepted',
-    },
-    ports
-  );
-
-  return {
-    ok: true,
-    providerId: 'opencode',
-    teamName,
-    runId,
-    state: 'accepted',
-    memberName,
-    runtimeSessionId,
-    diagnostics: [],
-    observedAt,
-  };
+  });
 }
 
 export async function recordOpenCodeRuntimeTaskEvent<Run extends OpenCodeRuntimeCheckinRun>(
@@ -382,43 +275,139 @@ export async function recordOpenCodeRuntimeHeartbeat<Run extends OpenCodeRuntime
   const memberName = requireRuntimeString(payload.memberName, 'memberName');
   const runtimeSessionId = requireRuntimeString(payload.runtimeSessionId, 'runtimeSessionId');
   const observedAt = normalizeRuntimeIso(payload.observedAt);
-  const laneId = await ports.resolveOpenCodeRuntimeLaneId({ teamName, runId, memberName });
   const status = optionalRuntimeString(payload.status);
+  const statusSuffix = status ? ` (${status})` : '';
 
-  await assertOpenCodeRuntimeEvidenceAccepted(
-    {
+  return ports.withTeamLock(teamName, async () => {
+    const laneId = await ports.resolveOpenCodeRuntimeLaneId({ teamName, runId, memberName });
+    await updateOpenCodeRuntimeMemberLiveness(
+      {
+        teamName,
+        runId,
+        memberName,
+        runtimeSessionId,
+        observedAt,
+        diagnostics: undefined,
+        metadata: parseRuntimeToolMetadata(payload.metadata),
+        reason: `OpenCode runtime heartbeat accepted${statusSuffix}`,
+        requiredIdentity: {
+          laneId,
+          evidenceKind: 'heartbeat',
+        },
+      },
+      ports
+    );
+
+    return {
+      ok: true,
+      providerId: 'opencode',
       teamName,
       runId,
-      laneId,
-      evidenceKind: 'heartbeat',
-    },
-    ports
-  );
-  await updateOpenCodeRuntimeMemberLiveness(
-    {
-      teamName,
-      runId,
+      state: 'accepted',
       memberName,
       runtimeSessionId,
+      diagnostics: [],
       observedAt,
-      diagnostics: undefined,
-      metadata: parseRuntimeToolMetadata(payload.metadata),
-      reason: `OpenCode runtime heartbeat accepted${status ? ` (${status})` : ''}`,
-    },
-    ports
-  );
+    };
+  });
+}
 
-  return {
-    ok: true,
-    providerId: 'opencode',
-    teamName,
-    runId,
-    state: 'accepted',
-    memberName,
-    runtimeSessionId,
-    diagnostics: [],
-    observedAt,
-  };
+export async function assertOpenCodeRuntimeMemberSessionAccepted(
+  input: {
+    teamName: string;
+    runId: string;
+    laneId: string;
+    memberName: string;
+    runtimeSessionId: string;
+    evidenceKind: RuntimeEvidenceKind;
+  },
+  ports: OpenCodeRuntimeMemberSessionAcceptancePorts
+): Promise<void> {
+  const [snapshot, config, metaMembers] = await Promise.all([
+    ports.readLaunchState(input.teamName),
+    ports.readConfigForStrictDecision(input.teamName),
+    ports.readMetaMembers(input.teamName),
+  ]);
+  assertOpenCodeRuntimeMemberSessionAcceptedFromState(input, snapshot, config, metaMembers);
+}
+
+function assertOpenCodeRuntimeMemberSessionAcceptedFromState(
+  input: {
+    teamName: string;
+    runId: string;
+    laneId: string;
+    memberName: string;
+    runtimeSessionId: string;
+    evidenceKind: RuntimeEvidenceKind;
+  },
+  snapshot: PersistedTeamLaunchSnapshot | null,
+  config: TeamConfig | null,
+  metaMembers: readonly TeamMember[]
+): void {
+  if (!config || config.deletedAt) {
+    throwRuntimeMemberSessionMismatch(input, 'team configuration is unavailable');
+  }
+
+  const configuredMember = resolveEffectiveConfiguredMember(
+    config.members ?? [],
+    metaMembers,
+    input.memberName
+  );
+  if (!configuredMember) {
+    throwRuntimeMemberSessionMismatch(input, 'member is not configured');
+  }
+  if (configuredMember.removedAt != null) {
+    throwRuntimeMemberSessionMismatch(input, 'member has been removed');
+  }
+  if (configuredMember.providerId !== 'opencode')
+    throwRuntimeMemberSessionMismatch(input, 'member is not owned by OpenCode');
+
+  const persistedMember = Object.entries(snapshot?.members ?? {}).find(([memberName]) =>
+    matchesTeamMemberIdentity(memberName, configuredMember.name)
+  )?.[1];
+  const isBootstrapCheckin = input.evidenceKind === 'bootstrap_checkin';
+  if (!persistedMember) {
+    if (isBootstrapCheckin) return;
+    throwRuntimeMemberSessionMismatch(input, 'member runtime identity is unavailable');
+  }
+  const persistedRunId = persistedMember.runtimeRunId?.trim();
+  if (isBootstrapCheckin && persistedRunId !== input.runId) return;
+  const persistedOwnerProviderId =
+    persistedMember.laneOwnerProviderId ?? persistedMember.providerId;
+  if (persistedOwnerProviderId !== 'opencode') {
+    throwRuntimeMemberSessionMismatch(input, 'member is not owned by OpenCode');
+  }
+
+  const persistedLaneId = persistedMember.laneId?.trim();
+  if (persistedLaneId !== input.laneId) {
+    throwRuntimeMemberSessionMismatch(input, 'member lane does not match');
+  }
+  if (persistedRunId !== input.runId) {
+    throwRuntimeMemberSessionMismatch(input, 'member runtime run does not match');
+  }
+  const persistedSessionId = persistedMember.runtimeSessionId?.trim();
+  if (
+    persistedSessionId !== input.runtimeSessionId &&
+    (!isBootstrapCheckin || Boolean(persistedSessionId))
+  ) {
+    throwRuntimeMemberSessionMismatch(input, 'member runtime session does not match');
+  }
+}
+
+function throwRuntimeMemberSessionMismatch(
+  input: {
+    memberName: string;
+    runId: string;
+    evidenceKind: RuntimeEvidenceKind;
+  },
+  reason: string
+): never {
+  throw new RuntimeStaleEvidenceError(
+    `Rejected OpenCode ${input.evidenceKind} for ${input.memberName}: ${reason}`,
+    'run_mismatch',
+    input.evidenceKind,
+    input.runId
+  );
 }
 
 export async function assertOpenCodeRuntimeEvidenceAccepted<Run extends OpenCodeRuntimeCheckinRun>(
@@ -435,6 +424,11 @@ export async function assertOpenCodeRuntimeEvidenceAccepted<Run extends OpenCode
 ): Promise<void> {
   const store = createRuntimeRunTombstoneStore({
     filePath: getOpenCodeRuntimeRunTombstonesPath(
+      ports.teamsBasePath,
+      input.teamName,
+      input.laneId
+    ),
+    accessLockTargetPath: getOpenCodeRuntimeLaneLifecycleLockTargetPath(
       ports.teamsBasePath,
       input.teamName,
       input.laneId
@@ -474,41 +468,92 @@ export async function assertOpenCodeRuntimeMemberCheckinAllowed<
   input: {
     teamName: string;
     memberName: string;
-    previousMember?: PersistedTeamLaunchMemberState;
   },
   ports: Pick<OpenCodeRuntimeCheckinPorts<Run>, 'readConfigForStrictDecision' | 'readMetaMembers'>
 ): Promise<void> {
   const config = await ports.readConfigForStrictDecision(input.teamName).catch(() => null);
   const metaMembers = await ports.readMetaMembers(input.teamName).catch(() => []);
+  if (!config || config.deletedAt) {
+    throwRuntimeBootstrapCheckinRejected(input.memberName, 'team configuration is unavailable');
+  }
   const configuredMember = resolveEffectiveConfiguredMember(
-    config?.members ?? [],
+    config.members ?? [],
     metaMembers,
     input.memberName
   );
 
   if (configuredMember?.removedAt != null) {
-    throw new RuntimeStaleEvidenceError(
-      `Rejected OpenCode bootstrap check-in for removed member "${input.memberName}"`,
-      'run_mismatch',
-      'bootstrap_checkin',
-      null
-    );
+    throwRuntimeBootstrapCheckinRejected(input.memberName, 'member has been removed');
   }
 
-  if (!configuredMember && !input.previousMember) {
-    throw new RuntimeStaleEvidenceError(
-      `Rejected OpenCode bootstrap check-in for unconfigured member "${input.memberName}"`,
-      'run_mismatch',
-      'bootstrap_checkin',
-      null
-    );
-  }
+  if (!configuredMember)
+    throwRuntimeBootstrapCheckinRejected(input.memberName, 'member is not configured');
+  if (configuredMember.providerId !== 'opencode')
+    throwRuntimeBootstrapCheckinRejected(input.memberName, 'member is not owned by OpenCode');
+}
+
+function throwRuntimeBootstrapCheckinRejected(memberName: string, reason: string): never {
+  throw new RuntimeStaleEvidenceError(
+    `Rejected OpenCode bootstrap check-in for "${memberName}": ${reason}`,
+    'run_mismatch',
+    'bootstrap_checkin',
+    null
+  );
 }
 
 export async function updateOpenCodeRuntimeMemberLiveness<Run extends OpenCodeRuntimeCheckinRun>(
   input: OpenCodeRuntimeLivenessInput,
   ports: OpenCodeRuntimeCheckinPorts<Run>
 ): Promise<void> {
+  if (input.requiredIdentity) {
+    const requiredIdentity = input.requiredIdentity;
+    let shouldEmitMemberSpawnChange = false;
+    await ports.mutateLaunchState(input.teamName, async (previous) => {
+      const [config, metaMembers] = await Promise.all([
+        ports.readConfigForStrictDecision(input.teamName),
+        ports.readMetaMembers(input.teamName),
+      ]);
+      await assertOpenCodeRuntimeEvidenceAccepted(
+        {
+          teamName: input.teamName,
+          runId: input.runId,
+          laneId: requiredIdentity.laneId,
+          evidenceKind: requiredIdentity.evidenceKind,
+        },
+        ports
+      );
+      assertOpenCodeRuntimeMemberSessionAcceptedFromState(
+        {
+          teamName: input.teamName,
+          runId: input.runId,
+          laneId: requiredIdentity.laneId,
+          memberName: input.memberName,
+          runtimeSessionId: input.runtimeSessionId,
+          evidenceKind: requiredIdentity.evidenceKind,
+        },
+        previous,
+        config,
+        metaMembers
+      );
+      const built = buildOpenCodeRuntimeMemberLivenessSnapshot(input, previous, ports);
+      shouldEmitMemberSpawnChange = built.shouldEmitMemberSpawnChange;
+      return built.snapshot;
+    });
+
+    const trackedUpdate = applyOpenCodeRuntimeBootstrapCheckinToTrackedRun(input, ports);
+    ports.invalidateRuntimeSnapshotCaches(input.teamName);
+    if (trackedUpdate?.changed) {
+      ports.emitMemberSpawnChange(trackedUpdate.run, input.memberName);
+    } else if (shouldEmitMemberSpawnChange) {
+      ports.emitRuntimeMemberSpawnChange({
+        teamName: input.teamName,
+        runId: input.runId,
+        memberName: input.memberName,
+      });
+    }
+    return;
+  }
+
   const trackedUpdate = applyOpenCodeRuntimeBootstrapCheckinToTrackedRun(input, ports);
   if (trackedUpdate) {
     await ports.persistTrackedRunLaunchState(trackedUpdate.run);
@@ -520,6 +565,22 @@ export async function updateOpenCodeRuntimeMemberLiveness<Run extends OpenCodeRu
   }
 
   const previous = await ports.readLaunchState(input.teamName);
+  const built = buildOpenCodeRuntimeMemberLivenessSnapshot(input, previous, ports);
+  await ports.writeLaunchState(input.teamName, built.snapshot);
+  if (built.shouldEmitMemberSpawnChange) {
+    ports.emitRuntimeMemberSpawnChange({
+      teamName: input.teamName,
+      runId: input.runId,
+      memberName: input.memberName,
+    });
+  }
+}
+
+function buildOpenCodeRuntimeMemberLivenessSnapshot<Run extends OpenCodeRuntimeCheckinRun>(
+  input: OpenCodeRuntimeLivenessInput,
+  previous: PersistedTeamLaunchSnapshot | null,
+  ports: Pick<OpenCodeRuntimeCheckinPorts<Run>, 'getTrackedRun' | 'readPersistedRuntimeMembers'>
+): { snapshot: PersistedTeamLaunchSnapshot; shouldEmitMemberSpawnChange: boolean } {
   const expectedMembers = previous
     ? getPersistedLaunchMemberNames(previous)
     : ports
@@ -595,14 +656,7 @@ export async function updateOpenCodeRuntimeMemberLiveness<Run extends OpenCodeRu
     },
     updatedAt: input.observedAt,
   });
-  await ports.writeLaunchState(input.teamName, snapshot);
-  if (shouldEmitMemberSpawnChange) {
-    ports.emitRuntimeMemberSpawnChange({
-      teamName: input.teamName,
-      runId: input.runId,
-      memberName: input.memberName,
-    });
-  }
+  return { snapshot, shouldEmitMemberSpawnChange };
 }
 
 export function applyOpenCodeRuntimeBootstrapCheckinToTrackedRun<
@@ -625,6 +679,16 @@ export function applyOpenCodeRuntimeBootstrapCheckinToTrackedRun<
     }
     if (!matchesTeamMemberIdentity(candidate.member.name, input.memberName)) {
       return false;
+    }
+    if (input.requiredIdentity) {
+      const memberEvidence = Object.entries(candidate.result?.members ?? {}).find(([memberName]) =>
+        matchesTeamMemberIdentity(memberName, input.memberName)
+      )?.[1];
+      return (
+        candidate.laneId === input.requiredIdentity.laneId &&
+        candidate.runId === input.runId &&
+        memberEvidence?.sessionId === input.runtimeSessionId
+      );
     }
     return !candidate.runId || candidate.runId === input.runId;
   });

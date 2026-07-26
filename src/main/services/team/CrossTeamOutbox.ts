@@ -10,19 +10,11 @@ import type { CrossTeamMessage, TaskRef } from '@shared/types';
 const CROSS_TEAM_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
 export interface CrossTeamDedupeOptions {
+  /** Treat message/conversation IDs as durable identities. */
   stableIdentity?: boolean;
   /** Trimmed caller-supplied ID; omit for generated IDs so conversation fallback remains active. */
   callerMessageId?: string;
   legacyToMember?: string;
-}
-
-export class CrossTeamIdempotencyConflictError extends Error {
-  readonly code = 'CROSS_TEAM_IDEMPOTENCY_CONFLICT';
-
-  constructor(readonly existingMessageId: string) {
-    super('Cross-team idempotency key was reused with a different normalized payload');
-    this.name = 'CrossTeamIdempotencyConflictError';
-  }
 }
 
 export interface CrossTeamOutboxMessage extends CrossTeamMessage {
@@ -43,6 +35,32 @@ export interface CrossTeamRuntimeDeliveryProofInput {
   timestamp: string;
 }
 
+export type CrossTeamRuntimeDeliveryReceiptStatus =
+  | 'valid'
+  | 'missing'
+  | 'corrupt'
+  | 'causally_stale'
+  | 'superseded';
+
+export class CrossTeamIdempotencyConflictError extends Error {
+  code: string = 'CROSS_TEAM_IDEMPOTENCY_CONFLICT';
+
+  constructor(readonly existingMessageId: string) {
+    super('Cross-team idempotency key was reused with a different normalized payload');
+    this.name = 'CrossTeamIdempotencyConflictError';
+  }
+}
+
+export class CrossTeamRuntimeDeliveryIdempotencyConflictError extends CrossTeamIdempotencyConflictError {
+  constructor(
+    readonly existingMessage: CrossTeamOutboxMessage,
+    readonly runtimeDeliveryReceiptStatus: CrossTeamRuntimeDeliveryReceiptStatus = 'corrupt'
+  ) {
+    super(existingMessage.messageId);
+    this.message = 'Cross-team runtime idempotency key was reused with a different payload';
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -55,6 +73,11 @@ function readRequiredString(row: Record<string, unknown>, key: string): string |
 function readOptionalString(row: Record<string, unknown>, key: string): string | undefined {
   const value = row[key];
   return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function readOptionalPayloadString(row: Record<string, unknown>, key: string): string | undefined {
+  const value = row[key];
+  return typeof value === 'string' ? value : undefined;
 }
 
 function isTaskRef(value: unknown): value is TaskRef {
@@ -99,7 +122,7 @@ function normalizePersistedMessage(value: unknown): CrossTeamOutboxMessage | nul
   const toMember = readOptionalString(value, 'toMember');
   const conversationId = readOptionalString(value, 'conversationId');
   const replyToConversationId = readOptionalString(value, 'replyToConversationId');
-  const summary = readOptionalString(value, 'summary');
+  const summary = readOptionalPayloadString(value, 'summary');
   const taskRefs = normalizePersistedTaskRefs(value.taskRefs);
   const runtimeDeliveryAcceptedAt = readOptionalString(value, 'runtimeDeliveryAcceptedAt');
   const validRuntimeDeliveryAcceptedAt =
@@ -117,7 +140,7 @@ function normalizePersistedMessage(value: unknown): CrossTeamOutboxMessage | nul
     ...(replyToConversationId ? { replyToConversationId } : {}),
     text,
     ...(taskRefs ? { taskRefs } : {}),
-    ...(summary ? { summary } : {}),
+    ...(summary !== undefined ? { summary } : {}),
     chainDepth,
     timestamp,
     ...(validRuntimeDeliveryAcceptedAt
@@ -188,6 +211,47 @@ function hasValidRuntimeDeliveryProofShape(value: unknown): boolean {
   );
 }
 
+function classifyExactRuntimeDeliveryReceipt(
+  rawMessage: unknown,
+  message: CrossTeamOutboxMessage,
+  superseded: boolean
+): CrossTeamRuntimeDeliveryReceiptStatus {
+  if (!isRecord(rawMessage) || rawMessage.runtimeDeliveryAcceptedAt === undefined) {
+    return 'missing';
+  }
+  if (!hasValidRuntimeDeliveryProofShape(rawMessage)) {
+    return 'corrupt';
+  }
+
+  const toMember = message.toMember?.trim();
+  const conversationId = message.conversationId?.trim();
+  if (
+    !toMember ||
+    !conversationId ||
+    !isExactAcceptedRuntimeDelivery(message, {
+      messageId: message.messageId,
+      fromTeam: message.fromTeam,
+      fromMember: message.fromMember,
+      toTeam: message.toTeam,
+      toMember,
+      conversationId,
+      text: message.text,
+      taskRefs: message.taskRefs,
+      summary: message.summary,
+      timestamp: message.timestamp,
+    })
+  ) {
+    return 'corrupt';
+  }
+
+  const messageTimestampMs = Date.parse(message.timestamp);
+  const acceptedAtMs = Date.parse(message.runtimeDeliveryAcceptedAt!);
+  if (!Number.isFinite(messageTimestampMs) || acceptedAtMs < messageTimestampMs) {
+    return 'causally_stale';
+  }
+  return superseded ? 'superseded' : 'valid';
+}
+
 function buildCrossTeamRouteKey(message: CrossTeamMessage, legacyToMember?: string): string[] {
   return [
     normalizeForDedupe(message.fromTeam),
@@ -212,6 +276,28 @@ function buildCrossTeamDedupeKey(message: CrossTeamMessage, legacyToMember?: str
     normalizeForDedupe(message.text),
     normalizeTaskRefsForDedupe(message),
   ].join('||');
+}
+
+function hasSameRoute(
+  left: CrossTeamMessage,
+  right: CrossTeamMessage,
+  legacyToMember?: string
+): boolean {
+  return (
+    buildCrossTeamRouteKey(left, legacyToMember).join('||') ===
+    buildCrossTeamRouteKey(right).join('||')
+  );
+}
+
+function buildRuntimePayloadIdentity(message: CrossTeamMessage, legacyToMember?: string): string {
+  return JSON.stringify({
+    route: buildCrossTeamRouteKey(message, legacyToMember),
+    text: normalizeForDedupe(message.text),
+    summary: message.summary === undefined ? null : normalizeForDedupe(message.summary),
+    taskRefs: normalizePersistedTaskRefs(message.taskRefs) ?? [],
+    replyToConversationId: message.replyToConversationId?.trim() || null,
+    chainDepth: message.chainDepth,
+  });
 }
 
 function hasMatchingStableIdentity(
@@ -243,32 +329,65 @@ function hasMatchingStableIdentity(
   );
 }
 
-function findDedupeMatch(
+function hasMatchingExactStableIdentity(
+  left: CrossTeamMessage,
+  right: CrossTeamMessage,
+  callerMessageId?: string
+): boolean {
+  const normalizedCallerMessageId = String(callerMessageId ?? '').trim();
+  const leftConversationId = stableConversationId(left);
+  const rightConversationId = stableConversationId(right);
+  return Boolean(
+    normalizedCallerMessageId &&
+    stableMessageId(left) === normalizedCallerMessageId &&
+    stableMessageId(right) === normalizedCallerMessageId &&
+    leftConversationId &&
+    rightConversationId &&
+    leftConversationId === rightConversationId
+  );
+}
+
+function classifyCrossTeamMessageIdentity(
+  entry: CrossTeamMessage,
+  message: CrossTeamMessage,
+  dedupeKey: string,
+  options: CrossTeamDedupeOptions
+): 'duplicate' | 'conflict' | null {
+  if (options.stableIdentity) {
+    if (
+      !hasSameRoute(entry, message, options.legacyToMember) ||
+      !hasMatchingStableIdentity(entry, message, options.callerMessageId)
+    ) {
+      return null;
+    }
+    const payloadMatches =
+      buildRuntimePayloadIdentity(entry, options.legacyToMember) ===
+      buildRuntimePayloadIdentity(message);
+    return payloadMatches ? 'duplicate' : 'conflict';
+  }
+
+  return buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey ? 'duplicate' : null;
+}
+
+function findRecentMatch(
   list: unknown[],
   message: CrossTeamMessage,
   windowMs: number,
   options: CrossTeamDedupeOptions
-): {
-  duplicate: CrossTeamOutboxMessage | null;
-  conflict: CrossTeamOutboxMessage | null;
-} {
-  const dedupeKey = buildCrossTeamDedupeKey(message);
-
-  if (options.stableIdentity) {
-    for (let i = list.length - 1; i >= 0; i -= 1) {
-      const entry = normalizePersistedMessage(list[i]);
-      if (!entry || !hasMatchingStableIdentity(entry, message, options.callerMessageId)) {
-        continue;
-      }
-      if (buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey) {
-        return { duplicate: entry, conflict: null };
-      }
-      return { duplicate: null, conflict: entry };
+):
+  | {
+      state: 'duplicate';
+      message: CrossTeamOutboxMessage;
     }
-    return { duplicate: null, conflict: null };
-  }
-
+  | {
+      state: 'conflict';
+      message: CrossTeamOutboxMessage;
+      runtimeDeliveryReceiptStatus: CrossTeamRuntimeDeliveryReceiptStatus;
+    }
+  | null {
+  const dedupeKey = buildCrossTeamDedupeKey(message);
   const cutoff = Date.now() - windowMs;
+  let duplicate: CrossTeamOutboxMessage | null = null;
 
   for (let i = list.length - 1; i >= 0; i -= 1) {
     const entry = normalizePersistedMessage(list[i]);
@@ -277,12 +396,31 @@ function findDedupeMatch(
     if (!options.stableIdentity && (!Number.isFinite(ts) || ts < cutoff)) {
       continue;
     }
-    if (buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey) {
-      return { duplicate: entry, conflict: null };
+    const state = classifyCrossTeamMessageIdentity(entry, message, dedupeKey, options);
+    if (state === 'conflict') {
+      const superseded = list.slice(i + 1).some((candidate) => {
+        const newerEntry = normalizePersistedMessage(candidate);
+        return (
+          newerEntry !== null &&
+          hasMatchingStableIdentity(newerEntry, message, options.callerMessageId)
+        );
+      });
+      return {
+        state,
+        message: entry,
+        runtimeDeliveryReceiptStatus: classifyExactRuntimeDeliveryReceipt(
+          list[i],
+          entry,
+          superseded
+        ),
+      };
+    }
+    if (state === 'duplicate' && !duplicate) {
+      duplicate = entry;
     }
   }
 
-  return { duplicate: null, conflict: null };
+  return duplicate ? { state: 'duplicate', message: duplicate } : null;
 }
 
 export class CrossTeamOutbox {
@@ -322,11 +460,14 @@ export class CrossTeamOutbox {
 
     await withFileLock(outboxPath, async () => {
       const list = await this.readUnlocked(outboxPath);
-      const match = findDedupeMatch(list, message, windowMs, options);
-      if (match.conflict) {
-        throw new CrossTeamIdempotencyConflictError(match.conflict.messageId);
+      const match = findRecentMatch(list, message, windowMs, options);
+      if (match?.state === 'conflict') {
+        throw new CrossTeamRuntimeDeliveryIdempotencyConflictError(
+          match.message,
+          match.runtimeDeliveryReceiptStatus
+        );
       }
-      duplicate = match.duplicate;
+      duplicate = match?.message ?? null;
       if (duplicate) return;
 
       await onBeforeAppend();
