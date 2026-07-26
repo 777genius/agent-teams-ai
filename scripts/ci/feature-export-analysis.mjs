@@ -440,8 +440,11 @@ export function findPublicReferenceOwner(
     );
     if (declaration) {
       if (
-        hasModifier(current, ts.SyntaxKind.ExportKeyword) &&
-        publicTargetOwners.isReferencePublic?.(node, declaration) === false
+        publicTargetOwners.isBindingVersionPublic?.(declaration) === false ||
+        (
+          hasModifier(current, ts.SyntaxKind.ExportKeyword) &&
+          publicTargetOwners.isReferencePublic?.(node, declaration) === false
+        )
       ) {
         return null;
       }
@@ -465,6 +468,12 @@ export function findPublicReferenceOwner(
   } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
     localNames = [current.name.text];
   } else if (ts.isExpressionStatement(current)) {
+    if (
+      publicTargetOwners.isMutationReferencePublic?.(node, current.expression) ===
+      false
+    ) {
+      return null;
+    }
     const commonJsExportNames = commonJsExportNamesForReference(
       current.expression,
       node,

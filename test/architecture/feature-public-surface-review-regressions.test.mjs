@@ -359,3 +359,122 @@ test('ignores CommonJS root resets outside definite execution', () => {
     }
   );
 });
+
+test('removes logical CommonJS assignments after a terminal delete', () => {
+  withFeatureFixture(
+    {
+      'src/features/commonjs-logical-delete/main/index.cjs': `
+        exports.Store ||= require('./infrastructure/Store');
+        delete exports.Store;
+      `,
+      'src/features/commonjs-logical-delete/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-logical-public/main/index.cjs': `
+        exports.Store ||= require('./infrastructure/Store');
+      `,
+      'src/features/commonjs-logical-public/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/commonjs-logical-public/main/index.cjs',
+      ]);
+    }
+  );
+});
+
+test('uses the final ESM binding and property state', () => {
+  withFeatureFixture(
+    {
+      'src/features/esm-rebind-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        let api = { Store };
+        api = {};
+        export { api };
+      `,
+      'src/features/esm-rebind-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-rebind-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        let api = {};
+        api = { Store };
+        export { api };
+      `,
+      'src/features/esm-rebind-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-rebind-conditional/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const enabled: boolean;
+        let api = { Store };
+        if (enabled) api = {};
+        export { api };
+      `,
+      'src/features/esm-rebind-conditional/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-default-snapshot/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        let api = Object.freeze({
+          get Store() {
+            return Store;
+          },
+        });
+        export default api;
+        api = {};
+      `,
+      'src/features/esm-default-snapshot/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-identity-rebind-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        let api = Object.freeze({
+          get Store() {
+            return Store;
+          },
+        });
+        api = {};
+        export { api };
+      `,
+      'src/features/esm-identity-rebind-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-object-assign-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = {};
+        Object.assign(api, { Store });
+        Object.assign(api, { Store: undefined });
+      `,
+      'src/features/esm-object-assign-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-object-assign-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = {};
+        Object.assign(api, { Store });
+      `,
+      'src/features/esm-object-assign-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-object-assign-nested-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = { nested: {} };
+        Object.assign(api.nested, { Store });
+        Object.assign(api.nested, { Store: undefined });
+      `,
+      'src/features/esm-object-assign-nested-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-object-assign-instance-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {}
+        export const api = new Api();
+        Object.assign(api, { Store });
+        Object.assign(api, { Store: undefined });
+      `,
+      'src/features/esm-object-assign-instance-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/esm-default-snapshot/main/index.ts',
+        'src/features/esm-object-assign-public/main/index.ts',
+        'src/features/esm-rebind-conditional/main/index.ts',
+        'src/features/esm-rebind-public/main/index.ts',
+      ]);
+    }
+  );
+});

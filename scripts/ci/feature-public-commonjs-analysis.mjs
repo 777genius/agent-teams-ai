@@ -33,6 +33,36 @@ export function commonJsRootKind(expression) {
     : null;
 }
 
+export function collectCommonJsRootAssignments(sourceFile) {
+  const assignments = [];
+  visitDefiniteTopLevelExpressions(sourceFile, (node) => {
+    if (!ts.isBinaryExpression(node) || node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
+      return;
+    }
+    const kind = commonJsRootKind(node.left);
+    if (kind) {
+      assignments.push({
+        expression: node.right,
+        kind,
+        node,
+        position: node.getStart(sourceFile),
+      });
+    }
+  });
+  return assignments
+    .sort((left, right) => {
+      if (left.node.pos <= right.node.pos && right.node.end <= left.node.end) return 1;
+      if (right.node.pos <= left.node.pos && left.node.end <= right.node.end) return -1;
+      return left.position - right.position;
+    })
+    .map(({ expression, kind, position }, order) => ({
+      expression,
+      kind,
+      order,
+      position,
+    }));
+}
+
 function assignmentLinksExports(kind, expression) {
   const current = unwrapExpression(expression);
   const opposite = kind === 'module' ? 'exports' : 'module';
@@ -309,13 +339,14 @@ export function collectFinalCommonJsPropertyWrites(
     }
     if (
       ts.isBinaryExpression(node) &&
-      node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+      ts.isAssignmentOperator(node.operatorToken.kind)
     ) {
       const targetPath = targetPathAt(node.left, position);
       if (targetPath !== null) {
         if (targetPath.length > 0) {
           recordAssignment(targetPath, node.end);
         } else {
+          if (node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) return;
           const rootKind = commonJsRootKind(node.left);
           if (
             rootKind &&
@@ -460,7 +491,7 @@ function assignedReferencePath(
   const current = unwrapExpression(expression);
   if (
     ts.isBinaryExpression(current) &&
-    current.operatorToken.kind === ts.SyntaxKind.EqualsToken
+    ts.isAssignmentOperator(current.operatorToken.kind)
   ) {
     const targetPath = targetPathAt(current.left, current.getStart());
     if (targetPath === null) return null;

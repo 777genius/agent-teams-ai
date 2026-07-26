@@ -279,6 +279,14 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
       node.arguments[1]
     ) {
       addDescriptorMapWrites(node.arguments[0], node.arguments[1], node);
+    } else if (method.name === 'assign' && node.arguments[0]) {
+      for (const path of staticOverwrittenPaths(
+        [...node.arguments].slice(1),
+        bindingModel,
+        node.getStart(sourceFile)
+      )) {
+        addTargetWrite(node.arguments[0], node, path);
+      }
     }
   };
   visitDefiniteTopLevelExpressions(sourceFile, visit);

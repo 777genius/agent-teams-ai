@@ -9,8 +9,8 @@ import {
   unwrapExpression,
 } from './feature-export-analysis.mjs';
 import {
+  collectCommonJsRootAssignments,
   collectFinalCommonJsPropertyWrites,
-  commonJsRootKind,
   commonJsReferenceIsPublic,
   commonJsRootWrapperSources,
   createExportsState,
@@ -273,26 +273,6 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
   return { edges, memberRelations };
 }
 
-function collectCommonJsRootAssignments(sourceFile) {
-  const assignments = [];
-  let order = 0;
-  visitDefiniteTopLevelExpressions(sourceFile, (node) => {
-    if (!ts.isBinaryExpression(node) || node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
-      return;
-    }
-    const kind = commonJsRootKind(node.left);
-    if (kind) {
-      assignments.push({
-        expression: node.right,
-        kind,
-        order: order++,
-        position: node.getStart(sourceFile),
-      });
-    }
-  });
-  return assignments;
-}
-
 function collectCommonJsSeeds(sourceFile, bindingModel, rootAssignments, exportsActiveAt) {
   const seeds = new Set();
   const lastModuleReset = lastCommonJsRootReplacement(rootAssignments, exportsActiveAt);
@@ -477,7 +457,11 @@ function propagateIdentitySet(initialValues, edges) {
   return values;
 }
 
-export function analyzePublicTargets(sourceFile, exportedLocalNames) {
+export function analyzePublicTargets(
+  sourceFile,
+  exportedLocalNames,
+  snapshotLocalExports = []
+) {
   const bindingModel = collectBindingModel(sourceFile);
   const propertyWrites = collectTopLevelPropertyWrites(sourceFile, bindingModel);
   const allCopyRelations = collectCopyRelations(sourceFile, bindingModel);
@@ -490,7 +474,17 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
   const stableExportOwners = [...exportedLocalNames]
     .map((name) => [bindingModel.bindingAt(name, Number.POSITIVE_INFINITY), name])
     .filter(([key]) => key !== null);
-  const identityOwners = propagateIdentityOwners(stableExportOwners, identityEdges);
+  const snapshotExportOwners = snapshotLocalExports
+    .map(({ name, position }) => [bindingModel.bindingAt(name, position), name])
+    .filter(([key]) => key !== null);
+  const identityOwners = propagateIdentityOwners(
+    [...stableExportOwners, ...snapshotExportOwners],
+    identityEdges
+  );
+  const publicBindingNames = new Set([
+    ...exportedLocalNames,
+    ...snapshotLocalExports.map(({ name }) => name),
+  ]);
   const rootAssignments = collectCommonJsRootAssignments(sourceFile);
   const exportsActiveAt = createExportsState(rootAssignments);
   const finalRootReplacement = lastCommonJsRootReplacement(
@@ -598,13 +592,25 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
   const localOwnersAt = (position, selectedSourcePath = null) => {
     const owners = new Map();
     let referenceOwner = null;
+    for (const [key, binding] of bindingModel.versions) {
+      const owner = identityOwners.get(key);
+      if (
+        owner &&
+        binding.initializer.pos <= position &&
+        position <= binding.initializer.end
+      ) {
+        owners.set(binding.name, owner);
+      }
+    }
     for (const name of bindingModel.eventsByName.keys()) {
       const key = bindingModel.bindingAt(name, position);
       const owner = key && identityOwners.get(key);
       if (owner) owners.set(name, owner);
     }
     for (const name of exportedLocalNames) {
-      if (!owners.has(name)) owners.set(name, name);
+      if (!bindingModel.eventsByName.has(name) && !owners.has(name)) {
+        owners.set(name, name);
+      }
     }
     for (const relation of [...publicMemberRelations, ...copyRelations]) {
       const source = bindingModel.versions.get(relation.sourceKey);
@@ -692,6 +698,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
     }
     attachPublicReferenceQueries(owners, {
       bindingModel,
+      publicBindingNames,
       propertyWrites,
       referenceOwner,
       referenceOwnerForSelection: (reference, { localMember, localNames }) => {

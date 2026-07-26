@@ -1,7 +1,16 @@
 import ts from 'typescript';
 
-import { propertyNameText, unwrapExpression } from './feature-export-ast.mjs';
-import { propertyPathWasOverwrittenAfter } from './feature-public-object-analysis.mjs';
+import {
+  containsReference,
+  memberAccess,
+  propertyNameText,
+  unwrapExpression,
+} from './feature-export-ast.mjs';
+import {
+  accessPath,
+  propertyPathWasOverwrittenAfter,
+  staticOverwrittenPaths,
+} from './feature-public-object-analysis.mjs';
 
 function directObjectReferencePath(initializer, reference) {
   const object = unwrapExpression(initializer);
@@ -33,10 +42,86 @@ function directObjectReferencePath(initializer, reference) {
   return current === object && path.length > 0 ? path : null;
 }
 
+function literalReferencePath(expression, reference) {
+  if (!containsReference(expression, reference)) return null;
+  const path = [];
+  let current = reference;
+  while (current !== expression) {
+    const parent = current.parent;
+    if (!parent || !containsReference(parent, reference)) return null;
+    if (
+      ts.isPropertyAssignment(parent) &&
+      containsReference(parent.initializer, reference)
+    ) {
+      path.unshift(propertyNameText(parent.name));
+    } else if (
+      ts.isShorthandPropertyAssignment(parent) &&
+      containsReference(parent.name, reference)
+    ) {
+      path.unshift(propertyNameText(parent.name));
+    } else if (ts.isArrayLiteralExpression(parent)) {
+      path.unshift(String(parent.elements.indexOf(current)));
+    } else if (ts.isSpreadAssignment(parent)) {
+      return null;
+    }
+    current = parent;
+  }
+  return path;
+}
+
+function mutationReferencePath(expression, reference, bindingModel, sourceFile) {
+  const current = unwrapExpression(expression);
+  let target;
+  let valuePath;
+  if (ts.isBinaryExpression(current) && ts.isAssignmentOperator(current.operatorToken.kind)) {
+    target = accessPath(current.left);
+    valuePath = literalReferencePath(current.right, reference);
+  } else if (ts.isCallExpression(current)) {
+    const method = memberAccess(current.expression);
+    if (
+      !method ||
+      !ts.isIdentifier(method.receiver) ||
+      method.receiver.text !== 'Object' ||
+      method.name !== 'assign' ||
+      !current.arguments[0]
+    ) {
+      return null;
+    }
+    target = accessPath(current.arguments[0]);
+    const sources = [...current.arguments].slice(1);
+    const sourceIndex = sources.findIndex((source) =>
+      containsReference(source, reference)
+    );
+    if (sourceIndex < 0) return null;
+    valuePath = literalReferencePath(sources[sourceIndex], reference);
+    if (
+      valuePath &&
+      staticOverwrittenPaths(
+        sources.slice(sourceIndex + 1),
+        bindingModel,
+        current.getStart(sourceFile)
+      ).some(
+        (path) =>
+          path.length <= valuePath.length &&
+          path.every((segment, index) => segment === valuePath[index])
+      )
+    ) {
+      return false;
+    }
+  }
+  if (!target || valuePath === null || valuePath === undefined) return null;
+  const position = current.getStart(sourceFile);
+  const key = bindingModel.bindingAt(target.root, position);
+  return key
+    ? { key, path: [...target.path, ...valuePath], position: current.end }
+    : null;
+}
+
 export function attachPublicReferenceQueries(
   owners,
   {
     bindingModel,
+    publicBindingNames,
     propertyWrites,
     referenceOwner,
     referenceOwnerForSelection,
@@ -47,16 +132,35 @@ export function attachPublicReferenceQueries(
     selection
       ? referenceOwnerForSelection?.(reference, selection) ?? null
       : referenceOwner;
+  owners.isBindingVersionPublic = (declaration) =>
+    !ts.isIdentifier(declaration.name) ||
+    !publicBindingNames.has(declaration.name.text) ||
+    owners.has(declaration.name.text);
   owners.isReferencePublic = (reference, declaration) => {
     if (!ts.isIdentifier(declaration.name) || !declaration.initializer) return true;
     const path = directObjectReferencePath(declaration.initializer, reference);
     if (!path) return true;
     const key = bindingModel.bindingAt(declaration.name.text, reference.getStart(sourceFile));
-    return !key || !propertyPathWasOverwrittenAfter(
+    return !propertyPathWasOverwrittenAfter(
       propertyWrites,
       key,
       path,
       declaration.getStart(sourceFile)
+    );
+  };
+  owners.isMutationReferencePublic = (reference, expression) => {
+    const target = mutationReferencePath(
+      expression,
+      reference,
+      bindingModel,
+      sourceFile
+    );
+    if (target === false) return false;
+    return !target || !propertyPathWasOverwrittenAfter(
+      propertyWrites,
+      target.key,
+      target.path,
+      target.position
     );
   };
 }

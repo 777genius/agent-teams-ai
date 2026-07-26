@@ -144,6 +144,8 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const declaredLocalNames = new Set();
   const directLocalExports = [];
   const exportedLocalNames = new Set();
+  const liveExportedLocalNames = new Set();
+  const snapshotLocalExports = [];
   for (const statement of sourceFile.statements) {
     const localNames = statementBindingNames(statement);
     for (const localName of localNames) declaredLocalNames.add(localName);
@@ -154,10 +156,16 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       ts.isNamedExports(statement.exportClause)
     ) {
       for (const element of statement.exportClause.elements) {
-        exportedLocalNames.add(element.propertyName?.text ?? element.name.text);
+        const localName = element.propertyName?.text ?? element.name.text;
+        exportedLocalNames.add(localName);
+        liveExportedLocalNames.add(localName);
       }
     } else if (ts.isExportAssignment(statement) && ts.isIdentifier(statement.expression)) {
       exportedLocalNames.add(statement.expression.text);
+      snapshotLocalExports.push({
+        name: statement.expression.text,
+        position: statement.getStart(sourceFile),
+      });
     }
     if (!hasModifier(statement, ts.SyntaxKind.ExportKeyword)) continue;
 
@@ -166,6 +174,9 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       : localNames;
     for (const [index, localName] of localNames.entries()) {
       exportedLocalNames.add(localName);
+      if (!hasModifier(statement, ts.SyntaxKind.DefaultKeyword)) {
+        liveExportedLocalNames.add(localName);
+      }
       directLocalExports.push({
         exportedName: exportedNames[index] ?? exportedNames[0],
         line: lineForNode(sourceFile, statement),
@@ -174,7 +185,11 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     }
   }
 
-  const publicTargets = analyzePublicTargets(sourceFile, exportedLocalNames);
+  const publicTargets = analyzePublicTargets(
+    sourceFile,
+    liveExportedLocalNames,
+    snapshotLocalExports
+  );
   for (const constructorExport of publicTargets.constructorExports) {
     directLocalExports.push({ ...constructorExport, line: 1 });
   }
