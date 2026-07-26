@@ -19,6 +19,7 @@ import {
 } from "@vioxen/subscription-runtime/worker-core";
 
 import { materializeCodexGoalHandoffArtifacts } from "../codex-goal-handoff-artifacts";
+import { tryMaterializeTerminalCodexGoalHandoff } from "../codex-goal-terminal-handoff-materialization";
 import {
   createCodexGoalJob,
   type CodexGoalJobManifest,
@@ -220,6 +221,37 @@ describe("terminal worker handoff dependency recovery", () => {
     );
     expect(started).toMatchObject({ ok: true, jobId: fixture.jobId });
     expect(startCalled).toBe(true);
+  });
+
+  it("continues a rejected secret-blocked completion from hash-only evidence", async () => {
+    const fixture = await actionFixture({ rawSecret: true });
+    const receipt = await writeRejectedUncapturedReview(fixture);
+    const verified = await verifyActionFixture(fixture);
+    expect(verified).toMatchObject({
+      reviewDisposition: "rejected_uncaptured",
+      patchSha256: receipt.decision.attemptId?.replace(
+        "uncaptured-rejection-",
+        "",
+      ),
+      changedFiles: ["owned.ts"],
+    });
+
+    let workerRole:
+      Parameters<ProjectControlBroker["startWorker"]>[0]["workerRole"];
+    await expect(
+      projectControlStartStoredJobView(fixture.startArgs, {
+        ...fixture.deps(async () => {}),
+        codexProjectControlBroker: () => ({
+          startWorker: async (
+            request: Parameters<ProjectControlBroker["startWorker"]>[0],
+          ) => {
+            workerRole = request.workerRole;
+            return { status: "started" };
+          },
+        }) as unknown as ProjectControlBroker,
+      }),
+    ).resolves.toMatchObject({ ok: true, jobId: fixture.jobId });
+    expect(workerRole).toBe(ProjectAdmissionWorkerRole.Adoption);
   });
 
   it("rejects archive tamper at recovery and terminal admission", async () => {
@@ -596,7 +628,9 @@ async function writeTerminalResult(
   );
 }
 
-async function actionFixture() {
+async function actionFixture(
+  options: { readonly rawSecret?: boolean } = {},
+) {
   const root = await mkdtemp(
     join(tmpdir(), "subscription-runtime-terminal-recovery-action-"),
   );
@@ -620,16 +654,57 @@ async function actionFixture() {
   await writeFile(join(workspacePath, "owned.ts"), "export const value = 1;\n");
   await git(workspacePath, ["add", "owned.ts"]);
   await git(workspacePath, ["commit", "-m", "test: base"]);
-  await writeFile(join(workspacePath, "owned.ts"), "export const value = 2;\n");
+  await writeFile(
+    join(workspacePath, "owned.ts"),
+    options.rawSecret === true
+      ? `export const value = ${JSON.stringify(
+          ["sk-", "v".repeat(24)].join(""),
+        )};\n`
+      : "export const value = 2;\n",
+  );
   await writeFile(promptPath, "Run checks only.\n");
-  const handoff = await materializeCodexGoalHandoffArtifacts({
-    workerJobId: jobId,
-    taskId: jobId,
-    workspacePath,
-    jobRootDir,
-  });
-  if (!handoff) throw new Error("expected handoff");
-  await writeTerminalResult(jobRootDir, jobId, handoff);
+  if (options.rawSecret === true) {
+    const terminal = await tryMaterializeTerminalCodexGoalHandoff({
+      jobId,
+      taskId: jobId,
+      workspacePath,
+      jobRootDir,
+    });
+    if (!terminal.continuationFingerprint || !terminal.errorCode) {
+      throw new Error("expected secret-blocked continuation fingerprint");
+    }
+    await writeFile(
+      join(jobRootDir, `${jobId}.latest-result.json`),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        provider: "codex",
+        runId: jobId,
+        taskId: jobId,
+        status: "done",
+        changedFiles: ["owned.ts"],
+        evidence: [],
+        blockers: [],
+        nextAction: "review_completed",
+        details: {
+          baseCommit: terminal.continuationFingerprint.baseCommit,
+          handoffArtifactError: terminal.errorCode,
+          continuationWorkspaceFingerprintSchema:
+            terminal.continuationFingerprint.schema,
+          continuationWorkspaceFingerprintSha256:
+            terminal.continuationFingerprint.sha256,
+        },
+      })}\n`,
+    );
+  } else {
+    const handoff = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: jobId,
+      taskId: jobId,
+      workspacePath,
+      jobRootDir,
+    });
+    if (!handoff) throw new Error("expected handoff");
+    await writeTerminalResult(jobRootDir, jobId, handoff);
+  }
   const scope: ProjectAccessScope = {
     projectId: "project",
     workspaceRoots: [canonicalWorkspacePath],

@@ -6,7 +6,18 @@ import { join } from "node:path";
 import { consumedOutputRecordFor } from "@vioxen/subscription-runtime/worker-core";
 import type { CodexGoalJobManifest } from "../../codex-goal-jobs";
 import type { CodexGoalStatus } from "../../codex-goal-ops";
-import { readVerifiedProducerHandoff } from "./codex-goal-project-verifier-handoff";
+import {
+  captureCodexGoalContinuationWorkspaceFingerprint,
+} from "../../codex-goal-handoff-artifacts";
+import { readLocalGitHeadCommit } from "../../codex-goal-git-revision";
+import {
+  captureGitWorkspaceChangedFiles,
+  captureGitWorkspacePatch,
+} from "../../codex-goal-runtime-result-io";
+import {
+  readControlledRuntimeInterruptionSnapshot,
+  readVerifiedProducerHandoff,
+} from "./codex-goal-project-verifier-handoff";
 import type { ReviewedWorkerOutputSnapshotterPort } from "../../reviewed-worker-output";
 import {
   hasRelevantConsumedOutputDebt,
@@ -57,9 +68,20 @@ export async function verifyTerminalHandoffRecovery(input: {
   readonly consumedOutputLedgerRoots?: readonly string[];
   readonly expected?: VerifiedTerminalHandoffRecovery;
 }): Promise<VerifiedTerminalHandoffRecovery> {
-  const handoff = await readVerifiedProducerHandoff({
-    producer: input.producer,
-  });
+  let handoff;
+  try {
+    handoff = await readVerifiedProducerHandoff({
+      producer: input.producer,
+    });
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      error.message !== "project_control_verifier_handoff_result_invalid"
+    ) {
+      throw error;
+    }
+    return await verifyRejectedUncapturedFingerprintRecovery(input);
+  }
   const reviewDisposition = await terminalHandoffReviewDisposition({
     producer: input.producer,
     workspacePath: input.workspacePath,
@@ -89,6 +111,77 @@ export async function verifyTerminalHandoffRecovery(input: {
     patchSha256: handoff.patchSha256,
     baseCommit: handoff.baseCommit,
     changedFiles: handoffChangedFiles,
+    reviewDisposition,
+  };
+  if (input.expected && !sameRecovery(input.expected, verified)) {
+    throw new Error(
+      "project_control_terminal_handoff_changed_during_dependency_bootstrap",
+    );
+  }
+  return verified;
+}
+
+async function verifyRejectedUncapturedFingerprintRecovery(input: {
+  readonly producer: CodexGoalJobManifest;
+  readonly workspacePath: string;
+  readonly consumedOutputLedgerRoots?: readonly string[];
+  readonly expected?: VerifiedTerminalHandoffRecovery;
+}): Promise<VerifiedTerminalHandoffRecovery> {
+  const snapshot = await readControlledRuntimeInterruptionSnapshot({
+    producer: input.producer,
+    allowCompletedRejectedUncaptured: true,
+  });
+  if (
+    snapshot.kind !== "continuation_fingerprint" ||
+    snapshot.resultPath === undefined
+  ) {
+    throw new Error("project_control_verifier_handoff_result_invalid");
+  }
+  const [currentFingerprint, currentPatch, currentChangedFiles, baseCommit] =
+    await Promise.all([
+    captureCodexGoalContinuationWorkspaceFingerprint({
+      workspacePath: input.workspacePath,
+    }),
+    captureGitWorkspacePatch({
+      workspacePath: input.workspacePath,
+    }),
+    captureGitWorkspaceChangedFiles({
+      workspacePath: input.workspacePath,
+    }),
+    readLocalGitHeadCommit(input.workspacePath),
+  ]);
+  if (
+    currentFingerprint === null ||
+    baseCommit === null ||
+    currentFingerprint.sha256 !== snapshot.sha256 ||
+    baseCommit !== snapshot.baseCommit ||
+    !sameStrings(
+      uniqueSorted(currentChangedFiles),
+      uniqueSorted(snapshot.changedPaths),
+    )
+  ) {
+    throw new Error(
+      "project_control_terminal_handoff_workspace_changed_after_capture",
+    );
+  }
+  const reviewDisposition = await terminalHandoffReviewDisposition({
+    producer: input.producer,
+    workspacePath: input.workspacePath,
+    patchSha256: sha256(currentPatch),
+    consumedOutputLedgerRoots:
+      input.consumedOutputLedgerRoots ??
+      input.producer.projectAccessScope?.consumedOutputLedgerRoots ??
+      [],
+  });
+  if (reviewDisposition !== "rejected_uncaptured") {
+    throw new Error("project_control_terminal_handoff_already_reviewed");
+  }
+  const verified = {
+    manifestPath: snapshot.resultPath,
+    manifestSha256: snapshot.sha256,
+    patchSha256: sha256(currentPatch),
+    baseCommit: snapshot.baseCommit,
+    changedFiles: uniqueSorted(snapshot.changedPaths),
     reviewDisposition,
   };
   if (input.expected && !sameRecovery(input.expected, verified)) {

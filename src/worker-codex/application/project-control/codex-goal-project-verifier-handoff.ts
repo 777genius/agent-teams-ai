@@ -92,6 +92,7 @@ export async function readControlledRuntimeInterruptionHandoff(input: {
 /** Hash-only snapshots prove same-workspace continuation, never reviewable output. */
 export async function readControlledRuntimeInterruptionSnapshot(input: {
   readonly producer: CodexGoalJobManifest;
+  readonly allowCompletedRejectedUncaptured?: boolean;
 }): Promise<ControlledRuntimeInterruptionSnapshot> {
   const producerJobRoot = await canonicalDirectory(input.producer.jobRootDir);
   const requestedResultPath = input.producer.outputPath ??
@@ -130,11 +131,16 @@ export async function readControlledRuntimeInterruptionSnapshot(input: {
     result.lastFailureReason === "runtime_interrupted" &&
     controlledInterruptionEvidence !== undefined;
   const terminalTaskTimeout = result.lastFailureReason === "task_timeout";
+  const completedRejectedUncaptured =
+    input.allowCompletedRejectedUncaptured === true &&
+    result.status === "done";
   if (
     !runtimeContinuationFingerprintErrors.has(result.handoffArtifactError) ||
     result.strict !== true ||
-    result.status !== "partial" ||
-    (!controlledRuntimeInterruption && !terminalTaskTimeout) ||
+    (result.status !== "partial" && !completedRejectedUncaptured) ||
+    (!controlledRuntimeInterruption &&
+      !terminalTaskTimeout &&
+      !completedRejectedUncaptured) ||
     !result.baseCommit ||
     !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/i.test(result.baseCommit) ||
     !result.changedFiles?.length ||
