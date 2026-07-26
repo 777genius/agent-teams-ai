@@ -196,11 +196,11 @@ export type { TeamProvisioningServiceCompositionDeps } from './TeamProvisioningS
 
 const logger = createLogger('Service:TeamProvisioning');
 const { AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES } = agentTeamsControllerModule;
-
 export interface RuntimeAdapterRunByTeamEntry {
   runId: string;
   providerId: TeamProviderId;
   cwd?: string;
+  allowExperimentalLocalModels?: boolean;
   members?: Record<string, TeamRuntimeMemberLaunchEvidence>;
 }
 

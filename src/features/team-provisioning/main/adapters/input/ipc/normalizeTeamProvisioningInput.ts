@@ -1,5 +1,6 @@
 import {
   isProvisioningTeamName,
+  parseOptionalBoolean,
   parseOptionalLaunchProviderBackendId,
   parseOptionalMemberEffort,
   parseOptionalMemberProviderId,
@@ -148,6 +149,13 @@ export async function normalizeCreateTeamRequest(
   if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
     return { valid: false, error: 'limitContext must be a boolean' };
   }
+  const experimentalModelsValidation = parseOptionalBoolean(
+    payload.allowExperimentalLocalModels,
+    'allowExperimentalLocalModels'
+  );
+  if (!experimentalModelsValidation.valid) {
+    return { valid: false, error: experimentalModelsValidation.error };
+  }
   if (!(await workspace.ensureDirectory(cwd))) {
     return { valid: false, error: 'failed to create cwd directory' };
   }
@@ -199,6 +207,7 @@ export async function normalizeCreateTeamRequest(
       effort: effortValidation.value,
       fastMode: fastModeValidation.value,
       limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
+      allowExperimentalLocalModels: experimentalModelsValidation.value,
       skipPermissions:
         typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
       worktree:
@@ -248,6 +257,13 @@ export async function normalizeLaunchTeamRequest(
   if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
     return { valid: false, error: 'limitContext must be a boolean' };
   }
+  const experimentalModelsValidation = parseOptionalBoolean(
+    payload.allowExperimentalLocalModels,
+    'allowExperimentalLocalModels'
+  );
+  if (!experimentalModelsValidation.valid) {
+    return { valid: false, error: experimentalModelsValidation.error };
+  }
   const providerValidation = parseOptionalTeamProviderId(payload.providerId);
   if (!providerValidation.valid) {
     return { valid: false, error: providerValidation.error };
@@ -264,7 +280,10 @@ export async function normalizeLaunchTeamRequest(
   return {
     valid: true,
     value: {
-      payload,
+      payload: {
+        ...payload,
+        allowExperimentalLocalModels: experimentalModelsValidation.value,
+      },
       teamName: teamNameValidation.value!,
       cwd,
       explicitProviderId,
