@@ -1,10 +1,6 @@
 import ts from 'typescript';
 
-import {
-  memberAccess,
-  propertyNameText,
-  unwrapExpression,
-} from './feature-export-analysis.mjs';
+import { memberAccess, propertyNameText, unwrapExpression } from './feature-export-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import { resolveObjectLiterals as resolveObjectLiteralBindings } from './feature-object-resolution.mjs';
 import { accessPath, bindingAliasTargets } from './feature-public-access-path.mjs';
@@ -13,17 +9,24 @@ import {
   descriptorDefinesValue,
   descriptorIsEnumerable,
   resolveDescriptorMapEntries,
+  staticDescriptorIsConfigurable,
+  staticDescriptorIsWritable,
+  staticDescriptorMapProperties,
 } from './feature-public-descriptor-state.mjs';
 
 export { accessPath };
+export {
+  staticDescriptorIsConfigurable,
+  staticDescriptorIsWritable,
+  staticDescriptorMapProperties,
+};
 
 export function propertyWriteAvailableAt(write) {
   return write.availableAt ?? write.position;
 }
 
 export function comparePropertyWriteOrder(left, right) {
-  const availabilityDelta =
-    propertyWriteAvailableAt(left) - propertyWriteAvailableAt(right);
+  const availabilityDelta = propertyWriteAvailableAt(left) - propertyWriteAvailableAt(right);
   if (availabilityDelta !== 0) return availabilityDelta;
   const leftOrder = left.availabilityOrder ?? [left.position];
   const rightOrder = right.availabilityOrder ?? [right.position];
@@ -36,17 +39,11 @@ export function comparePropertyWriteOrder(left, right) {
 
 export function latestPropertyWriteBefore(writes, beforePosition, predicate) {
   return writes
-    .filter(
-      (write) => propertyWriteAvailableAt(write) < beforePosition && predicate(write)
-    )
+    .filter((write) => propertyWriteAvailableAt(write) < beforePosition && predicate(write))
     .sort((left, right) => comparePropertyWriteOrder(right, left))[0];
 }
 
-export function propertyWriteWasOverwrittenBefore(
-  writes,
-  sourceWrite,
-  beforePosition
-) {
+export function propertyWriteWasOverwrittenBefore(writes, sourceWrite, beforePosition) {
   return writes.some(
     (write) =>
       comparePropertyWriteOrder(write, sourceWrite) > 0 &&
@@ -56,12 +53,7 @@ export function propertyWriteWasOverwrittenBefore(
   );
 }
 
-export function propertyPathWasOverwrittenAfter(
-  writes,
-  source,
-  path,
-  afterPosition
-) {
+export function propertyPathWasOverwrittenAfter(writes, source, path, afterPosition) {
   return (writes.get(source) ?? []).some(
     (write) =>
       propertyWriteAvailableAt(write) > afterPosition &&
@@ -85,7 +77,7 @@ function resolveObjectLiterals(expression, bindingModel, beforePosition) {
   });
 }
 
-export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
+export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identityAliases = []) {
   const writes = new Map();
   const configurablePaths = new Set();
   const nonConfigurablePaths = new Set();
@@ -93,6 +85,28 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
   const lockedPrefixes = [];
   const frozenPrefixes = [];
   const pathKey = (sourceKey, path) => `${sourceKey}:${JSON.stringify(path)}`;
+  const aliasNeighbors = new Map();
+  for (const [left, right] of identityAliases) {
+    const leftNeighbors = aliasNeighbors.get(left) ?? new Set();
+    const rightNeighbors = aliasNeighbors.get(right) ?? new Set();
+    leftNeighbors.add(right);
+    rightNeighbors.add(left);
+    aliasNeighbors.set(left, leftNeighbors);
+    aliasNeighbors.set(right, rightNeighbors);
+  }
+  const equivalentSourceKeys = (sourceKey) => {
+    const keys = new Set([sourceKey]);
+    const queue = [sourceKey];
+    while (queue.length > 0) {
+      for (const neighbor of aliasNeighbors.get(queue.shift()) ?? []) {
+        if (!keys.has(neighbor)) {
+          keys.add(neighbor);
+          queue.push(neighbor);
+        }
+      }
+    }
+    return keys;
+  };
   const addWrite = ({
     configurable,
     definition = false,
@@ -108,18 +122,17 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
   }) => {
     if (!sourceKey || path.length === 0) return;
     const key = pathKey(sourceKey, path);
-    const propertyKnown =
-      configurablePaths.has(key) || nonConfigurablePaths.has(key);
+    const propertyKnown = configurablePaths.has(key) || nonConfigurablePaths.has(key);
     const locked = lockedPrefixes.some(
       ({ path: prefix, sourceKey: lockedSource }) =>
         lockedSource === sourceKey &&
-        path.length > prefix.length &&
+        path.length === prefix.length + 1 &&
         prefix.every((segment, index) => path[index] === segment)
     );
     const frozen = frozenPrefixes.some(
       ({ path: prefix, sourceKey: frozenSource }) =>
         frozenSource === sourceKey &&
-        path.length > prefix.length &&
+        path.length === prefix.length + 1 &&
         prefix.every((segment, index) => path[index] === segment)
     );
     if (!removed && (frozen || (!definition && nonWritablePaths.has(key)))) return;
@@ -128,10 +141,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
       configurablePaths.delete(key);
       nonWritablePaths.delete(key);
     } else {
-      if (
-        configurable === false ||
-        (definition && configurable === undefined && !propertyKnown)
-      ) {
+      if (configurable === false || (definition && configurable === undefined && !propertyKnown)) {
         configurablePaths.delete(key);
         nonConfigurablePaths.add(key);
       } else if (
@@ -141,10 +151,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
       ) {
         configurablePaths.add(key);
       }
-      if (
-        writable === false ||
-        (definition && writable === undefined && !propertyKnown)
-      ) {
+      if (writable === false || (definition && writable === undefined && !propertyKnown)) {
         nonWritablePaths.add(key);
       } else if (writable === true && !nonConfigurablePaths.has(key)) {
         nonWritablePaths.delete(key);
@@ -203,16 +210,23 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
           targetExpression,
           node,
           [entry.name],
-          descriptorIsEnumerable(descriptor),
+          descriptorIsEnumerable(descriptor, bindingModel, node.getStart(sourceFile)),
           [...entry.references, descriptor],
           {
             configurable: descriptorBooleanSetting(
               descriptor,
-              'configurable'
+              'configurable',
+              bindingModel,
+              node.getStart(sourceFile)
             ),
             definition: true,
             recordsValue: descriptorDefinesValue(descriptor),
-            writable: descriptorBooleanSetting(descriptor, 'writable'),
+            writable: descriptorBooleanSetting(
+              descriptor,
+              'writable',
+              bindingModel,
+              node.getStart(sourceFile)
+            ),
           }
         );
       }
@@ -222,8 +236,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
     for (const property of object.properties) {
       if (
         !property.name ||
-        (!ts.isPropertyAssignment(property) &&
-          !ts.isShorthandPropertyAssignment(property))
+        (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property))
       ) {
         continue;
       }
@@ -248,10 +261,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
       addTargetWrite(node.expression, node, [], true, [node], { removed: true });
       return;
     }
-    if (
-      ts.isBinaryExpression(node) &&
-      node.operatorToken.kind === ts.SyntaxKind.EqualsToken
-    ) {
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
       const target = accessPath(node.left);
       if (target?.path.length) {
         addTargetWrite(node.left, node);
@@ -287,37 +297,40 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
           node.arguments[0],
           node,
           [propertyName],
-          descriptorIsEnumerable(descriptor),
+          descriptorIsEnumerable(descriptor, bindingModel, node.getStart(sourceFile)),
           [node.arguments[2], descriptor].filter(Boolean),
           {
             configurable: descriptorBooleanSetting(
               descriptor,
-              'configurable'
+              'configurable',
+              bindingModel,
+              node.getStart(sourceFile)
             ),
             definition: true,
             recordsValue: descriptorDefinesValue(descriptor),
-            writable: descriptorBooleanSetting(descriptor, 'writable'),
+            writable: descriptorBooleanSetting(
+              descriptor,
+              'writable',
+              bindingModel,
+              node.getStart(sourceFile)
+            ),
           }
         );
       }
-    } else if (
-      method.name === 'defineProperties' &&
-      node.arguments[0] &&
-      node.arguments[1]
-    ) {
+    } else if (method.name === 'defineProperties' && node.arguments[0] && node.arguments[1]) {
       addDescriptorMapWrites(node.arguments[0], node.arguments[1], node);
-    } else if (
-      ['freeze', 'seal'].includes(method.name) &&
-      node.arguments[0]
-    ) {
+    } else if (['freeze', 'seal'].includes(method.name) && node.arguments[0]) {
       for (const target of bindingAliasTargets(
         node.arguments[0],
         node.getStart(sourceFile),
         bindingModel
       )) {
-        lockedPrefixes.push(target);
-        if (method.name === 'freeze') {
-          frozenPrefixes.push(target);
+        for (const sourceKey of equivalentSourceKeys(target.sourceKey)) {
+          const aliasedTarget = { ...target, sourceKey };
+          lockedPrefixes.push(aliasedTarget);
+          if (method.name === 'freeze') {
+            frozenPrefixes.push(aliasedTarget);
+          }
         }
       }
     } else if (
@@ -340,11 +353,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
       node.arguments[1] &&
       ts.isStringLiteralLike(unwrapExpression(node.arguments[1]))
     ) {
-      addTargetWrite(
-        node.arguments[0],
-        node,
-        [unwrapExpression(node.arguments[1]).text]
-      );
+      addTargetWrite(node.arguments[0], node, [unwrapExpression(node.arguments[1]).text]);
     } else if (method.name === 'assign' && node.arguments[0]) {
       for (const path of staticOverwrittenPaths(
         [...node.arguments].slice(1),
@@ -381,16 +390,27 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
           addWrite({
             configurable: descriptorBooleanSetting(
               descriptor,
-              'configurable'
+              'configurable',
+              bindingModel,
+              initializer.getStart(sourceFile)
             ),
             definition: true,
             end: initializer.end,
-            enumerable: descriptorIsEnumerable(descriptor),
+            enumerable: descriptorIsEnumerable(
+              descriptor,
+              bindingModel,
+              initializer.getStart(sourceFile)
+            ),
             path: [entry.name],
             position: initializer.getStart(sourceFile),
             referenceNodes: [...entry.references, descriptor],
             sourceKey,
-            writable: descriptorBooleanSetting(descriptor, 'writable'),
+            writable: descriptorBooleanSetting(
+              descriptor,
+              'writable',
+              bindingModel,
+              initializer.getStart(sourceFile)
+            ),
           });
         }
       }
@@ -413,11 +433,7 @@ export function staticOverwrittenPaths(
     for (const property of object.properties) {
       if (ts.isSpreadAssignment(property)) {
         const spreadObjects = bindingModel
-          ? resolveObjectLiterals(
-              property.expression,
-              bindingModel,
-              beforePosition
-            )
+          ? resolveObjectLiterals(property.expression, bindingModel, beforePosition)
           : [];
         for (const spreadObject of spreadObjects) {
           for (const spreadProperty of collectProperties(spreadObject, nextVisited)) {
@@ -451,84 +467,10 @@ export function staticOverwrittenPaths(
   return paths;
 }
 
-export function staticDescriptorMapPaths(
-  expression,
-  bindingModel,
-  beforePosition
-) {
-  return resolveDescriptorMapEntries(
-    expression,
-    bindingModel,
-    beforePosition
-  ).map(({ name }) => [name]);
-}
-
-export function staticDescriptorIsConfigurable(
-  expression,
-  bindingModel,
-  beforePosition
-) {
-  const descriptors = resolveObjectLiterals(expression, bindingModel, beforePosition);
-  const settings = descriptors.map((descriptor) =>
-    descriptorBooleanSetting(descriptor, 'configurable')
-  );
-  return settings.length > 0 && settings.every((setting) => setting === settings[0])
-    ? settings[0]
-    : undefined;
-}
-
-export function staticDescriptorIsWritable(
-  expression,
-  bindingModel,
-  beforePosition
-) {
-  const descriptors = resolveObjectLiterals(expression, bindingModel, beforePosition);
-  const settings = descriptors.map((descriptor) =>
-    descriptorBooleanSetting(descriptor, 'writable')
-  );
-  return settings.length > 0 && settings.every((setting) => setting === settings[0])
-    ? settings[0]
-    : undefined;
-}
-
-export function staticDescriptorMapProperties(
-  expression,
-  bindingModel,
-  beforePosition
-) {
-  const properties = new Map();
-  for (const entry of resolveDescriptorMapEntries(
-    expression,
-    bindingModel,
-    beforePosition
-  )) {
-    const configurable = staticDescriptorIsConfigurable(
-      entry.expression,
-      bindingModel,
-      beforePosition
-    );
-    const writable = staticDescriptorIsWritable(
-      entry.expression,
-      bindingModel,
-      beforePosition
-    );
-    const previous = properties.get(entry.name);
-    const mergeSetting = (left, right) =>
-      left === right ? left : undefined;
-    properties.set(
-      entry.name,
-      previous === undefined
-        ? { configurable, writable }
-        : {
-            configurable: mergeSetting(previous.configurable, configurable),
-            writable: mergeSetting(previous.writable, writable),
-          }
-    );
-  }
-  return [...properties].map(([name, descriptor]) => ({
-    ...descriptor,
-    path: [name],
-  }));
+export function staticDescriptorMapPaths(expression, bindingModel, beforePosition) {
+  return resolveDescriptorMapEntries(expression, bindingModel, beforePosition).map(({ name }) => [
+    name,
+  ]);
 }
 
 export function staticOverwrittenPropertyPaths(
@@ -538,11 +480,7 @@ export function staticOverwrittenPropertyPaths(
 ) {
   return properties.flatMap((property) =>
     ts.isSpreadAssignment(property)
-      ? staticOverwrittenPaths(
-          [property.expression],
-          bindingModel,
-          beforePosition
-        )
+      ? staticOverwrittenPaths([property.expression], bindingModel, beforePosition)
       : ts.isPropertyAssignment(property) ||
           ts.isShorthandPropertyAssignment(property) ||
           ts.isMethodDeclaration(property) ||
@@ -554,24 +492,13 @@ export function staticOverwrittenPropertyPaths(
 }
 
 export function copiedPropertyPath(relation, sourcePath) {
-  return [
-    ...(relation.targetPath ?? []),
-    ...sourcePath.slice(relation.path.length),
-  ];
+  return [...(relation.targetPath ?? []), ...sourcePath.slice(relation.path.length)];
 }
 
-function addCopySources(
-  relations,
-  ownerKey,
-  targetPath,
-  callOrLiteral,
-  sources,
-  bindingModel
-) {
+function addCopySources(relations, ownerKey, targetPath, callOrLiteral, sources, bindingModel) {
   for (const [index, sourceExpression] of sources.entries()) {
     const source = accessPath(sourceExpression);
-    const sourceKey =
-      source && bindingModel.bindingAt(source.root, sourceExpression.getStart());
+    const sourceKey = source && bindingModel.bindingAt(source.root, sourceExpression.getStart());
     if (!sourceKey) continue;
     relations.push({
       copyPosition: callOrLiteral.end,
@@ -703,18 +630,14 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
           propertyWriteAvailableAt(sourceWrite) >= relation.copyPosition ||
           !sourceWrite.enumerable ||
           overwrittenBeforeCopy ||
-          !relation.path.every(
-            (segment, index) => sourceWrite.path[index] === segment
-          )
+          !relation.path.every((segment, index) => sourceWrite.path[index] === segment)
         ) {
           continue;
         }
         const sourceRelativePath = sourceWrite.path.slice(relation.path.length);
         if (
           relation.overwrittenPaths.some((overwrittenPath) =>
-            overwrittenPath.every(
-              (segment, index) => sourceRelativePath[index] === segment
-            )
+            overwrittenPath.every((segment, index) => sourceRelativePath[index] === segment)
           )
         ) {
           continue;
@@ -728,10 +651,7 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
             ...(sourceWrite.availabilityOrder ?? [sourceWrite.position]),
           ],
           originSourceKeys: [
-            ...new Set([
-              ...(sourceWrite.originSourceKeys ?? []),
-              relation.sourceKey,
-            ]),
+            ...new Set([...(sourceWrite.originSourceKeys ?? []), relation.sourceKey]),
           ],
           path: copiedPropertyPath(relation, sourceWrite.path),
         };
@@ -776,10 +696,7 @@ export function collectPrototypeRelations(sourceFile, bindingModel) {
   visitDefiniteTopLevelExpressions(sourceFile, (node) => {
     if (!ts.isCallExpression(node) || !node.arguments[0]) return;
     const target = accessPath(node.arguments[0]);
-    addRelation(
-      node,
-      target && bindingModel.bindingAt(target.root, node.getStart(sourceFile))
-    );
+    addRelation(node, target && bindingModel.bindingAt(target.root, node.getStart(sourceFile)));
   });
   return relations;
 }

@@ -8,8 +8,8 @@ import {
 import { withFeatureFixture } from './support/feature-fixture.mjs';
 
 function implementationViolationSources(root) {
-  return collectFeatureArchitectureViolations(root).violations
-    .filter(
+  return collectFeatureArchitectureViolations(root)
+    .violations.filter(
       ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
     )
     .map(({ source }) => source)
@@ -27,8 +27,7 @@ test('traces public accessors on directly exported classes', () => {
           }
         }
       `,
-      'src/features/exported-class/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/exported-class/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/exported-private-class/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export class Api {
@@ -37,8 +36,7 @@ test('traces public accessors on directly exported classes', () => {
           }
         }
       `,
-      'src/features/exported-private-class/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/exported-private-class/main/infrastructure/Store.ts': 'export class Store {}',
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
@@ -61,8 +59,7 @@ test('resolves every possible conditional descriptor map', () => {
         Object.defineProperties(hidden, descriptors);
         export const api = { ...hidden };
       `,
-      'src/features/conditional-descriptors/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/conditional-descriptors/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/nonenumerable-descriptor-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const descriptors = {
@@ -239,6 +236,65 @@ test('treats definite CommonJS deletes as final property removal', () => {
       `,
       'src/features/commonjs-nested-seal-delete-safe/main/infrastructure/Store.cjs':
         'exports.Store = class Store {};',
+      'src/features/commonjs-shallow-freeze-delete-safe/main/index.cjs': `
+        module.exports = {
+          api: { Store: require('./infrastructure/Store') },
+        };
+        Object.freeze(module.exports);
+        delete module.exports.api.Store;
+      `,
+      'src/features/commonjs-shallow-freeze-delete-safe/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
+      'src/features/commonjs-shallow-seal-delete-safe/main/index.cjs': `
+        module.exports = {
+          api: { Store: require('./infrastructure/Store') },
+        };
+        Object.seal(module.exports);
+        delete module.exports.api.Store;
+      `,
+      'src/features/commonjs-shallow-seal-delete-safe/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
+      'src/features/commonjs-descriptor-spread-locked/main/index.cjs': `
+        const locked = { configurable: false };
+        Object.defineProperty(exports, 'Store', {
+          configurable: true,
+          ...locked,
+          enumerable: true,
+          value: require('./infrastructure/Store'),
+        });
+        delete exports.Store;
+      `,
+      'src/features/commonjs-descriptor-spread-locked/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
+      'src/features/commonjs-descriptor-spread-delete-safe/main/index.cjs': `
+        const unlocked = { configurable: true };
+        Object.defineProperty(exports, 'Store', {
+          configurable: false,
+          ...unlocked,
+          enumerable: true,
+          value: require('./infrastructure/Store'),
+        });
+        delete exports.Store;
+      `,
+      'src/features/commonjs-descriptor-spread-delete-safe/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
+      'src/features/commonjs-nested-assign-safe/main/index.cjs': `
+        exports.api = { nested: {} };
+        Object.assign(exports.api.nested, {
+          Store: require('./infrastructure/Store'),
+        });
+        Object.assign(exports.api.nested, { Store: undefined });
+      `,
+      'src/features/commonjs-nested-assign-safe/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
+      'src/features/commonjs-nested-assign-public/main/index.cjs': `
+        exports.api = { nested: {} };
+        Object.assign(exports.api.nested, {
+          Store: require('./infrastructure/Store'),
+        });
+      `,
+      'src/features/commonjs-nested-assign-public/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
       'src/features/commonjs-delete-positive/main/index.cjs':
         "exports.Store = require('./infrastructure/Store');",
       'src/features/commonjs-delete-positive/main/infrastructure/Store.cjs':
@@ -325,7 +381,9 @@ test('treats definite CommonJS deletes as final property removal', () => {
         'src/features/commonjs-delete-optional-call/main/index.cjs',
         'src/features/commonjs-delete-optional-element/main/index.cjs',
         'src/features/commonjs-delete-positive/main/index.cjs',
+        'src/features/commonjs-descriptor-spread-locked/main/index.cjs',
         'src/features/commonjs-freeze-assignment-positive/main/index.cjs',
+        'src/features/commonjs-nested-assign-public/main/index.cjs',
         'src/features/commonjs-nonwritable-assignment-positive/main/index.cjs',
       ]);
     }
@@ -416,6 +474,14 @@ test('removes logical CommonJS assignments after a terminal delete', () => {
       `,
       'src/features/commonjs-logical-existing-nullish/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
+      'src/features/commonjs-logical-truthy-reset-safe/main/index.cjs': `
+        exports.Store = {
+          value: require('./infrastructure/Store'),
+        };
+        exports.Store &&= undefined;
+      `,
+      'src/features/commonjs-logical-truthy-reset-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
       'src/features/commonjs-freeze-delete/main/index.cjs': `
         exports.Store = require('./infrastructure/Store');
         Object.freeze(exports);
@@ -453,16 +519,14 @@ test('uses the final ESM binding and property state', () => {
         api = {};
         export { api };
       `,
-      'src/features/esm-rebind-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-rebind-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-rebind-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         let api = {};
         api = { Store };
         export { api };
       `,
-      'src/features/esm-rebind-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-rebind-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-rebind-conditional/main/index.ts': `
         import { Store } from './infrastructure/Store';
         declare const enabled: boolean;
@@ -470,8 +534,7 @@ test('uses the final ESM binding and property state', () => {
         if (enabled) api = {};
         export { api };
       `,
-      'src/features/esm-rebind-conditional/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-rebind-conditional/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-default-snapshot/main/index.ts': `
         import { Store } from './infrastructure/Store';
         let api = Object.freeze({
@@ -482,8 +545,7 @@ test('uses the final ESM binding and property state', () => {
         export default api;
         api = {};
       `,
-      'src/features/esm-default-snapshot/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-default-snapshot/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-identity-rebind-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         let api = Object.freeze({
@@ -494,23 +556,20 @@ test('uses the final ESM binding and property state', () => {
         api = {};
         export { api };
       `,
-      'src/features/esm-identity-rebind-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-identity-rebind-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-object-assign-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api = {};
         Object.assign(api, { Store });
         Object.assign(api, { Store: undefined });
       `,
-      'src/features/esm-object-assign-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-object-assign-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-object-assign-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api = {};
         Object.assign(api, { Store });
       `,
-      'src/features/esm-object-assign-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-object-assign-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-object-assign-nested-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api = { nested: {} };
@@ -542,24 +601,21 @@ test('uses the final ESM binding and property state', () => {
         export default api;
         Object.assign(api, { Store: undefined });
       `,
-      'src/features/esm-snapshot-assign-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-snapshot-assign-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-delete-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const api: Record<string, unknown> = { Store };
         export { api };
         delete api.Store;
       `,
-      'src/features/esm-delete-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-delete-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-snapshot-delete-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const api: Record<string, unknown> = { Store };
         export default api;
         Reflect.deleteProperty(api, 'Store');
       `,
-      'src/features/esm-snapshot-delete-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-snapshot-delete-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-alias-overwrite-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const api = { Store };
@@ -567,8 +623,7 @@ test('uses the final ESM binding and property state', () => {
         export { api };
         alias.Store = undefined;
       `,
-      'src/features/esm-alias-overwrite-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-alias-overwrite-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-alias-write-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const api: Record<string, unknown> = {};
@@ -577,8 +632,7 @@ test('uses the final ESM binding and property state', () => {
         alias.Store = undefined;
         export { api };
       `,
-      'src/features/esm-alias-write-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-alias-write-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-alias-delete-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const api: Record<string, unknown> = { Store };
@@ -586,8 +640,7 @@ test('uses the final ESM binding and property state', () => {
         export { api };
         delete alias.Store;
       `,
-      'src/features/esm-alias-delete-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-alias-delete-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-freeze-delete-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const api: Record<string, unknown> = { Store };
@@ -595,8 +648,7 @@ test('uses the final ESM binding and property state', () => {
         Object.freeze(api);
         delete api.Store;
       `,
-      'src/features/esm-freeze-delete-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-freeze-delete-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-freeze-overwrite-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const api: Record<string, unknown> = { Store };
@@ -614,8 +666,7 @@ test('uses the final ESM binding and property state', () => {
         Object.freeze(alias);
         api.Store = undefined;
       `,
-      'src/features/esm-alias-freeze-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-alias-freeze-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-conditional-alias-freeze-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const api: Record<string, unknown> = { Store };
@@ -651,8 +702,7 @@ test('uses the final ESM binding and property state', () => {
         export { api };
         Reflect.set(alias, 'Store', undefined);
       `,
-      'src/features/esm-reflect-set-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/esm-reflect-set-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/esm-configurable-descriptor-delete-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const api: Record<string, unknown> = {};
@@ -674,14 +724,79 @@ test('uses the final ESM binding and property state', () => {
       `,
       'src/features/esm-nested-freeze-replace-safe/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/esm-shallow-freeze-delete-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, any> = { nested: { Store } };
+        export { api };
+        Object.freeze(api);
+        delete api.nested.Store;
+      `,
+      'src/features/esm-shallow-freeze-delete-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-shallow-seal-delete-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, any> = { nested: { Store } };
+        export { api };
+        Object.seal(api);
+        delete api.nested.Store;
+      `,
+      'src/features/esm-shallow-seal-delete-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-freeze-before-alias-write-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        const alias = api;
+        export { api };
+        Object.freeze(api);
+        alias.Store = undefined;
+      `,
+      'src/features/esm-freeze-before-alias-write-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-descriptor-spread-locked/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const locked = { configurable: false };
+        const api: Record<string, unknown> = {};
+        Object.defineProperty(api, 'Store', {
+          configurable: true,
+          ...locked,
+          value: Store,
+        });
+        export { api };
+        delete api.Store;
+      `,
+      'src/features/esm-descriptor-spread-locked/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-descriptor-spread-delete-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const unlocked = { configurable: true };
+        const api: Record<string, unknown> = {};
+        Object.defineProperty(api, 'Store', {
+          configurable: false,
+          ...unlocked,
+          value: Store,
+        });
+        export { api };
+        delete api.Store;
+      `,
+      'src/features/esm-descriptor-spread-delete-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-nested-assign-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = { nested: {} };
+        Object.assign(api.nested, { Store });
+      `,
+      'src/features/esm-nested-assign-public/main/infrastructure/Store.ts': 'export class Store {}',
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
         'src/features/esm-alias-freeze-public/main/index.ts',
         'src/features/esm-conditional-alias-freeze-public/main/index.ts',
         'src/features/esm-default-snapshot/main/index.ts',
+        'src/features/esm-descriptor-spread-locked/main/index.ts',
+        'src/features/esm-freeze-before-alias-write-public/main/index.ts',
         'src/features/esm-freeze-delete-public/main/index.ts',
         'src/features/esm-freeze-overwrite-public/main/index.ts',
+        'src/features/esm-nested-assign-public/main/index.ts',
         'src/features/esm-nonwritable-overwrite-public/main/index.ts',
         'src/features/esm-object-assign-public/main/index.ts',
         'src/features/esm-rebind-conditional/main/index.ts',
@@ -738,6 +853,28 @@ test('captures exported member values at the publication point', () => {
       `,
       'src/features/esm-member-write-snapshot/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/esm-nonenumerable-member-snapshot/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = {};
+        Object.defineProperty(api, 'Store', {
+          configurable: true,
+          value: Store,
+        });
+        export default api.Store;
+      `,
+      'src/features/esm-nonenumerable-member-snapshot/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-nonenumerable-getter-snapshot/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = {};
+        Object.defineProperty(api, 'Store', {
+          configurable: true,
+          get: () => Store,
+        });
+        export default api.Store;
+      `,
+      'src/features/esm-nonenumerable-getter-snapshot/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/commonjs-member-snapshot/main/index.cjs': `
         const api = {
           Store: require('./infrastructure/Store'),
@@ -760,6 +897,8 @@ test('captures exported member values at the publication point', () => {
         'src/features/commonjs-member-snapshot/main/index.cjs',
         'src/features/esm-default-member-snapshot/main/index.ts',
         'src/features/esm-member-write-snapshot/main/index.ts',
+        'src/features/esm-nonenumerable-getter-snapshot/main/index.ts',
+        'src/features/esm-nonenumerable-member-snapshot/main/index.ts',
         'src/features/esm-selected-member-snapshot/main/index.ts',
       ]);
     }
@@ -809,10 +948,30 @@ test('keeps CommonJS member alias writes on their full public path', () => {
       `,
       'src/features/commonjs-member-alias-live/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
+      'src/features/commonjs-multiple-public-aliases/main/index.cjs': `
+        const api = {};
+        exports.a = api;
+        exports.b = api;
+        api.Store = require('./infrastructure/Store');
+        exports.a = {};
+      `,
+      'src/features/commonjs-multiple-public-aliases/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-multiple-public-aliases-reset-safe/main/index.cjs': `
+        const api = {};
+        exports.a = api;
+        exports.b = api;
+        api.Store = require('./infrastructure/Store');
+        exports.a = {};
+        exports.b = {};
+      `,
+      'src/features/commonjs-multiple-public-aliases-reset-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
         'src/features/commonjs-member-alias-live/main/index.cjs',
+        'src/features/commonjs-multiple-public-aliases/main/index.cjs',
       ]);
     }
   );
@@ -828,15 +987,13 @@ test('traces only definitely invoked function mutations', () => {
           api.Store = Store;
         })();
       `,
-      'src/features/iife-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/iife-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/iife-expression-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
         (() => (api.Store = Store))();
       `,
-      'src/features/iife-expression-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/iife-expression-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/iife-terminal-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api = { Store };
@@ -844,8 +1001,7 @@ test('traces only definitely invoked function mutations', () => {
           api.Store = undefined;
         })();
       `,
-      'src/features/iife-terminal-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/iife-terminal-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/iife-argument-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -853,8 +1009,7 @@ test('traces only definitely invoked function mutations', () => {
           api.Store = value;
         })(Store);
       `,
-      'src/features/iife-argument-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/iife-argument-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/iife-target-argument-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -871,8 +1026,7 @@ test('traces only definitely invoked function mutations', () => {
           api.Store = Store;
         }).call(undefined);
       `,
-      'src/features/iife-call-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/iife-call-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/iife-if-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -882,8 +1036,7 @@ test('traces only definitely invoked function mutations', () => {
           }
         })();
       `,
-      'src/features/iife-if-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/iife-if-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/iife-do-while-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -893,8 +1046,7 @@ test('traces only definitely invoked function mutations', () => {
           } while (false);
         })();
       `,
-      'src/features/iife-do-while-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/iife-do-while-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/iife-comma-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -902,8 +1054,7 @@ test('traces only definitely invoked function mutations', () => {
           api.Store = Store;
         }))();
       `,
-      'src/features/iife-comma-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/iife-comma-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/iife-dead-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -911,8 +1062,7 @@ test('traces only definitely invoked function mutations', () => {
           api.Store = Store;
         })();
       `,
-      'src/features/iife-dead-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/iife-dead-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/iife-dead-asserted-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -920,8 +1070,7 @@ test('traces only definitely invoked function mutations', () => {
           api.Store = Store;
         })();
       `,
-      'src/features/iife-dead-asserted-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/iife-dead-asserted-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/callback-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -929,8 +1078,7 @@ test('traces only definitely invoked function mutations', () => {
           api.Store = Store;
         });
       `,
-      'src/features/callback-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/callback-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/callback-argument-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -938,8 +1086,7 @@ test('traces only definitely invoked function mutations', () => {
           api.Store = value;
         });
       `,
-      'src/features/callback-argument-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/callback-argument-safe/main/infrastructure/Store.ts': 'export class Store {}',
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
