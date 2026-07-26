@@ -84,7 +84,15 @@ export async function inspectReviewedMergeScope(input: {
       input.workspacePath,
     )),
   ]);
-  const parentPaths = new Set(parentFootprint);
+  // Git may synthesize a destination path for a file-location conflict when
+  // one parent renamed a directory and the other added a file below the old
+  // directory. The destination exists in neither parent delta, but it is
+  // still safe when Git reports it as a conflict and review approved it.
+  const reviewedParentFootprint = uniqueSorted([
+    ...parentFootprint,
+    ...conflicts,
+  ]);
+  const parentPaths = new Set(reviewedParentFootprint);
   const unexpectedMergeFiles = uniqueSorted(input.mergeFootprint).filter(
     (file) => !parentPaths.has(file),
   );
@@ -95,7 +103,7 @@ export async function inspectReviewedMergeScope(input: {
       )}`,
     );
   }
-  return { parentFootprint, semanticFiles };
+  return { parentFootprint: reviewedParentFootprint, semanticFiles };
 }
 
 function uniqueSorted(files: readonly string[]): string[] {
