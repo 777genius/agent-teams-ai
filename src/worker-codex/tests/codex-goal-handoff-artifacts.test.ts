@@ -319,6 +319,46 @@ describe("Codex goal handoff artifact materialization", () => {
     })).rejects.toThrow("handoff_total_byte_limit_exceeded");
   });
 
+  it("materializes changed blobs above the former aggregate default", async () => {
+    const fixture = await createFixture();
+    const content = "stable-line\n".repeat(262_144);
+    for (const name of ["first.txt", "second.txt", "third.txt"]) {
+      await writeFile(join(fixture.workspacePath, name), content);
+    }
+    await git(fixture.workspacePath, ["add", "."]);
+    await git(fixture.workspacePath, [
+      "commit",
+      "-m",
+      "large aggregate fixture",
+    ]);
+    const baseCommit = (
+      await gitStdout(fixture.workspacePath, ["rev-parse", "HEAD"])
+    ).trim();
+    for (const name of ["first.txt", "second.txt", "third.txt"]) {
+      await writeFile(
+        join(fixture.workspacePath, name),
+        `changed-${name}\n${content}`,
+      );
+    }
+
+    const result = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: "worker-large-aggregate",
+      taskId: "task-large-aggregate",
+      workspacePath: fixture.workspacePath,
+      jobRootDir: fixture.jobRootDir,
+      expectedBaseCommit: baseCommit,
+    });
+
+    expect(result?.changedPaths).toEqual([
+      "first.txt",
+      "second.txt",
+      "third.txt",
+    ]);
+    expect(result?.manifest.artifacts.patch.byteLength).toBeLessThan(
+      DEFAULT_HANDOFF_ARTIFACT_LIMITS.maxPatchBytes,
+    );
+  });
+
   it("captures tracked plus untracked paths and enforces file-count bounds", async () => {
     const fixture = await createFixture();
     await writeFile(join(fixture.workspacePath, "README.md"), "changed\n");
