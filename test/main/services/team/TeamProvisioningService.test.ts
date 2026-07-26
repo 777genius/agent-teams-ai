@@ -6858,6 +6858,7 @@ describe('TeamProvisioningService', () => {
         runId: 'opencode-run-1',
         providerId: 'opencode',
         cwd: '/repo',
+        allowExperimentalLocalModels: true,
         members: {},
       });
       (svc as any).teamMetaStore = {
@@ -6916,6 +6917,7 @@ describe('TeamProvisioningService', () => {
       await svc.restartMember('pure-opencode-team', 'alice');
 
       expect(adapterPreflight).toHaveBeenCalledWith({
+        allowExperimentalLocalModels: true,
         targets: [
           { projectPath: '/repo', modelRoute: 'openai/gpt-5.4-mini' },
           { projectPath: '/repo', modelRoute: 'openai/gpt-5.4-mini' },
@@ -6924,6 +6926,7 @@ describe('TeamProvisioningService', () => {
       expect(runtimeRelaunch).toHaveBeenCalledTimes(1);
       const relaunchInput = runtimeRelaunch.mock.calls[0]?.[0] as any;
       expect(relaunchInput.request).toMatchObject({
+        allowExperimentalLocalModels: true,
         teamName: 'pure-opencode-team',
         cwd: '/repo',
         providerId: 'opencode',
@@ -6935,6 +6938,7 @@ describe('TeamProvisioningService', () => {
       ]);
       expect(adapterLaunch).toHaveBeenCalledWith(
         expect.objectContaining({
+          allowExperimentalLocalModels: true,
           laneId: 'primary',
           expectedMembers: [
             expect.objectContaining({ name: 'team-lead' }),

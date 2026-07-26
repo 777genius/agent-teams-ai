@@ -64,7 +64,7 @@ import type { JSX, ReactNode } from 'react';
 
 const SERVER_START_GUIDANCE: Record<RuntimeLocalProviderPresetIdDto, string> = {
   ollama:
-    'Make sure Ollama is running and at least one model has been pulled locally. Agent Teams tool use needs an effective 16K-32K context; Ollama defaults to 4K unless configured separately.',
+    'Make sure Ollama is running and at least one model has been pulled locally. Agent Teams needs at least 16K effective context; 64K is recommended for coding agents. Check the active allocation with ollama ps.',
   'lm-studio': 'In LM Studio, load a model, open Developer > Local Server, and start the server.',
   'atomic-chat': 'Open Atomic Chat, load a model, and start its local API server.',
   'llama.cpp': 'Start llama-server with a model loaded. The default port for this setup is 8080.',

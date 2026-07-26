@@ -90,6 +90,11 @@ export interface TeamRuntimeLaunchInput {
    */
   skipReadinessPreflight?: boolean;
   skipPermissions: boolean;
+  /**
+   * Continue to the real OpenCode execution proof when the advisory local-model
+   * coordination probe fails. Proven provider/tool/context incompatibilities still block.
+   */
+  allowExperimentalLocalModels?: boolean;
   expectedMembers: TeamRuntimeMemberSpec[];
   previousLaunchState: PersistedTeamLaunchSnapshot | null;
 }
@@ -227,6 +232,7 @@ export interface TeamLaunchRuntimeAdapter {
   prepare(input: TeamRuntimeLaunchInput): Promise<TeamRuntimePrepareResult>;
   preflightLocalModels?(input: {
     targets: readonly TeamRuntimeLocalModelPreflightTarget[];
+    allowExperimentalLocalModels?: boolean;
   }): Promise<TeamRuntimeLocalModelPreflightResult>;
   launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult>;
   reconcile(input: TeamRuntimeReconcileInput): Promise<TeamRuntimeReconcileResult>;

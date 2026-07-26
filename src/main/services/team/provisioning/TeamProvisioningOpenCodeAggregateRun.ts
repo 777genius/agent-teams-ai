@@ -103,6 +103,9 @@ async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
       runId: run.runId,
       providerId: 'opencode',
       cwd: input.primaryCwd,
+      ...(run.request.allowExperimentalLocalModels === true
+        ? { allowExperimentalLocalModels: true }
+        : {}),
     };
     ports.setRuntimeAdapterRun(run.teamName, exactPrimaryStopOwner);
   } else if (ownedRuntimeRun?.providerId === 'opencode' && ownedRuntimeRun.runId === run.runId) {
@@ -378,6 +381,9 @@ function retainUntrackedOpenCodePrimaryLaneForCleanup(
       runId: run.runId,
       providerId: 'opencode',
       cwd: primaryCwd,
+      ...(run.request.allowExperimentalLocalModels === true
+        ? { allowExperimentalLocalModels: true }
+        : {}),
     });
   }
 }

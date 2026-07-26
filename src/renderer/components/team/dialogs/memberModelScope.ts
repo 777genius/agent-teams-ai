@@ -1,9 +1,12 @@
 import {
   getAvailableTeamProviderModels,
+  getTeamModelSelectionError,
   isTeamModelAvailableForUi,
   normalizeExplicitTeamModelForUi,
   type TeamModelRuntimeProviderStatus,
 } from '@renderer/utils/teamModelAvailability';
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
@@ -13,6 +16,49 @@ type RuntimeProviderStatusById = ReadonlyMap<
   TeamProviderId,
   TeamModelRuntimeProviderStatus | null | undefined
 >;
+type RuntimeProviderLoadingById = ReadonlyMap<TeamProviderId, boolean | undefined>;
+
+interface OpenCodeLocalModelScope {
+  openCodeLocalProviderIds?: ReadonlySet<string>;
+  openCodeLocalProviderLookupAuthoritative?: boolean;
+}
+
+function shouldPreserveOpenCodeLocalModel(
+  providerId: TeamProviderId,
+  model: string,
+  scope: OpenCodeLocalModelScope
+): boolean {
+  if (providerId !== 'opencode') {
+    return false;
+  }
+  const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId ?? null;
+  if (!sourceId) {
+    return false;
+  }
+  return (
+    isOpenCodeLocalProviderId(sourceId) ||
+    scope.openCodeLocalProviderIds?.has(sourceId) === true ||
+    scope.openCodeLocalProviderLookupAuthoritative === false
+  );
+}
+
+function isKnownOpenCodeLocalModel(
+  providerId: TeamProviderId,
+  model: string | null | undefined,
+  scope: OpenCodeLocalModelScope
+): boolean {
+  if (providerId !== 'opencode') {
+    return false;
+  }
+  const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId ?? null;
+  return Boolean(
+    sourceId &&
+    (isOpenCodeLocalProviderId(sourceId) ||
+      scope.openCodeLocalProviderLookupAuthoritative === false ||
+      (scope.openCodeLocalProviderLookupAuthoritative === true &&
+        scope.openCodeLocalProviderIds?.has(sourceId) === true))
+  );
+}
 
 export function resolveMemberProviderForModelScope(input: {
   memberProviderId?: TeamProviderId;
@@ -21,12 +67,67 @@ export function resolveMemberProviderForModelScope(input: {
   return normalizeOptionalTeamProviderId(input.memberProviderId) ?? input.selectedProviderId;
 }
 
-export function resolveProviderScopedMemberModel(input: {
-  memberProviderId?: TeamProviderId;
-  memberModel?: string | null;
-  selectedProviderId: TeamProviderId;
-  runtimeProviderStatusById: RuntimeProviderStatusById;
-}): { providerId: TeamProviderId; model: string } {
+export function getDialogTeamModelValidationError(
+  input: {
+    selectedProviderId: TeamProviderId;
+    selectedModel?: string | null;
+    members: readonly MemberDraft[];
+    validateMembers: boolean;
+    runtimeProviderStatusById: RuntimeProviderStatusById;
+    runtimeProviderLoadingById: RuntimeProviderLoadingById;
+  } & OpenCodeLocalModelScope
+): string | null {
+  const getSelectionError = (
+    providerId: TeamProviderId,
+    model: string | null | undefined
+  ): string | null => {
+    const error = getTeamModelSelectionError(
+      providerId,
+      model ?? undefined,
+      input.runtimeProviderStatusById.get(providerId)
+    );
+    return error && !isKnownOpenCodeLocalModel(providerId, model, input) ? error : null;
+  };
+
+  if (!input.runtimeProviderLoadingById.get(input.selectedProviderId)) {
+    const leadError = getSelectionError(input.selectedProviderId, input.selectedModel);
+    if (leadError) {
+      return leadError;
+    }
+  }
+  if (!input.validateMembers) {
+    return null;
+  }
+
+  for (const member of input.members) {
+    if (member.removedAt) {
+      continue;
+    }
+    const providerId = resolveMemberProviderForModelScope({
+      memberProviderId: member.providerId,
+      selectedProviderId: input.selectedProviderId,
+    });
+    if (input.runtimeProviderLoadingById.get(providerId)) {
+      continue;
+    }
+    const memberError = getSelectionError(providerId, member.model);
+    if (memberError) {
+      const memberName = member.name.trim();
+      return memberName ? `${memberName}: ${memberError}` : memberError;
+    }
+  }
+
+  return null;
+}
+
+export function resolveProviderScopedMemberModel(
+  input: {
+    memberProviderId?: TeamProviderId;
+    memberModel?: string | null;
+    selectedProviderId: TeamProviderId;
+    runtimeProviderStatusById: RuntimeProviderStatusById;
+  } & OpenCodeLocalModelScope
+): { providerId: TeamProviderId; model: string } {
   const providerId = resolveMemberProviderForModelScope(input);
   const rawModel = input.memberModel?.trim() ?? '';
   if (!rawModel) {
@@ -36,6 +137,12 @@ export function resolveProviderScopedMemberModel(input: {
   const normalizedModel = normalizeExplicitTeamModelForUi(providerId, rawModel);
   if (!normalizedModel) {
     return { providerId, model: '' };
+  }
+  // App-managed local providers are discovered through the local-provider overlay,
+  // not solely through the general OpenCode runtime catalog. Preserve their exact
+  // route and let deep provider/model readiness prove whether it can launch.
+  if (shouldPreserveOpenCodeLocalModel(providerId, normalizedModel, input)) {
+    return { providerId, model: normalizedModel };
   }
 
   const providerStatus = input.runtimeProviderStatusById.get(providerId) ?? null;
@@ -77,12 +184,14 @@ function shouldClearOpenCodeModelToDefault(
   return getAvailableTeamProviderModels('opencode', providerStatus).length === 0;
 }
 
-export function clearInheritedMemberModelsUnavailableForProvider(input: {
-  members: MemberDraft[];
-  selectedProviderId: TeamProviderId;
-  runtimeProviderStatusById: RuntimeProviderStatusById;
-  deferredProviderIds?: ReadonlySet<TeamProviderId>;
-}): { members: MemberDraft[]; changed: boolean } {
+export function clearInheritedMemberModelsUnavailableForProvider(
+  input: {
+    members: MemberDraft[];
+    selectedProviderId: TeamProviderId;
+    runtimeProviderStatusById: RuntimeProviderStatusById;
+    deferredProviderIds?: ReadonlySet<TeamProviderId>;
+  } & OpenCodeLocalModelScope
+): { members: MemberDraft[]; changed: boolean } {
   let changed = false;
   const members = input.members.map((member) => {
     if (member.removedAt || !member.model?.trim()) {
@@ -96,15 +205,18 @@ export function clearInheritedMemberModelsUnavailableForProvider(input: {
       return member;
     }
     const providerStatus = input.runtimeProviderStatusById.get(providerId) ?? null;
+    if (member.providerId) {
+      return member;
+    }
+    if (shouldPreserveOpenCodeLocalModel(providerId, member.model, input)) {
+      return member;
+    }
     if (shouldClearOpenCodeModelToDefault(providerId, providerStatus)) {
       changed = true;
       return {
         ...member,
         model: '',
       };
-    }
-    if (member.providerId) {
-      return member;
     }
     if (
       input.selectedProviderId !== 'anthropic' &&
@@ -118,6 +230,8 @@ export function clearInheritedMemberModelsUnavailableForProvider(input: {
       memberModel: member.model,
       selectedProviderId: input.selectedProviderId,
       runtimeProviderStatusById: input.runtimeProviderStatusById,
+      openCodeLocalProviderIds: input.openCodeLocalProviderIds,
+      openCodeLocalProviderLookupAuthoritative: input.openCodeLocalProviderLookupAuthoritative,
     });
     if (scoped.model) {
       return member;

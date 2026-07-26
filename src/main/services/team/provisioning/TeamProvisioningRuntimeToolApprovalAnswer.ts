@@ -18,6 +18,7 @@ export interface RuntimeAdapterRunEntry {
   runId: string;
   providerId: TeamProviderId;
   cwd?: string;
+  allowExperimentalLocalModels?: boolean;
   members?: Record<string, TeamRuntimeMemberLaunchEvidence>;
 }
 
@@ -48,7 +49,12 @@ interface RuntimeToolApprovalIdentity<TRun extends OpenCodeRuntimePermissionAnsw
   readonly cwd: string | undefined;
   readonly runtimeOwner:
     | RuntimeAdapterRunEntry
-    | { runId: string; providerId: TeamProviderId; cwd?: string };
+    | {
+        runId: string;
+        providerId: TeamProviderId;
+        cwd?: string;
+        allowExperimentalLocalModels?: boolean;
+      };
   readonly runtimeOwnerCwd: string | undefined;
   readonly run: TRun | undefined;
   readonly lane: MixedSecondaryRuntimeLaneState | undefined;
@@ -168,6 +174,9 @@ export async function answerOpenCodeRuntimeToolApproval<
         runId: expectedIdentity.runtimeRunId,
         providerId: 'opencode',
         cwd: expectedIdentity.cwd,
+        ...(expectedIdentity.runtimeOwner.allowExperimentalLocalModels === true
+          ? { allowExperimentalLocalModels: true }
+          : {}),
         members: committed.members,
       });
       ports.setAliveRunId(expectedIdentity.teamName, expectedIdentity.runtimeRunId);

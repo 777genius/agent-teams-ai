@@ -10,6 +10,14 @@ import {
 } from '@shared/utils/openCodeWindowsAccessDenied';
 import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 
+import { hasExperimentalLocalModelOverride } from './providerPrepareDiagnosticsModels';
+
+import type {
+  ProviderPrepareCheckStatus,
+  ProviderPrepareDiagnosticsCachedSnapshot,
+  ProviderPrepareDiagnosticsModelResult,
+  ProviderPrepareDiagnosticsResult,
+} from './providerPrepareDiagnosticsModels';
 import type {
   TeamProviderId,
   TeamProvisioningModelCheckRequest,
@@ -18,7 +26,16 @@ import type {
   TeamProvisioningSupportDiagnostic,
 } from '@shared/types';
 
-export type ProviderPrepareCheckStatus = 'ready' | 'notes' | 'failed';
+export type {
+  ProviderPrepareCheckStatus,
+  ProviderPrepareDiagnosticsCachedSnapshot,
+  ProviderPrepareDiagnosticsModelResult,
+  ProviderPrepareDiagnosticsResult,
+} from './providerPrepareDiagnosticsModels';
+export {
+  buildReusableProviderPrepareModelResults,
+  mergeReusableProviderPrepareModelResults,
+} from './providerPrepareDiagnosticsModels';
 
 type PrepareProvisioningFn = (
   cwd?: string,
@@ -37,54 +54,7 @@ interface ProviderPrepareDiagnosticsProgress {
   totalCount: number;
 }
 
-export interface ProviderPrepareDiagnosticsModelResult {
-  status: 'ready' | 'notes' | 'failed';
-  line: string;
-  warningLine?: string | null;
-}
-
-export interface ProviderPrepareDiagnosticsCachedSnapshot {
-  status: ProviderPrepareCheckStatus | 'checking';
-  details: string[];
-  completedCount: number;
-  totalCount: number;
-}
-
-export interface ProviderPrepareDiagnosticsResult {
-  status: ProviderPrepareCheckStatus;
-  details: string[];
-  warnings: string[];
-  modelResultsById: Record<string, ProviderPrepareDiagnosticsModelResult>;
-  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
-}
-
 type TeamProvisioningPrepareIssue = NonNullable<TeamProvisioningPrepareResult['issues']>[number];
-
-export function buildReusableProviderPrepareModelResults(
-  modelResultsById: Record<string, ProviderPrepareDiagnosticsModelResult>
-): Record<string, ProviderPrepareDiagnosticsModelResult> {
-  return Object.fromEntries(
-    Object.entries(modelResultsById).filter(([, result]) => result.status !== 'notes')
-  );
-}
-
-export function mergeReusableProviderPrepareModelResults(
-  existingModelResultsById:
-    | Record<string, ProviderPrepareDiagnosticsModelResult>
-    | null
-    | undefined,
-  modelResultsById: Record<string, ProviderPrepareDiagnosticsModelResult>
-): Record<string, ProviderPrepareDiagnosticsModelResult> {
-  const mergedModelResultsById = { ...(existingModelResultsById ?? {}) };
-  for (const [modelId, result] of Object.entries(modelResultsById)) {
-    if (result.status === 'notes') {
-      delete mergedModelResultsById[modelId];
-      continue;
-    }
-    mergedModelResultsById[modelId] = result;
-  }
-  return mergedModelResultsById;
-}
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -135,12 +105,23 @@ function withSupportDiagnostics(
   result: ProviderPrepareDiagnosticsResult,
   supportDiagnostics: readonly TeamProvisioningSupportDiagnostic[]
 ): ProviderPrepareDiagnosticsResult {
+  const failedModelResults = Object.values(result.modelResultsById).filter(
+    (modelResult) => modelResult.status === 'failed'
+  );
+  const withOverrideAvailability: ProviderPrepareDiagnosticsResult =
+    failedModelResults.length > 0 &&
+    failedModelResults.every((modelResult) => modelResult.experimentalOverrideAvailable === true)
+      ? {
+          ...result,
+          experimentalOverrideAvailable: true,
+        }
+      : result;
   return supportDiagnostics.length > 0
     ? {
-        ...result,
+        ...withOverrideAvailability,
         supportDiagnostics: cloneSupportDiagnostics(supportDiagnostics),
       }
-    : result;
+    : withOverrideAvailability;
 }
 
 function getModelLabel(providerId: TeamProviderId, modelId: string): string {
@@ -803,6 +784,9 @@ function resolveModelResultFromBatch(
         scopedReason ?? fallbackBatchReason
       ),
       warningLine: null,
+      ...(hasExperimentalLocalModelOverride(modelId, result)
+        ? { experimentalOverrideAvailable: true }
+        : {}),
     };
   }
 
@@ -923,6 +907,9 @@ function resolveModelResultFromCompatibilityBatch(
           scopedReason ?? fallbackBatchReason
         ),
         warningLine: null,
+        ...(hasExperimentalLocalModelOverride(modelId, result)
+          ? { experimentalOverrideAvailable: true }
+          : {}),
       },
     };
   }
