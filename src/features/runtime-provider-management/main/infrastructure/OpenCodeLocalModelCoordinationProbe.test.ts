@@ -593,6 +593,25 @@ describe('probeOpenCodeLocalModelCoordination', () => {
       message: expect.stringContaining('HTTP 503: model is not loaded'),
     });
   });
+
+  it('keeps an explicit client rejection of the tool request blocking', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      jsonResponse({ error: 'tools are not supported by this model' }, 400)
+    );
+
+    const result = await probeOpenCodeLocalModelCoordination(
+      {
+        provider: localProvider('llama.cpp', 'http://127.0.0.1:8080/v1'),
+        modelId: 'no-tools-model',
+      },
+      { fetchImpl }
+    );
+
+    expect(result).toMatchObject({
+      status: 'failed',
+      message: expect.stringContaining('HTTP 400: tools are not supported by this model'),
+    });
+  });
 });
 
 function localProvider(

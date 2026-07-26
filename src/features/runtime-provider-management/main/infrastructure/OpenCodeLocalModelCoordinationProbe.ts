@@ -94,7 +94,9 @@ export async function probeOpenCodeLocalModelCoordination(
       signal,
     });
     if (!first.ok) {
-      return unavailableResult(input, first.message);
+      return first.failureKind === 'request_rejected'
+        ? failedResult(input, first.message)
+        : unavailableResult(input, first.message);
     }
 
     const firstCall = findToolCall(first.value.toolCalls, 'task_briefing');
@@ -134,7 +136,9 @@ export async function probeOpenCodeLocalModelCoordination(
       signal,
     });
     if (!second.ok) {
-      return unavailableResult(input, second.message);
+      return second.failureKind === 'request_rejected'
+        ? failedResult(input, second.message)
+        : unavailableResult(input, second.message);
     }
 
     const messageCall = findToolCall(second.value.toolCalls, 'message_send');
@@ -251,7 +255,11 @@ async function requestProbeCompletion(input: {
   signal: AbortSignal;
 }): Promise<
   | { readonly ok: true; readonly value: ProbeResponse }
-  | { readonly ok: false; readonly message: string }
+  | {
+      readonly ok: false;
+      readonly failureKind: 'request_rejected' | 'unavailable';
+      readonly message: string;
+    }
 > {
   const url = buildOpenAiChatCompletionsUrl(input.provider.baseUrl);
   const useOllamaStreaming = input.provider.preset.id === 'ollama';
@@ -278,17 +286,27 @@ async function requestProbeCompletion(input: {
   if (!response.ok) {
     return {
       ok: false,
+      failureKind:
+        response.status === 400 || response.status === 422 ? 'request_rejected' : 'unavailable',
       message: `HTTP ${response.status}${raw ? `: ${summarizeServerError(raw)}` : ''}`,
     };
   }
   if (!raw) {
-    return { ok: false, message: 'The local server returned an empty response.' };
+    return {
+      ok: false,
+      failureKind: 'unavailable',
+      message: 'The local server returned an empty response.',
+    };
   }
 
   const parsed = parseProbeResponse(raw);
   return parsed
     ? { ok: true, value: parsed }
-    : { ok: false, message: 'The local server returned an invalid tool-call response.' };
+    : {
+        ok: false,
+        failureKind: 'unavailable',
+        message: 'The local server returned an invalid tool-call response.',
+      };
 }
 
 function parseProbeResponse(raw: string): ProbeResponse | null {
