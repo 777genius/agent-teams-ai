@@ -7,6 +7,11 @@ import {
   unwrapExpression,
 } from './feature-export-analysis.mjs';
 import {
+  resolveLiteralSelection,
+  selectedBindings,
+  selectionKey,
+} from './feature-local-binding-selection.mjs';
+import {
   immediateIifeInvocation,
   staticNullishness,
   staticTruthiness,
@@ -215,37 +220,6 @@ function constraintsMatch(left, right) {
   );
 }
 
-function withBindingFallback(bindings, target, initializer) {
-  if (!initializer) return bindings;
-  const relative = new Map(
-    selectedBindings(target).map((binding) => [binding.identifier.text, binding.path])
-  );
-  return bindings.map((binding) => ({
-    ...binding,
-    fallback: { expression: initializer, selected: relative.get(binding.identifier.text) ?? [] },
-  }));
-}
-
-function selectedBindings(pattern, path = []) {
-  const current = unwrapExpression(pattern);
-  if (ts.isIdentifier(current)) return [{ identifier: current, path }];
-  if (!ts.isObjectBindingPattern(current) && !ts.isObjectLiteralExpression(current)) return [];
-  const elements = ts.isObjectLiteralExpression(current) ? current.properties : current.elements;
-  return elements.flatMap((element) => {
-    const rest = element.dotDotDotToken || ts.isSpreadAssignment(element);
-    const target = ts.isPropertyAssignment(element)
-      ? element.initializer
-      : (element.name ?? element.expression);
-    if (!target) return [];
-    const selected = rest ? null : propertyNameText(element.propertyName ?? element.name);
-    const bindings = selectedBindings(target, rest ? path : [...path, selected]);
-    const initializer =
-      (ts.isBindingElement(element) && element.initializer) ||
-      (ts.isShorthandPropertyAssignment(element) && element.objectAssignmentInitializer);
-    return withBindingFallback(bindings, target, initializer);
-  });
-}
-
 function reachingWrites(writes, useNode, boundary) {
   const usePath = executionPath(useNode, boundary);
   if (!usePath.reachable) return [];
@@ -390,27 +364,17 @@ function resolvedLocalObjects(
 ) {
   const current = expression && unwrapExpression(expression);
   if (!current) return [];
-  const memoKey = `${current.pos}:${current.end}:${selected.join('.')}`;
+  const memoKey = `${current.pos}:${current.end}:${selectionKey(selected)}`;
   if (memo.has(memoKey)) return memo.get(memoKey);
   memo.set(memoKey, []);
 
   const bindings = collectLocalBindingModel(boundary);
   let resolved = [];
-  if (ts.isObjectLiteralExpression(current) && selected.length > 0) {
-    const property = current.properties.find(
-      (candidate) =>
-        (ts.isPropertyAssignment(candidate) || ts.isShorthandPropertyAssignment(candidate)) &&
-        propertyNameText(candidate.name) === selected[0]
-    );
-    const value =
-      property && (ts.isPropertyAssignment(property) ? property.initializer : property.name);
-    resolved = value ? resolvedLocalObjects(value, boundary, selected.slice(1), visited, memo) : [];
-  } else if (ts.isArrayLiteralExpression(current) && selected.length > 0) {
-    const value = current.elements[Number(selected[0])];
-    resolved =
-      value && !ts.isOmittedExpression(value)
-        ? resolvedLocalObjects(value, boundary, selected.slice(1), visited, memo)
-        : [];
+  const literalSelection = resolveLiteralSelection(current, selected, (value, remaining) =>
+    resolvedLocalObjects(value, boundary, remaining, visited, memo)
+  );
+  if (literalSelection !== null) {
+    resolved = literalSelection;
   } else if (ts.isObjectLiteralExpression(current)) {
     resolved = [current];
   } else if (ts.isConditionalExpression(current)) {
