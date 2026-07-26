@@ -206,6 +206,7 @@ export function publicConstructorSelection(reference, boundary) {
   while (current.parent && current.parent !== boundary) {
     const parent = current.parent;
     if (ts.isReturnStatement(parent)) returned = true;
+    if (ts.isYieldExpression(parent)) returned = true;
     if (
       ts.isBinaryExpression(parent) &&
       ts.isAssignmentOperator(parent.operatorToken.kind) &&

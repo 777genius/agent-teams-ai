@@ -201,6 +201,11 @@ function publicSignatureSelection(reference, boundary, surface) {
   }
   const member = containingClassMember(reference, boundary);
   if (!member) return null;
+  if (ts.isIndexSignatureDeclaration(member)) {
+    return surface.instance && isPublicMember(member)
+      ? { getterOnly: false, localMember: '*' }
+      : null;
+  }
   if (ts.isConstructorDeclaration(member)) {
     if (
       surface.constructorSignature &&
@@ -248,6 +253,44 @@ function directAnonymousClasses(sourceFile) {
   return boundaries;
 }
 
+function bindingNames(name) {
+  if (ts.isIdentifier(name)) return [name.text];
+  return name.elements.flatMap((element) =>
+    ts.isBindingElement(element) ? bindingNames(element.name) : []
+  );
+}
+
+function liveExportedLocalNames(sourceFile) {
+  const names = new Set();
+  for (const statement of sourceFile.statements) {
+    if (
+      ts.isExportDeclaration(statement) &&
+      !statement.moduleSpecifier &&
+      statement.exportClause &&
+      ts.isNamedExports(statement.exportClause)
+    ) {
+      for (const element of statement.exportClause.elements) {
+        names.add(element.propertyName?.text ?? element.name.text);
+      }
+      continue;
+    }
+    if (
+      !hasModifier(statement, ts.SyntaxKind.ExportKeyword) ||
+      hasModifier(statement, ts.SyntaxKind.DefaultKeyword)
+    ) {
+      continue;
+    }
+    if (ts.isClassDeclaration(statement) && statement.name) {
+      names.add(statement.name.text);
+    } else if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        for (const name of bindingNames(declaration.name)) names.add(name);
+      }
+    }
+  }
+  return names;
+}
+
 export function analyzePublicClassSurfaces({
   constructorExports,
   exportedLocalNames,
@@ -257,6 +300,15 @@ export function analyzePublicClassSurfaces({
   const publicFunctionConstructorNames = new Set(
     constructorExports.map(({ localName }) => localName)
   );
+  const liveExportNames = liveExportedLocalNames(sourceFile);
+  const snapshotExports = sourceFile.statements.flatMap((statement) => {
+    if (!ts.isExportAssignment(statement)) return [];
+    const expression = unwrapExpression(statement.expression);
+    return ts.isIdentifier(expression)
+      ? [{ name: expression.text, position: statement.getStart(sourceFile) }]
+      : [];
+  });
+  const snapshotExportNames = new Set(snapshotExports.map(({ name }) => name));
   const surfaces = new Map();
   const candidates = new Set();
   const addSurface = (boundary, surface) => {
@@ -272,7 +324,18 @@ export function analyzePublicClassSurfaces({
     for (const event of eventsByName.get(name) ?? []) {
       for (const boundary of event.boundaries) candidates.add(boundary);
     }
-    for (const boundary of classBindingsAt(eventsByName, name, Infinity)) {
+    if (!snapshotExportNames.has(name) || liveExportNames.has(name)) {
+      for (const boundary of classBindingsAt(eventsByName, name, Infinity)) {
+        addSurface(boundary, DIRECT_CLASS_SURFACE);
+      }
+    }
+  }
+  for (const snapshot of snapshotExports) {
+    for (const boundary of classBindingsAt(
+      eventsByName,
+      snapshot.name,
+      snapshot.position
+    )) {
       addSurface(boundary, DIRECT_CLASS_SURFACE);
     }
   }
@@ -291,6 +354,9 @@ export function analyzePublicClassSurfaces({
     const surface = surfaces.get(boundary);
     const inheritedSurface = {
       ...INSTANCE_CLASS_SURFACE,
+      constructorSignature:
+        surface.constructorSignature &&
+        !boundary.members.some((member) => ts.isConstructorDeclaration(member)),
       static: surface.static,
     };
     for (const base of localBaseBoundaries(boundary, eventsByName)) {

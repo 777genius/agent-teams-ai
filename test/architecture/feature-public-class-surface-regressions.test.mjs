@@ -270,3 +270,69 @@ test('preserves public assignments from function constructors', () => {
     }
   );
 });
+
+test('traces snapshot defaults and inherited class type surfaces', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-default-snapshot/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          get store() {
+            return Store;
+          }
+        }
+        export default Api;
+        Api = class {};
+      `,
+      'src/features/class-default-snapshot/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-default-snapshot-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {}
+        export default Api;
+        Api = class {
+          get store() {
+            return Store;
+          }
+        };
+      `,
+      'src/features/class-default-snapshot-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-inherited-constructor/main/index.ts': `
+        import type { Config } from './infrastructure/Config';
+        class Base {
+          constructor(config: Config) {}
+        }
+        export class Api extends Base {}
+      `,
+      'src/features/class-inherited-constructor/main/infrastructure/Config.ts':
+        'export interface Config {}',
+      'src/features/class-index-signature/main/index.ts': `
+        import type { Store } from './infrastructure/Store';
+        export class Api {
+          [key: string]: Store;
+        }
+      `,
+      'src/features/class-index-signature/main/infrastructure/Store.ts':
+        'export interface Store {}',
+      'src/features/class-generator/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          *items() {
+            yield Store;
+          }
+        }
+      `,
+      'src/features/class-generator/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-default-snapshot/main/index.ts',
+        'src/features/class-generator/main/index.ts',
+        'src/features/class-index-signature/main/index.ts',
+        'src/features/class-inherited-constructor/main/index.ts',
+      ]);
+    }
+  );
+});
