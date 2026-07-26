@@ -2,10 +2,6 @@ import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 
 import { TeamTaskAttachmentStore } from '../../../../../src/main/services/team/TeamTaskAttachmentStore';
-import {
-  atomicCreateAsync,
-  cleanupAtomicCreateTempLinks,
-} from '../../../../../src/main/utils/atomicWrite';
 import { setAppDataBasePath } from '../../../../../src/main/utils/pathDecoder';
 
 const root = process.env.TASK_ATTACHMENT_STORE_RACE_ROOT;
@@ -18,25 +14,21 @@ setAppDataBasePath(root);
 const barrierDirectory = join(root, 'race-barrier');
 const readyPath = join(barrierDirectory, `${participant}.ready`);
 
-const store = new TeamTaskAttachmentStore({
-  async createFileAtomically(filePath, data) {
-    await fs.mkdir(barrierDirectory, { recursive: true });
-    await fs.writeFile(readyPath, '');
+await fs.mkdir(barrierDirectory, { recursive: true });
+await fs.writeFile(readyPath, '');
+const deadline = Date.now() + 10_000;
+while (Date.now() < deadline) {
+  const readyParticipants = (await fs.readdir(barrierDirectory)).filter((entry) =>
+    entry.endsWith('.ready')
+  );
+  if (readyParticipants.length >= 2) break;
+  await new Promise((resolve) => setTimeout(resolve, 10));
+}
+if ((await fs.readdir(barrierDirectory)).filter((entry) => entry.endsWith('.ready')).length < 2) {
+  throw new Error('Timed out waiting for the cross-process attachment race barrier');
+}
 
-    const deadline = Date.now() + 10_000;
-    while (Date.now() < deadline) {
-      const readyParticipants = (await fs.readdir(barrierDirectory)).filter((entry) =>
-        entry.endsWith('.ready')
-      );
-      if (readyParticipants.length >= 2) {
-        return atomicCreateAsync(filePath, data);
-      }
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    throw new Error('Timed out waiting for the cross-process attachment race barrier');
-  },
-  cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
-});
+const store = new TeamTaskAttachmentStore();
 
 try {
   const metadata = await store.saveAttachment(

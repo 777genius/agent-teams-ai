@@ -553,6 +553,7 @@ describe('ipc teams handlers', () => {
     updateKanbanColumnOrder: vi.fn(() => resolvedUndefined()),
     updateTaskStatus: vi.fn(() => resolvedUndefined()),
     startTask: vi.fn(() => resolvedUndefined()),
+    addTaskAttachment: vi.fn(() => resolvedUndefined()),
     addTaskComment: vi.fn(() =>
       resolved({
         id: 'c1',
@@ -1571,6 +1572,47 @@ describe('ipc teams handlers', () => {
       );
     } finally {
       await fs.promises.rm(attachmentDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rolls back attachment bytes when task metadata persistence fails', async () => {
+    const handler = handlers.get(TEAM_SAVE_TASK_ATTACHMENT);
+    expect(handler).toBeDefined();
+    const claudeRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'teams-attachment-'));
+    setClaudeBasePathOverride(claudeRoot);
+    const attachmentId = '11111111-1111-4111-8111-111111111111';
+    const metadataFailure = new Error('metadata persistence failed');
+    service.addTaskAttachment.mockRejectedValueOnce(metadataFailure);
+
+    try {
+      const result = (await handler!(
+        {} as never,
+        'my-team',
+        'task-1',
+        attachmentId,
+        'proof.png',
+        'image/png',
+        'dGVzdA=='
+      )) as { success: boolean; error?: string };
+
+      expect(result).toEqual({ success: false, error: metadataFailure.message });
+      expect(console.error).toHaveBeenCalledWith(
+        '[IPC:teams]',
+        expect.stringContaining('[teams:saveTaskAttachment] metadata persistence failed')
+      );
+      vi.mocked(console.error).mockClear();
+      const attachmentDirectory = path.join(
+        getAppDataPath(),
+        'task-attachments',
+        'my-team',
+        'task-1'
+      );
+      await expect(fs.promises.readdir(attachmentDirectory)).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
     }
   });
 

@@ -10,6 +10,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddTaskCommentUseCase } from '../../../../src/features/team-task-board/core/application/use-cases/AddTaskCommentUseCase';
 import { TeamTaskCommentAttachmentWriter } from '../../../../src/features/team-task-board/main/adapters/output/TeamTaskCommentAttachmentWriter';
 import {
+  NodeTaskAttachmentMutationCoordinator,
+  type TaskAttachmentMutationCoordinatorPort,
+} from '../../../../src/main/services/team/TaskAttachmentMutationCoordinator';
+import {
   type TaskAttachmentAtomicCreatorPort,
   TeamTaskAttachmentStore,
 } from '../../../../src/main/services/team/TeamTaskAttachmentStore';
@@ -42,6 +46,10 @@ interface AttachmentRaceWorkerResult {
   filePath?: string;
   errorCode?: string;
   errorMessage?: string;
+}
+
+async function readAttachmentDataFiles(directory: string): Promise<string[]> {
+  return (await readdir(directory)).filter((entry) => entry.startsWith(`${ATTACHMENT_ID}--`));
 }
 
 async function runAttachmentRaceWorker(
@@ -77,6 +85,15 @@ function createAtomicCreator(): TaskAttachmentAtomicCreatorPort {
     createFileAtomically: vi.fn(async () => ({ dev: 1, ino: 2 })),
     cleanupPublishedTempLinks: vi.fn(() => Promise.resolve()),
   };
+}
+
+function createUnitStore(atomicCreator: TaskAttachmentAtomicCreatorPort): TeamTaskAttachmentStore {
+  return new TeamTaskAttachmentStore(atomicCreator, {
+    run: (_mutationKey, operation) =>
+      operation({
+        assertHealthy: () => undefined,
+      }),
+  });
 }
 
 function createComment(): TaskComment {
@@ -120,7 +137,7 @@ describe('TeamTaskAttachmentStore', () => {
 
   it('publishes decoded attachment bytes through the no-clobber atomic creator port', async () => {
     const atomicCreator = createAtomicCreator();
-    const store = new TeamTaskAttachmentStore(atomicCreator);
+    const store = createUnitStore(atomicCreator);
 
     const metadata = await store.saveAttachment(
       'my-team',
@@ -149,11 +166,56 @@ describe('TeamTaskAttachmentStore', () => {
     const failure = new Error('atomic create failed');
     const atomicCreator = createAtomicCreator();
     vi.mocked(atomicCreator.createFileAtomically).mockRejectedValueOnce(failure);
+    const store = createUnitStore(atomicCreator);
+
+    await expect(
+      store.saveAttachment('my-team', 'task-1', ATTACHMENT_ID, 'proof.png', 'image/png', 'dGVzdA==')
+    ).rejects.toBe(failure);
+  });
+
+  it('removes the published attachment when its generation guard cannot be established', async () => {
+    const { taskDirectory } = await createRealStore();
+    const failure = new Error('generation guard failed');
+    const atomicCreator: TaskAttachmentAtomicCreatorPort = {
+      createFileAtomically: atomicCreateAsync,
+      createGenerationGuard: vi.fn(async () => {
+        throw failure;
+      }),
+      cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
+    };
     const store = new TeamTaskAttachmentStore(atomicCreator);
 
     await expect(
       store.saveAttachment('my-team', 'task-1', ATTACHMENT_ID, 'proof.png', 'image/png', 'dGVzdA==')
     ).rejects.toBe(failure);
+
+    await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('pins the saved generation until its rollback receipt is consumed', async () => {
+    const { store, taskDirectory } = await createRealStore();
+
+    const receipt = await store.saveAttachmentWithReceipt(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    expect(receipt.generationGuardPath).toMatch(/\.review-create\.[a-f0-9-]+\.tmp$/i);
+    const [attachmentIdentity, guardIdentity] = await Promise.all([
+      fsPromises.lstat(receipt.filePath),
+      fsPromises.lstat(receipt.generationGuardPath ?? ''),
+    ]);
+    expect({ dev: guardIdentity.dev, ino: guardIdentity.ino }).toEqual({
+      dev: attachmentIdentity.dev,
+      ino: attachmentIdentity.ino,
+    });
+
+    await store.rollbackAttachment(receipt);
+
+    await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it.each(['attachment-1', '../bad-id'])('rejects non-canonical attachment ID %s', async (id) => {
@@ -221,7 +283,7 @@ describe('TeamTaskAttachmentStore', () => {
       status: 'rejected',
       reason: expect.objectContaining({ code: 'EEXIST' }),
     });
-    const attachmentFiles = await readdir(taskDirectory);
+    const attachmentFiles = await readAttachmentDataFiles(taskDirectory);
     expect(attachmentFiles).toHaveLength(1);
     const attachmentFile = attachmentFiles[0];
     if (!attachmentFile) throw new Error('Expected one stored attachment');
@@ -241,10 +303,7 @@ describe('TeamTaskAttachmentStore', () => {
     const originalUnlink = fsPromises.unlink.bind(fsPromises);
     let tempUnlinkFailures = 0;
     const unlink = vi.spyOn(fsPromises, 'unlink').mockImplementation(async (filePath) => {
-      if (
-        basename(String(filePath)).startsWith('.review-create.') &&
-        tempUnlinkFailures < 2
-      ) {
+      if (basename(String(filePath)).startsWith('.review-create.') && tempUnlinkFailures < 2) {
         tempUnlinkFailures += 1;
         const error = new Error('injected busy temp hardlink') as NodeJS.ErrnoException;
         error.code = 'EBUSY';
@@ -288,7 +347,7 @@ describe('TeamTaskAttachmentStore', () => {
     expect(results.filter((result) => result.filePath)).toHaveLength(1);
     expect(results.filter((result) => result.errorCode === 'EEXIST')).toHaveLength(1);
     const attachmentDirectory = join(root, 'data', 'task-attachments', 'my-team', 'task-1');
-    expect(await readdir(attachmentDirectory)).toEqual([ATTACHMENT_FILE]);
+    expect(await readAttachmentDataFiles(attachmentDirectory)).toEqual([ATTACHMENT_FILE]);
   });
 
   it('does not roll back a pre-existing attachment when its ID collides', async () => {
@@ -327,7 +386,7 @@ describe('TeamTaskAttachmentStore', () => {
     const oldPath = oldAttachment.filePath;
     if (typeof oldPath !== 'string') throw new Error('Expected stored attachment path');
     expect(await readFile(oldPath)).toEqual(Buffer.from('old bytes'));
-    expect(await readdir(taskDirectory)).toEqual([basename(oldPath)]);
+    expect(await readAttachmentDataFiles(taskDirectory)).toEqual([basename(oldPath)]);
   });
 
   it('preserves a later generation when stale comment rollback runs after delete and recreate', async () => {
@@ -376,8 +435,85 @@ describe('TeamTaskAttachmentStore', () => {
     ).resolves.toBe('cmVwbGFjZW1lbnQgYnl0ZXM=');
     expect(originalPath).not.toBeNull();
     expect(replacementPath).toBe(originalPath);
-    const [attachmentFile] = await readdir(taskDirectory);
+    const [attachmentFile] = await readAttachmentDataFiles(taskDirectory);
     expect(attachmentFile).toBe(ATTACHMENT_FILE);
+  });
+
+  it('serializes rollback identity checks against delete and recreate in another coordinator', async () => {
+    const { taskDirectory } = await createRealStore();
+    let pauseRollbackCleanup = false;
+    let notifyCleanupStarted!: () => void;
+    let resumeCleanup!: () => void;
+    const cleanupStarted = new Promise<void>((resolve) => {
+      notifyCleanupStarted = resolve;
+    });
+    const cleanupResume = new Promise<void>((resolve) => {
+      resumeCleanup = resolve;
+    });
+    const firstCreator: TaskAttachmentAtomicCreatorPort = {
+      createFileAtomically: atomicCreateAsync,
+      async cleanupPublishedTempLinks(filePath) {
+        if (pauseRollbackCleanup) {
+          notifyCleanupStarted();
+          await cleanupResume;
+        }
+        await cleanupAtomicCreateTempLinks(filePath);
+      },
+    };
+    const firstStore = new TeamTaskAttachmentStore(
+      firstCreator,
+      new NodeTaskAttachmentMutationCoordinator()
+    );
+    const secondCoordinator = new NodeTaskAttachmentMutationCoordinator();
+    let notifySecondAttempted!: () => void;
+    const secondAttempted = new Promise<void>((resolve) => {
+      notifySecondAttempted = resolve;
+    });
+    const observedSecondCoordinator: TaskAttachmentMutationCoordinatorPort = {
+      run(mutationKey, operation) {
+        notifySecondAttempted();
+        return secondCoordinator.run(mutationKey, operation);
+      },
+    };
+    const secondStore = new TeamTaskAttachmentStore(undefined, observedSecondCoordinator);
+    const receipt = await firstStore.saveAttachmentWithReceipt(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'old.png',
+      'image/png',
+      'b2xk'
+    );
+
+    pauseRollbackCleanup = true;
+    const rollback = firstStore.rollbackAttachment(receipt);
+    await cleanupStarted;
+    let replacementSettled = false;
+    const replace = (async () => {
+      await secondStore.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+      return secondStore.saveAttachment(
+        'my-team',
+        'task-1',
+        ATTACHMENT_ID,
+        'replacement.png',
+        'image/png',
+        'bmV3'
+      );
+    })().finally(() => {
+      replacementSettled = true;
+    });
+    await secondAttempted;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(replacementSettled).toBe(false);
+
+    resumeCleanup();
+    await rollback;
+    await replace;
+
+    await expect(
+      secondStore.getAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png')
+    ).resolves.toBe('bmV3');
+    expect(await readAttachmentDataFiles(taskDirectory)).toEqual([ATTACHMENT_FILE]);
   });
 
   it('removes the exact saved generation when comment persistence fails', async () => {

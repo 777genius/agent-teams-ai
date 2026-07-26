@@ -1,4 +1,3 @@
-import { KeyedMutex } from '@features/internal-storage/main';
 import {
   estimateTaskAttachmentDecodedBytes,
   isCanonicalTaskAttachmentBase64,
@@ -9,13 +8,21 @@ import {
 import { atomicCreateAsync, cleanupAtomicCreateTempLinks } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import {
+  NodeTaskAttachmentMutationCoordinator,
+  type TaskAttachmentMutationCoordinatorPort,
+  type TaskAttachmentMutationGuard,
+} from './TaskAttachmentMutationCoordinator';
+
 import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
+import type { FileHandle } from 'fs/promises';
 
 const logger = createLogger('Service:TeamTaskAttachmentStore');
-const attachmentMutationMutex = new KeyedMutex();
+const nodeTaskAttachmentMutationCoordinator = new NodeTaskAttachmentMutationCoordinator();
 
 export interface TaskAttachmentAtomicCreatorPort {
   /**
@@ -23,6 +30,8 @@ export interface TaskAttachmentAtomicCreatorPort {
    * must preserve EEXIST collisions and leave no partial target on failure.
    */
   createFileAtomically(filePath: string, data: Buffer): Promise<TaskAttachmentFileIdentity>;
+  /** Pins the published inode until delete or rollback can identify its exact generation. */
+  createGenerationGuard?(filePath: string): Promise<string>;
   cleanupPublishedTempLinks(filePath: string): Promise<void>;
 }
 
@@ -35,18 +44,25 @@ export interface SavedTaskAttachmentReceipt {
   readonly filePath: string;
   readonly metadata: TaskAttachmentMeta;
   readonly identity: TaskAttachmentFileIdentity;
+  readonly generationGuardPath?: string;
   readonly teamName: string;
   readonly taskId: string;
 }
 
 const nodeTaskAttachmentAtomicCreator: TaskAttachmentAtomicCreatorPort = {
   createFileAtomically: atomicCreateAsync,
+  async createGenerationGuard(filePath) {
+    const guardPath = path.join(path.dirname(filePath), `.review-create.${randomUUID()}.tmp`);
+    await fs.promises.link(filePath, guardPath);
+    return guardPath;
+  },
   cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
 };
 
 export class TeamTaskAttachmentStore {
   constructor(
-    private readonly atomicCreator: TaskAttachmentAtomicCreatorPort = nodeTaskAttachmentAtomicCreator
+    private readonly atomicCreator: TaskAttachmentAtomicCreatorPort = nodeTaskAttachmentAtomicCreator,
+    private readonly mutationCoordinator: TaskAttachmentMutationCoordinatorPort = nodeTaskAttachmentMutationCoordinator
   ) {}
 
   private assertSafePathSegment(label: string, value: string): void {
@@ -72,8 +88,30 @@ export class TeamTaskAttachmentStore {
   }
 
   private getAttachmentMutationKey(teamName: string, taskId: string, attachmentId: string): string {
+    this.assertSafePathSegment('teamName', teamName);
+    this.assertSafePathSegment('taskId', taskId);
     this.assertSafePathSegment('attachmentId', attachmentId);
-    return path.join(this.getTaskDir(teamName, taskId), `${attachmentId}--attachment`);
+    return path.join(
+      getAppDataPath(),
+      'task-attachment-mutation-locks',
+      teamName,
+      taskId,
+      attachmentId
+    );
+  }
+
+  private async runAttachmentMutation<T>(
+    teamName: string,
+    taskId: string,
+    attachmentId: string,
+    operation: (guard: TaskAttachmentMutationGuard) => Promise<T>
+  ): Promise<T> {
+    const mutationKey = this.getAttachmentMutationKey(teamName, taskId, attachmentId);
+    try {
+      return await this.mutationCoordinator.run(mutationKey, operation);
+    } finally {
+      await this.cleanupEmptyTaskDirectory(teamName, taskId);
+    }
   }
 
   /** A stable target lets the filesystem enforce same-ID uniqueness across app processes. */
@@ -169,8 +207,7 @@ export class TeamTaskAttachmentStore {
       );
     }
 
-    const mutationKey = this.getAttachmentMutationKey(teamName, taskId, attachmentId);
-    return attachmentMutationMutex.run(mutationKey, async () => {
+    return this.runAttachmentMutation(teamName, taskId, attachmentId, async (guard) => {
       const existingPath = await this.findAttachmentFilePath(teamName, taskId, attachmentId);
       if (existingPath) {
         const collision = new Error(
@@ -181,15 +218,26 @@ export class TeamTaskAttachmentStore {
       }
 
       const filePath = this.getStoredFilePath(teamName, taskId, attachmentId);
+      guard.assertHealthy();
       const identity = await this.atomicCreator.createFileAtomically(filePath, buffer);
+      let generationGuardPath: string | undefined;
       try {
-        await this.atomicCreator.cleanupPublishedTempLinks(filePath);
+        generationGuardPath = await this.atomicCreator.createGenerationGuard?.(filePath);
       } catch (error) {
-        logger.warn(
-          `[${teamName}] Failed to clean published attachment temp links for task #${taskId}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
+        await this.atomicCreator.cleanupPublishedTempLinks(filePath).catch(() => undefined);
+        await fs.promises.unlink(filePath).catch(() => undefined);
+        throw error;
+      }
+      if (!generationGuardPath) {
+        try {
+          await this.atomicCreator.cleanupPublishedTempLinks(filePath);
+        } catch (error) {
+          logger.warn(
+            `[${teamName}] Failed to clean published attachment temp links for task #${taskId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
       }
       const metadata: TaskAttachmentMeta = {
         id: attachmentId,
@@ -201,16 +249,11 @@ export class TeamTaskAttachmentStore {
       };
 
       logger.debug(`[${teamName}] Saved task attachment ${attachmentId} for task #${taskId}`);
-      return { filePath, metadata, identity, teamName, taskId };
+      return { filePath, metadata, identity, generationGuardPath, teamName, taskId };
     });
   }
 
   async rollbackAttachment(receipt: SavedTaskAttachmentReceipt): Promise<void> {
-    const mutationKey = this.getAttachmentMutationKey(
-      receipt.teamName,
-      receipt.taskId,
-      receipt.metadata.id
-    );
     const taskDirectory = this.getTaskDir(receipt.teamName, receipt.taskId);
     const filePath = path.resolve(receipt.filePath);
     if (
@@ -219,36 +262,79 @@ export class TeamTaskAttachmentStore {
     ) {
       throw new Error('Invalid task attachment rollback receipt');
     }
-    await attachmentMutationMutex.run(mutationKey, async () => {
-      let stats: fs.Stats;
-      try {
-        stats = await fs.promises.lstat(filePath);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
-        throw error;
-      }
-      if (
-        !stats.isFile() ||
-        stats.isSymbolicLink() ||
-        receipt.identity.ino === 0 ||
-        stats.dev !== receipt.identity.dev ||
-        stats.ino !== receipt.identity.ino
-      ) {
-        return;
-      }
+    const generationGuardPath = receipt.generationGuardPath
+      ? path.resolve(receipt.generationGuardPath)
+      : null;
+    if (
+      generationGuardPath &&
+      (path.dirname(generationGuardPath) !== path.resolve(taskDirectory) ||
+        !/^\.review-create\.[a-f0-9-]+\.tmp$/i.test(path.basename(generationGuardPath)))
+    ) {
+      throw new Error('Invalid task attachment generation guard');
+    }
+    await this.runAttachmentMutation(
+      receipt.teamName,
+      receipt.taskId,
+      receipt.metadata.id,
+      async (guard) => {
+        let generationGuard: FileHandle | null = null;
+        if (generationGuardPath) {
+          try {
+            generationGuard = await fs.promises.open(
+              generationGuardPath,
+              fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW
+            );
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+            throw error;
+          }
+        }
 
-      await this.atomicCreator.cleanupPublishedTempLinks(filePath);
-      try {
-        await fs.promises.unlink(filePath);
-        logger.debug(
-          `[${receipt.teamName}] Rolled back task attachment ${receipt.metadata.id} for task #${receipt.taskId}`
-        );
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      }
+        let stats: fs.Stats;
+        try {
+          const guardedIdentity = generationGuard ? await generationGuard.stat() : receipt.identity;
+          try {
+            stats = await fs.promises.lstat(filePath);
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+              if (generationGuardPath) {
+                await fs.promises.unlink(generationGuardPath).catch(() => undefined);
+              }
+              return;
+            }
+            throw error;
+          }
+          if (
+            !stats.isFile() ||
+            stats.isSymbolicLink() ||
+            receipt.identity.ino === 0 ||
+            guardedIdentity.dev !== receipt.identity.dev ||
+            guardedIdentity.ino !== receipt.identity.ino ||
+            stats.dev !== guardedIdentity.dev ||
+            stats.ino !== guardedIdentity.ino
+          ) {
+            if (generationGuardPath) {
+              await fs.promises.unlink(generationGuardPath).catch(() => undefined);
+            }
+            return;
+          }
 
-      await this.cleanupEmptyTaskDirectory(receipt.teamName, receipt.taskId);
-    });
+          guard.assertHealthy();
+          await this.atomicCreator.cleanupPublishedTempLinks(filePath);
+          guard.assertHealthy();
+          try {
+            await fs.promises.unlink(filePath);
+            logger.debug(
+              `[${receipt.teamName}] Rolled back task attachment ${receipt.metadata.id} for task #${receipt.taskId}`
+            );
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+          }
+        } finally {
+          await generationGuard?.close();
+        }
+      }
+    );
   }
 
   /**
@@ -283,12 +369,13 @@ export class TeamTaskAttachmentStore {
     attachmentId: string,
     mimeType: AttachmentMediaType
   ): Promise<void> {
-    const lockKey = this.getAttachmentMutationKey(teamName, taskId, attachmentId);
-    await attachmentMutationMutex.run(lockKey, async () => {
+    await this.runAttachmentMutation(teamName, taskId, attachmentId, async (guard) => {
       const filePath = await this.findAttachmentFilePath(teamName, taskId, attachmentId, mimeType);
       if (!filePath) return;
 
+      guard.assertHealthy();
       await this.atomicCreator.cleanupPublishedTempLinks(filePath);
+      guard.assertHealthy();
       try {
         await fs.promises.unlink(filePath);
         logger.debug(`[${teamName}] Deleted task attachment ${attachmentId} for task #${taskId}`);
@@ -297,8 +384,6 @@ export class TeamTaskAttachmentStore {
           throw error;
         }
       }
-
-      await this.cleanupEmptyTaskDirectory(teamName, taskId);
     });
   }
 

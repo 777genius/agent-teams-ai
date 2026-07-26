@@ -598,7 +598,7 @@ async function handleSaveTaskAttachment(
   }
 
   return wrapTeamHandler('saveTaskAttachment', async () => {
-    const meta = await taskAttachmentStore.saveAttachment(
+    const receipt = await taskAttachmentStore.saveAttachmentWithReceipt(
       vTeam.value!,
       vTask.value!,
       safeAttId,
@@ -606,9 +606,22 @@ async function handleSaveTaskAttachment(
       mimeType.trim(),
       base64Data
     );
-    // Write metadata into the task JSON
-    await getTeamDataService().addTaskAttachment(vTeam.value!, vTask.value!, meta);
-    return meta;
+    try {
+      // Write metadata into the task JSON
+      await getTeamDataService().addTaskAttachment(vTeam.value!, vTask.value!, receipt.metadata);
+      return receipt.metadata;
+    } catch (error) {
+      try {
+        await taskAttachmentStore.rollbackAttachment(receipt);
+      } catch (rollbackError) {
+        logger.warn(
+          `[teams:saveTaskAttachment] Failed to roll back attachment ${safeAttId}: ${
+            rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+          }`
+        );
+      }
+      throw error;
+    }
   });
 }
 
