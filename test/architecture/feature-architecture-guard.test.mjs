@@ -1,6 +1,4 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -17,22 +15,9 @@ import {
   validateFeatureArchitectureBaseline,
   verifyFeatureArchitecture,
 } from '../../scripts/ci/verify-feature-architecture.mjs';
+import { withFeatureFixture as withFixture } from './support/feature-fixture.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-
-function withFixture(files, callback) {
-  const root = mkdtempSync(path.join(tmpdir(), 'feature-architecture-'));
-  try {
-    for (const [relativePath, source] of Object.entries(files)) {
-      const absolutePath = path.join(root, relativePath);
-      mkdirSync(path.dirname(absolutePath), { recursive: true });
-      writeFileSync(absolutePath, source);
-    }
-    return callback(root);
-  } finally {
-    rmSync(root, { force: true, recursive: true });
-  }
-}
 
 function baselineEntry(rule, source, specifier, publicEntrypoint) {
   const entry = { rule, source, specifier };
@@ -1780,6 +1765,51 @@ test('respects inherited constructor member visibility', () => {
         .map(({ source }) => source);
       assert.deepEqual(implementationSources, [
         'src/features/inherited-public/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('tracks public constructor parameter properties only', () => {
+  withFixture(
+    {
+      'src/features/parameter-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(public store = Store) {}
+        }
+        export const api = new Api();
+      `,
+      'src/features/parameter-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/parameter-protected/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(protected store = Store) {}
+        }
+        export const api = new Api();
+      `,
+      'src/features/parameter-protected/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/parameter-private/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(private store = Store) {}
+        }
+        export const api = new Api();
+      `,
+      'src/features/parameter-private/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const implementationSources = violations
+        .filter(
+          ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
+        )
+        .map(({ source }) => source);
+      assert.deepEqual(implementationSources, [
+        'src/features/parameter-public/main/index.ts',
       ]);
     }
   );

@@ -223,6 +223,15 @@ export function publicConstructorSelection(reference, boundary) {
       }
     }
     if (
+      ts.isParameter(parent) &&
+      ts.isConstructorDeclaration(parent.parent) &&
+      parent.parent.parent === boundary &&
+      ts.isParameterPropertyDeclaration(parent, parent.parent) &&
+      isPublicInstanceMember(parent)
+    ) {
+      return { getterOnly: false, localMember: propertyNameText(parent.name) };
+    }
+    if (
       (ts.isPropertyDeclaration(parent) ||
         ts.isGetAccessorDeclaration(parent) ||
         ts.isMethodDeclaration(parent)) &&
