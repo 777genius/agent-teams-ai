@@ -8,8 +8,8 @@ import {
 import { withFeatureFixture } from './support/feature-fixture.mjs';
 
 function implementationViolationSources(root) {
-  return collectFeatureArchitectureViolations(root).violations
-    .filter(
+  return collectFeatureArchitectureViolations(root)
+    .violations.filter(
       ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
     )
     .map(({ source }) => source)
@@ -31,8 +31,7 @@ test('traces anonymous, expression, instance, and static public class members', 
           }
         }
       `,
-      'src/features/class-anonymous-default/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/class-anonymous-default/main/infrastructure/Store.ts': infrastructureSource(),
       'src/features/class-expression/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const Api = class {
@@ -41,8 +40,7 @@ test('traces anonymous, expression, instance, and static public class members', 
           }
         };
       `,
-      'src/features/class-expression/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/class-expression/main/infrastructure/Store.ts': infrastructureSource(),
       'src/features/class-static/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export class Api {
@@ -51,8 +49,7 @@ test('traces anonymous, expression, instance, and static public class members', 
           }
         }
       `,
-      'src/features/class-static/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/class-static/main/infrastructure/Store.ts': infrastructureSource(),
       'src/features/class-private-protected-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export class Api {
@@ -95,8 +92,7 @@ test('traces direct class heritage, inherited members, and public type signature
         }
         export class Api extends Base {}
       `,
-      'src/features/class-inherited-member/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/class-inherited-member/main/infrastructure/Store.ts': infrastructureSource(),
       'src/features/class-method-parameter/main/index.ts': `
         import type { Input } from './infrastructure/Input';
         export class Api {
@@ -147,6 +143,185 @@ test('traces direct class heritage, inherited members, and public type signature
   );
 });
 
+test('traces public parameter-property defaults without exposing private constructor state', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-public-parameter-default/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(public store = Store) {}
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-public-parameter-default/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-private-parameter-default-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(private store = Store) {}
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-private-parameter-default-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-plain-parameter-default-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(store = Store) {
+            void store;
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-plain-parameter-default-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-public-parameter-default/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('does not attribute nested callback returns to an enclosing public method', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-direct-method-return/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          run() {
+            return Store;
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-direct-method-return/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-nested-callback-return-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          run() {
+            [1].map(() => {
+              return Store;
+            });
+            return true;
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-nested-callback-return-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-private-method-return-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          private run() {
+            return Store;
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-private-method-return-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-direct-method-return/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('traces modeled object-mutator writes to constructed public instances', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-object-assign/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.assign(this, { store: Store });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/class-object-assign-shorthand/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.assign(this, { Store });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-shorthand/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-reflect-set/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Reflect.set(this, 'store', Store);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-reflect-set/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/class-define-property/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.defineProperty(this, 'store', { value: Store });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-define-property/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/class-define-properties/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.defineProperties(this, { store: { value: Store } });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-define-properties/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/class-private-object-assign-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          private store: unknown;
+          constructor() {
+            Object.assign(this, { store: Store });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-private-object-assign-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-other-object-assign-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            Object.assign({}, { store: Store });
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-other-object-assign-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-define-properties/main/index.ts',
+        'src/features/class-define-property/main/index.ts',
+        'src/features/class-object-assign-shorthand/main/index.ts',
+        'src/features/class-object-assign/main/index.ts',
+        'src/features/class-reflect-set/main/index.ts',
+      ]);
+    }
+  );
+});
+
 test('keeps constructed instances instance-only while preserving their public instance type', () => {
   withFeatureFixture(
     {
@@ -159,8 +334,7 @@ test('keeps constructed instances instance-only while preserving their public in
         }
         export const api = new Api();
       `,
-      'src/features/class-instance-member/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/class-instance-member/main/infrastructure/Store.ts': infrastructureSource(),
       'src/features/class-instance-static-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         class Api {
@@ -213,8 +387,7 @@ test('uses the final class binding and remains conservative for conditional rebi
         Api = class {};
         export { Api };
       `,
-      'src/features/class-rebind-final-safe/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/class-rebind-final-safe/main/infrastructure/Store.ts': infrastructureSource(),
       'src/features/class-rebind-final-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         class Api {}
@@ -225,8 +398,7 @@ test('uses the final class binding and remains conservative for conditional rebi
         };
         export { Api };
       `,
-      'src/features/class-rebind-final-public/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/class-rebind-final-public/main/infrastructure/Store.ts': infrastructureSource(),
       'src/features/class-rebind-conditional/main/index.ts': `
         import { Store } from './infrastructure/Store';
         declare const enabled: boolean;
@@ -238,8 +410,7 @@ test('uses the final class binding and remains conservative for conditional rebi
         if (enabled) Api = class {};
         export { Api };
       `,
-      'src/features/class-rebind-conditional/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/class-rebind-conditional/main/infrastructure/Store.ts': infrastructureSource(),
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
@@ -260,8 +431,7 @@ test('preserves public assignments from function constructors', () => {
         }
         export const api = new Api();
       `,
-      'src/features/function-constructor/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/function-constructor/main/infrastructure/Store.ts': infrastructureSource(),
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
@@ -284,8 +454,7 @@ test('traces snapshot defaults and inherited class type surfaces', () => {
         export default Api;
         Api = class {};
       `,
-      'src/features/class-default-snapshot/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/class-default-snapshot/main/infrastructure/Store.ts': infrastructureSource(),
       'src/features/class-default-snapshot-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         class Api {}
@@ -323,8 +492,7 @@ test('traces snapshot defaults and inherited class type surfaces', () => {
           }
         }
       `,
-      'src/features/class-generator/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/class-generator/main/infrastructure/Store.ts': infrastructureSource(),
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
