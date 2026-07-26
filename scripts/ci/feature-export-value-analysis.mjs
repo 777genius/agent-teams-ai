@@ -6,6 +6,7 @@ import {
   propertyNameText,
   unwrapExpression,
 } from './feature-export-ast.mjs';
+import { IDENTITY_WRAPPERS } from './feature-identity-wrappers.mjs';
 
 function callable(node) {
   const current = node && unwrapExpression(node);
@@ -183,25 +184,48 @@ function isObjectCreateDescriptorMap(declaration) {
   return found;
 }
 
+function publicSurfaceExpressions(expression) {
+  const current = expression && unwrapExpression(expression);
+  if (!current) return [];
+  if (!ts.isCallExpression(current)) return [current];
+  const method = memberAccess(current.expression);
+  if (
+    !method ||
+    !ts.isIdentifier(method.receiver) ||
+    method.receiver.text !== 'Object' ||
+    !IDENTITY_WRAPPERS.has(method.name)
+  ) {
+    return [current];
+  }
+  const argumentsToInspect = method.name === 'assign'
+    ? current.arguments
+    : current.arguments.slice(0, 1);
+  return argumentsToInspect.flatMap(publicSurfaceExpressions);
+}
+
 function objectGetterMember(objectExpression, reference) {
-  const object = objectExpression && unwrapExpression(objectExpression);
-  if (!object || !ts.isObjectLiteralExpression(object)) return null;
-  const getter = object.properties.find(
-    (property) => ts.isGetAccessorDeclaration(property) && containsReference(property, reference)
-  );
-  return getter && ts.isGetAccessorDeclaration(getter) ? propertyNameText(getter.name) : null;
+  for (const object of publicSurfaceExpressions(objectExpression)) {
+    if (!ts.isObjectLiteralExpression(object)) continue;
+    const getter = object.properties.find(
+      (property) => ts.isGetAccessorDeclaration(property) && containsReference(property, reference)
+    );
+    if (getter && ts.isGetAccessorDeclaration(getter)) return propertyNameText(getter.name);
+  }
+  return null;
 }
 
 function objectCallableMember(objectExpression, reference) {
-  const object = objectExpression && unwrapExpression(objectExpression);
-  if (!object || !ts.isObjectLiteralExpression(object)) return null;
-  const member = object.properties.find((property) => {
-    if (ts.isMethodDeclaration(property)) return containsReference(property, reference);
-    if (!ts.isPropertyAssignment(property)) return false;
-    const initializer = unwrapExpression(property.initializer);
-    return ts.isFunctionLike(initializer) && containsReference(initializer, reference);
-  });
-  return member?.name ? propertyNameText(member.name) : null;
+  for (const object of publicSurfaceExpressions(objectExpression)) {
+    if (!ts.isObjectLiteralExpression(object)) continue;
+    const member = object.properties.find((property) => {
+      if (ts.isMethodDeclaration(property)) return containsReference(property, reference);
+      if (!ts.isPropertyAssignment(property)) return false;
+      const initializer = unwrapExpression(property.initializer);
+      return ts.isFunctionLike(initializer) && containsReference(initializer, reference);
+    });
+    if (member?.name) return propertyNameText(member.name);
+  }
+  return null;
 }
 
 function objectCreateGetterMember(expression, reference) {

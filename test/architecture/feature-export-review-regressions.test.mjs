@@ -395,3 +395,30 @@ test('drops direct ESM object members after a final overwrite', () => {
     }
   );
 });
+
+test('traces getters wrapped by public identity helpers', () => {
+  withFeatureFixture(
+    {
+      'src/features/identity-getters/main/index.ts': `
+        import { FrozenStore } from './infrastructure/FrozenStore';
+        import { AssignedStore } from './infrastructure/AssignedStore';
+        export const frozen = Object.freeze({
+          get Store() { return FrozenStore; },
+        });
+        export const assigned = Object.assign({}, {
+          get Store() { return AssignedStore; },
+        });
+      `,
+      'src/features/identity-getters/main/infrastructure/FrozenStore.ts':
+        'export class FrozenStore {}',
+      'src/features/identity-getters/main/infrastructure/AssignedStore.ts':
+        'export class AssignedStore {}',
+    },
+    (root) => {
+      assert.deepEqual(implementationSpecifiers(root).sort(), [
+        './infrastructure/AssignedStore',
+        './infrastructure/FrozenStore',
+      ]);
+    }
+  );
+});

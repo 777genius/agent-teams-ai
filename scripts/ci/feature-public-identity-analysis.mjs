@@ -5,14 +5,9 @@ import {
   rootBindingName,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
+import { IDENTITY_WRAPPERS } from './feature-identity-wrappers.mjs';
 
-export const IDENTITY_WRAPPERS = new Set([
-  'assign',
-  'freeze',
-  'preventExtensions',
-  'seal',
-  'setPrototypeOf',
-]);
+export { IDENTITY_WRAPPERS };
 
 export function constructedClassNames(expression) {
   const current = unwrapExpression(expression);
