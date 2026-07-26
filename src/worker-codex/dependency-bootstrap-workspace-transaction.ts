@@ -12,6 +12,7 @@ import {
   rename,
   rm,
   symlink,
+  writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -43,8 +44,15 @@ type WorkspaceState = {
 
 type WorkspaceBaseline = WorkspaceState & {
   readonly backupRoot: string;
+  readonly backupPaths: ReadonlySet<string>;
+  readonly indexEntriesByPath: ReadonlyMap<string, GitIndexEntry>;
   readonly indexExisted: boolean;
   readonly indexMode?: number;
+};
+
+type GitIndexEntry = {
+  readonly mode: string;
+  readonly objectId: string;
 };
 
 export async function withDependencyBootstrapWorkspaceTransaction<T>(input: {
@@ -148,9 +156,20 @@ async function captureBaseline(
   workspace: GitWorkspace,
   backupRoot: string,
 ): Promise<WorkspaceBaseline> {
-  const state = await captureWorkspaceState(workspace);
+  const [state, unstagedPaths, untrackedPaths] = await Promise.all([
+    captureWorkspaceState(workspace),
+    gitPaths(workspace, ["diff", "--name-only", "-z"]),
+    gitPaths(workspace, [
+      "ls-files",
+      "--others",
+      "--exclude-standard",
+      "--full-name",
+      "-z",
+    ]),
+  ]);
+  const backupPaths = new Set([...unstagedPaths, ...untrackedPaths]);
   for (const entry of state.entries.values()) {
-    if (entry.kind === "file") {
+    if (entry.kind === "file" && backupPaths.has(entry.path)) {
       const source = workspaceEntryPath(workspace, entry.path);
       const destination = join(backupRoot, "entries", entry.path);
       await mkdir(dirname(destination), { recursive: true });
@@ -171,6 +190,8 @@ async function captureBaseline(
   return {
     ...state,
     backupRoot,
+    backupPaths,
+    indexEntriesByPath: parseStageZeroIndexEntries(state.indexEntries),
     indexExisted: indexStat !== undefined,
     ...(indexStat ? { indexMode: indexStat.mode & 0o7777 } : {}),
   };
@@ -258,22 +279,16 @@ async function rollbackWorkspace(
       baseline,
       current?.entries.keys() ?? [],
     );
-    await restoreBaselineEntries(workspace, baseline);
+    await restoreBaselineEntries(workspace, baseline, current);
 
     const restoredView = await captureWorkspaceState(workspace);
-    await removeExtraEntries(
-      workspace,
-      baseline,
-      restoredView.entries.keys(),
-    );
-    await restoreBaselineEntries(workspace, baseline);
+    await removeExtraEntries(workspace, baseline, restoredView.entries.keys());
+    await restoreBaselineEntries(workspace, baseline, restoredView);
 
     const verified = await captureWorkspaceState(workspace);
     const remaining = workspaceMutations(baseline, verified);
     if (remaining.length > 0) {
-      throw new Error(
-        `rollback_verification_failed:${remaining.join(",")}`,
-      );
+      throw new Error(`rollback_verification_failed:${remaining.join(",")}`);
     }
   } catch (rollbackError) {
     throw new Error(
@@ -319,23 +334,87 @@ async function removeExtraEntries(
 async function restoreBaselineEntries(
   workspace: GitWorkspace,
   baseline: WorkspaceBaseline,
+  current: WorkspaceState | undefined,
 ): Promise<void> {
-  const entries = [...baseline.entries.values()].sort(
-    (left, right) => pathDepth(left.path) - pathDepth(right.path),
-  );
+  const entries = [...baseline.entries.values()]
+    .filter(
+      (entry) =>
+        current === undefined ||
+        !sameEntry(entry, current.entries.get(entry.path)),
+    )
+    .sort((left, right) => pathDepth(left.path) - pathDepth(right.path));
   for (const entry of entries) {
     const destination = workspaceEntryPath(workspace, entry.path);
     await rm(destination, { recursive: true, force: true });
     if (entry.kind === "missing") continue;
     await mkdir(dirname(destination), { recursive: true });
-    if (entry.kind === "symlink") {
-      await symlink(entry.linkTarget ?? "", destination);
+    if (baseline.backupPaths.has(entry.path)) {
+      if (entry.kind === "symlink") {
+        await symlink(entry.linkTarget ?? "", destination);
+        continue;
+      }
+      const source = join(baseline.backupRoot, "entries", entry.path);
+      await copyFile(source, destination);
+      if (entry.mode !== undefined) await chmod(destination, entry.mode);
       continue;
     }
-    const source = join(baseline.backupRoot, "entries", entry.path);
-    await copyFile(source, destination);
-    if (entry.mode !== undefined) await chmod(destination, entry.mode);
+    await restoreIndexBackedEntry(workspace, baseline, entry, destination);
   }
+}
+
+async function restoreIndexBackedEntry(
+  workspace: GitWorkspace,
+  baseline: WorkspaceBaseline,
+  entry: WorkspaceEntry,
+  destination: string,
+): Promise<void> {
+  const indexEntry = baseline.indexEntriesByPath.get(entry.path);
+  if (!indexEntry) {
+    throw new Error(
+      `dependency_bootstrap_workspace_transaction_index_entry_missing:${entry.path}`,
+    );
+  }
+  const content = await git(workspace.rootPath, [
+    "cat-file",
+    "blob",
+    indexEntry.objectId,
+  ]);
+  if (indexEntry.mode === "120000") {
+    await symlink(content.toString("utf8"), destination);
+    return;
+  }
+  if (indexEntry.mode !== "100644" && indexEntry.mode !== "100755") {
+    throw new Error(
+      `dependency_bootstrap_workspace_transaction_index_mode_unsupported:${entry.path}:${indexEntry.mode}`,
+    );
+  }
+  await writeFile(destination, content);
+  if (entry.mode !== undefined) await chmod(destination, entry.mode);
+}
+
+function parseStageZeroIndexEntries(
+  rawEntries: Buffer,
+): ReadonlyMap<string, GitIndexEntry> {
+  const entries = new Map<string, GitIndexEntry>();
+  for (const rawRecord of rawEntries.toString("utf8").split("\0")) {
+    if (!rawRecord) continue;
+    const separator = rawRecord.indexOf("\t");
+    if (separator < 0) {
+      throw new Error(
+        "dependency_bootstrap_workspace_transaction_index_entry_invalid",
+      );
+    }
+    const [mode, objectId, stage] = rawRecord.slice(0, separator).split(" ");
+    if (!mode || !objectId || !stage) {
+      throw new Error(
+        "dependency_bootstrap_workspace_transaction_index_entry_invalid",
+      );
+    }
+    if (stage !== "0") continue;
+    const path = rawRecord.slice(separator + 1);
+    entries.set(path, { mode, objectId });
+  }
+  return entries;
 }
 
 function workspaceMutations(
@@ -343,7 +422,10 @@ function workspaceMutations(
   current: WorkspaceState,
 ): readonly string[] {
   const mutations = new Set<string>();
-  const paths = new Set([...baseline.entries.keys(), ...current.entries.keys()]);
+  const paths = new Set([
+    ...baseline.entries.keys(),
+    ...current.entries.keys(),
+  ]);
   for (const path of paths) {
     if (!sameEntry(baseline.entries.get(path), current.entries.get(path))) {
       mutations.add(path);
@@ -421,7 +503,9 @@ function workspaceEntryPath(workspace: GitWorkspace, path: string): string {
     relativeToWorkspace.startsWith(`..${sep}`) ||
     isAbsolute(relativeToWorkspace)
   ) {
-    throw new Error("dependency_bootstrap_workspace_transaction_path_outside_scope");
+    throw new Error(
+      "dependency_bootstrap_workspace_transaction_path_outside_scope",
+    );
   }
   return absolutePath;
 }

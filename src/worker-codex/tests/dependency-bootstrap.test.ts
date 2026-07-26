@@ -3,6 +3,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   realpath,
   rm,
   symlink,
@@ -131,7 +132,9 @@ describe("dependency bootstrap", () => {
   });
 
   it("binds install execution to the canonical workspace when an alias is retargeted", async () => {
-    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-deps-retarget-"));
+    const root = await mkdtemp(
+      join(tmpdir(), "subscription-runtime-deps-retarget-"),
+    );
     const workspace = join(root, "inside");
     const alias = join(root, "workspace-alias");
     const outside = join(root, "outside");
@@ -166,8 +169,12 @@ describe("dependency bootstrap", () => {
       });
 
       expect(result.status).toBe("installed");
-      await expect(access(join(outside, "node_modules"))).resolves.toBeUndefined();
-      await expect(access(join(workspace, "node_modules"))).resolves.toBeUndefined();
+      await expect(
+        access(join(outside, "node_modules")),
+      ).resolves.toBeUndefined();
+      await expect(
+        access(join(workspace, "node_modules")),
+      ).resolves.toBeUndefined();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -320,18 +327,28 @@ describe("dependency bootstrap", () => {
           dirty: true,
         }),
       );
-      const [statusBefore, stagedBefore, packageJsonBefore] = await Promise.all([
-        git(root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]),
-        git(root, ["diff", "--cached", "--binary", "HEAD", "--"]),
-        readFile(packageJsonPath),
-      ]);
+      const [statusBefore, stagedBefore, packageJsonBefore] = await Promise.all(
+        [
+          git(root, [
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=all",
+          ]),
+          git(root, ["diff", "--cached", "--binary", "HEAD", "--"]),
+          readFile(packageJsonPath),
+        ],
+      );
 
       const result = await runDependencyBootstrap({
         workspacePath: root,
         mode: "install",
         confirmInstall: true,
         runCommand: async () => {
-          await writeFile(workspaceManifestPath, "packages:\n  - generated/*\n");
+          await writeFile(
+            workspaceManifestPath,
+            "packages:\n  - generated/*\n",
+          );
           throw new Error("simulated_install_failure");
         },
       });
@@ -343,13 +360,87 @@ describe("dependency bootstrap", () => {
       await expect(readFile(workspaceManifestPath, "utf8")).resolves.toBe(
         "packages:\n  - packages/*\n",
       );
-      await expect(readFile(packageJsonPath)).resolves.toEqual(packageJsonBefore);
+      await expect(readFile(packageJsonPath)).resolves.toEqual(
+        packageJsonBefore,
+      );
       await expect(
         git(root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]),
       ).resolves.toEqual(statusBefore);
       await expect(
         git(root, ["diff", "--cached", "--binary", "HEAD", "--"]),
       ).resolves.toEqual(stagedBefore);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("backs up only worktree-only state while restoring clean tracked files from the index", async () => {
+    const root = await mkGitDependencyWorkspace(
+      "subscription-runtime-deps-transaction-bounded-backup-",
+      "pnpm",
+    );
+    const cleanPath = join(root, "clean-corpus.txt");
+    const dirtyPath = join(root, "dirty-corpus.txt");
+    try {
+      await writeFile(cleanPath, "clean baseline\n");
+      await writeFile(dirtyPath, "committed baseline\n");
+      await git(root, ["add", "clean-corpus.txt", "dirty-corpus.txt"]);
+      await git(root, [
+        "-c",
+        "user.name=Dependency Bootstrap Test",
+        "-c",
+        "user.email=dependency-bootstrap@example.invalid",
+        "commit",
+        "--quiet",
+        "-m",
+        "test: add backup corpus",
+      ]);
+      await writeFile(dirtyPath, "operator dirty state\n");
+
+      const result = await runDependencyBootstrap({
+        workspacePath: root,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async () => {
+          const backupRoots = (
+            await readdir(tmpdir(), {
+              withFileTypes: true,
+            })
+          )
+            .filter(
+              (entry) =>
+                entry.isDirectory() &&
+                entry.name.startsWith(
+                  "subscription-runtime-dependency-bootstrap-",
+                ),
+            )
+            .map((entry) => join(tmpdir(), entry.name));
+          let owningBackupRoot: string | undefined;
+          for (const backupRoot of backupRoots) {
+            try {
+              await access(join(backupRoot, "entries", "dirty-corpus.txt"));
+              owningBackupRoot = backupRoot;
+              break;
+            } catch {
+              // Another concurrently created transaction owns this directory.
+            }
+          }
+          expect(owningBackupRoot).toBeDefined();
+          await expect(
+            access(join(owningBackupRoot ?? "", "entries", "clean-corpus.txt")),
+          ).rejects.toMatchObject({ code: "ENOENT" });
+          await writeFile(cleanPath, "bootstrap mutation\n");
+          throw new Error("simulated_install_failure");
+        },
+      });
+
+      expect(result.status).toBe("install_failed");
+      await expect(readFile(cleanPath, "utf8")).resolves.toBe(
+        "clean baseline\n",
+      );
+      await expect(readFile(dirtyPath, "utf8")).resolves.toBe(
+        "operator dirty state\n",
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
