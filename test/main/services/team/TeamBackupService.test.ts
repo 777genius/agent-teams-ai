@@ -313,13 +313,14 @@ describe('TeamBackupService', () => {
     expect(restoredRuntimeManifest.activeRunId).toBe('lane-run-1');
   });
 
-  it('never backs up or restores task attachment generation guards', async () => {
+  it('never backs up or restores internal task attachment artifacts', async () => {
     const service = new TeamBackupService();
     const teamName = 'attachment-guard-team';
     const teamDir = path.join(hoisted.teamsBase, teamName);
     const taskDir = path.join(hoisted.appDataPath, 'task-attachments', teamName, 'task-1');
     const attachmentName = '11111111-1111-4111-8111-111111111111--attachment';
     const guardName = '.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp';
+    const stagedDeleteName = '.attachment-delete.11111111-2222-4333-8444-555555555555.staged';
     const backupTaskDir = path.join(
       hoisted.backupsBase,
       'teams',
@@ -336,6 +337,7 @@ describe('TeamBackupService', () => {
     );
     await fs.writeFile(path.join(taskDir, attachmentName), 'attachment bytes', 'utf8');
     await fs.link(path.join(taskDir, attachmentName), path.join(taskDir, guardName));
+    await fs.writeFile(path.join(taskDir, stagedDeleteName), 'staged delete bytes', 'utf8');
 
     await service.initialize();
     await service.backupTeam(teamName);
@@ -346,8 +348,16 @@ describe('TeamBackupService', () => {
     await expect(fs.stat(path.join(backupTaskDir, guardName))).rejects.toMatchObject({
       code: 'ENOENT',
     });
+    await expect(fs.stat(path.join(backupTaskDir, stagedDeleteName))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
 
     await fs.writeFile(path.join(backupTaskDir, guardName), 'legacy guard bytes', 'utf8');
+    await fs.writeFile(
+      path.join(backupTaskDir, stagedDeleteName),
+      'legacy staged delete bytes',
+      'utf8'
+    );
     await fs.rm(teamDir, { recursive: true, force: true });
     await fs.rm(taskDir, { recursive: true, force: true });
     await service.restoreIfNeeded();
@@ -357,6 +367,99 @@ describe('TeamBackupService', () => {
       'attachment bytes'
     );
     await expect(fs.stat(path.join(taskDir, guardName))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(fs.stat(path.join(taskDir, stagedDeleteName))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('prunes legacy internal task attachment artifacts and their manifest stats', async () => {
+    const service = new TeamBackupService();
+    const teamName = 'attachment-artifact-prune-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+    const backupTaskDir = path.join(backupDir, 'task-attachments', 'task-1');
+    const guardRelPath =
+      'task-attachments/task-1/.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp';
+    const stagedDeleteRelPath =
+      'task-attachments/task-1/.attachment-delete.11111111-2222-4333-8444-555555555555.staged';
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Attachment Artifact Prune Team' }),
+      'utf8'
+    );
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    const manifestPath = path.join(backupDir, 'manifest.json');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8')) as {
+      fileStats: Record<string, { mtime: number; size: number }>;
+    };
+    await fs.mkdir(backupTaskDir, { recursive: true });
+    await fs.writeFile(path.join(backupDir, guardRelPath), 'legacy guard bytes', 'utf8');
+    await fs.writeFile(
+      path.join(backupDir, stagedDeleteRelPath),
+      'legacy staged delete bytes',
+      'utf8'
+    );
+    manifest.fileStats[guardRelPath] = { mtime: 1, size: 18 };
+    manifest.fileStats[stagedDeleteRelPath] = { mtime: 1, size: 26 };
+    await fs.writeFile(manifestPath, JSON.stringify(manifest), 'utf8');
+
+    const guardPath = path.join(backupDir, guardRelPath);
+    const realLstat = nativeFs.promises.lstat.bind(nativeFs.promises);
+    const lstatSpy = vi.spyOn(nativeFs.promises, 'lstat').mockImplementation(async (filePath) => {
+      if (path.resolve(String(filePath)) === path.resolve(guardPath)) {
+        await fs.unlink(guardPath);
+        throw Object.assign(new Error('injected concurrent artifact removal'), { code: 'ENOENT' });
+      }
+      return realLstat(filePath);
+    });
+    const realRename = nativeFs.promises.rename.bind(nativeFs.promises);
+    let failManifestPublication = true;
+    const renameSpy = vi
+      .spyOn(nativeFs.promises, 'rename')
+      .mockImplementation(async (sourcePath, destinationPath) => {
+        if (
+          failManifestPublication &&
+          path.resolve(String(destinationPath)) === path.resolve(manifestPath)
+        ) {
+          failManifestPublication = false;
+          throw Object.assign(new Error('injected manifest publication failure'), { code: 'EIO' });
+        }
+        return realRename(sourcePath, destinationPath);
+      });
+
+    try {
+      await expect(service.backupTeam(teamName)).rejects.toThrow(
+        'injected manifest publication failure'
+      );
+    } finally {
+      lstatSpy.mockRestore();
+      renameSpy.mockRestore();
+    }
+
+    await expect(fs.stat(path.join(backupDir, guardRelPath))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.stat(path.join(backupDir, stagedDeleteRelPath))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    const staleManifest = JSON.parse(await fs.readFile(manifestPath, 'utf8')) as {
+      fileStats: Record<string, unknown>;
+    };
+    expect(staleManifest.fileStats).toHaveProperty(guardRelPath);
+    expect(staleManifest.fileStats).toHaveProperty(stagedDeleteRelPath);
+
+    await service.backupTeam(teamName);
+    service.dispose();
+
+    const prunedManifest = JSON.parse(await fs.readFile(manifestPath, 'utf8')) as {
+      fileStats: Record<string, unknown>;
+    };
+    expect(prunedManifest.fileStats).not.toHaveProperty(guardRelPath);
+    expect(prunedManifest.fileStats).not.toHaveProperty(stagedDeleteRelPath);
   });
 
   it('fences startup restore after the durable destructive deletion boundary', async () => {

@@ -1,6 +1,6 @@
 import {
-  isTaskAttachmentGenerationGuardBackupPath,
-  isTaskAttachmentGenerationGuardName,
+  isTaskAttachmentInternalArtifactBackupPath,
+  isTaskAttachmentInternalArtifactName,
 } from './TaskAttachmentArtifacts';
 
 export function isValidJson(content: string): boolean {
@@ -22,9 +22,9 @@ export function isValidConfig(content: string): boolean {
 }
 
 export function shouldCollectTaskAttachmentBackupFile(fileName: string): boolean {
-  return !isTaskAttachmentGenerationGuardName(fileName);
+  return !isTaskAttachmentInternalArtifactName(fileName);
 }
 
-export function shouldCollectTaskAttachmentBackupPath(relPath: string): boolean {
-  return !isTaskAttachmentGenerationGuardBackupPath(relPath);
+export function shouldRestoreTaskAttachmentBackupPath(relPath: string): boolean {
+  return !isTaskAttachmentInternalArtifactBackupPath(relPath);
 }

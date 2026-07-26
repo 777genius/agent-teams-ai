@@ -24,6 +24,7 @@ import {
 } from './permanent-deletion/TeamPermanentDeletionTypes';
 import {
   type BackupFileDescriptor,
+  collectBackupRelativePaths,
   collectRecursiveFiles,
   collectRecursiveFilesSync,
 } from './TeamBackupFileCollection';
@@ -31,7 +32,7 @@ import {
   isValidConfig,
   isValidJson,
   shouldCollectTaskAttachmentBackupFile,
-  shouldCollectTaskAttachmentBackupPath,
+  shouldRestoreTaskAttachmentBackupPath,
 } from './TeamBackupFilePolicy';
 import { TeamBackupRestoreService } from './TeamBackupRestoreService';
 
@@ -140,7 +141,10 @@ export class TeamBackupService {
     loadManifest: (teamName) => this.loadManifest(teamName),
     getBackupDir: (teamName) => this.getBackupDir(teamName),
     getSourcePathForRelPath: (teamName, relPath) => this.getSourcePathForRelPath(teamName, relPath),
-    enumerateBackupFiles: (teamName) => this.enumerateBackupFiles(teamName),
+    enumerateRestorableBackupFiles: async (teamName) =>
+      (await collectBackupRelativePaths(this.getBackupDir(teamName))).filter(
+        shouldRestoreTaskAttachmentBackupPath
+      ),
   });
 
   // ── Public API ───────────────────────────────────────────────────────
@@ -451,9 +455,10 @@ export class TeamBackupService {
     const assertPublicationCurrent = (): Promise<void> =>
       this.permanentDeletion.assertBackupPublicationCurrent(teamName, manifest.identityId);
 
+    let anyChanged = false;
     // Prune stale backup files (only if source enumeration was error-free)
     if (!hasErrors) {
-      await this.pruneStaleBackupFiles(
+      anyChanged = await this.pruneStaleBackupFiles(
         teamName,
         sourceFiles,
         backupDir,
@@ -462,7 +467,6 @@ export class TeamBackupService {
       );
     }
 
-    let anyChanged = false;
     for (const descriptor of sourceFiles) {
       if (this.backupGeneration !== gen) return;
       const changed = await this.backupSingleFile(
@@ -682,9 +686,18 @@ export class TeamBackupService {
     backupDir: string,
     manifest: BackupManifest,
     assertPublicationCurrent: () => Promise<void>
-  ): Promise<void> {
-    const backupFiles = await this.enumerateBackupFiles(teamName);
+  ): Promise<boolean> {
+    const backupFiles = await collectBackupRelativePaths(backupDir);
     const sourceRelPaths = new Set(sourceFiles.map((f) => f.relPath));
+    const backupRelPaths = new Set(backupFiles);
+    let changed = false;
+
+    for (const manifestRelPath of Object.keys(manifest.fileStats)) {
+      if (!sourceRelPaths.has(manifestRelPath) && !backupRelPaths.has(manifestRelPath)) {
+        delete manifest.fileStats[manifestRelPath];
+        changed = true;
+      }
+    }
 
     for (const backupRelPath of backupFiles) {
       if (backupRelPath === 'manifest.json') continue;
@@ -700,12 +713,15 @@ export class TeamBackupService {
               return isSameDurablePathIdentity(identity, observed);
             },
           });
-          if (removal !== 'changed') delete manifest.fileStats[backupRelPath];
+          if (removal !== 'changed')
+            changed = Reflect.deleteProperty(manifest.fileStats, backupRelPath) || changed;
         } catch (error) {
           if (!isEnoent(error)) throw error;
+          changed = Reflect.deleteProperty(manifest.fileStats, backupRelPath) || changed;
         }
       }
     }
+    return changed;
   }
 
   // ── Internal: restore ────────────────────────────────────────────────
@@ -931,31 +947,6 @@ export class TeamBackupService {
     }
 
     return files;
-  }
-
-  private async enumerateBackupFiles(teamName: string): Promise<string[]> {
-    const backupDir = this.getBackupDir(teamName);
-    const results: string[] = [];
-
-    const walk = async (dir: string, prefix: string): Promise<void> => {
-      try {
-        const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-        for (const entry of entries) {
-          const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
-          if (entry.isFile()) {
-            if (!shouldCollectTaskAttachmentBackupPath(relPath)) continue;
-            results.push(relPath);
-          } else if (entry.isDirectory()) {
-            await walk(path.join(dir, entry.name), relPath);
-          }
-        }
-      } catch {
-        // skip
-      }
-    };
-
-    await walk(backupDir, '');
-    return results;
   }
 
   // ── Internal: registry + manifest ────────────────────────────────────
