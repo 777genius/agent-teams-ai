@@ -188,6 +188,13 @@ function isValueReference(node) {
   const parent = node.parent;
   if (!parent) return false;
   if (
+    ts.isBinaryExpression(parent) &&
+    ts.isAssignmentOperator(parent.operatorToken.kind) &&
+    unwrapExpression(parent.left) === node
+  ) {
+    return false;
+  }
+  if (
     (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
     ('name' in parent && parent.name === node && !ts.isShorthandPropertyAssignment(parent))
   ) {
@@ -251,11 +258,167 @@ function directLexicalBindings(node) {
   return names;
 }
 
+function callableBindsName(callable, name) {
+  return (
+    callable.parameters.some((parameter) =>
+      bindingEntries(parameter.name).some(({ identifier }) => identifier.text === name)
+    ) ||
+    (callable.name && ts.isIdentifier(callable.name) && callable.name.text === name)
+  );
+}
+
+function expressionReadsBinding(expression, name) {
+  let found = false;
+  const visit = (node) => {
+    if (found || ts.isFunctionLike(node) || ts.isClassLike(node)) return;
+    if (ts.isIdentifier(node) && node.text === name && isValueReference(node)) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(expression);
+  return found;
+}
+
+function bindingLiveAfterExpression(expression, name, live) {
+  const current = unwrapExpression(expression);
+  if (ts.isBinaryExpression(current)) {
+    if (
+      current.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      ts.isIdentifier(unwrapExpression(current.left)) &&
+      unwrapExpression(current.left).text === name
+    ) {
+      return live && expressionReadsBinding(current.right, name);
+    }
+    if (current.operatorToken.kind === ts.SyntaxKind.CommaToken) {
+      const afterLeft = bindingLiveAfterExpression(current.left, name, live);
+      return bindingLiveAfterExpression(current.right, name, afterLeft);
+    }
+    if (
+      [
+        ts.SyntaxKind.AmpersandAmpersandToken,
+        ts.SyntaxKind.BarBarToken,
+        ts.SyntaxKind.QuestionQuestionToken,
+      ].includes(current.operatorToken.kind)
+    ) {
+      const afterLeft = bindingLiveAfterExpression(current.left, name, live);
+      const truthiness = staticTruthiness(current.left);
+      const rightIsDefinite =
+        (current.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+          truthiness === true) ||
+        (current.operatorToken.kind === ts.SyntaxKind.BarBarToken && truthiness === false) ||
+        (current.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken &&
+          staticNullishness(current.left) === true);
+      if (rightIsDefinite) {
+        return bindingLiveAfterExpression(current.right, name, afterLeft);
+      }
+      return afterLeft || bindingLiveAfterExpression(current.right, name, afterLeft);
+    }
+  }
+  if (ts.isConditionalExpression(current)) {
+    const afterCondition = bindingLiveAfterExpression(current.condition, name, live);
+    const truthiness = staticTruthiness(current.condition);
+    if (truthiness === true) {
+      return bindingLiveAfterExpression(current.whenTrue, name, afterCondition);
+    }
+    if (truthiness === false) {
+      return bindingLiveAfterExpression(current.whenFalse, name, afterCondition);
+    }
+    return (
+      bindingLiveAfterExpression(current.whenTrue, name, afterCondition) ||
+      bindingLiveAfterExpression(current.whenFalse, name, afterCondition)
+    );
+  }
+  if (ts.isCallExpression(current)) {
+    const invocation = executedIifeForCall(current);
+    if (
+      invocation?.callable.body &&
+      !callableBindsName(invocation.callable, name) &&
+      ts.isBlock(invocation.callable.body)
+    ) {
+      let afterArguments = live;
+      for (const argument of invocation.arguments) {
+        afterArguments = bindingLiveAfterExpression(argument, name, afterArguments);
+      }
+      return bindingLiveAfterStatement(invocation.callable.body, name, afterArguments);
+    }
+  }
+  return live;
+}
+
+function bindingLiveAfterStatement(statement, name, live) {
+  if (ts.isExpressionStatement(statement)) {
+    return bindingLiveAfterExpression(statement.expression, name, live);
+  }
+  if (ts.isBlock(statement)) {
+    if (directLexicalBindings(statement).has(name)) return live;
+    return statement.statements.reduce(
+      (current, child) => bindingLiveAfterStatement(child, name, current),
+      live
+    );
+  }
+  if (ts.isIfStatement(statement)) {
+    const afterCondition = bindingLiveAfterExpression(statement.expression, name, live);
+    const truthiness = staticTruthiness(statement.expression);
+    if (truthiness === true) {
+      return bindingLiveAfterStatement(statement.thenStatement, name, afterCondition);
+    }
+    if (truthiness === false) {
+      return statement.elseStatement
+        ? bindingLiveAfterStatement(statement.elseStatement, name, afterCondition)
+        : afterCondition;
+    }
+    return (
+      bindingLiveAfterStatement(statement.thenStatement, name, afterCondition) ||
+      (statement.elseStatement
+        ? bindingLiveAfterStatement(statement.elseStatement, name, afterCondition)
+        : afterCondition)
+    );
+  }
+  return live;
+}
+
+function bindingIsLiveAtReference(callable, name, reference) {
+  const preceding = [];
+  let current = reference;
+  while (current && current !== callable.body) {
+    const parent = current.parent;
+    if (!parent) break;
+    if (ts.isBlock(parent) && parent.statements.includes(current)) {
+      preceding.unshift(...parent.statements.slice(0, parent.statements.indexOf(current)));
+    } else if (
+      (ts.isIfStatement(parent) &&
+        (current === parent.thenStatement || current === parent.elseStatement)) ||
+      (ts.isConditionalExpression(parent) &&
+        (current === parent.whenTrue || current === parent.whenFalse))
+    ) {
+      preceding.unshift(parent.expression ?? parent.condition);
+    }
+    current = parent;
+  }
+  return preceding.reduce(
+    (live, node) =>
+      ts.isStatement(node)
+        ? bindingLiveAfterStatement(node, name, live)
+        : bindingLiveAfterExpression(node, name, live),
+    true
+  );
+}
+
 function parameterReferences(callable, identifier) {
   if (!callable.body) return [];
   const references = [];
   const visit = (node, shadowed = false) => {
     if (node !== callable.body && (ts.isFunctionLike(node) || ts.isClassLike(node))) {
+      if (
+        ts.isFunctionLike(node) &&
+        immediateIifeInvocation(node) &&
+        node.body &&
+        !callableBindsName(node, identifier.text)
+      ) {
+        visit(node.body, shadowed);
+      }
       return;
     }
     const nestedShadow =
@@ -274,7 +437,7 @@ function parameterReferences(callable, identifier) {
       node.text === identifier.text &&
       isValueReference(node)
     ) {
-      references.push(node);
+      if (bindingIsLiveAtReference(callable, identifier.text, node)) references.push(node);
       return;
     }
     ts.forEachChild(node, (child) => visit(child, nestedShadow));

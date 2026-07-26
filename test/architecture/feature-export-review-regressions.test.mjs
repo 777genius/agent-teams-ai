@@ -694,3 +694,34 @@ test('maps destructured and default IIFE parameters without crossing lexical sha
     }
   );
 });
+
+test('tracks live IIFE parameters through nested execution and stops after reassignment', () => {
+  withFeatureFixture(
+    {
+      'src/features/iife-nested-param/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = {};
+        ((value) => {
+          (() => {
+            api.Store = value;
+          })();
+        })(Store);
+      `,
+      'src/features/iife-nested-param/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/iife-reassigned-param/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = {};
+        ((value) => {
+          value = undefined;
+          api.Store = value;
+        })(Store);
+      `,
+      'src/features/iife-reassigned-param/main/infrastructure/Store.ts': infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/iife-nested-param/main/index.ts',
+      ]);
+    }
+  );
+});
