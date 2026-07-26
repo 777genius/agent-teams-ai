@@ -1,23 +1,10 @@
 import ts from 'typescript';
 
-function literalBoolean(expression) {
-  if (expression.kind === ts.SyntaxKind.TrueKeyword) return true;
-  if (expression.kind === ts.SyntaxKind.FalseKeyword) return false;
-  return null;
-}
-
-function literalNullishness(expression) {
-  if (expression.kind === ts.SyntaxKind.NullKeyword) return true;
-  if (
-    expression.kind === ts.SyntaxKind.TrueKeyword ||
-    expression.kind === ts.SyntaxKind.FalseKeyword ||
-    ts.isStringLiteralLike(expression) ||
-    ts.isNumericLiteral(expression)
-  ) {
-    return false;
-  }
-  return null;
-}
+import {
+  immediateIifeInvocation,
+  staticNullishness,
+  staticTruthiness,
+} from './feature-executed-iife-analysis.mjs';
 
 function isDefinitelyExecutedChild(statement, parent) {
   if (ts.isBlock(parent)) {
@@ -27,33 +14,17 @@ function isDefinitelyExecutedChild(statement, parent) {
     return true;
   }
   if (ts.isIfStatement(parent)) {
-    const condition = literalBoolean(parent.expression);
+    const condition = staticTruthiness(parent.expression);
     return condition === true
       ? statement === parent.thenStatement
       : condition === false && statement === parent.elseStatement;
   }
+  if (ts.isDoStatement(parent)) return statement === parent.statement;
   return false;
 }
 
 export function immediateInvocation(node) {
-  let current = node;
-  while (
-    current.parent &&
-    (
-      ts.isParenthesizedExpression(current.parent) ||
-      ts.isAsExpression(current.parent) ||
-      ts.isTypeAssertionExpression(current.parent) ||
-      ts.isNonNullExpression(current.parent) ||
-      ts.isSatisfiesExpression(current.parent)
-    ) &&
-    current.parent.expression === current
-  ) {
-    current = current.parent;
-  }
-  const call = current.parent;
-  return call && ts.isCallExpression(call) && call.expression === current
-    ? call
-    : null;
+  return immediateIifeInvocation(node);
 }
 
 function isStaticallyDeadExpression(node) {
@@ -61,7 +32,7 @@ function isStaticallyDeadExpression(node) {
   while (current.parent && !ts.isExpressionStatement(current.parent)) {
     const parent = current.parent;
     if (ts.isConditionalExpression(parent)) {
-      const condition = literalBoolean(parent.condition);
+      const condition = staticTruthiness(parent.condition);
       if (
         (condition === true && current === parent.whenFalse) ||
         (condition === false && current === parent.whenTrue)
@@ -69,14 +40,14 @@ function isStaticallyDeadExpression(node) {
         return true;
       }
     } else if (ts.isBinaryExpression(parent) && current === parent.right) {
-      const left = literalBoolean(parent.left);
+      const left = staticTruthiness(parent.left);
       if (
         (parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
           left === false) ||
         (parent.operatorToken.kind === ts.SyntaxKind.BarBarToken && left === true) ||
         (
           parent.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken &&
-          literalNullishness(parent.left) === false
+          staticNullishness(parent.left) === false
         )
       ) {
         return true;

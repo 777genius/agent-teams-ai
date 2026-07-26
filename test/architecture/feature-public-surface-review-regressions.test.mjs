@@ -719,6 +719,64 @@ test('traces only definitely invoked function mutations', () => {
       `,
       'src/features/iife-terminal-safe/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/iife-argument-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        ((value) => {
+          api.Store = value;
+        })(Store);
+      `,
+      'src/features/iife-argument-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/iife-target-argument-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        ((target, value) => {
+          target.Store = value;
+        })(api, Store);
+      `,
+      'src/features/iife-target-argument-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/iife-call-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        (function () {
+          api.Store = Store;
+        }).call(undefined);
+      `,
+      'src/features/iife-call-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/iife-if-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        (() => {
+          if ((true)) {
+            api.Store = Store;
+          }
+        })();
+      `,
+      'src/features/iife-if-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/iife-do-while-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        (() => {
+          do {
+            api.Store = Store;
+          } while (false);
+        })();
+      `,
+      'src/features/iife-do-while-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/iife-comma-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        (undefined, (() => {
+          api.Store = Store;
+        }))();
+      `,
+      'src/features/iife-comma-public/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/iife-dead-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -727,6 +785,15 @@ test('traces only definitely invoked function mutations', () => {
         })();
       `,
       'src/features/iife-dead-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/iife-dead-asserted-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        (false as const) && (() => {
+          api.Store = Store;
+        })();
+      `,
+      'src/features/iife-dead-asserted-safe/main/infrastructure/Store.ts':
         'export class Store {}',
       'src/features/callback-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
@@ -737,11 +804,26 @@ test('traces only definitely invoked function mutations', () => {
       `,
       'src/features/callback-safe/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/callback-argument-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [Store].forEach((value) => {
+          api.Store = value;
+        });
+      `,
+      'src/features/callback-argument-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
+        'src/features/iife-argument-public/main/index.ts',
+        'src/features/iife-call-public/main/index.ts',
+        'src/features/iife-comma-public/main/index.ts',
+        'src/features/iife-do-while-public/main/index.ts',
         'src/features/iife-expression-public/main/index.ts',
+        'src/features/iife-if-public/main/index.ts',
         'src/features/iife-public/main/index.ts',
+        'src/features/iife-target-argument-public/main/index.ts',
       ]);
     }
   );

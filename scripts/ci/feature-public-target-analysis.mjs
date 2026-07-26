@@ -8,6 +8,7 @@ import {
   rootBindingName,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
+import { collectBindingModel } from './feature-binding-model-analysis.mjs';
 import {
   collectCommonJsRootAssignments,
   collectFinalCommonJsPropertyWrites,
@@ -38,102 +39,6 @@ import {
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import { attachPublicReferenceQueries } from './feature-public-reference-visibility.mjs';
 import { materializeIdentityAliasWrites } from './feature-public-write-alias-analysis.mjs';
-function bindingNames(bindingName) {
-  if (ts.isIdentifier(bindingName)) return [bindingName.text];
-  return bindingName.elements.flatMap((element) =>
-    ts.isBindingElement(element) ? bindingNames(element.name) : []
-  );
-}
-
-function collectBindingModel(sourceFile) {
-  const eventsByName = new Map();
-  const versions = new Map();
-  const topLevelNames = new Set();
-  let sequence = 0;
-
-  const addVersion = (name, initializer, position, forcedAlias) => {
-    const key = `${name}:${position}:${sequence++}`;
-    const version = { forcedAlias, initializer, key, name, position };
-    versions.set(key, version);
-    const events = eventsByName.get(name) ?? [];
-    events.push(version);
-    eventsByName.set(name, events);
-  };
-  const addBinding = (bindingName, initializer, position, forcedAlias) => {
-    if (ts.isIdentifier(bindingName)) {
-      addVersion(bindingName.text, initializer, position, forcedAlias);
-      return;
-    }
-    for (const [index, element] of bindingName.elements.entries()) {
-      if (!ts.isBindingElement(element)) continue;
-      const selectedName = ts.isObjectBindingPattern(bindingName)
-        ? propertyNameText(element.propertyName ?? element.name)
-        : String(index);
-      const skipIdentity = Boolean(element.dotDotDotToken || element.initializer);
-      addBinding(
-        element.name,
-        initializer,
-        position,
-        skipIdentity
-          ? { skipIdentity: true }
-          : {
-              expression: initializer,
-              path: [...(forcedAlias?.path ?? []), selectedName],
-              symmetric: false,
-            }
-      );
-    }
-  };
-
-  for (const statement of sourceFile.statements) {
-    if (!ts.isVariableStatement(statement)) continue;
-    for (const declaration of statement.declarationList.declarations) {
-      for (const name of bindingNames(declaration.name)) topLevelNames.add(name);
-      if (declaration.initializer) {
-        addBinding(
-          declaration.name,
-          declaration.initializer,
-          declaration.getStart(sourceFile),
-          undefined
-        );
-      }
-    }
-  }
-
-  const visitExpression = (node) => {
-    if (ts.isFunctionLike(node) || ts.isClassLike(node)) return;
-    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-      const target = unwrapExpression(node.left);
-      if (ts.isIdentifier(target) && topLevelNames.has(target.text)) {
-        addVersion(target.text, node.right, node.end, undefined);
-      }
-    }
-    ts.forEachChild(node, visitExpression);
-  };
-  const visitStatement = (statement) => {
-    if (ts.isExpressionStatement(statement)) {
-      visitExpression(statement.expression);
-    } else if (ts.isBlock(statement)) {
-      for (const child of statement.statements) visitStatement(child);
-    } else if (
-      ts.isIfStatement(statement) &&
-      statement.expression.kind === ts.SyntaxKind.TrueKeyword
-    ) {
-      visitStatement(statement.thenStatement);
-    }
-  };
-  for (const statement of sourceFile.statements) {
-    visitStatement(statement);
-  }
-  for (const events of eventsByName.values()) {
-    events.sort((left, right) => left.position - right.position);
-  }
-  const bindingAt = (name, position) => {
-    const events = eventsByName.get(name) ?? [];
-    return [...events].reverse().find((event) => event.position <= position)?.key ?? null;
-  };
-  return { bindingAt, eventsByName, versions };
-}
 
 function collectContainedBindingEntries(expression, bindingModel) {
   const entries = [];
@@ -726,9 +631,11 @@ export function analyzePublicTargets(
       },
       sourceFile,
     });
+    owners.atPosition = localOwnersAt;
     return owners;
   };
   const commonJsTargetsAt = (position) => ({
+    atPosition: commonJsTargetsAt,
     directExportsActive: position >= finalRootPosition && exportsActiveAt(position),
     directModuleExportsActive: position >= finalRootPosition,
     isReferencePublic: (expression, reference) =>

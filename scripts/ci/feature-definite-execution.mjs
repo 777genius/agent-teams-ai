@@ -1,40 +1,17 @@
 import ts from 'typescript';
 
-function literalTruthiness(node) {
-  if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
-  if (
-    node.kind === ts.SyntaxKind.FalseKeyword ||
-    node.kind === ts.SyntaxKind.NullKeyword
-  ) {
-    return false;
-  }
-  if (ts.isStringLiteralLike(node)) return node.text.length > 0;
-  if (ts.isNumericLiteral(node)) return Number(node.text) !== 0;
-  return null;
-}
-
-function invocationTarget(expression) {
-  let current = expression;
-  while (
-    ts.isParenthesizedExpression(current) ||
-    ts.isAsExpression(current) ||
-    ts.isTypeAssertionExpression(current) ||
-    ts.isNonNullExpression(current) ||
-    ts.isSatisfiesExpression(current)
-  ) {
-    current = current.expression;
-  }
-  return ts.isArrowFunction(current) || ts.isFunctionExpression(current)
-    ? current
-    : null;
-}
+import {
+  executedIifeForCall,
+  staticNullishness,
+  staticTruthiness,
+} from './feature-executed-iife-analysis.mjs';
 
 function visitDefiniteExpression(node, visitor) {
   if (ts.isFunctionLike(node) || ts.isClassLike(node)) return;
   visitor(node);
   if (ts.isConditionalExpression(node)) {
     visitDefiniteExpression(node.condition, visitor);
-    const truthiness = literalTruthiness(node.condition);
+    const truthiness = staticTruthiness(node.condition);
     if (truthiness === true) visitDefiniteExpression(node.whenTrue, visitor);
     if (truthiness === false) visitDefiniteExpression(node.whenFalse, visitor);
     return;
@@ -62,27 +39,28 @@ function visitDefiniteExpression(node, visitor) {
     ].includes(node.operatorToken.kind)
   ) {
     visitDefiniteExpression(node.left, visitor);
-    const truthiness = literalTruthiness(node.left);
+    const truthiness = staticTruthiness(node.left);
     const rightIsDefinite =
       (node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
         truthiness === true) ||
       (node.operatorToken.kind === ts.SyntaxKind.BarBarToken &&
         truthiness === false) ||
       (node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken &&
-        node.left.kind === ts.SyntaxKind.NullKeyword);
+        staticNullishness(node.left) === true);
     if (rightIsDefinite) visitDefiniteExpression(node.right, visitor);
     return;
   }
   if (ts.isCallExpression(node)) {
-    const invokedFunction = invocationTarget(node.expression);
-    if (invokedFunction) {
+    const invocation = executedIifeForCall(node);
+    if (invocation) {
+      visitDefiniteExpression(node.expression, visitor);
       for (const argument of node.arguments) {
         visitDefiniteExpression(argument, visitor);
       }
-      if (ts.isBlock(invokedFunction.body)) {
-        visitDefiniteStatement(invokedFunction.body, visitor);
+      if (ts.isBlock(invocation.callable.body)) {
+        visitDefiniteStatement(invocation.callable.body, visitor);
       } else {
-        visitDefiniteExpression(invokedFunction.body, visitor);
+        visitDefiniteExpression(invocation.callable.body, visitor);
       }
       return;
     }
@@ -107,11 +85,18 @@ function visitDefiniteStatement(statement, visitor) {
       if (ts.isReturnStatement(child) || ts.isThrowStatement(child)) break;
     }
   } else if (ts.isIfStatement(statement)) {
-    const truthiness = literalTruthiness(statement.expression);
+    visitDefiniteExpression(statement.expression, visitor);
+    const truthiness = staticTruthiness(statement.expression);
     if (truthiness === true) visitDefiniteStatement(statement.thenStatement, visitor);
     if (truthiness === false && statement.elseStatement) {
       visitDefiniteStatement(statement.elseStatement, visitor);
     }
+  } else if (ts.isDoStatement(statement)) {
+    visitDefiniteStatement(statement.statement, visitor);
+    visitDefiniteExpression(statement.expression, visitor);
+  } else if (ts.isTryStatement(statement)) {
+    visitDefiniteStatement(statement.tryBlock, visitor);
+    if (statement.finallyBlock) visitDefiniteStatement(statement.finallyBlock, visitor);
   }
 }
 

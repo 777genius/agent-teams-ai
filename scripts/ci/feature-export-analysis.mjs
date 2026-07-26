@@ -10,6 +10,7 @@ import {
   immediateInvocation,
   topLevelExpressionBoundary,
 } from './feature-export-flow-analysis.mjs';
+import { executedIifeParameterReferences } from './feature-executed-iife-analysis.mjs';
 import {
   dynamicThenCallbackMember,
   exportAssignmentValueSelection,
@@ -411,6 +412,29 @@ export function findPublicReferenceOwner(
   commonJsTargetAliases = new Set(),
   classifyPublicClassReference = () => undefined
 ) {
+  for (const parameterReference of executedIifeParameterReferences(node)) {
+    const parameterOwners =
+      publicTargetOwners.atPosition?.(parameterReference.getStart(sourceFile)) ??
+      publicTargetOwners;
+    const parameterCommonJsTargets =
+      commonJsTargetAliases.atPosition?.(parameterReference.getStart(sourceFile)) ??
+      commonJsTargetAliases;
+    const parameterOwner = findPublicReferenceOwner(
+      parameterReference,
+      sourceFile,
+      parameterOwners,
+      parameterCommonJsTargets,
+      classifyPublicClassReference
+    );
+    if (
+      parameterOwner &&
+      (parameterOwner.localNames.length > 0 ||
+        parameterOwner.exportedNames.length > 0)
+    ) {
+      return parameterOwner;
+    }
+  }
+
   let current = node;
   let insideFunctionBody = false;
   while (current && current !== sourceFile) {
