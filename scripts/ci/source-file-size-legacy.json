@@ -68,7 +68,7 @@
   "src/main/services/team/ReviewDecisionStore.ts": 2556,
   "src/main/services/team/TaskChangeComputer.ts": 1357,
   "src/main/services/team/TaskChangeLedgerReader.ts": 2159,
-  "src/main/services/team/TeamBackupService.ts": 1262,
+  "src/main/services/team/TeamBackupService.ts": 1216,
   "src/main/services/team/TeamBootstrapStateReader.ts": 908,
   "src/main/services/team/TeamConfigReader.ts": 1196,
   "src/main/services/team/TeamDataService.ts": 4216,
