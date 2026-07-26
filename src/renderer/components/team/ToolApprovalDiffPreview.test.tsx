@@ -7,8 +7,8 @@ vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock('@renderer/hooks/useToolApprovalDiff', () => ({
-  useToolApprovalDiff: () => ({
+const { useToolApprovalDiffMock } = vi.hoisted(() => ({
+  useToolApprovalDiffMock: vi.fn(() => ({
     hasDiff: false,
     loading: false,
     error: null,
@@ -18,7 +18,11 @@ vi.mock('@renderer/hooks/useToolApprovalDiff', () => ({
     isNewFile: false,
     truncated: false,
     isBinary: false,
-  }),
+  })),
+}));
+
+vi.mock('@renderer/hooks/useToolApprovalDiff', () => ({
+  useToolApprovalDiff: useToolApprovalDiffMock,
 }));
 
 import { ToolApprovalDiffPreview } from './ToolApprovalDiffPreview';
@@ -27,6 +31,7 @@ describe('ToolApprovalDiffPreview', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     localStorage.clear();
+    useToolApprovalDiffMock.mockClear();
   });
 
   afterEach(() => {
@@ -70,6 +75,17 @@ describe('ToolApprovalDiffPreview', () => {
     const labels = Array.from(host.querySelectorAll('span'), (span) => span.textContent);
     expect(labels).toContain('+200');
     expect(labels).not.toContain('+2');
+    expect(useToolApprovalDiffMock).toHaveBeenLastCalledWith(
+      'Write',
+      expect.objectContaining({
+        content: expect.stringContaining('line-199'),
+        file_path: '/workspace/file.txt',
+      }),
+      'team-one',
+      'run-two',
+      'request-reused',
+      false
+    );
 
     act(() => {
       root.unmount();
