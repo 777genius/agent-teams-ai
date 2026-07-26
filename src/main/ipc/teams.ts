@@ -676,6 +676,7 @@ async function handleSaveTaskAttachment(
     try {
       // Write metadata into the task JSON
       await getTeamDataService().addTaskAttachment(vTeam.value!, vTask.value!, receipt.metadata);
+      await taskAttachmentStore.finalizeAttachment(receipt);
       return receipt.metadata;
     } catch (error) {
       try {

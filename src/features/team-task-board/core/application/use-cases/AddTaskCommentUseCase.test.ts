@@ -40,6 +40,7 @@ function createDependencies(): {
               addedAt: '2026-07-22T00:00:00.000Z',
               filePath: `/workspace/attachments/${attachmentId}`,
             },
+            finalize: vi.fn(async () => undefined),
             rollback: vi.fn(async () => undefined),
           }) satisfies SavedTaskCommentAttachment
       ),
@@ -102,6 +103,7 @@ describe('AddTaskCommentUseCase', () => {
           addedAt: '2026-07-22T00:00:00.000Z',
           filePath: '/workspace/attachments/attachment-1',
         },
+        finalize: vi.fn(async () => undefined),
         rollback,
       })
       .mockRejectedValueOnce(failure);
@@ -175,13 +177,77 @@ describe('AddTaskCommentUseCase', () => {
       '[teams:addTaskComment] Failed to roll back attachment attachment-2: cleanup failed'
     );
   });
+
+  it('finalizes saved generations only after comment persistence succeeds', async () => {
+    const dependencies = createDependencies();
+    const finalize = vi.fn(async () => undefined);
+    vi.mocked(dependencies.attachments.saveAttachment).mockResolvedValueOnce(
+      createSavedAttachment(
+        'attachment-1',
+        'one.png',
+        'image/png',
+        vi.fn(async () => undefined),
+        finalize
+      )
+    );
+    const useCase = new AddTaskCommentUseCase(dependencies);
+
+    await useCase.execute('my-team', 'task-1', {
+      text: 'Comment',
+      attachments: [
+        {
+          id: 'attachment-1',
+          filename: 'one.png',
+          mimeType: 'image/png',
+          base64Data: 'b25l',
+        },
+      ],
+    });
+
+    expect(finalize).toHaveBeenCalledOnce();
+    expect(
+      vi.mocked(dependencies.comments.addTaskComment).mock.invocationCallOrder[0]
+    ).toBeLessThan(finalize.mock.invocationCallOrder[0]);
+  });
+
+  it('keeps a persisted comment when generation finalization fails', async () => {
+    const dependencies = createDependencies();
+    const finalizeFailure = new Error('finalize failed');
+    const rollback = vi.fn(async () => undefined);
+    vi.mocked(dependencies.attachments.saveAttachment).mockResolvedValueOnce(
+      createSavedAttachment('attachment-1', 'one.png', 'image/png', rollback, async () => {
+        throw finalizeFailure;
+      })
+    );
+    const useCase = new AddTaskCommentUseCase(dependencies);
+
+    await expect(
+      useCase.execute('my-team', 'task-1', {
+        text: 'Comment',
+        attachments: [
+          {
+            id: 'attachment-1',
+            filename: 'one.png',
+            mimeType: 'image/png',
+            base64Data: 'b25l',
+          },
+        ],
+      })
+    ).resolves.toMatchObject({ id: 'comment-1' });
+
+    expect(rollback).not.toHaveBeenCalled();
+    expect(dependencies.logger.warn).toHaveBeenCalledWith(
+      '[teams:addTaskComment] Failed to finalize attachment attachment-1: finalize failed'
+    );
+  });
 });
 
 function createSavedAttachment(
   id: string,
   filename: string,
   mimeType: AttachmentMediaType,
-  rollback: () => Promise<void>
+  rollback: () => Promise<void>,
+  finalize: () => Promise<void> = async () => undefined
 ): SavedTaskCommentAttachment {
   return {
     metadata: {
@@ -192,6 +258,7 @@ function createSavedAttachment(
       addedAt: '2026-07-22T00:00:00.000Z',
       filePath: `/workspace/attachments/${id}`,
     },
+    finalize,
     rollback,
   };
 }

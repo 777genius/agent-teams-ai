@@ -218,6 +218,21 @@ describe('TeamTaskAttachmentStore', () => {
     await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('removes the generation guard after a direct save succeeds', async () => {
+    const { store, taskDirectory } = await createRealStore();
+
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+
+    expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+  });
+
   it.each(['attachment-1', '../bad-id'])('rejects non-canonical attachment ID %s', async (id) => {
     const atomicCreator = createAtomicCreator();
     const store = new TeamTaskAttachmentStore(atomicCreator);
@@ -548,9 +563,24 @@ describe('TeamTaskAttachmentStore', () => {
     ).resolves.toBeNull();
   });
 
-  it('preserves a different attachment created while an empty directory cleanup begins', async () => {
-    const { store } = await createRealStore();
-    const receipt = await store.saveAttachmentWithReceipt(
+  it('serializes task directory cleanup against a different attachment save', async () => {
+    await createRealStore();
+    const firstStore = new TeamTaskAttachmentStore(
+      undefined,
+      new NodeTaskAttachmentMutationCoordinator()
+    );
+    const secondCoordinator = new NodeTaskAttachmentMutationCoordinator();
+    let notifySecondAttempted!: () => void;
+    const secondAttempted = new Promise<void>((resolve) => {
+      notifySecondAttempted = resolve;
+    });
+    const secondStore = new TeamTaskAttachmentStore(undefined, {
+      run(mutationKey, operation) {
+        notifySecondAttempted();
+        return secondCoordinator.run(mutationKey, operation);
+      },
+    });
+    const receipt = await firstStore.saveAttachmentWithReceipt(
       'my-team',
       'task-1',
       ATTACHMENT_ID,
@@ -559,26 +589,50 @@ describe('TeamTaskAttachmentStore', () => {
       'b2xk'
     );
     const originalRmdir = fsPromises.rmdir.bind(fsPromises);
+    let notifyCleanupStarted!: () => void;
+    let resumeCleanup!: () => void;
+    const cleanupStarted = new Promise<void>((resolve) => {
+      notifyCleanupStarted = resolve;
+    });
+    const cleanupResume = new Promise<void>((resolve) => {
+      resumeCleanup = resolve;
+    });
     const rmdir = vi.spyOn(fsPromises, 'rmdir').mockImplementationOnce(async (directory) => {
-      await store.saveAttachment(
-        'my-team',
-        'task-1',
-        OTHER_ATTACHMENT_ID,
-        'other.png',
-        'image/png',
-        'b3RoZXI='
-      );
+      notifyCleanupStarted();
+      await cleanupResume;
       await originalRmdir(directory);
     });
 
     try {
-      await store.rollbackAttachment(receipt);
+      const rollback = firstStore.rollbackAttachment(receipt);
+      await cleanupStarted;
+      let saveSettled = false;
+      const save = secondStore
+        .saveAttachment(
+          'my-team',
+          'task-1',
+          OTHER_ATTACHMENT_ID,
+          'other.png',
+          'image/png',
+          'b3RoZXI='
+        )
+        .finally(() => {
+          saveSettled = true;
+        });
+      await secondAttempted;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      expect(saveSettled).toBe(false);
+
+      resumeCleanup();
+      await rollback;
+      await save;
     } finally {
+      resumeCleanup();
       rmdir.mockRestore();
     }
 
     await expect(
-      store.getAttachment('my-team', 'task-1', OTHER_ATTACHMENT_ID, 'image/png')
+      secondStore.getAttachment('my-team', 'task-1', OTHER_ATTACHMENT_ID, 'image/png')
     ).resolves.toBe('b3RoZXI=');
   });
 });

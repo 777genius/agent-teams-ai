@@ -27,6 +27,7 @@ export class TeamTaskCommentAttachmentWriter implements TaskCommentAttachmentWri
     );
     return {
       metadata: receipt.metadata,
+      finalize: () => this.store.finalizeAttachment(receipt),
       rollback: () => this.store.rollbackAttachment(receipt),
     };
   }

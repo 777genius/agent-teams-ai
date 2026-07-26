@@ -92,6 +92,7 @@ export interface TaskCommentAttachmentWriterPort {
 
 export interface SavedTaskCommentAttachment {
   readonly metadata: TaskAttachmentMeta;
+  finalize(): Promise<void>;
   rollback(): Promise<void>;
 }
 

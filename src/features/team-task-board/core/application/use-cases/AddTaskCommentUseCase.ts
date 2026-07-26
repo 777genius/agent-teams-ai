@@ -38,6 +38,7 @@ export class AddTaskCommentUseCase implements AddTaskCommentPort {
     input: AddTaskCommentInput
   ): Promise<TaskComment> {
     const savedAttachments: SavedTaskCommentAttachment[] = [];
+    let comment: TaskComment;
     try {
       for (const attachment of input.attachments) {
         const saved = await this.dependencies.attachments.saveAttachment(
@@ -51,7 +52,7 @@ export class AddTaskCommentUseCase implements AddTaskCommentPort {
         savedAttachments.push(saved);
       }
 
-      return await this.dependencies.comments.addTaskComment(
+      comment = await this.dependencies.comments.addTaskComment(
         teamName,
         taskId,
         input.text,
@@ -63,6 +64,24 @@ export class AddTaskCommentUseCase implements AddTaskCommentPort {
     } catch (error) {
       await this.rollbackSavedAttachments(savedAttachments);
       throw error;
+    }
+
+    await this.finalizeSavedAttachments(savedAttachments);
+    return comment;
+  }
+
+  private async finalizeSavedAttachments(
+    attachments: readonly SavedTaskCommentAttachment[]
+  ): Promise<void> {
+    for (const attachment of attachments) {
+      try {
+        await attachment.finalize();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.dependencies.logger.warn(
+          `[teams:addTaskComment] Failed to finalize attachment ${attachment.metadata.id}: ${message}`
+        );
+      }
     }
   }
 
