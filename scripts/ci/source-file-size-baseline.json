@@ -173,7 +173,7 @@
     "src/renderer/utils/teamModelAvailability.ts": 983,
     "src/renderer/utils/teamModelCatalog.ts": 868,
     "src/renderer/utils/teamProvisioningPresentation.ts": 1414,
-    "src/shared/types/api.ts": 1163,
+    "src/shared/types/api.ts": 1151,
     "src/shared/types/team.ts": 1958
   }
 }
