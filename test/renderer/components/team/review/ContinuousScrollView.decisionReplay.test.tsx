@@ -1,7 +1,7 @@
 import React, { act, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ContinuousScrollView } from '../../../../../src/renderer/components/team/review/ContinuousScrollView';
 
@@ -100,6 +100,10 @@ describe('ContinuousScrollView decision replay', () => {
       callback(0);
       return 1;
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it.each([
