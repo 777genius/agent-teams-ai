@@ -203,6 +203,11 @@
     },
     {
       "rule": "core-application-dependencies",
+      "source": "src/features/team-provisioning/core/application/use-cases/GetProvisioningStatusUseCase.ts",
+      "specifier": "@shared/types/team"
+    },
+    {
+      "rule": "core-application-dependencies",
       "source": "src/features/team-provisioning/core/application/use-cases/ProvisionTeam.ts",
       "specifier": "@features/team-configuration"
     },
@@ -393,6 +398,11 @@
     },
     {
       "rule": "cross-feature-public-entrypoint",
+      "source": "src/features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore.ts",
+      "specifier": "@features/internal-storage/contracts/internalStorageContracts"
+    },
+    {
+      "rule": "cross-feature-public-entrypoint",
       "source": "src/features/member-work-sync/main/infrastructure/memberWorkSyncSnapshotMerge.ts",
       "specifier": "@features/internal-storage/contracts/internalStorageContracts"
     },
@@ -405,6 +415,11 @@
       "rule": "cross-feature-public-entrypoint",
       "source": "src/features/member-work-sync/main/infrastructure/memberWorkSyncSqliteMappers.ts",
       "specifier": "@features/internal-storage/contracts/internalStorageContracts"
+    },
+    {
+      "rule": "cross-feature-public-entrypoint",
+      "source": "src/main/ipc/teams.ts",
+      "specifier": "../../features/team-view-read-model/main/adapters/output/TeamPermanentDeletionTransactionCoordinator"
     },
     {
       "rule": "public-api-implementation-export",
@@ -648,7 +663,7 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts",
+      "source": "src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts",
       "specifier": "../infrastructure/MemberWorkSyncEventQueue",
       "publicEntrypoint": "src/features/member-work-sync/main/index.ts"
     },
@@ -657,24 +672,6 @@
       "source": "src/features/member-work-sync/main/index.ts",
       "specifier": "./adapters/input/registerMemberWorkSyncIpc",
       "publicEntrypoint": "src/features/member-work-sync/main/index.ts"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/member-work-sync/renderer/hooks/useMemberWorkSyncStatus.ts",
-      "specifier": "../adapters/memberWorkSyncStatusViewModel",
-      "publicEntrypoint": "src/features/member-work-sync/renderer/index.ts"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/member-work-sync/renderer/index.ts",
-      "specifier": "./adapters/memberWorkSyncStatusViewModel",
-      "publicEntrypoint": "src/features/member-work-sync/renderer/index.ts"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/member-work-sync/renderer/ui/MemberWorkSyncBadge.tsx",
-      "specifier": "../adapters/memberWorkSyncStatusViewModel",
-      "publicEntrypoint": "src/features/member-work-sync/renderer/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
@@ -831,6 +828,12 @@
       "source": "src/features/team-message-delivery/renderer/index.ts",
       "specifier": "./adapters/createTeamMessageDeliveryRendererSlice",
       "publicEntrypoint": "src/features/team-message-delivery/renderer/index.ts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/main/composition/createTeamProvisioningStatusFeature.ts",
+      "specifier": "../adapters/output/LegacyProvisioningStatusReaderAdapter",
+      "publicEntrypoint": "src/features/team-provisioning/main/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
@@ -1059,18 +1062,6 @@
       "source": "src/features/token-usage/main/index.ts",
       "specifier": "./infrastructure/TeamTaskUsageAttributionSource",
       "publicEntrypoint": "src/features/token-usage/main/index.ts"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/token-usage/renderer/hooks/useTokenUsageSnapshot.ts",
-      "specifier": "../adapters/tokenUsageViewModel",
-      "publicEntrypoint": "src/features/token-usage/renderer/index.ts"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/token-usage/renderer/index.ts",
-      "specifier": "./adapters/tokenUsageViewModel",
-      "publicEntrypoint": "src/features/token-usage/renderer/index.ts"
     },
     {
       "rule": "public-api-implementation-export",
