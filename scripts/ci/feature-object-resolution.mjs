@@ -1,15 +1,9 @@
 import ts from 'typescript';
 
-import {
-  memberAccess,
-  propertyNameText,
-  unwrapExpression,
-} from './feature-export-analysis.mjs';
+import { memberAccess, propertyNameText, unwrapExpression } from './feature-export-analysis.mjs';
 
 function uniqueNodes(nodes) {
-  return [
-    ...new Map(nodes.map((node) => [`${node.pos}:${node.end}`, node])).values(),
-  ];
+  return [...new Map(nodes.map((node) => [`${node.pos}:${node.end}`, node])).values()];
 }
 
 export function resolveObjectLiterals(
@@ -68,8 +62,7 @@ export function resolveObjectLiterals(
       ).flatMap((object) => {
         const property = object.properties.find(
           (candidate) =>
-            (ts.isPropertyAssignment(candidate) ||
-              ts.isShorthandPropertyAssignment(candidate)) &&
+            (ts.isPropertyAssignment(candidate) || ts.isShorthandPropertyAssignment(candidate)) &&
             propertyNameText(candidate.name) === access.name
         );
         if (property && ts.isPropertyAssignment(property)) {
@@ -82,13 +75,7 @@ export function resolveObjectLiterals(
           );
         }
         return property && ts.isShorthandPropertyAssignment(property)
-          ? resolveObjectLiterals(
-              property.name,
-              beforePosition,
-              resolveBinding,
-              visited,
-              memo
-            )
+          ? resolveObjectLiterals(property.name, beforePosition, resolveBinding, visited, memo)
           : [];
       });
     }

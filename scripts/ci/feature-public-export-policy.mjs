@@ -38,9 +38,7 @@ function createExportResolver(reexports, localExportNamesBySource, sourceFilePat
           if (!targetPath) return [`${reexport.specifier}#${reexport.importedName}`];
           if (reexport.importedName === '*') return [`${targetPath}#*`];
           const origins = exportOrigins(targetPath, reexport.importedName, nextVisited);
-          return origins.size > 0
-            ? [...origins]
-            : [`${targetPath}#${reexport.importedName}`];
+          return origins.size > 0 ? [...origins] : [`${targetPath}#${reexport.importedName}`];
         })
       );
     }
@@ -63,9 +61,7 @@ function createExportResolver(reexports, localExportNamesBySource, sourceFilePat
       .filter(({ isExportStar }) => isExportStar)
       .map((reexport) => {
         const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
-        return targetPath
-          ? exportOrigins(targetPath, requestedExport, nextVisited)
-          : new Set();
+        return targetPath ? exportOrigins(targetPath, requestedExport, nextVisited) : new Set();
       })
       .filter((origins) => origins.size > 0);
     const distinctOrigins = new Set(starOrigins.flatMap((origins) => [...origins]));
@@ -124,8 +120,7 @@ export function collectPublicApiImplementationExports({
 
       const sourceReexports = groupedReexports.get(sourcePath) ?? [];
       const explicitReexports = sourceReexports.filter(
-        ({ exportedName, isExportStar }) =>
-          !isExportStar && exportedName === requestedExport
+        ({ exportedName, isExportStar }) => !isExportStar && exportedName === requestedExport
       );
       if (
         explicitReexports.length === 0 &&
@@ -143,10 +138,7 @@ export function collectPublicApiImplementationExports({
       for (const reexport of relevantReexports) {
         const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
         if (!targetPath) continue;
-        if (
-          reexport.isExportStar &&
-          !exportedNames(targetPath).has(requestedExport)
-        ) {
+        if (reexport.isExportStar && !exportedNames(targetPath).has(requestedExport)) {
           continue;
         }
 
@@ -162,9 +154,7 @@ export function collectPublicApiImplementationExports({
           continue;
         }
 
-        const targetExport = reexport.isExportStar
-          ? requestedExport
-          : reexport.importedName;
+        const targetExport = reexport.isExportStar ? requestedExport : reexport.importedName;
         if (targetExport === '*') {
           for (const exportedName of exportedNames(targetPath)) visit(targetPath, exportedName);
         } else {

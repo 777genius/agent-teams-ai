@@ -30,16 +30,9 @@ export function propagateIdentityOwners(initialOwners, edges) {
   return owners;
 }
 
-export function propagateCommonJsTargetPaths(
-  initialPaths,
-  identityAliases,
-  memberRelations
-) {
+export function propagateCommonJsTargetPaths(initialPaths, identityAliases, memberRelations) {
   const pathsByKey = new Map(
-    [...initialPaths].map(([key, paths]) => [
-      key,
-      paths.map((path) => [...path]),
-    ])
+    [...initialPaths].map(([key, paths]) => [key, paths.map((path) => [...path])])
   );
   let changed = true;
   while (changed) {
@@ -56,11 +49,7 @@ export function propagateCommonJsTargetPaths(
       if (relation.liveAttached !== true) continue;
       for (const path of pathsByKey.get(relation.sourceKey) ?? []) {
         changed =
-          appendUniquePath(
-            pathsByKey,
-            relation.ownerKey,
-            [...path, ...relation.path]
-          ) || changed;
+          appendUniquePath(pathsByKey, relation.ownerKey, [...path, ...relation.path]) || changed;
       }
     }
   }

@@ -34,10 +34,10 @@ test('rejects value dependencies on runtime packages from core domain by default
     domainRule
   );
 
-  assert.deepEqual(
-    violations.map(({ specifier }) => specifier).sort(),
-    ['@terminal-platform/workspace-gateway-node', 'better-sqlite3']
-  );
+  assert.deepEqual(violations.map(({ specifier }) => specifier).sort(), [
+    '@terminal-platform/workspace-gateway-node',
+    'better-sqlite3',
+  ]);
 });
 
 test('resolves imported values only when they are not lexically shadowed', () => {
@@ -79,27 +79,23 @@ test('substitutes emitted ESM and CommonJS extensions before barrel traversal', 
       'src/features/js-substitution/main/barrel.ts': `
         export { Store } from './infrastructure/Store.js';
       `,
-      'src/features/js-substitution/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/js-substitution/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/mjs-substitution/main/index.mts': `export * from './barrel.mjs';`,
       'src/features/mjs-substitution/main/barrel.mts': `
         export { Store } from './infrastructure/Store.mjs';
       `,
-      'src/features/mjs-substitution/main/infrastructure/Store.mts':
-        'export class Store {}',
+      'src/features/mjs-substitution/main/infrastructure/Store.mts': 'export class Store {}',
       'src/features/cjs-substitution/main/index.cts': `export * from './barrel.cjs';`,
       'src/features/cjs-substitution/main/barrel.cts': `
         export { Store } from './infrastructure/Store.cjs';
       `,
-      'src/features/cjs-substitution/main/infrastructure/Store.cts':
-        'export class Store {}',
+      'src/features/cjs-substitution/main/infrastructure/Store.cts': 'export class Store {}',
       'src/features/js-precedence/main/index.ts': `export * from './barrel.js';`,
       'src/features/js-precedence/main/barrel.ts': 'export const safe = true;',
       'src/features/js-precedence/main/barrel.js': `
         export { Store } from './infrastructure/Store.js';
       `,
-      'src/features/js-precedence/main/infrastructure/Store.js':
-        'export class Store {}',
+      'src/features/js-precedence/main/infrastructure/Store.js': 'export class Store {}',
     },
     publicApiRule
   );
@@ -200,8 +196,7 @@ test('does not propagate default exports through export stars', () => {
       'src/features/named-star-unsafe/main/barrel.ts': `
         export { Store } from './infrastructure/Store';
       `,
-      'src/features/named-star-unsafe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/named-star-unsafe/main/infrastructure/Store.ts': 'export class Store {}',
     },
     publicApiRule
   );
@@ -220,15 +215,13 @@ test('lets explicit exports shadow same-named star exports', () => {
         export * from './infrastructure/Store';
         export { Store } from './safe';
       `,
-      'src/features/explicit-shadow-safe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/explicit-shadow-safe/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/explicit-shadow-safe/main/safe.ts': 'export const Store = "safe";',
       'src/features/unshadowed-star-unsafe/main/index.ts': `export * from './barrel';`,
       'src/features/unshadowed-star-unsafe/main/barrel.ts': `
         export * from './infrastructure/Store';
       `,
-      'src/features/unshadowed-star-unsafe/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/unshadowed-star-unsafe/main/infrastructure/Store.ts': 'export class Store {}',
     },
     publicApiRule
   );
@@ -248,8 +241,7 @@ test('omits ambiguous star collisions while preserving unique star exports', () 
         export * from './infrastructure/Store.mjs';
       `,
       'src/features/ambiguous-star-safe/main/safe.mjs': 'export const Store = "safe";',
-      'src/features/ambiguous-star-safe/main/infrastructure/Store.mjs':
-        'export class Store {}',
+      'src/features/ambiguous-star-safe/main/infrastructure/Store.mjs': 'export class Store {}',
       'src/features/unique-star-unsafe/main/index.mjs': `export * from './barrel.mjs';`,
       'src/features/unique-star-unsafe/main/barrel.mjs': `
         export * from './safe.mjs';

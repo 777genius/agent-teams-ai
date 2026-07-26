@@ -1,9 +1,6 @@
 import ts from 'typescript';
 
-import {
-  propertyNameText,
-  unwrapExpression,
-} from './feature-export-analysis.mjs';
+import { propertyNameText, unwrapExpression } from './feature-export-analysis.mjs';
 import { accessPath } from './feature-public-object-analysis.mjs';
 
 export function snapshotExportSelection(expression, position) {
@@ -17,22 +14,21 @@ export function snapshotExportSelection(expression, position) {
     : null;
 }
 
-export function collectSnapshotMemberRelations(
-  snapshotLocalExports,
-  bindingModel
-) {
+export function collectSnapshotMemberRelations(snapshotLocalExports, bindingModel) {
   return snapshotLocalExports.flatMap(({ name, path = [], position }) => {
     if (path.length === 0) return [];
     const sourceKey = bindingModel.bindingAt(name, position);
     return sourceKey
-      ? [{
-          copyPosition: position,
-          owner: name,
-          ownerKey: null,
-          path,
-          sourceKey,
-          targetPath: [],
-        }]
+      ? [
+          {
+            copyPosition: position,
+            owner: name,
+            ownerKey: null,
+            path,
+            sourceKey,
+            targetPath: [],
+          },
+        ]
       : [];
   });
 }
@@ -50,9 +46,7 @@ export function snapshotInitializerPathAt(initializer, position, prefix = []) {
         ts.isMethodDeclaration(property)
       ) {
         const path = [...prefix, propertyNameText(property.name)];
-        const value = ts.isPropertyAssignment(property)
-          ? property.initializer
-          : property;
+        const value = ts.isPropertyAssignment(property) ? property.initializer : property;
         return snapshotInitializerPathAt(value, position, path) ?? path;
       }
       return null;

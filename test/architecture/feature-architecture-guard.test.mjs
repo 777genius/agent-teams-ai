@@ -948,8 +948,7 @@ test('traces top-level getter aliases only when public descriptors expose them',
         container.api.Store = Store;
         export const api = Object.freeze(container.api);
       `,
-      'src/features/getter-freeze-member/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/getter-freeze-member/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/getter-object-assign-overwritten-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const hidden = {};
@@ -1120,8 +1119,7 @@ test('traces top-level getter aliases only when public descriptors expose them',
         Object.setPrototypeOf(api, proto);
         proto.Store = Store;
       `,
-      'src/features/getter-set-prototype-of/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/getter-set-prototype-of/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/getter-set-prototype-stale-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const proto = {};
@@ -1624,8 +1622,7 @@ test('tracks object mutators on constructed public instances', () => {
         }
         export const api = new Api();
       `,
-      'src/features/constructor-assign/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/constructor-assign/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/constructor-define-properties/main/index.ts': `
         import { Store } from './infrastructure/Store';
         class Api {
@@ -1659,8 +1656,7 @@ test('tracks object mutators on constructed public instances', () => {
         }
         export const api = new Api();
       `,
-      'src/features/constructor-reflect-set/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/constructor-reflect-set/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/constructor-callback-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
         class Api {
@@ -1681,9 +1677,7 @@ test('tracks object mutators on constructed public instances', () => {
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
       const implementationSources = violations
-        .filter(
-          ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
-        )
+        .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
         .map(({ source }) => source)
         .sort();
       assert.deepEqual(implementationSources, [
@@ -1708,8 +1702,7 @@ test('honors dynamic source ordering within one copy operation', () => {
         const alias = Object.assign({}, hidden, safe);
         export const api = { ...alias };
       `,
-      'src/features/copy-source-order/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/copy-source-order/main/infrastructure/Store.ts': 'export class Store {}',
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
@@ -1738,8 +1731,7 @@ test('respects inherited constructor member visibility', () => {
         }
         export const api = new Api();
       `,
-      'src/features/inherited-protected/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/inherited-protected/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/inherited-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         class Base {
@@ -1753,19 +1745,14 @@ test('respects inherited constructor member visibility', () => {
         }
         export const api = new Api();
       `,
-      'src/features/inherited-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/inherited-public/main/infrastructure/Store.ts': 'export class Store {}',
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
       const implementationSources = violations
-        .filter(
-          ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
-        )
+        .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
         .map(({ source }) => source);
-      assert.deepEqual(implementationSources, [
-        'src/features/inherited-public/main/index.ts',
-      ]);
+      assert.deepEqual(implementationSources, ['src/features/inherited-public/main/index.ts']);
     }
   );
 });
@@ -1780,8 +1767,7 @@ test('tracks public constructor parameter properties only', () => {
         }
         export const api = new Api();
       `,
-      'src/features/parameter-public/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/parameter-public/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/parameter-protected/main/index.ts': `
         import { Store } from './infrastructure/Store';
         class Api {
@@ -1789,8 +1775,7 @@ test('tracks public constructor parameter properties only', () => {
         }
         export const api = new Api();
       `,
-      'src/features/parameter-protected/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/parameter-protected/main/infrastructure/Store.ts': 'export class Store {}',
       'src/features/parameter-private/main/index.ts': `
         import { Store } from './infrastructure/Store';
         class Api {
@@ -1798,19 +1783,14 @@ test('tracks public constructor parameter properties only', () => {
         }
         export const api = new Api();
       `,
-      'src/features/parameter-private/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/parameter-private/main/infrastructure/Store.ts': 'export class Store {}',
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
       const implementationSources = violations
-        .filter(
-          ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
-        )
+        .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
         .map(({ source }) => source);
-      assert.deepEqual(implementationSources, [
-        'src/features/parameter-public/main/index.ts',
-      ]);
+      assert.deepEqual(implementationSources, ['src/features/parameter-public/main/index.ts']);
     }
   );
 });

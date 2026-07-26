@@ -266,12 +266,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
 
   const visit = (node) => {
     if (ts.isImportDeclaration(node)) {
-      const edge = addEdge(
-        node,
-        node.moduleSpecifier,
-        'import',
-        importDeclarationIsTypeOnly(node)
-      );
+      const edge = addEdge(node, node.moduleSpecifier, 'import', importDeclarationIsTypeOnly(node));
       addImportBindings(node.importClause, edge);
     } else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
       const edge = addEdge(node, node.moduleSpecifier, 'export', node.isTypeOnly);
@@ -355,10 +350,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       const owner = publicReferenceOwner(node);
       if (owner) {
         const importedBinding = importedBindings.get(node.text);
-        if (
-          importedBinding &&
-          !isLexicallyShadowedValueReference(node, sourceFile)
-        ) {
+        if (importedBinding && !isLexicallyShadowedValueReference(node, sourceFile)) {
           addOwnerDependency(owner, {
             edge: importedBinding.edge,
             importedName: importedNameForReference(node, importedBinding),

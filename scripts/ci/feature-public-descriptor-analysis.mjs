@@ -59,12 +59,7 @@ function resolveDescriptorObjects(expression, assignments, beforePosition) {
   });
 }
 
-function resolveDescriptorMapEntries(
-  expression,
-  assignments,
-  beforePosition,
-  visited = new Set()
-) {
+function resolveDescriptorMapEntries(expression, assignments, beforePosition, visited = new Set()) {
   const current = expression && unwrapExpression(expression);
   const entries = resolveDescriptorObjects(expression, assignments, beforePosition).flatMap(
     (descriptorMap) => {
@@ -93,13 +88,9 @@ function resolveDescriptorMapEntries(
           ts.isShorthandPropertyAssignment(property)
         ) {
           entries.set(propertyNameText(property.name), {
-            expression: ts.isPropertyAssignment(property)
-              ? property.initializer
-              : property.name,
+            expression: ts.isPropertyAssignment(property) ? property.initializer : property.name,
             name: propertyNameText(property.name),
-            references: [
-              ts.isPropertyAssignment(property) ? property.initializer : property.name,
-            ],
+            references: [ts.isPropertyAssignment(property) ? property.initializer : property.name],
           });
         }
       }
@@ -202,8 +193,7 @@ export function collectConsumedDescriptorGetterProperties(sourceFile, publicTarg
                 node.arguments[0],
                 publicTargets,
                 reference.getStart(sourceFile),
-                node.arguments[1] &&
-                  ts.isStringLiteralLike(unwrapExpression(node.arguments[1]))
+                node.arguments[1] && ts.isStringLiteralLike(unwrapExpression(node.arguments[1]))
                   ? [unwrapExpression(node.arguments[1]).text]
                   : ['*']
               )
@@ -234,12 +224,9 @@ export function collectConsumedDescriptorGetterProperties(sourceFile, publicTarg
             ];
             if (
               !visibilityReferences.some((reference) =>
-                isPublicTarget(
-                  node.arguments[0],
-                  publicTargets,
-                  reference.getStart(sourceFile),
-                  [entry.name]
-                )
+                isPublicTarget(node.arguments[0], publicTargets, reference.getStart(sourceFile), [
+                  entry.name,
+                ])
               )
             ) {
               continue;
@@ -290,16 +277,9 @@ export function consumedDescriptorGetterMembersForReference(
   return [...members];
 }
 
-export function isConsumedDescriptorGetterReference(
-  node,
-  sourceFile,
-  consumedDescriptorGetters
-) {
+export function isConsumedDescriptorGetterReference(node, sourceFile, consumedDescriptorGetters) {
   return (
-    consumedDescriptorGetterMembersForReference(
-      node,
-      sourceFile,
-      consumedDescriptorGetters
-    ).length > 0
+    consumedDescriptorGetterMembersForReference(node, sourceFile, consumedDescriptorGetters)
+      .length > 0
   );
 }

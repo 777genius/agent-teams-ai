@@ -197,9 +197,8 @@ function publicSurfaceExpressions(expression) {
   ) {
     return [current];
   }
-  const argumentsToInspect = method.name === 'assign'
-    ? current.arguments
-    : current.arguments.slice(0, 1);
+  const argumentsToInspect =
+    method.name === 'assign' ? current.arguments : current.arguments.slice(0, 1);
   return argumentsToInspect.flatMap(publicSurfaceExpressions);
 }
 
@@ -285,10 +284,7 @@ export function variableValueSelection(declaration, reference, exported) {
   if (callableMember !== null) return { getterOnly: true, localMember: callableMember };
   const createdMember = objectCreateGetterMember(declaration.initializer, reference);
   if (createdMember !== null) return { localMember: createdMember };
-  const descriptorInitializer = descriptorInitializerSelection(
-    declaration.initializer,
-    reference
-  );
+  const descriptorInitializer = descriptorInitializerSelection(declaration.initializer, reference);
   if (descriptorInitializer) return descriptorInitializer;
   if (descriptorContainsReference(declaration.initializer, reference)) {
     return { localMember: null };
@@ -338,9 +334,7 @@ export function expressionGetterSelection(expression, reference) {
   }
   if (method.name === 'defineProperties') {
     const localMember = descriptorMapGetterMember(current.arguments[1], reference);
-    return localMember === null
-      ? null
-      : { descriptorGetter: true, getterOnly: true, localMember };
+    return localMember === null ? null : { descriptorGetter: true, getterOnly: true, localMember };
   }
   if (method.name !== 'assign') return null;
   for (const source of current.arguments.slice(1)) {

@@ -6,9 +6,7 @@ import {
   ApplicationCommandLedgerStatus,
   ApplicationCommandRunner,
 } from '@features/application-command-ledger';
-import {
-  createApplicationCommandLedgerFeature,
-} from '@features/application-command-ledger/main';
+import { createApplicationCommandLedgerFeature } from '@features/application-command-ledger/main';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import {
   type LifecycleExecutionBackendRegistryPort,

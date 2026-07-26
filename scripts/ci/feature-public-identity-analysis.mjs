@@ -1,10 +1,6 @@
 import ts from 'typescript';
 
-import {
-  memberAccess,
-  rootBindingName,
-  unwrapExpression,
-} from './feature-export-analysis.mjs';
+import { memberAccess, rootBindingName, unwrapExpression } from './feature-export-analysis.mjs';
 import { IDENTITY_WRAPPERS } from './feature-identity-wrappers.mjs';
 
 export { IDENTITY_WRAPPERS };
@@ -13,15 +9,11 @@ export function constructedClassReferences(expression) {
   const current = unwrapExpression(expression);
   if (ts.isNewExpression(current)) {
     const className = rootBindingName(current.expression);
-    return className
-      ? [{ localName: className, position: current.expression.getStart() }]
-      : [];
+    return className ? [{ localName: className, position: current.expression.getStart() }] : [];
   }
   if (ts.isObjectLiteralExpression(current)) {
     return current.properties.flatMap((property) =>
-      ts.isPropertyAssignment(property)
-        ? constructedClassReferences(property.initializer)
-        : []
+      ts.isPropertyAssignment(property) ? constructedClassReferences(property.initializer) : []
     );
   }
   if (ts.isArrayLiteralExpression(current)) {

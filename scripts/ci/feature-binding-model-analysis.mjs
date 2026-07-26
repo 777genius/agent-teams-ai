@@ -98,16 +98,10 @@ export function collectBindingModel(sourceFile) {
       if (parameter.dotDotDotToken) continue;
       const argument = invocation.arguments[index] ?? parameter.initializer;
       if (!argument) continue;
-      addBinding(
-        parameter.name,
-        argument,
-        parameter.getStart(sourceFile),
-        undefined,
-        {
-          scopeEnd: invocation.callable.body.end,
-          scopeStart: invocation.callable.body.pos,
-        }
-      );
+      addBinding(parameter.name, argument, parameter.getStart(sourceFile), undefined, {
+        scopeEnd: invocation.callable.body.end,
+        scopeStart: invocation.callable.body.pos,
+      });
     }
   });
 
@@ -116,12 +110,16 @@ export function collectBindingModel(sourceFile) {
   }
   const bindingAt = (name, position) => {
     const events = eventsByName.get(name) ?? [];
-    return [...events].reverse().find(
-      (event) =>
-        event.position <= position &&
-        (event.scopeStart === undefined ||
-          (event.scopeStart <= position && position <= event.scopeEnd))
-    )?.key ?? null;
+    return (
+      [...events]
+        .reverse()
+        .find(
+          (event) =>
+            event.position <= position &&
+            (event.scopeStart === undefined ||
+              (event.scopeStart <= position && position <= event.scopeEnd))
+        )?.key ?? null
+    );
   };
   return { bindingAt, eventsByName, versions };
 }

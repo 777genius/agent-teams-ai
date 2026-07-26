@@ -21,9 +21,7 @@ function blockDeclaresValue(block, name) {
 }
 
 function functionDeclaresValue(functionLike, name) {
-  if (
-    functionLike.parameters.some((parameter) => bindingNames(parameter.name).includes(name))
-  ) {
+  if (functionLike.parameters.some((parameter) => bindingNames(parameter.name).includes(name))) {
     return true;
   }
 
@@ -46,7 +44,9 @@ function functionDeclaresValue(functionLike, name) {
 
 function loopInitializerDeclaresValue(node, name) {
   if (
-    (ts.isForStatement(node) && node.initializer && ts.isVariableDeclarationList(node.initializer)) ||
+    (ts.isForStatement(node) &&
+      node.initializer &&
+      ts.isVariableDeclarationList(node.initializer)) ||
     ((ts.isForInStatement(node) || ts.isForOfStatement(node)) &&
       ts.isVariableDeclarationList(node.initializer))
   ) {
@@ -69,9 +69,7 @@ function sourceFileImportsValue(sourceFile, name) {
     return (
       bindings &&
       ts.isNamedImports(bindings) &&
-      bindings.elements.some(
-        (element) => !element.isTypeOnly && element.name.text === name
-      )
+      bindings.elements.some((element) => !element.isTypeOnly && element.name.text === name)
     );
   });
 }
@@ -80,10 +78,7 @@ export function isLexicallyShadowedValueReference(reference, sourceFile) {
   const name = reference.text;
   let current = reference.parent;
   while (current && current !== sourceFile) {
-    if (
-      (ts.isBlock(current) || ts.isCaseBlock(current)) &&
-      blockDeclaresValue(current, name)
-    ) {
+    if ((ts.isBlock(current) || ts.isCaseBlock(current)) && blockDeclaresValue(current, name)) {
       return true;
     }
     if (ts.isCatchClause(current) && current.variableDeclaration) {

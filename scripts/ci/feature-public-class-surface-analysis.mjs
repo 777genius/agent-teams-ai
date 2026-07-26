@@ -1,10 +1,6 @@
 import ts from 'typescript';
 
-import {
-  hasModifier,
-  propertyNameText,
-  unwrapExpression,
-} from './feature-export-analysis.mjs';
+import { hasModifier, propertyNameText, unwrapExpression } from './feature-export-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import { publicStaticClassSelection } from './feature-public-class-analysis.mjs';
 import { publicConstructorSelection } from './feature-public-constructor-analysis.mjs';
@@ -28,19 +24,13 @@ function classBoundaries(expression) {
   const current = unwrapExpression(expression);
   if (ts.isClassExpression(current)) return [current];
   if (ts.isConditionalExpression(current)) {
-    return [
-      ...classBoundaries(current.whenTrue),
-      ...classBoundaries(current.whenFalse),
-    ];
+    return [...classBoundaries(current.whenTrue), ...classBoundaries(current.whenFalse)];
   }
   return [];
 }
 
 function assignmentToIdentifier(node) {
-  if (
-    !ts.isBinaryExpression(node) ||
-    node.operatorToken.kind !== ts.SyntaxKind.EqualsToken
-  ) {
+  if (!ts.isBinaryExpression(node) || node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
     return null;
   }
   const target = unwrapExpression(node.left);
@@ -81,12 +71,7 @@ function collectClassBindingEvents(sourceFile) {
     if (ts.isFunctionLike(node) || ts.isClassLike(node)) return;
     const name = assignmentToIdentifier(node);
     if (name) {
-      addEvent(
-        name,
-        classBoundaries(node.right),
-        node.end,
-        definiteAssignments.has(node)
-      );
+      addEvent(name, classBoundaries(node.right), node.end, definiteAssignments.has(node));
     }
     ts.forEachChild(node, visitAssignment);
   };
@@ -97,10 +82,7 @@ function collectClassBindingEvents(sourceFile) {
   }
 
   for (const events of eventsByName.values()) {
-    events.sort(
-      (left, right) =>
-        left.position - right.position || left.sequence - right.sequence
-    );
+    events.sort((left, right) => left.position - right.position || left.sequence - right.sequence);
   }
   return eventsByName;
 }
@@ -121,8 +103,7 @@ function classBindingsAt(eventsByName, name, position) {
 function mergeSurface(existing, next) {
   if (!existing) return { ...next };
   return {
-    constructorSignature:
-      existing.constructorSignature || next.constructorSignature,
+    constructorSignature: existing.constructorSignature || next.constructorSignature,
     heritage: existing.heritage || next.heritage,
     instance: existing.instance || next.instance,
     static: existing.static || next.static,
@@ -187,9 +168,7 @@ function referenceIsInBody(reference, member) {
 }
 
 function publicSignatureSelection(reference, boundary, surface) {
-  const heritage = boundary.heritageClauses?.find((clause) =>
-    containsReference(clause, reference)
-  );
+  const heritage = boundary.heritageClauses?.find((clause) => containsReference(clause, reference));
   if (heritage && surface.heritage) {
     return { getterOnly: false, localMember: '*' };
   }
@@ -291,11 +270,7 @@ function liveExportedLocalNames(sourceFile) {
   return names;
 }
 
-export function analyzePublicClassSurfaces({
-  constructorExports,
-  exportedLocalNames,
-  sourceFile,
-}) {
+export function analyzePublicClassSurfaces({ constructorExports, exportedLocalNames, sourceFile }) {
   const eventsByName = collectClassBindingEvents(sourceFile);
   const publicFunctionConstructorNames = new Set(
     constructorExports.map(({ localName }) => localName)
@@ -314,8 +289,7 @@ export function analyzePublicClassSurfaces({
   const addSurface = (boundary, surface) => {
     candidates.add(boundary);
     const merged = mergeSurface(surfaces.get(boundary), surface);
-    const changed =
-      JSON.stringify(merged) !== JSON.stringify(surfaces.get(boundary));
+    const changed = JSON.stringify(merged) !== JSON.stringify(surfaces.get(boundary));
     surfaces.set(boundary, merged);
     return changed;
   };
@@ -331,11 +305,7 @@ export function analyzePublicClassSurfaces({
     }
   }
   for (const snapshot of snapshotExports) {
-    for (const boundary of classBindingsAt(
-      eventsByName,
-      snapshot.name,
-      snapshot.position
-    )) {
+    for (const boundary of classBindingsAt(eventsByName, snapshot.name, snapshot.position)) {
       addSurface(boundary, DIRECT_CLASS_SURFACE);
     }
   }
@@ -364,9 +334,7 @@ export function analyzePublicClassSurfaces({
     }
   }
 
-  const staleBoundaries = new Set(
-    [...candidates].filter((boundary) => !surfaces.has(boundary))
-  );
+  const staleBoundaries = new Set([...candidates].filter((boundary) => !surfaces.has(boundary)));
   return {
     classifyReference: (reference) => {
       const boundary = nearestClassBoundary(reference);

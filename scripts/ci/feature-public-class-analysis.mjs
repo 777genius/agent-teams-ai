@@ -3,8 +3,9 @@ import ts from 'typescript';
 import { propertyNameText } from './feature-export-ast.mjs';
 
 function hasModifier(node, kind) {
-  return ts.canHaveModifiers(node) &&
-    ts.getModifiers(node)?.some((modifier) => modifier.kind === kind);
+  return (
+    ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === kind)
+  );
 }
 
 function isPublicStaticMember(member) {
@@ -30,9 +31,8 @@ export function publicStaticClassSelection(reference, boundary) {
       parent.parent === boundary &&
       isPublicStaticMember(parent)
     ) {
-      const outsideBody = !parent.body ||
-        reference.pos < parent.body.pos ||
-        reference.end > parent.body.end;
+      const outsideBody =
+        !parent.body || reference.pos < parent.body.pos || reference.end > parent.body.end;
       if (ts.isPropertyDeclaration(parent) || returned || outsideBody) {
         return { getterOnly: false, localMember: propertyNameText(parent.name) };
       }

@@ -42,13 +42,10 @@ function isStaticallyDeadExpression(node) {
     } else if (ts.isBinaryExpression(parent) && current === parent.right) {
       const left = staticTruthiness(parent.left);
       if (
-        (parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
-          left === false) ||
+        (parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && left === false) ||
         (parent.operatorToken.kind === ts.SyntaxKind.BarBarToken && left === true) ||
-        (
-          parent.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken &&
-          staticNullishness(parent.left) === false
-        )
+        (parent.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken &&
+          staticNullishness(parent.left) === false)
       ) {
         return true;
       }
@@ -91,9 +88,7 @@ export function topLevelExpressionBoundary(node, sourceFile) {
         : null;
     }
     if (!parent || !isDefinitelyExecutedChild(statement, parent)) return null;
-    statement = ts.isBlock(parent) && ts.isTryStatement(parent.parent)
-      ? parent.parent
-      : parent;
+    statement = ts.isBlock(parent) && ts.isTryStatement(parent.parent) ? parent.parent : parent;
   }
   return expressionStatement;
 }

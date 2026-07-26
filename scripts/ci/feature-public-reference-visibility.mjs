@@ -49,10 +49,7 @@ function literalReferencePath(expression, reference) {
   while (current !== expression) {
     const parent = current.parent;
     if (!parent || !containsReference(parent, reference)) return null;
-    if (
-      ts.isPropertyAssignment(parent) &&
-      containsReference(parent.initializer, reference)
-    ) {
+    if (ts.isPropertyAssignment(parent) && containsReference(parent.initializer, reference)) {
       path.unshift(propertyNameText(parent.name));
     } else if (
       ts.isShorthandPropertyAssignment(parent) &&
@@ -89,9 +86,7 @@ function mutationReferencePath(expression, reference, bindingModel, sourceFile) 
     target = accessPath(current.arguments[0]);
     if (method.name === 'assign') {
       const sources = [...current.arguments].slice(1);
-      const sourceIndex = sources.findIndex((source) =>
-        containsReference(source, reference)
-      );
+      const sourceIndex = sources.findIndex((source) => containsReference(source, reference));
       if (sourceIndex < 0) return null;
       valuePath = literalReferencePath(sources[sourceIndex], reference);
       if (
@@ -112,8 +107,8 @@ function mutationReferencePath(expression, reference, bindingModel, sourceFile) 
       ['defineProperty', 'set'].includes(method.name) &&
       current.arguments[1] &&
       ts.isStringLiteralLike(unwrapExpression(current.arguments[1])) &&
-      current.arguments.some((argument, index) =>
-        index >= 2 && containsReference(argument, reference)
+      current.arguments.some(
+        (argument, index) => index >= 2 && containsReference(argument, reference)
       )
     ) {
       valuePath = [unwrapExpression(current.arguments[1]).text];
@@ -122,10 +117,7 @@ function mutationReferencePath(expression, reference, bindingModel, sourceFile) 
       current.arguments[1] &&
       containsReference(current.arguments[1], reference)
     ) {
-      const descriptorPath = literalReferencePath(
-        current.arguments[1],
-        reference
-      );
+      const descriptorPath = literalReferencePath(current.arguments[1], reference);
       valuePath = descriptorPath?.length ? [descriptorPath[0]] : null;
     } else {
       return null;
@@ -134,9 +126,7 @@ function mutationReferencePath(expression, reference, bindingModel, sourceFile) 
   if (!target || valuePath === null || valuePath === undefined) return null;
   const position = current.getStart(sourceFile);
   const key = bindingModel.bindingAt(target.root, position);
-  return key
-    ? { key, path: [...target.path, ...valuePath], position: current.end }
-    : null;
+  return key ? { key, path: [...target.path, ...valuePath], position: current.end } : null;
 }
 
 export function attachPublicReferenceQueries(
@@ -152,9 +142,7 @@ export function attachPublicReferenceQueries(
   }
 ) {
   owners.ownerForReference = (reference, selection) =>
-    selection
-      ? referenceOwnerForSelection?.(reference, selection) ?? null
-      : referenceOwner;
+    selection ? (referenceOwnerForSelection?.(reference, selection) ?? null) : referenceOwner;
   owners.isBindingVersionPublic = (declaration) =>
     !ts.isIdentifier(declaration.name) ||
     !publicBindingNames.has(declaration.name.text) ||
@@ -174,18 +162,11 @@ export function attachPublicReferenceQueries(
   };
   owners.isMutationReferencePublic = (reference, expression) => {
     if (capturedReferenceIsPublic?.(reference)) return true;
-    const target = mutationReferencePath(
-      expression,
-      reference,
-      bindingModel,
-      sourceFile
-    );
+    const target = mutationReferencePath(expression, reference, bindingModel, sourceFile);
     if (target === false) return false;
-    return !target || !propertyPathWasOverwrittenAfter(
-      propertyWrites,
-      target.key,
-      target.path,
-      target.position
+    return (
+      !target ||
+      !propertyPathWasOverwrittenAfter(propertyWrites, target.key, target.path, target.position)
     );
   };
 }
