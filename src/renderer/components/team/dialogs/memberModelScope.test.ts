@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { getDialogTeamModelValidationError } from './memberModelScope';
+import {
+  clearInheritedMemberModelsUnavailableForProvider,
+  getDialogTeamModelValidationError,
+} from './memberModelScope';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
@@ -117,6 +120,20 @@ describe('getDialogTeamModelValidationError', () => {
         openCodeLocalProviderLookupAuthoritative: false,
       })
     ).toBeNull();
+  });
+
+  it('preserves an inherited custom member route while project lookup is not authoritative', () => {
+    const savedMember = member({ model: 'project-local/team-model' });
+
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        members: [savedMember],
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: providerStatusById,
+        openCodeLocalProviderIds: new Set(),
+        openCodeLocalProviderLookupAuthoritative: false,
+      })
+    ).toEqual({ members: [savedMember], changed: false });
   });
 
   it('keeps an unproven custom route blocked by renderer validation', () => {

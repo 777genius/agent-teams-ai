@@ -14,6 +14,14 @@ export interface OpenCodeLocalModelScope {
   openCodeLocalProviderLookupAuthoritative: boolean;
 }
 
+export function shouldEnableOpenCodeLocalModelScopeLookup(input: {
+  enabled: boolean;
+  projectPath: string;
+  requiresLookup: boolean;
+}): boolean {
+  return input.enabled && input.requiresLookup && Boolean(input.projectPath.trim());
+}
+
 export function useOpenCodeLocalModelScope(input: {
   enabled: boolean;
   projectPath: string;
@@ -23,9 +31,15 @@ export function useOpenCodeLocalModelScope(input: {
   const requiresLookup =
     input.selectedProviderId === 'opencode' ||
     input.members.some((member) => !member.removedAt && member.providerId === 'opencode');
+  const projectPath = input.projectPath.trim();
+  const lookupEnabled = shouldEnableOpenCodeLocalModelScopeLookup({
+    enabled: input.enabled,
+    projectPath,
+    requiresLookup,
+  });
   const { providers, authoritative } = useOpenCodeLocalProviders({
-    enabled: input.enabled && requiresLookup,
-    projectPath: input.projectPath || null,
+    enabled: lookupEnabled,
+    projectPath: projectPath || null,
   });
 
   return useMemo(
@@ -33,8 +47,8 @@ export function useOpenCodeLocalModelScope(input: {
       openCodeLocalProviderIds: new Set(
         providers.map((provider) => provider.providerId.trim().toLowerCase())
       ),
-      openCodeLocalProviderLookupAuthoritative: authoritative,
+      openCodeLocalProviderLookupAuthoritative: lookupEnabled && authoritative,
     }),
-    [authoritative, providers]
+    [authoritative, lookupEnabled, providers]
   );
 }
