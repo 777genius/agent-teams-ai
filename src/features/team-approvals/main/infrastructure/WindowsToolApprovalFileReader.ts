@@ -124,8 +124,9 @@ namespace AgentTeams.SafePreview {
           };
         }
 
+        string requestedPath = NormalizeKernelPath(normalizedPath);
         string openedPath = NormalizeKernelPath(GetOpenedPath(file));
-        if (!String.Equals(NormalizeComparisonPath(normalizedPath), openedPath, StringComparison.OrdinalIgnoreCase)) {
+        if (!String.Equals(requestedPath, openedPath, StringComparison.Ordinal)) {
           throw new InvalidOperationException("Safe approval preview rejected a redirected Windows path");
         }
 

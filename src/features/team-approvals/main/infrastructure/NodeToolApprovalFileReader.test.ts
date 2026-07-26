@@ -260,40 +260,6 @@ describe('NodeToolApprovalFileReader', () => {
     });
   });
 
-  it.runIf(process.platform === 'win32')(
-    'reads regular files through the native Windows handle helper',
-    async () => {
-      const textPath = path.join(tempDirectory, 'windows-preview.txt');
-      await writeFile(textPath, 'approved Windows content');
-
-      await expect(new WindowsToolApprovalFileReader().read(textPath)).resolves.toEqual({
-        content: 'approved Windows content',
-        exists: true,
-        truncated: false,
-        isBinary: false,
-      });
-    }
-  );
-
-  it.runIf(process.platform === 'win32')(
-    'rejects parent junctions through no-follow Windows handles',
-    async () => {
-      const outsideDirectory = path.join(tempDirectory, 'windows-outside');
-      const linkedDirectory = path.join(tempDirectory, 'windows-linked');
-      await mkdir(outsideDirectory);
-      await writeFile(path.join(outsideDirectory, 'secret.txt'), 'unapproved secret');
-      await symlink(outsideDirectory, linkedDirectory, 'junction');
-
-      await expect(
-        new WindowsToolApprovalFileReader().read(path.join(linkedDirectory, 'secret.txt'))
-      ).resolves.toMatchObject({
-        content: '',
-        exists: true,
-        error: expect.stringMatching(/redirected Windows path|reparse-point path/),
-      });
-    }
-  );
-
   it('reports masked procfs traversal as an error instead of a missing target', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('linux');
     const closeRoot = vi.fn(async () => undefined);

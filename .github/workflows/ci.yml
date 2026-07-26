@@ -256,6 +256,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Test Windows approval preview path safety
+        run: pnpm exec vitest run src/features/team-approvals/main/infrastructure/WindowsToolApprovalFileReader.windows.test.ts
+
       - name: Test Windows CLI shell fallback
         run: pnpm exec vitest run test/main/utils/childProcess.windows.test.ts
 
