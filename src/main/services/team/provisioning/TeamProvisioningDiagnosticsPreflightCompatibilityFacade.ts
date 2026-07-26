@@ -64,7 +64,11 @@ import {
 } from './TeamProvisioningRuntimeTurnSettledPlanning';
 import { type TeamProvisioningRunTrackingDeliveryHelper } from './TeamProvisioningRunTrackingDelivery';
 import { TeamProvisioningStatusQueryCompatibilityFacade } from './TeamProvisioningStatusQueryCompatibilityFacade';
-import { type TeamProvisioningToolApprovalFacade } from './TeamProvisioningToolApprovalFacade';
+import {
+  type TeamProvisioningMemberToolApprovalBusyInput,
+  type TeamProvisioningMemberToolApprovalBusyStatus,
+  type TeamProvisioningToolApprovalFacade,
+} from './TeamProvisioningToolApprovalFacade';
 import { type TeamProvisioningTransientRunState } from './TeamProvisioningTransientRunState';
 import { type TeamProvisioningVerificationProbePorts } from './TeamProvisioningVerificationProbePortsFactory';
 
@@ -116,6 +120,8 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     TeamProvisioningToolApprovalFacade<TRun>,
     | 'dismissApprovalNotification'
     | 'answerRuntimeToolApproval'
+    | 'getMemberToolApprovalBusyStatus'
+    | 'initializeToolApprovalSettingsForLaunch'
     | 'respondToToolApproval'
     | 'setMainWindow'
     | 'setToolApprovalEventEmitter'
@@ -358,6 +364,19 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
 
   updateToolApprovalSettings(teamName: string, settings: ToolApprovalSettings): void {
     this.toolApprovalFacade.updateToolApprovalSettings(teamName, settings);
+  }
+
+  initializeToolApprovalSettingsForLaunch(
+    teamName: string,
+    skipPermissions: boolean | undefined
+  ): void {
+    this.toolApprovalFacade.initializeToolApprovalSettingsForLaunch(teamName, skipPermissions);
+  }
+
+  async getMemberToolApprovalBusyStatus(
+    input: TeamProvisioningMemberToolApprovalBusyInput
+  ): Promise<TeamProvisioningMemberToolApprovalBusyStatus> {
+    return this.toolApprovalFacade.getMemberToolApprovalBusyStatus(input);
   }
 
   getLiveLeadProcessMessages(teamName: string): InboxMessage[] {

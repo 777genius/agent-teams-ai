@@ -896,11 +896,11 @@ function throwRuntimeDeliveryJournalRecordNotFound(input: RuntimeDeliveryJournal
     `Runtime delivery journal record not found: ${input.teamName}/${input.runId}/${input.idempotencyKey}`
   );
 }
-
 export function createRuntimeDeliveryJournalStore(options: {
   filePath: string;
   clock?: () => Date;
   maxTerminalRecords?: number;
+  accessLockTargetPath?: string;
 }): RuntimeDeliveryJournalStore {
   const clock = options.clock ?? (() => new Date());
   const maxTerminalRecords =
@@ -915,11 +915,11 @@ export function createRuntimeDeliveryJournalStore(options: {
       defaultData: () => [],
       validate: validateRuntimeDeliveryJournalEntries,
       clock,
+      accessLockTargetPath: options.accessLockTargetPath,
     }),
     maxTerminalRecords
   );
 }
-
 export function validateRuntimeDeliveryJournalRecords(
   value: unknown
 ): RuntimeDeliveryJournalRecord[] {

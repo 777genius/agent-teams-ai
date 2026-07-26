@@ -1,3 +1,7 @@
+import {
+  type DurablePathRemovalProofHooks,
+  removePathWithIdentityFenceAsync,
+} from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -8,6 +12,12 @@ import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
 const logger = createLogger('Service:TeamTaskAttachmentStore');
 
 const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20 MB
+const TEAM_TASK_ATTACHMENT_DELETE_OPTIONS = {
+  recursive: true,
+  force: true,
+  maxRetries: 5,
+  retryDelay: 50,
+} as const;
 
 export class TeamTaskAttachmentStore {
   private assertSafePathSegment(label: string, value: string): void {
@@ -30,6 +40,23 @@ export class TeamTaskAttachmentStore {
     this.assertSafePathSegment('teamName', teamName);
     this.assertSafePathSegment('taskId', taskId);
     return path.join(getAppDataPath(), 'task-attachments', teamName, taskId);
+  }
+
+  async deleteTeamAttachments(
+    teamName: string,
+    isDeletionTargetCurrent: (detachedPath?: string) => Promise<boolean> = async () => true,
+    proofHooks?: DurablePathRemovalProofHooks
+  ): Promise<boolean> {
+    this.assertSafePathSegment('teamName', teamName);
+    const attachmentsDir = path.join(getAppDataPath(), 'task-attachments');
+    const removal = await removePathWithIdentityFenceAsync(path.join(attachmentsDir, teamName), {
+      ...TEAM_TASK_ATTACHMENT_DELETE_OPTIONS,
+      durability: 'strict',
+      reservePublicDirectory: true,
+      validateDetached: (detachedPath) => isDeletionTargetCurrent(detachedPath),
+      ...(proofHooks ? { proofHooks } : {}),
+    });
+    return proofHooks ? removal === 'deleted' : removal !== 'changed';
   }
 
   private sanitizeStoredFilename(original: string): string {

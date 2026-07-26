@@ -1,3 +1,4 @@
+export type { MemberWorkSyncBusySignalPort } from '../core/application';
 export type { RuntimeTurnSettledProvider } from '../core/domain';
 export {
   registerMemberWorkSyncIpc,

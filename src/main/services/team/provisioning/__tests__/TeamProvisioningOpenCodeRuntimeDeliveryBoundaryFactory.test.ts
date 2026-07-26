@@ -138,6 +138,42 @@ describe('TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory', () => {
     expect(boundaryPorts.logger).toBe(ports.logger);
   });
 
+  it('rejects current primary identity while tracked runtime delivery is fenced', async () => {
+    const fakeBoundary = createFakeBoundary();
+    createBoundaryMock.mockReturnValue(fakeBoundary);
+    const ports = createPorts({
+      resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'run-1'),
+      canDeliverToTrackedRuntimeRun: vi.fn(() => false),
+    });
+
+    createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts(ports);
+
+    const boundaryPorts = createBoundaryMock.mock.calls[0]?.[0];
+    await expect(
+      boundaryPorts?.resolveCurrentOpenCodeRuntimeRunId('Team', 'primary')
+    ).resolves.toBeNull();
+    await expect(
+      boundaryPorts?.resolveCurrentOpenCodeRuntimeRunId('Team', 'secondary:opencode:builder')
+    ).resolves.toBe('run-1');
+  });
+
+  it('rejects secondary runtime delivery while its aggregate run is pending stop', async () => {
+    const fakeBoundary = createFakeBoundary();
+    createBoundaryMock.mockReturnValue(fakeBoundary);
+    const ports = createPorts({
+      resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'secondary-run-1'),
+      getTrackedRunId: vi.fn(() => 'aggregate-run-1'),
+      resolveDeliverableTrackedRuntimeRunId: vi.fn(() => null),
+    });
+
+    createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts(ports);
+
+    const boundaryPorts = createBoundaryMock.mock.calls[0]?.[0];
+    await expect(
+      boundaryPorts?.resolveCurrentOpenCodeRuntimeRunId('Team', 'secondary:opencode:builder')
+    ).resolves.toBeNull();
+  });
+
   it('builds the delivery boundary from a TeamProvisioning host without importing the service', async () => {
     const fakeBoundary = createFakeBoundary();
     createBoundaryMock.mockReturnValue(fakeBoundary);
@@ -302,6 +338,8 @@ function createPorts(
     readMetaMembers: vi.fn(async () => []),
     readPersistedRuntimeMembers: vi.fn(() => []),
     getTrackedRunId: vi.fn(() => null),
+    canDeliverToTrackedRuntimeRun: vi.fn(() => true),
+    resolveDeliverableTrackedRuntimeRunId: vi.fn(() => 'run-1'),
     getRun: vi.fn(() => null),
     persistLaunchStateSnapshot: vi.fn(async () => undefined),
     getMixedSecondaryLaunchPhase: vi.fn(() => 'active' as const),
@@ -345,6 +383,9 @@ function createPorts(
       warn: vi.fn(),
     },
     ...overrides,
+    mutateLaunchStateSnapshot:
+      overrides.mutateLaunchStateSnapshot ?? vi.fn(async (_teamName, mutation) => mutation(null)),
+    withTeamLock: overrides.withTeamLock ?? vi.fn(async (_teamName, operation) => operation()),
   };
 }
 
@@ -377,6 +418,10 @@ function createHost(options: {
       read: options.readLaunchState,
     },
     writeLaunchStateSnapshot: vi.fn(async () => undefined),
+    mutateLaunchStateSnapshot: vi.fn(async (_teamName, mutation) =>
+      mutation(await options.readLaunchState('Team'))
+    ),
+    withTeamLock: vi.fn(async (_teamName, operation) => operation()),
     readConfigForStrictDecision: vi.fn(async () => null),
     membersMetaStore: {
       getMembers: vi.fn(async () => []),
@@ -384,6 +429,8 @@ function createHost(options: {
     readPersistedRuntimeMembers: vi.fn(() => []),
     runTracking: {
       getTrackedRunId: vi.fn(() => 'run-1'),
+      canDeliverToTrackedRuntimeRun: vi.fn(() => true),
+      resolveDeliverableTrackedRuntimeRunId: vi.fn(() => 'run-1'),
     },
     runs: {
       get: vi.fn(() => options.run),
@@ -441,6 +488,9 @@ function createService(options: {
     openCodeRuntimeRecoveryIdentity: host.openCodeRuntimeRecoveryIdentity,
     launchStateStore: host.launchStateStore,
     writeLaunchStateSnapshot: host.writeLaunchStateSnapshot,
+    writeLaunchStateSnapshotNow: vi.fn(async (_teamName, snapshot) => ({ snapshot })),
+    enqueueLaunchStateStoreOperation: vi.fn(async (_teamName, operation) => operation()),
+    withTeamLock: host.withTeamLock,
     readConfigForStrictDecision: host.readConfigForStrictDecision,
     membersMetaStore: host.membersMetaStore,
     readPersistedRuntimeMembers: host.readPersistedRuntimeMembers,

@@ -11,11 +11,11 @@ import {
 } from '@renderer/components/ui/select';
 import { Bot, Building2, Link2, Network, Pencil, RadioTower, RefreshCw, Users } from 'lucide-react';
 
-import { DEFAULT_ORGANIZATION_MAP_LAYOUT_MODE } from '../adapters/organizationMapLayout';
-import { getOrganizationIdForNodeId } from '../adapters/organizationMapViewModel';
 import { useOrganizationCreateTeamDialog } from '../hooks/useOrganizationCreateTeamDialog';
 import { useOrganizationMap } from '../hooks/useOrganizationMap';
 import { useOrganizationStructureManager } from '../hooks/useOrganizationStructureManager';
+import { DEFAULT_ORGANIZATION_MAP_LAYOUT_MODE } from '../view-models/organizationMapLayout';
+import { getOrganizationIdForNodeId } from '../view-models/organizationMapViewModel';
 
 import { OrganizationEditorPanel } from './OrganizationEditorPanel';
 import { OrgGraphSurface } from './OrgGraphSurface';

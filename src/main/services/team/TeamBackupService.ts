@@ -2,7 +2,13 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { atomicWriteAsync, atomicWriteSync } from '@main/utils/atomicWrite';
+import {
+  atomicWriteAsync,
+  atomicWriteSync,
+  getDurablePathIdentity,
+  isSameDurablePathIdentity,
+  removePathWithIdentityFenceAsync,
+} from '@main/utils/atomicWrite';
 import {
   getAppDataPath,
   getBackupsBasePath,
@@ -11,7 +17,24 @@ import {
 } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
-import { TeamConfigReader } from './TeamConfigReader';
+import { TeamPermanentDeletionCoordinator } from './permanent-deletion/TeamPermanentDeletionCoordinator';
+import {
+  BackupPublicationFencedError,
+  type TeamPermanentDeletionIntent,
+} from './permanent-deletion/TeamPermanentDeletionTypes';
+import {
+  type BackupFileDescriptor,
+  collectRecursiveFiles,
+  collectRecursiveFilesSync,
+} from './TeamBackupFileCollection';
+import { TeamBackupRestoreService } from './TeamBackupRestoreService';
+
+import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
+
+export type {
+  PermanentDeletionTarget,
+  TeamPermanentDeletionIntent,
+} from './permanent-deletion/TeamPermanentDeletionTypes';
 
 const logger = createLogger('TeamBackupService');
 
@@ -44,11 +67,6 @@ interface BackupRegistryEntry {
   lastBackupAt: string;
 }
 
-interface BackupFileDescriptor {
-  sourcePath: string;
-  relPath: string;
-}
-
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -73,11 +91,6 @@ const TEAM_ROOT_FILES = [
 // Subdirs under ~/.claude/teams/{teamName}/
 const TEAM_SUBDIRS = ['inboxes', 'review-decisions'];
 const TEAM_RECURSIVE_SUBDIRS = ['.opencode-runtime', 'members'];
-const ATOMIC_WRITE_TEMP_FILE_PREFIX = '.tmp.';
-const FILE_LOCK_SUFFIX = '.lock';
-const QUARANTINED_OPENCODE_LANE_INDEX_RE = /^lanes\.invalid\.\d+\.json$/;
-const MEMBER_WORK_SYNC_DIR = '.member-work-sync';
-const MEMBER_WORK_SYNC_JOURNAL_FILE = 'journal.jsonl';
 // Subdirs under getAppDataPath() (our own storage, not in ~/.claude/)
 const APP_DATA_SUBDIRS = ['attachments'];
 const APP_DATA_DEEP_SUBDIRS = ['task-attachments'];
@@ -112,89 +125,6 @@ function isValidConfig(content: string): boolean {
   }
 }
 
-function shouldCollectRecursiveBackupFile(relPath: string): boolean {
-  const fileName = path.basename(relPath);
-  if (fileName.startsWith(ATOMIC_WRITE_TEMP_FILE_PREFIX)) {
-    return false;
-  }
-  if (fileName.endsWith(FILE_LOCK_SUFFIX)) {
-    return false;
-  }
-  // Runtime quarantine files are diagnostic snapshots of invalid JSON.
-  if (QUARANTINED_OPENCODE_LANE_INDEX_RE.test(fileName)) {
-    return false;
-  }
-  const segments = relPath.split('/');
-  const workSyncIndex = segments.lastIndexOf(MEMBER_WORK_SYNC_DIR);
-  if (
-    segments[0] === 'members' &&
-    workSyncIndex >= 2 &&
-    segments[workSyncIndex + 1] === MEMBER_WORK_SYNC_JOURNAL_FILE
-  ) {
-    return false;
-  }
-  return true;
-}
-
-async function collectRecursiveFiles(
-  rootDir: string,
-  relPrefix: string
-): Promise<BackupFileDescriptor[]> {
-  const files: BackupFileDescriptor[] = [];
-  const walk = async (dirPath: string, relDir: string): Promise<void> => {
-    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    for (const entry of entries) {
-      const sourcePath = path.join(dirPath, entry.name);
-      const relPath = relDir ? `${relDir}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) {
-        await walk(sourcePath, relPath);
-        continue;
-      }
-      if (entry.isFile()) {
-        const descriptorRelPath = relPrefix ? `${relPrefix}/${relPath}` : relPath;
-        if (!shouldCollectRecursiveBackupFile(descriptorRelPath)) {
-          continue;
-        }
-        files.push({
-          sourcePath,
-          relPath: descriptorRelPath,
-        });
-      }
-    }
-  };
-
-  await walk(rootDir, '');
-  return files;
-}
-
-function collectRecursiveFilesSync(rootDir: string, relPrefix: string): BackupFileDescriptor[] {
-  const files: BackupFileDescriptor[] = [];
-  const walk = (dirPath: string, relDir: string): void => {
-    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-    for (const entry of entries) {
-      const sourcePath = path.join(dirPath, entry.name);
-      const relPath = relDir ? `${relDir}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) {
-        walk(sourcePath, relPath);
-        continue;
-      }
-      if (entry.isFile()) {
-        const descriptorRelPath = relPrefix ? `${relPrefix}/${relPath}` : relPath;
-        if (!shouldCollectRecursiveBackupFile(descriptorRelPath)) {
-          continue;
-        }
-        files.push({
-          sourcePath,
-          relPath: descriptorRelPath,
-        });
-      }
-    }
-  };
-
-  walk(rootDir, '');
-  return files;
-}
-
 // ---------------------------------------------------------------------------
 // TeamBackupService
 // ---------------------------------------------------------------------------
@@ -203,15 +133,38 @@ export class TeamBackupService {
   private registry: BackupRegistry = { version: 1, teams: {} };
   private periodicTimer: ReturnType<typeof setInterval> | null = null;
   private taskDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  private teamMutex = new Map<string, Promise<void>>();
+  private teamMutex = new Map<string, Promise<unknown>>();
+  private initializationPromise: Promise<void> | null = null;
   private initialized = false;
   private isShuttingDown = false;
   private backupGeneration = 0;
+  private readonly permanentDeletion = new TeamPermanentDeletionCoordinator({
+    awaitInitialization: () => this.awaitInitialization(),
+    isInitialized: () => this.initialized,
+    isShuttingDown: () => this.isShuttingDown,
+    withTeamMutex: (teamName, operation) => this.withTeamMutex(teamName, operation),
+    registry: () => this.registry.teams,
+    loadManifest: (teamName) => this.loadManifest(teamName),
+    saveManifest: (teamName, manifest, strict) => this.saveManifest(teamName, manifest, strict),
+    saveRegistryEntry: (teamName, entry, strict) => this.saveRegistryEntry(teamName, entry, strict),
+  });
+  private readonly restoreService = new TeamBackupRestoreService({
+    loadManifest: (teamName) => this.loadManifest(teamName),
+    getBackupDir: (teamName) => this.getBackupDir(teamName),
+    getSourcePathForRelPath: (teamName, relPath) => this.getSourcePathForRelPath(teamName, relPath),
+    enumerateBackupFiles: (teamName) => this.enumerateBackupFiles(teamName),
+  });
 
   // ── Public API ───────────────────────────────────────────────────────
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
+    this.initializationPromise ??= this.initializeOnce();
+    return this.initializationPromise;
+  }
+
+  private async initializeOnce(): Promise<void> {
     this.registry = await this.loadRegistry();
+    await this.permanentDeletion.initialize();
     await this.reconcileResurrectedTeams();
     await this.restoreIfNeeded();
     void this.pruneStaleBackups().catch((err: unknown) =>
@@ -228,8 +181,11 @@ export class TeamBackupService {
   }
 
   async backupTeam(teamName: string): Promise<void> {
-    if (this.isShuttingDown || !this.initialized) return;
-    await this.withTeamMutex(teamName, () => this.doBackupTeam(teamName));
+    await this.awaitInitialization();
+    if (this.isShuttingDown) return;
+    await this.withTeamIdentityFence(teamName, () =>
+      this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
+    );
   }
 
   scheduleTaskBackup(teamName: string, taskFile: string): void {
@@ -255,6 +211,8 @@ export class TeamBackupService {
 
     for (const [teamName, entry] of Object.entries(this.registry.teams)) {
       if (entry.status !== 'active') continue;
+      if (this.permanentDeletion.isPermanentDeletionFencedSync(teamName, entry.identityId))
+        continue;
       try {
         this.doBackupTeamSync(teamName);
       } catch (err: unknown) {
@@ -264,31 +222,81 @@ export class TeamBackupService {
     this.saveRegistrySync();
   }
 
-  async markDeletedByUser(teamName: string): Promise<void> {
-    const entry = this.registry.teams[teamName];
-    if (entry) {
-      entry.status = 'deleted_by_user';
-      entry.deletedByUserAt = nowIso();
-    }
-    try {
-      const manifest = await this.loadManifest(teamName);
-      if (manifest) {
-        manifest.status = 'deleted_by_user';
-        manifest.deletedByUserAt = nowIso();
-        await this.saveManifest(teamName, manifest);
-      }
-    } catch (err: unknown) {
-      logger.warn(`[Backup] Failed to update manifest for ${teamName}: ${String(err)}`);
-    }
-    await this.saveRegistry();
+  beginPermanentDeletion(
+    teamName: string,
+    options: { draft?: boolean } = {}
+  ): Promise<TeamPermanentDeletionIntent> {
+    return this.permanentDeletion.beginPermanentDeletion(teamName, options);
+  }
+
+  commitPermanentDeletionBoundary(
+    intent: TeamPermanentDeletionIntent
+  ): Promise<TeamPermanentDeletionIntent> {
+    return this.permanentDeletion.commitPermanentDeletionBoundary(intent);
+  }
+
+  abortPreparedPermanentDeletion(intent: TeamPermanentDeletionIntent): Promise<void> {
+    return this.permanentDeletion.abortPreparedPermanentDeletion(intent);
+  }
+
+  listPendingPermanentDeletions(): Promise<TeamPermanentDeletionIntent[]> {
+    return this.permanentDeletion.listPendingPermanentDeletions();
+  }
+
+  isPermanentDeletionTargetCurrent(intent: TeamPermanentDeletionIntent): Promise<boolean> {
+    return this.permanentDeletion.isPermanentDeletionTargetCurrent(intent);
+  }
+
+  reconcilePermanentDeletionProgress(
+    intent: TeamPermanentDeletionIntent
+  ): Promise<TeamPermanentDeletionIntent> {
+    return this.permanentDeletion.reconcilePermanentDeletionProgress(intent);
+  }
+
+  completePermanentDeletion(intent: TeamPermanentDeletionIntent): Promise<void> {
+    return this.permanentDeletion.completePermanentDeletion(intent);
+  }
+
+  withTeamIdentityFence<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
+    return this.permanentDeletion.withTeamIdentityFence(teamName, operation);
+  }
+
+  withPermanentDeletionTargetFence(
+    intent: TeamPermanentDeletionIntent,
+    operation: Parameters<TeamPermanentDeletionCoordinator['withPermanentDeletionTargetFence']>[1]
+  ): Promise<boolean> {
+    return this.permanentDeletion.withPermanentDeletionTargetFence(intent, operation);
+  }
+
+  private acquirePermanentDeletionLock(scope: string): Promise<PermanentDeletionLock> {
+    return this.permanentDeletion.lock.acquirePermanentDeletionLock(scope);
+  }
+
+  private releasePermanentDeletionLock(lock: PermanentDeletionLock): Promise<void> {
+    return this.permanentDeletion.lock.releasePermanentDeletionLock(lock);
+  }
+
+  private removeStalePermanentDeletionLock(lockPath: string): Promise<boolean> {
+    return this.permanentDeletion.lock.removeStalePermanentDeletionLock(lockPath);
   }
 
   async restoreIfNeeded(): Promise<string[]> {
     const restored: string[] = [];
     for (const [teamName, entry] of Object.entries(this.registry.teams)) {
       if (entry.status !== 'active') continue;
+      const restoreIdentity = (await this.loadManifest(teamName))?.identityId ?? entry.identityId;
+      if (this.permanentDeletion.isReplacementForPendingDeletion(teamName, restoreIdentity)) {
+        logger.info(`[Backup] Skip restore of superseded deletion identity for ${teamName}`);
+        continue;
+      }
+      if (await this.permanentDeletion.isPermanentDeletionFenced(teamName, restoreIdentity)) {
+        logger.info(`[Backup] Restore fenced by permanent deletion intent for ${teamName}`);
+        continue;
+      }
       try {
-        const didRestore = await this.restoreTeam(teamName);
+        const didRestore = await this.withTeamIdentityFence(teamName, () =>
+          this.restoreTeam(teamName)
+        );
         if (didRestore) restored.push(teamName);
       } catch (err: unknown) {
         logger.warn(`[Backup] restore failed for ${teamName}: ${String(err)}`);
@@ -304,11 +312,46 @@ export class TeamBackupService {
       if (entry.status !== 'deleted_by_user' || !entry.deletedByUserAt) continue;
       const deletedAt = new Date(entry.deletedByUserAt).getTime();
       if (deletedAt > cutoff) continue;
-      const backupDir = this.getBackupDir(teamName);
-      await fs.promises.rm(backupDir, { recursive: true, force: true }).catch(() => undefined);
-      delete this.registry.teams[teamName];
-      changed = true;
-      logger.info(`[Backup] Pruned stale backup for ${teamName}`);
+      const didPrune = await this.withTeamIdentityFence(teamName, async () => {
+        const currentEntry = this.registry.teams[teamName];
+        if (
+          currentEntry?.status !== 'deleted_by_user' ||
+          currentEntry.identityId !== entry.identityId ||
+          currentEntry.deletedByUserAt !== entry.deletedByUserAt
+        ) {
+          return false;
+        }
+        const currentManifest = await this.loadManifest(teamName);
+        if (currentManifest && currentManifest.identityId !== entry.identityId) return false;
+
+        const backupDir = this.getBackupDir(teamName);
+        const removal = await removePathWithIdentityFenceAsync(backupDir, {
+          recursive: true,
+          force: true,
+          durability: 'strict',
+          validateDetached: async (detachedPath) => {
+            try {
+              const manifest = JSON.parse(
+                await fs.promises.readFile(path.join(detachedPath, 'manifest.json'), 'utf8')
+              ) as BackupManifest;
+              return (
+                manifest.teamName === teamName &&
+                manifest.identityId === entry.identityId &&
+                manifest.status === 'deleted_by_user'
+              );
+            } catch {
+              return false;
+            }
+          },
+        });
+        if (removal === 'changed') return false;
+        if (this.registry.teams[teamName]?.identityId === entry.identityId) {
+          delete this.registry.teams[teamName];
+        }
+        logger.info(`[Backup] Pruned stale backup for ${teamName}`);
+        return true;
+      });
+      if (didPrune) changed = true;
     }
     if (changed) await this.saveRegistry();
   }
@@ -326,7 +369,12 @@ export class TeamBackupService {
 
   // ── Internal: backup ─────────────────────────────────────────────────
 
-  private withTeamMutex(teamName: string, fn: () => Promise<void>): Promise<void> {
+  private async awaitInitialization(): Promise<void> {
+    if (this.initialized) return;
+    await this.initialize();
+  }
+
+  private withTeamMutex<T>(teamName: string, fn: () => Promise<T>): Promise<T> {
     const prev = this.teamMutex.get(teamName) ?? Promise.resolve();
     const next = prev.then(fn, () => fn());
     this.teamMutex.set(teamName, next);
@@ -346,13 +394,16 @@ export class TeamBackupService {
     const teamNames = await this.discoverActiveTeams();
     for (const teamName of teamNames) {
       if (this.isShuttingDown) return;
-      await this.withTeamMutex(teamName, () => this.doBackupTeam(teamName));
+      await this.withTeamIdentityFence(teamName, () =>
+        this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
+      );
     }
   }
 
   private async doBackupTeam(teamName: string): Promise<void> {
     const gen = this.backupGeneration;
     if (!(await this.isConfigReady(teamName))) return;
+    if (await this.permanentDeletion.isPermanentDeletionFenced(teamName)) return;
 
     const { files: sourceFiles, hasErrors } = await this.enumerateTeamFilesWithErrors(teamName);
     if (sourceFiles.length === 0) return;
@@ -362,38 +413,76 @@ export class TeamBackupService {
     // Reset stale manifest from a previously deleted team with the same name.
     // The backup dir may already contain the new team's files (copied by FileWatcher),
     // but the manifest was never updated because the deletion guard blocked it.
-    if (manifest?.status === 'deleted_by_user') {
+    if (
+      manifest?.status === 'deleted_by_user' ||
+      (manifest &&
+        this.permanentDeletion.isReplacementForPendingDeletion(teamName, manifest.identityId))
+    ) {
       manifest = null;
     }
-    const isNew = !manifest;
+    let isNew = !manifest;
 
     if (!manifest) {
-      const identityId = crypto.randomUUID();
+      const ownership = await this.permanentDeletion.ensureIdentityMarker(
+        teamName,
+        crypto.randomUUID()
+      );
+      if (ownership.status === 'unavailable') return;
       manifest = {
         teamName,
-        identityId,
+        identityId: ownership.identityId,
         status: 'active',
         firstBackupAt: nowIso(),
         lastBackupAt: nowIso(),
         fileStats: {},
       };
-      await this.ensureIdentityMarker(teamName, identityId);
     } else {
       // Ensure identity marker is present — may have been lost during full restore
       // (reconcile creates new identity in manifest, but restored config.json
       // from backup doesn't have the marker yet)
-      await this.ensureIdentityMarker(teamName, manifest.identityId);
+      const ownership = await this.permanentDeletion.ensureIdentityMarker(
+        teamName,
+        manifest.identityId
+      );
+      if (ownership.status === 'unavailable') return;
+      if (ownership.status === 'different') {
+        if (this.permanentDeletion.isIdentityClaimedForDeletion(teamName, manifest.identityId))
+          return;
+        manifest = {
+          teamName,
+          identityId: ownership.identityId,
+          status: 'active',
+          firstBackupAt: nowIso(),
+          lastBackupAt: nowIso(),
+          fileStats: {},
+        };
+        isNew = true;
+      }
     }
+
+    const assertPublicationCurrent = (): Promise<void> =>
+      this.permanentDeletion.assertBackupPublicationCurrent(teamName, manifest.identityId);
 
     // Prune stale backup files (only if source enumeration was error-free)
     if (!hasErrors) {
-      await this.pruneStaleBackupFiles(teamName, sourceFiles, backupDir, manifest);
+      await this.pruneStaleBackupFiles(
+        teamName,
+        sourceFiles,
+        backupDir,
+        manifest,
+        assertPublicationCurrent
+      );
     }
 
     let anyChanged = false;
     for (const descriptor of sourceFiles) {
       if (this.backupGeneration !== gen) return;
-      const changed = await this.backupSingleFile(descriptor, backupDir, manifest);
+      const changed = await this.backupSingleFile(
+        descriptor,
+        backupDir,
+        manifest,
+        assertPublicationCurrent
+      );
       if (changed) anyChanged = true;
     }
 
@@ -423,10 +512,10 @@ export class TeamBackupService {
       }
 
       if (this.backupGeneration !== gen) return;
-      await this.saveManifest(teamName, manifest);
+      await this.saveManifest(teamName, manifest, false, assertPublicationCurrent);
 
       // Update thin registry
-      this.registry.teams[teamName] = {
+      const registryEntry: BackupRegistryEntry = {
         teamName,
         identityId: manifest.identityId,
         status: manifest.status,
@@ -434,13 +523,14 @@ export class TeamBackupService {
         lastBackupAt: manifest.lastBackupAt,
       };
       if (this.backupGeneration !== gen) return;
-      await this.saveRegistry();
+      await this.saveRegistryEntry(teamName, registryEntry, false, assertPublicationCurrent);
     }
   }
 
   private doBackupTeamSync(teamName: string): void {
     const teamDir = path.join(getTeamsBasePath(), teamName);
     const configPath = path.join(teamDir, 'config.json');
+    if (this.permanentDeletion.isPermanentDeletionFencedSync(teamName)) return;
     try {
       const raw = fs.readFileSync(configPath, 'utf8');
       if (!isValidConfig(raw)) return;
@@ -452,52 +542,53 @@ export class TeamBackupService {
     if (sourceFiles.length === 0) return;
 
     const backupDir = this.getBackupDir(teamName);
-    let manifest: BackupManifest;
+    let manifest: BackupManifest | null = null;
     try {
       const raw = fs.readFileSync(path.join(backupDir, 'manifest.json'), 'utf8');
       manifest = JSON.parse(raw) as BackupManifest;
     } catch {
-      const identityId = crypto.randomUUID();
-      manifest = {
-        teamName,
-        identityId,
-        status: 'active',
-        firstBackupAt: nowIso(),
-        lastBackupAt: nowIso(),
-        fileStats: {},
-      };
-      // Write identity marker to source config (sync, best-effort)
-      try {
-        const raw = fs.readFileSync(configPath, 'utf8');
-        const config = JSON.parse(raw) as Record<string, unknown>;
-        config._backupIdentityId = identityId;
-        atomicWriteSync(configPath, JSON.stringify(config, null, 2));
-      } catch {
-        // best-effort
-      }
+      // A missing manifest is initialized below after source identity ownership is known.
     }
 
-    // Reset stale manifest from a previously deleted team with the same name.
-    // Without this, manifest.status ('deleted_by_user') would be written back
-    // to the registry (line below), blocking future backups and restores.
-    if (manifest.status === 'deleted_by_user') {
-      const identityId = crypto.randomUUID();
+    if (
+      manifest?.status === 'deleted_by_user' ||
+      (manifest &&
+        this.permanentDeletion.isReplacementForPendingDeletion(teamName, manifest.identityId))
+    ) {
+      manifest = null;
+    }
+
+    if (!manifest) {
+      const ownership = this.permanentDeletion.claimIdentityMarkerSync(
+        teamName,
+        crypto.randomUUID()
+      );
+      if (ownership.status === 'unavailable') return;
       manifest = {
         teamName,
-        identityId,
+        identityId: ownership.identityId,
         status: 'active',
         firstBackupAt: nowIso(),
         lastBackupAt: nowIso(),
         fileStats: {},
       };
-      // Write identity marker (sync, best-effort)
-      try {
-        const configRaw = fs.readFileSync(configPath, 'utf8');
-        const config = JSON.parse(configRaw) as Record<string, unknown>;
-        config._backupIdentityId = identityId;
-        atomicWriteSync(configPath, JSON.stringify(config, null, 2));
-      } catch {
-        // best-effort
+    } else {
+      const ownership = this.permanentDeletion.claimIdentityMarkerSync(
+        teamName,
+        manifest.identityId
+      );
+      if (ownership.status === 'unavailable') return;
+      if (ownership.status === 'different') {
+        if (this.permanentDeletion.isIdentityClaimedForDeletion(teamName, manifest.identityId))
+          return;
+        manifest = {
+          teamName,
+          identityId: ownership.identityId,
+          status: 'active',
+          firstBackupAt: nowIso(),
+          lastBackupAt: nowIso(),
+          fileStats: {},
+        };
       }
     }
 
@@ -520,7 +611,8 @@ export class TeamBackupService {
   private async backupSingleFile(
     descriptor: BackupFileDescriptor,
     backupDir: string,
-    manifest: BackupManifest
+    manifest: BackupManifest,
+    assertPublicationCurrent: () => Promise<void>
   ): Promise<boolean> {
     try {
       const stat = await fs.promises.stat(descriptor.sourcePath);
@@ -543,15 +635,22 @@ export class TeamBackupService {
           logger.warn(`[Backup] Skipping invalid JSON: ${descriptor.sourcePath}`);
           return false;
         }
-        await atomicWriteAsync(destPath, content);
+        await assertPublicationCurrent();
+        await atomicWriteAsync(destPath, content, {
+          beforeCommit: assertPublicationCurrent,
+        });
       } else {
-        await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
-        await fs.promises.copyFile(descriptor.sourcePath, destPath);
+        const content = await fs.promises.readFile(descriptor.sourcePath);
+        await assertPublicationCurrent();
+        await atomicWriteAsync(destPath, content, {
+          beforeCommit: assertPublicationCurrent,
+        });
       }
 
       manifest.fileStats[descriptor.relPath] = { mtime: stat.mtimeMs, size: stat.size };
       return true;
     } catch (err: unknown) {
+      if (err instanceof BackupPublicationFencedError) throw err;
       if (!isEnoent(err)) {
         logger.warn(`[Backup] Failed to backup ${descriptor.relPath}: ${String(err)}`);
       }
@@ -593,7 +692,8 @@ export class TeamBackupService {
     teamName: string,
     sourceFiles: BackupFileDescriptor[],
     backupDir: string,
-    manifest: BackupManifest
+    manifest: BackupManifest,
+    assertPublicationCurrent: () => Promise<void>
   ): Promise<void> {
     const backupFiles = await this.enumerateBackupFiles(teamName);
     const sourceRelPaths = new Set(sourceFiles.map((f) => f.relPath));
@@ -601,190 +701,29 @@ export class TeamBackupService {
     for (const backupRelPath of backupFiles) {
       if (backupRelPath === 'manifest.json') continue;
       if (!sourceRelPaths.has(backupRelPath)) {
-        await fs.promises.unlink(path.join(backupDir, backupRelPath)).catch(() => undefined);
-        delete manifest.fileStats[backupRelPath];
+        const backupPath = path.join(backupDir, backupRelPath);
+        try {
+          await assertPublicationCurrent();
+          const observed = getDurablePathIdentity(await fs.promises.lstat(backupPath));
+          const removal = await removePathWithIdentityFenceAsync(backupPath, {
+            force: true,
+            validateDetached: async (_detachedPath, identity) => {
+              await assertPublicationCurrent();
+              return isSameDurablePathIdentity(identity, observed);
+            },
+          });
+          if (removal !== 'changed') delete manifest.fileStats[backupRelPath];
+        } catch (error) {
+          if (!isEnoent(error)) throw error;
+        }
       }
-    }
-  }
-
-  private async ensureIdentityMarker(teamName: string, identityId: string): Promise<void> {
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    try {
-      const raw = await fs.promises.readFile(configPath, 'utf8');
-      const config = JSON.parse(raw) as Record<string, unknown>;
-      if (config._backupIdentityId === identityId) return;
-      config._backupIdentityId = identityId;
-      await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
-      TeamConfigReader.invalidateTeam(teamName);
-    } catch {
-      // best-effort — config may not exist yet
     }
   }
 
   // ── Internal: restore ────────────────────────────────────────────────
 
-  private async restoreTeam(teamName: string): Promise<boolean> {
-    const manifest = await this.loadManifest(teamName);
-    if (!manifest) return false;
-
-    const backupConfigPath = path.join(this.getBackupDir(teamName), 'config.json');
-    try {
-      const raw = await fs.promises.readFile(backupConfigPath, 'utf8');
-      if (!isValidConfig(raw)) {
-        logger.warn(`[Backup] Backup config.json invalid for ${teamName}, skipping restore`);
-        return false;
-      }
-    } catch {
-      logger.warn(`[Backup] No backup config.json for ${teamName}, skipping restore`);
-      return false;
-    }
-
-    // Check source config
-    const sourceConfigPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    const sourceConfigResult = await this.readSourceConfig(sourceConfigPath);
-
-    if (sourceConfigResult.status === 'valid') {
-      // Config exists and is valid — do partial restore
-      const identity = this.checkIdentityFromConfig(sourceConfigResult.parsed, manifest);
-      if (identity === 'mismatch') {
-        logger.info(`[Backup] Skip restore ${teamName}: different team with same name`);
-        return false;
-      }
-      if (identity === 'no_marker') {
-        logger.info(`[Backup] Skip restore ${teamName}: no _backupIdentityId in source config`);
-        return false;
-      }
-      const restoredCount = await this.restoreGenericPartial(teamName, manifest);
-      if (restoredCount > 0) {
-        logger.info(`[Backup] Partial restored ${teamName}: ${restoredCount} files`);
-        return true;
-      }
-      return false;
-    }
-
-    // Config missing or corrupted — full restore
-    logger.info(`[Backup] Full restoring team ${teamName} (config ${sourceConfigResult.status})`);
-    const backupDir = this.getBackupDir(teamName);
-    const backupFiles = await this.enumerateBackupFiles(teamName);
-    let count = 0;
-
-    // Restore config.json first
-    const configBackup = path.join(backupDir, 'config.json');
-    const configDest = sourceConfigPath;
-    try {
-      await fs.promises.mkdir(path.dirname(configDest), { recursive: true });
-      const content = await fs.promises.readFile(configBackup, 'utf8');
-      await atomicWriteAsync(configDest, content);
-      TeamConfigReader.invalidateTeam(teamName);
-      count++;
-    } catch (err: unknown) {
-      logger.warn(`[Backup] Failed to restore config.json for ${teamName}: ${String(err)}`);
-      return false;
-    }
-
-    // Restore remaining files
-    for (const relPath of backupFiles) {
-      if (relPath === 'config.json' || relPath === 'manifest.json') continue;
-      try {
-        const src = path.join(backupDir, relPath);
-        const dest = this.getSourcePathForRelPath(teamName, relPath);
-        // Don't overwrite newer files
-        try {
-          const destStat = await fs.promises.stat(dest);
-          const srcStat = await fs.promises.stat(src);
-          if (destStat.mtimeMs > srcStat.mtimeMs) {
-            logger.info(`[Backup] Skip restore ${teamName}/${relPath}: source file is newer`);
-            continue;
-          }
-        } catch {
-          // dest doesn't exist — ok to restore
-        }
-        await fs.promises.mkdir(path.dirname(dest), { recursive: true });
-        const content = await fs.promises.readFile(src);
-        await atomicWriteAsync(dest, content);
-        count++;
-      } catch {
-        // skip individual file errors
-      }
-    }
-
-    logger.info(`[Backup] Restored team ${teamName} (${count} files)`);
-    return count > 0;
-  }
-
-  private async restoreGenericPartial(teamName: string, manifest: BackupManifest): Promise<number> {
-    const backupDir = this.getBackupDir(teamName);
-    const backupFiles = await this.enumerateBackupFiles(teamName);
-    let count = 0;
-
-    for (const relPath of backupFiles) {
-      if (relPath === 'manifest.json') continue;
-      const dest = this.getSourcePathForRelPath(teamName, relPath);
-
-      try {
-        // Check if source file is missing or corrupted
-        let needsRestore = false;
-        let skipReason = '';
-        try {
-          if (dest.endsWith('.json')) {
-            const raw = await fs.promises.readFile(dest, 'utf8');
-            if (!isValidJson(raw)) {
-              needsRestore = true; // corrupted JSON
-            } else {
-              skipReason = 'valid existing file';
-            }
-          } else {
-            // Binary file — just check existence
-            await fs.promises.stat(dest);
-            skipReason = 'existing binary file';
-          }
-        } catch {
-          needsRestore = true; // missing
-        }
-
-        if (!needsRestore) {
-          logger.info(`[Backup] Skip restore ${teamName}/${relPath}: ${skipReason}`);
-          continue;
-        }
-
-        const src = path.join(backupDir, relPath);
-        const content = await fs.promises.readFile(src);
-        await atomicWriteAsync(dest, content);
-        count++;
-        logger.info(`[Backup] Partial restored ${teamName}/${relPath}`);
-      } catch {
-        // skip individual file errors
-      }
-    }
-
-    void manifest; // fileStats not checked during restore — mtime comparison happens in full restore
-    return count;
-  }
-
-  private checkIdentityFromConfig(
-    config: Record<string, unknown>,
-    manifest: BackupManifest
-  ): 'match' | 'mismatch' | 'no_marker' {
-    const sourceId = config._backupIdentityId;
-    if (typeof sourceId !== 'string') return 'no_marker';
-    return sourceId === manifest.identityId ? 'match' : 'mismatch';
-  }
-
-  private async readSourceConfig(
-    configPath: string
-  ): Promise<
-    | { status: 'valid'; parsed: Record<string, unknown> }
-    | { status: 'missing' }
-    | { status: 'corrupted' }
-  > {
-    try {
-      const raw = await fs.promises.readFile(configPath, 'utf8');
-      if (!isValidConfig(raw)) return { status: 'corrupted' };
-      return { status: 'valid', parsed: JSON.parse(raw) as Record<string, unknown> };
-    } catch (err: unknown) {
-      if (isEnoent(err)) return { status: 'missing' };
-      return { status: 'corrupted' };
-    }
+  private restoreTeam(teamName: string): Promise<boolean> {
+    return this.restoreService.restoreTeam(teamName);
   }
 
   // ── Internal: enumeration ────────────────────────────────────────────
@@ -1079,9 +1018,34 @@ export class TeamBackupService {
     return { version: 1, teams: {} };
   }
 
-  private async saveRegistry(): Promise<void> {
+  private async saveRegistry(strict = false): Promise<void> {
     if (this.isShuttingDown) return;
-    await atomicWriteAsync(this.getRegistryPath(), JSON.stringify(this.registry, null, 2));
+    await this.permanentDeletion.withSharedLock('backup-registry', () =>
+      atomicWriteAsync(
+        this.getRegistryPath(),
+        JSON.stringify(this.registry, null, 2),
+        strict ? { durability: 'strict', syncDirectory: true } : undefined
+      )
+    );
+  }
+
+  private async saveRegistryEntry(
+    teamName: string,
+    entry: BackupRegistryEntry,
+    strict = false,
+    beforeCommit?: () => Promise<void>
+  ): Promise<void> {
+    if (this.isShuttingDown) return;
+    await this.permanentDeletion.withSharedLock('backup-registry', async () => {
+      await beforeCommit?.();
+      const latestRegistry = await this.loadRegistry();
+      latestRegistry.teams[teamName] = entry;
+      await atomicWriteAsync(this.getRegistryPath(), JSON.stringify(latestRegistry, null, 2), {
+        ...(strict ? { durability: 'strict' as const, syncDirectory: true } : {}),
+        ...(beforeCommit ? { beforeCommit } : {}),
+      });
+      this.registry = latestRegistry;
+    });
   }
 
   private saveRegistrySync(): void {
@@ -1128,11 +1092,21 @@ export class TeamBackupService {
     }
   }
 
-  private async saveManifest(teamName: string, manifest: BackupManifest): Promise<void> {
+  private async saveManifest(
+    teamName: string,
+    manifest: BackupManifest,
+    strict = false,
+    beforeCommit?: () => Promise<void>
+  ): Promise<void> {
     if (this.isShuttingDown) return;
+    await beforeCommit?.();
     await atomicWriteAsync(
       path.join(this.getBackupDir(teamName), 'manifest.json'),
-      JSON.stringify(manifest, null, 2)
+      JSON.stringify(manifest, null, 2),
+      {
+        ...(strict ? { durability: 'strict' as const, syncDirectory: true } : {}),
+        ...(beforeCommit ? { beforeCommit } : {}),
+      }
     );
   }
 

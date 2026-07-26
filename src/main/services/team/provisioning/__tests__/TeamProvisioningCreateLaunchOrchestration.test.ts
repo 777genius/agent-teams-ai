@@ -76,6 +76,7 @@ function createHost(
       readTaskActivityRepairLaunchSnapshot: vi.fn(async () => null),
       repairStaleTaskActivityIntervalsOnce: vi.fn(),
     },
+    initializeToolApprovalSettingsForLaunch: vi.fn(),
     stopAllTeamsGeneration: 7,
     provisioningRunByTeam: new Map(),
     shouldRouteOpenCodeToRuntimeAdapter: vi.fn(() => true),
@@ -119,6 +120,7 @@ describe('TeamProvisioningCreateLaunchOrchestration', () => {
       host.configTaskActivityBoundary.readTaskActivityRepairLaunchSnapshot
     ).not.toHaveBeenCalled();
     expect(host.shouldRouteOpenCodeToRuntimeAdapter).not.toHaveBeenCalled();
+    expect(host.initializeToolApprovalSettingsForLaunch).toHaveBeenCalledWith('alpha', false);
   });
 
   it.each([
@@ -200,6 +202,10 @@ describe('TeamProvisioningCreateLaunchOrchestration', () => {
     expect(
       host.configTaskActivityBoundary.repairStaleTaskActivityIntervalsOnce
     ).toHaveBeenCalledWith('alpha', null);
+    expect(host.initializeToolApprovalSettingsForLaunch).toHaveBeenCalledWith('alpha', false);
+    expect(
+      vi.mocked(host.initializeToolApprovalSettingsForLaunch).mock.invocationCallOrder[0]
+    ).toBeLessThan(vi.mocked(host.shouldRouteOpenCodeToRuntimeAdapter).mock.invocationCallOrder[0]);
     expect(host.shouldRouteOpenCodeToRuntimeAdapter).toHaveBeenCalledWith(createRequest);
     expect(host.createOpenCodeTeamThroughRuntimeAdapter).toHaveBeenCalledWith(
       createRequest,
@@ -316,6 +322,7 @@ describe('TeamProvisioningCreateLaunchOrchestration', () => {
     ).not.toHaveBeenCalled();
     expect(host.shouldRouteOpenCodeToRuntimeAdapter).not.toHaveBeenCalled();
     expect(host.createOpenCodeTeamThroughRuntimeAdapter).not.toHaveBeenCalled();
+    expect(host.initializeToolApprovalSettingsForLaunch).not.toHaveBeenCalled();
     expect(host.provisioningRunByTeam.has('alpha')).toBe(false);
   });
 
@@ -335,6 +342,7 @@ describe('TeamProvisioningCreateLaunchOrchestration', () => {
 
     expect(host.shouldRouteOpenCodeToRuntimeAdapter).not.toHaveBeenCalled();
     expect(host.launchOpenCodeTeamThroughRuntimeAdapter).not.toHaveBeenCalled();
+    expect(host.initializeToolApprovalSettingsForLaunch).toHaveBeenCalledWith('alpha', false);
   });
 
   it('routes launch requests to the OpenCode runtime adapter without creating a pending legacy run', async () => {
@@ -346,6 +354,10 @@ describe('TeamProvisioningCreateLaunchOrchestration', () => {
     });
 
     expect(host.shouldRouteOpenCodeToRuntimeAdapter).toHaveBeenCalledWith(launchRequest);
+    expect(host.initializeToolApprovalSettingsForLaunch).toHaveBeenCalledWith('alpha', false);
+    expect(
+      vi.mocked(host.initializeToolApprovalSettingsForLaunch).mock.invocationCallOrder[0]
+    ).toBeLessThan(vi.mocked(host.shouldRouteOpenCodeToRuntimeAdapter).mock.invocationCallOrder[0]);
     expect(host.launchOpenCodeTeamThroughRuntimeAdapter).toHaveBeenCalledWith(
       launchRequest,
       onProgress

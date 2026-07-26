@@ -81,6 +81,10 @@ export function mapAppApprovalDecisionToProviderDecision(
   return decision === 'allow' ? 'allow' : 'reject';
 }
 
+function normalizeMemberName(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 export class RuntimeToolApprovalCoordinator {
   private readonly approvalsByTeam = new Map<string, Map<string, RuntimeToolApprovalEntry>>();
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -233,6 +237,16 @@ export class RuntimeToolApprovalCoordinator {
 
   get(teamName: string, requestId: string): RuntimeToolApprovalEntry | undefined {
     return this.approvalsByTeam.get(teamName)?.get(requestId);
+  }
+
+  hasPendingApprovalForMember(teamName: string, memberName: string): boolean {
+    const normalizedMemberName = normalizeMemberName(memberName);
+    if (!normalizedMemberName) {
+      return false;
+    }
+    return [...(this.approvalsByTeam.get(teamName)?.values() ?? [])].some(
+      (entry) => normalizeMemberName(entry.memberName) === normalizedMemberName
+    );
   }
 
   size(teamName?: string): number {
