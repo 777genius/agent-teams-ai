@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import { KeyedMutex } from '@features/internal-storage/main';
 import {
   estimateTaskAttachmentDecodedBytes,
@@ -78,12 +76,9 @@ export class TeamTaskAttachmentStore {
     return path.join(this.getTaskDir(teamName, taskId), `${attachmentId}--attachment`);
   }
 
-  /** Returns a generation-unique path so stale rollback receipts can never address a later save. */
+  /** A stable target lets the filesystem enforce same-ID uniqueness across app processes. */
   private getStoredFilePath(teamName: string, taskId: string, attachmentId: string): string {
-    return path.join(
-      this.getTaskDir(teamName, taskId),
-      `${attachmentId}--${randomUUID()}.attachment`
-    );
+    return path.join(this.getTaskDir(teamName, taskId), `${attachmentId}--attachment`);
   }
 
   private async findAttachmentFilePath(

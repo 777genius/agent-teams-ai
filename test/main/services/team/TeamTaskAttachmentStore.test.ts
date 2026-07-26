@@ -1,7 +1,9 @@
+import { execFile } from 'node:child_process';
 import { promises as fsPromises } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
+import { promisify } from 'node:util';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -28,10 +30,47 @@ vi.mock('@main/utils/pathDecoder', () => ({
 
 const ATTACHMENT_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_ATTACHMENT_ID = '22222222-2222-4222-8222-222222222222';
-const ATTACHMENT_FILE_PATTERN = new RegExp(
-  `^${ATTACHMENT_ID}--[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.attachment$`
-);
+const ATTACHMENT_FILE = `${ATTACHMENT_ID}--attachment`;
 const LEGACY_ATTACHMENT_FILE = `${ATTACHMENT_ID}--proof.png`;
+const execFileAsync = promisify(execFile);
+const PROCESS_WORKER_PATH = join(
+  process.cwd(),
+  'test/main/services/team/fixtures/teamTaskAttachmentStoreProcessWorker.ts'
+);
+
+interface AttachmentRaceWorkerResult {
+  filePath?: string;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+async function runAttachmentRaceWorker(
+  root: string,
+  participant: string
+): Promise<AttachmentRaceWorkerResult> {
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    ['--import', 'tsx', PROCESS_WORKER_PATH],
+    {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        TASK_ATTACHMENT_STORE_RACE_ROOT: root,
+        TASK_ATTACHMENT_STORE_RACE_PARTICIPANT: participant,
+      },
+      timeout: 20_000,
+    }
+  );
+  const resultLine = stdout
+    .split(/\r?\n/u)
+    .find((line) => line.startsWith('TASK_ATTACHMENT_RACE_RESULT:'));
+  if (!resultLine) {
+    throw new Error(`Attachment race worker did not report a result: ${stdout}`);
+  }
+  return JSON.parse(
+    resultLine.slice('TASK_ATTACHMENT_RACE_RESULT:'.length)
+  ) as AttachmentRaceWorkerResult;
+}
 
 function createAtomicCreator(): TaskAttachmentAtomicCreatorPort {
   return {
@@ -93,7 +132,7 @@ describe('TeamTaskAttachmentStore', () => {
     );
 
     const [filePath, bytes] = vi.mocked(atomicCreator.createFileAtomically).mock.calls[0] ?? [];
-    expect(basename(String(filePath))).toMatch(ATTACHMENT_FILE_PATTERN);
+    expect(basename(String(filePath))).toBe(ATTACHMENT_FILE);
     expect(bytes).toEqual(Buffer.from('test'));
     expect(metadata).toEqual(
       expect.objectContaining({
@@ -186,7 +225,7 @@ describe('TeamTaskAttachmentStore', () => {
     expect(attachmentFiles).toHaveLength(1);
     const attachmentFile = attachmentFiles[0];
     if (!attachmentFile) throw new Error('Expected one stored attachment');
-    expect(attachmentFile).toMatch(ATTACHMENT_FILE_PATTERN);
+    expect(attachmentFile).toBe(ATTACHMENT_FILE);
     expect(['one', 'two']).toContain(
       (await readFile(join(taskDirectory, attachmentFile))).toString()
     );
@@ -235,6 +274,21 @@ describe('TeamTaskAttachmentStore', () => {
     } finally {
       unlink.mockRestore();
     }
+  });
+
+  it('allows exactly one winner across independent processes saving the same attachment ID', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'team-task-attachment-process-race-'));
+    tempRoots.push(root);
+
+    const results = await Promise.all([
+      runAttachmentRaceWorker(root, 'first'),
+      runAttachmentRaceWorker(root, 'second'),
+    ]);
+
+    expect(results.filter((result) => result.filePath)).toHaveLength(1);
+    expect(results.filter((result) => result.errorCode === 'EEXIST')).toHaveLength(1);
+    const attachmentDirectory = join(root, 'data', 'task-attachments', 'my-team', 'task-1');
+    expect(await readdir(attachmentDirectory)).toEqual([ATTACHMENT_FILE]);
   });
 
   it('does not roll back a pre-existing attachment when its ID collides', async () => {
@@ -321,9 +375,9 @@ describe('TeamTaskAttachmentStore', () => {
       store.getAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png')
     ).resolves.toBe('cmVwbGFjZW1lbnQgYnl0ZXM=');
     expect(originalPath).not.toBeNull();
-    expect(replacementPath).not.toBe(originalPath);
+    expect(replacementPath).toBe(originalPath);
     const [attachmentFile] = await readdir(taskDirectory);
-    expect(attachmentFile).toMatch(ATTACHMENT_FILE_PATTERN);
+    expect(attachmentFile).toBe(ATTACHMENT_FILE);
   });
 
   it('removes the exact saved generation when comment persistence fails', async () => {
