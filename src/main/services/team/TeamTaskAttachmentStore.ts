@@ -13,11 +13,18 @@ import {
 } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
-import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { isTaskAttachmentGenerationGuardName } from './TaskAttachmentArtifacts';
+import {
+  type DetachedTaskAttachmentGeneration,
+  detachTaskAttachmentGeneration,
+  finalizeDetachedTaskAttachmentGeneration,
+  removeTaskAttachmentGenerationPin,
+  restoreDetachedTaskAttachmentGeneration,
+  type TaskAttachmentFileIdentity,
+} from './TaskAttachmentGenerationLifecycle';
 import {
   NodeTaskAttachmentMutationCoordinator,
   type TaskAttachmentMutationCoordinatorPort,
@@ -25,7 +32,6 @@ import {
 } from './TaskAttachmentMutationCoordinator';
 
 import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
-import type { FileHandle } from 'fs/promises';
 
 const logger = createLogger('Service:TeamTaskAttachmentStore');
 const nodeTaskAttachmentMutationCoordinator = new NodeTaskAttachmentMutationCoordinator();
@@ -35,16 +41,14 @@ export interface TaskAttachmentAtomicCreatorPort {
    * Publishes bytes without overwriting an existing target. Implementations
    * must preserve EEXIST collisions and leave no partial target on failure.
    */
-  createFileAtomically(filePath: string, data: Buffer): Promise<TaskAttachmentFileIdentity>;
-  /** Pins the published inode until delete or rollback can identify its exact generation. */
-  createGenerationGuard?(filePath: string): Promise<string>;
+  createPinnedFileAtomically(
+    filePath: string,
+    data: Buffer
+  ): Promise<{ identity: TaskAttachmentFileIdentity; generationGuardPath: string }>;
   cleanupPublishedTempLinks(filePath: string): Promise<void>;
 }
 
-export interface TaskAttachmentFileIdentity {
-  readonly dev: number;
-  readonly ino: number;
-}
+export type { TaskAttachmentFileIdentity } from './TaskAttachmentGenerationLifecycle';
 
 export interface SavedTaskAttachmentReceipt {
   readonly filePath: string;
@@ -53,6 +57,13 @@ export interface SavedTaskAttachmentReceipt {
   readonly generationGuardPath?: string;
   readonly teamName: string;
   readonly taskId: string;
+}
+
+export interface StagedTaskAttachmentDeletionReceipt {
+  readonly attachmentId: string;
+  readonly teamName: string;
+  readonly taskId: string;
+  readonly generation: DetachedTaskAttachmentGeneration;
 }
 
 export interface TaskAttachmentTransaction {
@@ -64,16 +75,22 @@ export interface TaskAttachmentTransaction {
   ): Promise<SavedTaskAttachmentReceipt>;
   finalizeAttachment(receipt: SavedTaskAttachmentReceipt): Promise<void>;
   rollbackAttachment(receipt: SavedTaskAttachmentReceipt): Promise<void>;
-  deleteAttachment(attachmentId: string, mimeType: AttachmentMediaType): Promise<void>;
+  stageAttachmentDeletion(
+    attachmentId: string,
+    mimeType: AttachmentMediaType
+  ): Promise<StagedTaskAttachmentDeletionReceipt | null>;
+  finalizeAttachmentDeletion(receipt: StagedTaskAttachmentDeletionReceipt): Promise<void>;
+  rollbackAttachmentDeletion(receipt: StagedTaskAttachmentDeletionReceipt): Promise<void>;
   markCommitted(): void;
 }
 
 const nodeTaskAttachmentAtomicCreator: TaskAttachmentAtomicCreatorPort = {
-  createFileAtomically: atomicCreateAsync,
-  async createGenerationGuard(filePath) {
-    const guardPath = path.join(path.dirname(filePath), `.review-create.${randomUUID()}.tmp`);
-    await fs.promises.link(filePath, guardPath);
-    return guardPath;
+  async createPinnedFileAtomically(filePath, data) {
+    const created = await atomicCreateAsync(filePath, data, { retainPin: true });
+    return {
+      identity: { dev: created.dev, ino: created.ino },
+      generationGuardPath: created.pinPath!,
+    };
   },
   cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
 };
@@ -85,10 +102,7 @@ const TEAM_TASK_ATTACHMENT_DELETE_OPTIONS = {
 } as const;
 
 export class TeamTaskAttachmentStore {
-  private readonly pendingCompensations = new WeakMap<
-    SavedTaskAttachmentReceipt,
-    { dismiss(): void }
-  >();
+  private readonly pendingCompensations = new WeakMap<object, { dismiss(): void }>();
 
   constructor(
     private readonly atomicCreator: TaskAttachmentAtomicCreatorPort = nodeTaskAttachmentAtomicCreator,
@@ -176,8 +190,12 @@ export class TeamTaskAttachmentStore {
           this.finalizeTransactionReceipt(receipt, teamName, taskId, guard),
         rollbackAttachment: (receipt) =>
           this.rollbackTransactionReceipt(receipt, teamName, taskId, guard),
-        deleteAttachment: (attachmentId, mimeType) =>
-          this.deleteAttachmentInMutation(teamName, taskId, attachmentId, mimeType, guard),
+        stageAttachmentDeletion: (attachmentId, mimeType) =>
+          this.stageAttachmentDeletionInMutation(teamName, taskId, attachmentId, mimeType, guard),
+        finalizeAttachmentDeletion: (receipt) =>
+          this.finalizeAttachmentDeletionInMutation(receipt, teamName, taskId),
+        rollbackAttachmentDeletion: (receipt) =>
+          this.rollbackAttachmentDeletionInMutation(receipt, teamName, taskId),
         markCommitted: () => guard.markCommitted(),
       })
     );
@@ -187,10 +205,10 @@ export class TeamTaskAttachmentStore {
     receipt: SavedTaskAttachmentReceipt,
     teamName: string,
     taskId: string,
-    guard: TaskAttachmentMutationGuard
+    _guard: TaskAttachmentMutationGuard
   ): Promise<void> {
     this.assertTransactionReceiptScope(receipt, teamName, taskId);
-    await this.finalizeAttachmentInMutation(receipt, guard).catch((error) => {
+    await this.finalizeAttachmentInMutation(receipt).catch((error) => {
       logger.warn(
         `[${receipt.teamName}] Failed to finalize task attachment ${receipt.metadata.id} for task #${receipt.taskId}: ${
           error instanceof Error ? error.message : String(error)
@@ -272,14 +290,14 @@ export class TeamTaskAttachmentStore {
         buffer,
         guard
       );
-      await this.finalizeAttachmentInMutation(receipt, guard).catch((error) => {
+      guard.markCommitted();
+      await this.finalizeAttachmentInMutation(receipt).catch((error) => {
         logger.warn(
           `[${teamName}] Failed to finalize task attachment ${attachmentId} for task #${taskId}: ${
             error instanceof Error ? error.message : String(error)
           }`
         );
       });
-      guard.markCommitted();
       return receipt.metadata;
     });
   }
@@ -326,26 +344,10 @@ export class TeamTaskAttachmentStore {
 
     const filePath = this.getStoredFilePath(teamName, taskId, attachmentId);
     guard.assertHealthy();
-    const identity = await this.atomicCreator.createFileAtomically(filePath, buffer);
-    let generationGuardPath: string | undefined;
-    try {
-      generationGuardPath = await this.atomicCreator.createGenerationGuard?.(filePath);
-    } catch (error) {
-      await this.atomicCreator.cleanupPublishedTempLinks(filePath).catch(() => undefined);
-      await fs.promises.unlink(filePath).catch(() => undefined);
-      throw error;
-    }
-    if (!generationGuardPath) {
-      try {
-        await this.atomicCreator.cleanupPublishedTempLinks(filePath);
-      } catch (error) {
-        logger.warn(
-          `[${teamName}] Failed to clean published attachment temp links for task #${taskId}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
+    const { identity, generationGuardPath } = await this.atomicCreator.createPinnedFileAtomically(
+      filePath,
+      buffer
+    );
     const metadata: TaskAttachmentMeta = {
       id: attachmentId,
       filename,
@@ -403,8 +405,8 @@ export class TeamTaskAttachmentStore {
   }
 
   async finalizeAttachment(receipt: SavedTaskAttachmentReceipt): Promise<void> {
-    await this.runTaskMutation(receipt.teamName, receipt.taskId, (guard) =>
-      this.finalizeAttachmentInMutation(receipt, guard)
+    await this.runTaskMutation(receipt.teamName, receipt.taskId, () =>
+      this.finalizeAttachmentInMutation(receipt)
     ).catch((error) => {
       logger.warn(
         `[${receipt.teamName}] Failed to finalize task attachment ${receipt.metadata.id} for task #${receipt.taskId}: ${
@@ -414,58 +416,11 @@ export class TeamTaskAttachmentStore {
     });
   }
 
-  private async finalizeAttachmentInMutation(
-    receipt: SavedTaskAttachmentReceipt,
-    guard: TaskAttachmentMutationGuard
-  ): Promise<void> {
-    const { filePath, generationGuardPath } = this.resolveReceiptPaths(receipt);
+  private async finalizeAttachmentInMutation(receipt: SavedTaskAttachmentReceipt): Promise<void> {
+    const { generationGuardPath } = this.resolveReceiptPaths(receipt);
     this.dismissCompensation(receipt);
     if (!generationGuardPath) return;
-
-    let generationGuard: FileHandle | null = null;
-    try {
-      try {
-        generationGuard = await fs.promises.open(
-          generationGuardPath,
-          fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW
-        );
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
-        throw error;
-      }
-
-      const guardedIdentity = await generationGuard.stat();
-      if (
-        receipt.identity.ino === 0 ||
-        guardedIdentity.dev !== receipt.identity.dev ||
-        guardedIdentity.ino !== receipt.identity.ino
-      ) {
-        return;
-      }
-
-      guard.assertHealthy();
-      let publishedIdentity: fs.Stats | null = null;
-      try {
-        publishedIdentity = await fs.promises.lstat(filePath);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      }
-      if (
-        publishedIdentity?.isFile() &&
-        !publishedIdentity.isSymbolicLink() &&
-        publishedIdentity.dev === guardedIdentity.dev &&
-        publishedIdentity.ino === guardedIdentity.ino
-      ) {
-        await this.atomicCreator.cleanupPublishedTempLinks(filePath);
-        return;
-      }
-
-      await fs.promises.unlink(generationGuardPath).catch((error: NodeJS.ErrnoException) => {
-        if (error.code !== 'ENOENT') throw error;
-      });
-    } finally {
-      await generationGuard?.close();
-    }
+    await removeTaskAttachmentGenerationPin(generationGuardPath, receipt.identity);
   }
 
   async rollbackAttachment(receipt: SavedTaskAttachmentReceipt): Promise<void> {
@@ -480,100 +435,21 @@ export class TeamTaskAttachmentStore {
     enforceHealthyLock: boolean
   ): Promise<void> {
     const { filePath, generationGuardPath } = this.resolveReceiptPaths(receipt);
-    let generationGuard: FileHandle | null = null;
+    if (enforceHealthyLock) guard.assertHealthy();
+    const detached = await detachTaskAttachmentGeneration(filePath, receipt.identity);
+    if (detached.kind === 'detached') {
+      await finalizeDetachedTaskAttachmentGeneration(detached.receipt);
+      logger.debug(
+        `[${receipt.teamName}] Rolled back task attachment ${receipt.metadata.id} for task #${receipt.taskId}`
+      );
+    }
     if (generationGuardPath) {
-      try {
-        generationGuard = await fs.promises.open(
-          generationGuardPath,
-          fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW
-        );
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          this.dismissCompensation(receipt);
-          return;
-        }
-        throw error;
-      }
+      await removeTaskAttachmentGenerationPin(generationGuardPath, receipt.identity);
     }
-
-    try {
-      const guardedIdentity = generationGuard ? await generationGuard.stat() : receipt.identity;
-      let stats: fs.Stats;
-      try {
-        stats = await fs.promises.lstat(filePath);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          if (generationGuardPath) {
-            await fs.promises.unlink(generationGuardPath).catch(() => undefined);
-          }
-          this.dismissCompensation(receipt);
-          return;
-        }
-        throw error;
-      }
-      if (
-        !stats.isFile() ||
-        stats.isSymbolicLink() ||
-        receipt.identity.ino === 0 ||
-        guardedIdentity.dev !== receipt.identity.dev ||
-        guardedIdentity.ino !== receipt.identity.ino ||
-        stats.dev !== guardedIdentity.dev ||
-        stats.ino !== guardedIdentity.ino
-      ) {
-        if (generationGuardPath) {
-          await fs.promises.unlink(generationGuardPath).catch(() => undefined);
-        }
-        this.dismissCompensation(receipt);
-        return;
-      }
-
-      if (enforceHealthyLock) {
-        guard.assertHealthy();
-      }
-      let cleanupError: unknown = null;
-      try {
-        await this.atomicCreator.cleanupPublishedTempLinks(filePath);
-      } catch (error) {
-        cleanupError = error;
-      }
-      if (enforceHealthyLock) {
-        guard.assertHealthy();
-      }
-      const currentIdentity = await fs.promises
-        .lstat(filePath)
-        .catch((error: NodeJS.ErrnoException) => {
-          if (error.code === 'ENOENT') return null;
-          throw error;
-        });
-      if (
-        currentIdentity?.isFile() &&
-        !currentIdentity.isSymbolicLink() &&
-        currentIdentity.dev === guardedIdentity.dev &&
-        currentIdentity.ino === guardedIdentity.ino
-      ) {
-        await fs.promises.unlink(filePath).catch((error: NodeJS.ErrnoException) => {
-          if (error.code !== 'ENOENT') throw error;
-        });
-        logger.debug(
-          `[${receipt.teamName}] Rolled back task attachment ${receipt.metadata.id} for task #${receipt.taskId}`
-        );
-      }
-      if (generationGuardPath) {
-        await fs.promises.unlink(generationGuardPath).catch((error: NodeJS.ErrnoException) => {
-          if (error.code !== 'ENOENT') throw error;
-        });
-      }
-      this.dismissCompensation(receipt);
-      if (cleanupError && enforceHealthyLock) {
-        if (cleanupError instanceof Error) throw cleanupError;
-        throw new Error('Task attachment temp-link cleanup failed', { cause: cleanupError });
-      }
-    } finally {
-      await generationGuard?.close();
-    }
+    this.dismissCompensation(receipt);
   }
 
-  private dismissCompensation(receipt: SavedTaskAttachmentReceipt): void {
+  private dismissCompensation(receipt: object): void {
     this.pendingCompensations.get(receipt)?.dismiss();
     this.pendingCompensations.delete(receipt);
   }
@@ -611,31 +487,122 @@ export class TeamTaskAttachmentStore {
     mimeType: AttachmentMediaType
   ): Promise<void> {
     await this.runTaskMutation(teamName, taskId, async (guard) => {
-      await this.deleteAttachmentInMutation(teamName, taskId, attachmentId, mimeType, guard);
+      const receipt = await this.stageAttachmentDeletionInMutation(
+        teamName,
+        taskId,
+        attachmentId,
+        mimeType,
+        guard
+      );
       guard.markCommitted();
+      if (receipt) {
+        await this.finalizeAttachmentDeletionInMutation(receipt, teamName, taskId);
+      }
     });
   }
 
-  private async deleteAttachmentInMutation(
+  private async stageAttachmentDeletionInMutation(
     teamName: string,
     taskId: string,
     attachmentId: string,
     mimeType: AttachmentMediaType,
     guard: TaskAttachmentMutationGuard
-  ): Promise<void> {
+  ): Promise<StagedTaskAttachmentDeletionReceipt | null> {
     const filePath = await this.findAttachmentFilePath(teamName, taskId, attachmentId, mimeType);
-    if (!filePath) return;
+    if (!filePath) return null;
 
     guard.assertHealthy();
-    await this.atomicCreator.cleanupPublishedTempLinks(filePath);
-    guard.assertHealthy();
-    try {
-      await fs.promises.unlink(filePath);
-      logger.debug(`[${teamName}] Deleted task attachment ${attachmentId} for task #${taskId}`);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    const publicGeneration = await fs.promises
+      .lstat(filePath)
+      .catch((error: NodeJS.ErrnoException) => {
+        if (error.code === 'ENOENT') return null;
         throw error;
+      });
+    if (!publicGeneration) return null;
+    if (!publicGeneration.isFile() || publicGeneration.isSymbolicLink()) {
+      throw new Error('Task attachment is not a regular file');
+    }
+    guard.assertHealthy();
+    const detached = await detachTaskAttachmentGeneration(filePath, {
+      dev: publicGeneration.dev,
+      ino: publicGeneration.ino,
+    });
+    if (detached.kind === 'missing') return null;
+    if (detached.kind === 'changed') {
+      throw new Error('Task attachment changed while staging deletion');
+    }
+
+    const receipt: StagedTaskAttachmentDeletionReceipt = {
+      attachmentId,
+      teamName,
+      taskId,
+      generation: detached.receipt,
+    };
+    const compensation = guard.registerCompensation(async () => {
+      await this.rollbackStagedAttachmentDeletion(receipt);
+      await this.cleanupEmptyTaskDirectory(teamName, taskId);
+    });
+    this.pendingCompensations.set(receipt, compensation);
+    guard.assertHealthy();
+    return receipt;
+  }
+
+  private async finalizeAttachmentDeletionInMutation(
+    receipt: StagedTaskAttachmentDeletionReceipt,
+    teamName: string,
+    taskId: string
+  ): Promise<void> {
+    this.assertDeletionReceiptScope(receipt, teamName, taskId);
+    this.dismissCompensation(receipt);
+    try {
+      try {
+        await this.atomicCreator.cleanupPublishedTempLinks(receipt.generation.detachedPath);
+      } catch (error) {
+        logger.warn(
+          `[${teamName}] Failed to clean task attachment generation pins for task #${taskId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
       }
+      await finalizeDetachedTaskAttachmentGeneration(receipt.generation);
+      logger.debug(
+        `[${teamName}] Deleted task attachment ${receipt.attachmentId} for task #${taskId}`
+      );
+    } catch (error) {
+      logger.warn(
+        `[${teamName}] Failed to finalize task attachment deletion ${receipt.attachmentId} for task #${taskId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  private async rollbackAttachmentDeletionInMutation(
+    receipt: StagedTaskAttachmentDeletionReceipt,
+    teamName: string,
+    taskId: string
+  ): Promise<void> {
+    this.assertDeletionReceiptScope(receipt, teamName, taskId);
+    await this.rollbackStagedAttachmentDeletion(receipt);
+  }
+
+  private async rollbackStagedAttachmentDeletion(
+    receipt: StagedTaskAttachmentDeletionReceipt
+  ): Promise<void> {
+    const outcome = await restoreDetachedTaskAttachmentGeneration(receipt.generation);
+    if (outcome === 'conflict') {
+      throw new Error('Task attachment deletion rollback would overwrite a newer generation');
+    }
+    this.dismissCompensation(receipt);
+  }
+
+  private assertDeletionReceiptScope(
+    receipt: StagedTaskAttachmentDeletionReceipt,
+    teamName: string,
+    taskId: string
+  ): void {
+    if (receipt.teamName !== teamName || receipt.taskId !== taskId) {
+      throw new Error('Task attachment deletion receipt belongs to another transaction');
     }
   }
 

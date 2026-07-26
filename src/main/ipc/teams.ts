@@ -754,9 +754,25 @@ async function handleDeleteTaskAttachment(
       vTeam.value!,
       vTask.value!,
       async (transaction) => {
-        await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
-        await transaction.deleteAttachment(safeAttId, mimeType.trim());
+        const receipt = await transaction.stageAttachmentDeletion(safeAttId, mimeType.trim());
+        try {
+          await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
+        } catch (error) {
+          if (receipt) {
+            try {
+              await transaction.rollbackAttachmentDeletion(receipt);
+            } catch (rollbackError) {
+              logger.warn(
+                `[teams:deleteTaskAttachment] Failed to restore attachment ${safeAttId}: ${
+                  rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+                }`
+              );
+            }
+          }
+          throw error;
+        }
         transaction.markCommitted();
+        if (receipt) await transaction.finalizeAttachmentDeletion(receipt);
       }
     );
   });

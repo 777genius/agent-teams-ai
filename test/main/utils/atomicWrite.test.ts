@@ -483,6 +483,15 @@ describe('atomicWriteAsync', () => {
 });
 
 describe('atomicCreateAsync', () => {
+  it('returns the exact retained inode pin without a second fallible hardlink step', async () => {
+    const result = await atomicCreateAsync(TARGET_PATH, CONTENT, { retainPin: true });
+
+    const pinPath = getTmpPath();
+    expect(mockLink).toHaveBeenCalledWith(pinPath, TARGET_PATH);
+    expect(mockUnlink).not.toHaveBeenCalledWith(pinPath);
+    expect(result).toEqual({ dev: 1, ino: 2, pinPath });
+  });
+
   it('publishes a fully-synced temp file without overwriting an existing target', async () => {
     const result = await atomicCreateAsync(TARGET_PATH, CONTENT);
 

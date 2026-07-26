@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export { cleanupAtomicCreateTempLinks } from './atomicCreateCleanup';
 export * from './durablePathOperations';
 
 const RENAME_MAX_ATTEMPTS = 20;
@@ -34,6 +35,8 @@ export type AtomicWriteDirectorySyncOutcome =
 export interface AtomicCreateResult {
   dev: number;
   ino: number;
+  /** Transaction-owned hardlink that pins the published inode until commit/rollback. */
+  pinPath?: string;
 }
 
 export interface ExpectedTextFileIdentity {
@@ -324,7 +327,7 @@ export async function atomicWriteAsync(
 export async function atomicCreateAsync(
   targetPath: string,
   data: string | Buffer,
-  options: { mode?: number } = {}
+  options: { mode?: number; retainPin?: boolean } = {}
 ): Promise<AtomicCreateResult> {
   const dir = path.dirname(targetPath);
   const tmpPath = path.join(dir, `.review-create.${randomUUID()}.tmp`);
@@ -350,14 +353,20 @@ export async function atomicCreateAsync(
     // because callers can neither roll back nor safely retry a create they believe failed.
     directorySync = await prepareDirectorySync(dir, true);
     await fs.promises.link(tmpPath, targetPath);
-    try {
-      await fs.promises.unlink(tmpPath);
-    } catch {
-      // The target is already a fully synced hardlink. Keep terminal success; a later
-      // authorization pass removes this reserved sibling link.
+    if (!options.retainPin) {
+      try {
+        await fs.promises.unlink(tmpPath);
+      } catch {
+        // The target is already a fully synced hardlink. Keep terminal success; a later
+        // authorization pass removes this reserved sibling link.
+      }
     }
     await finishDirectorySyncAfterPublish(directorySync);
-    return { dev: identity.dev, ino: identity.ino };
+    return {
+      dev: identity.dev,
+      ino: identity.ino,
+      ...(options.retainPin ? { pinPath: tmpPath } : {}),
+    };
   } catch (error) {
     await closeDirectorySync(directorySync);
     await fs.promises.unlink(tmpPath).catch(() => undefined);
@@ -872,27 +881,4 @@ async function syncRenamedDirectories(src: string, dest: string, strict: boolean
 export async function unlinkPathDurably(filePath: string): Promise<void> {
   await fs.promises.unlink(filePath);
   await syncDirectory(path.dirname(filePath), true);
-}
-
-/** Remove only crash-left atomic-create temp names that still reference this exact inode. */
-export async function cleanupAtomicCreateTempLinks(targetPath: string): Promise<void> {
-  const target = await fs.promises.lstat(targetPath);
-  if (target.nlink <= 1) return;
-
-  const dir = path.dirname(targetPath);
-  const entries = await fs.promises.readdir(dir);
-  for (const entry of entries) {
-    if (!/^\.review-create\.[a-f0-9-]+\.tmp$/i.test(entry)) continue;
-    const candidatePath = path.join(dir, entry);
-    try {
-      const candidate = await fs.promises.lstat(candidatePath);
-      if (candidate.dev === target.dev && candidate.ino === target.ino) {
-        await fs.promises.unlink(candidatePath);
-      }
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== 'ENOENT') throw error;
-    }
-  }
-  await syncDirectoryBestEffort(dir);
 }

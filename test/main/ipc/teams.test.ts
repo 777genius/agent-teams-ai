@@ -1739,6 +1739,7 @@ describe('ipc teams handlers', () => {
     try {
       await fs.promises.mkdir(attachmentDirectory, { recursive: true });
       await fs.promises.writeFile(attachmentPath, 'test');
+      const originalIdentity = await fs.promises.lstat(attachmentPath);
 
       const result = (await handler!(
         {} as never,
@@ -1755,6 +1756,53 @@ describe('ipc teams handlers', () => {
       );
       vi.mocked(console.error).mockClear();
       await expect(fs.promises.readFile(attachmentPath, 'utf8')).resolves.toBe('test');
+      const restoredIdentity = await fs.promises.lstat(attachmentPath);
+      expect({ dev: restoredIdentity.dev, ino: restoredIdentity.ino }).toEqual({
+        dev: originalIdentity.dev,
+        ino: originalIdentity.ino,
+      });
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('stages attachment bytes before committing metadata deletion', async () => {
+    const handler = handlers.get(TEAM_DELETE_TASK_ATTACHMENT);
+    expect(handler).toBeDefined();
+    const claudeRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'teams-attachment-'));
+    setClaudeBasePathOverride(claudeRoot);
+    const attachmentId = '11111111-1111-4111-8111-111111111111';
+    const attachmentDirectory = path.join(
+      getAppDataPath(),
+      'task-attachments',
+      'my-team',
+      'task-1'
+    );
+    const attachmentPath = path.join(attachmentDirectory, `${attachmentId}--proof.png`);
+    service.removeTaskAttachment.mockImplementationOnce(async () => {
+      await expect(fs.promises.lstat(attachmentPath)).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await fs.promises.readdir(attachmentDirectory)).toEqual([
+        expect.stringMatching(/^\.attachment-delete\.[a-f0-9-]+\.staged$/i),
+      ]);
+    });
+
+    try {
+      await fs.promises.mkdir(attachmentDirectory, { recursive: true });
+      await fs.promises.writeFile(attachmentPath, 'test');
+
+      const result = (await handler!(
+        {} as never,
+        'my-team',
+        'task-1',
+        attachmentId,
+        'image/png'
+      )) as { success: boolean; error?: string };
+
+      expect(result).toEqual({ success: true, data: undefined });
+      await expect(fs.promises.readdir(attachmentDirectory)).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
     } finally {
       setClaudeBasePathOverride(null);
       await fs.promises.rm(claudeRoot, { recursive: true, force: true });

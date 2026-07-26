@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { promises as fsPromises } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -82,8 +82,28 @@ async function runAttachmentRaceWorker(
 
 function createAtomicCreator(): TaskAttachmentAtomicCreatorPort {
   return {
-    createFileAtomically: vi.fn(async () => ({ dev: 1, ino: 2 })),
+    createPinnedFileAtomically: vi.fn(async (filePath) => ({
+      identity: { dev: 1, ino: 2 },
+      generationGuardPath: join(
+        dirname(filePath),
+        '.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp'
+      ),
+    })),
     cleanupPublishedTempLinks: vi.fn(() => Promise.resolve()),
+  };
+}
+
+async function createPinnedFileAtomically(
+  filePath: string,
+  data: Buffer
+): Promise<{
+  identity: { dev: number; ino: number };
+  generationGuardPath: string;
+}> {
+  const created = await atomicCreateAsync(filePath, data, { retainPin: true });
+  return {
+    identity: { dev: created.dev, ino: created.ino },
+    generationGuardPath: created.pinPath!,
   };
 }
 
@@ -178,7 +198,8 @@ describe('TeamTaskAttachmentStore', () => {
       'dGVzdA=='
     );
 
-    const [filePath, bytes] = vi.mocked(atomicCreator.createFileAtomically).mock.calls[0] ?? [];
+    const [filePath, bytes] =
+      vi.mocked(atomicCreator.createPinnedFileAtomically).mock.calls[0] ?? [];
     expect(basename(String(filePath))).toBe(ATTACHMENT_FILE);
     expect(bytes).toEqual(Buffer.from('test'));
     expect(metadata).toEqual(
@@ -195,7 +216,7 @@ describe('TeamTaskAttachmentStore', () => {
   it('preserves an atomic publication failure without returning attachment metadata', async () => {
     const failure = new Error('atomic create failed');
     const atomicCreator = createAtomicCreator();
-    vi.mocked(atomicCreator.createFileAtomically).mockRejectedValueOnce(failure);
+    vi.mocked(atomicCreator.createPinnedFileAtomically).mockRejectedValueOnce(failure);
     const store = createUnitStore(atomicCreator);
 
     await expect(
@@ -203,14 +224,11 @@ describe('TeamTaskAttachmentStore', () => {
     ).rejects.toBe(failure);
   });
 
-  it('removes the published attachment when its generation guard cannot be established', async () => {
+  it('does not publish an attachment when pinned creation fails', async () => {
     const { taskDirectory } = await createRealStore();
-    const failure = new Error('generation guard failed');
+    const failure = new Error('pinned create failed');
     const atomicCreator: TaskAttachmentAtomicCreatorPort = {
-      createFileAtomically: atomicCreateAsync,
-      createGenerationGuard: vi.fn(async () => {
-        throw failure;
-      }),
+      createPinnedFileAtomically: vi.fn(async () => Promise.reject(failure)),
       cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
     };
     const store = new TeamTaskAttachmentStore(atomicCreator);
@@ -289,19 +307,30 @@ describe('TeamTaskAttachmentStore', () => {
     await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('never deletes a replacement generation while rolling back a stale receipt', async () => {
+    const { store, taskDirectory } = await createRealStore();
+    const receipt = await store.saveAttachmentWithReceipt(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'old.png',
+      'image/png',
+      'b2xk'
+    );
+    await fsPromises.unlink(receipt.filePath);
+    await writeFile(receipt.filePath, 'replacement');
+
+    await store.rollbackAttachment(receipt);
+
+    await expect(readFile(receipt.filePath, 'utf8')).resolves.toBe('replacement');
+    expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+  });
+
   it('removes the identity-matched target even when temp-link cleanup fails', async () => {
     const { taskDirectory } = await createRealStore();
     const cleanupFailure = new Error('temp cleanup failed');
     const atomicCreator: TaskAttachmentAtomicCreatorPort = {
-      createFileAtomically: atomicCreateAsync,
-      async createGenerationGuard(filePath) {
-        const guardPath = join(
-          taskDirectory,
-          '.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp'
-        );
-        await fsPromises.link(filePath, guardPath);
-        return guardPath;
-      },
+      createPinnedFileAtomically,
       cleanupPublishedTempLinks: vi.fn(async () => {
         throw cleanupFailure;
       }),
@@ -316,7 +345,7 @@ describe('TeamTaskAttachmentStore', () => {
       'dGVzdA=='
     );
 
-    await expect(store.rollbackAttachment(receipt)).rejects.toBe(cleanupFailure);
+    await expect(store.rollbackAttachment(receipt)).resolves.toBeUndefined();
 
     await expect(fsPromises.lstat(receipt.filePath)).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
@@ -381,10 +410,11 @@ describe('TeamTaskAttachmentStore', () => {
 
     await expect(
       store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
-        await transaction.deleteAttachment(ATTACHMENT_ID, 'image/png');
+        const receipt = await transaction.stageAttachmentDeletion(ATTACHMENT_ID, 'image/png');
         metadataDeleted = true;
         compromise(lockFailure);
         transaction.markCommitted();
+        if (receipt) await transaction.finalizeAttachmentDeletion(receipt);
       })
     ).resolves.toBeUndefined();
 
@@ -399,7 +429,7 @@ describe('TeamTaskAttachmentStore', () => {
     await expect(
       store.saveAttachment('my-team', 'task-1', id, 'proof.png', 'image/png', 'dGVzdA==')
     ).rejects.toThrow('Attachment ID must be a canonical UUID');
-    expect(atomicCreator.createFileAtomically).not.toHaveBeenCalled();
+    expect(atomicCreator.createPinnedFileAtomically).not.toHaveBeenCalled();
   });
 
   it.each(['!!!!', 'YQ==junk', 'AA=A', 'YR==', 'YQ== '])(
@@ -418,7 +448,7 @@ describe('TeamTaskAttachmentStore', () => {
           base64Data
         )
       ).rejects.toThrow('Invalid attachment base64 data');
-      expect(atomicCreator.createFileAtomically).not.toHaveBeenCalled();
+      expect(atomicCreator.createPinnedFileAtomically).not.toHaveBeenCalled();
     }
   );
 
@@ -470,14 +500,14 @@ describe('TeamTaskAttachmentStore', () => {
   it('removes a crash-left temp hardlink before deleting its published attachment', async () => {
     const { taskDirectory } = await createRealStore();
     const atomicCreator: TaskAttachmentAtomicCreatorPort = {
-      createFileAtomically: atomicCreateAsync,
+      createPinnedFileAtomically,
       cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
     };
     const store = new TeamTaskAttachmentStore(atomicCreator);
     const originalUnlink = fsPromises.unlink.bind(fsPromises);
     let tempUnlinkFailures = 0;
     const unlink = vi.spyOn(fsPromises, 'unlink').mockImplementation(async (filePath) => {
-      if (basename(String(filePath)).startsWith('.review-create.') && tempUnlinkFailures < 2) {
+      if (basename(String(filePath)).startsWith('.review-create.') && tempUnlinkFailures < 1) {
         tempUnlinkFailures += 1;
         const error = new Error('injected busy temp hardlink') as NodeJS.ErrnoException;
         error.code = 'EBUSY';
@@ -497,7 +527,7 @@ describe('TeamTaskAttachmentStore', () => {
       );
       expect(await readdir(taskDirectory)).toHaveLength(2);
       expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toContain(
-        'Failed to clean published attachment temp links'
+        'Failed to finalize task attachment'
       );
       vi.mocked(console.warn).mockClear();
 
@@ -636,30 +666,15 @@ describe('TeamTaskAttachmentStore', () => {
   });
 
   it('serializes rollback identity checks against delete and recreate in another coordinator', async () => {
-    const { taskDirectory } = await createRealStore();
-    let pauseRollbackCleanup = false;
-    let notifyCleanupStarted!: () => void;
-    let resumeCleanup!: () => void;
-    const cleanupStarted = new Promise<void>((resolve) => {
-      notifyCleanupStarted = resolve;
+    const { store: firstStore, taskDirectory } = await createRealStore();
+    let notifyDetachStarted!: () => void;
+    let resumeDetach!: () => void;
+    const detachStarted = new Promise<void>((resolve) => {
+      notifyDetachStarted = resolve;
     });
-    const cleanupResume = new Promise<void>((resolve) => {
-      resumeCleanup = resolve;
+    const detachResume = new Promise<void>((resolve) => {
+      resumeDetach = resolve;
     });
-    const firstCreator: TaskAttachmentAtomicCreatorPort = {
-      createFileAtomically: atomicCreateAsync,
-      async cleanupPublishedTempLinks(filePath) {
-        if (pauseRollbackCleanup) {
-          notifyCleanupStarted();
-          await cleanupResume;
-        }
-        await cleanupAtomicCreateTempLinks(filePath);
-      },
-    };
-    const firstStore = new TeamTaskAttachmentStore(
-      firstCreator,
-      new NodeTaskAttachmentMutationCoordinator()
-    );
     const secondCoordinator = new NodeTaskAttachmentMutationCoordinator();
     let notifySecondAttempted!: () => void;
     const secondAttempted = new Promise<void>((resolve) => {
@@ -681,30 +696,44 @@ describe('TeamTaskAttachmentStore', () => {
       'b2xk'
     );
 
-    pauseRollbackCleanup = true;
-    const rollback = firstStore.rollbackAttachment(receipt);
-    await cleanupStarted;
-    let replacementSettled = false;
-    const replace = (async () => {
-      await secondStore.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
-      return secondStore.saveAttachment(
-        'my-team',
-        'task-1',
-        ATTACHMENT_ID,
-        'replacement.png',
-        'image/png',
-        'bmV3'
-      );
-    })().finally(() => {
-      replacementSettled = true;
+    const originalRename = fsPromises.rename.bind(fsPromises);
+    const rename = vi.spyOn(fsPromises, 'rename').mockImplementation(async (source, target) => {
+      if (
+        String(source) === receipt.filePath &&
+        basename(String(target)).startsWith('.attachment-delete.')
+      ) {
+        notifyDetachStarted();
+        await detachResume;
+      }
+      await originalRename(source, target);
     });
-    await secondAttempted;
-    await new Promise((resolve) => setTimeout(resolve, 25));
-    expect(replacementSettled).toBe(false);
+    try {
+      const rollback = firstStore.rollbackAttachment(receipt);
+      await detachStarted;
+      let replacementSettled = false;
+      const replace = (async () => {
+        await secondStore.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+        return secondStore.saveAttachment(
+          'my-team',
+          'task-1',
+          ATTACHMENT_ID,
+          'replacement.png',
+          'image/png',
+          'bmV3'
+        );
+      })().finally(() => {
+        replacementSettled = true;
+      });
+      await secondAttempted;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      expect(replacementSettled).toBe(false);
 
-    resumeCleanup();
-    await rollback;
-    await replace;
+      resumeDetach();
+      await rollback;
+      await replace;
+    } finally {
+      rename.mockRestore();
+    }
 
     await expect(
       secondStore.getAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png')
