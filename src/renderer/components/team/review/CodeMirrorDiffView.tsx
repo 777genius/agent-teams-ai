@@ -790,6 +790,9 @@ export const CodeMirrorDiffView = ({
       if (extRef) {
         (extRef as React.MutableRefObject<EditorView | null>).current = null;
       }
+      // A keyed remount invalidates the old document coordinates and selected text.
+      // Clear the parent-owned action menu before publishing the replacement view.
+      onSelectionChangeRef.current?.(null);
       // Notify parent that the EditorView was destroyed
       onViewChangeRef.current?.(null);
     };
