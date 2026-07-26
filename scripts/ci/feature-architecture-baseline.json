@@ -582,18 +582,6 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/features/internal-storage/main/composition/BackendSelectingTaskCommentNotificationJournalStore.ts",
-      "specifier": "../infrastructure/InternalStorageJsonReplica",
-      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/internal-storage/main/composition/BackendSelectingTaskStallJournalStore.ts",
-      "specifier": "../infrastructure/InternalStorageJsonReplica",
-      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
-    },
-    {
-      "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/composition/createInternalStorageFeature.ts",
       "specifier": "../infrastructure/CoordinationDurabilityStorageGateway",
       "publicEntrypoint": "src/features/internal-storage/main/index.ts"
