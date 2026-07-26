@@ -297,6 +297,11 @@ export function collectFinalCommonJsPropertyWrites(
     }
     writes.push({ path, position });
   };
+  const recordConditionalAssignment = (path) => {
+    if (!propertyStates.has(pathKey(path))) {
+      replacePropertyState(path, { configurable: true, writable: true });
+    }
+  };
   const recordDefinition = (path, position, descriptor) => {
     const current = propertyStates.get(pathKey(path));
     const requestedConfigurable =
@@ -344,7 +349,11 @@ export function collectFinalCommonJsPropertyWrites(
       const targetPath = targetPathAt(node.left, position);
       if (targetPath !== null) {
         if (targetPath.length > 0) {
-          recordAssignment(targetPath, node.end);
+          if (node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+            recordAssignment(targetPath, node.end);
+          } else {
+            recordConditionalAssignment(targetPath);
+          }
         } else {
           if (node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) return;
           const rootKind = commonJsRootKind(node.left);
@@ -401,7 +410,25 @@ export function collectFinalCommonJsPropertyWrites(
     ) {
       return;
     }
-    if (method.name === 'assign') {
+    if (
+      ['freeze', 'seal'].includes(method.name) &&
+      node.arguments[0]
+    ) {
+      const targetPath = targetPathAt(node.arguments[0], position);
+      if (targetPath === null) return;
+      for (const state of propertyStates.values()) {
+        if (
+          targetPath.every(
+            (segment, index) => state.path[index] === segment
+          )
+        ) {
+          replacePropertyState(state.path, {
+            configurable: false,
+            writable: method.name === 'freeze' ? false : state.writable,
+          });
+        }
+      }
+    } else if (method.name === 'assign') {
       addPaths(
         node.arguments[0],
         staticOverwrittenPaths(

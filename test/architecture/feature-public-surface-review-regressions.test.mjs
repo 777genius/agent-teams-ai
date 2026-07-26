@@ -374,10 +374,47 @@ test('removes logical CommonJS assignments after a terminal delete', () => {
       `,
       'src/features/commonjs-logical-public/main/infrastructure/Store.cjs':
         'module.exports = class Store {};',
+      'src/features/commonjs-logical-existing-or/main/index.cjs': `
+        exports.Store = require('./infrastructure/Store');
+        exports.Store ||= undefined;
+      `,
+      'src/features/commonjs-logical-existing-or/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-logical-existing-and/main/index.cjs': `
+        exports.Store = require('./infrastructure/Store');
+        exports.Store &&= exports.Store;
+      `,
+      'src/features/commonjs-logical-existing-and/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-logical-existing-nullish/main/index.cjs': `
+        exports.Store = require('./infrastructure/Store');
+        exports.Store ??= undefined;
+      `,
+      'src/features/commonjs-logical-existing-nullish/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-freeze-delete/main/index.cjs': `
+        exports.Store = require('./infrastructure/Store');
+        Object.freeze(exports);
+        delete exports.Store;
+      `,
+      'src/features/commonjs-freeze-delete/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-seal-delete/main/index.cjs': `
+        exports.Store = require('./infrastructure/Store');
+        Object.seal(exports);
+        delete exports.Store;
+      `,
+      'src/features/commonjs-seal-delete/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
+        'src/features/commonjs-freeze-delete/main/index.cjs',
+        'src/features/commonjs-logical-existing-and/main/index.cjs',
+        'src/features/commonjs-logical-existing-nullish/main/index.cjs',
+        'src/features/commonjs-logical-existing-or/main/index.cjs',
         'src/features/commonjs-logical-public/main/index.cjs',
+        'src/features/commonjs-seal-delete/main/index.cjs',
       ]);
     }
   );
@@ -467,13 +504,130 @@ test('uses the final ESM binding and property state', () => {
       `,
       'src/features/esm-object-assign-instance-safe/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/esm-snapshot-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api = { Store };
+        export default api;
+        api.Store = undefined;
+      `,
+      'src/features/esm-snapshot-overwrite-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-snapshot-assign-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api = { Store };
+        export default api;
+        Object.assign(api, { Store: undefined });
+      `,
+      'src/features/esm-snapshot-assign-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-delete-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        export { api };
+        delete api.Store;
+      `,
+      'src/features/esm-delete-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-snapshot-delete-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        export default api;
+        Reflect.deleteProperty(api, 'Store');
+      `,
+      'src/features/esm-snapshot-delete-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-alias-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api = { Store };
+        const alias = api;
+        export { api };
+        alias.Store = undefined;
+      `,
+      'src/features/esm-alias-overwrite-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-alias-write-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = {};
+        const alias = api;
+        api.Store = Store;
+        alias.Store = undefined;
+        export { api };
+      `,
+      'src/features/esm-alias-write-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-freeze-delete-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        export { api };
+        Object.freeze(api);
+        delete api.Store;
+      `,
+      'src/features/esm-freeze-delete-public/main/infrastructure/Store.ts':
+        'export class Store {}',
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
         'src/features/esm-default-snapshot/main/index.ts',
+        'src/features/esm-freeze-delete-public/main/index.ts',
         'src/features/esm-object-assign-public/main/index.ts',
         'src/features/esm-rebind-conditional/main/index.ts',
         'src/features/esm-rebind-public/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('traces only definitely invoked function mutations', () => {
+  withFeatureFixture(
+    {
+      'src/features/iife-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        (() => {
+          api.Store = Store;
+        })();
+      `,
+      'src/features/iife-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/iife-expression-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        (() => (api.Store = Store))();
+      `,
+      'src/features/iife-expression-public/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/iife-terminal-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = { Store };
+        (() => {
+          api.Store = undefined;
+        })();
+      `,
+      'src/features/iife-terminal-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/iife-dead-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        false && (() => {
+          api.Store = Store;
+        })();
+      `,
+      'src/features/iife-dead-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [1].map(() => {
+          api.Store = Store;
+        });
+      `,
+      'src/features/callback-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/iife-expression-public/main/index.ts',
+        'src/features/iife-public/main/index.ts',
       ]);
     }
   );

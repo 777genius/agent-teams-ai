@@ -13,6 +13,22 @@ function literalTruthiness(node) {
   return null;
 }
 
+function invocationTarget(expression) {
+  let current = expression;
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isAsExpression(current) ||
+    ts.isTypeAssertionExpression(current) ||
+    ts.isNonNullExpression(current) ||
+    ts.isSatisfiesExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return ts.isArrowFunction(current) || ts.isFunctionExpression(current)
+    ? current
+    : null;
+}
+
 function visitDefiniteExpression(node, visitor) {
   if (ts.isFunctionLike(node) || ts.isClassLike(node)) return;
   visitor(node);
@@ -57,22 +73,50 @@ function visitDefiniteExpression(node, visitor) {
     if (rightIsDefinite) visitDefiniteExpression(node.right, visitor);
     return;
   }
+  if (ts.isCallExpression(node)) {
+    const invokedFunction = invocationTarget(node.expression);
+    if (invokedFunction) {
+      for (const argument of node.arguments) {
+        visitDefiniteExpression(argument, visitor);
+      }
+      if (ts.isBlock(invokedFunction.body)) {
+        visitDefiniteStatement(invokedFunction.body, visitor);
+      } else {
+        visitDefiniteExpression(invokedFunction.body, visitor);
+      }
+      return;
+    }
+  }
   ts.forEachChild(node, (child) => visitDefiniteExpression(child, visitor));
 }
 
-export function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
-  const visitStatement = (statement) => {
-    if (ts.isExpressionStatement(statement)) {
-      visitDefiniteExpression(statement.expression, visitor);
-    } else if (ts.isBlock(statement)) {
-      for (const child of statement.statements) visitStatement(child);
-    } else if (ts.isIfStatement(statement)) {
-      const truthiness = literalTruthiness(statement.expression);
-      if (truthiness === true) visitStatement(statement.thenStatement);
-      if (truthiness === false && statement.elseStatement) {
-        visitStatement(statement.elseStatement);
+function visitDefiniteStatement(statement, visitor) {
+  if (ts.isExpressionStatement(statement)) {
+    visitDefiniteExpression(statement.expression, visitor);
+  } else if (ts.isVariableStatement(statement)) {
+    for (const declaration of statement.declarationList.declarations) {
+      if (declaration.initializer) {
+        visitDefiniteExpression(declaration.initializer, visitor);
       }
     }
-  };
-  for (const statement of sourceFile.statements) visitStatement(statement);
+  } else if (ts.isReturnStatement(statement) && statement.expression) {
+    visitDefiniteExpression(statement.expression, visitor);
+  } else if (ts.isBlock(statement)) {
+    for (const child of statement.statements) {
+      visitDefiniteStatement(child, visitor);
+      if (ts.isReturnStatement(child) || ts.isThrowStatement(child)) break;
+    }
+  } else if (ts.isIfStatement(statement)) {
+    const truthiness = literalTruthiness(statement.expression);
+    if (truthiness === true) visitDefiniteStatement(statement.thenStatement, visitor);
+    if (truthiness === false && statement.elseStatement) {
+      visitDefiniteStatement(statement.elseStatement, visitor);
+    }
+  }
+}
+
+export function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
+  for (const statement of sourceFile.statements) {
+    visitDefiniteStatement(statement, visitor);
+  }
 }

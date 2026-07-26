@@ -163,15 +163,36 @@ function resolveDescriptorMapEntries(
 
 export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
   const writes = new Map();
+  const configurablePaths = new Set();
+  const nonConfigurablePaths = new Set();
+  const lockedPrefixes = [];
+  const pathKey = (sourceKey, path) => `${sourceKey}:${JSON.stringify(path)}`;
   const addWrite = ({
+    configurable,
     end,
     enumerable = true,
     path,
     position,
     referenceNodes,
+    removed = false,
     sourceKey,
   }) => {
     if (!sourceKey || path.length === 0) return;
+    const key = pathKey(sourceKey, path);
+    const locked = lockedPrefixes.some(
+      ({ path: prefix, sourceKey: lockedSource }) =>
+        lockedSource === sourceKey &&
+        prefix.every((segment, index) => path[index] === segment)
+    );
+    if (removed) {
+      if (!configurablePaths.has(key) || locked) return;
+      configurablePaths.delete(key);
+    } else if (configurable === false) {
+      configurablePaths.delete(key);
+      nonConfigurablePaths.add(key);
+    } else if (!nonConfigurablePaths.has(key) && !locked) {
+      configurablePaths.add(key);
+    }
     const rootWrites = writes.get(sourceKey) ?? [];
     rootWrites.push({
       end,
@@ -190,11 +211,13 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
     node,
     suffix = [],
     enumerable = true,
-    referenceNodes = [node]
+    referenceNodes = [node],
+    options = {}
   ) => {
     const target = accessPath(targetExpression);
     if (!target) return;
     addWrite({
+      ...options,
       end: node.end,
       enumerable,
       path: [...target.path, ...suffix],
@@ -219,24 +242,52 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
           node,
           [entry.name],
           descriptorIsEnumerable(descriptor),
-          [...entry.references, descriptor]
+          [...entry.references, descriptor],
+          {
+            configurable:
+              descriptorBooleanSetting(descriptor, 'configurable') === true,
+          }
         );
       }
     }
   };
+  const collectLiteralPaths = (object, sourceKey, prefix = []) => {
+    for (const property of object.properties) {
+      if (
+        !property.name ||
+        (!ts.isPropertyAssignment(property) &&
+          !ts.isShorthandPropertyAssignment(property))
+      ) {
+        continue;
+      }
+      const path = [...prefix, propertyNameText(property.name)];
+      configurablePaths.add(pathKey(sourceKey, path));
+      const value = ts.isPropertyAssignment(property)
+        ? unwrapExpression(property.initializer)
+        : null;
+      if (value && ts.isObjectLiteralExpression(value)) {
+        collectLiteralPaths(value, sourceKey, path);
+      }
+    }
+  };
+  for (const [sourceKey, binding] of bindingModel.versions) {
+    const initializer = unwrapExpression(binding.initializer);
+    if (ts.isObjectLiteralExpression(initializer)) {
+      collectLiteralPaths(initializer, sourceKey);
+    }
+  }
   const visit = (node) => {
+    if (ts.isDeleteExpression(node)) {
+      addTargetWrite(node.expression, node, [], true, [node], { removed: true });
+      return;
+    }
     if (
       ts.isBinaryExpression(node) &&
       node.operatorToken.kind === ts.SyntaxKind.EqualsToken
     ) {
       const target = accessPath(node.left);
       if (target?.path.length) {
-        addWrite({
-          end: node.end,
-          path: target.path,
-          position: node.getStart(sourceFile),
-          sourceKey: bindingModel.bindingAt(target.root, node.getStart(sourceFile)),
-        });
+        addTargetWrite(node.left, node);
       }
       return;
     }
@@ -270,7 +321,11 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
           node,
           [propertyName],
           descriptorIsEnumerable(descriptor),
-          [node.arguments[2], descriptor].filter(Boolean)
+          [node.arguments[2], descriptor].filter(Boolean),
+          {
+            configurable:
+              descriptorBooleanSetting(descriptor, 'configurable') === true,
+          }
         );
       }
     } else if (
@@ -279,6 +334,31 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
       node.arguments[1]
     ) {
       addDescriptorMapWrites(node.arguments[0], node.arguments[1], node);
+    } else if (
+      ['freeze', 'seal'].includes(method.name) &&
+      node.arguments[0]
+    ) {
+      const target = accessPath(node.arguments[0]);
+      const sourceKey =
+        target &&
+        bindingModel.bindingAt(target.root, node.getStart(sourceFile));
+      if (sourceKey) {
+        lockedPrefixes.push({ path: target.path, sourceKey });
+      }
+    } else if (
+      method.name === 'deleteProperty' &&
+      node.arguments[0] &&
+      node.arguments[1] &&
+      ts.isStringLiteralLike(unwrapExpression(node.arguments[1]))
+    ) {
+      addTargetWrite(
+        node.arguments[0],
+        node,
+        [unwrapExpression(node.arguments[1]).text],
+        true,
+        [node],
+        { removed: true }
+      );
     } else if (method.name === 'assign' && node.arguments[0]) {
       for (const path of staticOverwrittenPaths(
         [...node.arguments].slice(1),
@@ -313,6 +393,8 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel) {
           initializer.getStart(sourceFile)
         )) {
           addWrite({
+            configurable:
+              descriptorBooleanSetting(descriptor, 'configurable') === true,
             end: initializer.end,
             enumerable: descriptorIsEnumerable(descriptor),
             path: [entry.name],

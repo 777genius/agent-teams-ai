@@ -37,6 +37,7 @@ import {
 } from './feature-public-identity-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import { attachPublicReferenceQueries } from './feature-public-reference-visibility.mjs';
+import { materializeIdentityAliasWrites } from './feature-public-write-alias-analysis.mjs';
 function bindingNames(bindingName) {
   if (ts.isIdentifier(bindingName)) return [bindingName.text];
   return bindingName.elements.flatMap((element) =>
@@ -225,6 +226,7 @@ function objectCreatePrototype(initializer, bindingModel) {
 
 function buildIdentityEdges(bindingModel, propertyWrites) {
   const edges = new Map();
+  const identityAliases = [];
   const memberRelations = [];
   const pathWasOverwritten = (source, path, position) =>
     propertyPathWasOverwrittenAfter(propertyWrites, source, path, position);
@@ -249,7 +251,10 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
           });
         } else {
           addIdentityEdge(edges, alias.key, key);
-          if (alias.symmetric) addIdentityEdge(edges, key, alias.key);
+          if (alias.symmetric) {
+            addIdentityEdge(edges, key, alias.key);
+            identityAliases.push([alias.key, key]);
+          }
         }
       }
       continue;
@@ -270,7 +275,7 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
       }
     }
   }
-  return { edges, memberRelations };
+  return { edges, identityAliases, memberRelations };
 }
 
 function collectCommonJsSeeds(sourceFile, bindingModel, rootAssignments, exportsActiveAt) {
@@ -466,10 +471,16 @@ export function analyzePublicTargets(
   const propertyWrites = collectTopLevelPropertyWrites(sourceFile, bindingModel);
   const allCopyRelations = collectCopyRelations(sourceFile, bindingModel);
   materializeCopyRelationWrites(propertyWrites, allCopyRelations);
-  const { edges: identityEdges, memberRelations } = buildIdentityEdges(
+  const {
+    edges: identityEdges,
+    identityAliases,
+    memberRelations,
+  } = buildIdentityEdges(
     bindingModel,
     propertyWrites
   );
+  materializeIdentityAliasWrites(propertyWrites, identityAliases);
+  materializeCopyRelationWrites(propertyWrites, allCopyRelations);
   memberRelations.push(...collectPrototypeRelations(sourceFile, bindingModel));
   const stableExportOwners = [...exportedLocalNames]
     .map((name) => [bindingModel.bindingAt(name, Number.POSITIVE_INFINITY), name])

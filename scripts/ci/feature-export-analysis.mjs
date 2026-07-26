@@ -6,7 +6,10 @@ import {
   propertyNameText,
   unwrapExpression,
 } from './feature-export-ast.mjs';
-import { topLevelExpressionBoundary } from './feature-export-flow-analysis.mjs';
+import {
+  immediateInvocation,
+  topLevelExpressionBoundary,
+} from './feature-export-flow-analysis.mjs';
 import {
   dynamicThenCallbackMember,
   exportAssignmentValueSelection,
@@ -413,6 +416,7 @@ export function findPublicReferenceOwner(
   while (current && current !== sourceFile) {
     if (
       ts.isFunctionLike(current) &&
+      !immediateInvocation(current) &&
       current.body &&
       node.getStart(sourceFile) >= current.body.getStart(sourceFile)
     ) {
@@ -441,10 +445,7 @@ export function findPublicReferenceOwner(
     if (declaration) {
       if (
         publicTargetOwners.isBindingVersionPublic?.(declaration) === false ||
-        (
-          hasModifier(current, ts.SyntaxKind.ExportKeyword) &&
-          publicTargetOwners.isReferencePublic?.(node, declaration) === false
-        )
+        publicTargetOwners.isReferencePublic?.(node, declaration) === false
       ) {
         return null;
       }
@@ -467,15 +468,18 @@ export function findPublicReferenceOwner(
     }
   } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
     localNames = [current.name.text];
-  } else if (ts.isExpressionStatement(current)) {
+  } else if (ts.isExpressionStatement(current) || ts.isExpression(current)) {
+    const expression = ts.isExpressionStatement(current)
+      ? current.expression
+      : current;
     if (
-      publicTargetOwners.isMutationReferencePublic?.(node, current.expression) ===
+      publicTargetOwners.isMutationReferencePublic?.(node, expression) ===
       false
     ) {
       return null;
     }
     const commonJsExportNames = commonJsExportNamesForReference(
-      current.expression,
+      expression,
       node,
       insideFunctionBody,
       commonJsTargetAliases
@@ -484,17 +488,17 @@ export function findPublicReferenceOwner(
       return {
         bindingSelections: null,
         exportedNames: commonJsExportNames,
-        localMember: commonJsCreateBindingSelection(current.expression, node, commonJsTargetAliases)
+        localMember: commonJsCreateBindingSelection(expression, node, commonJsTargetAliases)
           ?.importedName,
         localNames: [],
       };
     }
     ({ bindingSelections, localNames } = publicMutationBinding(
-      current.expression,
+      expression,
       publicTargetOwners
     ));
     if (getterSelection?.descriptorGetter) {
-      const selectionLocalNames = mutationTargetLocalNames(current.expression);
+      const selectionLocalNames = mutationTargetLocalNames(expression);
       const referenceOwner = publicTargetOwners.ownerForReference?.(node, {
         localMember: getterSelection.localMember,
         localNames: selectionLocalNames.length > 0 ? selectionLocalNames : localNames,
@@ -505,10 +509,10 @@ export function findPublicReferenceOwner(
     if (
       localNames.length === 0 &&
       getterSelection?.getterOnly &&
-      ts.isBinaryExpression(current.expression) &&
-      current.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken
+      ts.isBinaryExpression(expression) &&
+      expression.operatorToken.kind === ts.SyntaxKind.EqualsToken
     ) {
-      localNames = assignmentLocalNames(current.expression.left);
+      localNames = assignmentLocalNames(expression.left);
     }
   }
 
