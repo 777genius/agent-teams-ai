@@ -5,6 +5,9 @@ import { lock } from 'proper-lockfile';
 
 export interface TaskAttachmentMutationGuard {
   assertHealthy(): void;
+  registerCompensation(compensate: () => Promise<void>): {
+    dismiss(): void;
+  };
 }
 
 export interface TaskAttachmentMutationCoordinatorPort {
@@ -44,17 +47,58 @@ export class NodeTaskAttachmentMutationCoordinator implements TaskAttachmentMuta
           compromisedError = error;
         },
       });
+      const compensations: Array<{
+        active: boolean;
+        run: () => Promise<void>;
+      }> = [];
       const guard: TaskAttachmentMutationGuard = {
         assertHealthy() {
           if (compromisedError) throw compromisedError;
+        },
+        registerCompensation(compensate) {
+          const entry = { active: true, run: compensate };
+          compensations.push(entry);
+          return {
+            dismiss() {
+              entry.active = false;
+            },
+          };
         },
       };
 
       try {
         guard.assertHealthy();
-        return await operation(guard);
+        const result = await operation(guard);
+        guard.assertHealthy();
+        return result;
+      } catch (error) {
+        if (compromisedError) {
+          let compensationError: unknown = null;
+          for (const compensation of [...compensations].reverse()) {
+            if (!compensation.active) continue;
+            try {
+              await compensation.run();
+            } catch (candidate) {
+              compensationError ??= candidate;
+            }
+          }
+          if (compensationError) {
+            throw new AggregateError(
+              [error, compensationError],
+              'Task attachment mutation lock was compromised and compensation failed'
+            );
+          }
+        }
+        throw error;
       } finally {
-        await release();
+        // The mutation has already reached a terminal outcome. A release failure
+        // must not turn a committed write into a reported failure or hide the
+        // original operation error; proper-lockfile will reclaim a stale lock.
+        try {
+          await release();
+        } catch {
+          // Preserve the operation's terminal outcome.
+        }
       }
     });
   }

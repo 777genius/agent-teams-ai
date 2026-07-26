@@ -28,7 +28,6 @@ import {
 import { createSafeAppError } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import { TeamPermanentDeletionTransactionCoordinator } from '../../features/team-view-read-model/main/adapters/output/TeamPermanentDeletionTransactionCoordinator';
@@ -665,31 +664,38 @@ async function handleSaveTaskAttachment(
   }
 
   return wrapTeamHandler('saveTaskAttachment', async () => {
-    const receipt = await taskAttachmentStore.saveAttachmentWithReceipt(
+    return taskAttachmentStore.runTaskTransaction(
       vTeam.value!,
       vTask.value!,
-      safeAttId,
-      filename,
-      mimeType.trim(),
-      base64Data
-    );
-    try {
-      // Write metadata into the task JSON
-      await getTeamDataService().addTaskAttachment(vTeam.value!, vTask.value!, receipt.metadata);
-      await taskAttachmentStore.finalizeAttachment(receipt);
-      return receipt.metadata;
-    } catch (error) {
-      try {
-        await taskAttachmentStore.rollbackAttachment(receipt);
-      } catch (rollbackError) {
-        logger.warn(
-          `[teams:saveTaskAttachment] Failed to roll back attachment ${safeAttId}: ${
-            rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
-          }`
+      async (transaction) => {
+        const receipt = await transaction.saveAttachmentWithReceipt(
+          safeAttId,
+          filename,
+          mimeType.trim(),
+          base64Data
         );
+        try {
+          await getTeamDataService().addTaskAttachment(
+            vTeam.value!,
+            vTask.value!,
+            receipt.metadata
+          );
+          await transaction.finalizeAttachment(receipt);
+          return receipt.metadata;
+        } catch (error) {
+          try {
+            await transaction.rollbackAttachment(receipt);
+          } catch (rollbackError) {
+            logger.warn(
+              `[teams:saveTaskAttachment] Failed to roll back attachment ${safeAttId}: ${
+                rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+              }`
+            );
+          }
+          throw error;
+        }
       }
-      throw error;
-    }
+    );
   });
 }
 
@@ -743,13 +749,13 @@ async function handleDeleteTaskAttachment(
   }
 
   return wrapTeamHandler('deleteTaskAttachment', async () => {
-    await taskAttachmentStore.deleteAttachment(
+    await taskAttachmentStore.runTaskTransaction(
       vTeam.value!,
       vTask.value!,
-      safeAttId,
-      mimeType.trim()
+      async (transaction) => {
+        await transaction.deleteAttachment(safeAttId, mimeType.trim());
+        await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
+      }
     );
-    // Remove metadata from task JSON
-    await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
   });
 }

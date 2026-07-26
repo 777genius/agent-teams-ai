@@ -92,6 +92,7 @@ function createUnitStore(atomicCreator: TaskAttachmentAtomicCreatorPort): TeamTa
     run: (_mutationKey, operation) =>
       operation({
         assertHealthy: () => undefined,
+        registerCompensation: () => ({ dismiss: () => undefined }),
       }),
   });
 }
@@ -192,6 +193,46 @@ describe('TeamTaskAttachmentStore', () => {
     await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('registers identity-safe compensation for a post-publication lock compromise', async () => {
+    const { taskDirectory } = await createRealStore();
+    const compromisedFailure = new Error('lock compromised');
+    const coordinator: TaskAttachmentMutationCoordinatorPort = {
+      async run(_mutationKey, operation) {
+        const compensations: Array<{ active: boolean; run: () => Promise<void> }> = [];
+        await operation({
+          assertHealthy: () => undefined,
+          registerCompensation(compensate) {
+            const entry = { active: true, run: compensate };
+            compensations.push(entry);
+            return {
+              dismiss() {
+                entry.active = false;
+              },
+            };
+          },
+        });
+        for (const compensation of [...compensations].reverse()) {
+          if (compensation.active) await compensation.run();
+        }
+        throw compromisedFailure;
+      },
+    };
+    const store = new TeamTaskAttachmentStore(undefined, coordinator);
+
+    await expect(
+      store.saveAttachmentWithReceipt(
+        'my-team',
+        'task-1',
+        ATTACHMENT_ID,
+        'proof.png',
+        'image/png',
+        'dGVzdA=='
+      )
+    ).rejects.toBe(compromisedFailure);
+
+    await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('pins the saved generation until its rollback receipt is consumed', async () => {
     const { store, taskDirectory } = await createRealStore();
 
@@ -215,6 +256,39 @@ describe('TeamTaskAttachmentStore', () => {
 
     await store.rollbackAttachment(receipt);
 
+    await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('removes the identity-matched target even when temp-link cleanup fails', async () => {
+    const { taskDirectory } = await createRealStore();
+    const cleanupFailure = new Error('temp cleanup failed');
+    const atomicCreator: TaskAttachmentAtomicCreatorPort = {
+      createFileAtomically: atomicCreateAsync,
+      async createGenerationGuard(filePath) {
+        const guardPath = join(
+          taskDirectory,
+          '.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp'
+        );
+        await fsPromises.link(filePath, guardPath);
+        return guardPath;
+      },
+      cleanupPublishedTempLinks: vi.fn(async () => {
+        throw cleanupFailure;
+      }),
+    };
+    const store = new TeamTaskAttachmentStore(atomicCreator);
+    const receipt = await store.saveAttachmentWithReceipt(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+
+    await expect(store.rollbackAttachment(receipt)).rejects.toBe(cleanupFailure);
+
+    await expect(fsPromises.lstat(receipt.filePath)).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
@@ -404,25 +478,46 @@ describe('TeamTaskAttachmentStore', () => {
     expect(await readAttachmentDataFiles(taskDirectory)).toEqual([basename(oldPath)]);
   });
 
-  it('preserves a later generation when stale comment rollback runs after delete and recreate', async () => {
+  it('holds the task transaction through comment rollback before delete and recreate', async () => {
     const { store, taskDirectory } = await createRealStore();
     const attachmentWriter = new TeamTaskCommentAttachmentWriter(store);
+    const secondCoordinator = new NodeTaskAttachmentMutationCoordinator();
+    let notifyReplacementAttempted!: () => void;
+    const replacementAttempted = new Promise<void>((resolve) => {
+      notifyReplacementAttempted = resolve;
+    });
+    const replacementStore = new TeamTaskAttachmentStore(undefined, {
+      run(mutationKey, operation) {
+        notifyReplacementAttempted();
+        return secondCoordinator.run(mutationKey, operation);
+      },
+    });
     const failure = new Error('comment write failed');
     let originalPath: string | null = null;
     let replacementPath: string | null = null;
+    let replacementSettled = false;
+    let replace: Promise<TaskAttachmentMeta> | null = null;
     const addTaskComment = vi.fn(async (...args: unknown[]) => {
       const attachments = args[3] as TaskAttachmentMeta[] | undefined;
       originalPath = attachments?.[0]?.filePath ?? null;
-      await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
-      const replacement = await store.saveAttachment(
-        'my-team',
-        'task-1',
-        ATTACHMENT_ID,
-        'replacement.png',
-        'image/png',
-        'cmVwbGFjZW1lbnQgYnl0ZXM='
-      );
-      replacementPath = replacement.filePath ?? null;
+      replace = (async () => {
+        await replacementStore.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+        const replacement = await replacementStore.saveAttachment(
+          'my-team',
+          'task-1',
+          ATTACHMENT_ID,
+          'replacement.png',
+          'image/png',
+          'cmVwbGFjZW1lbnQgYnl0ZXM='
+        );
+        replacementPath = replacement.filePath ?? null;
+        return replacement;
+      })().finally(() => {
+        replacementSettled = true;
+      });
+      await replacementAttempted;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      expect(replacementSettled).toBe(false);
       throw failure;
     });
     const useCase = new AddTaskCommentUseCase({
@@ -444,9 +539,10 @@ describe('TeamTaskAttachmentStore', () => {
         ],
       })
     ).rejects.toBe(failure);
+    await replace;
 
     await expect(
-      store.getAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png')
+      replacementStore.getAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png')
     ).resolves.toBe('cmVwbGFjZW1lbnQgYnl0ZXM=');
     expect(originalPath).not.toBeNull();
     expect(replacementPath).toBe(originalPath);

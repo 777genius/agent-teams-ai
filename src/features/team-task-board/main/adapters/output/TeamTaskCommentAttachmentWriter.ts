@@ -2,33 +2,34 @@ import { TeamTaskAttachmentStore } from '@main/services/team/TeamTaskAttachmentS
 
 import type {
   SavedTaskCommentAttachment,
+  TaskCommentAttachmentTransactionPort,
   TaskCommentAttachmentWriterPort,
 } from '../../../core/application/ports/TeamTaskBoardPorts';
-import type { AttachmentMediaType } from '@shared/types';
 
 export class TeamTaskCommentAttachmentWriter implements TaskCommentAttachmentWriterPort {
   constructor(private readonly store: TeamTaskAttachmentStore = new TeamTaskAttachmentStore()) {}
 
-  async saveAttachment(
+  async runTransaction<T>(
     teamName: string,
     taskId: string,
-    attachmentId: string,
-    filename: string,
-    mimeType: AttachmentMediaType,
-    base64Data: string
-  ): Promise<SavedTaskCommentAttachment> {
-    const receipt = await this.store.saveAttachmentWithReceipt(
-      teamName,
-      taskId,
-      attachmentId,
-      filename,
-      mimeType,
-      base64Data
+    operation: (transaction: TaskCommentAttachmentTransactionPort) => Promise<T>
+  ): Promise<T> {
+    return this.store.runTaskTransaction(teamName, taskId, (storeTransaction) =>
+      operation({
+        saveAttachment: async (attachmentId, filename, mimeType, base64Data) => {
+          const receipt = await storeTransaction.saveAttachmentWithReceipt(
+            attachmentId,
+            filename,
+            mimeType,
+            base64Data
+          );
+          return {
+            metadata: receipt.metadata,
+            finalize: () => storeTransaction.finalizeAttachment(receipt),
+            rollback: () => storeTransaction.rollbackAttachment(receipt),
+          } satisfies SavedTaskCommentAttachment;
+        },
+      })
     );
-    return {
-      metadata: receipt.metadata,
-      finalize: () => this.store.finalizeAttachment(receipt),
-      rollback: () => this.store.rollbackAttachment(receipt),
-    };
   }
 }

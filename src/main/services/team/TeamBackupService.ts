@@ -27,6 +27,12 @@ import {
   collectRecursiveFiles,
   collectRecursiveFilesSync,
 } from './TeamBackupFileCollection';
+import {
+  isValidConfig,
+  isValidJson,
+  shouldCollectTaskAttachmentBackupFile,
+  shouldCollectTaskAttachmentBackupPath,
+} from './TeamBackupFilePolicy';
 import { TeamBackupRestoreService } from './TeamBackupRestoreService';
 
 import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
@@ -105,24 +111,6 @@ function isEnoent(err: unknown): boolean {
 
 function nowIso(): string {
   return new Date().toISOString();
-}
-
-function isValidJson(content: string): boolean {
-  try {
-    JSON.parse(content);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function isValidConfig(content: string): boolean {
-  try {
-    const parsed = JSON.parse(content) as Record<string, unknown>;
-    return typeof parsed.name === 'string' && parsed.name.trim() !== '';
-  } catch {
-    return false;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -804,7 +792,7 @@ export class TeamBackupService {
           try {
             const attachments = await fs.promises.readdir(taskDirPath, { withFileTypes: true });
             for (const att of attachments) {
-              if (att.isFile()) {
+              if (att.isFile() && shouldCollectTaskAttachmentBackupFile(att.name)) {
                 files.push({
                   sourcePath: path.join(taskDirPath, att.name),
                   relPath: `${subdir}/${taskDir.name}/${att.name}`,
@@ -912,7 +900,7 @@ export class TeamBackupService {
               { withFileTypes: true }
             );
             for (const att of attachments) {
-              if (att.isFile()) {
+              if (att.isFile() && shouldCollectTaskAttachmentBackupFile(att.name)) {
                 files.push({
                   sourcePath: path.join(appDataDir, subdir, teamName, taskDir.name, att.name),
                   relPath: `${subdir}/${taskDir.name}/${att.name}`,
@@ -955,6 +943,7 @@ export class TeamBackupService {
         for (const entry of entries) {
           const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
           if (entry.isFile()) {
+            if (!shouldCollectTaskAttachmentBackupPath(relPath)) continue;
             results.push(relPath);
           } else if (entry.isDirectory()) {
             await walk(path.join(dir, entry.name), relPath);

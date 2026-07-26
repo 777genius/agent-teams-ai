@@ -29,7 +29,7 @@ describe('createTeamTaskBoardFeature', () => {
         loadFresh()
     );
     const commentAttachments = {
-      saveAttachment: vi.fn(),
+      runTransaction: vi.fn(),
     };
     const logger = { error: vi.fn(), warn: vi.fn() };
 

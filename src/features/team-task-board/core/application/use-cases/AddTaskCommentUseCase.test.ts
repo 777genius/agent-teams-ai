@@ -4,6 +4,7 @@ import { AddTaskCommentUseCase } from './AddTaskCommentUseCase';
 
 import type {
   SavedTaskCommentAttachment,
+  TaskCommentAttachmentTransactionPort,
   TaskCommentAttachmentWriterPort,
   TaskCommentWriterPort,
   TeamTaskBoardLoggerPort,
@@ -13,8 +14,26 @@ import type { AttachmentMediaType, TaskComment } from '@shared/types';
 function createDependencies(): {
   comments: TaskCommentWriterPort;
   attachments: TaskCommentAttachmentWriterPort;
+  attachmentTransaction: TaskCommentAttachmentTransactionPort;
   logger: Pick<TeamTaskBoardLoggerPort, 'warn'>;
 } {
+  const attachmentTransaction: TaskCommentAttachmentTransactionPort = {
+    saveAttachment: vi.fn(
+      async (_attachmentId, filename, mimeType) =>
+        ({
+          metadata: {
+            id: _attachmentId,
+            filename,
+            mimeType,
+            size: 4,
+            addedAt: '2026-07-22T00:00:00.000Z',
+            filePath: `/workspace/attachments/${_attachmentId}`,
+          },
+          finalize: vi.fn(async () => undefined),
+          rollback: vi.fn(async () => undefined),
+        }) satisfies SavedTaskCommentAttachment
+    ),
+  };
   return {
     comments: {
       addTaskComment: vi.fn(
@@ -29,22 +48,9 @@ function createDependencies(): {
       ),
     },
     attachments: {
-      saveAttachment: vi.fn(
-        async (_teamName, _taskId, attachmentId, filename, mimeType) =>
-          ({
-            metadata: {
-              id: attachmentId,
-              filename,
-              mimeType,
-              size: 4,
-              addedAt: '2026-07-22T00:00:00.000Z',
-              filePath: `/workspace/attachments/${attachmentId}`,
-            },
-            finalize: vi.fn(async () => undefined),
-            rollback: vi.fn(async () => undefined),
-          }) satisfies SavedTaskCommentAttachment
-      ),
+      runTransaction: vi.fn((_teamName, _taskId, operation) => operation(attachmentTransaction)),
     },
+    attachmentTransaction,
     logger: {
       warn: vi.fn(),
     },
@@ -52,6 +58,19 @@ function createDependencies(): {
 }
 
 describe('AddTaskCommentUseCase', () => {
+  it('does not acquire an attachment transaction for a text-only comment', async () => {
+    const dependencies = createDependencies();
+    const useCase = new AddTaskCommentUseCase(dependencies);
+
+    await useCase.execute('my-team', 'task-1', {
+      text: 'Comment',
+      attachments: [],
+    });
+
+    expect(dependencies.attachments.runTransaction).not.toHaveBeenCalled();
+    expect(dependencies.comments.addTaskComment).toHaveBeenCalledOnce();
+  });
+
   it('saves attachments before persisting their comment metadata', async () => {
     const dependencies = createDependencies();
     const useCase = new AddTaskCommentUseCase(dependencies);
@@ -69,9 +88,7 @@ describe('AddTaskCommentUseCase', () => {
       taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'my-team' }],
     });
 
-    expect(dependencies.attachments.saveAttachment).toHaveBeenCalledWith(
-      'my-team',
-      'task-1',
+    expect(dependencies.attachmentTransaction.saveAttachment).toHaveBeenCalledWith(
       'attachment-1',
       'proof.png',
       'image/png',
@@ -85,7 +102,7 @@ describe('AddTaskCommentUseCase', () => {
       [{ taskId: 'task-2', displayId: '#2', teamName: 'my-team' }]
     );
     expect(
-      vi.mocked(dependencies.attachments.saveAttachment).mock.invocationCallOrder[0]
+      vi.mocked(dependencies.attachmentTransaction.saveAttachment).mock.invocationCallOrder[0]
     ).toBeLessThan(vi.mocked(dependencies.comments.addTaskComment).mock.invocationCallOrder[0]);
   });
 
@@ -93,7 +110,7 @@ describe('AddTaskCommentUseCase', () => {
     const dependencies = createDependencies();
     const failure = new Error('second save failed');
     const rollback = vi.fn(async () => undefined);
-    vi.mocked(dependencies.attachments.saveAttachment)
+    vi.mocked(dependencies.attachmentTransaction.saveAttachment)
       .mockResolvedValueOnce({
         metadata: {
           id: 'attachment-1',
@@ -140,7 +157,7 @@ describe('AddTaskCommentUseCase', () => {
     const rollbackSecond = vi.fn(async () => {
       throw new Error('cleanup failed');
     });
-    vi.mocked(dependencies.attachments.saveAttachment)
+    vi.mocked(dependencies.attachmentTransaction.saveAttachment)
       .mockResolvedValueOnce(
         createSavedAttachment('attachment-1', 'one.png', 'image/png', rollbackFirst)
       )
@@ -181,7 +198,7 @@ describe('AddTaskCommentUseCase', () => {
   it('finalizes saved generations only after comment persistence succeeds', async () => {
     const dependencies = createDependencies();
     const finalize = vi.fn(async () => undefined);
-    vi.mocked(dependencies.attachments.saveAttachment).mockResolvedValueOnce(
+    vi.mocked(dependencies.attachmentTransaction.saveAttachment).mockResolvedValueOnce(
       createSavedAttachment(
         'attachment-1',
         'one.png',
@@ -214,7 +231,7 @@ describe('AddTaskCommentUseCase', () => {
     const dependencies = createDependencies();
     const finalizeFailure = new Error('finalize failed');
     const rollback = vi.fn(async () => undefined);
-    vi.mocked(dependencies.attachments.saveAttachment).mockResolvedValueOnce(
+    vi.mocked(dependencies.attachmentTransaction.saveAttachment).mockResolvedValueOnce(
       createSavedAttachment('attachment-1', 'one.png', 'image/png', rollback, async () => {
         throw finalizeFailure;
       })

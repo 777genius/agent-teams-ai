@@ -313,6 +313,52 @@ describe('TeamBackupService', () => {
     expect(restoredRuntimeManifest.activeRunId).toBe('lane-run-1');
   });
 
+  it('never backs up or restores task attachment generation guards', async () => {
+    const service = new TeamBackupService();
+    const teamName = 'attachment-guard-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const taskDir = path.join(hoisted.appDataPath, 'task-attachments', teamName, 'task-1');
+    const attachmentName = '11111111-1111-4111-8111-111111111111--attachment';
+    const guardName = '.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp';
+    const backupTaskDir = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'task-attachments',
+      'task-1'
+    );
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.mkdir(taskDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Attachment Guard Team' }),
+      'utf8'
+    );
+    await fs.writeFile(path.join(taskDir, attachmentName), 'attachment bytes', 'utf8');
+    await fs.link(path.join(taskDir, attachmentName), path.join(taskDir, guardName));
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    await expect(fs.readFile(path.join(backupTaskDir, attachmentName), 'utf8')).resolves.toBe(
+      'attachment bytes'
+    );
+    await expect(fs.stat(path.join(backupTaskDir, guardName))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+
+    await fs.writeFile(path.join(backupTaskDir, guardName), 'legacy guard bytes', 'utf8');
+    await fs.rm(teamDir, { recursive: true, force: true });
+    await fs.rm(taskDir, { recursive: true, force: true });
+    await service.restoreIfNeeded();
+    service.dispose();
+
+    await expect(fs.readFile(path.join(taskDir, attachmentName), 'utf8')).resolves.toBe(
+      'attachment bytes'
+    );
+    await expect(fs.stat(path.join(taskDir, guardName))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('fences startup restore after the durable destructive deletion boundary', async () => {
     const teamName = 'delete-crash-team';
     const teamDir = path.join(hoisted.teamsBase, teamName);

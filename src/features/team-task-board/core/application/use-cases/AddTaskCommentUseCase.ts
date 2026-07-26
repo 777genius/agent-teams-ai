@@ -1,5 +1,6 @@
 import type {
   SavedTaskCommentAttachment,
+  TaskCommentAttachmentTransactionPort,
   TaskCommentAttachmentWriterPort,
   TaskCommentWriterPort,
   TeamTaskBoardLoggerPort,
@@ -37,13 +38,31 @@ export class AddTaskCommentUseCase implements AddTaskCommentPort {
     taskId: string,
     input: AddTaskCommentInput
   ): Promise<TaskComment> {
+    if (input.attachments.length === 0) {
+      return this.dependencies.comments.addTaskComment(
+        teamName,
+        taskId,
+        input.text,
+        undefined,
+        input.taskRefs
+      );
+    }
+    return this.dependencies.attachments.runTransaction(teamName, taskId, (transaction) =>
+      this.executeAttachmentTransaction(teamName, taskId, input, transaction)
+    );
+  }
+
+  private async executeAttachmentTransaction(
+    teamName: string,
+    taskId: string,
+    input: AddTaskCommentInput,
+    attachments: TaskCommentAttachmentTransactionPort
+  ): Promise<TaskComment> {
     const savedAttachments: SavedTaskCommentAttachment[] = [];
     let comment: TaskComment;
     try {
       for (const attachment of input.attachments) {
-        const saved = await this.dependencies.attachments.saveAttachment(
-          teamName,
-          taskId,
+        const saved = await attachments.saveAttachment(
           attachment.id,
           attachment.filename,
           attachment.mimeType,
