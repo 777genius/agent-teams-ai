@@ -49,6 +49,11 @@ export const projectScopedControllerToolGrants: readonly ControlledAgentToolGran
     ControlledAgentToolGroup.WorkerLifecycle,
     "write",
   ),
+  grant(
+    ControlledAgentToolName.ProjectPruneWorkspaceDependencies,
+    ControlledAgentToolGroup.WorkerLifecycle,
+    "write",
+  ),
   grant(ControlledAgentToolName.ProjectStop, ControlledAgentToolGroup.WorkerLifecycle, "write"),
   grant(
     ControlledAgentToolName.ProjectMarkReviewed,

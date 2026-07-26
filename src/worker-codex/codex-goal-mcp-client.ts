@@ -70,6 +70,7 @@ const requiredCodexGoalMcpTools = [
   "codex_goal_project_create_job",
   "codex_goal_project_refill_worker",
   "codex_goal_project_prepare_verifier",
+  "codex_goal_project_prune_workspace_dependencies",
   "codex_goal_project_recover_operations",
   "codex_goal_project_admission_snapshot",
   "codex_goal_project_update_controller_scope",

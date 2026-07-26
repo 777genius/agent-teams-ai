@@ -17,6 +17,7 @@ import {
   projectControlStopStoredJobView,
 } from "./codex-goal-mcp-project-control-actions";
 import { projectControlMarkReviewedView } from "./codex-goal-mcp-project-control-review";
+import { projectControlPruneWorkspaceDependenciesView } from "./codex-goal-mcp-project-control-workspace-maintenance";
 import {
   projectControlRecordFailedNoOutputView,
 } from "./codex-goal-mcp-project-control-terminal-output";
@@ -157,6 +158,15 @@ export async function projectControlPushBranch(args: ProjectControlMcpArgs) {
 
 export async function projectControlStopStoredJob(args: ProjectControlMcpArgs) {
   return mcpJson(await projectControlStopStoredJobView(args, projectControlActionDeps()));
+}
+
+export async function projectControlPruneWorkspaceDependencies(
+  args: ProjectControlMcpArgs,
+) {
+  return mcpJson(await projectControlPruneWorkspaceDependenciesView(
+    args,
+    projectControlActionDeps(),
+  ));
 }
 
 export async function projectControlMarkReviewed(args: ProjectControlMcpArgs) {

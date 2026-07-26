@@ -32,6 +32,7 @@ export type GoalMcpArgs = {
   readonly authRootDir?: string;
   readonly stateRootDir?: string;
   readonly workspacePath?: string;
+  readonly expectedWorkspacePath?: string;
   readonly promptPath?: string;
   readonly codexGoalObjective?: string;
   readonly taskId?: string;
@@ -160,6 +161,7 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly confirmIntegrate?: boolean;
   readonly confirmUpdate?: boolean;
   readonly confirmPush?: boolean;
+  readonly confirmPrune?: boolean;
   readonly confirmStart?: boolean;
   readonly continuationAccounts?: string | readonly string[];
   readonly confirmStop?: boolean;

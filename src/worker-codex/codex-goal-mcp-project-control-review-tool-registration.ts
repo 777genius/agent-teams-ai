@@ -7,6 +7,7 @@ import {
 import { withMcpErrors } from "./codex-goal-mcp-response";
 import {
   projectControlMarkReviewed,
+  projectControlPruneWorkspaceDependencies,
   projectControlRecordFailedNoOutput,
   projectControlStopStoredJob,
 } from "./codex-goal-mcp-project-control-tool-handlers";
@@ -31,6 +32,26 @@ export function registerCodexGoalProjectControlReviewTools(server: McpServer): v
     },
     async (args) => withMcpErrors(async () =>
       projectControlStopStoredJob(args as ProjectControlMcpArgs),
+    ),
+  );
+
+  server.registerTool(
+    "codex_goal_project_prune_workspace_dependencies",
+    {
+      title: "Project Control Prune Workspace Dependencies",
+      description:
+        "Preview or remove only a terminal worker workspace's node_modules through ProjectScopedControl policy and audit.",
+      inputSchema: {
+        ...jobIdInputSchema(),
+        controllerJobId: z.string().min(1),
+        expectedWorkspacePath: z.string().min(1),
+        confirmPrune: z.boolean().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      projectControlPruneWorkspaceDependencies(
+        args as ProjectControlMcpArgs,
+      ),
     ),
   );
 

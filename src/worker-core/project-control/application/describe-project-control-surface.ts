@@ -11,6 +11,7 @@ const workerLifecycleTools: readonly ProjectControlToolCapability[] = [
   capability("refill_worker", "worker_lifecycle", false),
   capability("prepare_verifier", "worker_lifecycle", false),
   capability("recover_operations", "worker_lifecycle", false),
+  capability("prune_workspace_dependencies", "worker_lifecycle", false),
   capability("mark_reviewed", "worker_lifecycle", false),
   capability("record_failed_no_output", "worker_lifecycle", false),
 ];

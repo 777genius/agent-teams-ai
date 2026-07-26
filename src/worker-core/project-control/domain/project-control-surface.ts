@@ -5,6 +5,7 @@ export type ProjectControlToolKind =
   | "refill_worker"
   | "prepare_verifier"
   | "recover_operations"
+  | "prune_workspace_dependencies"
   | "mark_reviewed"
   | "record_failed_no_output"
   | "open_integration_attempt"

@@ -51,6 +51,7 @@ export enum ProjectOperation {
   StartWorker = "start_worker",
   StopWorker = "stop_worker",
   CreateWorktree = "create_worktree",
+  PruneWorkspaceDependencies = "prune_workspace_dependencies",
   WriteReviewMarker = "write_review_marker",
   IntegrateCommit = "integrate_commit",
   PushBranch = "push_branch",
@@ -221,6 +222,9 @@ export type ProjectOperationRequest =
       readonly operation: ProjectOperation.CreateWorktree;
     } & ProjectWorktreeAccessRequest)
   | ({
+      readonly operation: ProjectOperation.PruneWorkspaceDependencies;
+    } & ProjectJobAccessRequest)
+  | ({
       readonly operation: ProjectOperation.WriteReviewMarker;
     } & ProjectJobAccessRequest)
   | ({
@@ -306,6 +310,7 @@ export interface AccessPolicyService {
   canStartWorker(request: ProjectJobAccessRequest): PolicyDecision;
   canStopWorker(request: ProjectJobAccessRequest): PolicyDecision;
   canCreateWorktree(request: ProjectWorktreeAccessRequest): PolicyDecision;
+  canPruneWorkspaceDependencies(request: ProjectJobAccessRequest): PolicyDecision;
   canWriteReviewMarker(request: ProjectJobAccessRequest): PolicyDecision;
   canIntegrateCommit(request: ProjectGitAccessRequest): PolicyDecision;
   canPushBranch(request: ProjectGitAccessRequest): PolicyDecision;
@@ -402,6 +407,8 @@ class DefaultAccessPolicyService implements AccessPolicyService {
         return this.canStopWorker(request);
       case ProjectOperation.CreateWorktree:
         return this.canCreateWorktree(request);
+      case ProjectOperation.PruneWorkspaceDependencies:
+        return this.canPruneWorkspaceDependencies(request);
       case ProjectOperation.WriteReviewMarker:
         return this.canWriteReviewMarker(request);
       case ProjectOperation.IntegrateCommit:
@@ -445,6 +452,15 @@ class DefaultAccessPolicyService implements AccessPolicyService {
 
   canStopWorker(request: ProjectJobAccessRequest): PolicyDecision {
     return this.projectControlJobDecision(ProjectOperation.StopWorker, request);
+  }
+
+  canPruneWorkspaceDependencies(
+    request: ProjectJobAccessRequest,
+  ): PolicyDecision {
+    return this.projectControlJobDecision(
+      ProjectOperation.PruneWorkspaceDependencies,
+      request,
+    );
   }
 
   canCreateWorktree(request: ProjectWorktreeAccessRequest): PolicyDecision {

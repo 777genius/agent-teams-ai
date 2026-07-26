@@ -102,6 +102,9 @@ export interface ProjectWorkspacePort {
   resolveRevision?(
     input: ProjectControlCreateWorktreeInput,
   ): Promise<ProjectResolvedWorktreeSource>;
+  pruneWorkspaceDependencies?(
+    workspacePath: string,
+  ): Promise<ProjectControlOperationResult>;
   createWorktree(
     input: ProjectControlCreateWorktreeInput,
   ): Promise<ProjectControlOperationResult>;
@@ -197,6 +200,21 @@ export class ProjectControlBroker {
       ...(input.ownedPaths ? { ownedPaths: input.ownedPaths } : {}),
     });
     return this.ports.workspace.createWorktree(input);
+  }
+
+  async pruneWorkspaceDependencies(
+    input: ProjectJobAccessRequest,
+  ): Promise<ProjectControlOperationResult> {
+    await this.authorize(this.policy.canPruneWorkspaceDependencies(input));
+    if (!input.workspacePath) {
+      throw new Error("project_control_prune_workspace_path_required");
+    }
+    if (!this.ports.workspace.pruneWorkspaceDependencies) {
+      throw new Error("project_control_prune_workspace_port_unavailable");
+    }
+    return this.ports.workspace.pruneWorkspaceDependencies(
+      input.workspacePath,
+    );
   }
 
   async resolveWorktreeRevision(

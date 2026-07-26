@@ -113,6 +113,9 @@ export type CodexProjectControlBrokerInput = {
   readonly createManifest?: CodexGoalJobManifestInput;
   readonly createOverwrite?: boolean;
   readonly createWorktreeInput?: CodexGoalProjectCreateWorktreeInput;
+  readonly pruneWorkspaceDependenciesEffect?: (
+    workspacePath: string,
+  ) => Promise<ProjectControlOperationResult>;
   readonly admittedInputPatchTarget?: {
     readonly jobId: string;
     readonly workspacePath: string;
@@ -447,6 +450,12 @@ function codexProjectControlPorts(
       },
     },
     workspace: {
+      async pruneWorkspaceDependencies(workspacePath) {
+        if (!input.pruneWorkspaceDependenciesEffect) {
+          throw new Error("project_control_prune_workspace_effect_required");
+        }
+        return input.pruneWorkspaceDependenciesEffect(workspacePath);
+      },
       async resolveRevision(worktreeInput) {
         const sourceWorkspacePath = await realpath(
           worktreeInput.sourceWorkspacePath ?? input.controller.workspacePath,
