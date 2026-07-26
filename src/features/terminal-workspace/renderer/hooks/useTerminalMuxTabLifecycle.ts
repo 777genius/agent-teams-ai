@@ -26,6 +26,12 @@ export type TerminalMuxCommands = Pick<
 export interface TerminalMuxTabCloseDispatch {
   closedTabId: string;
   preferredFocusTabId: string | null;
+  willDispatchPreferredFocus: boolean;
+}
+
+export interface TerminalMuxTabCloseFocusDispatch {
+  closedTabId: string;
+  focusTabId: string;
 }
 
 interface UseTerminalMuxTabLifecycleOptions {
@@ -44,6 +50,7 @@ interface UseTerminalMuxTabLifecycleOptions {
   visibleTabs: readonly TerminalMuxTab[];
   onSettingsOpenChange?: (open: boolean) => void;
   onTabCloseDispatched?: (dispatch: TerminalMuxTabCloseDispatch) => void;
+  onTabCloseFocusDispatched?: (dispatch: TerminalMuxTabCloseFocusDispatch) => void;
   onTabContentPendingChange?: (pending: boolean) => void;
 }
 
@@ -115,6 +122,7 @@ export function useTerminalMuxTabLifecycle({
   visibleTabs,
   onSettingsOpenChange,
   onTabCloseDispatched,
+  onTabCloseFocusDispatched,
   onTabContentPendingChange,
 }: UseTerminalMuxTabLifecycleOptions): UseTerminalMuxTabLifecycleResult {
   const mountedRef = useRef(true);
@@ -384,6 +392,9 @@ export function useTerminalMuxTabLifecycle({
         orderedVisibleTabs,
         tab.tab_id
       );
+      const willDispatchPreferredFocus = plan.commands.some(
+        (command) => command.kind === 'focus_tab' && command.tab_id === preferredFocusTabId
+      );
       await runMuxAction(plan, (command) => {
         if (
           command.kind === 'close_tab' &&
@@ -394,6 +405,19 @@ export function useTerminalMuxTabLifecycle({
           onTabCloseDispatched?.({
             closedTabId: tab.tab_id,
             preferredFocusTabId,
+            willDispatchPreferredFocus,
+          });
+          return;
+        }
+        if (
+          command.kind === 'focus_tab' &&
+          command.tab_id === preferredFocusTabId &&
+          mountedRef.current &&
+          scopeRef.current.epoch === targetScopeEpoch
+        ) {
+          onTabCloseFocusDispatched?.({
+            closedTabId: tab.tab_id,
+            focusTabId: command.tab_id,
           });
         }
       });
@@ -403,6 +427,7 @@ export function useTerminalMuxTabLifecycle({
       canCloseVisibleTabs,
       canFocusTab,
       onTabCloseDispatched,
+      onTabCloseFocusDispatched,
       orderedVisibleTabs,
       runMuxAction,
     ]

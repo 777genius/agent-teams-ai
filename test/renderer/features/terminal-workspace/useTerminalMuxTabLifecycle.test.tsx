@@ -93,6 +93,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(onTabCloseDispatched).toHaveBeenCalledWith({
       closedTabId: TAB_ONE.tab_id,
       preferredFocusTabId: TAB_TWO.tab_id,
+      willDispatchPreferredFocus: true,
     });
   });
 

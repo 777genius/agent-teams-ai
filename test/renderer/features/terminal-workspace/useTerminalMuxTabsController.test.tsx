@@ -178,6 +178,36 @@ describe('useTerminalMuxTabsController close focus', () => {
       attach.resolve();
       await closeAction;
     });
+
+    expect(document.activeElement).not.toBe(requiredElement('tab-tab-1'));
+  });
+
+  it('waits for the recorded post-close focus target across an intermediate topology', async () => {
+    const focusDispatch = createDeferred<void>();
+    commands.dispatchMuxCommand = vi.fn(async (_sessionId, command) => {
+      if (command.kind === 'focus_tab') {
+        await focusDispatch.promise;
+      }
+    }) as never;
+    await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_ONE));
+    requiredElement('close-tab-1').focus();
+
+    let closeAction!: Promise<void>;
+    await act(async () => {
+      closeAction = requiredControls().requestCloseTab(TAB_ONE);
+      await flushMicrotasks();
+    });
+
+    await render(createSnapshot([TAB_TWO, TAB_THREE], TAB_THREE));
+    expect(document.activeElement).not.toBe(requiredElement('tab-tab-3'));
+
+    await act(async () => {
+      focusDispatch.resolve();
+      await closeAction;
+    });
+    await render(createSnapshot([TAB_TWO, TAB_THREE], TAB_TWO));
+
+    expect(document.activeElement).toBe(requiredElement('tab-tab-2'));
   });
 
   it('does not restore stale close focus after the connection reconnects', async () => {
@@ -201,6 +231,8 @@ describe('useTerminalMuxTabsController close focus', () => {
       attach.resolve();
       await closeAction;
     });
+
+    expect(document.activeElement).not.toBe(requiredElement('tab-tab-1'));
   });
 
   it('restores DOM focus to the active mux tab after closing a focused inactive tab', async () => {

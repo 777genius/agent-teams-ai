@@ -25,6 +25,7 @@ import {
 import {
   type TerminalMuxCommands,
   type TerminalMuxTabCloseDispatch,
+  type TerminalMuxTabCloseFocusDispatch,
   useTerminalMuxTabLifecycle,
 } from './useTerminalMuxTabLifecycle';
 import { useTerminalTabPointerReorder } from './useTerminalTabPointerReorder';
@@ -90,6 +91,7 @@ interface PendingCloseFocusIntent {
 
 interface PendingCloseFocusRequest extends TerminalMuxTabCloseDispatch {
   commands: TerminalMuxCommands;
+  preferredFocusWasDispatched: boolean;
   scopeKey: string;
 }
 
@@ -140,10 +142,25 @@ export function useTerminalMuxTabsController({
       setPendingCloseFocusRequest({
         ...dispatch,
         commands,
+        preferredFocusWasDispatched: false,
         scopeKey: focusScopeKey,
       });
     },
     [commands, connectionState, focusScopeKey]
+  );
+  const handleTabCloseFocusDispatched = useCallback(
+    (dispatch: TerminalMuxTabCloseFocusDispatch): void => {
+      setPendingCloseFocusRequest((current) =>
+        current &&
+        current.closedTabId === dispatch.closedTabId &&
+        current.preferredFocusTabId === dispatch.focusTabId &&
+        current.commands === commands &&
+        current.scopeKey === focusScopeKey
+          ? { ...current, preferredFocusWasDispatched: true }
+          : current
+      );
+    },
+    [commands, focusScopeKey]
   );
   const lifecycle = useTerminalMuxTabLifecycle({
     activeSessionId: viewModel.activeSessionId,
@@ -161,6 +178,7 @@ export function useTerminalMuxTabsController({
     visibleTabs: viewModel.visibleTabs,
     onSettingsOpenChange,
     onTabCloseDispatched: handleTabCloseDispatched,
+    onTabCloseFocusDispatched: handleTabCloseFocusDispatched,
     onTabContentPendingChange,
   });
   const {
@@ -291,7 +309,21 @@ export function useTerminalMuxTabsController({
       return;
     }
 
-    const focusTabId = viewModel.activeVisibleTabId;
+    const preferredFocusTabId = pendingCloseFocusRequest.preferredFocusTabId;
+    const preferredFocusIsVisible =
+      preferredFocusTabId !== null &&
+      viewModel.visibleTabs.some((tab) => tab.tab_id === preferredFocusTabId);
+    const waitForPreferredFocus =
+      pendingCloseFocusRequest.willDispatchPreferredFocus &&
+      (busy || pendingCloseFocusRequest.preferredFocusWasDispatched);
+    if (
+      waitForPreferredFocus &&
+      (!preferredFocusIsVisible || viewModel.activeVisibleTabId !== preferredFocusTabId)
+    ) {
+      return;
+    }
+
+    const focusTabId = waitForPreferredFocus ? preferredFocusTabId : viewModel.activeVisibleTabId;
     if (!focusTabId) {
       setPendingCloseFocusRequest(null);
       return;
@@ -305,6 +337,7 @@ export function useTerminalMuxTabsController({
     target.focus();
     setPendingCloseFocusRequest(null);
   }, [
+    busy,
     commands,
     connectionState,
     focusScopeKey,
