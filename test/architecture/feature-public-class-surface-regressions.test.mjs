@@ -336,6 +336,13 @@ test('traces constructor getter descriptors and local mutator aliases', () => {
       `,
       'src/features/class-define-property-getter/main/infrastructure/Store.ts':
         infrastructureSource(),
+      'src/features/class-global-mutator-self-method-name/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api { Object() { Object.assign(this, { store: Store }); } Reflect() { Reflect.set(this, 'store', Store); } }
+        export const api = new Api();
+      `,
+      'src/features/class-global-mutator-self-method-name/main/infrastructure/Store.ts':
+        infrastructureSource(),
       'src/features/class-object-assign-alias/main/index.ts': `
         import { Store } from './infrastructure/Store';
         class Api {
@@ -347,6 +354,41 @@ test('traces constructor getter descriptors and local mutator aliases', () => {
         export const api = new Api();
       `,
       'src/features/class-object-assign-alias/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/class-object-assign-destructured-declaration/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api { constructor() { const source = { fields: { store: Store } }; const { fields } = source; Object.assign(this, fields); } }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-destructured-declaration/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-destructured-assignment/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api { constructor() { let fields = {}; const source = { fields: { store: Store } }; ({ fields } = source); Object.assign(this, fields); } }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-destructured-assignment/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-destructured-default/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api { constructor() { const source = {}; const { fields = { store: Store } } = source; Object.assign(this, fields); } }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-destructured-default/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-destructured-assignment-default/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api { constructor() { let fields = {}; const source = {}; ({ fields = { store: Store } } = source); Object.assign(this, fields); } }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-destructured-assignment-default/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-destructured-rest/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api { constructor() { const source = { store: Store }; const { ...fields } = source; Object.assign(this, fields); } }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-destructured-rest/main/infrastructure/Store.ts':
+        infrastructureSource(),
       'src/features/class-object-assign-public-method/main/index.ts': `
         import { Store } from './infrastructure/Store';
         class Api {
@@ -390,7 +432,13 @@ test('traces constructor getter descriptors and local mutator aliases', () => {
         'src/features/class-define-properties-alias/main/index.ts',
         'src/features/class-define-properties-getter-alias/main/index.ts',
         'src/features/class-define-property-getter/main/index.ts',
+        'src/features/class-global-mutator-self-method-name/main/index.ts',
         'src/features/class-object-assign-alias/main/index.ts',
+        'src/features/class-object-assign-destructured-assignment-default/main/index.ts',
+        'src/features/class-object-assign-destructured-assignment/main/index.ts',
+        'src/features/class-object-assign-destructured-declaration/main/index.ts',
+        'src/features/class-object-assign-destructured-default/main/index.ts',
+        'src/features/class-object-assign-destructured-rest/main/index.ts',
         'src/features/class-object-assign-public-method/main/index.ts',
       ]);
     }
@@ -444,6 +492,20 @@ test('ignores constructor mutator aliases that cannot expose the implementation'
         export const api = new Api();
       `,
       'src/features/class-object-assign-alias-rebound-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-destructured-declaration-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api { constructor() { const source = { fields: {} }; const { fields = { store: Store } } = source; Object.assign(this, fields); } }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-destructured-declaration-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-destructured-assignment-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api { constructor() { let fields = { store: Store }; const source = { fields: {} }; ({ fields = { store: Store } } = source); Object.assign(this, fields); } }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-destructured-assignment-safe/main/infrastructure/Store.ts':
         infrastructureSource(),
       'src/features/class-object-assign-alias-other-target-safe/main/index.ts': `
         import { Store } from './infrastructure/Store';
@@ -560,12 +622,98 @@ test('keeps conditional constructor alias rebinds path-conservative', () => {
       `,
       'src/features/class-object-assign-true-rebind-safe/main/infrastructure/Store.ts':
         infrastructureSource(),
+      'src/features/class-object-assign-all-branches-rebind-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(condition: boolean) {
+            let fields = { store: Store };
+            if (condition) fields = {};
+            else fields = {};
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api(false);
+      `,
+      'src/features/class-object-assign-all-branches-rebind-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-one-dangerous-branch/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(condition: boolean) {
+            let fields = {};
+            if (condition) fields = {};
+            else fields = { store: Store };
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api(false);
+      `,
+      'src/features/class-object-assign-one-dangerous-branch/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-unreachable-loop-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            let fields = {};
+            while (false) fields = { store: Store };
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-unreachable-loop-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-unknown-loop/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor(condition: boolean) {
+            let fields = {};
+            while (condition) {
+              fields = { store: Store };
+              break;
+            }
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api(false);
+      `,
+      'src/features/class-object-assign-unknown-loop/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-nullish-rebind-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            let fields = { store: Store };
+            null ?? (fields = {});
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-nullish-rebind-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-object-assign-non-nullish-rebind/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {
+          constructor() {
+            let fields = { store: Store };
+            false ?? (fields = {});
+            Object.assign(this, fields);
+          }
+        }
+        export const api = new Api();
+      `,
+      'src/features/class-object-assign-non-nullish-rebind/main/infrastructure/Store.ts':
+        infrastructureSource(),
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
         'src/features/class-object-assign-conditional-rebind/main/index.ts',
         'src/features/class-object-assign-conditional-source/main/index.ts',
         'src/features/class-object-assign-false-rebind/main/index.ts',
+        'src/features/class-object-assign-non-nullish-rebind/main/index.ts',
+        'src/features/class-object-assign-one-dangerous-branch/main/index.ts',
+        'src/features/class-object-assign-unknown-loop/main/index.ts',
       ]);
     }
   );

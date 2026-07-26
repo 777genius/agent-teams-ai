@@ -6,6 +6,11 @@ import {
   propertyNameText,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
+import {
+  immediateIifeInvocation,
+  staticNullishness,
+  staticTruthiness,
+} from './feature-executed-iife-analysis.mjs';
 
 function isPublicInstanceMember(node) {
   if (!node.name || ts.isPrivateIdentifier(node.name)) return false;
@@ -117,9 +122,7 @@ function nearestLexicalScope(node, boundary, functionOwner) {
       ts.isBlock(current) ||
       ts.isCaseBlock(current) ||
       ts.isCatchClause(current) ||
-      ts.isForStatement(current) ||
-      ts.isForInStatement(current) ||
-      ts.isForOfStatement(current)
+      ts.isIterationStatement(current, false)
     ) {
       return current;
     }
@@ -128,54 +131,42 @@ function nearestLexicalScope(node, boundary, functionOwner) {
   return functionOwner?.body ?? boundary;
 }
 
-function nodeDepth(node) {
-  let depth = 0;
-  let current = node;
-  while (current.parent) {
-    depth += 1;
-    current = current.parent;
+function constrainPath(path, control, selected, staticSelection = null) {
+  if (staticSelection !== null) {
+    if (staticSelection !== selected) path.reachable = false;
+    return;
   }
-  return depth;
-}
-
-function containsPosition(node, position) {
-  return node.pos <= position && position <= node.end;
-}
-
-function staticBooleanValue(expression) {
-  const value = unwrapExpression(expression);
-  if (value.kind === ts.SyntaxKind.TrueKeyword) return true;
-  if (value.kind === ts.SyntaxKind.FalseKeyword) return false;
-  if (ts.isPrefixUnaryExpression(value) && value.operator === ts.SyntaxKind.ExclamationToken) {
-    const operand = staticBooleanValue(value.operand);
-    return operand === null ? null : !operand;
+  const previous = path.constraints.get(control);
+  if (previous !== undefined && previous !== selected) {
+    path.reachable = false;
+  } else {
+    path.constraints.set(control, selected);
   }
-  return null;
 }
 
-function conditionalBranchState(condition, selectedWhenTrue) {
-  const value = staticBooleanValue(condition);
-  if (value === null) return 'conditional';
-  return value === selectedWhenTrue ? 'definite' : 'unreachable';
+function executionOwner(node, boundary) {
+  for (let current = node.parent; current && current !== boundary; current = current.parent) {
+    if (ts.isFunctionLike(current) && !immediateIifeInvocation(current)) return current;
+  }
+  return boundary;
 }
 
-function writeExecutionState(node, boundary) {
-  let state = 'definite';
+function executionPath(node, boundary) {
+  const path = { constraints: new Map(), reachable: true };
   let current = node;
-  while (current.parent && current.parent !== boundary) {
+  while (path.reachable && current.parent && current.parent !== boundary) {
     const parent = current.parent;
-    let branchState = 'definite';
     if (ts.isIfStatement(parent)) {
       if (containsReference(parent.thenStatement, current)) {
-        branchState = conditionalBranchState(parent.expression, true);
+        constrainPath(path, parent, true, staticTruthiness(parent.expression));
       } else if (parent.elseStatement && containsReference(parent.elseStatement, current)) {
-        branchState = conditionalBranchState(parent.expression, false);
+        constrainPath(path, parent, false, staticTruthiness(parent.expression));
       }
     } else if (ts.isConditionalExpression(parent)) {
       if (containsReference(parent.whenTrue, current)) {
-        branchState = conditionalBranchState(parent.condition, true);
+        constrainPath(path, parent, true, staticTruthiness(parent.condition));
       } else if (containsReference(parent.whenFalse, current)) {
-        branchState = conditionalBranchState(parent.condition, false);
+        constrainPath(path, parent, false, staticTruthiness(parent.condition));
       }
     } else if (
       ts.isBinaryExpression(parent) &&
@@ -186,31 +177,110 @@ function writeExecutionState(node, boundary) {
         ts.SyntaxKind.QuestionQuestionToken,
       ].includes(parent.operatorToken.kind)
     ) {
-      const left = staticBooleanValue(parent.left);
+      let executes = null;
       if (parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
-        branchState = left === true ? 'definite' : left === false ? 'unreachable' : 'conditional';
+        executes = staticTruthiness(parent.left);
       } else if (parent.operatorToken.kind === ts.SyntaxKind.BarBarToken) {
-        branchState = left === false ? 'definite' : left === true ? 'unreachable' : 'conditional';
+        const truthiness = staticTruthiness(parent.left);
+        executes = truthiness === null ? null : !truthiness;
       } else {
-        branchState = 'conditional';
+        executes = staticNullishness(parent.left);
       }
+      constrainPath(path, parent, true, executes);
     } else if (
-      ((ts.isForStatement(parent) ||
-        ts.isForInStatement(parent) ||
-        ts.isForOfStatement(parent) ||
-        ts.isWhileStatement(parent)) &&
-        containsReference(parent.statement, current)) ||
-      ts.isCaseClause(parent) ||
-      ts.isDefaultClause(parent) ||
-      ts.isCatchClause(parent)
+      ts.isIterationStatement(parent, false) &&
+      containsReference(parent.statement, current)
     ) {
-      branchState = 'conditional';
+      const execution = ts.isDoStatement(parent)
+        ? true
+        : ts.isForStatement(parent)
+          ? parent.condition
+            ? staticTruthiness(parent.condition)
+            : true
+          : ts.isWhileStatement(parent)
+            ? staticTruthiness(parent.expression)
+            : null;
+      constrainPath(path, parent, true, execution);
+    } else if (ts.isCaseClause(parent) || ts.isDefaultClause(parent) || ts.isCatchClause(parent)) {
+      constrainPath(path, parent, true);
     }
-    if (branchState === 'unreachable') return 'unreachable';
-    if (branchState === 'conditional') state = 'conditional';
     current = parent;
   }
-  return state;
+  return path;
+}
+
+function constraintsMatch(left, right) {
+  return [...left].every(
+    ([control, selected]) => !right.has(control) || right.get(control) === selected
+  );
+}
+
+function withBindingFallback(bindings, target, initializer) {
+  if (!initializer) return bindings;
+  const relative = new Map(
+    selectedBindings(target).map((binding) => [binding.identifier.text, binding.path])
+  );
+  return bindings.map((binding) => ({
+    ...binding,
+    fallback: { expression: initializer, selected: relative.get(binding.identifier.text) ?? [] },
+  }));
+}
+
+function selectedBindings(pattern, path = []) {
+  const current = unwrapExpression(pattern);
+  if (ts.isIdentifier(current)) return [{ identifier: current, path }];
+  if (!ts.isObjectBindingPattern(current) && !ts.isObjectLiteralExpression(current)) return [];
+  const elements = ts.isObjectLiteralExpression(current) ? current.properties : current.elements;
+  return elements.flatMap((element) => {
+    const rest = element.dotDotDotToken || ts.isSpreadAssignment(element);
+    const target = ts.isPropertyAssignment(element)
+      ? element.initializer
+      : (element.name ?? element.expression);
+    if (!target) return [];
+    const selected = rest ? null : propertyNameText(element.propertyName ?? element.name);
+    const bindings = selectedBindings(target, rest ? path : [...path, selected]);
+    const initializer =
+      (ts.isBindingElement(element) && element.initializer) ||
+      (ts.isShorthandPropertyAssignment(element) && element.objectAssignmentInitializer);
+    return withBindingFallback(bindings, target, initializer);
+  });
+}
+
+function reachingWrites(writes, useNode, boundary) {
+  const usePath = executionPath(useNode, boundary);
+  if (!usePath.reachable) return [];
+  const candidates = writes
+    .filter(
+      (write) =>
+        write.position <= useNode.getStart() &&
+        executionOwner(write.node, boundary) === executionOwner(useNode, boundary)
+    )
+    .map((write) => ({ ...write, path: executionPath(write.node, boundary) }))
+    .filter(
+      (write) =>
+        write.path.reachable && constraintsMatch(write.path.constraints, usePath.constraints)
+    );
+  const controls = new Set();
+  for (const write of candidates) {
+    for (const control of write.path.constraints.keys()) {
+      if (!usePath.constraints.has(control)) controls.add(control);
+    }
+  }
+  if (controls.size > 8) return candidates;
+
+  const variableControls = [...controls];
+  const latestWrites = new Map();
+  for (let mask = 0; mask < 2 ** variableControls.length; mask += 1) {
+    const choices = new Map(usePath.constraints);
+    for (const [index, control] of variableControls.entries()) {
+      choices.set(control, Boolean(mask & (1 << index)));
+    }
+    const latest = candidates
+      .filter((write) => constraintsMatch(write.path.constraints, choices))
+      .sort((left, right) => right.position - left.position)[0];
+    if (latest) latestWrites.set(`${latest.position}:${latest.expression.pos}`, latest);
+  }
+  return [...latestWrites.values()];
 }
 
 function collectLocalBindingModel(boundary) {
@@ -218,54 +288,42 @@ function collectLocalBindingModel(boundary) {
   if (cached) return cached;
 
   const declarationsByName = new Map();
-  const writesByDeclaration = new Map();
-  let sequence = 0;
-  const addDeclaration = (name, node, scope, initializer) => {
+  const addDeclaration = (name, node, scope, initializer, selected = [], fallback) => {
     const declaration = {
-      key: `${name}:${node.pos}:${sequence++}`,
-      name,
-      node,
+      key: `${name}:${node.pos}`,
       position: node.getStart(),
       scope,
-      scopeDepth: nodeDepth(scope),
+      writes: initializer
+        ? [{ expression: initializer, fallback, node, selected, position: node.getStart() }]
+        : [],
     };
     const declarations = declarationsByName.get(name) ?? [];
-    declarations.push(declaration);
-    declarationsByName.set(name, declarations);
-    writesByDeclaration.set(
-      declaration,
-      initializer
-        ? [
-            {
-              expression: initializer,
-              position: node.getStart(),
-              state: writeExecutionState(node, boundary),
-            },
-          ]
-        : []
-    );
+    declarationsByName.set(name, [...declarations, declaration]);
   };
   const visitDeclarations = (node) => {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
-      const functionOwner = containingFunction(node, boundary);
-      const declarationList = ts.isVariableDeclarationList(node.parent) ? node.parent : null;
-      const blockScoped = Boolean(
-        declarationList && declarationList.flags & ts.NodeFlags.BlockScoped
-      );
-      addDeclaration(
-        node.name.text,
-        node,
-        blockScoped
-          ? nearestLexicalScope(node, boundary, functionOwner)
-          : (functionOwner?.body ?? boundary),
-        node.initializer
-      );
-    } else if (
-      ts.isParameter(node) &&
-      ts.isIdentifier(node.name) &&
-      ts.isFunctionLike(node.parent)
+    if (
+      ts.isVariableDeclaration(node) ||
+      (ts.isParameter(node) && ts.isFunctionLike(node.parent))
     ) {
-      addDeclaration(node.name.text, node, node.parent.body ?? node.parent, node.initializer);
+      const owner = containingFunction(node, boundary);
+      const list =
+        ts.isVariableDeclaration(node) && ts.isVariableDeclarationList(node.parent)
+          ? node.parent
+          : null;
+      const scope =
+        list && list.flags & ts.NodeFlags.BlockScoped
+          ? nearestLexicalScope(node, boundary, owner)
+          : (owner?.body ?? boundary);
+      for (const binding of selectedBindings(node.name)) {
+        addDeclaration(
+          binding.identifier.text,
+          node,
+          scope,
+          node.initializer,
+          binding.path,
+          binding.fallback
+        );
+      }
     }
     ts.forEachChild(node, visitDeclarations);
   };
@@ -275,22 +333,28 @@ function collectLocalBindingModel(boundary) {
     (declarationsByName.get(name) ?? [])
       .filter(
         (declaration) =>
-          declaration.position <= position && containsPosition(declaration.scope, position)
+          declaration.position <= position &&
+          declaration.scope.pos <= position &&
+          position <= declaration.scope.end
       )
       .sort(
-        (left, right) => right.scopeDepth - left.scopeDepth || right.position - left.position
+        (left, right) =>
+          left.scope.end - left.scope.pos - (right.scope.end - right.scope.pos) ||
+          right.position - left.position
       )[0] ?? null;
 
   const visitAssignments = (node) => {
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
       const target = unwrapExpression(node.left);
-      if (ts.isIdentifier(target)) {
-        const declaration = declarationAt(target.text, node.getStart());
+      for (const binding of selectedBindings(target)) {
+        const declaration = declarationAt(binding.identifier.text, node.getStart());
         if (declaration) {
-          writesByDeclaration.get(declaration).push({
+          declaration.writes.push({
             expression: node.right,
+            node,
+            selected: binding.path,
+            fallback: binding.fallback,
             position: node.end,
-            state: writeExecutionState(node, boundary),
           });
         }
       }
@@ -300,22 +364,11 @@ function collectLocalBindingModel(boundary) {
   visitAssignments(boundary);
 
   const model = {
-    resolveAll(name, position) {
-      const declaration = declarationAt(name, position);
+    resolveAll(name, useNode) {
+      const declaration = declarationAt(name, useNode.getStart());
       if (!declaration) return [];
-      const writes = writesByDeclaration
-        .get(declaration)
-        .filter((candidate) => candidate.position <= position && candidate.state !== 'unreachable')
-        .sort((left, right) => left.position - right.position);
-      const lastDefiniteIndex = writes.findLastIndex((candidate) => candidate.state === 'definite');
-      const reachingWrites = writes.filter(
-        (candidate, index) =>
-          index === lastDefiniteIndex ||
-          (index > lastDefiniteIndex && candidate.state === 'conditional')
-      );
-      return reachingWrites.map((write) => ({
-        beforePosition: write.position,
-        expression: write.expression,
+      return reachingWrites(declaration.writes, useNode, boundary).map((write) => ({
+        ...write,
         key: `${declaration.key}:${write.position}`,
       }));
     },
@@ -331,37 +384,63 @@ function uniqueNodes(nodes) {
 function resolvedLocalObjects(
   expression,
   boundary,
-  beforePosition,
+  selected = [],
   visited = new Set(),
   memo = new Map()
 ) {
   const current = expression && unwrapExpression(expression);
   if (!current) return [];
-  const memoKey = `${current.pos}:${current.end}:${beforePosition}`;
+  const memoKey = `${current.pos}:${current.end}:${selected.join('.')}`;
   if (memo.has(memoKey)) return memo.get(memoKey);
   memo.set(memoKey, []);
 
   const bindings = collectLocalBindingModel(boundary);
   let resolved = [];
-  if (ts.isObjectLiteralExpression(current)) {
+  if (ts.isObjectLiteralExpression(current) && selected.length > 0) {
+    const property = current.properties.find(
+      (candidate) =>
+        (ts.isPropertyAssignment(candidate) || ts.isShorthandPropertyAssignment(candidate)) &&
+        propertyNameText(candidate.name) === selected[0]
+    );
+    const value =
+      property && (ts.isPropertyAssignment(property) ? property.initializer : property.name);
+    resolved = value ? resolvedLocalObjects(value, boundary, selected.slice(1), visited, memo) : [];
+  } else if (ts.isArrayLiteralExpression(current) && selected.length > 0) {
+    const value = current.elements[Number(selected[0])];
+    resolved =
+      value && !ts.isOmittedExpression(value)
+        ? resolvedLocalObjects(value, boundary, selected.slice(1), visited, memo)
+        : [];
+  } else if (ts.isObjectLiteralExpression(current)) {
     resolved = [current];
   } else if (ts.isConditionalExpression(current)) {
     resolved = [
-      ...resolvedLocalObjects(current.whenTrue, boundary, beforePosition, new Set(visited), memo),
-      ...resolvedLocalObjects(current.whenFalse, boundary, beforePosition, new Set(visited), memo),
+      ...resolvedLocalObjects(current.whenTrue, boundary, selected, new Set(visited), memo),
+      ...resolvedLocalObjects(current.whenFalse, boundary, selected, new Set(visited), memo),
     ];
   } else if (ts.isIdentifier(current)) {
-    for (const binding of bindings.resolveAll(current.text, beforePosition)) {
+    for (const binding of bindings.resolveAll(current.text, current)) {
       if (visited.has(binding.key)) continue;
-      resolved.push(
-        ...resolvedLocalObjects(
-          binding.expression,
-          boundary,
-          binding.beforePosition,
-          new Set(visited).add(binding.key),
-          memo
-        )
+      const nextVisited = new Set(visited).add(binding.key);
+      const values = resolvedLocalObjects(
+        binding.expression,
+        boundary,
+        [...binding.selected, ...selected],
+        nextVisited,
+        memo
       );
+      resolved.push(...values);
+      if (values.length === 0 && binding.fallback) {
+        resolved.push(
+          ...resolvedLocalObjects(
+            binding.fallback.expression,
+            boundary,
+            [...binding.fallback.selected, ...selected],
+            nextVisited,
+            memo
+          )
+        );
+      }
     }
   } else {
     const access = memberAccess(current);
@@ -369,28 +448,10 @@ function resolvedLocalObjects(
       resolved = resolvedLocalObjects(
         access.receiver,
         boundary,
-        beforePosition,
+        [access.name, ...selected],
         visited,
         memo
-      ).flatMap((object) => {
-        const property = object.properties.find(
-          (candidate) =>
-            (ts.isPropertyAssignment(candidate) || ts.isShorthandPropertyAssignment(candidate)) &&
-            propertyNameText(candidate.name) === access.name
-        );
-        if (property && ts.isPropertyAssignment(property)) {
-          return resolvedLocalObjects(
-            property.initializer,
-            boundary,
-            beforePosition,
-            visited,
-            memo
-          );
-        }
-        return property && ts.isShorthandPropertyAssignment(property)
-          ? resolvedLocalObjects(property.name, boundary, beforePosition, visited, memo)
-          : [];
-      });
+      );
     }
   }
   const unique = uniqueNodes(resolved);
@@ -409,8 +470,8 @@ function valueExpressionContainsReference(expression, reference) {
   return current === value;
 }
 
-function objectValueMember(expression, reference, boundary, beforePosition) {
-  for (const object of resolvedLocalObjects(expression, boundary, beforePosition)) {
+function objectValueMember(expression, reference, boundary) {
+  for (const object of resolvedLocalObjects(expression, boundary)) {
     for (const property of object.properties) {
       if (ts.isShorthandPropertyAssignment(property) && containsReference(property, reference)) {
         return propertyNameText(property.name);
@@ -456,8 +517,8 @@ function descriptorGetterContainsReference(property, reference) {
     : valueExpressionContainsReference(getter, reference);
 }
 
-function descriptorContainsReference(expression, reference, boundary, beforePosition) {
-  return resolvedLocalObjects(expression, boundary, beforePosition).some((descriptor) =>
+function descriptorContainsReference(expression, reference, boundary) {
+  return resolvedLocalObjects(expression, boundary).some((descriptor) =>
     descriptor.properties.some((property) => {
       const name = property.name && propertyNameText(property.name);
       if (
@@ -472,47 +533,18 @@ function descriptorContainsReference(expression, reference, boundary, beforePosi
   );
 }
 
-function isDirectlyInvokedFunction(functionNode) {
-  let expression = functionNode;
-  while (
-    expression.parent &&
-    !ts.isCallExpression(expression.parent) &&
-    unwrapExpression(expression.parent) === functionNode
-  ) {
-    expression = expression.parent;
-  }
-  return (
-    ts.isCallExpression(expression.parent) &&
-    unwrapExpression(expression.parent.expression) === functionNode
-  );
-}
-
-function hasDeferredFunctionBoundary(node, boundary) {
-  let current = node.parent;
-  while (current && current !== boundary) {
+function callTargetsBoundaryInstance(call, boundary) {
+  let owner = null;
+  for (let current = call.parent; current && current !== boundary; current = current.parent) {
     if (
       (ts.isArrowFunction(current) || ts.isFunctionExpression(current)) &&
-      !isDirectlyInvokedFunction(current)
+      !immediateIifeInvocation(current)
     ) {
-      return true;
+      return false;
     }
-    current = current.parent;
+    if (!owner && ts.isFunctionLike(current) && !ts.isArrowFunction(current)) owner = current;
   }
-  return false;
-}
-
-function boundaryThisOwner(node, boundary) {
-  let current = node.parent;
-  while (current && current !== boundary) {
-    if (ts.isFunctionLike(current) && !ts.isArrowFunction(current)) return current;
-    current = current.parent;
-  }
-  return ts.isFunctionLike(boundary) ? boundary : null;
-}
-
-function callTargetsBoundaryInstance(call, boundary) {
-  if (hasDeferredFunctionBoundary(call, boundary)) return false;
-  const owner = boundaryThisOwner(call, boundary);
+  owner ??= ts.isFunctionLike(boundary) ? boundary : null;
   if (ts.isClassLike(boundary)) {
     if (owner) return owner.parent === boundary && !isStaticMember(owner);
     let member = call;
@@ -526,19 +558,17 @@ function callTargetsBoundaryInstance(call, boundary) {
 
 function importBindingNames(statement) {
   if (ts.isImportEqualsDeclaration(statement)) return [statement.name.text];
-  if (!ts.isImportDeclaration(statement) || statement.importClause?.isTypeOnly) {
-    return [];
-  }
-  const clause = statement.importClause;
+  const clause =
+    ts.isImportDeclaration(statement) && !statement.importClause?.isTypeOnly
+      ? statement.importClause
+      : null;
   if (!clause) return [];
   const names = clause.name ? [clause.name.text] : [];
-  if (clause.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
-    names.push(clause.namedBindings.name.text);
-  } else if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+  const bindings = clause.namedBindings;
+  if (bindings && ts.isNamespaceImport(bindings)) names.push(bindings.name.text);
+  if (bindings && ts.isNamedImports(bindings)) {
     names.push(
-      ...clause.namedBindings.elements
-        .filter((element) => !element.isTypeOnly)
-        .map((element) => element.name.text)
+      ...bindings.elements.filter((item) => !item.isTypeOnly).map((item) => item.name.text)
     );
   }
   return names;
@@ -552,17 +582,14 @@ function statementRuntimeBindingNames(statement) {
   }
   const imports = importBindingNames(statement);
   if (imports.length > 0) return imports;
-  if (
-    (ts.isFunctionDeclaration(statement) ||
-      ts.isClassDeclaration(statement) ||
-      ts.isEnumDeclaration(statement) ||
-      ts.isModuleDeclaration(statement)) &&
-    statement.name &&
-    ts.isIdentifier(statement.name)
-  ) {
-    return [statement.name.text];
-  }
-  return [];
+  const runtimeDeclaration =
+    ts.isFunctionDeclaration(statement) ||
+    ts.isClassDeclaration(statement) ||
+    ts.isEnumDeclaration(statement) ||
+    ts.isModuleDeclaration(statement);
+  return runtimeDeclaration && statement.name && ts.isIdentifier(statement.name)
+    ? [statement.name.text]
+    : [];
 }
 
 function blockDeclaresRuntimeValue(block, name) {
@@ -574,7 +601,7 @@ function blockDeclaresRuntimeValue(block, name) {
 
 function functionDeclaresRuntimeValue(functionLike, name) {
   if (
-    ('name' in functionLike &&
+    ((ts.isFunctionDeclaration(functionLike) || ts.isFunctionExpression(functionLike)) &&
       functionLike.name &&
       ts.isIdentifier(functionLike.name) &&
       functionLike.name.text === name) ||
@@ -597,18 +624,6 @@ function functionDeclaresRuntimeValue(functionLike, name) {
   };
   if (functionLike.body) visit(functionLike.body);
   return found;
-}
-
-function loopInitializerDeclaresRuntimeValue(node, name) {
-  const initializer =
-    ts.isForStatement(node) || ts.isForInStatement(node) || ts.isForOfStatement(node)
-      ? node.initializer
-      : null;
-  return (
-    initializer &&
-    ts.isVariableDeclarationList(initializer) &&
-    initializer.declarations.some((declaration) => bindingNames(declaration.name).includes(name))
-  );
 }
 
 function isLexicallyShadowedRuntimeValue(reference) {
@@ -635,7 +650,15 @@ function isLexicallyShadowedRuntimeValue(reference) {
     if (ts.isClassExpression(current) && current.name?.text === name) {
       return true;
     }
-    if (loopInitializerDeclaresRuntimeValue(current, name)) return true;
+    const initializer =
+      (ts.isForStatement(current) || ts.isForInOrOfStatement(current)) && current.initializer;
+    if (
+      initializer &&
+      ts.isVariableDeclarationList(initializer) &&
+      initializer.declarations.some((declaration) => bindingNames(declaration.name).includes(name))
+    ) {
+      return true;
+    }
     current = current.parent;
   }
   return blockDeclaresRuntimeValue(sourceFile, name);
@@ -659,10 +682,9 @@ function publicInstanceMutatorMember(call, reference, boundary) {
   ) {
     return null;
   }
-  const beforePosition = call.getStart();
   if (method.name === 'assign') {
     for (const source of call.arguments.slice(1)) {
-      const localMember = objectValueMember(source, reference, boundary, beforePosition);
+      const localMember = objectValueMember(source, reference, boundary);
       if (localMember !== null) {
         return publicInstanceMemberName(boundary, localMember);
       }
@@ -679,7 +701,7 @@ function publicInstanceMutatorMember(call, reference, boundary) {
     );
   } else if (
     method.name === 'defineProperty' &&
-    descriptorContainsReference(call.arguments[2], reference, boundary, beforePosition)
+    descriptorContainsReference(call.arguments[2], reference, boundary)
   ) {
     const name = unwrapExpression(call.arguments[1]);
     return publicInstanceMemberName(
@@ -687,15 +709,14 @@ function publicInstanceMutatorMember(call, reference, boundary) {
       name && (ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) ? name.text : '*'
     );
   } else if (method.name === 'defineProperties') {
-    for (const descriptors of resolvedLocalObjects(call.arguments[1], boundary, beforePosition)) {
+    for (const descriptors of resolvedLocalObjects(call.arguments[1], boundary)) {
       for (const property of descriptors.properties) {
         if (
           (ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property)) &&
           descriptorContainsReference(
             ts.isPropertyAssignment(property) ? property.initializer : property.name,
             reference,
-            boundary,
-            beforePosition
+            boundary
           )
         ) {
           return publicInstanceMemberName(boundary, propertyNameText(property.name));
