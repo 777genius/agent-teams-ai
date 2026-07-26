@@ -92,9 +92,38 @@ function createUnitStore(atomicCreator: TaskAttachmentAtomicCreatorPort): TeamTa
     run: (_mutationKey, operation) =>
       operation({
         assertHealthy: () => undefined,
+        markCommitted: () => undefined,
         registerCompensation: () => ({ dismiss: () => undefined }),
       }),
   });
+}
+
+function createCommitAwareCoordinator(): {
+  coordinator: TaskAttachmentMutationCoordinatorPort;
+  compromise(error: Error): void;
+} {
+  let compromisedError: Error | null = null;
+  return {
+    compromise(error) {
+      compromisedError = error;
+    },
+    coordinator: {
+      async run(_mutationKey, operation) {
+        let committed = false;
+        const result = await operation({
+          assertHealthy() {
+            if (!committed && compromisedError) throw compromisedError;
+          },
+          markCommitted() {
+            committed = true;
+          },
+          registerCompensation: () => ({ dismiss: () => undefined }),
+        });
+        if (!committed && compromisedError) throw compromisedError;
+        return result;
+      },
+    },
+  };
 }
 
 function createComment(): TaskComment {
@@ -201,6 +230,7 @@ describe('TeamTaskAttachmentStore', () => {
         const compensations: Array<{ active: boolean; run: () => Promise<void> }> = [];
         await operation({
           assertHealthy: () => undefined,
+          markCommitted: () => undefined,
           registerCompensation(compensate) {
             const entry = { active: true, run: compensate };
             compensations.push(entry);
@@ -305,6 +335,61 @@ describe('TeamTaskAttachmentStore', () => {
     );
 
     expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+  });
+
+  it('preserves a durable metadata save when compromise is observed before its commit marker', async () => {
+    const { taskDirectory } = await createRealStore();
+    const lockFailure = new Error('lock compromised');
+    const { coordinator, compromise } = createCommitAwareCoordinator();
+    const store = new TeamTaskAttachmentStore(undefined, coordinator);
+    let metadataCommitted = false;
+
+    await expect(
+      store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+        const receipt = await transaction.saveAttachmentWithReceipt(
+          ATTACHMENT_ID,
+          'proof.png',
+          'image/png',
+          'dGVzdA=='
+        );
+        metadataCommitted = true;
+        compromise(lockFailure);
+        transaction.markCommitted();
+        await transaction.finalizeAttachment(receipt);
+        return receipt.metadata;
+      })
+    ).resolves.toMatchObject({ id: ATTACHMENT_ID });
+
+    expect(metadataCommitted).toBe(true);
+    expect(await readAttachmentDataFiles(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+  });
+
+  it('preserves a durable metadata delete when compromise is observed before its commit marker', async () => {
+    const { taskDirectory } = await createRealStore();
+    const lockFailure = new Error('lock compromised');
+    const { coordinator, compromise } = createCommitAwareCoordinator();
+    const store = new TeamTaskAttachmentStore(undefined, coordinator);
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    let metadataDeleted = false;
+
+    await expect(
+      store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+        await transaction.deleteAttachment(ATTACHMENT_ID, 'image/png');
+        metadataDeleted = true;
+        compromise(lockFailure);
+        transaction.markCommitted();
+      })
+    ).resolves.toBeUndefined();
+
+    expect(metadataDeleted).toBe(true);
+    await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it.each(['attachment-1', '../bad-id'])('rejects non-canonical attachment ID %s', async (id) => {

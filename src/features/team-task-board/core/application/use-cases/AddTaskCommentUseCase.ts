@@ -85,6 +85,7 @@ export class AddTaskCommentUseCase implements AddTaskCommentPort {
       throw error;
     }
 
+    attachments.markCommitted();
     await this.finalizeSavedAttachments(savedAttachments);
     return comment;
   }

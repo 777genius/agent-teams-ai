@@ -65,6 +65,7 @@ export interface TaskAttachmentTransaction {
   finalizeAttachment(receipt: SavedTaskAttachmentReceipt): Promise<void>;
   rollbackAttachment(receipt: SavedTaskAttachmentReceipt): Promise<void>;
   deleteAttachment(attachmentId: string, mimeType: AttachmentMediaType): Promise<void>;
+  markCommitted(): void;
 }
 
 const nodeTaskAttachmentAtomicCreator: TaskAttachmentAtomicCreatorPort = {
@@ -177,6 +178,7 @@ export class TeamTaskAttachmentStore {
           this.rollbackTransactionReceipt(receipt, teamName, taskId, guard),
         deleteAttachment: (attachmentId, mimeType) =>
           this.deleteAttachmentInMutation(teamName, taskId, attachmentId, mimeType, guard),
+        markCommitted: () => guard.markCommitted(),
       })
     );
   }
@@ -277,6 +279,7 @@ export class TeamTaskAttachmentStore {
           }`
         );
       });
+      guard.markCommitted();
       return receipt.metadata;
     });
   }
@@ -561,7 +564,10 @@ export class TeamTaskAttachmentStore {
         });
       }
       this.dismissCompensation(receipt);
-      if (cleanupError && enforceHealthyLock) throw cleanupError;
+      if (cleanupError && enforceHealthyLock) {
+        if (cleanupError instanceof Error) throw cleanupError;
+        throw new Error('Task attachment temp-link cleanup failed', { cause: cleanupError });
+      }
     } finally {
       await generationGuard?.close();
     }
@@ -604,9 +610,10 @@ export class TeamTaskAttachmentStore {
     attachmentId: string,
     mimeType: AttachmentMediaType
   ): Promise<void> {
-    await this.runTaskMutation(teamName, taskId, (guard) =>
-      this.deleteAttachmentInMutation(teamName, taskId, attachmentId, mimeType, guard)
-    );
+    await this.runTaskMutation(teamName, taskId, async (guard) => {
+      await this.deleteAttachmentInMutation(teamName, taskId, attachmentId, mimeType, guard);
+      guard.markCommitted();
+    });
   }
 
   private async deleteAttachmentInMutation(

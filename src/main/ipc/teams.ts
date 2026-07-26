@@ -680,6 +680,7 @@ async function handleSaveTaskAttachment(
             vTask.value!,
             receipt.metadata
           );
+          transaction.markCommitted();
           await transaction.finalizeAttachment(receipt);
           return receipt.metadata;
         } catch (error) {
@@ -755,6 +756,7 @@ async function handleDeleteTaskAttachment(
       async (transaction) => {
         await transaction.deleteAttachment(safeAttId, mimeType.trim());
         await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
+        transaction.markCommitted();
       }
     );
   });

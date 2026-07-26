@@ -29,6 +29,7 @@ export class TeamTaskCommentAttachmentWriter implements TaskCommentAttachmentWri
             rollback: () => storeTransaction.rollbackAttachment(receipt),
           } satisfies SavedTaskCommentAttachment;
         },
+        markCommitted: () => storeTransaction.markCommitted(),
       })
     );
   }

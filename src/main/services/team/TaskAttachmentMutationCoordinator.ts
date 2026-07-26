@@ -5,6 +5,13 @@ import { lock } from 'proper-lockfile';
 
 export interface TaskAttachmentMutationGuard {
   assertHealthy(): void;
+  /**
+   * Records that the externally visible mutation has durably committed.
+   * This must remain non-throwing even when a lock compromise was already
+   * observed: once the durable boundary is crossed, reporting failure would
+   * invite an unsafe retry.
+   */
+  markCommitted(): void;
   registerCompensation(compensate: () => Promise<void>): {
     dismiss(): void;
   };
@@ -47,13 +54,17 @@ export class NodeTaskAttachmentMutationCoordinator implements TaskAttachmentMuta
           compromisedError = error;
         },
       });
-      const compensations: Array<{
+      let committed = false;
+      const compensations: {
         active: boolean;
         run: () => Promise<void>;
-      }> = [];
+      }[] = [];
       const guard: TaskAttachmentMutationGuard = {
         assertHealthy() {
-          if (compromisedError) throw compromisedError;
+          if (!committed && compromisedError) throw compromisedError;
+        },
+        markCommitted() {
+          committed = true;
         },
         registerCompensation(compensate) {
           const entry = { active: true, run: compensate };
@@ -72,7 +83,7 @@ export class NodeTaskAttachmentMutationCoordinator implements TaskAttachmentMuta
         guard.assertHealthy();
         return result;
       } catch (error) {
-        if (compromisedError) {
+        if (compromisedError && !committed) {
           let compensationError: unknown = null;
           for (const compensation of [...compensations].reverse()) {
             if (!compensation.active) continue;

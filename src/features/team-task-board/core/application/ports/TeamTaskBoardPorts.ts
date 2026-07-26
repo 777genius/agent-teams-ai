@@ -94,6 +94,7 @@ export interface TaskCommentAttachmentTransactionPort {
     mimeType: AttachmentMediaType,
     base64Data: string
   ): Promise<SavedTaskCommentAttachment>;
+  markCommitted(): void;
 }
 
 export interface SavedTaskCommentAttachment {

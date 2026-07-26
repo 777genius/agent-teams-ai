@@ -18,6 +18,7 @@ function createDependencies(): {
   logger: Pick<TeamTaskBoardLoggerPort, 'warn'>;
 } {
   const attachmentTransaction: TaskCommentAttachmentTransactionPort = {
+    markCommitted: vi.fn(),
     saveAttachment: vi.fn(
       async (_attachmentId, filename, mimeType) =>
         ({
@@ -225,6 +226,69 @@ describe('AddTaskCommentUseCase', () => {
     expect(
       vi.mocked(dependencies.comments.addTaskComment).mock.invocationCallOrder[0]
     ).toBeLessThan(finalize.mock.invocationCallOrder[0]);
+    expect(
+      vi.mocked(dependencies.comments.addTaskComment).mock.invocationCallOrder[0]
+    ).toBeLessThan(
+      vi.mocked(dependencies.attachmentTransaction.markCommitted).mock.invocationCallOrder[0]
+    );
+    expect(
+      vi.mocked(dependencies.attachmentTransaction.markCommitted).mock.invocationCallOrder[0]
+    ).toBeLessThan(finalize.mock.invocationCallOrder[0]);
+  });
+
+  it('records a durable comment commit before a previously observed lock compromise can fail', async () => {
+    const dependencies = createDependencies();
+    const lockFailure = new Error('lock compromised');
+    let compromised = false;
+    let committed = false;
+    const finalize = vi.fn(async () => undefined);
+    vi.mocked(dependencies.attachmentTransaction.saveAttachment).mockResolvedValueOnce(
+      createSavedAttachment(
+        'attachment-1',
+        'one.png',
+        'image/png',
+        vi.fn(async () => undefined),
+        finalize
+      )
+    );
+    vi.mocked(dependencies.comments.addTaskComment).mockImplementationOnce(async () => {
+      compromised = true;
+      return {
+        id: 'comment-1',
+        author: 'user',
+        text: 'Comment',
+        createdAt: '2026-07-22T00:00:00.000Z',
+        type: 'regular',
+      };
+    });
+    vi.mocked(dependencies.attachmentTransaction.markCommitted).mockImplementationOnce(() => {
+      committed = true;
+    });
+    vi.mocked(dependencies.attachments.runTransaction).mockImplementationOnce(
+      async (_teamName, _taskId, operation) => {
+        const result = await operation(dependencies.attachmentTransaction);
+        if (compromised && !committed) throw lockFailure;
+        return result;
+      }
+    );
+    const useCase = new AddTaskCommentUseCase(dependencies);
+
+    await expect(
+      useCase.execute('my-team', 'task-1', {
+        text: 'Comment',
+        attachments: [
+          {
+            id: 'attachment-1',
+            filename: 'one.png',
+            mimeType: 'image/png',
+            base64Data: 'b25l',
+          },
+        ],
+      })
+    ).resolves.toMatchObject({ id: 'comment-1' });
+
+    expect(dependencies.attachmentTransaction.markCommitted).toHaveBeenCalledOnce();
+    expect(finalize).toHaveBeenCalledOnce();
   });
 
   it('keeps a persisted comment when generation finalization fails', async () => {

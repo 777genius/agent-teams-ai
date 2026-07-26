@@ -67,4 +67,56 @@ describe('NodeTaskAttachmentMutationCoordinator', () => {
     ).rejects.toBe(compromisedFailure);
     expect(compensate).toHaveBeenCalledOnce();
   });
+
+  it('preserves a committed result when compromise was observed before the commit marker', async () => {
+    const compromisedFailure = new Error('lock compromised');
+    let compromise!: (error: Error) => void;
+    mocks.lock.mockImplementation(async (_filePath, options) => {
+      compromise = options.onCompromised;
+      return vi.fn(async () => undefined);
+    });
+    const compensate = vi.fn(async () => undefined);
+    const coordinator = new NodeTaskAttachmentMutationCoordinator();
+
+    await expect(
+      coordinator.run(
+        join(tmpdir(), 'attachment-compromised-after-commit', 'task-1'),
+        async (guard) => {
+          guard.registerCompensation(compensate);
+          compromise(compromisedFailure);
+          guard.markCommitted();
+          return 'committed';
+        }
+      )
+    ).resolves.toBe('committed');
+    expect(compensate).not.toHaveBeenCalled();
+  });
+
+  it('runs every pre-commit compensation in reverse order after compromise', async () => {
+    const compromisedFailure = new Error('lock compromised');
+    let compromise!: (error: Error) => void;
+    mocks.lock.mockImplementation(async (_filePath, options) => {
+      compromise = options.onCompromised;
+      return vi.fn(async () => undefined);
+    });
+    const order: string[] = [];
+    const coordinator = new NodeTaskAttachmentMutationCoordinator();
+
+    await expect(
+      coordinator.run(
+        join(tmpdir(), 'attachment-compromised-reverse-compensation', 'task-1'),
+        async (guard) => {
+          guard.registerCompensation(async () => {
+            order.push('first');
+          });
+          guard.registerCompensation(async () => {
+            order.push('second');
+          });
+          compromise(compromisedFailure);
+          return 'published';
+        }
+      )
+    ).rejects.toBe(compromisedFailure);
+    expect(order).toEqual(['second', 'first']);
+  });
 });
