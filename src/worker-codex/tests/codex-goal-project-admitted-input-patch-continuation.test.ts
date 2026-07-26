@@ -486,28 +486,11 @@ describe("admitted input-patch capacity continuation", () => {
       verifiedInputPatchArtifactSha256: patchSha256,
       verifiedInputPatchStagedSha256: patchSha256,
     });
-    await authorizeProjectPreStartAdmissionLaunch({ manifest, scope });
     const resultPath = join(
       manifest.jobRootDir,
       `${manifest.taskId}.latest-result.json`,
     );
-    await writeFile(
-      resultPath,
-      `${JSON.stringify({
-        status: "blocked",
-        reason: "account_unavailable",
-        changedFiles: [],
-        evidence: ["safe_execution_status:waiting_capacity"],
-        blockers: ["account_unavailable"],
-        nextAction: "wait",
-      })}\n`,
-    );
     const journal = new InMemoryAttemptJournal();
-    await recordUnavailableAttempt(
-      journal,
-      manifest.taskId,
-      await realpath(workspacePath),
-    );
 
     const controller = {
       schemaVersion: 1,
@@ -546,9 +529,9 @@ describe("admitted input-patch capacity continuation", () => {
       jobId: manifest.jobId,
       confirmStart: true,
     };
-    await expect(projectControlStartStoredJobView(args, deps)).rejects.toThrow(
-      "reached_dependency_bootstrap",
-    );
+    await expect(
+      projectControlStartStoredJobView({ ...args, forceStart: true }, deps),
+    ).rejects.toThrow("reached_dependency_bootstrap");
     expect(bootstrapCalls).toBe(1);
 
     let reservedLaunch: CodexGoalLaunchInput | undefined;
@@ -588,6 +571,50 @@ describe("admitted input-patch capacity continuation", () => {
         } as unknown as ProjectControlBroker;
       },
     };
+    await writeFile(
+      join(workspacePath, "src", "example.ts"),
+      "export const drift = true;\n",
+    );
+    execFileSync("git", ["add", "src/example.ts"], { cwd: workspacePath });
+    await expect(
+      projectControlStartStoredJobView(
+        { ...args, forceStart: true },
+        continuationDeps,
+      ),
+    ).rejects.toThrow("project_control_pre_start_workspace_dirty");
+    expect(startAdmissionWorkspaceModes).toHaveLength(0);
+
+    await writeFile(
+      join(workspacePath, "src", "example.ts"),
+      `export const providerToken = ${JSON.stringify(providerToken)};\n`,
+    );
+    execFileSync("git", ["add", "src/example.ts"], { cwd: workspacePath });
+    const initialLaunch = await projectControlStartStoredJobView(
+      { ...args, forceStart: true },
+      continuationDeps,
+    );
+    expect(initialLaunch).toMatchObject({ ok: true });
+    expect(startAdmissionWorkspaceModes.at(-1)).toBe(
+      "admitted_input_patch",
+    );
+
+    await authorizeProjectPreStartAdmissionLaunch({ manifest, scope });
+    await writeFile(
+      resultPath,
+      `${JSON.stringify({
+        status: "blocked",
+        reason: "account_unavailable",
+        changedFiles: [],
+        evidence: ["safe_execution_status:waiting_capacity"],
+        blockers: ["account_unavailable"],
+        nextAction: "wait",
+      })}\n`,
+    );
+    await recordUnavailableAttempt(
+      journal,
+      manifest.taskId,
+      await realpath(workspacePath),
+    );
     const started = await projectControlStartStoredJobView(
       args,
       continuationDeps,

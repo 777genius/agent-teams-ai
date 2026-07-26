@@ -206,13 +206,24 @@ export async function projectControlStartStoredJobView(
       confirmDependencyBootstrap:
         booleanValue(args.confirmDependencyBootstrap) === true,
     });
+  const freshAdmittedInputPatchCandidate =
+    workspaceDirty &&
+    continuationDecision === undefined &&
+    reviewedOutputId === undefined &&
+    !terminalHandoffDependencyRecovery &&
+    status.resultExists === false &&
+    loaded.manifest.projectPreStartAdmission !== undefined;
   if (workspaceDirty && continuationDecision === undefined) {
     if (!args.forceStart) {
       throw new Error(
         "project_control_reviewed_dirty_continuation_force_required",
       );
     }
-    if (!reviewedOutputId && !terminalHandoffDependencyRecovery) {
+    if (
+      !reviewedOutputId &&
+      !terminalHandoffDependencyRecovery &&
+      !freshAdmittedInputPatchCandidate
+    ) {
       throw new Error(
         "project_control_reviewed_dirty_continuation_output_required",
       );
@@ -254,6 +265,12 @@ export async function projectControlStartStoredJobView(
           lockedContinuationDecision,
           continuationDecision,
         )
+      ) {
+        throw new Error("project_control_workspace_state_changed_before_start");
+      }
+      if (
+        freshAdmittedInputPatchCandidate &&
+        lockedStatus.resultExists !== false
       ) {
         throw new Error("project_control_workspace_state_changed_before_start");
       }
@@ -366,6 +383,7 @@ export async function projectControlStartStoredJobView(
       });
       assertProjectControlDependencyBootstrapReady(dependencyPreflight);
       let authorizedContinuationWorkspaceMode:
+        | "admitted_input_patch"
         | "admitted_input_patch_continuation"
         | "clean_capacity_continuation"
         | undefined;
@@ -415,8 +433,12 @@ export async function projectControlStartStoredJobView(
           await validateProjectRefillPreStartAdmissionLocked({
             manifest: loaded.manifest,
             scope: controller.scope,
+            ...(freshAdmittedInputPatchCandidate
+              ? { admittedInputPatch: true }
+              : {}),
           });
         if (
+          validatedWorkspaceMode === "admitted_input_patch" ||
           validatedWorkspaceMode === "admitted_input_patch_continuation" ||
           validatedWorkspaceMode === "clean_capacity_continuation"
         ) {
