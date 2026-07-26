@@ -754,8 +754,8 @@ async function handleDeleteTaskAttachment(
       vTeam.value!,
       vTask.value!,
       async (transaction) => {
-        await transaction.deleteAttachment(safeAttId, mimeType.trim());
         await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
+        await transaction.deleteAttachment(safeAttId, mimeType.trim());
         transaction.markCommitted();
       }
     );

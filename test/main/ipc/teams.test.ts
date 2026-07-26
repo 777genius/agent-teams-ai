@@ -648,6 +648,7 @@ describe('ipc teams handlers', () => {
     updateTaskStatus: vi.fn(() => resolvedUndefined()),
     startTask: vi.fn(() => resolvedUndefined()),
     addTaskAttachment: vi.fn(() => resolvedUndefined()),
+    removeTaskAttachment: vi.fn(() => resolvedUndefined()),
     addTaskComment: vi.fn(() =>
       resolved({
         id: 'c1',
@@ -1713,6 +1714,47 @@ describe('ipc teams handlers', () => {
       await expect(fs.promises.readdir(attachmentDirectory)).rejects.toMatchObject({
         code: 'ENOENT',
       });
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('preserves attachment bytes when metadata deletion fails', async () => {
+    const handler = handlers.get(TEAM_DELETE_TASK_ATTACHMENT);
+    expect(handler).toBeDefined();
+    const claudeRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'teams-attachment-'));
+    setClaudeBasePathOverride(claudeRoot);
+    const attachmentId = '11111111-1111-4111-8111-111111111111';
+    const attachmentDirectory = path.join(
+      getAppDataPath(),
+      'task-attachments',
+      'my-team',
+      'task-1'
+    );
+    const attachmentPath = path.join(attachmentDirectory, `${attachmentId}--proof.png`);
+    const metadataFailure = new Error('metadata deletion failed');
+    service.removeTaskAttachment.mockRejectedValueOnce(metadataFailure);
+
+    try {
+      await fs.promises.mkdir(attachmentDirectory, { recursive: true });
+      await fs.promises.writeFile(attachmentPath, 'test');
+
+      const result = (await handler!(
+        {} as never,
+        'my-team',
+        'task-1',
+        attachmentId,
+        'image/png'
+      )) as { success: boolean; error?: string };
+
+      expect(result).toEqual({ success: false, error: metadataFailure.message });
+      expect(console.error).toHaveBeenCalledWith(
+        '[IPC:teams]',
+        expect.stringContaining('[teams:deleteTaskAttachment] metadata deletion failed')
+      );
+      vi.mocked(console.error).mockClear();
+      await expect(fs.promises.readFile(attachmentPath, 'utf8')).resolves.toBe('test');
     } finally {
       setClaudeBasePathOverride(null);
       await fs.promises.rm(claudeRoot, { recursive: true, force: true });
