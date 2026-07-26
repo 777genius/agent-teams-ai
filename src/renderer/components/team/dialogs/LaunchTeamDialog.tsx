@@ -67,7 +67,6 @@ import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackend
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import {
-  getTeamModelSelectionError,
   isTeamProviderRuntimeStatusLoading,
   normalizeExplicitTeamModelForUi,
 } from '@renderer/utils/teamModelAvailability';
@@ -112,6 +111,7 @@ import {
 } from './launchTeamDialogHelpers';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
+  getDialogTeamModelValidationError,
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
@@ -2132,53 +2132,27 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     promptDraft.value,
     cronExpression,
   ]);
-  const modelValidationError = useMemo(() => {
-    if (!runtimeProviderLoadingById.get(selectedProviderId)) {
-      const leadError = getTeamModelSelectionError(
+  const modelValidationError = useMemo(
+    () =>
+      getDialogTeamModelValidationError({
         selectedProviderId,
         selectedModel,
-        runtimeProviderStatusById.get(selectedProviderId)
-      );
-      if (leadError) {
-        return leadError;
-      }
-    }
-
-    if (!isLaunchMode) {
-      return null;
-    }
-
-    for (const member of effectiveMemberDrafts) {
-      if (member.removedAt) {
-        continue;
-      }
-
-      const providerId = normalizeOptionalTeamProviderId(member.providerId) ?? selectedProviderId;
-      if (runtimeProviderLoadingById.get(providerId)) {
-        continue;
-      }
-      const memberError = getTeamModelSelectionError(
-        providerId,
-        member.model,
-        runtimeProviderStatusById.get(providerId)
-      );
-      if (!memberError) {
-        continue;
-      }
-
-      const memberName = member.name.trim();
-      return memberName ? `${memberName}: ${memberError}` : memberError;
-    }
-
-    return null;
-  }, [
-    effectiveMemberDrafts,
-    isLaunchMode,
-    runtimeProviderLoadingById,
-    runtimeProviderStatusById,
-    selectedModel,
-    selectedProviderId,
-  ]);
+        members: effectiveMemberDrafts,
+        validateMembers: isLaunchMode,
+        runtimeProviderStatusById,
+        runtimeProviderLoadingById,
+        ...openCodeLocalModelScope,
+      }),
+    [
+      effectiveMemberDrafts,
+      isLaunchMode,
+      openCodeLocalModelScope,
+      runtimeProviderLoadingById,
+      runtimeProviderStatusById,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
   const leadModelIssueText = useMemo(() => {
     const issue = getProvisioningModelIssue(
       prepareChecks,

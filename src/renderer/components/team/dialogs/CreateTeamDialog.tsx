@@ -87,7 +87,6 @@ import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackend
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import {
-  getTeamModelSelectionError,
   isTeamProviderRuntimeStatusLoading,
   normalizeExplicitTeamModelForUi,
 } from '@renderer/utils/teamModelAvailability';
@@ -112,6 +111,7 @@ import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModel
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
+  getDialogTeamModelValidationError,
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
@@ -2037,48 +2037,26 @@ export const CreateTeamDialog = ({
     () => validateRequest(request, t, { requireCwd: launchTeam }),
     [request, launchTeam, t]
   );
-  const modelValidationError = useMemo(() => {
-    if (!runtimeProviderLoadingById.get(selectedProviderId)) {
-      const leadError = getTeamModelSelectionError(
+  const modelValidationError = useMemo(
+    () =>
+      getDialogTeamModelValidationError({
         selectedProviderId,
         selectedModel,
-        runtimeProviderStatusById.get(selectedProviderId)
-      );
-      if (leadError) {
-        return leadError;
-      }
-    }
-
-    for (const member of effectiveMemberDrafts) {
-      if (member.removedAt) {
-        continue;
-      }
-
-      const providerId = normalizeOptionalTeamProviderId(member.providerId) ?? selectedProviderId;
-      if (runtimeProviderLoadingById.get(providerId)) {
-        continue;
-      }
-      const memberError = getTeamModelSelectionError(
-        providerId,
-        member.model,
-        runtimeProviderStatusById.get(providerId)
-      );
-      if (!memberError) {
-        continue;
-      }
-
-      const memberName = member.name.trim();
-      return memberName ? `${memberName}: ${memberError}` : memberError;
-    }
-
-    return null;
-  }, [
-    effectiveMemberDrafts,
-    runtimeProviderStatusById,
-    runtimeProviderLoadingById,
-    selectedModel,
-    selectedProviderId,
-  ]);
+        members: effectiveMemberDrafts,
+        validateMembers: true,
+        runtimeProviderStatusById,
+        runtimeProviderLoadingById,
+        ...openCodeLocalModelScope,
+      }),
+    [
+      effectiveMemberDrafts,
+      openCodeLocalModelScope,
+      runtimeProviderLoadingById,
+      runtimeProviderStatusById,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
   const leadModelIssueText = useMemo(() => {
     const issue = getProvisioningModelIssue(
       prepareChecks,
