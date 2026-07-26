@@ -198,17 +198,17 @@ export async function applyReviewedMerge(input: {
       fetchedHead !== merge.sourceCommit.toLowerCase();
     const descendantDriftFiles = sourceDescendant
       ? await assertSafeSemanticSourceDescendant({
-        runtime,
-        workspacePath,
-        reviewedSourceCommit: merge.sourceCommit,
-        fetchedHead,
-        protectedFiles: uniqueSorted([
-          ...input.attempt.expectedFiles,
-          ...input.workerOutput.changedFiles,
-          ...mergeState.conflictFiles,
-          ...reviewedScope.semanticFiles,
-        ]),
-      })
+          runtime,
+          workspacePath,
+          reviewedSourceCommit: merge.sourceCommit,
+          fetchedHead,
+          protectedFiles: uniqueSorted([
+            ...input.attempt.expectedFiles,
+            ...input.workerOutput.changedFiles,
+            ...mergeState.conflictFiles,
+            ...reviewedScope.semanticFiles,
+          ]),
+        })
       : [];
     const reviewedConflictFiles = mergeState.conflictFiles;
     const reviewedConflictStages = mergeState.conflictStages;
@@ -264,15 +264,13 @@ export async function applyReviewedMerge(input: {
       workspacePath,
     );
     if (applyResult.exitCode !== 0) {
-      if (
-        unmerged.length === 0 ||
-        !includesAllFiles(patchFiles, unmerged)
-      ) {
+      if (unmerged.length > 0 && !includesAllFiles(patchFiles, unmerged)) {
         throw new Error(
           "local_git_integration_merge_resolution_not_applicable",
         );
       }
-      for (const file of unmerged) {
+      const fallbackFiles = unmerged.length > 0 ? unmerged : patchFiles;
+      for (const file of fallbackFiles) {
         await restoreExactFilesToCommit(
           runtime,
           workspacePath,
@@ -322,9 +320,7 @@ export async function applyReviewedMerge(input: {
       workspacePath,
     );
     if (reverseCheck.exitCode !== 0) {
-      throw new Error(
-        "local_git_integration_merge_resolution_incomplete",
-      );
+      throw new Error("local_git_integration_merge_resolution_incomplete");
     }
     const reviewedChangedFiles = (await runtime.getStatus(workspacePath))
       .dirtyFiles;
@@ -345,7 +341,9 @@ export async function applyReviewedMerge(input: {
 
     const reviewedResolvedTree = (
       await runtime.git(["write-tree"], workspacePath)
-    ).stdout.trim().toLowerCase();
+    ).stdout
+      .trim()
+      .toLowerCase();
     if (!/^[a-f0-9]{40,64}$/.test(reviewedResolvedTree)) {
       throw new Error("local_git_integration_merge_resolved_tree_invalid");
     }
@@ -380,7 +378,9 @@ export async function applyReviewedMerge(input: {
       throw new Error(
         `local_git_integration_merge_semantic_conflict_scope_changed:reviewed=${uniqueSorted(
           reviewedConflictFiles,
-        ).join(",")};actual=${uniqueSorted(mergeState.conflictFiles).join(",")}`,
+        ).join(
+          ",",
+        )};actual=${uniqueSorted(mergeState.conflictFiles).join(",")}`,
       );
     }
     if (!sameStrings(mergeState.conflictStages, reviewedConflictStages)) {
@@ -509,23 +509,30 @@ async function readConflictStages(
       ["ls-files", "--unmerged", "--stage", "-z", "--", ...conflictFiles],
       workspacePath,
     )
-  ).stdout.split("\0").filter(Boolean).map((record) => {
-    const match = /^([0-7]{6}) ([a-f0-9]{40,64}) ([123])\t(.+)$/i.exec(record);
-    if (!match) {
-      throw new Error("local_git_integration_merge_conflict_stage_invalid");
-    }
-    const file = normalizeProjectRelativePath(match[4]!);
-    if (!allowedFiles.has(file)) {
-      throw new Error(
-        "local_git_integration_merge_conflict_stage_outside_scope",
+  ).stdout
+    .split("\0")
+    .filter(Boolean)
+    .map((record) => {
+      const match = /^([0-7]{6}) ([a-f0-9]{40,64}) ([123])\t(.+)$/i.exec(
+        record,
       );
-    }
-    return `${file}\t${match[3]}\t${match[1]}\t${match[2]!.toLowerCase()}`;
-  });
-  if (!includesAllFiles(
-    records.map((record) => record.split("\t", 1)[0]!),
-    conflictFiles,
-  )) {
+      if (!match) {
+        throw new Error("local_git_integration_merge_conflict_stage_invalid");
+      }
+      const file = normalizeProjectRelativePath(match[4]!);
+      if (!allowedFiles.has(file)) {
+        throw new Error(
+          "local_git_integration_merge_conflict_stage_outside_scope",
+        );
+      }
+      return `${file}\t${match[3]}\t${match[1]}\t${match[2]!.toLowerCase()}`;
+    });
+  if (
+    !includesAllFiles(
+      records.map((record) => record.split("\t", 1)[0]!),
+      conflictFiles,
+    )
+  ) {
     throw new Error("local_git_integration_merge_conflict_stage_missing");
   }
   return [...new Set(records)].sort();
@@ -606,7 +613,9 @@ export async function abortPendingMerge(
     if (cleanUnmaterializedStaleTarget) {
       const status = await runtime.getStatus(workspacePath);
       if (status.dirtyFiles.length > 0) {
-        throw new Error("local_git_integration_merge_abort_left_dirty_workspace");
+        throw new Error(
+          "local_git_integration_merge_abort_left_dirty_workspace",
+        );
       }
       return;
     }
@@ -806,7 +815,10 @@ function sameFiles(left: readonly string[], right: readonly string[]): boolean {
   );
 }
 
-function sameStrings(left: readonly string[], right: readonly string[]): boolean {
+function sameStrings(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
   const normalizedLeft = [...new Set(left)].sort();
   const normalizedRight = [...new Set(right)].sort();
   return (

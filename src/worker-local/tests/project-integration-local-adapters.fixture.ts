@@ -486,6 +486,91 @@ export async function createCleanMergeFixture(
   };
 }
 
+export async function createFileLocationConflictMergeFixture(): Promise<{
+  readonly rootDir: string;
+  readonly workspacePath: string;
+  readonly sourceCommit: string;
+  readonly targetCommit: string;
+  readonly patchPath: string;
+  readonly patchSha256: string;
+  readonly destinationPath: string;
+  readonly deletedPath: string;
+}> {
+  const rootDir = await mkdtemp(
+    join(tmpdir(), "project-integration-file-location-conflict-"),
+  );
+  tempRoots.push(rootDir);
+  const workspacePath = join(rootDir, "workspace");
+  const remotePath = join(rootDir, "remote.git");
+  const sourcePath = "src/legacy/coordinator.ts";
+  const destinationPath = "src/features/coordinator.ts";
+  const deletedPath = "src/delete-me.ts";
+  await mkdir(join(workspacePath, "src", "legacy"), { recursive: true });
+  await git(workspacePath, ["init", "-b", "main"]);
+  await git(workspacePath, ["config", "user.email", "test@example.com"]);
+  await git(workspacePath, ["config", "user.name", "Test User"]);
+  await writeFile(
+    join(workspacePath, "src", "legacy", "anchor.ts"),
+    "export const anchor = true;\n",
+  );
+  await writeFile(join(workspacePath, deletedPath), "delete me\n");
+  await git(workspacePath, ["add", "."]);
+  await git(workspacePath, ["commit", "-m", "chore: initial"]);
+  await execFileAsync("git", ["init", "--bare", remotePath]);
+  await git(workspacePath, ["remote", "add", "origin", remotePath]);
+
+  await git(workspacePath, ["checkout", "-b", "base"]);
+  await writeFile(
+    join(workspacePath, sourcePath),
+    "export const coordinator = 'source';\n",
+  );
+  await git(workspacePath, ["rm", deletedPath]);
+  await git(workspacePath, ["add", sourcePath]);
+  await git(workspacePath, ["commit", "-m", "feat: add coordinator"]);
+  const sourceCommit = (
+    await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+  ).trim();
+  await git(workspacePath, ["push", "origin", "base"]);
+
+  await git(workspacePath, ["checkout", "main"]);
+  await git(workspacePath, ["mv", "src/legacy", "src/features"]);
+  await git(workspacePath, ["commit", "-m", "refactor: move feature files"]);
+  const targetCommit = (
+    await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+  ).trim();
+  await git(workspacePath, ["push", "origin", "main"]);
+
+  await writeFile(
+    join(workspacePath, destinationPath),
+    "export const coordinator = 'reviewed';\n",
+  );
+  await rm(join(workspacePath, deletedPath));
+  await git(workspacePath, ["add", "--intent-to-add", destinationPath]);
+  const patch = await gitOutput(workspacePath, [
+    "diff",
+    "--binary",
+    "--",
+    destinationPath,
+    deletedPath,
+  ]);
+  const patchPath = join(rootDir, "reviewed-file-location-resolution.patch");
+  await writeFile(patchPath, patch);
+  const patchSha256 = createHash("sha256").update(patch).digest("hex");
+  await git(workspacePath, ["reset", "--", destinationPath]);
+  await rm(join(workspacePath, destinationPath));
+  await git(workspacePath, ["checkout", "--", deletedPath]);
+  return {
+    rootDir,
+    workspacePath,
+    sourceCommit,
+    targetCommit,
+    patchPath,
+    patchSha256,
+    destinationPath,
+    deletedPath,
+  };
+}
+
 export async function git(cwd: string, args: readonly string[]): Promise<void> {
   await execFileAsync("git", [...args], { cwd });
 }

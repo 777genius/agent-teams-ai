@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { LocalGitIntegrationAdapter } from "../index";
 import {
+  createFileLocationConflictMergeFixture,
   createSemanticMergeFixture,
   git,
   gitOutput,
@@ -19,6 +20,40 @@ afterEach(async () => {
 });
 
 describe("local semantic merge integration", () => {
+  it("applies a reviewed file-location conflict destination", async () => {
+    const fixture = await createFileLocationConflictMergeFixture();
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+    const changedFiles = [fixture.deletedPath, fixture.destinationPath].sort();
+
+    await expect(
+      adapter.applyWorkerOutput({
+        attempt: {
+          targetWorkspacePath: fixture.workspacePath,
+          expectedFiles: changedFiles,
+          merge: {
+            sourceRemote: "origin",
+            sourceBranch: "base",
+            sourceCommit: fixture.sourceCommit,
+            expectedTargetCommit: fixture.targetCommit,
+          },
+        },
+        workerOutput: {
+          workerJobId: "file-location-resolution-worker",
+          workspacePath: fixture.workspacePath,
+          patchPath: fixture.patchPath,
+          patchSha256: fixture.patchSha256,
+          baseCommit: fixture.targetCommit,
+          changedFiles,
+        },
+      }),
+    ).resolves.toEqual({ changedFiles });
+    await expect(
+      readFile(join(fixture.workspacePath, fixture.destinationPath), "utf8"),
+    ).resolves.toBe("export const coordinator = 'reviewed';\n");
+  });
+
   it("applies a reviewed semantic resolution within the pinned parent footprint", async () => {
     const fixture = await createSemanticMergeFixture();
     const adapter = new LocalGitIntegrationAdapter({
@@ -108,7 +143,11 @@ describe("local semantic merge integration", () => {
       "unrelated live drift\n",
     );
     await git(fixture.workspacePath, ["add", "LIVE_DRIFT.md"]);
-    await git(fixture.workspacePath, ["commit", "-m", "feat: advance live base"]);
+    await git(fixture.workspacePath, [
+      "commit",
+      "-m",
+      "feat: advance live base",
+    ]);
     await git(fixture.workspacePath, ["push", "origin", "base"]);
     await git(fixture.workspacePath, ["checkout", "main"]);
     const adapter = new LocalGitIntegrationAdapter({
@@ -200,10 +239,7 @@ describe("local semantic merge integration", () => {
       identity: { name: "Integrator", email: "integrator@example.com" },
       expectedParentCommits: [fixture.targetCommit, advancedHead],
     });
-    expect(commit.parentCommits).toEqual([
-      fixture.targetCommit,
-      advancedHead,
-    ]);
+    expect(commit.parentCommits).toEqual([fixture.targetCommit, advancedHead]);
   });
 
   it("rejects a source descendant that touches reviewed semantic scope", async () => {
@@ -221,10 +257,12 @@ describe("local semantic merge integration", () => {
       allowedPatchRoots: [fixture.rootDir],
     });
 
-    await expect(adapter.applyWorkerOutput({
-      attempt: semanticAttempt(fixture),
-      workerOutput: semanticWorkerOutput(fixture),
-    })).rejects.toThrow(
+    await expect(
+      adapter.applyWorkerOutput({
+        attempt: semanticAttempt(fixture),
+        workerOutput: semanticWorkerOutput(fixture),
+      }),
+    ).rejects.toThrow(
       "local_git_integration_merge_semantic_descendant_touched_reviewed_scope:package.json",
     );
     await expectCleanTarget(fixture.workspacePath, fixture.targetCommit);
@@ -254,19 +292,21 @@ describe("local semantic merge integration", () => {
       allowedPatchRoots: [fixture.rootDir],
     });
 
-    await expect(adapter.applyWorkerOutput({
-      attempt: {
-        ...semanticAttempt(fixture),
-        merge: {
-          ...semanticAttempt(fixture).merge,
-          expectedTargetCommit: advancedTarget,
+    await expect(
+      adapter.applyWorkerOutput({
+        attempt: {
+          ...semanticAttempt(fixture),
+          merge: {
+            ...semanticAttempt(fixture).merge,
+            expectedTargetCommit: advancedTarget,
+          },
         },
-      },
-      workerOutput: {
-        ...semanticWorkerOutput(fixture),
-        baseCommit: advancedTarget,
-      },
-    })).rejects.toThrow(
+        workerOutput: {
+          ...semanticWorkerOutput(fixture),
+          baseCommit: advancedTarget,
+        },
+      }),
+    ).rejects.toThrow(
       "local_git_integration_merge_semantic_conflict_scope_changed",
     );
     await expectCleanTarget(fixture.workspacePath, advancedTarget);
@@ -316,19 +356,21 @@ describe("local semantic merge integration", () => {
       allowedPatchRoots: [fixture.rootDir],
     });
 
-    await expect(adapter.applyWorkerOutput({
-      attempt: {
-        ...semanticAttempt(fixture),
-        merge: {
-          ...semanticAttempt(fixture).merge,
-          expectedTargetCommit: finalTarget,
+    await expect(
+      adapter.applyWorkerOutput({
+        attempt: {
+          ...semanticAttempt(fixture),
+          merge: {
+            ...semanticAttempt(fixture).merge,
+            expectedTargetCommit: finalTarget,
+          },
         },
-      },
-      workerOutput: {
-        ...semanticWorkerOutput(fixture),
-        baseCommit: finalTarget,
-      },
-    })).rejects.toThrow(
+        workerOutput: {
+          ...semanticWorkerOutput(fixture),
+          baseCommit: finalTarget,
+        },
+      }),
+    ).rejects.toThrow(
       "local_git_integration_merge_semantic_conflict_stages_changed",
     );
     await expectCleanTarget(fixture.workspacePath, finalTarget);
@@ -336,23 +378,32 @@ describe("local semantic merge integration", () => {
 
   it("rejects a rewritten non-ancestor source", async () => {
     const fixture = await createSemanticMergeFixture();
-    await git(fixture.workspacePath, ["checkout", "--orphan", "rewritten-base"]);
+    await git(fixture.workspacePath, [
+      "checkout",
+      "--orphan",
+      "rewritten-base",
+    ]);
     await git(fixture.workspacePath, ["rm", "-rf", "."]);
     await writeFile(join(fixture.workspacePath, "REWRITTEN.md"), "rewritten\n");
     await git(fixture.workspacePath, ["add", "REWRITTEN.md"]);
     await git(fixture.workspacePath, ["commit", "-m", "feat: rewrite base"]);
-    await git(fixture.workspacePath, ["push", "--force", "origin", "HEAD:base"]);
+    await git(fixture.workspacePath, [
+      "push",
+      "--force",
+      "origin",
+      "HEAD:base",
+    ]);
     await git(fixture.workspacePath, ["checkout", "main"]);
     const adapter = new LocalGitIntegrationAdapter({
       allowedPatchRoots: [fixture.rootDir],
     });
 
-    await expect(adapter.applyWorkerOutput({
-      attempt: semanticAttempt(fixture),
-      workerOutput: semanticWorkerOutput(fixture),
-    })).rejects.toThrow(
-      "local_git_integration_merge_source_commit_not_ancestor",
-    );
+    await expect(
+      adapter.applyWorkerOutput({
+        attempt: semanticAttempt(fixture),
+        workerOutput: semanticWorkerOutput(fixture),
+      }),
+    ).rejects.toThrow("local_git_integration_merge_source_commit_not_ancestor");
     await expectCleanTarget(fixture.workspacePath, fixture.targetCommit);
   });
 
@@ -368,10 +419,12 @@ describe("local semantic merge integration", () => {
       advancedHead,
     });
 
-    await expect(adapter.applyWorkerOutput({
-      attempt: semanticAttempt(fixture),
-      workerOutput: semanticWorkerOutput(fixture),
-    })).rejects.toThrow("local_git_integration_merge_source_head_changed");
+    await expect(
+      adapter.applyWorkerOutput({
+        attempt: semanticAttempt(fixture),
+        workerOutput: semanticWorkerOutput(fixture),
+      }),
+    ).rejects.toThrow("local_git_integration_merge_source_head_changed");
     await expectCleanTarget(fixture.workspacePath, fixture.targetCommit);
   });
 
@@ -382,7 +435,10 @@ describe("local semantic merge integration", () => {
     await git(fixture.workspacePath, ["add", "FIRST_ADVANCE.md"]);
     await git(fixture.workspacePath, ["commit", "-m", "feat: first advance"]);
     await git(fixture.workspacePath, ["push", "origin", "base"]);
-    await writeFile(join(fixture.workspacePath, "SECOND_ADVANCE.md"), "second\n");
+    await writeFile(
+      join(fixture.workspacePath, "SECOND_ADVANCE.md"),
+      "second\n",
+    );
     await git(fixture.workspacePath, ["add", "SECOND_ADVANCE.md"]);
     await git(fixture.workspacePath, ["commit", "-m", "feat: second advance"]);
     const secondHead = (
@@ -395,10 +451,12 @@ describe("local semantic merge integration", () => {
       advancedHead: secondHead,
     });
 
-    await expect(adapter.applyWorkerOutput({
-      attempt: semanticAttempt(fixture),
-      workerOutput: semanticWorkerOutput(fixture),
-    })).rejects.toThrow("local_git_integration_merge_source_head_changed");
+    await expect(
+      adapter.applyWorkerOutput({
+        attempt: semanticAttempt(fixture),
+        workerOutput: semanticWorkerOutput(fixture),
+      }),
+    ).rejects.toThrow("local_git_integration_merge_source_head_changed");
     await expectCleanTarget(fixture.workspacePath, fixture.targetCommit);
   });
 });
@@ -432,11 +490,13 @@ function semanticWorkerOutput(fixture: SemanticFixture) {
 class MovingSourceAdapter extends LocalGitIntegrationAdapter {
   private observations = 0;
 
-  constructor(private readonly movement: {
-    readonly fixture: SemanticFixture;
-    readonly moveOnObservation: number;
-    readonly advancedHead: string;
-  }) {
+  constructor(
+    private readonly movement: {
+      readonly fixture: SemanticFixture;
+      readonly moveOnObservation: number;
+      readonly advancedHead: string;
+    },
+  ) {
     super({ allowedPatchRoots: [movement.fixture.rootDir] });
   }
 
