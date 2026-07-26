@@ -1,5 +1,10 @@
 import type { OpenCodeRuntimeControlAck, OpenCodeRuntimeControlApi } from '../runtime-control';
-import type { TeamProvisioningStatusApi as FeatureTeamProvisioningStatusApi } from '@features/team-provisioning/contracts';
+import type {
+  TeamProvisioningRuntimeDeliveryApi as FeatureTeamProvisioningRuntimeDeliveryApi,
+  TeamProvisioningRuntimeSnapshotApi as FeatureTeamProvisioningRuntimeSnapshotApi,
+  TeamProvisioningStatusApi as FeatureTeamProvisioningStatusApi,
+  TeamProvisioningToolApprovalApi as FeatureTeamProvisioningToolApprovalApi,
+} from '@features/team-provisioning/contracts';
 import type {
   AgentActionMode,
   AttachmentPayload,
@@ -11,7 +16,6 @@ import type {
   OpenCodeRuntimeDeliveryUserVisibleImpact,
   RetryFailedOpenCodeSecondaryLanesResult,
   TaskRef,
-  TeamAgentRuntimeSnapshot,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
   TeamCreateConfigRequest,
@@ -27,7 +31,6 @@ import type {
   TeamRuntimeState,
   TeamSummary,
   TeamViewSnapshot,
-  ToolApprovalSettings,
 } from '@shared/types/team';
 
 export interface TeamProvisioningStartApi {
@@ -95,7 +98,11 @@ function validatePrepareModelIndexes(opts?: TeamProvisioningPrepareOptions): voi
   assertDensePrepareModelArray(opts?.modelChecks, 'modelChecks');
 }
 
-export type TeamRuntimeControlCompatibilityApi = OpenCodeRuntimeControlApi;
+export type TeamRuntimeControlCompatibilityApi = Omit<
+  OpenCodeRuntimeControlApi,
+  'deliverOpenCodeRuntimeMessage'
+> &
+  Pick<FeatureTeamProvisioningRuntimeDeliveryApi, 'deliverOpenCodeRuntimeMessage'>;
 
 export interface TeamRuntimeApi {
   getRuntimeState(teamName: string): Promise<TeamRuntimeState>;
@@ -158,10 +165,9 @@ export interface TeamMemberLifecycleApi {
   skipMemberForLaunch(teamName: string, memberName: string): Promise<void>;
 }
 
-export interface TeamDiagnosticsApi {
+export interface TeamDiagnosticsApi extends FeatureTeamProvisioningRuntimeSnapshotApi {
   getLeadActivityState(teamName: string): LeadActivitySnapshot;
   getLeadContextUsage(teamName: string): LeadContextUsageSnapshot;
-  getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
 }
 
 export interface TeamClaudeLogsApi {
@@ -216,7 +222,10 @@ export interface TeamOpenCodeMemberInboxRelayResult {
   diagnostics?: string[];
 }
 
-export interface TeamMessagingApi {
+export interface TeamMessagingApi extends Pick<
+  FeatureTeamProvisioningRuntimeDeliveryApi,
+  'getOpenCodeRuntimeDeliveryStatus'
+> {
   sendMessageToTeam(
     teamName: string,
     message: string,
@@ -228,10 +237,6 @@ export interface TeamMessagingApi {
     options?: TeamOpenCodeMemberInboxRelayOptions
   ): Promise<TeamOpenCodeMemberInboxRelayResult>;
   relayLeadInboxMessages(teamName: string): Promise<number>;
-  getOpenCodeRuntimeDeliveryStatus(
-    teamName: string,
-    messageId: string
-  ): Promise<OpenCodeRuntimeDeliveryStatus | null>;
   resolveRuntimeRecipientProviderId(
     teamName: string,
     memberName: string
@@ -274,16 +279,7 @@ export interface TeamCrossTeamMessagingApi {
   relayLeadInboxMessages(teamName: string): Promise<number>;
 }
 
-export interface TeamToolApprovalApi {
-  respondToToolApproval(
-    teamName: string,
-    runId: string,
-    requestId: string,
-    allow: boolean,
-    message?: string
-  ): Promise<void>;
-  updateToolApprovalSettings(teamName: string, settings: ToolApprovalSettings): void;
-}
+export type TeamToolApprovalApi = FeatureTeamProvisioningToolApprovalApi;
 
 export function bindTeamProvisioningStartApi(
   source: TeamProvisioningStartApi
