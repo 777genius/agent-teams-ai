@@ -754,7 +754,7 @@ async function handleDeleteTaskAttachment(
       vTeam.value!,
       vTask.value!,
       async (transaction) => {
-        const receipt = await transaction.stageAttachmentDeletion(safeAttId, mimeType.trim());
+        const receipt = await transaction.prepareAttachmentDeletion(safeAttId, mimeType.trim());
         try {
           await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
         } catch (error) {

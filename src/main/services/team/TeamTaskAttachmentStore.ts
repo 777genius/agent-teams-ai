@@ -21,8 +21,9 @@ import {
   type DetachedTaskAttachmentGeneration,
   detachTaskAttachmentGeneration,
   finalizeDetachedTaskAttachmentGeneration,
+  type PinnedTaskAttachmentGeneration,
+  pinTaskAttachmentGeneration,
   removeTaskAttachmentGenerationPin,
-  restoreDetachedTaskAttachmentGeneration,
   type TaskAttachmentFileIdentity,
 } from './TaskAttachmentGenerationLifecycle';
 import {
@@ -59,11 +60,11 @@ export interface SavedTaskAttachmentReceipt {
   readonly taskId: string;
 }
 
-export interface StagedTaskAttachmentDeletionReceipt {
+export interface PreparedTaskAttachmentDeletionReceipt {
   readonly attachmentId: string;
   readonly teamName: string;
   readonly taskId: string;
-  readonly generation: DetachedTaskAttachmentGeneration;
+  readonly generation: PinnedTaskAttachmentGeneration;
 }
 
 export interface TaskAttachmentTransaction {
@@ -75,12 +76,12 @@ export interface TaskAttachmentTransaction {
   ): Promise<SavedTaskAttachmentReceipt>;
   finalizeAttachment(receipt: SavedTaskAttachmentReceipt): Promise<void>;
   rollbackAttachment(receipt: SavedTaskAttachmentReceipt): Promise<void>;
-  stageAttachmentDeletion(
+  prepareAttachmentDeletion(
     attachmentId: string,
     mimeType: AttachmentMediaType
-  ): Promise<StagedTaskAttachmentDeletionReceipt | null>;
-  finalizeAttachmentDeletion(receipt: StagedTaskAttachmentDeletionReceipt): Promise<void>;
-  rollbackAttachmentDeletion(receipt: StagedTaskAttachmentDeletionReceipt): Promise<void>;
+  ): Promise<PreparedTaskAttachmentDeletionReceipt | null>;
+  finalizeAttachmentDeletion(receipt: PreparedTaskAttachmentDeletionReceipt): Promise<void>;
+  rollbackAttachmentDeletion(receipt: PreparedTaskAttachmentDeletionReceipt): Promise<void>;
   markCommitted(): void;
 }
 
@@ -190,8 +191,8 @@ export class TeamTaskAttachmentStore {
           this.finalizeTransactionReceipt(receipt, teamName, taskId, guard),
         rollbackAttachment: (receipt) =>
           this.rollbackTransactionReceipt(receipt, teamName, taskId, guard),
-        stageAttachmentDeletion: (attachmentId, mimeType) =>
-          this.stageAttachmentDeletionInMutation(teamName, taskId, attachmentId, mimeType, guard),
+        prepareAttachmentDeletion: (attachmentId, mimeType) =>
+          this.prepareAttachmentDeletionInMutation(teamName, taskId, attachmentId, mimeType, guard),
         finalizeAttachmentDeletion: (receipt) =>
           this.finalizeAttachmentDeletionInMutation(receipt, teamName, taskId),
         rollbackAttachmentDeletion: (receipt) =>
@@ -487,7 +488,7 @@ export class TeamTaskAttachmentStore {
     mimeType: AttachmentMediaType
   ): Promise<void> {
     await this.runTaskMutation(teamName, taskId, async (guard) => {
-      const receipt = await this.stageAttachmentDeletionInMutation(
+      const receipt = await this.prepareAttachmentDeletionInMutation(
         teamName,
         taskId,
         attachmentId,
@@ -501,13 +502,13 @@ export class TeamTaskAttachmentStore {
     });
   }
 
-  private async stageAttachmentDeletionInMutation(
+  private async prepareAttachmentDeletionInMutation(
     teamName: string,
     taskId: string,
     attachmentId: string,
     mimeType: AttachmentMediaType,
     guard: TaskAttachmentMutationGuard
-  ): Promise<StagedTaskAttachmentDeletionReceipt | null> {
+  ): Promise<PreparedTaskAttachmentDeletionReceipt | null> {
     const filePath = await this.findAttachmentFilePath(teamName, taskId, attachmentId, mimeType);
     if (!filePath) return null;
 
@@ -523,23 +524,23 @@ export class TeamTaskAttachmentStore {
       throw new Error('Task attachment is not a regular file');
     }
     guard.assertHealthy();
-    const detached = await detachTaskAttachmentGeneration(filePath, {
+    const pinned = await pinTaskAttachmentGeneration(filePath, {
       dev: publicGeneration.dev,
       ino: publicGeneration.ino,
     });
-    if (detached.kind === 'missing') return null;
-    if (detached.kind === 'changed') {
-      throw new Error('Task attachment changed while staging deletion');
+    if (pinned.kind === 'missing') return null;
+    if (pinned.kind === 'changed') {
+      throw new Error('Task attachment changed while preparing deletion');
     }
 
-    const receipt: StagedTaskAttachmentDeletionReceipt = {
+    const receipt: PreparedTaskAttachmentDeletionReceipt = {
       attachmentId,
       teamName,
       taskId,
-      generation: detached.receipt,
+      generation: pinned.receipt,
     };
     const compensation = guard.registerCompensation(async () => {
-      await this.rollbackStagedAttachmentDeletion(receipt);
+      await this.rollbackPreparedAttachmentDeletion(receipt);
       await this.cleanupEmptyTaskDirectory(teamName, taskId);
     });
     this.pendingCompensations.set(receipt, compensation);
@@ -548,15 +549,29 @@ export class TeamTaskAttachmentStore {
   }
 
   private async finalizeAttachmentDeletionInMutation(
-    receipt: StagedTaskAttachmentDeletionReceipt,
+    receipt: PreparedTaskAttachmentDeletionReceipt,
     teamName: string,
     taskId: string
   ): Promise<void> {
     this.assertDeletionReceiptScope(receipt, teamName, taskId);
     this.dismissCompensation(receipt);
+    let detached: DetachedTaskAttachmentGeneration | null = null;
     try {
+      const result = await detachTaskAttachmentGeneration(
+        receipt.generation.originalPath,
+        receipt.generation.identity
+      );
+      if (result.kind === 'detached') detached = result.receipt;
+    } catch (error) {
+      logger.warn(
+        `[${teamName}] Failed to detach task attachment ${receipt.attachmentId} for task #${taskId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+    if (detached) {
       try {
-        await this.atomicCreator.cleanupPublishedTempLinks(receipt.generation.detachedPath);
+        await this.atomicCreator.cleanupPublishedTempLinks(detached.detachedPath);
       } catch (error) {
         logger.warn(
           `[${teamName}] Failed to clean task attachment generation pins for task #${taskId}: ${
@@ -564,13 +579,27 @@ export class TeamTaskAttachmentStore {
           }`
         );
       }
-      await finalizeDetachedTaskAttachmentGeneration(receipt.generation);
-      logger.debug(
-        `[${teamName}] Deleted task attachment ${receipt.attachmentId} for task #${taskId}`
+      try {
+        await finalizeDetachedTaskAttachmentGeneration(detached);
+        logger.debug(
+          `[${teamName}] Deleted task attachment ${receipt.attachmentId} for task #${taskId}`
+        );
+      } catch (error) {
+        logger.warn(
+          `[${teamName}] Failed to finalize task attachment deletion ${receipt.attachmentId} for task #${taskId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+    try {
+      await removeTaskAttachmentGenerationPin(
+        receipt.generation.pinPath,
+        receipt.generation.identity
       );
     } catch (error) {
       logger.warn(
-        `[${teamName}] Failed to finalize task attachment deletion ${receipt.attachmentId} for task #${taskId}: ${
+        `[${teamName}] Failed to remove task attachment deletion pin ${receipt.attachmentId} for task #${taskId}: ${
           error instanceof Error ? error.message : String(error)
         }`
       );
@@ -578,26 +607,26 @@ export class TeamTaskAttachmentStore {
   }
 
   private async rollbackAttachmentDeletionInMutation(
-    receipt: StagedTaskAttachmentDeletionReceipt,
+    receipt: PreparedTaskAttachmentDeletionReceipt,
     teamName: string,
     taskId: string
   ): Promise<void> {
     this.assertDeletionReceiptScope(receipt, teamName, taskId);
-    await this.rollbackStagedAttachmentDeletion(receipt);
+    await this.rollbackPreparedAttachmentDeletion(receipt);
   }
 
-  private async rollbackStagedAttachmentDeletion(
-    receipt: StagedTaskAttachmentDeletionReceipt
+  private async rollbackPreparedAttachmentDeletion(
+    receipt: PreparedTaskAttachmentDeletionReceipt
   ): Promise<void> {
-    const outcome = await restoreDetachedTaskAttachmentGeneration(receipt.generation);
-    if (outcome === 'conflict') {
-      throw new Error('Task attachment deletion rollback would overwrite a newer generation');
-    }
+    await removeTaskAttachmentGenerationPin(
+      receipt.generation.pinPath,
+      receipt.generation.identity
+    );
     this.dismissCompensation(receipt);
   }
 
   private assertDeletionReceiptScope(
-    receipt: StagedTaskAttachmentDeletionReceipt,
+    receipt: PreparedTaskAttachmentDeletionReceipt,
     teamName: string,
     taskId: string
   ): void {

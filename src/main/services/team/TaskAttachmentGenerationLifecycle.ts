@@ -13,8 +13,19 @@ export interface DetachedTaskAttachmentGeneration {
   readonly identity: TaskAttachmentFileIdentity;
 }
 
+export interface PinnedTaskAttachmentGeneration {
+  readonly originalPath: string;
+  readonly pinPath: string;
+  readonly identity: TaskAttachmentFileIdentity;
+}
+
 export type DetachTaskAttachmentGenerationResult =
   | { readonly kind: 'detached'; readonly receipt: DetachedTaskAttachmentGeneration }
+  | { readonly kind: 'missing' }
+  | { readonly kind: 'changed' };
+
+export type PinTaskAttachmentGenerationResult =
+  | { readonly kind: 'pinned'; readonly receipt: PinnedTaskAttachmentGeneration }
   | { readonly kind: 'missing' }
   | { readonly kind: 'changed' };
 
@@ -33,6 +44,37 @@ async function lstatOrNull(filePath: string): Promise<fs.Stats | null> {
     if (code === 'ENOENT' || code === 'ENOTDIR') return null;
     throw error;
   }
+}
+
+/**
+ * Keeps an exact inode alive without removing its public pathname. The pin is
+ * created before metadata mutation so a process crash cannot break a still-live
+ * metadata reference.
+ */
+export async function pinTaskAttachmentGeneration(
+  originalPath: string,
+  expectedIdentity: TaskAttachmentFileIdentity
+): Promise<PinTaskAttachmentGenerationResult> {
+  const pinPath = path.join(path.dirname(originalPath), `.review-create.${randomUUID()}.tmp`);
+  try {
+    await fs.promises.link(originalPath, pinPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { kind: 'missing' };
+    throw error;
+  }
+
+  const pinned = await fs.promises.lstat(pinPath);
+  if (pinned.isFile() && !pinned.isSymbolicLink() && isSameIdentity(pinned, expectedIdentity)) {
+    return {
+      kind: 'pinned',
+      receipt: { originalPath, pinPath, identity: expectedIdentity },
+    };
+  }
+
+  if (pinned.isFile() && !pinned.isSymbolicLink()) {
+    await removeTaskAttachmentGenerationPin(pinPath, { dev: pinned.dev, ino: pinned.ino });
+  }
+  return { kind: 'changed' };
 }
 
 /**

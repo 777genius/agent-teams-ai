@@ -410,7 +410,7 @@ describe('TeamTaskAttachmentStore', () => {
 
     await expect(
       store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
-        const receipt = await transaction.stageAttachmentDeletion(ATTACHMENT_ID, 'image/png');
+        const receipt = await transaction.prepareAttachmentDeletion(ATTACHMENT_ID, 'image/png');
         metadataDeleted = true;
         compromise(lockFailure);
         transaction.markCommitted();

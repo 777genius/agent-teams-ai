@@ -1767,7 +1767,7 @@ describe('ipc teams handlers', () => {
     }
   });
 
-  it('stages attachment bytes before committing metadata deletion', async () => {
+  it('keeps attachment bytes public until metadata deletion commits', async () => {
     const handler = handlers.get(TEAM_DELETE_TASK_ATTACHMENT);
     expect(handler).toBeDefined();
     const claudeRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'teams-attachment-'));
@@ -1781,10 +1781,16 @@ describe('ipc teams handlers', () => {
     );
     const attachmentPath = path.join(attachmentDirectory, `${attachmentId}--proof.png`);
     service.removeTaskAttachment.mockImplementationOnce(async () => {
-      await expect(fs.promises.lstat(attachmentPath)).rejects.toMatchObject({ code: 'ENOENT' });
-      expect(await fs.promises.readdir(attachmentDirectory)).toEqual([
-        expect.stringMatching(/^\.attachment-delete\.[a-f0-9-]+\.staged$/i),
-      ]);
+      await expect(fs.promises.readFile(attachmentPath, 'utf8')).resolves.toBe('test');
+      const publicIdentity = await fs.promises.lstat(attachmentPath);
+      const entries = await fs.promises.readdir(attachmentDirectory);
+      const pinName = entries.find((entry) => /^\.review-create\.[a-f0-9-]+\.tmp$/i.test(entry));
+      expect(pinName).toBeDefined();
+      const pinIdentity = await fs.promises.lstat(path.join(attachmentDirectory, pinName!));
+      expect({ dev: pinIdentity.dev, ino: pinIdentity.ino }).toEqual({
+        dev: publicIdentity.dev,
+        ino: publicIdentity.ino,
+      });
     });
 
     try {
