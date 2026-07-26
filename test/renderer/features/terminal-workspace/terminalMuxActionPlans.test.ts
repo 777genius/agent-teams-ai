@@ -87,6 +87,8 @@ describe('terminal mux action plans', () => {
       commands: [{ kind: 'rename_tab', tab_id: 'tab-1', title: 'Release' }],
     });
     expect(planRenameTerminalTab(visibleTabs[0], ' Build ')).toBeNull();
+    expect(planRenameTerminalTab(visibleTabs[0], PREWARMED_TERMINAL_TAB_TITLE)).toBeNull();
+    expect(planRenameTerminalTab(visibleTabs[0], ` ${PREWARMED_TERMINAL_TAB_TITLE} `)).toBeNull();
     expect(visibleTabs.map((tab) => tab.title)).toEqual(['Build', 'Tests']);
   });
 });

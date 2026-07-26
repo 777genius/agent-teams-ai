@@ -1,6 +1,7 @@
 import {
   formatNextMuxTabTitle,
   isPrewarmedTerminalTab,
+  normalizeTerminalUserTabTitle,
   resolveVisibleTabToFocusAfterClose,
   type TerminalMuxTab,
 } from './terminalTabPreferences';
@@ -102,7 +103,7 @@ export function planRenameTerminalTab(
   tab: TerminalMuxTab,
   title: string
 ): TerminalMuxActionPlan | null {
-  const normalizedTitle = title.trim();
+  const normalizedTitle = normalizeTerminalUserTabTitle(title);
   if (!normalizedTitle || normalizedTitle === (tab.title?.trim() || '')) {
     return null;
   }

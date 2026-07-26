@@ -2604,7 +2604,7 @@
     "createTerminalTab": "Создать вкладку терминала",
     "terminalTabsUnavailable": "Вкладки терминала недоступны",
     "closeTerminalTabDialogTitle": "Закрыть вкладку терминала?",
-    "closeTerminalTabDialogDescription": "В этой вкладке есть история вывода терминала. Закрытие удалит вкладку и ее видимый вывод из workspace.",
+    "closeTerminalTabDialogDescription": "Эта вкладка может содержать вывод терминала или запущенные процессы. При закрытии вкладка и ее видимый вывод будут удалены из этого рабочего пространства.",
     "cancel": "Отмена",
     "closeTab": "Закрыть вкладку",
     "commandPlaceholder": "Введите команду...",

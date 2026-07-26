@@ -12,6 +12,8 @@ import {
 } from '@features/terminal-workspace/renderer/model/terminalTabPreferences';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ScreenProgressState } from '@terminal-platform/runtime-types';
+
 type LifecycleOptions = Parameters<typeof useTerminalMuxTabLifecycle>[0];
 type LifecycleControls = ReturnType<typeof useTerminalMuxTabLifecycle>;
 
@@ -67,9 +69,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     });
     await render({ commands });
 
-    await act(async () => {
-      await requiredControls().requestCloseTab(TAB_ONE);
-    });
+    await requestAndConfirmClose(TAB_ONE);
 
     expect(events).toEqual([
       'dispatch:session-a:close_tab:tab-1',
@@ -79,8 +79,136 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(requiredControls().pendingAction).toBeNull();
   });
 
+  it('reports a close dispatch after the close command succeeds', async () => {
+    const onTabCloseDispatched = vi.fn();
+    await render({ onTabCloseDispatched });
+
+    await requestAndConfirmClose(TAB_ONE);
+
+    expect(onTabCloseDispatched).toHaveBeenCalledOnce();
+    expect(onTabCloseDispatched).toHaveBeenCalledWith({
+      closedTabId: TAB_ONE.tab_id,
+      preferredFocusTabId: TAB_TWO.tab_id,
+      willDispatchPreferredFocus: true,
+    });
+  });
+
+  it('keeps the close dispatch when attach fails after the tab was removed', async () => {
+    const onTabCloseDispatched = vi.fn();
+    const commands = createResolvedCommands();
+    commands.attachSession = vi.fn().mockRejectedValue(new Error('attach failed')) as never;
+    await render({ commands, onTabCloseDispatched });
+
+    await requestAndConfirmClose(TAB_ONE);
+
+    expect(onTabCloseDispatched).toHaveBeenCalledOnce();
+    expect(requiredControls().error).toBe('attach failed');
+  });
+
+  it('reports the close dispatch before a later attach settles', async () => {
+    const attach = createDeferred<void>();
+    const onTabCloseDispatched = vi.fn();
+    const commands = createResolvedCommands();
+    commands.attachSession = vi.fn(() => attach.promise) as never;
+    await render({ commands, onTabCloseDispatched });
+
+    const { closeAction } = await beginConfirmedClose(TAB_ONE);
+
+    expect(onTabCloseDispatched).toHaveBeenCalledOnce();
+    expect(requiredControls().pendingAction).toBe('close-tab:tab-1');
+
+    await act(async () => {
+      attach.resolve();
+      await closeAction;
+    });
+  });
+
+  it('keeps the close dispatch when the following focus command fails', async () => {
+    const onTabCloseDispatched = vi.fn();
+    const commands = createResolvedCommands();
+    commands.dispatchMuxCommand = vi.fn(async (_sessionId, command) => {
+      if (command.kind === 'focus_tab') {
+        throw new Error('focus failed');
+      }
+      return CHANGED_MUX_RESULT;
+    }) as never;
+    await render({ commands, onTabCloseDispatched });
+
+    await requestAndConfirmClose(TAB_ONE);
+
+    expect(onTabCloseDispatched).toHaveBeenCalledOnce();
+    expect(commands.attachSession).not.toHaveBeenCalled();
+    expect(requiredControls().error).toBe('focus failed');
+  });
+
+  it('reports an unchanged focus settlement when the mux rejects it semantically', async () => {
+    const onTabCloseDispatched = vi.fn();
+    const onTabCloseFocusSettled = vi.fn();
+    const commands = createResolvedCommands();
+    commands.dispatchMuxCommand = vi.fn(async (_sessionId, command) => ({
+      changed: command.kind !== 'focus_tab',
+    })) as never;
+    await render({ commands, onTabCloseDispatched, onTabCloseFocusSettled });
+
+    await requestAndConfirmClose(TAB_ONE);
+
+    expect(onTabCloseDispatched).toHaveBeenCalledOnce();
+    expect(onTabCloseFocusSettled).toHaveBeenCalledWith({
+      changed: false,
+      closedTabId: TAB_ONE.tab_id,
+      focusTabId: TAB_TWO.tab_id,
+    });
+    expect(commands.attachSession).toHaveBeenCalledOnce();
+  });
+
+  it('does not report a close dispatch when the close command fails', async () => {
+    const onTabCloseDispatched = vi.fn();
+    const commands = createResolvedCommands();
+    commands.dispatchMuxCommand = vi.fn().mockRejectedValue(new Error('close failed')) as never;
+    await render({ commands, onTabCloseDispatched });
+
+    await requestAndConfirmClose(TAB_ONE);
+
+    expect(onTabCloseDispatched).not.toHaveBeenCalled();
+    expect(requiredControls().error).toBe('close failed');
+  });
+
+  it('does not focus a sibling when the close command is a semantic no-op', async () => {
+    const onTabCloseDispatched = vi.fn();
+    const onTabCloseFocusSettled = vi.fn();
+    const commands = createResolvedCommands();
+    commands.dispatchMuxCommand = vi.fn(async () => ({ changed: false })) as never;
+    await render({ commands, onTabCloseDispatched, onTabCloseFocusSettled });
+
+    await requestAndConfirmClose(TAB_ONE);
+
+    expect(commands.dispatchMuxCommand).toHaveBeenCalledOnce();
+    expect(commands.dispatchMuxCommand).toHaveBeenCalledWith('session-a', {
+      kind: 'close_tab',
+      tab_id: TAB_ONE.tab_id,
+    });
+    expect(onTabCloseDispatched).not.toHaveBeenCalled();
+    expect(onTabCloseFocusSettled).not.toHaveBeenCalled();
+    expect(commands.attachSession).toHaveBeenCalledOnce();
+  });
+
+  it('asks for confirmation before closing a visually empty tab with active progress', async () => {
+    const commands = createResolvedCommands();
+    await render({
+      commands,
+      snapshot: createSnapshotWithEmptyFocusedTab(TAB_ONE, 'indeterminate'),
+    });
+
+    await act(async () => {
+      await requiredControls().requestCloseTab(TAB_ONE);
+    });
+
+    expect(requiredControls().closeCandidate?.tab_id).toBe(TAB_ONE.tab_id);
+    expect(commands.dispatchMuxCommand).not.toHaveBeenCalled();
+  });
+
   it('uses a synchronous foreground mutex to reject a second action in the same render', async () => {
-    const firstDispatch = createDeferred<void>();
+    const firstDispatch = createDeferred<MuxCommandResult>();
     const commands = createResolvedCommands();
     commands.dispatchMuxCommand = vi.fn(() => firstDispatch.promise) as never;
     await render({ commands });
@@ -97,7 +225,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(requiredControls().pendingAction).toBe('focus-tab:tab-2');
 
     await act(async () => {
-      firstDispatch.resolve();
+      firstDispatch.resolve(CHANGED_MUX_RESULT);
       await Promise.all([firstAction, secondAction]);
     });
 
@@ -110,7 +238,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     commands.dispatchMuxCommand = vi
       .fn()
       .mockRejectedValueOnce(new Error('mux unavailable'))
-      .mockResolvedValueOnce(undefined) as never;
+      .mockResolvedValueOnce(CHANGED_MUX_RESULT) as never;
     await render({ commands });
 
     await act(async () => {
@@ -128,11 +256,11 @@ describe('useTerminalMuxTabLifecycle', () => {
   });
 
   it('cancels deferred session A work when the lifecycle scope switches to session B', async () => {
-    const deferredA = createDeferred<void>();
+    const deferredA = createDeferred<MuxCommandResult>();
     const pendingChanges = vi.fn();
     const commands = createResolvedCommands();
     commands.dispatchMuxCommand = vi.fn((sessionId: string) =>
-      sessionId === 'session-a' ? deferredA.promise : Promise.resolve()
+      sessionId === 'session-a' ? deferredA.promise : Promise.resolve(CHANGED_MUX_RESULT)
     ) as never;
     await render({ commands, onTabContentPendingChange: pendingChanges });
 
@@ -151,7 +279,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(pendingChanges.mock.calls.map(([pending]) => pending)).toEqual([true, false]);
 
     await act(async () => {
-      deferredA.resolve();
+      deferredA.resolve(CHANGED_MUX_RESULT);
       await sessionAAction;
     });
 
@@ -163,8 +291,8 @@ describe('useTerminalMuxTabLifecycle', () => {
   });
 
   it('prevents stale session A finally from clearing session B pending state', async () => {
-    const deferredA = createDeferred<void>();
-    const deferredB = createDeferred<void>();
+    const deferredA = createDeferred<MuxCommandResult>();
+    const deferredB = createDeferred<MuxCommandResult>();
     const pendingChanges = vi.fn();
     const commands = createResolvedCommands();
     commands.dispatchMuxCommand = vi.fn((sessionId: string) =>
@@ -191,14 +319,14 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(requiredControls().pendingAction).toBe('focus-tab:tab-3');
 
     await act(async () => {
-      deferredA.resolve();
+      deferredA.resolve(CHANGED_MUX_RESULT);
       await sessionAAction;
     });
     expect(requiredControls().pendingAction).toBe('focus-tab:tab-3');
     expect(pendingChanges.mock.calls.map(([pending]) => pending)).toEqual([true, false, true]);
 
     await act(async () => {
-      deferredB.resolve();
+      deferredB.resolve(CHANGED_MUX_RESULT);
       await sessionBAction;
     });
     expect(requiredControls().pendingAction).toBeNull();
@@ -211,12 +339,14 @@ describe('useTerminalMuxTabLifecycle', () => {
   });
 
   it('invalidates an in-flight prewarm before running an explicit focus action', async () => {
-    const prewarmDispatch = createDeferred<void>();
+    const prewarmDispatch = createDeferred<MuxCommandResult>();
     const dispatchedKinds: string[] = [];
     const commands = createResolvedCommands();
     commands.dispatchMuxCommand = vi.fn((_sessionId: string, command) => {
       dispatchedKinds.push(command.kind);
-      return command.kind === 'new_tab' ? prewarmDispatch.promise : Promise.resolve();
+      return command.kind === 'new_tab'
+        ? prewarmDispatch.promise
+        : Promise.resolve(CHANGED_MUX_RESULT);
     }) as never;
 
     await render({
@@ -235,7 +365,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(commands.attachSession).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      prewarmDispatch.resolve();
+      prewarmDispatch.resolve(CHANGED_MUX_RESULT);
       await flushMicrotasks();
     });
     expect(dispatchedKinds).toEqual(['new_tab', 'focus_tab']);
@@ -273,7 +403,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     });
     expect(requiredControls().error).toBe('scope-b-error');
 
-    const pendingDispatch = createDeferred<void>();
+    const pendingDispatch = createDeferred<MuxCommandResult>();
     const pendingChanges = vi.fn();
     const commandsC = createResolvedCommands();
     commandsC.dispatchMuxCommand = vi.fn(() => pendingDispatch.promise) as never;
@@ -299,14 +429,14 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(pendingChanges.mock.calls.map(([pending]) => pending)).toEqual([true, false]);
 
     await act(async () => {
-      pendingDispatch.resolve();
+      pendingDispatch.resolve(CHANGED_MUX_RESULT);
       await pendingAction;
     });
     expect(pendingChanges.mock.calls.map(([pending]) => pending)).toEqual([true, false]);
   });
 
   it('releases a pending callback exactly once on unmount and ignores late completion', async () => {
-    const dispatch = createDeferred<void>();
+    const dispatch = createDeferred<MuxCommandResult>();
     const pendingChanges = vi.fn();
     const commands = createResolvedCommands();
     commands.dispatchMuxCommand = vi.fn(() => dispatch.promise) as never;
@@ -326,7 +456,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     host.remove();
     expect(pendingChanges.mock.calls.map(([pending]) => pending)).toEqual([true, false]);
 
-    dispatch.resolve();
+    dispatch.resolve(CHANGED_MUX_RESULT);
     await action;
     expect(pendingChanges.mock.calls.map(([pending]) => pending)).toEqual([true, false]);
     expect(commands.attachSession).not.toHaveBeenCalled();
@@ -402,7 +532,7 @@ describe('useTerminalMuxTabLifecycle', () => {
   });
 
   it('invalidates old work when the narrow commands port is replaced', async () => {
-    const deferredOldPort = createDeferred<void>();
+    const deferredOldPort = createDeferred<MuxCommandResult>();
     const pendingChanges = vi.fn();
     const oldCommands = createResolvedCommands();
     oldCommands.dispatchMuxCommand = vi.fn(() => deferredOldPort.promise) as never;
@@ -426,7 +556,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(newCommands.attachSession).toHaveBeenCalledWith('session-a');
 
     await act(async () => {
-      deferredOldPort.resolve();
+      deferredOldPort.resolve(CHANGED_MUX_RESULT);
       await oldAction;
     });
     expect(oldCommands.attachSession).not.toHaveBeenCalled();
@@ -439,7 +569,7 @@ describe('useTerminalMuxTabLifecycle', () => {
   });
 
   it('does not cancel committed work from an abandoned concurrent scope render', async () => {
-    const sessionADispatch = createDeferred<void>();
+    const sessionADispatch = createDeferred<MuxCommandResult>();
     const abandonedRender = createDeferred<void>();
     const commands = createResolvedCommands();
     commands.dispatchMuxCommand = vi.fn(() => sessionADispatch.promise) as never;
@@ -465,7 +595,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     });
 
     await act(async () => {
-      sessionADispatch.resolve();
+      sessionADispatch.resolve(CHANGED_MUX_RESULT);
       await sessionAAction;
     });
     expect(commands.attachSession).toHaveBeenCalledWith('session-a');
@@ -526,6 +656,28 @@ describe('useTerminalMuxTabLifecycle', () => {
     });
   }
 
+  async function requestAndConfirmClose(tab: TerminalMuxTab): Promise<void> {
+    await act(async () => {
+      await requiredControls().requestCloseTab(tab);
+    });
+    await act(async () => {
+      await requiredControls().confirmCloseCandidate();
+    });
+  }
+
+  async function beginConfirmedClose(tab: TerminalMuxTab): Promise<{ closeAction: Promise<void> }> {
+    await act(async () => {
+      await requiredControls().requestCloseTab(tab);
+    });
+
+    let closeAction!: Promise<void>;
+    await act(async () => {
+      closeAction = requiredControls().confirmCloseCandidate();
+      await flushMicrotasks();
+    });
+    return { closeAction };
+  }
+
   function requiredControls(): LifecycleControls {
     if (!controls) {
       throw new Error('Lifecycle controls were not rendered');
@@ -543,10 +695,11 @@ function createOptions(commands: TerminalMuxCommands): LifecycleOptions {
     canCreateTab: false,
     canFocusTab: true,
     canRenameTab: true,
+    commandRuns: [],
     commands,
     orderedVisibleTabs: VISIBLE_TABS,
     prewarmedTab: null,
-    snapshot: {} as TerminalWorkspaceSnapshot,
+    snapshot: createSnapshotWithEmptyFocusedTab(TAB_ONE),
     tabsCount: VISIBLE_TABS.length,
     visibleTabs: VISIBLE_TABS,
   };
@@ -568,9 +721,14 @@ function createResolvedCommands({
     }),
     dispatchMuxCommand: vi.fn(async (sessionId: string, command) => {
       onDispatch?.(sessionId, command);
+      return CHANGED_MUX_RESULT;
     }),
   } as unknown as TerminalMuxCommands;
 }
+
+type MuxCommandResult = Awaited<ReturnType<TerminalMuxCommands['dispatchMuxCommand']>>;
+
+const CHANGED_MUX_RESULT: MuxCommandResult = { changed: true };
 
 function createTab(tabId: string, title: string): TerminalMuxTab {
   return {
@@ -593,6 +751,38 @@ function createSnapshotWithHistory(tab: TerminalMuxTab): TerminalWorkspaceSnapsh
       [`pane-${tab.tab_id}`]: {
         capturedAtMs: BigInt(1),
         lines: ['terminal output'],
+      },
+    },
+  } as unknown as TerminalWorkspaceSnapshot;
+}
+
+function createSnapshotWithEmptyFocusedTab(
+  tab: TerminalMuxTab,
+  progressState?: ScreenProgressState
+): TerminalWorkspaceSnapshot {
+  const paneId = `pane-${tab.tab_id}`;
+  return {
+    attachedSession: {
+      focused_screen: {
+        pane_id: paneId,
+        surface: {
+          lines: [],
+          ...(progressState ? { progress: { state: progressState } } : {}),
+        },
+      },
+      session: {
+        session_id: 'session-a',
+      },
+    },
+    historicalPanes: {
+      [paneId]: {
+        fromEventSeq: BigInt(1),
+        hasGaps: false,
+        hasMoreSegments: false,
+        lines: [],
+        nextEventSeq: null,
+        paneId,
+        sessionId: 'session-a',
       },
     },
   } as unknown as TerminalWorkspaceSnapshot;

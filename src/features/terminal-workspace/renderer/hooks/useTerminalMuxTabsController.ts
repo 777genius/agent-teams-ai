@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import {
   persistTerminalTabPreferences,
@@ -22,9 +22,15 @@ import {
   type TerminalTabStripFocusTarget,
 } from '../view-models/terminalMuxTabs';
 
-import { type TerminalMuxCommands, useTerminalMuxTabLifecycle } from './useTerminalMuxTabLifecycle';
+import {
+  type TerminalMuxCommands,
+  type TerminalMuxTabCloseDispatch,
+  type TerminalMuxTabCloseFocusSettlement,
+  useTerminalMuxTabLifecycle,
+} from './useTerminalMuxTabLifecycle';
 import { useTerminalTabPointerReorder } from './useTerminalTabPointerReorder';
 
+import type { TerminalCommandRunPresentation } from '../model/terminalCommandRuns';
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
@@ -33,6 +39,7 @@ import type {
 } from 'react';
 
 export interface UseTerminalMuxTabsControllerOptions {
+  commandRuns: readonly TerminalCommandRunPresentation[];
   commands: TerminalMuxCommands;
   placement: 'console' | 'sheet-header';
   settingsOpen: boolean;
@@ -77,7 +84,21 @@ export interface TerminalMuxTabsController {
   viewModel: TerminalMuxTabsViewModel;
 }
 
+interface PendingCloseFocusIntent {
+  closedTabId: string;
+  commands: TerminalMuxCommands;
+  restoreFocus: boolean;
+  scopeKey: string;
+}
+
+interface PendingCloseFocusRequest extends TerminalMuxTabCloseDispatch {
+  commands: TerminalMuxCommands;
+  preferredFocusState: 'not-planned' | 'pending' | 'changed' | 'unchanged';
+  scopeKey: string;
+}
+
 export function useTerminalMuxTabsController({
+  commandRuns,
   commands,
   placement,
   settingsOpen,
@@ -91,6 +112,10 @@ export function useTerminalMuxTabsController({
   );
   const settingsTabButtonRef = useRef<HTMLButtonElement | null>(null);
   const tabButtonElementsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const closeFocusIntentRef = useRef<PendingCloseFocusIntent | null>(null);
+  const closeConfirmationInProgressRef = useRef(false);
+  const [pendingCloseFocusRequest, setPendingCloseFocusRequest] =
+    useState<PendingCloseFocusRequest | null>(null);
   const viewModel = useMemo(
     () =>
       createTerminalMuxTabsViewModel({
@@ -101,6 +126,48 @@ export function useTerminalMuxTabsController({
       }),
     [placement, settingsOpen, snapshot, tabPreferences]
   );
+  const connectionState = snapshot.connection.state;
+  const focusScopeKey = `${teamName}\u001f${viewModel.activeSessionId ?? ''}`;
+  const handleTabCloseDispatched = useCallback(
+    (dispatch: TerminalMuxTabCloseDispatch): void => {
+      const intent = closeFocusIntentRef.current;
+      closeFocusIntentRef.current = null;
+      if (
+        connectionState !== 'ready' ||
+        !intent?.restoreFocus ||
+        intent.closedTabId !== dispatch.closedTabId ||
+        intent.commands !== commands ||
+        intent.scopeKey !== focusScopeKey
+      ) {
+        return;
+      }
+
+      setPendingCloseFocusRequest({
+        ...dispatch,
+        commands,
+        preferredFocusState: dispatch.willDispatchPreferredFocus ? 'pending' : 'not-planned',
+        scopeKey: focusScopeKey,
+      });
+    },
+    [commands, connectionState, focusScopeKey]
+  );
+  const handleTabCloseFocusSettled = useCallback(
+    (settlement: TerminalMuxTabCloseFocusSettlement): void => {
+      setPendingCloseFocusRequest((current) =>
+        current &&
+        current.closedTabId === settlement.closedTabId &&
+        current.preferredFocusTabId === settlement.focusTabId &&
+        current.commands === commands &&
+        current.scopeKey === focusScopeKey
+          ? {
+              ...current,
+              preferredFocusState: settlement.changed ? 'changed' : 'unchanged',
+            }
+          : current
+      );
+    },
+    [commands, focusScopeKey]
+  );
   const lifecycle = useTerminalMuxTabLifecycle({
     activeSessionId: viewModel.activeSessionId,
     activeTabId: viewModel.activeTabId,
@@ -109,6 +176,7 @@ export function useTerminalMuxTabsController({
     canCreateTab: viewModel.canCreateTab,
     canFocusTab: viewModel.canFocusTab,
     canRenameTab: viewModel.canRenameTab,
+    commandRuns,
     commands,
     orderedVisibleTabs: viewModel.orderedVisibleTabs,
     prewarmedTab: viewModel.prewarmedTab,
@@ -116,9 +184,19 @@ export function useTerminalMuxTabsController({
     tabsCount: viewModel.tabsCount,
     visibleTabs: viewModel.visibleTabs,
     onSettingsOpenChange,
+    onTabCloseDispatched: handleTabCloseDispatched,
+    onTabCloseFocusSettled: handleTabCloseFocusSettled,
     onTabContentPendingChange,
   });
-  const { busy, editingTabId, focusTab } = lifecycle;
+  const {
+    busy,
+    closeCandidate,
+    confirmCloseCandidate: confirmCloseCandidateLifecycle,
+    dismissCloseCandidate: dismissCloseCandidateLifecycle,
+    editingTabId,
+    focusTab,
+    requestCloseTab: requestCloseTabLifecycle,
+  } = lifecycle;
 
   const updateTabPreferences = useCallback(
     (updater: (current: TerminalTabPreferences) => TerminalTabPreferences): void => {
@@ -170,7 +248,7 @@ export function useTerminalMuxTabsController({
     disabled: busy,
     editingTabId,
     orderedTabIds: viewModel.orderedVisibleTabIds,
-    scopeKey: `${teamName}\u001f${viewModel.activeSessionId ?? ''}`,
+    scopeKey: focusScopeKey,
     onRequestFocus: focusTab,
     onRequestReorder: reorderTabs,
   });
@@ -198,6 +276,171 @@ export function useTerminalMuxTabsController({
     },
     []
   );
+
+  useLayoutEffect(() => {
+    if (connectionState !== 'ready') {
+      closeFocusIntentRef.current = null;
+      setPendingCloseFocusRequest((current) => (current ? null : current));
+      return;
+    }
+
+    const intent = closeFocusIntentRef.current;
+    if (intent && (intent.commands !== commands || intent.scopeKey !== focusScopeKey)) {
+      closeFocusIntentRef.current = null;
+    }
+    setPendingCloseFocusRequest((current) =>
+      current && (current.commands !== commands || current.scopeKey !== focusScopeKey)
+        ? null
+        : current
+    );
+  }, [commands, connectionState, focusScopeKey]);
+
+  useLayoutEffect(() => {
+    if (
+      connectionState !== 'ready' ||
+      !pendingCloseFocusRequest ||
+      pendingCloseFocusRequest.commands !== commands ||
+      pendingCloseFocusRequest.scopeKey !== focusScopeKey ||
+      viewModel.visibleTabs.some((tab) => tab.tab_id === pendingCloseFocusRequest.closedTabId)
+    ) {
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    if (
+      activeElement &&
+      activeElement !== document.body &&
+      !isElementWithinTerminalTab(activeElement, pendingCloseFocusRequest.closedTabId)
+    ) {
+      setPendingCloseFocusRequest(null);
+      return;
+    }
+
+    if (settingsOpen) {
+      const settingsTarget = settingsTabButtonRef.current;
+      if (!settingsTarget) {
+        return;
+      }
+      settingsTarget.focus();
+      setPendingCloseFocusRequest(null);
+      return undefined;
+    }
+
+    const preferredFocusTabId = pendingCloseFocusRequest.preferredFocusTabId;
+    const preferredFocusIsVisible =
+      preferredFocusTabId !== null &&
+      viewModel.visibleTabs.some((tab) => tab.tab_id === preferredFocusTabId);
+    const preferredFocusState = pendingCloseFocusRequest.preferredFocusState;
+    const waitForFocusCommand = preferredFocusState === 'pending' && busy;
+    const waitForPreferredTopology =
+      preferredFocusState === 'changed' &&
+      busy &&
+      (!preferredFocusIsVisible || viewModel.activeVisibleTabId !== preferredFocusTabId);
+    if (waitForFocusCommand || waitForPreferredTopology) {
+      return;
+    }
+
+    const focusTabId =
+      preferredFocusState === 'changed' &&
+      preferredFocusIsVisible &&
+      viewModel.activeVisibleTabId === preferredFocusTabId
+        ? preferredFocusTabId
+        : viewModel.activeVisibleTabId;
+    if (!focusTabId) {
+      setPendingCloseFocusRequest(null);
+      return;
+    }
+
+    const target = tabButtonElementsRef.current.get(focusTabId);
+    if (!target) {
+      return;
+    }
+
+    if (
+      preferredFocusState === 'changed' &&
+      !busy &&
+      preferredFocusIsVisible &&
+      viewModel.activeVisibleTabId !== preferredFocusTabId
+    ) {
+      let fallbackFrame: number | null = null;
+      const settlementFrame = window.requestAnimationFrame(() => {
+        fallbackFrame = window.requestAnimationFrame(() => {
+          const settledActiveElement = document.activeElement;
+          if (
+            settledActiveElement &&
+            settledActiveElement !== document.body &&
+            !isElementWithinTerminalTab(settledActiveElement, pendingCloseFocusRequest.closedTabId)
+          ) {
+            setPendingCloseFocusRequest((current) =>
+              current === pendingCloseFocusRequest ? null : current
+            );
+            return;
+          }
+
+          target.focus();
+          setPendingCloseFocusRequest((current) =>
+            current === pendingCloseFocusRequest ? null : current
+          );
+        });
+      });
+      return () => {
+        window.cancelAnimationFrame(settlementFrame);
+        if (fallbackFrame !== null) {
+          window.cancelAnimationFrame(fallbackFrame);
+        }
+      };
+    }
+
+    target.focus();
+    setPendingCloseFocusRequest(null);
+    return undefined;
+  }, [
+    busy,
+    commands,
+    connectionState,
+    focusScopeKey,
+    pendingCloseFocusRequest,
+    settingsOpen,
+    viewModel.activeVisibleTabId,
+    viewModel.visibleTabIdsKey,
+    viewModel.visibleTabs,
+  ]);
+
+  const requestCloseTab = useCallback(
+    async (tab: TerminalMuxTab): Promise<void> => {
+      closeFocusIntentRef.current = {
+        closedTabId: tab.tab_id,
+        commands,
+        restoreFocus:
+          connectionState === 'ready' &&
+          isElementWithinTerminalTab(document.activeElement, tab.tab_id),
+        scopeKey: focusScopeKey,
+      };
+      await requestCloseTabLifecycle(tab);
+    },
+    [commands, connectionState, focusScopeKey, requestCloseTabLifecycle]
+  );
+
+  const dismissCloseCandidate = useCallback((): void => {
+    const candidateTabId = closeCandidate?.tab_id;
+    if (
+      !closeConfirmationInProgressRef.current &&
+      candidateTabId &&
+      closeFocusIntentRef.current?.closedTabId === candidateTabId
+    ) {
+      closeFocusIntentRef.current = null;
+    }
+    dismissCloseCandidateLifecycle();
+  }, [closeCandidate, dismissCloseCandidateLifecycle]);
+
+  const confirmCloseCandidate = useCallback(async (): Promise<void> => {
+    closeConfirmationInProgressRef.current = true;
+    try {
+      await confirmCloseCandidateLifecycle();
+    } finally {
+      closeConfirmationInProgressRef.current = false;
+    }
+  }, [confirmCloseCandidateLifecycle]);
 
   const handleTabStripKeyDown = useCallback(
     (
@@ -269,9 +512,9 @@ export function useTerminalMuxTabsController({
     cancelRenameTab: lifecycle.cancelRenameTab,
     closeCandidate: lifecycle.closeCandidate,
     commitRenameTab: lifecycle.commitRenameTab,
-    confirmCloseCandidate: lifecycle.confirmCloseCandidate,
+    confirmCloseCandidate,
     createTab: lifecycle.createTab,
-    dismissCloseCandidate: lifecycle.dismissCloseCandidate,
+    dismissCloseCandidate,
     draggingTabId: pointerReorder.draggingTabId,
     dropIndicator: pointerReorder.dropIndicator,
     editingTabId: lifecycle.editingTabId,
@@ -290,7 +533,7 @@ export function useTerminalMuxTabsController({
     registerTabButtonElement,
     registerTabElement: pointerReorder.registerTabElement,
     renameInputRef: lifecycle.renameInputRef,
-    requestCloseTab: lifecycle.requestCloseTab,
+    requestCloseTab,
     setEditingTitle: lifecycle.setEditingTitle,
     setTabColor,
     settingsTabButtonRef,
@@ -298,4 +541,8 @@ export function useTerminalMuxTabsController({
     tabListElementRef: pointerReorder.tabListElementRef,
     viewModel,
   };
+}
+
+function isElementWithinTerminalTab(element: Element | null, tabId: string): boolean {
+  return element?.closest<HTMLElement>('[data-terminal-tab-id]')?.dataset.terminalTabId === tabId;
 }

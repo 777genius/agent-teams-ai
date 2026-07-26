@@ -66,7 +66,7 @@ vi.mock('@features/localization/renderer', () => ({
         'terminalWorkspace.terminalTabsUnavailable': 'Terminal tabs are unavailable',
         'terminalWorkspace.closeTerminalTabDialogTitle': 'Close terminal tab?',
         'terminalWorkspace.closeTerminalTabDialogDescription':
-          'This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.',
+          'This tab may contain terminal output or running processes. Closing it will remove the tab and its visible output from this workspace.',
         'terminalWorkspace.cancel': 'Cancel',
         'terminalWorkspace.closeTab': 'Close tab',
         'terminalWorkspace.commandPlaceholder': 'Type a command...',
@@ -892,7 +892,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(document.body.textContent).toContain('mux gateway unavailable');
     expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledTimes(1);
 
-    kernel.commands.dispatchMuxCommand.mockResolvedValue(undefined);
+    kernel.commands.dispatchMuxCommand.mockResolvedValue({ changed: true });
     await clickButton('Create terminal tab');
 
     expect(
@@ -996,7 +996,47 @@ describe('terminal workspace panel fixture-e2e', () => {
     });
   });
 
-  it('closes empty tabs immediately and asks for confirmation before dropping tab history', async () => {
+  it('rejects renaming a user tab to the internal prewarm title', async () => {
+    nextSnapshot = createWorkspaceSnapshot({
+      tabs: [
+        createTab('tab-1', 'Terminal UI Smoke', 'pane-1'),
+        createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+      ],
+    });
+
+    await renderPanel();
+    const kernel = currentKernel();
+    kernel.commands.dispatchMuxCommand.mockClear();
+
+    const tabButton = getTabButton('Terminal UI Smoke');
+    await act(async () => {
+      tabButton.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+      await flushMicrotasks();
+    });
+    const input = getRequiredElement('agent-team-terminal-tab-title-input') as HTMLInputElement;
+    await act(async () => {
+      setInputValue(input, '__tp_prewarmed_shell__');
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key: 'Enter',
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(kernel.commands.dispatchMuxCommand).not.toHaveBeenCalledWith(
+      'session-1',
+      expect.objectContaining({ kind: 'rename_tab', tab_id: 'tab-1' })
+    );
+    expect(getVisibleTabLabels()).toEqual(['Terminal UI Smoke']);
+  });
+
+  it('asks for confirmation before closing tabs with history or unhydrated output', async () => {
     nextSnapshot = createWorkspaceSnapshot({
       historicalPanes: {
         'pane-2': {
@@ -1029,13 +1069,20 @@ describe('terminal workspace panel fixture-e2e', () => {
 
     kernel.commands.dispatchMuxCommand.mockClear();
     await clickButton('Close terminal tab Terminal UI Smoke');
+    expect(kernel.commands.dispatchMuxCommand).not.toHaveBeenCalledWith('session-1', {
+      kind: 'close_tab',
+      tab_id: 'tab-1',
+    });
+    expect(document.body.textContent).toContain('Close terminal tab?');
+
+    await clickTextButton('Close tab');
     expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledWith('session-1', {
       kind: 'close_tab',
       tab_id: 'tab-1',
     });
   });
 
-  it('focuses the visible tab on the left after closing the active terminal tab', async () => {
+  it('restores DOM and mux focus to the visible tab on the left after closing the active tab', async () => {
     nextSnapshot = createWorkspaceSnapshot({
       focusedTabId: 'tab-3',
       tabs: [
@@ -1050,7 +1097,13 @@ describe('terminal workspace panel fixture-e2e', () => {
     const kernel = currentKernel();
     kernel.commands.dispatchMuxCommand.mockClear();
 
+    await act(async () => {
+      getTabCloseButton('Deploy').focus();
+      await flushMicrotasks();
+    });
     await clickButton('Close terminal tab Deploy');
+    expect(document.body.textContent).toContain('Close terminal tab?');
+    await clickTextButton('Close tab');
 
     expect(kernel.commands.dispatchMuxCommand.mock.calls.map(([, command]) => command)).toEqual([
       {
@@ -1062,6 +1115,18 @@ describe('terminal workspace panel fixture-e2e', () => {
         tab_id: 'tab-2',
       },
     ]);
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedTabId: 'tab-2',
+      tabs: [
+        createTab('tab-1', 'Build', 'pane-build'),
+        createTab('tab-2', 'Tests', 'pane-tests'),
+        createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+      ],
+    });
+    await renderPanel();
+
+    expect(document.activeElement).toBe(getTabButton('Tests'));
   });
 
   it('restores user tab order preferences and strips the hidden prewarmed tab from visible UI', async () => {
@@ -1296,6 +1361,8 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(document.querySelector('[data-testid="agent-team-terminal-tab-drop-indicator"]')).toBe(
       null
     );
+    expect(document.body.textContent).toContain('Close terminal tab?');
+    await clickTextButton('Close tab');
     expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledWith('session-1', {
       kind: 'close_tab',
       tab_id: 'tab-2',
@@ -1314,7 +1381,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     await renderPanel();
 
     const kernel = currentKernel();
-    const pendingFocus = createDeferred<void>();
+    const pendingFocus = createDeferred<{ changed: boolean }>();
     kernel.commands.dispatchMuxCommand.mockImplementationOnce(() => pendingFocus.promise);
 
     await act(async () => {
@@ -1326,7 +1393,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(getTabButton('Logs').querySelector('.animate-spin')).toBeNull();
 
     await act(async () => {
-      pendingFocus.resolve();
+      pendingFocus.resolve({ changed: true });
       await flushMicrotasks();
     });
 
@@ -2212,7 +2279,7 @@ interface MockKernel {
     attachSession: ReturnType<typeof vi.fn<(sessionId: string) => Promise<void>>>;
     bootstrap: ReturnType<typeof vi.fn<() => Promise<void>>>;
     dispatchMuxCommand: ReturnType<
-      typeof vi.fn<(sessionId: string, command: MockMuxCommand) => Promise<void>>
+      typeof vi.fn<(sessionId: string, command: MockMuxCommand) => Promise<{ changed: boolean }>>
     >;
     refreshSessions: ReturnType<typeof vi.fn<() => Promise<void>>>;
     setActiveSession: ReturnType<typeof vi.fn<(sessionId: string) => void>>;
@@ -2235,6 +2302,9 @@ interface MockWorkspaceSnapshot {
         lines: Array<{ text: string }>;
       };
     } | null;
+    session: {
+      session_id: string;
+    };
     session_id: string;
     topology: {
       focused_tab: string;
@@ -2319,7 +2389,7 @@ function createMockKernel(
     commands: {
       attachSession: vi.fn().mockResolvedValue(undefined),
       bootstrap: vi.fn().mockResolvedValue(undefined),
-      dispatchMuxCommand: vi.fn().mockResolvedValue(undefined),
+      dispatchMuxCommand: vi.fn().mockResolvedValue({ changed: true }),
       refreshSessions: vi.fn().mockResolvedValue(undefined),
       setActiveSession: vi.fn(),
       setTerminalFontScale: vi.fn(),
@@ -2395,6 +2465,9 @@ function createWorkspaceSnapshot({
             },
           }
         : null,
+      session: {
+        session_id: activeSessionId,
+      },
       session_id: activeSessionId,
       topology: {
         focused_tab: activeTab?.tab_id ?? focusedTabId,
