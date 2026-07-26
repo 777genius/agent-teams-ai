@@ -141,6 +141,21 @@ export const ContinuousScrollView = ({
   const fileChunkCounts = useStore((s) => s.fileChunkCounts);
   const [localCollapsedFiles, setLocalCollapsedFiles] = useState<Set<string>>(() => new Set());
   const collapsedFiles = collapsedFilesProp ?? localCollapsedFiles;
+  const activeSelectionFilePathRef = useRef<string | null>(null);
+
+  const handleFileSelectionChange = useCallback(
+    (filePath: string, info: EditorSelectionInfo | null) => {
+      if (info) {
+        activeSelectionFilePathRef.current = filePath;
+        onSelectionChange?.({ ...info, filePath });
+        return;
+      }
+      if (activeSelectionFilePathRef.current !== filePath) return;
+      activeSelectionFilePathRef.current = null;
+      onSelectionChange?.(null);
+    },
+    [onSelectionChange]
+  );
 
   const handleToggleCollapse = useCallback(
     (filePath: string) => {
@@ -345,7 +360,11 @@ export const ContinuousScrollView = ({
                 discardCounter={discardCounters[filePath] ?? 0}
                 autoViewed={autoViewed}
                 isViewed={isViewed}
-                onSelectionChange={onSelectionChange}
+                onSelectionChange={
+                  onSelectionChange
+                    ? (info) => handleFileSelectionChange(filePath, info)
+                    : undefined
+                }
                 globalHunkOffset={globalHunkOffsets?.[filePath] ?? 0}
                 totalReviewHunks={totalReviewHunks}
               />
