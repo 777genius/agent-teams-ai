@@ -117,7 +117,7 @@
       "connectPlan": "ప్లాన్‌ను కనెక్ట్ చేయండి",
       "connectSuperGrok": "SuperGrok‌ను కనెక్ట్ చేయండి",
       "connected": "కనెక్ట్ అయింది",
-      "copilotDescription": "OpenCode ద్వారా GitHub Copilot‌ను ఉపయోగించండి. Copilot Freeతో సహా మీ ప్లాన్‌కు అనుకూలమైన మోడల్‌ను Agent Teams ధృవీకరిస్తుంది.",
+      "copilotDescription": "OpenCode ద్వారా GitHub Copilot‌ను ఉపయోగించండి. మీ ప్లాన్ అనుమతించిన మోడల్‌ను OpenCode ఎంచుకోగలదా అని Agent Teams తనిఖీ చేస్తుంది.",
       "copyCommand": "కమాండ్‌ను కాపీ చేయండి",
       "chooseRegion": "ప్రాంతాన్ని ఎంచుకోండి",
       "cursorConnected": "Cursor ఖాతా కనెక్ట్ అయింది",

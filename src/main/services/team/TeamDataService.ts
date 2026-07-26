@@ -41,12 +41,21 @@ import { atomicWriteAsync } from './atomicWrite';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { MemberActivityMetaService } from './MemberActivityMetaService';
 import { mergeLiveLeadProcessMessagesPage } from './mergeLiveLeadProcessMessages';
+import {
+  permanentlyDeleteTeamData,
+  type PermanentTeamDataDeletionOptions,
+} from './permanentTeamDataDeletion';
 import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
+import {
+  findTasksByCreationIdempotencyKey,
+  isControllerTaskNotFoundError,
+} from './taskCreationIdempotency';
 import {
   choosePreferredLaunchSnapshot,
   readBootstrapLaunchSnapshot,
 } from './TeamBootstrapStateReader';
 import { resolveProjectPathFromConfig, TeamConfigReader } from './TeamConfigReader';
+import { capMessagesPageLiveOverlay } from './teamInboxOrdering';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
 import { TeamKanbanManager } from './TeamKanbanManager';
@@ -119,12 +128,6 @@ const TASK_COMMENT_NOTIFICATION_SOURCE = 'system_notification';
 const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
 const MEMBER_RUNTIME_ADVISORY_SNAPSHOT_BUDGET_MS = 250;
 const GLOBAL_TASK_TEAM_CONFIG_CONCURRENCY = 12;
-const PERMANENT_DELETE_RM_OPTIONS = {
-  recursive: true,
-  force: true,
-  maxRetries: 5,
-  retryDelay: 50,
-} as const;
 
 function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
   const hasher = createApplicationCommandHasher();
@@ -133,7 +136,6 @@ function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
   });
 }
 const TEAM_NOTIFICATION_CONTEXT_CACHE_MAX_AGE_MS = 5_000;
-const MAX_MESSAGES_PAGE_LIVE_OVERLAY_PAYLOAD = 200;
 const SAFE_DIAGNOSTIC_IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const MIXED_TEAM_LIVE_MUTATION_BLOCK_MESSAGE =
   'Live roster mutation on a running mixed team is not supported in V1. Stop the team, edit the roster, then relaunch.';
@@ -156,6 +158,14 @@ type TaskBoardWithCreationReconciliation = AgentTeamsController['taskBoard'] & {
   reconcileTaskCreation(input: Record<string, unknown>): unknown;
 };
 
+function hasTaskCreationReconciliation(
+  taskBoard: AgentTeamsController['taskBoard']
+): taskBoard is TaskBoardWithCreationReconciliation {
+  return (
+    typeof (taskBoard as { reconcileTaskCreation?: unknown }).reconcileTaskCreation === 'function'
+  );
+}
+
 interface TeamNotificationContext {
   displayName: string;
   projectPath?: string;
@@ -170,43 +180,6 @@ interface TeamNotificationContextCacheEntry {
 interface InFlightTeamNotificationContext {
   promise: Promise<TeamNotificationContext>;
   generation: number;
-}
-
-function isControllerTaskNotFoundError(error: unknown, taskId: string): boolean {
-  return error instanceof Error && error.message === `Task not found: ${taskId}`;
-}
-
-function hasTaskCreationReconciliation(
-  taskBoard: AgentTeamsController['taskBoard']
-): taskBoard is TaskBoardWithCreationReconciliation {
-  return (
-    typeof (taskBoard as { reconcileTaskCreation?: unknown }).reconcileTaskCreation === 'function'
-  );
-}
-
-function compareInboxMessagesNewestFirst(left: InboxMessage, right: InboxMessage): number {
-  const leftTime = Date.parse(left.timestamp);
-  const rightTime = Date.parse(right.timestamp);
-  if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
-    return rightTime - leftTime;
-  }
-  const leftId = typeof left.messageId === 'string' ? left.messageId : '';
-  const rightId = typeof right.messageId === 'string' ? right.messageId : '';
-  return leftId.localeCompare(rightId);
-}
-
-function capMessagesPageLiveOverlay(
-  liveMessages: readonly InboxMessage[] | undefined
-): InboxMessage[] {
-  if (!liveMessages?.length) {
-    return [];
-  }
-  if (liveMessages.length <= MAX_MESSAGES_PAGE_LIVE_OVERLAY_PAYLOAD) {
-    return [...liveMessages];
-  }
-  return [...liveMessages]
-    .sort(compareInboxMessagesNewestFirst)
-    .slice(0, MAX_MESSAGES_PAGE_LIVE_OVERLAY_PAYLOAD);
 }
 
 function resolveEffectiveMemberProviderId(
@@ -1448,15 +1421,30 @@ export class TeamDataService {
     this.invalidateNotificationContext(teamName);
   }
 
-  async permanentlyDeleteTeam(teamName: string): Promise<void> {
-    const teamsDir = path.join(getTeamsBasePath(), teamName);
-    await fs.promises.rm(teamsDir, PERMANENT_DELETE_RM_OPTIONS);
-    TeamConfigReader.invalidateTeam(teamName);
-    this.invalidateNotificationContext(teamName);
-
-    const tasksDir = path.join(getTasksBasePath(), teamName);
-    await fs.promises.rm(tasksDir, PERMANENT_DELETE_RM_OPTIONS);
-    TeamTaskReader.invalidateAllTasksCache();
+  async permanentlyDeleteTeam(teamName: string): Promise<void>;
+  async permanentlyDeleteTeam(
+    teamName: string,
+    isTeamDataCurrent: (detachedPath?: string) => Promise<boolean>,
+    isTaskDataCurrent?: (detachedPath?: string) => Promise<boolean>,
+    options?: PermanentTeamDataDeletionOptions
+  ): Promise<boolean>;
+  async permanentlyDeleteTeam(
+    teamName: string,
+    isTeamDataCurrent: (detachedPath?: string) => Promise<boolean> = async () => true,
+    isTaskDataCurrent: (detachedPath?: string) => Promise<boolean> = async () => true,
+    options: PermanentTeamDataDeletionOptions = {}
+  ): Promise<boolean | void> {
+    return permanentlyDeleteTeamData({
+      teamName,
+      isTeamDataCurrent,
+      isTaskDataCurrent,
+      options,
+      onTeamDataDeleted: () => {
+        TeamConfigReader.invalidateTeam(teamName);
+        this.invalidateNotificationContext(teamName);
+      },
+      onTaskDataDeleted: () => TeamTaskReader.invalidateAllTasksCache(),
+    });
   }
 
   async getTeamData(teamName: string, options?: TeamGetDataOptions): Promise<TeamViewSnapshot> {
@@ -2374,6 +2362,12 @@ export class TeamDataService {
               throw error;
             }
           },
+          findByIdempotencyKey: (idempotencyKey) =>
+            findTasksByCreationIdempotencyKey(
+              taskBoard.listTasks() as TeamTask[],
+              taskBoard.listDeletedTasks() as TeamTask[],
+              idempotencyKey
+            ),
           create: async (input) => {
             const projectPath = await this.readTaskCreateProjectPath(teamName);
             return taskBoard.createTask({

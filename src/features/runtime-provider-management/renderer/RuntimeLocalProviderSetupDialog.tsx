@@ -7,7 +7,6 @@ import {
   isDeletedProjectPathSelection,
 } from '@renderer/components/team/dialogs/projectPathOptions';
 import { Button } from '@renderer/components/ui/button';
-import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Combobox } from '@renderer/components/ui/combobox';
 import {
   Dialog,
@@ -33,7 +32,6 @@ import {
   Box,
   CheckCircle2,
   FolderOpen,
-  Globe2,
   Info,
   Loader2,
   Pencil,
@@ -42,9 +40,15 @@ import {
   Server,
 } from 'lucide-react';
 
-import { RUNTIME_LOCAL_PROVIDER_PRESETS } from '../core/domain';
+import {
+  isPrivateNetworkRuntimeLocalProviderUrl,
+  RUNTIME_LOCAL_PROVIDER_PRESETS,
+} from '../core/domain';
 
 import { LocalProviderBrandIcon } from './ui/LocalProviderBrandIcon';
+import { LocalProviderModelAssignmentControls } from './ui/LocalProviderModelAssignmentControls';
+import { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';
+import { LocalProviderScopeSelector } from './ui/LocalProviderScopeSelector';
 
 import type {
   RuntimeLocalProviderConfigurationDto,
@@ -64,7 +68,8 @@ const SERVER_START_GUIDANCE: Record<RuntimeLocalProviderPresetIdDto, string> = {
   'lm-studio': 'In LM Studio, load a model, open Developer > Local Server, and start the server.',
   'atomic-chat': 'Open Atomic Chat, load a model, and start its local API server.',
   'llama.cpp': 'Start llama-server with a model loaded. The default port for this setup is 8080.',
-  custom: 'Start an OpenAI-compatible API on this computer with a working /v1/models endpoint.',
+  custom:
+    'Start an OpenAI-compatible API on this computer or your local network with a working /v1/models endpoint.',
 };
 
 type SetupErrorScope = 'server' | 'project' | 'model' | 'setup';
@@ -271,52 +276,6 @@ const InlineError = ({ message }: { readonly message: string }): JSX.Element => 
   </div>
 );
 
-interface ProviderScopeSelectorProps {
-  readonly value: RuntimeLocalProviderScopeDto;
-  readonly disabled?: boolean;
-  readonly onChange: (scope: RuntimeLocalProviderScopeDto) => void;
-}
-
-const ProviderScopeSelector = ({
-  value,
-  disabled = false,
-  onChange,
-}: ProviderScopeSelectorProps): JSX.Element => (
-  <div
-    role="radiogroup"
-    aria-label="Available for"
-    className="inline-grid grid-cols-2 gap-1 justify-self-start rounded-xl bg-white/[0.035] p-1 ring-1 ring-inset ring-white/[0.08]"
-  >
-    {(
-      [
-        { value: 'global', label: 'All projects', icon: Globe2 },
-        { value: 'project', label: 'Select project', icon: FolderOpen },
-      ] as const
-    ).map((option) => {
-      const active = value === option.value;
-      const OptionIcon = option.icon;
-      return (
-        <button
-          key={option.value}
-          type="button"
-          role="radio"
-          aria-checked={active}
-          disabled={disabled}
-          className={`flex h-8 items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-medium transition-all ${
-            active
-              ? 'bg-gradient-to-r from-indigo-400/20 to-sky-400/10 text-indigo-100 shadow-[0_4px_14px_rgba(79,70,229,0.12)] ring-1 ring-inset ring-indigo-300/15'
-              : 'text-[var(--color-text-muted)] hover:bg-white/[0.04] hover:text-[var(--color-text-secondary)]'
-          } disabled:cursor-not-allowed disabled:opacity-50`}
-          onClick={() => onChange(option.value)}
-        >
-          <OptionIcon className="size-3.5" aria-hidden="true" />
-          {option.label}
-        </button>
-      );
-    })}
-  </div>
-);
-
 interface RuntimeLocalProviderSetupDialogProps {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
@@ -350,6 +309,8 @@ export const RuntimeLocalProviderSetupDialog = ({
   const [configurationScope, setConfigurationScope] =
     useState<RuntimeLocalProviderScopeDto>('global');
   const [setAsDefault, setSetAsDefault] = useState(true);
+  const [setAsSmallModel, setSetAsSmallModel] = useState(true);
+  const [allowPrivateNetwork, setAllowPrivateNetwork] = useState(false);
   const [phase, setPhase] = useState<SetupPhase>('idle');
   const [error, setError] = useState<SetupErrorState | null>(null);
   const [savedConfiguration, setSavedConfiguration] =
@@ -385,6 +346,7 @@ export const RuntimeLocalProviderSetupDialog = ({
   const closeBlocked = phase === 'configuring' || projectPickerLoading;
   const setupLocked = busy || Boolean(savedConfiguration);
   const detectedProbes = scanProbes.filter((candidate) => candidate.state === 'available');
+  const privateNetworkUrl = isPrivateNetworkRuntimeLocalProviderUrl(baseUrl);
   const projectConfigPath = projectPath ? getProjectConfigPath(projectPath) : null;
   const expectedConfigPath =
     configurationScope === 'global' ? '~/.config/opencode/opencode.json' : projectConfigPath;
@@ -556,6 +518,8 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSelectedModelId('');
     setConfigurationScope('global');
     setSetAsDefault(true);
+    setSetAsSmallModel(true);
+    setAllowPrivateNetwork(false);
     setProjectPickerLoading(false);
     setFolderSelectedProjectPath(null);
     setPhase('idle');
@@ -649,6 +613,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSelectedPresetId(preset.id);
     setProviderId(preset.providerId);
     setBaseUrl(preset.defaultBaseUrl);
+    setAllowPrivateNetwork(false);
     const scanned = scanProbes.find((candidate) => candidate.preset.id === preset.id) ?? null;
     setProbe(scanned?.state === 'available' ? scanned : null);
     setSelectedModelId(scanned?.models[0]?.id ?? '');
@@ -675,6 +640,7 @@ export const RuntimeLocalProviderSetupDialog = ({
         presetId: selectedPresetId,
         baseUrl,
         providerId,
+        allowPrivateNetwork,
       });
       if (dialogSessionRef.current !== sessionId) return;
       if (response.error) {
@@ -836,6 +802,8 @@ export const RuntimeLocalProviderSetupDialog = ({
         providerId,
         defaultModelId: selectedModelId,
         setAsDefault,
+        setAsSmallModel,
+        allowPrivateNetwork,
       });
       if (dialogSessionRef.current !== sessionId) return;
       if (response.error || !response.configuration) {
@@ -851,13 +819,21 @@ export const RuntimeLocalProviderSetupDialog = ({
       setSavedConfiguration(configuration);
       setSavedProjectPath(configurationScope === 'project' ? projectPath : null);
       setConfiguredProviders((current) => {
+        const previousEntry = current.find(
+          (entry) => entry.providerId === configuration.providerId
+        );
+        const assignedSmallModel = configuration.setAsSmallModel ?? setAsSmallModel;
         const nextEntry: RuntimeLocalProviderListEntryDto = {
           preset: selectedPreset,
           providerId: configuration.providerId,
           baseUrl: configuration.baseUrl,
           configuredModelIds: configuration.modelIds,
           defaultModelId: configuration.defaultModelId,
-          isDefault: setAsDefault,
+          smallModelId: assignedSmallModel
+            ? configuration.defaultModelId
+            : (previousEntry?.smallModelId ?? null),
+          isDefault: setAsDefault || previousEntry?.isDefault === true,
+          privateNetworkApproved: !privateNetworkUrl || allowPrivateNetwork,
           state: probe?.state ?? 'available',
           liveModels: probe?.models ?? [],
           latencyMs: probe?.latencyMs ?? null,
@@ -866,7 +842,15 @@ export const RuntimeLocalProviderSetupDialog = ({
         const withoutUpdatedProvider = current
           .filter((entry) => entry.providerId !== configuration.providerId)
           .map((entry) =>
-            setAsDefault && entry.isDefault ? { ...entry, isDefault: false } : entry
+            setAsDefault && entry.isDefault
+              ? {
+                  ...entry,
+                  isDefault: false,
+                  ...(assignedSmallModel ? { smallModelId: null } : {}),
+                }
+              : assignedSmallModel && entry.smallModelId
+                ? { ...entry, smallModelId: null }
+                : entry
           );
         return [nextEntry, ...withoutUpdatedProvider];
       });
@@ -916,6 +900,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setConfiguredProviders([]);
     setProviderListError(null);
     setSetAsDefault(true);
+    setSetAsSmallModel(true);
     showProviderView('loading');
   };
 
@@ -927,7 +912,9 @@ export const RuntimeLocalProviderSetupDialog = ({
       ) ?? RUNTIME_LOCAL_PROVIDER_PRESETS.find((candidate) => candidate.id === 'custom');
     if (nextPreset) selectPreset(nextPreset.id);
     setEditingProviderId(null);
-    setSetAsDefault(configuredProviders.length === 0);
+    const assignDefaults = configuredProviders.length === 0;
+    setSetAsDefault(assignDefaults);
+    setSetAsSmallModel(assignDefaults);
     showProviderView('editor');
   };
 
@@ -937,6 +924,7 @@ export const RuntimeLocalProviderSetupDialog = ({
     setSelectedPresetId(entry.preset.id);
     setProviderId(entry.providerId);
     setBaseUrl(entry.baseUrl);
+    setAllowPrivateNetwork(entry.privateNetworkApproved === true);
     setProbe({
       preset: entry.preset,
       providerId: entry.providerId,
@@ -946,12 +934,12 @@ export const RuntimeLocalProviderSetupDialog = ({
       latencyMs: entry.latencyMs,
       message: entry.message,
     });
-    setSelectedModelId(
-      entry.liveModels.some((model) => model.id === entry.defaultModelId)
-        ? (entry.defaultModelId ?? '')
-        : (entry.liveModels[0]?.id ?? '')
-    );
+    const selectedEntryModelId = entry.liveModels.some((model) => model.id === entry.defaultModelId)
+      ? (entry.defaultModelId ?? '')
+      : (entry.liveModels[0]?.id ?? '');
+    setSelectedModelId(selectedEntryModelId);
     setSetAsDefault(entry.isDefault);
+    setSetAsSmallModel(entry.smallModelId === selectedEntryModelId);
     setEditingProviderId(entry.providerId);
     showProviderView('editor');
   };
@@ -1019,7 +1007,7 @@ export const RuntimeLocalProviderSetupDialog = ({
             >
               <div className="grid gap-x-4 gap-y-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center">
                 <Label className="text-xs text-[var(--color-text-secondary)]">Available for</Label>
-                <ProviderScopeSelector
+                <LocalProviderScopeSelector
                   value={configurationScope}
                   disabled={providerListLoading || projectPickerLoading}
                   onChange={changeConfigurationScope}
@@ -1226,7 +1214,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                       <Label htmlFor="runtime-local-provider-preset">Server app</Label>
                       <Select
                         value={selectedPresetId}
-                        disabled={setupLocked}
+                        disabled={setupLocked || editingProviderId !== null}
                         onValueChange={(value) =>
                           selectPreset(value as RuntimeLocalProviderPresetIdDto)
                         }
@@ -1285,6 +1273,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                           onChange={(event) => {
                             selectionTouchedRef.current = true;
                             setBaseUrl(event.currentTarget.value);
+                            setAllowPrivateNetwork(false);
                             resetProbe();
                           }}
                         />
@@ -1308,9 +1297,19 @@ export const RuntimeLocalProviderSetupDialog = ({
                           id="runtime-local-provider-url-help"
                           className="text-[11px] text-[var(--color-text-muted)]"
                         >
-                          Advanced: this is the OpenAI-compatible /v1 address. Only localhost is
-                          accepted.
+                          Advanced: this is the OpenAI-compatible /v1 address. Localhost or a
+                          private local-network address is accepted.
                         </p>
+                      ) : null}
+                      {privateNetworkUrl && !savedConfiguration ? (
+                        <LocalProviderPrivateNetworkApprovalControl
+                          checked={allowPrivateNetwork}
+                          disabled={setupLocked}
+                          onChange={(checked) => {
+                            setAllowPrivateNetwork(checked);
+                            resetProbe();
+                          }}
+                        />
                       ) : null}
                     </div>
                   </div>
@@ -1321,7 +1320,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                       <Input
                         id="runtime-local-provider-id"
                         value={providerId}
-                        disabled={setupLocked}
+                        disabled={setupLocked || editingProviderId !== null}
                         placeholder="local"
                         autoCapitalize="none"
                         autoCorrect="off"
@@ -1388,7 +1387,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                   complete={scopeProgressComplete}
                   icon={<FolderOpen className="size-4.5" aria-hidden="true" />}
                 >
-                  <ProviderScopeSelector
+                  <LocalProviderScopeSelector
                     value={configurationScope}
                     disabled={setupLocked}
                     onChange={changeConfigurationScope}
@@ -1534,29 +1533,15 @@ export const RuntimeLocalProviderSetupDialog = ({
                     </div>
                   )}
 
-                  <div className="flex items-start gap-2 text-xs text-[var(--color-text-secondary)]">
-                    <Checkbox
-                      id="runtime-local-provider-project-default"
-                      className="mt-0.5"
-                      checked={setAsDefault}
-                      disabled={setupLocked || !selectedModelId}
-                      onCheckedChange={(checked) => setSetAsDefault(checked === true)}
-                    />
-                    <Label htmlFor="runtime-local-provider-project-default" className="font-normal">
-                      <span className="block text-[var(--color-text)]">
-                        {configurationScope === 'global'
-                          ? 'Use as global default model'
-                          : 'Use as default model for this project'}
-                      </span>
-                      {!savedConfiguration ? (
-                        <span className="mt-0.5 block text-[11px] text-[var(--color-text-muted)]">
-                          {setAsDefault
-                            ? `This replaces the current ${configurationScope === 'global' ? 'global' : 'project'} default and lightweight-task model. All other settings are preserved.`
-                            : `This provider will be added without changing the current ${configurationScope === 'global' ? 'global' : 'project'} defaults.`}
-                        </span>
-                      ) : null}
-                    </Label>
-                  </div>
+                  <LocalProviderModelAssignmentControls
+                    scope={configurationScope}
+                    setAsDefault={setAsDefault}
+                    setAsSmallModel={setAsSmallModel}
+                    disabled={setupLocked || !selectedModelId}
+                    saved={Boolean(savedConfiguration)}
+                    onSetAsDefaultChange={setSetAsDefault}
+                    onSetAsSmallModelChange={setSetAsSmallModel}
+                  />
 
                   {error?.scope === 'model' ? <InlineError message={error.message} /> : null}
                 </SetupStep>

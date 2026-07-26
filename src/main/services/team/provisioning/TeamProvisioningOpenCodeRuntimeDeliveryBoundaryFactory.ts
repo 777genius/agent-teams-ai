@@ -20,10 +20,14 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactoryPorts<
   resolveCurrentOpenCodeRuntimeRunId: DeliveryBoundaryPorts<Run>['resolveCurrentOpenCodeRuntimeRunId'];
   readLaunchState: DeliveryBoundaryPorts<Run>['readLaunchState'];
   writeLaunchStateSnapshot: DeliveryBoundaryPorts<Run>['writeLaunchState'];
+  mutateLaunchStateSnapshot: DeliveryBoundaryPorts<Run>['mutateLaunchState'];
+  withTeamLock: DeliveryBoundaryPorts<Run>['withTeamLock'];
   readConfigForStrictDecision: DeliveryBoundaryPorts<Run>['readConfigForStrictDecision'];
   readMetaMembers: DeliveryBoundaryPorts<Run>['readMetaMembers'];
   readPersistedRuntimeMembers: DeliveryBoundaryPorts<Run>['readPersistedRuntimeMembers'];
   getTrackedRunId(teamName: string): string | null | undefined;
+  canDeliverToTrackedRuntimeRun(teamName: string, runId: string): boolean;
+  resolveDeliverableTrackedRuntimeRunId(teamName: string): string | null;
   getRun(runId: string): Run | null | undefined;
   persistLaunchStateSnapshot(run: Run, launchPhase: PersistedTeamLaunchPhase): Promise<unknown>;
   getMixedSecondaryLaunchPhase(run: Run): PersistedTeamLaunchPhase;
@@ -70,6 +74,8 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<
     read: DeliveryBoundaryPorts<Run>['readLaunchState'];
   };
   writeLaunchStateSnapshot: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactoryPorts<Run>['writeLaunchStateSnapshot'];
+  mutateLaunchStateSnapshot: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactoryPorts<Run>['mutateLaunchStateSnapshot'];
+  withTeamLock: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactoryPorts<Run>['withTeamLock'];
   readConfigForStrictDecision: DeliveryBoundaryPorts<Run>['readConfigForStrictDecision'];
   membersMetaStore: {
     getMembers: DeliveryBoundaryPorts<Run>['readMetaMembers'];
@@ -77,6 +83,8 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<
   readPersistedRuntimeMembers: DeliveryBoundaryPorts<Run>['readPersistedRuntimeMembers'];
   runTracking: {
     getTrackedRunId: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactoryPorts<Run>['getTrackedRunId'];
+    canDeliverToTrackedRuntimeRun: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactoryPorts<Run>['canDeliverToTrackedRuntimeRun'];
+    resolveDeliverableTrackedRuntimeRunId: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactoryPorts<Run>['resolveDeliverableTrackedRuntimeRunId'];
   };
   runs: {
     get(runId: string): Run | undefined;
@@ -114,6 +122,12 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFactoryServi
   openCodeRuntimeRecoveryIdentity: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['openCodeRuntimeRecoveryIdentity'];
   launchStateStore: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['launchStateStore'];
   writeLaunchStateSnapshot: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['writeLaunchStateSnapshot'];
+  writeLaunchStateSnapshotNow(
+    teamName: string,
+    snapshot: Parameters<DeliveryBoundaryPorts<Run>['writeLaunchState']>[1]
+  ): Promise<{ snapshot: Parameters<DeliveryBoundaryPorts<Run>['writeLaunchState']>[1] }>;
+  enqueueLaunchStateStoreOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+  withTeamLock: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['withTeamLock'];
   readConfigForStrictDecision: DeliveryBoundaryPorts<Run>['readConfigForStrictDecision'];
   membersMetaStore: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['membersMetaStore'];
   readPersistedRuntimeMembers: DeliveryBoundaryPorts<Run>['readPersistedRuntimeMembers'];
@@ -148,6 +162,9 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryBoundaryServiceHost<
   openCodeRuntimeRecoveryIdentity: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['openCodeRuntimeRecoveryIdentity'];
   launchStateStore: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['launchStateStore'];
   writeLaunchStateSnapshot: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['writeLaunchStateSnapshot'];
+  writeLaunchStateSnapshotNow: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFactoryService<Run>['writeLaunchStateSnapshotNow'];
+  enqueueLaunchStateStoreOperation: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFactoryService<Run>['enqueueLaunchStateStoreOperation'];
+  withTeamLock: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['withTeamLock'];
   readConfigForStrictDecision: DeliveryBoundaryPorts<Run>['readConfigForStrictDecision'];
   membersMetaStore: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['membersMetaStore'];
   readPersistedRuntimeMembers: DeliveryBoundaryPorts<Run>['readPersistedRuntimeMembers'];
@@ -201,6 +218,13 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<
     },
     writeLaunchStateSnapshot: (teamName, snapshot) =>
       service.writeLaunchStateSnapshot(teamName, snapshot),
+    mutateLaunchStateSnapshot: (teamName, mutation) =>
+      service.enqueueLaunchStateStoreOperation(teamName, async () => {
+        const current = await service.launchStateStore.read(teamName);
+        const next = await mutation(current);
+        return (await service.writeLaunchStateSnapshotNow(teamName, next)).snapshot;
+      }),
+    withTeamLock: (teamName, operation) => service.withTeamLock(teamName, operation),
     readConfigForStrictDecision: (teamName) => service.readConfigForStrictDecision(teamName),
     membersMetaStore: {
       getMembers: (teamName) => service.membersMetaStore.getMembers(teamName),
@@ -208,6 +232,10 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<
     readPersistedRuntimeMembers: (teamName) => service.readPersistedRuntimeMembers(teamName),
     runTracking: {
       getTrackedRunId: (teamName) => service.runTracking.getTrackedRunId(teamName),
+      canDeliverToTrackedRuntimeRun: (teamName, runId) =>
+        service.runTracking.canDeliverToTrackedRuntimeRun(teamName, runId),
+      resolveDeliverableTrackedRuntimeRunId: (teamName) =>
+        service.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName),
     },
     runs: {
       get: (runId) => service.runs.get(runId),
@@ -287,6 +315,11 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFromSer
     },
     writeLaunchStateSnapshot: (teamName, snapshot) =>
       service.writeLaunchStateSnapshot(teamName, snapshot),
+    writeLaunchStateSnapshotNow: (teamName, snapshot) =>
+      service.writeLaunchStateSnapshotNow(teamName, snapshot),
+    enqueueLaunchStateStoreOperation: (teamName, operation) =>
+      service.enqueueLaunchStateStoreOperation(teamName, operation),
+    withTeamLock: (teamName, operation) => service.withTeamLock(teamName, operation),
     readConfigForStrictDecision: (teamName) => service.readConfigForStrictDecision(teamName),
     membersMetaStore: {
       getMembers: (teamName) => service.membersMetaStore.getMembers(teamName),
@@ -294,6 +327,10 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFromSer
     readPersistedRuntimeMembers: (teamName) => service.readPersistedRuntimeMembers(teamName),
     runTracking: {
       getTrackedRunId: (teamName) => service.runTracking.getTrackedRunId(teamName),
+      canDeliverToTrackedRuntimeRun: (teamName, runId) =>
+        service.runTracking.canDeliverToTrackedRuntimeRun(teamName, runId),
+      resolveDeliverableTrackedRuntimeRunId: (teamName) =>
+        service.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName),
     },
     runs: {
       get: (runId) => service.runs.get(runId),
@@ -358,15 +395,41 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost<
   return createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts<Run>({
     getTeamsBasePath: deps.getTeamsBasePath,
     resolveOpenCodeRuntimeLaneId: (input) => host.resolveOpenCodeRuntimeLaneId(input),
-    resolveCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
-      host.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
+    resolveCurrentOpenCodeRuntimeRunId: async (teamName, laneId) => {
+      const runId = await host.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(
+        teamName,
+        laneId
+      );
+      if (
+        runId &&
+        host.runTracking.getTrackedRunId(teamName) &&
+        !host.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName)
+      ) {
+        return null;
+      }
+      if (
+        runId &&
+        laneId.trim().toLowerCase() === 'primary' &&
+        !host.runTracking.canDeliverToTrackedRuntimeRun(teamName, runId)
+      ) {
+        return null;
+      }
+      return runId;
+    },
     readLaunchState: (teamName) => host.launchStateStore.read(teamName),
     writeLaunchStateSnapshot: (teamName, snapshot) =>
       host.writeLaunchStateSnapshot(teamName, snapshot),
+    mutateLaunchStateSnapshot: (teamName, mutation) =>
+      host.mutateLaunchStateSnapshot(teamName, mutation),
+    withTeamLock: (teamName, operation) => host.withTeamLock(teamName, operation),
     readConfigForStrictDecision: (teamName) => host.readConfigForStrictDecision(teamName),
     readMetaMembers: (teamName) => host.membersMetaStore.getMembers(teamName),
     readPersistedRuntimeMembers: (teamName) => host.readPersistedRuntimeMembers(teamName),
     getTrackedRunId: (teamName) => host.runTracking.getTrackedRunId(teamName),
+    canDeliverToTrackedRuntimeRun: (teamName, runId) =>
+      host.runTracking.canDeliverToTrackedRuntimeRun(teamName, runId),
+    resolveDeliverableTrackedRuntimeRunId: (teamName) =>
+      host.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName),
     getRun: (runId) => host.runs.get(runId),
     persistLaunchStateSnapshot: (run, launchPhase) =>
       host.persistLaunchStateSnapshot(run, launchPhase),
@@ -430,12 +493,30 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts<
   return createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<Run>({
     getTeamsBasePath: ports.getTeamsBasePath,
     resolveOpenCodeRuntimeLaneId: (input) => ports.resolveOpenCodeRuntimeLaneId(input),
-    resolveCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
-      ports.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId),
+    resolveCurrentOpenCodeRuntimeRunId: async (teamName, laneId) => {
+      const runId = await ports.resolveCurrentOpenCodeRuntimeRunId(teamName, laneId);
+      if (
+        runId &&
+        ports.getTrackedRunId(teamName) &&
+        !ports.resolveDeliverableTrackedRuntimeRunId(teamName)
+      ) {
+        return null;
+      }
+      if (
+        runId &&
+        laneId.trim().toLowerCase() === 'primary' &&
+        !ports.canDeliverToTrackedRuntimeRun(teamName, runId)
+      ) {
+        return null;
+      }
+      return runId;
+    },
     readLaunchState: (teamName) => ports.readLaunchState(teamName),
     writeLaunchState: async (teamName, snapshot) => {
       await ports.writeLaunchStateSnapshot(teamName, snapshot);
     },
+    mutateLaunchState: (teamName, mutation) => ports.mutateLaunchStateSnapshot(teamName, mutation),
+    withTeamLock: (teamName, operation) => ports.withTeamLock(teamName, operation),
     readConfigForStrictDecision: (teamName) => ports.readConfigForStrictDecision(teamName),
     readMetaMembers: (teamName) => ports.readMetaMembers(teamName),
     readPersistedRuntimeMembers: (teamName) => ports.readPersistedRuntimeMembers(teamName),

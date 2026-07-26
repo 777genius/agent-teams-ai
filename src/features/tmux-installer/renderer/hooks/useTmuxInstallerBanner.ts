@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
 
-import { TmuxInstallerBannerAdapter } from '../adapters/TmuxInstallerBannerAdapter';
+import { TmuxInstallerBannerViewModelBuilder } from '../view-models/TmuxInstallerBannerViewModelBuilder';
 
 import type { TmuxInstallerSnapshot, TmuxStatus } from '@features/tmux-installer/contracts';
 
@@ -29,7 +29,7 @@ function getIsoTimestamp(value: string | null | undefined): number {
 }
 
 export function useTmuxInstallerBanner(): {
-  viewModel: ReturnType<TmuxInstallerBannerAdapter['adapt']>;
+  viewModel: ReturnType<TmuxInstallerBannerViewModelBuilder['build']>;
   install: () => Promise<void>;
   cancel: () => Promise<void>;
   submitInput: (input: string) => Promise<boolean>;
@@ -38,7 +38,7 @@ export function useTmuxInstallerBanner(): {
   openExternal: (url: string) => Promise<void>;
 } {
   const electronMode = isElectronMode();
-  const adapter = useMemo(() => TmuxInstallerBannerAdapter.create(), []);
+  const viewModelBuilder = useMemo(() => TmuxInstallerBannerViewModelBuilder.create(), []);
   const [status, setStatus] = useState<TmuxStatus | null>(null);
   const [snapshot, setSnapshot] = useState<TmuxInstallerSnapshot>(IDLE_SNAPSHOT);
   const [loading, setLoading] = useState(electronMode);
@@ -182,14 +182,14 @@ export function useTmuxInstallerBanner(): {
 
   const viewModel = useMemo(
     () =>
-      adapter.adapt({
+      viewModelBuilder.build({
         status,
         snapshot,
         loading,
         error,
         detailsOpen,
       }),
-    [adapter, detailsOpen, error, loading, snapshot, status]
+    [viewModelBuilder, detailsOpen, error, loading, snapshot, status]
   );
 
   return {

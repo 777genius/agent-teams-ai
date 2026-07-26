@@ -6,3 +6,7 @@ export {
   createTeamProvisioningFeature,
   type TeamProvisioningFeature,
 } from './composition/createTeamProvisioningFeature';
+export {
+  createTeamProvisioningStatusFeature,
+  type TeamProvisioningStatusFeatureDeps,
+} from './composition/createTeamProvisioningStatusFeature';

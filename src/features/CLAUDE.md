@@ -14,6 +14,7 @@ Use local references:
 - `src/features/member-work-sync` - full feature with a root public barrel
 - `src/features/member-log-stream` - full feature with `main/application/`
 - `src/features/agent-graph` - thin `core/domain` plus `renderer` reference
+- `src/features/team-provisioning` - incremental legacy-migration walking slice
 
 Default location for new feature work:
 

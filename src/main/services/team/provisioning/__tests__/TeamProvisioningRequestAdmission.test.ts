@@ -55,6 +55,7 @@ function createHost(
     },
     stopAllTeamsGeneration: 7,
     provisioningRunByTeam: new Map(),
+    initializeToolApprovalSettingsForLaunch: vi.fn(),
     shouldRouteOpenCodeToRuntimeAdapter: vi.fn(unexpected),
     createOpenCodeTeamThroughRuntimeAdapter: vi.fn(unexpected),
     launchOpenCodeTeamThroughRuntimeAdapter: vi.fn(unexpected),

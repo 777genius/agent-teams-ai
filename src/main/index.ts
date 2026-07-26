@@ -247,6 +247,7 @@ import { getTeamDataWorkerClient } from './services/team/TeamDataWorkerClient';
 import { getTeamFsWorkerClient } from './services/team/TeamFsWorkerClient';
 import { TeamInboxReader } from './services/team/TeamInboxReader';
 import { TeamMemberRuntimeAdvisoryService } from './services/team/TeamMemberRuntimeAdvisoryService';
+import { createTeamProvisioningMemberWorkSyncBusySignals } from './services/team/provisioning/TeamProvisioningMemberWorkSyncBusySignals';
 import { notifyTeamChangeObserversSafely } from './services/team/TeamChangeFanout';
 import {
   createTeamReconcileDrainScheduler,
@@ -2829,11 +2830,7 @@ async function initializeServices(): Promise<void> {
     isMemberActive: isMemberActiveForMemberWorkSync,
     canDispatchNudges: canDispatchMemberWorkSyncNudges,
     listLifecycleActiveTeamNames: listMemberWorkSyncLifecycleActiveTeamNames,
-    extraBusySignals: [
-      {
-        isBusy: (input) => teamProvisioningService.getOpenCodeMemberDeliveryBusyStatus(input),
-      },
-    ],
+    ...createTeamProvisioningMemberWorkSyncBusySignals(teamProvisioningService),
     resolveControlUrl: async () => {
       if (!httpServer.isRunning()) {
         await startHttpServer(handleModeSwitch);
