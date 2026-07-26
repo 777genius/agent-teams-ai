@@ -93,6 +93,37 @@ describe("project verifier handoff", () => {
     );
   });
 
+  it("accepts exact historical auth fixtures in admitted test paths", async () => {
+    const root = await temporaryRoot("verifier-handoff-fixture-");
+    const workspacePath = join(root, "producer");
+    const jobRootDir = join(root, "jobs", "producer-1");
+    await initRepository(workspacePath);
+    await mkdir(join(workspacePath, "test"), { recursive: true });
+    await mkdir(jobRootDir, { recursive: true });
+    const fixtureToken = ["sk", "-secret-value-123456"].join("");
+    await writeFile(
+      join(workspacePath, "test", "provider-client.test.ts"),
+      `export const api_key = "${fixtureToken}";\n`,
+    );
+    const materialized = await materializeProducerHandoff({
+      workerJobId: "producer-1",
+      taskId: "task-1",
+      workspacePath,
+      jobRootDir,
+    });
+    expect(materialized).not.toBeNull();
+
+    await expect(
+      readVerifiedProducerHandoff({
+        producer: manifest({ workspacePath, jobRootDir }),
+      }),
+    ).resolves.toMatchObject({
+      producerJobId: "producer-1",
+      changedPaths: ["test/provider-client.test.ts"],
+      patchSha256: materialized?.manifest.artifacts.patch.sha256,
+    });
+  });
+
   it("allows only a verifier to inspect a captured provider-output failure", async () => {
     const root = await temporaryRoot("verifier-provider-output-invalid-");
     const workspacePath = join(root, "producer");
@@ -176,7 +207,10 @@ describe("project verifier handoff", () => {
       patchSha256: materialized.manifest.artifacts.patch.sha256,
     });
 
-    await writeFile(join(workspacePath, "feature.txt"), "changed after capture\n");
+    await writeFile(
+      join(workspacePath, "feature.txt"),
+      "changed after capture\n",
+    );
     await expect(readVerifiableProducerHandoff({ producer })).rejects.toThrow(
       "project_control_verifier_handoff_workspace_changed_after_capture",
     );
@@ -208,7 +242,7 @@ describe("project verifier handoff", () => {
       details: {
         baseCommit: materialized.baseCommit,
         rawCause:
-          "codex_app_server_turn_error:codex_app_server_reconnect_timeout:Reconnecting... 5/5:details={\"phase\":\"turn_error_before_output\"}",
+          'codex_app_server_turn_error:codex_app_server_reconnect_timeout:Reconnecting... 5/5:details={"phase":"turn_error_before_output"}',
       },
     };
     await writeFile(resultPath, `${JSON.stringify(result)}\n`);
@@ -242,9 +276,9 @@ describe("project verifier handoff", () => {
         resultPath,
         `${JSON.stringify({ ...result, ...invalid })}\n`,
       );
-      await expect(
-        readVerifiableProducerHandoff({ producer }),
-      ).rejects.toThrow("project_control_verifier_handoff_result_invalid");
+      await expect(readVerifiableProducerHandoff({ producer })).rejects.toThrow(
+        "project_control_verifier_handoff_result_invalid",
+      );
     }
   });
 
@@ -505,12 +539,9 @@ describe("project verifier handoff", () => {
       remoteTrackingRef: "origin/main",
       worktreeSourceRef: "main",
     });
-    expect(await gitText(workspacePath, [
-      "rev-parse",
-      source.worktreeSourceRef,
-    ])).toBe(
-      canonicalRevision,
-    );
+    expect(
+      await gitText(workspacePath, ["rev-parse", source.worktreeSourceRef]),
+    ).toBe(canonicalRevision);
   });
 
   it("normalizes scoped local and remote-tracking slash branches", () => {
@@ -520,40 +551,50 @@ describe("project verifier handoff", () => {
       allowedGitRemotes: ["origin"],
     };
 
-    expect(resolveCanonicalRemoteWorktreeSource({
-      requestedRef: "refactor/hosted-web-feature-boundaries",
-      scope,
-    })).toEqual({
+    expect(
+      resolveCanonicalRemoteWorktreeSource({
+        requestedRef: "refactor/hosted-web-feature-boundaries",
+        scope,
+      }),
+    ).toEqual({
       remoteTrackingRef: "origin/refactor/hosted-web-feature-boundaries",
       worktreeSourceRef: "refactor/hosted-web-feature-boundaries",
     });
-    expect(resolveCanonicalRemoteWorktreeSource({
-      requestedRef: "origin/refactor/hosted-web-feature-boundaries",
-      scope,
-    })).toEqual({
+    expect(
+      resolveCanonicalRemoteWorktreeSource({
+        requestedRef: "origin/refactor/hosted-web-feature-boundaries",
+        scope,
+      }),
+    ).toEqual({
       remoteTrackingRef: "origin/refactor/hosted-web-feature-boundaries",
       worktreeSourceRef: "refactor/hosted-web-feature-boundaries",
     });
-    expect(() => resolveCanonicalRemoteWorktreeSource({
-      requestedRef: "upstream/refactor/hosted-web-feature-boundaries",
-      scope,
-    })).toThrow("project_control_denied:remote_denied");
-    expect(() => resolveCanonicalRemoteWorktreeSource({
-      requestedRef: "release/private",
-      scope,
-    })).toThrow("project_control_denied:branch_denied");
+    expect(() =>
+      resolveCanonicalRemoteWorktreeSource({
+        requestedRef: "upstream/refactor/hosted-web-feature-boundaries",
+        scope,
+      }),
+    ).toThrow("project_control_denied:remote_denied");
+    expect(() =>
+      resolveCanonicalRemoteWorktreeSource({
+        requestedRef: "release/private",
+        scope,
+      }),
+    ).toThrow("project_control_denied:branch_denied");
   });
 
   it("normalizes a local slash branch before pinned remote verification", () => {
-    expect(resolveProjectSourceReference({
-      requestedRef: "refactor/hosted-web-feature-boundaries",
-      scope: {
-        projectId: "project",
-        allowedBranches: ["refactor/hosted-web-*"],
-        allowedGitRemotes: ["origin"],
-      },
-      remoteVerificationRequired: true,
-    })).toEqual({
+    expect(
+      resolveProjectSourceReference({
+        requestedRef: "refactor/hosted-web-feature-boundaries",
+        scope: {
+          projectId: "project",
+          allowedBranches: ["refactor/hosted-web-*"],
+          allowedGitRemotes: ["origin"],
+        },
+        remoteVerificationRequired: true,
+      }),
+    ).toEqual({
       remoteTrackingRef: "origin/refactor/hosted-web-feature-boundaries",
       worktreeSourceRef: "refactor/hosted-web-feature-boundaries",
       remoteVerified: true,

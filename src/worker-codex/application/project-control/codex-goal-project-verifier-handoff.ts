@@ -3,10 +3,13 @@ import { createHash } from "node:crypto";
 import { lstat, readFile, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 import { promisify } from "node:util";
-import { detectSecretLikeContent } from "@vioxen/subscription-runtime/worker-core";
 import type { CodexGoalJobManifest } from "../../codex-goal-jobs";
-import { captureCodexGoalHandoffPatchFingerprint } from "../../codex-goal-handoff-artifacts";
+import {
+  captureCodexGoalHandoffPatchFingerprint,
+  DEFAULT_HANDOFF_ARTIFACT_LIMITS,
+} from "../../codex-goal-handoff-artifacts";
 import { readControlledRuntimeInterruptionEvidence } from "../../codex-goal-runtime-control-evidence";
+import { assertGitPatchBlobsSecretSafe } from "../../git-patch-secret-validator";
 import { readRuntimeResultBrief } from "../codex-goal-runtime-result";
 import { isCodexAppServerReconnectTimeoutCause } from "./codex-goal-project-provider-failure";
 
@@ -95,14 +98,17 @@ export async function readControlledRuntimeInterruptionSnapshot(input: {
   readonly allowCompletedRejectedUncaptured?: boolean;
 }): Promise<ControlledRuntimeInterruptionSnapshot> {
   const producerJobRoot = await canonicalDirectory(input.producer.jobRootDir);
-  const requestedResultPath = input.producer.outputPath ??
+  const requestedResultPath =
+    input.producer.outputPath ??
     join(producerJobRoot, `${input.producer.taskId}.latest-result.json`);
   let resultPath: string;
   try {
     resultPath = await realpath(requestedResultPath);
   } catch (error) {
     if (isNodeError(error, "ENOENT")) {
-      throw new Error("project_control_runtime_interruption_handoff_result_required");
+      throw new Error(
+        "project_control_runtime_interruption_handoff_result_required",
+      );
     }
     throw error;
   }
@@ -132,8 +138,7 @@ export async function readControlledRuntimeInterruptionSnapshot(input: {
     controlledInterruptionEvidence !== undefined;
   const terminalTaskTimeout = result.lastFailureReason === "task_timeout";
   const completedRejectedUncaptured =
-    input.allowCompletedRejectedUncaptured === true &&
-    result.status === "done";
+    input.allowCompletedRejectedUncaptured === true && result.status === "done";
   if (
     !runtimeContinuationFingerprintErrors.has(result.handoffArtifactError) ||
     result.strict !== true ||
@@ -213,9 +218,12 @@ async function readProducerHandoff(input: {
   }
   const patchFile = await readRegularFile(patchPath, maxPatchBytes);
   assertDescriptor(manifest.artifacts.patch, patchPath, patchFile.bytes);
-  if (detectSecretLikeContent(patchFile.bytes) !== undefined) {
-    throw new Error("project_control_verifier_handoff_secret_like_content");
-  }
+  await assertProducerHandoffSecretSafe({
+    producerWorkspace,
+    producerJobRoot,
+    manifest,
+    patchPath,
+  });
   const changedPaths = await patchChangedPaths(producerWorkspace, patchPath);
   if (!sameStrings(changedPaths, manifest.changedPaths)) {
     throw new Error("project_control_verifier_handoff_changed_paths_mismatch");
@@ -237,6 +245,33 @@ async function readProducerHandoff(input: {
     baseCommit: manifest.baseCommit,
     changedPaths,
   };
+}
+
+async function assertProducerHandoffSecretSafe(input: {
+  readonly producerWorkspace: string;
+  readonly producerJobRoot: string;
+  readonly manifest: ParsedManifest;
+  readonly patchPath: string;
+}): Promise<void> {
+  try {
+    await assertGitPatchBlobsSecretSafe({
+      workspacePath: input.producerWorkspace,
+      baseCommit: input.manifest.baseCommit,
+      patchPath: input.patchPath,
+      changedPaths: input.manifest.changedPaths,
+      tempRootDir: input.producerJobRoot,
+      maxFileBytes: DEFAULT_HANDOFF_ARTIFACT_LIMITS.maxFileBytes,
+      maxTotalFileBytes: DEFAULT_HANDOFF_ARTIFACT_LIMITS.maxTotalFileBytes,
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith("git_patch_secret_like_content:")
+    ) {
+      throw new Error("project_control_verifier_handoff_secret_like_content");
+    }
+    throw new Error("project_control_verifier_handoff_blob_validation_failed");
+  }
 }
 
 async function currentResultHandoff(input: {
