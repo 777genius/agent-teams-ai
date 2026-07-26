@@ -7,6 +7,14 @@ import { dirname, join } from 'path';
 
 import { assessMemberWorkSyncDeliveryReadiness } from '../../core/domain';
 
+import { purgeJsonMemberWorkSyncActiveState } from './JsonMemberWorkSyncActiveStatePurger';
+import {
+  mergeDomainSnapshots,
+  pickDomainOutboxItem,
+  pickDomainReportIntent,
+} from './memberWorkSyncDomainSnapshotMerge';
+import { normalizeMemberKey } from './memberWorkSyncStoreIdentity';
+
 import type {
   MemberWorkSyncMetricEvent,
   MemberWorkSyncOutboxClaimInput,
@@ -32,6 +40,8 @@ import type {
   MemberWorkSyncStatusStorePort,
 } from '../../core/application';
 import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
+
+export { normalizeMemberKey } from './memberWorkSyncStoreIdentity';
 
 interface LegacyStatusFile {
   schemaVersion: 1;
@@ -249,10 +259,6 @@ export interface JsonMemberWorkSyncStoreDeps {
   auditJournal?: MemberWorkSyncAuditJournalPort;
   logger?: MemberWorkSyncLoggerPort;
   now?: () => Date;
-}
-
-export function normalizeMemberKey(memberName: unknown): string {
-  return typeof memberName === 'string' ? memberName.trim().toLowerCase() : '';
 }
 
 export function normalizeTeamKey(teamName: unknown): string {
@@ -1288,6 +1294,30 @@ export class JsonMemberWorkSyncStore
     };
   }
 
+  async purgeActiveState(
+    teamName: string,
+    lifecycle: Parameters<typeof purgeJsonMemberWorkSyncActiveState>[1]
+  ): Promise<void> {
+    await this.enqueue(teamName, async () => {
+      const activeFilePaths = [
+        this.paths.getLegacyStatusPath(teamName),
+        this.paths.getLegacyPendingReportsPath(teamName),
+        this.paths.getLegacyOutboxPath(teamName),
+        this.paths.getMetricsIndexPath(teamName),
+        this.paths.getOutboxIndexPath(teamName),
+        this.paths.getPendingReportsIndexPath(teamName),
+      ];
+      for (const memberName of await this.scanMemberNamesForImport(teamName)) {
+        activeFilePaths.push(
+          this.paths.getMemberStatusPath(teamName, memberName),
+          this.paths.getMemberReportsPath(teamName, memberName),
+          this.paths.getMemberOutboxPath(teamName, memberName)
+        );
+      }
+      await purgeJsonMemberWorkSyncActiveState(activeFilePaths, lifecycle);
+    });
+  }
+
   /**
    * Reads everything this backend persisted for a team, for the one-time
    * import into SQLite. Returns null when no member-work-sync files exist.
@@ -1453,12 +1483,9 @@ export class JsonMemberWorkSyncStore
       }
     }
     for (const intent of Object.values((await this.readLegacyPendingFile(teamName)).intents)) {
-      if (
-        !reportIntents.has(intent.id) &&
-        isReportIntentOwnedBy(teamName, intent.memberName, intent)
-      ) {
-        reportIntents.set(intent.id, intent);
-      }
+      if (!isReportIntentOwnedBy(teamName, intent.memberName, intent)) continue;
+      const current = reportIntents.get(intent.id);
+      reportIntents.set(intent.id, current ? pickDomainReportIntent(current, intent) : intent);
     }
 
     const outboxItems = new Map<string, MemberWorkSyncOutboxItem>();
@@ -1471,9 +1498,9 @@ export class JsonMemberWorkSyncStore
       }
     }
     for (const item of Object.values((await this.readLegacyOutboxFile(teamName)).items)) {
-      if (!outboxItems.has(item.id) && isOutboxItemOwnedBy(teamName, item.memberName, item)) {
-        outboxItems.set(item.id, item);
-      }
+      if (!isOutboxItemOwnedBy(teamName, item.memberName, item)) continue;
+      const current = outboxItems.get(item.id);
+      outboxItems.set(item.id, current ? pickDomainOutboxItem(current, item) : item);
     }
 
     const metricEvents = new Map<string, MemberWorkSyncMetricEvent>();
@@ -1567,7 +1594,8 @@ export class JsonMemberWorkSyncStore
     )) {
       for (const intent of Object.values(legacyReports.intents)) {
         if (isReportIntentOwnedBy(teamName, intent.memberName, intent)) {
-          reportIntents.set(intent.id, intent);
+          const current = reportIntents.get(intent.id);
+          reportIntents.set(intent.id, current ? pickDomainReportIntent(current, intent) : intent);
         }
       }
     }
@@ -1579,7 +1607,11 @@ export class JsonMemberWorkSyncStore
       )) {
         for (const intent of Object.values(memberReports.intents)) {
           if (isReportIntentOwnedBy(teamName, memberName, intent)) {
-            reportIntents.set(intent.id, intent);
+            const current = reportIntents.get(intent.id);
+            reportIntents.set(
+              intent.id,
+              current ? pickDomainReportIntent(current, intent) : intent
+            );
           }
         }
       }
@@ -1593,7 +1625,8 @@ export class JsonMemberWorkSyncStore
     )) {
       for (const item of Object.values(legacyOutbox.items)) {
         if (isOutboxItemOwnedBy(teamName, item.memberName, item)) {
-          outboxItems.set(item.id, item);
+          const current = outboxItems.get(item.id);
+          outboxItems.set(item.id, current ? pickDomainOutboxItem(current, item) : item);
         }
       }
     }
@@ -1605,7 +1638,8 @@ export class JsonMemberWorkSyncStore
       )) {
         for (const item of Object.values(memberOutbox.items)) {
           if (isOutboxItemOwnedBy(teamName, memberName, item)) {
-            outboxItems.set(item.id, item);
+            const current = outboxItems.get(item.id);
+            outboxItems.set(item.id, current ? pickDomainOutboxItem(current, item) : item);
           }
         }
       }
@@ -2318,97 +2352,4 @@ function groupByMember<T extends { memberName: string }>(records: readonly T[]):
     grouped.set(key, rows);
   }
   return grouped;
-}
-
-function mergeDomainSnapshots(
-  canonical: MemberWorkSyncStoreSnapshot,
-  incoming: MemberWorkSyncStoreSnapshot | null
-): MemberWorkSyncStoreSnapshot {
-  if (!incoming) return { ...canonical, filesToArchive: [] };
-  return {
-    statuses: mergeDomainRows(
-      canonical.statuses,
-      incoming.statuses,
-      (row) => normalizeMemberKey(row.memberName),
-      (left, right) => (compareReplicaIso(right.evaluatedAt, left.evaluatedAt) >= 0 ? right : left)
-    ),
-    reportIntents: mergeDomainRows(
-      canonical.reportIntents,
-      incoming.reportIntents,
-      (row) => row.id,
-      pickDomainReportIntent
-    ),
-    outboxItems: mergeDomainRows(
-      canonical.outboxItems,
-      incoming.outboxItems,
-      (row) => row.id,
-      pickDomainOutboxItem
-    ),
-    metricEvents: mergeDomainRows(
-      canonical.metricEvents,
-      incoming.metricEvents,
-      (row) => row.id,
-      (_left, right) => right
-    ),
-    filesToArchive: [],
-  };
-}
-
-function mergeDomainRows<T>(
-  canonical: readonly T[],
-  incoming: readonly T[],
-  identity: (record: T) => string,
-  pick: (canonical: T, incoming: T) => T
-): T[] {
-  const merged = new Map<string, T>();
-  for (const record of canonical) merged.set(identity(record), record);
-  for (const record of incoming) {
-    const key = identity(record);
-    const current = merged.get(key);
-    merged.set(key, current ? pick(current, record) : record);
-  }
-  return [...merged.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([, record]) => record);
-}
-
-function pickDomainReportIntent(
-  canonical: MemberWorkSyncReportIntent,
-  incoming: MemberWorkSyncReportIntent
-): MemberWorkSyncReportIntent {
-  const isProcessed = (status: MemberWorkSyncReportIntent['status']): boolean =>
-    status !== 'pending';
-  const canonicalProcessed = isProcessed(canonical.status);
-  const incomingProcessed = isProcessed(incoming.status);
-  if (canonicalProcessed !== incomingProcessed) return incomingProcessed ? incoming : canonical;
-  const leftTime = canonicalProcessed ? canonical.processedAt : canonical.recordedAt;
-  const rightTime = incomingProcessed ? incoming.processedAt : incoming.recordedAt;
-  return compareReplicaIso(rightTime, leftTime) >= 0 ? incoming : canonical;
-}
-
-function pickDomainOutboxItem(
-  canonical: MemberWorkSyncOutboxItem,
-  incoming: MemberWorkSyncOutboxItem
-): MemberWorkSyncOutboxItem {
-  const proofRank = (status: MemberWorkSyncOutboxItem['status']): number =>
-    status === 'delivered' ? 2 : status === 'failed_terminal' ? 1 : 0;
-  const canonicalProof = proofRank(canonical.status);
-  const incomingProof = proofRank(incoming.status);
-  if (canonicalProof !== incomingProof && (canonicalProof > 0 || incomingProof > 0)) {
-    return incomingProof > canonicalProof ? incoming : canonical;
-  }
-  if (canonical.attemptGeneration !== incoming.attemptGeneration) {
-    return incoming.attemptGeneration > canonical.attemptGeneration ? incoming : canonical;
-  }
-  return compareReplicaIso(incoming.updatedAt, canonical.updatedAt) >= 0 ? incoming : canonical;
-}
-
-function compareReplicaIso(left: string | undefined, right: string | undefined): number {
-  const leftMs = left ? Date.parse(left) : Number.NaN;
-  const rightMs = right ? Date.parse(right) : Number.NaN;
-  const leftValid = Number.isFinite(leftMs);
-  const rightValid = Number.isFinite(rightMs);
-  if (leftValid !== rightValid) return leftValid ? 1 : -1;
-  if (!leftValid || leftMs === rightMs) return 0;
-  return leftMs < rightMs ? -1 : 1;
 }

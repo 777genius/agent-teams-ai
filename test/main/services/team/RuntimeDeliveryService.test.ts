@@ -3,11 +3,8 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CrossTeamRuntimeDeliveryIdempotencyConflictError } from '../../../../src/main/services/team/CrossTeamOutbox';
 import { createOpenCodeRuntimeDeliveryPorts } from '../../../../src/main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryPorts';
-import {
-  canonicalizeRuntimeDeliveryCrossTeamIdentities,
-  canonicalizeRuntimeDeliveryJournalRecordIdentities,
-} from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
 import {
   buildRuntimeDestinationMessageId,
   createRuntimeDeliveryJournalStore,
@@ -26,12 +23,18 @@ import {
   type RuntimeDeliveryRecipientCanonicalizer,
   RuntimeDeliveryReconciler,
   type RuntimeDeliveryRunStateReader,
+  type RuntimeDeliverySenderIdentityReader,
   RuntimeDeliveryService,
+  RuntimeDeliveryStaleIdentityError,
   type RuntimeDeliveryTeamChangeEmitter,
   type RuntimeDeliveryTeamChangeEvent,
   type RuntimeDeliveryVerifyResult,
 } from '../../../../src/main/services/team/opencode/delivery/RuntimeDeliveryService';
 import { VersionedJsonStore } from '../../../../src/main/services/team/opencode/store/VersionedJsonStore';
+import {
+  canonicalizeRuntimeDeliveryCrossTeamIdentities,
+  canonicalizeRuntimeDeliveryJournalRecordIdentities,
+} from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
 import { CROSS_TEAM_SENT_SOURCE } from '../../../../src/shared/constants/crossTeam';
 
 import type {
@@ -93,6 +96,41 @@ describe('RuntimeDeliveryService', () => {
       }),
     });
     expect(destination.messages).toHaveLength(1);
+  });
+
+  it('classifies a typed downstream idempotency conflict as terminal', async () => {
+    destination.writeImpl = () =>
+      Promise.reject(
+        new CrossTeamRuntimeDeliveryIdempotencyConflictError({
+          messageId: 'existing-message',
+          fromTeam: 'team-a',
+          fromMember: 'team-lead',
+          toTeam: 'team-b',
+          toMember: 'Reviewer',
+          conversationId: 'delivery-1',
+          text: 'Existing runtime delivery',
+          chainDepth: 0,
+          timestamp: '2026-07-23T00:00:00.000Z',
+        })
+      );
+    const service = createService();
+
+    await expect(service.deliver(envelope())).resolves.toEqual({
+      ok: false,
+      delivered: false,
+      reason: 'idempotency_conflict',
+      idempotencyKey: 'delivery-1',
+    });
+    await expect(journal.get(journalKey())).resolves.toMatchObject({
+      status: 'failed_terminal',
+      lastError: 'idempotency_conflict',
+    });
+    expect(diagnostics.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'runtime_delivery_conflict',
+        severity: 'error',
+      })
+    );
   });
 
   it('keeps committed delivery successful when change event emission fails', async () => {
@@ -1524,6 +1562,46 @@ describe('RuntimeDeliveryService', () => {
     expect(destination.writeCalls).toBe(0);
   });
 
+  it('rejects a stale sender session before journal reservation or destination write', async () => {
+    const senderIdentity: RuntimeDeliverySenderIdentityReader = {
+      assertCurrent: vi.fn(() =>
+        Promise.reject(new RuntimeDeliveryStaleIdentityError('sender session was superseded'))
+      ),
+    };
+    const service = createService(undefined, senderIdentity);
+
+    await expect(service.deliver(envelope())).resolves.toEqual({
+      ok: false,
+      delivered: false,
+      reason: 'stale_runtime_identity',
+      idempotencyKey: 'delivery-1',
+    });
+    await expect(journal.list()).resolves.toEqual([]);
+    expect(destination.writeCalls).toBe(0);
+  });
+
+  it('revalidates sender session identity before destination write', async () => {
+    const assertCurrent = vi
+      .fn<RuntimeDeliverySenderIdentityReader['assertCurrent']>()
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new RuntimeDeliveryStaleIdentityError('sender session changed'));
+    const service = createService(undefined, { assertCurrent });
+
+    await expect(service.deliver(envelope())).resolves.toEqual({
+      ok: false,
+      delivered: false,
+      reason: 'stale_runtime_identity',
+      idempotencyKey: 'delivery-1',
+    });
+    expect(assertCurrent).toHaveBeenCalledTimes(3);
+    expect(destination.writeCalls).toBe(0);
+    await expect(journal.get(journalKey())).resolves.toMatchObject({
+      status: 'failed_terminal',
+      lastError: 'stale_runtime_identity',
+    });
+  });
+
   it('commits verified output when the run changes after destination write', async () => {
     destination.writeImpl = (input) => {
       const location: RuntimeDeliveryLocation = {
@@ -2256,7 +2334,8 @@ describe('RuntimeDeliveryReconciler', () => {
 });
 
 function createService(
-  recipientCanonicalizer?: RuntimeDeliveryRecipientCanonicalizer
+  recipientCanonicalizer?: RuntimeDeliveryRecipientCanonicalizer,
+  senderIdentity?: RuntimeDeliverySenderIdentityReader
 ): RuntimeDeliveryService {
   return new RuntimeDeliveryService(
     runState,
@@ -2265,7 +2344,8 @@ function createService(
     diagnostics,
     emitter,
     () => now,
-    recipientCanonicalizer
+    recipientCanonicalizer,
+    senderIdentity
   );
 }
 

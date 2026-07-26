@@ -1,3 +1,4 @@
+export type * from './api';
 export {
   TEAM_CANCEL_PROVISIONING,
   TEAM_CREATE,

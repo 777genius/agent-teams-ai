@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-clear-text-protocols -- plain-HTTP local URLs are the safe test subject */
 import { promises as fs } from 'node:fs';
 import * as http from 'node:http';
 import * as os from 'node:os';
@@ -156,6 +157,179 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     });
     expect(parsed.model).toBe('local-test/qwen3:8b');
     expect(parsed.small_model).toBe('local-test/qwen3:8b');
+  });
+
+  it('can assign only small_model while preserving the existing default model', async () => {
+    const projectPath = path.join(tempDir, 'small-model-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    const configPath = path.join(projectPath, 'opencode.json');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        model: 'anthropic/claude-sonnet',
+        small_model: 'anthropic/claude-haiku',
+      }),
+      'utf8'
+    );
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl: (async () =>
+        new Response(JSON.stringify({ data: [{ id: 'team-model' }] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })) as typeof fetch,
+    });
+
+    const response = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+      presetId: 'custom',
+      providerId: 'local-small',
+      baseUrl: 'http://127.0.0.1:18080/v1',
+      defaultModelId: 'team-model',
+      setAsDefault: false,
+      setAsSmallModel: true,
+    });
+
+    expect(response.error).toBeUndefined();
+    expect(response.configuration).toMatchObject({
+      setAsDefault: false,
+      setAsSmallModel: true,
+    });
+    const config = JSON.parse(await fs.readFile(configPath, 'utf8')) as {
+      model: string;
+      small_model: string;
+    };
+    expect(config.model).toBe('anthropic/claude-sonnet');
+    expect(config.small_model).toBe('local-small/team-model');
+  });
+
+  it('rejects non-boolean small_model assignment before probing the provider', async () => {
+    let probeCount = 0;
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl: (async () => {
+        probeCount += 1;
+        return new Response(JSON.stringify({ data: [{ id: 'team-model' }] }));
+      }) as typeof fetch,
+    });
+
+    const response = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath: tempDir,
+      presetId: 'custom',
+      providerId: 'local-small',
+      baseUrl: 'http://127.0.0.1:18080/v1',
+      defaultModelId: 'team-model',
+      setAsDefault: false,
+      setAsSmallModel: 'false' as unknown as boolean,
+    });
+
+    expect(response.error).toMatchObject({
+      code: 'invalid-input',
+      message: 'Lightweight-task model selection is invalid.',
+    });
+    expect(probeCount).toBe(0);
+  });
+
+  it('persists private-network approval before later list probes use the address', async () => {
+    const projectPath = path.join(tempDir, 'private-provider-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    const approvals: string[] = [];
+    const privateNetworkApprovalStore = {
+      isApproved: async (approval: { baseUrl: string }) => approvals.includes(approval.baseUrl),
+      approve: async (approval: { baseUrl: string }) => {
+        approvals.push(approval.baseUrl);
+      },
+    };
+    const requestedUrls: string[] = [];
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl: (async (input: string | URL | Request) => {
+        requestedUrls.push(String(input));
+        return new Response(JSON.stringify({ data: [{ id: 'team-model' }] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }) as typeof fetch,
+      privateNetworkApprovalStore,
+    });
+
+    const configured = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+      presetId: 'custom',
+      providerId: 'home-server',
+      baseUrl: 'http://192.168.1.20:8080/v1',
+      defaultModelId: 'team-model',
+      setAsDefault: false,
+      setAsSmallModel: false,
+      allowPrivateNetwork: true,
+    });
+    const listed = await connector.listLocalProviders({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+    });
+
+    expect(configured.error).toBeUndefined();
+    expect(approvals).toEqual(['http://192.168.1.20:8080/v1']);
+    expect(listed.providers).toEqual([
+      expect.objectContaining({
+        providerId: 'home-server',
+        privateNetworkApproved: true,
+        state: 'available',
+      }),
+    ]);
+    expect(requestedUrls).toEqual([
+      'http://192.168.1.20:8080/v1/models',
+      'http://192.168.1.20:8080/v1/models',
+    ]);
+  });
+
+  it('reports approval persistence failure without misreporting the completed config write', async () => {
+    const projectPath = path.join(tempDir, 'approval-failure-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    const configPath = path.join(projectPath, 'opencode.json');
+    const connector = new OpenCodeLocalProviderConnector({
+      fetchImpl: (async () =>
+        new Response(JSON.stringify({ data: [{ id: 'team-model' }] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })) as typeof fetch,
+      privateNetworkApprovalStore: {
+        isApproved: async () => false,
+        approve: async () => {
+          throw new Error('approval store is read-only');
+        },
+      },
+    });
+
+    const response = await connector.configureLocalProvider({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+      presetId: 'custom',
+      providerId: 'home-server',
+      baseUrl: 'http://192.168.1.20:8080/v1',
+      defaultModelId: 'team-model',
+      setAsDefault: false,
+      setAsSmallModel: false,
+      allowPrivateNetwork: true,
+    });
+
+    expect(response.error).toMatchObject({
+      code: 'approval-write-failed',
+      message: expect.stringContaining('OpenCode config was updated'),
+      recoverable: true,
+    });
+    expect(JSON.parse(await fs.readFile(configPath, 'utf8'))).toMatchObject({
+      provider: {
+        'home-server': {
+          options: { baseURL: 'http://192.168.1.20:8080/v1' },
+        },
+      },
+    });
   });
 
   it('scans every built-in local server preset without including the custom endpoint', async () => {
@@ -572,3 +746,5 @@ function closeServer(server: http.Server): Promise<void> {
     server.close((error) => (error ? reject(error) : resolve()));
   });
 }
+
+/* eslint-enable sonarjs/no-clear-text-protocols -- re-enable after the safe local HTTP fixtures */

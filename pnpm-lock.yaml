@@ -31,6 +31,7 @@ overrides:
   file-type@21: 21.3.2
   flatted: 3.4.2
   follow-redirects: 1.16.0
+  find-my-way: 9.7.0
   handlebars: 4.7.9
   hono: 4.12.30
   ip-address: 10.1.1
@@ -83,6 +84,7 @@ patchedDependencies:
   '@radix-ui/react-slot@1.2.3': cc153761e59f07565f64cf0883bb098c78bb27bed60b7363eaadb74ad4317504
   '@radix-ui/react-slot@1.2.4': 5c525e90054caa3bbfa5599b10f7650914e2085f54b773bd115ad0e41eeca30a
   '@radix-ui/react-tooltip@1.2.8': 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
+  brace-expansion@5.0.8: 4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d
   fastmcp@3.35.0: 7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df
   minimatch@3.1.4: be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0
   minimatch@5.1.8: ff3e7e29cf7eb70a0dcdea5d74206193b3894b1a4979f647e0d576484db57405
@@ -16940,7 +16942,7 @@ snapshots:
   boolean@3.2.0:
     optional: true
 
-  brace-expansion@5.0.8:
+  brace-expansion@5.0.8(patch_hash=4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d):
     dependencies:
       balanced-match: 4.0.3
 
@@ -20680,19 +20682,19 @@ snapshots:
 
   minimatch@10.2.3:
     dependencies:
-      brace-expansion: 5.0.8
+      brace-expansion: 5.0.8(patch_hash=4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d)
 
   minimatch@3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0):
     dependencies:
-      brace-expansion: 5.0.8
+      brace-expansion: 5.0.8(patch_hash=4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d)
 
   minimatch@5.1.8(patch_hash=ff3e7e29cf7eb70a0dcdea5d74206193b3894b1a4979f647e0d576484db57405):
     dependencies:
-      brace-expansion: 5.0.8
+      brace-expansion: 5.0.8(patch_hash=4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d)
 
   minimatch@9.0.7:
     dependencies:
-      brace-expansion: 5.0.8
+      brace-expansion: 5.0.8(patch_hash=4c10fc3a731c2a2b3c144b64684d2521e5c013fe0281cfc67dc907e31193b90d)
 
   minimist@1.2.8: {}
 

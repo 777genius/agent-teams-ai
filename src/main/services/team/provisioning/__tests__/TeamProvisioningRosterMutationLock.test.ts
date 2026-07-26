@@ -116,7 +116,7 @@ describe('team provisioning roster mutation lock', () => {
     expect(stopFlow).toHaveBeenCalledOnce();
   });
 
-  it('does not queue stop behind a non-roster team operation', async () => {
+  it('publishes the per-team stop fence before queuing behind a team operation', async () => {
     const service = new TeamProvisioningService();
     const stopFlow = vi.fn(async () => undefined);
     Object.assign(service as unknown as { stopFlowBoundaryValue: unknown }, {
@@ -128,6 +128,7 @@ describe('team provisioning roster mutation lock', () => {
     });
     const serviceInternals = service as unknown as {
       withTeamLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+      getStopTeamGeneration(teamName: string): number;
     };
     let releaseOperation!: () => void;
     let operationStarted!: () => void;
@@ -143,10 +144,12 @@ describe('team provisioning roster mutation lock', () => {
     await started;
 
     const stop = service.stopTeam('lock-team');
-    expect(stopFlow).toHaveBeenCalledOnce();
+    expect(serviceInternals.getStopTeamGeneration('lock-team')).toBe(1);
+    expect(stopFlow).not.toHaveBeenCalled();
 
     releaseOperation();
     await Promise.all([operation, stop]);
+    expect(stopFlow).toHaveBeenCalledOnce();
   });
 
   it('releases roster ownership after rollback failure so stop and restart can recover', async () => {

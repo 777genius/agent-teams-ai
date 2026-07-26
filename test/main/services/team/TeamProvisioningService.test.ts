@@ -1,4 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Legacy white-box service harnesses intentionally exercise private runtime state through structural mocks. */
+/*
+ * This legacy integration fixture lives outside src/, so mirror the repository's
+ * standard TypeScript test relaxations that normally apply through custom-rules.
+ */
+/* eslint
+  "@typescript-eslint/array-type": "warn",
+  "@typescript-eslint/no-empty-function": "off",
+  "@typescript-eslint/no-explicit-any": "off",
+  "@typescript-eslint/no-unused-vars": "warn",
+  "@typescript-eslint/require-await": "off",
+  "sonarjs/no-dead-store": "warn",
+  "sonarjs/no-nested-template-literals": "warn",
+  "sonarjs/no-unused-vars": "warn",
+  "sonarjs/publicly-writable-directories": "off",
+  "sonarjs/use-type-alias": "warn"
+*/
 import {
   buildWorkspaceTrustPathCandidates,
   type WorkspaceTrustWorkspace,
@@ -295,6 +310,7 @@ import {
 import type { TeamProvisioningConfigFacade } from '@main/services/team/provisioning/TeamProvisioningConfigFacade';
 import type { OpenCodeTeamRuntimeMessageResult } from '@main/services/team/runtime';
 import type {
+  PersistedTeamLaunchSnapshot,
   TeamConfig,
   TeamCreateRequest,
   TeamMember,
@@ -309,7 +325,7 @@ type RuntimeTelemetryProcessTableRow = RuntimeProcessTableRow & {
   runtimeTelemetrySource?: 'native' | 'wsl' | 'windows-host';
 };
 
-type OpenCodeIsolationHarness = {
+interface OpenCodeIsolationHarness {
   runs: Map<string, ReturnType<typeof createMemberSpawnRun>>;
   aliveRunByTeam: Map<string, string>;
   runtimeAdapterRunByTeam: Map<string, unknown>;
@@ -336,10 +352,14 @@ type OpenCodeIsolationHarness = {
       resolveCurrentOpenCodeRuntimeRunId(teamName: string, laneId: string): Promise<string | null>;
     };
   };
-};
+}
 
-type LeadWorkSyncTestTaskRef = { taskId: string; displayId?: string; teamName?: string };
-type LeadWorkSyncTestInboxMessage = {
+interface LeadWorkSyncTestTaskRef {
+  taskId: string;
+  displayId?: string;
+  teamName?: string;
+}
+interface LeadWorkSyncTestInboxMessage {
   from: string;
   to?: string;
   text: string;
@@ -348,7 +368,7 @@ type LeadWorkSyncTestInboxMessage = {
   read: boolean;
   messageKind?: string;
   taskRefs?: LeadWorkSyncTestTaskRef[];
-};
+}
 type LeadRelayPriorityTestInboxMessage = LeadWorkSyncTestInboxMessage & {
   source?: string;
   workSyncIntent?: string;
@@ -356,7 +376,7 @@ type LeadRelayPriorityTestInboxMessage = LeadWorkSyncTestInboxMessage & {
 type LeadRelayPriorityTestRun = ReturnType<typeof createMemberSpawnRun> & {
   leadRelayCapture?: { resolveOnce(text: string): void } | null;
 };
-type LeadRelayPriorityServiceHarness = {
+interface LeadRelayPriorityServiceHarness {
   runs: Map<string, LeadRelayPriorityTestRun>;
   aliveRunByTeam: Map<string, string>;
   configReader: {
@@ -380,15 +400,15 @@ type LeadRelayPriorityServiceHarness = {
   resolveControlApiBaseUrl(): Promise<string | null>;
   scheduleLeadInboxFollowUpRelay(teamName: string): void;
   sendMessageToRun(run: LeadRelayPriorityTestRun, message: string): Promise<void>;
-};
-type LeadWorkSyncReadCommitTestHarness = {
+}
+interface LeadWorkSyncReadCommitTestHarness {
   hasAcceptedLeadWorkSyncReport(input: { teamName: string; leadName: string }): Promise<boolean>;
   getLeadRelayReadCommitBatch(input: {
     teamName: string;
     leadName: string;
     batch: LeadWorkSyncTestInboxMessage[];
   }): Promise<LeadWorkSyncTestInboxMessage[]>;
-};
+}
 
 function leadWorkSyncReadCommitHarness(
   svc: TeamProvisioningService
@@ -507,6 +527,17 @@ function createDeferred<T>() {
     reject = rej;
   });
   return { promise, resolve, reject };
+}
+
+function successfulRuntimeStop(input: TeamRuntimeStopInput) {
+  return {
+    runId: input.runId,
+    teamName: input.teamName,
+    stopped: true,
+    members: {},
+    warnings: [],
+    diagnostics: [],
+  };
 }
 
 function writeLaunchConfig(
@@ -665,7 +696,7 @@ function writeBootstrapState(
 function writeMemberBootstrapRunId(teamName: string, memberName: string, runId: string): void {
   const configPath = path.join(tempTeamsBase, teamName, 'config.json');
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-    members?: Array<Record<string, unknown>>;
+    members?: Record<string, unknown>[];
   };
   config.members = (config.members ?? []).map((member) =>
     member.name === memberName ? { ...member, bootstrapRunId: runId } : member
@@ -910,6 +941,14 @@ function createOpenCodeRuntimeCheckinPortsForTest(
     writeLaunchState: async (teamName, snapshot) => {
       await service.launchStateStore?.write?.(teamName, snapshot);
     },
+    mutateLaunchState: async (teamName, mutation) => {
+      const current = (await service.launchStateStore?.read?.(teamName)) ?? null;
+      const next = await mutation(current);
+      await service.launchStateStore?.write?.(teamName, next);
+      return next;
+    },
+    withTeamLock: (teamName, operation) =>
+      Promise.resolve(service.withTeamLock?.(teamName, operation) ?? operation()),
     readConfigForStrictDecision: async (teamName) => {
       const configReader = service.configReader as
         | { getConfig?: (teamName: string) => Promise<TeamConfig | null> }
@@ -973,14 +1012,29 @@ function createOpenCodeRuntimeDeliveryBoundaryForTest(
     resolveOpenCodeRuntimeLaneId: async ({ memberName }) =>
       memberName ? `secondary:opencode:${memberName}` : 'primary',
     resolveCurrentOpenCodeRuntimeRunId: async () => null,
-    readLaunchState: async () => null,
+    readLaunchState: () =>
+      Promise.resolve({
+        members: {
+          bob: {
+            name: 'bob',
+            providerId: 'opencode',
+            laneOwnerProviderId: 'opencode',
+            laneId: 'secondary:opencode:bob',
+            runtimeRunId: 'opencode-run-1',
+            runtimeSessionId: 'session-bob',
+          },
+        },
+      } as unknown as PersistedTeamLaunchSnapshot),
     readLaunchStateForDeliveryRecovery: async () => null,
     writeLaunchState: async () => {},
     readConfigForStrictDecision: (teamName) =>
       Promise.resolve({
         name: teamName,
         projectPath: tempClaudeRoot,
-        members: [{ name: 'alice' }, { name: 'bob' }],
+        members: [
+          { name: 'alice', providerId: 'codex' },
+          { name: 'bob', providerId: 'opencode' },
+        ],
       }),
     readMetaMembers: async () => [],
     readPersistedRuntimeMembers: () => [],
@@ -1024,6 +1078,9 @@ function createOpenCodeRuntimeDeliveryBoundaryForTest(
     nowIso: () => '2026-04-22T12:05:00.000Z',
     logger: { warn: vi.fn() },
     ...overrides,
+    mutateLaunchState:
+      overrides.mutateLaunchState ?? (async (_teamName, mutation) => mutation(null)),
+    withTeamLock: overrides.withTeamLock ?? (async (_teamName, operation) => operation()),
   });
 }
 
@@ -1053,7 +1110,7 @@ function createMemberSpawnRun(params?: {
   expectedMembers?: string[];
   memberSpawnStatuses?: Map<string, Record<string, unknown>>;
   memberSpawnLeadInboxCursorByMember?: Map<string, { timestamp: string; messageId: string }>;
-  mixedSecondaryLanes?: Array<{ providerId: string; member: { name: string } }>;
+  mixedSecondaryLanes?: { providerId: string; member: { name: string } }[];
 }) {
   const teamName = params?.teamName ?? 'member-spawn-team';
   const expectedMembers = params?.expectedMembers ?? ['alice'];
@@ -1061,7 +1118,7 @@ function createMemberSpawnRun(params?: {
     params?.memberSpawnStatuses ??
     new Map([
       [
-        expectedMembers[0]!,
+        expectedMembers[0],
         createMemberSpawnStatusEntry({
           firstSpawnAcceptedAt: new Date(Date.now() - 5_000).toISOString(),
         }),
@@ -1249,6 +1306,12 @@ describe('TeamProvisioningService', () => {
   });
 
   afterEach(() => {
+    for (const [, command] of vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls) {
+      const scriptPath = parseDirectTmuxRestartLauncherPath(command);
+      if (scriptPath) {
+        fs.rmSync(path.dirname(scriptPath), { recursive: true, force: true });
+      }
+    }
     restoreRuntimeTelemetryPlatformAfterTest();
     restoreRuntimePidusageTelemetryEnv();
     clearAutoResumeService();
@@ -1301,7 +1364,7 @@ describe('TeamProvisioningService', () => {
       const svc = new TeamProvisioningService();
       const internals = privateHarness(svc);
       const firstMembers = internals.readPersistedRuntimeMembers(teamName);
-      firstMembers[0]!.name = 'mutated';
+      firstMembers[0].name = 'mutated';
 
       expect(internals.readPersistedRuntimeMembers(teamName)[0]).toMatchObject({
         name: 'alice',
@@ -4801,8 +4864,8 @@ describe('TeamProvisioningService', () => {
       const maxEntries = (TeamProvisioningService as unknown as Record<string, number>)
         .RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES;
       const pids = Array.from({ length: maxEntries + 2 }, (_value, index) => 10_000 + index);
-      const firstPid = pids[0]!;
-      const newestPid = pids[pids.length - 1]!;
+      const firstPid = pids[0];
+      const newestPid = pids[pids.length - 1];
       const usageByPid = Object.fromEntries(
         pids.map((pid, index) => [String(pid), createPidusageStat(pid, 100_000_000 + index, 1)])
       );
@@ -5575,7 +5638,7 @@ describe('TeamProvisioningService', () => {
       mockRuntimeUsageProcessRows([{ pid: 333, ppid: 1, command: 'opencode runtime host' }]);
       vi.mocked(pidusage).mockReset();
       vi.mocked(pidusage).mockImplementation(
-        async (target: number | string | Array<number | string>) => {
+        async (target: number | string | (number | string)[]) => {
           if (Array.isArray(target)) {
             if (target.length === 1 && Number(target[0]) === 333) {
               return {
@@ -5657,7 +5720,7 @@ describe('TeamProvisioningService', () => {
       vi.mocked(pidusage).mockReset();
       mockRuntimeUsageProcessRows([{ pid: 333, ppid: 1, command: 'opencode runtime host' }]);
       vi.mocked(pidusage).mockImplementation(
-        async (target: number | string | Array<number | string>) => {
+        async (target: number | string | (number | string)[]) => {
           if (Array.isArray(target)) {
             return {
               '333': createPidusageStat(333, 456_000_000),
@@ -6232,7 +6295,7 @@ describe('TeamProvisioningService', () => {
 
       const updatedConfig = JSON.parse(
         fs.readFileSync(path.join(teamDir, 'config.json'), 'utf8')
-      ) as { members: Array<Record<string, unknown>> };
+      ) as { members: Record<string, unknown>[] };
       expect(updatedConfig.members.find((member) => member.name === 'bob')).toMatchObject({
         agentId: 'bob@forge-labs-10',
         tmuxPaneId: '%1',
@@ -6243,7 +6306,7 @@ describe('TeamProvisioningService', () => {
       });
       const inbox = JSON.parse(
         fs.readFileSync(path.join(teamDir, 'inboxes', 'bob.json'), 'utf8')
-      ) as Array<Record<string, unknown>>;
+      ) as Record<string, unknown>[];
       expect(inbox.at(-1)).toMatchObject({
         from: 'team-lead',
         to: 'bob',
@@ -6658,14 +6721,6 @@ describe('TeamProvisioningService', () => {
         },
       ];
       run.allEffectiveMembers = [...run.effectiveMembers];
-      run.progress = {
-        runId: run.runId,
-        teamName,
-        state: 'ready',
-        message: 'OpenCode team is running',
-        startedAt: '2026-05-02T10:00:00.000Z',
-        updatedAt: '2026-05-02T10:00:05.000Z',
-      };
 
       const isolationHarness = svc as unknown as OpenCodeIsolationHarness;
       isolationHarness.runtimeAdapterRunByTeam.set(teamName, {
@@ -6791,14 +6846,9 @@ describe('TeamProvisioningService', () => {
             preflightLocalModels: adapterPreflight,
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(async (input: { runId: string; teamName: string }) => ({
-              runId: input.runId,
-              teamName: input.teamName,
-              stopped: true,
-              members: {},
-              warnings: [],
-              diagnostics: [],
-            })),
+            stop: vi.fn((input: TeamRuntimeStopInput) =>
+              Promise.resolve(successfulRuntimeStop(input))
+            ),
           } as any,
         ])
       );
@@ -6855,6 +6905,13 @@ describe('TeamProvisioningService', () => {
           )
         );
 
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempTeamsBase,
+        teamName: 'pure-opencode-team',
+        laneId: 'primary',
+        runId: 'opencode-run-1',
+      });
+
       await svc.restartMember('pure-opencode-team', 'alice');
 
       expect(adapterPreflight).toHaveBeenCalledWith({
@@ -6902,7 +6959,7 @@ describe('TeamProvisioningService', () => {
       const configReady = createDeferred<{
         name: string;
         projectPath: string;
-        members: Array<Record<string, unknown>>;
+        members: Record<string, unknown>[];
       }>();
       const adapterLaunch = vi.fn();
       const adapterStop = vi.fn(async (input: TeamRuntimeStopInput) => ({
@@ -6956,12 +7013,19 @@ describe('TeamProvisioningService', () => {
       };
       vi.spyOn(svc as any, 'resolveOpenCodeMemberWorkspacesForRuntime').mockImplementation(
         async (input: any) =>
-          (input.members as Array<Record<string, unknown>>).map((member) => ({
+          (input.members as Record<string, unknown>[]).map((member) => ({
             ...member,
             cwd: '/repo',
           }))
       );
       memberLifecycleUseCasesHarness(svc).persistOpenCodeMemberRestartSystemMessage = vi.fn();
+
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'primary',
+        runId: 'opencode-run-before-stop',
+      });
 
       const restart = svc.restartMember(teamName, 'alice');
       await vi.waitFor(() => {
@@ -8514,7 +8578,7 @@ describe('TeamProvisioningService', () => {
       ]);
       vi.mocked(pidusage).mockReset();
       vi.mocked(pidusage).mockImplementation(
-        async (target: number | string | Array<number | string>) => {
+        async (target: number | string | (number | string)[]) => {
           if (Array.isArray(target)) {
             return {
               '456': createPidusageStat(456, 456_000_000),
@@ -8956,7 +9020,7 @@ describe('TeamProvisioningService', () => {
         fileName: 'opencode-prompt-delivery-ledger.json',
       });
       const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<{ nextAttemptAt: string | null }>;
+        data: { nextAttemptAt: string | null }[];
       };
       ledgerEnvelope.data[0].nextAttemptAt = '2000-01-01T00:00:00.000Z';
       await fsPromises.writeFile(ledgerPath, JSON.stringify(ledgerEnvelope, null, 2), 'utf8');
@@ -8981,7 +9045,7 @@ describe('TeamProvisioningService', () => {
           path.join(tempTeamsBase, 'team-a', 'inboxes', 'user.json'),
           'utf8'
         )
-      ) as Array<Record<string, unknown>>;
+      ) as Record<string, unknown>[];
       expect(userInbox).toHaveLength(1);
       expect(userInbox[0]).toMatchObject({
         from: 'bob',
@@ -9218,12 +9282,12 @@ describe('TeamProvisioningService', () => {
         fileName: 'opencode-prompt-delivery-ledger.json',
       });
       const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<{
+        data: {
           status: string;
           responseState: string;
           nextAttemptAt: string | null;
           lastReason: string | null;
-        }>;
+        }[];
       };
       Object.assign(ledgerEnvelope.data[0], {
         status: 'accepted',
@@ -9259,7 +9323,7 @@ describe('TeamProvisioningService', () => {
       expect(sendMessageToMember).toHaveBeenCalledTimes(1);
 
       const scheduledEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<{
+        data: {
           status?: string;
           nextAttemptAt: string | null;
           diagnostics?: string[];
@@ -9268,7 +9332,7 @@ describe('TeamProvisioningService', () => {
           sessionRefreshAttempts?: number;
           attempts: number;
           maxAttempts: number;
-        }>;
+        }[];
       };
       expect(scheduledEnvelope.data[0]).toMatchObject({
         attempts: 1,
@@ -9310,7 +9374,7 @@ describe('TeamProvisioningService', () => {
         })
       );
       const rescheduledEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<Record<string, unknown>>;
+        data: Record<string, unknown>[];
       };
       expect(rescheduledEnvelope.data[0]).toMatchObject({
         status: 'accepted',
@@ -10058,7 +10122,7 @@ describe('TeamProvisioningService', () => {
         fileName: 'opencode-prompt-delivery-ledger.json',
       });
       const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<Record<string, unknown>>;
+        data: Record<string, unknown>[];
       };
       Object.assign(ledgerEnvelope.data[0], {
         status: 'accepted',
@@ -10090,7 +10154,7 @@ describe('TeamProvisioningService', () => {
       expect(sendMessageToMember).toHaveBeenCalledTimes(1);
       expect(observeMessageDelivery).toHaveBeenCalledTimes(1);
       const terminalEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<Record<string, unknown>>;
+        data: Record<string, unknown>[];
       };
       expect(terminalEnvelope.data[0]).toMatchObject({
         status: 'failed_terminal',
@@ -10194,7 +10258,7 @@ describe('TeamProvisioningService', () => {
         fileName: 'opencode-prompt-delivery-ledger.json',
       });
       const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<{ lastReason: string | null; nextAttemptAt: string | null }>;
+        data: { lastReason: string | null; nextAttemptAt: string | null }[];
       };
       expect(ledgerEnvelope.data[0]).toMatchObject({
         lastReason: 'plain_text_ack_only_still_requires_answer',
@@ -10304,7 +10368,7 @@ describe('TeamProvisioningService', () => {
           path.join(tempTeamsBase, 'team-a', 'inboxes', 'user.json'),
           'utf8'
         )
-      ) as Array<Record<string, unknown>>;
+      ) as Record<string, unknown>[];
       expect(userInbox).toHaveLength(1);
       expect(userInbox[0]).toMatchObject({
         from: 'bob',
@@ -10461,7 +10525,7 @@ describe('TeamProvisioningService', () => {
           path.join(tempTeamsBase, 'team-a', 'inboxes', 'user.json'),
           'utf8'
         )
-      ) as Array<Record<string, unknown>>;
+      ) as Record<string, unknown>[];
       expect(userInbox).toHaveLength(1);
       expect(userInbox[0]).toMatchObject({
         from: 'bob',
@@ -10703,7 +10767,7 @@ describe('TeamProvisioningService', () => {
       expect(sendMessageToMember).not.toHaveBeenCalled();
       const rows = JSON.parse(
         await fsPromises.readFile(path.join(inboxDir, 'bob.json'), 'utf8')
-      ) as Array<{ read?: boolean }>;
+      ) as { read?: boolean }[];
       expect(rows[0]?.read).toBe(false);
     });
 
@@ -10845,12 +10909,12 @@ describe('TeamProvisioningService', () => {
         fileName: 'opencode-prompt-delivery-ledger.json',
       });
       const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<{
+        data: {
           acceptanceUnknown: boolean;
           status: string;
           lastReason: string | null;
           nextAttemptAt: string | null;
-        }>;
+        }[];
       };
       expect(ledgerEnvelope.data[0]).toMatchObject({
         acceptanceUnknown: true,
@@ -10944,13 +11008,13 @@ describe('TeamProvisioningService', () => {
         fileName: 'opencode-prompt-delivery-ledger.json',
       });
       const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<{
+        data: {
           acceptanceUnknown: boolean;
           status: string;
           runtimePromptMessageId: string | null;
           lastReason: string | null;
           diagnostics: string[];
-        }>;
+        }[];
       };
       expect(ledgerEnvelope.data[0]).toMatchObject({
         acceptanceUnknown: true,
@@ -11106,7 +11170,7 @@ describe('TeamProvisioningService', () => {
       expect(sendMessageToMember).toHaveBeenCalledTimes(1);
 
       const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<{
+        data: {
           status: string;
           runtimePromptMessageId: string | null;
           runtimePromptMessageIds: string[];
@@ -11114,7 +11178,7 @@ describe('TeamProvisioningService', () => {
           acceptedAt: string | null;
           attempts: number;
           diagnostics: string[];
-        }>;
+        }[];
       };
       expect(ledgerEnvelope.data[0]).toMatchObject({
         status: 'accepted',
@@ -11253,14 +11317,14 @@ describe('TeamProvisioningService', () => {
       expect(sendMessageToMember).not.toHaveBeenCalled();
 
       const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<{
+        data: {
           id: string;
           status: string;
           acceptanceUnknown: boolean;
           nextAttemptAt: string | null;
           lastReason: string | null;
           diagnostics: string[];
-        }>;
+        }[];
       };
       expect(ledgerEnvelope.data[0]).toMatchObject({
         id: recordId,
@@ -11408,13 +11472,13 @@ describe('TeamProvisioningService', () => {
       );
 
       const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<{
+        data: {
           status: string;
           runtimePromptMessageId: string | null;
           acceptanceUnknown: boolean;
           attempts: number;
           diagnostics: string[];
-        }>;
+        }[];
       };
       expect(ledgerEnvelope.data[0]).toMatchObject({
         status: 'retry_scheduled',
@@ -11846,7 +11910,7 @@ describe('TeamProvisioningService', () => {
 
       const userInbox = JSON.parse(
         await fsPromises.readFile(path.join(inboxDir, 'user.json'), 'utf8')
-      ) as Array<Record<string, unknown>>;
+      ) as Record<string, unknown>[];
       expect(userInbox[0]).toMatchObject({
         messageId: 'reply-user-task-1',
         taskRefs: [taskRef],
@@ -11976,7 +12040,7 @@ describe('TeamProvisioningService', () => {
 
       const userInbox = JSON.parse(
         await fsPromises.readFile(path.join(inboxDir, 'user.json'), 'utf8')
-      ) as Array<Record<string, unknown>>;
+      ) as Record<string, unknown>[];
       expect(userInbox).toHaveLength(1);
       expect(userInbox[0]).toMatchObject({
         messageId: 'reply-wrong-relay-1',
@@ -12460,7 +12524,7 @@ describe('TeamProvisioningService', () => {
         fileName: 'opencode-prompt-delivery-ledger.json',
       });
       const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-        data: Array<{ nextAttemptAt: string | null }>;
+        data: { nextAttemptAt: string | null }[];
       };
       ledgerEnvelope.data[0].nextAttemptAt = '2000-01-01T00:00:00.000Z';
       await fsPromises.writeFile(ledgerPath, JSON.stringify(ledgerEnvelope, null, 2), 'utf8');
@@ -13185,7 +13249,7 @@ describe('TeamProvisioningService', () => {
           fileName: 'opencode-prompt-delivery-ledger.json',
         });
         const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
-          data: Array<{ nextAttemptAt: string | null }>;
+          data: { nextAttemptAt: string | null }[];
         };
         ledgerEnvelope.data[0].nextAttemptAt = '2000-01-01T00:00:00.000Z';
         await fsPromises.writeFile(ledgerPath, JSON.stringify(ledgerEnvelope, null, 2), 'utf8');
@@ -14893,7 +14957,7 @@ describe('TeamProvisioningService', () => {
         },
         teamLaunchState: 'partial_pending' as const,
       };
-      const events: Array<{ type: string; teamName: string; runId?: string; detail?: string }> = [];
+      const events: { type: string; teamName: string; runId?: string; detail?: string }[] = [];
 
       svc.setTeamChangeEmitter((event) => {
         events.push(event);
@@ -14962,7 +15026,7 @@ describe('TeamProvisioningService', () => {
         },
         teamLaunchState: 'ready' as const,
       };
-      const events: Array<{ type: string; teamName: string; runId?: string; detail?: string }> = [];
+      const events: { type: string; teamName: string; runId?: string; detail?: string }[] = [];
       const write = vi.fn(async () => {});
 
       svc.setTeamChangeEmitter((event) => {
@@ -15127,7 +15191,10 @@ describe('TeamProvisioningService', () => {
     });
 
     it('accepts duplicate OpenCode bootstrap check-ins for the same runtime session and refreshes liveness', async () => {
-      const svc = new TeamProvisioningService();
+      const svc = createServiceWithConfig({
+        teamName: 'mixed-team',
+        members: [{ name: 'bob', providerId: 'opencode' }],
+      });
       const previousSnapshot = {
         version: 2 as const,
         teamName: 'mixed-team',
@@ -15292,7 +15359,10 @@ describe('TeamProvisioningService', () => {
     });
 
     it('rejects conflicting OpenCode bootstrap check-ins for an already confirmed runtime session', async () => {
-      const svc = new TeamProvisioningService();
+      const svc = createServiceWithConfig({
+        teamName: 'mixed-team',
+        members: [{ name: 'bob', providerId: 'opencode' }],
+      });
       const previousSnapshot = {
         version: 2 as const,
         teamName: 'mixed-team',
@@ -15543,7 +15613,7 @@ describe('TeamProvisioningService', () => {
 
       const manifestPath = getOpenCodeRuntimeManifestPath(tempTeamsBase, teamName, laneId);
       const manifest = JSON.parse(await fsPromises.readFile(manifestPath, 'utf8')) as {
-        data: { entries: Array<{ schemaName: string; relativePath: string; runId: string }> };
+        data: { entries: { schemaName: string; relativePath: string; runId: string }[] };
       };
       expect(manifest.data.entries).toEqual(
         expect.arrayContaining([
@@ -15561,7 +15631,7 @@ describe('TeamProvisioningService', () => {
         )
       ) as {
         data: {
-          sessions: Array<{ id: string; memberName: string; runId: string; laneId: string }>;
+          sessions: { id: string; memberName: string; runId: string; laneId: string }[];
         };
       };
       expect(sessionStore.data.sessions).toEqual([
@@ -15696,6 +15766,7 @@ describe('TeamProvisioningService', () => {
         'secondary:opencode:bob',
         {
           teamsBasePath: tempTeamsBase,
+          withTeamLock: async (_teamName, operation) => operation(),
           resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'opencode-run-1'),
           createOpenCodeRuntimeDeliveryPorts: () => [
             {
@@ -15748,8 +15819,8 @@ describe('TeamProvisioningService', () => {
     });
 
     it('maps runtime delivery local data.detail to public TeamChangeEvent.detail', async () => {
-      const emitted: Array<Record<string, unknown>> = [];
-      const inboxMessages: Array<Record<string, unknown>> = [];
+      const emitted: Record<string, unknown>[] = [];
+      const inboxMessages: Record<string, unknown>[] = [];
 
       const boundary = createOpenCodeRuntimeDeliveryBoundaryForTest({
         resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'opencode-run-1'),
@@ -15847,7 +15918,7 @@ describe('TeamProvisioningService', () => {
       const teamName = 'mixed-team';
       const laneId = 'secondary:opencode:bob';
       const runId = 'opencode-run-1';
-      const inboxMessages: Array<Record<string, unknown>> = [];
+      const inboxMessages: Record<string, unknown>[] = [];
       const boundary = createOpenCodeRuntimeDeliveryBoundaryForTest({
         resolveOpenCodeRuntimeLaneId: vi.fn(async () => laneId),
         resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => runId),
@@ -15896,28 +15967,9 @@ describe('TeamProvisioningService', () => {
       ).resolves.toContain('delivery-1');
     });
 
-    it('removes lane index entries after the OpenCode adapter confirms mixed secondary lane stops', async () => {
+    it('retains exact mixed secondary lane ownership when no OpenCode adapter can confirm stop', async () => {
       const svc = new TeamProvisioningService();
       const teamName = 'mixed-team';
-      const adapterStop = vi.fn(async (input: { runId: string }) => ({
-        runId: input.runId,
-        teamName,
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      }));
-      svc.setRuntimeAdapterRegistry(
-        new TeamRuntimeAdapterRegistry([
-          {
-            providerId: 'opencode',
-            prepare: vi.fn(),
-            launch: vi.fn(),
-            reconcile: vi.fn(),
-            stop: adapterStop,
-          } as any,
-        ])
-      );
 
       (svc as any).setSecondaryRuntimeRun({
         teamName,
@@ -15940,27 +15992,13 @@ describe('TeamProvisioningService', () => {
         teamsBasePath: tempTeamsBase,
         teamName,
         laneId: 'secondary:opencode:bob',
-        runId: 'opencode-run-1',
         state: 'active',
-      });
-      await setOpenCodeRuntimeActiveRunManifest({
-        teamsBasePath: tempTeamsBase,
-        teamName,
-        laneId: 'secondary:opencode:bob',
-        runId: 'opencode-run-1',
       });
       await upsertOpenCodeRuntimeLaneIndexEntry({
         teamsBasePath: tempTeamsBase,
         teamName,
         laneId: 'secondary:opencode:tom',
-        runId: 'opencode-run-2',
         state: 'active',
-      });
-      await setOpenCodeRuntimeActiveRunManifest({
-        teamsBasePath: tempTeamsBase,
-        teamName,
-        laneId: 'secondary:opencode:tom',
-        runId: 'opencode-run-2',
       });
       await fsPromises.mkdir(
         path.dirname(
@@ -15988,47 +16026,33 @@ describe('TeamProvisioningService', () => {
         read: vi.fn(async () => null),
       };
 
-      await (svc as any).stopMixedSecondaryRuntimeLanes(teamName);
+      await expect((svc as any).stopMixedSecondaryRuntimeLanes(teamName)).rejects.toThrow(
+        'OpenCode runtime adapter is unavailable'
+      );
 
-      expect(adapterStop).toHaveBeenCalledTimes(2);
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
-        lanes: {},
+        lanes: {
+          'secondary:opencode:bob': { state: 'active' },
+          'secondary:opencode:tom': { state: 'active' },
+        },
       });
       await expect(
-        fsPromises.stat(
-          path.dirname(
-            getOpenCodeLaneScopedRuntimeFilePath({
-              teamsBasePath: tempTeamsBase,
-              teamName,
-              laneId: 'secondary:opencode:bob',
-              fileName: 'opencode-delivery-journal.json',
-            })
-          )
+        fsPromises.readFile(
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName,
+            laneId: 'secondary:opencode:bob',
+            fileName: 'opencode-delivery-journal.json',
+          }),
+          'utf8'
         )
-      ).rejects.toThrow();
+      ).resolves.toBe('{"records":[]}\n');
+      expect((svc as any).getSecondaryRuntimeRuns(teamName)).toHaveLength(2);
     });
 
-    it('clears provider-local lane storage when a single mixed secondary lane is stopped during controlled reattach', async () => {
+    it('retains a single mixed secondary lane when controlled reattach cannot confirm stop', async () => {
+      allowConsoleLogs();
       const svc = new TeamProvisioningService();
-      const adapterStop = vi.fn(async (input: { runId: string }) => ({
-        runId: input.runId,
-        teamName: 'mixed-team',
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      }));
-      svc.setRuntimeAdapterRegistry(
-        new TeamRuntimeAdapterRegistry([
-          {
-            providerId: 'opencode',
-            prepare: vi.fn(),
-            launch: vi.fn(),
-            reconcile: vi.fn(),
-            stop: adapterStop,
-          } as any,
-        ])
-      );
       const run = createMemberSpawnRun({
         teamName: 'mixed-team',
         expectedMembers: ['alice'],
@@ -16053,27 +16077,11 @@ describe('TeamProvisioningService', () => {
         diagnostics: [],
       };
 
-      (svc as any).setSecondaryRuntimeRun({
-        teamName: run.teamName,
-        runId: lane.runId,
-        providerId: lane.providerId,
-        laneId: lane.laneId,
-        memberName: lane.member.name,
-        cwd: run.request.cwd,
-      });
-
       await upsertOpenCodeRuntimeLaneIndexEntry({
         teamsBasePath: tempTeamsBase,
         teamName: run.teamName,
         laneId: lane.laneId,
-        runId: lane.runId,
         state: 'active',
-      });
-      await setOpenCodeRuntimeActiveRunManifest({
-        teamsBasePath: tempTeamsBase,
-        teamName: run.teamName,
-        laneId: lane.laneId,
-        runId: lane.runId,
       });
       await fsPromises.mkdir(
         path.dirname(
@@ -16097,38 +16105,31 @@ describe('TeamProvisioningService', () => {
         'utf8'
       );
 
-      await (svc as any).stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch');
+      await expect(
+        (svc as any).stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch')
+      ).rejects.toThrow('OpenCode runtime adapter is unavailable');
 
-      expect(adapterStop).toHaveBeenCalledWith(
-        expect.objectContaining({
-          runId: 'opencode-run-1',
-          laneId: lane.laneId,
-          teamName: run.teamName,
-          reason: 'relaunch',
-        })
-      );
       await expect(
         readOpenCodeRuntimeLaneIndex(tempTeamsBase, run.teamName)
       ).resolves.toMatchObject({
-        lanes: {},
+        lanes: { 'secondary:opencode:bob': { state: 'active' } },
       });
       await expect(
-        fsPromises.stat(
-          path.dirname(
-            getOpenCodeLaneScopedRuntimeFilePath({
-              teamsBasePath: tempTeamsBase,
-              teamName: run.teamName,
-              laneId: lane.laneId,
-              fileName: 'opencode-permissions.json',
-            })
-          )
+        fsPromises.readFile(
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName: run.teamName,
+            laneId: lane.laneId,
+            fileName: 'opencode-permissions.json',
+          }),
+          'utf8'
         )
-      ).rejects.toThrow();
-      expect(lane.runId).toBeNull();
-      expect(lane.state).toBe('finished');
+      ).resolves.toBe('{"requests":[]}\n');
+      expect(lane.runId).toBe('opencode-run-1');
+      expect(lane.state).toBe('active');
     });
 
-    it('preserves primary runtime evidence when no OpenCode adapter can confirm the stop', async () => {
+    it('retains exact primary lane ownership and storage when stopped without an adapter', async () => {
       const svc = new TeamProvisioningService();
       const teamName = 'opencode-team';
 
@@ -16173,40 +16174,603 @@ describe('TeamProvisioningService', () => {
 
       await expect(
         (svc as any).stopOpenCodeRuntimeAdapterTeam(teamName, 'opencode-run-1')
-      ).rejects.toThrow('OpenCode runtime adapter is unavailable; stop was not confirmed');
+      ).rejects.toThrow('OpenCode runtime adapter is unavailable');
 
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
-        lanes: {
-          primary: expect.objectContaining({ state: 'active' }),
-        },
+        lanes: { primary: { state: 'active' } },
       });
       await expect(
-        fsPromises.stat(
-          path.dirname(
-            getOpenCodeLaneScopedRuntimeFilePath({
-              teamsBasePath: tempTeamsBase,
-              teamName,
-              laneId: 'primary',
-              fileName: 'opencode-delivery-journal.json',
-            })
-          )
+        fsPromises.readFile(
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName,
+            laneId: 'primary',
+            fileName: 'opencode-delivery-journal.json',
+          }),
+          'utf8'
         )
-      ).resolves.toBeTruthy();
+      ).resolves.toBe('{"records":[]}\n');
       expect((svc as any).runtimeAdapterRunByTeam.has(teamName)).toBe(true);
       expect((svc as any).aliveRunByTeam.has(teamName)).toBe(true);
       expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(true);
-      expect((svc as any).stoppingPrimaryRuntimeTeams.has(teamName)).toBe(true);
+    });
+
+    it('rejects liveness and direct/runtime delivery while primary adapter stop is pending', async () => {
+      const svc = new TeamProvisioningService();
+      const teamName = 'opencode-pending-stop-fence';
+      const runId = 'opencode-pending-stop-run';
+      const stopStarted = createDeferred<void>();
+      const stopRelease = createDeferred<void>();
+      const sendMessageToMember = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          providerId: 'opencode' as const,
+          memberName: 'team-lead',
+          diagnostics: [],
+        })
+      );
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: vi.fn(async (input: TeamRuntimeStopInput) => {
+              stopStarted.resolve(undefined);
+              await stopRelease.promise;
+              return successfulRuntimeStop(input);
+            }),
+            sendMessageToMember,
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      const harness = svc as any;
+      harness.runtimeAdapterRunByTeam.set(teamName, {
+        runId,
+        providerId: 'opencode',
+        cwd: '/repo',
+      });
+      harness.aliveRunByTeam.set(teamName, runId);
+      harness.provisioningRunByTeam.set(teamName, runId);
+      harness.runtimeAdapterProgressByRunId.set(runId, {
+        runId,
+        teamName,
+        state: 'ready',
+        message: 'OpenCode team ready',
+        startedAt: '2026-07-23T00:00:00.000Z',
+        updatedAt: '2026-07-23T00:00:01.000Z',
+      });
+      harness.launchStateStore = {
+        read: vi.fn(() => Promise.resolve(null)),
+        write: vi.fn(() => Promise.resolve()),
+      };
+      harness.configReader = {
+        getConfig: vi.fn(() =>
+          Promise.resolve({
+            name: teamName,
+            projectPath: '/repo',
+            members: [
+              {
+                name: 'team-lead',
+                agentType: 'team-lead',
+                providerId: 'opencode',
+                model: 'minimax-m2.5-free',
+              },
+            ],
+          })
+        ),
+      };
+      harness.teamMetaStore = {
+        getMeta: vi.fn(() =>
+          Promise.resolve({
+            launchIdentity: { providerId: 'opencode' },
+            providerId: 'opencode',
+          })
+        ),
+      };
+      harness.membersMetaStore = {
+        getMembers: vi.fn(() => Promise.resolve([])),
+      };
+      await seedOpenCodeRuntimeLaneCurrentRunForTest({
+        teamName,
+        laneId: 'primary',
+        runId,
+      });
+
+      const stopping = harness.stopOpenCodeRuntimeAdapterTeam(teamName, runId) as Promise<void>;
+      await stopStarted.promise;
+
+      expect(svc.isTeamAlive(teamName)).toBe(false);
+      expect(harness.runtimeAdapterRunByTeam.get(teamName)?.runId).toBe(runId);
+      expect(harness.aliveRunByTeam.get(teamName)).toBe(runId);
+      expect(harness.provisioningRunByTeam.get(teamName)).toBe(runId);
       await expect(
         svc.deliverOpenCodeMemberMessage(teamName, {
-          memberName: 'alice',
-          text: 'must remain blocked after an unconfirmed stop',
-          messageId: 'msg-unconfirmed-primary-stop',
+          memberName: 'team-lead',
+          text: 'must not reach stopping runtime',
+          messageId: 'pending-stop-direct-message',
         })
-      ).resolves.toEqual({
+      ).resolves.toMatchObject({
         delivered: false,
-        reason: 'opencode_runtime_not_active',
+        reason: 'opencode_primary_runtime_not_deliverable',
       });
+      await expect(
+        svc.deliverOpenCodeRuntimeMessage({
+          teamName,
+          runId,
+          fromMemberName: 'team-lead',
+          messageId: 'pending-stop-runtime-message',
+          text: 'must not enter while stop is pending',
+          createdAt: '2026-07-23T00:00:02.000Z',
+        })
+      ).rejects.toThrow();
+      expect(sendMessageToMember).not.toHaveBeenCalled();
+
+      stopRelease.resolve(undefined);
+      await stopping;
     });
+
+    it('rejects direct and runtime delivery while late cancelled-launch cleanup owns its stop fence', async () => {
+      const svc = new TeamProvisioningService();
+      const teamName = 'opencode-late-cancelled-launch-stop';
+      const runId = 'opencode-late-cancelled-run';
+      const stopStarted = createDeferred<void>();
+      const stopRelease = createDeferred<void>();
+      const sendMessageToMember = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          providerId: 'opencode' as const,
+          memberName: 'team-lead',
+          diagnostics: [],
+        })
+      );
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: vi.fn(async (input: TeamRuntimeStopInput) => {
+              stopStarted.resolve(undefined);
+              await stopRelease.promise;
+              return successfulRuntimeStop(input);
+            }),
+            sendMessageToMember,
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      const harness = svc as any;
+      const previousProgress = {
+        runId,
+        teamName,
+        state: 'spawning',
+        message: 'OpenCode launch was still resolving',
+        startedAt: '2026-07-23T00:00:00.000Z',
+        updatedAt: '2026-07-23T00:00:01.000Z',
+      };
+      harness.runtimeAdapterProgressByRunId.set(runId, previousProgress);
+      harness.launchStateStore = {
+        read: vi.fn(() => Promise.resolve(null)),
+      };
+      harness.configReader = {
+        getConfig: vi.fn(() =>
+          Promise.resolve({
+            name: teamName,
+            projectPath: '/repo',
+            members: [
+              {
+                name: 'team-lead',
+                agentType: 'team-lead',
+                providerId: 'opencode',
+                model: 'minimax-m2.5-free',
+              },
+            ],
+          })
+        ),
+      };
+      harness.teamMetaStore = {
+        getMeta: vi.fn(() =>
+          Promise.resolve({
+            launchIdentity: { providerId: 'opencode' },
+            providerId: 'opencode',
+          })
+        ),
+      };
+      harness.membersMetaStore = {
+        getMembers: vi.fn(() => Promise.resolve([])),
+      };
+      await seedOpenCodeRuntimeLaneCurrentRunForTest({
+        teamName,
+        laneId: 'primary',
+        runId,
+      });
+
+      const stopping =
+        harness.cancellationBoundary.stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(
+          teamName,
+          runId
+        ) as Promise<boolean>;
+      await stopStarted.promise;
+
+      expect(harness.runtimeAdapterRunByTeam.get(teamName)).toMatchObject({
+        runId,
+        providerId: 'opencode',
+      });
+      expect(harness.runtimeAdapterProgressByRunId.get(runId)).toMatchObject({
+        state: 'disconnected',
+        message: 'Stopping cancelled OpenCode runtime launch',
+      });
+      expect(svc.isTeamAlive(teamName)).toBe(false);
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'team-lead',
+          text: 'must not reach late cancelled launch',
+          messageId: 'late-cancelled-direct-message',
+        })
+      ).resolves.toMatchObject({
+        delivered: false,
+        reason: 'opencode_primary_runtime_not_deliverable',
+      });
+      await expect(
+        svc.deliverOpenCodeRuntimeMessage({
+          teamName,
+          runId,
+          fromMemberName: 'team-lead',
+          messageId: 'late-cancelled-runtime-message',
+          text: 'must not enter while late cleanup is pending',
+          createdAt: '2026-07-23T00:00:02.000Z',
+        })
+      ).rejects.toThrow();
+      expect(sendMessageToMember).not.toHaveBeenCalled();
+
+      stopRelease.resolve(undefined);
+      await expect(stopping).resolves.toBe(true);
+      expect(harness.runtimeAdapterRunByTeam.has(teamName)).toBe(false);
+    });
+
+    it('rejects direct and runtime delivery while one secondary lane awaits exact stop', async () => {
+      const svc = new TeamProvisioningService();
+      const teamName = 'opencode-secondary-pending-stop';
+      const aggregateRunId = 'aggregate-run-pending-stop';
+      const laneRunId = 'secondary-run-pending-stop';
+      const laneId = 'secondary:opencode:bob';
+      const stopStarted = createDeferred<void>();
+      const stopRelease = createDeferred<void>();
+      const sendMessageToMember = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          providerId: 'opencode' as const,
+          memberName: 'bob',
+          diagnostics: [],
+        })
+      );
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: vi.fn(async (input: TeamRuntimeStopInput) => {
+              stopStarted.resolve(undefined);
+              await stopRelease.promise;
+              return successfulRuntimeStop(input);
+            }),
+            sendMessageToMember,
+          } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      const run = createMemberSpawnRun({
+        runId: aggregateRunId,
+        teamName,
+        expectedMembers: ['team-lead', 'bob'],
+      });
+      const previousProgress = {
+        ...run.progress,
+        state: 'ready' as const,
+        message: 'OpenCode aggregate ready',
+      };
+      run.progress = previousProgress;
+      run.request = {
+        teamName,
+        cwd: '/repo',
+        providerId: 'opencode',
+        members: [
+          { name: 'team-lead', role: 'Lead', providerId: 'opencode' },
+          { name: 'bob', role: 'Build', providerId: 'opencode' },
+        ],
+      };
+      const lane = {
+        laneId,
+        providerId: 'opencode' as const,
+        member: {
+          name: 'bob',
+          role: 'Build',
+          providerId: 'opencode' as const,
+        },
+        runId: laneRunId,
+        state: 'finished' as const,
+        result: null,
+        warnings: [],
+        diagnostics: [],
+      };
+      run.mixedSecondaryLanes = [lane];
+      const harness = svc as any;
+      harness.runs.set(aggregateRunId, run);
+      harness.provisioningRunByTeam.set(teamName, aggregateRunId);
+      harness.aliveRunByTeam.set(teamName, aggregateRunId);
+      harness.runtimeAdapterProgressByRunId.set(aggregateRunId, previousProgress);
+      harness.setSecondaryRuntimeRun({
+        teamName,
+        runId: laneRunId,
+        providerId: 'opencode',
+        laneId,
+        memberName: 'bob',
+        cwd: '/repo',
+      });
+      harness.launchStateStore = {
+        read: vi.fn(() => Promise.resolve(null)),
+      };
+      harness.configReader = {
+        getConfig: vi.fn(() =>
+          Promise.resolve({
+            name: teamName,
+            projectPath: '/repo',
+            members: [
+              {
+                name: 'team-lead',
+                agentType: 'team-lead',
+                providerId: 'opencode',
+                model: 'minimax-m2.5-free',
+              },
+              {
+                name: 'bob',
+                agentType: 'general-purpose',
+                providerId: 'opencode',
+                model: 'minimax-m2.5-free',
+              },
+            ],
+          })
+        ),
+      };
+      harness.teamMetaStore = {
+        getMeta: vi.fn(() =>
+          Promise.resolve({
+            launchIdentity: { providerId: 'opencode' },
+            providerId: 'opencode',
+          })
+        ),
+      };
+      harness.membersMetaStore = {
+        getMembers: vi.fn(() => Promise.resolve([])),
+      };
+      await seedOpenCodeRuntimeLaneCurrentRunForTest({
+        teamName,
+        laneId,
+        runId: laneRunId,
+      });
+
+      const stopping = harness.stopSingleMixedSecondaryRuntimeLane(
+        run,
+        lane,
+        'relaunch'
+      ) as Promise<void>;
+      await stopStarted.promise;
+
+      expect(run.progress).toMatchObject({
+        state: 'disconnected',
+        message: 'Stopping OpenCode runtime lane before cleanup or relaunch',
+      });
+      expect(harness.getSecondaryRuntimeRun(teamName, laneId)).toMatchObject({
+        runId: laneRunId,
+        laneId,
+      });
+      expect(lane.runId).toBe(laneRunId);
+      expect(harness.runTracking.canDeliverToTrackedRuntimeRun(teamName, aggregateRunId)).toBe(
+        false
+      );
+      expect(harness.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName)).toBeNull();
+      expect(harness.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName)).toBe(false);
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'bob',
+          text: 'must not reach secondary lane pending stop',
+          messageId: 'secondary-pending-stop-direct-message',
+        })
+      ).resolves.toMatchObject({
+        delivered: false,
+      });
+      await expect(
+        svc.deliverOpenCodeRuntimeMessage({
+          teamName,
+          runId: laneRunId,
+          fromMemberName: 'bob',
+          messageId: 'secondary-pending-stop-runtime-message',
+          text: 'must not enter while secondary stop is pending',
+          createdAt: '2026-07-23T00:00:02.000Z',
+        })
+      ).rejects.toThrow();
+      expect(sendMessageToMember).not.toHaveBeenCalled();
+
+      stopRelease.resolve(undefined);
+      await stopping;
+      expect(run.progress).toBe(previousProgress);
+      expect(lane.runId).toBeNull();
+      expect(harness.getSecondaryRuntimeRun(teamName, laneId)).toBeUndefined();
+    });
+
+    it('rejects direct delivery while slow unretainable-primary cleanup retains its exact owner', async () => {
+      const svc = new TeamProvisioningService();
+      const teamName = 'opencode-slow-unretainable-cleanup';
+      const run = createMemberSpawnRun({ teamName, expectedMembers: ['team-lead'] });
+      const stopStarted = createDeferred<void>();
+      const stopRelease = createDeferred<void>();
+      const send = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          providerId: 'opencode' as const,
+          memberName: 'team-lead',
+          diagnostics: [],
+        })
+      );
+      run.request = {
+        teamName,
+        cwd: '/repo',
+        providerId: 'opencode',
+        members: [{ name: 'team-lead', role: 'Lead', providerId: 'opencode' }],
+      };
+      run.progress = {
+        runId: run.runId,
+        teamName,
+        state: 'ready',
+        message: 'OpenCode team ready',
+        startedAt: run.startedAt,
+        updatedAt: run.startedAt,
+      };
+      const adapter = {
+        stop: vi.fn(async (input: TeamRuntimeStopInput) => {
+          stopStarted.resolve(undefined);
+          await stopRelease.promise;
+          return successfulRuntimeStop(input);
+        }),
+      } as unknown as TeamLaunchRuntimeAdapter;
+      const harness = svc as any;
+      const exactOwner = {
+        runId: run.runId,
+        providerId: 'opencode',
+        cwd: '/repo',
+      };
+      harness.runs.set(run.runId, run);
+      harness.provisioningRunByTeam.set(teamName, run.runId);
+      harness.aliveRunByTeam.set(teamName, run.runId);
+      harness.runtimeAdapterRunByTeam.set(teamName, exactOwner);
+      harness.runtimeAdapterProgressByRunId.set(run.runId, run.progress);
+
+      const stopping = harness.stopUnretainableOpenCodePrimaryLane({
+        adapter,
+        run,
+        previousEffectiveMembers: run.request.members,
+        previousLaunchState: null,
+      }) as Promise<void>;
+      await stopStarted.promise;
+
+      expect(harness.runtimeAdapterRunByTeam.get(teamName)).toBe(exactOwner);
+      expect(harness.runtimeAdapterProgressByRunId.get(run.runId)?.state).toBe('disconnected');
+      expect(svc.isTeamAlive(teamName)).toBe(false);
+      await expect(
+        harness.sendOpenCodeMemberMessageToRuntimeSerialized({
+          teamName,
+          laneId: 'primary',
+          memberName: 'team-lead',
+          send,
+        })
+      ).resolves.toMatchObject({
+        ok: false,
+        diagnostics: ['opencode_primary_runtime_not_deliverable'],
+      });
+      expect(send).not.toHaveBeenCalled();
+
+      stopRelease.resolve(undefined);
+      await stopping;
+      expect(harness.runtimeAdapterRunByTeam.get(teamName)).toBe(exactOwner);
+    });
+
+    it.each([
+      {
+        description: 'with retained-progress composition state',
+        omitRetainedProgressCompositionState: false,
+      },
+      {
+        description: 'without retained-progress composition state',
+        omitRetainedProgressCompositionState: true,
+      },
+    ])(
+      'rejects direct delivery while slow failed-relaunch cleanup retains candidate identity $description',
+      async ({ omitRetainedProgressCompositionState }) => {
+        const svc = new TeamProvisioningService();
+        const teamName = 'opencode-slow-relaunch-cleanup';
+        const run = createMemberSpawnRun({ teamName, expectedMembers: ['team-lead'] });
+        const stopStarted = createDeferred<void>();
+        const stopRelease = createDeferred<void>();
+        const send = vi.fn(() =>
+          Promise.resolve({
+            ok: true,
+            providerId: 'opencode' as const,
+            memberName: 'team-lead',
+            diagnostics: [],
+          })
+        );
+        run.request = {
+          teamName,
+          cwd: '/repo',
+          providerId: 'opencode',
+          members: [{ name: 'team-lead', role: 'Lead', providerId: 'opencode' }],
+        };
+        run.effectiveMembers = run.request.members;
+        run.progress = {
+          runId: run.runId,
+          teamName,
+          state: 'ready',
+          message: 'OpenCode team ready',
+          startedAt: run.startedAt,
+          updatedAt: run.startedAt,
+        };
+        const adapter = {
+          stop: vi.fn(async (input: TeamRuntimeStopInput) => {
+            stopStarted.resolve(undefined);
+            await stopRelease.promise;
+            return successfulRuntimeStop(input);
+          }),
+        } as unknown as TeamLaunchRuntimeAdapter;
+        const harness = svc as any;
+        const exactOwner = {
+          runId: run.runId,
+          providerId: 'opencode',
+          cwd: '/repo',
+        };
+        harness.runs.set(run.runId, run);
+        harness.provisioningRunByTeam.set(teamName, run.runId);
+        harness.aliveRunByTeam.set(teamName, run.runId);
+        harness.runtimeAdapterRunByTeam.set(teamName, exactOwner);
+        harness.runtimeAdapterProgressByRunId.set(run.runId, run.progress);
+        if (omitRetainedProgressCompositionState) {
+          harness.compatibilityDelegation = undefined;
+        }
+
+        const stopping = harness.stopFailedOpenCodeAggregatePrimaryRelaunchCandidate({
+          adapter,
+          run,
+          previousLaunchState: null,
+          previousOwner: undefined,
+        }) as Promise<void>;
+        await stopStarted.promise;
+
+        expect(harness.runtimeAdapterRunByTeam.get(teamName)).toBe(exactOwner);
+        expect(harness.runtimeAdapterProgressByRunId.get(run.runId)?.state).toBe('disconnected');
+        expect(run.progress).toMatchObject({
+          state: 'disconnected',
+          message: 'Stopping failed OpenCode primary relaunch candidate',
+        });
+        await expect(
+          harness.sendOpenCodeMemberMessageToRuntimeSerialized({
+            teamName,
+            laneId: 'primary',
+            memberName: 'team-lead',
+            send,
+          })
+        ).resolves.toMatchObject({
+          ok: false,
+          diagnostics: ['opencode_primary_runtime_not_deliverable'],
+        });
+        expect(send).not.toHaveBeenCalled();
+
+        stopRelease.resolve(undefined);
+        await stopping;
+        expect(harness.runtimeAdapterRunByTeam.has(teamName)).toBe(false);
+      }
+    );
 
     it('clears primary lane storage when OpenCode runtime adapter launch fails', async () => {
       const svc = new TeamProvisioningService();
@@ -16502,8 +17066,10 @@ describe('TeamProvisioningService', () => {
       const restartPromise = expect(svc.restartMember('tmux-team', 'forge')).rejects.toThrow(
         'Restart for teammate "forge" is still waiting for the previous tmux pane to exit (%2).'
       );
-      await vi.waitFor(() => expect(listTmuxPanePidsForCurrentPlatform).toHaveBeenCalled());
-      await vi.advanceTimersByTimeAsync(1_500);
+      await vi.waitFor(() => {
+        expect(vi.mocked(listTmuxPanePidsForCurrentPlatform)).toHaveBeenCalled();
+      });
+      await vi.runAllTimersAsync();
       await restartPromise;
 
       expect(sendMessageToRun).not.toHaveBeenCalled();
@@ -16572,8 +17138,10 @@ describe('TeamProvisioningService', () => {
       const restartPromise = expect(svc.restartMember('tmux-team', 'forge')).rejects.toThrow(
         'Restart for teammate "forge" is still waiting for the previous tmux pane to exit (%2).'
       );
-      await vi.waitFor(() => expect(listTmuxPanePidsForCurrentPlatform).toHaveBeenCalled());
-      await vi.advanceTimersByTimeAsync(1_500);
+      await vi.waitFor(() => {
+        expect(vi.mocked(listTmuxPanePidsForCurrentPlatform)).toHaveBeenCalled();
+      });
+      await vi.runAllTimersAsync();
       await restartPromise;
 
       expect(sendMessageToRun).not.toHaveBeenCalled();
@@ -17320,7 +17888,7 @@ describe('TeamProvisioningService', () => {
           fastMode: 'on',
         }),
       ]);
-      const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+      const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
       expect(launchArgs).toEqual(
         expect.arrayContaining([
           '--teammate-runtime',
@@ -17536,7 +18104,7 @@ describe('TeamProvisioningService', () => {
         projectPath,
         expect.objectContaining({ mcpPolicy: configuredMember.mcpPolicy })
       );
-      const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+      const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
       expect(launchArgs).toEqual(
         expect.arrayContaining([
           '--setting-sources',
@@ -17982,7 +18550,7 @@ describe('TeamProvisioningService', () => {
       )
     ).rejects.toThrow('spawn EINVAL');
 
-    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
     const settingsIndex = launchArgs.indexOf('--settings');
     const settings = JSON.parse(launchArgs[settingsIndex + 1] ?? '{}') as {
       codex?: { agent_teams_launch_config?: { config_overrides?: string[] } };
@@ -18106,7 +18674,7 @@ describe('TeamProvisioningService', () => {
         selectedModelKind: 'explicit',
         resolvedLaunchModel: 'gpt-5.4',
         catalogId: 'gpt-5.4',
-        catalogSource: 'app-server',
+        catalogSource: 'runtime',
         catalogFetchedAt: '2026-04-23T00:00:00.000Z',
         selectedEffort: 'medium',
         resolvedEffort: 'medium',
@@ -18125,7 +18693,7 @@ describe('TeamProvisioningService', () => {
       return JSON.parse(fs.readFileSync(spawnArgs[specIdx + 1], 'utf8')) as {
         mode: string;
         team: { name: string; cwd: string };
-        members: Array<{
+        members: {
           name: string;
           provider?: string;
           model?: string;
@@ -18134,7 +18702,7 @@ describe('TeamProvisioningService', () => {
           mcpConfigPath?: string;
           mcpSettingSources?: string;
           strictMcpConfig?: boolean;
-        }>;
+        }[];
       };
     }
 
@@ -18311,7 +18879,7 @@ describe('TeamProvisioningService', () => {
         cwd: tempClaudeRoot,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
-      const spawnArgs = spawnCall?.[1] as string[];
+      const spawnArgs = spawnCall?.[1];
       expect(spawnArgs).toEqual(
         expect.arrayContaining(['--model', 'gpt-5.4', '--effort', 'medium'])
       );
@@ -18407,7 +18975,7 @@ describe('TeamProvisioningService', () => {
         () => {}
       );
 
-      const spawnArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+      const spawnArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
       const bootstrapSpec = readBootstrapSpecFromSpawnArgs(spawnArgs);
       expect(bootstrapSpec.members).toEqual([
         expect.objectContaining({
@@ -18492,7 +19060,7 @@ describe('TeamProvisioningService', () => {
         () => {}
       );
 
-      const spawnArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+      const spawnArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
       const bootstrapSpec = readBootstrapSpecFromSpawnArgs(spawnArgs);
       expect(bootstrapSpec.members).toEqual([
         expect.objectContaining({
@@ -18525,7 +19093,7 @@ describe('TeamProvisioningService', () => {
         selectedModelKind: 'explicit',
         resolvedLaunchModel: 'sonnet',
         catalogId: 'sonnet',
-        catalogSource: 'anthropic-models-api',
+        catalogSource: 'runtime',
         catalogFetchedAt: '2026-05-17T00:00:00.000Z',
         selectedEffort: 'low',
         resolvedEffort: 'low',
@@ -18557,7 +19125,7 @@ describe('TeamProvisioningService', () => {
         () => {}
       );
 
-      const spawnArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+      const spawnArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
       expect(spawnArgs).toEqual(expect.arrayContaining(['--model', 'sonnet', '--effort', 'low']));
       const bootstrapSpec = readBootstrapSpecFromSpawnArgs(spawnArgs);
       expect(bootstrapSpec).toMatchObject({
@@ -18590,7 +19158,7 @@ describe('TeamProvisioningService', () => {
     it('routes a pure OpenCode team directly through the runtime adapter without spawning the CLI lane', async () => {
       allowConsoleLogs();
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
-        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const expectedMembers = input.expectedMembers as { name: string }[];
         const teamName = String(input.teamName);
         const laneId = String(input.laneId);
         const runId = String(input.runId);
@@ -18736,7 +19304,7 @@ describe('TeamProvisioningService', () => {
           path.join(tempTeamsBase, 'safe-opencode-only-launch', 'config.json'),
           'utf8'
         )
-      ) as { members: Array<{ name: string; providerId?: string; model?: string }> };
+      ) as { members: { name: string; providerId?: string; model?: string }[] };
       expect(config.members).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -18825,7 +19393,7 @@ describe('TeamProvisioningService', () => {
         }
       ).planRuntimeLanesOrThrow(
         materialized.request.providerId,
-        materialized.members as typeof request.members,
+        materialized.members,
         materialized.request.cwd
       );
 
@@ -18856,10 +19424,10 @@ describe('TeamProvisioningService', () => {
       const teamName = 'safe-opencode-shared-runtime-timeout';
       const rootCause = 'Failed to query OpenCode agents: OpenCode command timed out after 10000ms';
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
-        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const expectedMembers = input.expectedMembers as { name: string }[];
         const memberName =
           expectedMembers.find((member) => member.name !== 'team-lead')?.name ??
-          expectedMembers[0]!.name;
+          expectedMembers[0].name;
         return {
           runId: String(input.runId),
           teamName,
@@ -18887,14 +19455,9 @@ describe('TeamProvisioningService', () => {
           diagnostics: [rootCause],
         };
       });
-      const adapterStop = vi.fn(async (input: { runId: string; teamName: string }) => ({
-        runId: input.runId,
-        teamName: input.teamName,
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      }));
+      const adapterStop = vi.fn((input: TeamRuntimeStopInput) =>
+        Promise.resolve(successfulRuntimeStop(input))
+      );
       const { svc } = createSafeLaunchService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
@@ -18907,7 +19470,7 @@ describe('TeamProvisioningService', () => {
           } as unknown as TeamLaunchRuntimeAdapter,
         ])
       );
-      const progress: Array<{ state: string; error?: string }> = [];
+      const progress: { state: string; error?: string }[] = [];
 
       await svc.createTeam(
         {
@@ -18957,7 +19520,7 @@ describe('TeamProvisioningService', () => {
       const teamName = 'safe-mixed-shared-opencode-timeout';
       const rootCause = 'Failed to query OpenCode agents: OpenCode command timed out after 10000ms';
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
-        const memberName = (input.expectedMembers as Array<{ name: string }>)[0]!.name;
+        const memberName = (input.expectedMembers as { name: string }[])[0].name;
         return {
           runId: String(input.runId),
           teamName,
@@ -18993,14 +19556,7 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(async (input: TeamRuntimeStopInput) => ({
-              runId: input.runId,
-              teamName: input.teamName,
-              stopped: true,
-              members: {},
-              warnings: [],
-              diagnostics: [],
-            })),
+            stop: vi.fn(async () => undefined),
           } as unknown as TeamLaunchRuntimeAdapter,
         ])
       );
@@ -19061,16 +19617,11 @@ describe('TeamProvisioningService', () => {
       allowConsoleLogs();
       const teamName = 'safe-opencode-partial-member-launch';
       let aliceLaunchAttempts = 0;
-      const adapterStop = vi.fn(async (input: { runId: string; teamName: string }) => ({
-        runId: input.runId,
-        teamName: input.teamName,
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      }));
+      const adapterStop = vi.fn((input: TeamRuntimeStopInput) =>
+        Promise.resolve(successfulRuntimeStop(input))
+      );
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
-        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const expectedMembers = input.expectedMembers as { name: string }[];
         const laneId = String(input.laneId);
         const runId = String(input.runId);
         const failAlice =
@@ -19179,7 +19730,7 @@ describe('TeamProvisioningService', () => {
           } as unknown as TeamLaunchRuntimeAdapter,
         ])
       );
-      const progress: Array<{ state: string; message?: string; error?: string }> = [];
+      const progress: { state: string; message?: string; error?: string }[] = [];
 
       await svc.createTeam(
         {
@@ -19263,10 +19814,10 @@ describe('TeamProvisioningService', () => {
       allowConsoleLogs();
       const teamName = 'safe-opencode-failed-and-pending-member-launch';
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
-        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const expectedMembers = input.expectedMembers as { name: string }[];
         const memberName =
           expectedMembers.find((member) => member.name !== 'team-lead')?.name ??
-          expectedMembers[0]!.name;
+          expectedMembers[0].name;
         const runId = String(input.runId);
 
         if (memberName === 'alice') {
@@ -19324,18 +19875,13 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(async (input: TeamRuntimeStopInput) => ({
-              runId: input.runId,
-              teamName: input.teamName,
-              stopped: true,
-              members: {},
-              warnings: [],
-              diagnostics: [],
-            })),
+            stop: vi.fn((input: TeamRuntimeStopInput) =>
+              Promise.resolve(successfulRuntimeStop(input))
+            ),
           } as unknown as TeamLaunchRuntimeAdapter,
         ])
       );
-      const progress: Array<{ state: string; message?: string; error?: string }> = [];
+      const progress: { state: string; message?: string; error?: string }[] = [];
 
       await svc.createTeam(
         {
@@ -19402,14 +19948,9 @@ describe('TeamProvisioningService', () => {
       allowConsoleLogs();
       const teamName = 'safe-opencode-cancel-primary-race';
       const primaryResult = createDeferred<Record<string, unknown>>();
-      const adapterStop = vi.fn(async (input: { runId: string; teamName: string }) => ({
-        runId: input.runId,
-        teamName: input.teamName,
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      }));
+      const adapterStop = vi.fn((input: TeamRuntimeStopInput) =>
+        Promise.resolve(successfulRuntimeStop(input))
+      );
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
         if (input.laneId !== 'primary') {
           throw new Error('secondary lane must not launch after aggregate cancellation');
@@ -19445,9 +19986,9 @@ describe('TeamProvisioningService', () => {
         vi.fn()
       );
       await vi.waitFor(() => expect(adapterLaunch).toHaveBeenCalledTimes(1));
-      const launchInput = adapterLaunch.mock.calls[0]![0];
+      const launchInput = adapterLaunch.mock.calls[0][0];
       const runId = String(launchInput.runId);
-      const expectedMembers = launchInput.expectedMembers as Array<{ name: string }>;
+      const expectedMembers = launchInput.expectedMembers as { name: string }[];
 
       await svc.cancelProvisioning(runId);
       await writeCommittedOpenCodeSessionStore({
@@ -19553,14 +20094,9 @@ describe('TeamProvisioningService', () => {
         warnings: [],
         diagnostics: ["You've hit your Cursor usage limit."],
       }));
-      const adapterStop = vi.fn(async (input: { runId: string; teamName: string }) => ({
-        runId: input.runId,
-        teamName: input.teamName,
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      }));
+      const adapterStop = vi.fn((input: TeamRuntimeStopInput) =>
+        Promise.resolve(successfulRuntimeStop(input))
+      );
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
@@ -19689,14 +20225,9 @@ describe('TeamProvisioningService', () => {
         warnings: [],
         diagnostics: ["You've hit your Cursor usage limit."],
       }));
-      const adapterStop = vi.fn(async (input: { runId: string; teamName: string }) => ({
-        runId: input.runId,
-        teamName: input.teamName,
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      }));
+      const adapterStop = vi.fn((input: TeamRuntimeStopInput) =>
+        Promise.resolve(successfulRuntimeStop(input))
+      );
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
@@ -19797,7 +20328,7 @@ describe('TeamProvisioningService', () => {
       vi.mocked(spawnCli).mockReturnValue(createRunningChild() as any);
 
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
-        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const expectedMembers = input.expectedMembers as { name: string }[];
         const memberName = expectedMembers[0]?.name ?? 'unknown';
         const teamName = String(input.teamName);
         const laneId = String(input.laneId);
@@ -19838,14 +20369,9 @@ describe('TeamProvisioningService', () => {
           diagnostics: [],
         };
       });
-      const adapterStop = vi.fn(async (input: Record<string, unknown>) => ({
-        runId: String(input.runId),
-        teamName: String(input.teamName),
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      }));
+      const adapterStop = vi.fn((input: TeamRuntimeStopInput) =>
+        Promise.resolve(successfulRuntimeStop(input))
+      );
 
       const { svc, membersMetaStore } = createSafeLaunchService();
       svc.setRuntimeAdapterRegistry(
@@ -19893,7 +20419,7 @@ describe('TeamProvisioningService', () => {
         () => {}
       );
 
-      const spawnArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+      const spawnArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
       const bootstrapSpec = readBootstrapSpecFromSpawnArgs(spawnArgs);
       expect(bootstrapSpec.members).toEqual([
         expect.objectContaining({
@@ -20092,14 +20618,6 @@ describe('TeamProvisioningService', () => {
       });
 
       const { svc } = createSafeLaunchService();
-      const adapterStop = vi.fn(async (input: Record<string, unknown>) => ({
-        runId: String(input.runId),
-        teamName: String(input.teamName),
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      }));
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
           {
@@ -20107,7 +20625,9 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: adapterStop,
+            stop: vi.fn((input: TeamRuntimeStopInput) =>
+              Promise.resolve(successfulRuntimeStop(input))
+            ),
           } as any,
         ])
       );
@@ -20375,7 +20895,7 @@ describe('TeamProvisioningService', () => {
       const config = JSON.parse(fs.readFileSync(path.join(teamDir, 'config.json'), 'utf8')) as {
         leadSessionId?: string;
         projectPath?: string;
-        members: Array<{
+        members: {
           name: string;
           agentId?: string;
           agentType?: string;
@@ -20385,7 +20905,7 @@ describe('TeamProvisioningService', () => {
           workflow?: string;
           isolation?: string;
           cwd?: string;
-        }>;
+        }[];
       };
 
       expect(config.leadSessionId).toBe('new-lead-session');
@@ -20435,7 +20955,7 @@ describe('TeamProvisioningService', () => {
         })),
       };
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
-        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const expectedMembers = input.expectedMembers as { name: string }[];
         const memberName = expectedMembers[0]?.name ?? 'unknown';
         const teamName = String(input.teamName);
         const laneId = String(input.laneId);
@@ -20480,14 +21000,6 @@ describe('TeamProvisioningService', () => {
       const { svc, membersMetaStore } = createSafeLaunchService({
         memberWorktreeManager: worktreeManager,
       });
-      const adapterStop = vi.fn(async (input: Record<string, unknown>) => ({
-        runId: String(input.runId),
-        teamName: String(input.teamName),
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      }));
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
           {
@@ -20495,7 +21007,9 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: adapterStop,
+            stop: vi.fn((input: TeamRuntimeStopInput) =>
+              Promise.resolve(successfulRuntimeStop(input))
+            ),
           } as any,
         ])
       );
@@ -20577,7 +21091,7 @@ describe('TeamProvisioningService', () => {
         })),
       };
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
-        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const expectedMembers = input.expectedMembers as { name: string }[];
         const teamName = String(input.teamName);
         const laneId = String(input.laneId);
         const runId = String(input.runId);
@@ -20678,6 +21192,19 @@ describe('TeamProvisioningService', () => {
       );
       expect(adapterLaunch).toHaveBeenCalledWith(
         expect.objectContaining({
+          laneId: 'secondary:opencode:tom',
+          cwd: tempClaudeRoot,
+          expectedMembers: [
+            expect.objectContaining({
+              name: 'tom',
+              providerId: 'opencode',
+              cwd: tempClaudeRoot,
+            }),
+          ],
+        })
+      );
+      expect(adapterLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({
           laneId: 'secondary:opencode:bob',
           cwd: bobWorktree,
           expectedMembers: [
@@ -20686,19 +21213,6 @@ describe('TeamProvisioningService', () => {
               providerId: 'opencode',
               isolation: 'worktree',
               cwd: bobWorktree,
-            }),
-          ],
-        })
-      );
-      expect(adapterLaunch).toHaveBeenCalledWith(
-        expect.objectContaining({
-          laneId: 'secondary:opencode:tom',
-          cwd: tempClaudeRoot,
-          expectedMembers: [
-            expect.objectContaining({
-              name: 'tom',
-              providerId: 'opencode',
-              cwd: tempClaudeRoot,
             }),
           ],
         })
@@ -21161,7 +21675,7 @@ describe('TeamProvisioningService', () => {
     expect(write).toHaveBeenCalledTimes(1);
     const firstWrite = write.mock.calls[0]?.[0];
     expect(typeof firstWrite).toBe('string');
-    const payload = JSON.parse(firstWrite as string) as Record<string, unknown>;
+    const payload = JSON.parse(firstWrite) as Record<string, unknown>;
     expect(payload).toMatchObject({
       type: 'control_response',
       response: {
@@ -21453,7 +21967,7 @@ describe('TeamProvisioningService', () => {
       'launch spawn EINVAL'
     );
 
-    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
     expect(launchArgs).toBeTruthy();
     expect(launchArgs).not.toContain('--resume');
     expect(launchArgs).not.toContain(leadSessionId);
@@ -21519,7 +22033,7 @@ describe('TeamProvisioningService', () => {
       'launch spawn EINVAL'
     );
 
-    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
     expect(launchArgs).toBeTruthy();
     expect(launchArgs).not.toContain('--resume');
     expect(launchArgs).not.toContain(leadSessionId);
@@ -21587,7 +22101,7 @@ describe('TeamProvisioningService', () => {
       'launch spawn EINVAL'
     );
 
-    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
     expect(launchArgs).toBeTruthy();
     expect(launchArgs).not.toContain('--resume');
     expect(launchArgs).not.toContain(leadSessionId);
@@ -21654,7 +22168,7 @@ describe('TeamProvisioningService', () => {
       'launch spawn EINVAL'
     );
 
-    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1];
     expect(launchArgs).not.toContain('--resume');
     expect(launchArgs).not.toContain(leadSessionId);
   });
@@ -21725,7 +22239,7 @@ describe('TeamProvisioningService', () => {
       )
     ).rejects.toThrow('launch spawn EINVAL');
 
-    const launchArgs = vi.mocked(spawnCli).mock.calls.at(-1)?.[1] as string[];
+    const launchArgs = vi.mocked(spawnCli).mock.calls.at(-1)?.[1];
     expect(launchArgs).toBeTruthy();
     expect(launchArgs).not.toContain('--resume');
     expect(launchArgs).not.toContain(leadSessionId);
@@ -21769,7 +22283,7 @@ describe('TeamProvisioningService', () => {
 
     const { runId } = await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {});
 
-    const launchArgs = vi.mocked(spawnCli).mock.calls.at(-1)?.[1] as string[];
+    const launchArgs = vi.mocked(spawnCli).mock.calls.at(-1)?.[1];
     expect(launchArgs).not.toContain('--resume');
     expect((svc as any).pathExists).not.toHaveBeenCalled();
     expect(svc.getCurrentLeadSessionId(teamName)).toBeNull();
@@ -21940,7 +22454,7 @@ describe('TeamProvisioningService', () => {
         run.provisioningComplete = true;
       });
 
-    await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {});
+    const { runId } = await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {});
 
     child.stdout.emit(
       'data',
@@ -22074,7 +22588,7 @@ describe('TeamProvisioningService', () => {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: 'gpt-5.5',
       catalogId: 'gpt-5.5',
-      catalogSource: 'app-server',
+      catalogSource: 'runtime',
       catalogFetchedAt: '2026-05-07T00:00:00.000Z',
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
@@ -22167,7 +22681,7 @@ describe('TeamProvisioningService', () => {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: 'gpt-5.5',
       catalogId: 'gpt-5.5',
-      catalogSource: 'app-server',
+      catalogSource: 'runtime',
       catalogFetchedAt: '2026-05-07T00:00:00.000Z',
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
@@ -22258,7 +22772,7 @@ describe('TeamProvisioningService', () => {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: 'gpt-5.5',
       catalogId: 'gpt-5.5',
-      catalogSource: 'app-server',
+      catalogSource: 'runtime',
       catalogFetchedAt: '2026-05-07T00:00:00.000Z',
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
@@ -23165,7 +23679,7 @@ describe('TeamProvisioningService', () => {
     writeLaunchConfig(teamName, projectPath, leadSessionId, ['jack']);
     const configPath = path.join(tempTeamsBase, teamName, 'config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-      members: Array<Record<string, unknown>>;
+      members: Record<string, unknown>[];
     };
     config.members = config.members.map((member) =>
       member.name === 'jack'
@@ -23240,7 +23754,7 @@ describe('TeamProvisioningService', () => {
     writeLaunchConfig(teamName, projectPath, leadSessionId, ['jack']);
     const configPath = path.join(tempTeamsBase, teamName, 'config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-      members: Array<Record<string, unknown>>;
+      members: Record<string, unknown>[];
     };
     config.members = config.members.map((member) =>
       member.name === 'jack'
@@ -23322,7 +23836,7 @@ describe('TeamProvisioningService', () => {
     writeLaunchConfig(teamName, projectPath, leadSessionId, ['alice']);
     const configPath = path.join(tempTeamsBase, teamName, 'config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-      members: Array<Record<string, unknown>>;
+      members: Record<string, unknown>[];
     };
     config.members = config.members.map((member) =>
       member.name === 'alice'
@@ -23413,7 +23927,7 @@ describe('TeamProvisioningService', () => {
     writeLaunchConfig(teamName, projectPath, leadSessionId, ['alice']);
     const configPath = path.join(tempTeamsBase, teamName, 'config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-      members: Array<Record<string, unknown>>;
+      members: Record<string, unknown>[];
     };
     config.members = config.members.map((member) =>
       member.name === 'alice'
@@ -24796,7 +25310,7 @@ describe('TeamProvisioningService', () => {
     writeLaunchConfig(teamName, projectPath, leadSessionId, ['jack']);
     const configPath = path.join(tempTeamsBase, teamName, 'config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-      members: Array<Record<string, unknown>>;
+      members: Record<string, unknown>[];
     };
     config.members = config.members.map((member) =>
       member.name === 'jack'
@@ -24874,7 +25388,7 @@ describe('TeamProvisioningService', () => {
     writeLaunchConfig(teamName, projectPath, leadSessionId, ['jack']);
     const configPath = path.join(tempTeamsBase, teamName, 'config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-      members: Array<Record<string, unknown>>;
+      members: Record<string, unknown>[];
     };
     config.members = config.members.map((member) =>
       member.name === 'jack'
@@ -25006,7 +25520,7 @@ describe('TeamProvisioningService', () => {
     writeLaunchConfig(teamName, projectPath, leadSessionId, ['jack']);
     const configPath = path.join(tempTeamsBase, teamName, 'config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-      members: Array<Record<string, unknown>>;
+      members: Record<string, unknown>[];
     };
     config.members = config.members.map((member) =>
       member.name === 'jack'
@@ -25133,7 +25647,7 @@ describe('TeamProvisioningService', () => {
     writeLaunchConfig(teamName, projectPath, leadSessionId, ['jack']);
     const configPath = path.join(tempTeamsBase, teamName, 'config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-      members: Array<Record<string, unknown>>;
+      members: Record<string, unknown>[];
     };
     config.members = config.members.map((member) =>
       member.name === 'jack'
@@ -25214,7 +25728,7 @@ describe('TeamProvisioningService', () => {
     writeLaunchConfig(teamName, projectPath, leadSessionId, ['jack']);
     const configPath = path.join(tempTeamsBase, teamName, 'config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-      members: Array<Record<string, unknown>>;
+      members: Record<string, unknown>[];
     };
     config.members = config.members.map((member) =>
       member.name === 'jack'
@@ -26132,6 +26646,12 @@ describe('TeamProvisioningService', () => {
         'OpenCode bridge reported bootstrap confirmation, but no lane runtime evidence was committed.',
       ],
     });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId,
+      runId,
+    });
     await writeCommittedOpenCodeSessionStore({
       teamName,
       laneId,
@@ -26155,6 +26675,7 @@ describe('TeamProvisioningService', () => {
         laneId,
         laneKind: 'secondary',
         laneOwnerProviderId: 'opencode',
+        runtimeRunId: runId,
         launchState: 'runtime_pending_bootstrap',
         agentToolAccepted: true,
         runtimeAlive: false,
@@ -26204,6 +26725,12 @@ describe('TeamProvisioningService', () => {
       laneId,
       state: 'active',
     });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId,
+      runId,
+    });
     await writeCommittedOpenCodeSessionStore({
       teamName,
       laneId,
@@ -26226,6 +26753,7 @@ describe('TeamProvisioningService', () => {
         laneId,
         laneKind: 'secondary',
         laneOwnerProviderId: 'opencode',
+        runtimeRunId: runId,
         launchState: 'confirmed_alive',
         agentToolAccepted: true,
         runtimeAlive: false,
@@ -26246,6 +26774,7 @@ describe('TeamProvisioningService', () => {
           laneId,
           laneKind: 'secondary',
           laneOwnerProviderId: 'opencode',
+          runtimeRunId: runId,
           launchState: 'runtime_pending_bootstrap',
           agentToolAccepted: true,
           runtimeAlive: false,
@@ -26745,7 +27274,7 @@ describe('TeamProvisioningService', () => {
     const run = createMemberSpawnRun({
       teamName,
       expectedMembers: ['alice'],
-    }) as LeadRelayPriorityTestRun;
+    });
     run.child = { pid: 123 };
     run.processKilled = false;
     run.cancelRequested = false;
@@ -27231,7 +27760,7 @@ describe('TeamProvisioningService', () => {
     const harness = (svc as any).workspaceTrustPreSpawnBoundary as {
       collectWorkspaceTrustWorkspaces(input: {
         cwd: string;
-        members: Array<{ name: string; cwd: string; isolation: 'worktree' }>;
+        members: { name: string; cwd: string; isolation: 'worktree' }[];
       }): Promise<WorkspaceTrustWorkspace[]>;
     };
     const tempRoot = fs.realpathSync(tempClaudeRoot);
@@ -29807,7 +30336,7 @@ describe('TeamProvisioningService', () => {
     });
 
     const adapterReconcile = vi.fn(async (input: Record<string, unknown>) => {
-      const member = (input.expectedMembers as Array<{ name: string }>)[0]?.name;
+      const member = (input.expectedMembers as { name: string }[])[0]?.name;
       return {
         runId: String(input.runId),
         teamName,
@@ -30052,7 +30581,7 @@ describe('TeamProvisioningService', () => {
     );
 
     const adapterReconcile = vi.fn(async (input: Record<string, unknown>) => {
-      const member = (input.expectedMembers as Array<{ name: string }>)[0]?.name;
+      const member = (input.expectedMembers as { name: string }[])[0]?.name;
       return {
         runId: String(input.runId),
         teamName,
@@ -30181,6 +30710,7 @@ describe('TeamProvisioningService', () => {
               laneId: tomLaneId,
               laneKind: 'secondary',
               laneOwnerProviderId: 'opencode',
+              runtimeRunId: tomRunId,
               launchState: 'failed_to_start',
               agentToolAccepted: false,
               runtimeAlive: false,
@@ -30211,6 +30741,12 @@ describe('TeamProvisioningService', () => {
       laneId: tomLaneId,
       state: 'degraded',
       diagnostics: ['File lock timeout: opencode-runtime-receipts.json'],
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId: tomLaneId,
+      runId: tomRunId,
     });
     await writeCommittedOpenCodeSessionStore({
       teamName,
@@ -32176,7 +32712,7 @@ describe('TeamProvisioningService', () => {
   it('rejects a concurrent manual restart for the same teammate', async () => {
     const configReady = createDeferred<{
       name: string;
-      members: Array<{ name: string; agentType?: string }>;
+      members: { name: string; agentType?: string }[];
     }>();
     const svc = createServiceWithConfigReader({
       getConfig: vi.fn(() => configReady.promise),

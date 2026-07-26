@@ -47,6 +47,7 @@ overrides:
   'file-type@21': '21.3.2'
   'flatted': '3.4.2'
   'follow-redirects': '1.16.0'
+  'find-my-way': '9.7.0'
   'handlebars': '4.7.9'
   'hono': '4.12.30'
   'ip-address': '10.1.1'
@@ -116,3 +117,4 @@ patchedDependencies:
   'fastmcp@3.35.0': 'patches/fastmcp@3.35.0.patch'
   'minimatch@3.1.4': 'patches/minimatch@3.1.4.patch'
   'minimatch@5.1.8': 'patches/minimatch@5.1.8.patch'
+  brace-expansion@5.0.8: patches/brace-expansion@5.0.8.patch

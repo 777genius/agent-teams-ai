@@ -1,4 +1,5 @@
 import type { OpenCodeRuntimeControlAck, OpenCodeRuntimeControlApi } from '../runtime-control';
+import type { TeamProvisioningStatusApi as FeatureTeamProvisioningStatusApi } from '@features/team-provisioning/contracts';
 import type {
   AgentActionMode,
   AttachmentPayload,
@@ -40,9 +41,7 @@ export interface TeamProvisioningStartApi {
   ): Promise<TeamLaunchResponse>;
 }
 
-export interface TeamProvisioningStatusApi {
-  getProvisioningStatus(runId: string): Promise<TeamProvisioningProgress>;
-}
+export type TeamProvisioningStatusApi = FeatureTeamProvisioningStatusApi;
 
 export interface TeamProvisioningRunApi {
   cancelProvisioning(runId: string): Promise<void>;

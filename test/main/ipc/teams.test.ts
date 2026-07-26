@@ -175,9 +175,12 @@ import {
 } from '../../../src/features/team-view-read-model/main';
 import { createUnavailableTeamLifecycleReadHost } from '../../../src/main/composition/hosted/teamLifecycleReadComposition';
 import {
+  createIdentityFencedProvisioningStart,
+  createIdentityFencedTeamConfigurationRepository,
   handleListTeamLifecycle,
   initializeTeamHandlers,
   initializeTeamLifecycleReadHandler,
+  permanentlyDeleteDraftTeam,
   registerTeamHandlers,
   removeTeamHandlers,
 } from '../../../src/main/ipc/teams';
@@ -267,6 +270,10 @@ import {
 import { parseRevision, parseTeamId, parseWorkspaceId } from '../../../src/shared/contracts/hosted';
 
 import type { TeamIpcHandlerApis } from '../../../src/main/services/team/contracts/TeamProvisioningApis';
+import type {
+  TeamBackupService,
+  TeamPermanentDeletionIntent,
+} from '../../../src/main/services/team/TeamBackupService';
 
 type CreateTeamMock = (
   request: TeamCreateRequest,
@@ -466,6 +473,68 @@ describe('ipc teams handlers', () => {
     completeTeamDeletion: vi.fn(),
     resumeTeam: vi.fn(),
   };
+  const makePermanentDeletionIntent = (
+    teamName = 'my-team',
+    draft = false
+  ): TeamPermanentDeletionIntent => ({
+    version: 2,
+    teamName,
+    identityId: `identity-${teamName}`,
+    transactionId: `transaction-${teamName}`,
+    identityKind: draft ? 'draft' : 'team',
+    targets: {
+      'team-data': { status: 'absent' },
+      'task-data': { status: 'absent' },
+      'message-attachments': { status: 'absent' },
+      'task-attachments': { status: 'absent' },
+    },
+    targetRemovalProofs: {},
+    completedTargets: ['message-attachments', 'task-attachments'],
+    cleanupCompleted: false,
+    phase: 'prepared',
+    requestedAt: '2026-07-25T00:00:00.000Z',
+    updatedAt: '2026-07-25T00:00:00.000Z',
+  });
+  const teamBackupService = {
+    beginPermanentDeletion: vi.fn(async (teamName: string, options?: { draft?: boolean }) =>
+      makePermanentDeletionIntent(teamName, options?.draft === true)
+    ),
+    commitPermanentDeletionBoundary: vi.fn(async (intent: TeamPermanentDeletionIntent) => ({
+      ...intent,
+      phase: 'deleting' as const,
+    })),
+    abortPreparedPermanentDeletion: vi.fn(async () => undefined),
+    listPendingPermanentDeletions: vi.fn(async () => []),
+    isPermanentDeletionTargetCurrent: vi.fn(async () => true),
+    reconcilePermanentDeletionProgress: vi.fn(
+      async (intent: TeamPermanentDeletionIntent) => intent
+    ),
+    completePermanentDeletion: vi.fn(async () => undefined),
+    withTeamIdentityFence: vi.fn(
+      async <T>(_teamName: string, operation: () => Promise<T>): Promise<T> => operation()
+    ),
+    withPermanentDeletionTargetFence: vi.fn(
+      async (
+        intent: TeamPermanentDeletionIntent,
+        operation: Parameters<TeamBackupService['withPermanentDeletionTargetFence']>[1]
+      ) => {
+        const completed = new Set(intent.completedTargets);
+        const result = await operation(
+          async () => true,
+          (target) => ({
+            detachedPath: path.join(os.tmpdir(), `detached-${target}`),
+            onDetachedValidated: async () => undefined,
+            onRemovalDurable: async () => {
+              completed.add(target);
+            },
+          }),
+          (target) => completed.has(target)
+        );
+        intent.completedTargets = [...completed];
+        return result;
+      }
+    ),
+  };
 
   const service = {
     listTeams: vi.fn(() => resolved([{ teamName: 'my-team', displayName: 'My Team' }])),
@@ -516,7 +585,32 @@ describe('ipc teams handlers', () => {
     ),
     deleteTeam: vi.fn(() => resolvedUndefined()),
     restoreTeam: vi.fn(() => resolvedUndefined()),
-    permanentlyDeleteTeam: vi.fn(() => resolvedUndefined()),
+    permanentlyDeleteTeam: vi.fn(
+      async (
+        _teamName: string,
+        _isTeamDataCurrent?: (detachedPath?: string) => Promise<boolean>,
+        _isTaskDataCurrent?: (detachedPath?: string) => Promise<boolean>,
+        options?: {
+          teamDataProofHooks?: {
+            onRemovalDurable(
+              detachedPath: string,
+              identity: { dev: number; ino: number; birthtimeMs: number }
+            ): Promise<void>;
+          };
+          taskDataProofHooks?: {
+            onRemovalDurable(
+              detachedPath: string,
+              identity: { dev: number; ino: number; birthtimeMs: number }
+            ): Promise<void>;
+          };
+        }
+      ) => {
+        const identity = { dev: 1, ino: 1, birthtimeMs: 1 };
+        await options?.teamDataProofHooks?.onRemovalDurable('/detached/team', identity);
+        await options?.taskDataProofHooks?.onRemovalDurable('/detached/tasks', identity);
+        return true;
+      }
+    ),
     getLeadMemberName: vi.fn(() => resolved('team-lead')),
     getTeamDisplayName: vi.fn(() => resolved('My Team')),
     updateConfig: vi.fn(() => resolved({ name: 'My Team' })),
@@ -848,7 +942,7 @@ describe('ipc teams handlers', () => {
     initializeTeamHandlers(
       service as never,
       teamHandlerApis.runtime,
-      undefined,
+      teamBackupService as never,
       undefined,
       undefined,
       undefined,
@@ -869,7 +963,12 @@ describe('ipc teams handlers', () => {
     });
     registerTeamRuntimeOperationsIpc(ipcMain as never, teamRuntimeOperationsFeature);
     const teamConfigurationFeature = createTeamConfigurationFeature({
-      repository: service as never,
+      repository: createIdentityFencedTeamConfigurationRepository(
+        service as never,
+        teamBackupService as never,
+        permanentDeletionLifecycle,
+        permanentlyDeleteDraftTeam
+      ),
       runtime: teamHandlerApis.runtime,
       messaging: teamHandlerApis.messaging,
       logger: teamConfigurationLogger,
@@ -883,7 +982,11 @@ describe('ipc teams handlers', () => {
     });
     registerTeamMessageDeliveryIpc(ipcMain as never, teamMessageDeliveryFeature);
     const teamProvisioningFeature = createTeamProvisioningFeature({
-      start: teamHandlerApis.provisioningStart,
+      start: createIdentityFencedProvisioningStart(
+        teamHandlerApis.provisioningStart,
+        teamBackupService as never,
+        permanentDeletionLifecycle
+      ),
       status: teamHandlerApis.provisioningStatus,
       preflight: teamHandlerApis.preflight,
       provisioningRun: teamHandlerApis.provisioningRun,
@@ -2492,6 +2595,31 @@ describe('ipc teams handlers', () => {
       op: 'set_column',
       column: 'approved',
     });
+  });
+
+  it('keeps create-team mutation inside the durable team identity fence', async () => {
+    const fenceEntered = createDeferred<void>();
+    const releaseFence = createDeferred<void>();
+    teamBackupService.withTeamIdentityFence.mockImplementationOnce(
+      async <T>(teamName: string, operation: () => Promise<T>): Promise<T> => {
+        expect(teamName).toBe('identity-fenced-create');
+        fenceEntered.resolve(undefined);
+        await releaseFence.promise;
+        return operation();
+      }
+    );
+
+    const pending = handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
+      teamName: 'identity-fenced-create',
+      members: [],
+      cwd: os.tmpdir(),
+    });
+    await fenceEntered.promise;
+
+    expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+    releaseFence.resolve(undefined);
+    await expect(pending).resolves.toMatchObject({ success: true });
+    expect(teamHandlerMocks.createTeam).toHaveBeenCalledTimes(1);
   });
 
   it('marks created teams engaged before provisioning writes startup artifacts', async () => {
@@ -5008,8 +5136,19 @@ describe('ipc teams handlers', () => {
 
       result = (await permanentlyDeleteHandler({} as never, 'my-team')) as { success: boolean };
       expect(result.success).toBe(true);
-      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith('my-team');
-      expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith('my-team');
+      expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith(
+        'my-team',
+        'identity-my-team'
+      );
+      expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.any(Function),
+        expect.any(Function),
+        expect.objectContaining({
+          teamDataProofHooks: expect.any(Object),
+          taskDataProofHooks: expect.any(Object),
+        })
+      );
       expect(permanentDeletionLifecycle.completeTeamDeletion).toHaveBeenCalledWith('my-team');
       expect(
         permanentDeletionLifecycle.prepareTeamDeletion.mock.invocationCallOrder[0]
@@ -6664,6 +6803,76 @@ describe('ipc teams handlers', () => {
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('solo-team');
     });
 
+    it('keeps create-config mutation inside the durable team identity fence', async () => {
+      const fenceEntered = createDeferred<void>();
+      const releaseFence = createDeferred<void>();
+      teamBackupService.withTeamIdentityFence.mockImplementationOnce(
+        async <T>(teamName: string, operation: () => Promise<T>): Promise<T> => {
+          expect(teamName).toBe('identity-fenced-config');
+          fenceEntered.resolve(undefined);
+          await releaseFence.promise;
+          return operation();
+        }
+      );
+
+      const pending = handlers.get(TEAM_CREATE_CONFIG)!({} as never, {
+        teamName: 'identity-fenced-config',
+        members: [],
+        cwd: os.tmpdir(),
+      });
+      await fenceEntered.promise;
+
+      expect(service.createTeamConfig).not.toHaveBeenCalled();
+      releaseFence.resolve(undefined);
+      await expect(pending).resolves.toMatchObject({ success: true });
+      expect(service.createTeamConfig).toHaveBeenCalledTimes(1);
+    });
+
+    it('routes draft deletion through the durable transaction with draft identity semantics', async () => {
+      const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-draft-delete-durable-'));
+      setClaudeBasePathOverride(claudeRoot);
+      try {
+        fs.mkdirSync(path.join(claudeRoot, 'teams', 'durable-draft'), { recursive: true });
+
+        const result = (await handlers.get(TEAM_DELETE_DRAFT)!({} as never, 'durable-draft')) as {
+          success: boolean;
+        };
+
+        expect(result.success).toBe(true);
+        expect(teamBackupService.beginPermanentDeletion).toHaveBeenCalledWith('durable-draft', {
+          draft: true,
+        });
+        expect(teamBackupService.commitPermanentDeletionBoundary).toHaveBeenCalledWith(
+          expect.objectContaining({
+            teamName: 'durable-draft',
+            identityKind: 'draft',
+            phase: 'prepared',
+          })
+        );
+        expect(permanentDeletionLifecycle.prepareTeamDeletion).toHaveBeenCalledWith(
+          'durable-draft',
+          'identity-durable-draft'
+        );
+        expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith(
+          'durable-draft',
+          expect.any(Function),
+          expect.any(Function),
+          expect.any(Object)
+        );
+        expect(teamBackupService.completePermanentDeletion).toHaveBeenCalledWith(
+          expect.objectContaining({
+            teamName: 'durable-draft',
+            identityKind: 'draft',
+          })
+        );
+        expect(
+          teamBackupService.commitPermanentDeletionBoundary.mock.invocationCallOrder[0]
+        ).toBeLessThan(service.permanentlyDeleteTeam.mock.invocationCallOrder[0]!);
+      } finally {
+        fs.rmSync(claudeRoot, { recursive: true, force: true });
+      }
+    });
+
     it('handleCreateConfig preserves draft launch metadata', async () => {
       const handler = handlers.get(TEAM_CREATE_CONFIG)!;
       const result = (await handler({} as never, {
@@ -6944,6 +7153,55 @@ describe('ipc teams handlers', () => {
           expect.any(Function)
         );
       } finally {
+        fs.rmSync(claudeRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('keeps saved-draft launch mutation inside the durable team identity fence', async () => {
+      const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-draft-launch-fence-'));
+      setClaudeBasePathOverride(claudeRoot);
+      const fenceEntered = createDeferred<void>();
+      const releaseFence = createDeferred<void>();
+      try {
+        const teamDir = path.join(claudeRoot, 'teams', 'identity-fenced-draft');
+        fs.mkdirSync(teamDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(teamDir, 'team.meta.json'),
+          JSON.stringify({
+            version: 1,
+            displayName: 'Identity Fenced Draft',
+            cwd: os.tmpdir(),
+            createdAt: Date.now(),
+          })
+        );
+        service.getSavedRequest.mockResolvedValueOnce({
+          teamName: 'identity-fenced-draft',
+          displayName: 'Identity Fenced Draft',
+          cwd: os.tmpdir(),
+          members: [],
+        });
+        teamBackupService.withTeamIdentityFence.mockImplementationOnce(
+          async <T>(teamName: string, operation: () => Promise<T>): Promise<T> => {
+            expect(teamName).toBe('identity-fenced-draft');
+            fenceEntered.resolve(undefined);
+            await releaseFence.promise;
+            return operation();
+          }
+        );
+
+        const pending = handlers.get(TEAM_LAUNCH)!({ sender: { send: vi.fn() } } as never, {
+          teamName: 'identity-fenced-draft',
+          cwd: os.tmpdir(),
+        });
+        await fenceEntered.promise;
+
+        expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+        releaseFence.resolve(undefined);
+        await expect(pending).resolves.toMatchObject({ success: true });
+        expect(teamHandlerMocks.createTeam).toHaveBeenCalledTimes(1);
+        expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+      } finally {
+        releaseFence.resolve(undefined);
         fs.rmSync(claudeRoot, { recursive: true, force: true });
       }
     });
