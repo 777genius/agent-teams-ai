@@ -790,7 +790,7 @@ export const CodeMirrorDiffView = ({
       if (extRef) {
         (extRef as React.MutableRefObject<EditorView | null>).current = null;
       }
-      // Notify parent that the EditorView was destroyed
+      onSelectionChangeRef.current?.(null);
       onViewChangeRef.current?.(null);
     };
     // We intentionally rebuild the entire editor when key props change
