@@ -89,11 +89,43 @@ async function openLinuxSymlinkSafePath(filePath: string): Promise<FileHandle> {
   }
 }
 
+async function openWindowsSymlinkSafePath(filePath: string): Promise<FileHandle> {
+  const file = await fs.open(filePath, constants.O_RDONLY);
+  try {
+    const parsedPath = path.parse(filePath);
+    const segments = filePath.slice(parsedPath.root.length).split(path.sep).filter(Boolean);
+    let currentPath = parsedPath.root;
+    let pathStats = await fs.lstat(currentPath);
+
+    for (const segment of segments) {
+      currentPath = path.join(currentPath, segment);
+      pathStats = await fs.lstat(currentPath);
+      if (pathStats.isSymbolicLink()) {
+        throw new Error(`Safe approval preview rejected a reparse-point path: ${currentPath}`);
+      }
+    }
+
+    const openedStats = await file.stat();
+    if (
+      openedStats.dev !== pathStats.dev ||
+      openedStats.ino === 0 ||
+      openedStats.ino !== pathStats.ino
+    ) {
+      throw new Error('Safe approval preview path changed while it was being opened');
+    }
+    return file;
+  } catch (error) {
+    await file.close().catch(() => undefined);
+    throw error;
+  }
+}
+
 function openSymlinkSafePath(filePath: string): Promise<FileHandle> {
   if (process.platform === 'darwin') {
     return fs.open(filePath, constants.O_RDONLY | DARWIN_O_NOFOLLOW_ANY);
   }
   if (process.platform === 'linux') return openLinuxSymlinkSafePath(filePath);
+  if (process.platform === 'win32') return openWindowsSymlinkSafePath(filePath);
   throw new Error(`Safe approval preview reads are unavailable on ${process.platform}`);
 }
 

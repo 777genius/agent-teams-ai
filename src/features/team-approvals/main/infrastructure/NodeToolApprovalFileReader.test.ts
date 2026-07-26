@@ -205,6 +205,56 @@ describe('NodeToolApprovalFileReader', () => {
     });
   });
 
+  it('reads regular files through the identity-checked Windows fallback', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const textPath = path.join(tempDirectory, 'windows-preview.txt');
+    await writeFile(textPath, 'approved Windows content');
+
+    await expect(reader.read(textPath)).resolves.toEqual({
+      content: 'approved Windows content',
+      exists: true,
+      truncated: false,
+      isBinary: false,
+    });
+  });
+
+  it('rejects parent reparse points through the Windows fallback', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const outsideDirectory = path.join(tempDirectory, 'windows-outside');
+    const linkedDirectory = path.join(tempDirectory, 'windows-linked');
+    await mkdir(outsideDirectory);
+    await writeFile(path.join(outsideDirectory, 'secret.txt'), 'unapproved secret');
+    await symlink(outsideDirectory, linkedDirectory);
+
+    await expect(reader.read(path.join(linkedDirectory, 'secret.txt'))).resolves.toMatchObject({
+      content: '',
+      exists: true,
+      error: expect.stringContaining('reparse-point path'),
+    });
+  });
+
+  it('rejects a Windows path whose opened file identity no longer matches', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const filePath = path.join(tempDirectory, 'windows-race.txt');
+    await writeFile(filePath, 'approved content');
+    const originalStat = fs.stat.bind(fs);
+    vi.spyOn(fs, 'lstat').mockImplementation(async (candidate, options) => {
+      const stats = await originalStat(candidate, options as never);
+      if (String(candidate) === filePath) {
+        return Object.assign(Object.create(Object.getPrototypeOf(stats)), stats, {
+          ino: Number(stats.ino) + 1,
+        }) as Stats;
+      }
+      return stats;
+    });
+
+    await expect(reader.read(filePath)).resolves.toMatchObject({
+      content: '',
+      exists: true,
+      error: 'Safe approval preview path changed while it was being opened',
+    });
+  });
+
   it('reports masked procfs traversal as an error instead of a missing target', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('linux');
     const closeRoot = vi.fn(async () => undefined);
