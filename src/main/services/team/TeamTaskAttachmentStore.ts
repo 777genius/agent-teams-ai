@@ -513,21 +513,7 @@ export class TeamTaskAttachmentStore {
     if (!filePath) return null;
 
     guard.assertHealthy();
-    const publicGeneration = await fs.promises
-      .lstat(filePath)
-      .catch((error: NodeJS.ErrnoException) => {
-        if (error.code === 'ENOENT') return null;
-        throw error;
-      });
-    if (!publicGeneration) return null;
-    if (!publicGeneration.isFile() || publicGeneration.isSymbolicLink()) {
-      throw new Error('Task attachment is not a regular file');
-    }
-    guard.assertHealthy();
-    const pinned = await pinTaskAttachmentGeneration(filePath, {
-      dev: publicGeneration.dev,
-      ino: publicGeneration.ino,
-    });
+    const pinned = await pinTaskAttachmentGeneration(filePath);
     if (pinned.kind === 'missing') return null;
     if (pinned.kind === 'changed') {
       throw new Error('Task attachment changed while preparing deletion');

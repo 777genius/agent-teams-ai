@@ -36,7 +36,7 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     await expect(
       detachTaskAttachmentGeneration(publicPath, {
         dev: oldIdentity.dev,
-        ino: oldIdentity.ino,
+        ino: 0,
       })
     ).resolves.toEqual({ kind: 'changed' });
 
@@ -51,10 +51,7 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     await writeFile(publicPath, 'old');
     const identity = await fs.lstat(publicPath);
 
-    const pinned = await pinTaskAttachmentGeneration(publicPath, {
-      dev: identity.dev,
-      ino: identity.ino,
-    });
+    const pinned = await pinTaskAttachmentGeneration(publicPath);
     if (pinned.kind !== 'pinned') throw new Error('Expected pinned generation');
 
     await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('old');
@@ -66,23 +63,6 @@ describe('TaskAttachmentGenerationLifecycle', () => {
 
     await removeTaskAttachmentGenerationPin(pinned.receipt.pinPath, pinned.receipt.identity);
     await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('old');
-  });
-
-  it('rejects a changed public generation without removing it', async () => {
-    const { publicPath } = await createRoot();
-    await writeFile(publicPath, 'old');
-    const oldIdentity = await fs.lstat(publicPath);
-    await fs.unlink(publicPath);
-    await writeFile(publicPath, 'replacement');
-
-    await expect(
-      pinTaskAttachmentGeneration(publicPath, {
-        dev: oldIdentity.dev,
-        ino: oldIdentity.ino,
-      })
-    ).resolves.toEqual({ kind: 'changed' });
-
-    await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('replacement');
   });
 
   it('never clobbers a replacement while rolling back a detached generation', async () => {

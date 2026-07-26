@@ -52,29 +52,45 @@ async function lstatOrNull(filePath: string): Promise<fs.Stats | null> {
  * metadata reference.
  */
 export async function pinTaskAttachmentGeneration(
-  originalPath: string,
-  expectedIdentity: TaskAttachmentFileIdentity
+  originalPath: string
 ): Promise<PinTaskAttachmentGenerationResult> {
   const pinPath = path.join(path.dirname(originalPath), `.review-create.${randomUUID()}.tmp`);
+  let source: fs.promises.FileHandle;
   try {
-    await fs.promises.link(originalPath, pinPath);
+    source = await fs.promises.open(originalPath, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { kind: 'missing' };
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return { kind: 'missing' };
     throw error;
   }
 
-  const pinned = await fs.promises.lstat(pinPath);
-  if (pinned.isFile() && !pinned.isSymbolicLink() && isSameIdentity(pinned, expectedIdentity)) {
-    return {
-      kind: 'pinned',
-      receipt: { originalPath, pinPath, identity: expectedIdentity },
-    };
-  }
+  try {
+    const opened = await source.stat();
+    if (!opened.isFile()) return { kind: 'changed' };
+    const identity = { dev: opened.dev, ino: opened.ino };
+    try {
+      await fs.promises.link(originalPath, pinPath);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT' || code === 'ENOTDIR') return { kind: 'missing' };
+      throw error;
+    }
 
-  if (pinned.isFile() && !pinned.isSymbolicLink()) {
-    await removeTaskAttachmentGenerationPin(pinPath, { dev: pinned.dev, ino: pinned.ino });
+    const pinned = await fs.promises.lstat(pinPath);
+    if (pinned.isFile() && !pinned.isSymbolicLink() && isSameIdentity(pinned, identity)) {
+      return {
+        kind: 'pinned',
+        receipt: { originalPath, pinPath, identity },
+      };
+    }
+
+    if (pinned.isFile() && !pinned.isSymbolicLink()) {
+      await removeTaskAttachmentGenerationPin(pinPath, { dev: pinned.dev, ino: pinned.ino });
+    }
+    return { kind: 'changed' };
+  } finally {
+    await source.close();
   }
-  return { kind: 'changed' };
 }
 
 /**
