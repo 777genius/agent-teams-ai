@@ -372,23 +372,10 @@ export function resolveTerminalTabContentState(
     }
   }
 
-  if (paneIds.length !== 1) {
-    return 'unknown';
-  }
-
-  const paneId = paneIds[0];
-  const historicalPane = snapshot.historicalPanes?.[paneId];
-  const historyIsComplete =
-    historicalPane !== undefined &&
-    attachedSessionId !== null &&
-    historicalPane.sessionId === attachedSessionId &&
-    historicalPane.paneId === paneId &&
-    historicalPane.fromEventSeq === 1n &&
-    historicalPane.nextEventSeq === null &&
-    !historicalPane.hasGaps &&
-    !historicalPane.hasMoreSegments;
-
-  return focusedScreen?.pane_id === paneId && historyIsComplete ? 'empty' : 'unknown';
+  // Screen and history projections cannot prove that the shell is idle. Direct
+  // terminal input can start a long-running process and then clear both views
+  // without producing a command-run event, so closing must stay conservative.
+  return 'unknown';
 }
 
 function formatNewMuxTabTitle(tabNumber: number): string {

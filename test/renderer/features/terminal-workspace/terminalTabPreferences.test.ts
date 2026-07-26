@@ -14,8 +14,8 @@ import {
 } from '@features/terminal-workspace/renderer/model/terminalTabPreferences';
 import { describe, expect, it } from 'vitest';
 
-import type { ScreenProgressState } from '@terminal-platform/runtime-types';
 import type { TerminalCommandRunPresentation } from '@features/terminal-workspace/renderer/model/terminalCommandRuns';
+import type { ScreenProgressState } from '@terminal-platform/runtime-types';
 
 describe('terminal tab preferences', () => {
   const tabs = [createTab('tab-1', 'One'), createTab('tab-2', 'Two'), createTab('tab-3', 'Three')];
@@ -95,7 +95,7 @@ describe('terminal tab preferences', () => {
     expect(resolveTerminalTabContentState(snapshot, tabs[1])).toBe('unknown');
   });
 
-  it('requires complete focused single-pane history to prove a tab is empty', () => {
+  it('keeps a visually empty tab conservative even with complete history', () => {
     const completeHistory = createHistoricalPane({ paneId: 'pane-tab-1' });
 
     expect(
@@ -108,7 +108,7 @@ describe('terminal tab preferences', () => {
         }),
         tabs[0]
       )
-    ).toBe('empty');
+    ).toBe('unknown');
     expect(
       resolveTerminalTabContentState(
         createSnapshot({
@@ -236,7 +236,7 @@ describe('terminal tab preferences', () => {
         }),
         tabs[0]
       )
-    ).toBe('empty');
+    ).toBe('unknown');
   });
 
   it('treats a draft or an unsettled command run as content', () => {

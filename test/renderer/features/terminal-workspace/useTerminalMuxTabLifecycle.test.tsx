@@ -69,9 +69,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     });
     await render({ commands });
 
-    await act(async () => {
-      await requiredControls().requestCloseTab(TAB_ONE);
-    });
+    await requestAndConfirmClose(TAB_ONE);
 
     expect(events).toEqual([
       'dispatch:session-a:close_tab:tab-1',
@@ -85,9 +83,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     const onTabCloseDispatched = vi.fn();
     await render({ onTabCloseDispatched });
 
-    await act(async () => {
-      await requiredControls().requestCloseTab(TAB_ONE);
-    });
+    await requestAndConfirmClose(TAB_ONE);
 
     expect(onTabCloseDispatched).toHaveBeenCalledOnce();
     expect(onTabCloseDispatched).toHaveBeenCalledWith({
@@ -103,9 +99,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     commands.attachSession = vi.fn().mockRejectedValue(new Error('attach failed')) as never;
     await render({ commands, onTabCloseDispatched });
 
-    await act(async () => {
-      await requiredControls().requestCloseTab(TAB_ONE);
-    });
+    await requestAndConfirmClose(TAB_ONE);
 
     expect(onTabCloseDispatched).toHaveBeenCalledOnce();
     expect(requiredControls().error).toBe('attach failed');
@@ -118,11 +112,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     commands.attachSession = vi.fn(() => attach.promise) as never;
     await render({ commands, onTabCloseDispatched });
 
-    let closeAction!: Promise<void>;
-    await act(async () => {
-      closeAction = requiredControls().requestCloseTab(TAB_ONE);
-      await flushMicrotasks();
-    });
+    const { closeAction } = await beginConfirmedClose(TAB_ONE);
 
     expect(onTabCloseDispatched).toHaveBeenCalledOnce();
     expect(requiredControls().pendingAction).toBe('close-tab:tab-1');
@@ -144,9 +134,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     }) as never;
     await render({ commands, onTabCloseDispatched });
 
-    await act(async () => {
-      await requiredControls().requestCloseTab(TAB_ONE);
-    });
+    await requestAndConfirmClose(TAB_ONE);
 
     expect(onTabCloseDispatched).toHaveBeenCalledOnce();
     expect(commands.attachSession).not.toHaveBeenCalled();
@@ -162,9 +150,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     })) as never;
     await render({ commands, onTabCloseDispatched, onTabCloseFocusSettled });
 
-    await act(async () => {
-      await requiredControls().requestCloseTab(TAB_ONE);
-    });
+    await requestAndConfirmClose(TAB_ONE);
 
     expect(onTabCloseDispatched).toHaveBeenCalledOnce();
     expect(onTabCloseFocusSettled).toHaveBeenCalledWith({
@@ -181,9 +167,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     commands.dispatchMuxCommand = vi.fn().mockRejectedValue(new Error('close failed')) as never;
     await render({ commands, onTabCloseDispatched });
 
-    await act(async () => {
-      await requiredControls().requestCloseTab(TAB_ONE);
-    });
+    await requestAndConfirmClose(TAB_ONE);
 
     expect(onTabCloseDispatched).not.toHaveBeenCalled();
     expect(requiredControls().error).toBe('close failed');
@@ -196,9 +180,7 @@ describe('useTerminalMuxTabLifecycle', () => {
     commands.dispatchMuxCommand = vi.fn(async () => ({ changed: false })) as never;
     await render({ commands, onTabCloseDispatched, onTabCloseFocusSettled });
 
-    await act(async () => {
-      await requiredControls().requestCloseTab(TAB_ONE);
-    });
+    await requestAndConfirmClose(TAB_ONE);
 
     expect(commands.dispatchMuxCommand).toHaveBeenCalledOnce();
     expect(commands.dispatchMuxCommand).toHaveBeenCalledWith('session-a', {
@@ -672,6 +654,28 @@ describe('useTerminalMuxTabLifecycle', () => {
       );
       await flushMicrotasks();
     });
+  }
+
+  async function requestAndConfirmClose(tab: TerminalMuxTab): Promise<void> {
+    await act(async () => {
+      await requiredControls().requestCloseTab(tab);
+    });
+    await act(async () => {
+      await requiredControls().confirmCloseCandidate();
+    });
+  }
+
+  async function beginConfirmedClose(tab: TerminalMuxTab): Promise<{ closeAction: Promise<void> }> {
+    await act(async () => {
+      await requiredControls().requestCloseTab(tab);
+    });
+
+    let closeAction!: Promise<void>;
+    await act(async () => {
+      closeAction = requiredControls().confirmCloseCandidate();
+      await flushMicrotasks();
+    });
+    return { closeAction };
   }
 
   function requiredControls(): LifecycleControls {

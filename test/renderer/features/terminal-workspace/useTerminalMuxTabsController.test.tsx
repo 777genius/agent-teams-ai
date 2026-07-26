@@ -87,9 +87,7 @@ describe('useTerminalMuxTabsController close focus', () => {
     const closeButton = requiredElement('close-tab-2');
     closeButton.focus();
 
-    await act(async () => {
-      await requiredControls().requestCloseTab(TAB_TWO);
-    });
+    await requestAndConfirmClose(TAB_TWO);
     expect(document.activeElement).toBe(closeButton);
 
     await render(createSnapshot([TAB_ONE], TAB_ONE));
@@ -102,9 +100,7 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO));
     requiredElement('close-tab-2').focus();
 
-    await act(async () => {
-      await requiredControls().requestCloseTab(TAB_TWO);
-    });
+    await requestAndConfirmClose(TAB_TWO);
     await render(createSnapshot([TAB_ONE], TAB_ONE));
 
     expect(document.activeElement).toBe(requiredElement('tab-tab-1'));
@@ -116,11 +112,7 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO));
     requiredElement('close-tab-2').focus();
 
-    let closeAction!: Promise<void>;
-    await act(async () => {
-      closeAction = requiredControls().requestCloseTab(TAB_TWO);
-      await flushMicrotasks();
-    });
+    const { closeAction } = await beginConfirmedClose(TAB_TWO);
     expect(requiredControls().busy).toBe(true);
 
     await render(createSnapshot([TAB_ONE], TAB_ONE));
@@ -141,11 +133,7 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO));
     requiredElement('close-tab-2').focus();
 
-    let closeAction!: Promise<void>;
-    await act(async () => {
-      closeAction = requiredControls().requestCloseTab(TAB_TWO);
-      await flushMicrotasks();
-    });
+    const { closeAction } = await beginConfirmedClose(TAB_TWO);
 
     const externalFocusTarget = requiredElement('external-focus-target');
     externalFocusTarget.focus();
@@ -164,11 +152,7 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO));
     requiredElement('close-tab-2').focus();
 
-    let closeAction!: Promise<void>;
-    await act(async () => {
-      closeAction = requiredControls().requestCloseTab(TAB_TWO);
-      await flushMicrotasks();
-    });
+    const { closeAction } = await beginConfirmedClose(TAB_TWO);
 
     commands = createResolvedCommands();
     await render(createSnapshot([TAB_ONE], TAB_ONE));
@@ -194,11 +178,7 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_ONE));
     requiredElement('close-tab-1').focus();
 
-    let closeAction!: Promise<void>;
-    await act(async () => {
-      closeAction = requiredControls().requestCloseTab(TAB_ONE);
-      await flushMicrotasks();
-    });
+    const { closeAction } = await beginConfirmedClose(TAB_ONE);
 
     await render(createSnapshot([TAB_TWO, TAB_THREE], TAB_THREE));
     expect(document.activeElement).not.toBe(requiredElement('tab-tab-3'));
@@ -219,9 +199,7 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_ONE));
     requiredElement('close-tab-1').focus();
 
-    await act(async () => {
-      await requiredControls().requestCloseTab(TAB_ONE);
-    });
+    await requestAndConfirmClose(TAB_ONE);
     await render(createSnapshot([TAB_TWO, TAB_THREE], TAB_THREE));
 
     expect(document.activeElement).toBe(requiredElement('tab-tab-3'));
@@ -236,11 +214,7 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_ONE));
     requiredElement('close-tab-1').focus();
 
-    let closeAction!: Promise<void>;
-    await act(async () => {
-      closeAction = requiredControls().requestCloseTab(TAB_ONE);
-      await flushMicrotasks();
-    });
+    const { closeAction } = await beginConfirmedClose(TAB_ONE);
     await render(createSnapshot([TAB_TWO, TAB_THREE], TAB_THREE));
 
     expect(requiredControls().busy).toBe(true);
@@ -264,11 +238,7 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_ONE));
     requiredElement('close-tab-1').focus();
 
-    let closeAction!: Promise<void>;
-    await act(async () => {
-      closeAction = requiredControls().requestCloseTab(TAB_ONE);
-      await flushMicrotasks();
-    });
+    const { closeAction } = await beginConfirmedClose(TAB_ONE);
     await render(createSnapshot([TAB_TWO, TAB_THREE], TAB_THREE));
 
     expect(requiredControls().busy).toBe(true);
@@ -297,11 +267,7 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_ONE));
     requiredElement('close-tab-1').focus();
 
-    let closeAction!: Promise<void>;
-    await act(async () => {
-      closeAction = requiredControls().requestCloseTab(TAB_ONE);
-      await flushMicrotasks();
-    });
+    const { closeAction } = await beginConfirmedClose(TAB_ONE);
     expect(commands.dispatchMuxCommand).toHaveBeenCalledWith('session-a', {
       kind: 'focus_tab',
       tab_id: TAB_TWO.tab_id,
@@ -326,11 +292,7 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO));
     requiredElement('close-tab-2').focus();
 
-    let closeAction!: Promise<void>;
-    await act(async () => {
-      closeAction = requiredControls().requestCloseTab(TAB_TWO);
-      await flushMicrotasks();
-    });
+    const { closeAction } = await beginConfirmedClose(TAB_TWO);
 
     await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO, 'bootstrapping'));
     await render(createSnapshot([TAB_ONE], TAB_ONE));
@@ -360,6 +322,28 @@ describe('useTerminalMuxTabsController close focus', () => {
 
     expect(document.activeElement).toBe(requiredElement('tab-tab-3'));
   });
+
+  async function requestAndConfirmClose(tab: TerminalMuxTab): Promise<void> {
+    await act(async () => {
+      await requiredControls().requestCloseTab(tab);
+    });
+    await act(async () => {
+      await requiredControls().confirmCloseCandidate();
+    });
+  }
+
+  async function beginConfirmedClose(tab: TerminalMuxTab): Promise<{ closeAction: Promise<void> }> {
+    await act(async () => {
+      await requiredControls().requestCloseTab(tab);
+    });
+
+    let closeAction!: Promise<void>;
+    await act(async () => {
+      closeAction = requiredControls().confirmCloseCandidate();
+      await flushMicrotasks();
+    });
+    return { closeAction };
+  }
 
   async function render(snapshot: TerminalWorkspaceSnapshot): Promise<void> {
     await act(async () => {
