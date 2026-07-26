@@ -85,6 +85,7 @@ import {
 } from './TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase';
 
 import type { NativeAppManagedBootstrapSpec } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
+import type { TeamLaunchRuntimeAdapter } from '../runtime';
 import type { TeamMembersMetaStore } from '../TeamMembersMetaStore';
 import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import type {
@@ -139,12 +140,8 @@ type RuntimeAdapterRunEntry = NonNullable<
 type MemberLifecycleOpenCodeRuntimeAdapter = Exclude<
   ReturnType<TeamProvisioningMemberLifecycleHost['getOpenCodeRuntimeAdapter']>,
   null
-> & {
-  preflightLocalModels?: (input: {
-    targets: readonly { projectPath: string; modelRoute: string }[];
-    allowExperimentalLocalModels?: boolean;
-  }) => Promise<{ ok: boolean; warnings: string[]; diagnostics: string[] }>;
-};
+> &
+  Pick<TeamLaunchRuntimeAdapter, 'preflightLocalModels'>;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -2535,9 +2532,7 @@ export class TeamProvisioningMemberLifecycleController {
     }
     this.assertRunStillCurrentAndAlive(run, teamName);
     const localModelPreflight = await adapter.preflightLocalModels?.({
-      ...(run.request.allowExperimentalLocalModels === true
-        ? { allowExperimentalLocalModels: true }
-        : {}),
+      allowExperimentalLocalModels: run.request.allowExperimentalLocalModels,
       targets: [
         {
           projectPath: memberSpec.cwd?.trim() || run.request.cwd,

@@ -10,6 +10,14 @@ import {
 } from '@shared/utils/openCodeWindowsAccessDenied';
 import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 
+import { hasExperimentalLocalModelOverride } from './providerPrepareDiagnosticsModels';
+
+import type {
+  ProviderPrepareCheckStatus,
+  ProviderPrepareDiagnosticsCachedSnapshot,
+  ProviderPrepareDiagnosticsModelResult,
+  ProviderPrepareDiagnosticsResult,
+} from './providerPrepareDiagnosticsModels';
 import type {
   TeamProviderId,
   TeamProvisioningModelCheckRequest,
@@ -18,7 +26,16 @@ import type {
   TeamProvisioningSupportDiagnostic,
 } from '@shared/types';
 
-export type ProviderPrepareCheckStatus = 'ready' | 'notes' | 'failed';
+export type {
+  ProviderPrepareCheckStatus,
+  ProviderPrepareDiagnosticsCachedSnapshot,
+  ProviderPrepareDiagnosticsModelResult,
+  ProviderPrepareDiagnosticsResult,
+} from './providerPrepareDiagnosticsModels';
+export {
+  buildReusableProviderPrepareModelResults,
+  mergeReusableProviderPrepareModelResults,
+} from './providerPrepareDiagnosticsModels';
 
 type PrepareProvisioningFn = (
   cwd?: string,
@@ -37,56 +54,7 @@ interface ProviderPrepareDiagnosticsProgress {
   totalCount: number;
 }
 
-export interface ProviderPrepareDiagnosticsModelResult {
-  status: 'ready' | 'notes' | 'failed';
-  line: string;
-  warningLine?: string | null;
-  experimentalOverrideAvailable?: boolean;
-}
-
-export interface ProviderPrepareDiagnosticsCachedSnapshot {
-  status: ProviderPrepareCheckStatus | 'checking';
-  details: string[];
-  completedCount: number;
-  totalCount: number;
-}
-
-export interface ProviderPrepareDiagnosticsResult {
-  status: ProviderPrepareCheckStatus;
-  details: string[];
-  warnings: string[];
-  modelResultsById: Record<string, ProviderPrepareDiagnosticsModelResult>;
-  experimentalOverrideAvailable?: boolean;
-  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
-}
-
 type TeamProvisioningPrepareIssue = NonNullable<TeamProvisioningPrepareResult['issues']>[number];
-
-export function buildReusableProviderPrepareModelResults(
-  modelResultsById: Record<string, ProviderPrepareDiagnosticsModelResult>
-): Record<string, ProviderPrepareDiagnosticsModelResult> {
-  return Object.fromEntries(
-    Object.entries(modelResultsById).filter(([, result]) => result.status !== 'notes')
-  );
-}
-
-export function mergeReusableProviderPrepareModelResults(
-  existingModelResultsById:
-    | Record<string, ProviderPrepareDiagnosticsModelResult>
-    | null
-    | undefined,
-  modelResultsById: Record<string, ProviderPrepareDiagnosticsModelResult>
-): Record<string, ProviderPrepareDiagnosticsModelResult> {
-  const mergedModelResultsById = { ...(existingModelResultsById ?? {}) };
-  for (const [modelId, result] of Object.entries(modelResultsById)) {
-    if (result.status === 'notes') {
-      delete mergedModelResultsById[modelId];
-      continue;
-    }
-    mergedModelResultsById[modelId] = result;
-  }
-  return mergedModelResultsById;
-}
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -482,18 +450,6 @@ function getModelScopedEntries(modelId: string, result: TeamProvisioningPrepareR
     .map((entry) => entry?.trim() ?? '')
     .filter(Boolean)
     .filter((entry) => scopedPattern.test(entry));
-}
-
-function hasExperimentalLocalModelOverride(
-  modelId: string,
-  result: TeamProvisioningPrepareResult
-): boolean {
-  return (result.issues ?? []).some(
-    (issue) =>
-      issue.scope === 'model' &&
-      issue.modelId === modelId &&
-      issue.experimentalOverrideAvailable === true
-  );
 }
 
 function isModelScopedEntryForAnyModel(modelIds: readonly string[], entry: string): boolean {

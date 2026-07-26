@@ -107,14 +107,10 @@ import {
   extractUserFlags,
   PROTECTED_CLI_FLAGS,
 } from '@shared/utils/cliArgsParser';
-import {
-  formatEffortLevelListForProvider,
-  isTeamEffortLevelForProvider,
-} from '@shared/utils/effortLevels';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
-import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import {
   buildStandaloneSlashCommandMeta,
   parseStandaloneSlashCommand,
@@ -165,6 +161,16 @@ import {
   validateTeammateName,
   validateTeamName,
 } from './guards';
+import {
+  parseOptionalBoolean,
+  parseOptionalLaunchProviderBackendId,
+  parseOptionalMemberEffort,
+  parseOptionalMemberProviderId,
+  parseOptionalProviderBackendId,
+  parseOptionalTeamEffort,
+  parseOptionalTeamFastMode,
+  parseOptionalTeamProviderId,
+} from './teamIpcRequestParsers';
 
 import type {
   BoardTaskActivityDetailService,
@@ -1662,149 +1668,6 @@ function isProvisioningTeamName(teamName: string): boolean {
   return parts.every((p) => /^[a-z0-9]+$/.test(p));
 }
 
-function isValidEffort(value: unknown, providerId?: TeamProviderId | null): value is EffortLevel {
-  return isTeamEffortLevelForProvider(value, providerId);
-}
-
-function parseOptionalProviderId(
-  value: unknown,
-  fieldName: string
-): { valid: true; value: TeamProviderId | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (isTeamProviderId(value)) {
-    return { valid: true, value };
-  }
-  return { valid: false, error: `${fieldName} must be anthropic, codex, gemini, or opencode` };
-}
-
-function parseOptionalMemberProviderId(
-  value: unknown
-): { valid: true; value: TeamProviderId | undefined } | { valid: false; error: string } {
-  return parseOptionalProviderId(value, 'member providerId');
-}
-
-function parseOptionalTeamProviderId(
-  value: unknown
-): { valid: true; value: TeamProviderId | undefined } | { valid: false; error: string } {
-  return parseOptionalProviderId(value, 'providerId');
-}
-
-function parseOptionalProviderBackendId(
-  value: unknown,
-  providerId?: TeamProviderId
-): { valid: true; value: TeamProviderBackendId | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (typeof value !== 'string') {
-    return { valid: false, error: 'providerBackendId must be a string' };
-  }
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { valid: true, value: undefined };
-  }
-  if (trimmed.length > 64) {
-    return { valid: false, error: 'providerBackendId too long (max 64)' };
-  }
-  if (providerId) {
-    const migratedBackendId = migrateProviderBackendId(providerId, trimmed);
-    if (migratedBackendId) {
-      return { valid: true, value: migratedBackendId };
-    }
-  } else if (isTeamProviderBackendId(trimmed)) {
-    return { valid: true, value: trimmed };
-  }
-
-  return {
-    valid: false,
-    error:
-      'providerBackendId must be valid for the selected provider (auto, adapter, api, cli-sdk, codex-native, or opencode-cli)',
-  };
-}
-
-function parseOptionalLaunchProviderBackendId(
-  value: unknown,
-  providerId?: TeamProviderId
-): { valid: true; value: TeamProviderBackendId | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (typeof value !== 'string') {
-    return { valid: false, error: 'providerBackendId must be a string' };
-  }
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { valid: true, value: undefined };
-  }
-  if (trimmed.length > 64) {
-    return { valid: false, error: 'providerBackendId too long (max 64)' };
-  }
-
-  const migratedBackendId = migrateProviderBackendId(providerId, trimmed);
-  if (migratedBackendId) {
-    return { valid: true, value: migratedBackendId };
-  }
-
-  if (isTeamProviderBackendId(trimmed)) {
-    return { valid: true, value: undefined };
-  }
-
-  return {
-    valid: false,
-    error:
-      'providerBackendId must be valid for the selected provider (auto, adapter, api, cli-sdk, codex-native, or opencode-cli)',
-  };
-}
-
-function parseOptionalMemberEffort(
-  value: unknown,
-  providerId?: TeamProviderId | null
-): { valid: true; value: EffortLevel | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (isValidEffort(value, providerId)) {
-    return { valid: true, value };
-  }
-  return {
-    valid: false,
-    error: `member effort must be one of ${formatEffortLevelListForProvider(providerId)}`,
-  };
-}
-
-function parseOptionalTeamEffort(
-  value: unknown,
-  providerId?: TeamProviderId | null
-): { valid: true; value: EffortLevel | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (isValidEffort(value, providerId)) {
-    return { valid: true, value };
-  }
-  return {
-    valid: false,
-    error: `effort must be one of ${formatEffortLevelListForProvider(providerId)}`,
-  };
-}
-
-function parseOptionalTeamFastMode(
-  value: unknown
-): { valid: true; value: TeamFastMode | undefined } | { valid: false; error: string } {
-  if (value === undefined || value === null || value === '') {
-    return { valid: true, value: undefined };
-  }
-  if (value === 'inherit' || value === 'on' || value === 'off') {
-    return { valid: true, value };
-  }
-  return {
-    valid: false,
-    error: 'fastMode must be one of inherit, on, or off',
-  };
-}
-
 interface RuntimeRosterMutationMember {
   name: string;
   role?: string;
@@ -2175,11 +2038,12 @@ async function validateProvisioningRequest(
   if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
     return { valid: false, error: 'limitContext must be a boolean' };
   }
-  if (
-    payload.allowExperimentalLocalModels !== undefined &&
-    typeof payload.allowExperimentalLocalModels !== 'boolean'
-  ) {
-    return { valid: false, error: 'allowExperimentalLocalModels must be a boolean' };
+  const experimentalModelsValidation = parseOptionalBoolean(
+    payload.allowExperimentalLocalModels,
+    'allowExperimentalLocalModels'
+  );
+  if (!experimentalModelsValidation.valid) {
+    return { valid: false, error: experimentalModelsValidation.error };
   }
 
   try {
@@ -2240,10 +2104,7 @@ async function validateProvisioningRequest(
       limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
       skipPermissions:
         typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
-      allowExperimentalLocalModels:
-        typeof payload.allowExperimentalLocalModels === 'boolean'
-          ? payload.allowExperimentalLocalModels
-          : undefined,
+      allowExperimentalLocalModels: experimentalModelsValidation.value,
       worktree:
         typeof payload.worktree === 'string' && payload.worktree.trim()
           ? payload.worktree.trim()
@@ -2388,11 +2249,12 @@ async function handleLaunchTeam(
   if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
     return { success: false, error: 'limitContext must be a boolean' };
   }
-  if (
-    payload.allowExperimentalLocalModels !== undefined &&
-    typeof payload.allowExperimentalLocalModels !== 'boolean'
-  ) {
-    return { success: false, error: 'allowExperimentalLocalModels must be a boolean' };
+  const experimentalModelsValidation = parseOptionalBoolean(
+    payload.allowExperimentalLocalModels,
+    'allowExperimentalLocalModels'
+  );
+  if (!experimentalModelsValidation.valid) {
+    return { success: false, error: experimentalModelsValidation.error };
   }
   const providerValidation = parseOptionalTeamProviderId(payload.providerId);
   if (!providerValidation.valid) {
@@ -2490,10 +2352,7 @@ async function handleLaunchTeam(
         typeof payload.skipPermissions === 'boolean'
           ? payload.skipPermissions
           : savedRequest.skipPermissions,
-      allowExperimentalLocalModels:
-        typeof payload.allowExperimentalLocalModels === 'boolean'
-          ? payload.allowExperimentalLocalModels
-          : undefined,
+      allowExperimentalLocalModels: experimentalModelsValidation.value,
       worktree:
         typeof payload.worktree === 'string'
           ? payload.worktree.trim() || undefined
@@ -2612,10 +2471,7 @@ async function handleLaunchTeam(
           clearContext: payload.clearContext === true ? true : undefined,
           skipPermissions:
             typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
-          allowExperimentalLocalModels:
-            typeof payload.allowExperimentalLocalModels === 'boolean'
-              ? payload.allowExperimentalLocalModels
-              : undefined,
+          allowExperimentalLocalModels: experimentalModelsValidation.value,
           worktree:
             typeof payload.worktree === 'string' ? payload.worktree.trim() || undefined : undefined,
           extraCliArgs:

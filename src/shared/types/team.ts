@@ -1,5 +1,8 @@
 import type { NotificationTarget, TeamEventType } from './notifications';
+import type * as TeamProvisioningTypes from './teamProvisioning';
 import type { EnhancedChunk } from '@main/types';
+
+export type * from './teamProvisioning';
 
 export interface TeamMember {
   name: string;
@@ -1056,7 +1059,7 @@ export interface ProviderModelLaunchIdentity {
   fastResolutionReason?: string | null;
 }
 
-export interface TeamLaunchRequest {
+export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
   teamName: string;
   cwd: string;
   prompt?: string;
@@ -1071,8 +1074,6 @@ export interface TeamLaunchRequest {
   clearContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
-  /** Allow an explicitly selected local model to continue after a failed advisory probe. */
-  allowExperimentalLocalModels?: boolean;
   /** Worktree name — CLI: --worktree <name>. */
   worktree?: string;
   /** Raw custom CLI args string, shell-split and appended to CLI command. */
@@ -1501,7 +1502,7 @@ export interface TeamWorktreeGitStatus {
   message?: string;
 }
 
-export interface TeamCreateRequest {
+export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
   teamName: string;
   displayName?: string;
   description?: string;
@@ -1518,8 +1519,6 @@ export interface TeamCreateRequest {
   limitContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
-  /** Allow an explicitly selected local model to continue after a failed advisory probe. */
-  allowExperimentalLocalModels?: boolean;
   /** Worktree name — CLI: --worktree <name>. */
   worktree?: string;
   /** Raw custom CLI args string, shell-split and appended to CLI command. */
@@ -1556,25 +1555,20 @@ export interface TeamCreateResponse {
   alreadyRunning?: boolean;
 }
 
-export type TeamProvisioningModelVerificationMode = 'compatibility' | 'deep';
-
 export interface TeamProvisioningModelCheckRequest {
   providerId: TeamProviderId;
   model: string;
   effort?: EffortLevel;
 }
 
-export type TeamProvisioningPrepareIssueScope = 'provider' | 'model';
-export type TeamProvisioningPrepareIssueSeverity = 'blocking' | 'warning';
-
-export interface TeamProvisioningPrepareIssue {
+export interface TeamProvisioningPrepareIssue
+  extends TeamProvisioningTypes.LocalModelIssueMetadata {
   providerId?: TeamProviderId;
   modelId?: string;
-  scope: TeamProvisioningPrepareIssueScope;
-  severity: TeamProvisioningPrepareIssueSeverity;
+  scope: TeamProvisioningTypes.TeamProvisioningPrepareIssueScope;
+  severity: TeamProvisioningTypes.TeamProvisioningPrepareIssueSeverity;
   code: string;
   message: string;
-  experimentalOverrideAvailable?: boolean;
 }
 
 export interface TeamProvisioningSupportDiagnostic {
