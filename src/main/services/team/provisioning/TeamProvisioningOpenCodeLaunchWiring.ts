@@ -47,6 +47,7 @@ export interface OpenCodeLaunchWiringRuntimeRunEntry {
   runId: string;
   providerId: TeamProviderId;
   cwd?: string;
+  allowExperimentalLocalModels?: boolean;
   members?: TeamRuntimeLaunchResult['members'];
 }
 

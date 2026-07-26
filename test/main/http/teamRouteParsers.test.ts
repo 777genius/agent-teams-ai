@@ -64,6 +64,7 @@ describe('HTTP team route parsers', () => {
         limitContext: true,
         clearContext: true,
         skipPermissions: false,
+        allowExperimentalLocalModels: true,
         worktree: ' feature-branch ',
       })
     ).toEqual({
@@ -78,6 +79,7 @@ describe('HTTP team route parsers', () => {
       limitContext: true,
       clearContext: true,
       skipPermissions: false,
+      allowExperimentalLocalModels: true,
       worktree: 'feature-branch',
     });
 
@@ -101,6 +103,14 @@ describe('HTTP team route parsers', () => {
           providerBackendId: 'unknown-backend',
         }),
       'providerBackendId must be valid for the selected provider'
+    );
+    expectBadRequest(
+      () =>
+        parseLaunchRequest('demo-team', {
+          cwd: '/Users/test/project',
+          allowExperimentalLocalModels: 'yes',
+        }),
+      'allowExperimentalLocalModels must be a boolean'
     );
   });
 
@@ -204,6 +214,7 @@ describe('HTTP team route parsers', () => {
     const request = parseDraftLaunchCreateRequest(savedRequest, {
       cwd: '/Users/test/project',
       providerId: 'anthropic',
+      allowExperimentalLocalModels: true,
     });
 
     expect(request).toMatchObject({
@@ -217,12 +228,18 @@ describe('HTTP team route parsers', () => {
       providerId: 'anthropic',
       skipPermissions: false,
       worktree: 'saved-worktree',
+      allowExperimentalLocalModels: true,
     });
     expect(request.providerBackendId).toBeUndefined();
     expect(request.model).toBeUndefined();
     expect(request.effort).toBeUndefined();
     expect(request.fastMode).toBeUndefined();
     expect(request.limitContext).toBeUndefined();
+
+    expect(
+      parseDraftLaunchCreateRequest({ ...savedRequest, allowExperimentalLocalModels: true }, {})
+        .allowExperimentalLocalModels
+    ).toBeUndefined();
 
     expectBadRequest(
       () =>
@@ -231,6 +248,13 @@ describe('HTTP team route parsers', () => {
           {}
         ),
       'cwd is required'
+    );
+    expectBadRequest(
+      () =>
+        parseDraftLaunchCreateRequest(savedRequest, {
+          allowExperimentalLocalModels: 'yes',
+        }),
+      'allowExperimentalLocalModels must be a boolean'
     );
   });
 

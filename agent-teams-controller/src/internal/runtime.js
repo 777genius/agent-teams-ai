@@ -307,14 +307,20 @@ function buildLaunchRequest(flags = {}) {
     ...(typeof flags['extra-cli-args'] === 'string' && flags['extra-cli-args'].trim()
       ? { extraCliArgs: flags['extra-cli-args'].trim() }
       : {}),
+    ...(typeof flags.allowExperimentalLocalModels === 'boolean'
+      ? { allowExperimentalLocalModels: flags.allowExperimentalLocalModels }
+      : {}),
+    ...(typeof flags['allow-experimental-local-models'] === 'boolean'
+      ? { allowExperimentalLocalModels: flags['allow-experimental-local-models'] }
+      : {}),
   };
 }
 
 function isAlreadyLaunchingResponse(launch) {
   return Boolean(
     launch &&
-      typeof launch === 'object' &&
-      (launch.alreadyLaunching === true || launch.launchStatus === 'already_launching')
+    typeof launch === 'object' &&
+    (launch.alreadyLaunching === true || launch.launchStatus === 'already_launching')
   );
 }
 

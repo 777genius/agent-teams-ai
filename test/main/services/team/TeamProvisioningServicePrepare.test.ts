@@ -1888,7 +1888,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(prepare).toHaveBeenCalledWith(
       expect.objectContaining({
         providerId: 'opencode',
-        model: undefined,
+        model: 'opencode/minimax-m2.5-free',
         runtimeOnly: true,
       })
     );

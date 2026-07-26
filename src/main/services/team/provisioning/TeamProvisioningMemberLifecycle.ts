@@ -85,6 +85,7 @@ import {
 } from './TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase';
 
 import type { NativeAppManagedBootstrapSpec } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
+import type { TeamLaunchRuntimeAdapter } from '../runtime';
 import type { TeamMembersMetaStore } from '../TeamMembersMetaStore';
 import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import type {
@@ -139,11 +140,8 @@ type RuntimeAdapterRunEntry = NonNullable<
 type MemberLifecycleOpenCodeRuntimeAdapter = Exclude<
   ReturnType<TeamProvisioningMemberLifecycleHost['getOpenCodeRuntimeAdapter']>,
   null
-> & {
-  preflightLocalModels?: (input: {
-    targets: readonly { projectPath: string; modelRoute: string }[];
-  }) => Promise<{ ok: boolean; warnings: string[]; diagnostics: string[] }>;
-};
+> &
+  Pick<TeamLaunchRuntimeAdapter, 'preflightLocalModels'>;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -1970,7 +1968,6 @@ export class TeamProvisioningMemberLifecycleController {
     if (!config) {
       return false;
     }
-
     const [teamMeta, metaMembers] = await Promise.all([
       this.teamMetaStore.getMeta(teamName).catch(() => null),
       this.membersMetaStore.getMembers(teamName).catch(() => []),
@@ -2062,6 +2059,7 @@ export class TeamProvisioningMemberLifecycleController {
     }
 
     const localModelPreflight = await adapter.preflightLocalModels?.({
+      allowExperimentalLocalModels: runtimeRun.allowExperimentalLocalModels,
       targets: effectiveMembers.map((member) => ({
         projectPath: member.cwd?.trim() || projectPath,
         modelRoute: member.model?.trim() ?? '',
@@ -2095,6 +2093,7 @@ export class TeamProvisioningMemberLifecycleController {
     assertPureOpenCodeRestartStillCurrent();
     await this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: {
+        allowExperimentalLocalModels: runtimeRun.allowExperimentalLocalModels,
         teamName,
         cwd: projectPath,
         prompt: teamMeta?.prompt?.trim() || '',
@@ -2545,6 +2544,7 @@ export class TeamProvisioningMemberLifecycleController {
     }
     this.assertRunStillCurrentAndAlive(run, teamName);
     const localModelPreflight = await adapter.preflightLocalModels?.({
+      allowExperimentalLocalModels: run.request.allowExperimentalLocalModels,
       targets: [
         {
           projectPath: memberSpec.cwd?.trim() || run.request.cwd,
