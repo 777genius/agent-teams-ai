@@ -1,4 +1,3 @@
-import { builtinModules } from 'node:module';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -21,12 +20,16 @@ import {
   collectConsumedDescriptorGetterProperties,
   isConsumedDescriptorGetterReference,
 } from './feature-public-descriptor-analysis.mjs';
-import { publicConstructorSelection } from './feature-public-constructor-analysis.mjs';
-import { analyzePublicTargets } from './feature-public-target-analysis.mjs';
+import { isForbiddenCoreDomainPackage } from './feature-core-domain-policy.mjs';
 import {
-  collectProductionSourceFiles,
-  isFeaturePublicEntrypoint,
-} from './feature-source-files.mjs';
+  isCommonJsRequireCall,
+  isLexicallyShadowedValueReference,
+} from './feature-lexical-binding-analysis.mjs';
+import { resolveProjectTarget } from './feature-module-resolution.mjs';
+import { publicConstructorSelection } from './feature-public-constructor-analysis.mjs';
+import { collectPublicApiImplementationExports } from './feature-public-export-policy.mjs';
+import { analyzePublicTargets } from './feature-public-target-analysis.mjs';
+import { collectProductionSourceFiles } from './feature-source-files.mjs';
 
 export const FEATURE_ARCHITECTURE_RULES = Object.freeze({
   crossFeaturePublicEntrypoint: 'cross-feature-public-entrypoint',
@@ -35,34 +38,8 @@ export const FEATURE_ARCHITECTURE_RULES = Object.freeze({
   publicApiImplementationExport: 'public-api-implementation-export',
 });
 
-const RESOLUTION_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
 const PUBLIC_FEATURE_ENTRYPOINTS = new Set(['contracts', 'main', 'preload', 'renderer']);
 const IMPLEMENTATION_DIRECTORIES = new Set(['adapters', 'infrastructure']);
-const FRAMEWORK_AND_TRANSPORT_PACKAGES = [
-  '@fastify/',
-  'axios',
-  'electron',
-  'express',
-  'fastify',
-  'react',
-  'react-dom',
-  'ws',
-  'zustand',
-];
-const PROJECT_ALIASES = new Map([
-  ['@features', 'src/features'],
-  ['@main', 'src/main'],
-  ['@preload', 'src/preload'],
-  ['@renderer', 'src/renderer'],
-  ['@shared', 'src/shared'],
-]);
-const NODE_BUILTINS = new Set(
-  builtinModules.map((moduleName) => moduleName.replace(/^node:/, '').split('/')[0])
-);
-
-function normalizePath(filePath) {
-  return filePath.split(path.sep).join('/');
-}
 
 function isWithin(filePath, directoryPath) {
   return filePath === directoryPath || filePath.startsWith(`${directoryPath}/`);
@@ -74,6 +51,20 @@ function hasDirectorySegment(filePath, directoryNames) {
 
 function lineForNode(sourceFile, node) {
   return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+}
+
+function importDeclarationIsTypeOnly(node) {
+  const clause = node.importClause;
+  if (!clause) return false;
+  if (clause.isTypeOnly) return true;
+  const bindings = clause.namedBindings;
+  return (
+    !clause.name &&
+    bindings &&
+    ts.isNamedImports(bindings) &&
+    bindings.elements.length > 0 &&
+    bindings.elements.every(({ isTypeOnly }) => isTypeOnly)
+  );
 }
 
 function collectModuleAnalysisFromSource(source, sourcePath) {
@@ -92,9 +83,10 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const localReferenceNames = new Map();
   const reexports = [];
 
-  const addEdge = (node, moduleSpecifier, kind) => {
+  const addEdge = (node, moduleSpecifier, kind, isTypeOnly = false) => {
     if (!ts.isStringLiteralLike(moduleSpecifier)) return null;
     const edge = {
+      isTypeOnly,
       kind,
       line: lineForNode(sourceFile, node),
       source: sourcePath,
@@ -126,7 +118,12 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const addDirectReexports = (node, edge) => {
     if (!edge) return;
     if (!node.exportClause) {
-      reexports.push({ ...edge, exportedName: '*', importedName: '*' });
+      reexports.push({
+        ...edge,
+        exportedName: '*',
+        importedName: '*',
+        isExportStar: true,
+      });
     } else if (ts.isNamespaceExport(node.exportClause)) {
       reexports.push({
         ...edge,
@@ -228,6 +225,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
           ...directDependency.edge,
           exportedName,
           ...directDependency,
+          isDependencyTrace: true,
           kind: 'export',
         });
       }
@@ -236,7 +234,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
 
   const addTypeReference = (node) => {
     if (!ts.isLiteralTypeNode(node.argument)) return;
-    const edge = addEdge(node, node.argument.literal, 'import');
+    const edge = addEdge(node, node.argument.literal, 'import', true);
     if (!edge) return;
 
     const owner = publicReferenceOwner(node);
@@ -248,10 +246,15 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
 
   const visit = (node) => {
     if (ts.isImportDeclaration(node)) {
-      const edge = addEdge(node, node.moduleSpecifier, 'import');
+      const edge = addEdge(
+        node,
+        node.moduleSpecifier,
+        'import',
+        importDeclarationIsTypeOnly(node)
+      );
       addImportBindings(node.importClause, edge);
     } else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
-      const edge = addEdge(node, node.moduleSpecifier, 'export');
+      const edge = addEdge(node, node.moduleSpecifier, 'export', node.isTypeOnly);
       addDirectReexports(node, edge);
     } else if (
       ts.isExportDeclaration(node) &&
@@ -296,10 +299,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     } else if (ts.isCallExpression(node) && node.arguments.length >= 1) {
       const [argument] = node.arguments;
       const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
-      const isRequireCall =
-        node.arguments.length === 1 &&
-        ts.isIdentifier(node.expression) &&
-        node.expression.text === 'require';
+      const isRequireCall = isCommonJsRequireCall(node, sourceFile);
       if (isDynamicImport || isRequireCall) {
         const edge = addEdge(node, argument, 'import');
         const owner = publicReferenceOwner(node);
@@ -335,7 +335,10 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       const owner = publicReferenceOwner(node);
       if (owner) {
         const importedBinding = importedBindings.get(node.text);
-        if (importedBinding) {
+        if (
+          importedBinding &&
+          !isLexicallyShadowedValueReference(node, sourceFile)
+        ) {
           addOwnerDependency(owner, {
             edge: importedBinding.edge,
             importedName: importedNameForReference(node, importedBinding),
@@ -442,6 +445,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         ...dependency.edge,
         exportedName,
         importedName: dependency.importedName,
+        isDependencyTrace: true,
         kind: 'export',
         line,
       });
@@ -491,35 +495,6 @@ function parseFeatureAlias(specifier) {
   return { feature: match[1], rest: match[2] ?? '' };
 }
 
-function resolveAliasPath(specifier) {
-  for (const [alias, target] of PROJECT_ALIASES) {
-    if (specifier === alias) return target;
-    if (specifier.startsWith(`${alias}/`)) {
-      return `${target}/${specifier.slice(alias.length + 1)}`;
-    }
-  }
-  return null;
-}
-
-function resolveSourceFileCandidate(targetPath, sourceFilePaths) {
-  const normalizedTarget = normalizePath(path.posix.normalize(targetPath));
-  const candidates = [
-    normalizedTarget,
-    ...RESOLUTION_EXTENSIONS.map((extension) => `${normalizedTarget}${extension}`),
-    ...RESOLUTION_EXTENSIONS.map((extension) => `${normalizedTarget}/index${extension}`),
-  ];
-  return candidates.find((candidate) => sourceFilePaths.has(candidate)) ?? normalizedTarget;
-}
-
-function resolveProjectTarget(edge, sourceFilePaths) {
-  const aliasPath = resolveAliasPath(edge.specifier);
-  if (aliasPath) return resolveSourceFileCandidate(aliasPath, sourceFilePaths);
-  if (!edge.specifier.startsWith('.')) return null;
-
-  const relativeTarget = path.posix.join(path.posix.dirname(edge.source), edge.specifier);
-  return resolveSourceFileCandidate(relativeTarget, sourceFilePaths);
-}
-
 function isPublicFeatureAlias(featureAlias) {
   return featureAlias.rest === '' || PUBLIC_FEATURE_ENTRYPOINTS.has(featureAlias.rest);
 }
@@ -559,20 +534,6 @@ function evaluateCrossFeatureEntrypoint(edge, sourceFilePaths) {
   );
 }
 
-function isNodeBuiltin(specifier) {
-  if (specifier.startsWith('node:')) return true;
-  return NODE_BUILTINS.has(specifier.split('/')[0]);
-}
-
-function isFrameworkOrTransportPackage(specifier) {
-  return FRAMEWORK_AND_TRANSPORT_PACKAGES.some(
-    (packageName) =>
-      specifier === packageName ||
-      (packageName.endsWith('/') && specifier.startsWith(packageName)) ||
-      specifier.startsWith(`${packageName}/`)
-  );
-}
-
 function isForbiddenDomainProjectTarget(targetPath) {
   if (hasDirectorySegment(targetPath, IMPLEMENTATION_DIRECTORIES)) return true;
   if (
@@ -601,8 +562,7 @@ function evaluateCoreDomainDependency(edge, sourceFilePaths) {
 
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
   const forbidden =
-    isNodeBuiltin(edge.specifier) ||
-    isFrameworkOrTransportPackage(edge.specifier) ||
+    isForbiddenCoreDomainPackage(edge) ||
     (targetPath !== null && isForbiddenDomainProjectTarget(targetPath));
   if (!forbidden) return null;
 
@@ -635,94 +595,6 @@ function evaluateCoreApplicationDependency(edge, sourceFilePaths) {
     edge,
     'core/application may depend only on domain, contracts, and its own application models, use cases, and ports'
   );
-}
-
-function collectPublicApiImplementationExports(
-  reexports,
-  localExportNamesBySource,
-  sourceFilePaths
-) {
-  const reexportsBySource = new Map();
-  for (const reexport of reexports) {
-    const sourceReexports = reexportsBySource.get(reexport.source) ?? [];
-    sourceReexports.push(reexport);
-    reexportsBySource.set(reexport.source, sourceReexports);
-  }
-
-  const exposesNamedExport = (sourcePath, requestedExport, visited = new Set()) => {
-    if (requestedExport === '*' || visited.has(sourcePath)) return requestedExport === '*';
-    if (localExportNamesBySource.get(sourcePath)?.has(requestedExport)) return true;
-
-    const nextVisited = new Set(visited).add(sourcePath);
-    const sourceReexports = reexportsBySource.get(sourcePath) ?? [];
-    if (sourceReexports.some(({ exportedName }) => exportedName === requestedExport)) return true;
-    if (requestedExport === 'default') return false;
-
-    return sourceReexports
-      .filter(({ exportedName }) => exportedName === '*')
-      .some((reexport) => {
-        const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
-        return targetPath && exposesNamedExport(targetPath, requestedExport, nextVisited);
-      });
-  };
-
-  const violations = [];
-  for (const publicEntrypoint of [...sourceFilePaths].filter(isFeaturePublicEntrypoint).sort()) {
-    const visited = new Set();
-
-    const visit = (sourcePath, requestedExport = '*') => {
-      const visitKey = `${sourcePath}:${requestedExport}`;
-      if (visited.has(visitKey)) return;
-      visited.add(visitKey);
-
-      const sourceReexports = reexportsBySource.get(sourcePath) ?? [];
-      const explicitReexports =
-        requestedExport === '*'
-          ? sourceReexports
-          : sourceReexports.filter(({ exportedName }) => exportedName === requestedExport);
-      if (
-        requestedExport !== '*' &&
-        explicitReexports.length === 0 &&
-        localExportNamesBySource.get(sourcePath)?.has(requestedExport)
-      ) {
-        return;
-      }
-      const relevantReexports =
-        requestedExport === '*' || explicitReexports.length > 0
-          ? explicitReexports
-          : sourceReexports.filter((reexport) => {
-              if (reexport.exportedName !== '*') return false;
-              const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
-              return targetPath && exposesNamedExport(targetPath, requestedExport);
-            });
-
-      for (const reexport of relevantReexports) {
-        const targetPath = resolveProjectTarget(reexport, sourceFilePaths);
-        if (!targetPath) continue;
-
-        if (hasDirectorySegment(targetPath, IMPLEMENTATION_DIRECTORIES)) {
-          violations.push(
-            createViolation(
-              FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
-              reexport,
-              `public entrypoint ${publicEntrypoint} must not expose adapters or infrastructure`,
-              publicEntrypoint
-            )
-          );
-          continue;
-        }
-
-        const targetExport =
-          reexport.exportedName === '*' && reexport.importedName === '*'
-            ? requestedExport
-            : reexport.importedName;
-        visit(targetPath, targetExport);
-      }
-    };
-
-    visit(publicEntrypoint);
-  }
-  return violations;
 }
 
 export function violationKey(violation) {
@@ -775,7 +647,12 @@ export function collectFeatureArchitectureViolations(repoRoot) {
   }
 
   violations.push(
-    ...collectPublicApiImplementationExports(reexports, localExportNamesBySource, sourceFilePaths)
+    ...collectPublicApiImplementationExports({
+      localExportNamesBySource,
+      reexports,
+      rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+      sourceFilePaths,
+    })
   );
 
   const uniqueViolations = new Map();
