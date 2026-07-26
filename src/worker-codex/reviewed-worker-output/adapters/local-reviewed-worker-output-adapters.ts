@@ -17,9 +17,7 @@ import {
   type ReviewDecision,
   type WorkspaceLockPort,
 } from "@vioxen/subscription-runtime/worker-core";
-import {
-  LocalWorkspaceIntegrationLock,
-} from "@vioxen/subscription-runtime/worker-local";
+import { LocalWorkspaceIntegrationLock } from "@vioxen/subscription-runtime/worker-local";
 import { readLocalGitHeadCommit } from "../../codex-goal-git-revision";
 import {
   captureGitWorkspaceChangedFiles,
@@ -122,8 +120,8 @@ export class GitReviewedWorkerOutputSnapshotter implements ReviewedWorkerOutputS
         patchPath,
         changedPaths: input.changedFiles,
         tempRootDir: tempDir,
-        opaqueContentPolicy:
-          OpaqueSecretDetectionPolicy.ScanKnownSignatures,
+        maxTotalFileBytes: 32 * 1024 * 1024,
+        opaqueContentPolicy: OpaqueSecretDetectionPolicy.ScanKnownSignatures,
         ...(this.options.gitBinaryPath === undefined
           ? {}
           : { gitBinaryPath: this.options.gitBinaryPath }),
@@ -609,9 +607,8 @@ function parseSnapshot(
     "capturedAt",
   ]);
   const reviewDecision = parseReviewDecision(value.reviewDecision);
-  const merge = value.merge === undefined
-    ? undefined
-    : parseMergePlan(value.merge);
+  const merge =
+    value.merge === undefined ? undefined : parseMergePlan(value.merge);
   const patchByteLength = requiredNonNegativeInteger(value.patchByteLength);
   const snapshot: ReviewedWorkerOutputSnapshot = {
     format: reviewedWorkerOutputFormat,
@@ -646,7 +643,9 @@ function parseSnapshot(
   return snapshot;
 }
 
-function parseMergePlan(value: unknown): NonNullable<ReviewedWorkerOutputSnapshot["merge"]> {
+function parseMergePlan(
+  value: unknown,
+): NonNullable<ReviewedWorkerOutputSnapshot["merge"]> {
   if (!isRecord(value)) {
     throw new Error("reviewed_worker_output_merge_invalid");
   }
@@ -660,7 +659,9 @@ function parseMergePlan(value: unknown): NonNullable<ReviewedWorkerOutputSnapsho
     sourceRemote: requiredString(value.sourceRemote),
     sourceBranch: requiredString(value.sourceBranch),
     sourceCommit: requiredString(value.sourceCommit).toLowerCase(),
-    expectedTargetCommit: requiredString(value.expectedTargetCommit).toLowerCase(),
+    expectedTargetCommit: requiredString(
+      value.expectedTargetCommit,
+    ).toLowerCase(),
   };
   if (
     !/^[A-Za-z0-9._-]+$/.test(merge.sourceRemote) ||

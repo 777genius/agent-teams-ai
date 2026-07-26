@@ -19,6 +19,7 @@ import {
 } from "@vioxen/subscription-runtime/worker-core";
 import { createCodexGoalMcpServer } from "../codex-goal-mcp";
 import { captureGitWorkspacePatch } from "../codex-goal-runtime-result-io";
+import { GitReviewedWorkerOutputSnapshotter } from "../reviewed-worker-output/adapters/local-reviewed-worker-output-adapters";
 import {
   callToolJson,
   git,
@@ -527,6 +528,43 @@ describe("Codex project reviewed worker output", () => {
     }
   });
 
+  it("captures reviewed base and post blobs above the legacy 16 MiB aggregate", async () => {
+    const root = await mkdtemp(
+      join(tmpdir(), "subscription-runtime-reviewed-large-blobs-"),
+    );
+    roots.push(root);
+    const workspacePath = join(root, "workspace");
+    const blobFiles = Array.from(
+      { length: 3 },
+      (_, index) => `src/blob-${index}.bin`,
+    );
+    await mkdir(join(workspacePath, "src"), { recursive: true });
+    await gitInitRepository(workspacePath);
+    await Promise.all(
+      blobFiles.map((path, index) => {
+        const bytes = Buffer.alloc(2_900_000, index + 1);
+        bytes[0] = 0;
+        return writeFile(join(workspacePath, path), bytes);
+      }),
+    );
+    await git(workspacePath, ["add", "."]);
+    await git(workspacePath, ["commit", "-m", "test: base blobs"]);
+    await Promise.all(
+      blobFiles.map((path, index) => {
+        const bytes = Buffer.alloc(2_900_000, index + 1);
+        bytes[1] = 0;
+        return writeFile(join(workspacePath, path), bytes);
+      }),
+    );
+
+    const snapshot = await new GitReviewedWorkerOutputSnapshotter({
+      tempRootDir: join(root, "reviewed-output-tmp"),
+    }).capture({ workspacePath });
+
+    expect(snapshot.changedFiles).toEqual(blobFiles);
+    expect(snapshot.patch.length).toBeGreaterThan(0);
+  });
+
   it("quarantines an over-limit rejected workspace without a reviewed snapshot", async () => {
     const root = await mkdtemp(
       join(tmpdir(), "subscription-runtime-rejected-uncaptured-mcp-"),
@@ -547,30 +585,29 @@ describe("Codex project reviewed worker output", () => {
     ]);
     await gitInitRepository(workerWorkspacePath);
     await gitInitRepository(targetWorkspacePath);
-    await writeFile(join(workerWorkspacePath, "tracked.txt"), "base\n");
-    await git(workerWorkspacePath, ["add", "."]);
-    await git(workerWorkspacePath, ["commit", "-m", "test: base"]);
-    await writeFile(join(workerWorkspacePath, "tracked.txt"), "changed\n");
-    await mkdir(join(workerWorkspacePath, "untracked"), { recursive: true });
+    const trackedFiles = Array.from(
+      { length: 512 },
+      (_, index) => `tracked/${String(index).padStart(3, "0")}.txt`,
+    );
+    await mkdir(join(workerWorkspacePath, "tracked"), { recursive: true });
     await Promise.all(
-      Array.from({ length: 512 }, (_, index) =>
-        writeFile(
-          join(
-            workerWorkspacePath,
-            "untracked",
-            `${String(index).padStart(3, "0")}.txt`,
-          ),
-          `change ${index}\n`,
-        ),
+      trackedFiles.map((path, index) =>
+        writeFile(join(workerWorkspacePath, path), `base ${index}\n`),
       ),
     );
-    const changedFiles = [
-      "tracked.txt",
-      ...Array.from(
-        { length: 512 },
-        (_, index) => `untracked/${String(index).padStart(3, "0")}.txt`,
+    await git(workerWorkspacePath, ["add", "."]);
+    await git(workerWorkspacePath, ["commit", "-m", "test: base"]);
+    await mkdir(join(workerWorkspacePath, "untracked"), { recursive: true });
+    await Promise.all([
+      ...trackedFiles.map((path, index) =>
+        writeFile(join(workerWorkspacePath, path), `change ${index}\n`),
       ),
-    ];
+      writeFile(
+        join(workerWorkspacePath, "untracked", "000.txt"),
+        "untracked change\n",
+      ),
+    ]);
+    const changedFiles = [...trackedFiles, "untracked/000.txt"];
     await writeFile(
       join(workerJobRoot, `${workerJobId}.latest-result.json`),
       `${JSON.stringify({
@@ -699,9 +736,9 @@ describe("Codex project reviewed worker output", () => {
         ledger.decision.backup.patchPath,
         "utf8",
       );
-      expect(archivedPatch).toContain("tracked.txt");
+      expect(archivedPatch).toContain("tracked/000.txt");
+      expect(archivedPatch).toContain("tracked/255.txt");
       expect(archivedPatch).toContain("untracked/000.txt");
-      expect(archivedPatch).toContain("untracked/255.txt");
       expect(
         await captureGitWorkspacePatch({
           workspacePath: workerWorkspacePath,
