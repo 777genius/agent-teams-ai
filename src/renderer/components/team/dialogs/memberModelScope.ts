@@ -54,6 +54,7 @@ function isKnownOpenCodeLocalModel(
   return Boolean(
     sourceId &&
     (isOpenCodeLocalProviderId(sourceId) ||
+      scope.openCodeLocalProviderLookupAuthoritative === false ||
       (scope.openCodeLocalProviderLookupAuthoritative === true &&
         scope.openCodeLocalProviderIds?.has(sourceId) === true))
   );

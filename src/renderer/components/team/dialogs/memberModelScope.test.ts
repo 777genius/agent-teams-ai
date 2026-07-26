@@ -104,6 +104,21 @@ describe('getDialogTeamModelValidationError', () => {
     ).toBeNull();
   });
 
+  it('defers a saved custom route when the local-provider lookup is not authoritative', () => {
+    expect(
+      getDialogTeamModelValidationError({
+        selectedProviderId: 'opencode',
+        selectedModel: 'openrouter/auto',
+        members: [member({ providerId: 'opencode', model: 'local-lab/team-model' })],
+        validateMembers: true,
+        runtimeProviderStatusById: providerStatusById,
+        runtimeProviderLoadingById: providerLoadingById,
+        openCodeLocalProviderIds: new Set(),
+        openCodeLocalProviderLookupAuthoritative: false,
+      })
+    ).toBeNull();
+  });
+
   it('keeps an unproven custom route blocked by renderer validation', () => {
     expect(
       getDialogTeamModelValidationError({
