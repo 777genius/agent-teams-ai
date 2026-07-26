@@ -514,7 +514,9 @@ function buildCoordinationProbeFailure(input: {
   allowExperimentalLocalModels: boolean;
 }): OpenCodeLocalModelRuntimeReadiness {
   const unavailable = input.coordination.status === 'unavailable';
-  const experimentalOverride = input.coordination.status === 'failed';
+  const failed = input.coordination.status === 'failed';
+  const requestRejected = input.coordination.failureKind === 'request_rejected';
+  const experimentalOverride = failed && !requestRejected;
   const overrideApplied = experimentalOverride && input.allowExperimentalLocalModels;
   return {
     providerId: input.providerId,
@@ -528,17 +530,18 @@ function buildCoordinationProbeFailure(input: {
     coordinationProbeStatus: input.coordination.status,
     severity: unavailable || overrideApplied ? 'warning' : 'blocking',
     experimentalOverrideAvailable: experimentalOverride,
-    code: experimentalOverride
-      ? 'local_coordination_probe_failed'
-      : 'local_coordination_probe_unavailable',
+    code: failed ? 'local_coordination_probe_failed' : 'local_coordination_probe_unavailable',
     message: unavailable
       ? `${input.coordination.message} This is a verification availability problem, not proof ` +
         'that the model is unsupported. The real OpenCode execution probe will make the launch decision.'
-      : overrideApplied
-        ? `${input.coordination.message} Experimental local-model override is enabled; the real ` +
-          'OpenCode execution probe must still pass.'
-        : `${input.coordination.message} You can explicitly enable the experimental local-model ` +
-          'override to continue to the real OpenCode execution probe.',
+      : requestRejected
+        ? `${input.coordination.message} The local server rejected the required tool-call request, ` +
+          'so the experimental local-model override cannot bypass this failure.'
+        : overrideApplied
+          ? `${input.coordination.message} Experimental local-model override is enabled; the real ` +
+            'OpenCode execution probe must still pass.'
+          : `${input.coordination.message} You can explicitly enable the experimental local-model ` +
+            'override to continue to the real OpenCode execution probe.',
   };
 }
 

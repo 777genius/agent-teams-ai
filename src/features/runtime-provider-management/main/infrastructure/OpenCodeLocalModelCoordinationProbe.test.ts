@@ -609,6 +609,7 @@ describe('probeOpenCodeLocalModelCoordination', () => {
 
     expect(result).toMatchObject({
       status: 'failed',
+      failureKind: 'request_rejected',
       message: expect.stringContaining('HTTP 400: tools are not supported by this model'),
     });
   });

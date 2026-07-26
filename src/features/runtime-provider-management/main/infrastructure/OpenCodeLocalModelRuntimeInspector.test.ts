@@ -394,6 +394,48 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
     expect(result?.effectiveContextTokens).toBe(32_768);
   });
 
+  it('keeps a rejected tool-call request blocking when the experimental override is enabled', async () => {
+    const inventory = createInventory([ollamaProvider()]);
+    const fetchImpl = vi.fn<typeof fetch>(async (input) =>
+      String(input).endsWith('/api/show')
+        ? jsonResponse({
+            capabilities: ['completion', 'tools'],
+            model_info: {
+              'general.parameter_count': 7_615_616_000,
+              'qwen2.context_length': 32_768,
+            },
+          })
+        : jsonResponse({
+            models: [{ model: 'qwen3:8b', context_length: 32_768 }],
+          })
+    );
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'ollama/qwen3:8b',
+        allowExperimentalLocalModels: true,
+      },
+      {
+        inventory,
+        fetchImpl,
+        probeCoordination: vi.fn().mockResolvedValue({
+          status: 'failed',
+          failureKind: 'request_rejected',
+          message: 'HTTP 400: tools are not supported by this model.',
+        }),
+      }
+    );
+
+    expect(result).toMatchObject({
+      severity: 'blocking',
+      code: 'local_coordination_probe_failed',
+      coordinationProbeStatus: 'failed',
+      experimentalOverrideAvailable: false,
+      message: expect.stringContaining('override cannot bypass'),
+    });
+  });
+
   it('retries a temporarily unavailable coordination probe before deciding', async () => {
     const inventory = createInventory([customProvider()]);
     const probeCoordination = vi

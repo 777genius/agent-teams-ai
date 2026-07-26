@@ -14,6 +14,7 @@ const MESSAGE_SEND_TOOL_NAME = 'agent-teams_message_send';
 
 export interface OpenCodeLocalModelCoordinationProbeResult {
   readonly status: 'passed' | 'failed' | 'unavailable';
+  readonly failureKind?: 'request_rejected';
   readonly message: string;
 }
 
@@ -95,7 +96,7 @@ export async function probeOpenCodeLocalModelCoordination(
     });
     if (!first.ok) {
       return first.failureKind === 'request_rejected'
-        ? failedResult(input, first.message)
+        ? failedResult(input, first.message, 'request_rejected')
         : unavailableResult(input, first.message);
     }
 
@@ -137,7 +138,7 @@ export async function probeOpenCodeLocalModelCoordination(
     });
     if (!second.ok) {
       return second.failureKind === 'request_rejected'
-        ? failedResult(input, second.message)
+        ? failedResult(input, second.message, 'request_rejected')
         : unavailableResult(input, second.message);
     }
 
@@ -634,10 +635,12 @@ function failedResult(
     readonly provider: RuntimeLocalProviderListEntryDto;
     readonly modelId: string;
   },
-  reason: string
+  reason: string,
+  failureKind?: OpenCodeLocalModelCoordinationProbeResult['failureKind']
 ): OpenCodeLocalModelCoordinationProbeResult {
   return {
     status: 'failed',
+    ...(failureKind ? { failureKind } : {}),
     message:
       `${reason} This model is not reliable enough for Agent Teams task execution and ` +
       'teammate messaging.',
