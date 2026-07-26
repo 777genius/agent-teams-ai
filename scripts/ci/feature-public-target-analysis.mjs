@@ -35,6 +35,7 @@ import {
   IDENTITY_WRAPPERS,
   constructedClassReferences,
 } from './feature-public-identity-analysis.mjs';
+import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import { attachPublicReferenceQueries } from './feature-public-reference-visibility.mjs';
 function bindingNames(bindingName) {
   if (ts.isIdentifier(bindingName)) return [bindingName.text];
@@ -272,28 +273,10 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
   return { edges, memberRelations };
 }
 
-function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
-  const visitStatement = (statement) => {
-    if (ts.isExpressionStatement(statement)) {
-      visitor(statement.expression);
-    } else if (ts.isBlock(statement)) {
-      for (const child of statement.statements) visitStatement(child);
-    } else if (
-      ts.isIfStatement(statement) &&
-      statement.expression.kind === ts.SyntaxKind.TrueKeyword
-    ) {
-      visitStatement(statement.thenStatement);
-    }
-  };
-  for (const statement of sourceFile.statements) visitStatement(statement);
-}
-
 function collectCommonJsRootAssignments(sourceFile) {
   const assignments = [];
   let order = 0;
-  const visit = (node) => {
-    if (ts.isFunctionLike(node) || ts.isClassLike(node)) return;
-    ts.forEachChild(node, visit);
+  visitDefiniteTopLevelExpressions(sourceFile, (node) => {
     if (!ts.isBinaryExpression(node) || node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
       return;
     }
@@ -306,8 +289,7 @@ function collectCommonJsRootAssignments(sourceFile) {
         position: node.getStart(sourceFile),
       });
     }
-  };
-  visitDefiniteTopLevelExpressions(sourceFile, visit);
+  });
   return assignments;
 }
 

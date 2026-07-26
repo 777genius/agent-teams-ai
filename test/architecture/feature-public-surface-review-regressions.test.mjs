@@ -307,3 +307,55 @@ test('treats definite CommonJS deletes as final property removal', () => {
     }
   );
 });
+
+test('ignores CommonJS root resets outside definite execution', () => {
+  withFeatureFixture(
+    {
+      'src/features/commonjs-dead-and/main/index.cjs': `
+        module.exports = require('./infrastructure/Store');
+        false && (module.exports = {});
+      `,
+      'src/features/commonjs-dead-and/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-dead-or/main/index.cjs': `
+        module.exports = require('./infrastructure/Store');
+        true || (module.exports = {});
+      `,
+      'src/features/commonjs-dead-or/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-dead-ternary/main/index.cjs': `
+        module.exports = require('./infrastructure/Store');
+        true ? undefined : (module.exports = {});
+      `,
+      'src/features/commonjs-dead-ternary/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-optional-call/main/index.cjs': `
+        module.exports = require('./infrastructure/Store');
+        maybe?.(module.exports = {});
+      `,
+      'src/features/commonjs-optional-call/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-conditional-reset/main/index.cjs': `
+        module.exports = require('./infrastructure/Store');
+        enabled && (module.exports = {});
+      `,
+      'src/features/commonjs-conditional-reset/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-definite-reset-safe/main/index.cjs': `
+        module.exports = require('./infrastructure/Store');
+        true && (module.exports = {});
+      `,
+      'src/features/commonjs-definite-reset-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/commonjs-conditional-reset/main/index.cjs',
+        'src/features/commonjs-dead-and/main/index.cjs',
+        'src/features/commonjs-dead-or/main/index.cjs',
+        'src/features/commonjs-dead-ternary/main/index.cjs',
+        'src/features/commonjs-optional-call/main/index.cjs',
+      ]);
+    }
+  );
+});
