@@ -1947,7 +1947,6 @@ export class TeamProvisioningMemberLifecycleController {
       teamName,
       runtimeRun
     );
-
     const adapter = this.getOpenCodeRuntimeAdapter();
     if (!adapter) {
       throw new Error('OpenCode runtime adapter is not available for member restart.');
@@ -1957,7 +1956,6 @@ export class TeamProvisioningMemberLifecycleController {
     if (!config) {
       return false;
     }
-
     const [teamMeta, metaMembers] = await Promise.all([
       this.teamMetaStore.getMeta(teamName).catch(() => null),
       this.membersMetaStore.getMembers(teamName).catch(() => []),
@@ -2049,6 +2047,7 @@ export class TeamProvisioningMemberLifecycleController {
     }
 
     const localModelPreflight = await adapter.preflightLocalModels?.({
+      allowExperimentalLocalModels: runtimeRun.allowExperimentalLocalModels,
       targets: effectiveMembers.map((member) => ({
         projectPath: member.cwd?.trim() || projectPath,
         modelRoute: member.model?.trim() ?? '',
@@ -2082,6 +2081,7 @@ export class TeamProvisioningMemberLifecycleController {
     assertRuntimeAdapterRunStillCurrent();
     await this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: {
+        allowExperimentalLocalModels: runtimeRun.allowExperimentalLocalModels,
         teamName,
         cwd: projectPath,
         prompt: teamMeta?.prompt?.trim() || '',

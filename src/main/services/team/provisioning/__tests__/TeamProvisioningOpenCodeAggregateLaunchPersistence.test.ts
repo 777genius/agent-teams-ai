@@ -520,6 +520,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       runId: 'run-1',
       providerId: 'opencode',
       cwd: '/repo',
+      allowExperimentalLocalModels: true,
     });
   });
 
