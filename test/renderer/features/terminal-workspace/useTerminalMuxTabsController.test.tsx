@@ -188,6 +188,7 @@ describe('useTerminalMuxTabsController close focus', () => {
       if (command.kind === 'focus_tab') {
         await focusDispatch.promise;
       }
+      return CHANGED_MUX_RESULT;
     }) as never;
     await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_ONE));
     requiredElement('close-tab-1').focus();
@@ -208,6 +209,50 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_TWO, TAB_THREE], TAB_TWO));
 
     expect(document.activeElement).toBe(requiredElement('tab-tab-2'));
+  });
+
+  it('falls back to the active tab when preferred focus is rejected semantically', async () => {
+    commands.dispatchMuxCommand = vi.fn(async (_sessionId, command) => ({
+      changed: command.kind !== 'focus_tab',
+    })) as never;
+    await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_ONE));
+    requiredElement('close-tab-1').focus();
+
+    await act(async () => {
+      await requiredControls().requestCloseTab(TAB_ONE);
+    });
+    await render(createSnapshot([TAB_TWO, TAB_THREE], TAB_THREE));
+
+    expect(document.activeElement).toBe(requiredElement('tab-tab-3'));
+  });
+
+  it('falls back after a dispatched preferred focus target disappears', async () => {
+    const attach = createDeferred<void>();
+    commands.attachSession = vi.fn(() => attach.promise) as never;
+    await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_ONE));
+    requiredElement('close-tab-1').focus();
+
+    let closeAction!: Promise<void>;
+    await act(async () => {
+      closeAction = requiredControls().requestCloseTab(TAB_ONE);
+      await flushMicrotasks();
+    });
+    expect(commands.dispatchMuxCommand).toHaveBeenCalledWith('session-a', {
+      kind: 'focus_tab',
+      tab_id: TAB_TWO.tab_id,
+    });
+
+    await render(createSnapshot([TAB_THREE], TAB_THREE));
+    expect(requiredControls().busy).toBe(true);
+    expect(document.activeElement).not.toBe(requiredElement('tab-tab-3'));
+
+    await act(async () => {
+      attach.resolve();
+      await closeAction;
+    });
+
+    expect(requiredControls().busy).toBe(false);
+    expect(document.activeElement).toBe(requiredElement('tab-tab-3'));
   });
 
   it('does not restore stale close focus after the connection reconnects', async () => {
@@ -337,9 +382,13 @@ function createSnapshot(
 function createResolvedCommands(): TerminalMuxCommands {
   return {
     attachSession: vi.fn().mockResolvedValue(undefined),
-    dispatchMuxCommand: vi.fn().mockResolvedValue(undefined),
+    dispatchMuxCommand: vi.fn().mockResolvedValue(CHANGED_MUX_RESULT),
   } as unknown as TerminalMuxCommands;
 }
+
+type MuxCommandResult = Awaited<ReturnType<TerminalMuxCommands['dispatchMuxCommand']>>;
+
+const CHANGED_MUX_RESULT: MuxCommandResult = { changed: true };
 
 function createTab(tabId: string, title: string): TerminalMuxTab {
   return {

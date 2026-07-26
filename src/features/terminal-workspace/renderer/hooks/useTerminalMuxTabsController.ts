@@ -318,12 +318,16 @@ export function useTerminalMuxTabsController({
       (busy || pendingCloseFocusRequest.preferredFocusWasDispatched);
     if (
       waitForPreferredFocus &&
-      (!preferredFocusIsVisible || viewModel.activeVisibleTabId !== preferredFocusTabId)
+      (busy || preferredFocusIsVisible) &&
+      viewModel.activeVisibleTabId !== preferredFocusTabId
     ) {
       return;
     }
 
-    const focusTabId = waitForPreferredFocus ? preferredFocusTabId : viewModel.activeVisibleTabId;
+    const focusTabId =
+      waitForPreferredFocus && preferredFocusIsVisible
+        ? preferredFocusTabId
+        : viewModel.activeVisibleTabId;
     if (!focusTabId) {
       setPendingCloseFocusRequest(null);
       return;

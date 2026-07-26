@@ -287,11 +287,13 @@ export function useTerminalMuxTabLifecycle({
           if (!isForegroundOperationCurrent(token)) {
             return;
           }
-          await token.commands.dispatchMuxCommand(token.activeSessionId, command);
+          const result = await token.commands.dispatchMuxCommand(token.activeSessionId, command);
           if (!isForegroundOperationCurrent(token)) {
             return;
           }
-          onCommandDispatched?.(command);
+          if (result.changed) {
+            onCommandDispatched?.(command);
+          }
         }
 
         await token.commands.attachSession(token.activeSessionId);

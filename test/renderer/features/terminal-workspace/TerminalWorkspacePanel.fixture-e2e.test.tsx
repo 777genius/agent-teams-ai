@@ -892,7 +892,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(document.body.textContent).toContain('mux gateway unavailable');
     expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledTimes(1);
 
-    kernel.commands.dispatchMuxCommand.mockResolvedValue(undefined);
+    kernel.commands.dispatchMuxCommand.mockResolvedValue({ changed: true });
     await clickButton('Create terminal tab');
 
     expect(
@@ -1381,7 +1381,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     await renderPanel();
 
     const kernel = currentKernel();
-    const pendingFocus = createDeferred<void>();
+    const pendingFocus = createDeferred<{ changed: boolean }>();
     kernel.commands.dispatchMuxCommand.mockImplementationOnce(() => pendingFocus.promise);
 
     await act(async () => {
@@ -1393,7 +1393,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(getTabButton('Logs').querySelector('.animate-spin')).toBeNull();
 
     await act(async () => {
-      pendingFocus.resolve();
+      pendingFocus.resolve({ changed: true });
       await flushMicrotasks();
     });
 
@@ -2279,7 +2279,7 @@ interface MockKernel {
     attachSession: ReturnType<typeof vi.fn<(sessionId: string) => Promise<void>>>;
     bootstrap: ReturnType<typeof vi.fn<() => Promise<void>>>;
     dispatchMuxCommand: ReturnType<
-      typeof vi.fn<(sessionId: string, command: MockMuxCommand) => Promise<void>>
+      typeof vi.fn<(sessionId: string, command: MockMuxCommand) => Promise<{ changed: boolean }>>
     >;
     refreshSessions: ReturnType<typeof vi.fn<() => Promise<void>>>;
     setActiveSession: ReturnType<typeof vi.fn<(sessionId: string) => void>>;
@@ -2389,7 +2389,7 @@ function createMockKernel(
     commands: {
       attachSession: vi.fn().mockResolvedValue(undefined),
       bootstrap: vi.fn().mockResolvedValue(undefined),
-      dispatchMuxCommand: vi.fn().mockResolvedValue(undefined),
+      dispatchMuxCommand: vi.fn().mockResolvedValue({ changed: true }),
       refreshSessions: vi.fn().mockResolvedValue(undefined),
       setActiveSession: vi.fn(),
       setTerminalFontScale: vi.fn(),
