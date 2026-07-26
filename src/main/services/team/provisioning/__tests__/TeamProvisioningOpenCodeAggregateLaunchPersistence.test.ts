@@ -1080,6 +1080,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       providerId: 'opencode',
       cwd: '/repo',
     });
+    expect(runtimeRuns.get('team-a')).not.toHaveProperty('allowExperimentalLocalModels');
     expect(adapterStop).not.toHaveBeenCalled();
   });
 

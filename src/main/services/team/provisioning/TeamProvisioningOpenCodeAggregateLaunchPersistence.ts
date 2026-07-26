@@ -238,7 +238,9 @@ export async function launchOpenCodeAggregatePrimaryLane(
       runId,
       providerId: 'opencode',
       cwd: launchCwd,
-      allowExperimentalLocalModels: params.run.request.allowExperimentalLocalModels,
+      ...(params.run.request.allowExperimentalLocalModels === true
+        ? { allowExperimentalLocalModels: true }
+        : {}),
       get members() {
         return collectOpenCodeAggregateRuntimeMemberEvidence(primaryMembers, secondaryLanes);
       },
@@ -250,7 +252,9 @@ export async function launchOpenCodeAggregatePrimaryLane(
         runId,
         providerId: 'opencode' as const,
         cwd: launchCwd,
-        allowExperimentalLocalModels: params.run.request.allowExperimentalLocalModels,
+        ...(params.run.request.allowExperimentalLocalModels === true
+          ? { allowExperimentalLocalModels: true }
+          : {}),
         members: result.members,
       };
       const ownerBeforeCleanup = ports.getRuntimeAdapterRunByTeam?.(teamName);
