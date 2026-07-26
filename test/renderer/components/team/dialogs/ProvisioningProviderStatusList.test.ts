@@ -4,18 +4,83 @@ import { createRoot } from 'react-dom/client';
 import {
   createInitialProviderChecks,
   deriveEffectiveProvisioningPrepareState,
+  failIncompleteProviderChecks,
   getPrimaryProvisioningFailureDetail,
   getProvisioningFailureHint,
   getProvisioningProviderBackendSummary,
   getProvisioningProviderProgressMessage,
   getProvisioningProviderReadyById,
   ProvisioningProviderStatusList,
+  updateProviderCheck,
 } from '@renderer/components/team/dialogs/ProvisioningProviderStatusList';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('ProvisioningProviderStatusList', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+  });
+
+  it('clears stale experimental override evidence when a new provider state is applied', () => {
+    const previous = [
+      {
+        providerId: 'opencode' as const,
+        status: 'failed' as const,
+        details: ['Coordination failed'],
+        experimentalOverrideAvailable: true,
+      },
+    ];
+
+    const checking = updateProviderCheck(previous, 'opencode', {
+      status: 'checking',
+      details: ['Checking again'],
+    });
+    const genericFailure = updateProviderCheck(previous, 'opencode', {
+      status: 'failed',
+      details: ['IPC request failed'],
+    });
+
+    expect(checking[0]).not.toHaveProperty('experimentalOverrideAvailable');
+    expect(genericFailure[0]).not.toHaveProperty('experimentalOverrideAvailable');
+  });
+
+  it('keeps current experimental override evidence when the patch supplies it explicitly', () => {
+    const result = updateProviderCheck(
+      [
+        {
+          providerId: 'opencode',
+          status: 'checking',
+          details: [],
+        },
+      ],
+      'opencode',
+      {
+        status: 'failed',
+        details: ['Coordination failed'],
+        experimentalOverrideAvailable: true,
+      }
+    );
+
+    expect(result[0]?.experimentalOverrideAvailable).toBe(true);
+  });
+
+  it('does not promote stale override evidence when an incomplete check fails', () => {
+    const result = failIncompleteProviderChecks(
+      [
+        {
+          providerId: 'opencode',
+          status: 'checking',
+          details: [],
+          experimentalOverrideAvailable: true,
+        },
+      ],
+      'Provider check did not complete'
+    );
+
+    expect(result[0]).toMatchObject({
+      status: 'failed',
+      details: ['Provider check did not complete'],
+    });
+    expect(result[0]).not.toHaveProperty('experimentalOverrideAvailable');
   });
 
   it('shows waiting for pending provider checks', async () => {

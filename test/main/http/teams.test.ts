@@ -511,6 +511,7 @@ describe('HTTP team runtime routes', () => {
           skipPermissions: false,
           clearContext: true,
           limitContext: true,
+          allowExperimentalLocalModels: true,
         },
       });
 
@@ -525,6 +526,7 @@ describe('HTTP team runtime routes', () => {
           skipPermissions: false,
           clearContext: true,
           limitContext: true,
+          allowExperimentalLocalModels: true,
         },
         expect.any(Function)
       );
@@ -780,6 +782,7 @@ describe('HTTP team runtime routes', () => {
         payload: {
           cwd: '/Users/test/project',
           effort: 'high',
+          allowExperimentalLocalModels: true,
         },
       });
 
@@ -802,6 +805,7 @@ describe('HTTP team runtime routes', () => {
           effort: 'high',
           fastMode: 'on',
           limitContext: true,
+          allowExperimentalLocalModels: true,
         },
         expect.any(Function)
       );

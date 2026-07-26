@@ -396,6 +396,23 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
     expect(Object.hasOwn(permissionInput ?? {}, 'message')).toBe(false);
   });
 
+  it('preserves experimental local model consent when approval refreshes the owner', async () => {
+    const ports = makePorts();
+    ports.runtimeAdapterRunByTeam.set('team-a', {
+      runId: 'run-a',
+      providerId: 'opencode',
+      allowExperimentalLocalModels: true,
+    });
+
+    await answerOpenCodeRuntimeToolApproval(makeEntry(), true, ports);
+
+    expect(ports.runtimeAdapterRunByTeam.get('team-a')).toMatchObject({
+      runId: 'run-a',
+      providerId: 'opencode',
+      allowExperimentalLocalModels: true,
+    });
+  });
+
   it('stops only the unretainable primary lane, removes its exact owner, and marks it degraded', async () => {
     const entry = makeEntry();
     const committedResult = makeResult({

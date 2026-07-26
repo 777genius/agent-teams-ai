@@ -87,7 +87,7 @@ describe('memberModelScope', () => {
     ]);
   });
 
-  it('clears explicit OpenCode member models when the runtime exposes only Default', () => {
+  it('preserves explicit OpenCode member models when the general runtime catalog is empty', () => {
     const explicitOpenCode = draft({
       id: 'explicit-opencode',
       providerId: 'opencode',
@@ -119,10 +119,58 @@ describe('memberModelScope', () => {
       ]),
     });
 
-    expect(result.changed).toBe(true);
-    expect(result.members).toMatchObject([
-      { id: 'explicit-opencode', providerId: 'opencode', model: '' },
-    ]);
+    expect(result.changed).toBe(false);
+    expect(result.members[0]).toBe(explicitOpenCode);
+  });
+
+  it('preserves inherited Ollama overlay routes when the general runtime catalog is empty', () => {
+    const localModel = draft({
+      id: 'local-opencode',
+      model: 'ollama/qwen3-coder:30b',
+    });
+
+    const result = clearInheritedMemberModelsUnavailableForProvider({
+      members: [localModel],
+      selectedProviderId: 'opencode',
+      runtimeProviderStatusById: providerStatuses([
+        providerStatus('opencode', [], {
+          modelCatalogRefreshState: 'ready',
+        }),
+      ]),
+    });
+
+    expect(result.changed).toBe(false);
+    expect(result.members[0]).toBe(localModel);
+  });
+
+  it('preserves a custom local route while provider lookup is not authoritative', () => {
+    const customLocalModel = draft({ model: 'local-lab/team-model' });
+
+    const result = clearInheritedMemberModelsUnavailableForProvider({
+      members: [customLocalModel],
+      selectedProviderId: 'opencode',
+      runtimeProviderStatusById: providerStatuses([
+        providerStatus('opencode', ['opencode/minimax-m2.5-free']),
+      ]),
+      openCodeLocalProviderLookupAuthoritative: false,
+    });
+
+    expect(result).toEqual({ members: [customLocalModel], changed: false });
+  });
+
+  it('preserves a model owned by a configured custom local provider', () => {
+    expect(
+      resolveProviderScopedMemberModel({
+        memberProviderId: 'opencode',
+        memberModel: 'local-lab/team-model',
+        selectedProviderId: 'anthropic',
+        runtimeProviderStatusById: providerStatuses([
+          providerStatus('opencode', ['opencode/minimax-m2.5-free']),
+        ]),
+        openCodeLocalProviderIds: new Set(['local-lab']),
+        openCodeLocalProviderLookupAuthoritative: true,
+      })
+    ).toEqual({ providerId: 'opencode', model: 'local-lab/team-model' });
   });
 
   it('preserves explicit OpenCode member models while the catalog is still loading', () => {
