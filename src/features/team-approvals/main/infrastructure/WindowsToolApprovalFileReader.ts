@@ -55,6 +55,7 @@ namespace AgentTeams.SafePreview {
     private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
     private const int ERROR_FILE_NOT_FOUND = 2;
     private const int ERROR_PATH_NOT_FOUND = 3;
+    private const int MISSING_PATH_OPEN_ATTEMPTS = 2;
 
     private enum FileInfoByHandleClass {
       FileAttributeTagInfo = 9
@@ -118,8 +119,68 @@ namespace AgentTeams.SafePreview {
 
     public static PreviewResult Read(string requestedPath, int maximumBytes) {
       string normalizedPath = Path.GetFullPath(requestedPath);
-      SafeFileHandle file = CreateFileW(
-        normalizedPath,
+      for (int attempt = 0; attempt < MISSING_PATH_OPEN_ATTEMPTS; attempt++) {
+        AssertNoReparsePoints(normalizedPath, true);
+        SafeFileHandle file = OpenReadHandle(normalizedPath);
+        if (file.IsInvalid) {
+          int error = Marshal.GetLastWin32Error();
+          file.Dispose();
+          if (IsMissingPathError(error)) {
+            AssertNoReparsePoints(normalizedPath, true);
+            if (attempt + 1 < MISSING_PATH_OPEN_ATTEMPTS) continue;
+            return new PreviewResult { Exists = false, Content = new byte[0] };
+          }
+          throw new Win32Exception(error);
+        }
+
+        using (file) {
+          FileAttributeTagInfo openedInfo = GetAttributeTagInfo(file);
+          if ((openedInfo.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+            return new PreviewResult {
+              Exists = true,
+              Content = new byte[0],
+              Error = "Not a file"
+            };
+          }
+          if (GetLinkCount(file) > 1) {
+            throw new InvalidOperationException(
+              "Hard-linked files are not allowed in approval preview paths"
+            );
+          }
+
+          string comparisonRequestedPath = NormalizeKernelPath(normalizedPath);
+          string openedPath = NormalizeKernelPath(GetOpenedPath(file));
+          if (!String.Equals(comparisonRequestedPath, openedPath, StringComparison.Ordinal)) {
+            throw new InvalidOperationException("Safe approval preview rejected a redirected Windows path");
+          }
+
+          AssertNoReparsePoints(normalizedPath, false);
+
+          using (FileStream stream = new FileStream(file, FileAccess.Read)) {
+            long initialLength = stream.Length;
+            int readSize = (int)Math.Min(initialLength, maximumBytes);
+            byte[] content = new byte[readSize];
+            int bytesRead = 0;
+            while (bytesRead < readSize) {
+              int count = stream.Read(content, bytesRead, readSize - bytesRead);
+              if (count == 0) break;
+              bytesRead += count;
+            }
+            if (bytesRead != content.Length) Array.Resize(ref content, bytesRead);
+            return new PreviewResult {
+              Exists = true,
+              Content = content,
+              Truncated = stream.Length > bytesRead
+            };
+          }
+        }
+      }
+      throw new InvalidOperationException("Safe approval preview could not classify the Windows path");
+    }
+
+    private static SafeFileHandle OpenReadHandle(string filePath) {
+      return CreateFileW(
+        filePath,
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         IntPtr.Zero,
@@ -127,60 +188,13 @@ namespace AgentTeams.SafePreview {
         FILE_FLAG_BACKUP_SEMANTICS,
         IntPtr.Zero
       );
-
-      if (file.IsInvalid) {
-        int error = Marshal.GetLastWin32Error();
-        file.Dispose();
-        if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) {
-          return new PreviewResult { Exists = false, Content = new byte[0] };
-        }
-        throw new Win32Exception(error);
-      }
-
-      using (file) {
-        FileAttributeTagInfo openedInfo = GetAttributeTagInfo(file);
-        if ((openedInfo.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-          return new PreviewResult {
-            Exists = true,
-            Content = new byte[0],
-            Error = "Not a file"
-          };
-        }
-        if (GetLinkCount(file) > 1) {
-          throw new InvalidOperationException(
-            "Hard-linked files are not allowed in approval preview paths"
-          );
-        }
-
-        string comparisonRequestedPath = NormalizeKernelPath(normalizedPath);
-        string openedPath = NormalizeKernelPath(GetOpenedPath(file));
-        if (!String.Equals(comparisonRequestedPath, openedPath, StringComparison.Ordinal)) {
-          throw new InvalidOperationException("Safe approval preview rejected a redirected Windows path");
-        }
-
-        AssertNoReparsePoints(normalizedPath);
-
-        using (FileStream stream = new FileStream(file, FileAccess.Read)) {
-          long initialLength = stream.Length;
-          int readSize = (int)Math.Min(initialLength, maximumBytes);
-          byte[] content = new byte[readSize];
-          int bytesRead = 0;
-          while (bytesRead < readSize) {
-            int count = stream.Read(content, bytesRead, readSize - bytesRead);
-            if (count == 0) break;
-            bytesRead += count;
-          }
-          if (bytesRead != content.Length) Array.Resize(ref content, bytesRead);
-          return new PreviewResult {
-            Exists = true,
-            Content = content,
-            Truncated = stream.Length > bytesRead
-          };
-        }
-      }
     }
 
-    private static void AssertNoReparsePoints(string filePath) {
+    private static bool IsMissingPathError(int error) {
+      return error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND;
+    }
+
+    private static void AssertNoReparsePoints(string filePath, bool allowMissingFinalComponent) {
       string root = Path.GetPathRoot(filePath);
       string currentPath = root;
       char[] separators = new char[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
@@ -189,7 +203,8 @@ namespace AgentTeams.SafePreview {
         StringSplitOptions.RemoveEmptyEntries
       );
 
-      foreach (string segment in segments) {
+      for (int index = 0; index < segments.Length; index++) {
+        string segment = segments[index];
         currentPath = Path.Combine(currentPath, segment);
         using (SafeFileHandle component = CreateFileW(
           currentPath,
@@ -200,7 +215,15 @@ namespace AgentTeams.SafePreview {
           FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
           IntPtr.Zero
         )) {
-          if (component.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error());
+          if (component.IsInvalid) {
+            int error = Marshal.GetLastWin32Error();
+            bool isMissingFinalComponent =
+              allowMissingFinalComponent &&
+              index == segments.Length - 1 &&
+              IsMissingPathError(error);
+            if (isMissingFinalComponent) return;
+            throw new Win32Exception(error);
+          }
           FileAttributeTagInfo info = GetAttributeTagInfo(component);
           if ((info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0) {
             throw new InvalidOperationException(

@@ -18,6 +18,8 @@ const DARWIN_O_NOFOLLOW_ANY = 0x20000000;
 const LINUX_O_PATH = 0x200000;
 const LINUX_DIRECTORY_FLAGS = LINUX_O_PATH | constants.O_DIRECTORY | constants.O_NOFOLLOW;
 const LINUX_PROC_SELF_FD = '/proc/self/fd';
+const PARENT_PATH_COMPONENT_ERROR =
+  'Parent path traversal is not allowed in approval preview paths';
 
 class LinuxDescriptorTraversalUnavailableError extends Error {
   constructor(cause: unknown) {
@@ -28,6 +30,31 @@ class LinuxDescriptorTraversalUnavailableError extends Error {
 
 function linuxDescriptorChildPath(directory: FileHandle, segment: string): string {
   return `${path.join(LINUX_PROC_SELF_FD, String(directory.fd))}${path.sep}${segment}`;
+}
+
+/**
+ * Win32 treats two leading periods plus trailing ASCII space/period noise as a
+ * parent alias. Three or more leading periods remain a legal component name.
+ */
+function isWindowsParentPathComponent(component: string): boolean {
+  if (!component.startsWith('..')) return false;
+
+  let leadingPeriodCount = 0;
+  while (component[leadingPeriodCount] === '.') leadingPeriodCount++;
+  if (leadingPeriodCount !== 2) return false;
+
+  for (let index = leadingPeriodCount; index < component.length; index++) {
+    const character = component[index];
+    if (character !== ' ' && character !== '.') return false;
+  }
+  return true;
+}
+
+function hasParentPathComponent(filePath: string): boolean {
+  if (process.platform === 'win32') {
+    return filePath.split(/[\\/]+/).some(isWindowsParentPathComponent);
+  }
+  return filePath.split(path.sep).includes('..');
 }
 
 async function assertLinuxDescriptorTraversalAvailable(
@@ -108,6 +135,9 @@ export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
 
   async read(filePath: string): Promise<ToolApprovalFileContent> {
     try {
+      if (hasParentPathComponent(filePath)) {
+        throw new Error(PARENT_PATH_COMPONENT_ERROR);
+      }
       const resolvedPath = path.resolve(filePath);
       if (process.platform === 'win32') return this.windowsReader.read(resolvedPath);
       let file: FileHandle;

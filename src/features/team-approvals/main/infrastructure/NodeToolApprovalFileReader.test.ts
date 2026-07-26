@@ -218,6 +218,43 @@ describe('NodeToolApprovalFileReader', () => {
     });
   });
 
+  it('rejects raw parent components without rejecting legal dot-containing names', async () => {
+    const legalPath = path.join(tempDirectory, '..cache.txt');
+    await writeFile(legalPath, 'legal content');
+    await expect(reader.read(legalPath)).resolves.toMatchObject({ content: 'legal content' });
+
+    const rawParentPath = [tempDirectory, 'unused-child', '..', path.basename(legalPath)].join(
+      path.sep
+    );
+    await expect(reader.read(rawParentPath)).resolves.toMatchObject({
+      content: '',
+      error: expect.stringContaining('Parent path traversal is not allowed'),
+    });
+  });
+
+  it.runIf(process.platform !== 'win32')(
+    'rejects symlink parent traversal before lexical normalization can change the target',
+    async () => {
+      const workspaceDirectory = path.join(tempDirectory, 'workspace');
+      const outsideDirectory = path.join(tempDirectory, 'outside');
+      const outsideChildDirectory = path.join(outsideDirectory, 'child');
+      await mkdir(workspaceDirectory);
+      await mkdir(outsideDirectory);
+      await mkdir(outsideChildDirectory);
+      await writeFile(path.join(workspaceDirectory, 'target.txt'), 'benign content');
+      await writeFile(path.join(outsideDirectory, 'target.txt'), 'unapproved secret');
+
+      const linkedDirectory = path.join(workspaceDirectory, 'linked');
+      await symlink(outsideChildDirectory, linkedDirectory);
+      const rawApprovedPath = [linkedDirectory, '..', 'target.txt'].join(path.sep);
+      await expect(fs.readFile(rawApprovedPath, 'utf8')).resolves.toBe('unapproved secret');
+      await expect(reader.read(rawApprovedPath)).resolves.toMatchObject({
+        content: '',
+        error: expect.stringContaining('Parent path traversal is not allowed'),
+      });
+    }
+  );
+
   it.runIf(process.platform !== 'win32')(
     'rejects hard-linked files using the opened handle identity',
     async () => {
@@ -284,6 +321,57 @@ describe('NodeToolApprovalFileReader', () => {
       isBinary: false,
     });
     expect(windowsReader.read).toHaveBeenCalledWith(path.resolve(textPath));
+  });
+
+  it('rejects Windows parent aliases before native helper delegation', async () => {
+    const windowsReader = { read: vi.fn() };
+    const windowsAwareReader = new NodeToolApprovalFileReader(windowsReader);
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+
+    const blockedPaths = [
+      'C:\\approved\\..\\secret.txt',
+      'C:\\approved\\.. \\secret.txt',
+      'C:\\approved\\..  \\secret.txt',
+      'C:\\approved\\.. .\\secret.txt',
+      'C:/approved/.. /secret.txt',
+      'C:\\approved/.. .\\secret.txt',
+    ];
+    for (const blockedPath of blockedPaths) {
+      await expect(windowsAwareReader.read(blockedPath)).resolves.toMatchObject({
+        content: '',
+        error: expect.stringContaining('Parent path traversal is not allowed'),
+      });
+    }
+    expect(windowsReader.read).not.toHaveBeenCalled();
+  });
+
+  it('delegates legal Windows dot-containing components', async () => {
+    const windowsReader = {
+      read: vi.fn(async () => ({
+        content: '',
+        exists: false,
+        truncated: false,
+        isBinary: false,
+      })),
+    };
+    const windowsAwareReader = new NodeToolApprovalFileReader(windowsReader);
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+
+    const legalPaths = [
+      'C:\\approved\\..cache.txt',
+      'C:\\approved\\. \\preview.txt',
+      'C:\\approved\\...\\preview.txt',
+      'C:\\approved\\... \\preview.txt',
+      'C:\\approved\\.. .cache\\preview.txt',
+      'C:\\approved\\folder.\\preview.txt',
+      'C:\\approved\\folder \\preview.txt',
+      'C:\\approved\\..\u00a0\\preview.txt',
+    ];
+    for (const legalPath of legalPaths) {
+      await windowsAwareReader.read(legalPath);
+    }
+
+    expect(windowsReader.read).toHaveBeenCalledTimes(legalPaths.length);
   });
 
   it('decodes bounded content returned by the Windows handle helper', async () => {
