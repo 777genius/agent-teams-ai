@@ -642,6 +642,151 @@ test('stops executed IIFE traversal after selected return and throw branches', (
   );
 });
 
+test('joins exhaustive unknown IIFE branches before trailing mutations', () => {
+  withFeatureFixture(
+    {
+      'src/features/iife-exhaustive-return/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const flag = Math.random() > 0.5;
+        export const api = { Store };
+        (() => {
+          if (flag) return;
+          else return;
+          api.Store = undefined;
+        })();
+      `,
+      'src/features/iife-exhaustive-return/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/iife-return-or-throw/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const flag = Math.random() > 0.5;
+        export const api = { Store };
+        (() => {
+          if (flag) return;
+          else throw new Error('stop');
+          api.Store = undefined;
+        })();
+      `,
+      'src/features/iife-return-or-throw/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/iife-caught-runtime-tail/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const flag = Math.random() > 0.5;
+        export const api = { Store };
+        (() => {
+          try {
+            if (flag) return;
+            else throw new Error('caught');
+          } catch {}
+          api.Store = undefined;
+        })();
+      `,
+      'src/features/iife-caught-runtime-tail/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/iife-caught-terminal/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const flag = Math.random() > 0.5;
+        export const api = { Store };
+        (() => {
+          try {
+            if (flag) return;
+            else throw new Error('caught');
+          } catch {
+            return;
+          }
+          api.Store = undefined;
+        })();
+      `,
+      'src/features/iife-caught-terminal/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/iife-finally-return/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const flag = Math.random() > 0.5;
+        export const api = { Store };
+        (() => {
+          try {
+            if (flag) return;
+            else return;
+          } finally {
+            api.ready = true;
+          }
+          api.Store = undefined;
+        })();
+      `,
+      'src/features/iife-finally-return/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/iife-exhaustive-do-return/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const flag = Math.random() > 0.5;
+        export const api = { Store };
+        (() => {
+          do {
+            if (flag) return;
+            else return;
+          } while (false);
+          api.Store = undefined;
+        })();
+      `,
+      'src/features/iife-exhaustive-do-return/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/iife-nonexhaustive-runtime-tail/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const flag = Math.random() > 0.5;
+        export const api = { Store };
+        (() => {
+          if (flag) return;
+          api.Store = undefined;
+        })();
+      `,
+      'src/features/iife-nonexhaustive-runtime-tail/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/iife-caught-terminal/main/index.ts',
+        'src/features/iife-exhaustive-do-return/main/index.ts',
+        'src/features/iife-exhaustive-return/main/index.ts',
+        'src/features/iife-finally-return/main/index.ts',
+        'src/features/iife-return-or-throw/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('selects constant bigint branches while preserving unknown truthiness', () => {
+  withFeatureFixture(
+    {
+      'src/features/bigint-zero-dead-branch/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = { Store };
+        if (0n) api.Store = undefined;
+      `,
+      'src/features/bigint-zero-dead-branch/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/bigint-zero-selected-else/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = { Store };
+        if (0n) api.ready = true;
+        else api.Store = undefined;
+      `,
+      'src/features/bigint-zero-selected-else/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/bigint-nonzero-selected-then/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = { Store };
+        if (0x10n) api.Store = undefined;
+      `,
+      'src/features/bigint-nonzero-selected-then/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/bigint-unknown-branch/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const flag = BigInt(Date.now());
+        export const api = { Store };
+        if (flag) api.Store = undefined;
+      `,
+      'src/features/bigint-unknown-branch/main/infrastructure/Store.ts': infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/bigint-unknown-branch/main/index.ts',
+        'src/features/bigint-zero-dead-branch/main/index.ts',
+      ]);
+    }
+  );
+});
+
 test('maps destructured and default IIFE parameters without crossing lexical shadows', () => {
   withFeatureFixture(
     {

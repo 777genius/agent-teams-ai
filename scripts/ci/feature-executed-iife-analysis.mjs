@@ -121,6 +121,7 @@ export function staticTruthiness(expression) {
   }
   if (ts.isStringLiteralLike(current)) return current.text.length > 0;
   if (ts.isNumericLiteral(current)) return Number(current.text) !== 0;
+  if (ts.isBigIntLiteral(current)) return BigInt(current.text.slice(0, -1)) !== 0n;
   if (ts.isPrefixUnaryExpression(current) && current.operator === ts.SyntaxKind.ExclamationToken) {
     const operand = staticTruthiness(current.operand);
     return operand === null ? null : !operand;

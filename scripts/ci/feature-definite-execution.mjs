@@ -63,6 +63,53 @@ function visitDefiniteExpression(node, visitor) {
   ts.forEachChild(node, (child) => visitDefiniteExpression(child, visitor));
 }
 
+const COMPLETION_NORMAL = 1 << 0;
+const COMPLETION_RETURN = 1 << 1;
+const COMPLETION_THROW = 1 << 2;
+const COMPLETION_ABRUPT = COMPLETION_RETURN | COMPLETION_THROW;
+
+function statementCompletion(statement) {
+  if (ts.isReturnStatement(statement)) return COMPLETION_RETURN;
+  if (ts.isThrowStatement(statement)) return COMPLETION_THROW;
+  if (ts.isBlock(statement)) {
+    let completion = COMPLETION_NORMAL;
+    for (const child of statement.statements) {
+      if ((completion & COMPLETION_NORMAL) === 0) break;
+      completion = (completion & COMPLETION_ABRUPT) | statementCompletion(child);
+    }
+    return completion;
+  }
+  if (ts.isIfStatement(statement)) {
+    const truthiness = staticTruthiness(statement.expression);
+    if (truthiness === true) return statementCompletion(statement.thenStatement);
+    if (truthiness === false) {
+      return statement.elseStatement
+        ? statementCompletion(statement.elseStatement)
+        : COMPLETION_NORMAL;
+    }
+    return (
+      statementCompletion(statement.thenStatement) |
+      (statement.elseStatement ? statementCompletion(statement.elseStatement) : COMPLETION_NORMAL)
+    );
+  }
+  if (ts.isDoStatement(statement)) return statementCompletion(statement.statement);
+  if (ts.isTryStatement(statement)) {
+    let completion = statementCompletion(statement.tryBlock);
+    if (statement.catchClause && (completion & COMPLETION_THROW) !== 0) {
+      completion =
+        (completion & ~COMPLETION_THROW) | statementCompletion(statement.catchClause.block);
+    }
+    if (statement.finallyBlock) {
+      const finallyCompletion = statementCompletion(statement.finallyBlock);
+      completion =
+        (finallyCompletion & COMPLETION_NORMAL ? completion : 0) |
+        (finallyCompletion & COMPLETION_ABRUPT);
+    }
+    return completion;
+  }
+  return COMPLETION_NORMAL;
+}
+
 function visitDefiniteStatement(statement, visitor) {
   if (ts.isExpressionStatement(statement)) {
     visitDefiniteExpression(statement.expression, visitor);
@@ -74,37 +121,34 @@ function visitDefiniteStatement(statement, visitor) {
     }
   } else if (ts.isReturnStatement(statement) || ts.isThrowStatement(statement)) {
     if (statement.expression) visitDefiniteExpression(statement.expression, visitor);
-    return ts.isReturnStatement(statement) ? 'return' : 'throw';
   } else if (ts.isBlock(statement)) {
     for (const child of statement.statements) {
-      const termination = visitDefiniteStatement(child, visitor);
-      if (termination) return termination;
+      const completion = visitDefiniteStatement(child, visitor);
+      if ((completion & COMPLETION_NORMAL) === 0) break;
     }
   } else if (ts.isIfStatement(statement)) {
     visitDefiniteExpression(statement.expression, visitor);
     const truthiness = staticTruthiness(statement.expression);
     if (truthiness === true) {
-      return visitDefiniteStatement(statement.thenStatement, visitor);
-    }
-    if (truthiness === false && statement.elseStatement) {
-      return visitDefiniteStatement(statement.elseStatement, visitor);
+      visitDefiniteStatement(statement.thenStatement, visitor);
+    } else if (truthiness === false && statement.elseStatement) {
+      visitDefiniteStatement(statement.elseStatement, visitor);
     }
   } else if (ts.isDoStatement(statement)) {
-    const terminates = visitDefiniteStatement(statement.statement, visitor);
-    if (!terminates) visitDefiniteExpression(statement.expression, visitor);
-    return terminates;
+    const completion = visitDefiniteStatement(statement.statement, visitor);
+    if ((completion & COMPLETION_NORMAL) !== 0) {
+      visitDefiniteExpression(statement.expression, visitor);
+    }
   } else if (ts.isTryStatement(statement)) {
-    const tryTerminates = visitDefiniteStatement(statement.tryBlock, visitor);
-    const completion =
-      tryTerminates === 'throw' && statement.catchClause
-        ? visitDefiniteStatement(statement.catchClause.block, visitor)
-        : tryTerminates;
-    const finallyTerminates = statement.finallyBlock
-      ? visitDefiniteStatement(statement.finallyBlock, visitor)
-      : null;
-    return finallyTerminates ?? completion;
+    const tryCompletion = visitDefiniteStatement(statement.tryBlock, visitor);
+    if (tryCompletion === COMPLETION_THROW && statement.catchClause) {
+      visitDefiniteStatement(statement.catchClause.block, visitor);
+    }
+    if (statement.finallyBlock) {
+      visitDefiniteStatement(statement.finallyBlock, visitor);
+    }
   }
-  return null;
+  return statementCompletion(statement);
 }
 
 export function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
