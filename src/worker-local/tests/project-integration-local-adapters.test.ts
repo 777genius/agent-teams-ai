@@ -46,6 +46,10 @@ describe("local project integration adapters", () => {
   it("reports both sides of a staged rename in the dirty footprint", async () => {
     const fixture = await createGitFixture();
     const adapter = new LocalGitIntegrationAdapter();
+    const parentCommit = (await gitOutput(
+      fixture.workspacePath,
+      ["rev-parse", "HEAD"],
+    )).trim();
 
     await git(fixture.workspacePath, [
       "mv",
@@ -58,6 +62,21 @@ describe("local project integration adapters", () => {
         branch: "main",
         dirtyFiles: ["src/memory.ts", "src/renamed-memory.ts"],
       });
+
+    const commit = await adapter.commit({
+      workspacePath: fixture.workspacePath,
+      message: "refactor(memory): rename fixture",
+      files: ["src/memory.ts", "src/renamed-memory.ts"],
+      identity: {
+        name: "Approved Integrator",
+        email: "integrator@example.com",
+      },
+    });
+    expect(commit.commitSha).toMatch(/^[a-f0-9]{40}$/);
+    await expect(gitOutput(
+      fixture.workspacePath,
+      ["rev-parse", "HEAD^"],
+    )).resolves.toBe(`${parentCommit}\n`);
   });
 
   it("applies, commits, and pushes a worker commit through git cli", async () => {

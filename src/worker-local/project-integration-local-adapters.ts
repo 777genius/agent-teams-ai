@@ -305,7 +305,16 @@ export class LocalGitIntegrationAdapter implements GitPort {
     }
     const stagedDeletions = new Set(
       await this.gitNullTerminatedPaths(
-        ["diff", "--cached", "--name-only", "--diff-filter=D", "-z", "--", ...files],
+        [
+          "diff",
+          "--cached",
+          "--no-renames",
+          "--name-only",
+          "--diff-filter=D",
+          "-z",
+          "--",
+          ...files,
+        ],
         workspacePath,
       ),
     );
