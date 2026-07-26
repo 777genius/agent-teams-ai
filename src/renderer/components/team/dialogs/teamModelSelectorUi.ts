@@ -1,5 +1,23 @@
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+
 const OPENCODE_SOURCES_WITHOUT_NEEDS_TEST_BADGE = new Set(['cursor-acp']);
 const OPENCODE_ROUTE_KINDS_WITHOUT_NEEDS_TEST_BADGE = new Set(['configured_local']);
+
+export function resolveTeamModelSelectorValue(input: {
+  providerId: string;
+  value: string;
+  runtimeNormalizedValue: string;
+  isAppManagedLocalModel: boolean;
+  isInLocalOverlay: boolean;
+  isLocalLookupAuthoritative: boolean;
+}): string {
+  return input.providerId === 'opencode' &&
+    (input.isAppManagedLocalModel ||
+      input.isInLocalOverlay ||
+      (!input.isLocalLookupAuthoritative && Boolean(parseOpenCodeQualifiedModelRef(input.value))))
+    ? input.value
+    : input.runtimeNormalizedValue;
+}
 
 export function shouldShowOpenCodeNeedsTestBadge(
   proofState: string | null | undefined,

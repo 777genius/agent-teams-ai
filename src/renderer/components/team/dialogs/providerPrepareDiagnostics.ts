@@ -41,6 +41,7 @@ export interface ProviderPrepareDiagnosticsModelResult {
   status: 'ready' | 'notes' | 'failed';
   line: string;
   warningLine?: string | null;
+  experimentalOverrideAvailable?: boolean;
 }
 
 export interface ProviderPrepareDiagnosticsCachedSnapshot {
@@ -55,6 +56,7 @@ export interface ProviderPrepareDiagnosticsResult {
   details: string[];
   warnings: string[];
   modelResultsById: Record<string, ProviderPrepareDiagnosticsModelResult>;
+  experimentalOverrideAvailable?: boolean;
   supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
 }
 
@@ -135,12 +137,23 @@ function withSupportDiagnostics(
   result: ProviderPrepareDiagnosticsResult,
   supportDiagnostics: readonly TeamProvisioningSupportDiagnostic[]
 ): ProviderPrepareDiagnosticsResult {
+  const failedModelResults = Object.values(result.modelResultsById).filter(
+    (modelResult) => modelResult.status === 'failed'
+  );
+  const withOverrideAvailability: ProviderPrepareDiagnosticsResult =
+    failedModelResults.length > 0 &&
+    failedModelResults.every((modelResult) => modelResult.experimentalOverrideAvailable === true)
+      ? {
+          ...result,
+          experimentalOverrideAvailable: true,
+        }
+      : result;
   return supportDiagnostics.length > 0
     ? {
-        ...result,
+        ...withOverrideAvailability,
         supportDiagnostics: cloneSupportDiagnostics(supportDiagnostics),
       }
-    : result;
+    : withOverrideAvailability;
 }
 
 function getModelLabel(providerId: TeamProviderId, modelId: string): string {
@@ -469,6 +482,18 @@ function getModelScopedEntries(modelId: string, result: TeamProvisioningPrepareR
     .map((entry) => entry?.trim() ?? '')
     .filter(Boolean)
     .filter((entry) => scopedPattern.test(entry));
+}
+
+function hasExperimentalLocalModelOverride(
+  modelId: string,
+  result: TeamProvisioningPrepareResult
+): boolean {
+  return (result.issues ?? []).some(
+    (issue) =>
+      issue.scope === 'model' &&
+      issue.modelId === modelId &&
+      issue.experimentalOverrideAvailable === true
+  );
 }
 
 function isModelScopedEntryForAnyModel(modelIds: readonly string[], entry: string): boolean {
@@ -803,6 +828,9 @@ function resolveModelResultFromBatch(
         scopedReason ?? fallbackBatchReason
       ),
       warningLine: null,
+      ...(hasExperimentalLocalModelOverride(modelId, result)
+        ? { experimentalOverrideAvailable: true }
+        : {}),
     };
   }
 
@@ -923,6 +951,9 @@ function resolveModelResultFromCompatibilityBatch(
           scopedReason ?? fallbackBatchReason
         ),
         warningLine: null,
+        ...(hasExperimentalLocalModelOverride(modelId, result)
+          ? { experimentalOverrideAvailable: true }
+          : {}),
       },
     };
   }

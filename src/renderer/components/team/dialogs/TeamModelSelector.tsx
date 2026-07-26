@@ -89,6 +89,7 @@ import {
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
 import {
   getActiveOpenCodeStickyHeadingIndex,
+  resolveTeamModelSelectorValue,
   shouldElevateOpenCodeVirtualRow,
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
@@ -1815,18 +1816,45 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const selectedRuntimeCatalogModel = runtimeProviderStatus?.modelCatalog?.models.find(
     (model) => model.launchModel === value || model.id === value
   );
-  const selectedLocalRouteMissingFromScope =
+  const selectedAppManagedLocalModel =
     effectiveProviderId === 'opencode' &&
-    openCodeLocalProviderLookupAuthoritative &&
-    !openCodeLocalProvidersLoading &&
-    !openCodeLocalModelOverlay.modelIds.has(value) &&
     isAppManagedOpenCodeLocalModel(value, selectedRuntimeCatalogModel);
-  const normalizedValue =
-    effectiveProviderId === 'opencode' && openCodeLocalModelOverlay.modelIds.has(value)
-      ? value
-      : selectedLocalRouteMissingFromScope
-        ? ''
-        : runtimeNormalizedValue;
+  const normalizedValue = resolveTeamModelSelectorValue({
+    providerId: effectiveProviderId,
+    value,
+    runtimeNormalizedValue,
+    isAppManagedLocalModel: selectedAppManagedLocalModel,
+    isInLocalOverlay: openCodeLocalModelOverlay.modelIds.has(value),
+    isLocalLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
+  });
+  const selectedUnverifiedLocalModel =
+    effectiveProviderId === 'opencode' &&
+    normalizedValue === value &&
+    runtimeNormalizedValue !== value;
+  const selectedLocalModelFallbackOption = useMemo<TeamRuntimeModelOption | null>(() => {
+    const selectedModel = value.trim();
+    if (!selectedUnverifiedLocalModel || !selectedModel) {
+      return null;
+    }
+    const parsed = parseOpenCodeQualifiedModelRef(selectedModel);
+    const availabilityReason = openCodeLocalProvidersLoading
+      ? 'Checking the selected local model...'
+      : openCodeLocalProviderLookupError?.trim() ||
+        'This explicitly selected local model is not currently served in this project scope.';
+    return {
+      value: selectedModel,
+      label: parsed?.modelId ?? selectedModel,
+      badgeLabel:
+        getTeamModelSourceBadgeLabel('opencode', selectedModel) ?? parsed?.sourceId ?? 'Local',
+      availabilityStatus: 'unavailable',
+      availabilityReason,
+    };
+  }, [
+    openCodeLocalProviderLookupError,
+    openCodeLocalProvidersLoading,
+    selectedUnverifiedLocalModel,
+    value,
+  ]);
 
   useEffect(() => {
     if (openCodeCatalogScopeRevisionRef.current === null) {
@@ -1935,7 +1963,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     if (isInspectingInactiveProvider) {
       return;
     }
-    if (shouldDeferModelNormalization && !selectedLocalRouteMissingFromScope) {
+    if (shouldDeferModelNormalization) {
       return;
     }
     if (normalizedValue !== value) {
@@ -1945,20 +1973,23 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     isInspectingInactiveProvider,
     normalizedValue,
     onValueChange,
-    selectedLocalRouteMissingFromScope,
     shouldDeferModelNormalization,
     value,
   ]);
 
   const modelOptions = useMemo(() => {
     if (shouldAwaitRuntimeModelList) {
-      return [
+      const pendingOptions: TeamRuntimeModelOption[] = [
         {
           value: '',
           label: t('modelSelector.defaultModel'),
           badgeLabel: t('modelSelector.defaultModel'),
         },
       ];
+      if (selectedLocalModelFallbackOption) {
+        pendingOptions.push(selectedLocalModelFallbackOption);
+      }
+      return pendingOptions;
     }
     const unscopedRuntimeOptions = getAvailableTeamProviderModelOptions(
       effectiveProviderId,
@@ -1978,11 +2009,20 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               openCodeLocalModelOverlay.modelIds.has(option.value)
           )
         : unscopedRuntimeOptions;
-    if (effectiveProviderId !== 'opencode' || openCodeLocalModelOverlay.options.length === 0) {
+    if (
+      effectiveProviderId !== 'opencode' ||
+      (openCodeLocalModelOverlay.options.length === 0 && !selectedLocalModelFallbackOption)
+    ) {
       return runtimeOptions;
     }
 
     const optionByValue = new Map(runtimeOptions.map((option) => [option.value, option]));
+    if (
+      selectedLocalModelFallbackOption &&
+      !optionByValue.has(selectedLocalModelFallbackOption.value)
+    ) {
+      optionByValue.set(selectedLocalModelFallbackOption.value, selectedLocalModelFallbackOption);
+    }
     for (const option of openCodeLocalModelOverlay.options) {
       optionByValue.set(option.value, option);
     }
@@ -1993,6 +2033,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     openCodeLocalModelOverlay.modelIds,
     openCodeLocalModelOverlay.options,
     runtimeProviderStatus,
+    selectedLocalModelFallbackOption,
     shouldAwaitRuntimeModelList,
     t,
   ]);
