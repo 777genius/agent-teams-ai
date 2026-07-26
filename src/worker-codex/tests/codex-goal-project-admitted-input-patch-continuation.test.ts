@@ -554,6 +554,13 @@ describe("admitted input-patch capacity continuation", () => {
     let reservedLaunch: CodexGoalLaunchInput | undefined;
     const startAdmissionWorkspaceModes: Array<string | undefined> = [];
     const startAdmissionWorkerRoles: Array<string | undefined> = [];
+    const controlledInterruptionContinuations: Array<
+      | {
+          readonly signalId: string;
+          readonly resultUpdatedAt: string;
+        }
+      | undefined
+    > = [];
     const continuationDeps: CodexGoalMcpProjectControlActionsDeps = {
       ...deps,
       safeExecutionJournal: journal,
@@ -570,6 +577,9 @@ describe("admitted input-patch capacity continuation", () => {
       codexProjectControlBroker: (input) => {
         reservedLaunch = input.startLaunch;
         startAdmissionWorkspaceModes.push(input.startAdmissionWorkspaceMode);
+        controlledInterruptionContinuations.push(
+          input.controlledRuntimeInterruptionContinuation,
+        );
         return {
           startWorker: async (input: ProjectControlStartWorkerInput) => {
             startAdmissionWorkerRoles.push(input.workerRole);
@@ -953,6 +963,10 @@ describe("admitted input-patch capacity continuation", () => {
       "admitted_input_patch_runtime_continuation",
     );
     expect(startAdmissionWorkerRoles.at(-1)).toBe("adoption");
+    expect(controlledInterruptionContinuations.at(-1)).toEqual({
+      signalId: signal.signalId,
+      resultUpdatedAt: interruptedResult.updatedAt,
+    });
 
     await writeFile(
       interruptedResultPath,

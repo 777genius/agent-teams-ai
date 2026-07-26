@@ -35,6 +35,7 @@ import {
   withProjectPreStartAdmissionLaunchAuthorization,
 } from "./application/project-control/codex-goal-project-pre-start-launch-authorization";
 import type { ProjectPreStartAdmissionLaunchWorkspaceMode } from "./application/project-control/codex-goal-project-pre-start-admission";
+import type { ControlledRuntimeInterruptionEvidence } from "./codex-goal-runtime-control-evidence";
 import {
   assertCodexGoalProjectJobNotTerminal,
 } from "./application/project-control/codex-goal-consumed-output-ledger-io";
@@ -132,6 +133,8 @@ export type CodexProjectControlBrokerInput = {
     "workerJobId" | "taskId" | "workspacePath"
   >;
   readonly reviewedContinuation?: ReviewedWorkerOutputSnapshot;
+  readonly controlledRuntimeInterruptionContinuation?:
+    ControlledRuntimeInterruptionEvidence;
   readonly rejectedUncapturedTerminalHandoffRecovery?:
     | { readonly patchSha256: string }
     | undefined;
@@ -306,6 +309,12 @@ function codexProjectControlPorts(
             workspacePath: startLaunch.config.workspacePath,
             ...(input.reviewedContinuation
               ? { reviewedContinuation: input.reviewedContinuation }
+              : {}),
+            ...(input.controlledRuntimeInterruptionContinuation
+              ? {
+                  controlledRuntimeInterruptionContinuation:
+                    input.controlledRuntimeInterruptionContinuation,
+                }
               : {}),
             ...(input.startAdmissionWorkspaceMode ===
                 "admitted_input_patch_continuation" ||

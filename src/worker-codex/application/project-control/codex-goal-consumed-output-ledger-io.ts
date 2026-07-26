@@ -65,6 +65,9 @@ export async function assertCodexGoalProjectJobNotTerminal(input: {
   readonly workspacePath: string;
   readonly reviewedContinuation?: ReviewedWorkerOutputSnapshot;
   readonly capacityContinuation?: true;
+  readonly controlledRuntimeInterruptionContinuation?: {
+    readonly resultUpdatedAt: string;
+  };
   readonly rejectedUncapturedContinuationPatchSha256?: string;
 }): Promise<void> {
   if (
@@ -112,6 +115,25 @@ export async function assertCodexGoalProjectJobNotTerminal(input: {
       workspacePath: resolve(input.workspacePath),
     });
     return;
+  }
+  if (
+    record.status === "rejected" &&
+    input.controlledRuntimeInterruptionContinuation
+  ) {
+    const rejectedAt = Date.parse(record.closedAt ?? "");
+    const interruptedAt = Date.parse(
+      input.controlledRuntimeInterruptionContinuation.resultUpdatedAt,
+    );
+    if (
+      Number.isFinite(rejectedAt) &&
+      Number.isFinite(interruptedAt) &&
+      interruptedAt > rejectedAt
+    ) {
+      return;
+    }
+    throw new Error(
+      "project_control_terminal_job_start_denied:runtime_interruption_timeline_mismatch",
+    );
   }
   // Preserve failed_no_output as immutable evidence for the prior provider
   // attempt while permitting an independently validated capacity continuation.

@@ -500,6 +500,12 @@ export async function projectControlStartStoredJobView(
           startWorkspaceLease: workspace,
           startSkipDoctor: booleanValue(args.skipDoctor) ?? false,
           ...(reviewedContinuation ? { reviewedContinuation } : {}),
+          ...(continuationDecision?.kind === "controlled_runtime_interruption"
+            ? {
+                controlledRuntimeInterruptionContinuation:
+                  continuationDecision.evidence,
+              }
+            : {}),
           rejectedUncapturedTerminalHandoffRecovery: terminalRecovery?.reviewDisposition === "rejected_uncaptured"
             ? { patchSha256: terminalRecovery.patchSha256 } : undefined,
         });

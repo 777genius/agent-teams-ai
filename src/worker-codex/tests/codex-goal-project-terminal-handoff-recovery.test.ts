@@ -282,6 +282,40 @@ describe("terminal worker handoff dependency recovery", () => {
     );
   });
 
+  it("continues only a newer controlled interruption after rejected output", async () => {
+    const fixture = await actionFixture();
+    await writeRejectedUncapturedReview(fixture);
+
+    await expect(
+      assertCodexGoalProjectJobNotTerminal({
+        roots: [fixture.ledgerRoot],
+        projectId: fixture.scope.projectId,
+        controllerJobId: fixture.controller.jobId,
+        jobId: fixture.jobId,
+        taskId: fixture.jobId,
+        workspacePath: fixture.workspacePath,
+        controlledRuntimeInterruptionContinuation: {
+          resultUpdatedAt: "2026-07-21T00:00:01.000Z",
+        },
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertCodexGoalProjectJobNotTerminal({
+        roots: [fixture.ledgerRoot],
+        projectId: fixture.scope.projectId,
+        controllerJobId: fixture.controller.jobId,
+        jobId: fixture.jobId,
+        taskId: fixture.jobId,
+        workspacePath: fixture.workspacePath,
+        controlledRuntimeInterruptionContinuation: {
+          resultUpdatedAt: "2026-07-20T23:59:59.000Z",
+        },
+      }),
+    ).rejects.toThrow(
+      "project_control_terminal_job_start_denied:runtime_interruption_timeline_mismatch",
+    );
+  });
+
   it.each([
     "malformed",
     "semantic-invalid",
