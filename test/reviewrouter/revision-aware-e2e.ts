@@ -1,6 +1,6 @@
 export type WorkspaceRole = "owner" | "member";
 
-export const reviewFixtureRevision = 3;
+export const reviewFixtureRevision = 4;
 
 export function canDeleteWorkspace(role: WorkspaceRole): boolean {
   if (role === "owner") {
