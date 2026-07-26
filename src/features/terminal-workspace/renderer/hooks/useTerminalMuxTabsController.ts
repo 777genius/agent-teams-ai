@@ -83,11 +83,13 @@ export interface TerminalMuxTabsController {
 
 interface PendingCloseFocusIntent {
   closedTabId: string;
+  commands: TerminalMuxCommands;
   restoreFocus: boolean;
   scopeKey: string;
 }
 
 interface PendingCloseFocusRequest extends TerminalMuxTabCloseDispatch {
+  commands: TerminalMuxCommands;
   scopeKey: string;
 }
 
@@ -127,6 +129,7 @@ export function useTerminalMuxTabsController({
       if (
         !intent?.restoreFocus ||
         intent.closedTabId !== dispatch.closedTabId ||
+        intent.commands !== commands ||
         intent.scopeKey !== focusScopeKey
       ) {
         return;
@@ -134,10 +137,11 @@ export function useTerminalMuxTabsController({
 
       setPendingCloseFocusRequest({
         ...dispatch,
+        commands,
         scopeKey: focusScopeKey,
       });
     },
-    [focusScopeKey]
+    [commands, focusScopeKey]
   );
   const lifecycle = useTerminalMuxTabLifecycle({
     activeSessionId: viewModel.activeSessionId,
@@ -248,17 +252,20 @@ export function useTerminalMuxTabsController({
 
   useLayoutEffect(() => {
     const intent = closeFocusIntentRef.current;
-    if (intent && intent.scopeKey !== focusScopeKey) {
+    if (intent && (intent.commands !== commands || intent.scopeKey !== focusScopeKey)) {
       closeFocusIntentRef.current = null;
     }
     setPendingCloseFocusRequest((current) =>
-      current && current.scopeKey !== focusScopeKey ? null : current
+      current && (current.commands !== commands || current.scopeKey !== focusScopeKey)
+        ? null
+        : current
     );
-  }, [focusScopeKey]);
+  }, [commands, focusScopeKey]);
 
   useLayoutEffect(() => {
     if (
       !pendingCloseFocusRequest ||
+      pendingCloseFocusRequest.commands !== commands ||
       pendingCloseFocusRequest.scopeKey !== focusScopeKey ||
       viewModel.visibleTabs.some((tab) => tab.tab_id === pendingCloseFocusRequest.closedTabId)
     ) {
@@ -293,6 +300,7 @@ export function useTerminalMuxTabsController({
     target.focus();
     setPendingCloseFocusRequest(null);
   }, [
+    commands,
     focusScopeKey,
     pendingCloseFocusRequest,
     viewModel.activeVisibleTabId,
@@ -304,12 +312,13 @@ export function useTerminalMuxTabsController({
     async (tab: TerminalMuxTab): Promise<void> => {
       closeFocusIntentRef.current = {
         closedTabId: tab.tab_id,
+        commands,
         restoreFocus: isElementWithinTerminalTab(document.activeElement, tab.tab_id),
         scopeKey: focusScopeKey,
       };
       await requestCloseTabLifecycle(tab);
     },
-    [focusScopeKey, requestCloseTabLifecycle]
+    [commands, focusScopeKey, requestCloseTabLifecycle]
   );
 
   const dismissCloseCandidate = useCallback((): void => {

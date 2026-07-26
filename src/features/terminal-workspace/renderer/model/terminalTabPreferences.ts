@@ -347,7 +347,8 @@ export function resolveTerminalTabContentState(
 
     if (
       focusedScreen?.pane_id === paneId &&
-      focusedScreen.surface.lines.some(hasRichTerminalLineContent)
+      (focusedScreen.surface.lines.some(hasRichTerminalLineContent) ||
+        (focusedScreen.surface.progress?.state ?? 'inactive') !== 'inactive')
     ) {
       return 'has-content';
     }

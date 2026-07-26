@@ -12,6 +12,8 @@ import {
 } from '@features/terminal-workspace/renderer/model/terminalTabPreferences';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ScreenProgressState } from '@terminal-platform/runtime-types';
+
 type LifecycleOptions = Parameters<typeof useTerminalMuxTabLifecycle>[0];
 type LifecycleControls = ReturnType<typeof useTerminalMuxTabLifecycle>;
 
@@ -161,6 +163,21 @@ describe('useTerminalMuxTabLifecycle', () => {
 
     expect(onTabCloseDispatched).not.toHaveBeenCalled();
     expect(requiredControls().error).toBe('close failed');
+  });
+
+  it('asks for confirmation before closing a visually empty tab with active progress', async () => {
+    const commands = createResolvedCommands();
+    await render({
+      commands,
+      snapshot: createSnapshotWithEmptyFocusedTab(TAB_ONE, 'indeterminate'),
+    });
+
+    await act(async () => {
+      await requiredControls().requestCloseTab(TAB_ONE);
+    });
+
+    expect(requiredControls().closeCandidate?.tab_id).toBe(TAB_ONE.tab_id);
+    expect(commands.dispatchMuxCommand).not.toHaveBeenCalled();
   });
 
   it('uses a synchronous foreground mutex to reject a second action in the same render', async () => {
@@ -682,7 +699,10 @@ function createSnapshotWithHistory(tab: TerminalMuxTab): TerminalWorkspaceSnapsh
   } as unknown as TerminalWorkspaceSnapshot;
 }
 
-function createSnapshotWithEmptyFocusedTab(tab: TerminalMuxTab): TerminalWorkspaceSnapshot {
+function createSnapshotWithEmptyFocusedTab(
+  tab: TerminalMuxTab,
+  progressState?: ScreenProgressState
+): TerminalWorkspaceSnapshot {
   const paneId = `pane-${tab.tab_id}`;
   return {
     attachedSession: {
@@ -690,6 +710,7 @@ function createSnapshotWithEmptyFocusedTab(tab: TerminalMuxTab): TerminalWorkspa
         pane_id: paneId,
         surface: {
           lines: [],
+          ...(progressState ? { progress: { state: progressState } } : {}),
         },
       },
       session: {

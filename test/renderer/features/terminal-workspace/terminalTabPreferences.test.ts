@@ -1,18 +1,20 @@
 import {
-  PREWARMED_TERMINAL_TAB_TITLE,
   createDefaultTerminalTabPreferences,
   normalizeTerminalTabPreferences,
   normalizeTerminalUserTabTitle,
   orderTerminalTabsByPreference,
   parseTerminalTabPreferences,
+  PREWARMED_TERMINAL_TAB_TITLE,
   reorderTerminalTabsById,
-  resolveTerminalTabContentState,
   resolveTerminalTabColor,
+  resolveTerminalTabContentState,
   resolveVisibleTabToFocusAfterClose,
   type TerminalMuxTab,
   type TerminalWorkspaceSnapshot,
 } from '@features/terminal-workspace/renderer/model/terminalTabPreferences';
 import { describe, expect, it } from 'vitest';
+
+import type { ScreenProgressState } from '@terminal-platform/runtime-types';
 
 describe('terminal tab preferences', () => {
   const tabs = [createTab('tab-1', 'One'), createTab('tab-2', 'Two'), createTab('tab-3', 'Three')];
@@ -201,6 +203,40 @@ describe('terminal tab preferences', () => {
       )
     ).toBe('unknown');
   });
+
+  it('treats active terminal progress as content before closing a visually empty tab', () => {
+    const historicalPanes = {
+      'pane-tab-1': createHistoricalPane({ paneId: 'pane-tab-1' }),
+    };
+
+    for (const progressState of [
+      'error',
+      'indeterminate',
+      'normal',
+      'warning',
+    ] satisfies ScreenProgressState[]) {
+      expect(
+        resolveTerminalTabContentState(
+          createSnapshot({
+            focusedPaneId: 'pane-tab-1',
+            focusedProgressState: progressState,
+            historicalPanes,
+          }),
+          tabs[0]
+        )
+      ).toBe('has-content');
+    }
+    expect(
+      resolveTerminalTabContentState(
+        createSnapshot({
+          focusedPaneId: 'pane-tab-1',
+          focusedProgressState: 'inactive',
+          historicalPanes,
+        }),
+        tabs[0]
+      )
+    ).toBe('empty');
+  });
 });
 
 interface HistoricalPaneFixture {
@@ -216,11 +252,13 @@ interface HistoricalPaneFixture {
 function createSnapshot({
   focusedLines = [],
   focusedPaneId,
+  focusedProgressState,
   historicalPanes = {},
   sessionId = 'session-a',
 }: {
   focusedLines?: string[];
   focusedPaneId: string;
+  focusedProgressState?: ScreenProgressState;
   historicalPanes?: Record<string, HistoricalPaneFixture>;
   sessionId?: string;
 }): TerminalWorkspaceSnapshot {
@@ -230,6 +268,7 @@ function createSnapshot({
         pane_id: focusedPaneId,
         surface: {
           lines: focusedLines.map((text) => ({ spans: [], text })),
+          ...(focusedProgressState ? { progress: { state: focusedProgressState } } : {}),
         },
       },
       session: {

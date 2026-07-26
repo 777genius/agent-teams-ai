@@ -2,15 +2,16 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import {
-  useTerminalMuxTabsController,
   type TerminalMuxTabsController,
+  useTerminalMuxTabsController,
 } from '@features/terminal-workspace/renderer/hooks/useTerminalMuxTabsController';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { TerminalMuxCommands } from '@features/terminal-workspace/renderer/hooks/useTerminalMuxTabLifecycle';
 import type {
   TerminalMuxTab,
   TerminalWorkspaceSnapshot,
 } from '@features/terminal-workspace/renderer/model/terminalTabPreferences';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@terminal-platform/workspace-react', () => ({
   resolveTerminalTopologyControlState: (snapshot: MockWorkspaceSnapshot) => snapshot.__controls,
@@ -153,6 +154,29 @@ describe('useTerminalMuxTabsController close focus', () => {
     await render(createSnapshot([TAB_ONE], TAB_ONE));
 
     expect(document.activeElement).toBe(externalFocusTarget);
+  });
+
+  it('does not restore stale close focus after the terminal command scope changes', async () => {
+    const attach = createDeferred<void>();
+    commands.attachSession = vi.fn(() => attach.promise) as never;
+    await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO));
+    requiredElement('close-tab-2').focus();
+
+    let closeAction!: Promise<void>;
+    await act(async () => {
+      closeAction = requiredControls().requestCloseTab(TAB_TWO);
+      await flushMicrotasks();
+    });
+
+    commands = createResolvedCommands();
+    await render(createSnapshot([TAB_ONE], TAB_ONE));
+
+    expect(document.activeElement).not.toBe(requiredElement('tab-tab-1'));
+
+    await act(async () => {
+      attach.resolve();
+      await closeAction;
+    });
   });
 
   async function render(snapshot: TerminalWorkspaceSnapshot): Promise<void> {
