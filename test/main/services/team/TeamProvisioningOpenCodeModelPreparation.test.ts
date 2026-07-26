@@ -94,7 +94,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['openrouter/qwen/qwen3-coder', 'missing-model'],
       verificationMode: 'compatibility',
       appendPreflightDebugLog: (event) => debugEvents.push(event),
@@ -131,7 +131,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['first-model', 'second-model'],
       verificationMode: 'compatibility',
       appendPreflightDebugLog: (event) => debugEvents.push(event),
@@ -168,7 +168,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['ollama/qwen3-coder:30b'],
       verificationMode: 'compatibility',
     });
@@ -182,25 +182,34 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
   });
 
   it('defers a provider-scoped route missing from the general catalog to deep verification', async () => {
-    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
-      ok: true,
-      providerId: 'opencode',
-      modelId: 'local-lab/team-model',
-      diagnostics: [],
-      warnings: [],
-    });
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
     const adapter = createAdapter({
       prepare,
       availableModels: ['anthropic/claude-sonnet'],
+    });
+    const inspectLocalModelRuntime = vi.fn().mockResolvedValue({
+      providerId: 'local-lab',
+      modelId: 'team-model',
+      presetId: 'custom',
+      toolCapable: null,
+      parameterCount: null,
+      trainedContextTokens: null,
+      configuredContextTokens: null,
+      effectiveContextTokens: null,
+      coordinationProbeStatus: null,
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      message: 'Configured local route. Deep verification pending.',
     });
     const debugEvents: string[] = [];
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['local-lab/team-model'],
       verificationMode: 'compatibility',
       appendPreflightDebugLog: (event) => debugEvents.push(event),
+      inspectLocalModelRuntime,
     });
 
     expect(result).toMatchObject({
@@ -208,8 +217,54 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       blockingMessages: [],
       issues: [],
     });
-    expect(prepare).toHaveBeenCalledTimes(1);
-    expect(debugEvents).toContain('opencode_compatibility_batch_unknown_provider_deferred');
+    expect(inspectLocalModelRuntime).toHaveBeenCalledWith({
+      projectPath: '/workspace/project',
+      modelRoute: 'local-lab/team-model',
+      classificationOnly: true,
+    });
+    expect(prepare).not.toHaveBeenCalled();
+    expect(debugEvents).toContain('opencode_compatibility_batch_local_routes_deferred');
+  });
+
+  it('still checks catalog authentication when custom and cloud models mix', async () => {
+    const prepare = vi
+      .fn<TeamLaunchRuntimeAdapter['prepare']>()
+      .mockResolvedValueOnce({
+        ok: false,
+        providerId: 'opencode',
+        reason: 'not_authenticated',
+        retryable: true,
+        diagnostics: ['No connected OpenCode provider found'],
+        warnings: [],
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        providerId: 'opencode',
+        reason: 'not_authenticated',
+        retryable: true,
+        diagnostics: ['No connected OpenCode provider found'],
+        warnings: [],
+      });
+    const adapter = createAdapter({
+      prepare,
+      availableModels: ['anthropic/claude-sonnet'],
+    });
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/workspace/project',
+      modelIds: ['local-lab/team-model', 'anthropic/claude-sonnet'],
+      verificationMode: 'compatibility',
+    });
+
+    expect(prepare.mock.calls.map(([input]) => input.model)).toEqual([
+      'local-lab/team-model',
+      'anthropic/claude-sonnet',
+    ]);
+    expect(result.blockingMessages).toEqual(['No connected OpenCode provider found']);
+    expect(result.issues).toEqual([
+      expect.objectContaining({ code: 'not_authenticated', severity: 'blocking' }),
+    ]);
   });
 
   it('still blocks a missing model when its provider is present in the live catalog', async () => {
@@ -227,7 +282,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['local-lab/missing-model'],
       verificationMode: 'compatibility',
     });
@@ -257,7 +312,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['first-model', 'second-model'],
       verificationMode: 'deep',
     });
@@ -302,7 +357,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['zai-coding-plan/glm-5.1'],
       verificationMode: 'deep',
     });
@@ -332,7 +387,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['ollama/qwen2.5:0.5b'],
       verificationMode: 'deep',
     });
@@ -378,7 +433,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['ollama/qwen2.5:0.5b'],
       verificationMode: 'deep',
       inspectLocalModelRuntime,
@@ -397,7 +452,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       }),
     ]);
     expect(inspectLocalModelRuntime).toHaveBeenCalledWith({
-      projectPath: '/tmp/project',
+      projectPath: '/workspace/project',
       modelRoute: 'ollama/qwen2.5:0.5b',
     });
     expect(prepare).not.toHaveBeenCalled();
@@ -429,7 +484,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['ollama/qwen3:8b'],
       verificationMode: 'deep',
       inspectLocalModelRuntime,
@@ -458,7 +513,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['ollama/qwen3:8b'],
       verificationMode: 'deep',
       inspectLocalModelRuntime,
@@ -498,7 +553,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      cwd: '/tmp/project',
+      cwd: '/workspace/project',
       modelIds: ['local-lab/team-model'],
       verificationMode: 'deep',
       inspectLocalModelRuntime,
@@ -514,7 +569,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       }),
     ]);
     expect(inspectLocalModelRuntime).toHaveBeenCalledWith({
-      projectPath: '/tmp/project',
+      projectPath: '/workspace/project',
       modelRoute: 'local-lab/team-model',
     });
     expect(prepare).not.toHaveBeenCalled();

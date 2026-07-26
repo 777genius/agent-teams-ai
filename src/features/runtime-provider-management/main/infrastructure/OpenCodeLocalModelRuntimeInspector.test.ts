@@ -716,6 +716,29 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
       providerId: 'local-lab',
     });
   });
+
+  it('classifies a custom local route without running the coordination probe', async () => {
+    const inventory = createInventory([customProvider()]);
+    const probeCoordination = vi.fn(coordinationPassed);
+
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      {
+        projectPath: TEST_PROJECT_PATH,
+        modelRoute: 'local-lab/team-model',
+        classificationOnly: true,
+      },
+      { inventory, probeCoordination }
+    );
+
+    expect(result).toMatchObject({
+      providerId: 'local-lab',
+      modelId: 'team-model',
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      coordinationProbeStatus: null,
+    });
+    expect(probeCoordination).not.toHaveBeenCalled();
+  });
 });
 
 async function coordinationPassed() {

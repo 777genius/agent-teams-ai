@@ -72,6 +72,7 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
     readonly projectPath: string;
     readonly modelRoute: string;
     readonly allowExperimentalLocalModels?: boolean;
+    readonly classificationOnly?: boolean;
   },
   dependencies: OpenCodeLocalModelRuntimeInspectorDependencies = {}
 ): Promise<OpenCodeLocalModelRuntimeReadiness | null> {
@@ -101,6 +102,22 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       message:
         `Local provider ${parsed.sourceId} for ${input.modelRoute} is not configured for this ` +
         'project or globally. Reconnect the local provider, then retry launch.',
+    };
+  }
+  if (input.classificationOnly) {
+    return {
+      providerId: parsed.sourceId,
+      modelId: parsed.modelId,
+      presetId: provider.preset.id,
+      toolCapable: null,
+      parameterCount: null,
+      trainedContextTokens: null,
+      configuredContextTokens: null,
+      effectiveContextTokens: null,
+      coordinationProbeStatus: null,
+      severity: 'warning',
+      code: 'local_runtime_unverified',
+      message: `Local provider route ${input.modelRoute} is configured. Deep verification pending.`,
     };
   }
   if (provider.state !== 'available') {
