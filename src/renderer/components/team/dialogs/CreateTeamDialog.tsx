@@ -687,7 +687,6 @@ export const CreateTeamDialog = ({
     setCustomArgsRaw(value);
     localStorage.setItem(`team:lastCustomArgs:${advancedKey}`, value);
   };
-
   const resetUIState = (): void => {
     submittedTeamNameRef.current = null;
     setLocalError(null);
@@ -697,6 +696,7 @@ export const CreateTeamDialog = ({
     setPrepareMessage(null);
     setPrepareWarnings([]);
     setPrepareChecks([]);
+    setAllowExperimentalLocalModels(false);
     setConflictDismissed(false);
   };
 

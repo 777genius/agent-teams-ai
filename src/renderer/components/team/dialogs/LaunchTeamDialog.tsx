@@ -795,6 +795,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setPrepareMessage(null);
     setPrepareWarnings([]);
     setPrepareChecks([]);
+    setAllowExperimentalLocalModels(false);
     setCwdMode('project');
     setSelectedProjectPath('');
     setCustomCwd('');
@@ -811,7 +812,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setMaxTurns(50);
     setMaxBudgetUsd('');
   };
-
   const closeDialog = (): void => {
     if (isLaunchMode) {
       resetFormState();
