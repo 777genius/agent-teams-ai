@@ -36,6 +36,8 @@ import {
   constructedClassNames,
   directlyExportedClassNames,
 } from './feature-public-identity-analysis.mjs';
+import { attachPublicReferenceQueries } from './feature-public-reference-visibility.mjs';
+
 function bindingNames(bindingName) {
   if (ts.isIdentifier(bindingName)) return [bindingName.text];
   return bindingName.elements.flatMap((element) =>
@@ -615,6 +617,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
   };
   const localOwnersAt = (position, selectedSourcePath = null) => {
     const owners = new Map();
+    let referenceOwner = null;
     for (const name of bindingModel.eventsByName.keys()) {
       const key = bindingModel.bindingAt(name, position);
       const owner = key && identityOwners.get(key);
@@ -688,6 +691,9 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         !overwrittenByTarget &&
         !overwrittenAfterCopy
       ) {
+        if (currentWrite && writeContainsPosition(currentWrite, position)) {
+          referenceOwner ??= relation.owner;
+        }
         const visibleSources = [
           relation.sourceKey,
           ...(currentWrite?.originSourceKeys ?? []),
@@ -704,6 +710,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames) {
         }
       }
     }
+    attachPublicReferenceQueries(owners, { bindingModel, propertyWrites, referenceOwner, sourceFile });
     return owners;
   };
   const commonJsTargetsAt = (position) => ({

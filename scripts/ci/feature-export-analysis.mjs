@@ -1,5 +1,22 @@
 import ts from 'typescript';
 
+import {
+  containsReference,
+  memberAccess,
+  propertyNameText,
+  unwrapExpression,
+} from './feature-export-ast.mjs';
+import { topLevelExpressionBoundary } from './feature-export-flow-analysis.mjs';
+import { publicStaticClassSelection } from './feature-public-class-analysis.mjs';
+import {
+  dynamicThenCallbackMember,
+  exportAssignmentValueSelection,
+  expressionGetterSelection,
+  variableValueSelection,
+} from './feature-export-value-analysis.mjs';
+
+export { memberAccess, propertyNameText, unwrapExpression };
+
 const MUTATING_OBJECT_METHODS = new Set([
   'assign',
   'defineProperties',
@@ -151,39 +168,6 @@ function assignmentLocalNames(target) {
   return [];
 }
 
-export function unwrapExpression(expression) {
-  let current = expression;
-  while (
-    ts.isParenthesizedExpression(current) ||
-    ts.isAsExpression(current) ||
-    ts.isTypeAssertionExpression(current) ||
-    ts.isNonNullExpression(current) ||
-    ts.isSatisfiesExpression(current)
-  ) {
-    current = current.expression;
-  }
-  return current;
-}
-
-export function memberAccess(expression) {
-  const current = unwrapExpression(expression);
-  if (ts.isPropertyAccessExpression(current)) {
-    return { name: current.name.text, receiver: unwrapExpression(current.expression) };
-  }
-  if (
-    ts.isElementAccessExpression(current) &&
-    current.argumentExpression &&
-    (ts.isStringLiteralLike(current.argumentExpression) ||
-      ts.isNumericLiteral(current.argumentExpression))
-  ) {
-    return {
-      name: current.argumentExpression.text,
-      receiver: unwrapExpression(current.expression),
-    };
-  }
-  return null;
-}
-
 function assignmentTargetSelections(expression, exportedLocalNames) {
   const current = unwrapExpression(expression);
   if (!ts.isBinaryExpression(current) || current.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
@@ -279,7 +263,12 @@ export function isCommonJsExportsObject(expression) {
 function commonJsAssignmentExportName(expression, commonJsTargetAliases) {
   if (
     !ts.isBinaryExpression(expression) ||
-    expression.operatorToken.kind !== ts.SyntaxKind.EqualsToken
+    ![
+      ts.SyntaxKind.EqualsToken,
+      ts.SyntaxKind.AmpersandAmpersandEqualsToken,
+      ts.SyntaxKind.BarBarEqualsToken,
+      ts.SyntaxKind.QuestionQuestionEqualsToken,
+    ].includes(expression.operatorToken.kind)
   ) {
     return null;
   }
@@ -333,9 +322,9 @@ export function commonJsExportNamesForExpression(expression, commonJsTargetAlias
   if (
     (helperName === '__exportStar' || helperName === '_exportStar') &&
     current.arguments[1] &&
-    isCommonJsExportsObject(current.arguments[1])
+    commonJsTargetPath(current.arguments[1], commonJsTargetAliases) !== null
   ) {
-    return [commonJsExportPath(current.arguments[1])?.[0] ?? '*'];
+    return [commonJsTargetPath(current.arguments[1], commonJsTargetAliases)?.[0] ?? '*'];
   }
   const createBinding = commonJsCreateBindingSelection(current, undefined, commonJsTargetAliases);
   if (createBinding) return [createBinding.exportedName];
@@ -357,149 +346,15 @@ export function commonJsExportNamesForExpression(expression, commonJsTargetAlias
   return exportName && ts.isStringLiteralLike(exportName) ? [exportName.text] : ['*'];
 }
 
-function containsReference(node, reference) {
-  return reference.pos >= node.pos && reference.end <= node.end;
-}
-
-export function propertyNameText(name) {
-  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
-    return name.text;
-  }
-  if (ts.isComputedPropertyName(name) && ts.isStringLiteralLike(name.expression)) {
-    return name.expression.text;
-  }
-  return '*';
-}
-
-function descriptorGetterContainsReference(descriptorExpression, reference) {
-  const descriptor = descriptorExpression && unwrapExpression(descriptorExpression);
-  if (!descriptor || !ts.isObjectLiteralExpression(descriptor)) return false;
-  return descriptor.properties.some((property) => {
-    const name = property.name;
-    const isGetProperty =
-      name && (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) && name.text === 'get';
-    if (!isGetProperty) return false;
-    if (ts.isPropertyAssignment(property)) {
-      return containsReference(property.initializer, reference);
-    }
-    return ts.isMethodDeclaration(property) && containsReference(property, reference);
-  });
-}
-
-function descriptorMapGetterMember(descriptorsExpression, reference) {
-  const descriptors = descriptorsExpression && unwrapExpression(descriptorsExpression);
-  if (!descriptors || !ts.isObjectLiteralExpression(descriptors)) return null;
-  const property = descriptors.properties.find(
-    (candidate) =>
-      ts.isPropertyAssignment(candidate) &&
-      descriptorGetterContainsReference(candidate.initializer, reference)
-  );
-  return property && ts.isPropertyAssignment(property) ? propertyNameText(property.name) : null;
-}
-
-function objectGetterMember(objectExpression, reference) {
-  const object = objectExpression && unwrapExpression(objectExpression);
-  if (!object || !ts.isObjectLiteralExpression(object)) return null;
-  const getter = object.properties.find(
-    (property) => ts.isGetAccessorDeclaration(property) && containsReference(property, reference)
-  );
-  return getter && ts.isGetAccessorDeclaration(getter) ? propertyNameText(getter.name) : null;
-}
-
-function objectCallableMember(objectExpression, reference) {
-  const object = objectExpression && unwrapExpression(objectExpression);
-  if (!object || !ts.isObjectLiteralExpression(object)) return null;
-  const member = object.properties.find((property) => {
-    if (ts.isMethodDeclaration(property)) return containsReference(property, reference);
-    if (!ts.isPropertyAssignment(property)) return false;
-    const initializer = unwrapExpression(property.initializer);
-    return (
-      (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer)) &&
-      containsReference(initializer, reference)
-    );
-  });
-  return member?.name ? propertyNameText(member.name) : null;
-}
-
-function objectCreateGetterMember(expression, reference) {
-  const current = unwrapExpression(expression);
-  if (!ts.isCallExpression(current)) return null;
-  const method = memberAccess(current.expression);
-  if (
-    !method ||
-    !ts.isIdentifier(method.receiver) ||
-    method.receiver.text !== 'Object' ||
-    method.name !== 'create'
-  ) {
-    return null;
-  }
-  return descriptorMapGetterMember(current.arguments[1], reference);
-}
-
-function expressionGetterSelection(expression, reference) {
-  const current = unwrapExpression(expression);
-  if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-    const localMember = objectGetterMember(current.right, reference);
-    if (localMember !== null) return { localMember };
-    const initializer = unwrapExpression(current.right);
-    return (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer)) &&
-      containsReference(initializer, reference)
-      ? { getterOnly: true, localMember: undefined }
-      : null;
-  }
-  if (!ts.isCallExpression(current)) return null;
-
-  const method = memberAccess(current.expression);
-  if (
-    !method ||
-    !ts.isIdentifier(method.receiver) ||
-    !['Object', 'Reflect'].includes(method.receiver.text)
-  ) {
-    return null;
-  }
-  if (method.name === 'defineProperty') {
-    if (!descriptorGetterContainsReference(current.arguments[2], reference)) return null;
-    const exportName = current.arguments[1];
-    return {
-      localMember: exportName && ts.isStringLiteralLike(exportName) ? exportName.text : '*',
-    };
-  }
-  if (method.name === 'defineProperties') {
-    const localMember = descriptorMapGetterMember(current.arguments[1], reference);
-    return localMember === null ? null : { localMember };
-  }
-  if (method.name !== 'assign') return null;
-  for (const source of current.arguments.slice(1)) {
-    const localMember = objectGetterMember(source, reference);
-    if (localMember !== null) return { localMember };
-  }
-  return null;
-}
-
 export function getterSelectionForReference(reference, boundary) {
   if (ts.isVariableStatement(boundary)) {
     for (const declaration of boundary.declarationList.declarations) {
-      if (!declaration.initializer || !containsReference(declaration.initializer, reference)) {
-        continue;
-      }
-      const objectMember = objectGetterMember(declaration.initializer, reference);
-      if (objectMember !== null) return { localMember: objectMember };
-      const callableMember = objectCallableMember(declaration.initializer, reference);
-      if (callableMember !== null) return { getterOnly: true, localMember: callableMember };
-      const createdMember = objectCreateGetterMember(declaration.initializer, reference);
-      if (createdMember !== null) return { localMember: createdMember };
-      if (descriptorGetterContainsReference(declaration.initializer, reference)) {
-        return { localMember: null };
-      }
-      const descriptorMember = descriptorMapGetterMember(declaration.initializer, reference);
-      if (descriptorMember !== null) return { localMember: descriptorMember };
-      const initializer = unwrapExpression(declaration.initializer);
-      if (
-        !hasModifier(boundary, ts.SyntaxKind.ExportKeyword) &&
-        (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer))
-      ) {
-        return { getterOnly: true, localMember: undefined };
-      }
+      const selection = variableValueSelection(
+        declaration,
+        reference,
+        hasModifier(boundary, ts.SyntaxKind.ExportKeyword)
+      );
+      if (selection) return selection;
     }
     return null;
   }
@@ -510,8 +365,7 @@ export function getterSelectionForReference(reference, boundary) {
     return expressionGetterSelection(boundary.expression, reference);
   }
   if (ts.isExportAssignment(boundary)) {
-    const localMember = objectGetterMember(boundary.expression, reference);
-    return localMember === null ? null : { localMember };
+    return exportAssignmentValueSelection(boundary.expression, reference);
   }
   return null;
 }
@@ -570,27 +424,52 @@ export function findPublicReferenceOwner(
     current = current.parent;
   }
   if (!current || current.parent !== sourceFile) return null;
+  current = topLevelExpressionBoundary(node, sourceFile) ?? current;
   const isPublicConstructor =
     (ts.isClassDeclaration(current) || ts.isFunctionDeclaration(current)) &&
-    current.name &&
-    publicConstructorNames.has(current.name.text);
+    ((current.name && publicConstructorNames.has(current.name.text)) ||
+      (ts.isClassDeclaration(current) &&
+        !current.name &&
+        hasModifier(current, ts.SyntaxKind.ExportKeyword)));
   const getterSelection = isPublicConstructor
-    ? selectPublicConstructorMember(node, current)
+    ? selectPublicConstructorMember(node, current) ??
+      (!current.name ? publicStaticClassSelection(node, current) : null)
     : insideFunctionBody
       ? getterSelectionForReference(node, current)
       : null;
   if ((insideFunctionBody || isPublicConstructor) && !getterSelection) return null;
 
   let bindingSelections = null;
+  let descriptorGetterIsPublic = false;
   let localNames = [];
   if (ts.isVariableStatement(current)) {
     const declaration = current.declarationList.declarations.find((candidate) =>
       containsReference(candidate, node)
     );
     if (declaration) {
+      if (
+        hasModifier(current, ts.SyntaxKind.ExportKeyword) &&
+        publicTargetOwners.isReferencePublic?.(node, declaration) === false
+      ) {
+        return null;
+      }
       bindingSelections = objectBindingSelections(declaration.name);
       localNames = bindingNames(declaration.name);
-      localNames = localNames.map((localName) => publicTargetOwners.get(localName) ?? localName);
+      const initializer = declaration.initializer && unwrapExpression(declaration.initializer);
+      const directOwner = localNames
+        .map((localName) => publicTargetOwners.get(localName))
+        .find(Boolean);
+      const referenceOwner =
+        getterSelection?.descriptorGetter ||
+        (initializer && ts.isConditionalExpression(initializer))
+          ? publicTargetOwners.ownerForReference?.(node)
+          : null;
+      descriptorGetterIsPublic = Boolean(
+        getterSelection?.descriptorGetter && (referenceOwner || directOwner)
+      );
+      localNames = referenceOwner
+        ? [referenceOwner]
+        : localNames.map((localName) => publicTargetOwners.get(localName) ?? localName);
     }
   } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
     localNames = [current.name.text];
@@ -614,6 +493,11 @@ export function findPublicReferenceOwner(
       current.expression,
       publicTargetOwners
     ));
+    if (getterSelection?.descriptorGetter) {
+      const referenceOwner = publicTargetOwners.ownerForReference?.(node);
+      if (referenceOwner) localNames = [referenceOwner];
+      descriptorGetterIsPublic = Boolean(referenceOwner || localNames.length > 0);
+    }
     if (
       localNames.length === 0 &&
       getterSelection?.getterOnly &&
@@ -624,11 +508,15 @@ export function findPublicReferenceOwner(
     }
   }
 
+  const getterOnly =
+    getterSelection?.descriptorGetter && descriptorGetterIsPublic
+      ? false
+      : getterSelection?.getterOnly;
   if (ts.isExportAssignment(current)) {
     return {
       bindingSelections,
       exportedNames: ['default'],
-      getterOnly: getterSelection?.getterOnly,
+      getterOnly,
       localMember: getterSelection?.localMember,
       localNames: [],
     };
@@ -637,7 +525,7 @@ export function findPublicReferenceOwner(
     return {
       bindingSelections,
       exportedNames: [],
-      getterOnly: getterSelection?.getterOnly,
+      getterOnly,
       localMember: getterSelection?.localMember,
       localNames,
     };
@@ -645,7 +533,7 @@ export function findPublicReferenceOwner(
   return {
     bindingSelections,
     exportedNames: hasModifier(current, ts.SyntaxKind.DefaultKeyword) ? ['default'] : localNames,
-    getterOnly: getterSelection?.getterOnly,
+    getterOnly,
     localMember: getterSelection?.localMember,
     localNames,
   };
@@ -729,35 +617,6 @@ export function selectedMemberAfterTransparentWrappers(reference) {
   return access?.receiver === unwrapExpression(current) ? access.name : null;
 }
 
-function selectedThenCallbackMember(callback) {
-  if (!callback || (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback))) {
-    return null;
-  }
-  const [parameter] = callback.parameters;
-  if (!parameter) return null;
-
-  const returnedExpression = ts.isBlock(callback.body)
-    ? callback.body.statements.find(ts.isReturnStatement)?.expression
-    : callback.body;
-  if (!returnedExpression) return null;
-
-  const returned = unwrapExpression(returnedExpression);
-  if (ts.isIdentifier(parameter.name)) {
-    const access = memberAccess(returned);
-    return access &&
-      ts.isIdentifier(access.receiver) &&
-      access.receiver.text === parameter.name.text
-      ? access.name
-      : null;
-  }
-  if (!ts.isIdentifier(returned)) return null;
-  return (
-    objectBindingSelections(parameter.name)?.find(({ localNames }) =>
-      localNames.includes(returned.text)
-    )?.importedName ?? null
-  );
-}
-
 export function importedNameForCall(reference, isDynamicImport) {
   const selectedName = selectedMemberAfterTransparentWrappers(reference);
   if (!isDynamicImport || selectedName !== 'then') return selectedName ?? '*';
@@ -774,7 +633,7 @@ export function importedNameForCall(reference, isDynamicImport) {
   ) {
     return '*';
   }
-  return selectedThenCallbackMember(thenCall.arguments[0]) ?? '*';
+  return dynamicThenCallbackMember(thenCall.arguments[0]) ?? '*';
 }
 
 export function importedNameForReference(reference, importedBinding) {
