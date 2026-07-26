@@ -19,6 +19,7 @@ vi.mock('@terminal-platform/workspace-react', () => ({
 
 const TAB_ONE = createTab('tab-1', 'Build');
 const TAB_TWO = createTab('tab-2', 'Tests');
+const TAB_THREE = createTab('tab-3', 'Deploy');
 
 describe('useTerminalMuxTabsController close focus', () => {
   let commands: TerminalMuxCommands;
@@ -179,6 +180,45 @@ describe('useTerminalMuxTabsController close focus', () => {
     });
   });
 
+  it('does not restore stale close focus after the connection reconnects', async () => {
+    const attach = createDeferred<void>();
+    commands.attachSession = vi.fn(() => attach.promise) as never;
+    await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO));
+    requiredElement('close-tab-2').focus();
+
+    let closeAction!: Promise<void>;
+    await act(async () => {
+      closeAction = requiredControls().requestCloseTab(TAB_TWO);
+      await flushMicrotasks();
+    });
+
+    await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO, 'bootstrapping'));
+    await render(createSnapshot([TAB_ONE], TAB_ONE));
+
+    expect(document.activeElement).not.toBe(requiredElement('tab-tab-1'));
+
+    await act(async () => {
+      attach.resolve();
+      await closeAction;
+    });
+  });
+
+  it('restores DOM focus to the active mux tab after closing a focused inactive tab', async () => {
+    await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_THREE));
+    requiredElement('close-tab-1').focus();
+
+    await act(async () => {
+      await requiredControls().requestCloseTab(TAB_ONE);
+    });
+    expect(requiredControls().closeCandidate?.tab_id).toBe(TAB_ONE.tab_id);
+    await act(async () => {
+      await requiredControls().confirmCloseCandidate();
+    });
+    await render(createSnapshot([TAB_TWO, TAB_THREE], TAB_THREE));
+
+    expect(document.activeElement).toBe(requiredElement('tab-tab-3'));
+  });
+
   async function render(snapshot: TerminalWorkspaceSnapshot): Promise<void> {
     await act(async () => {
       root.render(<Harness snapshot={snapshot} />);
@@ -215,7 +255,8 @@ interface MockWorkspaceSnapshot extends TerminalWorkspaceSnapshot {
 
 function createSnapshot(
   tabs: readonly TerminalMuxTab[],
-  activeTab: TerminalMuxTab
+  activeTab: TerminalMuxTab,
+  connectionState: TerminalWorkspaceSnapshot['connection']['state'] = 'ready'
 ): TerminalWorkspaceSnapshot {
   return {
     __controls: {
@@ -225,6 +266,11 @@ function createSnapshot(
       canCreateTab: false,
       canFocusTab: true,
       canRenameTab: true,
+    },
+    connection: {
+      handshake: null,
+      lastError: null,
+      state: connectionState,
     },
     attachedSession: {
       focused_screen: {
