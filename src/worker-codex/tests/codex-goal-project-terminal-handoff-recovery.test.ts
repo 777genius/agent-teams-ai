@@ -717,6 +717,10 @@ async function actionFixture(
     allowedGitRemotes: ["origin"],
     consumedOutputLedgerRoots: [ledgerRoot],
   };
+  const {
+    consumedOutputLedgerRoots: _controllerOwnedLedgerRoots,
+    ...jobScope
+  } = scope;
   await createCodexGoalJob({
     registryRootDir,
     manifest: {
@@ -729,7 +733,7 @@ async function actionFixture(
       accounts: ["account-a"],
       tmuxSession: jobId,
       accessBoundary: AccessBoundary.ProjectScopedControl,
-      projectAccessScope: scope,
+      projectAccessScope: jobScope,
       networkAccess: NetworkAccessMode.Restricted,
     },
   });
@@ -744,14 +748,14 @@ async function actionFixture(
     taskId: "project-controller",
     accounts: ["account-a"],
     accessBoundary: AccessBoundary.ProjectScopedControl,
-    projectAccessScope: scope,
+    projectAccessScope: jobScope,
   } as CodexGoalJobManifest;
   const producer = {
     jobId,
     taskId: jobId,
     workspacePath,
     jobRootDir,
-    projectAccessScope: scope,
+    projectAccessScope: jobScope,
   } as CodexGoalJobManifest;
   const snapshotter = localReviewedWorkerOutputDeps({
     rootDir: join(root, "reviewed-output"),

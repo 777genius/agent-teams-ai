@@ -301,6 +301,8 @@ export async function projectControlStartStoredJobView(
             producer: loaded.manifest,
             workspacePath: workspace.canonicalWorkspacePath,
             snapshotter: reviewedOutputDeps.snapshotter,
+            consumedOutputLedgerRoots:
+              controller.scope.consumedOutputLedgerRoots ?? [],
           })
         : undefined;
       if (reviewedContinuation) {
@@ -387,6 +389,8 @@ export async function projectControlStartStoredJobView(
           producer: loaded.manifest,
           workspacePath: workspace.canonicalWorkspacePath,
           snapshotter: reviewedOutputDeps.snapshotter,
+          consumedOutputLedgerRoots:
+            controller.scope.consumedOutputLedgerRoots ?? [],
           expected: terminalRecovery,
         });
         await assertReviewedWorkerContinuationEnvironmentLocked(
