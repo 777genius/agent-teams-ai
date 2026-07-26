@@ -43,6 +43,14 @@ interface StreamingToolCall {
   arguments: string;
 }
 
+interface StreamingToolCallAccumulator {
+  readonly callsBySequence: Map<number, StreamingToolCall>;
+  readonly sequenceById: Map<string, number>;
+  readonly sequenceByIndex: Map<number, number>;
+  readonly ambiguousIndexes: Set<number>;
+  nextSequence: number;
+}
+
 export async function probeOpenCodeLocalModelCoordination(
   input: {
     readonly provider: RuntimeLocalProviderListEntryDto;
@@ -319,7 +327,13 @@ function parseStreamingProbeResponse(raw: string): ProbeResponse | null {
   let content = '';
   let reasoning = '';
   let reasoningContent = '';
-  const toolCallsByIndex = new Map<number, StreamingToolCall>();
+  const toolCallAccumulator: StreamingToolCallAccumulator = {
+    callsBySequence: new Map(),
+    sequenceById: new Map(),
+    sequenceByIndex: new Map(),
+    ambiguousIndexes: new Set(),
+    nextSequence: 0,
+  };
 
   for (const chunk of chunks) {
     root = chunk;
@@ -332,15 +346,16 @@ function parseStreamingProbeResponse(raw: string): ProbeResponse | null {
     if (typeof delta.reasoning_content === 'string') reasoningContent += delta.reasoning_content;
 
     const rawToolCalls = Array.isArray(delta.tool_calls) ? delta.tool_calls : [];
-    rawToolCalls.forEach((value, position) => {
+    rawToolCalls.forEach((value) => {
       const rawToolCall = asRecord(value);
       if (!rawToolCall) return;
-      const index =
-        typeof rawToolCall.index === 'number' && Number.isSafeInteger(rawToolCall.index)
-          ? rawToolCall.index
-          : position;
+      const sequence = resolveStreamingToolCallSequence(
+        toolCallAccumulator,
+        rawToolCall,
+        rawToolCalls.length === 1
+      );
       const fn = asRecord(rawToolCall.function);
-      const previous = toolCallsByIndex.get(index) ?? {
+      const previous = toolCallAccumulator.callsBySequence.get(sequence) ?? {
         id: null,
         type: 'function',
         name: '',
@@ -358,12 +373,12 @@ function parseStreamingProbeResponse(raw: string): ProbeResponse | null {
       if (typeof fn?.arguments === 'string') {
         previous.arguments += fn.arguments;
       }
-      toolCallsByIndex.set(index, previous);
+      toolCallAccumulator.callsBySequence.set(sequence, previous);
     });
   }
 
   if (!root) return null;
-  const rawToolCalls = Array.from(toolCallsByIndex.entries())
+  const rawToolCalls = Array.from(toolCallAccumulator.callsBySequence.entries())
     .sort(([left], [right]) => left - right)
     .map(([, call]) => ({
       id: call.id,
@@ -384,6 +399,76 @@ function parseStreamingProbeResponse(raw: string): ProbeResponse | null {
     .map(parseToolCall)
     .filter((value): value is ToolCall => value !== null);
   return { root, assistant, toolCalls };
+}
+
+function resolveStreamingToolCallSequence(
+  accumulator: StreamingToolCallAccumulator,
+  rawToolCall: Record<string, unknown>,
+  allowSingleCallContinuation: boolean
+): number {
+  const id =
+    typeof rawToolCall.id === 'string' && rawToolCall.id.trim() ? rawToolCall.id.trim() : null;
+  const index =
+    typeof rawToolCall.index === 'number' && Number.isSafeInteger(rawToolCall.index)
+      ? rawToolCall.index
+      : null;
+
+  if (id) {
+    const knownIdSequence = accumulator.sequenceById.get(id);
+    if (knownIdSequence !== undefined) {
+      registerStreamingToolCallIndex(accumulator, index, knownIdSequence);
+      return knownIdSequence;
+    }
+
+    if (index !== null && !accumulator.ambiguousIndexes.has(index)) {
+      const knownIndexSequence = accumulator.sequenceByIndex.get(index);
+      const indexedCall =
+        knownIndexSequence === undefined
+          ? undefined
+          : accumulator.callsBySequence.get(knownIndexSequence);
+      if (knownIndexSequence !== undefined && (!indexedCall?.id || indexedCall.id === id)) {
+        accumulator.sequenceById.set(id, knownIndexSequence);
+        return knownIndexSequence;
+      }
+      if (knownIndexSequence !== undefined) {
+        accumulator.sequenceByIndex.delete(index);
+        accumulator.ambiguousIndexes.add(index);
+      }
+    }
+
+    const sequence = accumulator.nextSequence++;
+    accumulator.sequenceById.set(id, sequence);
+    registerStreamingToolCallIndex(accumulator, index, sequence);
+    return sequence;
+  }
+
+  if (index !== null && !accumulator.ambiguousIndexes.has(index)) {
+    const knownIndexSequence = accumulator.sequenceByIndex.get(index);
+    if (knownIndexSequence !== undefined) return knownIndexSequence;
+  }
+
+  if (index === null && allowSingleCallContinuation && accumulator.callsBySequence.size === 1) {
+    for (const sequence of accumulator.callsBySequence.keys()) return sequence;
+  }
+
+  const sequence = accumulator.nextSequence++;
+  registerStreamingToolCallIndex(accumulator, index, sequence);
+  return sequence;
+}
+
+function registerStreamingToolCallIndex(
+  accumulator: StreamingToolCallAccumulator,
+  index: number | null,
+  sequence: number
+): void {
+  if (index === null || accumulator.ambiguousIndexes.has(index)) return;
+  const knownSequence = accumulator.sequenceByIndex.get(index);
+  if (knownSequence === undefined || knownSequence === sequence) {
+    accumulator.sequenceByIndex.set(index, sequence);
+    return;
+  }
+  accumulator.sequenceByIndex.delete(index);
+  accumulator.ambiguousIndexes.add(index);
 }
 
 function parseServerSentEventData(raw: string): Record<string, unknown>[] {

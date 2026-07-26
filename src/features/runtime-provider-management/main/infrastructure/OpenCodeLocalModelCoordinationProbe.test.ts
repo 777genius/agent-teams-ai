@@ -5,7 +5,7 @@ import { probeOpenCodeLocalModelCoordination } from './OpenCodeLocalModelCoordin
 import type { RuntimeLocalProviderListEntryDto } from '../../contracts';
 
 describe('probeOpenCodeLocalModelCoordination', () => {
-  it('proves the streaming Ollama tool loop despite a malformed trailing frame', async () => {
+  it('proves the streaming Ollama tool loop without indexes despite a malformed tail', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
       const body = JSON.parse(String(init?.body)) as {
         messages: Array<Record<string, unknown>>;
@@ -22,7 +22,6 @@ describe('probeOpenCodeLocalModelCoordination', () => {
                   delta: {
                     tool_calls: [
                       {
-                        index: 0,
                         id: 'call-1',
                         type: 'function',
                         function: {
@@ -41,7 +40,7 @@ describe('probeOpenCodeLocalModelCoordination', () => {
                   delta: {
                     tool_calls: [
                       {
-                        index: 0,
+                        id: 'call-1',
                         function: {
                           arguments: '"memberName":"probe-member"}',
                         },
@@ -151,6 +150,88 @@ describe('probeOpenCodeLocalModelCoordination', () => {
         },
       ],
     });
+  });
+
+  it('keeps Ollama tool calls separate when distinct ids repeat an index', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as { messages: Record<string, unknown>[] };
+      if (body.messages.length === 2) {
+        return sseResponse([
+          {
+            choices: [
+              {
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: 'call-noise',
+                      function: { name: 'unrelated_tool', arguments: '{}' },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            choices: [
+              {
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: 'call-briefing',
+                      function: {
+                        name: 'agent-teams_task_briefing',
+                        arguments: JSON.stringify({
+                          teamName: 'agent-teams-local-probe',
+                          memberName: 'probe-member',
+                        }),
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ]);
+      }
+      return sseResponse([
+        {
+          choices: [
+            {
+              delta: {
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: 'call-message',
+                    function: {
+                      name: 'agent-teams_message_send',
+                      arguments: JSON.stringify({
+                        teamName: 'agent-teams-local-probe',
+                        to: 'probe-lead',
+                        from: 'probe-member',
+                        text: 'fixed-nonce',
+                      }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ]);
+    });
+
+    const result = await probeOpenCodeLocalModelCoordination(
+      {
+        provider: localProvider('ollama', 'http://127.0.0.1:11434/v1'),
+        modelId: 'qwen3:8b',
+      },
+      { fetchImpl, createNonce: () => 'fixed-nonce' }
+    );
+
+    expect(result.status).toBe('passed');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it('keeps non-Ollama OpenAI-compatible probes on the portable non-streaming contract', async () => {
