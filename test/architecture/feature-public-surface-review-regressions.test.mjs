@@ -691,6 +691,133 @@ test('uses the final ESM binding and property state', () => {
   );
 });
 
+test('captures exported member values at the publication point', () => {
+  withFeatureFixture(
+    {
+      'src/features/esm-default-member-snapshot/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        export default api.Store;
+        api.Store = undefined;
+      `,
+      'src/features/esm-default-member-snapshot/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-selected-member-snapshot/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = { Store };
+        const selected = api.Store;
+        export { selected };
+        api.Store = undefined;
+      `,
+      'src/features/esm-selected-member-snapshot/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-member-after-snapshot-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = {};
+        const selected = api.Store;
+        export { selected };
+        api.Store = Store;
+      `,
+      'src/features/esm-member-after-snapshot-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-default-member-after-snapshot-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = {};
+        export default api.Store;
+        api.Store = Store;
+      `,
+      'src/features/esm-default-member-after-snapshot-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/esm-member-write-snapshot/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const api: Record<string, unknown> = {};
+        api.Store = Store;
+        const selected = api.Store;
+        export { selected };
+        api.Store = undefined;
+      `,
+      'src/features/esm-member-write-snapshot/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/commonjs-member-snapshot/main/index.cjs': `
+        const api = {
+          Store: require('./infrastructure/Store'),
+        };
+        module.exports = api.Store;
+        api.Store = undefined;
+      `,
+      'src/features/commonjs-member-snapshot/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-member-after-snapshot-safe/main/index.cjs': `
+        const api = {};
+        module.exports = api.Store;
+        api.Store = require('./infrastructure/Store');
+      `,
+      'src/features/commonjs-member-after-snapshot-safe/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/commonjs-member-snapshot/main/index.cjs',
+        'src/features/esm-default-member-snapshot/main/index.ts',
+        'src/features/esm-member-write-snapshot/main/index.ts',
+        'src/features/esm-selected-member-snapshot/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('keeps CommonJS member alias writes on their full public path', () => {
+  withFeatureFixture(
+    {
+      'src/features/commonjs-member-alias-direct-delete/main/index.cjs': `
+        exports.api = {};
+        const api = exports.api;
+        api.Store ||= require('./infrastructure/Store');
+        delete exports.api.Store;
+      `,
+      'src/features/commonjs-member-alias-direct-delete/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-member-alias-reverse-delete/main/index.cjs': `
+        exports.api = {};
+        const api = exports.api;
+        exports.api.Store ||= require('./infrastructure/Store');
+        delete api.Store;
+      `,
+      'src/features/commonjs-member-alias-reverse-delete/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-nested-alias-direct-delete/main/index.cjs': `
+        exports.api = { nested: {} };
+        const nested = exports.api.nested;
+        nested.Store ||= require('./infrastructure/Store');
+        delete exports.api.nested.Store;
+      `,
+      'src/features/commonjs-nested-alias-direct-delete/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-nested-alias-reverse-delete/main/index.cjs': `
+        exports.api = { nested: {} };
+        const nested = exports.api.nested;
+        exports.api.nested.Store ||= require('./infrastructure/Store');
+        delete nested.Store;
+      `,
+      'src/features/commonjs-nested-alias-reverse-delete/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/commonjs-member-alias-live/main/index.cjs': `
+        exports.api = {};
+        const api = exports.api;
+        api.Store ||= require('./infrastructure/Store');
+        delete exports.api.Other;
+      `,
+      'src/features/commonjs-member-alias-live/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/commonjs-member-alias-live/main/index.cjs',
+      ]);
+    }
+  );
+});
+
 test('traces only definitely invoked function mutations', () => {
   withFeatureFixture(
     {

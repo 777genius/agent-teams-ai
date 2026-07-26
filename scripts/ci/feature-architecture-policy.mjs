@@ -28,6 +28,7 @@ import {
 import { resolveProjectTarget } from './feature-module-resolution.mjs';
 import { analyzePublicClassSurfaces } from './feature-public-class-surface-analysis.mjs';
 import { collectPublicApiImplementationExports } from './feature-public-export-policy.mjs';
+import { snapshotExportSelection } from './feature-public-snapshot-analysis.mjs';
 import { analyzePublicTargets } from './feature-public-target-analysis.mjs';
 import { collectProductionSourceFiles } from './feature-source-files.mjs';
 
@@ -160,12 +161,15 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         exportedLocalNames.add(localName);
         liveExportedLocalNames.add(localName);
       }
-    } else if (ts.isExportAssignment(statement) && ts.isIdentifier(statement.expression)) {
-      exportedLocalNames.add(statement.expression.text);
-      snapshotLocalExports.push({
-        name: statement.expression.text,
-        position: statement.getStart(sourceFile),
-      });
+    } else if (ts.isExportAssignment(statement)) {
+      const snapshot = snapshotExportSelection(
+        statement.expression,
+        statement.getStart(sourceFile)
+      );
+      if (snapshot) {
+        snapshotLocalExports.push(snapshot);
+        if (snapshot.path.length === 0) exportedLocalNames.add(snapshot.name);
+      }
     }
     if (!hasModifier(statement, ts.SyntaxKind.ExportKeyword)) continue;
 

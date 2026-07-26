@@ -125,3 +125,39 @@ export function collectBindingModel(sourceFile) {
   };
   return { bindingAt, eventsByName, versions };
 }
+
+export function collectContainedBindingEntries(expression, bindingModel) {
+  const entries = [];
+  const visit = (value, path = []) => {
+    const current = unwrapExpression(value);
+    if (ts.isIdentifier(current)) {
+      const key = bindingModel.bindingAt(current.text, current.getStart());
+      if (key) entries.push({ key, path });
+      return;
+    }
+    if (ts.isObjectLiteralExpression(current)) {
+      for (const property of current.properties) {
+        if (ts.isShorthandPropertyAssignment(property)) {
+          visit(property.name, [...path, property.name.text]);
+        } else if (ts.isPropertyAssignment(property)) {
+          visit(property.initializer, [...path, propertyNameText(property.name)]);
+        }
+      }
+      return;
+    }
+    if (ts.isArrayLiteralExpression(current)) {
+      for (const [index, element] of current.elements.entries()) {
+        if (!ts.isOmittedExpression(element)) {
+          visit(element, [...path, String(index)]);
+        }
+      }
+      return;
+    }
+    if (ts.isConditionalExpression(current)) {
+      visit(current.whenTrue, path);
+      visit(current.whenFalse, path);
+    }
+  };
+  visit(expression);
+  return entries;
+}

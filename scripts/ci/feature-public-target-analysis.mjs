@@ -4,11 +4,13 @@ import {
   commonJsExportPath,
   isCommonJsExportsObject,
   memberAccess,
-  propertyNameText,
   rootBindingName,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
-import { collectBindingModel } from './feature-binding-model-analysis.mjs';
+import {
+  collectBindingModel,
+  collectContainedBindingEntries,
+} from './feature-binding-model-analysis.mjs';
 import {
   collectCommonJsRootAssignments,
   collectFinalCommonJsPropertyWrites,
@@ -28,6 +30,7 @@ import {
   latestPropertyWriteBefore,
   materializeCopyRelationWrites,
   propertyPathWasOverwrittenAfter,
+  propertyWriteAvailableAt,
   propertyWriteWasOverwrittenBefore,
   staticOverwrittenPaths,
   staticOverwrittenPropertyPaths,
@@ -38,46 +41,15 @@ import {
 } from './feature-public-identity-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import { attachPublicReferenceQueries } from './feature-public-reference-visibility.mjs';
+import {
+  collectSnapshotMemberRelations,
+  snapshotInitializerPathAt,
+} from './feature-public-snapshot-analysis.mjs';
+import {
+  propagateCommonJsTargetPaths,
+  propagateIdentityOwners,
+} from './feature-public-target-propagation.mjs';
 import { materializeIdentityAliasWrites } from './feature-public-write-alias-analysis.mjs';
-
-function collectContainedBindingEntries(expression, bindingModel) {
-  const entries = [];
-  const visit = (value, path = []) => {
-    const current = unwrapExpression(value);
-    if (ts.isIdentifier(current)) {
-      const key = bindingModel.bindingAt(current.text, current.getStart());
-      if (key) entries.push({ key, path });
-      return;
-    }
-    if (ts.isObjectLiteralExpression(current)) {
-      for (const property of current.properties) {
-        if (ts.isShorthandPropertyAssignment(property)) {
-          visit(property.name, [...path, property.name.text]);
-        } else if (ts.isPropertyAssignment(property)) {
-          visit(property.initializer, [...path, propertyNameText(property.name)]);
-        }
-        // Object spread copies properties; it does not expose the source object identity.
-      }
-      return;
-    }
-    if (ts.isArrayLiteralExpression(current)) {
-      for (const [index, element] of current.elements.entries()) {
-        if (!ts.isOmittedExpression(element)) visit(element, [...path, String(index)]);
-      }
-      return;
-    }
-    if (ts.isConditionalExpression(current)) {
-      visit(current.whenTrue, path);
-      visit(current.whenFalse, path);
-    }
-  };
-  visit(expression);
-  return entries;
-}
-
-function collectContainedStableBindings(expression, stableBindings) {
-  return new Set(collectContainedBindingEntries(expression, stableBindings).map(({ key }) => key));
-}
 
 function directAliasSource(expression, bindingModel) {
   let current = unwrapExpression(expression);
@@ -146,20 +118,28 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
         }
       : directAlias;
     if (alias) {
-      if (!pathWasOverwritten(alias.key, alias.path, binding.position)) {
-        if (alias.path.length > 0) {
+      const liveAttached = !pathWasOverwritten(
+        alias.key,
+        alias.path,
+        binding.position
+      );
+      if (alias.path.length > 0) {
+        memberRelations.push({
+          copyPosition: binding.position,
+          liveAttached,
+          ownerKey: key,
+          path: alias.path,
+          sourceKey: alias.key,
+          targetPath: [],
+        });
+        if (liveAttached) {
           addIdentityEdge(edges, alias.key, key);
-          memberRelations.push({
-            ownerKey: key,
-            path: alias.path,
-            sourceKey: alias.key,
-          });
-        } else {
-          addIdentityEdge(edges, alias.key, key);
-          if (alias.symmetric) {
-            addIdentityEdge(edges, key, alias.key);
-            identityAliases.push([alias.key, key]);
-          }
+        }
+      } else if (liveAttached) {
+        addIdentityEdge(edges, alias.key, key);
+        if (alias.symmetric) {
+          addIdentityEdge(edges, key, alias.key);
+          identityAliases.push([alias.key, key]);
         }
       }
       continue;
@@ -184,34 +164,50 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
 }
 
 function collectCommonJsSeeds(sourceFile, bindingModel, rootAssignments, exportsActiveAt) {
-  const seeds = new Set();
+  const seeds = new Map();
+  const addSeed = (key, path = []) => {
+    if (!key) return;
+    const paths = seeds.get(key) ?? [];
+    if (
+      !paths.some(
+        (candidate) =>
+          candidate.length === path.length &&
+          candidate.every((segment, index) => segment === path[index])
+      )
+    ) {
+      paths.push(path);
+      seeds.set(key, paths);
+    }
+  };
   const lastModuleReset = lastCommonJsRootReplacement(rootAssignments, exportsActiveAt);
   const finalRootPosition = lastModuleReset?.position ?? -1;
 
   for (const [key, binding] of bindingModel.versions) {
     const root = rootBindingName(binding.initializer);
-    const isCommonJsAlias = isCommonJsExportsObject(unwrapExpression(binding.initializer));
+    const exportPath = commonJsExportPath(unwrapExpression(binding.initializer));
     if (
-      isCommonJsAlias &&
+      exportPath !== null &&
       binding.position > finalRootPosition &&
       (root !== 'exports' || exportsActiveAt(binding.position))
     ) {
-      seeds.add(key);
+      addSeed(key, exportPath);
     }
   }
   if (lastModuleReset) {
     const value = unwrapExpression(lastModuleReset.expression);
     if (ts.isIdentifier(value)) {
       const key = bindingModel.bindingAt(value.text, lastModuleReset.position);
-      if (key) seeds.add(key);
+      addSeed(key);
     }
-    for (const key of collectContainedStableBindings(value, bindingModel)) seeds.add(key);
+    for (const entry of collectContainedBindingEntries(value, bindingModel)) {
+      addSeed(entry.key, entry.path);
+    }
     for (const source of commonJsRootWrapperSources(
       value,
       bindingModel,
       lastModuleReset.position
     )) {
-      if (source.path.length === 0) seeds.add(source.sourceKey);
+      if (source.path.length === 0) addSeed(source.sourceKey);
     }
   }
 
@@ -226,12 +222,13 @@ function collectCommonJsSeeds(sourceFile, bindingModel, rootAssignments, exports
       const targetRoot = rootBindingName(node.left);
       if (targetRoot !== 'exports' || exportsActiveAt(node.getStart(sourceFile))) {
         const value = unwrapExpression(node.right);
+        const targetPath = commonJsExportPath(node.left) ?? [];
         if (ts.isIdentifier(value)) {
           const key = bindingModel.bindingAt(value.text, node.getStart(sourceFile));
-          if (key) seeds.add(key);
+          addSeed(key, targetPath);
         }
-        for (const key of collectContainedStableBindings(value, bindingModel)) {
-          seeds.add(key);
+        for (const entry of collectContainedBindingEntries(value, bindingModel)) {
+          addSeed(entry.key, [...targetPath, ...entry.path]);
         }
       }
     }
@@ -337,36 +334,6 @@ function collectCommonJsCopyRelations(
   return relations;
 }
 
-function propagateIdentityOwners(initialOwners, edges) {
-  const owners = new Map(initialOwners);
-  const queue = [...owners.keys()];
-  while (queue.length > 0) {
-    const source = queue.shift();
-    const owner = owners.get(source);
-    if (!owner) continue;
-    for (const target of edges.get(source) ?? []) {
-      if (owners.has(target)) continue;
-      owners.set(target, owner);
-      queue.push(target);
-    }
-  }
-  return owners;
-}
-
-function propagateIdentitySet(initialValues, edges) {
-  const values = new Set(initialValues);
-  const queue = [...values];
-  while (queue.length > 0) {
-    const source = queue.shift();
-    for (const target of edges.get(source) ?? []) {
-      if (values.has(target)) continue;
-      values.add(target);
-      queue.push(target);
-    }
-  }
-  return values;
-}
-
 export function analyzePublicTargets(
   sourceFile,
   exportedLocalNames,
@@ -391,6 +358,7 @@ export function analyzePublicTargets(
     .map((name) => [bindingModel.bindingAt(name, Number.POSITIVE_INFINITY), name])
     .filter(([key]) => key !== null);
   const snapshotExportOwners = snapshotLocalExports
+    .filter(({ path = [] }) => path.length === 0)
     .map(({ name, position }) => [bindingModel.bindingAt(name, position), name])
     .filter(([key]) => key !== null);
   const identityOwners = propagateIdentityOwners(
@@ -415,14 +383,31 @@ export function analyzePublicTargets(
         finalRootReplacement.position
       ).filter(({ path }) => path.length > 0)
     : [];
-  const commonJsTargetAliases = propagateIdentitySet(
+  const commonJsTargetPaths = propagateCommonJsTargetPaths(
     collectCommonJsSeeds(sourceFile, bindingModel, rootAssignments, exportsActiveAt),
-    identityEdges
+    identityAliases,
+    memberRelations
   );
-  const publicMemberRelations = memberRelations.flatMap((relation) => {
-    const owner = identityOwners.get(relation.ownerKey);
-    return owner ? [{ ...relation, owner }] : [];
-  });
+  const commonJsTargetAliases = new Set(commonJsTargetPaths.keys());
+  const publicMemberRelations = [
+    ...collectSnapshotMemberRelations(snapshotLocalExports, bindingModel),
+    ...commonJsRootWrapperRelations.flatMap((relation) => {
+      const source = bindingModel.versions.get(relation.sourceKey);
+      return source
+        ? [{
+            ...relation,
+            copyPosition: finalRootPosition,
+            owner: source.name,
+            ownerKey: null,
+            targetPath: [],
+          }]
+        : [];
+    }),
+    ...memberRelations.flatMap((relation) => {
+      const owner = identityOwners.get(relation.ownerKey);
+      return owner ? [{ ...relation, owner }] : [];
+    }),
+  ];
   const copyRelations = allCopyRelations.flatMap((relation) => {
     const owner = identityOwners.get(relation.ownerKey);
     return owner ? [{ ...relation, owner }] : [];
@@ -445,7 +430,8 @@ export function analyzePublicTargets(
     const alias = accessPath(target);
     const aliasKey =
       alias && bindingModel.bindingAt(alias.root, position);
-    return aliasKey && commonJsTargetAliases.has(aliasKey) ? alias.path : null;
+    const publicPrefix = aliasKey && commonJsTargetPaths.get(aliasKey)?.[0];
+    return publicPrefix ? [...publicPrefix, ...alias.path] : null;
   };
   const finalCommonJsPropertyWrites = collectFinalCommonJsPropertyWrites(
     sourceFile,
@@ -508,6 +494,7 @@ export function analyzePublicTargets(
   const localOwnersAt = (position, selectedSourcePath = null) => {
     const owners = new Map();
     let referenceOwner = null;
+    let capturedReferenceIsPublic = false;
     for (const [key, binding] of bindingModel.versions) {
       const owner = identityOwners.get(key);
       if (
@@ -554,10 +541,32 @@ export function analyzePublicTargets(
       );
       const insideSourceInitializer =
         source.initializer.getStart(sourceFile) <= position && position <= source.initializer.end;
+      const initializerPath = insideSourceInitializer
+        ? snapshotInitializerPathAt(source.initializer, position)
+        : null;
+      const directInitializerAlias =
+        insideSourceInitializer &&
+        ts.isIdentifier(unwrapExpression(source.initializer));
+      const initializerWasOverwrittenBeforeCopy =
+        initializerPath &&
+        sourceWrites.some(
+          (write) =>
+            propertyWriteAvailableAt(write) > source.position &&
+            propertyWriteAvailableAt(write) < relation.copyPosition &&
+            write.path.length <= initializerPath.length &&
+            write.path.every(
+              (segment, index) => segment === initializerPath[index]
+            )
+        );
       const pathMatches =
         (currentWrite &&
           relation.path.every((segment, index) => currentWrite.path[index] === segment)) ||
-        (relation.path.length === 0 && insideSourceInitializer);
+        (initializerPath &&
+          ((initializerPath.length === 0 && directInitializerAlias) ||
+            relation.path.every(
+              (segment, index) => segment === initializerPath[index]
+            )) &&
+          !initializerWasOverwrittenBeforeCopy);
       if (relation.copyPosition === undefined) {
         if (pathMatches && !owners.has(source.name)) {
           owners.set(source.name, relation.owner);
@@ -593,6 +602,12 @@ export function analyzePublicTargets(
         !overwrittenByTarget &&
         !overwrittenAfterCopy
       ) {
+        capturedReferenceIsPublic =
+          capturedReferenceIsPublic ||
+          Boolean(
+            insideSourceInitializer ||
+            (currentWrite && writeContainsPosition(currentWrite, position))
+          );
         if (currentWrite && writeContainsPosition(currentWrite, position)) {
           referenceOwner ??= relation.owner;
         }
@@ -614,6 +629,9 @@ export function analyzePublicTargets(
     }
     attachPublicReferenceQueries(owners, {
       bindingModel,
+      capturedReferenceIsPublic: (reference) =>
+        capturedReferenceIsPublic &&
+        reference.getStart(sourceFile) === position,
       publicBindingNames,
       propertyWrites,
       referenceOwner,

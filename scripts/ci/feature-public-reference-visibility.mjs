@@ -143,6 +143,7 @@ export function attachPublicReferenceQueries(
   owners,
   {
     bindingModel,
+    capturedReferenceIsPublic,
     publicBindingNames,
     propertyWrites,
     referenceOwner,
@@ -159,6 +160,7 @@ export function attachPublicReferenceQueries(
     !publicBindingNames.has(declaration.name.text) ||
     owners.has(declaration.name.text);
   owners.isReferencePublic = (reference, declaration) => {
+    if (capturedReferenceIsPublic?.(reference)) return true;
     if (!ts.isIdentifier(declaration.name) || !declaration.initializer) return true;
     const path = directObjectReferencePath(declaration.initializer, reference);
     if (!path) return true;
@@ -171,6 +173,7 @@ export function attachPublicReferenceQueries(
     );
   };
   owners.isMutationReferencePublic = (reference, expression) => {
+    if (capturedReferenceIsPublic?.(reference)) return true;
     const target = mutationReferencePath(
       expression,
       reference,
