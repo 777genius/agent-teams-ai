@@ -16,6 +16,7 @@ import {
   type TerminalWorkspaceSnapshot,
 } from '../model/terminalTabPreferences';
 
+import type { TerminalCommandRunPresentation } from '../model/terminalCommandRuns';
 import type { WorkspaceKernel } from '@terminal-platform/workspace-core';
 
 export type TerminalMuxCommands = Pick<
@@ -43,6 +44,7 @@ interface UseTerminalMuxTabLifecycleOptions {
   canCreateTab: boolean;
   canFocusTab: boolean;
   canRenameTab: boolean;
+  commandRuns: readonly TerminalCommandRunPresentation[];
   commands: TerminalMuxCommands;
   orderedVisibleTabs: readonly TerminalMuxTab[];
   prewarmedTab: TerminalMuxTab | null;
@@ -115,6 +117,7 @@ export function useTerminalMuxTabLifecycle({
   canCreateTab,
   canFocusTab,
   canRenameTab,
+  commandRuns,
   commands,
   orderedVisibleTabs,
   prewarmedTab,
@@ -293,6 +296,9 @@ export function useTerminalMuxTabLifecycle({
             return;
           }
           onCommandSettled?.(command, result.changed);
+          if (command.kind === 'close_tab' && !result.changed) {
+            break;
+          }
         }
 
         await token.commands.attachSession(token.activeSessionId);
@@ -442,7 +448,7 @@ export function useTerminalMuxTabLifecycle({
         return;
       }
 
-      if (resolveTerminalTabContentState(snapshot, tab) !== 'empty') {
+      if (resolveTerminalTabContentState(snapshot, tab, commandRuns) !== 'empty') {
         const targetScopeEpoch = scopeRef.current.epoch;
         updateViewStateForEpoch(targetScopeEpoch, (current) => ({
           ...current,
@@ -453,7 +459,7 @@ export function useTerminalMuxTabLifecycle({
 
       await closeTab(tab);
     },
-    [canCloseVisibleTabs, closeTab, prewarmedTabId, snapshot, updateViewStateForEpoch]
+    [canCloseVisibleTabs, closeTab, commandRuns, prewarmedTabId, snapshot, updateViewStateForEpoch]
   );
 
   const dismissCloseCandidate = useCallback((): void => {

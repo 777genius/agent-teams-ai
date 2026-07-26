@@ -30,6 +30,7 @@ import {
 } from './useTerminalMuxTabLifecycle';
 import { useTerminalTabPointerReorder } from './useTerminalTabPointerReorder';
 
+import type { TerminalCommandRunPresentation } from '../model/terminalCommandRuns';
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
@@ -38,6 +39,7 @@ import type {
 } from 'react';
 
 export interface UseTerminalMuxTabsControllerOptions {
+  commandRuns: readonly TerminalCommandRunPresentation[];
   commands: TerminalMuxCommands;
   placement: 'console' | 'sheet-header';
   settingsOpen: boolean;
@@ -96,6 +98,7 @@ interface PendingCloseFocusRequest extends TerminalMuxTabCloseDispatch {
 }
 
 export function useTerminalMuxTabsController({
+  commandRuns,
   commands,
   placement,
   settingsOpen,
@@ -173,6 +176,7 @@ export function useTerminalMuxTabsController({
     canCreateTab: viewModel.canCreateTab,
     canFocusTab: viewModel.canFocusTab,
     canRenameTab: viewModel.canRenameTab,
+    commandRuns,
     commands,
     orderedVisibleTabs: viewModel.orderedVisibleTabs,
     prewarmedTab: viewModel.prewarmedTab,

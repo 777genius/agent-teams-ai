@@ -189,6 +189,27 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(requiredControls().error).toBe('close failed');
   });
 
+  it('does not focus a sibling when the close command is a semantic no-op', async () => {
+    const onTabCloseDispatched = vi.fn();
+    const onTabCloseFocusSettled = vi.fn();
+    const commands = createResolvedCommands();
+    commands.dispatchMuxCommand = vi.fn(async () => ({ changed: false })) as never;
+    await render({ commands, onTabCloseDispatched, onTabCloseFocusSettled });
+
+    await act(async () => {
+      await requiredControls().requestCloseTab(TAB_ONE);
+    });
+
+    expect(commands.dispatchMuxCommand).toHaveBeenCalledOnce();
+    expect(commands.dispatchMuxCommand).toHaveBeenCalledWith('session-a', {
+      kind: 'close_tab',
+      tab_id: TAB_ONE.tab_id,
+    });
+    expect(onTabCloseDispatched).not.toHaveBeenCalled();
+    expect(onTabCloseFocusSettled).not.toHaveBeenCalled();
+    expect(commands.attachSession).toHaveBeenCalledOnce();
+  });
+
   it('asks for confirmation before closing a visually empty tab with active progress', async () => {
     const commands = createResolvedCommands();
     await render({
@@ -670,6 +691,7 @@ function createOptions(commands: TerminalMuxCommands): LifecycleOptions {
     canCreateTab: false,
     canFocusTab: true,
     canRenameTab: true,
+    commandRuns: [],
     commands,
     orderedVisibleTabs: VISIBLE_TABS,
     prewarmedTab: null,

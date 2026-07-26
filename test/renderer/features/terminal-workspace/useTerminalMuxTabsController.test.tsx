@@ -29,6 +29,7 @@ describe('useTerminalMuxTabsController close focus', () => {
 
   function Harness({ snapshot }: { snapshot: TerminalWorkspaceSnapshot }): React.JSX.Element {
     const nextControls = useTerminalMuxTabsController({
+      commandRuns: [],
       commands,
       placement: 'console',
       settingsOpen: false,

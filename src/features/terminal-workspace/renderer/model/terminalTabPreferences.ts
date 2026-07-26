@@ -1,3 +1,4 @@
+import type { TerminalCommandRunPresentation } from './terminalCommandRuns';
 import type { WorkspaceKernel } from '@terminal-platform/workspace-core';
 
 export const PREWARMED_TERMINAL_TAB_TITLE = '__tp_prewarmed_shell__';
@@ -331,12 +332,29 @@ export function normalizeTerminalUserTabTitle(title: string): string | null {
 
 export function resolveTerminalTabContentState(
   snapshot: TerminalWorkspaceSnapshot,
-  tab: TerminalMuxTab
+  tab: TerminalMuxTab,
+  commandRuns: readonly TerminalCommandRunPresentation[] = []
 ): TerminalTabContentState {
   const paneIds = collectPaneIds(tab.root);
   const focusedScreen = snapshot.attachedSession?.focused_screen ?? null;
+  const attachedSessionId = snapshot.attachedSession?.session?.session_id ?? null;
 
   for (const paneId of paneIds) {
+    if ((snapshot.drafts?.[paneId] ?? '').trim().length > 0) {
+      return 'has-content';
+    }
+    if (
+      attachedSessionId &&
+      commandRuns.some(
+        (run) =>
+          run.sessionId === attachedSessionId &&
+          run.paneId === paneId &&
+          (run.status === 'running' || run.status === 'unknown')
+      )
+    ) {
+      return 'has-content';
+    }
+
     const historicalPane = snapshot.historicalPanes?.[paneId];
     if (
       historicalPane?.lines.some(hasVisibleTerminalText) ||
@@ -360,7 +378,6 @@ export function resolveTerminalTabContentState(
 
   const paneId = paneIds[0];
   const historicalPane = snapshot.historicalPanes?.[paneId];
-  const attachedSessionId = snapshot.attachedSession?.session?.session_id ?? null;
   const historyIsComplete =
     historicalPane !== undefined &&
     attachedSessionId !== null &&

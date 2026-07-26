@@ -15,6 +15,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import type { ScreenProgressState } from '@terminal-platform/runtime-types';
+import type { TerminalCommandRunPresentation } from '@features/terminal-workspace/renderer/model/terminalCommandRuns';
 
 describe('terminal tab preferences', () => {
   const tabs = [createTab('tab-1', 'One'), createTab('tab-2', 'Two'), createTab('tab-3', 'Three')];
@@ -237,6 +238,47 @@ describe('terminal tab preferences', () => {
       )
     ).toBe('empty');
   });
+
+  it('treats a draft or an unsettled command run as content', () => {
+    const historicalPanes = {
+      'pane-tab-1': createHistoricalPane({ paneId: 'pane-tab-1' }),
+    };
+    const emptySnapshot = createSnapshot({
+      focusedPaneId: 'pane-tab-1',
+      focusedProgressState: 'inactive',
+      historicalPanes,
+    });
+
+    expect(
+      resolveTerminalTabContentState(
+        createSnapshot({
+          drafts: { 'pane-tab-1': 'git status' },
+          focusedPaneId: 'pane-tab-1',
+          focusedProgressState: 'inactive',
+          historicalPanes,
+        }),
+        tabs[0]
+      )
+    ).toBe('has-content');
+
+    for (const status of [
+      'running',
+      'unknown',
+    ] satisfies TerminalCommandRunPresentation['status'][]) {
+      expect(
+        resolveTerminalTabContentState(emptySnapshot, tabs[0], [
+          {
+            clientEventId: `run-${status}`,
+            command: 'sleep 10',
+            paneId: 'pane-tab-1',
+            sessionId: 'session-a',
+            startedAtMs: 1,
+            status,
+          },
+        ])
+      ).toBe('has-content');
+    }
+  });
 });
 
 interface HistoricalPaneFixture {
@@ -250,12 +292,14 @@ interface HistoricalPaneFixture {
 }
 
 function createSnapshot({
+  drafts = {},
   focusedLines = [],
   focusedPaneId,
   focusedProgressState,
   historicalPanes = {},
   sessionId = 'session-a',
 }: {
+  drafts?: Record<string, string>;
   focusedLines?: string[];
   focusedPaneId: string;
   focusedProgressState?: ScreenProgressState;
@@ -275,6 +319,7 @@ function createSnapshot({
         session_id: sessionId,
       },
     },
+    drafts,
     historicalPanes,
   } as unknown as TerminalWorkspaceSnapshot;
 }
