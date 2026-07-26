@@ -66,7 +66,7 @@ export async function withIdentityStableDirectoryPathAsync<T>(
   assertIdentityStableDirectoryChildOperationsSupported();
   const strict = options.durability !== 'best-effort';
   const errorPath = options.errorPath ?? directoryPath;
-  const stableDescriptorMatch = directoryPath.match(/^\/proc\/self\/fd\/(\d+)(?:\/(.*))?$/);
+  const stableDescriptorMatch = /^\/proc\/self\/fd\/(\d+)(?:\/(.*))?$/.exec(directoryPath);
   const components = stableDescriptorMatch
     ? (stableDescriptorMatch[2] ?? '').split(path.sep).filter(Boolean)
     : path.resolve(directoryPath).split(path.sep).filter(Boolean);
