@@ -81,9 +81,12 @@ export class LocalGitIntegrationAdapter implements GitPort {
       await this.git(["rev-parse", "--abbrev-ref", "HEAD"], workspacePath)
     ).stdout.trim();
     const dirtyFiles = uniqueSorted([
-      ...(await this.gitLines(["diff", "--name-only"], workspacePath)),
       ...(await this.gitLines(
-        ["diff", "--cached", "--name-only"],
+        ["diff", "--no-renames", "--name-only"],
+        workspacePath,
+      )),
+      ...(await this.gitLines(
+        ["diff", "--cached", "--no-renames", "--name-only"],
         workspacePath,
       )),
       ...(await this.gitLines(

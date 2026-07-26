@@ -43,6 +43,23 @@ afterEach(async () => {
 });
 
 describe("local project integration adapters", () => {
+  it("reports both sides of a staged rename in the dirty footprint", async () => {
+    const fixture = await createGitFixture();
+    const adapter = new LocalGitIntegrationAdapter();
+
+    await git(fixture.workspacePath, [
+      "mv",
+      "src/memory.ts",
+      "src/renamed-memory.ts",
+    ]);
+
+    await expect(adapter.getStatus({ workspacePath: fixture.workspacePath }))
+      .resolves.toEqual({
+        branch: "main",
+        dirtyFiles: ["src/memory.ts", "src/renamed-memory.ts"],
+      });
+  });
+
   it("applies, commits, and pushes a worker commit through git cli", async () => {
     const fixture = await createGitFixture();
     const adapter = new LocalGitIntegrationAdapter();
