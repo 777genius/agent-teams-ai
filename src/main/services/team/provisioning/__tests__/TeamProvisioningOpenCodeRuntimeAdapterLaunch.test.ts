@@ -55,6 +55,7 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
         model: 'gpt-5',
         effort: 'high',
         skipPermissions: undefined,
+        allowExperimentalLocalModels: true,
       },
       members: [
         {
@@ -90,6 +91,7 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
       model: 'gpt-5',
       effort: 'high',
       skipPermissions: true,
+      allowExperimentalLocalModels: true,
       expectedMembers: [
         {
           name: 'alice',

@@ -229,6 +229,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     };
     assertPrimaryRuntimeOwnerCurrent();
     const localModelPreflight = await adapter.preflightLocalModels?.({
+      ...(run.request.allowExperimentalLocalModels === true
+        ? { allowExperimentalLocalModels: true }
+        : {}),
       targets: [
         {
           projectPath: run.request.cwd,

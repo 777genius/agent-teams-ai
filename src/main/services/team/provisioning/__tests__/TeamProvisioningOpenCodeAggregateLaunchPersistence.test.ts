@@ -430,6 +430,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       providerId: 'opencode',
       color: 'blue',
       displayName: 'Team A',
+      allowExperimentalLocalModels: true,
       members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
     } as TeamCreateRequest;
     const memberSpawnStatuses = new Map<string, MemberSpawnStatusEntry>();
@@ -496,6 +497,11 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
     );
 
     expect(result?.teamLaunchState).toBe('clean_success');
+    expect(adapterLaunch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowExperimentalLocalModels: true,
+      })
+    );
     expect(calls).toEqual([
       'getLaunchCwd',
       'getTeamsBasePath',

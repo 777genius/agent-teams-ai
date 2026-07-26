@@ -102,7 +102,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(prepare.mock.calls[0]?.[0]).toMatchObject({
-      model: undefined,
+      model: 'openrouter/qwen/qwen3-coder',
       runtimeOnly: true,
     });
     expect(result.details).toEqual([
@@ -139,7 +139,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(prepare.mock.calls[0]?.[0]).toMatchObject({
-      model: undefined,
+      model: 'first-model',
       runtimeOnly: true,
     });
     expect(result.blockingMessages).toEqual([]);
@@ -157,6 +157,91 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       },
     ]);
     expect(debugEvents).toContain('opencode_compatibility_batch_busy_deferred');
+  });
+
+  it('defers configured Ollama routes directly to deep verification without auth or catalog gating', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+    const adapter = createAdapter({
+      prepare,
+      availableModels: [],
+    });
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/tmp/project',
+      modelIds: ['ollama/qwen3-coder:30b'],
+      verificationMode: 'compatibility',
+    });
+
+    expect(result).toMatchObject({
+      details: ['Selected model ollama/qwen3-coder:30b is compatible. Deep verification pending.'],
+      blockingMessages: [],
+      issues: [],
+    });
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it('defers a provider-scoped route missing from the general catalog to deep verification', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'local-lab/team-model',
+      diagnostics: [],
+      warnings: [],
+    });
+    const adapter = createAdapter({
+      prepare,
+      availableModels: ['anthropic/claude-sonnet'],
+    });
+    const debugEvents: string[] = [];
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/tmp/project',
+      modelIds: ['local-lab/team-model'],
+      verificationMode: 'compatibility',
+      appendPreflightDebugLog: (event) => debugEvents.push(event),
+    });
+
+    expect(result).toMatchObject({
+      details: ['Selected model local-lab/team-model is compatible. Deep verification pending.'],
+      blockingMessages: [],
+      issues: [],
+    });
+    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(debugEvents).toContain('opencode_compatibility_batch_unknown_provider_deferred');
+  });
+
+  it('still blocks a missing model when its provider is present in the live catalog', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'local-lab/missing-model',
+      diagnostics: [],
+      warnings: [],
+    });
+    const adapter = createAdapter({
+      prepare,
+      availableModels: ['local-lab/team-model'],
+    });
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/tmp/project',
+      modelIds: ['local-lab/missing-model'],
+      verificationMode: 'compatibility',
+    });
+
+    expect(result.blockingMessages).toEqual([
+      expect.stringContaining('local-lab/missing-model was not found in the live provider catalog'),
+    ]);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        modelId: 'local-lab/missing-model',
+        code: 'model_unavailable',
+        severity: 'blocking',
+      }),
+    ]);
   });
 
   it('defers remaining deep verification when OpenCode is busy', async () => {
@@ -358,8 +443,14 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect(result.issues).toEqual([]);
   });
 
-  it('blocks a local model when runtime inspection fails instead of probing through it', async () => {
-    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+  it('defers an unavailable local runtime inspection to the real OpenCode execution probe', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'ollama/qwen3:8b',
+      diagnostics: [],
+      warnings: [],
+    });
     const adapter = createAdapter({ prepare });
     const inspectLocalModelRuntime = vi
       .fn()
@@ -373,16 +464,17 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       inspectLocalModelRuntime,
     });
 
-    expect(result.blockingMessages).toEqual([
-      expect.stringContaining('local provider inventory unavailable'),
+    expect(result.blockingMessages).toEqual([]);
+    expect(result.warnings).toEqual([
+      expect.stringContaining('does not prove that the model is unsupported'),
     ]);
     expect(result.issues).toEqual([
       expect.objectContaining({
-        severity: 'blocking',
+        severity: 'warning',
         code: 'local_runtime_inspection_failed',
       }),
     ]);
-    expect(prepare).not.toHaveBeenCalled();
+    expect(prepare).toHaveBeenCalledTimes(1);
   });
 
   it('preflights a configured custom local source before the OpenCode execution probe', async () => {
@@ -401,6 +493,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       severity: 'blocking',
       code: 'local_coordination_probe_failed',
       message: 'Custom local model did not complete message_send coordination.',
+      experimentalOverrideAvailable: true,
     } as const);
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
@@ -413,6 +506,12 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     expect(result.blockingMessages).toEqual([
       expect.stringContaining('did not complete message_send coordination'),
+    ]);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        code: 'local_coordination_probe_failed',
+        experimentalOverrideAvailable: true,
+      }),
     ]);
     expect(inspectLocalModelRuntime).toHaveBeenCalledWith({
       projectPath: '/tmp/project',

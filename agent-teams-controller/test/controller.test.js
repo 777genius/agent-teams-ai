@@ -3344,6 +3344,7 @@ controller.messages.sendMessage({
       const launched = await controller.runtime.launchTeam({
         cwd: '/tmp/project',
         controlUrl: server.baseUrl,
+        allowExperimentalLocalModels: true,
       });
       expect(launched.runId).toBe('run-123');
       expect(launched.isAlive).toBe(true);
@@ -3359,7 +3360,7 @@ controller.messages.sendMessage({
         {
           method: 'POST',
           url: '/api/teams/my-team/launch',
-          body: { cwd: '/tmp/project' },
+          body: { cwd: '/tmp/project', allowExperimentalLocalModels: true },
         },
         {
           method: 'GET',

@@ -20,6 +20,7 @@ interface TestRun extends MixedSecondaryLaneLaunchFlowRun {
   request: {
     cwd: string;
     skipPermissions?: boolean;
+    allowExperimentalLocalModels?: boolean;
     color?: string;
     displayName?: string;
   };
@@ -78,9 +79,7 @@ function createSnapshot(): PersistedTeamLaunchSnapshot {
   };
 }
 
-function createLaunchResult(
-  input: Partial<TeamRuntimeLaunchResult> = {}
-): TeamRuntimeLaunchResult {
+function createLaunchResult(input: Partial<TeamRuntimeLaunchResult> = {}): TeamRuntimeLaunchResult {
   return {
     runId: 'lane-run-id',
     teamName: 'team-a',
@@ -121,19 +120,15 @@ function createPorts(
 ): MixedSecondaryLaneLaunchFlowPorts<TestRun> {
   const adapter = createAdapter();
   return {
-    nowMs: vi
-      .fn<() => number>()
-      .mockReturnValueOnce(1000)
-      .mockReturnValue(1250),
+    nowMs: vi.fn<() => number>().mockReturnValueOnce(1000).mockReturnValue(1250),
     randomUuid: vi.fn<() => string>(() => 'lane-run-id'),
     teamsBasePath: vi.fn<() => string>(() => '/teams'),
     isStoppingSecondaryRuntimeTeam: vi.fn<(teamName: string) => boolean>(() => false),
     clearOpenCodeRuntimeLaneStorage: vi.fn<
       MixedSecondaryLaneLaunchFlowPorts<TestRun>['clearOpenCodeRuntimeLaneStorage']
     >(async () => undefined),
-    deleteSecondaryRuntimeRun: vi.fn<
-      MixedSecondaryLaneLaunchFlowPorts<TestRun>['deleteSecondaryRuntimeRun']
-    >(),
+    deleteSecondaryRuntimeRun:
+      vi.fn<MixedSecondaryLaneLaunchFlowPorts<TestRun>['deleteSecondaryRuntimeRun']>(),
     getOpenCodeRuntimeAdapter: vi.fn<
       MixedSecondaryLaneLaunchFlowPorts<TestRun>['getOpenCodeRuntimeAdapter']
     >(() => adapter),
@@ -152,9 +147,8 @@ function createPorts(
     readLaunchState: vi.fn<MixedSecondaryLaneLaunchFlowPorts<TestRun>['readLaunchState']>(
       async () => createSnapshot()
     ),
-    setSecondaryRuntimeRun: vi.fn<
-      MixedSecondaryLaneLaunchFlowPorts<TestRun>['setSecondaryRuntimeRun']
-    >(),
+    setSecondaryRuntimeRun:
+      vi.fn<MixedSecondaryLaneLaunchFlowPorts<TestRun>['setSecondaryRuntimeRun']>(),
     prepareOpenCodeRuntimeLaneForLaunchGeneration: vi.fn<
       MixedSecondaryLaneLaunchFlowPorts<TestRun>['prepareOpenCodeRuntimeLaneForLaunchGeneration']
     >(async () => ({ diagnostics: [] })),
@@ -164,9 +158,8 @@ function createPorts(
     guardCommittedOpenCodeSecondaryLaneEvidence: vi.fn<
       MixedSecondaryLaneLaunchFlowPorts<TestRun>['guardCommittedOpenCodeSecondaryLaneEvidence']
     >(async ({ result }) => result),
-    syncOpenCodeRuntimeToolApprovals: vi.fn<
-      MixedSecondaryLaneLaunchFlowPorts<TestRun>['syncOpenCodeRuntimeToolApprovals']
-    >(),
+    syncOpenCodeRuntimeToolApprovals:
+      vi.fn<MixedSecondaryLaneLaunchFlowPorts<TestRun>['syncOpenCodeRuntimeToolApprovals']>(),
     ...overrides,
   };
 }
@@ -180,13 +173,22 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
       .mockResolvedValueOnce(createLaunchResult());
     const adapter = createAdapter(launch);
     const lane = createLane({ diagnostics: ['requested diagnostic'] });
-    const run = createRun();
+    const run = createRun({
+      request: {
+        cwd: '/repo/root',
+        allowExperimentalLocalModels: true,
+        color: '#123456',
+        displayName: 'Team A',
+      },
+    });
     const ports = createPorts({
       getOpenCodeRuntimeAdapter: vi.fn<
         MixedSecondaryLaneLaunchFlowPorts<TestRun>['getOpenCodeRuntimeAdapter']
       >(() => adapter),
       prepareOpenCodeRuntimeLaneForLaunchGeneration: vi
-        .fn<MixedSecondaryLaneLaunchFlowPorts<TestRun>['prepareOpenCodeRuntimeLaneForLaunchGeneration']>()
+        .fn<
+          MixedSecondaryLaneLaunchFlowPorts<TestRun>['prepareOpenCodeRuntimeLaneForLaunchGeneration']
+        >()
         .mockResolvedValueOnce({ diagnostics: [] })
         .mockResolvedValueOnce({ diagnostics: ['reset stale manifest'] }),
     });
@@ -209,6 +211,11 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
       forceReset: true,
     });
     expect(launch).toHaveBeenCalledTimes(2);
+    expect(launch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowExperimentalLocalModels: true,
+      })
+    );
     expect(lane.result?.teamLaunchState).toBe('clean_success');
     expect(lane.state).toBe('finished');
     expect(ports.syncOpenCodeRuntimeToolApprovals).toHaveBeenCalledWith(

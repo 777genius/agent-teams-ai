@@ -212,6 +212,9 @@ export async function launchOpenCodeAggregatePrimaryLane(
     model: params.run.request.model,
     effort: params.run.request.effort,
     skipPermissions: params.run.request.skipPermissions !== false,
+    ...(params.run.request.allowExperimentalLocalModels === true
+      ? { allowExperimentalLocalModels: true }
+      : {}),
     expectedMembers,
     previousLaunchState: params.previousLaunchState,
   };

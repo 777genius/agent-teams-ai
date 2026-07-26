@@ -6014,6 +6014,20 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('prompt must be a string');
     });
+
+    it('rejects a non-boolean experimental local-model override', async () => {
+      const handler = handlers.get(TEAM_CREATE)!;
+      const result = (await handler({ sender: { send: vi.fn() } } as never, {
+        teamName: 'test-team',
+        members: [{ name: 'alice' }],
+        cwd: os.tmpdir(),
+        allowExperimentalLocalModels: 'yes',
+      })) as { success: boolean; error: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('allowExperimentalLocalModels must be a boolean');
+      expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+    });
   });
 
   it('removes all expected handlers', () => {
@@ -6199,11 +6213,13 @@ describe('ipc teams handlers', () => {
         providerId: 'codex',
         providerBackendId: 'codex-native',
         limitContext: true,
+        allowExperimentalLocalModels: true,
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
       const createRequest = teamHandlerMocks.createTeam.mock.calls[0][0];
       expect(createRequest.limitContext).toBe(true);
+      expect(createRequest.allowExperimentalLocalModels).toBe(true);
       expect(createRequest.members).toEqual([
         {
           name: 'builder',
@@ -6517,6 +6533,7 @@ describe('ipc teams handlers', () => {
           fastMode: 'on',
           limitContext: true,
           skipPermissions: false,
+          allowExperimentalLocalModels: true,
           worktree: 'feature-x',
           extraCliArgs: '--max-turns 5',
           members: [
@@ -7027,6 +7044,20 @@ describe('ipc teams handlers', () => {
       expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
     });
 
+    it('rejects invalid experimental local-model override before dispatching', async () => {
+      const handler = handlers.get(TEAM_LAUNCH)!;
+      const result = (await handler({ sender: { send: vi.fn() } } as never, {
+        teamName: 'my-team',
+        cwd: os.tmpdir(),
+        allowExperimentalLocalModels: 'true',
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('allowExperimentalLocalModels must be a boolean');
+      expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+    });
+
     it('launchTeam preserves top-level OpenCode provider and backend', async () => {
       const handler = handlers.get(TEAM_LAUNCH)!;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
@@ -7036,6 +7067,7 @@ describe('ipc teams handlers', () => {
         providerBackendId: 'opencode-cli',
         model: 'opencode/minimax-m2.5-free',
         effort: 'medium',
+        allowExperimentalLocalModels: true,
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
@@ -7046,6 +7078,7 @@ describe('ipc teams handlers', () => {
           providerBackendId: 'opencode-cli',
           model: 'opencode/minimax-m2.5-free',
           effort: 'medium',
+          allowExperimentalLocalModels: true,
         }),
         expect.any(Function)
       );

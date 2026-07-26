@@ -20,7 +20,10 @@ import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondary
 import type { TeamCreateRequest } from '@shared/types';
 
 export interface MixedSecondaryLaneLaunchFlowRun extends MixedSecondaryLaneLaunchSetupRun {
-  request: Pick<TeamCreateRequest, 'cwd' | 'skipPermissions' | 'color' | 'displayName'>;
+  request: Pick<
+    TeamCreateRequest,
+    'cwd' | 'skipPermissions' | 'allowExperimentalLocalModels' | 'color' | 'displayName'
+  >;
 }
 
 export interface MixedSecondaryLaneLaunchFlowPorts<
@@ -126,6 +129,9 @@ export async function launchSingleMixedSecondaryLaneWithPorts<
         effort: lane.member.effort,
         runtimeOnly: true,
         skipPermissions: run.request.skipPermissions !== false,
+        ...(run.request.allowExperimentalLocalModels === true
+          ? { allowExperimentalLocalModels: true }
+          : {}),
         expectedMembers: laneExpectedMembers,
         previousLaunchState,
       });

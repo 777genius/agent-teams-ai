@@ -38,6 +38,7 @@ export interface OpenCodeLocalModelRuntimeReadiness {
   readonly effectiveContextTokens: number | null;
   readonly coordinationProbeStatus: 'passed' | 'failed' | 'unavailable' | null;
   readonly severity: 'ready' | 'warning' | 'blocking';
+  readonly experimentalOverrideAvailable?: boolean;
   readonly code:
     | 'local_coordination_verified'
     | 'local_coordination_probe_failed'
@@ -62,6 +63,7 @@ export interface OpenCodeSelectedModelPreparationInput {
   inspectLocalModelRuntime?: (input: {
     projectPath: string;
     modelRoute: string;
+    allowExperimentalLocalModels?: boolean;
   }) => Promise<OpenCodeLocalModelRuntimeReadiness | null>;
 }
 
@@ -84,8 +86,8 @@ function buildLocalModelTeamToolsWarning(modelId: string): string | null {
   if (!isOpenCodeLocalProviderId(sourceId)) return null;
   return (
     `Local model ${modelId} answered the execution probe, but Agent Teams task and messaging ` +
-    'tools are not proven by that check. Use a tool-capable model and an effective 16K-32K ' +
-    'server context; Ollama defaults to 4K unless configured separately.'
+    'tools are not proven by that check. Use a tool-capable model and at least 16K effective ' +
+    'server context; 64K is recommended for coding agents.'
   );
 }
 
@@ -100,6 +102,7 @@ function buildLocalRuntimeInspectionFailure(
   message: string
 ): OpenCodeLocalModelRuntimeReadiness {
   const parsed = parseOpenCodeQualifiedModelRef(modelId);
+  const verificationUnavailable = code === 'local_runtime_inspection_failed';
   return {
     providerId: parsed?.sourceId ?? 'local',
     modelId: parsed?.modelId ?? modelId,
@@ -110,9 +113,12 @@ function buildLocalRuntimeInspectionFailure(
     configuredContextTokens: null,
     effectiveContextTokens: null,
     coordinationProbeStatus: null,
-    severity: 'blocking',
+    severity: verificationUnavailable ? 'warning' : 'blocking',
     code,
-    message,
+    message: verificationUnavailable
+      ? `${message} This verification failure does not prove that the model is unsupported; ` +
+        'the real OpenCode execution probe will make the launch decision.'
+      : message,
   };
 }
 
@@ -262,7 +268,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
 
     // A local runtime can often prove a hard incompatibility from server metadata alone.
     // Avoid starting the much slower OpenCode execution probe when launch is already
-    // impossible (for example, a sub-1B model or an effective 4K context window).
+    // impossible (for example, missing tool support or an effective 4K context window).
     if (localRuntimeReadiness?.severity === 'blocking') {
       appendPreflightDebugLog('opencode_local_model_prepare_skipped', {
         cwd,
@@ -343,6 +349,8 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
           severity: 'blocking',
           code: localRuntimeReadiness.code,
           message: localRuntimeReadiness.message,
+          experimentalOverrideAvailable:
+            localRuntimeReadiness.experimentalOverrideAvailable === true,
         });
         continue;
       }
@@ -498,6 +506,19 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
     modelIds,
   });
 
+  const configuredLocalModelIds = modelIds.filter(isOpenCodeLocalModelRoute);
+  const catalogModelIds = modelIds.filter((modelId) => !isOpenCodeLocalModelRoute(modelId));
+  for (const modelId of configuredLocalModelIds) {
+    details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
+  }
+  if (catalogModelIds.length === 0) {
+    appendPreflightDebugLog('opencode_compatibility_batch_local_routes_deferred', {
+      cwd,
+      modelIds,
+    });
+    return { details, warnings, blockingMessages, issues, supportDiagnostics };
+  }
+
   let sharedPrepare: TeamRuntimePrepareResult;
   try {
     sharedPrepare = await adapter.prepare({
@@ -505,7 +526,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
       teamName: '__prepare_opencode__',
       cwd,
       providerId: 'opencode',
-      model: undefined,
+      model: catalogModelIds[0],
       runtimeOnly: true,
       skipPermissions: true,
       expectedMembers: [],
@@ -587,6 +608,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
 
   const latestReadiness = getLastOpenCodeTeamLaunchReadiness(adapter, cwd);
   const availableModels = normalizeAvailableModelIds(latestReadiness?.availableModels);
+  const availableProviderIds = new Set(getOpenCodeCatalogProviderIds(availableModels));
   appendPreflightDebugLog('opencode_compatibility_batch_catalog', {
     cwd,
     modelIds,
@@ -599,10 +621,25 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
     return null;
   }
 
-  for (const modelId of modelIds) {
+  for (const modelId of catalogModelIds) {
     const resolvedModel = resolveOpenCodeCompatibilityModel(modelId, availableModels);
     if (resolvedModel.ok) {
       details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
+      continue;
+    }
+
+    const requestedProviderId = extractOpenCodeCatalogProviderId(modelId);
+    if (requestedProviderId && !availableProviderIds.has(requestedProviderId)) {
+      // A provider missing from the general OpenCode catalog is not proof that a
+      // provider-scoped route is invalid. App-managed custom local providers can
+      // be absent from this catalog while remaining executable. Defer the route
+      // to the inventory-aware local inspection and real OpenCode execution probe.
+      details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
+      appendPreflightDebugLog('opencode_compatibility_batch_unknown_provider_deferred', {
+        cwd,
+        modelId,
+        requestedProviderId,
+      });
       continue;
     }
 

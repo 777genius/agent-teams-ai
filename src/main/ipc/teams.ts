@@ -2175,6 +2175,12 @@ async function validateProvisioningRequest(
   if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
     return { valid: false, error: 'limitContext must be a boolean' };
   }
+  if (
+    payload.allowExperimentalLocalModels !== undefined &&
+    typeof payload.allowExperimentalLocalModels !== 'boolean'
+  ) {
+    return { valid: false, error: 'allowExperimentalLocalModels must be a boolean' };
+  }
 
   try {
     await fs.promises.mkdir(cwd, { recursive: true });
@@ -2234,6 +2240,10 @@ async function validateProvisioningRequest(
       limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
       skipPermissions:
         typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
+      allowExperimentalLocalModels:
+        typeof payload.allowExperimentalLocalModels === 'boolean'
+          ? payload.allowExperimentalLocalModels
+          : undefined,
       worktree:
         typeof payload.worktree === 'string' && payload.worktree.trim()
           ? payload.worktree.trim()
@@ -2378,6 +2388,12 @@ async function handleLaunchTeam(
   if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
     return { success: false, error: 'limitContext must be a boolean' };
   }
+  if (
+    payload.allowExperimentalLocalModels !== undefined &&
+    typeof payload.allowExperimentalLocalModels !== 'boolean'
+  ) {
+    return { success: false, error: 'allowExperimentalLocalModels must be a boolean' };
+  }
   const providerValidation = parseOptionalTeamProviderId(payload.providerId);
   if (!providerValidation.valid) {
     return { success: false, error: providerValidation.error };
@@ -2474,6 +2490,10 @@ async function handleLaunchTeam(
         typeof payload.skipPermissions === 'boolean'
           ? payload.skipPermissions
           : savedRequest.skipPermissions,
+      allowExperimentalLocalModels:
+        typeof payload.allowExperimentalLocalModels === 'boolean'
+          ? payload.allowExperimentalLocalModels
+          : undefined,
       worktree:
         typeof payload.worktree === 'string'
           ? payload.worktree.trim() || undefined
@@ -2592,6 +2612,10 @@ async function handleLaunchTeam(
           clearContext: payload.clearContext === true ? true : undefined,
           skipPermissions:
             typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
+          allowExperimentalLocalModels:
+            typeof payload.allowExperimentalLocalModels === 'boolean'
+              ? payload.allowExperimentalLocalModels
+              : undefined,
           worktree:
             typeof payload.worktree === 'string' ? payload.worktree.trim() || undefined : undefined,
           extraCliArgs:
