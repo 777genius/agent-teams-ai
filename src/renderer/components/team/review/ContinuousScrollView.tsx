@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { resolveChangeReviewFileHunkCount as getFileHunkCount } from '@features/change-review';
 import { useAppTranslation } from '@features/localization/renderer';
@@ -199,7 +199,9 @@ export const ContinuousScrollView = ({
   const hunkDecisionsRef = useRef(hunkDecisions);
   const hunkHashesRef = useRef(hunkContextHashesByFile);
   const editedContentsRef = useRef(editedContents);
-  useEffect(() => {
+  // A remounted editor publishes itself from a passive effect. Sync first so it cannot replay
+  // decisions or drafts from the render that triggered the remount.
+  useLayoutEffect(() => {
     fileDecisionsRef.current = fileDecisions;
     hunkDecisionsRef.current = hunkDecisions;
     hunkHashesRef.current = hunkContextHashesByFile;
