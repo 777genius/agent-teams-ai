@@ -196,25 +196,33 @@ export function evaluateSourceFileSizePolicy({
   return diagnostics;
 }
 
-export function evaluateLegacyManifestRatchet({ baselineLegacyMaxLines, legacyMaxLines }) {
+export function evaluateLegacyManifestRatchet({
+  baselineLegacyMaxLines,
+  baselineSourceLineCounts = new Map(),
+  legacyMaxLines,
+}) {
   if (baselineLegacyMaxLines === null) return [];
 
   const diagnostics = [];
   for (const [filePath, legacyLimit] of Object.entries(legacyMaxLines).sort(([left], [right]) =>
     left.localeCompare(right)
   )) {
-    const baselineLimit = baselineLegacyMaxLines[filePath];
-    if (baselineLimit === undefined) {
+    const manifestLimit = baselineLegacyMaxLines[filePath] ?? 0;
+    const sourceLimit = baselineSourceLineCounts.get(filePath) ?? 0;
+    const effectiveBaselineLimit = Math.max(manifestLimit, sourceLimit);
+    if (effectiveBaselineLimit <= MAX_PRODUCTION_SOURCE_LINES) {
       diagnostics.push({
         code: 'new-legacy-exception',
         filePath,
         message: 'new legacy exceptions are forbidden; split the file below the global limit',
       });
-    } else if (legacyLimit > baselineLimit) {
+    } else if (legacyLimit > effectiveBaselineLimit) {
       diagnostics.push({
         code: 'raised-legacy-cap',
         filePath,
-        message: `legacy cap ${legacyLimit} exceeds the base cap ${baselineLimit}`,
+        message:
+          `legacy cap ${legacyLimit} exceeds the base source/manifest cap ` +
+          `${effectiveBaselineLimit}`,
       });
     }
   }
@@ -246,10 +254,43 @@ function readBaselineLegacyManifest(baselineRef) {
   );
 }
 
+function readBaselineSourceLineCounts(baselineRef, filePaths) {
+  if (!baselineRef) return new Map();
+  if (!/^[0-9a-f]{40}$/i.test(baselineRef)) {
+    throw new Error('SOURCE_FILE_SIZE_BASELINE_REF must be a 40-character commit SHA');
+  }
+
+  const lineCounts = new Map();
+  for (const filePath of filePaths) {
+    const objectName = `${baselineRef}:${filePath}`;
+    try {
+      execFileSync('git', ['cat-file', '-e', objectName], {
+        cwd: repoRoot,
+        stdio: 'ignore',
+      });
+    } catch {
+      continue;
+    }
+    lineCounts.set(
+      filePath,
+      countPhysicalLines(
+        execFileSync('git', ['show', objectName], {
+          cwd: repoRoot,
+          encoding: 'utf8',
+        })
+      )
+    );
+  }
+  return lineCounts;
+}
+
 export function verifySourceFileSizePolicy(root = repoRoot) {
   const legacyMaxLines = JSON.parse(readFileSync(legacyManifestPath, 'utf8'));
-  const baselineLegacyMaxLines = readBaselineLegacyManifest(
-    process.env.SOURCE_FILE_SIZE_BASELINE_REF
+  const baselineRef = process.env.SOURCE_FILE_SIZE_BASELINE_REF;
+  const baselineLegacyMaxLines = readBaselineLegacyManifest(baselineRef);
+  const baselineSourceLineCounts = readBaselineSourceLineCounts(
+    baselineRef,
+    Object.keys(legacyMaxLines)
   );
   const workspacePackagePatterns = parseWorkspacePackagePatterns(
     readFileSync(workspacePath, 'utf8')
@@ -257,7 +298,11 @@ export function verifySourceFileSizePolicy(root = repoRoot) {
   const lineCounts = collectProductionSourceLineCounts(root);
   const diagnostics = [
     ...evaluateWorkspaceSourceCoverage({ workspacePackagePatterns }),
-    ...evaluateLegacyManifestRatchet({ baselineLegacyMaxLines, legacyMaxLines }),
+    ...evaluateLegacyManifestRatchet({
+      baselineLegacyMaxLines,
+      baselineSourceLineCounts,
+      legacyMaxLines,
+    }),
     ...evaluateSourceFileSizePolicy({ lineCounts, legacyMaxLines }),
   ];
 

@@ -144,6 +144,33 @@ test('forbids new legacy exceptions and raised caps relative to the PR base', ()
   );
 });
 
+test('uses base source sizes to repair stale manifests without widening the ratchet', () => {
+  const diagnostics = evaluateLegacyManifestRatchet({
+    baselineLegacyMaxLines: {
+      'src/stale-cap.ts': 900,
+    },
+    baselineSourceLineCounts: new Map([
+      ['src/stale-cap.ts', 925],
+      ['src/stale-path.ts', 910],
+      ['src/grew.ts', 900],
+    ]),
+    legacyMaxLines: {
+      'src/grew.ts': 901,
+      'src/new-exception.ts': 900,
+      'src/stale-cap.ts': 925,
+      'src/stale-path.ts': 910,
+    },
+  });
+
+  assert.deepEqual(
+    diagnostics.map(({ code, filePath }) => ({ code, filePath })),
+    [
+      { code: 'raised-legacy-cap', filePath: 'src/grew.ts' },
+      { code: 'new-legacy-exception', filePath: 'src/new-exception.ts' },
+    ]
+  );
+});
+
 test('keeps the checked-in legacy snapshot synchronized with the source tree', () => {
   const result = verifySourceFileSizePolicy();
 
