@@ -2,10 +2,13 @@ import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-export interface TaskAttachmentFileIdentity {
-  readonly dev: number;
-  readonly ino: number;
-}
+import {
+  type DurableFileIdentity,
+  getDurableFileIdentity,
+  isSameDurableFileIdentity,
+} from '@main/utils/atomicWrite';
+
+export type TaskAttachmentFileIdentity = DurableFileIdentity;
 
 export interface DetachedTaskAttachmentGeneration {
   readonly originalPath: string;
@@ -29,11 +32,18 @@ export type PinTaskAttachmentGenerationResult =
   | { readonly kind: 'missing' }
   | { readonly kind: 'changed' };
 
-function isSameIdentity(
-  left: Pick<fs.Stats, 'dev' | 'ino'>,
+export function getTaskAttachmentFileIdentity(
+  stats: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs' | 'size'>
+): TaskAttachmentFileIdentity {
+  return getDurableFileIdentity(stats);
+}
+
+export function isSameTaskAttachmentFileIdentity(
+  left: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs' | 'size'>,
   right: TaskAttachmentFileIdentity
 ): boolean {
-  return left.dev === right.dev && left.ino !== 0 && left.ino === right.ino;
+  const leftIdentity = getTaskAttachmentFileIdentity(left);
+  return isSameDurableFileIdentity(leftIdentity, right);
 }
 
 async function lstatOrNull(filePath: string): Promise<fs.Stats | null> {
@@ -73,8 +83,8 @@ export async function pinTaskAttachmentGeneration(
     throw error;
   }
 
-  const identity = { dev: pinned.dev, ino: pinned.ino };
-  if (!pinned.isFile() || pinned.isSymbolicLink() || pinned.ino === 0) {
+  const identity = getTaskAttachmentFileIdentity(pinned);
+  if (!pinned.isFile() || pinned.isSymbolicLink()) {
     await removePinnedTaskAttachmentPath(pinPath, identity);
     return { kind: 'changed' };
   }
@@ -90,7 +100,7 @@ export async function pinTaskAttachmentGeneration(
     !publicGeneration ||
     !publicGeneration.isFile() ||
     publicGeneration.isSymbolicLink() ||
-    !isSameIdentity(publicGeneration, identity)
+    !isSameTaskAttachmentFileIdentity(publicGeneration, identity)
   ) {
     await removePinnedTaskAttachmentPath(pinPath, identity);
     return publicGeneration ? { kind: 'changed' } : { kind: 'missing' };
@@ -127,7 +137,7 @@ export async function detachTaskAttachmentGeneration(
   if (
     detached.isFile() &&
     !detached.isSymbolicLink() &&
-    isSameIdentity(detached, expectedIdentity)
+    isSameTaskAttachmentFileIdentity(detached, expectedIdentity)
   ) {
     return {
       kind: 'detached',
@@ -138,7 +148,7 @@ export async function detachTaskAttachmentGeneration(
   const movedUnexpectedGeneration: DetachedTaskAttachmentGeneration = {
     originalPath,
     detachedPath,
-    identity: { dev: detached.dev, ino: detached.ino },
+    identity: getTaskAttachmentFileIdentity(detached),
   };
   const restored = await restoreDetachedTaskAttachmentGeneration(movedUnexpectedGeneration);
   if (restored === 'conflict') {
@@ -153,12 +163,14 @@ export async function restoreDetachedTaskAttachmentGeneration(
   const detached = await lstatOrNull(receipt.detachedPath);
   if (!detached) {
     const current = await lstatOrNull(receipt.originalPath);
-    return current && isSameIdentity(current, receipt.identity) ? 'already-restored' : 'missing';
+    return current && isSameTaskAttachmentFileIdentity(current, receipt.identity)
+      ? 'already-restored'
+      : 'missing';
   }
   if (
     !detached.isFile() ||
     detached.isSymbolicLink() ||
-    !isSameIdentity(detached, receipt.identity)
+    !isSameTaskAttachmentFileIdentity(detached, receipt.identity)
   ) {
     return 'conflict';
   }
@@ -169,7 +181,7 @@ export async function restoreDetachedTaskAttachmentGeneration(
     const code = (error as NodeJS.ErrnoException).code;
     if (code !== 'EEXIST') throw error;
     const current = await lstatOrNull(receipt.originalPath);
-    if (!current || !isSameIdentity(current, receipt.identity)) return 'conflict';
+    if (!current || !isSameTaskAttachmentFileIdentity(current, receipt.identity)) return 'conflict';
   }
   await fs.promises.unlink(receipt.detachedPath).catch((error: NodeJS.ErrnoException) => {
     if (error.code !== 'ENOENT') throw error;
@@ -186,7 +198,7 @@ export async function finalizeDetachedTaskAttachmentGeneration(
   if (
     !detached.isFile() ||
     detached.isSymbolicLink() ||
-    !isSameIdentity(detached, receipt.identity)
+    !isSameTaskAttachmentFileIdentity(detached, receipt.identity)
   ) {
     throw new Error('Detached task attachment generation changed; refusing to remove it');
   }
@@ -200,7 +212,7 @@ async function removePinnedTaskAttachmentPath(
 ): Promise<void> {
   const pin = await lstatOrNull(pinPath);
   if (!pin) return;
-  if (pin.dev !== expectedIdentity.dev || pin.ino !== expectedIdentity.ino) {
+  if (!isSameTaskAttachmentFileIdentity(pin, expectedIdentity)) {
     throw new Error('Task attachment generation pin changed; refusing to remove it');
   }
   await fs.promises.unlink(pinPath);
@@ -212,7 +224,11 @@ export async function removeTaskAttachmentGenerationPin(
 ): Promise<void> {
   const pin = await lstatOrNull(pinPath);
   if (!pin) return;
-  if (!pin.isFile() || pin.isSymbolicLink() || !isSameIdentity(pin, expectedIdentity)) {
+  if (
+    !pin.isFile() ||
+    pin.isSymbolicLink() ||
+    !isSameTaskAttachmentFileIdentity(pin, expectedIdentity)
+  ) {
     throw new Error('Task attachment generation pin changed; refusing to remove it');
   }
   await removePinnedTaskAttachmentPath(pinPath, expectedIdentity);

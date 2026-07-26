@@ -22,6 +22,7 @@ import {
   BackupPublicationFencedError,
   type TeamPermanentDeletionIntent,
 } from './permanent-deletion/TeamPermanentDeletionTypes';
+import { TaskAttachmentBackupSource } from './TaskAttachmentBackupSource';
 import {
   type BackupFileDescriptor,
   collectBackupRelativePaths,
@@ -31,12 +32,12 @@ import {
 import {
   isValidConfig,
   isValidJson,
-  shouldCollectTaskAttachmentBackupFile,
   shouldRestoreTaskAttachmentBackupPath,
 } from './TeamBackupFilePolicy';
 import { TeamBackupRestoreService } from './TeamBackupRestoreService';
 
 import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
+import type { TaskAttachmentDeletionBackupFence } from './TaskAttachmentDeletionJournal';
 
 export type {
   PermanentDeletionTarget,
@@ -100,7 +101,6 @@ const TEAM_SUBDIRS = ['inboxes', 'review-decisions'];
 const TEAM_RECURSIVE_SUBDIRS = ['.opencode-runtime', 'members'];
 // Subdirs under getAppDataPath() (our own storage, not in ~/.claude/)
 const APP_DATA_SUBDIRS = ['attachments'];
-const APP_DATA_DEEP_SUBDIRS = ['task-attachments'];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -146,6 +146,11 @@ export class TeamBackupService {
         shouldRestoreTaskAttachmentBackupPath
       ),
   });
+  private readonly taskAttachmentBackupSource: TaskAttachmentBackupSource;
+
+  constructor(taskAttachmentDeletionFence?: TaskAttachmentDeletionBackupFence) {
+    this.taskAttachmentBackupSource = new TaskAttachmentBackupSource(taskAttachmentDeletionFence);
+  }
 
   // ── Public API ───────────────────────────────────────────────────────
 
@@ -155,8 +160,10 @@ export class TeamBackupService {
   }
 
   private async initializeOnce(): Promise<void> {
+    await this.taskAttachmentBackupSource.reconcilePendingDeletions();
     this.registry = await this.loadRegistry();
     await this.permanentDeletion.initialize();
+    await this.settlePendingTaskAttachmentDeletionBackups();
     await this.reconcileResurrectedTeams();
     await this.restoreIfNeeded();
     void this.pruneStaleBackups().catch((err: unknown) =>
@@ -456,6 +463,12 @@ export class TeamBackupService {
       this.permanentDeletion.assertBackupPublicationCurrent(teamName, manifest.identityId);
 
     let anyChanged = false;
+    anyChanged =
+      (await this.taskAttachmentBackupSource.prunePendingBackups(
+        teamName,
+        backupDir,
+        manifest.fileStats
+      )) || anyChanged;
     // Prune stale backup files (only if source enumeration was error-free)
     if (!hasErrors) {
       anyChanged = await this.pruneStaleBackupFiles(
@@ -516,6 +529,21 @@ export class TeamBackupService {
       };
       if (this.backupGeneration !== gen) return;
       await this.saveRegistryEntry(teamName, registryEntry, false, assertPublicationCurrent);
+    }
+    await this.taskAttachmentBackupSource.completePendingDeletions(teamName, backupDir);
+  }
+
+  private async settlePendingTaskAttachmentDeletionBackups(): Promise<void> {
+    for (const teamName of await this.taskAttachmentBackupSource.getPendingTeams()) {
+      const manifest = await this.loadManifest(teamName);
+      const fileStats = manifest?.fileStats ?? {};
+      const changed = await this.taskAttachmentBackupSource.prunePendingBackups(
+        teamName,
+        this.getBackupDir(teamName),
+        fileStats
+      );
+      if (changed && manifest) await this.saveManifest(teamName, manifest, true);
+      await this.taskAttachmentBackupSource.completePendingDeletions(teamName);
     }
   }
 
@@ -584,6 +612,11 @@ export class TeamBackupService {
       }
     }
 
+    this.taskAttachmentBackupSource.prunePendingBackupsSync(
+      teamName,
+      backupDir,
+      manifest.fileStats
+    );
     for (const descriptor of sourceFiles) {
       this.backupSingleFileSync(descriptor, backupDir, manifest);
     }
@@ -797,32 +830,9 @@ export class TeamBackupService {
       }
     }
 
-    // Deep subdirs under app data dir (task-attachments/)
-    for (const subdir of APP_DATA_DEEP_SUBDIRS) {
-      const dirPath = path.join(appDataDir, subdir, teamName);
-      try {
-        const taskDirs = await fs.promises.readdir(dirPath, { withFileTypes: true });
-        for (const taskDir of taskDirs) {
-          if (!taskDir.isDirectory()) continue;
-          const taskDirPath = path.join(dirPath, taskDir.name);
-          try {
-            const attachments = await fs.promises.readdir(taskDirPath, { withFileTypes: true });
-            for (const att of attachments) {
-              if (att.isFile() && shouldCollectTaskAttachmentBackupFile(att.name)) {
-                files.push({
-                  sourcePath: path.join(taskDirPath, att.name),
-                  relPath: `${subdir}/${taskDir.name}/${att.name}`,
-                });
-              }
-            }
-          } catch (err: unknown) {
-            if (!isEnoent(err)) hasErrors = true;
-          }
-        }
-      } catch (err: unknown) {
-        if (!isEnoent(err)) hasErrors = true;
-      }
-    }
+    const taskAttachments = await this.taskAttachmentBackupSource.collect(teamName);
+    files.push(...taskAttachments.files);
+    hasErrors ||= taskAttachments.hasErrors;
 
     // Tasks (from separate dir)
     try {
@@ -902,35 +912,7 @@ export class TeamBackupService {
       }
     }
 
-    // Deep subdirs under app data dir (task-attachments/)
-    for (const subdir of APP_DATA_DEEP_SUBDIRS) {
-      try {
-        const taskDirs = fs.readdirSync(path.join(appDataDir, subdir, teamName), {
-          withFileTypes: true,
-        });
-        for (const taskDir of taskDirs) {
-          if (!taskDir.isDirectory()) continue;
-          try {
-            const attachments = fs.readdirSync(
-              path.join(appDataDir, subdir, teamName, taskDir.name),
-              { withFileTypes: true }
-            );
-            for (const att of attachments) {
-              if (att.isFile() && shouldCollectTaskAttachmentBackupFile(att.name)) {
-                files.push({
-                  sourcePath: path.join(appDataDir, subdir, teamName, taskDir.name, att.name),
-                  relPath: `${subdir}/${taskDir.name}/${att.name}`,
-                });
-              }
-            }
-          } catch {
-            // skip
-          }
-        }
-      } catch {
-        // skip
-      }
-    }
+    files.push(...this.taskAttachmentBackupSource.collectSync(teamName));
 
     try {
       const entries = fs.readdirSync(tasksDir, { withFileTypes: true });

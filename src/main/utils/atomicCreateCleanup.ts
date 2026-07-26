@@ -1,6 +1,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import { getDurableFileIdentity, isSameDurableFileIdentity } from './durablePathIdentity';
+
 async function syncDirectoryBestEffort(directoryPath: string): Promise<void> {
   let handle: fs.promises.FileHandle | null = null;
   try {
@@ -16,6 +18,7 @@ async function syncDirectoryBestEffort(directoryPath: string): Promise<void> {
 /** Remove only crash-left atomic-create temp names that still reference this exact inode. */
 export async function cleanupAtomicCreateTempLinks(targetPath: string): Promise<void> {
   const target = await fs.promises.lstat(targetPath);
+  const targetIdentity = getDurableFileIdentity(target);
   if (target.nlink <= 1) return;
 
   const directoryPath = path.dirname(targetPath);
@@ -24,7 +27,11 @@ export async function cleanupAtomicCreateTempLinks(targetPath: string): Promise<
     const candidatePath = path.join(directoryPath, entry);
     try {
       const candidate = await fs.promises.lstat(candidatePath);
-      if (candidate.dev === target.dev && candidate.ino === target.ino) {
+      if (
+        candidate.isFile() &&
+        !candidate.isSymbolicLink() &&
+        isSameDurableFileIdentity(getDurableFileIdentity(candidate), targetIdentity)
+      ) {
         await fs.promises.unlink(candidatePath);
       }
     } catch (error) {

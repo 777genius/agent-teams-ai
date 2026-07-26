@@ -8,6 +8,7 @@ import {
 import {
   atomicCreateAsync,
   cleanupAtomicCreateTempLinks,
+  type DurableFileIdentity,
   type DurablePathRemovalProofHooks,
   removePathWithIdentityFenceAsync,
 } from '@main/utils/atomicWrite';
@@ -18,9 +19,15 @@ import * as path from 'path';
 
 import { isTaskAttachmentGenerationGuardName } from './TaskAttachmentArtifacts';
 import {
-  type DetachedTaskAttachmentGeneration,
+  type TaskAttachmentDeletionIntent,
+  TaskAttachmentDeletionJournal,
+  type TaskAttachmentReferenceReader,
+} from './TaskAttachmentDeletionJournal';
+import {
   detachTaskAttachmentGeneration,
   finalizeDetachedTaskAttachmentGeneration,
+  getTaskAttachmentFileIdentity,
+  isSameTaskAttachmentFileIdentity,
   type PinnedTaskAttachmentGeneration,
   pinTaskAttachmentGeneration,
   removeTaskAttachmentGenerationPin,
@@ -65,6 +72,7 @@ export interface PreparedTaskAttachmentDeletionReceipt {
   readonly teamName: string;
   readonly taskId: string;
   readonly generation: PinnedTaskAttachmentGeneration;
+  readonly intent: TaskAttachmentDeletionIntent;
 }
 
 export interface TaskAttachmentTransaction {
@@ -88,9 +96,11 @@ export interface TaskAttachmentTransaction {
 const nodeTaskAttachmentAtomicCreator: TaskAttachmentAtomicCreatorPort = {
   async createPinnedFileAtomically(filePath, data) {
     const created = await atomicCreateAsync(filePath, data, { retainPin: true });
+    const generationGuardPath = created.pinPath!;
+    const identity = getTaskAttachmentFileIdentity(created);
     return {
-      identity: { dev: created.dev, ino: created.ino },
-      generationGuardPath: created.pinPath!,
+      identity,
+      generationGuardPath,
     };
   },
   cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
@@ -104,11 +114,19 @@ const TEAM_TASK_ATTACHMENT_DELETE_OPTIONS = {
 
 export class TeamTaskAttachmentStore {
   private readonly pendingCompensations = new WeakMap<object, { dismiss(): void }>();
+  private readonly deletionJournal: TaskAttachmentDeletionJournal;
 
   constructor(
     private readonly atomicCreator: TaskAttachmentAtomicCreatorPort = nodeTaskAttachmentAtomicCreator,
-    private readonly mutationCoordinator: TaskAttachmentMutationCoordinatorPort = nodeTaskAttachmentMutationCoordinator
-  ) {}
+    private readonly mutationCoordinator: TaskAttachmentMutationCoordinatorPort = nodeTaskAttachmentMutationCoordinator,
+    deletionJournal?: TaskAttachmentDeletionJournal
+  ) {
+    this.deletionJournal =
+      deletionJournal ??
+      new TaskAttachmentDeletionJournal((filePath) =>
+        this.atomicCreator.cleanupPublishedTempLinks(filePath)
+      );
+  }
 
   private assertSafePathSegment(label: string, value: string): void {
     if (
@@ -519,11 +537,19 @@ export class TeamTaskAttachmentStore {
       throw new Error('Task attachment changed while preparing deletion');
     }
 
+    let intent: TaskAttachmentDeletionIntent;
+    try {
+      intent = await this.deletionJournal.prepare(teamName, taskId, attachmentId, pinned.receipt);
+    } catch (error) {
+      await removeTaskAttachmentGenerationPin(pinned.receipt.pinPath, pinned.receipt.identity);
+      throw error;
+    }
     const receipt: PreparedTaskAttachmentDeletionReceipt = {
       attachmentId,
       teamName,
       taskId,
       generation: pinned.receipt,
+      intent,
     };
     const compensation = guard.registerCompensation(async () => {
       await this.rollbackPreparedAttachmentDeletion(receipt);
@@ -541,51 +567,14 @@ export class TeamTaskAttachmentStore {
   ): Promise<void> {
     this.assertDeletionReceiptScope(receipt, teamName, taskId);
     this.dismissCompensation(receipt);
-    let detached: DetachedTaskAttachmentGeneration | null = null;
     try {
-      const result = await detachTaskAttachmentGeneration(
-        receipt.generation.originalPath,
-        receipt.generation.identity
-      );
-      if (result.kind === 'detached') detached = result.receipt;
-    } catch (error) {
-      logger.warn(
-        `[${teamName}] Failed to detach task attachment ${receipt.attachmentId} for task #${taskId}: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-    if (detached) {
-      try {
-        await this.atomicCreator.cleanupPublishedTempLinks(detached.detachedPath);
-      } catch (error) {
-        logger.warn(
-          `[${teamName}] Failed to clean task attachment generation pins for task #${taskId}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-      try {
-        await finalizeDetachedTaskAttachmentGeneration(detached);
-        logger.debug(
-          `[${teamName}] Deleted task attachment ${receipt.attachmentId} for task #${taskId}`
-        );
-      } catch (error) {
-        logger.warn(
-          `[${teamName}] Failed to finalize task attachment deletion ${receipt.attachmentId} for task #${taskId}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-    try {
-      await removeTaskAttachmentGenerationPin(
-        receipt.generation.pinPath,
-        receipt.generation.identity
+      await this.deletionJournal.finalize(receipt.intent);
+      logger.debug(
+        `[${teamName}] Deleted task attachment ${receipt.attachmentId} for task #${taskId}`
       );
     } catch (error) {
       logger.warn(
-        `[${teamName}] Failed to remove task attachment deletion pin ${receipt.attachmentId} for task #${taskId}: ${
+        `[${teamName}] Deferred task attachment deletion ${receipt.attachmentId} for task #${taskId}: ${
           error instanceof Error ? error.message : String(error)
         }`
       );
@@ -604,11 +593,118 @@ export class TeamTaskAttachmentStore {
   private async rollbackPreparedAttachmentDeletion(
     receipt: PreparedTaskAttachmentDeletionReceipt
   ): Promise<void> {
-    await removeTaskAttachmentGenerationPin(
-      receipt.generation.pinPath,
-      receipt.generation.identity
-    );
+    await this.deletionJournal.abort(receipt.intent);
     this.dismissCompensation(receipt);
+  }
+
+  async reconcilePendingAttachmentDeletions(
+    isAttachmentReferenced: TaskAttachmentReferenceReader
+  ): Promise<void> {
+    const intents = await this.deletionJournal.loadAll();
+    for (const intent of intents) {
+      if (intent.phase === 'removed') continue;
+      await this.runTaskMutation(intent.teamName, intent.taskId, async (guard) => {
+        guard.assertHealthy();
+        const referenced = await isAttachmentReferenced(
+          intent.teamName,
+          intent.taskId,
+          intent.attachmentId
+        );
+        if (intent.phase === 'prepared' && referenced) {
+          await this.deletionJournal.abort(intent);
+        } else {
+          guard.markCommitted();
+          await this.deletionJournal.finalize(intent);
+        }
+      });
+    }
+  }
+
+  async getTaskAttachmentBackupExclusions(
+    teamName: string,
+    isAttachmentReferenced: TaskAttachmentReferenceReader
+  ): Promise<ReadonlySet<string>> {
+    this.assertSafePathSegment('teamName', teamName);
+    const exclusions = new Set<string>();
+    for (const intent of await this.deletionJournal.loadAll()) {
+      if (intent.teamName !== teamName) continue;
+      const referenced = await isAttachmentReferenced(
+        intent.teamName,
+        intent.taskId,
+        intent.attachmentId
+      );
+      if (intent.phase === 'prepared' && referenced) continue;
+      if (intent.phase === 'removed' && referenced) {
+        const current = await this.lstatOrNull(intent.originalPath);
+        if (
+          current?.isFile() &&
+          !current.isSymbolicLink() &&
+          !isSameTaskAttachmentFileIdentity(current, intent.identity)
+        ) {
+          continue;
+        }
+      }
+      exclusions.add(path.resolve(intent.originalPath));
+    }
+    return exclusions;
+  }
+
+  getTaskAttachmentBackupExclusionsSync(teamName: string): ReadonlySet<string> {
+    this.assertSafePathSegment('teamName', teamName);
+    return new Set(
+      this.deletionJournal
+        .loadAllSync()
+        .filter((intent) => intent.teamName === teamName)
+        .map((intent) => path.resolve(intent.originalPath))
+    );
+  }
+
+  async getPendingTaskAttachmentDeletionTeams(): Promise<ReadonlySet<string>> {
+    return new Set((await this.deletionJournal.loadAll()).map((intent) => intent.teamName));
+  }
+
+  async getPendingTaskAttachmentDeletionPaths(teamName: string): Promise<ReadonlySet<string>> {
+    this.assertSafePathSegment('teamName', teamName);
+    return new Set(
+      (await this.deletionJournal.loadAll())
+        .filter((intent) => intent.teamName === teamName)
+        .map((intent) => path.resolve(intent.originalPath))
+    );
+  }
+
+  async completePendingTaskAttachmentDeletions(
+    teamName: string,
+    isAttachmentReferenced: TaskAttachmentReferenceReader = async () => false,
+    backedUpReplacements: ReadonlyMap<string, DurableFileIdentity> = new Map()
+  ): Promise<void> {
+    this.assertSafePathSegment('teamName', teamName);
+    const intents = (await this.deletionJournal.loadAll()).filter(
+      (intent) => intent.teamName === teamName && intent.phase === 'removed'
+    );
+    for (const intent of intents) {
+      await this.runTaskMutation(intent.teamName, intent.taskId, async () => {
+        const referenced = await isAttachmentReferenced(
+          intent.teamName,
+          intent.taskId,
+          intent.attachmentId
+        );
+        if (referenced) {
+          const current = await this.lstatOrNull(intent.originalPath);
+          if (current && isSameTaskAttachmentFileIdentity(current, intent.identity)) return;
+          if (
+            current?.isFile() &&
+            !current.isSymbolicLink() &&
+            !isSameTaskAttachmentFileIdentity(
+              current,
+              backedUpReplacements.get(path.resolve(intent.originalPath)) ?? intent.identity
+            )
+          ) {
+            return;
+          }
+        }
+        await this.deletionJournal.complete(intent);
+      });
+    }
   }
 
   private assertDeletionReceiptScope(
@@ -618,6 +714,15 @@ export class TeamTaskAttachmentStore {
   ): void {
     if (receipt.teamName !== teamName || receipt.taskId !== taskId) {
       throw new Error('Task attachment deletion receipt belongs to another transaction');
+    }
+    if (
+      receipt.intent.teamName !== receipt.teamName ||
+      receipt.intent.taskId !== receipt.taskId ||
+      receipt.intent.attachmentId !== receipt.attachmentId ||
+      receipt.intent.originalPath !== receipt.generation.originalPath ||
+      receipt.intent.pinPath !== receipt.generation.pinPath
+    ) {
+      throw new Error('Task attachment deletion intent belongs to another transaction');
     }
   }
 
@@ -658,6 +763,16 @@ export class TeamTaskAttachmentStore {
           error instanceof Error ? error.message : String(error)
         }`
       );
+    }
+  }
+
+  private async lstatOrNull(filePath: string): Promise<fs.Stats | null> {
+    try {
+      return await fs.promises.lstat(filePath);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT' || code === 'ENOTDIR') return null;
+      throw error;
     }
   }
 }

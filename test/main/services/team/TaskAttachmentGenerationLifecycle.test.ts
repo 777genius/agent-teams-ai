@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   detachTaskAttachmentGeneration,
@@ -14,6 +14,7 @@ import {
   removeTaskAttachmentGenerationPin,
   restoreDetachedTaskAttachmentGeneration,
 } from '../../../../src/main/services/team/TaskAttachmentGenerationLifecycle';
+import { cleanupAtomicCreateTempLinks } from '../../../../src/main/utils/atomicWrite';
 
 const execFileAsync = promisify(execFile);
 
@@ -41,6 +42,8 @@ describe('TaskAttachmentGenerationLifecycle', () => {
       detachTaskAttachmentGeneration(publicPath, {
         dev: oldIdentity.dev,
         ino: 0,
+        birthtimeMs: oldIdentity.birthtimeMs,
+        size: oldIdentity.size,
       })
     ).resolves.toEqual({ kind: 'changed' });
 
@@ -48,6 +51,97 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     expect(
       (await readdir(root)).filter((entry) => entry.startsWith('.attachment-delete.'))
     ).toEqual([]);
+  });
+
+  it('uses birthtime and size when a filesystem reports zero inode identities', async () => {
+    const { root, publicPath } = await createRoot();
+    await writeFile(publicPath, 'old');
+    const realLstat = fs.lstat.bind(fs);
+    const lstat = vi.spyOn(fs, 'lstat').mockImplementation(async (filePath) => {
+      const stats = await realLstat(filePath);
+      return new Proxy(stats, {
+        get(target, property) {
+          return property === 'ino' ? 0 : Reflect.get(target, property, target);
+        },
+      });
+    });
+
+    try {
+      const pinned = await pinTaskAttachmentGeneration(publicPath);
+      if (pinned.kind !== 'pinned') throw new Error('Expected zero-inode generation to be pinned');
+      expect(pinned.receipt.identity).toMatchObject({ ino: 0, size: 3 });
+
+      await removeTaskAttachmentGenerationPin(pinned.receipt.pinPath, pinned.receipt.identity);
+
+      await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('old');
+      expect(await readdir(root)).toEqual(['attachment']);
+    } finally {
+      lstat.mockRestore();
+    }
+  });
+
+  it('preserves a zero-inode replacement with a different durable fallback identity', async () => {
+    const { root, publicPath } = await createRoot();
+    await writeFile(publicPath, 'old');
+    const realLstat = fs.lstat.bind(fs);
+    const lstat = vi.spyOn(fs, 'lstat').mockImplementation(async (filePath) => {
+      const stats = await realLstat(filePath);
+      return new Proxy(stats, {
+        get(target, property) {
+          return property === 'ino' ? 0 : Reflect.get(target, property, target);
+        },
+      });
+    });
+
+    try {
+      const pinned = await pinTaskAttachmentGeneration(publicPath);
+      if (pinned.kind !== 'pinned') throw new Error('Expected zero-inode generation to be pinned');
+      await fs.unlink(publicPath);
+      await writeFile(publicPath, 'replacement');
+
+      await expect(
+        detachTaskAttachmentGeneration(publicPath, pinned.receipt.identity)
+      ).resolves.toEqual({ kind: 'changed' });
+      await removeTaskAttachmentGenerationPin(pinned.receipt.pinPath, pinned.receipt.identity);
+
+      await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('replacement');
+      expect(await readdir(root)).toEqual(['attachment']);
+    } finally {
+      lstat.mockRestore();
+    }
+  });
+
+  it('never removes another zero-inode generation guard during temp-link cleanup', async () => {
+    const { root, publicPath } = await createRoot();
+    const ownGuard = join(root, '.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp');
+    const otherPath = join(root, 'other-attachment');
+    const otherGuardName = '.review-create.11111111-2222-4333-8444-555555555555.tmp';
+    const otherGuard = join(root, otherGuardName);
+    await writeFile(publicPath, 'old');
+    await fs.link(publicPath, ownGuard);
+    await writeFile(otherPath, 'different-size');
+    await fs.link(otherPath, otherGuard);
+    const realLstat = fs.lstat.bind(fs);
+    const lstat = vi.spyOn(fs, 'lstat').mockImplementation(async (filePath) => {
+      const stats = await realLstat(filePath);
+      return new Proxy(stats, {
+        get(target, property) {
+          return property === 'ino' ? 0 : Reflect.get(target, property, target);
+        },
+      });
+    });
+
+    try {
+      await cleanupAtomicCreateTempLinks(publicPath);
+
+      await expect(fs.lstat(ownGuard)).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(fs.readFile(otherGuard, 'utf8')).resolves.toBe('different-size');
+      expect((await readdir(root)).sort()).toEqual(
+        ['attachment', 'other-attachment', otherGuardName].sort()
+      );
+    } finally {
+      lstat.mockRestore();
+    }
   });
 
   it('pins an exact generation without removing its public pathname', async () => {
@@ -140,6 +234,8 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     const detached = await detachTaskAttachmentGeneration(publicPath, {
       dev: oldIdentity.dev,
       ino: oldIdentity.ino,
+      birthtimeMs: oldIdentity.birthtimeMs,
+      size: oldIdentity.size,
     });
     if (detached.kind !== 'detached') throw new Error('Expected detached generation');
     await writeFile(publicPath, 'replacement');
@@ -162,6 +258,8 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     const detached = await detachTaskAttachmentGeneration(publicPath, {
       dev: identity.dev,
       ino: identity.ino,
+      birthtimeMs: identity.birthtimeMs,
+      size: identity.size,
     });
     if (detached.kind !== 'detached') throw new Error('Expected detached generation');
 

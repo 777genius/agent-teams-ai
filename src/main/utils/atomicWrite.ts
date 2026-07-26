@@ -3,7 +3,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export { cleanupAtomicCreateTempLinks } from './atomicCreateCleanup';
+export type { AtomicCreateResult } from './atomicCreateTypes';
 export * from './durablePathOperations';
+
+import type { AtomicCreateResult } from './atomicCreateTypes';
 
 const RENAME_MAX_ATTEMPTS = 20;
 const RENAME_RETRY_BASE_DELAY_MS = 40;
@@ -31,13 +34,6 @@ export type AtomicWriteDirectorySyncOutcome =
   | 'unsupported-platform'
   | 'best-effort-unavailable'
   | 'failed-after-publish';
-
-export interface AtomicCreateResult {
-  dev: number;
-  ino: number;
-  /** Transaction-owned hardlink that pins the published inode until commit/rollback. */
-  pinPath?: string;
-}
 
 export interface ExpectedTextFileIdentity {
   dev: number;
@@ -365,6 +361,8 @@ export async function atomicCreateAsync(
     return {
       dev: identity.dev,
       ino: identity.ino,
+      birthtimeMs: identity.birthtimeMs,
+      size: identity.size,
       ...(options.retainPin ? { pinPath: tmpPath } : {}),
     };
   } catch (error) {

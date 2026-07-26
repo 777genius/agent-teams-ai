@@ -83,7 +83,7 @@ async function runAttachmentRaceWorker(
 function createAtomicCreator(): TaskAttachmentAtomicCreatorPort {
   return {
     createPinnedFileAtomically: vi.fn(async (filePath) => ({
-      identity: { dev: 1, ino: 2 },
+      identity: { dev: 1, ino: 2, birthtimeMs: 3, size: 4 },
       generationGuardPath: join(
         dirname(filePath),
         '.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp'
@@ -97,12 +97,17 @@ async function createPinnedFileAtomically(
   filePath: string,
   data: Buffer
 ): Promise<{
-  identity: { dev: number; ino: number };
+  identity: { dev: number; ino: number; birthtimeMs: number; size: number };
   generationGuardPath: string;
 }> {
   const created = await atomicCreateAsync(filePath, data, { retainPin: true });
   return {
-    identity: { dev: created.dev, ino: created.ino },
+    identity: {
+      dev: created.dev,
+      ino: created.ino,
+      birthtimeMs: created.birthtimeMs,
+      size: created.size,
+    },
     generationGuardPath: created.pinPath!,
   };
 }
@@ -366,6 +371,47 @@ describe('TeamTaskAttachmentStore', () => {
     expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
   });
 
+  it('finalizes and rolls back saved receipts when the creator reports a zero inode', async () => {
+    const { taskDirectory } = await createRealStore();
+    const generationGuardPath = join(
+      taskDirectory,
+      '.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp'
+    );
+    const atomicCreator: TaskAttachmentAtomicCreatorPort = {
+      async createPinnedFileAtomically(filePath, data) {
+        await mkdir(dirname(filePath), { recursive: true });
+        await writeFile(filePath, data, { flag: 'wx' });
+        await fsPromises.link(filePath, generationGuardPath);
+        const stats = await fsPromises.lstat(generationGuardPath);
+        return {
+          identity: {
+            dev: stats.dev,
+            ino: 0,
+            birthtimeMs: stats.birthtimeMs,
+            size: stats.size,
+          },
+          generationGuardPath,
+        };
+      },
+      cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
+    };
+    const store = new TeamTaskAttachmentStore(atomicCreator);
+
+    const receipt = await store.saveAttachmentWithReceipt(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    await store.finalizeAttachment(receipt);
+    expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+
+    await store.rollbackAttachment(receipt);
+    await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('preserves a durable metadata save when compromise is observed before its commit marker', async () => {
     const { taskDirectory } = await createRealStore();
     const lockFailure = new Error('lock compromised');
@@ -497,17 +543,22 @@ describe('TeamTaskAttachmentStore', () => {
     );
   });
 
-  it('removes a crash-left temp hardlink before deleting its published attachment', async () => {
-    const { taskDirectory } = await createRealStore();
+  it('recovers a committed deletion after transient generation cleanup failure', async () => {
+    const { root, taskDirectory } = await createRealStore();
     const atomicCreator: TaskAttachmentAtomicCreatorPort = {
       createPinnedFileAtomically,
       cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
     };
     const store = new TeamTaskAttachmentStore(atomicCreator);
     const originalUnlink = fsPromises.unlink.bind(fsPromises);
+    let injectCleanupFailure = false;
     let tempUnlinkFailures = 0;
     const unlink = vi.spyOn(fsPromises, 'unlink').mockImplementation(async (filePath) => {
-      if (basename(String(filePath)).startsWith('.review-create.') && tempUnlinkFailures < 1) {
+      if (
+        injectCleanupFailure &&
+        basename(String(filePath)).startsWith('.review-create.') &&
+        tempUnlinkFailures < 1
+      ) {
         tempUnlinkFailures += 1;
         const error = new Error('injected busy temp hardlink') as NodeJS.ErrnoException;
         error.code = 'EBUSY';
@@ -525,18 +576,218 @@ describe('TeamTaskAttachmentStore', () => {
         'image/png',
         'dGVzdA=='
       );
-      expect(await readdir(taskDirectory)).toHaveLength(2);
-      expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toContain(
-        'Failed to finalize task attachment'
-      );
-      vi.mocked(console.warn).mockClear();
+      injectCleanupFailure = true;
 
       await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
 
+      expect(await readFile(join(taskDirectory, ATTACHMENT_FILE), 'utf8')).toBe('test');
+      expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toContain(
+        'Deferred task attachment deletion'
+      );
+      vi.mocked(console.warn).mockClear();
+      const journalDirectory = join(root, 'task-attachment-deletion-intents');
+      expect(await readdir(journalDirectory)).toHaveLength(1);
+      expect(await store.getTaskAttachmentBackupExclusions('my-team', async () => false)).toContain(
+        join(taskDirectory, ATTACHMENT_FILE)
+      );
+
+      const recoveryStore = new TeamTaskAttachmentStore();
+      await recoveryStore.reconcilePendingAttachmentDeletions(async () => false);
+
       await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await readdir(journalDirectory)).toHaveLength(1);
+      await recoveryStore.completePendingTaskAttachmentDeletions('my-team');
+      expect(await readdir(journalDirectory)).toEqual([]);
     } finally {
       unlink.mockRestore();
     }
+  });
+
+  it('recovers a prepared intent after metadata committed before file finalization', async () => {
+    const { root, taskDirectory, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+
+    await store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+      const receipt = await transaction.prepareAttachmentDeletion(ATTACHMENT_ID, 'image/png');
+      expect(receipt).not.toBeNull();
+      transaction.markCommitted();
+      // Simulates termination after durable metadata deletion and before finalize().
+    });
+
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    expect(await readdir(journalDirectory)).toHaveLength(1);
+    expect(await readdir(taskDirectory)).toHaveLength(2);
+
+    const recoveryStore = new TeamTaskAttachmentStore();
+    await recoveryStore.reconcilePendingAttachmentDeletions(async () => false);
+    await recoveryStore.reconcilePendingAttachmentDeletions(async () => false);
+
+    await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await readdir(journalDirectory)).toHaveLength(1);
+    await recoveryStore.completePendingTaskAttachmentDeletions('my-team');
+    await recoveryStore.completePendingTaskAttachmentDeletions('my-team');
+    expect(await readdir(journalDirectory)).toEqual([]);
+  });
+
+  it('replays a committed intent persisted before attachment detachment', async () => {
+    const { root, taskDirectory, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    await store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+      await transaction.prepareAttachmentDeletion(ATTACHMENT_ID, 'image/png');
+      transaction.markCommitted();
+    });
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    const [journalName] = await readdir(journalDirectory);
+    if (!journalName) throw new Error('Expected a deletion intent');
+    const journalPath = join(journalDirectory, journalName);
+    const intent = JSON.parse(await readFile(journalPath, 'utf8')) as {
+      phase: string;
+      updatedAt: string;
+    };
+    intent.phase = 'committed';
+    intent.updatedAt = new Date().toISOString();
+    await writeFile(journalPath, JSON.stringify(intent, null, 2), 'utf8');
+
+    const recoveryStore = new TeamTaskAttachmentStore();
+    await recoveryStore.reconcilePendingAttachmentDeletions(async () => false);
+
+    await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await readdir(journalDirectory)).toHaveLength(1);
+    await recoveryStore.completePendingTaskAttachmentDeletions('my-team');
+    expect(await readdir(journalDirectory)).toEqual([]);
+  });
+
+  it('resumes an exact generation already detached before process termination', async () => {
+    const { root, taskDirectory, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    await store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+      await transaction.prepareAttachmentDeletion(ATTACHMENT_ID, 'image/png');
+      transaction.markCommitted();
+    });
+
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    const [journalName] = await readdir(journalDirectory);
+    if (!journalName) throw new Error('Expected a deletion intent');
+    const journalPath = join(journalDirectory, journalName);
+    const intent = JSON.parse(await readFile(journalPath, 'utf8')) as {
+      detachedPath: string;
+      phase: string;
+      updatedAt: string;
+    };
+    intent.phase = 'detached';
+    intent.updatedAt = new Date().toISOString();
+    await writeFile(journalPath, JSON.stringify(intent, null, 2), 'utf8');
+    await fsPromises.rename(join(taskDirectory, ATTACHMENT_FILE), intent.detachedPath);
+
+    const recoveryStore = new TeamTaskAttachmentStore();
+    await recoveryStore.reconcilePendingAttachmentDeletions(async () => false);
+
+    await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await readdir(journalDirectory)).toHaveLength(1);
+    await recoveryStore.completePendingTaskAttachmentDeletions('my-team');
+    expect(await readdir(journalDirectory)).toEqual([]);
+  });
+
+  it('rolls back a prepared intent when metadata still references the attachment', async () => {
+    const { root, taskDirectory, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+
+    await store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+      await transaction.prepareAttachmentDeletion(ATTACHMENT_ID, 'image/png');
+      transaction.markCommitted();
+    });
+    await new TeamTaskAttachmentStore().reconcilePendingAttachmentDeletions(async () => true);
+
+    expect(await readFile(join(taskDirectory, ATTACHMENT_FILE), 'utf8')).toBe('test');
+    expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+    expect(await readdir(join(root, 'task-attachment-deletion-intents'))).toEqual([]);
+  });
+
+  it('keeps a tombstone until a referenced replacement generation is backed up', async () => {
+    const { root, taskDirectory, store } = await createRealStore();
+    await store.saveAttachment('my-team', 'task-1', ATTACHMENT_ID, 'old.png', 'image/png', 'b2xk');
+    await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'replacement.png',
+      'image/png',
+      'cmVwbGFjZW1lbnQ='
+    );
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+
+    await expect(
+      store.getTaskAttachmentBackupExclusions('my-team', async () => true)
+    ).resolves.toEqual(new Set());
+    await store.completePendingTaskAttachmentDeletions('my-team', async () => true);
+    expect(await readdir(journalDirectory)).toHaveLength(1);
+
+    const replacementPath = join(taskDirectory, ATTACHMENT_FILE);
+    const replacement = await fsPromises.lstat(replacementPath);
+    await store.completePendingTaskAttachmentDeletions(
+      'my-team',
+      async () => true,
+      new Map([
+        [
+          replacementPath,
+          {
+            dev: replacement.dev,
+            ino: replacement.ino,
+            birthtimeMs: replacement.birthtimeMs,
+            size: replacement.size,
+          },
+        ],
+      ])
+    );
+    expect(await readdir(journalDirectory)).toEqual([]);
+    expect(await readFile(join(taskDirectory, ATTACHMENT_FILE), 'utf8')).toBe('replacement');
+  });
+
+  it('fails closed on a truncated deletion journal', async () => {
+    const { root, store } = await createRealStore();
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    await mkdir(journalDirectory, { recursive: true });
+    await writeFile(
+      join(journalDirectory, 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.json'),
+      '{"version":1,"transactionId":',
+      'utf8'
+    );
+
+    await expect(store.reconcilePendingAttachmentDeletions(async () => false)).rejects.toThrow(
+      'Corrupt task attachment deletion intent'
+    );
+    await expect(
+      store.getTaskAttachmentBackupExclusions('my-team', async () => false)
+    ).rejects.toThrow('Corrupt task attachment deletion intent');
   });
 
   it('allows exactly one winner across independent processes saving the same attachment ID', async () => {
