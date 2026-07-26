@@ -952,6 +952,7 @@ describe("admitted input-patch capacity continuation", () => {
     expect(startAdmissionWorkspaceModes.at(-1)).toBe(
       "admitted_input_patch_runtime_continuation",
     );
+    expect(startAdmissionWorkerRoles.at(-1)).toBe("adoption");
 
     await writeFile(
       interruptedResultPath,

@@ -513,7 +513,8 @@ export async function projectControlStartStoredJobView(
           accounts: [accountReservation.accountId],
           ...(reviewedContinuation ||
           terminalRecovery ||
-          continuationDecision?.kind === "terminal_timeout"
+          continuationDecision?.kind === "terminal_timeout" ||
+          continuationDecision?.kind === "controlled_runtime_interruption"
             ? { workerRole: ProjectAdmissionWorkerRole.Adoption }
             : {}),
           ...(loaded.manifest.tags ? { tags: loaded.manifest.tags } : {}),
