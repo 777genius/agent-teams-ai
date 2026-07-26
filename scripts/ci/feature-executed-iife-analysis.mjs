@@ -284,12 +284,25 @@ function expressionReadsBinding(expression, name) {
 function bindingLiveAfterExpression(expression, name, live) {
   const current = unwrapExpression(expression);
   if (ts.isBinaryExpression(current)) {
+    const assignmentTarget = unwrapExpression(current.left);
     if (
-      current.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      ts.isIdentifier(unwrapExpression(current.left)) &&
-      unwrapExpression(current.left).text === name
+      ts.isIdentifier(assignmentTarget) &&
+      assignmentTarget.text === name &&
+      [
+        ts.SyntaxKind.EqualsToken,
+        ts.SyntaxKind.AmpersandAmpersandEqualsToken,
+        ts.SyntaxKind.BarBarEqualsToken,
+        ts.SyntaxKind.QuestionQuestionEqualsToken,
+      ].includes(current.operatorToken.kind)
     ) {
-      return live && expressionReadsBinding(current.right, name);
+      // A live implementation value is truthy and non-nullish on the path carrying this taint.
+      if (
+        current.operatorToken.kind === ts.SyntaxKind.EqualsToken ||
+        current.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandEqualsToken
+      ) {
+        return live && expressionReadsBinding(current.right, name);
+      }
+      return live;
     }
     if (current.operatorToken.kind === ts.SyntaxKind.CommaToken) {
       const afterLeft = bindingLiveAfterExpression(current.left, name, live);

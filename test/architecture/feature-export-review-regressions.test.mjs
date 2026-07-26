@@ -725,3 +725,82 @@ test('tracks live IIFE parameters through nested execution and stops after reass
     }
   );
 });
+
+test('models logical IIFE parameter assignments without dropping possible tainted paths', () => {
+  withFeatureFixture(
+    {
+      'src/features/iife-logical-and-param/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = {};
+        ((value) => {
+          value &&= undefined;
+          api.Store = value;
+        })(Store);
+      `,
+      'src/features/iife-logical-and-param/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/iife-logical-or-param/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = {};
+        ((value) => {
+          value ||= undefined;
+          api.Store = value;
+        })(Store);
+      `,
+      'src/features/iife-logical-or-param/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/iife-logical-nullish-param/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = {};
+        ((value) => {
+          value ??= undefined;
+          api.Store = value;
+        })(Store);
+      `,
+      'src/features/iife-logical-nullish-param/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/iife-logical-and-unknown-param/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = {};
+        const flag = Math.random() > 0.5;
+        ((value) => {
+          value &&= flag ? undefined : value;
+          api.Store = value;
+        })(Store);
+      `,
+      'src/features/iife-logical-and-unknown-param/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/iife-logical-or-unknown-param/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = {};
+        const flag = Math.random() > 0.5;
+        ((value) => {
+          if (flag) value = undefined;
+          value ||= undefined;
+          api.Store = value;
+        })(Store);
+      `,
+      'src/features/iife-logical-or-unknown-param/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/iife-logical-nullish-unknown-param/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = {};
+        const flag = Math.random() > 0.5;
+        ((value) => {
+          if (flag) value = undefined;
+          value ??= undefined;
+          api.Store = value;
+        })(Store);
+      `,
+      'src/features/iife-logical-nullish-unknown-param/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/iife-logical-and-unknown-param/main/index.ts',
+        'src/features/iife-logical-nullish-param/main/index.ts',
+        'src/features/iife-logical-nullish-unknown-param/main/index.ts',
+        'src/features/iife-logical-or-param/main/index.ts',
+        'src/features/iife-logical-or-unknown-param/main/index.ts',
+      ]);
+    }
+  );
+});
