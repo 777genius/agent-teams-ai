@@ -478,6 +478,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       runId: input.run.runId,
       providerId: 'opencode' as const,
       cwd,
+      ...(input.run.request.allowExperimentalLocalModels === true
+        ? { allowExperimentalLocalModels: true }
+        : {}),
     };
     if (!currentOwner) {
       this.runtimeAdapterRunByTeam.set(input.run.teamName, exactStopOwner);
@@ -547,6 +550,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       runId: input.run.runId,
       providerId: 'opencode' as const,
       cwd,
+      ...(input.run.request.allowExperimentalLocalModels === true
+        ? { allowExperimentalLocalModels: true }
+        : {}),
     };
     if (!currentOwner) {
       this.runtimeAdapterRunByTeam.set(input.run.teamName, expectedOwner);
