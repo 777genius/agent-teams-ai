@@ -1,7 +1,9 @@
+import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
-import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -12,6 +14,8 @@ import {
   removeTaskAttachmentGenerationPin,
   restoreDetachedTaskAttachmentGeneration,
 } from '../../../../src/main/services/team/TaskAttachmentGenerationLifecycle';
+
+const execFileAsync = promisify(execFile);
 
 describe('TaskAttachmentGenerationLifecycle', () => {
   const roots: string[] = [];
@@ -64,6 +68,70 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     await removeTaskAttachmentGenerationPin(pinned.receipt.pinPath, pinned.receipt.identity);
     await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('old');
   });
+
+  it.runIf(process.platform !== 'win32')(
+    'rejects a FIFO promptly and removes its transaction pin',
+    async () => {
+      const { root, publicPath } = await createRoot();
+      await execFileAsync('/usr/bin/mkfifo', [publicPath], { timeout: 1_000 });
+
+      let unblockWriter = Promise.resolve();
+      const unblockTimer = setTimeout(() => {
+        unblockWriter = fs.open(publicPath, 'w').then((handle) => handle.close());
+      }, 750);
+      const startedAt = Date.now();
+      let result: Awaited<ReturnType<typeof pinTaskAttachmentGeneration>>;
+      try {
+        result = await pinTaskAttachmentGeneration(publicPath);
+      } finally {
+        clearTimeout(unblockTimer);
+        await unblockWriter;
+      }
+
+      expect(Date.now() - startedAt).toBeLessThan(500);
+      expect(result).toEqual({ kind: 'changed' });
+      expect((await fs.lstat(publicPath)).isFIFO()).toBe(true);
+      expect(await readdir(root)).toEqual(['attachment']);
+    }
+  );
+
+  it.runIf(process.platform !== 'win32')(
+    'pins a non-readable regular file without requiring read permission',
+    async () => {
+      const { publicPath } = await createRoot();
+      await writeFile(publicPath, 'old');
+      await chmod(publicPath, 0o000);
+
+      const pinned = await pinTaskAttachmentGeneration(publicPath);
+      if (pinned.kind !== 'pinned') throw new Error('Expected pinned generation');
+
+      const publicIdentity = await fs.lstat(publicPath);
+      const pinIdentity = await fs.lstat(pinned.receipt.pinPath);
+      expect({ dev: pinIdentity.dev, ino: pinIdentity.ino }).toEqual({
+        dev: publicIdentity.dev,
+        ino: publicIdentity.ino,
+      });
+
+      await removeTaskAttachmentGenerationPin(pinned.receipt.pinPath, pinned.receipt.identity);
+      await chmod(publicPath, 0o600);
+      await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('old');
+    }
+  );
+
+  it.runIf(process.platform !== 'win32')(
+    'rejects a symlink without leaving a transaction pin',
+    async () => {
+      const { root, publicPath } = await createRoot();
+      const targetPath = join(root, 'target');
+      await writeFile(targetPath, 'target');
+      await symlink(targetPath, publicPath);
+
+      await expect(pinTaskAttachmentGeneration(publicPath)).resolves.toEqual({ kind: 'changed' });
+
+      expect(await fs.readlink(publicPath)).toBe(targetPath);
+      expect((await readdir(root)).sort()).toEqual(['attachment', 'target']);
+    }
+  );
 
   it('never clobbers a replacement while rolling back a detached generation', async () => {
     const { root, publicPath } = await createRoot();
