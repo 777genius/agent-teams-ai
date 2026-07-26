@@ -27,12 +27,18 @@ describe('useTerminalMuxTabsController close focus', () => {
   let host: HTMLDivElement;
   let root: Root;
 
-  function Harness({ snapshot }: { snapshot: TerminalWorkspaceSnapshot }): React.JSX.Element {
+  function Harness({
+    settingsOpen = false,
+    snapshot,
+  }: Readonly<{
+    settingsOpen?: boolean;
+    snapshot: TerminalWorkspaceSnapshot;
+  }>): React.JSX.Element {
     const nextControls = useTerminalMuxTabsController({
       commandRuns: [],
       commands,
       placement: 'console',
-      settingsOpen: false,
+      settingsOpen,
       snapshot,
       teamName: 'terminal-focus-test',
     });
@@ -40,12 +46,15 @@ describe('useTerminalMuxTabsController close focus', () => {
 
     return (
       <>
-        {nextControls.viewModel.tabItems.map(({ id, label }) => (
+        {nextControls.viewModel.tabItems.map(({ active, id, label }) => (
           <div data-terminal-tab-id={id} key={id}>
             <button
               aria-disabled={nextControls.busy}
+              aria-selected={active}
               data-testid={`tab-${id}`}
               ref={(element) => nextControls.registerTabButtonElement(id, element)}
+              role="tab"
+              tabIndex={active ? 0 : -1}
               type="button"
             >
               {label}
@@ -55,6 +64,18 @@ describe('useTerminalMuxTabsController close focus', () => {
             </button>
           </div>
         ))}
+        {settingsOpen ? (
+          <button
+            aria-selected="true"
+            data-testid="settings-tab"
+            ref={nextControls.settingsTabButtonRef}
+            role="tab"
+            tabIndex={0}
+            type="button"
+          >
+            Settings
+          </button>
+        ) : null}
         <button data-testid="external-focus-target" type="button">
           External
         </button>
@@ -323,6 +344,39 @@ describe('useTerminalMuxTabsController close focus', () => {
     expect(document.activeElement).toBe(requiredElement('tab-tab-3'));
   });
 
+  it('restores DOM focus to the selected settings tab after closing a terminal tab', async () => {
+    await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO), true);
+    requiredElement('close-tab-2').focus();
+
+    await requestAndConfirmClose(TAB_TWO);
+    await render(createSnapshot([TAB_ONE], TAB_ONE), true);
+
+    const settingsTab = requiredElement('settings-tab');
+    expect(settingsTab.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(settingsTab);
+    expect(requiredElement('tab-tab-1').getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('restores settings focus before a deferred terminal focus command settles', async () => {
+    const focusDispatch = createDeferred<MuxCommandResult>();
+    commands.dispatchMuxCommand = vi.fn((_sessionId, command) =>
+      command.kind === 'focus_tab' ? focusDispatch.promise : Promise.resolve(CHANGED_MUX_RESULT)
+    ) as never;
+    await render(createSnapshot([TAB_ONE, TAB_TWO], TAB_TWO), true);
+    requiredElement('close-tab-2').focus();
+
+    const { closeAction } = await beginConfirmedClose(TAB_TWO);
+    await render(createSnapshot([TAB_ONE], TAB_ONE), true);
+
+    expect(requiredControls().busy).toBe(true);
+    expect(document.activeElement).toBe(requiredElement('settings-tab'));
+
+    await act(async () => {
+      focusDispatch.resolve(CHANGED_MUX_RESULT);
+      await closeAction;
+    });
+  });
+
   async function requestAndConfirmClose(tab: TerminalMuxTab): Promise<void> {
     await act(async () => {
       await requiredControls().requestCloseTab(tab);
@@ -345,9 +399,9 @@ describe('useTerminalMuxTabsController close focus', () => {
     return { closeAction };
   }
 
-  async function render(snapshot: TerminalWorkspaceSnapshot): Promise<void> {
+  async function render(snapshot: TerminalWorkspaceSnapshot, settingsOpen = false): Promise<void> {
     await act(async () => {
-      root.render(<Harness snapshot={snapshot} />);
+      root.render(<Harness settingsOpen={settingsOpen} snapshot={snapshot} />);
       await flushMicrotasks();
     });
   }

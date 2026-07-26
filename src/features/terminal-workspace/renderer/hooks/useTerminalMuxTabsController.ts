@@ -316,6 +316,16 @@ export function useTerminalMuxTabsController({
       return;
     }
 
+    if (settingsOpen) {
+      const settingsTarget = settingsTabButtonRef.current;
+      if (!settingsTarget) {
+        return;
+      }
+      settingsTarget.focus();
+      setPendingCloseFocusRequest(null);
+      return undefined;
+    }
+
     const preferredFocusTabId = pendingCloseFocusRequest.preferredFocusTabId;
     const preferredFocusIsVisible =
       preferredFocusTabId !== null &&
@@ -390,6 +400,7 @@ export function useTerminalMuxTabsController({
     connectionState,
     focusScopeKey,
     pendingCloseFocusRequest,
+    settingsOpen,
     viewModel.activeVisibleTabId,
     viewModel.visibleTabIdsKey,
     viewModel.visibleTabs,
