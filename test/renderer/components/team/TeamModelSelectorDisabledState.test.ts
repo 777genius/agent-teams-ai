@@ -5182,7 +5182,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('keeps app-managed local models scoped to the selected project', async () => {
+  it('keeps local inventories scoped without silently clearing an explicit route', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const listLocalProviders = vi.fn(
       async (input: { scope: 'global' | 'project'; projectPath?: string | null }) => ({
@@ -5400,7 +5400,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     await renderForProject('/tmp/local-model-project-a');
     await renderForProject('/tmp/local-model-project-b');
     expect(host.textContent).not.toContain('qwen-test:0.5b');
-    expect(onValueChange).toHaveBeenCalledWith('');
+    expect(onValueChange).not.toHaveBeenCalledWith('');
 
     await act(async () => {
       root.unmount();
