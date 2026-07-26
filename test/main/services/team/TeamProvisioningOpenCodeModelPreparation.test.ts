@@ -159,26 +159,59 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect(debugEvents).toContain('opencode_compatibility_batch_busy_deferred');
   });
 
-  it('defers configured Ollama routes directly to deep verification without auth or catalog gating', async () => {
-    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+  it.each(['ollama/qwen3-coder:30b', 'cursor-acp/auto', 'kiro/auto'])(
+    'defers authless execution route %s directly to deep verification',
+    async (modelId) => {
+      const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+      const adapter = createAdapter({
+        prepare,
+        availableModels: [modelId, 'opencode/big-pickle'],
+      });
+
+      const result = await prepareSelectedOpenCodeModelsForProvisioning({
+        adapter,
+        cwd: '/workspace/project',
+        modelIds: [modelId],
+        verificationMode: 'compatibility',
+      });
+
+      expect(result).toMatchObject({
+        details: [`Selected model ${modelId} is compatible. Deep verification pending.`],
+        blockingMessages: [],
+        issues: [],
+      });
+      expect(prepare).not.toHaveBeenCalled();
+    }
+  );
+
+  it('uses a provider-backed route for shared auth when Cursor also is selected', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'openrouter/qwen/qwen3-coder',
+      diagnostics: [],
+      warnings: [],
+    });
     const adapter = createAdapter({
       prepare,
-      availableModels: [],
+      availableModels: ['cursor-acp/auto', 'openrouter/qwen/qwen3-coder'],
     });
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
       cwd: '/workspace/project',
-      modelIds: ['ollama/qwen3-coder:30b'],
+      modelIds: ['cursor-acp/auto', 'openrouter/qwen/qwen3-coder'],
       verificationMode: 'compatibility',
     });
 
-    expect(result).toMatchObject({
-      details: ['Selected model ollama/qwen3-coder:30b is compatible. Deep verification pending.'],
-      blockingMessages: [],
-      issues: [],
-    });
-    expect(prepare).not.toHaveBeenCalled();
+    expect(prepare).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'openrouter/qwen/qwen3-coder', runtimeOnly: true })
+    );
+    expect(result.blockingMessages).toEqual([]);
+    expect(result.details).toEqual([
+      'Selected model cursor-acp/auto is compatible. Deep verification pending.',
+      'Selected model openrouter/qwen/qwen3-coder is compatible. Deep verification pending.',
+    ]);
   });
 
   it('defers a provider-scoped route missing from the general catalog to deep verification', async () => {

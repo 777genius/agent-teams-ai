@@ -109,6 +109,11 @@ function isOpenCodeLocalModelRoute(modelId: string): boolean {
   return isOpenCodeLocalProviderId(sourceId);
 }
 
+function requiresOpenCodeCompatibilityExecutionProbe(modelId: string): boolean {
+  const sourceId = parseOpenCodeQualifiedModelRef(modelId)?.sourceId ?? null;
+  return isOpenCodeLocalProviderId(sourceId) || sourceId === 'cursor-acp' || sourceId === 'kiro';
+}
+
 function isOpenCodeUnknownProviderRoute(
   modelId: string,
   availableProviderIds: ReadonlySet<string>
@@ -532,9 +537,11 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
     modelIds,
   });
 
-  const configuredLocalModelIds = modelIds.filter(isOpenCodeLocalModelRoute);
+  const configuredLocalModelIds = modelIds.filter(requiresOpenCodeCompatibilityExecutionProbe);
   if (inspectLocalModelRuntime) {
-    for (const modelId of modelIds.filter((candidate) => !isOpenCodeLocalModelRoute(candidate))) {
+    for (const modelId of modelIds.filter(
+      (candidate) => !requiresOpenCodeCompatibilityExecutionProbe(candidate)
+    )) {
       try {
         const classification = await inspectLocalModelRuntime({
           projectPath: cwd,
