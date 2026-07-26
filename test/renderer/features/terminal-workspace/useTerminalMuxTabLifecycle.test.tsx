@@ -153,21 +153,25 @@ describe('useTerminalMuxTabLifecycle', () => {
     expect(requiredControls().error).toBe('focus failed');
   });
 
-  it('does not report focus dispatch when the mux rejects it semantically', async () => {
+  it('reports an unchanged focus settlement when the mux rejects it semantically', async () => {
     const onTabCloseDispatched = vi.fn();
-    const onTabCloseFocusDispatched = vi.fn();
+    const onTabCloseFocusSettled = vi.fn();
     const commands = createResolvedCommands();
     commands.dispatchMuxCommand = vi.fn(async (_sessionId, command) => ({
       changed: command.kind !== 'focus_tab',
     })) as never;
-    await render({ commands, onTabCloseDispatched, onTabCloseFocusDispatched });
+    await render({ commands, onTabCloseDispatched, onTabCloseFocusSettled });
 
     await act(async () => {
       await requiredControls().requestCloseTab(TAB_ONE);
     });
 
     expect(onTabCloseDispatched).toHaveBeenCalledOnce();
-    expect(onTabCloseFocusDispatched).not.toHaveBeenCalled();
+    expect(onTabCloseFocusSettled).toHaveBeenCalledWith({
+      changed: false,
+      closedTabId: TAB_ONE.tab_id,
+      focusTabId: TAB_TWO.tab_id,
+    });
     expect(commands.attachSession).toHaveBeenCalledOnce();
   });
 

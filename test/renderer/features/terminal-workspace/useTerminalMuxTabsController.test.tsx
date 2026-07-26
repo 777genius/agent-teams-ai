@@ -226,6 +226,70 @@ describe('useTerminalMuxTabsController close focus', () => {
     expect(document.activeElement).toBe(requiredElement('tab-tab-3'));
   });
 
+  it('falls back before attach settles when preferred focus is rejected semantically', async () => {
+    const attach = createDeferred<void>();
+    commands.attachSession = vi.fn(() => attach.promise) as never;
+    commands.dispatchMuxCommand = vi.fn(async (_sessionId, command) => ({
+      changed: command.kind !== 'focus_tab',
+    })) as never;
+    await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_ONE));
+    requiredElement('close-tab-1').focus();
+
+    let closeAction!: Promise<void>;
+    await act(async () => {
+      closeAction = requiredControls().requestCloseTab(TAB_ONE);
+      await flushMicrotasks();
+    });
+    await render(createSnapshot([TAB_TWO, TAB_THREE], TAB_THREE));
+
+    expect(requiredControls().busy).toBe(true);
+    expect(document.activeElement).toBe(requiredElement('tab-tab-3'));
+
+    await act(async () => {
+      attach.resolve();
+      await closeAction;
+    });
+  });
+
+  it('falls back after settlement when another visible tab wins the final topology', async () => {
+    const settleFrames: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      settleFrames.push(callback);
+      return settleFrames.length;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    const attach = createDeferred<void>();
+    commands.attachSession = vi.fn(() => attach.promise) as never;
+    await render(createSnapshot([TAB_ONE, TAB_TWO, TAB_THREE], TAB_ONE));
+    requiredElement('close-tab-1').focus();
+
+    let closeAction!: Promise<void>;
+    await act(async () => {
+      closeAction = requiredControls().requestCloseTab(TAB_ONE);
+      await flushMicrotasks();
+    });
+    await render(createSnapshot([TAB_TWO, TAB_THREE], TAB_THREE));
+
+    expect(requiredControls().busy).toBe(true);
+    expect(document.activeElement).not.toBe(requiredElement('tab-tab-3'));
+
+    await act(async () => {
+      attach.resolve();
+      await closeAction;
+    });
+
+    expect(requiredControls().busy).toBe(false);
+    expect(document.activeElement).not.toBe(requiredElement('tab-tab-3'));
+
+    await act(async () => {
+      settleFrames.shift()?.(performance.now());
+      settleFrames.shift()?.(performance.now());
+      await flushMicrotasks();
+    });
+
+    expect(document.activeElement).toBe(requiredElement('tab-tab-3'));
+  });
+
   it('falls back after a dispatched preferred focus target disappears', async () => {
     const attach = createDeferred<void>();
     commands.attachSession = vi.fn(() => attach.promise) as never;

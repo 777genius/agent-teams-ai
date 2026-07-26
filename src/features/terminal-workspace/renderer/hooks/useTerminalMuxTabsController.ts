@@ -25,7 +25,7 @@ import {
 import {
   type TerminalMuxCommands,
   type TerminalMuxTabCloseDispatch,
-  type TerminalMuxTabCloseFocusDispatch,
+  type TerminalMuxTabCloseFocusSettlement,
   useTerminalMuxTabLifecycle,
 } from './useTerminalMuxTabLifecycle';
 import { useTerminalTabPointerReorder } from './useTerminalTabPointerReorder';
@@ -91,7 +91,7 @@ interface PendingCloseFocusIntent {
 
 interface PendingCloseFocusRequest extends TerminalMuxTabCloseDispatch {
   commands: TerminalMuxCommands;
-  preferredFocusWasDispatched: boolean;
+  preferredFocusState: 'not-planned' | 'pending' | 'changed' | 'unchanged';
   scopeKey: string;
 }
 
@@ -142,21 +142,24 @@ export function useTerminalMuxTabsController({
       setPendingCloseFocusRequest({
         ...dispatch,
         commands,
-        preferredFocusWasDispatched: false,
+        preferredFocusState: dispatch.willDispatchPreferredFocus ? 'pending' : 'not-planned',
         scopeKey: focusScopeKey,
       });
     },
     [commands, connectionState, focusScopeKey]
   );
-  const handleTabCloseFocusDispatched = useCallback(
-    (dispatch: TerminalMuxTabCloseFocusDispatch): void => {
+  const handleTabCloseFocusSettled = useCallback(
+    (settlement: TerminalMuxTabCloseFocusSettlement): void => {
       setPendingCloseFocusRequest((current) =>
         current &&
-        current.closedTabId === dispatch.closedTabId &&
-        current.preferredFocusTabId === dispatch.focusTabId &&
+        current.closedTabId === settlement.closedTabId &&
+        current.preferredFocusTabId === settlement.focusTabId &&
         current.commands === commands &&
         current.scopeKey === focusScopeKey
-          ? { ...current, preferredFocusWasDispatched: true }
+          ? {
+              ...current,
+              preferredFocusState: settlement.changed ? 'changed' : 'unchanged',
+            }
           : current
       );
     },
@@ -178,7 +181,7 @@ export function useTerminalMuxTabsController({
     visibleTabs: viewModel.visibleTabs,
     onSettingsOpenChange,
     onTabCloseDispatched: handleTabCloseDispatched,
-    onTabCloseFocusDispatched: handleTabCloseFocusDispatched,
+    onTabCloseFocusSettled: handleTabCloseFocusSettled,
     onTabContentPendingChange,
   });
   const {
@@ -313,19 +316,20 @@ export function useTerminalMuxTabsController({
     const preferredFocusIsVisible =
       preferredFocusTabId !== null &&
       viewModel.visibleTabs.some((tab) => tab.tab_id === preferredFocusTabId);
-    const waitForPreferredFocus =
-      pendingCloseFocusRequest.willDispatchPreferredFocus &&
-      (busy || pendingCloseFocusRequest.preferredFocusWasDispatched);
-    if (
-      waitForPreferredFocus &&
-      (busy || preferredFocusIsVisible) &&
-      viewModel.activeVisibleTabId !== preferredFocusTabId
-    ) {
+    const preferredFocusState = pendingCloseFocusRequest.preferredFocusState;
+    const waitForFocusCommand = preferredFocusState === 'pending' && busy;
+    const waitForPreferredTopology =
+      preferredFocusState === 'changed' &&
+      busy &&
+      (!preferredFocusIsVisible || viewModel.activeVisibleTabId !== preferredFocusTabId);
+    if (waitForFocusCommand || waitForPreferredTopology) {
       return;
     }
 
     const focusTabId =
-      waitForPreferredFocus && preferredFocusIsVisible
+      preferredFocusState === 'changed' &&
+      preferredFocusIsVisible &&
+      viewModel.activeVisibleTabId === preferredFocusTabId
         ? preferredFocusTabId
         : viewModel.activeVisibleTabId;
     if (!focusTabId) {
@@ -338,8 +342,44 @@ export function useTerminalMuxTabsController({
       return;
     }
 
+    if (
+      preferredFocusState === 'changed' &&
+      !busy &&
+      preferredFocusIsVisible &&
+      viewModel.activeVisibleTabId !== preferredFocusTabId
+    ) {
+      let fallbackFrame: number | null = null;
+      const settlementFrame = window.requestAnimationFrame(() => {
+        fallbackFrame = window.requestAnimationFrame(() => {
+          const settledActiveElement = document.activeElement;
+          if (
+            settledActiveElement &&
+            settledActiveElement !== document.body &&
+            !isElementWithinTerminalTab(settledActiveElement, pendingCloseFocusRequest.closedTabId)
+          ) {
+            setPendingCloseFocusRequest((current) =>
+              current === pendingCloseFocusRequest ? null : current
+            );
+            return;
+          }
+
+          target.focus();
+          setPendingCloseFocusRequest((current) =>
+            current === pendingCloseFocusRequest ? null : current
+          );
+        });
+      });
+      return () => {
+        window.cancelAnimationFrame(settlementFrame);
+        if (fallbackFrame !== null) {
+          window.cancelAnimationFrame(fallbackFrame);
+        }
+      };
+    }
+
     target.focus();
     setPendingCloseFocusRequest(null);
+    return undefined;
   }, [
     busy,
     commands,
