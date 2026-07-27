@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "violations": [
     {
       "rule": "core-application-dependencies",
@@ -435,697 +435,2425 @@
       "rule": "public-api-implementation-export",
       "source": "src/features/agent-attachments/main/index.ts",
       "specifier": "./infrastructure/attachmentArtifactStore",
-      "publicEntrypoint": "src/features/agent-attachments/main/index.ts"
+      "publicEntrypoint": "src/features/agent-attachments/main/index.ts",
+      "exportedName": "AgentAttachmentArtifactFileName",
+      "importedName": "AgentAttachmentArtifactFileName"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/agent-attachments/main/index.ts",
+      "specifier": "./infrastructure/attachmentArtifactStore",
+      "publicEntrypoint": "src/features/agent-attachments/main/index.ts",
+      "exportedName": "resolveAgentAttachmentArtifactPath",
+      "importedName": "resolveAgentAttachmentArtifactPath"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/agent-attachments/main/index.ts",
+      "specifier": "./infrastructure/attachmentArtifactStore",
+      "publicEntrypoint": "src/features/agent-attachments/main/index.ts",
+      "exportedName": "ResolveAgentAttachmentArtifactPathInput",
+      "importedName": "ResolveAgentAttachmentArtifactPathInput"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/agent-attachments/main/index.ts",
+      "specifier": "./infrastructure/attachmentArtifactStore",
+      "publicEntrypoint": "src/features/agent-attachments/main/index.ts",
+      "exportedName": "writeFileAtomic",
+      "importedName": "writeFileAtomic"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/agent-graph/renderer/index.ts",
       "specifier": "./adapters/TeamGraphAdapter",
-      "publicEntrypoint": "src/features/agent-graph/renderer/index.ts"
+      "publicEntrypoint": "src/features/agent-graph/renderer/index.ts",
+      "exportedName": "TeamGraphAdapter",
+      "importedName": "TeamGraphAdapter"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review-history/main/index.ts",
       "specifier": "./adapters/input/ipc/registerReviewDecisionHistoryIpc",
-      "publicEntrypoint": "src/features/change-review-history/main/index.ts"
+      "publicEntrypoint": "src/features/change-review-history/main/index.ts",
+      "exportedName": "registerReviewDecisionHistoryIpc",
+      "importedName": "registerReviewDecisionHistoryIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review-history/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerReviewDecisionHistoryIpc",
+      "publicEntrypoint": "src/features/change-review-history/main/index.ts",
+      "exportedName": "removeReviewDecisionHistoryIpc",
+      "importedName": "removeReviewDecisionHistoryIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review-history/main/index.ts",
       "specifier": "./adapters/input/ipc/registerReviewDraftHistoryIpc",
-      "publicEntrypoint": "src/features/change-review-history/main/index.ts"
+      "publicEntrypoint": "src/features/change-review-history/main/index.ts",
+      "exportedName": "registerReviewDraftHistoryIpc",
+      "importedName": "registerReviewDraftHistoryIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review-history/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerReviewDraftHistoryIpc",
+      "publicEntrypoint": "src/features/change-review-history/main/index.ts",
+      "exportedName": "removeReviewDraftHistoryIpc",
+      "importedName": "removeReviewDraftHistoryIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review-history/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerReviewDraftHistoryIpc",
+      "publicEntrypoint": "src/features/change-review-history/main/index.ts",
+      "exportedName": "ReviewDraftHistoryIpcHandlerWrapper",
+      "importedName": "ReviewDraftHistoryIpcHandlerWrapper"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review-history/main/index.ts",
       "specifier": "./adapters/input/ipc/types",
-      "publicEntrypoint": "src/features/change-review-history/main/index.ts"
+      "publicEntrypoint": "src/features/change-review-history/main/index.ts",
+      "exportedName": "ReviewHistoryIpcHandlerWrapper",
+      "importedName": "ReviewHistoryIpcHandlerWrapper"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review-history/main/index.ts",
       "specifier": "./infrastructure/ReviewDraftHistoryStore",
-      "publicEntrypoint": "src/features/change-review-history/main/index.ts"
+      "publicEntrypoint": "src/features/change-review-history/main/index.ts",
+      "exportedName": "ReviewDraftHistoryStore",
+      "importedName": "ReviewDraftHistoryStore"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review-history/main/index.ts",
+      "specifier": "./infrastructure/ReviewDraftHistoryStore",
+      "publicEntrypoint": "src/features/change-review-history/main/index.ts",
+      "exportedName": "SaveReviewDraftHistoryEntryInput",
+      "importedName": "SaveReviewDraftHistoryEntryInput"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review-history/renderer/index.ts",
       "specifier": "./adapters/reviewDraftEditorState",
-      "publicEntrypoint": "src/features/change-review-history/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review-history/renderer/index.ts",
+      "exportedName": "restoreReviewDraftEditorState",
+      "importedName": "restoreReviewDraftEditorState"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review-history/renderer/index.ts",
+      "specifier": "./adapters/reviewDraftEditorState",
+      "publicEntrypoint": "src/features/change-review-history/renderer/index.ts",
+      "exportedName": "serializeReviewDraftEditorState",
+      "importedName": "serializeReviewDraftEditorState"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/changeReviewDialogInteractionAdapters",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "browserChangeReviewCollapsedFilesStorage",
+      "importedName": "browserChangeReviewCollapsedFilesStorage"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/changeReviewDialogInteractionAdapters",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewExternalFileWatcherPort",
+      "importedName": "createChangeReviewExternalFileWatcherPort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewActionHistoryPorts",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewActionHistoryStorePort",
+      "importedName": "createChangeReviewActionHistoryStorePort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewActionHistoryPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewDecisionPersistencePort",
+      "importedName": "createChangeReviewDecisionPersistencePort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewBulkDecisionPorts",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewBulkDecisionCommandPort",
+      "importedName": "createChangeReviewBulkDecisionCommandPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewBulkDecisionPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewBulkDecisionStatePort",
+      "importedName": "createChangeReviewBulkDecisionStatePort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewConflictPorts",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewConflictCommandPort",
+      "importedName": "createChangeReviewConflictCommandPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewConflictPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewConflictQueryPort",
+      "importedName": "createChangeReviewConflictQueryPort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewConflictStateBridge",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "ChangeReviewConflictStateBridge",
+      "importedName": "ChangeReviewConflictStateBridge"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewConflictStateBridge",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewConflictStateBridge",
+      "importedName": "createChangeReviewConflictStateBridge"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewDialogLifecyclePorts",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewDialogLifecycleCommandPort",
+      "importedName": "createChangeReviewDialogLifecycleCommandPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewDialogLifecyclePorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewDialogLifecycleStatePort",
+      "importedName": "createChangeReviewDialogLifecycleStatePort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewDialogViewPorts",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "ChangeReviewDialogViewPorts",
+      "importedName": "ChangeReviewDialogViewPorts"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewDialogViewPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewDialogViewPorts",
+      "importedName": "createChangeReviewDialogViewPorts"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewDraftHistoryPort",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewDraftHistoryPort",
+      "importedName": "createChangeReviewDraftHistoryPort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewFileDecisionPorts",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewFileDecisionCommandPort",
+      "importedName": "createChangeReviewFileDecisionCommandPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewFileDecisionPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewFileDecisionStatePort",
+      "importedName": "createChangeReviewFileDecisionStatePort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewFileDraftPorts",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewFileDraftCommandPort",
+      "importedName": "createChangeReviewFileDraftCommandPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewFileDraftPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewFileDraftStatePort",
+      "importedName": "createChangeReviewFileDraftStatePort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewHistoryMutationPorts",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewHistoryMutationCommandPort",
+      "importedName": "createChangeReviewHistoryMutationCommandPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewHistoryMutationPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewHistoryMutationStatePort",
+      "importedName": "createChangeReviewHistoryMutationStatePort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/change-review/renderer/index.ts",
       "specifier": "./adapters/createChangeReviewHunkDecisionPorts",
-      "publicEntrypoint": "src/features/change-review/renderer/index.ts"
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewHunkDecisionCommandPort",
+      "importedName": "createChangeReviewHunkDecisionCommandPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/renderer/index.ts",
+      "specifier": "./adapters/createChangeReviewHunkDecisionPorts",
+      "publicEntrypoint": "src/features/change-review/renderer/index.ts",
+      "exportedName": "createChangeReviewHunkDecisionStatePort",
+      "importedName": "createChangeReviewHunkDecisionStatePort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/codex-account/main/index.ts",
       "specifier": "./adapters/input/ipc/registerCodexAccountIpc",
-      "publicEntrypoint": "src/features/codex-account/main/index.ts"
+      "publicEntrypoint": "src/features/codex-account/main/index.ts",
+      "exportedName": "registerCodexAccountIpc",
+      "importedName": "registerCodexAccountIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerCodexAccountIpc",
+      "publicEntrypoint": "src/features/codex-account/main/index.ts",
+      "exportedName": "removeCodexAccountIpc",
+      "importedName": "removeCodexAccountIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/codex-runtime-installer/main/composition/createCodexRuntimeInstallerFeature.ts",
       "specifier": "../infrastructure/CodexRuntimeInstallerService",
-      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts"
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
+      "exportedName": "createCodexRuntimeInstallerFeature",
+      "importedName": "CodexRuntimeInstallerServiceDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/codex-runtime-installer/main/index.ts",
       "specifier": "./adapters/input/ipc/registerCodexRuntimeInstallerIpc",
-      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts"
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
+      "exportedName": "registerCodexRuntimeInstallerIpc",
+      "importedName": "registerCodexRuntimeInstallerIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-runtime-installer/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerCodexRuntimeInstallerIpc",
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
+      "exportedName": "removeCodexRuntimeInstallerIpc",
+      "importedName": "removeCodexRuntimeInstallerIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/codex-runtime-installer/main/index.ts",
       "specifier": "./infrastructure/CodexRuntimeInstallerService",
-      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts"
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
+      "exportedName": "CodexRuntimeInstallerServiceDependencies",
+      "importedName": "CodexRuntimeInstallerServiceDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-runtime-installer/main/index.ts",
+      "specifier": "./infrastructure/CodexRuntimeInstallerService",
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
+      "exportedName": "extractCodexRuntimePackageFilesFromTarball",
+      "importedName": "extractCodexRuntimePackageFilesFromTarball"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-runtime-installer/main/index.ts",
+      "specifier": "./infrastructure/CodexRuntimeInstallerService",
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
+      "exportedName": "getCodexRuntimePlatformCandidates",
+      "importedName": "getCodexRuntimePlatformCandidates"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-runtime-installer/main/index.ts",
+      "specifier": "./infrastructure/CodexRuntimeInstallerService",
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
+      "exportedName": "resolveAppManagedCodexRuntimeBinaryPath",
+      "importedName": "resolveAppManagedCodexRuntimeBinaryPath"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-runtime-installer/main/index.ts",
+      "specifier": "./infrastructure/CodexRuntimeInstallerService",
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
+      "exportedName": "resolveVerifiedAppManagedCodexRuntimeBinaryPath",
+      "importedName": "resolveVerifiedAppManagedCodexRuntimeBinaryPath"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-runtime-installer/main/index.ts",
+      "specifier": "./infrastructure/CodexRuntimeInstallerService",
+      "publicEntrypoint": "src/features/codex-runtime-installer/main/index.ts",
+      "exportedName": "verifyCodexRuntimePackageIntegrity",
+      "importedName": "verifyCodexRuntimePackageIntegrity"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/coordination-backup/main/composition/createCoordinationBackupFeature.ts",
       "specifier": "../adapters/output/DurableBackupIdentityInventory",
-      "publicEntrypoint": "src/features/coordination-backup/main/index.ts"
+      "publicEntrypoint": "src/features/coordination-backup/main/index.ts",
+      "exportedName": "createCoordinationBackupFeature",
+      "importedName": "DurableIdentityInventorySource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/coordination-backup/main/composition/createCoordinationBackupFeature.ts",
+      "specifier": "../adapters/output/DurableBackupIdentityInventory",
+      "publicEntrypoint": "src/features/coordination-backup/main/index.ts",
+      "exportedName": "CreateCoordinationBackupFeatureOptions",
+      "importedName": "DurableIdentityInventorySource"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/coordination-backup/main/composition/createCoordinationBackupFeature.ts",
       "specifier": "../adapters/output/SqliteBackupCoordinationFlush",
-      "publicEntrypoint": "src/features/coordination-backup/main/index.ts"
+      "publicEntrypoint": "src/features/coordination-backup/main/index.ts",
+      "exportedName": "createCoordinationBackupFeature",
+      "importedName": "DurableStateCompatibilityManifestSource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/coordination-backup/main/composition/createCoordinationBackupFeature.ts",
+      "specifier": "../adapters/output/SqliteBackupCoordinationFlush",
+      "publicEntrypoint": "src/features/coordination-backup/main/index.ts",
+      "exportedName": "CreateCoordinationBackupFeatureOptions",
+      "importedName": "DurableStateCompatibilityManifestSource"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/coordination-events/main/composition/createCoordinationEventsFeature.ts",
       "specifier": "../adapters/output/SqliteCoordinationEventRecoveryPointParticipant",
-      "publicEntrypoint": "src/features/coordination-events/main/index.ts"
+      "publicEntrypoint": "src/features/coordination-events/main/index.ts",
+      "exportedName": "createCoordinationEventsFeature",
+      "importedName": "CoordinationEventRecoveryArtifactStore"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/coordination-events/main/composition/createCoordinationEventsFeature.ts",
+      "specifier": "../adapters/output/SqliteCoordinationEventRecoveryPointParticipant",
+      "publicEntrypoint": "src/features/coordination-events/main/index.ts",
+      "exportedName": "CreateCoordinationEventsFeatureOptions",
+      "importedName": "CoordinationEventRecoveryArtifactStore"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
       "specifier": "../infrastructure",
-      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts"
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "createExternalWriterFileAdapters",
+      "importedName": "NodeExternalContentChecksum"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "createExternalWriterFileAdapters",
+      "importedName": "NodeExternalFileObservationSource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "createExternalWriterFileAdapters",
+      "importedName": "NodeExternalWriterWatchPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "createExternalWriterFileAdapters",
+      "importedName": "NodeExternalWriterWatchPortOptions"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "createExternalWriterFileAdapters",
+      "importedName": "RegisteredExternalFileCatalog"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "createExternalWriterFileAdapters",
+      "importedName": "RegisteredExternalFileDefinition"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "CreateExternalWriterFileAdaptersInput",
+      "importedName": "NodeExternalWriterWatchPortOptions"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "CreateExternalWriterFileAdaptersInput",
+      "importedName": "RegisteredExternalFileDefinition"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "ExternalWriterFileAdapters",
+      "importedName": "NodeExternalContentChecksum"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "ExternalWriterFileAdapters",
+      "importedName": "NodeExternalFileObservationSource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "ExternalWriterFileAdapters",
+      "importedName": "NodeExternalWriterWatchPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/composition/createExternalWriterFileAdapters.ts",
+      "specifier": "../infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "ExternalWriterFileAdapters",
+      "importedName": "RegisteredExternalFileCatalog"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/external-writer-coordination/main/index.ts",
       "specifier": "./infrastructure",
-      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts"
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalContentChecksum",
+      "importedName": "NodeExternalContentChecksum"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalFileObservationSource",
+      "importedName": "NodeExternalFileObservationSource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalFileObservationSourceError",
+      "importedName": "NodeExternalFileObservationSourceError"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalFileObservationSourceErrorCode",
+      "importedName": "NodeExternalFileObservationSourceErrorCode"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalWriterNativeWatcher",
+      "importedName": "NodeExternalWriterNativeWatcher"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalWriterWatchFactory",
+      "importedName": "NodeExternalWriterWatchFactory"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalWriterWatchHandle",
+      "importedName": "NodeExternalWriterWatchHandle"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalWriterWatchInvalidation",
+      "importedName": "NodeExternalWriterWatchInvalidation"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalWriterWatchInvalidationReason",
+      "importedName": "NodeExternalWriterWatchInvalidationReason"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalWriterWatchPort",
+      "importedName": "NodeExternalWriterWatchPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalWriterWatchPortError",
+      "importedName": "NodeExternalWriterWatchPortError"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalWriterWatchPortErrorCode",
+      "importedName": "NodeExternalWriterWatchPortErrorCode"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "NodeExternalWriterWatchPortOptions",
+      "importedName": "NodeExternalWriterWatchPortOptions"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "RegisteredExternalFile",
+      "importedName": "RegisteredExternalFile"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "RegisteredExternalFileCatalog",
+      "importedName": "RegisteredExternalFileCatalog"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "RegisteredExternalFileCatalogError",
+      "importedName": "RegisteredExternalFileCatalogError"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "RegisteredExternalFileCatalogErrorCode",
+      "importedName": "RegisteredExternalFileCatalogErrorCode"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/external-writer-coordination/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/external-writer-coordination/main/index.ts",
+      "exportedName": "RegisteredExternalFileDefinition",
+      "importedName": "RegisteredExternalFileDefinition"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/instance-lease/main/index.ts",
       "specifier": "./adapters/output/NodeInheritedInstanceLease",
-      "publicEntrypoint": "src/features/instance-lease/main/index.ts"
+      "publicEntrypoint": "src/features/instance-lease/main/index.ts",
+      "exportedName": "createInstanceLeaseChildStdioPolicy",
+      "importedName": "createInstanceLeaseChildStdioPolicy"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/instance-lease/main/index.ts",
+      "specifier": "./adapters/output/NodeInheritedInstanceLease",
+      "publicEntrypoint": "src/features/instance-lease/main/index.ts",
+      "exportedName": "NodeInheritedInstanceLeaseError",
+      "importedName": "NodeInheritedInstanceLeaseError"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/instance-lease/main/index.ts",
+      "specifier": "./adapters/output/NodeInheritedInstanceLease",
+      "publicEntrypoint": "src/features/instance-lease/main/index.ts",
+      "exportedName": "NodeInheritedInstanceLeaseErrorCode",
+      "importedName": "NodeInheritedInstanceLeaseErrorCode"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/instance-lease/main/index.ts",
+      "specifier": "./adapters/output/NodeInheritedInstanceLease",
+      "publicEntrypoint": "src/features/instance-lease/main/index.ts",
+      "exportedName": "NodeInstanceLeaseChildStdioPolicy",
+      "importedName": "NodeInstanceLeaseChildStdioPolicy"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/instance-lease/main/index.ts",
+      "specifier": "./adapters/output/NodeInheritedInstanceLease",
+      "publicEntrypoint": "src/features/instance-lease/main/index.ts",
+      "exportedName": "openNodeInheritedInstanceLease",
+      "importedName": "openNodeInheritedInstanceLease"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/composition/createInternalStorageFeature.ts",
       "specifier": "../infrastructure/CoordinationDurabilityStorageGateway",
-      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "createInternalStorageFeature",
+      "importedName": "CoordinationDurabilityStorageGateway"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/composition/createInternalStorageFeature.ts",
+      "specifier": "../infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "InternalStorageCoordinationDurabilityBackend",
+      "importedName": "CoordinationDurabilityStorageGateway"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/composition/createInternalStorageFeature.ts",
+      "specifier": "../infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "InternalStorageFeature",
+      "importedName": "CoordinationDurabilityStorageGateway"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/composition/createInternalStorageFeature.ts",
       "specifier": "../infrastructure/ProcessOwnershipStorageGateway",
-      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "createInternalStorageFeature",
+      "importedName": "ProcessOwnershipStorageGateway"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/composition/createInternalStorageFeature.ts",
+      "specifier": "../infrastructure/ProcessOwnershipStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "InternalStorageFeature",
+      "importedName": "ProcessOwnershipStorageGateway"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/composition/createInternalStorageFeature.ts",
+      "specifier": "../infrastructure/ProcessOwnershipStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "InternalStorageProcessOwnershipBackend",
+      "importedName": "ProcessOwnershipStorageGateway"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/index.ts",
       "specifier": "./adapters/output/TeamScopedLegacyJsonSource",
-      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "archiveFileWithGenerations",
+      "importedName": "archiveFileWithGenerations"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./adapters/output/TeamScopedLegacyJsonSource",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "listPreSqliteArchiveGenerations",
+      "importedName": "listPreSqliteArchiveGenerations"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/index.ts",
       "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
-      "publicEntrypoint": "src/features/coordination-backup/main/index.ts"
+      "publicEntrypoint": "src/features/coordination-backup/main/index.ts",
+      "exportedName": "createCoordinationBackupFeature",
+      "importedName": "CoordinationDurabilityStorageGateway"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/index.ts",
       "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
-      "publicEntrypoint": "src/features/coordination-events/main/index.ts"
+      "publicEntrypoint": "src/features/coordination-backup/main/index.ts",
+      "exportedName": "CreateCoordinationBackupFeatureOptions",
+      "importedName": "CoordinationDurabilityStorageGateway"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/index.ts",
       "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
-      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+      "publicEntrypoint": "src/features/coordination-events/main/index.ts",
+      "exportedName": "createCoordinationEventsFeature",
+      "importedName": "CoordinationDurabilityStorageGateway"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/coordination-events/main/index.ts",
+      "exportedName": "CreateCoordinationEventsFeatureOptions",
+      "importedName": "CoordinationDurabilityStorageGateway"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "CoordinationDrainStorageEvidence",
+      "importedName": "CoordinationDrainStorageEvidence"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "CoordinationDurabilityStorageGateway",
+      "importedName": "CoordinationDurabilityStorageGateway"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "SqliteBackupChunkStorageResult",
+      "importedName": "SqliteBackupChunkStorageResult"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "SqliteOnlineBackupStorageResult",
+      "importedName": "SqliteOnlineBackupStorageResult"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "SqliteSnapshotVerificationStorageResult",
+      "importedName": "SqliteSnapshotVerificationStorageResult"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "StoredCoordinationEventRow",
+      "importedName": "StoredCoordinationEventRow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "StoredEventJournalMetadata",
+      "importedName": "StoredEventJournalMetadata"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "StoredSnapshotRetentionLease",
+      "importedName": "StoredSnapshotRetentionLease"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/CoordinationDurabilityStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "StoredSnapshotRetentionLeaseUse",
+      "importedName": "StoredSnapshotRetentionLeaseUse"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/index.ts",
       "specifier": "./infrastructure/InternalStorageJsonReplica",
-      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "InternalStorageFallbackUnsafeError",
+      "importedName": "InternalStorageFallbackUnsafeError"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/InternalStorageJsonReplica",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "InternalStorageJsonReplica",
+      "importedName": "InternalStorageJsonReplica"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/index.ts",
       "specifier": "./infrastructure/ProcessOwnershipStorageGateway",
-      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "PROCESS_OWNERSHIP_STORAGE_CODEC_VERSION",
+      "importedName": "PROCESS_OWNERSHIP_STORAGE_CODEC_VERSION"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/ProcessOwnershipStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "ProcessOwnershipStorageCallContext",
+      "importedName": "ProcessOwnershipStorageCallContext"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/ProcessOwnershipStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "ProcessOwnershipStorageCompareAndSwapRequest",
+      "importedName": "ProcessOwnershipStorageCompareAndSwapRequest"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/ProcessOwnershipStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "ProcessOwnershipStorageCompareAndSwapResult",
+      "importedName": "ProcessOwnershipStorageCompareAndSwapResult"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/ProcessOwnershipStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "ProcessOwnershipStorageGateway",
+      "importedName": "ProcessOwnershipStorageGateway"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/ProcessOwnershipStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "ProcessOwnershipStorageLoadResult",
+      "importedName": "ProcessOwnershipStorageLoadResult"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/ProcessOwnershipStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "ProcessOwnershipStorageScope",
+      "importedName": "ProcessOwnershipStorageScope"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/ProcessOwnershipStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "StoredProcessOwnershipPhase",
+      "importedName": "StoredProcessOwnershipPhase"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/ProcessOwnershipStorageGateway",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "StoredProcessOwnershipState",
+      "importedName": "StoredProcessOwnershipState"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/internal-storage/main/index.ts",
       "specifier": "./infrastructure/worker/internalStorageMigrations",
-      "publicEntrypoint": "src/features/internal-storage/main/index.ts"
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "INTERNAL_STORAGE_APPLICATION_ID",
+      "importedName": "INTERNAL_STORAGE_APPLICATION_ID"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/worker/internalStorageMigrations",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES",
+      "importedName": "INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/internal-storage/main/index.ts",
+      "specifier": "./infrastructure/worker/internalStorageMigrations",
+      "publicEntrypoint": "src/features/internal-storage/main/index.ts",
+      "exportedName": "INTERNAL_STORAGE_SCHEMA_VERSION",
+      "importedName": "INTERNAL_STORAGE_SCHEMA_VERSION"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/member-log-stream/main/index.ts",
       "specifier": "./adapters/input/ipc/registerMemberLogStreamIpc",
-      "publicEntrypoint": "src/features/member-log-stream/main/index.ts"
+      "publicEntrypoint": "src/features/member-log-stream/main/index.ts",
+      "exportedName": "registerMemberLogStreamIpc",
+      "importedName": "registerMemberLogStreamIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/member-log-stream/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerMemberLogStreamIpc",
+      "publicEntrypoint": "src/features/member-log-stream/main/index.ts",
+      "exportedName": "removeMemberLogStreamIpc",
+      "importedName": "removeMemberLogStreamIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/member-log-stream/renderer/index.ts",
       "specifier": "./adapters/MemberLogStreamSection",
-      "publicEntrypoint": "src/features/member-log-stream/renderer/index.ts"
+      "publicEntrypoint": "src/features/member-log-stream/renderer/index.ts",
+      "exportedName": "MemberLogStreamSection",
+      "importedName": "MemberLogStreamSection"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts",
       "specifier": "../infrastructure/MemberWorkSyncEventQueue",
-      "publicEntrypoint": "src/features/member-work-sync/main/index.ts"
+      "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
+      "exportedName": "createMemberWorkSyncFeature",
+      "importedName": "MemberWorkSyncQueueDiagnostics"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts",
+      "specifier": "../infrastructure/MemberWorkSyncEventQueue",
+      "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
+      "exportedName": "MemberWorkSyncFeatureFacade",
+      "importedName": "MemberWorkSyncQueueDiagnostics"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/member-work-sync/main/index.ts",
       "specifier": "./adapters/input/registerMemberWorkSyncIpc",
-      "publicEntrypoint": "src/features/member-work-sync/main/index.ts"
+      "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
+      "exportedName": "registerMemberWorkSyncIpc",
+      "importedName": "registerMemberWorkSyncIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/main/index.ts",
+      "specifier": "./adapters/input/registerMemberWorkSyncIpc",
+      "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
+      "exportedName": "removeMemberWorkSyncIpc",
+      "importedName": "removeMemberWorkSyncIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/organizations/main/index.ts",
       "specifier": "./adapters/input/http/registerOrganizationsHttp",
-      "publicEntrypoint": "src/features/organizations/main/index.ts"
+      "publicEntrypoint": "src/features/organizations/main/index.ts",
+      "exportedName": "registerOrganizationsHttp",
+      "importedName": "registerOrganizationsHttp"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/organizations/main/index.ts",
       "specifier": "./adapters/input/ipc/registerOrganizationsIpc",
-      "publicEntrypoint": "src/features/organizations/main/index.ts"
+      "publicEntrypoint": "src/features/organizations/main/index.ts",
+      "exportedName": "registerOrganizationsIpc",
+      "importedName": "registerOrganizationsIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/organizations/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerOrganizationsIpc",
+      "publicEntrypoint": "src/features/organizations/main/index.ts",
+      "exportedName": "removeOrganizationsIpc",
+      "importedName": "removeOrganizationsIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/recent-projects/main/index.ts",
       "specifier": "./adapters/input/http/registerRecentProjectsHttp",
-      "publicEntrypoint": "src/features/recent-projects/main/index.ts"
+      "publicEntrypoint": "src/features/recent-projects/main/index.ts",
+      "exportedName": "registerRecentProjectsHttp",
+      "importedName": "registerRecentProjectsHttp"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/recent-projects/main/index.ts",
       "specifier": "./adapters/input/ipc/registerRecentProjectsIpc",
-      "publicEntrypoint": "src/features/recent-projects/main/index.ts"
+      "publicEntrypoint": "src/features/recent-projects/main/index.ts",
+      "exportedName": "registerRecentProjectsIpc",
+      "importedName": "registerRecentProjectsIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/recent-projects/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerRecentProjectsIpc",
+      "publicEntrypoint": "src/features/recent-projects/main/index.ts",
+      "exportedName": "removeRecentProjectsIpc",
+      "importedName": "removeRecentProjectsIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/review-mutations/main/index.ts",
       "specifier": "./adapters/input/ipc/registerReviewMutationRecoveryIpc",
-      "publicEntrypoint": "src/features/review-mutations/main/index.ts"
+      "publicEntrypoint": "src/features/review-mutations/main/index.ts",
+      "exportedName": "registerReviewMutationRecoveryIpc",
+      "importedName": "registerReviewMutationRecoveryIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/review-mutations/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerReviewMutationRecoveryIpc",
+      "publicEntrypoint": "src/features/review-mutations/main/index.ts",
+      "exportedName": "removeReviewMutationRecoveryIpc",
+      "importedName": "removeReviewMutationRecoveryIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/review-mutations/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerReviewMutationRecoveryIpc",
+      "publicEntrypoint": "src/features/review-mutations/main/index.ts",
+      "exportedName": "ReviewMutationIpcHandlerWrapper",
+      "importedName": "ReviewMutationIpcHandlerWrapper"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts",
       "specifier": "../infrastructure/AgentTeamsRuntimeProviderManagementCliClient",
-      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts"
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
+      "exportedName": "createRuntimeProviderManagementFeature",
+      "importedName": "RuntimeProviderOAuthClientDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts",
       "specifier": "../infrastructure/cli-companion/types",
-      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts"
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
+      "exportedName": "createRuntimeProviderManagementFeature",
+      "importedName": "RuntimeProviderCompanionRegistry"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts",
       "specifier": "../infrastructure/KiroCliCompanionService",
-      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts"
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
+      "exportedName": "createRuntimeProviderManagementFeature",
+      "importedName": "KiroCliCompanionService"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts",
+      "specifier": "../infrastructure/KiroCliCompanionService",
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
+      "exportedName": "createRuntimeProviderManagementFeature",
+      "importedName": "KiroCliCompanionServiceDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/runtime-provider-management/main/index.ts",
       "specifier": "./adapters/input/registerRuntimeProviderManagementIpc",
-      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts"
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
+      "exportedName": "registerRuntimeProviderManagementIpc",
+      "importedName": "registerRuntimeProviderManagementIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/main/index.ts",
+      "specifier": "./adapters/input/registerRuntimeProviderManagementIpc",
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
+      "exportedName": "removeRuntimeProviderManagementIpc",
+      "importedName": "removeRuntimeProviderManagementIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/runtime-provider-management/main/index.ts",
       "specifier": "./infrastructure/OpenCodeLocalModelRuntimeInspector",
-      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts"
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
+      "exportedName": "inspectOpenCodeLocalModelRuntimeReadiness",
+      "importedName": "inspectOpenCodeLocalModelRuntimeReadiness"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/main/index.ts",
+      "specifier": "./infrastructure/OpenCodeLocalModelRuntimeInspector",
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
+      "exportedName": "MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS",
+      "importedName": "MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/main/index.ts",
+      "specifier": "./infrastructure/OpenCodeLocalModelRuntimeInspector",
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
+      "exportedName": "OpenCodeLocalModelRuntimeReadiness",
+      "importedName": "OpenCodeLocalModelRuntimeReadiness"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/main/index.ts",
+      "specifier": "./infrastructure/OpenCodeLocalModelRuntimeInspector",
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
+      "exportedName": "RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS",
+      "importedName": "RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/runtime-provider-management/main/index.ts",
       "specifier": "./infrastructure/OpenCodeLocalProviderConnector",
-      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts"
+      "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
+      "exportedName": "OpenCodeLocalProviderConnector",
+      "importedName": "OpenCodeLocalProviderConnector"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/task-log-observability/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTaskLogObservabilityIpc",
-      "publicEntrypoint": "src/features/task-log-observability/main/index.ts"
+      "publicEntrypoint": "src/features/task-log-observability/main/index.ts",
+      "exportedName": "registerTaskLogObservabilityIpc",
+      "importedName": "registerTaskLogObservabilityIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/task-log-observability/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTaskLogObservabilityIpc",
+      "publicEntrypoint": "src/features/task-log-observability/main/index.ts",
+      "exportedName": "removeTaskLogObservabilityIpc",
+      "importedName": "removeTaskLogObservabilityIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/task-log-observability/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTaskLogObservabilityIpc",
+      "publicEntrypoint": "src/features/task-log-observability/main/index.ts",
+      "exportedName": "TaskLogObservabilityIpcDependencies",
+      "importedName": "TaskLogObservabilityIpcDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/task-log-observability/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTaskLogObservabilityIpc",
+      "publicEntrypoint": "src/features/task-log-observability/main/index.ts",
+      "exportedName": "TaskLogObservabilityIpcLogger",
+      "importedName": "TaskLogObservabilityIpcLogger"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-approvals/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamApprovalsIpc",
-      "publicEntrypoint": "src/features/team-approvals/main/index.ts"
+      "publicEntrypoint": "src/features/team-approvals/main/index.ts",
+      "exportedName": "registerTeamApprovalsIpc",
+      "importedName": "registerTeamApprovalsIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-approvals/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTeamApprovalsIpc",
+      "publicEntrypoint": "src/features/team-approvals/main/index.ts",
+      "exportedName": "removeTeamApprovalsIpc",
+      "importedName": "removeTeamApprovalsIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-approvals/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTeamApprovalsIpc",
+      "publicEntrypoint": "src/features/team-approvals/main/index.ts",
+      "exportedName": "TeamApprovalsIpcDependencies",
+      "importedName": "TeamApprovalsIpcDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-approvals/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTeamApprovalsIpc",
+      "publicEntrypoint": "src/features/team-approvals/main/index.ts",
+      "exportedName": "TeamApprovalsIpcLogger",
+      "importedName": "TeamApprovalsIpcLogger"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-configuration/main/composition/createTeamConfigurationFeature.ts",
       "specifier": "../adapters/input/ipc/TeamConfigurationIpcDependencies",
-      "publicEntrypoint": "src/features/team-configuration/main/index.ts"
+      "publicEntrypoint": "src/features/team-configuration/main/index.ts",
+      "exportedName": "createTeamConfigurationFeature",
+      "importedName": "TeamConfigurationIpcDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-configuration/main/composition/createTeamConfigurationFeature.ts",
+      "specifier": "../adapters/input/ipc/TeamConfigurationIpcDependencies",
+      "publicEntrypoint": "src/features/team-configuration/main/index.ts",
+      "exportedName": "TeamConfigurationFeature",
+      "importedName": "TeamConfigurationIpcDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-configuration/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamConfigurationIpc",
-      "publicEntrypoint": "src/features/team-configuration/main/index.ts"
+      "publicEntrypoint": "src/features/team-configuration/main/index.ts",
+      "exportedName": "registerTeamConfigurationIpc",
+      "importedName": "registerTeamConfigurationIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-configuration/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTeamConfigurationIpc",
+      "publicEntrypoint": "src/features/team-configuration/main/index.ts",
+      "exportedName": "removeTeamConfigurationIpc",
+      "importedName": "removeTeamConfigurationIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-import/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamImportIpc",
-      "publicEntrypoint": "src/features/team-import/main/index.ts"
+      "publicEntrypoint": "src/features/team-import/main/index.ts",
+      "exportedName": "registerTeamImportIpc",
+      "importedName": "registerTeamImportIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-import/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTeamImportIpc",
+      "publicEntrypoint": "src/features/team-import/main/index.ts",
+      "exportedName": "removeTeamImportIpc",
+      "importedName": "removeTeamImportIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-lifecycle/main/composition/createTeamRosterAdoptionFeature.ts",
       "specifier": "../infrastructure/InternalStorageTeamRosterRepository",
-      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts"
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "createTeamRosterAdoptionFeature",
+      "importedName": "InternalStorageTeamRosterRepository"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/main/composition/createTeamRosterAdoptionFeature.ts",
+      "specifier": "../infrastructure/InternalStorageTeamRosterRepository",
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "TeamRosterAdoptionFeature",
+      "importedName": "InternalStorageTeamRosterRepository"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-lifecycle/main/index.ts",
       "specifier": "./adapters/input/TeamLifecycleReadApiAdapter",
-      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts"
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "TeamLifecycleReadApiAdapter",
+      "importedName": "TeamLifecycleReadApiAdapter"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/main/index.ts",
+      "specifier": "./adapters/input/TeamLifecycleReadApiAdapter",
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "TeamLifecycleReadUseCases",
+      "importedName": "TeamLifecycleReadUseCases"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-lifecycle/main/index.ts",
       "specifier": "./infrastructure/LegacyTeamLifecycleReadSource",
-      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts"
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "LegacyTeamBindingPage",
+      "importedName": "LegacyTeamBindingPage"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/main/index.ts",
+      "specifier": "./infrastructure/LegacyTeamLifecycleReadSource",
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "LegacyTeamDataReadPort",
+      "importedName": "LegacyTeamDataReadPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/main/index.ts",
+      "specifier": "./infrastructure/LegacyTeamLifecycleReadSource",
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "LegacyTeamIdentityBinding",
+      "importedName": "LegacyTeamIdentityBinding"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/main/index.ts",
+      "specifier": "./infrastructure/LegacyTeamLifecycleReadSource",
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "LegacyTeamIdentityReadPort",
+      "importedName": "LegacyTeamIdentityReadPort"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/main/index.ts",
+      "specifier": "./infrastructure/LegacyTeamLifecycleReadSource",
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "LegacyTeamLifecycleReadPolicy",
+      "importedName": "LegacyTeamLifecycleReadPolicy"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/main/index.ts",
+      "specifier": "./infrastructure/LegacyTeamLifecycleReadSource",
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "LegacyTeamLifecycleReadSource",
+      "importedName": "LegacyTeamLifecycleReadSource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/main/index.ts",
+      "specifier": "./infrastructure/LegacyTeamLifecycleReadSource",
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "LegacyTeamLifecycleReadSourceDependencies",
+      "importedName": "LegacyTeamLifecycleReadSourceDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/main/index.ts",
+      "specifier": "./infrastructure/LegacyTeamLifecycleReadSource",
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "LegacyTeamReadAvailability",
+      "importedName": "LegacyTeamReadAvailability"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/main/index.ts",
+      "specifier": "./infrastructure/LegacyTeamLifecycleReadSource",
+      "publicEntrypoint": "src/features/team-lifecycle/main/index.ts",
+      "exportedName": "LegacyTeamRuntimeReadPort",
+      "importedName": "LegacyTeamRuntimeReadPort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-lifecycle/renderer/hooks/useTeamLifecycleList.ts",
       "specifier": "../adapters/teamLifecycleListViewModel",
-      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
+      "exportedName": "useTeamLifecycleList",
+      "importedName": "TeamLifecycleListViewModel"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/renderer/hooks/useTeamLifecycleList.ts",
+      "specifier": "../adapters/teamLifecycleListViewModel",
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
+      "exportedName": "UseTeamLifecycleListResult",
+      "importedName": "TeamLifecycleListViewModel"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-lifecycle/renderer/index.ts",
       "specifier": "./adapters/createTeamLifecycleMutationCleanup",
-      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
+      "exportedName": "createTeamLifecycleMutationCleanup",
+      "importedName": "createTeamLifecycleMutationCleanup"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-lifecycle/renderer/index.ts",
       "specifier": "./adapters/createTeamLifecycleMutationSlice",
-      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
+      "exportedName": "createTeamLifecycleMutationSlice",
+      "importedName": "createTeamLifecycleMutationSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/renderer/index.ts",
+      "specifier": "./adapters/createTeamLifecycleMutationSlice",
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
+      "exportedName": "TeamLifecycleMutationSliceDependencies",
+      "importedName": "TeamLifecycleMutationSliceDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-lifecycle/renderer/index.ts",
       "specifier": "./adapters/teamLifecycleListViewModel",
-      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
+      "exportedName": "LOADING_TEAM_LIFECYCLE_LIST_VIEW_MODEL",
+      "importedName": "LOADING_TEAM_LIFECYCLE_LIST_VIEW_MODEL"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/renderer/index.ts",
+      "specifier": "./adapters/teamLifecycleListViewModel",
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
+      "exportedName": "TeamLifecycleListItemViewModel",
+      "importedName": "TeamLifecycleListItemViewModel"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/renderer/index.ts",
+      "specifier": "./adapters/teamLifecycleListViewModel",
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
+      "exportedName": "TeamLifecycleListStatusTone",
+      "importedName": "TeamLifecycleListStatusTone"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/renderer/index.ts",
+      "specifier": "./adapters/teamLifecycleListViewModel",
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
+      "exportedName": "TeamLifecycleListViewModel",
+      "importedName": "TeamLifecycleListViewModel"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/renderer/index.ts",
+      "specifier": "./adapters/teamLifecycleListViewModel",
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
+      "exportedName": "toTeamLifecycleListItemViewModel",
+      "importedName": "toTeamLifecycleListItemViewModel"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-lifecycle/renderer/index.ts",
+      "specifier": "./adapters/teamLifecycleListViewModel",
+      "publicEntrypoint": "src/features/team-lifecycle/renderer/index.ts",
+      "exportedName": "toTeamLifecycleListViewModel",
+      "importedName": "toTeamLifecycleListViewModel"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-message-delivery/main/composition/createTeamMessageDeliveryFeature.ts",
       "specifier": "../adapters/input/ipc/TeamMessageDeliveryIpcDependencies",
-      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts"
+      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts",
+      "exportedName": "createTeamMessageDeliveryFeature",
+      "importedName": "TeamMessageDeliveryIpcDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-message-delivery/main/composition/createTeamMessageDeliveryFeature.ts",
+      "specifier": "../adapters/input/ipc/TeamMessageDeliveryIpcDependencies",
+      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts",
+      "exportedName": "TeamMessageDeliveryFeature",
+      "importedName": "TeamMessageDeliveryIpcDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-message-delivery/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamMessageDeliveryIpc",
-      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts"
+      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts",
+      "exportedName": "registerTeamMessageDeliveryIpc",
+      "importedName": "registerTeamMessageDeliveryIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-message-delivery/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTeamMessageDeliveryIpc",
+      "publicEntrypoint": "src/features/team-message-delivery/main/index.ts",
+      "exportedName": "removeTeamMessageDeliveryIpc",
+      "importedName": "removeTeamMessageDeliveryIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-message-delivery/renderer/index.ts",
       "specifier": "./adapters/createTeamMessageDeliveryRendererSlice",
-      "publicEntrypoint": "src/features/team-message-delivery/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-message-delivery/renderer/index.ts",
+      "exportedName": "createTeamMessageDeliveryRendererSlice",
+      "importedName": "createTeamMessageDeliveryRendererSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-message-delivery/renderer/index.ts",
+      "specifier": "./adapters/createTeamMessageDeliveryRendererSlice",
+      "publicEntrypoint": "src/features/team-message-delivery/renderer/index.ts",
+      "exportedName": "TeamMessageDeliveryRendererSliceDependencies",
+      "importedName": "TeamMessageDeliveryRendererSliceDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/main/composition/createTeamProvisioningStatusFeature.ts",
       "specifier": "../adapters/output/LegacyProvisioningStatusReaderAdapter",
-      "publicEntrypoint": "src/features/team-provisioning/main/index.ts"
+      "publicEntrypoint": "src/features/team-provisioning/main/index.ts",
+      "exportedName": "createTeamProvisioningStatusFeature",
+      "importedName": "LegacyProvisioningProgressSource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/main/composition/createTeamProvisioningStatusFeature.ts",
+      "specifier": "../adapters/output/LegacyProvisioningStatusReaderAdapter",
+      "publicEntrypoint": "src/features/team-provisioning/main/index.ts",
+      "exportedName": "createTeamProvisioningStatusFeature",
+      "importedName": "LegacyProvisioningStatusRun"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/main/composition/createTeamProvisioningStatusFeature.ts",
+      "specifier": "../adapters/output/LegacyProvisioningStatusReaderAdapter",
+      "publicEntrypoint": "src/features/team-provisioning/main/index.ts",
+      "exportedName": "TeamProvisioningStatusFeatureDeps",
+      "importedName": "LegacyProvisioningProgressSource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/main/composition/createTeamProvisioningStatusFeature.ts",
+      "specifier": "../adapters/output/LegacyProvisioningStatusReaderAdapter",
+      "publicEntrypoint": "src/features/team-provisioning/main/index.ts",
+      "exportedName": "TeamProvisioningStatusFeatureDeps",
+      "importedName": "LegacyProvisioningStatusRun"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamProvisioningIpc",
-      "publicEntrypoint": "src/features/team-provisioning/main/index.ts"
+      "publicEntrypoint": "src/features/team-provisioning/main/index.ts",
+      "exportedName": "registerTeamProvisioningIpc",
+      "importedName": "registerTeamProvisioningIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTeamProvisioningIpc",
+      "publicEntrypoint": "src/features/team-provisioning/main/index.ts",
+      "exportedName": "removeTeamProvisioningIpc",
+      "importedName": "removeTeamProvisioningIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/renderer/index.ts",
       "specifier": "./adapters/createProductTeamLaunchAnalyticsCoordinator",
-      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "createProductTeamLaunchAnalyticsCoordinator",
+      "importedName": "createProductTeamLaunchAnalyticsCoordinator"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/renderer/index.ts",
       "specifier": "./adapters/createTeamProvisioningControlSlice",
-      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "createTeamProvisioningControlSlice",
+      "importedName": "createTeamProvisioningControlSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamProvisioningControlSlice",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "TeamProvisioningControlSlice",
+      "importedName": "TeamProvisioningControlSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamProvisioningControlSlice",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "TeamProvisioningControlSliceDependencies",
+      "importedName": "TeamProvisioningControlSliceDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/renderer/index.ts",
       "specifier": "./adapters/createTeamProvisioningLaunchPersistence",
-      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "createTeamProvisioningLaunchPersistence",
+      "importedName": "createTeamProvisioningLaunchPersistence"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamProvisioningLaunchPersistence",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "loadAllTeamLaunchParams",
+      "importedName": "loadAllTeamLaunchParams"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamProvisioningLaunchPersistence",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "saveTeamLaunchParams",
+      "importedName": "saveTeamLaunchParams"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamProvisioningLaunchPersistence",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "saveTeamToolApprovalSettings",
+      "importedName": "saveTeamToolApprovalSettings"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/renderer/index.ts",
       "specifier": "./adapters/createTeamProvisioningLaunchSlice",
-      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "createTeamProvisioningLaunchSlice",
+      "importedName": "createTeamProvisioningLaunchSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamProvisioningLaunchSlice",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "TeamProvisioningLaunchSliceDependencies",
+      "importedName": "TeamProvisioningLaunchSliceDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/renderer/index.ts",
       "specifier": "./adapters/createTeamProvisioningLaunchTransport",
-      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "createTeamProvisioningLaunchTransport",
+      "importedName": "createTeamProvisioningLaunchTransport"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/renderer/index.ts",
       "specifier": "./adapters/createTeamProvisioningProgressSlice",
-      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "createTeamProvisioningProgressSlice",
+      "importedName": "createTeamProvisioningProgressSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamProvisioningProgressSlice",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "TeamProvisioningProgressSlice",
+      "importedName": "TeamProvisioningProgressSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamProvisioningProgressSlice",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "TeamProvisioningProgressSliceDependencies",
+      "importedName": "TeamProvisioningProgressSliceDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-provisioning/renderer/index.ts",
       "specifier": "./adapters/createTeamRuntimeObservationSlice",
-      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "createTeamRuntimeObservationSlice",
+      "importedName": "createTeamRuntimeObservationSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamRuntimeObservationSlice",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "TeamRuntimeObservationSlice",
+      "importedName": "TeamRuntimeObservationSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-provisioning/renderer/index.ts",
+      "specifier": "./adapters/createTeamRuntimeObservationSlice",
+      "publicEntrypoint": "src/features/team-provisioning/renderer/index.ts",
+      "exportedName": "TeamRuntimeObservationSliceDependencies",
+      "importedName": "TeamRuntimeObservationSliceDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-roster-mutations/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamRosterMutationIpc",
-      "publicEntrypoint": "src/features/team-roster-mutations/main/index.ts"
+      "publicEntrypoint": "src/features/team-roster-mutations/main/index.ts",
+      "exportedName": "registerTeamRosterMutationIpc",
+      "importedName": "registerTeamRosterMutationIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-roster-mutations/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTeamRosterMutationIpc",
+      "publicEntrypoint": "src/features/team-roster-mutations/main/index.ts",
+      "exportedName": "removeTeamRosterMutationIpc",
+      "importedName": "removeTeamRosterMutationIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-runtime-operations/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamRuntimeOperationsIpc",
-      "publicEntrypoint": "src/features/team-runtime-operations/main/index.ts"
+      "publicEntrypoint": "src/features/team-runtime-operations/main/index.ts",
+      "exportedName": "registerTeamRuntimeOperationsIpc",
+      "importedName": "registerTeamRuntimeOperationsIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-runtime-operations/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTeamRuntimeOperationsIpc",
+      "publicEntrypoint": "src/features/team-runtime-operations/main/index.ts",
+      "exportedName": "removeTeamRuntimeOperationsIpc",
+      "importedName": "removeTeamRuntimeOperationsIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-runtime-recovery/main/index.ts",
       "specifier": "./adapters",
-      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts"
+      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts",
+      "exportedName": "RuntimeRecoveryNotificationAdapter",
+      "importedName": "RuntimeRecoveryNotificationAdapter"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-runtime-recovery/main/index.ts",
+      "specifier": "./adapters",
+      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts",
+      "exportedName": "RuntimeRecoverySignalAdapter",
+      "importedName": "RuntimeRecoverySignalAdapter"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-runtime-recovery/main/index.ts",
+      "specifier": "./adapters",
+      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts",
+      "exportedName": "RuntimeRecoveryTargetAdapter",
+      "importedName": "RuntimeRecoveryTargetAdapter"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-runtime-recovery/main/index.ts",
+      "specifier": "./adapters",
+      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts",
+      "exportedName": "TeamInboxRuntimeRecoveryDeliveryAdapter",
+      "importedName": "TeamInboxRuntimeRecoveryDeliveryAdapter"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-runtime-recovery/main/index.ts",
       "specifier": "./infrastructure",
-      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts"
+      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts",
+      "exportedName": "JsonTeamRuntimeRecoveryRepository",
+      "importedName": "JsonTeamRuntimeRecoveryRepository"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-runtime-recovery/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts",
+      "exportedName": "NodeRuntimeRecoveryHash",
+      "importedName": "NodeRuntimeRecoveryHash"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-runtime-recovery/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts",
+      "exportedName": "SystemRuntimeRecoveryClock",
+      "importedName": "SystemRuntimeRecoveryClock"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-runtime-recovery/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts",
+      "exportedName": "TeamRuntimeRecoveryScheduler",
+      "importedName": "TeamRuntimeRecoveryScheduler"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-runtime-recovery/main/index.ts",
+      "specifier": "./infrastructure",
+      "publicEntrypoint": "src/features/team-runtime-recovery/main/index.ts",
+      "exportedName": "TeamRuntimeRecoveryStorePaths",
+      "importedName": "TeamRuntimeRecoveryStorePaths"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-task-board/main/composition/createTeamTaskBoardFeature.ts",
       "specifier": "../adapters/input/ipc/TeamTaskBoardIpcDependencies",
-      "publicEntrypoint": "src/features/team-task-board/main/index.ts"
+      "publicEntrypoint": "src/features/team-task-board/main/index.ts",
+      "exportedName": "createTeamTaskBoardFeature",
+      "importedName": "TeamTaskBoardIpcDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/main/composition/createTeamTaskBoardFeature.ts",
+      "specifier": "../adapters/input/ipc/TeamTaskBoardIpcDependencies",
+      "publicEntrypoint": "src/features/team-task-board/main/index.ts",
+      "exportedName": "TeamTaskBoardCompatibilityApi",
+      "importedName": "TeamTaskBoardIpcDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/main/composition/createTeamTaskBoardFeature.ts",
+      "specifier": "../adapters/input/ipc/TeamTaskBoardIpcDependencies",
+      "publicEntrypoint": "src/features/team-task-board/main/index.ts",
+      "exportedName": "TeamTaskBoardFeature",
+      "importedName": "TeamTaskBoardIpcDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-task-board/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamTaskBoardIpc",
-      "publicEntrypoint": "src/features/team-task-board/main/index.ts"
+      "publicEntrypoint": "src/features/team-task-board/main/index.ts",
+      "exportedName": "registerTeamTaskBoardIpc",
+      "importedName": "registerTeamTaskBoardIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTeamTaskBoardIpc",
+      "publicEntrypoint": "src/features/team-task-board/main/index.ts",
+      "exportedName": "removeTeamTaskBoardIpc",
+      "importedName": "removeTeamTaskBoardIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-task-board/main/index.ts",
       "specifier": "./adapters/input/ipc/TeamTaskBoardIpcDependencies",
-      "publicEntrypoint": "src/features/team-task-board/main/index.ts"
+      "publicEntrypoint": "src/features/team-task-board/main/index.ts",
+      "exportedName": "TeamTaskBoardIpcDependencies",
+      "importedName": "TeamTaskBoardIpcDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/main/index.ts",
+      "specifier": "./adapters/input/ipc/TeamTaskBoardIpcDependencies",
+      "publicEntrypoint": "src/features/team-task-board/main/index.ts",
+      "exportedName": "UpdateTaskFieldsPort",
+      "importedName": "UpdateTaskFieldsPort"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-task-board/renderer/index.ts",
       "specifier": "./adapters/createTeamTaskArtifactsRendererSlice",
-      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "createTeamTaskArtifactsRendererSlice",
+      "importedName": "createTeamTaskArtifactsRendererSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/createTeamTaskArtifactsRendererSlice",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "TeamTaskArtifactAnalyticsAttachment",
+      "importedName": "TeamTaskArtifactAnalyticsAttachment"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/createTeamTaskArtifactsRendererSlice",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "TeamTaskArtifactFile",
+      "importedName": "TeamTaskArtifactFile"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/createTeamTaskArtifactsRendererSlice",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "TeamTaskArtifactsRendererSlice",
+      "importedName": "TeamTaskArtifactsRendererSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/createTeamTaskArtifactsRendererSlice",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "TeamTaskArtifactsRendererSliceDependencies",
+      "importedName": "TeamTaskArtifactsRendererSliceDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/createTeamTaskArtifactsRendererSlice",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "TeamTaskArtifactsRendererState",
+      "importedName": "TeamTaskArtifactsRendererState"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/createTeamTaskArtifactsRendererSlice",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "TeamTaskArtifactsTransport",
+      "importedName": "TeamTaskArtifactsTransport"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-task-board/renderer/index.ts",
       "specifier": "./adapters/createTeamTaskArtifactsTransport",
-      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "createTeamTaskArtifactsTransport",
+      "importedName": "createTeamTaskArtifactsTransport"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-task-board/renderer/index.ts",
       "specifier": "./adapters/createTeamTaskBoardRendererSlice",
-      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "createTeamTaskBoardRendererSlice",
+      "importedName": "createTeamTaskBoardRendererSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/createTeamTaskBoardRendererSlice",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "TeamTaskBoardRendererSlice",
+      "importedName": "TeamTaskBoardRendererSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/createTeamTaskBoardRendererSlice",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "TeamTaskBoardRendererSliceDependencies",
+      "importedName": "TeamTaskBoardRendererSliceDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/createTeamTaskBoardRendererSlice",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "TeamTaskBoardRendererStoreContext",
+      "importedName": "TeamTaskBoardRendererStoreContext"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-task-board/renderer/index.ts",
       "specifier": "./adapters/taskChangePresenceProjectionPolicy",
-      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "collectTaskChangeInvalidation",
+      "importedName": "collectTaskChangeInvalidation"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/taskChangePresenceProjectionPolicy",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "preserveKnownTaskChangePresence",
+      "importedName": "preserveKnownTaskChangePresence"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/taskChangePresenceProjectionPolicy",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "TaskChangeInvalidation",
+      "importedName": "TaskChangeInvalidation"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-task-board/renderer/index.ts",
       "specifier": "./adapters/taskLifecycleAnalytics",
-      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "clearTeamTaskBoardAnalytics",
+      "importedName": "clearTeamTaskBoardAnalytics"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/taskLifecycleAnalytics",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "recordTeamTaskBoardSnapshotTransitions",
+      "importedName": "recordTeamTaskBoardSnapshotTransitions"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-task-board/renderer/index.ts",
+      "specifier": "./adapters/taskLifecycleAnalytics",
+      "publicEntrypoint": "src/features/team-task-board/renderer/index.ts",
+      "exportedName": "resetTeamTaskBoardAnalyticsForTests",
+      "importedName": "resetTeamTaskBoardAnalyticsForTests"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-view-read-model/main/composition/createTeamViewReadModelFeature.ts",
       "specifier": "../adapters/input/ipc/TeamViewReadModelIpcDependencies",
-      "publicEntrypoint": "src/features/team-view-read-model/main/index.ts"
+      "publicEntrypoint": "src/features/team-view-read-model/main/index.ts",
+      "exportedName": "createTeamViewReadModelFeature",
+      "importedName": "TeamViewReadModelIpcDependencies"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/main/composition/createTeamViewReadModelFeature.ts",
+      "specifier": "../adapters/input/ipc/TeamViewReadModelIpcDependencies",
+      "publicEntrypoint": "src/features/team-view-read-model/main/index.ts",
+      "exportedName": "TeamViewReadModelFeature",
+      "importedName": "TeamViewReadModelIpcDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-view-read-model/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTeamViewReadModelIpc",
-      "publicEntrypoint": "src/features/team-view-read-model/main/index.ts"
+      "publicEntrypoint": "src/features/team-view-read-model/main/index.ts",
+      "exportedName": "registerTeamViewReadModelIpc",
+      "importedName": "registerTeamViewReadModelIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTeamViewReadModelIpc",
+      "publicEntrypoint": "src/features/team-view-read-model/main/index.ts",
+      "exportedName": "removeTeamViewReadModelIpc",
+      "importedName": "removeTeamViewReadModelIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-view-read-model/renderer/index.ts",
       "specifier": "./adapters/createTeamDirectoryRendererSlice",
-      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts",
+      "exportedName": "createTeamDirectoryRendererSlice",
+      "importedName": "createTeamDirectoryRendererSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/renderer/index.ts",
+      "specifier": "./adapters/createTeamDirectoryRendererSlice",
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts",
+      "exportedName": "TeamDirectoryRendererSliceDependencies",
+      "importedName": "TeamDirectoryRendererSliceDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-view-read-model/renderer/index.ts",
       "specifier": "./adapters/createTeamDirectoryTransport",
-      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts",
+      "exportedName": "createTeamDirectoryTransport",
+      "importedName": "createTeamDirectoryTransport"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-view-read-model/renderer/index.ts",
       "specifier": "./adapters/createTeamMessageFeedRendererSlice",
-      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts",
+      "exportedName": "createTeamMessageFeedRendererSlice",
+      "importedName": "createTeamMessageFeedRendererSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/renderer/index.ts",
+      "specifier": "./adapters/createTeamMessageFeedRendererSlice",
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts",
+      "exportedName": "TeamMessageFeedRendererSlice",
+      "importedName": "TeamMessageFeedRendererSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/renderer/index.ts",
+      "specifier": "./adapters/createTeamMessageFeedRendererSlice",
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts",
+      "exportedName": "TeamMessageFeedRendererSliceDependencies",
+      "importedName": "TeamMessageFeedRendererSliceDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-view-read-model/renderer/index.ts",
       "specifier": "./adapters/createTeamViewDataRendererSlice",
-      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts",
+      "exportedName": "createTeamViewDataRendererSlice",
+      "importedName": "createTeamViewDataRendererSlice"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-view-read-model/renderer/index.ts",
+      "specifier": "./adapters/createTeamViewDataRendererSlice",
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts",
+      "exportedName": "TeamViewDataRendererSliceDependencies",
+      "importedName": "TeamViewDataRendererSliceDependencies"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/team-view-read-model/renderer/index.ts",
       "specifier": "./adapters/createTeamViewDataTransport",
-      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts"
+      "publicEntrypoint": "src/features/team-view-read-model/renderer/index.ts",
+      "exportedName": "createTeamViewDataTransport",
+      "importedName": "createTeamViewDataTransport"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/terminal-workspace/main/index.ts",
       "specifier": "./adapters/input/registerTerminalWorkspaceIpc",
-      "publicEntrypoint": "src/features/terminal-workspace/main/index.ts"
+      "publicEntrypoint": "src/features/terminal-workspace/main/index.ts",
+      "exportedName": "registerTerminalWorkspaceIpc",
+      "importedName": "registerTerminalWorkspaceIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/terminal-workspace/main/index.ts",
+      "specifier": "./adapters/input/registerTerminalWorkspaceIpc",
+      "publicEntrypoint": "src/features/terminal-workspace/main/index.ts",
+      "exportedName": "removeTerminalWorkspaceIpc",
+      "importedName": "removeTerminalWorkspaceIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/terminal-workspace/renderer/index.ts",
       "specifier": "./adapters/TerminalWorkspaceBottomSheetAdapter",
-      "publicEntrypoint": "src/features/terminal-workspace/renderer/index.ts"
+      "publicEntrypoint": "src/features/terminal-workspace/renderer/index.ts",
+      "exportedName": "TerminalWorkspaceBottomSheet",
+      "importedName": "TerminalWorkspaceBottomSheetAdapter"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/terminal-workspace/renderer/index.ts",
       "specifier": "./adapters/TerminalWorkspaceFloatingLauncher",
-      "publicEntrypoint": "src/features/terminal-workspace/renderer/index.ts"
+      "publicEntrypoint": "src/features/terminal-workspace/renderer/index.ts",
+      "exportedName": "TerminalWorkspaceFloatingLauncher",
+      "importedName": "TerminalWorkspaceFloatingLauncher"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/terminal-workspace/renderer/index.ts",
       "specifier": "./adapters/TerminalWorkspacePanelAdapter",
-      "publicEntrypoint": "src/features/terminal-workspace/renderer/index.ts"
+      "publicEntrypoint": "src/features/terminal-workspace/renderer/index.ts",
+      "exportedName": "TerminalWorkspacePanel",
+      "importedName": "TerminalWorkspacePanelAdapter"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/tmux-installer/main/composition/runtimeSupport.ts",
       "specifier": "../infrastructure/runtime/TmuxPlatformCommandExecutor",
-      "publicEntrypoint": "src/features/tmux-installer/main/index.ts"
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "listRuntimeProcessTableForCurrentPlatform",
+      "importedName": "ListRuntimeProcessesOptions"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/composition/runtimeSupport.ts",
+      "specifier": "../infrastructure/runtime/TmuxPlatformCommandExecutor",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "listRuntimeProcessTableForCurrentPlatform",
+      "importedName": "RuntimeProcessTableRow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/composition/runtimeSupport.ts",
+      "specifier": "../infrastructure/runtime/TmuxPlatformCommandExecutor",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "listTmuxPaneRuntimeInfoForCurrentPlatform",
+      "importedName": "TmuxPaneRuntimeInfo"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/tmux-installer/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTmuxInstallerIpc",
-      "publicEntrypoint": "src/features/tmux-installer/main/index.ts"
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "registerTmuxInstallerIpc",
+      "importedName": "registerTmuxInstallerIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTmuxInstallerIpc",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "removeTmuxInstallerIpc",
+      "importedName": "removeTmuxInstallerIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/tmux-installer/main/index.ts",
       "specifier": "./infrastructure/runtime/TmuxPlatformCommandExecutor",
-      "publicEntrypoint": "src/features/tmux-installer/main/index.ts"
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "parseRuntimeProcessTable",
+      "importedName": "parseRuntimeProcessTable"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/index.ts",
+      "specifier": "./infrastructure/runtime/TmuxPlatformCommandExecutor",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "RuntimeProcessTableRow",
+      "importedName": "RuntimeProcessTableRow"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/main/index.ts",
+      "specifier": "./infrastructure/runtime/TmuxPlatformCommandExecutor",
+      "publicEntrypoint": "src/features/tmux-installer/main/index.ts",
+      "exportedName": "TmuxPaneRuntimeInfo",
+      "importedName": "TmuxPaneRuntimeInfo"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/token-usage/main/index.ts",
       "specifier": "./adapters/input/http/registerTokenUsageHttp",
-      "publicEntrypoint": "src/features/token-usage/main/index.ts"
+      "publicEntrypoint": "src/features/token-usage/main/index.ts",
+      "exportedName": "registerTokenUsageHttp",
+      "importedName": "registerTokenUsageHttp"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/token-usage/main/index.ts",
       "specifier": "./adapters/input/ipc/registerTokenUsageIpc",
-      "publicEntrypoint": "src/features/token-usage/main/index.ts"
+      "publicEntrypoint": "src/features/token-usage/main/index.ts",
+      "exportedName": "registerTokenUsageIpc",
+      "importedName": "registerTokenUsageIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/token-usage/main/index.ts",
+      "specifier": "./adapters/input/ipc/registerTokenUsageIpc",
+      "publicEntrypoint": "src/features/token-usage/main/index.ts",
+      "exportedName": "removeTokenUsageIpc",
+      "importedName": "removeTokenUsageIpc"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/token-usage/main/index.ts",
       "specifier": "./infrastructure/OpenCodeSessionStoreRunSourceDiscovery",
-      "publicEntrypoint": "src/features/token-usage/main/index.ts"
+      "publicEntrypoint": "src/features/token-usage/main/index.ts",
+      "exportedName": "resolveClaudeMultimodelDataHomePath",
+      "importedName": "resolveClaudeMultimodelDataHomePath"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/token-usage/main/index.ts",
       "specifier": "./infrastructure/TeamTaskUsageAttributionSource",
-      "publicEntrypoint": "src/features/token-usage/main/index.ts"
+      "publicEntrypoint": "src/features/token-usage/main/index.ts",
+      "exportedName": "TeamTaskUsageAttributionSource",
+      "importedName": "TeamTaskUsageAttributionSource"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/workspace-registry/main/index.ts",
       "specifier": "./infrastructure/ReadOnlyWorkspaceManifestAdapter",
-      "publicEntrypoint": "src/features/workspace-registry/main/index.ts"
+      "publicEntrypoint": "src/features/workspace-registry/main/index.ts",
+      "exportedName": "AdmittedWorkspaceManifestSource",
+      "importedName": "AdmittedWorkspaceManifestSource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-registry/main/index.ts",
+      "specifier": "./infrastructure/ReadOnlyWorkspaceManifestAdapter",
+      "publicEntrypoint": "src/features/workspace-registry/main/index.ts",
+      "exportedName": "ReadOnlyWorkspaceManifestAdapter",
+      "importedName": "ReadOnlyWorkspaceManifestAdapter"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-registry/main/index.ts",
+      "specifier": "./infrastructure/ReadOnlyWorkspaceManifestAdapter",
+      "publicEntrypoint": "src/features/workspace-registry/main/index.ts",
+      "exportedName": "WorkspaceManifestSourceAdmission",
+      "importedName": "WorkspaceManifestSourceAdmission"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-registry/main/index.ts",
+      "specifier": "./infrastructure/ReadOnlyWorkspaceManifestAdapter",
+      "publicEntrypoint": "src/features/workspace-registry/main/index.ts",
+      "exportedName": "WorkspaceRegistryStartupBaseline",
+      "importedName": "WorkspaceRegistryStartupBaseline"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-registry/main/index.ts",
+      "specifier": "./infrastructure/ReadOnlyWorkspaceManifestAdapter",
+      "publicEntrypoint": "src/features/workspace-registry/main/index.ts",
+      "exportedName": "WorkspaceRegistryStartupSnapshot",
+      "importedName": "WorkspaceRegistryStartupSnapshot"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-registry/main/index.ts",
+      "specifier": "./infrastructure/ReadOnlyWorkspaceManifestAdapter",
+      "publicEntrypoint": "src/features/workspace-registry/main/index.ts",
+      "exportedName": "WorkspaceStartupManifestSource",
+      "importedName": "WorkspaceStartupManifestSource"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/workspace-trust/main/index.ts",
       "specifier": "./adapters/output/ClaudeStateProbe",
-      "publicEntrypoint": "src/features/workspace-trust/main/index.ts"
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "FileClaudeStateProbe",
+      "importedName": "FileClaudeStateProbe"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/workspace-trust/main/index.ts",
       "specifier": "./adapters/output/ClaudeTrustPersister",
-      "publicEntrypoint": "src/features/workspace-trust/main/index.ts"
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "FileClaudeTrustPersister",
+      "importedName": "FileClaudeTrustPersister"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/workspace-trust/main/index.ts",
       "specifier": "./adapters/output/NodePtyProcessAdapter",
-      "publicEntrypoint": "src/features/workspace-trust/main/index.ts"
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "NodePtyProcessAdapter",
+      "importedName": "NodePtyProcessAdapter"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/workspace-trust/main/index.ts",
       "specifier": "./adapters/output/TempEmptyMcpConfigStore",
-      "publicEntrypoint": "src/features/workspace-trust/main/index.ts"
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "FileTempEmptyMcpConfigStore",
+      "importedName": "FileTempEmptyMcpConfigStore"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/workspace-trust/main/index.ts",
       "specifier": "./infrastructure/WorkspaceTrustCanonicalGitRoot",
-      "publicEntrypoint": "src/features/workspace-trust/main/index.ts"
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "resolveWorkspaceTrustCanonicalGitRoot",
+      "importedName": "resolveWorkspaceTrustCanonicalGitRoot"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/workspace-trust/main/index.ts",
+      "specifier": "./infrastructure/WorkspaceTrustCanonicalGitRoot",
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "resolveWorkspaceTrustFilesystemGitRoot",
+      "importedName": "resolveWorkspaceTrustFilesystemGitRoot"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/workspace-trust/main/index.ts",
       "specifier": "./infrastructure/WorkspaceTrustFeatureFlags",
-      "publicEntrypoint": "src/features/workspace-trust/main/index.ts"
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "resolveWorkspaceTrustFeatureFlags",
+      "importedName": "resolveWorkspaceTrustFeatureFlags"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/features/workspace-trust/main/index.ts",
       "specifier": "./infrastructure/workspaceTrustPreflightEnv",
-      "publicEntrypoint": "src/features/workspace-trust/main/index.ts"
+      "publicEntrypoint": "src/features/workspace-trust/main/index.ts",
+      "exportedName": "buildWorkspaceTrustPreflightEnv",
+      "importedName": "buildWorkspaceTrustPreflightEnv"
     },
     {
       "rule": "public-api-implementation-export",
       "source": "src/main/services/index.ts",
       "specifier": "./infrastructure",
-      "publicEntrypoint": "src/features/recent-projects/main/index.ts"
+      "publicEntrypoint": "src/features/recent-projects/main/index.ts",
+      "exportedName": "createRecentProjectsFeature",
+      "importedName": "ServiceContext"
     }
   ]
 }

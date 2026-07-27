@@ -113,8 +113,8 @@ export function collectPublicApiImplementationExports({
   for (const publicEntrypoint of [...sourceFilePaths].filter(isFeaturePublicEntrypoint).sort()) {
     const visited = new Set();
 
-    const visit = (sourcePath, requestedExport) => {
-      const visitKey = `${sourcePath}:${requestedExport}`;
+    const visit = (sourcePath, requestedExport, publicExportedName) => {
+      const visitKey = `${sourcePath}:${requestedExport}:${publicExportedName}`;
       if (visited.has(visitKey)) return;
       visited.add(visitKey);
 
@@ -143,7 +143,10 @@ export function collectPublicApiImplementationExports({
         }
 
         if (hasImplementationDirectory(targetPath)) {
+          const importedName = reexport.isExportStar ? requestedExport : reexport.importedName;
           violations.push({
+            exportedName: publicExportedName,
+            importedName,
             line: reexport.line,
             message: `public entrypoint ${publicEntrypoint} must not expose adapters or infrastructure`,
             publicEntrypoint,
@@ -156,15 +159,17 @@ export function collectPublicApiImplementationExports({
 
         const targetExport = reexport.isExportStar ? requestedExport : reexport.importedName;
         if (targetExport === '*') {
-          for (const exportedName of exportedNames(targetPath)) visit(targetPath, exportedName);
+          for (const exportedName of exportedNames(targetPath)) {
+            visit(targetPath, exportedName, publicExportedName);
+          }
         } else {
-          visit(targetPath, targetExport);
+          visit(targetPath, targetExport, publicExportedName);
         }
       }
     };
 
     for (const exportedName of exportedNames(publicEntrypoint)) {
-      visit(publicEntrypoint, exportedName);
+      visit(publicEntrypoint, exportedName, exportedName);
     }
   }
   return violations;

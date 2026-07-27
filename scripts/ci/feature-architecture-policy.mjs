@@ -622,6 +622,8 @@ export function violationKey(violation) {
     violation.source,
     violation.specifier,
     violation.publicEntrypoint ?? '',
+    violation.exportedName ?? '',
+    violation.importedName ?? '',
   ]);
 }
 
@@ -635,7 +637,11 @@ export function toBaselineEntry(violation) {
     source: violation.source,
     specifier: violation.specifier,
   };
-  if (violation.publicEntrypoint) entry.publicEntrypoint = violation.publicEntrypoint;
+  if (violation.publicEntrypoint) {
+    entry.publicEntrypoint = violation.publicEntrypoint;
+    entry.exportedName = violation.exportedName;
+    entry.importedName = violation.importedName;
+  }
   return entry;
 }
 

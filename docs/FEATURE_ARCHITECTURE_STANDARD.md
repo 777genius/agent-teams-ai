@@ -350,8 +350,10 @@ It scans production source and enforces:
 
 Legacy violations are pinned as individual dependency edges in
 `scripts/ci/feature-architecture-baseline.json`. The identity is the rule,
-source path, module specifier, and public entrypoint when applicable; line
-numbers are deliberately excluded so unrelated edits do not create noise.
+source path, and module specifier. Public API violations additionally include
+the public entrypoint plus the exported and imported symbol names, so extending
+an existing legacy barrel still fails the ratchet. Line numbers are deliberately
+excluded so unrelated edits do not create noise.
 
 The baseline is a ratchet, not a general allowlist:
 

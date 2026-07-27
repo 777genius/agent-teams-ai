@@ -16,7 +16,7 @@ import {
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), '..', '..');
 const baselineRelativePath = 'scripts/ci/feature-architecture-baseline.json';
-const BASELINE_VERSION = 1;
+const BASELINE_VERSION = 2;
 const KNOWN_RULES = new Set(Object.values(FEATURE_ARCHITECTURE_RULES));
 
 function diagnostic(code, message, entry) {
@@ -66,25 +66,34 @@ export function validateFeatureArchitectureBaseline(manifest) {
   const entries = [];
   const seenKeys = new Set();
   for (const entry of manifest.violations) {
-    const hasPublicEntrypoint =
-      typeof entry === 'object' && entry !== null && 'publicEntrypoint' in entry;
-    const expectedKeys = hasPublicEntrypoint
-      ? ['publicEntrypoint', 'rule', 'source', 'specifier']
+    const isObject = typeof entry === 'object' && entry !== null && !Array.isArray(entry);
+    const isPublicApiExport =
+      isObject && entry.rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport;
+    const expectedKeys = isPublicApiExport
+      ? ['exportedName', 'importedName', 'publicEntrypoint', 'rule', 'source', 'specifier']
       : ['rule', 'source', 'specifier'];
     if (
-      typeof entry !== 'object' ||
-      entry === null ||
-      Array.isArray(entry) ||
+      !isObject ||
       !sameObjectKeys(entry, expectedKeys) ||
       typeof entry.rule !== 'string' ||
       typeof entry.source !== 'string' ||
       typeof entry.specifier !== 'string' ||
-      (hasPublicEntrypoint && typeof entry.publicEntrypoint !== 'string')
+      (isPublicApiExport &&
+        (typeof entry.publicEntrypoint !== 'string' ||
+          typeof entry.exportedName !== 'string' ||
+          typeof entry.importedName !== 'string'))
     ) {
+      const missingPublicIdentity =
+        isPublicApiExport &&
+        (!('publicEntrypoint' in entry) ||
+          !('exportedName' in entry) ||
+          !('importedName' in entry));
       diagnostics.push(
         diagnostic(
-          'invalid-baseline-entry',
-          'each entry must contain rule, source, specifier, and optional publicEntrypoint strings',
+          missingPublicIdentity ? 'missing-public-export-identity' : 'invalid-baseline-entry',
+          isPublicApiExport
+            ? 'public API export entries must contain publicEntrypoint, exportedName, and importedName strings'
+            : 'dependency entries must contain exactly rule, source, and specifier strings',
           entry
         )
       );
@@ -95,15 +104,17 @@ export function validateFeatureArchitectureBaseline(manifest) {
       !entry.source.startsWith('src/') ||
       entry.source.includes('\\') ||
       entry.specifier.length === 0 ||
-      (hasPublicEntrypoint &&
+      (isPublicApiExport &&
         (entry.publicEntrypoint.length === 0 ||
           !entry.publicEntrypoint.startsWith('src/features/') ||
-          entry.publicEntrypoint.includes('\\')))
+          entry.publicEntrypoint.includes('\\') ||
+          entry.exportedName.length === 0 ||
+          entry.importedName.length === 0))
     ) {
       diagnostics.push(
         diagnostic(
           'invalid-baseline-path',
-          'baseline paths must be non-empty normalized production source paths',
+          'baseline paths and public symbol identities must be non-empty and normalized',
           entry
         )
       );
@@ -115,33 +126,6 @@ export function validateFeatureArchitectureBaseline(manifest) {
       );
       continue;
     }
-    if (
-      !entry.publicEntrypoint &&
-      entry.rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
-    ) {
-      diagnostics.push(
-        diagnostic(
-          'missing-public-entrypoint',
-          'public API export violations must identify the exposing entrypoint',
-          entry
-        )
-      );
-      continue;
-    }
-    if (
-      entry.publicEntrypoint &&
-      entry.rule !== FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
-    ) {
-      diagnostics.push(
-        diagnostic(
-          'unexpected-public-entrypoint',
-          'publicEntrypoint is valid only for public API export violations',
-          entry
-        )
-      );
-      continue;
-    }
-
     const key = violationKey(entry);
     if (seenKeys.has(key)) {
       diagnostics.push(
@@ -251,7 +235,7 @@ function formatDiagnostic({ code, entry, message }) {
   const location = entry
     ? `${entry.source}:${entry.specifier}${
         entry.publicEntrypoint ? ` (public via ${entry.publicEntrypoint})` : ''
-      }`
+      }${entry.exportedName ? ` [exports ${entry.exportedName} from ${entry.importedName}]` : ''}`
     : baselineRelativePath;
   return `  - [${code}] ${location}: ${message}`;
 }

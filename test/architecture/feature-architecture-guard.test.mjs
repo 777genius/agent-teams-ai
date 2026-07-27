@@ -21,8 +21,27 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 
 function baselineEntry(rule, source, specifier, publicEntrypoint) {
   const entry = { rule, source, specifier };
-  if (publicEntrypoint) entry.publicEntrypoint = publicEntrypoint;
+  if (publicEntrypoint) {
+    entry.publicEntrypoint = publicEntrypoint;
+    entry.exportedName = 'Store';
+    entry.importedName = 'Store';
+  }
   return entry;
+}
+
+function uniqueBaselineLocations(violations) {
+  const locations = new Map();
+  for (const violation of violations) {
+    const baseline = toBaselineEntry(violation);
+    const entry = {
+      rule: baseline.rule,
+      source: baseline.source,
+      specifier: baseline.specifier,
+    };
+    if (baseline.publicEntrypoint) entry.publicEntrypoint = baseline.publicEntrypoint;
+    locations.set(JSON.stringify(entry), entry);
+  }
+  return [...locations.values()];
 }
 
 function architectureViolation(rule, source, specifier) {
@@ -181,7 +200,7 @@ test('fails the end-to-end gate for a new violation in a new feature', () => {
   withFixture(
     {
       'scripts/ci/feature-architecture-baseline.json': JSON.stringify({
-        version: 1,
+        version: 2,
         violations: [],
       }),
       'src/features/new-feature/core/domain/rule.ts': `import path from 'node:path';`,
@@ -319,7 +338,7 @@ test('detects implementation exports through transitive internal barrels', () =>
         ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
       );
 
-      assert.deepEqual(publicApiViolations.map(toBaselineEntry), [
+      assert.deepEqual(uniqueBaselineLocations(publicApiViolations), [
         {
           publicEntrypoint: 'src/features/example/main/index.ts',
           rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
@@ -633,9 +652,11 @@ test('recognizes JavaScript feature root entrypoints', () => {
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
       assert.deepEqual(
-        violations
-          .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
-          .map(toBaselineEntry),
+        uniqueBaselineLocations(
+          violations.filter(
+            ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
+          )
+        ),
         [
           {
             publicEntrypoint: 'src/features/commonjs-create-binding/main/index.cjs',
@@ -2138,9 +2159,11 @@ test('preserves string-literal member selection for indexed import types', () =>
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
       assert.deepEqual(
-        violations
-          .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
-          .map(toBaselineEntry),
+        uniqueBaselineLocations(
+          violations.filter(
+            ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
+          )
+        ),
         [
           {
             publicEntrypoint: 'src/features/indexed-infra/main/index.ts',
@@ -2189,9 +2212,11 @@ test('preserves member selection through local aliases', () => {
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
       assert.deepEqual(
-        violations
-          .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
-          .map(toBaselineEntry),
+        uniqueBaselineLocations(
+          violations.filter(
+            ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
+          )
+        ),
         [
           {
             publicEntrypoint: 'src/features/default-alias/main/index.ts',
@@ -2281,7 +2306,7 @@ test('validates baseline schema, uniqueness, and canonical ordering', () => {
   );
 
   const validation = validateFeatureArchitectureBaseline({
-    version: 1,
+    version: 2,
     violations: [later, earlier, earlier],
   });
 
