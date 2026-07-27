@@ -723,6 +723,7 @@ describe('ipc teams handlers', () => {
     isTeamAlive: vi.fn(() => true),
     getCurrentRunId: vi.fn(() => 'run-2' as string | null),
     pushLiveLeadProcessMessage: vi.fn(),
+    getPendingToolApprovalFilePath: vi.fn(() => null),
     getPendingToolApprovalFileTarget: vi.fn(() => null),
     respondToToolApproval: vi.fn(() => resolvedUndefined()),
     updateToolApprovalSettings: vi.fn(),
@@ -851,6 +852,7 @@ describe('ipc teams handlers', () => {
       pushLiveLeadProcessMessage: teamHandlerMocks.pushLiveLeadProcessMessage,
     },
     toolApproval: {
+      getPendingToolApprovalFilePath: teamHandlerMocks.getPendingToolApprovalFilePath,
       getPendingToolApprovalFileTarget: teamHandlerMocks.getPendingToolApprovalFileTarget,
       respondToToolApproval: teamHandlerMocks.respondToToolApproval,
       updateToolApprovalSettings: teamHandlerMocks.updateToolApprovalSettings,

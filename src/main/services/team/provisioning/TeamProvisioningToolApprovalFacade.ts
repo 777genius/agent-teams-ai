@@ -101,11 +101,15 @@ function getRunApprovalProjectDirectory(
   approval: ToolApprovalRequest
 ): string | undefined {
   const source = normalizeMemberName(approval.source);
-  const memberDirectory = run.allEffectiveMembers?.find(
-    (member) => normalizeMemberName(member.name) === source
-  )?.cwd;
+  const member = run.allEffectiveMembers?.find(
+    (candidate) => normalizeMemberName(candidate.name) === source
+  );
+  const memberDirectory = member?.cwd;
   if (typeof memberDirectory === 'string' && memberDirectory.trim().length > 0) {
     return memberDirectory;
+  }
+  if (!member && source !== 'lead') {
+    return undefined;
   }
   const runDirectory = run.request.cwd;
   return typeof runDirectory === 'string' && runDirectory.trim().length > 0

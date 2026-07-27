@@ -168,6 +168,58 @@ describe('TeamProvisioningToolApprovalFacade', () => {
     });
   });
 
+  it('rejects relative preview paths from unknown or detached approval sources', () => {
+    const { facade, run } = createHarness();
+    const requestId = 'req-detached';
+    run.pendingApprovals.set(
+      requestId,
+      approvalRequest({
+        requestId,
+        source: 'Unknown member',
+        toolName: 'Edit',
+        toolInput: { file_path: '.env', old_string: 'a', new_string: 'b' },
+      })
+    );
+
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', requestId)).toBeNull();
+
+    run.pendingApprovals.set(
+      requestId,
+      approvalRequest({
+        requestId,
+        source: 'Worker',
+        toolName: 'Edit',
+        toolInput: { file_path: '.env', old_string: 'a', new_string: 'b' },
+      })
+    );
+    run.allEffectiveMembers = run.allEffectiveMembers.filter(({ name }) => name !== 'Worker');
+
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', requestId)).toBeNull();
+  });
+
+  it('uses the run directory for a lead or matched roster member without its own cwd', () => {
+    const { facade, run } = createHarness();
+    run.allEffectiveMembers = [{ name: 'Lead', cwd: TEST_PROJECT_DIRECTORY }, { name: 'Worker' }];
+
+    for (const source of ['Lead', 'Worker']) {
+      const requestId = `req-fallback-${source.toLowerCase()}`;
+      run.pendingApprovals.set(
+        requestId,
+        approvalRequest({
+          requestId,
+          source,
+          toolName: 'Write',
+          toolInput: { file_path: '.env', content: 'next' },
+        })
+      );
+
+      expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', requestId)).toEqual({
+        authorizationPath: '.env',
+        readPath: path.join(TEST_PROJECT_DIRECTORY, '.env'),
+      });
+    }
+  });
+
   it('re-evaluates pending lead approvals when settings are updated', () => {
     const { facade, run, events } = createHarness();
 
