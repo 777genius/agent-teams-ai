@@ -4,7 +4,7 @@ import { UpdateToolApprovalSettingsUseCase } from '../../core/application/comman
 import { GetRuntimeDeliveryStatusUseCase } from '../../core/application/queries/GetRuntimeDeliveryStatusUseCase';
 import { GetRuntimeSnapshotUseCase } from '../../core/application/queries/GetRuntimeSnapshotUseCase';
 
-import type { TeamProvisioningApplicationApi } from '../../contracts';
+import type { TeamAgentRuntimeSnapshot, TeamProvisioningApplicationApi } from '../../contracts';
 import type { RuntimeDeliveryPort } from '../../core/application/ports/RuntimeDeliveryPort';
 import type { ToolApprovalPort } from '../../core/application/ports/ToolApprovalPort';
 import type { RuntimeSnapshotReaderPort } from '../../core/application/queries/GetRuntimeSnapshotUseCase';
@@ -12,7 +12,7 @@ import type { RuntimeSnapshotReaderPort } from '../../core/application/queries/G
 export type TeamProvisioningApplicationFeature = TeamProvisioningApplicationApi;
 
 export interface TeamProvisioningApplicationFeatureDependencies {
-  runtimeSnapshot: RuntimeSnapshotReaderPort;
+  runtimeSnapshot: RuntimeSnapshotReaderPort<TeamAgentRuntimeSnapshot>;
   toolApproval: ToolApprovalPort;
   runtimeDelivery: RuntimeDeliveryPort;
 }

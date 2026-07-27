@@ -9,7 +9,7 @@ export interface LegacyRuntimeSnapshotReaderDeps {
   snapshotSource: LegacyRuntimeSnapshotSource;
 }
 
-export class LegacyRuntimeSnapshotReaderAdapter implements RuntimeSnapshotReaderPort {
+export class LegacyRuntimeSnapshotReaderAdapter implements RuntimeSnapshotReaderPort<TeamAgentRuntimeSnapshot> {
   constructor(private readonly deps: LegacyRuntimeSnapshotReaderDeps) {}
 
   readByTeamName(teamName: string): Promise<TeamAgentRuntimeSnapshot> {

@@ -633,7 +633,8 @@ function isForbiddenDomainProjectTarget(targetPath) {
   );
 }
 
-function evaluateCoreDomainDependency(edge, sourceFilePaths, reexportsBySource) {
+function evaluateCoreDomainDependency(edge, reexportContext) {
+  const { localExportNamesBySource, reexportsBySource, sourceFilePaths } = reexportContext;
   if (!/^src\/features\/[^/]+\/core\/domain\//.test(edge.source)) return null;
 
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
@@ -646,6 +647,7 @@ function evaluateCoreDomainDependency(edge, sourceFilePaths, reexportsBySource) 
         edge,
         sourceFilePaths,
         reexportsBySource,
+        localExportNamesBySource,
         (reexport) => {
           const origin = resolveProjectTarget(reexport, sourceFilePaths);
           return (
@@ -673,7 +675,8 @@ function isAllowedCoreApplicationTarget(sourceFeature, targetPath) {
   return targetFeature?.rest === 'contracts' || targetFeature?.rest.startsWith('contracts/');
 }
 
-function evaluateCoreApplicationDependency(edge, sourceFilePaths, reexportsBySource) {
+function evaluateCoreApplicationDependency(edge, reexportContext) {
+  const { localExportNamesBySource, reexportsBySource, sourceFilePaths } = reexportContext;
   const match = /^src\/features\/([^/]+)\/core\/application\//.exec(edge.source);
   if (!match) return null;
 
@@ -686,6 +689,7 @@ function evaluateCoreApplicationDependency(edge, sourceFilePaths, reexportsBySou
         edge,
         sourceFilePaths,
         reexportsBySource,
+        localExportNamesBySource,
         (reexport) => {
           const origin = resolveProjectTarget(reexport, sourceFilePaths);
           return !origin || !isAllowedCoreApplicationTarget(match[1], origin);
@@ -750,24 +754,21 @@ export function collectFeatureArchitectureViolations(repoRoot) {
     sourceReexports.push(reexport);
     reexportsBySource.set(reexport.source, sourceReexports);
   }
+  const reexportContext = {
+    localExportNamesBySource,
+    reexportsBySource,
+    sourceFilePaths,
+  };
   const violations = [];
 
   for (const edge of edges) {
     const crossFeatureViolation = evaluateCrossFeatureEntrypoint(edge, sourceFilePaths);
     if (crossFeatureViolation) violations.push(crossFeatureViolation);
 
-    const domainViolation = evaluateCoreDomainDependency(
-      edge,
-      sourceFilePaths,
-      reexportsBySource
-    );
+    const domainViolation = evaluateCoreDomainDependency(edge, reexportContext);
     if (domainViolation) violations.push(domainViolation);
 
-    const applicationViolation = evaluateCoreApplicationDependency(
-      edge,
-      sourceFilePaths,
-      reexportsBySource
-    );
+    const applicationViolation = evaluateCoreApplicationDependency(edge, reexportContext);
     if (applicationViolation) violations.push(applicationViolation);
   }
 

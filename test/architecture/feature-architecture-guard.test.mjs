@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -207,8 +209,14 @@ test('resolves allowed contract barrels to their dependency-rule origins', () =>
   withFixture(
     {
       'src/features/example/contracts/index.ts': `
+        export * from './unsafeStar';
         export type { SafeContract } from './safe';
         export { AppService } from './runtime';
+        export interface LocalSafeContract {}
+      `,
+      'src/features/example/contracts/unsafeStar.ts': `
+        export { RuntimeAdapter as SafeContract } from '../main/RuntimeAdapter';
+        export { RuntimeAdapter as LocalSafeContract } from '../main/RuntimeAdapter';
       `,
       'src/features/example/contracts/runtime.ts': `
         export { AppService } from '../core/application/AppService';
@@ -223,9 +231,9 @@ test('resolves allowed contract barrels to their dependency-rule origins', () =>
       `,
       'src/features/example/main/RuntimeAdapter.ts': 'export class RuntimeAdapter {}',
       'src/features/example/core/domain/policy.ts': `
-        import type { SafeContract } from '../../contracts';
+        import type { LocalSafeContract, SafeContract } from '../../contracts';
         import { AppService } from '../../contracts';
-        export type Policy = SafeContract;
+        export type Policy = SafeContract & LocalSafeContract;
         void AppService;
       `,
       'src/features/other/contracts/index.ts': `
@@ -2403,6 +2411,56 @@ test('forbids baseline expansion relative to the PR base while allowing removals
       ],
     }).map(({ code, entry }) => ({ code, specifier: entry.specifier })),
     [{ code: 'baseline-expansion', specifier: 'electron' }]
+  );
+});
+
+test('analyzes the base source when the base predates the baseline manifest', () => {
+  withFixture(
+    {
+      'scripts/ci/feature-architecture-baseline.json': '',
+      'src/features/example/core/domain/policy.ts': `import path from 'node:path';`,
+    },
+    (root) => {
+      execFileSync('git', ['init', '--quiet'], { cwd: root });
+      execFileSync('git', ['add', '--', 'src'], { cwd: root });
+      execFileSync(
+        'git',
+        [
+          '-c',
+          'user.name=Architecture Guard',
+          '-c',
+          'user.email=architecture-guard@example.test',
+          'commit',
+          '--quiet',
+          '-m',
+          'test: create pre-manifest base',
+        ],
+        { cwd: root }
+      );
+      const baselineRef = execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: root,
+        encoding: 'utf8',
+      }).trim();
+
+      writeFileSync(
+        path.join(root, 'src/features/example/core/domain/policy.ts'),
+        `import electron from 'electron'; import path from 'node:path';`
+      );
+      const { violations } = collectFeatureArchitectureViolations(root);
+      writeFileSync(
+        path.join(root, 'scripts/ci/feature-architecture-baseline.json'),
+        `${JSON.stringify(
+          { version: 2, violations: violations.map(toBaselineEntry) },
+          null,
+          2
+        )}\n`
+      );
+
+      assert.throws(
+        () => verifyFeatureArchitecture({ baselineRef, root }),
+        /baseline-expansion.*electron/s
+      );
+    }
   );
 });
 

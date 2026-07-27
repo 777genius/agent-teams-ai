@@ -18,9 +18,9 @@ function runtimeSnapshot(updatedAt = '2026-07-26T10:00:00.000Z'): TeamAgentRunti
 describe('GetRuntimeSnapshotUseCase', () => {
   it('returns the exact snapshot and forwards the team name unchanged', async () => {
     const snapshot = runtimeSnapshot();
-    const readByTeamName = vi.fn<RuntimeSnapshotReaderPort['readByTeamName']>(() =>
-      Promise.resolve(snapshot)
-    );
+    const readByTeamName = vi.fn<
+      RuntimeSnapshotReaderPort<TeamAgentRuntimeSnapshot>['readByTeamName']
+    >(() => Promise.resolve(snapshot));
     const useCase = new GetRuntimeSnapshotUseCase({ readByTeamName });
 
     await expect(useCase.execute({ teamName: '  team-1  ' })).resolves.toBe(snapshot);
@@ -41,7 +41,7 @@ describe('GetRuntimeSnapshotUseCase', () => {
     const firstSnapshot = runtimeSnapshot('2026-07-26T10:00:00.000Z');
     const secondSnapshot = runtimeSnapshot('2026-07-26T10:00:01.000Z');
     const readByTeamName = vi
-      .fn<RuntimeSnapshotReaderPort['readByTeamName']>()
+      .fn<RuntimeSnapshotReaderPort<TeamAgentRuntimeSnapshot>['readByTeamName']>()
       .mockResolvedValueOnce(firstSnapshot)
       .mockResolvedValueOnce(secondSnapshot);
     const useCase = new GetRuntimeSnapshotUseCase({ readByTeamName });

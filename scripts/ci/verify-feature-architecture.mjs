@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -207,17 +208,50 @@ function readManifest(source, label) {
   }
 }
 
+function analyzeBaselineReferenceSource(baselineRef, root) {
+  const checkoutRoot = mkdtempSync(path.join(tmpdir(), 'feature-architecture-base-'));
+  const archivePath = path.join(checkoutRoot, 'source.tar');
+  try {
+    execFileSync(
+      'git',
+      ['archive', '--format=tar', `--output=${archivePath}`, baselineRef, '--', 'src'],
+      { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] }
+    );
+    execFileSync('tar', ['-xf', archivePath, '-C', checkoutRoot], {
+      cwd: root,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    return collectFeatureArchitectureViolations(checkoutRoot).violations.map(toBaselineEntry);
+  } catch (error) {
+    throw new Error(
+      `baseline at ${baselineRef} has no manifest and its source could not be analyzed: ${
+        error instanceof Error ? error.message : error
+      }`
+    );
+  } finally {
+    rmSync(checkoutRoot, { force: true, recursive: true });
+  }
+}
+
 function readBaselineReferenceManifest(baselineRef, root) {
   if (!baselineRef) return null;
   if (!/^[0-9a-f]{40}$/i.test(baselineRef)) {
     throw new Error('FEATURE_ARCHITECTURE_BASELINE_REF must be a 40-character commit SHA');
+  }
+  try {
+    execFileSync('git', ['cat-file', '-e', `${baselineRef}^{commit}`], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+  } catch {
+    throw new Error(`FEATURE_ARCHITECTURE_BASELINE_REF commit ${baselineRef} is unavailable`);
   }
 
   const objectName = `${baselineRef}:${baselineRelativePath}`;
   try {
     execFileSync('git', ['cat-file', '-e', objectName], { cwd: root, stdio: 'ignore' });
   } catch {
-    return null;
+    return analyzeBaselineReferenceSource(baselineRef, root);
   }
 
   const manifest = readManifest(

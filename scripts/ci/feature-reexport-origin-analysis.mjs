@@ -17,6 +17,7 @@ export function dependencyHasForbiddenReexportOrigin(
   edge,
   sourceFilePaths,
   reexportsBySource,
+  localExportNamesBySource,
   originIsForbidden
 ) {
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
@@ -26,11 +27,20 @@ export function dependencyHasForbiddenReexportOrigin(
     const key = `${source}:${exportedName}`;
     if (visited.has(key)) return false;
     const nextVisited = new Set(visited).add(key);
-    return (reexportsBySource.get(source) ?? []).some((reexport) => {
+    if (exportedName !== '*' && localExportNamesBySource.get(source)?.has(exportedName)) {
+      return false;
+    }
+    const reexports = reexportsBySource.get(source) ?? [];
+    const hasExplicitReexport =
+      exportedName !== '*' &&
+      reexports.some(
+        (reexport) => !reexport.isExportStar && reexport.exportedName === exportedName
+      );
+    return reexports.some((reexport) => {
       if (
         exportedName !== '*' &&
         reexport.exportedName !== exportedName &&
-        !reexport.isExportStar
+        (!reexport.isExportStar || hasExplicitReexport)
       ) {
         return false;
       }
