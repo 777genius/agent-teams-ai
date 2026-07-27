@@ -88,6 +88,8 @@ beforeEach(() => {
   mockLstat.mockResolvedValue({
     dev: 1,
     ino: 2,
+    birthtimeMs: 3,
+    size: CONTENT.length,
     nlink: 1,
   } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>);
   mockLink.mockResolvedValue(undefined);
@@ -483,6 +485,41 @@ describe('atomicWriteAsync', () => {
 });
 
 describe('atomicCreateAsync', () => {
+  it('returns the exact retained inode pin without a second fallible hardlink step', async () => {
+    const result = await atomicCreateAsync(TARGET_PATH, CONTENT, { retainPin: true });
+
+    const pinPath = getTmpPath();
+    expect(mockLink).toHaveBeenCalledWith(pinPath, TARGET_PATH);
+    expect(mockUnlink).not.toHaveBeenCalledWith(pinPath);
+    expect(result).toEqual({
+      dev: 1,
+      ino: 2,
+      birthtimeMs: 3,
+      size: CONTENT.length,
+      pinPath,
+    });
+  });
+
+  it('fails before publication when a caller requires trustworthy identity', async () => {
+    mockLstat.mockResolvedValueOnce({
+      dev: 1,
+      ino: 0,
+      birthtimeMs: 3,
+      size: CONTENT.length,
+      nlink: 1,
+    } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>);
+
+    await expect(
+      atomicCreateAsync(TARGET_PATH, CONTENT, {
+        retainPin: true,
+        requireTrustworthyIdentity: true,
+      })
+    ).rejects.toThrow('Atomic create identity is not trustworthy enough for publication');
+
+    expect(mockLink).not.toHaveBeenCalled();
+    expect(mockUnlink).toHaveBeenCalledWith(getTmpPath());
+  });
+
   it('publishes a fully-synced temp file without overwriting an existing target', async () => {
     const result = await atomicCreateAsync(TARGET_PATH, CONTENT);
 
@@ -490,7 +527,7 @@ describe('atomicCreateAsync', () => {
     expect(tmpPath).toMatch(/\.review-create\.[a-f0-9-]+\.tmp$/);
     expect(mockLink).toHaveBeenCalledWith(tmpPath, TARGET_PATH);
     expect(mockUnlink).toHaveBeenCalledWith(tmpPath);
-    expect(result).toEqual({ dev: 1, ino: 2 });
+    expect(result).toEqual({ dev: 1, ino: 2, birthtimeMs: 3, size: CONTENT.length });
   });
 
   it('cleans the complete temp file and preserves the raced target on EEXIST', async () => {
@@ -507,8 +544,40 @@ describe('atomicCreateAsync', () => {
   it('reports terminal success when only crash-temp cleanup fails after publish', async () => {
     mockUnlink.mockRejectedValueOnce(Object.assign(new Error('temporary lock'), { code: 'EBUSY' }));
 
-    await expect(atomicCreateAsync(TARGET_PATH, CONTENT)).resolves.toEqual({ dev: 1, ino: 2 });
+    await expect(atomicCreateAsync(TARGET_PATH, CONTENT)).resolves.toEqual({
+      dev: 1,
+      ino: 2,
+      birthtimeMs: 3,
+      size: CONTENT.length,
+    });
 
+    expect(mockLink).toHaveBeenCalledWith(getTmpPath(), TARGET_PATH);
+    expect(mockUnlink).not.toHaveBeenCalledWith(TARGET_PATH);
+  });
+
+  it('reports terminal success when directory sync fails after publish', async () => {
+    const fileHandle = {
+      sync: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    } as unknown as fs.promises.FileHandle;
+    const directorySync = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('directory fsync failed after publish'));
+    const directoryHandle = {
+      sync: directorySync,
+      close: vi.fn().mockResolvedValue(undefined),
+    } as unknown as fs.promises.FileHandle;
+    mockOpen.mockResolvedValueOnce(fileHandle).mockResolvedValueOnce(directoryHandle);
+
+    await expect(atomicCreateAsync(TARGET_PATH, CONTENT)).resolves.toEqual({
+      dev: 1,
+      ino: 2,
+      birthtimeMs: 3,
+      size: CONTENT.length,
+    });
+
+    expect(directorySync).toHaveBeenCalledTimes(2);
     expect(mockLink).toHaveBeenCalledWith(getTmpPath(), TARGET_PATH);
     expect(mockUnlink).not.toHaveBeenCalledWith(TARGET_PATH);
   });
@@ -517,7 +586,11 @@ describe('atomicCreateAsync', () => {
     mockLstat.mockResolvedValue({
       dev: 7,
       ino: 9,
+      birthtimeMs: 11,
+      size: 13,
       nlink: 2,
+      isFile: () => true,
+      isSymbolicLink: () => false,
     } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>);
     mockReaddir.mockResolvedValue([
       '.review-create.12345678-1234-1234-1234-123456789abc.tmp',

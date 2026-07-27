@@ -1,3 +1,4 @@
+export type { TeamApprovalsElectronApi, ToolApprovalFileReadRequest } from './api';
 export {
   TEAM_TOOL_APPROVAL_EVENT,
   TEAM_TOOL_APPROVAL_READ_FILE,

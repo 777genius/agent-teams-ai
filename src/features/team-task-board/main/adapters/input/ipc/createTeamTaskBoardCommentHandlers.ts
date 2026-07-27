@@ -2,15 +2,69 @@ import { validateTaskId, validateTeamName } from '@main/ipc/guards';
 import { validateTaskRefs } from '@main/ipc/validation/taskRefs';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 
+import {
+  estimateTaskAttachmentDecodedBytes,
+  isCanonicalTaskAttachmentBase64,
+  isCanonicalTaskAttachmentId,
+  TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH,
+  TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES,
+} from '../../../../core/domain/taskAttachmentPayloadPolicy';
+
 import { executeTeamTaskBoardHandler } from './executeTeamTaskBoardHandler';
 import { isValidStoredAttachmentMimeType } from './teamTaskBoardValidation';
 
 import type { TaskCommentRequest } from '../../../../core/application/ports/TeamTaskBoardPorts';
+import type { AddTaskCommentAttachmentInput } from '../../../../core/application/use-cases/AddTaskCommentUseCase';
 import type { TeamTaskBoardIpcDependencies } from './TeamTaskBoardIpcDependencies';
-import type { IpcResult, TaskAttachmentMeta, TaskComment } from '@shared/types';
+import type { IpcResult, TaskComment } from '@shared/types';
 import type { IpcMainInvokeEvent } from 'electron';
 
 const MAX_ATTACHMENTS = 5;
+
+function normalizeAttachment(attachment: unknown): AddTaskCommentAttachmentInput {
+  if (!attachment || typeof attachment !== 'object') {
+    throw new Error('Invalid attachment data');
+  }
+  const candidate = attachment as Record<string, unknown>;
+  if (
+    typeof candidate.id !== 'string' ||
+    typeof candidate.filename !== 'string' ||
+    !isValidStoredAttachmentMimeType(candidate.mimeType) ||
+    typeof candidate.base64Data !== 'string'
+  ) {
+    throw new Error('Invalid attachment data');
+  }
+
+  const id = candidate.id.trim();
+  const base64Data = candidate.base64Data;
+  if (!isCanonicalTaskAttachmentId(id)) {
+    throw new Error('Attachment ID must be a canonical UUID');
+  }
+  if (
+    base64Data.length > TEAM_TASK_ATTACHMENT_MAX_BASE64_LENGTH ||
+    estimateTaskAttachmentDecodedBytes(base64Data) > TEAM_TASK_ATTACHMENT_MAX_DECODED_BYTES
+  ) {
+    throw new Error('Attachment payload exceeds the 20 MiB decoded size limit');
+  }
+  if (!isCanonicalTaskAttachmentBase64(base64Data)) {
+    throw new Error('Attachment data must be canonical base64');
+  }
+
+  return {
+    id,
+    filename: candidate.filename,
+    mimeType: candidate.mimeType.trim(),
+    base64Data,
+  };
+}
+
+function normalizeAttachments(attachments: readonly unknown[]): AddTaskCommentAttachmentInput[] {
+  const normalized = attachments.map(normalizeAttachment);
+  if (new Set(normalized.map((attachment) => attachment.id)).size !== normalized.length) {
+    throw new Error('Attachment IDs must be unique');
+  }
+  return normalized;
+}
 
 export function createTeamTaskBoardCommentHandlers(dependencies: TeamTaskBoardIpcDependencies): {
   addTaskComment(
@@ -52,45 +106,15 @@ export function createTeamTaskBoardCommentHandlers(dependencies: TeamTaskBoardIp
       }
 
       return executeTeamTaskBoardHandler(dependencies.logger, 'addTaskComment', async () => {
-        let savedAttachments: TaskAttachmentMeta[] | undefined;
-        if (rawAttachments.length > 0) {
-          savedAttachments = [];
-          for (const attachment of rawAttachments) {
-            if (!attachment || typeof attachment !== 'object') {
-              throw new Error('Invalid attachment data');
-            }
-            const candidate = attachment as unknown as Record<string, unknown>;
-            if (
-              typeof candidate.id !== 'string' ||
-              typeof candidate.filename !== 'string' ||
-              !isValidStoredAttachmentMimeType(candidate.mimeType) ||
-              typeof candidate.base64Data !== 'string' ||
-              candidate.base64Data.length === 0
-            ) {
-              throw new Error('Invalid attachment data');
-            }
-            const safeId = candidate.id.trim();
-            if (safeId.includes('/') || safeId.includes('\\') || safeId.includes('..')) {
-              throw new Error('Invalid attachment ID');
-            }
-            const metadata = await dependencies.commentAttachments.saveAttachment(
-              validatedTeamName.value!,
-              validatedTaskId.value!,
-              safeId,
-              candidate.filename,
-              candidate.mimeType.trim(),
-              candidate.base64Data
-            );
-            savedAttachments.push(metadata);
-          }
-        }
-
-        return dependencies.comments.addTaskComment(
+        const attachments = normalizeAttachments(rawAttachments);
+        return dependencies.addTaskComment.execute(
           validatedTeamName.value!,
           validatedTaskId.value!,
-          text.trim(),
-          savedAttachments,
-          validatedTaskRefs.value
+          {
+            text: text.trim(),
+            attachments,
+            taskRefs: validatedTaskRefs.value,
+          }
         );
       });
     },

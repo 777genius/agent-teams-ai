@@ -155,7 +155,7 @@ import {
   type TeamIpcHandlerApis,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
-import { TeamBackupService } from '@main/services/team/TeamBackupService';
+import * as TeamBackup from '@main/services/team/TeamBackupComposition';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
@@ -1139,7 +1139,7 @@ let teamTaskStallMonitor: TeamTaskStallMonitor | null = null;
 let internalStorageFeature: InternalStorageFeature | null = null;
 let teamLifecycleReadHost: TeamLifecycleReadHost | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
-let teamBackupService: TeamBackupService | null = null;
+let teamBackupService: TeamBackup.TeamBackupService | null = null;
 let branchStatusService: BranchStatusService | null = null;
 let rendererRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
 let rendererRecoveryAttempts = 0;
@@ -2354,7 +2354,7 @@ async function initializeServices(): Promise<void> {
     .catch((error: unknown) =>
       logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
     );
-  teamBackupService = new TeamBackupService();
+  teamBackupService = TeamBackup.createTeamBackupService(teamDataService);
   // Fire-and-forget: initializeServices() is sync, cannot await.
   // Safe because TeamBackupService.initialized flag blocks all backup/restore
   // operations until initialize() completes internally (restore → prune → set flag).

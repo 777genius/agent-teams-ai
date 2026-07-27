@@ -6,7 +6,7 @@
   "required": [
     "schemaVersion",
     "artifactId",
-    "observedAtSha",
+    "sourceSnapshotSha256",
     "derivation",
     "sourceFiles",
     "rowCount",
@@ -14,9 +14,9 @@
     "assertions"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "artifactId": { "const": "P0.W5.SUPPORTING.MUTATION_CENSUS" },
-    "observedAtSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "sourceSnapshotSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "derivation": { "type": "string" },
     "sourceFiles": { "type": "array", "minItems": 2 },
     "rowCount": { "type": "integer", "minimum": 1 },

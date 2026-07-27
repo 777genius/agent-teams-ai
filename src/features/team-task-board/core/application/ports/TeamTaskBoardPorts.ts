@@ -80,14 +80,27 @@ export interface TaskCommentWriterPort {
 }
 
 export interface TaskCommentAttachmentWriterPort {
-  saveAttachment(
+  runTransaction<T>(
     teamName: string,
     taskId: string,
+    operation: (transaction: TaskCommentAttachmentTransactionPort) => Promise<T>
+  ): Promise<T>;
+}
+
+export interface TaskCommentAttachmentTransactionPort {
+  saveAttachment(
     attachmentId: string,
     filename: string,
     mimeType: AttachmentMediaType,
     base64Data: string
-  ): Promise<TaskAttachmentMeta>;
+  ): Promise<SavedTaskCommentAttachment>;
+  markCommitted(): void;
+}
+
+export interface SavedTaskCommentAttachment {
+  readonly metadata: TaskAttachmentMeta;
+  finalize(): Promise<void>;
+  rollback(): Promise<void>;
 }
 
 export interface TaskFieldsWriterPort {
