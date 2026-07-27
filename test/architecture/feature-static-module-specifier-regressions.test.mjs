@@ -101,3 +101,36 @@ test('uses exact lexical reaching values without guessing ambiguous specifiers',
     ['./block-safe', './captured', './rebound-safe']
   );
 });
+
+test('forwards lexical resolution through unary static module specifiers', () => {
+  const source = `
+    const suffix = 1;
+    require(\`./numeric-\${+suffix}\`);
+    const disabled = 0;
+    require(\`./boolean-\${!disabled}\`);
+  `;
+
+  assert.deepEqual(
+    collectModuleEdgesFromSource(source, 'src/features/unary-specifier/main/index.cjs')
+      .map(({ specifier }) => specifier)
+      .sort(),
+    ['./boolean-true', './numeric-1']
+  );
+});
+
+test('preserves type-only status for import-equals dependencies', () => {
+  const source = `
+    import type Fs = require('node:fs');
+    import Path = require('node:path');
+  `;
+
+  assert.deepEqual(
+    collectModuleEdgesFromSource(source, 'src/features/import-equals/core/domain/model.ts').map(
+      ({ isTypeOnly, specifier }) => ({ isTypeOnly, specifier })
+    ),
+    [
+      { isTypeOnly: true, specifier: 'node:fs' },
+      { isTypeOnly: false, specifier: 'node:path' },
+    ]
+  );
+});

@@ -317,7 +317,12 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       ts.isExternalModuleReference(node.moduleReference) &&
       node.moduleReference.expression
     ) {
-      const edge = addEdge(node, node.moduleReference.expression, 'import');
+      const edge = addEdge(
+        node,
+        node.moduleReference.expression,
+        'import',
+        node.isTypeOnly
+      );
       if (edge) importedBindings.set(node.name.text, { edge, importedName: '*' });
     } else if (ts.isImportTypeNode(node)) {
       addTypeReference(node);

@@ -8,7 +8,7 @@ import {
 } from './feature-export-ast.mjs';
 import { IDENTITY_WRAPPERS } from './feature-identity-wrappers.mjs';
 
-const ARRAY_CALLBACK_RESULT_METHODS = new Set(['flatMap', 'map']);
+const ARRAY_CALLBACK_RESULT_METHODS = new Set(['flatMap', 'map', 'reduce', 'reduceRight']);
 
 function callable(node) {
   const current = node && unwrapExpression(node);
@@ -149,14 +149,22 @@ function definiteArrayCallbackResultCall(callback) {
   }
   const method = memberAccess(call.expression);
   const receiver = method?.receiver && unwrapExpression(method.receiver);
+  const definiteElements =
+    receiver && ts.isArrayLiteralExpression(receiver)
+      ? receiver.elements.filter(
+          (element) => !ts.isOmittedExpression(element) && !ts.isSpreadElement(element)
+        ).length
+      : 0;
+  const callbackDefinitelyRuns =
+    method?.name === 'reduce' || method?.name === 'reduceRight'
+      ? definiteElements >= (call.arguments.length >= 2 ? 1 : 2)
+      : definiteElements >= 1;
   if (
     !method ||
     !ARRAY_CALLBACK_RESULT_METHODS.has(method.name) ||
     !receiver ||
     !ts.isArrayLiteralExpression(receiver) ||
-    !receiver.elements.some(
-      (element) => !ts.isOmittedExpression(element) && !ts.isSpreadElement(element)
-    )
+    !callbackDefinitelyRuns
   ) {
     return null;
   }

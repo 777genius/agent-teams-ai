@@ -53,6 +53,18 @@ test('traces definite synchronous array callback results into public values', ()
       `,
       'src/features/callback-frozen/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/callback-reduce/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = [0].reduce(() => Store, null);
+      `,
+      'src/features/callback-reduce/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-reduce-right/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = [0, 1].reduceRight(() => Store);
+      `,
+      'src/features/callback-reduce-right/main/infrastructure/Store.ts':
+        'export class Store {}',
     },
     (root) => {
       assert.deepEqual(implementationSources(root), [
@@ -61,6 +73,8 @@ test('traces definite synchronous array callback results into public values', ()
         'src/features/callback-flat-map/main/index.ts',
         'src/features/callback-frozen/main/index.ts',
         'src/features/callback-map/main/index.ts',
+        'src/features/callback-reduce-right/main/index.ts',
+        'src/features/callback-reduce/main/index.ts',
       ]);
     }
   );
@@ -125,6 +139,18 @@ test('keeps discarded, deferred, non-result, and non-executing callbacks private
         });
       `,
       'src/features/callback-generator/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-reduce-empty/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = [].reduce(() => Store, null);
+      `,
+      'src/features/callback-reduce-empty/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-reduce-single/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api = [0].reduce(() => Store);
+      `,
+      'src/features/callback-reduce-single/main/infrastructure/Store.ts':
         'export class Store {}',
     },
     (root) => {

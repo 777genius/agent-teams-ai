@@ -207,10 +207,10 @@ function staticPrimitiveValue(expression, resolveIdentifier, resolving = new Set
   }
   if (ts.isPrefixUnaryExpression(current)) {
     if (current.operator === ts.SyntaxKind.ExclamationToken) {
-      const operand = staticTruthiness(current.operand);
-      return operand === null ? UNKNOWN_STATIC_VALUE : !operand;
+      const operand = staticPrimitiveValue(current.operand, resolveIdentifier, resolving);
+      return operand === UNKNOWN_STATIC_VALUE ? UNKNOWN_STATIC_VALUE : !operand;
     }
-    const operand = staticPrimitiveValue(current.operand);
+    const operand = staticPrimitiveValue(current.operand, resolveIdentifier, resolving);
     if (operand === UNKNOWN_STATIC_VALUE) return UNKNOWN_STATIC_VALUE;
     if (current.operator === ts.SyntaxKind.MinusToken) {
       return typeof operand === 'bigint' || typeof operand === 'number'
