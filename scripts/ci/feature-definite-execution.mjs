@@ -192,6 +192,11 @@ function visitVariableDeclarationList(declarationList, visitor) {
 
 function visitSelectedSwitch(statement, visitor) {
   visitDefiniteExpression(statement.expression, visitor);
+  for (const clause of statement.caseBlock.clauses) {
+    if (!ts.isCaseClause(clause)) continue;
+    visitDefiniteExpression(clause.expression, visitor);
+    if (staticStrictEquality(statement.expression, clause.expression) !== false) break;
+  }
   const selected = selectedSwitchClause(statement);
   if (selected === null || selected < 0) return;
 
@@ -282,4 +287,26 @@ export function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
   for (const statement of sourceFile.statements) {
     visitDefiniteStatement(statement, visitor);
   }
+}
+
+const definiteExpressionsBySource = new WeakMap();
+
+export function definiteTopLevelExpressionBoundary(node, sourceFile) {
+  let expressions = definiteExpressionsBySource.get(sourceFile);
+  if (!expressions) {
+    expressions = new Set();
+    visitDefiniteTopLevelExpressions(sourceFile, (candidate) => {
+      if (ts.isExpression(candidate)) expressions.add(candidate);
+    });
+    definiteExpressionsBySource.set(sourceFile, expressions);
+  }
+
+  let boundary = null;
+  let current = node;
+  while (current && current !== sourceFile) {
+    if (ts.isFunctionLike(current) || ts.isClassLike(current)) break;
+    if (ts.isExpression(current) && expressions.has(current)) boundary = current;
+    current = current.parent;
+  }
+  return boundary;
 }

@@ -63,6 +63,103 @@ function iifeSource(body) {
   `;
 }
 
+test('finds public writes in definitely executed expression containers', () => {
+  const cases = {
+    'case-expression': iifeSource(`
+      switch (1) {
+        case (api.Store = Store, 0): break;
+        case 1: break;
+      }
+    `),
+    'conditional-selection': iifeSource(`
+      const ignored = true ? (api.Store = Store) : 0;
+    `),
+    'for-condition': iifeSource(`
+      for (; (api.Store = Store, false);) {}
+    `),
+    'for-increment': iifeSource(`
+      for (let first = true; true; api.Store = Store) {
+        if (!first) break;
+        first = false;
+      }
+    `),
+    'for-initializer': iifeSource(`
+      for (const ignored = (api.Store = Store); false;) {}
+    `),
+    'logical-selection': iifeSource(`
+      const ignored = true && (api.Store = Store);
+    `),
+    'return-operand': iifeSource(`
+      (() => { return (api.Store = Store); })();
+    `),
+    'sequence-expression': iifeSource(`
+      const ignored = (0, api.Store = Store);
+    `),
+    'switch-expression': iifeSource(`
+      switch ((api.Store = Store, 1)) {
+        case 1: break;
+      }
+    `),
+    'throw-operand': iifeSource(`
+      try { throw (api.Store = Store); } catch {}
+    `),
+    'variable-initializer': iifeSource(`
+      const ignored = (api.Store = Store);
+    `),
+  };
+
+  assertImplementationCases(cases, Object.keys(cases));
+  withFeatureFixture(
+    {
+      'src/features/commonjs-variable-initializer/main/index.cjs': `
+        const Store = require('./infrastructure/Store');
+        const ignored = (module.exports.Store = Store);
+      `,
+      'src/features/commonjs-variable-initializer/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+    },
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/commonjs-variable-initializer/main/index.cjs',
+      ]);
+    }
+  );
+});
+
+test('keeps deferred and unreachable expression containers private', () => {
+  const cases = {
+    'callback-deferred': iifeSource(`
+      const ignored = () => (api.Store = Store);
+    `),
+    'conditional-unselected': iifeSource(`
+      const ignored = false ? (api.Store = Store) : 0;
+    `),
+    'for-increment-unreachable': iifeSource(`
+      for (; true; api.Store = Store) { break; }
+    `),
+    'generator-unstarted': iifeSource(`
+      (function* () { return (api.Store = Store); })();
+    `),
+    'logical-unselected': iifeSource(`
+      const ignored = false && (api.Store = Store);
+    `),
+    'switch-case-unselected': iifeSource(`
+      switch (1) {
+        case 1: break;
+        case (api.Store = Store, 2): break;
+      }
+    `),
+    'unreachable-after-return': iifeSource(`
+      (() => {
+        return;
+        const ignored = (api.Store = Store);
+      })();
+    `),
+  };
+
+  assertImplementationCases(cases, []);
+});
+
 test('models selected switch completion, fallthrough, defaults, and breaks', () => {
   const cases = {
     'switch-bigint-selected': controlFlowSource(`

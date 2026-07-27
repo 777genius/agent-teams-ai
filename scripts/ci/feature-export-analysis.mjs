@@ -10,6 +10,7 @@ import {
   immediateInvocation,
   topLevelExpressionBoundary,
 } from './feature-export-flow-analysis.mjs';
+import { definiteTopLevelExpressionBoundary } from './feature-definite-execution.mjs';
 import {
   executedIifeParameterReferences,
   isPotentiallyExecutedAtTopLevel,
@@ -411,6 +412,7 @@ function potentialTopLevelExpressionBoundary(node, sourceFile) {
   if (!isPotentiallyExecutedAtTopLevel(node, sourceFile)) return null;
   let current = node;
   while (current && current !== sourceFile) {
+    if (ts.isFunctionLike(current) || ts.isClassLike(current)) return null;
     if (ts.isExpressionStatement(current)) return current;
     current = current.parent;
   }
@@ -435,6 +437,26 @@ function nestedPublicMutationExpression(
     current = current.parent;
   }
   return expression;
+}
+
+function definitePublicMutationExpression(
+  node,
+  sourceFile,
+  publicTargetOwners,
+  commonJsTargetAliases
+) {
+  const boundary = definiteTopLevelExpressionBoundary(node, sourceFile);
+  if (!boundary) return null;
+  const mutation = nestedPublicMutationExpression(
+    boundary,
+    node,
+    publicTargetOwners,
+    commonJsTargetAliases
+  );
+  return commonJsExportNamesForExpression(mutation, commonJsTargetAliases).length > 0 ||
+    findPublicMutationOwner(mutation, publicTargetOwners)
+    ? mutation
+    : null;
 }
 
 export function findPublicReferenceOwner(
@@ -483,7 +505,8 @@ export function findPublicReferenceOwner(
   if (!current || current.parent !== sourceFile) return null;
   const publicExpressionBoundary = isPotentiallyExecutedAtTopLevel(node, sourceFile)
     ? (topLevelExpressionBoundary(node, sourceFile) ??
-      potentialTopLevelExpressionBoundary(node, sourceFile))
+      potentialTopLevelExpressionBoundary(node, sourceFile) ??
+      definitePublicMutationExpression(node, sourceFile, publicTargetOwners, commonJsTargetAliases))
     : null;
   current = publicExpressionBoundary ?? current;
   const classReference = classifyPublicClassReference(node);
