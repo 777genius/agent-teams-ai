@@ -10,6 +10,7 @@ import {
 } from '@main/utils/atomicWrite';
 
 import { isTaskAttachmentGenerationGuardName } from './TaskAttachmentArtifacts';
+import { cleanupJustCreatedTaskAttachmentPin } from './TaskAttachmentOwnedPinCleanup';
 
 export type TaskAttachmentFileIdentity = DurableFileIdentity;
 
@@ -86,10 +87,11 @@ export async function pinTaskAttachmentGeneration(
 
   const identity = getTaskAttachmentFileIdentity(pinned);
   if (!pinned.isFile() || pinned.isSymbolicLink()) {
-    await removePinnedTaskAttachmentPath(pinPath, identity);
+    await cleanupJustCreatedTaskAttachmentPin(originalPath, pinPath);
     return { kind: 'changed' };
   }
   if (!hasTrustworthyTaskAttachmentFileIdentity(identity)) {
+    await cleanupJustCreatedTaskAttachmentPin(originalPath, pinPath);
     return { kind: 'changed' };
   }
 

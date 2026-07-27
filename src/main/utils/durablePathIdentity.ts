@@ -49,5 +49,9 @@ export function isSameDurableFileIdentity(
   left: DurableFileIdentity,
   right: DurableFileIdentity
 ): boolean {
-  return isSameDurablePathIdentity(left, right);
+  return (
+    isSameDurablePathIdentity(left, right) &&
+    left.birthtimeMs === right.birthtimeMs &&
+    left.size === right.size
+  );
 }

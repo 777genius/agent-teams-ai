@@ -14,7 +14,10 @@ import {
   removeTaskAttachmentGenerationPin,
   restoreDetachedTaskAttachmentGeneration,
 } from '../../../../src/main/services/team/TaskAttachmentGenerationLifecycle';
-import { cleanupAtomicCreateTempLinks } from '../../../../src/main/utils/atomicWrite';
+import {
+  cleanupAtomicCreateTempLinks,
+  isSameDurableFileIdentity,
+} from '../../../../src/main/utils/atomicWrite';
 
 const execFileAsync = promisify(execFile);
 
@@ -74,6 +77,51 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     } finally {
       lstat.mockRestore();
     }
+  });
+
+  it('preserves a replacement swapped in after its cleanup capability was acquired', async () => {
+    const { root, publicPath } = await createRoot();
+    await writeFile(publicPath, 'old');
+    const realLstat = fs.lstat.bind(fs);
+    const realRename = fs.rename.bind(fs);
+    const lstat = vi.spyOn(fs, 'lstat').mockImplementation(async (filePath) => {
+      const stats = await realLstat(filePath);
+      return new Proxy(stats, {
+        get(target, property) {
+          return property === 'ino' ? 0 : Reflect.get(target, property, target);
+        },
+      });
+    });
+    let replacementPinPath = '';
+    const rename = vi.spyOn(fs, 'rename').mockImplementation(async (source, target) => {
+      if (basename(String(source)).startsWith('.review-create.')) {
+        replacementPinPath = String(source);
+        await fs.unlink(replacementPinPath);
+        await writeFile(replacementPinPath, 'foreign replacement', 'utf8');
+      }
+      await realRename(source, target);
+    });
+
+    try {
+      await expect(pinTaskAttachmentGeneration(publicPath)).resolves.toEqual({ kind: 'changed' });
+    } finally {
+      rename.mockRestore();
+      lstat.mockRestore();
+    }
+
+    await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('old');
+    await expect(fs.readFile(replacementPinPath, 'utf8')).resolves.toBe('foreign replacement');
+    expect((await readdir(root)).sort()).toEqual(
+      ['attachment', basename(replacementPinPath)].sort()
+    );
+  });
+
+  it('requires every durable file identity field to match', () => {
+    const identity = { dev: 1, ino: 2, birthtimeMs: 3, size: 4 };
+
+    expect(isSameDurableFileIdentity(identity, { ...identity, birthtimeMs: 5 })).toBe(false);
+    expect(isSameDurableFileIdentity(identity, { ...identity, size: 5 })).toBe(false);
+    expect(isSameDurableFileIdentity(identity, { ...identity })).toBe(true);
   });
 
   it('does not detach a zero-inode replacement with a colliding fallback identity', async () => {
