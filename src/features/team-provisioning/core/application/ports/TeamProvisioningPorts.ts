@@ -13,6 +13,18 @@ import type {
   TeamProvisioningProgress,
 } from '@shared/types';
 
+export type { RuntimeSnapshotReaderPort } from '../queries/GetRuntimeSnapshotUseCase';
+export type {
+  RuntimeDeliveryPort,
+  RuntimeDeliveryStatusPort,
+  RuntimeMessageDeliveryPort,
+} from './RuntimeDeliveryPort';
+export type {
+  ToolApprovalPort,
+  ToolApprovalResponsePort,
+  ToolApprovalSettingsPort,
+} from './ToolApprovalPort';
+
 export interface TeamProvisioningStartPort {
   createTeam(
     request: TeamCreateRequest,

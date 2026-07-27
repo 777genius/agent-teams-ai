@@ -1,16 +1,30 @@
 import {
   bindTeamCrossTeamMessagingApi,
+  bindTeamDiagnosticsApi,
   bindTeamHttpHandlerApis,
   bindTeamIpcHandlerApis,
+  bindTeamMessagingApi,
+  bindTeamRuntimeControlCompatibilityApi,
+  bindTeamToolApprovalApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import type {
+  TeamProvisioningRuntimeDeliveryApi,
+  TeamProvisioningRuntimeSnapshotApi,
+  TeamProvisioningToolApprovalApi,
+} from '@features/team-provisioning/contracts';
+import type {
   TeamCrossTeamMessagingApi,
+  TeamDiagnosticsApi,
   TeamHttpHandlerApis,
   TeamIpcHandlerApis,
+  TeamMessagingApi,
   TeamProvisioningPreflightApi,
+  TeamRuntimeControlCompatibilityApi,
+  TeamToolApprovalApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
+import type { ToolApprovalSettings } from '@shared/types';
 
 function sortedKeys(value: object): string[] {
   return Object.keys(value).sort((left, right) => left.localeCompare(right));
@@ -224,6 +238,72 @@ describe('bindTeamIpcHandlerApis', () => {
       runId: 'run-1',
       state: 'spawning',
     });
+  });
+
+  it('keeps accepted feature contracts exact across the legacy IPC and HTTP groupings', async () => {
+    expectTypeOf<TeamDiagnosticsApi>().toMatchTypeOf<TeamProvisioningRuntimeSnapshotApi>();
+    expectTypeOf<TeamToolApprovalApi>().toEqualTypeOf<TeamProvisioningToolApprovalApi>();
+    expectTypeOf<
+      TeamRuntimeControlCompatibilityApi['deliverOpenCodeRuntimeMessage']
+    >().toEqualTypeOf<TeamProvisioningRuntimeDeliveryApi['deliverOpenCodeRuntimeMessage']>();
+    expectTypeOf<TeamMessagingApi['getOpenCodeRuntimeDeliveryStatus']>().toEqualTypeOf<
+      TeamProvisioningRuntimeDeliveryApi['getOpenCodeRuntimeDeliveryStatus']
+    >();
+
+    const source = createSource();
+    const snapshot = {
+      teamName: 'team',
+      members: {},
+      runId: 'run-1',
+      updatedAt: TEST_TIMESTAMP,
+    };
+    const snapshotPromise = Promise.resolve(snapshot);
+    const approvalPromise = Promise.resolve();
+    const deliveryAck = {
+      ok: true,
+      providerId: 'opencode' as const,
+      teamName: 'team',
+      runId: 'run-1',
+      state: 'delivered' as const,
+      diagnostics: [],
+      observedAt: TEST_TIMESTAMP,
+    };
+    const deliveryPromise = Promise.resolve(deliveryAck);
+    const statusPromise = Promise.resolve(null);
+    const settings = {} as ToolApprovalSettings;
+    source.getTeamAgentRuntimeSnapshot.mockReturnValueOnce(snapshotPromise);
+    source.respondToToolApproval.mockReturnValueOnce(approvalPromise);
+    source.deliverOpenCodeRuntimeMessage.mockReturnValueOnce(deliveryPromise);
+    source.getOpenCodeRuntimeDeliveryStatus.mockReturnValueOnce(statusPromise);
+    const diagnostics = bindTeamDiagnosticsApi(source);
+    const toolApproval = bindTeamToolApprovalApi(source);
+    const runtimeControl = bindTeamRuntimeControlCompatibilityApi(source);
+    const messaging = bindTeamMessagingApi(source);
+
+    const snapshotResult = diagnostics.getTeamAgentRuntimeSnapshot('team');
+    const approvalResult = toolApproval.respondToToolApproval('team', 'run-1', 'request-1', true);
+    const deliveryResult = runtimeControl.deliverOpenCodeRuntimeMessage({});
+    const statusResult = messaging.getOpenCodeRuntimeDeliveryStatus('team', 'message-1');
+    const settingsResult = toolApproval.updateToolApprovalSettings('team', settings);
+
+    expect(snapshotResult).toBe(snapshotPromise);
+    expect(approvalResult).toBe(approvalPromise);
+    expect(deliveryResult).toBe(deliveryPromise);
+    expect(statusResult).toBe(statusPromise);
+    expect(settingsResult).toBeUndefined();
+    expect(source.updateToolApprovalSettings).toHaveBeenCalledWith('team', settings);
+    await expect(snapshotResult).resolves.toBe(snapshot);
+    await expect(approvalResult).resolves.toBeUndefined();
+    await expect(deliveryResult).resolves.toBe(deliveryAck);
+    await expect(statusResult).resolves.toBeNull();
+
+    const settingsFailure = new Error('settings update failed');
+    source.updateToolApprovalSettings.mockImplementationOnce(() => {
+      throw settingsFailure;
+    });
+    expect(() => toolApproval.updateToolApprovalSettings('team', settings)).toThrow(
+      settingsFailure
+    );
   });
 
   it('forwards dense model indexes through the IPC preflight facade', async () => {

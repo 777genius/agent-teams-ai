@@ -217,8 +217,8 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
     return getMemberSpawnStatusesSnapshot(teamName, this.createMemberSpawnStatusesSnapshotPorts());
   }
 
-  async getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
-    return this.runtimeSnapshotFacade.getTeamAgentRuntimeSnapshot(teamName);
+  getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
+    return this.provisioningApplication.getTeamAgentRuntimeSnapshot(teamName);
   }
 
   protected getMemberLaunchGraceKey(run: TRun, memberName: string): string {

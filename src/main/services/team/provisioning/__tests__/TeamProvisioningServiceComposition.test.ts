@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { createTeamProvisioningApplicationFeature } from '@features/team-provisioning/main';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TeamProvisioningService } from '../../TeamProvisioningService';
@@ -9,6 +10,12 @@ import {
   TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS_ARE_EXHAUSTIVE,
   TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS_ARE_UNIQUE,
 } from '../TeamProvisioningServiceComposition';
+
+import type {
+  RuntimeDeliveryStatus,
+  RuntimeMessageDeliveryAck,
+} from '@features/team-provisioning/contracts';
+import type { TeamAgentRuntimeSnapshot, ToolApprovalSettings } from '@shared/types';
 
 const { cleanupStaleAnthropicTeamApiKeyHelpersMock } = vi.hoisted(() => ({
   cleanupStaleAnthropicTeamApiKeyHelpersMock: vi.fn(async () => undefined),
@@ -55,7 +62,92 @@ describe('TeamProvisioningServiceComposition', () => {
         'configFacade'
       )
     ).toBe(Reflect.get(service, 'configFacade'));
+    expect(
+      Reflect.get(
+        Reflect.get(service, 'compatibilityDelegation') as Record<PropertyKey, unknown>,
+        'applicationFeature'
+      )
+    ).toBe(Reflect.get(service, 'applicationFeature'));
     expect(cleanupStaleAnthropicTeamApiKeyHelpersMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('combines the accepted slices without changing receivers, promises, results, or sync errors', async () => {
+    const snapshot = { teamName: 'alpha' } as TeamAgentRuntimeSnapshot;
+    const snapshotPromise = Promise.resolve(snapshot);
+    const responsePromise = Promise.resolve();
+    const deliveryAck = {
+      ok: true,
+      providerId: 'opencode',
+      teamName: 'alpha',
+      runId: 'run-1',
+      state: 'delivered',
+      diagnostics: [],
+      observedAt: '2026-07-26T00:00:00.000Z',
+    } satisfies RuntimeMessageDeliveryAck;
+    const deliveryPromise = Promise.resolve(deliveryAck);
+    const deliveryStatus = {
+      providerId: 'opencode',
+      attempted: true,
+      delivered: true,
+      messageId: 'message-1',
+    } satisfies RuntimeDeliveryStatus;
+    const statusPromise = Promise.resolve(deliveryStatus);
+    const settings = {} as ToolApprovalSettings;
+    const settingsFailure = new Error('settings write failed');
+    const snapshotSource = {
+      getTeamAgentRuntimeSnapshot(this: unknown, teamName: string) {
+        expect(this).toBe(snapshotSource);
+        expect(teamName).toBe(' alpha ');
+        return snapshotPromise;
+      },
+    };
+    const toolApprovalSource = {
+      respondToToolApproval(this: unknown) {
+        expect(this).toBe(toolApprovalSource);
+        return responsePromise;
+      },
+      updateToolApprovalSettings(this: unknown) {
+        expect(this).toBe(toolApprovalSource);
+        throw settingsFailure;
+      },
+    };
+    const runtimeDelivery = {
+      deliverOpenCodeRuntimeMessage(this: unknown) {
+        expect(this).toBe(runtimeDelivery);
+        return deliveryPromise;
+      },
+      getOpenCodeRuntimeDeliveryStatus(this: unknown) {
+        expect(this).toBe(runtimeDelivery);
+        return statusPromise;
+      },
+    };
+    const applicationFeature = createTeamProvisioningApplicationFeature({
+      runtimeSnapshot: { snapshotSource },
+      toolApproval: { toolApprovalSource },
+      runtimeDelivery,
+    });
+
+    const snapshotResult = applicationFeature.getTeamAgentRuntimeSnapshot(' alpha ');
+    const responseResult = applicationFeature.respondToToolApproval(
+      'alpha',
+      'run-1',
+      'request-1',
+      true
+    );
+    const deliveryResult = applicationFeature.deliverOpenCodeRuntimeMessage({});
+    const statusResult = applicationFeature.getOpenCodeRuntimeDeliveryStatus('alpha', 'message-1');
+
+    expect(snapshotResult).toBe(snapshotPromise);
+    expect(responseResult).toBe(responsePromise);
+    expect(deliveryResult).toBe(deliveryPromise);
+    expect(statusResult).toBe(statusPromise);
+    expect(() => applicationFeature.updateToolApprovalSettings('alpha', settings)).toThrow(
+      settingsFailure
+    );
+    await expect(snapshotResult).resolves.toBe(snapshot);
+    await expect(responseResult).resolves.toBeUndefined();
+    await expect(deliveryResult).resolves.toBe(deliveryAck);
+    await expect(statusResult).resolves.toBe(deliveryStatus);
   });
 
   it('keeps moved boundary factories in composition instead of the compatibility facade', () => {
