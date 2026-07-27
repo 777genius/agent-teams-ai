@@ -123,10 +123,8 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     | 'getPendingToolApprovalFilePath'
     | 'getMemberToolApprovalBusyStatus'
     | 'initializeToolApprovalSettingsForLaunch'
-    | 'respondToToolApproval'
     | 'setMainWindow'
     | 'setToolApprovalEventEmitter'
-    | 'updateToolApprovalSettings'
   >;
   protected abstract readonly liveLeadMessagePortsBoundary: Pick<
     TeamProvisioningLiveLeadMessagePortsBoundary<TRun>,
@@ -364,7 +362,7 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   }
 
   updateToolApprovalSettings(teamName: string, settings: ToolApprovalSettings): void {
-    this.toolApprovalFacade.updateToolApprovalSettings(teamName, settings);
+    this.provisioningApplication.updateToolApprovalSettings(teamName, settings);
   }
 
   getPendingToolApprovalFilePath(
@@ -404,8 +402,8 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     return this.openCodeRuntimeControlApi.recordOpenCodeRuntimeBootstrapCheckin(raw);
   }
 
-  async deliverOpenCodeRuntimeMessage(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
-    return this.openCodeRuntimeControlApi.deliverOpenCodeRuntimeMessage(raw);
+  deliverOpenCodeRuntimeMessage(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
+    return this.provisioningApplication.deliverOpenCodeRuntimeMessage(raw);
   }
 
   async recordOpenCodeRuntimeTaskEvent(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
@@ -457,16 +455,13 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     );
   }
 
-  async getOpenCodeRuntimeDeliveryStatus(
+  getOpenCodeRuntimeDeliveryStatus(
     teamName: string,
     messageId: string
   ): ReturnType<
     TeamProvisioningOpenCodeRuntimeDeliveryBoundary<TRun>['getOpenCodeRuntimeDeliveryStatus']
   > {
-    return this.createOpenCodeRuntimeDeliveryBoundary().getOpenCodeRuntimeDeliveryStatus(
-      teamName,
-      messageId
-    );
+    return this.provisioningApplication.getOpenCodeRuntimeDeliveryStatus(teamName, messageId);
   }
 
   protected async tryGetActiveOpenCodePromptDeliveryRecord(input: {
@@ -556,14 +551,20 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
    * Respond to a pending tool approval - sends control_response to CLI stdin.
    * Validates runId match and requestId existence before writing.
    */
-  async respondToToolApproval(
+  respondToToolApproval(
     teamName: string,
     runId: string,
     requestId: string,
     allow: boolean,
     message?: string
   ): Promise<void> {
-    await this.toolApprovalFacade.respondToToolApproval(teamName, runId, requestId, allow, message);
+    return this.provisioningApplication.respondToToolApproval(
+      teamName,
+      runId,
+      requestId,
+      allow,
+      message
+    );
   }
 
   protected async waitForValidConfig(

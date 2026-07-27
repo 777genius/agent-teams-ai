@@ -8,6 +8,11 @@ import { MainTeamLaunchDiagnostics } from '../adapters/output/MainTeamLaunchDiag
 import { MainTeamProvisioningEffects } from '../adapters/output/MainTeamProvisioningEffects';
 import { MainTeamProvisioningWorkspace } from '../infrastructure/MainTeamProvisioningWorkspace';
 
+import { createTeamProvisioningRuntimeDeliveryFeature } from './createTeamProvisioningRuntimeDeliveryFeature';
+import { createTeamProvisioningRuntimeSnapshotFeature } from './createTeamProvisioningRuntimeSnapshotFeature';
+import { createTeamProvisioningToolApprovalFeature } from './createTeamProvisioningToolApprovalFeature';
+
+import type { TeamProvisioningApplicationApi } from '../../contracts';
 import type {
   TeamLaunchDiagnosticsPort,
   TeamProvisioningCancellationPort,
@@ -19,7 +24,28 @@ import type {
   TeamProvisioningStatusPort,
   TeamProvisioningWorkspacePort,
 } from '../../core/application/ports/TeamProvisioningPorts';
+import type { TeamProvisioningRuntimeDeliveryFeatureDeps } from './createTeamProvisioningRuntimeDeliveryFeature';
+import type { TeamProvisioningRuntimeSnapshotFeatureDeps } from './createTeamProvisioningRuntimeSnapshotFeature';
+import type { TeamProvisioningToolApprovalFeatureDeps } from './createTeamProvisioningToolApprovalFeature';
 import type { LaunchIoGovernor } from '@main/services/team/LaunchIoGovernor';
+
+export type TeamProvisioningApplicationFeature = TeamProvisioningApplicationApi;
+
+export interface TeamProvisioningApplicationFeatureDependencies {
+  runtimeSnapshot: TeamProvisioningRuntimeSnapshotFeatureDeps;
+  toolApproval: TeamProvisioningToolApprovalFeatureDeps;
+  runtimeDelivery: TeamProvisioningRuntimeDeliveryFeatureDeps;
+}
+
+export function createTeamProvisioningApplicationFeature(
+  dependencies: TeamProvisioningApplicationFeatureDependencies
+): TeamProvisioningApplicationFeature {
+  return {
+    ...createTeamProvisioningRuntimeSnapshotFeature(dependencies.runtimeSnapshot),
+    ...createTeamProvisioningToolApprovalFeature(dependencies.toolApproval),
+    ...createTeamProvisioningRuntimeDeliveryFeature(dependencies.runtimeDelivery),
+  };
+}
 
 export interface TeamProvisioningFeature {
   provisionTeam: ProvisionTeam;

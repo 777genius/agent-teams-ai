@@ -2600,7 +2600,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "इस टैब में टर्मिनल आउटपुट या चल रही प्रक्रियाएं हो सकती हैं। इसे बंद करने पर यह टैब और इसका दिखाई देने वाला आउटपुट इस वर्कस्पेस से हट जाएगा।",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

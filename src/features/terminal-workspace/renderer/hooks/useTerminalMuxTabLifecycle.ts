@@ -6,20 +6,35 @@ import {
   planFocusTerminalTab,
   planRenameTerminalTab,
   type TerminalMuxActionPlan,
+  type TerminalMuxCommand,
 } from '../model/terminalMuxActionPlans';
 import {
-  hasTerminalTabHistory,
   PREWARMED_TERMINAL_TAB_TITLE,
+  resolveTerminalTabContentState,
+  resolveVisibleTabToFocusAfterClose,
   type TerminalMuxTab,
   type TerminalWorkspaceSnapshot,
 } from '../model/terminalTabPreferences';
 
+import type { TerminalCommandRunPresentation } from '../model/terminalCommandRuns';
 import type { WorkspaceKernel } from '@terminal-platform/workspace-core';
 
 export type TerminalMuxCommands = Pick<
   WorkspaceKernel['commands'],
   'attachSession' | 'dispatchMuxCommand'
 >;
+
+export interface TerminalMuxTabCloseDispatch {
+  closedTabId: string;
+  preferredFocusTabId: string | null;
+  willDispatchPreferredFocus: boolean;
+}
+
+export interface TerminalMuxTabCloseFocusSettlement {
+  changed: boolean;
+  closedTabId: string;
+  focusTabId: string;
+}
 
 interface UseTerminalMuxTabLifecycleOptions {
   activeSessionId: string | null;
@@ -29,6 +44,7 @@ interface UseTerminalMuxTabLifecycleOptions {
   canCreateTab: boolean;
   canFocusTab: boolean;
   canRenameTab: boolean;
+  commandRuns: readonly TerminalCommandRunPresentation[];
   commands: TerminalMuxCommands;
   orderedVisibleTabs: readonly TerminalMuxTab[];
   prewarmedTab: TerminalMuxTab | null;
@@ -36,6 +52,8 @@ interface UseTerminalMuxTabLifecycleOptions {
   tabsCount: number;
   visibleTabs: readonly TerminalMuxTab[];
   onSettingsOpenChange?: (open: boolean) => void;
+  onTabCloseDispatched?: (dispatch: TerminalMuxTabCloseDispatch) => void;
+  onTabCloseFocusSettled?: (settlement: TerminalMuxTabCloseFocusSettlement) => void;
   onTabContentPendingChange?: (pending: boolean) => void;
 }
 
@@ -99,6 +117,7 @@ export function useTerminalMuxTabLifecycle({
   canCreateTab,
   canFocusTab,
   canRenameTab,
+  commandRuns,
   commands,
   orderedVisibleTabs,
   prewarmedTab,
@@ -106,6 +125,8 @@ export function useTerminalMuxTabLifecycle({
   tabsCount,
   visibleTabs,
   onSettingsOpenChange,
+  onTabCloseDispatched,
+  onTabCloseFocusSettled,
   onTabContentPendingChange,
 }: UseTerminalMuxTabLifecycleOptions): UseTerminalMuxTabLifecycleResult {
   const mountedRef = useRef(true);
@@ -232,7 +253,10 @@ export function useTerminalMuxTabLifecycle({
   }, []);
 
   const runMuxAction = useCallback(
-    async (plan: TerminalMuxActionPlan): Promise<void> => {
+    async (
+      plan: TerminalMuxActionPlan,
+      onCommandSettled?: (command: TerminalMuxCommand, changed: boolean) => void
+    ): Promise<void> => {
       if (!renderedScopeIsCurrent || foregroundOperationRef.current) {
         return;
       }
@@ -267,9 +291,13 @@ export function useTerminalMuxTabLifecycle({
           if (!isForegroundOperationCurrent(token)) {
             return;
           }
-          await token.commands.dispatchMuxCommand(token.activeSessionId, command);
+          const result = await token.commands.dispatchMuxCommand(token.activeSessionId, command);
           if (!isForegroundOperationCurrent(token)) {
             return;
+          }
+          onCommandSettled?.(command, result.changed);
+          if (command.kind === 'close_tab' && !result.changed) {
+            break;
           }
         }
 
@@ -362,11 +390,56 @@ export function useTerminalMuxTabLifecycle({
         orderedVisibleTabs,
         tab,
       });
-      if (plan) {
-        await runMuxAction(plan);
+      if (!plan) {
+        return;
       }
+
+      const targetScopeEpoch = scopeRef.current.epoch;
+      const preferredFocusTabId = resolveVisibleTabToFocusAfterClose(
+        orderedVisibleTabs,
+        tab.tab_id
+      );
+      const willDispatchPreferredFocus = plan.commands.some(
+        (command) => command.kind === 'focus_tab' && command.tab_id === preferredFocusTabId
+      );
+      await runMuxAction(plan, (command, changed) => {
+        if (
+          changed &&
+          command.kind === 'close_tab' &&
+          command.tab_id === tab.tab_id &&
+          mountedRef.current &&
+          scopeRef.current.epoch === targetScopeEpoch
+        ) {
+          onTabCloseDispatched?.({
+            closedTabId: tab.tab_id,
+            preferredFocusTabId,
+            willDispatchPreferredFocus,
+          });
+          return;
+        }
+        if (
+          command.kind === 'focus_tab' &&
+          command.tab_id === preferredFocusTabId &&
+          mountedRef.current &&
+          scopeRef.current.epoch === targetScopeEpoch
+        ) {
+          onTabCloseFocusSettled?.({
+            changed,
+            closedTabId: tab.tab_id,
+            focusTabId: command.tab_id,
+          });
+        }
+      });
     },
-    [activeVisibleTabId, canCloseVisibleTabs, canFocusTab, orderedVisibleTabs, runMuxAction]
+    [
+      activeVisibleTabId,
+      canCloseVisibleTabs,
+      canFocusTab,
+      onTabCloseDispatched,
+      onTabCloseFocusSettled,
+      orderedVisibleTabs,
+      runMuxAction,
+    ]
   );
 
   const requestCloseTab = useCallback(
@@ -375,7 +448,7 @@ export function useTerminalMuxTabLifecycle({
         return;
       }
 
-      if (hasTerminalTabHistory(snapshot, tab)) {
+      if (resolveTerminalTabContentState(snapshot, tab, commandRuns) !== 'empty') {
         const targetScopeEpoch = scopeRef.current.epoch;
         updateViewStateForEpoch(targetScopeEpoch, (current) => ({
           ...current,
@@ -386,7 +459,7 @@ export function useTerminalMuxTabLifecycle({
 
       await closeTab(tab);
     },
-    [canCloseVisibleTabs, closeTab, prewarmedTabId, snapshot, updateViewStateForEpoch]
+    [canCloseVisibleTabs, closeTab, commandRuns, prewarmedTabId, snapshot, updateViewStateForEpoch]
   );
 
   const dismissCloseCandidate = useCallback((): void => {
