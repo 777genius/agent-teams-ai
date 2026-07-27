@@ -3,6 +3,7 @@ import ts from 'typescript';
 import {
   executedIifeForCall,
   staticNullishness,
+  staticStrictEquality,
   staticTruthiness,
 } from './feature-executed-iife-analysis.mjs';
 
@@ -66,19 +67,85 @@ function visitDefiniteExpression(node, visitor) {
 const COMPLETION_NORMAL = 1 << 0;
 const COMPLETION_RETURN = 1 << 1;
 const COMPLETION_THROW = 1 << 2;
-const COMPLETION_ABRUPT = COMPLETION_RETURN | COMPLETION_THROW;
+const COMPLETION_BREAK = 1 << 3;
+const COMPLETION_CONTINUE = 1 << 4;
+const COMPLETION_ABRUPT =
+  COMPLETION_RETURN | COMPLETION_THROW | COMPLETION_BREAK | COMPLETION_CONTINUE;
+
+function sequenceCompletion(statements) {
+  let completion = COMPLETION_NORMAL;
+  for (const statement of statements) {
+    if ((completion & COMPLETION_NORMAL) === 0) break;
+    completion = (completion & COMPLETION_ABRUPT) | statementCompletion(statement);
+  }
+  return completion;
+}
+
+function possibleSwitchEntries(statement) {
+  const clauses = statement.caseBlock.clauses;
+  const entries = [];
+  for (const [index, clause] of clauses.entries()) {
+    if (!ts.isCaseClause(clause)) continue;
+    const matches = staticStrictEquality(statement.expression, clause.expression);
+    if (matches !== false) entries.push(index);
+    if (matches === true) return { entries, noMatch: false };
+  }
+
+  const defaultIndex = clauses.findIndex(ts.isDefaultClause);
+  if (defaultIndex >= 0) entries.push(defaultIndex);
+  return { entries, noMatch: defaultIndex < 0 };
+}
+
+function selectedSwitchClause(statement) {
+  const { entries, noMatch } = possibleSwitchEntries(statement);
+  return !noMatch && entries.length === 1 ? entries[0] : null;
+}
+
+function switchCompletionFrom(statement, startIndex) {
+  if (startIndex < 0) return COMPLETION_NORMAL;
+  const statements = statement.caseBlock.clauses
+    .slice(startIndex)
+    .flatMap((clause) => [...clause.statements]);
+  const completion = sequenceCompletion(statements);
+  return (
+    (completion & ~COMPLETION_BREAK) |
+    ((completion & COMPLETION_BREAK) !== 0 ? COMPLETION_NORMAL : 0)
+  );
+}
+
+function switchCompletion(statement) {
+  const { entries, noMatch } = possibleSwitchEntries(statement);
+  let completion = entries.reduce(
+    (combined, index) => combined | switchCompletionFrom(statement, index),
+    0
+  );
+  if (noMatch) completion |= COMPLETION_NORMAL;
+  return completion;
+}
+
+function loopCompletion(statement) {
+  const bodyCompletion = statementCompletion(statement.statement);
+  const abrupt = bodyCompletion & (COMPLETION_RETURN | COMPLETION_THROW);
+  const breaks = (bodyCompletion & COMPLETION_BREAK) !== 0 ? COMPLETION_NORMAL : 0;
+  const condition = ts.isForStatement(statement) ? statement.condition : statement.expression;
+  const truthiness = condition ? staticTruthiness(condition) : true;
+
+  if (ts.isDoStatement(statement)) {
+    const reachesCondition = (bodyCompletion & (COMPLETION_NORMAL | COMPLETION_CONTINUE)) !== 0;
+    const exitsAfterCondition = reachesCondition && truthiness !== true ? COMPLETION_NORMAL : 0;
+    return abrupt | breaks | exitsAfterCondition;
+  }
+  if (truthiness === false) return COMPLETION_NORMAL;
+  if (truthiness === true) return abrupt | breaks;
+  return abrupt | COMPLETION_NORMAL;
+}
 
 function statementCompletion(statement) {
   if (ts.isReturnStatement(statement)) return COMPLETION_RETURN;
   if (ts.isThrowStatement(statement)) return COMPLETION_THROW;
-  if (ts.isBlock(statement)) {
-    let completion = COMPLETION_NORMAL;
-    for (const child of statement.statements) {
-      if ((completion & COMPLETION_NORMAL) === 0) break;
-      completion = (completion & COMPLETION_ABRUPT) | statementCompletion(child);
-    }
-    return completion;
-  }
+  if (ts.isBreakStatement(statement)) return COMPLETION_BREAK;
+  if (ts.isContinueStatement(statement)) return COMPLETION_CONTINUE;
+  if (ts.isBlock(statement)) return sequenceCompletion(statement.statements);
   if (ts.isIfStatement(statement)) {
     const truthiness = staticTruthiness(statement.expression);
     if (truthiness === true) return statementCompletion(statement.thenStatement);
@@ -92,7 +159,14 @@ function statementCompletion(statement) {
       (statement.elseStatement ? statementCompletion(statement.elseStatement) : COMPLETION_NORMAL)
     );
   }
-  if (ts.isDoStatement(statement)) return statementCompletion(statement.statement);
+  if (ts.isSwitchStatement(statement)) return switchCompletion(statement);
+  if (
+    ts.isWhileStatement(statement) ||
+    ts.isForStatement(statement) ||
+    ts.isDoStatement(statement)
+  ) {
+    return loopCompletion(statement);
+  }
   if (ts.isTryStatement(statement)) {
     let completion = statementCompletion(statement.tryBlock);
     if (statement.catchClause && (completion & COMPLETION_THROW) !== 0) {
@@ -110,15 +184,65 @@ function statementCompletion(statement) {
   return COMPLETION_NORMAL;
 }
 
+function visitVariableDeclarationList(declarationList, visitor) {
+  for (const declaration of declarationList.declarations) {
+    if (declaration.initializer) visitDefiniteExpression(declaration.initializer, visitor);
+  }
+}
+
+function visitSelectedSwitch(statement, visitor) {
+  visitDefiniteExpression(statement.expression, visitor);
+  const selected = selectedSwitchClause(statement);
+  if (selected === null || selected < 0) return;
+
+  let completion = COMPLETION_NORMAL;
+  for (const clause of statement.caseBlock.clauses.slice(selected)) {
+    for (const child of clause.statements) {
+      if ((completion & COMPLETION_NORMAL) === 0) return;
+      completion = (completion & COMPLETION_ABRUPT) | visitDefiniteStatement(child, visitor);
+    }
+  }
+}
+
+function visitLoop(statement, visitor) {
+  if (ts.isForStatement(statement)) {
+    if (statement.initializer) {
+      if (ts.isVariableDeclarationList(statement.initializer)) {
+        visitVariableDeclarationList(statement.initializer, visitor);
+      } else {
+        visitDefiniteExpression(statement.initializer, visitor);
+      }
+    }
+    if (statement.condition) visitDefiniteExpression(statement.condition, visitor);
+  } else if (!ts.isDoStatement(statement)) {
+    visitDefiniteExpression(statement.expression, visitor);
+  }
+
+  const condition = ts.isForStatement(statement) ? statement.condition : statement.expression;
+  const truthiness = condition ? staticTruthiness(condition) : true;
+  if (ts.isDoStatement(statement) || truthiness === true) {
+    const bodyCompletion = visitDefiniteStatement(statement.statement, visitor);
+    if (
+      ts.isForStatement(statement) &&
+      statement.incrementor &&
+      (bodyCompletion & (COMPLETION_NORMAL | COMPLETION_CONTINUE)) !== 0
+    ) {
+      visitDefiniteExpression(statement.incrementor, visitor);
+    }
+    if (
+      ts.isDoStatement(statement) &&
+      (bodyCompletion & (COMPLETION_NORMAL | COMPLETION_CONTINUE)) !== 0
+    ) {
+      visitDefiniteExpression(statement.expression, visitor);
+    }
+  }
+}
+
 function visitDefiniteStatement(statement, visitor) {
   if (ts.isExpressionStatement(statement)) {
     visitDefiniteExpression(statement.expression, visitor);
   } else if (ts.isVariableStatement(statement)) {
-    for (const declaration of statement.declarationList.declarations) {
-      if (declaration.initializer) {
-        visitDefiniteExpression(declaration.initializer, visitor);
-      }
-    }
+    visitVariableDeclarationList(statement.declarationList, visitor);
   } else if (ts.isReturnStatement(statement) || ts.isThrowStatement(statement)) {
     if (statement.expression) visitDefiniteExpression(statement.expression, visitor);
   } else if (ts.isBlock(statement)) {
@@ -134,11 +258,14 @@ function visitDefiniteStatement(statement, visitor) {
     } else if (truthiness === false && statement.elseStatement) {
       visitDefiniteStatement(statement.elseStatement, visitor);
     }
-  } else if (ts.isDoStatement(statement)) {
-    const completion = visitDefiniteStatement(statement.statement, visitor);
-    if ((completion & COMPLETION_NORMAL) !== 0) {
-      visitDefiniteExpression(statement.expression, visitor);
-    }
+  } else if (ts.isSwitchStatement(statement)) {
+    visitSelectedSwitch(statement, visitor);
+  } else if (
+    ts.isWhileStatement(statement) ||
+    ts.isForStatement(statement) ||
+    ts.isDoStatement(statement)
+  ) {
+    visitLoop(statement, visitor);
   } else if (ts.isTryStatement(statement)) {
     const tryCompletion = visitDefiniteStatement(statement.tryBlock, visitor);
     if (tryCompletion === COMPLETION_THROW && statement.catchClause) {

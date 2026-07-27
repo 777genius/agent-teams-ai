@@ -1,6 +1,15 @@
 import ts from 'typescript';
 
 import { containsReference, propertyNameText, unwrapExpression } from './feature-export-ast.mjs';
+import {
+  staticNullishness,
+  staticPropertyKey,
+  staticStrictEquality,
+  staticTruthiness,
+  staticUndefinedness,
+} from './feature-static-value-analysis.mjs';
+
+export { staticNullishness, staticStrictEquality, staticTruthiness };
 
 function callableTarget(expression) {
   let current = unwrapExpression(expression);
@@ -113,26 +122,15 @@ export function immediateIifeInvocation(node) {
     : null;
 }
 
-export function staticTruthiness(expression) {
-  const current = unwrapExpression(expression);
-  if (current.kind === ts.SyntaxKind.TrueKeyword) return true;
-  if (current.kind === ts.SyntaxKind.FalseKeyword || current.kind === ts.SyntaxKind.NullKeyword) {
-    return false;
-  }
-  if (ts.isStringLiteralLike(current)) return current.text.length > 0;
-  if (ts.isNumericLiteral(current)) return Number(current.text) !== 0;
-  if (ts.isBigIntLiteral(current)) return BigInt(current.text.slice(0, -1)) !== 0n;
-  if (ts.isPrefixUnaryExpression(current) && current.operator === ts.SyntaxKind.ExclamationToken) {
-    const operand = staticTruthiness(current.operand);
-    return operand === null ? null : !operand;
-  }
-  return null;
-}
+const MISSING_ARGUMENT = Symbol('missing-argument');
+const UNKNOWN_SELECTION = Symbol('unknown-selection');
+const DEFINED_SELECTION = Symbol('defined-selection');
 
-export function staticNullishness(expression) {
-  const current = unwrapExpression(expression);
-  if (current.kind === ts.SyntaxKind.NullKeyword) return true;
-  return staticTruthiness(current) === null ? null : false;
+function selectionUndefinedness(expression) {
+  if (expression === MISSING_ARGUMENT) return true;
+  if (expression === UNKNOWN_SELECTION) return null;
+  if (expression === DEFINED_SELECTION) return false;
+  return staticUndefinedness(expression);
 }
 
 export function isPotentiallyExecutedAtTopLevel(node, sourceFile) {
@@ -504,7 +502,101 @@ function referencesForSelection(callable, parameter, selectedPath) {
   return referencesForBindingSelection(callable, parameter.name, selectedPath);
 }
 
-function defaultParameterReferences(callable, parameter, reference) {
+function staticPropertyName(name) {
+  return staticPropertyKey(name);
+}
+
+function objectLiteralSelection(object, key) {
+  for (const property of [...object.properties].reverse()) {
+    if (ts.isSpreadAssignment(property)) {
+      const selected = literalSelection(property.expression, key, false);
+      if (selected !== MISSING_ARGUMENT) return selected;
+      continue;
+    }
+    const propertyKey = staticPropertyName(property.name);
+    if (propertyKey === null) return UNKNOWN_SELECTION;
+    if (propertyKey !== key) continue;
+    if (ts.isPropertyAssignment(property)) return property.initializer;
+    if (ts.isShorthandPropertyAssignment(property)) return property.name;
+    return DEFINED_SELECTION;
+  }
+  return MISSING_ARGUMENT;
+}
+
+function arrayLiteralSelection(array, index) {
+  if (array.elements.some(ts.isSpreadElement)) return UNKNOWN_SELECTION;
+  const element = array.elements[index];
+  return !element || ts.isOmittedExpression(element) ? MISSING_ARGUMENT : element;
+}
+
+function literalSelection(source, key, arrayPattern) {
+  if (source === MISSING_ARGUMENT || source === UNKNOWN_SELECTION) return UNKNOWN_SELECTION;
+  const current = unwrapExpression(source);
+  if (arrayPattern && ts.isArrayLiteralExpression(current)) {
+    return arrayLiteralSelection(current, Number(key));
+  }
+  if (!arrayPattern && ts.isObjectLiteralExpression(current)) {
+    return objectLiteralSelection(current, key);
+  }
+  if (!arrayPattern && staticNullishness(current) === false && staticTruthiness(current) !== null) {
+    return MISSING_ARGUMENT;
+  }
+  return UNKNOWN_SELECTION;
+}
+
+function bindingPatternContains(pattern, target) {
+  if (ts.isIdentifier(pattern)) return false;
+  return pattern.elements.some(
+    (element) =>
+      ts.isBindingElement(element) &&
+      (element === target || bindingPatternContains(element.name, target))
+  );
+}
+
+function bindingElementKey(pattern, element, index) {
+  if (ts.isArrayBindingPattern(pattern)) return String(index);
+  const name = element.propertyName ?? element.name;
+  return staticPropertyName(name);
+}
+
+function bindingElementDefaultExecutes(pattern, source, target) {
+  if (ts.isIdentifier(pattern)) return false;
+  for (const [index, element] of pattern.elements.entries()) {
+    if (!ts.isBindingElement(element)) continue;
+    if (element !== target && !bindingPatternContains(element.name, target)) continue;
+    const key = bindingElementKey(pattern, element, index);
+    if (key === null || element.dotDotDotToken) return false;
+    let selected = literalSelection(source, key, ts.isArrayBindingPattern(pattern));
+    const undefinedness = selectionUndefinedness(selected);
+    if (element === target) return undefinedness === true;
+    if (undefinedness === true) {
+      if (!element.initializer) return false;
+      selected = element.initializer;
+    } else if (undefinedness === null) {
+      return false;
+    }
+    return bindingElementDefaultExecutes(element.name, selected, target);
+  }
+  return false;
+}
+
+function parameterDefaultExecutes(argument) {
+  return argument === undefined || staticUndefinedness(argument) === true;
+}
+
+function effectiveParameterValue(parameter, argument) {
+  if (!parameterDefaultExecutes(argument)) {
+    return argument === undefined ? UNKNOWN_SELECTION : argument;
+  }
+  return parameter.initializer ?? UNKNOWN_SELECTION;
+}
+
+export function executedIifeParameterInitializer(parameter, argument) {
+  const value = effectiveParameterValue(parameter, argument);
+  return value === UNKNOWN_SELECTION || value === MISSING_ARGUMENT ? null : value;
+}
+
+function defaultParameterReferences(callable, parameter, reference, argument) {
   let current = reference;
   while (current && current !== parameter) {
     const parent = current.parent;
@@ -514,12 +606,27 @@ function defaultParameterReferences(callable, parameter, reference) {
       parent.initializer &&
       containsReference(parent.initializer, reference)
     ) {
+      if (
+        !bindingElementDefaultExecutes(
+          parameter.name,
+          effectiveParameterValue(parameter, argument),
+          parent
+        )
+      ) {
+        return [];
+      }
       const selectedPath = referencePath(parent.initializer, reference) ?? [];
       return referencesForBindingSelection(callable, parent.name, selectedPath);
     }
     current = parent;
   }
-  if (!parameter.initializer || !containsReference(parameter.initializer, reference)) return [];
+  if (
+    !parameter.initializer ||
+    !containsReference(parameter.initializer, reference) ||
+    !parameterDefaultExecutes(argument)
+  ) {
+    return [];
+  }
   const selectedPath = referencePath(parameter.initializer, reference) ?? [];
   return referencesForSelection(callable, parameter, selectedPath);
 }
@@ -546,8 +653,12 @@ export function executedIifeParameterReferences(reference) {
       }
       if (invocation) {
         for (const [index, parameter] of invocation.callable.parameters.entries()) {
-          if (invocation.arguments[index]) continue;
-          const references = defaultParameterReferences(invocation.callable, parameter, reference);
+          const references = defaultParameterReferences(
+            invocation.callable,
+            parameter,
+            reference,
+            invocation.arguments[index]
+          );
           if (references.length > 0) return references;
         }
       }

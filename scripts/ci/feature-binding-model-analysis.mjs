@@ -2,7 +2,10 @@ import ts from 'typescript';
 
 import { propertyNameText, unwrapExpression } from './feature-export-ast.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
-import { executedIifeForCall } from './feature-executed-iife-analysis.mjs';
+import {
+  executedIifeForCall,
+  executedIifeParameterInitializer,
+} from './feature-executed-iife-analysis.mjs';
 
 function bindingNames(bindingName) {
   if (ts.isIdentifier(bindingName)) return [bindingName.text];
@@ -96,9 +99,9 @@ export function collectBindingModel(sourceFile) {
     if (!invocation || !invocation.callable.body) return;
     for (const [index, parameter] of invocation.callable.parameters.entries()) {
       if (parameter.dotDotDotToken) continue;
-      const argument = invocation.arguments[index] ?? parameter.initializer;
-      if (!argument) continue;
-      addBinding(parameter.name, argument, parameter.getStart(sourceFile), undefined, {
+      const initializer = executedIifeParameterInitializer(parameter, invocation.arguments[index]);
+      if (!initializer) continue;
+      addBinding(parameter.name, initializer, parameter.getStart(sourceFile), undefined, {
         scopeEnd: invocation.callable.body.end,
         scopeStart: invocation.callable.body.pos,
       });
