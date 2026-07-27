@@ -1,6 +1,6 @@
-export type { TeamRosterMutationRendererSliceDependencies } from './adapters/createTeamRosterMutationRendererSlice';
-export { createTeamRosterMutationRendererSlice } from './adapters/createTeamRosterMutationRendererSlice';
-export { createTeamRosterMutationTransport } from './adapters/createTeamRosterMutationTransport';
+export type { TeamRosterMutationRendererSliceDependencies } from './composition/createTeamRosterMutationRendererSlice';
+export { createTeamRosterMutationRendererSlice } from './composition/createTeamRosterMutationRendererSlice';
+export { createTeamRosterMutationTransport } from './composition/createTeamRosterMutationTransport';
 export type {
   TeamRosterMutationActionsPort,
   TeamRosterMutationRefreshActions,

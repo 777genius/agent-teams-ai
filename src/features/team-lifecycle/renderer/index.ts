@@ -1,7 +1,6 @@
 export { createTeamLifecycleMutationCleanup } from './adapters/createTeamLifecycleMutationCleanup';
 export type { TeamLifecycleMutationSliceDependencies } from './adapters/createTeamLifecycleMutationSlice';
 export { createTeamLifecycleMutationSlice } from './adapters/createTeamLifecycleMutationSlice';
-export { createTeamLifecycleMutationTransport } from './adapters/createTeamLifecycleMutationTransport';
 export type {
   TeamLifecycleListItemViewModel,
   TeamLifecycleListStatusTone,
@@ -12,6 +11,7 @@ export {
   toTeamLifecycleListItemViewModel,
   toTeamLifecycleListViewModel,
 } from './adapters/teamLifecycleListViewModel';
+export { createTeamLifecycleMutationTransport } from './composition/createTeamLifecycleMutationTransport';
 export type { UseTeamLifecycleListResult } from './hooks/useTeamLifecycleList';
 export { useTeamLifecycleList } from './hooks/useTeamLifecycleList';
 export type {
