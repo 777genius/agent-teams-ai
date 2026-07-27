@@ -203,6 +203,7 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
           return { success: false, error: validatedOwner.error ?? 'Invalid owner' };
         }
       }
+      let blockedBy: string[] | undefined;
       if (payload.blockedBy !== undefined) {
         if (
           !Array.isArray(payload.blockedBy) ||
@@ -210,7 +211,16 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
         ) {
           return { success: false, error: 'blockedBy must be an array of task ID strings' };
         }
+        blockedBy = [];
+        for (const id of payload.blockedBy) {
+          const validated = validateTaskId(id);
+          if (!validated.valid) {
+            return { success: false, error: validated.error ?? 'Invalid blockedBy task id' };
+          }
+          blockedBy.push(validated.value!);
+        }
       }
+      let related: string[] | undefined;
       if (payload.related !== undefined) {
         if (
           !Array.isArray(payload.related) ||
@@ -218,11 +228,13 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
         ) {
           return { success: false, error: 'related must be an array of task ID strings' };
         }
+        related = [];
         for (const id of payload.related) {
           const validated = validateTaskId(id);
           if (!validated.valid) {
             return { success: false, error: validated.error ?? 'Invalid related task id' };
           }
+          related.push(validated.value!);
         }
       }
       if (payload.prompt !== undefined) {
@@ -247,8 +259,8 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
           subject: payload.subject!.trim(),
           description: payload.description?.trim(),
           owner: payload.owner?.trim() || undefined,
-          blockedBy: payload.blockedBy,
-          related: payload.related,
+          blockedBy,
+          related,
           descriptionTaskRefs: validatedDescriptionTaskRefs.value,
           prompt: payload.prompt?.trim() || undefined,
           promptTaskRefs: validatedPromptTaskRefs.value,
@@ -304,7 +316,20 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
       if (!Array.isArray(orderedTaskIds)) {
         return { success: false, error: 'orderedTaskIds must be an array' };
       }
-      const ids = orderedTaskIds.filter((id): id is string => typeof id === 'string');
+      const ids: string[] = [];
+      for (const id of orderedTaskIds) {
+        if (typeof id !== 'string') {
+          return { success: false, error: 'orderedTaskIds must contain only task ID strings' };
+        }
+        const validatedTaskId = validateTaskId(id);
+        if (!validatedTaskId.valid) {
+          return {
+            success: false,
+            error: validatedTaskId.error ?? 'orderedTaskIds contains an invalid task ID',
+          };
+        }
+        ids.push(validatedTaskId.value!);
+      }
       return executeTeamTaskBoardHandler(dependencies.logger, 'updateKanbanColumnOrder', () =>
         dependencies.commands.updateKanbanColumnOrder(
           validatedTeamName.value!,

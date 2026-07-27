@@ -2,13 +2,16 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import type { AtomicCreateResult } from './atomicWrite';
+export * from './durablePathIdentity';
 
-export interface DurablePathIdentity {
-  dev: number;
-  ino: number;
-  birthtimeMs: number;
-}
+import { resumeDeterministicDetachedRemoval } from './durableDetachedRemoval';
+import {
+  type DurablePathIdentity,
+  getDurablePathIdentity,
+  isSameDurablePathIdentity,
+} from './durablePathIdentity';
+
+import type { AtomicCreateResult } from './atomicCreateTypes';
 
 export type AtomicPathRemovalResult = 'deleted' | 'missing' | 'changed';
 export type DurableDirectoryEntryCleanupResult = 'cleaned' | 'missing' | 'validation_failed';
@@ -391,25 +394,6 @@ export interface DurablePathRemovalProofHooks {
   onRemovalDurable: (detachedPath: string, identity: DurablePathIdentity) => Promise<void>;
 }
 
-export function getDurablePathIdentity(
-  stats: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs'>
-): DurablePathIdentity {
-  return {
-    dev: stats.dev,
-    ino: stats.ino,
-    birthtimeMs: stats.birthtimeMs,
-  };
-}
-
-export function isSameDurablePathIdentity(
-  left: DurablePathIdentity,
-  right: DurablePathIdentity
-): boolean {
-  if (left.dev !== right.dev) return false;
-  if (left.ino !== 0 && right.ino !== 0) return left.ino === right.ino;
-  return left.birthtimeMs === right.birthtimeMs;
-}
-
 function getIdentityStableDirectoryPath(handle: fs.promises.FileHandle): string | null {
   if (process.platform !== 'linux') return null;
   return `/proc/self/fd/${handle.fd}`;
@@ -565,7 +549,12 @@ export async function atomicReplaceFileIfUnchangedAsync(
     await fs.promises.unlink(detachedPath);
     targetDetached = false;
     await syncDirectory(dir, true);
-    return { dev: stagedStats.dev, ino: stagedStats.ino };
+    return {
+      dev: stagedStats.dev,
+      ino: stagedStats.ino,
+      birthtimeMs: stagedStats.birthtimeMs,
+      size: stagedStats.size,
+    };
   } finally {
     await fs.promises.unlink(stagedPath).catch(() => undefined);
     if (targetDetached) {
@@ -729,35 +718,30 @@ export async function removePathWithIdentityFenceAsync(
     }
   };
 
+  const resumeProofBackedRemoval = (): Promise<AtomicPathRemovalResult> => {
+    if (!options.proofHooks) return Promise.resolve('missing');
+    return resumeDeterministicDetachedRemoval({
+      detachedPath,
+      removalOptions,
+      validateDetached: options.validateDetached,
+      proofHooks: options.proofHooks,
+      syncParentDirectory: () => syncDirectory(dir, options.durability === 'strict'),
+    });
+  };
+
   try {
     if (options.proofHooks) {
-      let resumedStats: fs.Stats | null = null;
-      try {
-        resumedStats = await fs.promises.lstat(detachedPath);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      }
-      if (resumedStats) {
-        const resumedIdentity = getDurablePathIdentity(resumedStats);
-        if (
-          options.validateDetached &&
-          !(await options.validateDetached(detachedPath, resumedIdentity))
-        ) {
-          return 'changed';
-        }
-        await options.proofHooks.onDetachedValidated(detachedPath, resumedIdentity);
-        await fs.promises.rm(detachedPath, removalOptions);
-        await syncDirectory(dir, options.durability === 'strict');
-        await options.proofHooks.onRemovalDurable(detachedPath, resumedIdentity);
-        return 'deleted';
-      }
+      const resumed = await resumeProofBackedRemoval();
+      if (resumed !== 'missing') return resumed;
     }
 
     try {
       await fs.promises.rename(targetPath, detachedPath);
       detached = true;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return resumeProofBackedRemoval();
+      }
       throw error;
     }
 

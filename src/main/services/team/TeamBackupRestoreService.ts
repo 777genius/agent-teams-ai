@@ -47,7 +47,7 @@ export interface TeamBackupRestorePorts {
   loadManifest(teamName: string): Promise<BackupManifest | null>;
   getBackupDir(teamName: string): string;
   getSourcePathForRelPath(teamName: string, relPath: string): string;
-  enumerateBackupFiles(teamName: string): Promise<string[]>;
+  enumerateRestorableBackupFiles(teamName: string): Promise<string[]>;
 }
 
 function isEnoent(error: unknown): boolean {
@@ -126,7 +126,7 @@ export class TeamBackupRestoreService {
     // Config missing or corrupted — full restore
     logger.info(`[Backup] Full restoring team ${teamName} (config ${sourceConfigResult.status})`);
     const backupDir = this.ports.getBackupDir(teamName);
-    const backupFiles = await this.ports.enumerateBackupFiles(teamName);
+    const backupFiles = await this.ports.enumerateRestorableBackupFiles(teamName);
     let count = 0;
 
     // Restore config.json first
@@ -228,7 +228,7 @@ export class TeamBackupRestoreService {
     sourceConfig: Extract<SourceConfigObservation, { status: 'valid' }>
   ): Promise<number> {
     const backupDir = this.ports.getBackupDir(teamName);
-    const backupFiles = await this.ports.enumerateBackupFiles(teamName);
+    const backupFiles = await this.ports.enumerateRestorableBackupFiles(teamName);
     let count = 0;
 
     for (const relPath of backupFiles) {

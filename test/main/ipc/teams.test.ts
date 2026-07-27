@@ -647,6 +647,8 @@ describe('ipc teams handlers', () => {
     updateKanbanColumnOrder: vi.fn(() => resolvedUndefined()),
     updateTaskStatus: vi.fn(() => resolvedUndefined()),
     startTask: vi.fn(() => resolvedUndefined()),
+    addTaskAttachment: vi.fn(() => resolvedUndefined()),
+    removeTaskAttachment: vi.fn(() => resolvedUndefined()),
     addTaskComment: vi.fn(() =>
       resolved({
         id: 'c1',
@@ -1674,6 +1676,142 @@ describe('ipc teams handlers', () => {
       );
     } finally {
       await fs.promises.rm(attachmentDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rolls back attachment bytes when task metadata persistence fails', async () => {
+    const handler = handlers.get(TEAM_SAVE_TASK_ATTACHMENT);
+    expect(handler).toBeDefined();
+    const claudeRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'teams-attachment-'));
+    setClaudeBasePathOverride(claudeRoot);
+    const attachmentId = '11111111-1111-4111-8111-111111111111';
+    const metadataFailure = new Error('metadata persistence failed');
+    service.addTaskAttachment.mockRejectedValueOnce(metadataFailure);
+
+    try {
+      const result = (await handler!(
+        {} as never,
+        'my-team',
+        'task-1',
+        attachmentId,
+        'proof.png',
+        'image/png',
+        'dGVzdA=='
+      )) as { success: boolean; error?: string };
+
+      expect(result).toEqual({ success: false, error: metadataFailure.message });
+      expect(console.error).toHaveBeenCalledWith(
+        '[IPC:teams]',
+        expect.stringContaining('[teams:saveTaskAttachment] metadata persistence failed')
+      );
+      vi.mocked(console.error).mockClear();
+      const attachmentDirectory = path.join(
+        getAppDataPath(),
+        'task-attachments',
+        'my-team',
+        'task-1'
+      );
+      await expect(fs.promises.readdir(attachmentDirectory)).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('preserves attachment bytes when metadata deletion fails', async () => {
+    const handler = handlers.get(TEAM_DELETE_TASK_ATTACHMENT);
+    expect(handler).toBeDefined();
+    const claudeRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'teams-attachment-'));
+    setClaudeBasePathOverride(claudeRoot);
+    const attachmentId = '11111111-1111-4111-8111-111111111111';
+    const attachmentDirectory = path.join(
+      getAppDataPath(),
+      'task-attachments',
+      'my-team',
+      'task-1'
+    );
+    const attachmentPath = path.join(attachmentDirectory, `${attachmentId}--proof.png`);
+    const metadataFailure = new Error('metadata deletion failed');
+    service.removeTaskAttachment.mockRejectedValueOnce(metadataFailure);
+
+    try {
+      await fs.promises.mkdir(attachmentDirectory, { recursive: true });
+      await fs.promises.writeFile(attachmentPath, 'test');
+      const originalIdentity = await fs.promises.lstat(attachmentPath);
+
+      const result = (await handler!(
+        {} as never,
+        'my-team',
+        'task-1',
+        attachmentId,
+        'image/png'
+      )) as { success: boolean; error?: string };
+
+      expect(result).toEqual({ success: false, error: metadataFailure.message });
+      expect(console.error).toHaveBeenCalledWith(
+        '[IPC:teams]',
+        expect.stringContaining('[teams:deleteTaskAttachment] metadata deletion failed')
+      );
+      vi.mocked(console.error).mockClear();
+      await expect(fs.promises.readFile(attachmentPath, 'utf8')).resolves.toBe('test');
+      const restoredIdentity = await fs.promises.lstat(attachmentPath);
+      expect({ dev: restoredIdentity.dev, ino: restoredIdentity.ino }).toEqual({
+        dev: originalIdentity.dev,
+        ino: originalIdentity.ino,
+      });
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps attachment bytes public until metadata deletion commits', async () => {
+    const handler = handlers.get(TEAM_DELETE_TASK_ATTACHMENT);
+    expect(handler).toBeDefined();
+    const claudeRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'teams-attachment-'));
+    setClaudeBasePathOverride(claudeRoot);
+    const attachmentId = '11111111-1111-4111-8111-111111111111';
+    const attachmentDirectory = path.join(
+      getAppDataPath(),
+      'task-attachments',
+      'my-team',
+      'task-1'
+    );
+    const attachmentPath = path.join(attachmentDirectory, `${attachmentId}--proof.png`);
+    service.removeTaskAttachment.mockImplementationOnce(async () => {
+      await expect(fs.promises.readFile(attachmentPath, 'utf8')).resolves.toBe('test');
+      const publicIdentity = await fs.promises.lstat(attachmentPath);
+      const entries = await fs.promises.readdir(attachmentDirectory);
+      const pinName = entries.find((entry) => /^\.review-create\.[a-f0-9-]+\.tmp$/i.test(entry));
+      expect(pinName).toBeDefined();
+      const pinIdentity = await fs.promises.lstat(path.join(attachmentDirectory, pinName!));
+      expect({ dev: pinIdentity.dev, ino: pinIdentity.ino }).toEqual({
+        dev: publicIdentity.dev,
+        ino: publicIdentity.ino,
+      });
+    });
+
+    try {
+      await fs.promises.mkdir(attachmentDirectory, { recursive: true });
+      await fs.promises.writeFile(attachmentPath, 'test');
+
+      const result = (await handler!(
+        {} as never,
+        'my-team',
+        'task-1',
+        attachmentId,
+        'image/png'
+      )) as { success: boolean; error?: string };
+
+      expect(result).toEqual({ success: true, data: undefined });
+      await expect(fs.promises.readdir(attachmentDirectory)).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
     }
   });
 
