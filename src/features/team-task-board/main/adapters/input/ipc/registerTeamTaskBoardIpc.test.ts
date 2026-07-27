@@ -278,6 +278,18 @@ describe('registerTeamTaskBoardIpc', () => {
     expect(dependencies.commands.createTask).not.toHaveBeenCalled();
   });
 
+  it('normalizes related task IDs before task creation', async () => {
+    await handlers.get(TEAM_CREATE_TASK)!({} as never, 'my-team', {
+      subject: 'Task subject',
+      related: [' task-2 '],
+    });
+
+    expect(dependencies.commands.createTask).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({ related: ['task-2'] })
+    );
+  });
+
   it.each([
     {
       label: 'non-string entries',

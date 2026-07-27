@@ -220,6 +220,7 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
           blockedBy.push(validated.value!);
         }
       }
+      let related: string[] | undefined;
       if (payload.related !== undefined) {
         if (
           !Array.isArray(payload.related) ||
@@ -227,11 +228,13 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
         ) {
           return { success: false, error: 'related must be an array of task ID strings' };
         }
+        related = [];
         for (const id of payload.related) {
           const validated = validateTaskId(id);
           if (!validated.valid) {
             return { success: false, error: validated.error ?? 'Invalid related task id' };
           }
+          related.push(validated.value!);
         }
       }
       if (payload.prompt !== undefined) {
@@ -257,7 +260,7 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
           description: payload.description?.trim(),
           owner: payload.owner?.trim() || undefined,
           blockedBy,
-          related: payload.related,
+          related,
           descriptionTaskRefs: validatedDescriptionTaskRefs.value,
           prompt: payload.prompt?.trim() || undefined,
           promptTaskRefs: validatedPromptTaskRefs.value,
