@@ -19,6 +19,62 @@ const logicalAssignmentKinds = new Set([
   ts.SyntaxKind.QuestionQuestionEqualsToken,
 ]);
 
+function immediateApplyInvocation(node) {
+  if (!ts.isArrowFunction(node) && !(ts.isFunctionExpression(node) && !node.asteriskToken)) {
+    return null;
+  }
+
+  let current = node;
+  while (current.parent) {
+    const parent = current.parent;
+    if (
+      (ts.isParenthesizedExpression(parent) ||
+        ts.isAsExpression(parent) ||
+        ts.isTypeAssertionExpression(parent) ||
+        ts.isNonNullExpression(parent) ||
+        ts.isSatisfiesExpression(parent)) &&
+      parent.expression === current
+    ) {
+      current = parent;
+      continue;
+    }
+    if (
+      ts.isBinaryExpression(parent) &&
+      parent.operatorToken.kind === ts.SyntaxKind.CommaToken &&
+      parent.right === current
+    ) {
+      current = parent;
+      continue;
+    }
+    break;
+  }
+
+  const method = current.parent;
+  const methodCall = method?.parent;
+  const isApply =
+    (ts.isPropertyAccessExpression(method) &&
+      !method.questionDotToken &&
+      method.expression === current &&
+      method.name.text === 'apply') ||
+    (ts.isElementAccessExpression(method) &&
+      !method.questionDotToken &&
+      method.expression === current &&
+      method.argumentExpression &&
+      ts.isStringLiteralLike(unwrapExpression(method.argumentExpression)) &&
+      unwrapExpression(method.argumentExpression).text === 'apply');
+  return isApply &&
+    methodCall &&
+    ts.isCallExpression(methodCall) &&
+    !methodCall.questionDotToken &&
+    methodCall.expression === method
+    ? methodCall
+    : null;
+}
+
+export function immediateConstructorIifeInvocation(node) {
+  return immediateIifeInvocation(node) ?? immediateApplyInvocation(node);
+}
+
 function containsReference(node, reference) {
   return reference.pos >= node.pos && reference.end <= node.end;
 }
@@ -63,7 +119,7 @@ function constrainPath(path, control, selected, staticSelection = null) {
 
 function executionOwner(node, boundary) {
   for (let current = node.parent; current && current !== boundary; current = current.parent) {
-    if (ts.isFunctionLike(current) && !immediateIifeInvocation(current)) return current;
+    if (ts.isFunctionLike(current) && !immediateConstructorIifeInvocation(current)) return current;
   }
   return boundary;
 }

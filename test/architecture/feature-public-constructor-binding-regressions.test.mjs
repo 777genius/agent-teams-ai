@@ -448,3 +448,112 @@ test('keeps scalar aliases private across shadow, callback, getter, and target b
     }
   );
 });
+
+test('tracks constructor this aliases through bindings and every public instance sink', () => {
+  withFeatureFixture(
+    constructorFixtures([
+      ['this-alias-direct-danger', 'const target = this; target.Store = Store;'],
+      [
+        'this-alias-chain-danger',
+        'const first = this; const target = first; target.Store = Store;',
+      ],
+      [
+        'this-alias-object-destructure-danger',
+        'const { target } = { target: this }; Object.assign(target, { Store });',
+      ],
+      [
+        'this-alias-array-assignment-danger',
+        "let target = {}; [target] = [this]; Object.defineProperty(target, 'Store', { value: Store });",
+      ],
+      [
+        'this-alias-define-properties-danger',
+        'const target = this; Object.defineProperties(target, { Store: { value: Store } });',
+      ],
+      ['this-alias-reflect-danger', "const target = this; Reflect.set(target, 'Store', Store);"],
+    ]),
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/this-alias-array-assignment-danger/main/index.ts',
+        'src/features/this-alias-chain-danger/main/index.ts',
+        'src/features/this-alias-define-properties-danger/main/index.ts',
+        'src/features/this-alias-direct-danger/main/index.ts',
+        'src/features/this-alias-object-destructure-danger/main/index.ts',
+        'src/features/this-alias-reflect-danger/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('preserves constructor this for immediate ordinary call and apply invocations', () => {
+  withFeatureFixture(
+    constructorFixtures([
+      ['this-call-danger', '(function () { this.Store = Store; }).call(this);'],
+      [
+        'this-call-alias-target-danger',
+        'const target = this; (function () { Object.assign(this, { Store }); }).call(target);',
+      ],
+      [
+        'this-apply-danger',
+        "(function () { Reflect.set(this, 'Store', Store); }).apply(this, []);",
+      ],
+      [
+        'this-apply-inner-alias-danger',
+        '(function () { const target = this; Object.defineProperties(target, { Store: { value: Store } }); }).apply(this, []);',
+      ],
+      [
+        'this-apply-outer-value-alias-danger',
+        "const value = Store; (function () { Object.defineProperty(this, 'Store', { value }); }).apply(this, []);",
+      ],
+      ['this-bracket-apply-danger', "(function () { this.Store = Store; })['apply'](this, []);"],
+    ]),
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/this-apply-danger/main/index.ts',
+        'src/features/this-apply-inner-alias-danger/main/index.ts',
+        'src/features/this-apply-outer-value-alias-danger/main/index.ts',
+        'src/features/this-bracket-apply-danger/main/index.ts',
+        'src/features/this-call-alias-target-danger/main/index.ts',
+        'src/features/this-call-danger/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('rejects rebound, copied, shadowed, deferred, and foreign constructor receivers', () => {
+  withFeatureFixture(
+    constructorFixtures([
+      ['this-alias-rebound-safe', 'let target = this; target = {}; target.Store = Store;'],
+      ['this-alias-rest-copy-safe', 'const { ...target } = this; target.Store = Store;'],
+      ['this-alias-other-object-safe', 'const target = Object.create(this); target.Store = Store;'],
+      [
+        'this-alias-shadowed-safe',
+        'const target = this; { const target = {}; target.Store = Store; } void target;',
+      ],
+      [
+        'this-alias-deferred-arrow-safe',
+        'const target = this; const install = () => { target.Store = Store; }; void install;',
+      ],
+      [
+        'this-deferred-function-safe',
+        'const install = function () { this.Store = Store; }; void install;',
+      ],
+      ['this-ordinary-iife-safe', '(function () { this.Store = Store; })();'],
+      [
+        'this-call-other-safe',
+        'const other = {}; (function () { this.Store = Store; }).call(other);',
+      ],
+      [
+        'this-apply-other-safe',
+        'const other = {}; (function () { this.Store = Store; }).apply(other, []);',
+      ],
+      [
+        'this-call-rebound-alias-safe',
+        'let target = this; target = {}; (function () { this.Store = Store; }).call(target);',
+      ],
+      ['this-unrelated-team-safe', 'const team = {}; team.Store = Store;'],
+    ]),
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), []);
+    }
+  );
+});

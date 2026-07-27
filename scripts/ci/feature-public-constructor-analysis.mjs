@@ -7,12 +7,12 @@ import {
   unwrapExpression,
 } from './feature-export-analysis.mjs';
 import {
+  immediateConstructorIifeInvocation,
   resolvedLocalObjects,
   resolvedLocalValueContainsReference,
   resolvedLocalValueNodes,
   resolvedStaticPropertyNames,
 } from './feature-constructor-local-value-analysis.mjs';
-import { immediateIifeInvocation } from './feature-executed-iife-analysis.mjs';
 
 function isPublicInstanceMember(node) {
   if (!node.name || ts.isPrivateIdentifier(node.name)) return false;
@@ -90,6 +90,38 @@ function publicInstanceMemberName(boundary, name, visited = new Set()) {
   return publicInstanceMemberName(base, name, new Set(visited).add(base));
 }
 
+function immediateInvocationMethod(call) {
+  const method = memberAccess(call.expression);
+  return method && ['call', 'apply'].includes(method.name) ? method.name : null;
+}
+
+function isBoundaryInstanceExpression(expression, boundary, visited = new Set()) {
+  return resolvedLocalValueNodes(expression, boundary).some((node) => {
+    const value = unwrapExpression(node);
+    if (value.kind !== ts.SyntaxKind.ThisKeyword || visited.has(value)) return false;
+
+    const nextVisited = new Set(visited).add(value);
+    let current = value.parent;
+    while (current && current !== boundary) {
+      if (ts.isClassLike(current)) return false;
+      if (ts.isArrowFunction(current)) {
+        current = current.parent;
+        continue;
+      }
+      if (ts.isFunctionLike(current)) {
+        if (current.parent === boundary && !isStaticMember(current)) return true;
+        const invocation = immediateConstructorIifeInvocation(current);
+        if (!invocation || !immediateInvocationMethod(invocation) || !invocation.arguments[0]) {
+          return false;
+        }
+        return isBoundaryInstanceExpression(invocation.arguments[0], boundary, nextVisited);
+      }
+      current = current.parent;
+    }
+    return current === boundary;
+  });
+}
+
 function isPublicInstanceAssignment(targetExpression, boundary) {
   if (
     ts.isPropertyAccessExpression(targetExpression) &&
@@ -98,7 +130,7 @@ function isPublicInstanceAssignment(targetExpression, boundary) {
     return null;
   }
   const target = memberAccess(targetExpression);
-  if (!target || target.receiver.kind !== ts.SyntaxKind.ThisKeyword) return null;
+  if (!target || !isBoundaryInstanceExpression(target.receiver, boundary)) return null;
   return publicInstanceMemberName(boundary, target.name);
 }
 
@@ -244,11 +276,9 @@ function descriptorContainsReference(expression, reference, boundary) {
 function executesOnBoundaryInstance(call, boundary) {
   let owner = null;
   for (let current = call.parent; current && current !== boundary; current = current.parent) {
-    if (
-      (ts.isArrowFunction(current) || ts.isFunctionExpression(current)) &&
-      !immediateIifeInvocation(current)
-    ) {
-      return false;
+    if (ts.isArrowFunction(current) || ts.isFunctionExpression(current)) {
+      if (!immediateConstructorIifeInvocation(current)) return false;
+      continue;
     }
     if (!owner && ts.isFunctionLike(current) && !ts.isArrowFunction(current)) owner = current;
   }
@@ -385,7 +415,7 @@ function publicInstanceMutatorMember(call, reference, boundary) {
   if (
     !method ||
     !isGlobalMutatorReceiver(method.receiver) ||
-    call.arguments[0]?.kind !== ts.SyntaxKind.ThisKeyword ||
+    !isBoundaryInstanceExpression(call.arguments[0], boundary) ||
     !executesOnBoundaryInstance(call, boundary)
   ) {
     return null;
