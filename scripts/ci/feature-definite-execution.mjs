@@ -289,6 +289,10 @@ export function visitDefiniteTopLevelExpressions(sourceFile, visitor) {
   }
 }
 
+export function visitDefiniteBlockExpressions(block, visitor) {
+  visitDefiniteStatement(block, visitor);
+}
+
 const definiteExpressionsBySource = new WeakMap();
 
 export function definiteTopLevelExpressionBoundary(node, sourceFile) {
