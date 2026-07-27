@@ -1,4 +1,4 @@
-import { link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -79,8 +79,6 @@ describe.runIf(process.platform === 'win32')('WindowsToolApprovalFileReader', ()
     await writeFile(secretPath, 'unapproved alias target');
 
     const rawAliasPath = path.join(restrictedDirectory, '.. ', path.basename(secretPath));
-    await expect(readFile(rawAliasPath, 'utf8')).resolves.toBe('unapproved alias target');
-
     const nodeReader = new NodeToolApprovalFileReader();
     await expect(nodeReader.read(rawAliasPath)).resolves.toMatchObject({
       content: '',

@@ -11,6 +11,7 @@ import type { ToolApprovalFileContent } from '@shared/types';
 
 const WINDOWS_HELPER_TIMEOUT_MS = 15_000;
 const WINDOWS_HELPER_MAX_OUTPUT_BYTES = Math.ceil((TOOL_APPROVAL_MAX_FILE_SIZE * 4) / 3) + 16_384;
+const WINDOWS_PREVIEW_PATH_PLACEHOLDER = '__AGENT_TEAMS_APPROVAL_PREVIEW_PATH_BASE64__';
 
 export interface WindowsPreviewHelperResult {
   exists: boolean;
@@ -356,7 +357,7 @@ namespace AgentTeams.SafePreview {
 
 try {
   Add-Type -TypeDefinition $source -Language CSharp
-  $encodedPath = [Console]::In.ReadToEnd()
+  $encodedPath = '${WINDOWS_PREVIEW_PATH_PLACEHOLDER}'
   $filePath = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($encodedPath))
   $result = [AgentTeams.SafePreview.Reader]::Read($filePath, ${TOOL_APPROVAL_MAX_FILE_SIZE})
   [Console]::Out.Write(([pscustomobject]@{
@@ -386,10 +387,14 @@ function resolveWindowsPowerShellPath(): string {
 export class PowerShellWindowsPreviewHelper implements WindowsPreviewHelperPort {
   read(filePath: string): Promise<WindowsPreviewHelperResult> {
     return new Promise((resolve, reject) => {
-      const encodedCommand = Buffer.from(WINDOWS_PREVIEW_SCRIPT, 'utf16le').toString('base64');
+      const encodedPath = Buffer.from(filePath, 'utf8').toString('base64');
+      const previewScript = WINDOWS_PREVIEW_SCRIPT.replace(
+        WINDOWS_PREVIEW_PATH_PLACEHOLDER,
+        encodedPath
+      );
       const child = spawn(
         resolveWindowsPowerShellPath(),
-        ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCommand],
+        ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', '-'],
         { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }
       );
       const stdoutChunks: Buffer[] = [];
@@ -444,7 +449,7 @@ export class PowerShellWindowsPreviewHelper implements WindowsPreviewHelperPort 
         }
       });
 
-      child.stdin.end(Buffer.from(filePath, 'utf8').toString('base64'));
+      child.stdin.end(previewScript, 'utf8');
     });
   }
 }
