@@ -28,7 +28,6 @@ import {
 import { createSafeAppError } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import { TeamPermanentDeletionTransactionCoordinator } from '../../features/team-view-read-model/main/adapters/output/TeamPermanentDeletionTransactionCoordinator';
@@ -665,17 +664,39 @@ async function handleSaveTaskAttachment(
   }
 
   return wrapTeamHandler('saveTaskAttachment', async () => {
-    const meta = await taskAttachmentStore.saveAttachment(
+    return taskAttachmentStore.runTaskTransaction(
       vTeam.value!,
       vTask.value!,
-      safeAttId,
-      filename,
-      mimeType.trim(),
-      base64Data
+      async (transaction) => {
+        const receipt = await transaction.saveAttachmentWithReceipt(
+          safeAttId,
+          filename,
+          mimeType.trim(),
+          base64Data
+        );
+        try {
+          await getTeamDataService().addTaskAttachment(
+            vTeam.value!,
+            vTask.value!,
+            receipt.metadata
+          );
+          transaction.markCommitted();
+          await transaction.finalizeAttachment(receipt);
+          return receipt.metadata;
+        } catch (error) {
+          try {
+            await transaction.rollbackAttachment(receipt);
+          } catch (rollbackError) {
+            logger.warn(
+              `[teams:saveTaskAttachment] Failed to roll back attachment ${safeAttId}: ${
+                rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+              }`
+            );
+          }
+          throw error;
+        }
+      }
     );
-    // Write metadata into the task JSON
-    await getTeamDataService().addTaskAttachment(vTeam.value!, vTask.value!, meta);
-    return meta;
   });
 }
 
@@ -729,13 +750,30 @@ async function handleDeleteTaskAttachment(
   }
 
   return wrapTeamHandler('deleteTaskAttachment', async () => {
-    await taskAttachmentStore.deleteAttachment(
+    await taskAttachmentStore.runTaskTransaction(
       vTeam.value!,
       vTask.value!,
-      safeAttId,
-      mimeType.trim()
+      async (transaction) => {
+        const receipt = await transaction.prepareAttachmentDeletion(safeAttId, mimeType.trim());
+        try {
+          await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
+        } catch (error) {
+          if (receipt) {
+            try {
+              await transaction.rollbackAttachmentDeletion(receipt);
+            } catch (rollbackError) {
+              logger.warn(
+                `[teams:deleteTaskAttachment] Failed to restore attachment ${safeAttId}: ${
+                  rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+                }`
+              );
+            }
+          }
+          throw error;
+        }
+        transaction.markCommitted();
+        if (receipt) await transaction.finalizeAttachmentDeletion(receipt);
+      }
     );
-    // Remove metadata from task JSON
-    await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
   });
 }

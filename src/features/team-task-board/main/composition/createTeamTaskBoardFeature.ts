@@ -4,6 +4,7 @@ import {
   type LaunchIoGovernor,
 } from '@main/services/team/LaunchIoGovernor';
 
+import { AddTaskCommentUseCase } from '../../core/application/use-cases/AddTaskCommentUseCase';
 import { UpdateTaskFieldsUseCase } from '../../core/application/use-cases/UpdateTaskFieldsUseCase';
 import { TeamTaskCommentAttachmentWriter } from '../adapters/output/TeamTaskCommentAttachmentWriter';
 
@@ -47,13 +48,19 @@ export function createTeamTaskBoardFeature(dependencies: {
     notifications: dependencies.notificationApi,
     logger: dependencies.logger,
   });
+  const commentAttachments =
+    dependencies.commentAttachments ?? new TeamTaskCommentAttachmentWriter();
+  const addTaskComment = new AddTaskCommentUseCase({
+    comments: dependencies.taskBoardApi,
+    attachments: commentAttachments,
+    logger: dependencies.logger,
+  });
 
   return {
     queries: dependencies.taskBoardApi,
     commands: dependencies.taskBoardApi,
     changePresence: dependencies.taskBoardApi,
-    comments: dependencies.taskBoardApi,
-    commentAttachments: dependencies.commentAttachments ?? new TeamTaskCommentAttachmentWriter(),
+    addTaskComment,
     globalTasks: {
       getAllTasks: (): Promise<GlobalTask[]> => {
         const loadFresh = (): Promise<GlobalTask[]> => dependencies.taskBoardApi.getAllTasks();

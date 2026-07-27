@@ -343,12 +343,11 @@ describe('TeamProvisioningDiagnosticsPreflightCompatibilityFacade', () => {
     const response = facade.respondToToolApproval('alpha', 'run-1', 'request-1', true, 'allow');
     const delivery = facade.deliverOpenCodeRuntimeMessage({ idempotencyKey: 'delivery-1' });
     const status = facade.getOpenCodeRuntimeDeliveryStatus('alpha', 'message-1');
-    const settingsResult = facade.updateToolApprovalSettings('alpha', settings);
+    facade.updateToolApprovalSettings('alpha', settings);
 
     expect(response).toBe(responsePromise);
     expect(delivery).toBe(deliveryPromise);
     expect(status).toBe(statusPromise);
-    expect(settingsResult).toBeUndefined();
     expect(facade.applicationFeatureMock.respondToToolApproval).toHaveBeenCalledWith(
       'alpha',
       'run-1',

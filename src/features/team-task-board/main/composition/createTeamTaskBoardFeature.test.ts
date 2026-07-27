@@ -8,6 +8,13 @@ import { createTeamTaskBoardFeature } from './createTeamTaskBoardFeature';
 describe('createTeamTaskBoardFeature', () => {
   it('keeps the compatibility service receiver and launch governor behavior', async () => {
     const task = { id: 'task-1', teamName: 'my-team', subject: 'Task' };
+    const addTaskComment = vi.fn(async () => ({
+      id: 'comment-1',
+      author: 'user',
+      text: 'Comment',
+      createdAt: '2026-07-22T00:00:00.000Z',
+      type: 'regular' as const,
+    }));
     const taskBoardApi = {
       getAllTasks(): Promise<(typeof task)[]> {
         if (this !== taskBoardApi) {
@@ -15,11 +22,15 @@ describe('createTeamTaskBoardFeature', () => {
         }
         return Promise.resolve([task]);
       },
+      addTaskComment,
     };
     const runSummaryOperation = vi.fn(
       async (_key: string, loadFresh: () => Promise<(typeof task)[]>): Promise<(typeof task)[]> =>
         loadFresh()
     );
+    const commentAttachments = {
+      runTransaction: vi.fn(),
+    };
     const logger = { error: vi.fn(), warn: vi.fn() };
 
     const feature = createTeamTaskBoardFeature({
@@ -27,7 +38,7 @@ describe('createTeamTaskBoardFeature', () => {
       runtimeApi: { isTeamAlive: vi.fn(() => false) },
       notificationApi: { sendMessageToTeam: vi.fn(async () => undefined) },
       launchIoGovernor: { runSummaryOperation } as never,
-      commentAttachments: { saveAttachment: vi.fn() },
+      commentAttachments,
       logger,
     });
 
@@ -35,8 +46,20 @@ describe('createTeamTaskBoardFeature', () => {
     expect(feature.queries).toBe(taskBoardApi);
     expect(feature.commands).toBe(taskBoardApi);
     expect(feature.changePresence).toBe(taskBoardApi);
-    expect(feature.comments).toBe(taskBoardApi);
     expect(feature.logger).toBe(logger);
+    await expect(
+      feature.addTaskComment.execute('my-team', 'task-1', {
+        text: 'Comment',
+        attachments: [],
+      })
+    ).resolves.toEqual(expect.objectContaining({ id: 'comment-1' }));
+    expect(addTaskComment).toHaveBeenCalledWith(
+      'my-team',
+      'task-1',
+      'Comment',
+      undefined,
+      undefined
+    );
     expect(runSummaryOperation).toHaveBeenCalledWith(
       'teams:getAllTasks',
       expect.any(Function),
