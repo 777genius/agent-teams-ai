@@ -2600,7 +2600,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "Bu sekmede terminal çıktısı veya çalışan işlemler bulunabilir. Sekmeyi kapatmak, sekmeyi ve görünür çıktısını bu çalışma alanından kaldırır.",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

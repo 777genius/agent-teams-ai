@@ -4192,6 +4192,8 @@ export default interface Resources {
         };
         blocked: 'Runtime environment is not available - {{action}} is blocked';
         checkingProviders: 'Checking selected providers...';
+        experimentalLocalModelOverride: 'Launch this local model experimentally';
+        experimentalLocalModelOverrideHint: 'Only the advisory coordination check is bypassed. Provider, tool, context, and real OpenCode execution checks still apply.';
         failed: 'Failed to prepare selected providers';
         preflight: 'Pre-flight check to catch errors before {{action}}';
         preparingEnvironment: 'Preparing environment...';
@@ -6152,7 +6154,7 @@ export default interface Resources {
       closeTerminalSettingsTab: 'Close terminal settings tab';
       closeTerminalSheet: 'Close terminal sheet';
       closeTerminalTab: 'Close terminal tab {{tab}}';
-      closeTerminalTabDialogDescription: 'This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.';
+      closeTerminalTabDialogDescription: 'This tab may contain terminal output or running processes. Closing it will remove the tab and its visible output from this workspace.';
       closeTerminalTabDialogTitle: 'Close terminal tab?';
       commandInterrupt: 'Ctrl+C';
       commandInterruptTitle: 'Send Ctrl+C to the focused pane';

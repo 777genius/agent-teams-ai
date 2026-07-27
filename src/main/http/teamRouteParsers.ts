@@ -248,6 +248,10 @@ export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchR
   const skipPermissions = assertOptionalBoolean(payload.skipPermissions, 'skipPermissions');
   const worktree = assertOptionalString(payload.worktree, 'worktree');
   const extraCliArgs = assertOptionalExtraCliArgs(payload.extraCliArgs);
+  const allowExperimentalLocalModels = assertOptionalBoolean(
+    payload.allowExperimentalLocalModels,
+    'allowExperimentalLocalModels'
+  );
 
   return {
     teamName,
@@ -282,6 +286,9 @@ export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchR
     }),
     ...(extraCliArgs && {
       extraCliArgs,
+    }),
+    ...(allowExperimentalLocalModels !== undefined && {
+      allowExperimentalLocalModels,
     }),
   };
 }
@@ -426,6 +433,12 @@ export function parseDraftLaunchCreateRequest(
       'skipPermissions'
     ),
     worktree: pickOptionalString(payload, 'worktree', savedRequest.worktree, 'worktree'),
+    allowExperimentalLocalModels: pickOptionalBoolean(
+      payload,
+      'allowExperimentalLocalModels',
+      undefined,
+      'allowExperimentalLocalModels'
+    ),
     ...(extraCliArgs ? { extraCliArgs } : {}),
   };
 }

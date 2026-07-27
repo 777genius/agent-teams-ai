@@ -1,3 +1,9 @@
+export {
+  type DeliverRuntimeMessageCommand,
+  DeliverRuntimeMessageUseCase,
+} from './commands/DeliverRuntimeMessageUseCase';
+export { RespondToToolApprovalUseCase } from './commands/RespondToToolApprovalUseCase';
+export { UpdateToolApprovalSettingsUseCase } from './commands/UpdateToolApprovalSettingsUseCase';
 export type {
   ProvisioningProgressUpdatePlan,
   TeamProvisioningProgressState,
@@ -12,3 +18,20 @@ export {
   planMemberSpawnObservationUpdate,
   planTeamAgentRuntimeObservationUpdate,
 } from './planTeamRuntimeObservationUpdate';
+export type {
+  RuntimeDeliveryPort,
+  RuntimeDeliveryStatusPort,
+  RuntimeMessageDeliveryPort,
+  RuntimeSnapshotReaderPort,
+  ToolApprovalPort,
+  ToolApprovalResponsePort,
+  ToolApprovalSettingsPort,
+} from './ports/TeamProvisioningPorts';
+export {
+  type GetRuntimeDeliveryStatusQuery,
+  GetRuntimeDeliveryStatusUseCase,
+} from './queries/GetRuntimeDeliveryStatusUseCase';
+export {
+  type GetRuntimeSnapshotQuery,
+  GetRuntimeSnapshotUseCase,
+} from './queries/GetRuntimeSnapshotUseCase';

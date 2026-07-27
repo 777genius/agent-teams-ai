@@ -325,6 +325,7 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
   protected readonly idlePromptInjectionBoundary!: TeamProvisioningIdlePromptInjectionBoundary<ProvisioningRun>;
   protected readonly providerRuntime!: TeamProvisioningProviderRuntimeFacade;
   private readonly providerRuntimeCompatibility!: TeamProvisioningProviderRuntimeCompatibility;
+  protected readonly applicationFeature!: TeamProvisioningServiceComposition['applicationFeature'];
   protected readonly compatibilityDelegation!: TeamProvisioningCompatibilityDelegation<ProvisioningRun>;
   protected readonly outputRecoveryFacade!: TeamProvisioningOutputRecoveryFacade<ProvisioningRun>;
   protected readonly deterministicCreateSpawnFlowBoundary!: TeamProvisioningCreateDeterministicSpawnFlowBoundary<ProvisioningRun>;

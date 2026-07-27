@@ -12,23 +12,20 @@ import {
 import { AlertTriangle, Check, CheckCircle2, Copy, Loader2, SlidersHorizontal } from 'lucide-react';
 
 import type {
-  CliProviderStatus,
-  TeamProviderId,
-  TeamProvisioningSupportDiagnostic,
-} from '@shared/types';
+  ProvisioningPrepareState,
+  ProvisioningProviderCheck,
+  ProvisioningProviderCheckStatus,
+} from './provisioningProviderChecks';
+import type { CliProviderStatus, TeamProviderId } from '@shared/types';
+
+export type {
+  ProvisioningPrepareState,
+  ProvisioningProviderCheck,
+  ProvisioningProviderCheckStatus,
+} from './provisioningProviderChecks';
+export { failIncompleteProviderChecks, updateProviderCheck } from './provisioningProviderChecks';
 
 type TeamTranslator = ReturnType<typeof useAppTranslation>['t'];
-
-export type ProvisioningProviderCheckStatus = 'pending' | 'checking' | 'ready' | 'notes' | 'failed';
-export type ProvisioningPrepareState = 'idle' | 'loading' | 'ready' | 'failed';
-
-export interface ProvisioningProviderCheck {
-  providerId: TeamProviderId;
-  status: ProvisioningProviderCheckStatus;
-  backendSummary?: string | null;
-  details: string[];
-  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
-}
 
 export function getProvisioningProviderLabel(providerId: TeamProviderId): string {
   return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
@@ -127,36 +124,6 @@ export function getProvisioningProviderBackendSummary(
   }
 
   return suffixes.length > 0 ? `${baseSummary} - ${suffixes.join(', ')}` : baseSummary;
-}
-
-export function updateProviderCheck(
-  checks: ProvisioningProviderCheck[],
-  providerId: TeamProviderId,
-  patch: Partial<ProvisioningProviderCheck>
-): ProvisioningProviderCheck[] {
-  return checks.map((check) =>
-    check.providerId === providerId
-      ? {
-          ...check,
-          ...patch,
-        }
-      : check
-  );
-}
-
-export function failIncompleteProviderChecks(
-  checks: ProvisioningProviderCheck[],
-  detail: string
-): ProvisioningProviderCheck[] {
-  return checks.map((check) =>
-    check.status === 'ready' || check.status === 'notes' || check.status === 'failed'
-      ? check
-      : {
-          ...check,
-          status: 'failed',
-          details: check.details.length > 0 ? check.details : [detail],
-        }
-  );
 }
 
 export function getProvisioningProviderProgressMessage(

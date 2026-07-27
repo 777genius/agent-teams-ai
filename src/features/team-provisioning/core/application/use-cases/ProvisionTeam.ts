@@ -129,6 +129,7 @@ export class ProvisionTeam {
       effort: effortValidation.value,
       fastMode: fastModeValidation.value,
       limitContext,
+      allowExperimentalLocalModels: payload.allowExperimentalLocalModels,
       skipPermissions:
         typeof payload.skipPermissions === 'boolean'
           ? payload.skipPermissions
@@ -233,6 +234,7 @@ export class ProvisionTeam {
       effort: effortValidation.value,
       fastMode: fastModeValidation.value,
       limitContext,
+      allowExperimentalLocalModels: input.payload.allowExperimentalLocalModels,
       clearContext: input.payload.clearContext === true ? true : undefined,
       skipPermissions:
         typeof input.payload.skipPermissions === 'boolean'

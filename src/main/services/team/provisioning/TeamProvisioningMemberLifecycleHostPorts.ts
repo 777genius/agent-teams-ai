@@ -62,7 +62,15 @@ export interface TeamMetaLike {
 
 export interface TeamProvisioningMemberLifecycleSharedStatePorts {
   runs: Map<string, ProvisioningRun>;
-  runtimeAdapterRunByTeam: Map<string, { providerId: TeamProviderId; runId: string; cwd?: string }>;
+  runtimeAdapterRunByTeam: Map<
+    string,
+    {
+      providerId: TeamProviderId;
+      runId: string;
+      cwd?: string;
+      allowExperimentalLocalModels?: boolean;
+    }
+  >;
   failedOpenCodeSecondaryRetryInFlightByTeam: Map<
     string,
     Promise<RetryFailedOpenCodeSecondaryLanesResult>

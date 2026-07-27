@@ -2600,7 +2600,7 @@
     "createTerminalTab": "Create terminal tab",
     "terminalTabsUnavailable": "Terminal tabs are unavailable",
     "closeTerminalTabDialogTitle": "Close terminal tab?",
-    "closeTerminalTabDialogDescription": "This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.",
+    "closeTerminalTabDialogDescription": "ఈ ట్యాబ్‌లో టెర్మినల్ అవుట్‌పుట్ లేదా నడుస్తున్న ప్రాసెస్‌లు ఉండవచ్చు. దీన్ని మూసివేస్తే, ఈ వర్క్‌స్పేస్ నుండి ట్యాబ్ మరియు దాని కనిపించే అవుట్‌పుట్ తొలగించబడతాయి.",
     "cancel": "Cancel",
     "closeTab": "Close tab",
     "commandPlaceholder": "Type a command...",

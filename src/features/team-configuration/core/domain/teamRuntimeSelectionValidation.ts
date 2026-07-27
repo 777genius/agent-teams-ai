@@ -162,3 +162,16 @@ export function parseOptionalTeamFastMode(
     error: 'fastMode must be one of inherit, on, or off',
   };
 }
+
+export function parseOptionalBoolean(
+  value: unknown,
+  fieldName: string
+): ValidationResult<boolean | undefined> {
+  if (value === undefined) {
+    return { valid: true, value: undefined };
+  }
+  if (typeof value === 'boolean') {
+    return { valid: true, value };
+  }
+  return { valid: false, error: `${fieldName} must be a boolean` };
+}

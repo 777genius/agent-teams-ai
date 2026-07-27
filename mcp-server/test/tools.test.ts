@@ -249,6 +249,7 @@ describe('agent-teams-mcp tools', () => {
           cwd: '/tmp/project',
           controlUrl: server.baseUrl,
           limitContext: true,
+          allowExperimentalLocalModels: true,
         })
       );
       expect(launched.runId).toBe('run-555');
@@ -268,7 +269,11 @@ describe('agent-teams-mcp tools', () => {
         {
           method: 'POST',
           url: '/api/teams/alpha/launch',
-          body: { cwd: '/tmp/project', limitContext: true },
+          body: {
+            cwd: '/tmp/project',
+            limitContext: true,
+            allowExperimentalLocalModels: true,
+          },
         },
         {
           method: 'GET',
