@@ -2,12 +2,16 @@ import type {
   PresentedRuntimeIngressCredential,
   RuntimeIngressCanonicalEffect,
   RuntimeIngressCredential,
+  RuntimeIngressCredentialId,
+  RuntimeIngressCredentialScope,
   RuntimeIngressEffectAcknowledgement,
   RuntimeIngressEffectRef,
+  RuntimeIngressPresentedSecret,
   RuntimeIngressReplayKey,
   RuntimeIngressSessionState,
   RuntimeIngressVerb,
 } from '../../domain/runtime-ingress';
+import type { LaneRelayHandle, RuntimePlanRef } from '../ports';
 import type {
   CommandClaimScope,
   CommandDescriptor,
@@ -16,6 +20,7 @@ import type {
   EffectRecoveryClass,
   PreparedCommandFingerprint,
 } from '@features/application-command-ledger';
+import type { MemberId } from '@shared/contracts/hosted';
 
 export type RuntimeIngressDurableCommandRecord =
   DurableApplicationCommandRecord<RuntimeIngressVerb>;
@@ -54,6 +59,123 @@ export interface RuntimeIngressDurableEffectEvidence {
 
 export interface RuntimeIngressClockPort {
   nowIso(): string;
+}
+
+export interface RuntimeIngressRelayAuthority {
+  readonly planRef: RuntimePlanRef;
+  readonly deploymentId: RuntimeIngressCredentialScope['deploymentId'];
+  readonly providerId: RuntimeIngressCredentialScope['providerId'];
+  readonly laneId: RuntimeIngressCredentialScope['laneId'];
+  readonly memberIds: readonly MemberId[];
+  readonly credentialGeneration: number;
+  readonly allowedVerbs: readonly RuntimeIngressVerb[];
+}
+
+export interface RuntimeIngressRelayBinding {
+  readonly credential: RuntimeIngressCredential;
+  readonly session: RuntimeIngressSessionState;
+  /** Trusted plan identity persisted when the credential was issued. */
+  readonly planRef: RuntimePlanRef;
+}
+
+export interface ResolveRuntimeIngressRelayBindingRequest {
+  readonly authority: RuntimeIngressRelayAuthority;
+}
+
+export interface RuntimeIngressRelayAuthoritySourcePort {
+  resolve(request: {
+    readonly planRef: RuntimePlanRef;
+    readonly laneId: RuntimeIngressCredentialScope['laneId'];
+  }): Promise<
+    | { readonly status: 'resolved'; readonly authority: RuntimeIngressRelayAuthority }
+    | { readonly status: 'stale_plan' | 'unavailable' }
+  >;
+}
+
+export interface RuntimeIngressRelayCommandRequest {
+  readonly runId: RuntimeIngressCredentialScope['runId'];
+  readonly verb: RuntimeIngressVerb;
+  readonly credentialId: RuntimeIngressCredentialId;
+  readonly presentedSecret: RuntimeIngressPresentedSecret;
+  readonly rawBody: string | Uint8Array;
+}
+
+export type RuntimeIngressRelayCommandResult =
+  | {
+      readonly status: 'accepted' | 'replayed';
+      readonly acknowledgementId: RuntimeIngressEffectAcknowledgement['acknowledgementId'];
+      readonly effectRef: RuntimeIngressEffectAcknowledgement['effectRef'];
+      readonly acceptedAtIso: string;
+    }
+  | {
+      readonly status: 'rejected';
+      readonly reason:
+        | 'bad_request'
+        | 'unauthorized'
+        | 'scope_mismatch'
+        | 'conflict'
+        | 'payload_too_large'
+        | 'rate_limited'
+        | 'recovery_required'
+        | 'unavailable';
+      readonly retryAfterSeconds?: number;
+    };
+
+/** Core-owned orchestration seam; HTTP request/response types stay in the input adapter. */
+export interface RuntimeIngressCommandOrchestrationPort {
+  executeRelayCommand(
+    request: RuntimeIngressRelayCommandRequest
+  ): Promise<RuntimeIngressRelayCommandResult>;
+}
+
+export interface RuntimeIngressRelayDispatchRequest {
+  readonly laneRelayHandle: LaneRelayHandle;
+  readonly verb: RuntimeIngressVerb;
+  readonly rawBody: string | Uint8Array;
+}
+
+export type RuntimeIngressRelayDispatchResult =
+  | { readonly status: 'delivered'; readonly result: RuntimeIngressRelayCommandResult }
+  | { readonly status: 'rejected'; readonly reason: 'handle_invalid' | 'verb_not_allowed' };
+
+export interface RuntimeIngressCredentialGenerationFence {
+  readonly deploymentId: RuntimeIngressCredentialScope['deploymentId'];
+  readonly teamId: RuntimeIngressCredentialScope['teamId'];
+  readonly runId: RuntimeIngressCredentialScope['runId'];
+  readonly planGeneration: number;
+  readonly planHash: RuntimePlanRef['planHash'];
+  readonly laneId: RuntimeIngressCredentialScope['laneId'];
+  readonly providerId: RuntimeIngressCredentialScope['providerId'];
+  readonly highestIssuedGeneration: number;
+  readonly revokedThroughGeneration: number;
+  readonly activeGeneration: number | null;
+}
+
+export interface RuntimeIngressAntiRollbackCheckpoint {
+  readonly checkpointVersion: 1;
+  readonly snapshotGeneration: number;
+  readonly credentialGenerationFences: readonly RuntimeIngressCredentialGenerationFence[];
+}
+
+export type RuntimeIngressAntiRollbackFenceResult =
+  | { readonly status: 'accepted' }
+  | { readonly status: 'rejected' | 'unavailable' };
+
+/**
+ * Durable anti-rollback authority owned outside the snapshot directory.
+ *
+ * validate is read-only. advance must atomically retain the snapshot high-water,
+ * every lane generation high-water, and every revoked-through generation.
+ * Implementations fail closed after loss/corruption and must not be stored in,
+ * or derived solely from, the runtime-ingress snapshot directory.
+ */
+export interface RuntimeIngressDurableAntiRollbackFencePort {
+  validate(
+    checkpoint: RuntimeIngressAntiRollbackCheckpoint
+  ): Promise<RuntimeIngressAntiRollbackFenceResult>;
+  advance(
+    checkpoint: RuntimeIngressAntiRollbackCheckpoint
+  ): Promise<RuntimeIngressAntiRollbackFenceResult>;
 }
 
 export interface VerifyRuntimeIngressCredentialRequest {
