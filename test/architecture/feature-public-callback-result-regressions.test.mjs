@@ -180,6 +180,24 @@ test('traces public mutations from definitely executed synchronous array callbac
       `,
       'src/features/callback-filter-mutation/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/callback-value-mutation/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [0, Store].forEach((value) => {
+          api.Store = value;
+        });
+      `,
+      'src/features/callback-value-mutation/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-target-mutation/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [api].forEach((target) => {
+          target.Store = Store;
+        });
+      `,
+      'src/features/callback-target-mutation/main/infrastructure/Store.ts':
+        'export class Store {}',
       'src/features/callback-empty-mutation/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
@@ -205,6 +223,8 @@ test('traces public mutations from definitely executed synchronous array callbac
         'src/features/callback-filter-mutation/main/index.ts',
         'src/features/callback-for-each-mutation/main/index.ts',
         'src/features/callback-map-mutation/main/index.ts',
+        'src/features/callback-target-mutation/main/index.ts',
+        'src/features/callback-value-mutation/main/index.ts',
       ]);
     }
   );

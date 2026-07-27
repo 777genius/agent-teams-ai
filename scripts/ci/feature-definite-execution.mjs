@@ -1,8 +1,7 @@
 import ts from 'typescript';
 
 import {
-  executedIifeForCall,
-  executedSynchronousArrayCallbackForCall,
+  executedInvocationForCall,
   immediateExecutedInvocation,
   staticNullishness,
   staticStrictEquality,
@@ -49,8 +48,7 @@ function visitDefiniteExpression(node, visitor) {
     return;
   }
   if (ts.isCallExpression(node)) {
-    const invocation =
-      executedIifeForCall(node) ?? executedSynchronousArrayCallbackForCall(node);
+    const invocation = executedInvocationForCall(node);
     if (invocation) {
       visitDefiniteExpression(node.expression, visitor);
       for (const argument of node.arguments) {

@@ -12,7 +12,7 @@ import {
 } from './feature-export-flow-analysis.mjs';
 import { definiteTopLevelExpressionBoundary } from './feature-definite-execution.mjs';
 import {
-  executedIifeParameterReferences,
+  executedInvocationParameterReferences,
   isPotentiallyExecutedAtTopLevel,
 } from './feature-executed-iife-analysis.mjs';
 import {
@@ -487,7 +487,7 @@ export function findPublicReferenceOwner(
   commonJsTargetAliases = new Set(),
   classifyPublicClassReference = () => undefined
 ) {
-  for (const parameterReference of executedIifeParameterReferences(node)) {
+  for (const parameterReference of executedInvocationParameterReferences(node)) {
     const parameterOwners =
       publicTargetOwners.atPosition?.(parameterReference.getStart(sourceFile)) ??
       publicTargetOwners;

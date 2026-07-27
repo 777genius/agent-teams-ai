@@ -1088,10 +1088,21 @@ test('traces only definitely invoked function mutations', () => {
         });
       `,
       'src/features/callback-argument-safe/main/infrastructure/Store.ts': 'export class Store {}',
+      'src/features/callback-target-argument-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [api].forEach((target) => {
+          target.Store = Store;
+        });
+      `,
+      'src/features/callback-target-argument-public/main/infrastructure/Store.ts':
+        'export class Store {}',
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
+        'src/features/callback-argument-safe/main/index.ts',
         'src/features/callback-safe/main/index.ts',
+        'src/features/callback-target-argument-public/main/index.ts',
         'src/features/iife-argument-public/main/index.ts',
         'src/features/iife-call-public/main/index.ts',
         'src/features/iife-comma-public/main/index.ts',

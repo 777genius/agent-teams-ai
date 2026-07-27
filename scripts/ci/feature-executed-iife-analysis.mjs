@@ -1,5 +1,6 @@
 import ts from 'typescript';
 
+import { callableTarget, callMethod } from './feature-callable-analysis.mjs';
 import { containsReference, propertyNameText, unwrapExpression } from './feature-export-ast.mjs';
 import {
   staticNullishness,
@@ -8,90 +9,9 @@ import {
   staticTruthiness,
   staticUndefinedness,
 } from './feature-static-value-analysis.mjs';
+import { executedSynchronousArrayCallbackForCall } from './feature-synchronous-array-callback-analysis.mjs';
 
 export { staticNullishness, staticStrictEquality, staticTruthiness };
-
-function callableTarget(expression) {
-  let current = unwrapExpression(expression);
-  while (
-    ts.isBinaryExpression(current) &&
-    current.operatorToken.kind === ts.SyntaxKind.CommaToken
-  ) {
-    current = unwrapExpression(current.right);
-  }
-  if (ts.isArrowFunction(current)) return current;
-  return ts.isFunctionExpression(current) && !current.asteriskToken ? current : null;
-}
-
-function callMethod(expression) {
-  const current = unwrapExpression(expression);
-  if (ts.isPropertyAccessExpression(current)) {
-    return {
-      name: current.name.text,
-      receiver: current.expression,
-    };
-  }
-  if (
-    ts.isElementAccessExpression(current) &&
-    current.argumentExpression &&
-    ts.isStringLiteralLike(unwrapExpression(current.argumentExpression))
-  ) {
-    return {
-      name: unwrapExpression(current.argumentExpression).text,
-      receiver: current.expression,
-    };
-  }
-  return null;
-}
-
-const SYNCHRONOUS_ARRAY_CALLBACK_METHODS = new Set([
-  'every',
-  'filter',
-  'find',
-  'findIndex',
-  'findLast',
-  'findLastIndex',
-  'flatMap',
-  'forEach',
-  'map',
-  'reduce',
-  'reduceRight',
-  'some',
-]);
-
-export function executedSynchronousArrayCallbackForCall(node) {
-  if (
-    !ts.isCallExpression(node) ||
-    node.questionDotToken ||
-    node.expression.questionDotToken
-  ) {
-    return null;
-  }
-  const method = callMethod(node.expression);
-  const receiver = method && unwrapExpression(method.receiver);
-  const callback = node.arguments[0] && callableTarget(node.arguments[0]);
-  if (
-    !method ||
-    !SYNCHRONOUS_ARRAY_CALLBACK_METHODS.has(method.name) ||
-    !receiver ||
-    !ts.isArrayLiteralExpression(receiver) ||
-    !callback
-  ) {
-    return null;
-  }
-  const definiteElements = receiver.elements.filter(
-    (element) => !ts.isOmittedExpression(element) && !ts.isSpreadElement(element)
-  ).length;
-  const minimumElements =
-    method.name === 'reduce' || method.name === 'reduceRight'
-      ? node.arguments.length >= 2
-        ? 1
-        : 2
-      : 1;
-  return definiteElements >= minimumElements
-    ? { call: node, callable: callback, method: method.name }
-    : null;
-}
 
 export function executedIifeForCall(node) {
   if (!ts.isCallExpression(node) || node.questionDotToken) return null;
@@ -114,6 +34,10 @@ export function executedIifeForCall(node) {
         callable: calledCallable,
       }
     : null;
+}
+
+export function executedInvocationForCall(node) {
+  return executedIifeForCall(node) ?? executedSynchronousArrayCallbackForCall(node);
 }
 
 export function immediateIifeInvocation(node) {
@@ -421,7 +345,7 @@ function bindingLiveAfterExpression(expression, name, live) {
     );
   }
   if (ts.isCallExpression(current)) {
-    const invocation = executedIifeForCall(current);
+    const invocation = executedInvocationForCall(current);
     if (
       invocation?.callable.body &&
       !callableBindsName(invocation.callable, name) &&
@@ -503,7 +427,7 @@ function parameterReferences(callable, identifier) {
     if (node !== callable.body && (ts.isFunctionLike(node) || ts.isClassLike(node))) {
       if (
         ts.isFunctionLike(node) &&
-        immediateIifeInvocation(node) &&
+        immediateExecutedInvocation(node) &&
         node.body &&
         !callableBindsName(node, identifier.text)
       ) {
@@ -669,7 +593,7 @@ function effectiveParameterValue(parameter, argument) {
   return parameter.initializer ?? UNKNOWN_SELECTION;
 }
 
-export function executedIifeParameterInitializer(parameter, argument) {
+export function executedInvocationParameterInitializer(parameter, argument) {
   const value = effectiveParameterValue(parameter, argument);
   return value === UNKNOWN_SELECTION || value === MISSING_ARGUMENT ? null : value;
 }
@@ -709,14 +633,53 @@ function defaultParameterReferences(callable, parameter, reference, argument) {
   return referencesForSelection(callable, parameter, selectedPath);
 }
 
-export function executedIifeParameterReferences(reference) {
+function synchronousCallbackParameterReferences(invocation, reference) {
+  const elementPosition = invocation.elements.findIndex(({ element }) =>
+    containsReference(element, reference)
+  );
+  if (elementPosition < 0) return [];
+  const { element } = invocation.elements[elementPosition];
+  const isReducer = invocation.method === 'reduce' || invocation.method === 'reduceRight';
+  const hasInitialValue = isReducer && invocation.call.arguments.length >= 2;
+  const valueParameterIndex = isReducer
+    ? hasInitialValue || elementPosition > 0
+      ? 1
+      : 0
+    : 0;
+  const selections = [
+    {
+      parameter: invocation.callable.parameters[valueParameterIndex],
+      path: referencePath(element, reference),
+    },
+    {
+      parameter: invocation.callable.parameters[isReducer ? 3 : 2],
+      path: referencePath(invocation.receiver, reference),
+    },
+  ];
+  return [
+    ...new Set(
+      selections.flatMap(({ parameter, path }) =>
+        parameter && path
+          ? referencesForSelection(invocation.callable, parameter, path)
+          : []
+      )
+    ),
+  ];
+}
+
+export function executedInvocationParameterReferences(reference) {
   let current = reference;
   while (current.parent) {
     const parent = current.parent;
     if (ts.isCallExpression(parent)) {
-      const invocation = executedIifeForCall(parent);
+      const callbackInvocation = executedSynchronousArrayCallbackForCall(parent);
+      const callbackReferences =
+        callbackInvocation &&
+        synchronousCallbackParameterReferences(callbackInvocation, reference);
+      if (callbackReferences && callbackReferences.length > 0) return callbackReferences;
+      const invocation = callbackInvocation ?? executedIifeForCall(parent);
       const argumentIndex = invocation?.arguments.findIndex((argument) =>
-        containsReference(argument, reference)
+        argument ? containsReference(argument, reference) : false
       );
       if (invocation && argumentIndex !== undefined && argumentIndex >= 0) {
         const parameter =

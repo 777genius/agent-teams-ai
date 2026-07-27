@@ -3,8 +3,8 @@ import ts from 'typescript';
 import { propertyNameText, unwrapExpression } from './feature-export-ast.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import {
-  executedIifeForCall,
-  executedIifeParameterInitializer,
+  executedInvocationForCall,
+  executedInvocationParameterInitializer,
 } from './feature-executed-iife-analysis.mjs';
 
 function bindingNames(bindingName) {
@@ -110,11 +110,14 @@ export function collectBindingModel(sourceFile) {
   for (const statement of sourceFile.statements) visitStatement(statement);
 
   visitDefiniteTopLevelExpressions(sourceFile, (node) => {
-    const invocation = executedIifeForCall(node);
+    const invocation = executedInvocationForCall(node);
     if (!invocation || !invocation.callable.body) return;
     for (const [index, parameter] of invocation.callable.parameters.entries()) {
       if (parameter.dotDotDotToken) continue;
-      const initializer = executedIifeParameterInitializer(parameter, invocation.arguments[index]);
+      const initializer = executedInvocationParameterInitializer(
+        parameter,
+        invocation.arguments[index]
+      );
       if (!initializer) continue;
       addBinding(parameter.name, initializer, parameter.getStart(sourceFile), undefined, {
         scopeEnd: invocation.callable.body.end,

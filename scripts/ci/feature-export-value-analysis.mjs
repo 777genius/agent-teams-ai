@@ -6,8 +6,8 @@ import {
   propertyNameText,
   unwrapExpression,
 } from './feature-export-ast.mjs';
-import { executedSynchronousArrayCallbackForCall } from './feature-executed-iife-analysis.mjs';
 import { IDENTITY_WRAPPERS } from './feature-identity-wrappers.mjs';
+import { executedSynchronousArrayCallbackForCall } from './feature-synchronous-array-callback-analysis.mjs';
 
 const ARRAY_CALLBACK_RESULT_METHODS = new Set(['flatMap', 'map', 'reduce', 'reduceRight']);
 
