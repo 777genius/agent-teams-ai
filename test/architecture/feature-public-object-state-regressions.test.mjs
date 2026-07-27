@@ -96,6 +96,47 @@ test('models ESM logical property assignments as conditional terminal writes', (
   );
 });
 
+test('preserves object aliases only when logical assignment cannot replace them', () => {
+  withFeatureFixture(
+    withStores({
+      'logical-or-preserves-object-alias': `
+        import { Store } from './infrastructure/Store';
+        const target = {};
+        export const api = { target };
+        api.target ||= {};
+        target.Store = Store;
+      `,
+      'logical-nullish-preserves-object-alias': `
+        import { Store } from './infrastructure/Store';
+        const target = {};
+        export const api = { target };
+        api.target ??= {};
+        target.Store = Store;
+      `,
+      'logical-and-replaces-object-alias-safe': `
+        import { Store } from './infrastructure/Store';
+        const target = {};
+        export const api = { target };
+        api.target &&= {};
+        target.Store = Store;
+      `,
+      'logical-and-clears-object-alias-safe': `
+        import { Store } from './infrastructure/Store';
+        const target = {};
+        export const api = { target };
+        api.target &&= undefined;
+        target.Store = Store;
+      `,
+    }),
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/logical-nullish-preserves-object-alias/main/index.ts',
+        'src/features/logical-or-preserves-object-alias/main/index.ts',
+      ]);
+    }
+  );
+});
+
 test('preserves ordinary and copied property capabilities through terminal deletes', () => {
   withFeatureFixture(
     withStores({

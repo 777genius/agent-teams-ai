@@ -84,6 +84,19 @@ function resolveObjectLiterals(expression, bindingModel, beforePosition) {
   });
 }
 
+function staticAliasedPublicValueState(expression, bindingModel, visited = new Set()) {
+  const current = unwrapExpression(expression);
+  const state = staticPublicValueState(current);
+  if (state !== 'unknown' || !ts.isIdentifier(current)) return state;
+  const key = bindingModel.bindingAt(current.text, current.getStart());
+  if (!key || visited.has(key)) return state;
+  visited.add(key);
+  const binding = bindingModel.versions.get(key);
+  return binding
+    ? staticAliasedPublicValueState(binding.initializer, bindingModel, visited)
+    : state;
+}
+
 export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identityAliases = []) {
   const writes = new Map();
   const objectState = createPublicObjectState();
@@ -261,6 +274,9 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identity
         definition: true,
         position: binding.position,
         sourceKey,
+        valueState: definition.accessorKind
+          ? definition.valueState
+          : staticAliasedPublicValueState(definition.referenceNodes[0], bindingModel),
       });
     }
   }
