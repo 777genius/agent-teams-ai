@@ -8,9 +8,11 @@ import {
 } from './feature-export-ast.mjs';
 import {
   accessPath,
+  latestPropertyWriteBefore,
   propertyPathWasOverwrittenAfter,
   staticOverwrittenPaths,
 } from './feature-public-object-analysis.mjs';
+import { LOGICAL_ASSIGNMENT_KINDS } from './feature-public-object-state.mjs';
 
 function directObjectReferencePath(initializer, reference) {
   const object = unwrapExpression(initializer);
@@ -126,7 +128,41 @@ function mutationReferencePath(expression, reference, bindingModel, sourceFile) 
   if (!target || valuePath === null || valuePath === undefined) return null;
   const position = current.getStart(sourceFile);
   const key = bindingModel.bindingAt(target.root, position);
-  return key ? { key, path: [...target.path, ...valuePath], position: current.end } : null;
+  return key
+    ? {
+        key,
+        logicalAssignment:
+          ts.isBinaryExpression(current) &&
+          target.path.length > 0 &&
+          LOGICAL_ASSIGNMENT_KINDS.has(current.operatorToken.kind),
+        path: [...target.path, ...valuePath],
+        position: current.end,
+      }
+    : null;
+}
+
+function latestPathWrite(propertyWrites, key, path) {
+  return latestPropertyWriteBefore(
+    propertyWrites.get(key) ?? [],
+    Number.POSITIVE_INFINITY,
+    (write) =>
+      write.path.length <= path.length &&
+      write.path.every((segment, index) => segment === path[index])
+  );
+}
+
+function writeContainsReference(write, reference) {
+  return Boolean(
+    write?.referenceRanges?.some(
+      (range) => range.start <= reference.getStart() && reference.end <= range.end
+    )
+  );
+}
+
+function sourceWasMaterialized(propertyWrites, sourceKey) {
+  return [...propertyWrites.values()].some((writes) =>
+    writes.some((write) => write.originSourceKeys?.includes(sourceKey))
+  );
 }
 
 export function attachPublicReferenceQueries(
@@ -153,16 +189,26 @@ export function attachPublicReferenceQueries(
     const path = directObjectReferencePath(declaration.initializer, reference);
     if (!path) return true;
     const key = bindingModel.bindingAt(declaration.name.text, reference.getStart(sourceFile));
-    return !propertyPathWasOverwrittenAfter(
-      propertyWrites,
-      key,
-      path,
-      declaration.getStart(sourceFile)
-    );
+    if (
+      key &&
+      !publicBindingNames.has(declaration.name.text) &&
+      !owners.has(declaration.name.text) &&
+      sourceWasMaterialized(propertyWrites, key)
+    ) {
+      return false;
+    }
+    const latestWrite = key && latestPathWrite(propertyWrites, key, path);
+    return latestWrite ? writeContainsReference(latestWrite, reference) : true;
   };
   owners.isMutationReferencePublic = (reference, expression) => {
-    if (capturedReferenceIsPublic?.(reference)) return true;
     const target = mutationReferencePath(expression, reference, bindingModel, sourceFile);
+    if (target?.logicalAssignment) {
+      return writeContainsReference(
+        latestPathWrite(propertyWrites, target.key, target.path),
+        reference
+      );
+    }
+    if (capturedReferenceIsPublic?.(reference)) return true;
     if (target === false) return false;
     return (
       !target ||

@@ -14,6 +14,12 @@ import {
   staticDescriptorIsWritable,
   staticDescriptorMapProperties,
 } from './feature-public-descriptor-state.mjs';
+import {
+  LOGICAL_ASSIGNMENT_KINDS,
+  collectOrdinaryPropertyDefinitions,
+  createPublicObjectState,
+  staticPublicValueState,
+} from './feature-public-object-state.mjs';
 
 export { accessPath };
 export {
@@ -80,12 +86,9 @@ function resolveObjectLiterals(expression, bindingModel, beforePosition) {
 
 export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identityAliases = []) {
   const writes = new Map();
-  const configurablePaths = new Set();
-  const nonConfigurablePaths = new Set();
-  const nonWritablePaths = new Set();
+  const objectState = createPublicObjectState();
   const lockedPrefixes = [];
   const frozenPrefixes = [];
-  const pathKey = (sourceKey, path) => `${sourceKey}:${JSON.stringify(path)}`;
   const aliasNeighbors = new Map();
   for (const [left, right] of identityAliases) {
     const leftNeighbors = aliasNeighbors.get(left) ?? new Set();
@@ -108,22 +111,38 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identity
     }
     return keys;
   };
+  const stateCopyRelations = collectCopyRelations(sourceFile, bindingModel)
+    .map((relation, order) => ({ ...relation, order }))
+    .sort((left, right) => left.copyPosition - right.copyPosition || left.order - right.order);
+  let stateCopyIndex = 0;
+  const applyCopiesBefore = (position) => {
+    while (
+      stateCopyIndex < stateCopyRelations.length &&
+      stateCopyRelations[stateCopyIndex].copyPosition < position
+    ) {
+      objectState.applyCopyRelation(stateCopyRelations[stateCopyIndex++], equivalentSourceKeys);
+    }
+  };
   const addWrite = ({
+    availabilityOrder,
+    accessorKind,
+    availableAt,
     configurable,
     definition = false,
     end,
     enumerable = true,
+    logicalOperator,
     path,
     position,
     referenceNodes,
+    referenceRanges,
     recordsValue = true,
     removed = false,
     sourceKey,
+    valueState = 'unknown',
     writable,
   }) => {
     if (!sourceKey || path.length === 0) return;
-    const key = pathKey(sourceKey, path);
-    const propertyKnown = configurablePaths.has(key) || nonConfigurablePaths.has(key);
     const locked = lockedPrefixes.some(
       ({ path: prefix, sourceKey: lockedSource }) =>
         lockedSource === sourceKey &&
@@ -136,39 +155,39 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identity
         path.length === prefix.length + 1 &&
         prefix.every((segment, index) => path[index] === segment)
     );
-    if (!removed && (frozen || (!definition && nonWritablePaths.has(key)))) return;
-    if (removed) {
-      if (!configurablePaths.has(key) || locked) return;
-      configurablePaths.delete(key);
-      nonWritablePaths.delete(key);
-    } else {
-      if (configurable === false || (definition && configurable === undefined && !propertyKnown)) {
-        configurablePaths.delete(key);
-        nonConfigurablePaths.add(key);
-      } else if (
-        (!definition || configurable === true) &&
-        !nonConfigurablePaths.has(key) &&
-        !locked
-      ) {
-        configurablePaths.add(key);
-      }
-      if (writable === false || (definition && writable === undefined && !propertyKnown)) {
-        nonWritablePaths.add(key);
-      } else if (writable === true && !nonConfigurablePaths.has(key)) {
-        nonWritablePaths.delete(key);
-      }
-    }
-    if (!recordsValue) return;
-    const rootWrites = writes.get(sourceKey) ?? [];
-    rootWrites.push({
-      end,
-      enumerable,
-      path,
-      position,
-      referenceRanges: (referenceNodes ?? []).map((node) => ({
+    const ranges = [
+      ...(referenceRanges ?? []),
+      ...(referenceNodes ?? []).map((node) => ({
         end: node.end,
         start: node.getStart(sourceFile),
       })),
+    ];
+    const stateResult = objectState.applyWrite({
+      accessorKind,
+      configurable,
+      definition,
+      enumerable,
+      frozen,
+      locked,
+      logicalOperator,
+      path,
+      recordsValue,
+      referenceRanges: ranges,
+      removed,
+      sourceKey,
+      valueState,
+      writable,
+    });
+    if (!stateResult.recordsWrite) return;
+    const rootWrites = writes.get(sourceKey) ?? [];
+    rootWrites.push({
+      availabilityOrder,
+      availableAt,
+      end,
+      enumerable: stateResult.enumerable,
+      path,
+      position,
+      referenceRanges: stateResult.referenceRanges,
     });
     writes.set(sourceKey, rootWrites);
   };
@@ -233,39 +252,38 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identity
       }
     }
   };
-  const collectLiteralPaths = (object, sourceKey, prefix = []) => {
-    for (const property of object.properties) {
-      if (
-        !property.name ||
-        (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property))
-      ) {
-        continue;
-      }
-      const path = [...prefix, propertyNameText(property.name)];
-      configurablePaths.add(pathKey(sourceKey, path));
-      const value = ts.isPropertyAssignment(property)
-        ? unwrapExpression(property.initializer)
-        : null;
-      if (value && ts.isObjectLiteralExpression(value)) {
-        collectLiteralPaths(value, sourceKey, path);
-      }
-    }
-  };
   for (const [sourceKey, binding] of bindingModel.versions) {
-    const initializer = unwrapExpression(binding.initializer);
-    if (ts.isObjectLiteralExpression(initializer)) {
-      collectLiteralPaths(initializer, sourceKey);
+    for (const definition of collectOrdinaryPropertyDefinitions(binding.initializer)) {
+      addWrite({
+        ...definition,
+        availabilityOrder: [definition.position],
+        availableAt: binding.position,
+        definition: true,
+        position: binding.position,
+        sourceKey,
+      });
     }
   }
   const visit = (node) => {
+    applyCopiesBefore(node.getStart(sourceFile));
     if (ts.isDeleteExpression(node)) {
       addTargetWrite(node.expression, node, [], true, [node], { removed: true });
       return;
     }
-    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+    if (
+      ts.isBinaryExpression(node) &&
+      (node.operatorToken.kind === ts.SyntaxKind.EqualsToken ||
+        LOGICAL_ASSIGNMENT_KINDS.has(node.operatorToken.kind))
+    ) {
       const target = accessPath(node.left);
       if (target?.path.length) {
-        addTargetWrite(node.left, node);
+        addTargetWrite(node.left, node, [], true, [node.right], {
+          logicalOperator:
+            node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+              ? undefined
+              : node.operatorToken.kind,
+          valueState: staticPublicValueState(node.right),
+        });
       }
       return;
     }
@@ -504,6 +522,7 @@ function addCopySources(relations, ownerKey, targetPath, callOrLiteral, sources,
     const sourceKey = source && bindingModel.bindingAt(source.root, sourceExpression.getStart());
     if (!sourceKey) continue;
     relations.push({
+      copyKind: 'assign',
       copyPosition: callOrLiteral.end,
       overwrittenPaths: staticOverwrittenPaths(
         sources.slice(index + 1),
@@ -531,6 +550,7 @@ export function collectCopyRelations(sourceFile, bindingModel) {
             source && bindingModel.bindingAt(source.root, property.getStart(sourceFile));
           if (sourceKey) {
             relations.push({
+              copyKind: 'spread',
               copyPosition: current.end,
               overwrittenPaths: staticOverwrittenPropertyPaths(
                 properties.slice(index + 1),
