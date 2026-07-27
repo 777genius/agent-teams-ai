@@ -579,7 +579,7 @@ function hasConsistentRelationships(
       (current.length !== 1 ||
         !isWithinPolicyDuration(
           current[0].issuedAt,
-          predecessor[0].predecessorGraceExpiresAt as number,
+          predecessor[0].predecessorGraceExpiresAt!,
           policy.predecessorGraceMs
         ))
     ) {
@@ -770,7 +770,7 @@ function hasCoherentResetIntent(
         hasChallenge &&
         bindingsEqual(state.binding, intent.requestedBinding) &&
         state.expectedKeyringId === intent.stagedKeyringId &&
-        challengeIds.has(intent.challengeId as PairingChallengeId) &&
+        challengeIds.has(intent.challengeId) &&
         challenge?.status === (intent.stage === 'challenge_pending' ? 'pending_delivery' : 'issued')
       );
     }
