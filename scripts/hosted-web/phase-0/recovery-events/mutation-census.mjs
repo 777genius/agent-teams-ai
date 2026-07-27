@@ -208,14 +208,14 @@ export function buildMutationCensusEvidence({
   manifest,
   verification,
   crossLaneVerification,
-  observedAtSha,
+  sourceSnapshotSha256,
 }) {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     artifactId: 'P0.W5.SUPPORTING.MUTATION_CENSUS',
-    observedAtSha,
+    sourceSnapshotSha256,
     derivation:
-      'TypeScript AST extraction compared bidirectionally with the independently maintained mutation-surface-manifest.json and command descriptors; observedAtSha is the latest committed revision that changed any census source input',
+      'TypeScript AST extraction compared bidirectionally with the independently maintained mutation-surface-manifest.json and command descriptors; sourceSnapshotSha256 is a topology-independent digest over every sorted source path and its exact bytes',
     sourceFiles: [...new Set(manifest.rows.map((entry) => entry.sourceFile))],
     rowCount: manifest.rows.length,
     dispositionCounts: verification.counts,

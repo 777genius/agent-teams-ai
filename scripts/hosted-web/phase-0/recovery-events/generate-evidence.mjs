@@ -18,7 +18,7 @@ import {
   verifyCrossLaneOwnerAgreement,
   verifyMutationCensus,
 } from './mutation-census.mjs';
-import { resolveMutationCensusSourceRevision } from './source-revision-provenance.mjs';
+import { resolveMutationCensusSourceSnapshotSha256 } from './source-revision-provenance.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(SCRIPT_DIR, '../../../..');
@@ -1135,7 +1135,7 @@ function buildReport({ catalog, scheduler, effectMatrix, goldens }) {
 
 async function renderOutputs() {
   const mutationManifest = JSON.parse(await readFile(MUTATION_MANIFEST_PATH, 'utf8'));
-  const mutationCensusObservedAtSha = await resolveMutationCensusSourceRevision({
+  const mutationCensusSourceSnapshotSha256 = await resolveMutationCensusSourceSnapshotSha256({
     root: ROOT,
     sourceScopes: mutationManifest.sourceScopes ?? [],
   });
@@ -1274,7 +1274,7 @@ async function renderOutputs() {
     manifest: mutationManifest,
     verification: censusVerification,
     crossLaneVerification: crossLaneOwnerVerification,
-    observedAtSha: mutationCensusObservedAtSha,
+    sourceSnapshotSha256: mutationCensusSourceSnapshotSha256,
   });
   const index = {
     schemaVersion: 1,

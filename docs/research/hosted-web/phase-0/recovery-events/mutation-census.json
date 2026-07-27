@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "artifactId": "P0.W5.SUPPORTING.MUTATION_CENSUS",
-  "observedAtSha": "dab13de404d5f3fbbf8edee15ec361826eec6cb4",
-  "derivation": "TypeScript AST extraction compared bidirectionally with the independently maintained mutation-surface-manifest.json and command descriptors; observedAtSha is the latest committed revision that changed any census source input",
+  "sourceSnapshotSha256": "e0225b6c38b10c12f51e3a79b758a383bfb728e80cf870183f95bebae6c4cd37",
+  "derivation": "TypeScript AST extraction compared bidirectionally with the independently maintained mutation-surface-manifest.json and command descriptors; sourceSnapshotSha256 is a topology-independent digest over every sorted source path and its exact bytes",
   "sourceFiles": [
     "src/shared/types/api.ts",
     "src/features/team-approvals/contracts/api.ts",
