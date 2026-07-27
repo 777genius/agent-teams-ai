@@ -9,7 +9,10 @@ import {
 
 import { TerminalMuxTabsView } from './TerminalMuxTabsView';
 
+import type { TerminalCommandRunPresentation } from '../model/terminalCommandRuns';
+
 export interface TerminalMuxTabsProps {
+  commandRuns: readonly TerminalCommandRunPresentation[];
   commands: TerminalMuxCommands;
   settingsOpen?: boolean;
   snapshot: TerminalWorkspaceSnapshot;
@@ -20,6 +23,7 @@ export interface TerminalMuxTabsProps {
 }
 
 export const TerminalMuxTabs = ({
+  commandRuns,
   commands,
   settingsOpen = false,
   snapshot,
@@ -30,6 +34,7 @@ export const TerminalMuxTabs = ({
 }: TerminalMuxTabsProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const controller = useTerminalMuxTabsController({
+    commandRuns,
     commands,
     placement,
     settingsOpen,

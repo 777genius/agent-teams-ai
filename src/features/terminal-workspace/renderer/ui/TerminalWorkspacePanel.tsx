@@ -418,7 +418,7 @@ const TerminalWorkspaceKernelView = ({
     window.requestAnimationFrame(scroll);
     window.setTimeout(scroll, 80);
   }, []);
-  const { activeCommandRuns } = useTerminalCommandRuns({
+  const { activeCommandRuns, commandRuns } = useTerminalCommandRuns({
     activePaneId: activeCommandPaneId,
     activeSessionId: activeCommandSessionId,
     eventSource: commandDockElement,
@@ -516,6 +516,7 @@ const TerminalWorkspaceKernelView = ({
 
   const tabs = (
     <TerminalMuxTabs
+      commandRuns={commandRuns}
       commands={kernel.commands}
       settingsOpen={settingsOpen}
       snapshot={snapshot}

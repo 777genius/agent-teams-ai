@@ -1,3 +1,4 @@
+import type { TerminalCommandRunPresentation } from './terminalCommandRuns';
 import type { WorkspaceKernel } from '@terminal-platform/workspace-core';
 
 export const PREWARMED_TERMINAL_TAB_TITLE = '__tp_prewarmed_shell__';
@@ -22,6 +23,7 @@ export type TerminalMuxTab = NonNullable<
 >['topology']['tabs'][number];
 type TerminalMuxPaneTreeNode = TerminalMuxTab['root'];
 export type TerminalTabColorId = (typeof TERMINAL_TAB_COLOR_OPTIONS)[number]['id'];
+export type TerminalTabContentState = 'empty' | 'has-content' | 'unknown';
 
 export interface TerminalTabColorOption {
   id: string;
@@ -321,28 +323,59 @@ export function isPrewarmedTerminalTab(tab: TerminalMuxTab): boolean {
   return tab.title?.trim() === PREWARMED_TERMINAL_TAB_TITLE;
 }
 
-export function hasTerminalTabHistory(
+export function normalizeTerminalUserTabTitle(title: string): string | null {
+  const normalizedTitle = title.trim();
+  return normalizedTitle && normalizedTitle !== PREWARMED_TERMINAL_TAB_TITLE
+    ? normalizedTitle
+    : null;
+}
+
+export function resolveTerminalTabContentState(
   snapshot: TerminalWorkspaceSnapshot,
-  tab: TerminalMuxTab
-): boolean {
+  tab: TerminalMuxTab,
+  commandRuns: readonly TerminalCommandRunPresentation[] = []
+): TerminalTabContentState {
   const paneIds = collectPaneIds(tab.root);
   const focusedScreen = snapshot.attachedSession?.focused_screen ?? null;
+  const attachedSessionId = snapshot.attachedSession?.session?.session_id ?? null;
 
   for (const paneId of paneIds) {
-    const historicalLines = snapshot.historicalPanes?.[paneId]?.lines ?? [];
-    if (historicalLines.some((line) => line.trim().length > 0)) {
-      return true;
+    if ((snapshot.drafts?.[paneId] ?? '').trim().length > 0) {
+      return 'has-content';
+    }
+    if (
+      attachedSessionId &&
+      commandRuns.some(
+        (run) =>
+          run.sessionId === attachedSessionId &&
+          run.paneId === paneId &&
+          (run.status === 'running' || run.status === 'unknown')
+      )
+    ) {
+      return 'has-content';
+    }
+
+    const historicalPane = snapshot.historicalPanes?.[paneId];
+    if (
+      historicalPane?.lines.some(hasVisibleTerminalText) ||
+      historicalPane?.richLines?.some(hasRichTerminalLineContent)
+    ) {
+      return 'has-content';
     }
 
     if (
       focusedScreen?.pane_id === paneId &&
-      focusedScreen.surface.lines.some((line) => line.text.trim().length > 0)
+      (focusedScreen.surface.lines.some(hasRichTerminalLineContent) ||
+        (focusedScreen.surface.progress?.state ?? 'inactive') !== 'inactive')
     ) {
-      return true;
+      return 'has-content';
     }
   }
 
-  return false;
+  // Screen and history projections cannot prove that the shell is idle. Direct
+  // terminal input can start a long-running process and then clear both views
+  // without producing a command-run event, so closing must stay conservative.
+  return 'unknown';
 }
 
 function formatNewMuxTabTitle(tabNumber: number): string {
@@ -355,4 +388,22 @@ function collectPaneIds(node: TerminalMuxPaneTreeNode): string[] {
   }
 
   return [...collectPaneIds(node.first), ...collectPaneIds(node.second)];
+}
+
+function hasVisibleTerminalText(line: string): boolean {
+  return line.length > 0;
+}
+
+function hasRichTerminalLineContent(line: {
+  text: string;
+  media?: readonly unknown[];
+  semantic_marks?: readonly unknown[];
+  side_effects?: readonly unknown[];
+}): boolean {
+  return (
+    hasVisibleTerminalText(line.text) ||
+    Boolean(line.media?.length) ||
+    Boolean(line.semantic_marks?.length) ||
+    Boolean(line.side_effects?.length)
+  );
 }
