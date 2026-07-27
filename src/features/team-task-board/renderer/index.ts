@@ -1,3 +1,4 @@
+export { createTeamNotificationTransport } from './adapters/createTeamNotificationTransport';
 export type {
   TeamTaskArtifactAnalyticsAttachment,
   TeamTaskArtifactFile,
@@ -24,3 +25,4 @@ export {
   recordTeamTaskBoardSnapshotTransitions,
   resetTeamTaskBoardAnalyticsForTests,
 } from './adapters/taskLifecycleAnalytics';
+export type { TeamTaskNotificationTransportPort } from './ports/TeamTaskNotificationPorts';

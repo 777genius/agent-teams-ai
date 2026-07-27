@@ -9,6 +9,7 @@ import {
 import {
   createTeamLifecycleMutationCleanup,
   createTeamLifecycleMutationSlice,
+  createTeamLifecycleMutationTransport,
   type TeamLifecycleMutationSlice,
 } from '@features/team-lifecycle/renderer';
 import { isActiveProvisioningState } from '@features/team-provisioning';
@@ -17,6 +18,7 @@ import {
   createTeamProvisioningControlSlice,
   createTeamProvisioningLaunchSlice,
   createTeamProvisioningProgressSlice,
+  createTeamToolApprovalTransport,
   loadAllTeamLaunchParams,
   saveTeamLaunchParams,
   saveTeamToolApprovalSettings,
@@ -26,6 +28,16 @@ import {
   type TeamProvisioningProgressSlice,
   type TeamRuntimeObservationSlice,
 } from '@features/team-provisioning/renderer';
+import {
+  createTeamRosterMutationRendererSlice,
+  createTeamRosterMutationTransport,
+  type TeamRosterMutationRendererSlice,
+} from '@features/team-roster-mutations/renderer';
+import {
+  createTeamRuntimeOperationsRendererSlice,
+  createTeamRuntimeOperationsTransport,
+  type TeamRuntimeOperationsRendererSlice,
+} from '@features/team-runtime-operations/renderer';
 import {
   clearTeamTaskBoardAnalytics,
   resetTeamTaskBoardAnalyticsForTests,
@@ -43,9 +55,7 @@ import {
 import { classifyAnalyticsError } from '@renderer/analytics/productAnalytics';
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
 import { getTeamLifecycleAnalyticsContext } from '@renderer/analytics/teamAnalyticsMetadata';
-import { api } from '@renderer/api';
 import { normalizePath } from '@renderer/utils/pathNormalize';
-import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { createLogger } from '@shared/utils/logger';
 
 import { createTeamCollaborationDataSlice } from '../team/createTeamCollaborationDataSlice';
@@ -85,35 +95,18 @@ import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMod
 import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import type {
   ActiveToolCall,
-  AddMemberRequest,
   LeadActivityState,
   LeadContextUsage,
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
   NotificationTarget,
-  RetryFailedOpenCodeSecondaryLanesResult,
   TeamAgentRuntimeSnapshot,
   TeamProvisioningProgress,
   TeamSummary,
   ToolApprovalRequest,
   ToolApprovalSettings,
 } from '@shared/types';
-
-interface CurrentDevProductAnalytics {
-  recordAttachmentAttachEnd(input: Record<string, unknown>): void;
-  recordCrossTeamMessageSend(input: Record<string, unknown>): void;
-  recordTeamDelete(input: Record<string, unknown>): void;
-}
-
-const currentDevProductAnalytics =
-  productAnalytics as unknown as Partial<CurrentDevProductAnalytics>;
-const recordAttachmentAttachEnd =
-  currentDevProductAnalytics.recordAttachmentAttachEnd ?? (() => undefined);
-const recordCrossTeamMessageSend =
-  currentDevProductAnalytics.recordCrossTeamMessageSend ?? (() => undefined);
-const recordTeamDelete = currentDevProductAnalytics.recordTeamDelete ?? (() => undefined);
 import type { StateCreator } from 'zustand';
-
 export { getLastResolvedTeamDataRefreshAt } from '../team/teamDataRefreshTimestamps';
 export {
   selectTeamDataForName,
@@ -140,73 +133,49 @@ export {
   selectResolvedMembersForTeamName,
 } from '../team/teamResolvedMembers';
 export type { TeamLaunchParams } from '@features/team-provisioning/renderer';
-
 const logger = createLogger('teamSlice');
-
+const recordAttachmentAttachEnd = productAnalytics.recordAttachmentAttachEnd ?? (() => undefined);
+const recordCrossTeamMessageSend = productAnalytics.recordCrossTeamMessageSend ?? (() => undefined);
+const recordTeamDelete = productAnalytics.recordTeamDelete ?? (() => undefined);
 const teamDirectoryRefreshCoordinator = new TeamDirectoryRefreshCoordinator<ContextRequestScope>();
 const teamStateLifecycleCoordinator = new TeamStateLifecycleCoordinator(
   teamDirectoryRefreshCoordinator
 );
 const teamLaunchAnalyticsCoordinator = createProductTeamLaunchAnalyticsCoordinator();
-
-export function isTeamDataRefreshPending(teamName: string): boolean {
-  return teamStateLifecycleCoordinator.isTeamDataRefreshPending(teamName);
-}
-
+const teamToolApprovalTransport = createTeamToolApprovalTransport();
+export const isTeamDataRefreshPending = (teamName: string): boolean =>
+  teamStateLifecycleCoordinator.isTeamDataRefreshPending(teamName);
 export function __resetTeamSliceModuleStateForTests(): void {
   resetToolApprovalSettingsSync();
   teamStateLifecycleCoordinator.reset();
   teamLaunchAnalyticsCoordinator.reset();
   resetTeamTaskBoardAnalyticsForTests();
 }
-
 export function __getTeamScopedTransientStateForTests(
   teamName: string
 ): TeamScopedTransientStateSnapshot {
   return teamStateLifecycleCoordinator.snapshot(teamName);
 }
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-export interface GlobalTaskDetailState {
-  teamName: string;
-  taskId: string;
-  commentId?: string;
-}
-
-export interface PendingMemberProfileState {
+const nowIso = (): string => new Date().toISOString();
+export type GlobalTaskDetailState = { teamName: string; taskId: string; commentId?: string };
+export type PendingMemberProfileState = {
   teamName?: string;
   memberName: string;
   focus?: 'profile' | 'messages' | 'logs';
-}
-
+};
 type TeamSectionTarget = NonNullable<Extract<NotificationTarget, { kind: 'team' }>['section']>;
-
-export interface PendingTeamSectionFocusState {
-  teamName: string;
-  section: TeamSectionTarget;
-}
-
-function isVisibleInActiveTeamSurface(
+export type PendingTeamSectionFocusState = { teamName: string; section: TeamSectionTarget };
+const isVisibleInActiveTeamSurface = (
   state: Pick<AppState, 'paneLayout'>,
   teamName: string | null | undefined
-): boolean {
-  if (!teamName) {
-    return false;
-  }
-  return state.paneLayout.panes.some((pane) => {
-    if (!pane.activeTabId) {
-      return false;
-    }
+): boolean =>
+  Boolean(teamName) &&
+  state.paneLayout.panes.some((pane) => {
     const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
     return (
       (activeTab?.type === 'team' || activeTab?.type === 'graph') && activeTab.teamName === teamName
     );
   });
-}
-
 export interface TeamSlice
   extends
     TeamGraphLayoutSlice,
@@ -217,6 +186,8 @@ export interface TeamSlice
     TeamProvisioningLaunchSlice,
     TeamProvisioningProgressSlice,
     TeamRuntimeObservationSlice,
+    TeamRuntimeOperationsRendererSlice,
+    TeamRosterMutationRendererSlice,
     TeamDirectoryRendererSlice,
     TeamTaskArtifactsRendererSlice,
     TeamTaskBoardRendererSlice,
@@ -224,7 +195,6 @@ export interface TeamSlice
   globalTaskDetail: GlobalTaskDetailState | null;
   openGlobalTaskDetail: (teamName: string, taskId: string, commentId?: string) => void;
   closeGlobalTaskDetail: () => void;
-  /** Set by MemberHoverCard to signal TeamDetailView to open MemberDetailDialog */
   pendingMemberProfile: PendingMemberProfileState | null;
   openMemberProfile: (
     memberName: string,
@@ -235,7 +205,6 @@ export interface TeamSlice
   pendingTeamSectionFocus: PendingTeamSectionFocusState | null;
   focusTeamSection: (teamName: string, section: TeamSectionTarget) => void;
   clearTeamSectionFocus: () => void;
-  /** Set by GlobalTaskDetailDialog to signal TeamDetailView to open ChangeReviewDialog */
   pendingReviewRequest: {
     taskId: string;
     filePath?: string;
@@ -249,18 +218,11 @@ export interface TeamSlice
     projectPath: string;
   } | null;
   provisioningRuns: Record<string, TeamProvisioningProgress>;
-  /** Synthetic TeamSummary snapshots for teams currently being provisioned (before config.json exists). */
   provisioningSnapshotByTeam: Record<string, TeamSummary>;
   currentProvisioningRunIdByTeam: Record<string, string | null>;
   currentRuntimeRunIdByTeam: Record<string, string | null>;
-  /** Runs explicitly cleared after Unknown runId polling; late events/progress for them are ignored. */
   ignoredProvisioningRunIds: Record<string, string>;
-  /** Runtime runs explicitly tombstoned after stop/offline so late events cannot resurrect UI state. */
   ignoredRuntimeRunIds: Record<string, string>;
-  /**
-   * Per-team lower bound for provisioning progress timestamps.
-   * Used to ignore late progress events from a previous run after stop→launch.
-   */
   provisioningStartedAtFloorByTeam: Record<string, string>;
   leadActivityByTeam: Record<string, LeadActivityState>;
   leadContextByTeam: Record<string, LeadContextUsage>;
@@ -268,7 +230,6 @@ export interface TeamSlice
   activeToolsByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
   finishedVisibleByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
   toolHistoryByTeam: Record<string, Record<string, ActiveToolCall[]>>;
-  /** Per-team per-member spawn statuses during team provisioning/launch. */
   memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
   memberSpawnSnapshotsByTeam: Record<string, MemberSpawnStatusesSnapshot>;
   teamAgentRuntimeByTeam: Record<string, TeamAgentRuntimeSnapshot>;
@@ -278,25 +239,9 @@ export interface TeamSlice
   openTeamsTab: (projectPath?: string) => void;
   openTeamTab: (teamName: string, projectPath?: string, taskId?: string) => void;
   clearKanbanFilter: () => void;
-  addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
-  restartMember: (teamName: string, memberName: string) => Promise<void>;
-  skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;
-  removeMember: (teamName: string, memberName: string) => Promise<void>;
-  restoreMember: (teamName: string, memberName: string) => Promise<void>;
-  updateMemberRole: (
-    teamName: string,
-    memberName: string,
-    role: string | undefined
-  ) => Promise<void>;
-  retryFailedOpenCodeSecondaryLanes: (
-    teamName: string
-  ) => Promise<RetryFailedOpenCodeSecondaryLanesResult>;
   pendingApprovals: ToolApprovalRequest[];
-  /** Resolved permission approvals: request_id → allowed (true/false). Used for noise row icons. */
   resolvedApprovals: Map<string, boolean>;
-  /** Authoritative renderer cache used by background/cross-team approval prompts. */
   toolApprovalSettingsByTeam: Record<string, ToolApprovalSettings>;
-  /** Projection for the currently selected team (legacy component compatibility). */
   toolApprovalSettings: ToolApprovalSettings;
   updateToolApprovalSettings: (
     patch: Partial<ToolApprovalSettings>,
@@ -309,8 +254,6 @@ export interface TeamSlice
     allow: boolean,
     message?: string
   ) => Promise<void>;
-
-  // Messages panel UI state
   messagesPanelMode: TeamMessagesPanelMode;
   messagesPanelWidth: number;
   sidebarLogsHeight: number;
@@ -318,7 +261,6 @@ export interface TeamSlice
   setMessagesPanelWidth: (width: number) => void;
   setSidebarLogsHeight: (height: number) => void;
 }
-
 export function getCurrentProvisioningProgressForTeam(
   state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
   teamName: string
@@ -326,7 +268,6 @@ export function getCurrentProvisioningProgressForTeam(
   const currentRunId = state.currentProvisioningRunIdByTeam[teamName];
   return currentRunId ? (state.provisioningRuns[currentRunId] ?? null) : null;
 }
-
 export function isTeamProvisioningActive(
   state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
   teamName: string
@@ -334,7 +275,6 @@ export function isTeamProvisioningActive(
   const current = getCurrentProvisioningProgressForTeam(state, teamName);
   return current != null && isActiveProvisioningState(current.state);
 }
-
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
   ...createTeamCollaborationDataSlice({
     analytics: {
@@ -421,12 +361,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     state: {
       setState: (update) => set((state) => update(state)),
     },
-    transport: {
-      permanentlyDelete: (teamName) =>
-        unwrapIpc('team:permanentlyDeleteTeam', () => api.teams.permanentlyDeleteTeam(teamName)),
-      restore: (teamName) => unwrapIpc('team:restoreTeam', () => api.teams.restoreTeam(teamName)),
-      softDelete: (teamName) => unwrapIpc('team:deleteTeam', () => api.teams.deleteTeam(teamName)),
-    },
+    transport: createTeamLifecycleMutationTransport(),
   }),
   provisioningRuns: {},
   provisioningSnapshotByTeam: {},
@@ -563,11 +498,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (!teamName) {
         return { provisioningErrorByTeam: {} };
       }
-
       if (!(teamName in state.provisioningErrorByTeam)) {
         return {};
       }
-
       const nextErrors = { ...state.provisioningErrorByTeam };
       delete nextErrors[teamName];
       return { provisioningErrorByTeam: nextErrors };
@@ -595,8 +528,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   resolvedApprovals: new Map(),
   toolApprovalSettingsByTeam: loadAllToolApprovalSettingsByTeam(),
   toolApprovalSettings: loadLegacyToolApprovalSettings(),
-
-  // Messages panel UI state
   messagesPanelMode: loadPersistedMessagesPanelMode(),
   messagesPanelWidth: 340,
   sidebarLogsHeight: 213,
@@ -606,7 +537,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
   setMessagesPanelWidth: (width: number) => set({ messagesPanelWidth: width }),
   setSidebarLogsHeight: (height: number) => set({ sidebarLogsHeight: height }),
-
   openTeamsTab: (projectPath?: string) => {
     const state = get();
     const normalizedProjectPath = projectPath?.trim() ?? '';
@@ -625,20 +555,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       state.setActiveTab(teamsTab.id);
       return;
     }
-
     state.openTab({
       type: 'teams',
       label: 'Teams',
     });
   },
-
   openTeamTab: (teamName: string, projectPath?: string, _taskId?: string) => {
-    if (!teamName.trim()) {
-      return;
-    }
-
-    // If projectPath is provided, immediately select the matching project in the sidebar.
-    // This avoids a race condition where config.json hasn't been updated with projectPath yet.
+    if (!teamName.trim()) return;
     if (projectPath) {
       const stateForProject = get();
       const normalizedPath = normalizePath(projectPath);
@@ -649,14 +572,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         stateForProject.selectProject(matchingProject.id);
       }
     }
-
     const state = get();
-    // Use display name from teams list or selected team data if available
     const teamSummary = state.teamByName[teamName];
     const selectedTeamDisplayName =
       state.selectedTeamName === teamName ? state.selectedTeamData?.config.name : undefined;
     const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
-
     const allTabs = state.getAllPaneTabs();
     const existing = allTabs.find((tab) => tab.type === 'team' && tab.teamName === teamName);
     if (existing) {
@@ -673,11 +593,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       });
     }
   },
-
-  clearKanbanFilter: () => {
-    set({ kanbanFilterQuery: null });
-  },
-
+  clearKanbanFilter: () => set({ kanbanFilterQuery: null }),
   ...createTeamGraphLayoutActions<AppState>({
     setState: (updater) => set((state) => updater(state) ?? state),
     selectDefaultLayoutSeed: (state, teamName) => {
@@ -688,71 +604,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     },
     warn: (message) => logger.warn(message),
   }),
-  addMember: async (teamName: string, request: AddMemberRequest) => {
-    await unwrapIpc('team:addMember', () => api.teams.addMember(teamName, request));
-    await get().refreshTeamData(teamName);
-  },
-
-  restartMember: async (teamName: string, memberName: string) => {
-    try {
-      await unwrapIpc('team:restartMember', () => api.teams.restartMember(teamName, memberName));
-    } finally {
-      await Promise.allSettled([
-        get().refreshTeamMessagesHead(teamName),
-        get().fetchMemberSpawnStatuses(teamName),
-        get().fetchTeamAgentRuntime(teamName),
-      ]);
-    }
-  },
-
-  retryFailedOpenCodeSecondaryLanes: async (teamName: string) => {
-    try {
-      return await unwrapIpc('team:retryFailedOpenCodeSecondaryLanes', () =>
-        api.teams.retryFailedOpenCodeSecondaryLanes(teamName)
-      );
-    } finally {
-      await Promise.allSettled([
-        get().fetchMemberSpawnStatuses(teamName),
-        get().fetchTeamAgentRuntime(teamName),
-      ]);
-    }
-  },
-
-  skipMemberForLaunch: async (teamName: string, memberName: string) => {
-    try {
-      await unwrapIpc('team:skipMemberForLaunch', () =>
-        api.teams.skipMemberForLaunch(teamName, memberName)
-      );
-    } finally {
-      await Promise.allSettled([
-        get().fetchMemberSpawnStatuses(teamName),
-        get().fetchTeamAgentRuntime(teamName),
-        get().fetchTeams(),
-      ]);
-    }
-  },
-
-  removeMember: async (teamName: string, memberName: string) => {
-    await unwrapIpc('team:removeMember', () => api.teams.removeMember(teamName, memberName));
-    await get().refreshTeamData(teamName);
-  },
-
-  restoreMember: async (teamName: string, memberName: string) => {
-    await unwrapIpc('team:restoreMember', () => api.teams.restoreMember(teamName, memberName));
-    await get().refreshTeamData(teamName);
-    await Promise.allSettled([
-      get().fetchMemberSpawnStatuses(teamName),
-      get().fetchTeamAgentRuntime(teamName),
-    ]);
-  },
-
-  updateMemberRole: async (teamName: string, memberName: string, role: string | undefined) => {
-    await unwrapIpc('team:updateMemberRole', () =>
-      api.teams.updateMemberRole(teamName, memberName, role)
-    );
-    await get().refreshTeamData(teamName);
-  },
-
+  ...createTeamRosterMutationRendererSlice({
+    actions: { getActions: get },
+    transport: createTeamRosterMutationTransport(),
+  }),
+  ...createTeamRuntimeOperationsRendererSlice({
+    actions: { getActions: get },
+    transport: createTeamRuntimeOperationsTransport(),
+  }),
   updateToolApprovalSettings: async (patch, forTeam) => {
     const teamName = forTeam ?? get().selectedTeamName;
     const stateBeforeUpdate = get();
@@ -768,11 +627,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     );
     persistAndScheduleToolApprovalSettingsSync(teamName, merged);
   },
-
   respondToToolApproval: async (teamName, runId, requestId, allow, message) => {
     try {
-      await api.teams.respondToToolApproval(teamName, runId, requestId, allow, message);
-      // Remove ONLY after successful IPC, by runId+requestId pair
+      await teamToolApprovalTransport.respond(teamName, runId, requestId, allow, message);
       set((s) => {
         const next = new Map(s.resolvedApprovals);
         next.set(requestId, allow);
@@ -786,7 +643,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error(`respondToToolApproval failed for ${teamName}/${requestId}: ${msg}`);
-      // Surface the error so ToolApprovalSheet can show feedback
       throw err;
     }
   },

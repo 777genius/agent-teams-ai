@@ -1,6 +1,7 @@
 export { createTeamLifecycleMutationCleanup } from './adapters/createTeamLifecycleMutationCleanup';
 export type { TeamLifecycleMutationSliceDependencies } from './adapters/createTeamLifecycleMutationSlice';
 export { createTeamLifecycleMutationSlice } from './adapters/createTeamLifecycleMutationSlice';
+export { createTeamLifecycleMutationTransport } from './adapters/createTeamLifecycleMutationTransport';
 export type {
   TeamLifecycleListItemViewModel,
   TeamLifecycleListStatusTone,
