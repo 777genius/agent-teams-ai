@@ -2,8 +2,10 @@ import ts from 'typescript';
 
 import { hasModifier, propertyNameText, unwrapExpression } from './feature-export-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
+import { isPotentiallyExecutedAtTopLevel } from './feature-executed-iife-analysis.mjs';
 import { publicStaticClassSelection } from './feature-public-class-analysis.mjs';
 import { publicConstructorSelection } from './feature-public-constructor-analysis.mjs';
+import { propertyWriteWasOverwrittenBefore } from './feature-public-object-analysis.mjs';
 
 const DIRECT_CLASS_SURFACE = Object.freeze({
   constructorSignature: true,
@@ -270,10 +272,82 @@ function liveExportedLocalNames(sourceFile) {
   return names;
 }
 
-export function analyzePublicClassSurfaces({ constructorExports, exportedLocalNames, sourceFile }) {
+function publicPrototypeWriteSelection(
+  reference,
+  propertyWrites,
+  publicConstructorBindingNames,
+  sourceFile
+) {
+  const referenceIsInGetter = (() => {
+    let current = reference.parent;
+    while (current && current !== sourceFile) {
+      if (ts.isGetAccessorDeclaration(current)) return true;
+      if (ts.isFunctionLike(current)) {
+        let callable = current;
+        while (
+          callable.parent &&
+          (ts.isParenthesizedExpression(callable.parent) ||
+            ts.isAsExpression(callable.parent) ||
+            ts.isTypeAssertionExpression(callable.parent) ||
+            ts.isNonNullExpression(callable.parent) ||
+            ts.isSatisfiesExpression(callable.parent))
+        ) {
+          callable = callable.parent;
+        }
+        return (
+          ts.isPropertyAssignment(callable.parent) &&
+          propertyNameText(callable.parent.name) === 'get'
+        );
+      }
+      current = current.parent;
+    }
+    return false;
+  })();
+  if (!isPotentiallyExecutedAtTopLevel(reference, sourceFile) && !referenceIsInGetter) {
+    return null;
+  }
+  const position = reference.getStart();
+  for (const [bindingKey, localName] of publicConstructorBindingNames) {
+    for (const write of propertyWrites.get(bindingKey) ?? []) {
+      if (
+        write.path[0] !== 'prototype' ||
+        !write.referenceRanges?.some(
+          (range) => range.start <= position && position <= range.end
+        ) ||
+        propertyWriteWasOverwrittenBefore(
+          propertyWrites.get(bindingKey) ?? [],
+          write,
+          Number.POSITIVE_INFINITY
+        )
+      ) {
+        continue;
+      }
+      return {
+        localName,
+        selection: {
+          getterOnly: false,
+          localMember: write.path[1] ?? '*',
+        },
+      };
+    }
+  }
+  return null;
+}
+
+export function analyzePublicClassSurfaces({
+  constructorExports,
+  exportedLocalNames,
+  propertyWrites,
+  sourceFile,
+}) {
   const eventsByName = collectClassBindingEvents(sourceFile);
   const publicFunctionConstructorNames = new Set(
     constructorExports.map(({ localName }) => localName)
+  );
+  const publicConstructorBindingNames = new Map(
+    constructorExports
+      .filter(({ bindingKey }) => bindingKey)
+      .map(({ bindingKey, localName }) => [bindingKey, localName])
   );
   const liveExportNames = liveExportedLocalNames(sourceFile);
   const snapshotExports = sourceFile.statements.flatMap((statement) => {
@@ -346,6 +420,15 @@ export function analyzePublicClassSurfaces({ constructorExports, exportedLocalNa
           };
         }
         return staleBoundaries.has(boundary) ? { selection: null } : undefined;
+      }
+      const prototypeSelection = publicPrototypeWriteSelection(
+        reference,
+        propertyWrites,
+        publicConstructorBindingNames,
+        sourceFile
+      );
+      if (prototypeSelection) {
+        return prototypeSelection;
       }
       const functionBoundary = nearestFunctionDeclaration(reference);
       return functionBoundary?.name &&

@@ -253,6 +253,10 @@ test('CI package guard rejects source and legacy cap growth from the base commit
       new URL('../../scripts/ci/verify-source-file-size.mjs', import.meta.url),
       verifierPath
     );
+    copyFileSync(
+      new URL('../../scripts/ci/check-source-file-size.mjs', import.meta.url),
+      join(root, 'scripts/ci/check-source-file-size.mjs')
+    );
     writeFileSync(
       join(root, 'package.json'),
       JSON.stringify({
@@ -318,6 +322,61 @@ test('CI package guard rejects source and legacy cap growth from the base commit
     const firstPush = runCiGuard('0'.repeat(40));
     assert.equal(firstPush.status, 0, commandOutput(firstPush));
 
+    writeFileSync(
+      join(root, 'scripts/ci/source-file-size-legacy.json'),
+      JSON.stringify({ 'src/legacy.ts': 1000 })
+    );
+    writeFileSync(join(root, 'src/legacy.ts'), 'baseline\n'.repeat(1000));
+    writeFileSync(join(root, broadLegacyPath), 'head\n'.repeat(901));
+    writeFileSync(
+      join(root, 'scripts/ci/source-file-size-baseline.json'),
+      JSON.stringify({
+        maxLines: 800,
+        legacy: {
+          [broadLegacyPath]: 900,
+          'src/legacy.ts': 1000,
+        },
+      })
+    );
+    const broadSourceGrowth = runCiGuard(baselineRef);
+    assert.notEqual(broadSourceGrowth.status, 0);
+    assert.match(
+      commandOutput(broadSourceGrowth),
+      /\[legacy-file-grew\] scripts\/hosted-web\/legacy\.mjs/
+    );
+
+    writeFileSync(
+      join(root, 'scripts/ci/source-file-size-baseline.json'),
+      JSON.stringify({
+        maxLines: 800,
+        legacy: {
+          'src/legacy.ts': 1000,
+        },
+      })
+    );
+    const removedBroadException = runCiGuard(baselineRef);
+    assert.notEqual(removedBroadException.status, 0);
+    assert.match(
+      commandOutput(removedBroadException),
+      /\[new-oversized-file\] scripts\/hosted-web\/legacy\.mjs/
+    );
+
+    writeFileSync(
+      join(root, 'scripts/ci/source-file-size-legacy.json'),
+      JSON.stringify({ 'src/legacy.ts': 1100 })
+    );
+    writeFileSync(join(root, 'src/legacy.ts'), 'head\n'.repeat(1100));
+    writeFileSync(join(root, broadLegacyPath), 'head\n'.repeat(950));
+    writeFileSync(
+      join(root, 'scripts/ci/source-file-size-baseline.json'),
+      JSON.stringify({
+        maxLines: 800,
+        legacy: {
+          [broadLegacyPath]: 950,
+          'src/legacy.ts': 1100,
+        },
+      })
+    );
     const raisedCap = runCiGuard(baselineRef);
     assert.notEqual(raisedCap.status, 0);
     assert.match(commandOutput(raisedCap), /\[raised-legacy-cap\] src\/legacy\.ts/);

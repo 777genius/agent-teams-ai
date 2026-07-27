@@ -147,23 +147,23 @@ function splitNullDelimited(output) {
   return output.split('\0').filter(Boolean);
 }
 
-function gitOutput(args) {
+function gitOutput(args, root = REPO_ROOT) {
   return execFileSync('git', args, {
-    cwd: REPO_ROOT,
+    cwd: root,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });
 }
 
-function readWorkingTreeRecords() {
+export function readWorkingTreeRecords(root = REPO_ROOT) {
   const fileNames = splitNullDelimited(
-    gitOutput(['ls-files', '--cached', '--others', '--exclude-standard', '-z'])
+    gitOutput(['ls-files', '--cached', '--others', '--exclude-standard', '-z'], root)
   );
   return fileNames
     .filter(isProductionSourcePath)
-    .filter((fileName) => existsSync(path.join(REPO_ROOT, fileName)))
+    .filter((fileName) => existsSync(path.join(root, fileName)))
     .map((fileName) => {
-      const contents = readFileSync(path.join(REPO_ROOT, fileName), 'utf8');
+      const contents = readFileSync(path.join(root, fileName), 'utf8');
       return { path: normalizeRepoPath(fileName), lineCount: countPhysicalLines(contents) };
     });
 }

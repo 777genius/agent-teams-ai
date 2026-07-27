@@ -203,6 +203,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const publicClassSurfaces = analyzePublicClassSurfaces({
     constructorExports: publicTargets.constructorExports,
     exportedLocalNames,
+    propertyWrites: publicTargets.propertyWrites,
     sourceFile,
   });
   const publicReferenceOwner = (node) =>

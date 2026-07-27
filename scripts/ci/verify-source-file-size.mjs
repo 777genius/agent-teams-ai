@@ -5,6 +5,11 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  evaluateSourceFileSizes as evaluateBroadSourceFileSizes,
+  readWorkingTreeRecords as readBroadWorkingTreeRecords,
+} from './check-source-file-size.mjs';
+
 export const MAX_PRODUCTION_SOURCE_LINES = 800;
 
 export const SOURCE_ROOTS = [
@@ -255,6 +260,16 @@ export function evaluatePolicyManifestRatchet({ baselinePolicy, policy }) {
   return diagnostics;
 }
 
+export function evaluatePolicyCurrentFiles({ policy, records }) {
+  return evaluateBroadSourceFileSizes(records, policy).violations.map(
+    ({ code, message, path: filePath }) => ({
+      code,
+      filePath: filePath ?? policyManifestRelativePath,
+      message,
+    })
+  );
+}
+
 function readBaselineManifest(baselineRef, manifestRelativePath) {
   if (!baselineRef) return null;
   if (!/^[0-9a-f]{40}$/i.test(baselineRef)) {
@@ -343,6 +358,10 @@ export function verifySourceFileSizePolicy(root = repoRoot, { requireBaseline = 
   const diagnostics = [
     ...evaluateWorkspaceSourceCoverage({ workspacePackagePatterns }),
     ...evaluatePolicyManifestRatchet({ baselinePolicy, policy }),
+    ...evaluatePolicyCurrentFiles({
+      policy,
+      records: readBroadWorkingTreeRecords(root),
+    }),
     ...evaluateLegacyManifestRatchet({
       baselineLegacyMaxLines,
       baselineSourceLineCounts,

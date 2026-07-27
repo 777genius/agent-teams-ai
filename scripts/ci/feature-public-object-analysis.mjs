@@ -204,6 +204,30 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identity
     });
     writes.set(sourceKey, rootWrites);
   };
+  const conservativeWriteTargets = (expression, position) => {
+    const exactTargets = bindingAliasTargets(expression, position, bindingModel);
+    if (exactTargets.length > 0) return exactTargets;
+
+    let current = unwrapExpression(expression);
+    const path = [];
+    while (true) {
+      const access = memberAccess(current);
+      if (access) {
+        path.unshift(access.name);
+        current = access.receiver;
+        continue;
+      }
+      if (ts.isElementAccessExpression(current) && current.argumentExpression) {
+        path.unshift('*');
+        current = unwrapExpression(current.expression);
+        continue;
+      }
+      break;
+    }
+    if (!ts.isIdentifier(current)) return [];
+    const sourceKey = bindingModel.bindingAt(current.text, position);
+    return sourceKey ? [{ path, sourceKey }] : [];
+  };
   const addTargetWrite = (
     targetExpression,
     node,
@@ -212,10 +236,9 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identity
     referenceNodes = [node],
     options = {}
   ) => {
-    for (const target of bindingAliasTargets(
+    for (const target of conservativeWriteTargets(
       targetExpression,
-      node.getStart(sourceFile),
-      bindingModel
+      node.getStart(sourceFile)
     )) {
       addWrite({
         ...options,
@@ -291,8 +314,8 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identity
       (node.operatorToken.kind === ts.SyntaxKind.EqualsToken ||
         LOGICAL_ASSIGNMENT_KINDS.has(node.operatorToken.kind))
     ) {
-      const target = accessPath(node.left);
-      if (target?.path.length) {
+      const target = unwrapExpression(node.left);
+      if (ts.isPropertyAccessExpression(target) || ts.isElementAccessExpression(target)) {
         addTargetWrite(node.left, node, [], true, [node.right], {
           logicalOperator:
             node.operatorToken.kind === ts.SyntaxKind.EqualsToken

@@ -895,6 +895,7 @@ test('captures exported member values at the publication point', () => {
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
         'src/features/commonjs-member-snapshot/main/index.cjs',
+        'src/features/commonjs-member-snapshot/main/index.cjs',
         'src/features/esm-default-member-snapshot/main/index.ts',
         'src/features/esm-member-write-snapshot/main/index.ts',
         'src/features/esm-nonenumerable-getter-snapshot/main/index.ts',

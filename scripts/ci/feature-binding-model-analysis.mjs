@@ -56,6 +56,21 @@ export function collectBindingModel(sourceFile) {
   };
 
   for (const statement of sourceFile.statements) {
+    if (
+      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
+      statement.name
+    ) {
+      topLevelNames.add(statement.name.text);
+      addVersion(
+        statement.name.text,
+        statement,
+        ts.isFunctionDeclaration(statement)
+          ? sourceFile.pos
+          : statement.getStart(sourceFile),
+        undefined
+      );
+      continue;
+    }
     if (!ts.isVariableStatement(statement)) continue;
     for (const declaration of statement.declarationList.declarations) {
       for (const name of bindingNames(declaration.name)) topLevelNames.add(name);

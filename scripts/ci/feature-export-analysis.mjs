@@ -604,6 +604,9 @@ export function findPublicReferenceOwner(
       };
     }
     ({ bindingSelections, localNames } = publicMutationBinding(expression, publicTargetOwners));
+    if (localNames.length === 0 && classReference?.localName) {
+      localNames = [classReference.localName];
+    }
     if (getterSelection?.descriptorGetter) {
       const selectionLocalNames = mutationTargetLocalNames(expression);
       const referenceOwner = publicTargetOwners.ownerForReference?.(node, {

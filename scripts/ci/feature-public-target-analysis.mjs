@@ -702,6 +702,10 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames, snapshotLoc
     },
   });
   const constructorExports = [];
+  const withConstructorBinding = (classReference) => ({
+    ...classReference,
+    bindingKey: bindingModel.bindingAt(classReference.localName, classReference.position),
+  });
   const copyConstructorOwners = new Map(
     copyRelations.map(({ owner, sourceKey }) => [sourceKey, owner])
   );
@@ -709,13 +713,19 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames, snapshotLoc
     const owner = identityOwners.get(key) ?? copyConstructorOwners.get(key);
     if (!owner) continue;
     for (const classReference of constructedClassReferences(binding.initializer)) {
-      constructorExports.push({ exportedName: owner, ...classReference });
+      constructorExports.push({
+        exportedName: owner,
+        ...withConstructorBinding(classReference),
+      });
     }
   }
   for (const statement of sourceFile.statements) {
     if (!ts.isExportAssignment(statement)) continue;
     for (const classReference of constructedClassReferences(statement.expression)) {
-      constructorExports.push({ exportedName: 'default', ...classReference });
+      constructorExports.push({
+        exportedName: 'default',
+        ...withConstructorBinding(classReference),
+      });
     }
   }
   return {
@@ -724,5 +734,6 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames, snapshotLoc
     constructorExports,
     localOwners: localOwnersAt(Number.POSITIVE_INFINITY),
     localOwnersAt,
+    propertyWrites,
   };
 }
