@@ -9,7 +9,19 @@ function sourceMethodForCatalog(row) {
   return row.id === 'CrossTeamAPI.send' ? 'crossTeam.send' : row.sourceMethod;
 }
 
-const W1_OWNERSHIP_INTERFACES = new Set(['TeamsAPI', 'CrossTeamAPI', 'ReviewAPI']);
+const W1_OWNERSHIP_INTERFACES = new Set([
+  'TeamsAPI',
+  'TeamApprovalsElectronApi',
+  'CrossTeamAPI',
+  'ReviewAPI',
+]);
+
+function w1OwnershipId(row) {
+  if (row.interfaceName === 'TeamApprovalsElectronApi') {
+    return `TeamsAPI.${row.sourceMethod}`;
+  }
+  return row.id;
+}
 
 export function verifyCrossLaneOwnerAgreement({ w1Ledger, manifest, catalog }) {
   const errors = [];
@@ -37,7 +49,7 @@ export function verifyCrossLaneOwnerAgreement({ w1Ledger, manifest, catalog }) {
   let missingW1Rows = 0;
   let ownerMismatches = 0;
   for (const row of comparedRows) {
-    const w1Member = w1ById.get(row.id);
+    const w1Member = w1ById.get(w1OwnershipId(row));
     if (!w1Member) {
       missingW1Rows += 1;
       errors.push(`required W5 mutation missing W1 ownership row ${row.id}`);

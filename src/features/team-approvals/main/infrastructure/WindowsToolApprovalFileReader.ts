@@ -126,9 +126,11 @@ namespace AgentTeams.SafePreview {
           int error = Marshal.GetLastWin32Error();
           file.Dispose();
           if (IsMissingPathError(error)) {
-            AssertNoReparsePoints(normalizedPath, true);
-            if (attempt + 1 < MISSING_PATH_OPEN_ATTEMPTS) continue;
-            return new PreviewResult { Exists = false, Content = new byte[0] };
+            using (SafeFileHandle parentBinding = OpenMissingParentBinding(normalizedPath)) {
+              AssertNoReparsePoints(normalizedPath, true);
+              if (attempt + 1 < MISSING_PATH_OPEN_ATTEMPTS) continue;
+              return new PreviewResult { Exists = false, Content = new byte[0] };
+            }
           }
           throw new Win32Exception(error);
         }
@@ -142,17 +144,14 @@ namespace AgentTeams.SafePreview {
               Error = "Not a file"
             };
           }
-          if (GetLinkCount(file) > 1) {
+          ByHandleFileInformation openedFileInfo = GetFileInformation(file);
+          if (openedFileInfo.NumberOfLinks != 1 || !HasStableFileIndex(openedFileInfo)) {
             throw new InvalidOperationException(
               "Hard-linked files are not allowed in approval preview paths"
             );
           }
 
-          string comparisonRequestedPath = NormalizeKernelPath(normalizedPath);
-          string openedPath = NormalizeKernelPath(GetOpenedPath(file));
-          if (!String.Equals(comparisonRequestedPath, openedPath, StringComparison.Ordinal)) {
-            throw new InvalidOperationException("Safe approval preview rejected a redirected Windows path");
-          }
+          AssertOpenedPathMatches(normalizedPath, file);
 
           AssertNoReparsePoints(normalizedPath, false);
 
@@ -167,6 +166,14 @@ namespace AgentTeams.SafePreview {
               bytesRead += count;
             }
             if (bytesRead != content.Length) Array.Resize(ref content, bytesRead);
+            ByHandleFileInformation finalFileInfo = GetFileInformation(file);
+            if (!HasStableFileInformation(openedFileInfo, finalFileInfo)) {
+              throw new InvalidOperationException(
+                "Approval preview path changed while the file was being read"
+              );
+            }
+            AssertNoReparsePoints(normalizedPath, false);
+            AssertOpenedPathMatches(normalizedPath, file);
             return new PreviewResult {
               Exists = true,
               Content = content,
@@ -182,12 +189,46 @@ namespace AgentTeams.SafePreview {
       return CreateFileW(
         filePath,
         GENERIC_READ,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        FILE_SHARE_READ,
         IntPtr.Zero,
         OPEN_EXISTING,
         FILE_FLAG_BACKUP_SEMANTICS,
         IntPtr.Zero
       );
+    }
+
+    private static SafeFileHandle OpenMissingParentBinding(string filePath) {
+      string parentPath = Path.GetDirectoryName(filePath);
+      SafeFileHandle parent = CreateFileW(
+        parentPath,
+        0,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        IntPtr.Zero,
+        OPEN_EXISTING,
+        FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
+        IntPtr.Zero
+      );
+      if (parent.IsInvalid) {
+        int error = Marshal.GetLastWin32Error();
+        parent.Dispose();
+        throw new Win32Exception(error);
+      }
+      try {
+        FileAttributeTagInfo info = GetAttributeTagInfo(parent);
+        if (
+          (info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 ||
+          (info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0
+        ) {
+          throw new InvalidOperationException(
+            "Safe approval preview rejected a redirected Windows path"
+          );
+        }
+        AssertOpenedPathMatches(parentPath, parent);
+        return parent;
+      } catch {
+        parent.Dispose();
+        throw;
+      }
     }
 
     private static bool IsMissingPathError(int error) {
@@ -243,12 +284,42 @@ namespace AgentTeams.SafePreview {
       return info;
     }
 
-    private static uint GetLinkCount(SafeFileHandle file) {
+    private static ByHandleFileInformation GetFileInformation(SafeFileHandle file) {
       ByHandleFileInformation info;
       if (!GetFileInformationByHandle(file, out info)) {
         throw new Win32Exception(Marshal.GetLastWin32Error());
       }
-      return info.NumberOfLinks;
+      return info;
+    }
+
+    private static bool HasStableFileIndex(ByHandleFileInformation info) {
+      return info.FileIndexHigh != 0 || info.FileIndexLow != 0;
+    }
+
+    private static bool HasStableFileInformation(
+      ByHandleFileInformation before,
+      ByHandleFileInformation after
+    ) {
+      return
+        HasStableFileIndex(before) &&
+        HasStableFileIndex(after) &&
+        before.VolumeSerialNumber == after.VolumeSerialNumber &&
+        before.FileIndexHigh == after.FileIndexHigh &&
+        before.FileIndexLow == after.FileIndexLow &&
+        before.FileSizeHigh == after.FileSizeHigh &&
+        before.FileSizeLow == after.FileSizeLow &&
+        before.LastWriteTimeHigh == after.LastWriteTimeHigh &&
+        before.LastWriteTimeLow == after.LastWriteTimeLow &&
+        before.NumberOfLinks == 1 &&
+        after.NumberOfLinks == 1;
+    }
+
+    private static void AssertOpenedPathMatches(string requestedPath, SafeFileHandle file) {
+      string comparisonRequestedPath = NormalizeKernelPath(requestedPath);
+      string openedPath = NormalizeKernelPath(GetOpenedPath(file));
+      if (!String.Equals(comparisonRequestedPath, openedPath, StringComparison.Ordinal)) {
+        throw new InvalidOperationException("Safe approval preview rejected a redirected Windows path");
+      }
     }
 
     private static string GetOpenedPath(SafeFileHandle file) {

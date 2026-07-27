@@ -38,13 +38,16 @@ describe('NodeToolApprovalFileReader', () => {
     await rm(tempDirectory, { recursive: true, force: true });
   });
 
-  function createVirtualStats(size: number, isFile = true): Stats {
+  function createVirtualStats(size: number, isFile = true, ino = isFile ? 11 : 10): Stats {
     return {
       dev: 7,
-      ino: isFile ? 11 : 10,
+      ino,
       isFile: () => isFile,
       isSymbolicLink: () => false,
+      nlink: 1,
       size,
+      mtimeMs: 100,
+      ctimeMs: 100,
     } as Stats;
   }
 
@@ -124,27 +127,31 @@ describe('NodeToolApprovalFileReader', () => {
   it('decodes only bytes actually returned by a short read', async () => {
     const close = vi.fn(async () => undefined);
     const filePath = mockFinalFileOpen('short-read.txt', {
-      read: vi.fn(async (buffer: Buffer) => {
-        buffer.write('hello');
-        return { bytesRead: 5, buffer };
-      }),
+      read: vi
+        .fn()
+        .mockImplementationOnce(async (buffer: Buffer) => {
+          buffer.write('hello');
+          return { bytesRead: 5, buffer };
+        })
+        .mockImplementationOnce(async (buffer: Buffer) => ({ bytesRead: 0, buffer })),
       stat: vi
         .fn()
         .mockResolvedValueOnce(createVirtualStats(8))
-        .mockResolvedValueOnce(createVirtualStats(5)),
+        .mockResolvedValueOnce(createVirtualStats(8))
+        .mockResolvedValueOnce(createVirtualStats(8)),
       close,
     });
 
     await expect(reader.read(filePath)).resolves.toEqual({
       content: 'hello',
       exists: true,
-      truncated: false,
+      truncated: true,
       isBinary: false,
     });
-    expect(close).toHaveBeenCalledOnce();
+    expect(close).toHaveBeenCalledTimes(2);
   });
 
-  it('marks a preview truncated when the open file grows after the initial stat', async () => {
+  it('rejects a file that grows after the initial stat', async () => {
     const filePath = mockFinalFileOpen('growing.txt', {
       read: vi.fn(async (buffer: Buffer) => {
         buffer.write('hello');
@@ -153,32 +160,37 @@ describe('NodeToolApprovalFileReader', () => {
       stat: vi
         .fn()
         .mockResolvedValueOnce(createVirtualStats(5))
+        .mockResolvedValueOnce(createVirtualStats(16))
         .mockResolvedValueOnce(createVirtualStats(16)),
       close: vi.fn(async () => undefined),
     });
 
     await expect(reader.read(filePath)).resolves.toMatchObject({
-      content: 'hello',
-      truncated: true,
+      content: '',
+      error: expect.stringContaining('path changed'),
     });
   });
 
-  it('clears stale truncation when the open file shrinks before the read', async () => {
+  it('rejects a file that shrinks during the read', async () => {
     const filePath = mockFinalFileOpen('shrinking.txt', {
-      read: vi.fn(async (buffer: Buffer) => {
-        buffer.write('hello');
-        return { bytesRead: 5, buffer };
-      }),
+      read: vi
+        .fn()
+        .mockImplementationOnce(async (buffer: Buffer) => {
+          buffer.write('hello');
+          return { bytesRead: 5, buffer };
+        })
+        .mockImplementationOnce(async (buffer: Buffer) => ({ bytesRead: 0, buffer })),
       stat: vi
         .fn()
         .mockResolvedValueOnce(createVirtualStats(TOOL_APPROVAL_MAX_FILE_SIZE + 1))
+        .mockResolvedValueOnce(createVirtualStats(5))
         .mockResolvedValueOnce(createVirtualStats(5)),
       close: vi.fn(async () => undefined),
     });
 
     await expect(reader.read(filePath)).resolves.toMatchObject({
-      content: 'hello',
-      truncated: false,
+      content: '',
+      error: expect.stringContaining('path changed'),
     });
   });
 
@@ -193,6 +205,26 @@ describe('NodeToolApprovalFileReader', () => {
       isBinary: false,
     });
     expect(result.error).toEqual(expect.any(String));
+  });
+
+  it('fails closed when the filesystem does not expose a stable inode', async () => {
+    const filePath = mockFinalFileOpen('zero-inode.txt', {
+      read: vi.fn(async (buffer: Buffer) => {
+        buffer.write('hello');
+        return { bytesRead: 5, buffer };
+      }),
+      stat: vi
+        .fn()
+        .mockResolvedValueOnce(createVirtualStats(5, true, 0))
+        .mockResolvedValueOnce(createVirtualStats(5, true, 0)),
+      close: vi.fn(async () => undefined),
+    });
+
+    await expect(reader.read(filePath)).resolves.toMatchObject({
+      content: '',
+      exists: true,
+      error: expect.stringContaining('path changed'),
+    });
   });
 
   it('rejects final and parent symbolic links instead of following them', async () => {
@@ -476,4 +508,107 @@ describe('NodeToolApprovalFileReader', () => {
     expect(result.content).not.toContain('unapproved secret');
     if (result.content) expect(result.content).toBe('approved content');
   });
+
+  it.runIf(process.platform !== 'win32')(
+    'rejects content from a file generation replaced while its handle is open',
+    async () => {
+      const approvedPath = path.join(tempDirectory, 'generation-bound.txt');
+      const parkedPath = path.join(tempDirectory, 'generation-bound.old.txt');
+      await writeFile(approvedPath, 'approved old generation');
+
+      const originalOpen = fs.open.bind(fs);
+      let swapped = false;
+      vi.spyOn(fs, 'open').mockImplementation(async (candidate, flags, mode) => {
+        const handle = await originalOpen(candidate, flags, mode);
+        if (!swapped && path.basename(String(candidate)) === path.basename(approvedPath)) {
+          const originalRead = handle.read.bind(handle);
+          handle.read = (async (
+            buffer: Buffer,
+            offset: number,
+            length: number,
+            position: number
+          ) => {
+            swapped = true;
+            await rename(approvedPath, parkedPath);
+            await writeFile(approvedPath, 'unreviewed new generation');
+            return originalRead(buffer, offset, length, position);
+          }) as typeof handle.read;
+        }
+        return handle;
+      });
+
+      await expect(reader.read(approvedPath)).resolves.toMatchObject({
+        content: '',
+        exists: true,
+        error: expect.stringContaining('path changed'),
+      });
+      await expect(fs.readFile(approvedPath, 'utf8')).resolves.toBe('unreviewed new generation');
+    }
+  );
+
+  it.runIf(process.platform !== 'win32')(
+    'rejects a same-inode same-size mutation that races the read',
+    async () => {
+      const approvedPath = path.join(tempDirectory, 'same-generation.txt');
+      await writeFile(approvedPath, 'AAAA');
+
+      const originalOpen = fs.open.bind(fs);
+      let mutated = false;
+      vi.spyOn(fs, 'open').mockImplementation(async (candidate, flags, mode) => {
+        const handle = await originalOpen(candidate, flags, mode);
+        if (!mutated && path.basename(String(candidate)) === path.basename(approvedPath)) {
+          const originalRead = handle.read.bind(handle);
+          handle.read = (async (
+            buffer: Buffer,
+            offset: number,
+            length: number,
+            position: number
+          ) => {
+            const result = await originalRead(buffer, offset, length, position);
+            mutated = true;
+            await writeFile(approvedPath, 'BBBB');
+            return result;
+          }) as typeof handle.read;
+        }
+        return handle;
+      });
+
+      await expect(reader.read(approvedPath)).resolves.toMatchObject({
+        content: '',
+        exists: true,
+        error: expect.stringContaining('path changed'),
+      });
+      await expect(fs.readFile(approvedPath, 'utf8')).resolves.toBe('BBBB');
+    }
+  );
+
+  it.runIf(process.platform === 'linux')(
+    'revalidates the lexical parent before reporting a missing final file',
+    async () => {
+      const approvedDirectory = path.join(tempDirectory, 'missing-approved');
+      const parkedDirectory = path.join(tempDirectory, 'missing-approved-parked');
+      const outsideDirectory = path.join(tempDirectory, 'missing-outside');
+      const requestedPath = path.join(approvedDirectory, 'new-file.txt');
+      await mkdir(approvedDirectory);
+      await mkdir(outsideDirectory);
+      await writeFile(path.join(outsideDirectory, 'new-file.txt'), 'unapproved redirected content');
+
+      const originalOpen = fs.open.bind(fs);
+      let swapped = false;
+      vi.spyOn(fs, 'open').mockImplementation(async (candidate, flags, mode) => {
+        if (!swapped && path.basename(String(candidate)) === path.basename(requestedPath)) {
+          swapped = true;
+          await rename(approvedDirectory, parkedDirectory);
+          await symlink(outsideDirectory, approvedDirectory);
+        }
+        return originalOpen(candidate, flags, mode);
+      });
+
+      await expect(reader.read(requestedPath)).resolves.toMatchObject({
+        content: '',
+        exists: true,
+        error: expect.any(String),
+      });
+    }
+  );
 });

@@ -9,6 +9,7 @@ import { WindowsToolApprovalFileReader } from './WindowsToolApprovalFileReader';
 
 import type { ToolApprovalFileReaderPort } from '../../core/application/ports/TeamApprovalsPorts';
 import type { ToolApprovalFileContent } from '@shared/types';
+import type { Stats } from 'node:fs';
 import type { FileHandle } from 'node:fs/promises';
 
 export { TOOL_APPROVAL_MAX_FILE_SIZE } from './ToolApprovalFileContent';
@@ -20,6 +21,7 @@ const LINUX_DIRECTORY_FLAGS = LINUX_O_PATH | constants.O_DIRECTORY | constants.O
 const LINUX_PROC_SELF_FD = '/proc/self/fd';
 const PARENT_PATH_COMPONENT_ERROR =
   'Parent path traversal is not allowed in approval preview paths';
+const PATH_GENERATION_CHANGED_ERROR = 'Approval preview path changed while the file was being read';
 
 class LinuxDescriptorTraversalUnavailableError extends Error {
   constructor(cause: unknown) {
@@ -128,6 +130,59 @@ function openSymlinkSafePath(filePath: string): Promise<FileHandle> {
   throw new Error(`Safe approval preview reads are unavailable on ${process.platform}`);
 }
 
+async function openSymlinkSafePathWithMissingRetry(filePath: string): Promise<FileHandle | null> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await openSymlinkSafePath(filePath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+  }
+  return null;
+}
+
+function hasSameStableIdentity(openedStats: Stats, currentStats: Stats): boolean {
+  return (
+    openedStats.ino !== 0 &&
+    currentStats.ino !== 0 &&
+    openedStats.dev === currentStats.dev &&
+    openedStats.ino === currentStats.ino &&
+    openedStats.size === currentStats.size &&
+    openedStats.mtimeMs === currentStats.mtimeMs &&
+    openedStats.ctimeMs === currentStats.ctimeMs &&
+    openedStats.nlink === 1 &&
+    currentStats.nlink === 1
+  );
+}
+
+async function assertOpenedFileStillMatchesPath(
+  filePath: string,
+  openedStats: Stats
+): Promise<void> {
+  const currentFile = await openSymlinkSafePathWithMissingRetry(filePath);
+  if (!currentFile) throw new Error(PATH_GENERATION_CHANGED_ERROR);
+
+  try {
+    const currentStats = await currentFile.stat();
+    if (!currentStats.isFile() || !hasSameStableIdentity(openedStats, currentStats)) {
+      throw new Error(PATH_GENERATION_CHANGED_ERROR);
+    }
+  } finally {
+    await currentFile.close();
+  }
+}
+
+async function readOpenedFile(file: FileHandle, readSize: number): Promise<Buffer> {
+  const buffer = Buffer.alloc(readSize);
+  let offset = 0;
+  while (offset < readSize) {
+    const { bytesRead } = await file.read(buffer, offset, readSize - offset, offset);
+    if (bytesRead === 0) break;
+    offset += bytesRead;
+  }
+  return buffer.subarray(0, offset);
+}
+
 export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
   constructor(
     private readonly windowsReader: ToolApprovalFileReaderPort = new WindowsToolApprovalFileReader()
@@ -140,15 +195,8 @@ export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
       }
       const resolvedPath = path.resolve(filePath);
       if (process.platform === 'win32') return this.windowsReader.read(resolvedPath);
-      let file: FileHandle;
-      try {
-        file = await openSymlinkSafePath(resolvedPath);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          return { content: '', exists: false, truncated: false, isBinary: false };
-        }
-        throw error;
-      }
+      const file = await openSymlinkSafePathWithMissingRetry(resolvedPath);
+      if (!file) return { content: '', exists: false, truncated: false, isBinary: false };
 
       try {
         const openedStats = await file.stat();
@@ -161,16 +209,18 @@ export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
             error: 'Not a file',
           };
         }
-        if (openedStats.nlink > 1) {
+        if (openedStats.nlink !== 1) {
           throw new Error('Hard-linked files are not allowed in approval preview paths');
         }
 
         const readSize = Math.min(openedStats.size, TOOL_APPROVAL_MAX_FILE_SIZE);
-        const buffer = Buffer.alloc(readSize);
-        const { bytesRead } = await file.read(buffer, 0, readSize, 0);
-        const contentBuffer = buffer.subarray(0, bytesRead);
+        const contentBuffer = await readOpenedFile(file, readSize);
         const finalStats = await file.stat();
-        const truncated = finalStats.size > bytesRead;
+        if (!hasSameStableIdentity(openedStats, finalStats)) {
+          throw new Error(PATH_GENERATION_CHANGED_ERROR);
+        }
+        const truncated = finalStats.size > contentBuffer.byteLength;
+        await assertOpenedFileStillMatchesPath(resolvedPath, openedStats);
 
         return createToolApprovalFileContent(contentBuffer, truncated);
       } finally {
