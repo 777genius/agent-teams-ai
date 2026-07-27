@@ -11,8 +11,7 @@ function bindingNameContains(bindingName, name) {
   );
 }
 
-function directLexicalBindings(node) {
-  const names = new Set();
+function directLexicalScopeBindsName(node, name) {
   const statements =
     ts.isBlock(node) || ts.isSourceFile(node)
       ? node.statements
@@ -22,8 +21,12 @@ function directLexicalBindings(node) {
   for (const statement of statements) {
     if (ts.isVariableStatement(statement)) {
       if (ts.isSourceFile(node) || statement.declarationList.flags & ts.NodeFlags.BlockScoped) {
-        for (const declaration of statement.declarationList.declarations) {
-          if (bindingNameContains(declaration.name, 'undefined')) names.add('undefined');
+        if (
+          statement.declarationList.declarations.some((declaration) =>
+            bindingNameContains(declaration.name, name)
+          )
+        ) {
+          return true;
         }
       }
       continue;
@@ -36,10 +39,10 @@ function directLexicalBindings(node) {
       statement.name &&
       ts.isIdentifier(statement.name)
     ) {
-      names.add(statement.name.text);
+      if (statement.name.text === name) return true;
     }
   }
-  return names;
+  return false;
 }
 
 function callableBindsName(callable, name) {
@@ -98,14 +101,14 @@ function loopInitializerBindsName(node, name) {
   );
 }
 
-function isUnshadowedUndefinedReference(reference) {
+function isUnshadowedGlobalReference(reference) {
   const name = reference.text;
   const sourceFile = reference.getSourceFile();
   let current = reference.parent;
   while (current && current !== sourceFile) {
     if (
       (ts.isBlock(current) || ts.isCaseBlock(current)) &&
-      directLexicalBindings(current).has(name)
+      directLexicalScopeBindsName(current, name)
     ) {
       return false;
     }
@@ -125,7 +128,7 @@ function isUnshadowedUndefinedReference(reference) {
   }
   return (
     !sourceFileImportsValue(sourceFile, name) &&
-    !directLexicalBindings(sourceFile).has(name) &&
+    !directLexicalScopeBindsName(sourceFile, name) &&
     !scopeHasVarBinding(sourceFile, name)
   );
 }
@@ -138,9 +141,22 @@ function staticPrimitiveValue(expression) {
   if (
     ts.isIdentifier(current) &&
     current.text === 'undefined' &&
-    isUnshadowedUndefinedReference(current)
+    isUnshadowedGlobalReference(current)
   ) {
     return undefined;
+  }
+  if (ts.isPropertyAccessExpression(current) && current.name.text === 'undefined') {
+    const receiver = unwrapExpression(current.expression);
+    if (
+      ts.isIdentifier(receiver) &&
+      receiver.text === 'globalThis' &&
+      isUnshadowedGlobalReference(receiver)
+    ) {
+      return undefined;
+    }
+  }
+  if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.CommaToken) {
+    return staticPrimitiveValue(current.right);
   }
   if (ts.isVoidExpression(current)) return undefined;
   if (ts.isStringLiteralLike(current)) return current.text;
