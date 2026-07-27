@@ -203,6 +203,75 @@ test('keeps core domain free from application and runtime dependencies', () => {
   );
 });
 
+test('resolves allowed contract barrels to their dependency-rule origins', () => {
+  withFixture(
+    {
+      'src/features/example/contracts/index.ts': `
+        export type { SafeContract } from './safe';
+        export { AppService } from './runtime';
+      `,
+      'src/features/example/contracts/runtime.ts': `
+        export { AppService } from '../core/application/AppService';
+        export { RuntimeAdapter } from '../main/RuntimeAdapter';
+      `,
+      'src/features/example/contracts/safe.ts': 'export interface SafeContract {}',
+      'src/features/example/core/application/AppService.ts':
+        'export class AppService {}',
+      'src/features/example/core/application/useContract.ts': `
+        import { RuntimeAdapter } from '../../contracts/runtime';
+        void RuntimeAdapter;
+      `,
+      'src/features/example/main/RuntimeAdapter.ts': 'export class RuntimeAdapter {}',
+      'src/features/example/core/domain/policy.ts': `
+        import type { SafeContract } from '../../contracts';
+        import { AppService } from '../../contracts';
+        export type Policy = SafeContract;
+        void AppService;
+      `,
+      'src/features/other/contracts/index.ts': `
+        export { RuntimeService } from '../main/RuntimeService';
+      `,
+      'src/features/other/main/RuntimeService.ts': 'export class RuntimeService {}',
+      'src/features/example/core/domain/remotePolicy.ts': `
+        import { RuntimeService } from '@features/other/contracts';
+        void RuntimeService;
+      `,
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const domainViolations = violations.filter(
+        ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.coreDomainIsolation
+      );
+
+      assert.deepEqual(
+        domainViolations.map(({ source, specifier }) => ({ source, specifier })),
+        [
+          {
+            source: 'src/features/example/core/domain/policy.ts',
+            specifier: '../../contracts',
+          },
+          {
+            source: 'src/features/example/core/domain/remotePolicy.ts',
+            specifier: '@features/other/contracts',
+          },
+        ]
+      );
+      const applicationViolations = violations.filter(
+        ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies
+      );
+      assert.deepEqual(applicationViolations.map(({ source, specifier }) => ({
+        source,
+        specifier,
+      })), [
+        {
+          source: 'src/features/example/core/application/useContract.ts',
+          specifier: '../../contracts/runtime',
+        },
+      ]);
+    }
+  );
+});
+
 test('allows application domain, contracts, and own ports while rejecting outer dependencies', () => {
   withFixture(
     {

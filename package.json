@@ -80,6 +80,7 @@
     "fix": "pnpm lint:fix && pnpm format",
     "quality": "pnpm check && pnpm format:check && npx knip",
     "guard:feature-architecture": "node ./scripts/ci/verify-feature-architecture.mjs",
+    "guard:feature-architecture:baseline": "node ./scripts/ci/update-feature-architecture-baseline.mjs --write",
     "guard:runtime-artifacts": "node ./scripts/ci/forbid-runtime-artifacts.cjs",
     "guard:source-file-size": "node ./scripts/ci/check-source-file-size.mjs",
     "guard:source-file-size:ci": "node ./scripts/ci/verify-source-file-size.mjs --require-baseline",

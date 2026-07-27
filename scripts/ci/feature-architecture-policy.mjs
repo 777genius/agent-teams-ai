@@ -29,6 +29,10 @@ import { resolvedLocalValueNodes } from './feature-constructor-local-value-analy
 import { resolveProjectTarget } from './feature-module-resolution.mjs';
 import { analyzePublicClassSurfaces } from './feature-public-class-surface-analysis.mjs';
 import { collectPublicApiImplementationExports } from './feature-public-export-policy.mjs';
+import {
+  dependencyHasForbiddenReexportOrigin,
+  isContractProjectTarget,
+} from './feature-reexport-origin-analysis.mjs';
 import { snapshotExportSelection } from './feature-public-snapshot-analysis.mjs';
 import { analyzePublicTargets } from './feature-public-target-analysis.mjs';
 import {
@@ -122,6 +126,22 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         });
       }
     }
+  };
+  const importedNamesForClause = (importClause) => {
+    if (!importClause) return ['*'];
+    const names = [];
+    if (importClause.name) names.push('default');
+    const bindings = importClause.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) {
+      names.push('*');
+    } else if (bindings && ts.isNamedImports(bindings)) {
+      names.push(
+        ...bindings.elements.map(
+          (element) => element.propertyName?.text ?? element.name.text
+        )
+      );
+    }
+    return names;
   };
 
   const addDirectReexports = (node, edge) => {
@@ -266,10 +286,11 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     if (!ts.isLiteralTypeNode(node.argument)) return;
     const edge = addEdge(node, node.argument.literal, 'import', true);
     if (!edge) return;
+    edge.importedNames = importTypeSelectedNames(node);
 
     const owner = publicReferenceOwner(node);
     if (!owner) return;
-    for (const importedName of importTypeSelectedNames(node)) {
+    for (const importedName of edge.importedNames) {
       addOwnerDependency(owner, { edge, importedName });
     }
   };
@@ -277,9 +298,18 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const visit = (node) => {
     if (ts.isImportDeclaration(node)) {
       const edge = addEdge(node, node.moduleSpecifier, 'import', importDeclarationIsTypeOnly(node));
+      if (edge) edge.importedNames = importedNamesForClause(node.importClause);
       addImportBindings(node.importClause, edge);
     } else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
       const edge = addEdge(node, node.moduleSpecifier, 'export', node.isTypeOnly);
+      if (edge) {
+        edge.importedNames =
+          node.exportClause && ts.isNamedExports(node.exportClause)
+            ? node.exportClause.elements.map(
+                (element) => element.propertyName?.text ?? element.name.text
+              )
+            : ['*'];
+      }
       addDirectReexports(node, edge);
     } else if (
       ts.isExportDeclaration(node) &&
@@ -323,7 +353,10 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         'import',
         node.isTypeOnly
       );
-      if (edge) importedBindings.set(node.name.text, { edge, importedName: '*' });
+      if (edge) {
+        edge.importedNames = ['*'];
+        importedBindings.set(node.name.text, { edge, importedName: '*' });
+      }
     } else if (ts.isImportTypeNode(node)) {
       addTypeReference(node);
     } else if (ts.isCallExpression(node) && node.arguments.length >= 1) {
@@ -332,6 +365,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       const isRequireCall = isCommonJsRequireCall(node, sourceFile);
       if (isDynamicImport || isRequireCall) {
         const edge = addEdge(node, argument, 'import');
+        if (edge) edge.importedNames = [importedNameForCall(node, isDynamicImport)];
         const owner = publicReferenceOwner(node);
         if (edge && owner) {
           const importedName = importedNameForCall(node, isDynamicImport);
@@ -599,13 +633,27 @@ function isForbiddenDomainProjectTarget(targetPath) {
   );
 }
 
-function evaluateCoreDomainDependency(edge, sourceFilePaths) {
+function evaluateCoreDomainDependency(edge, sourceFilePaths, reexportsBySource) {
   if (!/^src\/features\/[^/]+\/core\/domain\//.test(edge.source)) return null;
 
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
   const forbidden =
     isForbiddenCoreDomainPackage(edge) ||
-    (targetPath !== null && isForbiddenDomainProjectTarget(targetPath));
+    (targetPath !== null && isForbiddenDomainProjectTarget(targetPath)) ||
+    (targetPath !== null &&
+      isContractProjectTarget(targetPath) &&
+      dependencyHasForbiddenReexportOrigin(
+        edge,
+        sourceFilePaths,
+        reexportsBySource,
+        (reexport) => {
+          const origin = resolveProjectTarget(reexport, sourceFilePaths);
+          return (
+            isForbiddenCoreDomainPackage(reexport) ||
+            (origin !== null && isForbiddenDomainProjectTarget(origin))
+          );
+        }
+      ));
   if (!forbidden) return null;
 
   return createViolation(
@@ -625,12 +673,27 @@ function isAllowedCoreApplicationTarget(sourceFeature, targetPath) {
   return targetFeature?.rest === 'contracts' || targetFeature?.rest.startsWith('contracts/');
 }
 
-function evaluateCoreApplicationDependency(edge, sourceFilePaths) {
+function evaluateCoreApplicationDependency(edge, sourceFilePaths, reexportsBySource) {
   const match = /^src\/features\/([^/]+)\/core\/application\//.exec(edge.source);
   if (!match) return null;
 
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
-  if (targetPath && isAllowedCoreApplicationTarget(match[1], targetPath)) return null;
+  if (
+    targetPath &&
+    isAllowedCoreApplicationTarget(match[1], targetPath) &&
+    (!isContractProjectTarget(targetPath) ||
+      !dependencyHasForbiddenReexportOrigin(
+        edge,
+        sourceFilePaths,
+        reexportsBySource,
+        (reexport) => {
+          const origin = resolveProjectTarget(reexport, sourceFilePaths);
+          return !origin || !isAllowedCoreApplicationTarget(match[1], origin);
+        }
+      ))
+  ) {
+    return null;
+  }
 
   return createViolation(
     FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies,
@@ -681,16 +744,30 @@ export function collectFeatureArchitectureViolations(repoRoot) {
     moduleAnalyses.map(({ localExportNames, source }) => [source, localExportNames])
   );
   const reexports = moduleAnalyses.flatMap(({ reexports: moduleReexports }) => moduleReexports);
+  const reexportsBySource = new Map();
+  for (const reexport of reexports) {
+    const sourceReexports = reexportsBySource.get(reexport.source) ?? [];
+    sourceReexports.push(reexport);
+    reexportsBySource.set(reexport.source, sourceReexports);
+  }
   const violations = [];
 
   for (const edge of edges) {
     const crossFeatureViolation = evaluateCrossFeatureEntrypoint(edge, sourceFilePaths);
     if (crossFeatureViolation) violations.push(crossFeatureViolation);
 
-    const domainViolation = evaluateCoreDomainDependency(edge, sourceFilePaths);
+    const domainViolation = evaluateCoreDomainDependency(
+      edge,
+      sourceFilePaths,
+      reexportsBySource
+    );
     if (domainViolation) violations.push(domainViolation);
 
-    const applicationViolation = evaluateCoreApplicationDependency(edge, sourceFilePaths);
+    const applicationViolation = evaluateCoreApplicationDependency(
+      edge,
+      sourceFilePaths,
+      reexportsBySource
+    );
     if (applicationViolation) violations.push(applicationViolation);
   }
 

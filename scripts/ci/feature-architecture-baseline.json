@@ -29,7 +29,22 @@
     {
       "rule": "core-application-dependencies",
       "source": "src/features/member-log-stream/core/application/ports/MemberLogStreamSource.ts",
+      "specifier": "../../../contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/member-log-stream/core/application/ports/MemberLogStreamSource.ts",
       "specifier": "@shared/types"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/member-log-stream/core/application/use-cases/GetMemberLogStreamUseCase.ts",
+      "specifier": "../../../contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/mutation-readiness/core/application/MutationReadinessAssessor.ts",
+      "specifier": "../../contracts"
     },
     {
       "rule": "core-application-dependencies",
@@ -93,6 +108,36 @@
     },
     {
       "rule": "core-application-dependencies",
+      "source": "src/features/team-import/core/application/ports/TeamImportDraftRepositoryPort.ts",
+      "specifier": "@features/team-import/contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-import/core/application/ports/TeamImportReviewStorePort.ts",
+      "specifier": "@features/team-import/contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-import/core/application/use-cases/ReviewTeamImportUseCase.ts",
+      "specifier": "@features/team-import/contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/CancelProvisioning.ts",
+      "specifier": "../../contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/GetProvisioningStatus.ts",
+      "specifier": "../../contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/LaunchTeam.ts",
+      "specifier": "../../contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
       "source": "src/features/team-lifecycle/core/application/LaunchTeam.ts",
       "specifier": "@features/team-runtime-control"
     },
@@ -109,6 +154,11 @@
     {
       "rule": "core-application-dependencies",
       "source": "src/features/team-lifecycle/core/application/ports/TeamLifecycleCommandPorts.ts",
+      "specifier": "../../../contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/ports/TeamLifecycleCommandPorts.ts",
       "specifier": "@features/application-command-ledger"
     },
     {
@@ -120,6 +170,16 @@
       "rule": "core-application-dependencies",
       "source": "src/features/team-lifecycle/core/application/ports/TeamLifecycleCommandPorts.ts",
       "specifier": "@shared/types"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/RecoverTeamRun.ts",
+      "specifier": "../../contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-lifecycle/core/application/StopTeam.ts",
+      "specifier": "../../contracts"
     },
     {
       "rule": "core-application-dependencies",
@@ -173,6 +233,11 @@
     },
     {
       "rule": "core-application-dependencies",
+      "source": "src/features/team-provisioning/core/application/commands/UpdateToolApprovalSettingsUseCase.ts",
+      "specifier": "../../../contracts/tool-approval"
+    },
+    {
+      "rule": "core-application-dependencies",
       "source": "src/features/team-provisioning/core/application/models/TeamProvisioningModels.ts",
       "specifier": "@shared/types"
     },
@@ -188,8 +253,28 @@
     },
     {
       "rule": "core-application-dependencies",
+      "source": "src/features/team-provisioning/core/application/ports/RuntimeDeliveryPort.ts",
+      "specifier": "../../../contracts/runtime-delivery"
+    },
+    {
+      "rule": "core-application-dependencies",
       "source": "src/features/team-provisioning/core/application/ports/TeamProvisioningPorts.ts",
       "specifier": "@shared/types"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-provisioning/core/application/ports/ToolApprovalPort.ts",
+      "specifier": "../../../contracts/tool-approval"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-provisioning/core/application/queries/GetRuntimeDeliveryStatusUseCase.ts",
+      "specifier": "../../../contracts/runtime-delivery"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-provisioning/core/application/queries/GetRuntimeSnapshotUseCase.ts",
+      "specifier": "../../../contracts/runtime-snapshot"
     },
     {
       "rule": "core-application-dependencies",
@@ -234,12 +319,37 @@
     {
       "rule": "core-application-dependencies",
       "source": "src/features/team-runtime-control/core/application/backends/ExecutionBackendRegistry.ts",
+      "specifier": "../../../contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-control/core/application/backends/ExecutionBackendRegistry.ts",
       "specifier": "@shared/types"
     },
     {
       "rule": "core-application-dependencies",
       "source": "src/features/team-runtime-control/core/application/backends/LaneExecutionBackend.ts",
+      "specifier": "../../../contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-control/core/application/backends/LaneExecutionBackend.ts",
       "specifier": "@shared/types"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-control/core/application/environment/BuildHostedChildEnvironment.ts",
+      "specifier": "../../../contracts/hostedChildEnvironment"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-control/core/application/environment/ports.ts",
+      "specifier": "../../../contracts/hostedChildEnvironment"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-control/core/application/planning/createCompositeRuntimePlan.ts",
+      "specifier": "../../../contracts"
     },
     {
       "rule": "core-application-dependencies",
@@ -254,7 +364,17 @@
     {
       "rule": "core-application-dependencies",
       "source": "src/features/team-runtime-control/core/application/planning/CreateRuntimePlanFromPersistedRoster.ts",
+      "specifier": "../../../contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-control/core/application/planning/CreateRuntimePlanFromPersistedRoster.ts",
       "specifier": "@features/team-runtime-lanes"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-control/core/application/ports.ts",
+      "specifier": "../../contracts"
     },
     {
       "rule": "core-application-dependencies",
@@ -295,6 +415,16 @@
       "rule": "core-application-dependencies",
       "source": "src/features/team-runtime-operations/core/application/use-cases/ReadTeamRuntimeLogs.ts",
       "specifier": "@shared/types"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-recovery/core/application/ports.ts",
+      "specifier": "../../contracts"
+    },
+    {
+      "rule": "core-application-dependencies",
+      "source": "src/features/team-runtime-recovery/core/application/types.ts",
+      "specifier": "../../contracts"
     },
     {
       "rule": "core-application-dependencies",
@@ -368,6 +498,16 @@
     },
     {
       "rule": "core-domain-isolation",
+      "source": "src/features/member-log-stream/core/domain/policies/memberLogStreamMergePolicy.ts",
+      "specifier": "../../../contracts"
+    },
+    {
+      "rule": "core-domain-isolation",
+      "source": "src/features/mutation-readiness/core/domain/MutationReadinessDecisions.ts",
+      "specifier": "../../contracts"
+    },
+    {
+      "rule": "core-domain-isolation",
       "source": "src/features/mutation-readiness/core/domain/MutationReadinessDecisions.ts",
       "specifier": "@features/runtime-instance-context"
     },
@@ -384,12 +524,37 @@
     {
       "rule": "core-domain-isolation",
       "source": "src/features/team-lifecycle/core/domain/LifecycleRun.ts",
+      "specifier": "../../contracts"
+    },
+    {
+      "rule": "core-domain-isolation",
+      "source": "src/features/team-lifecycle/core/domain/LifecycleRun.ts",
       "specifier": "@features/team-runtime-control"
     },
     {
       "rule": "core-domain-isolation",
       "source": "src/features/team-lifecycle/core/domain/TeamLifecycle.ts",
       "specifier": "@features/team-runtime-control"
+    },
+    {
+      "rule": "core-domain-isolation",
+      "source": "src/features/team-runtime-control/core/domain/CompositeRuntimePlan.ts",
+      "specifier": "../../contracts"
+    },
+    {
+      "rule": "core-domain-isolation",
+      "source": "src/features/team-runtime-control/core/domain/HostedChildEnvironmentPolicy.ts",
+      "specifier": "../../contracts/hostedChildEnvironment"
+    },
+    {
+      "rule": "core-domain-isolation",
+      "source": "src/features/team-runtime-recovery/core/domain/RuntimeFailureClassifier.ts",
+      "specifier": "../../contracts"
+    },
+    {
+      "rule": "core-domain-isolation",
+      "source": "src/features/team-runtime-recovery/core/domain/RuntimeRecoveryPrompt.ts",
+      "specifier": "../../contracts"
     },
     {
       "rule": "core-domain-isolation",
