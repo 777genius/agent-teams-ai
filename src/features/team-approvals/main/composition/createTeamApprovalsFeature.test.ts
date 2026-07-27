@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { createTeamApprovalsFeature } from './createTeamApprovalsFeature';
@@ -20,11 +22,31 @@ describe('createTeamApprovalsFeature', () => {
     const updateToolApprovalSettings = vi.fn(function (this: TeamToolApprovalCompatibilityApi) {
       expect(this).toBe(api);
     });
+    const approvedPath = path.resolve('approved.txt');
+    const getPendingToolApprovalFileTarget = vi.fn(function (
+      this: TeamToolApprovalCompatibilityApi
+    ) {
+      expect(this).toBe(api);
+      return {
+        authorizationGeneration: 'approval-generation-1',
+        authorizationPath: 'approved.txt',
+        readPath: approvedPath,
+      };
+    });
     const api: TeamToolApprovalCompatibilityApi = {
+      getPendingToolApprovalFileTarget,
       respondToToolApproval,
       updateToolApprovalSettings,
     };
-    const feature = createTeamApprovalsFeature({ toolApprovalApi: api });
+    const fileReader = {
+      read: vi.fn(async () => ({
+        content: 'approved',
+        exists: true,
+        truncated: false,
+        isBinary: false,
+      })),
+    };
+    const feature = createTeamApprovalsFeature({ toolApprovalApi: api, fileReader });
 
     await feature.commands.respond({
       teamName: 'team-one',
@@ -43,5 +65,23 @@ describe('createTeamApprovalsFeature', () => {
       'approved'
     );
     expect(updateToolApprovalSettings).toHaveBeenCalledWith('team-one', settings);
+    await expect(
+      feature.previewReader.read({
+        teamName: 'team-one',
+        runId: 'run-1',
+        requestId: 'request-1',
+        filePath: 'approved.txt',
+      })
+    ).resolves.toMatchObject({ content: 'approved' });
+    await expect(
+      feature.previewReader.read({
+        teamName: 'team-one',
+        runId: 'run-1',
+        requestId: 'request-1',
+        filePath: path.resolve('other.txt'),
+      })
+    ).resolves.toBeNull();
+    expect(getPendingToolApprovalFileTarget).toHaveBeenCalledWith('team-one', 'run-1', 'request-1');
+    expect(fileReader.read).toHaveBeenCalledWith(approvedPath);
   });
 });

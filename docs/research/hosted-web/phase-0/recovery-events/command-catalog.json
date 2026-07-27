@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "evidenceId": "P0.W5.COMMAND_CATALOG",
-  "scope": "Required hosted v1 team, task, messaging, review, approval, Git, lifecycle, and runtime-ingress mutations named by the master plan and current TeamsAPI/CrossTeamAPI/ReviewAPI/runtime-control seams.",
+  "scope": "Required hosted v1 team, task, messaging, review, approval, Git, lifecycle, and runtime-ingress mutations named by the master plan and current TeamsAPI/TeamApprovalsElectronApi/CrossTeamAPI/ReviewAPI/runtime-control seams.",
   "descriptorDefaults": {
     "claimOrder": "authenticate_authorize_bound_validate_then_claim",
     "conflict": "same scope/key with changed descriptor/schema/fingerprint is idempotency_mismatch",
@@ -111,8 +111,8 @@
       "TeamsAPI.onTeamChange",
       "TeamsAPI.onProvisioningProgress",
       "TeamsAPI.validateCliArgs",
-      "TeamsAPI.onToolApprovalEvent",
-      "TeamsAPI.readFileForToolApproval",
+      "TeamApprovalsElectronApi.onToolApprovalEvent",
+      "TeamApprovalsElectronApi.readFileForToolApproval",
       "CrossTeamAPI.listTargets",
       "CrossTeamAPI.getOutbox",
       "ReviewAPI.getAgentChanges",
@@ -127,7 +127,9 @@
       "ReviewAPI.unwatchFiles",
       "ReviewAPI.onExternalFileChange",
       "ReviewAPI.loadDecisions",
+      "ReviewAPI.loadDecisionConflictCandidates",
       "ReviewAPI.loadDraftHistory",
+      "ReviewAPI.loadDraftHistoryConflictCandidates",
       "ReviewAPI.onCmdN",
       "ReviewAPI.getGitFileLog"
     ],
@@ -138,24 +140,28 @@
       "ReviewAPI.deleteEditedFile",
       "ReviewAPI.restoreRejectedRename",
       "ReviewAPI.reapplyRejectedRename",
+      "ReviewAPI.resolveDecisionConflictCandidate",
       "ReviewAPI.saveDraftHistoryEntry",
       "ReviewAPI.clearDraftHistory",
+      "ReviewAPI.resolveDraftHistoryConflictCandidate",
+      "ReviewAPI.replaceDraftHistoryConflictCandidate",
       "OpenCodeRuntimeControlApi.answerOpenCodeRuntimePermission",
       "ScheduleAPI mutations",
       "terminal input/tab/split commands"
     ],
-    "observedSurfaceCount": 123,
+    "observedSurfaceCount": 128,
     "observedMethodCount": 53,
     "dispositionCounts": {
-      "extracted": 123,
-      "dispositions": 123,
+      "extracted": 128,
+      "dispositions": 128,
       "required": 53,
-      "query": 46,
+      "query": 48,
       "ephemeral": 15,
-      "deferred": 9
+      "deferred": 12
     },
     "sourceFiles": [
       "src/shared/types/api.ts",
+      "src/features/team-approvals/contracts/api.ts",
       "src/main/services/team/runtime-control/application/OpenCodeRuntimeControlApi.ts"
     ],
     "sourceToManifestComplete": true,

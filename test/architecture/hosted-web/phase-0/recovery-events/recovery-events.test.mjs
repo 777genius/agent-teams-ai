@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -16,6 +17,7 @@ import {
   verifyCrossLaneOwnerAgreement,
   verifyMutationCensus,
 } from '../../../../../scripts/hosted-web/phase-0/recovery-events/mutation-census.mjs';
+import { computeSourceSnapshotSha256 } from '../../../../../scripts/hosted-web/phase-0/recovery-events/source-revision-provenance.mjs';
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(TEST_DIR, '../../../../..');
@@ -32,6 +34,27 @@ async function json(path) {
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
+
+test('mutation census source snapshots are content-addressed and topology-independent', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'mutation-census-provenance-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(resolve(root, 'nested'));
+  await writeFile(resolve(root, 'a.ts'), 'export const a = 1;\n');
+  await writeFile(resolve(root, 'nested/b.ts'), 'export const b = 2;\n');
+
+  const sourcePaths = ['a.ts', 'nested/b.ts'];
+  const first = await computeSourceSnapshotSha256({ root, sourcePaths });
+  const reordered = await computeSourceSnapshotSha256({
+    root,
+    sourcePaths: [...sourcePaths].reverse(),
+  });
+  assert.equal(first, reordered);
+  assert.match(first, /^[a-f0-9]{64}$/);
+
+  await writeFile(resolve(root, 'nested/b.ts'), 'export const b = 3;\n');
+  const changed = await computeSourceSnapshotSha256({ root, sourcePaths });
+  assert.notEqual(changed, first);
+});
 
 function schemaErrors(document, schema, path = '$') {
   const errors = [];

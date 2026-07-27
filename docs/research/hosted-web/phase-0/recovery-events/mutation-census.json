@@ -1,10 +1,11 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "artifactId": "P0.W5.SUPPORTING.MUTATION_CENSUS",
-  "observedAtSha": "668e7d4f2277b727125770960a4d826bf44be6fa",
-  "derivation": "TypeScript AST extraction compared bidirectionally with the independently maintained mutation-surface-manifest.json and command descriptors",
+  "sourceSnapshotSha256": "e0225b6c38b10c12f51e3a79b758a383bfb728e80cf870183f95bebae6c4cd37",
+  "derivation": "TypeScript AST extraction compared bidirectionally with the independently maintained mutation-surface-manifest.json and command descriptors; sourceSnapshotSha256 is a topology-independent digest over every sorted source path and its exact bytes",
   "sourceFiles": [
     "src/shared/types/api.ts",
+    "src/features/team-approvals/contracts/api.ts",
     "src/main/services/team/runtime-control/application/OpenCodeRuntimeControlApi.ts"
   ],
   "rowCount": 128,
@@ -787,10 +788,10 @@
       "sourceObserved": true
     },
     {
-      "id": "TeamsAPI.respondToToolApproval",
-      "interfaceName": "TeamsAPI",
+      "id": "TeamApprovalsElectronApi.respondToToolApproval",
+      "interfaceName": "TeamApprovalsElectronApi",
       "sourceMethod": "respondToToolApproval",
-      "sourceFile": "src/shared/types/api.ts",
+      "sourceFile": "src/features/team-approvals/contracts/api.ts",
       "disposition": "required_hosted_v1_mutation",
       "owner": "team-approvals",
       "commandKind": "approval.decide",
@@ -806,29 +807,29 @@
       "sourceObserved": true
     },
     {
-      "id": "TeamsAPI.onToolApprovalEvent",
-      "interfaceName": "TeamsAPI",
+      "id": "TeamApprovalsElectronApi.onToolApprovalEvent",
+      "interfaceName": "TeamApprovalsElectronApi",
       "sourceMethod": "onToolApprovalEvent",
-      "sourceFile": "src/shared/types/api.ts",
+      "sourceFile": "src/features/team-approvals/contracts/api.ts",
       "disposition": "ephemeral",
       "owner": "team-read",
       "sourceObserved": true
     },
     {
-      "id": "TeamsAPI.updateToolApprovalSettings",
-      "interfaceName": "TeamsAPI",
+      "id": "TeamApprovalsElectronApi.updateToolApprovalSettings",
+      "interfaceName": "TeamApprovalsElectronApi",
       "sourceMethod": "updateToolApprovalSettings",
-      "sourceFile": "src/shared/types/api.ts",
+      "sourceFile": "src/features/team-approvals/contracts/api.ts",
       "disposition": "required_hosted_v1_mutation",
       "owner": "team-approvals",
       "commandKind": "approval.policy_update",
       "sourceObserved": true
     },
     {
-      "id": "TeamsAPI.readFileForToolApproval",
-      "interfaceName": "TeamsAPI",
+      "id": "TeamApprovalsElectronApi.readFileForToolApproval",
+      "interfaceName": "TeamApprovalsElectronApi",
       "sourceMethod": "readFileForToolApproval",
-      "sourceFile": "src/shared/types/api.ts",
+      "sourceFile": "src/features/team-approvals/contracts/api.ts",
       "disposition": "query",
       "owner": "team-read",
       "sourceObserved": true

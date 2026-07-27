@@ -1509,8 +1509,8 @@ const electronAPI: ElectronAPI = {
     updateToolApprovalSettings: async (teamName: string, settings: ToolApprovalSettings) => {
       return invokeIpcWithResult<void>(TEAM_TOOL_APPROVAL_SETTINGS, teamName, settings);
     },
-    readFileForToolApproval: async (filePath: string) => {
-      return invokeIpcWithResult<ToolApprovalFileContent>(TEAM_TOOL_APPROVAL_READ_FILE, filePath);
+    readFileForToolApproval: async (request) => {
+      return invokeIpcWithResult<ToolApprovalFileContent>(TEAM_TOOL_APPROVAL_READ_FILE, request);
     },
   },
   crossTeam: {

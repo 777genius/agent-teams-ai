@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -75,6 +77,9 @@ class FakeNotification implements TeamProvisioningToolApprovalNotification {
   }
 }
 
+const TEST_PROJECT_DIRECTORY = path.resolve('repo');
+const TEST_WORKER_DIRECTORY = path.join(TEST_PROJECT_DIRECTORY, 'worker');
+
 describe('TeamProvisioningToolApprovalFacade', () => {
   beforeEach(() => {
     FakeNotification.instances.length = 0;
@@ -103,6 +108,208 @@ describe('TeamProvisioningToolApprovalFacade', () => {
     facade.inFlightResponsesForCleanup.delete('req-shared');
 
     expect(facade.tryClaimResponse('req-shared')).toBe(true);
+  });
+
+  it('exposes a preview target only for the exact active file-edit approval', () => {
+    const { deps, facade, run } = createHarness();
+    const approvedPath = path.join(TEST_PROJECT_DIRECTORY, 'approved.txt');
+    run.pendingApprovals.set(
+      'req-preview',
+      approvalRequest({
+        requestId: 'req-preview',
+        toolName: 'Write',
+        toolInput: { file_path: approvedPath, content: 'next' },
+      })
+    );
+
+    const firstTarget = facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview');
+    expect(firstTarget).toEqual({
+      authorizationGeneration: expect.any(String),
+      authorizationPath: approvedPath,
+      readPath: approvedPath,
+    });
+    expect(
+      facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview')
+        ?.authorizationGeneration
+    ).toBe(firstTarget?.authorizationGeneration);
+    expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'req-preview')).toBe(
+      approvedPath
+    );
+    run.pendingApprovals.set(
+      'req-preview',
+      approvalRequest({
+        requestId: 'req-preview',
+        toolName: 'Write',
+        toolInput: { file_path: approvedPath, content: 'replacement' },
+      })
+    );
+    expect(
+      facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview')
+        ?.authorizationGeneration
+    ).not.toBe(firstTarget?.authorizationGeneration);
+    expect(
+      facade.getPendingToolApprovalFileTarget('other-team', 'run-1', 'req-preview')
+    ).toBeNull();
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'stale-run', 'req-preview')).toBeNull();
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'missing')).toBeNull();
+
+    vi.mocked(deps.getTrackedRunId).mockReturnValue('run-2');
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview')).toBeNull();
+    vi.mocked(deps.getTrackedRunId).mockReturnValue('run-1');
+
+    run.pendingApprovals.set(
+      'req-preview',
+      approvalRequest({
+        requestId: 'req-preview',
+        toolName: 'Bash',
+        toolInput: { file_path: approvedPath },
+      })
+    );
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview')).toBeNull();
+  });
+
+  it('resolves relative preview paths against the exact requesting member directory', () => {
+    const { facade, run } = createHarness();
+    run.pendingApprovals.set(
+      'req-relative',
+      approvalRequest({
+        requestId: 'req-relative',
+        source: 'Worker',
+        toolName: 'Edit',
+        toolInput: { file_path: 'src/approved.txt', old_string: 'a', new_string: 'b' },
+      })
+    );
+
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-relative')).toMatchObject(
+      {
+        authorizationGeneration: expect.any(String),
+        authorizationPath: 'src/approved.txt',
+        readPath: path.join(TEST_WORKER_DIRECTORY, 'src', 'approved.txt'),
+      }
+    );
+  });
+
+  it('rejects raw parent traversal before resolving a relative preview path', () => {
+    const { facade, run } = createHarness();
+    run.pendingApprovals.set(
+      'req-parent-traversal',
+      approvalRequest({
+        requestId: 'req-parent-traversal',
+        source: 'Worker',
+        toolName: 'Edit',
+        toolInput: {
+          file_path: 'linked-directory/../approved.txt',
+          old_string: 'a',
+          new_string: 'b',
+        },
+      })
+    );
+
+    expect(
+      facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-parent-traversal')
+    ).toBeNull();
+
+    run.pendingApprovals.set(
+      'req-parent-cwd',
+      approvalRequest({
+        requestId: 'req-parent-cwd',
+        source: 'Worker',
+        toolName: 'Write',
+        toolInput: { file_path: 'approved.txt', content: 'next' },
+      })
+    );
+    run.allEffectiveMembers = [
+      { name: 'Lead', cwd: TEST_PROJECT_DIRECTORY },
+      {
+        name: 'Worker',
+        cwd: [TEST_PROJECT_DIRECTORY, 'linked-directory', '..', 'worker'].join(path.sep),
+      },
+    ];
+
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-parent-cwd')).toBeNull();
+  });
+
+  it('rejects Windows drive-relative paths before resolving a preview target', () => {
+    const platform = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    try {
+      const { facade, run } = createHarness();
+      for (const [index, filePath] of [
+        String.raw`C:..\approved.txt`,
+        'C:../approved.txt',
+        String.raw`D:approved.txt`,
+        String.raw`\current-drive-rooted.txt`,
+        '/current-drive-rooted.txt',
+        '///not-a-unc-path.txt',
+      ].entries()) {
+        const requestId = `req-drive-relative-${index}`;
+        run.pendingApprovals.set(
+          requestId,
+          approvalRequest({
+            requestId,
+            source: 'Worker',
+            toolName: 'Write',
+            toolInput: { file_path: filePath, content: 'next' },
+          })
+        );
+
+        expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', requestId)).toBeNull();
+      }
+    } finally {
+      platform.mockRestore();
+    }
+  });
+
+  it('rejects relative preview paths from unknown or detached approval sources', () => {
+    const { facade, run } = createHarness();
+    const requestId = 'req-detached';
+    run.pendingApprovals.set(
+      requestId,
+      approvalRequest({
+        requestId,
+        source: 'Unknown member',
+        toolName: 'Edit',
+        toolInput: { file_path: '.env', old_string: 'a', new_string: 'b' },
+      })
+    );
+
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', requestId)).toBeNull();
+
+    run.pendingApprovals.set(
+      requestId,
+      approvalRequest({
+        requestId,
+        source: 'Worker',
+        toolName: 'Edit',
+        toolInput: { file_path: '.env', old_string: 'a', new_string: 'b' },
+      })
+    );
+    run.allEffectiveMembers = run.allEffectiveMembers.filter(({ name }) => name !== 'Worker');
+
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', requestId)).toBeNull();
+  });
+
+  it('uses the run directory for a lead or matched roster member without its own cwd', () => {
+    const { facade, run } = createHarness();
+    run.allEffectiveMembers = [{ name: 'Lead', cwd: TEST_PROJECT_DIRECTORY }, { name: 'Worker' }];
+
+    for (const source of ['Lead', 'Worker']) {
+      const requestId = `req-fallback-${source.toLowerCase()}`;
+      run.pendingApprovals.set(
+        requestId,
+        approvalRequest({
+          requestId,
+          source,
+          toolName: 'Write',
+          toolInput: { file_path: '.env', content: 'next' },
+        })
+      );
+
+      expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', requestId)).toMatchObject({
+        authorizationGeneration: expect.any(String),
+        authorizationPath: '.env',
+        readPath: path.join(TEST_PROJECT_DIRECTORY, '.env'),
+      });
+    }
   });
 
   it('re-evaluates pending lead approvals when settings are updated', () => {
@@ -548,9 +755,11 @@ describe('TeamProvisioningToolApprovalFacade', () => {
 interface TestRun extends TeamProvisioningToolApprovalFacadeRun {
   request: {
     color: string;
+    cwd: string;
     displayName: string;
     members: Array<{ name: string; role?: string }>;
   };
+  allEffectiveMembers: Array<{ name: string; cwd?: string }>;
   child: {
     stdin: {
       writable: boolean;
@@ -663,12 +872,17 @@ function buildRun(): TestRun {
     teamName: 'alpha',
     request: {
       color: 'blue',
+      cwd: TEST_PROJECT_DIRECTORY,
       displayName: 'Alpha Team',
       members: [
         { name: 'Lead', role: 'lead' },
         { name: 'Worker', role: 'engineer' },
       ],
     },
+    allEffectiveMembers: [
+      { name: 'Lead', cwd: TEST_PROJECT_DIRECTORY },
+      { name: 'Worker', cwd: TEST_WORKER_DIRECTORY },
+    ],
     child: {
       stdin: {
         writable: true,

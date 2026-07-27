@@ -1,15 +1,14 @@
-import path from 'node:path';
-
 import {
   TEAM_TOOL_APPROVAL_READ_FILE,
   TEAM_TOOL_APPROVAL_RESPOND,
   TEAM_TOOL_APPROVAL_SETTINGS,
+  type ToolApprovalFileReadRequest,
 } from '@features/team-approvals/contracts';
 import { validateTeamName } from '@main/ipc/guards';
 
 import type {
   TeamApprovalsCommandPort,
-  ToolApprovalFileReaderPort,
+  ToolApprovalPreviewReaderPort,
 } from '../../../../core/application/ports/TeamApprovalsPorts';
 import type { IpcResult, ToolApprovalFileContent, ToolApprovalSettings } from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
@@ -20,7 +19,7 @@ export interface TeamApprovalsIpcLogger {
 
 export interface TeamApprovalsIpcDependencies {
   commands: TeamApprovalsCommandPort;
-  fileReader: ToolApprovalFileReaderPort;
+  previewReader: ToolApprovalPreviewReaderPort;
   logger: TeamApprovalsIpcLogger;
 }
 
@@ -72,6 +71,33 @@ function validateSettings(settings: unknown): IpcResult<never> | ToolApprovalSet
   return candidate as unknown as ToolApprovalSettings;
 }
 
+function validateFileReadRequest(request: unknown): IpcResult<never> | ToolApprovalFileReadRequest {
+  if (typeof request !== 'object' || request === null) {
+    return { success: false, error: 'File preview request must be an object' };
+  }
+
+  const candidate = request as Record<string, unknown>;
+  const validatedTeamName = validateTeamName(candidate.teamName);
+  if (!validatedTeamName.valid) {
+    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
+  }
+  if (typeof candidate.runId !== 'string' || candidate.runId.trim().length === 0) {
+    return { success: false, error: 'runId must be a non-empty string' };
+  }
+  if (typeof candidate.requestId !== 'string' || candidate.requestId.trim().length === 0) {
+    return { success: false, error: 'requestId must be a non-empty string' };
+  }
+  if (typeof candidate.filePath !== 'string' || candidate.filePath.trim().length === 0) {
+    return { success: false, error: 'filePath must be a non-empty string' };
+  }
+  return {
+    teamName: validatedTeamName.value!,
+    runId: candidate.runId,
+    requestId: candidate.requestId,
+    filePath: candidate.filePath,
+  };
+}
+
 export function registerTeamApprovalsIpc(
   ipcMain: IpcMain,
   dependencies: TeamApprovalsIpcDependencies
@@ -116,17 +142,23 @@ export function registerTeamApprovalsIpc(
     TEAM_TOOL_APPROVAL_READ_FILE,
     async (
       _event: IpcMainInvokeEvent,
-      filePath: unknown
+      request: unknown
     ): Promise<IpcResult<ToolApprovalFileContent>> => {
-      if (typeof filePath !== 'string' || filePath.trim().length === 0) {
-        return { success: false, error: 'filePath must be a non-empty string' };
-      }
-      if (!path.isAbsolute(filePath)) {
-        return { success: false, error: 'filePath must be an absolute path' };
-      }
+      const validatedRequest = validateFileReadRequest(request);
+      if ('success' in validatedRequest) return validatedRequest;
 
       try {
-        return { success: true, data: await dependencies.fileReader.read(filePath) };
+        const preview = await dependencies.previewReader.read(validatedRequest);
+        if (preview === null) {
+          return {
+            success: false,
+            error: 'File preview is not authorized for this approval request',
+          };
+        }
+        return {
+          success: true,
+          data: preview,
+        };
       } catch (error) {
         return {
           success: true,

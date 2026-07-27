@@ -10,6 +10,10 @@
       "interfaces": ["TeamsAPI", "CrossTeamAPI", "ReviewAPI"]
     },
     {
+      "sourceFile": "src/features/team-approvals/contracts/api.ts",
+      "interfaces": ["TeamApprovalsElectronApi"]
+    },
+    {
       "sourceFile": "src/main/services/team/runtime-control/application/OpenCodeRuntimeControlApi.ts",
       "interfaces": ["OpenCodeRuntimeControlApi"]
     }
@@ -714,10 +718,10 @@
       "owner": "team-read"
     },
     {
-      "id": "TeamsAPI.respondToToolApproval",
-      "interfaceName": "TeamsAPI",
+      "id": "TeamApprovalsElectronApi.respondToToolApproval",
+      "interfaceName": "TeamApprovalsElectronApi",
       "sourceMethod": "respondToToolApproval",
-      "sourceFile": "src/shared/types/api.ts",
+      "sourceFile": "src/features/team-approvals/contracts/api.ts",
       "disposition": "required_hosted_v1_mutation",
       "owner": "team-approvals",
       "commandKind": "approval.decide"
@@ -731,27 +735,27 @@
       "owner": "team-read"
     },
     {
-      "id": "TeamsAPI.onToolApprovalEvent",
-      "interfaceName": "TeamsAPI",
+      "id": "TeamApprovalsElectronApi.onToolApprovalEvent",
+      "interfaceName": "TeamApprovalsElectronApi",
       "sourceMethod": "onToolApprovalEvent",
-      "sourceFile": "src/shared/types/api.ts",
+      "sourceFile": "src/features/team-approvals/contracts/api.ts",
       "disposition": "ephemeral",
       "owner": "team-read"
     },
     {
-      "id": "TeamsAPI.updateToolApprovalSettings",
-      "interfaceName": "TeamsAPI",
+      "id": "TeamApprovalsElectronApi.updateToolApprovalSettings",
+      "interfaceName": "TeamApprovalsElectronApi",
       "sourceMethod": "updateToolApprovalSettings",
-      "sourceFile": "src/shared/types/api.ts",
+      "sourceFile": "src/features/team-approvals/contracts/api.ts",
       "disposition": "required_hosted_v1_mutation",
       "owner": "team-approvals",
       "commandKind": "approval.policy_update"
     },
     {
-      "id": "TeamsAPI.readFileForToolApproval",
-      "interfaceName": "TeamsAPI",
+      "id": "TeamApprovalsElectronApi.readFileForToolApproval",
+      "interfaceName": "TeamApprovalsElectronApi",
       "sourceMethod": "readFileForToolApproval",
-      "sourceFile": "src/shared/types/api.ts",
+      "sourceFile": "src/features/team-approvals/contracts/api.ts",
       "disposition": "query",
       "owner": "team-read"
     },
