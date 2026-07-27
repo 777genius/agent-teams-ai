@@ -284,10 +284,19 @@ function readBaselineSourceLineCounts(baselineRef, filePaths) {
   return lineCounts;
 }
 
-export function verifySourceFileSizePolicy(root = repoRoot) {
+export function verifySourceFileSizePolicy(root = repoRoot, { requireBaseline = false } = {}) {
   const legacyMaxLines = JSON.parse(readFileSync(legacyManifestPath, 'utf8'));
   const baselineRef = process.env.SOURCE_FILE_SIZE_BASELINE_REF;
+  if (requireBaseline && !baselineRef) {
+    throw new Error('SOURCE_FILE_SIZE_BASELINE_REF is required in source-size ratchet mode');
+  }
   const baselineLegacyMaxLines = readBaselineLegacyManifest(baselineRef);
+  if (requireBaseline && baselineLegacyMaxLines === null) {
+    throw new Error(
+      `SOURCE_FILE_SIZE_BASELINE_REF must resolve to ${legacyManifestRelativePath} ` +
+        'in source-size ratchet mode'
+    );
+  }
   const baselineSourceLineCounts = readBaselineSourceLineCounts(
     baselineRef,
     Object.keys(legacyMaxLines)
@@ -321,7 +330,9 @@ export function verifySourceFileSizePolicy(root = repoRoot) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
   try {
-    const result = verifySourceFileSizePolicy();
+    const result = verifySourceFileSizePolicy(repoRoot, {
+      requireBaseline: process.argv.includes('--require-baseline'),
+    });
     console.log(
       `[source-file-size] OK: ${result.productionFileCount} production files, ` +
         `${result.legacyFileCount} ratcheted legacy exceptions, ` +

@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
+import process from 'node:process';
 import test from 'node:test';
+import { URL } from 'node:url';
 
 import {
   collectFiles,
@@ -176,4 +179,91 @@ test('keeps the checked-in legacy snapshot synchronized with the source tree', (
 
   assert.ok(result.productionFileCount > result.legacyFileCount);
   assert.ok(result.legacyFileCount > 0);
+});
+
+test('CI package guard rejects source and legacy cap growth from the base commit', () => {
+  const root = mkdtempSync(join(tmpdir(), 'source-file-size-ci-'));
+  const packageScripts = JSON.parse(
+    readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
+  ).scripts;
+  const ciGuardScript = packageScripts['guard:source-file-size:ci'];
+
+  assert.match(packageScripts['validate:ci'], /^pnpm guard:source-file-size:ci(?: &&|$)/);
+  assert.equal(ciGuardScript, 'node ./scripts/ci/verify-source-file-size.mjs --require-baseline');
+
+  const runGit = (...args) =>
+    execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: 'pipe' });
+  const runCiGuard = (baselineRef) => {
+    const env = { ...process.env };
+    if (baselineRef === undefined) delete env.SOURCE_FILE_SIZE_BASELINE_REF;
+    else env.SOURCE_FILE_SIZE_BASELINE_REF = baselineRef;
+    return spawnSync('pnpm', ['guard:source-file-size:ci'], {
+      cwd: root,
+      encoding: 'utf8',
+      env,
+    });
+  };
+  const commandOutput = (result) => `${result.stdout}\n${result.stderr}`;
+
+  try {
+    const sourceRoots = [
+      'src',
+      'packages',
+      'agent-teams-controller/src',
+      'landing',
+      'mcp-server/src',
+    ];
+    for (const sourceRoot of sourceRoots) {
+      mkdirSync(join(root, sourceRoot), { recursive: true });
+    }
+    const verifierPath = join(root, 'scripts/ci/verify-source-file-size.mjs');
+    mkdirSync(dirname(verifierPath), { recursive: true });
+    copyFileSync(
+      new URL('../../scripts/ci/verify-source-file-size.mjs', import.meta.url),
+      verifierPath
+    );
+    writeFileSync(
+      join(root, 'package.json'),
+      JSON.stringify({
+        name: 'source-size-ci-fixture',
+        private: true,
+        scripts: {
+          'guard:source-file-size:ci': ciGuardScript,
+        },
+      })
+    );
+    writeFileSync(join(root, 'pnpm-workspace.yaml'), 'packages:\n');
+    writeFileSync(
+      join(root, 'scripts/ci/source-file-size-legacy.json'),
+      JSON.stringify({ 'src/legacy.ts': 1000 })
+    );
+    writeFileSync(join(root, 'src/legacy.ts'), 'baseline\n'.repeat(1000));
+
+    runGit('init', '--quiet');
+    runGit('config', 'user.email', 'source-size-test@example.invalid');
+    runGit('config', 'user.name', 'Source Size Test');
+    runGit('add', '.');
+    runGit('commit', '--quiet', '-m', 'test: establish source-size baseline');
+    const baselineRef = runGit('rev-parse', 'HEAD').trim();
+
+    writeFileSync(
+      join(root, 'scripts/ci/source-file-size-legacy.json'),
+      JSON.stringify({ 'src/legacy.ts': 1100 })
+    );
+    writeFileSync(join(root, 'src/legacy.ts'), 'head\n'.repeat(1100));
+
+    const missingBaseline = runCiGuard(undefined);
+    assert.notEqual(missingBaseline.status, 0);
+    assert.match(commandOutput(missingBaseline), /BASELINE_REF is required/);
+
+    const invalidBaseline = runCiGuard('not-a-commit');
+    assert.notEqual(invalidBaseline.status, 0);
+    assert.match(commandOutput(invalidBaseline), /must be a 40-character commit SHA/);
+
+    const raisedCap = runCiGuard(baselineRef);
+    assert.notEqual(raisedCap.status, 0);
+    assert.match(commandOutput(raisedCap), /\[raised-legacy-cap\] src\/legacy\.ts/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
