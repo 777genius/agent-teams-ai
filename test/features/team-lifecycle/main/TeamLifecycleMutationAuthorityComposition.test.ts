@@ -66,7 +66,10 @@ describe('team lifecycle mutation authority composition', () => {
       launchRequest(test.state, plan),
       createTestContext()
     );
-    if (test.authorityErrors[0]) throw test.authorityErrors[0];
+    const authorityError = test.authorityErrors[0];
+    if (authorityError !== undefined) {
+      throw new Error('unexpected mutation authority failure', { cause: authorityError });
+    }
     expect(launched).toMatchObject({ status: 'accepted' });
     await expect(
       test.feature.stopTeam(
@@ -160,7 +163,7 @@ describe('team lifecycle mutation authority composition', () => {
       },
     });
     const immutableLaunchMutation = test.state.snapshot.laneEffects[0]?.providerMutations.launch;
-    test.provider.script('provisioning_cli', plan.lanes[0]!.laneId, 'preflight', {
+    test.provider.script('provisioning_cli', plan.lanes[0].laneId, 'preflight', {
       status: 'ready',
       readiness: {
         ...immutableLaunchMutation?.readiness,
@@ -326,7 +329,7 @@ describe('team lifecycle mutation authority composition', () => {
     await expect(
       test.workflowDependencies.lanes.launch(
         run,
-        plan.lanes[0]!.laneId,
+        plan.lanes[0].laneId,
         backendMismatch,
         createTestContext().cancellation
       )
@@ -348,7 +351,7 @@ describe('team lifecycle mutation authority composition', () => {
     await expect(
       test.workflowDependencies.lanes.launch(
         run,
-        plan.lanes[0]!.laneId,
+        plan.lanes[0].laneId,
         scopeMismatch,
         createTestContext().cancellation
       )
@@ -365,7 +368,7 @@ describe('team lifecycle mutation authority composition', () => {
   ] as const)('blocks a higher-fenced recover after an %s launch result', async (_name, result) => {
     const test = await harness();
     const plan = createTestRuntimePlan({ topology: 'primary' });
-    test.provider.script('provisioning_cli', plan.lanes[0]!.laneId, 'launch', result);
+    test.provider.script('provisioning_cli', plan.lanes[0].laneId, 'launch', result);
 
     await expect(
       test.feature.launchTeam(launchRequest(test.state, plan), createTestContext())
