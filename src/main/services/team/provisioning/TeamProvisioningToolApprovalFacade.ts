@@ -499,6 +499,16 @@ export class TeamProvisioningToolApprovalFacade<
     );
   }
 
+  getPendingToolApprovalFilePath(
+    teamName: string,
+    runId: string,
+    requestId: string
+  ): string | null {
+    return getApprovalPreviewFilePath(
+      this.getPendingToolApprovalFileContext(teamName, runId, requestId)?.approval
+    );
+  }
+
   private getPendingToolApprovalFileContext(
     teamName: string,
     runId: string,

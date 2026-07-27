@@ -126,6 +126,9 @@ describe('TeamProvisioningToolApprovalFacade', () => {
       authorizationPath: approvedPath,
       readPath: approvedPath,
     });
+    expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'req-preview')).toBe(
+      approvedPath
+    );
     expect(
       facade.getPendingToolApprovalFileTarget('other-team', 'run-1', 'req-preview')
     ).toBeNull();
