@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "artifactId": "P0.W5.SUPPORTING.MUTATION_CENSUS",
-  "observedAtSha": "668e7d4f2277b727125770960a4d826bf44be6fa",
+  "observedAtSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
   "derivation": "TypeScript AST extraction compared bidirectionally with the independently maintained mutation-surface-manifest.json and command descriptors",
   "sourceFiles": [
     "src/shared/types/api.ts",

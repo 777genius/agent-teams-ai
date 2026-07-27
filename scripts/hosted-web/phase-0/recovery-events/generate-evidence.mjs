@@ -646,7 +646,7 @@ function buildCommandCatalog(mutationManifest) {
     schemaVersion: 1,
     evidenceId: 'P0.W5.COMMAND_CATALOG',
     scope:
-      'Required hosted v1 team, task, messaging, review, approval, Git, lifecycle, and runtime-ingress mutations named by the master plan and current TeamsAPI/CrossTeamAPI/ReviewAPI/runtime-control seams.',
+      'Required hosted v1 team, task, messaging, review, approval, Git, lifecycle, and runtime-ingress mutations named by the master plan and current TeamsAPI/TeamApprovalsElectronApi/CrossTeamAPI/ReviewAPI/runtime-control seams.',
     descriptorDefaults: {
       claimOrder: 'authenticate_authorize_bound_validate_then_claim',
       conflict: 'same scope/key with changed descriptor/schema/fingerprint is idempotency_mismatch',
