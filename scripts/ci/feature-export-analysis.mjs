@@ -524,10 +524,19 @@ export function findPublicReferenceOwner(
     current = current.parent;
   }
   if (!current || current.parent !== sourceFile) return null;
-  const publicExpressionBoundary = isPotentiallyExecutedAtTopLevel(node, sourceFile)
+  const potentiallyExecutedAtTopLevel = isPotentiallyExecutedAtTopLevel(node, sourceFile);
+  const definiteMutation = potentiallyExecutedAtTopLevel
+    ? definitePublicMutationExpression(
+        node,
+        sourceFile,
+        publicTargetOwners,
+        commonJsTargetAliases
+      )
+    : null;
+  const publicExpressionBoundary = potentiallyExecutedAtTopLevel
     ? (topLevelExpressionBoundary(node, sourceFile) ??
       potentialTopLevelExpressionBoundary(node, sourceFile) ??
-      definitePublicMutationExpression(node, sourceFile, publicTargetOwners, commonJsTargetAliases))
+      definiteMutation)
     : null;
   current = publicExpressionBoundary ?? current;
   const classReference = classifyPublicClassReference(node);
@@ -536,7 +545,7 @@ export function findPublicReferenceOwner(
     : insideFunctionBody
       ? getterSelectionForReference(node, current)
       : null;
-  if ((insideFunctionBody || classReference) && !getterSelection) return null;
+  if ((insideFunctionBody || classReference) && !getterSelection && !definiteMutation) return null;
 
   let bindingSelections = null;
   let descriptorGetterIsPublic = false;

@@ -44,6 +44,55 @@ function callMethod(expression) {
   return null;
 }
 
+const SYNCHRONOUS_ARRAY_CALLBACK_METHODS = new Set([
+  'every',
+  'filter',
+  'find',
+  'findIndex',
+  'findLast',
+  'findLastIndex',
+  'flatMap',
+  'forEach',
+  'map',
+  'reduce',
+  'reduceRight',
+  'some',
+]);
+
+export function executedSynchronousArrayCallbackForCall(node) {
+  if (
+    !ts.isCallExpression(node) ||
+    node.questionDotToken ||
+    node.expression.questionDotToken
+  ) {
+    return null;
+  }
+  const method = callMethod(node.expression);
+  const receiver = method && unwrapExpression(method.receiver);
+  const callback = node.arguments[0] && callableTarget(node.arguments[0]);
+  if (
+    !method ||
+    !SYNCHRONOUS_ARRAY_CALLBACK_METHODS.has(method.name) ||
+    !receiver ||
+    !ts.isArrayLiteralExpression(receiver) ||
+    !callback
+  ) {
+    return null;
+  }
+  const definiteElements = receiver.elements.filter(
+    (element) => !ts.isOmittedExpression(element) && !ts.isSpreadElement(element)
+  ).length;
+  const minimumElements =
+    method.name === 'reduce' || method.name === 'reduceRight'
+      ? node.arguments.length >= 2
+        ? 1
+        : 2
+      : 1;
+  return definiteElements >= minimumElements
+    ? { call: node, callable: callback, method: method.name }
+    : null;
+}
+
 export function executedIifeForCall(node) {
   if (!ts.isCallExpression(node) || node.questionDotToken) return null;
 
@@ -122,6 +171,35 @@ export function immediateIifeInvocation(node) {
     : null;
 }
 
+export function immediateSynchronousArrayCallbackInvocation(node) {
+  let current = node;
+  while (
+    current.parent &&
+    (ts.isParenthesizedExpression(current.parent) ||
+      ts.isAsExpression(current.parent) ||
+      ts.isTypeAssertionExpression(current.parent) ||
+      ts.isNonNullExpression(current.parent) ||
+      ts.isSatisfiesExpression(current.parent)) &&
+    current.parent.expression === current
+  ) {
+    current = current.parent;
+  }
+  const call = current.parent;
+  return call &&
+    ts.isCallExpression(call) &&
+    call.arguments[0] === current &&
+    executedSynchronousArrayCallbackForCall(call)?.callable === node
+    ? call
+    : null;
+}
+
+export function immediateExecutedInvocation(node) {
+  return (
+    immediateIifeInvocation(node) ??
+    immediateSynchronousArrayCallbackInvocation(node)
+  );
+}
+
 const MISSING_ARGUMENT = Symbol('missing-argument');
 const UNKNOWN_SELECTION = Symbol('unknown-selection');
 const DEFINED_SELECTION = Symbol('defined-selection');
@@ -139,7 +217,7 @@ export function isPotentiallyExecutedAtTopLevel(node, sourceFile) {
     const parent = current.parent;
     if (!parent) return false;
     if (ts.isFunctionLike(parent)) {
-      const invocation = immediateIifeInvocation(parent);
+      const invocation = immediateExecutedInvocation(parent);
       if (!invocation) return false;
       current = invocation;
       continue;

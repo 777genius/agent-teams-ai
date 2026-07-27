@@ -6,6 +6,7 @@ import {
   propertyNameText,
   unwrapExpression,
 } from './feature-export-ast.mjs';
+import { executedSynchronousArrayCallbackForCall } from './feature-executed-iife-analysis.mjs';
 import { IDENTITY_WRAPPERS } from './feature-identity-wrappers.mjs';
 
 const ARRAY_CALLBACK_RESULT_METHODS = new Set(['flatMap', 'map', 'reduce', 'reduceRight']);
@@ -137,38 +138,17 @@ function unwrapCallback(expression) {
 }
 
 function definiteArrayCallbackResultCall(callback) {
-  if (ts.isFunctionExpression(callback) && callback.asteriskToken) return null;
   const wrappedCallback = unwrapCallback(callback);
   const call = wrappedCallback.parent;
-  if (
-    !ts.isCallExpression(call) ||
-    call.arguments[0] !== wrappedCallback ||
-    call.questionDotToken
-  ) {
-    return null;
-  }
-  const method = memberAccess(call.expression);
-  const receiver = method?.receiver && unwrapExpression(method.receiver);
-  const definiteElements =
-    receiver && ts.isArrayLiteralExpression(receiver)
-      ? receiver.elements.filter(
-          (element) => !ts.isOmittedExpression(element) && !ts.isSpreadElement(element)
-        ).length
-      : 0;
-  const callbackDefinitelyRuns =
-    method?.name === 'reduce' || method?.name === 'reduceRight'
-      ? definiteElements >= (call.arguments.length >= 2 ? 1 : 2)
-      : definiteElements >= 1;
-  if (
-    !method ||
-    !ARRAY_CALLBACK_RESULT_METHODS.has(method.name) ||
-    !receiver ||
-    !ts.isArrayLiteralExpression(receiver) ||
-    !callbackDefinitelyRuns
-  ) {
-    return null;
-  }
-  return call;
+  const invocation =
+    call && ts.isCallExpression(call)
+      ? executedSynchronousArrayCallbackForCall(call)
+      : null;
+  return invocation &&
+    invocation.callable === callback &&
+    ARRAY_CALLBACK_RESULT_METHODS.has(invocation.method)
+    ? call
+    : null;
 }
 
 function transparentPublishedValueParent(current, parent) {

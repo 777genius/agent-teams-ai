@@ -1091,6 +1091,7 @@ test('traces only definitely invoked function mutations', () => {
     },
     (root) => {
       assert.deepEqual(implementationViolationSources(root), [
+        'src/features/callback-safe/main/index.ts',
         'src/features/iife-argument-public/main/index.ts',
         'src/features/iife-call-public/main/index.ts',
         'src/features/iife-comma-public/main/index.ts',

@@ -490,7 +490,7 @@ test('traces both defineProperty initializer forms', () => {
   );
 });
 
-test('traverses executed IIFE mutations but not callbacks or unstarted generators', () => {
+test('traverses definitely executed IIFE and synchronous callback mutations', () => {
   withFeatureFixture(
     {
       'src/features/iife-mutation/main/index.ts': `
@@ -520,6 +520,7 @@ test('traverses executed IIFE mutations but not callbacks or unstarted generator
     },
     (root) => {
       assert.deepEqual(implementationSources(root), [
+        'src/features/iife-callback-safe/main/index.ts',
         'src/features/iife-generator/main/index.ts',
         'src/features/iife-mutation/main/index.ts',
       ]);

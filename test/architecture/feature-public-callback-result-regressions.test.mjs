@@ -90,16 +90,6 @@ test('keeps discarded, deferred, non-result, and non-executing callbacks private
       `,
       'src/features/callback-discarded/main/infrastructure/Store.ts':
         'export class Store {}',
-      'src/features/callback-mutation-only/main/index.ts': `
-        import { Store } from './infrastructure/Store';
-        export const api: Record<string, unknown> = {};
-        [0].map(() => {
-          api.Store = Store;
-          return 0;
-        });
-      `,
-      'src/features/callback-mutation-only/main/infrastructure/Store.ts':
-        'export class Store {}',
       'src/features/callback-custom-map/main/index.ts': `
         import { Store } from './infrastructure/Store';
         const source = { map: (_callback: () => unknown) => [] };
@@ -155,6 +145,67 @@ test('keeps discarded, deferred, non-result, and non-executing callbacks private
     },
     (root) => {
       assert.deepEqual(implementationSources(root), []);
+    }
+  );
+});
+
+test('traces public mutations from definitely executed synchronous array callbacks', () => {
+  withFeatureFixture(
+    {
+      'src/features/callback-map-mutation/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [0].map(() => {
+          api.Store = Store;
+        });
+      `,
+      'src/features/callback-map-mutation/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-for-each-mutation/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [0].forEach(() => {
+          api.Store = Store;
+        });
+      `,
+      'src/features/callback-for-each-mutation/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-filter-mutation/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [0].filter(() => {
+          api.Store = Store;
+          return true;
+        });
+      `,
+      'src/features/callback-filter-mutation/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-empty-mutation/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [].map(() => {
+          api.Store = Store;
+        });
+      `,
+      'src/features/callback-empty-mutation/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-custom-mutation/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        const source = { map: (callback: () => void) => callback };
+        source.map(() => {
+          api.Store = Store;
+        });
+      `,
+      'src/features/callback-custom-mutation/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/callback-filter-mutation/main/index.ts',
+        'src/features/callback-for-each-mutation/main/index.ts',
+        'src/features/callback-map-mutation/main/index.ts',
+      ]);
     }
   );
 });

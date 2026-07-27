@@ -2,6 +2,8 @@ import ts from 'typescript';
 
 import {
   executedIifeForCall,
+  executedSynchronousArrayCallbackForCall,
+  immediateExecutedInvocation,
   staticNullishness,
   staticStrictEquality,
   staticTruthiness,
@@ -47,7 +49,8 @@ function visitDefiniteExpression(node, visitor) {
     return;
   }
   if (ts.isCallExpression(node)) {
-    const invocation = executedIifeForCall(node);
+    const invocation =
+      executedIifeForCall(node) ?? executedSynchronousArrayCallbackForCall(node);
     if (invocation) {
       visitDefiniteExpression(node.expression, visitor);
       for (const argument of node.arguments) {
@@ -308,7 +311,13 @@ export function definiteTopLevelExpressionBoundary(node, sourceFile) {
   let boundary = null;
   let current = node;
   while (current && current !== sourceFile) {
-    if (ts.isFunctionLike(current) || ts.isClassLike(current)) break;
+    if (ts.isFunctionLike(current)) {
+      const invocation = immediateExecutedInvocation(current);
+      if (!invocation) break;
+      current = invocation;
+      continue;
+    }
+    if (ts.isClassLike(current)) break;
     if (ts.isExpression(current) && expressions.has(current)) boundary = current;
     current = current.parent;
   }
