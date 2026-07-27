@@ -203,7 +203,7 @@ describe('team approvals IPC', () => {
     });
   });
 
-  it('validates approval identity and absolute paths before reading', async () => {
+  it('validates approval identity and preserves path strings before reading', async () => {
     await expect(handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, null)).resolves.toEqual({
       success: false,
       error: 'File preview request must be an object',
@@ -240,8 +240,15 @@ describe('team approvals IPC', () => {
         {},
         { ...VALID_FILE_READ_REQUEST, filePath: 'relative.txt' }
       )
-    ).resolves.toEqual({ success: false, error: 'filePath must be an absolute path' });
-    expect(previewReader.read).not.toHaveBeenCalled();
+    ).resolves.toEqual({
+      success: true,
+      data: { content: 'preview', exists: true, truncated: false, isBinary: false },
+    });
+    expect(previewReader.read).toHaveBeenCalledWith({
+      ...VALID_FILE_READ_REQUEST,
+      filePath: 'relative.txt',
+    });
+    previewReader.read.mockClear();
 
     await expect(
       handlers.get(TEAM_TOOL_APPROVAL_READ_FILE)!({}, VALID_FILE_READ_REQUEST)

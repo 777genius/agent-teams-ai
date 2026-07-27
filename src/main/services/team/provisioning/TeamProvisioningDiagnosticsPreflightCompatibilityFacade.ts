@@ -120,7 +120,7 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     TeamProvisioningToolApprovalFacade<TRun>,
     | 'dismissApprovalNotification'
     | 'answerRuntimeToolApproval'
-    | 'getPendingToolApprovalFilePath'
+    | 'getPendingToolApprovalFileTarget'
     | 'getMemberToolApprovalBusyStatus'
     | 'initializeToolApprovalSettingsForLaunch'
     | 'setMainWindow'
@@ -365,12 +365,12 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     this.provisioningApplication.updateToolApprovalSettings(teamName, settings);
   }
 
-  getPendingToolApprovalFilePath(
+  getPendingToolApprovalFileTarget(
     teamName: string,
     runId: string,
     requestId: string
-  ): string | null {
-    return this.toolApprovalFacade.getPendingToolApprovalFilePath(teamName, runId, requestId);
+  ): { authorizationPath: string; readPath: string } | null {
+    return this.toolApprovalFacade.getPendingToolApprovalFileTarget(teamName, runId, requestId);
   }
 
   initializeToolApprovalSettingsForLaunch(

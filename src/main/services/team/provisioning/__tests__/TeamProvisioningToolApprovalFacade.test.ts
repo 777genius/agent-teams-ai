@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -75,6 +77,9 @@ class FakeNotification implements TeamProvisioningToolApprovalNotification {
   }
 }
 
+const TEST_PROJECT_DIRECTORY = path.resolve('repo');
+const TEST_WORKER_DIRECTORY = path.join(TEST_PROJECT_DIRECTORY, 'worker');
+
 describe('TeamProvisioningToolApprovalFacade', () => {
   beforeEach(() => {
     FakeNotification.instances.length = 0;
@@ -105,26 +110,30 @@ describe('TeamProvisioningToolApprovalFacade', () => {
     expect(facade.tryClaimResponse('req-shared')).toBe(true);
   });
 
-  it('exposes a preview path only for the exact active file-edit approval', () => {
+  it('exposes a preview target only for the exact active file-edit approval', () => {
     const { deps, facade, run } = createHarness();
+    const approvedPath = path.join(TEST_PROJECT_DIRECTORY, 'approved.txt');
     run.pendingApprovals.set(
       'req-preview',
       approvalRequest({
         requestId: 'req-preview',
         toolName: 'Write',
-        toolInput: { file_path: '/repo/approved.txt', content: 'next' },
+        toolInput: { file_path: approvedPath, content: 'next' },
       })
     );
 
-    expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'req-preview')).toBe(
-      '/repo/approved.txt'
-    );
-    expect(facade.getPendingToolApprovalFilePath('other-team', 'run-1', 'req-preview')).toBeNull();
-    expect(facade.getPendingToolApprovalFilePath('alpha', 'stale-run', 'req-preview')).toBeNull();
-    expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'missing')).toBeNull();
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview')).toEqual({
+      authorizationPath: approvedPath,
+      readPath: approvedPath,
+    });
+    expect(
+      facade.getPendingToolApprovalFileTarget('other-team', 'run-1', 'req-preview')
+    ).toBeNull();
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'stale-run', 'req-preview')).toBeNull();
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'missing')).toBeNull();
 
     vi.mocked(deps.getTrackedRunId).mockReturnValue('run-2');
-    expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'req-preview')).toBeNull();
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview')).toBeNull();
     vi.mocked(deps.getTrackedRunId).mockReturnValue('run-1');
 
     run.pendingApprovals.set(
@@ -132,10 +141,28 @@ describe('TeamProvisioningToolApprovalFacade', () => {
       approvalRequest({
         requestId: 'req-preview',
         toolName: 'Bash',
-        toolInput: { file_path: '/repo/approved.txt' },
+        toolInput: { file_path: approvedPath },
       })
     );
-    expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'req-preview')).toBeNull();
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview')).toBeNull();
+  });
+
+  it('resolves relative preview paths against the exact requesting member directory', () => {
+    const { facade, run } = createHarness();
+    run.pendingApprovals.set(
+      'req-relative',
+      approvalRequest({
+        requestId: 'req-relative',
+        source: 'Worker',
+        toolName: 'Edit',
+        toolInput: { file_path: 'src/approved.txt', old_string: 'a', new_string: 'b' },
+      })
+    );
+
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-relative')).toEqual({
+      authorizationPath: 'src/approved.txt',
+      readPath: path.join(TEST_WORKER_DIRECTORY, 'src', 'approved.txt'),
+    });
   });
 
   it('re-evaluates pending lead approvals when settings are updated', () => {
@@ -581,9 +608,11 @@ describe('TeamProvisioningToolApprovalFacade', () => {
 interface TestRun extends TeamProvisioningToolApprovalFacadeRun {
   request: {
     color: string;
+    cwd: string;
     displayName: string;
     members: Array<{ name: string; role?: string }>;
   };
+  allEffectiveMembers: Array<{ name: string; cwd?: string }>;
   child: {
     stdin: {
       writable: boolean;
@@ -696,12 +725,17 @@ function buildRun(): TestRun {
     teamName: 'alpha',
     request: {
       color: 'blue',
+      cwd: TEST_PROJECT_DIRECTORY,
       displayName: 'Alpha Team',
       members: [
         { name: 'Lead', role: 'lead' },
         { name: 'Worker', role: 'engineer' },
       ],
     },
+    allEffectiveMembers: [
+      { name: 'Lead', cwd: TEST_PROJECT_DIRECTORY },
+      { name: 'Worker', cwd: TEST_WORKER_DIRECTORY },
+    ],
     child: {
       stdin: {
         writable: true,

@@ -1054,14 +1054,17 @@ describe('TeamProvisioning API binders', () => {
       response: null,
       settingsUpdate: null,
       previewLookup: null,
-      getPendingToolApprovalFilePath(
+      getPendingToolApprovalFileTarget(
         this: ToolApprovalSource,
         teamName: string,
         runId: string,
         requestId: string
-      ): string | null {
+      ): { authorizationPath: string; readPath: string } | null {
         this.previewLookup = { teamName, runId, requestId, sourceName: this.sourceName };
-        return '/repo/approved.txt';
+        return {
+          authorizationPath: 'approved.txt',
+          readPath: '/repo/approved.txt',
+        };
       },
       respondToToolApproval(
         this: ToolApprovalSource,
@@ -1095,13 +1098,14 @@ describe('TeamProvisioning API binders', () => {
     };
 
     const api = bindTeamToolApprovalApi(source);
-    const getPendingToolApprovalFilePath = api.getPendingToolApprovalFilePath.bind(undefined);
+    const getPendingToolApprovalFileTarget = api.getPendingToolApprovalFileTarget.bind(undefined);
     const respondToToolApproval = api.respondToToolApproval.bind(undefined);
     const updateToolApprovalSettings = api.updateToolApprovalSettings.bind(undefined);
 
-    expect(getPendingToolApprovalFilePath('team-bound', 'run-1', 'request-1')).toBe(
-      '/repo/approved.txt'
-    );
+    expect(getPendingToolApprovalFileTarget('team-bound', 'run-1', 'request-1')).toEqual({
+      authorizationPath: 'approved.txt',
+      readPath: '/repo/approved.txt',
+    });
     await respondToToolApproval('team-bound', 'run-1', 'request-1', true, 'approved');
     updateToolApprovalSettings('team-bound', settings);
 

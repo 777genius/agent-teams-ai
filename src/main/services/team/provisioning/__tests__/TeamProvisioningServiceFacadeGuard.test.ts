@@ -63,7 +63,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'getOpenCodeMemberDeliveryBusyStatus',
   'getOpenCodeRuntimeAdapter',
   'getOpenCodeRuntimeDeliveryStatus',
-  'getPendingToolApprovalFilePath',
+  'getPendingToolApprovalFileTarget',
   'getProvisioningStatus',
   'getRuntimeState',
   'getTeamAgentRuntimeSnapshot',

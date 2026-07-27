@@ -5,7 +5,20 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { NodeToolApprovalFileReader } from './NodeToolApprovalFileReader';
-import { WindowsToolApprovalFileReader } from './WindowsToolApprovalFileReader';
+import {
+  encodeWindowsPreviewPath,
+  WindowsToolApprovalFileReader,
+} from './WindowsToolApprovalFileReader';
+
+describe('Windows preview path transport', () => {
+  it('preserves every UTF-16 code unit, including an unpaired surrogate', () => {
+    const pathWithUnpairedSurrogate = `C:\\preview\\before-\ud800-after.txt`;
+
+    expect(
+      Buffer.from(encodeWindowsPreviewPath(pathWithUnpairedSurrogate), 'base64').toString('utf16le')
+    ).toBe(pathWithUnpairedSurrogate);
+  });
+});
 
 describe.runIf(process.platform === 'win32')('WindowsToolApprovalFileReader', () => {
   const reader = new WindowsToolApprovalFileReader();
@@ -65,6 +78,20 @@ describe.runIf(process.platform === 'win32')('WindowsToolApprovalFileReader', ()
     await mkdir(safeDirectory);
 
     await expect(reader.read(path.join(safeDirectory, 'new-file.txt'))).resolves.toEqual({
+      content: '',
+      exists: false,
+      truncated: false,
+      isBinary: false,
+    });
+  });
+
+  it('preserves nested missing-file previews from the nearest safe existing ancestor', async () => {
+    const safeDirectory = path.join(tempDirectory, 'windows-safe-ancestor');
+    await mkdir(safeDirectory);
+
+    await expect(
+      reader.read(path.join(safeDirectory, 'missing-one', 'missing-two', 'new-file.txt'))
+    ).resolves.toEqual({
       content: '',
       exists: false,
       truncated: false,

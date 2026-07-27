@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -36,7 +38,12 @@ import type { BrowserWindow } from 'electron';
 
 export type TeamProvisioningToolApprovalFacadeRun = TeamProvisioningToolApprovalPortsFactoryRun &
   TeamProvisioningToolApprovalTimeoutRun &
-  TeamProvisioningToolApprovalNotificationRunLike;
+  TeamProvisioningToolApprovalNotificationRunLike & {
+    request: {
+      cwd?: string;
+    };
+    allEffectiveMembers?: { name: string; cwd?: string }[];
+  };
 
 type TeamProvisioningToolApprovalBoundaryDeps<TRun extends TeamProvisioningToolApprovalFacadeRun> =
   TeamProvisioningToolApprovalPortsFactoryDeps<TRun>;
@@ -52,6 +59,58 @@ function getApprovalPreviewFilePath(approval: ToolApprovalRequest | undefined): 
 
   const filePath = approval.toolInput.file_path;
   return typeof filePath === 'string' && filePath.trim().length > 0 ? filePath : null;
+}
+
+interface PendingToolApprovalFileTarget {
+  authorizationPath: string;
+  readPath: string;
+}
+
+interface PendingToolApprovalFileContext {
+  approval: ToolApprovalRequest;
+  projectDirectory?: string;
+}
+
+function getApprovalPreviewFileTarget(
+  context: PendingToolApprovalFileContext | null
+): PendingToolApprovalFileTarget | null {
+  const authorizationPath = getApprovalPreviewFilePath(context?.approval);
+  if (authorizationPath === null) {
+    return null;
+  }
+  if (path.isAbsolute(authorizationPath)) {
+    return { authorizationPath, readPath: authorizationPath };
+  }
+
+  const projectDirectory = context?.projectDirectory;
+  if (
+    typeof projectDirectory !== 'string' ||
+    projectDirectory.trim().length === 0 ||
+    !path.isAbsolute(projectDirectory)
+  ) {
+    return null;
+  }
+  return {
+    authorizationPath,
+    readPath: path.resolve(projectDirectory, authorizationPath),
+  };
+}
+
+function getRunApprovalProjectDirectory(
+  run: TeamProvisioningToolApprovalFacadeRun,
+  approval: ToolApprovalRequest
+): string | undefined {
+  const source = normalizeMemberName(approval.source);
+  const memberDirectory = run.allEffectiveMembers?.find(
+    (member) => normalizeMemberName(member.name) === source
+  )?.cwd;
+  if (typeof memberDirectory === 'string' && memberDirectory.trim().length > 0) {
+    return memberDirectory;
+  }
+  const runDirectory = run.request.cwd;
+  return typeof runDirectory === 'string' && runDirectory.trim().length > 0
+    ? runDirectory
+    : undefined;
 }
 
 export interface TeamProvisioningMemberToolApprovalBusyInput {
@@ -430,18 +489,33 @@ export class TeamProvisioningToolApprovalFacade<
     this.reEvaluatePendingApprovals();
   }
 
-  getPendingToolApprovalFilePath(
+  getPendingToolApprovalFileTarget(
     teamName: string,
     runId: string,
     requestId: string
-  ): string | null {
-    const runtimeApproval = this.runtimeToolApprovalCoordinator.get(teamName, requestId)?.approval;
+  ): PendingToolApprovalFileTarget | null {
+    return getApprovalPreviewFileTarget(
+      this.getPendingToolApprovalFileContext(teamName, runId, requestId)
+    );
+  }
+
+  private getPendingToolApprovalFileContext(
+    teamName: string,
+    runId: string,
+    requestId: string
+  ): PendingToolApprovalFileContext | null {
+    const runtimeEntry = this.runtimeToolApprovalCoordinator.get(teamName, requestId);
+    const runtimeApproval = runtimeEntry?.approval;
     if (
+      runtimeEntry &&
       runtimeApproval?.runId === runId &&
       runtimeApproval.teamName === teamName &&
       runtimeApproval.requestId === requestId
     ) {
-      return getApprovalPreviewFilePath(runtimeApproval);
+      return {
+        approval: runtimeApproval,
+        projectDirectory: runtimeEntry.cwd,
+      };
     }
 
     if (this.deps.getTrackedRunId(teamName) !== runId) {
@@ -449,8 +523,10 @@ export class TeamProvisioningToolApprovalFacade<
     }
 
     const run = this.deps.getRun(runId);
-    const runApproval =
-      run?.teamName === teamName ? run.pendingApprovals.get(requestId) : undefined;
+    if (run?.teamName !== teamName) {
+      return null;
+    }
+    const runApproval = run.pendingApprovals.get(requestId);
     if (
       runApproval?.runId !== runId ||
       runApproval.teamName !== teamName ||
@@ -459,7 +535,10 @@ export class TeamProvisioningToolApprovalFacade<
       return null;
     }
 
-    return getApprovalPreviewFilePath(runApproval);
+    return {
+      approval: runApproval,
+      projectDirectory: getRunApprovalProjectDirectory(run, runApproval),
+    };
   }
 
   getMemberToolApprovalBusyStatus(

@@ -87,6 +87,26 @@ namespace AgentTeams.SafePreview {
       public uint FileIndexLow;
     }
 
+    private sealed class MissingAncestorBinding : IDisposable {
+      public readonly string Path;
+      public readonly SafeFileHandle Handle;
+      public readonly ByHandleFileInformation Information;
+
+      public MissingAncestorBinding(
+        string path,
+        SafeFileHandle handle,
+        ByHandleFileInformation information
+      ) {
+        Path = path;
+        Handle = handle;
+        Information = information;
+      }
+
+      public void Dispose() {
+        Handle.Dispose();
+      }
+    }
+
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern SafeFileHandle CreateFileW(
       string fileName,
@@ -129,8 +149,12 @@ namespace AgentTeams.SafePreview {
           int error = Marshal.GetLastWin32Error();
           file.Dispose();
           if (IsMissingPathError(error)) {
-            using (SafeFileHandle parentBinding = OpenMissingParentBinding(normalizedPath)) {
+            using (
+              MissingAncestorBinding ancestorBinding =
+                OpenNearestExistingAncestorBinding(normalizedPath)
+            ) {
               AssertNoReparsePoints(normalizedPath, true);
+              AssertMissingAncestorBindingStable(ancestorBinding);
               if (attempt + 1 < MISSING_PATH_OPEN_ATTEMPTS) continue;
               return new PreviewResult { Exists = false, Content = new byte[0] };
             }
@@ -200,37 +224,88 @@ namespace AgentTeams.SafePreview {
       );
     }
 
-    private static SafeFileHandle OpenMissingParentBinding(string filePath) {
-      string parentPath = Path.GetDirectoryName(filePath);
-      SafeFileHandle parent = CreateFileW(
-        parentPath,
+    private static MissingAncestorBinding OpenNearestExistingAncestorBinding(string filePath) {
+      string candidatePath = Path.GetDirectoryName(filePath);
+      while (!String.IsNullOrEmpty(candidatePath)) {
+        SafeFileHandle candidate = CreateFileW(
+          candidatePath,
+          0,
+          FILE_SHARE_READ | FILE_SHARE_WRITE,
+          IntPtr.Zero,
+          OPEN_EXISTING,
+          FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
+          IntPtr.Zero
+        );
+        if (candidate.IsInvalid) {
+          int error = Marshal.GetLastWin32Error();
+          candidate.Dispose();
+          if (IsMissingPathError(error)) {
+            string nextCandidate = Path.GetDirectoryName(candidatePath);
+            if (String.Equals(nextCandidate, candidatePath, StringComparison.Ordinal)) break;
+            candidatePath = nextCandidate;
+            continue;
+          }
+          throw new Win32Exception(error);
+        }
+        try {
+          FileAttributeTagInfo attributes = GetAttributeTagInfo(candidate);
+          if (
+            (attributes.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 ||
+            (attributes.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0
+          ) {
+            throw new InvalidOperationException(
+              "Safe approval preview rejected a redirected Windows path"
+            );
+          }
+          ByHandleFileInformation information = GetFileInformation(candidate);
+          if (!HasStableFileIndex(information)) {
+            throw new InvalidOperationException(
+              "Safe approval preview could not bind the Windows path generation"
+            );
+          }
+          AssertOpenedPathMatches(candidatePath, candidate);
+          return new MissingAncestorBinding(candidatePath, candidate, information);
+        } catch {
+          candidate.Dispose();
+          throw;
+        }
+      }
+      throw new InvalidOperationException(
+        "Safe approval preview could not bind an existing Windows path ancestor"
+      );
+    }
+
+    private static void AssertMissingAncestorBindingStable(
+      MissingAncestorBinding ancestorBinding
+    ) {
+      using (SafeFileHandle current = CreateFileW(
+        ancestorBinding.Path,
         0,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         IntPtr.Zero,
         OPEN_EXISTING,
         FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
         IntPtr.Zero
-      );
-      if (parent.IsInvalid) {
-        int error = Marshal.GetLastWin32Error();
-        parent.Dispose();
-        throw new Win32Exception(error);
-      }
-      try {
-        FileAttributeTagInfo info = GetAttributeTagInfo(parent);
+      )) {
+        if (current.IsInvalid) {
+          throw new Win32Exception(Marshal.GetLastWin32Error());
+        }
+        FileAttributeTagInfo attributes = GetAttributeTagInfo(current);
         if (
-          (info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 ||
-          (info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0
+          (attributes.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 ||
+          (attributes.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0
         ) {
           throw new InvalidOperationException(
             "Safe approval preview rejected a redirected Windows path"
           );
         }
-        AssertOpenedPathMatches(parentPath, parent);
-        return parent;
-      } catch {
-        parent.Dispose();
-        throw;
+        ByHandleFileInformation currentInformation = GetFileInformation(current);
+        if (!HasSameFileIdentity(ancestorBinding.Information, currentInformation)) {
+          throw new InvalidOperationException(
+            "Approval preview path changed while classifying a missing file"
+          );
+        }
+        AssertOpenedPathMatches(ancestorBinding.Path, current);
       }
     }
 
@@ -261,11 +336,7 @@ namespace AgentTeams.SafePreview {
         )) {
           if (component.IsInvalid) {
             int error = Marshal.GetLastWin32Error();
-            bool isMissingFinalComponent =
-              allowMissingFinalComponent &&
-              index == segments.Length - 1 &&
-              IsMissingPathError(error);
-            if (isMissingFinalComponent) return;
+            if (allowMissingFinalComponent && IsMissingPathError(error)) return;
             throw new Win32Exception(error);
           }
           FileAttributeTagInfo info = GetAttributeTagInfo(component);
@@ -297,6 +368,18 @@ namespace AgentTeams.SafePreview {
 
     private static bool HasStableFileIndex(ByHandleFileInformation info) {
       return info.FileIndexHigh != 0 || info.FileIndexLow != 0;
+    }
+
+    private static bool HasSameFileIdentity(
+      ByHandleFileInformation before,
+      ByHandleFileInformation after
+    ) {
+      return
+        HasStableFileIndex(before) &&
+        HasStableFileIndex(after) &&
+        before.VolumeSerialNumber == after.VolumeSerialNumber &&
+        before.FileIndexHigh == after.FileIndexHigh &&
+        before.FileIndexLow == after.FileIndexLow;
     }
 
     private static bool HasStableFileInformation(
@@ -360,7 +443,7 @@ namespace AgentTeams.SafePreview {
 try {
   Add-Type -TypeDefinition $source -Language CSharp
   $encodedPath = '${WINDOWS_PREVIEW_PATH_PLACEHOLDER}'
-  $filePath = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($encodedPath))
+  $filePath = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($encodedPath))
   $result = [AgentTeams.SafePreview.Reader]::Read($filePath, ${TOOL_APPROVAL_MAX_FILE_SIZE})
   [Console]::Out.Write(([pscustomobject]@{
     exists = $result.Exists
@@ -389,7 +472,7 @@ function resolveWindowsPowerShellPath(): string {
 export class PowerShellWindowsPreviewHelper implements WindowsPreviewHelperPort {
   read(filePath: string): Promise<WindowsPreviewHelperResult> {
     return new Promise((resolve, reject) => {
-      const encodedPath = Buffer.from(filePath, 'utf8').toString('base64');
+      const encodedPath = encodeWindowsPreviewPath(filePath);
       const previewScript = WINDOWS_PREVIEW_SCRIPT.replace(
         WINDOWS_PREVIEW_PATH_PLACEHOLDER,
         encodedPath
@@ -457,6 +540,10 @@ export class PowerShellWindowsPreviewHelper implements WindowsPreviewHelperPort 
       child.stdin.end(previewScript, 'utf8');
     });
   }
+}
+
+export function encodeWindowsPreviewPath(filePath: string): string {
+  return Buffer.from(filePath, 'utf16le').toString('base64');
 }
 
 export class WindowsToolApprovalFileReader implements ToolApprovalFileReaderPort {

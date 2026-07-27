@@ -23,12 +23,14 @@ describe('createTeamApprovalsFeature', () => {
       expect(this).toBe(api);
     });
     const approvedPath = path.resolve('approved.txt');
-    const getPendingToolApprovalFilePath = vi.fn(function (this: TeamToolApprovalCompatibilityApi) {
+    const getPendingToolApprovalFileTarget = vi.fn(function (
+      this: TeamToolApprovalCompatibilityApi
+    ) {
       expect(this).toBe(api);
-      return approvedPath;
+      return { authorizationPath: 'approved.txt', readPath: approvedPath };
     });
     const api: TeamToolApprovalCompatibilityApi = {
-      getPendingToolApprovalFilePath,
+      getPendingToolApprovalFileTarget,
       respondToToolApproval,
       updateToolApprovalSettings,
     };
@@ -64,7 +66,7 @@ describe('createTeamApprovalsFeature', () => {
         teamName: 'team-one',
         runId: 'run-1',
         requestId: 'request-1',
-        filePath: approvedPath,
+        filePath: 'approved.txt',
       })
     ).resolves.toMatchObject({ content: 'approved' });
     await expect(
@@ -75,7 +77,7 @@ describe('createTeamApprovalsFeature', () => {
         filePath: path.resolve('other.txt'),
       })
     ).resolves.toBeNull();
-    expect(getPendingToolApprovalFilePath).toHaveBeenCalledWith('team-one', 'run-1', 'request-1');
+    expect(getPendingToolApprovalFileTarget).toHaveBeenCalledWith('team-one', 'run-1', 'request-1');
     expect(fileReader.read).toHaveBeenCalledWith(approvedPath);
   });
 });

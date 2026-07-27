@@ -17,7 +17,11 @@ export interface TeamToolApprovalCompatibilityApi {
     message?: string
   ): Promise<void>;
   updateToolApprovalSettings(teamName: string, settings: ToolApprovalSettings): void;
-  getPendingToolApprovalFilePath(teamName: string, runId: string, requestId: string): string | null;
+  getPendingToolApprovalFileTarget(
+    teamName: string,
+    runId: string,
+    requestId: string
+  ): { authorizationPath: string; readPath: string } | null;
 }
 
 export interface TeamApprovalsFeature {
@@ -46,8 +50,8 @@ export function createTeamApprovalsFeature(dependencies: {
     },
     previewReader: new ReadToolApprovalFilePreview({
       pendingApprovals: {
-        getFilePath: (teamName, runId, requestId) =>
-          dependencies.toolApprovalApi.getPendingToolApprovalFilePath(teamName, runId, requestId),
+        getFileTarget: (teamName, runId, requestId) =>
+          dependencies.toolApprovalApi.getPendingToolApprovalFileTarget(teamName, runId, requestId),
       },
       files: fileReader,
     }),

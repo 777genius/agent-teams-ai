@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 import {
   TEAM_TOOL_APPROVAL_READ_FILE,
   TEAM_TOOL_APPROVAL_RESPOND,
@@ -92,10 +90,6 @@ function validateFileReadRequest(request: unknown): IpcResult<never> | ToolAppro
   if (typeof candidate.filePath !== 'string' || candidate.filePath.trim().length === 0) {
     return { success: false, error: 'filePath must be a non-empty string' };
   }
-  if (!path.isAbsolute(candidate.filePath)) {
-    return { success: false, error: 'filePath must be an absolute path' };
-  }
-
   return {
     teamName: validatedTeamName.value!,
     runId: candidate.runId,

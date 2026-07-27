@@ -1,5 +1,5 @@
 import type {
-  PendingToolApprovalFilePathPort,
+  PendingToolApprovalFileTargetPort,
   ToolApprovalFileReaderPort,
   ToolApprovalPreviewReaderPort,
 } from '../ports/TeamApprovalsPorts';
@@ -7,7 +7,7 @@ import type { ToolApprovalFileReadRequest } from '@features/team-approvals/contr
 import type { ToolApprovalFileContent } from '@shared/types';
 
 export interface ReadToolApprovalFilePreviewDependencies {
-  pendingApprovals: PendingToolApprovalFilePathPort;
+  pendingApprovals: PendingToolApprovalFileTargetPort;
   files: ToolApprovalFileReaderPort;
 }
 
@@ -15,15 +15,15 @@ export class ReadToolApprovalFilePreview implements ToolApprovalPreviewReaderPor
   constructor(private readonly dependencies: ReadToolApprovalFilePreviewDependencies) {}
 
   async read(request: ToolApprovalFileReadRequest): Promise<ToolApprovalFileContent | null> {
-    const approvedPath = this.dependencies.pendingApprovals.getFilePath(
+    const target = this.dependencies.pendingApprovals.getFileTarget(
       request.teamName,
       request.runId,
       request.requestId
     );
-    if (approvedPath === null || request.filePath !== approvedPath) {
+    if (request.filePath !== target?.authorizationPath) {
       return null;
     }
 
-    return this.dependencies.files.read(approvedPath);
+    return this.dependencies.files.read(target.readPath);
   }
 }

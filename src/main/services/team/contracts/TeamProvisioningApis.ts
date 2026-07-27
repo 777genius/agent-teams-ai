@@ -280,7 +280,11 @@ export interface TeamCrossTeamMessagingApi {
 }
 
 export interface TeamToolApprovalApi extends FeatureTeamProvisioningToolApprovalApi {
-  getPendingToolApprovalFilePath(teamName: string, runId: string, requestId: string): string | null;
+  getPendingToolApprovalFileTarget(
+    teamName: string,
+    runId: string,
+    requestId: string
+  ): { authorizationPath: string; readPath: string } | null;
 }
 
 export function bindTeamProvisioningStartApi(
@@ -468,7 +472,7 @@ export function bindTeamCrossTeamMessagingApi(
 
 export function bindTeamToolApprovalApi(source: TeamToolApprovalApi): TeamToolApprovalApi {
   return {
-    getPendingToolApprovalFilePath: source.getPendingToolApprovalFilePath.bind(source),
+    getPendingToolApprovalFileTarget: source.getPendingToolApprovalFileTarget.bind(source),
     respondToToolApproval: source.respondToToolApproval.bind(source),
     updateToolApprovalSettings: source.updateToolApprovalSettings.bind(source),
   };

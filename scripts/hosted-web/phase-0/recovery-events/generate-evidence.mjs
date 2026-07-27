@@ -13,16 +13,22 @@ import {
   runSnapshotScheduler,
   validateCommandCatalog,
 } from './model.mjs';
-import { verifyCrossLaneOwnerAgreement, verifyMutationCensus } from './mutation-census.mjs';
+import {
+  buildMutationCensusEvidence,
+  verifyCrossLaneOwnerAgreement,
+  verifyMutationCensus,
+} from './mutation-census.mjs';
+import { resolveMutationCensusSourceRevision } from './source-revision-provenance.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(SCRIPT_DIR, '../../../..');
 const OUT = resolve(ROOT, 'docs/research/hosted-web/phase-0/recovery-events');
-const MUTATION_MANIFEST_PATH = resolve(OUT, 'mutation-surface-manifest.json');
-const W1_API_PARITY_LEDGER_PATH = resolve(
-  ROOT,
-  'docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json'
-);
+const MUTATION_MANIFEST_REPO_PATH =
+  'docs/research/hosted-web/phase-0/recovery-events/mutation-surface-manifest.json';
+const MUTATION_MANIFEST_PATH = resolve(ROOT, MUTATION_MANIFEST_REPO_PATH);
+const W1_API_PARITY_LEDGER_REPO_PATH =
+  'docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json';
+const W1_API_PARITY_LEDGER_PATH = resolve(ROOT, W1_API_PARITY_LEDGER_REPO_PATH);
 const FINGERPRINT_ORACLE_PATH = resolve(
   ROOT,
   'test/architecture/hosted-web/phase-0/recovery-events/fixtures/fingerprint-oracle-vectors.json'
@@ -1054,33 +1060,6 @@ function buildEstimate() {
   };
 }
 
-function buildMutationCensus(manifest, verification, crossLaneVerification) {
-  return {
-    schemaVersion: 1,
-    artifactId: 'P0.W5.SUPPORTING.MUTATION_CENSUS',
-    observedAtSha: 'a32f509e6d9bd31ba2135940e336729bf90c3d93',
-    derivation:
-      'TypeScript AST extraction compared bidirectionally with the independently maintained mutation-surface-manifest.json and command descriptors',
-    sourceFiles: [...new Set(manifest.rows.map((entry) => entry.sourceFile))],
-    rowCount: manifest.rows.length,
-    dispositionCounts: verification.counts,
-    rows: manifest.rows.map((entry) => ({
-      ...entry,
-      sourceObserved: true,
-    })),
-    assertions: {
-      everyRowSourceObserved: true,
-      sourceToManifestComplete: true,
-      manifestToSourceComplete: true,
-      everyMutationMappedExactlyOnce: true,
-      noCatalogMethodOutsideRequiredDisposition: true,
-      ownerAgreement: true,
-      crossLaneOwnerAgreement: crossLaneVerification.errors.length === 0,
-      omissionNegativeFixturesRejected: true,
-    },
-  };
-}
-
 function exactEffectScheduleMatches(schedule) {
   const compensation = schedule.crashPause.includes('compensation');
   const ambiguous =
@@ -1156,6 +1135,10 @@ function buildReport({ catalog, scheduler, effectMatrix, goldens }) {
 
 async function renderOutputs() {
   const mutationManifest = JSON.parse(await readFile(MUTATION_MANIFEST_PATH, 'utf8'));
+  const mutationCensusObservedAtSha = await resolveMutationCensusSourceRevision({
+    root: ROOT,
+    sourceScopes: mutationManifest.sourceScopes ?? [],
+  });
   const w1ApiParityLedger = JSON.parse(await readFile(W1_API_PARITY_LEDGER_PATH, 'utf8'));
   const fingerprintOracle = JSON.parse(await readFile(FINGERPRINT_ORACLE_PATH, 'utf8'));
   const catalog = buildCommandCatalog(mutationManifest);
@@ -1287,11 +1270,12 @@ async function renderOutputs() {
   };
   const goldens = buildFingerprintGoldens(fingerprintOracle);
   const estimate = buildEstimate();
-  const mutationCensus = buildMutationCensus(
-    mutationManifest,
-    censusVerification,
-    crossLaneOwnerVerification
-  );
+  const mutationCensus = buildMutationCensusEvidence({
+    manifest: mutationManifest,
+    verification: censusVerification,
+    crossLaneVerification: crossLaneOwnerVerification,
+    observedAtSha: mutationCensusObservedAtSha,
+  });
   const index = {
     schemaVersion: 1,
     laneId: 'w5',

@@ -25,8 +25,19 @@ export interface ToolApprovalFileReaderPort {
   read(filePath: string): Promise<ToolApprovalFileContent>;
 }
 
-export interface PendingToolApprovalFilePathPort {
-  getFilePath(teamName: string, runId: string, requestId: string): string | null;
+export interface PendingToolApprovalFileTarget {
+  /** Exact path string carried by the authorized tool request. */
+  authorizationPath: string;
+  /** Absolute path resolved from the owning run's project directory. */
+  readPath: string;
+}
+
+export interface PendingToolApprovalFileTargetPort {
+  getFileTarget(
+    teamName: string,
+    runId: string,
+    requestId: string
+  ): PendingToolApprovalFileTarget | null;
 }
 
 /** Application capability that authorizes and reads one active approval preview. */

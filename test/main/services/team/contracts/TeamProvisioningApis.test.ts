@@ -140,7 +140,7 @@ function createSource() {
     }),
     registerPendingCrossTeamReplyExpectation: vi.fn(),
     clearPendingCrossTeamReplyExpectation: vi.fn(),
-    getPendingToolApprovalFilePath: vi.fn(() => null),
+    getPendingToolApprovalFileTarget: vi.fn(() => null),
     respondToToolApproval: vi.fn(() => Promise.resolve()),
     updateToolApprovalSettings: vi.fn(),
   } satisfies Parameters<typeof bindTeamIpcHandlerApis>[0] &
@@ -221,7 +221,7 @@ describe('bindTeamIpcHandlerApis', () => {
       'sendMessageToTeam',
     ]);
     expect(sortedKeys(api.toolApproval)).toEqual([
-      'getPendingToolApprovalFilePath',
+      'getPendingToolApprovalFileTarget',
       'respondToToolApproval',
       'updateToolApprovalSettings',
     ]);
@@ -245,8 +245,12 @@ describe('bindTeamIpcHandlerApis', () => {
   it('keeps accepted feature contracts exact across the legacy IPC and HTTP groupings', async () => {
     expectTypeOf<TeamDiagnosticsApi>().toMatchTypeOf<TeamProvisioningRuntimeSnapshotApi>();
     expectTypeOf<TeamToolApprovalApi>().toMatchTypeOf<TeamProvisioningToolApprovalApi>();
-    expectTypeOf<TeamToolApprovalApi['getPendingToolApprovalFilePath']>().toEqualTypeOf<
-      (teamName: string, runId: string, requestId: string) => string | null
+    expectTypeOf<TeamToolApprovalApi['getPendingToolApprovalFileTarget']>().toEqualTypeOf<
+      (
+        teamName: string,
+        runId: string,
+        requestId: string
+      ) => { authorizationPath: string; readPath: string } | null
     >();
     expectTypeOf<
       TeamRuntimeControlCompatibilityApi['deliverOpenCodeRuntimeMessage']
