@@ -183,8 +183,8 @@ function addWorkerLaunchCrossFieldIssues(context: {
 }): void {
   if (
     context.value.inputPatchHash === null &&
-    (context.value.reviewKind !== "implementation" &&
-      context.value.reviewKind !== "review" ||
+    ((context.value.reviewKind !== "implementation" &&
+      context.value.reviewKind !== "review") ||
       ("revision" in context.value && context.value.revision !== 0) ||
       ("retryCount" in context.value && context.value.retryCount !== 0) ||
       ("supersedes" in context.value && context.value.supersedes !== null))
@@ -317,9 +317,9 @@ function isSafeOwnedPath(value: string, allowDirectory: boolean): boolean {
 
 /**
  * Match a concrete changed file against the ownership declared by a worker.
- * File entries are exact. A trailing slash deliberately declares a directory
- * boundary, so `src/feature/` owns descendants but never the sibling
- * `src/feature-extra/`.
+ * File entries are exact. A trailing slash or trailing `/**` deliberately
+ * declares a directory boundary, so `src/feature/**` owns descendants but
+ * never the sibling `src/feature-extra/`.
  */
 export function workerLaunchOwnsChangedPath(
   launch: Pick<WorkerLaunchSpec, "ownedPaths">,
@@ -327,13 +327,17 @@ export function workerLaunchOwnsChangedPath(
 ): boolean {
   return (
     isSafeOwnedPath(changedPath, false) &&
-    launch.ownedPaths.some(
-      (ownedPath) =>
-        isSafeOwnedPath(ownedPath, true) &&
-        (ownedPath.endsWith("/")
-          ? changedPath.startsWith(ownedPath)
-          : changedPath === ownedPath),
-    )
+    launch.ownedPaths.some((ownedPath) => {
+      if (!isSafeOwnedPath(ownedPath, true)) return false;
+      const directoryPrefix = ownedPath.endsWith("/**")
+        ? ownedPath.slice(0, -2)
+        : ownedPath.endsWith("/")
+          ? ownedPath
+          : undefined;
+      return directoryPrefix
+        ? changedPath.startsWith(directoryPrefix)
+        : changedPath === ownedPath;
+    })
   );
 }
 

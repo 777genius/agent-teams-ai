@@ -7,8 +7,10 @@ import {
 } from "../index";
 
 describe("worker launch spec", () => {
-  it("treats trailing-slash ownership as a bounded directory scope", () => {
-    const launch = { ownedPaths: ["src/feature/", "README.md"] };
+  it("treats directory ownership as a bounded scope", () => {
+    const launch = {
+      ownedPaths: ["src/feature/**", "src/legacy/", "README.md"],
+    };
 
     expect(workerLaunchOwnsChangedPath(launch, "src/feature/file.ts")).toBe(
       true,
@@ -20,6 +22,12 @@ describe("worker launch spec", () => {
     expect(workerLaunchOwnsChangedPath(launch, "README.md.bak")).toBe(false);
     expect(
       workerLaunchOwnsChangedPath(launch, "src/feature-extra/file.ts"),
+    ).toBe(false);
+    expect(workerLaunchOwnsChangedPath(launch, "src/legacy/file.ts")).toBe(
+      true,
+    );
+    expect(
+      workerLaunchOwnsChangedPath(launch, "src/legacy-extra/file.ts"),
     ).toBe(false);
     for (const unsafePath of [
       "src/../outside.ts",
@@ -48,44 +56,60 @@ describe("worker launch spec", () => {
   });
 
   it("represents clean first implementations and canonical reviews without an input patch", () => {
-    expect(parseWorkerLaunchRequest({
-      ...workerLaunchRequest(),
-      inputPatchHash: null,
-    })).toMatchObject({ inputPatchHash: null, reviewKind: "implementation" });
+    expect(
+      parseWorkerLaunchRequest({
+        ...workerLaunchRequest(),
+        inputPatchHash: null,
+      }),
+    ).toMatchObject({ inputPatchHash: null, reviewKind: "implementation" });
 
-    expect(parseWorkerLaunchRequest({
-      ...workerLaunchRequest(),
-      inputPatchHash: null,
-      reviewKind: "review",
-    })).toMatchObject({ inputPatchHash: null, reviewKind: "review" });
-    expect(() => parseWorkerLaunchSpec({
-      ...workerLaunchSpec(),
-      inputPatchHash: null,
-      revision: 1,
-    })).toThrow("contract_inputPatchHash_null_invalid");
+    expect(
+      parseWorkerLaunchRequest({
+        ...workerLaunchRequest(),
+        inputPatchHash: null,
+        reviewKind: "review",
+      }),
+    ).toMatchObject({ inputPatchHash: null, reviewKind: "review" });
+    expect(() =>
+      parseWorkerLaunchSpec({
+        ...workerLaunchSpec(),
+        inputPatchHash: null,
+        revision: 1,
+      }),
+    ).toThrow("contract_inputPatchHash_null_invalid");
 
     for (const record of [
-      { ...workerLaunchStateRecord(), inputPatchHash: null, reviewKind: "remediation" },
+      {
+        ...workerLaunchStateRecord(),
+        inputPatchHash: null,
+        reviewKind: "remediation",
+      },
       { ...workerLaunchStateRecord(), inputPatchHash: null, revision: 1 },
     ]) {
-      expect(() => parseWorkerLaunchState({
+      expect(() =>
+        parseWorkerLaunchState({
+          schemaVersion: 1,
+          maxRetries: 0,
+          maxInFlight: 1,
+          records: [record],
+        }),
+      ).toThrow("contract_inputPatchHash_null_invalid");
+    }
+
+    expect(
+      parseWorkerLaunchState({
         schemaVersion: 1,
         maxRetries: 0,
         maxInFlight: 1,
-        records: [record],
-      })).toThrow("contract_inputPatchHash_null_invalid");
-    }
-
-    expect(parseWorkerLaunchState({
-      schemaVersion: 1,
-      maxRetries: 0,
-      maxInFlight: 1,
-      records: [{
-        ...workerLaunchStateRecord(),
-        inputPatchHash: null,
-        reviewKind: "review",
-      }],
-    }).records[0]).toMatchObject({ inputPatchHash: null, reviewKind: "review" });
+        records: [
+          {
+            ...workerLaunchStateRecord(),
+            inputPatchHash: null,
+            reviewKind: "review",
+          },
+        ],
+      }).records[0],
+    ).toMatchObject({ inputPatchHash: null, reviewKind: "review" });
   });
 
   it("rejects version-family aliases and future formats fail closed", () => {

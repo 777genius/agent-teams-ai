@@ -220,10 +220,7 @@ describe("admitted input-patch capacity continuation", () => {
       reason: "unknown_error",
       changedFiles,
       evidence: ["safe_execution_status:failed"],
-      blockers: [
-        "unknown_error",
-        "Safe execution has no attempts remaining.",
-      ],
+      blockers: ["unknown_error", "Safe execution has no attempts remaining."],
       nextAction: "preserve_patch",
       details: {
         baseCommit: "a".repeat(40),
@@ -594,9 +591,7 @@ describe("admitted input-patch capacity continuation", () => {
       continuationDeps,
     );
     expect(initialLaunch).toMatchObject({ ok: true });
-    expect(startAdmissionWorkspaceModes.at(-1)).toBe(
-      "admitted_input_patch",
-    );
+    expect(startAdmissionWorkspaceModes.at(-1)).toBe("admitted_input_patch");
 
     await authorizeProjectPreStartAdmissionLaunch({ manifest, scope });
     await writeFile(
@@ -652,7 +647,7 @@ describe("admitted input-patch capacity continuation", () => {
     const reconnectAttemptAt = new Date("2026-07-14T00:01:00.000Z");
     const reconnectFailureDetails = {
       rawCause:
-        "codex_app_server_turn_error:codex_app_server_reconnect_timeout:Reconnecting... 2/5:details={\"phase\":\"turn_error_before_output\"}",
+        'codex_app_server_turn_error:codex_app_server_reconnect_timeout:Reconnecting... 2/5:details={"phase":"turn_error_before_output"}',
     };
     await writeFile(
       resultPath,
@@ -672,12 +667,7 @@ describe("admitted input-patch capacity continuation", () => {
         listAccountStatuses: async () =>
           ["account-c", "account-g", "account-i"].map((accountId) => ({
             name: accountId,
-            authJsonPath: join(
-              fixture.root,
-              "auth",
-              accountId,
-              "auth.json",
-            ),
+            authJsonPath: join(fixture.root, "auth", accountId, "auth.json"),
             status: "ready" as const,
             availability: "available" as const,
             schedulerEligible: true,
@@ -700,12 +690,7 @@ describe("admitted input-patch capacity continuation", () => {
     expect(reservedLaunch?.config.accounts).toEqual([
       {
         name: "account-g",
-        authJsonPath: join(
-          fixture.root,
-          "auth",
-          "account-g",
-          "auth.json",
-        ),
+        authJsonPath: join(fixture.root, "auth", "account-g", "auth.json"),
       },
     ]);
     expect(
@@ -833,12 +818,7 @@ describe("admitted input-patch capacity continuation", () => {
         expect(input).toEqual({ authRootDir: join(fixture.root, "auth") });
         return ["account-c", "account-g", "account-i"].map((accountId) => ({
           name: accountId,
-          authJsonPath: join(
-            fixture.root,
-            "auth",
-            accountId,
-            "auth.json",
-          ),
+          authJsonPath: join(fixture.root, "auth", accountId, "auth.json"),
           status: "ready" as const,
           availability: "available" as const,
           schedulerEligible: true,
@@ -864,12 +844,7 @@ describe("admitted input-patch capacity continuation", () => {
     expect(reservedLaunch?.config.accounts).toEqual([
       {
         name: "account-c",
-        authJsonPath: join(
-          fixture.root,
-          "auth",
-          "account-c",
-          "auth.json",
-        ),
+        authJsonPath: join(fixture.root, "auth", "account-c", "auth.json"),
       },
     ]);
     await expect(
@@ -1101,7 +1076,7 @@ describe("clean-first producer runtime interruption continuation", () => {
       ...fixture.contract,
       reviewKind: "implementation",
       inputPatchHash: null,
-      ownedPaths: ["src/"],
+      ownedPaths: ["src/**"],
     });
     const state = {
       ...fixture.state,
