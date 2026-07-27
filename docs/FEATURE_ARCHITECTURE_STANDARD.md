@@ -504,6 +504,13 @@ shrink, and the exception must be removed once a file reaches 800 lines.
 Never add a new legacy exception or raise an existing cap. Split new
 responsibilities by domain/application/adapter/UI ownership instead.
 
+CI also ratchets the complete pre-existing policy in
+`scripts/ci/source-file-size-baseline.json`, including root configuration and
+production scripts outside the workspace source roots. Neither its global limit
+nor any legacy cap may increase. A zero predecessor SHA on the first push of a
+branch means there is no prior manifest to compare; the current-tree 800-line
+policy still runs normally.
+
 ## Recommended Test Coverage
 
 For medium and large features, cover at least:

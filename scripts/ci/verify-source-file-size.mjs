@@ -49,7 +49,12 @@ const legacyManifestPath = path.join(repoRoot, 'scripts', 'ci', 'source-file-siz
 const legacyManifestRelativePath = normalizeRelativePath(
   path.relative(repoRoot, legacyManifestPath)
 );
+const policyManifestPath = path.join(repoRoot, 'scripts', 'ci', 'source-file-size-baseline.json');
+const policyManifestRelativePath = normalizeRelativePath(
+  path.relative(repoRoot, policyManifestPath)
+);
 const workspacePath = path.join(repoRoot, 'pnpm-workspace.yaml');
+const NO_PRIOR_COMMIT_REF = '0'.repeat(40);
 
 function normalizeRelativePath(filePath) {
   return filePath.split(path.sep).join('/');
@@ -230,13 +235,33 @@ export function evaluateLegacyManifestRatchet({
   return diagnostics;
 }
 
-function readBaselineLegacyManifest(baselineRef) {
+export function evaluatePolicyManifestRatchet({ baselinePolicy, policy }) {
+  if (baselinePolicy === null) return [];
+
+  const diagnostics = [];
+  if (policy.maxLines > baselinePolicy.maxLines) {
+    diagnostics.push({
+      code: 'raised-global-limit',
+      filePath: policyManifestRelativePath,
+      message: `global limit ${policy.maxLines} exceeds the base limit ${baselinePolicy.maxLines}`,
+    });
+  }
+  diagnostics.push(
+    ...evaluateLegacyManifestRatchet({
+      baselineLegacyMaxLines: baselinePolicy.legacy,
+      legacyMaxLines: policy.legacy,
+    })
+  );
+  return diagnostics;
+}
+
+function readBaselineManifest(baselineRef, manifestRelativePath) {
   if (!baselineRef) return null;
   if (!/^[0-9a-f]{40}$/i.test(baselineRef)) {
     throw new Error('SOURCE_FILE_SIZE_BASELINE_REF must be a 40-character commit SHA');
   }
 
-  const objectName = `${baselineRef}:${legacyManifestRelativePath}`;
+  const objectName = `${baselineRef}:${manifestRelativePath}`;
   try {
     execFileSync('git', ['cat-file', '-e', objectName], {
       cwd: repoRoot,
@@ -286,14 +311,24 @@ function readBaselineSourceLineCounts(baselineRef, filePaths) {
 
 export function verifySourceFileSizePolicy(root = repoRoot, { requireBaseline = false } = {}) {
   const legacyMaxLines = JSON.parse(readFileSync(legacyManifestPath, 'utf8'));
-  const baselineRef = process.env.SOURCE_FILE_SIZE_BASELINE_REF;
-  if (requireBaseline && !baselineRef) {
+  const policy = JSON.parse(readFileSync(policyManifestPath, 'utf8'));
+  const configuredBaselineRef = process.env.SOURCE_FILE_SIZE_BASELINE_REF;
+  const baselineRef = configuredBaselineRef === NO_PRIOR_COMMIT_REF ? null : configuredBaselineRef;
+  const baselineRequired = requireBaseline && configuredBaselineRef !== NO_PRIOR_COMMIT_REF;
+  if (baselineRequired && !baselineRef) {
     throw new Error('SOURCE_FILE_SIZE_BASELINE_REF is required in source-size ratchet mode');
   }
-  const baselineLegacyMaxLines = readBaselineLegacyManifest(baselineRef);
-  if (requireBaseline && baselineLegacyMaxLines === null) {
+  const baselineLegacyMaxLines = readBaselineManifest(baselineRef, legacyManifestRelativePath);
+  const baselinePolicy = readBaselineManifest(baselineRef, policyManifestRelativePath);
+  if (baselineRequired && baselineLegacyMaxLines === null) {
     throw new Error(
       `SOURCE_FILE_SIZE_BASELINE_REF must resolve to ${legacyManifestRelativePath} ` +
+        'in source-size ratchet mode'
+    );
+  }
+  if (baselineRequired && baselinePolicy === null) {
+    throw new Error(
+      `SOURCE_FILE_SIZE_BASELINE_REF must resolve to ${policyManifestRelativePath} ` +
         'in source-size ratchet mode'
     );
   }
@@ -307,6 +342,7 @@ export function verifySourceFileSizePolicy(root = repoRoot, { requireBaseline = 
   const lineCounts = collectProductionSourceLineCounts(root);
   const diagnostics = [
     ...evaluateWorkspaceSourceCoverage({ workspacePackagePatterns }),
+    ...evaluatePolicyManifestRatchet({ baselinePolicy, policy }),
     ...evaluateLegacyManifestRatchet({
       baselineLegacyMaxLines,
       baselineSourceLineCounts,

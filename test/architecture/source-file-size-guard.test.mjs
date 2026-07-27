@@ -11,6 +11,7 @@ import {
   collectFiles,
   countPhysicalLines,
   evaluateLegacyManifestRatchet,
+  evaluatePolicyManifestRatchet,
   evaluateSourceFileSizePolicy,
   evaluateWorkspaceSourceCoverage,
   isProductionSourcePath,
@@ -174,6 +175,36 @@ test('uses base source sizes to repair stale manifests without widening the ratc
   );
 });
 
+test('ratchets legacy caps from the complete existing source-size policy', () => {
+  const diagnostics = evaluatePolicyManifestRatchet({
+    baselinePolicy: {
+      maxLines: 800,
+      legacy: {
+        'scripts/hosted-web/legacy.mjs': 900,
+      },
+    },
+    policy: {
+      maxLines: 801,
+      legacy: {
+        'eslint.config.js': 1000,
+        'scripts/hosted-web/legacy.mjs': 901,
+      },
+    },
+  });
+
+  assert.deepEqual(
+    diagnostics.map(({ code, filePath }) => ({ code, filePath })),
+    [
+      {
+        code: 'raised-global-limit',
+        filePath: 'scripts/ci/source-file-size-baseline.json',
+      },
+      { code: 'new-legacy-exception', filePath: 'eslint.config.js' },
+      { code: 'raised-legacy-cap', filePath: 'scripts/hosted-web/legacy.mjs' },
+    ]
+  );
+});
+
 test('keeps the checked-in legacy snapshot synchronized with the source tree', () => {
   const result = verifySourceFileSizePolicy();
 
@@ -238,6 +269,19 @@ test('CI package guard rejects source and legacy cap growth from the base commit
       JSON.stringify({ 'src/legacy.ts': 1000 })
     );
     writeFileSync(join(root, 'src/legacy.ts'), 'baseline\n'.repeat(1000));
+    const broadLegacyPath = 'scripts/hosted-web/legacy.mjs';
+    mkdirSync(join(root, dirname(broadLegacyPath)), { recursive: true });
+    writeFileSync(join(root, broadLegacyPath), 'baseline\n'.repeat(900));
+    writeFileSync(
+      join(root, 'scripts/ci/source-file-size-baseline.json'),
+      JSON.stringify({
+        maxLines: 800,
+        legacy: {
+          [broadLegacyPath]: 900,
+          'src/legacy.ts': 1000,
+        },
+      })
+    );
 
     runGit('init', '--quiet');
     runGit('config', 'user.email', 'source-size-test@example.invalid');
@@ -251,6 +295,17 @@ test('CI package guard rejects source and legacy cap growth from the base commit
       JSON.stringify({ 'src/legacy.ts': 1100 })
     );
     writeFileSync(join(root, 'src/legacy.ts'), 'head\n'.repeat(1100));
+    writeFileSync(join(root, broadLegacyPath), 'head\n'.repeat(950));
+    writeFileSync(
+      join(root, 'scripts/ci/source-file-size-baseline.json'),
+      JSON.stringify({
+        maxLines: 800,
+        legacy: {
+          [broadLegacyPath]: 950,
+          'src/legacy.ts': 1100,
+        },
+      })
+    );
 
     const missingBaseline = runCiGuard(undefined);
     assert.notEqual(missingBaseline.status, 0);
@@ -260,9 +315,16 @@ test('CI package guard rejects source and legacy cap growth from the base commit
     assert.notEqual(invalidBaseline.status, 0);
     assert.match(commandOutput(invalidBaseline), /must be a 40-character commit SHA/);
 
+    const firstPush = runCiGuard('0'.repeat(40));
+    assert.equal(firstPush.status, 0, commandOutput(firstPush));
+
     const raisedCap = runCiGuard(baselineRef);
     assert.notEqual(raisedCap.status, 0);
     assert.match(commandOutput(raisedCap), /\[raised-legacy-cap\] src\/legacy\.ts/);
+    assert.match(
+      commandOutput(raisedCap),
+      /\[raised-legacy-cap\] scripts\/hosted-web\/legacy\.mjs/
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
