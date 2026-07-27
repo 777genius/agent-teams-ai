@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-24.04
     if: ${{ github.event_name == 'workflow_dispatch' || ((github.event_name != 'issue_comment' || github.event.issue.pull_request) && github.event.comment.user.type != 'Bot') }}
     env:
-      RR_RUNTIME_REF: "7efe38163d547e2ae7b26f104096a652f3aab337"
+      RR_RUNTIME_REF: "a9df633cb0890263d27dc5e132bfc3f45fc347f6"
       REVIEWROUTER_API_URL: "https://api.reviewrouter.site"
       REVIEWROUTER_OIDC_AUDIENCE: "reviewrouter"
       REVIEWROUTER_RUNTIME_CONFIG_MODE: "oidc"
