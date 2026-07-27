@@ -30,7 +30,10 @@ import { analyzePublicClassSurfaces } from './feature-public-class-surface-analy
 import { collectPublicApiImplementationExports } from './feature-public-export-policy.mjs';
 import { snapshotExportSelection } from './feature-public-snapshot-analysis.mjs';
 import { analyzePublicTargets } from './feature-public-target-analysis.mjs';
-import { collectProductionSourceFiles } from './feature-source-files.mjs';
+import {
+  collectProductionSourceFiles,
+  isFeaturePublicEntrypoint,
+} from './feature-source-files.mjs';
 
 export const FEATURE_ARCHITECTURE_RULES = Object.freeze({
   crossFeaturePublicEntrypoint: 'cross-feature-public-entrypoint',
@@ -514,8 +517,11 @@ function parseFeatureAlias(specifier) {
   return { feature: match[1], rest: match[2] ?? '' };
 }
 
-function isPublicFeatureAlias(featureAlias) {
-  return featureAlias.rest === '' || PUBLIC_FEATURE_ENTRYPOINTS.has(featureAlias.rest);
+function isPublicFeatureAlias(featureAlias, edge, sourceFilePaths) {
+  if (featureAlias.rest !== '' && !PUBLIC_FEATURE_ENTRYPOINTS.has(featureAlias.rest)) return false;
+
+  const targetPath = resolveProjectTarget(edge, sourceFilePaths);
+  return targetPath !== null && isFeaturePublicEntrypoint(targetPath);
 }
 
 function createViolation(rule, edge, message, publicEntrypoint) {
@@ -534,7 +540,12 @@ function evaluateCrossFeatureEntrypoint(edge, sourceFilePaths) {
   const featureAlias = parseFeatureAlias(edge.specifier);
 
   if (featureAlias) {
-    if (sourceFeature === featureAlias.feature || isPublicFeatureAlias(featureAlias)) return null;
+    if (
+      sourceFeature === featureAlias.feature ||
+      isPublicFeatureAlias(featureAlias, edge, sourceFilePaths)
+    ) {
+      return null;
+    }
     return createViolation(
       FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint,
       edge,

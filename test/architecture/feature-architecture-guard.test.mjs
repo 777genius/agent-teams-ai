@@ -121,6 +121,51 @@ test('requires public entrypoints for alias and relative cross-feature dependenc
   );
 });
 
+test('accepts public aliases only when they resolve to index entrypoints', () => {
+  withFixture(
+    {
+      'src/features/alpha/main/composition/createAlpha.ts': `
+        import { rootFile } from '@features/root-file';
+        import { mainFile } from '@features/main-file/main';
+        import type { ContractFile } from '@features/contracts-file/contracts';
+        import { rootIndex } from '@features/root-index';
+        import { mainIndex } from '@features/main-index/main';
+        import type { ContractIndex } from '@features/contracts-index/contracts';
+      `,
+      'src/features/contracts-file/contracts.ts': 'export interface ContractFile {}',
+      'src/features/contracts-index/contracts/index.ts': 'export interface ContractIndex {}',
+      'src/features/main-file/main.ts': 'export const mainFile = true;',
+      'src/features/main-index/main/index.ts': 'export const mainIndex = true;',
+      'src/features/root-file.ts': 'export const rootFile = true;',
+      'src/features/root-index/index.ts': 'export const rootIndex = true;',
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const crossFeatureViolations = violations.filter(
+        ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint
+      );
+
+      assert.deepEqual(
+        crossFeatureViolations.map(({ source, specifier }) => ({ source, specifier })),
+        [
+          {
+            source: 'src/features/alpha/main/composition/createAlpha.ts',
+            specifier: '@features/contracts-file/contracts',
+          },
+          {
+            source: 'src/features/alpha/main/composition/createAlpha.ts',
+            specifier: '@features/main-file/main',
+          },
+          {
+            source: 'src/features/alpha/main/composition/createAlpha.ts',
+            specifier: '@features/root-file',
+          },
+        ]
+      );
+    }
+  );
+});
+
 test('keeps core domain free from application and runtime dependencies', () => {
   withFixture(
     {
