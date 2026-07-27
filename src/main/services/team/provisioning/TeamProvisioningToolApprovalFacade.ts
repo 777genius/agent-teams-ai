@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { isToolApprovalPreviewPathLexicallyUnsafe } from '@features/team-approvals';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -78,6 +79,10 @@ function getApprovalPreviewFileTarget(
   if (authorizationPath === null) {
     return null;
   }
+  const previewPathPlatform = process.platform === 'win32' ? 'win32' : 'posix';
+  if (isToolApprovalPreviewPathLexicallyUnsafe(authorizationPath, previewPathPlatform)) {
+    return null;
+  }
   if (path.isAbsolute(authorizationPath)) {
     return { authorizationPath, readPath: authorizationPath };
   }
@@ -86,7 +91,8 @@ function getApprovalPreviewFileTarget(
   if (
     typeof projectDirectory !== 'string' ||
     projectDirectory.trim().length === 0 ||
-    !path.isAbsolute(projectDirectory)
+    !path.isAbsolute(projectDirectory) ||
+    isToolApprovalPreviewPathLexicallyUnsafe(projectDirectory, previewPathPlatform)
   ) {
     return null;
   }

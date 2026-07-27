@@ -168,6 +168,73 @@ describe('TeamProvisioningToolApprovalFacade', () => {
     });
   });
 
+  it('rejects raw parent traversal before resolving a relative preview path', () => {
+    const { facade, run } = createHarness();
+    run.pendingApprovals.set(
+      'req-parent-traversal',
+      approvalRequest({
+        requestId: 'req-parent-traversal',
+        source: 'Worker',
+        toolName: 'Edit',
+        toolInput: {
+          file_path: 'linked-directory/../approved.txt',
+          old_string: 'a',
+          new_string: 'b',
+        },
+      })
+    );
+
+    expect(
+      facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-parent-traversal')
+    ).toBeNull();
+
+    run.pendingApprovals.set(
+      'req-parent-cwd',
+      approvalRequest({
+        requestId: 'req-parent-cwd',
+        source: 'Worker',
+        toolName: 'Write',
+        toolInput: { file_path: 'approved.txt', content: 'next' },
+      })
+    );
+    run.allEffectiveMembers = [
+      { name: 'Lead', cwd: TEST_PROJECT_DIRECTORY },
+      {
+        name: 'Worker',
+        cwd: [TEST_PROJECT_DIRECTORY, 'linked-directory', '..', 'worker'].join(path.sep),
+      },
+    ];
+
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-parent-cwd')).toBeNull();
+  });
+
+  it('rejects Windows drive-relative paths before resolving a preview target', () => {
+    const platform = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    try {
+      const { facade, run } = createHarness();
+      for (const [index, filePath] of [
+        String.raw`C:..\approved.txt`,
+        'C:../approved.txt',
+        String.raw`D:approved.txt`,
+      ].entries()) {
+        const requestId = `req-drive-relative-${index}`;
+        run.pendingApprovals.set(
+          requestId,
+          approvalRequest({
+            requestId,
+            source: 'Worker',
+            toolName: 'Write',
+            toolInput: { file_path: filePath, content: 'next' },
+          })
+        );
+
+        expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', requestId)).toBeNull();
+      }
+    } finally {
+      platform.mockRestore();
+    }
+  });
+
   it('rejects relative preview paths from unknown or detached approval sources', () => {
     const { facade, run } = createHarness();
     const requestId = 'req-detached';

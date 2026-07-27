@@ -1,6 +1,8 @@
 import { constants, promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { isToolApprovalPreviewPathLexicallyUnsafe } from '../../core/domain';
+
 import {
   createToolApprovalFileContent,
   TOOL_APPROVAL_MAX_FILE_SIZE,
@@ -32,31 +34,6 @@ class LinuxDescriptorTraversalUnavailableError extends Error {
 
 function linuxDescriptorChildPath(directory: FileHandle, segment: string): string {
   return `${path.join(LINUX_PROC_SELF_FD, String(directory.fd))}${path.sep}${segment}`;
-}
-
-/**
- * Win32 treats two leading periods plus trailing ASCII space/period noise as a
- * parent alias. Three or more leading periods remain a legal component name.
- */
-function isWindowsParentPathComponent(component: string): boolean {
-  if (!component.startsWith('..')) return false;
-
-  let leadingPeriodCount = 0;
-  while (component[leadingPeriodCount] === '.') leadingPeriodCount++;
-  if (leadingPeriodCount !== 2) return false;
-
-  for (let index = leadingPeriodCount; index < component.length; index++) {
-    const character = component[index];
-    if (character !== ' ' && character !== '.') return false;
-  }
-  return true;
-}
-
-function hasParentPathComponent(filePath: string): boolean {
-  if (process.platform === 'win32') {
-    return filePath.split(/[\\/]+/).some(isWindowsParentPathComponent);
-  }
-  return filePath.split(path.sep).includes('..');
 }
 
 async function assertLinuxDescriptorTraversalAvailable(
@@ -190,7 +167,12 @@ export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
 
   async read(filePath: string): Promise<ToolApprovalFileContent> {
     try {
-      if (hasParentPathComponent(filePath)) {
+      if (
+        isToolApprovalPreviewPathLexicallyUnsafe(
+          filePath,
+          process.platform === 'win32' ? 'win32' : 'posix'
+        )
+      ) {
         throw new Error(PARENT_PATH_COMPONENT_ERROR);
       }
       const resolvedPath = path.resolve(filePath);
