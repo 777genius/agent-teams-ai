@@ -23,12 +23,14 @@ import {
   type TeamPermanentDeletionIntent,
 } from './permanent-deletion/TeamPermanentDeletionTypes';
 import { TaskAttachmentBackupSource } from './TaskAttachmentBackupSource';
+import * as backupAttachmentSettlement from './TeamBackupAttachmentSettlement';
 import {
   type BackupFileDescriptor,
   collectBackupRelativePaths,
   collectRecursiveFiles,
   collectRecursiveFilesSync,
 } from './TeamBackupFileCollection';
+import * as backupFileIdentity from './TeamBackupFileIdentity';
 import {
   isValidConfig,
   isValidJson,
@@ -46,9 +48,7 @@ export type {
 
 const logger = createLogger('TeamBackupService');
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 interface BackupManifest {
   teamName: string;
@@ -59,7 +59,7 @@ interface BackupManifest {
   deletedByUserAt?: string;
   firstBackupAt: string;
   lastBackupAt: string;
-  fileStats: Record<string, { mtime: number; size: number }>;
+  fileStats: Record<string, backupFileIdentity.BackupFileStat>;
 }
 
 interface BackupRegistry {
@@ -528,27 +528,26 @@ export class TeamBackupService {
       if (this.backupGeneration !== gen) return;
       await this.saveRegistryEntry(teamName, registryEntry, false, assertPublicationCurrent);
     }
-    await this.taskAttachmentBackupSource.settlePendingDeletions(
+    await backupAttachmentSettlement.settleBackupRunAttachmentDeletions({
+      source: this.taskAttachmentBackupSource,
       teamName,
-      backupDir,
-      manifest.fileStats,
-      async () => {
+      backupDirectory: backupDir,
+      manifest,
+      isCurrent: () => !this.isShuttingDown && this.backupGeneration === gen,
+      persistManifest: async () => {
         manifest.lastBackupAt = nowIso();
         await this.saveManifest(teamName, manifest, false, assertPublicationCurrent);
-      }
-    );
+      },
+    });
   }
 
   private async settlePendingTaskAttachmentDeletionBackups(): Promise<void> {
-    for (const teamName of await this.taskAttachmentBackupSource.getPendingTeams()) {
-      const manifest = await this.loadManifest(teamName);
-      await this.taskAttachmentBackupSource.settlePendingDeletions(
-        teamName,
-        this.getBackupDir(teamName),
-        manifest?.fileStats ?? {},
-        manifest ? () => this.saveManifest(teamName, manifest, true) : undefined
-      );
-    }
+    await backupAttachmentSettlement.settleStartupAttachmentDeletions({
+      source: this.taskAttachmentBackupSource,
+      getBackupDirectory: (teamName) => this.getBackupDir(teamName),
+      loadManifest: (teamName) => this.loadManifest(teamName),
+      persistManifest: (teamName, manifest) => this.saveManifest(teamName, manifest, true),
+    });
   }
 
   private doBackupTeamSync(teamName: string): void {
@@ -647,7 +646,7 @@ export class TeamBackupService {
       }
 
       const cached = manifest.fileStats[descriptor.relPath];
-      if (cached?.mtime === stat.mtimeMs && cached.size === stat.size) {
+      if (backupFileIdentity.isSameBackupFileGeneration(cached, stat)) {
         return false; // not dirty
       }
 
@@ -671,7 +670,7 @@ export class TeamBackupService {
         });
       }
 
-      manifest.fileStats[descriptor.relPath] = { mtime: stat.mtimeMs, size: stat.size };
+      manifest.fileStats[descriptor.relPath] = backupFileIdentity.getBackupFileStat(stat);
       return true;
     } catch (err: unknown) {
       if (err instanceof BackupPublicationFencedError) throw err;
@@ -693,7 +692,7 @@ export class TeamBackupService {
       if (stat.size > MAX_FILE_SIZE_BYTES) return; // skip oversized silently during shutdown
 
       const cached = manifest.fileStats[descriptor.relPath];
-      if (cached?.mtime === stat.mtimeMs && cached.size === stat.size) return;
+      if (backupFileIdentity.isSameBackupFileGeneration(cached, stat)) return;
 
       const destPath = path.join(backupDir, descriptor.relPath);
 
@@ -706,7 +705,7 @@ export class TeamBackupService {
         fs.copyFileSync(descriptor.sourcePath, destPath);
       }
 
-      manifest.fileStats[descriptor.relPath] = { mtime: stat.mtimeMs, size: stat.size };
+      manifest.fileStats[descriptor.relPath] = backupFileIdentity.getBackupFileStat(stat);
     } catch {
       // best-effort during shutdown
     }

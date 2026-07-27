@@ -22,6 +22,11 @@ export interface PendingTaskAttachmentDeletionCompletion {
   readonly backupChanged: boolean;
 }
 
+export interface PendingTaskAttachmentDeletionSettlement {
+  readonly publishBackupChange?: () => Promise<boolean>;
+  readonly canComplete?: () => boolean;
+}
+
 function isMissing(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException).code;
   return code === 'ENOENT' || code === 'ENOTDIR';
@@ -42,14 +47,20 @@ export class TaskAttachmentBackupSource {
     teamName: string,
     backupDirectory: string,
     fileStats: Record<string, unknown>,
-    onBackupChanged?: () => Promise<void>
+    settlement: PendingTaskAttachmentDeletionSettlement = {}
   ): Promise<void> {
     const completion = await this.preparePendingDeletionCompletion(
       teamName,
       backupDirectory,
       fileStats
     );
-    if (completion?.backupChanged) await onBackupChanged?.();
+    if (
+      completion?.backupChanged &&
+      (!settlement.publishBackupChange || !(await settlement.publishBackupChange()))
+    ) {
+      return;
+    }
+    if (settlement.canComplete && !settlement.canComplete()) return;
     await this.completePendingDeletionSnapshot(teamName, completion);
   }
 

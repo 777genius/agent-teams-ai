@@ -464,6 +464,81 @@ describe('TeamBackupService', () => {
     await expect(fs.readFile(backupPath, 'utf8')).resolves.toBe('live prepared bytes');
   });
 
+  it('does not complete an async deletion snapshot after shutdown republishes its backup', async () => {
+    const teamName = 'attachment-settlement-shutdown-team';
+    const taskId = 'task-1';
+    const attachmentName = '11111111-1111-4111-8111-111111111111--attachment';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const attachmentPath = path.join(
+      hoisted.appDataPath,
+      'task-attachments',
+      teamName,
+      taskId,
+      attachmentName
+    );
+    const backupPath = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'task-attachments',
+      taskId,
+      attachmentName
+    );
+    let deletionPending = false;
+    let pendingExclusionReads = 0;
+    let releaseSettlement!: () => void;
+    let reportSettlementReady!: () => void;
+    const settlementReady = new Promise<void>((resolve) => {
+      reportSettlementReady = resolve;
+    });
+    const settlementRelease = new Promise<void>((resolve) => {
+      releaseSettlement = resolve;
+    });
+    const completedSnapshots: string[][] = [];
+    const service = new TeamBackupService({
+      reconcilePendingDeletions: async () => undefined,
+      getBackupExclusions: async () => {
+        if (!deletionPending) return new Set<string>();
+        pendingExclusionReads += 1;
+        if (pendingExclusionReads === 4) {
+          reportSettlementReady();
+          await settlementRelease;
+        }
+        return new Set([path.resolve(attachmentPath)]);
+      },
+      getPendingTeams: async () => new Set<string>(),
+      getCompletionCandidates: async () =>
+        deletionPending
+          ? [{ transactionId: 'pending-shutdown-deletion', originalPath: attachmentPath }]
+          : [],
+      completePendingDeletions: async (_teamName, transactionIds) => {
+        completedSnapshots.push([...transactionIds]);
+      },
+    });
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.mkdir(path.dirname(attachmentPath), { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Attachment Settlement Shutdown Team' }),
+      'utf8'
+    );
+    await fs.writeFile(attachmentPath, 'live replacement', 'utf8');
+    await service.initialize();
+    await service.backupTeam(teamName);
+    await expect(fs.readFile(backupPath, 'utf8')).resolves.toBe('live replacement');
+    completedSnapshots.length = 0;
+
+    deletionPending = true;
+    const asyncBackup = service.backupTeam(teamName);
+    await settlementReady;
+    service.runShutdownBackupSync();
+    releaseSettlement();
+    await asyncBackup;
+
+    await expect(fs.readFile(backupPath, 'utf8')).resolves.toBe('live replacement');
+    expect(completedSnapshots).toEqual([]);
+  });
+
   it('persists manifest pruning when only a tombstone backup changed', async () => {
     const teamName = 'attachment-prune-only-team';
     const taskId = 'task-1';
@@ -586,6 +661,13 @@ describe('TeamBackupService', () => {
     const taskId = 'task-1';
     const attachmentId = '11111111-1111-4111-8111-111111111111';
     const teamDir = path.join(hoisted.teamsBase, teamName);
+    const attachmentPath = path.join(
+      hoisted.appDataPath,
+      'task-attachments',
+      teamName,
+      taskId,
+      `${attachmentId}--attachment`
+    );
     const backupAttachmentPath = path.join(
       hoisted.backupsBase,
       'teams',
@@ -602,7 +684,8 @@ describe('TeamBackupService', () => {
       'utf8'
     );
     const store = new TeamTaskAttachmentStore();
-    await store.saveAttachment(teamName, taskId, attachmentId, 'old.png', 'image/png', 'b2xk');
+    await store.saveAttachment(teamName, taskId, attachmentId, 'old.png', 'image/png', 'QUFBQQ==');
+    const originalMtimeMs = (await fs.stat(attachmentPath)).mtimeMs;
     const initialBackupService = new TeamBackupService();
     await initialBackupService.initialize();
     await initialBackupService.backupTeam(teamName);
@@ -614,20 +697,32 @@ describe('TeamBackupService', () => {
       attachmentId,
       'replacement.png',
       'image/png',
-      'cmVwbGFjZW1lbnQ='
+      'QkJCQg=='
     );
+    await fs.utimes(attachmentPath, originalMtimeMs / 1000, originalMtimeMs / 1000);
+    expect((await fs.stat(attachmentPath)).mtimeMs).toBe(originalMtimeMs);
 
     const service = createTeamBackupService({
       getTask: async () => ({ attachments: [{ id: attachmentId }] }),
     });
     await service.initialize();
     expect(await fs.readdir(journalDirectory)).toHaveLength(1);
-    await expect(fs.readFile(backupAttachmentPath, 'utf8')).resolves.toBe('old');
+    await expect(fs.readFile(backupAttachmentPath, 'utf8')).resolves.toBe('AAAA');
 
-    await service.backupTeam(teamName);
+    service.runShutdownBackupSync();
     service.dispose();
 
-    await expect(fs.readFile(backupAttachmentPath, 'utf8')).resolves.toBe('replacement');
+    await expect(fs.readFile(backupAttachmentPath, 'utf8')).resolves.toBe('BBBB');
+    expect(await fs.readdir(journalDirectory)).toHaveLength(1);
+
+    const recoveryService = createTeamBackupService({
+      getTask: async () => ({ attachments: [{ id: attachmentId }] }),
+    });
+    await recoveryService.initialize();
+    await recoveryService.backupTeam(teamName);
+    recoveryService.dispose();
+
+    await expect(fs.readFile(backupAttachmentPath, 'utf8')).resolves.toBe('BBBB');
     expect(await fs.readdir(journalDirectory)).toEqual([]);
   });
 

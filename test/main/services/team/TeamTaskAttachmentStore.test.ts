@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddTaskCommentUseCase } from '../../../../src/features/team-task-board/core/application/use-cases/AddTaskCommentUseCase';
 import { TeamTaskCommentAttachmentWriter } from '../../../../src/features/team-task-board/main/adapters/output/TeamTaskCommentAttachmentWriter';
 import { TaskAttachmentDeletionJournal } from '../../../../src/main/services/team/TaskAttachmentDeletionJournal';
+import { removeTaskAttachmentGenerationPin } from '../../../../src/main/services/team/TaskAttachmentGenerationLifecycle';
 import {
   NodeTaskAttachmentMutationCoordinator,
   type TaskAttachmentMutationCoordinatorPort,
@@ -372,7 +373,7 @@ describe('TeamTaskAttachmentStore', () => {
     expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
   });
 
-  it('cleans its zero-inode pin but fails closed instead of deleting the public generation', async () => {
+  it('retains its zero-inode pin and fails closed without deleting the public generation', async () => {
     const { taskDirectory } = await createRealStore();
     const generationGuardPath = join(
       taskDirectory,
@@ -407,11 +408,42 @@ describe('TeamTaskAttachmentStore', () => {
       'dGVzdA=='
     );
     await store.finalizeAttachment(receipt);
-    expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+    expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toContain(
+      'Task attachment generation pin identity is not trustworthy'
+    );
+    vi.mocked(console.warn).mockClear();
+    expect((await readdir(taskDirectory)).sort()).toEqual(
+      [basename(generationGuardPath), ATTACHMENT_FILE].sort()
+    );
 
-    await store.rollbackAttachment(receipt);
-    expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+    await expect(store.rollbackAttachment(receipt)).rejects.toThrow(
+      'Task attachment generation pin identity is not trustworthy'
+    );
+    expect((await readdir(taskDirectory)).sort()).toEqual(
+      [basename(generationGuardPath), ATTACHMENT_FILE].sort()
+    );
     await expect(readFile(receipt.filePath, 'utf8')).resolves.toBe('test');
+  });
+
+  it('never treats a transaction-owned pin name as proof for a zero-inode replacement', async () => {
+    const { taskDirectory } = await createRealStore();
+    await mkdir(taskDirectory, { recursive: true });
+    const pinPath = join(taskDirectory, '.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp');
+    await writeFile(pinPath, 'old generation', 'utf8');
+    const original = await fsPromises.lstat(pinPath);
+    const untrustedIdentity = {
+      dev: original.dev,
+      ino: 0,
+      birthtimeMs: original.birthtimeMs,
+      size: original.size,
+    };
+    await fsPromises.unlink(pinPath);
+    await writeFile(pinPath, 'replacement!!', 'utf8');
+
+    await expect(removeTaskAttachmentGenerationPin(pinPath, untrustedIdentity)).rejects.toThrow(
+      'Task attachment generation pin identity is not trustworthy'
+    );
+    await expect(readFile(pinPath, 'utf8')).resolves.toBe('replacement!!');
   });
 
   it('preserves a durable metadata save when compromise is observed before its commit marker', async () => {
@@ -719,6 +751,189 @@ describe('TeamTaskAttachmentStore', () => {
     expect(await readdir(journalDirectory)).toHaveLength(1);
     await recoveryStore.completePendingTaskAttachmentDeletions('my-team');
     expect(await readdir(journalDirectory)).toEqual([]);
+  });
+
+  it('retains the journal and generation pin when no durable removal proof remains', async () => {
+    const { root, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    const receipt = await store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+      const prepared = await transaction.prepareAttachmentDeletion(ATTACHMENT_ID, 'image/png');
+      if (!prepared) throw new Error('Expected a prepared deletion');
+      transaction.markCommitted();
+      return prepared;
+    });
+    const journalPath = join(
+      root,
+      'task-attachment-deletion-intents',
+      `${receipt.intent.transactionId}.json`
+    );
+    const persisted = JSON.parse(await readFile(journalPath, 'utf8')) as {
+      phase: string;
+      updatedAt: string;
+    };
+    persisted.phase = 'committed';
+    persisted.updatedAt = new Date().toISOString();
+    await writeFile(journalPath, JSON.stringify(persisted, null, 2), 'utf8');
+    await fsPromises.unlink(receipt.generation.originalPath);
+
+    await expect(new TaskAttachmentDeletionJournal().finalize(receipt.intent)).rejects.toThrow(
+      'Task attachment deletion has no durable removal proof'
+    );
+    await expect(readFile(journalPath, 'utf8')).resolves.toContain('"phase": "committed"');
+    await expect(fsPromises.lstat(receipt.generation.pinPath)).resolves.toBeDefined();
+  });
+
+  it('resumes removal when rename detached the target but reported ENOENT', async () => {
+    const { root, taskDirectory, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    const receipt = await store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+      const prepared = await transaction.prepareAttachmentDeletion(ATTACHMENT_ID, 'image/png');
+      if (!prepared) throw new Error('Expected a prepared deletion');
+      transaction.markCommitted();
+      return prepared;
+    });
+    const originalRename = fsPromises.rename.bind(fsPromises);
+    const rename = vi.spyOn(fsPromises, 'rename').mockImplementation(async (source, target) => {
+      if (
+        String(source) === receipt.intent.originalPath &&
+        String(target) === receipt.intent.detachedPath
+      ) {
+        await originalRename(source, target);
+        throw Object.assign(new Error('simulated detached rename ambiguity'), {
+          code: 'ENOENT',
+        });
+      }
+      await originalRename(source, target);
+    });
+    try {
+      await new TaskAttachmentDeletionJournal().finalize(receipt.intent);
+    } finally {
+      rename.mockRestore();
+    }
+
+    expect(await readdir(taskDirectory)).toEqual([]);
+    const [journalName] = await readdir(join(root, 'task-attachment-deletion-intents'));
+    await expect(
+      readFile(join(root, 'task-attachment-deletion-intents', journalName!), 'utf8')
+    ).resolves.toContain('"phase": "removed"');
+  });
+
+  it('lets one of two concurrent finalizers prove durable removal without losing recovery state', async () => {
+    const { root, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    const receipt = await store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+      const prepared = await transaction.prepareAttachmentDeletion(ATTACHMENT_ID, 'image/png');
+      if (!prepared) throw new Error('Expected a prepared deletion');
+      transaction.markCommitted();
+      return prepared;
+    });
+    let releaseFirstRename!: () => void;
+    let reportFirstDetach!: () => void;
+    const firstDetach = new Promise<void>((resolve) => {
+      reportFirstDetach = resolve;
+    });
+    const firstRenameRelease = new Promise<void>((resolve) => {
+      releaseFirstRename = resolve;
+    });
+    const originalRename = fsPromises.rename.bind(fsPromises);
+    let attachmentRenameCount = 0;
+    const rename = vi.spyOn(fsPromises, 'rename').mockImplementation(async (source, target) => {
+      await originalRename(source, target);
+      if (
+        String(source) === receipt.intent.originalPath &&
+        String(target) === receipt.intent.detachedPath &&
+        attachmentRenameCount++ === 0
+      ) {
+        reportFirstDetach();
+        await firstRenameRelease;
+      }
+    });
+    try {
+      const first = new TaskAttachmentDeletionJournal().finalize(receipt.intent);
+      await firstDetach;
+      const second = new TaskAttachmentDeletionJournal().finalize(receipt.intent);
+      await second;
+      releaseFirstRename();
+      const outcomes = await Promise.allSettled([first, second]);
+      expect(outcomes.some((outcome) => outcome.status === 'fulfilled')).toBe(true);
+    } finally {
+      releaseFirstRename();
+      rename.mockRestore();
+    }
+
+    const [journalName] = await readdir(join(root, 'task-attachment-deletion-intents'));
+    await expect(
+      readFile(join(root, 'task-attachment-deletion-intents', journalName!), 'utf8')
+    ).resolves.toContain('"phase": "removed"');
+    await expect(fsPromises.lstat(receipt.generation.pinPath)).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('keeps the canonical prepared intent when phase publication fails before rename', async () => {
+    const { root, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    const receipt = await store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+      const prepared = await transaction.prepareAttachmentDeletion(ATTACHMENT_ID, 'image/png');
+      if (!prepared) throw new Error('Expected a prepared deletion');
+      transaction.markCommitted();
+      return prepared;
+    });
+    const journalPath = join(
+      root,
+      'task-attachment-deletion-intents',
+      `${receipt.intent.transactionId}.json`
+    );
+    const originalRename = fsPromises.rename.bind(fsPromises);
+    const rename = vi.spyOn(fsPromises, 'rename').mockImplementation(async (source, target) => {
+      if (String(target) === journalPath && basename(String(source)).startsWith('.tmp.')) {
+        throw Object.assign(new Error('simulated phase publication crash'), {
+          code: 'ENOSPC',
+        });
+      }
+      await originalRename(source, target);
+    });
+    try {
+      await expect(new TaskAttachmentDeletionJournal().finalize(receipt.intent)).rejects.toThrow(
+        'simulated phase publication crash'
+      );
+    } finally {
+      rename.mockRestore();
+    }
+
+    await expect(readFile(journalPath, 'utf8')).resolves.toContain('"phase": "prepared"');
+    const [recovered] = await new TaskAttachmentDeletionJournal().loadAll();
+    expect(recovered?.transactionId).toBe(receipt.intent.transactionId);
+    await expect(new TaskAttachmentDeletionJournal().finalize(recovered!)).resolves.toBeUndefined();
+    await expect(readFile(journalPath, 'utf8')).resolves.toContain('"phase": "removed"');
   });
 
   it('resumes an exact generation already detached before process termination', async () => {

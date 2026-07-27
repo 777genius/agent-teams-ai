@@ -3,15 +3,14 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import {
-  atomicReplaceFileIfUnchangedAsync,
   atomicWriteAsync,
   cleanupAtomicCreateTempLinks,
   type DurableFileIdentity,
-  getDurablePathIdentity,
   removePathWithIdentityFenceAsync,
   syncDirectoryDurably,
 } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
+import { lock } from 'proper-lockfile';
 
 import { isTaskAttachmentGenerationGuardName } from './TaskAttachmentArtifacts';
 import {
@@ -120,7 +119,6 @@ function isSamePersistedIdentity(
 interface PersistedIntentSnapshot {
   readonly intent: TaskAttachmentDeletionIntent;
   readonly raw: string;
-  readonly identity: ReturnType<typeof getDurablePathIdentity>;
 }
 
 export class TaskAttachmentDeletionJournal {
@@ -202,11 +200,12 @@ export class TaskAttachmentDeletionJournal {
       },
     });
 
-    if (removal === 'changed') {
+    if (removal !== 'deleted') {
       const current = await this.lstatOrNull(committed.originalPath);
       if (current && isSameTaskAttachmentFileIdentity(current, committed.identity)) {
         throw new Error('Task attachment deletion staging path changed; recovery remains fenced');
       }
+      throw new Error('Task attachment deletion has no durable removal proof');
     }
 
     await removeTaskAttachmentGenerationPin(committed.pinPath, committed.identity);
@@ -330,12 +329,31 @@ export class TaskAttachmentDeletionJournal {
     current: PersistedIntentSnapshot,
     next: TaskAttachmentDeletionIntent
   ): Promise<boolean> {
-    const replaced = await atomicReplaceFileIfUnchangedAsync(
-      this.getIntentPath(current.intent.transactionId),
-      JSON.stringify(next, null, 2),
-      { identity: current.identity, content: current.raw }
-    );
-    return replaced !== null;
+    const intentPath = this.getIntentPath(current.intent.transactionId);
+    const release = await lock(intentPath, {
+      lockfilePath: `${intentPath}.phase.lock`,
+      realpath: false,
+      stale: 30_000,
+      update: 10_000,
+      retries: {
+        retries: 50,
+        factor: 1.2,
+        minTimeout: 10,
+        maxTimeout: 250,
+        randomize: true,
+      },
+    });
+    try {
+      const latest = await this.readCurrentSnapshot(current.intent);
+      if (!latest || latest.raw !== current.raw) return false;
+      await atomicWriteAsync(intentPath, JSON.stringify(next, null, 2), {
+        durability: 'strict',
+        syncDirectory: true,
+      });
+      return true;
+    } finally {
+      await release().catch(() => undefined);
+    }
   }
 
   private async save(intent: TaskAttachmentDeletionIntent): Promise<void> {
@@ -394,7 +412,7 @@ export class TaskAttachmentDeletionJournal {
       const raw = await handle.readFile('utf8');
       const intent = this.parsePersistedIntent(raw, path.basename(intentPath));
       this.assertSameIntentIdentity(intent, expected);
-      return { intent, raw, identity: getDurablePathIdentity(stats) };
+      return { intent, raw };
     } finally {
       await handle.close();
     }
