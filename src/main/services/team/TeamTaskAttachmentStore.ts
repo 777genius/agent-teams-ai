@@ -27,6 +27,7 @@ import {
   detachTaskAttachmentGeneration,
   finalizeDetachedTaskAttachmentGeneration,
   getTaskAttachmentFileIdentity,
+  hasTrustworthyTaskAttachmentFileIdentity,
   isSameTaskAttachmentFileIdentity,
   type PinnedTaskAttachmentGeneration,
   pinTaskAttachmentGeneration,
@@ -605,6 +606,10 @@ export class TeamTaskAttachmentStore {
       if (intent.phase === 'removed') continue;
       await this.runTaskMutation(intent.teamName, intent.taskId, async (guard) => {
         guard.assertHealthy();
+        if (intent.phase === 'aborted') {
+          await this.deletionJournal.abort(intent);
+          return;
+        }
         const referenced = await isAttachmentReferenced(
           intent.teamName,
           intent.taskId,
@@ -627,7 +632,7 @@ export class TeamTaskAttachmentStore {
     this.assertSafePathSegment('teamName', teamName);
     const exclusions = new Set<string>();
     for (const intent of await this.deletionJournal.loadAll()) {
-      if (intent.teamName !== teamName) continue;
+      if (intent.teamName !== teamName || intent.phase === 'aborted') continue;
       const referenced = await isAttachmentReferenced(
         intent.teamName,
         intent.taskId,
@@ -639,6 +644,8 @@ export class TeamTaskAttachmentStore {
         if (
           current?.isFile() &&
           !current.isSymbolicLink() &&
+          hasTrustworthyTaskAttachmentFileIdentity(intent.identity) &&
+          hasTrustworthyTaskAttachmentFileIdentity(getTaskAttachmentFileIdentity(current)) &&
           !isSameTaskAttachmentFileIdentity(current, intent.identity)
         ) {
           continue;
@@ -649,37 +656,34 @@ export class TeamTaskAttachmentStore {
     return exclusions;
   }
 
-  getTaskAttachmentBackupExclusionsSync(teamName: string): ReadonlySet<string> {
-    this.assertSafePathSegment('teamName', teamName);
-    return new Set(
-      this.deletionJournal
-        .loadAllSync()
-        .filter((intent) => intent.teamName === teamName)
-        .map((intent) => path.resolve(intent.originalPath))
-    );
-  }
-
   async getPendingTaskAttachmentDeletionTeams(): Promise<ReadonlySet<string>> {
     return new Set((await this.deletionJournal.loadAll()).map((intent) => intent.teamName));
   }
 
-  async getPendingTaskAttachmentDeletionPaths(teamName: string): Promise<ReadonlySet<string>> {
+  async getTaskAttachmentDeletionCompletionCandidates(
+    teamName: string
+  ): Promise<ReadonlyArray<{ transactionId: string; originalPath: string }>> {
     this.assertSafePathSegment('teamName', teamName);
-    return new Set(
-      (await this.deletionJournal.loadAll())
-        .filter((intent) => intent.teamName === teamName)
-        .map((intent) => path.resolve(intent.originalPath))
-    );
+    return (await this.deletionJournal.loadAll())
+      .filter((intent) => intent.teamName === teamName && intent.phase === 'removed')
+      .map((intent) => ({
+        transactionId: intent.transactionId,
+        originalPath: path.resolve(intent.originalPath),
+      }));
   }
 
   async completePendingTaskAttachmentDeletions(
     teamName: string,
     isAttachmentReferenced: TaskAttachmentReferenceReader = async () => false,
-    backedUpReplacements: ReadonlyMap<string, DurableFileIdentity> = new Map()
+    backedUpReplacements: ReadonlyMap<string, DurableFileIdentity> = new Map(),
+    transactionIds?: ReadonlySet<string>
   ): Promise<void> {
     this.assertSafePathSegment('teamName', teamName);
     const intents = (await this.deletionJournal.loadAll()).filter(
-      (intent) => intent.teamName === teamName && intent.phase === 'removed'
+      (intent) =>
+        intent.teamName === teamName &&
+        intent.phase === 'removed' &&
+        (!transactionIds || transactionIds.has(intent.transactionId))
     );
     for (const intent of intents) {
       await this.runTaskMutation(intent.teamName, intent.taskId, async () => {

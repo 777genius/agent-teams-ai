@@ -24,9 +24,16 @@ export function isSameDurablePathIdentity(
   left: DurablePathIdentity,
   right: DurablePathIdentity
 ): boolean {
-  if (left.dev !== right.dev) return false;
-  if (left.ino !== 0 && right.ino !== 0) return left.ino === right.ino;
-  return left.birthtimeMs === right.birthtimeMs;
+  return (
+    left.dev === right.dev &&
+    hasTrustworthyDurablePathIdentity(left) &&
+    hasTrustworthyDurablePathIdentity(right) &&
+    left.ino === right.ino
+  );
+}
+
+export function hasTrustworthyDurablePathIdentity(identity: DurablePathIdentity): boolean {
+  return Number.isSafeInteger(identity.ino) && identity.ino > 0;
 }
 
 export function getDurableFileIdentity(
@@ -42,8 +49,5 @@ export function isSameDurableFileIdentity(
   left: DurableFileIdentity,
   right: DurableFileIdentity
 ): boolean {
-  if (!isSameDurablePathIdentity(left, right)) return false;
-  return left.ino !== 0 && right.ino !== 0
-    ? true
-    : left.birthtimeMs === right.birthtimeMs && left.size === right.size;
+  return isSameDurablePathIdentity(left, right);
 }

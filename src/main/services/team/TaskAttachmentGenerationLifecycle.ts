@@ -5,8 +5,11 @@ import * as path from 'node:path';
 import {
   type DurableFileIdentity,
   getDurableFileIdentity,
+  hasTrustworthyDurablePathIdentity,
   isSameDurableFileIdentity,
 } from '@main/utils/atomicWrite';
+
+import { isTaskAttachmentGenerationGuardName } from './TaskAttachmentArtifacts';
 
 export type TaskAttachmentFileIdentity = DurableFileIdentity;
 
@@ -44,6 +47,12 @@ export function isSameTaskAttachmentFileIdentity(
 ): boolean {
   const leftIdentity = getTaskAttachmentFileIdentity(left);
   return isSameDurableFileIdentity(leftIdentity, right);
+}
+
+export function hasTrustworthyTaskAttachmentFileIdentity(
+  identity: TaskAttachmentFileIdentity
+): boolean {
+  return hasTrustworthyDurablePathIdentity(identity);
 }
 
 async function lstatOrNull(filePath: string): Promise<fs.Stats | null> {
@@ -85,7 +94,11 @@ export async function pinTaskAttachmentGeneration(
 
   const identity = getTaskAttachmentFileIdentity(pinned);
   if (!pinned.isFile() || pinned.isSymbolicLink()) {
-    await removePinnedTaskAttachmentPath(pinPath, identity);
+    await removeTransactionOwnedTaskAttachmentPin(pinPath);
+    return { kind: 'changed' };
+  }
+  if (!hasTrustworthyTaskAttachmentFileIdentity(identity)) {
+    await removeTransactionOwnedTaskAttachmentPin(pinPath);
     return { kind: 'changed' };
   }
 
@@ -93,7 +106,7 @@ export async function pinTaskAttachmentGeneration(
   try {
     publicGeneration = await lstatOrNull(originalPath);
   } catch (error) {
-    await removePinnedTaskAttachmentPath(pinPath, identity);
+    await removeTransactionOwnedTaskAttachmentPin(pinPath);
     throw error;
   }
   if (
@@ -102,7 +115,7 @@ export async function pinTaskAttachmentGeneration(
     publicGeneration.isSymbolicLink() ||
     !isSameTaskAttachmentFileIdentity(publicGeneration, identity)
   ) {
-    await removePinnedTaskAttachmentPath(pinPath, identity);
+    await removeTransactionOwnedTaskAttachmentPin(pinPath);
     return publicGeneration ? { kind: 'changed' } : { kind: 'missing' };
   }
 
@@ -121,6 +134,9 @@ export async function detachTaskAttachmentGeneration(
   originalPath: string,
   expectedIdentity: TaskAttachmentFileIdentity
 ): Promise<DetachTaskAttachmentGenerationResult> {
+  if (!hasTrustworthyTaskAttachmentFileIdentity(expectedIdentity)) {
+    return { kind: 'changed' };
+  }
   const detachedPath = path.join(
     path.dirname(originalPath),
     `.attachment-delete.${randomUUID()}.staged`
@@ -205,15 +221,14 @@ export async function finalizeDetachedTaskAttachmentGeneration(
   await fs.promises.unlink(receipt.detachedPath);
 }
 
-/** Removes a transaction-owned pin only while it still names the expected inode. */
-async function removePinnedTaskAttachmentPath(
-  pinPath: string,
-  expectedIdentity: TaskAttachmentFileIdentity
-): Promise<void> {
+async function removeTransactionOwnedTaskAttachmentPin(pinPath: string): Promise<void> {
+  if (!isTaskAttachmentGenerationGuardName(path.basename(pinPath))) {
+    throw new Error('Invalid task attachment generation pin');
+  }
   const pin = await lstatOrNull(pinPath);
   if (!pin) return;
-  if (!isSameTaskAttachmentFileIdentity(pin, expectedIdentity)) {
-    throw new Error('Task attachment generation pin changed; refusing to remove it');
+  if (pin.isDirectory()) {
+    throw new Error('Task attachment generation pin is not a removable file artifact');
   }
   await fs.promises.unlink(pinPath);
 }
@@ -227,9 +242,10 @@ export async function removeTaskAttachmentGenerationPin(
   if (
     !pin.isFile() ||
     pin.isSymbolicLink() ||
-    !isSameTaskAttachmentFileIdentity(pin, expectedIdentity)
+    (hasTrustworthyTaskAttachmentFileIdentity(expectedIdentity) &&
+      !isSameTaskAttachmentFileIdentity(pin, expectedIdentity))
   ) {
     throw new Error('Task attachment generation pin changed; refusing to remove it');
   }
-  await removePinnedTaskAttachmentPath(pinPath, expectedIdentity);
+  await removeTransactionOwnedTaskAttachmentPin(pinPath);
 }

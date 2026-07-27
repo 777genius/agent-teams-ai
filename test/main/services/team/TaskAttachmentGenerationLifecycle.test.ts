@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import { chmod, mkdtemp, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { promisify } from 'node:util';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -53,7 +53,7 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     ).toEqual([]);
   });
 
-  it('uses birthtime and size when a filesystem reports zero inode identities', async () => {
+  it('fails closed and removes its transaction pin when inode identity is unavailable', async () => {
     const { root, publicPath } = await createRoot();
     await writeFile(publicPath, 'old');
     const realLstat = fs.lstat.bind(fs);
@@ -67,11 +67,7 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     });
 
     try {
-      const pinned = await pinTaskAttachmentGeneration(publicPath);
-      if (pinned.kind !== 'pinned') throw new Error('Expected zero-inode generation to be pinned');
-      expect(pinned.receipt.identity).toMatchObject({ ino: 0, size: 3 });
-
-      await removeTaskAttachmentGenerationPin(pinned.receipt.pinPath, pinned.receipt.identity);
+      await expect(pinTaskAttachmentGeneration(publicPath)).resolves.toEqual({ kind: 'changed' });
 
       await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('old');
       expect(await readdir(root)).toEqual(['attachment']);
@@ -80,31 +76,35 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     }
   });
 
-  it('preserves a zero-inode replacement with a different durable fallback identity', async () => {
+  it('does not detach a zero-inode replacement with a colliding fallback identity', async () => {
     const { root, publicPath } = await createRoot();
     await writeFile(publicPath, 'old');
+    const old = await fs.lstat(publicPath);
+    await fs.unlink(publicPath);
+    await writeFile(publicPath, 'new');
     const realLstat = fs.lstat.bind(fs);
     const lstat = vi.spyOn(fs, 'lstat').mockImplementation(async (filePath) => {
       const stats = await realLstat(filePath);
       return new Proxy(stats, {
         get(target, property) {
-          return property === 'ino' ? 0 : Reflect.get(target, property, target);
+          if (property === 'ino') return 0;
+          if (property === 'birthtimeMs') return old.birthtimeMs;
+          return Reflect.get(target, property, target);
         },
       });
     });
 
     try {
-      const pinned = await pinTaskAttachmentGeneration(publicPath);
-      if (pinned.kind !== 'pinned') throw new Error('Expected zero-inode generation to be pinned');
-      await fs.unlink(publicPath);
-      await writeFile(publicPath, 'replacement');
-
       await expect(
-        detachTaskAttachmentGeneration(publicPath, pinned.receipt.identity)
+        detachTaskAttachmentGeneration(publicPath, {
+          dev: old.dev,
+          ino: 0,
+          birthtimeMs: old.birthtimeMs,
+          size: old.size,
+        })
       ).resolves.toEqual({ kind: 'changed' });
-      await removeTaskAttachmentGenerationPin(pinned.receipt.pinPath, pinned.receipt.identity);
 
-      await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('replacement');
+      await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('new');
       expect(await readdir(root)).toEqual(['attachment']);
     } finally {
       lstat.mockRestore();
@@ -134,10 +134,10 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     try {
       await cleanupAtomicCreateTempLinks(publicPath);
 
-      await expect(fs.lstat(ownGuard)).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(fs.readFile(ownGuard, 'utf8')).resolves.toBe('old');
       await expect(fs.readFile(otherGuard, 'utf8')).resolves.toBe('different-size');
       expect((await readdir(root)).sort()).toEqual(
-        ['attachment', 'other-attachment', otherGuardName].sort()
+        ['attachment', 'other-attachment', basename(ownGuard), otherGuardName].sort()
       );
     } finally {
       lstat.mockRestore();

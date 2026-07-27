@@ -16,6 +16,12 @@ import type { BackupFileDescriptor } from './TeamBackupFileCollection';
 
 const TASK_ATTACHMENTS_DIRECTORY = 'task-attachments';
 
+export interface PendingTaskAttachmentDeletionCompletion {
+  readonly transactionIds: ReadonlySet<string>;
+  readonly backedUpReplacements: ReadonlyMap<string, DurableFileIdentity>;
+  readonly backupChanged: boolean;
+}
+
 function isMissing(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException).code;
   return code === 'ENOENT' || code === 'ENOTDIR';
@@ -32,49 +38,71 @@ export class TaskAttachmentBackupSource {
     return (await this.deletionFence?.getPendingTeams()) ?? new Set<string>();
   }
 
-  async completePendingDeletions(teamName: string, backupDirectory?: string): Promise<void> {
-    if (!this.deletionFence) return;
+  async settlePendingDeletions(
+    teamName: string,
+    backupDirectory: string,
+    fileStats: Record<string, unknown>,
+    onBackupChanged?: () => Promise<void>
+  ): Promise<void> {
+    const completion = await this.preparePendingDeletionCompletion(
+      teamName,
+      backupDirectory,
+      fileStats
+    );
+    if (completion?.backupChanged) await onBackupChanged?.();
+    await this.completePendingDeletionSnapshot(teamName, completion);
+  }
+
+  private async preparePendingDeletionCompletion(
+    teamName: string,
+    backupDirectory: string,
+    fileStats: Record<string, unknown>
+  ): Promise<PendingTaskAttachmentDeletionCompletion | null> {
+    if (!this.deletionFence) return null;
+    const candidates = await this.deletionFence.getCompletionCandidates(teamName);
+    const transactionIds = new Set(candidates.map((candidate) => candidate.transactionId));
+    const backupChanged = await this.prunePendingBackups(teamName, backupDirectory, fileStats);
     const backedUpReplacements = new Map<string, DurableFileIdentity>();
-    if (backupDirectory) {
-      const [pendingPaths, exclusions] = await Promise.all([
-        this.deletionFence.getPendingPaths(teamName),
-        this.deletionFence.getBackupExclusions(teamName),
-      ]);
-      const taskAttachmentRoot = path.resolve(
-        getAppDataPath(),
-        TASK_ATTACHMENTS_DIRECTORY,
-        teamName
-      );
-      for (const sourcePath of pendingPaths) {
-        const resolvedSourcePath = path.resolve(sourcePath);
-        if (exclusions.has(resolvedSourcePath)) continue;
-        const backupRelativePath = this.getBackupRelativePath(
-          taskAttachmentRoot,
-          resolvedSourcePath
-        );
-        if (!backupRelativePath) continue;
-        try {
-          const before = getDurableFileIdentity(await fs.promises.lstat(resolvedSourcePath));
-          const [sourceBytes, backupBytes] = await Promise.all([
-            fs.promises.readFile(resolvedSourcePath),
-            fs.promises.readFile(path.join(backupDirectory, backupRelativePath)),
-          ]);
-          const afterStats = await fs.promises.lstat(resolvedSourcePath);
-          const after = getDurableFileIdentity(afterStats);
-          if (
-            afterStats.isFile() &&
-            !afterStats.isSymbolicLink() &&
-            isSameDurableFileIdentity(before, after) &&
-            sourceBytes.equals(backupBytes)
-          ) {
-            backedUpReplacements.set(resolvedSourcePath, after);
-          }
-        } catch (error) {
-          if (!isMissing(error)) throw error;
+    const exclusions = await this.deletionFence.getBackupExclusions(teamName);
+    const taskAttachmentRoot = path.resolve(getAppDataPath(), TASK_ATTACHMENTS_DIRECTORY, teamName);
+    for (const candidate of candidates) {
+      const resolvedSourcePath = path.resolve(candidate.originalPath);
+      if (exclusions.has(resolvedSourcePath)) continue;
+      const backupRelativePath = this.getBackupRelativePath(taskAttachmentRoot, resolvedSourcePath);
+      if (!backupRelativePath) continue;
+      try {
+        const before = getDurableFileIdentity(await fs.promises.lstat(resolvedSourcePath));
+        const [sourceBytes, backupBytes] = await Promise.all([
+          fs.promises.readFile(resolvedSourcePath),
+          fs.promises.readFile(path.join(backupDirectory, backupRelativePath)),
+        ]);
+        const afterStats = await fs.promises.lstat(resolvedSourcePath);
+        const after = getDurableFileIdentity(afterStats);
+        if (
+          afterStats.isFile() &&
+          !afterStats.isSymbolicLink() &&
+          isSameDurableFileIdentity(before, after) &&
+          sourceBytes.equals(backupBytes)
+        ) {
+          backedUpReplacements.set(resolvedSourcePath, after);
         }
+      } catch (error) {
+        if (!isMissing(error)) throw error;
       }
     }
-    await this.deletionFence.completePendingDeletions(teamName, backedUpReplacements);
+    return { transactionIds, backedUpReplacements, backupChanged };
+  }
+
+  private async completePendingDeletionSnapshot(
+    teamName: string,
+    completion: PendingTaskAttachmentDeletionCompletion | null
+  ): Promise<void> {
+    if (!this.deletionFence || !completion) return;
+    await this.deletionFence.completePendingDeletions(
+      teamName,
+      completion.transactionIds,
+      completion.backedUpReplacements
+    );
   }
 
   async collect(teamName: string): Promise<{ files: BackupFileDescriptor[]; hasErrors: boolean }> {
@@ -117,7 +145,6 @@ export class TaskAttachmentBackupSource {
 
   collectSync(teamName: string): BackupFileDescriptor[] {
     const files: BackupFileDescriptor[] = [];
-    const exclusions = this.deletionFence?.getBackupExclusionsSync(teamName) ?? new Set<string>();
     const teamDirectory = path.join(getAppDataPath(), TASK_ATTACHMENTS_DIRECTORY, teamName);
     let taskDirectories: fs.Dirent[];
     try {
@@ -136,7 +163,6 @@ export class TaskAttachmentBackupSource {
             continue;
           }
           const sourcePath = path.join(taskDirectoryPath, attachment.name);
-          if (exclusions.has(path.resolve(sourcePath))) continue;
           files.push({
             sourcePath,
             relPath: `${TASK_ATTACHMENTS_DIRECTORY}/${taskDirectory.name}/${attachment.name}`,
@@ -147,21 +173,6 @@ export class TaskAttachmentBackupSource {
       }
     }
     return files;
-  }
-
-  prunePendingBackupsSync(
-    teamName: string,
-    backupDirectory: string,
-    fileStats: Record<string, unknown>
-  ): void {
-    const exclusions = this.deletionFence?.getBackupExclusionsSync(teamName) ?? new Set<string>();
-    const taskAttachmentRoot = path.resolve(getAppDataPath(), TASK_ATTACHMENTS_DIRECTORY, teamName);
-    for (const excludedPath of exclusions) {
-      const backupRelativePath = this.getBackupRelativePath(taskAttachmentRoot, excludedPath);
-      if (!backupRelativePath) continue;
-      fs.rmSync(path.join(backupDirectory, backupRelativePath), { force: true });
-      Reflect.deleteProperty(fileStats, backupRelativePath);
-    }
   }
 
   async prunePendingBackups(

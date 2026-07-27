@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AddTaskCommentUseCase } from '../../../../src/features/team-task-board/core/application/use-cases/AddTaskCommentUseCase';
 import { TeamTaskCommentAttachmentWriter } from '../../../../src/features/team-task-board/main/adapters/output/TeamTaskCommentAttachmentWriter';
+import { TaskAttachmentDeletionJournal } from '../../../../src/main/services/team/TaskAttachmentDeletionJournal';
 import {
   NodeTaskAttachmentMutationCoordinator,
   type TaskAttachmentMutationCoordinatorPort,
@@ -371,7 +372,7 @@ describe('TeamTaskAttachmentStore', () => {
     expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
   });
 
-  it('finalizes and rolls back saved receipts when the creator reports a zero inode', async () => {
+  it('cleans its zero-inode pin but fails closed instead of deleting the public generation', async () => {
     const { taskDirectory } = await createRealStore();
     const generationGuardPath = join(
       taskDirectory,
@@ -409,7 +410,8 @@ describe('TeamTaskAttachmentStore', () => {
     expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
 
     await store.rollbackAttachment(receipt);
-    await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
+    await expect(readFile(receipt.filePath, 'utf8')).resolves.toBe('test');
   });
 
   it('preserves a durable metadata save when compromise is observed before its commit marker', async () => {
@@ -634,6 +636,54 @@ describe('TeamTaskAttachmentStore', () => {
     await recoveryStore.completePendingTaskAttachmentDeletions('my-team');
     await recoveryStore.completePendingTaskAttachmentDeletions('my-team');
     expect(await readdir(journalDirectory)).toEqual([]);
+  });
+
+  it('does not let stale compensation abort an intent another owner committed', async () => {
+    const { root, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    const receipt = await store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+      const prepared = await transaction.prepareAttachmentDeletion(ATTACHMENT_ID, 'image/png');
+      if (!prepared) throw new Error('Expected a prepared deletion');
+      return prepared;
+    });
+    const committingOwner = new TaskAttachmentDeletionJournal();
+    const staleOwner = new TaskAttachmentDeletionJournal();
+    const originalRename = fsPromises.rename.bind(fsPromises);
+    const rename = vi.spyOn(fsPromises, 'rename').mockImplementation(async (source, target) => {
+      if (
+        String(source) === receipt.intent.originalPath &&
+        String(target) === receipt.intent.detachedPath
+      ) {
+        throw Object.assign(new Error('injected detach pause'), { code: 'EBUSY' });
+      }
+      await originalRename(source, target);
+    });
+    try {
+      await expect(committingOwner.finalize(receipt.intent)).rejects.toMatchObject({
+        code: 'EBUSY',
+      });
+    } finally {
+      rename.mockRestore();
+    }
+
+    const journalPath = join(
+      root,
+      'task-attachment-deletion-intents',
+      `${receipt.intent.transactionId}.json`
+    );
+    await expect(staleOwner.abort(receipt.intent)).rejects.toThrow(
+      'Cannot abort task attachment deletion in committed phase'
+    );
+    await expect(readFile(journalPath, 'utf8')).resolves.toContain('"phase": "committed"');
+    await expect(fsPromises.stat(receipt.generation.pinPath)).resolves.toBeDefined();
+    await expect(readFile(receipt.generation.originalPath, 'utf8')).resolves.toBe('test');
   });
 
   it('replays a committed intent persisted before attachment detachment', async () => {

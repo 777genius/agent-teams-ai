@@ -462,22 +462,20 @@ export class TeamBackupService {
     const assertPublicationCurrent = (): Promise<void> =>
       this.permanentDeletion.assertBackupPublicationCurrent(teamName, manifest.identityId);
 
-    let anyChanged = false;
-    anyChanged =
-      (await this.taskAttachmentBackupSource.prunePendingBackups(
-        teamName,
-        backupDir,
-        manifest.fileStats
-      )) || anyChanged;
-    // Prune stale backup files (only if source enumeration was error-free)
+    let anyChanged = await this.taskAttachmentBackupSource.prunePendingBackups(
+      teamName,
+      backupDir,
+      manifest.fileStats
+    );
     if (!hasErrors) {
-      anyChanged = await this.pruneStaleBackupFiles(
-        teamName,
-        sourceFiles,
-        backupDir,
-        manifest,
-        assertPublicationCurrent
-      );
+      anyChanged =
+        (await this.pruneStaleBackupFiles(
+          teamName,
+          sourceFiles,
+          backupDir,
+          manifest,
+          assertPublicationCurrent
+        )) || anyChanged;
     }
 
     for (const descriptor of sourceFiles) {
@@ -530,20 +528,26 @@ export class TeamBackupService {
       if (this.backupGeneration !== gen) return;
       await this.saveRegistryEntry(teamName, registryEntry, false, assertPublicationCurrent);
     }
-    await this.taskAttachmentBackupSource.completePendingDeletions(teamName, backupDir);
+    await this.taskAttachmentBackupSource.settlePendingDeletions(
+      teamName,
+      backupDir,
+      manifest.fileStats,
+      async () => {
+        manifest.lastBackupAt = nowIso();
+        await this.saveManifest(teamName, manifest, false, assertPublicationCurrent);
+      }
+    );
   }
 
   private async settlePendingTaskAttachmentDeletionBackups(): Promise<void> {
     for (const teamName of await this.taskAttachmentBackupSource.getPendingTeams()) {
       const manifest = await this.loadManifest(teamName);
-      const fileStats = manifest?.fileStats ?? {};
-      const changed = await this.taskAttachmentBackupSource.prunePendingBackups(
+      await this.taskAttachmentBackupSource.settlePendingDeletions(
         teamName,
         this.getBackupDir(teamName),
-        fileStats
+        manifest?.fileStats ?? {},
+        manifest ? () => this.saveManifest(teamName, manifest, true) : undefined
       );
-      if (changed && manifest) await this.saveManifest(teamName, manifest, true);
-      await this.taskAttachmentBackupSource.completePendingDeletions(teamName);
     }
   }
 
@@ -612,11 +616,6 @@ export class TeamBackupService {
       }
     }
 
-    this.taskAttachmentBackupSource.prunePendingBackupsSync(
-      teamName,
-      backupDir,
-      manifest.fileStats
-    );
     for (const descriptor of sourceFiles) {
       this.backupSingleFileSync(descriptor, backupDir, manifest);
     }

@@ -23,15 +23,15 @@ export function createTeamBackupService(taskReader: {
       recoveryStore.reconcilePendingAttachmentDeletions(isReferenced),
     getBackupExclusions: (teamName) =>
       recoveryStore.getTaskAttachmentBackupExclusions(teamName, isReferenced),
-    getBackupExclusionsSync: (teamName) =>
-      recoveryStore.getTaskAttachmentBackupExclusionsSync(teamName),
     getPendingTeams: () => recoveryStore.getPendingTaskAttachmentDeletionTeams(),
-    getPendingPaths: (teamName) => recoveryStore.getPendingTaskAttachmentDeletionPaths(teamName),
-    completePendingDeletions: (teamName, backedUpReplacements) =>
+    getCompletionCandidates: (teamName) =>
+      recoveryStore.getTaskAttachmentDeletionCompletionCandidates(teamName),
+    completePendingDeletions: (teamName, transactionIds, backedUpReplacements) =>
       recoveryStore.completePendingTaskAttachmentDeletions(
         teamName,
         isReferenced,
-        backedUpReplacements
+        backedUpReplacements,
+        transactionIds
       ),
   });
 }

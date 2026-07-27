@@ -1,7 +1,11 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { getDurableFileIdentity, isSameDurableFileIdentity } from './durablePathIdentity';
+import {
+  getDurableFileIdentity,
+  hasTrustworthyDurablePathIdentity,
+  isSameDurableFileIdentity,
+} from './durablePathIdentity';
 
 async function syncDirectoryBestEffort(directoryPath: string): Promise<void> {
   let handle: fs.promises.FileHandle | null = null;
@@ -19,7 +23,7 @@ async function syncDirectoryBestEffort(directoryPath: string): Promise<void> {
 export async function cleanupAtomicCreateTempLinks(targetPath: string): Promise<void> {
   const target = await fs.promises.lstat(targetPath);
   const targetIdentity = getDurableFileIdentity(target);
-  if (target.nlink <= 1) return;
+  if (target.nlink <= 1 || !hasTrustworthyDurablePathIdentity(targetIdentity)) return;
 
   const directoryPath = path.dirname(targetPath);
   for (const entry of await fs.promises.readdir(directoryPath)) {
