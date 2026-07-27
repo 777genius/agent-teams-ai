@@ -2,11 +2,13 @@ import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { hasTrustworthyDurablePathIdentity } from './durablePathIdentity';
+
+import type { AtomicCreateResult } from './atomicCreateTypes';
+
 export { cleanupAtomicCreateTempLinks } from './atomicCreateCleanup';
 export type { AtomicCreateResult } from './atomicCreateTypes';
 export * from './durablePathOperations';
-
-import type { AtomicCreateResult } from './atomicCreateTypes';
 
 const RENAME_MAX_ATTEMPTS = 20;
 const RENAME_RETRY_BASE_DELAY_MS = 40;
@@ -323,28 +325,24 @@ export async function atomicWriteAsync(
 export async function atomicCreateAsync(
   targetPath: string,
   data: string | Buffer,
-  options: { mode?: number; retainPin?: boolean } = {}
+  options: { mode?: number; retainPin?: boolean; requireTrustworthyIdentity?: boolean } = {}
 ): Promise<AtomicCreateResult> {
   const dir = path.dirname(targetPath);
   const tmpPath = path.join(dir, `.review-create.${randomUUID()}.tmp`);
   let directorySync: DirectorySyncPreparation | null = null;
   try {
     await fs.promises.mkdir(dir, { recursive: true });
-    if (options.mode === undefined) {
-      await fs.promises.writeFile(tmpPath, data, {
-        ...(typeof data === 'string' ? { encoding: 'utf8' as const } : {}),
-        flag: 'wx',
-      });
-    } else {
-      await fs.promises.writeFile(tmpPath, data, {
-        ...(typeof data === 'string' ? { encoding: 'utf8' as const } : {}),
-        flag: 'wx',
-        mode: options.mode,
-      });
-    }
+    await fs.promises.writeFile(tmpPath, data, {
+      ...(typeof data === 'string' ? { encoding: 'utf8' as const } : {}),
+      flag: 'wx',
+      ...(options.mode === undefined ? {} : { mode: options.mode }),
+    });
 
     await syncFile(tmpPath, true);
     const identity = await fs.promises.lstat(tmpPath);
+    if (options.requireTrustworthyIdentity && !hasTrustworthyDurablePathIdentity(identity)) {
+      throw new Error('Atomic create identity is not trustworthy enough for publication');
+    }
     // Probe directory fsync before publish; after link, durability uncertainty is terminal success
     // because callers can neither roll back nor safely retry a create they believe failed.
     directorySync = await prepareDirectorySync(dir, true);

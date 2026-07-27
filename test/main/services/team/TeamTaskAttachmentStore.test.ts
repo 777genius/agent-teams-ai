@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import fsSync from 'node:fs';
 import { promises as fsPromises } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -373,56 +374,50 @@ describe('TeamTaskAttachmentStore', () => {
     expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
   });
 
-  it('retains its zero-inode pin and fails closed without deleting the public generation', async () => {
-    const { taskDirectory } = await createRealStore();
-    const generationGuardPath = join(
-      taskDirectory,
-      '.review-create.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.tmp'
-    );
-    const atomicCreator: TaskAttachmentAtomicCreatorPort = {
-      async createPinnedFileAtomically(filePath, data) {
-        await mkdir(dirname(filePath), { recursive: true });
-        await writeFile(filePath, data, { flag: 'wx' });
-        await fsPromises.link(filePath, generationGuardPath);
-        const stats = await fsPromises.lstat(generationGuardPath);
-        return {
-          identity: {
-            dev: stats.dev,
-            ino: 0,
-            birthtimeMs: stats.birthtimeMs,
-            size: stats.size,
+  it('rejects true zero-inode identity before publication and allows a clean retry', async () => {
+    const { store, taskDirectory } = await createRealStore();
+    const realLstat = fsPromises.lstat.bind(fsPromises);
+    let reportZeroIdentity = true;
+    const lstat = vi.spyOn(fsPromises, 'lstat').mockImplementation(async (filePath) => {
+      const stats = await realLstat(filePath);
+      if (reportZeroIdentity && basename(String(filePath)).startsWith('.review-create.')) {
+        return new Proxy(stats, {
+          get(target, property) {
+            return property === 'ino' ? 0 : Reflect.get(target, property, target);
           },
-          generationGuardPath,
-        };
-      },
-      cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
-    };
-    const store = new TeamTaskAttachmentStore(atomicCreator);
+        });
+      }
+      return stats;
+    });
+    try {
+      await expect(
+        store.saveAttachment(
+          'my-team',
+          'task-1',
+          ATTACHMENT_ID,
+          'proof.png',
+          'image/png',
+          'dGVzdA=='
+        )
+      ).rejects.toThrow('Atomic create identity is not trustworthy enough for publication');
+      await expect(readdir(taskDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
 
-    const receipt = await store.saveAttachmentWithReceipt(
-      'my-team',
-      'task-1',
-      ATTACHMENT_ID,
-      'proof.png',
-      'image/png',
-      'dGVzdA=='
-    );
-    await store.finalizeAttachment(receipt);
-    expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toContain(
-      'Task attachment generation pin identity is not trustworthy'
-    );
-    vi.mocked(console.warn).mockClear();
-    expect((await readdir(taskDirectory)).sort()).toEqual(
-      [basename(generationGuardPath), ATTACHMENT_FILE].sort()
-    );
+      reportZeroIdentity = false;
+      await expect(
+        store.saveAttachment(
+          'my-team',
+          'task-1',
+          ATTACHMENT_ID,
+          'proof.png',
+          'image/png',
+          'dGVzdA=='
+        )
+      ).resolves.toMatchObject({ id: ATTACHMENT_ID });
+    } finally {
+      lstat.mockRestore();
+    }
 
-    await expect(store.rollbackAttachment(receipt)).rejects.toThrow(
-      'Task attachment generation pin identity is not trustworthy'
-    );
-    expect((await readdir(taskDirectory)).sort()).toEqual(
-      [basename(generationGuardPath), ATTACHMENT_FILE].sort()
-    );
-    await expect(readFile(receipt.filePath, 'utf8')).resolves.toBe('test');
+    expect(await readdir(taskDirectory)).toEqual([ATTACHMENT_FILE]);
   });
 
   it('never treats a transaction-owned pin name as proof for a zero-inode replacement', async () => {
@@ -886,9 +881,11 @@ describe('TeamTaskAttachmentStore', () => {
   it('rechecks the generation synchronously after journal validation before unlink', async () => {
     let generationCurrent = true;
     let validationBoundaries = 0;
-    const journal = new TaskAttachmentDeletionJournal(undefined, undefined, () => {
-      validationBoundaries += 1;
-      generationCurrent = false;
+    const journal = new TaskAttachmentDeletionJournal(undefined, undefined, {
+      afterValidation() {
+        validationBoundaries += 1;
+        generationCurrent = false;
+      },
     });
     const { root, store } = await createRealStore(journal);
     await store.saveAttachment(
@@ -915,6 +912,91 @@ describe('TeamTaskAttachmentStore', () => {
     ]);
   });
 
+  it('recovers when a crash follows durable restore publication before detach cleanup', async () => {
+    let generationCurrent = true;
+    const crash = new Error('simulated crash after durable restore publication');
+    const journal = new TaskAttachmentDeletionJournal(undefined, undefined, {
+      afterValidation() {
+        generationCurrent = false;
+      },
+      afterRestorePublished() {
+        throw crash;
+      },
+    });
+    const { root, store } = await createRealStore(journal);
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+
+    await expect(
+      store.completePendingTaskAttachmentDeletions(
+        'my-team',
+        async () => false,
+        new Map(),
+        undefined,
+        () => generationCurrent
+      )
+    ).rejects.toBe(crash);
+
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    expect((await readdir(journalDirectory)).sort()).toEqual([
+      expect.stringMatching(/^[0-9a-f-]+\.completion\.json$/),
+      expect.stringMatching(/^[0-9a-f-]+\.json$/),
+    ]);
+    const recoveryJournal = new TaskAttachmentDeletionJournal();
+    const recovered = await recoveryJournal.loadAll();
+    expect(recovered).toHaveLength(1);
+    await recoveryJournal.complete(recovered[0]!);
+    expect(await readdir(journalDirectory)).toEqual([]);
+  });
+
+  it('recovers when a crash follows restore detach cleanup before its directory fsync', async () => {
+    let generationCurrent = true;
+    const crash = new Error('simulated crash before restored journal directory fsync');
+    const journal = new TaskAttachmentDeletionJournal(undefined, undefined, {
+      afterValidation() {
+        generationCurrent = false;
+      },
+      afterRestoreDetached() {
+        throw crash;
+      },
+    });
+    const { root, store } = await createRealStore(journal);
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+
+    await expect(
+      store.completePendingTaskAttachmentDeletions(
+        'my-team',
+        async () => false,
+        new Map(),
+        undefined,
+        () => generationCurrent
+      )
+    ).rejects.toBe(crash);
+
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    expect(await readdir(journalDirectory)).toEqual([expect.stringMatching(/^[0-9a-f-]+\.json$/)]);
+    const recoveryJournal = new TaskAttachmentDeletionJournal();
+    const recovered = await recoveryJournal.loadAll();
+    expect(recovered).toHaveLength(1);
+    await recoveryJournal.complete(recovered[0]!);
+    expect(await readdir(journalDirectory)).toEqual([]);
+  });
+
   it('recovers a deterministic journal completion detach after a crash', async () => {
     const { root, store } = await createRealStore();
     await store.saveAttachment(
@@ -928,8 +1010,10 @@ describe('TeamTaskAttachmentStore', () => {
     await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
     const [intent] = await new TaskAttachmentDeletionJournal().loadAll();
     const crash = new Error('simulated crash at journal completion boundary');
-    const crashingJournal = new TaskAttachmentDeletionJournal(undefined, undefined, () => {
-      throw crash;
+    const crashingJournal = new TaskAttachmentDeletionJournal(undefined, undefined, {
+      afterValidation() {
+        throw crash;
+      },
     });
 
     await expect(crashingJournal.complete(intent!)).rejects.toBe(crash);
@@ -939,6 +1023,53 @@ describe('TeamTaskAttachmentStore', () => {
     const recovered = await recoveryJournal.loadAll();
     expect(recovered).toHaveLength(1);
     await recoveryJournal.complete(recovered[0]!);
+    expect(await readdir(journalDirectory)).toEqual([]);
+  });
+
+  it('rescans stale async and sync journal listings after completion renames', async () => {
+    const { root, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+    const journal = new TaskAttachmentDeletionJournal();
+    const [intent] = await journal.loadAll();
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    const canonicalPath = join(journalDirectory, `${intent!.transactionId}.json`);
+    const detachedPath = join(journalDirectory, `${intent!.transactionId}.completion.json`);
+
+    const staleAsyncEntries = await fsPromises.readdir(journalDirectory, {
+      withFileTypes: true,
+    });
+    await fsPromises.rename(canonicalPath, detachedPath);
+    const asyncListing = vi
+      .spyOn(fsPromises, 'readdir')
+      .mockResolvedValueOnce(staleAsyncEntries as never);
+    try {
+      expect(await journal.loadAll()).toHaveLength(1);
+    } finally {
+      asyncListing.mockRestore();
+    }
+
+    await fsPromises.rename(detachedPath, canonicalPath);
+    const staleSyncEntries = fsSync.readdirSync(journalDirectory, { withFileTypes: true });
+    fsSync.renameSync(canonicalPath, detachedPath);
+    const syncListing = vi
+      .spyOn(fsSync, 'readdirSync')
+      .mockReturnValueOnce(staleSyncEntries as never);
+    try {
+      expect(journal.loadAllSync()).toHaveLength(1);
+    } finally {
+      syncListing.mockRestore();
+    }
+
+    const [recovered] = await journal.loadAll();
+    await journal.complete(recovered!);
     expect(await readdir(journalDirectory)).toEqual([]);
   });
 

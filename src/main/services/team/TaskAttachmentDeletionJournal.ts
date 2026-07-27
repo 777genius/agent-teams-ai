@@ -144,6 +144,12 @@ interface PersistedIntentSnapshot {
   readonly raw: string;
 }
 
+interface TaskAttachmentCompletionProofHooks {
+  afterValidation?(intent: TaskAttachmentDeletionIntent): void;
+  afterRestorePublished?(): void;
+  afterRestoreDetached?(): void;
+}
+
 export class TaskAttachmentDeletionJournal {
   constructor(
     private readonly cleanupPublishedTempLinks: (
@@ -152,9 +158,7 @@ export class TaskAttachmentDeletionJournal {
     private readonly afterRemovalDurable: (
       intent: TaskAttachmentDeletionIntent
     ) => Promise<void> = async () => undefined,
-    private readonly afterCompletionValidation: (
-      intent: TaskAttachmentDeletionIntent
-    ) => void = () => undefined
+    private readonly completionProofHooks: TaskAttachmentCompletionProofHooks = {}
   ) {}
 
   async prepare(
@@ -279,40 +283,52 @@ export class TaskAttachmentDeletionJournal {
 
   async loadAll(): Promise<TaskAttachmentDeletionIntent[]> {
     const directory = this.getJournalDirectory();
-    let entries: fs.Dirent[];
-    try {
-      entries = await fs.promises.readdir(directory, { withFileTypes: true });
-    } catch (error) {
-      if (isMissing(error)) return [];
-      throw error;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      let entries: fs.Dirent[];
+      try {
+        entries = await fs.promises.readdir(directory, { withFileTypes: true });
+      } catch (error) {
+        if (isMissing(error)) return [];
+        throw error;
+      }
+      try {
+        const intents: TaskAttachmentDeletionIntent[] = [];
+        for (const entry of this.selectJournalEntries(directory, entries)) {
+          intents.push(
+            await this.readIntent(path.join(directory, entry.name), `${entry.transactionId}.json`)
+          );
+        }
+        return intents;
+      } catch (error) {
+        if (!isMissing(error) || attempt === 3) throw error;
+      }
     }
-
-    const intents: TaskAttachmentDeletionIntent[] = [];
-    for (const entry of this.selectJournalEntries(directory, entries)) {
-      intents.push(
-        await this.readIntent(path.join(directory, entry.name), `${entry.transactionId}.json`)
-      );
-    }
-    return intents;
+    return [];
   }
 
   loadAllSync(): TaskAttachmentDeletionIntent[] {
     const directory = this.getJournalDirectory();
-    let entries: fs.Dirent[];
-    try {
-      entries = fs.readdirSync(directory, { withFileTypes: true });
-    } catch (error) {
-      if (isMissing(error)) return [];
-      throw error;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      let entries: fs.Dirent[];
+      try {
+        entries = fs.readdirSync(directory, { withFileTypes: true });
+      } catch (error) {
+        if (isMissing(error)) return [];
+        throw error;
+      }
+      try {
+        return this.selectJournalEntries(directory, entries).map((entry) => {
+          const intentPath = path.join(directory, entry.name);
+          return this.parsePersistedIntent(
+            fs.readFileSync(intentPath, 'utf8'),
+            `${entry.transactionId}.json`
+          );
+        });
+      } catch (error) {
+        if (!isMissing(error) || attempt === 3) throw error;
+      }
     }
-
-    return this.selectJournalEntries(directory, entries).map((entry) => {
-      const intentPath = path.join(directory, entry.name);
-      return this.parsePersistedIntent(
-        fs.readFileSync(intentPath, 'utf8'),
-        `${entry.transactionId}.json`
-      );
-    });
+    return [];
   }
 
   private async advancePhase(
@@ -461,7 +477,7 @@ export class TaskAttachmentDeletionJournal {
     // This hook makes the post-validation boundary observable in tests. The
     // final generation check and durable removal below are deliberately
     // synchronous, so shutdown cannot interleave between them in this process.
-    this.afterCompletionValidation(detached.intent);
+    this.completionProofHooks.afterValidation?.(detached.intent);
     if (!canComplete()) {
       this.restoreCompletionIntentSync(detachedPath, intentPath);
       return;
@@ -523,7 +539,10 @@ export class TaskAttachmentDeletionJournal {
         cause: error,
       });
     }
+    syncDirectoryDurablySync(path.dirname(intentPath));
+    this.completionProofHooks.afterRestorePublished?.();
     fs.unlinkSync(detachedPath);
+    this.completionProofHooks.afterRestoreDetached?.();
     syncDirectoryDurablySync(path.dirname(intentPath));
   }
 

@@ -500,6 +500,26 @@ describe('atomicCreateAsync', () => {
     });
   });
 
+  it('fails before publication when a caller requires trustworthy identity', async () => {
+    mockLstat.mockResolvedValueOnce({
+      dev: 1,
+      ino: 0,
+      birthtimeMs: 3,
+      size: CONTENT.length,
+      nlink: 1,
+    } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>);
+
+    await expect(
+      atomicCreateAsync(TARGET_PATH, CONTENT, {
+        retainPin: true,
+        requireTrustworthyIdentity: true,
+      })
+    ).rejects.toThrow('Atomic create identity is not trustworthy enough for publication');
+
+    expect(mockLink).not.toHaveBeenCalled();
+    expect(mockUnlink).toHaveBeenCalledWith(getTmpPath());
+  });
+
   it('publishes a fully-synced temp file without overwriting an existing target', async () => {
     const result = await atomicCreateAsync(TARGET_PATH, CONTENT);
 

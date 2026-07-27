@@ -96,7 +96,10 @@ export interface TaskAttachmentTransaction {
 
 const nodeTaskAttachmentAtomicCreator: TaskAttachmentAtomicCreatorPort = {
   async createPinnedFileAtomically(filePath, data) {
-    const created = await atomicCreateAsync(filePath, data, { retainPin: true });
+    const created = await atomicCreateAsync(filePath, data, {
+      retainPin: true,
+      requireTrustworthyIdentity: true,
+    });
     const generationGuardPath = created.pinPath!;
     const identity = getTaskAttachmentFileIdentity(created);
     return {
