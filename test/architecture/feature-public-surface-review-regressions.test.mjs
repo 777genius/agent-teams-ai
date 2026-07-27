@@ -1091,7 +1091,7 @@ test('traces only definitely invoked function mutations', () => {
       'src/features/callback-target-argument-public/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
-        [api].forEach((target) => {
+        [{}, api].forEach((target) => {
           target.Store = Store;
         });
       `,

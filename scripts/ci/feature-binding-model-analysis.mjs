@@ -114,12 +114,21 @@ export function collectBindingModel(sourceFile) {
     if (!invocation || !invocation.callable.body) return;
     for (const [index, parameter] of invocation.callable.parameters.entries()) {
       if (parameter.dotDotDotToken) continue;
-      const initializer = executedInvocationParameterInitializer(
-        parameter,
-        invocation.arguments[index]
-      );
+      const candidateInitializers = [
+        ...new Set(
+          (invocation.invocations ?? [invocation]).flatMap((candidate) => {
+            const initializer = executedInvocationParameterInitializer(
+              parameter,
+              candidate.arguments[index]
+            );
+            return initializer ? [initializer] : [];
+          })
+        ),
+      ];
+      const [initializer] = candidateInitializers;
       if (!initializer) continue;
       addBinding(parameter.name, initializer, parameter.getStart(sourceFile), undefined, {
+        candidateInitializers,
         scopeEnd: invocation.callable.body.end,
         scopeStart: invocation.callable.body.pos,
       });

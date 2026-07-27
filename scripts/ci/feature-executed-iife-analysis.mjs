@@ -634,21 +634,15 @@ function defaultParameterReferences(callable, parameter, reference, argument) {
 }
 
 function synchronousCallbackParameterReferences(invocation, reference) {
-  const elementPosition = invocation.elements.findIndex(({ element }) =>
+  const binding = invocation.elementBindings.find(({ element }) =>
     containsReference(element, reference)
   );
-  if (elementPosition < 0) return [];
-  const { element } = invocation.elements[elementPosition];
+  if (!binding) return [];
+  const { element, parameterIndex } = binding;
   const isReducer = invocation.method === 'reduce' || invocation.method === 'reduceRight';
-  const hasInitialValue = isReducer && invocation.call.arguments.length >= 2;
-  const valueParameterIndex = isReducer
-    ? hasInitialValue || elementPosition > 0
-      ? 1
-      : 0
-    : 0;
   const selections = [
     {
-      parameter: invocation.callable.parameters[valueParameterIndex],
+      parameter: invocation.callable.parameters[parameterIndex],
       path: referencePath(element, reference),
     },
     {

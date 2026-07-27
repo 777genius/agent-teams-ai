@@ -149,50 +149,50 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
     propertyPathWasOverwrittenAfter(propertyWrites, source, path, position);
   for (const [key, binding] of bindingModel.versions) {
     if (binding.forcedAlias?.skipIdentity) continue;
-    const directAlias = directAliasSource(binding.initializer, bindingModel);
-    const alias = binding.forcedAlias
-      ? {
-          ...directAliasSource(binding.forcedAlias.expression, bindingModel),
-          path: binding.forcedAlias.path,
-          symmetric: binding.forcedAlias.symmetric,
-        }
-      : directAlias;
-    if (alias) {
-      const liveAttached = !pathWasOverwritten(alias.key, alias.path, binding.position);
-      if (alias.path.length > 0) {
-        memberRelations.push({
-          copyPosition: binding.position,
-          liveAttached,
-          ownerKey: key,
-          path: alias.path,
-          sourceKey: alias.key,
-          targetPath: [],
-        });
-        if (liveAttached) {
+    for (const initializer of binding.candidateInitializers ?? [binding.initializer]) {
+      const directAlias = directAliasSource(initializer, bindingModel);
+      const alias = binding.forcedAlias
+        ? {
+            ...directAlias,
+            path: binding.forcedAlias.path,
+            symmetric: binding.forcedAlias.symmetric,
+          }
+        : directAlias;
+      if (alias) {
+        const liveAttached = !pathWasOverwritten(alias.key, alias.path, binding.position);
+        if (alias.path.length > 0) {
+          memberRelations.push({
+            copyPosition: binding.position,
+            liveAttached,
+            ownerKey: key,
+            path: alias.path,
+            sourceKey: alias.key,
+            targetPath: [],
+          });
+          if (liveAttached) addIdentityEdge(edges, alias.key, key);
+        } else if (liveAttached) {
           addIdentityEdge(edges, alias.key, key);
+          if (alias.symmetric) {
+            addIdentityEdge(edges, key, alias.key);
+            identityAliases.push([alias.key, key]);
+          }
         }
-      } else if (liveAttached) {
-        addIdentityEdge(edges, alias.key, key);
-        if (alias.symmetric) {
-          addIdentityEdge(edges, key, alias.key);
-          identityAliases.push([alias.key, key]);
-        }
+        continue;
       }
-      continue;
-    }
-    const prototype = objectCreatePrototype(binding.initializer, bindingModel);
-    if (prototype?.path.length === 0) {
-      addIdentityEdge(edges, key, prototype.sourceKey);
-    } else if (prototype) {
-      memberRelations.push({
-        ownerKey: key,
-        path: prototype.path,
-        sourceKey: prototype.sourceKey,
-      });
-    }
-    for (const contained of collectContainedBindingEntries(binding.initializer, bindingModel)) {
-      if (!pathWasOverwritten(key, contained.path, binding.position)) {
-        addIdentityEdge(edges, key, contained.key);
+      const prototype = objectCreatePrototype(initializer, bindingModel);
+      if (prototype?.path.length === 0) {
+        addIdentityEdge(edges, key, prototype.sourceKey);
+      } else if (prototype) {
+        memberRelations.push({
+          ownerKey: key,
+          path: prototype.path,
+          sourceKey: prototype.sourceKey,
+        });
+      }
+      for (const contained of collectContainedBindingEntries(initializer, bindingModel)) {
+        if (!pathWasOverwritten(key, contained.path, binding.position)) {
+          addIdentityEdge(edges, key, contained.key);
+        }
       }
     }
   }

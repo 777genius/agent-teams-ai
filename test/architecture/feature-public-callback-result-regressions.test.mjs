@@ -192,11 +192,21 @@ test('traces public mutations from definitely executed synchronous array callbac
       'src/features/callback-target-mutation/main/index.ts': `
         import { Store } from './infrastructure/Store';
         export const api: Record<string, unknown> = {};
-        [api].forEach((target) => {
+        [{}, api].forEach((target) => {
           target.Store = Store;
         });
       `,
       'src/features/callback-target-mutation/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-reducer-target-mutation/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [{}, api].reduce((_accumulator, target) => {
+          target.Store = Store;
+          return {};
+        }, {});
+      `,
+      'src/features/callback-reducer-target-mutation/main/infrastructure/Store.ts':
         'export class Store {}',
       'src/features/callback-empty-mutation/main/index.ts': `
         import { Store } from './infrastructure/Store';
@@ -217,12 +227,23 @@ test('traces public mutations from definitely executed synchronous array callbac
       `,
       'src/features/callback-custom-mutation/main/infrastructure/Store.ts':
         'export class Store {}',
+      'src/features/callback-short-circuit-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export const api: Record<string, unknown> = {};
+        [0, Store].some((value) => {
+          api.Store = value;
+          return true;
+        });
+      `,
+      'src/features/callback-short-circuit-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
     },
     (root) => {
       assert.deepEqual(implementationSources(root), [
         'src/features/callback-filter-mutation/main/index.ts',
         'src/features/callback-for-each-mutation/main/index.ts',
         'src/features/callback-map-mutation/main/index.ts',
+        'src/features/callback-reducer-target-mutation/main/index.ts',
         'src/features/callback-target-mutation/main/index.ts',
         'src/features/callback-value-mutation/main/index.ts',
       ]);
