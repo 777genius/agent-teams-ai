@@ -1,4 +1,4 @@
-import { api } from '@renderer/api';
+import { createTeamToolApprovalTransport } from '@features/team-provisioning/renderer';
 import { createLogger } from '@shared/utils/logger';
 
 import {
@@ -10,6 +10,7 @@ import type { ToolApprovalSettings } from '@shared/types';
 
 const DEFAULT_RETRY_DELAYS_MS = [100, 500, 2_000, 5_000, 15_000, 30_000] as const;
 const logger = createLogger('ToolApprovalSettingsSync');
+const toolApprovalTransport = createTeamToolApprovalTransport();
 
 type ToolApprovalSettingsUpdater = (
   teamName: string,
@@ -194,7 +195,7 @@ let defaultSynchronizer: ToolApprovalSettingsSynchronizer | null = null;
 
 function getDefaultSynchronizer(): ToolApprovalSettingsSynchronizer {
   defaultSynchronizer ??= new ToolApprovalSettingsSynchronizer({
-    update: (teamName, settings) => api.teams.updateToolApprovalSettings(teamName, settings),
+    update: (teamName, settings) => toolApprovalTransport.updateSettings(teamName, settings),
     onRetry: ({ teamName, attempt, delayMs, error }) => {
       if (attempt === 1 || attempt % 10 === 0) {
         logger.warn(

@@ -1,5 +1,6 @@
 import {
   createTeamMessageDeliveryRendererSlice,
+  createTeamMessageDeliveryTransport,
   type TeamMessageDeliveryRendererSlice,
 } from '@features/team-message-delivery/renderer';
 import {
@@ -31,14 +32,12 @@ import {
   getAttachmentMimeTypes,
   getAttachmentTotalSizeBytes,
 } from '@renderer/analytics/teamAnalyticsMetadata';
-import { api } from '@renderer/api';
 import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
 import {
   buildOpenCodeRuntimeDeliveryDiagnostics,
   isOpenCodeRuntimeDeliveryHardUxFailure,
 } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import { normalizePath } from '@renderer/utils/pathNormalize';
-import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 
 import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
@@ -129,6 +128,7 @@ export function createTeamCollaborationDataSlice(
 ): TeamCollaborationDataSlice {
   const get = (): AppState => dependencies.state.getState();
   const set = dependencies.state.setState;
+  const messageDeliveryTransport = createTeamMessageDeliveryTransport();
   const setSliceState = (
     update: Partial<AppState> | ((state: AppState) => Partial<AppState>)
   ): void => {
@@ -294,10 +294,7 @@ export function createTeamCollaborationDataSlice(
       clock: {
         nowIso: () => dependencies.clock.nowIso(),
       },
-      crossTeamTransport: {
-        listTargets: () => api.crossTeam.listTargets(),
-        send: (request) => api.crossTeam.send(request),
-      },
+      crossTeamTransport: messageDeliveryTransport.crossTeam,
       diagnostics: {
         build: buildOpenCodeRuntimeDeliveryDiagnostics,
         isHardFailure: isOpenCodeRuntimeDeliveryHardUxFailure,
@@ -331,14 +328,7 @@ export function createTeamCollaborationDataSlice(
         getState: get,
         setState: setSliceState,
       },
-      transport: {
-        getRuntimeDeliveryStatus: (teamName, messageId) =>
-          unwrapIpc('team:getOpenCodeRuntimeDeliveryStatus', () =>
-            api.teams.getOpenCodeRuntimeDeliveryStatus(teamName, messageId)
-          ),
-        send: (teamName, request) =>
-          unwrapIpc('team:sendMessage', () => api.teams.sendMessage(teamName, request)),
-      },
+      transport: messageDeliveryTransport.team,
     }),
     ...createTeamTaskBoardRendererSlice({
       getState: () => {

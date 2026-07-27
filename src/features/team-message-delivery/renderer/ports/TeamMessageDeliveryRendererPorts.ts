@@ -67,6 +67,11 @@ export interface CrossTeamMessageDeliveryTransportPort {
   send(request: CrossTeamSendRequest): Promise<CrossTeamSendResult>;
 }
 
+export interface TeamMessageDeliveryRendererTransports {
+  crossTeam: CrossTeamMessageDeliveryTransportPort;
+  team: TeamMessageDeliveryTransportPort;
+}
+
 export interface TeamMessageDeliveryRefreshPort {
   refreshMessageHead(teamName: string): Promise<unknown>;
 }
