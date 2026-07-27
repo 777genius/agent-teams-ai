@@ -81,24 +81,30 @@ async function removeAbandonedLock(
 ): Promise<boolean> {
   try {
     const lockStat = await stat(lockPath);
-    if (Date.now() - lockStat.mtimeMs < staleAfterMs) return false;
+    const stale = Date.now() - lockStat.mtimeMs >= staleAfterMs;
+    const owner = await readDependencyLockOwner(lockPath);
+    if (owner.pid !== undefined) {
+      if (processIsAlive(owner.pid)) return false;
+    } else if (!stale) {
+      return false;
+    }
+    await rm(lockPath, { recursive: true, force: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readDependencyLockOwner(
+  lockPath: string,
+): Promise<{ readonly pid?: number }> {
+  try {
     const owner = JSON.parse(
       await readFile(join(lockPath, "owner.json"), "utf8"),
     ) as { readonly pid?: unknown };
-    const pid = typeof owner.pid === "number" ? owner.pid : undefined;
-    if (pid !== undefined && processIsAlive(pid)) return false;
-    await rm(lockPath, { recursive: true, force: true });
-    return true;
-  } catch (error) {
-    if (isMissingError(error)) {
-      await rm(lockPath, { recursive: true, force: true });
-      return true;
-    }
-    if (error instanceof SyntaxError) {
-      await rm(lockPath, { recursive: true, force: true });
-      return true;
-    }
-    return false;
+    return typeof owner.pid === "number" ? { pid: owner.pid } : {};
+  } catch {
+    return {};
   }
 }
 
@@ -119,10 +125,6 @@ function assertFingerprint(value: string): void {
 
 function isAlreadyExistsError(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === "EEXIST";
-}
-
-function isMissingError(error: unknown): boolean {
-  return (error as NodeJS.ErrnoException).code === "ENOENT";
 }
 
 function delay(ms: number): Promise<void> {

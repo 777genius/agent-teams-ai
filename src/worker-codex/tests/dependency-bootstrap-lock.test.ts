@@ -19,16 +19,22 @@ describe("dependency bootstrap lock", () => {
     };
     try {
       const [first, second] = await Promise.all([
-        withDependencyBootstrapLock({
-          cacheRoot,
-          fingerprint: FINGERPRINT,
-          pollIntervalMs: 5,
-        }, operation),
-        withDependencyBootstrapLock({
-          cacheRoot,
-          fingerprint: FINGERPRINT,
-          pollIntervalMs: 5,
-        }, operation),
+        withDependencyBootstrapLock(
+          {
+            cacheRoot,
+            fingerprint: FINGERPRINT,
+            pollIntervalMs: 5,
+          },
+          operation,
+        ),
+        withDependencyBootstrapLock(
+          {
+            cacheRoot,
+            fingerprint: FINGERPRINT,
+            pollIntervalMs: 5,
+          },
+          operation,
+        ),
       ]);
 
       expect(maxActive).toBe(1);
@@ -50,15 +56,72 @@ describe("dependency bootstrap lock", () => {
       const old = new Date(Date.now() - 60_000);
       await utimes(lockPath, old, old);
 
-      const result = await withDependencyBootstrapLock({
-        cacheRoot,
-        fingerprint: FINGERPRINT,
-        staleAfterMs: 1,
-        pollIntervalMs: 1,
-      }, async () => "recovered");
+      const result = await withDependencyBootstrapLock(
+        {
+          cacheRoot,
+          fingerprint: FINGERPRINT,
+          staleAfterMs: 1,
+          pollIntervalMs: 1,
+        },
+        async () => "recovered",
+      );
 
       expect(result.value).toBe("recovered");
       expect(result.staleLockRecovered).toBe(true);
+    } finally {
+      await rm(cacheRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("recovers a fresh lock immediately when its owner process no longer exists", async () => {
+    const cacheRoot = join(tmpdir(), `dependency-dead-lock-${Date.now()}`);
+    const lockPath = join(cacheRoot, ".locks", FINGERPRINT);
+    try {
+      await mkdir(lockPath, { recursive: true });
+      await writeFile(
+        join(lockPath, "owner.json"),
+        JSON.stringify({ pid: 2_147_483_647 }),
+      );
+
+      const result = await withDependencyBootstrapLock(
+        {
+          cacheRoot,
+          fingerprint: FINGERPRINT,
+          staleAfterMs: 60_000,
+          timeoutMs: 50,
+          pollIntervalMs: 1,
+        },
+        async () => "recovered",
+      );
+
+      expect(result.value).toBe("recovered");
+      expect(result.staleLockRecovered).toBe(true);
+    } finally {
+      await rm(cacheRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("does not reclaim a fresh lock with an incomplete owner record", async () => {
+    const cacheRoot = join(
+      tmpdir(),
+      `dependency-fresh-incomplete-${Date.now()}`,
+    );
+    const lockPath = join(cacheRoot, ".locks", FINGERPRINT);
+    try {
+      await mkdir(lockPath, { recursive: true });
+
+      await expect(
+        withDependencyBootstrapLock(
+          {
+            cacheRoot,
+            fingerprint: FINGERPRINT,
+            staleAfterMs: 60_000,
+            timeoutMs: 20,
+            pollIntervalMs: 1,
+          },
+          async () => "unexpected",
+        ),
+      ).rejects.toThrow("dependency_cache_lock_timeout");
     } finally {
       await rm(cacheRoot, { recursive: true, force: true });
     }
@@ -73,12 +136,15 @@ describe("dependency bootstrap lock", () => {
       const old = new Date(Date.now() - 60_000);
       await utimes(lockPath, old, old);
 
-      const result = await withDependencyBootstrapLock({
-        cacheRoot,
-        fingerprint: FINGERPRINT,
-        staleAfterMs: 1,
-        pollIntervalMs: 1,
-      }, async () => "recovered");
+      const result = await withDependencyBootstrapLock(
+        {
+          cacheRoot,
+          fingerprint: FINGERPRINT,
+          staleAfterMs: 1,
+          pollIntervalMs: 1,
+        },
+        async () => "recovered",
+      );
 
       expect(result.staleLockRecovered).toBe(true);
     } finally {
