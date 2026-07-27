@@ -61,7 +61,7 @@ export class TaskAttachmentBackupSource {
       return;
     }
     if (settlement.canComplete && !settlement.canComplete()) return;
-    await this.completePendingDeletionSnapshot(teamName, completion);
+    await this.completePendingDeletionSnapshot(teamName, completion, settlement.canComplete);
   }
 
   private async preparePendingDeletionCompletion(
@@ -106,13 +106,15 @@ export class TaskAttachmentBackupSource {
 
   private async completePendingDeletionSnapshot(
     teamName: string,
-    completion: PendingTaskAttachmentDeletionCompletion | null
+    completion: PendingTaskAttachmentDeletionCompletion | null,
+    canComplete?: () => boolean
   ): Promise<void> {
     if (!this.deletionFence || !completion) return;
     await this.deletionFence.completePendingDeletions(
       teamName,
       completion.transactionIds,
-      completion.backedUpReplacements
+      completion.backedUpReplacements,
+      canComplete
     );
   }
 

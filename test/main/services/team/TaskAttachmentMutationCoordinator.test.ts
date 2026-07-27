@@ -48,6 +48,60 @@ describe('NodeTaskAttachmentMutationCoordinator', () => {
     ).rejects.toBe(operationFailure);
   });
 
+  it('compensates every active publication after an ordinary uncommitted failure', async () => {
+    const operationFailure = new Error('operation failed');
+    const compensate = vi.fn(async () => undefined);
+    mocks.lock.mockResolvedValue(vi.fn(async () => undefined));
+    const coordinator = new NodeTaskAttachmentMutationCoordinator();
+
+    await expect(
+      coordinator.run(join(tmpdir(), 'attachment-operation-failure', 'task-1'), async (guard) => {
+        guard.registerCompensation(compensate);
+        throw operationFailure;
+      })
+    ).rejects.toBe(operationFailure);
+    expect(compensate).toHaveBeenCalledOnce();
+  });
+
+  it('does not repeat a compensation explicitly dismissed by a successful rollback', async () => {
+    const operationFailure = new Error('operation failed');
+    const compensate = vi.fn(async () => undefined);
+    mocks.lock.mockResolvedValue(vi.fn(async () => undefined));
+    const coordinator = new NodeTaskAttachmentMutationCoordinator();
+
+    await expect(
+      coordinator.run(
+        join(tmpdir(), 'attachment-dismissed-compensation', 'task-1'),
+        async (guard) => {
+          const receipt = guard.registerCompensation(compensate);
+          await compensate();
+          receipt.dismiss();
+          throw operationFailure;
+        }
+      )
+    ).rejects.toBe(operationFailure);
+    expect(compensate).toHaveBeenCalledOnce();
+  });
+
+  it('aggregates the operation error with every failed active compensation', async () => {
+    const operationFailure = new Error('operation failed');
+    const cleanupFailure = new Error('cleanup failed');
+    mocks.lock.mockResolvedValue(vi.fn(async () => undefined));
+    const coordinator = new NodeTaskAttachmentMutationCoordinator();
+
+    const failure = await coordinator
+      .run(join(tmpdir(), 'attachment-incomplete-compensation', 'task-1'), async (guard) => {
+        guard.registerCompensation(async () => {
+          throw cleanupFailure;
+        });
+        throw operationFailure;
+      })
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect((failure as AggregateError).errors).toEqual([operationFailure, cleanupFailure]);
+  });
+
   it('rechecks lock health and compensates a publication before returning', async () => {
     const compromisedFailure = new Error('lock compromised');
     let compromise!: (error: Error) => void;

@@ -539,6 +539,69 @@ describe('TeamBackupService', () => {
     expect(completedSnapshots).toEqual([]);
   });
 
+  it('rechecks the backup generation inside completion after the initial gate passed', async () => {
+    const teamName = 'attachment-post-gate-shutdown-team';
+    const taskId = 'task-1';
+    const attachmentName = '11111111-1111-4111-8111-111111111111--attachment';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const attachmentPath = path.join(
+      hoisted.appDataPath,
+      'task-attachments',
+      teamName,
+      taskId,
+      attachmentName
+    );
+    let deletionPending = false;
+    let completionCommitted = false;
+    let releaseCompletion!: () => void;
+    let reportCompletionEntered!: () => void;
+    const completionEntered = new Promise<void>((resolve) => {
+      reportCompletionEntered = resolve;
+    });
+    const completionRelease = new Promise<void>((resolve) => {
+      releaseCompletion = resolve;
+    });
+    const service = new TeamBackupService({
+      reconcilePendingDeletions: async () => undefined,
+      getBackupExclusions: async () => new Set(),
+      getPendingTeams: async () => new Set<string>(),
+      getCompletionCandidates: async () =>
+        deletionPending
+          ? [{ transactionId: 'post-gate-deletion', originalPath: attachmentPath }]
+          : [],
+      completePendingDeletions: async (
+        _teamName,
+        _transactionIds,
+        _backedUpReplacements,
+        canComplete
+      ) => {
+        if (!deletionPending) return;
+        reportCompletionEntered();
+        await completionRelease;
+        if (canComplete?.()) completionCommitted = true;
+      },
+    });
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.mkdir(path.dirname(attachmentPath), { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({ name: 'Attachment Post Gate Shutdown Team' }),
+      'utf8'
+    );
+    await fs.writeFile(attachmentPath, 'replacement bytes', 'utf8');
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    deletionPending = true;
+    const asyncBackup = service.backupTeam(teamName);
+    await completionEntered;
+    service.runShutdownBackupSync();
+    releaseCompletion();
+    await asyncBackup;
+
+    expect(completionCommitted).toBe(false);
+  });
+
   it('persists manifest pruning when only a tombstone backup changed', async () => {
     const teamName = 'attachment-prune-only-team';
     const taskId = 'task-1';

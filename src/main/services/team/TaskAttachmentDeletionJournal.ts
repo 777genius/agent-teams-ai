@@ -25,6 +25,8 @@ const JOURNAL_VERSION = 1;
 const JOURNAL_DIRECTORY = 'task-attachment-deletion-intents';
 const TRANSACTION_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const COMPLETION_INTENT_FILE_PATTERN =
+  /^([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.completion\.json$/i;
 
 export type TaskAttachmentDeletionPhase =
   | 'prepared'
@@ -64,13 +66,34 @@ export interface TaskAttachmentDeletionBackupFence {
   completePendingDeletions(
     teamName: string,
     transactionIds: ReadonlySet<string>,
-    backedUpReplacements: ReadonlyMap<string, DurableFileIdentity>
+    backedUpReplacements: ReadonlyMap<string, DurableFileIdentity>,
+    canComplete?: () => boolean
   ): Promise<void>;
 }
 
 function isMissing(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException).code;
   return code === 'ENOENT' || code === 'ENOTDIR';
+}
+
+function syncDirectoryDurablySync(directoryPath: string): void {
+  let descriptor: number | null = null;
+  try {
+    descriptor = fs.openSync(directoryPath, 'r');
+    fs.fsyncSync(descriptor);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    const unsupported =
+      code === 'EINVAL' ||
+      code === 'ENOSYS' ||
+      code === 'ENOTSUP' ||
+      code === 'EOPNOTSUPP' ||
+      (process.platform === 'win32' &&
+        (code === 'EACCES' || code === 'EPERM' || code === 'EISDIR' || code === 'EBADF'));
+    if (!unsupported) throw error;
+  } finally {
+    if (descriptor !== null) fs.closeSync(descriptor);
+  }
 }
 
 function assertSafeSegment(label: string, value: string): void {
@@ -125,7 +148,13 @@ export class TaskAttachmentDeletionJournal {
   constructor(
     private readonly cleanupPublishedTempLinks: (
       filePath: string
-    ) => Promise<void> = cleanupAtomicCreateTempLinks
+    ) => Promise<void> = cleanupAtomicCreateTempLinks,
+    private readonly afterRemovalDurable: (
+      intent: TaskAttachmentDeletionIntent
+    ) => Promise<void> = async () => undefined,
+    private readonly afterCompletionValidation: (
+      intent: TaskAttachmentDeletionIntent
+    ) => void = () => undefined
   ) {}
 
   async prepare(
@@ -170,7 +199,10 @@ export class TaskAttachmentDeletionJournal {
     if (current.intent.phase === 'aborted') {
       throw new Error('Task attachment deletion was already aborted');
     }
-    if (current.intent.phase === 'removed') return;
+    if (current.intent.phase === 'removed') {
+      await removeTaskAttachmentGenerationPin(current.intent.pinPath, current.intent.identity);
+      return;
+    }
     const committed =
       current.intent.phase === 'prepared'
         ? await this.advancePhase(current.intent, 'committed')
@@ -196,7 +228,10 @@ export class TaskAttachmentDeletionJournal {
           await this.advancePhase(committed, 'detached');
           await this.cleanupPublishedTempLinks(detachedPath);
         },
-        onRemovalDurable: async () => undefined,
+        onRemovalDurable: async () => {
+          const removed = await this.advancePhase(committed, 'removed');
+          await this.afterRemovalDurable(removed);
+        },
       },
     });
 
@@ -209,7 +244,6 @@ export class TaskAttachmentDeletionJournal {
     }
 
     await removeTaskAttachmentGenerationPin(committed.pinPath, committed.identity);
-    await this.advancePhase(committed, 'removed');
   }
 
   async abort(intent: TaskAttachmentDeletionIntent): Promise<void> {
@@ -228,15 +262,19 @@ export class TaskAttachmentDeletionJournal {
     await this.remove(aborted);
   }
 
-  async complete(intent: TaskAttachmentDeletionIntent): Promise<void> {
+  async complete(
+    intent: TaskAttachmentDeletionIntent,
+    canComplete: () => boolean = () => true
+  ): Promise<void> {
     this.assertScope(intent.teamName, intent.taskId, intent.attachmentId);
     this.assertIntentPaths(intent);
-    const current = await this.readCurrentSnapshot(intent);
-    if (!current) return;
-    if (current.intent.phase !== 'removed') {
-      throw new Error('Task attachment deletion is not ready for journal completion');
+    const intentPath = this.getIntentPath(intent.transactionId);
+    const release = await this.acquirePhaseLock(intentPath);
+    try {
+      this.completeUnderPhaseLock(intent, canComplete);
+    } finally {
+      await release().catch(() => undefined);
     }
-    await this.remove(current.intent);
   }
 
   async loadAll(): Promise<TaskAttachmentDeletionIntent[]> {
@@ -250,9 +288,10 @@ export class TaskAttachmentDeletionJournal {
     }
 
     const intents: TaskAttachmentDeletionIntent[] = [];
-    for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-      intents.push(await this.readIntent(path.join(directory, entry.name), entry.name));
+    for (const entry of this.selectJournalEntries(directory, entries)) {
+      intents.push(
+        await this.readIntent(path.join(directory, entry.name), `${entry.transactionId}.json`)
+      );
     }
     return intents;
   }
@@ -267,12 +306,13 @@ export class TaskAttachmentDeletionJournal {
       throw error;
     }
 
-    return entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
-      .map((entry) => {
-        const intentPath = path.join(directory, entry.name);
-        return this.parsePersistedIntent(fs.readFileSync(intentPath, 'utf8'), entry.name);
-      });
+    return this.selectJournalEntries(directory, entries).map((entry) => {
+      const intentPath = path.join(directory, entry.name);
+      return this.parsePersistedIntent(
+        fs.readFileSync(intentPath, 'utf8'),
+        `${entry.transactionId}.json`
+      );
+    });
   }
 
   private async advancePhase(
@@ -330,7 +370,22 @@ export class TaskAttachmentDeletionJournal {
     next: TaskAttachmentDeletionIntent
   ): Promise<boolean> {
     const intentPath = this.getIntentPath(current.intent.transactionId);
-    const release = await lock(intentPath, {
+    const release = await this.acquirePhaseLock(intentPath);
+    try {
+      const latest = await this.readCurrentSnapshot(current.intent);
+      if (!latest || latest.raw !== current.raw) return false;
+      await atomicWriteAsync(intentPath, JSON.stringify(next, null, 2), {
+        durability: 'strict',
+        syncDirectory: true,
+      });
+      return true;
+    } finally {
+      await release().catch(() => undefined);
+    }
+  }
+
+  private acquirePhaseLock(intentPath: string): Promise<() => Promise<void>> {
+    return lock(intentPath, {
       lockfilePath: `${intentPath}.phase.lock`,
       realpath: false,
       stale: 30_000,
@@ -343,17 +398,6 @@ export class TaskAttachmentDeletionJournal {
         randomize: true,
       },
     });
-    try {
-      const latest = await this.readCurrentSnapshot(current.intent);
-      if (!latest || latest.raw !== current.raw) return false;
-      await atomicWriteAsync(intentPath, JSON.stringify(next, null, 2), {
-        durability: 'strict',
-        syncDirectory: true,
-      });
-      return true;
-    } finally {
-      await release().catch(() => undefined);
-    }
   }
 
   private async save(intent: TaskAttachmentDeletionIntent): Promise<void> {
@@ -376,7 +420,8 @@ export class TaskAttachmentDeletionJournal {
       durability: 'strict',
       validateDetached: async (detachedPath) => {
         try {
-          return (await fs.promises.readFile(detachedPath, 'utf8')) === current.raw;
+          const raw = await fs.promises.readFile(detachedPath, 'utf8');
+          return raw === current.raw;
         } catch {
           return false;
         }
@@ -385,6 +430,138 @@ export class TaskAttachmentDeletionJournal {
     if (removal === 'changed') {
       throw new Error('Task attachment deletion intent changed while removing it');
     }
+  }
+
+  private completeUnderPhaseLock(
+    expected: TaskAttachmentDeletionIntent,
+    canComplete: () => boolean
+  ): void {
+    const intentPath = this.getIntentPath(expected.transactionId);
+    const detachedPath = this.getCompletionIntentPath(expected.transactionId);
+    const current = this.readCompletionSnapshotSync(expected, intentPath, detachedPath);
+    if (!current) return;
+    if (current.intent.phase !== 'removed') {
+      throw new Error('Task attachment deletion is not ready for journal completion');
+    }
+
+    if (current.path === intentPath) {
+      fs.renameSync(intentPath, detachedPath);
+      syncDirectoryDurablySync(path.dirname(intentPath));
+    }
+    const detached = this.readSnapshotSync(detachedPath, expected);
+    if (detached.raw !== current.raw) {
+      this.restoreCompletionIntentSync(detachedPath, intentPath);
+      throw new Error('Task attachment deletion intent changed while removing it');
+    }
+    if (!canComplete()) {
+      this.restoreCompletionIntentSync(detachedPath, intentPath);
+      return;
+    }
+
+    // This hook makes the post-validation boundary observable in tests. The
+    // final generation check and durable removal below are deliberately
+    // synchronous, so shutdown cannot interleave between them in this process.
+    this.afterCompletionValidation(detached.intent);
+    if (!canComplete()) {
+      this.restoreCompletionIntentSync(detachedPath, intentPath);
+      return;
+    }
+    fs.unlinkSync(detachedPath);
+    syncDirectoryDurablySync(path.dirname(detachedPath));
+  }
+
+  private readCompletionSnapshotSync(
+    expected: TaskAttachmentDeletionIntent,
+    intentPath: string,
+    detachedPath: string
+  ): (PersistedIntentSnapshot & { path: string }) | null {
+    const intentExists = fs.existsSync(intentPath);
+    const detachedExists = fs.existsSync(detachedPath);
+    if (!intentExists && !detachedExists) return null;
+    if (intentExists && detachedExists) {
+      const current = this.readSnapshotSync(intentPath, expected);
+      const detached = this.readSnapshotSync(detachedPath, expected);
+      if (current.raw !== detached.raw) {
+        throw new Error('Multiple task attachment deletion intent generations exist');
+      }
+      fs.unlinkSync(detachedPath);
+      syncDirectoryDurablySync(path.dirname(detachedPath));
+      return { ...current, path: intentPath };
+    }
+    const currentPath = intentExists ? intentPath : detachedPath;
+    return { ...this.readSnapshotSync(currentPath, expected), path: currentPath };
+  }
+
+  private readSnapshotSync(
+    snapshotPath: string,
+    expected: TaskAttachmentDeletionIntent
+  ): PersistedIntentSnapshot {
+    const descriptor = fs.openSync(
+      snapshotPath,
+      fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK
+    );
+    try {
+      const stats = fs.fstatSync(descriptor);
+      if (!stats.isFile()) {
+        throw new Error('Task attachment deletion intent is not a file');
+      }
+      const raw = fs.readFileSync(descriptor, 'utf8');
+      const intent = this.parsePersistedIntent(raw, `${expected.transactionId}.json`);
+      this.assertSameIntentIdentity(intent, expected);
+      return { intent, raw };
+    } finally {
+      fs.closeSync(descriptor);
+    }
+  }
+
+  private restoreCompletionIntentSync(detachedPath: string, intentPath: string): void {
+    try {
+      fs.linkSync(detachedPath, intentPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      throw new Error('Task attachment deletion intent was replaced during completion', {
+        cause: error,
+      });
+    }
+    fs.unlinkSync(detachedPath);
+    syncDirectoryDurablySync(path.dirname(intentPath));
+  }
+
+  private selectJournalEntries(
+    directory: string,
+    entries: readonly fs.Dirent[]
+  ): { name: string; transactionId: string }[] {
+    const selected = new Map<string, { name: string; transactionId: string }>();
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      const completionMatch = COMPLETION_INTENT_FILE_PATTERN.exec(entry.name);
+      const transactionId = completionMatch?.[1] ?? path.basename(entry.name, '.json');
+      if (
+        (!entry.name.endsWith('.json') && !completionMatch) ||
+        !TRANSACTION_ID_PATTERN.test(transactionId)
+      ) {
+        continue;
+      }
+      const existing = selected.get(transactionId);
+      if (existing && existing.name !== entry.name) {
+        const expectedFileName = `${transactionId}.json`;
+        const existingRaw = fs.readFileSync(path.join(directory, existing.name), 'utf8');
+        const candidateRaw = fs.readFileSync(path.join(directory, entry.name), 'utf8');
+        const existingIntent = this.parsePersistedIntent(existingRaw, expectedFileName);
+        const candidateIntent = this.parsePersistedIntent(candidateRaw, expectedFileName);
+        if (existingRaw !== candidateRaw || existingIntent.phase !== candidateIntent.phase) {
+          throw new Error(`Multiple task attachment deletion intent generations: ${transactionId}`);
+        }
+        const canonicalName = `${transactionId}.json`;
+        selected.set(transactionId, {
+          name: existing.name === canonicalName ? existing.name : entry.name,
+          transactionId,
+        });
+        continue;
+      }
+      selected.set(transactionId, { name: entry.name, transactionId });
+    }
+    return [...selected.values()];
   }
 
   private async readIntent(
@@ -515,6 +692,13 @@ export class TaskAttachmentDeletionJournal {
       throw new Error('Invalid task attachment deletion transaction');
     }
     return path.join(this.getJournalDirectory(), `${transactionId}.json`);
+  }
+
+  private getCompletionIntentPath(transactionId: string): string {
+    if (!TRANSACTION_ID_PATTERN.test(transactionId)) {
+      throw new Error('Invalid task attachment deletion transaction');
+    }
+    return path.join(this.getJournalDirectory(), `${transactionId}.completion.json`);
   }
 
   private async ensureDirectoryHierarchyDurably(directoryPath: string): Promise<void> {

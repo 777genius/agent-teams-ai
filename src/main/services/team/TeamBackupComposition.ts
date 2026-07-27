@@ -26,12 +26,13 @@ export function createTeamBackupService(taskReader: {
     getPendingTeams: () => recoveryStore.getPendingTaskAttachmentDeletionTeams(),
     getCompletionCandidates: (teamName) =>
       recoveryStore.getTaskAttachmentDeletionCompletionCandidates(teamName),
-    completePendingDeletions: (teamName, transactionIds, backedUpReplacements) =>
+    completePendingDeletions: (teamName, transactionIds, backedUpReplacements, canComplete) =>
       recoveryStore.completePendingTaskAttachmentDeletions(
         teamName,
         isReferenced,
         backedUpReplacements,
-        transactionIds
+        transactionIds,
+        canComplete
       ),
   });
 }

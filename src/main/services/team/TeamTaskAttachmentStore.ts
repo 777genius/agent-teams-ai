@@ -603,7 +603,12 @@ export class TeamTaskAttachmentStore {
   ): Promise<void> {
     const intents = await this.deletionJournal.loadAll();
     for (const intent of intents) {
-      if (intent.phase === 'removed') continue;
+      if (intent.phase === 'removed') {
+        await this.runTaskMutation(intent.teamName, intent.taskId, () =>
+          this.deletionJournal.finalize(intent)
+        );
+        continue;
+      }
       await this.runTaskMutation(intent.teamName, intent.taskId, async (guard) => {
         guard.assertHealthy();
         if (intent.phase === 'aborted') {
@@ -676,7 +681,8 @@ export class TeamTaskAttachmentStore {
     teamName: string,
     isAttachmentReferenced: TaskAttachmentReferenceReader = async () => false,
     backedUpReplacements: ReadonlyMap<string, DurableFileIdentity> = new Map(),
-    transactionIds?: ReadonlySet<string>
+    transactionIds?: ReadonlySet<string>,
+    canComplete: () => boolean = () => true
   ): Promise<void> {
     this.assertSafePathSegment('teamName', teamName);
     const intents = (await this.deletionJournal.loadAll()).filter(
@@ -686,6 +692,7 @@ export class TeamTaskAttachmentStore {
         (!transactionIds || transactionIds.has(intent.transactionId))
     );
     for (const intent of intents) {
+      if (!canComplete()) return;
       await this.runTaskMutation(intent.teamName, intent.taskId, async () => {
         const referenced = await isAttachmentReferenced(
           intent.teamName,
@@ -706,7 +713,8 @@ export class TeamTaskAttachmentStore {
             return;
           }
         }
-        await this.deletionJournal.complete(intent);
+        if (!canComplete()) return;
+        await this.deletionJournal.complete(intent, canComplete);
       });
     }
   }

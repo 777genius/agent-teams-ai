@@ -83,20 +83,20 @@ export class NodeTaskAttachmentMutationCoordinator implements TaskAttachmentMuta
         guard.assertHealthy();
         return result;
       } catch (error) {
-        if (compromisedError && !committed) {
-          let compensationError: unknown = null;
+        if (!committed) {
+          const compensationErrors: unknown[] = [];
           for (const compensation of [...compensations].reverse()) {
             if (!compensation.active) continue;
             try {
               await compensation.run();
             } catch (candidate) {
-              compensationError ??= candidate;
+              compensationErrors.push(candidate);
             }
           }
-          if (compensationError) {
+          if (compensationErrors.length > 0) {
             throw new AggregateError(
-              [error, compensationError],
-              'Task attachment mutation lock was compromised and compensation failed'
+              [error, ...compensationErrors],
+              'Task attachment mutation failed and compensation was incomplete'
             );
           }
         }

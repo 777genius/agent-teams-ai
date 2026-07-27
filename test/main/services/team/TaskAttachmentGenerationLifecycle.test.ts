@@ -34,6 +34,26 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     return { root, publicPath: join(root, 'attachment') };
   }
 
+  async function publishReplacementBeforePrivateRemoval<T>(
+    publicPath: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    const realRm = fs.rm.bind(fs);
+    let replacementPublished = false;
+    const remove = vi.spyOn(fs, 'rm').mockImplementation(async (target, options) => {
+      if (!replacementPublished && basename(String(target)).includes('.deleting.')) {
+        replacementPublished = true;
+        await writeFile(publicPath, 'replacement', 'utf8');
+      }
+      await realRm(target, options);
+    });
+    try {
+      return await operation();
+    } finally {
+      remove.mockRestore();
+    }
+  }
+
   it('restores a replacement generation instead of deleting it after an identity mismatch', async () => {
     const { root, publicPath } = await createRoot();
     await writeFile(publicPath, 'old');
@@ -77,6 +97,47 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     } finally {
       lstat.mockRestore();
     }
+  });
+
+  it('leaves a recoverable guard when file handles also report zero inode identity', async () => {
+    const { root, publicPath } = await createRoot();
+    await writeFile(publicPath, 'old');
+    const realLstat = fs.lstat.bind(fs);
+    const realOpen = fs.open.bind(fs);
+    const lstat = vi.spyOn(fs, 'lstat').mockImplementation(async (filePath) => {
+      const stats = await realLstat(filePath);
+      return new Proxy(stats, {
+        get(target, property) {
+          return property === 'ino' ? 0 : Reflect.get(target, property, target);
+        },
+      });
+    });
+    const open = vi.spyOn(fs, 'open').mockImplementation(async (...args) => {
+      const handle = await realOpen(...args);
+      return {
+        close: () => handle.close(),
+        stat: async () => {
+          const stats = await handle.stat();
+          return new Proxy(stats, {
+            get(target, property) {
+              return property === 'ino' ? 0 : Reflect.get(target, property, target);
+            },
+          });
+        },
+      } as Awaited<ReturnType<typeof fs.open>>;
+    });
+
+    try {
+      await expect(pinTaskAttachmentGeneration(publicPath)).resolves.toEqual({ kind: 'changed' });
+    } finally {
+      open.mockRestore();
+      lstat.mockRestore();
+    }
+
+    await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('old');
+    expect(
+      (await readdir(root)).filter((entry) => entry.startsWith('.review-create.'))
+    ).toHaveLength(1);
   });
 
   it('preserves a replacement swapped in after its cleanup capability was acquired', async () => {
@@ -297,6 +358,61 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     await finalizeDetachedTaskAttachmentGeneration(detached.receipt);
     await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('replacement');
     expect(await readdir(root)).toEqual(['attachment']);
+  });
+
+  it('does not remove a replacement published while a detached receipt is finalized', async () => {
+    const { publicPath } = await createRoot();
+    await writeFile(publicPath, 'old');
+    const identity = await fs.lstat(publicPath);
+    const detached = await detachTaskAttachmentGeneration(publicPath, {
+      dev: identity.dev,
+      ino: identity.ino,
+      birthtimeMs: identity.birthtimeMs,
+      size: identity.size,
+    });
+    if (detached.kind !== 'detached') throw new Error('Expected detached generation');
+
+    await publishReplacementBeforePrivateRemoval(detached.receipt.detachedPath, () =>
+      finalizeDetachedTaskAttachmentGeneration(detached.receipt)
+    );
+
+    await expect(fs.readFile(detached.receipt.detachedPath, 'utf8')).resolves.toBe('replacement');
+  });
+
+  it('does not remove a replacement published while a generation pin is finalized', async () => {
+    const { publicPath } = await createRoot();
+    await writeFile(publicPath, 'old');
+    const pinned = await pinTaskAttachmentGeneration(publicPath);
+    if (pinned.kind !== 'pinned') throw new Error('Expected pinned generation');
+
+    await publishReplacementBeforePrivateRemoval(pinned.receipt.pinPath, () =>
+      removeTaskAttachmentGenerationPin(pinned.receipt.pinPath, pinned.receipt.identity)
+    );
+
+    await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('old');
+    await expect(fs.readFile(pinned.receipt.pinPath, 'utf8')).resolves.toBe('replacement');
+  });
+
+  it('does not remove a replacement published while a restored receipt is cleaned up', async () => {
+    const { publicPath } = await createRoot();
+    await writeFile(publicPath, 'old');
+    const identity = await fs.lstat(publicPath);
+    const detached = await detachTaskAttachmentGeneration(publicPath, {
+      dev: identity.dev,
+      ino: identity.ino,
+      birthtimeMs: identity.birthtimeMs,
+      size: identity.size,
+    });
+    if (detached.kind !== 'detached') throw new Error('Expected detached generation');
+
+    await expect(
+      publishReplacementBeforePrivateRemoval(detached.receipt.detachedPath, () =>
+        restoreDetachedTaskAttachmentGeneration(detached.receipt)
+      )
+    ).resolves.toBe('restored');
+
+    await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('old');
+    await expect(fs.readFile(detached.receipt.detachedPath, 'utf8')).resolves.toBe('replacement');
   });
 
   it('restores the exact detached inode when the public path is still free', async () => {

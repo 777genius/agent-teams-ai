@@ -177,7 +177,7 @@ describe('TeamTaskAttachmentStore', () => {
     );
   });
 
-  async function createRealStore(): Promise<{
+  async function createRealStore(deletionJournal?: TaskAttachmentDeletionJournal): Promise<{
     root: string;
     taskDirectory: string;
     store: TeamTaskAttachmentStore;
@@ -188,7 +188,7 @@ describe('TeamTaskAttachmentStore', () => {
     return {
       root,
       taskDirectory: join(root, 'task-attachments', 'my-team', 'task-1'),
-      store: new TeamTaskAttachmentStore(),
+      store: new TeamTaskAttachmentStore(undefined, undefined, deletionJournal),
     };
   }
 
@@ -790,6 +790,181 @@ describe('TeamTaskAttachmentStore', () => {
     await expect(fsPromises.lstat(receipt.generation.pinPath)).resolves.toBeDefined();
   });
 
+  it('recovers after a crash immediately after durable removal receipt publication', async () => {
+    const { root, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    const receipt = await store.runTaskTransaction('my-team', 'task-1', async (transaction) => {
+      const prepared = await transaction.prepareAttachmentDeletion(ATTACHMENT_ID, 'image/png');
+      if (!prepared) throw new Error('Expected a prepared deletion');
+      transaction.markCommitted();
+      return prepared;
+    });
+    const crash = new Error('simulated crash after durable removal receipt');
+    const crashingJournal = new TaskAttachmentDeletionJournal(
+      async () => undefined,
+      async () => {
+        throw crash;
+      }
+    );
+
+    await expect(crashingJournal.finalize(receipt.intent)).rejects.toBe(crash);
+    const journalPath = join(
+      root,
+      'task-attachment-deletion-intents',
+      `${receipt.intent.transactionId}.json`
+    );
+    await expect(readFile(journalPath, 'utf8')).resolves.toContain('"phase": "removed"');
+    await expect(fsPromises.lstat(receipt.generation.originalPath)).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fsPromises.lstat(receipt.intent.detachedPath)).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fsPromises.lstat(receipt.generation.pinPath)).resolves.toBeDefined();
+    await writeFile(receipt.generation.originalPath, 'replacement', 'utf8');
+
+    await expect(
+      new TeamTaskAttachmentStore().reconcilePendingAttachmentDeletions(async () => false)
+    ).resolves.toBeUndefined();
+
+    await expect(readFile(receipt.generation.originalPath, 'utf8')).resolves.toBe('replacement');
+    await expect(fsPromises.lstat(receipt.generation.pinPath)).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(readFile(journalPath, 'utf8')).resolves.toContain('"phase": "removed"');
+  });
+
+  it('retains a tombstone when its completion generation expires inside the task lock', async () => {
+    const { root, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    expect(await readdir(journalDirectory)).toHaveLength(1);
+    let generationCurrent = true;
+    let releaseReferenceRead!: () => void;
+    let reportReferenceRead!: () => void;
+    const referenceRead = new Promise<void>((resolve) => {
+      reportReferenceRead = resolve;
+    });
+    const referenceReadRelease = new Promise<void>((resolve) => {
+      releaseReferenceRead = resolve;
+    });
+
+    const completion = store.completePendingTaskAttachmentDeletions(
+      'my-team',
+      async () => {
+        reportReferenceRead();
+        await referenceReadRelease;
+        return false;
+      },
+      new Map(),
+      undefined,
+      () => generationCurrent
+    );
+    await referenceRead;
+    generationCurrent = false;
+    releaseReferenceRead();
+    await completion;
+
+    expect(await readdir(journalDirectory)).toHaveLength(1);
+  });
+
+  it('rechecks the generation synchronously after journal validation before unlink', async () => {
+    let generationCurrent = true;
+    let validationBoundaries = 0;
+    const journal = new TaskAttachmentDeletionJournal(undefined, undefined, () => {
+      validationBoundaries += 1;
+      generationCurrent = false;
+    });
+    const { root, store } = await createRealStore(journal);
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+
+    await store.completePendingTaskAttachmentDeletions(
+      'my-team',
+      async () => false,
+      new Map(),
+      undefined,
+      () => generationCurrent
+    );
+
+    expect(validationBoundaries).toBe(1);
+    expect(await readdir(join(root, 'task-attachment-deletion-intents'))).toEqual([
+      expect.stringMatching(/^[0-9a-f-]+\.json$/),
+    ]);
+  });
+
+  it('recovers a deterministic journal completion detach after a crash', async () => {
+    const { root, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+    const [intent] = await new TaskAttachmentDeletionJournal().loadAll();
+    const crash = new Error('simulated crash at journal completion boundary');
+    const crashingJournal = new TaskAttachmentDeletionJournal(undefined, undefined, () => {
+      throw crash;
+    });
+
+    await expect(crashingJournal.complete(intent!)).rejects.toBe(crash);
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    expect(await readdir(journalDirectory)).toEqual([`${intent!.transactionId}.completion.json`]);
+    const recoveryJournal = new TaskAttachmentDeletionJournal();
+    const recovered = await recoveryJournal.loadAll();
+    expect(recovered).toHaveLength(1);
+    await recoveryJournal.complete(recovered[0]!);
+    expect(await readdir(journalDirectory)).toEqual([]);
+  });
+
+  it('deduplicates an exact canonical and detached journal generation', async () => {
+    const { root, store } = await createRealStore();
+    await store.saveAttachment(
+      'my-team',
+      'task-1',
+      ATTACHMENT_ID,
+      'proof.png',
+      'image/png',
+      'dGVzdA=='
+    );
+    await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+    const journal = new TaskAttachmentDeletionJournal();
+    const [intent] = await journal.loadAll();
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    const canonicalPath = join(journalDirectory, `${intent!.transactionId}.json`);
+    const detachedPath = join(journalDirectory, `${intent!.transactionId}.completion.json`);
+    await fsPromises.link(canonicalPath, detachedPath);
+
+    expect(await journal.loadAll()).toHaveLength(1);
+    await journal.complete(intent!);
+    expect(await readdir(journalDirectory)).toEqual([]);
+  });
+
   it('resumes removal when rename detached the target but reported ENOENT', async () => {
     const { root, taskDirectory, store } = await createRealStore();
     await store.saveAttachment(
@@ -1287,6 +1462,108 @@ describe('TeamTaskAttachmentStore', () => {
     await expect(
       store.getAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png')
     ).resolves.toBeNull();
+  });
+
+  it('retries a failed comment rollback through the transaction guard compensation', async () => {
+    const { store, taskDirectory } = await createRealStore();
+    const failure = new Error('comment write failed');
+    const logger = { warn: vi.fn() };
+    const useCase = new AddTaskCommentUseCase({
+      comments: {
+        addTaskComment: vi.fn(async () => {
+          throw failure;
+        }),
+      },
+      attachments: new TeamTaskCommentAttachmentWriter(store),
+      logger,
+    });
+    const originalRename = fsPromises.rename.bind(fsPromises);
+    let rollbackFailuresRemaining = 1;
+    const rename = vi.spyOn(fsPromises, 'rename').mockImplementation(async (source, target) => {
+      if (
+        rollbackFailuresRemaining > 0 &&
+        String(source) === join(taskDirectory, ATTACHMENT_FILE) &&
+        basename(String(target)).startsWith('.attachment-delete.')
+      ) {
+        rollbackFailuresRemaining -= 1;
+        throw Object.assign(new Error('transient rollback failure'), { code: 'EBUSY' });
+      }
+      await originalRename(source, target);
+    });
+    try {
+      await expect(
+        useCase.execute('my-team', 'task-1', {
+          text: 'Comment',
+          attachments: [
+            {
+              id: ATTACHMENT_ID,
+              filename: 'new.png',
+              mimeType: 'image/png',
+              base64Data: 'bmV3IGJ5dGVz',
+            },
+          ],
+        })
+      ).rejects.toBe(failure);
+    } finally {
+      rename.mockRestore();
+    }
+
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('transient rollback failure'));
+    await expect(
+      store.getAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png')
+    ).resolves.toBeNull();
+  });
+
+  it('aggregates an ordinary comment failure when guard compensation also fails', async () => {
+    const { store, taskDirectory } = await createRealStore();
+    const failure = new Error('comment write failed');
+    const useCase = new AddTaskCommentUseCase({
+      comments: {
+        addTaskComment: vi.fn(async () => {
+          throw failure;
+        }),
+      },
+      attachments: new TeamTaskCommentAttachmentWriter(store),
+      logger: { warn: vi.fn() },
+    });
+    const originalRename = fsPromises.rename.bind(fsPromises);
+    const cleanupFailure = Object.assign(new Error('persistent rollback failure'), {
+      code: 'EBUSY',
+    });
+    const rename = vi.spyOn(fsPromises, 'rename').mockImplementation(async (source, target) => {
+      if (
+        String(source) === join(taskDirectory, ATTACHMENT_FILE) &&
+        basename(String(target)).startsWith('.attachment-delete.')
+      ) {
+        throw cleanupFailure;
+      }
+      await originalRename(source, target);
+    });
+    let result: unknown;
+    try {
+      result = await useCase
+        .execute('my-team', 'task-1', {
+          text: 'Comment',
+          attachments: [
+            {
+              id: ATTACHMENT_ID,
+              filename: 'new.png',
+              mimeType: 'image/png',
+              base64Data: 'bmV3IGJ5dGVz',
+            },
+          ],
+        })
+        .catch((error: unknown) => error);
+    } finally {
+      rename.mockRestore();
+    }
+
+    expect(result).toBeInstanceOf(AggregateError);
+    expect((result as AggregateError).errors).toEqual([failure, cleanupFailure]);
+    expect((await readdir(taskDirectory)).some((entry) => entry === ATTACHMENT_FILE)).toBe(true);
+    expect(
+      (await readdir(taskDirectory)).some((entry) => entry.startsWith('.review-create.'))
+    ).toBe(true);
   });
 
   it('serializes task directory cleanup against a different attachment save', async () => {

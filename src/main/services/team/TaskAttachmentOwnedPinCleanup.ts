@@ -1,32 +1,25 @@
-import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 
-import { getDurableFileIdentity, isSameDurableFileIdentity } from '@main/utils/atomicWrite';
-
-function isAlreadyGone(error: unknown): boolean {
-  const code = (error as NodeJS.ErrnoException).code;
-  return code === 'ENOENT' || code === 'ENOTDIR';
-}
+import {
+  getDurableFileIdentity,
+  isSameDurableFileIdentity,
+  removePathWithIdentityFenceAsync,
+} from '@main/utils/atomicWrite';
 
 async function openIdentityHandle(filePath: string): Promise<fs.promises.FileHandle> {
   return fs.promises.open(filePath, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK);
 }
 
-async function restoreUnprovenPin(stagedPath: string, pinPath: string): Promise<void> {
-  try {
-    await fs.promises.link(stagedPath, pinPath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-    return;
-  }
-  await fs.promises.unlink(stagedPath);
-}
-
 /**
  * Removes only the hardlink created by the current pin attempt. File handles
- * bind the source and pin objects before detachment; the private directory is
- * the capability which prevents a shared-path replacement before unlink.
+ * bind the source and pin objects before the shared removal primitive detaches
+ * the pin name. App writers only know the shared pin path, so a replacement
+ * published there after detachment is never targeted. Guessing the primitive's
+ * random private path from another same-UID process is outside the supported
+ * cooperative app-concurrency threat model.
+ *
+ * If either handle reports ino=0, ownership cannot be proven and the standard
+ * .review-create guard remains recoverable by normal temp-link reconciliation.
  */
 export async function cleanupJustCreatedTaskAttachmentPin(
   originalPath: string,
@@ -34,13 +27,6 @@ export async function cleanupJustCreatedTaskAttachmentPin(
 ): Promise<boolean> {
   let originalHandle: fs.promises.FileHandle | null = null;
   let pinHandle: fs.promises.FileHandle | null = null;
-  let stagedHandle: fs.promises.FileHandle | null = null;
-  const cleanupDirectory = path.join(
-    path.dirname(pinPath),
-    `.task-attachment-pin-cleanup.${randomUUID()}`
-  );
-  const stagedPath = path.join(cleanupDirectory, 'owned-pin');
-  let cleanupDirectoryCreated = false;
   try {
     originalHandle = await openIdentityHandle(originalPath);
     pinHandle = await openIdentityHandle(pinPath);
@@ -48,27 +34,28 @@ export async function cleanupJustCreatedTaskAttachmentPin(
     const pinIdentity = getDurableFileIdentity(await pinHandle.stat());
     if (!isSameDurableFileIdentity(originalIdentity, pinIdentity)) return false;
 
-    await fs.promises.mkdir(cleanupDirectory, { mode: 0o700 });
-    cleanupDirectoryCreated = true;
-    await fs.promises.rename(pinPath, stagedPath);
-    stagedHandle = await openIdentityHandle(stagedPath);
-    const stagedIdentity = getDurableFileIdentity(await stagedHandle.stat());
-    if (!isSameDurableFileIdentity(pinIdentity, stagedIdentity)) {
-      await restoreUnprovenPin(stagedPath, pinPath);
-      return false;
-    }
-
-    await fs.promises.unlink(stagedPath);
-    return true;
+    const removal = await removePathWithIdentityFenceAsync(pinPath, {
+      force: true,
+      durability: 'strict',
+      validateDetached: async (detachedPath) => {
+        const detachedHandle = await openIdentityHandle(detachedPath);
+        try {
+          return isSameDurableFileIdentity(
+            pinIdentity,
+            getDurableFileIdentity(await detachedHandle.stat())
+          );
+        } finally {
+          await detachedHandle.close();
+        }
+      },
+    });
+    return removal === 'deleted';
   } catch (error) {
-    if (isAlreadyGone(error)) return false;
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return false;
     throw error;
   } finally {
-    await stagedHandle?.close().catch(() => undefined);
     await pinHandle?.close().catch(() => undefined);
     await originalHandle?.close().catch(() => undefined);
-    if (cleanupDirectoryCreated) {
-      await fs.promises.rmdir(cleanupDirectory).catch(() => undefined);
-    }
   }
 }

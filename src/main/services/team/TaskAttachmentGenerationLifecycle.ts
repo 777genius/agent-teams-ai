@@ -7,6 +7,7 @@ import {
   getDurableFileIdentity,
   hasTrustworthyDurablePathIdentity,
   isSameDurableFileIdentity,
+  removePathWithIdentityFenceAsync,
 } from '@main/utils/atomicWrite';
 
 import { isTaskAttachmentGenerationGuardName } from './TaskAttachmentArtifacts';
@@ -64,6 +65,25 @@ async function lstatOrNull(filePath: string): Promise<fs.Stats | null> {
     if (code === 'ENOENT' || code === 'ENOTDIR') return null;
     throw error;
   }
+}
+
+async function removeExactTaskAttachmentGeneration(
+  targetPath: string,
+  expectedIdentity: TaskAttachmentFileIdentity
+): Promise<'deleted' | 'missing' | 'changed'> {
+  return removePathWithIdentityFenceAsync(targetPath, {
+    force: true,
+    durability: 'strict',
+    validateDetached: async (detachedPath) => {
+      const detached = await lstatOrNull(detachedPath);
+      return Boolean(
+        detached &&
+        detached.isFile() &&
+        !detached.isSymbolicLink() &&
+        isSameTaskAttachmentFileIdentity(detached, expectedIdentity)
+      );
+    },
+  });
 }
 
 /**
@@ -192,9 +212,8 @@ export async function restoreDetachedTaskAttachmentGeneration(
     const current = await lstatOrNull(receipt.originalPath);
     if (!current || !isSameTaskAttachmentFileIdentity(current, receipt.identity)) return 'conflict';
   }
-  await fs.promises.unlink(receipt.detachedPath).catch((error: NodeJS.ErrnoException) => {
-    if (error.code !== 'ENOENT') throw error;
-  });
+  const removal = await removeExactTaskAttachmentGeneration(receipt.detachedPath, receipt.identity);
+  if (removal === 'changed') return 'conflict';
   return 'restored';
 }
 
@@ -202,16 +221,10 @@ export async function restoreDetachedTaskAttachmentGeneration(
 export async function finalizeDetachedTaskAttachmentGeneration(
   receipt: DetachedTaskAttachmentGeneration
 ): Promise<void> {
-  const detached = await lstatOrNull(receipt.detachedPath);
-  if (!detached) return;
-  if (
-    !detached.isFile() ||
-    detached.isSymbolicLink() ||
-    !isSameTaskAttachmentFileIdentity(detached, receipt.identity)
-  ) {
+  const removal = await removeExactTaskAttachmentGeneration(receipt.detachedPath, receipt.identity);
+  if (removal === 'changed') {
     throw new Error('Detached task attachment generation changed; refusing to remove it');
   }
-  await fs.promises.unlink(receipt.detachedPath);
 }
 
 async function removePinnedTaskAttachmentPath(
@@ -224,16 +237,10 @@ async function removePinnedTaskAttachmentPath(
   if (!hasTrustworthyTaskAttachmentFileIdentity(expectedIdentity)) {
     throw new Error('Task attachment generation pin identity is not trustworthy');
   }
-  const pin = await lstatOrNull(pinPath);
-  if (!pin) return;
-  if (
-    !pin.isFile() ||
-    pin.isSymbolicLink() ||
-    !isSameTaskAttachmentFileIdentity(pin, expectedIdentity)
-  ) {
+  const removal = await removeExactTaskAttachmentGeneration(pinPath, expectedIdentity);
+  if (removal === 'changed') {
     throw new Error('Task attachment generation pin changed; refusing to remove it');
   }
-  await fs.promises.unlink(pinPath);
 }
 
 export async function removeTaskAttachmentGenerationPin(
