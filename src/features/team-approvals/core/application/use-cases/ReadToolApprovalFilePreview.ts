@@ -24,6 +24,20 @@ export class ReadToolApprovalFilePreview implements ToolApprovalPreviewReaderPor
       return null;
     }
 
-    return this.dependencies.files.read(target.readPath);
+    const content = await this.dependencies.files.read(target.readPath);
+    const currentTarget = this.dependencies.pendingApprovals.getFileTarget(
+      request.teamName,
+      request.runId,
+      request.requestId
+    );
+    if (
+      currentTarget?.authorizationGeneration !== target.authorizationGeneration ||
+      currentTarget.authorizationPath !== target.authorizationPath ||
+      currentTarget.readPath !== target.readPath
+    ) {
+      return null;
+    }
+
+    return content;
   }
 }

@@ -26,6 +26,8 @@ export interface ToolApprovalFileReaderPort {
 }
 
 export interface PendingToolApprovalFileTarget {
+  /** Opaque generation of the active approval and its workspace binding. */
+  authorizationGeneration: string;
   /** Exact path string carried by the authorized tool request. */
   authorizationPath: string;
   /** Absolute path resolved from the owning run's project directory. */

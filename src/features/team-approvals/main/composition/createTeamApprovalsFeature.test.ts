@@ -27,7 +27,11 @@ describe('createTeamApprovalsFeature', () => {
       this: TeamToolApprovalCompatibilityApi
     ) {
       expect(this).toBe(api);
-      return { authorizationPath: 'approved.txt', readPath: approvedPath };
+      return {
+        authorizationGeneration: 'approval-generation-1',
+        authorizationPath: 'approved.txt',
+        readPath: approvedPath,
+      };
     });
     const api: TeamToolApprovalCompatibilityApi = {
       getPendingToolApprovalFileTarget,

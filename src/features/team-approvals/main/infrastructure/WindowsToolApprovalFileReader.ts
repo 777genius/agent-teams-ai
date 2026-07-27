@@ -58,7 +58,8 @@ namespace AgentTeams.SafePreview {
     private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
     private const int ERROR_FILE_NOT_FOUND = 2;
     private const int ERROR_PATH_NOT_FOUND = 3;
-    private const int MISSING_PATH_OPEN_ATTEMPTS = 2;
+    // Never re-open a lexical path after ENOENT; its ancestor generation may have changed.
+    private const int MISSING_PATH_OPEN_ATTEMPTS = 1;
 
     private enum FileInfoByHandleClass {
       FileAttributeTagInfo = 9

@@ -370,7 +370,7 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     teamName: string,
     runId: string,
     requestId: string
-  ): { authorizationPath: string; readPath: string } | null {
+  ): { authorizationGeneration: string; authorizationPath: string; readPath: string } | null {
     return this.toolApprovalFacade.getPendingToolApprovalFileTarget(teamName, runId, requestId);
   }
 

@@ -285,7 +285,7 @@ export interface TeamToolApprovalApi extends FeatureTeamProvisioningToolApproval
     teamName: string,
     runId: string,
     requestId: string
-  ): { authorizationPath: string; readPath: string } | null;
+  ): { authorizationGeneration: string; authorizationPath: string; readPath: string } | null;
 }
 
 export function bindTeamProvisioningStartApi(

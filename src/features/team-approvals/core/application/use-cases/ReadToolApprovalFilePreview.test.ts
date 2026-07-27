@@ -22,6 +22,7 @@ describe('ReadToolApprovalFilePreview', () => {
     const useCase = new ReadToolApprovalFilePreview({
       pendingApprovals: {
         getFileTarget: vi.fn(() => ({
+          authorizationGeneration: 'approval-generation-1',
           authorizationPath: REQUEST.filePath,
           readPath: REQUEST.filePath,
         })),
@@ -38,6 +39,7 @@ describe('ReadToolApprovalFilePreview', () => {
     const useCase = new ReadToolApprovalFilePreview({
       pendingApprovals: {
         getFileTarget: vi.fn(() => ({
+          authorizationGeneration: 'approval-generation-1',
           authorizationPath: '/workspace/safe/target.txt',
           readPath: '/workspace/safe/target.txt',
         })),
@@ -77,6 +79,7 @@ describe('ReadToolApprovalFilePreview', () => {
     const useCase = new ReadToolApprovalFilePreview({
       pendingApprovals: {
         getFileTarget: vi.fn(() => ({
+          authorizationGeneration: 'approval-generation-1',
           authorizationPath: 'src/approved.txt',
           readPath: '/workspace/project/src/approved.txt',
         })),
@@ -91,5 +94,37 @@ describe('ReadToolApprovalFilePreview', () => {
       })
     ).resolves.toMatchObject({ content: 'approved' });
     expect(files.read).toHaveBeenCalledWith('/workspace/project/src/approved.txt');
+  });
+
+  it('discards content when the approval is revoked during the filesystem read', async () => {
+    let active = true;
+    const files = {
+      read: vi.fn(async () => {
+        active = false;
+        return {
+          content: 'stale content',
+          exists: true,
+          truncated: false,
+          isBinary: false,
+        };
+      }),
+    };
+    const useCase = new ReadToolApprovalFilePreview({
+      pendingApprovals: {
+        getFileTarget: vi.fn(() =>
+          active
+            ? {
+                authorizationGeneration: 'approval-generation-1',
+                authorizationPath: REQUEST.filePath,
+                readPath: REQUEST.filePath,
+              }
+            : null
+        ),
+      },
+      files,
+    });
+
+    await expect(useCase.read(REQUEST)).resolves.toBeNull();
+    expect(files.read).toHaveBeenCalledOnce();
   });
 });

@@ -615,4 +615,44 @@ describe('NodeToolApprovalFileReader', () => {
       });
     }
   );
+
+  it.runIf(process.platform !== 'win32')(
+    'does not reopen a missing file through a replacement parent generation',
+    async () => {
+      const approvedDirectory = path.join(tempDirectory, 'missing-generation');
+      const parkedDirectory = path.join(tempDirectory, 'missing-generation-old');
+      const requestedPath = path.join(approvedDirectory, 'new-file.txt');
+      await mkdir(approvedDirectory);
+
+      const originalOpen = fs.open.bind(fs);
+      let replaced = false;
+      vi.spyOn(fs, 'open').mockImplementation(async (candidate, flags, mode) => {
+        try {
+          return await originalOpen(candidate, flags, mode);
+        } catch (error) {
+          if (
+            !replaced &&
+            path.basename(String(candidate)) === path.basename(requestedPath) &&
+            (error as NodeJS.ErrnoException).code === 'ENOENT'
+          ) {
+            replaced = true;
+            await rename(approvedDirectory, parkedDirectory);
+            await mkdir(approvedDirectory);
+            await writeFile(requestedPath, 'unapproved replacement generation');
+          }
+          throw error;
+        }
+      });
+
+      await expect(reader.read(requestedPath)).resolves.toEqual({
+        content: '',
+        exists: false,
+        truncated: false,
+        isBinary: false,
+      });
+      await expect(fs.readFile(requestedPath, 'utf8')).resolves.toBe(
+        'unapproved replacement generation'
+      );
+    }
+  );
 });

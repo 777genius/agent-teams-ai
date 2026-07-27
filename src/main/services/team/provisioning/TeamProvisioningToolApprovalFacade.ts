@@ -63,12 +63,14 @@ function getApprovalPreviewFilePath(approval: ToolApprovalRequest | undefined): 
 }
 
 interface PendingToolApprovalFileTarget {
+  authorizationGeneration: string;
   authorizationPath: string;
   readPath: string;
 }
 
 interface PendingToolApprovalFileContext {
   approval: ToolApprovalRequest;
+  authorizationGeneration: string;
   projectDirectory?: string;
 }
 
@@ -76,7 +78,7 @@ function getApprovalPreviewFileTarget(
   context: PendingToolApprovalFileContext | null
 ): PendingToolApprovalFileTarget | null {
   const authorizationPath = getApprovalPreviewFilePath(context?.approval);
-  if (authorizationPath === null) {
+  if (authorizationPath === null || context === null) {
     return null;
   }
   const previewPathPlatform = process.platform === 'win32' ? 'win32' : 'posix';
@@ -84,7 +86,11 @@ function getApprovalPreviewFileTarget(
     return null;
   }
   if (path.isAbsolute(authorizationPath)) {
-    return { authorizationPath, readPath: authorizationPath };
+    return {
+      authorizationGeneration: context.authorizationGeneration,
+      authorizationPath,
+      readPath: authorizationPath,
+    };
   }
 
   const projectDirectory = context?.projectDirectory;
@@ -97,6 +103,7 @@ function getApprovalPreviewFileTarget(
     return null;
   }
   return {
+    authorizationGeneration: context.authorizationGeneration,
     authorizationPath,
     readPath: path.resolve(projectDirectory, authorizationPath),
   };
@@ -344,6 +351,8 @@ export class TeamProvisioningToolApprovalFacade<
   private readonly toolApprovalTimeouts: TeamProvisioningToolApprovalTimeouts<TRun>;
   private readonly toolApprovalSettingsByTeam = new Map<string, ToolApprovalSettings>();
   private readonly inFlightResponses = new Set<string>();
+  private readonly approvalPreviewGenerations = new WeakMap<ToolApprovalRequest, string>();
+  private nextApprovalPreviewGeneration = 0;
   private toolApprovalEventEmitter: ((event: ToolApprovalEvent) => void) | null = null;
   private mainWindowRef: BrowserWindow | null = null;
   private readonly activeApprovalNotifications = new Map<
@@ -534,6 +543,7 @@ export class TeamProvisioningToolApprovalFacade<
     ) {
       return {
         approval: runtimeApproval,
+        authorizationGeneration: this.getApprovalPreviewGeneration(runtimeApproval),
         projectDirectory: runtimeEntry.cwd,
       };
     }
@@ -557,8 +567,19 @@ export class TeamProvisioningToolApprovalFacade<
 
     return {
       approval: runApproval,
+      authorizationGeneration: this.getApprovalPreviewGeneration(runApproval),
       projectDirectory: getRunApprovalProjectDirectory(run, runApproval),
     };
+  }
+
+  private getApprovalPreviewGeneration(approval: ToolApprovalRequest): string {
+    const existingGeneration = this.approvalPreviewGenerations.get(approval);
+    if (existingGeneration !== undefined) return existingGeneration;
+
+    this.nextApprovalPreviewGeneration += 1;
+    const generation = `approval-preview-${this.nextApprovalPreviewGeneration.toString(36)}`;
+    this.approvalPreviewGenerations.set(approval, generation);
+    return generation;
   }
 
   getMemberToolApprovalBusyStatus(

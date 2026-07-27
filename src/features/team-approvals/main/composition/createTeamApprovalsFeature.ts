@@ -21,7 +21,7 @@ export interface TeamToolApprovalCompatibilityApi {
     teamName: string,
     runId: string,
     requestId: string
-  ): { authorizationPath: string; readPath: string } | null;
+  ): { authorizationGeneration: string; authorizationPath: string; readPath: string } | null;
 }
 
 export interface TeamApprovalsFeature {

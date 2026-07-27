@@ -1075,9 +1075,10 @@ describe('TeamProvisioning API binders', () => {
         teamName: string,
         runId: string,
         requestId: string
-      ): { authorizationPath: string; readPath: string } | null {
+      ): { authorizationGeneration: string; authorizationPath: string; readPath: string } | null {
         this.previewLookup = { teamName, runId, requestId, sourceName: this.sourceName };
         return {
+          authorizationGeneration: 'approval-generation-1',
           authorizationPath: 'approved.txt',
           readPath: '/repo/approved.txt',
         };
@@ -1121,6 +1122,7 @@ describe('TeamProvisioning API binders', () => {
 
     expect(getPendingToolApprovalFilePath('team-bound', 'run-1', 'request-1')).toBe('approved.txt');
     expect(getPendingToolApprovalFileTarget('team-bound', 'run-1', 'request-1')).toEqual({
+      authorizationGeneration: 'approval-generation-1',
       authorizationPath: 'approved.txt',
       readPath: '/repo/approved.txt',
     });

@@ -122,13 +122,31 @@ describe('TeamProvisioningToolApprovalFacade', () => {
       })
     );
 
-    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview')).toEqual({
+    const firstTarget = facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview');
+    expect(firstTarget).toEqual({
+      authorizationGeneration: expect.any(String),
       authorizationPath: approvedPath,
       readPath: approvedPath,
     });
+    expect(
+      facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview')
+        ?.authorizationGeneration
+    ).toBe(firstTarget?.authorizationGeneration);
     expect(facade.getPendingToolApprovalFilePath('alpha', 'run-1', 'req-preview')).toBe(
       approvedPath
     );
+    run.pendingApprovals.set(
+      'req-preview',
+      approvalRequest({
+        requestId: 'req-preview',
+        toolName: 'Write',
+        toolInput: { file_path: approvedPath, content: 'replacement' },
+      })
+    );
+    expect(
+      facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-preview')
+        ?.authorizationGeneration
+    ).not.toBe(firstTarget?.authorizationGeneration);
     expect(
       facade.getPendingToolApprovalFileTarget('other-team', 'run-1', 'req-preview')
     ).toBeNull();
@@ -162,10 +180,13 @@ describe('TeamProvisioningToolApprovalFacade', () => {
       })
     );
 
-    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-relative')).toEqual({
-      authorizationPath: 'src/approved.txt',
-      readPath: path.join(TEST_WORKER_DIRECTORY, 'src', 'approved.txt'),
-    });
+    expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', 'req-relative')).toMatchObject(
+      {
+        authorizationGeneration: expect.any(String),
+        authorizationPath: 'src/approved.txt',
+        readPath: path.join(TEST_WORKER_DIRECTORY, 'src', 'approved.txt'),
+      }
+    );
   });
 
   it('rejects raw parent traversal before resolving a relative preview path', () => {
@@ -283,7 +304,8 @@ describe('TeamProvisioningToolApprovalFacade', () => {
         })
       );
 
-      expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', requestId)).toEqual({
+      expect(facade.getPendingToolApprovalFileTarget('alpha', 'run-1', requestId)).toMatchObject({
+        authorizationGeneration: expect.any(String),
         authorizationPath: '.env',
         readPath: path.join(TEST_PROJECT_DIRECTORY, '.env'),
       });

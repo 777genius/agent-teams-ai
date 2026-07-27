@@ -107,15 +107,13 @@ function openSymlinkSafePath(filePath: string): Promise<FileHandle> {
   throw new Error(`Safe approval preview reads are unavailable on ${process.platform}`);
 }
 
-async function openSymlinkSafePathWithMissingRetry(filePath: string): Promise<FileHandle | null> {
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      return await openSymlinkSafePath(filePath);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
+async function openSymlinkSafePathOrMissing(filePath: string): Promise<FileHandle | null> {
+  try {
+    return await openSymlinkSafePath(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    return null;
   }
-  return null;
 }
 
 function hasSameStableIdentity(openedStats: Stats, currentStats: Stats): boolean {
@@ -136,7 +134,7 @@ async function assertOpenedFileStillMatchesPath(
   filePath: string,
   openedStats: Stats
 ): Promise<void> {
-  const currentFile = await openSymlinkSafePathWithMissingRetry(filePath);
+  const currentFile = await openSymlinkSafePathOrMissing(filePath);
   if (!currentFile) throw new Error(PATH_GENERATION_CHANGED_ERROR);
 
   try {
@@ -177,7 +175,7 @@ export class NodeToolApprovalFileReader implements ToolApprovalFileReaderPort {
       }
       const resolvedPath = path.resolve(filePath);
       if (process.platform === 'win32') return this.windowsReader.read(resolvedPath);
-      const file = await openSymlinkSafePathWithMissingRetry(resolvedPath);
+      const file = await openSymlinkSafePathOrMissing(resolvedPath);
       if (!file) return { content: '', exists: false, truncated: false, isBinary: false };
 
       try {
