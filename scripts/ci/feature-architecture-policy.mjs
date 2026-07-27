@@ -335,11 +335,13 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   );
 
   const visitBindingReference = (node) => {
-    if (
-      ts.isImportDeclaration(node) ||
-      ts.isImportEqualsDeclaration(node) ||
-      ts.isExportDeclaration(node)
-    ) {
+    if (ts.isImportEqualsDeclaration(node)) {
+      if (!ts.isExternalModuleReference(node.moduleReference)) {
+        ts.forEachChild(node.moduleReference, visitBindingReference);
+      }
+      return;
+    }
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
       return;
     }
     if (

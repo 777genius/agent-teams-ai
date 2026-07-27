@@ -67,6 +67,27 @@ export function hasModifier(node, kind) {
   );
 }
 
+function isExportedNamespaceStatement(statement) {
+  return (
+    ts.isExportDeclaration(statement) ||
+    ts.isExportAssignment(statement) ||
+    hasModifier(statement, ts.SyntaxKind.ExportKeyword)
+  );
+}
+
+function isReferenceInExportedNamespaceMember(node, namespaceDeclaration) {
+  let current = node;
+  while (current && current !== namespaceDeclaration) {
+    if (current.parent && ts.isModuleBlock(current.parent)) {
+      if (!isExportedNamespaceStatement(current)) return false;
+      current = current.parent.parent;
+      continue;
+    }
+    current = current.parent;
+  }
+  return current === namespaceDeclaration;
+}
+
 export function statementBindingNames(statement) {
   if (ts.isVariableStatement(statement)) {
     return statement.declarationList.declarations.flatMap((declaration) =>
@@ -546,6 +567,11 @@ export function findPublicReferenceOwner(
       localNames = referenceOwner
         ? [referenceOwner]
         : localNames.map((localName) => publicTargetOwners.get(localName) ?? localName);
+    }
+  } else if (ts.isModuleDeclaration(current)) {
+    if (!isReferenceInExportedNamespaceMember(node, current)) return null;
+    if (current.name && ts.isIdentifier(current.name)) {
+      localNames = [current.name.text];
     }
   } else if ('name' in current && current.name && ts.isIdentifier(current.name)) {
     localNames = [current.name.text];

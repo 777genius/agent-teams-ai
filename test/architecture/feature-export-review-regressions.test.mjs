@@ -949,3 +949,41 @@ test('models logical IIFE parameter assignments without dropping possible tainte
     }
   );
 });
+
+test('tracks only exported namespace members and internal import aliases', () => {
+  withFeatureFixture(
+    {
+      'src/features/namespace-import-alias/main/index.ts': `
+        import * as infra from './infraBarrel';
+        export namespace api {
+          export import Store = infra.Store;
+        }
+      `,
+      'src/features/namespace-import-alias/main/infraBarrel.ts': `
+        export { Store } from './infrastructure/Store';
+      `,
+      'src/features/namespace-import-alias/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/namespace-private/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export namespace api {
+          const hidden = { Store };
+          export const safe = 1;
+        }
+      `,
+      'src/features/namespace-private/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/namespace-public/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export namespace api {
+          export const visible = { Store };
+        }
+      `,
+      'src/features/namespace-public/main/infrastructure/Store.ts': infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/namespace-import-alias/main/infraBarrel.ts',
+        'src/features/namespace-public/main/index.ts',
+      ]);
+    }
+  );
+});
