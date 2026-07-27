@@ -92,7 +92,7 @@
     "src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts": 1287,
     "src/main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection.ts": 945,
     "src/main/services/team/provisioning/TeamProvisioningRuntimeSnapshot.ts": 2062,
-    "src/main/services/team/provisioning/TeamProvisioningServiceComposition.ts": 843,
+    "src/main/services/team/provisioning/TeamProvisioningServiceComposition.ts": 816,
     "src/main/services/team/provisioning/TeamProvisioningStreamEvents.ts": 1212,
     "src/main/services/team/ReviewApplierService.ts": 2062,
     "src/main/services/team/ReviewDecisionStore.ts": 2556,

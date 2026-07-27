@@ -1,4 +1,4 @@
-import type { TeamAgentRuntimeSnapshot } from '@shared/types/team';
+import type { TeamAgentRuntimeSnapshot } from '../../../contracts/runtime-snapshot';
 
 export interface RuntimeSnapshotReaderPort {
   readByTeamName(teamName: string): Promise<TeamAgentRuntimeSnapshot>;

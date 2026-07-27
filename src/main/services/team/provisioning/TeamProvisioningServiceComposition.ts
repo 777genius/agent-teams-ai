@@ -518,15 +518,20 @@ export function createTeamProvisioningServiceComposition(
     );
   const applicationFeature = createTeamProvisioningApplicationFeature({
     runtimeSnapshot: {
-      snapshotSource: runtimeProjection.runtimeSnapshotFacade,
+      readByTeamName: runtimeProjection.runtimeSnapshotFacade.getTeamAgentRuntimeSnapshot.bind(
+        runtimeProjection.runtimeSnapshotFacade
+      ),
     },
     toolApproval: {
-      toolApprovalSource: toolApprovalFacade,
+      respondToToolApproval: ({ teamName, runId, requestId, allow, message }) =>
+        toolApprovalFacade.respondToToolApproval(teamName, runId, requestId, allow, message),
+      updateToolApprovalSettings: ({ teamName, settings }) =>
+        toolApprovalFacade.updateToolApprovalSettings(teamName, settings),
     },
     runtimeDelivery: {
-      deliverOpenCodeRuntimeMessage:
+      deliverRuntimeMessage:
         openCodeRuntimeControlApi.deliverOpenCodeRuntimeMessage.bind(openCodeRuntimeControlApi),
-      getOpenCodeRuntimeDeliveryStatus:
+      getRuntimeDeliveryStatus:
         runtimeDeliveryBoundary.getOpenCodeRuntimeDeliveryStatus.bind(runtimeDeliveryBoundary),
     },
   });
