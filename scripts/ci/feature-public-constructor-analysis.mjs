@@ -8,6 +8,8 @@ import {
 } from './feature-export-analysis.mjs';
 import {
   resolvedLocalObjects,
+  resolvedLocalValueContainsReference,
+  resolvedLocalValueNodes,
   resolvedStaticPropertyNames,
 } from './feature-constructor-local-value-analysis.mjs';
 import { immediateIifeInvocation } from './feature-executed-iife-analysis.mjs';
@@ -100,49 +102,41 @@ function isPublicInstanceAssignment(targetExpression, boundary) {
   return publicInstanceMemberName(boundary, target.name);
 }
 
-function containsReference(node, reference) {
-  return reference.pos >= node.pos && reference.end <= node.end;
-}
-
-function valueExpressionContainsReference(expression, reference) {
-  const value = unwrapExpression(expression);
-  if (ts.isFunctionLike(value) || !containsReference(value, reference)) return false;
-  let current = reference;
-  while (current && current !== value) {
-    if (ts.isFunctionLike(current)) return false;
-    current = current.parent;
-  }
-  return current === value;
-}
-
-function functionReturnsReference(functionNode, reference) {
-  if (!functionNode.body || !containsReference(functionNode.body, reference)) return false;
+function functionReturnsResolvedReference(functionNode, reference, boundary) {
+  if (!functionNode.body) return false;
   if (ts.isArrowFunction(functionNode) && !ts.isBlock(functionNode.body)) {
-    let current = reference;
-    while (current && current !== functionNode.body) {
-      if (ts.isFunctionLike(current)) return false;
-      current = current.parent;
+    return resolvedLocalValueContainsReference(functionNode.body, reference, boundary, {
+      captureOuter: true,
+    });
+  }
+  let returned = false;
+  const visit = (node) => {
+    if (returned || (node !== functionNode && ts.isFunctionLike(node))) return;
+    if (
+      ts.isReturnStatement(node) &&
+      node.expression &&
+      resolvedLocalValueContainsReference(node.expression, reference, boundary, {
+        captureOuter: true,
+      })
+    ) {
+      returned = true;
+      return;
     }
-    return current === functionNode.body;
-  }
-  let current = reference;
-  while (current && current !== functionNode) {
-    if (ts.isFunctionLike(current)) return false;
-    if (ts.isReturnStatement(current)) return true;
-    current = current.parent;
-  }
-  return false;
+    ts.forEachChild(node, visit);
+  };
+  visit(functionNode.body);
+  return returned;
 }
 
-function assignedPropertyContainsReference(property, reference) {
+function assignedPropertyContainsReference(property, reference, boundary) {
   if (ts.isShorthandPropertyAssignment(property)) {
-    return containsReference(property, reference);
+    return resolvedLocalValueContainsReference(property.name, reference, boundary);
   }
   if (ts.isPropertyAssignment(property)) {
-    return valueExpressionContainsReference(property.initializer, reference);
+    return resolvedLocalValueContainsReference(property.initializer, reference, boundary);
   }
   return ts.isGetAccessorDeclaration(property)
-    ? functionReturnsReference(property, reference)
+    ? functionReturnsResolvedReference(property, reference, boundary)
     : false;
 }
 
@@ -178,7 +172,7 @@ function objectReferenceStates(object, reference, boundary, visited = new Set())
       }
       continue;
     }
-    const contains = assignedPropertyContainsReference(property, reference);
+    const contains = assignedPropertyContainsReference(property, reference, boundary);
     const names = assignedPropertyNames(property, boundary);
     if (names.length === 0 && contains && property.name) {
       for (const state of states) state.set('*', true);
@@ -218,34 +212,36 @@ function objectAssignReferenceMember(expressions, reference, boundary) {
   return null;
 }
 
-function descriptorGetterContainsReference(property, reference) {
+function descriptorGetterContainsReference(property, reference, boundary) {
   if (ts.isMethodDeclaration(property)) {
-    return functionReturnsReference(property, reference);
+    return functionReturnsResolvedReference(property, reference, boundary);
   }
   if (!ts.isPropertyAssignment(property)) return false;
-  const getter = unwrapExpression(property.initializer);
-  return ts.isFunctionLike(getter)
-    ? functionReturnsReference(getter, reference)
-    : valueExpressionContainsReference(getter, reference);
+  return resolvedLocalValueNodes(property.initializer, boundary).some((node) => {
+    const getter = unwrapExpression(node);
+    return ts.isFunctionLike(getter)
+      ? functionReturnsResolvedReference(getter, reference, boundary)
+      : resolvedLocalValueContainsReference(getter, reference, boundary);
+  });
 }
 
 function descriptorContainsReference(expression, reference, boundary) {
   return resolvedLocalObjects(expression, boundary).some((descriptor) =>
     descriptor.properties.some((property) => {
       const name = property.name && propertyNameText(property.name);
-      if (
-        name === 'value' &&
-        ts.isPropertyAssignment(property) &&
-        valueExpressionContainsReference(property.initializer, reference)
-      ) {
-        return true;
-      }
-      return name === 'get' && descriptorGetterContainsReference(property, reference);
+      const value =
+        ts.isPropertyAssignment(property) && name === 'value'
+          ? property.initializer
+          : ts.isShorthandPropertyAssignment(property) && name === 'value'
+            ? property.name
+            : null;
+      if (value && resolvedLocalValueContainsReference(value, reference, boundary)) return true;
+      return name === 'get' && descriptorGetterContainsReference(property, reference, boundary);
     })
   );
 }
 
-function callTargetsBoundaryInstance(call, boundary) {
+function executesOnBoundaryInstance(call, boundary) {
   let owner = null;
   for (let current = call.parent; current && current !== boundary; current = current.parent) {
     if (
@@ -390,7 +386,7 @@ function publicInstanceMutatorMember(call, reference, boundary) {
     !method ||
     !isGlobalMutatorReceiver(method.receiver) ||
     call.arguments[0]?.kind !== ts.SyntaxKind.ThisKeyword ||
-    !callTargetsBoundaryInstance(call, boundary)
+    !executesOnBoundaryInstance(call, boundary)
   ) {
     return null;
   }
@@ -399,7 +395,7 @@ function publicInstanceMutatorMember(call, reference, boundary) {
   } else if (
     method.name === 'set' &&
     call.arguments[2] &&
-    valueExpressionContainsReference(call.arguments[2], reference)
+    resolvedLocalValueContainsReference(call.arguments[2], reference, boundary)
   ) {
     const name = unwrapExpression(call.arguments[1]);
     return publicInstanceMemberName(
@@ -434,10 +430,22 @@ function publicInstanceMutatorMember(call, reference, boundary) {
   return null;
 }
 
-function publicInstanceMutatorSelection(reference, boundary) {
+function publicInstanceWriteSelection(reference, boundary) {
   let selection = null;
   const visit = (node) => {
     if (selection || (node !== boundary && ts.isClassLike(node))) return;
+    if (
+      ts.isBinaryExpression(node) &&
+      ts.isAssignmentOperator(node.operatorToken.kind) &&
+      executesOnBoundaryInstance(node, boundary) &&
+      resolvedLocalValueContainsReference(node.right, reference, boundary)
+    ) {
+      const localMember = isPublicInstanceAssignment(node.left, boundary);
+      if (localMember !== null) {
+        selection = { getterOnly: false, localMember };
+        return;
+      }
+    }
     if (ts.isCallExpression(node)) {
       const localMember = publicInstanceMutatorMember(node, reference, boundary);
       if (localMember !== null) {
@@ -452,8 +460,8 @@ function publicInstanceMutatorSelection(reference, boundary) {
 }
 
 export function publicConstructorSelection(reference, boundary) {
-  const mutatorSelection = publicInstanceMutatorSelection(reference, boundary);
-  if (mutatorSelection) return mutatorSelection;
+  const writeSelection = publicInstanceWriteSelection(reference, boundary);
+  if (writeSelection) return writeSelection;
 
   let current = reference;
   let returned = false;
@@ -464,7 +472,8 @@ export function publicConstructorSelection(reference, boundary) {
     if (
       ts.isBinaryExpression(parent) &&
       ts.isAssignmentOperator(parent.operatorToken.kind) &&
-      parent.right === current
+      parent.right === current &&
+      executesOnBoundaryInstance(parent, boundary)
     ) {
       const localMember = isPublicInstanceAssignment(parent.left, boundary);
       if (localMember !== null) {

@@ -146,14 +146,26 @@ function applyLogicalWrite(states, write, classify) {
   return uniqueWrites(next);
 }
 
-function reachingWrites(writes, useNode, boundary, classify) {
-  const usePath = executionPath(useNode, boundary);
+function reachingWrites(writes, useNode, boundary, classify, captureOuter, declaration) {
+  let useOwner = executionOwner(useNode, boundary);
+  let usePath = executionPath(useNode, boundary);
+  let usePosition = useNode.getStart();
+  if (captureOuter && declaration.owner !== useOwner) {
+    useOwner = declaration.owner;
+    usePath = {
+      ...usePath,
+      constraints: new Map(
+        [...usePath.constraints].filter(
+          ([control]) => executionOwner(control, boundary) === declaration.owner
+        )
+      ),
+    };
+    usePosition = declaration.scope.end;
+  }
   if (!usePath.reachable) return [];
   const candidates = writes
     .filter(
-      (write) =>
-        write.position <= useNode.getStart() &&
-        executionOwner(write.node, boundary) === executionOwner(useNode, boundary)
+      (write) => write.position <= usePosition && executionOwner(write.node, boundary) === useOwner
     )
     .map((write) => ({ ...write, path: executionPath(write.node, boundary) }))
     .filter(
@@ -208,6 +220,7 @@ function collectLocalBindingModel(boundary) {
     else seed.expression = initializer;
     const declaration = {
       key: declarationKey,
+      owner: executionOwner(node, boundary),
       position: node.getStart(),
       scope,
       writes: [seed],
@@ -285,9 +298,11 @@ function collectLocalBindingModel(boundary) {
   visitAssignments(boundary);
 
   const model = {
-    resolveAll(name, useNode, classify) {
+    resolveAll(name, useNode, classify, captureOuter) {
       const declaration = declarationAt(name, useNode.getStart());
-      return declaration ? reachingWrites(declaration.writes, useNode, boundary, classify) : [];
+      return declaration
+        ? reachingWrites(declaration.writes, useNode, boundary, classify, captureOuter, declaration)
+        : [];
     },
   };
   localBindingModels.set(boundary, model);
@@ -379,17 +394,24 @@ function applyFallback(primary, fallback, selected, resolve) {
   };
 }
 
-function resolvedWrite(write, boundary, visited, memo, selected = []) {
+function resolvedWrite(write, boundary, visited, memo, selected = [], captureOuter = false) {
   if (write.seed === 'unknown') return { missing: false, nodes: [], unknown: true };
   if (write.seed === 'undefined') return { missing: true, nodes: [], unknown: false };
   const resolve = (expression, selection = []) =>
-    resolvedLocalValues(expression, boundary, selection, visited, memo);
+    resolvedLocalValues(expression, boundary, selection, visited, memo, captureOuter);
   const primary = resolve(write.expression, [...write.selected, ...selected]);
   return applyFallback(primary, write.fallback, selected, resolve);
 }
 
-function logicalWriteDecision(state, operator, boundary, visited, memo) {
-  const resolution = resolvedWrite(state, boundary, new Set(visited).add(state.key), memo);
+function logicalWriteDecision(state, operator, boundary, visited, memo, captureOuter) {
+  const resolution = resolvedWrite(
+    state,
+    boundary,
+    new Set(visited).add(state.key),
+    memo,
+    [],
+    captureOuter
+  );
   const outcomes = [];
   if (resolution.missing) {
     outcomes.push(operator !== ts.SyntaxKind.AmpersandAmpersandEqualsToken);
@@ -414,35 +436,64 @@ function resolvedLocalValues(
   boundary,
   selected = [],
   visited = new Set(),
-  memo = new Map()
+  memo = new Map(),
+  captureOuter = false
 ) {
   const current = expression && unwrapExpression(expression);
   if (!current) return { missing: true, nodes: [], unknown: false };
-  const memoKey = `${current.pos}:${current.end}:${selectionKey(selected)}`;
+  const memoKey = `${current.pos}:${current.end}:${selectionKey(selected)}:${captureOuter}`;
   if (memo.has(memoKey)) return memo.get(memoKey);
   memo.set(memoKey, { missing: false, nodes: [], unknown: true });
 
   const bindings = collectLocalBindingModel(boundary);
   const resolve = (value, remaining = []) =>
-    resolvedLocalValues(value, boundary, remaining, visited, memo);
-  const resolveKey = (value) => resolvedStaticPropertyNames(value, boundary, visited, memo);
+    resolvedLocalValues(value, boundary, remaining, visited, memo, captureOuter);
+  const resolveKey = (value) =>
+    resolvedStaticPropertyNames(value, boundary, visited, memo, captureOuter);
   const literalSelection = resolveLiteralSelection(current, selected, resolve, resolveKey);
   let resolution;
   if (literalSelection !== null) {
     resolution = literalSelection;
   } else if (ts.isConditionalExpression(current)) {
     resolution = mergeResolution(
-      resolvedLocalValues(current.whenTrue, boundary, selected, new Set(visited), memo),
-      resolvedLocalValues(current.whenFalse, boundary, selected, new Set(visited), memo)
+      resolvedLocalValues(
+        current.whenTrue,
+        boundary,
+        selected,
+        new Set(visited),
+        memo,
+        captureOuter
+      ),
+      resolvedLocalValues(
+        current.whenFalse,
+        boundary,
+        selected,
+        new Set(visited),
+        memo,
+        captureOuter
+      )
     );
   } else if (ts.isIdentifier(current)) {
-    const writes = bindings.resolveAll(current.text, current, (state, operator) =>
-      logicalWriteDecision(state, operator, boundary, visited, memo)
+    const writes = bindings.resolveAll(
+      current.text,
+      current,
+      (state, operator) =>
+        logicalWriteDecision(state, operator, boundary, visited, memo, captureOuter),
+      captureOuter
     );
     const values = [];
     for (const write of writes) {
       if (visited.has(write.key)) continue;
-      values.push(resolvedWrite(write, boundary, new Set(visited).add(write.key), memo, selected));
+      values.push(
+        resolvedWrite(
+          write,
+          boundary,
+          new Set(visited).add(write.key),
+          memo,
+          selected,
+          captureOuter
+        )
+      );
     }
     resolution =
       values.length > 0
@@ -458,7 +509,8 @@ function resolvedLocalValues(
         boundary,
         [access.name, ...selected],
         visited,
-        memo
+        memo,
+        captureOuter
       );
     } else {
       resolution =
@@ -476,19 +528,44 @@ export function resolvedStaticPropertyNames(
   expression,
   boundary,
   visited = new Set(),
-  memo = new Map()
+  memo = new Map(),
+  captureOuter = false
 ) {
   return [
     ...new Set(
-      resolvedLocalValues(expression, boundary, [], visited, memo)
+      resolvedLocalValues(expression, boundary, [], visited, memo, captureOuter)
         .nodes.map(staticPropertyName)
         .filter((name) => name !== null)
     ),
   ];
 }
 
+export function resolvedLocalValueNodes(expression, boundary, options = {}) {
+  return resolvedLocalValues(
+    expression,
+    boundary,
+    [],
+    new Set(),
+    new Map(),
+    options.captureOuter ?? false
+  ).nodes;
+}
+
+export function resolvedLocalValueContainsReference(expression, reference, boundary, options = {}) {
+  return resolvedLocalValueNodes(expression, boundary, options).some((node) => {
+    const value = unwrapExpression(node);
+    if (ts.isFunctionLike(value) || !containsReference(value, reference)) return false;
+    let current = reference;
+    while (current && current !== value) {
+      if (ts.isFunctionLike(current)) return false;
+      current = current.parent;
+    }
+    return current === value;
+  });
+}
+
 export function resolvedLocalObjects(expression, boundary) {
-  return resolvedLocalValues(expression, boundary).nodes.filter((node) =>
+  return resolvedLocalValueNodes(expression, boundary).filter((node) =>
     ts.isObjectLiteralExpression(node)
   );
 }

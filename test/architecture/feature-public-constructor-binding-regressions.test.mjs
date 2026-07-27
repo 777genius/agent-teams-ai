@@ -307,3 +307,144 @@ test('honors statically resolved computed object-rest exclusions', () => {
     }
   );
 });
+
+test('propagates constructor-local scalar aliases into every public instance sink', () => {
+  withFeatureFixture(
+    constructorFixtures([
+      ['scalar-direct-danger', 'const value = Store; this.Store = value;'],
+      ['scalar-assign-danger', 'const value = Store; Object.assign(this, { Store: value });'],
+      [
+        'scalar-define-property-danger',
+        "const value = Store; Object.defineProperty(this, 'Store', { value });",
+      ],
+      [
+        'scalar-define-properties-danger',
+        'const value = Store; Object.defineProperties(this, { Store: { value } });',
+      ],
+      ['scalar-reflect-set-danger', "const value = Store; Reflect.set(this, 'Store', value);"],
+      [
+        'scalar-getter-danger',
+        "const value = Store; Object.defineProperty(this, 'Store', { get() { return value; } });",
+      ],
+    ]),
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/scalar-assign-danger/main/index.ts',
+        'src/features/scalar-define-properties-danger/main/index.ts',
+        'src/features/scalar-define-property-danger/main/index.ts',
+        'src/features/scalar-direct-danger/main/index.ts',
+        'src/features/scalar-getter-danger/main/index.ts',
+        'src/features/scalar-reflect-set-danger/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('uses the latest path-sensitive scalar value for every public instance sink', () => {
+  withFeatureFixture(
+    constructorFixtures([
+      ['scalar-direct-rebound-safe', 'let value = Store; value = null; this.Store = value;'],
+      [
+        'scalar-assign-rebound-safe',
+        'let value = Store; value = null; Object.assign(this, { Store: value });',
+      ],
+      [
+        'scalar-define-property-rebound-safe',
+        "let value = Store; value = null; Object.defineProperty(this, 'Store', { value });",
+      ],
+      [
+        'scalar-define-properties-rebound-safe',
+        'let value = Store; value = null; Object.defineProperties(this, { Store: { value } });',
+      ],
+      [
+        'scalar-reflect-set-rebound-safe',
+        "let value = Store; value = null; Reflect.set(this, 'Store', value);",
+      ],
+      [
+        'scalar-getter-rebound-safe',
+        "let value = Store; Object.defineProperty(this, 'Store', { get: () => value }); value = null;",
+      ],
+      [
+        'scalar-getter-correlated-rebound-safe',
+        "let value = Store; if (Math.random()) { Object.defineProperty(this, 'Store', { get: () => value }); value = null; } else { value = Store; }",
+      ],
+      [
+        'scalar-alias-chain-danger',
+        'const value = Store; let alias = null; alias = value; this.Store = alias;',
+      ],
+      [
+        'scalar-conditional-rebind-danger',
+        'let value = Store; if (Math.random()) value = null; this.Store = value;',
+      ],
+      [
+        'scalar-all-branches-rebound-safe',
+        'let value = Store; if (Math.random()) value = null; else value = null; this.Store = value;',
+      ],
+      [
+        'scalar-logical-assignment-danger',
+        'let value = null; value ??= Store; Reflect.set(this, "Store", value);',
+      ],
+      [
+        'scalar-logical-assignment-safe',
+        'let value = null; value &&= Store; Reflect.set(this, "Store", value);',
+      ],
+    ]),
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/scalar-alias-chain-danger/main/index.ts',
+        'src/features/scalar-conditional-rebind-danger/main/index.ts',
+        'src/features/scalar-logical-assignment-danger/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('keeps scalar aliases private across shadow, callback, getter, and target boundaries', () => {
+  withFeatureFixture(
+    constructorFixtures([
+      [
+        'scalar-shadowed-safe',
+        'const value = Store; { const value = null; this.Store = value; } void value;',
+      ],
+      [
+        'scalar-deferred-direct-safe',
+        'const value = Store; const install = () => { this.Store = value; }; void install;',
+      ],
+      [
+        'scalar-deferred-mutator-safe',
+        'const value = Store; const install = () => Object.assign(this, { Store: value }); void install;',
+      ],
+      [
+        'scalar-getter-unreturned-safe',
+        "const value = Store; Object.defineProperty(this, 'Store', { get() { void value; return null; } });",
+      ],
+      [
+        'scalar-direct-other-instance-safe',
+        'const value = Store; const other = new Api(); other.Store = value;',
+      ],
+      [
+        'scalar-assign-other-target-safe',
+        'const value = Store; Object.assign({}, { Store: value });',
+      ],
+      [
+        'scalar-define-property-other-target-safe',
+        "const value = Store; Object.defineProperty({}, 'Store', { value });",
+      ],
+      [
+        'scalar-define-properties-other-target-safe',
+        'const value = Store; Object.defineProperties({}, { Store: { value } });',
+      ],
+      [
+        'scalar-reflect-set-other-target-safe',
+        "const value = Store; Reflect.set({}, 'Store', value);",
+      ],
+      [
+        'scalar-getter-other-target-safe',
+        "const value = Store; Object.defineProperty({}, 'Store', { get: () => value });",
+      ],
+    ]),
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), []);
+    }
+  );
+});
