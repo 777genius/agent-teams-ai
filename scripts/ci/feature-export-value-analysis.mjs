@@ -8,6 +8,8 @@ import {
 } from './feature-export-ast.mjs';
 import { IDENTITY_WRAPPERS } from './feature-identity-wrappers.mjs';
 
+const ARRAY_CALLBACK_RESULT_METHODS = new Set(['flatMap', 'map']);
+
 function callable(node) {
   const current = node && unwrapExpression(node);
   return current && (ts.isArrowFunction(current) || ts.isFunctionExpression(current))
@@ -116,6 +118,112 @@ function returnedMemberForReference(callback, reference) {
     current = parent;
   }
   return { localMember: undefined };
+}
+
+function unwrapCallback(expression) {
+  let current = expression;
+  while (
+    current.parent &&
+    (ts.isParenthesizedExpression(current.parent) ||
+      ts.isAsExpression(current.parent) ||
+      ts.isTypeAssertionExpression(current.parent) ||
+      ts.isNonNullExpression(current.parent) ||
+      ts.isSatisfiesExpression(current.parent)) &&
+    current.parent.expression === current
+  ) {
+    current = current.parent;
+  }
+  return current;
+}
+
+function definiteArrayCallbackResultCall(callback) {
+  if (ts.isFunctionExpression(callback) && callback.asteriskToken) return null;
+  const wrappedCallback = unwrapCallback(callback);
+  const call = wrappedCallback.parent;
+  if (
+    !ts.isCallExpression(call) ||
+    call.arguments[0] !== wrappedCallback ||
+    call.questionDotToken
+  ) {
+    return null;
+  }
+  const method = memberAccess(call.expression);
+  const receiver = method?.receiver && unwrapExpression(method.receiver);
+  if (
+    !method ||
+    !ARRAY_CALLBACK_RESULT_METHODS.has(method.name) ||
+    !receiver ||
+    !ts.isArrayLiteralExpression(receiver) ||
+    !receiver.elements.some(
+      (element) => !ts.isOmittedExpression(element) && !ts.isSpreadElement(element)
+    )
+  ) {
+    return null;
+  }
+  return call;
+}
+
+function transparentPublishedValueParent(current, parent) {
+  if (
+    ((ts.isParenthesizedExpression(parent) ||
+      ts.isAsExpression(parent) ||
+      ts.isTypeAssertionExpression(parent) ||
+      ts.isNonNullExpression(parent) ||
+      ts.isSatisfiesExpression(parent) ||
+      ts.isAwaitExpression(parent)) &&
+      parent.expression === current) ||
+    ((ts.isArrayLiteralExpression(parent) || ts.isObjectLiteralExpression(parent)) &&
+      containsReference(parent, current)) ||
+    ((ts.isPropertyAssignment(parent) || ts.isSpreadAssignment(parent)) &&
+      containsReference(parent, current)) ||
+    (ts.isSpreadElement(parent) && parent.expression === current) ||
+    (ts.isReturnStatement(parent) && parent.expression === current) ||
+    (ts.isConditionalExpression(parent) &&
+      (parent.whenTrue === current || parent.whenFalse === current))
+  ) {
+    return parent;
+  }
+  if (!ts.isCallExpression(parent) || !parent.arguments.includes(current)) return null;
+  const method = memberAccess(parent.expression);
+  return method &&
+    ts.isIdentifier(method.receiver) &&
+    method.receiver.text === 'Object' &&
+    IDENTITY_WRAPPERS.has(method.name) &&
+    (method.name === 'assign' || parent.arguments[0] === current)
+    ? parent
+    : null;
+}
+
+function callbackResultSelection(expression, reference) {
+  const publishedExpression = expression && unwrapExpression(expression);
+  if (!publishedExpression || !containsReference(publishedExpression, reference)) return null;
+
+  let current = reference;
+  let selection = null;
+  while (current && current !== publishedExpression) {
+    if (ts.isArrowFunction(current) || ts.isFunctionExpression(current)) {
+      const returnedSelection = returnedMemberForReference(current, reference);
+      const resultCall = returnedSelection && definiteArrayCallbackResultCall(current);
+      if (!resultCall) return null;
+      selection ??= returnedSelection;
+      current = resultCall;
+      continue;
+    }
+    const parent = current.parent;
+    if (!parent) return null;
+    if (ts.isFunctionLike(parent) && parent.body === current) {
+      current = parent;
+      continue;
+    }
+    if (current !== reference && ts.isExpression(current)) {
+      const publishedParent = transparentPublishedValueParent(current, parent);
+      if (!publishedParent) return null;
+      current = publishedParent;
+      continue;
+    }
+    current = parent;
+  }
+  return current === publishedExpression ? selection : null;
 }
 
 export function iifeSelectionForReference(initializer, reference) {
@@ -299,6 +407,8 @@ export function variableValueSelection(declaration, reference, exported) {
   }
   const iifeSelection = iifeSelectionForReference(declaration.initializer, reference);
   if (iifeSelection) return iifeSelection;
+  const resultSelection = callbackResultSelection(declaration.initializer, reference);
+  if (resultSelection) return resultSelection;
   const initializer = unwrapExpression(declaration.initializer);
   return !exported && ts.isFunctionLike(initializer)
     ? { getterOnly: true, localMember: undefined }
@@ -310,6 +420,8 @@ export function expressionGetterSelection(expression, reference) {
   if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
     const localMember = objectGetterMember(current.right, reference);
     if (localMember !== null) return { localMember };
+    const resultSelection = callbackResultSelection(current.right, reference);
+    if (resultSelection) return resultSelection;
     const initializer = unwrapExpression(current.right);
     return ts.isFunctionLike(initializer) && containsReference(initializer, reference)
       ? { getterOnly: true, localMember: undefined }
@@ -347,5 +459,8 @@ export function expressionGetterSelection(expression, reference) {
 export function exportAssignmentValueSelection(expression, reference) {
   const localMember = objectGetterMember(expression, reference);
   if (localMember !== null) return { localMember };
-  return iifeSelectionForReference(expression, reference);
+  return (
+    iifeSelectionForReference(expression, reference) ??
+    callbackResultSelection(expression, reference)
+  );
 }

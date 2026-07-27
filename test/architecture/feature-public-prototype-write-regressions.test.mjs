@@ -194,3 +194,184 @@ test('ignores stale, overwritten, and conditional prototype writes', () => {
     }
   );
 });
+
+test('traces live prototype writes through transitive class heritage and constructor aliases', () => {
+  withFeatureFixture(
+    {
+      'src/features/inherited-prototype/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Root {}
+        class Base extends Root {}
+        class Api extends Base {}
+        Root.prototype.Store = Store;
+        const Alias = Api;
+        export const api = new Alias();
+      `,
+      'src/features/inherited-prototype/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      assert.deepEqual(
+        implementationViolations(root).map(({ importedName, specifier }) => ({
+          importedName,
+          specifier,
+        })),
+        [
+          {
+            importedName: 'Store',
+            specifier: './infrastructure/Store',
+          },
+        ]
+      );
+    }
+  );
+});
+
+test('traces named, inline, and getter prototype objects', () => {
+  withFeatureFixture(
+    {
+      'src/features/named-prototype/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {}
+        const proto = {};
+        Object.setPrototypeOf(Api.prototype, proto);
+        proto.Store = Store;
+        export const api = new Api();
+      `,
+      'src/features/named-prototype/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/inline-prototype/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {}
+        Object.setPrototypeOf(Api.prototype, { Store });
+        export const api = new Api();
+      `,
+      'src/features/inline-prototype/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/getter-chain/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {}
+        Object.setPrototypeOf(Api.prototype, {
+          get Store() {
+            return Store;
+          },
+        });
+        export const api = new Api();
+      `,
+      'src/features/getter-chain/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      assert.deepEqual(
+        implementationViolations(root).map(({ importedName, specifier }) => ({
+          importedName,
+          specifier,
+        })),
+        [
+          {
+            importedName: 'Store',
+            specifier: './infrastructure/Store',
+          },
+          {
+            importedName: 'Store',
+            specifier: './infrastructure/Store',
+          },
+          {
+            importedName: 'Store',
+            specifier: './infrastructure/Store',
+          },
+        ]
+      );
+    }
+  );
+});
+
+test('honors prototype replacement, own-member shadowing, and delete fallback', () => {
+  withFeatureFixture(
+    {
+      'src/features/replaced-chain/main/index.ts': `
+        import { Detached } from './infrastructure/Detached';
+        class Base {}
+        class Api extends Base {}
+        Base.prototype.Detached = Detached;
+        Object.setPrototypeOf(Api.prototype, {});
+        export const api = new Api();
+      `,
+      'src/features/replaced-chain/main/infrastructure/Detached.ts':
+        'export class Detached {}',
+      'src/features/shadowed-chain/main/index.ts': `
+        import { Hidden } from './infrastructure/Hidden';
+        class Base {}
+        class Api extends Base {}
+        Base.prototype.Hidden = Hidden;
+        Api.prototype.Hidden = undefined;
+        export const api = new Api();
+      `,
+      'src/features/shadowed-chain/main/infrastructure/Hidden.ts':
+        'export class Hidden {}',
+      'src/features/delete-fallback/main/index.ts': `
+        import { Revealed } from './infrastructure/Revealed';
+        class Base {}
+        class Api extends Base {}
+        Base.prototype.Revealed = Revealed;
+        Api.prototype.Revealed = undefined;
+        delete Api.prototype.Revealed;
+        export const api = new Api();
+      `,
+      'src/features/delete-fallback/main/infrastructure/Revealed.ts':
+        'export class Revealed {}',
+    },
+    (root) => {
+      assert.deepEqual(
+        implementationViolations(root).map(({ importedName, specifier }) => ({
+          importedName,
+          specifier,
+        })),
+        [
+          {
+            importedName: 'Revealed',
+            specifier: './infrastructure/Revealed',
+          },
+        ]
+      );
+    }
+  );
+});
+
+test('keeps constructor prototype changes, conditional relations, and deferred members private', () => {
+  withFeatureFixture(
+    {
+      'src/features/constructor-prototype/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {}
+        Object.setPrototypeOf(Api, { Store });
+        export const api = new Api();
+      `,
+      'src/features/constructor-prototype/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/conditional-chain/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const enabled: boolean;
+        class Api {}
+        if (enabled) Object.setPrototypeOf(Api.prototype, { Store });
+        export const api = new Api();
+      `,
+      'src/features/conditional-chain/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/deferred-chain/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Api {}
+        Object.setPrototypeOf(Api.prototype, {
+          refresh: () => Store.bootstrap(),
+        });
+        export const api = new Api();
+      `,
+      'src/features/deferred-chain/main/infrastructure/Store.ts': `
+        export const Store = { bootstrap: () => undefined };
+      `,
+    },
+    (root) => {
+      assert.deepEqual(implementationViolations(root), []);
+    }
+  );
+});

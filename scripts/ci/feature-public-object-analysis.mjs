@@ -201,6 +201,7 @@ export function collectTopLevelPropertyWrites(sourceFile, bindingModel, identity
       path,
       position,
       referenceRanges: stateResult.referenceRanges,
+      removed,
     });
     writes.set(sourceKey, rootWrites);
   };
@@ -732,36 +733,4 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
     }
   }
   return propertyWrites;
-}
-
-export function collectPrototypeRelations(sourceFile, bindingModel) {
-  const relations = [];
-  const addRelation = (node, ownerKey) => {
-    if (!ts.isCallExpression(node) || !ownerKey) return;
-    const method = memberAccess(node.expression);
-    if (
-      !method ||
-      !ts.isIdentifier(method.receiver) ||
-      method.receiver.text !== 'Object' ||
-      !isUnshadowedGlobalValueReference(method.receiver) ||
-      method.name !== 'setPrototypeOf'
-    ) {
-      return;
-    }
-    const prototype = node.arguments[1] && accessPath(node.arguments[1]);
-    const sourceKey =
-      prototype && bindingModel.bindingAt(prototype.root, node.getStart(sourceFile));
-    if (sourceKey) {
-      relations.push({ ownerKey, path: prototype.path, sourceKey });
-    }
-  };
-  for (const [ownerKey, binding] of bindingModel.versions) {
-    addRelation(unwrapExpression(binding.initializer), ownerKey);
-  }
-  visitDefiniteTopLevelExpressions(sourceFile, (node) => {
-    if (!ts.isCallExpression(node) || !node.arguments[0]) return;
-    const target = accessPath(node.arguments[0]);
-    addRelation(node, target && bindingModel.bindingAt(target.root, node.getStart(sourceFile)));
-  });
-  return relations;
 }

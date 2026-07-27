@@ -25,6 +25,7 @@ import {
   isCommonJsRequireCall,
   isLexicallyShadowedValueReference,
 } from './feature-lexical-binding-analysis.mjs';
+import { resolvedLocalValueNodes } from './feature-constructor-local-value-analysis.mjs';
 import { resolveProjectTarget } from './feature-module-resolution.mjs';
 import { analyzePublicClassSurfaces } from './feature-public-class-surface-analysis.mjs';
 import { collectPublicApiImplementationExports } from './feature-public-export-policy.mjs';
@@ -34,6 +35,7 @@ import {
   collectProductionSourceFiles,
   isFeaturePublicEntrypoint,
 } from './feature-source-files.mjs';
+import { staticStringValue } from './feature-static-value-analysis.mjs';
 
 export const FEATURE_ARCHITECTURE_RULES = Object.freeze({
   crossFeaturePublicEntrypoint: 'cross-feature-public-entrypoint',
@@ -86,15 +88,18 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
   const localDependencyReferences = new Map();
   const localReferenceNames = new Map();
   const reexports = [];
+  const resolveStaticBinding = (identifier) =>
+    resolvedLocalValueNodes(identifier, sourceFile, { captureOuter: true });
 
   const addEdge = (node, moduleSpecifier, kind, isTypeOnly = false) => {
-    if (!ts.isStringLiteralLike(moduleSpecifier)) return null;
+    const specifier = staticStringValue(moduleSpecifier, resolveStaticBinding);
+    if (specifier === null) return null;
     const edge = {
       isTypeOnly,
       kind,
       line: lineForNode(sourceFile, node),
       source: sourcePath,
-      specifier: moduleSpecifier.text,
+      specifier,
     };
     edges.push(edge);
     return edge;
@@ -204,6 +209,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     constructorExports: publicTargets.constructorExports,
     exportedLocalNames,
     propertyWrites: publicTargets.propertyWrites,
+    prototypeRelations: publicTargets.prototypeRelations,
     sourceFile,
   });
   const publicReferenceOwner = (node) =>

@@ -24,7 +24,6 @@ import {
 import {
   accessPath,
   collectCopyRelations,
-  collectPrototypeRelations,
   collectTopLevelPropertyWrites,
   copiedPropertyPath,
   latestPropertyWriteBefore,
@@ -35,6 +34,7 @@ import {
   staticOverwrittenPaths,
   staticOverwrittenPropertyPaths,
 } from './feature-public-object-analysis.mjs';
+import { collectPrototypeRelations } from './feature-public-prototype-relation-analysis.mjs';
 import {
   IDENTITY_WRAPPERS,
   constructedClassReferences,
@@ -384,7 +384,35 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames, snapshotLoc
   const { edges: identityEdges, identityAliases, memberRelations } = identityAnalysis;
   materializeIdentityAliasWrites(propertyWrites, identityAliases);
   materializeCopyRelationWrites(propertyWrites, allCopyRelations);
-  memberRelations.push(...collectPrototypeRelations(sourceFile, bindingModel));
+  const aliasNeighbors = new Map();
+  for (const [left, right] of identityAliases) {
+    const leftNeighbors = aliasNeighbors.get(left) ?? new Set();
+    const rightNeighbors = aliasNeighbors.get(right) ?? new Set();
+    leftNeighbors.add(right);
+    rightNeighbors.add(left);
+    aliasNeighbors.set(left, leftNeighbors);
+    aliasNeighbors.set(right, rightNeighbors);
+  }
+  const equivalentOwnerKeys = (ownerKey) => {
+    const keys = new Set([ownerKey]);
+    const queue = [ownerKey];
+    while (queue.length > 0) {
+      for (const neighbor of aliasNeighbors.get(queue.shift()) ?? []) {
+        if (keys.has(neighbor)) continue;
+        keys.add(neighbor);
+        queue.push(neighbor);
+      }
+    }
+    return keys;
+  };
+  const prototypeRelations = collectPrototypeRelations(sourceFile, bindingModel).flatMap(
+    (relation) =>
+      [...equivalentOwnerKeys(relation.ownerKey)].map((ownerKey) => ({
+        ...relation,
+        ownerKey,
+      }))
+  );
+  memberRelations.push(...prototypeRelations.filter(({ sourceKey }) => sourceKey));
   const stableExportOwners = [...exportedLocalNames]
     .map((name) => [bindingModel.bindingAt(name, Number.POSITIVE_INFINITY), name])
     .filter(([key]) => key !== null);
@@ -735,5 +763,6 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames, snapshotLoc
     localOwners: localOwnersAt(Number.POSITIVE_INFINITY),
     localOwnersAt,
     propertyWrites,
+    prototypeRelations,
   };
 }

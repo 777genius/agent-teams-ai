@@ -150,7 +150,7 @@ test('recognizes logical CommonJS export mutations', () => {
   );
 });
 
-test('traces exported IIFE return values without promoting ordinary callbacks', () => {
+test('traces exported IIFE and synchronous array callback return values', () => {
   withFeatureFixture(
     {
       'src/features/iife-object/main/index.ts': `
@@ -179,6 +179,7 @@ test('traces exported IIFE return values without promoting ordinary callbacks', 
     },
     (root) => {
       assert.deepEqual(implementationSources(root), [
+        'src/features/callback-safe/main/index.ts',
         'src/features/iife-direct/main/index.ts',
         'src/features/iife-object/main/index.ts',
       ]);

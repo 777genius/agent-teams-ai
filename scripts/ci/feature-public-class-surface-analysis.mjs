@@ -5,7 +5,10 @@ import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.m
 import { isPotentiallyExecutedAtTopLevel } from './feature-executed-iife-analysis.mjs';
 import { publicStaticClassSelection } from './feature-public-class-analysis.mjs';
 import { publicConstructorSelection } from './feature-public-constructor-analysis.mjs';
-import { propertyWriteWasOverwrittenBefore } from './feature-public-object-analysis.mjs';
+import {
+  propertyWriteAvailableAt,
+  propertyWriteWasOverwrittenBefore,
+} from './feature-public-object-analysis.mjs';
 
 const DIRECT_CLASS_SURFACE = Object.freeze({
   constructorSignature: true,
@@ -276,6 +279,7 @@ function publicPrototypeWriteSelection(
   reference,
   propertyWrites,
   publicConstructorBindingNames,
+  prototypeRelations,
   sourceFile
 ) {
   const referenceIsInGetter = (() => {
@@ -307,28 +311,99 @@ function publicPrototypeWriteSelection(
     return null;
   }
   const position = reference.getStart();
+  const pathEquals = (left, right) =>
+    left.length === right.length && left.every((segment, index) => segment === right[index]);
+  const pathStartsWith = (path, prefix) =>
+    prefix.every((segment, index) => path[index] === segment);
+  const writeContainsReference = (write) =>
+    write.referenceRanges?.some((range) => range.start <= position && position <= range.end);
+  const liveWrites = (writes, prefix) =>
+    writes.filter(
+      (write) =>
+        pathStartsWith(write.path, prefix) &&
+        !propertyWriteWasOverwrittenBefore(writes, write, Number.POSITIVE_INFINITY)
+    );
+  const targetWasReplacedAfter = (relation) =>
+    (propertyWrites.get(relation.ownerKey) ?? []).some(
+      (write) =>
+        propertyWriteAvailableAt(write) > relation.position &&
+        write.path.length <= relation.targetPath.length &&
+        pathStartsWith(relation.targetPath, write.path)
+    );
+  const latestRelation = (ownerKey, targetPath) =>
+    prototypeRelations
+      .filter(
+        (relation) =>
+          relation.ownerKey === ownerKey && pathEquals(relation.targetPath, targetPath)
+      )
+      .sort(
+        (left, right) =>
+          right.position - left.position || right.sequence - left.sequence
+      )
+      .find((relation) => !targetWasReplacedAfter(relation));
+
   for (const [bindingKey, localName] of publicConstructorBindingNames) {
-    for (const write of propertyWrites.get(bindingKey) ?? []) {
-      if (
-        write.path[0] !== 'prototype' ||
-        !write.referenceRanges?.some(
-          (range) => range.start <= position && position <= range.end
-        ) ||
-        propertyWriteWasOverwrittenBefore(
-          propertyWrites.get(bindingKey) ?? [],
-          write,
-          Number.POSITIVE_INFINITY
-        )
-      ) {
-        continue;
+    const blockedMembers = new Set();
+    const visited = new Set();
+    let surface = {
+      inlineWrites: null,
+      path: ['prototype'],
+      sourceKey: bindingKey,
+    };
+    while (surface) {
+      const surfaceKey = surface.inlineWrites
+        ? `inline:${surface.inlineWrites[0]?.position ?? 'empty'}`
+        : `${surface.sourceKey}:${JSON.stringify(surface.path)}`;
+      if (visited.has(surfaceKey)) break;
+      visited.add(surfaceKey);
+
+      const allWrites = surface.inlineWrites ?? propertyWrites.get(surface.sourceKey) ?? [];
+      const currentWrites = liveWrites(allWrites, surface.path);
+      for (const write of currentWrites) {
+        const relativePath = write.path.slice(surface.path.length);
+        const member = relativePath[0] ?? '*';
+        if (
+          !write.removed &&
+          !blockedMembers.has(member) &&
+          writeContainsReference(write)
+        ) {
+          return {
+            localName,
+            selection: {
+              getterOnly: false,
+              localMember: member,
+            },
+          };
+        }
       }
-      return {
-        localName,
-        selection: {
-          getterOnly: false,
-          localMember: write.path[1] ?? '*',
-        },
-      };
+
+      for (const write of currentWrites) {
+        const relativePath = write.path.slice(surface.path.length);
+        if (
+          !write.removed &&
+          relativePath.length === 1 &&
+          relativePath[0] !== '*'
+        ) {
+          blockedMembers.add(relativePath[0]);
+        }
+      }
+
+      if (surface.inlineWrites) break;
+      const relation = latestRelation(surface.sourceKey, surface.path);
+      if (!relation) break;
+      surface = relation.sourceKey
+        ? {
+            inlineWrites: null,
+            path: relation.path,
+            sourceKey: relation.sourceKey,
+          }
+        : relation.inlineWrites?.length
+          ? {
+              inlineWrites: relation.inlineWrites,
+              path: [],
+              sourceKey: null,
+            }
+          : null;
     }
   }
   return null;
@@ -338,6 +413,7 @@ export function analyzePublicClassSurfaces({
   constructorExports,
   exportedLocalNames,
   propertyWrites,
+  prototypeRelations = [],
   sourceFile,
 }) {
   const eventsByName = collectClassBindingEvents(sourceFile);
@@ -425,6 +501,7 @@ export function analyzePublicClassSurfaces({
         reference,
         propertyWrites,
         publicConstructorBindingNames,
+        prototypeRelations,
         sourceFile
       );
       if (prototypeSelection) {

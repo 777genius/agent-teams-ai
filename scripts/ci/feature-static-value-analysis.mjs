@@ -133,8 +133,28 @@ function isUnshadowedGlobalReference(reference) {
   );
 }
 
-function staticPrimitiveValue(expression) {
+function staticPrimitiveValue(expression, resolveIdentifier, resolving = new Set()) {
   const current = unwrapExpression(expression);
+  if (ts.isIdentifier(current) && resolveIdentifier) {
+    const resolvedValues = resolveIdentifier(current) ?? [];
+    const candidates = Array.isArray(resolvedValues) ? resolvedValues : [resolvedValues];
+    let resolvedValue = UNKNOWN_STATIC_VALUE;
+    for (const resolved of candidates) {
+      if (!resolved || resolving.has(resolved)) return UNKNOWN_STATIC_VALUE;
+      const candidateValue = staticPrimitiveValue(
+        resolved,
+        resolveIdentifier,
+        new Set(resolving).add(resolved)
+      );
+      if (candidateValue === UNKNOWN_STATIC_VALUE) return UNKNOWN_STATIC_VALUE;
+      if (resolvedValue === UNKNOWN_STATIC_VALUE) {
+        resolvedValue = candidateValue;
+      } else if (!Object.is(resolvedValue, candidateValue)) {
+        return UNKNOWN_STATIC_VALUE;
+      }
+    }
+    if (resolvedValue !== UNKNOWN_STATIC_VALUE) return resolvedValue;
+  }
   if (current.kind === ts.SyntaxKind.TrueKeyword) return true;
   if (current.kind === ts.SyntaxKind.FalseKeyword) return false;
   if (current.kind === ts.SyntaxKind.NullKeyword) return null;
@@ -156,12 +176,35 @@ function staticPrimitiveValue(expression) {
     }
   }
   if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.CommaToken) {
-    return staticPrimitiveValue(current.right);
+    return staticPrimitiveValue(current.right, resolveIdentifier, resolving);
   }
   if (ts.isVoidExpression(current)) return undefined;
   if (ts.isStringLiteralLike(current)) return current.text;
   if (ts.isNumericLiteral(current)) return Number(current.text);
   if (ts.isBigIntLiteral(current)) return BigInt(current.text.slice(0, -1));
+  if (
+    ts.isBinaryExpression(current) &&
+    current.operatorToken.kind === ts.SyntaxKind.PlusToken
+  ) {
+    const left = staticPrimitiveValue(current.left, resolveIdentifier, resolving);
+    const right = staticPrimitiveValue(current.right, resolveIdentifier, resolving);
+    return typeof left === 'string' && typeof right === 'string'
+      ? left + right
+      : UNKNOWN_STATIC_VALUE;
+  }
+  if (ts.isTemplateExpression(current)) {
+    let value = current.head.text;
+    for (const span of current.templateSpans) {
+      const expressionValue = staticPrimitiveValue(
+        span.expression,
+        resolveIdentifier,
+        resolving
+      );
+      if (expressionValue === UNKNOWN_STATIC_VALUE) return UNKNOWN_STATIC_VALUE;
+      value += String(expressionValue) + span.literal.text;
+    }
+    return value;
+  }
   if (ts.isPrefixUnaryExpression(current)) {
     if (current.operator === ts.SyntaxKind.ExclamationToken) {
       const operand = staticTruthiness(current.operand);
@@ -221,4 +264,9 @@ export function staticPropertyKey(name) {
   if (!ts.isComputedPropertyName(name)) return propertyNameText(name);
   const value = staticPrimitiveValue(name.expression);
   return value === UNKNOWN_STATIC_VALUE ? null : String(value);
+}
+
+export function staticStringValue(expression, resolveIdentifier) {
+  const value = staticPrimitiveValue(expression, resolveIdentifier);
+  return typeof value === 'string' ? value : null;
 }
