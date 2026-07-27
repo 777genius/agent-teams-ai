@@ -76,6 +76,10 @@ function isMissing(error: unknown): boolean {
   return code === 'ENOENT' || code === 'ENOTDIR';
 }
 
+function isJournalEntryMissing(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException).code === 'ENOENT';
+}
+
 function syncDirectoryDurablySync(directoryPath: string): void {
   let descriptor: number | null = null;
   try {
@@ -150,6 +154,16 @@ interface TaskAttachmentCompletionProofHooks {
   afterRestoreDetached?(): void;
 }
 
+interface TaskAttachmentJournalListingPort {
+  list(directoryPath: string): Promise<fs.Dirent[]>;
+  listSync(directoryPath: string): fs.Dirent[];
+}
+
+const nodeTaskAttachmentJournalListing: TaskAttachmentJournalListingPort = {
+  list: (directoryPath) => fs.promises.readdir(directoryPath, { withFileTypes: true }),
+  listSync: (directoryPath) => fs.readdirSync(directoryPath, { withFileTypes: true }),
+};
+
 export class TaskAttachmentDeletionJournal {
   constructor(
     private readonly cleanupPublishedTempLinks: (
@@ -158,7 +172,8 @@ export class TaskAttachmentDeletionJournal {
     private readonly afterRemovalDurable: (
       intent: TaskAttachmentDeletionIntent
     ) => Promise<void> = async () => undefined,
-    private readonly completionProofHooks: TaskAttachmentCompletionProofHooks = {}
+    private readonly completionProofHooks: TaskAttachmentCompletionProofHooks = {},
+    private readonly journalListing: TaskAttachmentJournalListingPort = nodeTaskAttachmentJournalListing
   ) {}
 
   async prepare(
@@ -286,9 +301,9 @@ export class TaskAttachmentDeletionJournal {
     for (let attempt = 0; attempt < 4; attempt += 1) {
       let entries: fs.Dirent[];
       try {
-        entries = await fs.promises.readdir(directory, { withFileTypes: true });
+        entries = await this.journalListing.list(directory);
       } catch (error) {
-        if (isMissing(error)) return [];
+        if (isJournalEntryMissing(error)) return [];
         throw error;
       }
       try {
@@ -300,7 +315,7 @@ export class TaskAttachmentDeletionJournal {
         }
         return intents;
       } catch (error) {
-        if (!isMissing(error) || attempt === 3) throw error;
+        if (!isJournalEntryMissing(error) || attempt === 3) throw error;
       }
     }
     return [];
@@ -311,9 +326,9 @@ export class TaskAttachmentDeletionJournal {
     for (let attempt = 0; attempt < 4; attempt += 1) {
       let entries: fs.Dirent[];
       try {
-        entries = fs.readdirSync(directory, { withFileTypes: true });
+        entries = this.journalListing.listSync(directory);
       } catch (error) {
-        if (isMissing(error)) return [];
+        if (isJournalEntryMissing(error)) return [];
         throw error;
       }
       try {
@@ -325,7 +340,7 @@ export class TaskAttachmentDeletionJournal {
           );
         });
       } catch (error) {
-        if (!isMissing(error) || attempt === 3) throw error;
+        if (!isJournalEntryMissing(error) || attempt === 3) throw error;
       }
     }
     return [];

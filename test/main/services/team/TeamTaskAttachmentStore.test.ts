@@ -1,6 +1,5 @@
 import { execFile } from 'node:child_process';
-import fsSync from 'node:fs';
-import { promises as fsPromises } from 'node:fs';
+import fsSync, { type Dirent, promises as fsPromises } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
@@ -1037,8 +1036,7 @@ describe('TeamTaskAttachmentStore', () => {
       'dGVzdA=='
     );
     await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
-    const journal = new TaskAttachmentDeletionJournal();
-    const [intent] = await journal.loadAll();
+    const [intent] = await new TaskAttachmentDeletionJournal().loadAll();
     const journalDirectory = join(root, 'task-attachment-deletion-intents');
     const canonicalPath = join(journalDirectory, `${intent!.transactionId}.json`);
     const detachedPath = join(journalDirectory, `${intent!.transactionId}.completion.json`);
@@ -1046,27 +1044,32 @@ describe('TeamTaskAttachmentStore', () => {
     const staleAsyncEntries = await fsPromises.readdir(journalDirectory, {
       withFileTypes: true,
     });
+    let staleSyncEntries: Dirent[] | null = null;
+    let useStaleAsyncListing = true;
+    let useStaleSyncListing = true;
+    const journal = new TaskAttachmentDeletionJournal(undefined, undefined, undefined, {
+      async list(directoryPath) {
+        if (useStaleAsyncListing) {
+          useStaleAsyncListing = false;
+          return staleAsyncEntries;
+        }
+        return fsPromises.readdir(directoryPath, { withFileTypes: true });
+      },
+      listSync(directoryPath) {
+        if (useStaleSyncListing && staleSyncEntries) {
+          useStaleSyncListing = false;
+          return staleSyncEntries;
+        }
+        return fsSync.readdirSync(directoryPath, { withFileTypes: true });
+      },
+    });
     await fsPromises.rename(canonicalPath, detachedPath);
-    const asyncListing = vi
-      .spyOn(fsPromises, 'readdir')
-      .mockResolvedValueOnce(staleAsyncEntries as never);
-    try {
-      expect(await journal.loadAll()).toHaveLength(1);
-    } finally {
-      asyncListing.mockRestore();
-    }
+    expect(await journal.loadAll()).toHaveLength(1);
 
     await fsPromises.rename(detachedPath, canonicalPath);
-    const staleSyncEntries = fsSync.readdirSync(journalDirectory, { withFileTypes: true });
+    staleSyncEntries = fsSync.readdirSync(journalDirectory, { withFileTypes: true });
     fsSync.renameSync(canonicalPath, detachedPath);
-    const syncListing = vi
-      .spyOn(fsSync, 'readdirSync')
-      .mockReturnValueOnce(staleSyncEntries as never);
-    try {
-      expect(journal.loadAllSync()).toHaveLength(1);
-    } finally {
-      syncListing.mockRestore();
-    }
+    expect(journal.loadAllSync()).toHaveLength(1);
 
     const [recovered] = await journal.loadAll();
     await journal.complete(recovered!);
@@ -1359,6 +1362,39 @@ describe('TeamTaskAttachmentStore', () => {
     await expect(
       store.getTaskAttachmentBackupExclusions('my-team', async () => false)
     ).rejects.toThrow('Corrupt task attachment deletion intent');
+  });
+
+  it('propagates a non-directory journal root from async and sync listings', async () => {
+    const { root } = await createRealStore();
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    await writeFile(journalDirectory, 'not a directory', 'utf8');
+    const journal = new TaskAttachmentDeletionJournal();
+
+    await expect(journal.loadAll()).rejects.toMatchObject({ code: 'ENOTDIR' });
+    let syncFailure: unknown;
+    try {
+      journal.loadAllSync();
+    } catch (error) {
+      syncFailure = error;
+    }
+    expect(syncFailure).toMatchObject({ code: 'ENOTDIR' });
+  });
+
+  it('propagates non-missing I/O failures from async and sync journal listings', async () => {
+    await createRealStore();
+    const asyncFailure = Object.assign(new Error('journal read failed'), { code: 'EIO' });
+    const syncFailure = Object.assign(new Error('journal sync read failed'), { code: 'EIO' });
+    const journal = new TaskAttachmentDeletionJournal(undefined, undefined, undefined, {
+      async list() {
+        throw asyncFailure;
+      },
+      listSync() {
+        throw syncFailure;
+      },
+    });
+
+    await expect(journal.loadAll()).rejects.toBe(asyncFailure);
+    expect(() => journal.loadAllSync()).toThrow(syncFailure);
   });
 
   it('allows exactly one winner across independent processes saving the same attachment ID', async () => {
