@@ -344,7 +344,7 @@ describe('NodeToolApprovalFileReader', () => {
     };
     const windowsAwareReader = new NodeToolApprovalFileReader(windowsReader);
     vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
-    const textPath = path.join(tempDirectory, 'windows-preview.txt');
+    const textPath = String.raw`C:\approved\windows-preview.txt`;
 
     await expect(windowsAwareReader.read(textPath)).resolves.toEqual({
       content: 'approved Windows content',
@@ -367,6 +367,10 @@ describe('NodeToolApprovalFileReader', () => {
       'C:\\approved\\.. .\\secret.txt',
       'C:/approved/.. /secret.txt',
       'C:\\approved/.. .\\secret.txt',
+      String.raw`\current-drive-rooted.txt`,
+      '/current-drive-rooted.txt',
+      String.raw`\\server-only`,
+      '///not-a-unc-path.txt',
     ];
     for (const blockedPath of blockedPaths) {
       await expect(windowsAwareReader.read(blockedPath)).resolves.toMatchObject({

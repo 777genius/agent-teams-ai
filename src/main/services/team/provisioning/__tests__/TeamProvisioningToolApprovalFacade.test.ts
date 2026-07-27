@@ -216,6 +216,9 @@ describe('TeamProvisioningToolApprovalFacade', () => {
         String.raw`C:..\approved.txt`,
         'C:../approved.txt',
         String.raw`D:approved.txt`,
+        String.raw`\current-drive-rooted.txt`,
+        '/current-drive-rooted.txt',
+        '///not-a-unc-path.txt',
       ].entries()) {
         const requestId = `req-drive-relative-${index}`;
         run.pendingApprovals.set(
