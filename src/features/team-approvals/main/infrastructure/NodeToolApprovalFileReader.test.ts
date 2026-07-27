@@ -587,7 +587,7 @@ describe('NodeToolApprovalFileReader', () => {
   );
 
   it.runIf(process.platform === 'linux')(
-    'revalidates the lexical parent before reporting a missing final file',
+    'does not reopen a missing file after the lexical parent is replaced',
     async () => {
       const approvedDirectory = path.join(tempDirectory, 'missing-approved');
       const parkedDirectory = path.join(tempDirectory, 'missing-approved-parked');
@@ -608,10 +608,11 @@ describe('NodeToolApprovalFileReader', () => {
         return originalOpen(candidate, flags, mode);
       });
 
-      await expect(reader.read(requestedPath)).resolves.toMatchObject({
+      await expect(reader.read(requestedPath)).resolves.toEqual({
         content: '',
-        exists: true,
-        error: expect.any(String),
+        exists: false,
+        truncated: false,
+        isBinary: false,
       });
     }
   );
