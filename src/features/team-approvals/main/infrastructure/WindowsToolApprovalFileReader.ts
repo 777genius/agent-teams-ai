@@ -12,6 +12,8 @@ import type { ToolApprovalFileContent } from '@shared/types';
 const WINDOWS_HELPER_TIMEOUT_MS = 15_000;
 const WINDOWS_HELPER_MAX_OUTPUT_BYTES = Math.ceil((TOOL_APPROVAL_MAX_FILE_SIZE * 4) / 3) + 16_384;
 const WINDOWS_PREVIEW_PATH_PLACEHOLDER = '__AGENT_TEAMS_APPROVAL_PREVIEW_PATH_BASE64__';
+const WINDOWS_PREVIEW_STDIN_BOOTSTRAP =
+  '$script = [Console]::In.ReadToEnd(); & ([ScriptBlock]::Create($script))';
 
 export interface WindowsPreviewHelperResult {
   exists: boolean;
@@ -392,9 +394,12 @@ export class PowerShellWindowsPreviewHelper implements WindowsPreviewHelperPort 
         WINDOWS_PREVIEW_PATH_PLACEHOLDER,
         encodedPath
       );
+      const encodedBootstrap = Buffer.from(WINDOWS_PREVIEW_STDIN_BOOTSTRAP, 'utf16le').toString(
+        'base64'
+      );
       const child = spawn(
         resolveWindowsPowerShellPath(),
-        ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', '-'],
+        ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', encodedBootstrap],
         { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }
       );
       const stdoutChunks: Buffer[] = [];
