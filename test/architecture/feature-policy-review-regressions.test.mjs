@@ -40,6 +40,61 @@ test('rejects value dependencies on runtime packages from core domain by default
   ]);
 });
 
+test('rejects ambient NodeJS types while respecting local type bindings', () => {
+  const violations = withFeatureFixture(
+    {
+      'src/features/ambient-node/core/application/useCase.ts': `
+        export type Platform = NodeJS.Platform;
+      `,
+      'src/features/ambient-node/core/domain/model.js': `
+        /** @typedef {NodeJS.ProcessEnv} Environment */
+        export const marker = true;
+      `,
+      'src/features/ambient-node/core/domain/policy.ts': `
+        export type Environment = NodeJS.ProcessEnv;
+        export type Timer = NodeJS.Timeout;
+      `,
+      'src/features/local-node/core/domain/imported.ts': `
+        import type { LocalTypes as NodeJS } from './localTypes';
+        export type Environment = NodeJS.ProcessEnv;
+      `,
+      'src/features/local-node/core/domain/localTypes.ts': `
+        export namespace LocalTypes {
+          export interface ProcessEnv {}
+        }
+      `,
+      'src/features/local-node/core/domain/namespace.ts': `
+        namespace NodeJS {
+          export interface ProcessEnv {}
+        }
+        export type Environment = NodeJS.ProcessEnv;
+      `,
+    },
+    (root) => collectFeatureArchitectureViolations(root).violations
+  );
+
+  assert.deepEqual(
+    violations.map(({ rule, source, specifier }) => ({ rule, source, specifier })),
+    [
+      {
+        rule: FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies,
+        source: 'src/features/ambient-node/core/application/useCase.ts',
+        specifier: 'node:types',
+      },
+      {
+        rule: domainRule,
+        source: 'src/features/ambient-node/core/domain/model.js',
+        specifier: 'node:types',
+      },
+      {
+        rule: domainRule,
+        source: 'src/features/ambient-node/core/domain/policy.ts',
+        specifier: 'node:types',
+      },
+    ]
+  );
+});
+
 test('resolves imported values only when they are not lexically shadowed', () => {
   const violations = violationsFor(
     {

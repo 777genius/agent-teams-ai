@@ -2,6 +2,7 @@ import ts from 'typescript';
 
 import {
   isIdentifierReference,
+  isShadowedTypeReference,
   memberAccess,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
@@ -11,8 +12,10 @@ import {
 } from './feature-constructor-local-value-analysis.mjs';
 import { executedInvocationParameterInitializer } from './feature-executed-iife-analysis.mjs';
 import { isUnshadowedGlobalValueReference } from './feature-lexical-binding-analysis.mjs';
+import { forEachChildIncludingJsDoc } from './feature-module-syntax-analysis.mjs';
 
 const SAFE_LANGUAGE_LIB_PATTERN = /^(?:es(?:5|6|20\d{2}|next)(?:\..+)?|decorators(?:\.legacy)?)$/i;
+const AMBIENT_TYPE_NAMESPACE_SPECIFIERS = new Map([['NodeJS', 'node:types']]);
 const RUNTIME_GLOBAL_SPECIFIERS = new Map([
   ['Buffer', 'node:buffer'],
   ['EventSource', 'browser:event-source'],
@@ -94,6 +97,81 @@ function jsxRuntimeEdges(sourceFile, sourcePath) {
       specifier: `${importSource}/jsx-runtime`,
     },
   ];
+}
+
+function importDeclaresLocalName(statement, name) {
+  if (ts.isImportEqualsDeclaration(statement)) return statement.name.text === name;
+  if (!ts.isImportDeclaration(statement)) return false;
+  const clause = statement.importClause;
+  if (!clause) return false;
+  if (clause.name?.text === name) return true;
+  const bindings = clause.namedBindings;
+  if (bindings && ts.isNamespaceImport(bindings)) return bindings.name.text === name;
+  return (
+    bindings &&
+    ts.isNamedImports(bindings) &&
+    bindings.elements.some((element) => element.name.text === name)
+  );
+}
+
+function statementDeclaresTypeName(statement, name) {
+  if (importDeclaresLocalName(statement, name)) return true;
+  const isTypeDeclaration =
+    ts.isInterfaceDeclaration(statement) ||
+    ts.isTypeAliasDeclaration(statement) ||
+    ts.isClassDeclaration(statement) ||
+    ts.isEnumDeclaration(statement) ||
+    ts.isModuleDeclaration(statement);
+  return isTypeDeclaration && ts.isIdentifier(statement.name) && statement.name.text === name;
+}
+
+function scopeStatements(node) {
+  if (ts.isSourceFile(node) || ts.isBlock(node) || ts.isModuleBlock(node)) {
+    return node.statements;
+  }
+  return ts.isCaseBlock(node)
+    ? node.clauses.flatMap((clause) => clause.statements)
+    : [];
+}
+
+function isShadowedAmbientTypeReference(reference, sourceFile) {
+  if (isShadowedTypeReference(reference, sourceFile)) return true;
+  let current = reference.parent;
+  while (current) {
+    if (
+      scopeStatements(current).some((statement) =>
+        statementDeclaresTypeName(statement, reference.text)
+      )
+    ) {
+      return true;
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
+function ambientTypeNamespaceEdges(sourceFile, sourcePath) {
+  const edges = [];
+  const visit = (node) => {
+    if (
+      ts.isIdentifier(node) &&
+      AMBIENT_TYPE_NAMESPACE_SPECIFIERS.has(node.text) &&
+      ts.isQualifiedName(node.parent) &&
+      node.parent.left === node &&
+      !isShadowedAmbientTypeReference(node, sourceFile)
+    ) {
+      edges.push({
+        isTypeOnly: true,
+        kind: 'reference',
+        line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
+        source: sourcePath,
+        specifier: AMBIENT_TYPE_NAMESPACE_SPECIFIERS.get(node.text),
+      });
+    }
+    forEachChildIncludingJsDoc(node, visit);
+  };
+  visit(sourceFile);
+  return edges;
 }
 
 function runtimeGlobalEdges(sourceFile, sourcePath) {
@@ -236,6 +314,7 @@ export function collectAmbientDependencyEdges(sourceFile, sourcePath) {
   return [
     ...referenceDirectiveEdges(sourceFile, sourcePath),
     ...jsxRuntimeEdges(sourceFile, sourcePath),
+    ...ambientTypeNamespaceEdges(sourceFile, sourcePath),
     ...runtimeGlobalEdges(sourceFile, sourcePath),
   ];
 }
