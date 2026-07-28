@@ -1,8 +1,17 @@
 import ts from 'typescript';
 
-import { hasModifier, propertyNameText, unwrapExpression } from './feature-export-analysis.mjs';
+import {
+  hasModifier,
+  isIdentifierReference,
+  propertyNameText,
+  unwrapExpression,
+} from './feature-export-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import { isPotentiallyExecutedAtTopLevel } from './feature-executed-iife-analysis.mjs';
+import {
+  executionPath,
+  resolvedLocalValueNodes,
+} from './feature-constructor-local-value-analysis.mjs';
 import { publicStaticClassSelection } from './feature-public-class-analysis.mjs';
 import { publicConstructorSelection } from './feature-public-constructor-analysis.mjs';
 import {
@@ -24,6 +33,10 @@ const INSTANCE_CLASS_SURFACE = Object.freeze({
   static: false,
   typeParameters: false,
 });
+const UNREACHABLE_CLASS_SELECTION = Object.freeze({
+  getterOnly: true,
+  localMember: '*',
+});
 
 function classBoundaries(expression) {
   const current = unwrapExpression(expression);
@@ -42,7 +55,15 @@ function assignmentToIdentifier(node) {
   return ts.isIdentifier(target) ? target.text : null;
 }
 
-function collectClassBindingEvents(sourceFile) {
+function classBindingContainerStatements(container) {
+  return ts.isCaseBlock(container)
+    ? container.clauses.flatMap((clause) => [...clause.statements])
+    : [...container.statements];
+}
+
+function collectClassBindingEvents(container) {
+  const sourceFile = container.getSourceFile();
+  const statements = classBindingContainerStatements(container);
   const eventsByName = new Map();
   const definiteAssignments = new Set();
   let sequence = 0;
@@ -52,11 +73,13 @@ function collectClassBindingEvents(sourceFile) {
     eventsByName.set(name, events);
   };
 
-  visitDefiniteTopLevelExpressions(sourceFile, (node) => {
-    if (assignmentToIdentifier(node)) definiteAssignments.add(node);
-  });
+  if (!ts.isCaseBlock(container)) {
+    visitDefiniteTopLevelExpressions(container, (node) => {
+      if (assignmentToIdentifier(node)) definiteAssignments.add(node);
+    });
+  }
 
-  for (const statement of sourceFile.statements) {
+  for (const statement of statements) {
     if (ts.isClassDeclaration(statement) && statement.name) {
       addEvent(statement.name.text, [statement], statement.getStart(sourceFile));
       continue;
@@ -80,7 +103,7 @@ function collectClassBindingEvents(sourceFile) {
     }
     ts.forEachChild(node, visitAssignment);
   };
-  for (const statement of sourceFile.statements) {
+  for (const statement of statements) {
     if (!ts.isClassDeclaration(statement) && !ts.isVariableStatement(statement)) {
       visitAssignment(statement);
     }
@@ -221,6 +244,167 @@ function publicClassSelection(reference, boundary, surface) {
   return publicSignatureSelection(reference, boundary, surface);
 }
 
+const scopedClassBindingEvents = new WeakMap();
+
+function nearestClassBindingContainer(node) {
+  let current = node.parent;
+  while (current) {
+    if (ts.isBlock(current) || ts.isCaseBlock(current) || ts.isSourceFile(current)) return current;
+    current = current.parent;
+  }
+  return null;
+}
+
+function classBindingForBoundary(boundary) {
+  const container = nearestClassBindingContainer(boundary);
+  if (!container) return null;
+  let eventsByName = scopedClassBindingEvents.get(container);
+  if (!eventsByName) {
+    eventsByName = collectClassBindingEvents(container);
+    scopedClassBindingEvents.set(container, eventsByName);
+  }
+  for (const [name, events] of eventsByName) {
+    if (events.some(({ boundaries }) => boundaries.includes(boundary))) {
+      return { container, eventsByName, name };
+    }
+  }
+  return null;
+}
+
+function enclosingPublicClassSelection(reference, surfaces) {
+  let current = reference.parent;
+  while (current) {
+    if (ts.isClassLike(current)) {
+      const surface = surfaces.get(current);
+      if (surface) {
+        const selection = publicClassSelection(reference, current, surface);
+        if (selection) return selection;
+      }
+    }
+    current = current.parent;
+  }
+  return null;
+}
+
+function containerDeclaresBinding(container, name) {
+  return classBindingContainerStatements(container).some((statement) => {
+    if (ts.isVariableStatement(statement)) {
+      return statement.declarationList.declarations.some((declaration) =>
+        bindingNames(declaration.name).includes(name)
+      );
+    }
+    return (
+      (ts.isClassDeclaration(statement) ||
+        ts.isFunctionDeclaration(statement) ||
+        ts.isEnumDeclaration(statement)) &&
+      statement.name?.text === name
+    );
+  });
+}
+
+const MAX_NESTED_CLASS_EXPOSURE_STEPS = 256;
+const nestedBoundarySelections = new WeakMap();
+
+function classBoundaryReaches(candidate, target, visiting, budget) {
+  if (candidate === target) return true;
+  if (visiting.has(candidate) || budget.remaining-- <= 0) return false;
+  const binding = classBindingForBoundary(candidate);
+  return (
+    binding !== null &&
+    [...localBaseBoundaries(candidate, binding.eventsByName)].some((base) =>
+      classBoundaryReaches(base, target, new Set(visiting).add(candidate), budget)
+    )
+  );
+}
+
+function resolvedValueReachesBoundary(expression, target, binding, budget) {
+  return resolvedLocalValueNodes(expression, binding.container, { captureOuter: true }).some(
+    (node) => {
+      const value = unwrapExpression(node);
+      const candidates = ts.isClassLike(value)
+        ? [value]
+        : ts.isIdentifier(value)
+          ? [...classBindingsAt(binding.eventsByName, value.text, value.getStart())]
+          : [];
+      return candidates.some((candidate) =>
+        classBoundaryReaches(candidate, target, new Set(), budget)
+      );
+    }
+  );
+}
+
+function nestedBoundarySelection(boundary, surfaces, visiting, budget) {
+  if (nestedBoundarySelections.has(boundary)) return nestedBoundarySelections.get(boundary);
+  if (visiting.has(boundary) || budget.remaining-- <= 0) return undefined;
+  const binding = classBindingForBoundary(boundary);
+  if (!binding) return null;
+  let exposedSelection = null;
+  const visit = (node) => {
+    if (exposedSelection || budget.remaining-- <= 0 || node === boundary) return;
+    if (
+      ts.isIdentifier(node) &&
+      node.text === binding.name &&
+      isIdentifierReference(node) &&
+      classBindingsAt(binding.eventsByName, binding.name, node.getStart()).has(boundary)
+    ) {
+      const referenceContainer = nearestClassBindingContainer(node);
+      if (
+        referenceContainer !== binding.container &&
+        referenceContainer &&
+        containerDeclaresBinding(referenceContainer, binding.name)
+      ) {
+        return;
+      }
+      exposedSelection = enclosingPublicClassSelection(node, surfaces);
+      if (!exposedSelection) {
+        const derived = nearestClassBoundary(node);
+        if (
+          derived &&
+          derived !== boundary &&
+          derived.heritageClauses?.some((clause) => containsReference(clause, node))
+        ) {
+          exposedSelection = nestedBoundarySelection(
+            derived,
+            surfaces,
+            new Set(visiting).add(boundary),
+            budget
+          );
+        }
+      }
+      return;
+    }
+    if (ts.isCallExpression(node)) {
+      const selection = enclosingPublicClassSelection(node, surfaces);
+      if (selection && resolvedValueReachesBoundary(node, boundary, binding, budget)) {
+        exposedSelection = selection;
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(binding.container);
+  const selection = exposedSelection ?? (budget.remaining < 0 ? undefined : null);
+  if (selection !== undefined) nestedBoundarySelections.set(boundary, selection);
+  return selection;
+}
+
+function nestedClassSelection(reference, boundary, surfaces) {
+  const directSelection = enclosingPublicClassSelection(reference, surfaces);
+  if (directSelection) return { selection: directSelection };
+  let hasPublicAncestor = false;
+  for (let current = boundary.parent; current; current = current.parent) {
+    if (ts.isClassLike(current) && surfaces.has(current)) {
+      hasPublicAncestor = true;
+      break;
+    }
+  }
+  if (!hasPublicAncestor) return undefined;
+  const selection = nestedBoundarySelection(boundary, surfaces, new Set(), {
+    remaining: MAX_NESTED_CLASS_EXPOSURE_STEPS,
+  });
+  return selection === undefined ? undefined : { selection };
+}
+
 function directAnonymousClasses(sourceFile) {
   const boundaries = [];
   for (const statement of sourceFile.statements) {
@@ -333,13 +517,9 @@ function publicPrototypeWriteSelection(
   const latestRelation = (ownerKey, targetPath) =>
     prototypeRelations
       .filter(
-        (relation) =>
-          relation.ownerKey === ownerKey && pathEquals(relation.targetPath, targetPath)
+        (relation) => relation.ownerKey === ownerKey && pathEquals(relation.targetPath, targetPath)
       )
-      .sort(
-        (left, right) =>
-          right.position - left.position || right.sequence - left.sequence
-      )
+      .sort((left, right) => right.position - left.position || right.sequence - left.sequence)
       .find((relation) => !targetWasReplacedAfter(relation));
 
   for (const [bindingKey, localName] of publicConstructorBindingNames) {
@@ -362,11 +542,7 @@ function publicPrototypeWriteSelection(
       for (const write of currentWrites) {
         const relativePath = write.path.slice(surface.path.length);
         const member = relativePath[0] ?? '*';
-        if (
-          !write.removed &&
-          !blockedMembers.has(member) &&
-          writeContainsReference(write)
-        ) {
+        if (!write.removed && !blockedMembers.has(member) && writeContainsReference(write)) {
           return {
             localName,
             selection: {
@@ -379,11 +555,7 @@ function publicPrototypeWriteSelection(
 
       for (const write of currentWrites) {
         const relativePath = write.path.slice(surface.path.length);
-        if (
-          !write.removed &&
-          relativePath.length === 1 &&
-          relativePath[0] !== '*'
-        ) {
+        if (!write.removed && relativePath.length === 1 && relativePath[0] !== '*') {
           blockedMembers.add(relativePath[0]);
         }
       }
@@ -487,6 +659,9 @@ export function analyzePublicClassSurfaces({
   const staleBoundaries = new Set([...candidates].filter((boundary) => !surfaces.has(boundary)));
   return {
     classifyReference: (reference) => {
+      if (!executionPath(reference, sourceFile).reachable) {
+        return { selection: UNREACHABLE_CLASS_SELECTION };
+      }
       const boundary = nearestClassBoundary(reference);
       if (boundary) {
         const surface = surfaces.get(boundary);
@@ -495,7 +670,9 @@ export function analyzePublicClassSurfaces({
             selection: publicClassSelection(reference, boundary, surface),
           };
         }
-        return staleBoundaries.has(boundary) ? { selection: null } : undefined;
+        return staleBoundaries.has(boundary)
+          ? { selection: null }
+          : nestedClassSelection(reference, boundary, surfaces);
       }
       const prototypeSelection = publicPrototypeWriteSelection(
         reference,

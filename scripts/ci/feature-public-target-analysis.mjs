@@ -41,6 +41,7 @@ import {
 } from './feature-public-identity-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
 import { isUnshadowedGlobalValueReference } from './feature-lexical-binding-analysis.mjs';
+import { resolveLiteralSelection } from './feature-local-binding-selection.mjs';
 import { attachPublicReferenceQueries } from './feature-public-reference-visibility.mjs';
 import {
   collectSnapshotMemberRelations,
@@ -116,6 +117,31 @@ function directAliasSource(expression, bindingModel) {
   return null;
 }
 
+function forcedAliasSource(expression, forcedAlias, bindingModel) {
+  const resolve = (candidate, path) => {
+    const current = unwrapExpression(candidate);
+    if (path.length === 0) return { missing: false, nodes: [current], unknown: false };
+    return (
+      resolveLiteralSelection(current, path, resolve) ?? {
+        missing: false,
+        nodes: [],
+        unknown: true,
+      }
+    );
+  };
+  const selectedAlias = resolve(expression, forcedAlias.path)
+    .nodes.map((candidate) => directAliasSource(candidate, bindingModel))
+    .find(Boolean);
+  const rootAlias = directAliasSource(expression, bindingModel);
+  return selectedAlias
+    ? { ...selectedAlias, symmetric: false }
+    : rootAlias && {
+        ...rootAlias,
+        path: [...rootAlias.path, ...forcedAlias.path],
+        symmetric: false,
+      };
+}
+
 function addIdentityEdge(edges, source, target) {
   const targets = edges.get(source) ?? new Set();
   targets.add(target);
@@ -152,16 +178,13 @@ function buildIdentityEdges(bindingModel, propertyWrites) {
     for (const initializer of binding.candidateInitializers ?? [binding.initializer]) {
       const directAlias = directAliasSource(initializer, bindingModel);
       const hasInvocationAlternatives = (binding.candidateInitializers?.length ?? 0) > 1;
-      const alias = binding.forcedAlias
-        ? {
-            ...directAlias,
-            path: binding.forcedAlias.path,
-            symmetric: binding.forcedAlias.symmetric && !hasInvocationAlternatives,
-          }
-        : directAlias && {
-            ...directAlias,
-            symmetric: directAlias.symmetric && !hasInvocationAlternatives,
-          };
+      const aliasSource = binding.forcedAlias
+        ? forcedAliasSource(initializer, binding.forcedAlias, bindingModel)
+        : directAlias;
+      const alias = aliasSource && {
+        ...aliasSource,
+        symmetric: aliasSource.symmetric && !hasInvocationAlternatives,
+      };
       if (alias) {
         const liveAttached = !pathWasOverwritten(alias.key, alias.path, binding.position);
         if (alias.path.length > 0) {

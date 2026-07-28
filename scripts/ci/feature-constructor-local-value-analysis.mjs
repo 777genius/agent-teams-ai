@@ -606,6 +606,16 @@ export function resolvedLocalValueNodes(expression, boundary, options = {}) {
     options.captureOuter ?? false
   ).nodes;
 }
+export function resolvedLocalSelectionNodes(expression, selected, boundary, options = {}) {
+  return resolvedLocalValues(
+    expression,
+    boundary,
+    selected,
+    new Set(),
+    new Map(),
+    options.captureOuter ?? false
+  ).nodes;
+}
 
 export function reachingLocalValueWrites(expression, boundary, options = {}) {
   const current = expression && unwrapExpression(expression);

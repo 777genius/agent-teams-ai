@@ -1,7 +1,7 @@
 import ts from 'typescript';
 
 import { callableTarget, callMethod } from './feature-callable-analysis.mjs';
-import { unwrapExpression } from './feature-export-ast.mjs';
+import { containsReference, unwrapExpression } from './feature-export-ast.mjs';
 import { staticTruthiness } from './feature-static-value-analysis.mjs';
 
 const SYNCHRONOUS_ARRAY_CALLBACK_METHODS = new Set([
@@ -18,18 +18,9 @@ const SYNCHRONOUS_ARRAY_CALLBACK_METHODS = new Set([
   'reduceRight',
   'some',
 ]);
-const REVERSE_ARRAY_CALLBACK_METHODS = new Set([
-  'findLast',
-  'findLastIndex',
-  'reduceRight',
-]);
-const STOPS_ON_TRUTHY_METHODS = new Set([
-  'find',
-  'findIndex',
-  'findLast',
-  'findLastIndex',
-  'some',
-]);
+const REVERSE_ARRAY_CALLBACK_METHODS = new Set(['findLast', 'findLastIndex', 'reduceRight']);
+const VISITS_ARRAY_HOLES_METHODS = new Set(['find', 'findIndex', 'findLast', 'findLastIndex']);
+const STOPS_ON_TRUTHY_METHODS = new Set(['find', 'findIndex', 'findLast', 'findLastIndex', 'some']);
 const UNKNOWN_REDUCER_ACCUMULATOR = ts.factory.createObjectLiteralExpression();
 
 function statementOutcomes(statement) {
@@ -75,6 +66,26 @@ function callbackOutcomes(callable) {
   return outcomes.map((outcome) =>
     outcome.kind === 'normal' ? { expression: undefined, kind: 'return' } : outcome
   );
+}
+
+function callbackCompletion(callable) {
+  const outcomes = callbackOutcomes(callable);
+  if (outcomes.length > 0 && outcomes.every((outcome) => outcome.kind === 'throw')) {
+    return { throws: true, truthiness: null };
+  }
+  const truthiness = outcomes.map((outcome) =>
+    outcome.kind === 'return'
+      ? outcome.expression
+        ? staticTruthiness(outcome.expression)
+        : false
+      : null
+  );
+  const first = truthiness[0] ?? null;
+  return {
+    throws: false,
+    truthiness:
+      first !== null && truthiness.every((candidate) => candidate === first) ? first : null,
+  };
 }
 
 function callbackStopsAfterFirstCall(method, callable) {
@@ -145,11 +156,7 @@ function reducerInvocations(elements, receiver, initialValue, callable) {
 }
 
 export function executedSynchronousArrayCallbackForCall(node) {
-  if (
-    !ts.isCallExpression(node) ||
-    node.questionDotToken ||
-    node.expression.questionDotToken
-  ) {
+  if (!ts.isCallExpression(node) || node.questionDotToken || node.expression.questionDotToken) {
     return null;
   }
   const method = callMethod(node.expression);
@@ -164,11 +171,15 @@ export function executedSynchronousArrayCallbackForCall(node) {
   ) {
     return null;
   }
-  const definiteElements = receiver.elements.flatMap((element, index) =>
-    ts.isOmittedExpression(element) || ts.isSpreadElement(element)
-      ? []
-      : [{ element, index }]
-  );
+  const definiteElements = receiver.elements.flatMap((element, index) => {
+    if (ts.isSpreadElement(element)) return [];
+    if (ts.isOmittedExpression(element)) {
+      return VISITS_ARRAY_HOLES_METHODS.has(method.name)
+        ? [{ element: ts.factory.createVoidZero(), index }]
+        : [];
+    }
+    return [{ element, index }];
+  });
   const minimumElements =
     method.name === 'reduce' || method.name === 'reduceRight'
       ? node.arguments.length >= 2
@@ -181,31 +192,57 @@ export function executedSynchronousArrayCallbackForCall(node) {
     : definiteElements;
   const isReducer = method.name === 'reduce' || method.name === 'reduceRight';
   const initialValue = isReducer && node.arguments.length >= 2 ? node.arguments[1] : null;
+  const completion = callbackCompletion(callback);
   if (callbackStopsAfterFirstCall(method.name, callback)) {
     elements = elements.slice(0, isReducer && !initialValue ? 2 : 1);
   }
   const invocations = isReducer
     ? reducerInvocations(elements, receiver, initialValue, callback)
     : elements.map((element) => ({ arguments: callbackArguments(element, receiver) }));
-  const elementBindings =
-    isReducer
-      ? elements.map((element, index) => ({
-          element: element.element,
-          index: element.index,
-          parameterIndex: initialValue || index > 0 ? 1 : 0,
-        }))
-      : elements.map((element) => ({
-          element: element.element,
-          index: element.index,
-          parameterIndex: 0,
-        }));
+  const elementBindings = isReducer
+    ? elements.map((element, index) => ({
+        element: element.element,
+        index: element.index,
+        parameterIndex: initialValue || index > 0 ? 1 : 0,
+      }))
+    : elements.map((element) => ({
+        element: element.element,
+        index: element.index,
+        parameterIndex: 0,
+      }));
+
   return {
     arguments: invocations[0].arguments,
     call: node,
     callable: callback,
+    completion,
     elementBindings,
     invocations,
     method: method.name,
     receiver,
   };
+}
+
+export function synchronousArrayResultDiscardsReference(reference, boundary) {
+  let current = reference;
+  while (current) {
+    if (ts.isCallExpression(current)) {
+      const invocation = executedSynchronousArrayCallbackForCall(current);
+      if (invocation && containsReference(invocation.receiver, reference)) {
+        if (invocation.method === 'findIndex' || invocation.method === 'findLastIndex') {
+          return true;
+        }
+        if (invocation.method === 'find' || invocation.method === 'findLast') {
+          return (
+            invocation.completion.throws ||
+            invocation.completion.truthiness === false ||
+            !invocation.elementBindings.some(({ element }) => containsReference(element, reference))
+          );
+        }
+      }
+    }
+    if (current === boundary) break;
+    current = current.parent;
+  }
+  return false;
 }
