@@ -11,6 +11,7 @@ import {
   collectFiles,
   countPhysicalLines,
   evaluateLegacyManifestRatchet,
+  evaluatePolicyCurrentFiles,
   evaluatePolicyManifestRatchet,
   evaluateSourceFileSizePolicy,
   evaluateWorkspaceSourceCoverage,
@@ -201,6 +202,28 @@ test('ratchets legacy caps from the complete existing source-size policy', () =>
       },
       { code: 'new-legacy-exception', filePath: 'eslint.config.js' },
       { code: 'raised-legacy-cap', filePath: 'scripts/hosted-web/legacy.mjs' },
+    ]
+  );
+});
+
+test('rejects loose broad-policy caps for current files', () => {
+  const diagnostics = evaluatePolicyCurrentFiles({
+    policy: {
+      maxLines: 800,
+      legacy: {
+        'scripts/hosted-web/legacy.mjs': 900,
+      },
+    },
+    records: [{ path: 'scripts/hosted-web/legacy.mjs', lineCount: 875 }],
+  });
+
+  assert.deepEqual(
+    diagnostics.map(({ code, filePath }) => ({ code, filePath })),
+    [
+      {
+        code: 'legacy-cap-not-tight',
+        filePath: 'scripts/hosted-web/legacy.mjs',
+      },
     ]
   );
 });

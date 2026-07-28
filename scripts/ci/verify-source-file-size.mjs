@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import {
   evaluateSourceFileSizes as evaluateBroadSourceFileSizes,
   readWorkingTreeRecords as readBroadWorkingTreeRecords,
+  strictSourceFileSizeViolations,
 } from './check-source-file-size.mjs';
 
 export const MAX_PRODUCTION_SOURCE_LINES = 800;
@@ -261,7 +262,7 @@ export function evaluatePolicyManifestRatchet({ baselinePolicy, policy }) {
 }
 
 export function evaluatePolicyCurrentFiles({ policy, records }) {
-  return evaluateBroadSourceFileSizes(records, policy).violations.map(
+  return strictSourceFileSizeViolations(evaluateBroadSourceFileSizes(records, policy)).map(
     ({ code, message, path: filePath }) => ({
       code,
       filePath: filePath ?? policyManifestRelativePath,
