@@ -2,13 +2,16 @@ import {
   TEAM_ADD_TASK_COMMENT,
   TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_CREATE_TASK,
+  TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_TASK,
+  TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_TASK_CHANGE_PRESENCE,
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE_TASK,
+  TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SOFT_DELETE_TASK,
@@ -21,6 +24,7 @@ import {
   TEAM_UPDATE_TASK_STATUS,
 } from '@features/team-task-board/contracts';
 
+import { createTeamTaskAttachmentHandlers } from './createTeamTaskAttachmentHandlers';
 import { createTeamTaskBoardCommentHandlers } from './createTeamTaskBoardCommentHandlers';
 import { createTeamTaskBoardMutationHandlers } from './createTeamTaskBoardMutationHandlers';
 import { createTeamTaskBoardQueryHandlers } from './createTeamTaskBoardQueryHandlers';
@@ -35,6 +39,7 @@ export function registerTeamTaskBoardIpc(
   const mutations = createTeamTaskBoardMutationHandlers(dependencies);
   const queries = createTeamTaskBoardQueryHandlers(dependencies);
   const comments = createTeamTaskBoardCommentHandlers(dependencies);
+  const attachments = createTeamTaskAttachmentHandlers(dependencies);
 
   ipcMain.handle(TEAM_GET_TASK_CHANGE_PRESENCE, queries.getTaskChangePresence.bind(queries));
   ipcMain.handle(
@@ -62,6 +67,9 @@ export function registerTeamTaskBoardIpc(
   ipcMain.handle(TEAM_SET_TASK_CLARIFICATION, mutations.setTaskClarification.bind(mutations));
   ipcMain.handle(TEAM_ADD_TASK_RELATIONSHIP, mutations.addTaskRelationship.bind(mutations));
   ipcMain.handle(TEAM_REMOVE_TASK_RELATIONSHIP, mutations.removeTaskRelationship.bind(mutations));
+  ipcMain.handle(TEAM_SAVE_TASK_ATTACHMENT, attachments.save.bind(attachments));
+  ipcMain.handle(TEAM_GET_TASK_ATTACHMENT, attachments.get.bind(attachments));
+  ipcMain.handle(TEAM_DELETE_TASK_ATTACHMENT, attachments.delete.bind(attachments));
 }
 
 export function removeTeamTaskBoardIpc(ipcMain: IpcMain): void {
@@ -85,4 +93,7 @@ export function removeTeamTaskBoardIpc(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_SET_TASK_CLARIFICATION);
   ipcMain.removeHandler(TEAM_ADD_TASK_RELATIONSHIP);
   ipcMain.removeHandler(TEAM_REMOVE_TASK_RELATIONSHIP);
+  ipcMain.removeHandler(TEAM_SAVE_TASK_ATTACHMENT);
+  ipcMain.removeHandler(TEAM_GET_TASK_ATTACHMENT);
+  ipcMain.removeHandler(TEAM_DELETE_TASK_ATTACHMENT);
 }

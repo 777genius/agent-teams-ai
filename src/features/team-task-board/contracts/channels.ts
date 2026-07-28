@@ -1,13 +1,16 @@
 export const TEAM_ADD_TASK_COMMENT = 'team:addTaskComment';
 export const TEAM_ADD_TASK_RELATIONSHIP = 'team:addTaskRelationship';
 export const TEAM_CREATE_TASK = 'team:createTask';
+export const TEAM_DELETE_TASK_ATTACHMENT = 'team:deleteTaskAttachment';
 export const TEAM_GET_ALL_TASKS = 'team:getAllTasks';
 export const TEAM_GET_DELETED_TASKS = 'team:getDeletedTasks';
 export const TEAM_GET_TASK = 'team:getTask';
+export const TEAM_GET_TASK_ATTACHMENT = 'team:getTaskAttachment';
 export const TEAM_GET_TASK_CHANGE_PRESENCE = 'team:getTaskChangePresence';
 export const TEAM_REMOVE_TASK_RELATIONSHIP = 'team:removeTaskRelationship';
 export const TEAM_REQUEST_REVIEW = 'team:requestReview';
 export const TEAM_RESTORE_TASK = 'team:restoreTask';
+export const TEAM_SAVE_TASK_ATTACHMENT = 'team:saveTaskAttachment';
 export const TEAM_SET_CHANGE_PRESENCE_TRACKING = 'team:setChangePresenceTracking';
 export const TEAM_SET_TASK_CLARIFICATION = 'team:setTaskClarification';
 export const TEAM_SOFT_DELETE_TASK = 'team:softDeleteTask';

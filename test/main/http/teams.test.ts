@@ -1414,95 +1414,13 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('serves member work sync diagnostics and explicit refresh routes', async () => {
+  it('registers the feature-owned member work sync HTTP adapter', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
-    const queueDiagnostics = {
-      queued: 0,
-      running: 0,
-      enqueued: 2,
-      coalesced: 1,
-      reconciled: 1,
-      dropped: 0,
-      failed: 0,
-      queuedItems: [],
-      runningItems: [],
-    };
-    const metrics = {
-      teamName: 'demo-team',
-      generatedAt: '2026-05-05T00:00:00.000Z',
-      memberCount: 1,
-      stateCounts: {
-        caught_up: 1,
-        needs_sync: 0,
-        still_working: 0,
-        blocked: 0,
-        inactive: 0,
-        unknown: 0,
-      },
-      actionableItemCount: 0,
-      wouldNudgeCount: 0,
-      fingerprintChangeCount: 0,
-      reportAcceptedCount: 0,
-      reportRejectedCount: 0,
-      recentEvents: [],
-      phase2Readiness: {
-        state: 'collecting_shadow_data',
-        reasons: ['insufficient_members'],
-        thresholds: {
-          minObservedMembers: 2,
-          minStatusEvents: 10,
-          minObservationHours: 1,
-          maxWouldNudgesPerMemberHour: 1,
-          maxFingerprintChangesPerMemberHour: 1,
-          maxReportRejectionRate: 0.1,
-        },
-        rates: {
-          observationHours: 0,
-          statusEventCount: 0,
-          wouldNudgesPerMemberHour: 0,
-          fingerprintChangesPerMemberHour: 0,
-          reportRejectionRate: 0,
-        },
-        diagnostics: [],
-      },
-    };
-    const refreshedStatus = {
-      teamName: 'demo-team',
-      memberName: 'bob',
-      state: 'caught_up',
-      agenda: {
-        teamName: 'demo-team',
-        memberName: 'bob',
-        generatedAt: '2026-05-05T00:00:00.000Z',
-        fingerprint: 'empty',
-        items: [],
-        diagnostics: [],
-      },
-      evaluatedAt: '2026-05-05T00:00:00.000Z',
-      diagnostics: [],
-    };
+    const metrics = { teamName: 'demo-team', marker: 'feature-owned-adapter' };
+    const getMetrics = vi.fn(() => Promise.resolve(metrics));
     const memberWorkSyncFeature = {
-      getStatus: vi.fn(),
-      refreshStatus: vi.fn(() => Promise.resolve(refreshedStatus)),
-      getMetrics: vi.fn(() => Promise.resolve(metrics)),
-      report: vi.fn(() =>
-        Promise.resolve({
-          accepted: true,
-          code: 'accepted',
-          message: 'ok',
-          status: refreshedStatus,
-        })
-      ),
-      noteTeamChange: vi.fn(),
-      enqueueStartupScan: vi.fn(),
-      replayPendingReports: vi.fn(),
-      dispatchDueNudges: vi.fn(),
-      buildRuntimeTurnSettledHookSettings: vi.fn(),
-      buildRuntimeTurnSettledEnvironment: vi.fn(),
-      drainRuntimeTurnSettledEvents: vi.fn(),
-      getQueueDiagnostics: vi.fn(() => queueDiagnostics),
-      dispose: vi.fn(),
+      getMetrics,
     } as unknown as NonNullable<HttpServices['memberWorkSyncFeature']>;
     registerTeamRoutes(app, {
       ...mocks.services,
@@ -1511,49 +1429,13 @@ describe('HTTP team runtime routes', () => {
     await app.ready();
 
     try {
-      const diagnosticsResponse = await app.inject({
+      const response = await app.inject({
         method: 'GET',
-        url: '/api/teams/demo-team/member-work-sync/diagnostics',
+        url: '/api/teams/demo-team/member-work-sync/metrics',
       });
-      expect(diagnosticsResponse.statusCode).toBe(200);
-      expect(diagnosticsResponse.json()).toMatchObject({
-        teamName: 'demo-team',
-        queue: queueDiagnostics,
-        metrics,
-      });
-
-      const refreshResponse = await app.inject({
-        method: 'POST',
-        url: '/api/teams/demo-team/member-work-sync/bob/refresh',
-      });
-      expect(refreshResponse.statusCode).toBe(200);
-      expect(refreshResponse.json()).toMatchObject(refreshedStatus);
-      expect(memberWorkSyncFeature.refreshStatus).toHaveBeenCalledWith({
-        teamName: 'demo-team',
-        memberName: 'bob',
-      });
-
-      const reportResponse = await app.inject({
-        method: 'POST',
-        url: '/api/teams/demo-team/member-work-sync/report',
-        payload: {
-          memberName: 'bob',
-          state: 'still_working',
-          agendaFingerprint: 'agenda:v1:abc',
-          reportToken: 'wrs:v1.test.token',
-          taskIds: [' task-a ', '', 'task-a'],
-        },
-      });
-      expect(reportResponse.statusCode).toBe(200);
-      expect(memberWorkSyncFeature.report).toHaveBeenCalledWith({
-        teamName: 'demo-team',
-        memberName: 'bob',
-        state: 'still_working',
-        agendaFingerprint: 'agenda:v1:abc',
-        reportToken: 'wrs:v1.test.token',
-        taskIds: ['task-a'],
-        source: 'mcp',
-      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual(metrics);
+      expect(getMetrics).toHaveBeenCalledWith({ teamName: 'demo-team' });
     } finally {
       await app.close();
     }
