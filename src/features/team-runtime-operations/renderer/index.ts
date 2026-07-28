@@ -1,6 +1,5 @@
-export type { TeamRuntimeOperationsRendererSliceDependencies } from './adapters/createTeamRuntimeOperationsRendererSlice';
-export { createTeamRuntimeOperationsRendererSlice } from './adapters/createTeamRuntimeOperationsRendererSlice';
-export { createTeamRuntimeOperationsTransport } from './adapters/createTeamRuntimeOperationsTransport';
+export type { TeamRuntimeOperationsRendererSliceDependencies } from './composition/createTeamRuntimeOperationsRendererSlice';
+export { createTeamRuntimeOperationsRendererSlice } from './composition/createTeamRuntimeOperationsRendererSlice';
 export type {
   TeamRuntimeOperationsActionsPort,
   TeamRuntimeOperationsRefreshActions,

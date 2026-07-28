@@ -1,9 +1,9 @@
-import { registerMemberWorkSyncHttp } from '@features/member-work-sync/main';
 import {
   TEAM_LIFECYCLE_LIST_ROUTE,
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
   type TeamLifecycleReadFailure,
 } from '@features/team-lifecycle/contracts';
+import { registerMemberWorkSyncHttp } from '@main/composition/team/registerMemberWorkSyncHttp';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';

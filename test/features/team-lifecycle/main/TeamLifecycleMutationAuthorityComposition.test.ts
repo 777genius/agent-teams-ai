@@ -6,10 +6,7 @@ import {
   ApplicationCommandLedgerStatus,
   ApplicationCommandRunner,
 } from '@features/application-command-ledger';
-import {
-  InternalStorageApplicationCommandLedgerStore,
-  NodeApplicationCommandHasher,
-} from '@features/application-command-ledger/main';
+import { createApplicationCommandLedgerFeature } from '@features/application-command-ledger/main';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import {
   type LifecycleExecutionBackendRegistryPort,
@@ -22,6 +19,7 @@ import {
   ApplicationCommandLedgerLaneExecutionMutationAuthority,
   LANE_EXECUTION_MUTATION_NAMESPACE,
 } from '@features/team-runtime-control/main/adapters/output/backends';
+import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -69,7 +67,10 @@ describe('team lifecycle mutation authority composition', () => {
       launchRequest(test.state, plan),
       createTestContext()
     );
-    if (test.authorityErrors[0]) throw test.authorityErrors[0];
+    const authorityError = test.authorityErrors[0];
+    if (authorityError !== undefined) {
+      throw new Error('unexpected mutation authority failure', { cause: authorityError });
+    }
     expect(launched).toMatchObject({ status: 'accepted' });
     await expect(
       test.feature.stopTeam(
@@ -163,7 +164,7 @@ describe('team lifecycle mutation authority composition', () => {
       },
     });
     const immutableLaunchMutation = test.state.snapshot.laneEffects[0]?.providerMutations.launch;
-    test.provider.script('provisioning_cli', plan.lanes[0]!.laneId, 'preflight', {
+    test.provider.script('provisioning_cli', plan.lanes[0].laneId, 'preflight', {
       status: 'ready',
       readiness: {
         ...immutableLaunchMutation?.readiness,
@@ -329,7 +330,7 @@ describe('team lifecycle mutation authority composition', () => {
     await expect(
       test.workflowDependencies.lanes.launch(
         run,
-        plan.lanes[0]!.laneId,
+        plan.lanes[0].laneId,
         backendMismatch,
         createTestContext().cancellation
       )
@@ -351,7 +352,7 @@ describe('team lifecycle mutation authority composition', () => {
     await expect(
       test.workflowDependencies.lanes.launch(
         run,
-        plan.lanes[0]!.laneId,
+        plan.lanes[0].laneId,
         scopeMismatch,
         createTestContext().cancellation
       )
@@ -368,7 +369,7 @@ describe('team lifecycle mutation authority composition', () => {
   ] as const)('blocks a higher-fenced recover after an %s launch result', async (_name, result) => {
     const test = await harness();
     const plan = createTestRuntimePlan({ topology: 'primary' });
-    test.provider.script('provisioning_cli', plan.lanes[0]!.laneId, 'launch', result);
+    test.provider.script('provisioning_cli', plan.lanes[0].laneId, 'launch', result);
 
     await expect(
       test.feature.launchTeam(launchRequest(test.state, plan), createTestContext())
@@ -418,11 +419,15 @@ describe('team lifecycle mutation authority composition', () => {
       createDatabase: (file) => new Database(file),
     });
     cores.push(core);
-    const ledger = new InternalStorageApplicationCommandLedgerStore(new InProcessGateway(core));
+    const ledgerFeature = createApplicationCommandLedgerFeature({
+      storageGateway: new InProcessGateway(core),
+      hasher: createApplicationCommandHasher(),
+    });
+    const ledger = ledgerFeature.ledgerStore;
     const lifecycleClock = createTestClock();
     const runner = new ApplicationCommandRunner({
       ledger,
-      hasher: new NodeApplicationCommandHasher(),
+      hasher: ledgerFeature.hasher,
       clock: () => new Date(lifecycleClock.nowIso()),
     });
     const authority = new ApplicationCommandLedgerLaneExecutionMutationAuthority(runner);

@@ -1,4 +1,4 @@
-import { createTeamNotificationTransport } from '@features/team-task-board/renderer';
+import { createTeamNotificationTransport } from '@renderer/composition/team/createTeamNotificationTransport';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {

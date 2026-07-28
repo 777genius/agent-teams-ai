@@ -1,4 +1,4 @@
-import { createTeamMessageDeliveryTransport } from '@features/team-message-delivery/renderer';
+import { createTeamMessageDeliveryTransport } from '@renderer/composition/team/createTeamMessageDeliveryTransport';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({

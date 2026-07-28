@@ -1,7 +1,7 @@
-import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { TeamViewSnapshotAssembler } from '@features/team-view-read-model/main';
+import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
@@ -127,7 +127,7 @@ const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
 const GLOBAL_TASK_TEAM_CONFIG_CONCURRENCY = 12;
 
 function createNonDurableTaskBoardCommandFacade(): TaskBoardCommandFacade {
-  const hasher = new NodeApplicationCommandHasher();
+  const hasher = createApplicationCommandHasher();
   return new TaskBoardCommandFacade(null, {
     hashPayload: (payload) => hasher.hashJson(payload),
   });

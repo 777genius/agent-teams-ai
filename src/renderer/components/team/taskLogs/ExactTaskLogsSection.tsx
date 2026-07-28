@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { createTaskLogObservabilityRendererTransport } from '@features/task-log-observability/renderer';
+import { createTaskLogObservabilityRendererTransport } from '@renderer/composition/team/createTaskLogObservabilityRendererTransport';
 import { asEnhancedChunkArray } from '@renderer/types/data';
 import { AlertCircle, FileText, Loader2 } from 'lucide-react';
 

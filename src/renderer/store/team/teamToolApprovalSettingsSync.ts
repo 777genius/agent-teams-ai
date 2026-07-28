@@ -1,4 +1,4 @@
-import { createTeamToolApprovalTransport } from '@features/team-provisioning/renderer';
+import { createTeamToolApprovalTransport } from '@renderer/composition/team/createTeamToolApprovalTransport';
 import { createLogger } from '@shared/utils/logger';
 
 import {

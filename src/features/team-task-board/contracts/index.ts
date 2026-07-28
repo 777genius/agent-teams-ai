@@ -23,3 +23,4 @@ export {
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
 } from './channels';
+export type { AttachmentMediaType, TaskAttachmentMeta } from './taskAttachments';

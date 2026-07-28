@@ -1,10 +1,9 @@
+import type { AttachmentMediaType, TaskAttachmentMeta } from '../../../contracts/taskAttachments';
 import type {
   AddTaskCommentRequest,
-  AttachmentMediaType,
   CreateTaskRequest,
   GlobalTask,
   KanbanColumnId,
-  TaskAttachmentMeta,
   TaskChangePresenceState,
   TaskComment,
   TaskRef,

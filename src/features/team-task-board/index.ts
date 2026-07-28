@@ -23,6 +23,7 @@ export {
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
 } from './contracts/channels';
+export type { AttachmentMediaType, TaskAttachmentMeta } from './contracts/taskAttachments';
 export {
   estimateTaskAttachmentDecodedBytes,
   isCanonicalTaskAttachmentBase64,

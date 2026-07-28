@@ -1,8 +1,8 @@
 import {
   type MemberWorkSyncFeatureFacade,
   type MemberWorkSyncHttpHostPorts,
-  registerMemberWorkSyncHttp,
 } from '@features/member-work-sync/main';
+import { registerMemberWorkSyncHttp } from '@main/composition/team/registerMemberWorkSyncHttp';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';

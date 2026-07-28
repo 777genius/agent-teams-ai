@@ -1,9 +1,9 @@
+import type { AttachmentMediaType, TaskAttachmentMeta } from '../../../contracts/taskAttachments';
 import type {
   TaskAttachmentMetadataPort,
   TaskAttachmentStoragePort,
   TeamTaskBoardLoggerPort,
 } from '../ports/TeamTaskBoardPorts';
-import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
 
 export interface TaskAttachmentOperationsPort {
   save(

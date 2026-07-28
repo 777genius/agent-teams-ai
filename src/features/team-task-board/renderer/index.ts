@@ -1,4 +1,3 @@
-export { createTeamNotificationTransport } from './adapters/createTeamNotificationTransport';
 export type {
   TeamTaskArtifactAnalyticsAttachment,
   TeamTaskArtifactFile,

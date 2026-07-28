@@ -28,6 +28,7 @@ export {
   resolveCommandClaim,
   retryDurableEffectAfterObservedAbsent,
   selectCommandFingerprintKeyVersion,
+  stableJsonStringify,
   transitionDurableCommandState,
   transitionDurableEffectState,
 } from './core/domain';

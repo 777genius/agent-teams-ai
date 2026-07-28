@@ -38,7 +38,7 @@ import {
   HMAC_SHA256_LD_V1,
 } from '@features/application-command-ledger';
 import { createCommandDescriptorRegistry } from '@features/application-command-ledger/core/domain';
-import { InternalStorageApplicationCommandLedgerStore } from '@features/application-command-ledger/main';
+import { InternalStorageApplicationCommandLedgerStore } from '@features/application-command-ledger/main/adapters/output/InternalStorageApplicationCommandLedgerStore';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -198,7 +198,17 @@ describe('InternalStorageApplicationCommandLedgerStore', () => {
       outcome: ApplicationCommandBeginOutcome.Conflict,
       reason: ApplicationCommandConflictReason.PayloadHashMismatch,
     });
-    const { mutationFence: _omittedFence, ...withoutMutationFence } = settled;
+    const withoutMutationFence = {
+      namespace: settled.namespace,
+      scopeKey: settled.scopeKey,
+      commandId: settled.commandId,
+      idempotencyKey: settled.idempotencyKey,
+      operation: settled.operation,
+      payloadHash: settled.payloadHash,
+      metadataJson: settled.metadataJson,
+      nowIso: settled.nowIso,
+      startedStaleAfterMs: settled.startedStaleAfterMs,
+    };
     await expect(store.begin(withoutMutationFence)).resolves.toMatchObject({
       outcome: ApplicationCommandBeginOutcome.Conflict,
       reason: ApplicationCommandConflictReason.MutationOperationRebound,
@@ -265,7 +275,9 @@ describe('InternalStorageApplicationCommandLedgerStore', () => {
 
     const outcomes = await Promise.all([first.begin(request), second.begin(request)]);
 
-    expect(outcomes.map(({ outcome }) => outcome).sort()).toEqual([
+    expect(
+      outcomes.map(({ outcome }) => outcome).sort((left, right) => left.localeCompare(right))
+    ).toEqual([
       ApplicationCommandBeginOutcome.AlreadyStarted,
       ApplicationCommandBeginOutcome.Started,
     ]);

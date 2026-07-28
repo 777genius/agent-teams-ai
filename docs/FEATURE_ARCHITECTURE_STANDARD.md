@@ -334,6 +334,39 @@ directly, but production integration code should not.
 Push transport and store access into feature hooks or genuine boundary
 adapters. Keep presentation-only projection in `renderer/view-models/`.
 
+## Architecture Ratchet
+
+Run `pnpm guard:feature-architecture` for the repository-wide dependency gate.
+It scans production source and enforces:
+
+- cross-feature dependencies use only the feature root or the explicit
+  `contracts`, `main`, `preload`, or `renderer` entrypoint
+- `core/domain` stays independent from application, Node, Electron, frameworks,
+  transport, adapters, and infrastructure
+- `core/application` depends only on domain, contracts, and its own application
+  models, use cases, and ports
+- public feature entrypoints do not directly or transitively re-export adapters,
+  infrastructure, or concrete host boundaries hidden behind another directory
+  name
+
+Legacy violations are pinned as individual dependency edges in
+`scripts/ci/feature-architecture-baseline.json`. The identity is the rule,
+source path, and module specifier. Public API violations additionally include
+the public entrypoint plus the exported and imported symbol names, so extending
+an existing legacy barrel still fails the ratchet. Line numbers are deliberately
+excluded so unrelated edits do not create noise.
+
+The baseline is a ratchet, not a general allowlist:
+
+- an existing edge may remain unchanged while its migration is pending
+- a new violating edge fails even when it is added to a legacy file
+- removed violations require their exact baseline entries to be removed
+- CI compares the manifest with the PR base and rejects new exceptions
+- new files and new features therefore start with no architecture exceptions
+
+Use `pnpm guard:feature-architecture -- --report` only when the full legacy
+inventory is needed. The default successful output stays concise.
+
 ## Browser and Tauri Friendly Guidance
 
 The default transport direction should be:
@@ -471,6 +504,13 @@ current line count in `scripts/ci/source-file-size-legacy.json`: they may only
 shrink, and the exception must be removed once a file reaches 800 lines.
 Never add a new legacy exception or raise an existing cap. Split new
 responsibilities by domain/application/adapter/UI ownership instead.
+
+CI also ratchets the complete pre-existing policy in
+`scripts/ci/source-file-size-baseline.json`, including root configuration and
+production scripts outside the workspace source roots. Neither its global limit
+nor any legacy cap may increase. A zero predecessor SHA on the first push of a
+branch means there is no prior manifest to compare; the current-tree 800-line
+policy still runs normally.
 
 ## Recommended Test Coverage
 

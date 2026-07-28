@@ -1,4 +1,3 @@
-export { createTaskLogObservabilityRendererTransport } from './adapters/createTaskLogObservabilityRendererTransport';
 export type {
   TaskLogObservabilityRendererPort,
   TaskLogObservabilityTeamChangeListener,

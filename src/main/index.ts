@@ -101,10 +101,6 @@ import {
   type TeamRuntimeRecoveryFeatureFacade,
 } from '@features/team-runtime-recovery/main';
 import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
-import {
-  createApplicationCommandLedgerFeature,
-  NodeApplicationCommandHasher,
-} from '@features/application-command-ledger/main';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import {
   createTokenUsageFeature,
@@ -115,6 +111,7 @@ import {
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
 import { createWorkspaceTrustCoordinator } from '@features/workspace-trust/main';
+import { createApplicationCommandLedgerFeature } from '@main/composition/applicationCommandLedgerComposition';
 import {
   createUnavailableTeamLifecycleReadHost,
   type TeamLifecycleReadHost,
@@ -2269,7 +2266,6 @@ async function initializeServices(): Promise<void> {
   teamDataService = new TeamDataService();
   const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
   if (applicationCommandLedgerBackend) {
-    const applicationCommandHasher = new NodeApplicationCommandHasher();
     const applicationCommandLedgerFeature = createApplicationCommandLedgerFeature({
       storageGateway: applicationCommandLedgerBackend.gateway,
     });
@@ -2277,7 +2273,7 @@ async function initializeServices(): Promise<void> {
       new TaskBoardCommandFacade(applicationCommandLedgerFeature.runner, {
         isDurableStorageAvailable: () =>
           applicationCommandLedgerBackend.selector.select(true, false),
-        hashPayload: (payload) => applicationCommandHasher.hashJson(payload),
+        hashPayload: (payload) => applicationCommandLedgerFeature.hasher.hashJson(payload),
       })
     );
   }

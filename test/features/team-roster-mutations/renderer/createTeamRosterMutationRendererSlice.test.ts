@@ -1,8 +1,8 @@
 import {
   createTeamRosterMutationRendererSlice,
-  createTeamRosterMutationTransport,
   type TeamRosterMutationRefreshActions,
 } from '@features/team-roster-mutations/renderer';
+import { createTeamRosterMutationTransport } from '@renderer/composition/team/createTeamRosterMutationTransport';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const apiMocks = vi.hoisted(() => ({

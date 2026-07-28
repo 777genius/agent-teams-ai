@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { createTaskLogObservabilityRendererTransport } from '@features/task-log-observability/renderer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
+import { createTaskLogObservabilityRendererTransport } from '@renderer/composition/team/createTaskLogObservabilityRendererTransport';
 import { isTaskLogActivityChangeEvent } from '@renderer/utils/teamChangeEvents';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
 

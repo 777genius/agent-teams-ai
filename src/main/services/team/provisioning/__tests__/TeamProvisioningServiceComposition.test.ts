@@ -102,29 +102,51 @@ describe('TeamProvisioningServiceComposition', () => {
       },
     };
     const toolApprovalSource = {
-      respondToToolApproval(this: unknown) {
+      respondToToolApproval(
+        this: unknown,
+        _teamName: string,
+        _runId: string,
+        _requestId: string,
+        _allow: boolean,
+        _message?: string
+      ) {
         expect(this).toBe(toolApprovalSource);
         return responsePromise;
       },
-      updateToolApprovalSettings(this: unknown) {
+      updateToolApprovalSettings(
+        this: unknown,
+        _teamName: string,
+        _settings: ToolApprovalSettings
+      ) {
         expect(this).toBe(toolApprovalSource);
         throw settingsFailure;
       },
     };
     const runtimeDelivery = {
-      deliverOpenCodeRuntimeMessage(this: unknown) {
+      deliverOpenCodeRuntimeMessage(this: unknown, _raw: unknown) {
         expect(this).toBe(runtimeDelivery);
         return deliveryPromise;
       },
-      getOpenCodeRuntimeDeliveryStatus(this: unknown) {
+      getOpenCodeRuntimeDeliveryStatus(this: unknown, _teamName: string, _messageId: string) {
         expect(this).toBe(runtimeDelivery);
         return statusPromise;
       },
     };
     const applicationFeature = createTeamProvisioningApplicationFeature({
-      runtimeSnapshot: { snapshotSource },
-      toolApproval: { toolApprovalSource },
-      runtimeDelivery,
+      runtimeSnapshot: {
+        readByTeamName: snapshotSource.getTeamAgentRuntimeSnapshot.bind(snapshotSource),
+      },
+      toolApproval: {
+        respondToToolApproval: ({ teamName, runId, requestId, allow, message }) =>
+          toolApprovalSource.respondToToolApproval(teamName, runId, requestId, allow, message),
+        updateToolApprovalSettings: ({ teamName, settings: nextSettings }) =>
+          toolApprovalSource.updateToolApprovalSettings(teamName, nextSettings),
+      },
+      runtimeDelivery: {
+        deliverRuntimeMessage: runtimeDelivery.deliverOpenCodeRuntimeMessage.bind(runtimeDelivery),
+        getRuntimeDeliveryStatus:
+          runtimeDelivery.getOpenCodeRuntimeDeliveryStatus.bind(runtimeDelivery),
+      },
     });
 
     const snapshotResult = applicationFeature.getTeamAgentRuntimeSnapshot(' alpha ');
@@ -134,13 +156,20 @@ describe('TeamProvisioningServiceComposition', () => {
       'request-1',
       true
     );
-    const deliveryResult = applicationFeature.deliverOpenCodeRuntimeMessage({});
-    const statusResult = applicationFeature.getOpenCodeRuntimeDeliveryStatus('alpha', 'message-1');
+    const deliveryResult = applicationFeature.deliverRuntimeMessage({});
+    const statusResult = applicationFeature.getRuntimeDeliveryStatus('alpha', 'message-1');
+    const legacyDeliveryResult = applicationFeature.deliverOpenCodeRuntimeMessage({});
+    const legacyStatusResult = applicationFeature.getOpenCodeRuntimeDeliveryStatus(
+      'alpha',
+      'message-1'
+    );
 
     expect(snapshotResult).toBe(snapshotPromise);
     expect(responseResult).toBe(responsePromise);
     expect(deliveryResult).toBe(deliveryPromise);
     expect(statusResult).toBe(statusPromise);
+    expect(legacyDeliveryResult).toBe(deliveryPromise);
+    expect(legacyStatusResult).toBe(statusPromise);
     expect(() => applicationFeature.updateToolApprovalSettings('alpha', settings)).toThrow(
       settingsFailure
     );
@@ -148,6 +177,8 @@ describe('TeamProvisioningServiceComposition', () => {
     await expect(responseResult).resolves.toBeUndefined();
     await expect(deliveryResult).resolves.toBe(deliveryAck);
     await expect(statusResult).resolves.toBe(deliveryStatus);
+    await expect(legacyDeliveryResult).resolves.toBe(deliveryAck);
+    await expect(legacyStatusResult).resolves.toBe(deliveryStatus);
   });
 
   it('keeps moved boundary factories in composition instead of the compatibility facade', () => {

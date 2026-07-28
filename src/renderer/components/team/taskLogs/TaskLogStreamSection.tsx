@@ -5,7 +5,7 @@ import {
   ExecutionLogStreamView,
   normalizeExecutionLogStream,
 } from '@features/member-log-stream/renderer';
-import { createTaskLogObservabilityRendererTransport } from '@features/task-log-observability/renderer';
+import { createTaskLogObservabilityRendererTransport } from '@renderer/composition/team/createTaskLogObservabilityRendererTransport';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { isTaskLogActivityChangeEvent } from '@renderer/utils/teamChangeEvents';

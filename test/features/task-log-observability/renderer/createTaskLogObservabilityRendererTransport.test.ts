@@ -1,7 +1,5 @@
-import {
-  createTaskLogObservabilityRendererTransport,
-  type TaskLogObservabilityRendererPort,
-} from '@features/task-log-observability/renderer';
+import type { TaskLogObservabilityRendererPort } from '@features/task-log-observability/renderer';
+import { createTaskLogObservabilityRendererTransport } from '@renderer/composition/team/createTaskLogObservabilityRendererTransport';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { BoardTaskActivityEntry, TeamChangeEvent } from '@shared/types';

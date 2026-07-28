@@ -5,6 +5,12 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  evaluateSourceFileSizes as evaluateBroadSourceFileSizes,
+  readWorkingTreeRecords as readBroadWorkingTreeRecords,
+  strictSourceFileSizeViolations,
+} from './check-source-file-size.mjs';
+
 export const MAX_PRODUCTION_SOURCE_LINES = 800;
 
 export const SOURCE_ROOTS = [
@@ -49,7 +55,12 @@ const legacyManifestPath = path.join(repoRoot, 'scripts', 'ci', 'source-file-siz
 const legacyManifestRelativePath = normalizeRelativePath(
   path.relative(repoRoot, legacyManifestPath)
 );
+const policyManifestPath = path.join(repoRoot, 'scripts', 'ci', 'source-file-size-baseline.json');
+const policyManifestRelativePath = normalizeRelativePath(
+  path.relative(repoRoot, policyManifestPath)
+);
 const workspacePath = path.join(repoRoot, 'pnpm-workspace.yaml');
+const NO_PRIOR_COMMIT_REF = '0'.repeat(40);
 
 function normalizeRelativePath(filePath) {
   return filePath.split(path.sep).join('/');
@@ -196,25 +207,33 @@ export function evaluateSourceFileSizePolicy({
   return diagnostics;
 }
 
-export function evaluateLegacyManifestRatchet({ baselineLegacyMaxLines, legacyMaxLines }) {
+export function evaluateLegacyManifestRatchet({
+  baselineLegacyMaxLines,
+  baselineSourceLineCounts = new Map(),
+  legacyMaxLines,
+}) {
   if (baselineLegacyMaxLines === null) return [];
 
   const diagnostics = [];
   for (const [filePath, legacyLimit] of Object.entries(legacyMaxLines).sort(([left], [right]) =>
     left.localeCompare(right)
   )) {
-    const baselineLimit = baselineLegacyMaxLines[filePath];
-    if (baselineLimit === undefined) {
+    const manifestLimit = baselineLegacyMaxLines[filePath] ?? 0;
+    const sourceLimit = baselineSourceLineCounts.get(filePath) ?? 0;
+    const effectiveBaselineLimit = Math.max(manifestLimit, sourceLimit);
+    if (effectiveBaselineLimit <= MAX_PRODUCTION_SOURCE_LINES) {
       diagnostics.push({
         code: 'new-legacy-exception',
         filePath,
         message: 'new legacy exceptions are forbidden; split the file below the global limit',
       });
-    } else if (legacyLimit > baselineLimit) {
+    } else if (legacyLimit > effectiveBaselineLimit) {
       diagnostics.push({
         code: 'raised-legacy-cap',
         filePath,
-        message: `legacy cap ${legacyLimit} exceeds the base cap ${baselineLimit}`,
+        message:
+          `legacy cap ${legacyLimit} exceeds the base source/manifest cap ` +
+          `${effectiveBaselineLimit}`,
       });
     }
   }
@@ -222,13 +241,43 @@ export function evaluateLegacyManifestRatchet({ baselineLegacyMaxLines, legacyMa
   return diagnostics;
 }
 
-function readBaselineLegacyManifest(baselineRef) {
+export function evaluatePolicyManifestRatchet({ baselinePolicy, policy }) {
+  if (baselinePolicy === null) return [];
+
+  const diagnostics = [];
+  if (policy.maxLines > baselinePolicy.maxLines) {
+    diagnostics.push({
+      code: 'raised-global-limit',
+      filePath: policyManifestRelativePath,
+      message: `global limit ${policy.maxLines} exceeds the base limit ${baselinePolicy.maxLines}`,
+    });
+  }
+  diagnostics.push(
+    ...evaluateLegacyManifestRatchet({
+      baselineLegacyMaxLines: baselinePolicy.legacy,
+      legacyMaxLines: policy.legacy,
+    })
+  );
+  return diagnostics;
+}
+
+export function evaluatePolicyCurrentFiles({ policy, records }) {
+  return strictSourceFileSizeViolations(evaluateBroadSourceFileSizes(records, policy)).map(
+    ({ code, message, path: filePath }) => ({
+      code,
+      filePath: filePath ?? policyManifestRelativePath,
+      message,
+    })
+  );
+}
+
+function readBaselineManifest(baselineRef, manifestRelativePath) {
   if (!baselineRef) return null;
   if (!/^[0-9a-f]{40}$/i.test(baselineRef)) {
     throw new Error('SOURCE_FILE_SIZE_BASELINE_REF must be a 40-character commit SHA');
   }
 
-  const objectName = `${baselineRef}:${legacyManifestRelativePath}`;
+  const objectName = `${baselineRef}:${manifestRelativePath}`;
   try {
     execFileSync('git', ['cat-file', '-e', objectName], {
       cwd: repoRoot,
@@ -246,10 +295,62 @@ function readBaselineLegacyManifest(baselineRef) {
   );
 }
 
-export function verifySourceFileSizePolicy(root = repoRoot) {
+function readBaselineSourceLineCounts(baselineRef, filePaths) {
+  if (!baselineRef) return new Map();
+  if (!/^[0-9a-f]{40}$/i.test(baselineRef)) {
+    throw new Error('SOURCE_FILE_SIZE_BASELINE_REF must be a 40-character commit SHA');
+  }
+
+  const lineCounts = new Map();
+  for (const filePath of filePaths) {
+    const objectName = `${baselineRef}:${filePath}`;
+    try {
+      execFileSync('git', ['cat-file', '-e', objectName], {
+        cwd: repoRoot,
+        stdio: 'ignore',
+      });
+    } catch {
+      continue;
+    }
+    lineCounts.set(
+      filePath,
+      countPhysicalLines(
+        execFileSync('git', ['show', objectName], {
+          cwd: repoRoot,
+          encoding: 'utf8',
+        })
+      )
+    );
+  }
+  return lineCounts;
+}
+
+export function verifySourceFileSizePolicy(root = repoRoot, { requireBaseline = false } = {}) {
   const legacyMaxLines = JSON.parse(readFileSync(legacyManifestPath, 'utf8'));
-  const baselineLegacyMaxLines = readBaselineLegacyManifest(
-    process.env.SOURCE_FILE_SIZE_BASELINE_REF
+  const policy = JSON.parse(readFileSync(policyManifestPath, 'utf8'));
+  const configuredBaselineRef = process.env.SOURCE_FILE_SIZE_BASELINE_REF;
+  const baselineRef = configuredBaselineRef === NO_PRIOR_COMMIT_REF ? null : configuredBaselineRef;
+  const baselineRequired = requireBaseline && configuredBaselineRef !== NO_PRIOR_COMMIT_REF;
+  if (baselineRequired && !baselineRef) {
+    throw new Error('SOURCE_FILE_SIZE_BASELINE_REF is required in source-size ratchet mode');
+  }
+  const baselineLegacyMaxLines = readBaselineManifest(baselineRef, legacyManifestRelativePath);
+  const baselinePolicy = readBaselineManifest(baselineRef, policyManifestRelativePath);
+  if (baselineRequired && baselineLegacyMaxLines === null) {
+    throw new Error(
+      `SOURCE_FILE_SIZE_BASELINE_REF must resolve to ${legacyManifestRelativePath} ` +
+        'in source-size ratchet mode'
+    );
+  }
+  if (baselineRequired && baselinePolicy === null) {
+    throw new Error(
+      `SOURCE_FILE_SIZE_BASELINE_REF must resolve to ${policyManifestRelativePath} ` +
+        'in source-size ratchet mode'
+    );
+  }
+  const baselineSourceLineCounts = readBaselineSourceLineCounts(
+    baselineRef,
+    Object.keys(legacyMaxLines)
   );
   const workspacePackagePatterns = parseWorkspacePackagePatterns(
     readFileSync(workspacePath, 'utf8')
@@ -257,7 +358,16 @@ export function verifySourceFileSizePolicy(root = repoRoot) {
   const lineCounts = collectProductionSourceLineCounts(root);
   const diagnostics = [
     ...evaluateWorkspaceSourceCoverage({ workspacePackagePatterns }),
-    ...evaluateLegacyManifestRatchet({ baselineLegacyMaxLines, legacyMaxLines }),
+    ...evaluatePolicyManifestRatchet({ baselinePolicy, policy }),
+    ...evaluatePolicyCurrentFiles({
+      policy,
+      records: readBroadWorkingTreeRecords(root),
+    }),
+    ...evaluateLegacyManifestRatchet({
+      baselineLegacyMaxLines,
+      baselineSourceLineCounts,
+      legacyMaxLines,
+    }),
     ...evaluateSourceFileSizePolicy({ lineCounts, legacyMaxLines }),
   ];
 
@@ -276,7 +386,9 @@ export function verifySourceFileSizePolicy(root = repoRoot) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
   try {
-    const result = verifySourceFileSizePolicy();
+    const result = verifySourceFileSizePolicy(repoRoot, {
+      requireBaseline: process.argv.includes('--require-baseline'),
+    });
     console.log(
       `[source-file-size] OK: ${result.productionFileCount} production files, ` +
         `${result.legacyFileCount} ratcheted legacy exceptions, ` +

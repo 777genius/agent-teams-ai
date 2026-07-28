@@ -4,54 +4,37 @@ import {
   createTeamGraphLayoutActions,
   getDefaultTeamGraphSlotAssignmentsForMembers,
   isTeamGraphSlotPersistenceDisabled,
-  type TeamGraphLayoutSlice,
 } from '@features/agent-graph';
 import {
   createTeamLifecycleMutationCleanup,
   createTeamLifecycleMutationSlice,
-  createTeamLifecycleMutationTransport,
-  type TeamLifecycleMutationSlice,
 } from '@features/team-lifecycle/renderer';
-import { createTeamToolApprovalTransport } from '@features/team-provisioning/renderer';
-import {
-  createTeamRosterMutationRendererSlice,
-  createTeamRosterMutationTransport,
-  type TeamRosterMutationRendererSlice,
-} from '@features/team-roster-mutations/renderer';
-import {
-  createTeamRuntimeOperationsRendererSlice,
-  createTeamRuntimeOperationsTransport,
-  type TeamRuntimeOperationsRendererSlice,
-} from '@features/team-runtime-operations/renderer';
+import { createTeamRosterMutationRendererSlice } from '@features/team-roster-mutations/renderer';
+import { createTeamRuntimeOperationsRendererSlice } from '@features/team-runtime-operations/renderer';
 import {
   clearTeamTaskBoardAnalytics,
   resetTeamTaskBoardAnalyticsForTests,
-  type TeamTaskArtifactsRendererSlice,
-  type TeamTaskBoardRendererSlice,
 } from '@features/team-task-board/renderer';
 import {
   defaultTeamMessageFeedCoordinator,
   TeamDirectoryRefreshCoordinator,
-  type TeamDirectoryRendererSlice,
-  type TeamMessageFeedRendererSlice,
-  type TeamViewDataRendererSlice,
 } from '@features/team-view-read-model/renderer';
 import { classifyAnalyticsError } from '@renderer/analytics/productAnalytics';
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
 import { getTeamLifecycleAnalyticsContext } from '@renderer/analytics/teamAnalyticsMetadata';
+import { createTeamLifecycleMutationTransport } from '@renderer/composition/team/createTeamLifecycleMutationTransport';
+import { createTeamRosterMutationTransport } from '@renderer/composition/team/createTeamRosterMutationTransport';
+import { createTeamRuntimeOperationsTransport } from '@renderer/composition/team/createTeamRuntimeOperationsTransport';
+import { createTeamToolApprovalTransport } from '@renderer/composition/team/createTeamToolApprovalTransport';
 import { createLogger } from '@shared/utils/logger';
 
 import { createTeamCollaborationDataSlice } from '../team/createTeamCollaborationDataSlice';
-import {
-  createTeamNavigationSlice,
-  type TeamNavigationSlice,
-} from '../team/createTeamNavigationSlice';
+import { createTeamNavigationSlice } from '../team/createTeamNavigationSlice';
 import {
   createTeamProvisioningRuntimeSlice,
   getCurrentProvisioningProgressForTeam,
   isTeamProvisioningActive,
   resetTeamProvisioningRuntimeSliceForTests,
-  type TeamProvisioningRuntimeSlice,
 } from '../team/createTeamProvisioningRuntimeSlice';
 import { selectTeamDataForName } from '../team/teamDataSelectors';
 import { invalidateTeamLocalStateEpoch } from '../team/teamLocalStateEpoch';
@@ -82,9 +65,8 @@ import {
 } from '../team/teamToolApprovalSettingsSync';
 
 import type { AppState } from '../types';
-import type { TeamMessageDeliveryRendererSlice } from '@features/team-message-delivery/renderer';
+import type { TeamSlice } from './teamSlice.types';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
-import type { ToolApprovalRequest, ToolApprovalSettings } from '@shared/types';
 import type { StateCreator } from 'zustand';
 export { getLastResolvedTeamDataRefreshAt } from '../team/teamDataRefreshTimestamps';
 export {
@@ -118,6 +100,7 @@ export type {
   PendingTeamSectionFocusState,
   TeamsProjectNavigationIntent,
 } from '../team/teamSliceStateTypes';
+export type { TeamSlice } from './teamSlice.types';
 export type { TeamLaunchParams } from '@features/team-provisioning/renderer';
 export { getCurrentProvisioningProgressForTeam, isTeamProvisioningActive };
 const logger = createLogger('teamSlice');
@@ -143,42 +126,6 @@ export function __getTeamScopedTransientStateForTests(
   return teamStateLifecycleCoordinator.snapshot(teamName);
 }
 const nowIso = (): string => new Date().toISOString();
-export interface TeamSlice
-  extends
-    TeamGraphLayoutSlice,
-    TeamLifecycleMutationSlice,
-    TeamMessageDeliveryRendererSlice,
-    TeamMessageFeedRendererSlice,
-    TeamProvisioningRuntimeSlice,
-    TeamRuntimeOperationsRendererSlice,
-    TeamRosterMutationRendererSlice,
-    TeamDirectoryRendererSlice,
-    TeamNavigationSlice,
-    TeamTaskArtifactsRendererSlice,
-    TeamTaskBoardRendererSlice,
-    TeamViewDataRendererSlice {
-  pendingApprovals: ToolApprovalRequest[];
-  resolvedApprovals: Map<string, boolean>;
-  toolApprovalSettingsByTeam: Record<string, ToolApprovalSettings>;
-  toolApprovalSettings: ToolApprovalSettings;
-  updateToolApprovalSettings: (
-    patch: Partial<ToolApprovalSettings>,
-    forTeam?: string
-  ) => Promise<void>;
-  respondToToolApproval: (
-    teamName: string,
-    runId: string,
-    requestId: string,
-    allow: boolean,
-    message?: string
-  ) => Promise<void>;
-  messagesPanelMode: TeamMessagesPanelMode;
-  messagesPanelWidth: number;
-  sidebarLogsHeight: number;
-  setMessagesPanelMode: (mode: TeamMessagesPanelMode) => void;
-  setMessagesPanelWidth: (width: number) => void;
-  setSidebarLogsHeight: (height: number) => void;
-}
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
   ...createTeamCollaborationDataSlice({
     analytics: {

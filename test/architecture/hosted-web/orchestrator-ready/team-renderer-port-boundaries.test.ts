@@ -12,13 +12,13 @@ const legacyCompositionPaths = [
   'src/renderer/store/team/teamToolApprovalSettingsSync.ts',
 ] as const;
 const concreteTransportPaths = [
-  'src/features/task-log-observability/renderer/adapters/createTaskLogObservabilityRendererTransport.ts',
-  'src/features/team-lifecycle/renderer/adapters/createTeamLifecycleMutationTransport.ts',
-  'src/features/team-provisioning/renderer/adapters/createTeamToolApprovalTransport.ts',
-  'src/features/team-message-delivery/renderer/adapters/createTeamMessageDeliveryTransport.ts',
-  'src/features/team-task-board/renderer/adapters/createTeamNotificationTransport.ts',
-  'src/features/team-roster-mutations/renderer/adapters/createTeamRosterMutationTransport.ts',
-  'src/features/team-runtime-operations/renderer/adapters/createTeamRuntimeOperationsTransport.ts',
+  'src/renderer/composition/team/createTaskLogObservabilityRendererTransport.ts',
+  'src/renderer/composition/team/createTeamLifecycleMutationTransport.ts',
+  'src/renderer/composition/team/createTeamMessageDeliveryTransport.ts',
+  'src/renderer/composition/team/createTeamNotificationTransport.ts',
+  'src/renderer/composition/team/createTeamRosterMutationTransport.ts',
+  'src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts',
+  'src/renderer/composition/team/createTeamToolApprovalTransport.ts',
 ] as const;
 const taskLogComponentPaths = [
   'src/renderer/components/team/taskLogs/ExactTaskLogsSection.tsx',
@@ -29,9 +29,9 @@ const taskLogComponentPaths = [
 const transportFreeFeaturePaths = [
   'src/features/team-message-delivery/renderer/adapters/createTeamMessageDeliveryRendererSlice.ts',
   'src/features/team-message-delivery/renderer/ports/TeamMessageDeliveryRendererPorts.ts',
-  'src/features/team-roster-mutations/renderer/adapters/createTeamRosterMutationRendererSlice.ts',
+  'src/features/team-roster-mutations/renderer/composition/createTeamRosterMutationRendererSlice.ts',
   'src/features/team-roster-mutations/renderer/ports/TeamRosterMutationRendererPorts.ts',
-  'src/features/team-runtime-operations/renderer/adapters/createTeamRuntimeOperationsRendererSlice.ts',
+  'src/features/team-runtime-operations/renderer/composition/createTeamRuntimeOperationsRendererSlice.ts',
   'src/features/team-runtime-operations/renderer/ports/TeamRuntimeOperationsRendererPorts.ts',
 ] as const;
 
@@ -42,7 +42,7 @@ describe('team renderer port boundaries', () => {
     }
   });
 
-  it('isolates direct API access to feature-owned concrete transport adapters', () => {
+  it('isolates direct API access to outer renderer composition', () => {
     for (const path of concreteTransportPaths) {
       const contents = source(path);
       expect(contents, path).toContain("from '@renderer/api'");
@@ -56,14 +56,15 @@ describe('team renderer port boundaries', () => {
     }
   });
 
-  it('routes task-log components only through the feature renderer entrypoint', () => {
+  it('routes task-log components through outer renderer composition', () => {
     for (const path of taskLogComponentPaths) {
       const contents = source(path);
-      expect(contents, path).toContain("from '@features/task-log-observability/renderer'");
+      expect(contents, path).toContain(
+        "from '@renderer/composition/team/createTaskLogObservabilityRendererTransport'"
+      );
       expect(contents, path).not.toMatch(
         /@renderer\/api|window\.electronAPI|ElectronAPI|\bapi\.teams\b/
       );
-      expect(contents, path).not.toMatch(/@features\/task-log-observability\/renderer\//);
     }
   });
 

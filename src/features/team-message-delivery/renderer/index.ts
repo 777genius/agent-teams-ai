@@ -1,6 +1,5 @@
 export type { TeamMessageDeliveryRendererSliceDependencies } from './adapters/createTeamMessageDeliveryRendererSlice';
 export { createTeamMessageDeliveryRendererSlice } from './adapters/createTeamMessageDeliveryRendererSlice';
-export { createTeamMessageDeliveryTransport } from './adapters/createTeamMessageDeliveryTransport';
 export type {
   CrossTeamMessageAnalyticsInput,
   CrossTeamMessageDeliveryTransportPort,
