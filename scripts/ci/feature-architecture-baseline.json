@@ -397,6 +397,11 @@
       "specifier": "node:path"
     },
     {
+      "rule": "core-domain-isolation",
+      "source": "src/features/workspace-trust/core/domain/WorkspaceTrustPath.ts",
+      "specifier": "node:process"
+    },
+    {
       "rule": "cross-feature-public-entrypoint",
       "source": "src/features/codex-model-catalog/main/composition/createCodexModelCatalogFeature.ts",
       "specifier": "@features/codex-account/main/infrastructure/CodexAccountEnvBuilder"

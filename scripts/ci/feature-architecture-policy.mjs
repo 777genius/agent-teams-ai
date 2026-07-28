@@ -40,7 +40,7 @@ import {
   dependencyHasForbiddenReexportOrigin,
   isContractProjectTarget,
 } from './feature-reexport-origin-analysis.mjs';
-import { collectReferenceDirectiveEdges } from './feature-reference-directive-analysis.mjs';
+import { collectAmbientDependencyEdges } from './feature-ambient-dependency-analysis.mjs';
 import { snapshotExportSelection } from './feature-public-snapshot-analysis.mjs';
 import { analyzePublicTargets } from './feature-public-target-analysis.mjs';
 import {
@@ -93,7 +93,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     true,
     sourcePath.endsWith('.tsx') || sourcePath.endsWith('.jsx') ? ts.ScriptKind.TSX : undefined
   );
-  const edges = collectReferenceDirectiveEdges(sourceFile, sourcePath);
+  const edges = collectAmbientDependencyEdges(sourceFile, sourcePath);
   const importedBindings = new Map();
   const localExports = [];
   const localTypeExportNames = new Set();

@@ -61,6 +61,8 @@ test('collects static, dynamic, CommonJS, and re-export dependency edges', () =>
     `
       /// <reference types="node" />
       /// <reference path="./referenced.ts" />
+      /// <reference lib="dom" />
+      /// <reference lib="es2022" />
       import type { Contract } from './contract';
       export { facade } from './facade';
       const lazy = import('./lazy');
@@ -77,6 +79,9 @@ test('collects static, dynamic, CommonJS, and re-export dependency edges', () =>
     [
       { kind: 'reference', specifier: 'node' },
       { kind: 'reference', specifier: './referenced.ts' },
+      { kind: 'reference', specifier: 'typescript:lib/dom' },
+      { kind: 'global', specifier: 'node:module' },
+      { kind: 'global', specifier: 'node:module' },
       { kind: 'import', specifier: './contract' },
       { kind: 'export', specifier: './facade' },
       { kind: 'import', specifier: './lazy' },
@@ -188,6 +193,8 @@ test('keeps core domain free from application and runtime dependencies', () => {
       'src/features/example/core/domain/policy.ts': `
         /// <reference types="node" />
         /// <reference path="../../../../main/referenceTarget.ts" />
+        /// <reference lib="dom" />
+        /// <reference lib="es2022" />
         import path from 'node:path';
         import './styles.css';
         import electron from 'electron';
@@ -211,6 +218,18 @@ test('keeps core domain free from application and runtime dependencies', () => {
           path: PathLike;
           view: ReactNode;
         };
+      `,
+      'src/features/example/core/domain/runtimeGlobals.ts': `
+        export const bytes = Buffer.from('value');
+        export const cwd = process.cwd();
+      `,
+      'src/features/example/core/domain/shadowedRuntimeGlobals.ts': `
+        export function pure(
+          process: { cwd(): string },
+          Buffer: { from(value: string): string },
+        ): string {
+          return process.cwd() + Buffer.from('value');
+        }
       `,
       'src/features/runtime-feature/index.ts': `export { registerRuntime } from './main';`,
       'src/features/runtime-feature/main/index.ts':
@@ -236,9 +255,12 @@ test('keeps core domain free from application and runtime dependencies', () => {
         'fastify',
         'fastify',
         'node',
+        'node:buffer',
         'node:fs',
         'node:path',
+        'node:process',
         'react',
+        'typescript:lib/dom',
       ]);
     }
   );
@@ -322,8 +344,16 @@ test('resolves allowed contract barrels to their dependency-rule origins', () =>
             specifier: '../../contracts',
           },
           {
+            source: 'src/features/example/core/domain/runtimeExplicit.ts',
+            specifier: 'node:module',
+          },
+          {
             source: 'src/features/example/core/domain/runtimeLocal.ts',
             specifier: '../../contracts',
+          },
+          {
+            source: 'src/features/example/core/domain/runtimeLocal.ts',
+            specifier: 'node:module',
           },
         ]
       );
