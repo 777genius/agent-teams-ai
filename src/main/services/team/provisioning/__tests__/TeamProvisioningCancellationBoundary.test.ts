@@ -92,7 +92,10 @@ function makePorts(
     aliveRunId?: string | null;
   } = {}
 ): TeamProvisioningCancellationBoundaryPorts<TestRun> & {
+  aliveRunByTeam: Map<string, string>;
   cleanupRun: ReturnType<typeof vi.fn>;
+  getTrackedRunId: ReturnType<typeof vi.fn>;
+  hasSecondaryRuntimeRuns: ReturnType<typeof vi.fn>;
   killTeamProcessAndWait: ReturnType<typeof vi.fn>;
   emittedEvents: TeamChangeEvent[];
   progressUpdates: TeamProvisioningProgress[];
@@ -596,7 +599,68 @@ describe('TeamProvisioningCancellationBoundary', () => {
     expect(run.anthropicApiKeyHelper).toBeNull();
   });
 
-  it('reports helper cleanup failure and retains the cancelled run for stop retry', async () => {
+  it('coalesces concurrent cancellation while owned stops are in flight', async () => {
+    const teamProcessStop = createDeferred<void>();
+    const primaryStop = createDeferred<void>();
+    const secondaryStop = createDeferred<void>();
+    const run = makeRun({
+      anthropicApiKeyHelper: {
+        teamName: 'team-a',
+        directory: '/helpers/team-a/run-1',
+        helperPath: '/helpers/team-a/run-1/helper.sh',
+        keyPath: '/helpers/team-a/run-1/key',
+        settingsPath: '/helpers/team-a/run-1/settings.json',
+        settingsObject: { apiKeyHelper: '/helpers/team-a/run-1/helper.sh' },
+        settingsArgs: ['--settings', '/helpers/team-a/run-1/settings.json'],
+        envPatch: {},
+      },
+    });
+    const ports = makePorts({
+      run,
+      trackedRunId: run.runId,
+      hasSecondaryRuntimeRuns: true,
+    });
+    ports.killTeamProcessAndWait.mockImplementation(async () => {
+      await teamProcessStop.promise;
+    });
+    ports.stopOpenCodeRuntimeAdapterTeam.mockImplementation(async () => {
+      await primaryStop.promise;
+    });
+    ports.stopMixedSecondaryRuntimeLanes.mockImplementation(async () => {
+      await secondaryStop.promise;
+    });
+    ports.cleanupRunOwnedAnthropicApiKeyHelper = vi.fn(async (targetRun) => {
+      targetRun.anthropicApiKeyHelper = null;
+    });
+    const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+    const firstCancellation = boundary.cancelProvisioning(run.runId);
+    const duplicateCancellation = boundary.cancelProvisioning(run.runId);
+
+    expect(duplicateCancellation).toBe(firstCancellation);
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledOnce();
+    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledOnce();
+    expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
+    expect(ports.updateProgress).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+
+    teamProcessStop.resolve();
+    primaryStop.resolve();
+    secondaryStop.resolve();
+    await Promise.all([firstCancellation, duplicateCancellation]);
+
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledOnce();
+    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledOnce();
+    expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledOnce();
+    expect(ports.updateProgress).toHaveBeenCalledOnce();
+    expect(run.onProgress).toHaveBeenCalledOnce();
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(ports.runs.has(run.runId)).toBe(false);
+  });
+
+  it('retries retained helper cleanup without repeating completed runtime stops', async () => {
     const run = makeRun({
       anthropicApiKeyHelper: {
         teamName: 'team-a',
@@ -611,9 +675,28 @@ describe('TeamProvisioningCancellationBoundary', () => {
     });
     const ports = makePorts({ run, trackedRunId: run.runId });
     const cleanupError = new Error('helper cleanup failed');
-    ports.cleanupRunOwnedAnthropicApiKeyHelper = vi.fn(async () => {
-      throw cleanupError;
+    let helperCleanupAttempts = 0;
+    ports.stopOpenCodeRuntimeAdapterTeam.mockImplementation(async (teamName, runId) => {
+      if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
+        ports.runtimeAdapterRunByTeam.delete(teamName);
+      }
+      if (ports.provisioningRunByTeam.get(teamName) === runId) {
+        ports.provisioningRunByTeam.delete(teamName);
+      }
+      if (ports.aliveRunByTeam.get(teamName) === runId) {
+        ports.aliveRunByTeam.delete(teamName);
+      }
     });
+    const cleanupRunOwnedAnthropicApiKeyHelper = vi.fn(async (targetRun: TestRun) => {
+      if (targetRun.anthropicApiKeyHelper) {
+        helperCleanupAttempts += 1;
+        if (helperCleanupAttempts === 1) {
+          throw cleanupError;
+        }
+        targetRun.anthropicApiKeyHelper = null;
+      }
+    });
+    ports.cleanupRunOwnedAnthropicApiKeyHelper = cleanupRunOwnedAnthropicApiKeyHelper;
     const boundary = createTeamProvisioningCancellationBoundary(ports);
 
     await expect(boundary.cancelProvisioning(run.runId)).rejects.toBe(cleanupError);
@@ -625,11 +708,29 @@ describe('TeamProvisioningCancellationBoundary', () => {
     expect(ports.logWarning).toHaveBeenCalledWith(
       expect.stringContaining('Failed to clean Anthropic API-key helper after cancellation')
     );
+
+    await expect(boundary.cancelProvisioning(run.runId)).resolves.toBeUndefined();
+
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledOnce();
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(cleanupRunOwnedAnthropicApiKeyHelper).toHaveBeenCalledTimes(2);
+    expect(run.anthropicApiKeyHelper).toBeNull();
+    expect(run.onProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        runId: run.runId,
+        state: 'cancelled',
+        message: 'Provisioning cancelled by user',
+      })
+    );
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(ports.runs.has(run.runId)).toBe(false);
   });
 
-  it('retains cancellation evidence after a secondary stop failure', async () => {
+  it('retries only the retained secondary stop after a stop failure', async () => {
     const secondaryStopFailure = new Error('secondary stop failed');
     const events: string[] = [];
+    let secondaryOwned = true;
     const run = makeRun({
       onProgress: vi.fn(() => {
         events.push('cancelled progress');
@@ -640,12 +741,26 @@ describe('TeamProvisioningCancellationBoundary', () => {
       trackedRunId: run.runId,
       hasSecondaryRuntimeRuns: true,
     });
-    ports.stopOpenCodeRuntimeAdapterTeam.mockImplementation(async () => {
+    ports.hasSecondaryRuntimeRuns.mockImplementation(() => secondaryOwned);
+    ports.stopOpenCodeRuntimeAdapterTeam.mockImplementation(async (teamName, runId) => {
       events.push('primary stopped');
+      if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
+        ports.runtimeAdapterRunByTeam.delete(teamName);
+      }
+      if (ports.provisioningRunByTeam.get(teamName) === runId) {
+        ports.provisioningRunByTeam.delete(teamName);
+      }
+      if (ports.aliveRunByTeam.get(teamName) === runId) {
+        ports.aliveRunByTeam.delete(teamName);
+      }
     });
     ports.stopMixedSecondaryRuntimeLanes.mockImplementation(async () => {
-      events.push('secondary stop failed');
-      throw secondaryStopFailure;
+      if (ports.stopMixedSecondaryRuntimeLanes.mock.calls.length === 1) {
+        events.push('secondary stop failed');
+        throw secondaryStopFailure;
+      }
+      secondaryOwned = false;
+      events.push('secondary stopped');
     });
     const boundary = createTeamProvisioningCancellationBoundary(ports);
 
@@ -664,11 +779,113 @@ describe('TeamProvisioningCancellationBoundary', () => {
     expect(ports.cleanupRun).not.toHaveBeenCalled();
     expect(ports.runs.get(run.runId)).toBe(run);
 
-    await expect(boundary.cancelProvisioning(run.runId)).rejects.toThrow(
-      'Provisioning cannot be cancelled in current state'
-    );
+    await expect(boundary.cancelProvisioning(run.runId)).resolves.toBeUndefined();
+
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
     expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledOnce();
-    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledOnce();
+    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledTimes(2);
+    expect(ports.updateProgress).toHaveBeenCalledTimes(2);
+    expect(run.onProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        runId: run.runId,
+        state: 'cancelled',
+        message: 'Provisioning cancelled by user',
+      })
+    );
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(ports.runs.has(run.runId)).toBe(false);
+  });
+
+  it('retries only the retained primary stop after a stop failure', async () => {
+    const primaryStopFailure = new Error('primary stop failed');
+    const run = makeRun();
+    const ports = makePorts({
+      run,
+      trackedRunId: run.runId,
+      hasSecondaryRuntimeRuns: false,
+    });
+    ports.stopOpenCodeRuntimeAdapterTeam.mockImplementation(async (teamName, runId) => {
+      if (ports.stopOpenCodeRuntimeAdapterTeam.mock.calls.length === 1) {
+        throw primaryStopFailure;
+      }
+      if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
+        ports.runtimeAdapterRunByTeam.delete(teamName);
+      }
+      if (ports.provisioningRunByTeam.get(teamName) === runId) {
+        ports.provisioningRunByTeam.delete(teamName);
+      }
+      if (ports.aliveRunByTeam.get(teamName) === runId) {
+        ports.aliveRunByTeam.delete(teamName);
+      }
+    });
+    const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+    const firstCancellation = boundary.cancelProvisioning(run.runId);
+    const duplicateCancellation = boundary.cancelProvisioning(run.runId);
+    const firstRejection = expect(firstCancellation).rejects.toBe(primaryStopFailure);
+    const duplicateRejection = expect(duplicateCancellation).rejects.toBe(primaryStopFailure);
+
+    expect(duplicateCancellation).toBe(firstCancellation);
+    await Promise.all([firstRejection, duplicateRejection]);
+
+    expect(run.cancelRequested).toBe(true);
+    expect(run.progress).toMatchObject({
+      runId: run.runId,
+      state: 'failed',
+      message: 'Provisioning cancellation could not stop all runtime lanes',
+    });
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.runs.get(run.runId)).toBe(run);
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledOnce();
+
+    await expect(boundary.cancelProvisioning(run.runId)).resolves.toBeUndefined();
+
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledTimes(2);
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(ports.updateProgress).toHaveBeenCalledTimes(2);
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(ports.runs.has(run.runId)).toBe(false);
+  });
+
+  it('retries the exact failed team child without touching newer team ownership', async () => {
+    const teamProcessStopFailure = new Error('team process stop failed');
+    const run = makeRun();
+    const ports = makePorts({
+      run,
+      trackedRunId: null,
+      runtimeAdapterRunId: null,
+      provisioningRunId: null,
+      aliveRunId: null,
+      hasSecondaryRuntimeRuns: false,
+    });
+    ports.killTeamProcessAndWait.mockRejectedValueOnce(teamProcessStopFailure);
+    const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+    await expect(boundary.cancelProvisioning(run.runId)).rejects.toBe(teamProcessStopFailure);
+
+    ports.getTrackedRunId.mockReturnValue('newer-run');
+    ports.runtimeAdapterRunByTeam.set(run.teamName, {
+      runId: 'newer-run',
+      providerId: 'opencode',
+      cwd: '/newer-runtime-cwd',
+    });
+    ports.provisioningRunByTeam.set(run.teamName, 'newer-run');
+    ports.aliveRunByTeam.set(run.teamName, 'newer-run');
+
+    await expect(boundary.cancelProvisioning(run.runId)).resolves.toBeUndefined();
+
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledTimes(2);
+    expect(ports.killTeamProcessAndWait).toHaveBeenNthCalledWith(1, run.child);
+    expect(ports.killTeamProcessAndWait).toHaveBeenNthCalledWith(2, run.child);
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(ports.runtimeAdapterRunByTeam.get(run.teamName)?.runId).toBe('newer-run');
+    expect(ports.provisioningRunByTeam.get(run.teamName)).toBe('newer-run');
+    expect(ports.aliveRunByTeam.get(run.teamName)).toBe('newer-run');
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(ports.runs.has(run.runId)).toBe(false);
   });
 
   it('awaits remaining stops and retains failed evidence after cancellation rejects', async () => {
@@ -706,11 +923,15 @@ describe('TeamProvisioningCancellationBoundary', () => {
     ]);
     const stoppingSecondaryRuntimeTeams = new Set<string>();
     const stopInputs: Array<{ laneId: string; runId: string }> = [];
+    let laneAStopAttempts = 0;
     const adapter = makeAdapter(
       vi.fn(async (input) => {
         stopInputs.push({ laneId: input.laneId, runId: input.runId });
         if (input.laneId === 'lane-a') {
-          throw secondaryStopFailure;
+          laneAStopAttempts += 1;
+          if (laneAStopAttempts === 1) {
+            throw secondaryStopFailure;
+          }
         }
         if (input.laneId === 'lane-b') {
           events.push('remaining secondary stop started');
@@ -759,7 +980,19 @@ describe('TeamProvisioningCancellationBoundary', () => {
       trackedRunId: run.runId,
       hasSecondaryRuntimeRuns: true,
     });
-    ports.stopOpenCodeRuntimeAdapterTeam.mockImplementation(async () => {
+    ports.stopOpenCodeRuntimeAdapterTeam.mockImplementation(async (teamName, runId) => {
+      if (ports.stopOpenCodeRuntimeAdapterTeam.mock.calls.length > 1) {
+        if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
+          ports.runtimeAdapterRunByTeam.delete(teamName);
+        }
+        if (ports.provisioningRunByTeam.get(teamName) === runId) {
+          ports.provisioningRunByTeam.delete(teamName);
+        }
+        if (ports.aliveRunByTeam.get(teamName) === runId) {
+          ports.aliveRunByTeam.delete(teamName);
+        }
+        return;
+      }
       try {
         await primaryStop.promise;
       } catch (error) {
@@ -828,17 +1061,29 @@ describe('TeamProvisioningCancellationBoundary', () => {
     expect(stoppingSecondaryRuntimeTeams.has(run.teamName)).toBe(false);
     expect(cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
 
-    await expect(boundary.cancelProvisioning(run.runId)).rejects.toThrow(
-      'Provisioning cannot be cancelled in current state'
-    );
     expect(stopInputs).toEqual([
       { laneId: 'lane-a', runId: 'lane-run-a' },
       { laneId: 'lane-b', runId: 'lane-run-b' },
     ]);
+
+    await expect(boundary.cancelProvisioning(run.runId)).resolves.toBeUndefined();
+
+    expect(stopInputs).toEqual([
+      { laneId: 'lane-a', runId: 'lane-run-a' },
+      { laneId: 'lane-b', runId: 'lane-run-b' },
+      { laneId: 'lane-a', runId: 'lane-run-a' },
+    ]);
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledTimes(2);
+    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledTimes(2);
+    expect(ports.updateProgress).toHaveBeenCalledTimes(2);
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(ports.runs.has(run.runId)).toBe(false);
+    expect(secondaryRuns.size).toBe(0);
   });
 
   it.each(['ready', 'disconnected', 'failed', 'cancelled'] as const)(
-    'rejects direct run cancellation in the %s state',
+    'rejects non-cancellation terminal run cancellation in the %s state',
     async (state) => {
       const run = makeRun({ progress: progress({ state }) });
       const ports = makePorts({
@@ -862,6 +1107,173 @@ describe('TeamProvisioningCancellationBoundary', () => {
       expect(ports.runs.get(run.runId)).toBe(run);
     }
   );
+
+  it('does not retry cancelRequested runs outside the exact cancellation failure states', async () => {
+    const run = makeRun({
+      progress: progress({ state: 'ready' }),
+      cancelRequested: true,
+      processKilled: true,
+    });
+    const ports = makePorts({
+      run,
+      trackedRunId: run.runId,
+      hasSecondaryRuntimeRuns: true,
+    });
+    const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+    await expect(boundary.cancelProvisioning(run.runId)).rejects.toThrow(
+      'Provisioning cannot be cancelled in current state'
+    );
+
+    expect(ports.killTeamProcessAndWait).not.toHaveBeenCalled();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+  });
+
+  it('retains a failed secondary stop when newer ownership fences its retry', async () => {
+    const secondaryStopFailure = new Error('secondary stop failed');
+    const retainedSecondaryRunIds = new Set(['old-secondary-run']);
+    const run = makeRun({
+      anthropicApiKeyHelper: {
+        teamName: 'team-a',
+        directory: '/helpers/team-a/run-1',
+        helperPath: '/helpers/team-a/run-1/helper.sh',
+        keyPath: '/helpers/team-a/run-1/key',
+        settingsPath: '/helpers/team-a/run-1/settings.json',
+        settingsObject: { apiKeyHelper: '/helpers/team-a/run-1/helper.sh' },
+        settingsArgs: ['--settings', '/helpers/team-a/run-1/settings.json'],
+        envPatch: {},
+      },
+    });
+    const ports = makePorts({
+      run,
+      trackedRunId: run.runId,
+      hasSecondaryRuntimeRuns: true,
+    });
+    ports.hasSecondaryRuntimeRuns.mockImplementation(() => retainedSecondaryRunIds.size > 0);
+    ports.stopOpenCodeRuntimeAdapterTeam.mockImplementation(async (teamName, runId) => {
+      if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
+        ports.runtimeAdapterRunByTeam.delete(teamName);
+      }
+      if (ports.provisioningRunByTeam.get(teamName) === runId) {
+        ports.provisioningRunByTeam.delete(teamName);
+      }
+      if (ports.aliveRunByTeam.get(teamName) === runId) {
+        ports.aliveRunByTeam.delete(teamName);
+      }
+    });
+    ports.stopMixedSecondaryRuntimeLanes.mockRejectedValue(secondaryStopFailure);
+    ports.cleanupRunOwnedAnthropicApiKeyHelper = vi.fn(async (targetRun) => {
+      targetRun.anthropicApiKeyHelper = null;
+    });
+    const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+    await expect(boundary.cancelProvisioning(run.runId)).rejects.toBe(secondaryStopFailure);
+
+    ports.getTrackedRunId.mockReturnValue('newer-run');
+    ports.runtimeAdapterRunByTeam.set(run.teamName, {
+      runId: 'newer-run',
+      providerId: 'opencode',
+      cwd: '/newer-runtime-cwd',
+    });
+    ports.provisioningRunByTeam.set(run.teamName, 'newer-run');
+    ports.aliveRunByTeam.set(run.teamName, 'newer-run');
+
+    await expect(boundary.cancelProvisioning(run.runId)).rejects.toBe(secondaryStopFailure);
+
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledOnce();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(run.teamName, run.runId);
+    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledOnce();
+    expect(retainedSecondaryRunIds).toEqual(new Set(['old-secondary-run']));
+    expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
+    expect(ports.runtimeAdapterRunByTeam.get(run.teamName)?.runId).toBe('newer-run');
+    expect(ports.provisioningRunByTeam.get(run.teamName)).toBe('newer-run');
+    expect(ports.aliveRunByTeam.get(run.teamName)).toBe('newer-run');
+    expect(run.progress).toMatchObject({
+      runId: run.runId,
+      state: 'failed',
+      message: 'Provisioning cancellation could not stop all runtime lanes',
+    });
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.runs.get(run.runId)).toBe(run);
+  });
+
+  it('retains a failed primary stop when newer ownership fences its retry', async () => {
+    const primaryStopFailure = new Error('primary stop failed');
+    const run = makeRun({
+      anthropicApiKeyHelper: {
+        teamName: 'team-a',
+        directory: '/helpers/team-a/run-1',
+        helperPath: '/helpers/team-a/run-1/helper.sh',
+        keyPath: '/helpers/team-a/run-1/key',
+        settingsPath: '/helpers/team-a/run-1/settings.json',
+        settingsObject: { apiKeyHelper: '/helpers/team-a/run-1/helper.sh' },
+        settingsArgs: ['--settings', '/helpers/team-a/run-1/settings.json'],
+        envPatch: {},
+      },
+    });
+    const ports = makePorts({
+      run,
+      trackedRunId: run.runId,
+      hasSecondaryRuntimeRuns: false,
+    });
+    ports.stopOpenCodeRuntimeAdapterTeam.mockRejectedValue(primaryStopFailure);
+    ports.cleanupRunOwnedAnthropicApiKeyHelper = vi.fn(async (targetRun) => {
+      targetRun.anthropicApiKeyHelper = null;
+    });
+    const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+    await expect(boundary.cancelProvisioning(run.runId)).rejects.toBe(primaryStopFailure);
+
+    ports.getTrackedRunId.mockReturnValue('newer-run');
+    ports.runtimeAdapterRunByTeam.set(run.teamName, {
+      runId: 'newer-run',
+      providerId: 'opencode',
+      cwd: '/newer-runtime-cwd',
+    });
+    ports.provisioningRunByTeam.set(run.teamName, 'newer-run');
+    ports.aliveRunByTeam.set(run.teamName, 'newer-run');
+
+    await expect(boundary.cancelProvisioning(run.runId)).rejects.toBe(primaryStopFailure);
+
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledOnce();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(run.teamName, run.runId);
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(ports.cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
+    expect(ports.runtimeAdapterRunByTeam.get(run.teamName)?.runId).toBe('newer-run');
+    expect(ports.provisioningRunByTeam.get(run.teamName)).toBe('newer-run');
+    expect(ports.aliveRunByTeam.get(run.teamName)).toBe('newer-run');
+    expect(run.progress).toMatchObject({
+      runId: run.runId,
+      state: 'failed',
+      message: 'Provisioning cancellation could not stop all runtime lanes',
+    });
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.runs.get(run.runId)).toBe(run);
+  });
+
+  it('cleans a successful cancellation once and reports a repeated call as unknown', async () => {
+    const run = makeRun();
+    const ports = makePorts({
+      run,
+      trackedRunId: null,
+      runtimeAdapterRunId: null,
+      provisioningRunId: null,
+      aliveRunId: null,
+    });
+    const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+    await expect(boundary.cancelProvisioning(run.runId)).resolves.toBeUndefined();
+    await expect(boundary.cancelProvisioning(run.runId)).rejects.toThrow('Unknown runId');
+
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+  });
 
   it('routes runtime-adapter-only cancellation through the runtime cancellation port', async () => {
     const adapter = makeAdapter();
