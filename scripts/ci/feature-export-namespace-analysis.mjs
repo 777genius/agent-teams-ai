@@ -41,6 +41,35 @@ export function directExportNamesForNamespace(statement, namespace) {
     : statementBindingNames(statement);
 }
 
+export function directReexportsForDeclaration(node, edge) {
+  if (!edge) return [];
+  if (!node.exportClause) {
+    return [
+      {
+        ...edge,
+        exportedName: '*',
+        importedName: '*',
+        isExportStar: true,
+      },
+    ];
+  }
+  if (ts.isNamespaceExport(node.exportClause)) {
+    return [
+      {
+        ...edge,
+        exportedName: node.exportClause.name.text,
+        importedName: '*',
+      },
+    ];
+  }
+  return node.exportClause.elements.map((element) => ({
+    ...edge,
+    exportedName: element.name.text,
+    importedName: element.propertyName?.text ?? element.name.text,
+    isTypeOnly: edge.isTypeOnly || element.isTypeOnly,
+  }));
+}
+
 export function importSelectionsForClause(importClause) {
   if (!importClause) return { importedNames: ['*'], typeOnlyImportedNames: [] };
   const importedNames = [];

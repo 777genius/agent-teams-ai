@@ -20,6 +20,15 @@ export function normalizeSourcePath(filePath) {
   return filePath.split(path.sep).join('/');
 }
 
+export function isSourceCodeProjectTarget(targetPath) {
+  const extension = path.posix.extname(targetPath);
+  return (
+    extension === '' ||
+    RESOLUTION_EXTENSIONS.includes(extension) ||
+    RUNTIME_EXTENSION_SUBSTITUTIONS.has(extension)
+  );
+}
+
 function resolveAliasPath(specifier) {
   for (const [alias, target] of PROJECT_ALIASES) {
     if (specifier === alias) return target;
@@ -33,13 +42,7 @@ function resolveAliasPath(specifier) {
 export function resolveSourceFileCandidate(targetPath, sourceFilePaths) {
   const normalizedTarget = normalizeSourcePath(path.posix.normalize(targetPath));
   const runtimeExtension = path.posix.extname(normalizedTarget);
-  if (
-    runtimeExtension &&
-    !RESOLUTION_EXTENSIONS.includes(runtimeExtension) &&
-    !RUNTIME_EXTENSION_SUBSTITUTIONS.has(runtimeExtension)
-  ) {
-    return null;
-  }
+  if (runtimeExtension && !isSourceCodeProjectTarget(normalizedTarget)) return normalizedTarget;
   const substitutions = RUNTIME_EXTENSION_SUBSTITUTIONS.get(runtimeExtension);
   const candidates = substitutions
     ? substitutions.map(

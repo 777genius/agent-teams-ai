@@ -18,6 +18,7 @@ import {
 import {
   declarationNamesForNamespace,
   directExportNamesForNamespace,
+  directReexportsForDeclaration,
   importSelectionsForClause,
 } from './feature-export-namespace-analysis.mjs';
 import {
@@ -33,7 +34,10 @@ import {
   isLexicallyShadowedValueReference,
 } from './feature-lexical-binding-analysis.mjs';
 import { resolvedLocalValueNodes } from './feature-constructor-local-value-analysis.mjs';
-import { resolveProjectTarget } from './feature-module-resolution.mjs';
+import {
+  isSourceCodeProjectTarget,
+  resolveProjectTarget,
+} from './feature-module-resolution.mjs';
 import {
   forEachChildIncludingJsDoc,
   importDeclarationIsTypeOnly,
@@ -122,33 +126,6 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
         importedBindings.set(element.name.text, {
           edge: element.isTypeOnly && !edge.isTypeOnly ? { ...edge, isTypeOnly: true } : edge,
           importedName: element.propertyName?.text ?? element.name.text,
-        });
-      }
-    }
-  };
-
-  const addDirectReexports = (node, edge) => {
-    if (!edge) return;
-    if (!node.exportClause) {
-      reexports.push({
-        ...edge,
-        exportedName: '*',
-        importedName: '*',
-        isExportStar: true,
-      });
-    } else if (ts.isNamespaceExport(node.exportClause)) {
-      reexports.push({
-        ...edge,
-        exportedName: node.exportClause.name.text,
-        importedName: '*',
-      });
-    } else {
-      for (const element of node.exportClause.elements) {
-        reexports.push({
-          ...edge,
-          exportedName: element.name.text,
-          importedName: element.propertyName?.text ?? element.name.text,
-          isTypeOnly: edge.isTypeOnly || element.isTypeOnly,
         });
       }
     }
@@ -302,7 +279,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
               )
             : ['*'];
       }
-      addDirectReexports(node, edge);
+      reexports.push(...directReexportsForDeclaration(node, edge));
     } else if (
       ts.isExportDeclaration(node) &&
       node.exportClause &&
@@ -642,6 +619,7 @@ function evaluateCoreDomainDependency(edge, reexportContext) {
   const forbidden =
     (targetPath === null && isProjectSpecifier(edge.specifier)) ||
     isForbiddenCoreDomainPackage(edge) ||
+    (targetPath !== null && !isSourceCodeProjectTarget(targetPath)) ||
     (targetPath !== null && isForbiddenDomainProjectTarget(targetPath)) ||
     (targetPath !== null &&
       isContractProjectTarget(targetPath) &&
@@ -683,6 +661,7 @@ function evaluateCoreApplicationDependency(edge, reexportContext) {
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
   if (
     targetPath &&
+    isSourceCodeProjectTarget(targetPath) &&
     isAllowedCoreApplicationTarget(match[1], targetPath) &&
     (!isContractProjectTarget(targetPath) ||
       !dependencyHasForbiddenReexportOrigin(

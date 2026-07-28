@@ -240,6 +240,62 @@ test('requires public entrypoints for alias and relative cross-feature dependenc
   );
 });
 
+test('rejects non-code cross-feature imports without weakening core isolation', () => {
+  withFixture(
+    {
+      'src/features/alpha/core/application/useAsset.ts': `
+        import './application.css';
+      `,
+      'src/features/alpha/core/domain/model.ts': `
+        import './rules.json';
+      `,
+      'src/features/alpha/main/composition/loadAssets.ts': `
+        import data from '../../../beta/contracts/data.json';
+        import '../../../beta/renderer/theme.css';
+        void data;
+      `,
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+
+      assert.deepEqual(
+        violations
+          .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint)
+          .map(({ source, specifier }) => ({ source, specifier })),
+        [
+          {
+            source: 'src/features/alpha/main/composition/loadAssets.ts',
+            specifier: '../../../beta/contracts/data.json',
+          },
+          {
+            source: 'src/features/alpha/main/composition/loadAssets.ts',
+            specifier: '../../../beta/renderer/theme.css',
+          },
+        ]
+      );
+      assert.deepEqual(
+        violations
+          .filter(
+            ({ rule }) =>
+              rule === FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies ||
+              rule === FEATURE_ARCHITECTURE_RULES.coreDomainIsolation
+          )
+          .map(({ rule, specifier }) => ({ rule, specifier })),
+        [
+          {
+            rule: FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies,
+            specifier: './application.css',
+          },
+          {
+            rule: FEATURE_ARCHITECTURE_RULES.coreDomainIsolation,
+            specifier: './rules.json',
+          },
+        ]
+      );
+    }
+  );
+});
+
 test('accepts public aliases only when they resolve to index entrypoints', () => {
   withFixture(
     {
