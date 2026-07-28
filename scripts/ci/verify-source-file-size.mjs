@@ -334,14 +334,11 @@ export function verifySourceFileSizePolicy(root = repoRoot, { requireBaseline = 
   if (baselineRequired && !baselineRef) {
     throw new Error('SOURCE_FILE_SIZE_BASELINE_REF is required in source-size ratchet mode');
   }
-  const baselineLegacyMaxLines = readBaselineManifest(baselineRef, legacyManifestRelativePath);
+  const baselineLegacyManifest = readBaselineManifest(baselineRef, legacyManifestRelativePath);
+  // Pre-ratchet baselines have no legacy manifest; exact baseline source counts below
+  // still bound every current exception when a real baseline ref was supplied.
+  const baselineLegacyMaxLines = baselineLegacyManifest ?? (baselineRef ? {} : null);
   const baselinePolicy = readBaselineManifest(baselineRef, policyManifestRelativePath);
-  if (baselineRequired && baselineLegacyMaxLines === null) {
-    throw new Error(
-      `SOURCE_FILE_SIZE_BASELINE_REF must resolve to ${legacyManifestRelativePath} ` +
-        'in source-size ratchet mode'
-    );
-  }
   if (baselineRequired && baselinePolicy === null) {
     throw new Error(
       `SOURCE_FILE_SIZE_BASELINE_REF must resolve to ${policyManifestRelativePath} ` +

@@ -126,7 +126,7 @@ test('requires every legacy cap to stay exact and disappear after refactoring be
   );
 });
 
-test('forbids new legacy exceptions and raised caps relative to the PR base', () => {
+test('preserves normal post-ratchet manifest checks for new exceptions and raised caps', () => {
   const diagnostics = evaluateLegacyManifestRatchet({
     baselineLegacyMaxLines: {
       'src/lowered.ts': 950,
@@ -146,6 +146,48 @@ test('forbids new legacy exceptions and raised caps relative to the PR base', ()
       { code: 'new-legacy-exception', filePath: 'src/new-exception.ts' },
       { code: 'raised-legacy-cap', filePath: 'src/raised.ts' },
     ]
+  );
+});
+
+test('allows existing oversized files when bootstrapping an empty pre-ratchet manifest', () => {
+  const diagnostics = evaluateLegacyManifestRatchet({
+    baselineLegacyMaxLines: {},
+    baselineSourceLineCounts: new Map([['src/existing-oversized.ts', 900]]),
+    legacyMaxLines: {
+      'src/existing-oversized.ts': 900,
+    },
+  });
+
+  assert.deepEqual(diagnostics, []);
+});
+
+test('rejects new exceptions when a pre-ratchet baseline file was within the global limit', () => {
+  const diagnostics = evaluateLegacyManifestRatchet({
+    baselineLegacyMaxLines: {},
+    baselineSourceLineCounts: new Map([['src/new-exception.ts', 800]]),
+    legacyMaxLines: {
+      'src/new-exception.ts': 801,
+    },
+  });
+
+  assert.deepEqual(
+    diagnostics.map(({ code, filePath }) => ({ code, filePath })),
+    [{ code: 'new-legacy-exception', filePath: 'src/new-exception.ts' }]
+  );
+});
+
+test('rejects raised caps when bootstrapping from exact pre-ratchet source sizes', () => {
+  const diagnostics = evaluateLegacyManifestRatchet({
+    baselineLegacyMaxLines: {},
+    baselineSourceLineCounts: new Map([['src/raised.ts', 900]]),
+    legacyMaxLines: {
+      'src/raised.ts': 901,
+    },
+  });
+
+  assert.deepEqual(
+    diagnostics.map(({ code, filePath }) => ({ code, filePath })),
+    [{ code: 'raised-legacy-cap', filePath: 'src/raised.ts' }]
   );
 });
 
@@ -291,10 +333,6 @@ test('CI package guard rejects source and legacy cap growth from the base commit
       })
     );
     writeFileSync(join(root, 'pnpm-workspace.yaml'), 'packages:\n');
-    writeFileSync(
-      join(root, 'scripts/ci/source-file-size-legacy.json'),
-      JSON.stringify({ 'src/legacy.ts': 1000 })
-    );
     writeFileSync(join(root, 'src/legacy.ts'), 'baseline\n'.repeat(1000));
     const broadLegacyPath = 'scripts/hosted-web/legacy.mjs';
     mkdirSync(join(root, dirname(broadLegacyPath)), { recursive: true });
@@ -314,25 +352,27 @@ test('CI package guard rejects source and legacy cap growth from the base commit
     runGit('config', 'user.email', 'source-size-test@example.invalid');
     runGit('config', 'user.name', 'Source Size Test');
     runGit('add', '.');
-    runGit('commit', '--quiet', '-m', 'test: establish source-size baseline');
-    const baselineRef = runGit('rev-parse', 'HEAD').trim();
+    runGit('commit', '--quiet', '-m', 'test: establish pre-ratchet source-size baseline');
+    const preRatchetBaselineRef = runGit('rev-parse', 'HEAD').trim();
 
     writeFileSync(
       join(root, 'scripts/ci/source-file-size-legacy.json'),
-      JSON.stringify({ 'src/legacy.ts': 1100 })
+      JSON.stringify({ 'src/legacy.ts': 1000 })
     );
-    writeFileSync(join(root, 'src/legacy.ts'), 'head\n'.repeat(1100));
-    writeFileSync(join(root, broadLegacyPath), 'head\n'.repeat(950));
-    writeFileSync(
-      join(root, 'scripts/ci/source-file-size-baseline.json'),
-      JSON.stringify({
-        maxLines: 800,
-        legacy: {
-          [broadLegacyPath]: 950,
-          'src/legacy.ts': 1100,
-        },
-      })
+    const preRatchetBootstrap = runCiGuard(preRatchetBaselineRef);
+    assert.equal(
+      preRatchetBootstrap.status,
+      0,
+      `missing pre-ratchet legacy manifest should use baseline source sizes\n${commandOutput(
+        preRatchetBootstrap
+      )}`
     );
+
+    runGit('add', 'scripts/ci/source-file-size-legacy.json');
+    runGit('commit', '--quiet', '-m', 'test: establish post-ratchet source-size baseline');
+    const postRatchetBaselineRef = runGit('rev-parse', 'HEAD').trim();
+    const postRatchetBaseline = runCiGuard(postRatchetBaselineRef);
+    assert.equal(postRatchetBaseline.status, 0, commandOutput(postRatchetBaseline));
 
     const missingBaseline = runCiGuard(undefined);
     assert.notEqual(missingBaseline.status, 0);
@@ -361,7 +401,7 @@ test('CI package guard rejects source and legacy cap growth from the base commit
         },
       })
     );
-    const broadSourceGrowth = runCiGuard(baselineRef);
+    const broadSourceGrowth = runCiGuard(postRatchetBaselineRef);
     assert.notEqual(broadSourceGrowth.status, 0);
     assert.match(
       commandOutput(broadSourceGrowth),
@@ -377,7 +417,7 @@ test('CI package guard rejects source and legacy cap growth from the base commit
         },
       })
     );
-    const removedBroadException = runCiGuard(baselineRef);
+    const removedBroadException = runCiGuard(postRatchetBaselineRef);
     assert.notEqual(removedBroadException.status, 0);
     assert.match(
       commandOutput(removedBroadException),
@@ -400,7 +440,7 @@ test('CI package guard rejects source and legacy cap growth from the base commit
         },
       })
     );
-    const raisedCap = runCiGuard(baselineRef);
+    const raisedCap = runCiGuard(postRatchetBaselineRef);
     assert.notEqual(raisedCap.status, 0);
     assert.match(commandOutput(raisedCap), /\[raised-legacy-cap\] src\/legacy\.ts/);
     assert.match(
