@@ -156,13 +156,20 @@ describe('TeamProvisioningServiceComposition', () => {
       'request-1',
       true
     );
-    const deliveryResult = applicationFeature.deliverOpenCodeRuntimeMessage({});
-    const statusResult = applicationFeature.getOpenCodeRuntimeDeliveryStatus('alpha', 'message-1');
+    const deliveryResult = applicationFeature.deliverRuntimeMessage({});
+    const statusResult = applicationFeature.getRuntimeDeliveryStatus('alpha', 'message-1');
+    const legacyDeliveryResult = applicationFeature.deliverOpenCodeRuntimeMessage({});
+    const legacyStatusResult = applicationFeature.getOpenCodeRuntimeDeliveryStatus(
+      'alpha',
+      'message-1'
+    );
 
     expect(snapshotResult).toBe(snapshotPromise);
     expect(responseResult).toBe(responsePromise);
     expect(deliveryResult).toBe(deliveryPromise);
     expect(statusResult).toBe(statusPromise);
+    expect(legacyDeliveryResult).toBe(deliveryPromise);
+    expect(legacyStatusResult).toBe(statusPromise);
     expect(() => applicationFeature.updateToolApprovalSettings('alpha', settings)).toThrow(
       settingsFailure
     );
@@ -170,6 +177,8 @@ describe('TeamProvisioningServiceComposition', () => {
     await expect(responseResult).resolves.toBeUndefined();
     await expect(deliveryResult).resolves.toBe(deliveryAck);
     await expect(statusResult).resolves.toBe(deliveryStatus);
+    await expect(legacyDeliveryResult).resolves.toBe(deliveryAck);
+    await expect(legacyStatusResult).resolves.toBe(deliveryStatus);
   });
 
   it('keeps moved boundary factories in composition instead of the compatibility facade', () => {

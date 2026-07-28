@@ -4,17 +4,31 @@ import { UpdateToolApprovalSettingsUseCase } from '../../core/application/comman
 import { GetRuntimeDeliveryStatusUseCase } from '../../core/application/queries/GetRuntimeDeliveryStatusUseCase';
 import { GetRuntimeSnapshotUseCase } from '../../core/application/queries/GetRuntimeSnapshotUseCase';
 
-import type { TeamAgentRuntimeSnapshot, TeamProvisioningApplicationApi } from '../../contracts';
+import type {
+  RuntimeDeliveryStatus,
+  RuntimeMessageDeliveryAck,
+  TeamProvisioningApplicationApi,
+} from '../../contracts';
 import type { RuntimeDeliveryPort } from '../../core/application/ports/RuntimeDeliveryPort';
 import type { ToolApprovalPort } from '../../core/application/ports/ToolApprovalPort';
 import type { RuntimeSnapshotReaderPort } from '../../core/application/queries/GetRuntimeSnapshotUseCase';
 
 export type TeamProvisioningApplicationFeature = TeamProvisioningApplicationApi;
 
+type TeamAgentRuntimeSnapshot = Awaited<
+  ReturnType<TeamProvisioningApplicationApi['getTeamAgentRuntimeSnapshot']>
+>;
+type OpenCodeRuntimeMessageDeliveryAck = RuntimeMessageDeliveryAck<'opencode'>;
+type OpenCodeRuntimeDeliveryStatus = RuntimeDeliveryStatus<'opencode'>;
+
 export interface TeamProvisioningApplicationFeatureDependencies {
   runtimeSnapshot: RuntimeSnapshotReaderPort<TeamAgentRuntimeSnapshot>;
   toolApproval: ToolApprovalPort;
-  runtimeDelivery: RuntimeDeliveryPort;
+  runtimeDelivery: RuntimeDeliveryPort<
+    unknown,
+    OpenCodeRuntimeMessageDeliveryAck,
+    OpenCodeRuntimeDeliveryStatus
+  >;
 }
 
 export function createTeamProvisioningApplicationFeature(
@@ -36,7 +50,10 @@ export function createTeamProvisioningApplicationFeature(
       respondToToolApproval.execute({ teamName, runId, requestId, allow, message }),
     updateToolApprovalSettings: (teamName, settings) =>
       updateToolApprovalSettings.execute({ teamName, settings }),
-    deliverOpenCodeRuntimeMessage: (raw) => deliverRuntimeMessage.execute({ raw }),
+    deliverRuntimeMessage: (input) => deliverRuntimeMessage.execute({ input }),
+    getRuntimeDeliveryStatus: (teamName, messageId) =>
+      getRuntimeDeliveryStatus.execute({ teamName, messageId }),
+    deliverOpenCodeRuntimeMessage: (raw) => deliverRuntimeMessage.execute({ input: raw }),
     getOpenCodeRuntimeDeliveryStatus: (teamName, messageId) =>
       getRuntimeDeliveryStatus.execute({ teamName, messageId }),
   };
