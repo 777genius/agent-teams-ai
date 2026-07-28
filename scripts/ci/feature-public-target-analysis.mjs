@@ -51,6 +51,7 @@ import {
   propagateIdentityOwners,
 } from './feature-public-target-propagation.mjs';
 import { materializeIdentityAliasWrites } from './feature-public-write-alias-analysis.mjs';
+import { analyzePublicProxySurfaces } from './feature-public-proxy-surface-analysis.mjs';
 
 const MODELED_GLOBAL_METHODS = new Set([
   ...IDENTITY_WRAPPERS,
@@ -504,6 +505,15 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames, snapshotLoc
     commonJsFinalTargetPaths,
     bindingModel
   );
+  const publicProxySurfaces = analyzePublicProxySurfaces({
+    bindingModel,
+    commonJsFinalTargetPaths,
+    commonJsTargetPaths,
+    directCommonJsExpression: finalRootReplacement?.expression,
+    finalCommonJsPropertyWrites,
+    identityOwners,
+    sourceFile,
+  });
   const writeContainsPosition = (write, position) =>
     write.referenceRanges?.length
       ? write.referenceRanges.some((range) => range.start <= position && position <= range.end)
@@ -761,6 +771,7 @@ export function analyzePublicTargets(sourceFile, exportedLocalNames, snapshotLoc
     }
   }
   return {
+    classifyProxyReference: publicProxySurfaces.classifyReference,
     commonJsTargetAliases,
     commonJsTargetsAt,
     constructorExports,

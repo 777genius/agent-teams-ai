@@ -385,7 +385,8 @@ export function commonJsExportNamesForReference(
   expression,
   reference,
   insideFunctionBody,
-  commonJsTargetAliases = new Set()
+  commonJsTargetAliases = new Set(),
+  publicSelection
 ) {
   const createBinding = commonJsCreateBindingSelection(
     expression,
@@ -408,7 +409,7 @@ export function commonJsExportNamesForReference(
   }
   if (!insideFunctionBody || exportNames.length === 0) return exportNames;
 
-  const selection = expressionGetterSelection(expression, reference);
+  const selection = publicSelection ?? expressionGetterSelection(expression, reference);
   if (!selection) return [];
   return exportNames.includes('*') && selection.localMember ? [selection.localMember] : exportNames;
 }
@@ -587,7 +588,8 @@ export function findPublicReferenceOwner(
       expression,
       node,
       insideFunctionBody,
-      commonJsTargetAliases
+      commonJsTargetAliases,
+      classReference?.selection
     );
     if (commonJsExportNames.length > 0) {
       return {

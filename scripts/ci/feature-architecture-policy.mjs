@@ -209,7 +209,9 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       sourceFile,
       publicTargets.localOwnersAt(node.getStart(sourceFile)),
       publicTargets.commonJsTargetsAt(node.getStart(sourceFile)),
-      publicClassSurfaces.classifyReference
+      (reference) =>
+        publicTargets.classifyProxyReference(reference) ??
+        publicClassSurfaces.classifyReference(reference)
     );
 
   const addOwnerDependency = (owner, dependency) => {
@@ -339,8 +341,7 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
       const [argument] = node.arguments;
       const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
       const isRequireCall =
-        isCommonJsRequireCall(node, sourceFile) ||
-        (node.arguments.length === 1 && isCommonJsLoaderReference(node.expression));
+        isCommonJsRequireCall(node, sourceFile) || isCommonJsLoaderReference(node.expression);
       if (isDynamicImport || isRequireCall) {
         const edge = addEdge(node, argument, 'import');
         if (edge) edge.importedNames = [importedNameForCall(node, isDynamicImport)];

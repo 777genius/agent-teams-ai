@@ -328,6 +328,54 @@ test('collects module.require dependency edges', () => {
   );
 });
 
+test('collects CommonJS loader edges when calls include extra arguments', () => {
+  const violations = withFeatureFixture(
+    {
+      'src/features/extra-args-cross/main/index.cjs': `
+        exports.Store =
+          require('@features/extra-args-target/main/private/Store', undefined).Store;
+      `,
+      'src/features/extra-args-module/main/index.cjs': `
+        module.exports =
+          module.require('./infrastructure/Store', { ignored: true });
+      `,
+      'src/features/extra-args-module/main/infrastructure/Store.cjs':
+        'module.exports = class Store {};',
+      'src/features/extra-args-alias/main/index.ts': `
+        import { createRequire } from 'node:module';
+        const load = createRequire(import.meta.url, undefined);
+        export default load('./infrastructure/Store', undefined);
+      `,
+      'src/features/extra-args-alias/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/extra-args-target/main/index.ts': 'export const safe = true;',
+      'src/features/extra-args-target/main/private/Store.ts': 'export class Store {}',
+    },
+    (root) => collectFeatureArchitectureViolations(root).violations
+  );
+
+  assert.deepEqual(
+    violations.map(({ rule, source, specifier }) => ({ rule, source, specifier })),
+    [
+      {
+        rule: FEATURE_ARCHITECTURE_RULES.crossFeaturePublicEntrypoint,
+        source: 'src/features/extra-args-cross/main/index.cjs',
+        specifier: '@features/extra-args-target/main/private/Store',
+      },
+      {
+        rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+        source: 'src/features/extra-args-alias/main/index.ts',
+        specifier: './infrastructure/Store',
+      },
+      {
+        rule: FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport,
+        source: 'src/features/extra-args-module/main/index.cjs',
+        specifier: './infrastructure/Store',
+      },
+    ]
+  );
+});
+
 test('traces aliased CommonJS loaders into cross-feature and public API rules', () => {
   const violations = withFeatureFixture(
     {

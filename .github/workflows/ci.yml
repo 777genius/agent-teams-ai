@@ -94,11 +94,13 @@ jobs:
       - name: Verify runtime lock
         run: node ./scripts/ci/verify-runtime-lock.mjs
 
-      - name: Fetch architecture baselines
-        if: github.event_name == 'pull_request' || github.event.before != '0000000000000000000000000000000000000000'
+      - name: Resolve and fetch architecture baseline
+        id: architecture-baseline
         env:
-          ARCHITECTURE_BASELINE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: git fetch --no-tags --depth=1 origin "$ARCHITECTURE_BASELINE_REF"
+          ARCHITECTURE_EVENT_BASELINE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          baseline_ref="$(node ./scripts/ci/resolve-architecture-baseline-ref.mjs)"
+          printf 'ref=%s\n' "$baseline_ref" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -130,9 +132,9 @@ jobs:
 
       - name: Validate workspace truth gate
         env:
-          FEATURE_ARCHITECTURE_BASELINE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+          FEATURE_ARCHITECTURE_BASELINE_REF: ${{ steps.architecture-baseline.outputs.ref }}
           NODE_OPTIONS: --max-old-space-size=8192
-          SOURCE_FILE_SIZE_BASELINE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+          SOURCE_FILE_SIZE_BASELINE_REF: ${{ steps.architecture-baseline.outputs.ref }}
         run: pnpm validate:ci
 
   test:

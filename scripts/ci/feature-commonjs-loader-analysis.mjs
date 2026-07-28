@@ -92,7 +92,7 @@ export function createCommonJsLoaderReference(sourceFile) {
     }
     if (
       ts.isCallExpression(reference) &&
-      reference.arguments.length === 1 &&
+      reference.arguments.length >= 1 &&
       isNodeModuleSpecifier(reference.arguments[0]) &&
       (reference.expression.kind === ts.SyntaxKind.ImportKeyword ||
         isCommonJsRequireCall(reference, sourceFile))
@@ -135,7 +135,7 @@ export function createCommonJsLoaderReference(sourceFile) {
     if (isCommonJsRequireReference(reference, sourceFile)) return true;
     if (
       ts.isCallExpression(reference) &&
-      reference.arguments.length === 1 &&
+      reference.arguments.length >= 1 &&
       isCreateRequireFactoryReference(reference.expression)
     ) {
       return true;

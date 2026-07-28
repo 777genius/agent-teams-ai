@@ -68,7 +68,7 @@ test('collects static, dynamic, CommonJS, and re-export dependency edges', () =>
       const lazy = import('./lazy');
       const attributed = import('./attributed', { with: { type: 'json' } });
       const legacy = require('./legacy');
-      const invalidLegacy = require('./ignored', 'utf8');
+      const legacyWithIgnoredExtraArgument = require('./ignored', 'utf8');
       type Queried = import('./queried').Thing;
     `,
     'src/features/example/main/index.ts'
@@ -87,6 +87,7 @@ test('collects static, dynamic, CommonJS, and re-export dependency edges', () =>
       { kind: 'import', specifier: './lazy' },
       { kind: 'import', specifier: './attributed' },
       { kind: 'import', specifier: './legacy' },
+      { kind: 'import', specifier: './ignored' },
       { kind: 'import', specifier: './queried' },
     ]
   );

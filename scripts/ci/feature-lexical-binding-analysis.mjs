@@ -135,7 +135,7 @@ export function isCommonJsRequireReference(reference, sourceFile) {
 export function isCommonJsRequireCall(node, sourceFile) {
   return (
     ts.isCallExpression(node) &&
-    node.arguments.length === 1 &&
+    node.arguments.length >= 1 &&
     isCommonJsRequireReference(node.expression, sourceFile)
   );
 }
