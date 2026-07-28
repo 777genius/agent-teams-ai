@@ -59,6 +59,8 @@ function architectureViolation(rule, source, specifier) {
 test('collects static, dynamic, CommonJS, and re-export dependency edges', () => {
   const edges = collectModuleEdgesFromSource(
     `
+      /// <reference types="node" />
+      /// <reference path="./referenced.ts" />
       import type { Contract } from './contract';
       export { facade } from './facade';
       const lazy = import('./lazy');
@@ -73,6 +75,8 @@ test('collects static, dynamic, CommonJS, and re-export dependency edges', () =>
   assert.deepEqual(
     edges.map(({ kind, specifier }) => ({ kind, specifier })),
     [
+      { kind: 'reference', specifier: 'node' },
+      { kind: 'reference', specifier: './referenced.ts' },
       { kind: 'import', specifier: './contract' },
       { kind: 'export', specifier: './facade' },
       { kind: 'import', specifier: './lazy' },
@@ -182,6 +186,8 @@ test('keeps core domain free from application and runtime dependencies', () => {
   withFixture(
     {
       'src/features/example/core/domain/policy.ts': `
+        /// <reference types="node" />
+        /// <reference path="../../../../main/referenceTarget.ts" />
         import path from 'node:path';
         import './styles.css';
         import electron from 'electron';
@@ -209,6 +215,7 @@ test('keeps core domain free from application and runtime dependencies', () => {
       'src/features/runtime-feature/index.ts': `export { registerRuntime } from './main';`,
       'src/features/runtime-feature/main/index.ts':
         'export const registerRuntime = () => undefined;',
+      'src/main/referenceTarget.ts': 'export interface ReferenceTarget {}',
     },
     (root) => {
       const { violations } = collectFeatureArchitectureViolations(root);
@@ -217,6 +224,7 @@ test('keeps core domain free from application and runtime dependencies', () => {
       );
 
       assert.deepEqual(domainViolations.map(({ specifier }) => specifier).sort(), [
+        '../../../../main/referenceTarget.ts',
         '../../main/infrastructure/store',
         '../../main/infrastructure/typeStore',
         '../application/model',
@@ -227,6 +235,7 @@ test('keeps core domain free from application and runtime dependencies', () => {
         'electron',
         'fastify',
         'fastify',
+        'node',
         'node:fs',
         'node:path',
         'react',

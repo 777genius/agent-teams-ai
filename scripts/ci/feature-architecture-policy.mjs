@@ -117,6 +117,23 @@ function collectModuleAnalysisFromSource(source, sourcePath) {
     return edge;
   };
 
+  const addReferenceDirectiveEdge = (reference) => {
+    edges.push({
+      isTypeOnly: true,
+      kind: 'reference',
+      line: sourceFile.getLineAndCharacterOfPosition(reference.pos).line + 1,
+      source: sourcePath,
+      specifier: reference.fileName,
+    });
+  };
+
+  for (const reference of sourceFile.typeReferenceDirectives) {
+    addReferenceDirectiveEdge(reference);
+  }
+  for (const reference of sourceFile.referencedFiles) {
+    addReferenceDirectiveEdge(reference);
+  }
+
   const addImportBindings = (importClause, edge) => {
     if (!importClause || !edge) return;
     if (importClause.name) {
