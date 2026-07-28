@@ -4446,7 +4446,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs.map((input) => input.laneId).sort()).toEqual([
@@ -4456,6 +4456,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopAllPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -4606,7 +4607,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(secondRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 2);
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 2);
       expect(adapter.stopInputs.map((input) => input.teamName).sort()).toEqual([
@@ -4621,6 +4622,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 2);
+      await stopAllPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), firstTeamName)
@@ -16756,9 +16758,11 @@ describe(
 
       const killTracker = trackProcessKillsForPids([64901, 64902]);
       try {
-        await svc.stopTeam(teamName);
-
+        const stopPromise = svc.stopTeam(teamName);
         await waitForCondition(() => adapter.stopInputs.length === 1);
+        adapter.releaseLaunches();
+        await stopPromise;
+
         expectProcessKillCount(killTracker.killedPids, 64901, 0);
         expectProcessKillCount(killTracker.killedPids, 64902, 1);
         expectDirectChildKillCount(staleKillCount, 0);
@@ -19722,7 +19726,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19732,6 +19736,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(svc.isTeamAlive(teamName)).toBe(false);
@@ -19755,7 +19760,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19765,6 +19770,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(svc.isTeamAlive(teamName)).toBe(false);
@@ -19833,7 +19839,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19843,6 +19849,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(svc.isTeamAlive(teamName)).toBe(false);
@@ -19885,7 +19892,7 @@ describe(
         adapter.pendingLaunchInputs.some((input) => input.teamName === stoppedTeamName)
       );
 
-      svc.stopTeam(stoppedTeamName);
+      const stoppedTeamStopPromise = svc.stopTeam(stoppedTeamName);
 
       await waitForCondition(
         () => adapter.stopInputs.filter((input) => input.teamName === stoppedTeamName).length === 1
@@ -19901,6 +19908,7 @@ describe(
           (lane: { state: string }) => lane.state === 'finished'
         )
       );
+      await stoppedTeamStopPromise;
 
       const stoppedStatuses = await svc.getMemberSpawnStatuses(stoppedTeamName);
       const survivingStatuses = await svc.getMemberSpawnStatuses(survivingTeamName);
@@ -19935,7 +19943,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
@@ -19986,6 +19994,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -20019,7 +20028,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
@@ -20069,6 +20078,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -20140,7 +20150,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
@@ -20202,6 +20212,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -20238,12 +20249,13 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -20276,12 +20288,13 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -20354,12 +20367,13 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)

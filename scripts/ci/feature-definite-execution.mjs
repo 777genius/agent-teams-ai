@@ -94,10 +94,7 @@ export function isReachableThroughContainingStatementLists(node) {
         ? parent.statements
         : null;
     const index = statements?.indexOf(current) ?? -1;
-    if (
-      index > 0 &&
-      (sequenceCompletion(statements.slice(0, index)) & COMPLETION_NORMAL) === 0
-    ) {
+    if (index > 0 && (sequenceCompletion(statements.slice(0, index)) & COMPLETION_NORMAL) === 0) {
       return false;
     }
     current = parent;
@@ -206,6 +203,10 @@ function statementCompletion(statement) {
     return completion;
   }
   return COMPLETION_NORMAL;
+}
+
+export function statementMayCompleteNormally(statement) {
+  return (statementCompletion(statement) & COMPLETION_NORMAL) !== 0;
 }
 
 function visitVariableDeclarationList(declarationList, visitor) {

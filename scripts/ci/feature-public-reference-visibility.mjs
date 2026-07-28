@@ -13,6 +13,7 @@ import {
   staticOverwrittenPaths,
 } from './feature-public-object-analysis.mjs';
 import { LOGICAL_ASSIGNMENT_KINDS } from './feature-public-object-state.mjs';
+import { synchronousArrayResultDiscardsReference } from './feature-synchronous-array-callback-analysis.mjs';
 
 function directObjectReferencePath(initializer, reference) {
   const object = unwrapExpression(initializer);
@@ -184,6 +185,12 @@ export function attachPublicReferenceQueries(
     !publicBindingNames.has(declaration.name.text) ||
     owners.has(declaration.name.text);
   owners.isReferencePublic = (reference, declaration) => {
+    if (
+      declaration.initializer &&
+      synchronousArrayResultDiscardsReference(reference, declaration.initializer)
+    ) {
+      return false;
+    }
     if (capturedReferenceIsPublic?.(reference)) return true;
     if (!ts.isIdentifier(declaration.name) || !declaration.initializer) return true;
     const path = directObjectReferencePath(declaration.initializer, reference);

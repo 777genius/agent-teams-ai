@@ -1,17 +1,149 @@
 import ts from 'typescript';
 
 import { propertyNameText, unwrapExpression } from './feature-export-ast.mjs';
-import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
+import {
+  visitDefiniteBlockExpressions,
+  visitDefiniteTopLevelExpressions,
+} from './feature-definite-execution.mjs';
 import {
   executedInvocationForCall,
   executedInvocationParameterInitializer,
+  staticTruthiness,
 } from './feature-executed-iife-analysis.mjs';
+
+const originalParameterValue = Symbol('original-parameter-value');
+
+function parameterValuesAfterStatement(statement, incoming, parameterName, callable) {
+  if (incoming.size === 0) return incoming;
+  if (ts.isBlock(statement)) {
+    return statement.statements.reduce(
+      (values, child) => parameterValuesAfterStatement(child, values, parameterName, callable),
+      incoming
+    );
+  }
+  if (ts.isExpressionStatement(statement)) {
+    const expression = unwrapExpression(statement.expression);
+    if (
+      ts.isBinaryExpression(expression) &&
+      expression.operatorToken.kind === ts.SyntaxKind.EqualsToken
+    ) {
+      const target = unwrapExpression(expression.left);
+      if (
+        ts.isIdentifier(target) &&
+        target.text === parameterName &&
+        assignmentTargetsParameter(target, callable)
+      ) {
+        const initializer = unwrapExpression(expression.right);
+        return ts.isIdentifier(initializer) && initializer.text === parameterName
+          ? incoming
+          : new Set([expression.right]);
+      }
+    }
+    return incoming;
+  }
+  if (ts.isIfStatement(statement)) {
+    const truthiness = staticTruthiness(statement.expression);
+    if (truthiness === true) {
+      return parameterValuesAfterStatement(
+        statement.thenStatement,
+        incoming,
+        parameterName,
+        callable
+      );
+    }
+    if (truthiness === false) {
+      return statement.elseStatement
+        ? parameterValuesAfterStatement(statement.elseStatement, incoming, parameterName, callable)
+        : incoming;
+    }
+    const thenValues = parameterValuesAfterStatement(
+      statement.thenStatement,
+      incoming,
+      parameterName,
+      callable
+    );
+    const elseValues = statement.elseStatement
+      ? parameterValuesAfterStatement(statement.elseStatement, incoming, parameterName, callable)
+      : incoming;
+    return new Set([...thenValues, ...elseValues]);
+  }
+  if (ts.isReturnStatement(statement) || ts.isThrowStatement(statement)) {
+    return new Set();
+  }
+  return incoming;
+}
 
 function bindingNames(bindingName) {
   if (ts.isIdentifier(bindingName)) return [bindingName.text];
   return bindingName.elements.flatMap((element) =>
     ts.isBindingElement(element) ? bindingNames(element.name) : []
   );
+}
+
+function directScopeBindsName(scope, name) {
+  const statements =
+    ts.isBlock(scope) || ts.isSourceFile(scope)
+      ? scope.statements
+      : ts.isCaseBlock(scope)
+        ? scope.clauses.flatMap((clause) => clause.statements)
+        : [];
+  return statements.some((statement) => {
+    if (ts.isVariableStatement(statement)) {
+      return (
+        (statement.declarationList.flags & ts.NodeFlags.BlockScoped) !== 0 &&
+        statement.declarationList.declarations.some((declaration) =>
+          bindingNames(declaration.name).includes(name)
+        )
+      );
+    }
+    return (
+      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
+      statement.name?.text === name
+    );
+  });
+}
+
+function callableBindsName(callable, name) {
+  if (
+    callable.parameters.some((parameter) => bindingNames(parameter.name).includes(name)) ||
+    callable.name?.text === name
+  ) {
+    return true;
+  }
+  let found = false;
+  const visit = (node) => {
+    if (found || (node !== callable && ts.isFunctionLike(node))) return;
+    if (
+      ts.isVariableDeclarationList(node) &&
+      (node.flags & ts.NodeFlags.BlockScoped) === 0 &&
+      node.declarations.some((declaration) => bindingNames(declaration.name).includes(name))
+    ) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  if (callable.body) visit(callable.body);
+  return found;
+}
+
+function assignmentTargetsParameter(target, callable) {
+  let current = target.parent;
+  while (current && current !== callable) {
+    if (
+      ((ts.isBlock(current) || ts.isCaseBlock(current)) &&
+        current !== callable.body &&
+        directScopeBindsName(current, target.text)) ||
+      (ts.isFunctionLike(current) && callableBindsName(current, target.text)) ||
+      (ts.isCatchClause(current) &&
+        current.variableDeclaration &&
+        bindingNames(current.variableDeclaration.name).includes(target.text))
+    ) {
+      return false;
+    }
+    current = current.parent;
+  }
+  return current === callable;
 }
 
 export function collectBindingModel(sourceFile) {
@@ -64,9 +196,7 @@ export function collectBindingModel(sourceFile) {
       addVersion(
         statement.name.text,
         statement,
-        ts.isFunctionDeclaration(statement)
-          ? sourceFile.pos
-          : statement.getStart(sourceFile),
+        ts.isFunctionDeclaration(statement) ? sourceFile.pos : statement.getStart(sourceFile),
         undefined
       );
       continue;
@@ -117,8 +247,9 @@ export function collectBindingModel(sourceFile) {
       const candidateInitializers = [
         ...new Set(
           (invocation.invocations ?? [invocation]).flatMap((candidate) => {
-            const argumentsForParameter =
-              candidate.argumentCandidates?.[index] ?? [candidate.arguments[index]];
+            const argumentsForParameter = candidate.argumentCandidates?.[index] ?? [
+              candidate.arguments[index],
+            ];
             return argumentsForParameter.flatMap((argument) => {
               const initializer = executedInvocationParameterInitializer(parameter, argument);
               return initializer ? [initializer] : [];
@@ -128,11 +259,55 @@ export function collectBindingModel(sourceFile) {
       ];
       const [initializer] = candidateInitializers;
       if (!initializer) continue;
-      addBinding(parameter.name, initializer, parameter.getStart(sourceFile), undefined, {
-        candidateInitializers,
+      const scope = {
         scopeEnd: invocation.callable.body.end,
         scopeStart: invocation.callable.body.pos,
+      };
+      addBinding(parameter.name, initializer, parameter.getStart(sourceFile), undefined, {
+        ...scope,
+        candidateInitializers,
       });
+      if (!ts.isBlock(invocation.callable.body)) continue;
+      const parameterNames = new Set(bindingNames(parameter.name));
+      visitDefiniteBlockExpressions(invocation.callable.body, (expression) => {
+        if (
+          !ts.isBinaryExpression(expression) ||
+          expression.operatorToken.kind !== ts.SyntaxKind.EqualsToken
+        ) {
+          return;
+        }
+        const target = unwrapExpression(expression.left);
+        if (
+          ts.isIdentifier(target) &&
+          parameterNames.has(target.text) &&
+          assignmentTargetsParameter(target, invocation.callable)
+        ) {
+          addVersion(target.text, expression.right, expression.end, undefined, scope);
+        }
+      });
+      for (const parameterName of parameterNames) {
+        let values = new Set([originalParameterValue]);
+        for (const statement of invocation.callable.body.statements) {
+          const nextValues = parameterValuesAfterStatement(
+            statement,
+            values,
+            parameterName,
+            invocation.callable
+          );
+          if (
+            !ts.isExpressionStatement(statement) &&
+            nextValues.size > 0 &&
+            [...values].every((value) => !nextValues.has(value))
+          ) {
+            const candidateInitializers = [...nextValues];
+            addVersion(parameterName, candidateInitializers[0], statement.end, undefined, {
+              ...scope,
+              candidateInitializers,
+            });
+          }
+          values = nextValues;
+        }
+      }
     }
   });
 

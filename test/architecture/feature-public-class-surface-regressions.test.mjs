@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
+import { performance } from 'node:perf_hooks';
 import test from 'node:test';
+
+import ts from 'typescript';
 
 import {
   FEATURE_ARCHITECTURE_RULES,
   collectFeatureArchitectureViolations,
 } from '../../scripts/ci/feature-architecture-policy.mjs';
+import { publicStaticClassSelection } from '../../scripts/ci/feature-public-class-analysis.mjs';
 import { withFeatureFixture } from './support/feature-fixture.mjs';
 
 function implementationViolationSources(root) {
@@ -18,6 +22,34 @@ function implementationViolationSources(root) {
 
 function infrastructureSource(name = 'Store') {
   return `export class ${name} {}`;
+}
+
+function directPublicStaticSelection(source) {
+  const sourceFile = ts.createSourceFile(
+    'direct-public-static-selection.ts',
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  let boundary = null;
+  let reference = null;
+  const visit = (node) => {
+    if (ts.isClassDeclaration(node)) boundary = node;
+    if (
+      ts.isIdentifier(node) &&
+      node.text === 'Store' &&
+      ts.isBinaryExpression(node.parent) &&
+      node.parent.right === node
+    ) {
+      reference = node;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  assert.ok(boundary);
+  assert.ok(reference);
+  return publicStaticClassSelection(reference, boundary);
 }
 
 test('traces anonymous, expression, instance, and static public class members', () => {
@@ -69,6 +101,1206 @@ test('traces anonymous, expression, instance, and static public class members', 
         'src/features/class-anonymous-default/main/index.ts',
         'src/features/class-expression/main/index.ts',
         'src/features/class-static/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('isolates local classes nested in public static blocks', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-local-class-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            class Inner {
+              static {
+                this.Store = Store;
+              }
+            }
+            void Inner;
+          }
+        }
+      `,
+      'src/features/class-static-block-local-class-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-local-class-shadowed-sibling-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            class Inner {
+              static {
+                this.Store = Store;
+              }
+            }
+            {
+              class Inner {}
+              this.Inner = Inner;
+            }
+            void Inner;
+          }
+        }
+      `,
+      'src/features/class-static-block-local-class-shadowed-sibling-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-assigned-class/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            class Inner {
+              static {
+                this.Store = Store;
+              }
+            }
+            this.Inner = Inner;
+          }
+        }
+      `,
+      'src/features/class-static-block-assigned-class/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-direct-nested-class/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            this.Inner = class {
+              static {
+                this.Store = Store;
+              }
+            };
+          }
+        }
+      `,
+      'src/features/class-static-block-direct-nested-class/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-stale-assigned-class-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            class Inner {
+              static {
+                this.Store = Store;
+              }
+            }
+            Inner = class {};
+            this.Inner = Inner;
+          }
+        }
+      `,
+      'src/features/class-static-block-stale-assigned-class-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-ordinary-public-class/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static Store = Store;
+        }
+      `,
+      'src/features/class-static-block-ordinary-public-class/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-assigned-class/main/index.ts',
+        'src/features/class-static-block-direct-nested-class/main/index.ts',
+        'src/features/class-static-block-ordinary-public-class/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('models static-block terminal writes, aliases, branches, and returned values', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-assign-alias-call/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const assign = Object.assign;
+            assign.call(null, this, { Store });
+          }
+        }
+      `,
+      'src/features/class-static-block-assign-alias-call/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-reflect-alias-apply/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const set = Reflect.set;
+            set.apply(null, [this, 'Store', Store]);
+          }
+        }
+      `,
+      'src/features/class-static-block-reflect-alias-apply/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-branch-terminal-source/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const condition: boolean;
+        export class Api {
+          static {
+            const fields: Record<string, unknown> = {};
+            if (condition) fields.Store = Store;
+            else fields.Store = undefined;
+            Object.assign(this, fields);
+          }
+        }
+      `,
+      'src/features/class-static-block-branch-terminal-source/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-mutable-descriptor/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const descriptor: PropertyDescriptor = {};
+            descriptor.value = Store;
+            Object.defineProperty(this, 'Store', descriptor);
+          }
+        }
+      `,
+      'src/features/class-static-block-mutable-descriptor/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-alias-call/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            install.call(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-alias-call/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-terminal-direct-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            this.Store = Store;
+            this.Store = undefined;
+          }
+        }
+      `,
+      'src/features/class-static-block-terminal-direct-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-terminal-source-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const fields = { Store };
+            fields.Store = undefined;
+            Object.assign(this, fields);
+          }
+        }
+      `,
+      'src/features/class-static-block-terminal-source-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-unreachable-source-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const fields: Record<string, unknown> = {};
+            if (false) fields.Store = Store;
+            Object.assign(this, fields);
+          }
+        }
+      `,
+      'src/features/class-static-block-unreachable-source-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-static-alias-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            let assign = Object.assign;
+            if (true) assign = () => undefined;
+            assign(this, { Store });
+          }
+        }
+      `,
+      'src/features/class-static-block-static-alias-overwrite-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-shadowed-alias-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const { assign } = Object;
+            {
+              const assign = () => undefined;
+              assign(this, { Store });
+            }
+          }
+        }
+      `,
+      'src/features/class-static-block-shadowed-alias-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-static-apply-selection-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            Object.assign.apply(null, true ? [this, {}] : [this, { Store }]);
+          }
+        }
+      `,
+      'src/features/class-static-block-static-apply-selection-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-terminal-descriptor-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const descriptor = { value: Store };
+            descriptor.value = undefined;
+            Object.defineProperty(this, 'Store', descriptor);
+          }
+        }
+      `,
+      'src/features/class-static-block-terminal-descriptor-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-iife-return-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            this.Store = (() => {
+              void Store;
+              return undefined;
+            })();
+          }
+        }
+      `,
+      'src/features/class-static-block-iife-return-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-assign-alias-call/main/index.ts',
+        'src/features/class-static-block-branch-terminal-source/main/index.ts',
+        'src/features/class-static-block-function-alias-call/main/index.ts',
+        'src/features/class-static-block-mutable-descriptor/main/index.ts',
+        'src/features/class-static-block-reflect-alias-apply/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('bounds static-block terminal analysis across independent unknown controls', () => {
+  const conditionalSafeOverwrites = Array.from(
+    { length: 23 },
+    (_, index) => `if (controls[${index + 1}]) fields.Store = undefined;`
+  ).join('\n');
+  const conditionalSafeRebinds = Array.from(
+    { length: 23 },
+    (_, index) => `if (controls[${index + 1}]) fields = { Store: undefined };`
+  ).join('\n');
+  const staticBlockSource = (terminalSafe) => `
+    import { Store } from './infrastructure/Store';
+    declare const controls: readonly boolean[];
+    export class Api {
+      static {
+        const fields: Record<string, unknown> = {};
+        if (controls[0]) fields.Store = Store;
+        ${conditionalSafeOverwrites}
+        ${terminalSafe ? 'fields.Store = undefined;' : ''}
+        Object.assign(this, fields);
+      }
+    }
+  `;
+  const localValueSource = (dangerous) => `
+    import { Store } from './infrastructure/Store';
+    declare const controls: readonly boolean[];
+    export class Api {
+      static {
+        let fields: Record<string, unknown> = {};
+        if (controls[0]) fields = { Store: ${dangerous ? 'Store' : 'undefined'} };
+        ${conditionalSafeRebinds}
+        ${dangerous ? '' : 'void Store;'}
+        Object.assign(this, fields);
+      }
+    }
+  `;
+  const logicalLocalValueSource = (terminalSafe) => `
+    import { Store } from './infrastructure/Store';
+    declare const controls: readonly boolean[];
+    export class Api {
+      static {
+        let fields: Record<string, unknown> = {};
+        if (controls[0]) fields = undefined;
+        ${conditionalSafeRebinds}
+        if (controls[24]) fields ??= { Store };
+        ${terminalSafe ? 'fields = { Store: undefined };' : ''}
+        Object.assign(this, fields);
+      }
+    }
+  `;
+
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-control-stress-dangerous/main/index.ts':
+        staticBlockSource(false),
+      'src/features/class-static-block-control-stress-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-control-stress-safe/main/index.ts': staticBlockSource(true),
+      'src/features/class-static-block-control-stress-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-local-value-control-stress-dangerous/main/index.ts':
+        localValueSource(true),
+      'src/features/class-static-block-local-value-control-stress-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-local-value-control-stress-safe/main/index.ts':
+        localValueSource(false),
+      'src/features/class-static-block-local-value-control-stress-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-logical-control-stress-dangerous/main/index.ts':
+        logicalLocalValueSource(false),
+      'src/features/class-static-block-logical-control-stress-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-logical-control-stress-safe/main/index.ts':
+        logicalLocalValueSource(true),
+      'src/features/class-static-block-logical-control-stress-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-control-stress-dangerous/main/index.ts',
+        'src/features/class-static-block-local-value-control-stress-dangerous/main/index.ts',
+        'src/features/class-static-block-logical-control-stress-dangerous/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('keeps same-branch terminal overwrites correlated after unrelated-control overflow', () => {
+  const unrelatedWrites = Array.from(
+    { length: 23 },
+    (_, index) => `if (controls[${index + 1}]) this.other${index} = undefined;`
+  ).join('\n');
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-correlated-overflow-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            if (controls[0]) {
+              this.Store = Store;
+              this.Store = undefined;
+            }
+            ${unrelatedWrites}
+          }
+        }
+      `,
+      'src/features/class-static-block-correlated-overflow-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), []);
+    }
+  );
+});
+
+test('honors a definite terminal safe rebind after local reaching-write overflow', () => {
+  const unrelatedRebinds = Array.from(
+    { length: 23 },
+    (_, index) => `if (controls[${index + 1}]) fields = { Store: undefined };`
+  ).join('\n');
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-terminal-rebind-overflow-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            let fields: Record<string, unknown> = {};
+            if (controls[0]) fields = { Store };
+            ${unrelatedRebinds}
+            fields = { Store: undefined };
+            Object.assign(this, fields);
+          }
+        }
+      `,
+      'src/features/class-static-block-terminal-rebind-overflow-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-exhaustive-rebind-overflow-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            let fields: Record<string, unknown> = { Store };
+            if (controls[0]) fields = { Store: undefined };
+            else fields = { Store: undefined };
+            ${unrelatedRebinds}
+            Object.assign(this, fields);
+          }
+        }
+      `,
+      'src/features/class-static-block-exhaustive-rebind-overflow-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), []);
+    }
+  );
+});
+
+test('models every reachable repeated local function invocation and receiver', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-call-after-wrong-receiver/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            install.call({});
+            install.call(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-call-after-wrong-receiver/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-call-after-unreachable/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            if (false) install.call(this);
+            install.call(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-call-after-unreachable/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-repeated-startup-operation/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const operation = function () {
+              this.Store = Store;
+            };
+            const startup = function () {
+              operation.call(this);
+            };
+            startup.call({});
+            startup.call(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-repeated-startup-operation/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-call-after-unreachable/main/index.ts',
+        'src/features/class-static-block-call-after-wrong-receiver/main/index.ts',
+        'src/features/class-static-block-repeated-startup-operation/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('ignores class value writes after definite abrupt completion', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-iife-return-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            (() => {
+              return;
+              this.Store = Store;
+            })();
+          }
+        }
+      `,
+      'src/features/class-static-block-iife-return-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-local-return-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              if (true) return;
+              this.Store = Store;
+            };
+            install.call(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-local-return-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-iife-throw-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            (() => {
+              throw new Error('stop');
+              this.Store = Store;
+            })();
+          }
+        }
+      `,
+      'src/features/class-static-block-iife-throw-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), []);
+    }
+  );
+});
+
+test('preserves combination witnesses and nested exhaustive overwrites after path overflow', () => {
+  const unrelatedDirect = Array.from(
+    { length: 22 },
+    (_, index) => `if (controls[${index + 2}]) this.other${index} = undefined;`
+  ).join('\n');
+  const unrelatedLocal = Array.from(
+    { length: 22 },
+    (_, index) => `if (controls[${index + 2}]) fields = { Store: undefined };`
+  ).join('\n');
+  const nestedDirect = Array.from(
+    { length: 21 },
+    (_, index) => `if (controls[${index + 3}]) this.other${index} = undefined;`
+  ).join('\n');
+  const nestedLocal = Array.from(
+    { length: 21 },
+    (_, index) => `if (controls[${index + 3}]) fields = { Store: undefined };`
+  ).join('\n');
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-combination-overflow-dangerous/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            if (controls[0]) this.Store = Store;
+            if (controls[1]) {}
+            else this.Store = undefined;
+            ${unrelatedDirect}
+          }
+        }
+      `,
+      'src/features/class-static-block-combination-overflow-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-local-combination-overflow-dangerous/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            let fields: Record<string, unknown> = {};
+            if (controls[0]) fields = { Store };
+            if (controls[1]) {}
+            else fields = { Store: undefined };
+            ${unrelatedLocal}
+            Object.assign(this, fields);
+          }
+        }
+      `,
+      'src/features/class-static-block-local-combination-overflow-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-nested-exhaustive-overflow-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            this.Store = Store;
+            if (controls[0]) {
+              if (controls[1]) this.Store = undefined;
+              else this.Store = undefined;
+            } else {
+              if (controls[2]) this.Store = undefined;
+              else this.Store = undefined;
+            }
+            ${nestedDirect}
+          }
+        }
+      `,
+      'src/features/class-static-block-nested-exhaustive-overflow-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-local-nested-exhaustive-overflow-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            let fields: Record<string, unknown> = { Store };
+            if (controls[0]) {
+              if (controls[1]) fields = { Store: undefined };
+              else fields = { Store: undefined };
+            } else {
+              if (controls[2]) fields = { Store: undefined };
+              else fields = { Store: undefined };
+            }
+            ${nestedLocal}
+            Object.assign(this, fields);
+          }
+        }
+      `,
+      'src/features/class-static-block-local-nested-exhaustive-overflow-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-combination-overflow-dangerous/main/index.ts',
+        'src/features/class-static-block-local-combination-overflow-dangerous/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('preserves receiver, ordering, and all-false paths beyond the local-call context bound', () => {
+  const wrongCalls = Array.from({ length: 256 }, () => 'install.call({});').join('\n');
+  const conditionalCalls = Array.from(
+    { length: 257 },
+    (_, index) => `if (controls[${index}]) install.call(this);`
+  ).join('\n');
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-context-overflow-dangerous/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = undefined;
+            };
+            install.call(this);
+            this.Store = Store;
+            ${wrongCalls}
+          }
+        }
+      `,
+      'src/features/class-static-block-context-overflow-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-context-overflow-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            install.call(this);
+            this.Store = undefined;
+            ${wrongCalls}
+          }
+        }
+      `,
+      'src/features/class-static-block-context-path-overflow-dangerous/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = undefined;
+            };
+            this.Store = Store;
+            ${conditionalCalls}
+          }
+        }
+      `,
+      'src/features/class-static-block-context-path-overflow-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-context-overflow-dangerous/main/index.ts',
+        'src/features/class-static-block-context-path-overflow-dangerous/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('bounds per-member terminal analysis across 257 unrelated writes and controls', () => {
+  const nestedDanger = `${Array.from({ length: 9 }, (_, index) => `if (controls[${index}]) {`).join(
+    ''
+  )} this.Store = Store; ${'}'.repeat(9)}`;
+  const middleWrites = Array.from({ length: 257 }, (_, index) => {
+    if (index === 127) return nestedDanger;
+    return index < 9
+      ? `if (controls[${index}]) this.other = undefined;`
+      : 'this.other = undefined;';
+  }).join('\n');
+  const independentWrites = Array.from({ length: 257 }, (_, index) =>
+    index === 127
+      ? `if (controls[${index}]) this.Store = Store;`
+      : `if (controls[${index}]) this.other${index} = undefined;`
+  ).join('\n');
+  const started = performance.now();
+  let elapsedMs = 0;
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-middle-member-overflow-dangerous/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            this.Store = undefined;
+            ${middleWrites}
+          }
+        }
+      `,
+      'src/features/class-static-block-middle-member-overflow-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-independent-control-runtime/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            this.Store = undefined;
+            ${independentWrites}
+          }
+        }
+      `,
+      'src/features/class-static-block-independent-control-runtime/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-independent-control-runtime/main/index.ts',
+        'src/features/class-static-block-middle-member-overflow-dangerous/main/index.ts',
+      ]);
+      elapsedMs = performance.now() - started;
+    }
+  );
+  assert.ok(elapsedMs < 20_000, `257-control analysis took ${Math.round(elapsedMs)}ms`);
+});
+
+test('preserves every same-member terminal candidate under the shared path budget', () => {
+  const writes = Array.from(
+    { length: 257 },
+    (_, index) => `if (controls[${index}]) this.Store = ${index === 127 ? 'Store' : 'undefined'};`
+  ).join('\n');
+  const source = `
+    declare const Store: unknown;
+    declare const controls: readonly boolean[];
+    export class Api {
+      static {
+        ${writes}
+      }
+    }
+  `;
+  const directStarted = performance.now();
+  assert.deepEqual(directPublicStaticSelection(source), {
+    getterOnly: false,
+    localMember: 'Store',
+  });
+  const directElapsedMs = performance.now() - directStarted;
+  assert.ok(
+    directElapsedMs < 20_000,
+    `direct 257 same-member analysis took ${Math.round(directElapsedMs)}ms`
+  );
+
+  const collectorStarted = performance.now();
+  let collectorElapsedMs = 0;
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-same-member-budget-dangerous/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            ${writes}
+          }
+        }
+      `,
+      'src/features/class-static-block-same-member-budget-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-same-member-budget-terminal-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        declare const controls: readonly boolean[];
+        export class Api {
+          static {
+            ${writes}
+            this.Store = undefined;
+          }
+        }
+      `,
+      'src/features/class-static-block-same-member-budget-terminal-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-same-member-budget-dangerous/main/index.ts',
+      ]);
+      collectorElapsedMs = performance.now() - collectorStarted;
+    }
+  );
+  assert.ok(
+    collectorElapsedMs < 20_000,
+    `collector 257 same-member analysis took ${Math.round(collectorElapsedMs)}ms`
+  );
+});
+
+test('orders lexical arrow writes by invocation while preserving ordinary receivers', () => {
+  const arrowAfterSafe = `
+    declare const Store: unknown;
+    export class Api {
+      static {
+        const install = () => {
+          this.Store = Store;
+        };
+        this.Store = undefined;
+        install();
+      }
+    }
+  `;
+  const arrowBeforeSafe = `
+    declare const Store: unknown;
+    export class Api {
+      static {
+        const install = () => {
+          this.Store = Store;
+        };
+        install();
+        this.Store = undefined;
+      }
+    }
+  `;
+  const ordinaryDirectCall = `
+    declare const Store: unknown;
+    export class Api {
+      static {
+        const install = function () {
+          this.Store = Store;
+        };
+        this.Store = undefined;
+        install();
+      }
+    }
+  `;
+  const ordinaryStaticReceiver = `
+    declare const Store: unknown;
+    export class Api {
+      static {
+        const install = function () {
+          this.Store = Store;
+        };
+        this.Store = undefined;
+        install.call(this);
+      }
+    }
+  `;
+  assert.deepEqual(directPublicStaticSelection(arrowAfterSafe), {
+    getterOnly: false,
+    localMember: 'Store',
+  });
+  assert.equal(directPublicStaticSelection(arrowBeforeSafe), null);
+  assert.equal(directPublicStaticSelection(ordinaryDirectCall), null);
+  assert.deepEqual(directPublicStaticSelection(ordinaryStaticReceiver), {
+    getterOnly: false,
+    localMember: 'Store',
+  });
+
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-arrow-after-safe-dangerous/main/index.ts':
+        arrowAfterSafe.replace(
+          'declare const Store: unknown;',
+          "import { Store } from './infrastructure/Store';"
+        ),
+      'src/features/class-static-block-arrow-after-safe-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-arrow-before-safe/main/index.ts': arrowBeforeSafe.replace(
+        'declare const Store: unknown;',
+        "import { Store } from './infrastructure/Store';"
+      ),
+      'src/features/class-static-block-arrow-before-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-ordinary-direct-call/main/index.ts':
+        ordinaryDirectCall.replace(
+          'declare const Store: unknown;',
+          "import { Store } from './infrastructure/Store';"
+        ),
+      'src/features/class-static-block-ordinary-direct-call/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-ordinary-static-receiver-dangerous/main/index.ts':
+        ordinaryStaticReceiver.replace(
+          'declare const Store: unknown;',
+          "import { Store } from './infrastructure/Store';"
+        ),
+      'src/features/class-static-block-ordinary-static-receiver-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-arrow-after-safe-dangerous/main/index.ts',
+        'src/features/class-static-block-ordinary-static-receiver-dangerous/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('models retained values for direct logical static assignments', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-logical-or-retains-dangerous/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            this.Store = Store;
+            this.Store ||= undefined;
+          }
+        }
+      `,
+      'src/features/class-static-block-logical-or-retains-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-logical-nullish-retains-dangerous/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            this.Store = Store;
+            this.Store ??= undefined;
+          }
+        }
+      `,
+      'src/features/class-static-block-logical-nullish-retains-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-logical-and-retains-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            this.Store = undefined;
+            this.Store &&= Store;
+          }
+        }
+      `,
+      'src/features/class-static-block-logical-and-retains-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-logical-object-or-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            this.Store = {};
+            this.Store ||= Store;
+          }
+        }
+      `,
+      'src/features/class-static-block-logical-object-or-overwrite-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-logical-object-nullish-overwrite-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            this.Store = {};
+            this.Store ??= Store;
+          }
+        }
+      `,
+      'src/features/class-static-block-logical-object-nullish-overwrite-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-logical-and-reassigns-dangerous/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            this.Store = Store;
+            this.Store &&= Store;
+          }
+        }
+      `,
+      'src/features/class-static-block-logical-and-reassigns-dangerous/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-logical-and-reassigns-dangerous/main/index.ts',
+        'src/features/class-static-block-logical-nullish-retains-dangerous/main/index.ts',
+        'src/features/class-static-block-logical-or-retains-dangerous/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('resolves aliases of local functions call and apply methods', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-function-call-method-alias/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.call;
+            invoke.call(install, this);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-call-method-alias/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-apply-method-alias/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.apply;
+            invoke.call(install, this, []);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-apply-method-alias/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-call-method-alias-apply/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.call;
+            invoke.apply(install, [this]);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-call-method-alias-apply/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-call-method-alias-reflect/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.call;
+            Reflect.apply(invoke, install, [this]);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-call-method-alias-reflect/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-call-method-bound/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.call.bind(install);
+            invoke(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-call-method-bound/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-apply-method-alias-apply/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.apply;
+            invoke.apply(install, [this, []]);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-apply-method-alias-apply/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-call-method-alias-wrong-receiver-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.call;
+            invoke.apply(install, [{}]);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-call-method-alias-wrong-receiver-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-call-method-bound-wrong-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const other = function () {};
+            const invoke = install.call.bind(other);
+            invoke(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-call-method-bound-wrong-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-function-apply-method-alias-apply/main/index.ts',
+        'src/features/class-static-block-function-apply-method-alias/main/index.ts',
+        'src/features/class-static-block-function-call-method-alias-apply/main/index.ts',
+        'src/features/class-static-block-function-call-method-alias-reflect/main/index.ts',
+        'src/features/class-static-block-function-call-method-alias/main/index.ts',
+        'src/features/class-static-block-function-call-method-bound/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('resolves call and apply receivers pre-bound through detached aliases', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-function-call-prebound-receiver/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.call.bind(install, this);
+            invoke();
+          }
+        }
+      `,
+      'src/features/class-static-block-function-call-prebound-receiver/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-apply-prebound-receiver/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.apply.bind(install, this, []);
+            invoke();
+          }
+        }
+      `,
+      'src/features/class-static-block-function-apply-prebound-receiver/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-call-prebound-wrong-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.call.bind(install, {});
+            invoke(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-call-prebound-wrong-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-apply-prebound-wrong-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.apply.bind(install, {}, []);
+            invoke();
+          }
+        }
+      `,
+      'src/features/class-static-block-function-apply-prebound-wrong-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-function-apply-prebound-receiver/main/index.ts',
+        'src/features/class-static-block-function-call-prebound-receiver/main/index.ts',
       ]);
     }
   );
@@ -989,6 +2221,314 @@ test('traces snapshot defaults and inherited class type surfaces', () => {
         'src/features/class-generator/main/index.ts',
         'src/features/class-index-signature/main/index.ts',
         'src/features/class-inherited-constructor/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('resolves ordinary bound local functions and keeps their receiver immutable', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-function-direct-bind/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            install.bind(this)();
+          }
+        }
+      `,
+      'src/features/class-static-block-function-direct-bind/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-bind-alias/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.bind(this);
+            invoke();
+          }
+        }
+      `,
+      'src/features/class-static-block-function-bind-alias/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-bind-chained-alias/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.bind(this);
+            const alias = invoke;
+            alias();
+          }
+        }
+      `,
+      'src/features/class-static-block-function-bind-chained-alias/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-bind-partial/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function (_value) {
+              this.Store = Store;
+            };
+            const invoke = install.bind(this, 1);
+            invoke();
+          }
+        }
+      `,
+      'src/features/class-static-block-function-bind-partial/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-bind-missing-receiver-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.bind();
+            invoke.call(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-bind-missing-receiver-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-function-bind-undefined-receiver-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.bind(undefined);
+            invoke.call(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-function-bind-undefined-receiver-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-function-bind-alias/main/index.ts',
+        'src/features/class-static-block-function-bind-chained-alias/main/index.ts',
+        'src/features/class-static-block-function-bind-partial/main/index.ts',
+        'src/features/class-static-block-function-direct-bind/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('does not recover invocation receivers omitted from detached method binds', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-call-bind-missing-receiver-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.call.bind();
+            invoke.call(install, this);
+          }
+        }
+      `,
+      'src/features/class-static-block-call-bind-missing-receiver-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-call-bind-undefined-receiver-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.call.bind(undefined);
+            invoke.call(install, this);
+          }
+        }
+      `,
+      'src/features/class-static-block-call-bind-undefined-receiver-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-call-bind-partial-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.call.bind(install);
+            invoke();
+          }
+        }
+      `,
+      'src/features/class-static-block-call-bind-partial-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-call-bind-partial-late-argument/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              this.Store = Store;
+            };
+            const invoke = install.call.bind(install);
+            invoke.call({}, this);
+          }
+        }
+      `,
+      'src/features/class-static-block-call-bind-partial-late-argument/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-call-bind-partial-late-argument/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('isolates observed nested classes while tracing factory and inherited exposures', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-observed-nested-class-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            class Inner {
+              static Store = Store;
+            }
+            const inspect = () => {
+              void Inner;
+            };
+            inspect();
+          }
+        }
+      `,
+      'src/features/class-static-block-observed-nested-class-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-factory-nested-class/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            class Inner {
+              static Store = Store;
+            }
+            function make() {
+              return Inner;
+            }
+            this.Inner = make();
+          }
+        }
+      `,
+      'src/features/class-static-block-factory-nested-class/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-factory-observation-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            class Inner {
+              static Store = Store;
+            }
+            function make() {
+              void Inner;
+              return class {};
+            }
+            this.Inner = make();
+          }
+        }
+      `,
+      'src/features/class-static-block-factory-observation-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-inherited-nested-class/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            class Base {
+              static Store = Store;
+            }
+            class Inner extends Base {}
+            this.Inner = Inner;
+          }
+        }
+      `,
+      'src/features/class-static-block-inherited-nested-class/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-factory-nested-class/main/index.ts',
+        'src/features/class-static-block-inherited-nested-class/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('respects abrupt completion through try and finally blocks', () => {
+  withFeatureFixture(
+    {
+      'src/features/class-static-block-return-through-finally-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              try {
+                return;
+              } finally {
+              }
+              this.Store = Store;
+            };
+            install.call(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-return-through-finally-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-finally-return-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              try {
+                throw new Error('stop');
+              } finally {
+                return;
+              }
+              this.Store = Store;
+            };
+            install.call(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-finally-return-safe/main/infrastructure/Store.ts':
+        infrastructureSource(),
+      'src/features/class-static-block-catch-continues/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export class Api {
+          static {
+            const install = function () {
+              try {
+                throw new Error('continue in catch');
+              } catch {
+              } finally {
+              }
+              this.Store = Store;
+            };
+            install.call(this);
+          }
+        }
+      `,
+      'src/features/class-static-block-catch-continues/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/class-static-block-catch-continues/main/index.ts',
       ]);
     }
   );
