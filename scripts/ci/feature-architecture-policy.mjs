@@ -10,12 +10,12 @@ import {
   importedNameForCall,
   importedNameForReference,
   isIdentifierReference,
-  isShadowedTypeReference,
   selectImportedName,
   selectedMemberForReference,
   statementBindingNames,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
+import { isShadowedTypeReference } from './feature-type-scope-analysis.mjs';
 import {
   declarationNamesForNamespace,
   directExportNamesForNamespace,

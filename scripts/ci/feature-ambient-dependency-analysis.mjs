@@ -2,10 +2,10 @@ import ts from 'typescript';
 
 import {
   isIdentifierReference,
-  isShadowedTypeReference,
   memberAccess,
   unwrapExpression,
 } from './feature-export-analysis.mjs';
+import { isShadowedTypeReference } from './feature-type-scope-analysis.mjs';
 import {
   reachingLocalValueWrites,
   resolvedLocalValueNodes,
@@ -217,7 +217,7 @@ function ambientTypeNamespaceEdges(sourceFile, sourcePath) {
   const visit = (node) => {
     const directUsage = ts.isIdentifier(node) ? typeEntityUsage(node) : null;
     const directSpecifiers =
-      directUsage?.entity === node
+      directUsage?.entity === node && directUsage.space === 'type'
         ? AMBIENT_TYPE_NAME_SPECIFIERS
         : AMBIENT_TYPE_NAMESPACE_SPECIFIERS;
     const aliasReference =

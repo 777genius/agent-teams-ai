@@ -158,22 +158,6 @@ export function isIdentifierReference(node) {
   );
 }
 
-export function isShadowedTypeReference(node, sourceFile) {
-  let current = node.parent;
-  while (current && current !== sourceFile) {
-    if (
-      'typeParameters' in current &&
-      current.typeParameters?.some(
-        (parameter) => ts.isIdentifier(parameter.name) && parameter.name.text === node.text
-      )
-    ) {
-      return true;
-    }
-    current = current.parent;
-  }
-  return false;
-}
-
 function assignmentLocalNames(target) {
   const current = unwrapExpression(target);
   if (ts.isIdentifier(current)) return [current.text];

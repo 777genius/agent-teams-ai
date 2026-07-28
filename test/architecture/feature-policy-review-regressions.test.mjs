@@ -46,6 +46,9 @@ test('rejects ambient platform types while respecting local type and value bindi
       'src/features/ambient-electron/core/domain/event.ts': `
         export type Event = Electron.IpcMainEvent;
       `,
+      'src/features/ambient-electron/core/domain/namespace.ts': `
+        export type Namespace = typeof Electron;
+      `,
       'src/features/ambient-node/core/application/useCase.ts': `
         export type Platform = NodeJS.Platform;
       `,
@@ -58,6 +61,18 @@ test('rejects ambient platform types while respecting local type and value bindi
       `,
       'src/features/ambient-node/core/domain/heritage.ts': `
         export interface Stream extends NodeJS.ReadableStream {}
+      `,
+      'src/features/ambient-node/core/domain/inferFalseBranch.ts': `
+        export type Loader<T> = T extends infer Local ? Local : NodeRequire;
+      `,
+      'src/features/ambient-node/core/domain/mappedConstraint.ts': `
+        export type Encoding = { [Local in BufferEncoding]: Local };
+      `,
+      'src/features/ambient-node/core/domain/nestedInferScope.ts': `
+        export type Loader<T> =
+          T extends (T extends infer NodeRequire ? NodeRequire : never)
+            ? NodeRequire
+            : never;
       `,
       'src/features/ambient-node/core/domain/model.js': `
         /** @typedef {NodeJS.ProcessEnv} Environment */
@@ -80,6 +95,14 @@ test('rejects ambient platform types while respecting local type and value bindi
           export interface ProcessEnv {}
         }
       `,
+      'src/features/local-node/core/domain/inferBinder.ts': `
+        export type Loader<T> = T extends infer NodeRequire ? NodeRequire : never;
+      `,
+      'src/features/local-node/core/domain/mappedBinder.ts': `
+        export type Encoding<Keys extends PropertyKey> = {
+          [BufferEncoding in Keys]: BufferEncoding;
+        };
+      `,
       'src/features/local-node/core/domain/namespace.ts': `
         namespace NodeJS {
           export interface ProcessEnv {}
@@ -101,6 +124,10 @@ test('rejects ambient platform types while respecting local type and value bindi
         const NodeJS = { pid: 1 } as const;
         export type Pid = typeof NodeJS.pid;
       `,
+      'src/features/local-electron/core/domain/valueQuery.ts': `
+        const Electron = { version: 'local' } as const;
+        export type Version = typeof Electron;
+      `,
     },
     (root) => collectFeatureArchitectureViolations(root).violations
   );
@@ -120,6 +147,11 @@ test('rejects ambient platform types while respecting local type and value bindi
       },
       {
         rule: domainRule,
+        source: 'src/features/ambient-electron/core/domain/namespace.ts',
+        specifier: 'electron',
+      },
+      {
+        rule: domainRule,
         source: 'src/features/ambient-node/core/domain/bareTypes.ts',
         specifier: 'node:types',
       },
@@ -130,7 +162,22 @@ test('rejects ambient platform types while respecting local type and value bindi
       },
       {
         rule: domainRule,
+        source: 'src/features/ambient-node/core/domain/inferFalseBranch.ts',
+        specifier: 'node:types',
+      },
+      {
+        rule: domainRule,
+        source: 'src/features/ambient-node/core/domain/mappedConstraint.ts',
+        specifier: 'node:types',
+      },
+      {
+        rule: domainRule,
         source: 'src/features/ambient-node/core/domain/model.js',
+        specifier: 'node:types',
+      },
+      {
+        rule: domainRule,
+        source: 'src/features/ambient-node/core/domain/nestedInferScope.ts',
         specifier: 'node:types',
       },
       {
