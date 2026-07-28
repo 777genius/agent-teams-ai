@@ -1,7 +1,7 @@
 import { api } from '@renderer/api';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 
-import type { TeamRosterMutationRendererTransportPort } from '../ports/TeamRosterMutationRendererPorts';
+import type { TeamRosterMutationRendererTransportPort } from '@features/team-roster-mutations/renderer';
 
 export function createTeamRosterMutationTransport(): TeamRosterMutationRendererTransportPort {
   return {

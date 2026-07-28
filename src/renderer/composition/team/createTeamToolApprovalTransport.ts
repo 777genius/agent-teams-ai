@@ -1,6 +1,6 @@
 import { api } from '@renderer/api';
 
-import type { TeamToolApprovalRendererTransportPort } from '../ports/TeamToolApprovalRendererPorts';
+import type { TeamToolApprovalRendererTransportPort } from '@features/team-provisioning/renderer';
 
 export function createTeamToolApprovalTransport(): TeamToolApprovalRendererTransportPort {
   return {

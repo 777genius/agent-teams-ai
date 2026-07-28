@@ -13,11 +13,11 @@ const legacyCompositionPaths = [
 ] as const;
 const concreteTransportPaths = [
   'src/renderer/composition/team/createTeamLifecycleMutationTransport.ts',
-  'src/features/team-provisioning/renderer/composition/createTeamToolApprovalTransport.ts',
   'src/renderer/composition/team/createTeamMessageDeliveryTransport.ts',
-  'src/features/team-task-board/renderer/composition/createTeamNotificationTransport.ts',
-  'src/features/team-roster-mutations/renderer/composition/createTeamRosterMutationTransport.ts',
-  'src/features/team-runtime-operations/renderer/composition/createTeamRuntimeOperationsTransport.ts',
+  'src/renderer/composition/team/createTeamNotificationTransport.ts',
+  'src/renderer/composition/team/createTeamRosterMutationTransport.ts',
+  'src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts',
+  'src/renderer/composition/team/createTeamToolApprovalTransport.ts',
 ] as const;
 const transportFreeFeaturePaths = [
   'src/features/team-message-delivery/renderer/adapters/createTeamMessageDeliveryRendererSlice.ts',

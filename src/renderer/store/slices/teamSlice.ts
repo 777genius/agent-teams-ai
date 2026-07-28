@@ -15,20 +15,13 @@ import {
   createTeamProvisioningControlSlice,
   createTeamProvisioningLaunchSlice,
   createTeamProvisioningProgressSlice,
-  createTeamToolApprovalTransport,
   loadAllTeamLaunchParams,
   saveTeamLaunchParams,
   saveTeamToolApprovalSettings,
   type TeamLaunchAnalyticsContext,
 } from '@features/team-provisioning/renderer';
-import {
-  createTeamRosterMutationRendererSlice,
-  createTeamRosterMutationTransport,
-} from '@features/team-roster-mutations/renderer';
-import {
-  createTeamRuntimeOperationsRendererSlice,
-  createTeamRuntimeOperationsTransport,
-} from '@features/team-runtime-operations/renderer';
+import { createTeamRosterMutationRendererSlice } from '@features/team-roster-mutations/renderer';
+import { createTeamRuntimeOperationsRendererSlice } from '@features/team-runtime-operations/renderer';
 import {
   clearTeamTaskBoardAnalytics,
   resetTeamTaskBoardAnalyticsForTests,
@@ -42,6 +35,9 @@ import { classifyAnalyticsError } from '@renderer/analytics/productAnalytics';
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
 import { getTeamLifecycleAnalyticsContext } from '@renderer/analytics/teamAnalyticsMetadata';
 import { createTeamLifecycleMutationTransport } from '@renderer/composition/team/createTeamLifecycleMutationTransport';
+import { createTeamRosterMutationTransport } from '@renderer/composition/team/createTeamRosterMutationTransport';
+import { createTeamRuntimeOperationsTransport } from '@renderer/composition/team/createTeamRuntimeOperationsTransport';
+import { createTeamToolApprovalTransport } from '@renderer/composition/team/createTeamToolApprovalTransport';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { createLogger } from '@shared/utils/logger';
 

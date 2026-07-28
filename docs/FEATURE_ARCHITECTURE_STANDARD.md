@@ -345,8 +345,9 @@ It scans production source and enforces:
   transport, adapters, and infrastructure
 - `core/application` depends only on domain, contracts, and its own application
   models, use cases, and ports
-- public feature entrypoints do not directly or transitively re-export adapters
-  or infrastructure
+- public feature entrypoints do not directly or transitively re-export adapters,
+  infrastructure, or concrete host boundaries hidden behind another directory
+  name
 
 Legacy violations are pinned as individual dependency edges in
 `scripts/ci/feature-architecture-baseline.json`. The identity is the rule,

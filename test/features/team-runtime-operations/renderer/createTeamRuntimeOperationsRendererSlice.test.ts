@@ -1,8 +1,8 @@
 import {
   createTeamRuntimeOperationsRendererSlice,
-  createTeamRuntimeOperationsTransport,
   type TeamRuntimeOperationsRefreshActions,
 } from '@features/team-runtime-operations/renderer';
+import { createTeamRuntimeOperationsTransport } from '@renderer/composition/team/createTeamRuntimeOperationsTransport';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const apiMocks = vi.hoisted(() => ({

@@ -1,4 +1,4 @@
-import { createTeamNotificationTransport } from '@features/team-task-board/renderer';
+import { createTeamNotificationTransport } from '@renderer/composition/team/createTeamNotificationTransport';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TeamMessageNotificationData } from '@shared/types';

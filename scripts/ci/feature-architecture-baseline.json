@@ -513,6 +513,30 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/agent-graph/renderer/index.ts",
+      "specifier": "./ui/TeamGraphOverlay",
+      "publicEntrypoint": "src/features/agent-graph/renderer/index.ts",
+      "exportedName": "TeamGraphOverlay",
+      "importedName": "TeamGraphOverlay"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/agent-graph/renderer/index.ts",
+      "specifier": "./ui/TeamGraphOverlay",
+      "publicEntrypoint": "src/features/agent-graph/renderer/index.ts",
+      "exportedName": "TeamGraphOverlayProps",
+      "importedName": "TeamGraphOverlayProps"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/agent-graph/renderer/index.ts",
+      "specifier": "./ui/TeamGraphTab",
+      "publicEntrypoint": "src/features/agent-graph/renderer/index.ts",
+      "exportedName": "TeamGraphTab",
+      "importedName": "TeamGraphTab"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/change-review-history/main/index.ts",
       "specifier": "./adapters/input/ipc/registerReviewDecisionHistoryIpc",
       "publicEntrypoint": "src/features/change-review-history/main/index.ts",
@@ -590,6 +614,22 @@
       "publicEntrypoint": "src/features/change-review-history/renderer/index.ts",
       "exportedName": "serializeReviewDraftEditorState",
       "importedName": "serializeReviewDraftEditorState"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/main/index.ts",
+      "specifier": "./composition/createReviewFileWatchFeature",
+      "publicEntrypoint": "src/features/change-review/main/index.ts",
+      "exportedName": "createReviewFileWatchFeature",
+      "importedName": "createReviewFileWatchFeature"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/change-review/main/index.ts",
+      "specifier": "./composition/createReviewFileWatchFeature",
+      "publicEntrypoint": "src/features/change-review/main/index.ts",
+      "exportedName": "ReviewFileWatchFeature",
+      "importedName": "ReviewFileWatchFeature"
     },
     {
       "rule": "public-api-implementation-export",
@@ -790,6 +830,46 @@
       "publicEntrypoint": "src/features/codex-account/main/index.ts",
       "exportedName": "removeCodexAccountIpc",
       "importedName": "removeCodexAccountIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/renderer/index.ts",
+      "specifier": "./hooks/useCodexAccountSnapshot",
+      "publicEntrypoint": "src/features/codex-account/renderer/index.ts",
+      "exportedName": "CODEX_ACCOUNT_STARTUP_IDLE_DELAY_MS",
+      "importedName": "CODEX_ACCOUNT_STARTUP_IDLE_DELAY_MS"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/renderer/index.ts",
+      "specifier": "./hooks/useCodexAccountSnapshot",
+      "publicEntrypoint": "src/features/codex-account/renderer/index.ts",
+      "exportedName": "CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS",
+      "importedName": "CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/renderer/index.ts",
+      "specifier": "./hooks/useCodexAccountSnapshot",
+      "publicEntrypoint": "src/features/codex-account/renderer/index.ts",
+      "exportedName": "CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS",
+      "importedName": "CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/renderer/index.ts",
+      "specifier": "./hooks/useCodexAccountSnapshot",
+      "publicEntrypoint": "src/features/codex-account/renderer/index.ts",
+      "exportedName": "isCodexAccountSnapshotPending",
+      "importedName": "isCodexAccountSnapshotPending"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/codex-account/renderer/index.ts",
+      "specifier": "./hooks/useCodexAccountSnapshot",
+      "publicEntrypoint": "src/features/codex-account/renderer/index.ts",
+      "exportedName": "useCodexAccountSnapshot",
+      "importedName": "useCodexAccountSnapshot"
     },
     {
       "rule": "public-api-implementation-export",
@@ -1529,6 +1609,38 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/renderer/index.ts",
+      "specifier": "./hooks/useMemberWorkSyncStatus",
+      "publicEntrypoint": "src/features/member-work-sync/renderer/index.ts",
+      "exportedName": "useMemberWorkSyncStatus",
+      "importedName": "useMemberWorkSyncStatus"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/renderer/index.ts",
+      "specifier": "./hooks/useMemberWorkSyncStatus",
+      "publicEntrypoint": "src/features/member-work-sync/renderer/index.ts",
+      "exportedName": "UseMemberWorkSyncStatusOptions",
+      "importedName": "UseMemberWorkSyncStatusOptions"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/renderer/index.ts",
+      "specifier": "./hooks/useMemberWorkSyncStatus",
+      "publicEntrypoint": "src/features/member-work-sync/renderer/index.ts",
+      "exportedName": "UseMemberWorkSyncStatusResult",
+      "importedName": "UseMemberWorkSyncStatusResult"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/member-work-sync/renderer/index.ts",
+      "specifier": "./ui/MemberWorkSyncStatusPanel",
+      "publicEntrypoint": "src/features/member-work-sync/renderer/index.ts",
+      "exportedName": "MemberWorkSyncStatusPanel",
+      "importedName": "MemberWorkSyncStatusPanel"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/organizations/main/index.ts",
       "specifier": "./adapters/input/http/registerOrganizationsHttp",
       "publicEntrypoint": "src/features/organizations/main/index.ts",
@@ -1550,6 +1662,14 @@
       "publicEntrypoint": "src/features/organizations/main/index.ts",
       "exportedName": "removeOrganizationsIpc",
       "importedName": "removeOrganizationsIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/organizations/renderer/index.ts",
+      "specifier": "./ui/OrganizationMapTab",
+      "publicEntrypoint": "src/features/organizations/renderer/index.ts",
+      "exportedName": "OrganizationMapTab",
+      "importedName": "OrganizationMapTab"
     },
     {
       "rule": "public-api-implementation-export",
@@ -1577,6 +1697,14 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/recent-projects/renderer/index.ts",
+      "specifier": "./ui/RecentProjectsSection",
+      "publicEntrypoint": "src/features/recent-projects/renderer/index.ts",
+      "exportedName": "RecentProjectsSection",
+      "importedName": "RecentProjectsSection"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/review-mutations/main/index.ts",
       "specifier": "./adapters/input/ipc/registerReviewMutationRecoveryIpc",
       "publicEntrypoint": "src/features/review-mutations/main/index.ts",
@@ -1598,6 +1726,14 @@
       "publicEntrypoint": "src/features/review-mutations/main/index.ts",
       "exportedName": "ReviewMutationIpcHandlerWrapper",
       "importedName": "ReviewMutationIpcHandlerWrapper"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/running-teams/renderer/index.ts",
+      "specifier": "./ui/RunningTeamsSection",
+      "publicEntrypoint": "src/features/running-teams/renderer/index.ts",
+      "exportedName": "RunningTeamsSection",
+      "importedName": "RunningTeamsSection"
     },
     {
       "rule": "public-api-implementation-export",
@@ -1686,6 +1822,86 @@
       "publicEntrypoint": "src/features/runtime-provider-management/main/index.ts",
       "exportedName": "OpenCodeLocalProviderConnector",
       "importedName": "OpenCodeLocalProviderConnector"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/renderer/index.ts",
+      "specifier": "./hooks/useOpenCodeLocalProviders",
+      "publicEntrypoint": "src/features/runtime-provider-management/renderer/index.ts",
+      "exportedName": "mergeOpenCodeLocalProviders",
+      "importedName": "mergeOpenCodeLocalProviders"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/renderer/index.ts",
+      "specifier": "./hooks/useOpenCodeLocalProviders",
+      "publicEntrypoint": "src/features/runtime-provider-management/renderer/index.ts",
+      "exportedName": "resolveOpenCodeLocalProviderLookup",
+      "importedName": "resolveOpenCodeLocalProviderLookup"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/renderer/index.ts",
+      "specifier": "./hooks/useOpenCodeLocalProviders",
+      "publicEntrypoint": "src/features/runtime-provider-management/renderer/index.ts",
+      "exportedName": "useOpenCodeLocalProviders",
+      "importedName": "useOpenCodeLocalProviders"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/renderer/index.ts",
+      "specifier": "./hooks/useRuntimeProviderOnboarding",
+      "publicEntrypoint": "src/features/runtime-provider-management/renderer/index.ts",
+      "exportedName": "RuntimeProviderOnboardingMode",
+      "importedName": "RuntimeProviderOnboardingMode"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/renderer/index.ts",
+      "specifier": "./openCodeLocalModelLimits",
+      "publicEntrypoint": "src/features/runtime-provider-management/renderer/index.ts",
+      "exportedName": "OpenCodeLocalModelLimitSuggestion",
+      "importedName": "OpenCodeLocalModelLimitSuggestion"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/renderer/index.ts",
+      "specifier": "./openCodeLocalModelLimits",
+      "publicEntrypoint": "src/features/runtime-provider-management/renderer/index.ts",
+      "exportedName": "resolveOpenCodeLocalModelLimitSuggestion",
+      "importedName": "resolveOpenCodeLocalModelLimitSuggestion"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/renderer/index.ts",
+      "specifier": "./OpenCodeLocalModelLimitsCard",
+      "publicEntrypoint": "src/features/runtime-provider-management/renderer/index.ts",
+      "exportedName": "OpenCodeLocalModelLimitsCard",
+      "importedName": "OpenCodeLocalModelLimitsCard"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/renderer/index.ts",
+      "specifier": "./RuntimeProviderManagementPanel",
+      "publicEntrypoint": "src/features/runtime-provider-management/renderer/index.ts",
+      "exportedName": "RuntimeProviderManagementPanel",
+      "importedName": "RuntimeProviderManagementPanel"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/renderer/index.ts",
+      "specifier": "./RuntimeProviderOnboardingDialog",
+      "publicEntrypoint": "src/features/runtime-provider-management/renderer/index.ts",
+      "exportedName": "RuntimeProviderOnboardingDialog",
+      "importedName": "RuntimeProviderOnboardingDialog"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/runtime-provider-management/renderer/index.ts",
+      "specifier": "./RuntimeProviderQuickConnect",
+      "publicEntrypoint": "src/features/runtime-provider-management/renderer/index.ts",
+      "exportedName": "RuntimeProviderQuickConnect",
+      "importedName": "RuntimeProviderQuickConnect"
     },
     {
       "rule": "public-api-implementation-export",
@@ -1798,6 +2014,14 @@
       "publicEntrypoint": "src/features/team-import/main/index.ts",
       "exportedName": "removeTeamImportIpc",
       "importedName": "removeTeamImportIpc"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/team-import/renderer/index.ts",
+      "specifier": "./ui/ImportTeamDialog",
+      "publicEntrypoint": "src/features/team-import/renderer/index.ts",
+      "exportedName": "ImportTeamDialog",
+      "importedName": "ImportTeamDialog"
     },
     {
       "rule": "public-api-implementation-export",
@@ -2737,6 +2961,14 @@
     },
     {
       "rule": "public-api-implementation-export",
+      "source": "src/features/tmux-installer/renderer/index.ts",
+      "specifier": "./ui/TmuxInstallerBannerView",
+      "publicEntrypoint": "src/features/tmux-installer/renderer/index.ts",
+      "exportedName": "TmuxInstallerBannerView",
+      "importedName": "TmuxInstallerBannerView"
+    },
+    {
+      "rule": "public-api-implementation-export",
       "source": "src/features/token-usage/main/index.ts",
       "specifier": "./adapters/input/http/registerTokenUsageHttp",
       "publicEntrypoint": "src/features/token-usage/main/index.ts",
@@ -2774,6 +3006,22 @@
       "publicEntrypoint": "src/features/token-usage/main/index.ts",
       "exportedName": "TeamTaskUsageAttributionSource",
       "importedName": "TeamTaskUsageAttributionSource"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/token-usage/renderer/index.ts",
+      "specifier": "./hooks/useTokenUsageSnapshot",
+      "publicEntrypoint": "src/features/token-usage/renderer/index.ts",
+      "exportedName": "useTokenUsageSnapshot",
+      "importedName": "useTokenUsageSnapshot"
+    },
+    {
+      "rule": "public-api-implementation-export",
+      "source": "src/features/token-usage/renderer/index.ts",
+      "specifier": "./ui/TokenUsageDashboard",
+      "publicEntrypoint": "src/features/token-usage/renderer/index.ts",
+      "exportedName": "TokenUsageDashboard",
+      "importedName": "TokenUsageDashboard"
     },
     {
       "rule": "public-api-implementation-export",

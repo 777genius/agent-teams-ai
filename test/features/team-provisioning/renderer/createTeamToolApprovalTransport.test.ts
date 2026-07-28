@@ -1,4 +1,4 @@
-import { createTeamToolApprovalTransport } from '@features/team-provisioning/renderer';
+import { createTeamToolApprovalTransport } from '@renderer/composition/team/createTeamToolApprovalTransport';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

@@ -27,6 +27,30 @@ function infrastructureSource() {
   return 'export class Store {}';
 }
 
+test('classifies concrete host dependencies by resolution rather than folder name', () => {
+  withFeatureFixture(
+    {
+      'src/features/renamed-transport/renderer/index.ts': `
+        export { createTransport } from './composition/createTransport';
+      `,
+      'src/features/renamed-transport/renderer/composition/createTransport.ts': `
+        import { load } from './transportBridge';
+        export function createTransport() {
+          return { load };
+        }
+      `,
+      'src/features/renamed-transport/renderer/composition/transportBridge.ts': `
+        import { api } from '@renderer/api';
+        export const load = () => api.load();
+      `,
+      'src/renderer/api/index.ts': 'export const api = { load: () => Promise.resolve() };',
+    },
+    (root) => {
+      assert.deepEqual(implementationSpecifiers(root), ['./composition/createTransport']);
+    }
+  );
+});
+
 test('collects every reachable dynamic-import then selection', () => {
   withFeatureFixture(
     {

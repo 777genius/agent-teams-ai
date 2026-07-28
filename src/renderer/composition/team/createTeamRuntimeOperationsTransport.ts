@@ -1,7 +1,7 @@
 import { api } from '@renderer/api';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 
-import type { TeamRuntimeOperationsRendererTransportPort } from '../ports/TeamRuntimeOperationsRendererPorts';
+import type { TeamRuntimeOperationsRendererTransportPort } from '@features/team-runtime-operations/renderer';
 
 export function createTeamRuntimeOperationsTransport(): TeamRuntimeOperationsRendererTransportPort {
   return {

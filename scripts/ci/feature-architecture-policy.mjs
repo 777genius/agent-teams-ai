@@ -755,6 +755,7 @@ export function collectFeatureArchitectureViolations(repoRoot) {
 
   violations.push(
     ...collectPublicApiImplementationExports({
+      edges,
       localTypeExportNamesBySource,
       localValueExportNamesBySource,
       reexports,

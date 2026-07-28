@@ -2,6 +2,13 @@ import { resolveProjectTarget } from './feature-module-resolution.mjs';
 import { isFeaturePublicEntrypoint } from './feature-source-files.mjs';
 
 const IMPLEMENTATION_DIRECTORIES = new Set(['adapters', 'infrastructure']);
+const CONCRETE_BOUNDARY_ROOTS = [
+  'src/preload',
+  'src/renderer/api',
+  'src/shared/api',
+  'src/shared/ipc',
+  'src/shared/transport',
+];
 const EXPORT_NAMESPACES = ['type', 'value'];
 
 function exportNamespacesForSource(sourcePath) {
@@ -10,6 +17,54 @@ function exportNamespacesForSource(sourcePath) {
 
 function hasImplementationDirectory(filePath) {
   return filePath.split('/').some((segment) => IMPLEMENTATION_DIRECTORIES.has(segment));
+}
+
+function isWithinConcreteBoundaryRoot(filePath) {
+  return CONCRETE_BOUNDARY_ROOTS.some(
+    (root) => filePath === root || filePath.startsWith(`${root}/`)
+  );
+}
+
+function isImplementationTarget(filePath) {
+  return hasImplementationDirectory(filePath) || isWithinConcreteBoundaryRoot(filePath);
+}
+
+function featureLayer(filePath) {
+  const match = /^src\/features\/([^/]+)\/(main|preload|renderer)(?:\/|$)/.exec(filePath);
+  return match ? `${match[1]}:${match[2]}` : null;
+}
+
+function isSameFeatureLayer(sourcePath, targetPath) {
+  const sourceLayer = featureLayer(sourcePath);
+  return sourceLayer !== null && sourceLayer === featureLayer(targetPath);
+}
+
+function collectConcreteBoundarySources(edges, sourceFilePaths) {
+  const dependencies = edges
+    .map((edge) => ({
+      source: edge.source,
+      target: resolveProjectTarget(edge, sourceFilePaths),
+    }))
+    .filter(({ target }) => target !== null);
+  const concreteBoundarySources = new Set();
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    for (const { source, target } of dependencies) {
+      if (
+        concreteBoundarySources.has(source) ||
+        (!isWithinConcreteBoundaryRoot(target) &&
+          (!concreteBoundarySources.has(target) || !isSameFeatureLayer(source, target)))
+      ) {
+        continue;
+      }
+      concreteBoundarySources.add(source);
+      changed = true;
+    }
+  }
+
+  return concreteBoundarySources;
 }
 
 function reexportsBySource(reexports) {
@@ -135,6 +190,7 @@ function createExportResolver(
 }
 
 export function collectPublicApiImplementationExports({
+  edges,
   localTypeExportNamesBySource,
   localValueExportNamesBySource,
   reexports,
@@ -146,6 +202,7 @@ export function collectPublicApiImplementationExports({
     { localTypeExportNamesBySource, localValueExportNamesBySource },
     sourceFilePaths
   );
+  const concreteBoundarySources = collectConcreteBoundarySources(edges, sourceFilePaths);
   const violations = [];
 
   for (const publicEntrypoint of [...sourceFilePaths].filter(isFeaturePublicEntrypoint).sort()) {
@@ -193,13 +250,13 @@ export function collectPublicApiImplementationExports({
           continue;
         }
 
-        if (hasImplementationDirectory(targetPath)) {
+        if (isImplementationTarget(targetPath) || concreteBoundarySources.has(targetPath)) {
           const importedName = reexport.isExportStar ? requestedExport : reexport.importedName;
           violations.push({
             exportedName: publicExportedName,
             importedName,
             line: reexport.line,
-            message: `public entrypoint ${publicEntrypoint} must not expose adapters or infrastructure`,
+            message: `public entrypoint ${publicEntrypoint} must not expose adapters, infrastructure, or concrete host boundaries`,
             publicEntrypoint,
             rule,
             source: reexport.source,
