@@ -50,6 +50,10 @@ test('rejects ambient NodeJS types while respecting local type bindings', () => 
         /** @typedef {NodeJS.ProcessEnv} Environment */
         export const marker = true;
       `,
+      'src/features/ambient-node/core/domain/nodeAlias.ts': `
+        import Node = NodeJS;
+        export type Environment = Node.ProcessEnv;
+      `,
       'src/features/ambient-node/core/domain/policy.ts': `
         export type Environment = NodeJS.ProcessEnv;
         export type Timer = NodeJS.Timeout;
@@ -69,6 +73,13 @@ test('rejects ambient NodeJS types while respecting local type bindings', () => 
         }
         export type Environment = NodeJS.ProcessEnv;
       `,
+      'src/features/local-node/core/domain/namespaceAlias.ts': `
+        namespace NodeJS {
+          export interface ProcessEnv {}
+        }
+        import Node = NodeJS;
+        export type Environment = Node.ProcessEnv;
+      `,
     },
     (root) => collectFeatureArchitectureViolations(root).violations
   );
@@ -84,6 +95,11 @@ test('rejects ambient NodeJS types while respecting local type bindings', () => 
       {
         rule: domainRule,
         source: 'src/features/ambient-node/core/domain/model.js',
+        specifier: 'node:types',
+      },
+      {
+        rule: domainRule,
+        source: 'src/features/ambient-node/core/domain/nodeAlias.ts',
         specifier: 'node:types',
       },
       {

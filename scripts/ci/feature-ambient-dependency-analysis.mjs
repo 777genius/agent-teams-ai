@@ -152,20 +152,38 @@ function isShadowedAmbientTypeReference(reference, sourceFile) {
 
 function ambientTypeNamespaceEdges(sourceFile, sourcePath) {
   const edges = [];
+  const ambientSpecifierForReference = (reference) =>
+    ts.isIdentifier(reference) &&
+    AMBIENT_TYPE_NAMESPACE_SPECIFIERS.has(reference.text) &&
+    !isShadowedAmbientTypeReference(reference, sourceFile)
+      ? AMBIENT_TYPE_NAMESPACE_SPECIFIERS.get(reference.text)
+      : null;
+  const rootEntityName = (entityName) => {
+    let current = entityName;
+    while (ts.isQualifiedName(current)) current = current.left;
+    return ts.isIdentifier(current) ? current : null;
+  };
   const visit = (node) => {
-    if (
+    const directReference =
       ts.isIdentifier(node) &&
-      AMBIENT_TYPE_NAMESPACE_SPECIFIERS.has(node.text) &&
       ts.isQualifiedName(node.parent) &&
-      node.parent.left === node &&
-      !isShadowedAmbientTypeReference(node, sourceFile)
-    ) {
+      node.parent.left === node
+        ? node
+        : null;
+    const aliasReference =
+      ts.isImportEqualsDeclaration(node) &&
+      !ts.isExternalModuleReference(node.moduleReference)
+        ? rootEntityName(node.moduleReference)
+        : null;
+    const reference = directReference ?? aliasReference;
+    const specifier = reference ? ambientSpecifierForReference(reference) : null;
+    if (specifier) {
       edges.push({
         isTypeOnly: true,
         kind: 'reference',
-        line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
+        line: sourceFile.getLineAndCharacterOfPosition(reference.getStart(sourceFile)).line + 1,
         source: sourcePath,
-        specifier: AMBIENT_TYPE_NAMESPACE_SPECIFIERS.get(node.text),
+        specifier,
       });
     }
     forEachChildIncludingJsDoc(node, visit);
