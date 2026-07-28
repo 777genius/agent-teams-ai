@@ -59,6 +59,9 @@ test('rejects ambient platform types while respecting local type and value bindi
         export type Resolve = RequireResolve;
         export type BufferTypes = NonSharedBuffer | AllowSharedBuffer;
       `,
+      'src/features/ambient-node/core/domain/bufferType.ts': `
+        export type Bytes = Buffer;
+      `,
       'src/features/ambient-node/core/domain/heritage.ts': `
         export interface Stream extends NodeJS.ReadableStream {}
       `,
@@ -85,6 +88,21 @@ test('rejects ambient platform types while respecting local type and value bindi
       'src/features/ambient-node/core/domain/policy.ts': `
         export type Environment = NodeJS.ProcessEnv;
         export type Timer = NodeJS.Timeout;
+      `,
+      'src/features/ambient-node/core/domain/valueOnlyBufferShadow.ts': `
+        const Buffer = { from: (value: string) => value };
+        export type Bytes = Buffer;
+      `,
+      'src/features/ambient-worker/core/domain/workerType.ts': `
+        export type Job = Worker;
+      `,
+      'src/features/local-electron/core/domain/valueQuery.ts': `
+        const Electron = { version: 'local' } as const;
+        export type Version = typeof Electron;
+      `,
+      'src/features/local-node/core/domain/bufferType.ts': `
+        type Buffer = Uint8Array;
+        export type Bytes = Buffer;
       `,
       'src/features/local-node/core/domain/imported.ts': `
         import type { LocalTypes as NodeJS } from './localTypes';
@@ -124,9 +142,8 @@ test('rejects ambient platform types while respecting local type and value bindi
         const NodeJS = { pid: 1 } as const;
         export type Pid = typeof NodeJS.pid;
       `,
-      'src/features/local-electron/core/domain/valueQuery.ts': `
-        const Electron = { version: 'local' } as const;
-        export type Version = typeof Electron;
+      'src/features/local-worker/core/domain/typeParameter.ts': `
+        export type Job<Worker> = Worker;
       `,
     },
     (root) => collectFeatureArchitectureViolations(root).violations
@@ -154,6 +171,11 @@ test('rejects ambient platform types while respecting local type and value bindi
         rule: domainRule,
         source: 'src/features/ambient-node/core/domain/bareTypes.ts',
         specifier: 'node:types',
+      },
+      {
+        rule: domainRule,
+        source: 'src/features/ambient-node/core/domain/bufferType.ts',
+        specifier: 'node:buffer',
       },
       {
         rule: domainRule,
@@ -189,6 +211,16 @@ test('rejects ambient platform types while respecting local type and value bindi
         rule: domainRule,
         source: 'src/features/ambient-node/core/domain/policy.ts',
         specifier: 'node:types',
+      },
+      {
+        rule: domainRule,
+        source: 'src/features/ambient-node/core/domain/valueOnlyBufferShadow.ts',
+        specifier: 'node:buffer',
+      },
+      {
+        rule: domainRule,
+        source: 'src/features/ambient-worker/core/domain/workerType.ts',
+        specifier: 'browser:worker',
       },
     ]
   );

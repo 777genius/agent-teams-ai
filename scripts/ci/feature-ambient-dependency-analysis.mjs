@@ -361,11 +361,16 @@ function runtimeGlobalEdges(sourceFile, sourcePath) {
   };
   const visit = (node) => {
     const globalThisDependency = globalThisSpecifier(node);
+    const directUsage = ts.isIdentifier(node) ? typeEntityUsage(node) : null;
+    const isUnshadowedDirectGlobal =
+      directUsage?.space === 'type'
+        ? !isShadowedAmbientTypeReference(node, sourceFile)
+        : isUnshadowedGlobalValueReference(node);
     const directGlobalDependency =
       ts.isIdentifier(node) &&
       RUNTIME_GLOBAL_SPECIFIERS.has(node.text) &&
       isIdentifierReference(node) &&
-      isUnshadowedGlobalValueReference(node)
+      isUnshadowedDirectGlobal
         ? RUNTIME_GLOBAL_SPECIFIERS.get(node.text)
         : null;
     const specifier = globalThisDependency ?? directGlobalDependency;
