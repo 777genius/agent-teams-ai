@@ -163,11 +163,6 @@
     },
     {
       "rule": "core-application-dependencies",
-      "source": "src/features/team-message-delivery/core/application/use-cases/GetOpenCodeRuntimeDeliveryStatusUseCase.ts",
-      "specifier": "@shared/types"
-    },
-    {
-      "rule": "core-application-dependencies",
       "source": "src/features/team-message-delivery/core/application/use-cases/SendTeamMessageUseCase.ts",
       "specifier": "@shared/types"
     },
@@ -279,11 +274,6 @@
     {
       "rule": "core-application-dependencies",
       "source": "src/features/team-runtime-operations/core/application/ports/TeamRuntimeOperationPorts.ts",
-      "specifier": "@shared/types"
-    },
-    {
-      "rule": "core-application-dependencies",
-      "source": "src/features/team-runtime-operations/core/application/use-cases/ManageTeamRuntimeLifecycle.ts",
       "specifier": "@shared/types"
     },
     {
