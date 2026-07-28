@@ -62,6 +62,40 @@ function referenceDirectiveEdges(sourceFile, sourcePath) {
   }));
 }
 
+function jsxRuntimeEdges(sourceFile, sourcePath) {
+  let firstJsxNode = null;
+  const visit = (node) => {
+    if (firstJsxNode) return;
+    if (
+      ts.isJsxElement(node) ||
+      ts.isJsxSelfClosingElement(node) ||
+      ts.isJsxFragment(node)
+    ) {
+      firstJsxNode = node;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  if (!firstJsxNode) return [];
+
+  const pragmaImportSource = sourceFile.pragmas.get('jsximportsource')?.arguments?.factory;
+  const importSource =
+    typeof pragmaImportSource === 'string' && pragmaImportSource.length > 0
+      ? pragmaImportSource.replace(/\/+$/, '')
+      : 'react';
+
+  return [
+    {
+      isTypeOnly: false,
+      kind: 'import',
+      line: sourceFile.getLineAndCharacterOfPosition(firstJsxNode.getStart(sourceFile)).line + 1,
+      source: sourcePath,
+      specifier: `${importSource}/jsx-runtime`,
+    },
+  ];
+}
+
 function runtimeGlobalEdges(sourceFile, sourcePath) {
   const edges = [];
   let hasGlobalThisReference = false;
@@ -201,6 +235,7 @@ function runtimeGlobalEdges(sourceFile, sourcePath) {
 export function collectAmbientDependencyEdges(sourceFile, sourcePath) {
   return [
     ...referenceDirectiveEdges(sourceFile, sourcePath),
+    ...jsxRuntimeEdges(sourceFile, sourcePath),
     ...runtimeGlobalEdges(sourceFile, sourcePath),
   ];
 }

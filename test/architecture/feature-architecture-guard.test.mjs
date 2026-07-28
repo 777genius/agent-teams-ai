@@ -116,6 +116,35 @@ test('collects JSDoc dependency edges from production JavaScript', () => {
   );
 });
 
+test('collects implicit JSX runtime dependencies', () => {
+  const reactEdges = collectModuleEdgesFromSource(
+    `
+      export const View = () => <div />;
+      export const Fragment = () => <><span /></>;
+    `,
+    'src/features/example/core/domain/view.tsx'
+  );
+  const customEdges = collectModuleEdgesFromSource(
+    `
+      /** @jsxImportSource preact */
+      export const View = () => <section />;
+    `,
+    'src/features/example/core/application/view.tsx'
+  );
+
+  assert.deepEqual(
+    [...reactEdges, ...customEdges].map(({ isTypeOnly, kind, specifier }) => ({
+      isTypeOnly,
+      kind,
+      specifier,
+    })),
+    [
+      { isTypeOnly: false, kind: 'import', specifier: 'react/jsx-runtime' },
+      { isTypeOnly: false, kind: 'import', specifier: 'preact/jsx-runtime' },
+    ]
+  );
+});
+
 test('collects standard timer globals while respecting lexical shadows', () => {
   const edges = collectModuleEdgesFromSource(
     `
@@ -640,6 +669,38 @@ test('requires domain and application cryptography to enter through a port', () 
           rule: FEATURE_ARCHITECTURE_RULES.coreDomainIsolation,
           source: 'src/features/example/core/domain/createToken.ts',
           specifier: 'runtime:crypto',
+        },
+      ]);
+    }
+  );
+});
+
+test('rejects implicit JSX framework dependencies from domain and application', () => {
+  withFixture(
+    {
+      'src/features/example/core/application/view.tsx': `
+        export const ApplicationView = () => <span />;
+      `,
+      'src/features/example/core/domain/view.tsx': `
+        export const DomainView = () => <div />;
+      `,
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      const jsxViolations = violations
+        .filter(({ specifier }) => specifier === 'react/jsx-runtime')
+        .map(({ rule, source, specifier }) => ({ rule, source, specifier }));
+
+      assert.deepEqual(jsxViolations, [
+        {
+          rule: FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies,
+          source: 'src/features/example/core/application/view.tsx',
+          specifier: 'react/jsx-runtime',
+        },
+        {
+          rule: FEATURE_ARCHITECTURE_RULES.coreDomainIsolation,
+          source: 'src/features/example/core/domain/view.tsx',
+          specifier: 'react/jsx-runtime',
         },
       ]);
     }
