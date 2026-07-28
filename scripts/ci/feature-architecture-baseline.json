@@ -1577,22 +1577,6 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts",
-      "specifier": "../infrastructure/MemberWorkSyncEventQueue",
-      "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
-      "exportedName": "createMemberWorkSyncFeature",
-      "importedName": "MemberWorkSyncQueueDiagnostics"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/member-work-sync/main/composition/memberWorkSyncFeatureContracts.ts",
-      "specifier": "../infrastructure/MemberWorkSyncEventQueue",
-      "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
-      "exportedName": "MemberWorkSyncFeatureFacade",
-      "importedName": "MemberWorkSyncQueueDiagnostics"
-    },
-    {
-      "rule": "public-api-implementation-export",
       "source": "src/features/member-work-sync/main/index.ts",
       "specifier": "./adapters/input/registerMemberWorkSyncIpc",
       "publicEntrypoint": "src/features/member-work-sync/main/index.ts",

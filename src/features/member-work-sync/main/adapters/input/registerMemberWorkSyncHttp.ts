@@ -1,5 +1,9 @@
 import type { MemberWorkSyncReportState } from '../../../contracts';
 import type { MemberWorkSyncFeatureFacade } from '../../composition/createMemberWorkSyncFeature';
+import type {
+  MemberWorkSyncHttpHostPorts,
+  MemberWorkSyncHttpIdentifierValidationResult,
+} from '../../composition/memberWorkSyncHttpPorts';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 
 const MEMBER_WORK_SYNC_DIAGNOSTICS_ROUTE = '/api/teams/:teamName/member-work-sync/diagnostics';
@@ -7,43 +11,6 @@ const MEMBER_WORK_SYNC_METRICS_ROUTE = '/api/teams/:teamName/member-work-sync/me
 const MEMBER_WORK_SYNC_STATUS_ROUTE = '/api/teams/:teamName/member-work-sync/:memberName';
 const MEMBER_WORK_SYNC_REFRESH_ROUTE = '/api/teams/:teamName/member-work-sync/:memberName/refresh';
 const MEMBER_WORK_SYNC_REPORT_ROUTE = '/api/teams/:teamName/member-work-sync/report';
-
-export interface MemberWorkSyncHttpIdentifierValidationResult {
-  valid: boolean;
-  value?: string;
-  error?: string;
-}
-
-export interface MemberWorkSyncHttpIdentifierValidationPort {
-  validateTeamName(value: unknown): MemberWorkSyncHttpIdentifierValidationResult;
-  validateMemberName(value: unknown): MemberWorkSyncHttpIdentifierValidationResult;
-}
-
-export interface MemberWorkSyncHttpClockPort {
-  now(): Date;
-}
-
-export interface MemberWorkSyncHttpLoggerPort {
-  error(message: string, detail: string): void;
-}
-
-export interface MemberWorkSyncHttpUnexpectedErrorMapping {
-  statusCode: number;
-  responseMessage: string;
-  shouldLog: boolean;
-  logMessage: string;
-}
-
-export interface MemberWorkSyncHttpUnexpectedErrorPort {
-  map(error: unknown): MemberWorkSyncHttpUnexpectedErrorMapping;
-}
-
-export interface MemberWorkSyncHttpHostPorts {
-  identifiers: MemberWorkSyncHttpIdentifierValidationPort;
-  clock: MemberWorkSyncHttpClockPort;
-  logger: MemberWorkSyncHttpLoggerPort;
-  unexpectedErrors: MemberWorkSyncHttpUnexpectedErrorPort;
-}
 
 interface ValidationFailure {
   valid: false;
@@ -69,7 +36,7 @@ interface ReportPayloadSuccess {
 
 type ReportPayload = ReportPayloadFailure | ReportPayloadSuccess;
 
-export function registerMemberWorkSyncHttp(
+export function registerMemberWorkSyncHttpAdapter(
   app: FastifyInstance,
   feature: MemberWorkSyncFeatureFacade | undefined,
   host: MemberWorkSyncHttpHostPorts
