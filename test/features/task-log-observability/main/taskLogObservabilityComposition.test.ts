@@ -3,7 +3,10 @@ import { resolve } from 'path';
 import { describe, expect, it } from 'vitest';
 
 const ROOT = process.cwd();
-const handlersSource = readFileSync(resolve(ROOT, 'src/main/ipc/handlers.ts'), 'utf8');
+const teamCompositionSource = readFileSync(
+  resolve(ROOT, 'src/main/ipc/teamFeatureComposition.ts'),
+  'utf8'
+);
 const legacyTeamsSource = readFileSync(resolve(ROOT, 'src/main/ipc/teams.ts'), 'utf8');
 
 const OWNED_CHANNELS = [
@@ -17,16 +20,16 @@ const OWNED_CHANNELS = [
 
 describe('task log observability production composition', () => {
   it('registers and removes the feature exactly once through its public entrypoint', () => {
-    expect(handlersSource).toContain("from '@features/task-log-observability/main'");
-    expect(handlersSource.match(/\n {2}registerTaskLogObservabilityIpc\(/g)).toHaveLength(1);
-    expect(handlersSource.match(/\n {2}removeTaskLogObservabilityIpc\(/g)).toHaveLength(1);
+    expect(teamCompositionSource).toContain("from '@features/task-log-observability/main'");
+    expect(teamCompositionSource.match(/\n {6}registerTaskLogObservabilityIpc\(/g)).toHaveLength(1);
+    expect(teamCompositionSource.match(/\n {2}removeTaskLogObservabilityIpc\(/g)).toHaveLength(1);
   });
 
   it('maps the five existing shared service instances to narrow reader ports', () => {
-    expect(handlersSource).toMatch(
-      /readers:\s*{\s*activity: boardTaskActivityService,\s*activityDetail: boardTaskActivityDetailService,\s*stream: boardTaskLogStreamService,\s*exactLogSummaries: boardTaskExactLogsService,\s*exactLogDetail: boardTaskExactLogDetailService,/s
+    expect(teamCompositionSource).toMatch(
+      /readers:\s*{\s*activity: dependencies\.boardTaskActivityService,\s*activityDetail: dependencies\.boardTaskActivityDetailService,\s*stream: dependencies\.boardTaskLogStreamService,\s*exactLogSummaries: dependencies\.boardTaskExactLogsService,\s*exactLogDetail: dependencies\.boardTaskExactLogDetailService,/s
     );
-    expect(handlersSource).not.toMatch(/new BoardTask(?:Activity|LogStream|ExactLog)/);
+    expect(teamCompositionSource).not.toMatch(/new BoardTask(?:Activity|LogStream|ExactLog)/);
   });
 
   it('removes all six channel owners from the legacy teams adapter', () => {

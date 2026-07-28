@@ -4,7 +4,10 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const ROOT = process.cwd();
-const handlersSource = readFileSync(resolve(ROOT, 'src/main/ipc/handlers.ts'), 'utf8');
+const teamCompositionSource = readFileSync(
+  resolve(ROOT, 'src/main/ipc/teamFeatureComposition.ts'),
+  'utf8'
+);
 const legacyTeamsSource = readFileSync(resolve(ROOT, 'src/main/ipc/teams.ts'), 'utf8');
 const mainSource = readFileSync(resolve(ROOT, 'src/main/index.ts'), 'utf8');
 
@@ -16,11 +19,13 @@ const OWNED_CHANNELS = [
 
 describe('team approvals production composition', () => {
   it('creates, registers, and removes the feature exactly once through public entrypoints', () => {
-    expect(handlersSource).toContain("from '@features/team-approvals/main'");
-    expect(handlersSource.match(/createTeamApprovalsFeature\(/g)).toHaveLength(1);
-    expect(handlersSource.match(/\n {2}registerTeamApprovalsIpc\(/g)).toHaveLength(1);
-    expect(handlersSource.match(/\n {2}removeTeamApprovalsIpc\(/g)).toHaveLength(1);
-    expect(handlersSource).toContain('toolApprovalApi: teamHandlerApis.toolApproval');
+    expect(teamCompositionSource).toContain("from '@features/team-approvals/main'");
+    expect(teamCompositionSource.match(/createTeamApprovalsFeature\(/g)).toHaveLength(1);
+    expect(teamCompositionSource.match(/\n {6}registerTeamApprovalsIpc\(/g)).toHaveLength(1);
+    expect(teamCompositionSource.match(/\n {2}removeTeamApprovalsIpc\(/g)).toHaveLength(1);
+    expect(teamCompositionSource).toContain(
+      'toolApprovalApi: dependencies.teamHandlerApis.toolApproval'
+    );
   });
 
   it('removes all invoke-channel ownership and API state from legacy teams IPC', () => {

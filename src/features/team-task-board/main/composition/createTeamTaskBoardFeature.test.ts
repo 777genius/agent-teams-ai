@@ -441,10 +441,17 @@ describe('createTeamTaskBoardFeature', () => {
   });
 
   it('is wired unconditionally through the application IPC composition root', () => {
-    const handlersSource = readFileSync(resolve(process.cwd(), 'src/main/ipc/handlers.ts'), 'utf8');
+    const teamCompositionSource = readFileSync(
+      resolve(process.cwd(), 'src/main/ipc/teamFeatureComposition.ts'),
+      'utf8'
+    );
 
-    expect(handlersSource).toContain('const teamTaskBoardFeature = createTeamTaskBoardFeature({');
-    expect(handlersSource).toContain('registerTeamTaskBoardIpc(ipcMain, teamTaskBoardFeature);');
-    expect(handlersSource).toContain('removeTeamTaskBoardIpc(ipcMain);');
+    expect(teamCompositionSource).toContain(
+      'const teamTaskBoardFeature = createTeamTaskBoardFeature({'
+    );
+    expect(teamCompositionSource).toContain(
+      'registerTeamTaskBoardIpc(ipcMain, teamTaskBoardFeature);'
+    );
+    expect(teamCompositionSource).toContain('removeTeamTaskBoardIpc(ipcMain);');
   });
 });
