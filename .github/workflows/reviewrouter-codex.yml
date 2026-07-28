@@ -30,9 +30,9 @@ jobs:
       contents: read
       pull-requests: read
       id-token: write
-    uses: 777genius/review-router/.github/workflows/reviewrouter-t0-reusable.yml@0c1608b91ae356a39587b76f51ef57899389d95a
+    uses: 777genius/review-router/.github/workflows/reviewrouter-t0-reusable.yml@3339cf8ca861698aefe335f68a771a455d7e03ae
     with:
-      runtime_ref: "0c1608b91ae356a39587b76f51ef57899389d95a"
+      runtime_ref: "3339cf8ca861698aefe335f68a771a455d7e03ae"
       api_url: "https://api.reviewrouter.site"
       runtime_config_mode: oidc
       pr_number: ${{ inputs.pr_number }}
@@ -57,7 +57,7 @@ jobs:
     steps:
       - name: ReviewRouter Codex OAuth refresh
         id: refresh_codex
-        uses: 777genius/review-router@0c1608b91ae356a39587b76f51ef57899389d95a
+        uses: 777genius/review-router@3339cf8ca861698aefe335f68a771a455d7e03ae
         with:
           mode: codex-oauth-refresh
           api-url: "https://api.reviewrouter.site"
