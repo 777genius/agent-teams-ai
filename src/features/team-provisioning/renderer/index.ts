@@ -23,6 +23,11 @@ export type {
   TeamRuntimeObservationSliceDependencies,
 } from './adapters/createTeamRuntimeObservationSlice';
 export { createTeamRuntimeObservationSlice } from './adapters/createTeamRuntimeObservationSlice';
+export type { TeamToolApprovalRendererSliceDependencies } from './composition/createTeamToolApprovalRendererSlice';
+export {
+  createTeamToolApprovalRendererSlice,
+  loadTeamToolApprovalSettingsIntoRenderer,
+} from './composition/createTeamToolApprovalRendererSlice';
 export type { TeamLaunchAnalyticsContext } from './ports/TeamLaunchAnalyticsPorts';
 export type {
   TeamProvisioningControlEffectsPort,
@@ -59,7 +64,19 @@ export type {
   TeamRuntimeObservationStatePort,
   TeamRuntimeObservationTransportPort,
 } from './ports/TeamRuntimeObservationPorts';
-export type { TeamToolApprovalRendererTransportPort } from './ports/TeamToolApprovalRendererPorts';
+export type {
+  TeamToolApprovalErrorLogPort,
+  TeamToolApprovalProjectionPort,
+  TeamToolApprovalRendererSlice,
+  TeamToolApprovalRendererSliceActions,
+  TeamToolApprovalRendererSliceState,
+  TeamToolApprovalRendererState,
+  TeamToolApprovalRendererStatePort,
+  TeamToolApprovalRendererTransportPort,
+  TeamToolApprovalResponseTransportPort,
+  TeamToolApprovalSettingsLoadPort,
+  TeamToolApprovalSettingsSyncPort,
+} from './ports/TeamToolApprovalRendererPorts';
 export {
   areTeamLaunchParamsEqual,
   buildLaunchParamsFromRuntimeRequest,

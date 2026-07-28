@@ -4,11 +4,13 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const teamSlicePath = 'src/renderer/store/slices/teamSlice.ts';
+const teamSliceTypesPath = 'src/renderer/store/slices/teamSlice.types.ts';
 const navigationSlicePath = 'src/renderer/store/team/createTeamNavigationSlice.ts';
 const provisioningRuntimeSlicePath =
   'src/renderer/store/team/createTeamProvisioningRuntimeSlice.ts';
 const ownedProductionPaths = [
   teamSlicePath,
+  teamSliceTypesPath,
   navigationSlicePath,
   provisioningRuntimeSlicePath,
 ] as const;
@@ -38,7 +40,7 @@ describe('team slice feature boundary', () => {
   it('ratchets teamSlice size and delegates bounded state to composition slices', () => {
     const teamSlice = source(teamSlicePath);
 
-    expect(lineCount(teamSlice)).toBeLessThanOrEqual(565);
+    expect(lineCount(teamSlice)).toBeLessThan(245);
     expect(teamSlice).toContain('createTeamNavigationSlice({');
     expect(teamSlice).toContain('createTeamProvisioningRuntimeSlice({');
     expect(teamSlice).not.toMatch(
@@ -46,6 +48,22 @@ describe('team slice feature boundary', () => {
     );
     expect(teamSlice).not.toMatch(
       /\b(?:createTeamProvisioningControlSlice|createTeamProvisioningLaunchSlice|createTeamProvisioningProgressSlice)(?:<[^;]+?>)?\s*\(/
+    );
+    expect(teamSlice).toContain('createTeamToolApprovalRendererSlice(');
+    expect(teamSlice).toContain('createTeamViewPreferencesRendererSlice<AppState>(');
+    expect(teamSlice).not.toMatch(
+      /\b(?:updateToolApprovalSettings|respondToToolApproval|setMessagesPanelMode|setMessagesPanelWidth|setSidebarLogsHeight)\s*:/
+    );
+  });
+
+  it('composes the extracted public slice contracts without redeclaring their fields', () => {
+    const types = source(teamSliceTypesPath);
+
+    expect(lineCount(types)).toBeLessThan(63);
+    expect(types).toContain('TeamToolApprovalRendererSlice,');
+    expect(types).toContain('TeamViewPreferencesRendererSlice {}');
+    expect(types).not.toMatch(
+      /\b(?:pendingApprovals|resolvedApprovals|toolApprovalSettingsByTeam|toolApprovalSettings|messagesPanelMode|messagesPanelWidth|sidebarLogsHeight)\s*:/
     );
   });
 
@@ -59,6 +77,8 @@ describe('team slice feature boundary', () => {
       'createTeamProvisioningRuntimeSlice',
       'createTeamRosterMutationRendererSlice',
       'createTeamRuntimeOperationsRendererSlice',
+      'createTeamToolApprovalRendererSlice',
+      'createTeamViewPreferencesRendererSlice',
     ]) {
       expect(teamSlice, factory).toMatch(new RegExp(`\\b${factory}(?:<[^;]+?>)?\\s*\\(`));
     }

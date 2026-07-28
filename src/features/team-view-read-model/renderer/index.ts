@@ -9,6 +9,8 @@ export { createTeamMessageFeedRendererSlice } from './adapters/createTeamMessage
 export type { TeamViewDataRendererSliceDependencies } from './adapters/createTeamViewDataRendererSlice';
 export { createTeamViewDataRendererSlice } from './adapters/createTeamViewDataRendererSlice';
 export { createTeamViewDataTransport } from './adapters/createTeamViewDataTransport';
+export type { TeamViewPreferencesRendererSliceDependencies } from './composition/createTeamViewPreferencesRendererSlice';
+export { createTeamViewPreferencesRendererSlice } from './composition/createTeamViewPreferencesRendererSlice';
 export type {
   TeamDirectoryNotificationPort,
   TeamDirectoryPathPort,
@@ -55,6 +57,14 @@ export type {
   TeamViewDataTaskPolicyPort,
   TeamViewDataTransportPort,
 } from './ports/TeamViewDataRendererPorts';
+export type {
+  TeamMessagesPanelMode,
+  TeamViewPreferencesPersistencePort,
+  TeamViewPreferencesRendererSlice,
+  TeamViewPreferencesRendererSliceActions,
+  TeamViewPreferencesRendererSliceState,
+  TeamViewPreferencesStatePort,
+} from './ports/TeamViewPreferencesRendererPorts';
 export {
   buildGlobalTaskProjectionNotification,
   buildTeamSummaryIndexes,
