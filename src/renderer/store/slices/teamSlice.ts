@@ -89,6 +89,11 @@ import {
 } from '../team/teamToolApprovalSettingsSync';
 import { noteTeamRefreshFanout } from '../teamRefreshFanoutDiagnostics';
 
+import type {
+  GlobalTaskDetailState,
+  PendingMemberProfileState,
+  PendingTeamSectionFocusState,
+} from '../team/teamSliceStateTypes';
 import type { AppState } from '../types';
 import type { TeamMessageDeliveryRendererSlice } from '@features/team-message-delivery/renderer';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
@@ -99,7 +104,6 @@ import type {
   LeadContextUsage,
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
-  NotificationTarget,
   TeamAgentRuntimeSnapshot,
   TeamProvisioningProgress,
   TeamSummary,
@@ -132,6 +136,11 @@ export {
   selectResolvedMemberForTeamName,
   selectResolvedMembersForTeamName,
 } from '../team/teamResolvedMembers';
+export type {
+  GlobalTaskDetailState,
+  PendingMemberProfileState,
+  PendingTeamSectionFocusState,
+} from '../team/teamSliceStateTypes';
 export type { TeamLaunchParams } from '@features/team-provisioning/renderer';
 const logger = createLogger('teamSlice');
 const recordAttachmentAttachEnd = productAnalytics.recordAttachmentAttachEnd ?? (() => undefined);
@@ -157,21 +166,6 @@ export function __getTeamScopedTransientStateForTests(
   return teamStateLifecycleCoordinator.snapshot(teamName);
 }
 const nowIso = (): string => new Date().toISOString();
-export interface GlobalTaskDetailState {
-  teamName: string;
-  taskId: string;
-  commentId?: string;
-}
-export interface PendingMemberProfileState {
-  teamName?: string;
-  memberName: string;
-  focus?: 'profile' | 'messages' | 'logs';
-}
-type TeamSectionTarget = NonNullable<Extract<NotificationTarget, { kind: 'team' }>['section']>;
-export interface PendingTeamSectionFocusState {
-  teamName: string;
-  section: TeamSectionTarget;
-}
 const isVisibleInActiveTeamSurface = (
   state: Pick<AppState, 'paneLayout'>,
   teamName: string | null | undefined
@@ -210,7 +204,7 @@ export interface TeamSlice
   ) => void;
   closeMemberProfile: () => void;
   pendingTeamSectionFocus: PendingTeamSectionFocusState | null;
-  focusTeamSection: (teamName: string, section: TeamSectionTarget) => void;
+  focusTeamSection: (teamName: string, section: PendingTeamSectionFocusState['section']) => void;
   clearTeamSectionFocus: () => void;
   pendingReviewRequest: {
     taskId: string;
@@ -522,7 +516,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     focus?: PendingMemberProfileState['focus']
   ) => set({ pendingMemberProfile: { memberName, teamName, focus } }),
   closeMemberProfile: () => set({ pendingMemberProfile: null }),
-  focusTeamSection: (teamName: string, section: TeamSectionTarget) =>
+  focusTeamSection: (teamName: string, section: PendingTeamSectionFocusState['section']) =>
     set({ pendingTeamSectionFocus: { teamName, section } }),
   clearTeamSectionFocus: () => set({ pendingTeamSectionFocus: null }),
   pendingReviewRequest: null,
